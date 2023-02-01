@@ -33,7 +33,6 @@ func newProdFromEnv(ctx context.Context) (InstanceMetadata, error) {
 }
 
 func (p *prodFromEnv) populateInstanceMetadata() error {
-
 	for _, key := range []string{
 		"AZURE_ENVIRONMENT",
 		"AZURE_SUBSCRIPTION_ID",

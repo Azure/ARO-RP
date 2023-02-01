@@ -10,21 +10,23 @@ import (
 	"testing"
 
 	"github.com/Azure/go-autorest/autorest/to"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	operatorv1 "github.com/openshift/api/operator/v1"
-	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
-	maofake "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake"
+	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
 func TestMachineReconciler(t *testing.T) {
 	// Fake cluster with AZs
-	newFakeMao1 := func(diskSize, imagePublisher, vmSize, masterVmSize string) *maofake.Clientset {
+	newFakeMao1 := func(diskSize, imagePublisher, vmSize, masterVmSize string) *machinefake.Clientset {
 		master0 := getValidMachine("foo-hx8z7-master-0", "", "", "", "", true)
 		master1 := getValidMachine("foo-hx8z7-master-1", "", "", "", "", true)
 		master2 := getValidMachine("foo-hx8z7-master-2", "", "", masterVmSize, "", true)
@@ -35,11 +37,11 @@ func TestMachineReconciler(t *testing.T) {
 		workerMachineSet1 := workerMachineSet("foo-hx8z7-machineset-1")
 		workerMachineSet2 := workerMachineSet("foo-hx8z7-machineset-2")
 
-		return maofake.NewSimpleClientset(worker0, worker1, worker2, master0, master1, master2, workerMachineSet0, workerMachineSet1, workerMachineSet2)
+		return machinefake.NewSimpleClientset(worker0, worker1, worker2, master0, master1, master2, workerMachineSet0, workerMachineSet1, workerMachineSet2)
 	}
 
 	// Fake cluster missing a master
-	newFakeMao2 := func() *maofake.Clientset {
+	newFakeMao2 := func() *machinefake.Clientset {
 		master0 := getValidMachine("foo-hx8z7-master-0", "", "", "", "", true)
 		master2 := getValidMachine("foo-hx8z7-master-2", "", "", "", "", true)
 		worker0 := getValidMachine("foo-hx8z7-worker-0", "", "", "", "", false)
@@ -49,11 +51,11 @@ func TestMachineReconciler(t *testing.T) {
 		workerMachineSet1 := workerMachineSet("foo-hx8z7-machineset-1")
 		workerMachineSet2 := workerMachineSet("foo-hx8z7-machineset-2")
 
-		return maofake.NewSimpleClientset(worker0, worker1, worker2, master0, master2, workerMachineSet0, workerMachineSet1, workerMachineSet2)
+		return machinefake.NewSimpleClientset(worker0, worker1, worker2, master0, master2, workerMachineSet0, workerMachineSet1, workerMachineSet2)
 	}
 
 	// Fake cluster missing a worker
-	newFakeMao3 := func() *maofake.Clientset {
+	newFakeMao3 := func() *machinefake.Clientset {
 		master0 := getValidMachine("foo-hx8z7-master-0", "", "", "", "", true)
 		master1 := getValidMachine("foo-hx8z7-master-1", "", "", "", "", true)
 		master2 := getValidMachine("foo-hx8z7-master-2", "", "", "", "", true)
@@ -63,19 +65,13 @@ func TestMachineReconciler(t *testing.T) {
 		workerMachineSet1 := workerMachineSet("foo-hx8z7-machineset-1")
 		workerMachineSet2 := workerMachineSet("foo-hx8z7-machineset-2")
 
-		return maofake.NewSimpleClientset(worker0, worker1, master0, master1, master2, workerMachineSet0, workerMachineSet1, workerMachineSet2)
-	}
-
-	baseCluster := arov1alpha1.Cluster{
-		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-		Status:     arov1alpha1.ClusterStatus{Conditions: []operatorv1.OperatorCondition{}},
+		return machinefake.NewSimpleClientset(worker0, worker1, master0, master1, master2, workerMachineSet0, workerMachineSet1, workerMachineSet2)
 	}
 
 	tests := []struct {
 		name           string
 		request        ctrl.Request
-		maocli         *maofake.Clientset
-		arocli         *arofake.Clientset
+		maocli         *machinefake.Clientset
 		wantConditions []operatorv1.OperatorCondition
 	}{
 		{
@@ -114,7 +110,7 @@ func TestMachineReconciler(t *testing.T) {
 			wantConditions: []operatorv1.OperatorCondition{{
 				Type:    arov1alpha1.MachineValid,
 				Status:  operatorv1.ConditionFalse,
-				Message: "machine foo-hx8z7-worker-1: invalid image '{bananas aro4   }'",
+				Message: "machine foo-hx8z7-worker-1: invalid image '{bananas aro4    }'",
 				Reason:  "CheckFailed",
 			}},
 		},
@@ -151,20 +147,35 @@ func TestMachineReconciler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+
+			baseCluster := arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+				Status:     arov1alpha1.ClusterStatus{Conditions: []operatorv1.OperatorCondition{}},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						controllerEnabled: "true",
+					},
+				},
+			}
+
+			clientFake := fake.NewClientBuilder().WithObjects(&baseCluster).Build()
+
 			r := &Reconciler{
 				maocli:                 tt.maocli,
 				log:                    logrus.NewEntry(logrus.StandardLogger()),
-				arocli:                 arofake.NewSimpleClientset(&baseCluster),
 				isLocalDevelopmentMode: false,
 				role:                   "master",
+				client:                 clientFake,
 			}
 
-			_, err := r.Reconcile(context.Background(), tt.request)
+			_, err := r.Reconcile(ctx, tt.request)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			cluster, err := r.arocli.AroV1alpha1().Clusters().Get(context.Background(), arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+			cluster := &arov1alpha1.Cluster{}
+			err = r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, cluster)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -215,6 +226,12 @@ func getValidMachine(name, diskSize, imagePublisher, vmSize, offer string, isMas
 		labels = map[string]string{"machine.openshift.io/cluster-api-machine-role": "master"}
 	}
 
+	// To check that we support both API versions of AzureMachineProviderSpec
+	apiVersion := "azureproviderconfig.openshift.io/v1beta1"
+	if isMaster {
+		apiVersion = "machine.openshift.io/v1beta1"
+	}
+
 	return &machinev1beta1.Machine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -225,7 +242,7 @@ func getValidMachine(name, diskSize, imagePublisher, vmSize, offer string, isMas
 			ProviderSpec: machinev1beta1.ProviderSpec{
 				Value: &kruntime.RawExtension{
 					Raw: []byte(fmt.Sprintf(`{
-"apiVersion": "azureproviderconfig.openshift.io/v1beta1",
+"apiVersion": "%v",
 "kind": "AzureMachineProviderSpec",
 "osDisk": {
 "diskSizeGB": %v
@@ -235,7 +252,7 @@ func getValidMachine(name, diskSize, imagePublisher, vmSize, offer string, isMas
 "offer": "%v"
 },
 "vmSize": "%v"
-}`, diskSize, imagePublisher, offer, vmSize))},
+}`, apiVersion, diskSize, imagePublisher, offer, vmSize))},
 			},
 		},
 	}

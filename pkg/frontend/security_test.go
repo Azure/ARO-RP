@@ -65,6 +65,7 @@ func TestSecurity(t *testing.T) {
 	_env.EXPECT().AdminClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(validadminclientcerts[0].Raw))
 	_env.EXPECT().Listen().AnyTimes().Return(l, nil)
 	_env.EXPECT().FeatureIsSet(env.FeatureDisableReadinessDelay).AnyTimes().Return(false)
+	_env.EXPECT().FeatureIsSet(env.FeatureEnableOCMEndpoints).AnyTimes().Return(true)
 
 	invalidclientkey, invalidclientcerts, err := utiltls.GenerateKeyAndCertificate("invalidclient", nil, nil, false, true)
 	if err != nil {
@@ -76,11 +77,14 @@ func TestSecurity(t *testing.T) {
 
 	log := logrus.NewEntry(logrus.StandardLogger())
 	auditHook, auditEntry := testlog.NewAudit()
-	f, err := NewFrontend(ctx, auditEntry, log, _env, nil, nil, nil, api.APIs, &noop.Noop{}, nil, nil, nil, nil)
+	f, err := NewFrontend(ctx, auditEntry, log, _env, nil, nil, nil, nil, nil, api.APIs, &noop.Noop{}, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.(*frontend).startTime = time.Time{} // enable /healthz to return 200
+
+	// enable /healthz to return 200
+	f.startTime = time.Time{}
+	f.lastChangefeed.Store(time.Time{})
 
 	go f.Run(ctx, nil, nil)
 

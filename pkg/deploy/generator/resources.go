@@ -20,9 +20,9 @@ func (g *generator) actionGroup(name string, shortName string) *arm.Resource {
 		Resource: mgmtinsights.ActionGroupResource{
 			ActionGroup: &mgmtinsights.ActionGroup{
 				Enabled:        to.BoolPtr(true),
-				GroupShortName: to.StringPtr(shortName),
+				GroupShortName: &shortName,
 			},
-			Name:     to.StringPtr(name),
+			Name:     &name,
 			Type:     to.StringPtr("Microsoft.Insights/actionGroups"),
 			Location: to.StringPtr("Global"),
 		},
@@ -52,6 +52,19 @@ func (g *generator) securityGroup(name string, securityRules *[]mgmtnetwork.Secu
 			Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
+		Condition:  condition,
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
+	}
+}
+
+func (g *generator) securityRules(name string, properties *mgmtnetwork.SecurityRulePropertiesFormat, condition interface{}) *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtnetwork.SecurityRule{
+			SecurityRulePropertiesFormat: properties,
+			Name:                         &name,
+			Type:                         to.StringPtr("Microsoft.Network/networkSecurityGroups/securityRules"),
+		},
+		Location:   "[resourceGroup().location]",
 		Condition:  condition,
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
@@ -113,14 +126,14 @@ func (g *generator) virtualNetwork(name, addressPrefix string, subnets *[]mgmtne
 
 // virtualNetworkPeering configures vnetA to peer with vnetB, two symmetrical
 // configurations have to be applied for a peering to work
-func (g *generator) virtualNetworkPeering(name, vnetB string) *arm.Resource {
+func (g *generator) virtualNetworkPeering(name, vnetB string, allowGatewayTransit, useRemoteGateways bool, dependsOn []string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.VirtualNetworkPeering{
 			VirtualNetworkPeeringPropertiesFormat: &mgmtnetwork.VirtualNetworkPeeringPropertiesFormat{
 				AllowVirtualNetworkAccess: to.BoolPtr(true),
 				AllowForwardedTraffic:     to.BoolPtr(true),
-				AllowGatewayTransit:       to.BoolPtr(false),
-				UseRemoteGateways:         to.BoolPtr(false),
+				AllowGatewayTransit:       to.BoolPtr(allowGatewayTransit),
+				UseRemoteGateways:         to.BoolPtr(useRemoteGateways),
 				RemoteVirtualNetwork: &mgmtnetwork.SubResource{
 					ID: &vnetB,
 				},
@@ -130,6 +143,7 @@ func (g *generator) virtualNetworkPeering(name, vnetB string) *arm.Resource {
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		Type:       "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
 		Location:   "[resourceGroup().location]",
+		DependsOn:  dependsOn,
 	}
 }
 
@@ -147,7 +161,7 @@ func (g *generator) keyVault(name string, accessPolicies *[]mgmtkeyvault.AccessP
 				TenantID:       &tenantUUIDHack,
 				AccessPolicies: accessPolicies,
 			},
-			Name:     to.StringPtr(name),
+			Name:     &name,
 			Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},

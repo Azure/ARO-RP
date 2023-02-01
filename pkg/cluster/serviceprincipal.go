@@ -20,7 +20,8 @@ import (
 // initializeClusterSPClients initialized clients, based on cluster service principal
 func (m *manager) initializeClusterSPClients(ctx context.Context) error {
 	spp := m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
-	token, err := aad.GetToken(ctx, m.log, spp.ClientID, string(spp.ClientSecret), m.subscriptionDoc.Subscription.Properties.TenantID, m.env.Environment().ActiveDirectoryEndpoint, m.env.Environment().GraphEndpoint)
+	tokenClient := aad.NewTokenClient()
+	token, err := tokenClient.GetToken(ctx, m.log, spp.ClientID, string(spp.ClientSecret), m.subscriptionDoc.Subscription.Properties.TenantID, m.env.Environment().ActiveDirectoryEndpoint, m.env.Environment().GraphEndpoint)
 	if err != nil {
 		return err
 	}

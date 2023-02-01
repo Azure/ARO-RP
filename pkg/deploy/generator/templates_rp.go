@@ -26,7 +26,6 @@ func (g *generator) rpTemplate() *arm.Template {
 		"databaseAccountName",
 		"fpServicePrincipalId",
 		"rpServicePrincipalId",
-		"ipRules",
 	}
 	if g.production {
 		params = append(params,
@@ -37,6 +36,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"armApiClientCertCommonName",
 			"armClientId",
 			"azureCloudName",
+			"azureSecPackQualysUrl",
 			"azureSecPackVSATenantId",
 			"billingE2EStorageAccountId",
 			"billingServicePrincipalId",
@@ -49,11 +49,13 @@ func (g *generator) rpTemplate() *arm.Template {
 			"fluentbitImage",
 			"fpClientId",
 			"fpServicePrincipalId",
+			"ipRules",
 			"keyvaultPrefix",
 			"keyvaultDNSSuffix",
 			"gatewayDomains",
 			"gatewayResourceGroupName",
 			"gatewayServicePrincipalId",
+			"ipRules",
 			"mdmFrontendUrl",
 			"mdsdEnvironment",
 			"nonZonalRegions",
@@ -74,6 +76,11 @@ func (g *generator) rpTemplate() *arm.Template {
 			"vmSize",
 			"vmssCleanupEnabled",
 			"vmssName",
+
+			// TODO: Replace with Live Service Configuration in KeyVault
+			"clustersInstallViaHive",
+			"clusterDefaultInstallerPullspec",
+			"clustersAdoptByHive",
 		)
 	}
 
@@ -106,6 +113,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			p.DefaultValue = []string{
 				"eastasia",
 				"centralindia",
+				"centraluseuap",
 				"koreacentral",
 				"southcentralus",
 				"canadacentral",
@@ -115,7 +123,15 @@ func (g *generator) rpTemplate() *arm.Template {
 				"brazilsouth",
 				"southafricanorth",
 				"northcentralus",
+				"uaenorth",
+				"westus",
 			}
+
+		// TODO: Replace with Live Service Configuration in KeyVault
+		case "clustersInstallViaHive",
+			"clustersAdoptByHive",
+			"clusterDefaultInstallerPullspec":
+			p.DefaultValue = ""
 		}
 		t.Parameters[param] = p
 	}
@@ -135,13 +151,13 @@ func (g *generator) rpTemplate() *arm.Template {
 		t.Resources = append(t.Resources, g.rpBillingContributorRbac()...)
 
 		t.Resources = append(t.Resources,
-			g.virtualNetworkPeering("rp-vnet/peering-gateway-vnet", "[resourceId(parameters('gatewayResourceGroupName'), 'Microsoft.Network/virtualNetworks', 'gateway-vnet')]"),
+			g.virtualNetworkPeering("rp-vnet/peering-gateway-vnet", "[resourceId(parameters('gatewayResourceGroupName'), 'Microsoft.Network/virtualNetworks', 'gateway-vnet')]", false, false, nil),
 		)
 	}
 
 	t.Resources = append(t.Resources, g.rpDNSZone(),
-		g.virtualNetworkPeering("rp-vnet/peering-rp-pe-vnet-001", "[resourceId('Microsoft.Network/virtualNetworks', 'rp-pe-vnet-001')]"),
-		g.virtualNetworkPeering("rp-pe-vnet-001/peering-rp-vnet", "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]"))
+		g.virtualNetworkPeering("rp-vnet/peering-rp-pe-vnet-001", "[resourceId('Microsoft.Network/virtualNetworks', 'rp-pe-vnet-001')]", false, false, nil),
+		g.virtualNetworkPeering("rp-pe-vnet-001/peering-rp-vnet", "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]", false, false, nil))
 	t.Resources = append(t.Resources, g.rpCosmosDB()...)
 	t.Resources = append(t.Resources, g.rpRBAC()...)
 
@@ -262,7 +278,7 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 			"extraPortalKeyvaultAccessPolicies",
 			"extraServiceKeyvaultAccessPolicies",
 			"gatewayResourceGroupName",
-			"rpNsgSourceAddressPrefixes",
+			"rpNsgPortalSourceAddressPrefixes",
 		)
 	} else {
 		params = append(params,
@@ -282,7 +298,7 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 			"extraServiceKeyvaultAccessPolicies":
 			p.Type = "array"
 			p.DefaultValue = []interface{}{}
-		case "rpNsgSourceAddressPrefixes":
+		case "rpNsgPortalSourceAddressPrefixes":
 			p.Type = "array"
 			p.DefaultValue = []string{}
 		case "keyvaultPrefix":
@@ -300,7 +316,14 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 		g.rpDBTokenKeyvault(),
 		g.rpPortalKeyvault(),
 		g.rpServiceKeyvault(),
+		g.rpServiceKeyvaultDynamic(),
 	)
+
+	if g.production {
+		t.Resources = append(t.Resources,
+			g.rpSecurityGroupForPortalSourceAddressPrefixes(),
+		)
+	}
 
 	return t
 }

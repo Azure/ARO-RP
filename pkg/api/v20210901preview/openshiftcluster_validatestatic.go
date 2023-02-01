@@ -11,14 +11,13 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/gofrs/uuid"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/util/immutable"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
-	"github.com/Azure/ARO-RP/pkg/util/version"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 type openShiftClusterStaticValidator struct {
@@ -31,7 +30,12 @@ type openShiftClusterStaticValidator struct {
 }
 
 // Validate validates an OpenShift cluster
-func (sv *openShiftClusterStaticValidator) Static(_oc interface{}, _current *api.OpenShiftCluster) error {
+func (sv openShiftClusterStaticValidator) Static(_oc interface{}, _current *api.OpenShiftCluster, location, domain string, requireD2sV3Workers bool, resourceID string) error {
+	sv.location = location
+	sv.domain = domain
+	sv.requireD2sV3Workers = requireD2sV3Workers
+	sv.resourceID = resourceID
+
 	oc := _oc.(*OpenShiftCluster)
 
 	var current *OpenShiftCluster
@@ -57,7 +61,7 @@ func (sv *openShiftClusterStaticValidator) Static(_oc interface{}, _current *api
 	return sv.validateDelta(oc, current)
 }
 
-func (sv *openShiftClusterStaticValidator) validate(oc *OpenShiftCluster, isCreate bool) error {
+func (sv openShiftClusterStaticValidator) validate(oc *OpenShiftCluster, isCreate bool) error {
 	if !strings.EqualFold(oc.ID, sv.resourceID) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeMismatchingResourceID, "id", "The provided resource ID '%s' did not match the name in the Url '%s'.", oc.ID, sv.resourceID)
 	}
@@ -74,7 +78,7 @@ func (sv *openShiftClusterStaticValidator) validate(oc *OpenShiftCluster, isCrea
 	return sv.validateProperties("properties", &oc.Properties, isCreate)
 }
 
-func (sv *openShiftClusterStaticValidator) validateProperties(path string, p *OpenShiftClusterProperties, isCreate bool) error {
+func (sv openShiftClusterStaticValidator) validateProperties(path string, p *OpenShiftClusterProperties, isCreate bool) error {
 	switch p.ProvisioningState {
 	case ProvisioningStateCreating, ProvisioningStateUpdating,
 		ProvisioningStateAdminUpdating, ProvisioningStateDeleting,
@@ -120,7 +124,7 @@ func (sv *openShiftClusterStaticValidator) validateProperties(path string, p *Op
 	return nil
 }
 
-func (sv *openShiftClusterStaticValidator) validateClusterProfile(path string, cp *ClusterProfile, isCreate bool) error {
+func (sv openShiftClusterStaticValidator) validateClusterProfile(path string, cp *ClusterProfile, isCreate bool) error {
 	if pullsecret.Validate(cp.PullSecret) != nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".pullSecret", "The provided pull secret is invalid.")
 	}
@@ -147,10 +151,6 @@ func (sv *openShiftClusterStaticValidator) validateClusterProfile(path string, c
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".domain", "The provided domain '%s' is invalid.", cp.Domain)
 	}
 
-	if isCreate && cp.Version != version.InstallStream.Version.String() {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".version", "The provided version '%s' is invalid.", cp.Version)
-	}
-
 	if !validate.RxResourceGroupID.MatchString(cp.ResourceGroupID) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".resourceGroupId", "The provided resource group '%s' is invalid.", cp.ResourceGroupID)
 	}
@@ -164,7 +164,7 @@ func (sv *openShiftClusterStaticValidator) validateClusterProfile(path string, c
 	return nil
 }
 
-func (sv *openShiftClusterStaticValidator) validateConsoleProfile(path string, cp *ConsoleProfile) error {
+func (sv openShiftClusterStaticValidator) validateConsoleProfile(path string, cp *ConsoleProfile) error {
 	if cp.URL != "" {
 		if _, err := url.Parse(cp.URL); err != nil {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".url", "The provided console URL '%s' is invalid.", cp.URL)
@@ -174,9 +174,9 @@ func (sv *openShiftClusterStaticValidator) validateConsoleProfile(path string, c
 	return nil
 }
 
-func (sv *openShiftClusterStaticValidator) validateServicePrincipalProfile(path string, spp *ServicePrincipalProfile) error {
-	_, err := uuid.FromString(spp.ClientID)
-	if err != nil {
+func (sv openShiftClusterStaticValidator) validateServicePrincipalProfile(path string, spp *ServicePrincipalProfile) error {
+	valid := uuid.IsValid(spp.ClientID)
+	if !valid {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".clientId", "The provided client ID '%s' is invalid.", spp.ClientID)
 	}
 	if spp.ClientSecret == "" {
@@ -186,7 +186,7 @@ func (sv *openShiftClusterStaticValidator) validateServicePrincipalProfile(path 
 	return nil
 }
 
-func (sv *openShiftClusterStaticValidator) validateNetworkProfile(path string, np *NetworkProfile) error {
+func (sv openShiftClusterStaticValidator) validateNetworkProfile(path string, np *NetworkProfile) error {
 	_, pod, err := net.ParseCIDR(np.PodCIDR)
 	if err != nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".podCidr", "The provided pod CIDR '%s' is invalid: '%s'.", np.PodCIDR, err)
@@ -223,7 +223,7 @@ func (sv *openShiftClusterStaticValidator) validateNetworkProfile(path string, n
 	return nil
 }
 
-func (sv *openShiftClusterStaticValidator) validateMasterProfile(path string, mp *MasterProfile) error {
+func (sv openShiftClusterStaticValidator) validateMasterProfile(path string, mp *MasterProfile) error {
 	if !validate.VMSizeIsValid(api.VMSize(mp.VMSize), sv.requireD2sV3Workers, true) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", "The provided master VM size '%s' is invalid.", mp.VMSize)
 	}
@@ -258,7 +258,7 @@ func (sv *openShiftClusterStaticValidator) validateMasterProfile(path string, mp
 	return nil
 }
 
-func (sv *openShiftClusterStaticValidator) validateWorkerProfile(path string, wp *WorkerProfile, mp *MasterProfile) error {
+func (sv openShiftClusterStaticValidator) validateWorkerProfile(path string, wp *WorkerProfile, mp *MasterProfile) error {
 	if wp.Name != "worker" {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".name", "The provided worker name '%s' is invalid.", wp.Name)
 	}
@@ -300,7 +300,7 @@ func (sv *openShiftClusterStaticValidator) validateWorkerProfile(path string, wp
 	return nil
 }
 
-func (sv *openShiftClusterStaticValidator) validateAPIServerProfile(path string, ap *APIServerProfile) error {
+func (sv openShiftClusterStaticValidator) validateAPIServerProfile(path string, ap *APIServerProfile) error {
 	switch ap.Visibility {
 	case VisibilityPublic, VisibilityPrivate:
 	default:
@@ -315,7 +315,6 @@ func (sv *openShiftClusterStaticValidator) validateAPIServerProfile(path string,
 		ip := net.ParseIP(ap.IP)
 		if ip == nil {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".ip", "The provided IP '%s' is invalid.", ap.IP)
-
 		}
 		if ip.To4() == nil {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".ip", "The provided IP '%s' is invalid: must be IPv4.", ap.IP)
@@ -325,7 +324,7 @@ func (sv *openShiftClusterStaticValidator) validateAPIServerProfile(path string,
 	return nil
 }
 
-func (sv *openShiftClusterStaticValidator) validateIngressProfile(path string, p *IngressProfile) error {
+func (sv openShiftClusterStaticValidator) validateIngressProfile(path string, p *IngressProfile) error {
 	if p.Name != "default" {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".name", "The provided ingress name '%s' is invalid.", p.Name)
 	}
@@ -338,7 +337,6 @@ func (sv *openShiftClusterStaticValidator) validateIngressProfile(path string, p
 		ip := net.ParseIP(p.IP)
 		if ip == nil {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".ip", "The provided IP '%s' is invalid.", p.IP)
-
 		}
 		if ip.To4() == nil {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".ip", "The provided IP '%s' is invalid: must be IPv4.", p.IP)
@@ -348,7 +346,7 @@ func (sv *openShiftClusterStaticValidator) validateIngressProfile(path string, p
 	return nil
 }
 
-func (sv *openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftCluster) error {
+func (sv openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftCluster) error {
 	err := immutable.Validate("", oc, current)
 	if err != nil {
 		err := err.(*immutable.ValidationError)

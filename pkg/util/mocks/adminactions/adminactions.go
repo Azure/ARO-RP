@@ -6,9 +6,12 @@ package mock_adminactions
 
 import (
 	context "context"
+	io "io"
 	http "net/http"
 	reflect "reflect"
 
+	compute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	features "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	gomock "github.com/golang/mock/gomock"
 	logrus "github.com/sirupsen/logrus"
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -37,6 +40,62 @@ func (m *MockKubeActions) EXPECT() *MockKubeActionsMockRecorder {
 	return m.recorder
 }
 
+// ApproveAllCsrs mocks base method.
+func (m *MockKubeActions) ApproveAllCsrs(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApproveAllCsrs", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApproveAllCsrs indicates an expected call of ApproveAllCsrs.
+func (mr *MockKubeActionsMockRecorder) ApproveAllCsrs(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApproveAllCsrs", reflect.TypeOf((*MockKubeActions)(nil).ApproveAllCsrs), arg0)
+}
+
+// ApproveCsr mocks base method.
+func (m *MockKubeActions) ApproveCsr(arg0 context.Context, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApproveCsr", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApproveCsr indicates an expected call of ApproveCsr.
+func (mr *MockKubeActionsMockRecorder) ApproveCsr(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApproveCsr", reflect.TypeOf((*MockKubeActions)(nil).ApproveCsr), arg0, arg1)
+}
+
+// CordonNode mocks base method.
+func (m *MockKubeActions) CordonNode(arg0 context.Context, arg1 string, arg2 bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CordonNode", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CordonNode indicates an expected call of CordonNode.
+func (mr *MockKubeActionsMockRecorder) CordonNode(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CordonNode", reflect.TypeOf((*MockKubeActions)(nil).CordonNode), arg0, arg1, arg2)
+}
+
+// DrainNode mocks base method.
+func (m *MockKubeActions) DrainNode(arg0 context.Context, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DrainNode", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DrainNode indicates an expected call of DrainNode.
+func (mr *MockKubeActionsMockRecorder) DrainNode(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DrainNode", reflect.TypeOf((*MockKubeActions)(nil).DrainNode), arg0, arg1)
+}
+
 // KubeCreateOrUpdate mocks base method.
 func (m *MockKubeActions) KubeCreateOrUpdate(arg0 context.Context, arg1 *unstructured.Unstructured) error {
 	m.ctrl.T.Helper()
@@ -52,17 +111,17 @@ func (mr *MockKubeActionsMockRecorder) KubeCreateOrUpdate(arg0, arg1 interface{}
 }
 
 // KubeDelete mocks base method.
-func (m *MockKubeActions) KubeDelete(arg0 context.Context, arg1, arg2, arg3 string) error {
+func (m *MockKubeActions) KubeDelete(arg0 context.Context, arg1, arg2, arg3 string, arg4 bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "KubeDelete", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "KubeDelete", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // KubeDelete indicates an expected call of KubeDelete.
-func (mr *MockKubeActionsMockRecorder) KubeDelete(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockKubeActionsMockRecorder) KubeDelete(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KubeDelete", reflect.TypeOf((*MockKubeActions)(nil).KubeDelete), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KubeDelete", reflect.TypeOf((*MockKubeActions)(nil).KubeDelete), arg0, arg1, arg2, arg3, arg4)
 }
 
 // KubeGet mocks base method.
@@ -78,6 +137,21 @@ func (m *MockKubeActions) KubeGet(arg0 context.Context, arg1, arg2, arg3 string)
 func (mr *MockKubeActionsMockRecorder) KubeGet(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KubeGet", reflect.TypeOf((*MockKubeActions)(nil).KubeGet), arg0, arg1, arg2, arg3)
+}
+
+// KubeGetPodLogs mocks base method.
+func (m *MockKubeActions) KubeGetPodLogs(arg0 context.Context, arg1, arg2, arg3 string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "KubeGetPodLogs", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// KubeGetPodLogs indicates an expected call of KubeGetPodLogs.
+func (mr *MockKubeActionsMockRecorder) KubeGetPodLogs(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KubeGetPodLogs", reflect.TypeOf((*MockKubeActions)(nil).KubeGetPodLogs), arg0, arg1, arg2, arg3)
 }
 
 // KubeList mocks base method.
@@ -132,19 +206,77 @@ func (m *MockAzureActions) EXPECT() *MockAzureActionsMockRecorder {
 	return m.recorder
 }
 
-// ResourcesList mocks base method.
-func (m *MockAzureActions) ResourcesList(arg0 context.Context) ([]byte, error) {
+// AppLensGetDetector mocks base method.
+func (m *MockAzureActions) AppLensGetDetector(arg0 context.Context, arg1 string) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ResourcesList", arg0)
+	ret := m.ctrl.Call(m, "AppLensGetDetector", arg0, arg1)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ResourcesList indicates an expected call of ResourcesList.
-func (mr *MockAzureActionsMockRecorder) ResourcesList(arg0 interface{}) *gomock.Call {
+// AppLensGetDetector indicates an expected call of AppLensGetDetector.
+func (mr *MockAzureActionsMockRecorder) AppLensGetDetector(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourcesList", reflect.TypeOf((*MockAzureActions)(nil).ResourcesList), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppLensGetDetector", reflect.TypeOf((*MockAzureActions)(nil).AppLensGetDetector), arg0, arg1)
+}
+
+// AppLensListDetectors mocks base method.
+func (m *MockAzureActions) AppLensListDetectors(arg0 context.Context) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AppLensListDetectors", arg0)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AppLensListDetectors indicates an expected call of AppLensListDetectors.
+func (mr *MockAzureActionsMockRecorder) AppLensListDetectors(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppLensListDetectors", reflect.TypeOf((*MockAzureActions)(nil).AppLensListDetectors), arg0)
+}
+
+// GroupResourceList mocks base method.
+func (m *MockAzureActions) GroupResourceList(arg0 context.Context) ([]features.GenericResourceExpanded, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GroupResourceList", arg0)
+	ret0, _ := ret[0].([]features.GenericResourceExpanded)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GroupResourceList indicates an expected call of GroupResourceList.
+func (mr *MockAzureActionsMockRecorder) GroupResourceList(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GroupResourceList", reflect.TypeOf((*MockAzureActions)(nil).GroupResourceList), arg0)
+}
+
+// NICReconcileFailedState mocks base method.
+func (m *MockAzureActions) NICReconcileFailedState(arg0 context.Context, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NICReconcileFailedState", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// NICReconcileFailedState indicates an expected call of NICReconcileFailedState.
+func (mr *MockAzureActionsMockRecorder) NICReconcileFailedState(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NICReconcileFailedState", reflect.TypeOf((*MockAzureActions)(nil).NICReconcileFailedState), arg0, arg1)
+}
+
+// ResourcesList mocks base method.
+func (m *MockAzureActions) ResourcesList(arg0 context.Context, arg1 []features.GenericResourceExpanded, arg2 io.WriteCloser) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResourcesList", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ResourcesList indicates an expected call of ResourcesList.
+func (mr *MockAzureActionsMockRecorder) ResourcesList(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourcesList", reflect.TypeOf((*MockAzureActions)(nil).ResourcesList), arg0, arg1, arg2)
 }
 
 // VMRedeployAndWait mocks base method.
@@ -161,6 +293,20 @@ func (mr *MockAzureActionsMockRecorder) VMRedeployAndWait(arg0, arg1 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMRedeployAndWait", reflect.TypeOf((*MockAzureActions)(nil).VMRedeployAndWait), arg0, arg1)
 }
 
+// VMResize mocks base method.
+func (m *MockAzureActions) VMResize(arg0 context.Context, arg1, arg2 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VMResize", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// VMResize indicates an expected call of VMResize.
+func (mr *MockAzureActionsMockRecorder) VMResize(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMResize", reflect.TypeOf((*MockAzureActions)(nil).VMResize), arg0, arg1, arg2)
+}
+
 // VMSerialConsole mocks base method.
 func (m *MockAzureActions) VMSerialConsole(arg0 context.Context, arg1 http.ResponseWriter, arg2 *logrus.Entry, arg3 string) error {
 	m.ctrl.T.Helper()
@@ -173,4 +319,61 @@ func (m *MockAzureActions) VMSerialConsole(arg0 context.Context, arg1 http.Respo
 func (mr *MockAzureActionsMockRecorder) VMSerialConsole(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMSerialConsole", reflect.TypeOf((*MockAzureActions)(nil).VMSerialConsole), arg0, arg1, arg2, arg3)
+}
+
+// VMSizeList mocks base method.
+func (m *MockAzureActions) VMSizeList(arg0 context.Context) ([]compute.ResourceSku, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VMSizeList", arg0)
+	ret0, _ := ret[0].([]compute.ResourceSku)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// VMSizeList indicates an expected call of VMSizeList.
+func (mr *MockAzureActionsMockRecorder) VMSizeList(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMSizeList", reflect.TypeOf((*MockAzureActions)(nil).VMSizeList), arg0)
+}
+
+// VMStartAndWait mocks base method.
+func (m *MockAzureActions) VMStartAndWait(arg0 context.Context, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VMStartAndWait", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// VMStartAndWait indicates an expected call of VMStartAndWait.
+func (mr *MockAzureActionsMockRecorder) VMStartAndWait(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMStartAndWait", reflect.TypeOf((*MockAzureActions)(nil).VMStartAndWait), arg0, arg1)
+}
+
+// VMStopAndWait mocks base method.
+func (m *MockAzureActions) VMStopAndWait(arg0 context.Context, arg1 string, arg2 bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VMStopAndWait", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// VMStopAndWait indicates an expected call of VMStopAndWait.
+func (mr *MockAzureActionsMockRecorder) VMStopAndWait(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMStopAndWait", reflect.TypeOf((*MockAzureActions)(nil).VMStopAndWait), arg0, arg1, arg2)
+}
+
+// WriteToStream mocks base method.
+func (m *MockAzureActions) WriteToStream(arg0 context.Context, arg1 io.WriteCloser) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WriteToStream", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WriteToStream indicates an expected call of WriteToStream.
+func (mr *MockAzureActionsMockRecorder) WriteToStream(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteToStream", reflect.TypeOf((*MockAzureActions)(nil).WriteToStream), arg0, arg1)
 }

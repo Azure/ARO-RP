@@ -48,18 +48,7 @@ func (m *manager) updateClusterData(ctx context.Context) error {
 }
 
 func (m *manager) createOrUpdateRouterIPFromCluster(ctx context.Context) error {
-	// check if ingress profile contains default profile we intend to use.
-	// It might not exist if customer updated the profile or api is down.
-	// in both cases we can't do much so return early. Ingress profile can
-	// be set to nil by enricher
-	var found bool
-	for _, ip := range m.doc.OpenShiftCluster.Properties.IngressProfiles {
-		if ip.Name == "default" {
-			found = true
-		}
-	}
-
-	if !found {
+	if !m.isIngressProfileAvailable() {
 		m.log.Error("skip createOrUpdateRouterIPFromCluster")
 		return nil
 	}

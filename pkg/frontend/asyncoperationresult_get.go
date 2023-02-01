@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
@@ -19,10 +20,9 @@ import (
 func (f *frontend) getAsyncOperationResult(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
-	vars := mux.Vars(r)
 
 	header := http.Header{}
-	b, err := f._getAsyncOperationResult(ctx, r, header, f.apis[vars["api-version"]].OpenShiftClusterConverter())
+	b, err := f._getAsyncOperationResult(ctx, r, header, f.apis[r.URL.Query().Get(api.APIVersionKey)].OpenShiftClusterConverter)
 
 	reply(log, w, header, b, err)
 }
@@ -36,6 +36,14 @@ func (f *frontend) _getAsyncOperationResult(ctx context.Context, r *http.Request
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The entity was not found.")
 	case err != nil:
 		return nil, err
+	}
+
+	resource, err := azure.ParseResourceID(asyncdoc.OpenShiftClusterKey)
+	switch {
+	case err != nil:
+		return nil, err
+	case resource.SubscriptionID != vars["subscriptionId"]:
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The entity was not found.")
 	}
 
 	doc, err := f.dbOpenShiftClusters.Get(ctx, asyncdoc.OpenShiftClusterKey)

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -19,6 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
+	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 )
 
 type monitor struct {
@@ -29,8 +31,8 @@ type monitor struct {
 	dbOpenShiftClusters database.OpenShiftClusters
 	dbSubscriptions     database.Subscriptions
 
-	m        metrics.Interface
-	clusterm metrics.Interface
+	m        metrics.Emitter
+	clusterm metrics.Emitter
 	mu       sync.RWMutex
 	docs     map[string]*cacheDoc
 	subs     map[string]*api.SubscriptionDocument
@@ -42,13 +44,17 @@ type monitor struct {
 	lastBucketlist atomic.Value //time.Time
 	lastChangefeed atomic.Value //time.Time
 	startTime      time.Time
+
+	liveConfig       liveconfig.Manager
+	hiveShardConfigs map[int]*rest.Config
+	shardMutex       sync.RWMutex
 }
 
 type Runnable interface {
 	Run(context.Context) error
 }
 
-func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Monitors, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, m, clusterm metrics.Interface) Runnable {
+func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Monitors, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, m, clusterm metrics.Emitter, liveConfig liveconfig.Manager) Runnable {
 	return &monitor{
 		baseLog: log,
 		dialer:  dialer,
@@ -66,6 +72,10 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Moni
 		buckets:     map[int]struct{}{},
 
 		startTime: time.Now(),
+
+		liveConfig: liveConfig,
+
+		hiveShardConfigs: map[int]*rest.Config{},
 	}
 }
 
@@ -126,4 +136,17 @@ func (mon *monitor) checkReady() bool {
 	return (time.Since(lastBucketTime) < time.Minute) && // did we list buckets successfully recently?
 		(time.Since(lastChangefeedTime) < time.Minute) && // did we process the change feed recently?
 		(time.Since(mon.startTime) > 2*time.Minute) // are we running for at least 2 minutes?
+}
+
+func (mon *monitor) getHiveShardConfig(shard int) (*rest.Config, bool) {
+	mon.shardMutex.RLock()
+	hiveRestConfig, exists := mon.hiveShardConfigs[shard]
+	mon.shardMutex.RUnlock()
+	return hiveRestConfig, exists
+}
+
+func (mon *monitor) setHiveShardConfig(shard int, config *rest.Config) {
+	mon.shardMutex.Lock()
+	mon.hiveShardConfigs[shard] = config
+	mon.shardMutex.Unlock()
 }

@@ -5,22 +5,23 @@ package banner
 
 import (
 	"context"
+	"strconv"
 	"strings"
 	"testing"
 
 	consolev1 "github.com/openshift/api/console/v1"
-	consolefake "github.com/openshift/client-go/console/clientset/versioned/fake"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
 func TestBannerReconcile(t *testing.T) {
-	r := Reconciler{log: utillog.GetLogger()}
 	for _, tt := range []struct {
 		name            string
 		oldCN           consolev1.ConsoleNotification
@@ -129,6 +130,8 @@ func TestBannerReconcile(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+
 			instance := arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "cluster",
@@ -138,23 +141,29 @@ func TestBannerReconcile(t *testing.T) {
 					Banner: arov1alpha1.Banner{
 						Content: arov1alpha1.BannerContent(tt.bannerSetting),
 					},
-					Features: arov1alpha1.FeaturesSpec{
-						ReconcileBanner: tt.featureFlag,
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						controllerEnabled: strconv.FormatBool(tt.featureFlag),
 					},
 				},
 			}
 
-			r.arocli = arofake.NewSimpleClientset(&instance)
-			r.consolecli = consolefake.NewSimpleClientset(&tt.oldCN)
+			clientFake := fake.NewClientBuilder().WithObjects(&instance, &tt.oldCN).Build()
+
+			r := Reconciler{
+				log:    utillog.GetLogger(),
+				client: clientFake,
+			}
 
 			// function under test
-			_, err := r.Reconcile(context.Background(), ctrl.Request{})
+			_, err := r.Reconcile(ctx, ctrl.Request{})
 
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
 			}
-			resultBanner, err := r.consolecli.ConsoleV1().ConsoleNotifications().Get(context.Background(), BannerName, metav1.GetOptions{})
+
+			resultBanner := &consolev1.ConsoleNotification{}
+			err = clientFake.Get(ctx, types.NamespacedName{Name: BannerName}, resultBanner)
 			if tt.expectBanner {
 				if err != nil {
 					t.Error(err)
@@ -166,11 +175,10 @@ func TestBannerReconcile(t *testing.T) {
 				if err != nil && !kerrors.IsNotFound(err) {
 					t.Error(err)
 				}
-				if err == nil || !kerrors.IsNotFound(err) || resultBanner != nil {
+				if err == nil || !kerrors.IsNotFound(err) {
 					t.Errorf("Expected not to get a ConsoleNotification, but it exists")
 				}
 			}
-
 		})
 	}
 }

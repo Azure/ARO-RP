@@ -10,25 +10,17 @@ import (
 	"encoding/pem"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 )
 
-var (
-	client   = flag.Bool("client", false, "generate client certificate")
-	ca       = flag.Bool("ca", false, "generate ca certificate")
-	keyFile  = flag.String("keyFile", "", `file containing signing key in der format (default "" - self-signed)`)
-	certFile = flag.String("certFile", "", `file containing signing certificate in der format (default "" - self-signed)`)
-)
-
-func run(name string) error {
+func run(name string, flags flagsType) error {
 	var signingKey *rsa.PrivateKey
 	var signingCert *x509.Certificate
 
-	if *keyFile != "" {
-		b, err := ioutil.ReadFile(*keyFile)
+	if *flags.keyFile != "" {
+		b, err := os.ReadFile(*flags.keyFile)
 		if err != nil {
 			return err
 		}
@@ -39,8 +31,8 @@ func run(name string) error {
 		}
 	}
 
-	if *certFile != "" {
-		b, err := ioutil.ReadFile(*certFile)
+	if *flags.certFile != "" {
+		b, err := os.ReadFile(*flags.certFile)
 		if err != nil {
 			return err
 		}
@@ -51,19 +43,19 @@ func run(name string) error {
 		}
 	}
 
-	key, cert, err := utiltls.GenerateKeyAndCertificate(name, signingKey, signingCert, *ca, *client)
+	key, cert, err := utiltls.GenerateKeyAndCertificate(name, signingKey, signingCert, *flags.ca, *flags.client)
 	if err != nil {
 		return err
 	}
 
 	// key in der format
-	err = ioutil.WriteFile(name+".key", x509.MarshalPKCS1PrivateKey(key), 0600)
+	err = os.WriteFile(name+".key", x509.MarshalPKCS1PrivateKey(key), 0600)
 	if err != nil {
 		return err
 	}
 
 	// cert in der format
-	err = ioutil.WriteFile(name+".crt", cert[0].Raw, 0666)
+	err = os.WriteFile(name+".crt", cert[0].Raw, 0666)
 	if err != nil {
 		return err
 	}
@@ -85,7 +77,7 @@ func run(name string) error {
 	}
 
 	// key and cert in PKCS#8 PEM format for Azure Key Vault.
-	return ioutil.WriteFile(name+".pem", buf.Bytes(), 0600)
+	return os.WriteFile(name+".pem", buf.Bytes(), 0600)
 }
 
 func usage() {
@@ -93,7 +85,21 @@ func usage() {
 	flag.PrintDefaults()
 }
 
+type flagsType struct {
+	client   *bool
+	ca       *bool
+	keyFile  *string
+	certFile *string
+}
+
 func main() {
+	flags := flagsType{
+		client:   flag.Bool("client", false, "generate client certificate"),
+		ca:       flag.Bool("ca", false, "generate ca certificate"),
+		keyFile:  flag.String("keyFile", "", `file containing signing key in der format (default "" - self-signed)`),
+		certFile: flag.String("certFile", "", `file containing signing certificate in der format (default "" - self-signed)`),
+	}
+
 	flag.Usage = usage
 	flag.Parse()
 
@@ -102,7 +108,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	if err := run(flag.Arg(0)); err != nil {
+	if err := run(flag.Arg(0), flags); err != nil {
 		panic(err)
 	}
 }

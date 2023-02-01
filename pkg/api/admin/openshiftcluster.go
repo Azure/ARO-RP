@@ -35,6 +35,8 @@ type OpenShiftClusterProperties struct {
 	FailedProvisioningState         ProvisioningState       `json:"failedProvisioningState,omitempty"`
 	LastAdminUpdateError            string                  `json:"lastAdminUpdateError,omitempty"`
 	MaintenanceTask                 MaintenanceTask         `json:"maintenanceTask,omitempty" mutable:"true"`
+	OperatorFlags                   OperatorFlags           `json:"operatorFlags,omitempty" mutable:"true"`
+	OperatorVersion                 string                  `json:"operatorVersion,omitempty" mutable:"true"`
 	CreatedAt                       time.Time               `json:"createdAt,omitempty"`
 	CreatedBy                       string                  `json:"createdBy,omitempty"`
 	ProvisionedBy                   string                  `json:"provisionedBy,omitempty"`
@@ -52,6 +54,7 @@ type OpenShiftClusterProperties struct {
 	RegistryProfiles                []RegistryProfile       `json:"registryProfiles,omitempty"`
 	ImageRegistryStorageAccountName string                  `json:"imageRegistryStorageAccountName,omitempty"`
 	InfraID                         string                  `json:"infraId,omitempty"`
+	HiveProfile                     HiveProfile             `json:"hiveProfile,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state.
@@ -81,7 +84,11 @@ type MaintenanceTask string
 const (
 	MaintenanceTaskEverything MaintenanceTask = "Everything"
 	MaintenanceTaskOperator   MaintenanceTask = "OperatorUpdate"
+	MaintenanceTaskRenewCerts MaintenanceTask = "CertificatesRenewal"
 )
+
+// Operator feature flags
+type OperatorFlags map[string]string
 
 // ClusterProfile represents a cluster profile.
 type ClusterProfile struct {
@@ -115,13 +122,33 @@ const (
 	SoftwareDefinedNetworkOpenShiftSDN  SoftwareDefinedNetwork = "OpenShiftSDN"
 )
 
+// MTUSize represents the MTU size of a cluster (Maximum transmission unit)
+type MTUSize int
+
+// MTUSize constants
+const (
+	MTU1500 MTUSize = 1500
+	MTU3900 MTUSize = 3900
+)
+
+// OutboundType represents the type of routing a cluster is using
+type OutboundType string
+
+// OutboundType constants
+const (
+	OutboundTypeUserDefinedRouting OutboundType = "UserDefinedRouting"
+	OutboundTypeLoadbalancer       OutboundType = "Loadbalancer"
+)
+
 // NetworkProfile represents a network profile.
 type NetworkProfile struct {
 	// The software defined network (SDN) to use when installing the cluster.
 	SoftwareDefinedNetwork SoftwareDefinedNetwork `json:"softwareDefinedNetwork,omitempty"`
 
-	PodCIDR     string `json:"podCidr,omitempty"`
-	ServiceCIDR string `json:"serviceCidr,omitempty"`
+	PodCIDR      string       `json:"podCidr,omitempty"`
+	ServiceCIDR  string       `json:"serviceCidr,omitempty"`
+	MTUSize      MTUSize      `json:"mtuSize,omitempty"`
+	OutboundType OutboundType `json:"outboundType,omitempty" mutable:"true"`
 
 	APIServerPrivateEndpointIP string `json:"privateEndpointIp,omitempty"`
 	GatewayPrivateEndpointIP   string `json:"gatewayPrivateEndpointIp,omitempty"`
@@ -162,12 +189,18 @@ const (
 	VMSizeStandardD16sV3 VMSize = "Standard_D16s_v3"
 	VMSizeStandardD32sV3 VMSize = "Standard_D32s_v3"
 
-	VMSizeStandardE4sV3   VMSize = "Standard_E4s_v3"
-	VMSizeStandardE8sV3   VMSize = "Standard_E8s_v3"
-	VMSizeStandardE16sV3  VMSize = "Standard_E16s_v3"
-	VMSizeStandardE32sV3  VMSize = "Standard_E32s_v3"
-	VMSizeStandardE64isV3 VMSize = "Standard_E64is_v3"
-	VMSizeStandardE64iV3  VMSize = "Standard_E64i_v3"
+	VMSizeStandardE4sV3     VMSize = "Standard_E4s_v3"
+	VMSizeStandardE8sV3     VMSize = "Standard_E8s_v3"
+	VMSizeStandardE16sV3    VMSize = "Standard_E16s_v3"
+	VMSizeStandardE32sV3    VMSize = "Standard_E32s_v3"
+	VMSizeStandardE64isV3   VMSize = "Standard_E64is_v3"
+	VMSizeStandardE64iV3    VMSize = "Standard_E64i_v3"
+	VMSizeStandardE80isV4   VMSize = "Standard_E80is_v4"
+	VMSizeStandardE80idsV4  VMSize = "Standard_E80ids_v4"
+	VMSizeStandardE104iV5   VMSize = "Standard_E104i_v5"
+	VMSizeStandardE104isV5  VMSize = "Standard_E104is_v5"
+	VMSizeStandardE104idV5  VMSize = "Standard_E104id_v5"
+	VMSizeStandardE104idsV5 VMSize = "Standard_E104ids_v5"
 
 	VMSizeStandardF4sV2  VMSize = "Standard_F4s_v2"
 	VMSizeStandardF8sV2  VMSize = "Standard_F8s_v2"
@@ -178,6 +211,16 @@ const (
 	VMSizeStandardM128ms VMSize = "Standard_M128ms"
 	VMSizeStandardG5     VMSize = "Standard_G5"
 	VMSizeStandardGS5    VMSize = "Standard_GS5"
+
+	VMSizeStandardL4s    VMSize = "Standard_L4s"
+	VMSizeStandardL8s    VMSize = "Standard_L8s"
+	VMSizeStandardL16s   VMSize = "Standard_L16s"
+	VMSizeStandardL32s   VMSize = "Standard_L32s"
+	VMSizeStandardL8sV2  VMSize = "Standard_L8s_v2"
+	VMSizeStandardL16sV2 VMSize = "Standard_L16s_v2"
+	VMSizeStandardL32sV2 VMSize = "Standard_L32s_v2"
+	VMSizeStandardL48sV2 VMSize = "Standard_L48s_v2"
+	VMSizeStandardL64sV2 VMSize = "Standard_L64s_v2"
 )
 
 // WorkerProfile represents a worker profile.
@@ -263,4 +306,13 @@ type SystemData struct {
 	LastModifiedBy     string        `json:"lastModifiedBy,omitempty"`
 	LastModifiedByType CreatedByType `json:"lastModifiedByType,omitempty"`
 	LastModifiedAt     *time.Time    `json:"lastModifiedAt,omitempty"`
+}
+
+type HiveProfile struct {
+	Namespace string `json:"namespace,omitempty"`
+
+	// CreatedByHive is used during PUCM to skip adoption and reconciliation
+	// of clusters that were created by Hive to avoid deleting existing
+	// ClusterDeployments.
+	CreatedByHive bool `json:"createdByHive,omitempty"`
 }

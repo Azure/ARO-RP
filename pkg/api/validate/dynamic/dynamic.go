@@ -20,6 +20,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
@@ -50,9 +51,9 @@ type Dynamic interface {
 	ValidateVnet(ctx context.Context, location string, subnets []Subnet, additionalCIDRs ...string) error
 	ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error
 	ValidateProviders(ctx context.Context) error
-	ValidateQuota(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidateDiskEncryptionSets(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidateEncryptionAtHost(ctx context.Context, oc *api.OpenShiftCluster) error
+	ValidateVMSku(ctx context.Context, location string, subscriptionID string, oc *api.OpenShiftCluster) error
 }
 
 type dynamic struct {
@@ -65,16 +66,20 @@ type dynamic struct {
 	providers          features.ProvidersClient
 	virtualNetworks    virtualNetworksGetClient
 	diskEncryptionSets compute.DiskEncryptionSetsClient
+	resourceSkusClient compute.ResourceSkusClient
 	spComputeUsage     compute.UsageClient
 	spNetworkUsage     network.UsageClient
+	tokenClient        aad.TokenClient
 }
 
 type AuthorizerType string
 
-const AuthorizerFirstParty AuthorizerType = "resource provider"
-const AuthorizerClusterServicePrincipal AuthorizerType = "cluster"
+const (
+	AuthorizerFirstParty              AuthorizerType = "resource provider"
+	AuthorizerClusterServicePrincipal AuthorizerType = "cluster"
+)
 
-func NewValidator(log *logrus.Entry, env env.Interface, azEnv *azureclient.AROEnvironment, subscriptionID string, authorizer refreshable.Authorizer, authorizerType AuthorizerType) (Dynamic, error) {
+func NewValidator(log *logrus.Entry, env env.Interface, azEnv *azureclient.AROEnvironment, subscriptionID string, authorizer refreshable.Authorizer, authorizerType AuthorizerType, tokenClient aad.TokenClient) (Dynamic, error) {
 	return &dynamic{
 		log:            log,
 		authorizerType: authorizerType,
@@ -87,14 +92,17 @@ func NewValidator(log *logrus.Entry, env env.Interface, azEnv *azureclient.AROEn
 		permissions:        authorization.NewPermissionsClient(azEnv, subscriptionID, authorizer),
 		virtualNetworks:    newVirtualNetworksCache(network.NewVirtualNetworksClient(azEnv, subscriptionID, authorizer)),
 		diskEncryptionSets: compute.NewDiskEncryptionSetsClient(azEnv, subscriptionID, authorizer),
+		resourceSkusClient: compute.NewResourceSkusClient(azEnv, subscriptionID, authorizer),
+		tokenClient:        tokenClient,
 	}, nil
 }
 
-func NewServicePrincipalValidator(log *logrus.Entry, azEnv *azureclient.AROEnvironment, authorizerType AuthorizerType) (ServicePrincipalValidator, error) {
+func NewServicePrincipalValidator(log *logrus.Entry, azEnv *azureclient.AROEnvironment, authorizerType AuthorizerType, tokenClient aad.TokenClient) (ServicePrincipalValidator, error) {
 	return &dynamic{
 		log:            log,
 		authorizerType: authorizerType,
 		azEnv:          azEnv,
+		tokenClient:    tokenClient,
 	}, nil
 }
 
@@ -145,6 +153,12 @@ func (dv *dynamic) ValidateVnet(ctx context.Context, location string, subnets []
 		}
 	}
 
+	for _, s := range subnets {
+		err := dv.validateNatGatewayPermissions(ctx, s)
+		if err != nil {
+			return err
+		}
+	}
 	return dv.validateCIDRRanges(ctx, subnets, additionalCIDRs...)
 }
 
@@ -224,6 +238,59 @@ func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) 
 	return err
 }
 
+// validateNatGatewayPermissions will validate permissions on provided subnet
+func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) error {
+	dv.log.Printf("validateNatGatewayPermissions")
+
+	vnetID, _, err := subnet.Split(s.ID)
+	if err != nil {
+		return err
+	}
+
+	vnetr, err := azure.ParseResourceID(vnetID)
+	if err != nil {
+		return err
+	}
+
+	vnet, err := dv.virtualNetworks.Get(ctx, vnetr.ResourceGroup, vnetr.ResourceName, "")
+	if err != nil {
+		return err
+	}
+
+	ngID, err := getNatGatewayID(&vnet, s.ID)
+	if err != nil {
+		return err
+	}
+
+	if ngID == "" { // empty nat gateway
+		return nil
+	}
+
+	ngr, err := azure.ParseResourceID(ngID)
+	if err != nil {
+		return err
+	}
+
+	errCode := api.CloudErrorCodeInvalidResourceProviderPermissions
+	if dv.authorizerType == AuthorizerClusterServicePrincipal {
+		errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
+	}
+
+	err = dv.validateActions(ctx, &ngr, []string{
+		"Microsoft.Network/natGateways/join/action",
+		"Microsoft.Network/natGateways/read",
+		"Microsoft.Network/natGateways/write",
+	})
+	if err == wait.ErrWaitTimeout {
+		return api.NewCloudError(http.StatusBadRequest, errCode, "", "The %s service principal does not have Network Contributor permission on nat gateway '%s'.", dv.authorizerType, ngID)
+	}
+	if detailedErr, ok := err.(autorest.DetailedError); ok &&
+		detailedErr.StatusCode == http.StatusNotFound {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedNatGateway, "", "The nat gateway '%s' could not be found.", ngID)
+	}
+	return err
+}
+
 func (dv *dynamic) validateActions(ctx context.Context, r *azure.Resource, actions []string) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
@@ -287,11 +354,22 @@ func (dv *dynamic) validateCIDRRanges(ctx context.Context, subnets []Subnet, add
 			return err
 		}
 
-		_, net, err := net.ParseCIDR(*s.AddressPrefix)
-		if err != nil {
-			return err
+		// Validate the CIDR of AddressPrefix or AddressPrefixes, whichever is defined
+		if s.AddressPrefix == nil {
+			for _, address := range *s.AddressPrefixes {
+				_, net, err := net.ParseCIDR(address)
+				if err != nil {
+					return err
+				}
+				CIDRArray = append(CIDRArray, net)
+			}
+		} else {
+			_, net, err := net.ParseCIDR(*s.AddressPrefix)
+			if err != nil {
+				return err
+			}
+			CIDRArray = append(CIDRArray, net)
 		}
-		CIDRArray = append(CIDRArray, net)
 	}
 
 	for _, c := range additionalCIDRs {
@@ -360,7 +438,6 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 				ss.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
 				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, s.Path, "The provided subnet '%s' is invalid: must not have a network security group attached.", s.ID)
 			}
-
 		} else {
 			nsgID, err := subnet.NetworkSecurityGroupID(oc, *ss.ID)
 			if err != nil {
@@ -372,6 +449,11 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 				!strings.EqualFold(*ss.SubnetPropertiesFormat.NetworkSecurityGroup.ID, nsgID) {
 				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, s.Path, "The provided subnet '%s' is invalid: must have network security group '%s' attached.", s.ID, nsgID)
 			}
+		}
+
+		if ss.SubnetPropertiesFormat == nil ||
+			ss.SubnetPropertiesFormat.ProvisioningState != mgmtnetwork.Succeeded {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, s.Path, "The provided subnet '%s' is not in a Succeeded state", s.ID)
 		}
 
 		_, net, err := net.ParseCIDR(*ss.AddressPrefix)
@@ -399,6 +481,19 @@ func getRouteTableID(vnet *mgmtnetwork.VirtualNetwork, subnetID string) (string,
 	}
 
 	return *s.RouteTable.ID, nil
+}
+
+func getNatGatewayID(vnet *mgmtnetwork.VirtualNetwork, subnetID string) (string, error) {
+	s, err := findSubnet(vnet, subnetID)
+	if err != nil {
+		return "", err
+	}
+
+	if s == nil || s.NatGateway == nil {
+		return "", nil
+	}
+
+	return *s.NatGateway.ID, nil
 }
 
 func findSubnet(vnet *mgmtnetwork.VirtualNetwork, subnetID string) (*mgmtnetwork.Subnet, error) {

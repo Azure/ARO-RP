@@ -10,14 +10,15 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 )
 
 // Metric records request metrics for tracking
-func Metrics(m metrics.Interface) func(http.Handler) http.Handler {
+func Metrics(m metrics.Emitter) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			vars := mux.Vars(r)
+			apiVersion := r.URL.Query().Get(api.APIVersionKey)
 			t := time.Now()
 			var routeName string
 			if route := mux.CurrentRoute(r); route != nil {
@@ -31,14 +32,14 @@ func Metrics(m metrics.Interface) func(http.Handler) http.Handler {
 			defer func() {
 				m.EmitGauge("frontend.count", 1, map[string]string{
 					"verb":        r.Method,
-					"api-version": vars["api-version"],
+					"api-version": apiVersion,
 					"code":        strconv.Itoa(w.(*logResponseWriter).statusCode),
 					"route":       routeName,
 				})
 
 				m.EmitGauge("frontend.duration", time.Since(t).Milliseconds(), map[string]string{
 					"verb":        r.Method,
-					"api-version": vars["api-version"],
+					"api-version": apiVersion,
 					"code":        strconv.Itoa(w.(*logResponseWriter).statusCode),
 					"route":       routeName,
 				})

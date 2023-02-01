@@ -1,6 +1,8 @@
 package manifests
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 
@@ -8,23 +10,23 @@ import (
 	"github.com/pkg/errors"
 
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/installconfig"
-	icazure "github.com/openshift/installer/pkg/asset/installconfig/azure"
+	ibmcloudmachines "github.com/openshift/installer/pkg/asset/machines/ibmcloud"
+	alibabacloudmanifests "github.com/openshift/installer/pkg/asset/manifests/alibabacloud"
 	"github.com/openshift/installer/pkg/asset/manifests/azure"
 	gcpmanifests "github.com/openshift/installer/pkg/asset/manifests/gcp"
-	kubevirtmanifests "github.com/openshift/installer/pkg/asset/manifests/kubevirt"
+	ibmcloudmanifests "github.com/openshift/installer/pkg/asset/manifests/ibmcloud"
 	openstackmanifests "github.com/openshift/installer/pkg/asset/manifests/openstack"
 	vspheremanifests "github.com/openshift/installer/pkg/asset/manifests/vsphere"
+	alibabacloudtypes "github.com/openshift/installer/pkg/types/alibabacloud"
 	awstypes "github.com/openshift/installer/pkg/types/aws"
 	azuretypes "github.com/openshift/installer/pkg/types/azure"
 	baremetaltypes "github.com/openshift/installer/pkg/types/baremetal"
 	gcptypes "github.com/openshift/installer/pkg/types/gcp"
-	kubevirttypes "github.com/openshift/installer/pkg/types/kubevirt"
+	ibmcloudtypes "github.com/openshift/installer/pkg/types/ibmcloud"
 	libvirttypes "github.com/openshift/installer/pkg/types/libvirt"
 	nonetypes "github.com/openshift/installer/pkg/types/none"
 	openstacktypes "github.com/openshift/installer/pkg/types/openstack"
@@ -33,21 +35,19 @@ import (
 )
 
 var (
-	cloudProviderConfigFileName         = filepath.Join(manifestDir, "cloud-provider-config.yaml")
-	aroCloudProviderRoleFileName        = filepath.Join(manifestDir, "aro-cloud-provider-secret-reader-role.yaml")
-	aroCloudProviderRoleBindingFileName = filepath.Join(manifestDir, "aro-cloud-provider-secret-reader-rolebinding.yaml")
-	aroCloudProviderSecretFileName      = filepath.Join(manifestDir, "aro-cloud-provider-secret.yaml")
+	cloudProviderConfigFileName = filepath.Join(manifestDir, "cloud-provider-config.yaml")
 )
 
 const (
 	cloudProviderConfigDataKey         = "config"
 	cloudProviderConfigCABundleDataKey = "ca-bundle.pem"
+	cloudProviderEndpointsKey          = "endpoints"
 )
 
 // CloudProviderConfig generates the cloud-provider-config.yaml files.
 type CloudProviderConfig struct {
 	ConfigMap *corev1.ConfigMap
-	FileList  []*asset.File
+	File      *asset.File
 }
 
 var _ asset.WritableAsset = (*CloudProviderConfig)(nil)
@@ -99,7 +99,23 @@ func (cpc *CloudProviderConfig) Generate(dependencies asset.Parents) error {
 			return nil
 		}
 		cm.Data[cloudProviderConfigCABundleDataKey] = trustBundle
-
+		// Include a non-empty kube config to appease components--such as the kube-apiserver--that
+		// expect there to be a kube config if the cloud-provider-config ConfigMap exists. See
+		// https://bugzilla.redhat.com/show_bug.cgi?id=1926975.
+		// Note that the newline is required in order to be valid yaml.
+		cm.Data[cloudProviderConfigDataKey] = `[Global]
+`
+	case alibabacloudtypes.Name:
+		alibabacloudConfig, err := alibabacloudmanifests.CloudConfig{
+			Global: alibabacloudmanifests.GlobalConfig{
+				ClusterID: clusterID.InfraID,
+				Region:    installConfig.Config.AlibabaCloud.Region,
+			},
+		}.JSON()
+		if err != nil {
+			return errors.Wrap(err, "could not create Alibaba Cloud provider config")
+		}
+		cm.Data[cloudProviderConfigDataKey] = alibabacloudConfig
 	case openstacktypes.Name:
 		cloudProviderConfigData, cloudProviderConfigCABundleData, err := openstackmanifests.GenerateCloudProviderConfig(*installConfig.Config)
 		if err != nil {
@@ -140,12 +156,21 @@ func (cpc *CloudProviderConfig) Generate(dependencies asset.Parents) error {
 			NetworkSecurityGroupName: nsg,
 			VirtualNetworkName:       vnet,
 			SubnetName:               subnet,
-			ARO:                      installConfig.Config.Azure.ARO,
+			ResourceManagerEndpoint:  installConfig.Config.Azure.ARMEndpoint,
+			ARO:                      installConfig.Config.Azure.IsARO(),
 		}.JSON()
 		if err != nil {
 			return errors.Wrap(err, "could not create cloud provider config")
 		}
 		cm.Data[cloudProviderConfigDataKey] = azureConfig
+
+		if installConfig.Azure.CloudName == azuretypes.StackCloud {
+			b, err := json.Marshal(session.Environment)
+			if err != nil {
+				return errors.Wrap(err, "could not serialize Azure Stack endpoints")
+			}
+			cm.Data[cloudProviderEndpointsKey] = string(b)
+		}
 	case gcptypes.Name:
 		subnet := fmt.Sprintf("%s-worker-subnet", clusterID.InfraID)
 		if installConfig.Config.GCP.ComputeSubnet != "" {
@@ -156,6 +181,38 @@ func (cpc *CloudProviderConfig) Generate(dependencies asset.Parents) error {
 			return errors.Wrap(err, "could not create cloud provider config")
 		}
 		cm.Data[cloudProviderConfigDataKey] = gcpConfig
+	case ibmcloudtypes.Name:
+		accountID, err := installConfig.IBMCloud.AccountID(context.TODO())
+		if err != nil {
+			return err
+		}
+
+		controlPlane := &ibmcloudtypes.MachinePool{}
+		controlPlane.Set(installConfig.Config.Platform.IBMCloud.DefaultMachinePlatform)
+		controlPlane.Set(installConfig.Config.ControlPlane.Platform.IBMCloud)
+		compute := &ibmcloudtypes.MachinePool{}
+		compute.Set(installConfig.Config.Platform.IBMCloud.DefaultMachinePlatform)
+		compute.Set(installConfig.Config.WorkerMachinePool().Platform.IBMCloud)
+
+		if len(controlPlane.Zones) == 0 || len(compute.Zones) == 0 {
+			zones, err := ibmcloudmachines.AvailabilityZones(installConfig.Config.IBMCloud.Region)
+			if err != nil {
+				return errors.Wrapf(err, "could not get availability zones for %s", installConfig.Config.IBMCloud.Region)
+			}
+			if len(controlPlane.Zones) == 0 {
+				controlPlane.Zones = zones
+			}
+			if len(compute.Zones) == 0 {
+				compute.Zones = zones
+			}
+		}
+
+		resourceGroupName := installConfig.Config.Platform.IBMCloud.ClusterResourceGroupName(clusterID.InfraID)
+		ibmcloudConfig, err := ibmcloudmanifests.CloudProviderConfig(clusterID.InfraID, accountID, installConfig.Config.IBMCloud.Region, resourceGroupName, controlPlane.Zones, compute.Zones)
+		if err != nil {
+			return errors.Wrap(err, "could not create cloud provider config")
+		}
+		cm.Data[cloudProviderConfigDataKey] = ibmcloudConfig
 	case vspheretypes.Name:
 		folderPath := installConfig.Config.Platform.VSphere.Folder
 		if len(folderPath) == 0 {
@@ -170,15 +227,6 @@ func (cpc *CloudProviderConfig) Generate(dependencies asset.Parents) error {
 			return errors.Wrap(err, "could not create cloud provider config")
 		}
 		cm.Data[cloudProviderConfigDataKey] = vsphereConfig
-	case kubevirttypes.Name:
-		kubevirtConfig, err := kubevirtmanifests.CloudProviderConfig{
-			Namespace: installConfig.Config.Platform.Kubevirt.Namespace,
-			InfraID:   clusterID.InfraID,
-		}.JSON()
-		if err != nil {
-			return errors.Wrap(err, "could not create cloud provider config")
-		}
-		cm.Data[cloudProviderConfigDataKey] = kubevirtConfig
 	default:
 		return errors.New("invalid Platform")
 	}
@@ -188,134 +236,22 @@ func (cpc *CloudProviderConfig) Generate(dependencies asset.Parents) error {
 		return errors.Wrapf(err, "failed to create %s manifest", cpc.Name())
 	}
 	cpc.ConfigMap = cm
-	cpc.FileList = []*asset.File{
-		{
-			Filename: cloudProviderConfigFileName,
-			Data:     cmData,
-		},
-	}
-	if installConfig.Config.Azure.ARO {
-		session, err := installConfig.Azure.Session()
-		if err != nil {
-			return errors.Wrap(err, "could not get azure session")
-		}
-
-		for _, f := range []struct {
-			filename string
-			data     func(icazure.Credentials) ([]byte, error)
-		}{
-			{
-				filename: aroCloudProviderRoleFileName,
-				data:     aroRole,
-			},
-			{
-				filename: aroCloudProviderRoleBindingFileName,
-				data:     aroRoleBinding,
-			},
-			{
-				filename: aroCloudProviderSecretFileName,
-				data:     aroSecret,
-			},
-		} {
-			b, err := f.data(session.Credentials)
-			if err != nil {
-				return errors.Wrapf(err, "failed to create %s manifest", cpc.Name())
-			}
-
-			cpc.FileList = append(cpc.FileList, &asset.File{
-				Filename: f.filename,
-				Data:     b,
-			})
-		}
+	cpc.File = &asset.File{
+		Filename: cloudProviderConfigFileName,
+		Data:     cmData,
 	}
 	return nil
 }
 
 // Files returns the files generated by the asset.
 func (cpc *CloudProviderConfig) Files() []*asset.File {
-	return cpc.FileList
+	if cpc.File != nil {
+		return []*asset.File{cpc.File}
+	}
+	return []*asset.File{}
 }
 
 // Load loads the already-rendered files back from disk.
 func (cpc *CloudProviderConfig) Load(f asset.FileFetcher) (bool, error) {
 	return false, nil
-}
-
-func aroRole(icazure.Credentials) ([]byte, error) {
-	return yaml.Marshal(&rbacv1.Role{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Role",
-			APIVersion: "rbac.authorization.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "aro-cloud-provider-secret-reader",
-			Namespace: "kube-system",
-		},
-		Rules: []rbacv1.PolicyRule{
-			{
-				Verbs:         []string{"get"},
-				APIGroups:     []string{""},
-				Resources:     []string{"secrets"},
-				ResourceNames: []string{"azure-cloud-provider"},
-			},
-		},
-	})
-}
-
-func aroRoleBinding(icazure.Credentials) ([]byte, error) {
-	return yaml.Marshal(&rbacv1.RoleBinding{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "RoleBinding",
-			APIVersion: "rbac.authorization.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "aro-cloud-provider-secret-read",
-			Namespace: "kube-system",
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      "ServiceAccount",
-				Name:      "azure-cloud-provider",
-				Namespace: "kube-system",
-			},
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "Role",
-			Name:     "aro-cloud-provider-secret-reader",
-		},
-	})
-}
-
-func aroSecret(platformCreds icazure.Credentials) ([]byte, error) {
-	// config is used to created compatible secret to trigger azure cloud
-	// controller config merge behaviour
-	// https://github.com/openshift/origin/blob/release-4.3/vendor/k8s.io/kubernetes/staging/src/k8s.io/legacy-cloud-providers/azure/azure_config.go#L82
-	config := struct {
-		AADClientID     string `json:"aadClientId" yaml:"aadClientId"`
-		AADClientSecret string `json:"aadClientSecret" yaml:"aadClientSecret"`
-	}{
-		AADClientID:     platformCreds.ClientID,
-		AADClientSecret: platformCreds.ClientSecret,
-	}
-
-	b, err := yaml.Marshal(config)
-	if err != nil {
-		return nil, err
-	}
-
-	return yaml.Marshal(&v1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Secret",
-			APIVersion: corev1.SchemeGroupVersion.String(),
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "azure-cloud-provider",
-			Namespace: "kube-system",
-		},
-		Data: map[string][]byte{
-			"cloud-config": b,
-		},
-		Type: v1.SecretTypeOpaque,
-	})
 }

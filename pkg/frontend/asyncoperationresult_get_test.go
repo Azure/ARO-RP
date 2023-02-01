@@ -97,6 +97,17 @@ func TestGetAsyncOperationResult(t *testing.T) {
 			wantStatusCode: http.StatusAccepted,
 		},
 		{
+			name: "operation exists in db, but no subscription match",
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
+					ID:                  mockOpID,
+					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath("33333333-3333-3333-3333-333333333333", "fakeClusterID")),
+				})
+			},
+			wantStatusCode: http.StatusNotFound,
+			wantError:      `404: NotFound: : The entity was not found.`,
+		},
+		{
 			name:           "operation not found in db",
 			wantStatusCode: http.StatusNotFound,
 			wantError:      `404: NotFound: : The entity was not found.`,
@@ -122,7 +133,7 @@ func TestGetAsyncOperationResult(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, nil, nil, nil, nil)
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, nil, api.APIs, &noop.Noop{}, nil, nil, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

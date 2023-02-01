@@ -1,0 +1,36 @@
+FROM registry.access.redhat.com/ubi8/go-toolset:1.17.7 
+
+USER root
+RUN mkdir -p /root/go/src/github.com/Azure/ARO-RP 
+WORKDIR /root/go/src/github.com/Azure/ARO-RP 
+ENV GOPATH=/root/go
+
+#we have multiple steps for copy so we can make use of caching
+COPY vendor/ vendor
+
+COPY docs/ docs
+COPY hack/ hack
+
+COPY swagger/ swagger
+COPY test/ test
+COPY python/ python
+COPY portal/ portal
+
+COPY cmd/ cmd
+COPY pkg/ pkg
+
+#COPY all files with an extension (directories not copied)
+COPY ?*.* .
+COPY Makefile LICENSE .
+
+COPY .git .git
+COPY .gitignore .gitignore
+COPY .pipelines .pipelines
+COPY .gdn .gdn
+COPY .github .github
+COPY .env .env
+COPY .sha256sum .sha256sum
+COPY .config .config
+
+RUN hack/ci-utils/build.sh
+

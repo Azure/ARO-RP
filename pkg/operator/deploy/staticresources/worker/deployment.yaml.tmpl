@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: aro-operator-worker
+    version: "{{ .Version }}"
+  name: aro-operator-worker
+  namespace: openshift-azure-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aro-operator-worker
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: aro-operator-worker
+    spec:
+      containers:
+      - command:
+        - aro
+        args:
+        - operator
+        - worker
+        image: "{{ .Image }}"
+        name: aro-operator
+        {{ if .IsLocalDevelopment}}
+        env:
+        - name: "RP_MODE"
+          value: "development"
+        {{ end }}
+        livenessProbe:
+          httpGet:
+            path: /healthz/ready
+            port: 8080
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+      serviceAccountName: aro-operator-worker
+      serviceAccount: aro-operator-worker
+      priorityClassName: system-cluster-critical

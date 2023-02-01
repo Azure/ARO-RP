@@ -13,13 +13,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/fake"
 	ktesting "k8s.io/client-go/testing"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
 func TestPullSecretReconciler(t *testing.T) {
@@ -43,16 +45,13 @@ func TestPullSecretReconciler(t *testing.T) {
 		return fake.NewSimpleClientset(s, c)
 	}
 
-	newFakeAro := func(a *arov1alpha1.Cluster) *arofake.Clientset {
-		return arofake.NewSimpleClientset(a)
-	}
-
-	baseCluster := arov1alpha1.Cluster{
+	baseCluster := &arov1alpha1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
 		Status:     arov1alpha1.ClusterStatus{},
 		Spec: arov1alpha1.ClusterSpec{
-			Features: arov1alpha1.FeaturesSpec{
-				ReconcilePullSecret: true,
+			OperatorFlags: arov1alpha1.OperatorFlags{
+				controllerEnabled: "true",
+				controllerManaged: "true",
 			},
 		},
 	}
@@ -61,7 +60,7 @@ func TestPullSecretReconciler(t *testing.T) {
 		name        string
 		request     ctrl.Request
 		fakecli     *fake.Clientset
-		arocli      *arofake.Clientset
+		instance    *arov1alpha1.Cluster
 		wantKeys    []string
 		wantErr     bool
 		want        string
@@ -74,7 +73,7 @@ func TestPullSecretReconciler(t *testing.T) {
 			fakecli: newFakecli(nil, &corev1.Secret{Data: map[string][]byte{
 				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
-			arocli:      newFakeAro(&baseCluster),
+			instance:    baseCluster,
 			want:        `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantKeys:    nil,
 			wantCreated: true,
@@ -85,7 +84,7 @@ func TestPullSecretReconciler(t *testing.T) {
 			fakecli: newFakecli(&corev1.Secret{}, &corev1.Secret{Data: map[string][]byte{
 				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
-			arocli:      newFakeAro(&baseCluster),
+			instance:    baseCluster,
 			want:        `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantKeys:    nil,
 			wantCreated: true,
@@ -101,7 +100,7 @@ func TestPullSecretReconciler(t *testing.T) {
 				Data: map[string][]byte{
 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 				}}),
-			arocli:      newFakeAro(&baseCluster),
+			instance:    baseCluster,
 			want:        `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantKeys:    nil,
 			wantUpdated: true,
@@ -115,7 +114,7 @@ func TestPullSecretReconciler(t *testing.T) {
 			}, &corev1.Secret{Data: map[string][]byte{
 				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
-			arocli:      newFakeAro(&baseCluster),
+			instance:    baseCluster,
 			want:        `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantKeys:    nil,
 			wantUpdated: true,
@@ -127,7 +126,7 @@ func TestPullSecretReconciler(t *testing.T) {
 			}, &corev1.Secret{Data: map[string][]byte{
 				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
-			arocli:      newFakeAro(&baseCluster),
+			instance:    baseCluster,
 			want:        `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantKeys:    nil,
 			wantCreated: true,
@@ -142,7 +141,7 @@ func TestPullSecretReconciler(t *testing.T) {
 			}, &corev1.Secret{Data: map[string][]byte{
 				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
-			arocli:   newFakeAro(&baseCluster),
+			instance: baseCluster,
 			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantKeys: nil,
 		},
@@ -150,17 +149,17 @@ func TestPullSecretReconciler(t *testing.T) {
 			name: "valid RH keys present",
 			fakecli: newFakecli(&corev1.Secret{
 				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"cloud.redhat.com":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"cloud.openshift.com":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 				},
 			}, &corev1.Secret{Data: map[string][]byte{
-				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"cloud.redhat.com":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"cloud.openshift.com":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
-			arocli:   newFakeAro(&baseCluster),
-			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"cloud.redhat.com":{"auth":"ZnJlZDplbnRlcg=="}}}`,
-			wantKeys: []string{"registry.redhat.io", "cloud.redhat.com"},
+			instance: baseCluster,
+			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"cloud.openshift.com":{"auth":"ZnJlZDplbnRlcg=="}}}`,
+			wantKeys: []string{"registry.redhat.io", "cloud.openshift.com"},
 		},
 		{
-			name: "disabled feature, valid RH key present",
+			name: "management disabled, valid RH key present",
 			fakecli: newFakecli(&corev1.Secret{
 				Data: map[string][]byte{
 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
@@ -168,21 +167,21 @@ func TestPullSecretReconciler(t *testing.T) {
 			}, &corev1.Secret{Data: map[string][]byte{
 				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
-			arocli: newFakeAro(
-				&arov1alpha1.Cluster{
-					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-					Status:     arov1alpha1.ClusterStatus{},
-					Spec: arov1alpha1.ClusterSpec{
-						Features: arov1alpha1.FeaturesSpec{
-							ReconcilePullSecret: true,
-						},
+			instance: &arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+				Status:     arov1alpha1.ClusterStatus{},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						controllerEnabled: "true",
+						controllerManaged: "false",
 					},
-				}),
+				},
+			},
 			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantKeys: []string{"registry.redhat.io"},
 		},
 		{
-			name: "disabled feature, valid RH key missing",
+			name: "management disabled, valid RH key missing",
 			fakecli: newFakecli(&corev1.Secret{
 				Data: map[string][]byte{
 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
@@ -190,22 +189,24 @@ func TestPullSecretReconciler(t *testing.T) {
 			}, &corev1.Secret{Data: map[string][]byte{
 				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
-			arocli: newFakeAro(
-				&arov1alpha1.Cluster{
-					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-					Status:     arov1alpha1.ClusterStatus{},
-					Spec: arov1alpha1.ClusterSpec{
-						Features: arov1alpha1.FeaturesSpec{
-							ReconcilePullSecret: true,
-						},
+			instance: &arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+				Status:     arov1alpha1.ClusterStatus{},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						controllerEnabled: "true",
+						controllerManaged: "false",
 					},
-				}),
+				},
+			},
 			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantKeys: nil,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+
 			tt.fakecli.PrependReactor("create", "secrets", func(action ktesting.Action) (handled bool, ret kruntime.Object, err error) {
 				if !tt.wantCreated {
 					t.Fatal("Unexpected create")
@@ -227,22 +228,24 @@ func TestPullSecretReconciler(t *testing.T) {
 				return false, nil, nil
 			})
 
+			clientFake := ctrlfake.NewClientBuilder().WithObjects(tt.instance).Build()
+
 			r := &Reconciler{
 				kubernetescli: tt.fakecli,
 				log:           logrus.NewEntry(logrus.StandardLogger()),
-				arocli:        tt.arocli,
+				client:        clientFake,
 			}
 			if tt.request.Name == "" {
 				tt.request.NamespacedName = pullSecretName
 			}
 
-			_, err := r.Reconcile(context.Background(), tt.request)
+			_, err := r.Reconcile(ctx, tt.request)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("PullsecretReconciler.Reconcile() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
-			s, err := r.kubernetescli.CoreV1().Secrets("openshift-config").Get(context.Background(), "pull-secret", metav1.GetOptions{})
+			s, err := r.kubernetescli.CoreV1().Secrets("openshift-config").Get(ctx, "pull-secret", metav1.GetOptions{})
 			if err != nil {
 				t.Error(err)
 			}
@@ -255,7 +258,8 @@ func TestPullSecretReconciler(t *testing.T) {
 				t.Fatalf("Unexpected secret data.\ngot: %s\nwant: %s", string(s.Data[corev1.DockerConfigJsonKey]), tt.want)
 			}
 
-			cluster, err := r.arocli.AroV1alpha1().Clusters().Get(context.Background(), arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+			cluster := &arov1alpha1.Cluster{}
+			err = clientFake.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, cluster)
 			if err != nil {
 				t.Fatal("Error found")
 			}
@@ -274,7 +278,6 @@ func TestPullSecretReconciler(t *testing.T) {
 			if !reflect.DeepEqual(status.RedHatKeysPresent, tt.wantKeys) {
 				t.Fatalf("Unexpected status found\nwant: %v\ngot: %v", tt.wantKeys, status.RedHatKeysPresent)
 			}
-
 		})
 	}
 }
@@ -296,9 +299,9 @@ func TestParseRedHatKeys(t *testing.T) {
 		{
 			name: "with all rh key",
 			ps: &corev1.Secret{Data: map[string][]byte{
-				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.connect.redhat.com":{"auth":"ZnJlZDplbnRlcg=="},"cloud.redhat.com":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.connect.redhat.com":{"auth":"ZnJlZDplbnRlcg=="},"cloud.openshift.com":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}},
-			wantKeys: []string{"registry.redhat.io", "cloud.redhat.com", "registry.connect.redhat.com"},
+			wantKeys: []string{"registry.redhat.io", "cloud.openshift.com", "registry.connect.redhat.com"},
 		},
 	}
 
@@ -316,7 +319,6 @@ func TestParseRedHatKeys(t *testing.T) {
 			if !reflect.DeepEqual(out, tt.wantKeys) {
 				t.Fatalf("Enexpected keys found:\nwant: %v\ngot: %v", tt.wantKeys, out)
 			}
-
 		})
 	}
 }
@@ -649,7 +651,6 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 			if !reflect.DeepEqual(s, tt.wantSecret) {
 				t.Fatalf("Unexpected secret mismatch\ngot: %v\nwant: %v", s, tt.wantSecret)
 			}
-
 		})
 	}
 }

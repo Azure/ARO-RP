@@ -31,79 +31,89 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
+const (
+	ControllerName = "PullSecret"
+
+	controllerEnabled = "aro.pullsecret.enabled"
+	controllerManaged = "aro.pullsecret.managed"
+)
+
 var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
-var rhKeys = []string{"registry.redhat.io", "cloud.redhat.com", "registry.connect.redhat.com"}
+var rhKeys = []string{"registry.redhat.io", "cloud.openshift.com", "registry.connect.redhat.com"}
 
 // Reconciler reconciles a Cluster object
 type Reconciler struct {
 	log *logrus.Entry
 
-	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
+
+	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface) *Reconciler {
 	return &Reconciler{
 		log:           log,
 		kubernetescli: kubernetescli,
-		arocli:        arocli,
+		client:        client,
 	}
 }
 
 // Reconcile will make sure that the ACR part of the pull secret is correct. The
 // conditions under which Reconcile is called are slightly unusual and are as
 // follows:
-// * If the Cluster object changes, we'll see the *Cluster* object requested.
-// * If a Secret object owned by the Cluster object changes (e.g., but not
-//   limited to, the configuration Secret, we'll see the *Cluster* object
-//   requested).
-// * If the pull Secret object (which is not owned by the Cluster object)
-//   changes, we'll see the pull Secret object requested.
+//   - If the Cluster object changes, we'll see the *Cluster* object requested.
+//   - If a Secret object owned by the Cluster object changes (e.g., but not
+//     limited to, the configuration Secret, we'll see the *Cluster* object
+//     requested).
+//   - If the pull Secret object (which is not owned by the Cluster object)
+//     changes, we'll see the pull Secret object requested.
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	instance := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.Features.ReconcilePullSecret {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
-	operatorSecret, err := r.kubernetescli.CoreV1().Secrets(operator.Namespace).Get(ctx, operator.SecretName, metav1.GetOptions{})
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
+	r.log.Debug("running")
 	var userSecret *corev1.Secret
 
-	// reconcile global pull secret
-	// detects if the global pull secret is broken and fixes it by using backup managed by ARO operator
 	userSecret, err = r.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Get(ctx, pullSecretName.Name, metav1.GetOptions{})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return reconcile.Result{}, err
 	}
 
-	// fix pull secret if its broken to have at least the ARO pull secret
-	userSecret, err = r.ensureGlobalPullSecret(ctx, operatorSecret, userSecret)
-	if err != nil {
-		return reconcile.Result{}, err
+	// reconcile global pull secret
+	// detects if the global pull secret is broken and fixes it by using backup managed by ARO operator
+	if instance.Spec.OperatorFlags.GetSimpleBoolean(controllerManaged) {
+		operatorSecret, err := r.kubernetescli.CoreV1().Secrets(operator.Namespace).Get(ctx, operator.SecretName, metav1.GetOptions{})
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		// fix pull secret if its broken to have at least the ARO pull secret
+		userSecret, err = r.ensureGlobalPullSecret(ctx, operatorSecret, userSecret)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	// reconcile cluster status
 	// update the following information:
 	// - list of Red Hat pull-secret keys in status.
-
 	instance.Status.RedHatKeysPresent, err = r.parseRedHatKeys(userSecret)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	_, err = r.arocli.AroV1alpha1().Clusters().UpdateStatus(ctx, instance, metav1.UpdateOptions{})
+	err = r.client.Update(ctx, instance)
 	return reconcile.Result{}, err
 }
 
@@ -127,7 +137,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(pullSecretPredicate),
 		).
-		Named(controllers.PullSecretControllerName).
+		Named(ControllerName).
 		Complete(r)
 }
 
@@ -193,8 +203,9 @@ func (r *Reconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret,
 
 // parseRedHatKeys unmarshal and extract following RH keys from pull-secret:
 //   - redhat.registry.io
-//   - cloud.redhat.com
+//   - cloud.openshift.com
 //   - registry.connect.redhat.com
+//
 // if present, return error when the parsing fail, which means broken secret
 func (r *Reconciler) parseRedHatKeys(secret *corev1.Secret) (foundKeys []string, err error) {
 	// parse keys and validate JSON

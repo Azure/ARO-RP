@@ -1,0 +1,368 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "acrResourceId": {
+            "type": "string"
+        },
+        "azureCloudName": {
+            "type": "string"
+        },
+        "azureSecPackQualysUrl": {
+            "type": "string"
+        },
+        "azureSecPackVSATenantId": {
+            "type": "string"
+        },
+        "databaseAccountName": {
+            "type": "string"
+        },
+        "dbtokenClientId": {
+            "type": "string"
+        },
+        "dbtokenUrl": {
+            "type": "string"
+        },
+        "fluentbitImage": {
+            "type": "string"
+        },
+        "gatewayDomains": {
+            "type": "string",
+            "defaultValue": ""
+        },
+        "gatewayFeatures": {
+            "type": "string",
+            "defaultValue": ""
+        },
+        "gatewayMdsdConfigVersion": {
+            "type": "string"
+        },
+        "gatewayServicePrincipalId": {
+            "type": "string"
+        },
+        "gatewayStorageAccountDomain": {
+            "type": "string"
+        },
+        "gatewayVmSize": {
+            "type": "string",
+            "defaultValue": "Standard_D4s_v3"
+        },
+        "gatewayVmssCapacity": {
+            "type": "int",
+            "defaultValue": 3
+        },
+        "keyvaultDNSSuffix": {
+            "type": "string"
+        },
+        "keyvaultPrefix": {
+            "type": "string"
+        },
+        "mdmFrontendUrl": {
+            "type": "string"
+        },
+        "mdsdEnvironment": {
+            "type": "string"
+        },
+        "nonZonalRegions": {
+            "type": "array",
+            "defaultValue": [
+                "eastasia",
+                "centralindia",
+                "centraluseuap",
+                "koreacentral",
+                "switzerlandnorth",
+                "northcentralus",
+                "uaenorth",
+                "westus"
+            ]
+        },
+        "rpImage": {
+            "type": "string"
+        },
+        "rpMdmAccount": {
+            "type": "string"
+        },
+        "rpMdsdAccount": {
+            "type": "string"
+        },
+        "rpMdsdNamespace": {
+            "type": "string"
+        },
+        "rpResourceGroupName": {
+            "type": "string"
+        },
+        "rpServicePrincipalId": {
+            "type": "string"
+        },
+        "sshPublicKey": {
+            "type": "string"
+        },
+        "vmssCleanupEnabled": {
+            "type": "bool",
+            "defaultValue": true
+        },
+        "vmssName": {
+            "type": "string"
+        }
+    },
+    "resources": [
+        {
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "location": "[resourceGroup().location]",
+            "name": "[substring(parameters('gatewayStorageAccountDomain'), 0, indexOf(parameters('gatewayStorageAccountDomain'), '.'))]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2019-04-01"
+        },
+        {
+            "sku": {
+                "name": "Standard"
+            },
+            "properties": {
+                "frontendIPConfigurations": [
+                    {
+                        "properties": {
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet')]"
+                            }
+                        },
+                        "name": "gateway-frontend",
+                        "zones": "[if(contains(parameters('nonZonalRegions'),toLower(replace(resourceGroup().location, ' ', ''))),'',pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3))]"
+                    }
+                ],
+                "backendAddressPools": [
+                    {
+                        "name": "gateway-backend"
+                    }
+                ],
+                "loadBalancingRules": [
+                    {
+                        "properties": {
+                            "frontendIPConfiguration": {
+                                "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'gateway-lb-internal', 'gateway-frontend')]"
+                            },
+                            "backendAddressPool": {
+                                "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'gateway-lb-internal', 'gateway-backend')]"
+                            },
+                            "probe": {
+                                "id": "[resourceId('Microsoft.Network/loadBalancers/probes', 'gateway-lb-internal', 'gateway-probe')]"
+                            },
+                            "protocol": "Tcp",
+                            "loadDistribution": "Default",
+                            "frontendPort": 443,
+                            "backendPort": 443
+                        },
+                        "name": "gateway-lbrule-https"
+                    },
+                    {
+                        "properties": {
+                            "frontendIPConfiguration": {
+                                "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'gateway-lb-internal', 'gateway-frontend')]"
+                            },
+                            "backendAddressPool": {
+                                "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'gateway-lb-internal', 'gateway-backend')]"
+                            },
+                            "probe": {
+                                "id": "[resourceId('Microsoft.Network/loadBalancers/probes', 'gateway-lb-internal', 'gateway-probe')]"
+                            },
+                            "protocol": "Tcp",
+                            "loadDistribution": "Default",
+                            "frontendPort": 80,
+                            "backendPort": 80
+                        },
+                        "name": "gateway-lbrule-http"
+                    }
+                ],
+                "probes": [
+                    {
+                        "properties": {
+                            "protocol": "Http",
+                            "port": 80,
+                            "numberOfProbes": 2,
+                            "requestPath": "/healthz/ready"
+                        },
+                        "name": "gateway-probe"
+                    }
+                ]
+            },
+            "name": "gateway-lb-internal",
+            "type": "Microsoft.Network/loadBalancers",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2020-08-01"
+        },
+        {
+            "properties": {
+                "loadBalancerFrontendIpConfigurations": [
+                    {
+                        "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'gateway-lb-internal', 'gateway-frontend')]"
+                    }
+                ],
+                "ipConfigurations": [
+                    {
+                        "properties": {
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet')]"
+                            }
+                        },
+                        "name": "gateway-pls-001-nic"
+                    }
+                ],
+                "enableProxyProtocol": true
+            },
+            "name": "gateway-pls-001",
+            "type": "Microsoft.Network/privateLinkServices",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2020-08-01",
+            "dependsOn": [
+                "Microsoft.Network/loadBalancers/gateway-lb-internal"
+            ]
+        },
+        {
+            "sku": {
+                "name": "[parameters('gatewayVmSize')]",
+                "tier": "Standard",
+                "capacity": "[parameters('gatewayVmssCapacity')]"
+            },
+            "properties": {
+                "upgradePolicy": {
+                    "mode": "Manual"
+                },
+                "virtualMachineProfile": {
+                    "osProfile": {
+                        "computerNamePrefix": "[concat('gateway-', parameters('vmssName'), '-')]",
+                        "adminUsername": "cloud-user",
+                        "linuxConfiguration": {
+                            "disablePasswordAuthentication": true,
+                            "ssh": {
+                                "publicKeys": [
+                                    {
+                                        "path": "/home/cloud-user/.ssh/authorized_keys",
+                                        "keyData": "[parameters('sshPublicKey')]"
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "storageProfile": {
+                        "imageReference": {
+                            "publisher": "RedHat",
+                            "offer": "RHEL",
+                            "sku": "8-LVM",
+                            "version": "latest"
+                        },
+                        "osDisk": {
+                            "createOption": "FromImage",
+                            "managedDisk": {
+                                "storageAccountType": "Premium_LRS"
+                            }
+                        }
+                    },
+                    "networkProfile": {
+                        "healthProbe": {
+                            "id": "[resourceId('Microsoft.Network/loadBalancers/probes', 'gateway-lb-internal', 'gateway-probe')]"
+                        },
+                        "networkInterfaceConfigurations": [
+                            {
+                                "name": "gateway-vmss-nic",
+                                "properties": {
+                                    "primary": true,
+                                    "enableAcceleratedNetworking": false,
+                                    "ipConfigurations": [
+                                        {
+                                            "name": "gateway-vmss-ipconfig",
+                                            "properties": {
+                                                "subnet": {
+                                                    "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet')]"
+                                                },
+                                                "primary": true,
+                                                "publicIPAddressConfiguration": {
+                                                    "name": "gateway-vmss-pip"
+                                                },
+                                                "loadBalancerBackendAddressPools": [
+                                                    {
+                                                        "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'gateway-lb-internal', 'gateway-backend')]"
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    "diagnosticsProfile": {
+                        "bootDiagnostics": {
+                            "enabled": true,
+                            "storageUri": "[concat('https://', parameters('gatewayStorageAccountDomain'), '/')]"
+                        }
+                    },
+                    "extensionProfile": {
+                        "extensions": [
+                            {
+                                "name": "gateway-vmss-cse",
+                                "properties": {
+                                    "publisher": "Microsoft.Azure.Extensions",
+                                    "type": "CustomScript",
+                                    "typeHandlerVersion": "2.0",
+                                    "autoUpgradeMinorVersion": true,
+                                    "settings": {},
+                                    "protectedSettings": {
+                                        "script": "[base64(concat(base64ToString('c2V0IC1leAoK'),'ACRRESOURCEID=$(base64 -d \u003c\u003c\u003c''',base64(parameters('acrResourceId')),''')\n','AZURECLOUDNAME=$(base64 -d \u003c\u003c\u003c''',base64(parameters('azureCloudName')),''')\n','AZURESECPACKQUALYSURL=$(base64 -d \u003c\u003c\u003c''',base64(parameters('azureSecPackQualysUrl')),''')\n','AZURESECPACKVSATENANTID=$(base64 -d \u003c\u003c\u003c''',base64(parameters('azureSecPackVSATenantId')),''')\n','DATABASEACCOUNTNAME=$(base64 -d \u003c\u003c\u003c''',base64(parameters('databaseAccountName')),''')\n','DBTOKENCLIENTID=$(base64 -d \u003c\u003c\u003c''',base64(parameters('dbtokenClientId')),''')\n','DBTOKENURL=$(base64 -d \u003c\u003c\u003c''',base64(parameters('dbtokenUrl')),''')\n','MDMFRONTENDURL=$(base64 -d \u003c\u003c\u003c''',base64(parameters('mdmFrontendUrl')),''')\n','MDSDENVIRONMENT=$(base64 -d \u003c\u003c\u003c''',base64(parameters('mdsdEnvironment')),''')\n','FLUENTBITIMAGE=$(base64 -d \u003c\u003c\u003c''',base64(parameters('fluentbitImage')),''')\n','GATEWAYMDSDCONFIGVERSION=$(base64 -d \u003c\u003c\u003c''',base64(parameters('gatewayMdsdConfigVersion')),''')\n','GATEWAYDOMAINS=$(base64 -d \u003c\u003c\u003c''',base64(parameters('gatewayDomains')),''')\n','GATEWAYFEATURES=$(base64 -d \u003c\u003c\u003c''',base64(parameters('gatewayFeatures')),''')\n','KEYVAULTDNSSUFFIX=$(base64 -d \u003c\u003c\u003c''',base64(parameters('keyvaultDNSSuffix')),''')\n','KEYVAULTPREFIX=$(base64 -d \u003c\u003c\u003c''',base64(parameters('keyvaultPrefix')),''')\n','RPIMAGE=$(base64 -d \u003c\u003c\u003c''',base64(parameters('rpImage')),''')\n','RPMDMACCOUNT=$(base64 -d \u003c\u003c\u003c''',base64(parameters('rpMdmAccount')),''')\n','RPMDSDACCOUNT=$(base64 -d \u003c\u003c\u003c''',base64(parameters('rpMdsdAccount')),''')\n','RPMDSDNAMESPACE=$(base64 -d \u003c\u003c\u003c''',base64(parameters('rpMdsdNamespace')),''')\n','MDMIMAGE=''/distroless/genevamdm:mariner_20221026.2''\n','LOCATION=$(base64 -d \u003c\u003c\u003c''',base64(resourceGroup().location),''')\n','SUBSCRIPTIONID=$(base64 -d \u003c\u003c\u003c''',base64(subscription().subscriptionId),''')\n','RESOURCEGROUPNAME=$(base64 -d \u003c\u003c\u003c''',base64(resourceGroup().name),''')\n','\n',base64ToString('ZWNobyAic2V0dGluZyBzc2ggcGFzc3dvcmQgYXV0aGVudGljYXRpb24iCiMgV2UgbmVlZCB0byBtYW51YWxseSBzZXQgUGFzc3dvcmRBdXRoZW50aWNhdGlvbiB0byB0cnVlIGluIG9yZGVyIGZvciB0aGUgVk1TUyBBY2Nlc3MgSklUIHRvIHdvcmsKc2VkIC1pICdzL1Bhc3N3b3JkQXV0aGVudGljYXRpb24gbm8vUGFzc3dvcmRBdXRoZW50aWNhdGlvbiB5ZXMvZycgL2V0Yy9zc2gvc3NoZF9jb25maWcKc3lzdGVtY3RsIHJlbG9hZCBzc2hkLnNlcnZpY2UKCmVjaG8gInJ1bm5pbmcgeXVtIHVwZGF0ZSIKeXVtIC15IC14IFdBTGludXhBZ2VudCAteCBXQUxpbnV4QWdlbnQtdWRldiB1cGRhdGUKCmVjaG8gImV4dGVuZGluZyBmaWxlc3lzdGVtcyIKbHZleHRlbmQgLWwgKzUwJUZSRUUgL2Rldi9yb290dmcvcm9vdGx2Cnhmc19ncm93ZnMgLwoKbHZleHRlbmQgLWwgKzEwMCVGUkVFIC9kZXYvcm9vdHZnL3Zhcmx2Cnhmc19ncm93ZnMgL3ZhcgoKCnJwbSAtLWltcG9ydCBodHRwczovL2RsLmZlZG9yYXByb2plY3Qub3JnL3B1Yi9lcGVsL1JQTS1HUEctS0VZLUVQRUwtOApycG0gLS1pbXBvcnQgaHR0cHM6Ly9wYWNrYWdlcy5taWNyb3NvZnQuY29tL2tleXMvbWljcm9zb2Z0LmFzYwoKZm9yIGF0dGVtcHQgaW4gezEuLjV9OyBkbwogIHl1bSAteSBpbnN0YWxsIGh0dHBzOi8vZGwuZmVkb3JhcHJvamVjdC5vcmcvcHViL2VwZWwvZXBlbC1yZWxlYXNlLWxhdGVzdC04Lm5vYXJjaC5ycG0gJiYgYnJlYWsKICBpZiBbWyAke2F0dGVtcHR9IC1sdCA1IF1dOyB0aGVuIHNsZWVwIDEwOyBlbHNlIGV4aXQgMTsgZmkKZG9uZQoKZWNobyAiY29uZmlndXJpbmcgbG9ncm90YXRlIgpjYXQgPi9ldGMvbG9ncm90YXRlLmNvbmYgPDwnRU9GJwojIHNlZSAibWFuIGxvZ3JvdGF0ZSIgZm9yIGRldGFpbHMKIyByb3RhdGUgbG9nIGZpbGVzIHdlZWtseQp3ZWVrbHkKCiMga2VlcCAyIHdlZWtzIHdvcnRoIG9mIGJhY2tsb2dzCnJvdGF0ZSAyCgojIGNyZWF0ZSBuZXcgKGVtcHR5KSBsb2cgZmlsZXMgYWZ0ZXIgcm90YXRpbmcgb2xkIG9uZXMKY3JlYXRlCgojIHVzZSBkYXRlIGFzIGEgc3VmZml4IG9mIHRoZSByb3RhdGVkIGZpbGUKZGF0ZWV4dAoKIyB1bmNvbW1lbnQgdGhpcyBpZiB5b3Ugd2FudCB5b3VyIGxvZyBmaWxlcyBjb21wcmVzc2VkCmNvbXByZXNzCgojIFJQTSBwYWNrYWdlcyBkcm9wIGxvZyByb3RhdGlvbiBpbmZvcm1hdGlvbiBpbnRvIHRoaXMgZGlyZWN0b3J5CmluY2x1ZGUgL2V0Yy9sb2dyb3RhdGUuZAoKIyBubyBwYWNrYWdlcyBvd24gd3RtcCBhbmQgYnRtcCAtLSB3ZSdsbCByb3RhdGUgdGhlbSBoZXJlCi92YXIvbG9nL3d0bXAgewogICAgbW9udGhseQogICAgY3JlYXRlIDA2NjQgcm9vdCB1dG1wCiAgICAgICAgbWluc2l6ZSAxTQogICAgcm90YXRlIDEKfQoKL3Zhci9sb2cvYnRtcCB7CiAgICBtaXNzaW5nb2sKICAgIG1vbnRobHkKICAgIGNyZWF0ZSAwNjAwIHJvb3QgdXRtcAogICAgcm90YXRlIDEKfQpFT0YKCmVjaG8gImNvbmZpZ3VyaW5nIHl1bSByZXBvc2l0b3J5IGFuZCBydW5uaW5nIHl1bSB1cGRhdGUiCmNhdCA+L2V0Yy95dW0ucmVwb3MuZC9henVyZS5yZXBvIDw8J0VPRicKW2F6dXJlLWNsaV0KbmFtZT1henVyZS1jbGkKYmFzZXVybD1odHRwczovL3BhY2thZ2VzLm1pY3Jvc29mdC5jb20veXVtcmVwb3MvYXp1cmUtY2xpCmVuYWJsZWQ9eWVzCmdwZ2NoZWNrPXllcwoKW2F6dXJlY29yZV0KbmFtZT1henVyZWNvcmUKYmFzZXVybD1odHRwczovL3BhY2thZ2VzLm1pY3Jvc29mdC5jb20veXVtcmVwb3MvYXp1cmVjb3JlCmVuYWJsZWQ9eWVzCmdwZ2NoZWNrPW5vCkVPRgoKc2VtYW5hZ2UgZmNvbnRleHQgLWEgLXQgdmFyX2xvZ190ICIvdmFyL2xvZy9qb3VybmFsKC8uKik/Igpta2RpciAtcCAvdmFyL2xvZy9qb3VybmFsCgpmb3IgYXR0ZW1wdCBpbiB7MS4uNX07IGRvCiAgeXVtIC15IGluc3RhbGwgY2xhbWF2IGF6c2VjLWNsYW1hdiBhenNlYy1tb25pdG9yIGF6dXJlLWNsaSBhenVyZS1tZHNkIGF6dXJlLXNlY3VyaXR5IHBvZG1hbi1kb2NrZXIgb3BlbnNzbC1wZXJsIHB5dGhvbjMgJiYgYnJlYWsKICAjIGhhY2sgLSB3ZSBhcmUgaW5zdGFsbGluZyBweXRob24zIG9uIGhvc3RzIGR1ZSB0byBhbiBpc3N1ZSB3aXRoIEF6dXJlIExpbnV4IEV4dGVuc2lvbnMgaHR0cHM6Ly9naXRodWIuY29tL0F6dXJlL2F6dXJlLWxpbnV4LWV4dGVuc2lvbnMvcHVsbC8xNTA1CiAgaWYgW1sgJHthdHRlbXB0fSAtbHQgNSBdXTsgdGhlbiBzbGVlcCAxMDsgZWxzZSBleGl0IDE7IGZpCmRvbmUKCmVjaG8gImFwcGx5aW5nIGZpcmV3YWxsIHJ1bGVzIgojIGh0dHBzOi8vYWNjZXNzLnJlZGhhdC5jb20vc2VjdXJpdHkvY3ZlL2N2ZS0yMDIwLTEzNDAxCmNhdCA+L2V0Yy9zeXNjdGwuZC8wMi1kaXNhYmxlLWFjY2VwdC1yYS5jb25mIDw8J0VPRicKbmV0LmlwdjYuY29uZi5hbGwuYWNjZXB0X3JhPTAKRU9GCgpjYXQgPi9ldGMvc3lzY3RsLmQvMDEtZGlzYWJsZS1jb3JlLmNvbmYgPDwnRU9GJwprZXJuZWwuY29yZV9wYXR0ZXJuID0gfC9iaW4vdHJ1ZQpFT0YKc3lzY3RsIC0tc3lzdGVtCgpmaXJld2FsbC1jbWQgLS1hZGQtcG9ydD04MC90Y3AgLS1wZXJtYW5lbnQKZmlyZXdhbGwtY21kIC0tYWRkLXBvcnQ9NDQzL3RjcCAtLXBlcm1hbmVudAoKZWNobyAibG9nZ2luZyBpbnRvIHByb2QgYWNyIgpleHBvcnQgQVpVUkVfQ0xPVURfTkFNRT0kQVpVUkVDTE9VRE5BTUUKYXogbG9naW4gLWkgLS1hbGxvdy1uby1zdWJzY3JpcHRpb25zCgojIFRoZSBtYW5hZ2VkIGlkZW50aXR5IHRoYXQgdGhlIFZNIHJ1bnMgYXMgb25seSBoYXMgYSBzaW5nbGUgcm9sZWFzc2lnbm1lbnQuCiMgVGhpcyByb2xlIGFzc2lnbm1lbnQgaXMgQUNSUHVsbCB3aGljaCBpcyBub3QgbmVjZXNzYXJpbHkgcHJlc2VudCBpbiB0aGUKIyBzdWJzY3JpcHRpb24gd2UncmUgZGVwbG95aW5nIGludG8uICBJZiB0aGUgaWRlbnRpdHkgZG9lcyBub3QgaGF2ZSBhbnkKIyByb2xlIGFzc2lnbm1lbnRzIHNjb3BlZCBvbiB0aGUgc3Vic2NyaXB0aW9uIHdlJ3JlIGRlcGxveWluZyBpbnRvLCBpdCB3aWxsCiMgbm90IHNob3cgb24gYXogbG9naW4gLWksIHdoaWNoIGlzIHdoeSB0aGUgYmVsb3cgbGluZSBpcyBjb21tZW50ZWQuCiMgYXogYWNjb3VudCBzZXQgLXMgIiRTVUJTQ1JJUFRJT05JRCIKCiMgU3VwcHJlc3MgZW11bGF0aW9uIG91dHB1dCBmb3IgcG9kbWFuIGluc3RlYWQgb2YgZG9ja2VyIGZvciBheiBhY3IgY29tcGF0YWJpbGl0eQpta2RpciAtcCAvZXRjL2NvbnRhaW5lcnMvCnRvdWNoIC9ldGMvY29udGFpbmVycy9ub2RvY2tlcgoKbWtkaXIgLXAgL3Jvb3QvLmRvY2tlcgpSRUdJU1RSWV9BVVRIX0ZJTEU9L3Jvb3QvLmRvY2tlci9jb25maWcuanNvbiBheiBhY3IgbG9naW4gLS1uYW1lICIkKHNlZCAtZSAnc3wuKi98fCcgPDw8IiRBQ1JSRVNPVVJDRUlEIikiCgpNRE1JTUFHRT0iJHtSUElNQUdFJSUvKn0vJHtNRE1JTUFHRSMjKi99Igpkb2NrZXIgcHVsbCAiJE1ETUlNQUdFIgpkb2NrZXIgcHVsbCAiJFJQSU1BR0UiCmRvY2tlciBwdWxsICIkRkxVRU5UQklUSU1BR0UiCgpheiBsb2dvdXQKCmVjaG8gImNvbmZpZ3VyaW5nIGZsdWVudGJpdCBzZXJ2aWNlIgpta2RpciAtcCAvZXRjL2ZsdWVudGJpdC8KbWtkaXIgLXAgL3Zhci9saWIvZmx1ZW50CgpjYXQgPi9ldGMvZmx1ZW50Yml0L2ZsdWVudGJpdC5jb25mIDw8J0VPRicKW0lOUFVUXQoJTmFtZSBzeXN0ZW1kCglUYWcgam91cm5hbGQKCVN5c3RlbWRfRmlsdGVyIF9DT01NPWFybwoKW0ZJTFRFUl0KCU5hbWUgbW9kaWZ5CglNYXRjaCBqb3VybmFsZAoJUmVtb3ZlX3dpbGRjYXJkIF8KCVJlbW92ZSBUSU1FU1RBTVAKCltPVVRQVVRdCglOYW1lIGZvcndhcmQKCU1hdGNoICoKCVBvcnQgMjkyMzAKRU9GCgplY2hvICJGTFVFTlRCSVRJTUFHRT0kRkxVRU5UQklUSU1BR0UiID4vZXRjL3N5c2NvbmZpZy9mbHVlbnRiaXQKCmNhdCA+L2V0Yy9zeXN0ZW1kL3N5c3RlbS9mbHVlbnRiaXQuc2VydmljZSA8PCdFT0YnCltVbml0XQpBZnRlcj1uZXR3b3JrLW9ubGluZS50YXJnZXQKV2FudHM9bmV0d29yay1vbmxpbmUudGFyZ2V0ClN0YXJ0TGltaXRJbnRlcnZhbFNlYz0wCgpbU2VydmljZV0KUmVzdGFydFNlYz0xcwpFbnZpcm9ubWVudEZpbGU9L2V0Yy9zeXNjb25maWcvZmx1ZW50Yml0CkV4ZWNTdGFydFByZT0tL3Vzci9iaW4vZG9ja2VyIHJtIC1mICVOCkV4ZWNTdGFydD0vdXNyL2Jpbi9kb2NrZXIgcnVuIFwKICAtLXNlY3VyaXR5LW9wdCBsYWJlbD1kaXNhYmxlIFwKICAtLWVudHJ5cG9pbnQgL29wdC90ZC1hZ2VudC1iaXQvYmluL3RkLWFnZW50LWJpdCBcCiAgLS1uZXQ9aG9zdCBcCiAgLS1ob3N0bmFtZSAlSCBcCiAgLS1uYW1lICVOIFwKICAtLXJtIFwKICAtLWNhcC1kcm9wIG5ldF9yYXcgXAogIC12IC9ldGMvZmx1ZW50Yml0L2ZsdWVudGJpdC5jb25mOi9ldGMvZmx1ZW50Yml0L2ZsdWVudGJpdC5jb25mIFwKICAtdiAvdmFyL2xpYi9mbHVlbnQ6L3Zhci9saWIvZmx1ZW50OnogXAogIC12IC92YXIvbG9nL2pvdXJuYWw6L3Zhci9sb2cvam91cm5hbDpybyBcCiAgLXYgL2V0Yy9tYWNoaW5lLWlkOi9ldGMvbWFjaGluZS1pZDpybyBcCiAgJEZMVUVOVEJJVElNQUdFIFwKICAtYyAvZXRjL2ZsdWVudGJpdC9mbHVlbnRiaXQuY29uZgoKRXhlY1N0b3A9L3Vzci9iaW4vZG9ja2VyIHN0b3AgJU4KUmVzdGFydD1hbHdheXMKUmVzdGFydFNlYz01ClN0YXJ0TGltaXRJbnRlcnZhbD0wCgpbSW5zdGFsbF0KV2FudGVkQnk9bXVsdGktdXNlci50YXJnZXQKRU9GCgplY2hvICJjb25maWd1cmluZyBtZG0gc2VydmljZSIKY2F0ID4vZXRjL3N5c2NvbmZpZy9tZG0gPDxFT0YKTURNRlJPTlRFTkRVUkw9JyRNRE1GUk9OVEVORFVSTCcKTURNSU1BR0U9JyRNRE1JTUFHRScKTURNU09VUkNFRU5WSVJPTk1FTlQ9JyRMT0NBVElPTicKTURNU09VUkNFUk9MRT1nYXRld2F5Ck1ETVNPVVJDRVJPTEVJTlNUQU5DRT0nJChob3N0bmFtZSknCkVPRgoKbWtkaXIgL3Zhci9ldHcKY2F0ID4vZXRjL3N5c3RlbWQvc3lzdGVtL21kbS5zZXJ2aWNlIDw8J0VPRicKW1VuaXRdCkFmdGVyPW5ldHdvcmstb25saW5lLnRhcmdldApXYW50cz1uZXR3b3JrLW9ubGluZS50YXJnZXQKCltTZXJ2aWNlXQpFbnZpcm9ubWVudEZpbGU9L2V0Yy9zeXNjb25maWcvbWRtCkV4ZWNTdGFydFByZT0tL3Vzci9iaW4vZG9ja2VyIHJtIC1mICVOCkV4ZWNTdGFydD0vdXNyL2Jpbi9kb2NrZXIgcnVuIFwKICAtLWVudHJ5cG9pbnQgL3Vzci9zYmluL01ldHJpY3NFeHRlbnNpb24gXAogIC0taG9zdG5hbWUgJUggXAogIC0tbmFtZSAlTiBcCiAgLS1ybSBcCiAgLS1jYXAtZHJvcCBuZXRfcmF3IFwKICAtbSAyZyBcCiAgLXYgL2V0Yy9tZG0ucGVtOi9ldGMvbWRtLnBlbSBcCiAgLXYgL3Zhci9ldHc6L3Zhci9ldHc6eiBcCiAgJE1ETUlNQUdFIFwKICAtQ2VydEZpbGUgL2V0Yy9tZG0ucGVtIFwKICAtRnJvbnRFbmRVcmwgJE1ETUZST05URU5EVVJMIFwKICAtTG9nZ2VyIENvbnNvbGUgXAogIC1Mb2dMZXZlbCBXYXJuaW5nIFwKICAtUHJpdmF0ZUtleUZpbGUgL2V0Yy9tZG0ucGVtIFwKICAtU291cmNlRW52aXJvbm1lbnQgJE1ETVNPVVJDRUVOVklST05NRU5UIFwKICAtU291cmNlUm9sZSAkTURNU09VUkNFUk9MRSBcCiAgLVNvdXJjZVJvbGVJbnN0YW5jZSAkTURNU09VUkNFUk9MRUlOU1RBTkNFCkV4ZWNTdG9wPS91c3IvYmluL2RvY2tlciBzdG9wICVOClJlc3RhcnQ9YWx3YXlzClJlc3RhcnRTZWM9MQpTdGFydExpbWl0SW50ZXJ2YWw9MAoKW0luc3RhbGxdCldhbnRlZEJ5PW11bHRpLXVzZXIudGFyZ2V0CkVPRgoKZWNobyAiY29uZmlndXJpbmcgYXJvLWdhdGV3YXkgc2VydmljZSIKY2F0ID4vZXRjL3N5c2NvbmZpZy9hcm8tZ2F0ZXdheSA8PEVPRgpBQ1JfUkVTT1VSQ0VfSUQ9JyRBQ1JSRVNPVVJDRUlEJwpEQVRBQkFTRV9BQ0NPVU5UX05BTUU9JyREQVRBQkFTRUFDQ09VTlROQU1FJwpBWlVSRV9EQlRPS0VOX0NMSUVOVF9JRD0nJERCVE9LRU5DTElFTlRJRCcKREJUT0tFTl9VUkw9JyREQlRPS0VOVVJMJwpNRE1fQUNDT1VOVD0iJFJQTURNQUNDT1VOVCIKTURNX05BTUVTUEFDRT1HYXRld2F5CkdBVEVXQVlfRE9NQUlOUz0nJEdBVEVXQVlET01BSU5TJwpHQVRFV0FZX0ZFQVRVUkVTPSckR0FURVdBWUZFQVRVUkVTJwpSUElNQUdFPSckUlBJTUFHRScKRU9GCgpjYXQgPi9ldGMvc3lzdGVtZC9zeXN0ZW0vYXJvLWdhdGV3YXkuc2VydmljZSA8PCdFT0YnCltVbml0XQpBZnRlcj1uZXR3b3JrLW9ubGluZS50YXJnZXQKV2FudHM9bmV0d29yay1vbmxpbmUudGFyZ2V0CgpbU2VydmljZV0KRW52aXJvbm1lbnRGaWxlPS9ldGMvc3lzY29uZmlnL2Fyby1nYXRld2F5CkV4ZWNTdGFydFByZT0tL3Vzci9iaW4vZG9ja2VyIHJtIC1mICVOCkV4ZWNTdGFydD0vdXNyL2Jpbi9kb2NrZXIgcnVuIFwKICAtLWhvc3RuYW1lICVIIFwKICAtLW5hbWUgJU4gXAogIC0tcm0gXAogIC0tY2FwLWRyb3AgbmV0X3JhdyBcCiAgLWUgQUNSX1JFU09VUkNFX0lEIFwKICAtZSBEQVRBQkFTRV9BQ0NPVU5UX05BTUUgXAogIC1lIEFaVVJFX0RCVE9LRU5fQ0xJRU5UX0lEIFwKICAtZSBEQlRPS0VOX1VSTCBcCiAgLWUgR0FURVdBWV9ET01BSU5TIFwKICAtZSBHQVRFV0FZX0ZFQVRVUkVTIFwKICAtZSBNRE1fQUNDT1VOVCBcCiAgLWUgTURNX05BTUVTUEFDRSBcCiAgLW0gMmcgXAogIC1wIDgwOjgwODAgXAogIC1wIDQ0Mzo4NDQzIFwKICAtdiAvcnVuL3N5c3RlbWQvam91cm5hbDovcnVuL3N5c3RlbWQvam91cm5hbCBcCiAgLXYgL3Zhci9ldHc6L3Zhci9ldHc6eiBcCiAgJFJQSU1BR0UgXAogIGdhdGV3YXkKRXhlY1N0b3A9L3Vzci9iaW4vZG9ja2VyIHN0b3AgLXQgMzYwMCAlTgpUaW1lb3V0U3RvcFNlYz0zNjAwClJlc3RhcnQ9YWx3YXlzClJlc3RhcnRTZWM9MQpTdGFydExpbWl0SW50ZXJ2YWw9MAoKW0luc3RhbGxdCldhbnRlZEJ5PW11bHRpLXVzZXIudGFyZ2V0CkVPRgoKY2hjb24gLVIgc3lzdGVtX3U6b2JqZWN0X3I6dmFyX2xvZ190OnMwIC92YXIvb3B0L21pY3Jvc29mdC9saW51eG1vbmFnZW50Cgpta2RpciAtcCAvdmFyL2xpYi93YWFnZW50L01pY3Jvc29mdC5BenVyZS5LZXlWYXVsdC5TdG9yZQoKZWNobyAiY29uZmlndXJpbmcgbWRzZCBhbmQgbWRtIHNlcnZpY2VzIgpmb3IgdmFyIGluICJtZHNkIiAibWRtIjsgZG8KY2F0ID4vZXRjL3N5c3RlbWQvc3lzdGVtL2Rvd25sb2FkLSR2YXItY3JlZGVudGlhbHMuc2VydmljZSA8PEVPRgpbVW5pdF0KRGVzY3JpcHRpb249UGVyaW9kaWMgJHZhciBjcmVkZW50aWFscyByZWZyZXNoCgpbU2VydmljZV0KVHlwZT1vbmVzaG90CkV4ZWNTdGFydD0vdXNyL2xvY2FsL2Jpbi9kb3dubG9hZC1jcmVkZW50aWFscy5zaCAkdmFyCkVPRgoKY2F0ID4vZXRjL3N5c3RlbWQvc3lzdGVtL2Rvd25sb2FkLSR2YXItY3JlZGVudGlhbHMudGltZXIgPDxFT0YKW1VuaXRdCkRlc2NyaXB0aW9uPVBlcmlvZGljICR2YXIgY3JlZGVudGlhbHMgcmVmcmVzaApBZnRlcj1uZXR3b3JrLW9ubGluZS50YXJnZXQKV2FudHM9bmV0d29yay1vbmxpbmUudGFyZ2V0CgpbVGltZXJdCk9uQm9vdFNlYz0wbWluCk9uQ2FsZW5kYXI9MC8xMjowMDowMApBY2N1cmFjeVNlYz01cwoKW0luc3RhbGxdCldhbnRlZEJ5PXRpbWVycy50YXJnZXQKRU9GCmRvbmUKCmNhdCA+L3Vzci9sb2NhbC9iaW4vZG93bmxvYWQtY3JlZGVudGlhbHMuc2ggPDxFT0YKIyEvYmluL2Jhc2gKc2V0IC1ldQoKQ09NUE9ORU5UPSJcJDEiCmVjaG8gIkRvd25sb2FkIFwkQ09NUE9ORU5UIGNyZWRlbnRpYWxzIgoKVEVNUF9ESVI9XCQobWt0ZW1wIC1kKQpleHBvcnQgQVpVUkVfQ09ORklHX0RJUj1cJChta3RlbXAgLWQpCgplY2hvICJMb2dnaW5nIGludG8gQXp1cmUuLi4iClJFVFJJRVM9Mwp3aGlsZSBbICJcJFJFVFJJRVMiIC1ndCAwIF07IGRvCiAgICBpZiBheiBsb2dpbiAtaSAtLWFsbG93LW5vLXN1YnNjcmlwdGlvbnMKICAgIHRoZW4KICAgICAgICBlY2hvICJheiBsb2dpbiBzdWNjZXNzZnVsIgogICAgICAgIGJyZWFrCiAgICBlbHNlCiAgICAgICAgZWNobyAiYXogbG9naW4gZmFpbGVkLiBSZXRyeWluZy4uLiIKICAgICAgICBsZXQgUkVUUklFUy09MQogICAgICAgIHNsZWVwIDUKICAgIGZpCmRvbmUKCnRyYXAgImNsZWFudXAiIEVYSVQKCmNsZWFudXAoKSB7CiAgYXogbG9nb3V0CiAgW1sgIlwkVEVNUF9ESVIiID1+IC90bXAvLisgXV0gJiYgcm0gLXJmIFwkVEVNUF9ESVIKICBbWyAiXCRBWlVSRV9DT05GSUdfRElSIiA9fiAvdG1wLy4rIF1dICYmIHJtIC1yZiBcJEFaVVJFX0NPTkZJR19ESVIKfQoKaWYgWyAiXCRDT01QT05FTlQiID0gIm1kbSIgXTsgdGhlbgogIENVUlJFTlRfQ0VSVF9GSUxFPSIvZXRjL21kbS5wZW0iCmVsaWYgWyAiXCRDT01QT05FTlQiID0gIm1kc2QiIF07IHRoZW4KICBDVVJSRU5UX0NFUlRfRklMRT0iL3Zhci9saWIvd2FhZ2VudC9NaWNyb3NvZnQuQXp1cmUuS2V5VmF1bHQuU3RvcmUvbWRzZC5wZW0iCmVsc2UKICBlY2hvIEludmFsaWQgdXNhZ2UgJiYgZXhpdCAxCmZpCgpTRUNSRVRfTkFNRT0iZ3d5LVwke0NPTVBPTkVOVH0iCk5FV19DRVJUX0ZJTEU9IlwkVEVNUF9ESVIvXCRDT01QT05FTlQucGVtIgpmb3IgYXR0ZW1wdCBpbiB7MS4uNX07IGRvCiAgYXoga2V5dmF1bHQgc2VjcmV0IGRvd25sb2FkIC0tZmlsZSBcJE5FV19DRVJUX0ZJTEUgLS1pZCAiaHR0cHM6Ly8kS0VZVkFVTFRQUkVGSVgtZ3d5LiRLRVlWQVVMVEROU1NVRkZJWC9zZWNyZXRzL1wkU0VDUkVUX05BTUUiICYmIGJyZWFrCiAgaWYgW1sgXCRhdHRlbXB0IC1sdCA1IF1dOyB0aGVuIHNsZWVwIDEwOyBlbHNlIGV4aXQgMTsgZmkKZG9uZQoKaWYgWyAtZiBcJE5FV19DRVJUX0ZJTEUgXTsgdGhlbgogIGlmIFsgIlwkQ09NUE9ORU5UIiA9ICJtZHNkIiBdOyB0aGVuCiAgICBjaG93biBzeXNsb2c6c3lzbG9nIFwkTkVXX0NFUlRfRklMRQogIGVsc2UKICAgIHNlZCAtaSAtbmUgJzEsL0VORCBDRVJUSUZJQ0FURS8gcCcgXCRORVdfQ0VSVF9GSUxFCiAgZmkKICBpZiAhIGRpZmYgJE5FV19DRVJUX0ZJTEUgJENVUlJFTlRfQ0VSVF9GSUxFID4vZGV2L251bGwgMj4mMTsgdGhlbgogICAgY2htb2QgMDYwMCBcJE5FV19DRVJUX0ZJTEUKICAgIG12IFwkTkVXX0NFUlRfRklMRSBcJENVUlJFTlRfQ0VSVF9GSUxFCiAgZmkKZWxzZQogIGVjaG8gRmFpbGVkIHRvIHJlZnJlc2ggY2VydGlmaWNhdGUgZm9yIFwkQ09NUE9ORU5UICYmIGV4aXQgMQpmaQpFT0YKCmNobW9kIHUreCAvdXNyL2xvY2FsL2Jpbi9kb3dubG9hZC1jcmVkZW50aWFscy5zaAoKc3lzdGVtY3RsIGVuYWJsZSBkb3dubG9hZC1tZHNkLWNyZWRlbnRpYWxzLnRpbWVyCnN5c3RlbWN0bCBlbmFibGUgZG93bmxvYWQtbWRtLWNyZWRlbnRpYWxzLnRpbWVyCgovdXNyL2xvY2FsL2Jpbi9kb3dubG9hZC1jcmVkZW50aWFscy5zaCBtZHNkCi91c3IvbG9jYWwvYmluL2Rvd25sb2FkLWNyZWRlbnRpYWxzLnNoIG1kbQpNRFNEQ0VSVElGSUNBVEVTQU49JChvcGVuc3NsIHg1MDkgLWluIC92YXIvbGliL3dhYWdlbnQvTWljcm9zb2Z0LkF6dXJlLktleVZhdWx0LlN0b3JlL21kc2QucGVtIC1ub291dCAtc3ViamVjdCB8IHNlZCAtZSAncy8uKkNOID0gLy8nKQoKY2F0ID4vZXRjL3N5c3RlbWQvc3lzdGVtL3dhdGNoLW1kbS1jcmVkZW50aWFscy5zZXJ2aWNlIDw8RU9GCltVbml0XQpEZXNjcmlwdGlvbj1XYXRjaCBmb3IgY2hhbmdlcyBpbiBtZG0ucGVtIGFuZCByZXN0YXJ0cyB0aGUgbWRtIHNlcnZpY2UKCltTZXJ2aWNlXQpUeXBlPW9uZXNob3QKRXhlY1N0YXJ0PS91c3IvYmluL3N5c3RlbWN0bCByZXN0YXJ0IG1kbS5zZXJ2aWNlCgpbSW5zdGFsbF0KV2FudGVkQnk9bXVsdGktdXNlci50YXJnZXQKRU9GCgpjYXQgPi9ldGMvc3lzdGVtZC9zeXN0ZW0vd2F0Y2gtbWRtLWNyZWRlbnRpYWxzLnBhdGggPDxFT0YKW1BhdGhdClBhdGhNb2RpZmllZD0vZXRjL21kbS5wZW0KCltJbnN0YWxsXQpXYW50ZWRCeT1tdWx0aS11c2VyLnRhcmdldApFT0YKCnN5c3RlbWN0bCBlbmFibGUgd2F0Y2gtbWRtLWNyZWRlbnRpYWxzLnBhdGgKc3lzdGVtY3RsIHN0YXJ0IHdhdGNoLW1kbS1jcmVkZW50aWFscy5wYXRoCgpta2RpciAvZXRjL3N5c3RlbWQvc3lzdGVtL21kc2Quc2VydmljZS5kCmNhdCA+L2V0Yy9zeXN0ZW1kL3N5c3RlbS9tZHNkLnNlcnZpY2UuZC9vdmVycmlkZS5jb25mIDw8J0VPRicKW1VuaXRdCkFmdGVyPW5ldHdvcmstb25saW5lLnRhcmdldApFT0YKCmNhdCA+L2V0Yy9kZWZhdWx0L21kc2QgPDxFT0YKTURTRF9ST0xFX1BSRUZJWD0vdmFyL3J1bi9tZHNkL2RlZmF1bHQKTURTRF9PUFRJT05TPSItQSAtZCAtciBcJE1EU0RfUk9MRV9QUkVGSVgiCgpleHBvcnQgTU9OSVRPUklOR19HQ1NfRU5WSVJPTk1FTlQ9JyRNRFNERU5WSVJPTk1FTlQnCmV4cG9ydCBNT05JVE9SSU5HX0dDU19BQ0NPVU5UPSckUlBNRFNEQUNDT1VOVCcKZXhwb3J0IE1PTklUT1JJTkdfR0NTX1JFR0lPTj0nJExPQ0FUSU9OJwpleHBvcnQgTU9OSVRPUklOR19HQ1NfQVVUSF9JRF9UWVBFPUF1dGhLZXlWYXVsdApleHBvcnQgTU9OSVRPUklOR19HQ1NfQVVUSF9JRD0nJE1EU0RDRVJUSUZJQ0FURVNBTicKZXhwb3J0IE1PTklUT1JJTkdfR0NTX05BTUVTUEFDRT0nJFJQTURTRE5BTUVTUEFDRScKZXhwb3J0IE1PTklUT1JJTkdfQ09ORklHX1ZFUlNJT049JyRHQVRFV0FZTURTRENPTkZJR1ZFUlNJT04nCmV4cG9ydCBNT05JVE9SSU5HX1VTRV9HRU5FVkFfQ09ORklHX1NFUlZJQ0U9dHJ1ZQoKZXhwb3J0IE1PTklUT1JJTkdfVEVOQU5UPSckTE9DQVRJT04nCmV4cG9ydCBNT05JVE9SSU5HX1JPTEU9Z2F0ZXdheQpleHBvcnQgTU9OSVRPUklOR19ST0xFX0lOU1RBTkNFPSckKGhvc3RuYW1lKScKCmV4cG9ydCBNRFNEX01TR1BBQ0tfU09SVF9DT0xVTU5TPTEKRU9GCgojIHNldHRpbmcgTU9OSVRPUklOR19HQ1NfQVVUSF9JRF9UWVBFPUF1dGhLZXlWYXVsdCBzZWVtcyB0byBoYXZlIGNhdXNlZCBtZHNkIG5vdAojIHRvIGhvbm91ciBTU0xfQ0VSVF9GSUxFIGFueSBtb3JlLCBoZWF2ZW4gb25seSBrbm93cyB3aHkuCm1rZGlyIC1wIC91c3IvbGliL3NzbC9jZXJ0cwpjc3BsaXQgLWYgL3Vzci9saWIvc3NsL2NlcnRzL2NlcnQtIC1iICUwM2QucGVtIC9ldGMvcGtpL3Rscy9jZXJ0cy9jYS1idW5kbGUuY3J0IC9eJC8xIHsqfSA+L2Rldi9udWxsCmNfcmVoYXNoIC91c3IvbGliL3NzbC9jZXJ0cwoKIyB3ZSBsZWF2ZSBjbGllbnRJZCBibGFuayBhcyBsb25nIGFzIG9ubHkgMSBtYW5hZ2VkIGlkZW50aXR5IGFzc2lnbmVkIHRvIHZtc3MKIyBpZiB3ZSBoYXZlIG1vcmUgdGhhbiAxLCB3ZSB3aWxsIG5lZWQgdG8gcG9wdWxhdGUgd2l0aCBjbGllbnRJZCB1c2VkIGZvciBvZmYtbm9kZSBzY2FubmluZwpjYXQgPi9ldGMvZGVmYXVsdC92c2Etbm9kZXNjYW4tYWdlbnQuY29uZmlnIDw8RU9GCnsKICAgICJOaWNlIjogMTksCiAgICAiVGltZW91dCI6IDEwODAwLAogICAgIkNsaWVudElkIjogIiIsCiAgICAiVGVuYW50SWQiOiAiJEFaVVJFU0VDUEFDS1ZTQVRFTkFOVElEIiwKICAgICJRdWFseXNTdG9yZUJhc2VVcmwiOiAiJEFaVVJFU0VDUEFDS1FVQUxZU1VSTCIsCiAgICAiUHJvY2Vzc1RpbWVvdXQiOiAzMDAsCiAgICAiQ29tbWFuZERlbGF5IjogMAogIH0KRU9GCgojIHdlIHN0YXJ0IGEgY3JvbiBqb2IgdG8gcnVuIGV2ZXJ5IGhvdXIgdG8gZW5zdXJlIHRoZSBzYWlkIGRpcmVjdG9yeSBpcyBhY2Nlc3NpYmxlCiMgYnkgdGhlIGNvcnJlY3QgdXNlciBhcyBpdCBnZXRzIGNyZWF0ZWQgYnkgcm9vdCBhbmQgbWF5IGNhdXNlIGEgcmFjZSBjb25kaXRpb24KIyB3aGVyZSByb290IG93bnMgdGhlIGRpciBpbnN0ZWFkIG9mIHN5c2xvZwojIFRPRE86IGh0dHBzOi8vbXNhenVyZS52aXN1YWxzdHVkaW8uY29tL0F6dXJlUmVkSGF0T3BlblNoaWZ0L193b3JraXRlbXMvZWRpdC8xMjU5MTIwNwpjYXQgPi9ldGMvY3Jvbi5kL21kc2QtY2hvd24td29ya2Fyb3VuZCA8PEVPRgpTSEVMTD0vYmluL2Jhc2gKUEFUSD0vYmluCjAgKiAqICogKiByb290IGNob3duIHN5c2xvZzpzeXNsb2cgL3Zhci9vcHQvbWljcm9zb2Z0L2xpbnV4bW9uYWdlbnQvZWgvRXZlbnROb3RpY2UvYXJvcnBsb2dzKgpFT0YKCmVjaG8gImVuYWJsaW5nIGFybyBzZXJ2aWNlcyIKZm9yIHNlcnZpY2UgaW4gYXJvLWdhdGV3YXkgYXVvbXMgYXpzZWNkIGF6c2VjbW9uZCBtZHNkIG1kbSBjaHJvbnlkIGZsdWVudGJpdDsgZG8KICBzeXN0ZW1jdGwgZW5hYmxlICRzZXJ2aWNlLnNlcnZpY2UKZG9uZQoKZm9yIHNjYW4gaW4gYmFzZWxpbmUgY2xhbWF2IHNvZnR3YXJlOyBkbwogIC91c3IvbG9jYWwvYmluL2F6c2VjZCBjb25maWcgLXMgJHNjYW4gLWQgUDFECmRvbmUKCmVjaG8gInJlYm9vdGluZyIKcmVzdG9yZWNvbiAtUkYgL3Zhci9sb2cvKgooc2xlZXAgMzA7IHJlYm9vdCkgJgo=')))]"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                },
+                "overprovision": false
+            },
+            "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                    "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', concat('aro-gateway-', resourceGroup().location))]": {}
+                }
+            },
+            "name": "[concat('gateway-vmss-', parameters('vmssName'))]",
+            "type": "Microsoft.Compute/virtualMachineScaleSets",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "SkipLinuxAzSecPack": "true"
+            },
+            "apiVersion": "2020-12-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/loadBalancers', 'gateway-lb-internal')]",
+                "[resourceId('Microsoft.Storage/storageAccounts', substring(parameters('gatewayStorageAccountDomain'), 0, indexOf(parameters('gatewayStorageAccountDomain'), '.')))]"
+            ]
+        },
+        {
+            "properties": {
+                "allowVirtualNetworkAccess": true,
+                "allowForwardedTraffic": true,
+                "allowGatewayTransit": false,
+                "useRemoteGateways": false,
+                "remoteVirtualNetwork": {
+                    "id": "[resourceId(parameters('rpResourceGroupName'), 'Microsoft.Network/virtualNetworks', 'rp-vnet')]"
+                }
+            },
+            "name": "gateway-vnet/peering-rp-vnet",
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+            "apiVersion": "2020-08-01",
+            "location": "[resourceGroup().location]"
+        },
+        {
+            "name": "[concat('gateway-pls-001', '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/privateLinkServices', 'gateway-pls-001'), parameters('rpServicePrincipalId'), '4d97b98b-1d4f-4787-a291-c67834d212e7'))]",
+            "type": "Microsoft.Network/privateLinkServices/providers/roleAssignments",
+            "properties": {
+                "scope": "[resourceId('Microsoft.Network/privateLinkServices', 'gateway-pls-001')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7')]",
+                "principalId": "[parameters('rpServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2018-09-01-preview",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/privateLinkServices', 'gateway-pls-001')]"
+            ]
+        }
+    ]
+}

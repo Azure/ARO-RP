@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -29,7 +29,7 @@ func TestNew(t *testing.T) {
 	resourceID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg/providers/microsoft.redhatopenshift/openshiftclusters/cluster"
 	elevatedGroupIDs := []string{"10000000-0000-0000-0000-000000000000"}
 	username := "username"
-	password := "password"
+	password := "03030303-0303-0303-0303-030303030001"
 	master := 0
 
 	hostKey, _, err := utiltls.GenerateKeyAndCertificate("proxy", nil, nil, false, false)
@@ -60,7 +60,7 @@ func TestNew(t *testing.T) {
 				})
 			},
 			wantStatusCode: http.StatusOK,
-			wantBody:       "{\n    \"command\": \"ssh username@localhost\",\n    \"password\": \"password\"\n}",
+			wantBody:       "{\n    \"command\": \"ssh username@localhost\",\n    \"password\": \"03030303-0303-0303-0303-030303030001\"\n}",
 		},
 		{
 			name: "bad path",
@@ -81,7 +81,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "empty request",
 			r: func(r *http.Request) {
-				r.Body = ioutil.NopCloser(bytes.NewReader(nil))
+				r.Body = io.NopCloser(bytes.NewReader(nil))
 			},
 			wantStatusCode: http.StatusBadRequest,
 			wantBody:       "Bad Request\n",
@@ -89,7 +89,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "junk request",
 			r: func(r *http.Request) {
-				r.Body = ioutil.NopCloser(strings.NewReader("{{"))
+				r.Body = io.NopCloser(strings.NewReader("{{"))
 			},
 			wantStatusCode: http.StatusBadRequest,
 			wantBody:       "Bad Request\n",
@@ -140,12 +140,10 @@ func TestNew(t *testing.T) {
 
 			aadAuthenticatedRouter := &mux.Router{}
 
-			s, err := New(env, logrus.NewEntry(logrus.StandardLogger()), nil, nil, hostKey, elevatedGroupIDs, nil, dbPortal, nil, aadAuthenticatedRouter)
+			_, err = New(env, logrus.NewEntry(logrus.StandardLogger()), nil, nil, hostKey, elevatedGroupIDs, nil, dbPortal, nil, aadAuthenticatedRouter)
 			if err != nil {
 				t.Fatal(err)
 			}
-
-			s.newPassword = func() string { return password }
 
 			if tt.r != nil {
 				tt.r(r)
@@ -175,7 +173,7 @@ func TestNew(t *testing.T) {
 				t.Error(resp.Header.Get("Content-Type"))
 			}
 
-			b, err := ioutil.ReadAll(resp.Body)
+			b, err := io.ReadAll(resp.Body)
 			if err != nil {
 				t.Fatal(err)
 			}

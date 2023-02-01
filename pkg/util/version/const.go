@@ -4,8 +4,6 @@ package version
 // Licensed under the Apache License 2.0.
 
 import (
-	"os"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
@@ -29,14 +27,22 @@ var GitCommit = "unknown"
 
 // InstallStream describes stream we are defaulting to for all new clusters
 var InstallStream = &Stream{
-	Version:  NewVersion(4, 8, 18),
-	PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:321aae3d3748c589bc2011062cee9fd14e106f258807dc2d84ced3f7461160ea",
+	Version:  NewVersion(4, 10, 40),
+	PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:b9fad814fb4442e7e852b0614d9bb4e2ebc5e1a2fa51623aa838b4ee0e4a5369",
 }
 
 // UpgradeStreams describes list of streams we support for upgrades
 var (
 	UpgradeStreams = []*Stream{
 		InstallStream,
+		{
+			Version:  NewVersion(4, 9, 28),
+			PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:4084d94969b186e20189649b5affba7da59f7d1943e4e5bc7ef78b981eafb7a8",
+		},
+		{
+			Version:  NewVersion(4, 8, 18),
+			PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:321aae3d3748c589bc2011062cee9fd14e106f258807dc2d84ced3f7461160ea",
+		},
 		{
 			Version:  NewVersion(4, 7, 30),
 			PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:aba54b293dc151f5c0fd96d4353ced6ced3e7da6620c1c10714ab32d0577486f",
@@ -62,21 +68,18 @@ func FluentbitImage(acrDomain string) string {
 }
 
 // MdmImage contains the location of the MDM container image
+// https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
 func MdmImage(acrDomain string) string {
-	// for the latest version see https://genevamondocs.azurewebsites.net/collect/references/linuxcontainers.html?q=container
-	if os.Getenv("GENEVA_MDM_IMAGE_OVERRIDE") != "" {
-		return os.Getenv("GENEVA_MDM_IMAGE_OVERRIDE")
-	}
-
-	return acrDomain + "/genevamdm:master_20210928.1"
+	return acrDomain + "/distroless/genevamdm:mariner_20221026.2"
 }
 
 // MdsdImage contains the location of the MDSD container image
+// see https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
 func MdsdImage(acrDomain string) string {
-	// for the latest version see https://genevamondocs.azurewebsites.net/collect/references/linuxcontainers.html?q=container
-	if os.Getenv("GENEVA_MDSD_IMAGE_OVERRIDE") != "" {
-		return os.Getenv("GENEVA_MDSD_IMAGE_OVERRIDE")
-	}
+	return acrDomain + "/genevamdsd:master_20221018.2"
+}
 
-	return acrDomain + "/genevamdsd:master_20211001.1"
+// MUOImage contains the location of the Managed Upgrade Operator container image
+func MUOImage(acrDomain string) string {
+	return acrDomain + "/managed-upgrade-operator:aro-b4"
 }

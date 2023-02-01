@@ -10,13 +10,12 @@ import (
 	"net/url"
 	"strings"
 
-	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	"github.com/ugorji/go/codec"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/util/retry"
-	azureproviderv1beta1 "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
@@ -46,7 +45,6 @@ func (m *manager) enumerateUserDataSecrets(ctx context.Context) map[corev1.Secre
 	machinesets, err := m.maocli.MachineV1beta1().MachineSets("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		m.log.Print(err)
-
 	} else {
 		for _, machineset := range machinesets.Items {
 			ref, err := getUserDataSecretReference(&machineset.ObjectMeta, &machineset.Spec.Template.Spec)
@@ -63,7 +61,6 @@ func (m *manager) enumerateUserDataSecrets(ctx context.Context) map[corev1.Secre
 	machines, err := m.maocli.MachineV1beta1().Machines("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		m.log.Print(err)
-
 	} else {
 		for _, machine := range machines.Items {
 			ref, err := getUserDataSecretReference(&machine.ObjectMeta, &machine.Spec)
@@ -81,18 +78,17 @@ func (m *manager) enumerateUserDataSecrets(ctx context.Context) map[corev1.Secre
 }
 
 func getUserDataSecretReference(objMeta *metav1.ObjectMeta, spec *machinev1beta1.MachineSpec) (*corev1.SecretReference, error) {
-	if spec.ProviderSpec.Value == nil {
+	if spec.ProviderSpec.Value == nil || objMeta == nil {
 		return nil, nil
 	}
 
-	o, _, err := scheme.Codecs.UniversalDeserializer().Decode(spec.ProviderSpec.Value.Raw, nil, nil)
+	obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(spec.ProviderSpec.Value.Raw, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-
-	machineProviderSpec, ok := o.(*azureproviderv1beta1.AzureMachineProviderSpec)
+	machineProviderSpec, ok := obj.(*machinev1beta1.AzureMachineProviderSpec)
 	if !ok {
-		return nil, fmt.Errorf("failed to read provider spec: %T", o)
+		return nil, fmt.Errorf("machine %s: failed to read provider spec: %T", spec.Name, obj)
 	}
 
 	if machineProviderSpec.UserDataSecret == nil {

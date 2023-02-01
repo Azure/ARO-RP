@@ -58,7 +58,7 @@ func TestEmitPodConditions(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	m := mock_metrics.NewMockInterface(controller)
+	m := mock_metrics.NewMockEmitter(controller)
 
 	mon := &Monitor{
 		cli: cli,
@@ -126,7 +126,7 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	m := mock_metrics.NewMockInterface(controller)
+	m := mock_metrics.NewMockEmitter(controller)
 
 	mon := &Monitor{
 		cli: cli,
@@ -146,7 +146,6 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 }
 
 func TestEmitPodContainerRestartCounter(t *testing.T) {
-
 	cli := fake.NewSimpleClientset(
 		&corev1.Pod{ // #1 metrics and log entry expected
 			ObjectMeta: metav1.ObjectMeta{
@@ -236,7 +235,7 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 		&corev1.Pod{ // #6 Multi-container pod
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "multi-container-pod",
-				Namespace: "openshift-test",
+				Namespace: "openshift",
 			},
 			Status: corev1.PodStatus{
 				ContainerStatuses: []corev1.ContainerStatus{
@@ -259,7 +258,7 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	m := mock_metrics.NewMockInterface(controller)
+	m := mock_metrics.NewMockEmitter(controller)
 
 	mon := &Monitor{
 		cli:       cli,
@@ -286,7 +285,7 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 
 	m.EXPECT().EmitGauge("pod.restartcounter", int64(restartCounterThreshold*2), map[string]string{
 		"name":      "multi-container-pod",
-		"namespace": "openshift-test",
+		"namespace": "openshift",
 	})
 
 	ps, _ := cli.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})

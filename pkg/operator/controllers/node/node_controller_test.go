@@ -6,6 +6,7 @@ package node
 import (
 	"context"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -13,10 +14,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
 func TestReconciler(t *testing.T) {
@@ -357,23 +359,24 @@ func TestReconciler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			baseCluster := arov1alpha1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
-				Spec: arov1alpha1.ClusterSpec{
-					InfraID:  "aro-fake",
-					Features: arov1alpha1.FeaturesSpec{ReconcileNodeDrainer: tt.featureFlag},
-				},
-			}
-
-			if tt.clusterNotFound == true {
-				baseCluster = arov1alpha1.Cluster{}
+			clientBuilder := ctrlfake.NewClientBuilder()
+			if !tt.clusterNotFound {
+				clientBuilder = clientBuilder.WithObjects(&arov1alpha1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
+					Spec: arov1alpha1.ClusterSpec{
+						InfraID: "aro-fake",
+						OperatorFlags: arov1alpha1.OperatorFlags{
+							controllerEnabled: strconv.FormatBool(tt.featureFlag),
+						},
+					},
+				})
 			}
 
 			r := &Reconciler{
 				log: logrus.NewEntry(logrus.StandardLogger()),
 
-				arocli:        arofake.NewSimpleClientset(&baseCluster),
 				kubernetescli: fake.NewSimpleClientset(&tt.nodeObject),
+				client:        clientBuilder.Build(),
 			}
 
 			request := ctrl.Request{}
@@ -415,7 +418,6 @@ func TestSetAnnotation(t *testing.T) {
 			if !reflect.DeepEqual(tt.node.ObjectMeta.Annotations, map[string]string{tt.annotationKey: tt.annotationValue}) {
 				t.Error(cmp.Diff(tt.node.ObjectMeta.Annotations, map[string]string{tt.annotationKey: tt.annotationValue}))
 			}
-
 		})
 	}
 }

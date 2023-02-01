@@ -5,14 +5,28 @@ package swagger
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"reflect"
 
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
+// resourceName represents the tracked resource, OpenShiftCluster
 var resourceName = "OpenShiftCluster"
+
+// proxyResources represent the list of proxy resources - these are resources with operations, but do not exist in the Azure Portal
+// https://github.com/Azure/azure-resource-manager-rpc/blob/master/v1.0/proxy-api-reference.md
+var proxyResources = []string{
+	"SyncSet",
+	"SyncIdentityProvider",
+	"MachinePool",
+	"Secret",
+	"OpenShiftVersion",
+}
+
+// resourceNamePattern is a regex pattern to validate resource names
+const resourceNamePattern = `^[a-zA-Z0-9]$|^[a-zA-Z0-9][-_a-zA-Z0-9]*[a-zA-Z0-9]$`
 
 func Run(api, outputDir string) error {
 	g, err := New(api)
@@ -33,6 +47,17 @@ func Run(api, outputDir string) error {
 		Produces:    []string{"application/json"},
 		Paths:       g.populateTopLevelPaths("Microsoft.RedHatOpenShift", "openShiftCluster", "OpenShift cluster"),
 		Definitions: Definitions{},
+		Parameters: ParametersDefinitions{
+			"api-version": &Parameter{
+				Name:                 "api-version",
+				Description:          "The version of the API the caller wants to use.",
+				Required:             true,
+				Type:                 "string",
+				In:                   "query",
+				Pattern:              "^\\d{2}-\\d{2}-\\d{4}(-preview)?$",
+				XMSParameterLocation: "client",
+			},
+		},
 		SecurityDefinitions: SecurityDefinitions{
 			"azure_auth": {
 				Type:             "oauth2",
@@ -47,6 +72,20 @@ func Run(api, outputDir string) error {
 		Security: []SecurityRequirement{
 			{
 				"azure_auth": []string{"user_impersonation"},
+			},
+		},
+	}
+
+	s.Paths["/providers/Microsoft.RedHatOpenShift/operations"] = &PathItem{
+		Get: &Operation{
+			Tags:        []string{"Operations"},
+			Summary:     "Lists all of the available RP operations.",
+			Description: "The operation returns the RP operations.",
+			OperationID: "Operations_List",
+			Parameters:  g.populateParameters(0, "Operation", "Operation"),
+			Responses:   g.populateResponses("OperationList", false, http.StatusOK),
+			Pageable: &Pageable{
+				NextLinkName: "nextLink",
 			},
 		},
 	}
@@ -75,38 +114,71 @@ func Run(api, outputDir string) error {
 		}
 	}
 
-	s.Paths["/providers/Microsoft.RedHatOpenShift/operations"] = &PathItem{
-		Get: &Operation{
-			Tags:        []string{"Operations"},
-			Summary:     "Lists all of the available RP operations.",
-			Description: "The operation returns the RP operations.",
-			OperationID: "Operations_List",
-			Parameters:  g.populateParameters(0, "Operation", "Operation"),
-			Responses:   g.populateResponses("OperationList", false, http.StatusOK),
-			Pageable: &Pageable{
-				NextLinkName: "nextLink",
+	if g.installVersionList {
+		s.Paths["/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/locations/{location}/openshiftversions"] = &PathItem{
+			Get: &Operation{
+				Tags:        []string{"OpenShiftVersions"},
+				Summary:     "Lists all OpenShift versions available to install in the specified location.",
+				Description: "The operation returns the installable OpenShift versions as strings.",
+				OperationID: "OpenShiftVersions_List",
+				Parameters:  g.populateParameters(6, "OpenShiftVersionList", "OpenShift Versions"),
+				Responses:   g.populateResponses("OpenShiftVersionList", false, http.StatusOK),
+				Pageable: &Pageable{
+					NextLinkName: "nextLink",
+				},
 			},
-		},
+		}
 	}
 
+	if g.clusterManager {
+		g.populateChildResourcePaths(s.Paths, "Microsoft.RedHatOpenShift", "openShiftCluster", "syncSet", "SyncSet")
+		g.populateChildResourcePaths(s.Paths, "Microsoft.RedHatOpenShift", "openShiftCluster", "machinePool", "MachinePool")
+		g.populateChildResourcePaths(s.Paths, "Microsoft.RedHatOpenShift", "openShiftCluster", "syncIdentityProvider", "SyncIdentityProvider")
+		g.populateChildResourcePaths(s.Paths, "Microsoft.RedHatOpenShift", "openShiftCluster", "secret", "Secret")
+	}
 	populateExamples(s.Paths)
+
+	// This begins to define definitions required for the paths, parameters, and responses defined above
 	names := []string{"OpenShiftClusterList", "OpenShiftClusterCredentials"}
 	if g.kubeConfig {
 		names = append(names, "OpenShiftClusterAdminKubeconfig")
 	}
 
-	err = define(s.Definitions, api, g.xmsEnum, g.xmsSecretList, names...)
+	if g.installVersionList {
+		names = append(names, "OpenShiftVersionList")
+	}
+
+	if g.clusterManager {
+		// This needs to be the top level struct
+		// in most cases, the "list" struct (a collection of resources)
+		names = append(names, "SyncSetList", "MachinePoolList", "SyncIdentityProviderList", "SecretList")
+	}
+
+	err = define(s.Definitions, api, g.xmsEnum, g.xmsSecretList, g.xmsIdentifiers, names...)
 	if err != nil {
 		return err
 	}
 
 	names = []string{"CloudError", "OperationList"}
-	err = define(s.Definitions, "github.com/Azure/ARO-RP/pkg/api", g.xmsEnum, g.xmsSecretList, names...)
+	err = define(s.Definitions, "github.com/Azure/ARO-RP/pkg/api", g.xmsEnum, g.xmsSecretList, g.xmsIdentifiers, names...)
 	if err != nil {
 		return err
 	}
 
-	for _, azureResource := range []string{resourceName} {
+	// This begins the ARM / Azure Resources definition generation
+	azureResources := []string{
+		resourceName,
+	}
+
+	if g.clusterManager {
+		azureResources = append(azureResources, "SyncSet", "MachinePool", "SyncIdentityProvider", "Secret")
+	}
+
+	if g.installVersionList {
+		azureResources = append(azureResources, "OpenShiftVersion")
+	}
+
+	for _, azureResource := range azureResources {
 		def, err := deepCopy(s.Definitions[azureResource])
 		if err != nil {
 			return err
@@ -125,18 +197,22 @@ func Run(api, outputDir string) error {
 				properties = append(properties, property)
 			}
 		}
-
 		update.Properties = properties
-		s.Definitions[azureResource+"Update"] = update
 
-		s.Definitions[azureResource].AllOf = []Schema{
-			{
-				Ref: "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/definitions/TrackedResource",
-			},
+		// If this resource is not a proxy resource mark as tracked resource
+		// otherwise, its a proxy resource and we remove the proxyResource .Allof ref for the Update definition
+		// in order to make azure-rest-specs-api validation happy
+		if !contains(proxyResources, azureResource) {
+			s.Definitions[azureResource].AllOf = []Schema{
+				{
+					Ref: "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/definitions/TrackedResource",
+				},
+			}
+		} else {
+			update.AllOf = []Schema{}
 		}
 
 		properties = nil
-
 		for _, property := range s.Definitions[azureResource].Properties {
 			if property.Name == "properties" {
 				property.Schema.ClientFlatten = true
@@ -145,8 +221,15 @@ func Run(api, outputDir string) error {
 		}
 		s.Definitions[azureResource].Properties = properties
 
+		// Don't include an update object for "OpenShiftVersion" as it is not updatable via the API
+		azureResources := []string{azureResource}
+		if azureResource != "OpenShiftVersion" {
+			s.Definitions[azureResource+"Update"] = update
+			azureResources = append(azureResources, azureResource+"Update")
+		}
+
 		if g.systemData {
-			s.defineSystemData([]string{azureResource, azureResource + "Update"}, g.commonTypesVersion)
+			s.defineSystemData(azureResources, g.commonTypesVersion)
 		}
 	}
 
@@ -162,7 +245,7 @@ func Run(api, outputDir string) error {
 		return err
 	}
 
-	return ioutil.WriteFile(outputDir+"/redhatopenshift.json", b, 0666)
+	return os.WriteFile(outputDir+"/redhatopenshift.json", b, 0666)
 }
 
 func deepCopy(v interface{}) (interface{}, error) {
@@ -211,6 +294,18 @@ func removeNamedSchemas(list NameSchemas, remove string) NameSchemas {
 		}
 		result = append(result, schema)
 	}
-	return result
 
+	return result
+}
+
+// TODO: once we upgrade to go 1.18 we can use the slices.Contains function
+// until then, heres this helper func to check if the slice exists after we put it in a map
+func contains(slice []string, item string) bool {
+	set := make(map[string]struct{}, len(slice))
+	for _, s := range slice {
+		set[s] = struct{}{}
+	}
+
+	_, ok := set[item]
+	return ok
 }

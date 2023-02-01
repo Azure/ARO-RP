@@ -6,12 +6,16 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/openshift/installer/pkg/asset"
+	alibabacloudconfig "github.com/openshift/installer/pkg/asset/installconfig/alibabacloud"
 	awsconfig "github.com/openshift/installer/pkg/asset/installconfig/aws"
 	azureconfig "github.com/openshift/installer/pkg/asset/installconfig/azure"
 	gcpconfig "github.com/openshift/installer/pkg/asset/installconfig/gcp"
+	ibmcloudconfig "github.com/openshift/installer/pkg/asset/installconfig/ibmcloud"
+	"github.com/openshift/installer/pkg/types/alibabacloud"
 	"github.com/openshift/installer/pkg/types/aws"
 	"github.com/openshift/installer/pkg/types/azure"
 	"github.com/openshift/installer/pkg/types/gcp"
+	"github.com/openshift/installer/pkg/types/ibmcloud"
 	"github.com/openshift/installer/pkg/validate"
 )
 
@@ -35,6 +39,12 @@ func (a *baseDomain) Generate(parents asset.Parents) error {
 
 	var err error
 	switch platform.CurrentName() {
+	case alibabacloud.Name:
+		a.BaseDomain, err = alibabacloudconfig.GetBaseDomain()
+		if err != nil {
+			return err
+		}
+		return nil
 	case aws.Name:
 		a.BaseDomain, err = awsconfig.GetBaseDomain()
 		cause := errors.Cause(err)
@@ -43,7 +53,7 @@ func (a *baseDomain) Generate(parents asset.Parents) error {
 		}
 	case azure.Name:
 		// Create client using public cloud because install config has not been generated yet.
-		ssn, err := azureconfig.GetSession(azure.PublicCloud, nil)
+		ssn, err := azureconfig.GetSession(azure.PublicCloud, "")
 		if err != nil {
 			return err
 		}
@@ -61,6 +71,13 @@ func (a *baseDomain) Generate(parents asset.Parents) error {
 		if !(gcpconfig.IsForbidden(err) || gcpconfig.IsThrottled(err)) {
 			return err
 		}
+	case ibmcloud.Name:
+		zone, err := ibmcloudconfig.GetDNSZone()
+		if err != nil {
+			return err
+		}
+		a.BaseDomain = zone.Name
+		return nil
 	default:
 		//Do nothing
 	}

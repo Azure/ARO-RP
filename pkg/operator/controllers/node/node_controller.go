@@ -11,15 +11,21 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/kubectl/pkg/drain"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
+)
+
+const (
+	ControllerName = "Node"
+
+	controllerEnabled = "aro.nodedrainer.enabled"
 )
 
 // Reconciler spots nodes that look like they're stuck upgrading.  When this
@@ -27,28 +33,32 @@ import (
 type Reconciler struct {
 	log *logrus.Entry
 
-	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
+
+	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface) *Reconciler {
 	return &Reconciler{
 		log:           log,
-		arocli:        arocli,
 		kubernetescli: kubernetescli,
+		client:        client,
 	}
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	instance := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.Features.ReconcileNodeDrainer {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
+	r.log.Debug("running")
 	node, err := r.kubernetescli.CoreV1().Nodes().Get(ctx, request.Name, metav1.GetOptions{})
 	if err != nil {
 		r.log.Error(err)
@@ -95,9 +105,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	deadline := t.Add(gracePeriod)
 	now := time.Now()
 	if deadline.After(now) {
-		return reconcile.Result{
-			RequeueAfter: deadline.Sub(now),
-		}, err
+		return reconcile.Result{RequeueAfter: deadline.Sub(now)}, nil
 	}
 
 	// drain the node disabling eviction
@@ -135,7 +143,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Node{}).
-		Named(controllers.NodeControllerName).
+		Named(ControllerName).
 		Complete(r)
 }
 

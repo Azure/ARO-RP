@@ -18,14 +18,24 @@ pr:
     exclude:
     - docs/*
 
+resources:
+  containers:
+  - container: golang
+    image: registry.access.redhat.com/ubi8/go-toolset:1.17
+    options: --user=0
+  - container: python
+    image: registry.access.redhat.com/ubi8/python-39:latest
+    options: --user=0
+
 variables:
 - template: vars.yml
 
 jobs:
-
 - job: Python_Unit_Tests
   pool:
-    name: ARO-CI
+    name: 1es-aro-ci-pool
+  variables:
+    HOME: $(Agent.BuildDirectory)
   steps:
   - template: ./templates/template-checkout.yml
   - script: |
@@ -33,41 +43,48 @@ jobs:
       make test-python
       [[ -z "$(git status -s)" ]]
     displayName: 🧪Run Python Unit Tests
+    target: python
 
 - job: Golang_Unit_Tests
   pool:
-    name: ARO-CI
+    name: 1es-aro-ci-pool
+  variables:
+    GOCACHE: /tmp/gocache
   steps:
   - template: ./templates/template-checkout.yml
+
+  - script: |
+      set -xe
+      go version
+      go env
+    displayName: Print Go version & env
+    target: golang
 
   - script: |
       set -xe
       make generate
       [[ -z "$(git status -s)" ]]
     displayName: ⚙️ Run Golang code generate
-
-  - script: |
-      set -xe
-      make validate-go
-      [[ -z "$(git status -s)" ]]
-    displayName: 🕵️ Validate Golang code
-
-  - script: |
-      set -xe
-      make lint-go
-      [[ -z "$(git status -s)" ]]
-    displayName: 🕵️ Lint Golang code
+    target: golang
 
   - script: |
       set -xe
       make build-all
       [[ -z "$(git status -s)" ]]
     displayName: 🕵️ Build Golang code
+    target: golang
 
   - script: |
       set -xe
       make unit-test-go
     displayName: 🧪 Run Golang unit tests
+    target: golang
+
+  - script: |
+      set -xe
+      make validate-fips
+    displayName: 🕵️ Validate FIPS
+    target: golang
 
   - task: PublishTestResults@2
     displayName: 📊 Publish tests results
@@ -76,10 +93,11 @@ jobs:
     condition: succeededOrFailed()
 
   - script: |
-      go run ./vendor/github.com/axw/gocov/gocov/*.go convert cover.out > coverage.json
-      go run ./vendor/github.com/AlekSi/gocov-xml/gocov-xml.go < coverage.json > coverage.xml
+      set -xe
+      go run github.com/axw/gocov/gocov convert cover.out | go run github.com/AlekSi/gocov-xml > coverage.xml
     displayName: ⚙️ Process Reports
     condition: succeededOrFailed()
+    target: golang
 
   - task: PublishCodeCoverageResults@1
     displayName: 📈 Publish code coverage
@@ -88,4 +106,14 @@ jobs:
       summaryFileLocation: $(System.DefaultWorkingDirectory)/**/coverage.xml
       failIfCoverageEmpty: false
     condition: succeededOrFailed()
+    target: golang
 
+- job: Lint_Admin_Portal
+  pool:
+    name: 1es-aro-ci-pool
+  steps:
+  - template: ./templates/template-checkout.yml
+  - script: |
+      set -xe
+      make lint-admin-portal
+    displayName: 🧹 Lint Admin Portal

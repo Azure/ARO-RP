@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -22,7 +23,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
+	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
+	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -31,6 +34,8 @@ type prod struct {
 	Core
 	proxy.Dialer
 	ARMHelper
+
+	liveConfig liveconfig.Manager
 
 	armClientAuthorizer   clientauthorizer.ClientAuthorizer
 	adminClientAuthorizer clientauthorizer.ClientAuthorizer
@@ -209,13 +214,17 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		return nil, err
 	}
 
+	p.liveConfig, err = p.Core.NewLiveConfigManager(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	return p, nil
 }
 
 func (p *prod) InitializeAuthorizers() error {
 	if !p.FeatureIsSet(FeatureEnableDevelopmentAuthorizer) {
 		p.armClientAuthorizer = clientauthorizer.NewARM(p.log, p.Core)
-
 	} else {
 		armClientAuthorizer, err := clientauthorizer.NewSubjectNameAndIssuer(
 			p.log,
@@ -274,29 +283,7 @@ func (p *prod) populateVMSkus(ctx context.Context, resourceSkusClient compute.Re
 		return err
 	}
 
-	p.vmskus = map[string]*mgmtcompute.ResourceSku{}
-	for _, sku := range skus {
-		// TODO(mjudeikis): At some point some SKU's stopped returning zones and
-		// locations. IcM is open with MSFT but this might take a while.
-		// Revert once we find out right behaviour.
-		// https://github.com/Azure/ARO-RP/issues/1515
-		if len(*sku.Locations) == 0 || !strings.EqualFold((*sku.Locations)[0], p.Location()) ||
-			*sku.ResourceType != "virtualMachines" {
-			continue
-		}
-
-		if len(*sku.LocationInfo) == 0 { // happened in eastus2euap
-			continue
-		}
-
-		// We copy only part of the object so we don't have to keep
-		// a lot of data in memory.
-		p.vmskus[*sku.Name] = &mgmtcompute.ResourceSku{
-			Name:         sku.Name,
-			LocationInfo: sku.LocationInfo,
-			Capabilities: sku.Capabilities,
-		}
-	}
+	p.vmskus = computeskus.FilterVMSizes(skus, p.Location())
 
 	return nil
 }
@@ -379,4 +366,23 @@ func (p *prod) VMSku(vmSize string) (*mgmtcompute.ResourceSku, error) {
 		return nil, fmt.Errorf("sku information not found for vm size %q", vmSize)
 	}
 	return vmsku, nil
+}
+
+func (p *prod) LiveConfig() liveconfig.Manager {
+	return p.liveConfig
+}
+
+func (p *prod) FPNewClientCertificateCredential(tenantID string) (*azidentity.ClientCertificateCredential, error) {
+	fpPrivateKey, fpCertificates := p.fpCertificateRefresher.GetCertificates()
+
+	credential, err := azidentity.NewClientCertificateCredential(tenantID, p.fpClientID, fpCertificates, fpPrivateKey, &azidentity.ClientCertificateCredentialOptions{
+		AuthorityHost:        p.Environment().AuthorityHost,
+		SendCertificateChain: true,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return credential, nil
 }

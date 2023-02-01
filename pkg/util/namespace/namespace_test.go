@@ -7,62 +7,34 @@ import (
 	"testing"
 )
 
-func TestIsOpenShift(t *testing.T) {
+func TestIsOpenShiftNamespace(t *testing.T) {
 	for _, tt := range []struct {
 		namespace string
 		want      bool
 	}{
 		{
-			want: true,
-		},
-		{
-			namespace: "openshift-ns",
+			namespace: "",
 			want:      true,
 		},
 		{
-			namespace: "openshift",
+			namespace: "openshift-apiserver",
 			want:      true,
 		},
 		{
-			namespace: "kube-ns",
+			namespace: "openshift-azure-operator",
 			want:      true,
 		},
 		{
-			namespace: "default",
+			namespace: "openshift-azure-logging",
 			want:      true,
 		},
 		{
-			namespace: "customer",
-		},
-	} {
-		t.Run(tt.namespace, func(t *testing.T) {
-			got := IsOpenShift(tt.namespace)
-			if tt.want != got {
-				t.Error(got)
-			}
-		})
-	}
-}
-
-func TestIsOpenShiftSystemNamespace(t *testing.T) {
-	for _, tt := range []struct {
-		namespace string
-		want      bool
-	}{
-		{
-			want: true,
+			namespace: "openshift-gitops",
+			want:      false,
 		},
 		{
-			namespace: "openshift-ns",
-			want:      true,
-		},
-		{
-			namespace: "openshift",
-			want:      true,
-		},
-		{
-			namespace: "kube-ns",
-			want:      true,
+			namespace: "openshift-authentication",
+			want:      false,
 		},
 		{
 			namespace: "default",
@@ -70,10 +42,31 @@ func TestIsOpenShiftSystemNamespace(t *testing.T) {
 		},
 		{
 			namespace: "customer",
+			want:      false,
+		},
+		{
+			namespace: "openshift-/",
+			want:      false,
+		},
+		{
+			namespace: "openshift-ns",
+			want:      false,
+		},
+		{
+			namespace: "kube-ns",
+			want:      false,
+		},
+		{
+			namespace: "openshift-operator-lifecycle-manager",
+			want:      true,
+		},
+		{
+			namespace: "openshift-cluster-version",
+			want:      true,
 		},
 	} {
 		t.Run(tt.namespace, func(t *testing.T) {
-			got := IsOpenShiftSystemNamespace(tt.namespace)
+			got := IsOpenShiftNamespace(tt.namespace)
 			if tt.want != got {
 				t.Error(got)
 			}

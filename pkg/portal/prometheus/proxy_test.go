@@ -11,7 +11,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -299,7 +299,7 @@ func TestProxy(t *testing.T) {
 				t.Error(resp.Header.Get("Content-Type"))
 			}
 
-			b, err := ioutil.ReadAll(resp.Body)
+			b, err := io.ReadAll(resp.Body)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -343,7 +343,7 @@ func TestModifyResponse(t *testing.T) {
 				Header: http.Header{
 					"Content-Type": []string{"text/html"},
 				},
-				Body: ioutil.NopCloser(strings.NewReader(tt.body)),
+				Body: io.NopCloser(strings.NewReader(tt.body)),
 			}
 
 			p := &prometheus{}
@@ -353,7 +353,7 @@ func TestModifyResponse(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			body, err := ioutil.ReadAll(r.Body)
+			body, err := io.ReadAll(r.Body)
 			if err != nil {
 				t.Fatal(err)
 			}

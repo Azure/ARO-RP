@@ -38,57 +38,7 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 		)
 	}
 
-	trailer := base64.StdEncoding.EncodeToString([]byte(`yum -y update -x WALinuxAgent
-yum -y install docker
-
-firewall-cmd --add-port=443/tcp --permanent
-
-mkdir /root/.docker
-cat >/root/.docker/config.json <<EOF
-{
-	"auths": {
-		"${PROXYIMAGE%%/*}": {
-			"auth": "$PROXYIMAGEAUTH"
-		}
-	}
-}
-EOF
-systemctl start docker.service
-docker pull "$PROXYIMAGE"
-
-mkdir /etc/proxy
-base64 -d <<<"$PROXYCERT" >/etc/proxy/proxy.crt
-base64 -d <<<"$PROXYKEY" >/etc/proxy/proxy.key
-base64 -d <<<"$PROXYCLIENTCERT" >/etc/proxy/proxy-client.crt
-chown -R 1000:1000 /etc/proxy
-chmod 0600 /etc/proxy/proxy.key
-
-cat >/etc/sysconfig/proxy <<EOF
-PROXY_IMAGE='$PROXYIMAGE'
-EOF
-
-cat >/etc/systemd/system/proxy.service <<'EOF'
-[Unit]
-After=docker.service
-Requires=docker.service
-
-[Service]
-EnvironmentFile=/etc/sysconfig/proxy
-ExecStartPre=-/usr/bin/docker rm -f %n
-ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 -v /etc/proxy:/secrets $PROXY_IMAGE
-ExecStop=/usr/bin/docker stop %n
-Restart=always
-RestartSec=1
-StartLimitInterval=0
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-systemctl enable proxy.service
-
-(sleep 30; reboot) &
-`))
+	trailer := base64.StdEncoding.EncodeToString(scriptDevProxyVMSS)
 
 	parts = append(parts, "'\n'", fmt.Sprintf("base64ToString('%s')", trailer))
 
@@ -205,19 +155,12 @@ func (g *generator) devVPNPip() *arm.Resource {
 			Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
-		Condition:  "[equals(parameters('ciCapacity'), 0)]", // TODO(mj): Refactor g.conditionStanza for better usage
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }
 
 func (g *generator) devVnet() *arm.Resource {
-	return g.virtualNetwork("dev-vnet", "10.0.0.0/9", &[]mgmtnetwork.Subnet{
-		{
-			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-				AddressPrefix: to.StringPtr("10.0.0.0/24"),
-			},
-			Name: to.StringPtr("GatewaySubnet"),
-		},
+	return g.virtualNetwork("dev-vnet", "10.0.0.0/16", &[]mgmtnetwork.Subnet{
 		{
 			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 				AddressPrefix: to.StringPtr("10.0.1.0/24"),
@@ -230,6 +173,17 @@ func (g *generator) devVnet() *arm.Resource {
 	}, nil, nil)
 }
 
+func (g *generator) devVPNVnet() *arm.Resource {
+	return g.virtualNetwork("dev-vpn-vnet", "10.2.0.0/24", &[]mgmtnetwork.Subnet{
+		{
+			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+				AddressPrefix: to.StringPtr("10.2.0.0/24"),
+			},
+			Name: to.StringPtr("GatewaySubnet"),
+		},
+	}, nil, nil)
+}
+
 func (g *generator) devVPN() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.VirtualNetworkGateway{
@@ -238,7 +192,7 @@ func (g *generator) devVPN() *arm.Resource {
 					{
 						VirtualNetworkGatewayIPConfigurationPropertiesFormat: &mgmtnetwork.VirtualNetworkGatewayIPConfigurationPropertiesFormat{
 							Subnet: &mgmtnetwork.SubResource{
-								ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'dev-vnet', 'GatewaySubnet')]"),
+								ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'dev-vpn-vnet', 'GatewaySubnet')]"),
 							},
 							PublicIPAddress: &mgmtnetwork.SubResource{
 								ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]"),
@@ -273,11 +227,10 @@ func (g *generator) devVPN() *arm.Resource {
 			Type:     to.StringPtr("Microsoft.Network/virtualNetworkGateways"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
-		Condition:  "[equals(parameters('ciCapacity'), 0)]", // TODO(mj): Refactor g.conditionStanza for better usage
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
 			"[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]",
-			"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
+			"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]",
 		},
 	}
 }
@@ -297,62 +250,7 @@ func (g *generator) devCIPool() *arm.Resource {
 		)
 	}
 
-	trailer := base64.StdEncoding.EncodeToString([]byte(`
-yum -y update -x WALinuxAgent
-
-lvextend -l +50%FREE /dev/rootvg/varlv
-xfs_growfs /var
-
-lvextend -l +100%FREE /dev/rootvg/homelv
-xfs_growfs /home
-
-rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
-rpm --import https://packages.microsoft.com/keys/microsoft.asc
-
-yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-
-cat >/etc/yum.repos.d/azure.repo <<'EOF'
-[azure-cli]
-name=azure-cli
-baseurl=https://packages.microsoft.com/yumrepos/azure-cli
-enabled=yes
-gpgcheck=yes
-EOF
-
-yum -y install azure-cli podman podman-docker jq gcc gpgme-devel libassuan-devel git make tmpwatch go-toolset-1.14.12-1.module+el8.3.0+8784+380394dc
-
-# Suppress emulation output for podman instead of docker for az acr compatability
-mkdir -p /etc/containers/
-touch /etc/containers/nodocker
-
-VSTS_AGENT_VERSION=2.188.3
-mkdir /home/cloud-user/agent
-pushd /home/cloud-user/agent
-curl https://vstsagentpackage.azureedge.net/agent/${VSTS_AGENT_VERSION}/vsts-agent-linux-x64-${VSTS_AGENT_VERSION}.tar.gz | tar -xz
-chown -R cloud-user:cloud-user .
-
-./bin/installdependencies.sh
-sudo -u cloud-user ./config.sh --unattended --url https://dev.azure.com/msazure --auth pat --token "$CIAZPTOKEN" --pool "$CIPOOLNAME" --agent "ARO-RHEL-$HOSTNAME" --replace
-./svc.sh install cloud-user
-popd
-
-cat >/home/cloud-user/agent/.path <<'EOF'
-/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/cloud-user/.local/bin:/home/cloud-user/bin
-EOF
-
-cat >/home/cloud-user/agent/.env <<'EOF'
-GOLANG_FIPS=1
-EOF
-
-cat >/etc/cron.hourly/tmpwatch <<'EOF'
-#!/bin/bash
-
-exec /sbin/tmpwatch 24h /tmp
-EOF
-chmod +x /etc/cron.hourly/tmpwatch
-
-(sleep 30; reboot) &
-`))
+	trailer := base64.StdEncoding.EncodeToString(scriptDevCIPool)
 
 	parts = append(parts, "'\n'", fmt.Sprintf("base64ToString('%s')", trailer))
 
@@ -397,6 +295,7 @@ chmod +x /etc/cron.hourly/tmpwatch
 							ManagedDisk: &mgmtcompute.VirtualMachineScaleSetManagedDiskParameters{
 								StorageAccountType: mgmtcompute.StorageAccountTypesPremiumLRS,
 							},
+							DiskSizeGB: to.Int32Ptr(200),
 						},
 					},
 					NetworkProfile: &mgmtcompute.VirtualMachineScaleSetNetworkProfile{
@@ -461,11 +360,11 @@ chmod +x /etc/cron.hourly/tmpwatch
 }
 
 const (
-	sharedKeyVaultName          = "concat(take(resourceGroup().name,15), '" + SharedKeyVaultNameSuffix + "')"
+	sharedKeyVaultName          = "concat(take(resourceGroup().name,10), '" + SharedKeyVaultNameSuffix + "')"
 	sharedDiskEncryptionSetName = "concat(resourceGroup().name, '" + SharedDiskEncryptionSetNameSuffix + "')"
 	sharedDiskEncryptionKeyName = "concat(resourceGroup().name, '-disk-encryption-key')"
-
-	SharedKeyVaultNameSuffix          = "-sharedKV"
+	// Conflicts with current development subscription. cannot have two keyvaults with same name
+	SharedKeyVaultNameSuffix          = "-dev-sharedKV"
 	SharedDiskEncryptionSetNameSuffix = "-disk-encryption-set"
 )
 

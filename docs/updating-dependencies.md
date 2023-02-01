@@ -21,7 +21,7 @@ The reason for calling script instead of directly calling:
 
 ```bash
 go get -u ./...
-go mod tidy
+go mod tidy -compat=1.17
 go mod vendor
 ```
 
@@ -30,7 +30,7 @@ semantic versioning via tags. Therefore the proper version is parsed from the ve
 branch and fixed using replace directive. Otherwise it will upgrade every time
 the command is started.
 
-When upgrading to a never version of OpenShift, this script have to be updated to
+When upgrading to a newer version of OpenShift, this script have to be updated to
 reflect the proper release.
 
 
@@ -43,7 +43,7 @@ the PR, one can simply call
 go get <module>@<release> OR
 go get -u <module>@<release>
 
-go mod tidy
+go mod tidy -compat=1.17
 go mod vendor
 ```
 

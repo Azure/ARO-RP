@@ -1,6 +1,5 @@
 # Survey
 
-[![Build Status](https://travis-ci.org/AlecAivazis/survey.svg?branch=feature%2Fpretty)](https://travis-ci.org/AlecAivazis/survey)
 [![GoDoc](http://img.shields.io/badge/godoc-reference-5272B4.svg)](https://pkg.go.dev/github.com/AlecAivazis/survey/v2)
 
 A library for building interactive and accessible prompts on terminals supporting ANSI escape sequences.
@@ -56,39 +55,12 @@ func main() {
 }
 ```
 
-## Table of Contents
-
-1. [Examples](#examples)
-1. [Running the Prompts](#running-the-prompts)
-1. [Prompts](#prompts)
-   1. [Input](#input)
-      1. [Suggestion Options](#suggestion-options)
-   1. [Multiline](#multiline)
-   1. [Password](#password)
-   1. [Confirm](#confirm)
-   1. [Select](#select)
-   1. [MultiSelect](#multiselect)
-   1. [Editor](#editor)
-1. [Filtering Options](#filtering-options)
-1. [Validation](#validation)
-   1. [Built-in Validators](#built-in-validators)
-1. [Help Text](#help-text)
-   1. [Changing the input rune](#changing-the-input-rune)
-1. [Changing the Icons ](#changing-the-icons)
-1. [Custom Types](#custom-types)
-1. [Testing](#testing)
-1. [FAQ](#faq)
-
 ## Examples
 
 Examples can be found in the `examples/` directory. Run them
 to see basic behavior:
 
 ```bash
-go get github.com/AlecAivazis/survey/v2
-
-cd $GOPATH/src/github.com/AlecAivazis/survey
-
 go run examples/simple.go
 go run examples/validation.go
 ```
@@ -464,17 +436,20 @@ survey aims to support most terminal emulators; it expects support for ANSI esca
 This means that reading from piped stdin or writing to piped stdout is **not supported**,
 and likely to break your application in these situations. See [#337](https://github.com/AlecAivazis/survey/pull/337#issue-581351617)
 
-### Why isn't sending a SIGINT (aka. CTRL-C) signal working?
+### Why isn't Ctrl-C working?
 
-When you send an interrupt signal to the process, it only interrupts the current prompt instead of the entire process. This manifests in a `github.com/AlecAivazis/survey/v2/terminal.InterruptErr` being returned from `Ask` and `AskOne`. If you want to stop the process, handle the returned error in your code:
+Ordinarily, when you type Ctrl-C, the terminal recognizes this as the QUIT button and delivers a SIGINT signal to the process, which terminates it.
+However, Survey temporarily configures the terminal to deliver control codes as ordinary input bytes.
+When Survey reads a ^C byte (ASCII \x03, "end of text"), it interrupts the current survey and returns a
+`github.com/AlecAivazis/survey/v2/terminal.InterruptErr` from `Ask` or `AskOne`.
+If you want to stop the process, handle the returned error in your code:
 
 ```go
 err := survey.AskOne(prompt, &myVar)
-if err == terminal.InterruptErr {
-	fmt.Println("interrupted")
-
-	os.Exit(0)
-} else if err != nil {
-	panic(err)
+if err != nil {
+	if err == terminal.InterruptErr {
+		log.Fatal("interrupted")
+	}
+	...
 }
 ```

@@ -162,7 +162,6 @@ func TestListOpenShiftCluster(t *testing.T) {
 				return &v20200430.OpenShiftClusterList{
 					OpenShiftClusters: []*v20200430.OpenShiftCluster{},
 				}
-
 			},
 		},
 		{
@@ -198,7 +197,7 @@ func TestListOpenShiftCluster(t *testing.T) {
 
 					aead := testdatabase.NewFakeAEAD()
 
-					f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, aead, nil, nil, func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Interface) clusterdata.OpenShiftClusterEnricher {
+					f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, nil, api.APIs, &noop.Noop{}, aead, nil, nil, func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Emitter) clusterdata.OpenShiftClusterEnricher {
 						return ti.enricher
 					})
 					if err != nil {

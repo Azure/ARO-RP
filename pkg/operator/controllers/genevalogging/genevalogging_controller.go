@@ -12,6 +12,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -22,43 +23,55 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
+)
+
+const (
+	ControllerName = "GenevaLogging"
+
+	controllerEnabled = "aro.genevalogging.enabled"
+	// full pullspec of fluentbit image
+	controllerFluentbitPullSpec = "aro.genevalogging.fluentbit.pullSpec"
+	// full pullspec of mdsd image
+	controllerMDSDPullSpec = "aro.genevalogging.mdsd.pullSpec"
 )
 
 // Reconciler reconciles a Cluster object
 type Reconciler struct {
 	log *logrus.Entry
 
-	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
 	securitycli   securityclient.Interface
 
 	restConfig *rest.Config
+
+	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, securitycli securityclient.Interface, restConfig *rest.Config) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface, securitycli securityclient.Interface, restConfig *rest.Config) *Reconciler {
 	return &Reconciler{
 		log:           log,
 		securitycli:   securitycli,
 		kubernetescli: kubernetescli,
-		arocli:        arocli,
 		restConfig:    restConfig,
+		client:        client,
 	}
 }
 
 // Reconcile the genevalogging deployment.
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, request.Name, metav1.GetOptions{})
+	instance := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.Features.ReconcileGenevaLogging {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
+	r.log.Debug("running")
 	mysec, err := r.kubernetescli.CoreV1().Secrets(operator.Namespace).Get(ctx, operator.SecretName, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
@@ -114,6 +127,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.ServiceAccount{}).
 		Owns(&securityv1.SecurityContextConstraints{}).
-		Named(controllers.GenevaLoggingControllerName).
+		Named(ControllerName).
 		Complete(r)
 }

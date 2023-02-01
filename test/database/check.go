@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/go-test/deep"
 
@@ -23,6 +24,7 @@ type Checker struct {
 	asyncOperationDocuments   []*api.AsyncOperationDocument
 	portalDocuments           []*api.PortalDocument
 	gatewayDocuments          []*api.GatewayDocument
+	openShiftVersionDocuments []*api.OpenShiftVersionDocument
 }
 
 func NewChecker() *Checker {
@@ -92,6 +94,17 @@ func (f *Checker) AddGatewayDocuments(docs ...*api.GatewayDocument) {
 		}
 
 		f.gatewayDocuments = append(f.gatewayDocuments, docCopy.(*api.GatewayDocument))
+	}
+}
+
+func (f *Checker) AddOpenShiftVersionDocuments(docs ...*api.OpenShiftVersionDocument) {
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.openShiftVersionDocuments = append(f.openShiftVersionDocuments, docCopy.(*api.OpenShiftVersionDocument))
 	}
 }
 
@@ -222,6 +235,28 @@ func (f *Checker) CheckGateways(gateways *cosmosdb.FakeGatewayDocumentClient) (e
 		}
 	} else if len(all.GatewayDocuments) != 0 || len(f.gatewayDocuments) != 0 {
 		errs = append(errs, fmt.Errorf("gateways length different, %d vs %d", len(all.GatewayDocuments), len(f.gatewayDocuments)))
+	}
+
+	return errs
+}
+
+func (f *Checker) CheckOpenShiftVersions(versions *cosmosdb.FakeOpenShiftVersionDocumentClient) (errs []error) {
+	ctx := context.Background()
+
+	all, err := versions.ListAll(ctx, nil)
+	if err != nil {
+		return []error{err}
+	}
+
+	sort.Slice(all.OpenShiftVersionDocuments, func(i, j int) bool { return all.OpenShiftVersionDocuments[i].ID < all.OpenShiftVersionDocuments[j].ID })
+
+	if len(f.openShiftVersionDocuments) != 0 && len(all.OpenShiftVersionDocuments) == len(f.openShiftVersionDocuments) {
+		diff := deep.Equal(all.OpenShiftVersionDocuments, f.openShiftVersionDocuments)
+		for _, i := range diff {
+			errs = append(errs, errors.New(i))
+		}
+	} else if len(all.OpenShiftVersionDocuments) != 0 || len(f.openShiftVersionDocuments) != 0 {
+		errs = append(errs, fmt.Errorf("versions length different, %d vs %d", len(all.OpenShiftVersionDocuments), len(f.openShiftVersionDocuments)))
 	}
 
 	return errs

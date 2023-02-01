@@ -8,11 +8,12 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/to"
-	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
-	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -20,36 +21,44 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
+)
+
+const (
+	ControllerName = "MachineSet"
+
+	ControllerEnabled = "aro.machineset.enabled"
 )
 
 type Reconciler struct {
 	log *logrus.Entry
 
-	arocli aroclient.Interface
-	maocli maoclient.Interface
+	maocli machineclient.Interface
+
+	client client.Client
 }
 
 // MachineSet reconciler watches MachineSet objects for changes, evaluates total worker replica count, and reverts changes if needed.
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, maocli maoclient.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, maocli machineclient.Interface) *Reconciler {
 	return &Reconciler{
 		log:    log,
-		arocli: arocli,
 		maocli: maocli,
+		client: client,
 	}
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	instance := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.Features.ReconcileMachineSet {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ControllerEnabled) {
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
+	r.log.Debug("running")
 	modifiedMachineset, err := r.maocli.MachineV1beta1().MachineSets(machineSetsNamespace).Get(ctx, request.Name, metav1.GetOptions{})
 	if kerrors.IsNotFound(err) {
 		return reconcile.Result{}, err
@@ -96,6 +105,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&machinev1beta1.MachineSet{}, builder.WithPredicates(machineSetPredicate)).
-		Named(controllers.MachineSetControllerName).
+		Named(ControllerName).
 		Complete(r)
 }

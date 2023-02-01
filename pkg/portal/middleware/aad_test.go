@@ -19,7 +19,6 @@ import (
 
 	"github.com/form3tech-oss/jwt-go"
 	"github.com/go-test/deep"
-	"github.com/gofrs/uuid"
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/securecookie"
@@ -30,6 +29,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
 	"github.com/Azure/ARO-RP/pkg/util/roundtripper"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -87,7 +87,7 @@ func TestAAD(t *testing.T) {
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
 					SessionKeyUsername: "username",
 					SessionKeyGroups:   []string{"group1", "group2"},
-					SessionKeyExpires:  time.Unix(1, 0),
+					SessionKeyExpires:  int64(1),
 				}, a.store.Codecs...)
 				if err != nil {
 					return nil, err
@@ -109,7 +109,7 @@ func TestAAD(t *testing.T) {
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
 					SessionKeyUsername: "username",
 					SessionKeyGroups:   []string{"group1", "group2"},
-					SessionKeyExpires:  time.Unix(-1, 0),
+					SessionKeyExpires:  int64(-1),
 				}, a.store.Codecs...)
 				if err != nil {
 					return nil, err
@@ -137,7 +137,7 @@ func TestAAD(t *testing.T) {
 					},
 				}, nil
 			},
-			wantStatusCode: http.StatusInternalServerError,
+			wantStatusCode: http.StatusForbidden,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -155,7 +155,7 @@ func TestAAD(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			a.(*aad).now = func() time.Time { return time.Unix(0, 0) }
+			a.now = func() time.Time { return time.Unix(0, 0) }
 
 			var username string
 			var usernameok bool
@@ -166,7 +166,7 @@ func TestAAD(t *testing.T) {
 				groups, groupsok = r.Context().Value(ContextKeyGroups).([]string)
 			}))
 
-			r, err := tt.request(a.(*aad))
+			r, err := tt.request(a)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -261,7 +261,7 @@ func TestCheckAuthentication(t *testing.T) {
 				_, authenticated = r.Context().Value(ContextKeyUsername).(string)
 			}))
 
-			r, err := tt.request(a.(*aad))
+			r, err := tt.request(a)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -338,7 +338,7 @@ func TestLogin(t *testing.T) {
 
 			h := http.HandlerFunc(a.Login)
 
-			r, err := tt.request(a.(*aad))
+			r, err := tt.request(a)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -358,7 +358,6 @@ func TestLogin(t *testing.T) {
 			if !strings.HasPrefix(w.Header().Get("Location"), "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=&redirect_uri=https%3A%2F%2F%2Fcallback&response_type=code&scope=openid+profile&state=") {
 				t.Error(w.Header().Get("Location"))
 			}
-
 		})
 	}
 }
@@ -375,7 +374,7 @@ func TestLogout(t *testing.T) {
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
 					SessionKeyUsername: "username",
 					SessionKeyGroups:   []string{"group1", "group2"},
-					SessionKeyExpires:  time.Unix(1, 0),
+					SessionKeyExpires:  int64(0),
 				}, a.store.Codecs...)
 				if err != nil {
 					return nil, err
@@ -429,7 +428,7 @@ func TestLogout(t *testing.T) {
 
 			h := a.Logout("/bye")
 
-			r, err := tt.request(a.(*aad))
+			r, err := tt.request(a)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -452,7 +451,7 @@ func TestLogout(t *testing.T) {
 
 			var m map[interface{}]interface{}
 			cookies := w.Result().Cookies()
-			err = securecookie.DecodeMulti(SessionName, cookies[len(cookies)-1].Value, &m, a.(*aad).store.Codecs...)
+			err = securecookie.DecodeMulti(SessionName, cookies[len(cookies)-1].Value, &m, a.store.Codecs...)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -491,7 +490,7 @@ func TestCallback(t *testing.T) {
 		{
 			name: "success",
 			request: func(a *aad) (*http.Request, error) {
-				uuid := uuid.Must(uuid.NewV4()).String()
+				uuid := uuid.DefaultGenerator.Generate()
 
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
 					sessionKeyState: uuid,
@@ -541,8 +540,7 @@ func TestCallback(t *testing.T) {
 		{
 			name: "fail - state mismatch",
 			request: func(a *aad) (*http.Request, error) {
-				u, _ := uuid.NewV4()
-				uuid := u.String()
+				uuid := uuid.DefaultGenerator.Generate()
 
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
 					sessionKeyState: uuid,
@@ -566,8 +564,7 @@ func TestCallback(t *testing.T) {
 		{
 			name: "fail - error returned",
 			request: func(a *aad) (*http.Request, error) {
-				u, _ := uuid.NewV4()
-				uuid := u.String()
+				uuid := uuid.DefaultGenerator.Generate()
 
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
 					sessionKeyState: uuid,
@@ -593,8 +590,7 @@ func TestCallback(t *testing.T) {
 		{
 			name: "fail - oauther failed",
 			request: func(a *aad) (*http.Request, error) {
-				u, _ := uuid.NewV4()
-				uuid := u.String()
+				uuid := uuid.DefaultGenerator.Generate()
 
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
 					sessionKeyState: uuid,
@@ -621,8 +617,7 @@ func TestCallback(t *testing.T) {
 		{
 			name: "fail - no idtoken",
 			request: func(a *aad) (*http.Request, error) {
-				u, _ := uuid.NewV4()
-				uuid := u.String()
+				uuid := uuid.DefaultGenerator.Generate()
 
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
 					sessionKeyState: uuid,
@@ -647,8 +642,7 @@ func TestCallback(t *testing.T) {
 		{
 			name: "fail - verifier error",
 			request: func(a *aad) (*http.Request, error) {
-				u, _ := uuid.NewV4()
-				uuid := u.String()
+				uuid := uuid.DefaultGenerator.Generate()
 
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
 					sessionKeyState: uuid,
@@ -678,8 +672,7 @@ func TestCallback(t *testing.T) {
 		{
 			name: "fail - invalid claims",
 			request: func(a *aad) (*http.Request, error) {
-				u, _ := uuid.NewV4()
-				uuid := u.String()
+				uuid := uuid.DefaultGenerator.Generate()
 
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
 					sessionKeyState: uuid,
@@ -709,8 +702,7 @@ func TestCallback(t *testing.T) {
 		{
 			name: "fail - group mismatch",
 			request: func(a *aad) (*http.Request, error) {
-				u, _ := uuid.NewV4()
-				uuid := u.String()
+				uuid := uuid.DefaultGenerator.Generate()
 
 				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
 					sessionKeyState: uuid,
@@ -753,17 +745,17 @@ func TestCallback(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			a.(*aad).now = func() time.Time { return time.Unix(0, 0) }
-			a.(*aad).oauther = tt.oauther
+			a.now = func() time.Time { return time.Unix(0, 0) }
+			a.oauther = tt.oauther
 
-			r, err := tt.request(a.(*aad))
+			r, err := tt.request(a)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			w := httptest.NewRecorder()
 
-			a.(*aad).callback(w, r)
+			a.callback(w, r)
 
 			if tt.wantError != "" {
 				if w.Code != http.StatusInternalServerError {
@@ -780,7 +772,7 @@ func TestCallback(t *testing.T) {
 			type cookie map[interface{}]interface{}
 			var m cookie
 			cookies := w.Result().Cookies()
-			err = securecookie.DecodeMulti(SessionName, cookies[len(cookies)-1].Value, &m, a.(*aad).store.Codecs...)
+			err = securecookie.DecodeMulti(SessionName, cookies[len(cookies)-1].Value, &m, a.store.Codecs...)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -796,7 +788,7 @@ func TestCallback(t *testing.T) {
 				}
 
 				for _, l := range deep.Equal(m, cookie{
-					SessionKeyExpires:  time.Unix(3600, 0),
+					SessionKeyExpires:  int64(3600),
 					SessionKeyGroups:   groups,
 					SessionKeyUsername: username,
 				}) {
@@ -845,7 +837,7 @@ func TestClientAssertion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.(*aad).rt = roundtripper.RoundTripperFunc(func(*http.Request) (*http.Response, error) {
+	a.rt = roundtripper.RoundTripperFunc(func(*http.Request) (*http.Response, error) {
 		return nil, nil
 	})
 
@@ -855,7 +847,7 @@ func TestClientAssertion(t *testing.T) {
 	}
 	req.Form = url.Values{"test": []string{"value"}}
 
-	_, err = a.(*aad).clientAssertion(req)
+	_, err = a.clientAssertion(req)
 	if err != nil {
 		t.Fatal(err)
 	}

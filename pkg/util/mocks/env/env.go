@@ -11,6 +11,7 @@ import (
 	net "net"
 	reflect "reflect"
 
+	azidentity "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	compute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	autorest "github.com/Azure/go-autorest/autorest"
 	gomock "github.com/golang/mock/gomock"
@@ -19,6 +20,7 @@ import (
 	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
 	clientauthorizer "github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	keyvault "github.com/Azure/ARO-RP/pkg/util/keyvault"
+	liveconfig "github.com/Azure/ARO-RP/pkg/util/liveconfig"
 	refreshable "github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
@@ -99,6 +101,21 @@ func (m *MockCore) Location() string {
 func (mr *MockCoreMockRecorder) Location() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Location", reflect.TypeOf((*MockCore)(nil).Location))
+}
+
+// NewLiveConfigManager mocks base method.
+func (m *MockCore) NewLiveConfigManager(arg0 context.Context) (liveconfig.Manager, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewLiveConfigManager", arg0)
+	ret0, _ := ret[0].(liveconfig.Manager)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// NewLiveConfigManager indicates an expected call of NewLiveConfigManager.
+func (mr *MockCoreMockRecorder) NewLiveConfigManager(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewLiveConfigManager", reflect.TypeOf((*MockCore)(nil).NewLiveConfigManager), arg0)
 }
 
 // NewMSIAuthorizer mocks base method.
@@ -422,6 +439,21 @@ func (mr *MockInterfaceMockRecorder) FPClientID() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FPClientID", reflect.TypeOf((*MockInterface)(nil).FPClientID))
 }
 
+// FPNewClientCertificateCredential mocks base method.
+func (m *MockInterface) FPNewClientCertificateCredential(arg0 string) (*azidentity.ClientCertificateCredential, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FPNewClientCertificateCredential", arg0)
+	ret0, _ := ret[0].(*azidentity.ClientCertificateCredential)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FPNewClientCertificateCredential indicates an expected call of FPNewClientCertificateCredential.
+func (mr *MockInterfaceMockRecorder) FPNewClientCertificateCredential(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FPNewClientCertificateCredential", reflect.TypeOf((*MockInterface)(nil).FPNewClientCertificateCredential), arg0)
+}
+
 // FeatureIsSet mocks base method.
 func (m *MockInterface) FeatureIsSet(arg0 env.Feature) bool {
 	m.ctrl.T.Helper()
@@ -521,6 +553,20 @@ func (mr *MockInterfaceMockRecorder) Listen() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Listen", reflect.TypeOf((*MockInterface)(nil).Listen))
 }
 
+// LiveConfig mocks base method.
+func (m *MockInterface) LiveConfig() liveconfig.Manager {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LiveConfig")
+	ret0, _ := ret[0].(liveconfig.Manager)
+	return ret0
+}
+
+// LiveConfig indicates an expected call of LiveConfig.
+func (mr *MockInterfaceMockRecorder) LiveConfig() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LiveConfig", reflect.TypeOf((*MockInterface)(nil).LiveConfig))
+}
+
 // Location mocks base method.
 func (m *MockInterface) Location() string {
 	m.ctrl.T.Helper()
@@ -533,6 +579,21 @@ func (m *MockInterface) Location() string {
 func (mr *MockInterfaceMockRecorder) Location() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Location", reflect.TypeOf((*MockInterface)(nil).Location))
+}
+
+// NewLiveConfigManager mocks base method.
+func (m *MockInterface) NewLiveConfigManager(arg0 context.Context) (liveconfig.Manager, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewLiveConfigManager", arg0)
+	ret0, _ := ret[0].(liveconfig.Manager)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// NewLiveConfigManager indicates an expected call of NewLiveConfigManager.
+func (mr *MockInterfaceMockRecorder) NewLiveConfigManager(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewLiveConfigManager", reflect.TypeOf((*MockInterface)(nil).NewLiveConfigManager), arg0)
 }
 
 // NewMSIAuthorizer mocks base method.

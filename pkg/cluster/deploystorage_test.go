@@ -5,7 +5,9 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
@@ -15,14 +17,16 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
+	utilrand "k8s.io/apimachinery/pkg/util/rand"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
+	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
-func TestCreateAndUpdateErrors(t *testing.T) {
+func TestEnsureResourceGroup(t *testing.T) {
 	ctx := context.Background()
 	clusterID := "test-cluster"
 	resourceGroupName := "fakeResourceGroup"
@@ -34,41 +38,135 @@ func TestCreateAndUpdateErrors(t *testing.T) {
 		ManagedBy: &clusterID,
 	}
 
+	groupWithTags := group
+	groupWithTags.Tags = map[string]*string{
+		"yeet": to.StringPtr("yote"),
+	}
+
+	resourceGroupManagedByMismatch := autorest.NewErrorWithError(&azure.RequestError{
+		ServiceError: &azure.ServiceError{Code: "ResourceGroupManagedByMismatch"},
+	}, "", "", nil, "")
+
 	disallowedByPolicy := autorest.NewErrorWithError(&azure.RequestError{
 		ServiceError: &azure.ServiceError{Code: "RequestDisallowedByPolicy"},
 	}, "", "", nil, "")
 
 	for _, tt := range []struct {
-		name    string
-		result  mgmtfeatures.ResourceGroup
-		mocks   func(*mock_features.MockResourceGroupsClient, interface{})
-		wantErr string
+		name              string
+		provisioningState api.ProvisioningState
+		mocks             func(*mock_features.MockResourceGroupsClient, *mock_env.MockInterface)
+		wantErr           string
 	}{
 		{
-			name: "ResourceGroup creation was fine",
-			mocks: func(rg *mock_features.MockResourceGroupsClient, result interface{}) {
+			name:              "success - rg doesn't exist",
+			provisioningState: api.ProvisioningStateCreating,
+			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
 				rg.EXPECT().
-					CreateOrUpdate(ctx, resourceGroupName, group).
-					Return(result, nil)
+					CreateOrUpdate(gomock.Any(), resourceGroupName, group).
+					Return(group, nil)
+
+				env.EXPECT().
+					IsLocalDevelopmentMode().
+					Return(false)
+
+				env.EXPECT().
+					EnsureARMResourceGroupRoleAssignment(gomock.Any(), gomock.Any(), resourceGroupName).
+					Return(nil)
 			},
 		},
 		{
-			name: "ResourceGroup creation failed with RequestDisallowedByPolicy",
-			mocks: func(rg *mock_features.MockResourceGroupsClient, result interface{}) {
+			name:              "success - rg doesn't exist and localdev mode tags set",
+			provisioningState: api.ProvisioningStateCreating,
+			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
+				groupWithLocalDevTags := group
+				groupWithLocalDevTags.Tags = map[string]*string{
+					"purge": to.StringPtr("true"),
+				}
 				rg.EXPECT().
-					CreateOrUpdate(ctx, resourceGroupName, group).
-					Return(result, disallowedByPolicy)
+					CreateOrUpdate(gomock.Any(), resourceGroupName, groupWithLocalDevTags).
+					Return(groupWithLocalDevTags, nil)
+
+				env.EXPECT().
+					IsLocalDevelopmentMode().
+					Return(true)
+
+				env.EXPECT().
+					EnsureARMResourceGroupRoleAssignment(gomock.Any(), gomock.Any(), resourceGroupName).
+					Return(nil)
+			},
+		},
+		{
+			name:              "success - rg exists and maintain tags",
+			provisioningState: api.ProvisioningStateAdminUpdating,
+			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
+				rg.EXPECT().
+					Get(gomock.Any(), resourceGroupName).
+					Return(groupWithTags, nil)
+
+				rg.EXPECT().
+					CreateOrUpdate(gomock.Any(), resourceGroupName, groupWithTags).
+					Return(groupWithTags, nil)
+
+				env.EXPECT().
+					IsLocalDevelopmentMode().
+					Return(false)
+
+				env.EXPECT().
+					EnsureARMResourceGroupRoleAssignment(gomock.Any(), gomock.Any(), resourceGroupName).
+					Return(nil)
+			},
+		},
+		{
+			name:              "fail - get rg returns generic error",
+			provisioningState: api.ProvisioningStateAdminUpdating,
+			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
+				rg.EXPECT().
+					Get(gomock.Any(), resourceGroupName).
+					Return(group, errors.New("generic error"))
+			},
+			wantErr: "generic error",
+		},
+		{
+			name:              "fail - CreateOrUpdate returns resourcegroupmanagedbymismatch",
+			provisioningState: api.ProvisioningStateCreating,
+			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
+				rg.EXPECT().
+					CreateOrUpdate(gomock.Any(), resourceGroupName, group).
+					Return(group, resourceGroupManagedByMismatch)
+
+				env.EXPECT().
+					IsLocalDevelopmentMode().
+					Return(false)
+			},
+			wantErr: "400: ClusterResourceGroupAlreadyExists: : Resource group " + resourceGroup + " must not already exist.",
+		},
+		{
+			name:              "fail - CreateOrUpdate returns requestdisallowedbypolicy",
+			provisioningState: api.ProvisioningStateCreating,
+			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
+				rg.EXPECT().
+					CreateOrUpdate(gomock.Any(), resourceGroupName, group).
+					Return(group, disallowedByPolicy)
+
+				env.EXPECT().
+					IsLocalDevelopmentMode().
+					Return(false)
 			},
 			wantErr: `400: DeploymentFailed: : Deployment failed. Details: : : {"code":"RequestDisallowedByPolicy","message":"","target":null,"details":null,"innererror":null,"additionalInfo":null}`,
 		},
 		{
-			name: "ResourceGroup creation failed with other error",
-			mocks: func(rg *mock_features.MockResourceGroupsClient, result interface{}) {
+			name:              "fail - CreateOrUpdate returns generic error",
+			provisioningState: api.ProvisioningStateCreating,
+			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
 				rg.EXPECT().
-					CreateOrUpdate(ctx, resourceGroupName, group).
-					Return(result, fmt.Errorf("Any other error"))
+					CreateOrUpdate(gomock.Any(), resourceGroupName, group).
+					Return(group, errors.New("generic error"))
+
+				env.EXPECT().
+					IsLocalDevelopmentMode().
+					Return(false)
 			},
-			wantErr: "Any other error",
+			wantErr: "generic error",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -76,12 +174,10 @@ func TestCreateAndUpdateErrors(t *testing.T) {
 			defer controller.Finish()
 
 			resourceGroupsClient := mock_features.NewMockResourceGroupsClient(controller)
-			tt.mocks(resourceGroupsClient, tt.result)
-
 			env := mock_env.NewMockInterface(controller)
+			tt.mocks(resourceGroupsClient, env)
+
 			env.EXPECT().Location().AnyTimes().Return(location)
-			env.EXPECT().EnsureARMResourceGroupRoleAssignment(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
-			env.EXPECT().IsLocalDevelopmentMode().Return(false)
 
 			m := &manager{
 				log:            logrus.NewEntry(logrus.StandardLogger()),
@@ -92,6 +188,7 @@ func TestCreateAndUpdateErrors(t *testing.T) {
 							ClusterProfile: api.ClusterProfile{
 								ResourceGroupID: resourceGroup,
 							},
+							ProvisioningState: tt.provisioningState,
 						},
 						Location: location,
 						ID:       clusterID,
@@ -101,7 +198,6 @@ func TestCreateAndUpdateErrors(t *testing.T) {
 			}
 
 			err := m.ensureResourceGroup(ctx)
-
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -178,6 +274,109 @@ func TestSetMasterSubnetPolicies(t *testing.T) {
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
+			}
+		})
+	}
+}
+
+func TestEnsureInfraID(t *testing.T) {
+	ctx := context.Background()
+	resourceID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName"
+
+	for _, tt := range []struct {
+		name          string
+		oc            *api.OpenShiftClusterDocument
+		wantedInfraID string
+		wantErr       string
+	}{
+		{
+			name: "infra ID not set",
+			oc: &api.OpenShiftClusterDocument{
+				Key: strings.ToLower(resourceID),
+
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID:   resourceID,
+					Name: "FoobarCluster",
+
+					Properties: api.OpenShiftClusterProperties{
+						InfraID: "",
+					},
+				},
+			},
+			wantedInfraID: "foobarcluster-cbhtc",
+		},
+		{
+			name: "infra ID not set, very long name",
+			oc: &api.OpenShiftClusterDocument{
+				Key: strings.ToLower(resourceID),
+
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID:   resourceID,
+					Name: "abcdefghijklmnopqrstuvwxyzabc",
+
+					Properties: api.OpenShiftClusterProperties{
+						InfraID: "",
+					},
+				},
+			},
+			wantedInfraID: "abcdefghijklmnopqrstu-cbhtc",
+		},
+		{
+			name: "infra ID set and left alone",
+			oc: &api.OpenShiftClusterDocument{
+				Key: strings.ToLower(resourceID),
+
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID:   resourceID,
+					Name: "FoobarCluster",
+
+					Properties: api.OpenShiftClusterProperties{
+						InfraID: "infra",
+					},
+				},
+			},
+			wantedInfraID: "infra",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			dbOpenShiftClusters, _ := testdatabase.NewFakeOpenShiftClusters()
+
+			f := testdatabase.NewFixture().WithOpenShiftClusters(dbOpenShiftClusters)
+			f.AddOpenShiftClusterDocuments(tt.oc)
+
+			err := f.Create()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			doc, err := dbOpenShiftClusters.Get(ctx, strings.ToLower(resourceID))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			m := &manager{
+				db:  dbOpenShiftClusters,
+				doc: doc,
+			}
+
+			// hopefully setting a seed here means it passes consistently :)
+			utilrand.Seed(0)
+			err = m.ensureInfraID(ctx)
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
+			}
+
+			checkDoc, err := dbOpenShiftClusters.Get(ctx, strings.ToLower(resourceID))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if checkDoc.OpenShiftCluster.Properties.InfraID != tt.wantedInfraID {
+				t.Fatalf("%s != %s (wanted)", checkDoc.OpenShiftCluster.Properties.InfraID, tt.wantedInfraID)
 			}
 		})
 	}

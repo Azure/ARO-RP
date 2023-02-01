@@ -14,21 +14,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
-func (r *reconcileManager) reconcileSubnets(ctx context.Context) error {
-	subnets, err := r.kubeSubnets.List(ctx)
-	if err != nil {
-		return err
-	}
-
-	for _, s := range subnets {
-		err = r.ensureSubnetNSG(ctx, s)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (r *reconcileManager) ensureSubnetNSG(ctx context.Context, s subnet.Subnet) error {
 	architectureVersion := api.ArchitectureVersion(r.instance.Spec.ArchitectureVersion)
 
@@ -36,7 +21,7 @@ func (r *reconcileManager) ensureSubnetNSG(ctx context.Context, s subnet.Subnet)
 	if err != nil {
 		return err
 	}
-	if subnetObject.SubnetPropertiesFormat == nil || subnetObject.SubnetPropertiesFormat.NetworkSecurityGroup == nil {
+	if subnetObject.SubnetPropertiesFormat == nil {
 		return fmt.Errorf("received nil, expected a value in subnetProperties when trying to Get subnet %s", s.ResourceID)
 	}
 
@@ -45,14 +30,18 @@ func (r *reconcileManager) ensureSubnetNSG(ctx context.Context, s subnet.Subnet)
 		return err
 	}
 
-	if !strings.EqualFold(*subnetObject.NetworkSecurityGroup.ID, correctNSGResourceID) {
-		r.log.Infof("Fixing NSG from %s to %s", *subnetObject.NetworkSecurityGroup.ID, correctNSGResourceID)
-
-		subnetObject.NetworkSecurityGroup = &mgmtnetwork.SecurityGroup{ID: &correctNSGResourceID}
-		err = r.subnets.CreateOrUpdate(ctx, s.ResourceID, subnetObject)
-		if err != nil {
-			return err
-		}
+	// if the NSG is assigned && it's the correct NSG - do nothing
+	if subnetObject.SubnetPropertiesFormat.NetworkSecurityGroup != nil && strings.EqualFold(*subnetObject.NetworkSecurityGroup.ID, correctNSGResourceID) {
+		return nil
 	}
-	return nil
+
+	// else the NSG assignment needs to be corrected
+	oldNSG := "nil"
+	if subnetObject.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
+		oldNSG = *subnetObject.NetworkSecurityGroup.ID
+	}
+	r.log.Infof("Fixing NSG from %s to %s", oldNSG, correctNSGResourceID)
+	subnetObject.NetworkSecurityGroup = &mgmtnetwork.SecurityGroup{ID: &correctNSGResourceID}
+	err = r.subnets.CreateOrUpdate(ctx, s.ResourceID, subnetObject)
+	return err
 }

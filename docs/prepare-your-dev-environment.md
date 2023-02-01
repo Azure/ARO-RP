@@ -3,71 +3,105 @@
 This document goes through the development dependencies one requires in order to build the RP code.
 
 ## Software Required
-1. Install [Go 1.14](https://golang.org/dl) or later, if you haven't already.
+
+1. Install [Go 1.17](https://golang.org/dl) or later, if you haven't already.
+   1. After downloading follow the [Install instructions](https://go.dev/doc/install), replacing the tar archive with your download.
+   1. Append `export PATH="${PATH}:/usr/local/go/bin"` to your shell's profile file.
+
+1. Configure `GOPATH` as an OS environment variable in your shell (a requirement of some dependencies for `make generate`). If you want to keep the default path, you can add something like `GOPATH=$(go env GOPATH)` to your shell's profile/RC file.
+
+1. Append `export GO111MODULE=auto` to your shell's profile file.
+    1. Read [New module changes in Go 1.16](https://go.dev/blog/go116-module-changes) for more information.
 
 1. Install [Python 3.6+](https://www.python.org/downloads), if you haven't already.  You will also need `python-setuptools` installed, if you don't have it installed already.
 
-1. Install `virtualenv`, a tool for managing Python virtual environments.
-> The package is called `python-virtualenv` on both Fedora and Debian-based systems.
-
-1. Install the [az client](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli), if you haven't already. You will need `az` version 2.0.72 or greater, as this version includes the `az network vnet subnet update --disable-private-link-service-network-policies` flag.
+1. Install the [az client](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli), if you haven't already.
 
 1. Install [OpenVPN](https://openvpn.net/community-downloads) if it is not already installed
 
 1. Install the relevant packages required for your OS defined below.
 
+1. Install [Podman](https://podman.io/getting-started/installation) and [podman-docker](https://developers.redhat.com/blog/2019/02/21/podman-and-buildah-for-docker-users#) if you haven't already, used for building container images.
+
+1. Run for `az acr login` compatability
+
+    ```bash
+    sudo touch /etc/containers/nodocker
+    ```
+
+1. Install [golangci-lint](https://golangci-lint.run/) and [yamllint](https://yamllint.readthedocs.io/en/stable/quickstart.html#installing-yamllint) (optional but your code is required to comply to pass the CI)
+
 ### Fedora Packages
 
 1. Install the `gpgme-devel`, `libassuan-devel`, and `openssl` packages.
-> `sudo dnf install -y gpgme-devel libassuan-devel openssl`
+    > `sudo dnf install -y gpgme-devel libassuan-devel openssl`
+
+1. Install [Docker 17.05+](https://docs.docker.com/engine/install/fedora/) or later, used as an alternative to podman.
 
 ### Debian Packages
-1. Install the `libgpgme-dev` package.
+
+Install the `libgpgme-dev` package.
 
 ### MacOS Packages
+
 1. We are open to developers on MacOS working on this repository.  We are asking MacOS users to setup GNU utils on their machines.
 
-We are aiming to limit the amount of shell scripting, etc. in the repository, installing the GNU utils on MacOS will minimise the chances of unexpected differences in command line flags, usages, etc., and make it easier for everyone to ensure compatibility down the line.
+    We are aiming to limit the amount of shell scripting, etc. in the repository, installing the GNU utils on MacOS will minimise the chances of unexpected differences in command line flags, usages, etc., and make it easier for everyone to ensure compatibility down the line.
 
-Install the following packages on MacOS:
-```bash
-# GNU Utils
-brew install coreutils
-brew install findutils
-brew install gnu-tar
-brew install grep
+    Install the following packages on MacOS:
 
-# Install envsubst
-brew install gettext
-brew link --force gettext
+    ```bash
+    # GNU Utils
+    brew install coreutils findutils gnu-tar grep
 
-# Install
-brew install gpgme
+    # Install envsubst (provided with gettext)
+    brew install gettext
+    brew link gettext
 
-# GNU utils
-# Ref: https://web.archive.org/web/20190704110904/https://www.topbug.net/blog/2013/04/14/install-and-use-gnu-command-line-tools-in-mac-os-x
-# gawk, diffutils, gzip, screen, watch, git, rsync, wdiff
-export PATH="/usr/local/bin:$PATH"
-# coreutils
-export PATH="/usr/local/opt/coreutils/libexec/gnubin:$PATH"
-# findutils
-export PATH="/usr/local/opt/findutils/libexec/gnubin:$PATH"
+    # Install gpgme
+    brew install gpgme
 
-#grep
-export PATH="/usr/local/opt/grep/libexec/gnubin:$PATH"
+    # Install diffutils to avoid errors during test runs
+    brew install diffutils
+    ```
 
-#python-virtualenv
-sudo pip3 install virtualenv
-```
+1. Modify your `~/.zshrc` (or `~/.bashrc` for Bash): this prepends `PATH` with GNU Utils paths;
+
+    ```bash
+    echo "export PATH=$(find $(brew --prefix)/opt -type d -follow -name gnubin -print | paste -s -d ':' -):\$PATH" >> ~/.zshrc
+    ```
+
+1. Add the following into your `~/.zshrc`/`~/.bashrc` file:
+
+    ```bash
+    export LDFLAGS="-L$(brew --prefix)/lib"
+    export CFLAGS="-I$(brew --prefix)/include"
+    export CGO_LDFLAGS=$LDFLAGS
+    export CGO_CFLAGS=$CFLAGS
+    ```
 
 ## Getting Started
+
 1. Login to Azure:
+
     ```bash
     az login
     ```
 
 1. Clone the repository to your local machine:
+
     ```bash
     go get -u github.com/Azure/ARO-RP/...
+    ```
+
+    Alternatively you can also use:
+
+    ```bash
+    git clone https://github.com/Azure/ARO-RP.git $GOPATH/src/github.com/Azure/ARO-RP
+    ```
+
+1. Go to project:
+
+    ```bash
     cd ${GOPATH:-$HOME/go}/src/github.com/Azure/ARO-RP
     ```

@@ -16,25 +16,15 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
 var (
 	cmMetadata = metav1.ObjectMeta{Name: "cluster-monitoring-config", Namespace: "openshift-monitoring"}
-
-	arocli = arofake.NewSimpleClientset(&arov1alpha1.Cluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: arov1alpha1.SingletonClusterName,
-		},
-		Spec: arov1alpha1.ClusterSpec{
-			Features: arov1alpha1.FeaturesSpec{
-				ReconcileMonitoringConfig: true,
-			},
-		},
-	})
 )
 
 func TestReconcileMonitoringConfig(t *testing.T) {
@@ -146,10 +136,21 @@ somethingElse:
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			instance := &arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
+				},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						controllerEnabled: "true",
+					},
+				},
+			}
+
 			r := &Reconciler{
-				kubernetescli: tt.kubernetescli,
-				arocli:        arocli,
 				log:           log,
+				kubernetescli: tt.kubernetescli,
+				client:        ctrlfake.NewClientBuilder().WithObjects(instance).Build(),
 				jsonHandle:    new(codec.JsonHandle),
 			}
 			ctx := context.Background()
@@ -243,10 +244,21 @@ func TestReconcilePVC(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
+
+			instance := &arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
+				},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						controllerEnabled: "true",
+					},
+				},
+			}
 			r := &Reconciler{
 				log:           log,
-				arocli:        arocli,
 				kubernetescli: tt.kubernetescli,
+				client:        ctrlfake.NewClientBuilder().WithObjects(instance).Build(),
 				jsonHandle:    new(codec.JsonHandle),
 			}
 			request := ctrl.Request{}

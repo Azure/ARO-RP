@@ -1,0 +1,9 @@
+ARG REGISTRY
+FROM ${REGISTRY}/ubi8/nodejs-16
+WORKDIR /data
+USER root
+
+COPY /portal/v2 /data/
+RUN npm install
+
+CMD ["npm", "run", "lint"]

@@ -5,19 +5,19 @@ package e2e
 
 import (
 	"context"
+	"fmt"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("List clusters", func() {
-	Specify("the test cluster should be in the returned list", func() {
-		ctx := context.Background()
-
+	It("must contain the test cluster in the returned list", func(ctx context.Context) {
+		By("listing clusters")
 		ocList, err := clients.OpenshiftClustersv20200430.List(ctx)
 		Expect(err).NotTo(HaveOccurred())
-		//Expect(len(ocList.Value)).To(Greater(1)))
 
+		By("checking if the test cluster is in the list")
 		found := false
 		for _, oc := range ocList {
 			if *oc.Name == clusterName {
@@ -25,16 +25,16 @@ var _ = Describe("List clusters", func() {
 				break
 			}
 		}
-
 		Expect(found).To(Equal(true))
 	})
-	Specify("the test cluster should be in the returned listByResourceGroup", func() {
-		ctx := context.Background()
 
+	// listByResourceGroup test marked Pending (X), don't reenable until ARM caching issue is fixed, see https://github.com/Azure/ARO-RP/pull/1995
+	XIt("must contain the test cluster when listing clusters by a resource group", func(ctx context.Context) {
+		By(fmt.Sprintf("listing clusters by a resource group %q", vnetResourceGroup))
 		ocList, err := clients.OpenshiftClustersv20200430.ListByResourceGroup(ctx, vnetResourceGroup)
 		Expect(err).NotTo(HaveOccurred())
-		//Expect(len(ocList.Value)).To(Greater(1)))
 
+		By("checking if the test cluster is in the list")
 		found := false
 		for _, oc := range ocList {
 			if *oc.Name == clusterName {
@@ -42,7 +42,6 @@ var _ = Describe("List clusters", func() {
 				break
 			}
 		}
-
 		Expect(found).To(Equal(true))
 	})
 })

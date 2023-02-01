@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/kubernetes/pkg/kubelet/events"
 
 	"github.com/Azure/ARO-RP/pkg/util/namespace"
 )
@@ -51,11 +52,15 @@ func (mon *Monitor) emitPodConditions(ctx context.Context) error {
 
 func (mon *Monitor) _emitPodConditions(ps *corev1.PodList) {
 	for _, p := range ps.Items {
-		if !namespace.IsOpenShift(p.Namespace) {
+		if !namespace.IsOpenShiftNamespace(p.Namespace) {
 			continue
 		}
 
 		if p.Status.Phase == corev1.PodSucceeded {
+			continue
+		}
+
+		if p.Status.Reason == events.PreemptContainer {
 			continue
 		}
 
@@ -89,7 +94,7 @@ func (mon *Monitor) _emitPodConditions(ps *corev1.PodList) {
 
 func (mon *Monitor) _emitPodContainerStatuses(ps *corev1.PodList) {
 	for _, p := range ps.Items {
-		if !namespace.IsOpenShift(p.Namespace) {
+		if !namespace.IsOpenShiftNamespace(p.Namespace) {
 			continue
 		}
 
@@ -126,7 +131,7 @@ func (mon *Monitor) _emitPodContainerStatuses(ps *corev1.PodList) {
 
 func (mon *Monitor) _emitPodContainerRestartCounter(ps *corev1.PodList) {
 	for _, p := range ps.Items {
-		if !namespace.IsOpenShiftSystemNamespace(p.Namespace) {
+		if !namespace.IsOpenShiftNamespace(p.Namespace) {
 			continue
 		}
 

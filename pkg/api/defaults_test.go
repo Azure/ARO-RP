@@ -15,6 +15,7 @@ func validOpenShiftClusterDocument() *OpenShiftClusterDocument {
 			Properties: OpenShiftClusterProperties{
 				NetworkProfile: NetworkProfile{
 					SoftwareDefinedNetwork: SoftwareDefinedNetworkOpenShiftSDN,
+					OutboundType:           OutboundTypeLoadbalancer,
 				},
 				MasterProfile: MasterProfile{
 					EncryptionAtHost: EncryptionAtHostDisabled,
@@ -27,6 +28,7 @@ func validOpenShiftClusterDocument() *OpenShiftClusterDocument {
 				ClusterProfile: ClusterProfile{
 					FipsValidatedModules: FipsValidatedModulesDisabled,
 				},
+				OperatorFlags: DefaultOperatorFlags(),
 			},
 		},
 	}
@@ -103,6 +105,26 @@ func TestSetDefaults(t *testing.T) {
 			},
 			input: func(base *OpenShiftClusterDocument) {
 				base.OpenShiftCluster.Properties.ClusterProfile.FipsValidatedModules = FipsValidatedModulesEnabled
+			},
+		},
+		{
+			name: "default flags",
+			want: func() *OpenShiftClusterDocument {
+				return validOpenShiftClusterDocument()
+			},
+			input: func(base *OpenShiftClusterDocument) {
+				base.OpenShiftCluster.Properties.OperatorFlags = nil
+			},
+		},
+		{
+			name: "preserve flags",
+			want: func() *OpenShiftClusterDocument {
+				doc := validOpenShiftClusterDocument()
+				doc.OpenShiftCluster.Properties.OperatorFlags = OperatorFlags{}
+				return doc
+			},
+			input: func(base *OpenShiftClusterDocument) {
+				base.OpenShiftCluster.Properties.OperatorFlags = OperatorFlags{}
 			},
 		},
 	} {

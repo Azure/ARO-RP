@@ -11,9 +11,9 @@ import (
 	"testing"
 
 	"github.com/Azure/go-autorest/autorest/to"
-	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
-	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
-	maofake "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
+	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -40,15 +40,15 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 
 	for _, tt := range []struct {
 		name     string
-		client   func() maoclient.Interface
+		client   func() machineclient.Interface
 		modifyOc func(*api.OpenShiftCluster)
 		wantOc   *api.OpenShiftCluster
 		wantErr  string
 	}{
 		{
 			name: "machine set objects exists - valid provider spec JSON",
-			client: func() maoclient.Interface {
-				return maofake.NewSimpleClientset(
+			client: func() machineclient.Interface {
+				return machinefake.NewSimpleClientset(
 					&machinev1beta1.MachineSet{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "fake-worker-profile-1",
@@ -60,7 +60,7 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 									ProviderSpec: machinev1beta1.ProviderSpec{
 										Value: &kruntime.RawExtension{
 											Raw: []byte(fmt.Sprintf(`{
-	"apiVersion": "azureproviderconfig.openshift.io/v1beta1",
+	"apiVersion": "machine.openshift.io/v1beta1",
 	"kind": "AzureMachineProviderSpec",
 	"osDisk": {
 		"diskSizeGB": 512
@@ -136,8 +136,8 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 		},
 		{
 			name: "machine set objects exists - invalid provider spec JSON",
-			client: func() maoclient.Interface {
-				return maofake.NewSimpleClientset(
+			client: func() machineclient.Interface {
+				return machinefake.NewSimpleClientset(
 					&machinev1beta1.MachineSet{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "fake-worker-profile-1",
@@ -166,8 +166,8 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 		},
 		{
 			name: "machine set objects exists - provider spec is missing",
-			client: func() maoclient.Interface {
-				return maofake.NewSimpleClientset(
+			client: func() machineclient.Interface {
+				return machinefake.NewSimpleClientset(
 					&machinev1beta1.MachineSet{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "fake-worker-profile-1",
@@ -185,8 +185,8 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 		},
 		{
 			name: "machine set objects exists - provider spec is missing raw value",
-			client: func() maoclient.Interface {
-				return maofake.NewSimpleClientset(
+			client: func() machineclient.Interface {
+				return machinefake.NewSimpleClientset(
 					&machinev1beta1.MachineSet{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "fake-worker-profile-1",
@@ -213,8 +213,8 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 		},
 		{
 			name: "machine set objects do not exist",
-			client: func() maoclient.Interface {
-				return maofake.NewSimpleClientset()
+			client: func() machineclient.Interface {
+				return machinefake.NewSimpleClientset()
 			},
 			wantOc: &api.OpenShiftCluster{
 				ID: clusterID,
@@ -225,8 +225,8 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 		},
 		{
 			name: "machine set list request failed",
-			client: func() maoclient.Interface {
-				client := maofake.NewSimpleClientset()
+			client: func() machineclient.Interface {
+				client := machinefake.NewSimpleClientset()
 				client.PrependReactor("list", "machinesets", func(action ktesting.Action) (bool, kruntime.Object, error) {
 					return true, nil, errors.New("fake list error")
 				})
@@ -239,8 +239,8 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 		},
 		{
 			name: "invalid cluster object",
-			client: func() maoclient.Interface {
-				return maofake.NewSimpleClientset()
+			client: func() machineclient.Interface {
+				return machinefake.NewSimpleClientset()
 			},
 			modifyOc: func(oc *api.OpenShiftCluster) {
 				oc.ID = "invalid"

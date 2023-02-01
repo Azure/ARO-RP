@@ -9,7 +9,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 
@@ -48,7 +48,7 @@ func adminRequest(ctx context.Context, method, path string, params url.Values, i
 		if err != nil {
 			return nil, err
 		}
-		req.Body = ioutil.NopCloser(buf)
+		req.Body = io.NopCloser(buf)
 		req.Header.Set("Content-Type", "application/json")
 	}
 
@@ -70,15 +70,53 @@ func adminRequest(ctx context.Context, method, path string, params url.Values, i
 
 	if out != nil && resp.Header.Get("Content-Type") == "application/json" {
 		return resp, json.NewDecoder(resp.Body).Decode(&out)
+	} else if out != nil && resp.Header.Get("Content-Type") == "text/plain" {
+		strOut := out.(*string)
+		p, err := io.ReadAll(resp.Body)
+		if err == nil {
+			*strOut = string(p)
+		}
+
+		return resp, err
 	}
 
 	return resp, nil
 }
 
-func getCluster(ctx context.Context, resourceID string) *admin.OpenShiftCluster {
+// adminGetCluster returns admin representation of an ARO cluster
+func adminGetCluster(g Gomega, ctx context.Context, resourceID string) *admin.OpenShiftCluster {
 	var oc admin.OpenShiftCluster
 	resp, err := adminRequest(ctx, http.MethodGet, resourceID, nil, nil, &oc)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(resp.StatusCode).To(Equal(http.StatusOK))
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(resp.StatusCode).To(Equal(http.StatusOK))
 	return &oc
+}
+
+// adminListClusters returns a list of ARO clusters in admin representation.
+// It handles pagination: function returns all the clusters from all pages.
+func adminListClusters(g Gomega, ctx context.Context, path string) []*admin.OpenShiftCluster {
+	ocs := make([]*admin.OpenShiftCluster, 0)
+	params := url.Values{}
+	for {
+		var list admin.OpenShiftClusterList
+		resp, err := adminRequest(ctx, http.MethodGet, path, params, nil, &list)
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+		ocs = append(ocs, list.OpenShiftClusters...)
+
+		if list.NextLink == "" {
+			break
+		}
+
+		params = nextParams(g, list.NextLink)
+	}
+	return ocs
+}
+
+func nextParams(g Gomega, nextLink string) url.Values {
+	url, err := url.Parse(nextLink)
+	g.Expect(err).NotTo(HaveOccurred())
+
+	return url.Query()
 }

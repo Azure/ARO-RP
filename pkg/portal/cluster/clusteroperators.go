@@ -25,7 +25,7 @@ func clusterOperatorsInformationFromOperatorList(operators *configv1.ClusterOper
 	}
 
 	for _, co := range operators.Items {
-		var Available configv1.ConditionStatus = configv1.ConditionUnknown
+		var Available = configv1.ConditionUnknown
 
 		for _, cnd := range co.Status.Conditions {
 			if cnd.Type == "Available" {
@@ -43,7 +43,7 @@ func clusterOperatorsInformationFromOperatorList(operators *configv1.ClusterOper
 }
 
 func (f *realFetcher) ClusterOperators(ctx context.Context) (*ClusterOperatorsInformation, error) {
-	r, err := f.configcli.ConfigV1().ClusterOperators().List(ctx, metav1.ListOptions{})
+	r, err := f.configCli.ConfigV1().ClusterOperators().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

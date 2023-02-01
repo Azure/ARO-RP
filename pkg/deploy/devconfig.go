@@ -6,7 +6,6 @@ package deploy
 import (
 	"crypto/x509"
 	"encoding/pem"
-	"io/ioutil"
 	"os"
 
 	"github.com/Azure/go-autorest/autorest/to"
@@ -58,12 +57,12 @@ func deployKeyvaultAccessPolicy(_env env.Core) map[string]interface{} {
 }
 
 func DevConfig(_env env.Core) (*Config, error) {
-	ca, err := ioutil.ReadFile("secrets/dev-ca.crt")
+	ca, err := os.ReadFile("secrets/dev-ca.crt")
 	if err != nil {
 		return nil, err
 	}
 
-	client, err := ioutil.ReadFile("secrets/dev-client.crt")
+	client, err := os.ReadFile("secrets/dev-client.crt")
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +77,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 		sshPublicKeyPath = os.Getenv("HOME") + "/.ssh/id_rsa.pub"
 	}
 
-	sshPublicKey, err := ioutil.ReadFile(sshPublicKeyPath)
+	sshPublicKey, err := os.ReadFile(sshPublicKeyPath)
 	if err != nil {
 		return nil, err
 	}
@@ -108,9 +107,9 @@ func DevConfig(_env env.Core) (*Config, error) {
 		Configuration: &Configuration{
 			ACRResourceID:                to.StringPtr("/subscriptions/" + _env.SubscriptionID() + "/resourceGroups/" + os.Getenv("USER") + "-global/providers/Microsoft.ContainerRegistry/registries/" + os.Getenv("USER") + "aro"),
 			AdminAPICABundle:             to.StringPtr(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ca}))),
-			AdminAPIClientCertCommonName: to.StringPtr(clientCert.Subject.CommonName),
+			AdminAPIClientCertCommonName: &clientCert.Subject.CommonName,
 			ARMAPICABundle:               to.StringPtr(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ca}))),
-			ARMAPIClientCertCommonName:   to.StringPtr(clientCert.Subject.CommonName),
+			ARMAPIClientCertCommonName:   &clientCert.Subject.CommonName,
 			ARMClientID:                  to.StringPtr(os.Getenv("AZURE_ARM_CLIENT_ID")),
 			AzureSecPackVSATenantId:      to.StringPtr(""),
 			ClusterMDMAccount:            to.StringPtr(version.DevClusterGenevaMetricsAccount),
@@ -137,7 +136,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 				adminKeyvaultAccessPolicy(_env),
 				deployKeyvaultAccessPolicy(_env),
 			},
-			FluentbitImage:       to.StringPtr(version.FluentbitImage(os.Getenv("USER") + _env.Environment().ContainerRegistryDNSSuffix)),
+			FluentbitImage:       to.StringPtr(version.FluentbitImage(os.Getenv("USER") + "aro." + _env.Environment().ContainerRegistryDNSSuffix)),
 			FPClientID:           to.StringPtr(os.Getenv("AZURE_FP_CLIENT_ID")),
 			FPServicePrincipalID: to.StringPtr(os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")),
 			GatewayDomains: []string{
@@ -170,22 +169,21 @@ func DevConfig(_env env.Core) (*Config, error) {
 			PortalElevatedGroupIDs: []string{
 				os.Getenv("AZURE_PORTAL_ELEVATED_GROUP_IDS"),
 			},
+			AzureSecPackQualysUrl: to.StringPtr(""),
 			RPFeatures: []string{
 				"DisableDenyAssignments",
 				"DisableSignedCertificates",
 				"EnableDevelopmentAuthorizer",
 				"RequireD2sV3Workers",
 				"DisableReadinessDelay",
+				"EnableOCMEndpoints",
 			},
 			// TODO update this to support FF
-			RPImagePrefix:       to.StringPtr(os.Getenv("USER") + "aro.azurecr.io/aro"),
-			RPMDMAccount:        to.StringPtr(version.DevRPGenevaMetricsAccount),
-			RPMDSDAccount:       to.StringPtr(version.DevRPGenevaLoggingAccount),
-			RPMDSDConfigVersion: to.StringPtr(version.DevRPGenevaLoggingConfigVersion),
-			RPMDSDNamespace:     to.StringPtr(version.DevRPGenevaLoggingNamespace),
-			RPNSGSourceAddressPrefixes: []string{
-				"0.0.0.0/0",
-			},
+			RPImagePrefix:                     to.StringPtr(os.Getenv("USER") + "aro.azurecr.io/aro"),
+			RPMDMAccount:                      to.StringPtr(version.DevRPGenevaMetricsAccount),
+			RPMDSDAccount:                     to.StringPtr(version.DevRPGenevaLoggingAccount),
+			RPMDSDConfigVersion:               to.StringPtr(version.DevRPGenevaLoggingConfigVersion),
+			RPMDSDNamespace:                   to.StringPtr(version.DevRPGenevaLoggingNamespace),
 			RPParentDomainName:                to.StringPtr(os.Getenv("USER") + "-rp." + os.Getenv("PARENT_DOMAIN_NAME")),
 			RPVersionStorageAccountName:       to.StringPtr(os.Getenv("USER") + "rpversion"),
 			RPVMSSCapacity:                    to.IntPtr(1),
@@ -194,6 +192,11 @@ func DevConfig(_env env.Core) (*Config, error) {
 			SubscriptionResourceGroupName:     to.StringPtr(os.Getenv("USER") + "-subscription"),
 			VMSSCleanupEnabled:                to.BoolPtr(true),
 			VMSize:                            to.StringPtr("Standard_D2s_v3"),
+
+			// TODO: Replace with Live Service Configuration in KeyVault
+			InstallViaHive:           to.StringPtr(os.Getenv("ARO_INSTALL_VIA_HIVE")),
+			DefaultInstallerPullspec: to.StringPtr(os.Getenv("ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC")),
+			AdoptByHive:              to.StringPtr(os.Getenv("ARO_ADOPT_BY_HIVE")),
 		},
 	}, nil
 }

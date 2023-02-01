@@ -24,16 +24,44 @@ type Credentials struct {
 	TenantID     []byte
 }
 
+type azRefreshableAuthorizer struct {
+	log              *logrus.Entry
+	azureEnvironment *azureclient.AROEnvironment
+	kubernetescli    kubernetes.Interface
+	tokenClient      aad.TokenClient
+}
+
 // NewAzRefreshableAuthorizer returns a new refreshable authorizer
 // using Cluster Service Principal.
-func NewAzRefreshableAuthorizer(ctx context.Context, log *logrus.Entry, azEnv *azureclient.AROEnvironment, kubernetescli kubernetes.Interface) (refreshable.Authorizer, error) {
+func NewAzRefreshableAuthorizer(log *logrus.Entry, azEnv *azureclient.AROEnvironment, kubernetescli kubernetes.Interface, tokenClient aad.TokenClient) (*azRefreshableAuthorizer, error) {
+	if log == nil {
+		return nil, fmt.Errorf("log entry cannot be nil")
+	}
+	if azEnv == nil {
+		return nil, fmt.Errorf("azureEnvironment cannot be nil")
+	}
+	return &azRefreshableAuthorizer{
+		log:              log,
+		azureEnvironment: azEnv,
+		kubernetescli:    kubernetescli,
+		tokenClient:      tokenClient,
+	}, nil
+}
+
+func (a *azRefreshableAuthorizer) NewRefreshableAuthorizerToken(ctx context.Context) (refreshable.Authorizer, error) {
 	// Grab azure-credentials from secret
-	credentials, err := AzCredentials(ctx, kubernetescli)
+	credentials, err := AzCredentials(ctx, a.kubernetescli)
 	if err != nil {
 		return nil, err
 	}
 	// create service principal token from azure-credentials
-	token, err := aad.GetToken(ctx, log, string(credentials.ClientID), string(credentials.ClientSecret), string(credentials.TenantID), azEnv.ActiveDirectoryEndpoint, azEnv.ResourceManagerEndpoint)
+	token, err := a.tokenClient.GetToken(ctx,
+		a.log,
+		string(credentials.ClientID),
+		string(credentials.ClientSecret),
+		string(credentials.TenantID),
+		a.azureEnvironment.ActiveDirectoryEndpoint,
+		a.azureEnvironment.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +78,7 @@ func NewAzRefreshableAuthorizer(ctx context.Context, log *logrus.Entry, azEnv *a
 
 // AzCredentials gets Cluster Service Principal credentials from the Kubernetes secrets
 func AzCredentials(ctx context.Context, kubernetescli kubernetes.Interface) (*Credentials, error) {
-	mysec, err := kubernetescli.CoreV1().Secrets(azureCredentialSecretNameSpace).Get(ctx, azureCredentialSecretName, metav1.GetOptions{})
+	mysec, err := kubernetescli.CoreV1().Secrets(AzureCredentialSecretNameSpace).Get(ctx, AzureCredentialSecretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}

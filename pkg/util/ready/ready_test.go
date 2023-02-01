@@ -84,7 +84,6 @@ func TestNodeIsReady(t *testing.T) {
 				t.Fatalf("error with NodeIsReady: got %v wanted: %v", got, tt.want)
 			}
 		})
-
 	}
 }
 
@@ -563,57 +562,6 @@ func TestCheckDeploymentIsReadyError(t *testing.T) {
 
 	if err == nil {
 		t.Fatalf("check deployment error is: %v", err)
-	}
-}
-
-func TestCheckStatefulSetIsReady(t *testing.T) {
-	ctx := context.Background()
-
-	statefulset := &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "statefulset-not-found",
-			Namespace: "default",
-		},
-	}
-	clientset := fake.NewSimpleClientset()
-	_, err := clientset.AppsV1().StatefulSets("default").Create(ctx, statefulset, metav1.CreateOptions{})
-	if err != nil {
-		t.Fatalf("error creating statefulset: %v", err)
-	}
-	_, err = CheckStatefulSetIsReady(ctx, clientset.AppsV1().StatefulSets("default"), statefulset.ObjectMeta.Name)()
-
-	if err != nil {
-		t.Fatalf("check statefulsets is not ready: %v", err)
-	}
-}
-
-func TestCheckStatefulSetIsReadyNotFound(t *testing.T) {
-	ctx := context.Background()
-	statefulset := &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "statefulset-not-found",
-			Namespace: "default",
-		},
-	}
-	clientset := fake.NewSimpleClientset()
-	ok, _ := CheckStatefulSetIsReady(ctx, clientset.AppsV1().StatefulSets("default"), statefulset.ObjectMeta.Name)()
-
-	if ok {
-		t.Fatalf("check statefulsets is found")
-	}
-}
-
-func TestCheckStatefulSetIsReadyError(t *testing.T) {
-	ctx := context.Background()
-
-	clientset := fake.NewSimpleClientset()
-	clientset.Fake.PrependReactor("get", "statefulsets", func(action ktesting.Action) (bool, kruntime.Object, error) {
-		return true, &appsv1.StatefulSet{}, errors.New("error getting deployment")
-	})
-	_, err := CheckStatefulSetIsReady(ctx, clientset.AppsV1().StatefulSets("default"), "")()
-
-	if err == nil {
-		t.Fatalf("check statefulsets error is: %v", err)
 	}
 }
 

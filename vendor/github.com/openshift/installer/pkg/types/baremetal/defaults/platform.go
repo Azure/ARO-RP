@@ -2,8 +2,10 @@ package defaults
 
 import (
 	"fmt"
-	"github.com/openshift/installer/pkg/ipnet"
 	"net"
+	"sort"
+
+	"github.com/openshift/installer/pkg/ipnet"
 
 	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/openshift/installer/pkg/types"
@@ -19,6 +21,7 @@ const (
 	HardwareProfile         = "default"
 	APIVIP                  = ""
 	IngressVIP              = ""
+	BootMode                = baremetal.UEFI
 )
 
 // Wrapper for net.LookupHost so we can override in the test
@@ -88,6 +91,10 @@ func SetPlatformDefaults(p *baremetal.Platform, c *types.InstallConfig) {
 		if host.HardwareProfile == "" {
 			host.HardwareProfile = HardwareProfile
 		}
+
+		if host.BootMode == "" {
+			host.BootMode = BootMode
+		}
 	}
 
 	if p.APIVIP == APIVIP {
@@ -110,5 +117,11 @@ func SetPlatformDefaults(p *baremetal.Platform, c *types.InstallConfig) {
 		} else {
 			p.IngressVIP = vip[0]
 		}
+	}
+
+	if p.Hosts != nil {
+		sort.SliceStable(p.Hosts, func(i, j int) bool {
+			return p.Hosts[i].CompareByRole(p.Hosts[j])
+		})
 	}
 }

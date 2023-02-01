@@ -9,10 +9,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	machineapi "github.com/openshift/api/machine/v1beta1"
 	"github.com/openshift/installer/pkg/types"
 	"github.com/openshift/installer/pkg/types/azure"
-	machineapi "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
-	azureprovider "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
 )
 
 const (
@@ -79,13 +78,34 @@ func Machines(clusterID string, config *types.InstallConfig, pool *types.Machine
 	return machines, nil
 }
 
-func provider(platform *azure.Platform, mpool *azure.MachinePool, osImage string, userDataSecret string, clusterID string, role string, azIdx *int) (*azureprovider.AzureMachineProviderSpec, error) {
+func provider(platform *azure.Platform, mpool *azure.MachinePool, osImage string, userDataSecret string, clusterID string, role string, azIdx *int) (*machineapi.AzureMachineProviderSpec, error) {
+	var image machineapi.Image
+
 	var az *string
 	if len(mpool.Zones) > 0 && azIdx != nil {
 		az = &mpool.Zones[*azIdx]
 	}
 
 	rg := platform.ClusterResourceGroupName(clusterID)
+
+	if platform.Image != nil {
+		if platform.Image.ResourceID != "" {
+			image = machineapi.Image{
+				ResourceID: platform.Image.ResourceID,
+			}
+		} else {
+			image = machineapi.Image{
+				Publisher: platform.Image.Publisher,
+				Offer:     platform.Image.Offer,
+				SKU:       platform.Image.SKU,
+				Version:   platform.Image.Version,
+			}
+		}
+	} else {
+		image = machineapi.Image{
+			ResourceID: fmt.Sprintf("/resourceGroups/%s/providers/Microsoft.Compute/images/%s", rg, clusterID),
+		}
+	}
 
 	networkResourceGroup, virtualNetwork, subnet, err := getNetworkInfo(platform, clusterID, role)
 	if err != nil {
@@ -96,68 +116,60 @@ func provider(platform *azure.Platform, mpool *azure.MachinePool, osImage string
 		mpool.OSDisk.DiskType = "Premium_LRS"
 	}
 
+	var diskEncryptionSet *machineapi.DiskEncryptionSetParameters = nil
+	if mpool.OSDisk.DiskEncryptionSetID != "" {
+		diskEncryptionSet = &machineapi.DiskEncryptionSetParameters{
+			ID: mpool.OSDisk.DiskEncryptionSetID,
+		}
+	}
+
 	publicLB := clusterID
 	if platform.OutboundType == azure.UserDefinedRoutingOutboundType {
 		publicLB = ""
 	}
 
-	spec := &azureprovider.AzureMachineProviderSpec{
+	managedIdentity := fmt.Sprintf("%s-identity", clusterID)
+	if platform.IsARO() || platform.CloudName == azure.StackCloud {
+		managedIdentity = ""
+	}
+
+	var securityProfile *machineapi.SecurityProfile = nil
+	if mpool.EncryptionAtHost {
+		securityProfile = &machineapi.SecurityProfile{
+			EncryptionAtHost: &mpool.EncryptionAtHost,
+		}
+	}
+
+	spec := &machineapi.AzureMachineProviderSpec{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "azureproviderconfig.openshift.io/v1beta1",
+			APIVersion: "machine.openshift.io/v1beta1",
 			Kind:       "AzureMachineProviderSpec",
 		},
 		UserDataSecret:    &corev1.SecretReference{Name: userDataSecret},
 		CredentialsSecret: &corev1.SecretReference{Name: cloudsSecret, Namespace: cloudsSecretNamespace},
 		Location:          platform.Region,
 		VMSize:            mpool.InstanceType,
-		Image: azureprovider.Image{
-			ResourceID: fmt.Sprintf("/resourceGroups/%s/providers/Microsoft.Compute/images/%s", rg, clusterID),
-		},
-		OSDisk: azureprovider.OSDisk{
+		Image:             image,
+		OSDisk: machineapi.OSDisk{
 			OSType:     "Linux",
 			DiskSizeGB: mpool.OSDisk.DiskSizeGB,
-			ManagedDisk: azureprovider.ManagedDiskParameters{
+			ManagedDisk: machineapi.ManagedDiskParameters{
 				StorageAccountType: mpool.OSDisk.DiskType,
+				DiskEncryptionSet:  diskEncryptionSet,
 			},
 		},
 		Zone:                 az,
 		Subnet:               subnet,
-		ManagedIdentity:      fmt.Sprintf("%s-identity", clusterID),
+		ManagedIdentity:      managedIdentity,
 		Vnet:                 virtualNetwork,
 		ResourceGroup:        rg,
 		NetworkResourceGroup: networkResourceGroup,
 		PublicLoadBalancer:   publicLB,
+		SecurityProfile:      securityProfile,
 	}
 
-	if platform.Image != nil {
-		if platform.Image.ResourceID != "" {
-			spec.Image = azureprovider.Image{
-				ResourceID: platform.Image.ResourceID,
-			}
-		} else {
-			spec.Image = azureprovider.Image{
-				Publisher: platform.Image.Publisher,
-				Offer:     platform.Image.Offer,
-				SKU:       platform.Image.SKU,
-				Version:   platform.Image.Version,
-			}
-		}
-	}
-
-	if mpool.OSDisk.DiskEncryptionSetID != "" {
-		spec.OSDisk.ManagedDisk.DiskEncryptionSet = &azureprovider.DiskEncryptionSetParameters{
-			ID: mpool.OSDisk.DiskEncryptionSetID,
-		}
-	}
-
-	if mpool.EncryptionAtHost {
-		spec.SecurityProfile = &azureprovider.SecurityProfile{
-			EncryptionAtHost: &mpool.EncryptionAtHost,
-		}
-	}
-
-	if platform.ARO {
-		spec.ManagedIdentity = ""
+	if platform.CloudName == azure.StackCloud {
+		spec.AvailabilitySet = fmt.Sprintf("%s-cluster", clusterID)
 	}
 
 	return spec, nil

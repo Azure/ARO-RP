@@ -19,7 +19,7 @@ func (f *frontend) getAdminOpenShiftClusters(w http.ResponseWriter, r *http.Requ
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	b, err := f._getOpenShiftClusters(ctx, log, r, f.apis[admin.APIVersion].OpenShiftClusterConverter(), func(skipToken string) (cosmosdb.OpenShiftClusterDocumentIterator, error) {
+	b, err := f._getOpenShiftClusters(ctx, log, r, f.apis[admin.APIVersion].OpenShiftClusterConverter, func(skipToken string) (cosmosdb.OpenShiftClusterDocumentIterator, error) {
 		return f.dbOpenShiftClusters.List(skipToken), nil
 	})
 

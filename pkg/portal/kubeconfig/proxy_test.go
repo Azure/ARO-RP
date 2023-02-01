@@ -10,7 +10,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httputil"
 	"testing"
@@ -316,7 +316,6 @@ func TestProxy(t *testing.T) {
 				checker.AddPortalDocuments(portalDocument)
 
 				openShiftClustersClient.SetError(fmt.Errorf("sad"))
-
 			},
 			wantStatusCode: http.StatusInternalServerError,
 			wantBody:       "Internal Server Error\n",
@@ -398,9 +397,7 @@ func TestProxy(t *testing.T) {
 			_, audit := testlog.NewAudit()
 			_, baseLog := testlog.New()
 			_, baseAccessLog := testlog.New()
-			k := New(baseLog, audit, _env, baseAccessLog, nil, nil, dbOpenShiftClusters, dbPortal, dialer, &mux.Router{}, unauthenticatedRouter)
-
-			k.newToken = func() string { return token }
+			_ = New(baseLog, audit, _env, baseAccessLog, nil, nil, dbOpenShiftClusters, dbPortal, dialer, &mux.Router{}, unauthenticatedRouter)
 
 			if tt.r != nil {
 				tt.r(r)
@@ -431,7 +428,7 @@ func TestProxy(t *testing.T) {
 				t.Error(resp.Header.Get("Content-Type"))
 			}
 
-			b, err := ioutil.ReadAll(resp.Body)
+			b, err := io.ReadAll(resp.Body)
 			if err != nil {
 				t.Fatal(err)
 			}

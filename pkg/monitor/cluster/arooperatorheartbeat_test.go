@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 )
 
@@ -78,11 +79,12 @@ func TestEmitAroOperatorHeartbeat(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	m := mock_metrics.NewMockInterface(controller)
+	m := mock_metrics.NewMockEmitter(controller)
 
 	mon := &Monitor{
 		cli: cli,
 		m:   m,
+		log: utillog.GetLogger(),
 	}
 
 	m.EXPECT().EmitGauge("arooperator.heartbeat", int64(0), map[string]string{
@@ -97,5 +99,4 @@ func TestEmitAroOperatorHeartbeat(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 }

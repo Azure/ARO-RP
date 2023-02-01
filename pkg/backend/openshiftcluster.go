@@ -18,6 +18,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/cluster"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/hive"
+	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
@@ -27,7 +29,7 @@ import (
 type openShiftClusterBackend struct {
 	*backend
 
-	newManager func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, database.Gateway, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument) (cluster.Interface, error)
+	newManager func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, database.Gateway, database.OpenShiftVersions, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument, hive.ClusterManager, metrics.Emitter) (cluster.Interface, error)
 }
 
 func newOpenShiftClusterBackend(b *backend) *openShiftClusterBackend {
@@ -100,7 +102,31 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		return err
 	}
 
-	m, err := ocb.newManager(ctx, log, ocb.env, ocb.dbOpenShiftClusters, ocb.dbGateway, ocb.aead, ocb.billing, doc, subscriptionDoc)
+	// Only attempt to access Hive if we are installing via Hive or adopting clusters
+	installViaHive, err := ocb.env.LiveConfig().InstallViaHive(ctx)
+	if err != nil {
+		return err
+	}
+
+	adoptViaHive, err := ocb.env.LiveConfig().AdoptByHive(ctx)
+	if err != nil {
+		return err
+	}
+
+	var hr hive.ClusterManager
+	if installViaHive || adoptViaHive {
+		hiveShard := 1
+		hiveRestConfig, err := ocb.env.LiveConfig().HiveRestConfig(ctx, hiveShard)
+		if err != nil {
+			return fmt.Errorf("failed getting RESTConfig for Hive shard %d: %w", hiveShard, err)
+		}
+		hr, err = hive.NewFromConfig(log, ocb.env, hiveRestConfig)
+		if err != nil {
+			return fmt.Errorf("failed creating HiveClusterManager: %w", err)
+		}
+	}
+
+	m, err := ocb.newManager(ctx, log, ocb.env, ocb.dbOpenShiftClusters, ocb.dbGateway, ocb.dbOpenShiftVersions, ocb.aead, ocb.billing, doc, subscriptionDoc, hr, ocb.m)
 	if err != nil {
 		return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
 	}
@@ -146,6 +172,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 
 	case api.ProvisioningStateDeleting:
 		log.Print("deleting")
+		t := time.Now()
 
 		err = m.Delete(ctx)
 		if err != nil {
@@ -159,6 +186,11 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 
 		stop()
 
+		// This Sleep ensures that the monitor has enough time
+		// to capture the deletion (by reading from the changefeed)
+		// and stop monitoring the cluster.
+		// TODO: Provide better communication between RP and Monitor
+		time.Sleep(time.Until(t.Add(time.Second * 20)))
 		return ocb.dbOpenShiftClusters.Delete(ctx, doc)
 	}
 
@@ -249,10 +281,11 @@ func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, lo
 func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.Entry, stop func(), doc *api.OpenShiftClusterDocument, provisioningState api.ProvisioningState, backendErr error) error {
 	var adminUpdateError *string
 	var failedProvisioningState api.ProvisioningState
+	initialProvisioningState := doc.OpenShiftCluster.Properties.ProvisioningState
 
-	if doc.OpenShiftCluster.Properties.ProvisioningState != api.ProvisioningStateAdminUpdating &&
+	if initialProvisioningState != api.ProvisioningStateAdminUpdating &&
 		provisioningState == api.ProvisioningStateFailed {
-		failedProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
+		failedProvisioningState = initialProvisioningState
 	}
 
 	// If cluster is in the non-terminal state we are still in the same
@@ -262,11 +295,11 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 		if err != nil {
 			return err
 		}
-
+		ocb.asyncOperationResultLog(log, initialProvisioningState, backendErr)
 		ocb.emitMetrics(doc, provisioningState)
 	}
 
-	if doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateAdminUpdating {
+	if initialProvisioningState == api.ProvisioningStateAdminUpdating {
 		provisioningState = doc.OpenShiftCluster.Properties.LastProvisioningState
 		failedProvisioningState = doc.OpenShiftCluster.Properties.FailedProvisioningState
 
@@ -283,6 +316,29 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 
 	_, err := ocb.dbOpenShiftClusters.EndLease(ctx, doc.Key, provisioningState, failedProvisioningState, adminUpdateError)
 	return err
+}
+
+func (ocb *openShiftClusterBackend) asyncOperationResultLog(log *logrus.Entry, initialProvisioningState api.ProvisioningState, backendErr error) {
+	log = log.WithFields(logrus.Fields{
+		"LOGKIND":       "asyncqos",
+		"resultType":    utillog.SuccessResultType,
+		"operationType": initialProvisioningState.String(),
+	})
+
+	if backendErr == nil {
+		log.Info("long running operation succeeded")
+		return
+	}
+
+	_, ok := backendErr.(*api.CloudError)
+	if ok {
+		log = log.WithField("resultType", utillog.UserErrorResultType)
+	} else {
+		log = log.WithField("resultType", utillog.ServerErrorResultType)
+	}
+
+	log = log.WithField("errorDetails", backendErr.Error())
+	log.Info("long running operation failed")
 }
 
 func (ocb *openShiftClusterBackend) emitMetrics(doc *api.OpenShiftClusterDocument, provisioningState api.ProvisioningState) {

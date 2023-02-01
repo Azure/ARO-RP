@@ -129,7 +129,6 @@ func TestLog(t *testing.T) {
 	for _, e := range h.Entries {
 		fmt.Println(e)
 	}
-
 }
 
 func TestAuditTargetResourceData(t *testing.T) {

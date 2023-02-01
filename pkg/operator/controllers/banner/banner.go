@@ -10,37 +10,51 @@ import (
 	consolev1 "github.com/openshift/api/console/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 )
 
-func (r *Reconciler) reconcileBanner(ctx context.Context, instance *arov1alpha1.Cluster) (err error) {
+func (r *Reconciler) reconcileBanner(ctx context.Context, instance *arov1alpha1.Cluster) error {
+	var text string
+
 	switch instance.Spec.Banner.Content {
 	case arov1alpha1.BannerDisabled:
-		err = r.consolecli.ConsoleV1().ConsoleNotifications().Delete(ctx, BannerName, metav1.DeleteOptions{})
+		banner := &consolev1.ConsoleNotification{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: BannerName,
+			},
+		}
+		err := r.client.Delete(ctx, banner)
 		if err != nil && kerrors.IsNotFound(err) {
 			// we don't care if the object doesn't exist
 			return nil
 		}
 		return err
 	case arov1alpha1.BannerContactSupport:
-		banner := r.newBanner(fmt.Sprintf(TextContactSupport, instance.Spec.ResourceID))
-		_, err := r.consolecli.ConsoleV1().ConsoleNotifications().Get(ctx, BannerName, metav1.GetOptions{})
-		if err != nil && !kerrors.IsNotFound(err) {
-			return err
-		}
+		text = fmt.Sprintf(TextContactSupport, instance.Spec.ResourceID)
+	default:
+		return fmt.Errorf("wrong banner setting '%s'", instance.Spec.Banner.Content)
+	}
 
-		// if the object doesn't exist Create
-		if err != nil && kerrors.IsNotFound(err) {
-			_, err = r.consolecli.ConsoleV1().ConsoleNotifications().Create(ctx, banner, metav1.CreateOptions{})
-			return err
-		}
+	return r.createOrUpdate(ctx, text)
+}
 
-		// if there's no errors, object found then update
-		_, err = r.consolecli.ConsoleV1().ConsoleNotifications().Update(ctx, banner, metav1.UpdateOptions{})
+func (r *Reconciler) createOrUpdate(ctx context.Context, text string) error {
+	oldBanner := &consolev1.ConsoleNotification{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: BannerName}, oldBanner)
+	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}
-	return fmt.Errorf("wrong banner setting '%s'", instance.Spec.Banner.Content)
+
+	// if the object doesn't exist Create
+	if err != nil && kerrors.IsNotFound(err) {
+		return r.client.Create(ctx, r.newBanner(text))
+	}
+
+	// if there's no errors, object found then update
+	oldBanner.Spec.Text = text
+	return r.client.Update(ctx, oldBanner)
 }
 
 func (r *Reconciler) newBanner(text string) *consolev1.ConsoleNotification {

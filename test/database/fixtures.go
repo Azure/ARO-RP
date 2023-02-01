@@ -6,30 +6,40 @@ package database
 import (
 	"context"
 
-	"github.com/gofrs/uuid"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 type Fixture struct {
-	openshiftClusterDocuments []*api.OpenShiftClusterDocument
-	subscriptionDocuments     []*api.SubscriptionDocument
-	billingDocuments          []*api.BillingDocument
-	asyncOperationDocuments   []*api.AsyncOperationDocument
-	portalDocuments           []*api.PortalDocument
-	gatewayDocuments          []*api.GatewayDocument
+	openshiftClusterDocuments            []*api.OpenShiftClusterDocument
+	subscriptionDocuments                []*api.SubscriptionDocument
+	billingDocuments                     []*api.BillingDocument
+	asyncOperationDocuments              []*api.AsyncOperationDocument
+	portalDocuments                      []*api.PortalDocument
+	gatewayDocuments                     []*api.GatewayDocument
+	openShiftVersionDocuments            []*api.OpenShiftVersionDocument
+	clusterManagerConfigurationDocuments []*api.ClusterManagerConfigurationDocument
 
-	openShiftClustersDatabase database.OpenShiftClusters
-	billingDatabase           database.Billing
-	subscriptionsDatabase     database.Subscriptions
-	asyncOperationsDatabase   database.AsyncOperations
-	portalDatabase            database.Portal
-	gatewayDatabase           database.Gateway
+	openShiftClustersDatabase            database.OpenShiftClusters
+	billingDatabase                      database.Billing
+	subscriptionsDatabase                database.Subscriptions
+	asyncOperationsDatabase              database.AsyncOperations
+	portalDatabase                       database.Portal
+	gatewayDatabase                      database.Gateway
+	openShiftVersionsDatabase            database.OpenShiftVersions
+	clusterManagerConfigurationsDatabase database.ClusterManagerConfigurations
+
+	openShiftVersionsUUID uuid.Generator
 }
 
 func NewFixture() *Fixture {
 	return &Fixture{}
+}
+
+func (f *Fixture) WithClusterManagerConfigurations(db database.ClusterManagerConfigurations) *Fixture {
+	f.clusterManagerConfigurationsDatabase = db
+	return f
 }
 
 func (f *Fixture) WithOpenShiftClusters(db database.OpenShiftClusters) *Fixture {
@@ -59,6 +69,12 @@ func (f *Fixture) WithPortal(db database.Portal) *Fixture {
 
 func (f *Fixture) WithGateway(db database.Gateway) *Fixture {
 	f.gatewayDatabase = db
+	return f
+}
+
+func (f *Fixture) WithOpenShiftVersions(db database.OpenShiftVersions, uuid uuid.Generator) *Fixture {
+	f.openShiftVersionsDatabase = db
+	f.openShiftVersionsUUID = uuid
 	return f
 }
 
@@ -128,12 +144,34 @@ func (f *Fixture) AddGatewayDocuments(docs ...*api.GatewayDocument) {
 	}
 }
 
+func (f *Fixture) AddOpenShiftVersionDocuments(docs ...*api.OpenShiftVersionDocument) {
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.openShiftVersionDocuments = append(f.openShiftVersionDocuments, docCopy.(*api.OpenShiftVersionDocument))
+	}
+}
+
+func (f *Fixture) AddClusterManagerConfigurationDocuments(docs ...*api.ClusterManagerConfigurationDocument) {
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.clusterManagerConfigurationDocuments = append(f.clusterManagerConfigurationDocuments, docCopy.(*api.ClusterManagerConfigurationDocument))
+	}
+}
+
 func (f *Fixture) Create() error {
 	ctx := context.Background()
 
 	for _, i := range f.openshiftClusterDocuments {
 		if i.ID == "" {
-			i.ID = uuid.Must(uuid.NewV4()).String()
+			i.ID = f.openShiftClustersDatabase.NewUUID()
 		}
 		_, err := f.openShiftClustersDatabase.Create(ctx, i)
 		if err != nil {
@@ -171,6 +209,26 @@ func (f *Fixture) Create() error {
 
 	for _, i := range f.gatewayDocuments {
 		_, err := f.gatewayDatabase.Create(ctx, i)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, i := range f.openShiftVersionDocuments {
+		if i.ID == "" {
+			i.ID = f.openShiftVersionsDatabase.NewUUID()
+		}
+		_, err := f.openShiftVersionsDatabase.Create(ctx, i)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, i := range f.clusterManagerConfigurationDocuments {
+		if i.ID == "" {
+			i.ID = f.clusterManagerConfigurationsDatabase.NewUUID()
+		}
+		_, err := f.clusterManagerConfigurationsDatabase.Create(ctx, i)
 		if err != nil {
 			return err
 		}

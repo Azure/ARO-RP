@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/pkg/errors"
 	"sigs.k8s.io/cluster-api-provider-aws/pkg/apis/awsprovider/v1beta1"
 
 	configaws "github.com/openshift/installer/pkg/asset/installconfig/aws"
 	"github.com/openshift/installer/pkg/types"
 	typesaws "github.com/openshift/installer/pkg/types/aws"
-	"github.com/openshift/installer/pkg/types/aws/defaults"
 )
 
 type config struct {
@@ -59,6 +59,8 @@ type TFVarsSources struct {
 	AdditionalTrustBundle string
 
 	MasterIAMRoleName, WorkerIAMRoleName string
+
+	Architecture types.Architecture
 }
 
 // TFVars generates AWS-specific Terraform variables launching the cluster.
@@ -112,15 +114,13 @@ func TFVars(sources TFVarsSources) ([]byte, error) {
 		return nil, errors.New("EBS IOPS must be configured for the io1 root volume")
 	}
 
-	instanceClass := defaults.InstanceClass(masterConfig.Placement.Region)
-
 	cfg := &config{
 		CustomEndpoints:         endpoints,
 		Region:                  masterConfig.Placement.Region,
 		ExtraTags:               tags,
 		MasterAvailabilityZones: masterAvailabilityZones,
 		WorkerAvailabilityZones: workerAvailabilityZones,
-		BootstrapInstanceType:   fmt.Sprintf("%s.large", instanceClass),
+		BootstrapInstanceType:   masterConfig.InstanceType,
 		MasterInstanceType:      masterConfig.InstanceType,
 		Size:                    *rootVolume.EBS.VolumeSize,
 		Type:                    *rootVolume.EBS.VolumeType,
@@ -128,17 +128,23 @@ func TFVars(sources TFVarsSources) ([]byte, error) {
 		PrivateSubnets:          sources.PrivateSubnets,
 		InternalZone:            sources.InternalZone,
 		PublishStrategy:         string(sources.Publish),
-		SkipRegionCheck:         !configaws.IsKnownRegion(masterConfig.Placement.Region),
+		SkipRegionCheck:         !configaws.IsKnownRegion(masterConfig.Placement.Region, sources.Architecture),
 		IgnitionBucket:          sources.IgnitionBucket,
 		MasterIAMRoleName:       sources.MasterIAMRoleName,
 		WorkerIAMRoleName:       sources.WorkerIAMRoleName,
 	}
 
-	stubIgn, err := generateIgnitionShim(sources.IgnitionPresignedURL, sources.AdditionalTrustBundle)
+	stubIgn, err := bootstrap.GenerateIgnitionShimWithCertBundle(sources.IgnitionPresignedURL, sources.AdditionalTrustBundle)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create stub Ignition config for bootstrap")
 	}
-	cfg.BootstrapIgnitionStub = stubIgn
+
+	// Check the size of the raw ignition stub is less than 16KB for aws user-data
+	// see https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-add-user-data.html
+	if len(stubIgn) > 16000 {
+		return nil, fmt.Errorf("rendered bootstrap ignition shim exceeds the 16KB limit for AWS user data -- try reducing the size of your CA cert bundle")
+	}
+	cfg.BootstrapIgnitionStub = string(stubIgn)
 
 	if len(sources.PublicSubnets) == 0 {
 		if cfg.VPC != "" {

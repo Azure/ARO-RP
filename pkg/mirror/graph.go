@@ -57,13 +57,7 @@ func AddFromGraph(min *version.Version) ([]Node, error) {
 	}
 
 	releases := make([]Node, 0, len(g.Nodes))
-loop:
 	for _, node := range g.Nodes {
-		switch node.Version {
-		case "4.3.20":
-			continue loop
-		}
-
 		vsn, err := version.ParseVersion(node.Version)
 		if err != nil {
 			return nil, err
@@ -80,4 +74,20 @@ loop:
 	}
 
 	return releases, nil
+}
+
+// VersionInfo fetches the Node containing the version payload
+func VersionInfo(ver *version.Version) (Node, error) {
+	nodes, err := AddFromGraph(ver)
+	if err != nil {
+		return Node{}, err
+	}
+
+	for _, node := range nodes {
+		if strings.EqualFold(node.Version, ver.String()) {
+			return node, nil
+		}
+	}
+
+	return Node{}, fmt.Errorf("version '%s' not found", ver.String())
 }

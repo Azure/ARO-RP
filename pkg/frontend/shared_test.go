@@ -10,7 +10,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"reflect"
@@ -31,6 +31,7 @@ import (
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	"github.com/Azure/ARO-RP/test/util/clusterdata"
+	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
 	"github.com/Azure/ARO-RP/test/util/listener"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -73,11 +74,19 @@ type testInfra struct {
 	asyncOperationsDatabase   database.AsyncOperations
 	billingClient             *cosmosdb.FakeBillingDocumentClient
 	billingDatabase           database.Billing
+	clusterManagerClient      *cosmosdb.FakeClusterManagerConfigurationDocumentClient
+	clusterManagerDatabase    database.ClusterManagerConfigurations
 	subscriptionsClient       *cosmosdb.FakeSubscriptionDocumentClient
 	subscriptionsDatabase     database.Subscriptions
+	openShiftVersionsClient   *cosmosdb.FakeOpenShiftVersionDocumentClient
+	openShiftVersionsDatabase database.OpenShiftVersions
 }
 
 func newTestInfra(t *testing.T) *testInfra {
+	return newTestInfraWithFeatures(t, map[env.Feature]bool{env.FeatureRequireD2sV3Workers: false, env.FeatureDisableReadinessDelay: false, env.FeatureEnableOCMEndpoints: false})
+}
+
+func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *testInfra {
 	pool := x509.NewCertPool()
 	pool.AddCert(servercerts[0])
 
@@ -96,10 +105,11 @@ func newTestInfra(t *testing.T) *testInfra {
 	_env.EXPECT().ServiceKeyvault().AnyTimes().Return(keyvault)
 	_env.EXPECT().ArmClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(clientcerts[0].Raw))
 	_env.EXPECT().AdminClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(clientcerts[0].Raw))
-	_env.EXPECT().Domain().AnyTimes().Return("")
+	_env.EXPECT().Domain().AnyTimes().Return("aro.example")
 	_env.EXPECT().Listen().AnyTimes().Return(l, nil)
-	_env.EXPECT().FeatureIsSet(env.FeatureRequireD2sV3Workers).AnyTimes().Return(false)
-	_env.EXPECT().FeatureIsSet(env.FeatureDisableReadinessDelay).AnyTimes().Return(false)
+	for f, val := range features {
+		_env.EXPECT().FeatureIsSet(f).AnyTimes().Return(val)
+	}
 
 	_, auditEntry := testlog.NewAudit()
 	log := logrus.NewEntry(logrus.StandardLogger())
@@ -159,6 +169,19 @@ func (ti *testInfra) WithAsyncOperations() *testInfra {
 	return ti
 }
 
+func (ti *testInfra) WithOpenShiftVersions() *testInfra {
+	uuid := deterministicuuid.NewTestUUIDGenerator(7)
+	ti.openShiftVersionsDatabase, ti.openShiftVersionsClient = testdatabase.NewFakeOpenShiftVersions(uuid)
+	ti.fixture.WithOpenShiftVersions(ti.openShiftVersionsDatabase, uuid)
+	return ti
+}
+
+func (ti *testInfra) WithClusterManagerConfigurations() *testInfra {
+	ti.clusterManagerDatabase, ti.clusterManagerClient = testdatabase.NewFakeClusterManager()
+	ti.fixture.WithClusterManagerConfigurations(ti.clusterManagerDatabase)
+	return ti
+}
+
 func (ti *testInfra) done() {
 	ti.controller.Finish()
 	ti.cli.CloseIdleConnections()
@@ -199,7 +222,7 @@ func (ti *testInfra) request(method, url string, header http.Header, in interfac
 	}
 	defer resp.Body.Close()
 
-	b, err = ioutil.ReadAll(resp.Body)
+	b, err = io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, nil, err
 	}

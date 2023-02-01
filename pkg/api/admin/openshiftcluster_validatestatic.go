@@ -13,7 +13,7 @@ import (
 type openShiftClusterStaticValidator struct{}
 
 // Validate validates an OpenShift cluster
-func (sv *openShiftClusterStaticValidator) Static(_oc interface{}, _current *api.OpenShiftCluster) error {
+func (sv openShiftClusterStaticValidator) Static(_oc interface{}, _current *api.OpenShiftCluster, location, domain string, requireD2sV3Workers bool, resourceID string) error {
 	if _current == nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Admin API does not allow cluster creation.")
 	}
@@ -22,19 +22,15 @@ func (sv *openShiftClusterStaticValidator) Static(_oc interface{}, _current *api
 	return sv.validateDelta(oc, (&openShiftClusterConverter{}).ToExternal(_current).(*OpenShiftCluster))
 }
 
-func (sv *openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftCluster) error {
+func (sv openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftCluster) error {
 	err := immutable.Validate("", oc, current)
 	if err != nil {
 		err := err.(*immutable.ValidationError)
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, err.Target, err.Message)
 	}
 
-	if !(oc.Properties.MaintenanceTask == "" || oc.Properties.MaintenanceTask == MaintenanceTaskEverything || oc.Properties.MaintenanceTask == MaintenanceTaskOperator) {
+	if !(oc.Properties.MaintenanceTask == "" || oc.Properties.MaintenanceTask == MaintenanceTaskEverything || oc.Properties.MaintenanceTask == MaintenanceTaskOperator || oc.Properties.MaintenanceTask == MaintenanceTaskRenewCerts) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.maintenanceTask", "Invalid enum parameter.")
-	}
-
-	if current.Properties.FeatureProfile.GatewayEnabled && !oc.Properties.FeatureProfile.GatewayEnabled {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, "properties.featureProfile.gatewayEnabled", "Changing property 'properties.featureProfile.gatewayEnabled' is not allowed.")
 	}
 
 	return nil

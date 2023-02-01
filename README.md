@@ -108,11 +108,16 @@ questions or comments.
       `openshift-azure-logging` namespace matches the pre-defined specification
       found in `pkg/operator/controllers/genevalogging/genevalogging.go`.
 
+    * imageconfig: Ensures that required registries are not blocked in `image.config`
+
     * machine: validate machine objects have the correct provider spec,
       vm type, vm image, disk size, three master nodes exist, and the number of worker nodes
       match the desired worker replicas
 
     * machineset: Ensures that a minimum of two worker replicas are met.
+
+    * machinehealthcheck: Ensures the MachineHealthCheck resource is running as configured. See [machinehealthcheck/doc.go](pkg/operator/controllers/machinehealthcheck/doc.go)
+        * More information around the MHC CR can be found [in openshift documentation of MHC](https://docs.openshift.com/container-platform/4.9/machine_management/deploying-machine-health-checks.html)
 
     * monitoring: Ensures that the OpenShift monitoring configuration in the `openshift-monitoring` namespace is consistent and immutable.
 
@@ -130,6 +135,8 @@ questions or comments.
     * subnets: Ensures that the Network Security Groups (NSGs) are correct, and updates the Azure Machine Provider spec with subnet, vnet, and Network Resource Group.
 
     * workaround: Applies a set of temporay workarounds to the ARO cluster.
+
+    * previewfeature: Allows toggling certain features that are not yet enabled by default.
 
   * pkg/portal: Portal for running promql queries against a cluster or requesting a kubeconfig for a cluster.
 

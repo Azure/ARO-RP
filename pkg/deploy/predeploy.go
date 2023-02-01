@@ -19,15 +19,16 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 
+	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
-// Rotate the secret on every deploy of the RP iff the most recent
-// secret is less than 3 days old
-const rotateSecretAfter = time.Hour * 72
+// Rotate the secret on every deploy of the RP if the most recent
+// secret is greater than 7 days old
+const rotateSecretAfter = time.Hour * 168
 
 // PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
 // deployment
@@ -125,7 +126,7 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 	// key the decision to deploy NSGs on the existence of the gateway
 	// predeploy.  We do this in order to refresh the RP NSGs when the gateway
 	// is deployed for the first time.
-	var isCreate bool
+	isCreate := false
 	_, err = d.deployments.Get(ctx, d.config.GatewayResourceGroupName, strings.TrimSuffix(generator.FileGatewayProductionPredeploy, ".json"))
 	if isDeploymentNotFoundError(err) {
 		isCreate = true
@@ -145,24 +146,19 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 		return err
 	}
 
-	err = d.configureKeyvaultIssuers(ctx)
-	if err != nil {
-		return err
-	}
-
 	return d.configureServiceSecrets(ctx)
 }
 
 func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID, gatewayServicePrincipalID string) error {
 	deploymentName := "rp-global-" + d.config.Location
 
-	b, err := Asset(generator.FileRPProductionGlobal)
+	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileRPProductionGlobal)
 	if err != nil {
 		return err
 	}
 
 	var template map[string]interface{}
-	err = json.Unmarshal(b, &template)
+	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
@@ -205,13 +201,13 @@ func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID, gat
 func (d *deployer) deployRPGlobalACRReplication(ctx context.Context) error {
 	deploymentName := "rp-global-acr-replication-" + d.config.Location
 
-	b, err := Asset(generator.FileRPProductionGlobalACRReplication)
+	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileRPProductionGlobalACRReplication)
 	if err != nil {
 		return err
 	}
 
 	var template map[string]interface{}
-	err = json.Unmarshal(b, &template)
+	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
@@ -234,13 +230,13 @@ func (d *deployer) deployRPGlobalACRReplication(ctx context.Context) error {
 func (d *deployer) deployRPGlobalSubscription(ctx context.Context) error {
 	deploymentName := "rp-global-subscription-" + d.config.Location
 
-	b, err := Asset(generator.FileRPProductionGlobalSubscription)
+	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileRPProductionGlobalSubscription)
 	if err != nil {
 		return err
 	}
 
 	var template map[string]interface{}
-	err = json.Unmarshal(b, &template)
+	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
@@ -274,13 +270,13 @@ func (d *deployer) deployRPGlobalSubscription(ctx context.Context) error {
 func (d *deployer) deployRPSubscription(ctx context.Context) error {
 	deploymentName := "rp-production-subscription-" + d.config.Location
 
-	b, err := Asset(generator.FileRPProductionSubscription)
+	asset, err := assets.EmbeddedFiles.ReadFile(generator.FileRPProductionSubscription)
 	if err != nil {
 		return err
 	}
 
 	var template map[string]interface{}
-	err = json.Unmarshal(b, &template)
+	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
@@ -297,13 +293,13 @@ func (d *deployer) deployRPSubscription(ctx context.Context) error {
 func (d *deployer) deployManagedIdentity(ctx context.Context, resourceGroupName, deploymentFile string) error {
 	deploymentName := strings.TrimSuffix(deploymentFile, ".json")
 
-	b, err := Asset(deploymentFile)
+	asset, err := assets.EmbeddedFiles.ReadFile(deploymentFile)
 	if err != nil {
 		return err
 	}
 
 	var template map[string]interface{}
-	err = json.Unmarshal(b, &template)
+	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
@@ -320,13 +316,13 @@ func (d *deployer) deployManagedIdentity(ctx context.Context, resourceGroupName,
 func (d *deployer) deployPreDeploy(ctx context.Context, resourceGroupName, deploymentFile, spIDName, spID string, isCreate bool) error {
 	deploymentName := strings.TrimSuffix(deploymentFile, ".json")
 
-	b, err := Asset(deploymentFile)
+	asset, err := assets.EmbeddedFiles.ReadFile(deploymentFile)
 	if err != nil {
 		return err
 	}
 
 	var template map[string]interface{}
-	err = json.Unmarshal(b, &template)
+	err = json.Unmarshal(asset, &template)
 	if err != nil {
 		return err
 	}
@@ -353,40 +349,6 @@ func (d *deployer) deployPreDeploy(ctx context.Context, resourceGroupName, deplo
 			Parameters: parameters.Parameters,
 		},
 	})
-}
-
-func (d *deployer) configureKeyvaultIssuers(ctx context.Context) error {
-	if d.env.IsLocalDevelopmentMode() {
-		return nil
-	}
-
-	for _, kv := range []keyvault.Manager{
-		d.clusterKeyvault,
-		d.dbtokenKeyvault,
-		d.serviceKeyvault,
-		d.portalKeyvault,
-	} {
-		_, err := kv.SetCertificateIssuer(ctx, "OneCertV2-PublicCA", azkeyvault.CertificateIssuerSetParameters{
-			Provider: to.StringPtr("OneCertV2-PublicCA"),
-		})
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, kv := range []keyvault.Manager{
-		d.serviceKeyvault,
-		d.portalKeyvault,
-	} {
-		_, err := kv.SetCertificateIssuer(ctx, "OneCertV2-PrivateCA", azkeyvault.CertificateIssuerSetParameters{
-			Provider: to.StringPtr("OneCertV2-PrivateCA"),
-		})
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (d *deployer) configureServiceSecrets(ctx context.Context) error {

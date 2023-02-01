@@ -17,16 +17,16 @@ var _ kmetrics.LatencyMetric = (*tracer)(nil)
 var _ kmetrics.ResultMetric = (*tracer)(nil)
 
 type tracer struct {
-	m metrics.Interface
+	m metrics.Emitter
 }
 
-func NewLatency(m metrics.Interface) kmetrics.LatencyMetric {
+func NewLatency(m metrics.Emitter) kmetrics.LatencyMetric {
 	return &tracer{
 		m: m,
 	}
 }
 
-func NewResult(m metrics.Interface) kmetrics.ResultMetric {
+func NewResult(m metrics.Emitter) kmetrics.ResultMetric {
 	return &tracer{
 		m: m,
 	}

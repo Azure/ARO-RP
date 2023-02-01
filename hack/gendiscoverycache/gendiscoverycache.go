@@ -5,7 +5,6 @@ package main
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -53,7 +52,7 @@ func canonicalizeAssets() error {
 }
 
 func formatServerGroups(path string) error {
-	b, err := ioutil.ReadFile(path)
+	b, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
@@ -70,11 +69,11 @@ func formatServerGroups(path string) error {
 		return err
 	}
 
-	return ioutil.WriteFile(path, append(b, '\n'), 0666)
+	return os.WriteFile(path, append(b, '\n'), 0666)
 }
 
 func canonicalizeServerResources(path string) error {
-	b, err := ioutil.ReadFile(path)
+	b, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
@@ -101,5 +100,5 @@ func canonicalizeServerResources(path string) error {
 		return err
 	}
 
-	return ioutil.WriteFile(path, append(b, '\n'), 0666)
+	return os.WriteFile(path, append(b, '\n'), 0666)
 }

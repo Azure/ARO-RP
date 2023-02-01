@@ -10,8 +10,8 @@ import (
 	"reflect"
 	"testing"
 
-	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
-	maofake "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -19,13 +19,12 @@ import (
 	kjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
-	azureproviderv1beta1 "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
 
-func marshalAzureMachineProviderSpec(t *testing.T, spec *azureproviderv1beta1.AzureMachineProviderSpec) []byte {
+func marshalAzureMachineProviderSpec(t *testing.T, spec *machinev1beta1.AzureMachineProviderSpec) []byte {
 	serializer := kjson.NewSerializerWithOptions(
 		kjson.DefaultMetaFactory, scheme.Scheme, scheme.Scheme,
 		kjson.SerializerOptions{Yaml: true},
@@ -94,7 +93,7 @@ func userDataSecret(t *testing.T, namespace, name, appendSource, mergeSource str
 	}
 }
 
-func testMachine(t *testing.T, namespace, name string, spec *azureproviderv1beta1.AzureMachineProviderSpec) *machinev1beta1.Machine {
+func testMachine(t *testing.T, namespace, name string, spec *machinev1beta1.AzureMachineProviderSpec) *machinev1beta1.Machine {
 	return &machinev1beta1.Machine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -110,7 +109,7 @@ func testMachine(t *testing.T, namespace, name string, spec *azureproviderv1beta
 	}
 }
 
-func testMachineSet(t *testing.T, namespace, name string, spec *azureproviderv1beta1.AzureMachineProviderSpec) *machinev1beta1.MachineSet {
+func testMachineSet(t *testing.T, namespace, name string, spec *machinev1beta1.AzureMachineProviderSpec) *machinev1beta1.MachineSet {
 	return &machinev1beta1.MachineSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -150,13 +149,13 @@ func TestFixMCSUserData(t *testing.T) {
 			userDataSecret(t, "openshift-machine-api", "master-user-data", "https://api-int.example.com:22623/config/master", ""),
 			userDataSecret(t, "openshift-machine-api", "worker-user-data", "", "https://api-int.example.com:22623/config/worker"),
 		),
-		maocli: maofake.NewSimpleClientset(
-			testMachineSet(t, "openshift-machine-api", "worker", &azureproviderv1beta1.AzureMachineProviderSpec{
+		maocli: machinefake.NewSimpleClientset(
+			testMachineSet(t, "openshift-machine-api", "worker", &machinev1beta1.AzureMachineProviderSpec{
 				UserDataSecret: &corev1.SecretReference{
 					Name: "worker-user-data",
 				},
 			}),
-			testMachine(t, "openshift-machine-api", "master", &azureproviderv1beta1.AzureMachineProviderSpec{
+			testMachine(t, "openshift-machine-api", "master", &machinev1beta1.AzureMachineProviderSpec{
 				UserDataSecret: &corev1.SecretReference{
 					Name: "master-user-data",
 				},
@@ -183,5 +182,107 @@ func TestFixMCSUserData(t *testing.T) {
 		if !reflect.DeepEqual(s, wantSecret) {
 			t.Error(cmp.Diff(s, wantSecret))
 		}
+	}
+}
+
+func TestGetUserDataSecretReference(t *testing.T) {
+	for _, td := range []struct {
+		name        string
+		objectMeta  *metav1.ObjectMeta
+		machineSpec *machinev1beta1.MachineSpec
+		result      *corev1.SecretReference
+		shouldFail  bool
+	}{
+		{
+			name:       "valid cluster-api-provider-azure spec",
+			objectMeta: &metav1.ObjectMeta{Namespace: "any"},
+			machineSpec: &machinev1beta1.MachineSpec{
+				ProviderSpec: machinev1beta1.ProviderSpec{
+					Value: &kruntime.RawExtension{
+						Raw: []byte(`{
+								"apiVersion": "azureproviderconfig.openshift.io/v1beta1",
+								"kind": "AzureMachineProviderSpec",
+								"userDataSecret": {"name": "any"}
+							}`),
+					},
+				},
+			},
+			result: &corev1.SecretReference{
+				Name:      "any",
+				Namespace: "any",
+			},
+			shouldFail: false,
+		},
+		{
+			name:       "valid openshift/api spec",
+			objectMeta: &metav1.ObjectMeta{Namespace: "another"},
+			machineSpec: &machinev1beta1.MachineSpec{
+				ProviderSpec: machinev1beta1.ProviderSpec{
+					Value: &kruntime.RawExtension{
+						Raw: []byte(`{
+								"apiVersion": "machine.openshift.io/v1beta1",
+								"kind": "AzureMachineProviderSpec",
+								"userDataSecret": {"name": "any"}
+							}`),
+					},
+				},
+			},
+			result: &corev1.SecretReference{
+				Name:      "any",
+				Namespace: "another",
+			},
+			shouldFail: false,
+		},
+		{
+			name:       "not valid spec",
+			objectMeta: &metav1.ObjectMeta{Namespace: "any"},
+			machineSpec: &machinev1beta1.MachineSpec{
+				ProviderSpec: machinev1beta1.ProviderSpec{
+					Value: &kruntime.RawExtension{
+						Raw: []byte(`{
+								"apiVersion": "apiversion.openshift.io/unknown",
+								"kind": "AzureMachineProviderSpec"
+							}`),
+					},
+				},
+			},
+			shouldFail: true,
+		},
+		{
+			name:        "nil object meta",
+			objectMeta:  nil,
+			machineSpec: &machinev1beta1.MachineSpec{},
+			shouldFail:  false,
+			result:      nil,
+		},
+		{
+			name:       "nil user secret data",
+			objectMeta: &metav1.ObjectMeta{Namespace: "any"},
+			machineSpec: &machinev1beta1.MachineSpec{
+				ProviderSpec: machinev1beta1.ProviderSpec{
+					Value: &kruntime.RawExtension{
+						Raw: []byte(`{
+								"apiVersion": "azureproviderconfig.openshift.io/v1beta1",
+								"kind": "AzureMachineProviderSpec"
+							}`),
+					},
+				},
+			},
+			shouldFail: false,
+			result:     nil,
+		},
+	} {
+		t.Run(td.name, func(t *testing.T) {
+			res, err := getUserDataSecretReference(td.objectMeta, td.machineSpec)
+			if err != nil {
+				if !td.shouldFail {
+					t.Errorf("error hasn't been expected: %v", err)
+				}
+				return
+			}
+			if !reflect.DeepEqual(res, td.result) {
+				t.Errorf("unexpected result: %+v", res)
+			}
+		})
 	}
 }

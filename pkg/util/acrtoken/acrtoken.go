@@ -12,11 +12,11 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/gofrs/uuid"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerregistry"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 type Manager interface {
@@ -65,7 +65,7 @@ func (m *manager) GetRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProf
 func (m *manager) NewRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProfile {
 	return &api.RegistryProfile{
 		Name:     fmt.Sprintf("%s.%s", m.r.ResourceName, m.env.Environment().ContainerRegistryDNSSuffix),
-		Username: "token-" + uuid.Must(uuid.NewV4()).String(),
+		Username: "token-" + uuid.DefaultGenerator.Generate(),
 	}
 }
 

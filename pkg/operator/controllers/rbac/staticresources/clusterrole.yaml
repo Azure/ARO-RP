@@ -195,6 +195,14 @@ rules:
   - list
   - watch
 - apiGroups:
+  - cloud.network.openshift.io
+  resources:
+  - cloudprivateipconfigs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - cloudcredential.openshift.io
   resources:
   - credentialsrequests
@@ -213,6 +221,7 @@ rules:
   - consoles
   - dnses
   - featuregates
+  - imagecontentpolicies
   - images
   - infrastructures
   - ingresses
@@ -273,14 +282,6 @@ rules:
   - list
   - watch
 - apiGroups:
-  - extensions
-  resources:
-  - ingresses
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
   - flowcontrol.apiserver.k8s.io
   resources:
   - flowschemas
@@ -293,6 +294,7 @@ rules:
   - helm.openshift.io
   resources:
   - helmchartrepositories
+  - projecthelmchartrepositories
   verbs:
   - get
   - list
@@ -371,6 +373,10 @@ rules:
   - metal3.io
   resources:
   - baremetalhosts
+  - bmceventsubscriptions
+  - firmwareschemas
+  - hostfirmwaresettings
+  - preprovisioningimages
   - provisionings
   verbs:
   - get
@@ -478,6 +484,7 @@ rules:
   - catalogsources
   - clusterserviceversions
   - installplans
+  - olmconfigs
   - operatorconditions
   - operatorgroups
   - operators
@@ -628,6 +635,14 @@ rules:
   resources:
   - profiles
   - tuneds
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - upgrade.managed.openshift.io
+  resources:
+  - upgradeconfigs
   verbs:
   - get
   - list

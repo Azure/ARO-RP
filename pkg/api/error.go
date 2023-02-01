@@ -60,7 +60,7 @@ func (b *CloudErrorBody) String() string {
 }
 
 // CloudErrorCodes
-var (
+const (
 	CloudErrorCodeInternalServerError                = "InternalServerError"
 	CloudErrorCodeDeploymentFailed                   = "DeploymentFailed"
 	CloudErrorCodeInvalidParameter                   = "InvalidParameter"
@@ -76,15 +76,18 @@ var (
 	CloudErrorCodePropertyChangeNotAllowed           = "PropertyChangeNotAllowed"
 	CloudErrorCodeRequestNotAllowed                  = "RequestNotAllowed"
 	CloudErrorCodeResourceGroupNotFound              = "ResourceGroupNotFound"
+	CloudErrorCodeClusterResourceGroupAlreadyExists  = "ClusterResourceGroupAlreadyExists"
 	CloudErrorCodeResourceNotFound                   = "ResourceNotFound"
 	CloudErrorCodeUnsupportedMediaType               = "UnsupportedMediaType"
 	CloudErrorCodeInvalidLinkedVNet                  = "InvalidLinkedVNet"
 	CloudErrorCodeInvalidLinkedRouteTable            = "InvalidLinkedRouteTable"
+	CloudErrorCodeInvalidLinkedNatGateway            = "InvalidLinkedNatGateway"
 	CloudErrorCodeInvalidLinkedDiskEncryptionSet     = "InvalidLinkedDiskEncryptionSet"
 	CloudErrorCodeNotFound                           = "NotFound"
 	CloudErrorCodeForbidden                          = "Forbidden"
 	CloudErrorCodeInvalidSubscriptionState           = "InvalidSubscriptionState"
 	CloudErrorCodeInvalidServicePrincipalCredentials = "InvalidServicePrincipalCredentials"
+	CloudErrorCodeInvalidServicePrincipalToken       = "InvalidServicePrincipalToken"
 	CloudErrorCodeInvalidServicePrincipalClaims      = "InvalidServicePrincipalClaims"
 	CloudErrorCodeInvalidResourceProviderPermissions = "InvalidResourceProviderPermissions"
 	CloudErrorCodeInvalidServicePrincipalPermissions = "InvalidServicePrincipalPermissions"
@@ -94,7 +97,8 @@ var (
 	CloudErrorCodeDuplicateDomain                    = "DuplicateDomain"
 	CloudErrorCodeResourceQuotaExceeded              = "ResourceQuotaExceeded"
 	CloudErrorCodeQuotaExceeded                      = "QuotaExceeded"
-	CloudErrorResourceProviderNotRegistered          = "ResourceProviderNotRegistered"
+	CloudErrorCodeResourceProviderNotRegistered      = "ResourceProviderNotRegistered"
+	CloudErrorCodeCannotDeleteLoadBalancerByID       = "CannotDeleteLoadBalancerWithPrivateLinkService"
 )
 
 // NewCloudError returns a new CloudError

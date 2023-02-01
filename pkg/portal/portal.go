@@ -11,9 +11,11 @@ import (
 	"crypto/x509"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"log"
 	"net"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -26,6 +28,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	frontendmiddleware "github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/portal/assets"
 	"github.com/Azure/ARO-RP/pkg/portal/cluster"
 	"github.com/Azure/ARO-RP/pkg/portal/kubeconfig"
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
@@ -69,11 +72,12 @@ type portal struct {
 
 	dialer proxy.Dialer
 
-	t *template.Template
+	templateV1 *template.Template
+	templateV2 *template.Template
 
 	aad middleware.AAD
 
-	m metrics.Interface
+	m metrics.Emitter
 }
 
 func NewPortal(env env.Core,
@@ -96,7 +100,7 @@ func NewPortal(env env.Core,
 	dbOpenShiftClusters database.OpenShiftClusters,
 	dbPortal database.Portal,
 	dialer proxy.Dialer,
-	m metrics.Interface,
+	m metrics.Emitter,
 ) Runnable {
 	return &portal{
 		env:           env,
@@ -136,12 +140,22 @@ func (p *portal) setupRouter() error {
 	r := mux.NewRouter()
 	r.Use(middleware.Panic(p.log))
 
-	asset, err := Asset("index.html")
+	assetv1, err := assets.EmbeddedFiles.ReadFile("v1/build/index.html")
 	if err != nil {
 		return err
 	}
 
-	p.t, err = template.New("index.html").Parse(string(asset))
+	assetv2, err := assets.EmbeddedFiles.ReadFile("v2/build/index.html")
+	if err != nil {
+		return err
+	}
+
+	p.templateV1, err = template.New("index.html").Parse(string(assetv1))
+	if err != nil {
+		return err
+	}
+
+	p.templateV2, err = template.New("index.html").Parse(string(assetv2))
 	if err != nil {
 		return err
 	}
@@ -206,9 +220,8 @@ func (p *portal) Run(ctx context.Context) error {
 			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
 		},
-		PreferServerCipherSuites: true,
-		SessionTicketsDisabled:   true,
-		MinVersion:               tls.VersionTLS12,
+		SessionTicketsDisabled: true,
+		MinVersion:             tls.VersionTLS12,
 		CurvePreferences: []tls.CurveID{
 			tls.CurveP256,
 			tls.X25519,
@@ -250,27 +263,72 @@ func (p *portal) unauthenticatedRoutes(r *mux.Router) {
 }
 
 func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
-	for _, name := range AssetNames() {
-		if name == "index.html" {
-			r.NewRoute().Methods(http.MethodGet).Path("/").HandlerFunc(p.index)
-			continue
+	var names []string
+
+	err := fs.WalkDir(assets.EmbeddedFiles, ".", func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
 		}
 
-		r.NewRoute().Methods(http.MethodGet).Path("/" + name).HandlerFunc(p.serve(name))
+		if !entry.IsDir() {
+			names = append(names, path)
+		}
+		return nil
+	})
+
+	if err != nil {
+		p.log.Fatal(err)
+	}
+
+	for _, name := range names {
+		regexp, _ := regexp.Compile(`v[1,2]/build/.*\..*`)
+		name := regexp.FindString(name)
+		switch name {
+		case "v1/build/index.html":
+			r.NewRoute().Methods(http.MethodGet).Path("/").HandlerFunc(p.index)
+		case "v2/build/index.html":
+			r.NewRoute().Methods(http.MethodGet).Path("/v2").HandlerFunc(p.indexV2)
+		case "":
+		default:
+			fmtName := strings.TrimPrefix(name, "v1/build/")
+			fmtName = strings.TrimPrefix(fmtName, "v2/build/")
+
+			r.NewRoute().Methods(http.MethodGet).Path("/" + fmtName).HandlerFunc(p.serve(name))
+		}
 	}
 
 	r.NewRoute().Methods(http.MethodGet).Path("/api/clusters").HandlerFunc(p.clusters)
 	r.NewRoute().Methods(http.MethodGet).Path("/api/info").HandlerFunc(p.info)
+	r.NewRoute().Methods(http.MethodGet).Path("/api/regions").HandlerFunc(p.regions)
 
 	// Cluster-specific routes
-	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{name}/clusteroperators").HandlerFunc(p.clusterOperators)
-	r.NewRoute().Methods(http.MethodGet).Path("/api/{subscription}/{resourceGroup}/{name}").HandlerFunc(p.clusterInfo)
+	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}/clusteroperators").HandlerFunc(p.clusterOperators)
+	r.NewRoute().Methods(http.MethodGet).Path("/api/{subscription}/{resourceGroup}/{clusterName}").HandlerFunc(p.clusterInfo)
+	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}/nodes").HandlerFunc(p.nodes)
+	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}/machines").HandlerFunc(p.machines)
+	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}/machine-sets").HandlerFunc(p.machineSets)
+	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}").HandlerFunc(p.clusterInfo)
 }
 
 func (p *portal) index(w http.ResponseWriter, r *http.Request) {
 	buf := &bytes.Buffer{}
 
-	err := p.t.ExecuteTemplate(buf, "index.html", map[string]interface{}{
+	err := p.templateV1.ExecuteTemplate(buf, "index.html", map[string]interface{}{
+		"location":       p.env.Location(),
+		csrf.TemplateTag: csrf.TemplateField(r),
+	})
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(buf.Bytes()))
+}
+
+func (p *portal) indexV2(w http.ResponseWriter, r *http.Request) {
+	buf := &bytes.Buffer{}
+
+	err := p.templateV2.ExecuteTemplate(buf, "index.html", map[string]interface{}{
 		"location":       p.env.Location(),
 		csrf.TemplateTag: csrf.TemplateField(r),
 	})
@@ -284,7 +342,17 @@ func (p *portal) index(w http.ResponseWriter, r *http.Request) {
 
 // makeFetcher creates a cluster.FetchClient suitable for use by the Portal REST API
 func (p *portal) makeFetcher(ctx context.Context, r *http.Request) (cluster.FetchClient, error) {
-	resourceID := strings.Join(strings.Split(r.URL.Path, "/")[:9], "/")
+	apiVars := mux.Vars(r)
+
+	subscription := apiVars["subscription"]
+	resourceGroup := apiVars["resourceGroup"]
+	clusterName := apiVars["clusterName"]
+
+	resourceID :=
+		strings.ToLower(
+			fmt.Sprintf(
+				"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s",
+				subscription, resourceGroup, clusterName))
 	if !validate.RxClusterID.MatchString(resourceID) {
 		return nil, fmt.Errorf("invalid resource ID")
 	}
@@ -311,13 +379,13 @@ func (p *portal) makeFetcher(ctx context.Context, r *http.Request) (cluster.Fetc
 
 func (p *portal) serve(path string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		b, err := Asset(path)
+		asset, err := assets.EmbeddedFiles.ReadFile(path)
 		if err != nil {
 			p.internalServerError(w, err)
 			return
 		}
 
-		http.ServeContent(w, r, path, time.Time{}, bytes.NewReader(b))
+		http.ServeContent(w, r, path, time.Time{}, bytes.NewReader(asset))
 	}
 }
 

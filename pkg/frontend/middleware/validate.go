@@ -8,12 +8,12 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/gofrs/uuid"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 const (
@@ -28,6 +28,8 @@ func Validate(env env.Core, apis map[string]*api.Version) func(http.Handler) htt
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			vars := mux.Vars(r)
 			route := mux.CurrentRoute(r)
+
+			apiVersion := r.URL.Query().Get(api.APIVersionKey)
 
 			if route == nil {
 				if log, ok := r.Context().Value(ContextKeyLog).(*logrus.Entry); ok {
@@ -46,8 +48,8 @@ func Validate(env env.Core, apis map[string]*api.Version) func(http.Handler) htt
 			}
 
 			if _, found := vars["subscriptionId"]; found {
-				_, err := uuid.FromString(vars["subscriptionId"])
-				if err != nil {
+				valid := uuid.IsValid(vars["subscriptionId"])
+				if !valid {
 					api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionID, "", "The provided subscription identifier '%s' is malformed or invalid.", vars["subscriptionId"])
 					return
 				}
@@ -69,7 +71,7 @@ func Validate(env env.Core, apis map[string]*api.Version) func(http.Handler) htt
 
 			if _, found := vars["resourceType"]; found {
 				if vars["resourceType"] != strings.ToLower(resourceType) {
-					api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], vars["api-version"])
+					api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], apiVersion)
 					return
 				}
 			}
@@ -89,8 +91,8 @@ func Validate(env env.Core, apis map[string]*api.Version) func(http.Handler) htt
 			}
 
 			if _, found := vars["operationId"]; found {
-				_, err := uuid.FromString(vars["operationId"])
-				if err != nil {
+				valid := uuid.IsValid(vars["operationId"])
+				if !valid {
 					api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidOperationID, "", "The provided operation identifier '%s' is malformed or invalid.", vars["operationId"])
 					return
 				}
@@ -99,16 +101,16 @@ func Validate(env env.Core, apis map[string]*api.Version) func(http.Handler) htt
 			queries, err := route.GetQueriesTemplates()
 			var hasVariableAPIVersion bool
 			for _, query := range queries {
-				if strings.HasPrefix(query, "api-version=") && strings.ContainsRune(query, '{') {
+				if query == "api-version=" {
 					hasVariableAPIVersion = true
 					break
 				}
 			}
 
 			if err != nil || hasVariableAPIVersion {
-				if _, found := vars["api-version"]; found {
-					if _, found := apis[vars["api-version"]]; !found {
-						api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], vars["api-version"])
+				if apiVersion != "" {
+					if _, found := apis[apiVersion]; !found {
+						api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], apiVersion)
 						return
 					}
 				}

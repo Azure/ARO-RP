@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	azsku "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2018-10-01/compute"
-	aznetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-12-01/network"
-	azres "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-05-01/resources"
-	azsubs "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-06-01/subscriptions"
+	azsku "github.com/Azure/azure-sdk-for-go/profiles/2018-03-01/compute/mgmt/compute"
+	aznetwork "github.com/Azure/azure-sdk-for-go/profiles/2018-03-01/network/mgmt/network"
+	azres "github.com/Azure/azure-sdk-for-go/profiles/2018-03-01/resources/mgmt/resources"
+	azsubs "github.com/Azure/azure-sdk-for-go/profiles/2018-03-01/resources/mgmt/subscriptions"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/pkg/errors"
 )
@@ -26,6 +26,7 @@ type API interface {
 	GetDiskSkus(ctx context.Context, region string) ([]azsku.ResourceSku, error)
 	GetGroup(ctx context.Context, groupName string) (*azres.Group, error)
 	ListResourceIDsByGroup(ctx context.Context, groupName string) ([]string, error)
+	GetStorageEndpointSuffix(ctx context.Context) (string, error)
 }
 
 // Client makes calls to the Azure API.
@@ -92,6 +93,12 @@ func (c *Client) getVirtualNetworksClient(ctx context.Context) (*aznetwork.Virtu
 	vnetsClient := aznetwork.NewVirtualNetworksClientWithBaseURI(c.ssn.Environment.ResourceManagerEndpoint, c.ssn.Credentials.SubscriptionID)
 	vnetsClient.Authorizer = c.ssn.Authorizer
 	return &vnetsClient, nil
+}
+
+// GetStorageEndpointSuffix retrieves the StorageEndpointSuffix from the
+// session environment
+func (c *Client) GetStorageEndpointSuffix(ctx context.Context) (string, error) {
+	return c.ssn.Environment.StorageEndpointSuffix, nil
 }
 
 // getSubnetsClient sets up a new client to retrieve a subnet

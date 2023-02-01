@@ -5,6 +5,7 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net"
 	"net/http"
@@ -68,7 +69,7 @@ type gateway struct {
 
 	allowList map[string]struct{}
 
-	m                metrics.Interface
+	m                metrics.Emitter
 	httpConnections  int64
 	httpsConnections int64
 }
@@ -87,7 +88,7 @@ const SocketSize = 65536
 
 // TODO: may one day want to limit gateway readiness on # active connections
 
-func NewGateway(ctx context.Context, env env.Core, baseLog, accessLog *logrus.Entry, dbGateway database.Gateway, httpsl, httpl net.Listener, acrResourceID, gatewayDomains string, m metrics.Interface) (Runnable, error) {
+func NewGateway(ctx context.Context, env env.Core, baseLog, accessLog *logrus.Entry, dbGateway database.Gateway, httpsl, httpl net.Listener, acrResourceID, gatewayDomains string, m metrics.Emitter) (Runnable, error) {
 	var domains []string
 	if gatewayDomains != "" {
 		domains = strings.Split(gatewayDomains, ",")
@@ -100,6 +101,10 @@ func NewGateway(ctx context.Context, env env.Core, baseLog, accessLog *logrus.En
 		u, err := url.Parse(rawurl)
 		if err != nil {
 			return nil, err
+		}
+
+		if u.Hostname() == "" {
+			return nil, errors.New("missing required domain. Ensure the environment has both ActiveDirectoryEndpoint and ResourceManagerEndpoint")
 		}
 
 		domains = append(domains, u.Hostname())
@@ -155,8 +160,7 @@ func NewGateway(ctx context.Context, env env.Core, baseLog, accessLog *logrus.En
 		},
 
 		allowList: allowList,
-
-		m: m,
+		m:         m,
 	}
 
 	r := mux.NewRouter()

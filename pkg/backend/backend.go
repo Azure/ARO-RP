@@ -33,9 +33,10 @@ type backend struct {
 	dbGateway           database.Gateway
 	dbOpenShiftClusters database.OpenShiftClusters
 	dbSubscriptions     database.Subscriptions
+	dbOpenShiftVersions database.OpenShiftVersions
 
 	aead    encryption.AEAD
-	m       metrics.Interface
+	m       metrics.Emitter
 	billing billing.Manager
 
 	mu       sync.Mutex
@@ -53,8 +54,8 @@ type Runnable interface {
 }
 
 // NewBackend returns a new runnable backend
-func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsyncOperations database.AsyncOperations, dbBilling database.Billing, dbGateway database.Gateway, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, aead encryption.AEAD, m metrics.Interface) (Runnable, error) {
-	b, err := newBackend(ctx, log, env, dbAsyncOperations, dbBilling, dbGateway, dbOpenShiftClusters, dbSubscriptions, aead, m)
+func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsyncOperations database.AsyncOperations, dbBilling database.Billing, dbGateway database.Gateway, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, dbOpenShiftVersions database.OpenShiftVersions, aead encryption.AEAD, m metrics.Emitter) (Runnable, error) {
+	b, err := newBackend(ctx, log, env, dbAsyncOperations, dbBilling, dbGateway, dbOpenShiftClusters, dbSubscriptions, dbOpenShiftVersions, aead, m)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +65,7 @@ func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsy
 	return b, nil
 }
 
-func newBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsyncOperations database.AsyncOperations, dbBilling database.Billing, dbGateway database.Gateway, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, aead encryption.AEAD, m metrics.Interface) (*backend, error) {
+func newBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsyncOperations database.AsyncOperations, dbBilling database.Billing, dbGateway database.Gateway, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, dbOpenShiftVersions database.OpenShiftVersions, aead encryption.AEAD, m metrics.Emitter) (*backend, error) {
 	billing, err := billing.NewManager(env, dbBilling, dbSubscriptions, log)
 	if err != nil {
 		return nil, err
@@ -79,6 +80,7 @@ func newBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsy
 		dbGateway:           dbGateway,
 		dbOpenShiftClusters: dbOpenShiftClusters,
 		dbSubscriptions:     dbSubscriptions,
+		dbOpenShiftVersions: dbOpenShiftVersions,
 
 		billing: billing,
 		aead:    aead,

@@ -50,3 +50,8 @@ Release History
 1.0.6
 ++++++
 * Fixed backwards compatibility with Python3.6
+
+1.0.7
+++++++
+* Add support for get-versions (lists available installation versions of OpenShift per location)
+* Adds an aro create 'version' parameter (for specifying the cluster installation version)

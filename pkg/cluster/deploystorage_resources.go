@@ -5,12 +5,12 @@ package cluster
 
 import (
 	"fmt"
+	"strings"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/openshift/installer/pkg/asset/installconfig"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
@@ -75,19 +75,102 @@ func (m *manager) clusterServicePrincipalRBAC() *arm.Resource {
 	)
 }
 
-func (m *manager) storageAccount(name, region string) *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtstorage.Account{
-			Sku: &mgmtstorage.Sku{
-				Name: "Standard_LRS",
-			},
-			AccountProperties: &mgmtstorage.AccountProperties{
-				MinimumTLSVersion: mgmtstorage.TLS12,
-			},
-			Name:     &name,
-			Location: &region,
-			Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
+// storageAccount will return storage account resource.
+// Legacy storage accounts (public) are not encrypted and cannot be retrofitted.
+// The flag controls this behavior in update/create.
+func (m *manager) storageAccount(name, region string, encrypted bool) *arm.Resource {
+	virtualNetworkRules := []mgmtstorage.VirtualNetworkRule{
+		{
+			VirtualNetworkResourceID: &m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
+			Action:                   mgmtstorage.Allow,
 		},
+		{
+			VirtualNetworkResourceID: &m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID,
+			Action:                   mgmtstorage.Allow,
+		},
+		{
+			VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
+			Action:                   mgmtstorage.Allow,
+		},
+		{
+			VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-vnet/subnets/rp-subnet"),
+			Action:                   mgmtstorage.Allow,
+		},
+	}
+
+	// when installing via Hive we need to allow Hive to persist the installConfig graph in the cluster's storage account
+	// TODO: add AKS shard support
+	hiveShard := 1
+	if m.installViaHive && strings.Index(name, "cluster") == 0 {
+		virtualNetworkRules = append(virtualNetworkRules, mgmtstorage.VirtualNetworkRule{
+			VirtualNetworkResourceID: to.StringPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/aks-net/subnets/PodSubnet-%03d", m.env.SubscriptionID(), m.env.ResourceGroup(), hiveShard)),
+			Action:                   mgmtstorage.Allow,
+		})
+	}
+
+	// Prod includes a gateway rule as well
+	// Once we reach a PLS limit (1000) within a vnet , we may need some refactoring here
+	// https://docs.microsoft.com/en-us/azure/azure-resource-manager/management/azure-subscription-service-limits#private-link-limits
+	if !m.env.IsLocalDevelopmentMode() {
+		virtualNetworkRules = append(virtualNetworkRules, mgmtstorage.VirtualNetworkRule{
+			VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.GatewayResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/gateway-vnet/subnets/gateway-subnet"),
+			Action:                   mgmtstorage.Allow,
+		})
+	}
+
+	sa := &mgmtstorage.Account{
+		Kind: mgmtstorage.StorageV2,
+		Sku: &mgmtstorage.Sku{
+			Name: "Standard_LRS",
+		},
+		AccountProperties: &mgmtstorage.AccountProperties{
+			AllowBlobPublicAccess:  to.BoolPtr(false),
+			EnableHTTPSTrafficOnly: to.BoolPtr(true),
+			MinimumTLSVersion:      mgmtstorage.TLS12,
+			NetworkRuleSet: &mgmtstorage.NetworkRuleSet{
+				Bypass:              mgmtstorage.AzureServices,
+				VirtualNetworkRules: &virtualNetworkRules,
+				DefaultAction:       "Deny",
+			},
+		},
+		Name:     &name,
+		Location: &region,
+		Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
+	}
+
+	// In development API calls originates from user laptop so we allow all.
+	// TODO: Move to development on VPN so we can make this IPRule.  Will be done as part of Simply secure v2 work
+	if m.env.IsLocalDevelopmentMode() {
+		sa.NetworkRuleSet.DefaultAction = mgmtstorage.DefaultActionAllow
+	}
+	// When migrating storage accounts for old clusters we are not able to change
+	// encryption which is why we have this encryption flag. We will not add this
+	// retrospectively to old clusters
+	// If a storage account already has encryption enabled and the encrypted
+	// bool is set to false, it will still maintain the encryption on the storage account.
+	if encrypted {
+		sa.AccountProperties.Encryption = &mgmtstorage.Encryption{
+			RequireInfrastructureEncryption: to.BoolPtr(true),
+			Services: &mgmtstorage.EncryptionServices{
+				Blob: &mgmtstorage.EncryptionService{
+					KeyType: mgmtstorage.KeyTypeAccount,
+				},
+				File: &mgmtstorage.EncryptionService{
+					KeyType: mgmtstorage.KeyTypeAccount,
+				},
+				Table: &mgmtstorage.EncryptionService{
+					KeyType: mgmtstorage.KeyTypeAccount,
+				},
+				Queue: &mgmtstorage.EncryptionService{
+					KeyType: mgmtstorage.KeyTypeAccount,
+				},
+			},
+			KeySource: mgmtstorage.KeySourceMicrosoftStorage,
+		}
+	}
+
+	return &arm.Resource{
+		Resource:   sa,
 		APIVersion: azureclient.APIVersion("Microsoft.Storage"),
 	}
 }
@@ -105,7 +188,7 @@ func (m *manager) storageAccountBlobContainer(storageAccountName, name string) *
 	}
 }
 
-func (m *manager) networkPrivateLinkService(installConfig *installconfig.InstallConfig) *arm.Resource {
+func (m *manager) networkPrivateLinkService(azureRegion string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.PrivateLinkService{
 			PrivateLinkServiceProperties: &mgmtnetwork.PrivateLinkServiceProperties{
@@ -118,7 +201,7 @@ func (m *manager) networkPrivateLinkService(installConfig *installconfig.Install
 					{
 						PrivateLinkServiceIPConfigurationProperties: &mgmtnetwork.PrivateLinkServiceIPConfigurationProperties{
 							Subnet: &mgmtnetwork.Subnet{
-								ID: to.StringPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
+								ID: &m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
 							},
 						},
 						Name: to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-pls-nic"),
@@ -137,7 +220,7 @@ func (m *manager) networkPrivateLinkService(installConfig *installconfig.Install
 			},
 			Name:     to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-pls"),
 			Type:     to.StringPtr("Microsoft.Network/privateLinkServices"),
-			Location: &installConfig.Config.Azure.Region,
+			Location: &azureRegion,
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
@@ -173,7 +256,7 @@ func (m *manager) networkPrivateEndpoint() *arm.Resource {
 	}
 }
 
-func (m *manager) networkPublicIPAddress(installConfig *installconfig.InstallConfig, name string) *arm.Resource {
+func (m *manager) networkPublicIPAddress(azureRegion string, name string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.PublicIPAddress{
 			Sku: &mgmtnetwork.PublicIPAddressSku{
@@ -184,13 +267,13 @@ func (m *manager) networkPublicIPAddress(installConfig *installconfig.InstallCon
 			},
 			Name:     &name,
 			Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
-			Location: &installConfig.Config.Azure.Region,
+			Location: &azureRegion,
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }
 
-func (m *manager) networkInternalLoadBalancer(installConfig *installconfig.InstallConfig) *arm.Resource {
+func (m *manager) networkInternalLoadBalancer(azureRegion string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.LoadBalancer{
 			Sku: &mgmtnetwork.LoadBalancerSku{
@@ -210,7 +293,7 @@ func (m *manager) networkInternalLoadBalancer(installConfig *installconfig.Insta
 				},
 				BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 					{
-						Name: to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID),
+						Name: &m.doc.OpenShiftCluster.Properties.InfraID,
 					},
 					{
 						Name: to.StringPtr("ssh-0"),
@@ -357,13 +440,13 @@ func (m *manager) networkInternalLoadBalancer(installConfig *installconfig.Insta
 			},
 			Name:     to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-internal"),
 			Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
-			Location: &installConfig.Config.Azure.Region,
+			Location: &azureRegion,
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }
 
-func (m *manager) networkPublicLoadBalancer(installConfig *installconfig.InstallConfig) *arm.Resource {
+func (m *manager) networkPublicLoadBalancer(azureRegion string) *arm.Resource {
 	lb := &mgmtnetwork.LoadBalancer{
 		Sku: &mgmtnetwork.LoadBalancerSku{
 			Name: mgmtnetwork.LoadBalancerSkuNameStandard,
@@ -404,9 +487,9 @@ func (m *manager) networkPublicLoadBalancer(installConfig *installconfig.Install
 				},
 			},
 		},
-		Name:     to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID),
+		Name:     &m.doc.OpenShiftCluster.Properties.InfraID,
 		Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
-		Location: &installConfig.Config.Azure.Region,
+		Location: &azureRegion,
 	}
 
 	if m.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {

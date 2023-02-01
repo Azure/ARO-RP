@@ -31,6 +31,7 @@ func (g *generator) devSharedTemplate() *arm.Template {
 	t.Resources = append(t.Resources,
 		g.devVPNPip(),
 		g.devVnet(),
+		g.devVPNVnet(),
 		g.devVPN(),
 		g.devCIPool(),
 		g.devDiskEncryptionKeyvault(),
@@ -38,6 +39,46 @@ func (g *generator) devSharedTemplate() *arm.Template {
 		g.devDiskEncryptionKeyVaultAccessPolicy(),
 		g.devDiskEncryptionSet(),
 		g.devProxyVMSS())
+
+	t.Resources = append(t.Resources,
+		g.virtualNetworkPeering("dev-vpn-vnet/peering-dev-vnet",
+			"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
+			true,
+			false,
+			[]string{
+				"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
+				"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]",
+				"[resourceId('Microsoft.Network/virtualNetworkGateways', 'dev-vpn')]",
+			},
+		),
+		g.virtualNetworkPeering("dev-vnet/peering-dev-vpn-vnet",
+			"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]",
+			false,
+			true,
+			[]string{
+				"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
+				"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]",
+				"[resourceId('Microsoft.Network/virtualNetworkGateways', 'dev-vpn')]",
+			},
+		),
+		g.virtualNetworkPeering("dev-vpn-vnet/peering-rp-vnet",
+			"[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]",
+			true,
+			false,
+			[]string{
+				"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]",
+				"[resourceId('Microsoft.Network/virtualNetworkGateways', 'dev-vpn')]",
+			},
+		),
+		g.virtualNetworkPeering("rp-vnet/peering-dev-vpn-vnet",
+			"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]",
+			false,
+			true,
+			[]string{
+				"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]",
+				"[resourceId('Microsoft.Network/virtualNetworkGateways', 'dev-vpn')]",
+			},
+		))
 
 	for _, param := range []string{
 		"ciAzpToken",

@@ -11,8 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofrs/uuid"
-	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -20,6 +18,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/log/audit"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 type logResponseWriter struct {
@@ -57,19 +56,17 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			t := time.Now()
 
-			vars := mux.Vars(r)
-
 			r.Body = &logReadCloser{ReadCloser: r.Body}
 			w = &logResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 
 			correlationData := &api.CorrelationData{
 				ClientRequestID: r.Header.Get("X-Ms-Client-Request-Id"),
 				CorrelationID:   r.Header.Get("X-Ms-Correlation-Request-Id"),
-				RequestID:       uuid.Must(uuid.NewV4()).String(),
+				RequestID:       uuid.DefaultGenerator.Generate(),
 				RequestTime:     t,
 			}
 
-			if vars["api-version"] == admin.APIVersion || isAdminOp(r) {
+			if r.URL.Query().Get(api.APIVersionKey) == admin.APIVersion || isAdminOp(r) {
 				correlationData.ClientPrincipalName = r.Header.Get("X-Ms-Client-Principal-Name")
 			}
 

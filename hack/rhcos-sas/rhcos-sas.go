@@ -27,17 +27,17 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	resourceGroup := "images"
 	accountName := "openshiftimages"
 
-	authorizer, err := auth.NewAuthorizerFromEnvironment()
+	_env, err := env.NewCore(ctx, log)
 	if err != nil {
 		return err
 	}
 
-	env, err := env.NewCore(ctx, log)
+	authorizer, err := auth.NewAuthorizerFromCLIWithResource(_env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return err
 	}
 
-	accounts := storage.NewAccountsClient(env.Environment(), subscriptionID, authorizer)
+	accounts := storage.NewAccountsClient(_env.Environment(), subscriptionID, authorizer)
 
 	keys, err := accounts.ListKeys(ctx, resourceGroup, accountName, "")
 	if err != nil {

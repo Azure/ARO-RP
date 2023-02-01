@@ -11,6 +11,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/to"
 
+	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 )
@@ -28,13 +29,13 @@ func TestConfigurationFieldParity(t *testing.T) {
 		generator.FileRPProductionParameters,
 		generator.FileRPProductionPredeployParameters,
 	} {
-		b, err := Asset(paramsFile)
+		asset, err := assets.EmbeddedFiles.ReadFile(paramsFile)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		var params *arm.Parameters
-		err = json.Unmarshal(b, &params)
+		err = json.Unmarshal(asset, &params)
 		if err != nil {
 			t.Fatal(err)
 		}

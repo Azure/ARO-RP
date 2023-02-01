@@ -13,7 +13,7 @@ type openShiftClusterConverter struct{}
 // reading from the subset of the internal object's fields that appear in the
 // external representation.  ToExternal does not modify its argument; there is
 // no pointer aliasing between the passed and returned objects
-func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interface{} {
+func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interface{} {
 	out := &OpenShiftCluster{
 		ID:       oc.ID,
 		Name:     oc.Name,
@@ -26,6 +26,8 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 			FailedProvisioningState: ProvisioningState(oc.Properties.FailedProvisioningState),
 			LastAdminUpdateError:    oc.Properties.LastAdminUpdateError,
 			MaintenanceTask:         MaintenanceTask(oc.Properties.MaintenanceTask),
+			OperatorFlags:           OperatorFlags(oc.Properties.OperatorFlags),
+			OperatorVersion:         oc.Properties.OperatorVersion,
 			CreatedAt:               oc.Properties.CreatedAt,
 			CreatedBy:               oc.Properties.CreatedBy,
 			ProvisionedBy:           oc.Properties.ProvisionedBy,
@@ -49,6 +51,8 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 				SoftwareDefinedNetwork:     SoftwareDefinedNetwork(oc.Properties.NetworkProfile.SoftwareDefinedNetwork),
 				PodCIDR:                    oc.Properties.NetworkProfile.PodCIDR,
 				ServiceCIDR:                oc.Properties.NetworkProfile.ServiceCIDR,
+				MTUSize:                    MTUSize(oc.Properties.NetworkProfile.MTUSize),
+				OutboundType:               OutboundType(oc.Properties.NetworkProfile.OutboundType),
 				APIServerPrivateEndpointIP: oc.Properties.NetworkProfile.APIServerPrivateEndpointIP,
 				GatewayPrivateEndpointIP:   oc.Properties.NetworkProfile.GatewayPrivateEndpointIP,
 				GatewayPrivateLinkID:       oc.Properties.NetworkProfile.GatewayPrivateLinkID,
@@ -119,6 +123,10 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 		}
 	}
 
+	out.Properties.HiveProfile = HiveProfile{
+		Namespace:     oc.Properties.HiveProfile.Namespace,
+		CreatedByHive: oc.Properties.HiveProfile.CreatedByHive,
+	}
 	out.SystemData = SystemData{
 		CreatedBy:          oc.SystemData.CreatedBy,
 		CreatedAt:          oc.SystemData.CreatedAt,
@@ -133,7 +141,7 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 
 // ToExternalList returns a slice of external representations of the internal
 // objects
-func (c *openShiftClusterConverter) ToExternalList(ocs []*api.OpenShiftCluster, nextLink string) interface{} {
+func (c openShiftClusterConverter) ToExternalList(ocs []*api.OpenShiftCluster, nextLink string) interface{} {
 	l := &OpenShiftClusterList{
 		OpenShiftClusters: make([]*OpenShiftCluster, 0, len(ocs)),
 		NextLink:          nextLink,
@@ -150,7 +158,7 @@ func (c *openShiftClusterConverter) ToExternalList(ocs []*api.OpenShiftCluster, 
 // all mapped fields from the external representation. ToInternal modifies its
 // argument; there is no pointer aliasing between the passed and returned
 // objects
-func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShiftCluster) {
+func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShiftCluster) {
 	oc := _oc.(*OpenShiftCluster)
 
 	out.ID = oc.ID
@@ -166,11 +174,15 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 	}
 	out.Properties.ArchitectureVersion = api.ArchitectureVersion(oc.Properties.ArchitectureVersion)
 	out.Properties.InfraID = oc.Properties.InfraID
+	out.Properties.HiveProfile.Namespace = oc.Properties.HiveProfile.Namespace
+	out.Properties.HiveProfile.CreatedByHive = oc.Properties.HiveProfile.CreatedByHive
 	out.Properties.ProvisioningState = api.ProvisioningState(oc.Properties.ProvisioningState)
 	out.Properties.LastProvisioningState = api.ProvisioningState(oc.Properties.LastProvisioningState)
 	out.Properties.FailedProvisioningState = api.ProvisioningState(oc.Properties.FailedProvisioningState)
 	out.Properties.LastAdminUpdateError = oc.Properties.LastAdminUpdateError
 	out.Properties.MaintenanceTask = api.MaintenanceTask(oc.Properties.MaintenanceTask)
+	out.Properties.OperatorFlags = api.OperatorFlags(oc.Properties.OperatorFlags)
+	out.Properties.OperatorVersion = oc.Properties.OperatorVersion
 	out.Properties.CreatedBy = oc.Properties.CreatedBy
 	out.Properties.ProvisionedBy = oc.Properties.ProvisionedBy
 	out.Properties.ClusterProfile.Domain = oc.Properties.ClusterProfile.Domain
@@ -183,6 +195,8 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 	out.Properties.ServicePrincipalProfile.SPObjectID = oc.Properties.ServicePrincipalProfile.SPObjectID
 	out.Properties.NetworkProfile.PodCIDR = oc.Properties.NetworkProfile.PodCIDR
 	out.Properties.NetworkProfile.ServiceCIDR = oc.Properties.NetworkProfile.ServiceCIDR
+	out.Properties.NetworkProfile.MTUSize = api.MTUSize(oc.Properties.NetworkProfile.MTUSize)
+	out.Properties.NetworkProfile.OutboundType = api.OutboundType(oc.Properties.NetworkProfile.OutboundType)
 	out.Properties.NetworkProfile.SoftwareDefinedNetwork = api.SoftwareDefinedNetwork(oc.Properties.NetworkProfile.SoftwareDefinedNetwork)
 	out.Properties.NetworkProfile.APIServerPrivateEndpointIP = oc.Properties.NetworkProfile.APIServerPrivateEndpointIP
 	out.Properties.NetworkProfile.GatewayPrivateEndpointIP = oc.Properties.NetworkProfile.GatewayPrivateEndpointIP

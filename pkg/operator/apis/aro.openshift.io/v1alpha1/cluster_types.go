@@ -4,6 +4,8 @@ package v1alpha1
 // Licensed under the Apache License 2.0.
 
 import (
+	"strings"
+
 	operatorv1 "github.com/openshift/api/operator/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -20,17 +22,36 @@ const (
 	InternetReachableFromWorker = "InternetReachableFromWorker"
 	MachineValid                = "MachineValid"
 	ServicePrincipalValid       = "ServicePrincipalValid"
+
+	ManagedUpgradeOperatorStatus = "ManagedUpgradeOperatorStatus"
+
+	// advisor checks
+	DefaultIngressCertificate = "DefaultIngressCertificate"
+	DefaultClusterDNS         = "DefaultClusterDNS"
 )
 
 // AllConditionTypes is a operator conditions currently in use, any condition not in this list is not
 // added to the operator.status.conditions list
 func AllConditionTypes() []string {
-	return []string{InternetReachableFromMaster, InternetReachableFromWorker, MachineValid, ServicePrincipalValid}
+	return []string{
+		InternetReachableFromMaster,
+		InternetReachableFromWorker,
+		MachineValid,
+		ServicePrincipalValid,
+		ManagedUpgradeOperatorStatus,
+		DefaultIngressCertificate,
+		DefaultClusterDNS,
+	}
 }
 
 // ClusterChecksTypes represents checks performed on the cluster to verify basic functionality
 func ClusterChecksTypes() []string {
-	return []string{InternetReachableFromMaster, InternetReachableFromWorker, MachineValid, ServicePrincipalValid}
+	return []string{
+		InternetReachableFromMaster,
+		InternetReachableFromWorker,
+		MachineValid,
+		ServicePrincipalValid,
+	}
 }
 
 type GenevaLoggingSpec struct {
@@ -48,6 +69,29 @@ type InternetCheckerSpec struct {
 	URLs []string `json:"urls,omitempty"`
 }
 
+type OperatorFlags map[string]string
+
+func (f OperatorFlags) GetWithDefault(key string, sentinel string) string {
+	val, ext := f[key]
+	if !ext {
+		return sentinel
+	}
+	return val
+}
+
+func (f OperatorFlags) GetSimpleBoolean(key string) bool {
+	v, ext := f[key]
+	if ext {
+		// Only accept a literal true, rather than accepting anything other than
+		// literal false as true
+		// TODO: Is this the best behaviour?
+		if strings.EqualFold(v, "true") {
+			return true
+		}
+	}
+	return false
+}
+
 // ClusterSpec defines the desired state of Cluster
 type ClusterSpec struct {
 	// ResourceID is the Azure resourceId of the cluster
@@ -58,6 +102,7 @@ type ClusterSpec struct {
 	AZEnvironment            string              `json:"azEnvironment,omitempty"`
 	Location                 string              `json:"location,omitempty"`
 	InfraID                  string              `json:"infraId,omitempty"`
+	StorageSuffix            string              `json:"storageSuffix,omitempty"`
 	ArchitectureVersion      int                 `json:"architectureVersion,omitempty"`
 	GenevaLogging            GenevaLoggingSpec   `json:"genevaLogging,omitempty"`
 	InternetChecker          InternetCheckerSpec `json:"internetChecker,omitempty"`
@@ -67,23 +112,10 @@ type ClusterSpec struct {
 	GatewayDomains           []string            `json:"gatewayDomains,omitempty"`
 	GatewayPrivateEndpointIP string              `json:"gatewayPrivateEndpointIP,omitempty"`
 	Banner                   Banner              `json:"banner,omitempty"`
+	ServiceSubnets           []string            `json:"serviceSubnets,omitempty"`
 
-	Features FeaturesSpec `json:"features,omitempty"`
-}
-
-// FeaturesSpec defines ARO operator feature gates
-type FeaturesSpec struct {
-	ReconcileSubnets               bool `json:"reconcileSubnets,omitempty"`
-	ReconcileAlertWebhook          bool `json:"reconcileAlertWebhook,omitempty"`
-	ReconcileDNSMasq               bool `json:"reconcileDNSMasq,omitempty"`
-	ReconcileGenevaLogging         bool `json:"reconcileGenevaLogging,omitempty"`
-	ReconcileMachineSet            bool `json:"reconcileMachineSet,omitempty"`
-	ReconcileMonitoringConfig      bool `json:"reconcileMonitoringConfig,omitempty"`
-	ReconcileNodeDrainer           bool `json:"reconcileNodeDrainer,omitempty"`
-	ReconcilePullSecret            bool `json:"reconcilePullSecret,omitempty"`
-	ReconcileRouteFix              bool `json:"reconcileRouteFix,omitempty"`
-	ReconcileWorkaroundsController bool `json:"reconcileWorkaroundsController,omitempty"`
-	ReconcileBanner                bool `json:"reconcileBanner,omitempty"`
+	// OperatorFlags defines feature gates for the ARO Operator
+	OperatorFlags OperatorFlags `json:"operatorflags,omitempty"`
 }
 
 // Banner defines if a Banner should be shown to the customer

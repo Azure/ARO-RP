@@ -6,10 +6,10 @@ package cluster
 import (
 	"context"
 	"encoding/json"
-	"reflect"
-	"runtime"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
 
 func (m *manager) gatherFailureLogs(ctx context.Context) {
@@ -31,7 +31,7 @@ func (m *manager) gatherFailureLogs(ctx context.Context) {
 			continue
 		}
 
-		m.log.Printf("%s: %s", runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name(), string(b))
+		m.log.Printf("%s: %s", steps.FriendlyName(f), string(b))
 	}
 }
 

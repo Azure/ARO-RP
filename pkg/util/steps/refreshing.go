@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -84,6 +85,12 @@ func (s authorizationRefreshingActionStep) run(ctx context.Context, log *logrus.
 		return true, err
 	}, timeoutCtx.Done())
 }
+
 func (s authorizationRefreshingActionStep) String() string {
 	return fmt.Sprintf("[AuthorizationRefreshingAction %s]", s.step)
+}
+
+func (s authorizationRefreshingActionStep) metricsTopic() string {
+	trimedName := strings.ReplaceAll(strings.ReplaceAll(s.step.String(), "[", ""), "]", "")
+	return fmt.Sprintf("refreshing.%s", shortName(trimedName))
 }

@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"testing"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
@@ -53,7 +54,7 @@ func validVirtualMachinesMock(virtualMachines *mock_compute.MockVirtualMachinesC
 		VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
 			ProvisioningState: to.StringPtr("Succeeded"),
 		},
-	}, nil)
+	}, nil).AnyTimes()
 }
 
 func validVirtualNetworksMock(virtualNetworks *mock_network.MockVirtualNetworksClient, routeTables *mock_network.MockRouteTablesClient, mockSubID string) {
@@ -179,12 +180,14 @@ func TestResourcesList(t *testing.T) {
 				routeTables:        routeTables,
 			}
 
-			b, err := a.ResourcesList(ctx)
+			reader, writer := io.Pipe()
+			err := a.WriteToStream(ctx, writer)
 
+			b, _ := io.ReadAll(reader)
 			if tt.wantError == "" {
 				if tt.wantResponse != nil {
 					if !bytes.Equal(b, tt.wantResponse) {
-						t.Error(string(b))
+						t.Errorf("wanted %s got %s", string(tt.wantResponse), string(b))
 					}
 				}
 			} else {

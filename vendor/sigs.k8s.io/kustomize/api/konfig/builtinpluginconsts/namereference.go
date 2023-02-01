@@ -3,9 +3,7 @@
 
 package builtinpluginconsts
 
-// TODO: rename 'fieldSpecs' to 'referrers' for clarity.
-// This will, however, break anyone using a custom config.
-
+// LINT.IfChange
 const (
 	nameReferenceFieldSpecs = `
 nameReference:
@@ -401,3 +399,5 @@ nameReference:
     kind: Ingress
 `
 )
+
+// LINT.ThenChange(/examples/transformerconfigs/README.md)

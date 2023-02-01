@@ -10,9 +10,9 @@ import (
 	"testing"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/gofrs/uuid"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/Azure/ARO-RP/test/validate"
 )
@@ -133,12 +133,11 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 					(&openShiftClusterConverter{}).ToInternal(validOCForTest(), current)
 				}
 
-				err := v.Static(oc, current)
+				err := v.Static(oc, current, v.location, v.domain, tt.requireD2sV3Workers, v.resourceID)
 				if err == nil {
 					if tt.wantErr != "" {
 						t.Error(err)
 					}
-
 				} else {
 					if err.Error() != tt.wantErr {
 						t.Error(err)
@@ -317,13 +316,6 @@ func TestOpenShiftClusterStaticValidateClusterProfile(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.ClusterProfile.PullSecret = ""
 			},
-		},
-		{
-			name: "version invalid",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Version = "invalid"
-			},
-			wantErr: "400: InvalidParameter: properties.clusterProfile.version: The provided version 'invalid' is invalid.",
 		},
 		{
 			name: "leading digit domain invalid",
@@ -763,7 +755,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 		{
 			name: "clientId change",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ServicePrincipalProfile.ClientID = uuid.Must(uuid.NewV4()).String()
+				oc.Properties.ServicePrincipalProfile.ClientID = uuid.DefaultGenerator.Generate()
 			},
 		},
 		{

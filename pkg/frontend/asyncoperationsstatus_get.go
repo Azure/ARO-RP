@@ -7,6 +7,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
@@ -34,6 +35,14 @@ func (f *frontend) _getAsyncOperationsStatus(ctx context.Context, r *http.Reques
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The entity was not found.")
 	case err != nil:
 		return nil, err
+	}
+
+	resource, err := azure.ParseResourceID(asyncdoc.OpenShiftClusterKey)
+	switch {
+	case err != nil:
+		return nil, err
+	case resource.SubscriptionID != vars["subscriptionId"]:
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The entity was not found.")
 	}
 
 	doc, err := f.dbOpenShiftClusters.Get(ctx, asyncdoc.OpenShiftClusterKey)

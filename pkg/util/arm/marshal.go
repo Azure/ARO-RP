@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/gofrs/uuid"
+	gofrsuuid "github.com/gofrs/uuid"
 )
 
 // MarshalJSON marshals the nested r.Resource ignoring any MarshalJSON() methods
@@ -86,7 +86,7 @@ func _shadowCopy(v reflect.Value) reflect.Value {
 	switch v.Kind() {
 	case reflect.Array:
 		var t reflect.Type
-		if v.Type() == reflect.TypeOf(uuid.UUID{}) {
+		if v.Type() == reflect.TypeOf(gofrsuuid.UUID{}) {
 			// keep uuid.UUID - encoding/json will detect it and marshal it into
 			// a string
 			t = v.Type()

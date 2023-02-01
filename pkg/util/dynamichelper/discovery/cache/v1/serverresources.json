@@ -293,11 +293,22 @@
             ]
         },
         {
+            "name": "pods/ephemeralcontainers",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "Pod",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
             "name": "pods/eviction",
             "singularName": "",
             "namespaced": true,
             "group": "policy",
-            "version": "v1beta1",
+            "version": "v1",
             "kind": "Eviction",
             "verbs": [
                 "create"
@@ -507,6 +518,7 @@
             "verbs": [
                 "create",
                 "delete",
+                "deletecollection",
                 "get",
                 "list",
                 "patch",

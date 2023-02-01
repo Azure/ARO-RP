@@ -4,12 +4,16 @@ package deploy
 // Licensed under the Apache License 2.0.
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"reflect"
 	"strings"
 
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/ghodss/yaml"
+	"golang.org/x/crypto/ssh"
 )
 
 // NOTICE: when modifying the config definition here, don't forget to update
@@ -35,6 +39,7 @@ type Configuration struct {
 	ACRLocationOverride                *string       `json:"acrLocationOverride,omitempty"`
 	ACRResourceID                      *string       `json:"acrResourceId,omitempty" value:"required"`
 	AzureCloudName                     *string       `json:"azureCloudName,omitempty" value:"required"`
+	AzureSecPackQualysUrl              *string       `json:"azureSecPackQualysUrl,omitempty"`
 	AzureSecPackVSATenantId            *string       `json:"azureSecPackVSATenantId,omitempty"`
 	RPVersionStorageAccountName        *string       `json:"rpVersionStorageAccountName,omitempty" value:"required"`
 	ACRReplicaDisabled                 *bool         `json:"acrReplicaDisabled,omitempty"`
@@ -86,20 +91,25 @@ type Configuration struct {
 	RPMDSDAccount                      *string       `json:"rpMdsdAccount,omitempty" value:"required"`
 	RPMDSDConfigVersion                *string       `json:"rpMdsdConfigVersion,omitempty" value:"required"`
 	RPMDSDNamespace                    *string       `json:"rpMdsdNamespace,omitempty" value:"required"`
-	RPNSGSourceAddressPrefixes         []string      `json:"rpNsgSourceAddressPrefixes,omitempty" value:"required"`
+	RPNSGPortalSourceAddressPrefixes   []string      `json:"rpNsgPortalSourceAddressPrefixes,omitempty"`
 	RPParentDomainName                 *string       `json:"rpParentDomainName,omitempty" value:"required"`
+	RPVMSSCapacity                     *int          `json:"rpVmssCapacity,omitempty"`
+	SSHPublicKey                       *string       `json:"sshPublicKey,omitempty"`
+	StorageAccountDomain               *string       `json:"storageAccountDomain,omitempty" value:"required"`
 	SubscriptionResourceGroupName      *string       `json:"subscriptionResourceGroupName,omitempty" value:"required"`
 	SubscriptionResourceGroupLocation  *string       `json:"subscriptionResourceGroupLocation,omitempty" value:"required"`
-	RPVMSSCapacity                     *int          `json:"rpVmssCapacity,omitempty"`
-	SSHPublicKey                       *string       `json:"sshPublicKey,omitempty" value:"required"`
-	StorageAccountDomain               *string       `json:"storageAccountDomain,omitempty" value:"required"`
 	VMSize                             *string       `json:"vmSize,omitempty" value:"required"`
 	VMSSCleanupEnabled                 *bool         `json:"vmssCleanupEnabled,omitempty"`
+
+	// TODO: Replace with Live Service Configuration in KeyVault
+	InstallViaHive           *string `json:"clustersInstallViaHive,omitempty"`
+	DefaultInstallerPullspec *string `json:"clusterDefaultInstallerPullspec,omitempty"`
+	AdoptByHive              *string `json:"clustersAdoptByHive,omitempty"`
 }
 
 // GetConfig return RP configuration from the file
 func GetConfig(path, location string) (*RPConfig, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -146,6 +156,19 @@ func (conf *RPConfig) validate() error {
 	configuration := conf.Configuration
 	v := reflect.ValueOf(*configuration)
 	missingFields := []string{}
+
+	if conf.Configuration.SSHPublicKey == nil {
+		key, err := rsa.GenerateKey(rand.Reader, 2048)
+		if err != nil {
+			return err
+		}
+		publicRsaKey, err := ssh.NewPublicKey(&key.PublicKey)
+		if err != nil {
+			return err
+		}
+		publicKeyBytes := ssh.MarshalAuthorizedKey(publicRsaKey)
+		conf.Configuration.SSHPublicKey = to.StringPtr(string(publicKeyBytes))
+	}
 
 	for i := 0; i < v.NumField(); i++ {
 		required := v.Type().Field(i).Tag.Get("value") == "required"

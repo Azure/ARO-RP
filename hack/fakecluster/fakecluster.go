@@ -10,10 +10,10 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -26,24 +26,22 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-var (
-	certFile = flag.String("certFile", "secrets/proxy.crt", "file containing server certificate")
-	keyFile  = flag.String("keyFile", "secrets/proxy.key", "file containing server key")
-	port     = flag.Int("port", 6443, "Port to listen on")
-	host     = flag.String("host", "localhost", "Host to listen on")
-)
-
 func run(ctx context.Context, l *logrus.Entry) error {
+	certFile := flag.String("certFile", "secrets/proxy.crt", "file containing server certificate")
+	keyFile := flag.String("keyFile", "secrets/proxy.key", "file containing server key")
+	port := flag.Int("port", 6443, "Port to listen on")
+	host := flag.String("host", "localhost", "Host to listen on")
+
 	l.Printf("starting, git commit %s", version.GitCommit)
 
 	flag.Parse()
 
-	cert, err := ioutil.ReadFile(*certFile)
+	cert, err := os.ReadFile(*certFile)
 	if err != nil {
 		panic(err)
 	}
 
-	b, err := ioutil.ReadFile(*keyFile)
+	b, err := os.ReadFile(*keyFile)
 	if err != nil {
 		panic(err)
 	}
@@ -71,9 +69,8 @@ func run(ctx context.Context, l *logrus.Entry) error {
 			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
 		},
-		PreferServerCipherSuites: true,
-		SessionTicketsDisabled:   true,
-		MinVersion:               tls.VersionTLS12,
+		SessionTicketsDisabled: true,
+		MinVersion:             tls.VersionTLS12,
 		CurvePreferences: []tls.CurveID{
 			tls.CurveP256,
 			tls.X25519,
@@ -84,8 +81,12 @@ func run(ctx context.Context, l *logrus.Entry) error {
 	r.Use(middleware.Panic(l))
 
 	r.NewRoute().PathPrefix(
-		"/apis/config.openshift.io/v1/clusteroperators",
+		"/api/config.openshift.io/v1/clusteroperators",
 	).HandlerFunc(resp(cluster.MustAsset("clusteroperator.json")))
+
+	r.NewRoute().PathPrefix(
+		"/api/v1/nodes",
+	).HandlerFunc(resp(cluster.MustAsset("nodes.json")))
 
 	s := &http.Server{
 		Handler:     frontendmiddleware.Lowercase(r),

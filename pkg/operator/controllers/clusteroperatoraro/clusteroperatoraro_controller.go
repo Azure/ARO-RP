@@ -7,11 +7,11 @@ import (
 	"context"
 
 	configv1 "github.com/openshift/api/config/v1"
-	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
 	"github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -22,11 +22,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 const (
+	ControllerName = "ClusterOperatorARO"
+
+	// Operator object name
 	clusterOperatorName = "aro"
 )
 
@@ -37,36 +39,23 @@ const (
 )
 
 type Reconciler struct {
-	// TODO: Replace configcli with CO client
 	log *logrus.Entry
 
-	arocli    aroclient.Interface
-	configcli configclient.Interface
+	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, configcli configclient.Interface) *Reconciler {
+// TODO: Decide whether we actually going to make any progress on this. If not - clean up.
+func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
-		log:       log,
-		arocli:    arocli,
-		configcli: configcli,
+		log:    log,
+		client: client,
 	}
 }
 
-// SetupWithManager setup our manager
-func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
-	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
-		return o.GetName() == arov1alpha1.SingletonClusterName
-	})
-
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
-		Owns(&configv1.ClusterOperator{}).
-		Named(controllers.ClusterOperatorAROName).
-		Complete(r)
-}
-
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	cluster, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	r.log.Debug("running")
+	instance := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -77,12 +66,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			return err
 		}
 
-		err = controllerutil.SetControllerReference(cluster, co, scheme.Scheme)
+		err = controllerutil.SetControllerReference(instance, co, scheme.Scheme)
 		if err != nil {
 			return err
 		}
 
-		co, err = r.configcli.ConfigV1().ClusterOperators().Update(ctx, co, metav1.UpdateOptions{})
+		err = r.client.Update(ctx, co)
 		if err != nil {
 			return err
 		}
@@ -125,26 +114,25 @@ func (r *Reconciler) setClusterOperatorStatus(ctx context.Context, co *configv1.
 		v1helpers.SetStatusCondition(&co.Status.Conditions, c)
 	}
 
-	_, err := r.configcli.ConfigV1().ClusterOperators().UpdateStatus(ctx, co, metav1.UpdateOptions{})
-	return err
+	return r.client.Status().Update(ctx, co)
 }
 
 func (r *Reconciler) getOrCreateClusterOperator(ctx context.Context) (*configv1.ClusterOperator, error) {
-	co, err := r.configcli.ConfigV1().ClusterOperators().Get(ctx, clusterOperatorName, metav1.GetOptions{})
+	co := &configv1.ClusterOperator{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: clusterOperatorName}, co)
 	if !kerrors.IsNotFound(err) {
 		return co, err
 	}
 
 	r.log.Infof("ClusterOperator does not exist, creating a new one.")
-	defaultCo := r.defaultOperator()
-	co, err = r.configcli.ConfigV1().ClusterOperators().Create(ctx, defaultCo, metav1.CreateOptions{})
+	co = r.defaultOperator()
+	err = r.client.Create(ctx, co)
 	if err != nil {
 		return nil, err
 	}
 
-	co.Status = defaultCo.Status
-
-	return r.configcli.ConfigV1().ClusterOperators().UpdateStatus(ctx, co, metav1.UpdateOptions{})
+	err = r.client.Status().Update(ctx, co)
+	return co, err
 }
 
 func (r *Reconciler) defaultOperator() *configv1.ClusterOperator {
@@ -154,6 +142,12 @@ func (r *Reconciler) defaultOperator() *configv1.ClusterOperator {
 			Name: clusterOperatorName,
 		},
 		Status: configv1.ClusterOperatorStatus{
+			Versions: []configv1.OperandVersion{
+				{
+					Name:    "operator",
+					Version: version.GitCommit,
+				},
+			},
 			Conditions: []configv1.ClusterOperatorStatusCondition{
 				{
 					Type:               configv1.OperatorAvailable,
@@ -178,4 +172,17 @@ func (r *Reconciler) defaultOperator() *configv1.ClusterOperator {
 			},
 		},
 	}
+}
+
+// SetupWithManager setup our manager
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return o.GetName() == arov1alpha1.SingletonClusterName
+	})
+
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
+		Owns(&configv1.ClusterOperator{}).
+		Named(ControllerName).
+		Complete(r)
 }

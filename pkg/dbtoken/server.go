@@ -16,8 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofrs/uuid"
-	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -26,6 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 var rxValidPermission = regexp.MustCompile("^[a-z]{1,20}$")
@@ -41,7 +40,7 @@ type server struct {
 	l                       net.Listener
 	verifier                oidc.Verifier
 	permissionClientFactory func(userid string) cosmosdb.PermissionClient
-	m                       metrics.Interface
+	m                       metrics.Emitter
 }
 
 func NewServer(
@@ -54,7 +53,7 @@ func NewServer(
 	servingCerts []*x509.Certificate,
 	verifier oidc.Verifier,
 	userc cosmosdb.UserClient,
-	m metrics.Interface,
+	m metrics.Emitter,
 ) (Server, error) {
 	config := &tls.Config{
 		Certificates: []tls.Certificate{
@@ -71,9 +70,8 @@ func NewServer(
 			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
 		},
-		PreferServerCipherSuites: true,
-		SessionTicketsDisabled:   true,
-		MinVersion:               tls.VersionTLS12,
+		SessionTicketsDisabled: true,
+		MinVersion:             tls.VersionTLS12,
 		CurvePreferences: []tls.CurveID{
 			tls.CurveP256,
 			tls.X25519,
@@ -97,23 +95,31 @@ func NewServer(
 	}, nil
 }
 
+var healthProbe http.Handler = http.HandlerFunc(healthCheck)
+
+func healthCheck(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.NotFound(w, r)
+		return
+	}
+	// empty 200
+}
+
 func (s *server) Run(ctx context.Context) error {
 	go heartbeat.EmitHeartbeat(s.log, s.m, "dbtoken.heartbeat", nil, func() bool { return true })
 
-	r := mux.NewRouter()
-	r.Use(middleware.Panic(s.log))
+	logHandler := Log(s.accessLog)
+	panicMiddleware := middleware.Panic(s.log)
 
-	unauthenticatedRouter := r.NewRoute().Subrouter()
-	unauthenticatedRouter.Use(Log(s.accessLog))
-	s.unauthenticatedRoutes(unauthenticatedRouter)
+	muxRouter := http.NewServeMux()
 
-	authenticatedRouter := r.NewRoute().Subrouter()
-	authenticatedRouter.Use(s.authenticate)
-	authenticatedRouter.Use(Log(s.accessLog))
-	s.authenticatedRoutes(authenticatedRouter)
+	muxRouter.Handle("/healthz/ready", panicMiddleware(logHandler(healthProbe)))
+
+	tokenRefresh := panicMiddleware(s.authenticate(logHandler(http.HandlerFunc(s.token))))
+	muxRouter.Handle("/token", tokenRefresh)
 
 	srv := &http.Server{
-		Handler:     r,
+		Handler:     muxRouter,
 		ReadTimeout: 10 * time.Second,
 		IdleTimeout: 2 * time.Minute,
 		ErrorLog:    log.New(s.log.Writer(), "", 0),
@@ -121,14 +127,6 @@ func (s *server) Run(ctx context.Context) error {
 	}
 
 	return srv.Serve(s.l)
-}
-
-func (s *server) unauthenticatedRoutes(r *mux.Router) {
-	r.NewRoute().Methods(http.MethodGet).Path("/healthz/ready").HandlerFunc(func(http.ResponseWriter, *http.Request) {})
-}
-
-func (s *server) authenticatedRoutes(r *mux.Router) {
-	r.NewRoute().Methods(http.MethodPost).Path("/token").HandlerFunc(s.token)
 }
 
 func (s *server) authenticate(h http.Handler) http.Handler {
@@ -146,7 +144,7 @@ func (s *server) authenticate(h http.Handler) http.Handler {
 			return
 		}
 
-		if _, err := uuid.FromString(token.Subject()); err != nil {
+		if valid := uuid.IsValid(token.Subject()); !valid {
 			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 			return
 		}
@@ -159,6 +157,10 @@ func (s *server) authenticate(h http.Handler) http.Handler {
 }
 
 func (s *server) token(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 	ctx := r.Context()
 
 	permission := r.URL.Query().Get("permission")

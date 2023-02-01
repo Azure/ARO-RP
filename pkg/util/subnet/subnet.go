@@ -26,9 +26,12 @@ type Subnet struct {
 
 type Manager interface {
 	Get(ctx context.Context, subnetID string) (*mgmtnetwork.Subnet, error)
+	GetAll(ctx context.Context, subnetIds []string) ([]*mgmtnetwork.Subnet, error)
 	GetHighestFreeIP(ctx context.Context, subnetID string) (string, error)
 	CreateOrUpdate(ctx context.Context, subnetID string, subnet *mgmtnetwork.Subnet) error
+	CreateOrUpdateFromIds(ctx context.Context, subnetIds []string) error
 }
+
 type manager struct {
 	subnets         network.SubnetsClient
 	virtualNetworks network.VirtualNetworksClient
@@ -119,6 +122,44 @@ func (m *manager) CreateOrUpdate(ctx context.Context, subnetID string, subnet *m
 	}
 
 	return m.subnets.CreateOrUpdateAndWait(ctx, r.ResourceGroup, r.ResourceName, subnetName, *subnet)
+}
+
+func (m *manager) GetAll(ctx context.Context, subnetIds []string) ([]*mgmtnetwork.Subnet, error) {
+	if len(subnetIds) == 0 {
+		return nil, nil
+	}
+
+	subnets := make([]*mgmtnetwork.Subnet, len(subnetIds))
+
+	for i, subnetId := range subnetIds {
+		subnet, err := m.Get(ctx, subnetId)
+		if err != nil {
+			return nil, err
+		}
+
+		subnets[i] = subnet
+	}
+	return subnets, nil
+}
+
+func (m *manager) CreateOrUpdateFromIds(ctx context.Context, subnetIds []string) error {
+	subnets, err := m.GetAll(ctx, subnetIds)
+	if err != nil {
+		return err
+	}
+
+	subnetsToBeUpdated := addEndpointsToSubnets(api.SubnetsEndpoints, subnets)
+
+	return m.createOrUpdateSubnets(ctx, subnetsToBeUpdated)
+}
+
+func (m *manager) createOrUpdateSubnets(ctx context.Context, subnets []*mgmtnetwork.Subnet) error {
+	for _, subnet := range subnets {
+		if err := m.CreateOrUpdate(ctx, *subnet.ID, subnet); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Split splits the given subnetID into a vnetID and subnetName

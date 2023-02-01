@@ -25,8 +25,12 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers"
+)
+
+const (
+	ControllerName = "Monitoring"
+
+	controllerEnabled = "aro.monitoring.enabled"
 )
 
 var (
@@ -53,31 +57,35 @@ type Config struct {
 type Reconciler struct {
 	log *logrus.Entry
 
-	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
+
+	client client.Client
 
 	jsonHandle *codec.JsonHandle
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface) *Reconciler {
 	return &Reconciler{
-		arocli:        arocli,
-		kubernetescli: kubernetescli,
 		log:           log,
+		kubernetescli: kubernetescli,
+		client:        client,
 		jsonHandle:    new(codec.JsonHandle),
 	}
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	instance := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.Features.ReconcileMonitoringConfig {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
+	r.log.Debug("running")
 	for _, f := range []func(context.Context, ctrl.Request) (ctrl.Result, error){
 		r.reconcileConfiguration,
 		r.reconcilePVC, // TODO(mj): This should be removed once we don't have PVC anymore
@@ -208,6 +216,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(monitoringConfigMapPredicate),
 		).
-		Named(controllers.MonitoringControllerName).
+		Named(ControllerName).
 		Complete(r)
 }

@@ -18,9 +18,19 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
+type TokenClient interface {
+	GetToken(ctx context.Context, log *logrus.Entry, clientID, clientSecret, tenantID string, aadEndpoint, resource string) (*adal.ServicePrincipalToken, error)
+}
+
+type tokenClient struct{}
+
+func NewTokenClient() TokenClient {
+	return &tokenClient{}
+}
+
 // GetToken authenticates in the customer's tenant as the cluster service
 // principal and returns a token.
-func GetToken(ctx context.Context, log *logrus.Entry, clientID, clientSecret, tenantID string, aadEndpoint, resource string) (*adal.ServicePrincipalToken, error) {
+func (tc *tokenClient) GetToken(ctx context.Context, log *logrus.Entry, clientID, clientSecret, tenantID string, aadEndpoint, resource string) (*adal.ServicePrincipalToken, error) {
 	conf := auth.ClientCredentialsConfig{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
@@ -57,6 +67,7 @@ func GetToken(ctx context.Context, log *logrus.Entry, clientID, clientSecret, te
 		claims := jwt.MapClaims{}
 		_, _, err = p.ParseUnverified(authorizer.OAuthToken(), claims)
 		if err != nil {
+			err = api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalToken, "properties.servicePrincipalProfile", "The provided service principal generated an invalid token.")
 			return false, err
 		}
 

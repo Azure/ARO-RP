@@ -41,11 +41,9 @@ func (mon *Monitor) getNodeCounts(ctx context.Context) (int64, error) {
 	return int64(len(ns.Items)), nil
 }
 
-/***
-Count the number of nodes available
-Total the nodes under machineconfigpool control
-Alert if different
-*/
+// Count the number of nodes available
+// Total the nodes under machineconfigpool control
+// Alert if different
 func (mon *Monitor) emitMachineConfigPoolUnmanagedNodeCounts(ctx context.Context) error {
 	mcpcount, err := mon.getMachineConfigPoolNodeCounts(ctx)
 	if err != nil {
