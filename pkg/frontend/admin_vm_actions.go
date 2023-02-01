@@ -20,13 +20,14 @@ func (f *frontend) prepareAdminActions(log *logrus.Entry, ctx context.Context, v
 		return nil, nil, err
 	}
 
+	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
 	doc, err = f.dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return nil, nil,
 			api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "",
 				"The Resource '%s/%s' under resource group '%s' was not found.",
-				vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+				resType, resName, resGroupName)
 	case err != nil:
 		return nil, nil, err
 	}

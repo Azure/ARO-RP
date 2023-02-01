@@ -29,6 +29,7 @@ func (f *frontend) postAdminOpenShiftUpgrade(w http.ResponseWriter, r *http.Requ
 
 func (f *frontend) _postAdminOpenShiftUpgrade(ctx context.Context, r *http.Request, log *logrus.Entry) error {
 	vars := mux.Vars(r)
+	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
 
 	upgradeY := r.URL.Query().Get("upgradeY") == "true"
 
@@ -37,7 +38,7 @@ func (f *frontend) _postAdminOpenShiftUpgrade(ctx context.Context, r *http.Reque
 	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", resType, resName, resGroupName)
 	case err != nil:
 		return err
 	}
