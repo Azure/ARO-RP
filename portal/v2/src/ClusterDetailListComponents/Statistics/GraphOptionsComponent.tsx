@@ -115,14 +115,14 @@ export function GraphOptionsComponent(props: {duration: string, setDuration: Rea
     const timePickerStyles: Partial<IDatePickerStyles> = { root: { maxWidth: 75, marginLeft: 5, marginRight: 5 } };
     const onTimeChange = (event: React.FormEvent<IComboBox>, date: Date) => {        
       var localDate = new Date()
-      localDate.setFullYear(props.endDate.getFullYear(), props.endDate.getMonth(), props.endDate.getDate())
-      localDate.setHours(date.getHours());
-      localDate.setMinutes(date.getMinutes());
+      localDate.setUTCFullYear(props.endDate.getFullYear(), props.endDate.getMonth(), props.endDate.getDate())
+      localDate.setUTCHours(date.getHours());
+      localDate.setUTCMinutes(date.getMinutes());
       props.setEndDate(localDate)        
      };
     const onDateChange = (date: Date | null | undefined): void => { 
       let localDate: Date = new Date();
-      localDate.setFullYear(date!.getFullYear(), date!.getMonth(), date!.getDate())
+      localDate.setUTCFullYear(date!.getFullYear(), date!.getMonth(), date!.getDate())
       localDate.setHours(props.endDate.getHours());
       localDate.setMinutes(props.endDate.getMinutes());
       props.setEndDate(localDate)  
@@ -156,16 +156,16 @@ export function GraphOptionsComponent(props: {duration: string, setDuration: Rea
             placeholder="End Date"
             ariaLabel="End Date"
             onSelectDate={onDateChange}
-            value={props.endDate}
+            value={convertToUTC(props.endDate)}
             allowTextInput
           />
           <TimePicker
             styles={timePickerStyles}
             allowFreeform
-            placeholder={timeToString(props.endDate)}
+            placeholder={timeToString(convertToUTC(props.endDate))}
             autoComplete="on"
             onChange={onTimeChange}
-            defaultValue={props.endDate}
+            defaultValue={convertToUTC(props.endDate)}
             useComboBoxAsMenuWidth
           />
         </Stack>

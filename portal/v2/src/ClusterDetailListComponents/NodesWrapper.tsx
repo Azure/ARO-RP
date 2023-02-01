@@ -78,8 +78,6 @@ export function NodesWrapper(props: {
     setData(newData)
     const nodeList: INode[] = []
     if (state && state.current) {
-      console.log(newData);
-      
       newData.nodes.forEach((element: { name: any;
                                         createdTime: any;
                                         capacity: any;

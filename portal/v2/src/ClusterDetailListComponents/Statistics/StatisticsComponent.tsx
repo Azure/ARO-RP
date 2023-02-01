@@ -5,6 +5,7 @@ import { ILineChartPoints, LineChart, ILineChartDataPoint } from '@fluentui/reac
 import { IChartProps } from '@fluentui/react-charting';
 import { DefaultPalette} from '@fluentui/react/lib/Styling';
 import { IMetrics} from './StatisticsWrapper';
+import { convertToUTC } from "./GraphOptionsComponent";
 
 export function StatisticsComponent(props: {
   metrics: IMetrics[],
@@ -23,13 +24,45 @@ export function StatisticsComponent(props: {
 
   const colors: string[] = [
     DefaultPalette.blue,
-    DefaultPalette.black,
-    DefaultPalette.redDark,
+    DefaultPalette.blueLight,
     DefaultPalette.blueDark,
+    DefaultPalette.blueMid,
+    DefaultPalette.black,
+    DefaultPalette.red,
+    DefaultPalette.redDark,
     DefaultPalette.yellow,
+    DefaultPalette.yellowDark,
+    DefaultPalette.yellowLight,
     DefaultPalette.green,
     DefaultPalette.greenLight,
+    DefaultPalette.greenDark,
     DefaultPalette.purple,
+    DefaultPalette.purpleLight,
+    DefaultPalette.purpleDark,
+    DefaultPalette.orange,
+    DefaultPalette.orangeLight,
+    DefaultPalette.orangeLighter,
+    DefaultPalette.magenta,
+    DefaultPalette.magentaDark,
+    DefaultPalette.magentaLight,
+    DefaultPalette.themePrimary,
+    DefaultPalette.neutralPrimary,
+    DefaultPalette.neutralDark,
+    DefaultPalette.neutralSecondary,
+    DefaultPalette.neutralTertiary,
+    DefaultPalette.teal,
+    DefaultPalette.tealDark,
+    DefaultPalette.tealLight,
+    DefaultPalette.accent,
+    DefaultPalette.themeDarker,
+    DefaultPalette.themeDarkAlt,
+    DefaultPalette.themeDark,
+    DefaultPalette.themeLight,
+    DefaultPalette.themeLighter,
+    DefaultPalette.themeLighterAlt,
+    DefaultPalette.themePrimary,
+    DefaultPalette.themeSecondary,
+    DefaultPalette.themeTertiary
   ]
 
   const _onLegendClickHandler = (selectedLegend: string | null | string[]): void => {
@@ -45,8 +78,10 @@ export function StatisticsComponent(props: {
         props.metrics.forEach((metric, i) => {          
           var dataPoints: ILineChartDataPoint[] = []
           metric.MetricValue.forEach(metricValue => {
+            let timeStamp = new Date(metricValue.timestamp)
+            let metricsTime = convertToUTC(timeStamp)
             var data: ILineChartDataPoint = {
-              x: new Date(metricValue.timestamp), y: metricValue.value
+              x: metricsTime, y: metricValue.value
             }
             dataPoints.push(data)
           })
