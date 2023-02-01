@@ -15,6 +15,7 @@ import (
 // VaultsClient is a minimal interface for azure VaultsClient
 type VaultsClient interface {
 	CheckNameAvailability(ctx context.Context, vaultName mgmtkeyvault.VaultCheckNameAvailabilityParameters) (result mgmtkeyvault.CheckNameAvailabilityResult, err error)
+	CreateOrUpdate(ctx context.Context, resourceGroupName string, vaultName string, parameters mgmtkeyvault.VaultCreateOrUpdateParameters) (result mgmtkeyvault.VaultsCreateOrUpdateFuture, err error)
 }
 
 type vaultsClient struct {
