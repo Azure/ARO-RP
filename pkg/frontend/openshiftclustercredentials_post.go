@@ -22,8 +22,9 @@ func (f *frontend) postOpenShiftClusterCredentials(w http.ResponseWriter, r *htt
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
 
-	if f.apis[vars["api-version"]].OpenShiftClusterCredentialsConverter == nil {
-		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], vars["api-version"])
+	apiVersion := r.URL.Query().Get(api.APIVersionKey)
+	if f.apis[apiVersion].OpenShiftClusterCredentialsConverter == nil {
+		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], apiVersion)
 		return
 	}
 
@@ -35,7 +36,7 @@ func (f *frontend) postOpenShiftClusterCredentials(w http.ResponseWriter, r *htt
 
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	b, err := f._postOpenShiftClusterCredentials(ctx, r, f.apis[vars["api-version"]].OpenShiftClusterCredentialsConverter)
+	b, err := f._postOpenShiftClusterCredentials(ctx, r, f.apis[apiVersion].OpenShiftClusterCredentialsConverter)
 
 	reply(log, w, nil, b, err)
 }

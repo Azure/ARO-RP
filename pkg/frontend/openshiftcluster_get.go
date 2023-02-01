@@ -20,9 +20,8 @@ import (
 func (f *frontend) getOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
-	vars := mux.Vars(r)
 
-	b, err := f._getOpenShiftCluster(ctx, log, r, f.apis[vars["api-version"]].OpenShiftClusterConverter)
+	b, err := f._getOpenShiftCluster(ctx, log, r, f.apis[r.URL.Query().Get(api.APIVersionKey)].OpenShiftClusterConverter)
 
 	frontendOperationResultLog(log, r.Method, err)
 	reply(log, w, nil, b, err)

@@ -26,7 +26,9 @@ func (f *frontend) getClusterManagerConfiguration(w http.ResponseWriter, r *http
 		err error
 	)
 
-	err = f.validateOcmResourceType(vars)
+	apiVersion, ocmResourceType := r.URL.Query().Get(api.APIVersionKey), vars["ocmResourceType"]
+
+	err = f.validateOcmResourceType(apiVersion, ocmResourceType)
 	if err != nil {
 		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", err.Error())
 		return
@@ -34,13 +36,13 @@ func (f *frontend) getClusterManagerConfiguration(w http.ResponseWriter, r *http
 
 	switch vars["ocmResourceType"] {
 	case "syncset":
-		b, err = f._getSyncSetConfiguration(ctx, log, r, f.apis[vars["api-version"]].SyncSetConverter)
+		b, err = f._getSyncSetConfiguration(ctx, log, r, f.apis[apiVersion].SyncSetConverter)
 	case "machinepool":
-		b, err = f._getMachinePoolConfiguration(ctx, log, r, f.apis[vars["api-version"]].MachinePoolConverter)
+		b, err = f._getMachinePoolConfiguration(ctx, log, r, f.apis[apiVersion].MachinePoolConverter)
 	case "syncidentityprovider":
-		b, err = f._getSyncIdentityProviderConfiguration(ctx, log, r, f.apis[vars["api-version"]].SyncIdentityProviderConverter)
+		b, err = f._getSyncIdentityProviderConfiguration(ctx, log, r, f.apis[apiVersion].SyncIdentityProviderConverter)
 	case "secret":
-		b, err = f._getSecretConfiguration(ctx, log, r, f.apis[vars["api-version"]].SecretConverter)
+		b, err = f._getSecretConfiguration(ctx, log, r, f.apis[apiVersion].SecretConverter)
 	default:
 		return
 	}

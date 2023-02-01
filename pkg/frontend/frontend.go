@@ -207,7 +207,7 @@ func (f *frontend) unauthenticatedRoutes(r *mux.Router) {
 func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s := r.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodDelete).HandlerFunc(f.deleteOpenShiftCluster).Name("deleteOpenShiftCluster")
@@ -218,7 +218,7 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	if f.env.FeatureIsSet(env.FeatureEnableOCMEndpoints) {
 		s = r.
 			Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/{ocmResourceType}/{ocmResourceName}").
-			Queries("api-version", "{api-version}").
+			Queries("api-version", "").
 			Subrouter()
 
 		s.Methods(http.MethodDelete).HandlerFunc(f.deleteClusterManagerConfiguration).Name("deleteClusterManagerConfiguration")
@@ -229,49 +229,49 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters).Name("getOpenShiftClusters")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/{resourceType}").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters).Name("getOpenShiftClusters")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/operationsstatus/{operationId}").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getAsyncOperationsStatus).Name("getAsyncOperationsStatus")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/operationresults/{operationId}").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getAsyncOperationResult).Name("getAsyncOperationResult")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/listcredentials").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodPost).HandlerFunc(f.postOpenShiftClusterCredentials).Name("postOpenShiftClusterCredentials")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/listadmincredentials").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodPost).HandlerFunc(f.postOpenShiftClusterKubeConfigCredentials).Name("postOpenShiftClusterKubeConfigCredentials")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/openshiftversions").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.listInstallVersions).Name("listInstallVersions")
@@ -392,7 +392,7 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	// Operations
 	s = r.
 		Path("/providers/{resourceProviderNamespace}/operations").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getOperations).Name("getOperations")
