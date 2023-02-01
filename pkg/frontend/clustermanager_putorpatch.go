@@ -36,7 +36,6 @@ func (f *frontend) putOrPatchClusterManagerConfiguration(w http.ResponseWriter, 
 		return
 	}
 
-	ocmResourceType := vars["ocmResourceType"]
 	err = cosmosdb.RetryOnPreconditionFailed(func() error {
 		var err error
 		switch ocmResourceType {
