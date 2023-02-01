@@ -84,7 +84,7 @@ type portal struct {
 	m metrics.Emitter
 }
 
-func NewPortal(env env.Interface, //env env.Core,
+func NewPortal(env env.Interface,
 	audit *logrus.Entry,
 	log *logrus.Entry,
 	baseAccessLog *logrus.Entry,
