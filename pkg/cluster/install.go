@@ -175,6 +175,7 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Action(m.configureIngressCertificate),
 		steps.Action(m.updateOpenShiftSecret),
 		steps.Action(m.updateAROSecret),
+		steps.Action(m.renewMDSDCertificate),
 	}
 
 	if m.adoptViaHive {
