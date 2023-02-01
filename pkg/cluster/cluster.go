@@ -31,6 +31,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/privatedns"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
@@ -81,6 +82,7 @@ type manager struct {
 	denyAssignments       authorization.DenyAssignmentClient
 	fpPrivateEndpoints    network.PrivateEndpointsClient
 	rpPrivateLinkServices network.PrivateLinkServicesClient
+	keyvaults             keyvault.VaultsClient
 
 	dns     dns.Manager
 	storage storage.Manager
@@ -173,6 +175,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		denyAssignments:       authorization.NewDenyAssignmentsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		fpPrivateEndpoints:    network.NewPrivateEndpointsClient(_env.Environment(), _env.SubscriptionID(), localFPAuthorizer),
 		rpPrivateLinkServices: network.NewPrivateLinkServicesClient(_env.Environment(), _env.SubscriptionID(), msiAuthorizer),
+		keyvaults:             keyvault.NewVaultsClient(_env.Environment(), _env.SubscriptionID(), fpAuthorizer),
 
 		dns:     dns.NewManager(_env, localFPAuthorizer),
 		storage: storage,
