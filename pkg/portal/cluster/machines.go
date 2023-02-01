@@ -97,9 +97,6 @@ func (f *realFetcher) VMAllocationStatus(ctx context.Context) (VMAllocationStatu
 		vm, err := virtualMachineClient.Get(ctx, clusterRGName, *res.Name, mgmtcompute.InstanceView)
 		if err != nil {
 			f.log.Warn(err) // can happen when the ARM cache is lagging
-			// armResources = append(armResources, arm.Resource{
-			// 	Resource: res,
-			// })
 			continue
 		}
 

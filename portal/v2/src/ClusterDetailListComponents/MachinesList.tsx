@@ -135,7 +135,6 @@ export function MachinesListHelperComponent(props: {
     }
     
     const newColumns: IColumn[] = columns.slice();
-    console.log(initialMachineLength);
     
     newColumns.forEach(col => {
       col.onColumnClick = _onColumnClick
