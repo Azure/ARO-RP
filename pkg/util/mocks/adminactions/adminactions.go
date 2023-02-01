@@ -15,6 +15,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	logrus "github.com/sirupsen/logrus"
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	schema "k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // MockKubeActions is a mock of KubeActions interface.
@@ -167,6 +168,21 @@ func (m *MockKubeActions) KubeList(arg0 context.Context, arg1, arg2 string) ([]b
 func (mr *MockKubeActionsMockRecorder) KubeList(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KubeList", reflect.TypeOf((*MockKubeActions)(nil).KubeList), arg0, arg1, arg2)
+}
+
+// ResolveGVR mocks base method.
+func (m *MockKubeActions) ResolveGVR(arg0 string) (*schema.GroupVersionResource, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResolveGVR", arg0)
+	ret0, _ := ret[0].(*schema.GroupVersionResource)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ResolveGVR indicates an expected call of ResolveGVR.
+func (mr *MockKubeActionsMockRecorder) ResolveGVR(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveGVR", reflect.TypeOf((*MockKubeActions)(nil).ResolveGVR), arg0)
 }
 
 // Upgrade mocks base method.

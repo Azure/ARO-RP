@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
@@ -78,26 +79,70 @@ func (f *frontend) validateOpenShiftUniqueKey(ctx context.Context, doc *api.Open
 // prevent mischief
 var rxKubernetesString = regexp.MustCompile(`(?i)^[-a-z0-9.]{0,255}$`)
 
-func validateAdminKubernetesObjectsNonCustomer(method, groupKind, namespace, name string) error {
+func validatePermittedClusterwideObjects(gvr *schema.GroupVersionResource) bool {
+	if gvr == nil {
+		return false
+	}
+
+	validApiGroups := []string{
+		"apiserver.openshift.io",
+		"aro.openshift.io",
+		"authorization.openshift.io",
+		"certificates.k8s.io",
+		"config.openshift.io",
+		"console.openshift.io",
+		"imageregistry.operator.openshift.io",
+		"machine.openshift.io",
+		"machineconfiguration.openshift.io",
+		"operator.openshift.io",
+		"rbac.authorization.k8s.io",
+	}
+	validApiTypes := map[string][]string{
+		"": {"nodes"},
+	}
+	for _, apiGroup := range validApiGroups {
+		if gvr.Group == apiGroup {
+			return true
+		}
+	}
+	if validApiTypes[gvr.Group] != nil {
+		for _, apiType := range validApiTypes[gvr.Group] {
+			if gvr.Resource == apiType {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func validateAdminKubernetesObjectsNonCustomer(method string, gvr *schema.GroupVersionResource, namespace, name string) error {
+	if gvr == nil {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided resource is invalid.")
+	}
+
+	if namespace == "" && !validatePermittedClusterwideObjects(gvr) {
+		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to cluster-scoped object '%v' is forbidden.", gvr)
+	}
+
 	if !utilnamespace.IsOpenShiftNamespace(namespace) {
 		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to the provided namespace '%s' is forbidden.", namespace)
 	}
 
-	return validateAdminKubernetesObjects(method, groupKind, namespace, name)
+	return validateAdminKubernetesObjects(method, gvr, namespace, name)
 }
 
-func validateAdminKubernetesObjects(method, groupKind, namespace, name string) error {
-	if groupKind == "" ||
-		!rxKubernetesString.MatchString(groupKind) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided groupKind '%s' is invalid.", groupKind)
+func validateAdminKubernetesObjects(method string, gvr *schema.GroupVersionResource, namespace, name string) error {
+	if gvr == nil {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided resource is invalid.")
 	}
-	if strings.EqualFold(groupKind, "Secret") ||
-		strings.HasSuffix(strings.ToLower(groupKind), ".oauth.openshift.io") {
+
+	if gvr.Resource == "secrets" ||
+		gvr.Group == "oauth.openshift.io" {
 		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to secrets is forbidden.")
 	}
 	if method != http.MethodGet &&
-		(strings.HasSuffix(strings.ToLower(groupKind), ".rbac.authorization.k8s.io") ||
-			strings.HasSuffix(strings.ToLower(groupKind), ".authorization.openshift.io")) {
+		(gvr.Group == "rbac.authorization.k8s.io" ||
+			gvr.Group == "authorization.openshift.io") {
 		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Write access to RBAC is forbidden.")
 	}
 

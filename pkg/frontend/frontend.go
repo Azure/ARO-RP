@@ -293,6 +293,7 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/kubernetesobjects").
 		Subrouter()
 
+	s.Methods(http.MethodGet).Queries("unrestricted", "true").HandlerFunc(f.getAdminKubernetesObjectsUnrestricted).Name("getAdminKubernetesObjectsUnrestricted")
 	s.Methods(http.MethodGet).HandlerFunc(f.getAdminKubernetesObjects).Name("getAdminKubernetesObjects")
 	s.Methods(http.MethodPost).HandlerFunc(f.postAdminKubernetesObjects).Name("postAdminKubernetesObjects")
 	s.Methods(http.MethodDelete).HandlerFunc(f.deleteAdminKubernetesObjects).Name("deleteAdminKubernetesObjects")

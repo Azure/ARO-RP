@@ -4,8 +4,11 @@ package frontend
 // Licensed under the Apache License 2.0.
 
 import (
+	"net/http"
 	"strings"
 	"testing"
+
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 func TestValidateAdminKubernetesPodLogs(t *testing.T) {
@@ -85,6 +88,134 @@ func TestValidateAdminKubernetesPodLogs(t *testing.T) {
 	} {
 		t.Run(tt.test, func(t *testing.T) {
 			err := validateAdminKubernetesPodLogs(tt.namespace, tt.name, tt.containerName)
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
+			}
+		})
+	}
+}
+
+func TestValidateAdminKubernetesObjectsNonCustomer(t *testing.T) {
+	longName := strings.Repeat("x", 256)
+
+	for _, tt := range []struct {
+		test      string
+		method    string
+		gvr       *schema.GroupVersionResource
+		namespace string
+		name      string
+		wantErr   string
+	}{
+		{
+			test:      "valid openshift namespace",
+			gvr:       &schema.GroupVersionResource{Group: "openshift.io", Resource: "validkind"},
+			namespace: "openshift",
+			name:      "Valid-NAME-01",
+		},
+		{
+			test:      "invalid customer namespace",
+			gvr:       &schema.GroupVersionResource{Group: "openshift.io", Resource: "validkind"},
+			namespace: "customer",
+			name:      "Valid-NAME-01",
+			wantErr:   "403: Forbidden: : Access to the provided namespace 'customer' is forbidden.",
+		},
+		{
+			test:      "forbidden groupKind",
+			gvr:       &schema.GroupVersionResource{Resource: "secrets"},
+			namespace: "openshift",
+			name:      "Valid-NAME-01",
+			wantErr:   "403: Forbidden: : Access to secrets is forbidden.",
+		},
+		{
+			test:      "forbidden groupKind",
+			gvr:       &schema.GroupVersionResource{Group: "oauth.openshift.io", Resource: "anything"},
+			namespace: "openshift",
+			name:      "Valid-NAME-01",
+			wantErr:   "403: Forbidden: : Access to secrets is forbidden.",
+		},
+		{
+			test: "allowed groupKind on read",
+			gvr:  &schema.GroupVersionResource{Group: "rbac.authorization.k8s.io", Resource: "clusterroles"},
+			name: "Valid-NAME-01",
+		},
+		{
+			test: "allowed groupKind on read 2",
+			gvr:  &schema.GroupVersionResource{Group: "authorization.openshift.io", Resource: "clusterroles"},
+			name: "Valid-NAME-01",
+		},
+		{
+			test: "allowed groupKind on read 3",
+			gvr:  &schema.GroupVersionResource{Resource: "nodes"},
+			name: "Valid-NAME-01",
+		},
+		{
+			test:    "forbidden clusterwide groupKind on read",
+			gvr:     &schema.GroupVersionResource{Resource: "namespaces"},
+			name:    "Valid-NAME-01",
+			wantErr: "403: Forbidden: : Access to cluster-scoped object '/, Resource=namespaces' is forbidden.",
+		},
+		{
+			test:    "forbidden clusterwide groupKind on read 2",
+			gvr:     &schema.GroupVersionResource{Group: "user.openshift.io", Resource: "users"},
+			name:    "Valid-NAME-01",
+			wantErr: "403: Forbidden: : Access to cluster-scoped object 'user.openshift.io/, Resource=users' is forbidden.",
+		},
+		{
+			test:    "forbidden groupKind on write",
+			method:  http.MethodPost,
+			gvr:     &schema.GroupVersionResource{Group: "rbac.authorization.k8s.io", Resource: "clusterroles"},
+			name:    "Valid-NAME-01",
+			wantErr: "403: Forbidden: : Write access to RBAC is forbidden.",
+		},
+		{
+			test:    "forbidden groupKind on write 2",
+			method:  http.MethodPost,
+			gvr:     &schema.GroupVersionResource{Group: "authorization.openshift.io", Resource: "clusterroles"},
+			name:    "Valid-NAME-01",
+			wantErr: "403: Forbidden: : Write access to RBAC is forbidden.",
+		},
+		{
+			test:      "empty groupKind",
+			namespace: "openshift",
+			name:      "Valid-NAME-01",
+			wantErr:   "400: InvalidParameter: : The provided resource is invalid.",
+		},
+		{
+			test:      "invalid namespace",
+			gvr:       &schema.GroupVersionResource{Group: "openshift.io", Resource: "validkind"},
+			namespace: "openshift-/",
+			name:      "Valid-NAME-01",
+			wantErr:   "403: Forbidden: : Access to the provided namespace 'openshift-/' is forbidden.",
+		},
+		{
+			test:      "invalid name",
+			gvr:       &schema.GroupVersionResource{Group: "openshift.io", Resource: "validkind"},
+			namespace: "openshift",
+			name:      longName,
+			wantErr:   "400: InvalidParameter: : The provided name '" + longName + "' is invalid.",
+		},
+		{
+			test:      "post: empty name",
+			method:    http.MethodPost,
+			gvr:       &schema.GroupVersionResource{Group: "openshift.io", Resource: "validkind"},
+			namespace: "openshift",
+			wantErr:   "400: InvalidParameter: : The provided name '' is invalid.",
+		},
+		{
+			test:      "delete: empty name",
+			method:    http.MethodDelete,
+			gvr:       &schema.GroupVersionResource{Group: "openshift.io", Resource: "validkind"},
+			namespace: "openshift",
+			wantErr:   "400: InvalidParameter: : The provided name '' is invalid.",
+		},
+	} {
+		t.Run(tt.test, func(t *testing.T) {
+			if tt.method == "" {
+				tt.method = http.MethodGet
+			}
+
+			err := validateAdminKubernetesObjectsNonCustomer(tt.method, tt.gvr, tt.namespace, tt.name)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

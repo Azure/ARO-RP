@@ -11,11 +11,17 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
+
+var csrResource = schema.GroupVersionResource{
+	Group:    "certificates.k8s.io",
+	Resource: "certificatesigningrequests",
+}
 
 func (f *frontend) postAdminOpenShiftClusterApproveCSR(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -33,7 +39,7 @@ func (f *frontend) _postAdminOpenShiftClusterApproveCSR(ctx context.Context, r *
 
 	csrName := r.URL.Query().Get("csrName")
 	if csrName != "" {
-		err := validateAdminKubernetesObjects(r.Method, "CertificateSigningRequest", "", csrName)
+		err := validateAdminKubernetesObjects(r.Method, &csrResource, "", csrName)
 		if err != nil {
 			return err
 		}

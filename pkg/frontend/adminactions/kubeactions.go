@@ -14,6 +14,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 
@@ -29,6 +30,7 @@ type KubeActions interface {
 	KubeList(ctx context.Context, groupKind, namespace string) ([]byte, error)
 	KubeCreateOrUpdate(ctx context.Context, obj *unstructured.Unstructured) error
 	KubeDelete(ctx context.Context, groupKind, namespace, name string, force bool) error
+	ResolveGVR(groupKind string) (*schema.GroupVersionResource, error)
 	CordonNode(ctx context.Context, nodeName string, unschedulable bool) error
 	DrainNode(ctx context.Context, nodeName string) error
 	ApproveCsr(ctx context.Context, csrName string) error
@@ -91,6 +93,10 @@ func (k *kubeActions) KubeGetPodLogs(ctx context.Context, namespace, podName, co
 	var limit int64 = 52428800
 	opts := corev1.PodLogOptions{Container: containerName, LimitBytes: &limit}
 	return k.kubecli.CoreV1().Pods(namespace).GetLogs(podName, &opts).Do(ctx).Raw()
+}
+
+func (k *kubeActions) ResolveGVR(groupKind string) (*schema.GroupVersionResource, error) {
+	return k.gvrResolver.Resolve(groupKind, "")
 }
 
 func (k *kubeActions) KubeGet(ctx context.Context, groupKind, namespace, name string) ([]byte, error) {
