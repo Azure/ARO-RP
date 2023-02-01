@@ -117,9 +117,7 @@ func (c *openShiftClusters) Create(ctx context.Context, doc *api.OpenShiftCluste
 		return nil, err
 	}
 
-	if doc.OpenShiftCluster != nil {
-		doc.OpenShiftCluster.Properties.SecretVersion = c.secretVersion
-	}
+	doc.SecretVersion = c.secretVersion
 
 	doc, err = c.c.Create(ctx, doc.PartitionKey, doc, nil)
 
@@ -207,7 +205,7 @@ func (c *openShiftClusters) patch(ctx context.Context, key string, f OpenShiftCl
 			return
 		}
 
-		doc.OpenShiftCluster.Properties.SecretVersion = c.secretVersion
+		doc.SecretVersion = c.secretVersion
 
 		err = f(doc)
 		if err != nil {
@@ -244,7 +242,7 @@ func (c *openShiftClusters) update(ctx context.Context, doc *api.OpenShiftCluste
 		return nil, fmt.Errorf("key %q is not lower case", doc.Key)
 	}
 
-	doc.OpenShiftCluster.Properties.SecretVersion = c.secretVersion
+	doc.SecretVersion = c.secretVersion
 
 	return c.c.Replace(ctx, doc.PartitionKey, doc, options)
 }

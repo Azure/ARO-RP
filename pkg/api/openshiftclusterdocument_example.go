@@ -1,6 +1,9 @@
 package api
 
-import "time"
+import (
+	"encoding/hex"
+	"time"
+)
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -88,5 +91,6 @@ func ExampleOpenShiftClusterDocument() *OpenShiftClusterDocument {
 				KubeadminPassword: SecureString("password"),
 			},
 		},
+		SecretVersion: hex.EncodeToString([]byte("secretVersion")),
 	}
 }
