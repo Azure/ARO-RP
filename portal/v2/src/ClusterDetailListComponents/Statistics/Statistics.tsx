@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { ICluster } from "../../App"
-import { Modal, Stack, Text, IStackStyles, IconButton, mergeStyleSets, getTheme, Label, ThemeProvider, IMessageBarStyles, IButtonStyles, ITextStyles, IPanelStyles, IStackTokens, PartialTheme, DefaultPalette} from "@fluentui/react"
+import { Modal, Stack, Text, IStackStyles, IconButton, mergeStyleSets, getTheme, Label, ThemeProvider, IStackTokens, PartialTheme, DefaultPalette} from "@fluentui/react"
 import { useBoolean } from "@fluentui/react-hooks"
 import { StatisticsWrapper } from "./StatisticsWrapper";
 

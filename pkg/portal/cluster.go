@@ -12,9 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/ARO-RP/pkg/portal/prometheus"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/gorilla/mux"
+
+	"github.com/Azure/ARO-RP/pkg/portal/prometheus"
 )
 
 type AdminOpenShiftCluster struct {
