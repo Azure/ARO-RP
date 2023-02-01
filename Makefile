@@ -34,8 +34,8 @@ endif
 ARO_IMAGE ?= $(ARO_IMAGE_BASE):$(VERSION)
 
 check-release:
-# Check that VERSION is a valid tag when building an official release (when RELEASE=True).
-ifeq ($(RELEASE), True)
+# Check that VERSION is a valid tag when building an official release (when RELEASE=true).
+ifeq ($(RELEASE), true)
 ifeq ($(TAG), $(VERSION))
 	@echo Building release version $(VERSION)
 else
