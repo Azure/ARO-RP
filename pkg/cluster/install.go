@@ -250,6 +250,7 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureGatewayCreate)),
 		steps.Action(m.createAPIServerPrivateEndpoint),
 		steps.Action(m.createCertificates),
+		steps.Action(m.createKeyvault),
 	}
 
 	if m.adoptViaHive || m.installViaHive {
