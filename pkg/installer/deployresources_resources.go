@@ -106,7 +106,7 @@ func (m *manager) computeBootstrapVM(installConfig *installconfig.InstallConfig)
 	vm := &mgmtcompute.VirtualMachine{
 		VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
 			HardwareProfile: &mgmtcompute.HardwareProfile{
-				VMSize: mgmtcompute.VirtualMachineSizeTypesStandardD4sV3,
+				VMSize: mgmtcompute.VirtualMachineSizeTypesStandardD8sV3,
 			},
 			StorageProfile: &mgmtcompute.StorageProfile{
 				ImageReference: &mgmtcompute.ImageReference{
