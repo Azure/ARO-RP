@@ -11,11 +11,17 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
+
+var nodeResource = schema.GroupVersionResource{
+	Group:    "",
+	Resource: "nodes",
+}
 
 func (f *frontend) postAdminOpenShiftClusterCordonNode(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -33,7 +39,7 @@ func (f *frontend) _postAdminOpenShiftClusterCordonNode(ctx context.Context, r *
 
 	vmName := r.URL.Query().Get("vmName")
 	shouldCordon := strings.EqualFold(r.URL.Query().Get("shouldCordon"), "true")
-	err := validateAdminKubernetesObjects(r.Method, "Node", "", vmName)
+	err := validateAdminKubernetesObjects(r.Method, &nodeResource, "", vmName)
 	if err != nil {
 		return err
 	}

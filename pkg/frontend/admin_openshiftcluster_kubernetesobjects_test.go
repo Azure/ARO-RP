@@ -13,6 +13,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -52,6 +53,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 				k.EXPECT().
 					KubeGet(gomock.Any(), tt.objKind, tt.objNamespace, tt.objName).
 					Return([]byte(`{"Kind": "test"}`), nil)
+				k.EXPECT().ResolveGVR(tt.objKind).Return(&schema.GroupVersionResource{Resource: "configmaps"}, nil)
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse:   []byte(`{"Kind": "test"}` + "\n"),
@@ -66,6 +68,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 				k.EXPECT().
 					KubeList(gomock.Any(), tt.objKind, tt.objNamespace).
 					Return([]byte(`{"Kind": "test"}`), nil)
+				k.EXPECT().ResolveGVR(tt.objKind).Return(&schema.GroupVersionResource{Resource: "configmaps"}, nil)
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse:   []byte(`{"Kind": "test"}` + "\n"),
@@ -77,9 +80,10 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			objNamespace: "openshift",
 			objName:      "config",
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().ResolveGVR(tt.objKind)
 			},
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      "400: InvalidParameter: : The provided groupKind '' is invalid.",
+			wantError:      "400: InvalidParameter: : The provided resource is invalid.",
 		},
 		{
 			method:       http.MethodGet,
@@ -89,6 +93,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			objNamespace: "openshift",
 			objName:      "config",
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().ResolveGVR(tt.objKind).Return(&schema.GroupVersionResource{Resource: "secrets"}, nil)
 			},
 			wantStatusCode: http.StatusForbidden,
 			wantError:      "403: Forbidden: : Access to secrets is forbidden.",
@@ -104,6 +109,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 				k.EXPECT().
 					KubeDelete(gomock.Any(), tt.objKind, tt.objNamespace, tt.objName, false).
 					Return(nil)
+				k.EXPECT().ResolveGVR(tt.objKind).Return(&schema.GroupVersionResource{Resource: "configmaps"}, nil)
 			},
 			wantStatusCode: http.StatusOK,
 		},
@@ -119,6 +125,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 				k.EXPECT().
 					KubeDelete(gomock.Any(), tt.objKind, tt.objNamespace, tt.objName, true).
 					Return(nil)
+				k.EXPECT().ResolveGVR(tt.objKind).Return(&schema.GroupVersionResource{Resource: "pods"}, nil)
 			},
 			wantStatusCode: http.StatusOK,
 		},
@@ -142,9 +149,10 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			objNamespace: "openshift",
 			objName:      "config",
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().ResolveGVR(tt.objKind)
 			},
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      "400: InvalidParameter: : The provided groupKind '' is invalid.",
+			wantError:      "400: InvalidParameter: : The provided resource is invalid.",
 		},
 		{
 			method:       http.MethodDelete,
@@ -153,9 +161,10 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			objKind:      "this",
 			objNamespace: "openshift",
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().ResolveGVR(tt.objKind)
 			},
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      "400: InvalidParameter: : The provided name '' is invalid.",
+			wantError:      "400: InvalidParameter: : The provided resource is invalid.",
 		},
 		{
 			method:       http.MethodDelete,
@@ -165,6 +174,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			objNamespace: "openshift",
 			objName:      "config",
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().ResolveGVR(tt.objKind).Return(&schema.GroupVersionResource{Resource: "secrets"}, nil)
 			},
 			wantStatusCode: http.StatusForbidden,
 			wantError:      "403: Forbidden: : Access to secrets is forbidden.",
@@ -229,124 +239,6 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 	}
 }
 
-func TestValidateAdminKubernetesObjectsNonCustomer(t *testing.T) {
-	longName := strings.Repeat("x", 256)
-
-	for _, tt := range []struct {
-		test      string
-		method    string
-		groupKind string
-		namespace string
-		name      string
-		wantErr   string
-	}{
-		{
-			test:      "valid openshift namespace",
-			groupKind: "Valid-kind.openshift.io",
-			namespace: "openshift",
-			name:      "Valid-NAME-01",
-		},
-		{
-			test:      "invalid customer namespace",
-			groupKind: "Valid-kind.openshift.io",
-			namespace: "customer",
-			name:      "Valid-NAME-01",
-			wantErr:   "403: Forbidden: : Access to the provided namespace 'customer' is forbidden.",
-		},
-		{
-			test:      "invalid groupKind",
-			groupKind: "$",
-			namespace: "openshift",
-			name:      "Valid-NAME-01",
-			wantErr:   "400: InvalidParameter: : The provided groupKind '$' is invalid.",
-		},
-		{
-			test:      "forbidden groupKind",
-			groupKind: "Secret",
-			namespace: "openshift",
-			name:      "Valid-NAME-01",
-			wantErr:   "403: Forbidden: : Access to secrets is forbidden.",
-		},
-		{
-			test:      "forbidden groupKind",
-			groupKind: "Anything.oauth.openshift.io",
-			namespace: "openshift",
-			name:      "Valid-NAME-01",
-			wantErr:   "403: Forbidden: : Access to secrets is forbidden.",
-		},
-		{
-			test:      "allowed groupKind on read",
-			groupKind: "ClusterRole.rbac.authorization.k8s.io",
-			name:      "Valid-NAME-01",
-		},
-		{
-			test:      "allowed groupKind on read 2",
-			groupKind: "ClusterRole.authorization.openshift.io",
-			name:      "Valid-NAME-01",
-		},
-		{
-			test:      "forbidden groupKind on write",
-			method:    http.MethodPost,
-			groupKind: "ClusterRole.rbac.authorization.k8s.io",
-			name:      "Valid-NAME-01",
-			wantErr:   "403: Forbidden: : Write access to RBAC is forbidden.",
-		},
-		{
-			test:      "forbidden groupKind on write 2",
-			method:    http.MethodPost,
-			groupKind: "ClusterRole.authorization.openshift.io",
-			name:      "Valid-NAME-01",
-			wantErr:   "403: Forbidden: : Write access to RBAC is forbidden.",
-		},
-		{
-			test:      "empty groupKind",
-			namespace: "openshift",
-			name:      "Valid-NAME-01",
-			wantErr:   "400: InvalidParameter: : The provided groupKind '' is invalid.",
-		},
-		{
-			test:      "invalid namespace",
-			groupKind: "Valid-kind.openshift.io",
-			namespace: "openshift-/",
-			name:      "Valid-NAME-01",
-			wantErr:   "403: Forbidden: : Access to the provided namespace 'openshift-/' is forbidden.",
-		},
-		{
-			test:      "invalid name",
-			groupKind: "Valid-kind.openshift.io",
-			namespace: "openshift",
-			name:      longName,
-			wantErr:   "400: InvalidParameter: : The provided name '" + longName + "' is invalid.",
-		},
-		{
-			test:      "post: empty name",
-			method:    http.MethodPost,
-			groupKind: "Valid-kind.openshift.io",
-			namespace: "openshift",
-			wantErr:   "400: InvalidParameter: : The provided name '' is invalid.",
-		},
-		{
-			test:      "delete: empty name",
-			method:    http.MethodDelete,
-			groupKind: "Valid-kind.openshift.io",
-			namespace: "openshift",
-			wantErr:   "400: InvalidParameter: : The provided name '' is invalid.",
-		},
-	} {
-		t.Run(tt.test, func(t *testing.T) {
-			if tt.method == "" {
-				tt.method = http.MethodGet
-			}
-
-			err := validateAdminKubernetesObjectsNonCustomer(tt.method, tt.groupKind, tt.namespace, tt.name)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
-		})
-	}
-}
-
 func TestAdminPostKubernetesObjects(t *testing.T) {
 	mockSubID := "00000000-0000-0000-0000-000000000000"
 	mockTenantID := "00000000-0000-0000-0000-000000000000"
@@ -378,6 +270,7 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
 				k.EXPECT().KubeCreateOrUpdate(gomock.Any(), tt.objInBody).
 					Return(nil)
+				k.EXPECT().ResolveGVR(tt.objInBody.GetKind()).Return(&schema.GroupVersionResource{Resource: "configmaps"}, nil)
 			},
 			wantStatusCode: http.StatusOK,
 		},
@@ -393,7 +286,9 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 					},
 				},
 			},
-			mocks:          func(tt *test, k *mock_adminactions.MockKubeActions) {},
+			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().ResolveGVR(tt.objInBody.GetKind()).Return(&schema.GroupVersionResource{Resource: "secrets"}, nil)
+			},
 			wantStatusCode: http.StatusForbidden,
 			wantError:      "403: Forbidden: : Access to secrets is forbidden.",
 		},
