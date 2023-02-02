@@ -52,6 +52,10 @@ type frontend struct {
 	baseLog  *logrus.Entry
 	env      env.Interface
 
+	logMiddleware      middleware.LogMiddleware
+	validateMiddleware middleware.ValidateMiddleware
+	m                  middleware.MetricsMiddleware
+
 	dbAsyncOperations             database.AsyncOperations
 	dbClusterManagerConfiguration database.ClusterManagerConfigurations
 	dbOpenShiftClusters           database.OpenShiftClusters
@@ -64,7 +68,6 @@ type frontend struct {
 	lastChangefeed atomic.Value //time.Time
 	mu             sync.RWMutex
 
-	m    metrics.Emitter
 	aead encryption.AEAD
 
 	kubeActionsFactory  kubeActionsFactory
@@ -115,16 +118,27 @@ func NewFrontend(ctx context.Context,
 	azureActionsFactory azureActionsFactory,
 	ocEnricherFactory ocEnricherFactory) (*frontend, error) {
 	f := &frontend{
-		auditLog:                      auditLog,
-		baseLog:                       baseLog,
-		env:                           _env,
+		logMiddleware: middleware.LogMiddleware{
+			EnvironmentName: _env.Environment().Name,
+			Location:        _env.Location(),
+			Hostname:        _env.Hostname(),
+			BaseLog:         baseLog,
+			AuditLog:        auditLog,
+		},
+		baseLog:  baseLog,
+		auditLog: auditLog,
+		env:      _env,
+		validateMiddleware: middleware.ValidateMiddleware{
+			Location: _env.Location(),
+			Apis:     api.APIs,
+		},
 		dbAsyncOperations:             dbAsyncOperations,
 		dbClusterManagerConfiguration: dbClusterManagerConfiguration,
 		dbOpenShiftClusters:           dbOpenShiftClusters,
 		dbSubscriptions:               dbSubscriptions,
 		dbOpenShiftVersions:           dbOpenShiftVersions,
 		apis:                          apis,
-		m:                             m,
+		m:                             middleware.MetricsMiddleware{Emitter: m},
 		aead:                          aead,
 		kubeActionsFactory:            kubeActionsFactory,
 		azureActionsFactory:           azureActionsFactory,
@@ -407,11 +421,11 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 
 func (f *frontend) setupRouter() *mux.Router {
 	r := mux.NewRouter()
-	r.Use(middleware.Log(f.env, f.auditLog, f.baseLog.WithField("component", "access")))
-	r.Use(middleware.Metrics(f.m))
+	r.Use(f.logMiddleware.Log)
+	r.Use(f.m.Metrics)
 	r.Use(middleware.Panic)
 	r.Use(middleware.Headers)
-	r.Use(middleware.Validate(f.env, f.apis))
+	r.Use(f.validateMiddleware.Validate)
 	r.Use(middleware.Body)
 	r.Use(middleware.SystemData)
 
