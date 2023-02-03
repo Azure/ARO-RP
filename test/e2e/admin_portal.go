@@ -247,9 +247,8 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 
 	It("Should open an error modal for an invalid resource ID parameter in the URL", func() {
 		wd.Get(host + "/v2" + "?resourceid=" + "invalidResourceId")
-		time.Sleep(time.Second * 2) // this is done to give enough time to fetch the data
 
-		wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[role='document']"))
+		wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[role='document']"), time.Second*3)
 		errorModal, err := wd.FindElement(selenium.ByCSSSelector, "div[role='document']")
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
@@ -260,8 +259,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 
 	It("Should display the correct cluster detail view for the resource ID parameter in the URL", func() {
 		wd.Get(host + "/v2" + "?resourceid=" + resourceIDFromEnv())
-		time.Sleep(time.Second * 2)
-		wd.Wait(conditions.ElementIsLocated(selenium.ByID, "ClusterDetailPanel"))
+		wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByID, "ClusterDetailPanel"), time.Second*3)
 
 		detailPanel, err := wd.FindElement(selenium.ByID, "ClusterDetailPanel")
 		if err != nil {

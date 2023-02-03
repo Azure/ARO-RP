@@ -107,7 +107,6 @@ const PopupModal = (props: {title: string, text: string, hidePopup: any}) => {
             onDismiss={props.hidePopup}
             enableAriaHiddenSiblings={true}
           >
-            {/* https://developer.microsoft.com/en-us/fluentui#/controls/web/focustrapzone */}
             <FocusTrapZone>
               <div role="document" className={popupStyles.content}>
                 <h2>{props.title}</h2>
@@ -468,7 +467,7 @@ export function ClusterList(props: {
     }
 
     if (props.params) {
-      let resourceID: string = props.params["resourceid"]
+      const resourceID: string = props.params["resourceid"]
       const clusterList = data as ICluster[]
       const currentCluster = clusterList.find((item): item is ICluster => resourceID === item.resourceId)
 
@@ -505,6 +504,7 @@ export function ClusterList(props: {
         styles={controlStyles}
       />
       <Separator styles={separatorStyle} />
+      
       {error && errorBar()}
 
       {isPopupVisible && PopupModal({title: "Resource Not Found", text: "No resource found due to Invalid/Non-existent resource ID in the URL.", hidePopup: hidePopup})}

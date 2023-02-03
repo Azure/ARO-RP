@@ -18,8 +18,8 @@ const searchParams = window.location.search
 
 const getURLParams = () : any => {
   let urlParams = {}
-  let paramStringFromURL = searchParams.split('?')[1];
-  let paramsArr = paramStringFromURL.split('&');
+  const paramStringFromURL = searchParams.split('?')[1];
+  const paramsArr = paramStringFromURL.split('&');
 
   for (let i = 0; i < paramsArr.length; i++) {
       let pair = paramsArr[i].split('=');
