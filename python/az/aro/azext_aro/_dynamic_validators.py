@@ -10,7 +10,6 @@ from azure.cli.core.profiles import ResourceType
 from azure.cli.core.azclierror import CLIInternalError, InvalidArgumentValueError, \
     RequiredArgumentMissingError
 from azure.core.exceptions import ResourceNotFoundError
-from azure.cli.core.commands.progress import IndeterminateStandardOut
 from knack.log import get_logger
 from msrestazure.tools import is_valid_resource_id
 from msrestazure.tools import parse_resource_id
@@ -169,8 +168,8 @@ def dyn_validate_subnet(key):
 
         if subnet_obj.network_security_group is not None:
             message = f"A Network Security Group \"{subnet_obj.network_security_group.id}\" "\
-                        "is already assigned to this subnet. Ensure there a no Network "\
-                        "Security Groups assigned to cluster subnets before cluster creation"
+                      "is already assigned to this subnet. Ensure there a no Network "\
+                      "Security Groups assigned to cluster subnets before cluster creation"
             error = [f"{key}", parts['child_name_1'], message]
             errors.append(error)
 
@@ -207,9 +206,9 @@ def dyn_validate_cidr_ranges():
             node_mask = 23 - int(pod_cidr.split("/")[1])
             if node_mask < 2:
                 addresses.append(["Pod CIDR",
-                                    "Pod CIDR Capacity",
-                                    f"{pod_cidr} does not contain enough addresses for 3 master nodes " +
-                                    "(Requires cidr prefix of 21 or lower)"])
+                                  "Pod CIDR Capacity",
+                                  f"{pod_cidr} does not contain enough addresses for 3 master nodes " +
+                                  "(Requires cidr prefix of 21 or lower)"])
             cidr_array["Pod CIDR"] = ipaddress.IPv4Network(pod_cidr)
         if service_cidr is not None:
             cidr_array["Service CIDR"] = ipaddress.IPv4Network(service_cidr)
@@ -266,20 +265,21 @@ def dyn_validate_resource_permissions(service_principle_ids, resources):
                 for resource in resources[role]:
                     try:
                         resource_contributor_exists = has_role_assignment_on_resource(cmd.cli_ctx,
-                                                                                        resource,
-                                                                                        sp_id,
-                                                                                        role)
+                                                                                      resource,
+                                                                                      sp_id,
+                                                                                      role)
                         if not resource_contributor_exists:
                             parts = parse_resource_id(resource)
                             errors.append(["Resource Permissions",
-                                            parts['type'],
-                                            f"Resource {parts['name']} is missing role assignment {role}"])
+                                           parts['type'],
+                                           f"Resource {parts['name']} is missing role assignment {role}"])
                     except CloudError as e:
                         logger.error(e.message)
                         raise
         hook.end()
         return errors
     return _validate_resource_permissions
+
 
 def dyn_validate_version():
     def _validate_version(cmd,
@@ -299,12 +299,13 @@ def dyn_validate_version():
 
         if not found:
             errors.append(["OpenShift Version",
-                       namespace.version,
-                       f"{namespace.version} is not a valid version, valid versions are {versions}"])
+                           namespace.version,
+                           f"{namespace.version} is not a valid version, valid versions are {versions}"])
 
         hook.end()
         return errors
     return _validate_version
+
 
 def validate_cluster_create(cmd,  # pylint: disable=unused-argument
                             client,  # pylint: disable=unused-argument

@@ -5,6 +5,7 @@ import collections
 import random
 import os
 from base64 import b64decode
+import textwrap
 
 import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2022_09_04.models as openshiftcluster
 
@@ -13,7 +14,7 @@ from azure.cli.core.commands.client_factory import get_mgmt_service_client
 from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.profiles import ResourceType
 from azure.cli.core.util import sdk_no_wait
-from azure.cli.core.azclierror import FileOperationError, ResourceNotFoundError, UnauthorizedError
+from azure.cli.core.azclierror import FileOperationError, ResourceNotFoundError, UnauthorizedError, ValidationError
 from azext_aro._aad import AADManager
 from azext_aro._rbac import assign_role_to_resource, \
     has_role_assignment_on_resource
@@ -28,7 +29,6 @@ from msrestazure.tools import resource_id, parse_resource_id
 from msrest.exceptions import HttpOperationError
 
 from tabulate import tabulate
-import textwrap
 
 logger = get_logger(__name__)
 
@@ -158,7 +158,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                        parameters=oc)
 
 
-def aro_validate(cmd,
+def aro_validate(cmd,  # pylint: disable=too-many-locals
                  client,
                  resource_group_name,  # pylint: disable=unused-argument
                  master_subnet,
@@ -174,7 +174,7 @@ def aro_validate(cmd,
                  service_cidr=None
                  ):
 
-    class oc:
+    class oc:  # pylint: disable=too-few-public-methods
         def __init__(self, disk_encryption_id, master_subnet_id, worker_subnet_id):
             self.master_profile = openshiftcluster.MasterProfile(
                 subnet_id=master_subnet_id,
@@ -231,7 +231,7 @@ def aro_validate(cmd,
         logger.error("Issues found blocking cluster creation.\n")
         headers = ["Type", "Name", "Error"]
         table = tabulate(errors, headers=headers, tablefmt="grid")
-        print("%s\n", table)
+        print(f"\n{table}")
     else:
         print("\nNo Issues on subscription blocking cluster creation\n")
 
