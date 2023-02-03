@@ -301,7 +301,7 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
               <IconButton
                 iconProps={{ iconName: "BIDashboard" }}
                 aria-label="Prometheus"
-                href={item.resourceId + `/prometheus`}
+                href={item.resourceId + (+item.version >= 4.11 ? `/prometheus` : `/prometheus/graph`)}
               />
             </TooltipHost>
             <TooltipHost content={`SSH`}>

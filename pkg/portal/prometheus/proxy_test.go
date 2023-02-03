@@ -227,12 +227,12 @@ func TestProxy(t *testing.T) {
 				dialer.EXPECT().DialContext(gomock.Any(), "tcp", apiServerPrivateEndpointIP+":6443").Return(l.DialContext(ctx, "", ""))
 			},
 			wantStatusCode: http.StatusOK,
-			wantBody:       "GET /graph/test HTTP/1.1\r\nHost: prometheus-k8s-0:9090\r\nAccept-Encoding: gzip\r\nUser-Agent: Go-http-client/1.1\r\n\r\n",
+			wantBody:       "GET /test HTTP/1.1\r\nHost: prometheus-k8s-0:9090\r\nAccept-Encoding: gzip\r\nUser-Agent: Go-http-client/1.1\r\n\r\n",
 		},
 		{
 			name: "bad path",
 			r: func(r *http.Request) {
-				r.URL.Path = "/subscriptions/BAD/resourcegroups/rg/providers/microsoft.redhatopenshift/openshiftclusters/cluster/prometheus/graph/test"
+				r.URL.Path = "/subscriptions/BAD/resourcegroups/rg/providers/microsoft.redhatopenshift/openshiftclusters/cluster/prometheus/test"
 			},
 			wantStatusCode: http.StatusBadRequest,
 			wantBody:       "Bad Request\n",
@@ -264,7 +264,7 @@ func TestProxy(t *testing.T) {
 			}
 
 			r, err := http.NewRequest(http.MethodGet,
-				"https://localhost:8444"+resourceID+"/prometheus/graph/test", nil)
+				"https://localhost:8444"+resourceID+"/prometheus/test", nil)
 			if err != nil {
 				panic(err)
 			}
