@@ -42,8 +42,6 @@ func (err statusCodeError) Error() string {
 	return fmt.Sprintf("%d", err)
 }
 
-type hiveActionsFactory func(*logrus.Entry, env.Interface) (hive.ClusterManager, error)
-
 type kubeActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error)
 
 type azureActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error)
@@ -74,7 +72,7 @@ type frontend struct {
 
 	aead encryption.AEAD
 
-	hiveActionsFactory  hiveActionsFactory
+	hiveClusterManager  hive.ClusterManager
 	kubeActionsFactory  kubeActionsFactory
 	azureActionsFactory azureActionsFactory
 	ocEnricherFactory   ocEnricherFactory
@@ -119,7 +117,7 @@ func NewFrontend(ctx context.Context,
 	apis map[string]*api.Version,
 	m metrics.Emitter,
 	aead encryption.AEAD,
-	hiveActionsFactory hiveActionsFactory,
+	hiveClusterManager hive.ClusterManager,
 	kubeActionsFactory kubeActionsFactory,
 	azureActionsFactory azureActionsFactory,
 	ocEnricherFactory ocEnricherFactory) (*frontend, error) {
@@ -150,7 +148,7 @@ func NewFrontend(ctx context.Context,
 		apis:                          apis,
 		m:                             middleware.MetricsMiddleware{Emitter: m},
 		aead:                          aead,
-		hiveActionsFactory:            hiveActionsFactory,
+		hiveClusterManager:            hiveClusterManager,
 		kubeActionsFactory:            kubeActionsFactory,
 		azureActionsFactory:           azureActionsFactory,
 		ocEnricherFactory:             ocEnricherFactory,

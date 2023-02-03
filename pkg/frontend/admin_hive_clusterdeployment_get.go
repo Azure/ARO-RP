@@ -22,7 +22,7 @@ func (f *frontend) getAdminHiveClusterDeployment(w http.ResponseWriter, r *http.
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 
-	b, err := f._getAdminHiveClusterDeployment(ctx, r, log)
+	b, err := f._getAdminHiveClusterDeployment(ctx, r)
 
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
@@ -36,7 +36,7 @@ func (f *frontend) getAdminHiveClusterDeployment(w http.ResponseWriter, r *http.
 	adminReply(log, w, nil, b, err)
 }
 
-func (f *frontend) _getAdminHiveClusterDeployment(ctx context.Context, r *http.Request, log *logrus.Entry) ([]byte, error) {
+func (f *frontend) _getAdminHiveClusterDeployment(ctx context.Context, r *http.Request) ([]byte, error) {
 	url := filepath.Dir(r.URL.Path)
 	resourceID := strings.TrimPrefix(url, "/admin")
 	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
@@ -48,12 +48,7 @@ func (f *frontend) _getAdminHiveClusterDeployment(ctx context.Context, r *http.R
 		return nil, errors.New("cluster is not managed by hive")
 	}
 
-	hr, err := f.hiveActionsFactory(log, f.env)
-	if err != nil {
-		return nil, err
-	}
-
-	cd, err := hr.GetClusterDeployment(ctx, doc)
+	cd, err := f.hiveClusterManager.GetClusterDeployment(ctx, doc)
 	if err != nil {
 		return nil, err
 	}

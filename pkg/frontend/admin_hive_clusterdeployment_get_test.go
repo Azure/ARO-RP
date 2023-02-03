@@ -12,11 +12,8 @@ import (
 
 	"github.com/golang/mock/gomock"
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
-	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_hive "github.com/Azure/ARO-RP/pkg/util/mocks/hive"
@@ -85,9 +82,7 @@ func Test_getAdminHiveClusterDeployment(t *testing.T) {
 			}
 
 			f, err := NewFrontend(ctx, ti.audit, ti.log, _env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase,
-				ti.subscriptionsDatabase, nil, api.APIs, &noop.Noop{}, nil, func(log *logrus.Entry, _env env.Interface) (hive.ClusterManager, error) {
-					return clusterManager, nil
-				}, nil, nil, nil)
+				ti.subscriptionsDatabase, nil, api.APIs, &noop.Noop{}, nil, clusterManager, nil, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

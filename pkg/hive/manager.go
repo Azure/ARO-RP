@@ -5,7 +5,6 @@ package hive
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
@@ -53,27 +52,13 @@ type clusterManager struct {
 	dh dynamichelper.Interface
 }
 
-func NewFromEnv(log *logrus.Entry, env env.Interface) (ClusterManager, error) {
-	ctx := context.Background()
-	installViaHive, err := env.LiveConfig().InstallViaHive(ctx)
+func NewFromEnv(ctx context.Context, log *logrus.Entry, env env.Interface) (ClusterManager, error) {
+	hiveShard := 1
+	hiveRestConfig, err := env.LiveConfig().HiveRestConfig(ctx, hiveShard)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed getting RESTConfig for Hive shard %d: %w", hiveShard, err)
 	}
-
-	adoptViaHive, err := env.LiveConfig().AdoptByHive(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if installViaHive || adoptViaHive {
-		hiveShard := 1
-		hiveRestConfig, err := env.LiveConfig().HiveRestConfig(ctx, hiveShard)
-		if err != nil {
-			return nil, fmt.Errorf("failed getting RESTConfig for Hive shard %d: %w", hiveShard, err)
-		}
-		return NewFromConfig(log, env, hiveRestConfig)
-	}
-	return nil, errors.New("hive is not enabled")
+	return NewFromConfig(log, env, hiveRestConfig)
 }
 
 // NewFromConfig creates a ClusterManager.
@@ -209,11 +194,7 @@ func (hr *clusterManager) IsClusterInstallationComplete(ctx context.Context, doc
 }
 
 func (hr *clusterManager) GetClusterDeployment(ctx context.Context, doc *api.OpenShiftClusterDocument) (*hivev1.ClusterDeployment, error) {
-	cd, err := hr.hiveClientset.HiveV1().ClusterDeployments(doc.OpenShiftCluster.Properties.HiveProfile.Namespace).Get(ctx, ClusterDeploymentName, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return cd, nil
+	return hr.hiveClientset.HiveV1().ClusterDeployments(doc.OpenShiftCluster.Properties.HiveProfile.Namespace).Get(ctx, ClusterDeploymentName, metav1.GetOptions{})
 }
 
 func (hr *clusterManager) ResetCorrelationData(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
