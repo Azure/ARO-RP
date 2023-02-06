@@ -57,10 +57,13 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	return err
 }
 
+// validateEnvVars iterates over all the elements of vars and
+// if it does not exist an environment variable with that name, it will return an error.
+// Otherwise it returns nil.
 func validateEnvVars(vars ...string) error {
-	for _, key := range vars {
-		if _, found := os.LookupEnv(key); !found {
-			return fmt.Errorf("environment variable %q unset", key)
+	for _, v := range vars {
+		if _, found := os.LookupEnv(v); !found {
+			return fmt.Errorf("environment variable %q unset", v)
 		}
 	}
 	return nil
