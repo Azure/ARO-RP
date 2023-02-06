@@ -110,13 +110,10 @@ func (v ValidateMiddleware) Validate(h http.Handler) http.Handler {
 			}
 		}
 
-		if err != nil || hasVariableAPIVersion {
-			if apiVersion != "" {
-				if _, found := v.Apis[apiVersion]; !found {
-					api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], apiVersion)
-					return
-				}
-			}
+		_, apiVersionExists := v.Apis[apiVersion]
+		if (err != nil || hasVariableAPIVersion) && apiVersion != "" && !apiVersionExists {
+			api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], apiVersion)
+			return
 		}
 
 		h.ServeHTTP(w, r)
