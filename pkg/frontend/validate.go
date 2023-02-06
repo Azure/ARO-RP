@@ -80,39 +80,24 @@ func (f *frontend) validateOpenShiftUniqueKey(ctx context.Context, doc *api.Open
 var rxKubernetesString = regexp.MustCompile(`(?i)^[-a-z0-9.]{0,255}$`)
 
 func validatePermittedClusterwideObjects(gvr *schema.GroupVersionResource) bool {
-	if gvr == nil {
-		return false
+	permittedGroups := map[string]bool{
+		"apiserver.openshift.io":              true,
+		"aro.openshift.io":                    true,
+		"authorization.openshift.io":          true,
+		"certificates.k8s.io":                 true,
+		"config.openshift.io":                 true,
+		"console.openshift.io":                true,
+		"imageregistry.operator.openshift.io": true,
+		"machine.openshift.io":                true,
+		"machineconfiguration.openshift.io":   true,
+		"operator.openshift.io":               true,
+		"rbac.authorization.k8s.io":           true,
 	}
-
-	validApiGroups := []string{
-		"apiserver.openshift.io",
-		"aro.openshift.io",
-		"authorization.openshift.io",
-		"certificates.k8s.io",
-		"config.openshift.io",
-		"console.openshift.io",
-		"imageregistry.operator.openshift.io",
-		"machine.openshift.io",
-		"machineconfiguration.openshift.io",
-		"operator.openshift.io",
-		"rbac.authorization.k8s.io",
+	permittedObjects := map[string]map[string]bool{
+		"": {"nodes": true},
 	}
-	validApiTypes := map[string][]string{
-		"": {"nodes"},
-	}
-	for _, apiGroup := range validApiGroups {
-		if gvr.Group == apiGroup {
-			return true
-		}
-	}
-	if validApiTypes[gvr.Group] != nil {
-		for _, apiType := range validApiTypes[gvr.Group] {
-			if gvr.Resource == apiType {
-				return true
-			}
-		}
-	}
-	return false
+	allowedResources, groupHasException := permittedObjects[gvr.Group]
+	return permittedGroups[gvr.Group] || (groupHasException && allowedResources[gvr.Resource])
 }
 
 func validateAdminKubernetesObjectsNonCustomer(method string, gvr *schema.GroupVersionResource, namespace, name string) error {
