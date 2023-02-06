@@ -413,10 +413,10 @@ var (
 	VMSizeStandardNC16asT4V3Struct = VMSizeStruct{CoreCount: 16, Family: standardNCAS}
 	VMSizeStandardNC64asT4V3Struct = VMSizeStruct{CoreCount: 64, Family: standardNCAS}
 
-	VMSizeStandardNC6sV3Struct   = VMSizeStruct{CoreCount: 6, Family: standardNCS}
-	VMSizeStandardNC12sV3Struct  = VMSizeStruct{CoreCount: 12, Family: standardNCS}
-	VMSizeStandardNC24sV3Struct  = VMSizeStruct{CoreCount: 24, Family: standardNCS}
-	VMSizeStandardNC24rsV3Struct = VMSizeStruct{CoreCount: 24, Family: standardNCRS}
+	VMSizeStandardNC6sV3Struct   = VMSizeStruct{CoreCount: 6, Family: standardNCSv3}
+	VMSizeStandardNC12sV3Struct  = VMSizeStruct{CoreCount: 12, Family: standardNCSv3}
+	VMSizeStandardNC24sV3Struct  = VMSizeStruct{CoreCount: 24, Family: standardNCSv3}
+	VMSizeStandardNC24rsV3Struct = VMSizeStruct{CoreCount: 24, Family: standardNCSv3}
 )
 
 const (
@@ -434,8 +434,7 @@ const (
 	standardGFamily = "standardGFamily"
 	standardLSv2    = "standardLsv2Family"
 	standardNCAS    = "Standard NCASv3_T4 Family"
-	standardNCS     = "Standard NCSv3 Family"
-	standardNCRS    = "Standard NCRSv3 Family"
+	standardNCSv3   = "Standard NCSv3 Family"
 )
 
 // WorkerProfile represents a worker profile
