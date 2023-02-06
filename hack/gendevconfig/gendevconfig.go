@@ -17,7 +17,7 @@ import (
 )
 
 func run(ctx context.Context, log *logrus.Entry) error {
-	for _, key := range []string{
+	vars := []string{
 		"ADMIN_OBJECT_ID",
 		"AZURE_CLIENT_ID",
 		"AZURE_DBTOKEN_CLIENT_ID",
@@ -29,10 +29,10 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		"HOME",
 		"PARENT_DOMAIN_NAME",
 		"USER",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return fmt.Errorf("environment variable %q unset", key)
-		}
+	}
+	shouldReturn, returnValue := validateEnvVars(vars...)
+	if shouldReturn {
+		return returnValue
 	}
 
 	if _, found := os.LookupEnv("SSH_PUBLIC_KEY"); !found {
@@ -56,6 +56,15 @@ func run(ctx context.Context, log *logrus.Entry) error {
 
 	_, err = os.Stdout.Write(b)
 	return err
+}
+
+func validateEnvVars(vars ...string) (bool, error) {
+	for _, key := range vars {
+		if _, found := os.LookupEnv(key); !found {
+			return true, fmt.Errorf("environment variable %q unset", key)
+		}
+	}
+	return false, nil
 }
 
 func main() {
