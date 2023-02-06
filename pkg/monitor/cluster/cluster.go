@@ -21,6 +21,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
@@ -45,6 +46,7 @@ type Monitor struct {
 	// access below only via the helper functions in cache.go
 	cache struct {
 		cos   *configv1.ClusterOperatorList
+		cs    *arov1alpha1.ClusterList
 		cv    *configv1.ClusterVersion
 		ns    *corev1.NodeList
 		arodl *appsv1.DeploymentList
@@ -157,6 +159,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitJobConditions,
 		mon.emitSummary,
 		mon.emitHiveRegistrationStatus,
+		mon.emitOperatorFlagsAndSupportBanner,
 		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable
 	} {
 		err = f(ctx)
