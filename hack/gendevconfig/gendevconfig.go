@@ -30,9 +30,8 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		"PARENT_DOMAIN_NAME",
 		"USER",
 	}
-	shouldReturn, returnValue := validateEnvVars(vars...)
-	if shouldReturn {
-		return returnValue
+	if err := validateEnvVars(vars...); err != nil {
+		return err
 	}
 
 	if _, found := os.LookupEnv("SSH_PUBLIC_KEY"); !found {
@@ -58,13 +57,13 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	return err
 }
 
-func validateEnvVars(vars ...string) (bool, error) {
+func validateEnvVars(vars ...string) error {
 	for _, key := range vars {
 		if _, found := os.LookupEnv(key); !found {
-			return true, fmt.Errorf("environment variable %q unset", key)
+			return fmt.Errorf("environment variable %q unset", key)
 		}
 	}
-	return false, nil
+	return nil
 }
 
 func main() {
