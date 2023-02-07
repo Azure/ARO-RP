@@ -8,13 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	v20220904 "github.com/Azure/ARO-RP/pkg/api/v20220904"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
-	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
@@ -193,8 +190,6 @@ func TestPutOrPatchClusterManagerConfiguration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ti := newTestInfraWithFeatures(t, map[env.Feature]bool{env.FeatureRequireD2sV3Workers: false, env.FeatureDisableReadinessDelay: false, env.FeatureEnableOCMEndpoints: true}).WithClusterManagerConfigurations().WithSubscriptions().WithOpenShiftClusters()
 			defer ti.done()
-
-			ti.env.(*mock_env.MockInterface).EXPECT().ValidateOCMClientID(gomock.Any()).Return(true)
 
 			resourceKey := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/resourcename/%s/%s",
 				mockSubscriptionId,

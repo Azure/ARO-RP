@@ -9,10 +9,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/golang/mock/gomock"
-	"github.com/gorilla/mux"
 
-	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 )
 
@@ -20,14 +19,25 @@ func TestAuthenticatedForOCMAPIs(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 	_env := mock_env.NewMockInterface(controller)
-	r := mux.NewRouter()
-	// mimic what the setupRouter func will do for this specific path
-	r.HandleFunc("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}",
-		func(w http.ResponseWriter, request *http.Request) {})
 
-	r.HandleFunc("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/{ocmResourceType}/{ocmResourceName}",
-		func(w http.ResponseWriter, request *http.Request) {}).
-		Queries("api-version", "")
+	chiRouter := chi.NewMux()
+	chiRouter.Route("/subscriptions/{subscriptionId}", func(r chi.Router) {
+		r.Route("/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}", func(r chi.Router) {
+			r.Use(OCMValidator{Env: _env}.ValidateOCMClient)
+			r.Get("/", emptyResponse)
+		})
+
+		r.Route("/", func(r chi.Router) {
+			r.Use(OCMValidator{Env: _env}.ValidateOCMClient)
+			r.Get("/", emptyResponse)
+		})
+	})
+
+	chiRouter.Route("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/{ocmResourceType}/{ocmResourceName}", func(r chi.Router) {
+		r.Use(OCMValidator{Env: _env}.ValidateOCMClient)
+		r.Get("/", emptyResponse)
+	})
+
 	basePath := "https://server/subscriptions/0000-0000/resourcegroups/testrg/providers/testrpn/testrt/testrn/%s/myResource?api-version=2022-09-04"
 
 	for _, tt := range []struct {
@@ -67,37 +77,30 @@ func TestAuthenticatedForOCMAPIs(t *testing.T) {
 			expectedValidateCall: true,
 		},
 	} {
-		var req *http.Request
+		var r *http.Request
 		var err error
-		vars := map[string]string{
-			"api-version": "2022-09-04",
-		}
+
 		if tt.ocmResourceType == "" {
 			// non ocm api
-			req, err = http.NewRequest("GET", "https://server/subscriptions/0000-0000/resourcegroups/testrg/providers/testrpn/testrt/testrn", nil)
+			r = httptest.NewRequest(http.MethodGet, "https://server/subscriptions/0000-0000/resourcegroups/testrg/providers/testrpn/testrt/testrn", nil)
 		} else {
-			req, err = http.NewRequest("GET", fmt.Sprintf(basePath, tt.ocmResourceType), nil)
-			vars["ocmResourceType"] = tt.ocmResourceType
+			r = httptest.NewRequest(http.MethodGet, fmt.Sprintf(basePath, tt.ocmResourceType), nil)
 		}
 		if err != nil {
 			t.Fatal(err)
 		}
-		req.Header.Set(ArmSystemDataHeaderKey, tt.systemDataHeader)
 
-		req = mux.SetURLVars(req, vars)
+		r.Header.Set(ArmSystemDataHeaderKey, tt.systemDataHeader)
 
-		_env.EXPECT().ArmClientAuthorizer().Return(clientauthorizer.NewAll())
 		if tt.expectedValidateCall {
-			_env.EXPECT().ValidateOCMClientID(req.Header.Get(ArmSystemDataHeaderKey)).Return(tt.isValid)
+			_env.EXPECT().ValidateOCMClientID(r.Header.Get(ArmSystemDataHeaderKey)).Return(tt.isValid)
 		} else {
-			_env.EXPECT().ValidateOCMClientID(req.Header.Get(ArmSystemDataHeaderKey)).Times(0)
+			_env.EXPECT().ValidateOCMClientID(r.Header.Get(ArmSystemDataHeaderKey)).Times(0)
 		}
+		w := httptest.NewRecorder()
 
-		rr := httptest.NewRecorder()
-
-		Authenticated(_env)(r).ServeHTTP(rr, req)
-
-		if status := rr.Code; status != tt.wantStatus {
+		chiRouter.ServeHTTP(w, r)
+		if status := w.Code; status != tt.wantStatus {
 			t.Fatalf("expected status: %d got: %d", tt.wantStatus, status)
 		}
 	}

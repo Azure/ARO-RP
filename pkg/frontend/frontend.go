@@ -60,6 +60,7 @@ type frontend struct {
 	authMiddleware       middleware.AuthMiddleware
 	apiVersionMiddleware middleware.ApiVersionValidator
 
+	ocmValidator                  middleware.OCMValidator
 	dbAsyncOperations             database.AsyncOperations
 	dbClusterManagerConfiguration database.ClusterManagerConfigurations
 	dbOpenShiftClusters           database.OpenShiftClusters
@@ -144,6 +145,9 @@ func NewFrontend(ctx context.Context,
 		authMiddleware: middleware.AuthMiddleware{
 			AdminAuth: _env.AdminClientAuthorizer(),
 			ArmAuth:   _env.ArmClientAuthorizer(),
+		},
+		ocmValidator: middleware.OCMValidator{
+			Env: _env,
 		},
 		dbAsyncOperations:             dbAsyncOperations,
 		dbClusterManagerConfiguration: dbClusterManagerConfiguration,
@@ -363,7 +367,8 @@ func (f *frontend) setupRouter() chi.Router {
 		middleware.Headers,
 		f.validateMiddleware.Validate,
 		middleware.Body,
-		middleware.SystemData)
+		middleware.SystemData,
+		f.ocmValidator.ValidateOCMClient)
 	f.chiAuthenticatedRoutes(registered)
 	f.chiUnauthenticatedRoutes(registered)
 
