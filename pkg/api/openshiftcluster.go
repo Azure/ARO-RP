@@ -347,6 +347,11 @@ const (
 	VMSizeStandardNC8asT4V3  VMSize = "Standard_NC8as_T4_v3"
 	VMSizeStandardNC16asT4V3 VMSize = "Standard_NC16as_T4_v3"
 	VMSizeStandardNC64asT4V3 VMSize = "Standard_NC64as_T4_v3"
+
+	VMSizeStandardNC6sV3   VMSize = "Standard_NC6s_v3"
+	VMSizeStandardNC12sV3  VMSize = "Standard_NC12s_v3"
+	VMSizeStandardNC24sV3  VMSize = "Standard_NC24s_v3"
+	VMSizeStandardNC24rsV3 VMSize = "Standard_NC24rs_v3"
 )
 
 type VMSizeStruct struct {
@@ -407,6 +412,11 @@ var (
 	VMSizeStandardNC8asT4V3Struct  = VMSizeStruct{CoreCount: 8, Family: standardNCAS}
 	VMSizeStandardNC16asT4V3Struct = VMSizeStruct{CoreCount: 16, Family: standardNCAS}
 	VMSizeStandardNC64asT4V3Struct = VMSizeStruct{CoreCount: 64, Family: standardNCAS}
+
+	VMSizeStandardNC6sV3Struct   = VMSizeStruct{CoreCount: 6, Family: standardNCSv3}
+	VMSizeStandardNC12sV3Struct  = VMSizeStruct{CoreCount: 12, Family: standardNCSv3}
+	VMSizeStandardNC24sV3Struct  = VMSizeStruct{CoreCount: 24, Family: standardNCSv3}
+	VMSizeStandardNC24rsV3Struct = VMSizeStruct{CoreCount: 24, Family: standardNCSv3}
 )
 
 const (
@@ -424,6 +434,7 @@ const (
 	standardGFamily = "standardGFamily"
 	standardLSv2    = "standardLsv2Family"
 	standardNCAS    = "Standard NCASv3_T4 Family"
+	standardNCSv3   = "Standard NCSv3 Family"
 )
 
 // WorkerProfile represents a worker profile
