@@ -28,7 +28,7 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	if err = env.ValidateVars("AZURE_DBTOKEN_CLIENT_ID"); err != nil {
+	if err = ValidateVars("AZURE_DBTOKEN_CLIENT_ID"); err != nil {
 		return err
 	}
 
@@ -41,7 +41,10 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 
 	go g.Run()
 
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, nil, m, nil)
+	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+		return err
+	}
+	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, nil, m, nil, os.Getenv(DatabaseAccountName))
 	if err != nil {
 		return err
 	}

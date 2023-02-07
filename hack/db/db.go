@@ -22,6 +22,10 @@ import (
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
+const (
+	DatabaseAccountName = "DATABASE_ACCOUNT_NAME"
+)
+
 func run(ctx context.Context, log *logrus.Entry) error {
 	if len(os.Args) != 2 {
 		return fmt.Errorf("usage: %s resourceid", os.Args[0])
@@ -62,7 +66,10 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, &noop.Noop{}, aead)
+	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+		return err
+	}
+	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, &noop.Noop{}, aead, os.Getenv(DatabaseAccountName))
 	if err != nil {
 		return err
 	}

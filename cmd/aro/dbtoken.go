@@ -26,12 +26,12 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	if err := env.ValidateVars("AZURE_GATEWAY_SERVICE_PRINCIPAL_ID", "AZURE_DBTOKEN_CLIENT_ID"); err != nil {
+	if err := ValidateVars("AZURE_GATEWAY_SERVICE_PRINCIPAL_ID", "AZURE_DBTOKEN_CLIENT_ID"); err != nil {
 		return err
 	}
 
 	if !_env.IsLocalDevelopmentMode() {
-		if err := env.ValidateVars("MDM_ACCOUNT", "MDM_NAMESPACE"); err != nil {
+		if err := ValidateVars("MDM_ACCOUNT", "MDM_NAMESPACE"); err != nil {
 			return err
 		}
 	}
@@ -60,7 +60,10 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, m, nil)
+	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+		return err
+	}
+	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, m, nil, os.Getenv(DatabaseAccountName))
 	if err != nil {
 		return err
 	}

@@ -40,7 +40,7 @@ func getAuth(key string) (*types.DockerAuthConfig, error) {
 }
 
 func mirror(ctx context.Context, log *logrus.Entry) error {
-	err := env.ValidateVars(
+	err := ValidateVars(
 		"DST_AUTH",
 		"DST_ACR_NAME",
 		"SRC_AUTH_QUAY",

@@ -42,7 +42,7 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 			return err
 		}
 	} else { // running in CI node/Public - Use SP from Env
-		err := env.ValidateVars(
+		err := ValidateVars(
 			"AZURE_CLIENT_ID",
 			"AZURE_CLIENT_SECRET",
 			"AZURE_SUBSCRIPTION_ID",

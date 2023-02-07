@@ -31,7 +31,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	if !_env.IsLocalDevelopmentMode() {
-		err := env.ValidateVars(
+		err := ValidateVars(
 			"CLUSTER_MDM_ACCOUNT",
 			"CLUSTER_MDM_NAMESPACE",
 			"MDM_ACCOUNT",
@@ -87,7 +87,10 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, &noop.Noop{}, aead)
+	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+		return err
+	}
+	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, &noop.Noop{}, aead, os.Getenv(DatabaseAccountName))
 	if err != nil {
 		return err
 	}

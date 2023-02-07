@@ -31,7 +31,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 	}
 
 	if !_env.IsLocalDevelopmentMode() {
-		err := env.ValidateVars(
+		err := ValidateVars(
 			"MDM_ACCOUNT",
 			"MDM_NAMESPACE",
 			"PORTAL_HOSTNAME")
@@ -41,7 +41,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		}
 	}
 
-	env.ValidateVars(
+	err = ValidateVars(
 		"AZURE_PORTAL_CLIENT_ID",
 		"AZURE_PORTAL_ACCESS_GROUP_IDS",
 		"AZURE_PORTAL_ELEVATED_GROUP_IDS")
@@ -97,7 +97,10 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, m, aead)
+	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+		return err
+	}
+	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, m, aead, os.Getenv(DatabaseAccountName))
 	if err != nil {
 		return err
 	}

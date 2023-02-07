@@ -37,11 +37,7 @@ const (
 	collSubscriptions     = "Subscriptions"
 )
 
-func NewDatabaseClient(log *logrus.Entry, _env env.Core, authorizer cosmosdb.Authorizer, m metrics.Emitter, aead encryption.AEAD) (cosmosdb.DatabaseClient, error) {
-	if err := env.ValidateVars("DATABASE_ACCOUNT_NAME"); err != nil {
-		return nil, err
-	}
-
+func NewDatabaseClient(log *logrus.Entry, _env env.Core, authorizer cosmosdb.Authorizer, m metrics.Emitter, aead encryption.AEAD, databaseAccountName string) (cosmosdb.DatabaseClient, error) {
 	h, err := NewJSONHandle(aead)
 	if err != nil {
 		return nil, err
@@ -56,7 +52,7 @@ func NewDatabaseClient(log *logrus.Entry, _env env.Core, authorizer cosmosdb.Aut
 		Timeout: 30 * time.Second,
 	}
 
-	return cosmosdb.NewDatabaseClient(log, c, h, os.Getenv("DATABASE_ACCOUNT_NAME")+"."+_env.Environment().CosmosDBDNSSuffix, authorizer), nil
+	return cosmosdb.NewDatabaseClient(log, c, h, databaseAccountName+"."+_env.Environment().CosmosDBDNSSuffix, authorizer), nil
 }
 
 func NewMasterKeyAuthorizer(ctx context.Context, _env env.Core, msiAuthorizer autorest.Authorizer) (cosmosdb.Authorizer, error) {
