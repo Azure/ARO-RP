@@ -11,12 +11,14 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/v20210901preview"
 	v20220401 "github.com/Azure/ARO-RP/pkg/api/v20220401"
 	v20220904 "github.com/Azure/ARO-RP/pkg/api/v20220904"
+	"github.com/Azure/ARO-RP/pkg/api/v20230610preview"
 )
 
 const apiv20200430Path = "github.com/Azure/ARO-RP/pkg/api/v20200430"
 const apiv20210901previewPath = "github.com/Azure/ARO-RP/pkg/api/v20210901preview"
 const apiv20220401Path = "github.com/Azure/ARO-RP/pkg/api/v20220401"
 const apiv20220904Path = "github.com/Azure/ARO-RP/pkg/api/v20220904"
+const apiv20230610previewPath = "github.com/Azure/ARO-RP/pkg/api/v20230610preview"
 
 type generator struct {
 	exampleSyncSetPutParameter                     func() interface{}
@@ -121,6 +123,41 @@ var apis = map[string]*generator{
 		exampleOpenShiftClusterListResponse:            v20220904.ExampleOpenShiftClusterListResponse,
 		exampleOpenShiftClusterAdminKubeconfigResponse: v20220904.ExampleOpenShiftClusterAdminKubeconfigResponse,
 		exampleOpenShiftVersionListResponse:            v20220904.ExampleOpenShiftVersionListResponse,
+		exampleOperationListResponse:                   api.ExampleOperationListResponse,
+
+		xmsEnum:            []string{"EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility"},
+		xmsSecretList:      []string{"kubeconfig", "kubeadminPassword", "secretResources"},
+		xmsIdentifiers:     []string{},
+		commonTypesVersion: "v3",
+		systemData:         true,
+		clusterManager:     true,
+		installVersionList: true,
+		kubeConfig:         true,
+	},
+	apiv20230610previewPath: {
+		exampleSyncSetPutParameter:                     v20230610preview.ExampleSyncSetPutParameter,
+		exampleSyncSetPatchParameter:                   v20230610preview.ExampleSyncSetPatchParameter,
+		exampleSyncSetResponse:                         v20230610preview.ExampleSyncSetResponse,
+		exampleSyncSetListResponse:                     v20230610preview.ExampleSyncSetListResponse,
+		exampleMachinePoolPutParameter:                 v20230610preview.ExampleMachinePoolPutParameter,
+		exampleMachinePoolPatchParameter:               v20230610preview.ExampleMachinePoolPatchParameter,
+		exampleMachinePoolResponse:                     v20230610preview.ExampleMachinePoolResponse,
+		exampleMachinePoolListResponse:                 v20230610preview.ExampleMachinePoolListResponse,
+		exampleSyncIdentityProviderPutParameter:        v20230610preview.ExampleSyncIdentityProviderPutParameter,
+		exampleSyncIdentityProviderPatchParameter:      v20230610preview.ExampleSyncIdentityProviderPatchParameter,
+		exampleSyncIdentityProviderResponse:            v20230610preview.ExampleSyncIdentityProviderResponse,
+		exampleSyncIdentityProviderListResponse:        v20230610preview.ExampleSyncIdentityProviderListResponse,
+		exampleSecretPutParameter:                      v20230610preview.ExampleSecretPutParameter,
+		exampleSecretPatchParameter:                    v20230610preview.ExampleSecretPatchParameter,
+		exampleSecretResponse:                          v20230610preview.ExampleSecretResponse,
+		exampleSecretListResponse:                      v20230610preview.ExampleSecretListResponse,
+		exampleOpenShiftClusterPutParameter:            v20230610preview.ExampleOpenShiftClusterPutParameter,
+		exampleOpenShiftClusterPatchParameter:          v20230610preview.ExampleOpenShiftClusterPatchParameter,
+		exampleOpenShiftClusterResponse:                v20230610preview.ExampleOpenShiftClusterResponse,
+		exampleOpenShiftClusterCredentialsResponse:     v20230610preview.ExampleOpenShiftClusterCredentialsResponse,
+		exampleOpenShiftClusterListResponse:            v20230610preview.ExampleOpenShiftClusterListResponse,
+		exampleOpenShiftClusterAdminKubeconfigResponse: v20230610preview.ExampleOpenShiftClusterAdminKubeconfigResponse,
+		exampleOpenShiftVersionListResponse:            v20230610preview.ExampleOpenShiftVersionListResponse,
 		exampleOperationListResponse:                   api.ExampleOperationListResponse,
 
 		xmsEnum:            []string{"EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility"},
