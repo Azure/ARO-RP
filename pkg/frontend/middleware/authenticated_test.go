@@ -27,53 +27,44 @@ func TestAuthenticatedForOCMAPIs(t *testing.T) {
 
 	r.HandleFunc("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/{ocmResourceType}/{ocmResourceName}",
 		func(w http.ResponseWriter, request *http.Request) {}).
-		Queries("api-version", "{api-version}")
+		Queries("api-version", "")
 	basePath := "https://server/subscriptions/0000-0000/resourcegroups/testrg/providers/testrpn/testrt/testrn/%s/myResource?api-version=2022-09-04"
 
 	for _, tt := range []struct {
-		name             string
-		method           string
-		ocmResourceType  string
-		systemDataHeader string
-		wantStatus       int
-		isValid          bool
-		mocks            func(_env *mock_env.MockInterface, req http.Request, isValid bool)
+		name                 string
+		method               string
+		ocmResourceType      string
+		systemDataHeader     string
+		wantStatus           int
+		isValid              bool
+		expectedValidateCall bool
 	}{
 		{
-			name:             "non ocm api called, system data header is not validated",
-			method:           "GET",
-			ocmResourceType:  "",
-			systemDataHeader: `{"systemData":{"lastModifiedBy":"unused"}}`,
-			wantStatus:       200,
-			isValid:          true,
-			mocks: func(_env *mock_env.MockInterface, req http.Request, isValid bool) {
-				_env.EXPECT().ArmClientAuthorizer().Return(clientauthorizer.NewAll())
-				_env.EXPECT().ValidateOCMClientID(req.Header.Get(ArmSystemDataHeaderKey)).Times(0)
-			},
+			name:                 "non ocm api called, system data header is not validated",
+			method:               "GET",
+			ocmResourceType:      "",
+			systemDataHeader:     `{"systemData":{"lastModifiedBy":"unused"}}`,
+			wantStatus:           200,
+			isValid:              true,
+			expectedValidateCall: false,
 		},
 		{
-			name:             "ocm api 'syncsets' validator returns true, success",
-			method:           "GET",
-			ocmResourceType:  "syncsets",
-			systemDataHeader: `{"systemData":{"lastModifiedBy":"abc-123"}}`,
-			wantStatus:       200,
-			isValid:          true,
-			mocks: func(_env *mock_env.MockInterface, req http.Request, isValid bool) {
-				_env.EXPECT().ArmClientAuthorizer().Return(clientauthorizer.NewAll())
-				_env.EXPECT().ValidateOCMClientID(req.Header.Get(ArmSystemDataHeaderKey)).Return(isValid)
-			},
+			name:                 "ocm api 'syncsets' validator returns true, success",
+			method:               "GET",
+			ocmResourceType:      "syncsets",
+			systemDataHeader:     `{"systemData":{"lastModifiedBy":"abc-123"}}`,
+			wantStatus:           200,
+			isValid:              true,
+			expectedValidateCall: true,
 		},
 		{
-			name:             "ocm api 'syncsets' validator returns false, forbidden",
-			method:           "GET",
-			ocmResourceType:  "syncsets",
-			systemDataHeader: `{"systemData":{"lastModifiedBy":"abc-123"}}`,
-			wantStatus:       403,
-			isValid:          false,
-			mocks: func(_env *mock_env.MockInterface, req http.Request, isValid bool) {
-				_env.EXPECT().ArmClientAuthorizer().Return(clientauthorizer.NewAll())
-				_env.EXPECT().ValidateOCMClientID(req.Header.Get(ArmSystemDataHeaderKey)).Return(isValid)
-			},
+			name:                 "ocm api 'syncsets' validator returns false, forbidden",
+			method:               "GET",
+			ocmResourceType:      "syncsets",
+			systemDataHeader:     `{"systemData":{"lastModifiedBy":"abc-123"}}`,
+			wantStatus:           403,
+			isValid:              false,
+			expectedValidateCall: true,
 		},
 	} {
 		var req *http.Request
@@ -95,7 +86,12 @@ func TestAuthenticatedForOCMAPIs(t *testing.T) {
 
 		req = mux.SetURLVars(req, vars)
 
-		tt.mocks(_env, *req, tt.isValid)
+		_env.EXPECT().ArmClientAuthorizer().Return(clientauthorizer.NewAll())
+		if tt.expectedValidateCall {
+			_env.EXPECT().ValidateOCMClientID(req.Header.Get(ArmSystemDataHeaderKey)).Return(tt.isValid)
+		} else {
+			_env.EXPECT().ValidateOCMClientID(req.Header.Get(ArmSystemDataHeaderKey)).Times(0)
+		}
 
 		rr := httptest.NewRecorder()
 
