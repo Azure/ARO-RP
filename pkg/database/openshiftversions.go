@@ -29,13 +29,8 @@ type OpenShiftVersions interface {
 	NewUUID() string
 }
 
-func NewOpenShiftVersions(ctx context.Context, isDevelopmentMode bool, dbc cosmosdb.DatabaseClient) (OpenShiftVersions, error) {
-	dbid, err := Name(isDevelopmentMode)
-	if err != nil {
-		return nil, err
-	}
-
-	collc := cosmosdb.NewCollectionClient(dbc, dbid)
+func NewOpenShiftVersions(ctx context.Context, isDevelopmentMode bool, dbc cosmosdb.DatabaseClient, dbName string) (OpenShiftVersions, error) {
+	collc := cosmosdb.NewCollectionClient(dbc, dbName)
 
 	documentClient := cosmosdb.NewOpenShiftVersionDocumentClient(collc, collOpenShiftVersion)
 	return NewOpenShiftVersionsWithProvidedClient(documentClient, uuid.DefaultGenerator), nil

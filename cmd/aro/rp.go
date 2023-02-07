@@ -110,37 +110,41 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	dbAsyncOperations, err := database.NewAsyncOperations(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	dbName, err := DBName(env.IsLocalDevelopmentMode())
+	if err != nil {
+		return err
+	}
+	dbAsyncOperations, err := database.NewAsyncOperations(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
 	if err != nil {
 		return err
 	}
 
-	dbClusterManagerConfiguration, err := database.NewClusterManagerConfigurations(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	dbClusterManagerConfiguration, err := database.NewClusterManagerConfigurations(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
 	if err != nil {
 		return err
 	}
 
-	dbBilling, err := database.NewBilling(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	dbBilling, err := database.NewBilling(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
 	if err != nil {
 		return err
 	}
 
-	dbGateway, err := database.NewGateway(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	dbGateway, err := database.NewGateway(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
 	if err != nil {
 		return err
 	}
 
-	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
 	if err != nil {
 		return err
 	}
 
-	dbSubscriptions, err := database.NewSubscriptions(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	dbSubscriptions, err := database.NewSubscriptions(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
 	if err != nil {
 		return err
 	}
 
-	dbOpenShiftVersions, err := database.NewOpenShiftVersions(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	dbOpenShiftVersions, err := database.NewOpenShiftVersions(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
 	if err != nil {
 		return err
 	}

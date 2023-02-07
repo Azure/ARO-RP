@@ -74,7 +74,12 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbGateway, err := database.NewGateway(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	dbName, err := DBName(_env.IsLocalDevelopmentMode())
+	if err != nil {
+		return err
+	}
+
+	dbGateway, err := database.NewGateway(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
 	if err != nil {
 		return err
 	}

@@ -96,17 +96,21 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbMonitors, err := database.NewMonitors(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	dbName, err := DBName(_env.IsLocalDevelopmentMode())
+	if err != nil {
+		return err
+	}
+	dbMonitors, err := database.NewMonitors(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
 	if err != nil {
 		return err
 	}
 
-	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
 	if err != nil {
 		return err
 	}
 
-	dbSubscriptions, err := database.NewSubscriptions(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	dbSubscriptions, err := database.NewSubscriptions(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
 	if err != nil {
 		return err
 	}

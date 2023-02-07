@@ -28,13 +28,8 @@ type AsyncOperations interface {
 }
 
 // NewAsyncOperations returns a new AsyncOperations
-func NewAsyncOperations(ctx context.Context, isLocalDevelopmentMode bool, dbc cosmosdb.DatabaseClient) (AsyncOperations, error) {
-	dbid, err := Name(isLocalDevelopmentMode)
-	if err != nil {
-		return nil, err
-	}
-
-	collc := cosmosdb.NewCollectionClient(dbc, dbid)
+func NewAsyncOperations(ctx context.Context, isLocalDevelopmentMode bool, dbc cosmosdb.DatabaseClient, dbName string) (AsyncOperations, error) {
+	collc := cosmosdb.NewCollectionClient(dbc, dbName)
 	client := cosmosdb.NewAsyncOperationDocumentClient(collc, collAsyncOperations)
 	return NewAsyncOperationsWithProvidedClient(client, uuid.DefaultGenerator), nil
 }

@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/ARO-RP/pkg/env"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -117,4 +118,16 @@ func ValidateVars(vars ...string) error {
 		}
 	}
 	return nil
+}
+
+func DBName(isLocalDevelopmentMode bool) (string, error) {
+	if !isLocalDevelopmentMode {
+		return "ARO", nil
+	}
+
+	if err := env.ValidateVars("DATABASE_NAME"); err != nil {
+		return "", fmt.Errorf("%v (development mode)", err.Error())
+	}
+
+	return os.Getenv("DATABASE_NAME"), nil
 }

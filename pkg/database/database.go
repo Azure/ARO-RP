@@ -6,9 +6,7 @@ package database
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"net/http"
-	"os"
 	"reflect"
 	"time"
 
@@ -90,16 +88,4 @@ func NewJSONHandle(aead encryption.AEAD) (*codec.JsonHandle, error) {
 	}
 
 	return h, nil
-}
-
-func Name(isLocalDevelopmentMode bool) (string, error) {
-	if !isLocalDevelopmentMode {
-		return "ARO", nil
-	}
-
-	if err := env.ValidateVars("DATABASE_NAME"); err != nil {
-		return "", fmt.Errorf("%v (development mode)", err.Error())
-	}
-
-	return os.Getenv("DATABASE_NAME"), nil
 }

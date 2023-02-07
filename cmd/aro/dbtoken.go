@@ -71,14 +71,14 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbid, err := database.Name(_env.IsLocalDevelopmentMode())
+	dbName, err := DBName(_env.IsLocalDevelopmentMode())
 	if err != nil {
 		return err
 	}
 
-	userc := cosmosdb.NewUserClient(dbc, dbid)
+	userc := cosmosdb.NewUserClient(dbc, dbName)
 
-	err = pkgdbtoken.ConfigurePermissions(ctx, dbid, userc)
+	err = pkgdbtoken.ConfigurePermissions(ctx, dbName, userc)
 	if err != nil {
 		return err
 	}

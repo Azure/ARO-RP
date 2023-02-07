@@ -29,13 +29,8 @@ type Billing interface {
 }
 
 // NewBilling returns a new Billing
-func NewBilling(ctx context.Context, isLocalDevelopmentMode bool, dbc cosmosdb.DatabaseClient) (Billing, error) {
-	dbid, err := Name(isLocalDevelopmentMode)
-	if err != nil {
-		return nil, err
-	}
-
-	collc := cosmosdb.NewCollectionClient(dbc, dbid)
+func NewBilling(ctx context.Context, isLocalDevelopmentMode bool, dbc cosmosdb.DatabaseClient, dbName string) (Billing, error) {
+	collc := cosmosdb.NewCollectionClient(dbc, dbName)
 
 	triggers := []*cosmosdb.Trigger{
 		{

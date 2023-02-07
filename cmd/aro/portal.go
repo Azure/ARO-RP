@@ -106,12 +106,16 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	dbName, err := DBName(_env.IsLocalDevelopmentMode())
+	if err != nil {
+		return err
+	}
+	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
 	if err != nil {
 		return err
 	}
 
-	dbPortal, err := database.NewPortal(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	dbPortal, err := database.NewPortal(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
 	if err != nil {
 		return err
 	}

@@ -75,7 +75,12 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	openShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	dbName, err := DBName(_env.IsLocalDevelopmentMode())
+	if err != nil {
+		return err
+	}
+
+	openShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
 	if err != nil {
 		return err
 	}
@@ -94,4 +99,16 @@ func main() {
 	if err := run(context.Background(), log); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func DBName(isLocalDevelopmentMode bool) (string, error) {
+	if !isLocalDevelopmentMode {
+		return "ARO", nil
+	}
+
+	if err := env.ValidateVars("DATABASE_NAME"); err != nil {
+		return "", fmt.Errorf("%v (development mode)", err.Error())
+	}
+
+	return os.Getenv("DATABASE_NAME"), nil
 }

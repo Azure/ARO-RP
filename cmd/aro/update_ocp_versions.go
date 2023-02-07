@@ -98,7 +98,11 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 		return nil, err
 	}
 
-	dbOpenShiftVersions, err := database.NewOpenShiftVersions(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	dbName, err := DBName(_env.IsLocalDevelopmentMode())
+	if err != nil {
+		return nil, err
+	}
+	dbOpenShiftVersions, err := database.NewOpenShiftVersions(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
 	if err != nil {
 		return nil, err
 	}
