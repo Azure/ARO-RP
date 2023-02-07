@@ -55,6 +55,7 @@ type frontend struct {
 	logMiddleware      middleware.LogMiddleware
 	validateMiddleware middleware.ValidateMiddleware
 	m                  middleware.MetricsMiddleware
+	authMiddleware     middleware.AuthMiddleware
 
 	dbAsyncOperations             database.AsyncOperations
 	dbClusterManagerConfiguration database.ClusterManagerConfigurations
@@ -131,6 +132,10 @@ func NewFrontend(ctx context.Context,
 		validateMiddleware: middleware.ValidateMiddleware{
 			Location: _env.Location(),
 			Apis:     api.APIs,
+		},
+		authMiddleware: middleware.AuthMiddleware{
+			AdminAuth: _env.AdminClientAuthorizer(),
+			ArmAuth:   _env.ArmClientAuthorizer(),
 		},
 		dbAsyncOperations:             dbAsyncOperations,
 		dbClusterManagerConfiguration: dbClusterManagerConfiguration,
@@ -433,13 +438,15 @@ func (f *frontend) setupRouter() *mux.Router {
 		w.Header().Set("Content-Type", "application/json")
 		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The requested path could not be found.")
 	})
-	r.NotFoundHandler = middleware.Authenticated(f.env)(r.NotFoundHandler)
+
+	r.NotFoundHandler = f.authMiddleware.Authenticate(r.NotFoundHandler)
 
 	unauthenticated := r.NewRoute().Subrouter()
 	f.unauthenticatedRoutes(unauthenticated)
 
 	authenticated := r.NewRoute().Subrouter()
-	authenticated.Use(middleware.Authenticated(f.env))
+	authenticated.Use(f.authMiddleware.Authenticate)
+
 	f.authenticatedRoutes(authenticated)
 
 	return r
