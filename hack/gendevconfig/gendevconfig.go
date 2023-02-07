@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	"github.com/ghodss/yaml"
@@ -17,7 +16,7 @@ import (
 )
 
 func run(ctx context.Context, log *logrus.Entry) error {
-	vars := []string{
+	enVars := []string{
 		"ADMIN_OBJECT_ID",
 		"AZURE_CLIENT_ID",
 		"AZURE_DBTOKEN_CLIENT_ID",
@@ -30,7 +29,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		"PARENT_DOMAIN_NAME",
 		"USER",
 	}
-	if err := validateEnvVars(vars...); err != nil {
+	if err := env.ValidateVars(enVars...); err != nil {
 		return err
 	}
 
@@ -55,18 +54,6 @@ func run(ctx context.Context, log *logrus.Entry) error {
 
 	_, err = os.Stdout.Write(b)
 	return err
-}
-
-// validateEnvVars iterates over all the elements of vars and
-// if it does not exist an environment variable with that name, it will return an error.
-// Otherwise it returns nil.
-func validateEnvVars(vars ...string) error {
-	for _, v := range vars {
-		if _, found := os.LookupEnv(v); !found {
-			return fmt.Errorf("environment variable %q unset", v)
-		}
-	}
-	return nil
 }
 
 func main() {
