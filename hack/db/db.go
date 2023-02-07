@@ -61,7 +61,8 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, authorizer)
+	dbAccountName := os.Getenv(DatabaseAccountName)
+	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, authorizer, dbAccountName)
 	if err != nil {
 		return err
 	}

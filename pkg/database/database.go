@@ -55,14 +55,10 @@ func NewDatabaseClient(log *logrus.Entry, _env env.Core, authorizer cosmosdb.Aut
 	return cosmosdb.NewDatabaseClient(log, c, h, databaseAccountName+"."+_env.Environment().CosmosDBDNSSuffix, authorizer), nil
 }
 
-func NewMasterKeyAuthorizer(ctx context.Context, _env env.Core, msiAuthorizer autorest.Authorizer) (cosmosdb.Authorizer, error) {
-	if err := env.ValidateVars("DATABASE_ACCOUNT_NAME"); err != nil {
-		return nil, err
-	}
-
+func NewMasterKeyAuthorizer(ctx context.Context, _env env.Core, msiAuthorizer autorest.Authorizer, databaseAccountName string) (cosmosdb.Authorizer, error) {
 	databaseaccounts := documentdb.NewDatabaseAccountsClient(_env.Environment(), _env.SubscriptionID(), msiAuthorizer)
 
-	keys, err := databaseaccounts.ListKeys(ctx, _env.ResourceGroup(), os.Getenv("DATABASE_ACCOUNT_NAME"))
+	keys, err := databaseaccounts.ListKeys(ctx, _env.ResourceGroup(), databaseAccountName)
 	if err != nil {
 		return nil, err
 	}

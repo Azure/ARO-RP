@@ -55,15 +55,18 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 
 	go g.Run()
 
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer)
+	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+		return err
+	}
+
+	dbAccountName := os.Getenv(DatabaseAccountName)
+
+	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer, dbAccountName)
 	if err != nil {
 		return err
 	}
 
-	if err := env.ValidateVars(DatabaseAccountName); err != nil {
-		return err
-	}
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, m, nil, os.Getenv(DatabaseAccountName))
+	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, m, nil, dbAccountName)
 	if err != nil {
 		return err
 	}
