@@ -16,7 +16,7 @@ import (
 )
 
 func run(ctx context.Context, log *logrus.Entry) error {
-	enVars := []string{
+	err := env.ValidateVars(
 		"ADMIN_OBJECT_ID",
 		"AZURE_CLIENT_ID",
 		"AZURE_DBTOKEN_CLIENT_ID",
@@ -27,9 +27,9 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		"AZURE_PORTAL_ELEVATED_GROUP_IDS",
 		"HOME",
 		"PARENT_DOMAIN_NAME",
-		"USER",
-	}
-	if err := env.ValidateVars(enVars...); err != nil {
+		"USER")
+
+	if err != nil {
 		return err
 	}
 

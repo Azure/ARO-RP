@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"strings"
@@ -29,12 +28,8 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	for _, key := range []string{
-		"AZURE_DBTOKEN_CLIENT_ID",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return fmt.Errorf("environment variable %q unset", key)
-		}
+	if err = env.ValidateVars("AZURE_DBTOKEN_CLIENT_ID"); err != nil {
+		return err
 	}
 
 	m := statsd.New(ctx, log.WithField("component", "gateway"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))

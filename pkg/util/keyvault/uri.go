@@ -11,6 +11,7 @@ import (
 )
 
 func URI(instancemetadata instancemetadata.InstanceMetadata, suffix string) (string, error) {
+	// TODO (Aldo): can't use env package due to import cycle errors
 	for _, key := range []string{
 		"KEYVAULT_PREFIX",
 	} {

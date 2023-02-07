@@ -61,10 +61,9 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 			return fmt.Errorf(`environment variable "PULL_SECRET" set`)
 		}
 	}
-	for _, key := range keys {
-		if _, found := os.LookupEnv(key); !found {
-			return fmt.Errorf("environment variable %q unset", key)
-		}
+
+	if err = env.ValidateVars(keys...); err != nil {
+		return err
 	}
 
 	err = _env.InitializeAuthorizers()

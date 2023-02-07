@@ -23,12 +23,8 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return fmt.Errorf("usage: CLUSTER=x %s {create,delete}", os.Args[0])
 	}
 
-	for _, key := range []string{
-		"CLUSTER",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return fmt.Errorf("environment variable %q unset", key)
-		}
+	if err := env.ValidateVars("CLUSTER"); err != nil {
+		return err
 	}
 
 	env, err := env.NewCore(ctx, log)

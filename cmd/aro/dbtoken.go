@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"os"
 
@@ -27,23 +26,13 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	for _, key := range []string{
-		"AZURE_GATEWAY_SERVICE_PRINCIPAL_ID",
-		"AZURE_DBTOKEN_CLIENT_ID",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return fmt.Errorf("environment variable %q unset", key)
-		}
+	if err := env.ValidateVars("AZURE_GATEWAY_SERVICE_PRINCIPAL_ID", "AZURE_DBTOKEN_CLIENT_ID"); err != nil {
+		return err
 	}
 
 	if !_env.IsLocalDevelopmentMode() {
-		for _, key := range []string{
-			"MDM_ACCOUNT",
-			"MDM_NAMESPACE",
-		} {
-			if _, found := os.LookupEnv(key); !found {
-				return fmt.Errorf("environment variable %q unset", key)
-			}
+		if err := env.ValidateVars("MDM_ACCOUNT", "MDM_NAMESPACE"); err != nil {
+			return err
 		}
 	}
 

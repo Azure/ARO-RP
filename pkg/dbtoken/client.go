@@ -31,15 +31,11 @@ type client struct {
 	url        string
 }
 
-func NewClient(env env.Core, authorizer autorest.Authorizer, insecureSkipVerify bool) (Client, error) {
+func NewClient(_env env.Core, authorizer autorest.Authorizer, insecureSkipVerify bool) (Client, error) {
 	url := "https://localhost:8445"
-	if !env.IsLocalDevelopmentMode() {
-		for _, key := range []string{
-			"DBTOKEN_URL",
-		} {
-			if _, found := os.LookupEnv(key); !found {
-				return nil, fmt.Errorf("environment variable %q unset", key)
-			}
+	if !_env.IsLocalDevelopmentMode() {
+		if err := env.ValidateVars("DBTOKEN_URL"); err != nil {
+			return nil, err
 		}
 
 		url = os.Getenv("DBTOKEN_URL")

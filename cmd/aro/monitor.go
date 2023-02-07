@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	"github.com/Azure/go-autorest/tracing"
@@ -32,15 +31,14 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	if !_env.IsLocalDevelopmentMode() {
-		for _, key := range []string{
+		err := env.ValidateVars(
 			"CLUSTER_MDM_ACCOUNT",
 			"CLUSTER_MDM_NAMESPACE",
 			"MDM_ACCOUNT",
-			"MDM_NAMESPACE",
-		} {
-			if _, found := os.LookupEnv(key); !found {
-				return fmt.Errorf("environment variable %q unset", key)
-			}
+			"MDM_NAMESPACE")
+
+		if err != nil {
+			return err
 		}
 	}
 

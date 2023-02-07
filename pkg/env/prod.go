@@ -64,27 +64,21 @@ type prod struct {
 }
 
 func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
-	for _, key := range []string{
-		"AZURE_FP_CLIENT_ID",
-		"DOMAIN_NAME",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return nil, fmt.Errorf("environment variable %q unset", key)
-		}
+	if err := ValidateVars("AZURE_FP_CLIENT_ID", "DOMAIN_NAME"); err != nil {
+		return nil, err
 	}
 
 	if !IsLocalDevelopmentMode() {
-		for _, key := range []string{
+		err := ValidateVars(
 			"CLUSTER_MDSD_CONFIG_VERSION",
 			"CLUSTER_MDSD_ACCOUNT",
 			"GATEWAY_DOMAINS",
 			"GATEWAY_RESOURCEGROUP",
 			"MDSD_ENVIRONMENT",
-			"CLUSTER_MDSD_NAMESPACE",
-		} {
-			if _, found := os.LookupEnv(key); !found {
-				return nil, fmt.Errorf("environment variable %q unset", key)
-			}
+			"CLUSTER_MDSD_NAMESPACE")
+
+		if err != nil {
+			return nil, err
 		}
 	}
 

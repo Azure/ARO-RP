@@ -432,20 +432,18 @@ func tearDownSelenium(ctx context.Context) error {
 }
 
 func setup(ctx context.Context) error {
-	for _, key := range []string{
+	err := env.ValidateVars(
 		"AZURE_CLIENT_ID",
 		"AZURE_CLIENT_SECRET",
 		"AZURE_SUBSCRIPTION_ID",
 		"AZURE_TENANT_ID",
 		"CLUSTER",
-		"LOCATION",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return fmt.Errorf("environment variable %q unset", key)
-		}
+		"LOCATION")
+
+	if err != nil {
+		return err
 	}
 
-	var err error
 	_env, err = env.NewCoreForCI(ctx, log)
 	if err != nil {
 		return err

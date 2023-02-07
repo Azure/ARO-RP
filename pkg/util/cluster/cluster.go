@@ -85,12 +85,8 @@ func (errs errors) Error() string {
 
 func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 	if env.IsLocalDevelopmentMode() {
-		for _, key := range []string{
-			"AZURE_FP_CLIENT_ID",
-		} {
-			if _, found := os.LookupEnv(key); !found {
-				return nil, fmt.Errorf("environment variable %q unset", key)
-			}
+		if err := env.ValidateVars("AZURE_FP_CLIENT_ID"); err != nil {
+			return nil, err
 		}
 	}
 

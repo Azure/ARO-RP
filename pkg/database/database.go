@@ -37,13 +37,9 @@ const (
 	collSubscriptions     = "Subscriptions"
 )
 
-func NewDatabaseClient(log *logrus.Entry, env env.Core, authorizer cosmosdb.Authorizer, m metrics.Emitter, aead encryption.AEAD) (cosmosdb.DatabaseClient, error) {
-	for _, key := range []string{
-		"DATABASE_ACCOUNT_NAME",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return nil, fmt.Errorf("environment variable %q unset", key)
-		}
+func NewDatabaseClient(log *logrus.Entry, _env env.Core, authorizer cosmosdb.Authorizer, m metrics.Emitter, aead encryption.AEAD) (cosmosdb.DatabaseClient, error) {
+	if err := env.ValidateVars("DATABASE_ACCOUNT_NAME"); err != nil {
+		return nil, err
 	}
 
 	h, err := NewJSONHandle(aead)
@@ -60,16 +56,12 @@ func NewDatabaseClient(log *logrus.Entry, env env.Core, authorizer cosmosdb.Auth
 		Timeout: 30 * time.Second,
 	}
 
-	return cosmosdb.NewDatabaseClient(log, c, h, os.Getenv("DATABASE_ACCOUNT_NAME")+"."+env.Environment().CosmosDBDNSSuffix, authorizer), nil
+	return cosmosdb.NewDatabaseClient(log, c, h, os.Getenv("DATABASE_ACCOUNT_NAME")+"."+_env.Environment().CosmosDBDNSSuffix, authorizer), nil
 }
 
 func NewMasterKeyAuthorizer(ctx context.Context, _env env.Core, msiAuthorizer autorest.Authorizer) (cosmosdb.Authorizer, error) {
-	for _, key := range []string{
-		"DATABASE_ACCOUNT_NAME",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return nil, fmt.Errorf("environment variable %q unset", key)
-		}
+	if err := env.ValidateVars("DATABASE_ACCOUNT_NAME"); err != nil {
+		return nil, err
 	}
 
 	databaseaccounts := documentdb.NewDatabaseAccountsClient(_env.Environment(), _env.SubscriptionID(), msiAuthorizer)
@@ -113,12 +105,8 @@ func Name(isLocalDevelopmentMode bool) (string, error) {
 		return "ARO", nil
 	}
 
-	for _, key := range []string{
-		"DATABASE_NAME",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return "", fmt.Errorf("environment variable %q unset (development mode)", key)
-		}
+	if err := env.ValidateVars("DATABASE_NAME"); err != nil {
+		return "", fmt.Errorf("%v (development mode)", err.Error())
 	}
 
 	return os.Getenv("DATABASE_NAME"), nil

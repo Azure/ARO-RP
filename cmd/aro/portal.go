@@ -6,7 +6,6 @@ package main
 import (
 	"context"
 	"crypto/x509"
-	"fmt"
 	"net"
 	"os"
 	"strings"
@@ -32,25 +31,23 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 	}
 
 	if !_env.IsLocalDevelopmentMode() {
-		for _, key := range []string{
+		err := env.ValidateVars(
 			"MDM_ACCOUNT",
 			"MDM_NAMESPACE",
-			"PORTAL_HOSTNAME",
-		} {
-			if _, found := os.LookupEnv(key); !found {
-				return fmt.Errorf("environment variable %q unset", key)
-			}
+			"PORTAL_HOSTNAME")
+
+		if err != nil {
+			return err
 		}
 	}
 
-	for _, key := range []string{
+	env.ValidateVars(
 		"AZURE_PORTAL_CLIENT_ID",
 		"AZURE_PORTAL_ACCESS_GROUP_IDS",
-		"AZURE_PORTAL_ELEVATED_GROUP_IDS",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return fmt.Errorf("environment variable %q unset", key)
-		}
+		"AZURE_PORTAL_ELEVATED_GROUP_IDS")
+
+	if err != nil {
+		return err
 	}
 
 	groupIDs, err := parseGroupIDs(os.Getenv("AZURE_PORTAL_ACCESS_GROUP_IDS"))
