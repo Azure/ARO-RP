@@ -8,7 +8,6 @@ import (
 	"flag"
 	"fmt"
 
-	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -80,10 +79,6 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
-	mcocli, err := mcoclient.NewForConfig(restConfig)
-	if err != nil {
-		return err
-	}
 	// TODO (NE): dh is sometimes passed, sometimes created later. Can we standardize?
 	dh, err := dynamichelper.New(log, restConfig)
 	if err != nil {
@@ -113,7 +108,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (workaround.NewReconciler(
 			log.WithField("controller", workaround.ControllerName),
-			client, kubernetescli, mcocli, restConfig)).SetupWithManager(mgr); err != nil {
+			client, kubernetescli, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", workaround.ControllerName, err)
 		}
 		if err = (routefix.NewReconciler(
@@ -133,17 +128,17 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (dnsmasq.NewClusterReconciler(
 			log.WithField("controller", dnsmasq.ClusterControllerName),
-			client, mcocli, dh)).SetupWithManager(mgr); err != nil {
+			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", dnsmasq.ClusterControllerName, err)
 		}
 		if err = (dnsmasq.NewMachineConfigReconciler(
 			log.WithField("controller", dnsmasq.MachineConfigControllerName),
-			client, mcocli, dh)).SetupWithManager(mgr); err != nil {
+			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", dnsmasq.MachineConfigControllerName, err)
 		}
 		if err = (dnsmasq.NewMachineConfigPoolReconciler(
 			log.WithField("controller", dnsmasq.MachineConfigPoolControllerName),
-			client, mcocli, dh)).SetupWithManager(mgr); err != nil {
+			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", dnsmasq.MachineConfigPoolControllerName, err)
 		}
 		if err = (node.NewReconciler(

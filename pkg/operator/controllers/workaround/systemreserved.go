@@ -8,11 +8,12 @@ import (
 	"encoding/json"
 
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
-	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/autosizednodes"
@@ -23,7 +24,7 @@ import (
 type systemreserved struct {
 	log *logrus.Entry
 
-	mcocli mcoclient.Interface
+	client client.Client
 	dh     dynamichelper.Interface
 
 	versionFixed *version.Version
@@ -31,13 +32,13 @@ type systemreserved struct {
 
 var _ Workaround = &systemreserved{}
 
-func NewSystemReserved(log *logrus.Entry, mcocli mcoclient.Interface, dh dynamichelper.Interface) *systemreserved {
+func NewSystemReserved(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *systemreserved {
 	verFixed, err := version.ParseVersion("4.99.0") // TODO set this correctly when known.
 	utilruntime.Must(err)
 
 	return &systemreserved{
 		log:          log,
-		mcocli:       mcocli,
+		client:       client,
 		dh:           dh,
 		versionFixed: verFixed,
 	}
@@ -91,7 +92,8 @@ func (sr *systemreserved) Ensure(ctx context.Context) error {
 
 	// Step 1. Add label to worker MachineConfigPool.
 	// Get the worker MachineConfigPool, modify it to add a label aro.openshift.io/limits: "", and apply the modified config.
-	mcp, err := sr.mcocli.MachineconfigurationV1().MachineConfigPools().Get(ctx, workerMachineConfigPoolName, metav1.GetOptions{})
+	mcp := &mcv1.MachineConfigPool{}
+	err := sr.client.Get(ctx, types.NamespacedName{Name: workerMachineConfigPoolName}, mcp)
 	if err != nil {
 		return err
 	}
@@ -102,7 +104,7 @@ func (sr *systemreserved) Ensure(ctx context.Context) error {
 		}
 		mcp.Labels[labelName] = labelValue
 
-		_, err = sr.mcocli.MachineconfigurationV1().MachineConfigPools().Update(ctx, mcp, metav1.UpdateOptions{})
+		err = sr.client.Update(ctx, mcp)
 		if err != nil {
 			return err
 		}
@@ -119,8 +121,8 @@ func (sr *systemreserved) Ensure(ctx context.Context) error {
 
 func (sr *systemreserved) Remove(ctx context.Context) error {
 	sr.log.Debug("remove systemreserved")
-
-	mcp, err := sr.mcocli.MachineconfigurationV1().MachineConfigPools().Get(ctx, workerMachineConfigPoolName, metav1.GetOptions{})
+	mcp := &mcv1.MachineConfigPool{}
+	err := sr.client.Get(ctx, types.NamespacedName{Name: workerMachineConfigPoolName}, mcp)
 	if err != nil {
 		return err
 	}
@@ -130,7 +132,7 @@ func (sr *systemreserved) Remove(ctx context.Context) error {
 	}
 	delete(mcp.Labels, labelName)
 
-	_, err = sr.mcocli.MachineconfigurationV1().MachineConfigPools().Update(ctx, mcp, metav1.UpdateOptions{})
+	err = sr.client.Update(ctx, mcp)
 	if err != nil {
 		return err
 	}
