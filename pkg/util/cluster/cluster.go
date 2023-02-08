@@ -27,8 +27,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	v20220401 "github.com/Azure/ARO-RP/pkg/api/v20220401"
-	mgmtredhatopenshift20220401 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2022-04-01/redhatopenshift"
+	v20220904 "github.com/Azure/ARO-RP/pkg/api/v20220904"
+	mgmtredhatopenshift20220904 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2022-09-04/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -140,8 +140,11 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 }
 
 func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName string) error {
-	_, err := c.openshiftclustersv20200430.Get(ctx, vnetResourceGroup, clusterName)
+	clusterGet, err := c.openshiftclustersv20220904.Get(ctx, vnetResourceGroup, clusterName)
 	if err == nil {
+		if clusterGet.ProvisioningState == mgmtredhatopenshift20220904.Failed {
+			return fmt.Errorf("cluster exists and is in failed provisioning state, please delete and retry")
+		}
 		c.log.Print("cluster already exists, skipping create")
 		return nil
 	}
@@ -339,12 +342,15 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 
 func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, workerSubnet string) {
 	// pick a random 23 in range [10.3.0.0, 10.127.255.0]
-	// 10.0.0.0 is used by dev-vnet to host CI
-	// 10.1.0.0 is used by rp-vnet to host Proxy VM
-	// 10.2.0.0 is used by dev-vpn-vnet to host VirtualNetworkGateway
+	// 10.0.0.0/16 is used by dev-vnet to host CI
+	// 10.1.0.0/24 is used by rp-vnet to host Proxy VM
+	// 10.2.0.0/24 is used by dev-vpn-vnet to host VirtualNetworkGateway
 	var x, y int
 	rand.Seed(time.Now().UnixNano())
-	for x == 0 && y == 0 {
+	// Local Dev clusters are limited to /16 dev-vnet
+	if !c.ci {
+		x, y = 0, 2*rand.Intn(128)
+	} else {
 		x, y = rand.Intn((124))+3, 2*rand.Intn(128)
 	}
 	vnetPrefix = fmt.Sprintf("10.%d.%d.0/23", x, y)
@@ -489,19 +495,19 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
 	}
 
-	ext := api.APIs[v20220401.APIVersion].OpenShiftClusterConverter.ToExternal(&oc)
+	ext := api.APIs[v20220904.APIVersion].OpenShiftClusterConverter.ToExternal(&oc)
 	data, err := json.Marshal(ext)
 	if err != nil {
 		return err
 	}
 
-	ocExt := mgmtredhatopenshift20220401.OpenShiftCluster{}
+	ocExt := mgmtredhatopenshift20220904.OpenShiftCluster{}
 	err = json.Unmarshal(data, &ocExt)
 	if err != nil {
 		return err
 	}
 
-	return c.openshiftclustersv20220401.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, ocExt)
+	return c.openshiftclustersv20220904.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, ocExt)
 }
 
 func (c *Cluster) registerSubscription(ctx context.Context) error {

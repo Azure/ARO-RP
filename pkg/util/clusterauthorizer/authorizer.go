@@ -78,7 +78,7 @@ func (a *azRefreshableAuthorizer) NewRefreshableAuthorizerToken(ctx context.Cont
 
 // AzCredentials gets Cluster Service Principal credentials from the Kubernetes secrets
 func AzCredentials(ctx context.Context, kubernetescli kubernetes.Interface) (*Credentials, error) {
-	mysec, err := kubernetescli.CoreV1().Secrets(azureCredentialSecretNameSpace).Get(ctx, azureCredentialSecretName, metav1.GetOptions{})
+	mysec, err := kubernetescli.CoreV1().Secrets(AzureCredentialSecretNameSpace).Get(ctx, AzureCredentialSecretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}

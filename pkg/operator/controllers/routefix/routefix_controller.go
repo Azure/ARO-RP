@@ -6,14 +6,15 @@ package routefix
 import (
 	"context"
 
+	configv1 "github.com/openshift/api/config/v1"
 	securityv1 "github.com/openshift/api/security/v1"
-	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -23,7 +24,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -38,10 +38,10 @@ const (
 type Reconciler struct {
 	log *logrus.Entry
 
-	arocli        aroclient.Interface
-	configcli     configclient.Interface
 	kubernetescli kubernetes.Interface
 	securitycli   securityclient.Interface
+
+	client client.Client
 
 	restConfig *rest.Config
 	verFixed46 *version.Version
@@ -54,13 +54,12 @@ var (
 )
 
 // NewReconciler creates a new Reconciler
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, configcli configclient.Interface, kubernetescli kubernetes.Interface, securitycli securityclient.Interface, restConfig *rest.Config) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface, securitycli securityclient.Interface, restConfig *rest.Config) *Reconciler {
 	return &Reconciler{
 		log:           log,
-		arocli:        arocli,
-		configcli:     configcli,
 		kubernetescli: kubernetescli,
 		securitycli:   securitycli,
+		client:        client,
 		restConfig:    restConfig,
 		verFixed46:    verFixed46,
 		verFixed47:    verFixed47,
@@ -69,20 +68,28 @@ func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, configcli conf
 
 // Reconcile fixes the daemonset Routefix
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	instance := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		// controller is disabled
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
+
+	r.log.Debug("running")
 
 	// cluster version is not set to final until upgrade is completed. We need to
 	// detect if desired version is with the fix, so we can prevent stuck upgrade
 	// by deleting fix resources
-	clusterVersion, err := version.GetClusterDesiredVersion(ctx, r.configcli)
+	cv := &configv1.ClusterVersion{}
+	err = r.client.Get(ctx, types.NamespacedName{Name: "version"}, cv)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	clusterVersion, err := version.ParseVersion(cv.Status.Desired.Version)
 	if err != nil {
 		r.log.Errorf("error getting the OpenShift desired version: %v", err)
 		return reconcile.Result{}, err

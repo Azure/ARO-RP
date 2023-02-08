@@ -11,6 +11,7 @@ import (
 	net "net"
 	reflect "reflect"
 
+	azidentity "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	compute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	autorest "github.com/Azure/go-autorest/autorest"
 	gomock "github.com/golang/mock/gomock"
@@ -436,6 +437,21 @@ func (m *MockInterface) FPClientID() string {
 func (mr *MockInterfaceMockRecorder) FPClientID() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FPClientID", reflect.TypeOf((*MockInterface)(nil).FPClientID))
+}
+
+// FPNewClientCertificateCredential mocks base method.
+func (m *MockInterface) FPNewClientCertificateCredential(arg0 string) (*azidentity.ClientCertificateCredential, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FPNewClientCertificateCredential", arg0)
+	ret0, _ := ret[0].(*azidentity.ClientCertificateCredential)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FPNewClientCertificateCredential indicates an expected call of FPNewClientCertificateCredential.
+func (mr *MockInterfaceMockRecorder) FPNewClientCertificateCredential(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FPNewClientCertificateCredential", reflect.TypeOf((*MockInterface)(nil).FPNewClientCertificateCredential), arg0)
 }
 
 // FeatureIsSet mocks base method.

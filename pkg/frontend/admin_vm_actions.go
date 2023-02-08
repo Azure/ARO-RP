@@ -11,43 +11,35 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 )
 
-type azVmActionsWrapper struct {
-	vmName string
-	doc    *api.OpenShiftClusterDocument
-}
-
-func (f *frontend) newAzureActionsWrapper(log *logrus.Entry, ctx context.Context, vmName, resourceID string, vars map[string]string) (azVmActionsWrapper, error) {
-	err := validateAdminVMName(vmName)
+func (f *frontend) prepareAdminActions(log *logrus.Entry, ctx context.Context, vmName, resourceID string, vars map[string]string) (azureActions adminactions.AzureActions, doc *api.OpenShiftClusterDocument, err error) {
+	err = validateAdminVMName(vmName)
 	if err != nil {
-		return azVmActionsWrapper{}, err
-	}
-	if err != nil {
-		return azVmActionsWrapper{}, err
+		return nil, nil, err
 	}
 
-	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
+	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
+	doc, err = f.dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return azVmActionsWrapper{}, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "",
-			"The Resource '%s/%s' under resource group '%s' was not found.",
-			vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+		return nil, nil,
+			api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "",
+				"The Resource '%s/%s' under resource group '%s' was not found.",
+				resType, resName, resGroupName)
 	case err != nil:
-		return azVmActionsWrapper{}, err
+		return nil, nil, err
 	}
 
 	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
 	if err != nil {
-		return azVmActionsWrapper{}, err
+		return nil, nil, err
 	}
 
-	f.adminAction, err = f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
+	azureActions, err = f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
 	if err != nil {
-		return azVmActionsWrapper{}, err
+		return nil, nil, err
 	}
-	return azVmActionsWrapper{
-		vmName: vmName,
-		doc:    doc,
-	}, nil
+	return azureActions, doc, err
 }

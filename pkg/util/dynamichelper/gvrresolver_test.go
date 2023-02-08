@@ -4,33 +4,43 @@ package dynamichelper
 // Licensed under the Apache License 2.0.
 
 import (
-	"net/http"
 	"reflect"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"github.com/Azure/ARO-RP/pkg/api"
+	"k8s.io/client-go/restmapper"
 )
 
 func TestFindGVR(t *testing.T) {
 	tests := []struct {
 		name      string
-		resources []*metav1.APIResourceList
+		resources []*restmapper.APIGroupResources
 		kind      string
 		want      *schema.GroupVersionResource
 		wantErr   error
 	}{
 		{
 			name: "find one",
-			resources: []*metav1.APIResourceList{
+			resources: []*restmapper.APIGroupResources{
 				{
-					GroupVersion: "v1",
-					APIResources: []metav1.APIResource{
-						{
-							Name: "configmaps",
-							Kind: "ConfigMap",
+					Group: metav1.APIGroup{
+						Name: "",
+						Versions: []metav1.GroupVersionForDiscovery{
+							{
+								GroupVersion: "v1",
+								Version:      "v1",
+							},
+						},
+					},
+					VersionedResources: map[string][]metav1.APIResource{
+						"v1": {
+							{
+								Name:         "configmaps",
+								SingularName: "configmap",
+								Kind:         "ConfigMap",
+							},
 						},
 					},
 				},
@@ -40,22 +50,35 @@ func TestFindGVR(t *testing.T) {
 		},
 		{
 			name: "find best version",
-			resources: []*metav1.APIResourceList{
+			resources: []*restmapper.APIGroupResources{
 				{
-					GroupVersion: "v1",
-					APIResources: []metav1.APIResource{
-						{
-							Name: "configmaps",
-							Kind: "ConfigMap",
+					Group: metav1.APIGroup{
+						Name: "",
+						Versions: []metav1.GroupVersionForDiscovery{
+							{
+								GroupVersion: "v1",
+								Version:      "v1",
+							},
+							{
+								GroupVersion: "v1beta1",
+								Version:      "v1beta1",
+							},
 						},
 					},
-				},
-				{
-					GroupVersion: "v1beta1",
-					APIResources: []metav1.APIResource{
-						{
-							Name: "configmaps",
-							Kind: "ConfigMap",
+					VersionedResources: map[string][]metav1.APIResource{
+						"v1": {
+							{
+								Name:         "configmaps",
+								SingularName: "configmap",
+								Kind:         "ConfigMap",
+							},
+						},
+						"v1beta1": {
+							{
+								Name:         "configmaps",
+								SingularName: "configmap",
+								Kind:         "ConfigMap",
+							},
 						},
 					},
 				},
@@ -65,13 +88,24 @@ func TestFindGVR(t *testing.T) {
 		},
 		{
 			name: "find full group.resource",
-			resources: []*metav1.APIResourceList{
+			resources: []*restmapper.APIGroupResources{
 				{
-					GroupVersion: "metal3.io/v1alpha1",
-					APIResources: []metav1.APIResource{
-						{
-							Name: "baremetalhosts",
-							Kind: "BareMetalHost",
+					Group: metav1.APIGroup{
+						Name: "metal3.io",
+						Versions: []metav1.GroupVersionForDiscovery{
+							{
+								GroupVersion: "metal3.io/v1alpha1",
+								Version:      "v1alpha1",
+							},
+						},
+					},
+					VersionedResources: map[string][]metav1.APIResource{
+						"v1alpha1": {
+							{
+								Name:         "baremetalhosts",
+								SingularName: "baremetalhost",
+								Kind:         "BareMetalHost",
+							},
 						},
 					},
 				},
@@ -81,57 +115,83 @@ func TestFindGVR(t *testing.T) {
 		},
 		{
 			name: "no sub.resources",
-			resources: []*metav1.APIResourceList{
+			resources: []*restmapper.APIGroupResources{
 				{
-					GroupVersion: "metal3.io/v1alpha1",
-					APIResources: []metav1.APIResource{
-						{
-							Name: "baremetalhosts/status",
-							Kind: "BareMetalHost",
+					Group: metav1.APIGroup{
+						Name: "metal3.io",
+						Versions: []metav1.GroupVersionForDiscovery{
+							{
+								GroupVersion: "metal3.io/v1alpha1",
+								Version:      "v1alpha1",
+							},
+						},
+					},
+					VersionedResources: map[string][]metav1.APIResource{
+						"v1alpha1": {
+							{
+								Name:         "baremetalhosts",
+								SingularName: "baremetalhost",
+								Kind:         "BareMetalHost",
+							},
 						},
 					},
 				},
 			},
-			kind: "baremetalhost/status",
-			wantErr: api.NewCloudError(
-				http.StatusBadRequest, api.CloudErrorCodeNotFound,
-				"", "The groupKind '%s' was not found.", "baremetalhost/status"),
+			kind:    "baremetalhost/status",
+			wantErr: &meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{Resource: "baremetalhost/status"}},
 		},
 		{
 			name:      "empty resources",
-			resources: []*metav1.APIResourceList{},
+			resources: []*restmapper.APIGroupResources{},
 			kind:      "configmap",
-			wantErr: api.NewCloudError(
-				http.StatusBadRequest, api.CloudErrorCodeNotFound,
-				"", "The groupKind '%s' was not found.", "configmap"),
+			wantErr:   &meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{Resource: "configmap"}},
 		},
 		{
 			name: "find all kinds",
-			resources: []*metav1.APIResourceList{
+			resources: []*restmapper.APIGroupResources{
 				{
-					GroupVersion: "metal3.io/v1alpha1",
-					APIResources: []metav1.APIResource{
-						{
-							Name: "baremetalhosts",
-							Kind: "BareMetalHost",
+					Group: metav1.APIGroup{
+						Name: "metal3.io",
+						Versions: []metav1.GroupVersionForDiscovery{
+							{
+								GroupVersion: "metal3.io/v1alpha1",
+								Version:      "v1alpha1",
+							},
+						},
+					},
+					VersionedResources: map[string][]metav1.APIResource{
+						"v1alpha1": {
+							{
+								Name:         "baremetalhosts",
+								SingularName: "baremetalhost",
+								Kind:         "BareMetalHost",
+							},
 						},
 					},
 				},
 				{
-					GroupVersion: "plastic.io/v1alpha1",
-					APIResources: []metav1.APIResource{
-						{
-							Name: "plastichosts",
-							Kind: "BareMetalHost",
+					Group: metav1.APIGroup{
+						Name: "plastic.io",
+						Versions: []metav1.GroupVersionForDiscovery{
+							{
+								GroupVersion: "plastic.io/v1alpha1",
+								Version:      "v1alpha1",
+							},
+						},
+					},
+					VersionedResources: map[string][]metav1.APIResource{
+						"v1alpha1": {
+							{
+								Name:         "baremetalhosts",
+								SingularName: "baremetalhost",
+								Kind:         "BareMetalHost",
+							},
 						},
 					},
 				},
 			},
 			kind: "baremetalhost",
-			want: nil,
-			wantErr: api.NewCloudError(
-				http.StatusBadRequest, api.CloudErrorCodeInvalidParameter,
-				"", "The groupKind '%s' matched multiple groupKinds (baremetalhost.metal3.io, baremetalhost.plastic.io).", "baremetalhost"),
+			want: &schema.GroupVersionResource{Group: "metal3.io", Version: "v1alpha1", Resource: "baremetalhosts"},
 		},
 	}
 
@@ -141,10 +201,10 @@ func TestFindGVR(t *testing.T) {
 
 			got, err := r.Resolve(tt.kind, "")
 			if !reflect.DeepEqual(err, tt.wantErr) {
-				t.Error(err)
+				t.Errorf("got: %#v, expected: %#v", err, tt.wantErr)
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Error(got)
+				t.Errorf("got: %#v, expected: %#v", got, tt.want)
 			}
 		})
 	}

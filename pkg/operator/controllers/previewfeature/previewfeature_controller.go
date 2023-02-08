@@ -9,7 +9,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -19,7 +19,6 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aropreviewv1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/preview.aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/previewfeature/nsgflowlogs"
 	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -40,28 +39,32 @@ type feature interface {
 type Reconciler struct {
 	log *logrus.Entry
 
-	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
 	maocli        machineclient.Interface
+
+	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface, maocli machineclient.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface, maocli machineclient.Interface) *Reconciler {
 	return &Reconciler{
 		log:           log,
-		arocli:        arocli,
 		kubernetescli: kubernetescli,
 		maocli:        maocli,
+		client:        client,
 	}
 }
 
 // Reconcile reconciles ARO preview features
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.arocli.PreviewV1alpha1().PreviewFeatures().Get(ctx, aropreviewv1alpha1.SingletonPreviewFeatureName, metav1.GetOptions{})
+	r.log.Debug("running")
+	instance := &aropreviewv1alpha1.PreviewFeature{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: aropreviewv1alpha1.SingletonPreviewFeatureName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	clusterInstance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	clusterInstance := &arov1alpha1.Cluster{}
+	err = r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, clusterInstance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

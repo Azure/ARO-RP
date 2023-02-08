@@ -7,24 +7,24 @@ import (
 	"fmt"
 )
 
-func (f *frontend) validateOcmResourceType(vars map[string]string) error {
-	badRequestError := fmt.Errorf("the resource type '%s' is not valid for api version '%s'", vars["ocmResourceType"], vars["api-version"])
+func (f *frontend) validateOcmResourceType(apiVersion, ocmResourceType string) error {
+	badRequestError := fmt.Errorf("the resource type '%s' is not valid for api version '%s'", ocmResourceType, apiVersion)
 
-	switch vars["ocmResourceType"] {
+	switch ocmResourceType {
 	case "syncset":
-		if f.apis[vars["api-version"]].SyncSetConverter == nil {
+		if f.apis[apiVersion].SyncSetConverter == nil {
 			return badRequestError
 		}
 	case "machinepool":
-		if f.apis[vars["api-version"]].MachinePoolConverter == nil {
+		if f.apis[apiVersion].MachinePoolConverter == nil {
 			return badRequestError
 		}
 	case "syncidentityprovider":
-		if f.apis[vars["api-version"]].SyncIdentityProviderConverter == nil {
+		if f.apis[apiVersion].SyncIdentityProviderConverter == nil {
 			return badRequestError
 		}
 	case "secret":
-		if f.apis[vars["api-version"]].SecretConverter == nil {
+		if f.apis[apiVersion].SecretConverter == nil {
 			return badRequestError
 		}
 	default:

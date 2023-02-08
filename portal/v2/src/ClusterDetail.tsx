@@ -266,6 +266,7 @@ export function ClusterDetailPanel(props: {
 
   return (
     <Panel
+      id="ClusterDetailPanel"
       isOpen={isOpen}
       type={PanelType.custom}
       onDismiss={_dismissPanel}

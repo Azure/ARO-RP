@@ -1,5 +1,5 @@
-# We need to manually set PasswordAuthentication to true in order for the VMSS Access JIT to work
 echo "setting ssh password authentication"
+# We need to manually set PasswordAuthentication to true in order for the VMSS Access JIT to work
 sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
 systemctl reload sshd.service
 
@@ -13,15 +13,12 @@ xfs_growfs /
 lvextend -l +100%FREE /dev/rootvg/varlv
 xfs_growfs /var
 
-# avoid "error: db5 error(-30969) from dbenv->open: BDB0091 DB_VERSION_MISMATCH: Database environment version mismatch"
-echo "importing rpm repositories"
-rm -f /var/lib/rpm/__db*
 
-rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
 rpm --import https://packages.microsoft.com/keys/microsoft.asc
 
 for attempt in {1..5}; do
-  yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm && break
+  yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && break
   if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
 done
 
@@ -81,15 +78,13 @@ semanage fcontext -a -t var_log_t "/var/log/journal(/.*)?"
 mkdir -p /var/log/journal
 
 for attempt in {1..5}; do
-yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms -y install clamav azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security docker openssl-perl python3 && break
+  yum -y install clamav azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security podman-docker openssl-perl python3 && break
   # hack - we are installing python3 on hosts due to an issue with Azure Linux Extensions https://github.com/Azure/azure-linux-extensions/pull/1505
   if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
 done
 
-rpm -e $(rpm -qa | grep ^abrt-)
-
-# https://access.redhat.com/security/cve/cve-2020-13401
 echo "applying firewall rules"
+# https://access.redhat.com/security/cve/cve-2020-13401
 cat >/etc/sysctl.d/02-disable-accept-ra.conf <<'EOF'
 net.ipv6.conf.all.accept_ra=0
 EOF
@@ -102,6 +97,7 @@ sysctl --system
 firewall-cmd --add-port=80/tcp --permanent
 firewall-cmd --add-port=443/tcp --permanent
 
+echo "logging into prod acr"
 export AZURE_CLOUD_NAME=$AZURECLOUDNAME
 az login -i --allow-no-subscriptions
 
@@ -112,9 +108,12 @@ az login -i --allow-no-subscriptions
 # not show on az login -i, which is why the below line is commented.
 # az account set -s "$SUBSCRIPTIONID"
 
-echo "logging into prod acr"
-systemctl start docker.service
-az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
+# Suppress emulation output for podman instead of docker for az acr compatability
+mkdir -p /etc/containers/
+touch /etc/containers/nodocker
+
+mkdir -p /root/.docker
+REGISTRY_AUTH_FILE=/root/.docker/config.json az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
 
 MDMIMAGE="${RPIMAGE%%/*}/${MDMIMAGE##*/}"
 docker pull "$MDMIMAGE"
@@ -149,8 +148,8 @@ echo "FLUENTBITIMAGE=$FLUENTBITIMAGE" >/etc/sysconfig/fluentbit
 
 cat >/etc/systemd/system/fluentbit.service <<'EOF'
 [Unit]
-After=docker.service
-Requires=docker.service
+After=network-online.target
+Wants=network-online.target
 StartLimitIntervalSec=0
 
 [Service]
@@ -168,7 +167,6 @@ ExecStart=/usr/bin/docker run \
   -v /etc/fluentbit/fluentbit.conf:/etc/fluentbit/fluentbit.conf \
   -v /var/lib/fluent:/var/lib/fluent:z \
   -v /var/log/journal:/var/log/journal:ro \
-  -v /run/log/journal:/run/log/journal:ro \
   -v /etc/machine-id:/etc/machine-id:ro \
   $FLUENTBITIMAGE \
   -c /etc/fluentbit/fluentbit.conf
@@ -194,8 +192,8 @@ EOF
 mkdir /var/etw
 cat >/etc/systemd/system/mdm.service <<'EOF'
 [Unit]
-After=docker.service
-Requires=docker.service
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 EnvironmentFile=/etc/sysconfig/mdm
@@ -242,8 +240,8 @@ EOF
 
 cat >/etc/systemd/system/aro-gateway.service <<'EOF'
 [Unit]
-After=docker.service
-Requires=docker.service
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 EnvironmentFile=/etc/sysconfig/aro-gateway
@@ -296,6 +294,8 @@ EOF
 cat >/etc/systemd/system/download-$var-credentials.timer <<EOF
 [Unit]
 Description=Periodic $var credentials refresh
+After=network-online.target
+Wants=network-online.target
 
 [Timer]
 OnBootSec=0min
@@ -316,7 +316,20 @@ echo "Download \$COMPONENT credentials"
 
 TEMP_DIR=\$(mktemp -d)
 export AZURE_CONFIG_DIR=\$(mktemp -d)
-az login -i --allow-no-subscriptions
+
+echo "Logging into Azure..."
+RETRIES=3
+while [ "\$RETRIES" -gt 0 ]; do
+    if az login -i --allow-no-subscriptions
+    then
+        echo "az login successful"
+        break
+    else
+        echo "az login failed. Retrying..."
+        let RETRIES-=1
+        sleep 5
+    fi
+done
 
 trap "cleanup" EXIT
 
@@ -363,7 +376,7 @@ systemctl enable download-mdm-credentials.timer
 
 /usr/local/bin/download-credentials.sh mdsd
 /usr/local/bin/download-credentials.sh mdm
-MDSDCERTIFICATESAN=$(openssl x509 -in /var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem -noout -subject | sed -e 's/.*CN=//')
+MDSDCERTIFICATESAN=$(openssl x509 -in /var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem -noout -subject | sed -e 's/.*CN = //')
 
 cat >/etc/systemd/system/watch-mdm-credentials.service <<EOF
 [Unit]
@@ -455,4 +468,4 @@ done
 
 echo "rebooting"
 restorecon -RF /var/log/*
-(sleep 120; reboot) &
+(sleep 30; reboot) &

@@ -20,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 )
 
 const (
@@ -35,30 +34,33 @@ var alertManagerName = types.NamespacedName{Name: "alertmanager-main", Namespace
 type Reconciler struct {
 	log *logrus.Entry
 
-	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
+
+	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface) *Reconciler {
 	return &Reconciler{
 		log:           log,
-		arocli:        arocli,
 		kubernetescli: kubernetescli,
+		client:        client,
 	}
 }
 
 // Reconcile makes sure that the Alertmanager default webhook is set.
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	instance := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		// controller is disabled
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
+	r.log.Debug("running")
 	return reconcile.Result{}, r.setAlertManagerWebhook(ctx, "http://aro-operator-master.openshift-azure-operator.svc.cluster.local:8080/healthz/ready")
 }
 
@@ -117,8 +119,6 @@ func (r *Reconciler) setAlertManagerWebhook(ctx context.Context, addr string) er
 
 // SetupWithManager setup our manager
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.log.Info("starting alertmanager sink")
-
 	isAlertManagerPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return o.GetName() == alertManagerName.Name && o.GetNamespace() == alertManagerName.Namespace
 	})

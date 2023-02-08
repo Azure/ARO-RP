@@ -99,7 +99,7 @@ func GetLogger() *logrus.Entry {
 
 	l, err := logrus.ParseLevel(*loglevel)
 	if err == nil {
-		logrus.SetLevel(l)
+		logger.SetLevel(l)
 	} else {
 		log.Warn(err)
 	}

@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -57,8 +56,6 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			t := time.Now()
 
-			vars := mux.Vars(r)
-
 			r.Body = &logReadCloser{ReadCloser: r.Body}
 			w = &logResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 
@@ -69,7 +66,7 @@ func Log(env env.Core, auditLog, baseLog *logrus.Entry) func(http.Handler) http.
 				RequestTime:     t,
 			}
 
-			if vars["api-version"] == admin.APIVersion || isAdminOp(r) {
+			if r.URL.Query().Get(api.APIVersionKey) == admin.APIVersion || isAdminOp(r) {
 				correlationData.ClientPrincipalName = r.Header.Get("X-Ms-Client-Principal-Name")
 			}
 

@@ -22,7 +22,9 @@ func (mon *Monitor) emitAroOperatorHeartbeat(ctx context.Context) error {
 	for _, d := range aroDeployments.Items {
 		_, present := aroOperatorDeploymentsReady[d.Name]
 		if present {
-			aroOperatorDeploymentsReady[d.Name] = ready.DeploymentIsReady(&d)
+			deploymentIsReady := ready.DeploymentIsReady(&d)
+			mon.log.Infof("deployment %q is ready: %v, it's status: %+v", d.Name, deploymentIsReady, d.Status)
+			aroOperatorDeploymentsReady[d.Name] = deploymentIsReady
 		}
 	}
 

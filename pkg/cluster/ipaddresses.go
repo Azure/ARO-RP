@@ -33,7 +33,7 @@ func (m *manager) updateClusterData(ctx context.Context) error {
 
 	var installConfig *installconfig.InstallConfig
 	var kubeadminPassword *password.KubeadminPassword
-	err = pg.Get(&installConfig, &kubeadminPassword)
+	err = pg.Get(false, &installConfig, &kubeadminPassword)
 	if err != nil {
 		return err
 	}

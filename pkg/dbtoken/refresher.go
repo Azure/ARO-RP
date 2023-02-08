@@ -16,6 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 	utilrecover "github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -33,8 +34,9 @@ type refresher struct {
 
 	lastRefresh atomic.Value //time.Time
 
-	m            metrics.Emitter
-	metricPrefix string
+	m              metrics.Emitter
+	metricPrefix   string
+	tokenRefreshed bool
 }
 
 func NewRefresher(log *logrus.Entry, env env.Core, authorizer autorest.Authorizer, insecureSkipVerify bool, dbc cosmosdb.DatabaseClient, permission string, m metrics.Emitter, metricPrefix string) (Refresher, error) {
@@ -55,10 +57,18 @@ func NewRefresher(log *logrus.Entry, env env.Core, authorizer autorest.Authorize
 	}, nil
 }
 
+func (r *refresher) checkRefreshAndReset() bool {
+	if r.tokenRefreshed {
+		r.tokenRefreshed = false
+		return true
+	}
+	return false
+}
+
 func (r *refresher) Run(ctx context.Context) error {
 	defer utilrecover.Panic(r.log)
 
-	go r.metrics()
+	go heartbeat.EmitHeartbeat(r.log, r.m, r.metricPrefix+".dbtokenrefresh", nil, r.checkRefreshAndReset)
 
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
@@ -69,21 +79,7 @@ func (r *refresher) Run(ctx context.Context) error {
 			r.log.Error(err)
 		} else {
 			r.lastRefresh.Store(time.Now())
-		}
-
-		<-t.C
-	}
-}
-
-func (r *refresher) metrics() {
-	defer utilrecover.Panic(r.log)
-
-	t := time.NewTicker(time.Minute)
-	defer t.Stop()
-
-	for {
-		if lastRefresh, ok := r.lastRefresh.Load().(time.Time); ok {
-			r.m.EmitGauge(r.metricPrefix+".lastrefresh", lastRefresh.Unix(), nil)
+			r.tokenRefreshed = true
 		}
 
 		<-t.C

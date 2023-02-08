@@ -6,7 +6,9 @@ package scheme
 import (
 	configv1 "github.com/openshift/api/config/v1"
 	consolev1 "github.com/openshift/api/console/v1"
+	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	operatorv1 "github.com/openshift/api/operator/v1"
 	securityv1 "github.com/openshift/api/security/v1"
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
@@ -43,6 +45,7 @@ func init() {
 	utilruntime.Must(machinev1beta1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(consolev1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(monitoringv1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(operatorv1.AddToScheme(scheme.Scheme))
 	// AzureMachineProviderSpec is not registered by default
 	scheme.Scheme.AddKnownTypes(machinev1beta1.GroupVersion, &machinev1beta1.AzureMachineProviderSpec{})
 	// AzureMachineProviderSpec type has been deleted from sigs.k8s.io/cluster-api-provider-azure.
@@ -51,4 +54,5 @@ func init() {
 	// under both API Groups
 	scheme.Scheme.AddKnownTypes(azureproviderv1beta1.SchemeGroupVersion, &machinev1beta1.AzureMachineProviderSpec{})
 	utilruntime.Must(hivev1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(imageregistryv1.AddToScheme(scheme.Scheme))
 }

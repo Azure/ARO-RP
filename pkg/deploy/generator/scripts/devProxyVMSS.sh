@@ -1,4 +1,4 @@
-yum -y update
+yum -y -x WALinuxAgent -x WALinuxAgent-udev update
 yum -y install docker
 
 firewall-cmd --add-port=443/tcp --permanent

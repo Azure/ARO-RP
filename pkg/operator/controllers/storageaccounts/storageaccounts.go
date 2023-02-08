@@ -10,7 +10,8 @@ import (
 
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -28,7 +29,8 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 		serviceSubnets = append(serviceSubnets, subnet.ResourceID)
 	}
 
-	rc, err := r.imageregistrycli.ImageregistryV1().Configs().Get(ctx, "cluster", metav1.GetOptions{})
+	rc := &imageregistryv1.Config{}
+	err = r.client.Get(ctx, types.NamespacedName{Name: "cluster"}, rc)
 	if err != nil {
 		return err
 	}

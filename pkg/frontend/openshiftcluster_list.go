@@ -24,7 +24,7 @@ func (f *frontend) getOpenShiftClusters(w http.ResponseWriter, r *http.Request) 
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
 
-	b, err := f._getOpenShiftClusters(ctx, log, r, f.apis[vars["api-version"]].OpenShiftClusterConverter, func(skipToken string) (cosmosdb.OpenShiftClusterDocumentIterator, error) {
+	b, err := f._getOpenShiftClusters(ctx, log, r, f.apis[r.URL.Query().Get(api.APIVersionKey)].OpenShiftClusterConverter, func(skipToken string) (cosmosdb.OpenShiftClusterDocumentIterator, error) {
 		prefix := "/subscriptions/" + vars["subscriptionId"] + "/"
 		if vars["resourceGroupName"] != "" {
 			prefix += "resourcegroups/" + vars["resourceGroupName"] + "/"

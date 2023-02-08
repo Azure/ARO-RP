@@ -6,7 +6,6 @@ package e2e
 import (
 	"bytes"
 	"context"
-	"encoding/gob"
 	"fmt"
 	"image/png"
 	"math"
@@ -24,6 +23,7 @@ import (
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	projectclient "github.com/openshift/client-go/project/clientset/versioned"
+	hiveclient "github.com/openshift/hive/pkg/client/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"github.com/tebeka/selenium"
@@ -33,7 +33,9 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/tools/clientcmd/api/latest"
 
+	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/hive"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -60,13 +62,17 @@ type clientSet struct {
 	NetworkSecurityGroups network.SecurityGroupsClient
 	Subnet                network.SubnetsClient
 
-	RestConfig    *rest.Config
-	Kubernetes    kubernetes.Interface
-	MachineAPI    machineclient.Interface
-	MachineConfig mcoclient.Interface
-	AROClusters   aroclient.Interface
-	ConfigClient  configclient.Interface
-	Project       projectclient.Interface
+	RestConfig         *rest.Config
+	HiveRestConfig     *rest.Config
+	Kubernetes         kubernetes.Interface
+	MachineAPI         machineclient.Interface
+	MachineConfig      mcoclient.Interface
+	AROClusters        aroclient.Interface
+	ConfigClient       configclient.Interface
+	Project            projectclient.Interface
+	Hive               hiveclient.Interface
+	HiveAKS            kubernetes.Interface
+	HiveClusterManager hive.ClusterManager
 }
 
 var (
@@ -74,6 +80,7 @@ var (
 	_env              env.Core
 	vnetResourceGroup string
 	clusterName       string
+	clusterResourceID string
 	clients           *clientSet
 
 	dockerSucceeded bool
@@ -81,7 +88,7 @@ var (
 
 func skipIfNotInDevelopmentEnv() {
 	if !_env.IsLocalDevelopmentMode() {
-		Skip("skipping portal tests in non-development environment")
+		Skip("skipping tests in non-development environment")
 	}
 }
 
@@ -90,6 +97,12 @@ func skipIfDockerNotWorking() {
 	// it is running from docker already
 	if !dockerSucceeded {
 		Skip("skipping admin portal tests as docker is not available")
+	}
+}
+
+func skipIfNotHiveManagedCluster(adminAPICluster *admin.OpenShiftCluster) {
+	if adminAPICluster.Properties.HiveProfile == (admin.HiveProfile{}) {
+		Skip("skipping tests because this ARO cluster has not been created/adopted by Hive")
 	}
 }
 
@@ -166,6 +179,10 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 		hubPort  = 4444
 		hostPort = 8444
 	)
+	hubAddress := "localhost"
+	if os.Getenv("AGENT_NAME") != "" {
+		hubAddress = "selenium"
+	}
 
 	os.Setenv("SE_SESSION_REQUEST_TIMEOUT", "9000")
 
@@ -175,13 +192,13 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 	}
 	wd := selenium.WebDriver(nil)
 
-	_, err := url.ParseRequestURI(fmt.Sprintf("https://localhost:%d", hubPort))
+	_, err := url.ParseRequestURI(fmt.Sprintf("https://%s:%d", hubAddress, hubPort))
 	if err != nil {
 		panic(err)
 	}
 
 	for i := 0; i < 10; i++ {
-		wd, err = selenium.NewRemote(caps, fmt.Sprintf("http://localhost:%d/wd/hub", hubPort))
+		wd, err = selenium.NewRemote(caps, fmt.Sprintf("http://%s:%d/wd/hub", hubAddress, hubPort))
 		if wd != nil {
 			err = nil
 			break
@@ -195,8 +212,6 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 
 	log := utillog.GetLogger()
 
-	gob.Register(time.Time{})
-
 	// Navigate to the simple playground interface.
 	host, exists := os.LookupEnv("PORTAL_HOSTNAME")
 	if !exists {
@@ -207,7 +222,19 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 		log.Infof("Could not get to %s. With error : %s", host, err.Error())
 	}
 
-	cmd := exec.Command("go", "run", "./hack/portalauth", "-username", "test", "-groups", "$AZURE_PORTAL_ELEVATED_GROUP_IDS", "2>", "/dev/null")
+	var portalAuthCmd string
+	var portalAuthArgs = make([]string, 0)
+	if os.Getenv("CI") != "" {
+		// In CI we have a prebuilt portalauth binary
+		portalAuthCmd = "./portalauth"
+	} else {
+		portalAuthCmd = "go"
+		portalAuthArgs = []string{"run", "./hack/portalauth"}
+	}
+
+	portalAuthArgs = append(portalAuthArgs, "-username", "test", "-groups", "$AZURE_PORTAL_ELEVATED_GROUP_IDS")
+
+	cmd := exec.Command(portalAuthCmd, portalAuthArgs...)
 	output, err := cmd.Output()
 	if err != nil {
 		log.Fatalf("Error occurred creating session cookie\n Output: %s\n Error: %s\n", output, err)
@@ -289,6 +316,39 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
+	var hiveRestConfig *rest.Config
+	var hiveClientSet *hiveclient.Clientset
+	var hiveAKS *kubernetes.Clientset
+	var hiveCM hive.ClusterManager
+
+	if _env.IsLocalDevelopmentMode() {
+		liveCfg, err := _env.NewLiveConfigManager(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		hiveShard := 1
+		hiveRestConfig, err = liveCfg.HiveRestConfig(ctx, hiveShard)
+		if err != nil {
+			return nil, err
+		}
+
+		hiveClientSet, err = hiveclient.NewForConfig(hiveRestConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		hiveAKS, err = kubernetes.NewForConfig(hiveRestConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		hiveCM, err = hive.NewFromConfig(log, _env, hiveRestConfig)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &clientSet{
 		OpenshiftClustersv20200430: redhatopenshift20200430.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Operationsv20200430:        redhatopenshift20200430.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
@@ -302,13 +362,17 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		Subnet:                network.NewSubnetsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		NetworkSecurityGroups: network.NewSecurityGroupsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 
-		RestConfig:    restconfig,
-		Kubernetes:    cli,
-		MachineAPI:    machineapicli,
-		MachineConfig: mcocli,
-		AROClusters:   arocli,
-		Project:       projectcli,
-		ConfigClient:  configcli,
+		RestConfig:         restconfig,
+		HiveRestConfig:     hiveRestConfig,
+		Kubernetes:         cli,
+		MachineAPI:         machineapicli,
+		MachineConfig:      mcocli,
+		AROClusters:        arocli,
+		Project:            projectcli,
+		ConfigClient:       configcli,
+		Hive:               hiveClientSet,
+		HiveAKS:            hiveAKS,
+		HiveClusterManager: hiveCM,
 	}, nil
 }
 
@@ -395,19 +459,26 @@ func setup(ctx context.Context) error {
 		}
 	}
 
+	clusterResourceID = resourceIDFromEnv()
+
 	clients, err = newClientSet(ctx)
 	if err != nil {
 		return err
 	}
 
-	cmd := exec.CommandContext(ctx, "which", "docker")
-	_, err = cmd.CombinedOutput()
-	if err == nil {
-		dockerSucceeded = true
-	}
+	if os.Getenv("AGENT_NAME") != "" {
+		// Skip in pipelines for now
+		dockerSucceeded = false
+	} else {
+		cmd := exec.CommandContext(ctx, "which", "docker")
+		_, err = cmd.CombinedOutput()
+		if err == nil {
+			dockerSucceeded = true
+		}
 
-	if dockerSucceeded {
-		setupSelenium(ctx)
+		if dockerSucceeded {
+			setupSelenium(ctx)
+		}
 	}
 
 	return nil
@@ -444,7 +515,8 @@ var _ = BeforeSuite(func() {
 var _ = AfterSuite(func() {
 	log.Info("AfterSuite")
 
-	if dockerSucceeded {
+	// Azure Pipelines will tear down the image if needed
+	if dockerSucceeded && os.Getenv("AGENT_NAME") == "" {
 		if err := tearDownSelenium(context.Background()); err != nil {
 			log.Printf(err.Error())
 		}

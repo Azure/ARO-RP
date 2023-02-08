@@ -29,6 +29,8 @@ func Validate(env env.Core, apis map[string]*api.Version) func(http.Handler) htt
 			vars := mux.Vars(r)
 			route := mux.CurrentRoute(r)
 
+			apiVersion := r.URL.Query().Get(api.APIVersionKey)
+
 			if route == nil {
 				if log, ok := r.Context().Value(ContextKeyLog).(*logrus.Entry); ok {
 					log.Error("route was nil")
@@ -69,7 +71,7 @@ func Validate(env env.Core, apis map[string]*api.Version) func(http.Handler) htt
 
 			if _, found := vars["resourceType"]; found {
 				if vars["resourceType"] != strings.ToLower(resourceType) {
-					api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], vars["api-version"])
+					api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], apiVersion)
 					return
 				}
 			}
@@ -99,16 +101,16 @@ func Validate(env env.Core, apis map[string]*api.Version) func(http.Handler) htt
 			queries, err := route.GetQueriesTemplates()
 			var hasVariableAPIVersion bool
 			for _, query := range queries {
-				if strings.HasPrefix(query, "api-version=") && strings.ContainsRune(query, '{') {
+				if query == "api-version=" {
 					hasVariableAPIVersion = true
 					break
 				}
 			}
 
 			if err != nil || hasVariableAPIVersion {
-				if _, found := vars["api-version"]; found {
-					if _, found := apis[vars["api-version"]]; !found {
-						api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], vars["api-version"])
+				if apiVersion != "" {
+					if _, found := apis[apiVersion]; !found {
+						api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], apiVersion)
 						return
 					}
 				}

@@ -30,6 +30,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -69,7 +70,8 @@ type frontend struct {
 	kubeActionsFactory  kubeActionsFactory
 	azureActionsFactory azureActionsFactory
 	ocEnricherFactory   ocEnricherFactory
-	adminAction         adminactions.AzureActions
+
+	quotaValidator QuotaValidator
 
 	l net.Listener
 	s *http.Server
@@ -87,6 +89,8 @@ type frontend struct {
 	systemDataMachinePoolEnricher          func(*api.ClusterManagerConfigurationDocument, *api.SystemData)
 	systemDataSyncIdentityProviderEnricher func(*api.ClusterManagerConfigurationDocument, *api.SystemData)
 	systemDataSecretEnricher               func(*api.ClusterManagerConfigurationDocument, *api.SystemData)
+
+	streamResponder StreamResponder
 }
 
 // Runnable represents a runnable object
@@ -109,7 +113,7 @@ func NewFrontend(ctx context.Context,
 	aead encryption.AEAD,
 	kubeActionsFactory kubeActionsFactory,
 	azureActionsFactory azureActionsFactory,
-	ocEnricherFactory ocEnricherFactory) (Runnable, error) {
+	ocEnricherFactory ocEnricherFactory) (*frontend, error) {
 	f := &frontend{
 		auditLog:                      auditLog,
 		baseLog:                       baseLog,
@@ -125,6 +129,7 @@ func NewFrontend(ctx context.Context,
 		kubeActionsFactory:            kubeActionsFactory,
 		azureActionsFactory:           azureActionsFactory,
 		ocEnricherFactory:             ocEnricherFactory,
+		quotaValidator:                quotaValidator{},
 
 		// add default installation version so it's always supported
 		enabledOcpVersions: map[string]*api.OpenShiftVersion{
@@ -147,6 +152,8 @@ func NewFrontend(ctx context.Context,
 		systemDataMachinePoolEnricher:          enrichMachinePoolSystemData,
 		systemDataSyncIdentityProviderEnricher: enrichSyncIdentityProviderSystemData,
 		systemDataSecretEnricher:               enrichSecretSystemData,
+
+		streamResponder: defaultResponder{},
 	}
 
 	l, err := f.env.Listen()
@@ -175,9 +182,8 @@ func NewFrontend(ctx context.Context,
 			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
 		},
-		PreferServerCipherSuites: true,
-		SessionTicketsDisabled:   true,
-		MinVersion:               tls.VersionTLS12,
+		SessionTicketsDisabled: true,
+		MinVersion:             tls.VersionTLS12,
 		CurvePreferences: []tls.CurveID{
 			tls.CurveP256,
 			tls.X25519,
@@ -201,7 +207,7 @@ func (f *frontend) unauthenticatedRoutes(r *mux.Router) {
 func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s := r.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodDelete).HandlerFunc(f.deleteOpenShiftCluster).Name("deleteOpenShiftCluster")
@@ -212,7 +218,7 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	if f.env.FeatureIsSet(env.FeatureEnableOCMEndpoints) {
 		s = r.
 			Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/{ocmResourceType}/{ocmResourceName}").
-			Queries("api-version", "{api-version}").
+			Queries("api-version", "").
 			Subrouter()
 
 		s.Methods(http.MethodDelete).HandlerFunc(f.deleteClusterManagerConfiguration).Name("deleteClusterManagerConfiguration")
@@ -223,58 +229,71 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters).Name("getOpenShiftClusters")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/{resourceType}").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters).Name("getOpenShiftClusters")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/operationsstatus/{operationId}").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getAsyncOperationsStatus).Name("getAsyncOperationsStatus")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/operationresults/{operationId}").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getAsyncOperationResult).Name("getAsyncOperationResult")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/listcredentials").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodPost).HandlerFunc(f.postOpenShiftClusterCredentials).Name("postOpenShiftClusterCredentials")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/listadmincredentials").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodPost).HandlerFunc(f.postOpenShiftClusterKubeConfigCredentials).Name("postOpenShiftClusterKubeConfigCredentials")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/openshiftversions").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.listInstallVersions).Name("listInstallVersions")
+
+	s = r.
+		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/detectors").
+		Subrouter()
+
+	s.Methods(http.MethodGet).HandlerFunc(f.listAppLensDetectors).Name("listAppLensDetectors")
+
+	s = r.
+		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/detectors/{detectorId}").
+		Subrouter()
+
+	s.Methods(http.MethodGet).HandlerFunc(f.getAppLensDetector).Name("getAppLensDetector")
 
 	// Admin actions
 	s = r.
 		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/kubernetesobjects").
 		Subrouter()
 
+	s.Methods(http.MethodGet).Queries("unrestricted", "true").HandlerFunc(f.getAdminKubernetesObjectsUnrestricted).Name("getAdminKubernetesObjectsUnrestricted")
 	s.Methods(http.MethodGet).HandlerFunc(f.getAdminKubernetesObjects).Name("getAdminKubernetesObjects")
 	s.Methods(http.MethodPost).HandlerFunc(f.postAdminKubernetesObjects).Name("postAdminKubernetesObjects")
 	s.Methods(http.MethodDelete).HandlerFunc(f.deleteAdminKubernetesObjects).Name("deleteAdminKubernetesObjects")
@@ -374,7 +393,7 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	// Operations
 	s = r.
 		Path("/providers/{resourceProviderNamespace}/operations").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getOperations).Name("getOperations")
@@ -503,4 +522,36 @@ func reply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byt
 		_, _ = w.Write(b)
 		_, _ = w.Write([]byte{'\n'})
 	}
+}
+
+func frontendOperationResultLog(log *logrus.Entry, method string, err error) {
+	log = log.WithFields(logrus.Fields{
+		"LOGKIND":       "frontendqos",
+		"resultType":    utillog.SuccessResultType,
+		"operationType": method,
+	})
+
+	if err == nil {
+		log.Info("front end operation succeeded")
+		return
+	}
+
+	switch err := err.(type) {
+	case *api.CloudError:
+		log = log.WithField("resultType", utillog.UserErrorResultType)
+	case statusCodeError:
+		if int(err) < 300 && int(err) >= 200 {
+			log.Info("front end operation succeeded")
+			return
+		} else if int(err) < 500 {
+			log = log.WithField("resultType", utillog.UserErrorResultType)
+		} else {
+			log = log.WithField("resultType", utillog.ServerErrorResultType)
+		}
+	default:
+		log = log.WithField("resultType", utillog.ServerErrorResultType)
+	}
+
+	log = log.WithField("errorDetails", err.Error())
+	log.Info("front end operation failed")
 }

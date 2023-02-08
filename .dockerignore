@@ -3,9 +3,6 @@ gomock_reflect_*
 /.vscode
 /*.kubeconfig
 /dev-config.yaml
-/env*
-/env.example
-/env-int.example
 /id_rsa
 /pyenv*
 /mdm_statsd.socket

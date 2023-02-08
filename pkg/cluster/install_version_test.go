@@ -47,6 +47,7 @@ func TestGetOpenShiftVersionFromVersion(t *testing.T) {
 						},
 					},
 				},
+				openShiftClusterDocumentVersioner: new(openShiftClusterDocumentVersionerService),
 			},
 			wantErrString: "",
 			want: &api.OpenShiftVersion{
@@ -90,6 +91,7 @@ func TestGetOpenShiftVersionFromVersion(t *testing.T) {
 						},
 					},
 				},
+				openShiftClusterDocumentVersioner: new(openShiftClusterDocumentVersionerService),
 			},
 			wantErrString: "400: InvalidParameter: properties.clusterProfile.version: The requested OpenShift version '4.11.5' is not supported.",
 			want:          nil,

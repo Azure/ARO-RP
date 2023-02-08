@@ -278,6 +278,7 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 			"extraPortalKeyvaultAccessPolicies",
 			"extraServiceKeyvaultAccessPolicies",
 			"gatewayResourceGroupName",
+			"rpNsgPortalSourceAddressPrefixes",
 		)
 	} else {
 		params = append(params,
@@ -297,6 +298,9 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 			"extraServiceKeyvaultAccessPolicies":
 			p.Type = "array"
 			p.DefaultValue = []interface{}{}
+		case "rpNsgPortalSourceAddressPrefixes":
+			p.Type = "array"
+			p.DefaultValue = []string{}
 		case "keyvaultPrefix":
 			p.MaxLength = 24 - max(len(env.ClusterKeyvaultSuffix), len(env.ServiceKeyvaultSuffix), len(env.PortalKeyvaultSuffix))
 		}
@@ -314,6 +318,12 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 		g.rpServiceKeyvault(),
 		g.rpServiceKeyvaultDynamic(),
 	)
+
+	if g.production {
+		t.Resources = append(t.Resources,
+			g.rpSecurityGroupForPortalSourceAddressPrefixes(),
+		)
+	}
 
 	return t
 }

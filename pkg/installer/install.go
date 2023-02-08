@@ -33,11 +33,10 @@ func (m *manager) Install(ctx context.Context) error {
 			installConfig, image, err = m.generateInstallConfig(ctx)
 			return err
 		}),
-
 		steps.Action(func(ctx context.Context) error {
 			var err error
 			// Applies ARO-specific customisations to the InstallConfig
-			g, err = m.applyInstallConfigCustomisations(ctx, installConfig, image)
+			g, err = m.applyInstallConfigCustomisations(installConfig, image)
 			return err
 		}),
 		steps.Action(func(ctx context.Context) error {
@@ -65,7 +64,7 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 	}
 
 	var adminInternalClient *kubeconfig.AdminInternalClient
-	err = pg.Get(&adminInternalClient)
+	err = pg.Get(true, &adminInternalClient)
 	if err != nil {
 		return err
 	}

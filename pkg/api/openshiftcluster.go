@@ -248,6 +248,15 @@ const (
 	MTU3900 MTUSize = 3900
 )
 
+// OutboundType represents the type of routing a cluster is using
+type OutboundType string
+
+// OutboundType constants
+const (
+	OutboundTypeUserDefinedRouting OutboundType = "UserDefinedRouting"
+	OutboundTypeLoadbalancer       OutboundType = "Loadbalancer"
+)
+
 // NetworkProfile represents a network profile
 type NetworkProfile struct {
 	MissingFields
@@ -256,6 +265,7 @@ type NetworkProfile struct {
 	ServiceCIDR            string                 `json:"serviceCidr,omitempty"`
 	SoftwareDefinedNetwork SoftwareDefinedNetwork `json:"softwareDefinedNetwork,omitempty"`
 	MTUSize                MTUSize                `json:"mtuSize,omitempty"`
+	OutboundType           OutboundType           `json:"outboundType,omitempty"`
 
 	APIServerPrivateEndpointIP string `json:"privateEndpointIp,omitempty"`
 	GatewayPrivateEndpointIP   string `json:"gatewayPrivateEndpointIp,omitempty"`
@@ -337,6 +347,94 @@ const (
 	VMSizeStandardNC8asT4V3  VMSize = "Standard_NC8as_T4_v3"
 	VMSizeStandardNC16asT4V3 VMSize = "Standard_NC16as_T4_v3"
 	VMSizeStandardNC64asT4V3 VMSize = "Standard_NC64as_T4_v3"
+
+	VMSizeStandardNC6sV3   VMSize = "Standard_NC6s_v3"
+	VMSizeStandardNC12sV3  VMSize = "Standard_NC12s_v3"
+	VMSizeStandardNC24sV3  VMSize = "Standard_NC24s_v3"
+	VMSizeStandardNC24rsV3 VMSize = "Standard_NC24rs_v3"
+)
+
+type VMSizeStruct struct {
+	CoreCount int
+	Family    string
+}
+
+var (
+	VMSizeStandardD2sV3Struct = VMSizeStruct{CoreCount: 2, Family: standardDSv3}
+
+	VMSizeStandardD4asV4Struct  = VMSizeStruct{CoreCount: 4, Family: standardDASv4}
+	VMSizeStandardD8asV4Struct  = VMSizeStruct{CoreCount: 8, Family: standardDASv4}
+	VMSizeStandardD16asV4Struct = VMSizeStruct{CoreCount: 16, Family: standardDASv4}
+	VMSizeStandardD32asV4Struct = VMSizeStruct{CoreCount: 32, Family: standardDASv4}
+
+	VMSizeStandardD4sV3Struct  = VMSizeStruct{CoreCount: 4, Family: standardDSv3}
+	VMSizeStandardD8sV3Struct  = VMSizeStruct{CoreCount: 8, Family: standardDSv3}
+	VMSizeStandardD16sV3Struct = VMSizeStruct{CoreCount: 16, Family: standardDSv3}
+	VMSizeStandardD32sV3Struct = VMSizeStruct{CoreCount: 32, Family: standardDSv3}
+
+	VMSizeStandardE4sV3Struct     = VMSizeStruct{CoreCount: 4, Family: standardESv3}
+	VMSizeStandardE8sV3Struct     = VMSizeStruct{CoreCount: 8, Family: standardESv3}
+	VMSizeStandardE16sV3Struct    = VMSizeStruct{CoreCount: 16, Family: standardESv3}
+	VMSizeStandardE32sV3Struct    = VMSizeStruct{CoreCount: 32, Family: standardESv3}
+	VMSizeStandardE64isV3Struct   = VMSizeStruct{CoreCount: 64, Family: standardESv3}
+	VMSizeStandardE64iV3Struct    = VMSizeStruct{CoreCount: 64, Family: standardESv3}
+	VMSizeStandardE80isV4Struct   = VMSizeStruct{CoreCount: 80, Family: standardEISv4}
+	VMSizeStandardE80idsV4Struct  = VMSizeStruct{CoreCount: 80, Family: standardEIDSv4}
+	VMSizeStandardE104iV5Struct   = VMSizeStruct{CoreCount: 104, Family: standardEIv5}
+	VMSizeStandardE104isV5Struct  = VMSizeStruct{CoreCount: 104, Family: standardEISv5}
+	VMSizeStandardE104idV5Struct  = VMSizeStruct{CoreCount: 104, Family: standardEIDv5}
+	VMSizeStandardE104idsV5Struct = VMSizeStruct{CoreCount: 104, Family: standardEIDSv5}
+
+	VMSizeStandardF4sV2Struct  = VMSizeStruct{CoreCount: 4, Family: standardFSv2}
+	VMSizeStandardF8sV2Struct  = VMSizeStruct{CoreCount: 8, Family: standardFSv2}
+	VMSizeStandardF16sV2Struct = VMSizeStruct{CoreCount: 16, Family: standardFSv2}
+	VMSizeStandardF32sV2Struct = VMSizeStruct{CoreCount: 32, Family: standardFSv2}
+	VMSizeStandardF72sV2Struct = VMSizeStruct{CoreCount: 72, Family: standardFSv2}
+
+	VMSizeStandardM128msStruct = VMSizeStruct{CoreCount: 128, Family: standardMS}
+	VMSizeStandardG5Struct     = VMSizeStruct{CoreCount: 32, Family: standardGFamily}
+	VMSizeStandardGS5Struct    = VMSizeStruct{CoreCount: 32, Family: standardGFamily}
+
+	VMSizeStandardL4sStruct    = VMSizeStruct{CoreCount: 4, Family: standardLSv2}
+	VMSizeStandardL8sStruct    = VMSizeStruct{CoreCount: 8, Family: standardLSv2}
+	VMSizeStandardL16sStruct   = VMSizeStruct{CoreCount: 16, Family: standardLSv2}
+	VMSizeStandardL32sStruct   = VMSizeStruct{CoreCount: 32, Family: standardLSv2}
+	VMSizeStandardL8sV2Struct  = VMSizeStruct{CoreCount: 8, Family: standardLSv2}
+	VMSizeStandardL16sV2Struct = VMSizeStruct{CoreCount: 16, Family: standardLSv2}
+	VMSizeStandardL32sV2Struct = VMSizeStruct{CoreCount: 32, Family: standardLSv2}
+	VMSizeStandardL48sV2Struct = VMSizeStruct{CoreCount: 48, Family: standardLSv2}
+	VMSizeStandardL64sV2Struct = VMSizeStruct{CoreCount: 64, Family: standardLSv2}
+
+	//Struct GPU nodes
+	//Struct the formatting of the ncasv3_t4 family is different.  This can be seen through a
+	//Struct az vm list-usage -l eastus
+	VMSizeStandardNC4asT4V3Struct  = VMSizeStruct{CoreCount: 4, Family: standardNCAS}
+	VMSizeStandardNC8asT4V3Struct  = VMSizeStruct{CoreCount: 8, Family: standardNCAS}
+	VMSizeStandardNC16asT4V3Struct = VMSizeStruct{CoreCount: 16, Family: standardNCAS}
+	VMSizeStandardNC64asT4V3Struct = VMSizeStruct{CoreCount: 64, Family: standardNCAS}
+
+	VMSizeStandardNC6sV3Struct   = VMSizeStruct{CoreCount: 6, Family: standardNCSv3}
+	VMSizeStandardNC12sV3Struct  = VMSizeStruct{CoreCount: 12, Family: standardNCSv3}
+	VMSizeStandardNC24sV3Struct  = VMSizeStruct{CoreCount: 24, Family: standardNCSv3}
+	VMSizeStandardNC24rsV3Struct = VMSizeStruct{CoreCount: 24, Family: standardNCSv3}
+)
+
+const (
+	standardDSv3    = "standardDSv3Family"
+	standardDASv4   = "standardDASv4Family"
+	standardESv3    = "standardESv3Family"
+	standardEISv4   = "standardEISv4Family"
+	standardEIDSv4  = "standardEIDSv4Family"
+	standardEIv5    = "standardEIv5Family"
+	standardEISv5   = "standardEISv5Family"
+	standardEIDSv5  = "standardEIDSv5Family"
+	standardEIDv5   = "standardEIDv5Family"
+	standardFSv2    = "standardFSv2Family"
+	standardMS      = "standardMSFamily"
+	standardGFamily = "standardGFamily"
+	standardLSv2    = "standardLsv2Family"
+	standardNCAS    = "Standard NCASv3_T4 Family"
+	standardNCSv3   = "Standard NCSv3 Family"
 )
 
 // WorkerProfile represents a worker profile
@@ -422,4 +520,9 @@ type HiveProfile struct {
 	MissingFields
 
 	Namespace string `json:"namespace,omitempty"`
+
+	// CreatedByHive is used during PUCM to skip adoption and reconciliation
+	// of clusters that were created by Hive to avoid deleting existing
+	// ClusterDeployments.
+	CreatedByHive bool `json:"createdByHive,omitempty"`
 }

@@ -15,7 +15,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -221,9 +220,8 @@ func (p *portal) Run(ctx context.Context) error {
 			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
 		},
-		PreferServerCipherSuites: true,
-		SessionTicketsDisabled:   true,
-		MinVersion:               tls.VersionTLS12,
+		SessionTicketsDisabled: true,
+		MinVersion:             tls.VersionTLS12,
 		CurvePreferences: []tls.CurveID{
 			tls.CurveP256,
 			tls.X25519,
@@ -267,17 +265,19 @@ func (p *portal) unauthenticatedRoutes(r *mux.Router) {
 func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
 	var names []string
 
-	err := filepath.Walk(".", func(path string, info fs.FileInfo, err error) error {
+	err := fs.WalkDir(assets.EmbeddedFiles, ".", func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
-		names = append(names, path)
+		if !entry.IsDir() {
+			names = append(names, path)
+		}
 		return nil
 	})
 
 	if err != nil {
-		log.Fatal(err)
+		p.log.Fatal(err)
 	}
 
 	for _, name := range names {
@@ -332,6 +332,7 @@ func (p *portal) indexV2(w http.ResponseWriter, r *http.Request) {
 		"location":       p.env.Location(),
 		csrf.TemplateTag: csrf.TemplateField(r),
 	})
+
 	if err != nil {
 		p.internalServerError(w, err)
 		return

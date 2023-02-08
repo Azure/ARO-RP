@@ -29,6 +29,7 @@ func init() {
 				api.OperationOpenShiftClusterWrite,
 				api.OperationOpenShiftClusterDelete,
 				api.OperationOpenShiftClusterListCredentials,
+				api.OperationOpenShiftClusterGetDetectors,
 			},
 		},
 	}

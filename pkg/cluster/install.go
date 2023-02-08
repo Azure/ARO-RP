@@ -19,6 +19,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/installer"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
@@ -57,8 +58,13 @@ func (m *manager) adminUpdate() []steps.Step {
 			steps.Action(m.populateRegistryStorageAccountName), // must go before migrateStorageAccounts
 			steps.Action(m.migrateStorageAccounts),
 			steps.Action(m.fixSSH),
-			steps.Action(m.populateDatabaseIntIP),
 			//steps.Action(m.removePrivateDNSZone), // TODO(mj): re-enable once we communicate this out
+		)
+	}
+
+	if isEverything || isRenewCerts {
+		toRun = append(toRun,
+			steps.Action(m.populateDatabaseIntIP),
 		)
 	}
 
@@ -125,7 +131,7 @@ func (m *manager) adminUpdate() []steps.Step {
 	}
 
 	// Hive cluster adoption and reconciliation
-	if isEverything && m.adoptViaHive {
+	if isEverything && m.adoptViaHive && !m.clusterWasCreatedByHive() {
 		toRun = append(toRun,
 			steps.Action(m.hiveCreateNamespace),
 			steps.Action(m.hiveEnsureResources),
@@ -143,6 +149,14 @@ func (m *manager) adminUpdate() []steps.Step {
 	}
 
 	return toRun
+}
+
+func (m *manager) clusterWasCreatedByHive() bool {
+	if m.doc.OpenShiftCluster.Properties.HiveProfile.Namespace == "" {
+		return false
+	}
+
+	return m.doc.OpenShiftCluster.Properties.HiveProfile.CreatedByHive
 }
 
 func (m *manager) Update(ctx context.Context) error {
@@ -188,6 +202,12 @@ func (m *manager) runIntegratedInstaller(ctx context.Context) error {
 }
 
 func (m *manager) runHiveInstaller(ctx context.Context) error {
+	var err error
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, setFieldCreatedByHive(true))
+	if err != nil {
+		return err
+	}
+
 	version, err := m.openShiftVersionFromVersion(ctx)
 	if err != nil {
 		return err
@@ -199,6 +219,13 @@ func (m *manager) runHiveInstaller(ctx context.Context) error {
 	return m.hiveClusterManager.Install(ctx, m.subscriptionDoc, m.doc, version)
 }
 
+func setFieldCreatedByHive(createdByHive bool) database.OpenShiftClusterDocumentMutator {
+	return func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.HiveProfile.CreatedByHive = createdByHive
+		return nil
+	}
+}
+
 func (m *manager) bootstrap() []steps.Step {
 	s := []steps.Step{
 		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
@@ -207,6 +234,7 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.ensureSSHKey),
 		steps.Action(m.ensureStorageSuffix),
 		steps.Action(m.populateMTUSize),
+		steps.Action(m.determineOutboundType),
 
 		steps.Action(m.createDNS),
 		steps.Action(m.initializeClusterSPClients), // must run before clusterSPObjectID

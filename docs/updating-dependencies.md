@@ -30,7 +30,7 @@ semantic versioning via tags. Therefore the proper version is parsed from the ve
 branch and fixed using replace directive. Otherwise it will upgrade every time
 the command is started.
 
-When upgrading to a never version of OpenShift, this script have to be updated to
+When upgrading to a newer version of OpenShift, this script have to be updated to
 reflect the proper release.
 
 

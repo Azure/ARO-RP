@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -25,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	mock_frontend "github.com/Azure/ARO-RP/pkg/util/mocks/frontend"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
@@ -113,6 +115,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							MaintenanceTask: api.MaintenanceTaskEverything,
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -137,6 +140,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					MaintenanceTask: admin.MaintenanceTaskEverything,
 					NetworkProfile: admin.NetworkProfile{
 						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
+						OutboundType:           admin.OutboundTypeLoadbalancer,
 					},
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
@@ -201,6 +205,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -222,6 +227,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					MaintenanceTask:       admin.MaintenanceTaskOperator,
 					NetworkProfile: admin.NetworkProfile{
 						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
+						OutboundType:           admin.OutboundTypeLoadbalancer,
 					},
 					ClusterProfile: admin.ClusterProfile{
 						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
@@ -282,6 +288,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							MaintenanceTask:       api.MaintenanceTaskEverything,
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							ClusterProfile: api.ClusterProfile{
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
@@ -306,6 +313,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					MaintenanceTask:       admin.MaintenanceTaskEverything,
 					NetworkProfile: admin.NetworkProfile{
 						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
+						OutboundType:           admin.OutboundTypeLoadbalancer,
 					},
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
@@ -367,6 +375,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							MaintenanceTask: api.MaintenanceTaskOperator,
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -391,6 +400,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					MaintenanceTask: admin.MaintenanceTaskOperator,
 					NetworkProfile: admin.NetworkProfile{
 						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
+						OutboundType:           admin.OutboundTypeLoadbalancer,
 					},
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
@@ -451,6 +461,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							MaintenanceTask: api.MaintenanceTaskOperator,
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -475,6 +486,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					MaintenanceTask: admin.MaintenanceTaskOperator,
 					NetworkProfile: admin.NetworkProfile{
 						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
+						OutboundType:           admin.OutboundTypeLoadbalancer,
 					},
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
@@ -518,6 +530,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -541,6 +554,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -573,10 +587,10 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			f.(*frontend).bucketAllocator = bucket.Fixed(1)
+			f.bucketAllocator = bucket.Fixed(1)
 
 			var systemDataClusterDocEnricherCalled bool
-			f.(*frontend).systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
+			f.systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
 				systemDataClusterDocEnricherCalled = true
 			}
 
@@ -659,6 +673,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		request                func(*v20200430.OpenShiftCluster)
 		isPatch                bool
 		fixture                func(*testdatabase.Fixture)
+		quotaValidatorError    error
 		wantEnriched           []string
 		wantSystemDataEnriched bool
 		wantDocuments          func(*testdatabase.Checker)
@@ -672,7 +687,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		{
 			name: "create a new cluster",
 			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Version = "4.10.20"
+				oc.Properties.ClusterProfile.Version = "4.10.40"
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -708,11 +723,12 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							CreatedAt:           mockCurrentTime,
 							CreatedBy:           version.GitCommit,
 							ClusterProfile: api.ClusterProfile{
-								Version:              "4.10.20",
+								Version:              "4.10.40",
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -735,10 +751,52 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				Properties: v20200430.OpenShiftClusterProperties{
 					ProvisioningState: v20200430.ProvisioningStateCreating,
 					ClusterProfile: v20200430.ClusterProfile{
-						Version: "4.10.20",
+						Version: "4.10.40",
 					},
 				},
 			},
+		},
+		{
+			name: "create a new cluster vm not supported",
+			request: func(oc *v20200430.OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Version = "4.10.20"
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+				})
+			},
+			quotaValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided VM SKU %s is not supported.", "something"),
+			wantEnriched:        []string{},
+			wantStatusCode:      http.StatusBadRequest,
+			wantError:           "400: InvalidParameter: : The provided VM SKU something is not supported.",
+		},
+		{
+			name: "create a new cluster quota fails",
+			request: func(oc *v20200430.OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Version = "4.10.20"
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+				})
+			},
+			quotaValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeQuotaExceeded, "", "Resource quota of vm exceeded. Maximum allowed: 0, Current in use: 0, Additional requested: 1."),
+			wantEnriched:        []string{},
+			wantStatusCode:      http.StatusBadRequest,
+			wantError:           "400: QuotaExceeded: : Resource quota of vm exceeded. Maximum allowed: 0, Current in use: 0, Additional requested: 1.",
 		},
 		{
 			name: "update a cluster from succeeded",
@@ -775,6 +833,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -812,6 +871,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -893,6 +953,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -943,6 +1004,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							FailedProvisioningState: api.ProvisioningStateCreating,
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -981,6 +1043,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							FailedProvisioningState: api.ProvisioningStateDeleting,
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1029,6 +1092,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1070,6 +1134,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1135,6 +1200,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1177,6 +1243,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1234,6 +1301,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1276,6 +1344,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1314,12 +1383,13 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateCreating,
 							ClusterProfile: api.ClusterProfile{
-								Version:              "4.10.20",
+								Version:              "4.10.40",
 								ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID),
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1359,11 +1429,12 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateCreating,
 							ClusterProfile: api.ClusterProfile{
-								Version:              "4.10.20",
+								Version:              "4.10.40",
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1387,6 +1458,12 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				WithOpenShiftVersions()
 			defer ti.done()
 
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			mockValidator := mock_frontend.NewMockQuotaValidator(controller)
+			mockValidator.EXPECT().ValidateQuota(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.quotaValidatorError).AnyTimes()
+
 			err := ti.buildFixtures(tt.fixture)
 			if err != nil {
 				t.Fatal(err)
@@ -1398,11 +1475,13 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			f.(*frontend).bucketAllocator = bucket.Fixed(1)
-			f.(*frontend).now = func() time.Time { return mockCurrentTime }
+
+			f.quotaValidator = mockValidator
+			f.bucketAllocator = bucket.Fixed(1)
+			f.now = func() time.Time { return mockCurrentTime }
 
 			var systemDataClusterDocEnricherCalled bool
-			f.(*frontend).systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
+			f.systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
 				systemDataClusterDocEnricherCalled = true
 			}
 
@@ -1622,6 +1701,7 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 								PodCIDR:                "10.0.0.0/16",
 								ServiceCIDR:            "10.1.0.0/16",
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							APIServerProfile: api.APIServerProfile{
 								Visibility: api.VisibilityPrivate,
@@ -1700,11 +1780,11 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			f.(*frontend).bucketAllocator = bucket.Fixed(1)
-			f.(*frontend).now = func() time.Time { return mockCurrentTime }
+			f.bucketAllocator = bucket.Fixed(1)
+			f.now = func() time.Time { return mockCurrentTime }
 
 			var systemDataClusterDocEnricherCalled bool
-			f.(*frontend).systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
+			f.systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
 				enrichClusterSystemData(doc, systemData)
 				systemDataClusterDocEnricherCalled = true
 			}
