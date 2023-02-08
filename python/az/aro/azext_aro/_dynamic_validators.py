@@ -289,7 +289,11 @@ def dyn_validate_version():
         hook = cmd.cli_ctx.get_progress_controller()
         hook.add(message="Validating OpenShift Version")
 
-        versions = azext_aro.custom.aro_get_versions(namespace.client, namespace.location)
+        location = namespace.location
+        if location == None:
+            location=get_default_location_from_resource_group(cmd, namespace)
+
+        versions = azext_aro.custom.aro_get_versions(namespace.client, location)
 
         found = False
         for version in versions:
@@ -315,7 +319,7 @@ def validate_cluster_create(cmd,  # pylint: disable=unused-argument
                             pod_cidr,  # pylint: disable=unused-argument
                             service_cidr,  # pylint: disable=unused-argument
                             version,  # pylint: disable=unused-argument
-                            locations,  # pylint: disable=unused-argument
+                            location,  # pylint: disable=unused-argument
                             resources,
                             service_principle_ids):
     error_object = []
@@ -325,6 +329,7 @@ def validate_cluster_create(cmd,  # pylint: disable=unused-argument
     error_object.append(dyn_validate_subnet("worker_subnet"))
     error_object.append(dyn_validate_cidr_ranges())
     error_object.append(dyn_validate_resource_permissions(service_principle_ids, resources))
-    error_object.append(dyn_validate_version())
+    if version is not None:
+        error_object.append(dyn_validate_version())
 
     return error_object

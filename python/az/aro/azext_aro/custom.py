@@ -164,12 +164,12 @@ def aro_validate(cmd,  # pylint: disable=too-many-locals
                  master_subnet,
                  worker_subnet,
                  vnet,
-                 client_id,
-                 client_secret,  # pylint: disable=unused-argument
-                 location,
-                 version,
+                 client_id=None,
+                 client_secret=None,  # pylint: disable=unused-argument
                  vnet_resource_group_name=None,  # pylint: disable=unused-argument
                  disk_encryption_set=None,
+                 location=None,
+                 version=None,
                  pod_cidr=None,
                  service_cidr=None
                  ):
@@ -185,6 +185,9 @@ def aro_validate(cmd,  # pylint: disable=too-many-locals
             )]
 
     aad = AADManager(cmd.cli_ctx)
+
+    if client_id is None or client_secret is None:
+        client_id, client_secret = aad.create_application(cluster_resource_group or 'aro-' + random_id)
 
     client_sp_id = aad.get_service_principal_id(client_id)
     if not client_sp_id:
