@@ -146,7 +146,7 @@ func (a *aad) AAD(h http.Handler) http.Handler {
 					Expires: time.Unix(0, 0),
 				}
 				http.SetCookie(w, cookie)
-				http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+				http.Redirect(w, r, "/api/login", http.StatusTemporaryRedirect)
 			} else {
 				a.internalServerError(w, err)
 			}
@@ -174,7 +174,7 @@ func (a *aad) CheckAuthentication(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		if ctx.Value(ContextKeyUsername) == nil {
-			if r.URL != nil && r.URL.Path == "/" {
+			if r.URL != nil {
 				http.Redirect(w, r, "/api/login", http.StatusTemporaryRedirect)
 				return
 			}

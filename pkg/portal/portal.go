@@ -332,6 +332,7 @@ func (p *portal) indexV2(w http.ResponseWriter, r *http.Request) {
 		"location":       p.env.Location(),
 		csrf.TemplateTag: csrf.TemplateField(r),
 	})
+
 	if err != nil {
 		p.internalServerError(w, err)
 		return

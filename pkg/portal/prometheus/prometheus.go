@@ -51,6 +51,7 @@ func New(baseLog *logrus.Entry,
 		r.URL.Path += "/"
 		http.Redirect(w, r, r.URL.String(), http.StatusTemporaryRedirect)
 	})
+
 	aadAuthenticatedRouter.NewRoute().PathPrefix("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/prometheus/").Handler(rp)
 
 	return p

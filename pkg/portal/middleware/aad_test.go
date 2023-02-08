@@ -135,9 +135,10 @@ func TestAAD(t *testing.T) {
 					Header: http.Header{
 						"Cookie": []string{"session=xxx"},
 					},
+					URL: &url.URL{Path: ""},
 				}, nil
 			},
-			wantStatusCode: http.StatusForbidden,
+			wantStatusCode: http.StatusTemporaryRedirect,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -218,7 +219,7 @@ func TestCheckAuthentication(t *testing.T) {
 				ctx := context.Background()
 				return http.NewRequestWithContext(ctx, http.MethodGet, "/api/info", nil)
 			},
-			wantStatusCode: http.StatusForbidden,
+			wantStatusCode: http.StatusTemporaryRedirect,
 		},
 		{
 			name: "not authenticated",
@@ -226,7 +227,7 @@ func TestCheckAuthentication(t *testing.T) {
 				ctx := context.Background()
 				return http.NewRequestWithContext(ctx, http.MethodGet, "/callback", nil)
 			},
-			wantStatusCode: http.StatusForbidden,
+			wantStatusCode: http.StatusTemporaryRedirect,
 		},
 		{
 			name: "invalid cookie",
