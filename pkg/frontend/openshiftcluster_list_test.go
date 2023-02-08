@@ -195,7 +195,7 @@ func TestListOpenShiftCluster(t *testing.T) {
 						ti.openShiftClustersClient.SetError(tt.dbError)
 					}
 
-					aead := testdatabase.NewFakeAEAD()
+					aead := testdatabase.NewFakeAEAD("")
 
 					f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, nil, api.APIs, &noop.Noop{}, aead, nil, nil, nil, func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Emitter) clusterdata.OpenShiftClusterEnricher {
 						return ti.enricher

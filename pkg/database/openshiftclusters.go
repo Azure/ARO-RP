@@ -205,8 +205,6 @@ func (c *openShiftClusters) patch(ctx context.Context, key string, f OpenShiftCl
 			return
 		}
 
-		doc.SecretVersion = c.secretVersion
-
 		err = f(doc)
 		if err != nil {
 			return

@@ -8,26 +8,33 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
 )
 
 var jsonHandle *codec.JsonHandle
+var globalFakeAEAD fakeAEAD
 
 func init() {
 	var err error
-	jsonHandle, err = database.NewJSONHandle(&fakeAEAD{})
+	globalFakeAEAD := NewFakeAEAD("")
+	jsonHandle, err = database.NewJSONHandle(globalFakeAEAD)
 	if err != nil {
 		panic(err)
 	}
 }
 
 func NewFakeOpenShiftClusters() (db database.OpenShiftClusters, client *cosmosdb.FakeOpenShiftClusterDocumentClient) {
+	return NewFakeOpenShiftClustersWithProvidedJSONHandle(jsonHandle, globalFakeAEAD)
+}
+
+func NewFakeOpenShiftClustersWithProvidedJSONHandle(handle *codec.JsonHandle, aead encryption.AEAD) (db database.OpenShiftClusters, client *cosmosdb.FakeOpenShiftClusterDocumentClient) {
 	uuid := deterministicuuid.NewTestUUIDGenerator(deterministicuuid.CLUSTERS)
 	coll := &fakeCollectionClient{}
-	client = cosmosdb.NewFakeOpenShiftClusterDocumentClient(jsonHandle)
+	client = cosmosdb.NewFakeOpenShiftClusterDocumentClient(handle)
 	injectOpenShiftClusters(client)
-	db = database.NewOpenShiftClustersWithProvidedClient(client, coll, "", uuid, "")
+	db = database.NewOpenShiftClustersWithProvidedClient(client, coll, "", uuid, aead.SealSecretVersion())
 	return db, client
 }
 

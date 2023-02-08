@@ -5,20 +5,24 @@ package database
 
 var fakeCode []byte = []byte{'F', 'A', 'K', 'E'}
 
-type fakeAEAD struct{}
+type fakeAEAD struct {
+	secretVersion string
+}
 
 func (fakeAEAD) Open(in []byte) ([]byte, error) {
 	return in[4:], nil
 }
 
-func (fakeAEAD) Seal(in []byte) ([]byte, error) {
+func (f fakeAEAD) Seal(in []byte) ([]byte, error) {
 	return append(fakeCode, in...), nil
 }
 
-func NewFakeAEAD() *fakeAEAD {
-	return &fakeAEAD{}
+func NewFakeAEAD(secretVersion string) *fakeAEAD {
+	return &fakeAEAD{
+		secretVersion: secretVersion,
+	}
 }
 
-func (fakeAEAD) SealSecretVersion() string {
-	return ""
+func (f fakeAEAD) SealSecretVersion() string {
+	return f.secretVersion
 }

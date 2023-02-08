@@ -117,7 +117,7 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			aead := testdatabase.NewFakeAEAD()
+			aead := testdatabase.NewFakeAEAD("")
 
 			if tt.throwsError != nil {
 				ti.openShiftClustersClient.SetError(tt.throwsError)
