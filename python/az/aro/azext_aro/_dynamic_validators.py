@@ -6,6 +6,7 @@ import re
 from itertools import tee
 
 from azure.cli.core.commands.client_factory import get_mgmt_service_client
+from azure.cli.core.commands.validators import get_default_location_from_resource_group
 from azure.cli.core.profiles import ResourceType
 from azure.cli.core.azclierror import CLIInternalError, InvalidArgumentValueError, \
     RequiredArgumentMissingError
@@ -289,11 +290,10 @@ def dyn_validate_version():
         hook = cmd.cli_ctx.get_progress_controller()
         hook.add(message="Validating OpenShift Version")
 
-        location = namespace.location
-        if location == None:
-            location=get_default_location_from_resource_group(cmd, namespace)
+        if namespace.location is None:
+            get_default_location_from_resource_group(cmd, namespace)
 
-        versions = azext_aro.custom.aro_get_versions(namespace.client, location)
+        versions = azext_aro.custom.aro_get_versions(namespace.client, namespace.location)
 
         found = False
         for version in versions:
