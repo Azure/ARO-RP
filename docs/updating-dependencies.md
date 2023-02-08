@@ -21,7 +21,7 @@ The reason for calling script instead of directly calling:
 
 ```bash
 go get -u ./...
-go mod tidy -compat=1.17
+go mod tidy -compat=1.18
 go mod vendor
 ```
 
@@ -43,7 +43,7 @@ the PR, one can simply call
 go get <module>@<release> OR
 go get -u <module>@<release>
 
-go mod tidy -compat=1.17
+go mod tidy -compat=1.18
 go mod vendor
 ```
 
