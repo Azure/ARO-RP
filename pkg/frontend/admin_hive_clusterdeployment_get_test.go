@@ -31,6 +31,7 @@ func Test_getAdminHiveClusterDeployment(t *testing.T) {
 		name                                  string
 		resourceID                            string
 		properties                            api.OpenShiftClusterProperties
+		hiveEnabled                           bool
 		expectedGetClusterDeploymentCallCount int
 		wantStatusCode                        int
 		wantResponse                          []byte
@@ -42,6 +43,7 @@ func Test_getAdminHiveClusterDeployment(t *testing.T) {
 			name:                                  "cluster has hive profile with namespace",
 			resourceID:                            fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/hive", fakeUUID),
 			properties:                            api.OpenShiftClusterProperties{HiveProfile: api.HiveProfile{Namespace: fmt.Sprintf("aro-%s", fakeUUID)}},
+			hiveEnabled:                           true,
 			expectedGetClusterDeploymentCallCount: 1,
 			wantStatusCode:                        http.StatusOK,
 			wantResponse:                          []byte(`{"spec":{"clusterName":"abc123","baseDomain":"","platform":{},"installed":false}}` + "\n"),
@@ -49,9 +51,18 @@ func Test_getAdminHiveClusterDeployment(t *testing.T) {
 		{
 			name:                                  "cluster does not have hive profile with namespace",
 			resourceID:                            fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/nonHive", fakeUUID),
+			hiveEnabled:                           true,
 			expectedGetClusterDeploymentCallCount: 0,
 			wantStatusCode:                        http.StatusInternalServerError,
 			wantError:                             "500: InternalServerError: : cluster is not managed by hive",
+		},
+		{
+			name:                                  "hive is not enabled",
+			resourceID:                            fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/nonHive", fakeUUID),
+			hiveEnabled:                           false,
+			expectedGetClusterDeploymentCallCount: 0,
+			wantStatusCode:                        http.StatusInternalServerError,
+			wantError:                             "500: InternalServerError: : hive is not enabled",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -70,19 +81,22 @@ func Test_getAdminHiveClusterDeployment(t *testing.T) {
 				},
 			})
 
-			_env := ti.env.(*mock_env.MockInterface)
-
-			clusterManager := mock_hive.NewMockClusterManager(controller)
-
-			clusterManager.EXPECT().GetClusterDeployment(gomock.Any(), gomock.Any()).Return(&clusterDeployment, nil).Times(tt.expectedGetClusterDeploymentCallCount)
-
 			err := ti.buildFixtures(nil)
 			if err != nil {
 				t.Fatal(err)
 			}
+			_env := ti.env.(*mock_env.MockInterface)
+			var f *frontend
+			if tt.hiveEnabled {
+				clusterManager := mock_hive.NewMockClusterManager(controller)
+				clusterManager.EXPECT().GetClusterDeployment(gomock.Any(), gomock.Any()).Return(&clusterDeployment, nil).Times(tt.expectedGetClusterDeploymentCallCount)
+				f, err = NewFrontend(ctx, ti.audit, ti.log, _env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase,
+					ti.subscriptionsDatabase, nil, api.APIs, &noop.Noop{}, nil, clusterManager, nil, nil, nil)
+			} else {
+				f, err = NewFrontend(ctx, ti.audit, ti.log, _env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase,
+					ti.subscriptionsDatabase, nil, api.APIs, &noop.Noop{}, nil, nil, nil, nil, nil)
+			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, _env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase,
-				ti.subscriptionsDatabase, nil, api.APIs, &noop.Noop{}, nil, clusterManager, nil, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

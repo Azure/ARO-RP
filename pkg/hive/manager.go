@@ -52,7 +52,23 @@ type clusterManager struct {
 	dh dynamichelper.Interface
 }
 
+// NewFromEnv can return a nil ClusterManager when hive features are disabled. This exists to support regions where we don't have hive,
+// and we do not want to restrict the frontend from starting up successfully.
+// It has the caveat of requiring a nil check on any operations performed with the returned ClusterManager
+// until this conditional return is removed (we have hive everywhere).
 func NewFromEnv(ctx context.Context, log *logrus.Entry, env env.Interface) (ClusterManager, error) {
+	adoptByHive, err := env.LiveConfig().AdoptByHive(ctx)
+	if err != nil {
+		return nil, err
+	}
+	installViaHive, err := env.LiveConfig().InstallViaHive(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !adoptByHive && !installViaHive {
+		log.Infof("hive is disabled, skipping creation of ClusterManager")
+		return nil, nil
+	}
 	hiveShard := 1
 	hiveRestConfig, err := env.LiveConfig().HiveRestConfig(ctx, hiveShard)
 	if err != nil {

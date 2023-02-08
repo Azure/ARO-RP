@@ -37,6 +37,10 @@ func (f *frontend) getAdminHiveClusterDeployment(w http.ResponseWriter, r *http.
 }
 
 func (f *frontend) _getAdminHiveClusterDeployment(ctx context.Context, r *http.Request) ([]byte, error) {
+	// we have to check if the frontend has a valid clustermanager since hive is not everywhere.
+	if f.hiveClusterManager == nil {
+		return nil, errors.New("hive is not enabled")
+	}
 	url := filepath.Dir(r.URL.Path)
 	resourceID := strings.TrimPrefix(url, "/admin")
 	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
