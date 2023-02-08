@@ -29,7 +29,7 @@ spec:
           ns := input.review.object.metadata.namespace
           user := get_service_account(input.review.object)
           is_priv_namespace(ns)
-          not_priv_user(user)
+          not_exempted_user(user)
           msg := sprintf("User %v not allowed to operate in namespace %v", [user, ns])
         }
 
@@ -101,13 +101,81 @@ spec:
         		"openshift-service-ca-operator"
         }
 
-        not_priv_user(user) {
-          not privileged_user[user]
+        not_exempted_user(user) {
+          not exempted_user[user]
         }
 
-        privileged_user = {
-          "aro-sre",
-          "automated"
+        exempted_user = {
+          "openshift-apiserver-operator",
+          "openshift-apiserver-sa",
+          "authentication-operator",
+          "geneva",
+          "aro-operator-worker",
+          "cluster-cloud-controller-manager",
+          "cloud-credential-operator",
+          "azure-disk-csi-driver-controller-sa",
+          "azure-disk-csi-driver-node-sa",
+          "azure-disk-csi-driver-operator",
+          "machine-approver-sa",
+          "cluster-node-tuning-operator",
+          "tuned",
+          "cluster-samples-operator",
+          "cluster-storage-operator",
+          "csi-snapshot-controller",
+          "csi-snapshot-controller-operator",
+          "default",
+          "openshift-config-operator",
+          "console-operator",
+          "console",
+          "openshift-controller-manager-operator",
+          "openshift-controller-manager-sa",
+          "dns-operator",
+          "dns",
+          "node-resolver",
+          "etcd-operator",
+          "cluster-image-registry-operator",
+          "registry",
+          "node-ca",
+          "ingress-operator",
+          "router",
+          "operator",
+          "kube-apiserver-operator",
+          "kube-controller-manager-operator",
+          "openshift-kube-scheduler-operator",
+          "kube-storage-version-migrator-operator",
+          "kube-storage-version-migrator-sa",
+          "cluster-autoscaler-operator",
+          "cluster-baremetal-operator",
+          "cluster-baremetal-operator",
+          "machine-api-controllers",
+          "machine-api-operator",
+          "machine-config-controller",
+          "machine-config-daemon",
+          "machine-config-server",
+          "managed-upgrade-operator",
+          "marketplace-operator",
+          "alertmanager-main",
+          "cluster-monitoring-operator",
+          "grafana",
+          "kube-state-metrics",
+          "node-exporter",
+          "openshift-state-metrics",
+          "prometheus-adapter",
+          "prometheus-k8s",
+          "prometheus-operator",
+          "thanos-querier",
+          "multus",
+          "metrics-daemon-sa",
+          "network-diagnostics",
+          "oauth-apiserver-sa",
+          "collect-profiles",
+          "olm-operator-serviceaccount",
+          "sdn",
+          "sdn-controller",
+          "service-ca-operator",
+          "service-ca",
+          "pruner",
+          "installer-sa"
         }
 
         get_service_account(obj) = spec {

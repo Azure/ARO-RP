@@ -7,6 +7,7 @@ get_message(parameters, _default) = msg {
   msg := parameters.message
 }
 violation[{"msg": msg}] {
+  input.review.operation == "DELETE"
   label_value := input.review.object.metadata.labels[key]
   deny_label := input.parameters.labels[_]
   deny_label.key == key

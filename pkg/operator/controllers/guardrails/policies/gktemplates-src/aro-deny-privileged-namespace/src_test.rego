@@ -36,5 +36,5 @@ input_allowed_ns = "mytest"
 
 input_disallowed_ns1 = "openshift-config"
 
-priv_user = "aro-sre"
+priv_user = "geneva"
 non_priv_user = "test"

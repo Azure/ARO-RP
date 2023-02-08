@@ -29,11 +29,12 @@ get_input_with_label(label) = output {
         ]
     },
     "review": {
-            "kind": {
-                "kind": "Pod",
-                "version": "v1"
-            },
+            "operation": "DELETE",
             "object": {
+                "kind": {
+                    "kind": "Pod",
+                    "version": "v1"
+                },
                 "metadata": {
                     "name": "myapp",
                     "namespace": "default",
