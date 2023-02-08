@@ -11,12 +11,14 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/v20210901preview"
 	v20220401 "github.com/Azure/ARO-RP/pkg/api/v20220401"
 	v20220904 "github.com/Azure/ARO-RP/pkg/api/v20220904"
+	v20230401 "github.com/Azure/ARO-RP/pkg/api/v20230401"
 )
 
 const apiv20200430Path = "github.com/Azure/ARO-RP/pkg/api/v20200430"
 const apiv20210901previewPath = "github.com/Azure/ARO-RP/pkg/api/v20210901preview"
 const apiv20220401Path = "github.com/Azure/ARO-RP/pkg/api/v20220401"
 const apiv20220904Path = "github.com/Azure/ARO-RP/pkg/api/v20220904"
+const apiv20230401Path = "github.com/Azure/ARO-RP/pkg/api/v20230401"
 
 type generator struct {
 	exampleSyncSetPutParameter                     func() interface{}
@@ -121,6 +123,41 @@ var apis = map[string]*generator{
 		exampleOpenShiftClusterListResponse:            v20220904.ExampleOpenShiftClusterListResponse,
 		exampleOpenShiftClusterAdminKubeconfigResponse: v20220904.ExampleOpenShiftClusterAdminKubeconfigResponse,
 		exampleOpenShiftVersionListResponse:            v20220904.ExampleOpenShiftVersionListResponse,
+		exampleOperationListResponse:                   api.ExampleOperationListResponse,
+
+		xmsEnum:            []string{"EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility"},
+		xmsSecretList:      []string{"kubeconfig", "kubeadminPassword", "secretResources"},
+		xmsIdentifiers:     []string{},
+		commonTypesVersion: "v3",
+		systemData:         true,
+		clusterManager:     true,
+		installVersionList: true,
+		kubeConfig:         true,
+	},
+	apiv20230401Path: {
+		exampleSyncSetPutParameter:                     v20230401.ExampleSyncSetPutParameter,
+		exampleSyncSetPatchParameter:                   v20230401.ExampleSyncSetPatchParameter,
+		exampleSyncSetResponse:                         v20230401.ExampleSyncSetResponse,
+		exampleSyncSetListResponse:                     v20230401.ExampleSyncSetListResponse,
+		exampleMachinePoolPutParameter:                 v20230401.ExampleMachinePoolPutParameter,
+		exampleMachinePoolPatchParameter:               v20230401.ExampleMachinePoolPatchParameter,
+		exampleMachinePoolResponse:                     v20230401.ExampleMachinePoolResponse,
+		exampleMachinePoolListResponse:                 v20230401.ExampleMachinePoolListResponse,
+		exampleSyncIdentityProviderPutParameter:        v20230401.ExampleSyncIdentityProviderPutParameter,
+		exampleSyncIdentityProviderPatchParameter:      v20230401.ExampleSyncIdentityProviderPatchParameter,
+		exampleSyncIdentityProviderResponse:            v20230401.ExampleSyncIdentityProviderResponse,
+		exampleSyncIdentityProviderListResponse:        v20230401.ExampleSyncIdentityProviderListResponse,
+		exampleSecretPutParameter:                      v20230401.ExampleSecretPutParameter,
+		exampleSecretPatchParameter:                    v20230401.ExampleSecretPatchParameter,
+		exampleSecretResponse:                          v20230401.ExampleSecretResponse,
+		exampleSecretListResponse:                      v20230401.ExampleSecretListResponse,
+		exampleOpenShiftClusterPutParameter:            v20230401.ExampleOpenShiftClusterPutParameter,
+		exampleOpenShiftClusterPatchParameter:          v20230401.ExampleOpenShiftClusterPatchParameter,
+		exampleOpenShiftClusterResponse:                v20230401.ExampleOpenShiftClusterResponse,
+		exampleOpenShiftClusterCredentialsResponse:     v20230401.ExampleOpenShiftClusterCredentialsResponse,
+		exampleOpenShiftClusterListResponse:            v20230401.ExampleOpenShiftClusterListResponse,
+		exampleOpenShiftClusterAdminKubeconfigResponse: v20230401.ExampleOpenShiftClusterAdminKubeconfigResponse,
+		exampleOpenShiftVersionListResponse:            v20230401.ExampleOpenShiftVersionListResponse,
 		exampleOperationListResponse:                   api.ExampleOperationListResponse,
 
 		xmsEnum:            []string{"EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility"},
