@@ -161,9 +161,10 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
 def aro_validate(cmd,  # pylint: disable=too-many-locals
                  client,
                  resource_group_name,  # pylint: disable=unused-argument
+                 resource_name,  # pylint: disable=unused-argument
                  master_subnet,
                  worker_subnet,
-                 vnet,
+                 vnet=None,
                  cluster_resource_group=None,
                  client_id=None,
                  client_secret=None,  # pylint: disable=unused-argument
@@ -208,6 +209,16 @@ def aro_validate(cmd,  # pylint: disable=too-many-locals
     except (CloudError, HttpOperationError) as e:
         logger.error(e.message)
         raise
+
+    if vnet is None:
+        master_parts = parse_resource_id(master_subnet)
+        vnet = resource_id(
+            subscription=master_parts['subscription'],
+            resource_group=master_parts['resource_group'],
+            namespace='Microsoft.Network',
+            type='virtualNetworks',
+            name=master_parts['name'],
+        )
 
     error_objects = validate_cluster_create(cmd,
                                             client,

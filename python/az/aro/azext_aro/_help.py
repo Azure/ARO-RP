@@ -28,7 +28,7 @@ helps['aro validate'] = """
   short-summary: Validate permissions required to create a cluster.
   examples:
   - name: Validate permissions.
-    text: az aro validate --resource-group MyGroup --vnet MyVnet --master-subnet MyMasterSubnet --worker-subnet MyWorkerSubnet
+    text: az aro validate --resource-group MyGroup --name MyName --vnet MyVnet --master-subnet MyMasterSubnet --worker-subnet MyWorkerSubnet
 """
 
 helps['aro list'] = """
