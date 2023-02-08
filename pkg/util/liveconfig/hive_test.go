@@ -106,36 +106,28 @@ func TestProdHiveAdmin(t *testing.T) {
 func TestOCMValidClientIDs(t *testing.T) {
 	for _, tt := range []struct {
 		name          string
-		setupEnv      func(string)
 		envIds        string
 		wantClientIds []string
 	}{
 		{
-			name: "env not set, empty array returned",
-			setupEnv: func(clientIds string) {
-				// no op
-			},
+			name:          "env not set, empty array returned",
 			envIds:        "",
 			wantClientIds: []string{},
 		},
 		{
-			name: "env set, multiple IDs",
-			setupEnv: func(clientIds string) {
-				os.Setenv(ocmValidClientIDs, clientIds)
-			},
+			name:          "env set, multiple IDs",
 			envIds:        `abc,123`,
 			wantClientIds: []string{"abc", "123"},
 		},
 		{
-			name: "env set, single ID",
-			setupEnv: func(clientIds string) {
-				os.Setenv(ocmValidClientIDs, clientIds)
-			},
+			name:          "env set, single ID",
 			envIds:        `singleId`,
 			wantClientIds: []string{"singleId"},
 		},
 	} {
-		tt.setupEnv(tt.envIds)
+		if tt.envIds != "" {
+			os.Setenv(ocmValidClientIDs, tt.envIds)
+		}
 		prod := &prod{}
 		clientIds := prod.OCMValidClientIDs()
 

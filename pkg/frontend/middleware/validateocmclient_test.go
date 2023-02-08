@@ -13,7 +13,7 @@ import (
 	"github.com/golang/mock/gomock"
 )
 
-func TestAuthenticatedForOCMAPIs(t *testing.T) {
+func TestValidateOCMClient(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 	validOCMClientIds := []string{"abc-123"}
@@ -68,24 +68,18 @@ func TestAuthenticatedForOCMAPIs(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			var r *http.Request
-			var err error
 
 			if tt.ocmResourceType == "" {
 				// non ocm api
 				r = httptest.NewRequest(http.MethodGet, "https://server/subscriptions/0000-0000/resourcegroups/testrg/providers/testrpn/testrt/testrn", nil)
 			} else {
 				r = httptest.NewRequest(http.MethodGet, fmt.Sprintf(basePath, tt.ocmResourceType), nil)
-
-			}
-			if err != nil {
-				t.Fatal(err)
 			}
 
 			r.Header.Set(ArmSystemDataHeaderKey, tt.systemDataHeader)
-
 			w := httptest.NewRecorder()
-
 			chiRouter.ServeHTTP(w, r)
+
 			if status := w.Code; status != tt.wantStatus {
 				t.Fatalf("expected status: %d got: %d", tt.wantStatus, status)
 			}
