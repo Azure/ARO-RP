@@ -127,14 +127,6 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 		Namespace:     oc.Properties.HiveProfile.Namespace,
 		CreatedByHive: oc.Properties.HiveProfile.CreatedByHive,
 	}
-	out.SystemData = SystemData{
-		CreatedBy:          oc.SystemData.CreatedBy,
-		CreatedAt:          oc.SystemData.CreatedAt,
-		CreatedByType:      CreatedByType(oc.SystemData.CreatedByType),
-		LastModifiedBy:     oc.SystemData.LastModifiedBy,
-		LastModifiedAt:     oc.SystemData.LastModifiedAt,
-		LastModifiedByType: CreatedByType(oc.SystemData.LastModifiedByType),
-	}
 
 	return out
 }
@@ -240,15 +232,6 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 			Now:   oc.Properties.Install.Now,
 			Phase: api.InstallPhase(oc.Properties.Install.Phase),
 		}
-	}
-
-	out.SystemData = api.SystemData{
-		CreatedBy:          oc.SystemData.CreatedBy,
-		CreatedAt:          oc.SystemData.CreatedAt,
-		CreatedByType:      api.CreatedByType(oc.SystemData.CreatedByType),
-		LastModifiedBy:     oc.SystemData.LastModifiedBy,
-		LastModifiedAt:     oc.SystemData.LastModifiedAt,
-		LastModifiedByType: api.CreatedByType(oc.SystemData.CreatedByType),
 	}
 
 	// out.Properties.RegistryProfiles is not converted. The field is immutable and does not have to be converted.
