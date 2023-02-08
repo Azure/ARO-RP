@@ -24,7 +24,6 @@ type OpenShiftCluster struct {
 	Location   string                     `json:"location,omitempty"`
 	Tags       map[string]string          `json:"tags,omitempty"`
 	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
-	SystemData SystemData                 `json:"systemData,omitempty"`
 }
 
 // OpenShiftClusterProperties represents an OpenShift cluster's properties.
