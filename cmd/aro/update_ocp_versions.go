@@ -90,7 +90,7 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 		return nil, err
 	}
 
-	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+	if err := ValidateVars(DatabaseAccountName); err != nil {
 		return nil, err
 	}
 	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, m, aead, os.Getenv(DatabaseAccountName))

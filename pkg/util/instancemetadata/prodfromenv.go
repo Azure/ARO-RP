@@ -33,7 +33,8 @@ func newProdFromEnv(ctx context.Context) (InstanceMetadata, error) {
 }
 
 func (p *prodFromEnv) populateInstanceMetadata() error {
-	// TODO (Aldo): can't use env package due to import cycle errors
+	// TODO (Aldo): can't use env package due to import cycle errors.
+	// Inject values instead of validating + reading env variables.
 	for _, key := range []string{
 		"AZURE_ENVIRONMENT",
 		"AZURE_SUBSCRIPTION_ID",

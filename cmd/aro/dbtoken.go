@@ -55,7 +55,7 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 
 	go g.Run()
 
-	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+	if err := ValidateVars(DatabaseAccountName); err != nil {
 		return err
 	}
 

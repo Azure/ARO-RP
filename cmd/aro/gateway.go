@@ -41,7 +41,7 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 
 	go g.Run()
 
-	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+	if err := ValidateVars(DatabaseAccountName); err != nil {
 		return err
 	}
 	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, nil, m, nil, os.Getenv(DatabaseAccountName))
@@ -69,7 +69,11 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	dbRefresher, err := pkgdbtoken.NewRefresher(log, _env, msiRefresherAuthorizer, insecureSkipVerify, dbc, "gateway", m, "gateway")
+	url, err := getURL(_env.IsLocalDevelopmentMode())
+	if err != nil {
+		return err
+	}
+	dbRefresher, err := pkgdbtoken.NewRefresher(log, _env, msiRefresherAuthorizer, insecureSkipVerify, dbc, "gateway", m, "gateway", url)
 	if err != nil {
 		return err
 	}
@@ -128,4 +132,15 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 	<-done
 
 	return nil
+}
+
+func getURL(isLocalDevelopmentMode bool) (string, error) {
+	if isLocalDevelopmentMode {
+		return "https://localhost:8445", nil
+	}
+
+	if err := ValidateVars(DBTokenUrl); err != nil {
+		return "", err
+	}
+	return os.Getenv(DBTokenUrl), nil
 }

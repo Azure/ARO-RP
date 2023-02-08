@@ -23,6 +23,7 @@ import (
 )
 
 const (
+	DatabaseName        = "DATABASE_NAME"
 	DatabaseAccountName = "DATABASE_ACCOUNT_NAME"
 	KeyVaultPrefix      = "KEYVAULT_PREFIX"
 )
@@ -68,7 +69,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+	if err := ValidateVars(DatabaseAccountName); err != nil {
 		return err
 	}
 	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, &noop.Noop{}, aead, os.Getenv(DatabaseAccountName))
@@ -107,11 +108,11 @@ func DBName(isLocalDevelopmentMode bool) (string, error) {
 		return "ARO", nil
 	}
 
-	if err := env.ValidateVars("DATABASE_NAME"); err != nil {
+	if err := ValidateVars(DatabaseName); err != nil {
 		return "", fmt.Errorf("%v (development mode)", err.Error())
 	}
 
-	return os.Getenv("DATABASE_NAME"), nil
+	return os.Getenv(DatabaseName), nil
 }
 
 // ValidateVars iterates over all the elements of vars and

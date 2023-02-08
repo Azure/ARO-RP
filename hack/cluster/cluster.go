@@ -18,12 +18,16 @@ import (
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
+const (
+	Cluster = "CLUSTER"
+)
+
 func run(ctx context.Context, log *logrus.Entry) error {
 	if len(os.Args) != 2 {
 		return fmt.Errorf("usage: CLUSTER=x %s {create,delete}", os.Args[0])
 	}
 
-	if err := env.ValidateVars("CLUSTER"); err != nil {
+	if err := ValidateVars(Cluster); err != nil {
 		return err
 	}
 
@@ -34,9 +38,9 @@ func run(ctx context.Context, log *logrus.Entry) error {
 
 	vnetResourceGroup := os.Getenv("RESOURCEGROUP") // TODO: remove this when we deploy and peer a vnet per cluster create
 	if os.Getenv("CI") != "" {
-		vnetResourceGroup = os.Getenv("CLUSTER")
+		vnetResourceGroup = os.Getenv(Cluster)
 	}
-	clusterName := os.Getenv("CLUSTER")
+	clusterName := os.Getenv(Cluster)
 
 	c, err := cluster.New(log, env, os.Getenv("CI") != "")
 	if err != nil {
@@ -61,4 +65,16 @@ func main() {
 	if err := run(context.Background(), log); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// ValidateVars iterates over all the elements of vars and
+// if it does not exist an environment variable with that name, it will return an error.
+// Otherwise it returns nil.
+func ValidateVars(vars ...string) error {
+	for _, v := range vars {
+		if _, found := os.LookupEnv(v); !found {
+			return fmt.Errorf("environment variable %q unset", v)
+		}
+	}
+	return nil
 }

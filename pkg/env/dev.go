@@ -23,10 +23,6 @@ type dev struct {
 }
 
 func newDev(ctx context.Context, log *logrus.Entry) (Interface, error) {
-	if err := ValidateVars("PROXY_HOSTNAME"); err != nil {
-		return nil, err
-	}
-
 	d := &dev{}
 
 	var err error

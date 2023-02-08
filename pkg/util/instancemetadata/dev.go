@@ -12,7 +12,8 @@ import (
 
 func NewDev(checkEnv bool) (InstanceMetadata, error) {
 	if checkEnv {
-		// TODO (Aldo): can't use env package due to import cycle errors
+		// TODO (Aldo): can't use env package due to import cycle errors.
+		// Inject values instead of validating + reading env variables.
 		for _, key := range []string{
 			"AZURE_SUBSCRIPTION_ID",
 			"AZURE_TENANT_ID",

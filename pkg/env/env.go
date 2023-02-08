@@ -56,6 +56,7 @@ const (
 	PortalKeyvaultSuffix             = "-por"
 	ServiceKeyvaultSuffix            = "-svc"
 	RPPrivateEndpointPrefix          = "rp-pe-"
+	ProxyHostName                    = "PROXY_HOSTNAME"
 )
 
 // Interface is clunky and somewhat legacy and only used in the RP codebase (not
@@ -101,6 +102,9 @@ type Interface interface {
 
 func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
 	if IsLocalDevelopmentMode() {
+		if err := ValidateVars(ProxyHostName); err != nil {
+			return nil, err
+		}
 		return newDev(ctx, log)
 	}
 
