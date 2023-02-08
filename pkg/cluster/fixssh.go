@@ -130,8 +130,16 @@ func (m *manager) updateNIC(ctx context.Context, nic *mgmtnetwork.Interface, nic
 		return false
 	}
 
+	var ilbBackendPool string
+	switch m.doc.OpenShiftCluster.Properties.ArchitectureVersion {
+	case api.ArchitectureVersionV1:
+		ilbBackendPool = infraID + "-internal-controlplane-v4"
+	case api.ArchitectureVersionV2:
+		ilbBackendPool = infraID
+	}
+
 	sshID := fmt.Sprintf("%s/backendAddressPools/ssh-%d", *lb.ID, i)
-	ilbID := fmt.Sprintf("%s/backendAddressPools/%s", *lb.ID, infraID)
+	ilbID := fmt.Sprintf("%s/backendAddressPools/%s", *lb.ID, ilbBackendPool)
 
 	updateSSHPool := true
 	updateILBPool := true
