@@ -173,6 +173,7 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Condition(m.apiServersReady, 30*time.Minute, true),
 		steps.Action(m.configureAPIServerCertificate),
 		steps.Action(m.configureIngressCertificate),
+		steps.Action(m.renewMDSDCertificate),
 		steps.Action(m.updateOpenShiftSecret),
 		steps.Action(m.updateAROSecret),
 	}
