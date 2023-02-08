@@ -33,7 +33,7 @@ import (
 var _ = Describe("Encryption at host", func() {
 	It("must be enabled on the test cluster and each VM must have encryption at host enabled", func(ctx context.Context) {
 		By("getting the test cluster resource")
-		oc, err := clients.OpenshiftClustersv20220401.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking that encryption at host is enabled for masters")
@@ -69,7 +69,7 @@ var _ = Describe("Encryption at host", func() {
 var _ = Describe("Disk encryption at rest", func() {
 	It("must be enabled with customer managed key for the cluster and each disk must have it enabled", func(ctx context.Context) {
 		By("getting the test cluster resource")
-		oc, err := clients.OpenshiftClustersv20220401.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking that disk encryption at rest is enabled for masters")

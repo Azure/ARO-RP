@@ -19,7 +19,7 @@ var _ = Describe("FIPS Mode", func() {
 		expectedFIPSMachineConfigs := []string{"99-worker-fips", "99-master-fips"}
 
 		By("getting the test cluster resource")
-		oc, err := clients.OpenshiftClustersv20220401.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("listing machine configs")
