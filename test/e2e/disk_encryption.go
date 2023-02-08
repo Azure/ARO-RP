@@ -12,7 +12,6 @@ import (
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	mgmtredhatopenshift20220401 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2022-04-01/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -39,14 +38,14 @@ var _ = Describe("Encryption at host", func() {
 		By("checking that encryption at host is enabled for masters")
 		Expect(oc.OpenShiftClusterProperties).To(Not(BeNil()))
 		Expect(oc.OpenShiftClusterProperties.MasterProfile).To(Not(BeNil()))
-		Expect((*oc.OpenShiftClusterProperties.MasterProfile).EncryptionAtHost).To(Equal(mgmtredhatopenshift20220401.Enabled))
+		Expect((*oc.OpenShiftClusterProperties.MasterProfile).EncryptionAtHost).To(BeEquivalentTo("Enabled"))
 
 		By("checking that encryption at host is enabled for workers")
 		Expect(oc.OpenShiftClusterProperties).To(Not(BeNil()))
 		Expect(oc.OpenShiftClusterProperties.WorkerProfiles).To(Not(BeNil()))
 		Expect(*oc.OpenShiftClusterProperties.WorkerProfiles).NotTo(BeEmpty())
 		for _, profile := range *oc.OpenShiftClusterProperties.WorkerProfiles {
-			Expect(profile.EncryptionAtHost).To(Equal(mgmtredhatopenshift20220401.Enabled))
+			Expect(profile.EncryptionAtHost).To(BeEquivalentTo("Enabled"))
 		}
 
 		By("getting the resource group where the VM instances live in")
