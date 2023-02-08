@@ -432,7 +432,7 @@ func tearDownSelenium(ctx context.Context) error {
 }
 
 func setup(ctx context.Context) error {
-	err := ValidateVars(
+	err := env.ValidateVars(
 		"AZURE_CLIENT_ID",
 		"AZURE_CLIENT_SECRET",
 		"AZURE_SUBSCRIPTION_ID",
@@ -534,15 +534,3 @@ var _ = AfterSuite(func() {
 		panic(err)
 	}
 })
-
-// ValidateVars iterates over all the elements of vars and
-// if it does not exist an environment variable with that name, it will return an error.
-// Otherwise it returns nil.
-func ValidateVars(vars ...string) error {
-	for _, v := range vars {
-		if _, found := os.LookupEnv(v); !found {
-			return fmt.Errorf("environment variable %q unset", v)
-		}
-	}
-	return nil
-}

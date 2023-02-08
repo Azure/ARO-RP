@@ -62,7 +62,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		}
 	}
 
-	if err = ValidateVars(keys...); err != nil {
+	if err = env.ValidateVars(keys...); err != nil {
 		return err
 	}
 
@@ -102,7 +102,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	if err := ValidateVars(DatabaseAccountName); err != nil {
+	if err := env.ValidateVars(DatabaseAccountName); err != nil {
 		return err
 	}
 	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, metrics, aead, os.Getenv(DatabaseAccountName))

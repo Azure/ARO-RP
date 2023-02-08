@@ -34,11 +34,6 @@ func (c *core) NewMSIAuthorizer(msiContext MSIContext, scopes ...string) (autore
 	azureClientId := "AZURE_" + string(msiContext) + "_CLIENT_ID"
 	azureClientSecret := "AZURE_" + string(msiContext) + "_CLIENT_SECRET"
 	// TODO(Aldo): inject values instead of validating + reading env vars.
-	err := ValidateVars(
-		azureClientId,
-		azureClientSecret,
-		tenantIdKey)
-
 	if err := ValidateVars(azureClientId, azureClientSecret, tenantIdKey); err != nil {
 		return nil, fmt.Errorf("%v (development mode)", err.Error())
 	}

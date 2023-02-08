@@ -31,7 +31,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	if !_env.IsLocalDevelopmentMode() {
-		err := ValidateVars(
+		err := env.ValidateVars(
 			"CLUSTER_MDM_ACCOUNT",
 			"CLUSTER_MDM_NAMESPACE",
 			"MDM_ACCOUNT",
@@ -69,7 +69,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	if err := ValidateVars(KeyVaultPrefix); err != nil {
+	if err := env.ValidateVars(KeyVaultPrefix); err != nil {
 		return err
 	}
 	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
@@ -88,7 +88,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	if err := ValidateVars(DatabaseAccountName); err != nil {
+	if err := env.ValidateVars(DatabaseAccountName); err != nil {
 		return err
 	}
 	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, &noop.Noop{}, aead, os.Getenv(DatabaseAccountName))

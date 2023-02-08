@@ -50,12 +50,12 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 		return nil, err
 	}
 
-	if err = ValidateVars("DST_ACR_NAME"); err != nil {
+	if err = env.ValidateVars("DST_ACR_NAME"); err != nil {
 		return nil, err
 	}
 
 	if !_env.IsLocalDevelopmentMode() {
-		if err = ValidateVars("MDM_ACCOUNT", "MDM_NAMESPACE"); err != nil {
+		if err = env.ValidateVars("MDM_ACCOUNT", "MDM_NAMESPACE"); err != nil {
 			return nil, err
 		}
 	}
@@ -72,7 +72,7 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 
 	m := statsd.New(ctx, log.WithField("component", "update-ocp-versions"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 
-	if err := ValidateVars(KeyVaultPrefix); err != nil {
+	if err := env.ValidateVars(KeyVaultPrefix); err != nil {
 		return nil, err
 	}
 	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
@@ -90,7 +90,7 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 		return nil, err
 	}
 
-	if err := ValidateVars(DatabaseAccountName); err != nil {
+	if err := env.ValidateVars(DatabaseAccountName); err != nil {
 		return nil, err
 	}
 	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, m, aead, os.Getenv(DatabaseAccountName))

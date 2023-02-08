@@ -51,7 +51,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	if err := ValidateVars(KeyVaultPrefix); err != nil {
+	if err := env.ValidateVars(KeyVaultPrefix); err != nil {
 		return err
 	}
 	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
@@ -69,7 +69,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	if err := ValidateVars(DatabaseAccountName); err != nil {
+	if err := env.ValidateVars(DatabaseAccountName); err != nil {
 		return err
 	}
 	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, &noop.Noop{}, aead, os.Getenv(DatabaseAccountName))
@@ -108,21 +108,9 @@ func DBName(isLocalDevelopmentMode bool) (string, error) {
 		return "ARO", nil
 	}
 
-	if err := ValidateVars(DatabaseName); err != nil {
+	if err := env.ValidateVars(DatabaseName); err != nil {
 		return "", fmt.Errorf("%v (development mode)", err.Error())
 	}
 
 	return os.Getenv(DatabaseName), nil
-}
-
-// ValidateVars iterates over all the elements of vars and
-// if it does not exist an environment variable with that name, it will return an error.
-// Otherwise it returns nil.
-func ValidateVars(vars ...string) error {
-	for _, v := range vars {
-		if _, found := os.LookupEnv(v); !found {
-			return fmt.Errorf("environment variable %q unset", v)
-		}
-	}
-	return nil
 }

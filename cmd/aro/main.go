@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/ARO-RP/pkg/env"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -107,24 +108,12 @@ func checkMinArgs(required int) {
 	}
 }
 
-// ValidateVars iterates over all the elements of vars and
-// if it does not exist an environment variable with that name, it will return an error.
-// Otherwise it returns nil.
-func ValidateVars(vars ...string) error {
-	for _, v := range vars {
-		if _, found := os.LookupEnv(v); !found {
-			return fmt.Errorf("environment variable %q unset", v)
-		}
-	}
-	return nil
-}
-
 func DBName(isLocalDevelopmentMode bool) (string, error) {
 	if !isLocalDevelopmentMode {
 		return "ARO", nil
 	}
 
-	if err := ValidateVars(DatabaseName); err != nil {
+	if err := env.ValidateVars(DatabaseName); err != nil {
 		return "", fmt.Errorf("%v (development mode)", err.Error())
 	}
 

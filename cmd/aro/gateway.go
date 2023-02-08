@@ -28,7 +28,7 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	if err = ValidateVars("AZURE_DBTOKEN_CLIENT_ID"); err != nil {
+	if err = env.ValidateVars("AZURE_DBTOKEN_CLIENT_ID"); err != nil {
 		return err
 	}
 
@@ -41,7 +41,7 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 
 	go g.Run()
 
-	if err := ValidateVars(DatabaseAccountName); err != nil {
+	if err := env.ValidateVars(DatabaseAccountName); err != nil {
 		return err
 	}
 	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, nil, m, nil, os.Getenv(DatabaseAccountName))
@@ -139,7 +139,7 @@ func getURL(isLocalDevelopmentMode bool) (string, error) {
 		return "https://localhost:8445", nil
 	}
 
-	if err := ValidateVars(DBTokenUrl); err != nil {
+	if err := env.ValidateVars(DBTokenUrl); err != nil {
 		return "", err
 	}
 	return os.Getenv(DBTokenUrl), nil

@@ -27,7 +27,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return fmt.Errorf("usage: CLUSTER=x %s {create,delete}", os.Args[0])
 	}
 
-	if err := ValidateVars(Cluster); err != nil {
+	if err := env.ValidateVars(Cluster); err != nil {
 		return err
 	}
 
@@ -65,16 +65,4 @@ func main() {
 	if err := run(context.Background(), log); err != nil {
 		log.Fatal(err)
 	}
-}
-
-// ValidateVars iterates over all the elements of vars and
-// if it does not exist an environment variable with that name, it will return an error.
-// Otherwise it returns nil.
-func ValidateVars(vars ...string) error {
-	for _, v := range vars {
-		if _, found := os.LookupEnv(v); !found {
-			return fmt.Errorf("environment variable %q unset", v)
-		}
-	}
-	return nil
 }
