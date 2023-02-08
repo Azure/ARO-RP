@@ -24,7 +24,7 @@ type Manager interface {
 	HiveRestConfig(context.Context, int) (*rest.Config, error)
 	InstallViaHive(context.Context) (bool, error)
 	AdoptByHive(context.Context) (bool, error)
-	OCMValidClientIDs() ([]string, error)
+	OCMValidClientIDs() []string
 
 	// Allows overriding the default installer pullspec for Prod, if the OpenShiftVersions database is not populated
 	DefaultInstallerPullSpecOverride(context.Context) string

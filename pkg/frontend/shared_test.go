@@ -34,6 +34,7 @@ import (
 	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
 	"github.com/Azure/ARO-RP/test/util/listener"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
+	"github.com/Azure/ARO-RP/test/util/testliveconfig"
 )
 
 var (
@@ -107,6 +108,8 @@ func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *test
 	_env.EXPECT().AdminClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(clientcerts[0].Raw))
 	_env.EXPECT().Domain().AnyTimes().Return("aro.example")
 	_env.EXPECT().Listen().AnyTimes().Return(l, nil)
+	_env.EXPECT().LiveConfig().AnyTimes().Return(testliveconfig.NewTestLiveConfig(true, true))
+
 	for f, val := range features {
 		_env.EXPECT().FeatureIsSet(f).AnyTimes().Return(val)
 	}

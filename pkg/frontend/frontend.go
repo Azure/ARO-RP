@@ -147,7 +147,7 @@ func NewFrontend(ctx context.Context,
 			ArmAuth:   _env.ArmClientAuthorizer(),
 		},
 		ocmValidator: middleware.OCMValidator{
-			Env: _env,
+			ValidOCMClientIDs: _env.LiveConfig().OCMValidClientIDs(),
 		},
 		dbAsyncOperations:             dbAsyncOperations,
 		dbClusterManagerConfiguration: dbClusterManagerConfiguration,

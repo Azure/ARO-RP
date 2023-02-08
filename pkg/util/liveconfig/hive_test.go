@@ -109,7 +109,6 @@ func TestOCMValidClientIDs(t *testing.T) {
 		setupEnv      func(string)
 		envIds        string
 		wantClientIds []string
-		wantErr       string
 	}{
 		{
 			name: "env not set, empty array returned",
@@ -118,33 +117,27 @@ func TestOCMValidClientIDs(t *testing.T) {
 			},
 			envIds:        "",
 			wantClientIds: []string{},
-			wantErr:       "",
 		},
 		{
-			name: "env set, clientIds returned",
+			name: "env set, multiple IDs",
 			setupEnv: func(clientIds string) {
 				os.Setenv(ocmValidClientIDs, clientIds)
 			},
-			envIds:        `["abc"]`,
-			wantClientIds: []string{"abc"},
-			wantErr:       "",
+			envIds:        `abc,123`,
+			wantClientIds: []string{"abc", "123"},
 		},
 		{
-			name: "invalid value for clientIds, error returned",
+			name: "env set, single ID",
 			setupEnv: func(clientIds string) {
 				os.Setenv(ocmValidClientIDs, clientIds)
 			},
-			envIds:  `what is going on`,
-			wantErr: "invalid character 'w' looking for beginning of value",
+			envIds:        `singleId`,
+			wantClientIds: []string{"singleId"},
 		},
 	} {
 		tt.setupEnv(tt.envIds)
 		prod := &prod{}
-		clientIds, err := prod.OCMValidClientIDs()
-
-		if tt.wantErr != "" && tt.wantErr != err.Error() || tt.wantErr == "" && err != nil {
-			t.Fatalf("Failed: expected error: %q but got: %q", tt.wantErr, err)
-		}
+		clientIds := prod.OCMValidClientIDs()
 
 		if !reflect.DeepEqual(clientIds, tt.wantClientIds) {
 			t.Fatalf("clientIds do not match. Wanted: %q, got: %q", tt.wantClientIds, clientIds)

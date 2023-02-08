@@ -8,6 +8,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
@@ -132,7 +133,9 @@ func TestDeleteClusterManagerConfiguration(t *testing.T) {
 					resourceKey,
 					tt.apiVersion,
 				),
-				nil, nil)
+				http.Header{
+					middleware.ArmSystemDataHeaderKey: []string{`{"lastModifiedBy":"abc-123", "lastModifiedByType": "Application"}`},
+				}, nil)
 			if err != nil {
 				t.Fatalf("%s: %s", err, string(b))
 			}

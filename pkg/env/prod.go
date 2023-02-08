@@ -26,7 +26,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
-	"github.com/Azure/ARO-RP/pkg/util/ocm"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -258,15 +257,6 @@ func (p *prod) ArmClientAuthorizer() clientauthorizer.ClientAuthorizer {
 
 func (p *prod) AdminClientAuthorizer() clientauthorizer.ClientAuthorizer {
 	return p.adminClientAuthorizer
-}
-
-func (p *prod) ValidateOCMClientID(systemDataHeader string) bool {
-	clientIds, err := p.liveConfig.OCMValidClientIDs()
-	if err != nil {
-		p.log.Errorf("Unable to retrieve valid ocm clientIds: %q", err)
-		return false
-	}
-	return ocm.ValidateOCMFromSystemData(systemDataHeader, clientIds)
 }
 
 func (p *prod) ACRResourceID() string {

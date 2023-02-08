@@ -5,9 +5,9 @@ package liveconfig
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -73,19 +73,14 @@ func (d *dev) AdoptByHive(ctx context.Context) (bool, error) {
 	return false, nil
 }
 
-func (d *dev) OCMValidClientIDs() ([]string, error) {
+func (d *dev) OCMValidClientIDs() []string {
 	return validOCMClientIDsFromEnv()
 }
 
-func validOCMClientIDsFromEnv() ([]string, error) {
+func validOCMClientIDsFromEnv() []string {
 	ocmValidClientIDString := os.Getenv(ocmValidClientIDs)
 	if ocmValidClientIDString == "" {
-		return []string{}, nil
+		return []string{}
 	}
-	var clientIDs []string
-	err := json.Unmarshal([]byte(ocmValidClientIDString), &clientIDs)
-	if err != nil {
-		return nil, err
-	}
-	return clientIDs, nil
+	return strings.Split(ocmValidClientIDString, ",")
 }

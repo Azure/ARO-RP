@@ -26,6 +26,7 @@ import (
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/test/util/listener"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
+	"github.com/Azure/ARO-RP/test/util/testliveconfig"
 )
 
 func TestSecurity(t *testing.T) {
@@ -66,6 +67,7 @@ func TestSecurity(t *testing.T) {
 	_env.EXPECT().Listen().AnyTimes().Return(l, nil)
 	_env.EXPECT().FeatureIsSet(env.FeatureDisableReadinessDelay).AnyTimes().Return(false)
 	_env.EXPECT().FeatureIsSet(env.FeatureEnableOCMEndpoints).AnyTimes().Return(true)
+	_env.EXPECT().LiveConfig().AnyTimes().Return(testliveconfig.NewTestLiveConfig(true, true))
 
 	invalidclientkey, invalidclientcerts, err := utiltls.GenerateKeyAndCertificate("invalidclient", nil, nil, false, true)
 	if err != nil {

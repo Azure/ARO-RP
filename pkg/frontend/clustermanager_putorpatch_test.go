@@ -11,6 +11,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	v20220904 "github.com/Azure/ARO-RP/pkg/api/v20220904"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
@@ -214,7 +215,8 @@ func TestPutOrPatchClusterManagerConfiguration(t *testing.T) {
 					tt.apiVersion,
 				),
 				http.Header{
-					"Content-Type": []string{"application/json"},
+					"Content-Type":                    []string{"application/json"},
+					middleware.ArmSystemDataHeaderKey: []string{`{"lastModifiedBy":"abc-123", "lastModifiedByType": "Application"}`},
 				}, tt.requestBody)
 			if err != nil {
 				t.Fatalf("%s: %s", err, string(b))

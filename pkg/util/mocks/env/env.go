@@ -682,20 +682,6 @@ func (mr *MockInterfaceMockRecorder) VMSku(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMSku", reflect.TypeOf((*MockInterface)(nil).VMSku), arg0)
 }
 
-// ValidateOCMClientID mocks base method.
-func (m *MockInterface) ValidateOCMClientID(arg0 string) bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateOCMClientID", arg0)
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// ValidateOCMClientID indicates an expected call of ValidateOCMClientID.
-func (mr *MockInterfaceMockRecorder) ValidateOCMClientID(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateOCMClientID", reflect.TypeOf((*MockInterface)(nil).ValidateOCMClientID), arg0)
-}
-
 // MockCertificateRefresher is a mock of CertificateRefresher interface.
 type MockCertificateRefresher struct {
 	ctrl     *gomock.Controller

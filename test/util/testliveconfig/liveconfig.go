@@ -13,8 +13,9 @@ import (
 )
 
 type testLiveConfig struct {
-	adoptByHive    bool
-	installViaHive bool
+	adoptByHive       bool
+	installViaHive    bool
+	validOCMClientIds []string
 }
 
 func (t *testLiveConfig) HiveRestConfig(ctx context.Context, shard int) (*rest.Config, error) {
@@ -39,13 +40,14 @@ func (t *testLiveConfig) DefaultInstallerPullSpecOverride(ctx context.Context) s
 	return ""
 }
 
-func (t *testLiveConfig) OCMValidClientIDs() ([]string, error) {
-	return []string{}, nil
+func (t *testLiveConfig) OCMValidClientIDs() []string {
+	return t.validOCMClientIds
 }
 
 func NewTestLiveConfig(adoptByHive bool, installViaHive bool) liveconfig.Manager {
 	return &testLiveConfig{
-		adoptByHive:    adoptByHive,
-		installViaHive: installViaHive,
+		adoptByHive:       adoptByHive,
+		installViaHive:    installViaHive,
+		validOCMClientIds: []string{"abc-123"},
 	}
 }
