@@ -5,4 +5,5 @@ package main
 
 const (
 	DatabaseAccountName = "DATABASE_ACCOUNT_NAME"
+	KeyVaultPrefix      = "KEYVAULT_PREFIX"
 )

@@ -83,11 +83,11 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbtokenKeyvaultURI, err := keyvault.URI(_env, env.DBTokenKeyvaultSuffix)
-	if err != nil {
+	if err := ValidateVars(KeyVaultPrefix); err != nil {
 		return err
 	}
-
+	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
+	dbtokenKeyvaultURI := keyvault.URI(_env, env.DBTokenKeyvaultSuffix, keyVaultPrefix)
 	dbtokenKeyvault := keyvault.NewManager(msiKVAuthorizer, dbtokenKeyvaultURI)
 
 	servingKey, servingCerts, err := dbtokenKeyvault.GetCertificateSecret(ctx, env.DBTokenServerSecretName)

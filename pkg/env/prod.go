@@ -30,6 +30,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
+const (
+	KeyvaultPrefix = "KEYVAULT_PREFIX"
+)
+
 type prod struct {
 	Core
 	proxy.Dialer
@@ -130,11 +134,11 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		return nil, err
 	}
 
-	serviceKeyvaultURI, err := keyvault.URI(p, ServiceKeyvaultSuffix)
-	if err != nil {
+	if err := ValidateVars(KeyvaultPrefix); err != nil {
 		return nil, err
 	}
-
+	keyVaultPrefix := os.Getenv(KeyvaultPrefix)
+	serviceKeyvaultURI := keyvault.URI(p, ServiceKeyvaultSuffix, keyVaultPrefix)
 	p.serviceKeyvault = keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
 
 	resourceSkusClient := compute.NewResourceSkusClient(p.Environment(), p.SubscriptionID(), msiAuthorizer)
@@ -154,11 +158,7 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		return nil, err
 	}
 
-	clusterKeyvaultURI, err := keyvault.URI(p, ClusterKeyvaultSuffix)
-	if err != nil {
-		return nil, err
-	}
-
+	clusterKeyvaultURI := keyvault.URI(p, ClusterKeyvaultSuffix, keyVaultPrefix)
 	p.clusterKeyvault = keyvault.NewManager(localFPKVAuthorizer, clusterKeyvaultURI)
 
 	clusterGenevaLoggingPrivateKey, clusterGenevaLoggingCertificates, err := p.serviceKeyvault.GetCertificateSecret(ctx, ClusterLoggingSecretName)

@@ -69,12 +69,12 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	// TODO: should not be using the service keyvault here
-	serviceKeyvaultURI, err := keyvault.URI(_env, env.ServiceKeyvaultSuffix)
-	if err != nil {
+	if err := ValidateVars(KeyVaultPrefix); err != nil {
 		return err
 	}
-
+	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
+	// TODO: should not be using the service keyvault here
+	serviceKeyvaultURI := keyvault.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
 	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
 
 	aead, err := encryption.NewMulti(ctx, serviceKeyvault, env.EncryptionSecretV2Name, env.EncryptionSecretName)

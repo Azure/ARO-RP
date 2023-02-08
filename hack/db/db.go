@@ -24,6 +24,7 @@ import (
 
 const (
 	DatabaseAccountName = "DATABASE_ACCOUNT_NAME"
+	KeyVaultPrefix      = "KEYVAULT_PREFIX"
 )
 
 func run(ctx context.Context, log *logrus.Entry) error {
@@ -49,11 +50,11 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	serviceKeyvaultURI, err := keyvault.URI(_env, env.ServiceKeyvaultSuffix)
-	if err != nil {
+	if err := ValidateVars(KeyVaultPrefix); err != nil {
 		return err
 	}
-
+	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
+	serviceKeyvaultURI := keyvault.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
 	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
 
 	aead, err := encryption.NewMulti(ctx, serviceKeyvault, env.EncryptionSecretV2Name, env.EncryptionSecretName)
@@ -111,4 +112,16 @@ func DBName(isLocalDevelopmentMode bool) (string, error) {
 	}
 
 	return os.Getenv("DATABASE_NAME"), nil
+}
+
+// ValidateVars iterates over all the elements of vars and
+// if it does not exist an environment variable with that name, it will return an error.
+// Otherwise it returns nil.
+func ValidateVars(vars ...string) error {
+	for _, v := range vars {
+		if _, found := os.LookupEnv(v); !found {
+			return fmt.Errorf("environment variable %q unset", v)
+		}
+	}
+	return nil
 }

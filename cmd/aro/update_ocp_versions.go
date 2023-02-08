@@ -72,11 +72,11 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 
 	m := statsd.New(ctx, log.WithField("component", "update-ocp-versions"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 
-	serviceKeyvaultURI, err := keyvault.URI(_env, env.ServiceKeyvaultSuffix)
-	if err != nil {
+	if err := ValidateVars(KeyVaultPrefix); err != nil {
 		return nil, err
 	}
-
+	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
+	serviceKeyvaultURI := keyvault.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
 	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
 
 	aead, err := encryption.NewMulti(ctx, serviceKeyvault, env.EncryptionSecretV2Name, env.EncryptionSecretName)

@@ -79,12 +79,12 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 
 	go g.Run()
 
-	// TODO: should not be using the service keyvault here
-	serviceKeyvaultURI, err := keyvault.URI(_env, env.ServiceKeyvaultSuffix)
-	if err != nil {
+	if err := ValidateVars(KeyVaultPrefix); err != nil {
 		return err
 	}
-
+	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
+	// TODO: should not be using the service keyvault here
+	serviceKeyvaultURI := keyvault.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
 	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
 
 	aead, err := encryption.NewMulti(ctx, serviceKeyvault, env.EncryptionSecretV2Name, env.EncryptionSecretName)
@@ -120,11 +120,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	portalKeyvaultURI, err := keyvault.URI(_env, env.PortalKeyvaultSuffix)
-	if err != nil {
-		return err
-	}
-
+	portalKeyvaultURI := keyvault.URI(_env, env.PortalKeyvaultSuffix, keyVaultPrefix)
 	portalKeyvault := keyvault.NewManager(msiKVAuthorizer, portalKeyvaultURI)
 
 	servingKey, servingCerts, err := portalKeyvault.GetCertificateSecret(ctx, env.PortalServerSecretName)

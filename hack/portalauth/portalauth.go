@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -25,6 +26,7 @@ const (
 	SessionKeyExpires  = "expires"
 	SessionKeyUsername = "user_name"
 	SessionKeyGroups   = "groups"
+	KeyVaultPrefix     = "KEYVAULT_PREFIX"
 )
 
 func run(ctx context.Context, log *logrus.Entry) error {
@@ -43,11 +45,11 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	portalKeyvaultURI, err := keyvault.URI(_env, env.PortalKeyvaultSuffix)
-	if err != nil {
+	if err := ValidateVars(KeyVaultPrefix); err != nil {
 		return err
 	}
-
+	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
+	portalKeyvaultURI := keyvault.URI(_env, env.PortalKeyvaultSuffix, keyVaultPrefix)
 	portalKeyvault := keyvault.NewManager(msiKVAuthorizer, portalKeyvaultURI)
 
 	sessionKey, err := portalKeyvault.GetBase64Secret(ctx, env.PortalServerSessionKeySecretName, "")
@@ -88,4 +90,16 @@ func main() {
 	if err := run(context.Background(), log); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// ValidateVars iterates over all the elements of vars and
+// if it does not exist an environment variable with that name, it will return an error.
+// Otherwise it returns nil.
+func ValidateVars(vars ...string) error {
+	for _, v := range vars {
+		if _, found := os.LookupEnv(v); !found {
+			return fmt.Errorf("environment variable %q unset", v)
+		}
+	}
+	return nil
 }
