@@ -10,10 +10,10 @@ import (
 
 	"github.com/golang/mock/gomock"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
-	mcofake "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
-	ktesting "k8s.io/client-go/testing"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
@@ -22,61 +22,58 @@ import (
 
 func TestSystemreservedEnsure(t *testing.T) {
 	tests := []struct {
-		name                         string
-		mcocli                       *mcofake.Clientset
-		mocker                       func(mdh *mock_dynamichelper.MockInterface)
-		machineConfigPoolNeedsUpdate bool
-		wantErr                      bool
+		name string
+		mcp  *mcv1.MachineConfigPool
 	}{
 		{
 			name: "first time create",
-			mcocli: mcofake.NewSimpleClientset(&mcv1.MachineConfigPool{
+			mcp: &mcv1.MachineConfigPool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "worker",
 				},
-			}),
-			machineConfigPoolNeedsUpdate: true,
-			mocker: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
 		{
-			name: "nothing to be done",
-			mcocli: mcofake.NewSimpleClientset(&mcv1.MachineConfigPool{
+			name: "label already exists",
+			mcp: &mcv1.MachineConfigPool{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   "worker",
 					Labels: map[string]string{labelName: labelValue},
 				},
-			}),
-			mocker: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
+			clientFake := fake.NewClientBuilder().WithObjects(tt.mcp).Build()
+
 			mdh := mock_dynamichelper.NewMockInterface(controller)
 			sr := &systemreserved{
-				mcocli: tt.mcocli,
 				dh:     mdh,
+				client: clientFake,
 				log:    utillog.GetLogger(),
 			}
 
-			var updated bool
-			tt.mcocli.PrependReactor("update", "machineconfigpools", func(action ktesting.Action) (handled bool, ret kruntime.Object, err error) {
-				updated = true
-				return false, nil, nil
-			})
+			mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil)
 
-			tt.mocker(mdh)
-			if err := sr.Ensure(context.Background()); (err != nil) != tt.wantErr {
-				t.Errorf("systemreserved.Ensure() error = %v, wantErr %v", err, tt.wantErr)
+			err := sr.Ensure(context.Background())
+			if err != nil {
+				t.Error(err)
 			}
-			if tt.machineConfigPoolNeedsUpdate != updated {
-				t.Errorf("systemreserved.Ensure() updated %v, machineConfigPoolNeedsUpdate = %v", updated, tt.machineConfigPoolNeedsUpdate)
+
+			result := &mcv1.MachineConfigPool{}
+			err = clientFake.Get(ctx, types.NamespacedName{Name: workerMachineConfigPoolName}, result)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if val, ok := result.Labels[labelName]; !ok || val != labelValue {
+				t.Error(result.Labels)
 			}
 		})
 	}

@@ -7,9 +7,8 @@ import (
 	"context"
 
 	"github.com/openshift/installer/pkg/aro/dnsmasq"
-	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
+	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -31,16 +30,14 @@ const (
 type ClusterReconciler struct {
 	log *logrus.Entry
 
-	mcocli mcoclient.Interface
-	dh     dynamichelper.Interface
+	dh dynamichelper.Interface
 
 	client client.Client
 }
 
-func NewClusterReconciler(log *logrus.Entry, client client.Client, mcocli mcoclient.Interface, dh dynamichelper.Interface) *ClusterReconciler {
+func NewClusterReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *ClusterReconciler {
 	return &ClusterReconciler{
 		log:    log,
-		mcocli: mcocli,
 		dh:     dh,
 		client: client,
 	}
@@ -61,7 +58,8 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 	}
 
 	r.log.Debug("running")
-	mcps, err := r.mcocli.MachineconfigurationV1().MachineConfigPools().List(ctx, metav1.ListOptions{})
+	mcps := &mcv1.MachineConfigPoolList{}
+	err = r.client.List(ctx, mcps)
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err

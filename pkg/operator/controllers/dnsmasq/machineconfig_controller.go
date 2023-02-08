@@ -8,10 +8,8 @@ import (
 	"regexp"
 
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
-	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,18 +26,16 @@ const (
 type MachineConfigReconciler struct {
 	log *logrus.Entry
 
-	mcocli mcoclient.Interface
-	dh     dynamichelper.Interface
+	dh dynamichelper.Interface
 
 	client client.Client
 }
 
 var rxARODNS = regexp.MustCompile("^99-(.*)-aro-dns$")
 
-func NewMachineConfigReconciler(log *logrus.Entry, client client.Client, mcocli mcoclient.Interface, dh dynamichelper.Interface) *MachineConfigReconciler {
+func NewMachineConfigReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *MachineConfigReconciler {
 	return &MachineConfigReconciler{
 		log:    log,
-		mcocli: mcocli,
 		dh:     dh,
 		client: client,
 	}
@@ -66,7 +62,8 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 	}
 	role := m[1]
 
-	_, err = r.mcocli.MachineconfigurationV1().MachineConfigPools().Get(ctx, role, metav1.GetOptions{})
+	mcp := &mcv1.MachineConfigPool{}
+	err = r.client.Get(ctx, types.NamespacedName{Name: role}, mcp)
 	if kerrors.IsNotFound(err) {
 		return reconcile.Result{}, nil
 	}

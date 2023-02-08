@@ -93,7 +93,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// If already exists, update the spec
 	config.Spec = defaultConfig.Spec
-	err = r.client.Update(ctx, &config, &client.UpdateOptions{})
+	err = r.client.Update(ctx, &config)
 	if err != nil {
 		err = fmt.Errorf("could not update KubeletConfig: %w", err)
 	}
