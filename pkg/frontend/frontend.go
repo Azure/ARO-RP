@@ -52,6 +52,11 @@ type frontend struct {
 	baseLog  *logrus.Entry
 	env      env.Interface
 
+	logMiddleware      middleware.LogMiddleware
+	validateMiddleware middleware.ValidateMiddleware
+	m                  middleware.MetricsMiddleware
+	authMiddleware     middleware.AuthMiddleware
+
 	dbAsyncOperations             database.AsyncOperations
 	dbClusterManagerConfiguration database.ClusterManagerConfigurations
 	dbOpenShiftClusters           database.OpenShiftClusters
@@ -64,7 +69,6 @@ type frontend struct {
 	lastChangefeed atomic.Value //time.Time
 	mu             sync.RWMutex
 
-	m    metrics.Emitter
 	aead encryption.AEAD
 
 	kubeActionsFactory  kubeActionsFactory
@@ -115,16 +119,31 @@ func NewFrontend(ctx context.Context,
 	azureActionsFactory azureActionsFactory,
 	ocEnricherFactory ocEnricherFactory) (*frontend, error) {
 	f := &frontend{
-		auditLog:                      auditLog,
-		baseLog:                       baseLog,
-		env:                           _env,
+		logMiddleware: middleware.LogMiddleware{
+			EnvironmentName: _env.Environment().Name,
+			Location:        _env.Location(),
+			Hostname:        _env.Hostname(),
+			BaseLog:         baseLog.WithField("component", "access"),
+			AuditLog:        auditLog,
+		},
+		baseLog:  baseLog,
+		auditLog: auditLog,
+		env:      _env,
+		validateMiddleware: middleware.ValidateMiddleware{
+			Location: _env.Location(),
+			Apis:     api.APIs,
+		},
+		authMiddleware: middleware.AuthMiddleware{
+			AdminAuth: _env.AdminClientAuthorizer(),
+			ArmAuth:   _env.ArmClientAuthorizer(),
+		},
 		dbAsyncOperations:             dbAsyncOperations,
 		dbClusterManagerConfiguration: dbClusterManagerConfiguration,
 		dbOpenShiftClusters:           dbOpenShiftClusters,
 		dbSubscriptions:               dbSubscriptions,
 		dbOpenShiftVersions:           dbOpenShiftVersions,
 		apis:                          apis,
-		m:                             m,
+		m:                             middleware.MetricsMiddleware{Emitter: m},
 		aead:                          aead,
 		kubeActionsFactory:            kubeActionsFactory,
 		azureActionsFactory:           azureActionsFactory,
@@ -408,11 +427,11 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 
 func (f *frontend) setupRouter() *mux.Router {
 	r := mux.NewRouter()
-	r.Use(middleware.Log(f.env, f.auditLog, f.baseLog.WithField("component", "access")))
-	r.Use(middleware.Metrics(f.m))
+	r.Use(f.logMiddleware.Log)
+	r.Use(f.m.Metrics)
 	r.Use(middleware.Panic)
 	r.Use(middleware.Headers)
-	r.Use(middleware.Validate(f.env, f.apis))
+	r.Use(f.validateMiddleware.Validate)
 	r.Use(middleware.Body)
 	r.Use(middleware.SystemData)
 
@@ -420,13 +439,15 @@ func (f *frontend) setupRouter() *mux.Router {
 		w.Header().Set("Content-Type", "application/json")
 		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The requested path could not be found.")
 	})
-	r.NotFoundHandler = middleware.Authenticated(f.env)(r.NotFoundHandler)
+
+	r.NotFoundHandler = f.authMiddleware.Authenticate(r.NotFoundHandler)
 
 	unauthenticated := r.NewRoute().Subrouter()
 	f.unauthenticatedRoutes(unauthenticated)
 
 	authenticated := r.NewRoute().Subrouter()
-	authenticated.Use(middleware.Authenticated(f.env))
+	authenticated.Use(f.authMiddleware.Authenticate)
+
 	f.authenticatedRoutes(authenticated)
 
 	return r
