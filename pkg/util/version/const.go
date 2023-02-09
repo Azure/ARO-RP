@@ -64,7 +64,7 @@ var (
 
 // FluentbitImage contains the location of the Fluentbit container image
 func FluentbitImage(acrDomain string) string {
-	return acrDomain + "/fluentbit:1.7.8-1"
+	return acrDomain + "/fluentbit:1.9.9-1"
 }
 
 // MdmImage contains the location of the MDM container image
