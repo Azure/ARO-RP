@@ -516,6 +516,7 @@ github.com/google/btree
 # github.com/google/go-cmp v0.5.8
 ## explicit; go 1.13
 github.com/google/go-cmp/cmp
+github.com/google/go-cmp/cmp/cmpopts
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
@@ -848,6 +849,9 @@ github.com/openshift/client-go/config/clientset/versioned/fake
 github.com/openshift/client-go/config/clientset/versioned/scheme
 github.com/openshift/client-go/config/clientset/versioned/typed/config/v1
 github.com/openshift/client-go/config/clientset/versioned/typed/config/v1/fake
+github.com/openshift/client-go/config/informers/externalversions/config/v1
+github.com/openshift/client-go/config/informers/externalversions/internalinterfaces
+github.com/openshift/client-go/config/listers/config/v1
 github.com/openshift/client-go/console/clientset/versioned
 github.com/openshift/client-go/console/clientset/versioned/fake
 github.com/openshift/client-go/console/clientset/versioned/scheme
@@ -855,9 +859,6 @@ github.com/openshift/client-go/console/clientset/versioned/typed/console/v1
 github.com/openshift/client-go/console/clientset/versioned/typed/console/v1/fake
 github.com/openshift/client-go/console/clientset/versioned/typed/console/v1alpha1
 github.com/openshift/client-go/console/clientset/versioned/typed/console/v1alpha1/fake
-github.com/openshift/client-go/config/informers/externalversions/config/v1
-github.com/openshift/client-go/config/informers/externalversions/internalinterfaces
-github.com/openshift/client-go/config/listers/config/v1
 github.com/openshift/client-go/imageregistry/clientset/versioned
 github.com/openshift/client-go/imageregistry/clientset/versioned/scheme
 github.com/openshift/client-go/imageregistry/clientset/versioned/typed/imageregistry/v1
@@ -1967,6 +1968,10 @@ k8s.io/klog
 # k8s.io/klog/v2 v2.60.1
 ## explicit; go 1.13
 k8s.io/klog/v2
+k8s.io/klog/v2/internal/buffer
+k8s.io/klog/v2/internal/clock
+k8s.io/klog/v2/internal/serialize
+k8s.io/klog/v2/internal/severity
 # k8s.io/kube-aggregator v0.24.1 => k8s.io/kube-aggregator v0.23.0
 ## explicit; go 1.16
 k8s.io/kube-aggregator/pkg/apis/apiregistration
@@ -1974,10 +1979,6 @@ k8s.io/kube-aggregator/pkg/apis/apiregistration/v1
 k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1
 k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/scheme
 k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/typed/apiregistration/v1
-k8s.io/klog/v2/internal/buffer
-k8s.io/klog/v2/internal/clock
-k8s.io/klog/v2/internal/serialize
-k8s.io/klog/v2/internal/severity
 # k8s.io/kube-openapi v0.0.0-20220401212409-b28bf2818661 => k8s.io/kube-openapi v0.0.0-20211115234752-e816edb12b65
 ## explicit; go 1.16
 k8s.io/kube-openapi/pkg/schemaconv
