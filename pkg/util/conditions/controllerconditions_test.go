@@ -53,15 +53,15 @@ func TestSetControllerConditions(t *testing.T) {
 			},
 			input: ControllerConditions{
 				Available: &operatorv1.OperatorCondition{
-					Type:   "Controller1" + operatorv1.OperatorStatusTypeAvailable,
+					Type:   "FakeController" + operatorv1.OperatorStatusTypeAvailable,
 					Status: operatorv1.ConditionTrue,
 				},
 				Progressing: &operatorv1.OperatorCondition{
-					Type:   "Controller1" + operatorv1.OperatorStatusTypeProgressing,
+					Type:   "FakeController" + operatorv1.OperatorStatusTypeProgressing,
 					Status: operatorv1.ConditionFalse,
 				},
 				Degraded: &operatorv1.OperatorCondition{
-					Type:   "Controller1" + operatorv1.OperatorStatusTypeDegraded,
+					Type:   "FakeController" + operatorv1.OperatorStatusTypeDegraded,
 					Status: operatorv1.ConditionFalse,
 				},
 			},
@@ -72,17 +72,17 @@ func TestSetControllerConditions(t *testing.T) {
 					LastTransitionTime: now,
 				},
 				{
-					Type:               "Controller1" + operatorv1.OperatorStatusTypeAvailable,
+					Type:               "FakeController" + operatorv1.OperatorStatusTypeAvailable,
 					Status:             operatorv1.ConditionTrue,
 					LastTransitionTime: now,
 				},
 				{
-					Type:               "Controller1" + operatorv1.OperatorStatusTypeProgressing,
+					Type:               "FakeController" + operatorv1.OperatorStatusTypeProgressing,
 					Status:             operatorv1.ConditionFalse,
 					LastTransitionTime: now,
 				},
 				{
-					Type:               "Controller1" + operatorv1.OperatorStatusTypeDegraded,
+					Type:               "FakeController" + operatorv1.OperatorStatusTypeDegraded,
 					Status:             operatorv1.ConditionFalse,
 					LastTransitionTime: now,
 				},
@@ -100,7 +100,7 @@ func TestSetControllerConditions(t *testing.T) {
 							LastTransitionTime: now,
 						},
 						{
-							Type:               "Controller1" + operatorv1.OperatorStatusTypeAvailable,
+							Type:               "FakeController" + operatorv1.OperatorStatusTypeAvailable,
 							Status:             operatorv1.ConditionTrue,
 							LastTransitionTime: past,
 						},
@@ -110,15 +110,15 @@ func TestSetControllerConditions(t *testing.T) {
 			},
 			input: ControllerConditions{
 				Available: &operatorv1.OperatorCondition{
-					Type:   "Controller1" + operatorv1.OperatorStatusTypeAvailable,
+					Type:   "FakeController" + operatorv1.OperatorStatusTypeAvailable,
 					Status: operatorv1.ConditionTrue,
 				},
 				Progressing: &operatorv1.OperatorCondition{
-					Type:   "Controller1" + operatorv1.OperatorStatusTypeProgressing,
+					Type:   "FakeController" + operatorv1.OperatorStatusTypeProgressing,
 					Status: operatorv1.ConditionFalse,
 				},
 				Degraded: &operatorv1.OperatorCondition{
-					Type:   "Controller1" + operatorv1.OperatorStatusTypeDegraded,
+					Type:   "FakeController" + operatorv1.OperatorStatusTypeDegraded,
 					Status: operatorv1.ConditionFalse,
 				},
 			},
@@ -129,17 +129,17 @@ func TestSetControllerConditions(t *testing.T) {
 					LastTransitionTime: now,
 				},
 				{
-					Type:               "Controller1" + operatorv1.OperatorStatusTypeAvailable,
+					Type:               "FakeController" + operatorv1.OperatorStatusTypeAvailable,
 					Status:             operatorv1.ConditionTrue,
 					LastTransitionTime: past,
 				},
 				{
-					Type:               "Controller1" + operatorv1.OperatorStatusTypeProgressing,
+					Type:               "FakeController" + operatorv1.OperatorStatusTypeProgressing,
 					Status:             operatorv1.ConditionFalse,
 					LastTransitionTime: now,
 				},
 				{
-					Type:               "Controller1" + operatorv1.OperatorStatusTypeDegraded,
+					Type:               "FakeController" + operatorv1.OperatorStatusTypeDegraded,
 					Status:             operatorv1.ConditionFalse,
 					LastTransitionTime: now,
 				},
@@ -157,7 +157,7 @@ func TestSetControllerConditions(t *testing.T) {
 							LastTransitionTime: now,
 						},
 						{
-							Type:               "Controller1" + operatorv1.OperatorStatusTypeAvailable,
+							Type:               "FakeController" + operatorv1.OperatorStatusTypeAvailable,
 							Status:             operatorv1.ConditionTrue,
 							LastTransitionTime: past,
 						},
@@ -167,15 +167,15 @@ func TestSetControllerConditions(t *testing.T) {
 			},
 			input: ControllerConditions{
 				Available: &operatorv1.OperatorCondition{
-					Type:   "Controller1" + operatorv1.OperatorStatusTypeAvailable,
+					Type:   "FakeController" + operatorv1.OperatorStatusTypeAvailable,
 					Status: operatorv1.ConditionFalse,
 				},
 				Progressing: &operatorv1.OperatorCondition{
-					Type:   "Controller1" + operatorv1.OperatorStatusTypeProgressing,
+					Type:   "FakeController" + operatorv1.OperatorStatusTypeProgressing,
 					Status: operatorv1.ConditionFalse,
 				},
 				Degraded: &operatorv1.OperatorCondition{
-					Type:   "Controller1" + operatorv1.OperatorStatusTypeDegraded,
+					Type:   "FakeController" + operatorv1.OperatorStatusTypeDegraded,
 					Status: operatorv1.ConditionFalse,
 				},
 			},
@@ -186,17 +186,17 @@ func TestSetControllerConditions(t *testing.T) {
 					LastTransitionTime: now,
 				},
 				{
-					Type:               "Controller1" + operatorv1.OperatorStatusTypeAvailable,
+					Type:               "FakeController" + operatorv1.OperatorStatusTypeAvailable,
 					Status:             operatorv1.ConditionFalse,
 					LastTransitionTime: now,
 				},
 				{
-					Type:               "Controller1" + operatorv1.OperatorStatusTypeProgressing,
+					Type:               "FakeController" + operatorv1.OperatorStatusTypeProgressing,
 					Status:             operatorv1.ConditionFalse,
 					LastTransitionTime: now,
 				},
 				{
-					Type:               "Controller1" + operatorv1.OperatorStatusTypeDegraded,
+					Type:               "FakeController" + operatorv1.OperatorStatusTypeDegraded,
 					Status:             operatorv1.ConditionFalse,
 					LastTransitionTime: now,
 				},
