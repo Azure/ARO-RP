@@ -136,7 +136,7 @@ func lbAfter(lbID string) *mgmtnetwork.LoadBalancer {
 	}
 }
 
-func ifBefore(lbID string, i int) *mgmtnetwork.Interface {
+func ifBefore(lbID string, i int, ilbBackendPool string) *mgmtnetwork.Interface {
 	return &mgmtnetwork.Interface{
 		InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
 			VirtualMachine: &mgmtnetwork.SubResource{
@@ -153,7 +153,7 @@ func ifBefore(lbID string, i int) *mgmtnetwork.Interface {
 	}
 }
 
-func ifNoVmBefore(lbID string, i int) *mgmtnetwork.Interface {
+func ifNoVmBefore(lbID string, i int, ilbBackendPool string) *mgmtnetwork.Interface {
 	return &mgmtnetwork.Interface{
 		InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
 			VirtualMachine: nil,
@@ -178,7 +178,7 @@ func ifNoVmAfter(nic *mgmtnetwork.Interface) *mgmtnetwork.Interface {
 	return nic
 }
 
-func ifAfter(lbID string, i int) *mgmtnetwork.Interface {
+func ifAfter(lbID string, i int, ilbBackendPool string) *mgmtnetwork.Interface {
 	return &mgmtnetwork.Interface{
 		InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
 			VirtualMachine: &mgmtnetwork.SubResource{
@@ -192,7 +192,7 @@ func ifAfter(lbID string, i int) *mgmtnetwork.Interface {
 								ID: to.StringPtr(fmt.Sprintf(lbID+"/backendAddressPools/ssh-%d", i)),
 							},
 							{
-								ID: to.StringPtr(fmt.Sprintf(lbID+"/backendAddressPools/%s", infraID)),
+								ID: to.StringPtr(fmt.Sprintf(lbID+"/backendAddressPools/%s", ilbBackendPool)),
 							},
 						},
 					},
@@ -208,7 +208,7 @@ func TestFixSSH(t *testing.T) {
 		lb                  string
 		lbID                string
 		loadbalancer        func(string) *mgmtnetwork.LoadBalancer
-		iface               func(string, int) *mgmtnetwork.Interface
+		iface               func(string, int, string) *mgmtnetwork.Interface
 		iNameF              string
 		ifaceNoVmAttached   bool // create the NIC without a master VM attached, to simulate a master node replacement
 		lbErrorExpected     bool
@@ -216,6 +216,7 @@ func TestFixSSH(t *testing.T) {
 		fallbackExpected    bool // do we expect fallback nic.Get as part of this test
 		nicErrorExpected    bool
 		wantError           string
+		ilbBackendPool      string
 	}{
 		{
 			name:          "updates v1 resources correctly",
@@ -227,12 +228,13 @@ func TestFixSSH(t *testing.T) {
 			writeExpected: true,
 		},
 		{
-			name:         "v1 noop",
-			lb:           infraID + "-internal-lb",
-			lbID:         "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
-			loadbalancer: lbAfter,
-			iface:        ifAfter,
-			iNameF:       "%s-master%d-nic",
+			name:           "v1 noop",
+			lb:             infraID + "-internal-lb",
+			lbID:           "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
+			loadbalancer:   lbAfter,
+			iface:          ifAfter,
+			iNameF:         "%s-master%d-nic",
+			ilbBackendPool: infraID + "-internal-controlplane-v4",
 		},
 		{
 			name:                "updates v2 resources correctly",
@@ -252,6 +254,7 @@ func TestFixSSH(t *testing.T) {
 			loadbalancer:        lbAfter,
 			iface:               ifAfter,
 			iNameF:              "%s-master%d-nic",
+			ilbBackendPool:      infraID,
 		},
 		{
 			name:                "updates v2 resources correctly with masters recreated",
@@ -322,11 +325,11 @@ func TestFixSSH(t *testing.T) {
 			}
 
 			for i := 0; i < 3; i++ {
-				vmNicBefore := tt.iface(tt.lbID, i)
+				vmNicBefore := tt.iface(tt.lbID, i, tt.ilbBackendPool)
 
 				if tt.fallbackExpected { // bit of hack to check fallback.
 					if tt.ifaceNoVmAttached {
-						vmNicBefore = ifNoVmBefore(tt.lbID, i)
+						vmNicBefore = ifNoVmBefore(tt.lbID, i, tt.ilbBackendPool)
 						interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf("%s-master%d-nic", infraID, i), "").Return(*vmNicBefore, nil)
 					} else {
 						interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf("%s-master%d-nic", infraID, i), "").Return(mgmtnetwork.Interface{}, fmt.Errorf("nic not found"))
