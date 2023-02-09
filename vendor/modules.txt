@@ -36,7 +36,7 @@ github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features
 github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage
 github.com/Azure/azure-sdk-for-go/storage
 github.com/Azure/azure-sdk-for-go/version
-# github.com/Azure/azure-sdk-for-go/sdk/azcore v1.4.0
+# github.com/Azure/azure-sdk-for-go/sdk/azcore v1.6.0
 ## explicit; go 1.18
 github.com/Azure/azure-sdk-for-go/sdk/azcore
 github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud
@@ -56,11 +56,13 @@ github.com/Azure/azure-sdk-for-go/sdk/azcore/tracing
 # github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.2.2
 ## explicit; go 1.18
 github.com/Azure/azure-sdk-for-go/sdk/azidentity
-# github.com/Azure/azure-sdk-for-go/sdk/internal v1.2.0
+# github.com/Azure/azure-sdk-for-go/sdk/internal v1.3.0
 ## explicit; go 1.18
 github.com/Azure/azure-sdk-for-go/sdk/internal/diag
 github.com/Azure/azure-sdk-for-go/sdk/internal/errorinfo
+github.com/Azure/azure-sdk-for-go/sdk/internal/exported
 github.com/Azure/azure-sdk-for-go/sdk/internal/log
+github.com/Azure/azure-sdk-for-go/sdk/internal/poller
 github.com/Azure/azure-sdk-for-go/sdk/internal/temporal
 github.com/Azure/azure-sdk-for-go/sdk/internal/uuid
 # github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1
@@ -269,6 +271,9 @@ github.com/chai2010/gettext-go/gettext
 github.com/chai2010/gettext-go/gettext/mo
 github.com/chai2010/gettext-go/gettext/plural
 github.com/chai2010/gettext-go/gettext/po
+# github.com/cjlapao/common-go v0.0.39
+## explicit; go 1.19
+github.com/cjlapao/common-go/duration
 # github.com/clarketm/json v1.17.1 => github.com/clarketm/json v1.15.7
 ## explicit
 github.com/clarketm/json
@@ -425,8 +430,8 @@ github.com/evanphx/json-patch
 # github.com/exponent-io/jsonpath v0.0.0-20210407135951-1de76d718b3f
 ## explicit; go 1.15
 github.com/exponent-io/jsonpath
-# github.com/fatih/color v1.13.0
-## explicit; go 1.13
+# github.com/fatih/color v1.14.1
+## explicit; go 1.17
 github.com/fatih/color
 # github.com/form3tech-oss/jwt-go v3.2.5+incompatible
 ## explicit
@@ -448,9 +453,13 @@ github.com/go-chi/chi/v5/middleware
 # github.com/go-errors/errors v1.4.2
 ## explicit; go 1.14
 github.com/go-errors/errors
-# github.com/go-logr/logr v1.2.3
+# github.com/go-logr/logr v1.2.4
 ## explicit; go 1.16
 github.com/go-logr/logr
+github.com/go-logr/logr/funcr
+# github.com/go-logr/stdr v1.2.2
+## explicit; go 1.16
+github.com/go-logr/stdr
 # github.com/go-openapi/errors v0.20.2
 ## explicit; go 1.14
 github.com/go-openapi/errors
@@ -697,11 +706,11 @@ github.com/liggitt/tabwriter
 github.com/mailru/easyjson/buffer
 github.com/mailru/easyjson/jlexer
 github.com/mailru/easyjson/jwriter
-# github.com/mattn/go-colorable v0.1.12
-## explicit; go 1.13
+# github.com/mattn/go-colorable v0.1.13
+## explicit; go 1.15
 github.com/mattn/go-colorable
-# github.com/mattn/go-isatty v0.0.14
-## explicit; go 1.12
+# github.com/mattn/go-isatty v0.0.17
+## explicit; go 1.15
 github.com/mattn/go-isatty
 # github.com/mattn/go-runewidth v0.0.13
 ## explicit; go 1.9
@@ -721,6 +730,109 @@ github.com/metal3-io/baremetal-operator/pkg/hardwareutils/bmc
 # github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d
 ## explicit
 github.com/mgutz/ansi
+# github.com/microsoft/kiota-abstractions-go v1.0.0
+## explicit; go 1.18
+github.com/microsoft/kiota-abstractions-go
+github.com/microsoft/kiota-abstractions-go/authentication
+github.com/microsoft/kiota-abstractions-go/serialization
+github.com/microsoft/kiota-abstractions-go/store
+# github.com/microsoft/kiota-authentication-azure-go v1.0.0
+## explicit; go 1.18
+github.com/microsoft/kiota-authentication-azure-go
+# github.com/microsoft/kiota-http-go v1.0.0
+## explicit; go 1.18
+github.com/microsoft/kiota-http-go
+# github.com/microsoft/kiota-serialization-form-go v1.0.0
+## explicit; go 1.19
+github.com/microsoft/kiota-serialization-form-go
+# github.com/microsoft/kiota-serialization-json-go v1.0.1
+## explicit; go 1.18
+github.com/microsoft/kiota-serialization-json-go
+# github.com/microsoft/kiota-serialization-text-go v1.0.0
+## explicit; go 1.18
+github.com/microsoft/kiota-serialization-text-go
+# github.com/microsoftgraph/msgraph-sdk-go v1.4.0
+## explicit; go 1.18
+github.com/microsoftgraph/msgraph-sdk-go
+github.com/microsoftgraph/msgraph-sdk-go/admin
+github.com/microsoftgraph/msgraph-sdk-go/agreementacceptances
+github.com/microsoftgraph/msgraph-sdk-go/agreements
+github.com/microsoftgraph/msgraph-sdk-go/appcatalogs
+github.com/microsoftgraph/msgraph-sdk-go/applications
+github.com/microsoftgraph/msgraph-sdk-go/applicationtemplates
+github.com/microsoftgraph/msgraph-sdk-go/auditlogs
+github.com/microsoftgraph/msgraph-sdk-go/authenticationmethodconfigurations
+github.com/microsoftgraph/msgraph-sdk-go/authenticationmethodspolicy
+github.com/microsoftgraph/msgraph-sdk-go/branding
+github.com/microsoftgraph/msgraph-sdk-go/certificatebasedauthconfiguration
+github.com/microsoftgraph/msgraph-sdk-go/chats
+github.com/microsoftgraph/msgraph-sdk-go/communications
+github.com/microsoftgraph/msgraph-sdk-go/compliance
+github.com/microsoftgraph/msgraph-sdk-go/connections
+github.com/microsoftgraph/msgraph-sdk-go/contacts
+github.com/microsoftgraph/msgraph-sdk-go/contracts
+github.com/microsoftgraph/msgraph-sdk-go/datapolicyoperations
+github.com/microsoftgraph/msgraph-sdk-go/deviceappmanagement
+github.com/microsoftgraph/msgraph-sdk-go/devicemanagement
+github.com/microsoftgraph/msgraph-sdk-go/devices
+github.com/microsoftgraph/msgraph-sdk-go/directory
+github.com/microsoftgraph/msgraph-sdk-go/directoryobjects
+github.com/microsoftgraph/msgraph-sdk-go/directoryroles
+github.com/microsoftgraph/msgraph-sdk-go/directoryroletemplates
+github.com/microsoftgraph/msgraph-sdk-go/domaindnsrecords
+github.com/microsoftgraph/msgraph-sdk-go/domains
+github.com/microsoftgraph/msgraph-sdk-go/drives
+github.com/microsoftgraph/msgraph-sdk-go/education
+github.com/microsoftgraph/msgraph-sdk-go/employeeexperience
+github.com/microsoftgraph/msgraph-sdk-go/external
+github.com/microsoftgraph/msgraph-sdk-go/filteroperators
+github.com/microsoftgraph/msgraph-sdk-go/functions
+github.com/microsoftgraph/msgraph-sdk-go/grouplifecyclepolicies
+github.com/microsoftgraph/msgraph-sdk-go/groups
+github.com/microsoftgraph/msgraph-sdk-go/groupsettings
+github.com/microsoftgraph/msgraph-sdk-go/groupsettingtemplates
+github.com/microsoftgraph/msgraph-sdk-go/identity
+github.com/microsoftgraph/msgraph-sdk-go/identitygovernance
+github.com/microsoftgraph/msgraph-sdk-go/identityprotection
+github.com/microsoftgraph/msgraph-sdk-go/identityproviders
+github.com/microsoftgraph/msgraph-sdk-go/informationprotection
+github.com/microsoftgraph/msgraph-sdk-go/invitations
+github.com/microsoftgraph/msgraph-sdk-go/localizations
+github.com/microsoftgraph/msgraph-sdk-go/models
+github.com/microsoftgraph/msgraph-sdk-go/models/callrecords
+github.com/microsoftgraph/msgraph-sdk-go/models/externalconnectors
+github.com/microsoftgraph/msgraph-sdk-go/models/odataerrors
+github.com/microsoftgraph/msgraph-sdk-go/models/security
+github.com/microsoftgraph/msgraph-sdk-go/models/termstore
+github.com/microsoftgraph/msgraph-sdk-go/oauth2permissiongrants
+github.com/microsoftgraph/msgraph-sdk-go/organization
+github.com/microsoftgraph/msgraph-sdk-go/permissiongrants
+github.com/microsoftgraph/msgraph-sdk-go/places
+github.com/microsoftgraph/msgraph-sdk-go/planner
+github.com/microsoftgraph/msgraph-sdk-go/policies
+github.com/microsoftgraph/msgraph-sdk-go/print
+github.com/microsoftgraph/msgraph-sdk-go/privacy
+github.com/microsoftgraph/msgraph-sdk-go/reports
+github.com/microsoftgraph/msgraph-sdk-go/rolemanagement
+github.com/microsoftgraph/msgraph-sdk-go/schemaextensions
+github.com/microsoftgraph/msgraph-sdk-go/scopedrolememberships
+github.com/microsoftgraph/msgraph-sdk-go/search
+github.com/microsoftgraph/msgraph-sdk-go/security
+github.com/microsoftgraph/msgraph-sdk-go/serviceprincipals
+github.com/microsoftgraph/msgraph-sdk-go/shares
+github.com/microsoftgraph/msgraph-sdk-go/sites
+github.com/microsoftgraph/msgraph-sdk-go/solutions
+github.com/microsoftgraph/msgraph-sdk-go/subscribedskus
+github.com/microsoftgraph/msgraph-sdk-go/subscriptions
+github.com/microsoftgraph/msgraph-sdk-go/teams
+github.com/microsoftgraph/msgraph-sdk-go/teamstemplates
+github.com/microsoftgraph/msgraph-sdk-go/teamwork
+github.com/microsoftgraph/msgraph-sdk-go/tenantrelationships
+github.com/microsoftgraph/msgraph-sdk-go/users
+# github.com/microsoftgraph/msgraph-sdk-go-core v1.0.0
+## explicit; go 1.18
+github.com/microsoftgraph/msgraph-sdk-go-core
+github.com/microsoftgraph/msgraph-sdk-go-core/authentication
 # github.com/miekg/pkcs11 v1.1.1
 ## explicit; go 1.12
 github.com/miekg/pkcs11
@@ -1184,10 +1296,8 @@ github.com/stefanberger/go-pkcs11uri
 # github.com/stoewer/go-strcase v1.2.0
 ## explicit; go 1.11
 github.com/stoewer/go-strcase
-# github.com/stretchr/objx v0.3.0
-## explicit; go 1.12
-# github.com/stretchr/testify v1.7.1
-## explicit; go 1.13
+# github.com/stretchr/testify v1.8.3
+## explicit; go 1.20
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
 # github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
@@ -1248,6 +1358,9 @@ github.com/vmware/govmomi/vim25/xml
 # github.com/xlab/treeprint v1.1.0
 ## explicit; go 1.13
 github.com/xlab/treeprint
+# github.com/yosida95/uritemplate/v3 v3.0.2
+## explicit; go 1.14
+github.com/yosida95/uritemplate/v3
 # go.etcd.io/bbolt v1.3.6
 ## explicit; go 1.12
 go.etcd.io/bbolt
@@ -1281,6 +1394,20 @@ go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
+# go.opentelemetry.io/otel v1.15.1
+## explicit; go 1.19
+go.opentelemetry.io/otel
+go.opentelemetry.io/otel/attribute
+go.opentelemetry.io/otel/baggage
+go.opentelemetry.io/otel/codes
+go.opentelemetry.io/otel/internal
+go.opentelemetry.io/otel/internal/attribute
+go.opentelemetry.io/otel/internal/baggage
+go.opentelemetry.io/otel/internal/global
+go.opentelemetry.io/otel/propagation
+# go.opentelemetry.io/otel/trace v1.15.1
+## explicit; go 1.19
+go.opentelemetry.io/otel/trace
 # go.starlark.net v0.0.0-20220328144851-d1966c6b9fcd
 ## explicit; go 1.13
 go.starlark.net/internal/compile
@@ -1387,7 +1514,7 @@ golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
 golang.org/x/text/width
-# golang.org/x/time v0.0.0-20220224211638-0e9765cccd65
+# golang.org/x/time v0.0.0-20220609170525-579cf78fd858
 ## explicit
 golang.org/x/time/rate
 # golang.org/x/tools v0.6.0
@@ -1556,7 +1683,7 @@ gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.1
 ## explicit
 gopkg.in/yaml.v3
-# k8s.io/api v0.24.7 => k8s.io/api v0.23.0
+# k8s.io/api v0.25.0 => k8s.io/api v0.23.0
 ## explicit; go 1.16
 k8s.io/api/admission/v1
 k8s.io/api/admission/v1beta1
@@ -1606,7 +1733,7 @@ k8s.io/api/scheduling/v1beta1
 k8s.io/api/storage/v1
 k8s.io/api/storage/v1alpha1
 k8s.io/api/storage/v1beta1
-# k8s.io/apiextensions-apiserver v0.24.7 => k8s.io/apiextensions-apiserver v0.23.0
+# k8s.io/apiextensions-apiserver v0.25.0 => k8s.io/apiextensions-apiserver v0.23.0
 ## explicit; go 1.16
 k8s.io/apiextensions-apiserver/pkg/apis/apiextensions
 k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1
@@ -1622,7 +1749,7 @@ k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme
 k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1
 k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1
 k8s.io/apiextensions-apiserver/third_party/forked/celopenapi/model
-# k8s.io/apimachinery v0.24.7 => k8s.io/apimachinery v0.23.0
+# k8s.io/apimachinery v0.25.0 => k8s.io/apimachinery v0.23.0
 ## explicit; go 1.16
 k8s.io/apimachinery/pkg/api/equality
 k8s.io/apimachinery/pkg/api/errors
@@ -1993,7 +2120,7 @@ k8s.io/code-generator/cmd/client-gen/path
 k8s.io/code-generator/cmd/client-gen/types
 k8s.io/code-generator/pkg/namer
 k8s.io/code-generator/pkg/util
-# k8s.io/component-base v0.24.7 => k8s.io/component-base v0.23.0
+# k8s.io/component-base v0.25.0 => k8s.io/component-base v0.23.0
 ## explicit; go 1.16
 k8s.io/component-base/config
 k8s.io/component-base/config/v1alpha1
@@ -2011,11 +2138,12 @@ k8s.io/gengo/types
 # k8s.io/klog v1.0.0
 ## explicit; go 1.12
 k8s.io/klog
-# k8s.io/klog/v2 v2.60.1
+# k8s.io/klog/v2 v2.70.1
 ## explicit; go 1.13
 k8s.io/klog/v2
 k8s.io/klog/v2/internal/buffer
 k8s.io/klog/v2/internal/clock
+k8s.io/klog/v2/internal/dbg
 k8s.io/klog/v2/internal/serialize
 k8s.io/klog/v2/internal/severity
 # k8s.io/kube-aggregator v0.24.1 => k8s.io/kube-aggregator v0.23.0
@@ -2025,7 +2153,7 @@ k8s.io/kube-aggregator/pkg/apis/apiregistration/v1
 k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1
 k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/scheme
 k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/typed/apiregistration/v1
-# k8s.io/kube-openapi v0.0.0-20220401212409-b28bf2818661 => k8s.io/kube-openapi v0.0.0-20211115234752-e816edb12b65
+# k8s.io/kube-openapi v0.0.0-20220803162953-67bda5d908f1 => k8s.io/kube-openapi v0.0.0-20211115234752-e816edb12b65
 ## explicit; go 1.16
 k8s.io/kube-openapi/pkg/schemaconv
 k8s.io/kube-openapi/pkg/util/proto
@@ -2059,7 +2187,7 @@ k8s.io/kubernetes/pkg/apis/rbac/v1
 k8s.io/kubernetes/pkg/features
 k8s.io/kubernetes/pkg/kubelet/events
 k8s.io/kubernetes/pkg/util/parsers
-# k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
+# k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed
 ## explicit; go 1.12
 k8s.io/utils/buffer
 k8s.io/utils/clock
@@ -2082,7 +2210,7 @@ sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1
 ## explicit; go 1.16
 sigs.k8s.io/cluster-api-provider-openstack/pkg/apis
 sigs.k8s.io/cluster-api-provider-openstack/pkg/apis/openstackproviderconfig/v1alpha1
-# sigs.k8s.io/controller-runtime v0.12.3 => sigs.k8s.io/controller-runtime v0.11.2
+# sigs.k8s.io/controller-runtime v0.13.1 => sigs.k8s.io/controller-runtime v0.11.2
 ## explicit; go 1.17
 sigs.k8s.io/controller-runtime
 sigs.k8s.io/controller-runtime/pkg/builder
@@ -2141,8 +2269,8 @@ sigs.k8s.io/controller-tools/pkg/schemapatcher
 sigs.k8s.io/controller-tools/pkg/schemapatcher/internal/yaml
 sigs.k8s.io/controller-tools/pkg/version
 sigs.k8s.io/controller-tools/pkg/webhook
-# sigs.k8s.io/json v0.0.0-20211208200746-9f7c6b3444d2
-## explicit; go 1.17
+# sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2
+## explicit; go 1.18
 sigs.k8s.io/json
 sigs.k8s.io/json/internal/golang/encoding/json
 # sigs.k8s.io/kube-storage-version-migrator v0.0.4
@@ -2233,7 +2361,7 @@ sigs.k8s.io/kustomize/kyaml/yaml/merge2
 sigs.k8s.io/kustomize/kyaml/yaml/merge3
 sigs.k8s.io/kustomize/kyaml/yaml/schema
 sigs.k8s.io/kustomize/kyaml/yaml/walk
-# sigs.k8s.io/structured-merge-diff/v4 v4.2.1
+# sigs.k8s.io/structured-merge-diff/v4 v4.2.3
 ## explicit; go 1.13
 sigs.k8s.io/structured-merge-diff/v4/fieldpath
 sigs.k8s.io/structured-merge-diff/v4/schema
