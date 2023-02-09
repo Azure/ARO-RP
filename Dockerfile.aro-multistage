@@ -1,7 +1,7 @@
 # Uses a multi-stage container build to build the RP.
 #
 ARG REGISTRY
-FROM ${REGISTRY}/ubi8/go-toolset:1.17.7 AS builder
+FROM ${REGISTRY}/ubi8/go-toolset:1.18.4 AS builder
 ENV GOOS=linux \
     GOPATH=/go/
 WORKDIR ${GOPATH}/src/github.com/Azure/ARO-RP

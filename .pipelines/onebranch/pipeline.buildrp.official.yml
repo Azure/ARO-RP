@@ -14,7 +14,7 @@ pr: none
 variables:
   Cdp_Definition_Build_Count: $[counter('', 0)] # needed for onebranch.pipeline.version task https://aka.ms/obpipelines/versioning
   ONEBRANCH_AME_ACR_LOGIN: cdpxb8e9ef87cd634085ab141c637806568c00.azurecr.io
-  LinuxContainerImage: $(ONEBRANCH_AME_ACR_LOGIN)/b8e9ef87-cd63-4085-ab14-1c637806568c/official/ubi8/go-toolset:1.17.7-13 # Docker image which is used to build the project https://aka.ms/obpipelines/containers
+  LinuxContainerImage: $(ONEBRANCH_AME_ACR_LOGIN)/b8e9ef87-cd63-4085-ab14-1c637806568c/official/ubi8/go-toolset:1.18.4 # Docker image which is used to build the project https://aka.ms/obpipelines/containers
   Debian_Frontend: noninteractive
 
 resources:

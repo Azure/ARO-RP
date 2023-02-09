@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/go-toolset:1.17.7 
+FROM registry.access.redhat.com/ubi8/go-toolset:1.18.4 
 
 USER root
 RUN mkdir -p /root/go/src/github.com/Azure/ARO-RP 
