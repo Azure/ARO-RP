@@ -5,7 +5,6 @@ package frontend
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -14,53 +13,47 @@ import (
 	"github.com/ugorji/go/codec"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
 
 func (f *frontend) getAdminHiveClusterDeployment(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
+	resourceID := strings.TrimPrefix(filepath.Dir(r.URL.Path), "/admin")
+	b, err := f._getAdminHiveClusterDeployment(ctx, resourceID)
 
-	b, err := f._getAdminHiveClusterDeployment(ctx, r)
-
-	switch {
-	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeNotFound, "", "Cluster not found.")
-		return
-	case err != nil:
-		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+	if cloudErr, ok := err.(*api.CloudError); ok {
+		api.WriteCloudError(w, cloudErr)
 		return
 	}
 
 	adminReply(log, w, nil, b, err)
 }
 
-func (f *frontend) _getAdminHiveClusterDeployment(ctx context.Context, r *http.Request) ([]byte, error) {
+func (f *frontend) _getAdminHiveClusterDeployment(ctx context.Context, resourceID string) ([]byte, error) {
 	// we have to check if the frontend has a valid clustermanager since hive is not everywhere.
 	if f.hiveClusterManager == nil {
-		return nil, errors.New("hive is not enabled")
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "hive is not enabled")
 	}
-	url := filepath.Dir(r.URL.Path)
-	resourceID := strings.TrimPrefix(url, "/admin")
+
 	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
 	if err != nil {
-		return nil, err
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "cluster not found")
 	}
 
 	if doc.OpenShiftCluster.Properties.HiveProfile.Namespace == "" {
-		return nil, errors.New("cluster is not managed by hive")
+		return nil, api.NewCloudError(http.StatusNoContent, api.CloudErrorCodeResourceNotFound, "", "cluster is not managed by hive")
 	}
 
 	cd, err := f.hiveClusterManager.GetClusterDeployment(ctx, doc)
 	if err != nil {
-		return nil, err
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "cluster deployment not found")
 	}
 
 	var b []byte
 	err = codec.NewEncoderBytes(&b, &codec.JsonHandle{}).Encode(cd)
 	if err != nil {
-		return nil, err
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "unable to marshal response")
 	}
 
 	return b, nil

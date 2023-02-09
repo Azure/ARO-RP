@@ -45,16 +45,15 @@ func Test_getAdminHiveClusterDeployment(t *testing.T) {
 			properties:                            api.OpenShiftClusterProperties{HiveProfile: api.HiveProfile{Namespace: fmt.Sprintf("aro-%s", fakeUUID)}},
 			hiveEnabled:                           true,
 			expectedGetClusterDeploymentCallCount: 1,
-			wantStatusCode:                        http.StatusOK,
-			wantResponse:                          []byte(`{"spec":{"clusterName":"abc123","baseDomain":"","platform":{},"installed":false}}` + "\n"),
+			wantResponse:                          []byte(`{"spec":{"clusterName":"abc123","baseDomain":"","platform":{},"installed":false}}`),
 		},
 		{
 			name:                                  "cluster does not have hive profile with namespace",
 			resourceID:                            fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/nonHive", fakeUUID),
 			hiveEnabled:                           true,
 			expectedGetClusterDeploymentCallCount: 0,
-			wantStatusCode:                        http.StatusInternalServerError,
-			wantError:                             "500: InternalServerError: : cluster is not managed by hive",
+			wantStatusCode:                        http.StatusNoContent,
+			wantError:                             "204: ResourceNotFound: : cluster is not managed by hive",
 		},
 		{
 			name:                                  "hive is not enabled",
@@ -100,19 +99,19 @@ func Test_getAdminHiveClusterDeployment(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-
-			go f.Run(ctx, nil, nil)
-
-			requestStr := fmt.Sprintf("https://server/admin%s/clusterdeployment", tt.resourceID)
-
-			resp, b, err := ti.request(http.MethodGet, requestStr, nil, nil)
-			if err != nil {
-				t.Fatal(err)
+			hiveClusterDeployment, err := f._getAdminHiveClusterDeployment(ctx, strings.ToLower(tt.resourceID))
+			cloudErr, isCloudErr := err.(*api.CloudError)
+			if tt.wantError != "" && isCloudErr && cloudErr != nil {
+				if tt.wantError != cloudErr.Error() {
+					t.Fatalf("got %q but wanted %q", cloudErr.Error(), tt.wantError)
+				}
+				if tt.wantStatusCode != 0 && tt.wantStatusCode != cloudErr.StatusCode {
+					t.Fatalf("got %q but wanted %q", cloudErr.Error(), tt.wantError)
+				}
 			}
 
-			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, tt.wantResponse)
-			if err != nil {
-				t.Error(err)
+			if !strings.EqualFold(string(hiveClusterDeployment), string(tt.wantResponse)) {
+				t.Fatalf("got %q and expected %q", hiveClusterDeployment, tt.wantResponse)
 			}
 		})
 	}

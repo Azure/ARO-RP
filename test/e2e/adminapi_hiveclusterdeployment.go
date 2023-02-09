@@ -29,7 +29,7 @@ var _ = Describe("[Admin API] Get Hive Cluster Deployment action", func() {
 			}
 			clusterDeployment := hivev1.ClusterDeployment{}
 			By("requesting the cluster deployment cr")
-			resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/clusterdeployment", nil, nil, &clusterDeployment)
+			resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/clusterdeployment", nil, true, nil, &clusterDeployment)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
 			Expect(resp.Header.Get("Content-Type")).To(Equal("application/json"))
