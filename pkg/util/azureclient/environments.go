@@ -20,7 +20,15 @@ type AROEnvironment struct {
 	AppLensEndpoint          string
 	AppLensScope             string
 	AppLensTenantID          string
+	AuthzRemotePDPEndPoint   string
 	azidentity.AuthorityHost
+	AzureRbacPDPEnvironment
+}
+
+// AzureRbacPDPEnvironment contains cloud specific instance of Authz RBAC PDP Remote Server
+type AzureRbacPDPEnvironment struct {
+	Endpoint   string
+	OAuthScope string
 }
 
 var (
@@ -34,6 +42,10 @@ var (
 		AppLensScope:             "b9a1efcd-32ee-4330-834c-c04eb00f4b33",
 		AppLensTenantID:          "72f988bf-86f1-41af-91ab-2d7cd011db47",
 		AuthorityHost:            azidentity.AzurePublicCloud,
+		AzureRbacPDPEnvironment: AzureRbacPDPEnvironment{
+			Endpoint:   "https://%s.authorization.azure.net/providers/Microsoft.Authorization/checkAccess",
+			OAuthScope: "https://authorization.azure.net/.default",
+		},
 	}
 
 	// USGovernmentCloud contains additional ARO information for the US Gov cloud environment.
@@ -46,6 +58,10 @@ var (
 		AppLensScope:             "https://microsoft.onmicrosoft.com/runtimehost",
 		AppLensTenantID:          "cab8a31a-1906-4287-a0d8-4eef66b95f6e",
 		AuthorityHost:            azidentity.AzureGovernment,
+		AzureRbacPDPEnvironment: AzureRbacPDPEnvironment{
+			Endpoint:   "https://%s.authorization.azure.us/providers/Microsoft.Authorization/checkAccess",
+			OAuthScope: "https://authorization.azure.us/.default",
+		},
 	}
 )
 
