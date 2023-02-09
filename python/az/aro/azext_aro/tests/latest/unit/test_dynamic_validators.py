@@ -372,7 +372,7 @@ test_validate_resource_data = [
             "child_name_1": None
         },
         [True, True, True, True, True, True, True, False],
-        "Resource Test_Subnet is missing role assignment test"
+        "Resource Test_Subnet is missing role assignment test for service principal test"
     )
 ]
 

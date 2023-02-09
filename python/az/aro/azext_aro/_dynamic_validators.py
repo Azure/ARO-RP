@@ -273,7 +273,8 @@ def dyn_validate_resource_permissions(service_principle_ids, resources):
                             parts = parse_resource_id(resource)
                             errors.append(["Resource Permissions",
                                            parts['type'],
-                                           f"Resource {parts['name']} is missing role assignment {role}"])
+                                           f"Resource {parts['name']} is missing role assignment " +
+                                           f"{role} for service principal {sp_id}"])
                     except CloudError as e:
                         logger.error(e.message)
                         raise
