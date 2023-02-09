@@ -8,7 +8,6 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	securityv1 "github.com/openshift/api/security/v1"
-	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -39,7 +38,6 @@ type Reconciler struct {
 	log *logrus.Entry
 
 	kubernetescli kubernetes.Interface
-	securitycli   securityclient.Interface
 
 	client client.Client
 
@@ -54,11 +52,10 @@ var (
 )
 
 // NewReconciler creates a new Reconciler
-func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface, securitycli securityclient.Interface, restConfig *rest.Config) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface, restConfig *rest.Config) *Reconciler {
 	return &Reconciler{
 		log:           log,
 		kubernetescli: kubernetescli,
-		securitycli:   securitycli,
 		client:        client,
 		restConfig:    restConfig,
 		verFixed46:    verFixed46,
