@@ -14,11 +14,13 @@ import (
 
 type logrWrapper struct {
 	entry *logrus.Entry
-	level int
 }
 
-func (lw *logrWrapper) Enabled() bool {
-	return lw.level <= int(logrus.GetLevel())
+func (lw *logrWrapper) Init(info logr.RuntimeInfo) {
+}
+
+func (lw *logrWrapper) Enabled(level int) bool {
+	return level <= int(logrus.GetLevel())
 }
 
 func (lw *logrWrapper) Error(err error, msg string, keysAndValues ...interface{}) {
@@ -38,39 +40,24 @@ func (lw *logrWrapper) withKeysAndValues(keysAndValues []interface{}) *logrus.En
 	return lw.entry.WithFields(fields)
 }
 
-func (lw *logrWrapper) Info(msg string, keysAndValues ...interface{}) {
-	if !lw.Enabled() {
-		return
-	}
+func (lw *logrWrapper) Info(level int, msg string, keysAndValues ...interface{}) {
 	lw.withKeysAndValues(keysAndValues).Info(msg)
 }
 
-func (lw *logrWrapper) V(level int) logr.Logger {
-	return &logrWrapper{
-		entry: lw.entry,
-		level: level,
-	}
-}
-
-func (lw *logrWrapper) WithValues(keysAndValues ...interface{}) logr.Logger {
+func (lw *logrWrapper) WithValues(keysAndValues ...interface{}) logr.LogSink {
 	return &logrWrapper{
 		entry: lw.withKeysAndValues(keysAndValues),
-		level: lw.level,
 	}
 }
 
-func (lw *logrWrapper) WithName(name string) logr.Logger {
+func (lw *logrWrapper) WithName(name string) logr.LogSink {
 	return &logrWrapper{
 		entry: lw.withKeysAndValues([]interface{}{name, ""}),
-		level: lw.level,
 	}
 }
 
 func LogrWrapper(logger *logrus.Entry) logr.Logger {
-	return &logrWrapper{
-		entry: logger,
-		level: int(logrus.GetLevel()),
-	}
+	return logr.New(&logrWrapper{entry: logger})
 }
 
 type logrHook struct{}
