@@ -5,10 +5,15 @@ package clusteroperatoraro
 
 import (
 	"context"
+	"strings"
+	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
+	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
+	"github.com/openshift/library-go/pkg/operator/status"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/api/equality"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -74,11 +79,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{}, r.setClusterOperatorStatus(ctx, co)
+	return reconcile.Result{}, r.setClusterOperatorStatus(ctx, co, instance)
 }
 
-func (r *Reconciler) setClusterOperatorStatus(ctx context.Context, co *configv1.ClusterOperator) error {
-	// TODO: Replace with a real conditions based on aro operator conditions
+func (r *Reconciler) setClusterOperatorStatus(ctx context.Context, originalClusterOperatorObj *configv1.ClusterOperator, cluster *arov1alpha1.Cluster) error {
+	clusterOperatorObj := originalClusterOperatorObj.DeepCopy()
+
 	currentTime := metav1.Now()
 	conditions := []configv1.ClusterOperatorStatusCondition{
 		{
@@ -107,11 +113,32 @@ func (r *Reconciler) setClusterOperatorStatus(ctx context.Context, co *configv1.
 		},
 	}
 
-	for _, c := range conditions {
-		v1helpers.SetStatusCondition(&co.Status.Conditions, c)
+	degradedInertia := status.MustNewInertia(2 * time.Minute).Inertia
+
+	// todo: these guard checks can be removed once we are guaranteed to have at least one of each type of Controller Condition present on the cluster resource.
+	if hasControllerConditionOfType(&cluster.Status.Conditions, operatorv1.OperatorStatusTypeAvailable) {
+		v1helpers.SetStatusCondition(&clusterOperatorObj.Status.Conditions, status.UnionClusterCondition("Available", operatorv1.ConditionTrue, nil, cluster.Status.Conditions...))
+	} else {
+		v1helpers.SetStatusCondition(&clusterOperatorObj.Status.Conditions, conditions[0])
 	}
 
-	return r.client.Status().Update(ctx, co)
+	if hasControllerConditionOfType(&cluster.Status.Conditions, operatorv1.OperatorStatusTypeProgressing) {
+		v1helpers.SetStatusCondition(&clusterOperatorObj.Status.Conditions, status.UnionClusterCondition("Progressing", operatorv1.ConditionFalse, nil, cluster.Status.Conditions...))
+	} else {
+		v1helpers.SetStatusCondition(&clusterOperatorObj.Status.Conditions, conditions[1])
+	}
+
+	if hasControllerConditionOfType(&cluster.Status.Conditions, operatorv1.OperatorStatusTypeDegraded) {
+		v1helpers.SetStatusCondition(&clusterOperatorObj.Status.Conditions, status.UnionClusterCondition("Degraded", operatorv1.ConditionFalse, degradedInertia, cluster.Status.Conditions...))
+	} else {
+		v1helpers.SetStatusCondition(&clusterOperatorObj.Status.Conditions, conditions[2])
+	}
+
+	if equality.Semantic.DeepEqual(clusterOperatorObj.Status.Conditions, originalClusterOperatorObj.Status.Conditions) {
+		return nil
+	} else {
+		return r.client.Status().Update(ctx, clusterOperatorObj)
+	}
 }
 
 func (r *Reconciler) getOrCreateClusterOperator(ctx context.Context) (*configv1.ClusterOperator, error) {
@@ -182,4 +209,13 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&configv1.ClusterOperator{}).
 		Named(ControllerName).
 		Complete(r)
+}
+
+func hasControllerConditionOfType(conditions *[]operatorv1.OperatorCondition, conditionType string) bool {
+	for _, condition := range *conditions {
+		if strings.HasSuffix(condition.Type, "Controller"+conditionType) {
+			return true
+		}
+	}
+	return false
 }

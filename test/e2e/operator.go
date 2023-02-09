@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/ghodss/yaml"
 	configv1 "github.com/openshift/api/config/v1"
+	cov1Helpers "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
 	"github.com/ugorji/go/codec"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -255,7 +256,11 @@ var _ = Describe("ARO Operator - MachineHealthCheck", func() {
 })
 
 var _ = Describe("ARO Operator - Conditions", func() {
-	It("must have all the conditions set to true", func(ctx context.Context) {
+	const (
+		timeout = 30 * time.Second
+	)
+
+	It("cluster must have all the conditions set to true", func(ctx context.Context) {
 		Eventually(func(g Gomega, ctx context.Context) {
 			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 			g.Expect(err).NotTo(HaveOccurred())
@@ -264,6 +269,24 @@ var _ = Describe("ARO Operator - Conditions", func() {
 				g.Expect(conditions.IsTrue(co.Status.Conditions, condition)).To(BeTrue(), "Condition %s", condition)
 			}
 		}).WithContext(ctx).Should(Succeed())
+	})
+
+	It("cluster operator must have all the conditions set to the expected values by default", func(ctx context.Context) {
+		By("saving the original cluster status")
+		originalCluster, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		Eventually(func(g Gomega, ctx context.Context) {
+			co, err := clients.ConfigClient.ConfigV1().ClusterOperators().Get(ctx, "aro", metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+
+			g.Expect(cov1Helpers.IsStatusConditionTrue(co.Status.Conditions, configv1.OperatorAvailable))
+			g.Expect(cov1Helpers.IsStatusConditionFalse(co.Status.Conditions, configv1.OperatorProgressing))
+			g.Expect(cov1Helpers.IsStatusConditionFalse(co.Status.Conditions, configv1.OperatorDegraded))
+		}).WithContext(ctx).WithTimeout(timeout).Should(Succeed())
+
+		By("restoring the original cluster status")
+		clients.AROClusters.AroV1alpha1().Clusters().UpdateStatus(ctx, originalCluster, metav1.UpdateOptions{})
 	})
 })
 
