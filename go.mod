@@ -515,7 +515,7 @@ replace (
 	k8s.io/mount-utils => k8s.io/mount-utils v0.23.0
 	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.23.0
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.23.0
-	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.9.1
+	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.11.2
 	sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.5.0
 )
 
@@ -538,7 +538,6 @@ replace (
 	github.com/deislabs/oras => github.com/oras-project/oras v0.12.0
 	github.com/etcd-io/bbolt => go.etcd.io/bbolt v1.3.6
 	github.com/go-check/check => gopkg.in/check.v1 v0.0.0-20201130134442-10cb98267c6c
-	github.com/go-logr/logr => github.com/go-logr/logr v0.4.0
 	github.com/golang/lint => golang.org/x/lint v0.0.0-20210508222113-6edffad5e616
 	github.com/google/tcpproxy => inet.af/tcpproxy v0.0.0-20210824174053-2e577fef49e2
 	github.com/googleapis/gnostic => github.com/google/gnostic v0.5.5
@@ -575,7 +574,6 @@ replace (
 	github.com/willf/bitset => github.com/bits-and-blooms/bitset v1.2.1
 	google.golang.org/cloud => cloud.google.com/go v0.97.0
 	google.golang.org/grpc => google.golang.org/grpc v1.40.0
-	k8s.io/klog/v2 => k8s.io/klog/v2 v2.8.0
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20211115234752-e816edb12b65
 	k8s.io/kube-state-metrics => k8s.io/kube-state-metrics v1.9.7
 	mvdan.cc/unparam => mvdan.cc/unparam v0.0.0-20211002133954-f839ab2b2b11
