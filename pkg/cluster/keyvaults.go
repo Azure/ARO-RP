@@ -13,7 +13,25 @@ import (
 // Licensed under the Apache License 2.0.
 
 func (m *manager) createKeyvault(ctx context.Context) error {
-	keyvaultName := "aro-secrets-" + m.doc.OpenShiftCluster.Name[:12]
+
+	// We want random characters from end of infraID to help ensure KV name uniqueness
+	infraID := m.doc.OpenShiftCluster.Properties.InfraID
+	suffixMaxLength := 20
+	var suffix string
+
+	// This runs after ensureInfraID bootstrap step, but just in case
+	if infraID == "" {
+		suffix = m.doc.OpenShiftCluster.Name
+	} else {
+		suffix = infraID
+	}
+
+	suffixLength := len(suffix)
+	if suffixLength > suffixMaxLength {
+		suffix = suffix[suffixLength-suffixMaxLength : suffixLength]
+	}
+	keyvaultName := "aro-" + suffix
+
 	vaultNameAvailabilityParameters := keyvault.VaultCheckNameAvailabilityParameters{
 		Name: &keyvaultName,
 		Type: to.StringPtr("Microsoft.KeyVault/vaults"),
