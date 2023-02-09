@@ -290,8 +290,8 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
 			r.NewRoute().Methods(http.MethodGet).Path("/v1").HandlerFunc(p.index)
 		case "":
 		default:
-			fmtName := strings.TrimPrefix(name, "v2/build/")
-			fmtName = strings.TrimPrefix(fmtName, "v1/build/")
+			fmtName := strings.TrimPrefix(name, "v1/build/")
+			fmtName = strings.TrimPrefix(fmtName, "v2/build/")
 
 			r.NewRoute().Methods(http.MethodGet).Path("/" + fmtName).HandlerFunc(p.serve(name))
 		}
