@@ -41,11 +41,14 @@ func (i *ifReload) IsRequired(clusterVersion *version.Version, cluster *arov1alp
 	return clusterVersion.Lt(i.versionFixed)
 }
 
-func (*ifReload) Ensure(ctx context.Context) error {
+func (i *ifReload) Ensure(ctx context.Context) error {
+	i.log.Debug("ensure ifReload")
 	return nil
 }
 
 func (i *ifReload) Remove(ctx context.Context) error {
+	i.log.Debug("remove ifReload")
+
 	err := i.cli.CoreV1().Namespaces().Delete(ctx, kubeNamespace, metav1.DeleteOptions{})
 	if kerrors.IsNotFound(err) {
 		return nil

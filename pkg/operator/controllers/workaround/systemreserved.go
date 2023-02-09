@@ -87,6 +87,8 @@ func (sr *systemreserved) kubeletConfig() (*mcv1.KubeletConfig, error) {
 }
 
 func (sr *systemreserved) Ensure(ctx context.Context) error {
+	sr.log.Debug("ensure systemreserved")
+
 	// Step 1. Add label to worker MachineConfigPool.
 	// Get the worker MachineConfigPool, modify it to add a label aro.openshift.io/limits: "", and apply the modified config.
 	mcp, err := sr.mcocli.MachineconfigurationV1().MachineConfigPools().Get(ctx, workerMachineConfigPoolName, metav1.GetOptions{})
@@ -116,6 +118,8 @@ func (sr *systemreserved) Ensure(ctx context.Context) error {
 }
 
 func (sr *systemreserved) Remove(ctx context.Context) error {
+	sr.log.Debug("remove systemreserved")
+
 	mcp, err := sr.mcocli.MachineconfigurationV1().MachineConfigPools().Get(ctx, workerMachineConfigPoolName, metav1.GetOptions{})
 	if err != nil {
 		return err
