@@ -34,12 +34,16 @@ func (f *frontend) _getAdminKubernetesObjects(ctx context.Context, r *http.Reque
 	var err error
 	vars := mux.Vars(r)
 	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
+	log.Debugf("received getAdminKubernetesObjects request for '%s/%s' under resource group '%s'", resType, resName, resGroupName)
 
 	groupKind, namespace, name := r.URL.Query().Get("kind"), r.URL.Query().Get("namespace"), r.URL.Query().Get("name")
+	log.Debugf("requested object kind is '%s', namespace is '%s', name is '%s'", groupKind, namespace, name)
 
 	unrestricted := false
 	if r.URL.Query().Has("unrestricted") {
-		unrestricted, err = strconv.ParseBool(r.URL.Query().Get("unrestricted"))
+		unrestrictedValue := r.URL.Query().Get("unrestricted")
+		log.Debugf("received unrestricted value '%s'", unrestrictedValue)
+		unrestricted, err = strconv.ParseBool(unrestrictedValue)
 		if err != nil {
 			return nil, err
 		}
