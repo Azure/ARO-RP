@@ -6,13 +6,19 @@ parameters:
   type: boolean
   default: false
 
+resources:
+  containers:
+  - container: golang
+    image: registry.access.redhat.com/ubi8/go-toolset:1.17
+    options: --user=0
+
 variables:
 - template: vars.yml
 
 jobs:
 - job: Clean_subscription
   pool:
-    name: ARO-CI
+    name: 1es-aro-ci-pool
 
   steps:
   - template: ./templates/template-checkout.yml
