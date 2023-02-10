@@ -151,6 +151,39 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
+	minorVersions := map[string]bool{}
+	var currentVersion string
+
+	for _, ref := range releases {
+		v, err := version.ParseVersion(ref.Version)
+		if err != nil {
+			log.Errorf("%s: %s\n", ref, err)
+			errorOccurred = true
+		}
+
+		currentVersion = v.MinorVersion()
+		if exists := minorVersions[currentVersion]; !exists {
+			minorVersions[currentVersion] = true
+			for _, ref := range []string{
+				"registry.redhat.io/redhat/certified-operator-index:v",
+				"registry.redhat.io/redhat/community-operator-index:v",
+				"registry.redhat.io/redhat/redhat-marketplace-index:v",
+				"registry.redhat.io/redhat/redhat-operator-index:v",
+			} {
+				src := ref + currentVersion
+				dest := pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, src)
+				srcAuth := srcAuthRedhat
+
+				log.Printf("mirroring %s -> %s", src, dest)
+				err = pkgmirror.Copy(ctx, dest, src, dstAuth, srcAuth)
+				if err != nil {
+					log.Errorf("%s: %s\n", src, err)
+					errorOccurred = true
+				}
+			}
+		}
+	}
+
 	for _, ref := range []string{
 		"registry.redhat.io/rhel8/support-tools:latest",
 		"registry.redhat.io/openshift4/ose-tools-rhel8:latest",
