@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -30,10 +31,23 @@ func (f *frontend) getAdminKubernetesObjects(w http.ResponseWriter, r *http.Requ
 }
 
 func (f *frontend) _getAdminKubernetesObjects(ctx context.Context, r *http.Request, log *logrus.Entry) ([]byte, error) {
+	var err error
 	vars := mux.Vars(r)
 	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
+	log.Debugf("received getAdminKubernetesObjects request for '%s/%s' under resource group '%s'", resType, resName, resGroupName)
 
 	groupKind, namespace, name := r.URL.Query().Get("kind"), r.URL.Query().Get("namespace"), r.URL.Query().Get("name")
+	log.Debugf("requested object kind is '%s', namespace is '%s', name is '%s'", groupKind, namespace, name)
+
+	unrestricted := false
+	if r.URL.Query().Has("unrestricted") {
+		unrestrictedValue := r.URL.Query().Get("unrestricted")
+		log.Debugf("received unrestricted value '%s'", unrestrictedValue)
+		unrestricted, err = strconv.ParseBool(unrestrictedValue)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
@@ -55,53 +69,12 @@ func (f *frontend) _getAdminKubernetesObjects(ctx context.Context, r *http.Reque
 		return nil, err
 	}
 
-	err = validateAdminKubernetesObjectsNonCustomer(r.Method, gvr, namespace, name)
-	if err != nil {
-		return nil, err
+	if !unrestricted {
+		err = validateAdminKubernetesObjectsNonCustomer(r.Method, gvr, namespace, name)
+		if err != nil {
+			return nil, err
+		}
 	}
-
-	if name != "" {
-		return k.KubeGet(ctx, groupKind, namespace, name)
-	}
-	return k.KubeList(ctx, groupKind, namespace)
-}
-
-func (f *frontend) getAdminKubernetesObjectsUnrestricted(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
-	r.URL.Path = filepath.Dir(r.URL.Path)
-
-	b, err := f._getAdminKubernetesObjectsUnrestricted(ctx, r, log)
-
-	adminReply(log, w, nil, b, err)
-}
-
-func (f *frontend) _getAdminKubernetesObjectsUnrestricted(ctx context.Context, r *http.Request, log *logrus.Entry) ([]byte, error) {
-	vars := mux.Vars(r)
-	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
-
-	groupKind, namespace, name := r.URL.Query().Get("kind"), r.URL.Query().Get("namespace"), r.URL.Query().Get("name")
-
-	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
-
-	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
-	switch {
-	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", resType, resName, resGroupName)
-	case err != nil:
-		return nil, err
-	}
-
-	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
-	if err != nil {
-		return nil, err
-	}
-
-	gvr, err := k.ResolveGVR(groupKind)
-	if err != nil {
-		return nil, err
-	}
-
 	err = validateAdminKubernetesObjects(r.Method, gvr, namespace, name)
 	if err != nil {
 		return nil, err
