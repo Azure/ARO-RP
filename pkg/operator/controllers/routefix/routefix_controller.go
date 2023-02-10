@@ -11,10 +11,10 @@ import (
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -37,8 +37,6 @@ const (
 type Reconciler struct {
 	log *logrus.Entry
 
-	kubernetescli kubernetes.Interface
-
 	client client.Client
 
 	restConfig *rest.Config
@@ -52,14 +50,13 @@ var (
 )
 
 // NewReconciler creates a new Reconciler
-func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface, restConfig *rest.Config) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, restConfig *rest.Config) *Reconciler {
 	return &Reconciler{
-		log:           log,
-		kubernetescli: kubernetescli,
-		client:        client,
-		restConfig:    restConfig,
-		verFixed46:    verFixed46,
-		verFixed47:    verFixed47,
+		log:        log,
+		client:     client,
+		restConfig: restConfig,
+		verFixed46: verFixed46,
+		verFixed47: verFixed47,
 	}
 }
 
@@ -99,6 +96,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 }
 
 func (r *Reconciler) deploy(ctx context.Context, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
+	r.log.Debugf("deploying RouteFix")
+
 	// TODO: dh should be a field in r, but the fact that it is initialised here
 	// each time currently saves us in the case that the controller runs before
 	// the SCC API is registered.
@@ -136,11 +135,24 @@ func (r *Reconciler) deploy(ctx context.Context, instance *arov1alpha1.Cluster) 
 }
 
 func (r *Reconciler) remove(ctx context.Context, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
-	err := r.kubernetescli.CoreV1().Namespaces().Delete(ctx, kubeNamespace, metav1.DeleteOptions{})
+	r.log.Debugf("removing RouteFix")
+
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: kubeNamespace,
+		},
+	}
+	err := r.client.Delete(ctx, ns)
 	if !kerrors.IsNotFound(err) {
 		return reconcile.Result{}, err
 	}
-	err = r.kubernetescli.RbacV1().ClusterRoleBindings().Delete(ctx, kubeName, metav1.DeleteOptions{})
+
+	crb := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: kubeName,
+		},
+	}
+	err = r.client.Delete(ctx, crb)
 	if kerrors.IsNotFound(err) {
 		return reconcile.Result{}, nil
 	}

@@ -67,7 +67,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 				Name: configName,
 			},
 		}
-		err = r.client.Delete(ctx, &config, &client.DeleteOptions{})
+		err = r.client.Delete(ctx, &config)
 		if err != nil {
 			err = fmt.Errorf("could not delete KubeletConfig: %w", err)
 		}

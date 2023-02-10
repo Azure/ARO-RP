@@ -10,7 +10,6 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -37,10 +36,10 @@ type Reconciler struct {
 }
 
 // TODO: use client.Client instead of dynamichelper here.
-func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface, dh dynamichelper.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *Reconciler {
 	return &Reconciler{
 		log:         log,
-		workarounds: []Workaround{NewSystemReserved(log, client, dh), NewIfReload(log, kubernetescli)},
+		workarounds: []Workaround{NewSystemReserved(log, client, dh), NewIfReload(log, client)},
 		client:      client,
 	}
 }

@@ -20,7 +20,7 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
+	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_aad "github.com/Azure/ARO-RP/pkg/util/mocks/aad"
@@ -46,33 +46,35 @@ func TestNewAzRefreshableAuthorizer(t *testing.T) {
 		name       string
 		azCloudEnv *azureclient.AROEnvironment
 		secret     *corev1.Secret
-		kubecli    *fake.Clientset
 		log        *logrus.Entry
 		wantErr    string
 	}{
 		{
 			name:    "fail: nil azure cloud environment",
-			kubecli: fake.NewSimpleClientset(newV1CoreSecret(azureSecretName, nameSpace)),
+			secret:  newV1CoreSecret(azureSecretName, nameSpace),
 			wantErr: "azureEnvironment cannot be nil",
 			log:     logrus.NewEntry(logrus.StandardLogger()),
 		},
 		{
 			name:       "fail: nil log entry",
 			azCloudEnv: &azureclient.PublicCloud,
-			kubecli:    fake.NewSimpleClientset(newV1CoreSecret(azureSecretName, nameSpace)),
+			secret:     newV1CoreSecret(azureSecretName, nameSpace),
 			wantErr:    "log entry cannot be nil",
 		},
 		{
 			name:       "pass: create new azrefreshable authorizer",
 			azCloudEnv: &azureclient.PublicCloud,
-			kubecli:    fake.NewSimpleClientset(newV1CoreSecret(azureSecretName, nameSpace)),
+			secret:     newV1CoreSecret(azureSecretName, nameSpace),
 			log:        logrus.NewEntry(logrus.StandardLogger()),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
 			aad := mock_aad.NewMockTokenClient(controller)
-			_, err := NewAzRefreshableAuthorizer(tt.log, tt.azCloudEnv, tt.kubecli, aad)
+
+			clientFake := ctrlfake.NewClientBuilder().WithObjects(tt.secret).Build()
+
+			_, err := NewAzRefreshableAuthorizer(tt.log, tt.azCloudEnv, clientFake, aad)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Errorf("\n%v\n !=\n%v", err, tt.wantErr)
@@ -134,7 +136,7 @@ func TestNewRefreshableAuthorizerToken(t *testing.T) {
 			secret: newV1CoreSecret(azureSecretName, nameSpace),
 		},
 	} {
-		kubecli := fake.NewSimpleClientset(tt.secret)
+		clientFake := ctrlfake.NewClientBuilder().WithObjects(tt.secret).Build()
 
 		controller := gomock.NewController(t)
 		aad := mock_aad.NewMockTokenClient(controller)
@@ -146,7 +148,7 @@ func TestNewRefreshableAuthorizerToken(t *testing.T) {
 			aad.EXPECT().GetToken(ctx, log, tt.tr.clientID, tt.tr.clientSecret, tt.tr.tenantID, tt.tr.aadEndpoint, tt.tr.resource).MaxTimes(1).Return(token, tt.getTokenErr)
 		}
 
-		azRefreshAuthorizer, err := NewAzRefreshableAuthorizer(log, &azureclient.PublicCloud, kubecli, aad)
+		azRefreshAuthorizer, err := NewAzRefreshableAuthorizer(log, &azureclient.PublicCloud, clientFake, aad)
 		if err != nil {
 			t.Errorf("failed to create azRefreshAuthorizer, %v", err)
 		}
@@ -246,10 +248,10 @@ func TestAzCredentials(t *testing.T) {
 			},
 		},
 	} {
-		kubecli := fake.NewSimpleClientset(tt.secret)
+		clientFake := ctrlfake.NewClientBuilder().WithObjects(tt.secret).Build()
 
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := AzCredentials(ctx, kubecli)
+			_, err := AzCredentials(ctx, clientFake)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Errorf("\n%v\n !=\n%v", err, tt.wantErr)

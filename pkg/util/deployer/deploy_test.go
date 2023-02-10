@@ -17,7 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes/fake"
+	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
@@ -38,7 +38,7 @@ func TestDeployCreateOrUpdateSetsOwnerReferences(t *testing.T) {
 		},
 	}
 
-	k8scli := fake.NewSimpleClientset()
+	clientFake := ctrlfake.NewClientBuilder().Build()
 	dh := mock_dynamichelper.NewMockInterface(controller)
 
 	// the OwnerReference that we expect to be set on each object we Ensure
@@ -67,7 +67,7 @@ func TestDeployCreateOrUpdateSetsOwnerReferences(t *testing.T) {
 	}
 	dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Do(check).Return(nil)
 
-	deployer := NewDeployer(k8scli, dh, staticFiles, "staticresources")
+	deployer := NewDeployer(clientFake, dh, staticFiles, "staticresources")
 	err := deployer.CreateOrUpdate(context.Background(), cluster, &config.MUODeploymentConfig{Pullspec: setPullSpec})
 	if err != nil {
 		t.Error(err)
@@ -86,11 +86,11 @@ func TestDeployDelete(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	k8scli := fake.NewSimpleClientset()
+	clientFake := ctrlfake.NewClientBuilder().Build()
 	dh := mock_dynamichelper.NewMockInterface(controller)
 	dh.EXPECT().EnsureDeleted(gomock.Any(), "Deployment", "openshift-managed-upgrade-operator", "managed-upgrade-operator").Return(nil)
 
-	deployer := NewDeployer(k8scli, dh, staticFiles, "staticresources")
+	deployer := NewDeployer(clientFake, dh, staticFiles, "staticresources")
 	err := deployer.Remove(context.Background(), config.MUODeploymentConfig{})
 	if err != nil {
 		t.Error(err)
@@ -101,11 +101,11 @@ func TestDeployDeleteFailure(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	k8scli := fake.NewSimpleClientset()
+	clientFake := ctrlfake.NewClientBuilder().Build()
 	dh := mock_dynamichelper.NewMockInterface(controller)
 	dh.EXPECT().EnsureDeleted(gomock.Any(), "Deployment", "openshift-managed-upgrade-operator", "managed-upgrade-operator").Return(errors.New("fail"))
 
-	deployer := NewDeployer(k8scli, dh, staticFiles, "staticresources")
+	deployer := NewDeployer(clientFake, dh, staticFiles, "staticresources")
 	err := deployer.Remove(context.Background(), config.MUODeploymentConfig{})
 	if err == nil {
 		t.Error(err)
@@ -117,7 +117,7 @@ func TestDeployDeleteFailure(t *testing.T) {
 
 func TestDeployIsReady(t *testing.T) {
 	specReplicas := int32(1)
-	k8scli := fake.NewSimpleClientset(&appsv1.Deployment{
+	clientFake := ctrlfake.NewClientBuilder().WithObjects(&appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:       "managed-upgrade-operator",
 			Namespace:  "openshift-managed-upgrade-operator",
@@ -134,9 +134,9 @@ func TestDeployIsReady(t *testing.T) {
 			AvailableReplicas:   1,
 			UnavailableReplicas: 0,
 		},
-	})
+	}).Build()
 
-	deployer := NewDeployer(k8scli, nil, staticFiles, "staticresources")
+	deployer := NewDeployer(clientFake, nil, staticFiles, "staticresources")
 	ready, err := deployer.IsReady(context.Background(), "openshift-managed-upgrade-operator", "managed-upgrade-operator")
 	if err != nil {
 		t.Error(err)
@@ -147,8 +147,8 @@ func TestDeployIsReady(t *testing.T) {
 }
 
 func TestDeployIsReadyMissing(t *testing.T) {
-	k8scli := fake.NewSimpleClientset()
-	deployer := NewDeployer(k8scli, nil, staticFiles, "staticresources")
+	clientFake := ctrlfake.NewClientBuilder().Build()
+	deployer := NewDeployer(clientFake, nil, staticFiles, "staticresources")
 	ready, err := deployer.IsReady(context.Background(), "openshift-managed-upgrade-operator", "managed-upgrade-operator")
 	if err != nil {
 		t.Error(err)

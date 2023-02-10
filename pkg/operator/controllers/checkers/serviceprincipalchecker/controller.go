@@ -11,7 +11,6 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,12 +45,12 @@ type Reconciler struct {
 	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface, role string) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, role string) *Reconciler {
 	return &Reconciler{
 		log:  log,
 		role: role,
 
-		checker: newServicePrincipalChecker(log, kubernetescli),
+		checker: newServicePrincipalChecker(log, client),
 
 		client: client,
 	}

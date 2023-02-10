@@ -12,10 +12,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -59,8 +57,7 @@ type MUODeploymentConfig struct {
 type Reconciler struct {
 	log *logrus.Entry
 
-	kubernetescli kubernetes.Interface
-	deployer      deployer.Deployer
+	deployer deployer.Deployer
 
 	client client.Client
 
@@ -68,12 +65,11 @@ type Reconciler struct {
 	readinessTimeout  time.Duration
 }
 
-func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface, dh dynamichelper.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *Reconciler {
 	return &Reconciler{
 		log: log,
 
-		kubernetescli: kubernetescli,
-		deployer:      deployer.NewDeployer(kubernetescli, dh, staticFiles, "staticresources"),
+		deployer: deployer.NewDeployer(client, dh, staticFiles, "staticresources"),
 
 		client: client,
 
@@ -115,9 +111,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		disableOCM := instance.Spec.OperatorFlags.GetSimpleBoolean(controllerForceLocalOnly)
 		if !disableOCM {
 			useOCM := func() bool {
-				var userSecret *corev1.Secret
-
-				userSecret, err = r.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Get(ctx, pullSecretName.Name, metav1.GetOptions{})
+				userSecret := &corev1.Secret{}
+				err = r.client.Get(ctx, pullSecretName, userSecret)
 				if err != nil {
 					// if a pullsecret doesn't exist/etc, fallback to local
 					return false
