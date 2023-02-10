@@ -10,9 +10,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,16 +32,13 @@ var alertManagerName = types.NamespacedName{Name: "alertmanager-main", Namespace
 type Reconciler struct {
 	log *logrus.Entry
 
-	kubernetescli kubernetes.Interface
-
 	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
-		log:           log,
-		kubernetescli: kubernetescli,
-		client:        client,
+		log:    log,
+		client: client,
 	}
 }
 
@@ -67,7 +62,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 // setAlertManagerWebhook is a hack to disable the
 // AlertmanagerReceiversNotConfigured warning added in 4.3.8.
 func (r *Reconciler) setAlertManagerWebhook(ctx context.Context, addr string) error {
-	s, err := r.kubernetescli.CoreV1().Secrets(alertManagerName.Namespace).Get(ctx, alertManagerName.Name, metav1.GetOptions{})
+	s := &corev1.Secret{}
+	err := r.client.Get(ctx, alertManagerName, s)
 	if err != nil {
 		return err
 	}
@@ -113,8 +109,7 @@ func (r *Reconciler) setAlertManagerWebhook(ctx context.Context, addr string) er
 		return err
 	}
 
-	_, err = r.kubernetescli.CoreV1().Secrets(alertManagerName.Namespace).Update(ctx, s, metav1.UpdateOptions{})
-	return err
+	return r.client.Update(ctx, s)
 }
 
 // SetupWithManager setup our manager

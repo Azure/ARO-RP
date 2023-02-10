@@ -9,8 +9,9 @@ import (
 
 	"github.com/form3tech-oss/jwt-go"
 	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
@@ -27,13 +28,13 @@ type Credentials struct {
 type azRefreshableAuthorizer struct {
 	log              *logrus.Entry
 	azureEnvironment *azureclient.AROEnvironment
-	kubernetescli    kubernetes.Interface
+	client           client.Client
 	tokenClient      aad.TokenClient
 }
 
 // NewAzRefreshableAuthorizer returns a new refreshable authorizer
 // using Cluster Service Principal.
-func NewAzRefreshableAuthorizer(log *logrus.Entry, azEnv *azureclient.AROEnvironment, kubernetescli kubernetes.Interface, tokenClient aad.TokenClient) (*azRefreshableAuthorizer, error) {
+func NewAzRefreshableAuthorizer(log *logrus.Entry, azEnv *azureclient.AROEnvironment, client client.Client, tokenClient aad.TokenClient) (*azRefreshableAuthorizer, error) {
 	if log == nil {
 		return nil, fmt.Errorf("log entry cannot be nil")
 	}
@@ -43,14 +44,14 @@ func NewAzRefreshableAuthorizer(log *logrus.Entry, azEnv *azureclient.AROEnviron
 	return &azRefreshableAuthorizer{
 		log:              log,
 		azureEnvironment: azEnv,
-		kubernetescli:    kubernetescli,
+		client:           client,
 		tokenClient:      tokenClient,
 	}, nil
 }
 
 func (a *azRefreshableAuthorizer) NewRefreshableAuthorizerToken(ctx context.Context) (refreshable.Authorizer, error) {
 	// Grab azure-credentials from secret
-	credentials, err := AzCredentials(ctx, a.kubernetescli)
+	credentials, err := AzCredentials(ctx, a.client)
 	if err != nil {
 		return nil, err
 	}
@@ -77,21 +78,22 @@ func (a *azRefreshableAuthorizer) NewRefreshableAuthorizerToken(ctx context.Cont
 }
 
 // AzCredentials gets Cluster Service Principal credentials from the Kubernetes secrets
-func AzCredentials(ctx context.Context, kubernetescli kubernetes.Interface) (*Credentials, error) {
-	mysec, err := kubernetescli.CoreV1().Secrets(AzureCredentialSecretNameSpace).Get(ctx, AzureCredentialSecretName, metav1.GetOptions{})
+func AzCredentials(ctx context.Context, client client.Client) (*Credentials, error) {
+	clusterSPSecret := &corev1.Secret{}
+	err := client.Get(ctx, types.NamespacedName{Namespace: AzureCredentialSecretNameSpace, Name: AzureCredentialSecretName}, clusterSPSecret)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, key := range []string{"azure_client_id", "azure_client_secret", "azure_tenant_id"} {
-		if _, ok := mysec.Data[key]; !ok {
+		if _, ok := clusterSPSecret.Data[key]; !ok {
 			return nil, fmt.Errorf("%s does not exist in the secret", key)
 		}
 	}
 
 	return &Credentials{
-		ClientID:     mysec.Data["azure_client_id"],
-		ClientSecret: mysec.Data["azure_client_secret"],
-		TenantID:     mysec.Data["azure_tenant_id"],
+		ClientID:     clusterSPSecret.Data["azure_client_id"],
+		ClientSecret: clusterSPSecret.Data["azure_client_secret"],
+		TenantID:     clusterSPSecret.Data["azure_tenant_id"],
 	}, nil
 }

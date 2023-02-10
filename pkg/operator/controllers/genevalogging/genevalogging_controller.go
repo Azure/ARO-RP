@@ -10,9 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -39,19 +37,16 @@ const (
 type Reconciler struct {
 	log *logrus.Entry
 
-	kubernetescli kubernetes.Interface
-
 	restConfig *rest.Config
 
 	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface, restConfig *rest.Config) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, restConfig *rest.Config) *Reconciler {
 	return &Reconciler{
-		log:           log,
-		kubernetescli: kubernetescli,
-		restConfig:    restConfig,
-		client:        client,
+		log:        log,
+		restConfig: restConfig,
+		client:     client,
 	}
 }
 
@@ -69,7 +64,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	r.log.Debug("running")
-	mysec, err := r.kubernetescli.CoreV1().Secrets(operator.Namespace).Get(ctx, operator.SecretName, metav1.GetOptions{})
+	operatorSecret := &corev1.Secret{}
+	err = r.client.Get(ctx, types.NamespacedName{Namespace: operator.Namespace, Name: operator.SecretName}, operatorSecret)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -83,7 +79,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	resources, err := r.resources(ctx, instance, mysec.Data[GenevaCertName], mysec.Data[GenevaKeyName])
+	resources, err := r.resources(ctx, instance, operatorSecret.Data[GenevaCertName], operatorSecret.Data[GenevaKeyName])
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err

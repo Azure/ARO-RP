@@ -13,7 +13,6 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,8 +40,6 @@ const (
 type Reconciler struct {
 	log *logrus.Entry
 
-	kubernetescli kubernetes.Interface
-
 	client client.Client
 }
 
@@ -58,11 +55,10 @@ type reconcileManager struct {
 }
 
 // NewReconciler creates a new Reconciler
-func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
-		log:           log,
-		kubernetescli: kubernetescli,
-		client:        client,
+		log:    log,
+		client: client,
 	}
 }
 
@@ -98,7 +94,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// create a refreshable authorizer from token
-	azRefreshAuthorizer, err := clusterauthorizer.NewAzRefreshableAuthorizer(r.log, &azEnv, r.kubernetescli, aad.NewTokenClient())
+	azRefreshAuthorizer, err := clusterauthorizer.NewAzRefreshableAuthorizer(r.log, &azEnv, r.client, aad.NewTokenClient())
 	if err != nil {
 		return reconcile.Result{}, err
 	}

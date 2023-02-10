@@ -11,7 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -189,18 +189,19 @@ func TestSetAlertManagerWebhook(t *testing.T) {
 				instance.Spec.OperatorFlags[controllerEnabled] = "true"
 			}
 
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "alertmanager-main",
+					Namespace: "openshift-monitoring",
+				},
+				Data: map[string][]byte{
+					"alertmanager.yaml": tt.alertmanagerYaml,
+				},
+			}
+
 			r := &Reconciler{
-				log: logrus.NewEntry(logrus.StandardLogger()),
-				kubernetescli: fake.NewSimpleClientset(&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "alertmanager-main",
-						Namespace: "openshift-monitoring",
-					},
-					Data: map[string][]byte{
-						"alertmanager.yaml": tt.alertmanagerYaml,
-					},
-				}),
-				client: ctrlfake.NewClientBuilder().WithObjects(instance).Build(),
+				log:    logrus.NewEntry(logrus.StandardLogger()),
+				client: ctrlfake.NewClientBuilder().WithObjects(instance, secret).Build(),
 			}
 
 			_, err := r.Reconcile(ctx, ctrl.Request{})
@@ -208,7 +209,8 @@ func TestSetAlertManagerWebhook(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			s, err := r.kubernetescli.CoreV1().Secrets("openshift-monitoring").Get(ctx, "alertmanager-main", metav1.GetOptions{})
+			s := &corev1.Secret{}
+			err = r.client.Get(ctx, types.NamespacedName{Namespace: "openshift-monitoring", Name: "alertmanager-main"}, s)
 			if err != nil {
 				t.Fatal(err)
 			}

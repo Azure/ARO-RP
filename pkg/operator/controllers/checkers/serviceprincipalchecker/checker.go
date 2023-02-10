@@ -7,7 +7,7 @@ import (
 	"context"
 
 	"github.com/sirupsen/logrus"
-	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/ARO-RP/pkg/api/validate/dynamic"
 	"github.com/Azure/ARO-RP/pkg/util/aad"
@@ -26,14 +26,14 @@ type checker struct {
 	newSPValidator func(azEnv *azureclient.AROEnvironment) (dynamic.ServicePrincipalValidator, error)
 }
 
-func newServicePrincipalChecker(log *logrus.Entry, kubernetescli kubernetes.Interface) *checker {
+func newServicePrincipalChecker(log *logrus.Entry, client client.Client) *checker {
 	tokenClient := aad.NewTokenClient()
 
 	return &checker{
 		log: log,
 
 		credentials: func(ctx context.Context) (*clusterauthorizer.Credentials, error) {
-			return clusterauthorizer.AzCredentials(ctx, kubernetescli)
+			return clusterauthorizer.AzCredentials(ctx, client)
 		},
 		newSPValidator: func(azEnv *azureclient.AROEnvironment) (dynamic.ServicePrincipalValidator, error) {
 			return dynamic.NewServicePrincipalValidator(log, azEnv, dynamic.AuthorizerClusterServicePrincipal, tokenClient)

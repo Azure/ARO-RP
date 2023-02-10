@@ -88,7 +88,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	if role == pkgoperator.RoleMaster {
 		if err = (genevalogging.NewReconciler(
 			log.WithField("controller", genevalogging.ControllerName),
-			client, kubernetescli, restConfig)).SetupWithManager(mgr); err != nil {
+			client, restConfig)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", genevalogging.ControllerName, err)
 		}
 		if err = (clusteroperatoraro.NewReconciler(
@@ -98,27 +98,27 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (pullsecret.NewReconciler(
 			log.WithField("controller", pullsecret.ControllerName),
-			client, kubernetescli)).SetupWithManager(mgr); err != nil {
+			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", pullsecret.ControllerName, err)
 		}
 		if err = (alertwebhook.NewReconciler(
 			log.WithField("controller", alertwebhook.ControllerName),
-			client, kubernetescli)).SetupWithManager(mgr); err != nil {
+			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", alertwebhook.ControllerName, err)
 		}
 		if err = (workaround.NewReconciler(
 			log.WithField("controller", workaround.ControllerName),
-			client, kubernetescli, dh)).SetupWithManager(mgr); err != nil {
+			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", workaround.ControllerName, err)
 		}
 		if err = (routefix.NewReconciler(
 			log.WithField("controller", routefix.ControllerName),
-			client, kubernetescli, restConfig)).SetupWithManager(mgr); err != nil {
+			client, restConfig)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", routefix.ControllerName, err)
 		}
 		if err = (monitoring.NewReconciler(
 			log.WithField("controller", monitoring.ControllerName),
-			client, kubernetescli)).SetupWithManager(mgr); err != nil {
+			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", monitoring.ControllerName, err)
 		}
 		if err = (rbac.NewReconciler(
@@ -148,7 +148,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (subnets.NewReconciler(
 			log.WithField("controller", subnets.ControllerName),
-			client, kubernetescli)).SetupWithManager(mgr); err != nil {
+			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", subnets.ControllerName, err)
 		}
 		if err = (machine.NewReconciler(
@@ -172,17 +172,17 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (previewfeature.NewReconciler(
 			log.WithField("controller", previewfeature.ControllerName),
-			client, kubernetescli)).SetupWithManager(mgr); err != nil {
+			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", previewfeature.ControllerName, err)
 		}
 		if err = (storageaccounts.NewReconciler(
 			log.WithField("controller", storageaccounts.ControllerName),
-			client, kubernetescli)).SetupWithManager(mgr); err != nil {
+			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", storageaccounts.ControllerName, err)
 		}
 		if err = (muo.NewReconciler(
 			log.WithField("controller", muo.ControllerName),
-			client, kubernetescli, dh)).SetupWithManager(mgr); err != nil {
+			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", muo.ControllerName, err)
 		}
 		if err = (autosizednodes.NewReconciler(
@@ -202,7 +202,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (serviceprincipalchecker.NewReconciler(
 			log.WithField("controller", serviceprincipalchecker.ControllerName),
-			client, kubernetescli, role)).SetupWithManager(mgr); err != nil {
+			client, role)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", serviceprincipalchecker.ControllerName, err)
 		}
 		if err = (clusterdnschecker.NewReconciler(

@@ -20,7 +20,6 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -48,16 +47,13 @@ var rhKeys = []string{"registry.redhat.io", "cloud.openshift.com", "registry.con
 type Reconciler struct {
 	log *logrus.Entry
 
-	kubernetescli kubernetes.Interface
-
 	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
-		log:           log,
-		kubernetescli: kubernetescli,
-		client:        client,
+		log:    log,
+		client: client,
 	}
 }
 
@@ -83,9 +79,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	r.log.Debug("running")
-	var userSecret *corev1.Secret
-
-	userSecret, err = r.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Get(ctx, pullSecretName.Name, metav1.GetOptions{})
+	userSecret := &corev1.Secret{}
+	err = r.client.Get(ctx, pullSecretName, userSecret)
 	if err != nil && !kerrors.IsNotFound(err) {
 		return reconcile.Result{}, err
 	}
@@ -93,7 +88,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// reconcile global pull secret
 	// detects if the global pull secret is broken and fixes it by using backup managed by ARO operator
 	if instance.Spec.OperatorFlags.GetSimpleBoolean(controllerManaged) {
-		operatorSecret, err := r.kubernetescli.CoreV1().Secrets(operator.Namespace).Get(ctx, operator.SecretName, metav1.GetOptions{})
+		operatorSecret := &corev1.Secret{}
+		err = r.client.Get(ctx, types.NamespacedName{Namespace: operator.Namespace, Name: operator.SecretName}, operatorSecret)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -187,18 +183,20 @@ func (r *Reconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret,
 	secret.Data[corev1.DockerConfigJsonKey] = []byte(fixedData)
 
 	if recreate {
-		// delete possible existing userSecret, calling deletion everytime and ignoring when secret not found
+		// delete possible existing userSecret, calling deletion every time and ignoring when secret not found
 		// allows for simpler logic flow, when delete and create are not handled separately
 		// this call happens only when there is a need to change, it has no significant impact on performance
-		err := r.kubernetescli.CoreV1().Secrets(secret.Namespace).Delete(ctx, secret.Name, metav1.DeleteOptions{})
+		err := r.client.Delete(ctx, secret)
 		if err != nil && !kerrors.IsNotFound(err) {
 			return nil, err
 		}
 
-		return r.kubernetescli.CoreV1().Secrets(secret.Namespace).Create(ctx, secret, metav1.CreateOptions{})
+		err = r.client.Create(ctx, secret)
+		return secret, err
 	}
 
-	return r.kubernetescli.CoreV1().Secrets(secret.Namespace).Update(ctx, secret, metav1.UpdateOptions{})
+	err = r.client.Update(ctx, secret)
+	return secret, err
 }
 
 // parseRedHatKeys unmarshal and extract following RH keys from pull-secret:

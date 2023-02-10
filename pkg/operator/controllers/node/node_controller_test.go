@@ -25,7 +25,7 @@ func TestReconciler(t *testing.T) {
 	tests := []struct {
 		name            string
 		nodeName        string
-		nodeObject      corev1.Node
+		nodeObject      *corev1.Node
 		clusterNotFound bool
 		featureFlag     bool
 		wantErr         string
@@ -33,7 +33,7 @@ func TestReconciler(t *testing.T) {
 		{
 			name:     "node is a master, don't touch it",
 			nodeName: "aro-fake-node-0",
-			nodeObject: corev1.Node{
+			nodeObject: &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "aro-fake-node-0",
 					Labels: map[string]string{
@@ -47,7 +47,7 @@ func TestReconciler(t *testing.T) {
 		{
 			name:     "node doesn't exist",
 			nodeName: "nonexistent-node",
-			nodeObject: corev1.Node{
+			nodeObject: &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "aro-fake-node-0",
 				},
@@ -58,7 +58,7 @@ func TestReconciler(t *testing.T) {
 		{
 			name:            "can't fetch cluster instance",
 			nodeName:        "aro-fake-node-0",
-			nodeObject:      corev1.Node{},
+			nodeObject:      &corev1.Node{},
 			clusterNotFound: true,
 			featureFlag:     true,
 			wantErr:         `clusters.aro.openshift.io "cluster" not found`,
@@ -66,14 +66,14 @@ func TestReconciler(t *testing.T) {
 		{
 			name:        "feature flag is false, don't touch it",
 			nodeName:    "aro-fake-node-0",
-			nodeObject:  corev1.Node{},
+			nodeObject:  &corev1.Node{},
 			featureFlag: false,
 			wantErr:     "",
 		},
 		{
 			name:     "isDraining false, annotation start time is blank",
 			nodeName: "aro-fake-node-0",
-			nodeObject: corev1.Node{
+			nodeObject: &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "aro-fake-node-0",
 					Annotations: map[string]string{
@@ -87,7 +87,7 @@ func TestReconciler(t *testing.T) {
 		{
 			name:     "isDraining false, delete our annotation",
 			nodeName: "aro-fake-node-0",
-			nodeObject: corev1.Node{
+			nodeObject: &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "aro-fake-node-0",
 					Annotations: map[string]string{
@@ -101,7 +101,7 @@ func TestReconciler(t *testing.T) {
 		{
 			name:     "isDraining false, node is unschedulable=false",
 			nodeName: "aro-fake-node-0",
-			nodeObject: corev1.Node{
+			nodeObject: &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "aro-fake-node-0",
 				},
@@ -123,7 +123,7 @@ func TestReconciler(t *testing.T) {
 		{
 			name:     "isDraining false, annotationDesiredConfig is blank",
 			nodeName: "aro-fake-node-0",
-			nodeObject: corev1.Node{
+			nodeObject: &corev1.Node{
 				Status: corev1.NodeStatus{
 					Conditions: []corev1.NodeCondition{
 						{
@@ -151,7 +151,7 @@ func TestReconciler(t *testing.T) {
 		{
 			name:     "isDraining false, annotationCurrentConfig is blank",
 			nodeName: "aro-fake-node-0",
-			nodeObject: corev1.Node{
+			nodeObject: &corev1.Node{
 				Status: corev1.NodeStatus{
 					Conditions: []corev1.NodeCondition{
 						{
@@ -179,7 +179,7 @@ func TestReconciler(t *testing.T) {
 		{
 			name:     "isDraining false, no conditions are met",
 			nodeName: "aro-fake-node-0",
-			nodeObject: corev1.Node{
+			nodeObject: &corev1.Node{
 				Status: corev1.NodeStatus{
 					Conditions: []corev1.NodeCondition{
 						{
@@ -207,7 +207,7 @@ func TestReconciler(t *testing.T) {
 		{
 			name:     "isDraining false, current config matches desired",
 			nodeName: "aro-fake-node-0",
-			nodeObject: corev1.Node{
+			nodeObject: &corev1.Node{
 				Status: corev1.NodeStatus{
 					Conditions: []corev1.NodeCondition{
 						{
@@ -235,7 +235,7 @@ func TestReconciler(t *testing.T) {
 		{
 			name:     "isDraining true, set annotation",
 			nodeName: "aro-fake-node-0",
-			nodeObject: corev1.Node{
+			nodeObject: &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "aro-fake-node-0",
 					Annotations: map[string]string{
@@ -262,7 +262,7 @@ func TestReconciler(t *testing.T) {
 		{
 			name:     "isDraining true, set annotation",
 			nodeName: "aro-fake-node-0",
-			nodeObject: corev1.Node{
+			nodeObject: &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "aro-fake-node-0",
 					Annotations: map[string]string{
@@ -289,7 +289,7 @@ func TestReconciler(t *testing.T) {
 		{
 			name:     "isDraining true, degraded state, unable to drain",
 			nodeName: "aro-fake-node-0",
-			nodeObject: corev1.Node{
+			nodeObject: &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "aro-fake-node-0",
 					Annotations: map[string]string{
@@ -317,7 +317,7 @@ func TestReconciler(t *testing.T) {
 		{
 			name:     `node has nil annotations, return ""`,
 			nodeName: "aro-fake-node-0",
-			nodeObject: corev1.Node{
+			nodeObject: &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        "aro-fake-node-0",
 					Annotations: nil,
@@ -329,7 +329,7 @@ func TestReconciler(t *testing.T) {
 		{
 			name:     "node is draining, deadline was exceeded, execute the drain",
 			nodeName: "aro-fake-node-0",
-			nodeObject: corev1.Node{
+			nodeObject: &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "aro-fake-node-0",
 					Annotations: map[string]string{
@@ -372,10 +372,14 @@ func TestReconciler(t *testing.T) {
 				})
 			}
 
+			if tt.nodeObject != nil {
+				clientBuilder = clientBuilder.WithObjects(tt.nodeObject)
+			}
+
 			r := &Reconciler{
 				log: logrus.NewEntry(logrus.StandardLogger()),
 
-				kubernetescli: fake.NewSimpleClientset(&tt.nodeObject),
+				kubernetescli: fake.NewSimpleClientset(tt.nodeObject),
 				client:        clientBuilder.Build(),
 			}
 

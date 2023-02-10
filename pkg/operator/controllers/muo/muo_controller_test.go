@@ -13,7 +13,6 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -262,23 +261,17 @@ func TestMUOReconciler(t *testing.T) {
 					ACRDomain:     "acrtest.example.com",
 				},
 			}
-			kubecli := fake.NewSimpleClientset()
 			deployer := mock_deployer.NewMockDeployer(controller)
-			clientFake := ctrlfake.NewClientBuilder().WithObjects(instance).Build()
+			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(instance)
 
 			if tt.pullsecret != "" {
-				_, err := kubecli.CoreV1().Secrets(pullSecretName.Namespace).Create(context.Background(),
-					&corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      pullSecretName.Name,
-							Namespace: pullSecretName.Namespace,
-						},
-						Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(tt.pullsecret)},
+				clientBuilder = clientBuilder.WithObjects(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      pullSecretName.Name,
+						Namespace: pullSecretName.Namespace,
 					},
-					metav1.CreateOptions{})
-				if err != nil {
-					t.Fatal(err)
-				}
+					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(tt.pullsecret)},
+				})
 			}
 
 			if tt.mocks != nil {
@@ -287,9 +280,8 @@ func TestMUOReconciler(t *testing.T) {
 
 			r := &Reconciler{
 				log:               logrus.NewEntry(logrus.StandardLogger()),
-				kubernetescli:     kubecli,
 				deployer:          deployer,
-				client:            clientFake,
+				client:            clientBuilder.Build(),
 				readinessTimeout:  0 * time.Second,
 				readinessPollTime: 1 * time.Second,
 			}

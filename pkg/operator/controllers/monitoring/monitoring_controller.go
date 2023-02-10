@@ -13,8 +13,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -57,19 +57,16 @@ type Config struct {
 type Reconciler struct {
 	log *logrus.Entry
 
-	kubernetescli kubernetes.Interface
-
 	client client.Client
 
 	jsonHandle *codec.JsonHandle
 }
 
-func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
-		log:           log,
-		kubernetescli: kubernetescli,
-		client:        client,
-		jsonHandle:    new(codec.JsonHandle),
+		log:        log,
+		client:     client,
+		jsonHandle: new(codec.JsonHandle),
 	}
 }
 
@@ -86,11 +83,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	r.log.Debug("running")
-	for _, f := range []func(context.Context, ctrl.Request) (ctrl.Result, error){
+	for _, f := range []func(context.Context) (ctrl.Result, error){
 		r.reconcileConfiguration,
 		r.reconcilePVC, // TODO(mj): This should be removed once we don't have PVC anymore
 	} {
-		result, err := f(ctx, request)
+		result, err := f(ctx)
 		if err != nil {
 			return result, err
 		}
@@ -99,14 +96,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	return reconcile.Result{}, nil
 }
 
-func (r *Reconciler) reconcilePVC(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	pvcList, err := r.kubernetescli.CoreV1().PersistentVolumeClaims(monitoringName.Namespace).List(ctx, metav1.ListOptions{LabelSelector: prometheusLabels})
+func (r *Reconciler) reconcilePVC(ctx context.Context) (ctrl.Result, error) {
+	pvcList := &corev1.PersistentVolumeClaimList{}
+	selector, _ := labels.Parse(prometheusLabels)
+	err := r.client.List(ctx, pvcList, &client.ListOptions{
+		Namespace:     monitoringName.Namespace,
+		LabelSelector: selector,
+	})
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	for _, pvc := range pvcList.Items {
-		err = r.kubernetescli.CoreV1().PersistentVolumeClaims(monitoringName.Namespace).Delete(ctx, pvc.Name, metav1.DeleteOptions{})
+		err = r.client.Delete(ctx, &pvc)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -114,7 +116,7 @@ func (r *Reconciler) reconcilePVC(ctx context.Context, request ctrl.Request) (ct
 	return reconcile.Result{}, nil
 }
 
-func (r *Reconciler) reconcileConfiguration(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) reconcileConfiguration(ctx context.Context) (ctrl.Result, error) {
 	cm, isCreate, err := r.monitoringConfigMap(ctx)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -171,16 +173,17 @@ func (r *Reconciler) reconcileConfiguration(ctx context.Context, request ctrl.Re
 
 	if isCreate {
 		r.log.Infof("re-creating monitoring configmap. %s", monitoringName.Name)
-		_, err = r.kubernetescli.CoreV1().ConfigMaps(monitoringName.Namespace).Create(ctx, cm, metav1.CreateOptions{})
+		err = r.client.Create(ctx, cm)
 	} else {
 		r.log.Infof("updating monitoring configmap. %s", monitoringName.Name)
-		_, err = r.kubernetescli.CoreV1().ConfigMaps(monitoringName.Namespace).Update(ctx, cm, metav1.UpdateOptions{})
+		err = r.client.Update(ctx, cm)
 	}
 	return reconcile.Result{}, err
 }
 
 func (r *Reconciler) monitoringConfigMap(ctx context.Context) (*corev1.ConfigMap, bool, error) {
-	cm, err := r.kubernetescli.CoreV1().ConfigMaps(monitoringName.Namespace).Get(ctx, monitoringName.Name, metav1.GetOptions{})
+	cm := &corev1.ConfigMap{}
+	err := r.client.Get(ctx, monitoringName, cm)
 	if kerrors.IsNotFound(err) {
 		return &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
