@@ -25,16 +25,17 @@ logger = get_logger(__name__)
 
 def can_do_action(perms, action):
     for perm in perms:
-        for perm_action in perm.actions:
-            clean = re.escape(perm_action)
-            clean = re.match("(?i)^" + clean.replace(r"\*", ".*") + "$", action)
-            if clean:
-                return None
         for not_action in perm.not_actions:
-            clean = re.escape(not_action)
-            clean = re.match("(?i)^" + clean.replace(r"\*", ".*") + "$", action)
-            if clean:
+            match = re.escape(not_action)
+            match = re.match("(?i)^" + match.replace(r"\*", ".*") + "$", action)
+            if match:
                 return f"{action} permission is disabled"
+        for perm_action in perm.actions:
+            match = re.escape(perm_action)
+            match = re.match("(?i)^" + match.replace(r"\*", ".*") + "$", action)
+            if match:
+                return None
+
     return f"{action} permission is missing"
 
 
@@ -44,6 +45,7 @@ def validate_resource(client, key, resource, actions):
                                                  "",
                                                  resource['type'],
                                                  resource['name'])
+
 
     errors = []
     for action in actions:
