@@ -10,17 +10,21 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 )
 
+// RemotePDPClient represents the Microsoft Remote PDP API Spec
 type RemotePDPClient interface {
 	CheckAccess(context.Context, AuthorizationRequest) (*AuthorizationDecisionResponse, error)
 }
 
-// TODO insert the required attributes
+// remotePDPClient implements RemotePDPClient
 type remotePDPClient struct {
 	endpoint string
 	pipeline runtime.Pipeline
 }
 
-// TODO Insert the required parameters
+// NewRemotePDPClient returns an implementation of RemotePDPClient
+// endpoint - the fqdn of the regional specific endpoint of PDP
+// scope - the oauth scope required by the PDP serer
+// cred - the credential of the client to call the PDP server
 func NewRemotePDPClient(endpoint, scope string, cred azcore.TokenCredential) RemotePDPClient {
 	authPolicy := runtime.NewBearerTokenPolicy(cred, []string{scope}, nil)
 
@@ -37,7 +41,9 @@ func NewRemotePDPClient(endpoint, scope string, cred azcore.TokenCredential) Rem
 	return &remotePDPClient{endpoint, pipeline}
 }
 
-// TODO Implement it
+// CheckAccess sends an Authorization query to the PDP server specified in the client
+// ctx - the context to propagate
+// authzReq - the actual AuthorizationRequest
 func (r *remotePDPClient) CheckAccess(ctx context.Context, authzReq AuthorizationRequest) (*AuthorizationDecisionResponse, error) {
 	req, err := runtime.NewRequest(ctx, http.MethodPost, r.endpoint)
 	if err != nil {
@@ -62,6 +68,7 @@ func (r *remotePDPClient) CheckAccess(ctx context.Context, authzReq Authorizatio
 	return &accessDecision, nil
 }
 
+// newCheckAccessError returns an error when non HTTP 200 response is returned.
 func newCheckAccessError(r *http.Response) error {
 	resErr := azcore.ResponseError{
 		StatusCode:  r.StatusCode,

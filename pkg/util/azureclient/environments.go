@@ -43,7 +43,7 @@ var (
 		AppLensTenantID:          "72f988bf-86f1-41af-91ab-2d7cd011db47",
 		AuthorityHost:            azidentity.AzurePublicCloud,
 		AzureRbacPDPEnvironment: AzureRbacPDPEnvironment{
-			Endpoint:   "https://%s.authorization.azure.net/providers/Microsoft.Authorization/checkAccess",
+			Endpoint:   "https://%s.authorization.azure.net/providers/Microsoft.Authorization/checkAccess?api-version=2021-06-01-preview",
 			OAuthScope: "https://authorization.azure.net/.default",
 		},
 	}
@@ -59,7 +59,7 @@ var (
 		AppLensTenantID:          "cab8a31a-1906-4287-a0d8-4eef66b95f6e",
 		AuthorityHost:            azidentity.AzureGovernment,
 		AzureRbacPDPEnvironment: AzureRbacPDPEnvironment{
-			Endpoint:   "https://%s.authorization.azure.us/providers/Microsoft.Authorization/checkAccess",
+			Endpoint:   "https://%s.authorization.azure.us/providers/Microsoft.Authorization/checkAccess?api-version=2021-06-01-preview",
 			OAuthScope: "https://authorization.azure.us/.default",
 		},
 	}

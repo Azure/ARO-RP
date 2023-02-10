@@ -1,5 +1,6 @@
 package remotepdp
 
+// AuthorizationRequest represents the payload of the request sent to a PDP server
 type AuthorizationRequest struct {
 	Subject            SubjectInfo     `json:"Subject"`
 	Actions            []ActionInfo    `json:"Actions"`
@@ -12,6 +13,9 @@ type SubjectInfo struct {
 	Attributes SubjectAttributes `json:"Attributes"`
 }
 
+// SubjectAttributes contains the possible attributes to describe the subject
+// of query (i.e. if IT has the access). The ObjectId field is the UUID value of
+// the subject and is required.
 type SubjectAttributes struct {
 	ObjectId         string   `json:"ObjectId"`
 	Groups           []string `json:"Groups"`
@@ -27,12 +31,16 @@ type SubjectAttributes struct {
 	Issuer           string   `json:"iss,omitempty"`
 }
 
+// ActionInfo contains an action the query checks whether the subject
+// has access to perform. Example: "Microsoft.Network/virtualNetworks/read"
 type ActionInfo struct {
 	Id           string `json:"Id"`
 	IsDataAction bool   `json:"IsDataAction,omitempty"`
 	Attributes   `json:"Attributes"`
 }
 
+// ResourceInfo is the resource path of the target object the query
+// checks whether the subject has access to perform against it.
 type ResourceInfo struct {
 	Id         string `json:"Id"`
 	Attributes `json:"Attributes"`
@@ -42,11 +50,15 @@ type EnvironmentInfo struct {
 	Attributes `json:"Attributes"`
 }
 
+// AuthorizationDecisionResponse contains a paginated list of all decision results
+// In case the list is more than 50, follow NextLink to retrieve the next page.
 type AuthorizationDecisionResponse struct {
 	Value    []AuthorizationDecision `json:"value"`
 	NextLink string                  `json:"nextLink"`
 }
 
+// AuthorizationDecision tells whether the subject can perform the action
+// on the target resource.
 type AuthorizationDecision struct {
 	ActionId       string `json:"actionId,omitempty"`
 	AccessDecision `json:"accessDecision,omitempty"`
@@ -56,6 +68,7 @@ type AuthorizationDecision struct {
 	TimeToLiveInMs int            `json:"timeToLiveInMs,omitempty"`
 }
 
+// AccessDecision can be: Allowed, NotAllowed, Denied.
 type AccessDecision string
 
 type RoleAssignment struct {
@@ -75,7 +88,6 @@ type RoleDefinition struct {
 	Id string `json:"id,omitempty"`
 }
 
-//
 type Attributes map[string]interface{}
 
 // RemotePDPErrorPayload represents the body content when the server returns
