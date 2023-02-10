@@ -5,6 +5,7 @@ package env
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -14,10 +15,11 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/jongio/azidext/go/azidext"
+	msgraph "github.com/microsoftgraph/msgraph-sdk-go"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
+	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
@@ -63,8 +65,8 @@ type armHelper struct {
 	log *logrus.Entry
 	env Interface
 
+	fpGraphClient   *msgraph.GraphServiceClient
 	roleassignments authorization.RoleAssignmentsClient
-	applications    graphrbac.ApplicationsClient
 }
 
 func newARMHelper(ctx context.Context, log *logrus.Entry, env Interface) (ARMHelper, error) {
@@ -104,7 +106,13 @@ func newARMHelper(ctx context.Context, log *logrus.Entry, env Interface) (ARMHel
 	scopes := []string{env.Environment().ResourceManagerScope}
 	armAuthorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
-	fpGraphAuthorizer, err := env.FPAuthorizer(env.TenantID(), env.Environment().ActiveDirectoryGraphScope)
+	// Graph service client uses the first party service principal.
+	tokenCredential, err = env.FPNewClientCertificateCredential(env.TenantID())
+	if err != nil {
+		return nil, err
+	}
+
+	fpGraphClient, err := env.Environment().NewGraphServiceClient(tokenCredential)
 	if err != nil {
 		return nil, err
 	}
@@ -113,23 +121,26 @@ func newARMHelper(ctx context.Context, log *logrus.Entry, env Interface) (ARMHel
 		log: log,
 		env: env,
 
+		fpGraphClient:   fpGraphClient,
 		roleassignments: authorization.NewRoleAssignmentsClient(env.Environment(), env.SubscriptionID(), armAuthorizer),
-		applications:    graphrbac.NewApplicationsClient(env.Environment(), env.TenantID(), fpGraphAuthorizer),
 	}, nil
 }
 
 func (ah *armHelper) EnsureARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer autorest.Authorizer, resourceGroup string) error {
 	ah.log.Print("ensuring resource group role assignment")
 
-	res, err := ah.applications.GetServicePrincipalsIDByAppID(ctx, ah.env.FPClientID())
+	principalID, err := utilgraph.GetServicePrincipalIDByAppID(ctx, ah.fpGraphClient, ah.env.FPClientID())
 	if err != nil {
 		return err
+	}
+	if principalID == nil {
+		return fmt.Errorf("no service principal found for application ID '%s'", ah.env.FPClientID())
 	}
 
 	_, err = ah.roleassignments.Create(ctx, "/subscriptions/"+ah.env.SubscriptionID()+"/resourceGroups/"+resourceGroup, uuid.DefaultGenerator.Generate(), mgmtauthorization.RoleAssignmentCreateParameters{
 		RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
 			RoleDefinitionID: to.StringPtr("/subscriptions/" + ah.env.SubscriptionID() + "/providers/Microsoft.Authorization/roleDefinitions/" + rbac.RoleOwner),
-			PrincipalID:      res.Value,
+			PrincipalID:      principalID,
 		},
 	})
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
