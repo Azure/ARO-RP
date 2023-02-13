@@ -42,6 +42,11 @@
    follow [prepare a shared RP development
    environment](prepare-a-shared-rp-development-environment.md).
 
+1. If you have multiple subscription in your account, make sure you set the "ARO SRE Team - InProgress (EA Subscription 2)" as your active subscription, otherwise skip to the next step
+   ```bash
+   az account set --subscription "ARO SRE Team - InProgress (EA Subscription 2)"
+   ```
+   
 1. Set SECRET_SA_ACCOUNT_NAME to the name of the storage account containing your
    shared development environment secrets and save them in `secrets`:
 
