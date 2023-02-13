@@ -12,7 +12,6 @@ import (
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	mgmtredhatopenshift20220401 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2022-04-01/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -33,20 +32,20 @@ import (
 var _ = Describe("Encryption at host", func() {
 	It("must be enabled on the test cluster and each VM must have encryption at host enabled", func(ctx context.Context) {
 		By("getting the test cluster resource")
-		oc, err := clients.OpenshiftClustersv20220401.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking that encryption at host is enabled for masters")
 		Expect(oc.OpenShiftClusterProperties).To(Not(BeNil()))
 		Expect(oc.OpenShiftClusterProperties.MasterProfile).To(Not(BeNil()))
-		Expect((*oc.OpenShiftClusterProperties.MasterProfile).EncryptionAtHost).To(Equal(mgmtredhatopenshift20220401.Enabled))
+		Expect((*oc.OpenShiftClusterProperties.MasterProfile).EncryptionAtHost).To(BeEquivalentTo("Enabled"))
 
 		By("checking that encryption at host is enabled for workers")
 		Expect(oc.OpenShiftClusterProperties).To(Not(BeNil()))
 		Expect(oc.OpenShiftClusterProperties.WorkerProfiles).To(Not(BeNil()))
 		Expect(*oc.OpenShiftClusterProperties.WorkerProfiles).NotTo(BeEmpty())
 		for _, profile := range *oc.OpenShiftClusterProperties.WorkerProfiles {
-			Expect(profile.EncryptionAtHost).To(Equal(mgmtredhatopenshift20220401.Enabled))
+			Expect(profile.EncryptionAtHost).To(BeEquivalentTo("Enabled"))
 		}
 
 		By("getting the resource group where the VM instances live in")
@@ -69,7 +68,7 @@ var _ = Describe("Encryption at host", func() {
 var _ = Describe("Disk encryption at rest", func() {
 	It("must be enabled with customer managed key for the cluster and each disk must have it enabled", func(ctx context.Context) {
 		By("getting the test cluster resource")
-		oc, err := clients.OpenshiftClustersv20220401.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking that disk encryption at rest is enabled for masters")
