@@ -45,8 +45,6 @@ def validate_resource(client, key, resource, actions):
                                                  "",
                                                  resource['type'],
                                                  resource['name'])
-
-
     errors = []
     for action in actions:
         perms, perms_copy = tee(perms)
