@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -28,8 +28,7 @@ func (f *frontend) getOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
 }
 
 func (f *frontend) _getOpenShiftCluster(ctx context.Context, log *logrus.Entry, r *http.Request, converter api.OpenShiftClusterConverter) ([]byte, error) {
-	vars := mux.Vars(r)
-	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
+	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 
 	doc, err := f.dbOpenShiftClusters.Get(ctx, r.URL.Path)
 	switch {

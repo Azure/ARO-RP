@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -28,8 +28,7 @@ func (f *frontend) postAdminReconcileFailedNIC(w http.ResponseWriter, r *http.Re
 }
 
 func (f *frontend) _postAdminReconcileFailedNIC(ctx context.Context, r *http.Request, log *logrus.Entry) error {
-	vars := mux.Vars(r)
-	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
+	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 
 	nicName := r.URL.Query().Get("nicName")
 	if err := validateNetworkInterfaceName(nicName); err != nil {
