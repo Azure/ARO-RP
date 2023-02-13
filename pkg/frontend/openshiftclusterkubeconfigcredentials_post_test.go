@@ -65,12 +65,6 @@ func TestPostOpenShiftClusterKubeConfigCredentials(t *testing.T) {
 						State: api.SubscriptionStateRegistered,
 						Properties: &api.SubscriptionProperties{
 							TenantID: "11111111-1111-1111-1111-111111111111",
-							RegisteredFeatures: []api.RegisteredFeatureProfile{
-								{
-									Name:  api.FeatureFlagAdminKubeconfig,
-									State: "Registered",
-								},
-							},
 						},
 					},
 				})
@@ -81,35 +75,6 @@ func TestPostOpenShiftClusterKubeConfigCredentials(t *testing.T) {
 					Kubeconfig: []byte("{kubeconfig}"),
 				}
 			},
-		},
-		{
-			name:       "cluster exists in db but no feature flag",
-			resourceID: resourceID,
-			fixture: func(f *testdatabase.Fixture) {
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Name: "resourceName",
-						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState:   api.ProvisioningStateSucceeded,
-							UserAdminKubeconfig: api.SecureBytes("{kubeconfig}"),
-						},
-					},
-				})
-				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
-					ID: mockSubID,
-					Subscription: &api.Subscription{
-						State: api.SubscriptionStateRegistered,
-						Properties: &api.SubscriptionProperties{
-							TenantID: "11111111-1111-1111-1111-111111111111",
-						},
-					},
-				})
-			},
-			wantStatusCode: http.StatusForbidden,
-			wantError:      `403: Forbidden: : Subscription feature flag 'Microsoft.RedHatOpenShift/AdminKubeconfig' is not enabled on this subscription to use this API.`,
 		},
 		{
 			name:           "credentials request is not allowed in the API version",
@@ -140,12 +105,6 @@ func TestPostOpenShiftClusterKubeConfigCredentials(t *testing.T) {
 						State: api.SubscriptionStateRegistered,
 						Properties: &api.SubscriptionProperties{
 							TenantID: "11111111-1111-1111-1111-111111111111",
-							RegisteredFeatures: []api.RegisteredFeatureProfile{
-								{
-									Name:  api.FeatureFlagAdminKubeconfig,
-									State: "Registered",
-								},
-							},
 						},
 					},
 				})
@@ -175,12 +134,6 @@ func TestPostOpenShiftClusterKubeConfigCredentials(t *testing.T) {
 						State: api.SubscriptionStateRegistered,
 						Properties: &api.SubscriptionProperties{
 							TenantID: "11111111-1111-1111-1111-111111111111",
-							RegisteredFeatures: []api.RegisteredFeatureProfile{
-								{
-									Name:  api.FeatureFlagAdminKubeconfig,
-									State: "Registered",
-								},
-							},
 						},
 					},
 				})
@@ -211,12 +164,6 @@ func TestPostOpenShiftClusterKubeConfigCredentials(t *testing.T) {
 						State: api.SubscriptionStateRegistered,
 						Properties: &api.SubscriptionProperties{
 							TenantID: "11111111-1111-1111-1111-111111111111",
-							RegisteredFeatures: []api.RegisteredFeatureProfile{
-								{
-									Name:  api.FeatureFlagAdminKubeconfig,
-									State: "Registered",
-								},
-							},
 						},
 					},
 				})
@@ -246,13 +193,8 @@ func TestPostOpenShiftClusterKubeConfigCredentials(t *testing.T) {
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateRegistered,
 						Properties: &api.SubscriptionProperties{
-							TenantID: "11111111-1111-1111-1111-111111111111",
-							RegisteredFeatures: []api.RegisteredFeatureProfile{
-								{
-									Name:  api.FeatureFlagAdminKubeconfig,
-									State: "Registered",
-								},
-							},
+							TenantID:           "11111111-1111-1111-1111-111111111111",
+							RegisteredFeatures: []api.RegisteredFeatureProfile{},
 						},
 					},
 				})
@@ -270,12 +212,6 @@ func TestPostOpenShiftClusterKubeConfigCredentials(t *testing.T) {
 						State: api.SubscriptionStateRegistered,
 						Properties: &api.SubscriptionProperties{
 							TenantID: "11111111-1111-1111-1111-111111111111",
-							RegisteredFeatures: []api.RegisteredFeatureProfile{
-								{
-									Name:  api.FeatureFlagAdminKubeconfig,
-									State: "Registered",
-								},
-							},
 						},
 					},
 				})

@@ -15,7 +15,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
-	"github.com/Azure/ARO-RP/pkg/util/feature"
 )
 
 func (f *frontend) postOpenShiftClusterKubeConfigCredentials(w http.ResponseWriter, r *http.Request) {
@@ -46,15 +45,9 @@ func (f *frontend) postOpenShiftClusterKubeConfigCredentials(w http.ResponseWrit
 func (f *frontend) _postOpenShiftClusterKubeConfigCredentials(ctx context.Context, r *http.Request, converter api.OpenShiftClusterAdminKubeconfigConverter) ([]byte, error) {
 	vars := mux.Vars(r)
 
-	subDoc, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
+	_, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
 	if err != nil {
 		return nil, err
-	}
-
-	// TODO(mjudeikis): Remove this once all this is communicated to the customers and this
-	// becomes defacto standard
-	if !feature.IsRegisteredForFeature(subDoc.Subscription.Properties, api.FeatureFlagAdminKubeconfig) {
-		return nil, api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Subscription feature flag '%s' is not enabled on this subscription to use this API.", api.FeatureFlagAdminKubeconfig)
 	}
 
 	doc, err := f.dbOpenShiftClusters.Get(ctx, r.URL.Path)
