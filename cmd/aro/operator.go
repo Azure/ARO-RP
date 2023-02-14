@@ -79,7 +79,6 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
-	// TODO (NE): dh is sometimes passed, sometimes created later. Can we standardize?
 	dh, err := dynamichelper.New(log, restConfig)
 	if err != nil {
 		return err
@@ -88,7 +87,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	if role == pkgoperator.RoleMaster {
 		if err = (genevalogging.NewReconciler(
 			log.WithField("controller", genevalogging.ControllerName),
-			client, restConfig)).SetupWithManager(mgr); err != nil {
+			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", genevalogging.ControllerName, err)
 		}
 		if err = (clusteroperatoraro.NewReconciler(
@@ -113,7 +112,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (routefix.NewReconciler(
 			log.WithField("controller", routefix.ControllerName),
-			client, restConfig)).SetupWithManager(mgr); err != nil {
+			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", routefix.ControllerName, err)
 		}
 		if err = (monitoring.NewReconciler(
