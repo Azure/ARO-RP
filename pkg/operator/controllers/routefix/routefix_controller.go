@@ -15,7 +15,6 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,8 +37,8 @@ type Reconciler struct {
 	log *logrus.Entry
 
 	client client.Client
+	dh     dynamichelper.Interface
 
-	restConfig *rest.Config
 	verFixed46 *version.Version
 	verFixed47 *version.Version
 }
@@ -50,11 +49,13 @@ var (
 )
 
 // NewReconciler creates a new Reconciler
-func NewReconciler(log *logrus.Entry, client client.Client, restConfig *rest.Config) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *Reconciler {
 	return &Reconciler{
-		log:        log,
-		client:     client,
-		restConfig: restConfig,
+		log: log,
+
+		client: client,
+		dh:     dh,
+
 		verFixed46: verFixed46,
 		verFixed47: verFixed47,
 	}
@@ -98,15 +99,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 func (r *Reconciler) deploy(ctx context.Context, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
 	r.log.Debugf("deploying RouteFix")
 
-	// TODO: dh should be a field in r, but the fact that it is initialised here
-	// each time currently saves us in the case that the controller runs before
-	// the SCC API is registered.
-	dh, err := dynamichelper.New(r.log, r.restConfig)
-	if err != nil {
-		r.log.Error(err)
-		return reconcile.Result{}, err
-	}
-
 	resources, err := r.resources(ctx, instance)
 	if err != nil {
 		r.log.Error(err)
@@ -125,7 +117,7 @@ func (r *Reconciler) deploy(ctx context.Context, instance *arov1alpha1.Cluster) 
 		return reconcile.Result{}, err
 	}
 
-	err = dh.Ensure(ctx, resources...)
+	err = r.dh.Ensure(ctx, resources...)
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err
