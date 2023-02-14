@@ -33,5 +33,9 @@ var _ = Describe("Get cluster", func() {
 		workerProfiles := oc.WorkerProfiles
 		Expect(workerProfiles).NotTo(BeNil())
 		Expect(*workerProfiles).NotTo(BeEmpty())
+
+		By("checking we retrieved associated systemData")
+		systemData := oc.SystemData
+		Expect(systemData).NotTo(BeNil())
 	})
 })

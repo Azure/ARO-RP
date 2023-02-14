@@ -21,7 +21,7 @@ var _ = Describe("[Admin API] Cluster admin update action", func() {
 		var oc = &admin.OpenShiftCluster{}
 
 		By("triggering the update via RP admin API")
-		resp, err := adminRequest(ctx, http.MethodPatch, clusterResourceID, nil, json.RawMessage("{}"), oc)
+		resp, err := adminRequest(ctx, http.MethodPatch, clusterResourceID, nil, true, json.RawMessage("{}"), oc)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
