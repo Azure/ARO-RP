@@ -81,6 +81,8 @@ not_exempted_user(user) {
 }
 
 exempted_user = {
+  # "default",
+  "aro-sre",
   "openshift-apiserver-operator",
   "openshift-apiserver-sa",
   "authentication-operator",
@@ -98,7 +100,6 @@ exempted_user = {
   "cluster-storage-operator",
   "csi-snapshot-controller",
   "csi-snapshot-controller-operator",
-  "default",
   "openshift-config-operator",
   "console-operator",
   "console",
