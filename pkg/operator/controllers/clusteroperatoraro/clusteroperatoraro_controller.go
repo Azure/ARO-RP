@@ -13,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -60,24 +59,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{}, retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		co, err := r.getOrCreateClusterOperator(ctx)
-		if err != nil {
-			return err
-		}
+	co, err := r.getOrCreateClusterOperator(ctx)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 
-		err = controllerutil.SetControllerReference(instance, co, scheme.Scheme)
-		if err != nil {
-			return err
-		}
+	err = controllerutil.SetControllerReference(instance, co, scheme.Scheme)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 
-		err = r.client.Update(ctx, co)
-		if err != nil {
-			return err
-		}
+	err = r.client.Update(ctx, co)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 
-		return r.setClusterOperatorStatus(ctx, co)
-	})
+	return reconcile.Result{}, r.setClusterOperatorStatus(ctx, co)
 }
 
 func (r *Reconciler) setClusterOperatorStatus(ctx context.Context, co *configv1.ClusterOperator) error {
