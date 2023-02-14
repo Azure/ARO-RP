@@ -42,7 +42,7 @@
    follow [prepare a shared RP development
    environment](prepare-a-shared-rp-development-environment.md).
 
-1. If you have multiple subscription in your account, make sure you set the "ARO SRE Team - InProgress (EA Subscription 2)" as your active subscription, otherwise skip to the next step
+1. If you have multiple subscriptions in your account, verify that "ARO SRE Team - InProgress (EA Subscription 2)" is your active subscription:
    ```bash
    az account set --subscription "ARO SRE Team - InProgress (EA Subscription 2)"
    ```
