@@ -24,6 +24,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/jongio/azidext/go/azidext"
+	msgraph "github.com/microsoftgraph/msgraph-sdk-go"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -34,7 +35,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	keyvaultclient "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/keyvault"
@@ -43,6 +43,7 @@ import (
 	redhatopenshift20210901preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2021-09-01-preview/redhatopenshift"
 	redhatopenshift20220401 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2022-04-01/redhatopenshift"
 	redhatopenshift20220904 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2022-09-04/redhatopenshift"
+	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
@@ -53,10 +54,9 @@ type Cluster struct {
 	ci           bool
 	ciParentVnet string
 
+	spGraphClient                     *msgraph.GraphServiceClient
 	deployments                       features.DeploymentsClient
 	groups                            features.ResourceGroupsClient
-	applications                      graphrbac.ApplicationsClient
-	serviceprincipals                 graphrbac.ServicePrincipalClient
 	openshiftclustersv20200430        redhatopenshift20200430.OpenShiftClustersClient
 	openshiftclustersv20210901preview redhatopenshift20210901preview.OpenShiftClustersClient
 	openshiftclustersv20220401        redhatopenshift20220401.OpenShiftClustersClient
@@ -96,10 +96,12 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		return nil, err
 	}
 
-	scopes := []string{environment.Environment().GraphEndpoint + "/.default"}
-	graphAuthorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
+	spGraphClient, err := environment.Environment().NewGraphServiceClient(tokenCredential)
+	if err != nil {
+		return nil, err
+	}
 
-	scopes = []string{environment.Environment().ResourceManagerScope}
+	scopes := []string{environment.Environment().ResourceManagerScope}
 	authorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
 	c := &Cluster{
@@ -107,14 +109,13 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		env: environment,
 		ci:  ci,
 
+		spGraphClient:                     spGraphClient,
 		deployments:                       features.NewDeploymentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		groups:                            features.NewResourceGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		openshiftclustersv20200430:        redhatopenshift20200430.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		openshiftclustersv20210901preview: redhatopenshift20210901preview.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		openshiftclustersv20220401:        redhatopenshift20220401.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		openshiftclustersv20220904:        redhatopenshift20220904.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		applications:                      graphrbac.NewApplicationsClient(environment.Environment(), environment.TenantID(), graphAuthorizer),
-		serviceprincipals:                 graphrbac.NewServicePrincipalClient(environment.Environment(), environment.TenantID(), graphAuthorizer),
 		securitygroups:                    network.NewSecurityGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		subnets:                           network.NewSubnetsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		routetables:                       network.NewRouteTablesClient(environment.Environment(), environment.SubscriptionID(), authorizer),
@@ -586,15 +587,15 @@ func (c *Cluster) fixupNSGs(ctx context.Context, vnetResourceGroup, clusterName 
 }
 
 func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, appID string) error {
-	spObjID, err := c.getServicePrincipal(ctx, appID)
+	spObjID, err := utilgraph.GetServicePrincipalIDByAppID(ctx, c.spGraphClient, appID)
 	if err != nil {
 		return err
 	}
-	if spObjID == "" {
+	if spObjID == nil {
 		return nil
 	}
 
-	roleAssignments, err := c.roleassignments.ListForResourceGroup(ctx, vnetResourceGroup, fmt.Sprintf("principalId eq '%s'", spObjID))
+	roleAssignments, err := c.roleassignments.ListForResourceGroup(ctx, vnetResourceGroup, fmt.Sprintf("principalId eq '%s'", *spObjID))
 	if err != nil {
 		return err
 	}
