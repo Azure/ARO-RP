@@ -15,7 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -35,11 +34,10 @@ type Reconciler struct {
 	client client.Client
 }
 
-// TODO: use client.Client instead of dynamichelper here.
-func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
 		log:         log,
-		workarounds: []Workaround{NewSystemReserved(log, client, dh), NewIfReload(log, client)},
+		workarounds: []Workaround{NewSystemReserved(log, client), NewIfReload(log, client)},
 		client:      client,
 	}
 }
