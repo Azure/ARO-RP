@@ -75,7 +75,8 @@ var _ = Describe("[Admin API] List Azure resources action", func() {
 
 		By("getting the actual Azure resource IDs via RP admin API")
 		var actualResources []mgmtfeatures.GenericResourceExpanded
-		resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/resources", nil, nil, &actualResources)
+		// Don't strictly check for unknown fields because the upstream struct doesn't account for an Etag
+		resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/resources", nil, false, nil, &actualResources)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 

@@ -48,7 +48,7 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("triggering VM redeployment via RP Admin API")
-		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/redeployvm", url.Values{"vmName": []string{*vm.Name}}, nil, nil)
+		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/redeployvm", url.Values{"vmName": []string{*vm.Name}}, true, nil, nil)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 

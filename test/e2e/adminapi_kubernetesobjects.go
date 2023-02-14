@@ -144,7 +144,7 @@ func testSecretOperationsForbidden(objName, namespace string) {
 		By("creating a new secret via RP admin API")
 		obj := mockSecret(objName, namespace)
 		var cloudErr api.CloudError
-		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/kubernetesobjects", nil, obj, &cloudErr)
+		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/kubernetesobjects", nil, true, obj, &cloudErr)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
 		Expect(cloudErr.Code).To(Equal(api.CloudErrorCodeForbidden))
@@ -158,7 +158,7 @@ func testSecretOperationsForbidden(objName, namespace string) {
 			"name":      []string{objName},
 		}
 		var cloudErr api.CloudError
-		resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/kubernetesobjects", params, nil, &cloudErr)
+		resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/kubernetesobjects", params, true, nil, &cloudErr)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
 
@@ -173,7 +173,7 @@ func testSecretOperationsForbidden(objName, namespace string) {
 			"namespace": []string{namespace},
 		}
 		var cloudErr api.CloudError
-		resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/kubernetesobjects", params, nil, &cloudErr)
+		resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/kubernetesobjects", params, true, nil, &cloudErr)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
 
@@ -189,7 +189,7 @@ func testSecretOperationsForbidden(objName, namespace string) {
 			"name":      []string{objName},
 		}
 		var cloudErr api.CloudError
-		resp, err := adminRequest(ctx, http.MethodDelete, "/admin"+clusterResourceID+"/kubernetesobjects", params, nil, &cloudErr)
+		resp, err := adminRequest(ctx, http.MethodDelete, "/admin"+clusterResourceID+"/kubernetesobjects", params, true, nil, &cloudErr)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
 		Expect(cloudErr.Code).To(Equal(api.CloudErrorCodeForbidden))
@@ -199,7 +199,7 @@ func testSecretOperationsForbidden(objName, namespace string) {
 func testConfigMapCreateOK(ctx context.Context, objName, namespace string) {
 	By("creating a new object via RP admin API")
 	obj := mockConfigMap(objName, namespace)
-	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/kubernetesobjects", nil, obj, nil)
+	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/kubernetesobjects", nil, true, obj, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -221,7 +221,7 @@ func testConfigMapGetOK(ctx context.Context, objName, namespace string, unrestri
 	}
 
 	var obj corev1.ConfigMap
-	resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/kubernetesobjects", params, nil, &obj)
+	resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/kubernetesobjects", params, true, nil, &obj)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -242,7 +242,7 @@ func testConfigMapListOK(ctx context.Context, objName, namespace string, unrestr
 	}
 
 	var obj corev1.ConfigMapList
-	resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/kubernetesobjects", params, nil, &obj)
+	resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/kubernetesobjects", params, true, nil, &obj)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -259,7 +259,7 @@ func testConfigMapUpdateOK(ctx context.Context, objName, namespace string) {
 	obj := mockConfigMap(objName, namespace)
 	obj.Data["key"] = "new_value"
 
-	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/kubernetesobjects", nil, obj, nil)
+	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/kubernetesobjects", nil, true, obj, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -280,7 +280,7 @@ func testConfigMapForceDeleteForbidden(ctx context.Context, objName, namespace s
 		"force":     []string{"true"},
 	}
 	var cloudErr api.CloudError
-	resp, err := adminRequest(ctx, http.MethodDelete, "/admin"+clusterResourceID+"/kubernetesobjects", params, nil, &cloudErr)
+	resp, err := adminRequest(ctx, http.MethodDelete, "/admin"+clusterResourceID+"/kubernetesobjects", params, true, nil, &cloudErr)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
 	Expect(cloudErr.Code).To(Equal(api.CloudErrorCodeForbidden))
@@ -294,7 +294,7 @@ func testConfigMapDeleteOK(ctx context.Context, objName, namespace string) {
 		"name":      []string{objName},
 		"force":     []string{"false"},
 	}
-	resp, err := adminRequest(ctx, http.MethodDelete, "/admin"+clusterResourceID+"/kubernetesobjects", params, nil, nil)
+	resp, err := adminRequest(ctx, http.MethodDelete, "/admin"+clusterResourceID+"/kubernetesobjects", params, true, nil, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -311,7 +311,7 @@ func testConfigMapCreateOrUpdateForbidden(ctx context.Context, operation, objNam
 	By(operation + " a new object via RP admin API")
 	obj := mockConfigMap(objName, namespace)
 	var cloudErr api.CloudError
-	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/kubernetesobjects", nil, obj, &cloudErr)
+	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/kubernetesobjects", nil, true, obj, &cloudErr)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
 	Expect(cloudErr.Code).To(Equal(api.CloudErrorCodeForbidden))
@@ -326,7 +326,7 @@ func testConfigMapDeleteForbidden(ctx context.Context, objName, namespace string
 		"force":     []string{"false"},
 	}
 	var cloudErr api.CloudError
-	resp, err := adminRequest(ctx, http.MethodDelete, "/admin"+clusterResourceID+"/kubernetesobjects", params, nil, &cloudErr)
+	resp, err := adminRequest(ctx, http.MethodDelete, "/admin"+clusterResourceID+"/kubernetesobjects", params, true, nil, &cloudErr)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
 	Expect(cloudErr.Code).To(Equal(api.CloudErrorCodeForbidden))
@@ -340,7 +340,7 @@ func testConfigMapGetForbidden(ctx context.Context, objName, namespace string) {
 		"name":      []string{objName},
 	}
 	var cloudErr api.CloudError
-	resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/kubernetesobjects", params, nil, &cloudErr)
+	resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/kubernetesobjects", params, true, nil, &cloudErr)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
 	Expect(cloudErr.Code).To(Equal(api.CloudErrorCodeForbidden))
@@ -353,7 +353,7 @@ func testConfigMapListForbidden(ctx context.Context, objName, namespace string) 
 		"namespace": []string{namespace},
 	}
 	var cloudErr api.CloudError
-	resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/kubernetesobjects", params, nil, &cloudErr)
+	resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/kubernetesobjects", params, true, nil, &cloudErr)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
 	Expect(cloudErr.Code).To(Equal(api.CloudErrorCodeForbidden))
@@ -362,7 +362,7 @@ func testConfigMapListForbidden(ctx context.Context, objName, namespace string) 
 func testPodCreateOK(ctx context.Context, containerName, objName, namespace string) {
 	By("creating a new pod via RP admin API")
 	obj := mockPod(containerName, objName, namespace, "")
-	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/kubernetesobjects", nil, obj, nil)
+	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/kubernetesobjects", nil, true, obj, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -382,7 +382,7 @@ func testPodForceDeleteOK(ctx context.Context, objName, namespace string) {
 		"name":      []string{objName},
 		"force":     []string{"true"},
 	}
-	resp, err := adminRequest(ctx, http.MethodDelete, "/admin"+clusterResourceID+"/kubernetesobjects", params, nil, nil)
+	resp, err := adminRequest(ctx, http.MethodDelete, "/admin"+clusterResourceID+"/kubernetesobjects", params, true, nil, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
