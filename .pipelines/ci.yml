@@ -21,7 +21,7 @@ pr:
 resources:
   containers:
   - container: golang
-    image: registry.access.redhat.com/ubi8/go-toolset:1.17
+    image: registry.access.redhat.com/ubi8/go-toolset:1.18
     options: --user=0
   - container: python
     image: registry.access.redhat.com/ubi8/python-39:latest
