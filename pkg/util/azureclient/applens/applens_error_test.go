@@ -14,13 +14,15 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
+
+	testhttp "github.com/Azure/ARO-RP/test/util/http"
 )
 
 func TestAppLensErrorOnEmptyResponse(t *testing.T) {
-	srv, close := NewTLSServer()
+	srv, close := testhttp.NewTLSServer()
 	defer close()
 	srv.SetResponse(
-		WithStatusCode(404))
+		testhttp.WithStatusCode(404))
 
 	req, err := runtime.NewRequest(context.Background(), http.MethodGet, srv.URL())
 	if err != nil {
@@ -46,11 +48,11 @@ func TestAppLensErrorOnEmptyResponse(t *testing.T) {
 }
 
 func TestAppLensErrorOnNonJsonBody(t *testing.T) {
-	srv, close := NewTLSServer()
+	srv, close := testhttp.NewTLSServer()
 	defer close()
 	srv.SetResponse(
-		WithBody([]byte("This is not JSON")),
-		WithStatusCode(404))
+		testhttp.WithBody([]byte("This is not JSON")),
+		testhttp.WithStatusCode(404))
 
 	req, err := runtime.NewRequest(context.Background(), http.MethodGet, srv.URL())
 	if err != nil {
@@ -88,11 +90,11 @@ func TestAppLensErrorOnJsonBody(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	srv, close := NewTLSServer()
+	srv, close := testhttp.NewTLSServer()
 	defer close()
 	srv.SetResponse(
-		WithBody(jsonString),
-		WithStatusCode(404))
+		testhttp.WithBody(jsonString),
+		testhttp.WithStatusCode(404))
 
 	req, err := runtime.NewRequest(context.Background(), http.MethodGet, srv.URL())
 	if err != nil {
