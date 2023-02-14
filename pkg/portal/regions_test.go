@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -32,7 +33,7 @@ func TestRegionListPublic(t *testing.T) {
 		dbOpenShiftClusters: dbOpenShiftClusters,
 	}
 
-	os.Setenv("AZURE_ENVIRONMENT", azureclient.PublicCloud.Environment.Name)
+	os.Setenv("AZURE_ENVIRONMENT", strings.ToUpper(azureclient.PublicCloud.Environment.Name))
 
 	req, err := http.NewRequest("GET", "/api/regions", nil)
 	if err != nil {
@@ -153,6 +154,10 @@ func TestRegionListPublic(t *testing.T) {
 				URL:  "https://norwayeast.admin.aro.azure.com",
 			},
 			{
+				Name: "qatar",
+				URL:  "https://qatar.admin.aro.azure.com",
+			},
+			{
 				Name: "southafricanorth",
 				URL:  "https://southafricanorth.admin.aro.azure.com",
 			},
@@ -239,7 +244,7 @@ func TestRegionListFF(t *testing.T) {
 		dbOpenShiftClusters: dbOpenShiftClusters,
 	}
 
-	os.Setenv("AZURE_ENVIRONMENT", azureclient.USGovernmentCloud.Environment.Name)
+	os.Setenv("AZURE_ENVIRONMENT", strings.ToUpper(azureclient.USGovernmentCloud.Environment.Name))
 
 	req, err := http.NewRequest("GET", "/api/regions", nil)
 	if err != nil {
