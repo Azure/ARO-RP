@@ -399,7 +399,7 @@ ExecStart=/usr/bin/docker run \
   -e KEYVAULT_PREFIX \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
-  -m 2g \
+  -m 2.5g \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
   $RPIMAGE \
