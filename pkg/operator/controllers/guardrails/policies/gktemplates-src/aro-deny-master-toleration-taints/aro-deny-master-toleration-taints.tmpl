@@ -1,0 +1,18 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: arodenymastertolerationtaints
+  metadata.gatekeeper.sh/title: "Deny Recourses with Masters Toleration Taints in Non-privileged Namespaces"
+  metadata.gatekeeper.sh/version: 1.0.0
+  description: >-
+    Prevents non-privileged namespaces from having pods that have masters toleration taints.
+    non-privileged namespaces indicates namespaces that don't match (^kube$|^kube-.*|^openshift$|^openshift-.*|^default$|^redhat-.*), but can match (openshift-logging|openshift-operators)
+spec:
+  crd:
+    spec:
+      names:
+        kind: ARODenyMasterTolerationTaints
+  targets:
+  - target: admission.k8s.gatekeeper.sh
+    rego: |
+{{ file.Read "gktemplates-src/aro-deny-master-toleration-taints/src.rego" | strings.Indent 8 | strings.TrimSuffix "\n" }}
