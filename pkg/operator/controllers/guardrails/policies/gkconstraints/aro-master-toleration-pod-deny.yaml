@@ -1,0 +1,10 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: ARODenyMasterTolerationTaints
+metadata:
+  name: aro-nonprivileged-namespace-deny-master-toleration-taints-pods
+spec:
+  enforcementAction: {{.Enforcement}}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
