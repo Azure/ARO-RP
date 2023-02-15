@@ -9,6 +9,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
+	networkclient "github.com/openshift/client-go/network/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 
@@ -37,6 +38,7 @@ type FetchClient interface {
 	ClusterOperators(context.Context) (*ClusterOperatorsInformation, error)
 	Machines(context.Context) (*MachineListInformation, error)
 	MachineSets(context.Context) (*MachineSetListInformation, error)
+	Network(context.Context) (*NetworkInformation, error)
 }
 
 type AzureFetchClient interface {
@@ -63,6 +65,7 @@ type realFetcher struct {
 	configCli     configclient.Interface
 	kubernetesCli kubernetes.Interface
 	machineClient machineclient.Interface
+	networkClient networkclient.Interface
 }
 
 // azureClient is the same implementation as client's, the only difference is that it will be used to fetch something from azure regarding a cluster.
@@ -128,11 +131,18 @@ func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftCl
 		return nil, err
 	}
 
+	networkClient, err := networkclient.NewForConfig(restConfig)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+
 	return &realFetcher{
 		log:           log,
 		configCli:     configCli,
 		kubernetesCli: kubernetesCli,
 		machineClient: machineClient,
+		networkClient: networkClient,
 	}, nil
 }
 

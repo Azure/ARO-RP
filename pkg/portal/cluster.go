@@ -239,3 +239,28 @@ func (p *portal) machineSets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+func (p *portal) network(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	fetcher, err := p.makeFetcher(ctx, r)
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	network, err := fetcher.Network(ctx)
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	b, err := json.MarshalIndent(network, "", "    ")
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(b)
+}
