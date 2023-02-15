@@ -153,6 +153,10 @@ func TestRegionListPublic(t *testing.T) {
 				URL:  "https://norwayeast.admin.aro.azure.com",
 			},
 			{
+				Name: "qatar",
+				URL:  "https://qatar.admin.aro.azure.com",
+			},
+			{
 				Name: "southafricanorth",
 				URL:  "https://southafricanorth.admin.aro.azure.com",
 			},
