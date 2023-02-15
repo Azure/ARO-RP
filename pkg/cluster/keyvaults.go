@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	"github.com/Azure/go-autorest/autorest/to"
 )
@@ -13,7 +14,6 @@ import (
 // Licensed under the Apache License 2.0.
 
 func (m *manager) createKeyvault(ctx context.Context) error {
-
 	// We want random characters from end of infraID to help ensure KV name uniqueness
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 	suffixMaxLength := 20
@@ -45,12 +45,26 @@ func (m *manager) createKeyvault(ctx context.Context) error {
 		return fmt.Errorf("could not generate unique key vault name: %v", result.Reason)
 	}
 
-	keyvaultProperties := new(keyvault.VaultProperties)
+	tenantID, err := uuid.FromString(m.env.TenantID())
+	if err != nil {
+		return err
+	}
+
+	accessPolicies := []keyvault.AccessPolicyEntry{}
+
+	keyvaultProperties := keyvault.VaultProperties{
+		TenantID: &tenantID,
+		Sku: &keyvault.Sku{
+			Name:   keyvault.Standard,
+			Family: to.StringPtr("A"),
+		},
+		AccessPolicies: &accessPolicies,
+	}
 
 	keyvaultParameters := keyvault.VaultCreateOrUpdateParameters{
 		Location:   &m.doc.OpenShiftCluster.Location,
 		Tags:       make(map[string]*string),
-		Properties: keyvaultProperties,
+		Properties: &keyvaultProperties,
 	}
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
