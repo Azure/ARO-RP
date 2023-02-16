@@ -4,6 +4,8 @@ package generator
 // Licensed under the Apache License 2.0.
 
 import (
+	"github.com/Azure/go-autorest/autorest/to"
+
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 )
@@ -137,6 +139,20 @@ func (g *generator) rpTemplate() *arm.Template {
 	}
 
 	if g.production {
+		t.Variables = map[string]interface{}{
+			"rpCosmoDbVirtualNetworkRules": to.StringPtr("createArray(" +
+				" createObject('id', resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet'))," +
+				" createObject('id', resourceId(parameters('gatewayResourceGroupName'), 'Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet'))" +
+				")"),
+			"rpCosmoDbVirtualNetworkRulesVmDeploy": to.StringPtr("createArray(" +
+				" createObject('id', resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet'))," +
+				" createObject('id', resourceId(parameters('gatewayResourceGroupName'), 'Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet'))" +
+				" createObject('id', resourceId('Microsoft.Network/virtualNetworks/subnets', 'aks-net', 'ClusterSubnet-001'))," +
+				// TODO: AKS Sharding: add rules for additional AKS shards for this RP instance. Currently only shard 1, which has subnet ClusterSubnet-001, is set above.
+				// AKS subnet design: https://docs.google.com/document/d/1gTGSW5S4uN1vB2hqVFKYr-qp6n62WbkdQMrKg-qvPbE
+				")"),
+		}
+
 		t.Resources = append(t.Resources,
 			g.publicIPAddress("rp-pip"),
 			g.publicIPAddress("portal-pip"),
