@@ -1,13 +1,20 @@
 package arodenymastertolerationtaints
 
-violation[{"msg": "Operate resources with master toleration taints in non-privileged is not allowed"}] {
+import future.keywords.in
+
+violation[{"msg": msg}] {
     # Check if the input namespace is a non-privileged namespace
     ns := input.review.object.metadata.namespace
     non_priv_namespace(ns)
 
-    # Check if pod object has master toleration taint
+    # Check if the input operation is CREATE or UPDATE
+    input.review.operation in ["CREATE", "UPDATE"]
+
+    # Check if pod object has master toleration taints
     some i
-    input.request.object.spec.tolerations[i].key == "node-role.kubernetes.io/master"
+    input.request.object.spec.tolerations[i].key in ["node-role.kubernetes.io/master", "node-role.kubernetes.io/control-plane"]
+
+    msg := "Create or update resources to have master toleration taints is not allowed in non-privileged namespaces"
 }
 
 non_priv_namespace(ns) {
