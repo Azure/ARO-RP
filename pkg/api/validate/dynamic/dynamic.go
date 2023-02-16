@@ -436,7 +436,14 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 		if oc.Properties.ProvisioningState == api.ProvisioningStateCreating {
 			if ss.SubnetPropertiesFormat != nil &&
 				ss.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
-				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, s.Path, "The provided subnet '%s' is invalid: must not have a network security group attached.", s.ID)
+				expectedNsgID, err := subnet.NetworkSecurityGroupID(oc, s.ID)
+				if err != nil {
+					return err
+				}
+
+				if !strings.EqualFold(*ss.SubnetPropertiesFormat.NetworkSecurityGroup.ID, expectedNsgID) {
+					return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, s.Path, "The provided subnet '%s' is invalid: must not have a network security group attached.", s.ID)
+				}
 			}
 		} else {
 			nsgID, err := subnet.NetworkSecurityGroupID(oc, *ss.ID)
