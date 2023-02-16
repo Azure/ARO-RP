@@ -4,9 +4,10 @@ package generator
 // Licensed under the Apache License 2.0.
 
 import (
+	"github.com/Azure/go-autorest/autorest/to"
+
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/go-autorest/autorest/to"
 )
 
 func (g *generator) rpManagedIdentityTemplate() *arm.Template {
