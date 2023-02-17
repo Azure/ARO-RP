@@ -236,9 +236,19 @@ func TestValidateAdminMasterVMSize(t *testing.T) {
 			wantErr: "",
 		},
 		{
+			test:    "size is supported as master, lowercase",
+			vmSize:  "standard_d8s_v3",
+			wantErr: "",
+		},
+		{
 			test:    "size is unsupported as master",
 			vmSize:  "Silly_D8s_v10",
 			wantErr: "400: InvalidParameter: : The provided vmSize 'Silly_D8s_v10' is unsupported for master.",
+		},
+		{
+			test:    "size is unsupported as master, lowercase",
+			vmSize:  "silly_d8s_v10",
+			wantErr: "400: InvalidParameter: : The provided vmSize 'silly_d8s_v10' is unsupported for master.",
 		},
 	} {
 		t.Run(tt.test, func(t *testing.T) {
