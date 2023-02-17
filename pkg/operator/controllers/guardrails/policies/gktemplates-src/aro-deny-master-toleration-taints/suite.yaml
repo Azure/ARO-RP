@@ -11,3 +11,4 @@ tests:
     object: gator-test/not_allowed_pod_in_non_privledged_ns.yaml
     assertions:
     - violations: yes
+    
