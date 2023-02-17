@@ -196,7 +196,7 @@ func validateAdminMasterVMSize(vmSize string) error {
 
 	// check to ensure that the size is supported as a master size
 	for k := range validate.SupportedMasterVmSizes {
-		if string(k) == vmSize {
+		if strings.EqualFold(string(k), vmSize) {
 			return nil
 		}
 	}
