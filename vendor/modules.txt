@@ -20,7 +20,6 @@ github.com/Azure/azure-sdk-for-go/services/containerservice/mgmt/2021-10-01/cont
 github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2021-01-15/documentdb
 github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2016-04-01/dns
 github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns
-github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac
 github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault
 github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault
 github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi
