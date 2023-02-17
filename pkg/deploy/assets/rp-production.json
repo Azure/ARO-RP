@@ -3,7 +3,7 @@
     "contentVersion": "1.0.0.0",
     "variables": {
         "rpCosmoDbVirtualNetworkRules": "createArray( createObject('id', resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')), createObject('id', resourceId(parameters('gatewayResourceGroupName'), 'Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet')))",
-        "rpCosmoDbVirtualNetworkRulesVmDeploy": "createArray( createObject('id', resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')), createObject('id', resourceId(parameters('gatewayResourceGroupName'), 'Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet')) createObject('id', resourceId('Microsoft.Network/virtualNetworks/subnets', 'aks-net', 'ClusterSubnet-001')),)"
+        "rpCosmoDbVirtualNetworkRulesVmDeploy": "createArray( createObject('id', resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')), createObject('id', resourceId(parameters('gatewayResourceGroupName'), 'Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet')), createObject('id', resourceId('Microsoft.Network/virtualNetworks/subnets', 'aks-net', 'ClusterSubnet-001')))"
     },
     "parameters": {
         "acrResourceId": {
