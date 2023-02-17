@@ -27,8 +27,9 @@ spec:
             input.review.operation in ["CREATE", "UPDATE"]
 
             # Check if pod object has master toleration taints
-            some i
-            input.request.object.spec.tolerations[i].key in ["node-role.kubernetes.io/master", "node-role.kubernetes.io/control-plane"]
+            tolerations := input.review.object.spec.tolerations
+            some toleration in tolerations
+            toleration.key in ["node-role.kubernetes.io/master", "node-role.kubernetes.io/control-plane"]
 
             msg := "Create or update resources to have master toleration taints is not allowed in non-privileged namespaces"
         }

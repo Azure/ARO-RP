@@ -1,7 +1,7 @@
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: ARODenyMasterTolerationTaints
 metadata:
-  name: aro-nonprivileged-namespace-deny-master-toleration-taints-pods
+  name: aro-deny-master-toleration-pods-in-nonprivileged-namespace
 spec:
   enforcementAction: {{.Enforcement}}
   match:
