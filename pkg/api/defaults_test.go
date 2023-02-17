@@ -48,26 +48,6 @@ func TestSetDefaults(t *testing.T) {
 			},
 		},
 		{
-			name: "default SDN",
-			want: func() *OpenShiftClusterDocument {
-				return validOpenShiftClusterDocument()
-			},
-			input: func(base *OpenShiftClusterDocument) {
-				base.OpenShiftCluster.Properties.NetworkProfile.SoftwareDefinedNetwork = ""
-			},
-		},
-		{
-			name: "preserve SDN",
-			want: func() *OpenShiftClusterDocument {
-				doc := validOpenShiftClusterDocument()
-				doc.OpenShiftCluster.Properties.NetworkProfile.SoftwareDefinedNetwork = SoftwareDefinedNetworkOVNKubernetes
-				return doc
-			},
-			input: func(base *OpenShiftClusterDocument) {
-				base.OpenShiftCluster.Properties.NetworkProfile.SoftwareDefinedNetwork = SoftwareDefinedNetworkOVNKubernetes
-			},
-		},
-		{
 			name: "default encryption at host",
 			want: func() *OpenShiftClusterDocument {
 				return validOpenShiftClusterDocument()

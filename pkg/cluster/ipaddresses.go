@@ -44,6 +44,14 @@ func (m *manager) updateClusterData(ctx context.Context) error {
 		doc.OpenShiftCluster.Properties.KubeadminPassword = api.SecureString(kubeadminPassword.Password)
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.NetworkProfile.SoftwareDefinedNetwork = api.SoftwareDefinedNetwork(installConfig.Config.NetworkType)
+		return nil
+	})
 	return err
 }
 
