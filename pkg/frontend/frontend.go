@@ -24,6 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
@@ -71,6 +72,7 @@ type frontend struct {
 
 	aead encryption.AEAD
 
+	hiveClusterManager  hive.ClusterManager
 	kubeActionsFactory  kubeActionsFactory
 	azureActionsFactory azureActionsFactory
 	ocEnricherFactory   ocEnricherFactory
@@ -115,6 +117,7 @@ func NewFrontend(ctx context.Context,
 	apis map[string]*api.Version,
 	m metrics.Emitter,
 	aead encryption.AEAD,
+	hiveClusterManager hive.ClusterManager,
 	kubeActionsFactory kubeActionsFactory,
 	azureActionsFactory azureActionsFactory,
 	ocEnricherFactory ocEnricherFactory) (*frontend, error) {
@@ -145,6 +148,7 @@ func NewFrontend(ctx context.Context,
 		apis:                          apis,
 		m:                             middleware.MetricsMiddleware{Emitter: m},
 		aead:                          aead,
+		hiveClusterManager:            hiveClusterManager,
 		kubeActionsFactory:            kubeActionsFactory,
 		azureActionsFactory:           azureActionsFactory,
 		ocEnricherFactory:             ocEnricherFactory,
@@ -400,6 +404,12 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 		Subrouter()
 
 	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterDrainNode).Name("postAdminOpenShiftClusterDrainNode")
+
+	s = r.
+		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/clusterdeployment").
+		Subrouter()
+
+	s.Methods(http.MethodGet).HandlerFunc(f.getAdminHiveClusterDeployment).Name("getAdminHiveClusterDeployment")
 
 	s = r.
 		Path("/admin/versions").

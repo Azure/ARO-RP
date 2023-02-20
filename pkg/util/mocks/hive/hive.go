@@ -9,7 +9,8 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	v1 "k8s.io/api/core/v1"
+	v1 "github.com/openshift/hive/apis/hive/v1"
+	v10 "k8s.io/api/core/v1"
 
 	api "github.com/Azure/ARO-RP/pkg/api"
 )
@@ -38,10 +39,10 @@ func (m *MockClusterManager) EXPECT() *MockClusterManagerMockRecorder {
 }
 
 // CreateNamespace mocks base method.
-func (m *MockClusterManager) CreateNamespace(arg0 context.Context) (*v1.Namespace, error) {
+func (m *MockClusterManager) CreateNamespace(arg0 context.Context) (*v10.Namespace, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateNamespace", arg0)
-	ret0, _ := ret[0].(*v1.Namespace)
+	ret0, _ := ret[0].(*v10.Namespace)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -78,6 +79,21 @@ func (m *MockClusterManager) Delete(arg0 context.Context, arg1 *api.OpenShiftClu
 func (mr *MockClusterManagerMockRecorder) Delete(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockClusterManager)(nil).Delete), arg0, arg1)
+}
+
+// GetClusterDeployment mocks base method.
+func (m *MockClusterManager) GetClusterDeployment(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) (*v1.ClusterDeployment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetClusterDeployment", arg0, arg1)
+	ret0, _ := ret[0].(*v1.ClusterDeployment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetClusterDeployment indicates an expected call of GetClusterDeployment.
+func (mr *MockClusterManagerMockRecorder) GetClusterDeployment(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterDeployment", reflect.TypeOf((*MockClusterManager)(nil).GetClusterDeployment), arg0, arg1)
 }
 
 // Install mocks base method.

@@ -38,6 +38,7 @@ type ClusterManager interface {
 	Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion) error
 	IsClusterDeploymentReady(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error)
 	IsClusterInstallationComplete(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error)
+	GetClusterDeployment(ctx context.Context, doc *api.OpenShiftClusterDocument) (*hivev1.ClusterDeployment, error)
 	ResetCorrelationData(ctx context.Context, doc *api.OpenShiftClusterDocument) error
 }
 
@@ -49,6 +50,31 @@ type clusterManager struct {
 	kubernetescli kubernetes.Interface
 
 	dh dynamichelper.Interface
+}
+
+// NewFromEnv can return a nil ClusterManager when hive features are disabled. This exists to support regions where we don't have hive,
+// and we do not want to restrict the frontend from starting up successfully.
+// It has the caveat of requiring a nil check on any operations performed with the returned ClusterManager
+// until this conditional return is removed (we have hive everywhere).
+func NewFromEnv(ctx context.Context, log *logrus.Entry, env env.Interface) (ClusterManager, error) {
+	adoptByHive, err := env.LiveConfig().AdoptByHive(ctx)
+	if err != nil {
+		return nil, err
+	}
+	installViaHive, err := env.LiveConfig().InstallViaHive(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !adoptByHive && !installViaHive {
+		log.Infof("hive is disabled, skipping creation of ClusterManager")
+		return nil, nil
+	}
+	hiveShard := 1
+	hiveRestConfig, err := env.LiveConfig().HiveRestConfig(ctx, hiveShard)
+	if err != nil {
+		return nil, fmt.Errorf("failed getting RESTConfig for Hive shard %d: %w", hiveShard, err)
+	}
+	return NewFromConfig(log, env, hiveRestConfig)
 }
 
 // NewFromConfig creates a ClusterManager.
@@ -132,7 +158,7 @@ func (hr *clusterManager) Delete(ctx context.Context, doc *api.OpenShiftClusterD
 }
 
 func (hr *clusterManager) IsClusterDeploymentReady(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error) {
-	cd, err := hr.hiveClientset.HiveV1().ClusterDeployments(doc.OpenShiftCluster.Properties.HiveProfile.Namespace).Get(ctx, ClusterDeploymentName, metav1.GetOptions{})
+	cd, err := hr.GetClusterDeployment(ctx, doc)
 	if err != nil {
 		return false, err
 	}
@@ -181,6 +207,10 @@ func (hr *clusterManager) IsClusterInstallationComplete(ctx context.Context, doc
 	}
 
 	return false, nil
+}
+
+func (hr *clusterManager) GetClusterDeployment(ctx context.Context, doc *api.OpenShiftClusterDocument) (*hivev1.ClusterDeployment, error) {
+	return hr.hiveClientset.HiveV1().ClusterDeployments(doc.OpenShiftCluster.Properties.HiveProfile.Namespace).Get(ctx, ClusterDeploymentName, metav1.GetOptions{})
 }
 
 func (hr *clusterManager) ResetCorrelationData(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
