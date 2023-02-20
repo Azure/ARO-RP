@@ -1,6 +1,6 @@
 ## Adding new instance types
 
-Full support for new instance types in ARO relies on both OpenShift support, Azure billing support, and RP support. The below document outlines how to introduce and test RP support for new instance types, after upstream OpenShift compatibility has been confirmed, and billing for each desired instance has been set up.
+Full support for new instance types in ARO relies on OpenShift support, Azure billing support, and RP support. The below document outlines how to introduce and test RP support for new instance types, after upstream OpenShift compatibility has been confirmed, and billing for each desired instance has been set up.
 
 At the time of writing, new instance types need to be added in the following places:
 
@@ -8,6 +8,8 @@ At the time of writing, new instance types need to be added in the following pla
 - `pkg/admin/api/openshiftcluster.go`
 - `pkg/api/validate/vm.go`
     - If adding support for a new master instance, ensure that it is tested accordingly as we distinguish between master and worker support.
+
+There are also vmSize consts in the `openshiftcluster.go` files of older versioned APIs, but this was deprecated in `v20220401` and is no longer necessary.
 
 ## Testing new instance types
 
