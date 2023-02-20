@@ -259,7 +259,7 @@ func (p *portal) Run(ctx context.Context) error {
 func (p *portal) unauthenticatedRoutes(r *mux.Router) {
 	logger := middleware.Log(p.env, p.audit, p.baseAccessLog)
 
-	r.NewRoute().Methods(http.MethodGet).Path("/healthz/ready").Handler(logger(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})))
+	r.Methods(http.MethodGet).Path("/healthz/ready").Handler(logger(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})))
 }
 
 func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
@@ -285,29 +285,29 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
 		name := regexp.FindString(name)
 		switch name {
 		case "v2/build/index.html":
-			r.NewRoute().Methods(http.MethodGet).Path("/").HandlerFunc(p.indexV2)
+			r.Methods(http.MethodGet).Path("/").HandlerFunc(p.indexV2)
 		case "v1/build/index.html":
-			r.NewRoute().Methods(http.MethodGet).Path("/v1").HandlerFunc(p.index)
+			r.Methods(http.MethodGet).Path("/v1").HandlerFunc(p.index)
 		case "":
 		default:
 			fmtName := strings.TrimPrefix(name, "v1/build/")
 			fmtName = strings.TrimPrefix(fmtName, "v2/build/")
 
-			r.NewRoute().Methods(http.MethodGet).Path("/" + fmtName).HandlerFunc(p.serve(name))
+			r.Methods(http.MethodGet).Path("/" + fmtName).HandlerFunc(p.serve(name))
 		}
 	}
 
-	r.NewRoute().Methods(http.MethodGet).Path("/api/clusters").HandlerFunc(p.clusters)
-	r.NewRoute().Methods(http.MethodGet).Path("/api/info").HandlerFunc(p.info)
-	r.NewRoute().Methods(http.MethodGet).Path("/api/regions").HandlerFunc(p.regions)
+	r.Methods(http.MethodGet).Path("/api/clusters").HandlerFunc(p.clusters)
+	r.Methods(http.MethodGet).Path("/api/info").HandlerFunc(p.info)
+	r.Methods(http.MethodGet).Path("/api/regions").HandlerFunc(p.regions)
 
 	// Cluster-specific routes
-	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}/clusteroperators").HandlerFunc(p.clusterOperators)
-	r.NewRoute().Methods(http.MethodGet).Path("/api/{subscription}/{resourceGroup}/{clusterName}").HandlerFunc(p.clusterInfo)
-	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}/nodes").HandlerFunc(p.nodes)
-	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}/machines").HandlerFunc(p.machines)
-	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}/machine-sets").HandlerFunc(p.machineSets)
-	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}").HandlerFunc(p.clusterInfo)
+	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/clusteroperators").HandlerFunc(p.clusterOperators)
+	r.Methods(http.MethodGet).Path("/api/{subscription}/{resourceGroup}/{clusterName}").HandlerFunc(p.clusterInfo)
+	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/nodes").HandlerFunc(p.nodes)
+	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/machines").HandlerFunc(p.machines)
+	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/machine-sets").HandlerFunc(p.machineSets)
+	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}").HandlerFunc(p.clusterInfo)
 }
 
 func (p *portal) index(w http.ResponseWriter, r *http.Request) {
