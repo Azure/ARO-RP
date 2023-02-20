@@ -170,7 +170,7 @@ func (m *manager) updateILBAddressPool(ctx context.Context, nic *mgmtnetwork.Int
 
 	ipc := (*nic.InterfacePropertiesFormat.IPConfigurations)[0]
 	if ipc.LoadBalancerBackendAddressPools == nil {
-		emptyBackendAddressPool := []mgmtnetwork.BackendAddressPool{}
+		emptyBackendAddressPool := make([]mgmtnetwork.BackendAddressPool, 0)
 		ipc.LoadBalancerBackendAddressPools = &emptyBackendAddressPool
 	} else {
 		for _, p := range *ipc.LoadBalancerBackendAddressPools {
