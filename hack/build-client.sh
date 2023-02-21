@@ -39,8 +39,6 @@ function generate_golang() {
     --input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
     --output-folder=/github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/"$API_VERSION"/redhatopenshift
 
-  sudo chown -R $(id -un):$(id -gn) pkg/client
-
   docker run \
     --platform=linux/amd64 \
     --rm \
@@ -77,7 +75,6 @@ function generate_python() {
     --input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
     --output-folder=/python/client
 
-  sudo chown -R $(id -un):$(id -gn) python/client
   rm -rf python/client/azure/mgmt/redhatopenshift/v"${API_VERSION//-/_}"/aio
   >python/client/__init__.py
 }
