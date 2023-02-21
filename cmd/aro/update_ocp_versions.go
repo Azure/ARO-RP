@@ -38,6 +38,14 @@ func getLatestOCPVersions(ctx context.Context, log *logrus.Entry) ([]api.OpenShi
 					Enabled:           true,
 				},
 			},
+			{
+				Properties: api.OpenShiftVersionProperties{
+					Version:           version.AdditionalStreams["4.11.26"].Version.String(),
+					OpenShiftPullspec: version.AdditionalStreams["4.11.26"].PullSpec,
+					InstallerPullspec: dstRepo + "/aro-installer:release-4.11",
+					Enabled:           true,
+				},
+			},
 		}
 	)
 	return OpenshiftVersions, nil
