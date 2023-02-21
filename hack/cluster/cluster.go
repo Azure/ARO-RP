@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+	msgraph_errors "github.com/microsoftgraph/msgraph-sdk-go/models/odataerrors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -65,6 +67,9 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 
 	if err := run(context.Background(), log); err != nil {
+		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
+			spew.Dump(oDataError.GetError())
+		}
 		log.Fatal(err)
 	}
 }

@@ -21,6 +21,7 @@ require (
 	github.com/coreos/go-systemd/v22 v22.3.2
 	github.com/coreos/ignition/v2 v2.14.0
 	github.com/coreos/stream-metadata-go v0.2.0
+	github.com/davecgh/go-spew v1.1.1
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
@@ -121,7 +122,6 @@ require (
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
 	github.com/coreos/ignition v0.35.0 // indirect
 	github.com/coreos/vcontext v0.0.0-20220326205524-7fcaf69e7050 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/docker/docker v20.10.24+incompatible // indirect
