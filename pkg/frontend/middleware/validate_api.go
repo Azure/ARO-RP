@@ -1,10 +1,14 @@
 package middleware
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"net/http"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/go-chi/chi/v5"
+
+	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 type ApiVersionValidator struct {
