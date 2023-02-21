@@ -22,7 +22,7 @@ import (
 // information about clusters. It returns frontend-suitable data structures.
 type FetchClient interface {
 	Nodes(context.Context) (*NodeListInformation, error)
-	VMAllocationStatus(context.Context) (VMAllocationStatus, error)
+	VMAllocationStatus(context.Context) (map[string]string, error)
 	ClusterOperators(context.Context) (*ClusterOperatorsInformation, error)
 	Machines(context.Context) (*MachineListInformation, error)
 	MachineSets(context.Context) (*MachineSetListInformation, error)
