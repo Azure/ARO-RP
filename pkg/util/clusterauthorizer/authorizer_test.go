@@ -271,10 +271,8 @@ func createToken(tr *tokenRequirements) (*adal.ServicePrincipalToken, error) {
 		hmac.New(sha512.New, []byte(headerEnc+claimsEnc+tr.clientSecret)).Sum(nil),
 	)
 
-	tk := adal.Token{}
-
 	r := rand.New(rand.NewSource(time.Now().UnixMicro()))
-	tk = adal.Token{
+	tk := adal.Token{
 		AccessToken:  headerEnc + "." + claimsEnc + "." + signatureEnc,
 		RefreshToken: fmt.Sprintf("rand-%d", r.Int()),
 		ExpiresIn:    json.Number("300"),
