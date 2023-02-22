@@ -1,5 +1,8 @@
 package cluster
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"context"
 	"fmt"
@@ -9,9 +12,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	"github.com/Azure/go-autorest/autorest/to"
 )
-
-// Copyright (c) Microsoft Corporation.
-// Licensed under the Apache License 2.0.
 
 func (m *manager) createKeyvault(ctx context.Context) error {
 	// We want random characters from end of infraID to help ensure KV name uniqueness
