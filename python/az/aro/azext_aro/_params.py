@@ -9,6 +9,7 @@ from azext_aro._validators import validate_domain
 from azext_aro._validators import validate_pull_secret
 from azext_aro._validators import validate_subnet
 from azext_aro._validators import validate_client_secret
+from azext_aro._validators import validate_maintenance_start
 from azext_aro._validators import validate_visibility
 from azext_aro._validators import validate_vnet
 from azext_aro._validators import validate_vnet_resource_group_name
@@ -113,6 +114,10 @@ def load_arguments(self, _):
         c.argument('client_secret',
                    help='Client secret of cluster service principal.',
                    validator=validate_client_secret(isCreate=False))
+        c.argument('maintenance_start',
+                   help='maintenance_start help message',
+                   options_list=['--maintenance-start'],
+                   validator=validate_maintenance_start)
         c.argument('refresh_cluster_credentials',
                    arg_type=get_three_state_flag(),
                    help='Refresh cluster application credentials.',

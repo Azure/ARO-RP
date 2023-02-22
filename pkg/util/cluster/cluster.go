@@ -482,6 +482,13 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 					Visibility: visibility,
 				},
 			},
+			MaintenanceProfiles: []api.MaintenanceProfile{
+				{
+					Next:     "default",
+					Status:   "default",
+					Previous: "default",
+				},
+			},
 		},
 		Location: c.env.Location(),
 	}

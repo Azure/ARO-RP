@@ -21,6 +21,7 @@ try:
     from ._models_py3 import ConsoleProfile
     from ._models_py3 import Display
     from ._models_py3 import IngressProfile
+    from ._models_py3 import MaintenanceProfile
     from ._models_py3 import MasterProfile
     from ._models_py3 import NetworkProfile
     from ._models_py3 import OpenShiftCluster
@@ -40,6 +41,7 @@ except (SyntaxError, ImportError):
     from ._models import ConsoleProfile  # type: ignore
     from ._models import Display  # type: ignore
     from ._models import IngressProfile  # type: ignore
+    from ._models import MaintenanceProfile  # type: ignore
     from ._models import MasterProfile  # type: ignore
     from ._models import NetworkProfile  # type: ignore
     from ._models import OpenShiftCluster  # type: ignore
@@ -66,6 +68,7 @@ __all__ = [
     'ConsoleProfile',
     'Display',
     'IngressProfile',
+    'MaintenanceProfile',
     'MasterProfile',
     'NetworkProfile',
     'OpenShiftCluster',

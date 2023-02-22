@@ -48,6 +48,7 @@ type OpenShiftClusterProperties struct {
 	WorkerProfiles                  []WorkerProfile         `json:"workerProfiles,omitempty"`
 	APIServerProfile                APIServerProfile        `json:"apiserverProfile,omitempty"`
 	IngressProfiles                 []IngressProfile        `json:"ingressProfiles,omitempty"`
+	MaintenanceProfiles             []MaintenanceProfile    `json:"maintenanceProfiles,omitempty" mutable:"true"`
 	Install                         *Install                `json:"install,omitempty"`
 	StorageSuffix                   string                  `json:"storageSuffix,omitempty"`
 	RegistryProfiles                []RegistryProfile       `json:"registryProfiles,omitempty"`
@@ -255,6 +256,13 @@ type IngressProfile struct {
 	Name       string     `json:"name,omitempty"`
 	Visibility Visibility `json:"visibility,omitempty"`
 	IP         string     `json:"ip,omitempty"`
+}
+
+// MaintenanceProfile represents an ingress profile
+type MaintenanceProfile struct {
+	Previous string `json:"previous,omitempty" mutable:"true"`
+	Status   string `json:"status,omitempty" mutable:"true"`
+	Next     string `json:"next,omitempty" mutable:"true"`
 }
 
 // Install represents an install process.

@@ -249,6 +249,41 @@ class IngressProfile(msrest.serialization.Model):
         self.ip = kwargs.get('ip', None)
 
 
+class MaintenanceProfile(msrest.serialization.Model):
+    """IngressProfile represents an ingress profile.
+
+    :ivar name: The ingress profile name.
+    :vartype name: str
+    :ivar visibility: Ingress visibility. Possible values include: "Private", "Public".
+    :vartype visibility: str or ~azure.mgmt.redhatopenshift.v2022_09_04.models.Visibility
+    :ivar ip: The IP of the ingress.
+    :vartype ip: str
+    """
+
+    _attribute_map = {
+        'previous': {'key': 'previous', 'type': 'str'},
+        'status': {'key': 'status', 'type': 'str'},
+        'next': {'key': 'next', 'type': 'str'},
+    }
+
+    def __init__(
+        self,
+        **kwargs
+    ):
+        """
+        :keyword name: The ingress profile name.
+        :paramtype name: str
+        :keyword visibility: Ingress visibility. Possible values include: "Private", "Public".
+        :paramtype visibility: str or ~azure.mgmt.redhatopenshift.v2022_09_04.models.Visibility
+        :keyword ip: The IP of the ingress.
+        :paramtype ip: str
+        """
+        super(MaintenanceProfile, self).__init__(**kwargs)
+        self.previous = kwargs.get('previous', None)
+        self.status = kwargs.get('status', None)
+        self.next = kwargs.get('next', None)
+
+
 class Resource(msrest.serialization.Model):
     """Common fields that are returned in the response for all Azure Resource Manager resources.
 
@@ -645,6 +680,7 @@ class OpenShiftCluster(TrackedResource):
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
         'apiserver_profile': {'key': 'properties.apiserverProfile', 'type': 'APIServerProfile'},
         'ingress_profiles': {'key': 'properties.ingressProfiles', 'type': '[IngressProfile]'},
+        'maintenance_profiles': {'key': 'properties.maintenanceProfiles', 'type': '[MaintenanceProfile]'},
     }
 
     def __init__(
@@ -689,6 +725,7 @@ class OpenShiftCluster(TrackedResource):
         self.worker_profiles = kwargs.get('worker_profiles', None)
         self.apiserver_profile = kwargs.get('apiserver_profile', None)
         self.ingress_profiles = kwargs.get('ingress_profiles', None)
+        self.maintenance_profiles = kwargs.get('maintenance_profiles', None)
 
 
 class OpenShiftClusterAdminKubeconfig(msrest.serialization.Model):
@@ -820,6 +857,7 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
         'apiserver_profile': {'key': 'properties.apiserverProfile', 'type': 'APIServerProfile'},
         'ingress_profiles': {'key': 'properties.ingressProfiles', 'type': '[IngressProfile]'},
+        'maintenance_profiles': {'key': 'properties.maintenanceProfiles', 'type': '[MaintenanceProfile]'},
     }
 
     def __init__(
@@ -864,6 +902,7 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         self.worker_profiles = kwargs.get('worker_profiles', None)
         self.apiserver_profile = kwargs.get('apiserver_profile', None)
         self.ingress_profiles = kwargs.get('ingress_profiles', None)
+        self.maintenance_profiles = kwargs.get('maintenance_profiles', None)
 
 
 class OpenShiftVersion(ProxyResource):
@@ -1144,6 +1183,37 @@ class ServicePrincipalProfile(msrest.serialization.Model):
         super(ServicePrincipalProfile, self).__init__(**kwargs)
         self.client_id = kwargs.get('client_id', None)
         self.client_secret = kwargs.get('client_secret', None)
+
+
+class MaintenanceProfile(msrest.serialization.Model):
+    """ServicePrincipalProfile represents a service principal profile.
+
+    :ivar client_id: The client ID used for the cluster.
+    :vartype client_id: str
+    :ivar client_secret: The client secret used for the cluster.
+    :vartype client_secret: str
+    """
+
+    _attribute_map = {
+        'previous': {'key': 'previous', 'type': 'str'},
+        'status': {'key': 'status', 'type': 'str'},
+        'next': {'key': 'next', 'type': 'str'},
+    }
+
+    def __init__(
+        self,
+        **kwargs
+    ):
+        """
+        :keyword client_id: The client ID used for the cluster.
+        :paramtype client_id: str
+        :keyword client_secret: The client secret used for the cluster.
+        :paramtype client_secret: str
+        """
+        super(MaintenanceProfile, self).__init__(**kwargs)
+        self.previous = kwargs.get('previous', None)
+        self.status = kwargs.get('status', None)
+        self.next = kwargs.get('next', None)
 
 
 class SyncIdentityProvider(ProxyResource):

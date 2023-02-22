@@ -69,6 +69,8 @@ type OpenShiftClusterProperties struct {
 
 	// The cluster ingress profiles.
 	IngressProfiles []IngressProfile `json:"ingressProfiles,omitempty"`
+
+	MaintenanceProfiles []MaintenanceProfile `json:"maintenanceProfiles,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state.
@@ -219,6 +221,13 @@ type IngressProfile struct {
 
 	// The IP of the ingress.
 	IP string `json:"ip,omitempty"`
+}
+
+// MaintenanceProfile represents an maintenance profile
+type MaintenanceProfile struct {
+	Previous string `json:"previous,omitempty"`
+	Status   string `json:"status,omitempty"`
+	Next     string `json:"next,omitempty"`
 }
 
 // CreatedByType by defines user type, which executed the request

@@ -498,6 +498,7 @@ class OpenShiftCluster(TrackedResource):
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
         'apiserver_profile': {'key': 'properties.apiserverProfile', 'type': 'APIServerProfile'},
         'ingress_profiles': {'key': 'properties.ingressProfiles', 'type': '[IngressProfile]'},
+        'maintenance_profiles': {'key': 'properties.maintenanceProfiles', 'type': '[MaintenanceProfile]'},
     }
 
     def __init__(
@@ -548,6 +549,7 @@ class OpenShiftCluster(TrackedResource):
         self.worker_profiles = kwargs.get('worker_profiles', None)
         self.apiserver_profile = kwargs.get('apiserver_profile', None)
         self.ingress_profiles = kwargs.get('ingress_profiles', None)
+        self.maintenance_profiles = kwargs.get('maintenance_profiles', None)
 
 
 class OpenShiftClusterAdminKubeconfig(msrest.serialization.Model):
@@ -682,6 +684,7 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
         'apiserver_profile': {'key': 'properties.apiserverProfile', 'type': 'APIServerProfile'},
         'ingress_profiles': {'key': 'properties.ingressProfiles', 'type': '[IngressProfile]'},
+        'maintenance_profiles': {'key': 'properties.maintenanceProfiles', 'type': '[MaintenanceProfile]'},
     }
 
     def __init__(
@@ -731,6 +734,7 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         self.worker_profiles = kwargs.get('worker_profiles', None)
         self.apiserver_profile = kwargs.get('apiserver_profile', None)
         self.ingress_profiles = kwargs.get('ingress_profiles', None)
+        self.maintenance_profiles = kwargs.get('maintenance_profiles', None)
 
 
 class Operation(msrest.serialization.Model):

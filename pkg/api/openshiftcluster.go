@@ -128,6 +128,8 @@ type OpenShiftClusterProperties struct {
 
 	IngressProfiles []IngressProfile `json:"ingressProfiles,omitempty"`
 
+	MaintenanceProfiles []MaintenanceProfile `json:"maintenanceProfiles,omitempty"`
+
 	// Install is non-nil only when an install is in progress
 	Install *Install `json:"install,omitempty"`
 
@@ -476,6 +478,15 @@ type IngressProfile struct {
 	Name       string     `json:"name,omitempty"`
 	Visibility Visibility `json:"visibility,omitempty"`
 	IP         string     `json:"ip,omitempty"`
+}
+
+// MaintenanceProfile represents an maintenanceProfile profile
+type MaintenanceProfile struct {
+	MissingFields
+
+	Previous string `json:"previous,omitempty"`
+	Status   string `json:"status,omitempty"`
+	Next     string `json:"next,omitempty"`
 }
 
 // RegistryProfile represents a registry's login

@@ -56,6 +56,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                worker_count=None,
                apiserver_visibility=None,
                ingress_visibility=None,
+               maintenance_start=None,
                tags=None,
                version=None,
                no_wait=False):
@@ -140,6 +141,13 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
             openshiftcluster.IngressProfile(
                 name='default',  # TODO: 'default' should not be hard-coded
                 visibility=ingress_visibility or 'Public',
+            )
+        ],
+        maintenance_profiles=[
+            openshiftcluster.MaintenanceProfile(
+                previous=maintenance_start or 'default',
+                next='default',
+                status='default',
             )
         ],
     )
@@ -236,6 +244,7 @@ def aro_update(cmd,
                resource_name,
                refresh_cluster_credentials=False,
                client_id=None,
+               maintenance_start=None,
                client_secret=None,
                no_wait=False):
     # if we can't read cluster spec, we will not be able to do much. Fail.
@@ -243,7 +252,11 @@ def aro_update(cmd,
 
     ocUpdate = openshiftcluster.OpenShiftClusterUpdate()
 
-    client_id, client_secret = cluster_application_update(cmd.cli_ctx, oc, client_id, client_secret, refresh_cluster_credentials)  # pylint: disable=line-too-long
+    client_id, client_secret = cluster_application_update(cmd.cli_ctx, oc, client_id, client_secret, refresh_cluster_credentials, maintenance_start)  # pylint: disable=line-too-long
+
+    print(maintenance_start)    
+    ocUpdate.maintenance_profiles = openshiftcluster.MaintenanceProfile()
+    ocUpdate.maintenance_profiles.previous = maintenance_start
 
     if client_id is not None or client_secret is not None:
         # construct update payload
@@ -355,13 +368,15 @@ def cluster_application_update(cli_ctx,
                                oc,
                                client_id,
                                client_secret,
-                               refresh_cluster_credentials):
+                               refresh_cluster_credentials,
+                               maintenance_start):
     # QUESTION: is there possible unification with the create path?
 
     rp_client_sp_id = None
     client_sp_id = None
     random_id = generate_random_id()
 
+    print(maintenance_start)
     # if any of these are set - we expect users to have access to fix rbac so we fail
     # common for 1 and 2 flows
     fail = client_id or client_secret or refresh_cluster_credentials

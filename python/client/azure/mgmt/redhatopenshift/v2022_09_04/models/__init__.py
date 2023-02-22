@@ -21,6 +21,7 @@ try:
     from ._models_py3 import ConsoleProfile
     from ._models_py3 import Display
     from ._models_py3 import IngressProfile
+    from ._models_py3 import MaintenanceProfile
     from ._models_py3 import MachinePool
     from ._models_py3 import MachinePoolList
     from ._models_py3 import MachinePoolUpdate
@@ -57,6 +58,7 @@ except (SyntaxError, ImportError):
     from ._models import ConsoleProfile  # type: ignore
     from ._models import Display  # type: ignore
     from ._models import IngressProfile  # type: ignore
+    from ._models import MaintenanceProfile  # type: ignore
     from ._models import MachinePool  # type: ignore
     from ._models import MachinePoolList  # type: ignore
     from ._models import MachinePoolUpdate  # type: ignore
@@ -102,6 +104,7 @@ __all__ = [
     'ConsoleProfile',
     'Display',
     'IngressProfile',
+    'MaintenanceProfile',
     'MachinePool',
     'MachinePoolList',
     'MachinePoolUpdate',

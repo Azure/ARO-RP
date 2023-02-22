@@ -268,6 +268,45 @@ class IngressProfile(msrest.serialization.Model):
         self.ip = ip
 
 
+class MaintenanceProfile(msrest.serialization.Model):
+    """MaintenanceProfile represents an MaintenanceProfile .
+
+    :ivar name: The ingress profile name.
+    :vartype name: str
+    :ivar visibility: Ingress visibility. Possible values include: "Private", "Public".
+    :vartype visibility: str or ~azure.mgmt.redhatopenshift.v2022_04_01.models.Visibility
+    :ivar ip: The IP of the ingress.
+    :vartype ip: str
+    """
+
+    _attribute_map = {
+        'previous': {'key': 'previous', 'type': 'str'},
+        'status': {'key': 'status', 'type': 'str'},
+        'next': {'key': 'next', 'type': 'str'},
+    }
+
+    def __init__(
+        self,
+        *,
+        previous: Optional[str] = None,
+        status: Optional[str] = None,
+        next: Optional[str] = None,
+        **kwargs
+    ):
+        """
+        :keyword name: The ingress profile name.
+        :paramtype name: str
+        :keyword visibility: Ingress visibility. Possible values include: "Private", "Public".
+        :paramtype visibility: str or ~azure.mgmt.redhatopenshift.v2022_04_01.models.Visibility
+        :keyword ip: The IP of the ingress.
+        :paramtype ip: str
+        """
+        super(MaintenanceProfile, self).__init__(**kwargs)
+        self.previous = previous
+        self.status = status
+        self.next = next
+
+
 class MasterProfile(msrest.serialization.Model):
     """MasterProfile represents a master profile.
 
@@ -497,6 +536,7 @@ class OpenShiftCluster(TrackedResource):
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
         'apiserver_profile': {'key': 'properties.apiserverProfile', 'type': 'APIServerProfile'},
         'ingress_profiles': {'key': 'properties.ingressProfiles', 'type': '[IngressProfile]'},
+        'maintenance_profiles': {'key': 'properties.maintenanceProfiles', 'type': '[MaintenanceProfile]'},
     }
 
     def __init__(
@@ -513,6 +553,7 @@ class OpenShiftCluster(TrackedResource):
         worker_profiles: Optional[List["WorkerProfile"]] = None,
         apiserver_profile: Optional["APIServerProfile"] = None,
         ingress_profiles: Optional[List["IngressProfile"]] = None,
+        maintenance_profiles: Optional[List["MaintenanceProfile"]] = None,
         **kwargs
     ):
         """
@@ -553,6 +594,7 @@ class OpenShiftCluster(TrackedResource):
         self.worker_profiles = worker_profiles
         self.apiserver_profile = apiserver_profile
         self.ingress_profiles = ingress_profiles
+        self.maintenance_profiles = maintenance_profiles
 
 
 class OpenShiftClusterCredentials(msrest.serialization.Model):
@@ -658,6 +700,7 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
         'apiserver_profile': {'key': 'properties.apiserverProfile', 'type': 'APIServerProfile'},
         'ingress_profiles': {'key': 'properties.ingressProfiles', 'type': '[IngressProfile]'},
+        'maintenance_profiles': {'key': 'properties.maintenanceProfiles', 'type': '[MaintenanceProfile]'},
     }
 
     def __init__(
@@ -673,6 +716,7 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         worker_profiles: Optional[List["WorkerProfile"]] = None,
         apiserver_profile: Optional["APIServerProfile"] = None,
         ingress_profiles: Optional[List["IngressProfile"]] = None,
+        maintenance_profiles: Optional[List["MaintenanceProfile"]] = None,
         **kwargs
     ):
         """
@@ -712,6 +756,7 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         self.worker_profiles = worker_profiles
         self.apiserver_profile = apiserver_profile
         self.ingress_profiles = ingress_profiles
+        self.maintenance_profiles = maintenance_profiles
 
 
 class Operation(msrest.serialization.Model):

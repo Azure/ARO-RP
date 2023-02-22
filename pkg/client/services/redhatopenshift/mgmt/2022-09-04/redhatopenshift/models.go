@@ -122,6 +122,12 @@ type IngressProfile struct {
 	IP *string `json:"ip,omitempty"`
 }
 
+type MaintenanceProfile struct {
+	Previous *string `json:"previous,omitempty"`
+	Status   *string `json:"status,omitempty"`
+	Next     *string `json:"next,omitempty"`
+}
+
 // MachinePool machinePool represents a MachinePool
 type MachinePool struct {
 	autorest.Response `json:"-"`
@@ -748,6 +754,8 @@ type OpenShiftClusterProperties struct {
 	ApiserverProfile *APIServerProfile `json:"apiserverProfile,omitempty"`
 	// IngressProfiles - The cluster ingress profiles.
 	IngressProfiles *[]IngressProfile `json:"ingressProfiles,omitempty"`
+
+	MaintenanceProfiles *[]MaintenanceProfile `json:"maintenanceProfiles,omitempty"`
 }
 
 // OpenShiftClustersCreateOrUpdateFuture an abstraction for monitoring and retrieving the results of a

@@ -119,6 +119,12 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *Ope
 		if err := sv.validateIngressProfile(path+".ingressProfiles['"+p.IngressProfiles[0].Name+"']", &p.IngressProfiles[0]); err != nil {
 			return err
 		}
+		if len(p.MaintenanceProfiles) != 1 {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".maintenanceProfiles", "There should be exactly one ingress profile.")
+		}
+		if err := sv.validateMaintenanceProfile(&p.MaintenanceProfiles[0]); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -343,6 +349,10 @@ func (sv openShiftClusterStaticValidator) validateIngressProfile(path string, p 
 		}
 	}
 
+	return nil
+}
+
+func (sv openShiftClusterStaticValidator) validateMaintenanceProfile(p *MaintenanceProfile) error {
 	return nil
 }
 
