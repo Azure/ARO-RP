@@ -114,8 +114,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							},
 							MaintenanceTask: api.MaintenanceTaskEverything,
 							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
-								OutboundType:           api.OutboundTypeLoadbalancer,
+								OutboundType: api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -139,8 +138,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					},
 					MaintenanceTask: admin.MaintenanceTaskEverything,
 					NetworkProfile: admin.NetworkProfile{
-						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
-						OutboundType:           admin.OutboundTypeLoadbalancer,
+						OutboundType: admin.OutboundTypeLoadbalancer,
 					},
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
@@ -204,8 +202,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
-								OutboundType:           api.OutboundTypeLoadbalancer,
+								OutboundType: api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -226,8 +223,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					LastProvisioningState: admin.ProvisioningStateSucceeded,
 					MaintenanceTask:       admin.MaintenanceTaskOperator,
 					NetworkProfile: admin.NetworkProfile{
-						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
-						OutboundType:           admin.OutboundTypeLoadbalancer,
+						OutboundType: admin.OutboundTypeLoadbalancer,
 					},
 					ClusterProfile: admin.ClusterProfile{
 						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
@@ -287,8 +283,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							LastProvisioningState: api.ProvisioningStateSucceeded,
 							MaintenanceTask:       api.MaintenanceTaskEverything,
 							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
-								OutboundType:           api.OutboundTypeLoadbalancer,
+								OutboundType: api.OutboundTypeLoadbalancer,
 							},
 							ClusterProfile: api.ClusterProfile{
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
@@ -312,8 +307,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					LastProvisioningState: admin.ProvisioningStateSucceeded,
 					MaintenanceTask:       admin.MaintenanceTaskEverything,
 					NetworkProfile: admin.NetworkProfile{
-						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
-						OutboundType:           admin.OutboundTypeLoadbalancer,
+						OutboundType: admin.OutboundTypeLoadbalancer,
 					},
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
@@ -374,8 +368,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							},
 							MaintenanceTask: api.MaintenanceTaskOperator,
 							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
-								OutboundType:           api.OutboundTypeLoadbalancer,
+								OutboundType: api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -399,8 +392,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					},
 					MaintenanceTask: admin.MaintenanceTaskOperator,
 					NetworkProfile: admin.NetworkProfile{
-						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
-						OutboundType:           admin.OutboundTypeLoadbalancer,
+						OutboundType: admin.OutboundTypeLoadbalancer,
 					},
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
@@ -460,8 +452,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							},
 							MaintenanceTask: api.MaintenanceTaskOperator,
 							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
-								OutboundType:           api.OutboundTypeLoadbalancer,
+								OutboundType: api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -485,8 +476,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					},
 					MaintenanceTask: admin.MaintenanceTaskOperator,
 					NetworkProfile: admin.NetworkProfile{
-						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
-						OutboundType:           admin.OutboundTypeLoadbalancer,
+						OutboundType: admin.OutboundTypeLoadbalancer,
 					},
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
@@ -529,8 +519,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
-								OutboundType:           api.OutboundTypeLoadbalancer,
+								OutboundType: api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -553,8 +542,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
-								OutboundType:           api.OutboundTypeLoadbalancer,
+								OutboundType: api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -727,8 +715,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
-								OutboundType:           api.OutboundTypeLoadbalancer,
+								OutboundType: api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -952,8 +939,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
-								OutboundType:           api.OutboundTypeLoadbalancer,
+								OutboundType: api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1003,8 +989,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							ProvisioningState:       api.ProvisioningStateFailed,
 							FailedProvisioningState: api.ProvisioningStateCreating,
 							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
-								OutboundType:           api.OutboundTypeLoadbalancer,
+								OutboundType: api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1698,10 +1683,9 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 								ClientSecret: "00000000-0000-0000-0000-000000000000",
 							},
 							NetworkProfile: api.NetworkProfile{
-								PodCIDR:                "10.0.0.0/16",
-								ServiceCIDR:            "10.1.0.0/16",
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
-								OutboundType:           api.OutboundTypeLoadbalancer,
+								PodCIDR:      "10.0.0.0/16",
+								ServiceCIDR:  "10.1.0.0/16",
+								OutboundType: api.OutboundTypeLoadbalancer,
 							},
 							APIServerProfile: api.APIServerProfile{
 								Visibility: api.VisibilityPrivate,
