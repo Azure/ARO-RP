@@ -13,6 +13,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
@@ -57,7 +58,7 @@ type OpenShiftClusters interface {
 }
 
 // NewOpenShiftClusters returns a new OpenShiftClusters
-func NewOpenShiftClusters(ctx context.Context, isLocalDevelopmentMode bool, dbc cosmosdb.DatabaseClient, secretVersion string) (OpenShiftClusters, error) {
+func NewOpenShiftClusters(ctx context.Context, isLocalDevelopmentMode bool, dbc cosmosdb.DatabaseClient, aead encryption.AEAD) (OpenShiftClusters, error) {
 	dbid, err := Name(isLocalDevelopmentMode)
 	if err != nil {
 		return nil, err
@@ -89,16 +90,16 @@ func NewOpenShiftClusters(ctx context.Context, isLocalDevelopmentMode bool, dbc 
 	}
 
 	documentClient := cosmosdb.NewOpenShiftClusterDocumentClient(collc, collOpenShiftClusters)
-	return NewOpenShiftClustersWithProvidedClient(documentClient, collc, uuid.DefaultGenerator.Generate(), uuid.DefaultGenerator, secretVersion), nil
+	return NewOpenShiftClustersWithProvidedClient(documentClient, collc, uuid.DefaultGenerator.Generate(), uuid.DefaultGenerator, aead), nil
 }
 
-func NewOpenShiftClustersWithProvidedClient(client cosmosdb.OpenShiftClusterDocumentClient, collectionClient cosmosdb.CollectionClient, uuid string, uuidGenerator uuid.Generator, secretVersion string) OpenShiftClusters {
+func NewOpenShiftClustersWithProvidedClient(client cosmosdb.OpenShiftClusterDocumentClient, collectionClient cosmosdb.CollectionClient, uuid string, uuidGenerator uuid.Generator, aead encryption.AEAD) OpenShiftClusters {
 	return &openShiftClusters{
 		c:             client,
 		collc:         collectionClient,
 		uuid:          uuid,
 		uuidGenerator: uuidGenerator,
-		secretVersion: secretVersion,
+		secretVersion: aead.SealSecretVersion(),
 	}
 }
 
