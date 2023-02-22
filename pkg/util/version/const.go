@@ -31,8 +31,9 @@ var DefaultInstallStream = &Stream{
 	PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:b9fad814fb4442e7e852b0614d9bb4e2ebc5e1a2fa51623aa838b4ee0e4a5369",
 }
 
-var AdditionalStreams = map[string]*Stream{
-	"4.11.26": {
+var HiveInstallStreams = []*Stream{
+	DefaultInstallStream,
+	{
 		Version:  NewVersion(4, 11, 26),
 		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:1c3913a65b0a10b4a0650f54e545fe928360a94767acea64c0bd10faa52c945a",
 	},

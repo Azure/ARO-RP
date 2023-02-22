@@ -28,27 +28,20 @@ func getLatestOCPVersions(ctx context.Context, log *logrus.Entry) ([]api.OpenShi
 	acrDomainSuffix := "." + env.Environment().ContainerRegistryDNSSuffix
 
 	dstRepo := dstAcr + acrDomainSuffix
-	var (
-		OpenshiftVersions = []api.OpenShiftVersion{
-			{
-				Properties: api.OpenShiftVersionProperties{
-					Version:           version.DefaultInstallStream.Version.String(),
-					OpenShiftPullspec: version.DefaultInstallStream.PullSpec,
-					InstallerPullspec: dstRepo + "/aro-installer:release-4.10",
-					Enabled:           true,
-				},
+	ocpVersions := []api.OpenShiftVersion{}
+
+	for _, vers := range version.HiveInstallStreams {
+		ocpVersions = append(ocpVersions, api.OpenShiftVersion{
+			Properties: api.OpenShiftVersionProperties{
+				Version:           vers.Version.String(),
+				OpenShiftPullspec: vers.PullSpec,
+				InstallerPullspec: fmt.Sprintf("%s/aro-installer:release-%s", dstRepo, vers.Version.MinorVersion()),
+				Enabled:           true,
 			},
-			{
-				Properties: api.OpenShiftVersionProperties{
-					Version:           version.AdditionalStreams["4.11.26"].Version.String(),
-					OpenShiftPullspec: version.AdditionalStreams["4.11.26"].PullSpec,
-					InstallerPullspec: dstRepo + "/aro-installer:release-4.11",
-					Enabled:           true,
-				},
-			},
-		}
-	)
-	return OpenshiftVersions, nil
+		})
+	}
+
+	return ocpVersions, nil
 }
 
 func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenShiftVersions, error) {
