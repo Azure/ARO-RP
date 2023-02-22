@@ -156,9 +156,9 @@ func NewFrontend(ctx context.Context,
 
 		// add default installation version so it's always supported
 		enabledOcpVersions: map[string]*api.OpenShiftVersion{
-			version.InstallStream.Version.String(): {
+			version.DefaultInstallStream.Version.String(): {
 				Properties: api.OpenShiftVersionProperties{
-					Version: version.InstallStream.Version.String(),
+					Version: version.DefaultInstallStream.Version.String(),
 					Enabled: true,
 				},
 			},

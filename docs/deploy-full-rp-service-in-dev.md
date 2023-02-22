@@ -84,7 +84,7 @@
         ```
 
     1. Run the mirroring
-        > The `latest` argument will take the InstallStream from `pkg/util/version/const.go` and mirror that version
+        > The `latest` argument will take the DefaultInstallStream from `pkg/util/version/const.go` and mirror that version
         ```bash
         go run -tags aro ./cmd/aro mirror latest
         ```
