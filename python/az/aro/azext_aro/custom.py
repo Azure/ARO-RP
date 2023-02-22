@@ -158,25 +158,25 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                        parameters=oc)
 
 
-def aro_validate(cmd,  # pylint: disable=too-many-locals
-                 client,
+def aro_validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
+                 client,  # pylint: disable=unused-argument
                  resource_group_name,  # pylint: disable=unused-argument
                  resource_name,  # pylint: disable=unused-argument
                  master_subnet,
                  worker_subnet,
                  vnet=None,
-                 cluster_resource_group=None,
+                 cluster_resource_group=None,  # pylint: disable=unused-argument
                  client_id=None,
                  client_secret=None,  # pylint: disable=unused-argument
                  vnet_resource_group_name=None,  # pylint: disable=unused-argument
                  disk_encryption_set=None,
-                 location=None,
+                 location=None,  # pylint: disable=unused-argument
                  version=None,
-                 pod_cidr=None,
-                 service_cidr=None
+                 pod_cidr=None,  # pylint: disable=unused-argument
+                 service_cidr=None  # pylint: disable=unused-argument
                  ):
 
-    class oc:  # pylint: disable=too-few-public-methods
+    class mockoc:  # pylint: disable=too-few-public-methods
         def __init__(self, disk_encryption_id, master_subnet_id, worker_subnet_id):
             self.master_profile = openshiftcluster.MasterProfile(
                 subnet_id=master_subnet_id,
@@ -188,20 +188,17 @@ def aro_validate(cmd,  # pylint: disable=too-many-locals
 
     aad = AADManager(cmd.cli_ctx)
 
-    if client_id is None or client_secret is None:
-        random_id = generate_random_id()
-        client_id, client_secret = aad.create_application(cluster_resource_group or 'aro-' + random_id)
-
-    client_sp_id = aad.get_service_principal_id(client_id)
-    if not client_sp_id:
-        raise ResourceNotFoundError("RP service principal not found.")
-
     rp_client_sp_id = aad.get_service_principal_id(resolve_rp_client_id())
     if not rp_client_sp_id:
         raise ResourceNotFoundError("RP service principal not found.")
 
-    sp_obj_ids = [client_sp_id, rp_client_sp_id]
-    cluster = oc(disk_encryption_set, master_subnet, worker_subnet)
+    sp_obj_ids = [rp_client_sp_id]
+
+    if client_id is not None:
+        client_sp_id = aad.get_service_principal_id(client_id)
+        sp_obj_ids.append(client_sp_id)
+
+    cluster = mockoc(disk_encryption_set, master_subnet, worker_subnet)
     try:
         # Get cluster resources we need to assign permissions on, sort to ensure the same order of operations
         resources = {ROLE_NETWORK_CONTRIBUTOR: sorted(get_cluster_network_resources(cmd.cli_ctx, cluster, True)),
@@ -220,15 +217,7 @@ def aro_validate(cmd,  # pylint: disable=too-many-locals
             name=master_parts['name'],
         )
 
-    error_objects = validate_cluster_create(cmd,
-                                            client,
-                                            master_subnet,
-                                            worker_subnet,
-                                            vnet,
-                                            pod_cidr,
-                                            service_cidr,
-                                            version,
-                                            location,
+    error_objects = validate_cluster_create(version,
                                             resources,
                                             sp_obj_ids)
     errors = []
@@ -246,6 +235,7 @@ def aro_validate(cmd,  # pylint: disable=too-many-locals
     if len(errors) > 0:
         logger.error("Issues found blocking cluster creation.\n")
         headers = ["Type", "Name", "Error"]
+
         table = tabulate(errors, headers=headers, tablefmt="grid")
         print(f"\n{table}")
     else:

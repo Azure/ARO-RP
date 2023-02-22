@@ -10,6 +10,8 @@ from knack.log import get_logger
 
 logger = get_logger(__name__)
 
+MAX_RETRIES = 3
+
 
 # All methods now return the text based values
 # for consistency and hiding implementation details
@@ -26,6 +28,9 @@ class AADManager:
         password = self.add_password(obj_id)
         return app_id, password
 
+    def delete_application(self, app_id):
+        self.client.application_delete(app_id)
+
     def get_service_principal_id(self, app_id):
         sps = self.client.service_principal_list(f"appId eq '{app_id}'")
         if sps:
@@ -39,16 +44,27 @@ class AADManager:
         return None
 
     def create_service_principal(self, app_id):
-        max_retries = 3
         retries = 0
         while True:
             try:
                 return self.client.service_principal_create({"appId": app_id})["id"]
             except GraphError as ex:
-                if retries >= max_retries:
-                    raise
+                if retries >= MAX_RETRIES:
+                    raise ex
                 retries += 1
-                logger.warning("%s; retry %d of %d", ex, retries, max_retries)
+                logger.warning("%s; retry %d of %d", ex, retries, MAX_RETRIES)
+                time.sleep(10)
+
+    def delete_service_principal(self, app_id):
+        retries = 0
+        while True:
+            try:
+                return self.client.service_principal_delete(app_id)
+            except GraphError as ex:
+                if retries >= MAX_RETRIES:
+                    raise ex
+                retries += 1
+                logger.warning("%s; retry %d of %d", ex, retries, MAX_RETRIES)
                 time.sleep(10)
 
     def add_password(self, obj_id):

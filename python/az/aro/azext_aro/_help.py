@@ -29,6 +29,8 @@ helps['aro validate'] = """
   examples:
   - name: Validate permissions.
     text: az aro validate --resource-group MyGroup --name MyName --vnet MyVnet --master-subnet MyMasterSubnet --worker-subnet MyWorkerSubnet
+  - name: Validate permissions and OpenShift version
+    text: az aro validate --resource-group MyGroup --name MyName --vnet MyVnet --master-subnet MyMasterSubnet --worker-subnet MyWorkerSubnet --version X.Y.Z
 """
 
 helps['aro list'] = """

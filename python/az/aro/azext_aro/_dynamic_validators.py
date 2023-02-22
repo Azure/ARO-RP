@@ -62,10 +62,11 @@ def get_subnet(client, subnet, subnet_parts):
         subnet_obj = client.subnets.get(subnet_parts['resource_group'],
                                         subnet_parts['name'],
                                         subnet_parts['child_name_1'])
+    except ResourceNotFoundError as err:
+        raise InvalidArgumentValueError(
+            f"Invalid -- subnet, error when getting '{subnet}': {str(err)}") from err
+
     except Exception as err:
-        if isinstance(err, ResourceNotFoundError):
-            raise InvalidArgumentValueError(
-                f"Invalid -- subnet, error when getting '{subnet}': {str(err)}") from err
         raise CLIInternalError(
             f"Unexpected error when getting subnet '{subnet}': {str(err)}") from err
 
@@ -83,12 +84,29 @@ def get_clients(key, cmd):
     return parts, network_client, auth_client
 
 
+# Function to create a progress tracker decorator for the dynamic validation functions
+def get_progress_tracker(msg):
+    def progress_tracking(func):
+        def inner(cmd, namespace):
+            hook = cmd.cli_ctx.get_progress_controller()
+            hook.add(message=msg)
+
+            errors = func(cmd, namespace)
+
+            hook.end()
+
+            return errors
+        return inner
+    return progress_tracking
+
+
+# Validating that the virtual network has the correct permissions
 def dyn_validate_vnet(key):
+    prog = get_progress_tracker("Validating Virtual Network Permissions")
+
+    @prog
     def _validate_vnet(cmd, namespace):
         errors = []
-
-        hook = cmd.cli_ctx.get_progress_controller()
-        hook.add(message="Validating Virtual Network Permissions")
 
         vnet = getattr(namespace, key)
 
@@ -102,12 +120,13 @@ def dyn_validate_vnet(key):
 
         try:
             network_client.virtual_networks.get(parts['resource_group'], parts['name'])
+        except ResourceNotFoundError as err:
+            raise InvalidArgumentValueError(
+                f"Invalid --{key.replace('_', '-')}, error when getting '{vnet}': {str(err)}") from err
+
         except Exception as err:
-            if isinstance(err, ResourceNotFoundError):
-                raise InvalidArgumentValueError(
-                    f"Invalid --{key.replace('_', '-')}, error when getting '{vnet}': {str(err)}") from err
             raise CLIInternalError(
-                f"Unexpected error when getting subnet '{vnet}': {str(err)}") from err
+                f"Unexpected error when getting vnet '{vnet}': {str(err)}") from err
 
         errors = validate_resource(auth_client, key, parts, [
             "Microsoft.Network/virtualNetworks/join/action",
@@ -117,19 +136,19 @@ def dyn_validate_vnet(key):
             "Microsoft.Network/virtualNetworks/subnets/read",
             "Microsoft.Network/virtualNetworks/subnets/write", ])
 
-        hook.end()
-
         return errors
 
     return _validate_vnet
 
 
-def dyn_validate_subnet(key):
+# Validating that the route tables attached to the subnet have the
+# correct permissions and that the subnet is not assigned to an NSG
+def dyn_validate_subnet_and_route_tables(key):
+    prog = get_progress_tracker(f"Validating {key} permissions")
+
+    @prog
     def _validate_subnet(cmd, namespace):
         errors = []
-
-        hook = cmd.cli_ctx.get_progress_controller()
-        hook.add(message=f"Validating {key} permissions")
 
         subnet = getattr(namespace, key)
 
@@ -151,41 +170,43 @@ def dyn_validate_subnet(key):
                                                     parts['child_name_1'])
 
             route_table_obj = subnet_obj.route_table
-            if route_table_obj is None:
-                raise ResourceNotFoundError("Subnet is missing route table")
+            if route_table_obj is not None:
+                route_parts = parse_resource_id(route_table_obj.id)
+
+                errors = validate_resource(auth_client, f"{key}_route_table", route_parts, [
+                    "Microsoft.Network/routeTables/join/action",
+                    "Microsoft.Network/routeTables/read",
+                    "Microsoft.Network/routeTables/write"])
+        except ResourceNotFoundError as err:
+            raise InvalidArgumentValueError(
+                f"Invalid -- subnet, error when getting '{subnet}': {str(err)}") from err
+
         except Exception as err:
-            if isinstance(err, ResourceNotFoundError):
-                raise InvalidArgumentValueError(
-                    f"Invalid --{key.replace('_', '-')}, error when getting '{subnet}': {str(err)}") from err
             raise CLIInternalError(
                 f"Unexpected error when getting subnet '{subnet}': {str(err)}") from err
 
-        route_parts = parse_resource_id(route_table_obj.id)
-
-        errors = validate_resource(auth_client, f"{key}_route_table", route_parts, [
-            "Microsoft.Network/routeTables/join/action",
-            "Microsoft.Network/routeTables/read",
-            "Microsoft.Network/routeTables/write"])
-
         if subnet_obj.network_security_group is not None:
             message = f"A Network Security Group \"{subnet_obj.network_security_group.id}\" "\
-                      "is already assigned to this subnet. Ensure there a no Network "\
+                      "is already assigned to this subnet. Ensure there are no Network "\
                       "Security Groups assigned to cluster subnets before cluster creation"
-            error = [f"{key}", parts['child_name_1'], message]
+            error = [key, parts['child_name_1'], message]
             errors.append(error)
 
-        hook.end()
         return errors
 
     return _validate_subnet
 
 
+# Validating that the cidr ranges between the master_subnet, worker_subnet,
+# service_cidr and pod_cidr do not overlap at all
 def dyn_validate_cidr_ranges():
-    def _validate_cidr_ranges(cmd, namespace):
-        addresses = []
+    prog = get_progress_tracker("Validating no overlapping CIDR Ranges on subnets")
 
-        hook = cmd.cli_ctx.get_progress_controller()
-        hook.add(message="Validating no overlapping CIDR Ranges on subnets")
+    @prog
+    def _validate_cidr_ranges(cmd, namespace):
+        MIN_CIDR_PREFIX = 23
+
+        addresses = []
 
         ERROR_KEY = "CIDR Range"
         master_subnet = namespace.master_subnet
@@ -204,7 +225,7 @@ def dyn_validate_cidr_ranges():
         cidr_array = {}
 
         if pod_cidr is not None:
-            node_mask = 23 - int(pod_cidr.split("/")[1])
+            node_mask = MIN_CIDR_PREFIX - int(pod_cidr.split("/")[1])
             if node_mask < 2:
                 addresses.append(["Pod CIDR",
                                   "Pod CIDR Capacity",
@@ -246,20 +267,18 @@ def dyn_validate_cidr_ranges():
                     if cidr.overlaps(compare):
                         addresses.append([ERROR_KEY, key, f"{cidr} is not valid as it overlaps with {compare}"])
 
-        hook.end()
-
         return addresses
 
     return _validate_cidr_ranges
 
 
 def dyn_validate_resource_permissions(service_principle_ids, resources):
-    def _validate_resource_permissions(cmd,
-                                       namespace):  # pylint: disable=unused-argument
-        errors = []
+    prog = get_progress_tracker("Validating resource permissions")
 
-        hook = cmd.cli_ctx.get_progress_controller()
-        hook.add(message="Validating resource permissions")
+    @prog
+    def _validate_resource_permissions(cmd,
+                                       _namespace):
+        errors = []
 
         for sp_id in service_principle_ids:
             for role in sorted(resources):
@@ -274,22 +293,22 @@ def dyn_validate_resource_permissions(service_principle_ids, resources):
                             errors.append(["Resource Permissions",
                                            parts['type'],
                                            f"Resource {parts['name']} is missing role assignment " +
-                                           f"{role} for service principal {sp_id}"])
+                                           f"{role} for service principal {sp_id} " +
+                                           "(These roles will be automatically added during cluster creation)"])
                     except CloudError as e:
                         logger.error(e.message)
                         raise
-        hook.end()
         return errors
     return _validate_resource_permissions
 
 
 def dyn_validate_version():
-    def _validate_version(cmd,
-                          namespace):  # pylint: disable=unused-argument
-        errors = []
+    prog = get_progress_tracker("Validating OpenShift Version")
 
-        hook = cmd.cli_ctx.get_progress_controller()
-        hook.add(message="Validating OpenShift Version")
+    @prog
+    def _validate_version(cmd,
+                          namespace):
+        errors = []
 
         if namespace.location is None:
             get_default_location_from_resource_group(cmd, namespace)
@@ -307,27 +326,18 @@ def dyn_validate_version():
                            namespace.version,
                            f"{namespace.version} is not a valid version, valid versions are {versions}"])
 
-        hook.end()
         return errors
     return _validate_version
 
 
-def validate_cluster_create(cmd,  # pylint: disable=unused-argument
-                            client,  # pylint: disable=unused-argument
-                            master_subnet,  # pylint: disable=unused-argument
-                            worker_subnet,  # pylint: disable=unused-argument
-                            vnet,  # pylint: disable=unused-argument
-                            pod_cidr,  # pylint: disable=unused-argument
-                            service_cidr,  # pylint: disable=unused-argument
-                            version,  # pylint: disable=unused-argument
-                            location,  # pylint: disable=unused-argument
+def validate_cluster_create(version,
                             resources,
                             service_principle_ids):
     error_object = []
 
     error_object.append(dyn_validate_vnet("vnet"))
-    error_object.append(dyn_validate_subnet("master_subnet"))
-    error_object.append(dyn_validate_subnet("worker_subnet"))
+    error_object.append(dyn_validate_subnet_and_route_tables("master_subnet"))
+    error_object.append(dyn_validate_subnet_and_route_tables("worker_subnet"))
     error_object.append(dyn_validate_cidr_ranges())
     error_object.append(dyn_validate_resource_permissions(service_principle_ids, resources))
     if version is not None:

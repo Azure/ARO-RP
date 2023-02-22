@@ -3,7 +3,7 @@
 
 from unittest.mock import Mock, patch
 from azext_aro._dynamic_validators import (
-    dyn_validate_cidr_ranges, dyn_validate_subnet, dyn_validate_vnet, dyn_validate_resource_permissions, dyn_validate_version
+    dyn_validate_cidr_ranges, dyn_validate_subnet_and_route_tables, dyn_validate_vnet, dyn_validate_resource_permissions, dyn_validate_version
 )
 
 from azure.mgmt.authorization.models import Permission
@@ -208,7 +208,7 @@ test_validate_subnets_data = [
         },
         Mock(),
         "A Network Security Group \"test\" is already assigned to this subnet. "
-        "Ensure there a no Network Security Groups assigned to cluster "
+        "Ensure there are no Network Security Groups assigned to cluster "
         "subnets before cluster creation"
     )
 ]
@@ -233,7 +233,7 @@ def test_validate_subnets(
     parse_resource_id_mock.return_value = parse_resource_id_mock_return_value
     get_mgmt_service_client_mock.side_effect = [network_client_mock, auth_client_mock]
 
-    validate_subnet_fn = dyn_validate_subnet('')
+    validate_subnet_fn = dyn_validate_subnet_and_route_tables('')
     if expected_missing_perms is None:
         missing_perms = validate_subnet_fn(cmd_mock, namespace_mock)
 
@@ -372,7 +372,8 @@ test_validate_resource_data = [
             "child_name_1": None
         },
         [True, True, True, True, True, True, True, False],
-        "Resource Test_Subnet is missing role assignment test for service principal test"
+        "Resource Test_Subnet is missing role assignment test for service principal test " +
+        "(These roles will be automatically added during cluster creation)"
     )
 ]
 
