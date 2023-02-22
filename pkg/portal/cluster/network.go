@@ -7,7 +7,12 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
+	"github.com/Azure/ARO-RP/pkg/api"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure/auth"
 	networkv1 "github.com/openshift/api/network/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -29,27 +34,68 @@ type ClusterNetwork struct {
 }
 
 type ClusterNetworkList struct {
-	ClusterNetwork []ClusterNetwork `json:"clusternetworks"`
+	ClusterNetworks []ClusterNetwork `json:"clusternetworks"`
+}
+
+type VNetPeering struct {
+	Name         string `json:"name"`
+	RemoteVNet   string `json:"remotevnet"`
+	State        string `json:"state"`
+	Provisioning string `json:"provisioning"`
+}
+
+type VNetPeeringList struct {
+	VNetPeerings []VNetPeering `json:"vnetpeerings"`
 }
 
 type NetworkInformation struct {
-	ClusterNetworkList ClusterNetworkList `json: "clusternetworklist"`
+	ClusterNetworkList ClusterNetworkList `json:"clusternetworklist"`
+	VNetPeeringList    VNetPeeringList    `json:"vnetpeeringlist"`
 }
 
-func NetworkData(clusterNetworks *networkv1.ClusterNetworkList) *NetworkInformation {
+type ClusterDetails struct {
+	Auth     autorest.Authorizer `json:"auth"`
+	SubsId   string              `json:"subsID"`
+	ResGrp   string              `json:"resgrp"`
+	VNet     string              `json:"vnet"`
+	ClusName string              `json:"clusname"`
+}
+
+func NetworkData(clusterNetworks *networkv1.ClusterNetworkList, doc *api.OpenShiftClusterDocument) *NetworkInformation {
+
+	clusDet := getClusterDetails(doc)
 	final := &NetworkInformation{
 		ClusterNetworkList: getClusterNetworkList(clusterNetworks),
+		VNetPeeringList:    getVNetPeeringList(clusDet),
 	}
-	fmt.Println()
-	fmt.Println(final)
-	fmt.Println()
 	return final
 }
 
 // helper functions
+func getClusterDetails(doc *api.OpenShiftClusterDocument) (envDetails ClusterDetails) {
+	// Get an authorizer
+	authorizer, err := auth.NewAuthorizerFromEnvironment()
+	if err != nil {
+		fmt.Println("Error creating Azure authorizer:", err)
+		return
+	}
+
+	clusterName := doc.OpenShiftCluster.Name
+	resourceID := strings.Split(doc.OpenShiftCluster.Properties.MasterProfile.SubnetID, "/")
+
+	envDet := ClusterDetails{
+		Auth:     authorizer,
+		SubsId:   resourceID[2],
+		ResGrp:   resourceID[4],
+		VNet:     resourceID[8],
+		ClusName: clusterName,
+	}
+	return envDet
+}
+
 func getClusterNetworkList(clusterNetworks *networkv1.ClusterNetworkList) ClusterNetworkList {
 	final := ClusterNetworkList{
-		ClusterNetwork: make([]ClusterNetwork, len(clusterNetworks.Items)),
+		ClusterNetworks: make([]ClusterNetwork, len(clusterNetworks.Items)),
 	}
 
 	for i, clusNet := range clusterNetworks.Items {
@@ -63,8 +109,42 @@ func getClusterNetworkList(clusterNetworks *networkv1.ClusterNetworkList) Cluste
 			VXLANPort:             getVXLANPort(clusNet),
 			ClusterNetworkEntries: getClusterNetworkEntries(clusNet),
 		}
-		final.ClusterNetwork[i] = clusterNetwork
+		final.ClusterNetworks[i] = clusterNetwork
 	}
+	return final
+}
+
+func getVNetPeeringList(clusDet ClusterDetails) VNetPeeringList {
+
+	// Create a context object for the VirtualNetworkPeerings client
+	ctx := context.Background()
+
+	// Create a new VirtualNetworkPeerings client
+	vnetPeeringClient := mgmtnetwork.NewVirtualNetworkPeeringsClient(clusDet.SubsId)
+	vnetPeeringClient.Authorizer = clusDet.Auth
+
+	// Get a list of all the virtual network peerings in the specified virtual network
+	vnetPeerings, err := vnetPeeringClient.List(ctx, clusDet.ResGrp, clusDet.VNet)
+	if err != nil {
+		fmt.Println("Error getiing Vnet Peerings:", err)
+	}
+
+	final := VNetPeeringList{
+		VNetPeerings: make([]VNetPeering, len(vnetPeerings.Values())),
+	}
+
+	// Loop through the list of virtual network peerings and create final list
+	for i, peering := range vnetPeerings.Values() {
+
+		vnetPeering := VNetPeering{
+			Name:         *peering.Name,
+			RemoteVNet:   strings.Split(*peering.RemoteVirtualNetwork.ID, "/")[8],
+			State:        string(peering.PeeringState),
+			Provisioning: string(peering.VirtualNetworkPeeringPropertiesFormat.ProvisioningState),
+		}
+		final.VNetPeerings[i] = vnetPeering
+	}
+
 	return final
 }
 
@@ -98,15 +178,15 @@ func getVXLANPort(clusterNetwork networkv1.ClusterNetwork) string {
 	return MTU
 }
 
-func (f *realFetcher) Network(ctx context.Context) (*NetworkInformation, error) {
-	r, err := f.networkClient.NetworkV1().ClusterNetworks().List(ctx, metav1.ListOptions{})
+func (f *realFetcher) Network(ctx context.Context, doc *api.OpenShiftClusterDocument) (*NetworkInformation, error) {
+	r1, err := f.networkClient.NetworkV1().ClusterNetworks().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	return NetworkData(r), nil
+	return NetworkData(r1, doc), nil
 }
 
-func (c *client) Network(ctx context.Context) (*NetworkInformation, error) {
-	return c.fetcher.Network(ctx)
+func (c *client) Network(ctx context.Context, doc *api.OpenShiftClusterDocument) (*NetworkInformation, error) {
+	return c.fetcher.Network(ctx, doc)
 }

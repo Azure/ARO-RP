@@ -38,7 +38,7 @@ type FetchClient interface {
 	ClusterOperators(context.Context) (*ClusterOperatorsInformation, error)
 	Machines(context.Context) (*MachineListInformation, error)
 	MachineSets(context.Context) (*MachineSetListInformation, error)
-	Network(context.Context) (*NetworkInformation, error)
+	Network(context.Context, *api.OpenShiftClusterDocument) (*NetworkInformation, error)
 }
 
 type AzureFetchClient interface {
