@@ -26,7 +26,7 @@ func (m *manager) createKeyvault(ctx context.Context) error {
 
 	suffixLength := len(suffix)
 	if suffixLength > suffixMaxLength {
-		suffix = suffix[suffixLength-suffixMaxLength : suffixLength]
+		suffix = suffix[suffixLength-suffixMaxLength:]
 	}
 	keyvaultName := "aro-" + suffix
 
