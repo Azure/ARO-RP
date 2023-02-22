@@ -158,8 +158,10 @@ func NewFrontend(ctx context.Context,
 		enabledOcpVersions: map[string]*api.OpenShiftVersion{
 			version.InstallStream.Version.String(): {
 				Properties: api.OpenShiftVersionProperties{
-					Version: version.InstallStream.Version.String(),
-					Enabled: true,
+					Version:           version.InstallStream.Version.String(),
+					OpenShiftPullspec: version.InstallStream.PullSpec,
+					InstallerPullspec: fmt.Sprintf("%s/aro-installer:release-%s", _env.ACRDomain(), version.InstallStream.Version.MinorVersion()),
+					Enabled:           true,
 				},
 			},
 		},

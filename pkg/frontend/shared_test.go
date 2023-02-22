@@ -98,15 +98,16 @@ func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *test
 	keyvault.EXPECT().GetCertificateSecret(gomock.Any(), env.RPServerSecretName).AnyTimes().Return(serverkey, servercerts, nil)
 
 	_env := mock_env.NewMockInterface(controller)
-	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
+	_env.EXPECT().ACRDomain().AnyTimes().Return("arosvc.azurecr.io")
+	_env.EXPECT().AdminClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(clientcerts[0].Raw))
+	_env.EXPECT().ArmClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(clientcerts[0].Raw))
+	_env.EXPECT().Domain().AnyTimes().Return("aro.example")
 	_env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
 	_env.EXPECT().Hostname().AnyTimes().Return("testhost")
+	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
+	_env.EXPECT().Listen().AnyTimes().Return(l, nil)
 	_env.EXPECT().Location().AnyTimes().Return("eastus")
 	_env.EXPECT().ServiceKeyvault().AnyTimes().Return(keyvault)
-	_env.EXPECT().ArmClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(clientcerts[0].Raw))
-	_env.EXPECT().AdminClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(clientcerts[0].Raw))
-	_env.EXPECT().Domain().AnyTimes().Return("aro.example")
-	_env.EXPECT().Listen().AnyTimes().Return(l, nil)
 	for f, val := range features {
 		_env.EXPECT().FeatureIsSet(f).AnyTimes().Return(val)
 	}
