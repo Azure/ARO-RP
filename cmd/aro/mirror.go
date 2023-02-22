@@ -95,8 +95,8 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		for _, arg := range flag.Args()[1:] {
 			if strings.EqualFold(arg, "latest") {
 				releases = append(releases, pkgmirror.Node{
-					Version: version.InstallStream.Version.String(),
-					Payload: version.InstallStream.PullSpec,
+					Version: version.DefaultInstallStream.Version.String(),
+					Payload: version.DefaultInstallStream.PullSpec,
 				})
 			} else {
 				vers, err := version.ParseVersion(arg)

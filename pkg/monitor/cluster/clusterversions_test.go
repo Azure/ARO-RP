@@ -161,7 +161,7 @@ func TestEmitClusterVersion(t *testing.T) {
 				"resourceProviderVersion":              "unknown",
 				"availableVersion":                     tt.wantAvailableVersion,
 				"availableRP":                          tt.wantAvailableRP,
-				"latestGaMinorVersion":                 version.InstallStream.Version.MinorVersion(),
+				"latestGaMinorVersion":                 version.DefaultInstallStream.Version.MinorVersion(),
 				"actualMinorVersion":                   tt.wantActualMinorVersion,
 			})
 

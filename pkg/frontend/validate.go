@@ -201,9 +201,9 @@ func validateAdminVMSize(vmSize string) error {
 func (f *frontend) validateInstallVersion(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
 	oc := doc.OpenShiftCluster
 	// If this request is from an older API or the user never specified
-	// the version to install we default to the InstallStream.Version
+	// the version to install we default to the DefaultInstallStream.Version
 	if oc.Properties.ClusterProfile.Version == "" {
-		oc.Properties.ClusterProfile.Version = version.InstallStream.Version.String()
+		oc.Properties.ClusterProfile.Version = version.DefaultInstallStream.Version.String()
 		return nil
 	}
 

@@ -45,7 +45,7 @@ func (f *frontend) getEnabledInstallVersions(ctx context.Context) []*api.OpenShi
 	if len(versions) == 0 {
 		versions = append(versions, &api.OpenShiftVersion{
 			Properties: api.OpenShiftVersionProperties{
-				Version: version.InstallStream.Version.String(),
+				Version: version.DefaultInstallStream.Version.String(),
 			},
 		})
 	}
