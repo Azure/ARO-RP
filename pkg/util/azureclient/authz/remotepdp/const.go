@@ -1,5 +1,8 @@
 package remotepdp
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 const (
 	modulename = "aro-pdpclient"
 	// version is the semantic version of this module

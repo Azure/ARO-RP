@@ -1,5 +1,8 @@
 package remotepdp
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 // AuthorizationRequest represents the payload of the request sent to a PDP server
 type AuthorizationRequest struct {
 	Subject            SubjectInfo     `json:"Subject"`

@@ -1,5 +1,8 @@
 package remotepdp
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"context"
 	"encoding/json"
@@ -23,7 +26,7 @@ type remotePDPClient struct {
 
 // NewRemotePDPClient returns an implementation of RemotePDPClient
 // endpoint - the fqdn of the regional specific endpoint of PDP
-// scope - the oauth scope required by the PDP serer
+// scope - the oauth scope required by the PDP server
 // cred - the credential of the client to call the PDP server
 func NewRemotePDPClient(endpoint, scope string, cred azcore.TokenCredential) RemotePDPClient {
 	authPolicy := runtime.NewBearerTokenPolicy(cred, []string{scope}, nil)
