@@ -55,6 +55,8 @@ type OpenShiftClusterProperties struct {
 	// The cluster service principal profile.
 	ServicePrincipalProfile ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
 
+	TestingProfile TestingProfile `json:"testingProfile,omitempty"`
+
 	// The cluster network profile.
 	NetworkProfile NetworkProfile `json:"networkProfile,omitempty"`
 
@@ -69,6 +71,8 @@ type OpenShiftClusterProperties struct {
 
 	// The cluster ingress profiles.
 	IngressProfiles []IngressProfile `json:"ingressProfiles,omitempty"`
+
+	MaintenanceProfiles []MaintenanceProfile `json:"maintenanceProfiles,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state.
@@ -124,6 +128,14 @@ type ServicePrincipalProfile struct {
 
 	// The client secret used for the cluster.
 	ClientSecret string `json:"clientSecret,omitempty" mutable:"true"`
+}
+
+type TestingProfile struct {
+	// The client ID used for the cluster.
+	StartTime string `json:"startTime,omitempty" mutable:"true"`
+
+	// The client secret used for the cluster.
+	EndTime string `json:"endTime,omitempty" mutable:"true"`
 }
 
 // NetworkProfile represents a network profile.
@@ -219,6 +231,13 @@ type IngressProfile struct {
 
 	// The IP of the ingress.
 	IP string `json:"ip,omitempty"`
+}
+
+// MaintenanceProfile represents an maintenance profile
+type MaintenanceProfile struct {
+	Previous string `json:"previous,omitempty"`
+	Status   string `json:"status,omitempty"`
+	Next     string `json:"next,omitempty"`
 }
 
 // CreatedByType by defines user type, which executed the request

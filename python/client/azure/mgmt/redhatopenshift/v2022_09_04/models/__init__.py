@@ -21,6 +21,7 @@ try:
     from ._models_py3 import ConsoleProfile
     from ._models_py3 import Display
     from ._models_py3 import IngressProfile
+    from ._models_py3 import MaintenanceProfile
     from ._models_py3 import MachinePool
     from ._models_py3 import MachinePoolList
     from ._models_py3 import MachinePoolUpdate
@@ -41,6 +42,7 @@ try:
     from ._models_py3 import SecretList
     from ._models_py3 import SecretUpdate
     from ._models_py3 import ServicePrincipalProfile
+    from ._models_py3 import TestingProfile
     from ._models_py3 import SyncIdentityProvider
     from ._models_py3 import SyncIdentityProviderList
     from ._models_py3 import SyncIdentityProviderUpdate
@@ -57,6 +59,7 @@ except (SyntaxError, ImportError):
     from ._models import ConsoleProfile  # type: ignore
     from ._models import Display  # type: ignore
     from ._models import IngressProfile  # type: ignore
+    from ._models import MaintenanceProfile  # type: ignore
     from ._models import MachinePool  # type: ignore
     from ._models import MachinePoolList  # type: ignore
     from ._models import MachinePoolUpdate  # type: ignore
@@ -77,6 +80,7 @@ except (SyntaxError, ImportError):
     from ._models import SecretList  # type: ignore
     from ._models import SecretUpdate  # type: ignore
     from ._models import ServicePrincipalProfile  # type: ignore
+    from ._models import TestingProfile  # type: ignore
     from ._models import SyncIdentityProvider  # type: ignore
     from ._models import SyncIdentityProviderList  # type: ignore
     from ._models import SyncIdentityProviderUpdate  # type: ignore
@@ -102,6 +106,7 @@ __all__ = [
     'ConsoleProfile',
     'Display',
     'IngressProfile',
+    'MaintenanceProfile',
     'MachinePool',
     'MachinePoolList',
     'MachinePoolUpdate',
@@ -122,6 +127,7 @@ __all__ = [
     'SecretList',
     'SecretUpdate',
     'ServicePrincipalProfile',
+    'TestingProfile',
     'SyncIdentityProvider',
     'SyncIdentityProviderList',
     'SyncIdentityProviderUpdate',

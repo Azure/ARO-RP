@@ -118,6 +118,8 @@ type OpenShiftClusterProperties struct {
 
 	ServicePrincipalProfile ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
 
+	TestingProfile TestingProfile `json:"testingProfile,omitempty"`
+
 	NetworkProfile NetworkProfile `json:"networkProfile,omitempty"`
 
 	MasterProfile MasterProfile `json:"masterProfile,omitempty"`
@@ -127,6 +129,8 @@ type OpenShiftClusterProperties struct {
 	APIServerProfile APIServerProfile `json:"apiserverProfile,omitempty"`
 
 	IngressProfiles []IngressProfile `json:"ingressProfiles,omitempty"`
+
+	MaintenanceProfiles []MaintenanceProfile `json:"maintenanceProfiles,omitempty"`
 
 	// Install is non-nil only when an install is in progress
 	Install *Install `json:"install,omitempty"`
@@ -229,6 +233,14 @@ type ServicePrincipalProfile struct {
 	ClientID     string       `json:"clientId,omitempty"`
 	ClientSecret SecureString `json:"clientSecret,omitempty"`
 	SPObjectID   string       `json:"spObjectId,omitempty"`
+}
+
+// TestingProfile represents a TestingProfile.
+type TestingProfile struct {
+	MissingFields
+
+	StartTime string `json:"startTime,omitempty"`
+	EndTime   string `json:"endTime,omitempty"`
 }
 
 // SoftwareDefinedNetwork
@@ -476,6 +488,15 @@ type IngressProfile struct {
 	Name       string     `json:"name,omitempty"`
 	Visibility Visibility `json:"visibility,omitempty"`
 	IP         string     `json:"ip,omitempty"`
+}
+
+// MaintenanceProfile represents an maintenanceProfile profile
+type MaintenanceProfile struct {
+	MissingFields
+
+	Previous string `json:"previous,omitempty"`
+	Status   string `json:"status,omitempty"`
+	Next     string `json:"next,omitempty"`
 }
 
 // RegistryProfile represents a registry's login

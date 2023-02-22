@@ -95,6 +95,9 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *Ope
 	if err := sv.validateServicePrincipalProfile(path+".servicePrincipalProfile", &p.ServicePrincipalProfile); err != nil {
 		return err
 	}
+	if err := sv.validateTestingProfile(path+".testingProfile", &p.TestingProfile); err != nil {
+		return err
+	}
 	if err := sv.validateNetworkProfile(path+".networkProfile", &p.NetworkProfile); err != nil {
 		return err
 	}
@@ -117,6 +120,12 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *Ope
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".ingressProfiles", "There should be exactly one ingress profile.")
 		}
 		if err := sv.validateIngressProfile(path+".ingressProfiles['"+p.IngressProfiles[0].Name+"']", &p.IngressProfiles[0]); err != nil {
+			return err
+		}
+		if len(p.MaintenanceProfiles) != 1 {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".maintenanceProfiles", "There should be exactly one ingress profile.")
+		}
+		if err := sv.validateMaintenanceProfile(&p.MaintenanceProfiles[0]); err != nil {
 			return err
 		}
 	}
@@ -192,6 +201,17 @@ func (sv openShiftClusterStaticValidator) validateServicePrincipalProfile(path s
 	return nil
 }
 
+func (sv openShiftClusterStaticValidator) validateTestingProfile(path string, tp *TestingProfile) error {
+	if tp.EndTime == "" {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".endTime", "The provided end time is invalid.")
+	}
+
+	if tp.StartTime == "" {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".startTime", "The provided start time is invalid.")
+	}
+
+	return nil
+}
 func (sv openShiftClusterStaticValidator) validateNetworkProfile(path string, np *NetworkProfile) error {
 	_, pod, err := net.ParseCIDR(np.PodCIDR)
 	if err != nil {
@@ -343,6 +363,10 @@ func (sv openShiftClusterStaticValidator) validateIngressProfile(path string, p 
 		}
 	}
 
+	return nil
+}
+
+func (sv openShiftClusterStaticValidator) validateMaintenanceProfile(p *MaintenanceProfile) error {
 	return nil
 }
 

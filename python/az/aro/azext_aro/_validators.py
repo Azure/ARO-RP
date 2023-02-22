@@ -203,6 +203,11 @@ def validate_visibility(key):
     return _validate_visibility
 
 
+def validate_start_time(namespace):
+    if not namespace.start_time:        
+        return
+
+
 def validate_vnet(cmd, namespace):
     validate_vnet_resource_group_name(namespace)
 

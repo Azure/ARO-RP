@@ -451,6 +451,10 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 				ClientID:     clientID,
 				ClientSecret: api.SecureString(clientSecret),
 			},
+			TestingProfile: api.TestingProfile{
+				StartTime: "00:00",
+				EndTime:   "00:00",
+			},
 			NetworkProfile: api.NetworkProfile{
 				PodCIDR:                "10.128.0.0/14",
 				ServiceCIDR:            "172.30.0.0/16",
@@ -480,6 +484,13 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 				{
 					Name:       "default",
 					Visibility: visibility,
+				},
+			},
+			MaintenanceProfiles: []api.MaintenanceProfile{
+				{
+					Next:     "default",
+					Status:   "default",
+					Previous: "default",
 				},
 			},
 		},

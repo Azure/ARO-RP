@@ -122,6 +122,12 @@ type IngressProfile struct {
 	IP *string `json:"ip,omitempty"`
 }
 
+type MaintenanceProfile struct {
+	Previous *string `json:"previous,omitempty"`
+	Status   *string `json:"status,omitempty"`
+	Next     *string `json:"next,omitempty"`
+}
+
 // MachinePool machinePool represents a MachinePool
 type MachinePool struct {
 	autorest.Response `json:"-"`
@@ -738,6 +744,8 @@ type OpenShiftClusterProperties struct {
 	ConsoleProfile *ConsoleProfile `json:"consoleProfile,omitempty"`
 	// ServicePrincipalProfile - The cluster service principal profile.
 	ServicePrincipalProfile *ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
+
+	TestingProfile *TestingProfile `json:"testingProfile,omitempty"`
 	// NetworkProfile - The cluster network profile.
 	NetworkProfile *NetworkProfile `json:"networkProfile,omitempty"`
 	// MasterProfile - The cluster master profile.
@@ -748,6 +756,8 @@ type OpenShiftClusterProperties struct {
 	ApiserverProfile *APIServerProfile `json:"apiserverProfile,omitempty"`
 	// IngressProfiles - The cluster ingress profiles.
 	IngressProfiles *[]IngressProfile `json:"ingressProfiles,omitempty"`
+
+	MaintenanceProfiles *[]MaintenanceProfile `json:"maintenanceProfiles,omitempty"`
 }
 
 // OpenShiftClustersCreateOrUpdateFuture an abstraction for monitoring and retrieving the results of a
@@ -1696,6 +1706,14 @@ type ServicePrincipalProfile struct {
 	ClientID *string `json:"clientId,omitempty"`
 	// ClientSecret - The client secret used for the cluster.
 	ClientSecret *string `json:"clientSecret,omitempty"`
+}
+
+// ServicePrincipalProfile servicePrincipalProfile represents a service principal profile.
+type TestingProfile struct {
+	// ClientID - The client ID used for the cluster.
+	StartTime *string `json:"startTime,omitempty"`
+	// ClientSecret - The client secret used for the cluster.
+	EndTime *string `json:"endTime,omitempty"`
 }
 
 // SyncIdentityProvider syncIdentityProvider represents a SyncIdentityProvider

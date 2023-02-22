@@ -78,6 +78,13 @@ func ExampleOpenShiftClusterDocument() *OpenShiftClusterDocument {
 						IP:         "1.2.3.4",
 					},
 				},
+				MaintenanceProfiles: []MaintenanceProfile{
+					{
+						Previous: "default",
+						Status:   "default",
+						Next:     "default",
+					},
+				},
 				Install: &Install{
 					Now:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 					Phase: InstallPhaseBootstrap,

@@ -35,6 +35,10 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 				ClientID:     oc.Properties.ServicePrincipalProfile.ClientID,
 				ClientSecret: string(oc.Properties.ServicePrincipalProfile.ClientSecret),
 			},
+			TestingProfile: TestingProfile{
+				StartTime: string(oc.Properties.TestingProfile.StartTime),
+				EndTime:   string(oc.Properties.TestingProfile.EndTime),
+			},
 			NetworkProfile: NetworkProfile{
 				PodCIDR:     oc.Properties.NetworkProfile.PodCIDR,
 				ServiceCIDR: oc.Properties.NetworkProfile.ServiceCIDR,
@@ -75,6 +79,17 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 				Name:       p.Name,
 				Visibility: Visibility(p.Visibility),
 				IP:         p.IP,
+			})
+		}
+	}
+
+	if oc.Properties.MaintenanceProfiles != nil {
+		out.Properties.MaintenanceProfiles = make([]MaintenanceProfile, 0, len(oc.Properties.MaintenanceProfiles))
+		for _, p := range oc.Properties.MaintenanceProfiles {
+			out.Properties.MaintenanceProfiles = append(out.Properties.MaintenanceProfiles, MaintenanceProfile{
+				Previous: p.Previous,
+				Status:   p.Status,
+				Next:     p.Next,
 			})
 		}
 	}
@@ -140,6 +155,8 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	out.Properties.ClusterProfile.FipsValidatedModules = api.FipsValidatedModules(oc.Properties.ClusterProfile.FipsValidatedModules)
 	out.Properties.ServicePrincipalProfile.ClientID = oc.Properties.ServicePrincipalProfile.ClientID
 	out.Properties.ServicePrincipalProfile.ClientSecret = api.SecureString(oc.Properties.ServicePrincipalProfile.ClientSecret)
+	out.Properties.TestingProfile.StartTime = oc.Properties.TestingProfile.StartTime
+	out.Properties.TestingProfile.EndTime = oc.Properties.TestingProfile.EndTime
 	out.Properties.NetworkProfile.PodCIDR = oc.Properties.NetworkProfile.PodCIDR
 	out.Properties.NetworkProfile.ServiceCIDR = oc.Properties.NetworkProfile.ServiceCIDR
 	out.Properties.MasterProfile.VMSize = api.VMSize(oc.Properties.MasterProfile.VMSize)
@@ -169,6 +186,16 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 			out.Properties.IngressProfiles[i].Name = oc.Properties.IngressProfiles[i].Name
 			out.Properties.IngressProfiles[i].Visibility = api.Visibility(oc.Properties.IngressProfiles[i].Visibility)
 			out.Properties.IngressProfiles[i].IP = oc.Properties.IngressProfiles[i].IP
+		}
+	}
+
+	out.Properties.MaintenanceProfiles = nil
+	if oc.Properties.MaintenanceProfiles != nil {
+		out.Properties.MaintenanceProfiles = make([]api.MaintenanceProfile, len(oc.Properties.MaintenanceProfiles))
+		for i := range oc.Properties.MaintenanceProfiles {
+			out.Properties.MaintenanceProfiles[i].Next = oc.Properties.MaintenanceProfiles[i].Next
+			out.Properties.MaintenanceProfiles[i].Status = oc.Properties.MaintenanceProfiles[i].Status
+			out.Properties.MaintenanceProfiles[i].Previous = oc.Properties.MaintenanceProfiles[i].Previous
 		}
 	}
 

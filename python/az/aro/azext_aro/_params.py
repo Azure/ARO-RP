@@ -21,6 +21,7 @@ from azure.cli.core.commands.parameters import get_enum_type, get_three_state_fl
 from azure.cli.core.commands.parameters import resource_group_name_type
 from azure.cli.core.commands.parameters import tags_type
 from azure.cli.core.commands.validators import get_default_location_from_resource_group
+from azext_aro._validators import validate_start_time
 
 
 def load_arguments(self, _):
@@ -113,6 +114,10 @@ def load_arguments(self, _):
         c.argument('client_secret',
                    help='Client secret of cluster service principal.',
                    validator=validate_client_secret(isCreate=False))
+        c.argument('start_time',
+                   help='start time help message',
+                   options_list=['--start-time'],
+                   validator=validate_start_time)
         c.argument('refresh_cluster_credentials',
                    arg_type=get_three_state_flag(),
                    help='Refresh cluster application credentials.',

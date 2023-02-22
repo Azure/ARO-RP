@@ -4,6 +4,7 @@ package frontend
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -32,6 +33,10 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 	var b []byte
 
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
+
+	str3 := bytes.NewBuffer(body).String()
+	fmt.Println("String:", str3)
+	//os.Exit(-1)
 	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
 	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
 	originalPath := r.Context().Value(middleware.ContextKeyOriginalPath).(string)
