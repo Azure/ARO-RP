@@ -141,7 +141,7 @@ func (m *manager) removeBackendPoolsFromNIC(ctx context.Context, resourceGroup, 
 	ipc := (*nic.InterfacePropertiesFormat.IPConfigurations)[0]
 	if ipc.LoadBalancerBackendAddressPools != nil {
 		m.log.Printf("Removing Load balancer Backend Address Pools from NIC %s with no VMs attached", nicName)
-		*ipc.LoadBalancerBackendAddressPools = []mgmtnetwork.BackendAddressPool{}
+		*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools = []mgmtnetwork.BackendAddressPool{}
 		return m.interfaces.CreateOrUpdateAndWait(ctx, resourceGroup, nicName, *nic)
 	}
 	return nil
@@ -171,9 +171,9 @@ func (m *manager) updateILBAddressPool(ctx context.Context, nic *mgmtnetwork.Int
 	ipc := (*nic.InterfacePropertiesFormat.IPConfigurations)[0]
 	if ipc.LoadBalancerBackendAddressPools == nil {
 		emptyBackendAddressPool := make([]mgmtnetwork.BackendAddressPool, 0)
-		ipc.LoadBalancerBackendAddressPools = &emptyBackendAddressPool
+		(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools = &emptyBackendAddressPool
 	} else {
-		for _, p := range *ipc.LoadBalancerBackendAddressPools {
+		for _, p := range *(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools {
 			if strings.EqualFold(*p.ID, sshBackendPoolID) {
 				updateSSHPool = false
 			}
@@ -185,14 +185,14 @@ func (m *manager) updateILBAddressPool(ctx context.Context, nic *mgmtnetwork.Int
 
 	if updateSSHPool {
 		m.log.Printf("Adding NIC %s to Internal Load Balancer SSH Backend Address Pool %s", nicName, sshBackendPoolID)
-		*ipc.LoadBalancerBackendAddressPools = append(*ipc.LoadBalancerBackendAddressPools, mgmtnetwork.BackendAddressPool{
+		*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools = append(*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools, mgmtnetwork.BackendAddressPool{
 			ID: &sshBackendPoolID,
 		})
 	}
 
 	if updateILBPool {
 		m.log.Printf("Adding NIC %s to Internal Load Balancer API Address Pool %s", nicName, ilbBackendPoolID)
-		*ipc.LoadBalancerBackendAddressPools = append(*ipc.LoadBalancerBackendAddressPools, mgmtnetwork.BackendAddressPool{
+		*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools = append(*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools, mgmtnetwork.BackendAddressPool{
 			ID: &ilbBackendPoolID,
 		})
 	}
@@ -217,8 +217,7 @@ func (m *manager) updateELBAddressPool(ctx context.Context, nic *mgmtnetwork.Int
 	elbBackendPoolID := fmt.Sprintf("%s/backendAddressPools/%s", *lb.ID, elbBackendPool)
 
 	updateELBPool := true
-	ipc := (*nic.InterfacePropertiesFormat.IPConfigurations)[0]
-	for _, p := range *ipc.LoadBalancerBackendAddressPools {
+	for _, p := range *(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools {
 		if strings.EqualFold(*p.ID, elbBackendPoolID) {
 			updateELBPool = false
 		}
@@ -226,7 +225,7 @@ func (m *manager) updateELBAddressPool(ctx context.Context, nic *mgmtnetwork.Int
 
 	if updateELBPool {
 		m.log.Printf("Adding NIC %s to Public Load Balancer API Address Pool %s", nicName, elbBackendPoolID)
-		*ipc.LoadBalancerBackendAddressPools = append(*ipc.LoadBalancerBackendAddressPools, mgmtnetwork.BackendAddressPool{
+		*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools = append(*(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools, mgmtnetwork.BackendAddressPool{
 			ID: &elbBackendPoolID,
 		})
 	}
