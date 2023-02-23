@@ -99,6 +99,7 @@ const (
 	CloudErrorCodeQuotaExceeded                      = "QuotaExceeded"
 	CloudErrorCodeResourceProviderNotRegistered      = "ResourceProviderNotRegistered"
 	CloudErrorCodeCannotDeleteLoadBalancerByID       = "CannotDeleteLoadBalancerWithPrivateLinkService"
+	CloudErrorCodeInUseSubnetCannotBeDeleted         = "InUseSubnetCannotBeDeleted"
 )
 
 // NewCloudError returns a new CloudError
