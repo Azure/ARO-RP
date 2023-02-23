@@ -48,9 +48,22 @@ type VNetPeeringList struct {
 	VNetPeerings []VNetPeering `json:"vnetpeerings"`
 }
 
+type Subnet struct {
+	Name          string `json:"name"`
+	ID            string `json:"id"`
+	AddressPrefix string `json:"addressprefix"`
+	Provisioning  string `json:"provisioning"`
+	RouteTable    string `json:"routetable"`
+}
+
+type SubnetList struct {
+	Subnets []Subnet `json:"subnets"`
+}
+
 type NetworkInformation struct {
 	ClusterNetworkList ClusterNetworkList `json:"clusternetworklist"`
 	VNetPeeringList    VNetPeeringList    `json:"vnetpeeringlist"`
+	SubnetList         SubnetList         `json:"subnetlist"`
 }
 
 type ClusterDetails struct {
@@ -64,10 +77,20 @@ type ClusterDetails struct {
 func NetworkData(clusterNetworks *networkv1.ClusterNetworkList, doc *api.OpenShiftClusterDocument) *NetworkInformation {
 
 	clusDet := getClusterDetails(doc)
+
+	// Get all subnetids for getting the subnet details
+	subnetIds := []string{doc.OpenShiftCluster.Properties.MasterProfile.SubnetID}
+	for _, wp := range doc.OpenShiftCluster.Properties.WorkerProfiles {
+		subnetIds = append(subnetIds, wp.SubnetID)
+	}
+
+	// Response of request for network information
 	final := &NetworkInformation{
 		ClusterNetworkList: getClusterNetworkList(clusterNetworks),
 		VNetPeeringList:    getVNetPeeringList(clusDet),
+		SubnetList:         getSubnetList(subnetIds, clusDet),
 	}
+
 	return final
 }
 
@@ -116,15 +139,12 @@ func getClusterNetworkList(clusterNetworks *networkv1.ClusterNetworkList) Cluste
 
 func getVNetPeeringList(clusDet ClusterDetails) VNetPeeringList {
 
-	// Create a context object for the VirtualNetworkPeerings client
-	ctx := context.Background()
-
 	// Create a new VirtualNetworkPeerings client
 	vnetPeeringClient := mgmtnetwork.NewVirtualNetworkPeeringsClient(clusDet.SubsId)
 	vnetPeeringClient.Authorizer = clusDet.Auth
 
 	// Get a list of all the virtual network peerings in the specified virtual network
-	vnetPeerings, err := vnetPeeringClient.List(ctx, clusDet.ResGrp, clusDet.VNet)
+	vnetPeerings, err := vnetPeeringClient.List(context.Background(), clusDet.ResGrp, clusDet.VNet)
 	if err != nil {
 		fmt.Println("Error getiing Vnet Peerings:", err)
 	}
@@ -143,6 +163,36 @@ func getVNetPeeringList(clusDet ClusterDetails) VNetPeeringList {
 			Provisioning: string(peering.VirtualNetworkPeeringPropertiesFormat.ProvisioningState),
 		}
 		final.VNetPeerings[i] = vnetPeering
+	}
+
+	return final
+}
+
+func getSubnetList(subnetIds []string, clusDet ClusterDetails) SubnetList {
+
+	// create a new SubnetsClient
+	subnetsClient := mgmtnetwork.NewSubnetsClient(clusDet.SubsId)
+	subnetsClient.Authorizer = clusDet.Auth
+
+	final := SubnetList{
+		Subnets: make([]Subnet, len(subnetIds)),
+	}
+
+	for i, subnetID := range subnetIds {
+		// get the subnet details
+		subnet, err := subnetsClient.Get(context.Background(), clusDet.ResGrp, clusDet.VNet, strings.Split(subnetID, "/")[10], "")
+		if err != nil {
+			fmt.Println("Failed to get subnet details:", err)
+		}
+
+		subNet := Subnet{
+			Name:          *subnet.Name,
+			ID:            *subnet.ID,
+			AddressPrefix: *subnet.AddressPrefix,
+			Provisioning:  string(subnet.ProvisioningState),
+			RouteTable:    strings.Split(*subnet.RouteTable.ID, "/")[8],
+		}
+		final.Subnets[i] = subNet
 	}
 
 	return final
