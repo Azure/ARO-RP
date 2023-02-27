@@ -53,4 +53,3 @@ request:
     kind: CreateOptions
     apiVersion: meta.k8s.io/v1
   object:
-
