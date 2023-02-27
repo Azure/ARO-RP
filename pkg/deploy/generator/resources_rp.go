@@ -924,7 +924,6 @@ func (g *generator) rpServiceKeyvaultDynamic() *arm.Resource {
 		Name:       "rpServiceKeyvaultDynamic",
 		Type:       "Microsoft.Resources/deployments",
 		APIVersion: azureclient.APIVersion("Microsoft.Resources/deployments"),
-		Condition:  "[not(startsWith(toLower(replace(resourceGroup().location, ' ', '')), 'usgov'))]",
 		DependsOn:  []string{"[concat(parameters('keyvaultPrefix'), '" + env.ServiceKeyvaultSuffix + "')]"},
 		Resource:   rpServiceKeyvaultDynamicDeployment,
 	}
