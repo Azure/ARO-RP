@@ -1,3 +1,6 @@
+echo "running RHUI fix"
+yum update -y --disablerepo='*' --enablerepo='rhui-microsoft-azure*'
+
 yum -y -x WALinuxAgent -x WALinuxAgent-udev update
 yum -y install docker
 
