@@ -98,6 +98,7 @@ EOF
 sysctl --system
 
 firewall-cmd --add-port=80/tcp --permanent
+firewall-cmd --add-port=8081/tcp --permanent
 firewall-cmd --add-port=443/tcp --permanent
 
 echo "logging into prod acr"
