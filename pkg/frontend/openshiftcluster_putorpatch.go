@@ -119,6 +119,16 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		f.clusterEnricher.Enrich(timeoutCtx, log, doc.OpenShiftCluster)
 	}
 
+	// We want the original set of tags to be completely replaced by the new set
+	// that the customer has provided. json.Unmarshal() merges maps rather than
+	// replacing one with the other, so setting this to nil here prevents that
+	// erroneous merging from happening.
+	//
+	// If it turns out that the customer has not passed a new set of tags to use, we
+	// can restore the old one after the json.Unmarshal() call since we saved it here.
+	originalClusterResourceGroupTags := doc.OpenShiftCluster.Properties.ClusterResourceGroupTags
+	doc.OpenShiftCluster.Properties.ClusterResourceGroupTags = nil
+
 	var ext interface{}
 	switch method {
 	// In case of PUT we will take customer request payload and store into database
@@ -154,6 +164,16 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
 	}
+
+	// Ensure that both ext and doc contain the sets of tags they are supposed to
+	// before proceeding with validation.
+	doc.OpenShiftCluster.Properties.ClusterResourceGroupTags = originalClusterResourceGroupTags
+	tempOc := &api.OpenShiftCluster{}
+	converter.ToInternal(ext, tempOc)
+	if tempOc.Properties.ClusterResourceGroupTags == nil {
+		tempOc.Properties.ClusterResourceGroupTags = originalClusterResourceGroupTags
+	}
+	ext = converter.ToExternal(tempOc)
 
 	if isCreate {
 		converter.ToInternal(ext, doc.OpenShiftCluster)
