@@ -2104,6 +2104,10 @@
             "$ref": "#/definitions/IngressProfile"
           },
           "x-ms-identifiers": []
+        },
+        "clusterResourceGroupTags": {
+          "$ref": "#/definitions/Tags",
+          "description": "The cluster resource group tags."
         }
       }
     },
