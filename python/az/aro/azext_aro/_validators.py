@@ -9,6 +9,7 @@ from os.path import exists
 
 from azure.cli.core.commands.client_factory import get_mgmt_service_client
 from azure.cli.core.commands.client_factory import get_subscription_id
+from azure.cli.core.commands.validators import validate_tag
 from azure.cli.core.profiles import ResourceType
 from azure.cli.core.azclierror import CLIInternalError, InvalidArgumentValueError, \
     RequiredArgumentMissingError
@@ -67,6 +68,22 @@ def validate_cluster_resource_group(cmd, namespace):
         raise InvalidArgumentValueError(
             f"Invalid --cluster-resource-group '{namespace.cluster_resource_group}':"
             " resource group must not exist.")
+
+
+def validate_cluster_resource_group_tags(cmd, namespace):
+    if namespace.cluster_resource_group_tags is None:
+        return
+
+    if len(namespace.cluster_resource_group_tags) == 1 and namespace.cluster_resource_group_tags[0] == '':
+        namespace.cluster_resource_group_tags = {}
+        return
+
+    tags = {}
+
+    for t in namespace.cluster_resource_group_tags:
+        tags.update(validate_tag(t))
+
+    namespace.cluster_resource_group_tags = tags
 
 
 def validate_disk_encryption_set(cmd, namespace):
