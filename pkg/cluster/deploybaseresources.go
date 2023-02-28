@@ -61,6 +61,16 @@ func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
 	group.Location = &m.doc.OpenShiftCluster.Location
 	group.ManagedBy = &m.doc.OpenShiftCluster.ID
 
+	if m.doc.OpenShiftCluster.Properties.ClusterResourceGroupTags != nil {
+		if group.Tags == nil {
+			group.Tags = map[string]*string{}
+		}
+
+		for k, v := range m.doc.OpenShiftCluster.Properties.ClusterResourceGroupTags {
+			group.Tags[k] = to.StringPtr(v)
+		}
+	}
+
 	// HACK: set purge=true on dev clusters so our purger wipes them out since there is not deny assignment in place
 	if m.env.IsLocalDevelopmentMode() {
 		if group.Tags == nil {
