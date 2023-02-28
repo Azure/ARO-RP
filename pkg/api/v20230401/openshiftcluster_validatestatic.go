@@ -375,12 +375,12 @@ func (sv openShiftClusterStaticValidator) validateIngressProfile(path string, p 
 
 func (sv openShiftClusterStaticValidator) validateClusterResourceGroupTags(path string, t *Tags) error {
 	if len(*t) > maxTags {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, fmt.Sprintf("The provided set of cluster resource group tags is too large; it can contain at most %s tags.", maxTags), t)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, fmt.Sprintf("The provided set of cluster resource group tags is too large; it can contain at most %d tags.", maxTags))
 	}
 
 	for k, v := range *t {
 		if !sv.clusterResourceGroupTagIsValid(k, v) {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, "One or more of the provided cluster resource group tags are invalid.", t)
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, "One or more of the provided cluster resource group tags are invalid.")
 		}
 	}
 

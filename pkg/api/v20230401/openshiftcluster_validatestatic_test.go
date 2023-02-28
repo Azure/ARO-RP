@@ -801,6 +801,64 @@ func TestOpenShiftClusterStaticValidateIngressProfile(t *testing.T) {
 	runTests(t, testModeCreate, tests)
 }
 
+func TestOpenShiftClusterStaticValidateClusterResourceGroupTags(t *testing.T) {
+	commonTests := []*validateTest{
+		{
+			name: "valid no tags",
+		},
+		{
+			name: "valid one tag",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterResourceGroupTags = map[string]string{
+					"key": "value",
+				}
+			},
+		},
+		{
+			name: "too many tags",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterResourceGroupTags = map[string]string{}
+				for i := 0; i < 11; i++ {
+					oc.Properties.ClusterResourceGroupTags[fmt.Sprintf("key%d", i)] = "value"
+				}
+			},
+			wantErr: "400: InvalidParameter: properties.clusterResourceGroupTags: The provided set of cluster resource group tags is too large; it can contain at most 10 tags.",
+		},
+		{
+			name: "invalid tag name ends with period",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterResourceGroupTags = map[string]string{
+					"key.": "value",
+				}
+			},
+			wantErr: "400: InvalidParameter: properties.clusterResourceGroupTags: One or more of the provided cluster resource group tags are invalid.",
+		},
+		{
+			name: "invalid tag name too long",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterResourceGroupTags = map[string]string{
+					strings.Repeat("A", 129): "value",
+					"goodkey":                "value",
+				}
+			},
+			wantErr: "400: InvalidParameter: properties.clusterResourceGroupTags: One or more of the provided cluster resource group tags are invalid.",
+		},
+		{
+			name: "invalid tag value too long",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterResourceGroupTags = map[string]string{
+					"goodkey": "value",
+					"key":     strings.Repeat("A", 257),
+				}
+			},
+			wantErr: "400: InvalidParameter: properties.clusterResourceGroupTags: One or more of the provided cluster resource group tags are invalid.",
+		},
+	}
+
+	runTests(t, testModeCreate, commonTests)
+	runTests(t, testModeUpdate, commonTests)
+}
+
 func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 	tests := []*validateTest{
 		{
