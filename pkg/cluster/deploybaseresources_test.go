@@ -44,6 +44,13 @@ func TestEnsureResourceGroup(t *testing.T) {
 		"yeet": to.StringPtr("yote"),
 	}
 
+	modifyManagerClusterResourceGroupTags := func(m *manager) {
+		m.doc.OpenShiftCluster.Properties.ClusterResourceGroupTags = map[string]string{
+			"foo": "bar",
+			"bar": "baz",
+		}
+	}
+
 	resourceGroupManagedByMismatch := autorest.NewErrorWithError(&azure.RequestError{
 		ServiceError: &azure.ServiceError{Code: "ResourceGroupManagedByMismatch"},
 	}, "", "", nil, "")
@@ -56,6 +63,7 @@ func TestEnsureResourceGroup(t *testing.T) {
 		name              string
 		provisioningState api.ProvisioningState
 		mocks             func(*mock_features.MockResourceGroupsClient, *mock_env.MockInterface)
+		modify            func(*manager)
 		wantErr           string
 	}{
 		{
@@ -97,6 +105,56 @@ func TestEnsureResourceGroup(t *testing.T) {
 			},
 		},
 		{
+			name:              "success - rg doesn't exist and customer's tags set",
+			provisioningState: api.ProvisioningStateCreating,
+			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
+				groupWithCustomerTags := group
+				groupWithCustomerTags.Tags = map[string]*string{
+					"foo": to.StringPtr("bar"),
+					"bar": to.StringPtr("baz"),
+				}
+
+				rg.EXPECT().
+					CreateOrUpdate(gomock.Any(), resourceGroupName, groupWithCustomerTags).
+					Return(groupWithCustomerTags, nil)
+
+				env.EXPECT().
+					IsLocalDevelopmentMode().
+					Return(false)
+
+				env.EXPECT().
+					EnsureARMResourceGroupRoleAssignment(gomock.Any(), gomock.Any(), resourceGroupName).
+					Return(nil)
+
+			},
+			modify: modifyManagerClusterResourceGroupTags,
+		},
+		{
+			name:              "success - rg doesn't exist and customer's tags and localdev mode tags both set",
+			provisioningState: api.ProvisioningStateCreating,
+			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
+				groupWithMixedTags := group
+				groupWithMixedTags.Tags = map[string]*string{
+					"purge": to.StringPtr("true"),
+					"foo":   to.StringPtr("bar"),
+					"bar":   to.StringPtr("baz"),
+				}
+
+				rg.EXPECT().
+					CreateOrUpdate(gomock.Any(), resourceGroupName, groupWithMixedTags).
+					Return(groupWithMixedTags, nil)
+
+				env.EXPECT().
+					IsLocalDevelopmentMode().
+					Return(true)
+
+				env.EXPECT().
+					EnsureARMResourceGroupRoleAssignment(gomock.Any(), gomock.Any(), resourceGroupName).
+					Return(nil)
+			},
+			modify: modifyManagerClusterResourceGroupTags,
+		},
+		{
 			name:              "success - rg exists and maintain tags",
 			provisioningState: api.ProvisioningStateAdminUpdating,
 			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
@@ -116,6 +174,32 @@ func TestEnsureResourceGroup(t *testing.T) {
 					EnsureARMResourceGroupRoleAssignment(gomock.Any(), gomock.Any(), resourceGroupName).
 					Return(nil)
 			},
+		},
+		{
+			name:              "success - rg exists, maintains existing tags, and is updated correctly with new tags",
+			provisioningState: api.ProvisioningStateAdminUpdating,
+			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
+				groupWithAddedTags := groupWithTags
+				groupWithAddedTags.Tags["foo"] = to.StringPtr("bar")
+				groupWithAddedTags.Tags["bar"] = to.StringPtr("baz")
+
+				rg.EXPECT().
+					Get(gomock.Any(), resourceGroupName).
+					Return(groupWithTags, nil)
+
+				rg.EXPECT().
+					CreateOrUpdate(gomock.Any(), resourceGroupName, groupWithAddedTags).
+					Return(groupWithAddedTags, nil)
+
+				env.EXPECT().
+					IsLocalDevelopmentMode().
+					Return(false)
+
+				env.EXPECT().
+					EnsureARMResourceGroupRoleAssignment(gomock.Any(), gomock.Any(), resourceGroupName).
+					Return(nil)
+			},
+			modify: modifyManagerClusterResourceGroupTags,
 		},
 		{
 			name:              "fail - get rg returns generic error",
@@ -196,6 +280,10 @@ func TestEnsureResourceGroup(t *testing.T) {
 					},
 				},
 				env: env,
+			}
+
+			if tt.modify != nil {
+				tt.modify(m)
 			}
 
 			err := m.ensureResourceGroup(ctx)
