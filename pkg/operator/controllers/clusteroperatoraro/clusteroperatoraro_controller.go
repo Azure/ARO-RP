@@ -5,8 +5,6 @@ package clusteroperatoraro
 
 import (
 	"context"
-	"strings"
-	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
@@ -85,54 +83,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 func (r *Reconciler) setClusterOperatorStatus(ctx context.Context, originalClusterOperatorObj *configv1.ClusterOperator, cluster *arov1alpha1.Cluster) error {
 	clusterOperatorObj := originalClusterOperatorObj.DeepCopy()
 
-	currentTime := metav1.Now()
-	conditions := []configv1.ClusterOperatorStatusCondition{
-		{
-			Type:               configv1.OperatorAvailable,
-			Status:             configv1.ConditionTrue,
-			LastTransitionTime: currentTime,
-			Reason:             reasonAsExpected,
-		},
-		{
-			Type:               configv1.OperatorProgressing,
-			Status:             configv1.ConditionFalse,
-			LastTransitionTime: currentTime,
-			Reason:             reasonAsExpected,
-		},
-		{
-			Type:               configv1.OperatorDegraded,
-			Status:             configv1.ConditionFalse,
-			LastTransitionTime: currentTime,
-			Reason:             reasonAsExpected,
-		},
-		{
-			Type:               configv1.OperatorUpgradeable,
-			Status:             configv1.ConditionTrue,
-			LastTransitionTime: currentTime,
-			Reason:             reasonAsExpected,
-		},
-	}
+	v1helpers.SetStatusCondition(&clusterOperatorObj.Status.Conditions, status.UnionClusterCondition("Available", operatorv1.ConditionTrue, nil, cluster.Status.Conditions...))
+	v1helpers.SetStatusCondition(&clusterOperatorObj.Status.Conditions, status.UnionClusterCondition("Progressing", operatorv1.ConditionFalse, nil, cluster.Status.Conditions...))
 
-	degradedInertia := status.MustNewInertia(2 * time.Minute).Inertia
-
-	// todo: these guard checks can be removed once we are guaranteed to have at least one of each type of Controller Condition present on the cluster resource.
-	if hasControllerConditionOfType(&cluster.Status.Conditions, operatorv1.OperatorStatusTypeAvailable) {
-		v1helpers.SetStatusCondition(&clusterOperatorObj.Status.Conditions, status.UnionClusterCondition("Available", operatorv1.ConditionTrue, nil, cluster.Status.Conditions...))
-	} else {
-		v1helpers.SetStatusCondition(&clusterOperatorObj.Status.Conditions, conditions[0])
-	}
-
-	if hasControllerConditionOfType(&cluster.Status.Conditions, operatorv1.OperatorStatusTypeProgressing) {
-		v1helpers.SetStatusCondition(&clusterOperatorObj.Status.Conditions, status.UnionClusterCondition("Progressing", operatorv1.ConditionFalse, nil, cluster.Status.Conditions...))
-	} else {
-		v1helpers.SetStatusCondition(&clusterOperatorObj.Status.Conditions, conditions[1])
-	}
-
-	if hasControllerConditionOfType(&cluster.Status.Conditions, operatorv1.OperatorStatusTypeDegraded) {
-		v1helpers.SetStatusCondition(&clusterOperatorObj.Status.Conditions, status.UnionClusterCondition("Degraded", operatorv1.ConditionFalse, degradedInertia, cluster.Status.Conditions...))
-	} else {
-		v1helpers.SetStatusCondition(&clusterOperatorObj.Status.Conditions, conditions[2])
-	}
+	// We always set the Degraded status to false, as the operator being in Degraded state will prevent cluster upgrade.
+	v1helpers.SetStatusCondition(&clusterOperatorObj.Status.Conditions, configv1.ClusterOperatorStatusCondition{
+		Type:               configv1.OperatorDegraded,
+		Status:             configv1.ConditionFalse,
+		LastTransitionTime: metav1.Now(),
+		Reason:             reasonAsExpected,
+	})
 
 	if equality.Semantic.DeepEqual(clusterOperatorObj.Status.Conditions, originalClusterOperatorObj.Status.Conditions) {
 		return nil
@@ -209,13 +169,4 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&configv1.ClusterOperator{}).
 		Named(ControllerName).
 		Complete(r)
-}
-
-func hasControllerConditionOfType(conditions *[]operatorv1.OperatorCondition, conditionType string) bool {
-	for _, condition := range *conditions {
-		if strings.HasSuffix(condition.Type, "Controller"+conditionType) {
-			return true
-		}
-	}
-	return false
 }
