@@ -4,7 +4,7 @@ This document goes through the development dependencies one requires in order to
 
 ## Software Required
 
-1. Install [Go 1.17](https://golang.org/dl) or later, if you haven't already.
+1. Install [Go 1.18](https://golang.org/dl) or later, if you haven't already.
    1. After downloading follow the [Install instructions](https://go.dev/doc/install), replacing the tar archive with your download.
    1. Append `export PATH="${PATH}:/usr/local/go/bin"` to your shell's profile file.
 
@@ -60,6 +60,9 @@ Install the `libgpgme-dev` package.
 
     # Install gpgme
     brew install gpgme
+
+    # Install diffutils to avoid errors during test runs
+    brew install diffutils
     ```
 
 1. Modify your `~/.zshrc` (or `~/.bashrc` for Bash): this prepends `PATH` with GNU Utils paths;

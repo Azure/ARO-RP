@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -30,13 +31,18 @@ func (f *frontend) getAdminKubernetesObjects(w http.ResponseWriter, r *http.Requ
 }
 
 func (f *frontend) _getAdminKubernetesObjects(ctx context.Context, r *http.Request, log *logrus.Entry) ([]byte, error) {
+	var err error
 	vars := mux.Vars(r)
+	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
 
 	groupKind, namespace, name := r.URL.Query().Get("kind"), r.URL.Query().Get("namespace"), r.URL.Query().Get("name")
 
-	err := validateAdminKubernetesObjects(r.Method, groupKind, namespace, name)
-	if err != nil {
-		return nil, err
+	unrestricted := false
+	if r.URL.Query().Has("unrestricted") {
+		unrestricted, err = strconv.ParseBool(r.URL.Query().Get("unrestricted"))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
@@ -44,12 +50,28 @@ func (f *frontend) _getAdminKubernetesObjects(ctx context.Context, r *http.Reque
 	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", resType, resName, resGroupName)
 	case err != nil:
 		return nil, err
 	}
 
 	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
+	if err != nil {
+		return nil, err
+	}
+
+	gvr, err := k.ResolveGVR(groupKind)
+	if err != nil {
+		return nil, err
+	}
+
+	if !unrestricted {
+		err = validateAdminKubernetesObjectsNonCustomer(r.Method, gvr, namespace, name)
+		if err != nil {
+			return nil, err
+		}
+	}
+	err = validateAdminKubernetesObjects(r.Method, gvr, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -72,14 +94,10 @@ func (f *frontend) deleteAdminKubernetesObjects(w http.ResponseWriter, r *http.R
 
 func (f *frontend) _deleteAdminKubernetesObjects(ctx context.Context, r *http.Request, log *logrus.Entry) error {
 	vars := mux.Vars(r)
+	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
 
 	groupKind, namespace, name := r.URL.Query().Get("kind"), r.URL.Query().Get("namespace"), r.URL.Query().Get("name")
 	force := strings.EqualFold(r.URL.Query().Get("force"), "true")
-
-	err := validateAdminKubernetesObjectsNonCustomer(r.Method, groupKind, namespace, name)
-	if err != nil {
-		return err
-	}
 
 	if force {
 		err := validateAdminKubernetesObjectsForceDelete(groupKind)
@@ -93,12 +111,22 @@ func (f *frontend) _deleteAdminKubernetesObjects(ctx context.Context, r *http.Re
 	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", resType, resName, resGroupName)
 	case err != nil:
 		return err
 	}
 
 	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
+	if err != nil {
+		return err
+	}
+
+	gvr, err := k.ResolveGVR(groupKind)
+	if err != nil {
+		return err
+	}
+
+	err = validateAdminKubernetesObjectsNonCustomer(r.Method, gvr, namespace, name)
 	if err != nil {
 		return err
 	}
@@ -125,13 +153,14 @@ func (f *frontend) postAdminKubernetesObjects(w http.ResponseWriter, r *http.Req
 func (f *frontend) _postAdminKubernetesObjects(ctx context.Context, r *http.Request, log *logrus.Entry) error {
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 	vars := mux.Vars(r)
+	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
 	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", resType, resName, resGroupName)
 	case err != nil:
 		return err
 	}
@@ -142,12 +171,17 @@ func (f *frontend) _postAdminKubernetesObjects(ctx context.Context, r *http.Requ
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
 	}
 
-	err = validateAdminKubernetesObjectsNonCustomer(r.Method, obj.GroupVersionKind().GroupKind().String(), obj.GetNamespace(), obj.GetName())
+	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
 	if err != nil {
 		return err
 	}
 
-	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
+	gvr, err := k.ResolveGVR(obj.GetKind())
+	if err != nil {
+		return err
+	}
+
+	err = validateAdminKubernetesObjectsNonCustomer(r.Method, gvr, obj.GetNamespace(), obj.GetName())
 	if err != nil {
 		return err
 	}

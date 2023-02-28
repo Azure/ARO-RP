@@ -17,6 +17,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/util/ready"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/Azure/ARO-RP/test/util/project"
 )
 
@@ -51,6 +52,7 @@ var _ = Describe("Cluster", func() {
 	})
 
 	It("can run a stateful set which is using Azure Disk storage", func(ctx context.Context) {
+
 		By("creating stateful set")
 		err := createStatefulSet(ctx, clients.Kubernetes)
 		Expect(err).NotTo(HaveOccurred())
@@ -114,6 +116,13 @@ var _ = Describe("Cluster", func() {
 })
 
 func createStatefulSet(ctx context.Context, cli kubernetes.Interface) error {
+	oc, _ := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+	installVersion, _ := version.ParseVersion(*oc.ClusterProfile.Version)
+
+	defaultStorageClass := "managed-premium"
+	if installVersion.V[0] == 4 && installVersion.V[1] == 11 {
+		defaultStorageClass = "managed-csi"
+	}
 	pvcStorage, err := resource.ParseQuantity("2Gi")
 	if err != nil {
 		return err
@@ -161,7 +170,7 @@ func createStatefulSet(ctx context.Context, cli kubernetes.Interface) error {
 						AccessModes: []corev1.PersistentVolumeAccessMode{
 							corev1.ReadWriteOnce,
 						},
-						StorageClassName: to.StringPtr("managed-premium"),
+						StorageClassName: to.StringPtr(defaultStorageClass),
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceStorage: pvcStorage,

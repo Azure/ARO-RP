@@ -33,10 +33,20 @@ endif
 
 ARO_IMAGE ?= $(ARO_IMAGE_BASE):$(VERSION)
 
+check-release:
+# Check that VERSION is a valid tag when building an official release (when RELEASE=true).
+ifeq ($(RELEASE), true)
+ifeq ($(TAG), $(VERSION))
+	@echo Building release version $(VERSION)
+else
+	$(error $(shell git describe --exact-match) Ensure there is an annotated tag (git tag -a) for git commit $(COMMIT))
+endif
+endif
+
 build-all:
 	go build -tags aro,containers_image_openpgp ./...
 
-aro: generate
+aro: check-release generate
 	go build -tags aro,containers_image_openpgp,codec.safe -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro
 
 runlocal-rp:
@@ -56,7 +66,7 @@ clean:
 	find -type d -name 'gomock_reflect_[0-9]*' -exec rm -rf {} \+ 2>/dev/null
 
 client: generate
-	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04
+	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
@@ -114,6 +124,15 @@ publish-image-fluentbit: image-fluentbit
 publish-image-proxy: image-proxy
 	docker push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest
 
+image-e2e:
+	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro-e2e -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
+
+publish-image-e2e: image-e2e
+	docker push $(ARO_IMAGE)
+
+extract-aro-docker:
+	hack/ci-utils/extractaro.sh ${ARO_IMAGE}
+
 proxy:
 	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/proxy
 
@@ -150,6 +169,11 @@ tunnel:
 e2e.test:
 	go test ./test/e2e/... -tags e2e,codec.safe -c -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" -o e2e.test
 
+e2etools:
+	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/cluster
+	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/db
+	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/portalauth
+
 test-e2e: e2e.test
 	./e2e.test $(E2E_FLAGS)
 
@@ -178,6 +202,9 @@ validate-fips:
 
 unit-test-go:
 	go run ./vendor/gotest.tools/gotestsum/main.go --format pkgname --junitfile report.xml -- -tags=aro,containers_image_openpgp -coverprofile=cover.out ./...
+
+unit-test-go-coverpkg:
+	go run ./vendor/gotest.tools/gotestsum/main.go --format pkgname --junitfile report.xml -- -tags=aro,containers_image_openpgp -coverpkg=./... -coverprofile=cover_coverpkg.out ./...
 
 lint-go:
 	hack/lint-go.sh

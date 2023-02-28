@@ -107,7 +107,7 @@ func templateManifests(data deploymentData) ([][]byte, error) {
 	}
 
 	templatedFiles := make([][]byte, 0)
-	templatesArray := []*template.Template{templatesMaster, templatesRoot, templatesWorker}
+	templatesArray := []*template.Template{templatesRoot, templatesMaster, templatesWorker}
 
 	for _, templates := range templatesArray {
 		for _, templ := range templates.Templates() {

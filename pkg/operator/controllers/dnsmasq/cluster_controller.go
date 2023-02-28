@@ -7,10 +7,10 @@ import (
 	"context"
 
 	"github.com/openshift/installer/pkg/aro/dnsmasq"
-	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
+	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,7 +18,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
@@ -31,34 +30,36 @@ const (
 type ClusterReconciler struct {
 	log *logrus.Entry
 
-	arocli aroclient.Interface
-	mcocli mcoclient.Interface
-	dh     dynamichelper.Interface
+	dh dynamichelper.Interface
+
+	client client.Client
 }
 
-func NewClusterReconciler(log *logrus.Entry, arocli aroclient.Interface, mcocli mcoclient.Interface, dh dynamichelper.Interface) *ClusterReconciler {
+func NewClusterReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *ClusterReconciler {
 	return &ClusterReconciler{
 		log:    log,
-		arocli: arocli,
-		mcocli: mcocli,
 		dh:     dh,
+		client: client,
 	}
 }
 
 // Reconcile watches the ARO object, and if it changes, reconciles all the
 // 99-%s-aro-dns machineconfigs
 func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	instance := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		// controller is disabled
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
-	mcps, err := r.mcocli.MachineconfigurationV1().MachineConfigPools().List(ctx, metav1.ListOptions{})
+	r.log.Debug("running")
+	mcps := &mcv1.MachineConfigPoolList{}
+	err = r.client.List(ctx, mcps)
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err
@@ -69,7 +70,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		roles = append(roles, mcp.Name)
 	}
 
-	err = reconcileMachineConfigs(ctx, r.arocli, r.dh, roles...)
+	err = reconcileMachineConfigs(ctx, instance, r.dh, roles...)
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err
@@ -78,24 +79,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 	return reconcile.Result{}, nil
 }
 
-// SetupWithManager setup our mananger
-func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
-		return o.GetName() == arov1alpha1.SingletonClusterName
-	})
-
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
-		Named(ClusterControllerName).
-		Complete(r)
-}
-
-func reconcileMachineConfigs(ctx context.Context, arocli aroclient.Interface, dh dynamichelper.Interface, roles ...string) error {
-	instance, err := arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
+func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, dh dynamichelper.Interface, roles ...string) error {
 	var resources []kruntime.Object
 	for _, role := range roles {
 		resource, err := dnsmasq.MachineConfig(instance.Spec.Domain, instance.Spec.APIIntIP, instance.Spec.IngressIP, role, instance.Spec.GatewayDomains, instance.Spec.GatewayPrivateEndpointIP)
@@ -106,7 +90,7 @@ func reconcileMachineConfigs(ctx context.Context, arocli aroclient.Interface, dh
 		resources = append(resources, resource)
 	}
 
-	err = dynamichelper.SetControllerReferences(resources, instance)
+	err := dynamichelper.SetControllerReferences(resources, instance)
 	if err != nil {
 		return err
 	}
@@ -117,4 +101,16 @@ func reconcileMachineConfigs(ctx context.Context, arocli aroclient.Interface, dh
 	}
 
 	return dh.Ensure(ctx, resources...)
+}
+
+// SetupWithManager setup our manager
+func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return o.GetName() == arov1alpha1.SingletonClusterName
+	})
+
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
+		Named(ClusterControllerName).
+		Complete(r)
 }

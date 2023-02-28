@@ -83,7 +83,7 @@ func (dh *dynamicHelper) resolve(groupKind, optionalVersion string) (*schema.Gro
 	}
 	// refresh may sometimes solve the issue
 	if errNew := dh.Refresh(); errNew != nil {
-		dh.log.Printf("dynamicHelper Refresh failed with error: %v", errNew)
+		dh.log.Errorf("dynamicHelper Refresh failed with error: %v", errNew)
 		return gvr, err
 	}
 	return dh.Resolve(groupKind, optionalVersion)
@@ -100,14 +100,10 @@ func (dh *dynamicHelper) EnsureDeletedGVR(ctx context.Context, groupKind, namesp
 
 	// gatekeeper policies are unstructured and should be deleted differently
 	if isKindUnstructured(groupKind) {
-		dh.log.Printf("Delete unstructured obj kind %s ns %s name %s version %s", groupKind, namespace, name, optionalVersion)
-		err := dh.deleteUnstructuredObj(ctx, groupKind, namespace, name)
-		if err == nil {
-			err = nil
-		}
-		return err
+		dh.log.Infof("Delete unstructured obj kind %s ns %s name %s version %s", groupKind, namespace, name, optionalVersion)
+		return dh.deleteUnstructuredObj(ctx, groupKind, namespace, name)
 	}
-	dh.log.Printf("Delete kind %s ns %s name %s", groupKind, namespace, name)
+	dh.log.Infof("Delete kind %s ns %s name %s", groupKind, namespace, name)
 	err = dh.restcli.Delete().AbsPath(makeURLSegments(gvr, namespace, name)...).Do(ctx).Error()
 	if kerrors.IsNotFound(err) {
 		err = nil
@@ -150,7 +146,7 @@ func (dh *dynamicHelper) ensureUnstructuredObj(ctx context.Context, uns *unstruc
 		create = true
 	}
 	if create {
-		dh.log.Printf("Create %s", keyFunc(uns.GroupVersionKind().GroupKind(), uns.GetNamespace(), uns.GetName()))
+		dh.log.Infof("Create %s", keyFunc(uns.GroupVersionKind().GroupKind(), uns.GetNamespace(), uns.GetName()))
 		if _, err = dh.dynamicClient.Resource(*gvr).Namespace(uns.GetNamespace()).Create(ctx, uns, metav1.CreateOptions{}); err != nil {
 			return err
 		}
@@ -168,7 +164,7 @@ func (dh *dynamicHelper) ensureUnstructuredObj(ctx context.Context, uns *unstruc
 		// currently EnforcementAction is the only part that may change in an update
 		return nil
 	}
-	dh.log.Printf("Update %s: enforcementAction: %s->%s", keyFunc(uns.GroupVersionKind().GroupKind(), uns.GetNamespace(), uns.GetName()), enOld, enNew)
+	dh.log.Infof("Update %s: enforcementAction: %s->%s", keyFunc(uns.GroupVersionKind().GroupKind(), uns.GetNamespace(), uns.GetName()), enOld, enNew)
 	uns.SetResourceVersion(obj.GetResourceVersion())
 
 	if _, err = dh.dynamicClient.Resource(*gvr).Namespace(uns.GetNamespace()).Update(ctx, uns, metav1.UpdateOptions{}); err != nil {
@@ -206,6 +202,13 @@ func (dh *dynamicHelper) deleteUnstructuredObj(ctx context.Context, groupKind, n
 	if err != nil {
 		return err
 	}
+	uns, err := dh.dynamicClient.Resource(*gvr).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	if kerrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil || uns == nil {
+		return err
+	}
 	if err = dh.dynamicClient.Resource(*gvr).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{}); !(err == nil || notFound(err)) {
 		return err
 	}
@@ -233,24 +236,24 @@ func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) err
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		old, err := dh.restcli.Get().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), acc.GetName())...).Do(ctx).Get()
 		if kerrors.IsNotFound(err) {
-			dh.log.Printf("Create %s", keyFunc(gvk.GroupKind(), acc.GetNamespace(), acc.GetName()))
+			dh.log.Infof("Create %s", keyFunc(gvk.GroupKind(), acc.GetNamespace(), acc.GetName()))
 			return dh.restcli.Post().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), "")...).Body(new).Do(ctx).Error()
 		}
 		if err != nil {
 			return err
 		}
-		candidate, changed, diff, err := mergeWithLogic(acc.GetName(), gvk.GroupKind().String(), old, new)
+		candidate, changed, diff, err := dh.mergeWithLogic(acc.GetName(), gvk.GroupKind().String(), old, new)
 		if err != nil || !changed {
 			return err
 		}
-		dh.log.Printf("Update %s: %s", keyFunc(gvk.GroupKind(), acc.GetNamespace(), acc.GetName()), diff)
+		dh.log.Infof("Update %s: %s", keyFunc(gvk.GroupKind(), acc.GetNamespace(), acc.GetName()), diff)
 		return dh.restcli.Put().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), acc.GetName())...).Body(candidate).Do(ctx).Error()
 	})
 }
 
-func mergeWithLogic(name, groupKind string, old, new kruntime.Object) (kruntime.Object, bool, string, error) {
+func (dh *dynamicHelper) mergeWithLogic(name, groupKind string, old, new kruntime.Object) (kruntime.Object, bool, string, error) {
 	if strings.HasPrefix(name, "gatekeeper") {
-		logrus.Printf("Skip updating %s: %s", name, groupKind)
+		dh.log.Debugf("Skip updating %s: %s", name, groupKind)
 		return nil, false, "", nil
 	}
 	if strings.HasPrefix(groupKind, "ConstraintTemplate.templates.gatekeeper") {

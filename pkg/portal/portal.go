@@ -15,7 +15,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -221,9 +220,8 @@ func (p *portal) Run(ctx context.Context) error {
 			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
 		},
-		PreferServerCipherSuites: true,
-		SessionTicketsDisabled:   true,
-		MinVersion:               tls.VersionTLS12,
+		SessionTicketsDisabled: true,
+		MinVersion:             tls.VersionTLS12,
 		CurvePreferences: []tls.CurveID{
 			tls.CurveP256,
 			tls.X25519,
@@ -261,53 +259,55 @@ func (p *portal) Run(ctx context.Context) error {
 func (p *portal) unauthenticatedRoutes(r *mux.Router) {
 	logger := middleware.Log(p.env, p.audit, p.baseAccessLog)
 
-	r.NewRoute().Methods(http.MethodGet).Path("/healthz/ready").Handler(logger(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})))
+	r.Methods(http.MethodGet).Path("/healthz/ready").Handler(logger(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})))
 }
 
 func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
 	var names []string
 
-	err := filepath.Walk(".", func(path string, info fs.FileInfo, err error) error {
+	err := fs.WalkDir(assets.EmbeddedFiles, ".", func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
-		names = append(names, path)
+		if !entry.IsDir() {
+			names = append(names, path)
+		}
 		return nil
 	})
 
 	if err != nil {
-		log.Fatal(err)
+		p.log.Fatal(err)
 	}
 
 	for _, name := range names {
 		regexp, _ := regexp.Compile(`v[1,2]/build/.*\..*`)
 		name := regexp.FindString(name)
 		switch name {
-		case "v1/build/index.html":
-			r.NewRoute().Methods(http.MethodGet).Path("/").HandlerFunc(p.index)
 		case "v2/build/index.html":
-			r.NewRoute().Methods(http.MethodGet).Path("/v2").HandlerFunc(p.indexV2)
+			r.Methods(http.MethodGet).Path("/").HandlerFunc(p.indexV2)
+		case "v1/build/index.html":
+			r.Methods(http.MethodGet).Path("/v1").HandlerFunc(p.index)
 		case "":
 		default:
 			fmtName := strings.TrimPrefix(name, "v1/build/")
 			fmtName = strings.TrimPrefix(fmtName, "v2/build/")
 
-			r.NewRoute().Methods(http.MethodGet).Path("/" + fmtName).HandlerFunc(p.serve(name))
+			r.Methods(http.MethodGet).Path("/" + fmtName).HandlerFunc(p.serve(name))
 		}
 	}
 
-	r.NewRoute().Methods(http.MethodGet).Path("/api/clusters").HandlerFunc(p.clusters)
-	r.NewRoute().Methods(http.MethodGet).Path("/api/info").HandlerFunc(p.info)
-	r.NewRoute().Methods(http.MethodGet).Path("/api/regions").HandlerFunc(p.regions)
+	r.Methods(http.MethodGet).Path("/api/clusters").HandlerFunc(p.clusters)
+	r.Methods(http.MethodGet).Path("/api/info").HandlerFunc(p.info)
+	r.Methods(http.MethodGet).Path("/api/regions").HandlerFunc(p.regions)
 
 	// Cluster-specific routes
-	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}/clusteroperators").HandlerFunc(p.clusterOperators)
-	r.NewRoute().Methods(http.MethodGet).Path("/api/{subscription}/{resourceGroup}/{clusterName}").HandlerFunc(p.clusterInfo)
-	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}/nodes").HandlerFunc(p.nodes)
-	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}/machines").HandlerFunc(p.machines)
-	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}/machine-sets").HandlerFunc(p.machineSets)
-	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{clusterName}").HandlerFunc(p.clusterInfo)
+	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/clusteroperators").HandlerFunc(p.clusterOperators)
+	r.Methods(http.MethodGet).Path("/api/{subscription}/{resourceGroup}/{clusterName}").HandlerFunc(p.clusterInfo)
+	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/nodes").HandlerFunc(p.nodes)
+	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/machines").HandlerFunc(p.machines)
+	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/machine-sets").HandlerFunc(p.machineSets)
+	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}").HandlerFunc(p.clusterInfo)
 }
 
 func (p *portal) index(w http.ResponseWriter, r *http.Request) {
@@ -332,6 +332,7 @@ func (p *portal) indexV2(w http.ResponseWriter, r *http.Request) {
 		"location":       p.env.Location(),
 		csrf.TemplateTag: csrf.TemplateField(r),
 	})
+
 	if err != nil {
 		p.internalServerError(w, err)
 		return

@@ -1,6 +1,9 @@
 # Hack - wait on create because the WALinuxAgent sometimes conflicts with the yum update -y below
 sleep 60
 
+echo "running RHUI fix"
+yum update -y --disablerepo='*' --enablerepo='rhui-microsoft-azure*'
+
 for attempt in {1..5}; do
   yum -y update && break
   if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi

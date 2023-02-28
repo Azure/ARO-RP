@@ -11,11 +11,17 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
+
+var csrResource = schema.GroupVersionResource{
+	Group:    "certificates.k8s.io",
+	Resource: "certificatesigningrequests",
+}
 
 func (f *frontend) postAdminOpenShiftClusterApproveCSR(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -29,10 +35,11 @@ func (f *frontend) postAdminOpenShiftClusterApproveCSR(w http.ResponseWriter, r 
 
 func (f *frontend) _postAdminOpenShiftClusterApproveCSR(ctx context.Context, r *http.Request, log *logrus.Entry) error {
 	vars := mux.Vars(r)
+	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
 
 	csrName := r.URL.Query().Get("csrName")
 	if csrName != "" {
-		err := validateAdminKubernetesObjects(r.Method, "CertificateSigningRequest", "", csrName)
+		err := validateAdminKubernetesObjects(r.Method, &csrResource, "", csrName)
 		if err != nil {
 			return err
 		}
@@ -43,7 +50,7 @@ func (f *frontend) _postAdminOpenShiftClusterApproveCSR(ctx context.Context, r *
 	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", resType, resName, resGroupName)
 	case err != nil:
 		return err
 	}

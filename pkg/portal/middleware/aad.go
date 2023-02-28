@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
-	"encoding/gob"
 	"errors"
 	"io"
 	"net/http"
@@ -28,16 +27,13 @@ import (
 )
 
 const (
-	SessionName        = "session"
+	SessionName = "session"
+	// Expiration time in unix format
 	SessionKeyExpires  = "expires"
 	sessionKeyState    = "state"
 	SessionKeyUsername = "user_name"
 	SessionKeyGroups   = "groups"
 )
-
-func init() {
-	gob.Register(time.Time{})
-}
 
 // AAD is responsible for ensuring that we have a valid login session with AAD.
 type AAD interface {
@@ -87,7 +83,7 @@ func NewAAD(log *logrus.Entry,
 	clientCerts []*x509.Certificate,
 	allGroups []string,
 	unauthenticatedRouter *mux.Router,
-	verifier oidc.Verifier) (AAD, error) {
+	verifier oidc.Verifier) (*aad, error) {
 	if len(sessionKey) != 32 {
 		return nil, errors.New("invalid sessionKey")
 	}
@@ -150,15 +146,15 @@ func (a *aad) AAD(h http.Handler) http.Handler {
 					Expires: time.Unix(0, 0),
 				}
 				http.SetCookie(w, cookie)
-				http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+				http.Redirect(w, r, "/api/login", http.StatusTemporaryRedirect)
 			} else {
 				a.internalServerError(w, err)
 			}
 			return
 		}
 
-		expires, ok := session.Values[SessionKeyExpires].(time.Time)
-		if !ok || expires.Before(a.now()) {
+		expires, ok := session.Values[SessionKeyExpires].(int64)
+		if !ok || time.Unix(expires, 0).Before(a.now()) {
 			h.ServeHTTP(w, r)
 			return
 		}
@@ -178,7 +174,7 @@ func (a *aad) CheckAuthentication(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		if ctx.Value(ContextKeyUsername) == nil {
-			if r.URL != nil && r.URL.Path == "/" {
+			if r.URL != nil {
 				http.Redirect(w, r, "/api/login", http.StatusTemporaryRedirect)
 				return
 			}
@@ -310,7 +306,7 @@ func (a *aad) callback(w http.ResponseWriter, r *http.Request) {
 
 	session.Values[SessionKeyUsername] = claims.PreferredUsername
 	session.Values[SessionKeyGroups] = groupsIntersect
-	session.Values[SessionKeyExpires] = a.now().Add(a.sessionTimeout)
+	session.Values[SessionKeyExpires] = a.now().Add(a.sessionTimeout).Unix()
 
 	err = session.Save(r, w)
 	if err != nil {

@@ -21,7 +21,7 @@ jobs:
           sudo apt-get install libgpgme-dev libgpgme11
       - uses: actions/setup-go@v3
         with:
-          go-version: 1.17
+          go-version: 1.18
       - uses: actions/checkout@v3
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
@@ -53,6 +53,6 @@ jobs:
     steps:
       - uses: actions/setup-go@v3
         with:
-          go-version: 1.17
+          go-version: 1.18
       - uses: actions/checkout@v3
       - run: make validate-go-action

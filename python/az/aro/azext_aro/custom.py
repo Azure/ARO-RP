@@ -12,7 +12,7 @@ from azure.cli.core.commands.client_factory import get_mgmt_service_client
 from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.profiles import ResourceType
 from azure.cli.core.util import sdk_no_wait
-from azure.cli.core.azclierror import FileOperationError, ResourceNotFoundError, UnauthorizedError
+from azure.cli.core.azclierror import FileOperationError, ResourceNotFoundError, UnauthorizedError, ValidationError
 from azext_aro._aad import AADManager
 from azext_aro._rbac import assign_role_to_resource, \
     has_role_assignment_on_resource
@@ -47,7 +47,6 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                client_secret=None,
                pod_cidr=None,
                service_cidr=None,
-               software_defined_network=None,
                disk_encryption_set=None,
                master_encryption_at_host=False,
                master_vm_size=None,
@@ -58,7 +57,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                apiserver_visibility=None,
                ingress_visibility=None,
                tags=None,
-               install_version=None,
+               version=None,
                no_wait=False):
     if not rp_mode_development():
         resource_client = get_mgmt_service_client(
@@ -106,7 +105,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
             resource_group_id=(f"/subscriptions/{subscription_id}"
                                f"/resourceGroups/{cluster_resource_group or 'aro-' + random_id}"),
             fips_validated_modules='Enabled' if fips_validated_modules else 'Disabled',
-            version=install_version or '',
+            version=version or '',
 
         ),
         service_principal_profile=openshiftcluster.ServicePrincipalProfile(
@@ -116,7 +115,6 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
         network_profile=openshiftcluster.NetworkProfile(
             pod_cidr=pod_cidr or '10.128.0.0/14',
             service_cidr=service_cidr or '172.30.0.0/16',
-            software_defined_network=software_defined_network or 'OpenShiftSDN'
         ),
         master_profile=openshiftcluster.MasterProfile(
             vm_size=master_vm_size or 'Standard_D8s_v3',
@@ -278,12 +276,18 @@ def generate_random_id():
     return random_id
 
 
-def get_network_resources_from_subnets(cli_ctx, subnets):
+def get_network_resources_from_subnets(cli_ctx, subnets, fail):
     network_client = get_mgmt_service_client(cli_ctx, ResourceType.MGMT_NETWORK)
 
     subnet_resources = set()
     for sn in subnets:
         sid = parse_resource_id(sn)
+
+        if 'resource_group' not in sid or 'name' not in sid or 'resource_name' not in sid:
+            if fail:
+                raise ValidationError(f"""(ValidationError) Failed to validate subnet '{sn}'.
+                    Please retry, if issue persists: raise azure support ticket""")
+            logger.info("Failed to validate subnet '%s'", sn)
 
         subnet = network_client.subnets.get(resource_group_name=sid['resource_group'],
                                             virtual_network_name=sid['name'],
@@ -298,7 +302,7 @@ def get_network_resources_from_subnets(cli_ctx, subnets):
     return subnet_resources
 
 
-def get_cluster_network_resources(cli_ctx, oc):
+def get_cluster_network_resources(cli_ctx, oc, fail):
     master_subnet = oc.master_profile.subnet_id
     worker_subnets = set()
 
@@ -316,11 +320,11 @@ def get_cluster_network_resources(cli_ctx, oc):
         name=master_parts['name'],
     )
 
-    return get_network_resources(cli_ctx, worker_subnets | {master_subnet}, vnet)
+    return get_network_resources(cli_ctx, worker_subnets | {master_subnet}, vnet, fail)
 
 
-def get_network_resources(cli_ctx, subnets, vnet):
-    subnet_resources = get_network_resources_from_subnets(cli_ctx, subnets)
+def get_network_resources(cli_ctx, subnets, vnet, fail):
+    subnet_resources = get_network_resources_from_subnets(cli_ctx, subnets, fail)
 
     resources = set()
     resources.add(vnet)
@@ -421,7 +425,7 @@ def resolve_rp_client_id():
 def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
     try:
         # Get cluster resources we need to assign permissions on, sort to ensure the same order of operations
-        resources = {ROLE_NETWORK_CONTRIBUTOR: sorted(get_cluster_network_resources(cli_ctx, oc)),
+        resources = {ROLE_NETWORK_CONTRIBUTOR: sorted(get_cluster_network_resources(cli_ctx, oc, fail)),
                      ROLE_READER: sorted(get_disk_encryption_resources(oc))}
     except (CloudError, HttpOperationError) as e:
         if fail:

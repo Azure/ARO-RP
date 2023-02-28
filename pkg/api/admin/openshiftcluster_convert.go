@@ -124,15 +124,8 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 	}
 
 	out.Properties.HiveProfile = HiveProfile{
-		Namespace: oc.Properties.HiveProfile.Namespace,
-	}
-	out.SystemData = SystemData{
-		CreatedBy:          oc.SystemData.CreatedBy,
-		CreatedAt:          oc.SystemData.CreatedAt,
-		CreatedByType:      CreatedByType(oc.SystemData.CreatedByType),
-		LastModifiedBy:     oc.SystemData.LastModifiedBy,
-		LastModifiedAt:     oc.SystemData.LastModifiedAt,
-		LastModifiedByType: CreatedByType(oc.SystemData.LastModifiedByType),
+		Namespace:     oc.Properties.HiveProfile.Namespace,
+		CreatedByHive: oc.Properties.HiveProfile.CreatedByHive,
 	}
 
 	return out
@@ -174,6 +167,7 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	out.Properties.ArchitectureVersion = api.ArchitectureVersion(oc.Properties.ArchitectureVersion)
 	out.Properties.InfraID = oc.Properties.InfraID
 	out.Properties.HiveProfile.Namespace = oc.Properties.HiveProfile.Namespace
+	out.Properties.HiveProfile.CreatedByHive = oc.Properties.HiveProfile.CreatedByHive
 	out.Properties.ProvisioningState = api.ProvisioningState(oc.Properties.ProvisioningState)
 	out.Properties.LastProvisioningState = api.ProvisioningState(oc.Properties.LastProvisioningState)
 	out.Properties.FailedProvisioningState = api.ProvisioningState(oc.Properties.FailedProvisioningState)
@@ -238,15 +232,6 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 			Now:   oc.Properties.Install.Now,
 			Phase: api.InstallPhase(oc.Properties.Install.Phase),
 		}
-	}
-
-	out.SystemData = api.SystemData{
-		CreatedBy:          oc.SystemData.CreatedBy,
-		CreatedAt:          oc.SystemData.CreatedAt,
-		CreatedByType:      api.CreatedByType(oc.SystemData.CreatedByType),
-		LastModifiedBy:     oc.SystemData.LastModifiedBy,
-		LastModifiedAt:     oc.SystemData.LastModifiedAt,
-		LastModifiedByType: api.CreatedByType(oc.SystemData.CreatedByType),
 	}
 
 	// out.Properties.RegistryProfiles is not converted. The field is immutable and does not have to be converted.

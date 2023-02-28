@@ -104,6 +104,7 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 		masterZones = []string{""}
 	}
 
+	// TODO: If we update the integrated installer to 4.11, this should default to OVNK8s
 	SoftwareDefinedNetwork := string(api.SoftwareDefinedNetworkOpenShiftSDN)
 	if m.oc.Properties.NetworkProfile.SoftwareDefinedNetwork != "" {
 		SoftwareDefinedNetwork = string(m.oc.Properties.NetworkProfile.SoftwareDefinedNetwork)

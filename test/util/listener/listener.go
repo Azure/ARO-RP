@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sync"
 
 	"github.com/Azure/ARO-RP/test/util/bufferedpipe"
 )
@@ -17,8 +18,8 @@ func (addr) Network() string { return "testlistener" }
 func (addr) String() string  { return "testlistener" }
 
 type Listener struct {
-	c      chan net.Conn
-	closed bool
+	c    chan net.Conn
+	once sync.Once
 }
 
 func NewListener() *Listener {
@@ -36,10 +37,10 @@ func (l *Listener) Accept() (net.Conn, error) {
 }
 
 func (l *Listener) Close() error {
-	if !l.closed {
+	l.once.Do(func() {
 		close(l.c)
-		l.closed = true
-	}
+	})
+
 	return nil
 }
 

@@ -15,10 +15,9 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
@@ -32,7 +31,8 @@ func (r *Reconciler) getPolicyConfig(ctx context.Context, na string) (string, st
 	}
 	name := parts[0]
 
-	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	instance := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return "", "", err
 	}
@@ -134,12 +134,12 @@ func (r *Reconciler) policyTicker(ctx context.Context, instance *arov1alpha1.Clu
 				return
 			}
 			// false to trigger a ticker reset
-			logrus.Printf("policyTicker reset to %d min", r.reconciliationMinutes)
+			r.log.Infof("policyTicker reset to %d min", r.reconciliationMinutes)
 			ticker.Reset(time.Duration(r.reconciliationMinutes) * time.Minute)
 		case <-ticker.C:
 			err = r.ensurePolicy(ctx, gkPolicyConraints, gkConstraintsPath)
 			if err != nil {
-				logrus.Printf("policyTicker ensurePolicy error %s", err.Error())
+				r.log.Errorf("policyTicker ensurePolicy error %s", err.Error())
 			}
 		}
 	}

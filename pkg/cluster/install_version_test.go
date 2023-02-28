@@ -42,18 +42,19 @@ func TestGetOpenShiftVersionFromVersion(t *testing.T) {
 						ID: key,
 						Properties: api.OpenShiftClusterProperties{
 							ClusterProfile: api.ClusterProfile{
-								Version: version.InstallStream.Version.String(),
+								Version: version.DefaultInstallStream.Version.String(),
 							},
 						},
 					},
 				},
+				openShiftClusterDocumentVersioner: new(openShiftClusterDocumentVersionerService),
 			},
 			wantErrString: "",
 			want: &api.OpenShiftVersion{
 				Properties: api.OpenShiftVersionProperties{
-					Version:           version.InstallStream.Version.String(),
-					OpenShiftPullspec: version.InstallStream.PullSpec,
-					InstallerPullspec: fmt.Sprintf("%s/aro-installer:release-%d.%d", testACRDomain, version.InstallStream.Version.V[0], version.InstallStream.Version.V[1]),
+					Version:           version.DefaultInstallStream.Version.String(),
+					OpenShiftPullspec: version.DefaultInstallStream.PullSpec,
+					InstallerPullspec: fmt.Sprintf("%s/aro-installer:release-%d.%d", testACRDomain, version.DefaultInstallStream.Version.V[0], version.DefaultInstallStream.Version.V[1]),
 				},
 			},
 		},
@@ -90,6 +91,7 @@ func TestGetOpenShiftVersionFromVersion(t *testing.T) {
 						},
 					},
 				},
+				openShiftClusterDocumentVersioner: new(openShiftClusterDocumentVersionerService),
 			},
 			wantErrString: "400: InvalidParameter: properties.clusterProfile.version: The requested OpenShift version '4.11.5' is not supported.",
 			want:          nil,

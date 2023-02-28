@@ -5,4 +5,8 @@ if [[ "$#" -ne 1 ]]; then
     exit 1
 fi
 
-go run ./hack/db "$1" | jq -r .openShiftCluster.properties.adminKubeconfig | base64 -d | sed -e 's|https://api-int\.|https://api\.|'
+if [[ $CI ]]; then
+    ./db "$1" | jq -r .openShiftCluster.properties.adminKubeconfig | base64 -d | sed -e 's|https://api-int\.|https://api\.|'
+else
+    go run ./hack/db "$1" | jq -r .openShiftCluster.properties.adminKubeconfig | base64 -d | sed -e 's|https://api-int\.|https://api\.|'
+fi

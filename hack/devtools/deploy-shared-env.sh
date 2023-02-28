@@ -76,9 +76,19 @@ deploy_aks_dev() {
         -n aks-development \
         --template-file pkg/deploy/assets/aks-development.json \
         --parameters \
-            "adminObjectId=$ADMIN_OBJECT_ID" \
             "dnsZone=$DOMAIN_NAME" \
+            "keyvaultPrefix=$KEYVAULT_PREFIX" \
             "sshRSAPublicKey=$(<secrets/proxy_id_rsa.pub)" >/dev/null
+}
+
+deploy_vpn_for_dedicated_rp() {
+    echo "########## Deploying Dev VPN in RG $RESOURCEGROUP ##########"
+    az deployment group create \
+        -g "$RESOURCEGROUP" \
+        -n dev-vpn \
+        --template-file pkg/deploy/assets/vpn-development.json \
+        --parameters \
+             "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" >/dev/null
 }
 
 deploy_env_dev_override() {

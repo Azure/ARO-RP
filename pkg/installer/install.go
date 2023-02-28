@@ -64,7 +64,7 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 	}
 
 	var adminInternalClient *kubeconfig.AdminInternalClient
-	err = pg.Get(&adminInternalClient)
+	err = pg.Get(true, &adminInternalClient)
 	if err != nil {
 		return err
 	}

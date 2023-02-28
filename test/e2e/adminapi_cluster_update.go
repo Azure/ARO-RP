@@ -19,10 +19,9 @@ var _ = Describe("[Admin API] Cluster admin update action", func() {
 
 	It("must run cluster update operation on a cluster", func(ctx context.Context) {
 		var oc = &admin.OpenShiftCluster{}
-		resourceID := resourceIDFromEnv()
 
 		By("triggering the update via RP admin API")
-		resp, err := adminRequest(ctx, http.MethodPatch, resourceID, nil, json.RawMessage("{}"), oc)
+		resp, err := adminRequest(ctx, http.MethodPatch, clusterResourceID, nil, true, json.RawMessage("{}"), oc)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -32,7 +31,7 @@ var _ = Describe("[Admin API] Cluster admin update action", func() {
 
 		By("waiting for the update to complete")
 		Eventually(func(g Gomega, ctx context.Context) {
-			oc = adminGetCluster(g, ctx, resourceID)
+			oc = adminGetCluster(g, ctx, clusterResourceID)
 
 			g.Expect(oc.Properties.ProvisioningState).To(Equal(admin.ProvisioningStateSucceeded))
 		}).WithContext(ctx).Should(Succeed())

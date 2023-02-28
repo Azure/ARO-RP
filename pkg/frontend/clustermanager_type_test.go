@@ -19,7 +19,7 @@ func TestValidateOcmResourceType(t *testing.T) {
 	for _, tt := range []struct {
 		name                          string
 		vars                          map[string]string
-		apiVersion                    string
+		ocmResourceType               string
 		syncSetConverter              api.SyncSetConverter
 		machinePoolConverter          api.MachinePoolConverter
 		syncIdentityProviderConverter api.SyncIdentityProviderConverter
@@ -27,120 +27,108 @@ func TestValidateOcmResourceType(t *testing.T) {
 		err                           string
 	}{
 		{
-			name: "syncset - resource type is valid",
+			name:            "syncset - resource type is valid",
+			ocmResourceType: "syncset",
 			vars: map[string]string{
-				"ocmResourceType":           "syncset",
-				"api-version":               "2022-09-04",
 				"resourceProviderNamespace": "microsoft.redhatopenshift",
 			},
 			syncSetConverter: mock_api.NewMockSyncSetConverter(controller),
 			err:              "",
 		},
 		{
-			name: "syncset - resource type is invalid",
+			name:            "syncset - resource type is invalid",
+			ocmResourceType: "invalid",
 			vars: map[string]string{
-				"ocmResourceType":           "invalid",
-				"api-version":               "2022-09-04",
 				"resourceProviderNamespace": "microsoft.redhatopenshift",
 			},
 			syncSetConverter: mock_api.NewMockSyncSetConverter(controller),
 			err:              "the resource type 'invalid' is not valid for api version '2022-09-04'",
 		},
 		{
-			name: "syncset - converter is nil",
+			name:            "syncset - converter is nil",
+			ocmResourceType: "syncset",
 			vars: map[string]string{
-				"ocmResourceType":           "syncset",
-				"api-version":               "2022-09-04",
 				"resourceProviderNamespace": "microsoft.redhatopenshift",
 			},
 			syncSetConverter: nil,
 			err:              "the resource type 'syncset' is not valid for api version '2022-09-04'",
 		},
 		{
-			name: "machinepool - resource type is valid",
+			name:            "machinepool - resource type is valid",
+			ocmResourceType: "machinepool",
 			vars: map[string]string{
-				"ocmResourceType":           "machinepool",
-				"api-version":               "2022-09-04",
 				"resourceProviderNamespace": "microsoft.redhatopenshift",
 			},
 			machinePoolConverter: mock_api.NewMockMachinePoolConverter(controller),
 			err:                  "",
 		},
 		{
-			name: "machinepool - resource type is invalid",
+			name:            "machinepool - resource type is invalid",
+			ocmResourceType: "invalid",
 			vars: map[string]string{
-				"ocmResourceType":           "invalid",
-				"api-version":               "2022-09-04",
 				"resourceProviderNamespace": "microsoft.redhatopenshift",
 			},
 			machinePoolConverter: mock_api.NewMockMachinePoolConverter(controller),
 			err:                  "the resource type 'invalid' is not valid for api version '2022-09-04'",
 		},
 		{
-			name: "machinepool - converter is nil",
+			name:            "machinepool - converter is nil",
+			ocmResourceType: "machinepool",
 			vars: map[string]string{
-				"ocmResourceType":           "machinepool",
-				"api-version":               "2022-09-04",
 				"resourceProviderNamespace": "microsoft.redhatopenshift",
 			},
 			machinePoolConverter: nil,
 			err:                  "the resource type 'machinepool' is not valid for api version '2022-09-04'",
 		},
 		{
-			name: "syncidentityprovider - resource type is valid",
+			name:            "syncidentityprovider - resource type is valid",
+			ocmResourceType: "syncidentityprovider",
 			vars: map[string]string{
-				"ocmResourceType":           "syncidentityprovider",
-				"api-version":               "2022-09-04",
 				"resourceProviderNamespace": "microsoft.redhatopenshift",
 			},
 			syncIdentityProviderConverter: mock_api.NewMockSyncIdentityProviderConverter(controller),
 			err:                           "",
 		},
 		{
-			name: "syncidentityprovider - resource type is invalid",
+			name:            "syncidentityprovider - resource type is invalid",
+			ocmResourceType: "invalid",
 			vars: map[string]string{
-				"ocmResourceType":           "invalid",
-				"api-version":               "2022-09-04",
 				"resourceProviderNamespace": "microsoft.redhatopenshift",
 			},
 			syncIdentityProviderConverter: mock_api.NewMockSyncIdentityProviderConverter(controller),
 			err:                           "the resource type 'invalid' is not valid for api version '2022-09-04'",
 		},
 		{
-			name: "syncidentityprovider - converter is nil",
+			name:            "syncidentityprovider - converter is nil",
+			ocmResourceType: "syncidentityprovider",
 			vars: map[string]string{
-				"ocmResourceType":           "syncidentityprovider",
-				"api-version":               "2022-09-04",
 				"resourceProviderNamespace": "microsoft.redhatopenshift",
 			},
 			syncIdentityProviderConverter: nil,
 			err:                           "the resource type 'syncidentityprovider' is not valid for api version '2022-09-04'",
 		},
 		{
-			name: "secret - resource type is valid",
+			name:            "secret - resource type is valid",
+			ocmResourceType: "secret",
 			vars: map[string]string{
-				"ocmResourceType":           "secret",
-				"api-version":               "2022-09-04",
 				"resourceProviderNamespace": "microsoft.redhatopenshift",
 			},
 			secretConverter: mock_api.NewMockSecretConverter(controller),
 			err:             "",
 		},
 		{
-			name: "secret - resource type is invalid",
+			name:            "secret - resource type is invalid",
+			ocmResourceType: "invalid",
 			vars: map[string]string{
-				"ocmResourceType":           "invalid",
-				"api-version":               "2022-09-04",
 				"resourceProviderNamespace": "microsoft.redhatopenshift",
 			},
 			secretConverter: mock_api.NewMockSecretConverter(controller),
 			err:             "the resource type 'invalid' is not valid for api version '2022-09-04'",
 		},
 		{
-			name: "secret - converter is nil",
+			name:            "secret - converter is nil",
+			ocmResourceType: "secret",
 			vars: map[string]string{
-				"ocmResourceType":           "secret",
-				"api-version":               "2022-09-04",
 				"resourceProviderNamespace": "microsoft.redhatopenshift",
 			},
 			secretConverter: nil,
@@ -159,7 +147,7 @@ func TestValidateOcmResourceType(t *testing.T) {
 				},
 			}
 
-			err := f.validateOcmResourceType(tt.vars)
+			err := f.validateOcmResourceType("2022-09-04", tt.ocmResourceType)
 			if err != nil {
 				if err.Error() != tt.err {
 					t.Errorf("wanted '%v', got '%v'", tt.err, err)

@@ -8,6 +8,7 @@ gomock_reflect_*
 /*.key
 /*.kubeconfig
 /*.pem
+/*.tar
 /aro
 /dev-config.yaml
 /e2e.test
@@ -23,6 +24,7 @@ gomock_reflect_*
 /mdm_statsd.socket
 /uts.txt
 /cover.out
+/cover_coverpkg.out
 /coverage.*
 /report.xml
 /e2e-report.xml

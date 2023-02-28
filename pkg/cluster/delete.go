@@ -398,8 +398,14 @@ func (m *manager) deleteResourcesAndResourceGroup(ctx context.Context) error {
 }
 
 func (m *manager) Delete(ctx context.Context) error {
+	m.log.Printf("running ensureResourceGroup")
+	err := m.ensureResourceGroup(ctx) // re-create RP RBAC if needed/missing on best-effort basics
+	if err != nil {
+		m.log.Error(err)
+	}
+
 	m.log.Printf("deleting dns")
-	err := m.dns.Delete(ctx, m.doc.OpenShiftCluster)
+	err = m.dns.Delete(ctx, m.doc.OpenShiftCluster)
 	if err != nil {
 		return err
 	}

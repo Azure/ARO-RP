@@ -7,32 +7,31 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gorilla/mux"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 )
 
-func Authenticated(env env.Interface) func(http.Handler) http.Handler {
-	return func(h http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			vars := mux.Vars(r)
+type AuthMiddleware struct {
+	AdminAuth clientauthorizer.ClientAuthorizer
+	ArmAuth   clientauthorizer.ClientAuthorizer
+}
 
-			var clientAuthorizer clientauthorizer.ClientAuthorizer
-			if vars["api-version"] == admin.APIVersion || strings.HasPrefix(r.URL.Path, "/admin") {
-				clientAuthorizer = env.AdminClientAuthorizer()
-			} else {
-				clientAuthorizer = env.ArmClientAuthorizer()
-			}
+func (a AuthMiddleware) Authenticate(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		apiVersion := r.URL.Query().Get(api.APIVersionKey)
+		var clientAuthorizer clientauthorizer.ClientAuthorizer
+		if apiVersion == admin.APIVersion || strings.HasPrefix(r.URL.Path, "/admin") {
+			clientAuthorizer = a.AdminAuth
+		} else {
+			clientAuthorizer = a.ArmAuth
+		}
 
-			if !clientAuthorizer.IsAuthorized(r.TLS) {
-				api.WriteError(w, http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Forbidden.")
-				return
-			}
+		if !clientAuthorizer.IsAuthorized(r.TLS) {
+			api.WriteError(w, http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Forbidden.")
+			return
+		}
 
-			h.ServeHTTP(w, r)
-		})
-	}
+		h.ServeHTTP(w, r)
+	})
 }

@@ -24,12 +24,14 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -51,6 +53,11 @@ type frontend struct {
 	baseLog  *logrus.Entry
 	env      env.Interface
 
+	logMiddleware      middleware.LogMiddleware
+	validateMiddleware middleware.ValidateMiddleware
+	m                  middleware.MetricsMiddleware
+	authMiddleware     middleware.AuthMiddleware
+
 	dbAsyncOperations             database.AsyncOperations
 	dbClusterManagerConfiguration database.ClusterManagerConfigurations
 	dbOpenShiftClusters           database.OpenShiftClusters
@@ -63,12 +70,14 @@ type frontend struct {
 	lastChangefeed atomic.Value //time.Time
 	mu             sync.RWMutex
 
-	m    metrics.Emitter
 	aead encryption.AEAD
 
+	hiveClusterManager  hive.ClusterManager
 	kubeActionsFactory  kubeActionsFactory
 	azureActionsFactory azureActionsFactory
 	ocEnricherFactory   ocEnricherFactory
+
+	quotaValidator QuotaValidator
 
 	l net.Listener
 	s *http.Server
@@ -86,6 +95,8 @@ type frontend struct {
 	systemDataMachinePoolEnricher          func(*api.ClusterManagerConfigurationDocument, *api.SystemData)
 	systemDataSyncIdentityProviderEnricher func(*api.ClusterManagerConfigurationDocument, *api.SystemData)
 	systemDataSecretEnricher               func(*api.ClusterManagerConfigurationDocument, *api.SystemData)
+
+	streamResponder StreamResponder
 }
 
 // Runnable represents a runnable object
@@ -106,30 +117,48 @@ func NewFrontend(ctx context.Context,
 	apis map[string]*api.Version,
 	m metrics.Emitter,
 	aead encryption.AEAD,
+	hiveClusterManager hive.ClusterManager,
 	kubeActionsFactory kubeActionsFactory,
 	azureActionsFactory azureActionsFactory,
-	ocEnricherFactory ocEnricherFactory) (Runnable, error) {
+	ocEnricherFactory ocEnricherFactory) (*frontend, error) {
 	f := &frontend{
-		auditLog:                      auditLog,
-		baseLog:                       baseLog,
-		env:                           _env,
+		logMiddleware: middleware.LogMiddleware{
+			EnvironmentName: _env.Environment().Name,
+			Location:        _env.Location(),
+			Hostname:        _env.Hostname(),
+			BaseLog:         baseLog.WithField("component", "access"),
+			AuditLog:        auditLog,
+		},
+		baseLog:  baseLog,
+		auditLog: auditLog,
+		env:      _env,
+		validateMiddleware: middleware.ValidateMiddleware{
+			Location: _env.Location(),
+			Apis:     api.APIs,
+		},
+		authMiddleware: middleware.AuthMiddleware{
+			AdminAuth: _env.AdminClientAuthorizer(),
+			ArmAuth:   _env.ArmClientAuthorizer(),
+		},
 		dbAsyncOperations:             dbAsyncOperations,
 		dbClusterManagerConfiguration: dbClusterManagerConfiguration,
 		dbOpenShiftClusters:           dbOpenShiftClusters,
 		dbSubscriptions:               dbSubscriptions,
 		dbOpenShiftVersions:           dbOpenShiftVersions,
 		apis:                          apis,
-		m:                             m,
+		m:                             middleware.MetricsMiddleware{Emitter: m},
 		aead:                          aead,
+		hiveClusterManager:            hiveClusterManager,
 		kubeActionsFactory:            kubeActionsFactory,
 		azureActionsFactory:           azureActionsFactory,
 		ocEnricherFactory:             ocEnricherFactory,
+		quotaValidator:                quotaValidator{},
 
 		// add default installation version so it's always supported
 		enabledOcpVersions: map[string]*api.OpenShiftVersion{
-			version.InstallStream.Version.String(): {
+			version.DefaultInstallStream.Version.String(): {
 				Properties: api.OpenShiftVersionProperties{
-					Version: version.InstallStream.Version.String(),
+					Version: version.DefaultInstallStream.Version.String(),
 					Enabled: true,
 				},
 			},
@@ -146,6 +175,8 @@ func NewFrontend(ctx context.Context,
 		systemDataMachinePoolEnricher:          enrichMachinePoolSystemData,
 		systemDataSyncIdentityProviderEnricher: enrichSyncIdentityProviderSystemData,
 		systemDataSecretEnricher:               enrichSecretSystemData,
+
+		streamResponder: defaultResponder{},
 	}
 
 	l, err := f.env.Listen()
@@ -174,9 +205,8 @@ func NewFrontend(ctx context.Context,
 			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
 		},
-		PreferServerCipherSuites: true,
-		SessionTicketsDisabled:   true,
-		MinVersion:               tls.VersionTLS12,
+		SessionTicketsDisabled: true,
+		MinVersion:             tls.VersionTLS12,
 		CurvePreferences: []tls.CurveID{
 			tls.CurveP256,
 			tls.X25519,
@@ -200,7 +230,7 @@ func (f *frontend) unauthenticatedRoutes(r *mux.Router) {
 func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s := r.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodDelete).HandlerFunc(f.deleteOpenShiftCluster).Name("deleteOpenShiftCluster")
@@ -211,7 +241,7 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	if f.env.FeatureIsSet(env.FeatureEnableOCMEndpoints) {
 		s = r.
 			Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/{ocmResourceType}/{ocmResourceName}").
-			Queries("api-version", "{api-version}").
+			Queries("api-version", "").
 			Subrouter()
 
 		s.Methods(http.MethodDelete).HandlerFunc(f.deleteClusterManagerConfiguration).Name("deleteClusterManagerConfiguration")
@@ -222,52 +252,64 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters).Name("getOpenShiftClusters")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/{resourceType}").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters).Name("getOpenShiftClusters")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/operationsstatus/{operationId}").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getAsyncOperationsStatus).Name("getAsyncOperationsStatus")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/operationresults/{operationId}").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getAsyncOperationResult).Name("getAsyncOperationResult")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/listcredentials").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodPost).HandlerFunc(f.postOpenShiftClusterCredentials).Name("postOpenShiftClusterCredentials")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/listadmincredentials").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodPost).HandlerFunc(f.postOpenShiftClusterKubeConfigCredentials).Name("postOpenShiftClusterKubeConfigCredentials")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/openshiftversions").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.listInstallVersions).Name("listInstallVersions")
+
+	s = r.
+		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/detectors").
+		Subrouter()
+
+	s.Methods(http.MethodGet).HandlerFunc(f.listAppLensDetectors).Name("listAppLensDetectors")
+
+	s = r.
+		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/detectors/{detectorId}").
+		Subrouter()
+
+	s.Methods(http.MethodGet).HandlerFunc(f.getAppLensDetector).Name("getAppLensDetector")
 
 	// Admin actions
 	s = r.
@@ -364,6 +406,12 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterDrainNode).Name("postAdminOpenShiftClusterDrainNode")
 
 	s = r.
+		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/clusterdeployment").
+		Subrouter()
+
+	s.Methods(http.MethodGet).HandlerFunc(f.getAdminHiveClusterDeployment).Name("getAdminHiveClusterDeployment")
+
+	s = r.
 		Path("/admin/versions").
 		Subrouter()
 
@@ -373,7 +421,7 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	// Operations
 	s = r.
 		Path("/providers/{resourceProviderNamespace}/operations").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getOperations).Name("getOperations")
@@ -388,11 +436,11 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 
 func (f *frontend) setupRouter() *mux.Router {
 	r := mux.NewRouter()
-	r.Use(middleware.Log(f.env, f.auditLog, f.baseLog.WithField("component", "access")))
-	r.Use(middleware.Metrics(f.m))
+	r.Use(f.logMiddleware.Log)
+	r.Use(f.m.Metrics)
 	r.Use(middleware.Panic)
 	r.Use(middleware.Headers)
-	r.Use(middleware.Validate(f.env, f.apis))
+	r.Use(f.validateMiddleware.Validate)
 	r.Use(middleware.Body)
 	r.Use(middleware.SystemData)
 
@@ -400,13 +448,15 @@ func (f *frontend) setupRouter() *mux.Router {
 		w.Header().Set("Content-Type", "application/json")
 		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The requested path could not be found.")
 	})
-	r.NotFoundHandler = middleware.Authenticated(f.env)(r.NotFoundHandler)
+
+	r.NotFoundHandler = f.authMiddleware.Authenticate(r.NotFoundHandler)
 
 	unauthenticated := r.NewRoute().Subrouter()
 	f.unauthenticatedRoutes(unauthenticated)
 
 	authenticated := r.NewRoute().Subrouter()
-	authenticated.Use(middleware.Authenticated(f.env))
+	authenticated.Use(f.authMiddleware.Authenticate)
+
 	f.authenticatedRoutes(authenticated)
 
 	return r
@@ -502,4 +552,36 @@ func reply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byt
 		_, _ = w.Write(b)
 		_, _ = w.Write([]byte{'\n'})
 	}
+}
+
+func frontendOperationResultLog(log *logrus.Entry, method string, err error) {
+	log = log.WithFields(logrus.Fields{
+		"LOGKIND":       "frontendqos",
+		"resultType":    utillog.SuccessResultType,
+		"operationType": method,
+	})
+
+	if err == nil {
+		log.Info("front end operation succeeded")
+		return
+	}
+
+	switch err := err.(type) {
+	case *api.CloudError:
+		log = log.WithField("resultType", utillog.UserErrorResultType)
+	case statusCodeError:
+		if int(err) < 300 && int(err) >= 200 {
+			log.Info("front end operation succeeded")
+			return
+		} else if int(err) < 500 {
+			log = log.WithField("resultType", utillog.UserErrorResultType)
+		} else {
+			log = log.WithField("resultType", utillog.ServerErrorResultType)
+		}
+	default:
+		log = log.WithField("resultType", utillog.ServerErrorResultType)
+	}
+
+	log = log.WithField("errorDetails", err.Error())
+	log.Info("front end operation failed")
 }

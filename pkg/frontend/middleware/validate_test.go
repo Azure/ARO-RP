@@ -21,12 +21,12 @@ func TestValidate(t *testing.T) {
 
 	router.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
 
 	router.
 		Path("/providers/{resourceProviderNamespace}/operations").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "").
 		HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
 
 	router.
@@ -34,7 +34,11 @@ func TestValidate(t *testing.T) {
 		Queries("api-version", "2.0").
 		HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
 
-	router.Use(Validate(nil, api.APIs))
+	ValidateMiddleware := ValidateMiddleware{
+		Location: "",
+		Apis:     api.APIs,
+	}
+	router.Use(ValidateMiddleware.Validate)
 
 	tests := []struct {
 		name    string
