@@ -60,10 +60,21 @@ type SubnetList struct {
 	Subnets []Subnet `json:"subnets"`
 }
 
+type IngressProfile struct {
+	Name       string `json:"name"`
+	IP         string `json:"ip"`
+	Visibility string `json:"visibility"`
+}
+
+type IngressProfileList struct {
+	IngressProfiles []IngressProfile `json:"ingressprofiles"`
+}
+
 type NetworkInformation struct {
 	ClusterNetworkList ClusterNetworkList `json:"clusternetworklist"`
 	VNetPeeringList    VNetPeeringList    `json:"vnetpeeringlist"`
 	SubnetList         SubnetList         `json:"subnetlist"`
+	IngressProfileList IngressProfileList `json:"ingressprofilelist"`
 }
 
 type ClusterDetails struct {
@@ -89,6 +100,7 @@ func NetworkData(clusterNetworks *networkv1.ClusterNetworkList, doc *api.OpenShi
 		ClusterNetworkList: getClusterNetworkList(clusterNetworks),
 		VNetPeeringList:    getVNetPeeringList(clusDet),
 		SubnetList:         getSubnetList(subnetIds, clusDet),
+		IngressProfileList: getIngressProfileList(doc),
 	}
 
 	return final
@@ -198,6 +210,24 @@ func getSubnetList(subnetIds []string, clusDet ClusterDetails) SubnetList {
 	return final
 }
 
+func getIngressProfileList(doc *api.OpenShiftClusterDocument) IngressProfileList {
+
+	final := IngressProfileList{
+		IngressProfiles: make([]IngressProfile, len(doc.OpenShiftCluster.Properties.IngressProfiles)),
+	}
+
+	for i, ip := range doc.OpenShiftCluster.Properties.IngressProfiles {
+		ingressProfile := IngressProfile{
+			Name:       ip.Name,
+			IP:         ip.IP,
+			Visibility: string(ip.Visibility),
+		}
+		final.IngressProfiles[i] = ingressProfile
+	}
+
+	return final
+}
+
 func getClusterNetworkEntries(clusterNetwork networkv1.ClusterNetwork) []ClusterNetworkEntry {
 	final := make([]ClusterNetworkEntry, len(clusterNetwork.ClusterNetworks))
 
@@ -221,11 +251,11 @@ func getMTU(clusterNetwork networkv1.ClusterNetwork) string {
 }
 
 func getVXLANPort(clusterNetwork networkv1.ClusterNetwork) string {
-	MTU := "Unknown"
+	VXLANPort := "Unknown"
 	if clusterNetwork.VXLANPort != nil {
-		MTU = strconv.FormatUint(uint64(*clusterNetwork.VXLANPort), 10)
+		VXLANPort = strconv.FormatUint(uint64(*clusterNetwork.VXLANPort), 10)
 	}
-	return MTU
+	return VXLANPort
 }
 
 func (f *realFetcher) Network(ctx context.Context, doc *api.OpenShiftClusterDocument) (*NetworkInformation, error) {
