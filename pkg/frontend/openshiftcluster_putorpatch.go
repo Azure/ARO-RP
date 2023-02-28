@@ -168,12 +168,24 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	// Ensure that both ext and doc contain the sets of tags they are supposed to
 	// before proceeding with validation.
 	doc.OpenShiftCluster.Properties.ClusterResourceGroupTags = originalClusterResourceGroupTags
+
 	tempOc := &api.OpenShiftCluster{}
 	converter.ToInternal(ext, tempOc)
+
 	if tempOc.Properties.ClusterResourceGroupTags == nil {
 		tempOc.Properties.ClusterResourceGroupTags = originalClusterResourceGroupTags
+		tagsExt := converter.ToExternal(tempOc)
+
+		tagsJson, err := json.Marshal(tagsExt)
+		if err != nil {
+			return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
+		}
+
+		err = json.Unmarshal(tagsJson, &ext)
+		if err != nil {
+			return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
+		}
 	}
-	ext = converter.ToExternal(tempOc)
 
 	if isCreate {
 		converter.ToInternal(ext, doc.OpenShiftCluster)
