@@ -44,6 +44,13 @@ func TestEnsureResourceGroup(t *testing.T) {
 		"yeet": to.StringPtr("yote"),
 	}
 
+	modifyManagerResourceTags := func(m *manager) {
+		m.doc.OpenShiftCluster.Properties.ResourceTags = map[string]string{
+			"foo": "bar",
+			"bar": "baz",
+		}
+	}
+
 	resourceGroupManagedByMismatch := autorest.NewErrorWithError(&azure.RequestError{
 		ServiceError: &azure.ServiceError{Code: "ResourceGroupManagedByMismatch"},
 	}, "", "", nil, "")
