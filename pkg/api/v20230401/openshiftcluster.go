@@ -69,6 +69,9 @@ type OpenShiftClusterProperties struct {
 
 	// The cluster ingress profiles.
 	IngressProfiles []IngressProfile `json:"ingressProfiles,omitempty"`
+
+	// The cluster resource group tags.
+	ClusterResourceGroupTags Tags `json:"clusterResourceGroupTags,omitempty" mutable:"true"`
 }
 
 // ProvisioningState represents a provisioning state.

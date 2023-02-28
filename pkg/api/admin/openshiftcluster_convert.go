@@ -115,6 +115,13 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 		}
 	}
 
+	if oc.Properties.ClusterResourceGroupTags != nil {
+		out.Properties.ClusterResourceGroupTags = make(map[string]string, len(oc.Properties.ClusterResourceGroupTags))
+		for k, v := range oc.Properties.ClusterResourceGroupTags {
+			out.Properties.ClusterResourceGroupTags[k] = v
+		}
+	}
+
 	if oc.Properties.RegistryProfiles != nil {
 		out.Properties.RegistryProfiles = make([]RegistryProfile, len(oc.Properties.RegistryProfiles))
 		for i, v := range oc.Properties.RegistryProfiles {
@@ -162,6 +169,13 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 		out.Tags = make(map[string]string, len(oc.Tags))
 		for k, v := range oc.Tags {
 			out.Tags[k] = v
+		}
+	}
+	out.Properties.ClusterResourceGroupTags = nil
+	if oc.Properties.ClusterResourceGroupTags != nil {
+		out.Properties.ClusterResourceGroupTags = make(map[string]string, len(oc.Properties.ClusterResourceGroupTags))
+		for k, v := range oc.Properties.ClusterResourceGroupTags {
+			out.Properties.ClusterResourceGroupTags[k] = v
 		}
 	}
 	out.Properties.ArchitectureVersion = api.ArchitectureVersion(oc.Properties.ArchitectureVersion)

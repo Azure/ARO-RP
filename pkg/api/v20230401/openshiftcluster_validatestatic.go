@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -19,6 +20,21 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
+
+// The maximum allowed number of cluster resource group tags.
+//
+// See https://github.com/openshift/enhancements/blob/master/enhancements/api-review/azure_user_defined_tags.md
+// to understand how the value was decided.
+var maxTags = 10
+
+// Compiled regexp to use to check whether a cluster resource group tag name is valid.
+//
+// Valid tag names:
+// - Start with a letter
+// - End with a letter, number, or underscore
+// - Contain only letters, numbers, underscores, periods, and hyphens
+// - Have length <= 128
+var tagNameRegexp *regexp.Regexp = regexp.MustCompile("^[a-zA-Z]([a-zA-Z0-9_.-]{0,126}[a-zA-Z0-9_])?$")
 
 type openShiftClusterStaticValidator struct {
 	location            string
@@ -102,6 +118,9 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *Ope
 		return err
 	}
 	if err := sv.validateAPIServerProfile(path+".apiserverProfile", &p.APIServerProfile); err != nil {
+		return err
+	}
+	if err := sv.validateClusterResourceGroupTags(path+".clusterResourceGroupTags", &p.ClusterResourceGroupTags); err != nil {
 		return err
 	}
 
@@ -352,6 +371,24 @@ func (sv openShiftClusterStaticValidator) validateIngressProfile(path string, p 
 	}
 
 	return nil
+}
+
+func (sv openShiftClusterStaticValidator) validateClusterResourceGroupTags(path string, t *Tags) error {
+	if len(*t) > maxTags {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, fmt.Sprintf("The provided set of cluster resource group tags is too large; it can contain at most %s tags.", maxTags), t)
+	}
+
+	for k, v := range *t {
+		if !sv.clusterResourceGroupTagIsValid(k, v) {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, "One or more of the provided cluster resource group tags are invalid.", t)
+		}
+	}
+
+	return nil
+}
+
+func (sv openShiftClusterStaticValidator) clusterResourceGroupTagIsValid(key string, value string) bool {
+	return tagNameRegexp.MatchString(key) && len(value) <= 256
 }
 
 func (sv openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftCluster) error {
