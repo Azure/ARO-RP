@@ -4,6 +4,7 @@
 from azext_aro._validators import validate_cidr
 from azext_aro._validators import validate_client_id
 from azext_aro._validators import validate_cluster_resource_group
+from azext_aro._validators import validate_cluster_resource_group_tags
 from azext_aro._validators import validate_disk_encryption_set
 from azext_aro._validators import validate_domain
 from azext_aro._validators import validate_pull_secret
@@ -20,6 +21,7 @@ from azure.cli.core.commands.parameters import name_type
 from azure.cli.core.commands.parameters import get_enum_type, get_three_state_flag
 from azure.cli.core.commands.parameters import resource_group_name_type
 from azure.cli.core.commands.parameters import tags_type
+from azure.cli.core.commands.parameters import quote_text
 from azure.cli.core.commands.validators import get_default_location_from_resource_group
 
 
@@ -32,6 +34,10 @@ def load_arguments(self, _):
                    help='Name of cluster.')
         c.argument('tags',
                    tags_type)
+        c.argument('cluster_resource_group_tags',
+                   nargs='*',
+                   help="Tags to apply to the cluster resource group; a space-separated list of tags in 'key=[value]' format. {}".format(quote_text),
+                   validator=validate_cluster_resource_group_tags)
 
         c.argument('pull_secret',
                    help='Pull secret of cluster.',
