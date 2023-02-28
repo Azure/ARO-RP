@@ -14,12 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 )
-
-// Creating local vars for these functions in order to make them swappable to make them testable. The function definition will is altered in the tests written.
-var newResourceClientFunction = features.NewResourcesClient
-var newVirtualMachineClientFunction = compute.NewVirtualMachinesClient
 
 type MachinesInformation struct {
 	Name              string `json:"name"`
@@ -82,15 +77,13 @@ func (f *realFetcher) VMAllocationStatus(ctx context.Context) (map[string]string
 	if err != nil {
 		return nil, err
 	}
-
 	// Getting Virtual Machine resources through the Cluster's Resource Group
-	computeResources, err := newResourceClientFunction(env.Environment(), subscriptionDoc.ID, fpAuth).ListByResourceGroup(ctx, clusterRGName, "resourceType eq 'Microsoft.Compute/virtualMachines'", "", nil)
+	computeResources, err := f.resourceFactory.NewResourcesClient(env.Environment(), subscriptionDoc.ID, fpAuth).ListByResourceGroup(ctx, clusterRGName, "resourceType eq 'Microsoft.Compute/virtualMachines'", "", nil)
 	if err != nil {
 		return nil, err
 	}
-
 	vmAllocationStatus := make(map[string]string)
-	virtualMachineClient := newVirtualMachineClientFunction(env.Environment(), subscriptionDoc.ID, fpAuth)
+	virtualMachineClient := f.resourceFactory.NewVirtualMachinesClient(env.Environment(), subscriptionDoc.ID, fpAuth)
 	for _, res := range computeResources {
 		putAllocationStatusToMap(ctx, clusterRGName, vmAllocationStatus, res, virtualMachineClient, f.log)
 	}

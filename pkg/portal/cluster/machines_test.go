@@ -112,25 +112,28 @@ func TestMachines(t *testing.T) {
 	}
 }
 
+type mockResourceFactory struct {
+	mockResourcesClient       *mock_features.MockResourcesClient
+	mockVirtualMachinesClient *mock_compute.MockVirtualMachinesClient
+}
+
+func newMockResourceFactory(mockResourcesClient *mock_features.MockResourcesClient, mockVirtualMachinesClient *mock_compute.MockVirtualMachinesClient) mockResourceFactory {
+	return mockResourceFactory{mockResourcesClient: mockResourcesClient, mockVirtualMachinesClient: mockVirtualMachinesClient}
+}
+
+func (mrf mockResourceFactory) NewResourcesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient {
+	return mrf.mockResourcesClient
+}
+
+func (mrf mockResourceFactory) NewVirtualMachinesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient {
+	return mrf.mockVirtualMachinesClient
+}
+
 func TestVMAllocationStatus(t *testing.T) {
 	ctx := context.Background()
 	controller := gomock.NewController(t)
 	mockResourcesClient := mock_features.NewMockResourcesClient(controller)
 	mockVirtualMachinesClient := mock_compute.NewMockVirtualMachinesClient(controller)
-	newResourceClientFunction = func(environment *azureclient.AROEnvironment,
-		subscriptionID string,
-		authorizer autorest.Authorizer) features.ResourcesClient {
-		return mockResourcesClient
-	}
-	newVirtualMachineClientFunction = func(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient {
-		return mockVirtualMachinesClient
-	}
-
-	defer func() {
-		newResourceClientFunction = features.NewResourcesClient
-		newVirtualMachineClientFunction = compute.NewVirtualMachinesClient
-	}()
-
 	type test struct {
 		name    string
 		mocks   func(*test, *mock_env.MockInterface, *mock_refreshable.MockAuthorizer, *mock_features.MockResourcesClient, *mock_compute.MockVirtualMachinesClient)
@@ -245,9 +248,11 @@ func TestVMAllocationStatus(t *testing.T) {
 				env:               mockEnv,
 				subscriptionDoc:   subscriptionDoc,
 			}
+			mrf := newMockResourceFactory(mockResourcesClient, mockVirtualMachinesClient)
 			realFetcher := &realFetcher{
 				log:              log,
 				azureSideFetcher: azureSideFetcher,
+				resourceFactory:  mrf,
 			}
 			client := &client{fetcher: realFetcher, log: log}
 			_, err := client.VMAllocationStatus(ctx)

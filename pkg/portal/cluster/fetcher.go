@@ -6,6 +6,7 @@ package cluster
 import (
 	"context"
 
+	"github.com/Azure/go-autorest/autorest"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	"github.com/sirupsen/logrus"
@@ -14,9 +15,17 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/proxy"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
+
+type ResourceFactory interface {
+	NewResourcesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient
+	NewVirtualMachinesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient
+}
 
 // FetchClient is the interface that the Admin Portal Frontend uses to gather
 // information about clusters. It returns frontend-suitable data structures.
@@ -49,12 +58,23 @@ type realFetcher struct {
 	kubernetesCli    kubernetes.Interface
 	machineClient    machineclient.Interface
 	azureSideFetcher azureSideFetcher
+	resourceFactory  ResourceFactory
 }
 
 type azureSideFetcher struct {
 	resourceGroupName string
 	subscriptionDoc   *api.SubscriptionDocument
 	env               env.Interface
+}
+
+type resourceFactory struct{}
+
+func (rf resourceFactory) NewResourcesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient {
+	return features.NewResourcesClient(environment, subscriptionID, authorizer)
+}
+
+func (rf resourceFactory) NewVirtualMachinesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient {
+	return compute.NewVirtualMachinesClient(environment, subscriptionID, authorizer)
 }
 
 func newAzureSideFetcher(resourceGroupName string, subscriptionDoc *api.SubscriptionDocument, env env.Interface) azureSideFetcher {
@@ -65,7 +85,7 @@ func newAzureSideFetcher(resourceGroupName string, subscriptionDoc *api.Subscrip
 	}
 }
 
-func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftClusterDocument, azureSideFetcher azureSideFetcher) (*realFetcher, error) {
+func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftClusterDocument, azureSideFetcher azureSideFetcher, resourceFactory ResourceFactory) (*realFetcher, error) {
 	restConfig, err := restconfig.RestConfig(dialer, doc.OpenShiftCluster)
 	if err != nil {
 		log.Error(err)
@@ -95,14 +115,15 @@ func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftCl
 		kubernetesCli:    kubernetesCli,
 		machineClient:    machineClient,
 		azureSideFetcher: azureSideFetcher,
+		resourceFactory:  resourceFactory,
 	}, nil
 }
 
 func NewFetchClient(log *logrus.Entry, dialer proxy.Dialer, cluster *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, env env.Interface) (FetchClient, error) {
 	resourceGroupName := stringutils.LastTokenByte(cluster.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	azureSideFetcher := newAzureSideFetcher(resourceGroupName, subscriptionDoc, env)
-
-	fetcher, err := newRealFetcher(log, dialer, cluster, azureSideFetcher)
+	rf := resourceFactory{}
+	fetcher, err := newRealFetcher(log, dialer, cluster, azureSideFetcher, rf)
 	if err != nil {
 		return nil, err
 	}
