@@ -49,13 +49,13 @@ import (
 // In INT/PROD I believe it is invisible.
 
 type ARMHelper interface {
-	EnsureARMResourceGroupRoleAssignment(context.Context, autorest.Authorizer, string) error
+	EnsureARMResourceGroupRoleAssignment(context.Context, string) error
 }
 
 // noopARMHelper is used in INT and PROD.  It does nothing.
 type noopARMHelper struct{}
 
-func (*noopARMHelper) EnsureARMResourceGroupRoleAssignment(context.Context, autorest.Authorizer, string) error {
+func (*noopARMHelper) EnsureARMResourceGroupRoleAssignment(context.Context, string) error {
 	return nil
 }
 
@@ -126,7 +126,7 @@ func newARMHelper(ctx context.Context, log *logrus.Entry, env Interface) (ARMHel
 	}, nil
 }
 
-func (ah *armHelper) EnsureARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer autorest.Authorizer, resourceGroup string) error {
+func (ah *armHelper) EnsureARMResourceGroupRoleAssignment(ctx context.Context, resourceGroup string) error {
 	ah.log.Print("ensuring resource group role assignment")
 
 	principalID, err := utilgraph.GetServicePrincipalIDByAppID(ctx, ah.fpGraphClient, ah.env.FPClientID())

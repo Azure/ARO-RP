@@ -117,7 +117,7 @@ func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
 		return err
 	}
 
-	return m.env.EnsureARMResourceGroupRoleAssignment(ctx, m.fpAuthorizer, resourceGroup)
+	return m.env.EnsureARMResourceGroupRoleAssignment(ctx, resourceGroup)
 }
 
 func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {

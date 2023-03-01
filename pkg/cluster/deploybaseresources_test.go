@@ -71,7 +71,7 @@ func TestEnsureResourceGroup(t *testing.T) {
 					Return(false)
 
 				env.EXPECT().
-					EnsureARMResourceGroupRoleAssignment(gomock.Any(), gomock.Any(), resourceGroupName).
+					EnsureARMResourceGroupRoleAssignment(gomock.Any(), resourceGroupName).
 					Return(nil)
 			},
 		},
@@ -92,7 +92,7 @@ func TestEnsureResourceGroup(t *testing.T) {
 					Return(true)
 
 				env.EXPECT().
-					EnsureARMResourceGroupRoleAssignment(gomock.Any(), gomock.Any(), resourceGroupName).
+					EnsureARMResourceGroupRoleAssignment(gomock.Any(), resourceGroupName).
 					Return(nil)
 			},
 		},
@@ -113,7 +113,7 @@ func TestEnsureResourceGroup(t *testing.T) {
 					Return(false)
 
 				env.EXPECT().
-					EnsureARMResourceGroupRoleAssignment(gomock.Any(), gomock.Any(), resourceGroupName).
+					EnsureARMResourceGroupRoleAssignment(gomock.Any(), resourceGroupName).
 					Return(nil)
 			},
 		},
