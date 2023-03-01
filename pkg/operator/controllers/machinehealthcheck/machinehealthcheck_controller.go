@@ -12,14 +12,17 @@ import (
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
@@ -32,9 +35,10 @@ var machinehealthcheckYaml []byte
 var mhcremediationalertYaml []byte
 
 const (
-	ControllerName string = "MachineHealthCheck"
-	managed        string = "aro.machinehealthcheck.managed"
-	enabled        string = "aro.machinehealthcheck.enabled"
+	ControllerName    string = "MachineHealthCheck"
+	managed           string = "aro.machinehealthcheck.managed"
+	enabled           string = "aro.machinehealthcheck.enabled"
+	maxSupportedNodes int    = 62
 )
 
 type Reconciler struct {
@@ -66,7 +70,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	r.log.Debug("running")
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(managed) {
+	nodeList := &corev1.NodeList{}
+	err = r.client.List(ctx, nodeList)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	removeMHCCR := len(nodeList.Items) == maxSupportedNodes
+
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(managed) || removeMHCCR {
 		err := r.dh.EnsureDeleted(ctx, "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck")
 		if err != nil {
 			return reconcile.Result{RequeueAfter: time.Hour}, err
@@ -119,6 +130,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
+		Watches(&source.Kind{Type: &corev1.Node{}}, &handler.EnqueueRequestForObject{}).
 		Named(ControllerName).
 		Owns(&machinev1beta1.MachineHealthCheck{}).
 		Owns(&monitoringv1.PrometheusRule{}).
