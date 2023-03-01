@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	v20200430 "github.com/Azure/ARO-RP/pkg/api/v20200430"
 	v20220401 "github.com/Azure/ARO-RP/pkg/api/v20220401"
+	v20230401 "github.com/Azure/ARO-RP/pkg/api/v20230401"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
@@ -649,7 +650,8 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 
 	type test struct {
 		name                    string
-		request                 func(*v20200430.OpenShiftCluster)
+		apiVersion              string
+		request                 func(interface{})
 		isPatch                 bool
 		fixture                 func(*testdatabase.Fixture)
 		quotaValidatorError     error
@@ -659,16 +661,18 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		wantSystemDataEnriched  bool
 		wantDocuments           func(*testdatabase.Checker)
 		wantStatusCode          int
-		wantResponse            *v20200430.OpenShiftCluster
+		wantResponse            interface{}
 		wantAsync               bool
 		wantError               string
 	}
 
 	for _, tt := range []*test{
 		{
-			name: "create a new cluster",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Version = defaultVersion
+			name:       "create a new cluster",
+			apiVersion: "2020-04-30",
+			request: func(oc interface{}) {
+				_oc := oc.(*v20200430.OpenShiftCluster)
+				_oc.Properties.ClusterProfile.Version = "4.10.40"
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -737,9 +741,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			},
 		},
 		{
-			name: "create a new cluster vm not supported",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Version = "4.10.20"
+			name:       "create a new cluster vm not supported",
+			apiVersion: "2020-04-30",
+			request: func(oc interface{}) {
+				_oc := oc.(*v20200430.OpenShiftCluster)
+				_oc.Properties.ClusterProfile.Version = "4.10.20"
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -758,9 +764,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			wantError:           "400: InvalidParameter: : The provided VM SKU something is not supported.",
 		},
 		{
-			name: "create a new cluster quota fails",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Version = "4.10.20"
+			name:       "create a new cluster quota fails",
+			apiVersion: "2020-04-30",
+			request: func(oc interface{}) {
+				_oc := oc.(*v20200430.OpenShiftCluster)
+				_oc.Properties.ClusterProfile.Version = "4.10.20"
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -779,9 +787,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			wantError:           "400: QuotaExceeded: : Resource quota of vm exceeded. Maximum allowed: 0, Current in use: 0, Additional requested: 1.",
 		},
 		{
-			name: "create a new cluster sku unavailable",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Version = "4.10.20"
+			name:       "create a new cluster sku unavailable",
+			apiVersion: "2020-04-30",
+			request: func(oc interface{}) {
+				_oc := oc.(*v20200430.OpenShiftCluster)
+				_oc.Properties.ClusterProfile.Version = "4.10.20"
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -800,9 +810,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			wantError:         "400: InvalidParameter: : The selected SKU 'Standard_Sku' is unavailable in region 'somewhere'",
 		},
 		{
-			name: "create a new cluster sku restricted",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Version = "4.10.20"
+			name:       "create a new cluster sku restricted",
+			apiVersion: "2020-04-30",
+			request: func(oc interface{}) {
+				_oc := oc.(*v20200430.OpenShiftCluster)
+				_oc.Properties.ClusterProfile.Version = "4.10.20"
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -822,9 +834,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		},
 
 		{
-			name: "create a new cluster Microsoft.Authorization provider not registered",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Version = "4.10.20"
+			name:       "create a new cluster Microsoft.Authorization provider not registered",
+			apiVersion: "2020-04-30",
+			request: func(oc interface{}) {
+				_oc := oc.(*v20200430.OpenShiftCluster)
+				_oc.Properties.ClusterProfile.Version = "4.10.20"
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -843,9 +857,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			wantError:               "400: ResourceProviderNotRegistered: : The resource provider 'Microsoft.Authorization' is not registered.",
 		},
 		{
-			name: "create a new cluster Microsoft.Compute provider not registered",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Version = "4.10.20"
+			name:       "create a new cluster Microsoft.Compute provider not registered",
+			apiVersion: "2020-04-30",
+			request: func(oc interface{}) {
+				_oc := oc.(*v20200430.OpenShiftCluster)
+				_oc.Properties.ClusterProfile.Version = "4.10.20"
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -864,9 +880,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			wantError:               "400: ResourceProviderNotRegistered: : The resource provider 'Microsoft.Compute' is not registered.",
 		},
 		{
-			name: "create a new cluster Microsoft.Network provider not registered",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Version = "4.10.20"
+			name:       "create a new cluster Microsoft.Network provider not registered",
+			apiVersion: "2020-04-30",
+			request: func(oc interface{}) {
+				_oc := oc.(*v20200430.OpenShiftCluster)
+				_oc.Properties.ClusterProfile.Version = "4.10.20"
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -885,9 +903,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			wantError:               "400: ResourceProviderNotRegistered: : The resource provider 'Microsoft.Network' is not registered.",
 		},
 		{
-			name: "create a new cluster Microsoft.Storage provider not registered",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Version = "4.10.20"
+			name:       "create a new cluster Microsoft.Storage provider not registered",
+			apiVersion: "2020-04-30",
+			request: func(oc interface{}) {
+				_oc := oc.(*v20200430.OpenShiftCluster)
+				_oc.Properties.ClusterProfile.Version = "4.10.20"
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -906,9 +926,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			wantError:               "400: ResourceProviderNotRegistered: : The resource provider 'Microsoft.Storage' is not registered.",
 		},
 		{
-			name: "update a cluster from succeeded",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Domain = "changed"
+			name:       "update a cluster from succeeded",
+			apiVersion: "2020-04-30",
+			request: func(oc interface{}) {
+				_oc := oc.(*v20200430.OpenShiftCluster)
+				_oc.Properties.ClusterProfile.Domain = "changed"
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -1004,9 +1026,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			},
 		},
 		{
-			name: "update a cluster from failed during update",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Domain = "changed"
+			name:       "update a cluster from failed during update",
+			apiVersion: "2020-04-30",
+			request: func(oc interface{}) {
+				_oc := oc.(*v20200430.OpenShiftCluster)
+				_oc.Properties.ClusterProfile.Domain = "changed"
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -1085,9 +1109,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			},
 		},
 		{
-			name: "update a cluster from failed during creation",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Domain = "changed"
+			name:       "update a cluster from failed during creation",
+			apiVersion: "2020-04-30",
+			request: func(oc interface{}) {
+				_oc := oc.(*v20200430.OpenShiftCluster)
+				_oc.Properties.ClusterProfile.Domain = "changed"
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -1123,9 +1149,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			wantError:      "400: RequestNotAllowed: : Request is not allowed on cluster whose creation failed. Delete the cluster.",
 		},
 		{
-			name: "update a cluster from failed during deletion",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Domain = "changed"
+			name:       "update a cluster from failed during deletion",
+			apiVersion: "2020-04-30",
+			request: func(oc interface{}) {
+				_oc := oc.(*v20200430.OpenShiftCluster)
+				_oc.Properties.ClusterProfile.Domain = "changed"
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -1162,11 +1190,13 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			wantError:      "400: RequestNotAllowed: : Request is not allowed on cluster whose deletion failed. Delete the cluster.",
 		},
 		{
-			name: "patch a cluster from succeeded",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Domain = "changed"
-				oc.Properties.IngressProfiles = []v20200430.IngressProfile{{Name: "changed"}}
-				oc.Properties.WorkerProfiles = []v20200430.WorkerProfile{{Name: "changed"}}
+			name:       "patch a cluster from succeeded",
+			apiVersion: "2020-04-30",
+			request: func(oc interface{}) {
+				_oc := oc.(*v20200430.OpenShiftCluster)
+				_oc.Properties.ClusterProfile.Domain = "changed"
+				_oc.Properties.IngressProfiles = []v20200430.IngressProfile{{Name: "changed"}}
+				_oc.Properties.WorkerProfiles = []v20200430.WorkerProfile{{Name: "changed"}}
 			},
 			isPatch: true,
 			fixture: func(f *testdatabase.Fixture) {
@@ -1268,9 +1298,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			},
 		},
 		{
-			name: "patch a cluster from failed during update",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Domain = "changed"
+			name:       "patch a cluster from failed during update",
+			apiVersion: "2020-04-30",
+			request: func(oc interface{}) {
+				_oc := oc.(*v20200430.OpenShiftCluster)
+				_oc.Properties.ClusterProfile.Domain = "changed"
 			},
 			isPatch: true,
 			fixture: func(f *testdatabase.Fixture) {
@@ -1377,9 +1409,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			},
 		},
 		{
-			name: "patch a cluster from failed during creation",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Domain = "changed"
+			name:       "patch a cluster from failed during creation",
+			apiVersion: "2020-04-30",
+			request: func(oc interface{}) {
+				_oc := oc.(*v20200430.OpenShiftCluster)
+				_oc.Properties.ClusterProfile.Domain = "changed"
 			},
 			isPatch: true,
 			fixture: func(f *testdatabase.Fixture) {
@@ -1420,9 +1454,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			wantError:      "400: RequestNotAllowed: : Request is not allowed on cluster whose creation failed. Delete the cluster.",
 		},
 		{
-			name: "patch a cluster from failed during deletion",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Domain = "changed"
+			name:       "patch a cluster from failed during deletion",
+			apiVersion: "2020-04-30",
+			request: func(oc interface{}) {
+				_oc := oc.(*v20200430.OpenShiftCluster)
+				_oc.Properties.ClusterProfile.Domain = "changed"
 			},
 			isPatch: true,
 			fixture: func(f *testdatabase.Fixture) {
@@ -1463,10 +1499,12 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			wantError:      "400: RequestNotAllowed: : Request is not allowed on cluster whose deletion failed. Delete the cluster.",
 		},
 		{
-			name: "creating cluster failing when provided cluster resource group already contains a cluster",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ServicePrincipalProfile.ClientID = mockSubID
-				oc.Properties.ClusterProfile.ResourceGroupID = fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID)
+			name:       "creating cluster failing when provided cluster resource group already contains a cluster",
+			apiVersion: "2020-04-30",
+			request: func(oc interface{}) {
+				_oc := oc.(*v20200430.OpenShiftCluster)
+				_oc.Properties.ServicePrincipalProfile.ClientID = mockSubID
+				_oc.Properties.ClusterProfile.ResourceGroupID = fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID)
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -1510,9 +1548,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			wantError:              fmt.Sprintf("400: DuplicateResourceGroup: : The provided resource group '/subscriptions/%s/resourcegroups/aro-vjb21wca' already contains a cluster.", mockSubID),
 		},
 		{
-			name: "creating cluster failing when provided client ID is not unique",
-			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ServicePrincipalProfile.ClientID = mockSubID
+			name:       "creating cluster failing when provided client ID is not unique",
+			apiVersion: "2020-04-30",
+			request: func(oc interface{}) {
+				_oc := oc.(*v20200430.OpenShiftCluster)
+				_oc.Properties.ServicePrincipalProfile.ClientID = mockSubID
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -1597,7 +1637,14 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 
 			go f.Run(ctx, nil, nil)
 
-			oc := &v20200430.OpenShiftCluster{}
+			var oc interface{}
+
+			if tt.apiVersion == "2020-04-30" {
+				oc = &v20200430.OpenShiftCluster{}
+			} else if tt.apiVersion == "2023-04-01" {
+				oc = &v20230401.OpenShiftCluster{}
+			}
+
 			if tt.request != nil {
 				tt.request(oc)
 			}
@@ -1608,7 +1655,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			}
 
 			resp, b, err := ti.request(method,
-				"https://server"+testdatabase.GetResourcePath(mockSubID, "resourceName")+"?api-version=2020-04-30",
+				"https://server"+testdatabase.GetResourcePath(mockSubID, "resourceName")+fmt.Sprintf("?api-version=%s", tt.apiVersion),
 				http.Header{
 					"Content-Type": []string{"application/json"},
 				}, oc)

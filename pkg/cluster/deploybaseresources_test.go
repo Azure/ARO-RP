@@ -125,7 +125,6 @@ func TestEnsureResourceGroup(t *testing.T) {
 				env.EXPECT().
 					EnsureARMResourceGroupRoleAssignment(gomock.Any(), gomock.Any(), resourceGroupName).
 					Return(nil)
-
 			},
 			modify: modifyManagerClusterResourceGroupTags,
 		},
