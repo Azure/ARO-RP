@@ -8,9 +8,10 @@ import (
 	"net/http"
 	"testing"
 
-	testhttp "github.com/Azure/ARO-RP/test/util/http"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
+
+	testhttp "github.com/Azure/ARO-RP/test/util/http"
 )
 
 func TestSuccessfulCallReturnsADecision(t *testing.T) {
@@ -44,7 +45,6 @@ func TestFailedCallReturns(t *testing.T) {
 	if err == nil {
 		t.Error("Call resulting in a failure should return an error")
 	}
-
 }
 
 func createClientWithServer(s *testhttp.Server) RemotePDPClient {
@@ -57,5 +57,4 @@ func createClientWithServer(s *testhttp.Server) RemotePDPClient {
 			&policy.ClientOptions{Transport: s},
 		),
 	}
-
 }
