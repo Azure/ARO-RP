@@ -93,22 +93,22 @@ func (f *realFetcher) vmAllocationStatus(ctx context.Context) (map[string]string
 
 // Helper Functions
 func putAllocationStatusToMap(ctx context.Context, clusterRGName string, vmAllocationStatus map[string]string, res mgmtfeatures.GenericResourceExpanded, virtualMachineClient compute.VirtualMachinesClient, log *logrus.Entry) {
-	var vmName, allocationStatus string
 	vm, err := virtualMachineClient.Get(ctx, clusterRGName, *res.Name, mgmtcompute.InstanceView)
 	if err != nil {
 		log.Warn(err) // can happen when the ARM cache is lagging
 		return
 	}
 
-	vmName = *vm.Name
+	vmName := *vm.Name
 	instanceViewStatuses := vm.InstanceView.Statuses
 	for _, status := range *instanceViewStatuses {
 		if strings.HasPrefix(*status.Code, "PowerState/") {
-			allocationStatus = *status.Code
+			vmAllocationStatus[vmName] = *status.Code
+			return
 		}
 	}
 
-	vmAllocationStatus[vmName] = allocationStatus
+	vmAllocationStatus[vmName] = ""
 }
 
 func getLastOperation(machine machinev1beta1.Machine) string {
