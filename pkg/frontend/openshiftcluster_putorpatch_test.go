@@ -837,7 +837,6 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			wantStatusCode:    http.StatusBadRequest,
 			wantError:         "400: InvalidParameter: : The selected SKU 'Standard_Sku' is restricted in region 'somewhere' for selected subscription",
 		},
-
 		{
 			name:       "create a new cluster Microsoft.Authorization provider not registered",
 			apiVersion: "2020-04-30",
