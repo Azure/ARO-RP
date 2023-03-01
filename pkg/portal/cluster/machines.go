@@ -66,10 +66,10 @@ func (c *client) Machines(ctx context.Context) (*MachineListInformation, error) 
 }
 
 func (c *client) VMAllocationStatus(ctx context.Context) (map[string]string, error) {
-	return c.fetcher.VMAllocationStatus(ctx)
+	return c.fetcher.vmAllocationStatus(ctx)
 }
 
-func (f *realFetcher) VMAllocationStatus(ctx context.Context) (map[string]string, error) {
+func (f *realFetcher) vmAllocationStatus(ctx context.Context) (map[string]string, error) {
 	env := f.azureSideFetcher.env
 	subscriptionDoc := f.azureSideFetcher.subscriptionDoc
 	clusterRGName := f.azureSideFetcher.resourceGroupName
