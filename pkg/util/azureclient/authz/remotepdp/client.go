@@ -63,11 +63,10 @@ func (r *remotePDPClient) CheckAccess(ctx context.Context, authzReq Authorizatio
 	}
 
 	var accessDecision AuthorizationDecisionResponse
-	err = runtime.UnmarshalAsJSON(res, &accessDecision)
-
-	if err != nil {
+	if err := runtime.UnmarshalAsJSON(res, &accessDecision); err != nil {
 		return nil, err
 	}
+
 	return &accessDecision, nil
 }
 
