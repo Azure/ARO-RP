@@ -22,8 +22,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
-type ResourceFactory interface {
+type ResourceClientFactory interface {
 	NewResourcesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient
+}
+
+type VirtualMachinesClientFactory interface {
 	NewVirtualMachinesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient
 }
 
@@ -53,12 +56,13 @@ type client struct {
 // contains Kubernetes clients and returns the frontend-suitable data
 // structures. The concrete implementation of FetchClient wraps this.
 type realFetcher struct {
-	log              *logrus.Entry
-	configCli        configclient.Interface
-	kubernetesCli    kubernetes.Interface
-	machineClient    machineclient.Interface
-	azureSideFetcher azureSideFetcher
-	resourceFactory  ResourceFactory
+	log                          *logrus.Entry
+	configCli                    configclient.Interface
+	kubernetesCli                kubernetes.Interface
+	machineClient                machineclient.Interface
+	azureSideFetcher             azureSideFetcher
+	resourceClientFactory        ResourceClientFactory
+	virtualMachinesClientFactory VirtualMachinesClientFactory
 }
 
 type azureSideFetcher struct {
@@ -67,13 +71,13 @@ type azureSideFetcher struct {
 	env               env.Interface
 }
 
-type resourceFactory struct{}
+type clientFactory struct{}
 
-func (rf resourceFactory) NewResourcesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient {
+func (cf clientFactory) NewResourcesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient {
 	return features.NewResourcesClient(environment, subscriptionID, authorizer)
 }
 
-func (rf resourceFactory) NewVirtualMachinesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient {
+func (cf clientFactory) NewVirtualMachinesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient {
 	return compute.NewVirtualMachinesClient(environment, subscriptionID, authorizer)
 }
 
@@ -85,7 +89,7 @@ func newAzureSideFetcher(resourceGroupName string, subscriptionDoc *api.Subscrip
 	}
 }
 
-func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftClusterDocument, azureSideFetcher azureSideFetcher, resourceFactory ResourceFactory) (*realFetcher, error) {
+func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftClusterDocument, azureSideFetcher azureSideFetcher, resourceClientFactory ResourceClientFactory, virtualMachinesClientFactory VirtualMachinesClientFactory) (*realFetcher, error) {
 	restConfig, err := restconfig.RestConfig(dialer, doc.OpenShiftCluster)
 	if err != nil {
 		log.Error(err)
@@ -110,20 +114,21 @@ func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftCl
 	}
 
 	return &realFetcher{
-		log:              log,
-		configCli:        configCli,
-		kubernetesCli:    kubernetesCli,
-		machineClient:    machineClient,
-		azureSideFetcher: azureSideFetcher,
-		resourceFactory:  resourceFactory,
+		log:                          log,
+		configCli:                    configCli,
+		kubernetesCli:                kubernetesCli,
+		machineClient:                machineClient,
+		azureSideFetcher:             azureSideFetcher,
+		resourceClientFactory:        resourceClientFactory,
+		virtualMachinesClientFactory: virtualMachinesClientFactory,
 	}, nil
 }
 
 func NewFetchClient(log *logrus.Entry, dialer proxy.Dialer, cluster *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, env env.Interface) (FetchClient, error) {
 	resourceGroupName := stringutils.LastTokenByte(cluster.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	azureSideFetcher := newAzureSideFetcher(resourceGroupName, subscriptionDoc, env)
-	rf := resourceFactory{}
-	fetcher, err := newRealFetcher(log, dialer, cluster, azureSideFetcher, rf)
+	cf := clientFactory{}
+	fetcher, err := newRealFetcher(log, dialer, cluster, azureSideFetcher, cf, cf)
 	if err != nil {
 		return nil, err
 	}

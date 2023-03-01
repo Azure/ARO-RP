@@ -78,12 +78,12 @@ func (f *realFetcher) VMAllocationStatus(ctx context.Context) (map[string]string
 		return nil, err
 	}
 	// Getting Virtual Machine resources through the Cluster's Resource Group
-	computeResources, err := f.resourceFactory.NewResourcesClient(env.Environment(), subscriptionDoc.ID, fpAuth).ListByResourceGroup(ctx, clusterRGName, "resourceType eq 'Microsoft.Compute/virtualMachines'", "", nil)
+	computeResources, err := f.resourceClientFactory.NewResourcesClient(env.Environment(), subscriptionDoc.ID, fpAuth).ListByResourceGroup(ctx, clusterRGName, "resourceType eq 'Microsoft.Compute/virtualMachines'", "", nil)
 	if err != nil {
 		return nil, err
 	}
 	vmAllocationStatus := make(map[string]string)
-	virtualMachineClient := f.resourceFactory.NewVirtualMachinesClient(env.Environment(), subscriptionDoc.ID, fpAuth)
+	virtualMachineClient := f.virtualMachinesClientFactory.NewVirtualMachinesClient(env.Environment(), subscriptionDoc.ID, fpAuth)
 	for _, res := range computeResources {
 		putAllocationStatusToMap(ctx, clusterRGName, vmAllocationStatus, res, virtualMachineClient, f.log)
 	}
