@@ -72,8 +72,7 @@ func (p *prod) populateTenantIDFromMSI(ctx context.Context) error {
 	c := &azureclaim.AzureClaim{}
 	_, _, err = parser.ParseUnverified(token.OAuthToken(), c)
 	if err != nil {
-		err = api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalToken, "properties.servicePrincipalProfile", err.Error())
-		return err
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalToken, "properties.servicePrincipalProfile", err.Error())
 	}
 
 	p.tenantID = c.TenantID
