@@ -35,10 +35,11 @@ var machinehealthcheckYaml []byte
 var mhcremediationalertYaml []byte
 
 const (
-	ControllerName    string = "MachineHealthCheck"
-	managed           string = "aro.machinehealthcheck.managed"
-	enabled           string = "aro.machinehealthcheck.enabled"
-	maxSupportedNodes int    = 62
+	ControllerName string = "MachineHealthCheck"
+	managed        string = "aro.machinehealthcheck.managed"
+	enabled        string = "aro.machinehealthcheck.enabled"
+	// Note: We're going to review this functionality or change this const once ARO supports more than 62 nodes out of the box.
+	maxSupportedNodes int = 62
 )
 
 type Reconciler struct {
