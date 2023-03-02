@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -24,7 +25,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
 	"github.com/Azure/ARO-RP/pkg/util/deployer"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
-	"github.com/sirupsen/logrus"
 )
 
 type Reconciler struct {
@@ -65,9 +65,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// how to handle the enable/disable sequence of enabled and managed?
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		// controller is disabled
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
+
+	r.log.Debug("running")
 
 	managed := instance.Spec.OperatorFlags.GetWithDefault(controllerManaged, "")
 
@@ -164,11 +166,8 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	// we won't listen for changes on policies, since we only want to reconcile on a timer anyway
-	if err := grBuilder.
+	return grBuilder.
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}, predicate.LabelChangedPredicate{})).
 		Named(ControllerName).
-		Complete(r); err != nil {
-		return err
-	}
-	return nil
+		Complete(r)
 }

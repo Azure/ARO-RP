@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
+	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
 	mock_deployer "github.com/Azure/ARO-RP/pkg/util/mocks/deployer"
 )
@@ -181,6 +181,10 @@ func TestGuardRailsReconciler(t *testing.T) {
 			defer controller.Finish()
 
 			cluster := &arov1alpha1.Cluster{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Cluster",
+					APIVersion: "aro.openshift.io/v1alpha1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: arov1alpha1.SingletonClusterName,
 				},
@@ -189,19 +193,17 @@ func TestGuardRailsReconciler(t *testing.T) {
 					ACRDomain:     "acrtest.example.com",
 				},
 			}
-			arocli := arofake.NewSimpleClientset(cluster)
-			kubecli := fake.NewSimpleClientset()
 			deployer := mock_deployer.NewMockDeployer(controller)
+			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(cluster)
 
 			if tt.mocks != nil {
 				tt.mocks(deployer, cluster)
 			}
 
 			r := &Reconciler{
-				arocli:        arocli,
-				kubernetescli: kubecli,
-				deployer:      deployer,
-				// gkPolicyTemplate:   mock_deployer.NewMockDeployer(controller),
+				log:               logrus.NewEntry(logrus.StandardLogger()),
+				deployer:          deployer,
+				client:            clientBuilder.Build(),
 				readinessTimeout:  0 * time.Second,
 				readinessPollTime: 1 * time.Second,
 			}
