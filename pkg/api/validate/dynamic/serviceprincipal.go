@@ -25,6 +25,7 @@ func (dv *dynamic) ValidateServicePrincipal(ctx context.Context, clientID, clien
 	c := &azureclaim.AzureClaim{}
 	_, _, err = p.ParseUnverified(token.OAuthToken(), c)
 	if err != nil {
+		err = api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalToken, "properties.servicePrincipalProfile", err.Error())
 		return err
 	}
 

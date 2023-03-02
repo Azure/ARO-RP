@@ -205,7 +205,7 @@ func TestPopulateTenantIDFromMSI(t *testing.T) {
 					OAuthToken().
 					Return("invalid")
 			},
-			wantErr: "token contains an invalid number of segments",
+			wantErr: "400: InvalidServicePrincipalToken: properties.servicePrincipalProfile: token contains an invalid number of segments",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -236,7 +236,7 @@ func TestPopulateTenantIDFromMSI(t *testing.T) {
 
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
-				t.Fatal(err)
+				t.Fatalf("\n%v\n !=\n%v", err, tt.wantErr)
 			}
 
 			if p.tenantID != tt.wantTenantID {

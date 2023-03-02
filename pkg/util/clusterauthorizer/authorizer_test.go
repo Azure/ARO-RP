@@ -128,7 +128,7 @@ func TestNewRefreshableAuthorizerToken(t *testing.T) {
 				signMethod:   "fake-signing-method",
 			},
 			secret:  newV1CoreSecret(azureSecretName, nameSpace),
-			wantErr: "signing method (alg) is unavailable.",
+			wantErr: "400: InvalidServicePrincipalToken: properties.servicePrincipalProfile: signing method (alg) is unavailable.",
 		},
 		{
 			name:   "pass: create new bearer authorizer token",
