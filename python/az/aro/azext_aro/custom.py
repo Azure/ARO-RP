@@ -7,7 +7,7 @@ import os
 from base64 import b64decode
 import textwrap
 
-import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2022_09_04.models as openshiftcluster
+import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2023_04_01.models as openshiftcluster
 
 from azure.cli.command_modules.role import GraphError
 from azure.cli.core.commands.client_factory import get_mgmt_service_client
@@ -140,11 +140,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
         network_profile=openshiftcluster.NetworkProfile(
             pod_cidr=pod_cidr or '10.128.0.0/14',
             service_cidr=service_cidr or '172.30.0.0/16',
-<<<<<<< HEAD
-=======
             outbound_type=outbound_type or 'Loadbalancer',
-            software_defined_network=software_defined_network or 'OpenShiftSDN'
->>>>>>> 381c20683 (add outbound-type param to az cli extension)
         ),
         master_profile=openshiftcluster.MasterProfile(
             vm_size=master_vm_size or 'Standard_D8s_v3',
