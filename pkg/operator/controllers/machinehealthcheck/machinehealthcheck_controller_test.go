@@ -6,14 +6,17 @@ package machinehealthcheck
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -26,6 +29,7 @@ func TestReconciler(t *testing.T) {
 	type test struct {
 		name             string
 		instance         *arov1alpha1.Cluster
+		nodes            []client.Object
 		mocks            func(mdh *mock_dynamichelper.MockInterface)
 		wantErr          string
 		wantRequeueAfter time.Duration
@@ -114,6 +118,67 @@ func TestReconciler(t *testing.T) {
 			wantRequeueAfter: time.Hour,
 		},
 		{
+			name: "Node Count is equal to supported maximum: ensure mhc and its alert are deleted",
+			instance: &arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
+				},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						enabled: strconv.FormatBool(true),
+						managed: strconv.FormatBool(true),
+					},
+				},
+			},
+			nodes: getFakeNodes(maxSupportedNodes),
+			mocks: func(mdh *mock_dynamichelper.MockInterface) {
+				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Times(1)
+				mdh.EXPECT().EnsureDeleted(gomock.Any(), "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert").Times(1)
+			},
+			wantErr: "",
+		},
+		{
+			name: "Node Count is equal to supported maximum: mhc fails to delete, an error is returned",
+			instance: &arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
+				},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						enabled: strconv.FormatBool(true),
+						managed: strconv.FormatBool(true),
+					},
+				},
+			},
+			nodes: getFakeNodes(maxSupportedNodes),
+			mocks: func(mdh *mock_dynamichelper.MockInterface) {
+				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Return(errors.New("Could not delete mhc"))
+			},
+			wantErr:          "Could not delete mhc",
+			wantRequeueAfter: time.Hour,
+		},
+		{
+			name: "Node Count is equal to supported maximum: mhc deletes but mhc alert fails to delete, an error is returned",
+			instance: &arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
+				},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						enabled: strconv.FormatBool(true),
+						managed: strconv.FormatBool(true),
+					},
+				},
+			},
+			nodes: getFakeNodes(maxSupportedNodes),
+			mocks: func(mdh *mock_dynamichelper.MockInterface) {
+				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Times(1)
+				mdh.EXPECT().EnsureDeleted(gomock.Any(), "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert").Return(errors.New("Could not delete mhc alert"))
+			},
+			wantErr:          "Could not delete mhc alert",
+			wantRequeueAfter: time.Hour,
+		},
+		{
 			name: "Managed Feature Flag is true: dynamic helper ensures resources",
 			instance: &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
@@ -162,6 +227,9 @@ func TestReconciler(t *testing.T) {
 			if tt.instance != nil {
 				clientBuilder = clientBuilder.WithObjects(tt.instance)
 			}
+			if tt.nodes != nil {
+				clientBuilder = clientBuilder.WithObjects(tt.nodes...)
+			}
 
 			ctx := context.Background()
 			r := &Reconciler{
@@ -184,4 +252,18 @@ func TestReconciler(t *testing.T) {
 			}
 		})
 	}
+}
+
+func getFakeNodes(count int) []client.Object {
+	nodes := []client.Object{}
+	for i := 0; i < count; i++ {
+		node := &corev1.Node{
+			TypeMeta:   metav1.TypeMeta{},
+			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("aro-fake-node-%d", i)},
+			Spec:       corev1.NodeSpec{},
+			Status:     corev1.NodeStatus{},
+		}
+		nodes = append(nodes, node)
+	}
+	return nodes
 }
