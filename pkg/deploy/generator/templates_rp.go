@@ -148,8 +148,6 @@ func (g *generator) rpTemplate() *arm.Template {
 				{
 					ID: to.StringPtr("[resourceId(parameters('gatewayResourceGroupName'), 'Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet')]"),
 				},
-			},
-			"rpCosmoDbVirtualNetworkRulesVmDeploy": &[]mgmtdocumentdb.VirtualNetworkRule{
 				{
 					ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'aks-net', 'ClusterSubnet-001')]"),
 					// TODO: AKS Sharding: add rules for additional AKS shards for this RP instance. Currently only shard 1, which has subnet ClusterSubnet-001, is set above.
