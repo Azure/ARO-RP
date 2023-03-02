@@ -11,6 +11,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest/azure"
+	msgraph "github.com/microsoftgraph/msgraph-sdk-go"
 )
 
 // AROEnvironment contains additional, cloud-specific information needed by ARO.
@@ -32,6 +33,7 @@ type AROEnvironment struct {
 	ResourceManagerScope      string
 	KeyVaultScope             string
 	ActiveDirectoryGraphScope string
+	MicrosoftGraphScope       string
 }
 
 // AzureRbacPDPEnvironment contains cloud specific instance of Authz RBAC PDP Remote Server
@@ -60,6 +62,7 @@ var (
 		ResourceManagerScope:      azure.PublicCloud.ResourceManagerEndpoint + "/.default",
 		KeyVaultScope:             azure.PublicCloud.ResourceIdentifiers.KeyVault + "/.default",
 		ActiveDirectoryGraphScope: azure.PublicCloud.GraphEndpoint + "/.default",
+		MicrosoftGraphScope:       azure.PublicCloud.MicrosoftGraphEndpoint + "/.default",
 	}
 
 	// USGovernmentCloud contains additional ARO information for the US Gov cloud environment.
@@ -82,6 +85,7 @@ var (
 		ResourceManagerScope:      azure.USGovernmentCloud.ResourceManagerEndpoint + "/.default",
 		KeyVaultScope:             azure.USGovernmentCloud.ResourceIdentifiers.KeyVault + "/.default",
 		ActiveDirectoryGraphScope: azure.USGovernmentCloud.GraphEndpoint + "/.default",
+		MicrosoftGraphScope:       azure.USGovernmentCloud.MicrosoftGraphEndpoint + "/.default",
 	}
 )
 
@@ -128,4 +132,18 @@ func (e *AROEnvironment) ManagedIdentityCredentialOptions() *azidentity.ManagedI
 			Cloud: e.Cloud,
 		},
 	}
+}
+
+func (e *AROEnvironment) NewGraphServiceClient(tokenCredential azcore.TokenCredential) (*msgraph.GraphServiceClient, error) {
+	scopes := []string{e.MicrosoftGraphScope}
+	client, err := msgraph.NewGraphServiceClientWithCredentials(tokenCredential, scopes)
+	if err != nil {
+		return nil, err
+	}
+
+	// Watch this issue for a better way to configure the graph endpoint.
+	// https://github.com/microsoftgraph/msgraph-sdk-go/issues/235
+	client.GetAdapter().SetBaseUrl(e.MicrosoftGraphEndpoint + "v1.0")
+
+	return client, nil
 }
