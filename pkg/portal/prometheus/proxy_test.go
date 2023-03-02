@@ -277,15 +277,21 @@ func TestProxy(t *testing.T) {
 				tt.mocks(dialer)
 			}
 
+			prom := New(logrus.NewEntry(logrus.StandardLogger()), dbOpenShiftClusters, dialer)
 			aadAuthenticatedRouter := &mux.Router{}
-
-			New(logrus.NewEntry(logrus.StandardLogger()), dbOpenShiftClusters, dialer, aadAuthenticatedRouter)
 
 			if tt.r != nil {
 				tt.r(r)
 			}
 
 			w := responsewriter.New(r)
+
+			aadAuthenticatedRouter.NewRoute().Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/prometheus").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				r.URL.Path += "/"
+				http.Redirect(w, r, r.URL.String(), http.StatusTemporaryRedirect)
+			})
+
+			aadAuthenticatedRouter.NewRoute().PathPrefix("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/prometheus/").Handler(prom.ReverseProxy)
 
 			aadAuthenticatedRouter.ServeHTTP(w, r)
 
@@ -346,9 +352,9 @@ func TestModifyResponse(t *testing.T) {
 				Body: io.NopCloser(strings.NewReader(tt.body)),
 			}
 
-			p := &prometheus{}
+			p := &Prometheus{}
 
-			err := p.modifyResponse(r)
+			err := p.ModifyResponse(r)
 			if err != nil {
 				t.Fatal(err)
 			}

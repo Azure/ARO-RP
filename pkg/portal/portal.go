@@ -44,16 +44,13 @@ type Runnable interface {
 }
 
 type portal struct {
-	env                 env.Core
-	audit               *logrus.Entry
-	log                 *logrus.Entry
-	baseAccessLog       *logrus.Entry
-	l                   net.Listener
-	sshl                net.Listener
-	verifier            oidc.Verifier
-	baseRouter          *mux.Router
-	authenticatedRouter *mux.Router
-	publicRouter        *mux.Router
+	env           env.Core
+	audit         *logrus.Entry
+	log           *logrus.Entry
+	baseAccessLog *logrus.Entry
+	l             net.Listener
+	sshl          net.Listener
+	verifier      oidc.Verifier
 
 	hostname     string
 	servingKey   *rsa.PrivateKey
@@ -132,35 +129,32 @@ func NewPortal(env env.Core,
 	}
 }
 
-func (p *portal) setupRouter() error {
-	if p.baseRouter != nil {
-		return fmt.Errorf("can't setup twice")
-	}
-
+func (p *portal) setupRouter(kconfig *kubeconfig.Kubeconfig, prom *prometheus.Prometheus, sshStruct *ssh.SSH) (*mux.Router, error) {
 	r := mux.NewRouter()
 	r.Use(middleware.Panic(p.log))
 
 	assetv1, err := assets.EmbeddedFiles.ReadFile("v1/build/index.html")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	assetv2, err := assets.EmbeddedFiles.ReadFile("v2/build/index.html")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	p.templateV1, err = template.New("index.html").Parse(string(assetv1))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	p.templateV2, err = template.New("index.html").Parse(string(assetv2))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	unauthenticatedRouter := r.NewRoute().Subrouter()
+	bearerRoutes(unauthenticatedRouter, kconfig)
 	p.unauthenticatedRoutes(unauthenticatedRouter)
 
 	allGroups := append([]string{}, p.groupIDs...)
@@ -168,7 +162,7 @@ func (p *portal) setupRouter() error {
 
 	p.aad, err = middleware.NewAAD(p.log, p.audit, p.env, p.baseAccessLog, p.hostname, p.sessionKey, p.clientID, p.clientKey, p.clientCerts, allGroups, unauthenticatedRouter, p.verifier)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	aadAuthenticatedRouter := r.NewRoute().Subrouter()
@@ -177,31 +171,27 @@ func (p *portal) setupRouter() error {
 	aadAuthenticatedRouter.Use(p.aad.CheckAuthentication)
 	aadAuthenticatedRouter.Use(csrf.Protect(p.sessionKey, csrf.SameSite(csrf.SameSiteStrictMode), csrf.MaxAge(0), csrf.Path("/")))
 
-	p.aadAuthenticatedRoutes(aadAuthenticatedRouter)
+	p.aadAuthenticatedRoutes(aadAuthenticatedRouter, prom, kconfig, sshStruct)
 
-	p.baseRouter = r
-	p.publicRouter = unauthenticatedRouter
-	p.authenticatedRouter = aadAuthenticatedRouter
-
-	return nil
+	return r, nil
 }
 
-func (p *portal) setupServices() error {
-	ssh, err := ssh.New(p.env, p.log, p.baseAccessLog, p.sshl, p.sshKey, p.elevatedGroupIDs, p.dbOpenShiftClusters, p.dbPortal, p.dialer, p.authenticatedRouter)
+func (p *portal) setupServices() (*kubeconfig.Kubeconfig, *prometheus.Prometheus, *ssh.SSH, error) {
+	ssh, err := ssh.New(p.env, p.log, p.baseAccessLog, p.sshl, p.sshKey, p.elevatedGroupIDs, p.dbOpenShiftClusters, p.dbPortal, p.dialer)
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 
 	err = ssh.Run()
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 
-	kubeconfig.New(p.log, p.audit, p.env, p.baseAccessLog, p.servingCerts[0], p.elevatedGroupIDs, p.dbOpenShiftClusters, p.dbPortal, p.dialer, p.authenticatedRouter, p.publicRouter)
+	k := kubeconfig.New(p.log, p.audit, p.env, p.baseAccessLog, p.servingCerts[0], p.elevatedGroupIDs, p.dbOpenShiftClusters, p.dbPortal, p.dialer)
 
-	prometheus.New(p.log, p.dbOpenShiftClusters, p.dialer, p.authenticatedRouter)
+	prom := prometheus.New(p.log, p.dbOpenShiftClusters, p.dialer)
 
-	return nil
+	return k, prom, ssh, nil
 }
 
 func (p *portal) Run(ctx context.Context) error {
@@ -232,19 +222,17 @@ func (p *portal) Run(ctx context.Context) error {
 		config.Certificates[0].Certificate = append(config.Certificates[0].Certificate, cert.Raw)
 	}
 
-	if p.baseRouter == nil {
-		err := p.setupRouter()
-		if err != nil {
-			return err
-		}
-		err = p.setupServices()
-		if err != nil {
-			return err
-		}
+	k, prom, sshStruct, err := p.setupServices()
+	if err != nil {
+		return err
+	}
+	router, err := p.setupRouter(k, prom, sshStruct)
+	if err != nil {
+		return err
 	}
 
 	s := &http.Server{
-		Handler:     frontendmiddleware.Lowercase(p.baseRouter),
+		Handler:     frontendmiddleware.Lowercase(router),
 		ReadTimeout: 10 * time.Second,
 		IdleTimeout: 2 * time.Minute,
 		ErrorLog:    log.New(p.log.Writer(), "", 0),
@@ -256,13 +244,23 @@ func (p *portal) Run(ctx context.Context) error {
 	return s.Serve(tls.NewListener(p.l, config))
 }
 
+func bearerRoutes(r *mux.Router, k *kubeconfig.Kubeconfig) {
+	if k != nil {
+		bearerAuthenticatedRouter := r.NewRoute().Subrouter()
+		bearerAuthenticatedRouter.Use(middleware.Bearer(k.DbPortal))
+		bearerAuthenticatedRouter.Use(middleware.Log(k.Env, k.Audit, k.BaseAccessLog))
+
+		bearerAuthenticatedRouter.PathPrefix("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/kubeconfig/proxy/").Handler(k.ReverseProxy)
+	}
+}
+
 func (p *portal) unauthenticatedRoutes(r *mux.Router) {
 	logger := middleware.Log(p.env, p.audit, p.baseAccessLog)
 
 	r.Methods(http.MethodGet).Path("/healthz/ready").Handler(logger(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})))
 }
 
-func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
+func (p *portal) aadAuthenticatedRoutes(r *mux.Router, prom *prometheus.Prometheus, kconfig *kubeconfig.Kubeconfig, sshStruct *ssh.SSH) {
 	var names []string
 
 	err := fs.WalkDir(assets.EmbeddedFiles, ".", func(path string, entry fs.DirEntry, err error) error {
@@ -308,6 +306,24 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
 	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/machines").HandlerFunc(p.machines)
 	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/machine-sets").HandlerFunc(p.machineSets)
 	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}").HandlerFunc(p.clusterInfo)
+
+	// prometheus
+	if prom != nil {
+		r.Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/prometheus").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			r.URL.Path += "/"
+			http.Redirect(w, r, r.URL.String(), http.StatusTemporaryRedirect)
+		})
+
+		r.PathPrefix("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/prometheus/").Handler(prom.ReverseProxy)
+	}
+
+	//kubeconfig
+	if kconfig != nil {
+		r.Methods(http.MethodPost).Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/kubeconfig/new").HandlerFunc(kconfig.New)
+	}
+
+	// ssh
+	r.Methods(http.MethodPost).Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/ssh/new").HandlerFunc(sshStruct.New)
 }
 
 func (p *portal) index(w http.ResponseWriter, r *http.Request) {

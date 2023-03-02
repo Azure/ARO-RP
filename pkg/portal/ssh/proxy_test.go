@@ -10,6 +10,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"net"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -412,10 +413,13 @@ func TestProxy(t *testing.T) {
 
 			hook, log := testlog.New()
 
-			s, err := New(nil, nil, log, nil, hostKey, nil, dbOpenShiftClusters, dbPortal, dialer, &mux.Router{})
+			s, err := New(nil, nil, log, nil, hostKey, nil, dbOpenShiftClusters, dbPortal, dialer)
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			r := mux.NewRouter()
+			r.Methods(http.MethodPost).Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/ssh/new").HandlerFunc(s.New)
 
 			done := make(chan struct{})
 

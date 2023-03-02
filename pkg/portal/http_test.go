@@ -50,13 +50,13 @@ func (p *testPortal) DumpLogs(t *testing.T) {
 }
 
 func (p *testPortal) Run(ctx context.Context) error {
-	err := p.p.setupRouter()
+	router, err := p.p.setupRouter(nil, nil, nil)
 	if err != nil {
 		return err
 	}
 
 	s := &http.Server{
-		Handler:     frontendmiddleware.Lowercase(p.p.baseRouter),
+		Handler:     frontendmiddleware.Lowercase(router),
 		ReadTimeout: 10 * time.Second,
 		IdleTimeout: 2 * time.Minute,
 		ErrorLog:    log.New(p.p.log.Writer(), "", 0),
