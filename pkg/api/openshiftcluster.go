@@ -158,7 +158,7 @@ type OpenShiftClusterProperties struct {
 
 	HiveProfile HiveProfile `json:"hiveProfile,omitempty"`
 
-	ClusterResourceGroupTags map[string]string `json:"clusterResourceGroupTags,omitempty" mutable:"true"`
+	ClusterResourceGroupTags map[string]string `json:"clusterResourceGroupTags" mutable:"true"`
 }
 
 // ProvisioningState represents a provisioning state
