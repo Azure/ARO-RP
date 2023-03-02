@@ -96,9 +96,9 @@ func (r *Reconciler) setClusterOperatorStatus(ctx context.Context, originalClust
 
 	if equality.Semantic.DeepEqual(clusterOperatorObj.Status.Conditions, originalClusterOperatorObj.Status.Conditions) {
 		return nil
-	} else {
-		return r.client.Status().Update(ctx, clusterOperatorObj)
 	}
+
+	return r.client.Status().Update(ctx, clusterOperatorObj)
 }
 
 func (r *Reconciler) getOrCreateClusterOperator(ctx context.Context) (*configv1.ClusterOperator, error) {

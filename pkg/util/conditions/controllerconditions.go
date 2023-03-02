@@ -79,12 +79,13 @@ func SetControllerConditions(ctx context.Context, c client.Client, conditions Co
 
 func getCluster(ctx context.Context, c client.Client) (*arov1alpha1.Cluster, error) {
 	cluster := &arov1alpha1.Cluster{}
+
 	err := c.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, cluster)
 	if err != nil {
 		return nil, err
-	} else {
-		return cluster, nil
 	}
+
+	return cluster, nil
 }
 
 func conditionName(controllerName string, conditionType string) string {
