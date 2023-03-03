@@ -66,6 +66,21 @@ func PossibleFipsValidatedModulesValues() []FipsValidatedModules {
 	return []FipsValidatedModules{FipsValidatedModulesDisabled, FipsValidatedModulesEnabled}
 }
 
+// OutboundType enumerates the values for outbound type.
+type OutboundType string
+
+const (
+	// Loadbalancer ...
+	Loadbalancer OutboundType = "Loadbalancer"
+	// UserDefinedRouting ...
+	UserDefinedRouting OutboundType = "UserDefinedRouting"
+)
+
+// PossibleOutboundTypeValues returns an array of possible values for the OutboundType const type.
+func PossibleOutboundTypeValues() []OutboundType {
+	return []OutboundType{Loadbalancer, UserDefinedRouting}
+}
+
 // ProvisioningState enumerates the values for provisioning state.
 type ProvisioningState string
 
