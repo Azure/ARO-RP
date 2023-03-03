@@ -150,7 +150,7 @@ export function ClusterDetailPanel(props: {
           name: 'Network',
           key: networkKey,
           url: '#network',
-          icon: 'BuildQueue',
+          icon: 'Dataflows',
         },
       ],
     },

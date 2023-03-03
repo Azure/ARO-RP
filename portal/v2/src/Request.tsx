@@ -86,6 +86,17 @@ export const FetchMachineSets = async (cluster: ICluster): Promise<AxiosResponse
   }
 }
 
+export const FetchNetwork = async (cluster: ICluster): Promise<AxiosResponse | null> => {
+  try {
+    const result = await axios(
+      "/api/" + cluster.subscription + "/" + cluster.resourceGroup + "/" + cluster.name + "/network")
+    return result
+  } catch (e: any) {
+    const err = e.response as AxiosResponse
+    return OnError(err)
+  }
+}
+
 export const FetchRegions = async (): Promise<AxiosResponse | null> => {
   try {
     const result = await axios("/api/regions")

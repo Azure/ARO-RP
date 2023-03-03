@@ -44,10 +44,6 @@ type VNetPeering struct {
 	Provisioning string `json:"provisioning"`
 }
 
-type VNetPeeringList struct {
-	VNetPeerings []VNetPeering `json:"vnetpeerings"`
-}
-
 type Subnet struct {
 	Name          string `json:"name"`
 	ID            string `json:"id"`
@@ -56,25 +52,17 @@ type Subnet struct {
 	RouteTable    string `json:"routetable"`
 }
 
-type SubnetList struct {
-	Subnets []Subnet `json:"subnets"`
-}
-
 type IngressProfile struct {
 	Name       string `json:"name"`
 	IP         string `json:"ip"`
 	Visibility string `json:"visibility"`
 }
 
-type IngressProfileList struct {
-	IngressProfiles []IngressProfile `json:"ingressprofiles"`
-}
-
 type NetworkInformation struct {
-	ClusterNetworkList ClusterNetworkList `json:"clusternetworklist"`
-	VNetPeeringList    VNetPeeringList    `json:"vnetpeeringlist"`
-	SubnetList         SubnetList         `json:"subnetlist"`
-	IngressProfileList IngressProfileList `json:"ingressprofilelist"`
+	ClusterNetworks []ClusterNetwork `json:"clusternetworks"`
+	VNetPeerings    []VNetPeering    `json:"vnetpeerings"`
+	Subnets         []Subnet         `json:"subnets"`
+	IngressProfiles []IngressProfile `json:"ingressprofiles"`
 }
 
 type ClusterDetails struct {
@@ -97,10 +85,10 @@ func NetworkData(clusterNetworks *networkv1.ClusterNetworkList, doc *api.OpenShi
 
 	// Response of request for network information
 	final := &NetworkInformation{
-		ClusterNetworkList: getClusterNetworkList(clusterNetworks),
-		VNetPeeringList:    getVNetPeeringList(clusDet),
-		SubnetList:         getSubnetList(subnetIds, clusDet),
-		IngressProfileList: getIngressProfileList(doc),
+		ClusterNetworks: getClusterNetworkList(clusterNetworks),
+		VNetPeerings:    getVNetPeeringList(clusDet),
+		Subnets:         getSubnetList(subnetIds, clusDet),
+		IngressProfiles: getIngressProfileList(doc),
 	}
 
 	return final
@@ -128,10 +116,8 @@ func getClusterDetails(doc *api.OpenShiftClusterDocument) (envDetails ClusterDet
 	return envDet
 }
 
-func getClusterNetworkList(clusterNetworks *networkv1.ClusterNetworkList) ClusterNetworkList {
-	final := ClusterNetworkList{
-		ClusterNetworks: make([]ClusterNetwork, len(clusterNetworks.Items)),
-	}
+func getClusterNetworkList(clusterNetworks *networkv1.ClusterNetworkList) []ClusterNetwork {
+	ClusterNetworks := make([]ClusterNetwork, len(clusterNetworks.Items))
 
 	for i, clusNet := range clusterNetworks.Items {
 		clusterNetwork := ClusterNetwork{
@@ -144,12 +130,12 @@ func getClusterNetworkList(clusterNetworks *networkv1.ClusterNetworkList) Cluste
 			VXLANPort:             getVXLANPort(clusNet),
 			ClusterNetworkEntries: getClusterNetworkEntries(clusNet),
 		}
-		final.ClusterNetworks[i] = clusterNetwork
+		ClusterNetworks[i] = clusterNetwork
 	}
-	return final
+	return ClusterNetworks
 }
 
-func getVNetPeeringList(clusDet ClusterDetails) VNetPeeringList {
+func getVNetPeeringList(clusDet ClusterDetails) []VNetPeering {
 
 	// Create a new VirtualNetworkPeerings client
 	vnetPeeringClient := mgmtnetwork.NewVirtualNetworkPeeringsClient(clusDet.SubsId)
@@ -161,9 +147,7 @@ func getVNetPeeringList(clusDet ClusterDetails) VNetPeeringList {
 		fmt.Println("Error getiing Vnet Peerings:", err)
 	}
 
-	final := VNetPeeringList{
-		VNetPeerings: make([]VNetPeering, len(vnetPeerings.Values())),
-	}
+	VNetPeerings := make([]VNetPeering, len(vnetPeerings.Values()))
 
 	// Loop through the list of virtual network peerings and create final list
 	for i, peering := range vnetPeerings.Values() {
@@ -174,21 +158,19 @@ func getVNetPeeringList(clusDet ClusterDetails) VNetPeeringList {
 			State:        string(peering.PeeringState),
 			Provisioning: string(peering.VirtualNetworkPeeringPropertiesFormat.ProvisioningState),
 		}
-		final.VNetPeerings[i] = vnetPeering
+		VNetPeerings[i] = vnetPeering
 	}
 
-	return final
+	return VNetPeerings
 }
 
-func getSubnetList(subnetIds []string, clusDet ClusterDetails) SubnetList {
+func getSubnetList(subnetIds []string, clusDet ClusterDetails) []Subnet {
 
 	// create a new SubnetsClient
 	subnetsClient := mgmtnetwork.NewSubnetsClient(clusDet.SubsId)
 	subnetsClient.Authorizer = clusDet.Auth
 
-	final := SubnetList{
-		Subnets: make([]Subnet, len(subnetIds)),
-	}
+	Subnets := make([]Subnet, len(subnetIds))
 
 	for i, subnetID := range subnetIds {
 		// get the subnet details
@@ -204,17 +186,15 @@ func getSubnetList(subnetIds []string, clusDet ClusterDetails) SubnetList {
 			Provisioning:  string(subnet.ProvisioningState),
 			RouteTable:    strings.Split(*subnet.RouteTable.ID, "/")[8],
 		}
-		final.Subnets[i] = subNet
+		Subnets[i] = subNet
 	}
 
-	return final
+	return Subnets
 }
 
-func getIngressProfileList(doc *api.OpenShiftClusterDocument) IngressProfileList {
+func getIngressProfileList(doc *api.OpenShiftClusterDocument) []IngressProfile {
 
-	final := IngressProfileList{
-		IngressProfiles: make([]IngressProfile, len(doc.OpenShiftCluster.Properties.IngressProfiles)),
-	}
+	IngressProfiles := make([]IngressProfile, len(doc.OpenShiftCluster.Properties.IngressProfiles))
 
 	for i, ip := range doc.OpenShiftCluster.Properties.IngressProfiles {
 		ingressProfile := IngressProfile{
@@ -222,24 +202,24 @@ func getIngressProfileList(doc *api.OpenShiftClusterDocument) IngressProfileList
 			IP:         ip.IP,
 			Visibility: string(ip.Visibility),
 		}
-		final.IngressProfiles[i] = ingressProfile
+		IngressProfiles[i] = ingressProfile
 	}
 
-	return final
+	return IngressProfiles
 }
 
 func getClusterNetworkEntries(clusterNetwork networkv1.ClusterNetwork) []ClusterNetworkEntry {
-	final := make([]ClusterNetworkEntry, len(clusterNetwork.ClusterNetworks))
+	ClusterNetworkEntries := make([]ClusterNetworkEntry, len(clusterNetwork.ClusterNetworks))
 
 	for i, clusNetEnt := range clusterNetwork.ClusterNetworks {
 		clusterNetworkEntry := ClusterNetworkEntry{
 			CIDR:             clusNetEnt.CIDR,
 			HostSubnetLength: strconv.FormatUint(uint64(clusNetEnt.HostSubnetLength), 10),
 		}
-		final[i] = clusterNetworkEntry
+		ClusterNetworkEntries[i] = clusterNetworkEntry
 	}
 
-	return final
+	return ClusterNetworkEntries
 }
 
 func getMTU(clusterNetwork networkv1.ClusterNetwork) string {
