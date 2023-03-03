@@ -45,6 +45,7 @@ import (
 	redhatopenshift20230401 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2023-04-01/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
 
@@ -55,6 +56,7 @@ type clientSet struct {
 	OpenshiftClusters redhatopenshift20230401.OpenShiftClustersClient
 
 	VirtualMachines       compute.VirtualMachinesClient
+	ResourceGroups        features.ResourceGroupsClient
 	Resources             features.ResourcesClient
 	VirtualNetworks       network.VirtualNetworksClient
 	DiskEncryptionSets    compute.DiskEncryptionSetsClient
@@ -77,14 +79,22 @@ type clientSet struct {
 }
 
 var (
-	log               *logrus.Entry
-	_env              env.Core
-	vnetResourceGroup string
-	clusterName       string
-	clusterResourceID string
-	clients           *clientSet
+	log                    *logrus.Entry
+	_env                   env.Core
+	vnetResourceGroup      string
+	clusterName            string
+	clusterResourceID      string
+	clusterResourceGroupID string
+	clients                *clientSet
 
 	dockerSucceeded bool
+
+	// The set of tags stored in CosmosDB
+	originalClusterResourceGroupTags map[string]*string
+
+	// The set of tags that actually exists on the Azure
+	// resource group
+	originalClusterResourceGroupTagsAzure map[string]*string
 )
 
 func skipIfNotInDevelopmentEnv() {
@@ -364,6 +374,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		OpenshiftClusters: redhatopenshift20230401.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 
 		VirtualMachines:       compute.NewVirtualMachinesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		ResourceGroups:        features.NewResourceGroupsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Resources:             features.NewResourcesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		VirtualNetworks:       network.NewVirtualNetworksClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Disks:                 compute.NewDisksClient(_env.Environment(), _env.SubscriptionID(), authorizer),
@@ -490,6 +501,21 @@ func setup(ctx context.Context) error {
 			setupSelenium(ctx)
 		}
 	}
+
+	oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+	if err != nil {
+		return err
+	}
+
+	originalClusterResourceGroupTags = oc.OpenShiftClusterProperties.ClusterResourceGroupTags
+	clusterResourceGroupID = stringutils.LastTokenByte(*oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, '/')
+
+	group, err := clients.ResourceGroups.Get(ctx, clusterResourceGroupID)
+	if err != nil {
+		return err
+	}
+
+	originalClusterResourceGroupTagsAzure = group.Tags
 
 	return nil
 }
