@@ -205,7 +205,7 @@ func TestPopulateTenantIDFromMSI(t *testing.T) {
 					OAuthToken().
 					Return("invalid")
 			},
-			wantErr: "400: InvalidServicePrincipalToken: properties.servicePrincipalProfile: token contains an invalid number of segments",
+			wantErr: "the provided service principal is invalid",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
