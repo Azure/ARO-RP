@@ -4,11 +4,9 @@ import { useEffect, useRef, useState } from "react"
 import { ICluster } from "../App"
 import { networkKey } from "../ClusterDetail"
 import { FetchNetwork } from "../Request"
+import { IngressProfilesListComponent } from "./IngressProfileList"
 import { SubnetsListComponent } from "./SubnetList"
 import { VNetPeeringsListComponent } from "./VNetPeeringList"
-
-
-
 
 export interface IVNetPeering {
     name: string
@@ -25,17 +23,11 @@ export interface ISubnet {
     id: string
 }
 
-// export interface IIngressProfile {
-//     name: string
-//     ip: string
-//     visibility: string
-// }
-
-// export interface INetwork {
-//     vnetpeerings?: IVNetPeering[]
-//     subnets?: ISubnet[]
-//     ingressprofiles?: IIngressProfile[]
-// }
+export interface IIngressProfile {
+    name: string
+    ip: string
+    visibility: string
+}
 
 export function NetworkWrapper(props: {
     currentCluster: ICluster
@@ -46,6 +38,7 @@ export function NetworkWrapper(props: {
     const [error, setError] = useState<AxiosResponse | null>(null)
     const subnetState = useRef<SubnetsListComponent>(null)
     const vNetPeeringState = useRef<VNetPeeringsListComponent>(null)
+    const ingressProfileState = useRef<IngressProfilesListComponent>(null)
   
     const [fetching, setFetching] = useState("")
 
@@ -101,7 +94,22 @@ export function NetworkWrapper(props: {
                 vNetPeeringList.push(vNetPeering)
             });
             vNetPeeringState.current.setState({ vNetPeerings: vNetPeeringList })
-            }
+        }
+
+        const ingressProfileList: IIngressProfile[] = []
+        if (ingressProfileState && ingressProfileState.current) {
+            newData.ingressprofiles.forEach((element: { name: string;
+                                                ip: string;
+                                                visibility: string;}) => {
+                const ingressProfile: IIngressProfile = {
+                    name: element.name,
+                    ip: element.ip,
+                    visibility: element.visibility
+                }
+                ingressProfileList.push(ingressProfile)
+            });
+            ingressProfileState.current.setState({ ingressProfiles: ingressProfileList })
+        }
 
     }
 
@@ -128,15 +136,17 @@ export function NetworkWrapper(props: {
         <Stack>
           <Stack.Item grow>{error && errorBar()}</Stack.Item>
           <Stack>
-            <h3>Subnets</h3>
+            <h3><u>Subnets</u></h3>
             <SubnetsListComponent subnets={data!} ref={subnetState} clusterName={props.currentCluster != null ? props.currentCluster.name : ""} />
           </Stack>
           <Stack>
-            <h3>VNetPeerings</h3>
+            <h3><u>VNetPeerings</u></h3>
             <VNetPeeringsListComponent vNetPeerings={data!} ref={vNetPeeringState} clusterName={props.currentCluster != null ? props.currentCluster.name : ""} />
+          </Stack>
+          <Stack>
+            <h3><u>Ingress Profiles</u></h3>
+            <IngressProfilesListComponent ingressProfiles={data!} ref={ingressProfileState} clusterName={props.currentCluster != null ? props.currentCluster.name : ""} />
           </Stack>
         </Stack>   
       )
-
-
 }
