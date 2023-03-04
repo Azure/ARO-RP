@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { ICluster } from "../App"
 import { networkKey } from "../ClusterDetail"
 import { FetchNetwork } from "../Request"
+import { ClusterNetworksListComponent } from "./ClusterNetworkList"
 import { IngressProfilesListComponent } from "./IngressProfileList"
 import { SubnetsListComponent } from "./SubnetList"
 import { VNetPeeringsListComponent } from "./VNetPeeringList"
@@ -29,6 +30,22 @@ export interface IIngressProfile {
     visibility: string
 }
 
+export interface IClusterNetworkEntry {
+    cidr: string
+    hostsubnetlength: string
+}
+
+export interface IClusterNetwork {
+    name: string
+    pluginname: string
+    networkcidr: string
+    servicenetworkcidr: string
+    hostsubnetlength: string
+    mtu: string
+    vxlanport: string
+    clusternerworkentry?: IClusterNetworkEntry[]
+}
+
 export function NetworkWrapper(props: {
     currentCluster: ICluster
     detailPanelSelected: string
@@ -39,6 +56,7 @@ export function NetworkWrapper(props: {
     const subnetState = useRef<SubnetsListComponent>(null)
     const vNetPeeringState = useRef<VNetPeeringsListComponent>(null)
     const ingressProfileState = useRef<IngressProfilesListComponent>(null)
+    const clusterNetworkState = useRef<ClusterNetworksListComponent>(null)
   
     const [fetching, setFetching] = useState("")
 
@@ -111,6 +129,37 @@ export function NetworkWrapper(props: {
             ingressProfileState.current.setState({ ingressProfiles: ingressProfileList })
         }
 
+        const clusterNetworkList: IClusterNetwork[] = []
+        if (clusterNetworkState && clusterNetworkState.current) {
+            newData.clusternetworks.forEach((element: { name: string;
+                                                    pluginname: string;
+                                                    networkcidr: string;
+                                                    servicenetworkcidr: string;
+                                                    hostsubnetlength: string;
+                                                    mtu: string;
+                                                    vxlanport: string;
+                                                    clusternetworkentry: IClusterNetworkEntry[]}) => {
+                const clusterNetwork: IClusterNetwork = {
+                    name: element.name,
+                    pluginname: element.pluginname,
+                    networkcidr: element.networkcidr,
+                    servicenetworkcidr: element.servicenetworkcidr,
+                    hostsubnetlength: element.hostsubnetlength,
+                    mtu: element.mtu,
+                    vxlanport: element.vxlanport,
+                }
+
+                clusterNetwork.clusternerworkentry = []
+                element.clusternetworkentry.forEach((clusternetworkentry: IClusterNetworkEntry) => {
+                    clusterNetwork.clusternerworkentry!.push(clusternetworkentry)
+                })
+
+                clusterNetworkList.push(clusterNetwork)
+            })
+
+            clusterNetworkState.current.setState({clusterNetworks: clusterNetworkList})
+        }
+
     }
 
     useEffect(() => {
@@ -136,15 +185,19 @@ export function NetworkWrapper(props: {
         <Stack>
           <Stack.Item grow>{error && errorBar()}</Stack.Item>
           <Stack>
-            <h3><u>Subnets</u></h3>
+            <h3><u>Cluster Network</u></h3>
+            <ClusterNetworksListComponent clusterNetworks={data!} ref={clusterNetworkState} clusterName={props.currentCluster != null ? props.currentCluster.name : ""} />
+          </Stack>
+          <Stack>
+            <h3><u>Subnet</u></h3>
             <SubnetsListComponent subnets={data!} ref={subnetState} clusterName={props.currentCluster != null ? props.currentCluster.name : ""} />
           </Stack>
           <Stack>
-            <h3><u>VNetPeerings</u></h3>
+            <h3><u>VNetPeering</u></h3>
             <VNetPeeringsListComponent vNetPeerings={data!} ref={vNetPeeringState} clusterName={props.currentCluster != null ? props.currentCluster.name : ""} />
           </Stack>
           <Stack>
-            <h3><u>Ingress Profiles</u></h3>
+            <h3><u>Ingress Profile</u></h3>
             <IngressProfilesListComponent ingressProfiles={data!} ref={ingressProfileState} clusterName={props.currentCluster != null ? props.currentCluster.name : ""} />
           </Stack>
         </Stack>   
