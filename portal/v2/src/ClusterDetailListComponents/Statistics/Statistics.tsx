@@ -218,6 +218,11 @@ export function Statistics(props: {
             <GraphWrapper statisticsName="dnshealthcheck" heading={"Health Check"}/>
           </Stack.Item>
         </Stack>
+        <Stack horizontal>
+          <Stack.Item>
+            <GraphWrapper statisticsName="dnsforwardedtraffic" heading={"Forwarded Traffic"}/>
+          </Stack.Item>
+        </Stack>
       </>
     )
   }

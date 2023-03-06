@@ -5,7 +5,6 @@ package portal
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"sort"
@@ -15,6 +14,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/gorilla/mux"
 
+	"github.com/Azure/ARO-RP/pkg/portal/cluster"
 	"github.com/Azure/ARO-RP/pkg/portal/prometheus"
 )
 
@@ -210,49 +210,16 @@ func (p *portal) statistics(w http.ResponseWriter, r *http.Request) {
 	resourceGroup := apiVars["resourceGroup"]
 	clusterName := apiVars["clusterName"]
 	statisticsType := apiVars["statisticsType"]
-	promQuery := ""
-
-	switch statisticsType {
-	//kube-apiserver
-	case "kubeapicodes":
-		promQuery = "sum(rate(apiserver_request_total{job=\"apiserver\",code=~\"[45]..\"}[10m])) by (code, verb)"
-	case "kubeapicpu":
-		promQuery = "rate(process_cpu_seconds_total{job=\"apiserver\"}[5m])"
-	case "kubeapimemory":
-		promQuery = "process_resident_memory_bytes{job=\"apiserver\"}"
-	//kube-controller-manager
-	case "kubecontrollermanagercodes":
-		promQuery = "sum(rate(rest_client_requests_total{job=\"kube-controller-manager\"}[5m])) by (code)"
-	case "kubecontrollermanagercpu":
-		promQuery = "rate(process_cpu_seconds_total{job=\"kube-controller-manager\"}[5m])"
-	case "kubecontrollermanagermemory":
-		promQuery = "process_resident_memory_bytes{job=\"kube-controller-manager\"}"
-	//DNS
-	case "dnsresponsecodes":
-		promQuery = "sum(rate(coredns_dns_responses_total[5m])) by (rcode)"
-	case "dnserrorrate":
-		promQuery = "sum(rate(coredns_dns_responses_total{rcode=~\"SERVFAIL|NXDOMAIN\"}[5m])) by (pod) / sum(rate(coredns_dns_responses_total{rcode=~\"NOERROR\"}[5m])) by (pod)"
-
-	case "dnshealthcheck":
-		promQuery = "histogram_quantile(0.99, sum(rate(coredns_health_request_duration_seconds_bucket[5m])) by (le))"
-	case "dnsforwardedtraffic":
-		promQuery = ""
-	case "dnsalltraffic":
-		promQuery = "histogram_quantile(0.95, sum(rate(coredns_dns_request_duration_seconds_bucket[5m])) by (le))"
-	//Ingress
-	case "ingresscontrollercondition":
-		promQuery = "sum(ingress_controller_conditions) by (condition)"
-
-	default:
-		p.internalServerError(w, errors.New("invalid statistic type '"+statisticsType+"'"))
+	promQuery, err := cluster.GetPromQuery(statisticsType)
+	if err != nil {
+		p.internalServerError(w, err)
 		return
 	}
 
-	resourceID :=
-		strings.ToLower(
-			fmt.Sprintf(
-				"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s",
-				subscription, resourceGroup, clusterName))
+	resourceID := strings.ToLower(
+		fmt.Sprintf(
+			"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s",
+			subscription, resourceGroup, clusterName))
 
 	prom := prometheus.New(p.log, p.dbOpenShiftClusters, p.dialer, p.authenticatedRouter)
 	httpClient, err := prom.Cli(ctx, resourceID)

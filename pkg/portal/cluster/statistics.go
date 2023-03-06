@@ -58,10 +58,10 @@ func (f *realFetcher) Statistics(ctx context.Context, httpClient *http.Client, p
 	}
 
 	valueMatrix := value.(model.Matrix)
-	return convertToStringMap(valueMatrix), nil
+	return convertToTypeMetrics(valueMatrix), nil
 }
 
-func convertToStringMap(v model.Matrix) []Metrics {
+func convertToTypeMetrics(v model.Matrix) []Metrics {
 	metrics := make([]Metrics, 0)
 	for _, i := range v {
 		metric := Metrics{}
@@ -112,4 +112,40 @@ func getStartTimeFromDuration(duration string, endTime time.Time) (time.Time, er
 		return endTime.Add(-56 * 24 * time.Hour), nil
 	}
 	return time.Time{}, errors.New("invalid duration")
+}
+
+func GetPromQuery(statisticsType string) (string, error) {
+	switch statisticsType {
+	//kube-apiserver
+	case "kubeapicodes":
+		return "sum(rate(apiserver_request_total{job=\"apiserver\",code=~\"[45]..\"}[10m])) by (code, verb)", nil
+	case "kubeapicpu":
+		return "rate(process_cpu_seconds_total{job=\"apiserver\"}[5m])", nil
+	case "kubeapimemory":
+		return "process_resident_memory_bytes{job=\"apiserver\"}", nil
+	//kube-controller-manager
+	case "kubecontrollermanagercodes":
+		return "sum(rate(rest_client_requests_total{job=\"kube-controller-manager\"}[5m])) by (code)", nil
+	case "kubecontrollermanagercpu":
+		return "rate(process_cpu_seconds_total{job=\"kube-controller-manager\"}[5m])", nil
+	case "kubecontrollermanagermemory":
+		return "process_resident_memory_bytes{job=\"kube-controller-manager\"}", nil
+	//DNS
+	case "dnsresponsecodes":
+		return "sum(rate(coredns_dns_responses_total[5m])) by (rcode)", nil
+	case "dnserrorrate":
+		return "sum(rate(coredns_dns_responses_total{rcode=~\"SERVFAIL|NXDOMAIN\"}[5m])) by (pod) / sum(rate(coredns_dns_responses_total{rcode=~\"NOERROR\"}[5m])) by (pod)", nil
+	case "dnshealthcheck":
+		return "histogram_quantile(0.99, sum(rate(coredns_health_request_duration_seconds_bucket[5m])) by (le))", nil
+	case "dnsforwardedtraffic":
+		return "histogram_quantile(0.95, sum(rate(coredns_forward_request_duration_seconds_bucket[5m])) by (le))", nil
+	case "dnsalltraffic":
+		return "histogram_quantile(0.95, sum(rate(coredns_dns_request_duration_seconds_bucket[5m])) by (le))", nil
+	//Ingress
+	case "ingresscontrollercondition":
+		return "sum(ingress_controller_conditions) by (condition)", nil
+
+	default:
+		return "", errors.New("invalid statistic type '" + statisticsType + "'")
+	}
 }
