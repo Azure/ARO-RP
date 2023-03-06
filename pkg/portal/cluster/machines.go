@@ -65,25 +65,26 @@ func (c *client) Machines(ctx context.Context) (*MachineListInformation, error) 
 	return c.fetcher.Machines(ctx)
 }
 
-func (c *client) VMAllocationStatus(ctx context.Context) (map[string]string, error) {
+func (c *azureClient) VMAllocationStatus(ctx context.Context) (map[string]string, error) {
 	return c.fetcher.vmAllocationStatus(ctx)
 }
 
-func (f *realFetcher) vmAllocationStatus(ctx context.Context) (map[string]string, error) {
-	env := f.azureSideFetcher.env
-	subscriptionDoc := f.azureSideFetcher.subscriptionDoc
-	clusterRGName := f.azureSideFetcher.resourceGroupName
-	fpAuth, err := env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID, env.Environment().ResourceManagerEndpoint)
+func (f *azureSideFetcher) vmAllocationStatus(ctx context.Context) (map[string]string, error) {
+	env := f.env
+	subscriptionDoc := f.subscriptionDoc
+	clusterRGName := f.resourceGroupName
+	aroEnvironment := env.Environment()
+	fpAuth, err := env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID, aroEnvironment.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
 	// Getting Virtual Machine resources through the Cluster's Resource Group
-	computeResources, err := f.resourceClientFactory.NewResourcesClient(env.Environment(), subscriptionDoc.ID, fpAuth).ListByResourceGroup(ctx, clusterRGName, "resourceType eq 'Microsoft.Compute/virtualMachines'", "", nil)
+	computeResources, err := f.resourceClientFactory.NewResourcesClient(aroEnvironment, subscriptionDoc.ID, fpAuth).ListByResourceGroup(ctx, clusterRGName, "resourceType eq 'Microsoft.Compute/virtualMachines'", "", nil)
 	if err != nil {
 		return nil, err
 	}
 	vmAllocationStatus := make(map[string]string)
-	virtualMachineClient := f.virtualMachinesClientFactory.NewVirtualMachinesClient(env.Environment(), subscriptionDoc.ID, fpAuth)
+	virtualMachineClient := f.virtualMachinesClientFactory.NewVirtualMachinesClient(aroEnvironment, subscriptionDoc.ID, fpAuth)
 	for _, res := range computeResources {
 		putAllocationStatusToMap(ctx, clusterRGName, vmAllocationStatus, res, virtualMachineClient, f.log)
 	}
@@ -107,7 +108,6 @@ func putAllocationStatusToMap(ctx context.Context, clusterRGName string, vmAlloc
 			return
 		}
 	}
-
 	vmAllocationStatus[vmName] = ""
 }
 

@@ -132,88 +132,36 @@ func (mcf MockClientFactory) NewVirtualMachinesClient(environment *azureclient.A
 func TestVMAllocationStatus(t *testing.T) {
 	ctx := context.Background()
 	controller := gomock.NewController(t)
-	mockResourcesClient := mock_features.NewMockResourcesClient(controller)
-	mockVirtualMachinesClient := mock_compute.NewMockVirtualMachinesClient(controller)
 	type test struct {
 		name    string
-		mocks   func(*test, *mock_env.MockInterface, *mock_refreshable.MockAuthorizer, *mock_features.MockResourcesClient, *mock_compute.MockVirtualMachinesClient)
+		mocks   map[string]int
 		wantErr string
 	}
 	for _, tt := range []*test{
 		{
 			name: "Successfully fetching VMs allocation status. Calling all the required methods.",
-			mocks: func(tt *test,
-				env *mock_env.MockInterface,
-				authorizer *mock_refreshable.MockAuthorizer,
-				mockResourcesClient *mock_features.MockResourcesClient,
-				mockVirtualMachinesClient *mock_compute.MockVirtualMachinesClient) {
-				env.EXPECT().Environment().Return(&azureclient.AROEnvironment{
-					Environment: azure.Environment{
-						ResourceManagerEndpoint: "temp",
-					},
-				}).AnyTimes()
-				env.EXPECT().FPAuthorizer(gomock.Any(), gomock.Any()).Return(authorizer, nil)
-
-				mockResourcesClient.EXPECT().ListByResourceGroup(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return([]mgmtfeatures.GenericResourceExpanded{
-						{
-							Kind: func(v string) *string { return &v }("something"),
-							Type: func(v string) *string { return &v }("Microsoft.Compute/virtualMachines"),
-							Name: func(v string) *string { return &v }("master-x"),
-						},
-					}, nil)
-
-				mockVirtualMachinesClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mgmtcompute.VirtualMachine{
-					Name: func(v string) *string { return &v }("master-x"),
-					VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
-						InstanceView: &mgmtcompute.VirtualMachineInstanceView{
-							Statuses: &[]mgmtcompute.InstanceViewStatus{
-								{
-									Code: func() *string {
-										s := new(string)
-										*s = "PowerState/running"
-										return s
-									}(),
-								},
-							},
-						},
-					},
-				}, nil)
+			mocks: map[string]int{
+				"env.Environment":                    1,
+				"env.FPAuthorizer":                   1,
+				"resourceClient.ListByResourceGroup": 1,
+				"virtualMachinesClient.Get":          1,
 			},
 			wantErr: "",
 		},
 		{
 			name: "No VM resource found",
-			mocks: func(tt *test,
-				env *mock_env.MockInterface,
-				authorizer *mock_refreshable.MockAuthorizer,
-				mockResourcesClient *mock_features.MockResourcesClient,
-				mockVirtualMachinesClient *mock_compute.MockVirtualMachinesClient) {
-				env.EXPECT().Environment().Return(&azureclient.AROEnvironment{
-					Environment: azure.Environment{
-						ResourceManagerEndpoint: "temp",
-					},
-				}).AnyTimes()
-				env.EXPECT().FPAuthorizer(gomock.Any(), gomock.Any()).Return(authorizer, nil)
-
-				mockResourcesClient.EXPECT().ListByResourceGroup(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return([]mgmtfeatures.GenericResourceExpanded{}, nil)
+			mocks: map[string]int{
+				"env.Environment":                    1,
+				"env.FPAuthorizer":                   1,
+				"resourceClient.ListByResourceGroup": 1,
 			},
 			wantErr: "",
 		},
 		{
 			name: "Empty FP Authorizer",
-			mocks: func(tt *test,
-				env *mock_env.MockInterface,
-				authorizer *mock_refreshable.MockAuthorizer,
-				mockResourcesClient *mock_features.MockResourcesClient,
-				mockVirtualMachinesClient *mock_compute.MockVirtualMachinesClient) {
-				env.EXPECT().Environment().Return(&azureclient.AROEnvironment{
-					Environment: azure.Environment{
-						ResourceManagerEndpoint: "temp",
-					},
-				}).AnyTimes()
-				env.EXPECT().FPAuthorizer(gomock.Any(), gomock.Any()).Return(nil, errors.New("Empty Athorizer"))
+			mocks: map[string]int{
+				"env.Environment":  1,
+				"env.FPAuthorizer": 1,
 			},
 			wantErr: "Empty Athorizer",
 		},
@@ -221,6 +169,8 @@ func TestVMAllocationStatus(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockEnv := mock_env.NewMockInterface(controller)
 			mockRefreshable := mock_refreshable.NewMockAuthorizer(controller)
+			mockResourcesClient := mock_features.NewMockResourcesClient(controller)
+			mockVirtualMachinesClient := mock_compute.NewMockVirtualMachinesClient(controller)
 			subscriptionDoc := &api.SubscriptionDocument{
 				ID:          "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
 				ResourceID:  "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
@@ -240,23 +190,77 @@ func TestVMAllocationStatus(t *testing.T) {
 			}
 
 			if tt.mocks != nil {
-				tt.mocks(tt, mockEnv, mockRefreshable, mockResourcesClient, mockVirtualMachinesClient)
+				if tt.mocks["env.Environment"] > 0 {
+					switch tt.name {
+					case "Successfully fetching VMs allocation status. Calling all the required methods.", "No VM resource found", "Empty FP Authorizer":
+						mockEnv.EXPECT().Environment().Return(&azureclient.AROEnvironment{
+							Environment: azure.Environment{
+								ResourceManagerEndpoint: "temp",
+							},
+						})
+					}
+				}
+
+				if tt.mocks["env.FPAuthorizer"] > 0 {
+					switch tt.name {
+					case "Successfully fetching VMs allocation status. Calling all the required methods.", "No VM resource found":
+						mockEnv.EXPECT().FPAuthorizer(gomock.Any(), gomock.Any()).Return(mockRefreshable, nil)
+
+					case "Empty FP Authorizer":
+						mockEnv.EXPECT().FPAuthorizer(gomock.Any(), gomock.Any()).Return(nil, errors.New("Empty Athorizer"))
+					}
+				}
+
+				if tt.mocks["resourceClient.ListByResourceGroup"] > 0 {
+					switch tt.name {
+					case "Successfully fetching VMs allocation status. Calling all the required methods.":
+						mockResourcesClient.EXPECT().ListByResourceGroup(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+							Return([]mgmtfeatures.GenericResourceExpanded{
+								{
+									Kind: func(v string) *string { return &v }("something"),
+									Type: func(v string) *string { return &v }("Microsoft.Compute/virtualMachines"),
+									Name: func(v string) *string { return &v }("master-x"),
+								},
+							}, nil)
+					case "No VM resource found":
+						mockResourcesClient.EXPECT().ListByResourceGroup(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+							Return([]mgmtfeatures.GenericResourceExpanded{}, nil)
+					}
+				}
+				if tt.mocks["virtualMachinesClient.Get"] > 0 {
+					switch tt.name {
+					case "Successfully fetching VMs allocation status. Calling all the required methods.":
+						mockVirtualMachinesClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mgmtcompute.VirtualMachine{
+							Name: func(v string) *string { return &v }("master-x"),
+							VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
+								InstanceView: &mgmtcompute.VirtualMachineInstanceView{
+									Statuses: &[]mgmtcompute.InstanceViewStatus{
+										{
+											Code: func() *string {
+												s := new(string)
+												*s = "PowerState/running"
+												return s
+											}(),
+										},
+									},
+								},
+							},
+						}, nil)
+					}
+				}
 			}
 			_, log := testlog.New()
-			azureSideFetcher := azureSideFetcher{
-				resourceGroupName: "someResourceGroup",
-				env:               mockEnv,
-				subscriptionDoc:   subscriptionDoc,
-			}
 			mcf := newMockClientFactory(mockResourcesClient, mockVirtualMachinesClient)
-			realFetcher := &realFetcher{
+			azureSideFetcher := &azureSideFetcher{
 				log:                          log,
-				azureSideFetcher:             azureSideFetcher,
+				resourceGroupName:            "someResourceGroup",
+				subscriptionDoc:              subscriptionDoc,
+				env:                          mockEnv,
 				resourceClientFactory:        mcf,
 				virtualMachinesClientFactory: mcf,
 			}
-			client := &client{fetcher: realFetcher, log: log}
-			_, err := client.VMAllocationStatus(ctx)
+			azureClient := &azureClient{fetcher: azureSideFetcher, log: log}
+			_, err := azureClient.VMAllocationStatus(ctx)
 			if err != nil && err.Error() != tt.wantErr || err == nil && tt.wantErr != "" {
 				t.Error("Expected", tt.wantErr, "Got", err)
 			}

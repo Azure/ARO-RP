@@ -185,13 +185,13 @@ func (p *portal) machines(w http.ResponseWriter, r *http.Request) {
 func (p *portal) VMAllocationStatus(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	fetcher, err := p.makeFetcher(ctx, r)
+	azurefetcher, err := p.makeAzureFetcher(ctx, r)
 	if err != nil {
 		p.internalServerError(w, err)
 		return
 	}
 
-	machineVMAllocationStatus, err := fetcher.VMAllocationStatus(ctx)
+	machineVMAllocationStatus, err := azurefetcher.VMAllocationStatus(ctx)
 	if err != nil {
 		p.internalServerError(w, err)
 		return

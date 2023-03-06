@@ -47,16 +47,13 @@ type Runnable interface {
 }
 
 type portal struct {
-	env                 env.Interface
-	audit               *logrus.Entry
-	log                 *logrus.Entry
-	baseAccessLog       *logrus.Entry
-	l                   net.Listener
-	sshl                net.Listener
-	verifier            oidc.Verifier
-	baseRouter          *mux.Router
-	authenticatedRouter *mux.Router
-	publicRouter        *mux.Router
+	env           env.Interface
+	audit         *logrus.Entry
+	log           *logrus.Entry
+	baseAccessLog *logrus.Entry
+	l             net.Listener
+	sshl          net.Listener
+	verifier      oidc.Verifier
 
 	hostname     string
 	servingKey   *rsa.PrivateKey
@@ -400,13 +397,37 @@ func (p *portal) makeFetcher(ctx context.Context, r *http.Request) (cluster.Fetc
 	} else {
 		dialer = p.dialer
 	}
+	return cluster.NewFetchClient(p.log, dialer, doc)
+}
+
+// makeAzureFetcher creates a cluster.AzureFetchClient suitable for use by the Portal REST API to fetch anything directly from Azure like VM Details etc.
+func (p *portal) makeAzureFetcher(ctx context.Context, r *http.Request) (cluster.AzureFetchClient, error) {
+	apiVars := mux.Vars(r)
+
+	subscription := apiVars["subscription"]
+	resourceGroup := apiVars["resourceGroup"]
+	clusterName := apiVars["clusterName"]
+
+	resourceID :=
+		strings.ToLower(
+			fmt.Sprintf(
+				"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s",
+				subscription, resourceGroup, clusterName))
+	if !validate.RxClusterID.MatchString(resourceID) {
+		return nil, fmt.Errorf("invalid resource ID")
+	}
+
+	doc, err := p.dbOpenShiftClusters.Get(ctx, resourceID)
+	if err != nil {
+		return nil, err
+	}
 
 	subscriptionDoc, err := p.getSubscriptionDocument(ctx, doc.Key)
 	if err != nil {
 		return nil, err
 	}
 
-	return cluster.NewFetchClient(p.log, dialer, doc, subscriptionDoc, p.env)
+	return cluster.NewAzureFetchClient(p.log, doc, subscriptionDoc, p.env), nil
 }
 
 func (p *portal) serve(path string) func(w http.ResponseWriter, r *http.Request) {

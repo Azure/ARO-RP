@@ -34,10 +34,13 @@ type VirtualMachinesClientFactory interface {
 // information about clusters. It returns frontend-suitable data structures.
 type FetchClient interface {
 	Nodes(context.Context) (*NodeListInformation, error)
-	VMAllocationStatus(context.Context) (map[string]string, error)
 	ClusterOperators(context.Context) (*ClusterOperatorsInformation, error)
 	Machines(context.Context) (*MachineListInformation, error)
 	MachineSets(context.Context) (*MachineSetListInformation, error)
+}
+
+type AzureFetchClient interface {
+	VMAllocationStatus(context.Context) (map[string]string, error)
 }
 
 // client is an implementation of FetchClient. It currently contains a "fetcher"
@@ -56,19 +59,28 @@ type client struct {
 // contains Kubernetes clients and returns the frontend-suitable data
 // structures. The concrete implementation of FetchClient wraps this.
 type realFetcher struct {
-	log                          *logrus.Entry
-	configCli                    configclient.Interface
-	kubernetesCli                kubernetes.Interface
-	machineClient                machineclient.Interface
-	azureSideFetcher             azureSideFetcher
-	resourceClientFactory        ResourceClientFactory
-	virtualMachinesClientFactory VirtualMachinesClientFactory
+	log           *logrus.Entry
+	configCli     configclient.Interface
+	kubernetesCli kubernetes.Interface
+	machineClient machineclient.Interface
 }
 
+// azureClient is the same implementation as client's, the only difference is that it will be used to fetch something from azure regarding a cluster.
+type azureClient struct {
+	log     *logrus.Entry
+	fetcher *azureSideFetcher
+}
+
+// azureSideFetcher is responsible for fetching information about azure resources of a k8s cluster. It
+// contains azure related authentication/authorization data and returns the frontend-suitable data
+// structures. The concrete implementation of AzureFetchClient wraps this.
 type azureSideFetcher struct {
-	resourceGroupName string
-	subscriptionDoc   *api.SubscriptionDocument
-	env               env.Interface
+	log                          *logrus.Entry
+	resourceGroupName            string
+	subscriptionDoc              *api.SubscriptionDocument
+	env                          env.Interface
+	resourceClientFactory        ResourceClientFactory
+	virtualMachinesClientFactory VirtualMachinesClientFactory
 }
 
 type clientFactory struct{}
@@ -81,15 +93,18 @@ func (cf clientFactory) NewVirtualMachinesClient(environment *azureclient.AROEnv
 	return compute.NewVirtualMachinesClient(environment, subscriptionID, authorizer)
 }
 
-func newAzureSideFetcher(resourceGroupName string, subscriptionDoc *api.SubscriptionDocument, env env.Interface) azureSideFetcher {
+func newAzureSideFetcher(log *logrus.Entry, resourceGroupName string, subscriptionDoc *api.SubscriptionDocument, env env.Interface, resourceClientFactory ResourceClientFactory, virtualMachinesClientFactory VirtualMachinesClientFactory) azureSideFetcher {
 	return azureSideFetcher{
-		resourceGroupName: resourceGroupName,
-		subscriptionDoc:   subscriptionDoc,
-		env:               env,
+		log:                          log,
+		resourceGroupName:            resourceGroupName,
+		subscriptionDoc:              subscriptionDoc,
+		env:                          env,
+		resourceClientFactory:        resourceClientFactory,
+		virtualMachinesClientFactory: virtualMachinesClientFactory,
 	}
 }
 
-func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftClusterDocument, azureSideFetcher azureSideFetcher, resourceClientFactory ResourceClientFactory, virtualMachinesClientFactory VirtualMachinesClientFactory) (*realFetcher, error) {
+func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftClusterDocument) (*realFetcher, error) {
 	restConfig, err := restconfig.RestConfig(dialer, doc.OpenShiftCluster)
 	if err != nil {
 		log.Error(err)
@@ -114,21 +129,15 @@ func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftCl
 	}
 
 	return &realFetcher{
-		log:                          log,
-		configCli:                    configCli,
-		kubernetesCli:                kubernetesCli,
-		machineClient:                machineClient,
-		azureSideFetcher:             azureSideFetcher,
-		resourceClientFactory:        resourceClientFactory,
-		virtualMachinesClientFactory: virtualMachinesClientFactory,
+		log:           log,
+		configCli:     configCli,
+		kubernetesCli: kubernetesCli,
+		machineClient: machineClient,
 	}, nil
 }
 
-func NewFetchClient(log *logrus.Entry, dialer proxy.Dialer, cluster *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, env env.Interface) (FetchClient, error) {
-	resourceGroupName := stringutils.LastTokenByte(cluster.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	azureSideFetcher := newAzureSideFetcher(resourceGroupName, subscriptionDoc, env)
-	cf := clientFactory{}
-	fetcher, err := newRealFetcher(log, dialer, cluster, azureSideFetcher, cf, cf)
+func NewFetchClient(log *logrus.Entry, dialer proxy.Dialer, cluster *api.OpenShiftClusterDocument) (FetchClient, error) {
+	fetcher, err := newRealFetcher(log, dialer, cluster)
 	if err != nil {
 		return nil, err
 	}
@@ -138,4 +147,14 @@ func NewFetchClient(log *logrus.Entry, dialer proxy.Dialer, cluster *api.OpenShi
 		cluster: cluster,
 		fetcher: fetcher,
 	}, nil
+}
+
+func NewAzureFetchClient(log *logrus.Entry, cluster *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, env env.Interface) AzureFetchClient {
+	resourceGroupName := stringutils.LastTokenByte(cluster.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	cf := clientFactory{}
+	azureSideFetcher := newAzureSideFetcher(log, resourceGroupName, subscriptionDoc, env, cf, cf)
+	return &azureClient{
+		log:     log,
+		fetcher: &azureSideFetcher,
+	}
 }
