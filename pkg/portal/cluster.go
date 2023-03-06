@@ -221,7 +221,7 @@ func (p *portal) statistics(w http.ResponseWriter, r *http.Request) {
 			"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s",
 			subscription, resourceGroup, clusterName))
 
-	prom := prometheus.New(p.log, p.dbOpenShiftClusters, p.dialer, p.authenticatedRouter)
+	prom := prometheus.New(p.log, p.dbOpenShiftClusters, p.dialer) //, p.authenticatedRouter)
 	httpClient, err := prom.Cli(ctx, resourceID)
 	if err != nil {
 		p.internalServerError(w, err)

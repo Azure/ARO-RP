@@ -69,7 +69,7 @@ func (p *Prometheus) Director(r *http.Request) {
 	*r = *r.WithContext(context.WithValue(ctx, contextKeyClient, cli))
 }
 
-func (p *prometheus) Cli(ctx context.Context, resourceID string) (*http.Client, error) {
+func (p *Prometheus) Cli(ctx context.Context, resourceID string) (*http.Client, error) {
 	openShiftDoc, err := p.dbOpenShiftClusters.Get(ctx, resourceID)
 	if err != nil {
 		return nil, err
