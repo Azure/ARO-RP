@@ -24,7 +24,7 @@ function generate_golang() {
   local FOLDER=$3
 
   # Generating Track 1 SDK. Needs work to migrate to Track 2.
-  docker run \
+  docker run -d -t \
     --platform=linux/amd64 \
     --rm \
     -v $PWD/pkg/client:/github.com/Azure/ARO-RP/pkg/client:z \
@@ -32,15 +32,16 @@ function generate_golang() {
     "${AUTOREST_IMAGE}" \
     --go \
     --use=@autorest/go@4.0.0-preview.45 \
-    --use=@autorest/modelerfour@~4.23.5 \
-    --version=3.6.3 \
+    --use=@autorest/modelerfour@~4.26.0 \
+    --version=~3.6.3 \
     --license-header=MICROSOFT_APACHE_NO_VERSION \
+    --openapi-type=data-plane \
     --namespace=redhatopenshift \
     --verbose \
     --input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
     --output-folder=/github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/"$API_VERSION"/redhatopenshift
 
-  docker run \
+  docker run -d -t \
     --platform=linux/amd64 \
     --rm \
     -v $PWD/pkg/client:/github.com/Azure/ARO-RP/pkg/client:z \
@@ -93,8 +94,22 @@ do
     FOLDER=preview
   fi
 
+  printf "\nGENERATING $API_VERSION FROM $FOLDER\n"
+  printf '%*s\n' "${COLUMNS:-$(tput cols)}" '' | tr ' ' -
+
+  printf "CLEANING OLD API GENERATED FILES...\n"
   clean "$API_VERSION" "$FOLDER"
+  printf "COMPLETED SUCCESSFULLY\n"
+
+  printf "GENERATING CHECKSUM...\n"
   checksum "$API_VERSION" "$FOLDER"
+  printf "COMPLETED SUCCESSFULLY\n"
+
+  printf "GENERATING GOLANG...\n"
   generate_golang "$AUTOREST_IMAGE" "$API_VERSION" "$FOLDER"
+  printf "COMPLETED SUCCESSFULLY\n"
+
+  printf "GENERATING PYTHON...\n"
   generate_python "$AUTOREST_IMAGE" "$API_VERSION" "$FOLDER"
+  printf "COMPLETED SUCCESSFULLY\n"
 done
