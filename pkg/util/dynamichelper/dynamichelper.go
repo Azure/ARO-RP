@@ -536,7 +536,6 @@ func cmpAndCopy(srcPtr, dstPtr *corev1.ResourceList) bool {
 }
 
 func (dh *dynamicHelper) IsConstraintTemplateReady(ctx context.Context, name string) (bool, error) {
-
 	gvr := schema.GroupVersionResource{Group: "templates.gatekeeper.sh", Version: "v1beta1", Resource: "constrainttemplates"}
 	ct, err := dh.dynamicClient.Resource(gvr).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {

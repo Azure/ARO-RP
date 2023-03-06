@@ -192,7 +192,6 @@ func (depl *deployer) IsReady(ctx context.Context, namespace, deploymentName str
 }
 
 func (depl *deployer) IsConstraintTemplateReady(ctx context.Context, config interface{}) (bool, error) {
-
 	resources, err := depl.Template(config, depl.fs)
 	if err != nil {
 		return false, err
