@@ -13,20 +13,24 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 )
 
-var clusterObjectConditionsExpected = map[string]operatorv1.ConditionStatus{
-	// ARO Operator Conditions
-	arov1alpha1.InternetReachableFromMaster: operatorv1.ConditionTrue,
-	arov1alpha1.InternetReachableFromWorker: operatorv1.ConditionTrue,
-	// Service Principal Condition
-	arov1alpha1.ServicePrincipalValid: operatorv1.ConditionTrue,
+type conditionMetric struct {
+	expectedStatus operatorv1.ConditionStatus
+	metricName     string
 }
 
-var metricname = map[string]string{
-	// ARO Operator Metrics
-	arov1alpha1.InternetReachableFromMaster: "arooperator.conditions",
-	arov1alpha1.InternetReachableFromWorker: "arooperator.conditions",
-	// Service principal Metric
-	arov1alpha1.ServicePrincipalValid: "serviceprincipal.conditions",
+var clusterObjectConditionMetrics = map[string]conditionMetric{
+	arov1alpha1.InternetReachableFromMaster: {
+		expectedStatus: operatorv1.ConditionTrue,
+		metricName:     "arooperator.conditions",
+	},
+	arov1alpha1.InternetReachableFromWorker: {
+		expectedStatus: operatorv1.ConditionTrue,
+		metricName:     "arooperator.conditions",
+	},
+	arov1alpha1.ServicePrincipalValid: {
+		expectedStatus: operatorv1.ConditionTrue,
+		metricName:     "serviceprincipal.conditions",
+	},
 }
 
 func (mon *Monitor) emitClusterObjectConditions(ctx context.Context) error {
@@ -36,22 +40,19 @@ func (mon *Monitor) emitClusterObjectConditions(ctx context.Context) error {
 	}
 
 	for _, c := range cluster.Status.Conditions {
-		if _, ok := clusterObjectConditionsExpected[c.Type]; !ok {
-			// Ignore conditions not in the map
-			continue
-		}
-		if clusterObjectConditionsExpected[c.Type] == c.Status {
+		if status, ok := clusterObjectConditionMetrics[c.Type]; !ok || status.expectedStatus == c.Status {
+			// Ignore conditions not in the map and ignore conditions with status True
 			continue
 		}
 
-		mon.emitGauge(metricname[c.Type], 1, map[string]string{
+		mon.emitGauge(clusterObjectConditionMetrics[c.Type].metricName, 1, map[string]string{
 			"status": string(c.Status),
 			"type":   c.Type,
 		})
 
 		if mon.hourlyRun {
 			mon.log.WithFields(logrus.Fields{
-				"metric":  metricname[c.Type],
+				"metric":  clusterObjectConditionMetrics[c.Type].metricName,
 				"status":  c.Status,
 				"type":    c.Type,
 				"message": c.Message,
