@@ -1,9 +1,131 @@
-ARG REGISTRY
-FROM ${REGISTRY}/ubi8/ubi-minimal
+ARG MARINER_VERSION
+FROM ${REGISTRY}/cbl-mariner/base/core:2.0.${MARINER_VERSION}-amd64 as builder
+RUN tdnf repolist --refresh && \
+    tdnf update -y && \
+    tdnf install -y ca-certificates flex build-essential openssl-devel systemd-devel cmake wget tar
 ARG VERSION
-RUN echo -e '[td-agent-bit]\nname=td-agent-bit\nbaseurl=https://packages.fluentbit.io/centos/$releasever/$basearch' >/etc/yum.repos.d/td-agent-bit.repo && \
-    rpm --import https://packages.fluentbit.io/fluentbit.key && \
-    microdnf update && \
-    microdnf install td-agent-bit-$VERSION && \
-    microdnf clean all
+RUN mkdir /build && \
+    cd /build && \
+    wget -q https://github.com/fluent/fluent-bit/archive/refs/tags/v$VERSION.tar.gz && \
+    tar --strip-components=1 -xf v$VERSION.tar.gz
+WORKDIR /build
+RUN cmake -B build/ \
+    -DCMAKE_INSTALL_PREFIX=/opt/td-agent-bit/ \
+    -DCMAKE_INSTALL_SYSCONFDIR=/etc/ \
+    -DFLB_AWS="Off" \
+    -DFLB_CONFIG_YAML="Off" \
+    -DFLB_CUSTOM_CALYPTIA="Off" \
+    -DFLB_DEBUG="Off" \
+    -DFLB_EXAMPLES="Off" \
+    -DFLB_HTTP_SERVER="On" \
+    -DFLB_LUAJIT="Off" \
+    -DFLB_METRICS="Off" \
+    -DFLB_PROXY_GO="Off" \
+    -DFLB_RELEASE="On" \
+    -DFLB_SIGNV4="Off" \
+    -DFLB_SHARED_LIB="Off" \
+    -DFLB_STREAM_PROCESSOR="Off" \
+    -DFLB_WAMRC="Off" \
+    -DFLB_WASM="Off" \
+    -DFLB_FILTER_AWS="Off" \
+    -DFLB_FILTER_CHECKLIST="Off" \
+    -DFLB_FILTER_ECS="Off" \
+    -DFLB_FILTER_EXPECT="Off" \
+    -DFLB_FILTER_GEOIP2="Off" \
+    -DFLB_FILTER_KUBERNETES="Off" \
+    -DFLB_FILTER_LUA="Off" \
+    -DFLB_FILTER_NIGHTFALL="Off"\
+    -DFLB_FILTER_RECORD_MODIFIER="Off" \
+    -DFLB_FILTER_STDOUT="Off" \
+    -DFLB_FILTER_THROTTLE_SIZE="Off" \
+    -DFLB_FILTER_THROTTLE="Off" \
+    -DFLB_FILTER_WASM="Off" \
+    -DFLB_IN_COLLECTD="Off" \
+    -DFLB_IN_CPU="Off" \
+    -DFLB_IN_DISK="Off" \
+    -DFLB_IN_DOCKER_EVENTS="Off" \
+    -DFLB_IN_DOCKER="Off" \
+    -DFLB_IN_DUMMY="Off" \
+    -DFLB_IN_EXEC_WASI="Off" \
+    -DFLB_IN_EXEC="Off" \
+    -DFLB_IN_FLUENTBIT_METRICS="Off" \
+    -DFLB_IN_FORWARD="Off" \
+    -DFLB_IN_HEAD="Off" \
+    -DFLB_IN_HEALTH="Off" \
+    -DFLB_IN_HTTP="Off" \
+    -DFLB_IN_KMSG="Off" \
+    -DFLB_IN_MEM="Off" \
+    -DFLB_IN_MQTT="Off" \
+    -DFLB_IN_NETIF="Off" \
+    -DFLB_IN_NGINX_EXPORTER_METRICS="Off" \
+    -DFLB_IN_NODE_EXPORTER_METRICS="Off" \
+    -DFLB_IN_PROC="Off" \
+    -DFLB_IN_PROMETHEUS_SCRAPE="Off" \
+    -DFLB_IN_RANDOM="Off" \
+    -DFLB_IN_SERIAL="Off" \
+    -DFLB_IN_STATSD="Off" \
+    -DFLB_IN_STDIN="Off" \
+    -DFLB_IN_SYSLOG="Off" \
+    -DFLB_IN_SYSTEMD="On" \
+    -DFLB_IN_TCP="Off" \
+    -DFLB_IN_THERMAL="Off" \
+    -DFLB_IN_OPENTELEMETRY="Off" \
+    -DFLB_IN_UDP="Off" \
+    -DFLB_OUT_AZURE_BLOB="Off" \
+    -DFLB_OUT_AZURE_KUSTO="Off" \
+    -DFLB_OUT_AZURE="Off" \
+    -DFLB_OUT_BIGQUERY="Off" \
+    -DFLB_OUT_CALYPTIA="Off" \
+    -DFLB_OUT_CLOUDWATCH_LOGS="Off" \
+    -DFLB_OUT_COUNTER="Off" \
+    -DFLB_OUT_DATADOG="Off" \
+    -DFLB_OUT_ES="Off" \
+    -DFLB_OUT_EXIT="Off" \
+    -DFLB_OUT_FILE="Off" \
+    -DFLB_OUT_FLOWCOUNTER="Off" \
+    -DFLB_OUT_GELF="Off" \
+    -DFLB_OUT_HTTP="Off" \
+    -DFLB_OUT_INFLUXDB="Off" \
+    -DFLB_OUT_KAFKA_REST="Off" \
+    -DFLB_OUT_KAFKA="Off" \
+    -DFLB_OUT_KINESIS_FIREHOSE="Off" \
+    -DFLB_OUT_KINESIS_STREAMS="Off" \
+    -DFLB_OUT_LIB="Off" \
+    -DFLB_OUT_LOGDNA="Off" \
+    -DFLB_OUT_LOKI="Off" \
+    -DFLB_OUT_NATS="Off" \
+    -DFLB_OUT_NRLOGS="Off" \
+    -DFLB_OUT_OPENSEARCH="Off" \
+    -DFLB_OUT_OPENTELEMETRY="Off" \
+    -DFLB_OUT_PGSQL="Off" \
+    -DFLB_OUT_PLOT="Off" \
+    -DFLB_OUT_PROMETHEUS_EXPORTER="Off" \
+    -DFLB_OUT_PROMETHEUS_REMOTE_WRITE="Off" \
+    -DFLB_OUT_S3="Off" \
+    -DFLB_OUT_SKYWALKING="Off" \
+    -DFLB_OUT_SLACK="Off" \
+    -DFLB_OUT_SPLUNK="Off" \
+    -DFLB_OUT_STACKDRIVER="Off" \
+    -DFLB_OUT_STDOUT="Off" \
+    -DFLB_OUT_SYSLOG="Off" \
+    -DFLB_OUT_TD="Off" \
+    -DFLB_OUT_WEBSOCKET="Off"
+RUN make -C build
+RUN make -C build install
+
+FROM ${REGISTRY}/cbl-mariner/distroless/base:2.0.${MARINER_VERSION}-amd64
+COPY --from=builder \
+    /lib/libsystemd.so.0 \
+    /lib/liblzma.so.5 \
+    /lib/liblz4.so.1 \
+    /lib/libcap.so.2 \
+    /lib/libmount.so.1 \
+    /lib/libgcrypt.so.20 \
+    /lib/libblkid.so.1 \
+    /lib/libuuid.so.1 \
+    /lib/libselinux.so.1 \
+    /lib/libgpg-error.so.0 \
+    /lib/libpcre.so.1 \
+    /lib/
+COPY --from=builder /opt/td-agent-bit/bin/fluent-bit /opt/td-agent-bit/bin/td-agent-bit
 ENTRYPOINT ["/opt/td-agent-bit/bin/td-agent-bit"]
