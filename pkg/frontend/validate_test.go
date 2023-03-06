@@ -223,3 +223,40 @@ func TestValidateAdminKubernetesObjectsNonCustomer(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateAdminMasterVMSize(t *testing.T) {
+	for _, tt := range []struct {
+		test    string
+		vmSize  string
+		wantErr string
+	}{
+		{
+			test:    "size is supported as master",
+			vmSize:  "Standard_D8s_v3",
+			wantErr: "",
+		},
+		{
+			test:    "size is supported as master, lowercase",
+			vmSize:  "standard_d8s_v3",
+			wantErr: "",
+		},
+		{
+			test:    "size is unsupported as master",
+			vmSize:  "Silly_D8s_v10",
+			wantErr: "400: InvalidParameter: : The provided vmSize 'Silly_D8s_v10' is unsupported for master.",
+		},
+		{
+			test:    "size is unsupported as master, lowercase",
+			vmSize:  "silly_d8s_v10",
+			wantErr: "400: InvalidParameter: : The provided vmSize 'silly_d8s_v10' is unsupported for master.",
+		},
+	} {
+		t.Run(tt.test, func(t *testing.T) {
+			err := validateAdminMasterVMSize(tt.vmSize)
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
+			}
+		})
+	}
+}

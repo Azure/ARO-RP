@@ -9,11 +9,6 @@ package api
 // when moving between old and new versions
 func SetDefaults(doc *OpenShiftClusterDocument) {
 	if doc.OpenShiftCluster != nil {
-		// SoftwareDefinedNetwork was introduced in 2021-09-01-preview
-		if doc.OpenShiftCluster.Properties.NetworkProfile.SoftwareDefinedNetwork == "" {
-			doc.OpenShiftCluster.Properties.NetworkProfile.SoftwareDefinedNetwork = SoftwareDefinedNetworkOpenShiftSDN
-		}
-
 		// EncryptionAtHost was introduced in 2021-09-01-preview.
 		// It can't be changed post cluster creation
 		if doc.OpenShiftCluster.Properties.MasterProfile.EncryptionAtHost == "" {

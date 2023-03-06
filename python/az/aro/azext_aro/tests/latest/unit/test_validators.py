@@ -4,7 +4,7 @@
 from unittest.mock import Mock, patch
 from azext_aro._validators import (
     validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group,
-    validate_disk_encryption_set, validate_domain, validate_pull_secret, validate_sdn, validate_subnet, validate_subnets,
+    validate_disk_encryption_set, validate_domain, validate_pull_secret, validate_subnet, validate_subnets,
     validate_visibility, validate_vnet_resource_group_name, validate_worker_count, validate_worker_vm_disk_size_gb, validate_refresh_cluster_credentials
 )
 from azure.cli.core.azclierror import (
@@ -346,48 +346,6 @@ def test_validate_pull_secret(test_description, namespace, expected_exception):
     else:
         with pytest.raises(expected_exception):
             validate_pull_secret(namespace)
-
-
-test_validate_sdn_data = [
-    (
-        "should not raise any exception when namespace.software_defined_network is None",
-        Mock(software_defined_network=None),
-        None
-    ),
-    (
-        "should not raise any exception when namespace.software_defined_network is OVNKubernetes",
-        Mock(software_defined_network="OVNKubernetes"),
-        None
-    ),
-    (
-        "should not raise any exception when namespace.software_defined_network is OpenshiftSDN",
-        Mock(software_defined_network="OpenshiftSDN"),
-        None
-    ),
-    (
-        "should raise InvalidArgumentValueError exception when namespace.software_defined_network is 'uknown', not one of the target values",
-        Mock(software_defined_network="uknown"),
-        InvalidArgumentValueError
-    ),
-    (
-        "should raise InvalidArgumentValueError exception when namespace.software_defined_network is an empty string",
-        Mock(software_defined_network=""),
-        InvalidArgumentValueError
-    )
-]
-
-
-@pytest.mark.parametrize(
-    "test_description, namespace, expected_exception",
-    test_validate_sdn_data,
-    ids=[i[0] for i in test_validate_sdn_data]
-)
-def test_validate_sdn(test_description, namespace, expected_exception):
-    if expected_exception is None:
-        validate_sdn(namespace)
-    else:
-        with pytest.raises(expected_exception):
-            validate_sdn(namespace)
 
 
 test_validate_subnet_data = [

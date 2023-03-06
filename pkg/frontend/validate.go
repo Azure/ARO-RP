@@ -189,11 +189,15 @@ func validateNetworkInterfaceName(nicName string) error {
 	return nil
 }
 
-func validateAdminVMSize(vmSize string) error {
-	if vmSize == "" {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided vmSize '%s' is invalid.", vmSize)
+func validateAdminMasterVMSize(vmSize string) error {
+	// check to ensure that the target size is supported as a master size
+	for k := range validate.SupportedMasterVmSizes {
+		if strings.EqualFold(string(k), vmSize) {
+			return nil
+		}
 	}
-	return nil
+
+	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided vmSize '%s' is unsupported for master.", vmSize)
 }
 
 // validateInstallVersion validates the install version set in the clusterprofile.version
@@ -201,9 +205,9 @@ func validateAdminVMSize(vmSize string) error {
 func (f *frontend) validateInstallVersion(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
 	oc := doc.OpenShiftCluster
 	// If this request is from an older API or the user never specified
-	// the version to install we default to the InstallStream.Version
+	// the version to install we default to the DefaultInstallStream.Version
 	if oc.Properties.ClusterProfile.Version == "" {
-		oc.Properties.ClusterProfile.Version = version.InstallStream.Version.String()
+		oc.Properties.ClusterProfile.Version = version.DefaultInstallStream.Version.String()
 		return nil
 	}
 

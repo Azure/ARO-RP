@@ -3,6 +3,9 @@ echo "setting ssh password authentication"
 sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
 systemctl reload sshd.service
 
+echo "running RHUI fix"
+yum update -y --disablerepo='*' --enablerepo='rhui-microsoft-azure*'
+
 echo "running yum update"
 yum -y -x WALinuxAgent -x WALinuxAgent-udev update
 

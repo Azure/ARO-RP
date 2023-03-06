@@ -42,26 +42,26 @@ func (service *openShiftClusterDocumentVersionerService) Get(ctx context.Context
 
 	errUnsupportedVersion := api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.clusterProfile.version", "The requested OpenShift version '%s' is not supported.", requestedInstallVersion)
 
-	// when we have no OpenShiftVersion entries in CosmoDB, default to building one using the InstallStream
+	// when we have no OpenShiftVersion entries in CosmoDB, default to building one using the DefaultInstallStream
 	if len(activeOpenShiftVersions) == 0 {
-		if requestedInstallVersion != version.InstallStream.Version.String() {
+		if requestedInstallVersion != version.DefaultInstallStream.Version.String() {
 			return nil, errUnsupportedVersion
 		}
 
 		installerPullSpec := env.LiveConfig().DefaultInstallerPullSpecOverride(ctx)
 		if installerPullSpec == "" {
 			// If no ENV var was set as an override, then use the default image name:tag format we build in the ARO-Installer build & push pipeline
-			installerPullSpec = fmt.Sprintf("%s/aro-installer:release-%d.%d", env.ACRDomain(), version.InstallStream.Version.V[0], version.InstallStream.Version.V[1])
+			installerPullSpec = fmt.Sprintf("%s/aro-installer:release-%d.%d", env.ACRDomain(), version.DefaultInstallStream.Version.V[0], version.DefaultInstallStream.Version.V[1])
 		}
 
-		openshiftPullSpec := version.InstallStream.PullSpec
+		openshiftPullSpec := version.DefaultInstallStream.PullSpec
 		if installViaHive {
 			openshiftPullSpec = strings.Replace(openshiftPullSpec, "quay.io", env.ACRDomain(), 1)
 		}
 
 		return &api.OpenShiftVersion{
 			Properties: api.OpenShiftVersionProperties{
-				Version:           version.InstallStream.Version.String(),
+				Version:           version.DefaultInstallStream.Version.String(),
 				OpenShiftPullspec: openshiftPullSpec,
 				InstallerPullspec: installerPullSpec,
 				Enabled:           true,

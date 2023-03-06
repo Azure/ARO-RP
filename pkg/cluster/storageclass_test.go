@@ -30,18 +30,18 @@ func TestConfigureStorageClass(t *testing.T) {
 	}{
 		{
 			name:       "no disk encryption set provided",
-			ocpVersion: version.InstallStream.Version.String(),
+			ocpVersion: version.DefaultInstallStream.Version.String(),
 		},
 		{
 			name:       "disk encryption set provided",
 			desID:      "fake-des-id",
-			ocpVersion: version.InstallStream.Version.String(),
+			ocpVersion: version.DefaultInstallStream.Version.String(),
 			wantNewSC:  true,
 		},
 		{
 			name:       "error getting old default StorageClass",
 			desID:      "fake-des-id",
-			ocpVersion: version.InstallStream.Version.String(),
+			ocpVersion: version.DefaultInstallStream.Version.String(),
 			mocks: func(kubernetescli *fake.Clientset) {
 				kubernetescli.PrependReactor("get", "storageclasses", func(action ktesting.Action) (handled bool, ret kruntime.Object, err error) {
 					if action.(ktesting.GetAction).GetName() != "managed-premium" {
@@ -55,7 +55,7 @@ func TestConfigureStorageClass(t *testing.T) {
 		{
 			name:       "error removing default annotation from old StorageClass",
 			desID:      "fake-des-id",
-			ocpVersion: version.InstallStream.Version.String(),
+			ocpVersion: version.DefaultInstallStream.Version.String(),
 			mocks: func(kubernetescli *fake.Clientset) {
 				kubernetescli.PrependReactor("update", "storageclasses", func(action ktesting.Action) (handled bool, ret kruntime.Object, err error) {
 					obj := action.(ktesting.UpdateAction).GetObject().(*storagev1.StorageClass)
@@ -70,7 +70,7 @@ func TestConfigureStorageClass(t *testing.T) {
 		{
 			name:       "error creating the new default encrypted StorageClass",
 			desID:      "fake-des-id",
-			ocpVersion: version.InstallStream.Version.String(),
+			ocpVersion: version.DefaultInstallStream.Version.String(),
 			mocks: func(kubernetescli *fake.Clientset) {
 				kubernetescli.PrependReactor("create", "storageclasses", func(action ktesting.Action) (handled bool, ret kruntime.Object, err error) {
 					obj := action.(ktesting.CreateAction).GetObject().(*storagev1.StorageClass)

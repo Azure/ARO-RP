@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 // E2E cluster comes with encryption at host and encryption at rest enabled,
@@ -67,9 +68,16 @@ var _ = Describe("Encryption at host", func() {
 
 var _ = Describe("Disk encryption at rest", func() {
 	It("must be enabled with customer managed key for the cluster and each disk must have it enabled", func(ctx context.Context) {
+
 		By("getting the test cluster resource")
 		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
+
+		installVersion, _ := version.ParseVersion(*oc.ClusterProfile.Version)
+		defaultStorageClass := "managed-premium-encrypted-cmk"
+		if installVersion.V[0] == 4 && installVersion.V[1] == 11 {
+			defaultStorageClass = "managed-csi-encrypted-cmk"
+		}
 
 		By("checking that disk encryption at rest is enabled for masters")
 		Expect(oc.OpenShiftClusterProperties).To(Not(BeNil()))
@@ -102,7 +110,7 @@ var _ = Describe("Disk encryption at rest", func() {
 		}
 
 		By("making sure the encrypted storage class is default")
-		sc, err := clients.Kubernetes.StorageV1().StorageClasses().Get(ctx, "managed-premium-encrypted-cmk", metav1.GetOptions{})
+		sc, err := clients.Kubernetes.StorageV1().StorageClasses().Get(ctx, defaultStorageClass, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(sc).NotTo(BeNil())
 		Expect(sc.Annotations).NotTo(BeNil())

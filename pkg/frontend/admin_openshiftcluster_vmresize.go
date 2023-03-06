@@ -37,7 +37,7 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx con
 	}
 
 	vmSize := r.URL.Query().Get("vmSize")
-	err = validateAdminVMSize(vmSize)
+	err = validateAdminMasterVMSize(vmSize)
 	if err != nil {
 		return err
 	}

@@ -7,7 +7,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
-var supportedMasterVmSizes = map[api.VMSize]api.VMSizeStruct{
+var SupportedMasterVmSizes = map[api.VMSize]api.VMSizeStruct{
 	// General purpose
 	api.VMSizeStandardD8sV3:  api.VMSizeStandardD8sV3Struct,
 	api.VMSizeStandardD16sV3: api.VMSizeStandardD16sV3Struct,
@@ -98,7 +98,7 @@ func DiskSizeIsValid(sizeGB int) bool {
 
 func VMSizeIsValid(vmSize api.VMSize, requiredD2sV3Workers, isMaster bool) bool {
 	if isMaster {
-		_, supportedAsMaster := supportedMasterVmSizes[vmSize]
+		_, supportedAsMaster := SupportedMasterVmSizes[vmSize]
 		return supportedAsMaster
 	}
 
@@ -124,7 +124,7 @@ func VMSizeFromName(vmSize api.VMSize) (api.VMSizeStruct, bool) {
 		return size, true
 	}
 
-	if size, ok := supportedMasterVmSizes[vmSize]; ok {
+	if size, ok := SupportedMasterVmSizes[vmSize]; ok {
 		return size, true
 	}
 	return api.VMSizeStruct{}, false

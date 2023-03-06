@@ -33,7 +33,8 @@ const (
 	contextKeyResponse
 )
 
-func (p *prometheus) director(r *http.Request) {
+// Director modifies the request to point to the clusters prometheus instance
+func (p *Prometheus) Director(r *http.Request) {
 	ctx := r.Context()
 
 	resourceID := strings.Join(strings.Split(r.URL.Path, "/")[:9], "/")
@@ -68,7 +69,7 @@ func (p *prometheus) director(r *http.Request) {
 	*r = *r.WithContext(context.WithValue(ctx, contextKeyClient, cli))
 }
 
-func (p *prometheus) cli(ctx context.Context, resourceID string) (*http.Client, error) {
+func (p *Prometheus) cli(ctx context.Context, resourceID string) (*http.Client, error) {
 	openShiftDoc, err := p.dbOpenShiftClusters.Get(ctx, resourceID)
 	if err != nil {
 		return nil, err
@@ -88,7 +89,7 @@ func (p *prometheus) cli(ctx context.Context, resourceID string) (*http.Client, 
 	}, nil
 }
 
-func (p *prometheus) roundTripper(r *http.Request) (*http.Response, error) {
+func (p *Prometheus) RoundTripper(r *http.Request) (*http.Response, error) {
 	if resp, ok := r.Context().Value(contextKeyResponse).(*http.Response); ok {
 		return resp, nil
 	}
@@ -97,12 +98,12 @@ func (p *prometheus) roundTripper(r *http.Request) (*http.Response, error) {
 	return cli.Do(r)
 }
 
-// modifyResponse: unfortunately Prometheus serves HTML files containing just a
+// ModifyResponse: unfortunately Prometheus serves HTML files containing just a
 // couple of absolute links.  Given that we're serving Prometheus under
 // /subscriptions/.../clusterName/prometheus, we need to dig these out and
 // rewrite them.  This is a hack which hopefully goes away once we forward all
 // metrics to Kusto.
-func (p *prometheus) modifyResponse(r *http.Response) error {
+func (p *Prometheus) ModifyResponse(r *http.Response) error {
 	mediaType, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if mediaType != "text/html" {
 		return nil
@@ -169,7 +170,7 @@ func walk(n *html.Node, f func(*html.Node)) {
 	}
 }
 
-func (p *prometheus) error(r *http.Request, statusCode int, err error) {
+func (p *Prometheus) error(r *http.Request, statusCode int, err error) {
 	if err != nil {
 		p.log.Print(err)
 	}

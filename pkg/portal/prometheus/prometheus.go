@@ -5,11 +5,9 @@ package prometheus
 
 import (
 	"log"
-	"net/http"
 	"net/http/httputil"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -18,20 +16,22 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/roundtripper"
 )
 
-type prometheus struct {
+type Prometheus struct {
 	log *logrus.Entry
 
 	dbOpenShiftClusters database.OpenShiftClusters
 
 	dialer      proxy.Dialer
 	clientCache clientcache.ClientCache
+
+	ReverseProxy *httputil.ReverseProxy
 }
 
 func New(baseLog *logrus.Entry,
 	dbOpenShiftClusters database.OpenShiftClusters,
 	dialer proxy.Dialer,
-	aadAuthenticatedRouter *mux.Router) *prometheus {
-	p := &prometheus{
+) *Prometheus {
+	p := &Prometheus{
 		log: baseLog,
 
 		dbOpenShiftClusters: dbOpenShiftClusters,
@@ -39,20 +39,12 @@ func New(baseLog *logrus.Entry,
 		dialer:      dialer,
 		clientCache: clientcache.New(time.Hour),
 	}
-
-	rp := &httputil.ReverseProxy{
-		Director:       p.director,
-		Transport:      roundtripper.RoundTripperFunc(p.roundTripper),
-		ModifyResponse: p.modifyResponse,
+	p.ReverseProxy = &httputil.ReverseProxy{
+		Director:       p.Director,
+		Transport:      roundtripper.RoundTripperFunc(p.RoundTripper),
+		ModifyResponse: p.ModifyResponse,
 		ErrorLog:       log.New(p.log.Writer(), "", 0),
 	}
-
-	aadAuthenticatedRouter.NewRoute().Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/prometheus").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		r.URL.Path += "/"
-		http.Redirect(w, r, r.URL.String(), http.StatusTemporaryRedirect)
-	})
-
-	aadAuthenticatedRouter.NewRoute().PathPrefix("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/prometheus/").Handler(rp)
 
 	return p
 }

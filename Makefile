@@ -5,8 +5,9 @@ ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
 E2E_FLAGS ?= -test.v --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2 --ginkgo.junit-report=e2e-report.xml
 
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
-FLUENTBIT_VERSION = 1.9.9-1
-FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)
+MARINER_VERSION = 20230126
+FLUENTBIT_VERSION = 1.9.10
+FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$(MARINER_VERSION)
 AUTOREST_VERSION = 3.6.3
 AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
 
@@ -66,7 +67,7 @@ clean:
 	find -type d -name 'gomock_reflect_[0-9]*' -exec rm -rf {} \+ 2>/dev/null
 
 client: generate
-	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04
+	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
@@ -95,7 +96,7 @@ image-autorest:
 	docker build --platform=linux/amd64 --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
 
 image-fluentbit:
-	docker build --platform=linux/amd64 --network=host --no-cache --build-arg VERSION=$(FLUENTBIT_VERSION) --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
+	docker build --platform=linux/amd64 --network=host --build-arg VERSION=$(FLUENTBIT_VERSION) --build-arg MARINER_VERSION=$(MARINER_VERSION) --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
 
 image-proxy: proxy
 	docker pull $(REGISTRY)/ubi8/ubi-minimal
