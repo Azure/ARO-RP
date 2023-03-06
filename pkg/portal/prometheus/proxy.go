@@ -56,8 +56,7 @@ func (p *Prometheus) Director(r *http.Request) {
 	}
 
 	r.RequestURI = ""
-	r.URL.Scheme = "http"
-	r.URL.Host = "prometheus-k8s-0:9090"
+	r.URL.Host, r.URL.Scheme = p.GetPrometheusHostAndScheme()
 	r.URL.Path = "/" + strings.Join(strings.Split(r.URL.Path, "/")[10:], "/")
 	r.Header.Del("Cookie")
 	r.Header.Del("Referer")
@@ -67,6 +66,10 @@ func (p *Prometheus) Director(r *http.Request) {
 	// new context, but we have no way to return it, so we overwrite our
 	// existing request.
 	*r = *r.WithContext(context.WithValue(ctx, contextKeyClient, cli))
+}
+
+func (p *Prometheus) GetPrometheusHostAndScheme() (string, string) {
+	return "prometheus-k8s-0:9090", "http"
 }
 
 func (p *Prometheus) Cli(ctx context.Context, resourceID string) (*http.Client, error) {

@@ -200,3 +200,21 @@ export function GraphOptionsComponent(props: {duration: string, setDuration: Rea
     
     return localDate
   }
+
+  export const convertTimeToHours = (duration: string): string => {
+    switch(duration) {
+      case "1d":
+        return "24h"
+      case "2d":
+        return "48h"
+      case "1w":
+        return "168h"
+      case "2w":
+        return "336h"
+      case "4w":
+        return "672h"
+      case "8w":
+        return "1344h"
+    }
+    return duration
+  }

@@ -210,17 +210,16 @@ func (p *portal) statistics(w http.ResponseWriter, r *http.Request) {
 	resourceGroup := apiVars["resourceGroup"]
 	clusterName := apiVars["clusterName"]
 	statisticsType := apiVars["statisticsType"]
-	promQuery, err := cluster.GetPromQuery(statisticsType)
-	if err != nil {
-		p.internalServerError(w, err)
-		return
-	}
-
 	resourceID := strings.ToLower(
 		fmt.Sprintf(
 			"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s",
 			subscription, resourceGroup, clusterName))
 
+	promQuery, err := cluster.GetPromQuery(statisticsType)
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
 	prom := prometheus.New(p.log, p.dbOpenShiftClusters, p.dialer) //, p.authenticatedRouter)
 	httpClient, err := prom.Cli(ctx, resourceID)
 	if err != nil {
@@ -233,7 +232,9 @@ func (p *portal) statistics(w http.ResponseWriter, r *http.Request) {
 		p.internalServerError(w, err)
 		return
 	}
-	APIStatistics, err := fetcher.Statistics(ctx, httpClient, promQuery, duration, endTime)
+	promHost, promScheme := prom.GetPrometheusHostAndScheme()
+	prometheusURL := promScheme + "://" + promHost
+	APIStatistics, err := fetcher.Statistics(ctx, httpClient, promQuery, duration, endTime, prometheusURL)
 	if err != nil {
 		p.internalServerError(w, err)
 		return

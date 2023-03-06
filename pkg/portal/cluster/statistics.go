@@ -24,13 +24,13 @@ type Metrics struct {
 	Value []MetricValue `json:"metricvalue"`
 }
 
-func (c *client) Statistics(ctx context.Context, httpClient *http.Client, promQuery string, duration string, endTime time.Time) ([]Metrics, error) {
-	return c.fetcher.Statistics(ctx, httpClient, promQuery, duration, endTime)
+func (c *client) Statistics(ctx context.Context, httpClient *http.Client, promQuery string, duration string, endTime time.Time, prometheusURL string) ([]Metrics, error) {
+	return c.fetcher.statistics(ctx, httpClient, promQuery, duration, endTime, prometheusURL)
 }
 
-func (f *realFetcher) Statistics(ctx context.Context, httpClient *http.Client, promQuery string, duration string, endTime time.Time) ([]Metrics, error) {
+func (f *realFetcher) statistics(ctx context.Context, httpClient *http.Client, promQuery string, duration string, endTime time.Time, prometheusURL string) ([]Metrics, error) {
 	promConfig := prometheusAPI.Config{
-		Address: "http://prometheus-k8s-0:9090",
+		Address: prometheusURL,
 		Client:  httpClient,
 	}
 
@@ -81,71 +81,34 @@ func convertToTypeMetrics(v model.Matrix) []Metrics {
 }
 
 func getStartTimeFromDuration(duration string, endTime time.Time) (time.Time, error) {
-	switch duration {
-	case "1m":
-		return endTime.Add(-1 * time.Minute), nil
-	case "5m":
-		return endTime.Add(-5 * time.Minute), nil
-	case "10m":
-		return endTime.Add(-10 * time.Minute), nil
-	case "30m":
-		return endTime.Add(-30 * time.Minute), nil
-	case "1h":
-		return endTime.Add(-1 * time.Hour), nil
-	case "2h":
-		return endTime.Add(-2 * time.Hour), nil
-	case "6h":
-		return endTime.Add(-6 * time.Hour), nil
-	case "12h":
-		return endTime.Add(-12 * time.Hour), nil
-	case "1d":
-		return endTime.Add(-24 * time.Hour), nil
-	case "2d":
-		return endTime.Add(-48 * time.Hour), nil
-	case "1w":
-		return endTime.Add(-7 * 24 * time.Hour), nil
-	case "2w":
-		return endTime.Add(-14 * 24 * time.Hour), nil
-	case "4w":
-		return endTime.Add(-28 * 24 * time.Hour), nil
-	case "8w":
-		return endTime.Add(-56 * 24 * time.Hour), nil
+	parsedDuration, err := time.ParseDuration(duration)
+	if err != nil {
+		return time.Time{}, errors.New("invalid duration")
 	}
-	return time.Time{}, errors.New("invalid duration")
+	return endTime.Add(-1 * parsedDuration), nil
 }
 
 func GetPromQuery(statisticsType string) (string, error) {
-	switch statisticsType {
-	//kube-apiserver
-	case "kubeapicodes":
-		return "sum(rate(apiserver_request_total{job=\"apiserver\",code=~\"[45]..\"}[10m])) by (code, verb)", nil
-	case "kubeapicpu":
-		return "rate(process_cpu_seconds_total{job=\"apiserver\"}[5m])", nil
-	case "kubeapimemory":
-		return "process_resident_memory_bytes{job=\"apiserver\"}", nil
-	//kube-controller-manager
-	case "kubecontrollermanagercodes":
-		return "sum(rate(rest_client_requests_total{job=\"kube-controller-manager\"}[5m])) by (code)", nil
-	case "kubecontrollermanagercpu":
-		return "rate(process_cpu_seconds_total{job=\"kube-controller-manager\"}[5m])", nil
-	case "kubecontrollermanagermemory":
-		return "process_resident_memory_bytes{job=\"kube-controller-manager\"}", nil
-	//DNS
-	case "dnsresponsecodes":
-		return "sum(rate(coredns_dns_responses_total[5m])) by (rcode)", nil
-	case "dnserrorrate":
-		return "sum(rate(coredns_dns_responses_total{rcode=~\"SERVFAIL|NXDOMAIN\"}[5m])) by (pod) / sum(rate(coredns_dns_responses_total{rcode=~\"NOERROR\"}[5m])) by (pod)", nil
-	case "dnshealthcheck":
-		return "histogram_quantile(0.99, sum(rate(coredns_health_request_duration_seconds_bucket[5m])) by (le))", nil
-	case "dnsforwardedtraffic":
-		return "histogram_quantile(0.95, sum(rate(coredns_forward_request_duration_seconds_bucket[5m])) by (le))", nil
-	case "dnsalltraffic":
-		return "histogram_quantile(0.95, sum(rate(coredns_dns_request_duration_seconds_bucket[5m])) by (le))", nil
-	//Ingress
-	case "ingresscontrollercondition":
-		return "sum(ingress_controller_conditions) by (condition)", nil
-
-	default:
+	promQueries := map[string]string{
+		"kubeapicodes":  "sum(rate(apiserver_request_total{job=\"apiserver\",code=~\"[45]..\"}[10m])) by (code, verb)",
+		"kubeapicpu":    "rate(process_cpu_seconds_total{job=\"apiserver\"}[5m])",
+		"kubeapimemory": "process_resident_memory_bytes{job=\"apiserver\"}",
+		//kube-controller-manager
+		"kubecontrollermanagercodes":  "sum(rate(rest_client_requests_total{job=\"kube-controller-manager\"}[5m])) by (code)",
+		"kubecontrollermanagercpu":    "rate(process_cpu_seconds_total{job=\"kube-controller-manager\"}[5m])",
+		"kubecontrollermanagermemory": "process_resident_memory_bytes{job=\"kube-controller-manager\"}",
+		//DNS
+		"dnsresponsecodes":    "sum(rate(coredns_dns_responses_total[5m])) by (rcode)",
+		"dnserrorrate":        "sum(rate(coredns_dns_responses_total{rcode=~\"SERVFAIL|NXDOMAIN\"}[5m])) by (pod) / sum(rate(coredns_dns_responses_total{rcode=~\"NOERROR\"}[5m])) by (pod)",
+		"dnshealthcheck":      "histogram_quantile(0.99, sum(rate(coredns_health_request_duration_seconds_bucket[5m])) by (le))",
+		"dnsforwardedtraffic": "histogram_quantile(0.95, sum(rate(coredns_forward_request_duration_seconds_bucket[5m])) by (le))",
+		"dnsalltraffic":       "histogram_quantile(0.95, sum(rate(coredns_dns_request_duration_seconds_bucket[5m])) by (le))",
+		//Ingress
+		"ingresscontrollercondition": "sum(ingress_controller_conditions) by (condition)",
+	}
+	promQuery, ok := promQueries[statisticsType]
+	if !ok {
 		return "", errors.New("invalid statistic type '" + statisticsType + "'")
 	}
+	return promQuery, nil
 }

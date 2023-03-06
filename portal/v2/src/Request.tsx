@@ -1,5 +1,6 @@
 import axios, { AxiosResponse } from "axios"
 import { ICluster } from "./App"
+import {convertTimeToHours} from "./ClusterDetailListComponents/Statistics/GraphOptionsComponent"
 
 const OnError = (err: AxiosResponse): AxiosResponse | null => {
   if (err.status === 403) {
@@ -116,6 +117,7 @@ export const RequestKubeconfig = async (
 }
 
 export const FetchStatistics = async (cluster: ICluster, statisticsName: string, duration: string, endDate: Date): Promise<AxiosResponse | null> => {
+  duration = convertTimeToHours(duration)
   try {
     const result = await axios(
       "/api/" + cluster.subscription + "/" + cluster.resourceGroup + "/" + cluster.name + "/statistics/" + statisticsName + "?duration=" + duration + "&endtime=" + endDate.toJSON())
