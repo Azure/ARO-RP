@@ -33,6 +33,7 @@ type Deployer interface {
 	Remove(context.Context, interface{}) error
 	IsReady(context.Context, string, string) (bool, error)
 	Template(interface{}, fs.FS) ([]kruntime.Object, error)
+	IsConstraintTemplateReady(context.Context, interface{}) (bool, error)
 }
 
 type deployer struct {
@@ -188,4 +189,25 @@ func (depl *deployer) IsReady(ctx context.Context, namespace, deploymentName str
 	}
 
 	return ready.DeploymentIsReady(d), nil
+}
+
+func (depl *deployer) IsConstraintTemplateReady(ctx context.Context, config interface{}) (bool, error) {
+
+	resources, err := depl.Template(config, depl.fs)
+	if err != nil {
+		return false, err
+	}
+	for _, resource := range resources {
+		if reflect.TypeOf(resource).String() == "*v1.ConstraintTemplate" {
+			name, err := getField(resource, "Name")
+			if err != nil {
+				return false, err
+			}
+			ready, err := depl.dh.IsConstraintTemplateReady(ctx, name.String())
+			if !ready || err != nil {
+				return ready, err
+			}
+		}
+	}
+	return true, nil
 }

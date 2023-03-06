@@ -38,6 +38,7 @@ type Interface interface {
 	EnsureDeleted(ctx context.Context, groupKind, namespace, name string) error
 	EnsureDeletedGVR(ctx context.Context, groupKind, namespace, name, optionalVersion string) error
 	Ensure(ctx context.Context, objs ...kruntime.Object) error
+	IsConstraintTemplateReady(ctx context.Context, name string) (bool, error)
 }
 
 type dynamicHelper struct {
@@ -532,4 +533,22 @@ func cmpAndCopy(srcPtr, dstPtr *corev1.ResourceList) bool {
 		}
 	}
 	return hasChanged
+}
+
+func (dh *dynamicHelper) IsConstraintTemplateReady(ctx context.Context, name string) (bool, error) {
+
+	gvr := schema.GroupVersionResource{Group: "templates.gatekeeper.sh", Version: "v1beta1", Resource: "constrainttemplates"}
+	ct, err := dh.dynamicClient.Resource(gvr).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return false, err
+	}
+	status, ok := ct.Object["status"].(map[string]interface{})
+	if !ok {
+		return false, nil
+	}
+	created, ok := status["created"].(bool)
+	if !ok {
+		return false, nil
+	}
+	return created, nil
 }
