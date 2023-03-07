@@ -527,10 +527,12 @@ func TestSecurity(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			defer resp.Body.Close()
 
 			if resp.StatusCode != tt.wantStatusCode {
 				t.Error(resp.StatusCode)
 			}
+
 			testlog.AssertAuditPayloads(t, auditHook, tt.wantAuditPayloads)
 		})
 	}
