@@ -267,11 +267,11 @@ func (d defaultAccessValidator) validateAccess(ctx context.Context, rawIDToken s
 
 	if idToken.Expiry.Before(now) {
 		// token has expired
-		return false, "", nil, idToken.Expiry, err
+		return false, "", nil, idToken.Expiry, nil
 	}
 	username, groups, err = extractInfoFromToken(idToken)
 	if err != nil {
-		return false, username, groups, idToken.Expiry, err
+		return false, "", nil, time.Time{}, err
 	}
 	groupsIntersect := GroupsIntersect(d.allowedGroups, groups)
 	if len(groupsIntersect) == 0 {
