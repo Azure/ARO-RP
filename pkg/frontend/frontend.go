@@ -79,6 +79,7 @@ type frontend struct {
 	azureActionsFactory azureActionsFactory
 	ocEnricherFactory   ocEnricherFactory
 
+	skuValidator   SkuValidator
 	quotaValidator QuotaValidator
 
 	l net.Listener
@@ -158,6 +159,7 @@ func NewFrontend(ctx context.Context,
 		azureActionsFactory:           azureActionsFactory,
 		ocEnricherFactory:             ocEnricherFactory,
 		quotaValidator:                quotaValidator{},
+		skuValidator:                  skuValidator{},
 
 		// add default installation version so it's always supported
 		enabledOcpVersions: map[string]*api.OpenShiftVersion{
