@@ -20,7 +20,7 @@ var testClusterResourceGroupTags map[string]*string = map[string]*string{
 	"e2e_test_tag2": to.StringPtr("bar"),
 }
 
-var _ = FDescribe("Cluster resource group tags", func() {
+var _ = Describe("Cluster resource group tags", func() {
 	var oc mgmtredhatopenshift20230401.OpenShiftCluster
 	var group features.ResourceGroup
 	var err error
