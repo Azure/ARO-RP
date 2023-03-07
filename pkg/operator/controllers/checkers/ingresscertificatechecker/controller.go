@@ -23,7 +23,6 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	checkercommon "github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/common"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
-	utilnet "github.com/Azure/ARO-RP/pkg/util/net"
 )
 
 // This is the permissions that this controller needs to work.
@@ -68,12 +67,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	r.log.Debug("running")
 
-	domainDetector, err := utilnet.NewDomainDetector(cluster.Spec.AZEnvironment)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	checkErr := r.checker.Check(ctx, domainDetector)
+	checkErr := r.checker.Check(ctx)
 	condition := r.condition(checkErr)
 
 	err = conditions.SetCondition(ctx, r.client, condition, r.role)

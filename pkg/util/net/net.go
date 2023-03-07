@@ -6,7 +6,13 @@ package net
 import (
 	"errors"
 	"net"
+	"strings"
 	"syscall"
+)
+
+const (
+	publicCloudManagedDomainSuffix = ".aroapp.io"
+	govCloudManagedDomainSuffix    = ".aroapp.azure.us"
 )
 
 // Listen returns a listener with its send and receive buffer sizes set, such
@@ -71,4 +77,22 @@ func setBuffers(rc syscall.RawConn, sz int) error {
 	}
 
 	return err
+}
+
+func managedDomainSuffixes() []string {
+	return []string{
+		publicCloudManagedDomainSuffix,
+		govCloudManagedDomainSuffix,
+	}
+}
+
+func IsManagedDomain(domain string) bool {
+	suffixes := managedDomainSuffixes()
+	for _, suffix := range suffixes {
+		if strings.HasSuffix(domain, suffix) {
+			return true
+		}
+	}
+
+	return false
 }

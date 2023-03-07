@@ -21,7 +21,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
-	utilnet "github.com/Azure/ARO-RP/pkg/util/net"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
@@ -29,7 +28,7 @@ type fakeChecker struct {
 	expectedResult error
 }
 
-func (fc fakeChecker) Check(ctx context.Context, domainDetector utilnet.DomainDetector) error {
+func (fc fakeChecker) Check(ctx context.Context) error {
 	return fc.expectedResult
 }
 

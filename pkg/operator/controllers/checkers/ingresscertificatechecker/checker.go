@@ -33,7 +33,7 @@ var (
 )
 
 type ingressCertificateChecker interface {
-	Check(ctx context.Context, domainDetector utilnet.DomainDetector) error
+	Check(ctx context.Context) error
 }
 
 type checker struct {
@@ -46,7 +46,7 @@ func newIngressCertificateChecker(client client.Client) *checker {
 	}
 }
 
-func (r *checker) Check(ctx context.Context, domainDetector utilnet.DomainDetector) error {
+func (r *checker) Check(ctx context.Context) error {
 	cv, err := r.clusterVersion(ctx)
 	if err != nil {
 		return err
@@ -57,7 +57,7 @@ func (r *checker) Check(ctx context.Context, domainDetector utilnet.DomainDetect
 		return err
 	}
 
-	clusterHasManagedDomain, err := r.clusterHasManagedDomain(ctx, domainDetector)
+	clusterHasManagedDomain, err := r.clusterHasManagedDomain(ctx)
 	if err != nil {
 		return err
 	}
@@ -82,14 +82,14 @@ func (r *checker) clusterVersion(ctx context.Context) (*configv1.ClusterVersion,
 	return cv, nil
 }
 
-func (r *checker) clusterHasManagedDomain(ctx context.Context, domainDetector utilnet.DomainDetector) (bool, error) {
+func (r *checker) clusterHasManagedDomain(ctx context.Context) (bool, error) {
 	cluster := &arov1alpha1.Cluster{}
 	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, cluster)
 	if err != nil {
 		return false, err
 	}
 
-	return domainDetector.ClusterHasManagedDomain(cluster.Spec.Domain), nil
+	return utilnet.IsManagedDomain(cluster.Spec.Domain), nil
 }
 
 func validateCertificate(clusterId configv1.ClusterID, ingressCertificate *corev1.LocalObjectReference, clusterHasManagedDomain bool) error {
