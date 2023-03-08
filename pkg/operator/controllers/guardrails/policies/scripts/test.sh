@@ -5,12 +5,13 @@ set -eu
 template_src_path="gktemplates-src"
 constraint_path="gkconstraints"
 constraint_test_path="gkconstraints-test"
+library="${template_src_path}/library/common.rego"
 
 echo "opa test:"
 for folder in ${template_src_path}/*
 do
-  echo "opa test ${folder}/*.rego"
-  opa test ${folder}/*.rego
+  echo "opa test $library ${folder}/*.rego"
+  opa test $library ${folder}/*.rego
 done
 
 echo "gator test:"
