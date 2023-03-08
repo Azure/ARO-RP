@@ -23,8 +23,8 @@ function generate_golang() {
   local API_VERSION=$2
   local FOLDER=$3
 
-  # Generating Track 1 SDK. Needs work to migrate to Track 2.
-  docker run -d -t \
+  # Generating Track 2 Golang SDK
+  docker run \
     --platform=linux/amd64 \
     --rm \
     -v $PWD/pkg/client:/github.com/Azure/ARO-RP/pkg/client:z \
@@ -33,15 +33,14 @@ function generate_golang() {
     --go \
     --use=@autorest/go@4.0.0-preview.45 \
     --use=@autorest/modelerfour@~4.26.0 \
-    --version=~3.6.3 \
+    --version=~3.9.4 \
     --license-header=MICROSOFT_APACHE_NO_VERSION \
-    --openapi-type=data-plane \
     --namespace=redhatopenshift \
-    --verbose \
     --input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
+    --export-clients=true \
     --output-folder=/github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/"$API_VERSION"/redhatopenshift
 
-  docker run -d -t \
+  docker run \
     --platform=linux/amd64 \
     --rm \
     -v $PWD/pkg/client:/github.com/Azure/ARO-RP/pkg/client:z \
@@ -49,8 +48,8 @@ function generate_golang() {
     "${AUTOREST_IMAGE}" \
     --in-place \
     --expression='s|azure/aro-rp|Azure/ARO-RP|g' \
-    "/github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/${API_VERSION}/redhatopenshift/models.go" \
-    "/github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/${API_VERSION}/redhatopenshift/redhatopenshiftapi/interfaces.go"
+    "/github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/${API_VERSION}/redhatopenshift/models.go"
+    # "/github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/${API_VERSION}/redhatopenshift/redhatopenshiftapi/interfaces.go"
 
   go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP pkg/client
 }
@@ -60,21 +59,22 @@ function generate_python() {
   local API_VERSION=$2
   local FOLDER=$3
 
-  # Generating Track 2 SDK
+  # Generating Track 2 Python SDK
   docker run \
     --platform=linux/amd64 \
     --rm \
     -v $PWD/python/client:/python/client:z \
     -v $PWD/swagger:/swagger:z \
     "${AUTOREST_IMAGE}" \
-    --use=@autorest/python@~5.12.0 \
-    --use=@autorest/modelerfour@~4.20.0 \
-    --version=~3.6.3 \
+    --use=@autorest/python@~6.4.3 \
+    --use=@autorest/modelerfour@~4.26.0 \
+    --version=~3.9.4 \
     --python \
     --azure-arm \
     --license-header=MICROSOFT_APACHE_NO_VERSION \
     --namespace=azure.mgmt.redhatopenshift.v"${API_VERSION//-/_}" \
     --input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
+    --export-clients=true \
     --output-folder=/python/client
 
   rm -rf python/client/azure/mgmt/redhatopenshift/v"${API_VERSION//-/_}"/aio
@@ -94,22 +94,24 @@ do
     FOLDER=preview
   fi
 
-  printf "\nGENERATING $API_VERSION FROM $FOLDER\n"
+  printf "\nGENERATING API v$API_VERSION\n"
   printf '%*s\n' "${COLUMNS:-$(tput cols)}" '' | tr ' ' -
 
   printf "CLEANING OLD API GENERATED FILES...\n"
   clean "$API_VERSION" "$FOLDER"
-  printf "COMPLETED SUCCESSFULLY\n"
+  printf "[\u2714] SUCCESS\n\n"
 
   printf "GENERATING CHECKSUM...\n"
   checksum "$API_VERSION" "$FOLDER"
-  printf "COMPLETED SUCCESSFULLY\n"
+  printf "[\u2714] SUCCESS\n\n"
 
-  printf "GENERATING GOLANG...\n"
+  printf "GENERATING GOLANG SDK...\n"
   generate_golang "$AUTOREST_IMAGE" "$API_VERSION" "$FOLDER"
-  printf "COMPLETED SUCCESSFULLY\n"
+  printf "[\u2714] SUCCESS\n\n"
 
-  printf "GENERATING PYTHON...\n"
+  printf "GENERATING PYTHON SDK...\n"
   generate_python "$AUTOREST_IMAGE" "$API_VERSION" "$FOLDER"
-  printf "COMPLETED SUCCESSFULLY\n"
+  printf "[\u2714] SUCCESS\n\n"
 done
+
+printf "[\u2714] CLIENT GENERATATION COMPLETED SUCCESSFULLY\n"
