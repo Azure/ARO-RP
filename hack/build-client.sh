@@ -37,7 +37,6 @@ function generate_golang() {
     --license-header=MICROSOFT_APACHE_NO_VERSION \
     --namespace=redhatopenshift \
     --input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
-    --export-clients=true \
     --output-folder=/github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/"$API_VERSION"/redhatopenshift
 
   docker run \
@@ -74,7 +73,6 @@ function generate_python() {
     --license-header=MICROSOFT_APACHE_NO_VERSION \
     --namespace=azure.mgmt.redhatopenshift.v"${API_VERSION//-/_}" \
     --input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
-    --export-clients=true \
     --output-folder=/python/client
 
   rm -rf python/client/azure/mgmt/redhatopenshift/v"${API_VERSION//-/_}"/aio
