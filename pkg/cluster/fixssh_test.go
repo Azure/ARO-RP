@@ -213,6 +213,7 @@ func TestFixSSH(t *testing.T) {
 		ilbID               string
 		elb                 string
 		elbID               string
+		elbV1ID             string
 		loadbalancer        func(string) *mgmtnetwork.LoadBalancer
 		iface               func(string, string, int, string, string) *mgmtnetwork.Interface
 		iNameF              string
@@ -235,6 +236,7 @@ func TestFixSSH(t *testing.T) {
 			iNameF:        "%s-master%d-nic",
 			writeExpected: true,
 			elb:           infraID + "-public-lb",
+			elbV1ID:       "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID,
 			elbID:         "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-public-lb",
 		},
 		{
@@ -372,8 +374,12 @@ func TestFixSSH(t *testing.T) {
 					break
 				} else if tt.lbErrorExpected {
 					interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), "").Times(0)
+				} else if tt.architectureVersion == api.ArchitectureVersionV2 && tt.noOperationExpected {
+					interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), "").Return(*vmNicBefore, nil)
+					loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
 				} else if tt.noOperationExpected {
 					interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), "").Return(*vmNicBefore, nil)
+					loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, infraID, "").Return(*tt.loadbalancer(tt.elbV1ID), nil)
 					loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
 				} else {
 					interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), "").Return(*vmNicBefore, nil)
@@ -385,7 +391,12 @@ func TestFixSSH(t *testing.T) {
 						interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), *ifNoVmAfter(vmNicBefore))
 						loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
 						interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), *ifNoVmAfter(vmNicBefore))
+					} else if tt.architectureVersion == api.ArchitectureVersionV2 {
+						interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), *vmNicBefore)
+						loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
+						interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), *vmNicBefore)
 					} else {
+						loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, infraID, "").Return(*tt.loadbalancer(tt.elbV1ID), nil)
 						interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), *vmNicBefore)
 						loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
 						interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), *vmNicBefore)
