@@ -9,12 +9,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	networkv1 "github.com/openshift/api/network/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 type ClusterNetworkEntry struct {
@@ -74,7 +75,6 @@ type ClusterDetails struct {
 }
 
 func NetworkData(clusterNetworks *networkv1.ClusterNetworkList, doc *api.OpenShiftClusterDocument) *NetworkInformation {
-
 	clusDet := getClusterDetails(doc)
 
 	// Get all subnetids for getting the subnet details
@@ -136,7 +136,6 @@ func getClusterNetworkList(clusterNetworks *networkv1.ClusterNetworkList) []Clus
 }
 
 func getVNetPeeringList(clusDet ClusterDetails) []VNetPeering {
-
 	// Create a new VirtualNetworkPeerings client
 	vnetPeeringClient := mgmtnetwork.NewVirtualNetworkPeeringsClient(clusDet.SubsId)
 	vnetPeeringClient.Authorizer = clusDet.Auth
@@ -151,7 +150,6 @@ func getVNetPeeringList(clusDet ClusterDetails) []VNetPeering {
 
 	// Loop through the list of virtual network peerings and create final list
 	for i, peering := range vnetPeerings.Values() {
-
 		vnetPeering := VNetPeering{
 			Name:         *peering.Name,
 			RemoteVNet:   strings.Split(*peering.RemoteVirtualNetwork.ID, "/")[8],
@@ -165,7 +163,6 @@ func getVNetPeeringList(clusDet ClusterDetails) []VNetPeering {
 }
 
 func getSubnetList(subnetIds []string, clusDet ClusterDetails) []Subnet {
-
 	// create a new SubnetsClient
 	subnetsClient := mgmtnetwork.NewSubnetsClient(clusDet.SubsId)
 	subnetsClient.Authorizer = clusDet.Auth
@@ -193,7 +190,6 @@ func getSubnetList(subnetIds []string, clusDet ClusterDetails) []Subnet {
 }
 
 func getIngressProfileList(doc *api.OpenShiftClusterDocument) []IngressProfile {
-
 	IngressProfiles := make([]IngressProfile, len(doc.OpenShiftCluster.Properties.IngressProfiles))
 
 	for i, ip := range doc.OpenShiftCluster.Properties.IngressProfiles {
