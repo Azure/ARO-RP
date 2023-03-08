@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Deployment
+metadata:
+  name: disallowed
+  namespace: openshift-config
+spec:
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      serviceAccountName: test-user
+      containers:
+      - name: nginx
+        image: nginx
+        ports:
+        - containerPort: 80
