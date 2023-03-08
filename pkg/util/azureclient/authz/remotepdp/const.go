@@ -6,7 +6,7 @@ package remotepdp
 const (
 	modulename = "aro-pdpclient"
 	// version is the semantic version of this module
-	version = "0.0.1" //nolint
+	version = "0.0.1"
 )
 
 // AccessDecision possible returned values

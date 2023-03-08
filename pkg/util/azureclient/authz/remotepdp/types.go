@@ -21,7 +21,7 @@ type SubjectInfo struct {
 // the subject and is required.
 type SubjectAttributes struct {
 	ObjectId         string   `json:"ObjectId"`
-	Groups           []string `json:"Groups"`
+	Groups           []string `json:"Groups,omitempty"`
 	ApplicationId    string   `json:"ApplicationId,omitempty"`
 	ApplicationACR   string   `json:"ApplicationACR,omitempty"`
 	RoleTemplate     []string `json:"RoleTemplate,omitempty"`

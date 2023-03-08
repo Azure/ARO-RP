@@ -72,10 +72,6 @@ func (r *remotePDPClient) CheckAccess(ctx context.Context, authzReq Authorizatio
 
 // newCheckAccessError returns an error when non HTTP 200 response is returned.
 func newCheckAccessError(r *http.Response) error {
-	resErr := azcore.ResponseError{
-		StatusCode:  r.StatusCode,
-		RawResponse: r,
-	}
 	payload, err := runtime.Payload(r)
 	if err != nil {
 		return err
@@ -85,6 +81,9 @@ func newCheckAccessError(r *http.Response) error {
 	if err != nil {
 		return err
 	}
-	resErr.ErrorCode = checkAccessError.Message
-	return &resErr
+	return &azcore.ResponseError{
+		StatusCode:  r.StatusCode,
+		RawResponse: r,
+		ErrorCode:   checkAccessError.Message,
+	}
 }
