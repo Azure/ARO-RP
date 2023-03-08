@@ -25,6 +25,6 @@ steps:
     export AZURE_PURGE_CREATED_TAG="${{ parameters.purgeCreatedTag }}"
     export AZURE_PURGE_RESOURCEGROUP_PREFIXES="${{ parameters.resourceGroupDeletePrefixes }}"
 
-    go run ./hack/clean -dryRun=${{ parameters.dryRun }}
+    GOCACHE=/tmp go run ./hack/clean -dryRun=${{ parameters.dryRun }}
   displayName: 🧹 Clean subscription
   target: golang
