@@ -189,6 +189,7 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	out.Properties.MaintenanceTask = api.MaintenanceTask(oc.Properties.MaintenanceTask)
 	out.Properties.OperatorFlags = api.OperatorFlags(oc.Properties.OperatorFlags)
 	out.Properties.OperatorVersion = oc.Properties.OperatorVersion
+	out.Properties.CreatedAt = oc.Properties.CreatedAt
 	out.Properties.CreatedBy = oc.Properties.CreatedBy
 	out.Properties.ProvisionedBy = oc.Properties.ProvisionedBy
 	out.Properties.ClusterProfile.Domain = oc.Properties.ClusterProfile.Domain
