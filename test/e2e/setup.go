@@ -25,6 +25,7 @@ import (
 	projectclient "github.com/openshift/client-go/project/clientset/versioned"
 	hiveclient "github.com/openshift/hive/pkg/client/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
+	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	"github.com/sirupsen/logrus"
 	"github.com/tebeka/selenium"
 	"k8s.io/client-go/kubernetes"
@@ -62,6 +63,7 @@ type clientSet struct {
 
 	RestConfig         *rest.Config
 	HiveRestConfig     *rest.Config
+	Monitoring         monitoringclient.Interface
 	Kubernetes         kubernetes.Interface
 	MachineAPI         machineclient.Interface
 	MachineConfig      mcoclient.Interface
@@ -289,6 +291,11 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
+	monitoring, err := monitoringclient.NewForConfig(restconfig)
+	if err != nil {
+		return nil, err
+	}
+
 	machineapicli, err := machineclient.NewForConfig(restconfig)
 	if err != nil {
 		return nil, err
@@ -362,6 +369,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		RestConfig:         restconfig,
 		HiveRestConfig:     hiveRestConfig,
 		Kubernetes:         cli,
+		Monitoring:         monitoring,
 		MachineAPI:         machineapicli,
 		MachineConfig:      mcocli,
 		AROClusters:        arocli,
