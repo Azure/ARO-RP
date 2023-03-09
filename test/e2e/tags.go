@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	mgmtredhatopenshift20230401 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2023-04-01/redhatopenshift"
@@ -22,7 +22,7 @@ var testClusterResourceGroupTags map[string]*string = map[string]*string{
 
 var _ = Describe("Cluster resource group tags", func() {
 	var oc mgmtredhatopenshift20230401.OpenShiftCluster
-	var group features.ResourceGroup
+	var group mgmtfeatures.ResourceGroup
 	var err error
 
 	BeforeEach(func(ctx context.Context) {
@@ -82,12 +82,7 @@ var _ = Describe("Cluster resource group tags", func() {
 	})
 })
 
-func restoreClusterResourceGroupTags(ctx context.Context) (oc mgmtredhatopenshift20230401.OpenShiftCluster, group features.ResourceGroup, err error) {
-	oc, err = clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
-	if err != nil {
-		return mgmtredhatopenshift20230401.OpenShiftCluster{}, features.ResourceGroup{}, err
-	}
-
+func restoreClusterResourceGroupTags(ctx context.Context) (oc mgmtredhatopenshift20230401.OpenShiftCluster, group mgmtfeatures.ResourceGroup, err error) {
 	updateParameters := mgmtredhatopenshift20230401.OpenShiftClusterUpdate{
 		OpenShiftClusterProperties: &mgmtredhatopenshift20230401.OpenShiftClusterProperties{
 			ClusterResourceGroupTags: originalClusterResourceGroupTags,
@@ -96,19 +91,19 @@ func restoreClusterResourceGroupTags(ctx context.Context) (oc mgmtredhatopenshif
 
 	oc, err = clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, updateParameters)
 	if err != nil {
-		return mgmtredhatopenshift20230401.OpenShiftCluster{}, features.ResourceGroup{}, err
+		return mgmtredhatopenshift20230401.OpenShiftCluster{}, mgmtfeatures.ResourceGroup{}, err
 	}
 
 	group, err = clients.ResourceGroups.Get(ctx, clusterResourceGroupID)
 	if err != nil {
-		return mgmtredhatopenshift20230401.OpenShiftCluster{}, features.ResourceGroup{}, err
+		return mgmtredhatopenshift20230401.OpenShiftCluster{}, mgmtfeatures.ResourceGroup{}, err
 	}
 
 	group.Tags = originalClusterResourceGroupTagsAzure
 
 	group, err = clients.ResourceGroups.CreateOrUpdate(ctx, clusterResourceGroupID, group)
 	if err != nil {
-		return mgmtredhatopenshift20230401.OpenShiftCluster{}, features.ResourceGroup{}, err
+		return mgmtredhatopenshift20230401.OpenShiftCluster{}, mgmtfeatures.ResourceGroup{}, err
 	}
 
 	return oc, group, nil
