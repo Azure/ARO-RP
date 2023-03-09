@@ -262,10 +262,10 @@ func TestInstallationTimeMetrics(t *testing.T) {
 				steps.AuthorizationRefreshingAction(nil, steps.Action(successfulActionStep)),
 			},
 			wantedMetrics: map[string]int64{
-				"backend.openshiftcluster.install.time.total":                             6,
-				"backend.openshiftcluster.install.action.successfulActionStep.time":       2,
-				"backend.openshiftcluster.install.condition.successfulConditionStep.time": 2,
-				"backend.openshiftcluster.install.refreshing.successfulActionStep.time":   2,
+				"backend.openshiftcluster.install.duration.total.seconds":                             6,
+				"backend.openshiftcluster.install.action.successfulActionStep.duration.seconds":       2,
+				"backend.openshiftcluster.install.condition.successfulConditionStep.duration.seconds": 2,
+				"backend.openshiftcluster.install.refreshing.successfulActionStep.duration.seconds":   2,
 			},
 		},
 		{
@@ -278,10 +278,10 @@ func TestInstallationTimeMetrics(t *testing.T) {
 				steps.AuthorizationRefreshingAction(nil, steps.Action(successfulActionStep)),
 			},
 			wantedMetrics: map[string]int64{
-				"backend.openshiftcluster.update.time.total":                             9,
-				"backend.openshiftcluster.update.action.successfulActionStep.time":       3,
-				"backend.openshiftcluster.update.condition.successfulConditionStep.time": 3,
-				"backend.openshiftcluster.update.refreshing.successfulActionStep.time":   3,
+				"backend.openshiftcluster.update.duration.total.seconds":                             9,
+				"backend.openshiftcluster.update.action.successfulActionStep.duration.seconds":       3,
+				"backend.openshiftcluster.update.condition.successfulConditionStep.duration.seconds": 3,
+				"backend.openshiftcluster.update.refreshing.successfulActionStep.duration.seconds":   3,
 			},
 		},
 	} {
