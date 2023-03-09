@@ -13,6 +13,8 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 )
 
+var _ RemotePDPClient = &remotePDPClient{}
+
 // RemotePDPClient represents the Microsoft Remote PDP API Spec
 type RemotePDPClient interface {
 	CheckAccess(context.Context, AuthorizationRequest) (*AuthorizationDecisionResponse, error)
@@ -28,7 +30,7 @@ type remotePDPClient struct {
 // endpoint - the fqdn of the regional specific endpoint of PDP
 // scope - the oauth scope required by the PDP server
 // cred - the credential of the client to call the PDP server
-func NewRemotePDPClient(endpoint, scope string, cred azcore.TokenCredential) RemotePDPClient {
+func NewRemotePDPClient(endpoint, scope string, cred azcore.TokenCredential) *remotePDPClient {
 	authPolicy := runtime.NewBearerTokenPolicy(cred, []string{scope}, nil)
 
 	pipeline := runtime.NewPipeline(
