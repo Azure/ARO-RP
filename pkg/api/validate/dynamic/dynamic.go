@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -57,6 +58,7 @@ type Dynamic interface {
 
 type dynamic struct {
 	log            *logrus.Entry
+	authorizer     refreshable.Authorizer
 	authorizerType AuthorizerType
 	env            env.Interface
 	azEnv          *azureclient.AROEnvironment
@@ -69,6 +71,7 @@ type dynamic struct {
 	spComputeUsage     compute.UsageClient
 	spNetworkUsage     network.UsageClient
 	tokenClient        aad.TokenClient
+	pdpClient          remotepdp.RemotePDPClient
 }
 
 type AuthorizerType string
@@ -78,9 +81,10 @@ const (
 	AuthorizerClusterServicePrincipal AuthorizerType = "cluster"
 )
 
-func NewValidator(log *logrus.Entry, env env.Interface, azEnv *azureclient.AROEnvironment, subscriptionID string, authorizer refreshable.Authorizer, authorizerType AuthorizerType, tokenClient aad.TokenClient) (Dynamic, error) {
+func NewValidator(log *logrus.Entry, env env.Interface, azEnv *azureclient.AROEnvironment, subscriptionID string, authorizer refreshable.Authorizer, authorizerType AuthorizerType, tokenClient aad.TokenClient, pdpClient remotepdp.RemotePDPClient) (Dynamic, error) {
 	return &dynamic{
 		log:            log,
+		authorizer:     authorizer,
 		authorizerType: authorizerType,
 		env:            env,
 		azEnv:          azEnv,
@@ -93,6 +97,7 @@ func NewValidator(log *logrus.Entry, env env.Interface, azEnv *azureclient.AROEn
 		diskEncryptionSets: compute.NewDiskEncryptionSetsClient(azEnv, subscriptionID, authorizer),
 		resourceSkusClient: compute.NewResourceSkusClient(azEnv, subscriptionID, authorizer),
 		tokenClient:        tokenClient,
+		pdpClient:          pdpClient,
 	}, nil
 }
 
@@ -291,34 +296,95 @@ func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) 
 }
 
 func (dv *dynamic) validateActions(ctx context.Context, r *azure.Resource, actions []string) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	c := closure{dv: dv, ctx: ctx, resource: r, actions: actions}
+	conditionalFunc := c.usingListPermissions
+	timeout := 5 * time.Minute
+	if dv.pdpClient != nil {
+		conditionalFunc = c.usingCheckAccessV2
+		timeout = 90 * time.Second
+	}
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	return wait.PollImmediateUntil(20*time.Second, func() (bool, error) {
-		dv.log.Debug("retry validateActions")
-		perms, err := dv.permissions.ListForResource(ctx, r.ResourceGroup, r.Provider, "", r.ResourceType, r.ResourceName)
+	return wait.PollImmediateUntil(timeout, conditionalFunc, timeoutCtx.Done())
+}
 
-		if detailedErr, ok := err.(autorest.DetailedError); ok &&
-			detailedErr.StatusCode == http.StatusForbidden {
-			return false, steps.ErrWantRefresh
-		}
-		if err != nil {
+// closure is the closure used in PollImmediateUntil's ConditionalFunc
+type closure struct {
+	dv       *dynamic
+	ctx      context.Context
+	resource *azure.Resource
+	actions  []string
+}
+
+// usingListPermissions is how the current check is done
+func (c closure) usingListPermissions() (bool, error) {
+	c.dv.log.Debug("retry validateActions with ListPermissions")
+	perms, err := c.dv.permissions.ListForResource(c.ctx, c.resource.ResourceGroup, c.resource.Provider, "", c.resource.ResourceType, c.resource.ResourceName)
+
+	if detailedErr, ok := err.(autorest.DetailedError); ok &&
+		detailedErr.StatusCode == http.StatusForbidden {
+		return false, steps.ErrWantRefresh
+	}
+	if err != nil {
+		return false, err
+	}
+
+	for _, action := range c.actions {
+		ok, err := permissions.CanDoAction(perms, action)
+		if !ok || err != nil {
+			// TODO(jminter): I don't understand if there are genuinely
+			// cases where CanDoAction can return false then true shortly
+			// after. I'm a little skeptical; if it can't happen we can
+			// simplify this code.  We should add a metric on this.
 			return false, err
 		}
+	}
+	return true, nil
+}
 
-		for _, action := range actions {
-			ok, err := permissions.CanDoAction(perms, action)
-			if !ok || err != nil {
-				// TODO(jminter): I don't understand if there are genuinely
-				// cases where CanDoAction can return false then true shortly
-				// after. I'm a little skeptical; if it can't happen we can
-				// simplify this code.  We should add a metric on this.
-				return false, err
-			}
+// usingCheckAccessV2 uses the new RBAC checkAccessV2 API
+func (c closure) usingCheckAccessV2() (bool, error) {
+	c.dv.log.Debug("retry validationActions with CheckAccessV2")
+	oid, err := aad.GetObjectId(c.dv.authorizer.OAuthToken())
+	if err != nil {
+		return false, err
+	}
+
+	authReq := createAuthorizationRequest(oid, c.resource.String(), c.actions...)
+	results, err := c.dv.pdpClient.CheckAccess(c.ctx, authReq)
+	if err != nil {
+		return false, err
+	}
+
+	for _, result := range results.Value {
+		if result.AccessDecision != remotepdp.Allowed {
+			c.dv.log.Debug(fmt.Sprintf("%s has no access to %s", oid, result.ActionId))
+			return false, nil
 		}
+	}
 
-		return true, nil
-	}, timeoutCtx.Done())
+	return true, nil
+}
+
+func createAuthorizationRequest(subject, resourceId string, actions ...string) remotepdp.AuthorizationRequest {
+	actionInfos := []remotepdp.ActionInfo{}
+	for _, action := range actions {
+		actionInfos = append(actionInfos, remotepdp.ActionInfo{Id: action})
+	}
+
+	return remotepdp.AuthorizationRequest{
+		Subject: remotepdp.SubjectInfo{
+			Attributes: remotepdp.SubjectAttributes{
+				ObjectId: subject,
+			},
+		},
+		Actions: actionInfos,
+		Resource: remotepdp.ResourceInfo{
+			Id: resourceId,
+		},
+	}
 }
 
 func (dv *dynamic) validateCIDRRanges(ctx context.Context, subnets []Subnet, additionalCIDRs ...string) error {

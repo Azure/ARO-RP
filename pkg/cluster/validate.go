@@ -10,8 +10,11 @@ import (
 )
 
 func (m *manager) validateResources(ctx context.Context) error {
-	ocDynamicValidator := validate.NewOpenShiftClusterDynamicValidator(
-		m.log, m.env, m.doc.OpenShiftCluster, m.subscriptionDoc, m.fpAuthorizer,
+	ocDynamicValidator, err := validate.NewOpenShiftClusterDynamicValidator(
+		ctx, m.log, m.env, m.doc.OpenShiftCluster, m.subscriptionDoc, m.fpAuthorizer,
 	)
+	if err != nil {
+		return err
+	}
 	return ocDynamicValidator.Dynamic(ctx)
 }
