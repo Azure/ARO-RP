@@ -239,18 +239,23 @@ func TestInstallationTimeMetrics(t *testing.T) {
 
 	for _, tt := range []struct {
 		name          string
+		metricsTopic  string
+		timePerStep   int64
 		steps         []steps.Step
 		wantedMetrics map[string]int64
 	}{
 		{
-			name: "Failed step run will not generate any install time metrics",
+			name:         "Failed step run will not generate any install time metrics",
+			metricsTopic: "install",
 			steps: []steps.Step{
 				steps.Action(successfulActionStep),
 				steps.Action(failingFunc),
 			},
 		},
 		{
-			name: "Succeeded step run will generate a valid install time metrics",
+			name:         "Succeeded step run for cluster installation will generate a valid install time metrics",
+			metricsTopic: "install",
+			timePerStep:  2,
 			steps: []steps.Step{
 				steps.Action(successfulActionStep),
 				steps.Condition(successfulConditionStep, 30*time.Minute, true),
@@ -263,16 +268,32 @@ func TestInstallationTimeMetrics(t *testing.T) {
 				"backend.openshiftcluster.install.refreshing.successfulActionStep.time":   2,
 			},
 		},
+		{
+			name:         "Succeeded step run for cluster update will generate a valid install time metrics",
+			metricsTopic: "update",
+			timePerStep:  3,
+			steps: []steps.Step{
+				steps.Action(successfulActionStep),
+				steps.Condition(successfulConditionStep, 30*time.Minute, true),
+				steps.AuthorizationRefreshingAction(nil, steps.Action(successfulActionStep)),
+			},
+			wantedMetrics: map[string]int64{
+				"backend.openshiftcluster.update.time.total":                             9,
+				"backend.openshiftcluster.update.action.successfulActionStep.time":       3,
+				"backend.openshiftcluster.update.condition.successfulConditionStep.time": 3,
+				"backend.openshiftcluster.update.refreshing.successfulActionStep.time":   3,
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			m := &manager{
 				log:            log,
 				metricsEmitter: fm,
-				now:            func() time.Time { return time.Now().Add(2 * time.Second) },
+				now:            func() time.Time { return time.Now().Add(time.Duration(tt.timePerStep) * time.Second) },
 			}
 
-			err := m.runSteps(ctx, tt.steps, "install")
+			err := m.runSteps(ctx, tt.steps, tt.metricsTopic)
 			if err != nil {
 				if len(fm.Metrics) != 0 {
 					t.Error("fake metrics obj should be empty when run steps failed")
@@ -282,10 +303,10 @@ func TestInstallationTimeMetrics(t *testing.T) {
 					for k, v := range tt.wantedMetrics {
 						time, ok := fm.Metrics[k]
 						if !ok {
-							t.Errorf("unexpected metrics topic: %s", k)
+							t.Errorf("unexpected metrics key: %s", k)
 						}
 						if time != v {
-							t.Errorf("incorrect fake metrics obj, want: %d, got: %d", v, time)
+							t.Errorf("incorrect fake metrics value, want: %d, got: %d", v, time)
 						}
 					}
 				}
