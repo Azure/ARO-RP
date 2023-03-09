@@ -114,8 +114,15 @@ func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) err
 		return err
 	}
 
-	// TODO: Ensure we get the latest version of the GVK
 	gvk := gvks[0]
+	// ASSUMPTION: The above assumes there will only ever be one gvk for the passed-in object
+	// but there may be a case where the object is not fully formed and therefore may match
+	// multiple gvks. This is a code-path that we don't test for so it may cause unintended
+	// side-effects. Therefore we log a warning for our future selves.
+	if len(gvks) > 1 {
+		_gvk := new.GetObjectKind().GroupVersionKind()
+		dh.log.Warnf("While retrieving kinds for an object \"%s\", more that one version returned which is a codepath that's not fully handled.", _gvk.String())
+	}
 
 	// Retrieve the schema for the GVK
 	gvr, err := dh.Resolve(gvk.GroupKind().String(), gvk.Version)
