@@ -31,6 +31,7 @@ func (f *frontend) deleteOpenShiftCluster(w http.ResponseWriter, r *http.Request
 		err = statusCodeError(http.StatusAccepted)
 	}
 
+	frontendOperationResultLog(log, r.Method, err)
 	reply(log, w, header, nil, err)
 }
 
@@ -52,7 +53,11 @@ func (f *frontend) _deleteOpenShiftCluster(ctx context.Context, r *http.Request,
 	doc.CorrelationData = correlationData
 	doc.Dequeues = 0
 
-	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, mux.Vars(r), doc)
+	vars := mux.Vars(r)
+	subId := vars["subscriptionId"]
+	resourceProviderNamespace := vars["resourceProviderNamespace"]
+
+	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, subId, resourceProviderNamespace, doc)
 	if err != nil {
 		return err
 	}
@@ -64,10 +69,10 @@ func (f *frontend) _deleteOpenShiftCluster(ctx context.Context, r *http.Request,
 
 	*header = http.Header{}
 
-	u.Path = f.operationResultsPath(r, doc.AsyncOperationID)
+	u.Path = f.operationResultsPath(subId, resourceProviderNamespace, doc.AsyncOperationID)
 	(*header)["Location"] = []string{u.String()}
 
-	u.Path = f.operationsPath(mux.Vars(r), doc.AsyncOperationID)
+	u.Path = f.operationsPath(subId, resourceProviderNamespace, doc.AsyncOperationID)
 	(*header)["Azure-AsyncOperation"] = []string{u.String()}
 
 	return nil

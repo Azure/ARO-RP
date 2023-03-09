@@ -8,12 +8,9 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
-	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
@@ -41,10 +37,7 @@ const (
 type Reconciler struct {
 	log *logrus.Entry
 
-	arocli           aroclient.Interface
-	kubernetescli    kubernetes.Interface
-	maocli           machineclient.Interface
-	imageregistrycli imageregistryclient.Interface
+	client client.Client
 }
 
 // reconcileManager is instance of manager instantiated per request
@@ -54,33 +47,33 @@ type reconcileManager struct {
 	instance       *arov1alpha1.Cluster
 	subscriptionID string
 
-	imageregistrycli imageregistryclient.Interface
-	kubeSubnets      subnet.KubeManager
-	storage          storage.AccountsClient
+	client      client.Client
+	kubeSubnets subnet.KubeManager
+	storage     storage.AccountsClient
 }
 
 // NewReconciler creates a new Reconciler
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, maocli machineclient.Interface, kubernetescli kubernetes.Interface, imageregistrycli imageregistryclient.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
-		log:              log,
-		arocli:           arocli,
-		kubernetescli:    kubernetescli,
-		imageregistrycli: imageregistrycli,
-		maocli:           maocli,
+		log:    log,
+		client: client,
 	}
 }
 
 // Reconcile ensures the firewall is set on storage accounts as per user subnets
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	instance := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		// controller is disabled
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
+
+	r.log.Debug("running")
 
 	// Get endpoints from operator
 	azEnv, err := azureclient.EnvironmentFromName(instance.Spec.AZEnvironment)
@@ -94,7 +87,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// create refreshable authorizer from token
-	azRefreshAuthorizer, err := clusterauthorizer.NewAzRefreshableAuthorizer(r.log, &azEnv, r.kubernetescli, aad.NewTokenClient())
+	azRefreshAuthorizer, err := clusterauthorizer.NewAzRefreshableAuthorizer(r.log, &azEnv, r.client, aad.NewTokenClient())
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -109,9 +102,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		instance:       instance,
 		subscriptionID: resource.SubscriptionID,
 
-		imageregistrycli: r.imageregistrycli,
-		kubeSubnets:      subnet.NewKubeManager(r.maocli, resource.SubscriptionID),
-		storage:          storage.NewAccountsClient(&azEnv, resource.SubscriptionID, authorizer),
+		client:      r.client,
+		kubeSubnets: subnet.NewKubeManager(r.client, resource.SubscriptionID),
+		storage:     storage.NewAccountsClient(&azEnv, resource.SubscriptionID, authorizer),
 	}
 
 	return reconcile.Result{}, manager.reconcileAccounts(ctx)

@@ -38,7 +38,7 @@ func (f *frontend) putAdminOpenShiftVersion(w http.ResponseWriter, r *http.Reque
 	}
 
 	// prevent disabling of the default installation version
-	if ext.Properties.Version == version.InstallStream.Version.String() && !ext.Properties.Enabled {
+	if ext.Properties.Version == version.DefaultInstallStream.Version.String() && !ext.Properties.Enabled {
 		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.enabled", "You cannot disable the default installation version.")
 		return
 	}

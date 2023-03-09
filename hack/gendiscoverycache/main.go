@@ -10,6 +10,7 @@ import (
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -54,7 +55,11 @@ func writeVersion(ctx context.Context, restconfig *rest.Config) error {
 		return err
 	}
 
-	clusterVersion, err := version.GetClusterVersion(ctx, configcli)
+	cv, err := configcli.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	clusterVersion, err := version.GetClusterVersion(cv)
 	if err != nil {
 		return err
 	}

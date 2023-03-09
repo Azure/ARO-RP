@@ -70,7 +70,7 @@ func testGetPodLogsOK(ctx context.Context, containerName, podName, namespace str
 		"podname":   []string{podName},
 	}
 	var logs string
-	resp, err := adminRequest(ctx, http.MethodGet, "/admin"+resourceIDFromEnv()+"/kubernetespodlogs", params, nil, &logs)
+	resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/kubernetespodlogs", params, true, nil, &logs)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -87,7 +87,7 @@ func testGetPodLogsFromCustomerNamespaceForbidden(ctx context.Context, container
 	}
 
 	var logs string
-	resp, err := adminRequest(ctx, http.MethodGet, "/admin"+resourceIDFromEnv()+"/kubernetespodlogs", params, nil, logs)
+	resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/kubernetespodlogs", params, true, nil, logs)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
 

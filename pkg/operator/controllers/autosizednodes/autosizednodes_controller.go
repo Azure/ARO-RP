@@ -35,9 +35,9 @@ const (
 	configName        = "dynamic-node"
 )
 
-func NewReconciler(log *logrus.Entry, mgr ctrl.Manager) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
-		client: mgr.GetClient(),
+		client: client,
 
 		log: log,
 	}
@@ -67,7 +67,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 				Name: configName,
 			},
 		}
-		err = r.client.Delete(ctx, &config, &client.DeleteOptions{})
+		err = r.client.Delete(ctx, &config)
 		if err != nil {
 			err = fmt.Errorf("could not delete KubeletConfig: %w", err)
 		}
@@ -93,7 +93,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// If already exists, update the spec
 	config.Spec = defaultConfig.Spec
-	err = r.client.Update(ctx, &config, &client.UpdateOptions{})
+	err = r.client.Update(ctx, &config)
 	if err != nil {
 		err = fmt.Errorf("could not update KubeletConfig: %w", err)
 	}

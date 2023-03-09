@@ -10,9 +10,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -20,7 +18,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 )
 
 const (
@@ -35,37 +32,38 @@ var alertManagerName = types.NamespacedName{Name: "alertmanager-main", Namespace
 type Reconciler struct {
 	log *logrus.Entry
 
-	arocli        aroclient.Interface
-	kubernetescli kubernetes.Interface
+	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
-		log:           log,
-		arocli:        arocli,
-		kubernetescli: kubernetescli,
+		log:    log,
+		client: client,
 	}
 }
 
 // Reconcile makes sure that the Alertmanager default webhook is set.
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	instance := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		// controller is disabled
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
+	r.log.Debug("running")
 	return reconcile.Result{}, r.setAlertManagerWebhook(ctx, "http://aro-operator-master.openshift-azure-operator.svc.cluster.local:8080/healthz/ready")
 }
 
 // setAlertManagerWebhook is a hack to disable the
 // AlertmanagerReceiversNotConfigured warning added in 4.3.8.
 func (r *Reconciler) setAlertManagerWebhook(ctx context.Context, addr string) error {
-	s, err := r.kubernetescli.CoreV1().Secrets(alertManagerName.Namespace).Get(ctx, alertManagerName.Name, metav1.GetOptions{})
+	s := &corev1.Secret{}
+	err := r.client.Get(ctx, alertManagerName, s)
 	if err != nil {
 		return err
 	}
@@ -111,14 +109,11 @@ func (r *Reconciler) setAlertManagerWebhook(ctx context.Context, addr string) er
 		return err
 	}
 
-	_, err = r.kubernetescli.CoreV1().Secrets(alertManagerName.Namespace).Update(ctx, s, metav1.UpdateOptions{})
-	return err
+	return r.client.Update(ctx, s)
 }
 
 // SetupWithManager setup our manager
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.log.Info("starting alertmanager sink")
-
 	isAlertManagerPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return o.GetName() == alertManagerName.Name && o.GetNamespace() == alertManagerName.Namespace
 	})

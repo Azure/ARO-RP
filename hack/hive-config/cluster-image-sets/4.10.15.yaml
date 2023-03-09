@@ -1,6 +1,0 @@
-apiVersion: hive.openshift.io/v1
-kind: ClusterImageSet
-metadata:
-  name: openshift-v4.10.15
-spec:
-  releaseImage: quay.io/openshift-release-dev/ocp-release@sha256:ddcb70ce04a01ce487c0f4ad769e9e36a10c8c832a34307c1b1eb8e03a5b7ddb

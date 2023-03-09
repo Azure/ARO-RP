@@ -23,6 +23,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	mock_hive "github.com/Azure/ARO-RP/pkg/util/mocks/hive"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -223,7 +224,6 @@ func TestUpdateProvisionedBy(t *testing.T) {
 		t.Error(err)
 	}
 
-	// Check it was set to the correct value in the database
 	updatedClusterDoc, err := openShiftClustersDatabase.Get(ctx, strings.ToLower(key))
 	if err != nil {
 		t.Fatal(err)
@@ -291,5 +291,65 @@ func TestInstallationTimeMetrics(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestRunHiveInstallerSetsCreatedByHiveFieldToTrueInClusterDoc(t *testing.T) {
+	ctx := context.Background()
+	key := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1"
+
+	openShiftClustersDatabase, _ := testdatabase.NewFakeOpenShiftClusters()
+	fixture := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClustersDatabase)
+	doc := &api.OpenShiftClusterDocument{
+		Key: strings.ToLower(key),
+		OpenShiftCluster: &api.OpenShiftCluster{
+			ID: key,
+			Properties: api.OpenShiftClusterProperties{
+				ProvisioningState: api.ProvisioningStateCreating,
+			},
+		},
+	}
+
+	fixture.AddOpenShiftClusterDocuments(doc)
+	err := fixture.Create()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dequeuedDoc, err := openShiftClustersDatabase.Dequeue(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	hiveClusterManagerMock := mock_hive.NewMockClusterManager(controller)
+	hiveClusterManagerMock.EXPECT().Install(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
+
+	m := &manager{
+		doc: dequeuedDoc,
+		db:  openShiftClustersDatabase,
+		openShiftClusterDocumentVersioner: &FakeOpenShiftClusterDocumentVersionerService{
+			expectedOpenShiftVersion: nil,
+			expectedError:            nil,
+		},
+		hiveClusterManager: hiveClusterManagerMock,
+	}
+
+	err = m.runHiveInstaller(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	updatedDoc, err := openShiftClustersDatabase.Get(ctx, strings.ToLower(key))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := true
+	got := updatedDoc.OpenShiftCluster.Properties.HiveProfile.CreatedByHive
+	if got != expected {
+		t.Fatalf("expected updatedDoc.OpenShiftCluster.Properties.HiveProfile.CreatedByHive set to %v, but got %v", expected, got)
 	}
 }

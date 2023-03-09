@@ -20,10 +20,9 @@ import (
 func (f *frontend) getAsyncOperationResult(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
-	vars := mux.Vars(r)
 
 	header := http.Header{}
-	b, err := f._getAsyncOperationResult(ctx, r, header, f.apis[vars["api-version"]].OpenShiftClusterConverter)
+	b, err := f._getAsyncOperationResult(ctx, r, header, f.apis[r.URL.Query().Get(api.APIVersionKey)].OpenShiftClusterConverter)
 
 	reply(log, w, header, b, err)
 }

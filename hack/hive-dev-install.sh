@@ -68,7 +68,6 @@ fi
 
 $KUBECTL apply -f ./hack/hive-config/crds
 $KUBECTL apply -f ./hack/hive-config/hive-deployment.yaml
-$KUBECTL apply -f ./hack/hive-config/cluster-image-sets
 
 echo "$PULL_SECRET" > /tmp/.tmp-secret
 # Using dry-run allows updates to work seamlessly

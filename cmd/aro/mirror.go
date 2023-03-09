@@ -95,8 +95,8 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		for _, arg := range flag.Args()[1:] {
 			if strings.EqualFold(arg, "latest") {
 				releases = append(releases, pkgmirror.Node{
-					Version: version.InstallStream.Version.String(),
-					Payload: version.InstallStream.PullSpec,
+					Version: version.DefaultInstallStream.Version.String(),
+					Payload: version.DefaultInstallStream.PullSpec,
 				})
 			} else {
 				vers, err := version.ParseVersion(arg)
@@ -151,19 +151,27 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
+	MARINER_VERSION := "20230126"
+
 	for _, ref := range []string{
-		"registry.redhat.io/rhel7/support-tools:latest",
 		"registry.redhat.io/rhel8/support-tools:latest",
-		"registry.redhat.io/openshift4/ose-tools-rhel7:latest",
 		"registry.redhat.io/openshift4/ose-tools-rhel8:latest",
-		"registry.access.redhat.com/ubi7/ubi-minimal:latest",
 		"registry.access.redhat.com/ubi8/ubi-minimal:latest",
 		"registry.access.redhat.com/ubi8/nodejs-14:latest",
-		"registry.access.redhat.com/ubi7/go-toolset:1.16.12",
-		"registry.access.redhat.com/ubi8/go-toolset:1.17.7",
+		// https://catalog.redhat.com/software/containers/ubi8/go-toolset/5ce8713aac3db925c03774d1
+		"registry.access.redhat.com/ubi8/go-toolset:1.17.12",
+		"registry.access.redhat.com/ubi8/go-toolset:1.18.4",
 		"mcr.microsoft.com/azure-cli:latest",
+		// https://mcr.microsoft.com/en-us/product/cbl-mariner/base/core/tags
+		"mcr.microsoft.com/cbl-mariner/base/core:2.0-nonroot." + MARINER_VERSION + "-amd64",
+		"mcr.microsoft.com/cbl-mariner/base/core:2.0." + MARINER_VERSION + "-amd64",
+		// https://mcr.microsoft.com/en-us/product/cbl-mariner/distroless/base/tags
+		"mcr.microsoft.com/cbl-mariner/distroless/base:2.0." + MARINER_VERSION + "-amd64",
+		"mcr.microsoft.com/cbl-mariner/distroless/base:2.0-nonroot." + MARINER_VERSION + "-amd64",
 
-		"quay.io/app-sre/managed-upgrade-operator:v0.1.856-eebbe07",
+		// https://quay.io/repository/app-sre/managed-upgrade-operator?tab=tags
+		"quay.io/app-sre/managed-upgrade-operator:v0.1.891-3d94c00",
+		// https://quay.io/repository/app-sre/hive?tab=tags
 		"quay.io/app-sre/hive:fec14dc",
 	} {
 		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))

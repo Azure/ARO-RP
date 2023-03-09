@@ -138,7 +138,7 @@ func (g *generator) gatewayLB() *arm.Resource {
 					{
 						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
 							Protocol:       mgmtnetwork.ProbeProtocolHTTP,
-							Port:           to.Int32Ptr(80),
+							Port:           to.Int32Ptr(8081),
 							NumberOfProbes: to.Int32Ptr(2),
 							RequestPath:    to.StringPtr("/healthz/ready"),
 						},
@@ -283,7 +283,7 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 						ImageReference: &mgmtcompute.ImageReference{
 							Publisher: to.StringPtr("RedHat"),
 							Offer:     to.StringPtr("RHEL"),
-							Sku:       to.StringPtr("7-LVM"),
+							Sku:       to.StringPtr("8-LVM"),
 							Version:   to.StringPtr("latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{

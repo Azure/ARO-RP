@@ -6,7 +6,7 @@ steps:
     dockerFileRelPath: ./Dockerfile.aro-multistage
     dockerFileContextPath: ./
     registry: cdpxb8e9ef87cd634085ab141c637806568c00.azurecr.io
-    arguments: --build-arg REGISTRY=registry.access.redhat.com
+    arguments: --build-arg REGISTRY=registry.access.redhat.com --build-arg IS_OFFICIAL_RELEASE=$(is_official_release)
     saveImageToPath: aro-rp.tar
     buildkit: 1
     enable_network: true

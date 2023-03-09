@@ -19,7 +19,7 @@ var _ = Describe("Update clusters", func() {
 		value := strconv.Itoa(rand.Int())
 
 		By("getting cluster resource")
-		oc, err := clients.OpenshiftClustersv20200430.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(oc.Tags).NotTo(HaveKeyWithValue("key", &value))
 
@@ -30,11 +30,11 @@ var _ = Describe("Update clusters", func() {
 		oc.Tags["key"] = &value
 
 		By("sending the PUT request to update the resource")
-		err = clients.OpenshiftClustersv20200430.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, oc)
+		err = clients.OpenshiftClusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, oc)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("getting the cluster resource")
-		oc, err = clients.OpenshiftClustersv20200430.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err = clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking that the tag has expected value")

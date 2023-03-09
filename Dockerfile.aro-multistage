@@ -1,18 +1,13 @@
 # Uses a multi-stage container build to build the RP.
 #
-# TODO:
-# Currently the docker version on our RHEL7 VMSS uses a version which
-# does not support multi-stage builds.  This is a temporary stop-gap
-# until we get podman working without issue
 ARG REGISTRY
-FROM ${REGISTRY}/ubi8/go-toolset:1.17.7 AS builder
+FROM ${REGISTRY}/ubi8/go-toolset:1.18.4 AS builder
 ENV GOOS=linux \
     GOPATH=/go/
 WORKDIR ${GOPATH}/src/github.com/Azure/ARO-RP
 USER root
-RUN yum update -y
 COPY . ${GOPATH}/src/github.com/Azure/ARO-RP/
-RUN make aro && make e2e.test
+RUN make aro RELEASE=${IS_OFFICIAL_RELEASE} -o generate && make e2e.test
 
 FROM ${REGISTRY}/ubi8/ubi-minimal
 RUN microdnf update && microdnf clean all

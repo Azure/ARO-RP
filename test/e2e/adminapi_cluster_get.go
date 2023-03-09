@@ -14,13 +14,11 @@ var _ = Describe("[Admin API] Get cluster action", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
 	It("must return single cluster with admin fields", func(ctx context.Context) {
-		resourceID := resourceIDFromEnv()
-
 		By("requesting the cluster document via RP admin API")
-		oc := adminGetCluster(Default, ctx, resourceID)
+		oc := adminGetCluster(Default, ctx, clusterResourceID)
 
 		By("checking that we received the expected cluster")
-		Expect(oc.ID).To(Equal(resourceID))
+		Expect(oc.ID).To(Equal(clusterResourceID))
 
 		By("checking that fields available only in Admin API have values")
 		// Note: some fields will have empty values

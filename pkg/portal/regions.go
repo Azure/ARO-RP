@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
@@ -38,6 +39,7 @@ var (
 		"northeurope",
 		"norwaywest",
 		"norwayeast",
+		"qatar",
 		"southafricanorth",
 		"southcentralus",
 		"southeastasia",
@@ -72,7 +74,8 @@ func (p *portal) regions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if value, found := os.LookupEnv("AZURE_ENVIRONMENT"); found {
-		if value == azureclient.PublicCloud.Environment.Name {
+		// AZURE_ENVIRONMENT variable can either be AZUREPUBLICCLOUD or AZUREUSGOVERNMENTCLOUD
+		if strings.EqualFold(value, azureclient.PublicCloud.Environment.Name) {
 			for _, region := range PROD_REGIONS {
 				resp.Regions = append(resp.Regions, Region{
 					Name: region,

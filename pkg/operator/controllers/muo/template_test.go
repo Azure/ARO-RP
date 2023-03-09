@@ -16,7 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes/fake"
+	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
@@ -41,7 +41,7 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 		},
 	}
 
-	k8scli := fake.NewSimpleClientset()
+	clientFake := ctrlfake.NewClientBuilder().Build()
 	dh := mock_dynamichelper.NewMockInterface(controller)
 
 	// When the DynamicHelper is called, count the number of objects it creates
@@ -64,7 +64,7 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 	}
 	dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Do(check).Return(nil)
 
-	deployer := deployer.NewDeployer(k8scli, dh, staticFiles, "staticresources")
+	deployer := deployer.NewDeployer(clientFake, dh, staticFiles, "staticresources")
 	err := deployer.CreateOrUpdate(context.Background(), cluster, &config.MUODeploymentConfig{Pullspec: setPullSpec})
 	if err != nil {
 		t.Error(err)
@@ -124,7 +124,7 @@ func TestDeployConfig(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		k8scli := fake.NewSimpleClientset()
+		clientFake := ctrlfake.NewClientBuilder().Build()
 		dh := mock_dynamichelper.NewMockInterface(controller)
 
 		// When the DynamicHelper is called, capture configmaps to inspect them
@@ -139,7 +139,7 @@ func TestDeployConfig(t *testing.T) {
 		}
 		dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Do(check).Return(nil)
 
-		deployer := deployer.NewDeployer(k8scli, dh, staticFiles, "staticresources")
+		deployer := deployer.NewDeployer(clientFake, dh, staticFiles, "staticresources")
 		err := deployer.CreateOrUpdate(context.Background(), cluster, tt.deploymentConfig)
 		if err != nil {
 			t.Error(err)

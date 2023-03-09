@@ -319,7 +319,6 @@
             "dependsOn": [
                 "[concat(parameters('keyvaultPrefix'), '-svc')]"
             ],
-            "condition": "[not(startsWith(toLower(replace(resourceGroup().location, ' ', '')), 'usgov'))]",
             "properties": {
                 "mode": "Incremental",
                 "expressionEvaluationOptions": {

@@ -61,7 +61,7 @@ func (m *manager) fixMCSCert(ctx context.Context) error {
 				return err
 			}
 
-			err = pg.Get(&rootCA)
+			err = pg.Get(true, &rootCA)
 			if err != nil {
 				return err
 			}

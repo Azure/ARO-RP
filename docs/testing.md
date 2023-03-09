@@ -8,6 +8,8 @@ To run RP unit tests:
 make test-go
 ```
 
+In case of MacOS, the go-diff module creates [issue](https://github.com/golangci/golangci-lint/issues/3087) making the test fail. Until a new release of the module with the [fix](https://github.com/sourcegraph/go-diff/pull/65) is available, an easy workaround to mitigate the issue is to install diffutils using `brew install diffutils`
+
 To Run Go tests with coverage:
 
 ```bash

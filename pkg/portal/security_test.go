@@ -317,7 +317,7 @@ func TestSecurity(t *testing.T) {
 					if tt2.authenticated {
 						tt2.wantStatusCode = http.StatusOK
 					} else {
-						tt2.wantStatusCode = http.StatusForbidden
+						tt2.wantStatusCode = http.StatusTemporaryRedirect
 					}
 				}
 
@@ -421,7 +421,7 @@ func addAuth(req *http.Request, groups []string) error {
 	cookie, err := securecookie.EncodeMulti(middleware.SessionName, map[interface{}]interface{}{
 		middleware.SessionKeyUsername: "username",
 		middleware.SessionKeyGroups:   groups,
-		middleware.SessionKeyExpires:  time.Now().Add(time.Hour),
+		middleware.SessionKeyExpires:  time.Now().Add(time.Hour).Unix(),
 	}, store.Codecs...)
 	if err != nil {
 		return err

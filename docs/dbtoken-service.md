@@ -47,10 +47,26 @@ in depth in the face of an attack on the gateway component.
 
 ## Setup
 
-* At rollout time, create an AAD application whose *Application ID URI*
-  (`identifierUris` in the application manifest) is
-  `https://dbtoken.aro.azure.com`.  It is not necessary for the application to
-  have any permissions, credentials, etc.
+* Create the application and set `requestedAccessTokenVersion`
+
+   ```bash
+   AZURE_DBTOKEN_CLIENT_ID="$(az ad app create --display-name dbtoken \
+      --oauth2-allow-implicit-flow false \
+      --query appId \
+      -o tsv)"
+
+   OBJ_ID="$(az ad app show --id $AZURE_DBTOKEN_CLIENT_ID --query id)"
+
+   # NOTE: the graph API requires this to be done from a managed machine
+   az rest --method PATCH \
+      --uri https://graph.microsoft.com/v1.0/applications/$OBJ_ID/ \
+      --body '{"api":{"requestedAccessTokenVersion": 2}}'
+   ```
+
+   * Add the `AZURE_DBTOKEN_CLIENT_ID` to the RP config for the respective environment.
 
 * The dbtoken service is responsible for creating database users and permissions
-  - see the `ConfigurePermissions` function.
+
+  * see the ConfigurePermissions function.
+
+

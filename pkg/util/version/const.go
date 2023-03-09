@@ -25,16 +25,24 @@ const (
 
 var GitCommit = "unknown"
 
-// InstallStream describes stream we are defaulting to for all new clusters
-var InstallStream = &Stream{
-	Version:  NewVersion(4, 10, 20),
-	PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:b89ada9261a1b257012469e90d7d4839d0d2f99654f5ce76394fa3f06522b600",
+// DefaultInstallStream describes stream we are defaulting to for all new clusters
+var DefaultInstallStream = &Stream{
+	Version:  NewVersion(4, 10, 40),
+	PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:b9fad814fb4442e7e852b0614d9bb4e2ebc5e1a2fa51623aa838b4ee0e4a5369",
+}
+
+var HiveInstallStreams = []*Stream{
+	DefaultInstallStream,
+	{
+		Version:  NewVersion(4, 11, 26),
+		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:1c3913a65b0a10b4a0650f54e545fe928360a94767acea64c0bd10faa52c945a",
+	},
 }
 
 // UpgradeStreams describes list of streams we support for upgrades
 var (
 	UpgradeStreams = []*Stream{
-		InstallStream,
+		DefaultInstallStream,
 		{
 			Version:  NewVersion(4, 9, 28),
 			PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:4084d94969b186e20189649b5affba7da59f7d1943e4e5bc7ef78b981eafb7a8",
@@ -64,7 +72,7 @@ var (
 
 // FluentbitImage contains the location of the Fluentbit container image
 func FluentbitImage(acrDomain string) string {
-	return acrDomain + "/fluentbit:1.7.8-1"
+	return acrDomain + "/fluentbit:1.9.9-1"
 }
 
 // MdmImage contains the location of the MDM container image

@@ -36,7 +36,7 @@ func (m *manager) generateAROSREKubeconfig(pg graph.PersistedGraph) (*kubeconfig
 }
 
 // checkUserAdminKubeconfigUpdated checks if the user kubeconfig is
-// present, has >90days until expiry, has the right settings
+// present, has >275days until expiry, has the right settings
 func (m *manager) checkUserAdminKubeconfigUpdated() bool {
 	if len(m.doc.OpenShiftCluster.Properties.UserAdminKubeconfig) == 0 {
 		// field empty, not updated
@@ -69,8 +69,8 @@ func (m *manager) checkUserAdminKubeconfigUpdated() bool {
 			return false
 		}
 		for j := range innercert {
-			if !innercert[j].NotAfter.After(time.Now().AddDate(0, 0, 90)) {
-				// Not After field in certificate closer than 90 days, not updated
+			if !innercert[j].NotAfter.After(time.Now().AddDate(0, 0, 275)) {
+				// Not After field in certificate closer than 275 days, not updated
 				return false
 			}
 		}
@@ -96,7 +96,7 @@ func (m *manager) generateKubeconfigs(ctx context.Context) error {
 	}
 
 	var adminInternalClient *kubeconfig.AdminInternalClient
-	err = pg.Get(&adminInternalClient)
+	err = pg.Get(true, &adminInternalClient)
 	if err != nil {
 		return err
 	}
@@ -127,7 +127,7 @@ func (m *manager) generateKubeconfigs(ctx context.Context) error {
 func generateKubeconfig(pg graph.PersistedGraph, commonName string, organization []string, validity time.Duration, internal bool) (*kubeconfig.AdminInternalClient, error) {
 	var ca *tls.AdminKubeConfigSignerCertKey
 	var adminInternalClient *kubeconfig.AdminInternalClient
-	err := pg.Get(&ca, &adminInternalClient)
+	err := pg.Get(true, &ca, &adminInternalClient)
 	if err != nil {
 		return nil, err
 	}

@@ -1,15 +1,14 @@
 parameters:
   rpImageACR: ''
-  buildCommand: ''
 steps:
 - script: |
     set -e
-    trap 'set +e; for c in $(docker ps -aq); do docker rm -f $c; done; docker image prune -af ; rm -rf ~/.docker/config.json; rm -rf /run/user/$(id -u $USERNAME)/containers/auth.json' EXIT
+    #trap 'set +e; for c in $(docker ps -aq); do docker rm -f $c; done; docker image prune -af ; rm -rf ~/.docker/config.json; rm -rf /run/user/$(id -u $USERNAME)/containers/auth.json' EXIT
 
     export RP_IMAGE_ACR=${{ parameters.rpImageACR }}
 
     az acr login --name "$RP_IMAGE_ACR"
     # azure checkouts commit, so removing master reference when publishing image
     export BRANCH=$(Build.SourceBranchName)
-    make ${{ parameters.buildCommand }}
+    make publish-image-e2e
   displayName: ⚙️ Build and push images to ACR

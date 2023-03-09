@@ -20,14 +20,14 @@ func (f *frontend) listInstallVersions(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
-
-	if f.apis[vars["api-version"]].OpenShiftVersionConverter == nil {
-		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The endpoint could not be found in the namespace '%s' for api version '%s'.", vars["resourceProviderNamespace"], vars["api-version"])
+	apiVersion := r.URL.Query().Get(api.APIVersionKey)
+	if f.apis[apiVersion].OpenShiftVersionConverter == nil {
+		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The endpoint could not be found in the namespace '%s' for api version '%s'.", vars["resourceProviderNamespace"], apiVersion)
 		return
 	}
 
 	versions := f.getEnabledInstallVersions(ctx)
-	converter := f.apis[vars["api-version"]].OpenShiftVersionConverter
+	converter := f.apis[apiVersion].OpenShiftVersionConverter
 
 	b, err := json.MarshalIndent(converter.ToExternalList(versions), "", "    ")
 	reply(log, w, nil, b, err)
@@ -45,7 +45,7 @@ func (f *frontend) getEnabledInstallVersions(ctx context.Context) []*api.OpenShi
 	if len(versions) == 0 {
 		versions = append(versions, &api.OpenShiftVersion{
 			Properties: api.OpenShiftVersionProperties{
-				Version: version.InstallStream.Version.String(),
+				Version: version.DefaultInstallStream.Version.String(),
 			},
 		})
 	}

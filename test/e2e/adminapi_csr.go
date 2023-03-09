@@ -65,7 +65,7 @@ func testCSRApproveOK(ctx context.Context, objName, namespace string) {
 	params := url.Values{
 		"csrName": []string{objName},
 	}
-	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+resourceIDFromEnv()+"/approvecsr", params, nil, nil)
+	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/approvecsr", params, true, nil, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -87,7 +87,7 @@ func testCSRApproveOK(ctx context.Context, objName, namespace string) {
 
 func testCSRMassApproveOK(ctx context.Context, namePrefix, namespace string, csrCount int) {
 	By("approving all CSRs via RP admin API")
-	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+resourceIDFromEnv()+"/approvecsr", nil, nil, nil)
+	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/approvecsr", nil, true, nil, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 

@@ -10,11 +10,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -24,7 +23,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
 	"github.com/Azure/ARO-RP/pkg/util/deployer"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
@@ -57,19 +55,23 @@ type MUODeploymentConfig struct {
 }
 
 type Reconciler struct {
-	arocli        aroclient.Interface
-	kubernetescli kubernetes.Interface
-	deployer      deployer.Deployer
+	log *logrus.Entry
+
+	deployer deployer.Deployer
+
+	client client.Client
 
 	readinessPollTime time.Duration
 	readinessTimeout  time.Duration
 }
 
-func NewReconciler(arocli aroclient.Interface, kubernetescli kubernetes.Interface, dh dynamichelper.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *Reconciler {
 	return &Reconciler{
-		arocli:        arocli,
-		kubernetescli: kubernetescli,
-		deployer:      deployer.NewDeployer(kubernetescli, dh, staticFiles, "staticresources"),
+		log: log,
+
+		deployer: deployer.NewDeployer(client, dh, staticFiles, "staticresources"),
+
+		client: client,
 
 		readinessPollTime: 10 * time.Second,
 		readinessTimeout:  5 * time.Minute,
@@ -77,15 +79,18 @@ func NewReconciler(arocli aroclient.Interface, kubernetescli kubernetes.Interfac
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	instance := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		// controller is disabled
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
+
+	r.log.Debug("running")
 
 	managed := instance.Spec.OperatorFlags.GetWithDefault(controllerManaged, "")
 
@@ -106,9 +111,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		disableOCM := instance.Spec.OperatorFlags.GetSimpleBoolean(controllerForceLocalOnly)
 		if !disableOCM {
 			useOCM := func() bool {
-				var userSecret *corev1.Secret
-
-				userSecret, err = r.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Get(ctx, pullSecretName.Name, metav1.GetOptions{})
+				userSecret := &corev1.Secret{}
+				err = r.client.Get(ctx, pullSecretName, userSecret)
 				if err != nil {
 					// if a pullsecret doesn't exist/etc, fallback to local
 					return false

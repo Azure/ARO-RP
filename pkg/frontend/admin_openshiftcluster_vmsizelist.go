@@ -30,6 +30,7 @@ func (f *frontend) getAdminOpenShiftClusterVMResizeOptions(w http.ResponseWriter
 
 func (f *frontend) _getAdminOpenShiftClusterVMResizeOptions(ctx context.Context, r *http.Request, log *logrus.Entry) ([]byte, error) {
 	vars := mux.Vars(r)
+	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
@@ -38,7 +39,7 @@ func (f *frontend) _getAdminOpenShiftClusterVMResizeOptions(ctx context.Context,
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "",
 			"The Resource '%s/%s' under resource group '%s' was not found.",
-			vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+			resType, resName, resGroupName)
 	case err != nil:
 		return nil, err
 	}
