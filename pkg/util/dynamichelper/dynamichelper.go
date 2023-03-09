@@ -1,3 +1,9 @@
+// Package dynamichelper interfaces with the kubernetes API and providers helpers
+// for managing GVK (group, version, kind) api resources using dynamic types
+// derived from the api.
+//
+// This helper exists so that developers do not have to statically create
+// types for each group/version/kind that they need to interact with.
 package dynamichelper
 
 // Copyright (c) Microsoft Corporation.
@@ -30,10 +36,12 @@ import (
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
+// Interface defines a set of methods which allow retrieving and updating
+// GVKs from the kubernets api.
 type Interface interface {
-	Refresh() error
-	EnsureDeleted(ctx context.Context, groupKind, namespace, name string) error
-	Ensure(ctx context.Context, objs ...kruntime.Object) error
+	Refresh() error                                                             // Refresh the in-memory storage of the GVK
+	EnsureDeleted(ctx context.Context, groupKind, namespace, name string) error // Ensures the deletion of the GVK
+	Ensure(ctx context.Context, objs ...kruntime.Object) error                  // Ensures the GVK exists and is correct
 }
 
 type dynamicHelper struct {
@@ -43,6 +51,10 @@ type dynamicHelper struct {
 	restcli rest.Interface
 }
 
+// New creates a new dynamichelper with the desired Interface
+//
+// Using the provided restconfig we connect to the cluster
+// and return the dynamichelper.Interface.
 func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {
 	dh := &dynamicHelper{
 		log: log,
@@ -66,6 +78,8 @@ func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {
 	return dh, nil
 }
 
+// EnsureDeleted uses the rest cluster connection to delete the GVK from
+// the requested namespace
 func (dh *dynamicHelper) EnsureDeleted(ctx context.Context, groupKind, namespace, name string) error {
 	gvr, err := dh.Resolve(groupKind, "")
 	if err != nil {
@@ -79,8 +93,9 @@ func (dh *dynamicHelper) EnsureDeleted(ctx context.Context, groupKind, namespace
 	return err
 }
 
-// Ensure that one or more objects match their desired state.  Only update
-// objects that need to be updated.
+// Ensure ensures that one or more objects match their desired state. Only updates
+// objects that need to be updated. Assumes that all provided objects are fully-
+// formed and contain a group, version and kind.
 func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...kruntime.Object) error {
 	for _, o := range objs {
 		err := dh.ensureOne(ctx, o)
@@ -93,13 +108,16 @@ func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...kruntime.Object) er
 }
 
 func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) error {
+	// Grab all possible GVKs for object
 	gvks, _, err := scheme.Scheme.ObjectKinds(new)
 	if err != nil {
 		return err
 	}
 
+	// TODO: Ensure we get the latest version of the GVK
 	gvk := gvks[0]
 
+	// Retrieve the schema for the GVK
 	gvr, err := dh.Resolve(gvk.GroupKind().String(), gvk.Version)
 	if err != nil {
 		return err
@@ -110,7 +128,9 @@ func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) err
 		return err
 	}
 
+	// Perform the update retrying if other clients are accessing the object
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		// Retrieve the old object
 		old, err := dh.restcli.Get().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), acc.GetName())...).Do(ctx).Get()
 		if kerrors.IsNotFound(err) {
 			dh.log.Printf("Create %s", keyFunc(gvk.GroupKind(), acc.GetNamespace(), acc.GetName()))
@@ -120,12 +140,14 @@ func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) err
 			return err
 		}
 
+		// Merge the two objects
 		new, changed, diff, err := merge(old, new)
 		if err != nil || !changed {
 			return err
 		}
 
 		dh.log.Printf("Update %s: %s", keyFunc(gvk.GroupKind(), acc.GetNamespace(), acc.GetName()), diff)
+		// Update the object in the api
 		return dh.restcli.Put().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), acc.GetName())...).Body(new).Do(ctx).Error()
 	})
 }
