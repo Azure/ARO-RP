@@ -36,7 +36,8 @@ def load_arguments(self, _):
                    tags_type)
         c.argument('cluster_resource_group_tags',
                    nargs='*',
-                   help="Tags to apply to the cluster resource group; a space-separated list of tags in 'key=[value]' format. {}".format(quote_text),
+                   options_list=['--cluster-resource-group-tags', '--rg-tags'],
+                   help=f"Tags to apply to the cluster resource group; a space-separated list of tags in 'key=[value]' format. {quote_text}",  # pylint: disable=line-too-long
                    validator=validate_cluster_resource_group_tags)
 
         c.argument('pull_secret',

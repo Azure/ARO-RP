@@ -70,7 +70,7 @@ def validate_cluster_resource_group(cmd, namespace):
             " resource group must not exist.")
 
 
-def validate_cluster_resource_group_tags(cmd, namespace):
+def validate_cluster_resource_group_tags(namespace):
     if namespace.cluster_resource_group_tags is None:
         return
 
