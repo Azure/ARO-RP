@@ -7,7 +7,6 @@ metadata:
     metadata.gatekeeper.sh/version: 1.0.0
     description: >-
       Disallows creating, updating or deleting resources in privileged namespaces.
-      including, ["^kube.*|^openshift.*|^default$|^redhat.*|^com$|^io$|^in$"]
 spec:
   crd:
     spec:
@@ -19,7 +18,6 @@ spec:
           type: object
           description: >-
             Disallows creating, updating or deleting resources in privileged namespaces.
-            including, ["^kube.*|^openshift.*|^default$|^redhat.*|^com$|^io$|^in$"]
   targets:
     - target: admission.k8s.gatekeeper.sh
       rego: |
@@ -39,6 +37,8 @@ spec:
       libs:
         - |
           package lib.common
+
+          # shared structures, functions, etc.
 
           is_priv_namespace(ns) {
             privileged_ns[ns]

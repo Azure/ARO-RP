@@ -3,7 +3,7 @@ package arodenymastertolerationtaints
 
 test_input_allowed_in_privileged_ns_with_master_taint {
     input := { 
-        "review": fake_input_review("openshift-config", "CREATE", "node-role.kubernetes.io/worker", "node-role.kubernetes.io/master")
+        "review": fake_input_review("openshift-config", "CREATE", "node-role.kubernetes.io/worker", "node-role.kubernetes.io/master=")
     }
     results := violation with input as input
     count(results) == 0
@@ -19,7 +19,7 @@ test_input_allowed_in_nonprivileged_ns_with_no_master_taint {
 
 test_input_allowed_in_nonprivileged_ns_with_delete_operation {
     input := { 
-        "review": fake_input_review("customer", "DELETE", "node-role.kubernetes.io/worker", "node-role.kubernetes.io/control-plane")
+        "review": fake_input_review("customer", "DELETE", "node-role.kubernetes.io/worker", "node-role.kubernetes.io/control-plane=")
     }
     results := violation with input as input
     count(results) == 0
@@ -27,7 +27,7 @@ test_input_allowed_in_nonprivileged_ns_with_delete_operation {
 
 test_input_not_allowed_in_nonprivileged_ns_with_create_operation {
     input := { 
-        "review": fake_input_review("customer", "CREATE", "node-role.kubernetes.io/worker", "node-role.kubernetes.io/master")
+        "review": fake_input_review("customer", "CREATE", "node-role.kubernetes.io/worker", "node-role.kubernetes.io/master=")
     }
     results := violation with input as input
     count(results) == 1

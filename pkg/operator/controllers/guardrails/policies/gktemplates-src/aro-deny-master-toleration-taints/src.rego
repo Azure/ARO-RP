@@ -1,6 +1,7 @@
 package arodenymastertolerationtaints
 
 import future.keywords.in
+import future.keywords.contains
 import data.lib.common.is_priv_namespace
 
 violation[{"msg": msg}] {
@@ -14,7 +15,16 @@ violation[{"msg": msg}] {
     # Check if pod object has master toleration taints
     tolerations := input.review.object.spec.tolerations
     some toleration in tolerations
-    toleration.key in ["node-role.kubernetes.io/master", "node-role.kubernetes.io/control-plane"]
+    is_master_toleration(toleration.key)
 
     msg := "Create or update resources to have master toleration taints is not allowed in non-privileged namespaces"
+}
+
+
+is_master_toleration(toleration_key){
+    contains(toleration_key,"node-role.kubernetes.io/master")
+}
+
+is_master_toleration(toleration_key){
+    contains(toleration_key,"node-role.kubernetes.io/control-plane")
 }

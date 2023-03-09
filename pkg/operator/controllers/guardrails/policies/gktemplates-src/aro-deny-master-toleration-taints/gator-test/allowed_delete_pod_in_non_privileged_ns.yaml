@@ -19,11 +19,11 @@ request:
     version: v1
     resource: pods
   name: demo-pod
-  operation: CREATE
+  operation: DELETE
   userInfo:
     username: kube-review
     uid: eede9e7b-1854-4635-b5c0-029598ec6865
-  object:
+  oldObject:
     kind: Pod
     apiVersion: v1
     metadata:
@@ -40,7 +40,6 @@ request:
         operator: Exists
         effect: NoSchedule
     status: {}
-  oldObject:
   options:
     kind: CreateOptions
     apiVersion: meta.k8s.io/v1
