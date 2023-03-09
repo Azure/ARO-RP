@@ -10,11 +10,14 @@ steps:
 - script: |
     set -e
 
+    wget https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
+    chmod +x jq-linux64
+
     trap 'rm -f spn.json' EXIT
     base64 -d >spn.json <<<${{ parameters.subscriptionCredentialsJSON }}
-    export AZURE_CLIENT_ID=$(jq -r .clientId <spn.json)
-    export AZURE_CLIENT_SECRET=$(jq -r .clientSecret <spn.json)
-    export AZURE_TENANT_ID=$(jq -r .tenantId <spn.json)
+    export AZURE_CLIENT_ID=$(./jq-linux64 -r .clientId <spn.json)
+    export AZURE_CLIENT_SECRET=$(./jq-linux64 -r .clientSecret <spn.json)
+    export AZURE_TENANT_ID=$(./jq-linux64 -r .tenantId <spn.json)
 
     export AZURE_SUBSCRIPTION_ID="${{ parameters.subscriptionId }}"
 
@@ -22,6 +25,6 @@ steps:
     export AZURE_PURGE_CREATED_TAG="${{ parameters.purgeCreatedTag }}"
     export AZURE_PURGE_RESOURCEGROUP_PREFIXES="${{ parameters.resourceGroupDeletePrefixes }}"
 
-    go run ./hack/clean -dryRun=${{ parameters.dryRun }}
+    GOCACHE=/tmp go run ./hack/clean -dryRun=${{ parameters.dryRun }}
   displayName: 🧹 Clean subscription
   target: golang
