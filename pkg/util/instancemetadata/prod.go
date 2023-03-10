@@ -71,7 +71,7 @@ func (p *prod) populateTenantIDFromMSI(ctx context.Context) error {
 	c := &azureclaim.AzureClaim{}
 	_, _, err = parser.ParseUnverified(token.OAuthToken(), c)
 	if err != nil {
-		return err
+		return fmt.Errorf("the provided service principal is invalid")
 	}
 
 	p.tenantID = c.TenantID
