@@ -38,7 +38,6 @@ func TestStatic(t *testing.T) {
 		name            string
 		ocmResource     string
 		ocmResourceType string
-		vars            map[string]string
 		wantErr         bool
 		err             string
 	}{
