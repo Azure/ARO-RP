@@ -56,3 +56,17 @@ func (m *manager) ensureACRToken(ctx context.Context) error {
 
 	return nil
 }
+
+func (m *manager) updateACRToken(ctx context.Context) error {
+	// we do not want to rotate tokens in local development
+	// TODO: check for using rh-dev-env-pull on arointsvc along with/instead of local development
+	if m.env.IsLocalDevelopmentMode() {
+		return nil
+	}
+
+	// get cluster's tokens from ACR
+	// check token expiration dates, choose oldest
+	// generate new password
+
+	return nil
+}

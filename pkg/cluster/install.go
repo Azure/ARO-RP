@@ -93,6 +93,7 @@ func (m *manager) adminUpdate() []steps.Step {
 	if isEverything {
 		toRun = append(toRun,
 			steps.Action(m.ensureGatewayUpgrade),
+			steps.Action(m.updateACRToken),
 		)
 	}
 
