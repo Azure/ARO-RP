@@ -39,14 +39,6 @@ func (v ValidateMiddleware) Validate(h http.Handler) http.Handler {
 
 		apiVersion := r.URL.Query().Get(api.APIVersionKey)
 
-		//		if route == nil {
-		//			if log, ok := r.Context().Value(ContextKeyLog).(*logrus.Entry); ok {
-		//				log.Error("route was nil")
-		//			}
-		//			api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
-		//			return
-		//		}
-
 		if r.URL.Path != strings.ToLower(r.URL.Path) {
 			if log, ok := r.Context().Value(ContextKeyLog).(*logrus.Entry); ok {
 				log.Error("path was not lower case")
@@ -105,22 +97,6 @@ func (v ValidateMiddleware) Validate(h http.Handler) http.Handler {
 				return
 			}
 		}
-
-		// TODO: create a function outside the middleware to check on a per route basis
-		//		queries, err := route.GetQueriesTemplates()
-		//		var hasVariableAPIVersion bool
-		//		for _, query := range queries {
-		//			if query == "api-version=" {
-		//				hasVariableAPIVersion = true
-		//				break
-		//			}
-		//		}
-		//
-		//		_, apiVersionExists := v.Apis[apiVersion]
-		//		if (err != nil || hasVariableAPIVersion) && apiVersion != "" && !apiVersionExists {
-		//			api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", resourceType, resourceProviderNamespace, apiVersion)
-		//			return
-		//		}
 
 		h.ServeHTTP(w, r)
 	})
