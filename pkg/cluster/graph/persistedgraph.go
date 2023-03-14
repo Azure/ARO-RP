@@ -17,18 +17,31 @@ import (
 
 type PersistedGraph map[string]json.RawMessage
 
-func (pg PersistedGraph) Get(disallowUnknownFields bool, is ...interface{}) error {
-	for _, i := range is {
-		d := json.NewDecoder(bytes.NewReader(pg[reflect.TypeOf(i).Elem().String()]))
+func (pg PersistedGraph) Get(disallowUnknownFields bool, name string, out interface{}) error {
+	d := json.NewDecoder(bytes.NewReader(pg[name]))
 
-		if disallowUnknownFields {
-			d.DisallowUnknownFields()
-		}
+	if disallowUnknownFields {
+		d.DisallowUnknownFields()
+	}
 
-		err := d.Decode(i)
-		if err != nil {
-			return err
-		}
+	err := d.Decode(out)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (pg PersistedGraph) GetRaw(disallowUnknownFields bool, name string) (map[string]string, error) {
+	d := json.NewDecoder(bytes.NewReader(pg[name]))
+
+	if disallowUnknownFields {
+		d.DisallowUnknownFields()
+	}
+
+	err := d.Decode(out)
+	if err != nil {
+		return err
 	}
 
 	return nil

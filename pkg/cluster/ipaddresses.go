@@ -13,7 +13,6 @@ import (
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/installconfig"
-	"github.com/openshift/installer/pkg/asset/password"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -21,6 +20,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
+
+// See github.com/openshift/installer/pkg/asset/password
+type kubeadminPasswordData struct {
+	Password string
+}
 
 func (m *manager) updateClusterData(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
@@ -32,15 +36,21 @@ func (m *manager) updateClusterData(ctx context.Context) error {
 	}
 
 	var installConfig *installconfig.InstallConfig
-	var kubeadminPassword *password.KubeadminPassword
-	err = pg.Get(false, &installConfig, &kubeadminPassword)
+	var kubeadminPassword *kubeadminPasswordData
+	err = pg.Get(false, &kubeadminPassword)
 	if err != nil {
 		return err
 	}
 
+	// See aro-installer/pkg/installer/generateinstallconfig.go
+	domain := m.doc.OpenShiftCluster.Properties.ClusterProfile.Domain
+	if !strings.ContainsRune(domain, '.') {
+		domain += "." + m.env.Domain()
+	}
+
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.APIServerProfile.URL = "https://api." + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + ":6443/"
-		doc.OpenShiftCluster.Properties.ConsoleProfile.URL = "https://console-openshift-console.apps." + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/"
+		doc.OpenShiftCluster.Properties.APIServerProfile.URL = "https://api." + domain + ":6443/"
+		doc.OpenShiftCluster.Properties.ConsoleProfile.URL = "https://console-openshift-console.apps." + domain + "/"
 		doc.OpenShiftCluster.Properties.KubeadminPassword = api.SecureString(kubeadminPassword.Password)
 		return nil
 	})
