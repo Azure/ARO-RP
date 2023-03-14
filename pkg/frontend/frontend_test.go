@@ -14,8 +14,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/golang/mock/gomock"
-	"github.com/gorilla/mux"
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
@@ -184,33 +184,50 @@ func TestRoutesAreNamedWithLowerCasePaths(t *testing.T) {
 	}
 	router := f.setupRouter()
 
-	varCleanupRe := regexp.MustCompile(`{.*?}`)
-	err := router.Walk(func(route *mux.Route, _ *mux.Router, _ []*mux.Route) error {
-		_, err := route.GetMethods()
-		if err != nil {
-			if err.Error() == "mux: route doesn't have methods" {
-				err = nil
-			}
-			return err
+	routes := router.Routes()
+	for _, route := range routes {
+		if !routeHasHandlers(route) {
+			t.Errorf("no handler for some routes in %s", route)
 		}
-
-		pathTemplate, err := route.GetPathTemplate()
-		if err != nil {
-			return err
+		if !routeIsAllLowercase(route) {
+			t.Errorf("route %s is not all lowercase", route.Pattern)
 		}
-
-		if route.GetName() == "" {
-			t.Errorf("path %s has no name", pathTemplate)
-		}
-
-		cleanPathTemplate := varCleanupRe.ReplaceAllString(pathTemplate, "")
-		if cleanPathTemplate != strings.ToLower(cleanPathTemplate) {
-			t.Error(pathTemplate)
-		}
-
-		return nil
-	})
-	if err != nil {
-		t.Fatal(err)
 	}
+}
+
+func routeHasHandlers(route chi.Route) bool {
+	if route.SubRoutes == nil {
+		return true
+	}
+
+	if len(route.SubRoutes.Routes()) == 0 {
+		return len(route.Handlers) > 0
+	}
+
+	for _, v := range route.SubRoutes.Routes() {
+		if !routeHasHandlers(v) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func routeIsAllLowercase(route chi.Route) bool {
+	varCleanupRe := regexp.MustCompile(`{.*?}`)
+	pattern := varCleanupRe.ReplaceAllString(route.Pattern, "")
+	if route.SubRoutes == nil {
+		return true
+	}
+	if len(route.SubRoutes.Routes()) == 0 {
+		return pattern == strings.ToLower(pattern)
+	}
+
+	for _, v := range route.SubRoutes.Routes() {
+		if !(pattern == strings.ToLower(pattern)) || !routeIsAllLowercase(v) {
+			return false
+		}
+	}
+
+	return true
 }

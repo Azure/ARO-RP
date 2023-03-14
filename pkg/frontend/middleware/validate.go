@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	resourceProviderNamespace = "Microsoft.RedHatOpenShift"
-	resourceType              = "openShiftClusters"
+	wantedResourceProviderNamespace = "Microsoft.RedHatOpenShift"
+	resourceTypeOpenshiftCluster    = "openShiftClusters"
 )
 
 var rxResourceGroupName = regexp.MustCompile(`^[-a-z0-9_().]{0,89}[-a-z0-9_()]$`)
@@ -29,18 +29,15 @@ type ValidateMiddleware struct {
 
 func (v ValidateMiddleware) Validate(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		route := mux.CurrentRoute(r)
+		subId := chi.URLParam(r, "subscriptionId")
+		resourceGroupName := chi.URLParam(r, "resourceGroupName")
+		resourceProviderNamespace := chi.URLParam(r, "resourceProviderNamespace")
+		resourceType := chi.URLParam(r, "resourceType")
+		location := chi.URLParam(r, "location")
+		operationId := chi.URLParam(r, "operationId")
+		resourceName := chi.URLParam(r, "resourceName")
 
 		apiVersion := r.URL.Query().Get(api.APIVersionKey)
-
-		if route == nil {
-			if log, ok := r.Context().Value(ContextKeyLog).(*logrus.Entry); ok {
-				log.Error("route was nil")
-			}
-			api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
-			return
-		}
 
 		if r.URL.Path != strings.ToLower(r.URL.Path) {
 			if log, ok := r.Context().Value(ContextKeyLog).(*logrus.Entry); ok {
@@ -50,70 +47,55 @@ func (v ValidateMiddleware) Validate(h http.Handler) http.Handler {
 			return
 		}
 
-		if _, found := vars["subscriptionId"]; found {
-			valid := uuid.IsValid(vars["subscriptionId"])
+		if subId != "" {
+			valid := uuid.IsValid(subId)
 			if !valid {
-				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionID, "", "The provided subscription identifier '%s' is malformed or invalid.", vars["subscriptionId"])
+				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionID, "", "The provided subscription identifier '%s' is malformed or invalid.", subId)
 				return
 			}
 		}
 
-		if _, found := vars["resourceGroupName"]; found {
-			if !rxResourceGroupName.MatchString(vars["resourceGroupName"]) {
-				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeResourceGroupNotFound, "", "Resource group '%s' could not be found.", vars["resourceGroupName"])
+		if resourceGroupName != "" {
+			if !rxResourceGroupName.MatchString(resourceGroupName) {
+				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeResourceGroupNotFound, "", "Resource group '%s' could not be found.", resourceGroupName)
 				return
 			}
 		}
 
-		if _, found := vars["resourceProviderNamespace"]; found {
-			if vars["resourceProviderNamespace"] != strings.ToLower(resourceProviderNamespace) {
-				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceNamespace, "", "The resource namespace '%s' is invalid.", vars["resourceProviderNamespace"])
+		if resourceProviderNamespace != "" {
+			if resourceProviderNamespace != strings.ToLower(wantedResourceProviderNamespace) {
+				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceNamespace, "", "The resource namespace '%s' is invalid.", resourceProviderNamespace)
 				return
 			}
 		}
 
-		if _, found := vars["resourceType"]; found {
-			if vars["resourceType"] != strings.ToLower(resourceType) {
-				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], apiVersion)
+		if resourceType != "" {
+			if resourceType != strings.ToLower(resourceTypeOpenshiftCluster) {
+				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", resourceType, resourceProviderNamespace, apiVersion)
 				return
 			}
 		}
 
-		if _, found := vars["resourceName"]; found {
-			if !rxResourceGroupName.MatchString(vars["resourceName"]) {
-				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s/%s' under resource group '%s' was not found.", vars["resourceProviderNamespace"], vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+		if resourceName != "" {
+			if !rxResourceGroupName.MatchString(resourceName) {
+				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s/%s' under resource group '%s' was not found.", resourceProviderNamespace, resourceType, resourceName, resourceGroupName)
 				return
 			}
 		}
 
-		if _, found := vars["location"]; found {
-			if !strings.EqualFold(vars["location"], v.Location) {
-				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidLocation, "", "The provided location '%s' is malformed or invalid.", vars["location"])
+		if location != "" {
+			if !strings.EqualFold(location, v.Location) {
+				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidLocation, "", "The provided location '%s' is malformed or invalid.", location)
 				return
 			}
 		}
 
-		if _, found := vars["operationId"]; found {
-			valid := uuid.IsValid(vars["operationId"])
+		if operationId != "" {
+			valid := uuid.IsValid(operationId)
 			if !valid {
-				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidOperationID, "", "The provided operation identifier '%s' is malformed or invalid.", vars["operationId"])
+				api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidOperationID, "", "The provided operation identifier '%s' is malformed or invalid.", operationId)
 				return
 			}
-		}
-
-		queries, err := route.GetQueriesTemplates()
-		var hasVariableAPIVersion bool
-		for _, query := range queries {
-			if query == "api-version=" {
-				hasVariableAPIVersion = true
-				break
-			}
-		}
-
-		_, apiVersionExists := v.Apis[apiVersion]
-		if (err != nil || hasVariableAPIVersion) && apiVersion != "" && !apiVersionExists {
-			api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], apiVersion)
-			return
 		}
 
 		h.ServeHTTP(w, r)

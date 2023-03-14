@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -37,10 +37,13 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 	originalPath := r.Context().Value(middleware.ContextKeyOriginalPath).(string)
 	referer := r.Header.Get("Referer")
 
+	subId := chi.URLParam(r, "subscriptionId")
+	resourceProviderNamespace := chi.URLParam(r, "resourceProviderNamespace")
+
 	apiVersion := r.URL.Query().Get(api.APIVersionKey)
 	err := cosmosdb.RetryOnPreconditionFailed(func() error {
 		var err error
-		b, err = f._putOrPatchOpenShiftCluster(ctx, log, body, correlationData, systemData, r.URL.Path, originalPath, r.Method, referer, &header, f.apis[apiVersion].OpenShiftClusterConverter, f.apis[apiVersion].OpenShiftClusterStaticValidator, mux.Vars(r), apiVersion)
+		b, err = f._putOrPatchOpenShiftCluster(ctx, log, body, correlationData, systemData, r.URL.Path, originalPath, r.Method, referer, &header, f.apis[apiVersion].OpenShiftClusterConverter, f.apis[apiVersion].OpenShiftClusterStaticValidator, subId, resourceProviderNamespace, apiVersion)
 		return err
 	})
 
@@ -48,7 +51,7 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 	reply(log, w, header, b, err)
 }
 
-func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.Entry, body []byte, correlationData *api.CorrelationData, systemData *api.SystemData, path, originalPath, method, referer string, header *http.Header, converter api.OpenShiftClusterConverter, staticValidator api.OpenShiftClusterStaticValidator, vars map[string]string, apiVersion string) ([]byte, error) {
+func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.Entry, body []byte, correlationData *api.CorrelationData, systemData *api.SystemData, path, originalPath, method, referer string, header *http.Header, converter api.OpenShiftClusterConverter, staticValidator api.OpenShiftClusterStaticValidator, subId, resourceProviderNamespace string, apiVersion string) ([]byte, error) {
 	subscription, err := f.validateSubscriptionState(ctx, path, api.SubscriptionStateRegistered)
 	if err != nil {
 		return nil, err
@@ -208,8 +211,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	// SetDefaults will set defaults on cluster document
 	api.SetDefaults(doc)
 
-	subId := vars["subscriptionId"]
-	resourceProviderNamespace := vars["resourceProviderNamespace"]
 	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, subId, resourceProviderNamespace, doc)
 	if err != nil {
 		return nil, err

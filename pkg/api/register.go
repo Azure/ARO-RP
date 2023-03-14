@@ -15,7 +15,7 @@ type OpenShiftClusterStaticValidator interface {
 }
 
 type ClusterManagerStaticValidator interface {
-	Static(string, map[string]string) error
+	Static(string, string) error
 }
 
 type OpenShiftClusterCredentialsConverter interface {

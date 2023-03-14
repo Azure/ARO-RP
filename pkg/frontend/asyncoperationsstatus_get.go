@@ -8,7 +8,7 @@ import (
 	"net/http"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 
@@ -27,9 +27,10 @@ func (f *frontend) getAsyncOperationsStatus(w http.ResponseWriter, r *http.Reque
 }
 
 func (f *frontend) _getAsyncOperationsStatus(ctx context.Context, r *http.Request) ([]byte, error) {
-	vars := mux.Vars(r)
+	operationId := chi.URLParam(r, "operationId")
+	subscriptionId := chi.URLParam(r, "subscriptionId")
 
-	asyncdoc, err := f.dbAsyncOperations.Get(ctx, vars["operationId"])
+	asyncdoc, err := f.dbAsyncOperations.Get(ctx, operationId)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The entity was not found.")
@@ -41,7 +42,7 @@ func (f *frontend) _getAsyncOperationsStatus(ctx context.Context, r *http.Reques
 	switch {
 	case err != nil:
 		return nil, err
-	case resource.SubscriptionID != vars["subscriptionId"]:
+	case resource.SubscriptionID != subscriptionId:
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The entity was not found.")
 	}
 
@@ -52,7 +53,7 @@ func (f *frontend) _getAsyncOperationsStatus(ctx context.Context, r *http.Reques
 
 	// don't give away the final operation status until it's committed to the
 	// database
-	if doc != nil && doc.AsyncOperationID == vars["operationId"] {
+	if doc != nil && doc.AsyncOperationID == operationId {
 		asyncdoc.AsyncOperation.ProvisioningState = asyncdoc.AsyncOperation.InitialProvisioningState
 		asyncdoc.AsyncOperation.EndTime = nil
 		asyncdoc.AsyncOperation.Error = nil

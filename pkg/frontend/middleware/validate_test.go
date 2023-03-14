@@ -9,36 +9,38 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	_ "github.com/Azure/ARO-RP/pkg/api/v20200430"
 	"github.com/Azure/ARO-RP/test/validate"
 )
 
+func emptyResponse(w http.ResponseWriter, r *http.Request) {}
+
 func TestValidate(t *testing.T) {
-	router := mux.NewRouter()
-
-	router.
-		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}").
-		Queries("api-version", "").
-		HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-
-	router.
-		Path("/providers/{resourceProviderNamespace}/operations").
-		Queries("api-version", "").
-		HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-
-	router.
-		Path("/subscriptions/{subscriptionId}").
-		Queries("api-version", "2.0").
-		HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-
 	ValidateMiddleware := ValidateMiddleware{
 		Location: "",
 		Apis:     api.APIs,
 	}
-	router.Use(ValidateMiddleware.Validate)
+
+	chiRouter := chi.NewMux()
+	chiRouter.Route("/subscriptions/{subscriptionId}", func(r chi.Router) {
+		r.Route("/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}", func(r chi.Router) {
+			r.Use(ValidateMiddleware.Validate)
+			r.Put("/", emptyResponse)
+		})
+
+		r.Route("/", func(r chi.Router) {
+			r.Use(ValidateMiddleware.Validate)
+			r.Put("/", emptyResponse)
+		})
+	})
+
+	chiRouter.Route("/providers/{resourceProviderNamespace}/operations", func(r chi.Router) {
+		r.Use(ValidateMiddleware.Validate)
+		r.Put("/", emptyResponse)
+	})
 
 	tests := []struct {
 		name    string
@@ -80,11 +82,6 @@ func TestValidate(t *testing.T) {
 			wantErr: "400: ResourceNotFound: : The Resource 'microsoft.redhatopenshift/openshiftclusters/$' under resource group 'resourcegroup' was not found.",
 		},
 		{
-			name:    "invalid openShiftClusters - api-version",
-			path:    "/subscriptions/42d9eac4-d29a-4d6e-9e26-3439758b1491/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/cluster?api-version=invalid",
-			wantErr: "400: InvalidResourceType: : The resource type 'openshiftclusters' could not be found in the namespace 'microsoft.redhatopenshift' for api version 'invalid'.",
-		},
-		{
 			name: "valid operations",
 			path: "/providers/microsoft.redhatopenshift/operations?api-version=2020-04-30",
 		},
@@ -92,11 +89,6 @@ func TestValidate(t *testing.T) {
 			name:    "invalid operations - resourceProviderNamespace",
 			path:    "/providers/invalid/operations?api-version=2020-04-30",
 			wantErr: "400: InvalidResourceNamespace: : The resource namespace 'invalid' is invalid.",
-		},
-		{
-			name:    "invalid operations - api-version",
-			path:    "/providers/microsoft.redhatopenshift/operations?api-version=invalid",
-			wantErr: "400: InvalidResourceType: : The resource type '' could not be found in the namespace 'microsoft.redhatopenshift' for api version 'invalid'.",
 		},
 		{
 			name: "valid subscriptions",
@@ -114,7 +106,7 @@ func TestValidate(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPut, tt.path, nil)
 			w := httptest.NewRecorder()
 
-			router.ServeHTTP(w, r)
+			chiRouter.ServeHTTP(w, r)
 
 			if tt.wantErr == "" {
 				if w.Code != http.StatusOK {
@@ -129,14 +121,14 @@ func TestValidate(t *testing.T) {
 				var cloudErr *api.CloudError
 				err := json.Unmarshal(w.Body.Bytes(), &cloudErr)
 				if err != nil {
-					t.Fatal(err)
+					t.Fatalf("got %s while unmarshalling. status code : %d", err, w.Code)
 				}
 				cloudErr.StatusCode = w.Code
 
 				validate.CloudError(t, cloudErr)
 
 				if tt.wantErr != cloudErr.Error() {
-					t.Error(cloudErr)
+					t.Errorf("wanted %s but got %s", tt.wantErr, cloudErr.Error())
 				}
 			}
 		})
