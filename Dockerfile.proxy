@@ -7,7 +7,7 @@ ENV GOOS=linux \
 WORKDIR ${GOPATH}/src/github.com/Azure/ARO-RP
 USER root
 COPY . ${GOPATH}/src/github.com/Azure/ARO-RP/
-RUN make proxy RELEASE=${IS_OFFICIAL_RELEASE} -o generate
+RUN make proxy
 
 FROM ${REGISTRY}/ubi8/ubi-minimal
 RUN microdnf update && microdnf clean all
