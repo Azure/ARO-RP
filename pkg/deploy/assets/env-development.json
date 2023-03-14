@@ -357,7 +357,7 @@
                         "imageReference": {
                             "publisher": "RedHat",
                             "offer": "RHEL",
-                            "sku": "7-LVM",
+                            "sku": "8-LVM",
                             "version": "latest"
                         },
                         "osDisk": {
