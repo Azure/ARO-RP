@@ -45,13 +45,13 @@ endif
 endif
 
 build-all:
-	go build -tags aro,containers_image_openpgp ./...
+	go build -tags containers_image_openpgp ./...
 
 aro: check-release generate
-	go build -tags aro,containers_image_openpgp,codec.safe -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro
+	go build -tags containers_image_openpgp,codec.safe -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro
 
 runlocal-rp:
-	go run -tags aro,containers_image_openpgp -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro rp
+	go run -tags containers_image_openpgp -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro rp
 
 az: pyenv
 	. pyenv/bin/activate && \
@@ -72,7 +72,7 @@ client: generate
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
 deploy:
-	go run -tags aro,containers_image_openpgp -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
+	go run -tags containers_image_openpgp -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
 
 dev-config.yaml:
 	go run ./hack/gendevconfig >dev-config.yaml
@@ -138,7 +138,7 @@ proxy:
 	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/proxy
 
 run-portal:
-	go run -tags aro,containers_image_openpgp -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro portal
+	go run -tags containers_image_openpgp -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro portal
 
 build-portal:
 	cd portal/v1 && npm install && npm run build && cd ../v2 && npm install && npm run build
@@ -202,10 +202,10 @@ validate-fips:
 	hack/fips/validate-fips.sh
 
 unit-test-go:
-	go run ./vendor/gotest.tools/gotestsum/main.go --format pkgname --junitfile report.xml -- -tags=aro,containers_image_openpgp -coverprofile=cover.out ./...
+	go run ./vendor/gotest.tools/gotestsum/main.go --format pkgname --junitfile report.xml -- -tags=containers_image_openpgp -coverprofile=cover.out ./...
 
 unit-test-go-coverpkg:
-	go run ./vendor/gotest.tools/gotestsum/main.go --format pkgname --junitfile report.xml -- -tags=aro,containers_image_openpgp -coverpkg=./... -coverprofile=cover_coverpkg.out ./...
+	go run ./vendor/gotest.tools/gotestsum/main.go --format pkgname --junitfile report.xml -- -tags=containers_image_openpgp -coverpkg=./... -coverprofile=cover_coverpkg.out ./...
 
 lint-go:
 	hack/lint-go.sh

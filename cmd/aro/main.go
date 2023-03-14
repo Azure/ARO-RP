@@ -43,11 +43,6 @@ func main() {
 	audit := utillog.GetAuditEntry()
 	log := utillog.GetLogger()
 
-	// TODO: Use `azuretypes.Platform.IsARO()` from github.com/openshift/installer/pkg/types/azure
-	if !platformIsAro {
-		log.Fatal("ARO-RP must be built, run, and tested with '-tags aro' to support github.com/openshift/installer, see https://github.com/openshift/installer/pull/4843/files")
-	}
-
 	go func() {
 		log.Warn(http.ListenAndServe("localhost:6060", nil))
 	}()

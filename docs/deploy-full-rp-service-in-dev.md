@@ -83,15 +83,19 @@
         docker login -u 00000000-0000-0000-0000-000000000000 -p "$(echo $DST_AUTH | base64 -d | cut -d':' -f2)" "${DST_ACR_NAME}.azurecr.io"
         ```
 
-    1. Run the mirroring
-        > The `latest` argument will take the DefaultInstallStream from `pkg/util/version/const.go` and mirror that version
-        ```bash
-        go run -tags aro ./cmd/aro mirror latest
-        ```
-        If you are going to test or work with multi-version installs, then you should mirror any additional versions as well, for example for 4.11.21 it would be
-        ```bash
-        go run -tags aro ./cmd/aro mirror 4.11.21
-        ```
+   1. Run the mirroring
+
+      > The `latest` argument will take the DefaultInstallStream from `pkg/util/version/const.go` and mirror that version
+
+      ```bash
+      go run ./cmd/aro mirror latest
+      ```
+
+      If you are going to test or work with multi-version installs, then you should mirror any additional versions as well, for example for 4.11.21 it would be
+
+      ```bash
+      go run ./cmd/aro mirror 4.11.21
+      ```
 
     1. Push the ARO and Fluentbit images to your ACR
 

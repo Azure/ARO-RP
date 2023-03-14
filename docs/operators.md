@@ -74,7 +74,7 @@ Then do:
 ```sh
 oc scale -n openshift-azure-operator deployment/aro-operator-master --replicas=0
 make generate
-go run -tags aro ./cmd/aro operator master
+go run ./cmd/aro operator master
 ```
 
 ### How to create & publish ARO Operator image to ACR/Quay
