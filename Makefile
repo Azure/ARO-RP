@@ -98,7 +98,7 @@ image-autorest:
 image-fluentbit:
 	docker build --platform=linux/amd64 --network=host --build-arg VERSION=$(FLUENTBIT_VERSION) --build-arg MARINER_VERSION=$(MARINER_VERSION) --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
 
-image-proxy: proxy
+image-proxy:
 	docker pull $(REGISTRY)/ubi8/ubi-minimal
 	docker build --platform=linux/amd64 --no-cache -f Dockerfile.proxy -t $(REGISTRY)/proxy:latest --build-arg REGISTRY=$(REGISTRY) .
 
