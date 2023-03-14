@@ -72,7 +72,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	if err != nil {
 		r.log.Error(err)
 
-		// cnds.Degraded.Status = operatorv1.ConditionTrue
+		cnds.Degraded.Status = operatorv1.ConditionTrue
 		cnds.Degraded.Message = err.Error()
 
 		conditions.SetControllerConditions(ctx, r.client, cnds)
@@ -99,7 +99,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 		err = r.client.Update(ctx, node)
 		if err != nil {
-			// cnds.Degraded.Status = operatorv1.ConditionTrue
+			cnds.Degraded.Status = operatorv1.ConditionTrue
 			cnds.Degraded.Message = err.Error()
 			r.log.Error(err)
 		}
@@ -117,7 +117,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		err = r.client.Update(ctx, node)
 		if err != nil {
 			r.log.Error(err)
-			// cnds.Degraded.Status = operatorv1.ConditionTrue
+			cnds.Degraded.Status = operatorv1.ConditionTrue
 			cnds.Degraded.Message = err.Error()
 
 			conditions.SetControllerConditions(ctx, r.client, cnds)
@@ -152,7 +152,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}, request.Name)
 	if err != nil {
 		r.log.Error(err)
-		// cnds.Degraded.Status = operatorv1.ConditionTrue
+		cnds.Degraded.Status = operatorv1.ConditionTrue
 		cnds.Degraded.Message = err.Error()
 		conditions.SetControllerConditions(ctx, r.client, cnds)
 
@@ -165,7 +165,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	err = r.client.Update(ctx, node)
 	if err != nil {
 		r.log.Error(err)
-		// cnds.Degraded.Status = operatorv1.ConditionTrue
+		cnds.Degraded.Status = operatorv1.ConditionTrue
 		cnds.Degraded.Message = err.Error()
 		conditions.SetControllerConditions(ctx, r.client, cnds)
 		return reconcile.Result{}, err

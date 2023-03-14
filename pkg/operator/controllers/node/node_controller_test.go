@@ -80,9 +80,8 @@ func TestReconciler(t *testing.T) {
 			wantErr:     `nodes "nonexistent-node" not found`,
 			wantConditions: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing,
 				{
-					Type: ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
-					// Status:             operatorv1.ConditionTrue,
-					Status:             operatorv1.ConditionFalse,
+					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+					Status:             operatorv1.ConditionTrue,
 					LastTransitionTime: transitionTime,
 					Message:            `nodes "nonexistent-node" not found`,
 				},
