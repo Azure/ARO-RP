@@ -71,9 +71,6 @@ type AuthorizationDecision struct {
 	TimeToLiveInMs int            `json:"timeToLiveInMs,omitempty"`
 }
 
-// AccessDecision can be: Allowed, NotAllowed, Denied.
-type AccessDecision string
-
 type RoleAssignment struct {
 	Id                                 string `json:"id,omitempty"`
 	RoleDefinitionId                   string `json:"roleDefinitionId,omitempty"`

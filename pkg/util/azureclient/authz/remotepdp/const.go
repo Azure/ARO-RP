@@ -9,6 +9,9 @@ const (
 	version = "0.0.1"
 )
 
+// AccessDecision can be: Allowed, NotAllowed, Denied.
+type AccessDecision string
+
 // AccessDecision possible returned values
 const (
 	Allowed    AccessDecision = "Allowed"

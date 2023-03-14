@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 )
 
+// this asserts that &remotePDPClient{} would always implement RemotePDPClient
 var _ RemotePDPClient = &remotePDPClient{}
 
 // RemotePDPClient represents the Microsoft Remote PDP API Spec

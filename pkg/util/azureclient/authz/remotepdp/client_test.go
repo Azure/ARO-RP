@@ -5,6 +5,7 @@ package remotepdp
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"testing"
 
@@ -22,39 +23,41 @@ func TestClientCreate(t *testing.T) {
 	if err != nil {
 		t.Error("Unable to create a new PDP client")
 	}
-	NewRemotePDPClient(endpoint, scope, cred)
-}
-
-func TestSuccessfulCallReturnsADecision(t *testing.T) {
-	srv, close := testhttp.NewTLSServer()
-	defer close()
-	srv.SetResponse(
-		testhttp.WithStatusCode(http.StatusOK),
-	)
-
-	client := createClientWithServer(srv)
-
-	decision, err := client.CheckAccess(context.Background(), AuthorizationRequest{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if decision == nil {
-		t.Error("Successful calls should return an access decision")
+	client := NewRemotePDPClient(endpoint, scope, cred)
+	if client.endpoint != endpoint {
+		t.Error("The client endpoint doesn't equal to the target endpoint")
 	}
 }
 
-func TestFailedCallReturns(t *testing.T) {
-	srv, close := testhttp.NewTLSServer()
-	defer close()
-	srv.SetResponse(
-		testhttp.WithStatusCode(http.StatusUnauthorized),
-	)
-
-	client := createClientWithServer(srv)
-
-	_, err := client.CheckAccess(context.Background(), AuthorizationRequest{})
-	if err == nil {
-		t.Error("Call resulting in a failure should return an error")
+func TestCallingCheckAccess(t *testing.T) {
+	cases := []struct {
+		desc             string
+		returnedHttpCode int
+		expectedDecision *AuthorizationDecisionResponse
+		expectedErr      error
+	}{
+		{
+			desc:             "Successful calls should return an access decision",
+			returnedHttpCode: http.StatusOK,
+			expectedDecision: &AuthorizationDecisionResponse{},
+			expectedErr:      nil,
+		}, {
+			desc:             "Call resulting in a failure should return an error",
+			returnedHttpCode: http.StatusUnauthorized,
+			expectedDecision: nil,
+			expectedErr:      errors.New("An error"),
+		},
+	}
+	for _, c := range cases {
+		srv, close := testhttp.NewTLSServer()
+		srv.SetResponse(testhttp.WithStatusCode(c.returnedHttpCode))
+		client := createClientWithServer(srv)
+		decision, err := client.CheckAccess(context.Background(), AuthorizationRequest{})
+		if decision != c.expectedDecision && err != c.expectedErr {
+			t.Errorf("%s: expected decision to be %v; and error to be %s. Got %v and %s",
+				c.desc, c.expectedDecision, c.expectedErr, decision, err)
+		}
+		close()
 	}
 }
 
