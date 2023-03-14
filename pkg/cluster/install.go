@@ -20,7 +20,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
-	"github.com/Azure/ARO-RP/pkg/installer"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
@@ -193,13 +192,7 @@ func (m *manager) Update(ctx context.Context) error {
 }
 
 func (m *manager) runIntegratedInstaller(ctx context.Context) error {
-	version, err := m.openShiftVersionFromVersion(ctx)
-	if err != nil {
-		return err
-	}
-
-	i := installer.NewInstaller(m.log, m.env, m.doc.ID, m.doc.OpenShiftCluster, m.subscriptionDoc.Subscription, version, m.fpAuthorizer, m.deployments, m.graph)
-	return i.Install(ctx)
+	return fmt.Errorf("integrated installer is not present")
 }
 
 func (m *manager) runHiveInstaller(ctx context.Context) error {
