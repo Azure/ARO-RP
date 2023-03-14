@@ -54,7 +54,7 @@ func validateQuota(ctx context.Context, oc *api.OpenShiftCluster, spNetworkUsage
 	// If ValidateQuota runs outside install process, we should skip quota validation
 	requiredResources := map[string]int{}
 
-	err := addRequiredResources(requiredResources, oc.Properties.MasterProfile.VMSize, 3)
+	err := addRequiredResources(requiredResources, oc.Properties.MasterProfile.VMSize, 4)
 	if err != nil {
 		return err
 	}
