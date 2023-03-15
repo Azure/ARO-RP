@@ -119,13 +119,45 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 							{
 								Name: to.StringPtr("dev-proxy-vmss-cse"),
 								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
-									Publisher:               to.StringPtr("Microsoft.Azure.Extensions"),
-									Type:                    to.StringPtr("CustomScript"),
-									TypeHandlerVersion:      to.StringPtr("2.0"),
+									Publisher:          to.StringPtr("Microsoft.Azure.Extensions"),
+									Type:               to.StringPtr("CustomScript"),
+									TypeHandlerVersion: to.StringPtr("2.0"),
+									ProvisionAfterExtensions: &[]string{
+										"Microsoft.Azure.Monitor.AzureMonitorLinuxAgent",
+										"Microsoft.Azure.Security.Monitoring.AzureSecurityLinuxAgent",
+									},
 									AutoUpgradeMinorVersion: to.BoolPtr(true),
 									Settings:                map[string]interface{}{},
 									ProtectedSettings: map[string]interface{}{
 										"script": script,
+									},
+								},
+							},
+							{
+								Name: to.StringPtr("Microsoft.Azure.Monitor.AzureMonitorLinuxAgent"),
+								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
+									Publisher:               to.StringPtr("Microsoft.Azure.Monitor"),
+									Type:                    to.StringPtr("AzureMonitorLinuxAgent"),
+									TypeHandlerVersion:      to.StringPtr("1.0"),
+									AutoUpgradeMinorVersion: to.BoolPtr(true),
+									EnableAutomaticUpgrade:  to.BoolPtr(true),
+									Settings: map[string]interface{}{
+										"GCS_AUTO_CONFIG": true,
+									},
+								},
+							},
+							{
+								Name: to.StringPtr("Microsoft.Azure.Security.Monitoring.AzureSecurityLinuxAgent"),
+								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
+									Publisher:               to.StringPtr("Microsoft.Azure.Security.Monitoring"),
+									Type:                    to.StringPtr("AzureSecurityLinuxAgent"),
+									TypeHandlerVersion:      to.StringPtr("2.0"),
+									AutoUpgradeMinorVersion: to.BoolPtr(true),
+									EnableAutomaticUpgrade:  to.BoolPtr(true),
+									Settings: map[string]interface{}{
+										"enableGenevaUpload":               true,
+										"enableAutoConfig":                 true,
+										"reportSuccessOnUnsupportedDistro": true,
 									},
 								},
 							},
