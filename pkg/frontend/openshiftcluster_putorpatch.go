@@ -297,5 +297,10 @@ func (f *frontend) ValidateNewCluster(ctx context.Context, subscription *api.Sub
 		return err
 	}
 
+	err = f.providersValidator.ValidateProviders(ctx, f.env.Environment(), f.env, subscription.ID, subscription.Subscription.Properties.TenantID)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
