@@ -71,7 +71,7 @@ export function StatisticsComponent(props: {
     }
   };
 
-  function _styledExample(): JSX.Element {   
+  function StatisticsHelperComponent(): JSX.Element {   
     useEffect(() => {
       if (props.metrics.length > 0) {
         const newPoints: ILineChartPoints[] = []
@@ -159,7 +159,7 @@ export function StatisticsComponent(props: {
   }
   return (
     <>
-      <div>{_styledExample()}</div>
+      <div>{StatisticsHelperComponent()}</div>
     </>
   );
 }
