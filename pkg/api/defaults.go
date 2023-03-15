@@ -83,5 +83,6 @@ func DefaultOperatorFlags() OperatorFlags {
 		"aro.autosizednodes.enabled":               flagFalse,
 		"rh.srep.muo.enabled":                      flagTrue,
 		"rh.srep.muo.managed":                      flagTrue,
+		"aro.dnsmasq.retry.enabled":                flagFalse,
 	}
 }

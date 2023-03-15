@@ -24,7 +24,8 @@ import (
 const (
 	ClusterControllerName = "DnsmasqCluster"
 
-	controllerEnabled = "aro.dnsmasq.enabled"
+	controllerEnabled   = "aro.dnsmasq.enabled"
+	dnsmasqRetryEnabled = "aro.dnsmasq.retry.enabled"
 )
 
 type ClusterReconciler struct {
@@ -81,8 +82,9 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 
 func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, dh dynamichelper.Interface, roles ...string) error {
 	var resources []kruntime.Object
+	var retriesEnabled = instance.Spec.OperatorFlags.GetSimpleBoolean(dnsmasqRetryEnabled)
 	for _, role := range roles {
-		resource, err := dnsmasq.MachineConfig(instance.Spec.Domain, instance.Spec.APIIntIP, instance.Spec.IngressIP, role, instance.Spec.GatewayDomains, instance.Spec.GatewayPrivateEndpointIP)
+		resource, err := dnsmasq.MachineConfig(instance.Spec.Domain, instance.Spec.APIIntIP, instance.Spec.IngressIP, role, instance.Spec.GatewayDomains, instance.Spec.GatewayPrivateEndpointIP, retriesEnabled)
 		if err != nil {
 			return err
 		}
