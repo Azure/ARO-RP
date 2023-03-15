@@ -9,6 +9,7 @@ from azext_aro._validators import validate_domain
 from azext_aro._validators import validate_pull_secret
 from azext_aro._validators import validate_subnet
 from azext_aro._validators import validate_client_secret
+from azext_aro._validators import validate_maintenance_start
 from azext_aro._validators import validate_visibility
 from azext_aro._validators import validate_vnet
 from azext_aro._validators import validate_vnet_resource_group_name
