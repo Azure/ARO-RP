@@ -43,7 +43,6 @@ func (g *generator) templateFixup(t *arm.Template) ([]byte, error) {
 
 	// :-(
 	b = bytes.ReplaceAll(b, []byte(tenantIDHack), []byte("[subscription().tenantId]"))
-	b = bytes.ReplaceAll(b, []byte(`"capacity": 1337`), []byte(`"capacity": "[parameters('ciCapacity')]"`))
 	b = bytes.ReplaceAll(b, []byte(`"capacity": 1338`), []byte(`"capacity": "[parameters('rpVmssCapacity')]"`))
 	b = bytes.ReplaceAll(b, []byte(`"capacity": 1339`), []byte(`"capacity": "[parameters('gatewayVmssCapacity')]"`))
 	// pickZones doesn't work for regions that don't have zones.  We have created param nonZonalRegions in both rp and gateway and set default values to include all those regions.  It cannot be passed in-line to contains function, has to be created as an array in a parameter :(
