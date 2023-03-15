@@ -65,20 +65,6 @@ func (mr *MockDynamicMockRecorder) ValidateEncryptionAtHost(arg0, arg1 interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateEncryptionAtHost", reflect.TypeOf((*MockDynamic)(nil).ValidateEncryptionAtHost), arg0, arg1)
 }
 
-// ValidateProviders mocks base method.
-func (m *MockDynamic) ValidateProviders(arg0 context.Context) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateProviders", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ValidateProviders indicates an expected call of ValidateProviders.
-func (mr *MockDynamicMockRecorder) ValidateProviders(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateProviders", reflect.TypeOf((*MockDynamic)(nil).ValidateProviders), arg0)
-}
-
 // ValidateServicePrincipal mocks base method.
 func (m *MockDynamic) ValidateServicePrincipal(arg0 context.Context, arg1, arg2, arg3 string) error {
 	m.ctrl.T.Helper()
