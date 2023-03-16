@@ -378,18 +378,31 @@ func (sv openShiftClusterStaticValidator) validateClusterResourceGroupTags(path 
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, fmt.Sprintf("The provided set of cluster resource group tags is too large; it can contain at most %d tags.", maxTags))
 	}
 
+	var invalidTags []string
+
 	for k, v := range *t {
 		if !sv.clusterResourceGroupTagIsValid(k, v) {
-			errorMsg := "One or more of the provided cluster resource group tags are invalid. Rules for tag names and values:\n\n"
-			errorMsg += `Tag names must:
+			invalidTags = append(invalidTags, k)
+		}
+	}
+
+	if len(invalidTags) > 0 {
+		errorMsg := "The following cluster resource group tags either have an invalid name or an invalid value:\n"
+
+		for _, v := range invalidTags {
+			errorMsg += fmt.Sprintf("- %s\n", v)
+		}
+
+		errorMsg += `
+Tag names must:
 - Start with a letter
 - End with a letter, number, or underscore
 - Contain only letters, numbers, underscores, periods, and hyphens
-- Have length <= 128`
-			errorMsg += "\n\nTag values have no character restrictions, but must have length <= 256"
+- Have length <= 128
 
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, errorMsg)
-		}
+Tag values have no character restrictions, but must have length <= 256.`
+
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, errorMsg)
 	}
 
 	return nil
