@@ -34,6 +34,7 @@ func NewOpenShiftClusterDynamicValidator(ctx context.Context, log *logrus.Entry,
 	spp := oc.Properties.ServicePrincipalProfile
 
 	if feature.IsRegisteredForFeature(subscriptionDoc.Subscription.Properties, api.FeatureFlagCheckAccessTestToggle) {
+		log.Info("CheckAccess Feature is set")
 		var err error
 		fpClientCred, err = env.FPNewClientCertificateCredential(subscriptionDoc.Subscription.Properties.TenantID)
 		if err != nil {

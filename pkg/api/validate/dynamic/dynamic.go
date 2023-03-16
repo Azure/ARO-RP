@@ -301,7 +301,7 @@ func (dv *dynamic) validateActions(ctx context.Context, r *azure.Resource, actio
 	timeout := 5 * time.Minute
 	if dv.pdpClient != nil {
 		conditionalFunc = c.usingCheckAccessV2
-		timeout = 90 * time.Second
+		timeout = 185 * time.Second // checkAccess refreshes data every min. This allows ~3 retries.
 	}
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
@@ -346,7 +346,7 @@ func (c closure) usingListPermissions() (bool, error) {
 
 // usingCheckAccessV2 uses the new RBAC checkAccessV2 API
 func (c closure) usingCheckAccessV2() (bool, error) {
-	c.dv.log.Debug("retry validationActions with CheckAccessV2")
+	c.dv.log.Info("retry validationActions with CheckAccessV2")
 	oid, err := aad.GetObjectId(c.dv.authorizer.OAuthToken())
 	if err != nil {
 		return false, err
