@@ -1,4 +1,4 @@
-package net_test
+package dns_test
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -6,7 +6,7 @@ package net_test
 import (
 	"testing"
 
-	utilnet "github.com/Azure/ARO-RP/pkg/util/net"
+	"github.com/Azure/ARO-RP/pkg/util/dns"
 )
 
 func TestIsManagedDomain(t *testing.T) {
@@ -36,7 +36,7 @@ func TestIsManagedDomain(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.testName, func(t *testing.T) {
-			got := utilnet.IsManagedDomain(tt.domain)
+			got := dns.IsManagedDomain(tt.domain)
 
 			if got != tt.want {
 				t.Errorf("expected %v, but got %v", tt.want, got)
