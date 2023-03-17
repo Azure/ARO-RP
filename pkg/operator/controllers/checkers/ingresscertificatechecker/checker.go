@@ -13,24 +13,23 @@ package ingresscertificatechecker
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	utilnet "github.com/Azure/ARO-RP/pkg/util/net"
 )
 
+const ingressNameSuffix = "-ingress"
+
 var (
-	// errNoDefaultCertificate means a cluster has no default cert reference.
-	// This can happen because of the following reasons:
-	//   1. A cluster doesn't use a managed domain.
-	//    	For example it was created with a custom domain)
-	//   	or in a dev env where we don't have managed domains.
-	//   2. When a customer changed the ingress config incorrectly.
-	//
-	// While the first is valid the second is something we should be aware of.
-	errNoDefaultCertificate = errors.New("ingress has no default certificate set")
+	errNoCertificateAndCustomDomain       = errors.New("missing ingress certificate for cluster with custom domain")
+	errNoCertificateAndManagedDomain      = errors.New("missing ingress certificate for cluster with managed domain")
+	errInvalidCertificateAndManagedDomain = errors.New("invalid ingress certificate name for cluster with managed domain")
 )
 
 type ingressCertificateChecker interface {
@@ -48,25 +47,69 @@ func newIngressCertificateChecker(client client.Client) *checker {
 }
 
 func (r *checker) Check(ctx context.Context) error {
+	cv, err := r.clusterVersion(ctx)
+	if err != nil {
+		return err
+	}
+
+	ingress, err := r.ingress(ctx)
+	if err != nil {
+		return err
+	}
+
+	clusterHasManagedDomain, err := r.clusterHasManagedDomain(ctx)
+	if err != nil {
+		return err
+	}
+	return validateCertificate(cv.Spec.ClusterID, ingress.Spec.DefaultCertificate, clusterHasManagedDomain)
+}
+
+func (r *checker) ingress(ctx context.Context) (*operatorv1.IngressController, error) {
+	ingress := &operatorv1.IngressController{}
+	err := r.client.Get(ctx, types.NamespacedName{Namespace: "openshift-ingress-operator", Name: "default"}, ingress)
+	if err != nil {
+		return nil, err
+	}
+	return ingress, nil
+}
+
+func (r *checker) clusterVersion(ctx context.Context) (*configv1.ClusterVersion, error) {
 	cv := &configv1.ClusterVersion{}
 	err := r.client.Get(ctx, types.NamespacedName{Name: "version"}, cv)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	return cv, nil
+}
 
-	ingress := &operatorv1.IngressController{}
-	err = r.client.Get(ctx, types.NamespacedName{Namespace: "openshift-ingress-operator", Name: "default"}, ingress)
+func (r *checker) clusterHasManagedDomain(ctx context.Context) (bool, error) {
+	cluster := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, cluster)
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	if ingress.Spec.DefaultCertificate == nil {
-		return errNoDefaultCertificate
+	return utilnet.IsManagedDomain(cluster.Spec.Domain), nil
+}
+
+func validateCertificate(clusterId configv1.ClusterID, ingressCertificate *corev1.LocalObjectReference, clusterHasManagedDomain bool) error {
+	if ingressCertificate == nil {
+		if clusterHasManagedDomain {
+			return errNoCertificateAndManagedDomain
+		}
+		return errNoCertificateAndCustomDomain
 	}
 
-	if ingress.Spec.DefaultCertificate.Name != string(cv.Spec.ClusterID)+"-ingress" {
-		return fmt.Errorf("custom ingress certificate in use: %q", ingress.Spec.DefaultCertificate.Name)
+	certificateName := ingressCertificate.Name
+
+	if !certificateIsValid(certificateName, clusterId) && clusterHasManagedDomain {
+		return errInvalidCertificateAndManagedDomain
 	}
 
 	return nil
+}
+
+func certificateIsValid(certificateName string, clusterID configv1.ClusterID) bool {
+	expectedCertName := string(clusterID) + ingressNameSuffix
+	return certificateName == expectedCertName
 }
