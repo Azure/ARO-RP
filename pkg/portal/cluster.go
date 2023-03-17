@@ -220,7 +220,7 @@ func (p *portal) statistics(w http.ResponseWriter, r *http.Request) {
 		p.internalServerError(w, err)
 		return
 	}
-	prom := prometheus.New(p.log, p.dbOpenShiftClusters, p.dialer) //, p.authenticatedRouter)
+	prom := prometheus.New(p.log, p.dbOpenShiftClusters, p.dialer)
 	httpClient, err := prom.Cli(ctx, resourceID)
 	if err != nil {
 		p.internalServerError(w, err)
@@ -246,5 +246,8 @@ func (p *portal) statistics(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(b)
+	_, err = w.Write(b)
+	if err != nil {
+		p.log.Error(err)
+	}
 }
