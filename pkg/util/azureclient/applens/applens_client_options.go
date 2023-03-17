@@ -26,7 +26,7 @@ func NewClientOptions() *ClientOptions {
 		azcore.ClientOptions{
 			Retry: policy.RetryOptions{
 				MaxRetries: 3,
-				RetryDelay: time.Second * 10,
+				RetryDelay: time.Second * 3,
 			},
 			Telemetry: policy.TelemetryOptions{
 				ApplicationID: userAgent,
