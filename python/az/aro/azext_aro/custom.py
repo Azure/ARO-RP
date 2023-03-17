@@ -288,7 +288,7 @@ def aro_list_credentials(client, resource_group_name, resource_name):
     return client.open_shift_clusters.list_credentials(resource_group_name, resource_name)
 
 
-def aro_list_admin_credentials(client, resource_group_name, resource_name, file="kubeconfig"):
+def aro_get_admin_kubeconfig(client, resource_group_name, resource_name, file="kubeconfig"):
     query_result = client.open_shift_clusters.list_admin_credentials(resource_group_name, resource_name)
     file_mode = "x"
     yaml_data = b64decode(query_result.kubeconfig).decode('UTF-8')
