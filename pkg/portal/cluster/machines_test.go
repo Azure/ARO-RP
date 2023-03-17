@@ -237,7 +237,7 @@ func TestVMAllocationStatus(t *testing.T) {
 			if !reflect.DeepEqual(vmAllocationStatuses, tt.wantOutput) {
 				t.Error("Expected output", tt.wantOutput, "Got", vmAllocationStatuses)
 			}
-			if err != nil && err /*.Error()*/ != tt.wantErr || err == nil && tt.wantErr != nil /*""*/ {
+			if err != nil && err != tt.wantErr || err == nil && tt.wantErr != nil {
 				t.Error("Expected", tt.wantErr, "Got", err)
 			}
 		})
