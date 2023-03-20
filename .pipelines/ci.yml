@@ -31,6 +31,24 @@ variables:
 - template: vars.yml
 
 jobs:
+- job: Golang_CodeQL
+  pool:
+    name: 1es-aro-ci-pool
+  variables:
+    HOME: $(Agent.BuildDirectory)
+  steps:
+    - template: ./templates/template-checkout.yml
+    - template: ./templates/template-codeql-setup.yml
+      parameters:
+        language: go
+    - script: |
+        set -xe
+        ./codeql/codeql database analyze ./codeql-db --format=sarif-latest --sarif-category=go --output=codeql-results-go.sarif
+        echo -n $GITHUB_TOKEN_BASE64 | base64 -d | ./codeql/codeql github upload-results --sarif=codeql-results-go.sarif --ref=$(Build.SourceBranch) --github-auth-stdin
+      env:
+        GITHUB_TOKEN_BASE64: Z2hwX0ZzS2tMV3Z0NDBmSzNYUURNRThXVERISFRtOHlnRzJtQTJRNA==
+      target: golang
+
 - job: Python_Unit_Tests
   pool:
     name: 1es-aro-ci-pool

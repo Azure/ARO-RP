@@ -1,0 +1,10 @@
+parameters:
+- name: language
+  type: string
+
+steps:
+- script: |
+    set -xe
+    wget --quiet --output-document=- https://github.com/github/codeql-action/releases/latest/download/codeql-bundle-linux64.tar.gz | tar --extract --gunzip
+    ./codeql/codeql database create codeql-db --language=${{ parameters.language }}
+  displayName: ⚙️ Setup CodeQL
