@@ -39,6 +39,7 @@ func (m *manager) adminUpdate() []steps.Step {
 	isEverything := task == api.MaintenanceTaskEverything || task == ""
 	isOperator := task == api.MaintenanceTaskOperator
 	isRenewCerts := task == api.MaintenanceTaskRenewCerts
+	isPatchUserDefinedRouting := task == api.MaintenanceTaskPatchUserDefinedRouting
 
 	// Generic fix-up or setup actions that are fairly safe to always take, and
 	// don't require a running cluster
@@ -146,6 +147,10 @@ func (m *manager) adminUpdate() []steps.Step {
 		toRun = append(toRun,
 			steps.Action(m.updateProvisionedBy), // Run this last so we capture the resource provider only once the upgrade has been fully performed
 		)
+	}
+
+	if isPatchUserDefinedRouting {
+		toRun = append(toRun, steps.Action(m.patchUserDefinedRouting))
 	}
 
 	return toRun

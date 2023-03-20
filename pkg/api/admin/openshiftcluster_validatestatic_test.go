@@ -651,6 +651,19 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			},
 		},
 		{
+			name: "maintenanceTask change to PatchUserDefinedRouting is allowed",
+			oc: func() *OpenShiftCluster {
+				return &OpenShiftCluster{
+					Properties: OpenShiftClusterProperties{
+						MaintenanceTask: "",
+					},
+				}
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.MaintenanceTask = MaintenanceTaskPatchUserDefinedRouting
+			},
+		},
+		{
 			name: "maintenanceTask change to Operator is allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{

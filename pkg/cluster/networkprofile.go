@@ -61,6 +61,16 @@ func patchMTUSize(m *manager, ctx context.Context, mtuSize api.MTUSize) error {
 	return err
 }
 
+func (m *manager) patchUserDefinedRouting(ctx context.Context) error {
+	// Patch clusters that had there public IP removed manually
+	var err error
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType = api.OutboundTypeUserDefinedRouting
+		return nil
+	})
+	return err
+}
+
 func (m *manager) determineOutboundType(ctx context.Context) error {
 	var err error
 	// Determine if this is a cluster with user defined routing

@@ -248,6 +248,25 @@ func TestAdminUpdateSteps(t *testing.T) {
 				"[Action updateProvisionedBy-fm]",
 			},
 		},
+		{
+			name: "Patch UserDefinedRouting",
+			fixture: func() (*api.OpenShiftClusterDocument, bool) {
+				doc := baseClusterDoc()
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
+				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskPatchUserDefinedRouting
+				return doc, true
+			},
+			shouldRunSteps: []string{
+				"[Action initializeKubernetesClients-fm]",
+				"[Action ensureBillingRecord-fm]",
+				"[Action ensureDefaults-fm]",
+				"[Action fixupClusterSPObjectID-fm]",
+				"[Action fixInfraID-fm]",
+				"[Action startVMs-fm]",
+				"[Condition apiServersReady-fm, timeout 30m0s]",
+				"[Action patchUserDefinedRouting-fm]",
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			doc, adoptViaHive := tt.fixture()
