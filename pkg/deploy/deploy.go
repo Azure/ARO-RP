@@ -171,10 +171,8 @@ func (d *deployer) deploy(ctx context.Context, rgName, deploymentName, vmssName 
 				continue
 			}
 			if serviceErr.Code == "CannotModifyProbeUsedByVMSS" {
-				// delete the gateway VMSS and recreates it. This is because we modified the health
-				// check port. This can be removed once all the regions have been updated to that
-				// new port.
-				if retry := d.vmssCleaner.RemoveGatewayScaleset(ctx, rgName); retry {
+				// removes the probe reference so we can update the lb rules
+				if retry := d.vmssCleaner.UpdateVMSSProbes(ctx, rgName); retry {
 					continue
 				}
 			}

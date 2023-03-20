@@ -14,7 +14,7 @@ import (
 
 type Interface interface {
 	RemoveFailedNewScaleset(ctx context.Context, rgName, vmssToDelete string) (retry bool)
-	RemoveGatewayScaleset(ctx context.Context, rgName string) (retry bool)
+	UpdateVMSSProbes(ctx context.Context, rgName string) (retry bool)
 }
 
 type cleaner struct {
@@ -65,8 +65,8 @@ func (c *cleaner) RemoveFailedNewScaleset(ctx context.Context, rgName, vmssToDel
 	return true
 }
 
-// RemoveGatewayScaleset attempts to delete the gateway vmss so we can update resources that it references
-func (c *cleaner) RemoveGatewayScaleset(ctx context.Context, rgName string) (retry bool) {
+// UpdateVMSSProbes attempts to remove the probes references so we can update the load balancer rules
+func (c *cleaner) UpdateVMSSProbes(ctx context.Context, rgName string) (retry bool) {
 	scalesets, err := c.vmss.List(ctx, rgName)
 	if err != nil {
 		c.log.Warn(err)
@@ -79,11 +79,13 @@ func (c *cleaner) RemoveGatewayScaleset(ctx context.Context, rgName string) (ret
 			continue
 		}
 
-		c.log.Printf("deleting gateway scaleset to update the health probe port %s", name)
-		err = c.vmss.DeleteAndWait(ctx, rgName, name)
+		//removes the network profile healthprobe
+		vmss.VirtualMachineProfile.NetworkProfile.HealthProbe = nil
+		c.log.Printf("removing the probe reference from the vmss %s", name)
+		err = c.vmss.CreateOrUpdateAndWait(ctx, rgName, name, vmss)
 		if err != nil {
 			c.log.Warn(err)
-			return false // If deletion failed, gateway vmss still exists. Don't retry.
+			return false // If update failed, gateway vmss still exists. Don't retry.
 		}
 	}
 	// no scaleset matched, so we should not retry and return the error
