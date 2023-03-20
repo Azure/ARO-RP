@@ -498,7 +498,7 @@ class NetworkProfile(msrest.serialization.Model):
     :vartype pod_cidr: str
     :ivar service_cidr: The CIDR used for OpenShift/Kubernetes Services.
     :vartype service_cidr: str
-    :ivar outbound_type: The OutboundType use for egress traffic. Possible values include:
+    :ivar outbound_type: The OutboundType used for egress traffic. Possible values include:
      "Loadbalancer", "UserDefinedRouting".
     :vartype outbound_type: str or ~azure.mgmt.redhatopenshift.v2023_04_01.models.OutboundType
     """
@@ -518,7 +518,7 @@ class NetworkProfile(msrest.serialization.Model):
         :paramtype pod_cidr: str
         :keyword service_cidr: The CIDR used for OpenShift/Kubernetes Services.
         :paramtype service_cidr: str
-        :keyword outbound_type: The OutboundType use for egress traffic. Possible values include:
+        :keyword outbound_type: The OutboundType used for egress traffic. Possible values include:
          "Loadbalancer", "UserDefinedRouting".
         :paramtype outbound_type: str or ~azure.mgmt.redhatopenshift.v2023_04_01.models.OutboundType
         """
