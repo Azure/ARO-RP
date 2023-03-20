@@ -158,16 +158,26 @@ func (d *deployer) deploy(ctx context.Context, rgName, deploymentName, vmssName 
 	for i := 0; i < 3; i++ {
 		d.log.Printf("deploying %s", deploymentName)
 		err = d.deployments.CreateOrUpdateAndWait(ctx, rgName, deploymentName, deployment)
-		if serviceErr, ok := err.(*azure.ServiceError); ok &&
-			serviceErr.Code == "DeploymentFailed" &&
-			i < 1 {
-			// on new RP deployments, we get a spurious DeploymentFailed error
-			// from the Microsoft.Insights/metricAlerts resources indicating
-			// that rp-lb can't be found, even though it exists and the
-			// resources correctly have a dependsOn stanza referring to it.
-			// Retry once.
-			d.log.Print(err)
-			continue
+		serviceErr, isServiceError := err.(*azure.ServiceError)
+		if isServiceError {
+			if serviceErr.Code == "DeploymentFailed" &&
+				i < 1 {
+				// on new RP deployments, we get a spurious DeploymentFailed error
+				// from the Microsoft.Insights/metricAlerts resources indicating
+				// that rp-lb can't be found, even though it exists and the
+				// resources correctly have a dependsOn stanza referring to it.
+				// Retry once.
+				d.log.Print(err)
+				continue
+			}
+			if serviceErr.Code == "CannotModifyProbeUsedByVMSS" {
+				// delete the gateway VMSS and recreates it. This is because we modified the health
+				// check port. This can be removed once all the regions have been updated to that
+				// new port.
+				if retry := d.vmssCleaner.RemoveGatewayScaleset(ctx, rgName); retry {
+					continue
+				}
+			}
 		}
 		if err != nil && *d.config.Configuration.VMSSCleanupEnabled {
 			if retry := d.vmssCleaner.RemoveFailedNewScaleset(ctx, rgName, vmssName); retry {

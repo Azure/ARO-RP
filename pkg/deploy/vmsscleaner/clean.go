@@ -5,6 +5,7 @@ package vmsscleaner
 
 import (
 	"context"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 
@@ -13,6 +14,7 @@ import (
 
 type Interface interface {
 	RemoveFailedNewScaleset(ctx context.Context, rgName, vmssToDelete string) (retry bool)
+	RemoveGatewayScaleset(ctx context.Context, rgName string) (retry bool)
 }
 
 type cleaner struct {
@@ -61,4 +63,29 @@ func (c *cleaner) RemoveFailedNewScaleset(ctx context.Context, rgName, vmssToDel
 	// If vmssToDelete was found and deleted successfully, deployment can be retried
 	// If it was not returned from List, assume it does not exist and that deployment can be retried.
 	return true
+}
+
+// RemoveGatewayScaleset attempts to delete the gateway vmss so we can update resources that it references
+func (c *cleaner) RemoveGatewayScaleset(ctx context.Context, rgName string) (retry bool) {
+	scalesets, err := c.vmss.List(ctx, rgName)
+	if err != nil {
+		c.log.Warn(err)
+		return false
+	}
+
+	for _, vmss := range scalesets {
+		name := *vmss.Name
+		if !strings.HasPrefix(name, "gateway-vmss-") {
+			continue
+		}
+
+		c.log.Printf("deleting gateway scaleset to update the health probe port %s", name)
+		err = c.vmss.DeleteAndWait(ctx, rgName, name)
+		if err != nil {
+			c.log.Warn(err)
+			return false // If deletion failed, gateway vmss still exists. Don't retry.
+		}
+	}
+	// no scaleset matched, so we should not retry and return the error
+	return false
 }
