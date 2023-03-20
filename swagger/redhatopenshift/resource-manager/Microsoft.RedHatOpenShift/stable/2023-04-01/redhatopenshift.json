@@ -1988,7 +1988,7 @@
         },
         "outboundType": {
           "$ref": "#/definitions/OutboundType",
-          "description": "The OutboundType use for egress traffic."
+          "description": "The OutboundType used for egress traffic."
         }
       }
     },

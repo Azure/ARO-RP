@@ -438,7 +438,7 @@ type NetworkProfile struct {
 	PodCidr *string `json:"podCidr,omitempty"`
 	// ServiceCidr - The CIDR used for OpenShift/Kubernetes Services.
 	ServiceCidr *string `json:"serviceCidr,omitempty"`
-	// OutboundType - The OutboundType use for egress traffic. Possible values include: 'Loadbalancer', 'UserDefinedRouting'
+	// OutboundType - The OutboundType used for egress traffic. Possible values include: 'Loadbalancer', 'UserDefinedRouting'
 	OutboundType OutboundType `json:"outboundType,omitempty"`
 }
 
