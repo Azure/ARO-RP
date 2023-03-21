@@ -1721,6 +1721,11 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 						APIServerProfile: v20220401.APIServerProfile{
 							Visibility: v20220401.VisibilityPrivate,
 						},
+						IngressProfiles: []v20220401.IngressProfile{
+							{
+								Visibility: v20220401.VisibilityPublic,
+							},
+						},
 					},
 				}
 			},
@@ -1770,6 +1775,11 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 							},
 							APIServerProfile: api.APIServerProfile{
 								Visibility: api.VisibilityPrivate,
+							},
+							IngressProfiles: []api.IngressProfile{
+								{
+									Visibility: api.VisibilityPublic,
+								},
 							},
 							OperatorFlags: api.OperatorFlags{},
 						},
@@ -1826,6 +1836,11 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 							APIServerProfile: api.APIServerProfile{
 								Visibility: api.VisibilityPrivate,
 							},
+							IngressProfiles: []api.IngressProfile{
+								{
+									Visibility: api.VisibilityPublic,
+								},
+							},
 							OperatorFlags: api.OperatorFlags{},
 						},
 						SystemData: api.SystemData{
@@ -1869,6 +1884,11 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 					},
 					APIServerProfile: v20220401.APIServerProfile{
 						Visibility: v20220401.VisibilityPrivate,
+					},
+					IngressProfiles: []v20220401.IngressProfile{
+						{
+							Visibility: v20220401.VisibilityPublic,
+						},
 					},
 				},
 				SystemData: &v20220401.SystemData{
