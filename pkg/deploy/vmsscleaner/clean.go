@@ -85,9 +85,8 @@ func (c *cleaner) UpdateVMSSProbes(ctx context.Context, rgName string) (retry bo
 		err = c.vmss.CreateOrUpdateAndWait(ctx, rgName, name, vmss)
 		if err != nil {
 			c.log.Warn(err)
-			return false // If update failed, gateway vmss still exists. Don't retry.
+			return false // If update failed, gateway vmss still has a reference to the probe
 		}
 	}
-	// no scaleset matched, so we should not retry and return the error
-	return false
+	return true
 }
