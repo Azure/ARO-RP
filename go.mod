@@ -473,6 +473,7 @@ exclude (
 
 replace (
 	bitbucket.org/ww/goautoneg => github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d // 404 on bitbucket.org/ww/goautoneg
+	github.com/Azure/azure-sdk-for-go => github.com/Azure/azure-sdk-for-go v63.1.0+incompatible
 	github.com/Unknwon/com => github.com/unknwon/com v1.0.1
 	github.com/clarketm/json => github.com/clarketm/json v1.15.7 // Later versions not compatible with Go 1.16
 	github.com/cockroachdb/sentry-go => github.com/getsentry/sentry-go v0.11.0
