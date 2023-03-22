@@ -178,7 +178,7 @@
                     {
                         "properties": {
                             "protocol": "Http",
-                            "port": 8081,
+                            "port": 80,
                             "numberOfProbes": 2,
                             "requestPath": "/healthz/ready"
                         },

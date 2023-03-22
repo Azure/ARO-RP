@@ -15,6 +15,15 @@ import (
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
+func (g *gateway) handleHttp(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		g.checkReady(w, r)
+	case http.MethodConnect:
+		g.handleConnect(w, r)
+	}
+}
+
 // handleConnect handles incoming HTTP proxy HTTPS CONNECT requests.  The Host
 // header will indicate where the incoming connection wants to be connected to.
 func (g *gateway) handleConnect(w http.ResponseWriter, r *http.Request) {
