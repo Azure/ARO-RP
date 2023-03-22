@@ -44,13 +44,6 @@ func TestEnsureResourceGroup(t *testing.T) {
 		"yeet": to.StringPtr("yote"),
 	}
 
-	modifyManagerClusterResourceGroupTags := func(m *manager) {
-		m.doc.OpenShiftCluster.Properties.ClusterResourceGroupTags = map[string]string{
-			"foo": "bar",
-			"bar": "baz",
-		}
-	}
-
 	resourceGroupManagedByMismatch := autorest.NewErrorWithError(&azure.RequestError{
 		ServiceError: &azure.ServiceError{Code: "ResourceGroupManagedByMismatch"},
 	}, "", "", nil, "")
@@ -458,5 +451,14 @@ func TestEnsureInfraID(t *testing.T) {
 				t.Fatalf("%s != %s (wanted)", checkDoc.OpenShiftCluster.Properties.InfraID, tt.wantedInfraID)
 			}
 		})
+	}
+}
+
+// modifyManagerClusterResourceGroupTags is a helper function used by some test cases to tweak the set of
+// tags included in an OpenShiftClusterDocument.
+func modifyManagerClusterResourceGroupTags(m *manager) {
+	m.doc.OpenShiftCluster.Properties.ClusterResourceGroupTags = map[string]string{
+		"foo": "bar",
+		"bar": "baz",
 	}
 }
