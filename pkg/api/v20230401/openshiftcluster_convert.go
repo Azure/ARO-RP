@@ -87,10 +87,10 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 		}
 	}
 
-	if oc.Properties.ClusterResourceGroupTags != nil {
-		out.Properties.ClusterResourceGroupTags = make(map[string]string, len(oc.Properties.ClusterResourceGroupTags))
-		for k, v := range oc.Properties.ClusterResourceGroupTags {
-			out.Properties.ClusterResourceGroupTags[k] = v
+	if oc.Properties.ResourceTags != nil {
+		out.Properties.ResourceTags = make(map[string]string, len(oc.Properties.ResourceTags))
+		for k, v := range oc.Properties.ResourceTags {
+			out.Properties.ResourceTags[k] = v
 		}
 	}
 
@@ -139,11 +139,11 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 			out.Tags[k] = v
 		}
 	}
-	out.Properties.ClusterResourceGroupTags = nil
-	if oc.Properties.ClusterResourceGroupTags != nil {
-		out.Properties.ClusterResourceGroupTags = make(map[string]string, len(oc.Properties.ClusterResourceGroupTags))
-		for k, v := range oc.Properties.ClusterResourceGroupTags {
-			out.Properties.ClusterResourceGroupTags[k] = v
+	out.Properties.ResourceTags = nil
+	if oc.Properties.ResourceTags != nil {
+		out.Properties.ResourceTags = make(map[string]string, len(oc.Properties.ResourceTags))
+		for k, v := range oc.Properties.ResourceTags {
+			out.Properties.ResourceTags[k] = v
 		}
 	}
 	out.Properties.ProvisioningState = api.ProvisioningState(oc.Properties.ProvisioningState)

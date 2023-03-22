@@ -2105,9 +2105,9 @@
           },
           "x-ms-identifiers": []
         },
-        "clusterResourceGroupTags": {
+        "resourceTags": {
           "$ref": "#/definitions/Tags",
-          "description": "The cluster resource group tags."
+          "description": "The set of tags to apply to the cluster resource group and resources."
         }
       }
     },

@@ -801,7 +801,7 @@ func TestOpenShiftClusterStaticValidateIngressProfile(t *testing.T) {
 	runTests(t, testModeCreate, tests)
 }
 
-func TestOpenShiftClusterStaticValidateClusterResourceGroupTags(t *testing.T) {
+func TestOpenShiftClusterStaticValidateResourceTags(t *testing.T) {
 	commonTests := []*validateTest{
 		{
 			name: "valid no tags",
@@ -809,7 +809,7 @@ func TestOpenShiftClusterStaticValidateClusterResourceGroupTags(t *testing.T) {
 		{
 			name: "valid one tag",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterResourceGroupTags = map[string]string{
+				oc.Properties.ResourceTags = map[string]string{
 					"key": "value",
 				}
 			},
@@ -817,21 +817,21 @@ func TestOpenShiftClusterStaticValidateClusterResourceGroupTags(t *testing.T) {
 		{
 			name: "too many tags",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterResourceGroupTags = map[string]string{}
+				oc.Properties.ResourceTags = map[string]string{}
 				for i := 0; i < maxTags+1; i++ {
-					oc.Properties.ClusterResourceGroupTags[fmt.Sprintf("key%d", i)] = "value"
+					oc.Properties.ResourceTags[fmt.Sprintf("key%d", i)] = "value"
 				}
 			},
-			wantErr: fmt.Sprintf("400: InvalidParameter: properties.clusterResourceGroupTags: The provided set of cluster resource group tags is too large; it can contain at most %d tags.", maxTags),
+			wantErr: fmt.Sprintf("400: InvalidParameter: properties.resourceTags: The provided set of cluster resource tags is too large; it can contain at most %d tags.", maxTags),
 		},
 		{
 			name: "invalid tag name ends with period",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterResourceGroupTags = map[string]string{
+				oc.Properties.ResourceTags = map[string]string{
 					"key.": "value",
 				}
 			},
-			wantErr: `400: InvalidParameter: properties.clusterResourceGroupTags: The following cluster resource group tags either have an invalid name or an invalid value:
+			wantErr: `400: InvalidParameter: properties.resourceTags: The following cluster resource tags either have an invalid name or an invalid value:
 - key.
 
 Tag names must:
@@ -845,12 +845,12 @@ Tag values have no character restrictions, but must have length <= 256.`,
 		{
 			name: "invalid tag name too long",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterResourceGroupTags = map[string]string{
+				oc.Properties.ResourceTags = map[string]string{
 					strings.Repeat("A", 129): "value",
 					"goodkey":                "value",
 				}
 			},
-			wantErr: strings.Replace(`400: InvalidParameter: properties.clusterResourceGroupTags: The following cluster resource group tags either have an invalid name or an invalid value:
+			wantErr: strings.Replace(`400: InvalidParameter: properties.resourceTags: The following cluster resource tags either have an invalid name or an invalid value:
 - REPLACE
 
 Tag names must:
@@ -864,12 +864,12 @@ Tag values have no character restrictions, but must have length <= 256.`, "REPLA
 		{
 			name: "invalid tag value too long",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterResourceGroupTags = map[string]string{
+				oc.Properties.ResourceTags = map[string]string{
 					"goodkey": "value",
 					"key":     strings.Repeat("A", 257),
 				}
 			},
-			wantErr: `400: InvalidParameter: properties.clusterResourceGroupTags: The following cluster resource group tags either have an invalid name or an invalid value:
+			wantErr: `400: InvalidParameter: properties.resourceTags: The following cluster resource tags either have an invalid name or an invalid value:
 - key
 
 Tag names must:

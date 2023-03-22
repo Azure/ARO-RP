@@ -15,7 +15,7 @@ import (
 	mgmtredhatopenshift20230401 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2023-04-01/redhatopenshift"
 )
 
-var testClusterResourceGroupTags map[string]*string = map[string]*string{
+var testResourceTags map[string]*string = map[string]*string{
 	"e2e_test_tag1": to.StringPtr("foo"),
 	"e2e_test_tag2": to.StringPtr("bar"),
 }
@@ -39,7 +39,7 @@ var _ = Describe("Cluster resource group tags", func() {
 		By("replacing the current set of tags with a new set")
 		updateParameters := mgmtredhatopenshift20230401.OpenShiftClusterUpdate{
 			OpenShiftClusterProperties: &mgmtredhatopenshift20230401.OpenShiftClusterProperties{
-				ClusterResourceGroupTags: testClusterResourceGroupTags,
+				ResourceTags: testResourceTags,
 			},
 		}
 
@@ -47,13 +47,13 @@ var _ = Describe("Cluster resource group tags", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("verifying the request to replace the set of tags fully replaced the previous set stored in the API field")
-		Expect(oc.OpenShiftClusterProperties.ClusterResourceGroupTags).To(Equal(testClusterResourceGroupTags))
+		Expect(oc.OpenShiftClusterProperties.ResourceTags).To(Equal(testResourceTags))
 
 		By("verifying the new set of tags is present on the resource group")
 		group, err = clients.ResourceGroups.Get(ctx, clusterResourceGroupID)
 		Expect(err).NotTo(HaveOccurred())
 
-		for k, v := range testClusterResourceGroupTags {
+		for k, v := range testResourceTags {
 			Expect(group.Tags).Should(HaveKey(k))
 			Expect(*group.Tags[k]).To(Equal(*v))
 		}
@@ -61,7 +61,7 @@ var _ = Describe("Cluster resource group tags", func() {
 		By("replacing the current set of tags with the empty set")
 		updateParameters = mgmtredhatopenshift20230401.OpenShiftClusterUpdate{
 			OpenShiftClusterProperties: &mgmtredhatopenshift20230401.OpenShiftClusterProperties{
-				ClusterResourceGroupTags: map[string]*string{},
+				ResourceTags: map[string]*string{},
 			},
 		}
 
@@ -69,13 +69,13 @@ var _ = Describe("Cluster resource group tags", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("verifying that the API field now contains the empty set")
-		Expect(oc.OpenShiftClusterProperties.ClusterResourceGroupTags).To(Equal(map[string]*string{}))
+		Expect(oc.OpenShiftClusterProperties.ResourceTags).To(Equal(map[string]*string{}))
 
 		By("verifying that the tags are still present on the resource group despite being removed from the API field")
 		group, err = clients.ResourceGroups.Get(ctx, clusterResourceGroupID)
 		Expect(err).NotTo(HaveOccurred())
 
-		for k, v := range testClusterResourceGroupTags {
+		for k, v := range testResourceTags {
 			Expect(group.Tags).Should(HaveKey(k))
 			Expect(*group.Tags[k]).To(Equal(*v))
 		}
@@ -85,7 +85,7 @@ var _ = Describe("Cluster resource group tags", func() {
 func restoreClusterResourceGroupTags(ctx context.Context) (oc mgmtredhatopenshift20230401.OpenShiftCluster, group mgmtfeatures.ResourceGroup, err error) {
 	updateParameters := mgmtredhatopenshift20230401.OpenShiftClusterUpdate{
 		OpenShiftClusterProperties: &mgmtredhatopenshift20230401.OpenShiftClusterProperties{
-			ClusterResourceGroupTags: originalClusterResourceGroupTags,
+			ResourceTags: originalResourceTags,
 		},
 	}
 

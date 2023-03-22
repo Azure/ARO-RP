@@ -47,7 +47,7 @@
             "visibility": "Public"
           }
         ],
-        "clusterResourceGroupTags": null
+        "resourceTags": null
       }
     }
   },
@@ -111,7 +111,7 @@
               "ip": "1.2.3.4"
             }
           ],
-          "clusterResourceGroupTags": null
+          "resourceTags": null
         }
       }
     },
@@ -174,7 +174,7 @@
               "ip": "1.2.3.4"
             }
           ],
-          "clusterResourceGroupTags": null
+          "resourceTags": null
         }
       }
     }

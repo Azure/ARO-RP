@@ -4,10 +4,10 @@
 from azext_aro._validators import validate_cidr
 from azext_aro._validators import validate_client_id
 from azext_aro._validators import validate_cluster_resource_group
-from azext_aro._validators import validate_cluster_resource_group_tags
 from azext_aro._validators import validate_disk_encryption_set
 from azext_aro._validators import validate_domain
 from azext_aro._validators import validate_pull_secret
+from azext_aro._validators import validate_resource_tags
 from azext_aro._validators import validate_subnet
 from azext_aro._validators import validate_client_secret
 from azext_aro._validators import validate_visibility
@@ -34,11 +34,10 @@ def load_arguments(self, _):
                    help='Name of cluster.')
         c.argument('tags',
                    tags_type)
-        c.argument('cluster_resource_group_tags',
+        c.argument('resource_tags',
                    nargs='*',
-                   options_list=['--cluster-resource-group-tags', '--rg-tags'],
-                   help=f"Tags to apply to the cluster resource group; a space-separated list of tags in 'key=[value]' format. {quote_text}",  # pylint: disable=line-too-long
-                   validator=validate_cluster_resource_group_tags)
+                   help=f"Tags to apply to the cluster resource group and resources; a space-separated list of tags in 'key=[value]' format. {quote_text}",  # pylint: disable=line-too-long
+                   validator=validate_resource_tags)
 
         c.argument('pull_secret',
                    help='Pull secret of cluster.',

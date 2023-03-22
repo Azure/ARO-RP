@@ -70,20 +70,20 @@ def validate_cluster_resource_group(cmd, namespace):
             " resource group must not exist.")
 
 
-def validate_cluster_resource_group_tags(namespace):
-    if namespace.cluster_resource_group_tags is None:
+def validate_resource_tags(namespace):
+    if namespace.resource_tags is None:
         return
 
-    if len(namespace.cluster_resource_group_tags) == 1 and namespace.cluster_resource_group_tags[0] == '':
-        namespace.cluster_resource_group_tags = {}
+    if len(namespace.resource_tags) == 1 and namespace.resource_tags[0] == '':
+        namespace.resource_tags= {}
         return
 
     tags = {}
 
-    for t in namespace.cluster_resource_group_tags:
+    for t in namespace.resource_tags:
         tags.update(validate_tag(t))
 
-    namespace.cluster_resource_group_tags = tags
+    namespace.resource_tags = tags
 
 
 def validate_disk_encryption_set(cmd, namespace):
