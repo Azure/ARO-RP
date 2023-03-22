@@ -16,7 +16,7 @@
                     "id": "[parameters('databaseName')]"
                 },
                 "options": {
-                    "throughput": 500
+                    "throughput": 1000
                 }
             },
             "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'))]",

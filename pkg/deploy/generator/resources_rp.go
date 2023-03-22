@@ -1092,7 +1092,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 						ID: to.StringPtr("[" + databaseName + "]"),
 					},
 					Options: &mgmtdocumentdb.CreateUpdateOptions{
-						Throughput: to.Int32Ptr(500),
+						Throughput: to.Int32Ptr(1000),
 					},
 				},
 				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ")]"),
