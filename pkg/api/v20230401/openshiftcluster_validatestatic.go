@@ -25,7 +25,7 @@ import (
 //
 // See https://github.com/openshift/enhancements/blob/master/enhancements/api-review/azure_user_defined_tags.md
 // to understand how the value was decided.
-var maxTags = 10
+const maxTags = 10
 
 // Compiled regexp to use to check whether a cluster resource group tag name is valid.
 //
