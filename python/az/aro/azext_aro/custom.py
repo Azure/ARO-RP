@@ -195,8 +195,7 @@ def aro_validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
     sp_obj_ids = [rp_client_sp_id]
 
     if client_id is not None:
-        client_sp_id = aad.get_service_principal_id(client_id)
-        sp_obj_ids.append(client_sp_id)
+        sp_obj_ids.append(aad.get_service_principal_id(client_id))
 
     cluster = mockoc(disk_encryption_set, master_subnet, worker_subnet)
     try:
