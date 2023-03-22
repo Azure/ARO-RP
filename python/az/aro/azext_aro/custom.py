@@ -336,7 +336,7 @@ def aro_update(cmd,
         if client_id is not None:
             ocUpdate.service_principal_profile.client_id = client_id
 
-    ocUpdate.resource_tags = resource_tags 
+    ocUpdate.resource_tags = resource_tags
 
     return sdk_no_wait(no_wait, client.open_shift_clusters.begin_update,
                        resource_group_name=resource_group_name,
