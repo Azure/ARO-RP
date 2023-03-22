@@ -467,6 +467,7 @@ replace (
 	github.com/uber-go/atomic => go.uber.org/atomic v1.9.0
 	github.com/uber/athenadriver => github.com/uber/athenadriver v1.1.10
 	github.com/willf/bitset => github.com/bits-and-blooms/bitset v1.2.1
+	go.mongodb.org/mongo-driver => go.mongodb.org/mongo-driver v1.9.4
 	google.golang.org/cloud => cloud.google.com/go v0.97.0
 	google.golang.org/grpc => google.golang.org/grpc v1.40.0
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20211115234752-e816edb12b65
