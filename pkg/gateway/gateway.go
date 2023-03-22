@@ -176,7 +176,7 @@ func NewGateway(ctx context.Context, env env.Core, baseLog, accessLog *logrus.En
 	panicMiddleware := middleware.Panic(baseLog)
 
 	proxyRouter := http.NewServeMux()
-	proxyRouter.Handle("/", panicMiddleware(http.HandlerFunc(g.handleConnect)))
+	proxyRouter.Handle("/", panicMiddleware(http.HandlerFunc(g.handleHttp)))
 
 	healthRouter := http.NewServeMux()
 	healthRouter.Handle("/healthz/ready", http.HandlerFunc(g.checkReady))
