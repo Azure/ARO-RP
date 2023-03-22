@@ -21,6 +21,13 @@ type ProvidersValidator interface {
 
 type providersValidator struct{}
 
+var requiredResourceProviders = []string{
+	"Microsoft.Authorization",
+	"Microsoft.Compute",
+	"Microsoft.Network",
+	"Microsoft.Storage",
+}
+
 func (p providersValidator) ValidateProviders(ctx context.Context, azEnv *azureclient.AROEnvironment, environment env.Interface, subscriptionID, tenantID string) error {
 	fpAuthorizer, err := environment.FPAuthorizer(tenantID, environment.Environment().ResourceManagerEndpoint)
 	if err != nil {
@@ -44,12 +51,7 @@ func validateProviders(ctx context.Context, providersClient features.ProvidersCl
 		providerMap[*provider.Namespace] = provider
 	}
 
-	for _, provider := range []string{
-		"Microsoft.Authorization",
-		"Microsoft.Compute",
-		"Microsoft.Network",
-		"Microsoft.Storage",
-	} {
+	for _, provider := range requiredResourceProviders {
 		if providerMap[provider].RegistrationState == nil ||
 			*providerMap[provider].RegistrationState != "Registered" {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceProviderNotRegistered, "", "The resource provider '%s' is not registered.", provider)
