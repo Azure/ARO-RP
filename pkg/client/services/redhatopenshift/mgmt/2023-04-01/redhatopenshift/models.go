@@ -750,8 +750,8 @@ type OpenShiftClusterProperties struct {
 	ApiserverProfile *APIServerProfile `json:"apiserverProfile,omitempty"`
 	// IngressProfiles - The cluster ingress profiles.
 	IngressProfiles *[]IngressProfile `json:"ingressProfiles,omitempty"`
-	// ClusterResourceGroupTags - The cluster resource group tags.
-	ClusterResourceGroupTags map[string]*string `json:"clusterResourceGroupTags"`
+	// ResourceTags - The set of tags to apply to the cluster resource group and resources.
+	ResourceTags map[string]*string `json:"resourceTags"`
 }
 
 // MarshalJSON is the custom marshaler for OpenShiftClusterProperties.
@@ -784,8 +784,8 @@ func (oscp OpenShiftClusterProperties) MarshalJSON() ([]byte, error) {
 	if oscp.IngressProfiles != nil {
 		objectMap["ingressProfiles"] = oscp.IngressProfiles
 	}
-	if oscp.ClusterResourceGroupTags != nil {
-		objectMap["clusterResourceGroupTags"] = oscp.ClusterResourceGroupTags
+	if oscp.ResourceTags != nil {
+		objectMap["resourceTags"] = oscp.ResourceTags
 	}
 	return json.Marshal(objectMap)
 }

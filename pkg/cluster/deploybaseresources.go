@@ -61,12 +61,12 @@ func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
 	group.Location = &m.doc.OpenShiftCluster.Location
 	group.ManagedBy = &m.doc.OpenShiftCluster.ID
 
-	if m.doc.OpenShiftCluster.Properties.ClusterResourceGroupTags != nil {
+	if m.doc.OpenShiftCluster.Properties.ResourceTags != nil {
 		if group.Tags == nil {
 			group.Tags = map[string]*string{}
 		}
 
-		for k, v := range m.doc.OpenShiftCluster.Properties.ClusterResourceGroupTags {
+		for k, v := range m.doc.OpenShiftCluster.Properties.ResourceTags {
 			group.Tags[k] = to.StringPtr(v)
 		}
 	}

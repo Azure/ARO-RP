@@ -126,8 +126,8 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	//
 	// If it turns out that the customer has not passed a new set of tags to use, we
 	// can restore the old one after the json.Unmarshal() call since we saved it here.
-	originalClusterResourceGroupTags := doc.OpenShiftCluster.Properties.ClusterResourceGroupTags
-	doc.OpenShiftCluster.Properties.ClusterResourceGroupTags = nil
+	originalResourceTags := doc.OpenShiftCluster.Properties.ResourceTags
+	doc.OpenShiftCluster.Properties.ResourceTags = nil
 
 	var ext interface{}
 	switch method {
@@ -167,13 +167,13 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 
 	// Ensure that both ext and doc contain the sets of tags they are supposed to
 	// before proceeding with validation.
-	doc.OpenShiftCluster.Properties.ClusterResourceGroupTags = originalClusterResourceGroupTags
+	doc.OpenShiftCluster.Properties.ResourceTags = originalResourceTags
 
 	tempOc := &api.OpenShiftCluster{}
 	converter.ToInternal(ext, tempOc)
 
-	if tempOc.Properties.ClusterResourceGroupTags == nil {
-		tempOc.Properties.ClusterResourceGroupTags = originalClusterResourceGroupTags
+	if tempOc.Properties.ResourceTags == nil {
+		tempOc.Properties.ResourceTags = originalResourceTags
 		tagsExt := converter.ToExternal(tempOc)
 
 		tagsJson, err := json.Marshal(tagsExt)

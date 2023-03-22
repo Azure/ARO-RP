@@ -21,13 +21,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
-// The maximum allowed number of cluster resource group tags.
+// The maximum allowed number of cluster resource tags.
 //
 // See https://github.com/openshift/enhancements/blob/master/enhancements/api-review/azure_user_defined_tags.md
 // to understand how the value was decided.
 const maxTags = 10
 
-// Compiled regexp to use to check whether a cluster resource group tag name is valid.
+// Compiled regexp to use to check whether a cluster resource tag name is valid.
 //
 // Valid tag names:
 // - Start with a letter
@@ -120,7 +120,7 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *Ope
 	if err := sv.validateAPIServerProfile(path+".apiserverProfile", &p.APIServerProfile); err != nil {
 		return err
 	}
-	if err := sv.validateClusterResourceGroupTags(path+".clusterResourceGroupTags", p.ClusterResourceGroupTags); err != nil {
+	if err := sv.validateResourceTags(path+".resourceTags", p.ResourceTags); err != nil {
 		return err
 	}
 
@@ -373,21 +373,21 @@ func (sv openShiftClusterStaticValidator) validateIngressProfile(path string, p 
 	return nil
 }
 
-func (sv openShiftClusterStaticValidator) validateClusterResourceGroupTags(path string, t Tags) error {
+func (sv openShiftClusterStaticValidator) validateResourceTags(path string, t Tags) error {
 	if len(t) > maxTags {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, fmt.Sprintf("The provided set of cluster resource group tags is too large; it can contain at most %d tags.", maxTags))
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, fmt.Sprintf("The provided set of cluster resource tags is too large; it can contain at most %d tags.", maxTags))
 	}
 
 	var invalidTags []string
 
 	for k, v := range t {
-		if !sv.clusterResourceGroupTagIsValid(k, v) {
+		if !sv.resourceTagIsValid(k, v) {
 			invalidTags = append(invalidTags, k)
 		}
 	}
 
 	if len(invalidTags) > 0 {
-		errorMsg := "The following cluster resource group tags either have an invalid name or an invalid value:\n"
+		errorMsg := "The following cluster resource tags either have an invalid name or an invalid value:\n"
 
 		for _, v := range invalidTags {
 			errorMsg += fmt.Sprintf("- %s\n", v)
@@ -408,7 +408,7 @@ Tag values have no character restrictions, but must have length <= 256.`
 	return nil
 }
 
-func (sv openShiftClusterStaticValidator) clusterResourceGroupTagIsValid(key string, value string) bool {
+func (sv openShiftClusterStaticValidator) resourceTagIsValid(key string, value string) bool {
 	return tagNameRegexp.MatchString(key) && len(value) <= 256
 }
 

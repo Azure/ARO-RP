@@ -62,7 +62,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                apiserver_visibility=None,
                ingress_visibility=None,
                tags=None,
-               cluster_resource_group_tags=None,
+               resource_tags=None,
                version=None,
                no_wait=False):
     if not rp_mode_development():
@@ -123,7 +123,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
     oc = openshiftcluster.OpenShiftCluster(
         location=location,
         tags=tags,
-        cluster_resource_group_tags=cluster_resource_group_tags,
+        resource_tags=resource_tags,
         cluster_profile=openshiftcluster.ClusterProfile(
             pull_secret=pull_secret or "",
             domain=domain or random_id,
@@ -397,7 +397,7 @@ def aro_update(cmd,
                client_id=None,
                client_secret=None,
                no_wait=False,
-               cluster_resource_group_tags=None):
+               resource_tags=None):
     # if we can't read cluster spec, we will not be able to do much. Fail.
     oc = client.open_shift_clusters.get(resource_group_name, resource_name)
 
@@ -415,7 +415,7 @@ def aro_update(cmd,
         if client_id is not None:
             ocUpdate.service_principal_profile.client_id = client_id
 
-    ocUpdate.cluster_resource_group_tags = cluster_resource_group_tags
+    ocUpdate.resource_tags = resource_tags 
 
     return sdk_no_wait(no_wait, client.open_shift_clusters.begin_update,
                        resource_group_name=resource_group_name,

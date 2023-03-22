@@ -677,8 +677,8 @@ class OpenShiftCluster(TrackedResource):
     :vartype apiserver_profile: ~azure.mgmt.redhatopenshift.v2023_04_01.models.APIServerProfile
     :ivar ingress_profiles: The cluster ingress profiles.
     :vartype ingress_profiles: list[~azure.mgmt.redhatopenshift.v2023_04_01.models.IngressProfile]
-    :ivar cluster_resource_group_tags: The cluster resource group tags.
-    :vartype cluster_resource_group_tags: dict[str, str]
+    :ivar resource_tags: The set of tags to apply to the cluster resource group and resources.
+    :vartype resource_tags: dict[str, str]
     """
 
     _validation = {
@@ -705,7 +705,7 @@ class OpenShiftCluster(TrackedResource):
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
         'apiserver_profile': {'key': 'properties.apiserverProfile', 'type': 'APIServerProfile'},
         'ingress_profiles': {'key': 'properties.ingressProfiles', 'type': '[IngressProfile]'},
-        'cluster_resource_group_tags': {'key': 'properties.clusterResourceGroupTags', 'type': '{str}'},
+        'resource_tags': {'key': 'properties.resourceTags', 'type': '{str}'},
     }
 
     def __init__(
@@ -722,7 +722,7 @@ class OpenShiftCluster(TrackedResource):
         worker_profiles: Optional[List["WorkerProfile"]] = None,
         apiserver_profile: Optional["APIServerProfile"] = None,
         ingress_profiles: Optional[List["IngressProfile"]] = None,
-        cluster_resource_group_tags: Optional[Dict[str, str]] = None,
+        resource_tags: Optional[Dict[str, str]] = None,
         **kwargs
     ):
         """
@@ -752,8 +752,8 @@ class OpenShiftCluster(TrackedResource):
         :keyword ingress_profiles: The cluster ingress profiles.
         :paramtype ingress_profiles:
          list[~azure.mgmt.redhatopenshift.v2023_04_01.models.IngressProfile]
-        :keyword cluster_resource_group_tags: The cluster resource group tags.
-        :paramtype cluster_resource_group_tags: dict[str, str]
+        :keyword resource_tags: The set of tags to apply to the cluster resource group and resources.
+        :paramtype resource_tags: dict[str, str]
         """
         super(OpenShiftCluster, self).__init__(tags=tags, location=location, **kwargs)
         self.provisioning_state = provisioning_state
@@ -765,7 +765,7 @@ class OpenShiftCluster(TrackedResource):
         self.worker_profiles = worker_profiles
         self.apiserver_profile = apiserver_profile
         self.ingress_profiles = ingress_profiles
-        self.cluster_resource_group_tags = cluster_resource_group_tags
+        self.resource_tags = resource_tags
 
 
 class OpenShiftClusterAdminKubeconfig(msrest.serialization.Model):
@@ -887,8 +887,8 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
     :vartype apiserver_profile: ~azure.mgmt.redhatopenshift.v2023_04_01.models.APIServerProfile
     :ivar ingress_profiles: The cluster ingress profiles.
     :vartype ingress_profiles: list[~azure.mgmt.redhatopenshift.v2023_04_01.models.IngressProfile]
-    :ivar cluster_resource_group_tags: The cluster resource group tags.
-    :vartype cluster_resource_group_tags: dict[str, str]
+    :ivar resource_tags: The set of tags to apply to the cluster resource group and resources.
+    :vartype resource_tags: dict[str, str]
     """
 
     _validation = {
@@ -907,7 +907,7 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
         'apiserver_profile': {'key': 'properties.apiserverProfile', 'type': 'APIServerProfile'},
         'ingress_profiles': {'key': 'properties.ingressProfiles', 'type': '[IngressProfile]'},
-        'cluster_resource_group_tags': {'key': 'properties.clusterResourceGroupTags', 'type': '{str}'},
+        'resource_tags': {'key': 'properties.resourceTags', 'type': '{str}'},
     }
 
     def __init__(
@@ -923,7 +923,7 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         worker_profiles: Optional[List["WorkerProfile"]] = None,
         apiserver_profile: Optional["APIServerProfile"] = None,
         ingress_profiles: Optional[List["IngressProfile"]] = None,
-        cluster_resource_group_tags: Optional[Dict[str, str]] = None,
+        resource_tags: Optional[Dict[str, str]] = None,
         **kwargs
     ):
         """
@@ -951,8 +951,8 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         :keyword ingress_profiles: The cluster ingress profiles.
         :paramtype ingress_profiles:
          list[~azure.mgmt.redhatopenshift.v2023_04_01.models.IngressProfile]
-        :keyword cluster_resource_group_tags: The cluster resource group tags.
-        :paramtype cluster_resource_group_tags: dict[str, str]
+        :keyword resource_tags: The set of tags to apply to the cluster resource group and resources.
+        :paramtype resource_tags: dict[str, str]
         """
         super(OpenShiftClusterUpdate, self).__init__(**kwargs)
         self.tags = tags
@@ -966,7 +966,7 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         self.worker_profiles = worker_profiles
         self.apiserver_profile = apiserver_profile
         self.ingress_profiles = ingress_profiles
-        self.cluster_resource_group_tags = cluster_resource_group_tags
+        self.resource_tags = resource_tags
 
 
 class OpenShiftVersion(ProxyResource):
