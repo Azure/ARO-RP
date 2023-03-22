@@ -47,17 +47,3 @@ func (mr *MockInterfaceMockRecorder) RemoveFailedNewScaleset(arg0, arg1, arg2 in
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveFailedNewScaleset", reflect.TypeOf((*MockInterface)(nil).RemoveFailedNewScaleset), arg0, arg1, arg2)
 }
-
-// UpdateVMSSProbes mocks base method.
-func (m *MockInterface) UpdateVMSSProbes(arg0 context.Context, arg1 string) bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateVMSSProbes", arg0, arg1)
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// UpdateVMSSProbes indicates an expected call of UpdateVMSSProbes.
-func (mr *MockInterfaceMockRecorder) UpdateVMSSProbes(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateVMSSProbes", reflect.TypeOf((*MockInterface)(nil).UpdateVMSSProbes), arg0, arg1)
-}
