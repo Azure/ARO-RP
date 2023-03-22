@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	utilnet "github.com/Azure/ARO-RP/pkg/util/net"
+	"github.com/Azure/ARO-RP/pkg/util/dns"
 )
 
 const ingressNameSuffix = "-ingress"
@@ -89,7 +89,7 @@ func (r *checker) clusterHasManagedDomain(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	return utilnet.IsManagedDomain(cluster.Spec.Domain), nil
+	return dns.IsManagedDomain(cluster.Spec.Domain), nil
 }
 
 func validateCertificate(clusterId configv1.ClusterID, ingressCertificate *corev1.LocalObjectReference, clusterHasManagedDomain bool) error {
