@@ -120,7 +120,7 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *Ope
 	if err := sv.validateAPIServerProfile(path+".apiserverProfile", &p.APIServerProfile); err != nil {
 		return err
 	}
-	if err := sv.validateClusterResourceGroupTags(path+".clusterResourceGroupTags", &p.ClusterResourceGroupTags); err != nil {
+	if err := sv.validateClusterResourceGroupTags(path+".clusterResourceGroupTags", p.ClusterResourceGroupTags); err != nil {
 		return err
 	}
 
@@ -373,14 +373,14 @@ func (sv openShiftClusterStaticValidator) validateIngressProfile(path string, p 
 	return nil
 }
 
-func (sv openShiftClusterStaticValidator) validateClusterResourceGroupTags(path string, t *Tags) error {
-	if len(*t) > maxTags {
+func (sv openShiftClusterStaticValidator) validateClusterResourceGroupTags(path string, t Tags) error {
+	if len(t) > maxTags {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, fmt.Sprintf("The provided set of cluster resource group tags is too large; it can contain at most %d tags.", maxTags))
 	}
 
 	var invalidTags []string
 
-	for k, v := range *t {
+	for k, v := range t {
 		if !sv.clusterResourceGroupTagIsValid(k, v) {
 			invalidTags = append(invalidTags, k)
 		}
