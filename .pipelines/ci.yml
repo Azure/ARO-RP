@@ -94,7 +94,7 @@ jobs:
 
   - script: |
       set -xe
-      go run github.com/axw/gocov/gocov convert cover.out | go run github.com/AlekSi/gocov-xml > coverage.xml
+      go run github.com/axw/gocov/gocov@v1.1.0 convert cover.out | go run github.com/AlekSi/gocov-xml@v1.1.0 > coverage.xml
     displayName: ⚙️ Process Reports
     condition: succeededOrFailed()
     target: golang
