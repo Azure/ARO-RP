@@ -286,5 +286,16 @@ func (f *frontend) ValidateNewCluster(ctx context.Context, subscription *api.Sub
 	if err != nil {
 		return err
 	}
-	return f.quotaValidator.ValidateQuota(ctx, f.env.Environment(), f.env, subscription.ID, subscription.Subscription.Properties.TenantID, cluster)
+
+	err = f.skuValidator.ValidateVMSku(ctx, f.env.Environment(), f.env, subscription.ID, subscription.Subscription.Properties.TenantID, cluster)
+	if err != nil {
+		return err
+	}
+
+	err = f.quotaValidator.ValidateQuota(ctx, f.env.Environment(), f.env, subscription.ID, subscription.Subscription.Properties.TenantID, cluster)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

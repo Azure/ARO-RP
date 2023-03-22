@@ -107,20 +107,6 @@ func (mr *MockDynamicMockRecorder) ValidateSubnets(arg0, arg1, arg2 interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateSubnets", reflect.TypeOf((*MockDynamic)(nil).ValidateSubnets), arg0, arg1, arg2)
 }
 
-// ValidateVMSku mocks base method.
-func (m *MockDynamic) ValidateVMSku(arg0 context.Context, arg1, arg2 string, arg3 *api.OpenShiftCluster) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateVMSku", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ValidateVMSku indicates an expected call of ValidateVMSku.
-func (mr *MockDynamicMockRecorder) ValidateVMSku(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateVMSku", reflect.TypeOf((*MockDynamic)(nil).ValidateVMSku), arg0, arg1, arg2, arg3)
-}
-
 // ValidateVnet mocks base method.
 func (m *MockDynamic) ValidateVnet(arg0 context.Context, arg1 string, arg2 []dynamic.Subnet, arg3 ...string) error {
 	m.ctrl.T.Helper()

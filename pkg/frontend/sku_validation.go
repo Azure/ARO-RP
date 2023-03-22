@@ -1,4 +1,4 @@
-package dynamic
+package frontend
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -11,15 +11,35 @@ import (
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 )
 
-// ValidateWorkerSku uses resourceSkusClient to ensure that the VM sizes listed in the cluster document are available for use in the target region.
-func (dv *dynamic) ValidateVMSku(ctx context.Context, location string, subscriptionID string, oc *api.OpenShiftCluster) error {
-	// Get a list of available worker SKUs, filtering by location. We initialize a new resourceSkusClient here instead of using the one in dv.env,
+type SkuValidator interface {
+	ValidateVMSku(ctx context.Context, azEnv *azureclient.AROEnvironment, environment env.Interface, subscriptionID, tenantID string, oc *api.OpenShiftCluster) error
+}
+
+type skuValidator struct{}
+
+func (s skuValidator) ValidateVMSku(ctx context.Context, azEnv *azureclient.AROEnvironment, environment env.Interface, subscriptionID, tenantID string, oc *api.OpenShiftCluster) error {
+	fpAuthorizer, err := environment.FPAuthorizer(tenantID, environment.Environment().ResourceManagerEndpoint)
+	if err != nil {
+		return err
+	}
+	resourceSkusClient := compute.NewResourceSkusClient(azEnv, subscriptionID, fpAuthorizer)
+
+	return validateVMSku(ctx, oc, resourceSkusClient)
+}
+
+// validateVMSku uses resourceSkusClient to ensure that the VM sizes listed in the cluster document are available for use in the target region.
+func validateVMSku(ctx context.Context, oc *api.OpenShiftCluster, resourceSkusClient compute.ResourceSkusClient) error {
+	// Get a list of available worker SKUs, filtering by location. We initialized a new resourceSkusClient
 	// so that we can determine SKU availability within target cluster subscription instead of within RP subscription.
+	location := oc.Location
 	filter := fmt.Sprintf("location eq %s", location)
-	skus, err := dv.resourceSkusClient.List(ctx, filter)
+	skus, err := resourceSkusClient.List(ctx, filter)
 	if err != nil {
 		return err
 	}

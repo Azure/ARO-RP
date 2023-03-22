@@ -662,6 +662,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		isPatch                bool
 		fixture                func(*testdatabase.Fixture)
 		quotaValidatorError    error
+		skuValidatorError      error
 		wantEnriched           []string
 		wantSystemDataEnriched bool
 		wantDocuments          func(*testdatabase.Checker)
@@ -784,6 +785,48 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			wantEnriched:        []string{},
 			wantStatusCode:      http.StatusBadRequest,
 			wantError:           "400: QuotaExceeded: : Resource quota of vm exceeded. Maximum allowed: 0, Current in use: 0, Additional requested: 1.",
+		},
+		{
+			name: "create a new cluster sku unavailable",
+			request: func(oc *v20200430.OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Version = "4.10.20"
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+				})
+			},
+			skuValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The selected SKU '%v' is unavailable in region '%v'", "Standard_Sku", "somewhere"),
+			wantEnriched:      []string{},
+			wantStatusCode:    http.StatusBadRequest,
+			wantError:         "400: InvalidParameter: : The selected SKU 'Standard_Sku' is unavailable in region 'somewhere'",
+		},
+		{
+			name: "create a new cluster sku restricted",
+			request: func(oc *v20200430.OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Version = "4.10.20"
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+				})
+			},
+			skuValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The selected SKU '%v' is restricted in region '%v' for selected subscription", "Standard_Sku", "somewhere"),
+			wantEnriched:      []string{},
+			wantStatusCode:    http.StatusBadRequest,
+			wantError:         "400: InvalidParameter: : The selected SKU 'Standard_Sku' is restricted in region 'somewhere' for selected subscription",
 		},
 		{
 			name: "update a cluster from succeeded",
@@ -1446,8 +1489,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			mockValidator := mock_frontend.NewMockQuotaValidator(controller)
-			mockValidator.EXPECT().ValidateQuota(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.quotaValidatorError).AnyTimes()
+			mockQuotaValidator := mock_frontend.NewMockQuotaValidator(controller)
+			mockQuotaValidator.EXPECT().ValidateQuota(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.quotaValidatorError).AnyTimes()
+
+			mockSkuValidator := mock_frontend.NewMockSkuValidator(controller)
+			mockSkuValidator.EXPECT().ValidateVMSku(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.skuValidatorError).AnyTimes()
 
 			err := ti.buildFixtures(tt.fixture)
 			if err != nil {
@@ -1461,7 +1507,8 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f.quotaValidator = mockValidator
+			f.quotaValidator = mockQuotaValidator
+			f.skuValidator = mockSkuValidator
 			f.bucketAllocator = bucket.Fixed(1)
 			f.now = func() time.Time { return mockCurrentTime }
 

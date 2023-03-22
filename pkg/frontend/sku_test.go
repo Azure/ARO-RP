@@ -1,4 +1,4 @@
-package dynamic
+package frontend
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -12,7 +12,6 @@ import (
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
-	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
@@ -24,7 +23,6 @@ func TestValidateVMSku(t *testing.T) {
 		restrictions          mgmtcompute.ResourceSkuRestrictionsReasonCode
 		restrictionLocation   *[]string
 		restrictedZones       []string
-		targetLocation        string
 		workerProfile1Sku     string
 		workerProfile2Sku     string
 		masterProfileSku      string
@@ -140,10 +138,6 @@ func TestValidateVMSku(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.targetLocation == "" {
-				tt.targetLocation = "eastus"
-			}
-
 			if tt.restrictedZones == nil {
 				tt.restrictedZones = []string{"1", "2", "3"}
 			}
@@ -152,6 +146,7 @@ func TestValidateVMSku(t *testing.T) {
 			defer controller.Finish()
 
 			oc := &api.OpenShiftCluster{
+				Location: "eastus",
 				Properties: api.OpenShiftClusterProperties{
 					WorkerProfiles: []api.WorkerProfile{
 						{
@@ -190,7 +185,7 @@ func TestValidateVMSku(t *testing.T) {
 				},
 				{
 					Name:      &tt.restrictedSku,
-					Locations: &[]string{tt.targetLocation},
+					Locations: &[]string{"eastus"},
 					LocationInfo: &[]mgmtcompute.ResourceSkuLocationInfo{
 						{Zones: &tt.restrictedZones},
 					},
@@ -209,16 +204,10 @@ func TestValidateVMSku(t *testing.T) {
 
 			resourceSkusClient := mock_compute.NewMockResourceSkusClient(controller)
 			resourceSkusClient.EXPECT().
-				List(gomock.Any(), fmt.Sprintf("location eq %v", tt.targetLocation)).
+				List(gomock.Any(), fmt.Sprintf("location eq %v", "eastus")).
 				Return(skus, tt.resourceSkusClientErr)
 
-			dv := dynamic{
-				authorizerType:     AuthorizerClusterServicePrincipal,
-				log:                logrus.NewEntry(logrus.StandardLogger()),
-				resourceSkusClient: resourceSkusClient,
-			}
-
-			err := dv.ValidateVMSku(context.Background(), tt.targetLocation, subscriptionID, oc)
+			err := validateVMSku(context.Background(), oc, resourceSkusClient)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

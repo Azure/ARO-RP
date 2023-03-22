@@ -53,7 +53,6 @@ type Dynamic interface {
 	ValidateProviders(ctx context.Context) error
 	ValidateDiskEncryptionSets(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidateEncryptionAtHost(ctx context.Context, oc *api.OpenShiftCluster) error
-	ValidateVMSku(ctx context.Context, location string, subscriptionID string, oc *api.OpenShiftCluster) error
 }
 
 type dynamic struct {
