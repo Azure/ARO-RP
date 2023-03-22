@@ -6,7 +6,6 @@ package vmsscleaner
 import (
 	"context"
 	"errors"
-	"io"
 	"testing"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
@@ -124,84 +123,6 @@ func TestRemoveFailedScaleset(t *testing.T) {
 
 			retry := c.RemoveFailedNewScaleset(ctx, rg, vmssToDelete)
 			if retry != tt.want {
-				t.Error(retry)
-			}
-		})
-	}
-}
-
-func TestUpdateProbe(t *testing.T) {
-	var tests = []struct {
-		name              string
-		expected          bool
-		listErr           error
-		createOrUpdateErr error
-		listReturn        []mgmtcompute.VirtualMachineScaleSet
-	}{
-		{
-			name:     "list error",
-			expected: false,
-			listErr:  errors.New("error"),
-		},
-		{
-			name:              "update error",
-			createOrUpdateErr: errors.New("error"),
-			expected:          false,
-			listReturn: []mgmtcompute.VirtualMachineScaleSet{
-				{
-					Name: to.StringPtr("gateway-vmss-redhat"),
-					VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
-						VirtualMachineProfile: &mgmtcompute.VirtualMachineScaleSetVMProfile{
-							NetworkProfile: &mgmtcompute.VirtualMachineScaleSetNetworkProfile{},
-						},
-					},
-				},
-			},
-		},
-		{
-			name:     "success",
-			expected: true,
-			listReturn: []mgmtcompute.VirtualMachineScaleSet{
-				{
-					Name: to.StringPtr("gateway-vmss-redhat"),
-					VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
-						VirtualMachineProfile: &mgmtcompute.VirtualMachineScaleSetVMProfile{
-							NetworkProfile: &mgmtcompute.VirtualMachineScaleSetNetworkProfile{},
-						},
-					},
-				},
-			},
-		},
-		{
-			name:     "not gateway",
-			expected: true,
-			listReturn: []mgmtcompute.VirtualMachineScaleSet{
-				{
-					Name: to.StringPtr("spencer's-vmss"),
-				},
-			},
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			mockVMSS := mock_compute.NewMockVirtualMachineScaleSetsClient(controller)
-			mockVMSS.EXPECT().List(gomock.Any(), gomock.Any()).AnyTimes().Return(tt.listReturn, tt.listErr)
-			mockVMSS.EXPECT().CreateOrUpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(tt.createOrUpdateErr)
-
-			logger := logrus.Logger{}
-			logger.Out = io.Discard
-			c := cleaner{
-				log:  logrus.NewEntry(&logger),
-				vmss: mockVMSS,
-			}
-			ctx := context.Background()
-			rg := "someid"
-			retry := c.UpdateVMSSProbes(ctx, rg)
-			if retry != tt.expected {
 				t.Error(retry)
 			}
 		})
