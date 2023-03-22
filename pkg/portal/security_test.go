@@ -16,10 +16,10 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/golangci/golangci-lint/pkg/sliceutil"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"github.com/sirupsen/logrus"
+	"k8s.io/utils/strings/slices"
 
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
@@ -383,7 +383,7 @@ func TestSecurity(t *testing.T) {
 						payload.Result.ResultType = audit.ResultTypeFail
 					}
 
-					if tt2.authenticated && !sliceutil.Contains([]string{
+					if tt2.authenticated && !slices.Contains([]string{
 						"/callback", "/healthz/ready", "/api/login", "/api/logout"}, tt.name) {
 						payload.CallerIdentities[0].CallerIdentityValue = "username"
 					}
