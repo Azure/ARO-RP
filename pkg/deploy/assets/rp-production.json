@@ -772,7 +772,7 @@
                     "id": "['ARO']"
                 },
                 "options": {
-                    "throughput": 500
+                    "throughput": 1000
                 }
             },
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO')]",
