@@ -75,7 +75,7 @@ def validate_resource_tags(namespace):
         return
 
     if len(namespace.resource_tags) == 1 and namespace.resource_tags[0] == '':
-        namespace.resource_tags= {}
+        namespace.resource_tags = {}
         return
 
     tags = {}
