@@ -1,8 +1,14 @@
 import { useEffect, useState } from "react"
 import { Stack, StackItem, IStackProps} from '@fluentui/react';
 import { Spinner, SpinnerSize } from '@fluentui/react/lib/Spinner';
-import { ILineChartPoints, LineChart, ILineChartDataPoint } from '@fluentui/react-charting';
-import { IChartProps } from '@fluentui/react-charting';
+import {
+  ILineChartPoints,
+  ILegendsProps,
+  IChartProps,
+  LineChart,
+  ILineChartDataPoint,
+  ILineChartProps
+} from '@fluentui/react-charting';
 import { DefaultPalette} from '@fluentui/react/lib/Styling';
 import { IMetrics} from './StatisticsWrapper';
 import { convertToUTC } from "./GraphOptionsComponent";
@@ -65,12 +71,6 @@ export function StatisticsComponent(props: {
     DefaultPalette.themeTertiary
   ]
 
-  const _onLegendClickHandler = (selectedLegend: string | null | string[]): void => {
-    if (selectedLegend !== null) {
-      console.log(`Selected legend - ${selectedLegend}`);
-    }
-  };
-
   function StatisticsHelperComponent(): JSX.Element {   
     useEffect(() => {
       if (props.metrics.length > 0) {
@@ -88,13 +88,12 @@ export function StatisticsComponent(props: {
 
           var lineChartPoint: ILineChartPoints = {
             legend: metric.Name,
-            onLegendClick: _onLegendClickHandler,
             data: dataPoints,
             color: colors[i]
           }
           newPoints.push(lineChartPoint)
         })
-        setPoints(newPoints)    
+        setPoints(newPoints);
       }
     },[props.metrics])
 
@@ -120,7 +119,26 @@ export function StatisticsComponent(props: {
       },
     };
     const rowProps: IStackProps = { horizontal: false, verticalAlign: 'center' };
-    
+    const legendProps: Partial<ILegendsProps> = { canSelectMultipleLegends: true, allowFocusOnLegends: true };
+    let lineChartProps: ILineChartProps = {
+      data: data,
+      strokeWidth: 2,
+      tickFormat: timeFormat,
+      height: height,
+      width: width,
+      legendProps: legendProps
+    }
+
+    const renderLineChart = (lineChartProps: ILineChartProps) => {
+      return (
+      <div style={rootStyle}>
+        <LineChart
+          {...lineChartProps}
+        />
+      </div>
+      )
+    }
+
     return (
     <Stack>
       <StackItem>
@@ -131,27 +149,10 @@ export function StatisticsComponent(props: {
             <StackItem> 
               <Spinner size={SpinnerSize.large} />
             </StackItem>
-            <div style={rootStyle}>
-              <LineChart
-                data={data}
-                strokeWidth={2}
-                tickFormat={timeFormat}
-                height={height}
-                legendProps={{ canSelectMultipleLegends: true, allowFocusOnLegends: true }}
-              />
-            </div>
+            {renderLineChart(lineChartProps)}
           </Stack>
           :
-          <div style={rootStyle}>
-            <LineChart
-              data={data}
-              strokeWidth={2}
-              tickFormat={timeFormat}
-              height={height}
-              width={width}
-              legendProps={{ canSelectMultipleLegends: true, allowFocusOnLegends: true }}
-            />
-          </div>
+          renderLineChart(lineChartProps)
         }
       </StackItem>
     </Stack>

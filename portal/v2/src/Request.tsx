@@ -118,9 +118,10 @@ export const RequestKubeconfig = async (
 
 export const FetchStatistics = async (cluster: ICluster, statisticsName: string, duration: string, endDate: Date): Promise<AxiosResponse | null> => {
   duration = convertTimeToHours(duration)
+  let endDateJSON = endDate.toJSON()
   try {
     const result = await axios(
-      "/api/" + cluster.subscription + "/" + cluster.resourceGroup + "/" + cluster.name + "/statistics/" + statisticsName + "?duration=" + duration + "&endtime=" + endDate.toJSON())
+      `/api/${cluster.subscription}/${cluster.resourceGroup}/${cluster.name}/statistics/${statisticsName}?duration=${duration}&endtime=${endDateJSON}`)
     return result
   } catch (e: any) {
     const err = e.response as AxiosResponse

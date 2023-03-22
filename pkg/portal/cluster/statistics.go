@@ -14,21 +14,23 @@ import (
 	"github.com/prometheus/common/model"
 )
 
+// MetricValue contains the actual data of the metrics at certain timestamp, and a slice of this is used in the `Metrics` struct to combine all the metrics in one object.
 type MetricValue struct {
 	Timestamp time.Time `json:"timestamp"`
 	Value     float64   `json:"value"`
 }
 
+//This is a structure which actually carries, a particular type of metrics
 type Metrics struct {
 	Name  string        `json:"metricname"`
 	Value []MetricValue `json:"metricvalue"`
 }
 
-func (c *client) Statistics(ctx context.Context, httpClient *http.Client, promQuery string, duration string, endTime time.Time, prometheusURL string) ([]Metrics, error) {
+func (c *client) Statistics(ctx context.Context, httpClient *http.Client, promQuery string, duration time.Duration, endTime time.Time, prometheusURL string) ([]Metrics, error) {
 	return c.fetcher.statistics(ctx, httpClient, promQuery, duration, endTime, prometheusURL)
 }
 
-func (f *realFetcher) statistics(ctx context.Context, httpClient *http.Client, promQuery string, duration string, endTime time.Time, prometheusURL string) ([]Metrics, error) {
+func (f *realFetcher) statistics(ctx context.Context, httpClient *http.Client, promQuery string, duration time.Duration, endTime time.Time, prometheusURL string) ([]Metrics, error) {
 	promConfig := prometheusAPI.Config{
 		Address: prometheusURL,
 		Client:  httpClient,
@@ -40,11 +42,7 @@ func (f *realFetcher) statistics(ctx context.Context, httpClient *http.Client, p
 	}
 
 	v1api := v1.NewAPI(client)
-
-	startTime, err := getStartTimeFromDuration(duration, endTime)
-	if err != nil {
-		return nil, err
-	}
+	startTime := endTime.Add(-1 * duration)
 	value, warning, err := v1api.QueryRange(ctx, promQuery, v1.Range{
 		Start: startTime,
 		End:   endTime,
@@ -78,14 +76,6 @@ func convertToTypeMetrics(v model.Matrix) []Metrics {
 	}
 
 	return metrics
-}
-
-func getStartTimeFromDuration(duration string, endTime time.Time) (time.Time, error) {
-	parsedDuration, err := time.ParseDuration(duration)
-	if err != nil {
-		return time.Time{}, errors.New("invalid duration")
-	}
-	return endTime.Add(-1 * parsedDuration), nil
 }
 
 func GetPromQuery(statisticsType string) (string, error) {

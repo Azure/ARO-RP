@@ -199,10 +199,15 @@ func (p *portal) machineSets(w http.ResponseWriter, r *http.Request) {
 func (p *portal) statistics(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	duration := r.URL.Query().Get("duration")
+	parsedDuration, err := time.ParseDuration(duration)
+	if err != nil {
+		p.badRequest(w, err)
+		return
+	}
 	endTimeString := r.URL.Query().Get("endtime")
 	endTime, err := time.Parse(time.RFC3339, endTimeString)
 	if err != nil {
-		p.internalServerError(w, err)
+		p.badRequest(w, err)
 		return
 	}
 	apiVars := mux.Vars(r)
@@ -217,7 +222,7 @@ func (p *portal) statistics(w http.ResponseWriter, r *http.Request) {
 
 	promQuery, err := cluster.GetPromQuery(statisticsType)
 	if err != nil {
-		p.internalServerError(w, err)
+		p.badRequest(w, err)
 		return
 	}
 	prom := prometheus.New(p.log, p.dbOpenShiftClusters, p.dialer)
@@ -234,7 +239,7 @@ func (p *portal) statistics(w http.ResponseWriter, r *http.Request) {
 	}
 	promHost, promScheme := prom.GetPrometheusHostAndScheme()
 	prometheusURL := promScheme + "://" + promHost
-	APIStatistics, err := fetcher.Statistics(ctx, httpClient, promQuery, duration, endTime, prometheusURL)
+	APIStatistics, err := fetcher.Statistics(ctx, httpClient, promQuery, parsedDuration, endTime, prometheusURL)
 	if err != nil {
 		p.internalServerError(w, err)
 		return

@@ -88,17 +88,13 @@ export class ClusterDetailComponent extends Component<ClusterDetailComponentProp
         case "dnsstatistics":
         {
           return (
-            <>
             <Statistics currentCluster={this.props.cluster!} detailPanelSelected={this.props.detailPanelVisible} loaded={this.props.isDataLoaded} statisticsType={"dns"}/>
-            </>
           );
         }
         case "ingressstatistics":
         {
           return (
-            <>
             <Statistics currentCluster={this.props.cluster!} detailPanelSelected={this.props.detailPanelVisible} loaded={this.props.isDataLoaded} statisticsType={"ingress"}/>     
-            </>
           );
         }
       }

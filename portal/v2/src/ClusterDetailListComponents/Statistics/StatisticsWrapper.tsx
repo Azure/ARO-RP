@@ -71,6 +71,7 @@ export function StatisticsWrapper(props: {
     const onData = (result: AxiosResponse | null) => {
       if (result?.status === 200) {        
         updateData(result.data)
+        setError(null)
       } else {
         setError(result)
       }

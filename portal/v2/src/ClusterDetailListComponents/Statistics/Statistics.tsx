@@ -48,26 +48,24 @@ export function Statistics(props: {
       const containerStackTokens: IStackTokens = {}
       const appStackTokens: IStackTokens = { childrenGap: 10 }
       return(
-        <>
-          <Stack styles={stackStyles} tokens={containerStackTokens} horizontalAlign={"stretch"}>
-            <ThemeProvider theme={darkTheme}>
-              <Stack
-                grow
-                tokens={appStackTokens}
-                horizontalAlign={"start"}
-                verticalAlign={"center"}
-                horizontal
-                styles={stackNavStyles}>
-                <Stack.Item grow>
-                  <Text>{"Global Graph Options"}</Text>
-                </Stack.Item>
-                <Stack.Item>
-                  <GraphOptionsComponent duration={globalDuration} setDuration={setGlobalDuration} endDate={globalEndDate} setEndDate={setGlobalEndDate}/>
-                </Stack.Item>
-              </Stack>
-            </ThemeProvider>
-          </Stack>
-        </>
+        <Stack styles={stackStyles} tokens={containerStackTokens} horizontalAlign={"stretch"}>
+          <ThemeProvider theme={darkTheme}>
+            <Stack
+              grow
+              tokens={appStackTokens}
+              horizontalAlign={"start"}
+              verticalAlign={"center"}
+              horizontal
+              styles={stackNavStyles}>
+              <Stack.Item grow>
+                <Text>{"Global Graph Options"}</Text>
+              </Stack.Item>
+              <Stack.Item>
+                <GraphOptionsComponent duration={globalDuration} setDuration={setGlobalDuration} endDate={globalEndDate} setEndDate={setGlobalEndDate}/>
+              </Stack.Item>
+            </Stack>
+          </ThemeProvider>
+        </Stack>
       )
     }
 

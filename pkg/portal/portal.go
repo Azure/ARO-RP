@@ -411,3 +411,8 @@ func (p *portal) internalServerError(w http.ResponseWriter, err error) {
 	p.log.Warn(err)
 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
+
+func (p *portal) badRequest(w http.ResponseWriter, err error) {
+	p.log.Warn(err)
+	http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+}
