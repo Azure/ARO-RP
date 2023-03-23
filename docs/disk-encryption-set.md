@@ -39,8 +39,7 @@ export DISK_ENCRYPTION_SET_NAME=$USER-des
 az keyvault create -n $KEYVAULT_NAME \
                    -g $RESOURCEGROUP \
                    -l $LOCATION \
-                   --enable-purge-protection true \
-                   --enable-soft-delete true
+                   --enable-purge-protection true
 
 az keyvault key create --vault-name $KEYVAULT_NAME \
                        -n $KEYVAULT_KEY_NAME \
