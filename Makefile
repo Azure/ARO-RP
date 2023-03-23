@@ -1,15 +1,16 @@
 SHELL = /bin/bash
+.SHELLFLAGS := -o nounset -c
 TAG ?= $(shell git describe --exact-match 2>/dev/null)
 COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
-ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
+ARO_IMAGE_BASE = $${RP_IMAGE_ACR}.azurecr.io/aro
 E2E_FLAGS ?= -test.v --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2 --ginkgo.junit-report=e2e-report.xml
 
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
 MARINER_VERSION = 20230321
 FLUENTBIT_VERSION = 1.9.10
-FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$(MARINER_VERSION)
+FLUENTBIT_IMAGE ?= $${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$(MARINER_VERSION)
 AUTOREST_VERSION = 3.6.2
-AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
+AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:$${AUTOREST_VERSION}
 
 ifneq ($(shell uname -s),Darwin)
     export CGO_CFLAGS=-Dgpgme_off_t=off_t
@@ -67,12 +68,12 @@ clean:
 	find -type d -name 'gomock_reflect_[0-9]*' -exec rm -rf {} \+ 2>/dev/null
 
 client: generate
-	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01
+	hack/build-client.sh "$${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
 deploy:
-	go run -tags aro,containers_image_openpgp -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
+	go run -tags aro,containers_image_openpgp -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro deploy dev-config.yaml $${LOCATION}
 
 dev-config.yaml:
 	go run ./hack/gendevconfig >dev-config.yaml
@@ -93,7 +94,7 @@ image-aro-multistage:
 	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
 
 image-autorest:
-	docker build --platform=linux/amd64 --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
+	docker build --platform=linux/amd64 --network=host --no-cache --build-arg AUTOREST_VERSION="$${AUTOREST_VERSION}" --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.autorest -t $${AUTOREST_IMAGE} .
 
 image-fluentbit:
 	docker build --platform=linux/amd64 --network=host --build-arg VERSION=$(FLUENTBIT_VERSION) --build-arg MARINER_VERSION=$(MARINER_VERSION) -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
@@ -104,26 +105,26 @@ image-proxy:
 
 publish-image-aro: image-aro
 	docker push $(ARO_IMAGE)
-ifeq ("${RP_IMAGE_ACR}-$(BRANCH)","arointsvc-master")
+ifeq ("$${RP_IMAGE_ACR}-$(BRANCH)","arointsvc-master")
 		docker tag $(ARO_IMAGE) arointsvc.azurecr.io/aro:latest
 		docker push arointsvc.azurecr.io/aro:latest
 endif
 
 publish-image-aro-multistage: image-aro-multistage
 	docker push $(ARO_IMAGE)
-ifeq ("${RP_IMAGE_ACR}-$(BRANCH)","arointsvc-master")
+ifeq ("$${RP_IMAGE_ACR}-$(BRANCH)","arointsvc-master")
 		docker tag $(ARO_IMAGE) arointsvc.azurecr.io/aro:latest
 		docker push arointsvc.azurecr.io/aro:latest
 endif
 
 publish-image-autorest: image-autorest
-	docker push ${AUTOREST_IMAGE}
+	docker push $${AUTOREST_IMAGE}
 
 publish-image-fluentbit: image-fluentbit
 	docker push $(FLUENTBIT_IMAGE)
 
 publish-image-proxy: image-proxy
-	docker push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest
+	docker push $${RP_IMAGE_ACR}.azurecr.io/proxy:latest
 
 image-e2e:
 	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro-e2e -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
@@ -132,7 +133,7 @@ publish-image-e2e: image-e2e
 	docker push $(ARO_IMAGE)
 
 extract-aro-docker:
-	hack/ci-utils/extractaro.sh ${ARO_IMAGE}
+	hack/ci-utils/extractaro.sh $${ARO_IMAGE}
 
 proxy:
 	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/proxy
@@ -152,20 +153,20 @@ pyenv:
 		sed -i -e "s|^dev_sources = $(PWD)$$|dev_sources = $(PWD)/python|" ~/.azure/config
 
 secrets:
-	@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
+	@[ "$${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
 	rm -rf secrets
-	az storage blob download -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
+	az storage blob download -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name $${SECRET_SA_ACCOUNT_NAME} >/dev/null
 	tar -xzf secrets.tar.gz
 	rm secrets.tar.gz
 
 secrets-update:
-	@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
+	@[ "$${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
 	tar -czf secrets.tar.gz secrets
-	az storage blob upload -n secrets.tar.gz -c secrets -f secrets.tar.gz --overwrite --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
+	az storage blob upload -n secrets.tar.gz -c secrets -f secrets.tar.gz --overwrite --account-name $${SECRET_SA_ACCOUNT_NAME} >/dev/null
 	rm secrets.tar.gz
 
 tunnel:
-	go run ./hack/tunnel $(shell az network public-ip show -g ${RESOURCEGROUP} -n rp-pip --query 'ipAddress')
+	go run ./hack/tunnel $(shell az network public-ip show -g $${RESOURCEGROUP} -n rp-pip --query 'ipAddress')
 
 e2e.test:
 	go test ./test/e2e/... -tags e2e,codec.safe -c -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" -o e2e.test
@@ -220,15 +221,14 @@ test-python: pyenv az
 		azdev style && \
 		hack/unit-test-python.sh
 
-
 shared-cluster-login:
-	@oc login ${SHARED_CLUSTER_API} -u kubeadmin -p ${SHARED_CLUSTER_KUBEADMIN_PASSWORD}
+	oc login $${SHARED_CLUSTER_API} -u kubeadmin -p $${SHARED_CLUSTER_KUBEADMIN_PASSWORD}
 
 unit-test-python:
 	hack/unit-test-python.sh
 
 admin.kubeconfig:
-	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig
+	hack/get-admin-kubeconfig.sh /subscriptions/$${AZURE_SUBSCRIPTION_ID}/resourceGroups/$${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/$${CLUSTER} >admin.kubeconfig
 
 aks.kubeconfig:
 	hack/get-admin-aks-kubeconfig.sh
