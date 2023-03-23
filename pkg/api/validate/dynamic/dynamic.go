@@ -347,14 +347,22 @@ func (c closure) usingListPermissions() (bool, error) {
 // usingCheckAccessV2 uses the new RBAC checkAccessV2 API
 func (c closure) usingCheckAccessV2() (bool, error) {
 	c.dv.log.Info("retry validationActions with CheckAccessV2")
-	oid, err := aad.GetObjectId(c.dv.authorizer.OAuthToken())
+
+	token := c.dv.authorizer.OAuthToken()
+	c.dv.log.Info(fmt.Sprintf("token: %s", token))
+
+	oid, err := aad.GetObjectId(token)
 	if err != nil {
+		c.dv.log.Info(fmt.Sprintf("error retrieving object ID: %s", err))
 		return false, err
 	}
+
+	c.dv.log.Info(fmt.Printf("oid: %s", oid))
 
 	authReq := createAuthorizationRequest(oid, c.resource.String(), c.actions...)
 	results, err := c.dv.pdpClient.CheckAccess(c.ctx, authReq)
 	if err != nil {
+		c.dv.log.Info(fmt.Sprintf("check access failure: %s", err))
 		return false, err
 	}
 
@@ -364,6 +372,8 @@ func (c closure) usingCheckAccessV2() (bool, error) {
 			return false, nil
 		}
 	}
+
+	c.dv.log.Debug(fmt.Sprintf("%s has access", oid))
 
 	return true, nil
 }
