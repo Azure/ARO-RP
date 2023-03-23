@@ -12,6 +12,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/containers/image/v5/types"
 	"github.com/sirupsen/logrus"
 
@@ -64,7 +65,6 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	dstAcr := os.Getenv("DST_ACR_NAME")
-	srcAcrGenevaOverride := os.Getenv("SRC_ACR_NAME_GENEVA_OVERRIDE") // Optional
 
 	srcAuthQuay, err := getAuth("SRC_AUTH_QUAY")
 	if err != nil {
@@ -76,13 +76,8 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
+	// Geneva allows anonymous pulls
 	var srcAuthGeneva *types.DockerAuthConfig
-	if os.Getenv("SRC_AUTH_GENEVA") != "" {
-		srcAuthGeneva, err = getAuth("SRC_AUTH_GENEVA") // Optional.  Needed for situations where ACR doesn't allow anonymous pulls
-		if err != nil {
-			return err
-		}
-	}
 
 	var releases []pkgmirror.Node
 	if len(flag.Args()) == 1 {
@@ -131,24 +126,26 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	srcAcrGeneva := "linuxgeneva-microsoft" + acrDomainSuffix
+	// Geneva mirroring from upstream only takes place in Public Cloud, in
+	// soverign clouds a separate mirror process mirrors from the public cloud
+	if env.Environment().Environment == azure.PublicCloud {
+		srcAcrGeneva := "linuxgeneva-microsoft" + acrDomainSuffix
 
-	if srcAcrGenevaOverride != "" {
-		srcAcrGeneva = srcAcrGenevaOverride
-	}
-
-	mirrorImages := []string{
-		version.MdsdImage(srcAcrGeneva),
-		version.MdmImage(srcAcrGeneva),
-	}
-
-	for _, ref := range mirrorImages {
-		log.Printf("mirroring %s -> %s", ref, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref))
-		err = pkgmirror.Copy(ctx, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthGeneva)
-		if err != nil {
-			log.Errorf("%s: %s\n", ref, err)
-			errorOccurred = true
+		mirrorImages := []string{
+			version.MdsdImage(srcAcrGeneva),
+			version.MdmImage(srcAcrGeneva),
 		}
+
+		for _, ref := range mirrorImages {
+			log.Printf("mirroring %s -> %s", ref, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref))
+			err = pkgmirror.Copy(ctx, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthGeneva)
+			if err != nil {
+				log.Errorf("%s: %s\n", ref, err)
+				errorOccurred = true
+			}
+		}
+	} else {
+		log.Printf("skipping Geneva mirroring due to not being in Public")
 	}
 
 	MARINER_VERSION := "20230126"
