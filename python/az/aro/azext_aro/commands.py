@@ -26,3 +26,5 @@ def load_command_table(self, _):
         g.custom_command('get-admin-kubeconfig', 'aro_list_admin_credentials')
 
         g.custom_command('get-versions', 'aro_get_versions', table_transformer=aro_version_table_format)
+
+        g.custom_command('validate', 'aro_validate')
