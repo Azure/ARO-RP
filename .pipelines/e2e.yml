@@ -44,7 +44,7 @@ jobs:
     parameters:
       rpImageACR: $(RP_IMAGE_ACR)
   - script: |
-      make extract-aro-docker
+      ARO_IMAGE=arointsvc.azurecr.io/aro:latest make extract-aro-docker
     displayName: Extract ARO binaries from build
 
   - script: |
