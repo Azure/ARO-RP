@@ -354,6 +354,7 @@ func notFound(w http.ResponseWriter, r *http.Request) {
 func (f *frontend) setupRouter() chi.Router {
 	chiRouter := chi.NewMux()
 
+	chiRouter.Use(chiMiddlewares.Logger)
 	chiRouter.Use(chiMiddlewares.CleanPath)
 
 	chiRouter.NotFound(f.authMiddleware.Authenticate(http.HandlerFunc(notFound)).ServeHTTP)
