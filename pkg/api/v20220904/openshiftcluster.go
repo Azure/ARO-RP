@@ -36,9 +36,6 @@ type OpenShiftCluster struct {
 
 	// The cluster properties.
 	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
-
-	// The cluster install version.
-	InstallVersion string `json:"installVersion,omitempty"`
 }
 
 // Tags represents an OpenShift cluster's tags.
@@ -129,19 +126,8 @@ type ServicePrincipalProfile struct {
 	ClientSecret string `json:"clientSecret,omitempty" mutable:"true"`
 }
 
-// SoftwareDefinedNetwork is a choice of network used for Pods.
-type SoftwareDefinedNetwork string
-
-const (
-	SoftwareDefinedNetworkOVNKubernetes SoftwareDefinedNetwork = "OVNKubernetes"
-	SoftwareDefinedNetworkOpenShiftSDN  SoftwareDefinedNetwork = "OpenShiftSDN"
-)
-
 // NetworkProfile represents a network profile.
 type NetworkProfile struct {
-	// The SDN type used for OpenShift/Kubernetes Pods.
-	SoftwareDefinedNetwork SoftwareDefinedNetwork `json:"softwareDefinedNetwork,omitempty"`
-
 	// The CIDR used for OpenShift/Kubernetes Pods.
 	PodCIDR string `json:"podCidr,omitempty"`
 

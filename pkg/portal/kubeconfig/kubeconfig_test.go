@@ -7,7 +7,7 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"reflect"
 	"testing"
@@ -148,13 +148,15 @@ func TestNew(t *testing.T) {
 			_, audit := testlog.NewAudit()
 			_, baseLog := testlog.New()
 			_, baseAccessLog := testlog.New()
-			_ = New(baseLog, audit, _env, baseAccessLog, servingCert, elevatedGroupIDs, nil, dbPortal, nil, aadAuthenticatedRouter, &mux.Router{})
+			k := New(baseLog, audit, _env, baseAccessLog, servingCert, elevatedGroupIDs, nil, dbPortal, nil)
 
 			if tt.r != nil {
 				tt.r(r)
 			}
 
 			w := responsewriter.New(r)
+
+			aadAuthenticatedRouter.NewRoute().Methods(http.MethodPost).Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/kubeconfig/new").HandlerFunc(k.New)
 
 			aadAuthenticatedRouter.ServeHTTP(w, r)
 
@@ -184,7 +186,7 @@ func TestNew(t *testing.T) {
 				t.Error(resp.Header.Get("Content-Type"))
 			}
 
-			b, err := ioutil.ReadAll(resp.Body)
+			b, err := io.ReadAll(resp.Body)
 			if err != nil {
 				t.Fatal(err)
 			}

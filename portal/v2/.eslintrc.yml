@@ -1,6 +1,7 @@
 env:
   browser: true
   es2021: true
+  node: true
 extends:
   - 'plugin:react/recommended'
   - "eslint:recommended"
@@ -21,4 +22,5 @@ settings:
     fragment: "Fragment"
     version: "detect"
     flowVersion: "0.53"
-rules: {}
+rules:
+  no-undef: "off"

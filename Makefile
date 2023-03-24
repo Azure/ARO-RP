@@ -2,13 +2,14 @@ SHELL = /bin/bash
 TAG ?= $(shell git describe --exact-match 2>/dev/null)
 COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
-E2E_FLAGS ?= -test.timeout 180m -test.v -ginkgo.v -ginkgo.noColor
+E2E_FLAGS ?= -test.v --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2 --ginkgo.junit-report=e2e-report.xml
 
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
-FLUENTBIT_VERSION = 1.9.4-1
-FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)
+MARINER_VERSION = 20230126
+FLUENTBIT_VERSION = 1.9.10
+FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$(MARINER_VERSION)
 AUTOREST_VERSION = 3.6.2
-AUTOREST_IMAGE = "quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}"
+AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
 
 ifneq ($(shell uname -s),Darwin)
     export CGO_CFLAGS=-Dgpgme_off_t=off_t
@@ -33,10 +34,20 @@ endif
 
 ARO_IMAGE ?= $(ARO_IMAGE_BASE):$(VERSION)
 
+check-release:
+# Check that VERSION is a valid tag when building an official release (when RELEASE=true).
+ifeq ($(RELEASE), true)
+ifeq ($(TAG), $(VERSION))
+	@echo Building release version $(VERSION)
+else
+	$(error $(shell git describe --exact-match) Ensure there is an annotated tag (git tag -a) for git commit $(COMMIT))
+endif
+endif
+
 build-all:
 	go build -tags aro,containers_image_openpgp ./...
 
-aro: generate
+aro: check-release generate
 	go build -tags aro,containers_image_openpgp,codec.safe -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro
 
 runlocal-rp:
@@ -56,7 +67,7 @@ clean:
 	find -type d -name 'gomock_reflect_[0-9]*' -exec rm -rf {} \+ 2>/dev/null
 
 client: generate
-	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04
+	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
@@ -76,20 +87,20 @@ generate:
 
 image-aro: aro e2e.test
 	docker pull $(REGISTRY)/ubi8/ubi-minimal
-	docker build --network=host --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
+	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
 
 image-aro-multistage:
-	docker build --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
+	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
 
 image-autorest:
-	docker build --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
+	docker build --platform=linux/amd64 --network=host --no-cache --build-arg AUTOREST_VERSION="${AUTOREST_VERSION}" --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.autorest -t ${AUTOREST_IMAGE} .
 
 image-fluentbit:
-	docker build --network=host --no-cache --build-arg VERSION=$(FLUENTBIT_VERSION) --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
+	docker build --platform=linux/amd64 --network=host --build-arg VERSION=$(FLUENTBIT_VERSION) --build-arg MARINER_VERSION=$(MARINER_VERSION) --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.fluentbit -t $(FLUENTBIT_IMAGE) .
 
-image-proxy: proxy
+image-proxy:
 	docker pull $(REGISTRY)/ubi8/ubi-minimal
-	docker build --no-cache -f Dockerfile.proxy -t $(REGISTRY)/proxy:latest --build-arg REGISTRY=$(REGISTRY) .
+	docker build --platform=linux/amd64 --no-cache -f Dockerfile.proxy -t $(REGISTRY)/proxy:latest --build-arg REGISTRY=$(REGISTRY) .
 
 publish-image-aro: image-aro
 	docker push $(ARO_IMAGE)
@@ -114,15 +125,23 @@ publish-image-fluentbit: image-fluentbit
 publish-image-proxy: image-proxy
 	docker push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest
 
+image-e2e:
+	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro-e2e -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
+
+publish-image-e2e: image-e2e
+	docker push $(ARO_IMAGE)
+
+extract-aro-docker:
+	hack/ci-utils/extractaro.sh ${ARO_IMAGE}
+
 proxy:
-	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/proxy
+	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/proxy
 
 run-portal:
 	go run -tags aro,containers_image_openpgp -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro portal
 
 build-portal:
 	cd portal/v1 && npm install && npm run build && cd ../v2 && npm install && npm run build
-	make generate
 
 pyenv:
 	python3 -m venv pyenv
@@ -149,7 +168,12 @@ tunnel:
 	go run ./hack/tunnel $(shell az network public-ip show -g ${RESOURCEGROUP} -n rp-pip --query 'ipAddress')
 
 e2e.test:
-	go test ./test/e2e -tags e2e,codec.safe -c -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" -o e2e.test
+	go test ./test/e2e/... -tags e2e,codec.safe -c -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" -o e2e.test
+
+e2etools:
+	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/cluster
+	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/db
+	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/portalauth
 
 test-e2e: e2e.test
 	./e2e.test $(E2E_FLAGS)
@@ -178,14 +202,17 @@ validate-fips:
 	hack/fips/validate-fips.sh
 
 unit-test-go:
-	go run ./vendor/gotest.tools/gotestsum/main.go --format pkgname --junitfile report.xml -- -tags=aro,containers_image_openpgp -coverprofile=cover.out ./...
+	go run gotest.tools/gotestsum@v1.9.0 --format pkgname --junitfile report.xml -- -tags=aro,containers_image_openpgp -coverprofile=cover.out ./...
+
+unit-test-go-coverpkg:
+	go run gotest.tools/gotestsum@v1.9.0 --format pkgname --junitfile report.xml -- -tags=aro,containers_image_openpgp -coverpkg=./... -coverprofile=cover_coverpkg.out ./...
 
 lint-go:
 	hack/lint-go.sh
 
 lint-admin-portal:
-	docker build --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.portal_lint . -t linter
-	docker run -it --rm localhost/linter ./src --ext .ts
+	docker build --platform=linux/amd64 --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.portal_lint . -t linter:latest --no-cache
+	docker run --platform=linux/amd64 -t --rm linter:latest
 
 test-python: pyenv az
 	. pyenv/bin/activate && \
@@ -194,7 +221,7 @@ test-python: pyenv az
 		hack/unit-test-python.sh
 
 
-shared-cluster-login: 
+shared-cluster-login:
 	@oc login ${SHARED_CLUSTER_API} -u kubeadmin -p ${SHARED_CLUSTER_KUBEADMIN_PASSWORD}
 
 unit-test-python:

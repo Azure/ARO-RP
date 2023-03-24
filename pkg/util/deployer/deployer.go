@@ -16,9 +16,11 @@ import (
 	"text/template"
 
 	appsv1 "k8s.io/api/apps/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
@@ -33,18 +35,18 @@ type Deployer interface {
 }
 
 type deployer struct {
-	kubernetescli kubernetes.Interface
-	dh            dynamichelper.Interface
-	fs            fs.FS
-	directory     string
+	client    client.Client
+	dh        dynamichelper.Interface
+	fs        fs.FS
+	directory string
 }
 
-func NewDeployer(kubernetescli kubernetes.Interface, dh dynamichelper.Interface, fs fs.FS, directory string) Deployer {
+func NewDeployer(client client.Client, dh dynamichelper.Interface, fs fs.FS, directory string) Deployer {
 	return &deployer{
-		kubernetescli: kubernetescli,
-		dh:            dh,
-		fs:            fs,
-		directory:     directory,
+		client:    client,
+		dh:        dh,
+		fs:        fs,
+		directory: directory,
 	}
 }
 
@@ -126,5 +128,14 @@ func (depl *deployer) Remove(ctx context.Context, data interface{}) error {
 }
 
 func (depl *deployer) IsReady(ctx context.Context, namespace, deploymentName string) (bool, error) {
-	return ready.CheckDeploymentIsReady(ctx, depl.kubernetescli.AppsV1().Deployments(namespace), deploymentName)()
+	d := &appsv1.Deployment{}
+	err := depl.client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: deploymentName}, d)
+	switch {
+	case kerrors.IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, err
+	}
+
+	return ready.DeploymentIsReady(d), nil
 }

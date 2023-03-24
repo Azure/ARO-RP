@@ -9,7 +9,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 
@@ -19,7 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 )
 
-func adminRequest(ctx context.Context, method, path string, params url.Values, in, out interface{}) (*http.Response, error) {
+func adminRequest(ctx context.Context, method, path string, params url.Values, strict bool, in, out interface{}) (*http.Response, error) {
 	if !env.IsLocalDevelopmentMode() {
 		return nil, errors.New("only development RP mode is supported")
 	}
@@ -48,7 +48,7 @@ func adminRequest(ctx context.Context, method, path string, params url.Values, i
 		if err != nil {
 			return nil, err
 		}
-		req.Body = ioutil.NopCloser(buf)
+		req.Body = io.NopCloser(buf)
 		req.Header.Set("Content-Type", "application/json")
 	}
 
@@ -69,10 +69,17 @@ func adminRequest(ctx context.Context, method, path string, params url.Values, i
 	}()
 
 	if out != nil && resp.Header.Get("Content-Type") == "application/json" {
-		return resp, json.NewDecoder(resp.Body).Decode(&out)
+		decoder := json.NewDecoder(resp.Body)
+		// If strict is set, enable DisallowUnknownFields. This is used to
+		// verify that the response doesn't contain any fields that are not
+		// defined, namely systemData.
+		if strict {
+			decoder.DisallowUnknownFields()
+		}
+		return resp, decoder.Decode(&out)
 	} else if out != nil && resp.Header.Get("Content-Type") == "text/plain" {
 		strOut := out.(*string)
-		p, err := ioutil.ReadAll(resp.Body)
+		p, err := io.ReadAll(resp.Body)
 		if err == nil {
 			*strOut = string(p)
 		}
@@ -83,10 +90,40 @@ func adminRequest(ctx context.Context, method, path string, params url.Values, i
 	return resp, nil
 }
 
-func getCluster(ctx context.Context, resourceID string) *admin.OpenShiftCluster {
+// adminGetCluster returns admin representation of an ARO cluster
+func adminGetCluster(g Gomega, ctx context.Context, resourceID string) *admin.OpenShiftCluster {
 	var oc admin.OpenShiftCluster
-	resp, err := adminRequest(ctx, http.MethodGet, resourceID, nil, nil, &oc)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(resp.StatusCode).To(Equal(http.StatusOK))
+	resp, err := adminRequest(ctx, http.MethodGet, resourceID, nil, true, nil, &oc)
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(resp.StatusCode).To(Equal(http.StatusOK))
 	return &oc
+}
+
+// adminListClusters returns a list of ARO clusters in admin representation.
+// It handles pagination: function returns all the clusters from all pages.
+func adminListClusters(g Gomega, ctx context.Context, path string) []*admin.OpenShiftCluster {
+	ocs := make([]*admin.OpenShiftCluster, 0)
+	params := url.Values{}
+	for {
+		var list admin.OpenShiftClusterList
+		resp, err := adminRequest(ctx, http.MethodGet, path, params, true, nil, &list)
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+		ocs = append(ocs, list.OpenShiftClusters...)
+
+		if list.NextLink == "" {
+			break
+		}
+
+		params = nextParams(g, list.NextLink)
+	}
+	return ocs
+}
+
+func nextParams(g Gomega, nextLink string) url.Values {
+	url, err := url.Parse(nextLink)
+	g.Expect(err).NotTo(HaveOccurred())
+
+	return url.Query()
 }

@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"fmt"
+	"strings"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
@@ -94,6 +95,16 @@ func (m *manager) storageAccount(name, region string, encrypted bool) *arm.Resou
 			VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-vnet/subnets/rp-subnet"),
 			Action:                   mgmtstorage.Allow,
 		},
+	}
+
+	// when installing via Hive we need to allow Hive to persist the installConfig graph in the cluster's storage account
+	// TODO: add AKS shard support
+	hiveShard := 1
+	if m.installViaHive && strings.Index(name, "cluster") == 0 {
+		virtualNetworkRules = append(virtualNetworkRules, mgmtstorage.VirtualNetworkRule{
+			VirtualNetworkResourceID: to.StringPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/aks-net/subnets/PodSubnet-%03d", m.env.SubscriptionID(), m.env.ResourceGroup(), hiveShard)),
+			Action:                   mgmtstorage.Allow,
+		})
 	}
 
 	// Prod includes a gateway rule as well

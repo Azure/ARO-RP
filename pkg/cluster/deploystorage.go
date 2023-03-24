@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -41,14 +42,19 @@ func (m *manager) ensureInfraID(ctx context.Context) (err error) {
 	return err
 }
 
-func (m *manager) ensureResourceGroup(ctx context.Context) error {
+func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	group := mgmtfeatures.ResourceGroup{}
 
+	// The FPSP's role definition does not have read on a resource group
+	// if the resource group does not exist.
 	// Retain the existing resource group configuration (such as tags) if it exists
-	group, err := m.resourceGroups.Get(ctx, resourceGroup)
-	if err != nil {
-		if detailedErr, ok := err.(autorest.DetailedError); !ok || detailedErr.StatusCode != http.StatusNotFound {
-			return err
+	if m.doc.OpenShiftCluster.Properties.ProvisioningState != api.ProvisioningStateCreating {
+		group, err = m.resourceGroups.Get(ctx, resourceGroup)
+		if err != nil {
+			if detailedErr, ok := err.(autorest.DetailedError); !ok || detailedErr.StatusCode != http.StatusNotFound {
+				return err
+			}
 		}
 	}
 
@@ -81,6 +87,16 @@ func (m *manager) ensureResourceGroup(ctx context.Context) error {
 		serviceError = requestErr.ServiceError
 	}
 
+	if serviceError != nil && serviceError.Code == "ResourceGroupManagedByMismatch" {
+		return &api.CloudError{
+			StatusCode: http.StatusBadRequest,
+			CloudErrorBody: &api.CloudErrorBody{
+				Code: api.CloudErrorCodeClusterResourceGroupAlreadyExists,
+				Message: "Resource group " + m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID +
+					" must not already exist.",
+			},
+		}
+	}
 	if serviceError != nil && serviceError.Code == "RequestDisallowedByPolicy" {
 		// if request was disallowed by policy, inform user so they can take appropriate action
 		b, _ := json.Marshal(serviceError)
@@ -120,15 +136,22 @@ func (m *manager) deployStorageTemplate(ctx context.Context) error {
 		m.clusterNSG(infraID, azureRegion),
 		m.clusterServicePrincipalRBAC(),
 		m.networkPrivateLinkService(azureRegion),
-		m.networkPublicIPAddress(azureRegion, infraID+"-pip-v4"),
 		m.networkInternalLoadBalancer(azureRegion),
-		m.networkPublicLoadBalancer(azureRegion),
 	}
 
-	if m.doc.OpenShiftCluster.Properties.IngressProfiles[0].Visibility == api.VisibilityPublic {
+	// Create a public load balancer routing if needed
+	if m.doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType == api.OutboundTypeLoadbalancer {
+		// Normal private clusters still need a public load balancer
 		resources = append(resources,
-			m.networkPublicIPAddress(azureRegion, infraID+"-default-v4"),
+			m.networkPublicIPAddress(azureRegion, infraID+"-pip-v4"),
+			m.networkPublicLoadBalancer(azureRegion),
 		)
+		// If the cluster is public we still want the default public IP address
+		if m.doc.OpenShiftCluster.Properties.IngressProfiles[0].Visibility == api.VisibilityPublic {
+			resources = append(resources,
+				m.networkPublicIPAddress(azureRegion, infraID+"-default-v4"),
+			)
+		}
 	}
 
 	if m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled {

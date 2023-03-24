@@ -13,7 +13,7 @@ type openShiftClusterConverter struct{}
 // reading from the subset of the internal object's fields that appear in the
 // external representation.  ToExternal does not modify its argument; there is
 // no pointer aliasing between the passed and returned objects
-func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interface{} {
+func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interface{} {
 	out := &OpenShiftCluster{
 		ID:       oc.ID,
 		Name:     oc.Name,
@@ -36,9 +36,8 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 				ClientSecret: string(oc.Properties.ServicePrincipalProfile.ClientSecret),
 			},
 			NetworkProfile: NetworkProfile{
-				SoftwareDefinedNetwork: SoftwareDefinedNetwork(oc.Properties.NetworkProfile.SoftwareDefinedNetwork),
-				PodCIDR:                oc.Properties.NetworkProfile.PodCIDR,
-				ServiceCIDR:            oc.Properties.NetworkProfile.ServiceCIDR,
+				PodCIDR:     oc.Properties.NetworkProfile.PodCIDR,
+				ServiceCIDR: oc.Properties.NetworkProfile.ServiceCIDR,
 			},
 			MasterProfile: MasterProfile{
 				VMSize:              VMSize(oc.Properties.MasterProfile.VMSize),
@@ -101,7 +100,7 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 
 // ToExternalList returns a slice of external representations of the internal
 // objects
-func (c *openShiftClusterConverter) ToExternalList(ocs []*api.OpenShiftCluster, nextLink string) interface{} {
+func (c openShiftClusterConverter) ToExternalList(ocs []*api.OpenShiftCluster, nextLink string) interface{} {
 	l := &OpenShiftClusterList{
 		OpenShiftClusters: make([]*OpenShiftCluster, 0, len(ocs)),
 		NextLink:          nextLink,
@@ -118,7 +117,7 @@ func (c *openShiftClusterConverter) ToExternalList(ocs []*api.OpenShiftCluster, 
 // all mapped fields from the external representation. ToInternal modifies its
 // argument; there is no pointer aliasing between the passed and returned
 // objects
-func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShiftCluster) {
+func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShiftCluster) {
 	oc := _oc.(*OpenShiftCluster)
 
 	out.ID = oc.ID
@@ -141,7 +140,6 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 	out.Properties.ClusterProfile.FipsValidatedModules = api.FipsValidatedModules(oc.Properties.ClusterProfile.FipsValidatedModules)
 	out.Properties.ServicePrincipalProfile.ClientID = oc.Properties.ServicePrincipalProfile.ClientID
 	out.Properties.ServicePrincipalProfile.ClientSecret = api.SecureString(oc.Properties.ServicePrincipalProfile.ClientSecret)
-	out.Properties.NetworkProfile.SoftwareDefinedNetwork = api.SoftwareDefinedNetwork(oc.Properties.NetworkProfile.SoftwareDefinedNetwork)
 	out.Properties.NetworkProfile.PodCIDR = oc.Properties.NetworkProfile.PodCIDR
 	out.Properties.NetworkProfile.ServiceCIDR = oc.Properties.NetworkProfile.ServiceCIDR
 	out.Properties.MasterProfile.VMSize = api.VMSize(oc.Properties.MasterProfile.VMSize)

@@ -95,9 +95,14 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
+	healthListener, err := utilnet.Listen("tcp", ":8081", pkggateway.SocketSize)
+	if err != nil {
+		return err
+	}
+
 	log.Print("listening")
 
-	p, err := pkggateway.NewGateway(ctx, _env, log.WithField("component", "gateway"), log.WithField("component", "gateway-access"), dbGateway, httpsl, httpl, os.Getenv("ACR_RESOURCE_ID"), os.Getenv("GATEWAY_DOMAINS"), m)
+	p, err := pkggateway.NewGateway(ctx, _env, log.WithField("component", "gateway"), log.WithField("component", "gateway-access"), dbGateway, httpsl, httpl, healthListener, os.Getenv("ACR_RESOURCE_ID"), os.Getenv("GATEWAY_DOMAINS"), m)
 	if err != nil {
 		return err
 	}

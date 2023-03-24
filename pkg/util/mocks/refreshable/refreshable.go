@@ -36,6 +36,20 @@ func (m *MockAuthorizer) EXPECT() *MockAuthorizerMockRecorder {
 	return m.recorder
 }
 
+// LastError mocks base method.
+func (m *MockAuthorizer) LastError() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LastError")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// LastError indicates an expected call of LastError.
+func (mr *MockAuthorizerMockRecorder) LastError() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LastError", reflect.TypeOf((*MockAuthorizer)(nil).LastError))
+}
+
 // OAuthToken mocks base method.
 func (m *MockAuthorizer) OAuthToken() string {
 	m.ctrl.T.Helper()

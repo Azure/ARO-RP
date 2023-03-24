@@ -10,10 +10,12 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
+	chiMiddlewares "github.com/go-chi/chi/v5/middleware"
 	"github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -23,13 +25,16 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type statusCodeError int
@@ -49,17 +54,33 @@ type frontend struct {
 	baseLog  *logrus.Entry
 	env      env.Interface
 
-	dbAsyncOperations   database.AsyncOperations
-	dbOpenShiftClusters database.OpenShiftClusters
-	dbSubscriptions     database.Subscriptions
+	logMiddleware        middleware.LogMiddleware
+	validateMiddleware   middleware.ValidateMiddleware
+	m                    middleware.MetricsMiddleware
+	authMiddleware       middleware.AuthMiddleware
+	apiVersionMiddleware middleware.ApiVersionValidator
 
-	apis map[string]*api.Version
-	m    metrics.Emitter
+	dbAsyncOperations             database.AsyncOperations
+	dbClusterManagerConfiguration database.ClusterManagerConfigurations
+	dbOpenShiftClusters           database.OpenShiftClusters
+	dbSubscriptions               database.Subscriptions
+	dbOpenShiftVersions           database.OpenShiftVersions
+
+	enabledOcpVersions map[string]*api.OpenShiftVersion
+	apis               map[string]*api.Version
+
+	lastChangefeed atomic.Value //time.Time
+	mu             sync.RWMutex
+
 	aead encryption.AEAD
 
+	hiveClusterManager  hive.ClusterManager
 	kubeActionsFactory  kubeActionsFactory
 	azureActionsFactory azureActionsFactory
 	ocEnricherFactory   ocEnricherFactory
+
+	skuValidator   SkuValidator
+	quotaValidator QuotaValidator
 
 	l net.Listener
 	s *http.Server
@@ -70,8 +91,15 @@ type frontend struct {
 	ready     atomic.Value
 
 	// these helps us to test and mock easier
-	now                func() time.Time
-	systemDataEnricher func(*api.OpenShiftClusterDocument, *api.SystemData)
+	now                          func() time.Time
+	systemDataClusterDocEnricher func(*api.OpenShiftClusterDocument, *api.SystemData)
+
+	systemDataSyncSetEnricher              func(*api.ClusterManagerConfigurationDocument, *api.SystemData)
+	systemDataMachinePoolEnricher          func(*api.ClusterManagerConfigurationDocument, *api.SystemData)
+	systemDataSyncIdentityProviderEnricher func(*api.ClusterManagerConfigurationDocument, *api.SystemData)
+	systemDataSecretEnricher               func(*api.ClusterManagerConfigurationDocument, *api.SystemData)
+
+	streamResponder StreamResponder
 }
 
 // Runnable represents a runnable object
@@ -85,34 +113,77 @@ func NewFrontend(ctx context.Context,
 	baseLog *logrus.Entry,
 	_env env.Interface,
 	dbAsyncOperations database.AsyncOperations,
+	dbClusterManagerConfiguration database.ClusterManagerConfigurations,
 	dbOpenShiftClusters database.OpenShiftClusters,
 	dbSubscriptions database.Subscriptions,
+	dbOpenShiftVersions database.OpenShiftVersions,
 	apis map[string]*api.Version,
 	m metrics.Emitter,
 	aead encryption.AEAD,
+	hiveClusterManager hive.ClusterManager,
 	kubeActionsFactory kubeActionsFactory,
 	azureActionsFactory azureActionsFactory,
-	ocEnricherFactory ocEnricherFactory) (Runnable, error) {
+	ocEnricherFactory ocEnricherFactory) (*frontend, error) {
 	f := &frontend{
-		auditLog:            auditLog,
-		baseLog:             baseLog,
-		env:                 _env,
-		dbAsyncOperations:   dbAsyncOperations,
-		dbOpenShiftClusters: dbOpenShiftClusters,
-		dbSubscriptions:     dbSubscriptions,
-		apis:                apis,
-		m:                   m,
-		aead:                aead,
-		kubeActionsFactory:  kubeActionsFactory,
-		azureActionsFactory: azureActionsFactory,
-		ocEnricherFactory:   ocEnricherFactory,
+		logMiddleware: middleware.LogMiddleware{
+			EnvironmentName: _env.Environment().Name,
+			Location:        _env.Location(),
+			Hostname:        _env.Hostname(),
+			BaseLog:         baseLog.WithField("component", "access"),
+			AuditLog:        auditLog,
+		},
+		baseLog:  baseLog,
+		auditLog: auditLog,
+		env:      _env,
+		apiVersionMiddleware: middleware.ApiVersionValidator{
+			APIs: api.APIs,
+		},
+		validateMiddleware: middleware.ValidateMiddleware{
+			Location: _env.Location(),
+			Apis:     api.APIs,
+		},
+		authMiddleware: middleware.AuthMiddleware{
+			AdminAuth: _env.AdminClientAuthorizer(),
+			ArmAuth:   _env.ArmClientAuthorizer(),
+		},
+		dbAsyncOperations:             dbAsyncOperations,
+		dbClusterManagerConfiguration: dbClusterManagerConfiguration,
+		dbOpenShiftClusters:           dbOpenShiftClusters,
+		dbSubscriptions:               dbSubscriptions,
+		dbOpenShiftVersions:           dbOpenShiftVersions,
+		apis:                          apis,
+		m:                             middleware.MetricsMiddleware{Emitter: m},
+		aead:                          aead,
+		hiveClusterManager:            hiveClusterManager,
+		kubeActionsFactory:            kubeActionsFactory,
+		azureActionsFactory:           azureActionsFactory,
+		ocEnricherFactory:             ocEnricherFactory,
+		quotaValidator:                quotaValidator{},
+		skuValidator:                  skuValidator{},
+
+		// add default installation version so it's always supported
+		enabledOcpVersions: map[string]*api.OpenShiftVersion{
+			version.DefaultInstallStream.Version.String(): {
+				Properties: api.OpenShiftVersionProperties{
+					Version: version.DefaultInstallStream.Version.String(),
+					Enabled: true,
+				},
+			},
+		},
 
 		bucketAllocator: &bucket.Random{},
 
 		startTime: time.Now(),
 
-		now:                time.Now,
-		systemDataEnricher: enrichSystemData,
+		now:                          time.Now,
+		systemDataClusterDocEnricher: enrichClusterSystemData,
+
+		systemDataSyncSetEnricher:              enrichSyncSetSystemData,
+		systemDataMachinePoolEnricher:          enrichMachinePoolSystemData,
+		systemDataSyncIdentityProviderEnricher: enrichSyncIdentityProviderSystemData,
+		systemDataSecretEnricher:               enrichSecretSystemData,
+
+		streamResponder: defaultResponder{},
 	}
 
 	l, err := f.env.Listen()
@@ -141,9 +212,8 @@ func NewFrontend(ctx context.Context,
 			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
 		},
-		PreferServerCipherSuites: true,
-		SessionTicketsDisabled:   true,
-		MinVersion:               tls.VersionTLS12,
+		SessionTicketsDisabled: true,
+		MinVersion:             tls.VersionTLS12,
 		CurvePreferences: []tls.CurveID{
 			tls.CurveP256,
 			tls.X25519,
@@ -160,202 +230,151 @@ func NewFrontend(ctx context.Context,
 	return f, nil
 }
 
-func (f *frontend) unauthenticatedRoutes(r *mux.Router) {
-	r.Path("/healthz/ready").Methods(http.MethodGet).HandlerFunc(f.getReady).Name("getReady")
+func (f *frontend) chiUnauthenticatedRoutes(router chi.Router) {
+	router.Get("/healthz/ready", f.getReady)
 }
 
-func (f *frontend) authenticatedRoutes(r *mux.Router) {
-	s := r.
-		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}").
-		Queries("api-version", "{api-version}").
-		Subrouter()
+func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
+	r := router.With(f.authMiddleware.Authenticate)
 
-	s.Methods(http.MethodDelete).HandlerFunc(f.deleteOpenShiftCluster).Name("deleteOpenShiftCluster")
-	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftCluster).Name("getOpenShiftCluster")
-	s.Methods(http.MethodPatch).HandlerFunc(f.putOrPatchOpenShiftCluster).Name("putOrPatchOpenShiftCluster")
-	s.Methods(http.MethodPut).HandlerFunc(f.putOrPatchOpenShiftCluster).Name("putOrPatchOpenShiftCluster")
+	r.Route("/subscriptions/{subscriptionId}", func(r chi.Router) {
+		r.Route("/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}", func(r chi.Router) {
+			r.With(f.apiVersionMiddleware.ValidateAPIVersion).Get("/", f.getOpenShiftClusters)
 
-	s = r.
-		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}").
-		Queries("api-version", "{api-version}").
-		Subrouter()
+			r.Route("/{resourceName}", func(r chi.Router) {
+				r.With(f.apiVersionMiddleware.ValidateAPIVersion).Route("/", func(r chi.Router) {
+					// With API version check
+					if f.env.FeatureIsSet(env.FeatureEnableOCMEndpoints) {
+						r.Route("/{ocmResourceType}",
+							func(r chi.Router) {
+								r.Delete("/{ocmResourceName}", f.deleteClusterManagerConfiguration)
+								r.Get("/{ocmResourceName}", f.getClusterManagerConfiguration)
+								r.Patch("/{ocmResourceName}", f.putOrPatchClusterManagerConfiguration)
+								r.Put("/{ocmResourceName}", f.putOrPatchClusterManagerConfiguration)
+							},
+						)
+					}
 
-	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters).Name("getOpenShiftClusters")
+					r.Delete("/", f.deleteOpenShiftCluster)
+					r.Get("/", f.getOpenShiftCluster)
+					r.Patch("/", f.putOrPatchOpenShiftCluster)
+					r.Put("/", f.putOrPatchOpenShiftCluster)
 
-	s = r.
-		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/{resourceType}").
-		Queries("api-version", "{api-version}").
-		Subrouter()
+					r.Post("/listcredentials", f.postOpenShiftClusterCredentials)
 
-	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters).Name("getOpenShiftClusters")
+					r.Post("/listadmincredentials", f.postOpenShiftClusterKubeConfigCredentials)
+				})
 
-	s = r.
-		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/operationsstatus/{operationId}").
-		Queries("api-version", "{api-version}").
-		Subrouter()
+				r.Get("/detectors", f.listAppLensDetectors)
 
-	s.Methods(http.MethodGet).HandlerFunc(f.getAsyncOperationsStatus).Name("getAsyncOperationsStatus")
+				r.Get("/detectors/{detectorId}", f.getAppLensDetector)
+			})
+		})
 
-	s = r.
-		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/operationresults/{operationId}").
-		Queries("api-version", "{api-version}").
-		Subrouter()
+		r.Route("/providers/{resourceProviderNamespace}", func(r chi.Router) {
+			r.Use(f.apiVersionMiddleware.ValidateAPIVersion)
 
-	s.Methods(http.MethodGet).HandlerFunc(f.getAsyncOperationResult).Name("getAsyncOperationResult")
+			r.Get("/{resourceType}", f.getOpenShiftClusters)
 
-	s = r.
-		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/listcredentials").
-		Queries("api-version", "{api-version}").
-		Subrouter()
+			r.Route("/locations/{location}", func(r chi.Router) {
+				r.Get("/operationsstatus/{operationId}", f.getAsyncOperationsStatus)
 
-	s.Methods(http.MethodPost).HandlerFunc(f.postOpenShiftClusterCredentials).Name("postOpenShiftClusterCredentials")
+				r.Get("/operationresults/{operationId}", f.getAsyncOperationResult)
 
-	s = r.
-		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/listadmincredentials").
-		Queries("api-version", "{api-version}").
-		Subrouter()
-
-	s.Methods(http.MethodPost).HandlerFunc(f.postOpenShiftClusterKubeConfigCredentials).Name("postOpenShiftClusterKubeConfigCredentials")
-
-	s = r.
-		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/listinstallversions").
-		Queries("api-version", "{api-version}").
-		Subrouter()
-
-	s.Methods(http.MethodGet).HandlerFunc(f.listInstallVersions).Name("listInstallVersions")
-
-	// Admin actions
-	s = r.
-		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/kubernetesobjects").
-		Subrouter()
-
-	s.Methods(http.MethodGet).HandlerFunc(f.getAdminKubernetesObjects).Name("getAdminKubernetesObjects")
-	s.Methods(http.MethodPost).HandlerFunc(f.postAdminKubernetesObjects).Name("postAdminKubernetesObjects")
-	s.Methods(http.MethodDelete).HandlerFunc(f.deleteAdminKubernetesObjects).Name("deleteAdminKubernetesObjects")
-
-	// Pod logs
-	s = r.
-		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/kubernetespodlogs").
-		Subrouter()
-
-	s.Methods(http.MethodGet).HandlerFunc(f.getAdminKubernetesPodLogs).Name("getAdminKubernetesPodLogs")
-
-	s = r.
-		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/resources").
-		Subrouter()
-
-	s.Methods(http.MethodGet).HandlerFunc(f.listAdminOpenShiftClusterResources).Name("listAdminOpenShiftClusterResources")
-
-	s = r.
-		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/serialconsole").
-		Subrouter()
-
-	s.Methods(http.MethodGet).HandlerFunc(f.getAdminOpenShiftClusterSerialConsole).Name("getAdminOpenShiftClusterSerialConsole")
-
-	s = r.
-		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/redeployvm").
-		Subrouter()
-
-	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterRedeployVM).Name("postAdminOpenShiftClusterRedeployVM")
-
-	s = r.
-		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/stopvm").
-		Subrouter()
-
-	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterStopVM).Name("postAdminOpenShiftClusterStopVM")
-
-	s = r.
-		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/startvm").
-		Subrouter()
-
-	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterStartVM).Name("postAdminOpenShiftClusterStartVM")
-
-	s = r.
-		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/upgrade").
-		Subrouter()
-
-	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftUpgrade).Name("postAdminOpenShiftUpgrade")
-
-	s = r.
-		Path("/admin/providers/{resourceProviderNamespace}/{resourceType}").
-		Subrouter()
-
-	s.Methods(http.MethodGet).HandlerFunc(f.getAdminOpenShiftClusters).Name("getAdminOpenShiftClusters")
-
-	s = r.
-		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/skus").
-		Subrouter()
-
-	s.Methods(http.MethodGet).HandlerFunc(f.getAdminOpenShiftClusterVMResizeOptions).Name("getAdminOpenShiftClusterVMResizeOptions")
-
-	s = r.
-		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/resize").
-		Subrouter()
-
-	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterVMResize).Name("postAdminOpenShiftClusterVMResize")
-
-	s = r.
-		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/reconcilefailednic").
-		Subrouter()
-
-	s.Methods(http.MethodPost).HandlerFunc(f.postAdminReconcileFailedNIC).Name("reconcileFailedNic")
-
-	s = r.
-		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/cordonnode").
-		Subrouter()
-
-	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterCordonNode).Name("postAdminOpenShiftClusterCordonNode")
-
-	s = r.
-		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/drainnode").
-		Subrouter()
-
-	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterDrainNode).Name("postAdminOpenShiftClusterDrainNode")
-
-	// Operations
-	s = r.
-		Path("/providers/{resourceProviderNamespace}/operations").
-		Queries("api-version", "{api-version}").
-		Subrouter()
-
-	s.Methods(http.MethodGet).HandlerFunc(f.getOperations).Name("getOperations")
-
-	s = r.
-		Path("/subscriptions/{subscriptionId}").
-		Queries("api-version", "2.0").
-		Subrouter()
-
-	s.Methods(http.MethodPut).HandlerFunc(f.putSubscription).Name("putSubscription")
-}
-
-func (f *frontend) setupRouter() *mux.Router {
-	r := mux.NewRouter()
-	r.Use(middleware.Log(f.env, f.auditLog, f.baseLog.WithField("component", "access")))
-	r.Use(middleware.Metrics(f.m))
-	r.Use(middleware.Panic)
-	r.Use(middleware.Headers)
-	r.Use(middleware.Validate(f.env, f.apis))
-	r.Use(middleware.Body)
-	r.Use(middleware.SystemData)
-
-	r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The requested path could not be found.")
+				r.Get("/openshiftversions", f.listInstallVersions)
+			})
+		})
 	})
-	r.NotFoundHandler = middleware.Authenticated(f.env)(r.NotFoundHandler)
 
-	unauthenticated := r.NewRoute().Subrouter()
-	f.unauthenticatedRoutes(unauthenticated)
+	//Admin Actions
 
-	authenticated := r.NewRoute().Subrouter()
-	authenticated.Use(middleware.Authenticated(f.env))
-	f.authenticatedRoutes(authenticated)
+	r.Route("/admin", func(r chi.Router) {
+		r.Route("/versions", func(r chi.Router) {
+			r.Get("/", f.getAdminOpenShiftVersions)
+			r.Put("/", f.putAdminOpenShiftVersion)
+		})
 
-	return r
+		r.Route("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/kubernetesobjects",
+			func(r chi.Router) {
+				r.Get("/", f.getAdminKubernetesObjects)
+				r.Post("/", f.postAdminKubernetesObjects)
+				r.Delete("/", f.deleteAdminKubernetesObjects)
+			},
+		)
+
+		r.Route("/subscriptions/{subscriptionId}", func(r chi.Router) {
+			r.Route("/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}", func(r chi.Router) {
+				r.Post("/approvecsr", f.postAdminOpenShiftClusterApproveCSR)
+
+				// Pod logs
+				r.Get("/kubernetespodlogs", f.getAdminKubernetesPodLogs)
+
+				r.Get("/resources", f.listAdminOpenShiftClusterResources)
+
+				r.Get("/serialconsole", f.getAdminOpenShiftClusterSerialConsole)
+
+				r.Get("/clusterdeployment", f.getAdminHiveClusterDeployment)
+
+				r.Post("/redeployvm", f.postAdminOpenShiftClusterRedeployVM)
+
+				r.Post("/stopvm", f.postAdminOpenShiftClusterStopVM)
+
+				r.Post("/startvm", f.postAdminOpenShiftClusterStartVM)
+
+				r.Post("/upgrade", f.postAdminOpenShiftUpgrade)
+
+				r.Get("/skus", f.getAdminOpenShiftClusterVMResizeOptions)
+
+				r.Post("/resize", f.postAdminOpenShiftClusterVMResize)
+
+				r.Post("/reconcilefailednic", f.postAdminReconcileFailedNIC)
+
+				r.Post("/cordonnode", f.postAdminOpenShiftClusterCordonNode)
+
+				r.Post("/drainnode", f.postAdminOpenShiftClusterDrainNode)
+			})
+		})
+
+		// Operations
+		r.Route("/providers/{resourceProviderNamespace}", func(r chi.Router) {
+			r.Get("/{resourceType}", f.getAdminOpenShiftClusters)
+		})
+	})
+
+	r.Put("/subscriptions/{subscriptionId}", f.putSubscription)
+
+	r.With(f.apiVersionMiddleware.ValidateAPIVersion).Get("/providers/{resourceProviderNamespace}/operations", f.getOperations)
+}
+
+func notFound(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The requested path could not be found.")
+}
+
+func (f *frontend) setupRouter() chi.Router {
+	chiRouter := chi.NewMux()
+
+	chiRouter.Use(chiMiddlewares.CleanPath)
+
+	chiRouter.NotFound(f.authMiddleware.Authenticate(http.HandlerFunc(notFound)).ServeHTTP)
+	registered := chiRouter.With(
+		chiMiddlewares.CleanPath,
+		f.logMiddleware.Log,
+		f.m.Metrics,
+		middleware.Panic,
+		middleware.Headers,
+		f.validateMiddleware.Validate,
+		middleware.Body,
+		middleware.SystemData)
+	f.chiAuthenticatedRoutes(registered)
+	f.chiUnauthenticatedRoutes(registered)
+
+	return chiRouter
 }
 
 func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- struct{}) {
 	defer recover.Panic(f.baseLog)
+	go f.changefeed(ctx)
 
 	if stop != nil {
 		go func() {
@@ -443,4 +462,36 @@ func reply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byt
 		_, _ = w.Write(b)
 		_, _ = w.Write([]byte{'\n'})
 	}
+}
+
+func frontendOperationResultLog(log *logrus.Entry, method string, err error) {
+	log = log.WithFields(logrus.Fields{
+		"LOGKIND":       "frontendqos",
+		"resultType":    utillog.SuccessResultType,
+		"operationType": method,
+	})
+
+	if err == nil {
+		log.Info("front end operation succeeded")
+		return
+	}
+
+	switch err := err.(type) {
+	case *api.CloudError:
+		log = log.WithField("resultType", utillog.UserErrorResultType)
+	case statusCodeError:
+		if int(err) < 300 && int(err) >= 200 {
+			log.Info("front end operation succeeded")
+			return
+		} else if int(err) < 500 {
+			log = log.WithField("resultType", utillog.UserErrorResultType)
+		} else {
+			log = log.WithField("resultType", utillog.ServerErrorResultType)
+		}
+	default:
+		log = log.WithField("resultType", utillog.ServerErrorResultType)
+	}
+
+	log = log.WithField("errorDetails", err.Error())
+	log.Info("front end operation failed")
 }

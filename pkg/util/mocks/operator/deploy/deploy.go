@@ -64,15 +64,30 @@ func (mr *MockOperatorMockRecorder) IsReady(arg0 interface{}) *gomock.Call {
 }
 
 // IsRunningDesiredVersion mocks base method.
-func (m *MockOperator) IsRunningDesiredVersion(arg0 context.Context) error {
+func (m *MockOperator) IsRunningDesiredVersion(arg0 context.Context) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsRunningDesiredVersion", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // IsRunningDesiredVersion indicates an expected call of IsRunningDesiredVersion.
 func (mr *MockOperatorMockRecorder) IsRunningDesiredVersion(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRunningDesiredVersion", reflect.TypeOf((*MockOperator)(nil).IsRunningDesiredVersion), arg0)
+}
+
+// RenewMDSDCertificate mocks base method.
+func (m *MockOperator) RenewMDSDCertificate(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RenewMDSDCertificate", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RenewMDSDCertificate indicates an expected call of RenewMDSDCertificate.
+func (mr *MockOperatorMockRecorder) RenewMDSDCertificate(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RenewMDSDCertificate", reflect.TypeOf((*MockOperator)(nil).RenewMDSDCertificate), arg0)
 }

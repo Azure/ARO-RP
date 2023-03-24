@@ -28,18 +28,17 @@ func TestClusterOperators(t *testing.T) {
 		t.Error(err)
 	}
 
-	// lol golang
 	converted := make([]kruntime.Object, len(operators.Items))
 	for i := range operators.Items {
 		converted[i] = &operators.Items[i]
 	}
 
-	configcli := configfake.NewSimpleClientset(converted...)
+	configCli := configfake.NewSimpleClientset(converted...)
 
 	_, log := testlog.New()
 
 	rf := &realFetcher{
-		configcli: configcli,
+		configCli: configCli,
 		log:       log,
 	}
 

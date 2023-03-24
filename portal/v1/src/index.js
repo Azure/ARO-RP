@@ -1,10 +1,12 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
-import 'bootstrap-select/dist/css/bootstrap-select.min.css';
 
 import 'bootstrap/js/dist/util';
 import 'bootstrap/js/dist/dropdown';
+import 'bootstrap/js/dist/alert';
 
-import 'bootstrap-select'
+import "./select/select.css"
+import 'tom-select/dist/css/tom-select.bootstrap5.min.css';
+import TomSelect from 'tom-select/dist/js/tom-select.complete.min';
 
 jQuery.extend({
     redirect: function (location, args) {
@@ -33,7 +35,19 @@ jQuery(function () {
                 $("#selResourceId").append($("<option>").text(cluster.resourceId));
             });
 
-            $("#selResourceId").selectpicker();
+            $("#selResourceId").prop("disabled", false);
+
+            new TomSelect("#selResourceId", {
+                plugins: ["dropdown_input"],
+                maxOptions: null,
+                maxItems: 1,
+                placeholder: "Search clusters...",
+                onDropdownOpen: function (value) {
+                    $(".dropdown-input").val($(".ts-control").children("div").html());
+                }
+            });
+
+            $("#selResourceId").css("display", "none");
         },
         dataType: "json",
     });
@@ -98,6 +112,6 @@ jQuery(function () {
     });
 
     $("#btnV2").click(function () {
-        window.location = "/v2";
+        window.location = "/";
     });
 });

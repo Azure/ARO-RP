@@ -40,6 +40,11 @@ func typeForImport(imp *ast.ImportSpec) importType {
 }
 
 func validateGroups(path string, fset *token.FileSet, f *ast.File) (errs []error) {
+	// some generated mock files are conflicting with this rule so we exclude those
+	if strings.HasPrefix(path, "pkg/util/mocks") {
+		return
+	}
+
 	var groups [][]*ast.ImportSpec
 
 	for i, imp := range f.Imports {

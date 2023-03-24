@@ -4,6 +4,9 @@ package generator
 // Licensed under the Apache License 2.0.
 
 import (
+	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2021-01-15/documentdb"
+	"github.com/Azure/go-autorest/autorest/to"
+
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 )
@@ -76,6 +79,11 @@ func (g *generator) rpTemplate() *arm.Template {
 			"vmSize",
 			"vmssCleanupEnabled",
 			"vmssName",
+
+			// TODO: Replace with Live Service Configuration in KeyVault
+			"clustersInstallViaHive",
+			"clusterDefaultInstallerPullspec",
+			"clustersAdoptByHive",
 		)
 	}
 
@@ -119,12 +127,35 @@ func (g *generator) rpTemplate() *arm.Template {
 				"southafricanorth",
 				"northcentralus",
 				"uaenorth",
+				"westus",
 			}
+
+		// TODO: Replace with Live Service Configuration in KeyVault
+		case "clustersInstallViaHive",
+			"clustersAdoptByHive",
+			"clusterDefaultInstallerPullspec":
+			p.DefaultValue = ""
 		}
 		t.Parameters[param] = p
 	}
 
 	if g.production {
+		t.Variables = map[string]interface{}{
+			"rpCosmoDbVirtualNetworkRules": &[]mgmtdocumentdb.VirtualNetworkRule{
+				{
+					ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
+				},
+				{
+					ID: to.StringPtr("[resourceId(parameters('gatewayResourceGroupName'), 'Microsoft.Network/virtualNetworks/subnets', 'gateway-vnet', 'gateway-subnet')]"),
+				},
+				{
+					ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'aks-net', 'ClusterSubnet-001')]"),
+					// TODO: AKS Sharding: add rules for additional AKS shards for this RP instance. Currently only shard 1, which has subnet ClusterSubnet-001, is set above.
+					// AKS subnet design: https://docs.google.com/document/d/1gTGSW5S4uN1vB2hqVFKYr-qp6n62WbkdQMrKg-qvPbE
+				},
+			},
+		}
+
 		t.Resources = append(t.Resources,
 			g.publicIPAddress("rp-pip"),
 			g.publicIPAddress("portal-pip"),
@@ -266,7 +297,7 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 			"extraPortalKeyvaultAccessPolicies",
 			"extraServiceKeyvaultAccessPolicies",
 			"gatewayResourceGroupName",
-			"rpNsgSourceAddressPrefixes",
+			"rpNsgPortalSourceAddressPrefixes",
 		)
 	} else {
 		params = append(params,
@@ -286,7 +317,7 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 			"extraServiceKeyvaultAccessPolicies":
 			p.Type = "array"
 			p.DefaultValue = []interface{}{}
-		case "rpNsgSourceAddressPrefixes":
+		case "rpNsgPortalSourceAddressPrefixes":
 			p.Type = "array"
 			p.DefaultValue = []string{}
 		case "keyvaultPrefix":
@@ -304,7 +335,14 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 		g.rpDBTokenKeyvault(),
 		g.rpPortalKeyvault(),
 		g.rpServiceKeyvault(),
+		g.rpServiceKeyvaultDynamic(),
 	)
+
+	if g.production {
+		t.Resources = append(t.Resources,
+			g.rpSecurityGroupForPortalSourceAddressPrefixes(),
+		)
+	}
 
 	return t
 }

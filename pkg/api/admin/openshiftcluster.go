@@ -24,7 +24,6 @@ type OpenShiftCluster struct {
 	Location   string                     `json:"location,omitempty"`
 	Tags       map[string]string          `json:"tags,omitempty"`
 	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
-	SystemData SystemData                 `json:"systemData,omitempty"`
 }
 
 // OpenShiftClusterProperties represents an OpenShift cluster's properties.
@@ -84,6 +83,7 @@ type MaintenanceTask string
 const (
 	MaintenanceTaskEverything MaintenanceTask = "Everything"
 	MaintenanceTaskOperator   MaintenanceTask = "OperatorUpdate"
+	MaintenanceTaskRenewCerts MaintenanceTask = "CertificatesRenewal"
 )
 
 // Operator feature flags
@@ -130,14 +130,24 @@ const (
 	MTU3900 MTUSize = 3900
 )
 
+// OutboundType represents the type of routing a cluster is using
+type OutboundType string
+
+// OutboundType constants
+const (
+	OutboundTypeUserDefinedRouting OutboundType = "UserDefinedRouting"
+	OutboundTypeLoadbalancer       OutboundType = "Loadbalancer"
+)
+
 // NetworkProfile represents a network profile.
 type NetworkProfile struct {
 	// The software defined network (SDN) to use when installing the cluster.
 	SoftwareDefinedNetwork SoftwareDefinedNetwork `json:"softwareDefinedNetwork,omitempty"`
 
-	PodCIDR     string  `json:"podCidr,omitempty"`
-	ServiceCIDR string  `json:"serviceCidr,omitempty"`
-	MTUSize     MTUSize `json:"mtuSize,omitempty"`
+	PodCIDR      string       `json:"podCidr,omitempty"`
+	ServiceCIDR  string       `json:"serviceCidr,omitempty"`
+	MTUSize      MTUSize      `json:"mtuSize,omitempty"`
+	OutboundType OutboundType `json:"outboundType,omitempty" mutable:"true"`
 
 	APIServerPrivateEndpointIP string `json:"privateEndpointIp,omitempty"`
 	GatewayPrivateEndpointIP   string `json:"gatewayPrivateEndpointIp,omitempty"`
@@ -166,29 +176,87 @@ type VMSize string
 
 // VMSize constants.
 const (
-	VMSizeStandardD2sV3 VMSize = "Standard_D2s_v3"
-
-	VMSizeStandardD4asV4  VMSize = "Standard_D4as_v4"
-	VMSizeStandardD8asV4  VMSize = "Standard_D8as_v4"
-	VMSizeStandardD16asV4 VMSize = "Standard_D16as_v4"
-	VMSizeStandardD32asV4 VMSize = "Standard_D32as_v4"
-
+	VMSizeStandardD2sV3  VMSize = "Standard_D2s_v3"
 	VMSizeStandardD4sV3  VMSize = "Standard_D4s_v3"
 	VMSizeStandardD8sV3  VMSize = "Standard_D8s_v3"
 	VMSizeStandardD16sV3 VMSize = "Standard_D16s_v3"
 	VMSizeStandardD32sV3 VMSize = "Standard_D32s_v3"
 
-	VMSizeStandardE4sV3     VMSize = "Standard_E4s_v3"
-	VMSizeStandardE8sV3     VMSize = "Standard_E8s_v3"
-	VMSizeStandardE16sV3    VMSize = "Standard_E16s_v3"
-	VMSizeStandardE32sV3    VMSize = "Standard_E32s_v3"
+	VMSizeStandardD4sV4  VMSize = "Standard_D4s_v4"
+	VMSizeStandardD8sV4  VMSize = "Standard_D8s_v4"
+	VMSizeStandardD16sV4 VMSize = "Standard_D16s_v4"
+	VMSizeStandardD32sV4 VMSize = "Standard_D32s_v4"
+	VMSizeStandardD64sV4 VMSize = "Standard_D64s_v4"
+	VMSizeStandardD96sV4 VMSize = "Standard_D96s_v4"
+
+	VMSizeStandardD4sV5  VMSize = "Standard_D4s_v5"
+	VMSizeStandardD8sV5  VMSize = "Standard_D8s_v5"
+	VMSizeStandardD16sV5 VMSize = "Standard_D16s_v5"
+	VMSizeStandardD32sV5 VMSize = "Standard_D32s_v5"
+	VMSizeStandardD64sV5 VMSize = "Standard_D64s_v5"
+	VMSizeStandardD96sV5 VMSize = "Standard_D96s_v5"
+
+	VMSizeStandardD4asV4  VMSize = "Standard_D4as_v4"
+	VMSizeStandardD8asV4  VMSize = "Standard_D8as_v4"
+	VMSizeStandardD16asV4 VMSize = "Standard_D16as_v4"
+	VMSizeStandardD32asV4 VMSize = "Standard_D32as_v4"
+	VMSizeStandardD64asV4 VMSize = "Standard_D64as_v4"
+	VMSizeStandardD96asV4 VMSize = "Standard_D96as_v4"
+
+	VMSizeStandardD4asV5  VMSize = "Standard_D4as_v5"
+	VMSizeStandardD8asV5  VMSize = "Standard_D8as_v5"
+	VMSizeStandardD16asV5 VMSize = "Standard_D16as_v5"
+	VMSizeStandardD32asV5 VMSize = "Standard_D32as_v5"
+	VMSizeStandardD64asV5 VMSize = "Standard_D64as_v5"
+	VMSizeStandardD96asV5 VMSize = "Standard_D96as_v5"
+
+	VMSizeStandardE4sV3  VMSize = "Standard_E4s_v3"
+	VMSizeStandardE8sV3  VMSize = "Standard_E8s_v3"
+	VMSizeStandardE16sV3 VMSize = "Standard_E16s_v3"
+	VMSizeStandardE32sV3 VMSize = "Standard_E32s_v3"
+
+	VMSizeStandardE2sV4  VMSize = "Standard_E2s_v4"
+	VMSizeStandardE4sV4  VMSize = "Standard_E4s_v4"
+	VMSizeStandardE8sV4  VMSize = "Standard_E8s_v4"
+	VMSizeStandardE16sV4 VMSize = "Standard_E16s_v4"
+	VMSizeStandardE20sV4 VMSize = "Standard_E20s_v4"
+	VMSizeStandardE32sV4 VMSize = "Standard_E32s_v4"
+	VMSizeStandardE48sV4 VMSize = "Standard_E48s_v4"
+	VMSizeStandardE64sV4 VMSize = "Standard_E64s_v4"
+	VMSizeStandardE96sV4 VMSize = "Standard_E96s_v4"
+
+	VMSizeStandardE2sV5  VMSize = "Standard_E2s_v5"
+	VMSizeStandardE4sV5  VMSize = "Standard_E4s_v5"
+	VMSizeStandardE8sV5  VMSize = "Standard_E8s_v5"
+	VMSizeStandardE16sV5 VMSize = "Standard_E16s_v5"
+	VMSizeStandardE20sV5 VMSize = "Standard_E20s_v5"
+	VMSizeStandardE32sV5 VMSize = "Standard_E32s_v5"
+	VMSizeStandardE48sV5 VMSize = "Standard_E48s_v5"
+	VMSizeStandardE64sV5 VMSize = "Standard_E64s_v5"
+	VMSizeStandardE96sV5 VMSize = "Standard_E96s_v5"
+
+	VMSizeStandardE4asV4  VMSize = "Standard_E4as_v4"
+	VMSizeStandardE8asV4  VMSize = "Standard_E8as_v4"
+	VMSizeStandardE16asV4 VMSize = "Standard_E16as_v4"
+	VMSizeStandardE20asV4 VMSize = "Standard_E20as_v4"
+	VMSizeStandardE32asV4 VMSize = "Standard_E32as_v4"
+	VMSizeStandardE48asV4 VMSize = "Standard_E48as_v4"
+	VMSizeStandardE64asV4 VMSize = "Standard_E64as_v4"
+	VMSizeStandardE96asV4 VMSize = "Standard_E96as_v4"
+
+	VMSizeStandardE8asV5  VMSize = "Standard_E8as_v5"
+	VMSizeStandardE16asV5 VMSize = "Standard_E16as_v5"
+	VMSizeStandardE20asV5 VMSize = "Standard_E20as_v5"
+	VMSizeStandardE32asV5 VMSize = "Standard_E32as_v5"
+	VMSizeStandardE48asV5 VMSize = "Standard_E48as_v5"
+	VMSizeStandardE64asV5 VMSize = "Standard_E64as_v5"
+	VMSizeStandardE96asV5 VMSize = "Standard_E96as_v5"
+
 	VMSizeStandardE64isV3   VMSize = "Standard_E64is_v3"
-	VMSizeStandardE64iV3    VMSize = "Standard_E64i_v3"
 	VMSizeStandardE80isV4   VMSize = "Standard_E80is_v4"
 	VMSizeStandardE80idsV4  VMSize = "Standard_E80ids_v4"
-	VMSizeStandardE104iV5   VMSize = "Standard_E104i_v5"
+	VMSizeStandardE96dsV5   VMSize = "Standard_E96ds_v5"
 	VMSizeStandardE104isV5  VMSize = "Standard_E104is_v5"
-	VMSizeStandardE104idV5  VMSize = "Standard_E104id_v5"
 	VMSizeStandardE104idsV5 VMSize = "Standard_E104ids_v5"
 
 	VMSizeStandardF4sV2  VMSize = "Standard_F4s_v2"
@@ -198,18 +266,34 @@ const (
 	VMSizeStandardF72sV2 VMSize = "Standard_F72s_v2"
 
 	VMSizeStandardM128ms VMSize = "Standard_M128ms"
-	VMSizeStandardG5     VMSize = "Standard_G5"
-	VMSizeStandardGS5    VMSize = "Standard_GS5"
 
-	VMSizeStandardL4s    VMSize = "Standard_L4s"
-	VMSizeStandardL8s    VMSize = "Standard_L8s"
-	VMSizeStandardL16s   VMSize = "Standard_L16s"
-	VMSizeStandardL32s   VMSize = "Standard_L32s"
+	VMSizeStandardL4s  VMSize = "Standard_L4s"
+	VMSizeStandardL8s  VMSize = "Standard_L8s"
+	VMSizeStandardL16s VMSize = "Standard_L16s"
+	VMSizeStandardL32s VMSize = "Standard_L32s"
+
 	VMSizeStandardL8sV2  VMSize = "Standard_L8s_v2"
 	VMSizeStandardL16sV2 VMSize = "Standard_L16s_v2"
 	VMSizeStandardL32sV2 VMSize = "Standard_L32s_v2"
 	VMSizeStandardL48sV2 VMSize = "Standard_L48s_v2"
 	VMSizeStandardL64sV2 VMSize = "Standard_L64s_v2"
+
+	VMSizeStandardL8sV3  VMSize = "Standard_L8s_v3"
+	VMSizeStandardL16sV3 VMSize = "Standard_L16s_v3"
+	VMSizeStandardL32sV3 VMSize = "Standard_L32s_v3"
+	VMSizeStandardL48sV3 VMSize = "Standard_L48s_v3"
+	VMSizeStandardL64sV3 VMSize = "Standard_L64s_v3"
+
+	// GPU VMs
+	VMSizeStandardNC4asT4V3  VMSize = "Standard_NC4as_T4_v3"
+	VMSizeStandardNC8asT4V3  VMSize = "Standard_NC8as_T4_v3"
+	VMSizeStandardNC16asT4V3 VMSize = "Standard_NC16as_T4_v3"
+	VMSizeStandardNC64asT4V3 VMSize = "Standard_NC64as_T4_v3"
+
+	VMSizeStandardNC6sV3   VMSize = "Standard_NC6s_v3"
+	VMSizeStandardNC12sV3  VMSize = "Standard_NC12s_v3"
+	VMSizeStandardNC24sV3  VMSize = "Standard_NC24s_v3"
+	VMSizeStandardNC24rsV3 VMSize = "Standard_NC24rs_v3"
 )
 
 // WorkerProfile represents a worker profile.
@@ -299,4 +383,9 @@ type SystemData struct {
 
 type HiveProfile struct {
 	Namespace string `json:"namespace,omitempty"`
+
+	// CreatedByHive is used during PUCM to skip adoption and reconciliation
+	// of clusters that were created by Hive to avoid deleting existing
+	// ClusterDeployments.
+	CreatedByHive bool `json:"createdByHive,omitempty"`
 }

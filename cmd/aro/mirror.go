@@ -12,6 +12,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/containers/image/v5/types"
 	"github.com/sirupsen/logrus"
 
@@ -64,7 +65,6 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	dstAcr := os.Getenv("DST_ACR_NAME")
-	srcAcrGenevaOverride := os.Getenv("SRC_ACR_NAME_GENEVA_OVERRIDE") // Optional
 
 	srcAuthQuay, err := getAuth("SRC_AUTH_QUAY")
 	if err != nil {
@@ -76,13 +76,8 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
+	// Geneva allows anonymous pulls
 	var srcAuthGeneva *types.DockerAuthConfig
-	if os.Getenv("SRC_AUTH_GENEVA") != "" {
-		srcAuthGeneva, err = getAuth("SRC_AUTH_GENEVA") // Optional.  Needed for situations where ACR doesn't allow anonymous pulls
-		if err != nil {
-			return err
-		}
-	}
 
 	var releases []pkgmirror.Node
 	if len(flag.Args()) == 1 {
@@ -95,8 +90,8 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		for _, arg := range flag.Args()[1:] {
 			if strings.EqualFold(arg, "latest") {
 				releases = append(releases, pkgmirror.Node{
-					Version: version.InstallStream.Version.String(),
-					Payload: version.InstallStream.PullSpec,
+					Version: version.DefaultInstallStream.Version.String(),
+					Payload: version.DefaultInstallStream.PullSpec,
 				})
 			} else {
 				vers, err := version.ParseVersion(arg)
@@ -131,54 +126,59 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	srcAcrGeneva := "linuxgeneva-microsoft" + acrDomainSuffix
+	// Geneva mirroring from upstream only takes place in Public Cloud, in
+	// soverign clouds a separate mirror process mirrors from the public cloud
+	if env.Environment().Environment == azure.PublicCloud {
+		srcAcrGeneva := "linuxgeneva-microsoft" + acrDomainSuffix
 
-	if srcAcrGenevaOverride != "" {
-		srcAcrGeneva = srcAcrGenevaOverride
-	}
-
-	mirrorImages := []string{
-		version.MdsdImage(srcAcrGeneva),
-		version.MdmImage(srcAcrGeneva),
-	}
-
-	for _, ref := range mirrorImages {
-		log.Printf("mirroring %s -> %s", ref, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref))
-		err = pkgmirror.Copy(ctx, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthGeneva)
-		if err != nil {
-			log.Errorf("%s: %s\n", ref, err)
-			errorOccurred = true
+		mirrorImages := []string{
+			version.MdsdImage(srcAcrGeneva),
+			version.MdmImage(srcAcrGeneva),
 		}
+
+		for _, ref := range mirrorImages {
+			log.Printf("mirroring %s -> %s", ref, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref))
+			err = pkgmirror.Copy(ctx, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthGeneva)
+			if err != nil {
+				log.Errorf("%s: %s\n", ref, err)
+				errorOccurred = true
+			}
+		}
+	} else {
+		log.Printf("skipping Geneva mirroring due to not being in Public")
 	}
+
+	MARINER_VERSION := "20230126"
 
 	for _, ref := range []string{
-		"registry.redhat.io/rhel7/support-tools:latest",
 		"registry.redhat.io/rhel8/support-tools:latest",
-		"registry.redhat.io/openshift4/ose-tools-rhel7:latest",
 		"registry.redhat.io/openshift4/ose-tools-rhel8:latest",
-		"registry.access.redhat.com/ubi7/ubi-minimal:latest",
 		"registry.access.redhat.com/ubi8/ubi-minimal:latest",
 		"registry.access.redhat.com/ubi8/nodejs-14:latest",
-		"registry.access.redhat.com/ubi7/go-toolset:1.16.12",
-		"registry.access.redhat.com/ubi8/go-toolset:1.17.7",
+		// https://catalog.redhat.com/software/containers/ubi8/go-toolset/5ce8713aac3db925c03774d1
+		"registry.access.redhat.com/ubi8/go-toolset:1.17.12",
+		"registry.access.redhat.com/ubi8/go-toolset:1.18.4",
+		"mcr.microsoft.com/azure-cli:latest",
+		// https://mcr.microsoft.com/en-us/product/cbl-mariner/base/core/tags
+		"mcr.microsoft.com/cbl-mariner/base/core:2.0-nonroot." + MARINER_VERSION + "-amd64",
+		"mcr.microsoft.com/cbl-mariner/base/core:2.0." + MARINER_VERSION + "-amd64",
+		// https://mcr.microsoft.com/en-us/product/cbl-mariner/distroless/base/tags
+		"mcr.microsoft.com/cbl-mariner/distroless/base:2.0." + MARINER_VERSION + "-amd64",
+		"mcr.microsoft.com/cbl-mariner/distroless/base:2.0-nonroot." + MARINER_VERSION + "-amd64",
+
+		// https://quay.io/repository/app-sre/managed-upgrade-operator?tab=tags
+		"quay.io/app-sre/managed-upgrade-operator:v0.1.891-3d94c00",
+		// https://quay.io/repository/app-sre/hive?tab=tags
+		"quay.io/app-sre/hive:fec14dc",
 	} {
 		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
-		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthRedhat)
-		if err != nil {
-			log.Errorf("%s: %s\n", ref, err)
-			errorOccurred = true
+
+		srcAuth := srcAuthRedhat
+		if strings.Index(ref, "quay.io") == 0 {
+			srcAuth = srcAuthQuay
 		}
-	}
 
-	for _, ref := range []string{
-		// Managed Upgrade Operator
-		"quay.io/app-sre/managed-upgrade-operator:v0.1.856-eebbe07",
-
-		// Hive
-		"quay.io/app-sre/hive:2383a88",
-	} {
-		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
-		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthQuay)
+		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuth)
 		if err != nil {
 			log.Errorf("%s: %s\n", ref, err)
 			errorOccurred = true

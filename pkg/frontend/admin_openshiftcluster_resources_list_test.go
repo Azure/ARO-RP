@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
+	mock_frontend "github.com/Azure/ARO-RP/pkg/util/mocks/frontend"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
@@ -32,8 +34,6 @@ func TestAdminListResourcesList(t *testing.T) {
 		fixture        func(f *testdatabase.Fixture)
 		mocks          func(*test, *mock_adminactions.MockAzureActions)
 		wantStatusCode int
-		wantResponse   []byte
-		wantError      string
 	}
 
 	for _, tt := range []*test{
@@ -67,11 +67,18 @@ func TestAdminListResourcesList(t *testing.T) {
 			},
 			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().
-					ResourcesList(gomock.Any()).
-					Return([]byte(`[{"properties":{"dhcpOptions":{"dnsServers":[]}},"id":"/subscriptions/id","type":"Microsoft.Network/virtualNetworks"},{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`), nil)
+					ResourcesList(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil).
+					AnyTimes()
+				a.EXPECT().
+					GroupResourceList(gomock.Any()).
+					Return([]mgmtfeatures.GenericResourceExpanded{}, nil).
+					AnyTimes()
+				a.EXPECT().
+					WriteToStream(gomock.Any(), gomock.Any()).
+					Return(nil)
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse:   []byte(`[{"properties":{"dhcpOptions":{"dnsServers":[]}},"id":"/subscriptions/id","type":"Microsoft.Network/virtualNetworks"},{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]` + "\n"),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -86,9 +93,12 @@ func TestAdminListResourcesList(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, nil, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error) {
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, nil, api.APIs, &noop.Noop{}, nil, nil, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error) {
 				return a, nil
 			}, nil)
+			mockResponder := mock_frontend.NewMockStreamResponder(ti.controller)
+			mockResponder.EXPECT().AdminReplyStream(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
+			f.streamResponder = mockResponder
 
 			if err != nil {
 				t.Fatal(err)
@@ -96,16 +106,11 @@ func TestAdminListResourcesList(t *testing.T) {
 
 			go f.Run(ctx, nil, nil)
 
-			resp, b, err := ti.request(http.MethodGet,
+			_, _, err = ti.request(http.MethodGet,
 				fmt.Sprintf("https://server/admin/%s/resources", tt.resourceID),
 				nil, nil)
 			if err != nil {
 				t.Fatal(err)
-			}
-
-			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, tt.wantResponse)
-			if err != nil {
-				t.Error(err)
 			}
 		})
 	}

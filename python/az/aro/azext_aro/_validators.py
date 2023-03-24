@@ -5,6 +5,7 @@ import ipaddress
 import json
 import re
 import uuid
+from os.path import exists
 
 from azure.cli.core.commands.client_factory import get_mgmt_service_client
 from azure.cli.core.commands.client_factory import get_subscription_id
@@ -106,20 +107,14 @@ def validate_pull_secret(namespace):
         return
 
     try:
+        if exists(namespace.pull_secret):
+            with open(namespace.pull_secret, 'r', encoding='utf-8') as file:
+                namespace.pull_secret = file.read().rstrip('\n')
+
         if not isinstance(json.loads(namespace.pull_secret), dict):
             raise Exception()
     except Exception as e:
         raise InvalidArgumentValueError("Invalid --pull-secret.") from e
-
-
-def validate_sdn(namespace):
-    if namespace.software_defined_network is None:
-        return
-
-    target_values = ['OVNKubernetes', 'OpenshiftSDN']
-    if namespace.software_defined_network not in target_values:
-        raise InvalidArgumentValueError(
-            f"Invalid --software-defined-network '{namespace.software_defined_network}'.")
 
 
 def validate_subnet(key):
@@ -253,3 +248,8 @@ def validate_refresh_cluster_credentials(namespace):
         return
     if namespace.client_secret is not None or namespace.client_id is not None:
         raise RequiredArgumentMissingError('--client-id and --client-secret must be not set with --refresh-credentials.')  # pylint: disable=line-too-long
+
+
+def validate_version_format(namespace):
+    if namespace.version is not None and not re.match(r'^[4-9]{1}\.[0-9]{1,2}\.[0-9]{1,2}$', namespace.version):
+        raise InvalidArgumentValueError('--version is invalid')

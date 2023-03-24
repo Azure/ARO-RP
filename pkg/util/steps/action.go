@@ -18,7 +18,9 @@ type actionFunction func(context.Context) error
 // Action returns a Step which will execute the action function `f`. Errors from
 // `f` are returned directly.
 func Action(f actionFunction) Step {
-	return actionStep{f}
+	return actionStep{
+		f: f,
+	}
 }
 
 type actionStep struct {
@@ -28,6 +30,11 @@ type actionStep struct {
 func (s actionStep) run(ctx context.Context, log *logrus.Entry) error {
 	return s.f(ctx)
 }
+
 func (s actionStep) String() string {
 	return fmt.Sprintf("[Action %s]", FriendlyName(s.f))
+}
+
+func (s actionStep) metricsTopic() string {
+	return fmt.Sprintf("action.%s", shortName(FriendlyName(s.f)))
 }

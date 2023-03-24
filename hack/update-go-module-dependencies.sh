@@ -68,5 +68,5 @@ go mod edit -replace github.com/openshift/installer=$(go list -mod=mod -m github
 
 go get -u ./...
 
-go mod tidy -compat=1.17
+go mod tidy -compat=1.18
 go mod vendor

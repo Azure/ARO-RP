@@ -1,0 +1,17 @@
+# Uses a multi-stage container build to build the RP & E2E components.
+#
+ARG REGISTRY
+FROM ${REGISTRY}/ubi8/go-toolset:1.18.4 AS builder
+ENV GOOS=linux \
+    GOPATH=/go/
+WORKDIR ${GOPATH}/src/github.com/Azure/ARO-RP
+USER root
+COPY . ${GOPATH}/src/github.com/Azure/ARO-RP/
+RUN make aro RELEASE=${IS_OFFICIAL_RELEASE} -o generate && make e2e.test e2etools
+
+FROM ${REGISTRY}/ubi8/ubi-minimal
+RUN microdnf update && microdnf clean all
+COPY --from=builder /go/src/github.com/Azure/ARO-RP/aro /go/src/github.com/Azure/ARO-RP/e2e.test /go/src/github.com/Azure/ARO-RP/db /go/src/github.com/Azure/ARO-RP/cluster /go/src/github.com/Azure/ARO-RP/portalauth /usr/local/bin/
+ENTRYPOINT ["aro"]
+EXPOSE 2222/tcp 8080/tcp 8443/tcp 8444/tcp 8445/tcp
+USER 1000

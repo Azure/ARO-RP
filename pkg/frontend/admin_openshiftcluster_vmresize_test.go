@@ -89,7 +89,7 @@ func TestAdminVMResize(t *testing.T) {
 					Items: []corev1.Node{node},
 				}
 				marsh, _ := json.Marshal(nodeList)
-				k.EXPECT().KubeList(gomock.Any(), "node", "").Return([]byte(marsh), nil)
+				k.EXPECT().KubeList(gomock.Any(), "node", "").Return(marsh, nil)
 				a.EXPECT().VMResize(gomock.Any(), tt.vmName, tt.vmSize).Return(nil)
 			},
 			wantStatusCode: http.StatusOK,
@@ -183,7 +183,7 @@ func TestAdminVMResize(t *testing.T) {
 					Items: []corev1.Node{node},
 				}
 				marsh, _ := json.Marshal(nodeList)
-				k.EXPECT().KubeList(gomock.Any(), "node", "").Return([]byte(marsh), nil)
+				k.EXPECT().KubeList(gomock.Any(), "node", "").Return(marsh, nil)
 			},
 			wantStatusCode: http.StatusNotFound,
 			wantError:      `404: NotFound: : "The master node 'aro-fake-node-0' under resource group 'resourcegroup' was not found."`,
@@ -211,7 +211,7 @@ func TestAdminVMResize(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, nil,
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, nil, api.APIs, &noop.Noop{}, nil, nil,
 				func(e *logrus.Entry, i env.Interface, osc *api.OpenShiftCluster) (adminactions.KubeActions, error) {
 					return k, nil
 				}, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error) {

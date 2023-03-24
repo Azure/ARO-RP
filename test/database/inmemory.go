@@ -8,6 +8,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
 )
 
@@ -65,8 +66,17 @@ func NewFakeGateway() (db database.Gateway, client *cosmosdb.FakeGatewayDocument
 	return db, client
 }
 
-func NewFakeOpenShiftVersions() (db database.OpenShiftVersions, client *cosmosdb.FakeOpenShiftVersionDocumentClient) {
+func NewFakeOpenShiftVersions(uuid uuid.Generator) (db database.OpenShiftVersions, client *cosmosdb.FakeOpenShiftVersionDocumentClient) {
 	client = cosmosdb.NewFakeOpenShiftVersionDocumentClient(jsonHandle)
-	db = database.NewOpenShiftVersionsWithProvidedClient(client)
+	db = database.NewOpenShiftVersionsWithProvidedClient(client, uuid)
+	return db, client
+}
+
+func NewFakeClusterManager() (db database.ClusterManagerConfigurations, client *cosmosdb.FakeClusterManagerConfigurationDocumentClient) {
+	uuid := deterministicuuid.NewTestUUIDGenerator(deterministicuuid.CLUSTERMANAGER)
+	client = cosmosdb.NewFakeClusterManagerConfigurationDocumentClient(jsonHandle)
+	injectClusterManager(client)
+	coll := &fakeCollectionClient{}
+	db = database.NewClusterManagerConfigurationsWithProvidedClient(client, coll, "", uuid)
 	return db, client
 }

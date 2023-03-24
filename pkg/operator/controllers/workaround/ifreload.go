@@ -7,9 +7,10 @@ import (
 	"context"
 
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -18,17 +19,17 @@ import (
 type ifReload struct {
 	log *logrus.Entry
 
-	cli kubernetes.Interface
+	client client.Client
 
 	versionFixed *version.Version
 }
 
-func NewIfReload(log *logrus.Entry, cli kubernetes.Interface) Workaround {
+func NewIfReload(log *logrus.Entry, client client.Client) Workaround {
 	verFixed, _ := version.ParseVersion("4.4.10")
 
 	return &ifReload{
 		log:          log,
-		cli:          cli,
+		client:       client,
 		versionFixed: verFixed,
 	}
 }
@@ -41,12 +42,20 @@ func (i *ifReload) IsRequired(clusterVersion *version.Version, cluster *arov1alp
 	return clusterVersion.Lt(i.versionFixed)
 }
 
-func (*ifReload) Ensure(ctx context.Context) error {
+func (i *ifReload) Ensure(ctx context.Context) error {
+	i.log.Debug("ensure ifReload")
 	return nil
 }
 
 func (i *ifReload) Remove(ctx context.Context) error {
-	err := i.cli.CoreV1().Namespaces().Delete(ctx, kubeNamespace, metav1.DeleteOptions{})
+	i.log.Debug("remove ifReload")
+
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: kubeNamespace,
+		},
+	}
+	err := i.client.Delete(ctx, ns)
 	if kerrors.IsNotFound(err) {
 		return nil
 	}

@@ -1,0 +1,25 @@
+name: node-lint
+on:
+  push:
+    tags:
+      - v*
+    branches:
+      - master
+      - main
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  npm-audit-portal-v2:
+    name: npm-audit-portal-v2
+    runs-on: ubuntu-latest
+    steps:
+      - name: setup Node.JS
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.16.0
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      - name: Run NPM Audit
+        run: bash ${GITHUB_WORKSPACE}/hack/github-actions/npm_audit.sh
+        shell: bash

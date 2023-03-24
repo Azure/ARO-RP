@@ -7,12 +7,9 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 )
@@ -20,13 +17,11 @@ import (
 var _ = Describe("[Admin API] Cluster admin update action", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
-	It("should be able to run cluster update operation on a cluster", func() {
+	It("must run cluster update operation on a cluster", func(ctx context.Context) {
 		var oc = &admin.OpenShiftCluster{}
-		ctx := context.Background()
-		resourceID := resourceIDFromEnv()
 
 		By("triggering the update via RP admin API")
-		resp, err := adminRequest(ctx, http.MethodPatch, resourceID, nil, json.RawMessage("{}"), oc)
+		resp, err := adminRequest(ctx, http.MethodPatch, clusterResourceID, nil, true, json.RawMessage("{}"), oc)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -35,10 +30,10 @@ var _ = Describe("[Admin API] Cluster admin update action", func() {
 		Expect(oc.Properties.LastProvisioningState).To(Equal(admin.ProvisioningStateSucceeded))
 
 		By("waiting for the update to complete")
-		err = wait.PollImmediate(10*time.Second, 30*time.Minute, func() (bool, error) {
-			oc = getCluster(ctx, resourceID)
-			return oc.Properties.ProvisioningState == admin.ProvisioningStateSucceeded, nil
-		})
-		Expect(err).NotTo(HaveOccurred())
+		Eventually(func(g Gomega, ctx context.Context) {
+			oc = adminGetCluster(g, ctx, clusterResourceID)
+
+			g.Expect(oc.Properties.ProvisioningState).To(Equal(admin.ProvisioningStateSucceeded))
+		}).WithContext(ctx).Should(Succeed())
 	})
 })

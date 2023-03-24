@@ -27,13 +27,13 @@ type testPortal struct {
 	portalLogHook *test.Hook
 }
 
-func NewTestPortal(_env env.Core, dbOpenShiftClusters database.OpenShiftClusters, dbPortal database.Portal) *testPortal {
+func NewTestPortal(_env env.Interface, dbOpenShiftClusters database.OpenShiftClusters, dbPortal database.Portal, dbSubscription database.Subscriptions) *testPortal {
 	_, portalAccessLog := testlog.New()
 	portalLogHook, portalLog := testlog.New()
 	auditHook, portalAuditLog := testlog.NewAudit()
 
 	l := listener.NewListener()
-	p := NewPortal(_env, portalAuditLog, portalLog, portalAccessLog, l, nil, nil, "", nil, nil, "", nil, nil, make([]byte, 32), nil, nonElevatedGroupIDs, elevatedGroupIDs, dbOpenShiftClusters, dbPortal, nil, nil).(*portal)
+	p := NewPortal(_env, portalAuditLog, portalLog, portalAccessLog, l, nil, nil, "", nil, nil, "", nil, nil, make([]byte, 32), nil, nonElevatedGroupIDs, elevatedGroupIDs, dbOpenShiftClusters, dbPortal, dbSubscription, nil, nil).(*portal)
 
 	return &testPortal{
 		p:             p,
@@ -50,13 +50,13 @@ func (p *testPortal) DumpLogs(t *testing.T) {
 }
 
 func (p *testPortal) Run(ctx context.Context) error {
-	err := p.p.setupRouter()
+	router, err := p.p.setupRouter(nil, nil, nil)
 	if err != nil {
 		return err
 	}
 
 	s := &http.Server{
-		Handler:     frontendmiddleware.Lowercase(p.p.baseRouter),
+		Handler:     frontendmiddleware.Lowercase(router),
 		ReadTimeout: 10 * time.Second,
 		IdleTimeout: 2 * time.Minute,
 		ErrorLog:    log.New(p.p.log.Writer(), "", 0),

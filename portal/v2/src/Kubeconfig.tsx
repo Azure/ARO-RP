@@ -29,7 +29,7 @@ export const KubeconfigButton = forwardRef<any, KubeconfigButtonProps>(
         if (result?.status === 200) {
           const blob = new Blob([result.request.response])
           const fileDownloadUrl = URL.createObjectURL(blob)
-          const filename = parseContentDisposition(result.headers["content-disposition"]).parameters
+          const filename = parseContentDisposition(result.headers["content-disposition"] || '').parameters
             .filename
           setData({ content: fileDownloadUrl, name: filename })
         } else {
@@ -58,7 +58,7 @@ export const KubeconfigButton = forwardRef<any, KubeconfigButtonProps>(
       <>
         <TooltipHost content={`Download Kubeconfig`}>
           <IconButton
-            iconProps={{ iconName: "HardDriveGroup" }}
+            iconProps={{ iconName: "kubernetes-svg" }}
             disabled={fetching === "FETCHING"}
             aria-label="Download Kubeconfig"
             onClick={() => setFetching("")}

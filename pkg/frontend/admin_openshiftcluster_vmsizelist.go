@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -24,14 +24,12 @@ func (f *frontend) getAdminOpenShiftClusterVMResizeOptions(w http.ResponseWriter
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
-
 	b, err := f._getAdminOpenShiftClusterVMResizeOptions(ctx, r, log)
-
 	adminReply(log, w, nil, b, err)
 }
 
 func (f *frontend) _getAdminOpenShiftClusterVMResizeOptions(ctx context.Context, r *http.Request, log *logrus.Entry) ([]byte, error) {
-	vars := mux.Vars(r)
+	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
@@ -40,7 +38,7 @@ func (f *frontend) _getAdminOpenShiftClusterVMResizeOptions(ctx context.Context,
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "",
 			"The Resource '%s/%s' under resource group '%s' was not found.",
-			vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+			resType, resName, resGroupName)
 	case err != nil:
 		return nil, err
 	}

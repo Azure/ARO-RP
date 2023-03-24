@@ -21,11 +21,9 @@ import (
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
-var (
-	fileName = flag.String("file", "-", "File to read. '-' for stdin.")
-)
-
 func run(ctx context.Context, log *logrus.Entry) error {
+	fileName := flag.String("file", "-", "File to read. '-' for stdin.")
+
 	flag.Parse()
 
 	var (

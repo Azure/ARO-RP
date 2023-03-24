@@ -10,9 +10,9 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // KubeManager interface interact with kubernetes layer to extract required information
@@ -21,14 +21,14 @@ type KubeManager interface {
 }
 
 type kubeManager struct {
-	maocli machineclient.Interface
+	client client.Client
 
 	subscriptionID string
 }
 
-func NewKubeManager(maocli machineclient.Interface, subscriptionID string) KubeManager {
+func NewKubeManager(client client.Client, subscriptionID string) KubeManager {
 	return &kubeManager{
-		maocli:         maocli,
+		client:         client,
 		subscriptionID: subscriptionID,
 	}
 }
@@ -40,7 +40,12 @@ func (m *kubeManager) List(ctx context.Context) ([]Subnet, error) {
 	subnetMap := []Subnet{}
 
 	// select all workers by the  machine.openshift.io/cluster-api-machine-role: not equal to master Label
-	machines, err := m.maocli.MachineV1beta1().Machines(machineSetsNamespace).List(ctx, metav1.ListOptions{LabelSelector: "machine.openshift.io/cluster-api-machine-role!=master"})
+	selector, _ := labels.Parse("machine.openshift.io/cluster-api-machine-role!=master")
+	machines := &machinev1beta1.MachineList{}
+	err := m.client.List(ctx, machines, &client.ListOptions{
+		Namespace:     machineSetsNamespace,
+		LabelSelector: selector,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +57,13 @@ func (m *kubeManager) List(ctx context.Context) ([]Subnet, error) {
 		}
 		subnetMap = append(subnetMap, *subnetDesc)
 	}
-	machines, err = m.maocli.MachineV1beta1().Machines(machineSetsNamespace).List(ctx, metav1.ListOptions{LabelSelector: "machine.openshift.io/cluster-api-machine-role=master"})
+
+	selector, _ = labels.Parse("machine.openshift.io/cluster-api-machine-role=master")
+	machines = &machinev1beta1.MachineList{}
+	err = m.client.List(ctx, machines, &client.ListOptions{
+		Namespace:     machineSetsNamespace,
+		LabelSelector: selector,
+	})
 	if err != nil {
 		return nil, err
 	}

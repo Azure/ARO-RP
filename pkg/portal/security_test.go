@@ -16,10 +16,10 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/golangci/golangci-lint/pkg/sliceutil"
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"github.com/sirupsen/logrus"
+	"k8s.io/utils/strings/slices"
 
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
@@ -49,7 +49,7 @@ func TestSecurity(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	_env := mock_env.NewMockCore(controller)
+	_env := mock_env.NewMockInterface(controller)
 	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 	_env.EXPECT().Location().AnyTimes().Return("eastus")
 	_env.EXPECT().TenantID().AnyTimes().Return("00000000-0000-0000-0000-000000000001")
@@ -74,6 +74,7 @@ func TestSecurity(t *testing.T) {
 
 	dbOpenShiftClusters, _ := testdatabase.NewFakeOpenShiftClusters()
 	dbPortal, _ := testdatabase.NewFakePortal()
+	dbSubscription, _ := testdatabase.NewFakeSubscriptions()
 
 	pool := x509.NewCertPool()
 	pool.AddCert(servercerts[0])
@@ -90,7 +91,7 @@ func TestSecurity(t *testing.T) {
 		},
 	}
 
-	p := NewPortal(_env, portalAuditLog, portalLog, portalAccessLog, l, sshl, nil, "", serverkey, servercerts, "", nil, nil, make([]byte, 32), sshkey, nil, elevatedGroupIDs, dbOpenShiftClusters, dbPortal, nil, &noop.Noop{})
+	p := NewPortal(_env, portalAuditLog, portalLog, portalAccessLog, l, sshl, nil, "", serverkey, servercerts, "", nil, nil, make([]byte, 32), sshkey, nil, elevatedGroupIDs, dbOpenShiftClusters, dbPortal, dbSubscription, nil, &noop.Noop{})
 	go func() {
 		err := p.Run(ctx)
 		if err != nil {
@@ -317,7 +318,7 @@ func TestSecurity(t *testing.T) {
 					if tt2.authenticated {
 						tt2.wantStatusCode = http.StatusOK
 					} else {
-						tt2.wantStatusCode = http.StatusForbidden
+						tt2.wantStatusCode = http.StatusTemporaryRedirect
 					}
 				}
 
@@ -383,7 +384,7 @@ func TestSecurity(t *testing.T) {
 						payload.Result.ResultType = audit.ResultTypeFail
 					}
 
-					if tt2.authenticated && !sliceutil.Contains([]string{
+					if tt2.authenticated && !slices.Contains([]string{
 						"/callback", "/healthz/ready", "/api/login", "/api/logout"}, tt.name) {
 						payload.CallerIdentities[0].CallerIdentityValue = "username"
 					}
@@ -421,7 +422,7 @@ func addAuth(req *http.Request, groups []string) error {
 	cookie, err := securecookie.EncodeMulti(middleware.SessionName, map[interface{}]interface{}{
 		middleware.SessionKeyUsername: "username",
 		middleware.SessionKeyGroups:   groups,
-		middleware.SessionKeyExpires:  time.Now().Add(time.Hour),
+		middleware.SessionKeyExpires:  time.Now().Add(time.Hour).Unix(),
 	}, store.Codecs...)
 	if err != nil {
 		return err

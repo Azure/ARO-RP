@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -81,7 +81,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "empty request",
 			r: func(r *http.Request) {
-				r.Body = ioutil.NopCloser(bytes.NewReader(nil))
+				r.Body = io.NopCloser(bytes.NewReader(nil))
 			},
 			wantStatusCode: http.StatusBadRequest,
 			wantBody:       "Bad Request\n",
@@ -89,7 +89,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "junk request",
 			r: func(r *http.Request) {
-				r.Body = ioutil.NopCloser(strings.NewReader("{{"))
+				r.Body = io.NopCloser(strings.NewReader("{{"))
 			},
 			wantStatusCode: http.StatusBadRequest,
 			wantBody:       "Bad Request\n",
@@ -138,12 +138,13 @@ func TestNew(t *testing.T) {
 			env := mock_env.NewMockCore(ctrl)
 			env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 
-			aadAuthenticatedRouter := &mux.Router{}
-
-			_, err = New(env, logrus.NewEntry(logrus.StandardLogger()), nil, nil, hostKey, elevatedGroupIDs, nil, dbPortal, nil, aadAuthenticatedRouter)
+			s, err := New(env, logrus.NewEntry(logrus.StandardLogger()), nil, nil, hostKey, elevatedGroupIDs, nil, dbPortal, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			router := mux.NewRouter()
+			router.Methods(http.MethodPost).Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/ssh/new").HandlerFunc(s.New)
 
 			if tt.r != nil {
 				tt.r(r)
@@ -151,7 +152,7 @@ func TestNew(t *testing.T) {
 
 			w := responsewriter.New(r)
 
-			aadAuthenticatedRouter.ServeHTTP(w, r)
+			router.ServeHTTP(w, r)
 
 			portalClient.SetError(nil)
 
@@ -173,7 +174,7 @@ func TestNew(t *testing.T) {
 				t.Error(resp.Header.Get("Content-Type"))
 			}
 
-			b, err := ioutil.ReadAll(resp.Body)
+			b, err := io.ReadAll(resp.Body)
 			if err != nil {
 				t.Fatal(err)
 			}

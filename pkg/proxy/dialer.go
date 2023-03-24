@@ -10,7 +10,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -120,14 +119,18 @@ func NewDialer(isLocalDevelopmentMode bool) (Dialer, error) {
 
 	d := &dev{}
 
-	// This assumes we are running from an ARO-RP checkout in development
-	_, curmod, _, _ := runtime.Caller(0)
-	basepath, err := filepath.Abs(filepath.Join(filepath.Dir(curmod), "../.."))
-	if err != nil {
-		return nil, err
+	basepath := os.Getenv("ARO_CHECKOUT_PATH")
+	if basepath == "" {
+		// This assumes we are running from an ARO-RP checkout in development
+		var err error
+		_, curmod, _, _ := runtime.Caller(0)
+		basepath, err = filepath.Abs(filepath.Join(filepath.Dir(curmod), "../.."))
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	b, err := ioutil.ReadFile(path.Join(basepath, "secrets/proxy.crt"))
+	b, err := os.ReadFile(path.Join(basepath, "secrets/proxy.crt"))
 	if err != nil {
 		return nil, err
 	}
@@ -140,12 +143,12 @@ func NewDialer(isLocalDevelopmentMode bool) (Dialer, error) {
 	d.proxyPool = x509.NewCertPool()
 	d.proxyPool.AddCert(cert)
 
-	d.proxyClientCert, err = ioutil.ReadFile(path.Join(basepath, "secrets/proxy-client.crt"))
+	d.proxyClientCert, err = os.ReadFile(path.Join(basepath, "secrets/proxy-client.crt"))
 	if err != nil {
 		return nil, err
 	}
 
-	b, err = ioutil.ReadFile(path.Join(basepath, "secrets/proxy-client.key"))
+	b, err = os.ReadFile(path.Join(basepath, "secrets/proxy-client.key"))
 	if err != nil {
 		return nil, err
 	}

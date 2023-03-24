@@ -13,12 +13,13 @@ import {
   Separator,
   IStackStyles,
   Icon,
+  IconButton,
   IIconStyles,
 } from "@fluentui/react"
 import { AxiosResponse } from "axios"
 import { FetchClusterInfo } from "./Request"
 import { ICluster, headerStyles } from "./App"
-import { Nav, INavLink, INavLinkGroup, INavStyles } from "@fluentui/react/lib/Nav"
+import { Nav, INavLink, INavStyles } from "@fluentui/react/lib/Nav"
 import { ClusterDetailComponent } from "./ClusterDetailList"
 import React from "react"
 
@@ -36,36 +37,14 @@ const navStyles: Partial<INavStyles> = {
   },
 }
 
-const navLinkGroups: INavLinkGroup[] = [
-  {
-    links: [
-      {
-        name: "Overview",
-        key: "overview",
-        url: "#overview",
-        icon: "ThisPC",
-      },
-    ],
-  },
-  /*  {
-    links: [
-      {
-        name: "Nodes",
-        key: "nodes",
-        url: "#nodes",
-        icon: "BuildQueue",
-      },
-    ],
-  }, */
-]
 
-const customPanelStyle: Partial<IPanelStyles> = {
-  root: { top: "40px", left: "225px" },
-  content: { paddingLeft: 30, paddingRight: 5 },
-  navigation: {
-    justifyContent: "flex-start",
-  },
-}
+// let customPanelStyle: Partial<IPanelStyles> = {
+//   root: { top: "40px", left: "225px" },
+//   content: { paddingLeft: 30, paddingRight: 5 },
+//   navigation: {
+//     justifyContent: "flex-start",
+//   },
+// }
 
 const headerStyle: Partial<IStackStyles> = {
   root: {
@@ -74,6 +53,15 @@ const headerStyle: Partial<IStackStyles> = {
     height: 48,
     paddingLeft: 30,
     marginBottom: 15,
+  },
+}
+
+const doubleChevronIconStyle: Partial<IStackStyles> = {
+  root: {
+    marginLeft: -30,
+    marginTop: -15,
+    height: "100%",
+    width: "100%",
   },
 }
 
@@ -89,13 +77,18 @@ const headerIconStyles: Partial<IIconStyles> = {
   },
 }
 
+export const overviewKey = "overview"
+export const nodesKey = "nodes"
+export const machinesKey = "machines"
+export const machineSetsKey = "machinesets"
+
 const errorBarStyles: Partial<IMessageBarStyles> = { root: { marginBottom: 15 } }
 
 export function ClusterDetailPanel(props: {
   csrfToken: MutableRefObject<string>
   currentCluster: ICluster | null
-  onClose: Function
-  csrfTokenAvailable: string
+  onClose: any
+  loaded: string
 }) {
   const [data, setData] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
@@ -104,6 +97,13 @@ export function ClusterDetailPanel(props: {
   const [isOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false) // panel controls
   const [dataLoaded, setDataLoaded] = useState<boolean>(false)
   const [detailPanelVisible, setdetailPanelVisible] = useState<string>("Overview")
+  const [customPanelStyle, setcustomPanelStyle] = useState<Partial<IPanelStyles>>({
+    root: { top: "40px", left: "225px" },
+    content: { paddingLeft: 30, paddingRight: 5 },
+    navigation: {
+      justifyContent: "flex-start",
+    },
+  })
 
   const errorBar = (): any => {
     return (
@@ -117,6 +117,37 @@ export function ClusterDetailPanel(props: {
       </MessageBar>
     )
   }
+
+  const navLinkGroups = [
+    {
+      links: [
+        {
+          name: 'Overview',
+          key: overviewKey,
+          url: '#overview',
+          icon: 'ThisPC',
+        },
+        {
+          name: 'Nodes',
+          key: nodesKey,
+          url: '#nodes',
+          icon: 'BuildQueue',
+        },
+        {
+          name: 'Machines',
+          key: machinesKey,
+          url: '#machines',
+          icon: 'BuildQueue',
+        },
+        {
+          name: 'MachineSets',
+          key: machineSetsKey,
+          url: '#machinesets',
+          icon: 'BuildQueue',
+        },
+      ],
+    },
+  ];
 
   // updateData - updates the state of the component
   // can be used if we want a refresh button.
@@ -141,7 +172,7 @@ export function ClusterDetailPanel(props: {
     if (props.currentCluster == null) {
       return
     }
-    var resourceID = props.currentCluster.resourceId
+    const resourceID = props.currentCluster.resourceId
 
     const onData = (result: AxiosResponse | null) => {
       if (result?.status === 200) {
@@ -153,10 +184,10 @@ export function ClusterDetailPanel(props: {
       setFetching(resourceID)
     }
 
-    if (fetching === "" && props.csrfTokenAvailable === "DONE" && resourceID != "") {
+    if (fetching === "" && props.loaded === "DONE" && resourceID != "") {
       setFetching("FETCHING")
       setError(null)
-      FetchClusterInfo(props.currentCluster).then(onData) // TODO: fetchClusterInfo accepts IClusterDetail
+      FetchClusterInfo(props.currentCluster).then(onData)
     }
   }, [data, fetching, setFetching])
 
@@ -165,7 +196,7 @@ export function ClusterDetailPanel(props: {
       setDataLoaded(false)
       return
     }
-    var resourceID = props.currentCluster.resourceId
+    const resourceID = props.currentCluster.resourceId
 
     if (resourceID != "") {
       if (resourceID == fetching) {
@@ -186,10 +217,40 @@ export function ClusterDetailPanel(props: {
     }
   }
 
+  const [doubleChevronIconProp, setdoubleChevronIconProp] = useState({ iconName: "doublechevronleft"})
+  function _onClickDoubleChevronIcon() {
+    let customPanelStyleRootLeft
+    if (doubleChevronIconProp.iconName == "doublechevronright") {
+      customPanelStyleRootLeft = "225px"
+      setdoubleChevronIconProp({ iconName: "doublechevronleft"})
+    } else {
+      customPanelStyleRootLeft = "0px"
+      setdoubleChevronIconProp({ iconName: "doublechevronright"})
+    }
+
+    setcustomPanelStyle({
+      root: { top: "40px", left: customPanelStyleRootLeft },
+      content: { paddingLeft: 30, paddingRight: 5 },
+      navigation: {
+        justifyContent: "flex-start",
+      },
+    })
+  }
+
+
   const onRenderHeader = (
   ): ReactElement => {
     return (
       <>
+        <Stack styles={headerStyle} horizontal>
+          <Stack.Item styles={doubleChevronIconStyle}>
+            <IconButton
+              onClick={_onClickDoubleChevronIcon}
+              iconProps={doubleChevronIconProp}
+            />
+          </Stack.Item>
+        </Stack>
+
         <Stack styles={headerStyle} horizontal>
           <Stack.Item>
             <Icon styles={headerIconStyles} iconName="openshift-svg"></Icon>
@@ -205,6 +266,7 @@ export function ClusterDetailPanel(props: {
 
   return (
     <Panel
+      id="ClusterDetailPanel"
       isOpen={isOpen}
       type={PanelType.custom}
       onDismiss={_dismissPanel}

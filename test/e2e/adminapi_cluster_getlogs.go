@@ -5,17 +5,16 @@ package e2e
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
-	"time"
+	"strings"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 var _ = Describe("[Admin API] Kubernetes get pod logs action", func() {
@@ -27,8 +26,7 @@ var _ = Describe("[Admin API] Kubernetes get pod logs action", func() {
 	When("in a standard openshift namespace", func() {
 		const namespace = "openshift-azure-operator"
 
-		It("should be able to get logs from a container of a pod", func() {
-			ctx := context.Background()
+		It("must be able to get logs from a container of a pod", func(ctx context.Context) {
 			testGetPodLogsOK(ctx, containerName, podName, namespace)
 		})
 	})
@@ -36,8 +34,7 @@ var _ = Describe("[Admin API] Kubernetes get pod logs action", func() {
 	When("in a customer namespace", func() {
 		const namespace = "e2e-test-namespace"
 
-		It("should be not be able to get logs from customer workload namespaces", func() {
-			ctx := context.Background()
+		It("must be not be able to get logs from customer workload namespaces", func(ctx context.Context) {
 			testGetPodLogsFromCustomerNamespaceForbidden(ctx, containerName, podName, namespace)
 		})
 	})
@@ -45,33 +42,44 @@ var _ = Describe("[Admin API] Kubernetes get pod logs action", func() {
 
 // We will create a pod with known logs of its container and will compare the logs gotten through the kubernetes client and through the Admin API.
 func testGetPodLogsOK(ctx context.Context, containerName, podName, namespace string) {
-	By("creating a pod in openshift-azure-operator namespace with some known logs then comparing those logs with the logs of the container in the pod created")
-	pod := mockPod(containerName, podName, namespace)
+	expectedLog := "mock-pod-logs"
+
+	By("creating a test pod in openshift-azure-operator namespace with some known logs")
+	pod := mockPod(containerName, podName, namespace, expectedLog)
 	pod, err := clients.Kubernetes.CoreV1().Pods(namespace).Create(ctx, pod, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
+
 	defer func() {
+		By("deleting the test pod")
 		err = clients.Kubernetes.CoreV1().Pods(namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred())
 	}()
-	err = wait.PollInfinite(time.Second*5, func() (done bool, err error) {
+
+	By("waiting for the pod to successfully terminate")
+	Eventually(func(g Gomega, ctx context.Context) {
 		pod, err = clients.Kubernetes.CoreV1().Pods(namespace).Get(ctx, pod.Name, metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred())
+		g.Expect(err).NotTo(HaveOccurred())
 
-		switch pod.Status.Phase {
-		case corev1.PodSucceeded:
-			return true, nil
-		case corev1.PodPending:
-			if pod.CreationTimestamp.Time.Add(5*time.Minute).Unix() < time.Now().Unix() {
-				return false, errors.New("pod was pending for more than 5min")
-			}
-			return false, nil
-		case corev1.PodFailed:
-			return true, errors.New(pod.Status.Message)
-		}
-		return false, nil
-	})
+		g.Expect(pod.Status.Phase).To(Equal(corev1.PodSucceeded))
+	}).WithContext(ctx).Should(Succeed())
+
+	By("requesting logs via RP admin API")
+	params := url.Values{
+		"container": []string{containerName},
+		"namespace": []string{namespace},
+		"podname":   []string{podName},
+	}
+	var logs string
+	resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/kubernetespodlogs", params, true, nil, &logs)
 	Expect(err).NotTo(HaveOccurred())
+	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
+	By("verifying that logs received from RP match known logs")
+	Expect(strings.TrimRight(logs, "\n")).To(Equal(expectedLog))
+}
+
+func testGetPodLogsFromCustomerNamespaceForbidden(ctx context.Context, containerName, podName, namespace string) {
+	By("requesting logs via RP admin API")
 	params := url.Values{
 		"container": []string{containerName},
 		"namespace": []string{namespace},
@@ -79,32 +87,15 @@ func testGetPodLogsOK(ctx context.Context, containerName, podName, namespace str
 	}
 
 	var logs string
-	resp, err := adminRequest(ctx, http.MethodGet, "/admin"+resourceIDFromEnv()+"/kubernetespodlogs", params, nil, &logs)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(resp.StatusCode).To(Equal(http.StatusOK))
-
-	podOptions := corev1.PodLogOptions{
-		Container: pod.Spec.Containers[0].Name,
-	}
-	r := clients.Kubernetes.CoreV1().Pods(namespace).GetLogs(pod.Name, &podOptions)
-	result, err := r.Do(ctx).Raw()
-	Expect(err).NotTo(HaveOccurred())
-	result = append(result, "\n"...)
-	Expect(logs).To(Equal(string(result)))
-}
-
-func testGetPodLogsFromCustomerNamespaceForbidden(ctx context.Context, containerName, podName, namespace string) {
-	params := url.Values{
-		"container": []string{containerName},
-		"namespace": []string{namespace},
-		"podname":   []string{podName},
-	}
-	resp, err := adminRequest(ctx, http.MethodGet, "/admin"+resourceIDFromEnv()+"/kubernetespodlogs", params, nil, nil)
+	resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/kubernetespodlogs", params, true, nil, logs)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
+
+	By("verifying that we not receive any logs from RP")
+	Expect(strings.TrimRight(logs, "\n")).To(BeEmpty())
 }
 
-func mockPod(containerName, podName, namespace string) *corev1.Pod {
+func mockPod(containerName, podName, namespace, fakeLog string) *corev1.Pod {
 	return &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Pod",
@@ -118,7 +109,7 @@ func mockPod(containerName, podName, namespace string) *corev1.Pod {
 			Containers: []corev1.Container{{
 				Name:    containerName,
 				Image:   "quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:103505c93bf45c4a29301f282f1ff046e35b63bceaf4df1cca2e631039289da2",
-				Command: []string{"/bin/bash", "-c", "echo 'mock-pod-logs'"},
+				Command: []string{"/bin/bash", "-c", fmt.Sprintf("echo %q", fakeLog)},
 			}},
 			RestartPolicy: "Never",
 			HostNetwork:   true,

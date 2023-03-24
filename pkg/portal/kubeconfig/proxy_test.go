@@ -10,7 +10,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httputil"
 	"testing"
@@ -21,6 +21,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/portal/middleware"
 	"github.com/Azure/ARO-RP/pkg/portal/util/responsewriter"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
@@ -392,12 +393,16 @@ func TestProxy(t *testing.T) {
 				tt.mocks(dialer)
 			}
 
-			unauthenticatedRouter := &mux.Router{}
-
 			_, audit := testlog.NewAudit()
 			_, baseLog := testlog.New()
 			_, baseAccessLog := testlog.New()
-			_ = New(baseLog, audit, _env, baseAccessLog, nil, nil, dbOpenShiftClusters, dbPortal, dialer, &mux.Router{}, unauthenticatedRouter)
+			k := New(baseLog, audit, _env, baseAccessLog, nil, nil, dbOpenShiftClusters, dbPortal, dialer)
+
+			unauthenticatedRouter := &mux.Router{}
+			unauthenticatedRouter.Use(middleware.Bearer(k.DbPortal))
+			unauthenticatedRouter.Use(middleware.Log(k.Env, audit, k.BaseAccessLog))
+
+			unauthenticatedRouter.PathPrefix("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/kubeconfig/proxy/").Handler(k.ReverseProxy)
 
 			if tt.r != nil {
 				tt.r(r)
@@ -428,7 +433,7 @@ func TestProxy(t *testing.T) {
 				t.Error(resp.Header.Get("Content-Type"))
 			}
 
-			b, err := ioutil.ReadAll(resp.Body)
+			b, err := io.ReadAll(resp.Body)
 			if err != nil {
 				t.Fatal(err)
 			}

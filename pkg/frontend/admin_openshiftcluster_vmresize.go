@@ -10,14 +10,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
 
@@ -25,45 +24,23 @@ func (f *frontend) postAdminOpenShiftClusterVMResize(w http.ResponseWriter, r *h
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
-
-	err := f._postAdminOpenShiftClusterVMResize(ctx, r, log)
-
+	err := f._postAdminOpenShiftClusterVMResize(log, ctx, r)
 	adminReply(log, w, nil, nil, err)
 }
 
-func (f *frontend) _postAdminOpenShiftClusterVMResize(ctx context.Context, r *http.Request, log *logrus.Entry) error {
-	vars := mux.Vars(r)
-
+func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx context.Context, r *http.Request) error {
 	vmName := r.URL.Query().Get("vmName")
-	err := validateAdminVMName(vmName)
-	if err != nil {
-		return err
-	}
+	resourceName := chi.URLParam(r, "resourceName")
+	resourceType := chi.URLParam(r, "resourceType")
+	resourceGroupName := chi.URLParam(r, "resourceGroupName")
 
-	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
-
-	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
-	switch {
-	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "",
-			"The Resource '%s/%s' under resource group '%s' was not found.",
-			vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
-	case err != nil:
-		return err
-	}
-
-	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
+	action, doc, err := f.prepareAdminActions(log, ctx, vmName, strings.TrimPrefix(r.URL.Path, "/admin"), resourceType, resourceName, resourceGroupName)
 	if err != nil {
 		return err
 	}
 
 	vmSize := r.URL.Query().Get("vmSize")
-	err = validateAdminVMSize(vmSize)
-	if err != nil {
-		return err
-	}
-
-	a, err := f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
+	err = validateAdminMasterVMSize(vmSize)
 	if err != nil {
 		return err
 	}
@@ -104,8 +81,8 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(ctx context.Context, r *ht
 	if !nodeExists {
 		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "",
 			`"The master node '%s' under resource group '%s' was not found."`,
-			vmName, vars["resourceGroupName"])
+			vmName, resourceGroupName)
 	}
 
-	return a.VMResize(ctx, vmName, vmSize)
+	return action.VMResize(ctx, vmName, vmSize)
 }

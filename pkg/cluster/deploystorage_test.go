@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 	"testing"
 
@@ -44,22 +43,24 @@ func TestEnsureResourceGroup(t *testing.T) {
 		"yeet": to.StringPtr("yote"),
 	}
 
+	resourceGroupManagedByMismatch := autorest.NewErrorWithError(&azure.RequestError{
+		ServiceError: &azure.ServiceError{Code: "ResourceGroupManagedByMismatch"},
+	}, "", "", nil, "")
+
 	disallowedByPolicy := autorest.NewErrorWithError(&azure.RequestError{
 		ServiceError: &azure.ServiceError{Code: "RequestDisallowedByPolicy"},
 	}, "", "", nil, "")
 
 	for _, tt := range []struct {
-		name    string
-		mocks   func(*mock_features.MockResourceGroupsClient, *mock_env.MockInterface)
-		wantErr string
+		name              string
+		provisioningState api.ProvisioningState
+		mocks             func(*mock_features.MockResourceGroupsClient, *mock_env.MockInterface)
+		wantErr           string
 	}{
 		{
-			name: "success - rg doesn't exist",
+			name:              "success - rg doesn't exist",
+			provisioningState: api.ProvisioningStateCreating,
 			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
-				rg.EXPECT().
-					Get(gomock.Any(), resourceGroupName).
-					Return(group, autorest.DetailedError{StatusCode: http.StatusNotFound})
-
 				rg.EXPECT().
 					CreateOrUpdate(gomock.Any(), resourceGroupName, group).
 					Return(group, nil)
@@ -74,16 +75,13 @@ func TestEnsureResourceGroup(t *testing.T) {
 			},
 		},
 		{
-			name: "success - rg doesn't exist and localdev mode tags set",
+			name:              "success - rg doesn't exist and localdev mode tags set",
+			provisioningState: api.ProvisioningStateCreating,
 			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
 				groupWithLocalDevTags := group
 				groupWithLocalDevTags.Tags = map[string]*string{
 					"purge": to.StringPtr("true"),
 				}
-				rg.EXPECT().
-					Get(gomock.Any(), resourceGroupName).
-					Return(group, autorest.DetailedError{StatusCode: http.StatusNotFound})
-
 				rg.EXPECT().
 					CreateOrUpdate(gomock.Any(), resourceGroupName, groupWithLocalDevTags).
 					Return(groupWithLocalDevTags, nil)
@@ -98,7 +96,8 @@ func TestEnsureResourceGroup(t *testing.T) {
 			},
 		},
 		{
-			name: "success - rg exists and maintain tags",
+			name:              "success - rg exists and maintain tags",
+			provisioningState: api.ProvisioningStateAdminUpdating,
 			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
 				rg.EXPECT().
 					Get(gomock.Any(), resourceGroupName).
@@ -118,7 +117,8 @@ func TestEnsureResourceGroup(t *testing.T) {
 			},
 		},
 		{
-			name: "fail - get rg returns generic error",
+			name:              "fail - get rg returns generic error",
+			provisioningState: api.ProvisioningStateAdminUpdating,
 			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
 				rg.EXPECT().
 					Get(gomock.Any(), resourceGroupName).
@@ -127,12 +127,23 @@ func TestEnsureResourceGroup(t *testing.T) {
 			wantErr: "generic error",
 		},
 		{
-			name: "fail - CreateOrUpdate returns requestdisallowedbypolicy",
+			name:              "fail - CreateOrUpdate returns resourcegroupmanagedbymismatch",
+			provisioningState: api.ProvisioningStateCreating,
 			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
 				rg.EXPECT().
-					Get(gomock.Any(), resourceGroupName).
-					Return(group, autorest.DetailedError{StatusCode: http.StatusNotFound})
+					CreateOrUpdate(gomock.Any(), resourceGroupName, group).
+					Return(group, resourceGroupManagedByMismatch)
 
+				env.EXPECT().
+					IsLocalDevelopmentMode().
+					Return(false)
+			},
+			wantErr: "400: ClusterResourceGroupAlreadyExists: : Resource group " + resourceGroup + " must not already exist.",
+		},
+		{
+			name:              "fail - CreateOrUpdate returns requestdisallowedbypolicy",
+			provisioningState: api.ProvisioningStateCreating,
+			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
 				rg.EXPECT().
 					CreateOrUpdate(gomock.Any(), resourceGroupName, group).
 					Return(group, disallowedByPolicy)
@@ -144,12 +155,9 @@ func TestEnsureResourceGroup(t *testing.T) {
 			wantErr: `400: DeploymentFailed: : Deployment failed. Details: : : {"code":"RequestDisallowedByPolicy","message":"","target":null,"details":null,"innererror":null,"additionalInfo":null}`,
 		},
 		{
-			name: "fail - CreateOrUpdate returns generic error",
+			name:              "fail - CreateOrUpdate returns generic error",
+			provisioningState: api.ProvisioningStateCreating,
 			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
-				rg.EXPECT().
-					Get(gomock.Any(), resourceGroupName).
-					Return(group, autorest.DetailedError{StatusCode: http.StatusNotFound})
-
 				rg.EXPECT().
 					CreateOrUpdate(gomock.Any(), resourceGroupName, group).
 					Return(group, errors.New("generic error"))
@@ -180,6 +188,7 @@ func TestEnsureResourceGroup(t *testing.T) {
 							ClusterProfile: api.ClusterProfile{
 								ResourceGroupID: resourceGroup,
 							},
+							ProvisioningState: tt.provisioningState,
 						},
 						Location: location,
 						ID:       clusterID,
@@ -189,7 +198,6 @@ func TestEnsureResourceGroup(t *testing.T) {
 			}
 
 			err := m.ensureResourceGroup(ctx)
-
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

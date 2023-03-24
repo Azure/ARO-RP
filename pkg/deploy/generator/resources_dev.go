@@ -38,64 +38,7 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 		)
 	}
 
-	trailer := base64.StdEncoding.EncodeToString([]byte(`yum -y update -x WALinuxAgent
-yum -y install docker
-
-firewall-cmd --add-port=443/tcp --permanent
-
-mkdir /root/.docker
-cat >/root/.docker/config.json <<EOF
-{
-	"auths": {
-		"${PROXYIMAGE%%/*}": {
-			"auth": "$PROXYIMAGEAUTH"
-		}
-	}
-}
-EOF
-systemctl start docker.service
-docker pull "$PROXYIMAGE"
-
-mkdir /etc/proxy
-base64 -d <<<"$PROXYCERT" >/etc/proxy/proxy.crt
-base64 -d <<<"$PROXYKEY" >/etc/proxy/proxy.key
-base64 -d <<<"$PROXYCLIENTCERT" >/etc/proxy/proxy-client.crt
-chown -R 1000:1000 /etc/proxy
-chmod 0600 /etc/proxy/proxy.key
-
-cat >/etc/sysconfig/proxy <<EOF
-PROXY_IMAGE='$PROXYIMAGE'
-EOF
-
-cat >/etc/systemd/system/proxy.service <<'EOF'
-[Unit]
-After=docker.service
-Requires=docker.service
-
-[Service]
-EnvironmentFile=/etc/sysconfig/proxy
-ExecStartPre=-/usr/bin/docker rm -f %n
-ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 -v /etc/proxy:/secrets $PROXY_IMAGE
-ExecStop=/usr/bin/docker stop %n
-Restart=always
-RestartSec=1
-StartLimitInterval=0
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-systemctl enable proxy.service
-
-cat >/etc/cron.weekly/yumupdate <<'EOF'
-#!/bin/bash
-
-yum update -y
-EOF
-chmod +x /etc/cron.weekly/yumupdate
-
-(sleep 30; reboot) &
-`))
+	trailer := base64.StdEncoding.EncodeToString(scriptDevProxyVMSS)
 
 	parts = append(parts, "'\n'", fmt.Sprintf("base64ToString('%s')", trailer))
 
@@ -132,7 +75,7 @@ chmod +x /etc/cron.weekly/yumupdate
 						ImageReference: &mgmtcompute.ImageReference{
 							Publisher: to.StringPtr("RedHat"),
 							Offer:     to.StringPtr("RHEL"),
-							Sku:       to.StringPtr("7-LVM"),
+							Sku:       to.StringPtr("8-LVM"),
 							Version:   to.StringPtr("latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
@@ -176,13 +119,45 @@ chmod +x /etc/cron.weekly/yumupdate
 							{
 								Name: to.StringPtr("dev-proxy-vmss-cse"),
 								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
-									Publisher:               to.StringPtr("Microsoft.Azure.Extensions"),
-									Type:                    to.StringPtr("CustomScript"),
-									TypeHandlerVersion:      to.StringPtr("2.0"),
+									Publisher:          to.StringPtr("Microsoft.Azure.Extensions"),
+									Type:               to.StringPtr("CustomScript"),
+									TypeHandlerVersion: to.StringPtr("2.0"),
+									ProvisionAfterExtensions: &[]string{
+										"Microsoft.Azure.Monitor.AzureMonitorLinuxAgent",
+										"Microsoft.Azure.Security.Monitoring.AzureSecurityLinuxAgent",
+									},
 									AutoUpgradeMinorVersion: to.BoolPtr(true),
 									Settings:                map[string]interface{}{},
 									ProtectedSettings: map[string]interface{}{
 										"script": script,
+									},
+								},
+							},
+							{
+								Name: to.StringPtr("Microsoft.Azure.Monitor.AzureMonitorLinuxAgent"),
+								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
+									Publisher:               to.StringPtr("Microsoft.Azure.Monitor"),
+									Type:                    to.StringPtr("AzureMonitorLinuxAgent"),
+									TypeHandlerVersion:      to.StringPtr("1.0"),
+									AutoUpgradeMinorVersion: to.BoolPtr(true),
+									EnableAutomaticUpgrade:  to.BoolPtr(true),
+									Settings: map[string]interface{}{
+										"GCS_AUTO_CONFIG": true,
+									},
+								},
+							},
+							{
+								Name: to.StringPtr("Microsoft.Azure.Security.Monitoring.AzureSecurityLinuxAgent"),
+								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
+									Publisher:               to.StringPtr("Microsoft.Azure.Security.Monitoring"),
+									Type:                    to.StringPtr("AzureSecurityLinuxAgent"),
+									TypeHandlerVersion:      to.StringPtr("2.0"),
+									AutoUpgradeMinorVersion: to.BoolPtr(true),
+									EnableAutomaticUpgrade:  to.BoolPtr(true),
+									Settings: map[string]interface{}{
+										"enableGenevaUpload":               true,
+										"enableAutoConfig":                 true,
+										"reportSuccessOnUnsupportedDistro": true,
 									},
 								},
 							},
@@ -288,241 +263,6 @@ func (g *generator) devVPN() *arm.Resource {
 		DependsOn: []string{
 			"[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]",
 			"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]",
-		},
-	}
-}
-
-func (g *generator) devCIPool() *arm.Resource {
-	parts := []string{
-		fmt.Sprintf("base64ToString('%s')", base64.StdEncoding.EncodeToString([]byte("set -e\n\n"))),
-	}
-
-	for _, variable := range []string{
-		"ciAzpToken",
-		"ciPoolName"} {
-		parts = append(parts,
-			fmt.Sprintf("'%s='''", strings.ToUpper(variable)),
-			fmt.Sprintf("parameters('%s')", variable),
-			"'''\n'",
-		)
-	}
-
-	trailer := base64.StdEncoding.EncodeToString([]byte(`
-# Hack - wait on create because the WALinuxAgent sometimes conflicts with the yum update -y below
-sleep 60
-
-for attempt in {1..5}; do
-  yum -y update -x WALinuxAgent && break
-  if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
-done
-
-lvextend -l +50%FREE /dev/rootvg/homelv
-xfs_growfs /home
-
-lvextend -l +50%FREE /dev/rootvg/tmplv
-xfs_growfs /tmp
-
-lvextend -l +100%FREE /dev/rootvg/varlv
-xfs_growfs /var
-
-rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
-rpm --import https://packages.microsoft.com/keys/microsoft.asc
-
-yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-
-cat >/etc/yum.repos.d/azure.repo <<'EOF'
-[azure-cli]
-name=azure-cli
-baseurl=https://packages.microsoft.com/yumrepos/azure-cli
-enabled=yes
-gpgcheck=yes
-EOF
-
-yum -y install azure-cli podman podman-docker jq gcc gpgme-devel libassuan-devel git make tmpwatch python3-devel htop go-toolset-1.17.7-1.module+el8.6.0+14297+32a15e19 openvpn
-
-# Suppress emulation output for podman instead of docker for az acr compatability
-mkdir -p /etc/containers/
-touch /etc/containers/nodocker
-
-VSTS_AGENT_VERSION=2.193.1
-mkdir /home/cloud-user/agent
-pushd /home/cloud-user/agent
-curl -s https://vstsagentpackage.azureedge.net/agent/${VSTS_AGENT_VERSION}/vsts-agent-linux-x64-${VSTS_AGENT_VERSION}.tar.gz | tar -xz
-chown -R cloud-user:cloud-user .
-
-./bin/installdependencies.sh
-sudo -u cloud-user ./config.sh --unattended --url https://dev.azure.com/msazure --auth pat --token "$CIAZPTOKEN" --pool "$CIPOOLNAME" --agent "ARO-RHEL-$HOSTNAME" --replace
-./svc.sh install cloud-user
-popd
-
-cat >/home/cloud-user/agent/.path <<'EOF'
-/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/cloud-user/.local/bin:/home/cloud-user/bin
-EOF
-
-# Set the agent's "System capabilities" for tests (go-1.17 and GOLANG_FIPS) in the agent's .env file
-# and add a HACK for XDG_RUNTIME_DIR: https://github.com/containers/podman/issues/427
-cat >/home/cloud-user/agent/.env <<'EOF'
-go-1.17=true
-GOLANG_FIPS=1
-XDG_RUNTIME_DIR=/run/user/1000
-EOF
-
-cat >/etc/cron.weekly/yumupdate <<'EOF'
-#!/bin/bash
-
-yum update -y
-EOF
-chmod +x /etc/cron.weekly/yumupdate
-
-cat >/etc/cron.hourly/tmpwatch <<'EOF'
-#!/bin/bash
-
-exec /sbin/tmpwatch 24h /tmp
-EOF
-chmod +x /etc/cron.hourly/tmpwatch
-
-# HACK - podman doesn't always terminate or clean up it's pause.pid file causing
-# 'cannot reexec errors' so attempt to clean it up every minute to keep pipelines running
-# smoothly
-cat >/usr/local/bin/fix-podman-pause.sh <<'EOF'
-#!/bin/bash
-
-PAUSE_FILE='/tmp/podman-run-1000/libpod/tmp/pause.pid'
-
-if [ -f "${PAUSE_FILE}" ]; then
-	PID=$(cat ${PAUSE_FILE})
-	if ! ps -p $PID > /dev/null; then
-		rm $PAUSE_FILE
-	fi
-fi
-EOF
-chmod +x /usr/local/bin/fix-podman-pause.sh
-
-# HACK - /tmp will fill up causing build failures
-# delete anything not accessed within 2 days
-cat >/usr/local/bin/clean-tmp.sh <<'EOF'
-#!/bin/bash
-
-find /tmp -type f \( ! -user root \) -atime +2 -delete
-
-EOF
-chmod +x /usr/local/bin/clean-tmp.sh
-
-echo "0 0 */1 * * /usr/local/bin/clean-tmp.sh" >> cron
-echo "* * * * * /usr/local/bin/fix-podman-pause.sh" >> cron
-
-# HACK - https://github.com/containers/podman/issues/9002
-echo "@reboot loginctl enable-linger cloud-user" >> cron
-
-crontab cron
-rm cron
-
-(sleep 30; reboot) &
-`))
-
-	parts = append(parts, "'\n'", fmt.Sprintf("base64ToString('%s')", trailer))
-
-	script := fmt.Sprintf("[base64(concat(%s))]", strings.Join(parts, ","))
-
-	return &arm.Resource{
-		Resource: &mgmtcompute.VirtualMachineScaleSet{
-			Sku: &mgmtcompute.Sku{
-				Name:     to.StringPtr(string(mgmtcompute.VirtualMachineSizeTypesStandardD2sV3)),
-				Tier:     to.StringPtr("Standard"),
-				Capacity: to.Int64Ptr(1337),
-			},
-			VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
-				UpgradePolicy: &mgmtcompute.UpgradePolicy{
-					Mode: mgmtcompute.UpgradeModeManual,
-				},
-				VirtualMachineProfile: &mgmtcompute.VirtualMachineScaleSetVMProfile{
-					OsProfile: &mgmtcompute.VirtualMachineScaleSetOSProfile{
-						ComputerNamePrefix: to.StringPtr("ci-"),
-						AdminUsername:      to.StringPtr("cloud-user"),
-						LinuxConfiguration: &mgmtcompute.LinuxConfiguration{
-							DisablePasswordAuthentication: to.BoolPtr(true),
-							SSH: &mgmtcompute.SSHConfiguration{
-								PublicKeys: &[]mgmtcompute.SSHPublicKey{
-									{
-										Path:    to.StringPtr("/home/cloud-user/.ssh/authorized_keys"),
-										KeyData: to.StringPtr("[parameters('sshPublicKey')]"),
-									},
-								},
-							},
-						},
-					},
-					StorageProfile: &mgmtcompute.VirtualMachineScaleSetStorageProfile{
-						ImageReference: &mgmtcompute.ImageReference{
-							Publisher: to.StringPtr("RedHat"),
-							Offer:     to.StringPtr("RHEL"),
-							Sku:       to.StringPtr("8-LVM"),
-							Version:   to.StringPtr("latest"),
-						},
-						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
-							CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
-							ManagedDisk: &mgmtcompute.VirtualMachineScaleSetManagedDiskParameters{
-								StorageAccountType: mgmtcompute.StorageAccountTypesPremiumLRS,
-							},
-							DiskSizeGB: to.Int32Ptr(200),
-						},
-					},
-					NetworkProfile: &mgmtcompute.VirtualMachineScaleSetNetworkProfile{
-						NetworkInterfaceConfigurations: &[]mgmtcompute.VirtualMachineScaleSetNetworkConfiguration{
-							{
-								Name: to.StringPtr("ci-vmss-nic"),
-								VirtualMachineScaleSetNetworkConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetNetworkConfigurationProperties{
-									Primary: to.BoolPtr(true),
-									IPConfigurations: &[]mgmtcompute.VirtualMachineScaleSetIPConfiguration{
-										{
-											Name: to.StringPtr("ci-vmss-ipconfig"),
-											VirtualMachineScaleSetIPConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetIPConfigurationProperties{
-												Subnet: &mgmtcompute.APIEntityReference{
-													ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'dev-vnet', 'ToolingSubnet')]"),
-												},
-												Primary: to.BoolPtr(true),
-												PublicIPAddressConfiguration: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfiguration{
-													Name: to.StringPtr("ci-vmss-pip"),
-													VirtualMachineScaleSetPublicIPAddressConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationProperties{
-														DNSSettings: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationDNSSettings{
-															DomainNameLabel: to.StringPtr("aro-ci"),
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-					ExtensionProfile: &mgmtcompute.VirtualMachineScaleSetExtensionProfile{
-						Extensions: &[]mgmtcompute.VirtualMachineScaleSetExtension{
-							{
-								Name: to.StringPtr("ci-vmss-cse"),
-								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
-									Publisher:               to.StringPtr("Microsoft.Azure.Extensions"),
-									Type:                    to.StringPtr("CustomScript"),
-									TypeHandlerVersion:      to.StringPtr("2.0"),
-									AutoUpgradeMinorVersion: to.BoolPtr(true),
-									Settings:                map[string]interface{}{},
-									ProtectedSettings: map[string]interface{}{
-										"script": script,
-									},
-								},
-							},
-						},
-					},
-				},
-				Overprovision: to.BoolPtr(false),
-			},
-			Name:     to.StringPtr("ci-vmss"),
-			Type:     to.StringPtr("Microsoft.Compute/virtualMachineScaleSets"),
-			Location: to.StringPtr("[resourceGroup().location]"),
-		},
-		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
-		Condition:  "[greater(parameters('ciCapacity'), 0)]", // TODO(mj): Refactor g.conditionStanza for better usage
-		DependsOn: []string{
-			"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
 		},
 	}
 }

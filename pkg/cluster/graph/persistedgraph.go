@@ -17,10 +17,13 @@ import (
 
 type PersistedGraph map[string]json.RawMessage
 
-func (pg PersistedGraph) Get(is ...interface{}) error {
+func (pg PersistedGraph) Get(disallowUnknownFields bool, is ...interface{}) error {
 	for _, i := range is {
 		d := json.NewDecoder(bytes.NewReader(pg[reflect.TypeOf(i).Elem().String()]))
-		d.DisallowUnknownFields()
+
+		if disallowUnknownFields {
+			d.DisallowUnknownFields()
+		}
 
 		err := d.Decode(i)
 		if err != nil {

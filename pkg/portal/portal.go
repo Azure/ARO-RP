@@ -11,21 +11,27 @@ import (
 	"crypto/x509"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"log"
 	"net"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	frontendmiddleware "github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/portal/assets"
 	"github.com/Azure/ARO-RP/pkg/portal/cluster"
 	"github.com/Azure/ARO-RP/pkg/portal/kubeconfig"
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
@@ -41,16 +47,13 @@ type Runnable interface {
 }
 
 type portal struct {
-	env                 env.Core
-	audit               *logrus.Entry
-	log                 *logrus.Entry
-	baseAccessLog       *logrus.Entry
-	l                   net.Listener
-	sshl                net.Listener
-	verifier            oidc.Verifier
-	baseRouter          *mux.Router
-	authenticatedRouter *mux.Router
-	publicRouter        *mux.Router
+	env           env.Interface
+	audit         *logrus.Entry
+	log           *logrus.Entry
+	baseAccessLog *logrus.Entry
+	l             net.Listener
+	sshl          net.Listener
+	verifier      oidc.Verifier
 
 	hostname     string
 	servingKey   *rsa.PrivateKey
@@ -66,6 +69,7 @@ type portal struct {
 
 	dbPortal            database.Portal
 	dbOpenShiftClusters database.OpenShiftClusters
+	dbSubscriptions     database.Subscriptions
 
 	dialer proxy.Dialer
 
@@ -77,7 +81,7 @@ type portal struct {
 	m metrics.Emitter
 }
 
-func NewPortal(env env.Core,
+func NewPortal(env env.Interface,
 	audit *logrus.Entry,
 	log *logrus.Entry,
 	baseAccessLog *logrus.Entry,
@@ -96,6 +100,7 @@ func NewPortal(env env.Core,
 	elevatedGroupIDs []string,
 	dbOpenShiftClusters database.OpenShiftClusters,
 	dbPortal database.Portal,
+	dbSubscriptions database.Subscriptions,
 	dialer proxy.Dialer,
 	m metrics.Emitter,
 ) Runnable {
@@ -122,6 +127,7 @@ func NewPortal(env env.Core,
 
 		dbOpenShiftClusters: dbOpenShiftClusters,
 		dbPortal:            dbPortal,
+		dbSubscriptions:     dbSubscriptions,
 
 		dialer: dialer,
 
@@ -129,35 +135,32 @@ func NewPortal(env env.Core,
 	}
 }
 
-func (p *portal) setupRouter() error {
-	if p.baseRouter != nil {
-		return fmt.Errorf("can't setup twice")
-	}
-
+func (p *portal) setupRouter(kconfig *kubeconfig.Kubeconfig, prom *prometheus.Prometheus, sshStruct *ssh.SSH) (*mux.Router, error) {
 	r := mux.NewRouter()
 	r.Use(middleware.Panic(p.log))
 
-	assetv1, err := Asset("v1/build/index.html")
+	assetv1, err := assets.EmbeddedFiles.ReadFile("v1/build/index.html")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	assetv2, err := Asset("v2/build/index.html")
+	assetv2, err := assets.EmbeddedFiles.ReadFile("v2/build/index.html")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	p.templateV1, err = template.New("index.html").Parse(string(assetv1))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	p.templateV2, err = template.New("index.html").Parse(string(assetv2))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	unauthenticatedRouter := r.NewRoute().Subrouter()
+	bearerRoutes(unauthenticatedRouter, kconfig)
 	p.unauthenticatedRoutes(unauthenticatedRouter)
 
 	allGroups := append([]string{}, p.groupIDs...)
@@ -165,7 +168,7 @@ func (p *portal) setupRouter() error {
 
 	p.aad, err = middleware.NewAAD(p.log, p.audit, p.env, p.baseAccessLog, p.hostname, p.sessionKey, p.clientID, p.clientKey, p.clientCerts, allGroups, unauthenticatedRouter, p.verifier)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	aadAuthenticatedRouter := r.NewRoute().Subrouter()
@@ -174,31 +177,27 @@ func (p *portal) setupRouter() error {
 	aadAuthenticatedRouter.Use(p.aad.CheckAuthentication)
 	aadAuthenticatedRouter.Use(csrf.Protect(p.sessionKey, csrf.SameSite(csrf.SameSiteStrictMode), csrf.MaxAge(0), csrf.Path("/")))
 
-	p.aadAuthenticatedRoutes(aadAuthenticatedRouter)
+	p.aadAuthenticatedRoutes(aadAuthenticatedRouter, prom, kconfig, sshStruct)
 
-	p.baseRouter = r
-	p.publicRouter = unauthenticatedRouter
-	p.authenticatedRouter = aadAuthenticatedRouter
-
-	return nil
+	return r, nil
 }
 
-func (p *portal) setupServices() error {
-	ssh, err := ssh.New(p.env, p.log, p.baseAccessLog, p.sshl, p.sshKey, p.elevatedGroupIDs, p.dbOpenShiftClusters, p.dbPortal, p.dialer, p.authenticatedRouter)
+func (p *portal) setupServices() (*kubeconfig.Kubeconfig, *prometheus.Prometheus, *ssh.SSH, error) {
+	ssh, err := ssh.New(p.env, p.log, p.baseAccessLog, p.sshl, p.sshKey, p.elevatedGroupIDs, p.dbOpenShiftClusters, p.dbPortal, p.dialer)
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 
 	err = ssh.Run()
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 
-	kubeconfig.New(p.log, p.audit, p.env, p.baseAccessLog, p.servingCerts[0], p.elevatedGroupIDs, p.dbOpenShiftClusters, p.dbPortal, p.dialer, p.authenticatedRouter, p.publicRouter)
+	k := kubeconfig.New(p.log, p.audit, p.env, p.baseAccessLog, p.servingCerts[0], p.elevatedGroupIDs, p.dbOpenShiftClusters, p.dbPortal, p.dialer)
 
-	prometheus.New(p.log, p.dbOpenShiftClusters, p.dialer, p.authenticatedRouter)
+	prom := prometheus.New(p.log, p.dbOpenShiftClusters, p.dialer)
 
-	return nil
+	return k, prom, ssh, nil
 }
 
 func (p *portal) Run(ctx context.Context) error {
@@ -217,9 +216,8 @@ func (p *portal) Run(ctx context.Context) error {
 			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
 		},
-		PreferServerCipherSuites: true,
-		SessionTicketsDisabled:   true,
-		MinVersion:               tls.VersionTLS12,
+		SessionTicketsDisabled: true,
+		MinVersion:             tls.VersionTLS12,
 		CurvePreferences: []tls.CurveID{
 			tls.CurveP256,
 			tls.X25519,
@@ -230,19 +228,17 @@ func (p *portal) Run(ctx context.Context) error {
 		config.Certificates[0].Certificate = append(config.Certificates[0].Certificate, cert.Raw)
 	}
 
-	if p.baseRouter == nil {
-		err := p.setupRouter()
-		if err != nil {
-			return err
-		}
-		err = p.setupServices()
-		if err != nil {
-			return err
-		}
+	k, prom, sshStruct, err := p.setupServices()
+	if err != nil {
+		return err
+	}
+	router, err := p.setupRouter(k, prom, sshStruct)
+	if err != nil {
+		return err
 	}
 
 	s := &http.Server{
-		Handler:     frontendmiddleware.Lowercase(p.baseRouter),
+		Handler:     frontendmiddleware.Lowercase(router),
 		ReadTimeout: 10 * time.Second,
 		IdleTimeout: 2 * time.Minute,
 		ErrorLog:    log.New(p.log.Writer(), "", 0),
@@ -254,36 +250,87 @@ func (p *portal) Run(ctx context.Context) error {
 	return s.Serve(tls.NewListener(p.l, config))
 }
 
+func bearerRoutes(r *mux.Router, k *kubeconfig.Kubeconfig) {
+	if k != nil {
+		bearerAuthenticatedRouter := r.NewRoute().Subrouter()
+		bearerAuthenticatedRouter.Use(middleware.Bearer(k.DbPortal))
+		bearerAuthenticatedRouter.Use(middleware.Log(k.Env, k.Audit, k.BaseAccessLog))
+
+		bearerAuthenticatedRouter.PathPrefix("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/kubeconfig/proxy/").Handler(k.ReverseProxy)
+	}
+}
+
 func (p *portal) unauthenticatedRoutes(r *mux.Router) {
 	logger := middleware.Log(p.env, p.audit, p.baseAccessLog)
 
-	r.NewRoute().Methods(http.MethodGet).Path("/healthz/ready").Handler(logger(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})))
+	r.Methods(http.MethodGet).Path("/healthz/ready").Handler(logger(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})))
 }
 
-func (p *portal) aadAuthenticatedRoutes(r *mux.Router) {
-	for _, name := range AssetNames() {
-		if name == "v1/build/index.html" {
-			r.NewRoute().Methods(http.MethodGet).Path("/").HandlerFunc(p.index)
-			continue
+func (p *portal) aadAuthenticatedRoutes(r *mux.Router, prom *prometheus.Prometheus, kconfig *kubeconfig.Kubeconfig, sshStruct *ssh.SSH) {
+	var names []string
+
+	err := fs.WalkDir(assets.EmbeddedFiles, ".", func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
 		}
 
-		if name == "v2/build/index.html" {
-			r.NewRoute().Methods(http.MethodGet).Path("/v2").HandlerFunc(p.indexV2)
-			continue
+		if !entry.IsDir() {
+			names = append(names, path)
 		}
+		return nil
+	})
 
-		fmtName := strings.TrimPrefix(name, "v1/build/")
-		fmtName = strings.TrimPrefix(fmtName, "v2/build/")
-
-		r.NewRoute().Methods(http.MethodGet).Path("/" + fmtName).HandlerFunc(p.serve(name))
+	if err != nil {
+		p.log.Fatal(err)
 	}
 
-	r.NewRoute().Methods(http.MethodGet).Path("/api/clusters").HandlerFunc(p.clusters)
-	r.NewRoute().Methods(http.MethodGet).Path("/api/info").HandlerFunc(p.info)
+	for _, name := range names {
+		regexp, _ := regexp.Compile(`v[1,2]/build/.*\..*`)
+		name := regexp.FindString(name)
+		switch name {
+		case "v2/build/index.html":
+			r.Methods(http.MethodGet).Path("/").HandlerFunc(p.indexV2)
+		case "v1/build/index.html":
+			r.Methods(http.MethodGet).Path("/v1").HandlerFunc(p.index)
+		case "":
+		default:
+			fmtName := strings.TrimPrefix(name, "v1/build/")
+			fmtName = strings.TrimPrefix(fmtName, "v2/build/")
+
+			r.Methods(http.MethodGet).Path("/" + fmtName).HandlerFunc(p.serve(name))
+		}
+	}
+
+	r.Methods(http.MethodGet).Path("/api/clusters").HandlerFunc(p.clusters)
+	r.Methods(http.MethodGet).Path("/api/info").HandlerFunc(p.info)
+	r.Methods(http.MethodGet).Path("/api/regions").HandlerFunc(p.regions)
 
 	// Cluster-specific routes
-	r.NewRoute().PathPrefix("/api/{subscription}/{resourceGroup}/{name}/clusteroperators").HandlerFunc(p.clusterOperators)
-	r.NewRoute().Methods(http.MethodGet).Path("/api/{subscription}/{resourceGroup}/{name}").HandlerFunc(p.clusterInfo)
+	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/clusteroperators").HandlerFunc(p.clusterOperators)
+	r.Methods(http.MethodGet).Path("/api/{subscription}/{resourceGroup}/{clusterName}").HandlerFunc(p.clusterInfo)
+	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/nodes").HandlerFunc(p.nodes)
+	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/machines").HandlerFunc(p.machines)
+	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/vmallocationstatus").HandlerFunc(p.VMAllocationStatus)
+	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/machine-sets").HandlerFunc(p.machineSets)
+	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}").HandlerFunc(p.clusterInfo)
+
+	// prometheus
+	if prom != nil {
+		r.Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/prometheus").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			r.URL.Path += "/"
+			http.Redirect(w, r, r.URL.String(), http.StatusTemporaryRedirect)
+		})
+
+		r.PathPrefix("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/prometheus/").Handler(prom.ReverseProxy)
+	}
+
+	//kubeconfig
+	if kconfig != nil {
+		r.Methods(http.MethodPost).Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/kubeconfig/new").HandlerFunc(kconfig.New)
+	}
+
+	// ssh
+	r.Methods(http.MethodPost).Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/ssh/new").HandlerFunc(sshStruct.New)
 }
 
 func (p *portal) index(w http.ResponseWriter, r *http.Request) {
@@ -308,6 +355,7 @@ func (p *portal) indexV2(w http.ResponseWriter, r *http.Request) {
 		"location":       p.env.Location(),
 		csrf.TemplateTag: csrf.TemplateField(r),
 	})
+
 	if err != nil {
 		p.internalServerError(w, err)
 		return
@@ -318,7 +366,17 @@ func (p *portal) indexV2(w http.ResponseWriter, r *http.Request) {
 
 // makeFetcher creates a cluster.FetchClient suitable for use by the Portal REST API
 func (p *portal) makeFetcher(ctx context.Context, r *http.Request) (cluster.FetchClient, error) {
-	resourceID := strings.Join(strings.Split(r.URL.Path, "/")[:9], "/")
+	apiVars := mux.Vars(r)
+
+	subscription := apiVars["subscription"]
+	resourceGroup := apiVars["resourceGroup"]
+	clusterName := apiVars["clusterName"]
+
+	resourceID :=
+		strings.ToLower(
+			fmt.Sprintf(
+				"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s",
+				subscription, resourceGroup, clusterName))
 	if !validate.RxClusterID.MatchString(resourceID) {
 		return nil, fmt.Errorf("invalid resource ID")
 	}
@@ -339,20 +397,62 @@ func (p *portal) makeFetcher(ctx context.Context, r *http.Request) (cluster.Fetc
 	} else {
 		dialer = p.dialer
 	}
-
 	return cluster.NewFetchClient(p.log, dialer, doc)
+}
+
+// makeAzureFetcher creates a cluster.AzureFetchClient suitable for use by the Portal REST API to fetch anything directly from Azure like VM Details etc.
+func (p *portal) makeAzureFetcher(ctx context.Context, r *http.Request) (cluster.AzureFetchClient, error) {
+	apiVars := mux.Vars(r)
+
+	subscription := apiVars["subscription"]
+	resourceGroup := apiVars["resourceGroup"]
+	clusterName := apiVars["clusterName"]
+
+	resourceID :=
+		strings.ToLower(
+			fmt.Sprintf(
+				"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s",
+				subscription, resourceGroup, clusterName))
+	if !validate.RxClusterID.MatchString(resourceID) {
+		return nil, fmt.Errorf("invalid resource ID")
+	}
+
+	doc, err := p.dbOpenShiftClusters.Get(ctx, resourceID)
+	if err != nil {
+		return nil, err
+	}
+
+	subscriptionDoc, err := p.getSubscriptionDocument(ctx, doc.Key)
+	if err != nil {
+		return nil, err
+	}
+
+	return cluster.NewAzureFetchClient(p.log, doc, subscriptionDoc, p.env), nil
 }
 
 func (p *portal) serve(path string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		b, err := Asset(path)
+		asset, err := assets.EmbeddedFiles.ReadFile(path)
 		if err != nil {
 			p.internalServerError(w, err)
 			return
 		}
 
-		http.ServeContent(w, r, path, time.Time{}, bytes.NewReader(b))
+		http.ServeContent(w, r, path, time.Time{}, bytes.NewReader(asset))
 	}
+}
+
+func (p *portal) getSubscriptionDocument(ctx context.Context, key string) (*api.SubscriptionDocument, error) {
+	r, err := azure.ParseResourceID(key)
+	if err != nil {
+		return nil, err
+	}
+	doc, err := p.dbSubscriptions.Get(ctx, r.SubscriptionID)
+	if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", "Request is not allowed in unregistered subscription '%s'.", r.SubscriptionID)
+	}
+
+	return doc, err
 }
 
 func (p *portal) internalServerError(w http.ResponseWriter, err error) {

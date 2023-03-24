@@ -76,10 +76,12 @@ const (
 	CloudErrorCodePropertyChangeNotAllowed           = "PropertyChangeNotAllowed"
 	CloudErrorCodeRequestNotAllowed                  = "RequestNotAllowed"
 	CloudErrorCodeResourceGroupNotFound              = "ResourceGroupNotFound"
+	CloudErrorCodeClusterResourceGroupAlreadyExists  = "ClusterResourceGroupAlreadyExists"
 	CloudErrorCodeResourceNotFound                   = "ResourceNotFound"
 	CloudErrorCodeUnsupportedMediaType               = "UnsupportedMediaType"
 	CloudErrorCodeInvalidLinkedVNet                  = "InvalidLinkedVNet"
 	CloudErrorCodeInvalidLinkedRouteTable            = "InvalidLinkedRouteTable"
+	CloudErrorCodeInvalidLinkedNatGateway            = "InvalidLinkedNatGateway"
 	CloudErrorCodeInvalidLinkedDiskEncryptionSet     = "InvalidLinkedDiskEncryptionSet"
 	CloudErrorCodeNotFound                           = "NotFound"
 	CloudErrorCodeForbidden                          = "Forbidden"
@@ -95,7 +97,9 @@ const (
 	CloudErrorCodeDuplicateDomain                    = "DuplicateDomain"
 	CloudErrorCodeResourceQuotaExceeded              = "ResourceQuotaExceeded"
 	CloudErrorCodeQuotaExceeded                      = "QuotaExceeded"
-	CloudErrorResourceProviderNotRegistered          = "ResourceProviderNotRegistered"
+	CloudErrorCodeResourceProviderNotRegistered      = "ResourceProviderNotRegistered"
+	CloudErrorCodeCannotDeleteLoadBalancerByID       = "CannotDeleteLoadBalancerWithPrivateLinkService"
+	CloudErrorCodeInUseSubnetCannotBeDeleted         = "InUseSubnetCannotBeDeleted"
 )
 
 // NewCloudError returns a new CloudError

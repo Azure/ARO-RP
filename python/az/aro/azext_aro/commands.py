@@ -5,12 +5,13 @@ from azure.cli.core.commands import CliCommandType
 from azext_aro._client_factory import cf_aro
 from azext_aro._format import aro_show_table_format
 from azext_aro._format import aro_list_table_format
+from azext_aro._format import aro_version_table_format
 from azext_aro._help import helps  # pylint: disable=unused-import
 
 
 def load_command_table(self, _):
     aro_sdk = CliCommandType(
-        operations_tmpl='azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2022_04_01.operations#OpenShiftClustersOperations.{}',  # pylint: disable=line-too-long
+        operations_tmpl='azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2022_09_04.operations#OpenShiftClustersOperations.{}',  # pylint: disable=line-too-long
         client_factory=cf_aro)
 
     with self.command_group('aro', aro_sdk, client_factory=cf_aro) as g:
@@ -22,4 +23,8 @@ def load_command_table(self, _):
         g.wait_command('wait')
 
         g.custom_command('list-credentials', 'aro_list_credentials')
-        g.custom_command('get-admin-kubeconfig', 'aro_list_admin_credentials')
+        g.custom_command('get-admin-kubeconfig', 'aro_get_admin_kubeconfig')
+
+        g.custom_command('get-versions', 'aro_get_versions', table_transformer=aro_version_table_format)
+
+        g.custom_command('validate', 'aro_validate')

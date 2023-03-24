@@ -32,25 +32,6 @@ deploy_rp_dev() {
             "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_RP_CLIENT_ID'" --query '[].id' -o tsv)" >/dev/null
 }
 
-deploy_env_dev_ci() {
-    echo "########## Deploying env-development in RG $RESOURCEGROUP ##########"
-    az deployment group create \
-        -g "$RESOURCEGROUP" \
-        -n env-development \
-        --template-file pkg/deploy/assets/env-development.json \
-        --parameters \
-            "ciAzpToken=$AZPTOKEN" \
-            "ciCapacity=6" \
-            "ciPoolName=ARO-CI" \
-            "proxyCert=$(base64 -w0 <secrets/proxy.crt)" \
-            "proxyClientCert=$(base64 -w0 <secrets/proxy-client.crt)" \
-            "proxyDomainNameLabel=$(cut -d. -f2 <<<$PROXY_HOSTNAME)" \
-            "proxyImage=arointsvc.azurecr.io/proxy:latest" \
-            "proxyImageAuth=$(jq -r '.auths["arointsvc.azurecr.io"].auth' <<<$PULL_SECRET)" \
-            "proxyKey=$(base64 -w0 <secrets/proxy.key)" \
-            "sshPublicKey=$(<secrets/proxy_id_rsa.pub)" >/dev/null
-}
-
 deploy_env_dev() {
     echo "########## Deploying env-development in RG $RESOURCEGROUP ##########"
     az deployment group create \
@@ -75,10 +56,19 @@ deploy_aks_dev() {
         -n aks-development \
         --template-file pkg/deploy/assets/aks-development.json \
         --parameters \
-            "adminObjectId=$ADMIN_OBJECT_ID" \
             "dnsZone=$DOMAIN_NAME" \
-            "sshRSAPublicKey=$(<secrets/proxy_id_rsa.pub)" \
-            "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" >/dev/null
+            "keyvaultPrefix=$KEYVAULT_PREFIX" \
+            "sshRSAPublicKey=$(<secrets/proxy_id_rsa.pub)" >/dev/null
+}
+
+deploy_vpn_for_dedicated_rp() {
+    echo "########## Deploying Dev VPN in RG $RESOURCEGROUP ##########"
+    az deployment group create \
+        -g "$RESOURCEGROUP" \
+        -n dev-vpn \
+        --template-file pkg/deploy/assets/vpn-development.json \
+        --parameters \
+             "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" >/dev/null
 }
 
 deploy_env_dev_override() {

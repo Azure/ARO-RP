@@ -1,7 +1,17 @@
+# Uses a multi-stage container build to build the proxy
+#
 ARG REGISTRY
+FROM ${REGISTRY}/ubi8/go-toolset:1.18.4 AS builder
+ENV GOOS=linux \
+    GOPATH=/go/
+WORKDIR ${GOPATH}/src/github.com/Azure/ARO-RP
+USER root
+COPY . ${GOPATH}/src/github.com/Azure/ARO-RP/
+RUN make proxy
+
 FROM ${REGISTRY}/ubi8/ubi-minimal
 RUN microdnf update && microdnf clean all
-COPY proxy /usr/local/bin
+COPY --from=builder /go/src/github.com/Azure/ARO-RP/proxy /usr/local/bin/
 ENTRYPOINT ["proxy"]
 EXPOSE 8443/tcp
 USER 1000

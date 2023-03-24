@@ -212,17 +212,17 @@ func (mr *MockVirtualMachinesClientMockRecorder) StartAndWait(arg0, arg1, arg2 i
 }
 
 // StopAndWait mocks base method.
-func (m *MockVirtualMachinesClient) StopAndWait(arg0 context.Context, arg1, arg2 string) error {
+func (m *MockVirtualMachinesClient) StopAndWait(arg0 context.Context, arg1, arg2 string, arg3 bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StopAndWait", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "StopAndWait", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // StopAndWait indicates an expected call of StopAndWait.
-func (mr *MockVirtualMachinesClientMockRecorder) StopAndWait(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockVirtualMachinesClientMockRecorder) StopAndWait(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopAndWait", reflect.TypeOf((*MockVirtualMachinesClient)(nil).StopAndWait), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopAndWait", reflect.TypeOf((*MockVirtualMachinesClient)(nil).StopAndWait), arg0, arg1, arg2, arg3)
 }
 
 // MockUsageClient is a mock of UsageClient interface.
@@ -351,6 +351,20 @@ func NewMockVirtualMachineScaleSetsClient(ctrl *gomock.Controller) *MockVirtualM
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockVirtualMachineScaleSetsClient) EXPECT() *MockVirtualMachineScaleSetsClientMockRecorder {
 	return m.recorder
+}
+
+// CreateOrUpdateAndWait mocks base method.
+func (m *MockVirtualMachineScaleSetsClient) CreateOrUpdateAndWait(arg0 context.Context, arg1, arg2 string, arg3 compute.VirtualMachineScaleSet) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateOrUpdateAndWait indicates an expected call of CreateOrUpdateAndWait.
+func (mr *MockVirtualMachineScaleSetsClientMockRecorder) CreateOrUpdateAndWait(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockVirtualMachineScaleSetsClient)(nil).CreateOrUpdateAndWait), arg0, arg1, arg2, arg3)
 }
 
 // DeleteAndWait mocks base method.

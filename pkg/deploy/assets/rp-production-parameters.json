@@ -35,6 +35,9 @@
         "billingServicePrincipalId": {
             "value": ""
         },
+        "clusterDefaultInstallerPullspec": {
+            "value": ""
+        },
         "clusterMdmAccount": {
             "value": ""
         },
@@ -48,6 +51,12 @@
             "value": ""
         },
         "clusterParentDomainName": {
+            "value": ""
+        },
+        "clustersAdoptByHive": {
+            "value": ""
+        },
+        "clustersInstallViaHive": {
             "value": ""
         },
         "databaseAccountName": {
@@ -106,7 +115,8 @@
                 "brazilsouth",
                 "southafricanorth",
                 "northcentralus",
-                "uaenorth"
+                "uaenorth",
+                "westus"
             ]
         },
         "portalAccessGroupIds": {

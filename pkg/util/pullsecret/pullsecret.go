@@ -20,10 +20,13 @@ type pullSecret struct {
 
 // Unmarshal pull-secret data which is stored in corev1.Secret.Data
 // the data has form:
-//   {"auths": {"secret key": {"auth": "secret value"}, "secret key": {"auth": "secret value"}}}
+//
+//	{"auths": {"secret key": {"auth": "secret value"}, "secret key": {"auth": "secret value"}}}
 //
 // returns map of extracted secrets in a form:
-//   {"secret key": "secret value"}
+//
+//	{"secret key": "secret value"}
+//
 // error is returned when parsing fails
 func UnmarshalSecretData(ps *corev1.Secret) (map[string]string, error) {
 	var pullSecretData pullSecret

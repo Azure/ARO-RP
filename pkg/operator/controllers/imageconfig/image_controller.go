@@ -11,8 +11,8 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	configv1 "github.com/openshift/api/config/v1"
-	configclient "github.com/openshift/client-go/config/clientset/versioned"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -20,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
@@ -34,14 +33,15 @@ const (
 )
 
 type Reconciler struct {
-	arocli    aroclient.Interface
-	configcli configclient.Interface
+	log *logrus.Entry
+
+	client client.Client
 }
 
-func NewReconciler(arocli aroclient.Interface, configcli configclient.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
-		arocli:    arocli,
-		configcli: configcli,
+		log:    log,
+		client: client,
 	}
 }
 
@@ -50,26 +50,27 @@ func NewReconciler(arocli aroclient.Interface, configcli configclient.Interface)
 // - If AllowedRegistries is not nil, makes sure required registries are added
 // - Fails fast if both are not nil, unsupported
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	// Get cluster
-	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, request.Name, metav1.GetOptions{})
+	instance := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		// controller is disabled
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
-	// Check for cloud type
-	requiredRegistries, err := getCloudAwareRegistries(instance)
+	r.log.Debug("running")
+	requiredRegistries, err := GetCloudAwareRegistries(instance)
 	if err != nil {
 		// Not returning error as it will requeue again
 		return reconcile.Result{}, nil
 	}
 
 	// Get image.config yaml
-	imageconfig, err := r.configcli.ConfigV1().Images().Get(ctx, request.Name, metav1.GetOptions{})
+	imageconfig := &configv1.Image{}
+	err = r.client.Get(ctx, types.NamespacedName{Name: request.Name}, imageconfig)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -101,8 +102,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// Update image config registry
-	_, err = r.configcli.ConfigV1().Images().Update(ctx, imageconfig, metav1.UpdateOptions{})
-	return reconcile.Result{}, err
+	return reconcile.Result{}, r.client.Update(ctx, imageconfig)
 }
 
 // SetupWithManager setup the manager
@@ -118,19 +118,26 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 // Switch case to ensure the correct registries are added depending on the cloud environment (Gov or Public cloud)
-func getCloudAwareRegistries(instance *arov1alpha1.Cluster) ([]string, error) {
-	var requiredRegistries []string
+func GetCloudAwareRegistries(instance *arov1alpha1.Cluster) ([]string, error) {
+	var replicationRegistry string
+	var dnsSuffix string
+
+	acrDomain := instance.Spec.ACRDomain
+	acrSubdomain := strings.Split(acrDomain, ".")[0]
+	if acrDomain == "" || acrSubdomain == "" {
+		return nil, fmt.Errorf("azure container registry domain is not present or is malformed")
+	}
+
 	switch instance.Spec.AZEnvironment {
 	case azureclient.PublicCloud.Environment.Name:
-		requiredRegistries = []string{instance.Spec.ACRDomain, "arosvc." + instance.Spec.Location + ".data." + azure.PublicCloud.ContainerRegistryDNSSuffix}
-
+		dnsSuffix = azure.PublicCloud.ContainerRegistryDNSSuffix
 	case azureclient.USGovernmentCloud.Environment.Name:
-		requiredRegistries = []string{instance.Spec.ACRDomain, "arosvc." + instance.Spec.Location + ".data." + azure.USGovernmentCloud.ContainerRegistryDNSSuffix}
-
+		dnsSuffix = azure.USGovernmentCloud.ContainerRegistryDNSSuffix
 	default:
 		return nil, fmt.Errorf("cloud environment %s is not supported", instance.Spec.AZEnvironment)
 	}
-	return requiredRegistries, nil
+	replicationRegistry = fmt.Sprintf("%s.%s.data.%s", acrSubdomain, instance.Spec.Location, dnsSuffix)
+	return []string{acrDomain, replicationRegistry}, nil
 }
 
 // Helper function that filters registries to make sure they are added in consistent order

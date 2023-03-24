@@ -6,12 +6,15 @@ package clusterauthorizer
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/form3tech-oss/jwt-go"
 	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -24,16 +27,44 @@ type Credentials struct {
 	TenantID     []byte
 }
 
+type azRefreshableAuthorizer struct {
+	log              *logrus.Entry
+	azureEnvironment *azureclient.AROEnvironment
+	client           client.Client
+	tokenClient      aad.TokenClient
+}
+
 // NewAzRefreshableAuthorizer returns a new refreshable authorizer
 // using Cluster Service Principal.
-func NewAzRefreshableAuthorizer(ctx context.Context, log *logrus.Entry, azEnv *azureclient.AROEnvironment, kubernetescli kubernetes.Interface) (refreshable.Authorizer, error) {
+func NewAzRefreshableAuthorizer(log *logrus.Entry, azEnv *azureclient.AROEnvironment, client client.Client, tokenClient aad.TokenClient) (*azRefreshableAuthorizer, error) {
+	if log == nil {
+		return nil, fmt.Errorf("log entry cannot be nil")
+	}
+	if azEnv == nil {
+		return nil, fmt.Errorf("azureEnvironment cannot be nil")
+	}
+	return &azRefreshableAuthorizer{
+		log:              log,
+		azureEnvironment: azEnv,
+		client:           client,
+		tokenClient:      tokenClient,
+	}, nil
+}
+
+func (a *azRefreshableAuthorizer) NewRefreshableAuthorizerToken(ctx context.Context) (refreshable.Authorizer, error) {
 	// Grab azure-credentials from secret
-	credentials, err := AzCredentials(ctx, kubernetescli)
+	credentials, err := AzCredentials(ctx, a.client)
 	if err != nil {
 		return nil, err
 	}
 	// create service principal token from azure-credentials
-	token, err := aad.GetToken(ctx, log, string(credentials.ClientID), string(credentials.ClientSecret), string(credentials.TenantID), azEnv.ActiveDirectoryEndpoint, azEnv.ResourceManagerEndpoint)
+	token, err := a.tokenClient.GetToken(ctx,
+		a.log,
+		string(credentials.ClientID),
+		string(credentials.ClientSecret),
+		string(credentials.TenantID),
+		a.azureEnvironment.ActiveDirectoryEndpoint,
+		a.azureEnvironment.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -42,28 +73,29 @@ func NewAzRefreshableAuthorizer(ctx context.Context, log *logrus.Entry, azEnv *a
 	c := &azureclaim.AzureClaim{}
 	_, _, err = p.ParseUnverified(token.OAuthToken(), c)
 	if err != nil {
-		return nil, err
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "the provided service principal is invalid")
 	}
 
 	return refreshable.NewAuthorizer(token), nil
 }
 
 // AzCredentials gets Cluster Service Principal credentials from the Kubernetes secrets
-func AzCredentials(ctx context.Context, kubernetescli kubernetes.Interface) (*Credentials, error) {
-	mysec, err := kubernetescli.CoreV1().Secrets(azureCredentialSecretNameSpace).Get(ctx, azureCredentialSecretName, metav1.GetOptions{})
+func AzCredentials(ctx context.Context, client client.Client) (*Credentials, error) {
+	clusterSPSecret := &corev1.Secret{}
+	err := client.Get(ctx, types.NamespacedName{Namespace: AzureCredentialSecretNameSpace, Name: AzureCredentialSecretName}, clusterSPSecret)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, key := range []string{"azure_client_id", "azure_client_secret", "azure_tenant_id"} {
-		if _, ok := mysec.Data[key]; !ok {
+		if _, ok := clusterSPSecret.Data[key]; !ok {
 			return nil, fmt.Errorf("%s does not exist in the secret", key)
 		}
 	}
 
 	return &Credentials{
-		ClientID:     mysec.Data["azure_client_id"],
-		ClientSecret: mysec.Data["azure_client_secret"],
-		TenantID:     mysec.Data["azure_tenant_id"],
+		ClientID:     clusterSPSecret.Data["azure_client_id"],
+		ClientSecret: clusterSPSecret.Data["azure_client_secret"],
+		TenantID:     clusterSPSecret.Data["azure_tenant_id"],
 	}, nil
 }

@@ -28,7 +28,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/rhcos"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.InstallConfig, *releaseimage.Image, error) {
@@ -105,9 +104,16 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 		masterZones = []string{""}
 	}
 
+	// TODO: If we update the integrated installer to 4.11, this should default to OVNK8s
 	SoftwareDefinedNetwork := string(api.SoftwareDefinedNetworkOpenShiftSDN)
 	if m.oc.Properties.NetworkProfile.SoftwareDefinedNetwork != "" {
 		SoftwareDefinedNetwork = string(m.oc.Properties.NetworkProfile.SoftwareDefinedNetwork)
+	}
+
+	// determine outbound type based on cluster visibility
+	outboundType := azuretypes.LoadbalancerOutboundType
+	if m.oc.Properties.NetworkProfile.OutboundType == api.OutboundTypeUserDefinedRouting {
+		outboundType = azuretypes.UserDefinedRoutingOutboundType
 	}
 
 	installConfig := &installconfig.InstallConfig{
@@ -183,7 +189,7 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 					ControlPlaneSubnet:       masterSubnetName,
 					ComputeSubnet:            workerSubnetName,
 					CloudName:                azuretypes.CloudEnvironment(m.env.Environment().Name),
-					OutboundType:             azuretypes.LoadbalancerOutboundType,
+					OutboundType:             outboundType,
 					ResourceGroupName:        resourceGroup,
 				},
 			},
@@ -233,8 +239,8 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 	}
 
 	image := &releaseimage.Image{}
-	if m.oc.Properties.ClusterProfile.Version == version.InstallStream.Version.String() {
-		image.PullSpec = version.InstallStream.PullSpec
+	if m.oc.Properties.ClusterProfile.Version == m.version.Properties.Version {
+		image.PullSpec = m.version.Properties.OpenShiftPullspec
 	} else {
 		return nil, nil, fmt.Errorf("unimplemented version %q", m.oc.Properties.ClusterProfile.Version)
 	}

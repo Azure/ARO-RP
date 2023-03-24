@@ -16,12 +16,14 @@ import (
 type Authorizer interface {
 	autorest.Authorizer
 	RefreshWithContext(context.Context, *logrus.Entry) (bool, error)
+	LastError() error
 	OAuthToken() string
 }
 
 type authorizer struct {
 	autorest.Authorizer
-	sp *adal.ServicePrincipalToken
+	sp        *adal.ServicePrincipalToken
+	lastError error
 }
 
 // RefreshWithContext attempts to refresh a service principal token.  It should
@@ -54,20 +56,23 @@ type authorizer struct {
 // {"error":"invalid_client","error_description":"AADSTS7000215: Invalid client secret is provided.`
 // Once aad starts propagating credentials you might see occasional success in authentication.
 func (a *authorizer) RefreshWithContext(ctx context.Context, log *logrus.Entry) (bool, error) {
-	err := a.sp.RefreshWithContext(ctx)
-	if err != nil {
-		log.Info(err)
-
-		if !autorest.IsTokenRefreshError(err) ||
-			azureerrors.IsUnauthorizedClientError(err) ||
-			azureerrors.IsInvalidSecretError(err) {
-			return false, nil
-		}
-
-		return false, err
+	a.lastError = a.sp.RefreshWithContext(ctx)
+	if a.lastError == nil {
+		return true, nil
 	}
 
-	return true, nil
+	log.Info(a.lastError)
+
+	if !autorest.IsTokenRefreshError(a.lastError) ||
+		azureerrors.IsUnauthorizedClientError(a.lastError) ||
+		azureerrors.IsInvalidSecretError(a.lastError) {
+		return false, nil
+	}
+	return false, a.lastError
+}
+
+func (a *authorizer) LastError() error {
+	return a.lastError
 }
 
 func (a *authorizer) OAuthToken() string {

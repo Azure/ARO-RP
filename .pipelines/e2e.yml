@@ -6,51 +6,126 @@ resources:
   - pipeline: e2e
     source: CI
     trigger: true
+  containers:
+  - container: container
+    image: registry.access.redhat.com/ubi8/toolbox:8.7
+    options: --user=0 --cap-add=NET_ADMIN --device /dev/net/tun --name vpn
+  - container: selenium
+    image: docker.io/selenium/standalone-edge:latest
+    options: --shm-size=2g
+
 
 # Azure DevOps Pipeline running e2e tests
 variables:
 - template: vars.yml
+
+# Run the test suite and collect must-gather
 jobs:
 - job: E2E
   timeoutInMinutes: 180
   pool:
-    name: ARO-CI
-    demands: go-1.17
+    name: 1es-aro-ci-pool
+  #services:
+  #  selenium: selenium
   steps:
   - template: ./templates/template-checkout.yml
+
+  - script: |
+      set -xe
+      sudo rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+      sudo dnf install -y openvpn make
+    displayName: Setup (Container)
+    target: container
+
   - template: ./templates/template-az-cli-login.yml
     parameters:
       azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
-  - script: |
-      az account set -s $AZURE_SUBSCRIPTION_ID
-      export SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME)
-      make secrets
-      . secrets/env
-      echo "##vso[task.setvariable variable=RP_MODE]$RP_MODE"
-    displayName: 🔑 Downloading certificates and secrets from storage account
-    name: setEnv
   - template: ./templates/template-push-images-to-acr.yml
     parameters:
       rpImageACR: $(RP_IMAGE_ACR)
-      buildCommand: publish-image-aro
   - script: |
-      set -e
-      set -o pipefail
+      make extract-aro-docker
+    displayName: Extract ARO binaries from build
 
+  - script: |
+      az account set -s $AZURE_SUBSCRIPTION_ID
+      SECRET_SA_ACCOUNT_NAME=e2earosecrets make secrets
       . secrets/env
 
-      az account set -s $AZURE_SUBSCRIPTION_ID
-
-      set -x
+      export CI=true
       . ./hack/e2e/run-rp-and-e2e.sh
-      trap 'set +e; kill_rp; clean_e2e_db' EXIT
-
       deploy_e2e_db
+    displayName: Setup (Azure)
+
+  - script: |
+      export CI=true
+      . secrets/env
+      . ./hack/e2e/run-rp-and-e2e.sh
+
+      run_vpn
+      # run_portal
+      # validate_portal_running
 
       run_rp
       validate_rp_running
+
       register_sub
 
+      make test-e2e -o e2e.test
+    displayName: Execute Tests
+    target: container
+
+  - script: |
       export CI=true
-      make test-e2e
+      . ./hack/e2e/run-rp-and-e2e.sh
+
+      hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER >admin.kubeconfig
+      export KUBECONFIG=admin.kubeconfig
+
+      wget https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftVersion)/openshift-client-linux-$(OpenShiftVersion).tar.gz
+      tar xf openshift-client-linux-$(OpenShiftVersion).tar.gz
+      ./oc adm must-gather
+      tar cf must-gather.tar.gz must-gather.local.*
+    displayName: Collect must-gather
+    condition: failed()
+    target: container
+  - publish: must-gather.tar.gz
+    artifact: must-gather
+    displayName: Append must-gather to Pipeline
+    condition: failed()
+    target: container
+
+  - script: |
+      export CI=true
+      . ./hack/e2e/run-rp-and-e2e.sh
+
+      delete_e2e_cluster
+      kill_rp
+      kill_vpn
+    displayName: Cleanup
+    condition: always()
+    target: container
+  - script: |
+      export CI=true
+      . ./hack/e2e/run-rp-and-e2e.sh
+      clean_e2e_db
+    displayName: Cleanup (Azure)
   - template: ./templates/template-az-cli-logout.yml
+
+  - task: PublishTestResults@2
+    displayName: 📊 Publish tests results
+    inputs:
+      testResultsFiles: $(System.DefaultWorkingDirectory)/**/e2e-report.xml
+    condition: succeededOrFailed()
+
+  - task: CopyFiles@2
+    condition: succeededOrFailed()
+    inputs:
+      contents: $(Build.SourcesDirectory)/*.png
+      targetFolder: $(Build.ArtifactStagingDirectory)
+
+  - task: PublishBuildArtifacts@1
+    condition: succeededOrFailed()
+    inputs:
+      pathToPublish: $(Build.ArtifactStagingDirectory)
+      artifactName: Screenshots

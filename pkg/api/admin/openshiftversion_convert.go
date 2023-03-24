@@ -14,12 +14,14 @@ type openShiftVersionConverter struct{}
 // fields that appear in the external representation.  ToExternal does not
 // modify its argument; there is no pointer aliasing between the passed and
 // returned objects.
-func (*openShiftVersionConverter) ToExternal(v *api.OpenShiftVersion) interface{} {
+func (openShiftVersionConverter) ToExternal(v *api.OpenShiftVersion) interface{} {
 	out := &OpenShiftVersion{
-		Version:           v.Version,
-		OpenShiftPullspec: v.OpenShiftPullspec,
-		InstallerPullspec: v.InstallerPullspec,
-		Enabled:           v.Enabled,
+		Properties: OpenShiftVersionProperties{
+			Version:           v.Properties.Version,
+			OpenShiftPullspec: v.Properties.OpenShiftPullspec,
+			InstallerPullspec: v.Properties.InstallerPullspec,
+			Enabled:           v.Properties.Enabled,
+		},
 	}
 
 	return out
@@ -27,7 +29,7 @@ func (*openShiftVersionConverter) ToExternal(v *api.OpenShiftVersion) interface{
 
 // ToExternalList returns a slice of external representations of the internal
 // objects
-func (c *openShiftVersionConverter) ToExternalList(vers []*api.OpenShiftVersion) interface{} {
+func (c openShiftVersionConverter) ToExternalList(vers []*api.OpenShiftVersion) interface{} {
 	l := &OpenShiftVersionList{
 		OpenShiftVersions: make([]*OpenShiftVersion, 0, len(vers)),
 	}
@@ -37,4 +39,17 @@ func (c *openShiftVersionConverter) ToExternalList(vers []*api.OpenShiftVersion)
 	}
 
 	return l
+}
+
+// ToInternal overwrites in place a pre-existing internal object, setting (only)
+// all mapped fields from the external representation. ToInternal modifies its
+// argument; there is no pointer aliasing between the passed and returned
+// objects
+func (c openShiftVersionConverter) ToInternal(_new interface{}, out *api.OpenShiftVersion) {
+	new := _new.(*OpenShiftVersion)
+
+	out.Properties.Enabled = new.Properties.Enabled
+	out.Properties.InstallerPullspec = new.Properties.InstallerPullspec
+	out.Properties.OpenShiftPullspec = new.Properties.OpenShiftPullspec
+	out.Properties.Version = new.Properties.Version
 }

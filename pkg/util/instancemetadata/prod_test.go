@@ -8,7 +8,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"reflect"
 	"strings"
@@ -38,7 +38,7 @@ func TestPopulateInstanceMetadata(t *testing.T) {
 					Header: http.Header{
 						"Content-Type": []string{"application/json; charset=utf-8"},
 					},
-					Body: ioutil.NopCloser(strings.NewReader(
+					Body: io.NopCloser(strings.NewReader(
 						`{
 							"subscriptionId": "rpSubscriptionId",
 							"location": "eastus",
@@ -61,7 +61,7 @@ func TestPopulateInstanceMetadata(t *testing.T) {
 					Header: http.Header{
 						"Content-Type": []string{"application/json; charset=utf-8"},
 					},
-					Body: ioutil.NopCloser(strings.NewReader(
+					Body: io.NopCloser(strings.NewReader(
 						`{
 							"subscriptionId": "rpSubscriptionId",
 							"location": "eastus",
@@ -84,7 +84,7 @@ func TestPopulateInstanceMetadata(t *testing.T) {
 					Header: http.Header{
 						"Content-Type": []string{"application/json"},
 					},
-					Body: ioutil.NopCloser(strings.NewReader("not JSON")),
+					Body: io.NopCloser(strings.NewReader("not JSON")),
 				}, nil
 			},
 			wantErr: "invalid character 'o' in literal null (expecting 'u')",
@@ -101,7 +101,7 @@ func TestPopulateInstanceMetadata(t *testing.T) {
 			do: func(*http.Request) (*http.Response, error) {
 				return &http.Response{
 					StatusCode: http.StatusBadGateway,
-					Body:       ioutil.NopCloser(nil),
+					Body:       io.NopCloser(nil),
 				}, nil
 			},
 			wantErr: "unexpected status code 502",
@@ -114,7 +114,7 @@ func TestPopulateInstanceMetadata(t *testing.T) {
 					Header: http.Header{
 						"Content-Type": []string{"text/plain"},
 					},
-					Body: ioutil.NopCloser(nil),
+					Body: io.NopCloser(nil),
 				}, nil
 			},
 			wantErr: `unexpected content type "text/plain"`,
@@ -205,7 +205,7 @@ func TestPopulateTenantIDFromMSI(t *testing.T) {
 					OAuthToken().
 					Return("invalid")
 			},
-			wantErr: "token contains an invalid number of segments",
+			wantErr: "the provided service principal is invalid",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -236,7 +236,7 @@ func TestPopulateTenantIDFromMSI(t *testing.T) {
 
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
-				t.Fatal(err)
+				t.Fatalf("\n%v\n !=\n%v", err, tt.wantErr)
 			}
 
 			if p.tenantID != tt.wantTenantID {

@@ -13,6 +13,10 @@ import {
   TooltipHost,
   TextField,
   Link,
+  Layer,
+  Popup,
+  DefaultButton,
+  FocusTrapZone,
 } from "@fluentui/react"
 import {
   DetailsList,
@@ -21,6 +25,7 @@ import {
   IColumn,
   IDetailsListStyles,
 } from "@fluentui/react/lib/DetailsList"
+import { useBoolean } from "@fluentui/react-hooks"
 import { FetchClusters } from "./Request"
 import { KubeconfigButton } from "./Kubeconfig"
 import { AxiosResponse } from "axios"
@@ -70,6 +75,58 @@ const separatorStyle = {
     padding: 0,
   },
 }
+
+const popupStyles = mergeStyleSets({
+  root: {
+    background: 'rgba(0, 0, 0, 0.2)',
+    bottom: '0',
+    left: '0',
+    position: 'fixed',
+    right: '0',
+    top: '0',
+  },
+  content: {
+    background: 'white',
+    left: '50%',
+    maxWidth: '400px',
+    padding: '0 2em 2em',
+    position: 'absolute',
+    top: '50%',
+    transform: 'translate(-50%, -50%)',
+  },
+});
+
+const PopupModal = (props: {title: string, text: string, hidePopup: any}) => {
+  return (
+    <>
+        <Layer>
+          <Popup
+            className={popupStyles.root}
+            role="dialog"
+            aria-modal="true"
+            onDismiss={props.hidePopup}
+            enableAriaHiddenSiblings={true}
+          >
+            <FocusTrapZone>
+              <div role="document" className={popupStyles.content}>
+                <h2>{props.title}</h2>
+                <p>
+                  {props.text}
+                </p>
+                <DefaultButton onClick={() => {
+                  // this is to change the URL in the address bar
+                  window.history.replaceState({}, "", "/v2")
+                  props.hidePopup()
+                }}>
+                  Close
+                </DefaultButton>
+              </div>
+            </FocusTrapZone>
+          </Popup>
+        </Layer>
+    </>
+  );
+};
 
 interface IClusterListState {
   columns: IColumn[]
@@ -244,7 +301,7 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
               <IconButton
                 iconProps={{ iconName: "BIDashboard" }}
                 aria-label="Prometheus"
-                href={item.resourceId + `/prometheus`}
+                href={item.resourceId + (+item.version >= 4.11 ? `/prometheus` : `/prometheus/graph`)}
               />
             </TooltipHost>
             <TooltipHost content={`SSH`}>
@@ -255,6 +312,20 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
               />
             </TooltipHost>
             <KubeconfigButton resourceId={item.resourceId} csrfToken={props.csrfToken} />
+            {/* <TooltipHost content={`Geneva`}>
+              <IconButton
+                iconProps={{iconName: "Health"}}
+                aria-label="Geneva"
+                href={item.resourceId + `/geneva`}
+              />
+            </TooltipHost>
+            <TooltipHost content={`Feature Flags`}>
+              <IconButton
+                iconProps={{iconName: "IconSetsFlag"}}
+                aria-label="featureFlags"
+                href={item.resourceId + `/feature-flags`}
+              />
+            </TooltipHost> */}
           </Stack>
         ),
       },
@@ -275,7 +346,7 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
         <div className={classNames.controlWrapper}>
           <TextField placeholder="Filter on resource ID" onChange={this._onChangeText} />
         </div>
-        <Text className={classNames.itemsCount}>Showing {items.length} items</Text>
+        <Text id="ClusterCount" className={classNames.itemsCount}>Showing {items.length} items</Text>
         <DetailsList
           items={items}
           columns={columns}
@@ -301,7 +372,7 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
   ): void => {
     this.setState({
       items: text
-        ? this.props.items.filter((i) => i.resourceId.toLowerCase().indexOf(text) > -1)
+      ? this.props.items.filter((i) => i.resourceId.toLowerCase().indexOf(text.trim().toLowerCase()) != -1)
         : this.props.items,
     })
   }
@@ -350,9 +421,11 @@ export function ClusterList(props: {
   sshBox: MutableRefObject<any>
   setCurrentCluster: any
   csrfTokenAvailable: string
+  params: any
 }) {
   const [data, setData] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
+  const [isPopupVisible, { setTrue: showPopup, setFalse: hidePopup }] = useBoolean(false);
   const state = useRef<ClusterListComponent>(null)
   const [fetching, setFetching] = useState("")
 
@@ -392,6 +465,20 @@ export function ClusterList(props: {
       setFetching("FETCHING")
       FetchClusters().then(onData)
     }
+
+    if (props.params) {
+      const resourceID: string = props.params["resourceid"]
+      const clusterList = data as ICluster[]
+      const currentCluster = clusterList.find((item): item is ICluster => resourceID === item.resourceId)
+
+      if (fetching === "DONE" && !currentCluster) {
+        showPopup()
+        return
+      }
+
+      props.setCurrentCluster(currentCluster)
+    }
+
   }, [data, fetching, setFetching, props.csrfTokenAvailable])
 
   const _items: ICommandBarItemProps[] = [
@@ -417,8 +504,11 @@ export function ClusterList(props: {
         styles={controlStyles}
       />
       <Separator styles={separatorStyle} />
-
+      
       {error && errorBar()}
+
+      {isPopupVisible && PopupModal({title: "Resource Not Found", text: "No resource found due to Invalid/Non-existent resource ID in the URL.", hidePopup: hidePopup})}
+
       <ClusterListComponent
         items={data}
         ref={state} // why do we need ref here?

@@ -9,11 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
 
@@ -21,40 +19,20 @@ func (f *frontend) postAdminOpenShiftClusterStartVM(w http.ResponseWriter, r *ht
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
-
-	err := f._postAdminOpenShiftClusterStartVM(ctx, r, log)
-
+	err := f._postAdminOpenShiftClusterStartVM(log, ctx, r)
 	adminReply(log, w, nil, nil, err)
 }
 
-func (f *frontend) _postAdminOpenShiftClusterStartVM(ctx context.Context, r *http.Request, log *logrus.Entry) error {
-	vars := mux.Vars(r)
-
+func (f *frontend) _postAdminOpenShiftClusterStartVM(log *logrus.Entry, ctx context.Context, r *http.Request) error {
 	vmName := r.URL.Query().Get("vmName")
-	err := validateAdminVMName(vmName)
+	resourceName := chi.URLParam(r, "resourceName")
+	resourceType := chi.URLParam(r, "resourceType")
+	resourceGroupName := chi.URLParam(r, "resourceGroupName")
+
+	action, _, err := f.prepareAdminActions(log, ctx, vmName, strings.TrimPrefix(r.URL.Path, "/admin"), resourceType, resourceName, resourceGroupName)
 	if err != nil {
 		return err
 	}
 
-	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
-
-	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
-	switch {
-	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
-	case err != nil:
-		return err
-	}
-
-	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
-	if err != nil {
-		return err
-	}
-
-	a, err := f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
-	if err != nil {
-		return err
-	}
-
-	return a.VMStartAndWait(ctx, vmName)
+	return action.VMStartAndWait(ctx, vmName)
 }

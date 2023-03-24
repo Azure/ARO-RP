@@ -63,7 +63,7 @@ func TestValidateEncryptionAtHost(t *testing.T) {
 				Properties: api.OpenShiftClusterProperties{
 					MasterProfile: api.MasterProfile{
 						EncryptionAtHost: api.EncryptionAtHostEnabled,
-						VMSize:           api.VMSizeStandardG5,
+						VMSize:           api.VMSizeStandardM128ms,
 					},
 					WorkerProfiles: []api.WorkerProfile{{
 						EncryptionAtHost: api.EncryptionAtHostEnabled,
@@ -72,14 +72,14 @@ func TestValidateEncryptionAtHost(t *testing.T) {
 				},
 			},
 			mocks: func(env *mock_env.MockInterface) {
-				env.EXPECT().VMSku(string(api.VMSizeStandardG5)).
+				env.EXPECT().VMSku(string(api.VMSizeStandardM128ms)).
 					Return(&mgmtcompute.ResourceSku{
 						Capabilities: &([]mgmtcompute.ResourceSkuCapabilities{
 							{Name: to.StringPtr("EncryptionAtHostSupported"), Value: to.StringPtr("False")},
 						}),
 					}, nil)
 			},
-			wantErr: "400: InvalidParameter: properties.masterProfile.encryptionAtHost: VM SKU 'Standard_G5' does not support encryption at host.",
+			wantErr: "400: InvalidParameter: properties.masterProfile.encryptionAtHost: VM SKU 'Standard_M128ms' does not support encryption at host.",
 		},
 		{
 			name: "encryption at host enabled with unsupported worker VM SKU",
@@ -91,7 +91,7 @@ func TestValidateEncryptionAtHost(t *testing.T) {
 					},
 					WorkerProfiles: []api.WorkerProfile{{
 						EncryptionAtHost: api.EncryptionAtHostEnabled,
-						VMSize:           api.VMSizeStandardG5,
+						VMSize:           api.VMSizeStandardM128ms,
 					}},
 				},
 			},
@@ -102,14 +102,14 @@ func TestValidateEncryptionAtHost(t *testing.T) {
 							{Name: to.StringPtr("EncryptionAtHostSupported"), Value: to.StringPtr("True")},
 						}),
 					}, nil)
-				env.EXPECT().VMSku(string(api.VMSizeStandardG5)).
+				env.EXPECT().VMSku(string(api.VMSizeStandardM128ms)).
 					Return(&mgmtcompute.ResourceSku{
 						Capabilities: &([]mgmtcompute.ResourceSkuCapabilities{
 							{Name: to.StringPtr("EncryptionAtHostSupported"), Value: to.StringPtr("False")},
 						}),
 					}, nil)
 			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles[0].encryptionAtHost: VM SKU 'Standard_G5' does not support encryption at host.",
+			wantErr: "400: InvalidParameter: properties.workerProfiles[0].encryptionAtHost: VM SKU 'Standard_M128ms' does not support encryption at host.",
 		},
 		{
 			name: "encryption at host enabled with unknown VM SKU",
@@ -121,7 +121,7 @@ func TestValidateEncryptionAtHost(t *testing.T) {
 					},
 					WorkerProfiles: []api.WorkerProfile{{
 						EncryptionAtHost: api.EncryptionAtHostEnabled,
-						VMSize:           api.VMSizeStandardG5,
+						VMSize:           api.VMSizeStandardM128ms,
 					}},
 				},
 			},

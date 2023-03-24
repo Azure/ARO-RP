@@ -73,7 +73,7 @@ const (
 [FILTER]
 	Name grep
 	Match containers
-	Regex NAMESPACE ^(?:default|kube-.*|openshift|openshift-.*)$
+	Regex NAMESPACE ^(?:default|kube-.*|openshift|(?!openshift-(logging|gitops|user-workload-monitoring))(openshift-.*))$
 
 [FILTER]
 	Name nest

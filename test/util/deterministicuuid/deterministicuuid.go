@@ -17,6 +17,8 @@ const (
 	ASYNCOPERATIONS
 	PORTAL
 	GATEWAY
+	OPENSHIFT_VERSIONS
+	CLUSTERMANAGER
 )
 
 type gen struct {
@@ -42,7 +44,7 @@ func (g *gen) Generate() string {
 	uuidBytes := bytes.Repeat([]byte{g.namespace}, 14)
 
 	// 16 bits of uuid ought to be enough for any test :)
-	uuidBytes = append(uuidBytes, byte(uint8(g.counter>>8)))
-	uuidBytes = append(uuidBytes, byte(uint8(g.counter)))
+	uuidBytes = append(uuidBytes, byte(g.counter>>8))
+	uuidBytes = append(uuidBytes, byte(g.counter))
 	return gofrsuuid.FromBytesOrNil(uuidBytes).String()
 }
