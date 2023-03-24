@@ -113,22 +113,22 @@ func (m *manager) checkandUpdateNIC(ctx context.Context, resourceGroup string, i
 		switch m.doc.OpenShiftCluster.Properties.ArchitectureVersion {
 		case api.ArchitectureVersionV1:
 			elbName = infraID + "-public-lb"
-		case api.ArchitectureVersionV2:
-			elbName = infraID
-		}
 
-		if m.doc.OpenShiftCluster.Properties.ArchitectureVersion == api.ArchitectureVersionV1 {
-			elbv1, err := m.loadBalancers.Get(ctx, resourceGroup, infraID, "")
-			if err != nil {
-				return err
-			}
-			if m.updateV1ELBAddressPool(ctx, &nic, nicName, &elbv1, i, infraID) {
-				m.log.Printf("Updating Network Interface %s", nicName)
-				err = m.interfaces.CreateOrUpdateAndWait(ctx, resourceGroup, nicName, nic)
+			if m.doc.OpenShiftCluster.Properties.ArchitectureVersion == api.ArchitectureVersionV1 {
+				elbv1, err := m.loadBalancers.Get(ctx, resourceGroup, infraID, "")
 				if err != nil {
 					return err
+				} else if m.updateV1ELBAddressPool(ctx, &nic, nicName, &elbv1, i, infraID) {
+					m.log.Printf("Updating Network Interface %s", nicName)
+					err = m.interfaces.CreateOrUpdateAndWait(ctx, resourceGroup, nicName, nic)
+					if err != nil {
+						return err
+					}
 				}
 			}
+
+		case api.ArchitectureVersionV2:
+			elbName = infraID
 		}
 
 		elb, err := m.loadBalancers.Get(ctx, resourceGroup, elbName, "")
