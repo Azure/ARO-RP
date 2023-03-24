@@ -75,7 +75,7 @@ var _ = Describe("Disk encryption at rest", func() {
 
 		installVersion, _ := version.ParseVersion(*oc.ClusterProfile.Version)
 		defaultStorageClass := "managed-premium-encrypted-cmk"
-		if installVersion.V[0] == 4 && installVersion.V[1] == 11 {
+		if installVersion.V[0] == 4 && installVersion.V[1] >= 11 {
 			defaultStorageClass = "managed-csi-encrypted-cmk"
 		}
 

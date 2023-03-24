@@ -120,7 +120,7 @@ func createStatefulSet(ctx context.Context, cli kubernetes.Interface) error {
 	installVersion, _ := version.ParseVersion(*oc.ClusterProfile.Version)
 
 	defaultStorageClass := "managed-premium"
-	if installVersion.V[0] == 4 && installVersion.V[1] == 11 {
+	if installVersion.V[0] == 4 && installVersion.V[1] >= 11 {
 		defaultStorageClass = "managed-csi"
 	}
 	pvcStorage, err := resource.ParseQuantity("2Gi")
