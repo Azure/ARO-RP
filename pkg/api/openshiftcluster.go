@@ -141,6 +141,8 @@ type OpenShiftClusterProperties struct {
 	InfraID string      `json:"infraId,omitempty"`
 	SSHKey  SecureBytes `json:"sshKey,omitempty"`
 
+	UUID string `json:"uuid,omitempty"`
+
 	// AdminKubeconfig is installer generated kubeconfig. It is 10 year config,
 	// and should never be returned to the user.
 	AdminKubeconfig SecureBytes `json:"adminKubeconfig,omitempty"`

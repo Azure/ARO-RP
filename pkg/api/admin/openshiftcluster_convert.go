@@ -72,6 +72,7 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 			StorageSuffix:                   oc.Properties.StorageSuffix,
 			ImageRegistryStorageAccountName: oc.Properties.ImageRegistryStorageAccountName,
 			InfraID:                         oc.Properties.InfraID,
+			UUID:                            oc.Properties.UUID,
 		},
 	}
 
@@ -180,6 +181,7 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	}
 	out.Properties.ArchitectureVersion = api.ArchitectureVersion(oc.Properties.ArchitectureVersion)
 	out.Properties.InfraID = oc.Properties.InfraID
+	out.Properties.UUID = oc.Properties.UUID
 	out.Properties.HiveProfile.Namespace = oc.Properties.HiveProfile.Namespace
 	out.Properties.HiveProfile.CreatedByHive = oc.Properties.HiveProfile.CreatedByHive
 	out.Properties.ProvisioningState = api.ProvisioningState(oc.Properties.ProvisioningState)

@@ -53,6 +53,7 @@ type OpenShiftClusterProperties struct {
 	RegistryProfiles                []RegistryProfile       `json:"registryProfiles,omitempty"`
 	ImageRegistryStorageAccountName string                  `json:"imageRegistryStorageAccountName,omitempty"`
 	InfraID                         string                  `json:"infraId,omitempty"`
+	UUID                            string                  `json:"uuid,omitempty"`
 	HiveProfile                     HiveProfile             `json:"hiveProfile,omitempty"`
 	ResourceTags                    map[string]string       `json:"resourceTags" mutable:"true"`
 }
