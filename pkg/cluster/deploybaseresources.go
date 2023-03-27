@@ -12,19 +12,31 @@ import (
 	"strings"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
+	mgmtpolicyinsights "github.com/Azure/azure-sdk-for-go/services/preview/policyinsights/mgmt/2020-07-01-preview/policyinsights"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	mgmtpolicy "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-09-01/policy"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	v20230401 "github.com/Azure/ARO-RP/pkg/api/v20230401"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
+
+// Since this will have to be changed with each API release, declaring a package-scoped
+// const here and using this one throughout the package reduces the number of places
+// that have to be changed.
+const maxTags = v20230401.MaxTags
+
+// Used by tagging policy's managed identity for tag remediation.
+const tagContributorRoleDefinitionId = "/providers/Microsoft.Authorization/roleDefinitions/4a9ae827-6dc8-4573-8ac7-8239d42aa03f"
 
 func (m *manager) createDNS(ctx context.Context) error {
 	return m.dns.Create(ctx, m.doc.OpenShiftCluster)
@@ -141,6 +153,103 @@ func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
 	}
 
 	return m.env.EnsureARMResourceGroupRoleAssignment(ctx, m.fpAuthorizer, resourceGroup)
+}
+
+func (m *manager) ensureTaggingPolicy(ctx context.Context) error {
+	displayName := tagPolicyDisplayName(m.doc.OpenShiftCluster.Properties.InfraID)
+	definition := resourceTaggingPolicyDefinition(displayName)
+	definition, err := m.definitions.CreateOrUpdate(ctx, displayName, definition)
+
+	if err != nil {
+		return err
+	}
+
+	parameters := map[string]*mgmtpolicy.ParameterValuesValue{}
+	i := 0
+
+	for k, v := range m.doc.OpenShiftCluster.Properties.ResourceTags {
+		tagKeyParamName := tagKeyParamName(i)
+		tagValueParamName := tagValueParamName(i)
+
+		parameters[tagKeyParamName] = &mgmtpolicy.ParameterValuesValue{
+			Value: k,
+		}
+
+		parameters[tagValueParamName] = &mgmtpolicy.ParameterValuesValue{
+			Value: v,
+		}
+
+		i++
+	}
+
+	// If the customer has passed fewer than the maximum possible number
+	// of tags, fill in the remaining parameters with empty strings.
+	for ; i < maxTags; i++ {
+		tagKeyParamName := tagKeyParamName(i)
+		tagValueParamName := tagValueParamName(i)
+
+		parameters[tagKeyParamName] = &mgmtpolicy.ParameterValuesValue{
+			Value: "",
+		}
+
+		parameters[tagValueParamName] = &mgmtpolicy.ParameterValuesValue{
+			Value: "",
+		}
+	}
+
+	assignment := mgmtpolicy.Assignment{}
+	assignment.Location = &m.doc.OpenShiftCluster.Location
+
+	assignment.AssignmentProperties = &mgmtpolicy.AssignmentProperties{
+		DisplayName:        &displayName,
+		PolicyDefinitionID: to.StringPtr(*definition.ID),
+		Scope:              to.StringPtr(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID),
+		Parameters:         parameters,
+		EnforcementMode:    mgmtpolicy.Default,
+	}
+
+	assignment.Identity = &mgmtpolicy.Identity{
+		Type: mgmtpolicy.SystemAssigned,
+	}
+
+	assignment, err = m.assignments.Create(ctx, m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, displayName, assignment)
+
+	if err != nil {
+		return err
+	}
+
+	roleAssignmentParams := mgmtauthorization.RoleAssignmentCreateParameters{
+		RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
+			RoleDefinitionID: to.StringPtr(tagContributorRoleDefinitionId),
+			PrincipalID:      assignment.Identity.PrincipalID,
+			PrincipalType:    mgmtauthorization.ServicePrincipal,
+		},
+	}
+
+	_, err = m.roleAssignments.Create(ctx, m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, m.doc.OpenShiftCluster.Properties.UUID, roleAssignmentParams)
+
+	return err
+}
+
+func (m *manager) triggerTagRemediation(ctx context.Context) error {
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	displayName := tagPolicyDisplayName(m.doc.OpenShiftCluster.Properties.InfraID)
+	assignment, err := m.assignments.Get(ctx, m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, displayName)
+
+	if err != nil {
+		return err
+	}
+
+	remediation := mgmtpolicyinsights.Remediation{
+		RemediationProperties: &mgmtpolicyinsights.RemediationProperties{
+			PolicyAssignmentID:    assignment.ID,
+			ResourceDiscoveryMode: mgmtpolicyinsights.ReEvaluateCompliance,
+		},
+	}
+
+	_, err = m.remediations.CreateOrUpdateAtResourceGroup(ctx, m.env.SubscriptionID(), resourceGroup, fmt.Sprintf("%s-remediation-%s", displayName, uuid.DefaultGenerator.Generate()), remediation)
+
+	return err
 }
 
 func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
@@ -287,4 +396,86 @@ func generateInfraID(base string, maxLen int, randomLen int) string {
 
 	// add random chars to the end to randomize
 	return fmt.Sprintf("%s-%s", base, utilrand.String(randomLen))
+}
+
+func resourceTaggingPolicyDefinition(displayName string) mgmtpolicy.Definition {
+	dp := &mgmtpolicy.DefinitionProperties{}
+
+	dp.PolicyType = mgmtpolicy.Custom
+	dp.Mode = to.StringPtr("Indexed")
+	dp.DisplayName = &displayName
+	dp.Description = to.StringPtr("This policy definition was created via the Azure Red Hat OpenShift RP and is used to tag the resources in your ARO cluster's RP-managed resource group. *Do not delete or modify this policy definition.* The ARO RP will delete this policy definition when/if it deletes the associated cluster.")
+	dp.Parameters = map[string]*mgmtpolicy.ParameterDefinitionsValue{}
+
+	ifConditions := make([]map[string]interface{}, maxTags)
+	operations := make([]map[string]string, maxTags)
+
+	for i := 0; i < maxTags; i++ {
+		tagKeyParamName := tagKeyParamName(i)
+		tagValueParamName := tagValueParamName(i)
+
+		for _, p := range [2]string{tagKeyParamName, tagValueParamName} {
+			dp.Parameters[p] = &mgmtpolicy.ParameterDefinitionsValue{
+				Type: mgmtpolicy.String,
+				Metadata: &mgmtpolicy.ParameterDefinitionsValueMetadata{
+					DisplayName: to.StringPtr(p),
+				},
+			}
+		}
+
+		currTagValue := fmt.Sprintf("[concat('tags[', parameters('%s'), ']')]", tagKeyParamName)
+		tagKey := fmt.Sprintf("[parameters('%s')]", tagKeyParamName)
+		tagValue := fmt.Sprintf("[parameters('%s')]", tagValueParamName)
+		notEmptyCondition := fmt.Sprintf("[not(equals(parameters('%s'), ''))]", tagKeyParamName)
+
+		ifConditions[i] = map[string]interface{}{
+			"allOf": []map[string]string{
+				map[string]string{
+					"field":     currTagValue,
+					"notEquals": tagValue,
+				},
+				map[string]string{
+					"value":     tagKey,
+					"notEquals": "",
+				},
+			},
+		}
+
+		operations[i] = map[string]string{
+			"operation": "addOrReplace",
+			"field":     currTagValue,
+			"value":     tagValue,
+			"condition": notEmptyCondition,
+		}
+	}
+
+	dp.PolicyRule = map[string]interface{}{
+		"if": map[string]interface{}{
+			"anyOf": ifConditions,
+		},
+		"then": map[string]interface{}{
+			"effect": "modify",
+			"details": map[string]interface{}{
+				"roleDefinitionIds": []string{tagContributorRoleDefinitionId},
+				"operations":        operations,
+			},
+		},
+	}
+
+	return mgmtpolicy.Definition{
+		DefinitionProperties: dp,
+	}
+}
+
+// Note that this same name is used for both the policy definition and the policy assignment.
+func tagPolicyDisplayName(infraID string) string {
+	return fmt.Sprintf("%s-%s-resource-tagging-policy", "aro", infraID)
+}
+
+func tagKeyParamName(i int) string {
+	return fmt.Sprintf("tagKey%d", i)
+}
+
+func tagValueParamName(i int) string {
+	return fmt.Sprintf("tagValue%d", i)
 }
