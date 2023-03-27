@@ -818,11 +818,11 @@ func TestOpenShiftClusterStaticValidateResourceTags(t *testing.T) {
 			name: "too many tags",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.ResourceTags = map[string]string{}
-				for i := 0; i < maxTags+1; i++ {
+				for i := 0; i < MaxTags+1; i++ {
 					oc.Properties.ResourceTags[fmt.Sprintf("key%d", i)] = "value"
 				}
 			},
-			wantErr: fmt.Sprintf("400: InvalidParameter: properties.resourceTags: The provided set of cluster resource tags is too large; it can contain at most %d tags.", maxTags),
+			wantErr: fmt.Sprintf("400: InvalidParameter: properties.resourceTags: The provided set of cluster resource tags is too large; it can contain at most %d tags.", MaxTags),
 		},
 		{
 			name: "invalid tag name ends with period",

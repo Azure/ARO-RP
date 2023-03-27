@@ -25,7 +25,7 @@ import (
 //
 // See https://github.com/openshift/enhancements/blob/master/enhancements/api-review/azure_user_defined_tags.md
 // to understand how the value was decided.
-const maxTags = 10
+const MaxTags = 10
 
 const maxTagValueLen = 256
 
@@ -376,8 +376,8 @@ func (sv openShiftClusterStaticValidator) validateIngressProfile(path string, p 
 }
 
 func (sv openShiftClusterStaticValidator) validateResourceTags(path string, t Tags) error {
-	if len(t) > maxTags {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, fmt.Sprintf("The provided set of cluster resource tags is too large; it can contain at most %d tags.", maxTags))
+	if len(t) > MaxTags {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, fmt.Sprintf("The provided set of cluster resource tags is too large; it can contain at most %d tags.", MaxTags))
 	}
 
 	var invalidTags []string
