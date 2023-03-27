@@ -234,6 +234,7 @@ func (m *manager) bootstrap() []steps.Step {
 	s := []steps.Step{
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources),
 		steps.Action(m.ensureACRToken),
+		steps.Action(m.ensureUUID),
 		steps.Action(m.ensureInfraID),
 		steps.Action(m.ensureSSHKey),
 		steps.Action(m.ensureStorageSuffix),

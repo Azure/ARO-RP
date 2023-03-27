@@ -23,6 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 func (m *manager) createDNS(ctx context.Context) error {
@@ -40,6 +41,18 @@ func (m *manager) ensureInfraID(ctx context.Context) (err error) {
 		return nil
 	})
 	return err
+}
+
+func (m *manager) ensureUUID(ctx context.Context) (err error) {
+	if m.doc.OpenShiftCluster.Properties.UUID != "" {
+		return err
+	}
+
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.UUID = uuid.DefaultGenerator.Generate()
+		return nil
+	})
+	return nil
 }
 
 func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
