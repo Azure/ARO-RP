@@ -13,11 +13,21 @@ import (
 // ResourcesClientAddons is a minimal interface for azure ResourcesClient
 type ResourcesClientAddons interface {
 	Client() autorest.Client
+	UpdateByIDAndWait(ctx context.Context, resourceID string, APIVersion string, parameters mgmtfeatures.GenericResource) error
 	ListByResourceGroup(ctx context.Context, resourceGroupName string, filter string, expand string, top *int32) ([]mgmtfeatures.GenericResourceExpanded, error)
 }
 
 func (c *resourcesClient) Client() autorest.Client {
 	return c.ResourcesClient.Client
+}
+
+func (c *resourcesClient) UpdateByIDAndWait(ctx context.Context, resourceID string, APIVersion string, parameters mgmtfeatures.GenericResource) error {
+	future, err := c.ResourcesClient.UpdateByID(ctx, resourceID, APIVersion, parameters)
+	if err != nil {
+		return err
+	}
+
+	return future.WaitForCompletionRef(ctx, c.Client())
 }
 
 func (c *resourcesClient) ListByResourceGroup(ctx context.Context, resourceGroupName string, filter string, expand string, top *int32) (resources []mgmtfeatures.GenericResourceExpanded, err error) {
