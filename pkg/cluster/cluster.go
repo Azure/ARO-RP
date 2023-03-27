@@ -33,6 +33,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/policy"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/policyinsights"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/privatedns"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
@@ -82,6 +84,9 @@ type manager struct {
 	denyAssignments       authorization.DenyAssignmentClient
 	fpPrivateEndpoints    network.PrivateEndpointsClient
 	rpPrivateLinkServices network.PrivateLinkServicesClient
+	assignments           policy.AssignmentsClient
+	definitions           policy.DefinitionsClient
+	remediations          policyinsights.RemediationsClient
 
 	dns     dns.Manager
 	storage storage.Manager
@@ -172,6 +177,9 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		roleAssignments:       authorization.NewRoleAssignmentsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		roleDefinitions:       authorization.NewRoleDefinitionsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		denyAssignments:       authorization.NewDenyAssignmentsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		assignments:           policy.NewAssignmentsClient(_env.Environment(), _env.SubscriptionID(), fpAuthorizer),
+		definitions:           policy.NewDefinitionsClient(_env.Environment(), _env.SubscriptionID(), fpAuthorizer),
+		remediations:          policyinsights.NewRemediationsClient(_env.Environment(), _env.SubscriptionID(), fpAuthorizer),
 		fpPrivateEndpoints:    network.NewPrivateEndpointsClient(_env.Environment(), _env.SubscriptionID(), localFPAuthorizer),
 		rpPrivateLinkServices: network.NewPrivateLinkServicesClient(_env.Environment(), _env.SubscriptionID(), msiAuthorizer),
 
