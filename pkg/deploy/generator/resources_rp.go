@@ -1029,6 +1029,22 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 }
 
 func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Resource {
+	database := &arm.Resource{
+		Resource: &mgmtdocumentdb.SQLDatabaseCreateUpdateParameters{
+			SQLDatabaseCreateUpdateProperties: &mgmtdocumentdb.SQLDatabaseCreateUpdateProperties{
+				Resource: &mgmtdocumentdb.SQLDatabaseResource{
+					ID: to.StringPtr("[" + databaseName + "]"),
+				},
+				Options: &mgmtdocumentdb.CreateUpdateOptions{
+					Throughput: to.Int32Ptr(500),
+				},
+			},
+			Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ")]"),
+			Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
+	}
 	portal := &arm.Resource{
 		Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
 			SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
@@ -1080,27 +1096,13 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 	}
 
 	if g.production {
-		portal.Resource.(*mgmtdocumentdb.SQLContainerCreateUpdateParameters).SQLContainerCreateUpdateProperties.Options.Throughput = to.Int32Ptr(400)
-		gateway.Resource.(*mgmtdocumentdb.SQLContainerCreateUpdateParameters).SQLContainerCreateUpdateProperties.Options.Throughput = to.Int32Ptr(400)
+		database.Resource.(*mgmtdocumentdb.SQLDatabaseCreateUpdateParameters).SQLDatabaseCreateUpdateProperties.Options.Throughput = to.Int32Ptr(cosmosDbStandardProvisionedThroughputHack)
+		portal.Resource.(*mgmtdocumentdb.SQLContainerCreateUpdateParameters).SQLContainerCreateUpdateProperties.Options.Throughput = to.Int32Ptr(cosmosDbPortalProvisionedThroughputHack)
+		gateway.Resource.(*mgmtdocumentdb.SQLContainerCreateUpdateParameters).SQLContainerCreateUpdateProperties.Options.Throughput = to.Int32Ptr(cosmosDbGatewayProvisionedThroughputHack)
 	}
 
 	rs := []*arm.Resource{
-		{
-			Resource: &mgmtdocumentdb.SQLDatabaseCreateUpdateParameters{
-				SQLDatabaseCreateUpdateProperties: &mgmtdocumentdb.SQLDatabaseCreateUpdateProperties{
-					Resource: &mgmtdocumentdb.SQLDatabaseResource{
-						ID: to.StringPtr("[" + databaseName + "]"),
-					},
-					Options: &mgmtdocumentdb.CreateUpdateOptions{
-						Throughput: to.Int32Ptr(1000),
-					},
-				},
-				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ")]"),
-				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases"),
-				Location: to.StringPtr("[resourceGroup().location]"),
-			},
-			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
-		},
+		database,
 		{
 			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
 				SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{

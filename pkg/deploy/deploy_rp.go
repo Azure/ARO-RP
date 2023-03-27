@@ -77,6 +77,13 @@ func (d *deployer) DeployRP(ctx context.Context) error {
 	parameters.Parameters["azureCloudName"] = &arm.ParametersParameter{
 		Value: d.env.Environment().ActualCloudName,
 	}
+	parameters.Parameters["cosmosDB"] = &arm.ParametersParameter{
+		Value: map[string]int{
+			"standardProvisionedThroughput": d.config.Configuration.CosmosDB.StandardProvisionedThroughput,
+			"portalProvisionedThroughput":   d.config.Configuration.CosmosDB.PortalProvisionedThroughput,
+			"gatewayProvisionedThroughput":  d.config.Configuration.CosmosDB.GatewayProvisionedThroughput,
+		},
+	}
 
 	err = d.deploy(ctx, d.config.RPResourceGroupName, deploymentName, rpVMSSPrefix+d.version,
 		mgmtfeatures.Deployment{
