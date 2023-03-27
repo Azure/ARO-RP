@@ -13,7 +13,6 @@ import (
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
-	mgmtpolicyinsights "github.com/Azure/azure-sdk-for-go/services/preview/policyinsights/mgmt/2020-07-01-preview/policyinsights"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	mgmtpolicy "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-09-01/policy"
 	"github.com/Azure/go-autorest/autorest"
@@ -231,25 +230,34 @@ func (m *manager) ensureTaggingPolicy(ctx context.Context) error {
 	return err
 }
 
-func (m *manager) triggerTagRemediation(ctx context.Context) error {
+func (m *manager) remediateTags(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	displayName := tagPolicyDisplayName(m.doc.OpenShiftCluster.Properties.InfraID)
-	assignment, err := m.assignments.Get(ctx, m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, displayName)
+
+	resources, err := m.resources.ListByResourceGroup(ctx, resourceGroup, "", "", nil)
 
 	if err != nil {
 		return err
 	}
 
-	remediation := mgmtpolicyinsights.Remediation{
-		RemediationProperties: &mgmtpolicyinsights.RemediationProperties{
-			PolicyAssignmentID:    assignment.ID,
-			ResourceDiscoveryMode: mgmtpolicyinsights.ReEvaluateCompliance,
-		},
+	for _, r := range resources {
+		// Do not remove any tags, but add new tags and update values
+		// for existing tags.
+		for k, v := range m.doc.OpenShiftCluster.Properties.ResourceTags {
+			r.Tags[k] = to.StringPtr(v)
+		}
+
+		parameters := mgmtfeatures.GenericResource{
+			Tags: r.Tags,
+		}
+
+		err = m.resources.UpdateByIDAndWait(ctx, *r.ID, "2021-04-01", parameters)
+
+		if err != nil {
+			return err
+		}
 	}
 
-	_, err = m.remediations.CreateOrUpdateAtResourceGroup(ctx, m.env.SubscriptionID(), resourceGroup, fmt.Sprintf("%s-remediation-%s", displayName, uuid.DefaultGenerator.Generate()), remediation)
-
-	return err
+	return nil
 }
 
 func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
