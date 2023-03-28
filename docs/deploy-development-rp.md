@@ -244,8 +244,8 @@ After that, when you [create](https://github.com/Azure/ARO-RP/blob/master/docs/d
 
 * List Supported VM Sizes
   ```bash
-  INSTANCETYPE=<master or worker>
-  curl -X GET -k "https://localhost:8443/admin/listSupportedVMSizes?instanceType=$INSTANCETYPE"
+  VMROLE=<master or worker>
+  curl -X GET -k "https://localhost:8443/admin/listSupportedVMSizes?instanceType=$VMROLE"
   ```
 
 ## OpenShift Version

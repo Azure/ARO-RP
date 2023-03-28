@@ -15,24 +15,23 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
 
+var validVMRoles = map[string]map[api.VMSize]api.VMSizeStruct{
+	"master": validate.SupportedMasterVmSizes,
+	"worker": validate.SupportedWorkerVmSizes,
+}
+
 func (f *frontend) listSupportedVMSizes(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
-	//r.URL.Path = filepath.Dir(r.URL.Path)
 	b, err := f._listSupportedVMSizes(log, ctx, r)
 	reply(log, w, nil, b, err)
 }
 
 func (f *frontend) _listSupportedVMSizes(log *logrus.Entry, ctx context.Context, r *http.Request) ([]byte, error) {
-	var vmsizes map[api.VMSize]api.VMSizeStruct
-	instanceType := r.URL.Query().Get("instanceType")
-	switch instanceType {
-	case "master":
-		vmsizes = validate.SupportedMasterVmSizes
-	case "worker":
-		vmsizes = validate.SupportedWorkerVmSizes
-	default:
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided instanceType '%s' is invalid. InstanceType can only be master or worker", instanceType)
+	vmRole := r.URL.Query().Get("vmRole")
+	vmsizes, exists := validVMRoles[vmRole]
+	if !exists {
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided vmRole '%s' is invalid. vmRole can only be master or worker", vmRole)
 	}
 	b, err := json.MarshalIndent(vmsizes, "", "    ")
 	if err != nil {
