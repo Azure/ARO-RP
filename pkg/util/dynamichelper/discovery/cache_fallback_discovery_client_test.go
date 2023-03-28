@@ -4,8 +4,9 @@ package discovery
 // Licensed under the Apache License 2.0.
 
 import (
+	"embed"
 	"errors"
-	"fmt"
+	"io"
 	"reflect"
 	"strings"
 	"testing"
@@ -24,7 +25,11 @@ import (
 // TestVersion makes sure that bindata contains cache generated with the
 // supported OpenShift version.
 func TestVersion(t *testing.T) {
-	b, err := Asset("assets_version")
+	file, err := embeddedFiles.Open("cache/assets_version")
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := io.ReadAll(file)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,6 +39,9 @@ func TestVersion(t *testing.T) {
 		t.Error("discovery cache is out of date: run make discoverycache")
 	}
 }
+
+//go:embed test_cache
+var testCache embed.FS
 
 func TestCacheFallbackDiscoveryClient(t *testing.T) {
 	log := utillog.GetLogger()
@@ -67,16 +75,13 @@ func TestCacheFallbackDiscoveryClient(t *testing.T) {
 	}
 	wantResources := []*metav1.APIResourceList{fakeServerResources}
 
-	fakeServerGroupsCache := []byte(`{"groups":[{"name":"foo","versions":[{"groupVersion":"foo/v1","version":"v1"}],"preferredVersion":{"groupVersion":"foo/v1","version":"v1"}}]}`)
-	fakeServerResourcesCache := []byte(`{"resources":[{"name":"widgets","singularName":"","namespaced":false,"kind":"Widget","verbs":null}]}`)
-
 	for _, tt := range []struct {
 		name           string
 		delegateClient discovery.DiscoveryInterface
-		assets         map[string][]byte
 		wantGroups     []*metav1.APIGroup
 		wantResources  []*metav1.APIResourceList
 		wantErr        string
+		noCache        bool
 	}{
 		{
 			name: "no error from delegate client",
@@ -92,9 +97,6 @@ func TestCacheFallbackDiscoveryClient(t *testing.T) {
 			delegateClient: &fakeDiscoveryClient{
 				fakeServerResources: fakeServerResources,
 			},
-			assets: map[string][]byte{
-				"servergroups.json": fakeServerGroupsCache,
-			},
 			wantGroups:    wantGroups,
 			wantResources: wantResources,
 		},
@@ -103,9 +105,6 @@ func TestCacheFallbackDiscoveryClient(t *testing.T) {
 			delegateClient: &fakeDiscoveryClient{
 				fakeServerGroups: fakeServerGroups,
 			},
-			assets: map[string][]byte{
-				"foo/v1/serverresources.json": fakeServerResourcesCache,
-			},
 			wantGroups:    wantGroups,
 			wantResources: wantResources,
 		},
@@ -113,6 +112,7 @@ func TestCacheFallbackDiscoveryClient(t *testing.T) {
 			name:           "error from ServerGroups in delegate client, cache doesn't exists",
 			delegateClient: &fakeDiscoveryClient{},
 			wantErr:        "error from ServerGroups",
+			noCache:        true,
 		},
 		{
 			name: "error from ServerResourcesForGroupVersion in delegate client, cache doesn't exists",
@@ -122,25 +122,24 @@ func TestCacheFallbackDiscoveryClient(t *testing.T) {
 			wantGroups:    wantGroups,
 			wantResources: []*metav1.APIResourceList{},
 			wantErr:       "unable to retrieve the complete list of server APIs: foo/v1: error from ServerResourcesForGroupVersion",
+			noCache:       true,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			cli := &cacheFallbackDiscoveryClient{
 				DiscoveryInterface: tt.delegateClient,
 				log:                log,
-				asset: func(name string) ([]byte, error) {
-					if cache, ok := tt.assets[name]; ok {
-						return cache, nil
-					}
-
-					return nil, fmt.Errorf("%s not found", name)
-				},
+				cache:              testCache,
+				cacheDir:           "test_cache",
+			}
+			if tt.noCache {
+				cli.cacheDir = "not_there"
 			}
 
 			groups, resources, err := cli.ServerGroupsAndResources()
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
-				t.Error(err)
+				t.Error(err, tt.wantErr)
 			}
 
 			if !reflect.DeepEqual(tt.wantGroups, groups) {
