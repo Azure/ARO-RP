@@ -108,6 +108,7 @@ type Configuration struct {
 	AdoptByHive              *string `json:"clustersAdoptByHive,omitempty"`
 }
 
+// Note: if this configuration block is provided, all throughputs must be present and valid
 type CosmosDBConfiguration struct {
 	StandardProvisionedThroughput int `json:"standardProvisionedThroughput,omitempty"`
 	PortalProvisionedThroughput   int `json:"portalProvisionedThroughput,omitempty"`
