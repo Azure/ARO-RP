@@ -5,14 +5,6 @@
         "clusterParentDomainName": {
             "type": "string"
         },
-        "cosmosDB": {
-            "type": "object",
-            "defaultValue": {
-                "gatewayProvisionedThroughput": 400,
-                "portalProvisionedThroughput": 400,
-                "standardProvisionedThroughput": 1000
-            }
-        },
         "databaseAccountName": {
             "type": "string"
         },

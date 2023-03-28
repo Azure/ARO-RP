@@ -27,7 +27,6 @@ func (g *generator) rpTemplate() *arm.Template {
 	params := []string{
 		"clusterParentDomainName",
 		"databaseAccountName",
-		"cosmosDB",
 		"fpServicePrincipalId",
 		"rpServicePrincipalId",
 	}
@@ -48,6 +47,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"clusterMdsdAccount",
 			"clusterMdsdConfigVersion",
 			"clusterMdsdNamespace",
+			"cosmosDB",
 			"dbtokenClientId",
 			"disableCosmosDBFirewall",
 			"fluentbitImage",
