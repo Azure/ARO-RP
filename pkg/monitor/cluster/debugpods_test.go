@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
+	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
@@ -55,18 +56,21 @@ func TestEmitDebugPodsCount(t *testing.T) {
 func reactorFn(_ ktesting.Action) (handled bool, ret kruntime.Object, err error) {
 	now := metav1.Now()
 	longAgo := metav1.Date(1991, time.August, 24, 0, 0, 0, 0, time.UTC)
-	return true, &corev1.EventList{Items: []corev1.Event{
+	return true, &eventsv1.EventList{Items: []eventsv1.Event{
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "master-1-started",
 				Namespace: "default",
 			},
 			Reason: "Started",
-			InvolvedObject: corev1.ObjectReference{
+			Regarding: corev1.ObjectReference{
 				Kind: "Pod",
 				Name: "master-1-debug",
 			},
-			LastTimestamp: longAgo,
+
+			Series: &eventsv1.EventSeries{
+				LastObservedTime: metav1.NewMicroTime(longAgo.Time),
+			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -74,35 +78,43 @@ func reactorFn(_ ktesting.Action) (handled bool, ret kruntime.Object, err error)
 				Namespace: "default",
 			},
 			Reason: "Started",
-			InvolvedObject: corev1.ObjectReference{
+			Regarding: corev1.ObjectReference{
 				Kind: "Pod",
 				Name: "master-2-debug",
 			},
-			LastTimestamp: now,
+			Series: &eventsv1.EventSeries{
+				LastObservedTime: metav1.NewMicroTime(now.Time),
+			},
 		},
 	}}, nil
 }
 
 func TestEventIsNew(t *testing.T) {
 	for _, tt := range []struct {
-		event corev1.Event
+		event eventsv1.Event
 		isNew bool
 	}{
 		{
-			event: corev1.Event{
-				LastTimestamp: metav1.Now(),
+			event: eventsv1.Event{
+				Series: &eventsv1.EventSeries{
+					LastObservedTime: metav1.NewMicroTime(metav1.Now().Time),
+				},
 			},
 			isNew: true,
 		},
 		{
-			event: corev1.Event{
-				LastTimestamp: metav1.NewTime(metav1.Now().Add(-1 * time.Minute)),
+			event: eventsv1.Event{
+				Series: &eventsv1.EventSeries{
+					LastObservedTime: metav1.NewMicroTime(metav1.NewTime(metav1.Now().Add(-1 * time.Minute)).Time),
+				},
 			},
 			isNew: true,
 		},
 		{
-			event: corev1.Event{
-				LastTimestamp: metav1.Date(2020, 02, 18, 0, 0, 0, 0, time.UTC),
+			event: eventsv1.Event{
+				Series: &eventsv1.EventSeries{
+					LastObservedTime: metav1.NewMicroTime(metav1.Date(2020, 02, 18, 0, 0, 0, 0, time.UTC).Time),
+				},
 			},
 			isNew: false,
 		},
@@ -147,27 +159,33 @@ func TestCountDebugPods(t *testing.T) {
 
 	for _, tt := range []struct {
 		debugPodNames []string
-		events        []corev1.Event
+		events        []eventsv1.Event
 		expectedCount int
 	}{
 		{
 			debugPodNames: []string{"m-0-debug", "m-1-debug", "m-2-debug", "m-3-debug"},
-			events: []corev1.Event{
+			events: []eventsv1.Event{
 				{
-					LastTimestamp: now,
-					InvolvedObject: corev1.ObjectReference{
+					Series: &eventsv1.EventSeries{
+						LastObservedTime: metav1.NewMicroTime(now.Time),
+					},
+					Regarding: corev1.ObjectReference{
 						Name: "m-0-debug",
 					},
 				},
 				{
-					LastTimestamp: now,
-					InvolvedObject: corev1.ObjectReference{
+					Series: &eventsv1.EventSeries{
+						LastObservedTime: metav1.NewMicroTime(now.Time),
+					},
+					Regarding: corev1.ObjectReference{
 						Name: "m-3",
 					},
 				},
 				{
-					LastTimestamp: longAgo,
-					InvolvedObject: corev1.ObjectReference{
+					Series: &eventsv1.EventSeries{
+						LastObservedTime: metav1.NewMicroTime(longAgo.Time),
+					},
+					Regarding: corev1.ObjectReference{
 						Name: "m-1-debug",
 					},
 				},
