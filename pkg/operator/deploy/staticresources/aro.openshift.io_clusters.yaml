@@ -52,6 +52,18 @@ spec:
                 type: object
               clusterResourceGroupId:
                 type: string
+              dnsmasq:
+                description: DnsmasqConfigSpec configures the per-node DNS resolver
+                properties:
+                  cacheSize:
+                    type: integer
+                  maxCacheTTL:
+                    type: integer
+                  minCacheTTL:
+                    type: integer
+                  noNegCache:
+                    type: boolean
+                type: object
               domain:
                 type: string
               gatewayDomains:

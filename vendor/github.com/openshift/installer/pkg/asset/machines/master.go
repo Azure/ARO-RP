@@ -458,7 +458,14 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 		}
 		machineConfigs = append(machineConfigs, ignFIPS)
 	}
-	ignARODNS, err := dnsmasq.MachineConfig(installConfig.Config.ClusterDomain(), aroDNSConfig.APIIntIP, aroDNSConfig.IngressIP, "master", aroDNSConfig.GatewayDomains, aroDNSConfig.GatewayPrivateEndpointIP)
+	cfg := dnsmasq.DnsmasqConfig{
+		ClusterDomain:            installConfig.Config.ClusterDomain(),
+		APIIntIP:                 aroDNSConfig.APIIntIP,
+		IngressIP:                aroDNSConfig.IngressIP,
+		GatewayDomains:           aroDNSConfig.GatewayDomains,
+		GatewayPrivateEndpointIP: aroDNSConfig.GatewayPrivateEndpointIP,
+	}
+	ignARODNS, err := dnsmasq.MachineConfig(cfg, "master")
 	if err != nil {
 		return errors.Wrap(err, "failed to create ignition for ARO DNS for master machines")
 	}

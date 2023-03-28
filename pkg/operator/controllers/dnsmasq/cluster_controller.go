@@ -82,7 +82,18 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, dh dynamichelper.Interface, roles ...string) error {
 	var resources []kruntime.Object
 	for _, role := range roles {
-		resource, err := dnsmasq.MachineConfig(instance.Spec.Domain, instance.Spec.APIIntIP, instance.Spec.IngressIP, role, instance.Spec.GatewayDomains, instance.Spec.GatewayPrivateEndpointIP)
+		cfg := dnsmasq.DnsmasqConfig{
+			ClusterDomain:            instance.Spec.Domain,
+			APIIntIP:                 instance.Spec.APIIntIP,
+			IngressIP:                instance.Spec.IngressIP,
+			GatewayDomains:           instance.Spec.GatewayDomains,
+			GatewayPrivateEndpointIP: instance.Spec.GatewayPrivateEndpointIP,
+			CacheSize:                instance.Spec.DnsmasqConfig.CacheSize,
+			MinCacheTTL:              instance.Spec.DnsmasqConfig.MinCacheTTL,
+			MaxCacheTTL:              instance.Spec.DnsmasqConfig.MaxCacheTTL,
+			NoNegCache:               instance.Spec.DnsmasqConfig.NoNegCache,
+		}
+		resource, err := dnsmasq.MachineConfig(cfg, role)
 		if err != nil {
 			return err
 		}

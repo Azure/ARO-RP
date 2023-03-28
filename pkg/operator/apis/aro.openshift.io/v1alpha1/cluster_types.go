@@ -69,6 +69,14 @@ type InternetCheckerSpec struct {
 	URLs []string `json:"urls,omitempty"`
 }
 
+// DnsmasqConfigSpec configures the per-node DNS resolver
+type DnsmasqConfigSpec struct {
+	CacheSize   int  `json:"cacheSize,omitempty"`
+	MaxCacheTTL int  `json:"maxCacheTTL,omitempty"`
+	MinCacheTTL int  `json:"minCacheTTL,omitempty"`
+	NoNegCache  bool `json:"noNegCache,omitempty"`
+}
+
 type OperatorFlags map[string]string
 
 func (f OperatorFlags) GetWithDefault(key string, sentinel string) string {
@@ -113,6 +121,7 @@ type ClusterSpec struct {
 	GatewayPrivateEndpointIP string              `json:"gatewayPrivateEndpointIP,omitempty"`
 	Banner                   Banner              `json:"banner,omitempty"`
 	ServiceSubnets           []string            `json:"serviceSubnets,omitempty"`
+	DnsmasqConfig            DnsmasqConfigSpec   `json:"dnsmasq,omitempty"`
 
 	// OperatorFlags defines feature gates for the ARO Operator
 	OperatorFlags OperatorFlags `json:"operatorflags,omitempty"`
