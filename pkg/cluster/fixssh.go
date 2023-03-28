@@ -114,17 +114,9 @@ func (m *manager) checkandUpdateNIC(ctx context.Context, resourceGroup string, i
 		case api.ArchitectureVersionV1:
 			elbName = infraID + "-public-lb"
 
-			if m.doc.OpenShiftCluster.Properties.ArchitectureVersion == api.ArchitectureVersionV1 {
-				elbv1, err := m.loadBalancers.Get(ctx, resourceGroup, infraID, "")
-				if err != nil {
-					return err
-				} else if m.updateV1ELBAddressPool(ctx, &nic, nicName, &elbv1, i, infraID) {
-					m.log.Printf("Updating Network Interface %s", nicName)
-					err = m.interfaces.CreateOrUpdateAndWait(ctx, resourceGroup, nicName, nic)
-					if err != nil {
-						return err
-					}
-				}
+			err = m.updateV1ELBAddressPool(ctx, &nic, nicName, resourceGroup, infraID)
+			if err != nil {
+				return err
 			}
 
 		case api.ArchitectureVersionV2:
@@ -214,13 +206,13 @@ func (m *manager) updateILBAddressPool(ctx context.Context, nic *mgmtnetwork.Int
 	return updateSSHPool || updateILBPool
 }
 
-func (m *manager) updateV1ELBAddressPool(ctx context.Context, nic *mgmtnetwork.Interface, nicName string, lb *mgmtnetwork.LoadBalancer, i int, infraID string) bool {
+func (m *manager) updateV1ELBAddressPool(ctx context.Context, nic *mgmtnetwork.Interface, nicName string, resourceGroup string, infraID string) error {
 	if nic.InterfacePropertiesFormat.IPConfigurations == nil || len(*nic.InterfacePropertiesFormat.IPConfigurations) == 0 {
-		m.log.Warnf("unable to update NIC as there are no IP configurations for %s", nicName)
-		return false
+		return fmt.Errorf("unable to update NIC as there are no IP configurations for %s", nicName)
 	}
-	var updateV1ELBPool bool
 
+	var updateV1ELBPool bool
+	lb, err := m.loadBalancers.Get(ctx, resourceGroup, infraID, "")
 	elbBackendPoolID := fmt.Sprintf("%s/backendAddressPools/%s", *lb.ID, infraID)
 	lbpool := *(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools
 	var index int
@@ -235,8 +227,13 @@ func (m *manager) updateV1ELBAddressPool(ctx context.Context, nic *mgmtnetwork.I
 		m.log.Printf("Removing NIC %s from Public Load Balancer API Address Pool %s", nicName, elbBackendPoolID)
 		lbpool = append(lbpool[:index], lbpool[index+1:]...)
 		(*nic.IPConfigurations)[0].LoadBalancerBackendAddressPools = &lbpool
+		m.log.Printf("Updating Network Interface %s", nicName)
+		err = m.interfaces.CreateOrUpdateAndWait(ctx, resourceGroup, nicName, *nic)
+		if err != nil {
+			return err
+		}
 	}
-	return updateV1ELBPool
+	return err
 }
 
 func (m *manager) updateELBAddressPool(ctx context.Context, nic *mgmtnetwork.Interface, nicName string, lb *mgmtnetwork.LoadBalancer, i int, infraID string) bool {
