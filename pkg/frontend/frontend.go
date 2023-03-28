@@ -239,7 +239,6 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 
 	r.Route("/subscriptions/{subscriptionId}", func(r chi.Router) {
 		r.Route("/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}", func(r chi.Router) {
-			r.Get("/listSupportedVMSizes", f.listSupportedVMSizes)
 			r.With(f.apiVersionMiddleware.ValidateAPIVersion).Get("/", f.getOpenShiftClusters)
 
 			r.Route("/{resourceName}", func(r chi.Router) {
