@@ -294,7 +294,7 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 			r.Get("/", f.getAdminOpenShiftVersions)
 			r.Put("/", f.putAdminOpenShiftVersion)
 		})
-		r.Route("/listsupportedvmsizes", func(r chi.Router) {
+		r.Route("/supportedvmsizes", func(r chi.Router) {
 			r.Get("/", f.listSupportedVMSizes)
 		})
 
