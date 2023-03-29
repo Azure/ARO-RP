@@ -74,9 +74,9 @@ var _ = Describe("Disk encryption at rest", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		installVersion, _ := version.ParseVersion(*oc.ClusterProfile.Version)
-		defaultStorageClass := "managed-premium-encrypted-cmk"
-		if installVersion.V[0] == 4 && installVersion.V[1] >= 11 {
-			defaultStorageClass = "managed-csi-encrypted-cmk"
+		defaultStorageClass := "managed-csi-encrypted-cmk"
+		if installVersion.Lt(version.NewVersion(4, 11)) {
+			defaultStorageClass = "managed-premium-encrypted-cmk"
 		}
 
 		By("checking that disk encryption at rest is enabled for masters")
