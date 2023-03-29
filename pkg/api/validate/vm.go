@@ -7,6 +7,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
+// Public facing document which lists supported VM Sizes:
+// https://learn.microsoft.com/en-us/azure/openshift/support-policies-v4#supported-virtual-machine-sizes
+
+// To add new instance types, needs Project Managment's involment and instructions are below.,
+// https://github.com/Azure/ARO-RP/blob/master/docs/adding-new-instance-types.md
+
 var SupportedMasterVmSizes = map[api.VMSize]api.VMSizeStruct{
 	// General purpose
 	api.VMSizeStandardD8sV3:  api.VMSizeStandardD8sV3Struct,
@@ -79,7 +85,8 @@ var SupportedMasterVmSizes = map[api.VMSize]api.VMSizeStruct{
 	api.VMSizeStandardM128ms: api.VMSizeStandardM128msStruct,
 }
 
-var supportedWorkerVmSizes = map[api.VMSize]api.VMSizeStruct{
+// Document support
+var SupportedWorkerVmSizes = map[api.VMSize]api.VMSizeStruct{
 	// General purpose
 	api.VMSizeStandardD4sV3:  api.VMSizeStandardD4sV3Struct,
 	api.VMSizeStandardD8sV3:  api.VMSizeStandardD8sV3Struct,
@@ -219,7 +226,7 @@ func VMSizeIsValid(vmSize api.VMSize, requiredD2sV3Workers, isMaster bool) bool 
 		return false
 	}
 
-	_, supportedAsWorker := supportedWorkerVmSizes[vmSize]
+	_, supportedAsWorker := SupportedWorkerVmSizes[vmSize]
 	if supportedAsWorker || (requiredD2sV3Workers && vmSize == api.VMSizeStandardD2sV3) {
 		return true
 	}
@@ -233,7 +240,7 @@ func VMSizeFromName(vmSize api.VMSize) (api.VMSizeStruct, bool) {
 		return api.VMSizeStandardD2sV3Struct, true
 	}
 
-	if size, ok := supportedWorkerVmSizes[vmSize]; ok {
+	if size, ok := SupportedWorkerVmSizes[vmSize]; ok {
 		return size, true
 	}
 

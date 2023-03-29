@@ -242,6 +242,12 @@ After that, when you [create](https://github.com/Azure/ARO-RP/blob/master/docs/d
   curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/kubernetespodlogs?podname=$POD&namespace=$NAMESPACE&container=$CONTAINER"
   ```
 
+* List Supported VM Sizes
+  ```bash
+  VMROLE=<master or worker>
+  curl -X GET -k "https://localhost:8443/admin/supportedvmsizes?vmRole=$VMROLE"
+  ```
+
 ## OpenShift Version
 
 * We have a cosmos container which contains supported installable OCP versions, more information on the definition in `pkg/api/openshiftversion.go`.
