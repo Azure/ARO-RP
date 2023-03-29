@@ -63,7 +63,7 @@ func (m *manager) ensureUUID(ctx context.Context) (err error) {
 		doc.OpenShiftCluster.Properties.UUID = uuid.DefaultGenerator.Generate()
 		return nil
 	})
-	return nil
+	return err
 }
 
 func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
