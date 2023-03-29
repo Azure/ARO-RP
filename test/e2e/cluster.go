@@ -119,9 +119,9 @@ func createStatefulSet(ctx context.Context, cli kubernetes.Interface) error {
 	oc, _ := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 	installVersion, _ := version.ParseVersion(*oc.ClusterProfile.Version)
 
-	defaultStorageClass := "managed-premium"
-	if installVersion.V[0] == 4 && installVersion.V[1] >= 11 {
-		defaultStorageClass = "managed-csi"
+	defaultStorageClass := "managed-csi"
+	if installVersion.Lt(version.NewVersion(4, 11)) {
+		defaultStorageClass = "managed-premium"
 	}
 	pvcStorage, err := resource.ParseQuantity("2Gi")
 	if err != nil {
