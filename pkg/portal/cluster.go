@@ -5,12 +5,14 @@ package portal
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/gorilla/mux"
 )
 
 type AdminOpenShiftCluster struct {
@@ -238,4 +240,43 @@ func (p *portal) machineSets(w http.ResponseWriter, r *http.Request) {
 		p.internalServerError(w, err)
 		return
 	}
+}
+
+func (p *portal) network(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	apiVars := mux.Vars(r)
+
+	subscription := apiVars["subscription"]
+	resourceGroup := apiVars["resourceGroup"]
+	clusterName := apiVars["clusterName"]
+
+	resourceId := strings.ToLower(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s", subscription, resourceGroup, clusterName))
+
+	doc, err := p.dbOpenShiftClusters.Get(ctx, resourceId)
+	if err != nil {
+		http.Error(w, "Cluster not found", http.StatusNotFound)
+		return
+	}
+
+	fetcher, err := p.makeFetcher(ctx, r)
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	network, err := fetcher.Network(ctx, doc)
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	b, err := json.MarshalIndent(network, "", "    ")
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(b)
 }

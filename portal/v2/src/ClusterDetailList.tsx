@@ -4,6 +4,7 @@ import { NodesWrapper } from './ClusterDetailListComponents/NodesWrapper';
 import { MachinesWrapper } from "./ClusterDetailListComponents/MachinesWrapper";
 import { MachineSetsWrapper } from "./ClusterDetailListComponents/MachineSetsWrapper";
 import { ICluster } from "./App"
+import { NetworkWrapper } from "./ClusterDetailListComponents/NetworkWrapper";
 
 interface ClusterDetailComponentProps {
   item: any
@@ -68,6 +69,12 @@ export class ClusterDetailComponent extends Component<ClusterDetailComponentProp
         {
           return (
             <MachineSetsWrapper currentCluster={this.props.cluster!} detailPanelSelected={this.props.detailPanelVisible} loaded={this.props.isDataLoaded}/>
+          );
+        }
+        case "network":
+        {
+          return (
+            <NetworkWrapper currentCluster={this.props.cluster!} detailPanelSelected={this.props.detailPanelVisible} loaded={this.props.isDataLoaded}/>
           );
         }
       }

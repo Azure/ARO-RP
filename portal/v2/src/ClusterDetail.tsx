@@ -81,6 +81,7 @@ export const overviewKey = "overview"
 export const nodesKey = "nodes"
 export const machinesKey = "machines"
 export const machineSetsKey = "machinesets"
+export const networkKey = "network"
 
 const errorBarStyles: Partial<IMessageBarStyles> = { root: { marginBottom: 15 } }
 
@@ -144,6 +145,12 @@ export function ClusterDetailPanel(props: {
           key: machineSetsKey,
           url: '#machinesets',
           icon: 'BuildQueue',
+        },
+        {
+          name: 'Network',
+          key: networkKey,
+          url: '#network',
+          icon: 'Dataflows',
         },
       ],
     },
