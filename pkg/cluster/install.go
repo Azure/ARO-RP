@@ -48,6 +48,7 @@ func (m *manager) adminUpdate() []steps.Step {
 		steps.Action(m.ensureDefaults),
 		steps.Action(m.fixupClusterSPObjectID),
 		steps.Action(m.fixInfraID), // Old clusters lacks infraID in the database. Which makes code prone to errors.
+		steps.Action(m.fixUUID),
 	}
 
 	if isEverything {
