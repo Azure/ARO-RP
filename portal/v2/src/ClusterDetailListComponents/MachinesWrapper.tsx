@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react"
 import { AxiosResponse } from "axios"
 import { fetchMachines } from "../Request"
-import { ICluster } from "../App"
 import { MachinesListComponent } from "./MachinesList"
 import { IMessageBarStyles, MessageBar, MessageBarType, Stack } from "@fluentui/react"
 import { machinesKey } from "../ClusterDetail"
+import { WrapperProps } from "../ClusterDetailList"
 
 export interface IMachine {
   name?: string
@@ -17,11 +17,7 @@ export interface IMachine {
   status: string
 }
 
-export function MachinesWrapper(props: {
-  currentCluster: ICluster
-  detailPanelSelected: string
-  loaded: boolean
-}) {
+export function MachinesWrapper(props: WrapperProps) {
   const [data, setData] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
   const state = useRef<MachinesListComponent>(null)
@@ -84,14 +80,16 @@ export function MachinesWrapper(props: {
       } else {
         setError(result)
       }
-      setFetching(props.currentCluster.name)
+      if(props.currentCluster) {
+        setFetching(props.currentCluster.name)
+      }
     }
 
     if (
       props.detailPanelSelected.toLowerCase() == machinesKey &&
       fetching === "" &&
       props.loaded &&
-      props.currentCluster.name != ""
+      props.currentCluster
     ) {
       setFetching("FETCHING")
       fetchMachines(props.currentCluster).then(onData)

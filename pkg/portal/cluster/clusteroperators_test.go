@@ -225,14 +225,6 @@ func TestClusterOperators(t *testing.T) {
 		}
 	}
 
-	for _, r := range info.Operators {
-		// Ensure vars are accessible to goroutine in t.Run
-		r := r
-		t.Run(r.Name, func(t *testing.T) {
-			t.Parallel()
-		})
-	}
-
 	sort.SliceStable(info.Operators, func(i, j int) bool { return info.Operators[i].Name < info.Operators[j].Name })
 	sort.SliceStable(expected.Operators, func(i, j int) bool { return expected.Operators[i].Name < expected.Operators[j].Name })
 

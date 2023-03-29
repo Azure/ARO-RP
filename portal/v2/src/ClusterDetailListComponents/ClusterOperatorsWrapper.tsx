@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react"
 import { AxiosResponse } from 'axios';
 import { fetchClusterOperators } from '../Request';
-import { ICluster } from "../App"
 import { IMessageBarStyles, MessageBar, MessageBarType, Stack } from '@fluentui/react';
 import { clusterOperatorsKey } from "../ClusterDetail";
 import { ClusterOperatorListComponent } from "./ClusterOperatorList";
+import { WrapperProps } from "../ClusterDetailList";
 
 export interface ICondition {
   status: string,
@@ -21,11 +21,7 @@ export interface IClusterOperator {
   conditions?: ICondition[],
 }
 
-export function ClusterOperatorsWrapper(props: {
-  currentCluster: ICluster
-  detailPanelSelected: string
-  loaded: boolean
-}) {
+export function ClusterOperatorsWrapper(props: WrapperProps) {
   const [operators, setOperators] = useState<IClusterOperator[]>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
   const state = useRef<ClusterOperatorListComponent>(null)
@@ -83,13 +79,15 @@ export function ClusterOperatorsWrapper(props: {
       } else {
         setError(result)
       }
-      setFetching(props.currentCluster.name)
+      if(props.currentCluster) {
+        setFetching(props.currentCluster.name)
+      }
     }
 
     if (props.detailPanelSelected.toLowerCase() == clusterOperatorsKey && 
         fetching === "" &&
         props.loaded &&
-        props.currentCluster.name != "") {
+        props.currentCluster) {
       setFetching("FETCHING")
       fetchClusterOperators(props.currentCluster).then(onData)
     }

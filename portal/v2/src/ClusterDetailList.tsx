@@ -6,7 +6,6 @@ import { MachinesWrapper } from "./ClusterDetailListComponents/MachinesWrapper"
 import { MachineSetsWrapper } from "./ClusterDetailListComponents/MachineSetsWrapper"
 import { Statistics } from "./ClusterDetailListComponents/Statistics/Statistics"
 import { ClusterOperatorsWrapper } from "./ClusterDetailListComponents/ClusterOperatorsWrapper";
-
 import { ICluster } from "./App"
 
 
@@ -36,6 +35,12 @@ export interface IClusterDetails {
   provisioningState: string
   version: string
   installStatus: string
+}
+
+export interface WrapperProps {
+  currentCluster: ICluster | null
+  detailPanelSelected: string
+  loaded: boolean
 }
 
 interface IClusterDetailComponentState {
