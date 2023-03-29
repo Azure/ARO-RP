@@ -284,6 +284,169 @@ func TestEnsureResourceGroup(t *testing.T) {
 	}
 }
 
+func TestRemediateTags(t *testing.T) {
+	ctx := context.Background()
+	resourceGroupName := "fakeResourceGroup"
+	resourceGroup := fmt.Sprintf("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/%s", resourceGroupName)
+
+	baseTags := map[string]*string{
+		"foo":  to.StringPtr("foo"),
+		"bar":  to.StringPtr("bar"),
+		"bash": to.StringPtr("bash"),
+		"zsh":  to.StringPtr("zsh"),
+	}
+
+	newTags := map[string]string{
+		"new_tag":         "hi",
+		"another_new_tag": "hello",
+	}
+
+	newTagsWithChanged := map[string]string{
+		"zsh": "changed!",
+	}
+
+	for k, v := range newTags {
+		newTagsWithChanged[k] = v
+	}
+
+	azResourcesExpanded := []mgmtfeatures.GenericResourceExpanded{
+		mgmtfeatures.GenericResourceExpanded{
+			Name: to.StringPtr("disk"),
+			ID:   to.StringPtr("disk-id"),
+			Tags: baseTags,
+		},
+		mgmtfeatures.GenericResourceExpanded{
+			Name: to.StringPtr("lb"),
+			ID:   to.StringPtr("lb-id"),
+			Tags: baseTags,
+		},
+		mgmtfeatures.GenericResourceExpanded{
+			Name: to.StringPtr("master-vm"),
+			ID:   to.StringPtr("master-vm-id"),
+			Tags: baseTags,
+		},
+		mgmtfeatures.GenericResourceExpanded{
+			Name: to.StringPtr("worker-vm"),
+			ID:   to.StringPtr("worker-vm-id"),
+			Tags: baseTags,
+		},
+		mgmtfeatures.GenericResourceExpanded{
+			Name: to.StringPtr("nsg"),
+			ID:   to.StringPtr("nsg-id"),
+			Tags: baseTags,
+		},
+	}
+
+	azResourceBaseTags := mgmtfeatures.GenericResource{
+		Tags: baseTags,
+	}
+
+	for _, tt := range []struct {
+		name    string
+		modify  func(*manager)
+		mocks   func(*mock_features.MockResourcesClient)
+		wantErr string
+	}{
+		{
+			name: "empty ResourceTags in cluster doc - no tag updates needed",
+			mocks: func(resources *mock_features.MockResourcesClient) {
+				resources.EXPECT().ListByResourceGroup(ctx, resourceGroupName, "", "", nil).Return(azResourcesExpanded, nil)
+				resources.EXPECT().UpdateByIDAndWait(ctx, gomock.Any(), "2021-04-01", gomock.Eq(azResourceBaseTags)).Return(nil).Times(len(azResourcesExpanded))
+			},
+		},
+		{
+			name: "non-empty ResourceTags in cluster doc - only adding new tags",
+			modify: func(m *manager) {
+				m.doc.OpenShiftCluster.Properties.ResourceTags = map[string]string{}
+
+				for k, v := range newTags {
+					m.doc.OpenShiftCluster.Properties.ResourceTags[k] = v
+				}
+			},
+			mocks: func(resources *mock_features.MockResourcesClient) {
+				resources.EXPECT().ListByResourceGroup(ctx, resourceGroupName, "", "", nil).Return(azResourcesExpanded, nil)
+
+				mergedTags := map[string]*string{}
+
+				for k, v := range baseTags {
+					mergedTags[k] = v
+				}
+
+				for k, v := range newTags {
+					mergedTags[k] = to.StringPtr(v)
+				}
+
+				azResourceNewTags := mgmtfeatures.GenericResource{
+					Tags: mergedTags,
+				}
+
+				resources.EXPECT().UpdateByIDAndWait(ctx, gomock.Any(), "2021-04-01", gomock.Eq(azResourceNewTags)).Return(nil).Times(len(azResourcesExpanded))
+			},
+		},
+		{
+			name: "non-empty ResourceTags in cluster doc - adding new tags and modifying one",
+			modify: func(m *manager) {
+				m.doc.OpenShiftCluster.Properties.ResourceTags = map[string]string{}
+
+				for k, v := range newTagsWithChanged {
+					m.doc.OpenShiftCluster.Properties.ResourceTags[k] = v
+				}
+			},
+			mocks: func(resources *mock_features.MockResourcesClient) {
+				resources.EXPECT().ListByResourceGroup(ctx, resourceGroupName, "", "", nil).Return(azResourcesExpanded, nil)
+
+				mergedTags := map[string]*string{}
+
+				for k, v := range baseTags {
+					mergedTags[k] = v
+				}
+
+				for k, v := range newTagsWithChanged {
+					mergedTags[k] = to.StringPtr(v)
+				}
+
+				azResourceNewTags := mgmtfeatures.GenericResource{
+					Tags: mergedTags,
+				}
+
+				resources.EXPECT().UpdateByIDAndWait(ctx, gomock.Any(), "2021-04-01", gomock.Eq(azResourceNewTags)).Return(nil).Times(len(azResourcesExpanded))
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			resourcesClient := mock_features.NewMockResourcesClient(controller)
+			tt.mocks(resourcesClient)
+
+			m := &manager{
+				log:       logrus.NewEntry(logrus.StandardLogger()),
+				resources: resourcesClient,
+				doc: &api.OpenShiftClusterDocument{
+					OpenShiftCluster: &api.OpenShiftCluster{
+						Properties: api.OpenShiftClusterProperties{
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: resourceGroup,
+							},
+						},
+					},
+				},
+			}
+
+			if tt.modify != nil {
+				tt.modify(m)
+			}
+
+			err := m.remediateTags(ctx)
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
+			}
+		})
+	}
+}
+
 func TestSetMasterSubnetPolicies(t *testing.T) {
 	ctx := context.Background()
 
