@@ -4,7 +4,6 @@ package frontend
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 
