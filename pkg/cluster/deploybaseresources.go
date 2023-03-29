@@ -310,6 +310,14 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 		t.Resources = append(t.Resources, m.denyAssignment())
 	}
 
+	for _, r := range resources {
+		r.Tags = map[string]interface{}{}
+
+		for k, v := range m.doc.OpenShiftCluster.Properties.ResourceTags {
+			r.Tags[k] = v
+		}
+	}
+
 	return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil)
 }
 

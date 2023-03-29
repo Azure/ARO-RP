@@ -37,6 +37,21 @@ func (m *manager) deployResourceTemplate(ctx context.Context) error {
 		return err
 	}
 
+	resources := []*arm.Resource{
+		m.networkBootstrapNIC(installConfig),
+		m.networkMasterNICs(installConfig),
+		m.computeBootstrapVM(installConfig),
+		m.computeMasterVMs(installConfig, zones, machineMaster),
+	}
+
+	for _, r := range resources {
+		r.Tags = map[string]interface{}{}
+
+		for k, v := range m.oc.Properties.ResourceTags {
+			r.Tags[k] = v
+		}
+	}
+
 	t := &arm.Template{
 		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 		ContentVersion: "1.0.0.0",
@@ -45,12 +60,7 @@ func (m *manager) deployResourceTemplate(ctx context.Context) error {
 				Type: "object",
 			},
 		},
-		Resources: []*arm.Resource{
-			m.networkBootstrapNIC(installConfig),
-			m.networkMasterNICs(installConfig),
-			m.computeBootstrapVM(installConfig),
-			m.computeMasterVMs(installConfig, zones, machineMaster),
-		},
+		Resources: resources,
 	}
 	return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "resources", t, map[string]interface{}{
 		"sas": map[string]interface{}{
