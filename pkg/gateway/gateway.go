@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/go-chi/chi/v5"
 	"github.com/pires/go-proxyproto"
 	"github.com/sirupsen/logrus"
 
@@ -175,14 +176,14 @@ func NewGateway(ctx context.Context, env env.Core, baseLog, accessLog *logrus.En
 
 	panicMiddleware := middleware.Panic(baseLog)
 
-	proxyRouter := http.NewServeMux()
-	proxyRouter.Handle("/", panicMiddleware(http.HandlerFunc(g.handleConnect)))
+	chiRouter := chi.NewMux()
+	chiRouter.Use(panicMiddleware)
 
-	healthRouter := http.NewServeMux()
-	healthRouter.Handle("/healthz/ready", http.HandlerFunc(g.checkReady))
+	chiRouter.Get("/healthz/ready", http.HandlerFunc(g.checkReady))
+	chiRouter.Connect("/*", http.HandlerFunc(g.handleConnect))
 
-	g.server.Handler = proxyRouter
-	g.healthServer.Handler = healthRouter
+	g.server.Handler = chiRouter
+	g.healthServer.Handler = chiRouter
 
 	g.ready.Store(true)
 
