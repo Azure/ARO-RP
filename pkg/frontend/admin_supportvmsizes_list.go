@@ -19,15 +19,15 @@ var validVMRoles = map[string]map[api.VMSize]api.VMSizeStruct{
 	"worker": validate.SupportedWorkerVmSizes,
 }
 
-func (f *frontend) supportedVMSizesForRole(w http.ResponseWriter, r *http.Request) {
+func (f *frontend) supportedvmsizes(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	vmRole := r.URL.Query().Get("vmRole")
-	b, err := f._supportedVMSizesForRole(vmRole)
+	b, err := f.supportedVMSizesForRole(vmRole)
 	reply(log, w, nil, b, err)
 }
 
-func (f *frontend) _supportedVMSizesForRole(vmRole string) ([]byte, error) {
+func (f *frontend) supportedVMSizesForRole(vmRole string) ([]byte, error) {
 	vmsizes, exists := validVMRoles[vmRole]
 	if !exists {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided vmRole '%s' is invalid. vmRole can only be master or worker", vmRole)
