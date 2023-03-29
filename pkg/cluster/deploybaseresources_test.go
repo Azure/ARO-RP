@@ -7,11 +7,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"testing"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	mgmtpolicy "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-09-01/policy"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -20,7 +23,9 @@ import (
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	mock_authorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
+	mock_policy "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/policy"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
@@ -285,6 +290,257 @@ func TestEnsureResourceGroup(t *testing.T) {
 	}
 }
 
+func TestEnsureTaggingPolicy(t *testing.T) {
+	ctx := context.Background()
+	location := "eastus"
+	infraID := "arouser-xx2nx"
+	uuid := "123e4567-e89b-12d3-a456-426614174000"
+
+	resourceGroupName := "fakeResourceGroup"
+	resourceGroup := fmt.Sprintf("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/%s", resourceGroupName)
+
+	displayName := tagPolicyDisplayName(infraID)
+
+	definitionID := "/subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.Authorization/policyDefinitions/00000000-0000-0000-0000-000000000000"
+	spID := "00000000-0000-0000-0000-000000000000"
+
+	// This would be painfully long if fully typed out here.
+	// E2E tests will validate the policy's functional correctness.
+	definition := resourceTaggingPolicyDefinition(displayName)
+
+	definitionWithID := definition
+	definitionWithID.ID = to.StringPtr(definitionID)
+
+	assignment := mgmtpolicy.Assignment{
+		Location: to.StringPtr(location),
+		Identity: &mgmtpolicy.Identity{
+			Type: mgmtpolicy.SystemAssigned,
+		},
+		AssignmentProperties: &mgmtpolicy.AssignmentProperties{
+			DisplayName:        to.StringPtr(displayName),
+			PolicyDefinitionID: to.StringPtr(definitionID),
+			Scope:              to.StringPtr(resourceGroup),
+			EnforcementMode:    mgmtpolicy.Default,
+		},
+	}
+
+	assignmentWithSpID := mgmtpolicy.Assignment{
+		Identity: &mgmtpolicy.Identity{
+			PrincipalID: to.StringPtr(spID),
+		},
+	}
+
+	roleAssignmentParams := mgmtauthorization.RoleAssignmentCreateParameters{
+		RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
+			RoleDefinitionID: to.StringPtr("/providers/Microsoft.Authorization/roleDefinitions/4a9ae827-6dc8-4573-8ac7-8239d42aa03f"), // Tag Contributor
+			PrincipalID:      to.StringPtr(spID),
+			PrincipalType:    mgmtauthorization.ServicePrincipal,
+		},
+	}
+
+	tagSet := map[string]string{
+		"foo":  "foo",
+		"bar":  "bar",
+		"bash": "bash",
+		"zsh":  "zsh",
+	}
+
+	tagSetKeys := []string{}
+
+	for k := range tagSet {
+		tagSetKeys = append(tagSetKeys, k)
+	}
+
+	sort.Strings(tagSetKeys)
+
+	maxLenTagSet := map[string]string{}
+	maxLenTagSetKeys := []string{}
+
+	for i := 0; i < maxTags; i++ {
+		k := fmt.Sprintf("key%d", i)
+		maxLenTagSet[k] = fmt.Sprintf("value%d", i)
+		maxLenTagSetKeys = append(maxLenTagSetKeys, k)
+	}
+
+	sort.Strings(maxLenTagSetKeys)
+
+	for _, tt := range []struct {
+		name                 string
+		modify               func(*manager)
+		assignmentsMocks     func(*mock_policy.MockAssignmentsClient)
+		definitionsMocks     func(*mock_policy.MockDefinitionsClient)
+		roleAssignmentsMocks func(*mock_authorization.MockRoleAssignmentsClient)
+		wantErr              string
+	}{
+		{
+			name: "empty ResourceTags in cluster doc - policy parameters all empty strings",
+			definitionsMocks: func(definitions *mock_policy.MockDefinitionsClient) {
+				definitionWithID := definition
+				definitionWithID.ID = to.StringPtr(definitionID)
+				definitions.EXPECT().CreateOrUpdate(ctx, displayName, definition).Return(definitionWithID, nil)
+			},
+			assignmentsMocks: func(assignments *mock_policy.MockAssignmentsClient) {
+				assignmentWithParams := assignment
+				parameters := map[string]*mgmtpolicy.ParameterValuesValue{}
+
+				for i := 0; i < maxTags; i++ {
+					tagKeyParamName := tagKeyParamName(i)
+					tagValueParamName := tagValueParamName(i)
+
+					parameters[tagKeyParamName] = &mgmtpolicy.ParameterValuesValue{
+						Value: "",
+					}
+
+					parameters[tagValueParamName] = &mgmtpolicy.ParameterValuesValue{
+						Value: "",
+					}
+				}
+
+				assignmentWithParams.AssignmentProperties.Parameters = parameters
+
+				assignments.EXPECT().Create(ctx, resourceGroup, displayName, assignmentWithParams).Return(assignmentWithSpID, nil)
+			},
+			roleAssignmentsMocks: func(roleAssignments *mock_authorization.MockRoleAssignmentsClient) {
+				roleAssignments.EXPECT().Create(ctx, resourceGroup, uuid, roleAssignmentParams).Return(mgmtauthorization.RoleAssignment{}, nil)
+			},
+		},
+		{
+			name: "non-empty, non-maxxed ResourceTags in cluster doc - some policy parameters non-empty",
+			modify: func(m *manager) {
+				m.doc.OpenShiftCluster.Properties.ResourceTags = map[string]string{}
+
+				for k, v := range tagSet {
+					m.doc.OpenShiftCluster.Properties.ResourceTags[k] = v
+				}
+			},
+			definitionsMocks: func(definitions *mock_policy.MockDefinitionsClient) {
+				definitionWithID := definition
+				definitionWithID.ID = to.StringPtr(definitionID)
+				definitions.EXPECT().CreateOrUpdate(ctx, displayName, definition).Return(definitionWithID, nil)
+			},
+			assignmentsMocks: func(assignments *mock_policy.MockAssignmentsClient) {
+				assignmentWithParams := assignment
+				parameters := map[string]*mgmtpolicy.ParameterValuesValue{}
+
+				for i := 0; i < len(tagSet); i++ {
+					tagKeyParamName := tagKeyParamName(i)
+					tagValueParamName := tagValueParamName(i)
+
+					parameters[tagKeyParamName] = &mgmtpolicy.ParameterValuesValue{
+						Value: tagSetKeys[i],
+					}
+
+					parameters[tagValueParamName] = &mgmtpolicy.ParameterValuesValue{
+						Value: tagSet[tagSetKeys[i]],
+					}
+				}
+
+				for i := len(tagSet); i < maxTags; i++ {
+					tagKeyParamName := tagKeyParamName(i)
+					tagValueParamName := tagValueParamName(i)
+
+					parameters[tagKeyParamName] = &mgmtpolicy.ParameterValuesValue{
+						Value: "",
+					}
+
+					parameters[tagValueParamName] = &mgmtpolicy.ParameterValuesValue{
+						Value: "",
+					}
+				}
+
+				assignmentWithParams.AssignmentProperties.Parameters = parameters
+
+				assignments.EXPECT().Create(ctx, resourceGroup, displayName, assignmentWithParams).Return(assignmentWithSpID, nil)
+			},
+			roleAssignmentsMocks: func(roleAssignments *mock_authorization.MockRoleAssignmentsClient) {
+				roleAssignments.EXPECT().Create(ctx, resourceGroup, uuid, roleAssignmentParams).Return(mgmtauthorization.RoleAssignment{}, nil)
+			},
+		},
+		{
+			name: "max length ResourceTags in cluster doc - no policy parameters empty",
+			modify: func(m *manager) {
+				m.doc.OpenShiftCluster.Properties.ResourceTags = map[string]string{}
+
+				for k, v := range maxLenTagSet {
+					m.doc.OpenShiftCluster.Properties.ResourceTags[k] = v
+				}
+			},
+			definitionsMocks: func(definitions *mock_policy.MockDefinitionsClient) {
+				definitionWithID := definition
+				definitionWithID.ID = to.StringPtr(definitionID)
+				definitions.EXPECT().CreateOrUpdate(ctx, displayName, definition).Return(definitionWithID, nil)
+			},
+			assignmentsMocks: func(assignments *mock_policy.MockAssignmentsClient) {
+				assignmentWithParams := assignment
+				parameters := map[string]*mgmtpolicy.ParameterValuesValue{}
+
+				for i := 0; i < maxTags; i++ {
+					tagKeyParamName := tagKeyParamName(i)
+					tagValueParamName := tagValueParamName(i)
+
+					parameters[tagKeyParamName] = &mgmtpolicy.ParameterValuesValue{
+						Value: maxLenTagSetKeys[i],
+					}
+
+					parameters[tagValueParamName] = &mgmtpolicy.ParameterValuesValue{
+						Value: maxLenTagSet[maxLenTagSetKeys[i]],
+					}
+				}
+
+				assignmentWithParams.AssignmentProperties.Parameters = parameters
+
+				assignments.EXPECT().Create(ctx, resourceGroup, displayName, assignmentWithParams).Return(assignmentWithSpID, nil)
+			},
+			roleAssignmentsMocks: func(roleAssignments *mock_authorization.MockRoleAssignmentsClient) {
+				roleAssignments.EXPECT().Create(ctx, resourceGroup, uuid, roleAssignmentParams).Return(mgmtauthorization.RoleAssignment{}, nil)
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			assignmentsClient := mock_policy.NewMockAssignmentsClient(controller)
+			tt.assignmentsMocks(assignmentsClient)
+
+			definitionsClient := mock_policy.NewMockDefinitionsClient(controller)
+			tt.definitionsMocks(definitionsClient)
+
+			roleAssignmentsClient := mock_authorization.NewMockRoleAssignmentsClient(controller)
+			tt.roleAssignmentsMocks(roleAssignmentsClient)
+
+			m := &manager{
+				log:             logrus.NewEntry(logrus.StandardLogger()),
+				assignments:     assignmentsClient,
+				definitions:     definitionsClient,
+				roleAssignments: roleAssignmentsClient,
+				doc: &api.OpenShiftClusterDocument{
+					OpenShiftCluster: &api.OpenShiftCluster{
+						Location: location,
+						Properties: api.OpenShiftClusterProperties{
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: resourceGroup,
+							},
+							InfraID: infraID,
+							UUID:    uuid,
+						},
+					},
+				},
+			}
+
+			if tt.modify != nil {
+				tt.modify(m)
+			}
+
+			err := m.ensureTaggingPolicy(ctx)
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
+			}
+		})
+	}
+}
+
 func TestRemediateTags(t *testing.T) {
 	ctx := context.Background()
 	resourceGroupName := "fakeResourceGroup"
@@ -311,27 +567,27 @@ func TestRemediateTags(t *testing.T) {
 	}
 
 	azResourcesExpanded := []mgmtfeatures.GenericResourceExpanded{
-		mgmtfeatures.GenericResourceExpanded{
+		{
 			Name: to.StringPtr("disk"),
 			ID:   to.StringPtr("disk-id"),
 			Tags: baseTags,
 		},
-		mgmtfeatures.GenericResourceExpanded{
+		{
 			Name: to.StringPtr("lb"),
 			ID:   to.StringPtr("lb-id"),
 			Tags: baseTags,
 		},
-		mgmtfeatures.GenericResourceExpanded{
+		{
 			Name: to.StringPtr("master-vm"),
 			ID:   to.StringPtr("master-vm-id"),
 			Tags: baseTags,
 		},
-		mgmtfeatures.GenericResourceExpanded{
+		{
 			Name: to.StringPtr("worker-vm"),
 			ID:   to.StringPtr("worker-vm-id"),
 			Tags: baseTags,
 		},
-		mgmtfeatures.GenericResourceExpanded{
+		{
 			Name: to.StringPtr("nsg"),
 			ID:   to.StringPtr("nsg-id"),
 			Tags: baseTags,

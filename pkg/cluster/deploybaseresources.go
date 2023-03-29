@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"sort"
 	"strings"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
@@ -166,7 +167,18 @@ func (m *manager) ensureTaggingPolicy(ctx context.Context) error {
 	parameters := map[string]*mgmtpolicy.ParameterValuesValue{}
 	i := 0
 
-	for k, v := range m.doc.OpenShiftCluster.Properties.ResourceTags {
+	tagKeys := []string{}
+
+	for k := range m.doc.OpenShiftCluster.Properties.ResourceTags {
+		tagKeys = append(tagKeys, k)
+	}
+
+	// The only reason the tags need to be sorted is to make it feasible
+	// to write unit tests that validate the correctness of the policy
+	// parameters.
+	sort.Strings(tagKeys)
+
+	for _, k := range tagKeys {
 		tagKeyParamName := tagKeyParamName(i)
 		tagValueParamName := tagValueParamName(i)
 
@@ -175,7 +187,7 @@ func (m *manager) ensureTaggingPolicy(ctx context.Context) error {
 		}
 
 		parameters[tagValueParamName] = &mgmtpolicy.ParameterValuesValue{
-			Value: v,
+			Value: m.doc.OpenShiftCluster.Properties.ResourceTags[k],
 		}
 
 		i++
@@ -200,8 +212,8 @@ func (m *manager) ensureTaggingPolicy(ctx context.Context) error {
 	assignment.Location = &m.doc.OpenShiftCluster.Location
 
 	assignment.AssignmentProperties = &mgmtpolicy.AssignmentProperties{
-		DisplayName:        &displayName,
-		PolicyDefinitionID: to.StringPtr(*definition.ID),
+		DisplayName:        to.StringPtr(displayName),
+		PolicyDefinitionID: definition.ID,
 		Scope:              to.StringPtr(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID),
 		Parameters:         parameters,
 		EnforcementMode:    mgmtpolicy.Default,
