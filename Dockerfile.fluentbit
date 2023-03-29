@@ -1,4 +1,5 @@
 ARG MARINER_VERSION
+ARG REGISTRY
 FROM ${REGISTRY}/cbl-mariner/base/core:2.0.${MARINER_VERSION}-amd64 as builder
 RUN tdnf repolist --refresh && \
     tdnf update -y && \
