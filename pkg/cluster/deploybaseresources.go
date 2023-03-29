@@ -446,11 +446,11 @@ func resourceTaggingPolicyDefinition(displayName string) mgmtpolicy.Definition {
 
 		ifConditions[i] = map[string]interface{}{
 			"allOf": []map[string]string{
-				map[string]string{
+				{
 					"field":     currTagValue,
 					"notEquals": tagValue,
 				},
-				map[string]string{
+				{
 					"value":     tagKey,
 					"notEquals": "",
 				},
