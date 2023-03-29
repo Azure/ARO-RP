@@ -293,9 +293,7 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 			r.Get("/", f.getAdminOpenShiftVersions)
 			r.Put("/", f.putAdminOpenShiftVersion)
 		})
-		r.Route("/supportedvmsizes", func(r chi.Router) {
-			r.Get("/", f.listSupportedVMSizes)
-		})
+		r.Get("/supportedvmsizes", f.supportedVMSizesForRole)
 
 		r.Route("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/kubernetesobjects",
 			func(r chi.Router) {
