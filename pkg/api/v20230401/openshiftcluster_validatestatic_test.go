@@ -832,13 +832,13 @@ func TestOpenShiftClusterStaticValidateResourceTags(t *testing.T) {
 				}
 			},
 			wantErr: `400: InvalidParameter: properties.resourceTags: The following cluster resource tags either have an invalid name or an invalid value:
-- key.
+	- key.
 
 Tag names must:
-- Start with a letter
-- End with a letter, number, or underscore
-- Contain only letters, numbers, underscores, periods, and hyphens
-- Have length <= 128
+	- Start with a letter
+	- End with a letter, number, or underscore
+	- Contain only letters, numbers, underscores, periods, and hyphens
+	- Have length <= 128
 
 Tag values have no character restrictions, but must have length <= 256.`,
 		},
@@ -851,13 +851,13 @@ Tag values have no character restrictions, but must have length <= 256.`,
 				}
 			},
 			wantErr: strings.Replace(`400: InvalidParameter: properties.resourceTags: The following cluster resource tags either have an invalid name or an invalid value:
-- REPLACE
+	- REPLACE
 
 Tag names must:
-- Start with a letter
-- End with a letter, number, or underscore
-- Contain only letters, numbers, underscores, periods, and hyphens
-- Have length <= 128
+	- Start with a letter
+	- End with a letter, number, or underscore
+	- Contain only letters, numbers, underscores, periods, and hyphens
+	- Have length <= 128
 
 Tag values have no character restrictions, but must have length <= 256.`, "REPLACE", strings.Repeat("A", 129), 1),
 		},
@@ -870,13 +870,13 @@ Tag values have no character restrictions, but must have length <= 256.`, "REPLA
 				}
 			},
 			wantErr: `400: InvalidParameter: properties.resourceTags: The following cluster resource tags either have an invalid name or an invalid value:
-- key
+	- key
 
 Tag names must:
-- Start with a letter
-- End with a letter, number, or underscore
-- Contain only letters, numbers, underscores, periods, and hyphens
-- Have length <= 128
+	- Start with a letter
+	- End with a letter, number, or underscore
+	- Contain only letters, numbers, underscores, periods, and hyphens
+	- Have length <= 128
 
 Tag values have no character restrictions, but must have length <= 256.`,
 		},

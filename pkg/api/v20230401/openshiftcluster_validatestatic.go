@@ -389,18 +389,18 @@ func (sv openShiftClusterStaticValidator) validateResourceTags(path string, t Ta
 	}
 
 	errorTemplate := `The following cluster resource tags either have an invalid name or an invalid value:
-- %s
+	- %s
 
 Tag names must:
-- Start with a letter
-- End with a letter, number, or underscore
-- Contain only letters, numbers, underscores, periods, and hyphens
-- Have length <= 128
+	- Start with a letter
+	- End with a letter, number, or underscore
+	- Contain only letters, numbers, underscores, periods, and hyphens
+	- Have length <= 128
 
 Tag values have no character restrictions, but must have length <= 256.`
 
 	if len(invalidTags) > 0 {
-		errorMsg := fmt.Sprintf(errorTemplate, strings.Join(invalidTags, "\n-"))
+		errorMsg := fmt.Sprintf(errorTemplate, strings.Join(invalidTags, "\n\t-"))
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, errorMsg)
 	}
 
