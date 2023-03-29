@@ -55,7 +55,7 @@ func TestServer(t *testing.T) {
 			wantStatusCode: http.StatusOK,
 		},
 		{
-			name: "GET unauthorized /token returns 403",
+			name: "GET unauthorized /token returns 405",
 			req: &http.Request{
 				Method: http.MethodGet,
 				URL: &url.URL{
@@ -64,7 +64,7 @@ func TestServer(t *testing.T) {
 					Path:   "/token",
 				},
 			},
-			wantStatusCode: http.StatusForbidden,
+			wantStatusCode: http.StatusMethodNotAllowed,
 		},
 		{
 			name: "POST /token?permission=good returns 403 (no auth)",
