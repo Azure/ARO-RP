@@ -27,6 +27,8 @@ import (
 // to understand how the value was decided.
 const maxTags = 10
 
+const maxTagValueLen = 256
+
 // Compiled regexp to use to check whether a cluster resource tag name is valid.
 //
 // Valid tag names:
@@ -409,7 +411,7 @@ Tag values have no character restrictions, but must have length <= 256.`
 }
 
 func (sv openShiftClusterStaticValidator) resourceTagIsValid(key string, value string) bool {
-	return tagNameRegexp.MatchString(key) && len(value) <= 256
+	return tagNameRegexp.MatchString(key) && len(value) <= maxTagValueLen
 }
 
 func (sv openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftCluster) error {
