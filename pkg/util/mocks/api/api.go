@@ -7,8 +7,9 @@ package mock_api
 import (
 	reflect "reflect"
 
-	api "github.com/Azure/ARO-RP/pkg/api"
 	gomock "github.com/golang/mock/gomock"
+
+	api "github.com/Azure/ARO-RP/pkg/api"
 )
 
 // MockSyncSetConverter is a mock of SyncSetConverter interface.
