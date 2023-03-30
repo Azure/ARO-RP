@@ -9,22 +9,24 @@ import (
 	"net/http"
 	"path/filepath"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
-	"github.com/Azure/ARO-RP/pkg/util/feature"
 )
 
 func (f *frontend) postOpenShiftClusterKubeConfigCredentials(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
-	vars := mux.Vars(r)
+	resourceType := chi.URLParam(r, "resourceType")
+	resourceProviderNamespace := chi.URLParam(r, "resourceProviderNamespace")
 
-	if f.apis[vars["api-version"]].OpenShiftClusterAdminKubeconfigConverter == nil {
-		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], vars["api-version"])
+	apiVersion := r.URL.Query().Get(api.APIVersionKey)
+
+	if f.apis[apiVersion].OpenShiftClusterAdminKubeconfigConverter == nil {
+		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", resourceType, resourceProviderNamespace, apiVersion)
 		return
 	}
 
@@ -36,29 +38,25 @@ func (f *frontend) postOpenShiftClusterKubeConfigCredentials(w http.ResponseWrit
 
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	b, err := f._postOpenShiftClusterKubeConfigCredentials(ctx, r, f.apis[vars["api-version"]].OpenShiftClusterAdminKubeconfigConverter)
+	b, err := f._postOpenShiftClusterKubeConfigCredentials(ctx, r, f.apis[apiVersion].OpenShiftClusterAdminKubeconfigConverter)
 
 	reply(log, w, nil, b, err)
 }
 
 func (f *frontend) _postOpenShiftClusterKubeConfigCredentials(ctx context.Context, r *http.Request, converter api.OpenShiftClusterAdminKubeconfigConverter) ([]byte, error) {
-	vars := mux.Vars(r)
+	resourceType := chi.URLParam(r, "resourceType")
+	resourceName := chi.URLParam(r, "resourceName")
+	resourceGroupName := chi.URLParam(r, "resourceGroupName")
 
-	subDoc, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
+	_, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
 	if err != nil {
 		return nil, err
-	}
-
-	// TODO(mjudeikis): Remove this once all this is communicated to the customers and this
-	// becomes defacto standard
-	if !feature.IsRegisteredForFeature(subDoc.Subscription.Properties, api.FeatureFlagAdminKubeconfig) {
-		return nil, api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Subscription feature flag '%s' is not enabled on this subscription to use this API.", api.FeatureFlagAdminKubeconfig)
 	}
 
 	doc, err := f.dbOpenShiftClusters.Get(ctx, r.URL.Path)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", resourceType, resourceName, resourceGroupName)
 	case err != nil:
 		return nil, err
 	}

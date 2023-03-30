@@ -10,9 +10,6 @@ import (
 //go:embed scripts/devProxyVMSS.sh
 var scriptDevProxyVMSS []byte
 
-//go:embed scripts/devCIPool.sh
-var scriptDevCIPool []byte
-
 //go:embed scripts/gatewayVMSS.sh
 var scriptGatewayVMSS []byte
 

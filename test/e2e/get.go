@@ -13,7 +13,7 @@ import (
 var _ = Describe("Get cluster", func() {
 	It("must be possible get a cluster and retrieve some (enriched) fields", func(ctx context.Context) {
 		By("getting the cluster resource")
-		oc, err := clients.OpenshiftClustersv20200430.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking we retrieved the default Ingress Profile (and only this one by default)")
@@ -33,5 +33,9 @@ var _ = Describe("Get cluster", func() {
 		workerProfiles := oc.WorkerProfiles
 		Expect(workerProfiles).NotTo(BeNil())
 		Expect(*workerProfiles).NotTo(BeEmpty())
+
+		By("checking we retrieved associated systemData")
+		systemData := oc.SystemData
+		Expect(systemData).NotTo(BeNil())
 	})
 })

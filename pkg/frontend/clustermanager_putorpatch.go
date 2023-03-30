@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -20,7 +20,6 @@ import (
 func (f *frontend) putOrPatchClusterManagerConfiguration(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
-	vars := mux.Vars(r)
 
 	var (
 		header http.Header
@@ -28,7 +27,9 @@ func (f *frontend) putOrPatchClusterManagerConfiguration(w http.ResponseWriter, 
 		err    error
 	)
 
-	err = f.validateOcmResourceType(vars)
+	apiVersion, ocmResourceType := r.URL.Query().Get(api.APIVersionKey), chi.URLParam(r, "ocmResourceType")
+
+	err = f.validateOcmResourceType(apiVersion, ocmResourceType)
 	if err != nil {
 		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", err.Error())
 		return
@@ -36,15 +37,15 @@ func (f *frontend) putOrPatchClusterManagerConfiguration(w http.ResponseWriter, 
 
 	err = cosmosdb.RetryOnPreconditionFailed(func() error {
 		var err error
-		switch vars["ocmResourceType"] {
+		switch ocmResourceType {
 		case "syncset":
-			b, err = f._putOrPatchSyncSet(ctx, log, r, &header, f.apis[vars["api-version"]].SyncSetConverter, f.apis[vars["api-version"]].ClusterManagerStaticValidator)
+			b, err = f._putOrPatchSyncSet(ctx, log, r, &header, f.apis[apiVersion].SyncSetConverter, f.apis[apiVersion].ClusterManagerStaticValidator)
 		case "machinepool":
-			b, err = f._putOrPatchMachinePool(ctx, log, r, &header, f.apis[vars["api-version"]].MachinePoolConverter, f.apis[vars["api-version"]].ClusterManagerStaticValidator)
+			b, err = f._putOrPatchMachinePool(ctx, log, r, &header, f.apis[apiVersion].MachinePoolConverter, f.apis[apiVersion].ClusterManagerStaticValidator)
 		case "syncidentityprovider":
-			b, err = f._putOrPatchSyncIdentityProvider(ctx, log, r, &header, f.apis[vars["api-version"]].SyncIdentityProviderConverter, f.apis[vars["api-version"]].ClusterManagerStaticValidator)
+			b, err = f._putOrPatchSyncIdentityProvider(ctx, log, r, &header, f.apis[apiVersion].SyncIdentityProviderConverter, f.apis[apiVersion].ClusterManagerStaticValidator)
 		case "secret":
-			b, err = f._putOrPatchSecret(ctx, log, r, &header, f.apis[vars["api-version"]].SecretConverter, f.apis[vars["api-version"]].ClusterManagerStaticValidator)
+			b, err = f._putOrPatchSecret(ctx, log, r, &header, f.apis[apiVersion].SecretConverter, f.apis[apiVersion].ClusterManagerStaticValidator)
 		}
 		return err
 	})
@@ -56,9 +57,9 @@ func (f *frontend) _putOrPatchSyncSet(ctx context.Context, log *logrus.Entry, r 
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
 	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
-	vars := mux.Vars(r)
-
-	originalPath, err := f.extractOriginalPath(ctx, r, vars)
+	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
+	ocmResourceType, ocmResourceName := chi.URLParam(r, "ocmResourceType"), chi.URLParam(r, "ocmResourceName")
+	originalPath, err := f.extractOriginalPath(ctx, r, resType, resName, resGroupName)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +69,7 @@ func (f *frontend) _putOrPatchSyncSet(ctx context.Context, log *logrus.Entry, r 
 		return nil, err
 	} else if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) && r.Method == http.MethodPatch {
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s/%s/%s' under resource group '%s' was not found.",
-			vars["resourceType"], vars["resourceName"], vars["ocmResourceType"], vars["ocmResourceName"], vars["resourceGroupName"])
+			resType, resName, ocmResourceType, ocmResourceName, resGroupName)
 	}
 
 	var resources string
@@ -77,7 +78,7 @@ func (f *frontend) _putOrPatchSyncSet(ctx context.Context, log *logrus.Entry, r 
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
 	}
 
-	err = staticValidator.Static(resources, vars)
+	err = staticValidator.Static(resources, ocmResourceType)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The 'Kind' in the request payload does not match 'Kind' in the request path: %q.", err)
 	}
@@ -90,7 +91,7 @@ func (f *frontend) _putOrPatchSyncSet(ctx context.Context, log *logrus.Entry, r 
 			Key: r.URL.Path,
 		}
 		ocmdoc.SyncSet = &api.SyncSet{
-			Name: vars["ocmResourceName"],
+			Name: ocmResourceName,
 			Type: "Microsoft.RedHatOpenShift/SyncSet",
 			ID:   originalPath,
 			Properties: api.SyncSetProperties{
@@ -128,9 +129,10 @@ func (f *frontend) _putOrPatchMachinePool(ctx context.Context, log *logrus.Entry
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
 	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
-	vars := mux.Vars(r)
+	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
+	ocmResourceType, ocmResourceName := chi.URLParam(r, "ocmResourceType"), chi.URLParam(r, "ocmResourceName")
 
-	originalPath, err := f.extractOriginalPath(ctx, r, vars)
+	originalPath, err := f.extractOriginalPath(ctx, r, resType, resName, resGroupName)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +142,7 @@ func (f *frontend) _putOrPatchMachinePool(ctx context.Context, log *logrus.Entry
 		return nil, err
 	} else if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) && r.Method == http.MethodPatch {
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s/%s/%s' under resource group '%s' was not found.",
-			vars["resourceType"], vars["resourceName"], vars["ocmResourceType"], vars["ocmResourceName"], vars["resourceGroupName"])
+			resType, resName, ocmResourceType, ocmResourceName, resGroupName)
 	}
 
 	var resources string
@@ -149,7 +151,7 @@ func (f *frontend) _putOrPatchMachinePool(ctx context.Context, log *logrus.Entry
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
 	}
 
-	err = staticValidator.Static(resources, vars)
+	err = staticValidator.Static(resources, ocmResourceType)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The 'Kind' in the request payload does not match 'Kind' in the request path: %q.", err)
 	}
@@ -162,7 +164,7 @@ func (f *frontend) _putOrPatchMachinePool(ctx context.Context, log *logrus.Entry
 			Key: r.URL.Path,
 		}
 		ocmdoc.MachinePool = &api.MachinePool{
-			Name: vars["ocmResourceName"],
+			Name: ocmResourceName,
 			Type: "Microsoft.RedHatOpenShift/MachinePool",
 			ID:   originalPath,
 			Properties: api.MachinePoolProperties{
@@ -200,9 +202,10 @@ func (f *frontend) _putOrPatchSyncIdentityProvider(ctx context.Context, log *log
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
 	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
-	vars := mux.Vars(r)
+	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
+	ocmResourceType, ocmResourceName := chi.URLParam(r, "ocmResourceType"), chi.URLParam(r, "ocmResourceName")
 
-	originalPath, err := f.extractOriginalPath(ctx, r, vars)
+	originalPath, err := f.extractOriginalPath(ctx, r, resType, resName, resGroupName)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +215,7 @@ func (f *frontend) _putOrPatchSyncIdentityProvider(ctx context.Context, log *log
 		return nil, err
 	} else if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) && r.Method == http.MethodPatch {
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s/%s/%s' under resource group '%s' was not found.",
-			vars["resourceType"], vars["resourceName"], vars["ocmResourceType"], vars["ocmResourceName"], vars["resourceGroupName"])
+			resType, resName, ocmResourceType, ocmResourceName, resGroupName)
 	}
 
 	var resources string
@@ -221,7 +224,7 @@ func (f *frontend) _putOrPatchSyncIdentityProvider(ctx context.Context, log *log
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
 	}
 
-	err = staticValidator.Static(resources, vars)
+	err = staticValidator.Static(resources, ocmResourceType)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The 'Kind' in the request payload does not match 'Kind' in the request path: %q.", err)
 	}
@@ -234,7 +237,7 @@ func (f *frontend) _putOrPatchSyncIdentityProvider(ctx context.Context, log *log
 			Key: r.URL.Path,
 		}
 		ocmdoc.SyncIdentityProvider = &api.SyncIdentityProvider{
-			Name: vars["ocmResourceName"],
+			Name: ocmResourceName,
 			Type: "Microsoft.RedHatOpenShift/SyncIdentityProvider",
 			ID:   originalPath,
 			Properties: api.SyncIdentityProviderProperties{
@@ -272,9 +275,10 @@ func (f *frontend) _putOrPatchSecret(ctx context.Context, log *logrus.Entry, r *
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
 	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
-	vars := mux.Vars(r)
+	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
+	ocmResourceType, ocmResourceName := chi.URLParam(r, "ocmResourceType"), chi.URLParam(r, "ocmResourceName")
 
-	originalPath, err := f.extractOriginalPath(ctx, r, vars)
+	originalPath, err := f.extractOriginalPath(ctx, r, resType, resName, resGroupName)
 	if err != nil {
 		return nil, err
 	}
@@ -284,7 +288,7 @@ func (f *frontend) _putOrPatchSecret(ctx context.Context, log *logrus.Entry, r *
 		return nil, err
 	} else if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) && r.Method == http.MethodPatch {
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s/%s/%s' under resource group '%s' was not found.",
-			vars["resourceType"], vars["resourceName"], vars["ocmResourceType"], vars["ocmResourceName"], vars["resourceGroupName"])
+			resType, resName, ocmResourceType, ocmResourceName, resGroupName)
 	}
 
 	var resources string
@@ -293,7 +297,7 @@ func (f *frontend) _putOrPatchSecret(ctx context.Context, log *logrus.Entry, r *
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
 	}
 
-	err = staticValidator.Static(resources, vars)
+	err = staticValidator.Static(resources, ocmResourceType)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The 'Kind' in the request payload does not match 'Kind' in the request path: %q.", err)
 	}
@@ -306,7 +310,7 @@ func (f *frontend) _putOrPatchSecret(ctx context.Context, log *logrus.Entry, r *
 			Key: r.URL.Path,
 		}
 		ocmdoc.Secret = &api.Secret{
-			Name: vars["ocmResourceName"],
+			Name: ocmResourceName,
 			Type: "Microsoft.RedHatOpenShift/Secret",
 			ID:   originalPath,
 			Properties: api.SecretProperties{
@@ -340,7 +344,7 @@ func (f *frontend) _putOrPatchSecret(ctx context.Context, log *logrus.Entry, r *
 	return b, err
 }
 
-func (f *frontend) extractOriginalPath(ctx context.Context, r *http.Request, vars map[string]string) (string, error) {
+func (f *frontend) extractOriginalPath(ctx context.Context, r *http.Request, resType, resName, resGroupName string) (string, error) {
 	_, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
 	if err != nil {
 		return "", err
@@ -358,7 +362,7 @@ func (f *frontend) extractOriginalPath(ctx context.Context, r *http.Request, var
 	}
 
 	if ocp == nil || cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
-		return "", api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+		return "", api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", resType, resName, resGroupName)
 	}
 
 	return originalPath, err
@@ -370,6 +374,9 @@ func (f *frontend) extractOriginalPath(ctx context.Context, r *http.Request, var
 func enrichSyncSetSystemData(doc *api.ClusterManagerConfigurationDocument, systemData *api.SystemData) {
 	if systemData == nil {
 		return
+	}
+	if doc.SyncSet.SystemData == nil {
+		doc.SyncSet.SystemData = &api.SystemData{}
 	}
 	if systemData.CreatedAt != nil {
 		doc.SyncSet.SystemData.CreatedAt = systemData.CreatedAt
@@ -395,6 +402,9 @@ func enrichMachinePoolSystemData(doc *api.ClusterManagerConfigurationDocument, s
 	if systemData == nil {
 		return
 	}
+	if doc.MachinePool.SystemData == nil {
+		doc.MachinePool.SystemData = &api.SystemData{}
+	}
 	if systemData.CreatedAt != nil {
 		doc.MachinePool.SystemData.CreatedAt = systemData.CreatedAt
 	}
@@ -419,6 +429,9 @@ func enrichSyncIdentityProviderSystemData(doc *api.ClusterManagerConfigurationDo
 	if systemData == nil {
 		return
 	}
+	if doc.SyncIdentityProvider.SystemData == nil {
+		doc.SyncIdentityProvider.SystemData = &api.SystemData{}
+	}
 	if systemData.CreatedAt != nil {
 		doc.SyncIdentityProvider.SystemData.CreatedAt = systemData.CreatedAt
 	}
@@ -442,6 +455,9 @@ func enrichSyncIdentityProviderSystemData(doc *api.ClusterManagerConfigurationDo
 func enrichSecretSystemData(doc *api.ClusterManagerConfigurationDocument, systemData *api.SystemData) {
 	if systemData == nil {
 		return
+	}
+	if doc.Secret.SystemData == nil {
+		doc.Secret.SystemData = &api.SystemData{}
 	}
 	if systemData.CreatedAt != nil {
 		doc.Secret.SystemData.CreatedAt = systemData.CreatedAt

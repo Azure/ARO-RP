@@ -105,6 +105,8 @@ type manager struct {
 	aroOperatorDeployer deploy.Operator
 
 	now func() time.Time
+
+	openShiftClusterDocumentVersioner openShiftClusterDocumentVersioner
 }
 
 // New returns a cluster manager
@@ -177,9 +179,10 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		subnet:  subnet.NewManager(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		graph:   graph.NewManager(log, aead, storage),
 
-		installViaHive:     installViaHive,
-		adoptViaHive:       adoptByHive,
-		hiveClusterManager: hiveClusterManager,
-		now:                func() time.Time { return time.Now() },
+		installViaHive:                    installViaHive,
+		adoptViaHive:                      adoptByHive,
+		hiveClusterManager:                hiveClusterManager,
+		now:                               func() time.Time { return time.Now() },
+		openShiftClusterDocumentVersioner: new(openShiftClusterDocumentVersionerService),
 	}, nil
 }

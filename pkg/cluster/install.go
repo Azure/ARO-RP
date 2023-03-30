@@ -19,6 +19,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/installer"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
@@ -30,7 +31,7 @@ import (
 // AdminUpdate performs an admin update of an ARO cluster
 func (m *manager) AdminUpdate(ctx context.Context) error {
 	toRun := m.adminUpdate()
-	return m.runSteps(ctx, toRun, false)
+	return m.runSteps(ctx, toRun, "adminUpdate")
 }
 
 func (m *manager) adminUpdate() []steps.Step {
@@ -57,8 +58,13 @@ func (m *manager) adminUpdate() []steps.Step {
 			steps.Action(m.populateRegistryStorageAccountName), // must go before migrateStorageAccounts
 			steps.Action(m.migrateStorageAccounts),
 			steps.Action(m.fixSSH),
-			steps.Action(m.populateDatabaseIntIP),
 			//steps.Action(m.removePrivateDNSZone), // TODO(mj): re-enable once we communicate this out
+		)
+	}
+
+	if isEverything || isRenewCerts {
+		toRun = append(toRun,
+			steps.Action(m.populateDatabaseIntIP),
 		)
 	}
 
@@ -125,7 +131,7 @@ func (m *manager) adminUpdate() []steps.Step {
 	}
 
 	// Hive cluster adoption and reconciliation
-	if isEverything && m.adoptViaHive {
+	if isEverything && m.adoptViaHive && !m.clusterWasCreatedByHive() {
 		toRun = append(toRun,
 			steps.Action(m.hiveCreateNamespace),
 			steps.Action(m.hiveEnsureResources),
@@ -145,6 +151,14 @@ func (m *manager) adminUpdate() []steps.Step {
 	return toRun
 }
 
+func (m *manager) clusterWasCreatedByHive() bool {
+	if m.doc.OpenShiftCluster.Properties.HiveProfile.Namespace == "" {
+		return false
+	}
+
+	return m.doc.OpenShiftCluster.Properties.HiveProfile.CreatedByHive
+}
+
 func (m *manager) Update(ctx context.Context) error {
 	s := []steps.Step{
 		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
@@ -159,6 +173,7 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Condition(m.apiServersReady, 30*time.Minute, true),
 		steps.Action(m.configureAPIServerCertificate),
 		steps.Action(m.configureIngressCertificate),
+		steps.Action(m.renewMDSDCertificate),
 		steps.Action(m.updateOpenShiftSecret),
 		steps.Action(m.updateAROSecret),
 	}
@@ -174,7 +189,7 @@ func (m *manager) Update(ctx context.Context) error {
 		)
 	}
 
-	return m.runSteps(ctx, s, false)
+	return m.runSteps(ctx, s, "update")
 }
 
 func (m *manager) runIntegratedInstaller(ctx context.Context) error {
@@ -188,6 +203,12 @@ func (m *manager) runIntegratedInstaller(ctx context.Context) error {
 }
 
 func (m *manager) runHiveInstaller(ctx context.Context) error {
+	var err error
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, setFieldCreatedByHive(true))
+	if err != nil {
+		return err
+	}
+
 	version, err := m.openShiftVersionFromVersion(ctx)
 	if err != nil {
 		return err
@@ -199,6 +220,13 @@ func (m *manager) runHiveInstaller(ctx context.Context) error {
 	return m.hiveClusterManager.Install(ctx, m.subscriptionDoc, m.doc, version)
 }
 
+func setFieldCreatedByHive(createdByHive bool) database.OpenShiftClusterDocumentMutator {
+	return func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.HiveProfile.CreatedByHive = createdByHive
+		return nil
+	}
+}
+
 func (m *manager) bootstrap() []steps.Step {
 	s := []steps.Step{
 		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
@@ -207,6 +235,7 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.ensureSSHKey),
 		steps.Action(m.ensureStorageSuffix),
 		steps.Action(m.populateMTUSize),
+		steps.Action(m.determineOutboundType),
 
 		steps.Action(m.createDNS),
 		steps.Action(m.initializeClusterSPClients), // must run before clusterSPObjectID
@@ -308,21 +337,21 @@ func (m *manager) Install(ctx context.Context) error {
 		return fmt.Errorf("unrecognised phase %s", m.doc.OpenShiftCluster.Properties.Install.Phase)
 	}
 	m.log.Printf("starting phase %s", m.doc.OpenShiftCluster.Properties.Install.Phase)
-	return m.runSteps(ctx, steps[m.doc.OpenShiftCluster.Properties.Install.Phase], true)
+	return m.runSteps(ctx, steps[m.doc.OpenShiftCluster.Properties.Install.Phase], "install")
 }
 
-func (m *manager) runSteps(ctx context.Context, s []steps.Step, emitMetrics bool) error {
+func (m *manager) runSteps(ctx context.Context, s []steps.Step, metricsTopic string) error {
 	var err error
-	if emitMetrics {
+	if metricsTopic != "" {
 		var stepsTimeRun map[string]int64
 		stepsTimeRun, err = steps.Run(ctx, m.log, 10*time.Second, s, m.now)
 		if err == nil {
 			var totalInstallTime int64
-			for topic, duration := range stepsTimeRun {
-				m.metricsEmitter.EmitGauge(fmt.Sprintf("backend.openshiftcluster.installtime.%s", topic), duration, nil)
+			for stepName, duration := range stepsTimeRun {
+				m.metricsEmitter.EmitGauge(fmt.Sprintf("backend.openshiftcluster.%s.%s.duration.seconds", metricsTopic, stepName), duration, nil)
 				totalInstallTime += duration
 			}
-			m.metricsEmitter.EmitGauge("backend.openshiftcluster.installtime.total", totalInstallTime, nil)
+			m.metricsEmitter.EmitGauge(fmt.Sprintf("backend.openshiftcluster.%s.duration.total.seconds", metricsTopic), totalInstallTime, nil)
 		}
 	} else {
 		_, err = steps.Run(ctx, m.log, 10*time.Second, s, nil)

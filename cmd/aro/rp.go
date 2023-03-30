@@ -21,11 +21,13 @@ import (
 	_ "github.com/Azure/ARO-RP/pkg/api/v20210901preview"
 	_ "github.com/Azure/ARO-RP/pkg/api/v20220401"
 	_ "github.com/Azure/ARO-RP/pkg/api/v20220904"
+	_ "github.com/Azure/ARO-RP/pkg/api/v20230401"
 	"github.com/Azure/ARO-RP/pkg/backend"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
+	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
@@ -146,8 +148,11 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
-
-	f, err := frontend.NewFrontend(ctx, audit, log.WithField("component", "frontend"), _env, dbAsyncOperations, dbClusterManagerConfiguration, dbOpenShiftClusters, dbSubscriptions, dbOpenShiftVersions, api.APIs, m, feAead, adminactions.NewKubeActions, adminactions.NewAzureActions, clusterdata.NewBestEffortEnricher)
+	hiveClusterManager, err := hive.NewFromEnv(ctx, log, _env)
+	if err != nil {
+		return err
+	}
+	f, err := frontend.NewFrontend(ctx, audit, log.WithField("component", "frontend"), _env, dbAsyncOperations, dbClusterManagerConfiguration, dbOpenShiftClusters, dbSubscriptions, dbOpenShiftVersions, api.APIs, m, feAead, hiveClusterManager, adminactions.NewKubeActions, adminactions.NewAzureActions, clusterdata.NewBestEffortEnricher)
 	if err != nil {
 		return err
 	}

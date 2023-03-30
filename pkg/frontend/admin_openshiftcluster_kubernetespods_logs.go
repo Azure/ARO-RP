@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -31,7 +31,7 @@ func (f *frontend) getAdminKubernetesPodLogs(w http.ResponseWriter, r *http.Requ
 }
 
 func (f *frontend) _getAdminKubernetesPodLogs(ctx context.Context, r *http.Request, log *logrus.Entry) ([]byte, error) {
-	vars := mux.Vars(r)
+	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 
 	namespace, containerName, podName := r.URL.Query().Get("namespace"), r.URL.Query().Get("container"), r.URL.Query().Get("podname")
 
@@ -45,7 +45,7 @@ func (f *frontend) _getAdminKubernetesPodLogs(ctx context.Context, r *http.Reque
 	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", resType, resName, resGroupName)
 	case err != nil:
 		return nil, err
 	}

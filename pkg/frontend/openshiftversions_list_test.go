@@ -37,15 +37,15 @@ func TestListInstallVersions(t *testing.T) {
 		{
 			name: "return multiple versions",
 			changeFeed: map[string]*api.OpenShiftVersion{
-				version.InstallStream.Version.String(): {
+				version.DefaultInstallStream.Version.String(): {
 					Properties: api.OpenShiftVersionProperties{
-						Version: version.InstallStream.Version.String(),
+						Version: version.DefaultInstallStream.Version.String(),
 						Enabled: true,
 					},
 				},
-				"4.10.27": {
+				"4.10.67": {
 					Properties: api.OpenShiftVersionProperties{
-						Version: "4.10.27",
+						Version: "4.10.67",
 						Enabled: true,
 					},
 				},
@@ -62,12 +62,12 @@ func TestListInstallVersions(t *testing.T) {
 				OpenShiftVersions: []*v20220904.OpenShiftVersion{
 					{
 						Properties: v20220904.OpenShiftVersionProperties{
-							Version: version.InstallStream.Version.String(),
+							Version: version.DefaultInstallStream.Version.String(),
 						},
 					},
 					{
 						Properties: v20220904.OpenShiftVersionProperties{
-							Version: "4.10.27",
+							Version: "4.10.67",
 						},
 					},
 					{
@@ -89,14 +89,13 @@ func TestListInstallVersions(t *testing.T) {
 			ti := newTestInfra(t).WithSubscriptions().WithOpenShiftVersions()
 			defer ti.done()
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, nil, nil, nil, nil, ti.openShiftVersionsDatabase, api.APIs, &noop.Noop{}, nil, nil, nil, nil)
+			frontend, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, nil, nil, nil, nil, ti.openShiftVersionsDatabase, api.APIs, &noop.Noop{}, nil, nil, nil, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			go f.Run(ctx, nil, nil)
+			go frontend.Run(ctx, nil, nil)
 
-			frontend, _ := f.(*frontend)
 			frontend.mu.Lock()
 			frontend.enabledOcpVersions = tt.changeFeed
 			frontend.mu.Unlock()

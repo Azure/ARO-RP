@@ -7,7 +7,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -18,10 +18,11 @@ import (
 func (f *frontend) deleteClusterManagerConfiguration(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
-	vars := mux.Vars(r)
 	var err error
 
-	err = f.validateOcmResourceType(vars)
+	apiVersion, ocmResourceType := r.URL.Query().Get(api.APIVersionKey), chi.URLParam(r, "ocmResourceType")
+
+	err = f.validateOcmResourceType(apiVersion, ocmResourceType)
 	if err != nil {
 		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", err.Error())
 		return
@@ -40,18 +41,17 @@ func (f *frontend) deleteClusterManagerConfiguration(w http.ResponseWriter, r *h
 }
 
 func (f *frontend) _deleteClusterManagerConfigurationDocument(ctx context.Context, log *logrus.Entry, r *http.Request) error {
-	vars := mux.Vars(r)
-
 	_, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered, api.SubscriptionStateSuspended, api.SubscriptionStateWarned)
 	if err != nil {
 		return err
 	}
 
+	resourceType, resourceName, ocmResourceType, ocmResourceName, resourceGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "ocmResourceType"), chi.URLParam(r, "ocmResourceName"), chi.URLParam(r, "resourceGroupName")
 	doc, err := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s/%s/%s' under resource group '%s' was not found.",
-			vars["resourceType"], vars["resourceName"], vars["ocmResourceType"], vars["ocmResourceName"], vars["resourceGroupName"])
+			resourceType, resourceName, ocmResourceType, ocmResourceName, resourceGroupName)
 	case err != nil:
 		return err
 	}

@@ -23,10 +23,8 @@ var _ = Describe("[Admin API] List Azure resources action", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
 	It("must list Azure resources for a cluster", func(ctx context.Context) {
-		resourceID := resourceIDFromEnv()
-
 		By("getting the resource group where cluster resources live in")
-		oc, err := clients.OpenshiftClustersv20200430.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 		clusterResourceGroup := stringutils.LastTokenByte(*oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, '/')
 
@@ -77,7 +75,8 @@ var _ = Describe("[Admin API] List Azure resources action", func() {
 
 		By("getting the actual Azure resource IDs via RP admin API")
 		var actualResources []mgmtfeatures.GenericResourceExpanded
-		resp, err := adminRequest(ctx, http.MethodGet, "/admin"+resourceID+"/resources", nil, nil, &actualResources)
+		// Don't strictly check for unknown fields because the upstream struct doesn't account for an Etag
+		resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/resources", nil, false, nil, &actualResources)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 

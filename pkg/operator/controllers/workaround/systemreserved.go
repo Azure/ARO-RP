@@ -8,37 +8,36 @@ import (
 	"encoding/json"
 
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
-	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/autosizednodes"
-	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type systemreserved struct {
 	log *logrus.Entry
 
-	mcocli mcoclient.Interface
-	dh     dynamichelper.Interface
+	client client.Client
 
 	versionFixed *version.Version
 }
 
 var _ Workaround = &systemreserved{}
 
-func NewSystemReserved(log *logrus.Entry, mcocli mcoclient.Interface, dh dynamichelper.Interface) *systemreserved {
+func NewSystemReserved(log *logrus.Entry, client client.Client) *systemreserved {
 	verFixed, err := version.ParseVersion("4.99.0") // TODO set this correctly when known.
 	utilruntime.Must(err)
 
 	return &systemreserved{
 		log:          log,
-		mcocli:       mcocli,
-		dh:           dh,
+		client:       client,
 		versionFixed: verFixed,
 	}
 }
@@ -54,42 +53,13 @@ func (sr *systemreserved) IsRequired(clusterVersion *version.Version, cluster *a
 	return clusterVersion.Lt(sr.versionFixed)
 }
 
-func (sr *systemreserved) kubeletConfig() (*mcv1.KubeletConfig, error) {
-	b, err := json.Marshal(map[string]interface{}{
-		"systemReserved": map[string]interface{}{
-			"memory": memReserved,
-		},
-		"evictionHard": map[string]interface{}{
-			"memory.available":  hardEviction,
-			"nodefs.available":  nodeFsAvailable,
-			"nodefs.inodesFree": nodeFsInodes,
-			"imagefs.available": imageFs,
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &mcv1.KubeletConfig{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   kubeletConfigName,
-			Labels: map[string]string{labelName: labelValue},
-		},
-		Spec: mcv1.KubeletConfigSpec{
-			MachineConfigPoolSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{labelName: labelValue},
-			},
-			KubeletConfig: &kruntime.RawExtension{
-				Raw: b,
-			},
-		},
-	}, nil
-}
-
 func (sr *systemreserved) Ensure(ctx context.Context) error {
+	sr.log.Debug("ensure systemreserved")
+
 	// Step 1. Add label to worker MachineConfigPool.
 	// Get the worker MachineConfigPool, modify it to add a label aro.openshift.io/limits: "", and apply the modified config.
-	mcp, err := sr.mcocli.MachineconfigurationV1().MachineConfigPools().Get(ctx, workerMachineConfigPoolName, metav1.GetOptions{})
+	mcp := &mcv1.MachineConfigPool{}
+	err := sr.client.Get(ctx, types.NamespacedName{Name: workerMachineConfigPoolName}, mcp)
 	if err != nil {
 		return err
 	}
@@ -100,35 +70,75 @@ func (sr *systemreserved) Ensure(ctx context.Context) error {
 		}
 		mcp.Labels[labelName] = labelValue
 
-		_, err = sr.mcocli.MachineconfigurationV1().MachineConfigPools().Update(ctx, mcp, metav1.UpdateOptions{})
+		err = sr.client.Update(ctx, mcp)
 		if err != nil {
 			return err
 		}
 	}
 
 	//   Step 2. Create KubeletConfig CRD with appropriate limits.
-	kc, err := sr.kubeletConfig()
-	if err != nil {
-		return err
+	kc := &mcv1.KubeletConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: kubeletConfigName,
+		},
 	}
+	_, err = controllerutil.CreateOrUpdate(ctx, sr.client, kc, func() error {
+		if kc.Labels == nil {
+			kc.Labels = make(map[string]string)
+		}
+		kc.Labels[labelName] = labelValue
 
-	return sr.dh.Ensure(ctx, kc)
+		b, err := json.Marshal(map[string]interface{}{
+			"systemReserved": map[string]interface{}{
+				"memory": memReserved,
+			},
+			"evictionHard": map[string]interface{}{
+				"memory.available":  hardEviction,
+				"nodefs.available":  nodeFsAvailable,
+				"nodefs.inodesFree": nodeFsInodes,
+				"imagefs.available": imageFs,
+			},
+		})
+		if err != nil {
+			return err
+		}
+
+		kc.Spec = mcv1.KubeletConfigSpec{
+			MachineConfigPoolSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{labelName: labelValue},
+			},
+			KubeletConfig: &kruntime.RawExtension{
+				Raw: b,
+			},
+		}
+
+		return nil
+	})
+
+	return err
 }
 
 func (sr *systemreserved) Remove(ctx context.Context) error {
-	mcp, err := sr.mcocli.MachineconfigurationV1().MachineConfigPools().Get(ctx, workerMachineConfigPoolName, metav1.GetOptions{})
+	sr.log.Debug("remove systemreserved")
+	mcp := &mcv1.MachineConfigPool{}
+	err := sr.client.Get(ctx, types.NamespacedName{Name: workerMachineConfigPoolName}, mcp)
 	if err != nil {
 		return err
 	}
-	if _, ok := mcp.Labels[labelName]; !ok {
-		// don't update if we don't need to.
-		return nil
-	}
-	delete(mcp.Labels, labelName)
+	// don't update if we don't need to.
+	if _, ok := mcp.Labels[labelName]; ok {
+		delete(mcp.Labels, labelName)
 
-	_, err = sr.mcocli.MachineconfigurationV1().MachineConfigPools().Update(ctx, mcp, metav1.UpdateOptions{})
-	if err != nil {
-		return err
+		err = sr.client.Update(ctx, mcp)
+		if err != nil {
+			return err
+		}
 	}
-	return sr.dh.EnsureDeleted(ctx, "KubeletConfig.machineconfiguration.openshift.io", "", kubeletConfigName)
+
+	kc := &mcv1.KubeletConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: kubeletConfigName,
+		},
+	}
+	return client.IgnoreNotFound(sr.client.Delete(ctx, kc))
 }

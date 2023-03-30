@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -71,9 +71,8 @@ func NewServer(
 			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
 		},
-		PreferServerCipherSuites: true,
-		SessionTicketsDisabled:   true,
-		MinVersion:               tls.VersionTLS12,
+		SessionTicketsDisabled: true,
+		MinVersion:             tls.VersionTLS12,
 		CurvePreferences: []tls.CurveID{
 			tls.CurveP256,
 			tls.X25519,
@@ -97,23 +96,27 @@ func NewServer(
 	}, nil
 }
 
+func healthCheck(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(200)
+}
+
 func (s *server) Run(ctx context.Context) error {
 	go heartbeat.EmitHeartbeat(s.log, s.m, "dbtoken.heartbeat", nil, func() bool { return true })
 
-	r := mux.NewRouter()
-	r.Use(middleware.Panic(s.log))
+	logHandler := Log(s.accessLog)
+	panicMiddleware := middleware.Panic(s.log)
 
-	unauthenticatedRouter := r.NewRoute().Subrouter()
-	unauthenticatedRouter.Use(Log(s.accessLog))
-	s.unauthenticatedRoutes(unauthenticatedRouter)
+	chiRouter := chi.NewMux()
 
-	authenticatedRouter := r.NewRoute().Subrouter()
-	authenticatedRouter.Use(s.authenticate)
-	authenticatedRouter.Use(Log(s.accessLog))
-	s.authenticatedRoutes(authenticatedRouter)
+	chiRouter.Use(panicMiddleware, logHandler)
+
+	chiRouter.Get("/healthz/ready", healthCheck)
+
+	tokenRefresh := panicMiddleware(s.authenticate(logHandler(http.HandlerFunc(s.token))))
+	chiRouter.With(s.authenticate).Post("/token", tokenRefresh.ServeHTTP)
 
 	srv := &http.Server{
-		Handler:     r,
+		Handler:     chiRouter,
 		ReadTimeout: 10 * time.Second,
 		IdleTimeout: 2 * time.Minute,
 		ErrorLog:    log.New(s.log.Writer(), "", 0),
@@ -121,14 +124,6 @@ func (s *server) Run(ctx context.Context) error {
 	}
 
 	return srv.Serve(s.l)
-}
-
-func (s *server) unauthenticatedRoutes(r *mux.Router) {
-	r.NewRoute().Methods(http.MethodGet).Path("/healthz/ready").HandlerFunc(func(http.ResponseWriter, *http.Request) {})
-}
-
-func (s *server) authenticatedRoutes(r *mux.Router) {
-	r.NewRoute().Methods(http.MethodPost).Path("/token").HandlerFunc(s.token)
 }
 
 func (s *server) authenticate(h http.Handler) http.Handler {

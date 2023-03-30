@@ -217,6 +217,43 @@ var _ = Describe("ARO Operator - RBAC", func() {
 	})
 })
 
+var _ = Describe("ARO Operator - MachineHealthCheck", func() {
+	const (
+		mhcNamespace            = "openshift-machine-api"
+		mhcName                 = "aro-machinehealthcheck"
+		mhcRemediationAlertName = "mhc-remediation-alert"
+	)
+
+	getMachineHealthCheck := func(g Gomega, ctx context.Context) {
+		_, err := clients.MachineAPI.MachineV1beta1().MachineHealthChecks(mhcNamespace).Get(ctx, mhcName, metav1.GetOptions{})
+		g.Expect(err).ToNot(HaveOccurred())
+	}
+
+	getMachineHealthCheckRemediationAlertName := func(g Gomega, ctx context.Context) {
+		_, err := clients.Monitoring.MonitoringV1().PrometheusRules(mhcNamespace).Get(ctx, mhcRemediationAlertName, metav1.GetOptions{})
+		g.Expect(err).ToNot(HaveOccurred())
+	}
+
+	It("must be recreated if deleted", func(ctx context.Context) {
+		By("deleting the machine health check")
+		err := clients.MachineAPI.MachineV1beta1().MachineHealthChecks(mhcNamespace).Delete(ctx, mhcName, metav1.DeleteOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		By("waiting for the machine health check to be restored")
+		Eventually(getMachineHealthCheck).WithContext(ctx).WithTimeout(3 * time.Second).Should(Succeed())
+	})
+
+	It("the alerting rule must recreated if deleted", func(ctx context.Context) {
+		By("deleting the machine health remediation alert")
+		err := clients.Monitoring.MonitoringV1().PrometheusRules(mhcNamespace).Delete(ctx, mhcRemediationAlertName, metav1.DeleteOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		By("waiting for the machine health check remediation alert to be restored")
+		Eventually(getMachineHealthCheckRemediationAlertName).WithContext(ctx).WithTimeout(3 * time.Second).Should(Succeed())
+	})
+
+})
+
 var _ = Describe("ARO Operator - Conditions", func() {
 	It("must have all the conditions set to true", func(ctx context.Context) {
 		Eventually(func(g Gomega, ctx context.Context) {
@@ -239,7 +276,7 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 
 	gatherNetworkInfo := func(ctx context.Context) {
 		By("gathering vnet name, resource group, location, and adds master/worker subnets to list to reconcile")
-		oc, err := clients.OpenshiftClustersv20200430.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 		location = *oc.Location
 
@@ -311,9 +348,14 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 })
 
 var _ = Describe("ARO Operator - MUO Deployment", func() {
+	const (
+		managedUpgradeOperatorNamespace  = "openshift-managed-upgrade-operator"
+		managedUpgradeOperatorDeployment = "managed-upgrade-operator"
+	)
+
 	It("must be deployed by default with FIPS crypto mandated", func(ctx context.Context) {
 		By("getting MUO pods")
-		pods, err := clients.Kubernetes.CoreV1().Pods("openshift-managed-upgrade-operator").List(ctx, metav1.ListOptions{
+		pods, err := clients.Kubernetes.CoreV1().Pods(managedUpgradeOperatorNamespace).List(ctx, metav1.ListOptions{
 			LabelSelector: "name=managed-upgrade-operator",
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -321,11 +363,38 @@ var _ = Describe("ARO Operator - MUO Deployment", func() {
 
 		By("verifying that MUO has FIPS crypto mandated by reading logs")
 		Eventually(func(g Gomega, ctx context.Context) {
-			b, err := clients.Kubernetes.CoreV1().Pods("openshift-managed-upgrade-operator").GetLogs(pods.Items[0].Name, &corev1.PodLogOptions{}).DoRaw(ctx)
+			b, err := clients.Kubernetes.CoreV1().Pods(managedUpgradeOperatorNamespace).GetLogs(pods.Items[0].Name, &corev1.PodLogOptions{}).DoRaw(ctx)
 			g.Expect(err).NotTo(HaveOccurred())
 
 			g.Expect(string(b)).To(ContainSubstring(`msg="FIPS crypto mandated: true"`))
 		}).WithContext(ctx).Should(Succeed())
+	})
+
+	It("must be restored if deleted", func(ctx context.Context) {
+		deleteMUODeployment := func(ctx context.Context) error {
+			return clients.Kubernetes.
+				AppsV1().
+				Deployments(managedUpgradeOperatorNamespace).
+				Delete(ctx, managedUpgradeOperatorDeployment, metav1.DeleteOptions{})
+		}
+
+		muoDeploymentExists := func(g Gomega, ctx context.Context) {
+			_, err := clients.Kubernetes.
+				AppsV1().
+				Deployments(managedUpgradeOperatorNamespace).
+				Get(ctx, managedUpgradeOperatorDeployment, metav1.GetOptions{})
+
+			g.Expect(err).ToNot(HaveOccurred())
+		}
+
+		By("waiting for the MUO deployment to be ready")
+		Eventually(muoDeploymentExists).WithContext(ctx).Should(Succeed())
+
+		By("deleting the MUO deployment")
+		Expect(deleteMUODeployment(ctx)).Should(Succeed())
+
+		By("waiting for the MUO deployment to be reconciled")
+		Eventually(muoDeploymentExists).WithContext(ctx).Should(Succeed())
 	})
 })
 

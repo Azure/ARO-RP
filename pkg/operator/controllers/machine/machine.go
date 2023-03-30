@@ -8,8 +8,8 @@ import (
 	"fmt"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
@@ -18,7 +18,8 @@ import (
 
 func (r *Reconciler) workerReplicas(ctx context.Context) (int, error) {
 	count := 0
-	machinesets, err := r.maocli.MachineV1beta1().MachineSets(machineSetsNamespace).List(ctx, metav1.ListOptions{})
+	machinesets := &machinev1beta1.MachineSetList{}
+	err := r.client.List(ctx, machinesets, client.InNamespace(machineSetsNamespace))
 	if err != nil {
 		return 0, err
 	}
@@ -78,7 +79,8 @@ func (r *Reconciler) checkMachines(ctx context.Context) (errs []error) {
 		return []error{err}
 	}
 
-	machines, err := r.maocli.MachineV1beta1().Machines(machineSetsNamespace).List(ctx, metav1.ListOptions{})
+	machines := &machinev1beta1.MachineList{}
+	err = r.client.List(ctx, machines, client.InNamespace(machineSetsNamespace))
 	if err != nil {
 		return []error{err}
 	}

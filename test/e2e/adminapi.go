@@ -19,7 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 )
 
-func adminRequest(ctx context.Context, method, path string, params url.Values, in, out interface{}) (*http.Response, error) {
+func adminRequest(ctx context.Context, method, path string, params url.Values, strict bool, in, out interface{}) (*http.Response, error) {
 	if !env.IsLocalDevelopmentMode() {
 		return nil, errors.New("only development RP mode is supported")
 	}
@@ -69,7 +69,14 @@ func adminRequest(ctx context.Context, method, path string, params url.Values, i
 	}()
 
 	if out != nil && resp.Header.Get("Content-Type") == "application/json" {
-		return resp, json.NewDecoder(resp.Body).Decode(&out)
+		decoder := json.NewDecoder(resp.Body)
+		// If strict is set, enable DisallowUnknownFields. This is used to
+		// verify that the response doesn't contain any fields that are not
+		// defined, namely systemData.
+		if strict {
+			decoder.DisallowUnknownFields()
+		}
+		return resp, decoder.Decode(&out)
 	} else if out != nil && resp.Header.Get("Content-Type") == "text/plain" {
 		strOut := out.(*string)
 		p, err := io.ReadAll(resp.Body)
@@ -86,7 +93,7 @@ func adminRequest(ctx context.Context, method, path string, params url.Values, i
 // adminGetCluster returns admin representation of an ARO cluster
 func adminGetCluster(g Gomega, ctx context.Context, resourceID string) *admin.OpenShiftCluster {
 	var oc admin.OpenShiftCluster
-	resp, err := adminRequest(ctx, http.MethodGet, resourceID, nil, nil, &oc)
+	resp, err := adminRequest(ctx, http.MethodGet, resourceID, nil, true, nil, &oc)
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(resp.StatusCode).To(Equal(http.StatusOK))
 	return &oc
@@ -99,7 +106,7 @@ func adminListClusters(g Gomega, ctx context.Context, path string) []*admin.Open
 	params := url.Values{}
 	for {
 		var list admin.OpenShiftClusterList
-		resp, err := adminRequest(ctx, http.MethodGet, path, params, nil, &list)
+		resp, err := adminRequest(ctx, http.MethodGet, path, params, true, nil, &list)
 		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(resp.StatusCode).To(Equal(http.StatusOK))
 

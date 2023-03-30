@@ -102,27 +102,12 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
-	err = spDynamic.ValidateProviders(ctx)
-	if err != nil {
-		return err
-	}
-
-	err = spDynamic.ValidateQuota(ctx, dv.oc)
-	if err != nil {
-		return err
-	}
-
 	err = spDynamic.ValidateDiskEncryptionSets(ctx, dv.oc)
 	if err != nil {
 		return err
 	}
 
 	err = spDynamic.ValidateEncryptionAtHost(ctx, dv.oc)
-	if err != nil {
-		return err
-	}
-
-	err = spDynamic.ValidateVMSku(ctx, dv.oc.Location, dv.subscriptionDoc.ID, dv.oc)
 	if err != nil {
 		return err
 	}

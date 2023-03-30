@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
@@ -40,8 +41,8 @@ func (f *frontend) getSubscriptionDocument(ctx context.Context, key string) (*ap
 	return doc, err
 }
 
-func (f *frontend) validateSubscriptionState(ctx context.Context, key string, allowedStates ...api.SubscriptionState) (*api.SubscriptionDocument, error) {
-	doc, err := f.getSubscriptionDocument(ctx, key)
+func (f *frontend) validateSubscriptionState(ctx context.Context, path string, allowedStates ...api.SubscriptionState) (*api.SubscriptionDocument, error) {
+	doc, err := f.getSubscriptionDocument(ctx, path)
 	if err != nil {
 		return nil, err
 	}
@@ -78,26 +79,55 @@ func (f *frontend) validateOpenShiftUniqueKey(ctx context.Context, doc *api.Open
 // prevent mischief
 var rxKubernetesString = regexp.MustCompile(`(?i)^[-a-z0-9.]{0,255}$`)
 
-func validateAdminKubernetesObjectsNonCustomer(method, groupKind, namespace, name string) error {
+func validatePermittedClusterwideObjects(gvr *schema.GroupVersionResource) bool {
+	permittedGroups := map[string]bool{
+		"apiserver.openshift.io":              true,
+		"aro.openshift.io":                    true,
+		"authorization.openshift.io":          true,
+		"certificates.k8s.io":                 true,
+		"config.openshift.io":                 true,
+		"console.openshift.io":                true,
+		"imageregistry.operator.openshift.io": true,
+		"machine.openshift.io":                true,
+		"machineconfiguration.openshift.io":   true,
+		"operator.openshift.io":               true,
+		"rbac.authorization.k8s.io":           true,
+	}
+	permittedObjects := map[string]map[string]bool{
+		"": {"nodes": true},
+	}
+	allowedResources, groupHasException := permittedObjects[gvr.Group]
+	return permittedGroups[gvr.Group] || (groupHasException && allowedResources[gvr.Resource])
+}
+
+func validateAdminKubernetesObjectsNonCustomer(method string, gvr *schema.GroupVersionResource, namespace, name string) error {
+	if gvr == nil {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided resource is invalid.")
+	}
+
+	if namespace == "" && !validatePermittedClusterwideObjects(gvr) {
+		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to cluster-scoped object '%v' is forbidden.", gvr)
+	}
+
 	if !utilnamespace.IsOpenShiftNamespace(namespace) {
 		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to the provided namespace '%s' is forbidden.", namespace)
 	}
 
-	return validateAdminKubernetesObjects(method, groupKind, namespace, name)
+	return validateAdminKubernetesObjects(method, gvr, namespace, name)
 }
 
-func validateAdminKubernetesObjects(method, groupKind, namespace, name string) error {
-	if groupKind == "" ||
-		!rxKubernetesString.MatchString(groupKind) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided groupKind '%s' is invalid.", groupKind)
+func validateAdminKubernetesObjects(method string, gvr *schema.GroupVersionResource, namespace, name string) error {
+	if gvr == nil {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided resource is invalid.")
 	}
-	if strings.EqualFold(groupKind, "Secret") ||
-		strings.HasSuffix(strings.ToLower(groupKind), ".oauth.openshift.io") {
+
+	if gvr.Resource == "secrets" ||
+		gvr.Group == "oauth.openshift.io" {
 		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to secrets is forbidden.")
 	}
 	if method != http.MethodGet &&
-		(strings.HasSuffix(strings.ToLower(groupKind), ".rbac.authorization.k8s.io") ||
-			strings.HasSuffix(strings.ToLower(groupKind), ".authorization.openshift.io")) {
+		(gvr.Group == "rbac.authorization.k8s.io" ||
+			gvr.Group == "authorization.openshift.io") {
 		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Write access to RBAC is forbidden.")
 	}
 
@@ -159,11 +189,15 @@ func validateNetworkInterfaceName(nicName string) error {
 	return nil
 }
 
-func validateAdminVMSize(vmSize string) error {
-	if vmSize == "" {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided vmSize '%s' is invalid.", vmSize)
+func validateAdminMasterVMSize(vmSize string) error {
+	// check to ensure that the target size is supported as a master size
+	for k := range validate.SupportedMasterVmSizes {
+		if strings.EqualFold(string(k), vmSize) {
+			return nil
+		}
 	}
-	return nil
+
+	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided vmSize '%s' is unsupported for master.", vmSize)
 }
 
 // validateInstallVersion validates the install version set in the clusterprofile.version
@@ -171,9 +205,9 @@ func validateAdminVMSize(vmSize string) error {
 func (f *frontend) validateInstallVersion(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
 	oc := doc.OpenShiftCluster
 	// If this request is from an older API or the user never specified
-	// the version to install we default to the InstallStream.Version
+	// the version to install we default to the DefaultInstallStream.Version
 	if oc.Properties.ClusterProfile.Version == "" {
-		oc.Properties.ClusterProfile.Version = version.InstallStream.Version.String()
+		oc.Properties.ClusterProfile.Version = version.DefaultInstallStream.Version.String()
 		return nil
 	}
 

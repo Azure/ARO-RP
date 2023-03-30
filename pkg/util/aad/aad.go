@@ -18,6 +18,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
+const (
+	defaultTimeout = 5 * time.Minute
+)
+
 type TokenClient interface {
 	GetToken(ctx context.Context, log *logrus.Entry, clientID, clientSecret, tenantID string, aadEndpoint, resource string) (*adal.ServicePrincipalToken, error)
 }
@@ -28,9 +32,29 @@ func NewTokenClient() TokenClient {
 	return &tokenClient{}
 }
 
+func (tc *tokenClient) GetToken(ctx context.Context, log *logrus.Entry, clientID, clientSecret, tenantID, aadEndpoint, resource string) (*adal.ServicePrincipalToken, error) {
+	spToken, err := newServicePrincipalToken(clientID, clientSecret, tenantID, aadEndpoint, resource)
+	if err != nil {
+		return spToken, err
+	}
+
+	tokenAuthorizer := refreshable.NewAuthorizer(spToken)
+
+	err = authenticateServicePrincipalToken(ctx, log, tokenAuthorizer, defaultTimeout)
+	return spToken, err
+}
+
+func refreshContext(ctx context.Context, authorizer refreshable.Authorizer, log *logrus.Entry) (bool, error) {
+	done, err := authorizer.RefreshWithContext(ctx, log)
+	if err != nil {
+		err = api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "The provided service principal credentials are invalid.")
+	}
+	return done, err
+}
+
 // GetToken authenticates in the customer's tenant as the cluster service
 // principal and returns a token.
-func (tc *tokenClient) GetToken(ctx context.Context, log *logrus.Entry, clientID, clientSecret, tenantID string, aadEndpoint, resource string) (*adal.ServicePrincipalToken, error) {
+func newServicePrincipalToken(clientID, clientSecret, tenantID, aadEndpoint, resource string) (*adal.ServicePrincipalToken, error) {
 	conf := auth.ClientCredentialsConfig{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
@@ -39,26 +63,28 @@ func (tc *tokenClient) GetToken(ctx context.Context, log *logrus.Entry, clientID
 		AADEndpoint:  aadEndpoint,
 	}
 
-	sp, err := conf.ServicePrincipalToken()
+	spToken, err := conf.ServicePrincipalToken()
 	if err != nil {
 		return nil, err
 	}
 
-	authorizer := refreshable.NewAuthorizer(sp)
+	return spToken, nil
+}
 
+// AuthenticateServicePrincipalToken authenticates in the customer's tenant as the cluster service principal and returns a token.
+func authenticateServicePrincipalToken(ctx context.Context, log *logrus.Entry, authorizer refreshable.Authorizer, timeout time.Duration) error {
 	// during credentials rotation this can take time to propagate
-	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	// it is overridable so we can have unit tests pass/fail quicker
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
+	var err error
+	done := false
 	// NOTE: Do not override err with the error returned by
 	// wait.PollImmediateUntil. Doing this will not propagate the latest error
 	// to the user in case when wait exceeds the timeout
 	_ = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		var done bool
-		done, err = authorizer.RefreshWithContext(ctx, log)
-		if err != nil {
-			err = api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "The provided service principal credentials are invalid.")
-		}
+		done, err = refreshContext(ctx, authorizer, log)
 		if !done || err != nil {
 			return false, err
 		}
@@ -84,9 +110,18 @@ func (tc *tokenClient) GetToken(ctx context.Context, log *logrus.Entry, clientID
 
 		return false, nil
 	}, timeoutCtx.Done())
+
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return sp, nil
+	if !done && authorizer.LastError() != nil {
+		return api.NewCloudError(
+			http.StatusBadRequest,
+			api.CloudErrorCodeInvalidServicePrincipalCredentials,
+			"properties.servicePrincipalProfile",
+			"The provided service principal credentials are invalid.")
+	}
+
+	return nil
 }

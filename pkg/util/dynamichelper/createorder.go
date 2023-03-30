@@ -9,6 +9,7 @@ import (
 	securityv1 "github.com/openshift/api/security/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	extensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	extensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -17,6 +18,7 @@ import (
 // to be brought forward
 var createOrderMap = map[reflect.Type]int{
 	// non-namespaced resources
+	reflect.TypeOf(&extensionsv1.CustomResourceDefinition{}):      -9, // before custom resources
 	reflect.TypeOf(&extensionsv1beta1.CustomResourceDefinition{}): -8, // before custom resources
 	reflect.TypeOf(&rbacv1.ClusterRole{}):                         -7, // before workload resources
 	reflect.TypeOf(&rbacv1.ClusterRoleBinding{}):                  -6, // before workload resources

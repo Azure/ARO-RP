@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
@@ -24,12 +24,16 @@ func (f *frontend) postAdminOpenShiftClusterStopVM(w http.ResponseWriter, r *htt
 }
 
 func (f *frontend) _postAdminOpenShiftClusterStopVM(log *logrus.Entry, ctx context.Context, r *http.Request) error {
-	vars := mux.Vars(r)
-	vmName := r.URL.Query().Get("vmName")
-	azActionsWrapper, err := f.newAzureActionsWrapper(log, ctx, vmName, strings.TrimPrefix(r.URL.Path, "/admin"), vars)
+	vmName, deallocateVm := r.URL.Query().Get("vmName"), r.URL.Query().Get("deallocateVM")
+	resourceName := chi.URLParam(r, "resourceName")
+	resourceType := chi.URLParam(r, "resourceType")
+	resourceGroupName := chi.URLParam(r, "resourceGroupName")
+
+	action, _, err := f.prepareAdminActions(log, ctx, vmName, strings.TrimPrefix(r.URL.Path, "/admin"), resourceType, resourceName, resourceGroupName)
+
 	if err != nil {
 		return err
 	}
 
-	return f.adminAction.VMStopAndWait(ctx, azActionsWrapper.vmName)
+	return action.VMStopAndWait(ctx, vmName, strings.EqualFold(deallocateVm, "True"))
 }

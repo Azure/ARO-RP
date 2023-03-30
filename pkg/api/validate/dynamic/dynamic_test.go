@@ -848,11 +848,23 @@ func TestValidateSubnets(t *testing.T) {
 			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + masterSubnet + "' is not in a Succeeded state",
 		},
 		{
-			name: "fail: provisioning state creating: subnet has NSG",
+			name: "pass: provisioning state creating: subnet has expected NSG attached",
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.ProvisioningState = api.ProvisioningStateCreating
 			},
 			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
+		},
+		{
+			name: "fail: provisioning state creating: subnet has incorrect NSG attached",
+			modifyOC: func(oc *api.OpenShiftCluster) {
+				oc.Properties.ProvisioningState = api.ProvisioningStateCreating
+			},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				(*vnet.Subnets)[0].NetworkSecurityGroup.ID = to.StringPtr("not-the-correct-nsg")
 				vnetClient.EXPECT().
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)

@@ -6,10 +6,12 @@ package hive
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	hivev1azure "github.com/openshift/hive/apis/hive/v1/azure"
@@ -23,6 +25,7 @@ import (
 )
 
 const (
+	createdByHiveLabelKey = "aro-created-by-Hive"
 	envSecretsName        = "aro-env-secret"
 	pullsecretSecretName  = "aro-pullsecret"
 	installConfigName     = "aro-installconfig"
@@ -115,11 +118,16 @@ func servicePrincipalSecretForInstall(oc *api.OpenShiftCluster, sub *api.Subscri
 	if isDevelopment {
 		// In development mode, load in the proxy certificates so that clusters
 		// can be accessed from a local (not in Azure) Hive
-		// This assumes we are running from an ARO-RP checkout in development
-		_, curmod, _, _ := runtime.Caller(0)
-		basepath, err := filepath.Abs(filepath.Join(filepath.Dir(curmod), "../.."))
-		if err != nil {
-			return nil, err
+
+		basepath := os.Getenv("ARO_CHECKOUT_PATH")
+		if basepath == "" {
+			// This assumes we are running from an ARO-RP checkout in development
+			var err error
+			_, curmod, _, _ := runtime.Caller(0)
+			basepath, err = filepath.Abs(filepath.Join(filepath.Dir(curmod), "../.."))
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		proxyCert, err := os.ReadFile(path.Join(basepath, "secrets/proxy.crt"))
@@ -167,6 +175,11 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 		}
 	}
 
+	clusterDomain := doc.OpenShiftCluster.Properties.ClusterProfile.Domain
+	if !strings.ContainsRune(clusterDomain, '.') {
+		clusterDomain += "." + os.Getenv("DOMAIN_NAME")
+	}
+
 	// Do not set InfraID here, as Hive wants to do that
 	return &hivev1.ClusterDeployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -175,6 +188,7 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 			Labels: map[string]string{
 				"hive.openshift.io/cluster-platform": "azure",
 				"hive.openshift.io/cluster-region":   doc.OpenShiftCluster.Location,
+				createdByHiveLabelKey:                "true",
 			},
 			Annotations: map[string]string{
 				"hive.openshift.io/try-install-once":                "true",
@@ -192,6 +206,10 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 						Name: clusterServicePrincipalSecretName,
 					},
 				},
+			},
+			ControlPlaneConfig: hivev1.ControlPlaneConfigSpec{
+				APIServerIPOverride: doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP,
+				APIURLOverride:      fmt.Sprintf("api-int.%s:6443", clusterDomain),
 			},
 			PullSecretRef: &corev1.LocalObjectReference{
 				Name: pullsecretSecretName,

@@ -12,13 +12,12 @@ import (
 
 	"github.com/golang/mock/gomock"
 	configv1 "github.com/openshift/api/config/v1"
-	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	mock_workaround "github.com/Azure/ARO-RP/pkg/util/mocks/operator/controllers/workaround"
 )
@@ -43,19 +42,6 @@ func clusterVersion(ver string) *configv1.ClusterVersion {
 }
 
 func TestWorkaroundReconciler(t *testing.T) {
-	var (
-		arocli = arofake.NewSimpleClientset(&arov1alpha1.Cluster{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: arov1alpha1.SingletonClusterName,
-			},
-			Spec: arov1alpha1.ClusterSpec{
-				OperatorFlags: arov1alpha1.OperatorFlags{
-					controllerEnabled: "true",
-				},
-			},
-		})
-	)
-
 	tests := []struct {
 		name    string
 		want    ctrl.Result
@@ -94,12 +80,22 @@ func TestWorkaroundReconciler(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
+			instance := &arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
+				},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						controllerEnabled: "true",
+					},
+				},
+			}
+
 			mwa := mock_workaround.NewMockWorkaround(controller)
 			r := &Reconciler{
-				arocli:      arocli,
-				configcli:   configfake.NewSimpleClientset(clusterVersion("4.4.10")),
 				workarounds: []Workaround{mwa},
 				log:         utillog.GetLogger(),
+				client:      ctrlfake.NewClientBuilder().WithObjects(instance, clusterVersion("4.4.10")).Build(),
 			}
 			tt.mocker(mwa)
 			got, err := r.Reconcile(context.Background(), reconcile.Request{})

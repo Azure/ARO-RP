@@ -9,13 +9,19 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
+
+var nodeResource = schema.GroupVersionResource{
+	Group:    "",
+	Resource: "nodes",
+}
 
 func (f *frontend) postAdminOpenShiftClusterCordonNode(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -28,11 +34,11 @@ func (f *frontend) postAdminOpenShiftClusterCordonNode(w http.ResponseWriter, r 
 }
 
 func (f *frontend) _postAdminOpenShiftClusterCordonNode(ctx context.Context, r *http.Request, log *logrus.Entry) error {
-	vars := mux.Vars(r)
+	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 
 	vmName := r.URL.Query().Get("vmName")
 	shouldCordon := strings.EqualFold(r.URL.Query().Get("shouldCordon"), "true")
-	err := validateAdminKubernetesObjects(r.Method, "Node", "", vmName)
+	err := validateAdminKubernetesObjects(r.Method, &nodeResource, "", vmName)
 	if err != nil {
 		return err
 	}
@@ -42,7 +48,7 @@ func (f *frontend) _postAdminOpenShiftClusterCordonNode(ctx context.Context, r *
 	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", resType, resName, resGroupName)
 	case err != nil:
 		return err
 	}

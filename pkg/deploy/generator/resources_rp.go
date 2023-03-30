@@ -37,6 +37,19 @@ func (g *generator) rpManagedIdentity() *arm.Resource {
 	}
 }
 
+func (g *generator) rpSecurityGroupForPortalSourceAddressPrefixes() *arm.Resource {
+	return g.securityRules("rp-nsg/portal_in", &mgmtnetwork.SecurityRulePropertiesFormat{
+		Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+		SourcePortRange:          to.StringPtr("*"),
+		DestinationPortRange:     to.StringPtr("444"),
+		SourceAddressPrefixes:    &[]string{},
+		DestinationAddressPrefix: to.StringPtr("*"),
+		Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+		Priority:                 to.Int32Ptr(142),
+		Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+	}, "[not(empty(parameters('rpNsgPortalSourceAddressPrefixes')))]")
+}
+
 func (g *generator) rpSecurityGroup() *arm.Resource {
 	rules := []mgmtnetwork.SecurityRule{
 		{
@@ -558,7 +571,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 						ImageReference: &mgmtcompute.ImageReference{
 							Publisher: to.StringPtr("RedHat"),
 							Offer:     to.StringPtr("RHEL"),
-							Sku:       to.StringPtr("7-LVM"),
+							Sku:       to.StringPtr("8-LVM"),
 							Version:   to.StringPtr("latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
@@ -911,7 +924,6 @@ func (g *generator) rpServiceKeyvaultDynamic() *arm.Resource {
 		Name:       "rpServiceKeyvaultDynamic",
 		Type:       "Microsoft.Resources/deployments",
 		APIVersion: azureclient.APIVersion("Microsoft.Resources/deployments"),
-		Condition:  "[not(startsWith(toLower(replace(resourceGroup().location, ' ', '')), 'usgov'))]",
 		DependsOn:  []string{"[concat(parameters('keyvaultPrefix'), '" + env.ServiceKeyvaultSuffix + "')]"},
 		Resource:   rpServiceKeyvaultDynamicDeployment,
 	}
@@ -1080,7 +1092,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 						ID: to.StringPtr("[" + databaseName + "]"),
 					},
 					Options: &mgmtdocumentdb.CreateUpdateOptions{
-						Throughput: to.Int32Ptr(500),
+						Throughput: to.Int32Ptr(1000),
 					},
 				},
 				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ")]"),

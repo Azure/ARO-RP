@@ -19,10 +19,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/purge"
 )
 
-var (
-	dryRun = flag.Bool("dryRun", true, `Dry run`)
-)
-
 // denylist exists as belt and braces protection for important RGs, even though
 // they may already have the persist=true tag set, especially if it is easy to
 // accidentally redeploy the RG without the persist=true tag set.
@@ -45,11 +41,13 @@ const (
 )
 
 func main() {
+	dryRun := flag.Bool("dryRun", true, `Dry run`)
+
 	flag.Parse()
 	ctx := context.Background()
 	log := utillog.GetLogger()
 
-	if err := run(ctx, log); err != nil {
+	if err := run(ctx, log, dryRun); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -60,7 +58,7 @@ type settings struct {
 	deleteGroupPrefixes []string
 }
 
-func run(ctx context.Context, log *logrus.Entry) error {
+func run(ctx context.Context, log *logrus.Entry, dryRun *bool) error {
 	for _, key := range []string{
 		"AZURE_CLIENT_ID",
 		"AZURE_CLIENT_SECRET",

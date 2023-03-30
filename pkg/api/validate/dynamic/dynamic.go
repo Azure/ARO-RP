@@ -24,7 +24,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/permissions"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
@@ -50,11 +49,8 @@ type Dynamic interface {
 
 	ValidateVnet(ctx context.Context, location string, subnets []Subnet, additionalCIDRs ...string) error
 	ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error
-	ValidateProviders(ctx context.Context) error
-	ValidateQuota(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidateDiskEncryptionSets(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidateEncryptionAtHost(ctx context.Context, oc *api.OpenShiftCluster) error
-	ValidateVMSku(ctx context.Context, location string, subscriptionID string, oc *api.OpenShiftCluster) error
 }
 
 type dynamic struct {
@@ -64,7 +60,6 @@ type dynamic struct {
 	azEnv          *azureclient.AROEnvironment
 
 	permissions        authorization.PermissionsClient
-	providers          features.ProvidersClient
 	virtualNetworks    virtualNetworksGetClient
 	diskEncryptionSets compute.DiskEncryptionSetsClient
 	resourceSkusClient compute.ResourceSkusClient
@@ -87,7 +82,6 @@ func NewValidator(log *logrus.Entry, env env.Interface, azEnv *azureclient.AROEn
 		env:            env,
 		azEnv:          azEnv,
 
-		providers:          features.NewProvidersClient(azEnv, subscriptionID, authorizer),
 		spComputeUsage:     compute.NewUsageClient(azEnv, subscriptionID, authorizer),
 		spNetworkUsage:     network.NewUsageClient(azEnv, subscriptionID, authorizer),
 		permissions:        authorization.NewPermissionsClient(azEnv, subscriptionID, authorizer),
@@ -437,7 +431,14 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 		if oc.Properties.ProvisioningState == api.ProvisioningStateCreating {
 			if ss.SubnetPropertiesFormat != nil &&
 				ss.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
-				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, s.Path, "The provided subnet '%s' is invalid: must not have a network security group attached.", s.ID)
+				expectedNsgID, err := subnet.NetworkSecurityGroupID(oc, s.ID)
+				if err != nil {
+					return err
+				}
+
+				if !strings.EqualFold(*ss.SubnetPropertiesFormat.NetworkSecurityGroup.ID, expectedNsgID) {
+					return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, s.Path, "The provided subnet '%s' is invalid: must not have a network security group attached.", s.ID)
+				}
 			}
 		} else {
 			nsgID, err := subnet.NetworkSecurityGroupID(oc, *ss.ID)

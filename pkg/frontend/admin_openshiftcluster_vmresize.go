@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -29,20 +29,23 @@ func (f *frontend) postAdminOpenShiftClusterVMResize(w http.ResponseWriter, r *h
 }
 
 func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx context.Context, r *http.Request) error {
-	vars := mux.Vars(r)
 	vmName := r.URL.Query().Get("vmName")
-	azActionsWrapper, err := f.newAzureActionsWrapper(log, ctx, vmName, strings.TrimPrefix(r.URL.Path, "/admin"), vars)
+	resourceName := chi.URLParam(r, "resourceName")
+	resourceType := chi.URLParam(r, "resourceType")
+	resourceGroupName := chi.URLParam(r, "resourceGroupName")
+
+	action, doc, err := f.prepareAdminActions(log, ctx, vmName, strings.TrimPrefix(r.URL.Path, "/admin"), resourceType, resourceName, resourceGroupName)
 	if err != nil {
 		return err
 	}
 
 	vmSize := r.URL.Query().Get("vmSize")
-	err = validateAdminVMSize(vmSize)
+	err = validateAdminMasterVMSize(vmSize)
 	if err != nil {
 		return err
 	}
 
-	k, err := f.kubeActionsFactory(log, f.env, azActionsWrapper.doc.OpenShiftCluster)
+	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
 	if err != nil {
 		return err
 	}
@@ -69,7 +72,7 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx con
 			continue
 		}
 
-		if strings.EqualFold(azActionsWrapper.vmName, node.ObjectMeta.Name) {
+		if strings.EqualFold(vmName, node.ObjectMeta.Name) {
 			nodeExists = true
 			break
 		}
@@ -78,8 +81,8 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx con
 	if !nodeExists {
 		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "",
 			`"The master node '%s' under resource group '%s' was not found."`,
-			azActionsWrapper.vmName, vars["resourceGroupName"])
+			vmName, resourceGroupName)
 	}
 
-	return f.adminAction.VMResize(ctx, azActionsWrapper.vmName, vmSize)
+	return action.VMResize(ctx, vmName, vmSize)
 }

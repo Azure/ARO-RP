@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"path/filepath"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -20,10 +20,12 @@ import (
 func (f *frontend) postOpenShiftClusterCredentials(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
-	vars := mux.Vars(r)
+	resourceType := chi.URLParam(r, "resourceType")
+	resourceProviderNamespace := chi.URLParam(r, "resourceProviderNamespace")
 
-	if f.apis[vars["api-version"]].OpenShiftClusterCredentialsConverter == nil {
-		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], vars["api-version"])
+	apiVersion := r.URL.Query().Get(api.APIVersionKey)
+	if f.apis[apiVersion].OpenShiftClusterCredentialsConverter == nil {
+		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", resourceType, resourceProviderNamespace, apiVersion)
 		return
 	}
 
@@ -35,13 +37,13 @@ func (f *frontend) postOpenShiftClusterCredentials(w http.ResponseWriter, r *htt
 
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	b, err := f._postOpenShiftClusterCredentials(ctx, r, f.apis[vars["api-version"]].OpenShiftClusterCredentialsConverter)
+	b, err := f._postOpenShiftClusterCredentials(ctx, r, f.apis[apiVersion].OpenShiftClusterCredentialsConverter)
 
 	reply(log, w, nil, b, err)
 }
 
 func (f *frontend) _postOpenShiftClusterCredentials(ctx context.Context, r *http.Request, converter api.OpenShiftClusterCredentialsConverter) ([]byte, error) {
-	vars := mux.Vars(r)
+	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 
 	_, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
 	if err != nil {
@@ -51,7 +53,7 @@ func (f *frontend) _postOpenShiftClusterCredentials(ctx context.Context, r *http
 	doc, err := f.dbOpenShiftClusters.Get(ctx, r.URL.Path)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", resType, resName, resGroupName)
 	case err != nil:
 		return nil, err
 	}

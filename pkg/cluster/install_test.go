@@ -23,6 +23,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	mock_hive "github.com/Azure/ARO-RP/pkg/util/mocks/hive"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -175,7 +176,7 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				now:           func() time.Time { return time.Now() },
 			}
 
-			err := m.runSteps(ctx, tt.steps, false)
+			err := m.runSteps(ctx, tt.steps, "")
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -223,7 +224,6 @@ func TestUpdateProvisionedBy(t *testing.T) {
 		t.Error(err)
 	}
 
-	// Check it was set to the correct value in the database
 	updatedClusterDoc, err := openShiftClustersDatabase.Get(ctx, strings.ToLower(key))
 	if err != nil {
 		t.Fatal(err)
@@ -239,28 +239,49 @@ func TestInstallationTimeMetrics(t *testing.T) {
 
 	for _, tt := range []struct {
 		name          string
+		metricsTopic  string
+		timePerStep   int64
 		steps         []steps.Step
 		wantedMetrics map[string]int64
 	}{
 		{
-			name: "Failed step run will not generate any install time metrics",
+			name:         "Failed step run will not generate any install time metrics",
+			metricsTopic: "install",
 			steps: []steps.Step{
 				steps.Action(successfulActionStep),
 				steps.Action(failingFunc),
 			},
 		},
 		{
-			name: "Succeeded step run will generate a valid install time metrics",
+			name:         "Succeeded step run for cluster installation will generate a valid install time metrics",
+			metricsTopic: "install",
+			timePerStep:  2,
 			steps: []steps.Step{
 				steps.Action(successfulActionStep),
 				steps.Condition(successfulConditionStep, 30*time.Minute, true),
 				steps.AuthorizationRefreshingAction(nil, steps.Action(successfulActionStep)),
 			},
 			wantedMetrics: map[string]int64{
-				"backend.openshiftcluster.installtime.total":                             6,
-				"backend.openshiftcluster.installtime.action.successfulActionStep":       2,
-				"backend.openshiftcluster.installtime.condition.successfulConditionStep": 2,
-				"backend.openshiftcluster.installtime.refreshing.successfulActionStep":   2,
+				"backend.openshiftcluster.install.duration.total.seconds":                             6,
+				"backend.openshiftcluster.install.action.successfulActionStep.duration.seconds":       2,
+				"backend.openshiftcluster.install.condition.successfulConditionStep.duration.seconds": 2,
+				"backend.openshiftcluster.install.refreshing.successfulActionStep.duration.seconds":   2,
+			},
+		},
+		{
+			name:         "Succeeded step run for cluster update will generate a valid install time metrics",
+			metricsTopic: "update",
+			timePerStep:  3,
+			steps: []steps.Step{
+				steps.Action(successfulActionStep),
+				steps.Condition(successfulConditionStep, 30*time.Minute, true),
+				steps.AuthorizationRefreshingAction(nil, steps.Action(successfulActionStep)),
+			},
+			wantedMetrics: map[string]int64{
+				"backend.openshiftcluster.update.duration.total.seconds":                             9,
+				"backend.openshiftcluster.update.action.successfulActionStep.duration.seconds":       3,
+				"backend.openshiftcluster.update.condition.successfulConditionStep.duration.seconds": 3,
+				"backend.openshiftcluster.update.refreshing.successfulActionStep.duration.seconds":   3,
 			},
 		},
 	} {
@@ -269,10 +290,10 @@ func TestInstallationTimeMetrics(t *testing.T) {
 			m := &manager{
 				log:            log,
 				metricsEmitter: fm,
-				now:            func() time.Time { return time.Now().Add(2 * time.Second) },
+				now:            func() time.Time { return time.Now().Add(time.Duration(tt.timePerStep) * time.Second) },
 			}
 
-			err := m.runSteps(ctx, tt.steps, true)
+			err := m.runSteps(ctx, tt.steps, tt.metricsTopic)
 			if err != nil {
 				if len(fm.Metrics) != 0 {
 					t.Error("fake metrics obj should be empty when run steps failed")
@@ -282,14 +303,74 @@ func TestInstallationTimeMetrics(t *testing.T) {
 					for k, v := range tt.wantedMetrics {
 						time, ok := fm.Metrics[k]
 						if !ok {
-							t.Errorf("unexpected metrics topic: %s", k)
+							t.Errorf("unexpected metrics key: %s", k)
 						}
 						if time != v {
-							t.Errorf("incorrect fake metrics obj, want: %d, got: %d", v, time)
+							t.Errorf("incorrect fake metrics value, want: %d, got: %d", v, time)
 						}
 					}
 				}
 			}
 		})
+	}
+}
+
+func TestRunHiveInstallerSetsCreatedByHiveFieldToTrueInClusterDoc(t *testing.T) {
+	ctx := context.Background()
+	key := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1"
+
+	openShiftClustersDatabase, _ := testdatabase.NewFakeOpenShiftClusters()
+	fixture := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClustersDatabase)
+	doc := &api.OpenShiftClusterDocument{
+		Key: strings.ToLower(key),
+		OpenShiftCluster: &api.OpenShiftCluster{
+			ID: key,
+			Properties: api.OpenShiftClusterProperties{
+				ProvisioningState: api.ProvisioningStateCreating,
+			},
+		},
+	}
+
+	fixture.AddOpenShiftClusterDocuments(doc)
+	err := fixture.Create()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dequeuedDoc, err := openShiftClustersDatabase.Dequeue(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	hiveClusterManagerMock := mock_hive.NewMockClusterManager(controller)
+	hiveClusterManagerMock.EXPECT().Install(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
+
+	m := &manager{
+		doc: dequeuedDoc,
+		db:  openShiftClustersDatabase,
+		openShiftClusterDocumentVersioner: &FakeOpenShiftClusterDocumentVersionerService{
+			expectedOpenShiftVersion: nil,
+			expectedError:            nil,
+		},
+		hiveClusterManager: hiveClusterManagerMock,
+	}
+
+	err = m.runHiveInstaller(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	updatedDoc, err := openShiftClustersDatabase.Get(ctx, strings.ToLower(key))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := true
+	got := updatedDoc.OpenShiftCluster.Properties.HiveProfile.CreatedByHive
+	if got != expected {
+		t.Fatalf("expected updatedDoc.OpenShiftCluster.Properties.HiveProfile.CreatedByHive set to %v, but got %v", expected, got)
 	}
 }

@@ -8,15 +8,14 @@ import (
 	"regexp"
 
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
-	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
@@ -27,42 +26,44 @@ const (
 type MachineConfigReconciler struct {
 	log *logrus.Entry
 
-	arocli aroclient.Interface
-	mcocli mcoclient.Interface
-	dh     dynamichelper.Interface
+	dh dynamichelper.Interface
+
+	client client.Client
 }
 
 var rxARODNS = regexp.MustCompile("^99-(.*)-aro-dns$")
 
-func NewMachineConfigReconciler(log *logrus.Entry, arocli aroclient.Interface, mcocli mcoclient.Interface, dh dynamichelper.Interface) *MachineConfigReconciler {
+func NewMachineConfigReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *MachineConfigReconciler {
 	return &MachineConfigReconciler{
 		log:    log,
-		arocli: arocli,
-		mcocli: mcocli,
 		dh:     dh,
+		client: client,
 	}
 }
 
 // Reconcile watches ARO DNS MachineConfig objects, and if any changes,
 // reconciles it
 func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	instance := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		// controller is disabled
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
+	r.log.Debug("running")
 	m := rxARODNS.FindStringSubmatch(request.Name)
 	if m == nil {
 		return reconcile.Result{}, nil
 	}
 	role := m[1]
 
-	_, err = r.mcocli.MachineconfigurationV1().MachineConfigPools().Get(ctx, role, metav1.GetOptions{})
+	mcp := &mcv1.MachineConfigPool{}
+	err = r.client.Get(ctx, types.NamespacedName{Name: role}, mcp)
 	if kerrors.IsNotFound(err) {
 		return reconcile.Result{}, nil
 	}
@@ -71,7 +72,7 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		return reconcile.Result{}, err
 	}
 
-	err = reconcileMachineConfigs(ctx, r.arocli, r.dh, role)
+	err = reconcileMachineConfigs(ctx, instance, r.dh, role)
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err

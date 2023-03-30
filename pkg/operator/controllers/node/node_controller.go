@@ -11,13 +11,14 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/kubectl/pkg/drain"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 )
 
@@ -32,30 +33,34 @@ const (
 type Reconciler struct {
 	log *logrus.Entry
 
-	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
+
+	client client.Client
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, kubernetescli kubernetes.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface) *Reconciler {
 	return &Reconciler{
 		log:           log,
-		arocli:        arocli,
 		kubernetescli: kubernetescli,
+		client:        client,
 	}
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	instance := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		// controller is disabled
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
-	node, err := r.kubernetescli.CoreV1().Nodes().Get(ctx, request.Name, metav1.GetOptions{})
+	r.log.Debug("running")
+	node := &corev1.Node{}
+	err = r.client.Get(ctx, types.NamespacedName{Name: request.Name}, node)
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err
@@ -76,7 +81,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 		delete(node.Annotations, annotationDrainStartTime)
 
-		_, err = r.kubernetescli.CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{})
+		err = r.client.Update(ctx, node)
 		if err != nil {
 			r.log.Error(err)
 		}
@@ -90,7 +95,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		t = time.Now().UTC()
 		setAnnotation(&node.ObjectMeta, annotationDrainStartTime, t.Format(time.RFC3339))
 
-		node, err = r.kubernetescli.CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{})
+		err = r.client.Update(ctx, node)
 		if err != nil {
 			r.log.Error(err)
 			return reconcile.Result{}, err
@@ -127,7 +132,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// ensure our annotation is not set and return
 	delete(node.Annotations, annotationDrainStartTime)
 
-	_, err = r.kubernetescli.CoreV1().Nodes().Update(ctx, node, metav1.UpdateOptions{})
+	err = r.client.Update(ctx, node)
 	if err != nil {
 		r.log.Error(err)
 	}

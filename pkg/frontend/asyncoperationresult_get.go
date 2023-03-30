@@ -9,7 +9,7 @@ import (
 	"net/http"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -20,18 +20,17 @@ import (
 func (f *frontend) getAsyncOperationResult(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
-	vars := mux.Vars(r)
 
 	header := http.Header{}
-	b, err := f._getAsyncOperationResult(ctx, r, header, f.apis[vars["api-version"]].OpenShiftClusterConverter)
+	b, err := f._getAsyncOperationResult(ctx, r, header, f.apis[r.URL.Query().Get(api.APIVersionKey)].OpenShiftClusterConverter)
 
 	reply(log, w, header, b, err)
 }
 
 func (f *frontend) _getAsyncOperationResult(ctx context.Context, r *http.Request, header http.Header, converter api.OpenShiftClusterConverter) ([]byte, error) {
-	vars := mux.Vars(r)
-
-	asyncdoc, err := f.dbAsyncOperations.Get(ctx, vars["operationId"])
+	operationId := chi.URLParam(r, "operationId")
+	subscriptionId := chi.URLParam(r, "subscriptionId")
+	asyncdoc, err := f.dbAsyncOperations.Get(ctx, operationId)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The entity was not found.")
@@ -43,7 +42,7 @@ func (f *frontend) _getAsyncOperationResult(ctx context.Context, r *http.Request
 	switch {
 	case err != nil:
 		return nil, err
-	case resource.SubscriptionID != vars["subscriptionId"]:
+	case resource.SubscriptionID != subscriptionId:
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The entity was not found.")
 	}
 
@@ -54,7 +53,7 @@ func (f *frontend) _getAsyncOperationResult(ctx context.Context, r *http.Request
 
 	// don't give away the final operation status until it's committed to the
 	// database
-	if doc != nil && doc.AsyncOperationID == vars["operationId"] {
+	if doc != nil && doc.AsyncOperationID == operationId {
 		header["Location"] = r.Header["Referer"]
 		return nil, statusCodeError(http.StatusAccepted)
 	}

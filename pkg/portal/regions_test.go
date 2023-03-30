@@ -40,7 +40,7 @@ func TestRegionListPublic(t *testing.T) {
 	}
 
 	aadAuthenticatedRouter := mux.NewRouter()
-	p.aadAuthenticatedRoutes(aadAuthenticatedRouter)
+	p.aadAuthenticatedRoutes(aadAuthenticatedRouter, nil, nil, nil)
 	w := httptest.NewRecorder()
 	aadAuthenticatedRouter.ServeHTTP(w, req)
 
@@ -153,6 +153,10 @@ func TestRegionListPublic(t *testing.T) {
 				URL:  "https://norwayeast.admin.aro.azure.com",
 			},
 			{
+				Name: "qatar",
+				URL:  "https://qatar.admin.aro.azure.com",
+			},
+			{
 				Name: "southafricanorth",
 				URL:  "https://southafricanorth.admin.aro.azure.com",
 			},
@@ -247,7 +251,7 @@ func TestRegionListFF(t *testing.T) {
 	}
 
 	aadAuthenticatedRouter := mux.NewRouter()
-	p.aadAuthenticatedRoutes(aadAuthenticatedRouter)
+	p.aadAuthenticatedRoutes(aadAuthenticatedRouter, nil, nil, nil)
 	w := httptest.NewRecorder()
 	aadAuthenticatedRouter.ServeHTTP(w, req)
 

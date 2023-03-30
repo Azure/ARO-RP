@@ -15,6 +15,7 @@ func validOpenShiftClusterDocument() *OpenShiftClusterDocument {
 			Properties: OpenShiftClusterProperties{
 				NetworkProfile: NetworkProfile{
 					SoftwareDefinedNetwork: SoftwareDefinedNetworkOpenShiftSDN,
+					OutboundType:           OutboundTypeLoadbalancer,
 				},
 				MasterProfile: MasterProfile{
 					EncryptionAtHost: EncryptionAtHostDisabled,
@@ -44,26 +45,6 @@ func TestSetDefaults(t *testing.T) {
 			name: "no defaults needed",
 			want: func() *OpenShiftClusterDocument {
 				return validOpenShiftClusterDocument()
-			},
-		},
-		{
-			name: "default SDN",
-			want: func() *OpenShiftClusterDocument {
-				return validOpenShiftClusterDocument()
-			},
-			input: func(base *OpenShiftClusterDocument) {
-				base.OpenShiftCluster.Properties.NetworkProfile.SoftwareDefinedNetwork = ""
-			},
-		},
-		{
-			name: "preserve SDN",
-			want: func() *OpenShiftClusterDocument {
-				doc := validOpenShiftClusterDocument()
-				doc.OpenShiftCluster.Properties.NetworkProfile.SoftwareDefinedNetwork = SoftwareDefinedNetworkOVNKubernetes
-				return doc
-			},
-			input: func(base *OpenShiftClusterDocument) {
-				base.OpenShiftCluster.Properties.NetworkProfile.SoftwareDefinedNetwork = SoftwareDefinedNetworkOVNKubernetes
 			},
 		},
 		{

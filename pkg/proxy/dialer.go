@@ -119,11 +119,15 @@ func NewDialer(isLocalDevelopmentMode bool) (Dialer, error) {
 
 	d := &dev{}
 
-	// This assumes we are running from an ARO-RP checkout in development
-	_, curmod, _, _ := runtime.Caller(0)
-	basepath, err := filepath.Abs(filepath.Join(filepath.Dir(curmod), "../.."))
-	if err != nil {
-		return nil, err
+	basepath := os.Getenv("ARO_CHECKOUT_PATH")
+	if basepath == "" {
+		// This assumes we are running from an ARO-RP checkout in development
+		var err error
+		_, curmod, _, _ := runtime.Caller(0)
+		basepath, err = filepath.Abs(filepath.Join(filepath.Dir(curmod), "../.."))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	b, err := os.ReadFile(path.Join(basepath, "secrets/proxy.crt"))

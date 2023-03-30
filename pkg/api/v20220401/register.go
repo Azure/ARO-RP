@@ -31,6 +31,7 @@ func init() {
 				api.OperationOpenShiftClusterDelete,
 				api.OperationOpenShiftClusterListCredentials,
 				api.OperationOpenShiftClusterListAdminCredentials,
+				api.OperationOpenShiftClusterGetDetectors,
 			},
 		},
 	}

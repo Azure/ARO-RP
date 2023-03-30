@@ -65,34 +65,6 @@ func (mr *MockDynamicMockRecorder) ValidateEncryptionAtHost(arg0, arg1 interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateEncryptionAtHost", reflect.TypeOf((*MockDynamic)(nil).ValidateEncryptionAtHost), arg0, arg1)
 }
 
-// ValidateProviders mocks base method.
-func (m *MockDynamic) ValidateProviders(arg0 context.Context) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateProviders", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ValidateProviders indicates an expected call of ValidateProviders.
-func (mr *MockDynamicMockRecorder) ValidateProviders(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateProviders", reflect.TypeOf((*MockDynamic)(nil).ValidateProviders), arg0)
-}
-
-// ValidateQuota mocks base method.
-func (m *MockDynamic) ValidateQuota(arg0 context.Context, arg1 *api.OpenShiftCluster) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateQuota", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ValidateQuota indicates an expected call of ValidateQuota.
-func (mr *MockDynamicMockRecorder) ValidateQuota(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateQuota", reflect.TypeOf((*MockDynamic)(nil).ValidateQuota), arg0, arg1)
-}
-
 // ValidateServicePrincipal mocks base method.
 func (m *MockDynamic) ValidateServicePrincipal(arg0 context.Context, arg1, arg2, arg3 string) error {
 	m.ctrl.T.Helper()
@@ -119,20 +91,6 @@ func (m *MockDynamic) ValidateSubnets(arg0 context.Context, arg1 *api.OpenShiftC
 func (mr *MockDynamicMockRecorder) ValidateSubnets(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateSubnets", reflect.TypeOf((*MockDynamic)(nil).ValidateSubnets), arg0, arg1, arg2)
-}
-
-// ValidateVMSku mocks base method.
-func (m *MockDynamic) ValidateVMSku(arg0 context.Context, arg1, arg2 string, arg3 *api.OpenShiftCluster) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateVMSku", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ValidateVMSku indicates an expected call of ValidateVMSku.
-func (mr *MockDynamicMockRecorder) ValidateVMSku(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateVMSku", reflect.TypeOf((*MockDynamic)(nil).ValidateVMSku), arg0, arg1, arg2, arg3)
 }
 
 // ValidateVnet mocks base method.

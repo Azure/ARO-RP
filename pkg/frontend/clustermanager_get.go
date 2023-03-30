@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -19,28 +19,31 @@ import (
 func (f *frontend) getClusterManagerConfiguration(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
-	vars := mux.Vars(r)
+
+	ocmResourceType := chi.URLParam(r, "ocmResourceType")
 
 	var (
 		b   []byte
 		err error
 	)
 
-	err = f.validateOcmResourceType(vars)
+	apiVersion := r.URL.Query().Get(api.APIVersionKey)
+
+	err = f.validateOcmResourceType(apiVersion, ocmResourceType)
 	if err != nil {
 		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", err.Error())
 		return
 	}
 
-	switch vars["ocmResourceType"] {
+	switch ocmResourceType {
 	case "syncset":
-		b, err = f._getSyncSetConfiguration(ctx, log, r, f.apis[vars["api-version"]].SyncSetConverter)
+		b, err = f._getSyncSetConfiguration(ctx, log, r, f.apis[apiVersion].SyncSetConverter)
 	case "machinepool":
-		b, err = f._getMachinePoolConfiguration(ctx, log, r, f.apis[vars["api-version"]].MachinePoolConverter)
+		b, err = f._getMachinePoolConfiguration(ctx, log, r, f.apis[apiVersion].MachinePoolConverter)
 	case "syncidentityprovider":
-		b, err = f._getSyncIdentityProviderConfiguration(ctx, log, r, f.apis[vars["api-version"]].SyncIdentityProviderConverter)
+		b, err = f._getSyncIdentityProviderConfiguration(ctx, log, r, f.apis[apiVersion].SyncIdentityProviderConverter)
 	case "secret":
-		b, err = f._getSecretConfiguration(ctx, log, r, f.apis[vars["api-version"]].SecretConverter)
+		b, err = f._getSecretConfiguration(ctx, log, r, f.apis[apiVersion].SecretConverter)
 	default:
 		return
 	}
@@ -49,9 +52,8 @@ func (f *frontend) getClusterManagerConfiguration(w http.ResponseWriter, r *http
 }
 
 func (f *frontend) _getSyncSetConfiguration(ctx context.Context, log *logrus.Entry, r *http.Request, converter api.SyncSetConverter) ([]byte, error) {
-	vars := mux.Vars(r)
-
-	doc, err := f.validateResourceForGet(ctx, vars, r.URL.Path, r)
+	resType, resName, ocmResType, ocmResName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "ocmResourceType"), chi.URLParam(r, "ocmResourceName"), chi.URLParam(r, "resourceGroupName")
+	doc, err := f.validateResourceForGet(ctx, resType, resName, ocmResType, ocmResName, resGroupName, r.URL.Path, r)
 	if err != nil {
 		return nil, err
 	}
@@ -61,9 +63,8 @@ func (f *frontend) _getSyncSetConfiguration(ctx context.Context, log *logrus.Ent
 }
 
 func (f *frontend) _getMachinePoolConfiguration(ctx context.Context, log *logrus.Entry, r *http.Request, converter api.MachinePoolConverter) ([]byte, error) {
-	vars := mux.Vars(r)
-
-	doc, err := f.validateResourceForGet(ctx, vars, r.URL.Path, r)
+	resType, resName, ocmResType, ocmResName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "ocmResourceType"), chi.URLParam(r, "ocmResourceName"), chi.URLParam(r, "resourceGroupName")
+	doc, err := f.validateResourceForGet(ctx, resType, resName, ocmResType, ocmResName, resGroupName, r.URL.Path, r)
 	if err != nil {
 		return nil, err
 	}
@@ -73,9 +74,8 @@ func (f *frontend) _getMachinePoolConfiguration(ctx context.Context, log *logrus
 }
 
 func (f *frontend) _getSyncIdentityProviderConfiguration(ctx context.Context, log *logrus.Entry, r *http.Request, converter api.SyncIdentityProviderConverter) ([]byte, error) {
-	vars := mux.Vars(r)
-
-	doc, err := f.validateResourceForGet(ctx, vars, r.URL.Path, r)
+	resType, resName, ocmResType, ocmResName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "ocmResourceType"), chi.URLParam(r, "ocmResourceName"), chi.URLParam(r, "resourceGroupName")
+	doc, err := f.validateResourceForGet(ctx, resType, resName, ocmResType, ocmResName, resGroupName, r.URL.Path, r)
 	if err != nil {
 		return nil, err
 	}
@@ -85,9 +85,8 @@ func (f *frontend) _getSyncIdentityProviderConfiguration(ctx context.Context, lo
 }
 
 func (f *frontend) _getSecretConfiguration(ctx context.Context, log *logrus.Entry, r *http.Request, converter api.SecretConverter) ([]byte, error) {
-	vars := mux.Vars(r)
-
-	doc, err := f.validateResourceForGet(ctx, vars, r.URL.Path, r)
+	resType, resName, ocmResType, ocmResName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "ocmResourceType"), chi.URLParam(r, "ocmResourceName"), chi.URLParam(r, "resourceGroupName")
+	doc, err := f.validateResourceForGet(ctx, resType, resName, ocmResType, ocmResName, resGroupName, r.URL.Path, r)
 	if err != nil {
 		return nil, err
 	}
@@ -96,13 +95,13 @@ func (f *frontend) _getSecretConfiguration(ctx context.Context, log *logrus.Entr
 	return json.MarshalIndent(ext, "", "    ")
 }
 
-func (f *frontend) validateResourceForGet(ctx context.Context, vars map[string]string, path string, r *http.Request) (*api.ClusterManagerConfigurationDocument, error) {
+func (f *frontend) validateResourceForGet(ctx context.Context, resType, resName, ocmResType, ocmResName, resGroupName, path string, r *http.Request) (*api.ClusterManagerConfigurationDocument, error) {
 	doc, err := f.dbClusterManagerConfiguration.Get(ctx, r.URL.Path)
 	if err != nil {
 		switch {
 		case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 			return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s/%s/%s' under resource group '%s' was not found.",
-				vars["resourceType"], vars["resourceName"], vars["ocmResourceType"], vars["ocmResourceName"], vars["resourceGroupName"])
+				resType, resName, ocmResType, ocmResName, resGroupName)
 		default:
 			return nil, err
 		}

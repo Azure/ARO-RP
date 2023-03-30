@@ -80,7 +80,7 @@ func TestValidateServicePrincipal(t *testing.T) {
 				claims:        `{ "Roles":["Application.ReadWrite.OwnedBy"] }`,
 				signMethod:    "fake-signing-method",
 			},
-			wantErr: "signing method (alg) is unavailable.",
+			wantErr: "400: InvalidServicePrincipalCredentials: properties.servicePrincipalProfile: signing method (alg) is unavailable.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -119,10 +119,8 @@ func createToken(tr *tokenRequirements) (*adal.ServicePrincipalToken, error) {
 		hmac.New(sha512.New, []byte(headerEnc+claimsEnc+tr.clientSecret)).Sum(nil),
 	)
 
-	tk := adal.Token{}
-
 	r := rand.New(rand.NewSource(time.Now().UnixMicro()))
-	tk = adal.Token{
+	tk := adal.Token{
 		AccessToken:  headerEnc + "." + claimsEnc + "." + signatureEnc,
 		RefreshToken: fmt.Sprintf("rand-%d", r.Int()),
 		ExpiresIn:    json.Number("300"),

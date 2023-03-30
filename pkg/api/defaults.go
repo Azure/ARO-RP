@@ -9,11 +9,6 @@ package api
 // when moving between old and new versions
 func SetDefaults(doc *OpenShiftClusterDocument) {
 	if doc.OpenShiftCluster != nil {
-		// SoftwareDefinedNetwork was introduced in 2021-09-01-preview
-		if doc.OpenShiftCluster.Properties.NetworkProfile.SoftwareDefinedNetwork == "" {
-			doc.OpenShiftCluster.Properties.NetworkProfile.SoftwareDefinedNetwork = SoftwareDefinedNetworkOpenShiftSDN
-		}
-
 		// EncryptionAtHost was introduced in 2021-09-01-preview.
 		// It can't be changed post cluster creation
 		if doc.OpenShiftCluster.Properties.MasterProfile.EncryptionAtHost == "" {
@@ -36,9 +31,15 @@ func SetDefaults(doc *OpenShiftClusterDocument) {
 				doc.OpenShiftCluster.Properties.MaintenanceTask = MaintenanceTaskEverything
 			}
 		}
+
 		// If there's no operator flags, set the default ones
 		if doc.OpenShiftCluster.Properties.OperatorFlags == nil {
 			doc.OpenShiftCluster.Properties.OperatorFlags = DefaultOperatorFlags()
+		}
+
+		// If there's no userDefinedRouting, set default one
+		if doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType == "" {
+			doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType = OutboundTypeLoadbalancer
 		}
 	}
 }
@@ -79,7 +80,7 @@ func DefaultOperatorFlags() OperatorFlags {
 		"aro.routefix.enabled":                     flagTrue,
 		"aro.storageaccounts.enabled":              flagTrue,
 		"aro.workaround.enabled":                   flagTrue,
-		"aro.autosizednodes.enable":                flagFalse,
+		"aro.autosizednodes.enabled":               flagFalse,
 		"rh.srep.muo.enabled":                      flagTrue,
 		"rh.srep.muo.managed":                      flagTrue,
 	}

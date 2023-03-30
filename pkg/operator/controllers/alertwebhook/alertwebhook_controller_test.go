@@ -8,13 +8,15 @@ import (
 	"context"
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
 var (
@@ -139,130 +141,76 @@ func TestSetAlertManagerWebhook(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
-		name       string
-		reconciler *Reconciler
-		want       []byte
+		name              string
+		alertmanagerYaml  []byte
+		controllerEnabled bool
+		want              []byte
 	}{
 		{
-			name: "old cluster, enabled",
-			reconciler: &Reconciler{
-				kubernetescli: fake.NewSimpleClientset(&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "alertmanager-main",
-						Namespace: "openshift-monitoring",
-					},
-					Data: map[string][]byte{
-						"alertmanager.yaml": initialOld,
-					},
-				}),
-				arocli: arofake.NewSimpleClientset(
-					&arov1alpha1.Cluster{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: arov1alpha1.SingletonClusterName,
-						},
-						Spec: arov1alpha1.ClusterSpec{
-							OperatorFlags: arov1alpha1.OperatorFlags{
-								controllerEnabled: "true",
-							},
-						},
-					},
-				),
-			},
-			want: wantOld,
+			name:              "old cluster, enabled",
+			alertmanagerYaml:  initialOld,
+			controllerEnabled: true,
+			want:              wantOld,
 		},
 		{
-			name: "new cluster, enabled",
-			reconciler: &Reconciler{
-				kubernetescli: fake.NewSimpleClientset(&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "alertmanager-main",
-						Namespace: "openshift-monitoring",
-					},
-					Data: map[string][]byte{
-						"alertmanager.yaml": initialNew,
-					},
-				}),
-				arocli: arofake.NewSimpleClientset(
-					&arov1alpha1.Cluster{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: arov1alpha1.SingletonClusterName,
-						},
-						Spec: arov1alpha1.ClusterSpec{
-							OperatorFlags: arov1alpha1.OperatorFlags{
-								controllerEnabled: "true",
-							},
-						},
-					},
-				),
-			},
-			want: wantNew,
+			name:              "new cluster, enabled",
+			alertmanagerYaml:  initialNew,
+			controllerEnabled: true,
+			want:              wantNew,
 		},
 		{
-			name: "old cluster, disabled",
-			reconciler: &Reconciler{
-				kubernetescli: fake.NewSimpleClientset(&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "alertmanager-main",
-						Namespace: "openshift-monitoring",
-					},
-					Data: map[string][]byte{
-						"alertmanager.yaml": initialOld,
-					},
-				}),
-				arocli: arofake.NewSimpleClientset(
-					&arov1alpha1.Cluster{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: arov1alpha1.SingletonClusterName,
-						},
-						Spec: arov1alpha1.ClusterSpec{
-							OperatorFlags: arov1alpha1.OperatorFlags{
-								controllerEnabled: "false",
-							},
-						},
-					},
-				),
-			},
-			want: initialOld,
+			name:              "old cluster, disabled",
+			alertmanagerYaml:  initialOld,
+			controllerEnabled: false,
+			want:              initialOld,
 		},
 		{
-			name: "new cluster, disabled",
-			reconciler: &Reconciler{
-				kubernetescli: fake.NewSimpleClientset(&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "alertmanager-main",
-						Namespace: "openshift-monitoring",
-					},
-					Data: map[string][]byte{
-						"alertmanager.yaml": initialNew,
-					},
-				}),
-				arocli: arofake.NewSimpleClientset(
-					&arov1alpha1.Cluster{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: arov1alpha1.SingletonClusterName,
-						},
-						Spec: arov1alpha1.ClusterSpec{
-							OperatorFlags: arov1alpha1.OperatorFlags{
-								controllerEnabled: "false",
-							},
-						},
-					},
-				),
-			},
-			want: initialNew,
+			name:              "new cluster, disabled",
+			alertmanagerYaml:  initialNew,
+			controllerEnabled: false,
+			want:              initialNew,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			i := tt.reconciler
+			instance := &arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
+				},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						controllerEnabled: "false",
+					},
+				},
+			}
 
-			_, err := i.Reconcile(ctx, ctrl.Request{})
+			if tt.controllerEnabled {
+				instance.Spec.OperatorFlags[controllerEnabled] = "true"
+			}
+
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "alertmanager-main",
+					Namespace: "openshift-monitoring",
+				},
+				Data: map[string][]byte{
+					"alertmanager.yaml": tt.alertmanagerYaml,
+				},
+			}
+
+			r := &Reconciler{
+				log:    logrus.NewEntry(logrus.StandardLogger()),
+				client: ctrlfake.NewClientBuilder().WithObjects(instance, secret).Build(),
+			}
+
+			_, err := r.Reconcile(ctx, ctrl.Request{})
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			s, err := i.kubernetescli.CoreV1().Secrets("openshift-monitoring").Get(ctx, "alertmanager-main", metav1.GetOptions{})
+			s := &corev1.Secret{}
+			err = r.client.Get(ctx, types.NamespacedName{Namespace: "openshift-monitoring", Name: "alertmanager-main"}, s)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -16,11 +16,21 @@ helps['aro create'] = """
   - name: Create a cluster.
     text: az aro create --resource-group MyResourceGroup --name MyCluster --vnet MyVnet --master-subnet MyMasterSubnet --worker-subnet MyWorkerSubnet
   - name: Create a cluster with a supported OpenShift version.
-    text: az aro create --resource-group MyResourceGroup --name MyCluster --vnet MyVnet --master-subnet MyMasterSubnet --worker-subnet MyWorkerSubnet --install-version X.Y.Z
+    text: az aro create --resource-group MyResourceGroup --name MyCluster --vnet MyVnet --master-subnet MyMasterSubnet --worker-subnet MyWorkerSubnet --version X.Y.Z
   - name: Create a cluster with 5 compute nodes and Red Hat pull secret.
     text: az aro create --resource-group MyResourceGroup --name MyCluster --vnet MyVnet --master-subnet MyMasterSubnet --worker-subnet MyWorkerSubnet --worker-count 5 --pull-secret @pullsecret.txt
   - name: Create a private cluster.
     text: az aro create --resource-group MyResourceGroup --name MyCluster --vnet MyVnet --master-subnet MyMasterSubnet --worker-subnet MyWorkerSubnet --apiserver-visibility Private --ingress-visibility Private
+"""
+
+helps['aro validate'] = """
+  type: command
+  short-summary: Validate permissions required to create a cluster.
+  examples:
+  - name: Validate permissions.
+    text: az aro validate --resource-group MyGroup --name MyName --vnet MyVnet --master-subnet MyMasterSubnet --worker-subnet MyWorkerSubnet
+  - name: Validate permissions and OpenShift version
+    text: az aro validate --resource-group MyGroup --name MyName --vnet MyVnet --master-subnet MyMasterSubnet --worker-subnet MyWorkerSubnet --version X.Y.Z
 """
 
 helps['aro list'] = """

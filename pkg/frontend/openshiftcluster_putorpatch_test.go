@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -25,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	mock_frontend "github.com/Azure/ARO-RP/pkg/util/mocks/frontend"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
@@ -112,7 +114,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							},
 							MaintenanceTask: api.MaintenanceTaskEverything,
 							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType: api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -136,7 +138,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					},
 					MaintenanceTask: admin.MaintenanceTaskEverything,
 					NetworkProfile: admin.NetworkProfile{
-						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
+						OutboundType: admin.OutboundTypeLoadbalancer,
 					},
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
@@ -200,7 +202,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType: api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -221,7 +223,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					LastProvisioningState: admin.ProvisioningStateSucceeded,
 					MaintenanceTask:       admin.MaintenanceTaskOperator,
 					NetworkProfile: admin.NetworkProfile{
-						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
+						OutboundType: admin.OutboundTypeLoadbalancer,
 					},
 					ClusterProfile: admin.ClusterProfile{
 						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
@@ -281,7 +283,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							LastProvisioningState: api.ProvisioningStateSucceeded,
 							MaintenanceTask:       api.MaintenanceTaskEverything,
 							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType: api.OutboundTypeLoadbalancer,
 							},
 							ClusterProfile: api.ClusterProfile{
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
@@ -305,7 +307,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					LastProvisioningState: admin.ProvisioningStateSucceeded,
 					MaintenanceTask:       admin.MaintenanceTaskEverything,
 					NetworkProfile: admin.NetworkProfile{
-						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
+						OutboundType: admin.OutboundTypeLoadbalancer,
 					},
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
@@ -366,7 +368,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							},
 							MaintenanceTask: api.MaintenanceTaskOperator,
 							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType: api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -390,7 +392,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					},
 					MaintenanceTask: admin.MaintenanceTaskOperator,
 					NetworkProfile: admin.NetworkProfile{
-						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
+						OutboundType: admin.OutboundTypeLoadbalancer,
 					},
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
@@ -450,7 +452,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							},
 							MaintenanceTask: api.MaintenanceTaskOperator,
 							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType: api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -474,7 +476,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					},
 					MaintenanceTask: admin.MaintenanceTaskOperator,
 					NetworkProfile: admin.NetworkProfile{
-						SoftwareDefinedNetwork: admin.SoftwareDefinedNetworkOpenShiftSDN,
+						OutboundType: admin.OutboundTypeLoadbalancer,
 					},
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
@@ -517,7 +519,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType: api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -540,7 +542,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType: api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -567,16 +569,16 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, nil, apis, &noop.Noop{}, nil, nil, nil, func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Emitter) clusterdata.OpenShiftClusterEnricher {
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, nil, apis, &noop.Noop{}, nil, nil, nil, nil, func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Emitter) clusterdata.OpenShiftClusterEnricher {
 				return ti.enricher
 			})
 			if err != nil {
 				t.Fatal(err)
 			}
-			f.(*frontend).bucketAllocator = bucket.Fixed(1)
+			f.bucketAllocator = bucket.Fixed(1)
 
 			var systemDataClusterDocEnricherCalled bool
-			f.(*frontend).systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
+			f.systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
 				systemDataClusterDocEnricherCalled = true
 			}
 
@@ -655,24 +657,27 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 	mockCurrentTime := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	type test struct {
-		name                   string
-		request                func(*v20200430.OpenShiftCluster)
-		isPatch                bool
-		fixture                func(*testdatabase.Fixture)
-		wantEnriched           []string
-		wantSystemDataEnriched bool
-		wantDocuments          func(*testdatabase.Checker)
-		wantStatusCode         int
-		wantResponse           *v20200430.OpenShiftCluster
-		wantAsync              bool
-		wantError              string
+		name                    string
+		request                 func(*v20200430.OpenShiftCluster)
+		isPatch                 bool
+		fixture                 func(*testdatabase.Fixture)
+		quotaValidatorError     error
+		skuValidatorError       error
+		providersValidatorError error
+		wantEnriched            []string
+		wantSystemDataEnriched  bool
+		wantDocuments           func(*testdatabase.Checker)
+		wantStatusCode          int
+		wantResponse            *v20200430.OpenShiftCluster
+		wantAsync               bool
+		wantError               string
 	}
 
 	for _, tt := range []*test{
 		{
 			name: "create a new cluster",
 			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Version = "4.10.20"
+				oc.Properties.ClusterProfile.Version = "4.10.40"
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -708,11 +713,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							CreatedAt:           mockCurrentTime,
 							CreatedBy:           version.GitCommit,
 							ClusterProfile: api.ClusterProfile{
-								Version:              "4.10.20",
+								Version:              "4.10.40",
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType: api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -735,10 +740,179 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				Properties: v20200430.OpenShiftClusterProperties{
 					ProvisioningState: v20200430.ProvisioningStateCreating,
 					ClusterProfile: v20200430.ClusterProfile{
-						Version: "4.10.20",
+						Version: "4.10.40",
 					},
 				},
 			},
+		},
+		{
+			name: "create a new cluster vm not supported",
+			request: func(oc *v20200430.OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Version = "4.10.20"
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+				})
+			},
+			quotaValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided VM SKU %s is not supported.", "something"),
+			wantEnriched:        []string{},
+			wantStatusCode:      http.StatusBadRequest,
+			wantError:           "400: InvalidParameter: : The provided VM SKU something is not supported.",
+		},
+		{
+			name: "create a new cluster quota fails",
+			request: func(oc *v20200430.OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Version = "4.10.20"
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+				})
+			},
+			quotaValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeQuotaExceeded, "", "Resource quota of vm exceeded. Maximum allowed: 0, Current in use: 0, Additional requested: 1."),
+			wantEnriched:        []string{},
+			wantStatusCode:      http.StatusBadRequest,
+			wantError:           "400: QuotaExceeded: : Resource quota of vm exceeded. Maximum allowed: 0, Current in use: 0, Additional requested: 1.",
+		},
+		{
+			name: "create a new cluster sku unavailable",
+			request: func(oc *v20200430.OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Version = "4.10.20"
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+				})
+			},
+			skuValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The selected SKU '%v' is unavailable in region '%v'", "Standard_Sku", "somewhere"),
+			wantEnriched:      []string{},
+			wantStatusCode:    http.StatusBadRequest,
+			wantError:         "400: InvalidParameter: : The selected SKU 'Standard_Sku' is unavailable in region 'somewhere'",
+		},
+		{
+			name: "create a new cluster sku restricted",
+			request: func(oc *v20200430.OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Version = "4.10.20"
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+				})
+			},
+			skuValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The selected SKU '%v' is restricted in region '%v' for selected subscription", "Standard_Sku", "somewhere"),
+			wantEnriched:      []string{},
+			wantStatusCode:    http.StatusBadRequest,
+			wantError:         "400: InvalidParameter: : The selected SKU 'Standard_Sku' is restricted in region 'somewhere' for selected subscription",
+		},
+
+		{
+			name: "create a new cluster Microsoft.Authorization provider not registered",
+			request: func(oc *v20200430.OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Version = "4.10.20"
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+				})
+			},
+			providersValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceProviderNotRegistered, "", "The resource provider '%s' is not registered.", "Microsoft.Authorization"),
+			wantEnriched:            []string{},
+			wantStatusCode:          http.StatusBadRequest,
+			wantError:               "400: ResourceProviderNotRegistered: : The resource provider 'Microsoft.Authorization' is not registered.",
+		},
+		{
+			name: "create a new cluster Microsoft.Compute provider not registered",
+			request: func(oc *v20200430.OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Version = "4.10.20"
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+				})
+			},
+			providersValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceProviderNotRegistered, "", "The resource provider '%s' is not registered.", "Microsoft.Compute"),
+			wantEnriched:            []string{},
+			wantStatusCode:          http.StatusBadRequest,
+			wantError:               "400: ResourceProviderNotRegistered: : The resource provider 'Microsoft.Compute' is not registered.",
+		},
+		{
+			name: "create a new cluster Microsoft.Network provider not registered",
+			request: func(oc *v20200430.OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Version = "4.10.20"
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+				})
+			},
+			providersValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceProviderNotRegistered, "", "The resource provider '%s' is not registered.", "Microsoft.Network"),
+			wantEnriched:            []string{},
+			wantStatusCode:          http.StatusBadRequest,
+			wantError:               "400: ResourceProviderNotRegistered: : The resource provider 'Microsoft.Network' is not registered.",
+		},
+		{
+			name: "create a new cluster Microsoft.Storage provider not registered",
+			request: func(oc *v20200430.OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Version = "4.10.20"
+			},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+				})
+			},
+			providersValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceProviderNotRegistered, "", "The resource provider '%s' is not registered.", "Microsoft.Storage"),
+			wantEnriched:            []string{},
+			wantStatusCode:          http.StatusBadRequest,
+			wantError:               "400: ResourceProviderNotRegistered: : The resource provider 'Microsoft.Storage' is not registered.",
 		},
 		{
 			name: "update a cluster from succeeded",
@@ -775,6 +949,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -812,6 +987,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -892,7 +1068,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType: api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -942,7 +1118,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							ProvisioningState:       api.ProvisioningStateFailed,
 							FailedProvisioningState: api.ProvisioningStateCreating,
 							NetworkProfile: api.NetworkProfile{
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType: api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -981,6 +1157,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							FailedProvisioningState: api.ProvisioningStateDeleting,
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1029,6 +1206,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1070,6 +1248,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1135,6 +1314,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1177,6 +1357,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1234,6 +1415,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1276,6 +1458,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1314,12 +1497,13 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateCreating,
 							ClusterProfile: api.ClusterProfile{
-								Version:              "4.10.20",
+								Version:              "4.10.40",
 								ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID),
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1359,11 +1543,12 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateCreating,
 							ClusterProfile: api.ClusterProfile{
-								Version:              "4.10.20",
+								Version:              "4.10.40",
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								OutboundType:           api.OutboundTypeLoadbalancer,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1387,22 +1572,37 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				WithOpenShiftVersions()
 			defer ti.done()
 
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			mockQuotaValidator := mock_frontend.NewMockQuotaValidator(controller)
+			mockQuotaValidator.EXPECT().ValidateQuota(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.quotaValidatorError).AnyTimes()
+
+			mockSkuValidator := mock_frontend.NewMockSkuValidator(controller)
+			mockSkuValidator.EXPECT().ValidateVMSku(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.skuValidatorError).AnyTimes()
+			mockProvidersValidator := mock_frontend.NewMockProvidersValidator(controller)
+			mockProvidersValidator.EXPECT().ValidateProviders(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.providersValidatorError).AnyTimes()
+
 			err := ti.buildFixtures(tt.fixture)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, ti.openShiftVersionsDatabase, apis, &noop.Noop{}, nil, nil, nil, func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Emitter) clusterdata.OpenShiftClusterEnricher {
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, ti.openShiftVersionsDatabase, apis, &noop.Noop{}, nil, nil, nil, nil, func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Emitter) clusterdata.OpenShiftClusterEnricher {
 				return ti.enricher
 			})
 			if err != nil {
 				t.Fatal(err)
 			}
-			f.(*frontend).bucketAllocator = bucket.Fixed(1)
-			f.(*frontend).now = func() time.Time { return mockCurrentTime }
+
+			f.quotaValidator = mockQuotaValidator
+			f.skuValidator = mockSkuValidator
+			f.providersValidator = mockProvidersValidator
+			f.bucketAllocator = bucket.Fixed(1)
+			f.now = func() time.Time { return mockCurrentTime }
 
 			var systemDataClusterDocEnricherCalled bool
-			f.(*frontend).systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
+			f.systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
 				systemDataClusterDocEnricherCalled = true
 			}
 
@@ -1619,9 +1819,9 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 								ClientSecret: "00000000-0000-0000-0000-000000000000",
 							},
 							NetworkProfile: api.NetworkProfile{
-								PodCIDR:                "10.0.0.0/16",
-								ServiceCIDR:            "10.1.0.0/16",
-								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
+								PodCIDR:      "10.0.0.0/16",
+								ServiceCIDR:  "10.1.0.0/16",
+								OutboundType: api.OutboundTypeLoadbalancer,
 							},
 							APIServerProfile: api.APIServerProfile{
 								Visibility: api.VisibilityPrivate,
@@ -1694,17 +1894,17 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, ti.openShiftVersionsDatabase, api.APIs, &noop.Noop{}, nil, nil, nil, func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Emitter) clusterdata.OpenShiftClusterEnricher {
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, ti.openShiftVersionsDatabase, api.APIs, &noop.Noop{}, nil, nil, nil, nil, func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Emitter) clusterdata.OpenShiftClusterEnricher {
 				return ti.enricher
 			})
 			if err != nil {
 				t.Fatal(err)
 			}
-			f.(*frontend).bucketAllocator = bucket.Fixed(1)
-			f.(*frontend).now = func() time.Time { return mockCurrentTime }
+			f.bucketAllocator = bucket.Fixed(1)
+			f.now = func() time.Time { return mockCurrentTime }
 
 			var systemDataClusterDocEnricherCalled bool
-			f.(*frontend).systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
+			f.systemDataClusterDocEnricher = func(doc *api.OpenShiftClusterDocument, systemData *api.SystemData) {
 				enrichClusterSystemData(doc, systemData)
 				systemDataClusterDocEnricherCalled = true
 			}

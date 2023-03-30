@@ -64,7 +64,7 @@ func testCordonNodeOK(ctx context.Context, nodeName string) {
 		"shouldCordon": []string{"true"},
 		"vmName":       []string{nodeName},
 	}
-	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+resourceIDFromEnv()+"/cordonnode", params, nil, nil)
+	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/cordonnode", params, true, nil, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -81,7 +81,7 @@ func testUncordonNodeOK(ctx context.Context, nodeName string) {
 		"shouldCordon": []string{"false"},
 		"vmName":       []string{nodeName},
 	}
-	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+resourceIDFromEnv()+"/cordonnode", params, nil, nil)
+	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/cordonnode", params, true, nil, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -97,7 +97,7 @@ func testDrainNodeOK(ctx context.Context, nodeName string, drainer *drain.Helper
 	params := url.Values{
 		"vmName": []string{nodeName},
 	}
-	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+resourceIDFromEnv()+"/drainnode", params, nil, nil)
+	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/drainnode", params, true, nil, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 }

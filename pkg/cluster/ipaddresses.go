@@ -33,7 +33,7 @@ func (m *manager) updateClusterData(ctx context.Context) error {
 
 	var installConfig *installconfig.InstallConfig
 	var kubeadminPassword *password.KubeadminPassword
-	err = pg.Get(&installConfig, &kubeadminPassword)
+	err = pg.Get(false, &installConfig, &kubeadminPassword)
 	if err != nil {
 		return err
 	}
@@ -42,6 +42,14 @@ func (m *manager) updateClusterData(ctx context.Context) error {
 		doc.OpenShiftCluster.Properties.APIServerProfile.URL = "https://api." + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + ":6443/"
 		doc.OpenShiftCluster.Properties.ConsoleProfile.URL = "https://console-openshift-console.apps." + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/"
 		doc.OpenShiftCluster.Properties.KubeadminPassword = api.SecureString(kubeadminPassword.Password)
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.NetworkProfile.SoftwareDefinedNetwork = api.SoftwareDefinedNetwork(installConfig.Config.NetworkType)
 		return nil
 	})
 	return err
