@@ -32,8 +32,8 @@ func (c *client) Statistics(ctx context.Context, httpClient *http.Client, promQu
 
 func (f *realFetcher) statistics(ctx context.Context, httpClient *http.Client, promQuery string, duration time.Duration, endTime time.Time, prometheusURL string) ([]Metrics, error) {
 	promConfig := prometheusAPI.Config{
-		Address: prometheusURL,
-		Client:  httpClient,
+		Address:      prometheusURL,
+		RoundTripper: httpClient.Transport,
 	}
 
 	client, err := prometheusAPI.NewClient(promConfig)

@@ -5,7 +5,6 @@ package portal
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"sort"
 	"strings"
@@ -211,15 +210,8 @@ func (p *portal) statistics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	apiVars := mux.Vars(r)
-	subscription := apiVars["subscription"]
-	resourceGroup := apiVars["resourceGroup"]
-	clusterName := apiVars["clusterName"]
 	statisticsType := apiVars["statisticsType"]
-	resourceID := strings.ToLower(
-		fmt.Sprintf(
-			"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s",
-			subscription, resourceGroup, clusterName))
-
+	resourceID := p.getResourceID(r)
 	promQuery, err := cluster.GetPromQuery(statisticsType)
 	if err != nil {
 		p.badRequest(w, err)

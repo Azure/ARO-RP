@@ -129,8 +129,7 @@ export function Statistics(props: {
             <Stack.Item  align="center" grow={1}>
               <Text> {lprops.heading} </Text> 
             </Stack.Item>
-            <Stack.Item /*align="stretch" className={classNames.iconContainer} grow={1}*/>
-
+            <Stack.Item>
               <GraphOptionsComponent duration={duration} setDuration={setDuration} endDate={endDate} setEndDate={setEndDate}/>
             </Stack.Item>  
           </Stack>

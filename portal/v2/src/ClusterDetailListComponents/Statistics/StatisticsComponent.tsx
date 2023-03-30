@@ -20,6 +20,7 @@ export function StatisticsComponent(props: {
   height: number,
   width: number,
   endDate: Date,
+  fetchStatus: string,
 }) {
   const width = props.width
   const height = props.height
@@ -70,10 +71,10 @@ export function StatisticsComponent(props: {
     DefaultPalette.themeSecondary,
     DefaultPalette.themeTertiary
   ]
-
+  
   function StatisticsHelperComponent(): JSX.Element {   
     useEffect(() => {
-      if (props.metrics.length > 0) {
+      if (props.fetchStatus === "success") {
         const newPoints: ILineChartPoints[] = []
         props.metrics.forEach((metric, i) => {          
           var dataPoints: ILineChartDataPoint[] = []
@@ -85,7 +86,6 @@ export function StatisticsComponent(props: {
             }
             dataPoints.push(data)
           })
-
           var lineChartPoint: ILineChartPoints = {
             legend: metric.Name,
             data: dataPoints,
@@ -95,14 +95,15 @@ export function StatisticsComponent(props: {
         })
         setPoints(newPoints);
       }
-    },[props.metrics])
+      (props.fetchStatus === "error") ? setSpinnerVisible(false) : setSpinnerVisible(true)
+    },[props.metrics, props.fetchStatus])
 
     useEffect(() => {   
       setData({
         chartTitle: 'Line Chart',
         lineChartData: points,
       });
-      (points.length > 0) ? setSpinnerVisible(false) : setSpinnerVisible(true)
+      (props.fetchStatus === "success") ? setSpinnerVisible(false) : setSpinnerVisible(true);
     }, [points])
     
     useEffect(() => {   

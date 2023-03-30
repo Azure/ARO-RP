@@ -27,7 +27,6 @@ export function StatisticsWrapper(props: {
   graphHeight: number,
   graphWidth: number,
 }) {
-  const [data, setData] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
   const [metrics, setMetrics] = useState<IMetrics[]>([])
   const [fetching, setFetching] = useState("")
@@ -54,7 +53,6 @@ export function StatisticsWrapper(props: {
   // can be used if we want a refresh button.
   // api/clusterdetail returns a single item.
   const updateData = (newData: any) => {    
-    setData(newData)
     const metrics: IMetrics[] = []
     newData.forEach((element: { metricname: any;
                                 metricvalue: IMetricValue[];}) => {
@@ -68,33 +66,34 @@ export function StatisticsWrapper(props: {
   }
 
   useEffect(() => {    
-    const onData = (result: AxiosResponse | null) => {
+    const onData = (result: AxiosResponse | null) => {      
       if (result?.status === 200) {        
-        updateData(result.data)
+        setFetching("success")
+        updateData(result.data)        
         setError(null)
       } else {
         setError(result)
+        setFetching("error")
       }
-      setFetching(props.currentCluster.name)
     }
     
     if (statisticsKeys.includes(props.detailPanelSelected.toLowerCase())  && 
         (fetching === "" || localDuration != props.duration || localEndDate != props.endDate) &&
         props.loaded &&
-        props.currentCluster.name != "") {  
+        props.currentCluster.name != "") {
       setLocalDuration(props.duration)
       setLocalEndDate(props.endDate)
       setFetching("FETCHING")
       FetchStatistics(props.currentCluster, props.statisticsName, props.duration, props.endDate).then(onData)      
     }
     
-  }, [data, props.loaded, props.detailPanelSelected, props.duration, props.endDate])
+  }, [props.loaded, props.detailPanelSelected, props.duration, props.endDate])
 
   return (
     <Stack>
       <Stack.Item grow>{error && errorBar()}</Stack.Item>
       <Stack>
-        <StatisticsComponent metrics={metrics}  duration={props.duration} clusterName={props.currentCluster != null ? props.currentCluster.name : ""} height={props.graphHeight} width={props.graphWidth} endDate={props.endDate}/>
+        <StatisticsComponent metrics={metrics} fetchStatus={fetching}  duration={props.duration} clusterName={props.currentCluster != null ? props.currentCluster.name : ""} height={props.graphHeight} width={props.graphWidth} endDate={props.endDate}/>
       </Stack>
     </Stack>   
   )

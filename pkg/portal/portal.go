@@ -360,17 +360,7 @@ func (p *portal) indexV2(w http.ResponseWriter, r *http.Request) {
 
 // makeFetcher creates a cluster.FetchClient suitable for use by the Portal REST API
 func (p *portal) makeFetcher(ctx context.Context, r *http.Request) (cluster.FetchClient, error) {
-	apiVars := mux.Vars(r)
-
-	subscription := apiVars["subscription"]
-	resourceGroup := apiVars["resourceGroup"]
-	clusterName := apiVars["clusterName"]
-
-	resourceID :=
-		strings.ToLower(
-			fmt.Sprintf(
-				"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s",
-				subscription, resourceGroup, clusterName))
+	resourceID := p.getResourceID(r)
 	if !validate.RxClusterID.MatchString(resourceID) {
 		return nil, fmt.Errorf("invalid resource ID")
 	}
