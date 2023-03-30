@@ -1,7 +1,9 @@
 ARG REGISTRY
 FROM ${REGISTRY}/ubi8/ubi-minimal
 RUN microdnf update && microdnf clean all
-RUN curl -o /etc/pki/ca-trust/source/anchors/AMEROOT_ameroot.crt http://crl.microsoft.com/pkiinfra/certs/AMEROOT_ameroot.crt && update-ca-trust
+# See certs/README.md
+COPY ./certs/AMEROOT_ameroot.crt /etc/pki/ca-trust/source/anchors/AMEROOT_ameroot.crt
+RUN update-ca-trust
 COPY aro e2e.test /usr/local/bin/
 ENTRYPOINT ["aro"]
 EXPOSE 2222/tcp 8080/tcp 8443/tcp 8444/tcp 8445/tcp
