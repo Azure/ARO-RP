@@ -243,6 +243,11 @@ func (m *manager) ensureTaggingPolicy(ctx context.Context) error {
 }
 
 func (m *manager) remediateTags(ctx context.Context) error {
+	// This work can just be skipped if there are no tags to add to the cluster resources.
+	if m.doc.OpenShiftCluster.Properties.ResourceTags == nil || len(m.doc.OpenShiftCluster.Properties.ResourceTags) == 0 {
+		return nil
+	}
+
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
 	resources, err := m.resources.ListByResourceGroup(ctx, resourceGroup, "", "", nil)
