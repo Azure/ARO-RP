@@ -645,6 +645,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 	ctx := context.Background()
 
+	defaultVersion := version.DefaultInstallStream.Version.String()
+
 	apis := map[string]*api.Version{
 		"2020-04-30": {
 			OpenShiftClusterConverter:            api.APIs["2020-04-30"].OpenShiftClusterConverter,
@@ -677,7 +679,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		{
 			name: "create a new cluster",
 			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Version = "4.10.40"
+				oc.Properties.ClusterProfile.Version = defaultVersion
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -713,7 +715,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							CreatedAt:           mockCurrentTime,
 							CreatedBy:           version.GitCommit,
 							ClusterProfile: api.ClusterProfile{
-								Version:              "4.10.40",
+								Version:              defaultVersion,
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
@@ -740,7 +742,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				Properties: v20200430.OpenShiftClusterProperties{
 					ProvisioningState: v20200430.ProvisioningStateCreating,
 					ClusterProfile: v20200430.ClusterProfile{
-						Version: "4.10.40",
+						Version: defaultVersion,
 					},
 				},
 			},
@@ -1497,7 +1499,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateCreating,
 							ClusterProfile: api.ClusterProfile{
-								Version:              "4.10.40",
+								Version:              defaultVersion,
 								ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID),
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
@@ -1543,7 +1545,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateCreating,
 							ClusterProfile: api.ClusterProfile{
-								Version:              "4.10.40",
+								Version:              defaultVersion,
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
