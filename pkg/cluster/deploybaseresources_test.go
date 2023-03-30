@@ -598,6 +598,29 @@ func TestRemediateTags(t *testing.T) {
 		Tags: baseTags,
 	}
 
+	azResourcesExpandedNoTags := []mgmtfeatures.GenericResourceExpanded{
+		{
+			Name: to.StringPtr("disk"),
+			ID:   to.StringPtr("disk-id"),
+		},
+		{
+			Name: to.StringPtr("lb"),
+			ID:   to.StringPtr("lb-id"),
+		},
+		{
+			Name: to.StringPtr("master-vm"),
+			ID:   to.StringPtr("master-vm-id"),
+		},
+		{
+			Name: to.StringPtr("worker-vm"),
+			ID:   to.StringPtr("worker-vm-id"),
+		},
+		{
+			Name: to.StringPtr("nsg"),
+			ID:   to.StringPtr("nsg-id"),
+		},
+	}
+
 	for _, tt := range []struct {
 		name    string
 		modify  func(*manager)
@@ -667,6 +690,31 @@ func TestRemediateTags(t *testing.T) {
 				}
 
 				resources.EXPECT().UpdateByIDAndWait(ctx, gomock.Any(), "2021-04-01", gomock.Eq(azResourceNewTags)).Return(nil).Times(len(azResourcesExpanded))
+			},
+		},
+		{
+			name: "non-empty ResourceTags in cluster doc - adding to nil Tags sets",
+			modify: func(m *manager) {
+				m.doc.OpenShiftCluster.Properties.ResourceTags = map[string]string{}
+
+				for k, v := range newTags {
+					m.doc.OpenShiftCluster.Properties.ResourceTags[k] = v
+				}
+			},
+			mocks: func(resources *mock_features.MockResourcesClient) {
+				resources.EXPECT().ListByResourceGroup(ctx, resourceGroupName, "", "", nil).Return(azResourcesExpandedNoTags, nil)
+
+				_newTags := map[string]*string{}
+
+				for k, v := range newTags {
+					_newTags[k] = to.StringPtr(v)
+				}
+
+				azResourceNewTags := mgmtfeatures.GenericResource{
+					Tags: _newTags,
+				}
+
+				resources.EXPECT().UpdateByIDAndWait(ctx, gomock.Any(), "2021-04-01", gomock.Eq(azResourceNewTags)).Return(nil).Times(5)
 			},
 		},
 	} {

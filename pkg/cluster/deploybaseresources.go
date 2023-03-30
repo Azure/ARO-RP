@@ -252,6 +252,10 @@ func (m *manager) remediateTags(ctx context.Context) error {
 	}
 
 	for _, r := range resources {
+		if r.Tags == nil {
+			r.Tags = map[string]*string{}
+		}
+
 		// Do not remove any tags, but add new tags and update values
 		// for existing tags.
 		for k, v := range m.doc.OpenShiftCluster.Properties.ResourceTags {
