@@ -5,6 +5,7 @@ package deploy
 
 import (
 	"context"
+	"encoding/json"
 	"reflect"
 	"strings"
 
@@ -156,27 +157,43 @@ func (d *deployer) deploy(ctx context.Context, rgName, deploymentName, vmssName 
 		d.log.Printf("deploying %s", deploymentName)
 		err = d.deployments.CreateOrUpdateAndWait(ctx, rgName, deploymentName, deployment)
 		serviceErr, isServiceError := err.(*azure.ServiceError)
-		if isServiceError {
-			if serviceErr.Code == "DeploymentFailed" &&
-				i < 1 {
-				// on new RP deployments, we get a spurious DeploymentFailed error
-				// from the Microsoft.Insights/metricAlerts resources indicating
-				// that rp-lb can't be found, even though it exists and the
-				// resources correctly have a dependsOn stanza referring to it.
-				// Retry once.
-				d.log.Print(err)
-				continue
-			}
-			if serviceErr.Code == "CannotModifyProbeUsedByVMSS" {
-				// removes the probe reference so we can update the lb rules
-				if retry := d.vmssCleaner.UpdateVMSSProbes(ctx, rgName); retry {
-					continue
+
+		// Check for two known errors that we know how to handle.
+		if isServiceError && serviceErr.Code == "DeploymentFailed" && len(serviceErr.Details) > 0 {
+			if outerCode, ok := serviceErr.Details[0]["code"]; ok {
+				if outerCode == "BadRequest" {
+					if message, ok := serviceErr.Details[0]["message"].(string); ok {
+						innerErr := map[string]interface{}{}
+
+						if err := json.Unmarshal([]byte(message), &innerErr); err == nil {
+							if innerCode, ok := innerErr["code"].(string); ok {
+								if innerMessage, ok := innerErr["message"].(string); ok {
+									if i < 1 && innerCode == "ResourceNotFound" && strings.Contains(innerMessage, "Microsoft.Network/loadBalancers/rp-lb") {
+										// on new RP deployments, we get a spurious DeploymentFailed error
+										// from the Microsoft.Insights/metricAlerts resources indicating
+										// that rp-lb can't be found, even though it exists and the
+										// resources correctly have a dependsOn stanza referring to it.
+										// Retry once.
+										d.log.Print(err)
+										continue
+									} else if innerCode == "CannotModifyProbeUsedByVMSS" {
+										// removes the probe reference so we can update the lb rules
+										if retry := d.vmssCleaner.UpdateVMSSProbes(ctx, rgName); retry {
+											continue
+										}
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 		}
+
+		// For errors we don't know how to handle, delete the failed VMSS and retry the deployment.
 		if err != nil && *d.config.Configuration.VMSSCleanupEnabled {
 			if retry := d.vmssCleaner.RemoveFailedNewScaleset(ctx, rgName, vmssName); retry {
-				continue // Retry deployment after deleting failed VMSS.
+				continue
 			}
 		}
 		break
