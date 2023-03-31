@@ -20,7 +20,7 @@ type MetricValue struct {
 	Value     float64   `json:"value"`
 }
 
-//This is a structure which actually carries, a particular type of metrics
+// This is a structure which actually carries, a particular type of metrics
 type Metrics struct {
 	Name  string        `json:"metricname"`
 	Value []MetricValue `json:"metricvalue"`
@@ -83,17 +83,17 @@ func GetPromQuery(statisticsType string) (string, error) {
 		"kubeapicodes":  "sum(rate(apiserver_request_total{job=\"apiserver\",code=~\"[45]..\"}[10m])) by (code, verb)",
 		"kubeapicpu":    "rate(process_cpu_seconds_total{job=\"apiserver\"}[5m])",
 		"kubeapimemory": "process_resident_memory_bytes{job=\"apiserver\"}",
-		//kube-controller-manager
+		// kube-controller-manager
 		"kubecontrollermanagercodes":  "sum(rate(rest_client_requests_total{job=\"kube-controller-manager\"}[5m])) by (code)",
 		"kubecontrollermanagercpu":    "rate(process_cpu_seconds_total{job=\"kube-controller-manager\"}[5m])",
 		"kubecontrollermanagermemory": "process_resident_memory_bytes{job=\"kube-controller-manager\"}",
-		//DNS
+		// DNS
 		"dnsresponsecodes":    "sum(rate(coredns_dns_responses_total[5m])) by (rcode)",
 		"dnserrorrate":        "sum(rate(coredns_dns_responses_total{rcode=~\"SERVFAIL|NXDOMAIN\"}[5m])) by (pod) / sum(rate(coredns_dns_responses_total{rcode=~\"NOERROR\"}[5m])) by (pod)",
 		"dnshealthcheck":      "histogram_quantile(0.99, sum(rate(coredns_health_request_duration_seconds_bucket[5m])) by (le))",
 		"dnsforwardedtraffic": "histogram_quantile(0.95, sum(rate(coredns_forward_request_duration_seconds_bucket[5m])) by (le))",
 		"dnsalltraffic":       "histogram_quantile(0.95, sum(rate(coredns_dns_request_duration_seconds_bucket[5m])) by (le))",
-		//Ingress
+		// Ingress
 		"ingresscontrollercondition": "sum(ingress_controller_conditions) by (condition)",
 	}
 	promQuery, ok := promQueries[statisticsType]
