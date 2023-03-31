@@ -38,11 +38,12 @@ type FetchClient interface {
 	ClusterOperators(context.Context) (*ClusterOperatorsInformation, error)
 	Machines(context.Context) (*MachineListInformation, error)
 	MachineSets(context.Context) (*MachineSetListInformation, error)
-	Network(context.Context, *api.OpenShiftClusterDocument) (*NetworkInformation, error)
+	Network(context.Context, *api.OpenShiftClusterDocument, ClusterDetails) (*NetworkInformation, error)
 }
 
 type AzureFetchClient interface {
 	VMAllocationStatus(context.Context) (map[string]string, error)
+	GetClusterDetails(context.Context, *api.OpenShiftClusterDocument) (ClusterDetails, error)
 }
 
 // client is an implementation of FetchClient. It currently contains a "fetcher"

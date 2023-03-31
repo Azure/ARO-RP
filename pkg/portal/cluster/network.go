@@ -10,12 +10,11 @@ import (
 	"strings"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure/auth"
 	networkv1 "github.com/openshift/api/network/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
 type ClusterNetworkEntry struct {
@@ -67,16 +66,14 @@ type NetworkInformation struct {
 }
 
 type ClusterDetails struct {
-	Auth     autorest.Authorizer `json:"auth"`
-	SubsId   string              `json:"subsID"`
-	ResGrp   string              `json:"resgrp"`
-	VNet     string              `json:"vnet"`
-	ClusName string              `json:"clusname"`
+	Auth     refreshable.Authorizer `json:"auth"`
+	SubsId   string                 `json:"subsID"`
+	ResGrp   string                 `json:"resgrp"`
+	VNet     string                 `json:"vnet"`
+	ClusName string                 `json:"clusname"`
 }
 
-func NetworkData(clusterNetworks *networkv1.ClusterNetworkList, doc *api.OpenShiftClusterDocument) *NetworkInformation {
-	clusDet := getClusterDetails(doc)
-
+func NetworkData(clusterNetworks *networkv1.ClusterNetworkList, doc *api.OpenShiftClusterDocument, clusDet ClusterDetails) *NetworkInformation {
 	// Get all subnetids for getting the subnet details
 	subnetIds := []string{doc.OpenShiftCluster.Properties.MasterProfile.SubnetID}
 	for _, wp := range doc.OpenShiftCluster.Properties.WorkerProfiles {
@@ -95,11 +92,18 @@ func NetworkData(clusterNetworks *networkv1.ClusterNetworkList, doc *api.OpenShi
 }
 
 // helper functions
-func getClusterDetails(doc *api.OpenShiftClusterDocument) (envDetails ClusterDetails) {
+
+func (c *azureClient) GetClusterDetails(ctx context.Context, doc *api.OpenShiftClusterDocument) (ClusterDetails, error) {
+	return c.fetcher.getClusterDetails(ctx, doc)
+}
+
+func (f *azureSideFetcher) getClusterDetails(ctx context.Context, doc *api.OpenShiftClusterDocument) (envDetails ClusterDetails, err error) {
 	// Get an authorizer
-	authorizer, err := auth.NewAuthorizerFromEnvironment()
+	env := f.env
+	subscriptionDoc := f.subscriptionDoc
+	aroEnvironment := env.Environment()
+	authorizer, err := env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID, aroEnvironment.ResourceManagerEndpoint)
 	if err != nil {
-		fmt.Println("Error creating Azure authorizer:", err)
 		return
 	}
 
@@ -113,7 +117,7 @@ func getClusterDetails(doc *api.OpenShiftClusterDocument) (envDetails ClusterDet
 		VNet:     resourceID[8],
 		ClusName: clusterName,
 	}
-	return envDet
+	return envDet, err
 }
 
 func getClusterNetworkList(clusterNetworks *networkv1.ClusterNetworkList) []ClusterNetwork {
@@ -234,15 +238,15 @@ func getVXLANPort(clusterNetwork networkv1.ClusterNetwork) string {
 	return VXLANPort
 }
 
-func (f *realFetcher) Network(ctx context.Context, doc *api.OpenShiftClusterDocument) (*NetworkInformation, error) {
+func (f *realFetcher) Network(ctx context.Context, doc *api.OpenShiftClusterDocument, clusDet ClusterDetails) (*NetworkInformation, error) {
 	r1, err := f.networkClient.NetworkV1().ClusterNetworks().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	return NetworkData(r1, doc), nil
+	return NetworkData(r1, doc, clusDet), nil
 }
 
-func (c *client) Network(ctx context.Context, doc *api.OpenShiftClusterDocument) (*NetworkInformation, error) {
-	return c.fetcher.Network(ctx, doc)
+func (c *client) Network(ctx context.Context, doc *api.OpenShiftClusterDocument, clusDet ClusterDetails) (*NetworkInformation, error) {
+	return c.fetcher.Network(ctx, doc, clusDet)
 }

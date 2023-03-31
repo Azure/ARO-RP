@@ -265,7 +265,19 @@ func (p *portal) network(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	network, err := fetcher.Network(ctx, doc)
+	azurefetcher, err := p.makeAzureFetcher(ctx, r)
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	clusDet, err := azurefetcher.GetClusterDetails(ctx, doc)
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	network, err := fetcher.Network(ctx, doc, clusDet)
 	if err != nil {
 		p.internalServerError(w, err)
 		return
