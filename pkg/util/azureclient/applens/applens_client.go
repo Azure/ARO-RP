@@ -108,7 +108,7 @@ func (c *Client) createRequest(
 	requestEnricher func(*policy.Request)) (*policy.Request, error) {
 	if requestOptions != nil {
 		header := requestOptions.toHeader()
-		ctx = policy.WithHTTPHeader(ctx, header)
+		ctx = runtime.WithHTTPHeader(ctx, header)
 	}
 
 	req, err := runtime.NewRequest(ctx, method, c.endpoint)

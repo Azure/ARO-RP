@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest/adal"
@@ -376,7 +377,9 @@ func (p *prod) FPNewClientCertificateCredential(tenantID string) (*azidentity.Cl
 	fpPrivateKey, fpCertificates := p.fpCertificateRefresher.GetCertificates()
 
 	credential, err := azidentity.NewClientCertificateCredential(tenantID, p.fpClientID, fpCertificates, fpPrivateKey, &azidentity.ClientCertificateCredentialOptions{
-		AuthorityHost:        p.Environment().AuthorityHost,
+		ClientOptions: azcore.ClientOptions{
+			Cloud: p.Environment().Cloud,
+		},
 		SendCertificateChain: true,
 	})
 
