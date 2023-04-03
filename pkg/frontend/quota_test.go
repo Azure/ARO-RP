@@ -37,28 +37,28 @@ func TestValidateQuota(t *testing.T) {
 								Value: to.StringPtr("cores"),
 							},
 							CurrentValue: to.Int32Ptr(100),
-							Limit:        to.Int64Ptr(218),
+							Limit:        to.Int64Ptr(212),
 						},
 						{
 							Name: &mgmtcompute.UsageName{
 								Value: to.StringPtr("virtualMachines"),
 							},
 							CurrentValue: to.Int32Ptr(100),
-							Limit:        to.Int64Ptr(113),
+							Limit:        to.Int64Ptr(114),
 						},
 						{
 							Name: &mgmtcompute.UsageName{
 								Value: to.StringPtr("standardDSv3Family"),
 							},
 							CurrentValue: to.Int32Ptr(100),
-							Limit:        to.Int64Ptr(204),
+							Limit:        to.Int64Ptr(212),
 						},
 						{
 							Name: &mgmtcompute.UsageName{
 								Value: to.StringPtr("PremiumDiskCount"),
 							},
 							CurrentValue: to.Int32Ptr(100),
-							Limit:        to.Int64Ptr(113),
+							Limit:        to.Int64Ptr(114),
 						},
 					}, nil)
 				nuc.EXPECT().
@@ -86,7 +86,7 @@ func TestValidateQuota(t *testing.T) {
 								Value: to.StringPtr("cores"),
 							},
 							CurrentValue: to.Int32Ptr(101),
-							Limit:        to.Int64Ptr(218),
+							Limit:        to.Int64Ptr(212),
 						},
 					}, nil)
 			},
@@ -103,7 +103,7 @@ func TestValidateQuota(t *testing.T) {
 								Value: to.StringPtr("virtualMachines"),
 							},
 							CurrentValue: to.Int32Ptr(101),
-							Limit:        to.Int64Ptr(119),
+							Limit:        to.Int64Ptr(114),
 						},
 					}, nil)
 			},
@@ -120,7 +120,7 @@ func TestValidateQuota(t *testing.T) {
 								Value: to.StringPtr("standardDSv3Family"),
 							},
 							CurrentValue: to.Int32Ptr(101),
-							Limit:        to.Int64Ptr(218),
+							Limit:        to.Int64Ptr(212),
 						},
 					}, nil)
 			},
@@ -137,7 +137,7 @@ func TestValidateQuota(t *testing.T) {
 								Value: to.StringPtr("PremiumDiskCount"),
 							},
 							CurrentValue: to.Int32Ptr(101),
-							Limit:        to.Int64Ptr(119),
+							Limit:        to.Int64Ptr(114),
 						},
 					}, nil)
 			},
