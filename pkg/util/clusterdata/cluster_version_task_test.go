@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
 
@@ -59,27 +60,20 @@ func TestClusterVersionEnricherTask(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			oc := &api.OpenShiftCluster{}
-			e := &clusterVersionEnricherTask{
-				log:    log,
-				client: tt.client,
-				oc:     oc,
+			dialer, _ := proxy.NewDialer(true)
+			clients := clients{config: tt.client}
+			e := clusterVersionEnricher{
+				dialer: dialer,
 			}
-			e.SetDefaults()
+			e.SetDefaults(oc)
 
-			callbacks := make(chan func())
-			errors := make(chan error)
-			go e.FetchData(context.Background(), callbacks, errors)
+			err := e.Enrich(context.Background(), log, oc, clients.k8s, clients.config, clients.machine, clients.operator)
 
-			select {
-			case f := <-callbacks:
-				f()
-				if !reflect.DeepEqual(oc, tt.wantOc) {
-					t.Error(cmp.Diff(oc, tt.wantOc))
-				}
-			case err := <-errors:
-				if tt.wantErr != err.Error() {
-					t.Error(err)
-				}
+			if (err == nil && tt.wantErr != "") || (err != nil && err.Error() != tt.wantErr) {
+				t.Errorf("wanted err to be %s but got %s", err, tt.wantErr)
+			}
+			if !reflect.DeepEqual(oc, tt.wantOc) {
+				t.Error(cmp.Diff(oc, tt.wantOc))
 			}
 		})
 	}

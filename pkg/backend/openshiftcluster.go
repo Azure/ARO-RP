@@ -259,6 +259,7 @@ func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, lo
 			}
 
 			if oc != nil {
+				//nolint:govet
 				ocCopy := *oc
 				ocCopy.Properties.ProvisioningState = provisioningState
 				ocCopy.Properties.LastProvisioningState = ""

@@ -10,52 +10,44 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
+	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/proxy"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
+
+type machineClientEnricher struct {
+	dialer proxy.Dialer
+}
 
 const (
 	workerMachineSetsNamespace = "openshift-machine-api"
 )
 
-func newWorkerProfilesEnricherTask(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster) (enricherTask, error) {
-	maocli, err := machineclient.NewForConfig(restConfig)
+func (ce machineClientEnricher) Enrich(
+	ctx context.Context,
+	log *logrus.Entry,
+	oc *api.OpenShiftCluster,
+	k8scli kubernetes.Interface,
+	configcli configclient.Interface,
+	machinecli machineclient.Interface,
+	operatorcli operatorclient.Interface,
+) error {
+	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &workerProfilesEnricherTask{
-		log:    log,
-		maocli: maocli,
-		oc:     oc,
-	}, nil
-}
-
-type workerProfilesEnricherTask struct {
-	log    *logrus.Entry
-	maocli machineclient.Interface
-	oc     *api.OpenShiftCluster
-}
-
-func (ef *workerProfilesEnricherTask) FetchData(ctx context.Context, callbacks chan<- func(), errs chan<- error) {
-	r, err := azure.ParseResourceID(ef.oc.ID)
+	machinesets, err := machinecli.MachineV1beta1().MachineSets(workerMachineSetsNamespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		ef.log.Error(err)
-		errs <- err
-		return
-	}
-
-	machinesets, err := ef.maocli.MachineV1beta1().MachineSets(workerMachineSetsNamespace).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		ef.log.Error(err)
-		errs <- err
-		return
+		return err
 	}
 
 	workerProfiles := make([]api.WorkerProfile, len(machinesets.Items))
@@ -71,18 +63,18 @@ func (ef *workerProfilesEnricherTask) FetchData(ctx context.Context, callbacks c
 		}
 
 		if machineset.Spec.Template.Spec.ProviderSpec.Value == nil {
-			ef.log.Infof("provider spec is missing in the machine set %q", machineset.Name)
+			log.Infof("provider spec is missing in the machine set %q", machineset.Name)
 			continue
 		}
 
 		obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(machineset.Spec.Template.Spec.ProviderSpec.Value.Raw, nil, nil)
 		if err != nil {
-			ef.log.Info(err)
+			log.Info(err)
 			continue
 		}
 		machineProviderSpec, ok := obj.(*machinev1beta1.AzureMachineProviderSpec)
 		if !ok {
-			ef.log.Infof("failed to read provider spec from the machine set %q: %T", machineset.Name, obj)
+			log.Infof("failed to read provider spec from the machine set %q: %T", machineset.Name, obj)
 			continue
 		}
 
@@ -109,11 +101,13 @@ func (ef *workerProfilesEnricherTask) FetchData(ctx context.Context, callbacks c
 
 	sort.Slice(workerProfiles, func(i, j int) bool { return workerProfiles[i].Name < workerProfiles[j].Name })
 
-	callbacks <- func() {
-		ef.oc.Properties.WorkerProfiles = workerProfiles
-	}
+	oc.Lock.Lock()
+	defer oc.Lock.Unlock()
+
+	oc.Properties.WorkerProfiles = workerProfiles
+	return nil
 }
 
-func (ef *workerProfilesEnricherTask) SetDefaults() {
-	ef.oc.Properties.WorkerProfiles = nil
+func (ce machineClientEnricher) SetDefaults(oc *api.OpenShiftCluster) {
+	oc.Properties.WorkerProfiles = nil
 }

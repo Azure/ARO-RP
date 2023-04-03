@@ -152,7 +152,8 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
-	f, err := frontend.NewFrontend(ctx, audit, log.WithField("component", "frontend"), _env, dbAsyncOperations, dbClusterManagerConfiguration, dbOpenShiftClusters, dbSubscriptions, dbOpenShiftVersions, api.APIs, m, feAead, hiveClusterManager, adminactions.NewKubeActions, adminactions.NewAzureActions, clusterdata.NewBestEffortEnricher)
+	f, err := frontend.NewFrontend(ctx, audit, log.WithField("component", "frontend"), _env, dbAsyncOperations, dbClusterManagerConfiguration, dbOpenShiftClusters, dbSubscriptions, dbOpenShiftVersions, api.APIs, m, feAead, hiveClusterManager, adminactions.NewKubeActions, adminactions.NewAzureActions, clusterdata.NewParallelEnricher(m, _env))
+
 	if err != nil {
 		return err
 	}
