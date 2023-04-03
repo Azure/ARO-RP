@@ -29,7 +29,7 @@ var requiredResourceProviders = []string{
 }
 
 func (p providersValidator) ValidateProviders(ctx context.Context, azEnv *azureclient.AROEnvironment, environment env.Interface, subscriptionID, tenantID string) error {
-	fpAuthorizer, err := environment.FPAuthorizer(tenantID, environment.Environment().ResourceManagerEndpoint)
+	fpAuthorizer, err := environment.FPAuthorizer(tenantID, environment.Environment().ResourceManagerScope)
 	if err != nil {
 		return err
 	}

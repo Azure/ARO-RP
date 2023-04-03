@@ -38,7 +38,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	scopes := []string{_env.Environment().ResourceManagerEndpoint + "/.default"}
+	scopes := []string{_env.Environment().ResourceManagerScope}
 	authorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
 	accounts := storage.NewAccountsClient(_env.Environment(), subscriptionID, authorizer)

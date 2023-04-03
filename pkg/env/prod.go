@@ -126,12 +126,12 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		}
 	}
 
-	msiAuthorizer, err := p.NewMSIAuthorizer(MSIContextRP, p.Environment().ResourceManagerEndpoint+"/.default")
+	msiAuthorizer, err := p.NewMSIAuthorizer(MSIContextRP, p.Environment().ResourceManagerScope)
 	if err != nil {
 		return nil, err
 	}
 
-	msiKVAuthorizer, err := p.NewMSIAuthorizer(MSIContextRP, p.Environment().ResourceIdentifiers.KeyVault+"/.default")
+	msiKVAuthorizer, err := p.NewMSIAuthorizer(MSIContextRP, p.Environment().KeyVaultScope)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +155,7 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		return nil, err
 	}
 
-	localFPKVAuthorizer, err := p.FPAuthorizer(p.TenantID(), p.Environment().ResourceIdentifiers.KeyVault+"/.default")
+	localFPKVAuthorizer, err := p.FPAuthorizer(p.TenantID(), p.Environment().KeyVaultScope)
 	if err != nil {
 		return nil, err
 	}

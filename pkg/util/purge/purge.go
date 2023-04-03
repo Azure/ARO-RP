@@ -42,7 +42,7 @@ func NewResourceCleaner(log *logrus.Entry, env env.Core, shouldDelete checkFn, d
 		return nil, err
 	}
 
-	scopes := []string{env.Environment().ResourceManagerEndpoint + "/.default"}
+	scopes := []string{env.Environment().ResourceManagerScope}
 	authorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
 	return &ResourceCleaner{

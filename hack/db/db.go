@@ -37,10 +37,10 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	scopes := []string{_env.Environment().ResourceManagerEndpoint + "/.default"}
+	scopes := []string{_env.Environment().ResourceManagerScope}
 	authorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
-	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceIdentifiers.KeyVault+"/.default")
+	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().KeyVaultScope)
 	if err != nil {
 		return err
 	}

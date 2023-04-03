@@ -25,6 +25,11 @@ type AROEnvironment struct {
 	AuthzRemotePDPEndPoint   string
 	AzureRbacPDPEnvironment
 	Cloud cloud.Configuration
+	// Microsoft identity platform scopes used by ARO
+	// See https://learn.microsoft.com/EN-US/azure/active-directory/develop/scopes-oidc#the-default-scope
+	ResourceManagerScope      string
+	KeyVaultScope             string
+	ActiveDirectoryGraphScope string
 }
 
 // AzureRbacPDPEnvironment contains cloud specific instance of Authz RBAC PDP Remote Server
@@ -48,6 +53,9 @@ var (
 			Endpoint:   "https://%s.authorization.azure.net/providers/Microsoft.Authorization/checkAccess?api-version=2021-06-01-preview",
 			OAuthScope: "https://authorization.azure.net/.default",
 		},
+		ResourceManagerScope:      azure.PublicCloud.ResourceManagerEndpoint + "/.default",
+		KeyVaultScope:             azure.PublicCloud.ResourceIdentifiers.KeyVault + "/.default",
+		ActiveDirectoryGraphScope: azure.PublicCloud.GraphEndpoint + "/.default",
 	}
 
 	// USGovernmentCloud contains additional ARO information for the US Gov cloud environment.
@@ -64,6 +72,9 @@ var (
 			Endpoint:   "https://%s.authorization.azure.us/providers/Microsoft.Authorization/checkAccess?api-version=2021-06-01-preview",
 			OAuthScope: "https://authorization.azure.us/.default",
 		},
+		ResourceManagerScope:      azure.USGovernmentCloud.ResourceManagerEndpoint + "/.default",
+		KeyVaultScope:             azure.USGovernmentCloud.ResourceIdentifiers.KeyVault + "/.default",
+		ActiveDirectoryGraphScope: azure.USGovernmentCloud.GraphEndpoint + "/.default",
 	}
 )
 

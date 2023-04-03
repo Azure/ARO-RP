@@ -101,10 +101,10 @@ func newARMHelper(ctx context.Context, log *logrus.Entry, env Interface) (ARMHel
 		}
 	}
 
-	scopes := []string{env.Environment().ResourceManagerEndpoint + "/.default"}
+	scopes := []string{env.Environment().ResourceManagerScope}
 	armAuthorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
-	fpGraphAuthorizer, err := env.FPAuthorizer(env.TenantID(), env.Environment().GraphEndpoint+"/.default")
+	fpGraphAuthorizer, err := env.FPAuthorizer(env.TenantID(), env.Environment().ActiveDirectoryGraphScope)
 	if err != nil {
 		return nil, err
 	}

@@ -51,7 +51,7 @@ func (p *prod) populateTenantIDFromMSI(ctx context.Context) error {
 	}
 
 	tokenRequestOptions := policy.TokenRequestOptions{
-		Scopes: []string{p.Environment().ResourceManagerEndpoint + "/.default"},
+		Scopes: []string{p.Environment().ResourceManagerScope},
 	}
 	token, err := tokenCredential.GetToken(ctx, tokenRequestOptions)
 	if err != nil {
