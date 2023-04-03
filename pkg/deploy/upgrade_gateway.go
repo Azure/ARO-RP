@@ -41,7 +41,8 @@ func (d *deployer) gatewayWaitForReadiness(ctx context.Context, vmssName string)
 	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		for _, vm := range scalesetVMs {
 			r, err := d.vmssvms.GetInstanceView(ctx, d.config.GatewayResourceGroupName, vmssName, *vm.InstanceID)
-			if err != nil || *r.VMHealth.Status.Code != "HealthState/healthy" {
+			canGetVMStatus := r.VMHealth != nil && r.VMHealth.Status != nil && r.VMHealth.Status.Code != nil
+			if err != nil || canGetVMStatus && *r.VMHealth.Status.Code != "HealthState/healthy" {
 				d.log.Printf("instance %s status %s", *vm.InstanceID, *r.VMHealth.Status.Code)
 				return false, nil
 			}
