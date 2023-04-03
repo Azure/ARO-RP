@@ -166,7 +166,7 @@ func (d *deployer) deploy(ctx context.Context, rgName, deploymentName, vmssName 
 			if outerCodeOk && messageOk && outerCode == "BadRequest" {
 				innerErr := map[string]interface{}{}
 
-				if err := json.Unmarshal([]byte(message), &innerErr); err == nil {
+				if jsonErr := json.Unmarshal([]byte(message), &innerErr); jsonErr == nil {
 					innerCode, innerCodeOk := innerErr["code"].(string)
 					innerMessage, innerMessageOk := innerErr["message"].(string)
 
