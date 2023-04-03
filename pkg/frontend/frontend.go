@@ -80,7 +80,6 @@ type frontend struct {
 	providersValidator ProvidersValidator
 
 	clusterEnricher clusterdata.BestEffortEnricher
-	adminAction     adminactions.AzureActions
 
 	l net.Listener
 	s *http.Server
