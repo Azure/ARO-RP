@@ -1,11 +1,15 @@
 import { useState, useEffect } from "react"
-import { AxiosResponse } from 'axios';
+import { AxiosResponse } from "axios"
 import { ICluster } from "../../App"
-import { StatisticsComponent } from './StatisticsComponent';
-import { FetchStatistics } from '../../Request';
-import { apiStatisticsKey, dnsStatisticsKey, ingressStatisticsKey, kcmStatisticsKey } from "../../ClusterDetail";
-import { IMessageBarStyles, MessageBar, MessageBarType, Stack } from '@fluentui/react';
-
+import { StatisticsComponent } from "./StatisticsComponent"
+import { fetchStatistics } from "../../Request"
+import {
+  apiStatisticsKey,
+  dnsStatisticsKey,
+  ingressStatisticsKey,
+  kcmStatisticsKey,
+} from "../../ClusterDetail"
+import { IMessageBarStyles, MessageBar, MessageBarType, Stack } from "@fluentui/react"
 
 export interface IMetricValue {
   timestamp: Date
@@ -18,14 +22,14 @@ export interface IMetrics {
 }
 
 export function StatisticsWrapper(props: {
-  currentCluster: ICluster,
-  detailPanelSelected: string,
-  loaded: boolean,
-  statisticsName: string,
-  duration: string,
-  endDate: Date,
-  graphHeight: number,
-  graphWidth: number,
+  currentCluster: ICluster
+  detailPanelSelected: string
+  loaded: boolean
+  statisticsName: string
+  duration: string
+  endDate: Date
+  graphHeight: number
+  graphWidth: number
 }) {
   const [error, setError] = useState<AxiosResponse | null>(null)
   const [metrics, setMetrics] = useState<IMetrics[]>([])
@@ -33,8 +37,13 @@ export function StatisticsWrapper(props: {
   const [localDuration, setLocalDuration] = useState(props.duration)
   const [localEndDate, setLocalEndDate] = useState(props.endDate)
   const errorBarStyles: Partial<IMessageBarStyles> = { root: { marginBottom: 15 } }
-  const statisticsKeys = [apiStatisticsKey, dnsStatisticsKey, ingressStatisticsKey, kcmStatisticsKey]
-  
+  const statisticsKeys = [
+    apiStatisticsKey,
+    dnsStatisticsKey,
+    ingressStatisticsKey,
+    kcmStatisticsKey,
+  ]
+
   const errorBar = (): any => {
     return (
       <MessageBar
@@ -42,9 +51,8 @@ export function StatisticsWrapper(props: {
         isMultiline={false}
         onDismiss={() => setError(null)}
         dismissButtonAriaLabel="Close"
-        styles={errorBarStyles}
-      >
-      {error?.statusText}
+        styles={errorBarStyles}>
+        {error?.statusText}
       </MessageBar>
     )
   }
@@ -52,49 +60,62 @@ export function StatisticsWrapper(props: {
   // updateData - updates the state of the component
   // can be used if we want a refresh button.
   // api/clusterdetail returns a single item.
-  const updateData = (newData: any) => {    
+  const updateData = (newData: any) => {
     const metrics: IMetrics[] = []
-    newData.forEach((element: { metricname: any;
-                                metricvalue: IMetricValue[];}) => {
+    newData.forEach((element: { metricname: any; metricvalue: IMetricValue[] }) => {
       const metric: IMetrics = {
         Name: element.metricname,
         MetricValue: element.metricvalue,
       }
       metrics.push(metric)
-    });
-    setMetrics(metrics)   
+    })
+    setMetrics(metrics)
   }
 
-  useEffect(() => {    
-    const onData = (result: AxiosResponse | null) => {      
-      if (result?.status === 200) {        
+  useEffect(() => {
+    const onData = (result: AxiosResponse | null) => {
+      if (result?.status === 200) {
         setFetching("success")
-        updateData(result.data)        
+        updateData(result.data)
         setError(null)
       } else {
         setError(result)
         setFetching("error")
       }
     }
-    
-    if (statisticsKeys.includes(props.detailPanelSelected.toLowerCase())  && 
-        (fetching === "" || localDuration != props.duration || localEndDate != props.endDate) &&
-        props.loaded &&
-        props.currentCluster.name != "") {
+
+    if (
+      statisticsKeys.includes(props.detailPanelSelected.toLowerCase()) &&
+      (fetching === "" || localDuration != props.duration || localEndDate != props.endDate) &&
+      props.loaded &&
+      props.currentCluster.name != ""
+    ) {
       setLocalDuration(props.duration)
       setLocalEndDate(props.endDate)
       setFetching("FETCHING")
-      FetchStatistics(props.currentCluster, props.statisticsName, props.duration, props.endDate).then(onData)      
+      fetchStatistics(
+        props.currentCluster,
+        props.statisticsName,
+        props.duration,
+        props.endDate
+      ).then(onData)
     }
-    
   }, [props.loaded, props.detailPanelSelected, props.duration, props.endDate])
 
   return (
     <Stack>
       <Stack.Item grow>{error && errorBar()}</Stack.Item>
       <Stack>
-        <StatisticsComponent metrics={metrics} fetchStatus={fetching}  duration={props.duration} clusterName={props.currentCluster != null ? props.currentCluster.name : ""} height={props.graphHeight} width={props.graphWidth} endDate={props.endDate}/>
+        <StatisticsComponent
+          metrics={metrics}
+          fetchStatus={fetching}
+          duration={props.duration}
+          clusterName={props.currentCluster != null ? props.currentCluster.name : ""}
+          height={props.graphHeight}
+          width={props.graphWidth}
+          endDate={props.endDate}
+        />
       </Stack>
-    </Stack>   
+    </Stack>
   )
 }

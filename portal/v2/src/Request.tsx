@@ -1,6 +1,6 @@
 import axios, { AxiosResponse } from "axios"
 import { ICluster } from "./App"
-import {convertTimeToHours} from "./ClusterDetailListComponents/Statistics/GraphOptionsComponent"
+import { convertTimeToHours } from "./ClusterDetailListComponents/Statistics/GraphOptionsComponent"
 
 const OnError = (err: AxiosResponse): AxiosResponse | null => {
   if (err.status === 403) {
@@ -11,7 +11,7 @@ const OnError = (err: AxiosResponse): AxiosResponse | null => {
   }
 }
 
-export const FetchClusters = async (): Promise<AxiosResponse | null> => {
+export const fetchClusters = async (): Promise<AxiosResponse | null> => {
   try {
     const result = await axios("/api/clusters")
     return result
@@ -21,7 +21,7 @@ export const FetchClusters = async (): Promise<AxiosResponse | null> => {
   }
 }
 
-export const FetchClusterInfo = async (cluster: ICluster): Promise<AxiosResponse | null> => {
+export const fetchClusterInfo = async (cluster: ICluster): Promise<AxiosResponse | null> => {
   try {
     const result = await axios(
       "/api/" + cluster.subscription + "/" + cluster.resourceGroup + "/" + cluster.name
@@ -33,7 +33,7 @@ export const FetchClusterInfo = async (cluster: ICluster): Promise<AxiosResponse
   }
 }
 
-export const FetchInfo = async (): Promise<AxiosResponse | null> => {
+export const fetchInfo = async (): Promise<AxiosResponse | null> => {
   try {
     const result = await axios("/api/info")
     return result
@@ -43,10 +43,11 @@ export const FetchInfo = async (): Promise<AxiosResponse | null> => {
   }
 }
 
-export const FetchNodes = async (cluster: ICluster): Promise<AxiosResponse | null> => {
+export const fetchNodes = async (cluster: ICluster): Promise<AxiosResponse | null> => {
   try {
     const result = await axios(
-      "/api/" + cluster.subscription + "/" + cluster.resourceGroup + "/" + cluster.name + "/nodes")
+      "/api/" + cluster.subscription + "/" + cluster.resourceGroup + "/" + cluster.name + "/nodes"
+    )
     return result
   } catch (e: any) {
     const err = e.response as AxiosResponse
@@ -54,10 +55,17 @@ export const FetchNodes = async (cluster: ICluster): Promise<AxiosResponse | nul
   }
 }
 
-export const FetchMachines = async (cluster: ICluster): Promise<AxiosResponse | null> => {
+export const fetchMachines = async (cluster: ICluster): Promise<AxiosResponse | null> => {
   try {
     const result = await axios(
-      "/api/" + cluster.subscription + "/" + cluster.resourceGroup + "/" + cluster.name + "/machines")
+      "/api/" +
+        cluster.subscription +
+        "/" +
+        cluster.resourceGroup +
+        "/" +
+        cluster.name +
+        "/machines"
+    )
     return result
   } catch (e: any) {
     const err = e.response as AxiosResponse
@@ -65,10 +73,17 @@ export const FetchMachines = async (cluster: ICluster): Promise<AxiosResponse | 
   }
 }
 
-export const FetchMachineSets = async (cluster: ICluster): Promise<AxiosResponse | null> => {
+export const fetchMachineSets = async (cluster: ICluster): Promise<AxiosResponse | null> => {
   try {
     const result = await axios(
-      "/api/" + cluster.subscription + "/" + cluster.resourceGroup + "/" + cluster.name + "/machine-sets")
+      "/api/" +
+        cluster.subscription +
+        "/" +
+        cluster.resourceGroup +
+        "/" +
+        cluster.name +
+        "/machine-sets"
+    )
     return result
   } catch (e: any) {
     const err = e.response as AxiosResponse
@@ -76,7 +91,7 @@ export const FetchMachineSets = async (cluster: ICluster): Promise<AxiosResponse
   }
 }
 
-export const FetchRegions = async (): Promise<AxiosResponse | null> => {
+export const fetchRegions = async (): Promise<AxiosResponse | null> => {
   try {
     const result = await axios("/api/regions")
     return result
@@ -88,7 +103,7 @@ export const FetchRegions = async (): Promise<AxiosResponse | null> => {
 
 export const ProcessLogOut = async (): Promise<any> => {
   try {
-    const result = await axios({method: "POST", url: "/api/logout"})
+    const result = await axios({ method: "POST", url: "/api/logout" })
     return result
   } catch (e: any) {
     const err = e.response as AxiosResponse
@@ -116,12 +131,18 @@ export const RequestKubeconfig = async (
   }
 }
 
-export const FetchStatistics = async (cluster: ICluster, statisticsName: string, duration: string, endDate: Date): Promise<AxiosResponse | null> => {
+export const fetchStatistics = async (
+  cluster: ICluster,
+  statisticsName: string,
+  duration: string,
+  endDate: Date
+): Promise<AxiosResponse | null> => {
   duration = convertTimeToHours(duration)
   let endDateJSON = endDate.toJSON()
   try {
     const result = await axios(
-      `/api/${cluster.subscription}/${cluster.resourceGroup}/${cluster.name}/statistics/${statisticsName}?duration=${duration}&endtime=${endDateJSON}`)
+      `/api/${cluster.subscription}/${cluster.resourceGroup}/${cluster.name}/statistics/${statisticsName}?duration=${duration}&endtime=${endDateJSON}`
+    )
     return result
   } catch (e: any) {
     const err = e.response as AxiosResponse

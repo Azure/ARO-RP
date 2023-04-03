@@ -211,7 +211,10 @@ func (p *portal) statistics(w http.ResponseWriter, r *http.Request) {
 	}
 	apiVars := mux.Vars(r)
 	statisticsType := apiVars["statisticsType"]
-	resourceID := p.getResourceID(r)
+	subscriptionID := apiVars["subscription"]
+	resourceGroup := apiVars["resourceGroup"]
+	clusterName := apiVars["clusterName"]
+	resourceID := p.getResourceID(subscriptionID, resourceGroup, clusterName)
 	promQuery, err := cluster.GetPromQuery(statisticsType)
 	if err != nil {
 		p.badRequest(w, err)

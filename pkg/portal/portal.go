@@ -360,7 +360,11 @@ func (p *portal) indexV2(w http.ResponseWriter, r *http.Request) {
 
 // makeFetcher creates a cluster.FetchClient suitable for use by the Portal REST API
 func (p *portal) makeFetcher(ctx context.Context, r *http.Request) (cluster.FetchClient, error) {
-	resourceID := p.getResourceID(r)
+	apiVars := mux.Vars(r)
+	subscriptionID := apiVars["subscription"]
+	resourceGroup := apiVars["resourceGroup"]
+	clusterName := apiVars["clusterName"]
+	resourceID := p.getResourceID(subscriptionID, resourceGroup, clusterName)
 	if !validate.RxClusterID.MatchString(resourceID) {
 		return nil, fmt.Errorf("invalid resource ID")
 	}
@@ -397,6 +401,13 @@ func (p *portal) serve(path string) func(w http.ResponseWriter, r *http.Request)
 	}
 }
 
+func (p *portal) getResourceID(subscriptionID, resourceGroup, clusterName string) string {
+	return strings.ToLower(
+		fmt.Sprintf(
+			"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s",
+			subscriptionID, resourceGroup, clusterName))
+}
+
 func (p *portal) internalServerError(w http.ResponseWriter, err error) {
 	p.log.Warn(err)
 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -404,5 +415,6 @@ func (p *portal) internalServerError(w http.ResponseWriter, err error) {
 
 func (p *portal) badRequest(w http.ResponseWriter, err error) {
 	p.log.Warn(err)
+	p.log.Debug(err)
 	http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 }

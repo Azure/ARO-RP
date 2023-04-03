@@ -38,7 +38,7 @@ func (p *portal) clusterInfo(w http.ResponseWriter, r *http.Request) {
 	subscription := apiVars["subscription"]
 	resourceGroup := apiVars["resourceGroup"]
 	clusterName := apiVars["clusterName"]
-	resourceId := p.getResourceID(r)
+	resourceId := p.getResourceID(subscription, resourceGroup, clusterName)
 
 	doc, err := p.dbOpenShiftClusters.Get(ctx, resourceId)
 	if err != nil {
