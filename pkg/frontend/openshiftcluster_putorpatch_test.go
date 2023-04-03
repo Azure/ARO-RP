@@ -23,6 +23,7 @@ import (
 	mock_frontend "github.com/Azure/ARO-RP/pkg/util/mocks/frontend"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+
 	"github.com/golang/mock/gomock"
 )
 
