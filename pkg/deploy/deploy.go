@@ -80,10 +80,10 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 		return nil, err
 	}
 
-	scopes := []string{_env.Environment().ResourceManagerEndpoint + "/.default"}
+	scopes := []string{_env.Environment().ResourceManagerScope}
 	authorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
-	scopes = []string{_env.Environment().ResourceIdentifiers.KeyVault + "/.default"}
+	scopes = []string{_env.Environment().KeyVaultScope}
 	kvAuthorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
 	vmssClient := compute.NewVirtualMachineScaleSetsClient(_env.Environment(), config.SubscriptionID, authorizer)

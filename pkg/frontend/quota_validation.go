@@ -39,7 +39,7 @@ func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, c
 // creation
 // It is a method on struct so we can make use of interfaces.
 func (q quotaValidator) ValidateQuota(ctx context.Context, azEnv *azureclient.AROEnvironment, environment env.Interface, subscriptionID, tenantID string, oc *api.OpenShiftCluster) error {
-	fpAuthorizer, err := environment.FPAuthorizer(tenantID, environment.Environment().ResourceManagerEndpoint+"/.default")
+	fpAuthorizer, err := environment.FPAuthorizer(tenantID, environment.Environment().ResourceManagerScope)
 	if err != nil {
 		return err
 	}

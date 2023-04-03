@@ -145,7 +145,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
-	scopes := []string{dv.env.Environment().ResourceManagerEndpoint + "/.default"}
+	scopes := []string{dv.env.Environment().ResourceManagerScope}
 	err = ensureAccessTokenClaims(ctx, tokenCredential, scopes)
 	if err != nil {
 		return err

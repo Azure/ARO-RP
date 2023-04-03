@@ -35,7 +35,7 @@ func (c *core) IsLocalDevelopmentMode() bool {
 }
 
 func (c *core) NewLiveConfigManager(ctx context.Context) (liveconfig.Manager, error) {
-	msiAuthorizer, err := c.NewMSIAuthorizer(MSIContextRP, c.Environment().ResourceManagerEndpoint+"/.default")
+	msiAuthorizer, err := c.NewMSIAuthorizer(MSIContextRP, c.Environment().ResourceManagerScope)
 	if err != nil {
 		return nil, err
 	}

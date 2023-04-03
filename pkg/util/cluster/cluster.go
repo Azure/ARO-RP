@@ -103,7 +103,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 	scopes := []string{environment.Environment().GraphEndpoint + "/.default"}
 	graphAuthorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
-	scopes = []string{environment.Environment().ResourceManagerEndpoint + "/.default"}
+	scopes = []string{environment.Environment().ResourceManagerScope}
 	authorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
 	c := &Cluster{

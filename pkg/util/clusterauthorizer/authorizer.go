@@ -65,7 +65,7 @@ func (a *azRefreshableAuthorizer) NewRefreshableAuthorizerToken(ctx context.Cont
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "the provided service principal is invalid")
 	}
 
-	scopes := []string{a.azureEnvironment.ResourceManagerEndpoint + "/.default"}
+	scopes := []string{a.azureEnvironment.ResourceManagerScope}
 
 	return azidext.NewTokenCredentialAdapter(tokenCredential, scopes), nil
 }

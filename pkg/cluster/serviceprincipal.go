@@ -28,7 +28,7 @@ func (m *manager) initializeClusterSPClients(ctx context.Context) error {
 		return err
 	}
 
-	scopes := []string{m.env.Environment().GraphEndpoint + "/.default"}
+	scopes := []string{m.env.Environment().ActiveDirectoryGraphScope}
 	spGraphAuthorizer := azidext.NewTokenCredentialAdapter(credential, scopes)
 
 	m.spApplications = graphrbac.NewApplicationsClient(m.env.Environment(), m.subscriptionDoc.Subscription.Properties.TenantID, spGraphAuthorizer)
