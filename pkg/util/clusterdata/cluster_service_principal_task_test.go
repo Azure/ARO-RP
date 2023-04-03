@@ -15,7 +15,6 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
 
@@ -75,10 +74,7 @@ func TestClusterServidePrincipalEnricherTask(t *testing.T) {
 					},
 				},
 			}
-			dialer, _ := proxy.NewDialer(true)
-			e := clusterServicePrincipalEnricher{
-				dialer: dialer,
-			}
+			e := clusterServicePrincipalEnricher{}
 			e.SetDefaults(oc)
 
 			clients := clients{k8s: tt.client}

@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
 
@@ -60,11 +59,8 @@ func TestClusterVersionEnricherTask(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			oc := &api.OpenShiftCluster{}
-			dialer, _ := proxy.NewDialer(true)
 			clients := clients{config: tt.client}
-			e := clusterVersionEnricher{
-				dialer: dialer,
-			}
+			e := clusterVersionEnricher{}
 			e.SetDefaults(oc)
 
 			err := e.Enrich(context.Background(), log, oc, clients.k8s, clients.config, clients.machine, clients.operator)

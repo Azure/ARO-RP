@@ -16,11 +16,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/proxy"
 )
 
 type ingressProfileEnricher struct {
-	dialer proxy.Dialer
 }
 
 func (ip ingressProfileEnricher) Enrich(

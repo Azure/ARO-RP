@@ -14,11 +14,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/proxy"
 )
 
 type clusterVersionEnricher struct {
-	dialer proxy.Dialer
 }
 
 func (ce clusterVersionEnricher) Enrich(

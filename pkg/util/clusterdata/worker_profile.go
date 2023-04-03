@@ -19,12 +19,10 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/proxy"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
 type machineClientEnricher struct {
-	dialer proxy.Dialer
 }
 
 const (

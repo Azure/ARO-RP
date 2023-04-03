@@ -57,10 +57,10 @@ func NewParallelEnricher(metricsEmitter metrics.Emitter, dialer proxy.Dialer) Pa
 	return ParallelEnricher{
 		emitter: metricsEmitter,
 		enrichers: map[string]ClusterEnricher{
-			servicePrincipal: clusterServicePrincipalEnricher{dialer},
-			ingressProfile:   ingressProfileEnricher{dialer},
-			clusterVersion:   clusterVersionEnricher{dialer},
-			machineClient:    machineClientEnricher{dialer},
+			servicePrincipal: clusterServicePrincipalEnricher{},
+			ingressProfile:   ingressProfileEnricher{},
+			clusterVersion:   clusterVersionEnricher{},
+			machineClient:    machineClientEnricher{},
 		},
 		dialer: dialer,
 	}

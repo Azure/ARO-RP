@@ -20,7 +20,6 @@ import (
 	ktesting "k8s.io/client-go/testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
 
@@ -261,10 +260,7 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 				tt.modifyOc(oc)
 			}
 
-			dialer, _ := proxy.NewDialer(true)
-			e := machineClientEnricher{
-				dialer: dialer,
-			}
+			e := machineClientEnricher{}
 			clients := clients{
 				machine: tt.client(),
 			}

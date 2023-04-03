@@ -18,7 +18,6 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
 
@@ -305,10 +304,7 @@ func TestIngressProfilesEnricherTask(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			oc := &api.OpenShiftCluster{}
-			dialer, _ := proxy.NewDialer(true)
-			e := ingressProfileEnricher{
-				dialer: dialer,
-			}
+			e := ingressProfileEnricher{}
 			e.SetDefaults(oc)
 
 			clients := clients{
