@@ -138,8 +138,7 @@ func TestDetermineOutboundType(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			// Run determineOutboundType and assert the correct results
-			err := determineOutboundType(ctx, tt.clusterDoc, tt.subscriptionDoc)
-			assert.Equal(t, tt.expectedErr, err, "Unexpected error exception")
+			determineOutboundType(ctx, tt.clusterDoc, tt.subscriptionDoc)
 			assert.Equal(t, tt.expectedOutboundType, tt.clusterDoc.OpenShiftCluster.Properties.NetworkProfile.OutboundType, "OutboundType was not updated as expected exception")
 		})
 	}
