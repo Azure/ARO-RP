@@ -194,6 +194,8 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		if err != nil {
 			return nil, err
 		}
+		// TODO: Remove this once 23-04-01 API release is complete.
+		determineOutboundType(ctx, doc, subscription)
 	} else {
 		doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
 
@@ -206,9 +208,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		}
 		doc.Dequeues = 0
 	}
-
-	// TODO: Remove this once 23-04-01 API release is complete.
-	determineOutboundType(ctx, doc, subscription)
 
 	// SetDefaults will set defaults on cluster document
 	api.SetDefaults(doc)
