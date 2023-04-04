@@ -240,7 +240,7 @@ var _ = Describe("ARO Operator - MachineHealthCheck", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("waiting for the machine health check to be restored")
-		Eventually(getMachineHealthCheck).WithContext(ctx).WithTimeout(3 * time.Second).Should(Succeed())
+		Eventually(getMachineHealthCheck).WithContext(ctx).Should(Succeed())
 	})
 
 	It("the alerting rule must recreated if deleted", func(ctx context.Context) {
@@ -249,7 +249,7 @@ var _ = Describe("ARO Operator - MachineHealthCheck", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("waiting for the machine health check remediation alert to be restored")
-		Eventually(getMachineHealthCheckRemediationAlertName).WithContext(ctx).WithTimeout(3 * time.Second).Should(Succeed())
+		Eventually(getMachineHealthCheckRemediationAlertName).WithContext(ctx).Should(Succeed())
 	})
 
 })
