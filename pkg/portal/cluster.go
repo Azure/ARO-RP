@@ -88,11 +88,7 @@ func (p *portal) clusters(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write(b)
-	if err != nil {
-		p.internalServerError(w, err)
-		return
-	}
+	_, _ = w.Write(b)
 }
 
 func (p *portal) clusterOperators(w http.ResponseWriter, r *http.Request) {
@@ -117,11 +113,7 @@ func (p *portal) clusterOperators(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write(b)
-	if err != nil {
-		p.internalServerError(w, err)
-		return
-	}
+	_, _ = w.Write(b)
 }
 
 func (p *portal) nodes(w http.ResponseWriter, r *http.Request) {
@@ -146,11 +138,7 @@ func (p *portal) nodes(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write(b)
-	if err != nil {
-		p.internalServerError(w, err)
-		return
-	}
+	_, _ = w.Write(b)
 }
 
 func (p *portal) machines(w http.ResponseWriter, r *http.Request) {
@@ -175,40 +163,7 @@ func (p *portal) machines(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write(b)
-	if err != nil {
-		p.internalServerError(w, err)
-		return
-	}
-}
-
-func (p *portal) VMAllocationStatus(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	azurefetcher, err := p.makeAzureFetcher(ctx, r)
-	if err != nil {
-		p.internalServerError(w, err)
-		return
-	}
-
-	machineVMAllocationStatus, err := azurefetcher.VMAllocationStatus(ctx)
-	if err != nil {
-		p.internalServerError(w, err)
-		return
-	}
-
-	b, err := json.MarshalIndent(machineVMAllocationStatus, "", "    ")
-	if err != nil {
-		p.internalServerError(w, err)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write(b)
-	if err != nil {
-		p.internalServerError(w, err)
-		return
-	}
+	_, _ = w.Write(b)
 }
 
 func (p *portal) machineSets(w http.ResponseWriter, r *http.Request) {
@@ -233,9 +188,5 @@ func (p *portal) machineSets(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write(b)
-	if err != nil {
-		p.internalServerError(w, err)
-		return
-	}
+	_, _ = w.Write(b)
 }

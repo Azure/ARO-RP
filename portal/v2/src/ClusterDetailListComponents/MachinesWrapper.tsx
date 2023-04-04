@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef } from "react"
 import { AxiosResponse } from 'axios';
-import { FetchMachines, FetchVMAllocationStatus } from '../Request';
+import { FetchMachines } from '../Request';
 import { ICluster } from "../App"
 import { MachinesListComponent } from './MachinesList';
 import { IMessageBarStyles, MessageBar, MessageBarType, Stack } from '@fluentui/react';
 import { machinesKey } from "../ClusterDetail";
-
 
 export interface IMachine {
   name?: string,
@@ -24,7 +23,6 @@ export function MachinesWrapper(props: {
   loaded: boolean
 }) {
   const [data, setData] = useState<any>([])
-  const [vmAllocationstatus, setVmallocationstatus] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
   const state = useRef<MachinesListComponent>(null)
   const [fetching, setFetching] = useState("")
@@ -76,17 +74,6 @@ export function MachinesWrapper(props: {
     }
   }
 
-  const updateVMAllocationStatusData = (newData: any) => {
-    let map = new Map<string, string>()  
-    for (var key in newData) {
-      map.set(key, newData[key])
-    } 
-    setVmallocationstatus(map)
-    if (state && state.current) {
-      state.current.setState({ vmAllocationStatus: map })
-    }
-  }
-
   useEffect(() => {
     const onData = (result: AxiosResponse | null) => {
       if (result?.status === 200) {
@@ -97,29 +84,20 @@ export function MachinesWrapper(props: {
       setFetching(props.currentCluster.name)
     }
 
-    const onVMAllocationStatusData = (result: AxiosResponse | null) => {
-      if (result?.status === 200) {
-        updateVMAllocationStatusData(result.data)
-      } else {
-        setError(result)
-      }
-    }
-
     if (props.detailPanelSelected.toLowerCase() == machinesKey && 
         fetching === "" &&
         props.loaded &&
         props.currentCluster.name != "") {
       setFetching("FETCHING")
       FetchMachines(props.currentCluster).then(onData)
-      FetchVMAllocationStatus(props.currentCluster).then(onVMAllocationStatusData)
     }
-  }, [data, props.loaded, props.detailPanelSelected, vmAllocationstatus])
+  }, [data, props.loaded, props.detailPanelSelected])
 
   return (
     <Stack>
       <Stack.Item grow>{error && errorBar()}</Stack.Item>
       <Stack>
-        <MachinesListComponent vmAllocationStatus={vmAllocationstatus} machines={data!} ref={state} clusterName={props.currentCluster != null ? props.currentCluster.name : ""} />
+        <MachinesListComponent machines={data!} ref={state} clusterName={props.currentCluster != null ? props.currentCluster.name : ""} />
       </Stack>
     </Stack>   
   )

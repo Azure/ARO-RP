@@ -23,7 +23,7 @@ func TestInfo(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	_env := mock_env.NewMockInterface(controller)
+	_env := mock_env.NewMockCore(controller)
 	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 	_env.EXPECT().Location().AnyTimes().Return("eastus")
 	_env.EXPECT().TenantID().AnyTimes().Return("00000000-0000-0000-0000-000000000001")
@@ -32,9 +32,8 @@ func TestInfo(t *testing.T) {
 
 	dbOpenShiftClusters, _ := testdatabase.NewFakeOpenShiftClusters()
 	dbPortal, _ := testdatabase.NewFakePortal()
-	dbSubscription, _ := testdatabase.NewFakeSubscriptions()
 
-	p := NewTestPortal(_env, dbOpenShiftClusters, dbPortal, dbSubscription)
+	p := NewTestPortal(_env, dbOpenShiftClusters, dbPortal)
 	defer p.Cleanup()
 	err := p.Run(ctx)
 	if err != nil {
