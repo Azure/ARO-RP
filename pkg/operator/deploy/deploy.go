@@ -220,7 +220,10 @@ func (o *operator) resources() ([]kruntime.Object, error) {
 			ResourceID:             o.oc.ID,
 			ClusterResourceGroupID: o.oc.Properties.ClusterProfile.ResourceGroupID,
 			DnsmasqConfig: arov1alpha1.DnsmasqConfigSpec{
-				CacheSize: 0,
+				CacheSize:   0,
+				MinCacheTTL: 0,
+				MaxCacheTTL: 0,
+				NoNegCache:  false,
 			},
 			Domain:              domain,
 			ACRDomain:           o.env.ACRDomain(),
