@@ -13,19 +13,16 @@ export declare interface IMachinesList {
   name?: string;
   status: string;
   createdTime: string;
-  allocationStatus?: string;
 }
 
 interface MachinesListComponentProps {
   machines: any
   clusterName: string
-  vmAllocationStatus: Map<string, string>
 }
 
 export interface IMachinesListState {
   machines: IMachine[]
   clusterName: string
-  vmAllocationStatus: Map<string, string>
 }
 
 export class MachinesListComponent extends React.Component<MachinesListComponentProps, IMachinesListState> {
@@ -36,22 +33,20 @@ export class MachinesListComponent extends React.Component<MachinesListComponent
       this.state = {
           machines: this.props.machines,
           clusterName: this.props.clusterName,
-          vmAllocationStatus:  this.props.vmAllocationStatus
       }
   }
   
   
   public render() {
     return (
-        <MachinesListHelperComponent vmAllocationStatus={this.state.vmAllocationStatus} machines={this.state.machines} clusterName={this.state.clusterName}/>
+        <MachinesListHelperComponent machines={this.state.machines} clusterName={this.state.clusterName}/>
       )
   }
 }
 
 export function MachinesListHelperComponent(props: {
      machines: any,
-     clusterName: string,
-     vmAllocationStatus: Map<string, string>
+     clusterName: string
 }) {
     const [columns, setColumns] = useState<IColumn[]>([
     {
@@ -80,17 +75,6 @@ export function MachinesListHelperComponent(props: {
       showSortIconWhenUnsorted: true,
     },
     {
-      key: "allocationStatus",
-      name: "Allocation State",
-      fieldName: "allocationStatus",
-      minWidth: 120,
-      maxWidth: 120,
-      isResizable: true,
-      isSorted: true,
-      isSortedDescending: false,
-      showSortIconWhenUnsorted: true,
-    },
-    {
       key: "createdTime",
       name: "Created Time",
       fieldName: "createdTime",
@@ -113,52 +97,15 @@ export function MachinesListHelperComponent(props: {
     setMachinesList(createMachinesList(props.machines))
   }, [props.machines] );
 
-  // For updating machinesList with VM Allocation Status
+
   useEffect(() => {
-    const initialMachineLength: number = machinesList.length
-    const fetchError: string = "FetchError"
-    if (initialMachineLength > 0) {
-      let localMachineList = machinesList
-      for (let i=0; i < localMachineList.length; i++) {
-        let allocationStatus: string = props.vmAllocationStatus.get(localMachineList[i].name!)!
-        let r: string = allocationStatus.slice(11, 12).toUpperCase() + allocationStatus.slice(12, allocationStatus.length)
-        localMachineList[i].allocationStatus = r
-      }
-      setMachinesList(localMachineList)
-    } else {
-      let localMachineList: IMachinesList[] = []
-      props.vmAllocationStatus.forEach((allocationStatus, machineName) => {
-        let allocationStatusShort: string = allocationStatus.slice(11, 12).toUpperCase() + allocationStatus.slice(12, allocationStatus.length)
-        localMachineList.push({name: machineName, status: fetchError, allocationStatus: allocationStatusShort, createdTime: fetchError,})
-      })
-      setMachinesList(localMachineList)
-    }
-    
-    const newColumns: IColumn[] = columns.slice();
-    
-    newColumns.forEach(col => {
-      col.onColumnClick = _onColumnClick
-      if (col.key == "machineName" && initialMachineLength == 0) { 
-        col.onRender = undefined
-      } else if (col.key == "machineName") {
-        col.onRender = (item: IMachinesList) => (
-          <Link onClick={() => _onMachineInfoLinkClick(item.name!)}>{item.name}</Link>
-        )
-      }
-    })
-    setColumns(newColumns)
-
-  }, [props.vmAllocationStatus])
-
-  // For Shimmer
-  useEffect(() => {  
     const newColumns: IColumn[] = columns.slice();
     newColumns.forEach(col => {
       col.onColumnClick = _onColumnClick
     })
     setColumns(newColumns)
 
-    if (machinesList.length > 0 || props.vmAllocationStatus.keys.length > 0) {
+    if (machinesList.length > 0) {
       SetShimmerVisibility(false)
     }
     
@@ -199,11 +146,12 @@ export function MachinesListHelperComponent(props: {
     })
 
     setColumns(newColumns)
+    //setMachinesList(machineLocal)
     }
 
     function createMachinesList(machines: IMachine[]): IMachinesList[] {
         return machines.map(machine => {
-            return {name: machine.name, status: machine.status, allocationStatus: "Loading...", createdTime: machine.createdTime,}
+            return {name: machine.name, status: machine.status, createdTime: machine.createdTime}
         })
     }
 

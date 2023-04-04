@@ -19,15 +19,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database"
-	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	frontendmiddleware "github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics"
@@ -47,7 +44,7 @@ type Runnable interface {
 }
 
 type portal struct {
-	env           env.Interface
+	env           env.Core
 	audit         *logrus.Entry
 	log           *logrus.Entry
 	baseAccessLog *logrus.Entry
@@ -69,7 +66,6 @@ type portal struct {
 
 	dbPortal            database.Portal
 	dbOpenShiftClusters database.OpenShiftClusters
-	dbSubscriptions     database.Subscriptions
 
 	dialer proxy.Dialer
 
@@ -81,7 +77,7 @@ type portal struct {
 	m metrics.Emitter
 }
 
-func NewPortal(env env.Interface,
+func NewPortal(env env.Core,
 	audit *logrus.Entry,
 	log *logrus.Entry,
 	baseAccessLog *logrus.Entry,
@@ -100,7 +96,6 @@ func NewPortal(env env.Interface,
 	elevatedGroupIDs []string,
 	dbOpenShiftClusters database.OpenShiftClusters,
 	dbPortal database.Portal,
-	dbSubscriptions database.Subscriptions,
 	dialer proxy.Dialer,
 	m metrics.Emitter,
 ) Runnable {
@@ -127,7 +122,6 @@ func NewPortal(env env.Interface,
 
 		dbOpenShiftClusters: dbOpenShiftClusters,
 		dbPortal:            dbPortal,
-		dbSubscriptions:     dbSubscriptions,
 
 		dialer: dialer,
 
@@ -310,7 +304,6 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router, prom *prometheus.Promethe
 	r.Methods(http.MethodGet).Path("/api/{subscription}/{resourceGroup}/{clusterName}").HandlerFunc(p.clusterInfo)
 	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/nodes").HandlerFunc(p.nodes)
 	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/machines").HandlerFunc(p.machines)
-	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/vmallocationstatus").HandlerFunc(p.VMAllocationStatus)
 	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/machine-sets").HandlerFunc(p.machineSets)
 	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}").HandlerFunc(p.clusterInfo)
 
@@ -397,37 +390,8 @@ func (p *portal) makeFetcher(ctx context.Context, r *http.Request) (cluster.Fetc
 	} else {
 		dialer = p.dialer
 	}
+
 	return cluster.NewFetchClient(p.log, dialer, doc)
-}
-
-// makeAzureFetcher creates a cluster.AzureFetchClient suitable for use by the Portal REST API to fetch anything directly from Azure like VM Details etc.
-func (p *portal) makeAzureFetcher(ctx context.Context, r *http.Request) (cluster.AzureFetchClient, error) {
-	apiVars := mux.Vars(r)
-
-	subscription := apiVars["subscription"]
-	resourceGroup := apiVars["resourceGroup"]
-	clusterName := apiVars["clusterName"]
-
-	resourceID :=
-		strings.ToLower(
-			fmt.Sprintf(
-				"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s",
-				subscription, resourceGroup, clusterName))
-	if !validate.RxClusterID.MatchString(resourceID) {
-		return nil, fmt.Errorf("invalid resource ID")
-	}
-
-	doc, err := p.dbOpenShiftClusters.Get(ctx, resourceID)
-	if err != nil {
-		return nil, err
-	}
-
-	subscriptionDoc, err := p.getSubscriptionDocument(ctx, doc.Key)
-	if err != nil {
-		return nil, err
-	}
-
-	return cluster.NewAzureFetchClient(p.log, doc, subscriptionDoc, p.env), nil
 }
 
 func (p *portal) serve(path string) func(w http.ResponseWriter, r *http.Request) {
@@ -440,19 +404,6 @@ func (p *portal) serve(path string) func(w http.ResponseWriter, r *http.Request)
 
 		http.ServeContent(w, r, path, time.Time{}, bytes.NewReader(asset))
 	}
-}
-
-func (p *portal) getSubscriptionDocument(ctx context.Context, key string) (*api.SubscriptionDocument, error) {
-	r, err := azure.ParseResourceID(key)
-	if err != nil {
-		return nil, err
-	}
-	doc, err := p.dbSubscriptions.Get(ctx, r.SubscriptionID)
-	if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", "Request is not allowed in unregistered subscription '%s'.", r.SubscriptionID)
-	}
-
-	return doc, err
 }
 
 func (p *portal) internalServerError(w http.ResponseWriter, err error) {

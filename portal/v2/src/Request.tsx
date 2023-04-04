@@ -64,17 +64,6 @@ export const FetchMachines = async (cluster: ICluster): Promise<AxiosResponse | 
   }
 }
 
-export const FetchVMAllocationStatus = async (cluster: ICluster): Promise<AxiosResponse | null> => {
-  try {
-    const result = await axios(
-      "/api/" + cluster.subscription + "/" + cluster.resourceGroup + "/" + cluster.name + "/vmallocationstatus")
-    return result
-  } catch (e: any) {
-    const err = e.response as AxiosResponse
-    return OnError(err)
-  }
-}
-
 export const FetchMachineSets = async (cluster: ICluster): Promise<AxiosResponse | null> => {
   try {
     const result = await axios(
