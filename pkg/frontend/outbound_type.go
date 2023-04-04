@@ -10,19 +10,15 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/feature"
 )
 
-func determineOutboundType(ctx context.Context, doc *api.OpenShiftClusterDocument, subscription *api.SubscriptionDocument) error {
-	var err error
+func determineOutboundType(ctx context.Context, doc *api.OpenShiftClusterDocument, subscription *api.SubscriptionDocument) {
 	// Honor the value of OutboundType if it was passed in via the API
-	if doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType != "" {
-		return err
+	if doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType == "" {
+		// Determine if this is a cluster with user defined routing
+		doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType = api.OutboundTypeLoadbalancer
+		if doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPrivate &&
+			doc.OpenShiftCluster.Properties.IngressProfiles[0].Visibility == api.VisibilityPrivate &&
+			feature.IsRegisteredForFeature(subscription.Subscription.Properties, api.FeatureFlagUserDefinedRouting) {
+			doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType = api.OutboundTypeUserDefinedRouting
+		}
 	}
-
-	// Determine if this is a cluster with user defined routing
-	doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType = api.OutboundTypeLoadbalancer
-	if doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPrivate &&
-		doc.OpenShiftCluster.Properties.IngressProfiles[0].Visibility == api.VisibilityPrivate &&
-		feature.IsRegisteredForFeature(subscription.Subscription.Properties, api.FeatureFlagUserDefinedRouting) {
-		doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType = api.OutboundTypeUserDefinedRouting
-	}
-	return err
 }
