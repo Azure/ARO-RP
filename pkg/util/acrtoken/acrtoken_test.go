@@ -6,9 +6,11 @@ package acrtoken
 import (
 	"context"
 	"testing"
+	"time"
 
 	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2020-11-01-preview/containerregistry"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 
@@ -66,5 +68,117 @@ func TestEnsureTokenAndPassword(t *testing.T) {
 	}
 	if password != "foo" {
 		t.Error(password)
+	}
+}
+
+func TestRotateTokenPassword(t *testing.T) {
+	tests := []struct {
+		name                    string
+		tokenPasswordProperties []mgmtcontainerregistry.TokenPassword
+		expectedRenewalPassword mgmtcontainerregistry.TokenPasswordName
+	}{
+		{
+			name:                    "uses password1 when token has no passwords present",
+			tokenPasswordProperties: []mgmtcontainerregistry.TokenPassword{},
+			expectedRenewalPassword: mgmtcontainerregistry.TokenPasswordNamePassword1,
+		},
+		{
+			name: "uses missing password when only one token password exists",
+			tokenPasswordProperties: []mgmtcontainerregistry.TokenPassword{
+				{
+					Name:         mgmtcontainerregistry.TokenPasswordNamePassword1,
+					CreationTime: &date.Time{Time: time.Date(2022, time.April, 4, 0, 0, 0, 0, time.UTC)},
+				},
+			},
+			expectedRenewalPassword: mgmtcontainerregistry.TokenPasswordNamePassword2,
+		},
+		{
+			name: "renews password1 when it is the oldest password",
+			tokenPasswordProperties: []mgmtcontainerregistry.TokenPassword{
+				{
+					Name:         mgmtcontainerregistry.TokenPasswordNamePassword1,
+					CreationTime: &date.Time{Time: time.Date(2022, time.April, 4, 0, 0, 0, 0, time.UTC)},
+				},
+				{
+					Name:         mgmtcontainerregistry.TokenPasswordNamePassword2,
+					CreationTime: &date.Time{Time: time.Date(2022, time.May, 20, 0, 0, 0, 0, time.UTC)},
+				},
+			},
+			expectedRenewalPassword: mgmtcontainerregistry.TokenPasswordNamePassword1,
+		},
+		{
+			name: "renews password2 when it is the oldest password",
+			tokenPasswordProperties: []mgmtcontainerregistry.TokenPassword{
+				{
+					Name:         mgmtcontainerregistry.TokenPasswordNamePassword1,
+					CreationTime: &date.Time{Time: time.Date(2022, time.May, 20, 0, 0, 0, 0, time.UTC)},
+				},
+				{
+					Name:         mgmtcontainerregistry.TokenPasswordNamePassword2,
+					CreationTime: &date.Time{Time: time.Date(2022, time.April, 4, 0, 0, 0, 0, time.UTC)},
+				},
+			},
+			expectedRenewalPassword: mgmtcontainerregistry.TokenPasswordNamePassword2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resourceID := "/subscriptions/93aeba23-2f76-4307-be82-02921df010cf/resourceGroups/global/providers/Microsoft.ContainerRegistry/registries/arointsvc"
+			username := "aro-12345"
+
+			ctx := context.Background()
+			controller := gomock.NewController(t)
+
+			env := mock_env.NewMockInterface(controller)
+			env.EXPECT().ACRResourceID().AnyTimes().Return(resourceID)
+
+			fakeTokenProperties := mgmtcontainerregistry.TokenProperties{
+				Credentials: &mgmtcontainerregistry.TokenCredentialsProperties{
+					Passwords: &tt.tokenPasswordProperties,
+				},
+			}
+			tokens := mock_containerregistry.NewMockTokensClient(controller)
+			tokens.EXPECT().GetTokenProperties(ctx, "global", "arointsvc", username).Return(fakeTokenProperties, nil)
+
+			registries := mock_containerregistry.NewMockRegistriesClient(controller)
+			expectedCredentialParameters := mgmtcontainerregistry.GenerateCredentialsParameters{
+				TokenID: to.StringPtr(resourceID + "/tokens/" + username),
+				Name:    tt.expectedRenewalPassword,
+			}
+			credentialResult := mgmtcontainerregistry.GenerateCredentialsResult{
+				Passwords: &[]mgmtcontainerregistry.TokenPassword{
+					{
+						Value: to.StringPtr("foo"),
+					},
+				},
+			}
+			registries.EXPECT().GenerateCredentials(ctx, "global", "arointsvc", expectedCredentialParameters).
+				Return(credentialResult, nil)
+
+			r, err := azure.ParseResourceID(env.ACRResourceID())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			m := &manager{
+				env: env,
+				r:   r,
+
+				registries: registries,
+				tokens:     tokens,
+			}
+
+			registryProfile := api.RegistryProfile{
+				Username: "aro-12345",
+			}
+			err = m.RotateTokenPassword(ctx, &registryProfile)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if registryProfile.Password != api.SecureString("foo") {
+				t.Error(registryProfile.Password)
+			}
+		})
 	}
 }
