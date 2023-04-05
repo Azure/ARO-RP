@@ -304,28 +304,19 @@ func TestIngressProfilesEnricherTask(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			oc := &api.OpenShiftCluster{}
-			e := &ingressProfileEnricherTask{
-				log:         log,
-				operatorcli: tt.operatorcli,
-				kubecli:     tt.kubecli,
-				oc:          oc,
+			e := ingressProfileEnricher{}
+			e.SetDefaults(oc)
+
+			clients := clients{
+				k8s:      tt.kubecli,
+				operator: tt.operatorcli,
 			}
-			e.SetDefaults()
-
-			callbacks := make(chan func())
-			errors := make(chan error)
-			go e.FetchData(context.Background(), callbacks, errors)
-
-			select {
-			case f := <-callbacks:
-				f()
-				if !reflect.DeepEqual(oc, tt.wantOc) {
-					t.Error(cmp.Diff(oc, tt.wantOc))
-				}
-			case err := <-errors:
-				if tt.wantErr != err.Error() {
-					t.Error(err)
-				}
+			err := e.Enrich(context.Background(), log, oc, clients.k8s, clients.config, clients.machine, clients.operator)
+			if (err == nil && tt.wantErr != "") || (err != nil && err.Error() != tt.wantErr) {
+				t.Errorf("wanted err to be %s but got %s", err, tt.wantErr)
+			}
+			if !reflect.DeepEqual(oc, tt.wantOc) {
+				t.Error(cmp.Diff(oc, tt.wantOc))
 			}
 		})
 	}

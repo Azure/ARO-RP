@@ -9,8 +9,11 @@ import (
 	"sync"
 	"time"
 
+	configclient "github.com/openshift/client-go/config/clientset/versioned"
+	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
+	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	"github.com/sirupsen/logrus"
-	"k8s.io/client-go/rest"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics"
@@ -19,139 +22,205 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
-// OpenShiftClusterEnricher must update the cluster object with
-// data received from API server
-type OpenShiftClusterEnricher interface {
-	Enrich(ctx context.Context, ocs ...*api.OpenShiftCluster)
+type BestEffortEnricher interface {
+	Enrich(ctx context.Context, log *logrus.Entry, ocs ...*api.OpenShiftCluster)
 }
 
-type enricherTaskConstructor func(*logrus.Entry, *rest.Config, *api.OpenShiftCluster) (enricherTask, error)
-type enricherTask interface {
-	SetDefaults()
-	FetchData(context.Context, chan<- func(), chan<- error)
+// ParallelEnricher enriches the cluster in parallel and does not fail if any of the
+// enricher fails
+type ParallelEnricher struct {
+	enrichers map[string]ClusterEnricher
+	emitter   metrics.Emitter
+	dialer    proxy.Dialer
 }
 
-// NewBestEffortEnricher returns an enricher that attempts to populate
-// fields, but ignores errors in case of failures
-func NewBestEffortEnricher(log *logrus.Entry, dialer proxy.Dialer, m metrics.Emitter) OpenShiftClusterEnricher {
-	return &bestEffortEnricher{
-		log:    log,
-		dialer: dialer,
-		m:      m,
+type ClusterEnricher interface {
+	Enrich(context.Context, *logrus.Entry, *api.OpenShiftCluster, kubernetes.Interface, configclient.Interface, machineclient.Interface, operatorclient.Interface) error
+	SetDefaults(*api.OpenShiftCluster)
+}
 
-		restConfig: restconfig.RestConfig,
-		taskConstructors: []enricherTaskConstructor{
-			newClusterVersionEnricherTask,
-			newWorkerProfilesEnricherTask,
-			newClusterServicePrincipalEnricherTask,
-			newIngressProfileEnricherTask,
+type clients struct {
+	k8s      kubernetes.Interface
+	config   configclient.Interface
+	machine  machineclient.Interface
+	operator operatorclient.Interface
+}
+
+const (
+	servicePrincipal = "servicePrincipal"
+	ingressProfile   = "ingressProfile"
+	clusterVersion   = "clusterVersion"
+	machineClient    = "machineClient"
+)
+
+func NewParallelEnricher(metricsEmitter metrics.Emitter, dialer proxy.Dialer) ParallelEnricher {
+	return ParallelEnricher{
+		emitter: metricsEmitter,
+		enrichers: map[string]ClusterEnricher{
+			servicePrincipal: clusterServicePrincipalEnricher{},
+			ingressProfile:   ingressProfileEnricher{},
+			clusterVersion:   clusterVersionEnricher{},
+			machineClient:    machineClientEnricher{},
 		},
+		dialer: dialer,
 	}
 }
 
-type bestEffortEnricher struct {
-	log    *logrus.Entry
-	dialer proxy.Dialer
-	m      metrics.Emitter
-
-	restConfig       func(dialer proxy.Dialer, oc *api.OpenShiftCluster) (*rest.Config, error)
-	taskConstructors []enricherTaskConstructor
-}
-
-func (e *bestEffortEnricher) Enrich(ctx context.Context, ocs ...*api.OpenShiftCluster) {
-	e.m.EmitGauge("enricher.tasks.count", int64(len(e.taskConstructors)*len(ocs)), nil)
-
+func (p ParallelEnricher) Enrich(ctx context.Context, log *logrus.Entry, ocs ...*api.OpenShiftCluster) {
 	var wg sync.WaitGroup
 	wg.Add(len(ocs))
-	for i := range ocs {
-		go func(i int) {
-			defer recover.Panic(e.log)
-
+	for _, oc := range ocs {
+		// https://golang.org/doc/faq#closures_and_goroutines
+		oc := oc
+		go func() {
+			defer recover.Panic(log)
 			defer wg.Done()
-			e.enrichOne(ctx, ocs[i])
-		}(i) // https://golang.org/doc/faq#closures_and_goroutines
+
+			k8sclient, machineclient, operatorclient, configclient, unsuccessfulEnrichers := p.initializeClients(ctx, log, oc)
+			clients := clients{
+				k8s:      k8sclient,
+				machine:  machineclient,
+				operator: operatorclient,
+				config:   configclient,
+			}
+
+			p.enrichOne(ctx, log, oc, clients, unsuccessfulEnrichers)
+		}()
 	}
 	wg.Wait()
 }
 
-func (e *bestEffortEnricher) enrichOne(ctx context.Context, oc *api.OpenShiftCluster) {
-	if !e.isValidProvisioningState(oc) {
+func (p ParallelEnricher) enrichOne(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster, clients clients, unsuccessfulEnrichers map[string]bool) {
+	if err := validateProvisioningState(log, oc); err != nil {
+		log.Info(err)
 		return
 	}
 
-	restConfig, err := e.restConfig(e.dialer, oc)
-	if err != nil {
-		e.m.EmitGauge("enricher.tasks.errors", int64(len(e.taskConstructors)), nil)
-		e.log.Error(err)
-		return
-	}
-
-	tasks := make([]enricherTask, 0, len(e.taskConstructors))
-	for i := range e.taskConstructors {
-		task, err := e.taskConstructors[i](e.log, restConfig, oc)
-		if err != nil {
-			e.m.EmitGauge("enricher.tasks.errors", 1, nil)
-			e.log.Error(err)
+	errors := make(chan error, len(p.enrichers))
+	expectedResults := 0
+	for name, enricher := range p.enrichers {
+		if unsuccessfulEnrichers[name] || enricher == nil {
 			continue
 		}
-		tasks = append(tasks, task)
-		task.SetDefaults()
-	}
+		p.emitter.EmitGauge("enricher.tasks.count", 1, nil)
 
-	// We must use a buffered channels with length equal to the number of tasks
-	// to ensure that FetchData goroutines return as soon as they finish
-	// their job and do not wait for someone to read from the channel.
-	// Otherwise in case of error in one of the goroutines or on timeout
-	// they will not be garbage collected.
-	callbacks := make(chan func(), len(tasks))
-	errors := make(chan error, len(tasks))
-	for i := range tasks {
-		go func(i int) {
-			defer recover.Panic(e.log)
+		expectedResults++
 
+		e := enricher
+		go func() {
 			t := time.Now()
-			defer func() {
-				e.m.EmitGauge("enricher.tasks.duration", time.Since(t).Milliseconds(), map[string]string{
-					"task": fmt.Sprintf("%T", tasks[i]),
-				})
-			}()
 
-			tasks[i].FetchData(ctx, callbacks, errors)
-		}(i) // https://golang.org/doc/faq#closures_and_goroutines
+			errors <- e.Enrich(ctx, log, oc, clients.k8s, clients.config, clients.machine, clients.operator)
+
+			p.emitter.EmitGauge(
+				"enricher.tasks.duration",
+				time.Since(t).Milliseconds(),
+				map[string]string{"task": fmt.Sprintf("%T", e)})
+		}()
 	}
 
-out:
-	for i := 0; i < len(tasks); i++ {
-		select {
-		case f := <-callbacks:
-			f()
-		case <-errors:
-			// No need to log errors. We log them in each task locally
-			e.m.EmitGauge("enricher.tasks.errors", 1, nil)
-		case <-ctx.Done():
-			e.m.EmitGauge("enricher.timeouts", 1, nil)
-			e.log.Warn("timeout expired")
-			break out
+	p.waitForResults(log, errors, expectedResults)
+}
+
+func (p ParallelEnricher) waitForResults(log *logrus.Entry, errChannel chan error, expectedResults int) {
+	timeout := false
+	//retrieve the errors from the routines
+	for i := 0; i < expectedResults; i++ {
+		err := <-errChannel
+		switch err {
+		case nil:
+			//do nothing
+		case context.Canceled, context.DeadlineExceeded:
+			if !timeout {
+				p.emitter.EmitGauge("enricher.timeouts", 1, nil)
+				log.Warn("timeout expired")
+				timeout = true
+			}
+		default:
+			p.taskError(log, err, 1)
 		}
 	}
 }
 
-// isValidProvisioningState checks whether or not it is ok to run enrichment
-// of the object based on the ProvisioningState.
-// For example, when a user creates a new cluster kubeconfig for the cluster
-// will be missing from the object in the beginning of the creation process
-// and it will be not possible to make requests to the API server.
-func (e *bestEffortEnricher) isValidProvisioningState(oc *api.OpenShiftCluster) bool {
+// initializeClients initialize the necassary clients for the specified cluster
+// if some clients fail to be initialized, it also returns the list of enrichers
+// that we should skip because the clients they are using failed to instantiate
+func (p ParallelEnricher) initializeClients(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster) (
+	k8s kubernetes.Interface, machineclient machineclient.Interface, operatorclient operatorclient.Interface, configclient configclient.Interface, unsuccessfulEnrichers map[string]bool) {
+	unsuccessfulEnrichers = make(map[string]bool)
+	k8s, err := p.setupK8sClient(ctx, oc)
+	if err != nil {
+		unsuccessfulEnrichers[servicePrincipal] = true
+		unsuccessfulEnrichers[ingressProfile] = true
+		p.taskError(log, err, 2)
+	}
+	machineclient, err = p.setupMachineClient(ctx, oc)
+	if err != nil {
+		unsuccessfulEnrichers[machineClient] = true
+		p.taskError(log, err, 1)
+	}
+	operatorclient, err = p.setupOperatorClient(ctx, oc)
+	if err != nil {
+		unsuccessfulEnrichers[ingressProfile] = true
+		p.taskError(log, err, 1)
+	}
+	configclient, err = p.setupConfigClient(ctx, oc)
+	if err != nil {
+		unsuccessfulEnrichers[clusterVersion] = true
+		p.taskError(log, err, 1)
+	}
+	return k8s, machineclient, operatorclient, configclient, unsuccessfulEnrichers
+}
+
+func (p ParallelEnricher) taskError(log *logrus.Entry, err error, count int) {
+	p.emitter.EmitGauge("enricher.tasks.errors", int64(count), nil)
+	log.Error(err)
+}
+
+func (p ParallelEnricher) setupK8sClient(ctx context.Context, oc *api.OpenShiftCluster) (kubernetes.Interface, error) {
+	restConfig, err := restconfig.RestConfig(p.dialer, oc)
+	if err != nil {
+		return nil, err
+	}
+
+	return kubernetes.NewForConfig(restConfig)
+}
+
+func (p ParallelEnricher) setupConfigClient(ctx context.Context, oc *api.OpenShiftCluster) (configclient.Interface, error) {
+	restConfig, err := restconfig.RestConfig(p.dialer, oc)
+	if err != nil {
+		return nil, err
+	}
+
+	return configclient.NewForConfig(restConfig)
+}
+
+func (p ParallelEnricher) setupOperatorClient(ctx context.Context, oc *api.OpenShiftCluster) (operatorclient.Interface, error) {
+	restConfig, err := restconfig.RestConfig(p.dialer, oc)
+	if err != nil {
+		return nil, err
+	}
+	return operatorclient.NewForConfig(restConfig)
+}
+
+func (p ParallelEnricher) setupMachineClient(ctx context.Context, oc *api.OpenShiftCluster) (machineclient.Interface, error) {
+	restConfig, err := restconfig.RestConfig(p.dialer, oc)
+	if err != nil {
+		return nil, err
+	}
+
+	return machineclient.NewForConfig(restConfig)
+}
+
+func validateProvisioningState(log *logrus.Entry, oc *api.OpenShiftCluster) error {
 	switch oc.Properties.ProvisioningState {
 	case api.ProvisioningStateCreating, api.ProvisioningStateDeleting:
-		e.log.Infof("cluster is in %q provisioning state. Skipping enrichment...", oc.Properties.ProvisioningState)
-		return false
+		return fmt.Errorf("cluster is in %q provisioning state. Skipping enrichment", oc.Properties.ProvisioningState)
 	case api.ProvisioningStateFailed:
 		switch oc.Properties.FailedProvisioningState {
 		case api.ProvisioningStateCreating, api.ProvisioningStateDeleting:
-			e.log.Infof("cluster is in failed %q provisioning state. Skipping enrichment...", oc.Properties.ProvisioningState)
-			return false
+			return fmt.Errorf("cluster is in failed %q provisioning state. Skipping enrichment", oc.Properties.ProvisioningState)
 		}
 	}
-	return true
+	return nil
 }

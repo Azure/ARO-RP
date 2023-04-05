@@ -4,6 +4,7 @@ package api
 // Licensed under the Apache License 2.0.
 
 import (
+	"sync"
 	"time"
 )
 
@@ -20,6 +21,9 @@ type OpenShiftCluster struct {
 	SystemData SystemData                 `json:"systemData,omitempty"`
 	Tags       map[string]string          `json:"tags,omitempty"`
 	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
+
+	//this property is used in the enrichers. Should not be marshalled
+	Lock sync.Mutex `json:"-"`
 }
 
 // CreatedByType by defines user type, which executed the request

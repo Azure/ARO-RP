@@ -27,7 +27,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics"
-	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
@@ -46,8 +45,6 @@ func (err statusCodeError) Error() string {
 type kubeActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error)
 
 type azureActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error)
-
-type ocEnricherFactory func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Emitter) clusterdata.OpenShiftClusterEnricher
 
 type frontend struct {
 	auditLog *logrus.Entry
@@ -77,11 +74,12 @@ type frontend struct {
 	hiveClusterManager  hive.ClusterManager
 	kubeActionsFactory  kubeActionsFactory
 	azureActionsFactory azureActionsFactory
-	ocEnricherFactory   ocEnricherFactory
 
 	skuValidator       SkuValidator
 	quotaValidator     QuotaValidator
 	providersValidator ProvidersValidator
+
+	clusterEnricher clusterdata.BestEffortEnricher
 
 	l net.Listener
 	s *http.Server
@@ -124,7 +122,8 @@ func NewFrontend(ctx context.Context,
 	hiveClusterManager hive.ClusterManager,
 	kubeActionsFactory kubeActionsFactory,
 	azureActionsFactory azureActionsFactory,
-	ocEnricherFactory ocEnricherFactory) (*frontend, error) {
+	enricher clusterdata.BestEffortEnricher,
+) (*frontend, error) {
 	f := &frontend{
 		logMiddleware: middleware.LogMiddleware{
 			EnvironmentName: _env.Environment().Name,
@@ -158,10 +157,12 @@ func NewFrontend(ctx context.Context,
 		hiveClusterManager:            hiveClusterManager,
 		kubeActionsFactory:            kubeActionsFactory,
 		azureActionsFactory:           azureActionsFactory,
-		ocEnricherFactory:             ocEnricherFactory,
-		quotaValidator:                quotaValidator{},
-		skuValidator:                  skuValidator{},
-		providersValidator:            providersValidator{},
+
+		quotaValidator:     quotaValidator{},
+		skuValidator:       skuValidator{},
+		providersValidator: providersValidator{},
+
+		clusterEnricher: enricher,
 
 		// add default installation version so it's always supported
 		enabledOcpVersions: map[string]*api.OpenShiftVersion{

@@ -260,27 +260,20 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 				tt.modifyOc(oc)
 			}
 
-			e := &workerProfilesEnricherTask{
-				log:    log,
-				maocli: tt.client(),
-				oc:     oc,
+			e := machineClientEnricher{}
+			clients := clients{
+				machine: tt.client(),
 			}
-			e.SetDefaults()
 
-			callbacks := make(chan func())
-			errors := make(chan error)
-			go e.FetchData(context.Background(), callbacks, errors)
+			e.SetDefaults(oc)
 
-			select {
-			case f := <-callbacks:
-				f()
-				if !reflect.DeepEqual(oc, tt.wantOc) {
-					t.Error(cmp.Diff(oc, tt.wantOc))
-				}
-			case err := <-errors:
-				if tt.wantErr != err.Error() {
-					t.Error(err)
-				}
+			err := e.Enrich(context.Background(), log, oc, clients.k8s, clients.config, clients.machine, clients.operator)
+
+			if (err == nil && tt.wantErr != "") || (err != nil && err.Error() != tt.wantErr) {
+				t.Errorf("wanted err to be %s but got %s", err, tt.wantErr)
+			}
+			if !reflect.DeepEqual(oc, tt.wantOc) {
+				t.Error(cmp.Diff(oc, tt.wantOc))
 			}
 		})
 	}

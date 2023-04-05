@@ -116,8 +116,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 
-		ocEnricher := f.ocEnricherFactory(log, f.env, f.m)
-		ocEnricher.Enrich(timeoutCtx, doc.OpenShiftCluster)
+		f.clusterEnricher.Enrich(timeoutCtx, log, doc.OpenShiftCluster)
 	}
 
 	var ext interface{}
