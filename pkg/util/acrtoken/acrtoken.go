@@ -110,18 +110,31 @@ func (m *manager) RotateTokenPassword(ctx context.Context, rp *api.RegistryProfi
 	if err != nil {
 		return err
 	}
+	tokenPasswords := *tokenProperties.Credentials.Passwords
 
-	// in practice there are only 2 possible passwords for the token, but the slice as written has arbitrary length so we iterate over all of them
-	var toRenew mgmtcontainerregistry.TokenPassword
-	for _, tp := range *tokenProperties.Credentials.Passwords {
-		if tp.CreationTime.IsZero() {
-			toRenew = tp
-		} else if tp.CreationTime.Before(toRenew.CreationTime.ToTime()) {
-			toRenew = tp
+	var passwordToRenew mgmtcontainerregistry.TokenPasswordName
+	switch {
+	// Passwords has zero entries: generate password 1
+	// this shouldn't ever happen, which guarantees it will happen
+	case len(tokenPasswords) == 0:
+		passwordToRenew = mgmtcontainerregistry.TokenPasswordNamePassword1
+	// Passwords only has one entry: renew password that isn't present
+	case len(tokenPasswords) == 1:
+		if tokenPasswords[0].Name == mgmtcontainerregistry.TokenPasswordNamePassword1 {
+			passwordToRenew = mgmtcontainerregistry.TokenPasswordNamePassword2
+		} else {
+			passwordToRenew = mgmtcontainerregistry.TokenPasswordNamePassword1
+		}
+	// Passwords has two entries: compare creation dates, renew oldest
+	case len(tokenPasswords) == 2:
+		if tokenPasswords[0].CreationTime.Before(tokenPasswords[1].CreationTime.Time) {
+			passwordToRenew = mgmtcontainerregistry.TokenPasswordNamePassword1
+		} else {
+			passwordToRenew = mgmtcontainerregistry.TokenPasswordNamePassword2
 		}
 	}
 
-	newPassword, err := m.generateTokenPassword(ctx, toRenew.Name, rp)
+	newPassword, err := m.generateTokenPassword(ctx, passwordToRenew, rp)
 	if err != nil {
 		return err
 	}
@@ -132,7 +145,6 @@ func (m *manager) RotateTokenPassword(ctx context.Context, rp *api.RegistryProfi
 // generateTokenPassword takes an existing ACR token and generates
 // a password for the specified password name
 func (m *manager) generateTokenPassword(ctx context.Context, passwordName mgmtcontainerregistry.TokenPasswordName, rp *api.RegistryProfile) (string, error) {
-
 	creds, err := m.registries.GenerateCredentials(ctx, m.r.ResourceGroup, m.r.ResourceName, mgmtcontainerregistry.GenerateCredentialsParameters{
 		TokenID: to.StringPtr(m.env.ACRResourceID() + "/tokens/" + rp.Username),
 		Name:    passwordName,
