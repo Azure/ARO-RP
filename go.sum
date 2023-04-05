@@ -941,8 +941,6 @@ github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJS
 github.com/jessevdk/go-flags v1.5.0/go.mod h1:Fw0T6WPc1dYxT4mKEZRfG5kJhaTDP9pj1c2EWnYs/m4=
 github.com/jewzaam/go-cosmosdb v0.0.0-20220315232836-282b67c5b234 h1:R0Hokq55Hv3SpbXyfZRh8vIrKFAPZ+SQqyTsRc7J/4E=
 github.com/jewzaam/go-cosmosdb v0.0.0-20220315232836-282b67c5b234/go.mod h1:kZxm8EB19+pd3nT92t0aQblXb7K4sHG8cp59cleqdNc=
-github.com/jewzaam/installer-aro v0.9.0-master.0.20220524230743-7e2aa7a0cc1a h1:dz4VJywAe1LvRMqwl8mkaVLb0vfvp+4NBT+EaxXj6oE=
-github.com/jewzaam/installer-aro v0.9.0-master.0.20220524230743-7e2aa7a0cc1a/go.mod h1:ak+tefHa9dwYifd0+K910jIyFuRuqHjtr/htkxI8IZo=
 github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=
 github.com/jmespath/go-jmespath v0.3.0/go.mod h1:9QtRXoHjLGCJ5IBSaohpXITPlowMeeYCZ7fLUTSywik=
 github.com/jmespath/go-jmespath v0.4.0 h1:BEgLn5cpjn8UN1mAw4NjwDrS35OdebyEtFe+9YPoQUg=
@@ -1577,6 +1575,8 @@ github.com/vbatts/tar-split v0.11.2/go.mod h1:vV3ZuO2yWSVsz+pfFzDG/upWH1JhjOiEaW
 github.com/vbauerster/mpb/v7 v7.3.2/go.mod h1:wfxIZcOJq/bG1/lAtfzMXcOiSvbqVi/5GX5WCSi+IsA=
 github.com/vbauerster/mpb/v7 v7.4.1 h1:NhLMWQ3gNg2KJR8oeA9lO8Xvq+eNPmixDmB6JEQOUdA=
 github.com/vbauerster/mpb/v7 v7.4.1/go.mod h1:Ygg2mV9Vj9sQBWqsK2m2pidcf9H3s6bNKtqd3/M4gBo=
+github.com/ventifus/installer-aro v0.0.0-20230404230942-a99152bf4d63 h1:h+Rf4tJhsWBbrk7ze+epBBWwnZRNR7XSQd09iOMTSKY=
+github.com/ventifus/installer-aro v0.0.0-20230404230942-a99152bf4d63/go.mod h1:ak+tefHa9dwYifd0+K910jIyFuRuqHjtr/htkxI8IZo=
 github.com/vincent-petithory/dataurl v0.0.0-20160330182126-9a301d65acbb/go.mod h1:FHafX5vmDzyP+1CQATJn7WFKc9CvnvxyvZy6I1MrG/U=
 github.com/vincent-petithory/dataurl v1.0.0 h1:cXw+kPto8NLuJtlMsI152irrVw9fRDX8AbShPRpg2CI=
 github.com/vincent-petithory/dataurl v1.0.0/go.mod h1:FHafX5vmDzyP+1CQATJn7WFKc9CvnvxyvZy6I1MrG/U=
