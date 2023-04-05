@@ -12,7 +12,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
 
@@ -46,10 +45,11 @@ func (f *frontend) preflightValidation(w http.ResponseWriter, r *http.Request) {
 
 func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, body []byte, correlationData *api.CorrelationData, systemData *api.SystemData, path, originalPath, method, referer string, header *http.Header, converter api.OpenShiftClusterConverter, staticValidator api.OpenShiftClusterStaticValidator, subId, resourceProviderNamespace string, apiVersion string) ([]byte, error) {
 	// multiple errors should be able to return, just add them to the message
-	subscription, err := f.validateSubscriptionState(ctx, path, api.SubscriptionStateRegistered)
+	/*subscription, err := f.validateSubscriptionState(ctx, path, api.SubscriptionStateRegistered)
 	if err != nil {
 		return nil, err
 	}
+	*/
 
 	doc, err := f.dbOpenShiftClusters.Get(ctx, path)
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
@@ -93,22 +93,11 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 			return nil, err
 		}
 	} else {
+		// validateTerminalProvisionState which if creating, wouldn't have. maybe save that check for deploying
+
 		// preflight doc mentions SKU and quota validation are good candidates to do preflight validation on
-		err = f.skuValidator.ValidateVMSku(ctx, f.env.Environment(), f.env, subscription.ID, subscription.Subscription.Properties.TenantID, cluster)
-		if err != nil {
-			return nil, err
-		}
-
-		err = f.quotaValidator.ValidateQuota(ctx, f.env.Environment(), f.env, subscription.ID, subscription.Subscription.Properties.TenantID, cluster)
-		if err != nil {
-			return nil, err
-		}
-
-		// Not sure if we keep this one yet
-		err = staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sV3Workers), path)
-		if err != nil {
-			return nil, err
-		}
+		// Need workerprofiles, location, VMsize from the clusterdoc
+		// change the base of the function to not need cluster to work
 
 		err = f.validateInstallVersion(ctx, doc)
 		if err != nil {
@@ -116,5 +105,5 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 		}
 	}
 
-	return b, err
+	return nil, err
 }

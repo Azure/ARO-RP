@@ -287,7 +287,7 @@ func (f *frontend) ValidateNewCluster(ctx context.Context, subscription *api.Sub
 		return err
 	}
 
-	err = f.skuValidator.ValidateVMSku(ctx, f.env.Environment(), f.env, subscription.ID, subscription.Subscription.Properties.TenantID, cluster)
+	err = f.skuValidator.ValidateVMSku(ctx, f.env.Environment(), f.env, subscription.ID, subscription.Subscription.Properties.TenantID, cluster.Location, string(cluster.Properties.MasterProfile.VMSize), cluster.Properties.WorkerProfiles)
 	if err != nil {
 		return err
 	}

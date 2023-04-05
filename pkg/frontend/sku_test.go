@@ -207,7 +207,7 @@ func TestValidateVMSku(t *testing.T) {
 				List(gomock.Any(), fmt.Sprintf("location eq %v", "eastus")).
 				Return(skus, tt.resourceSkusClientErr)
 
-			err := validateVMSku(context.Background(), oc, resourceSkusClient)
+			err := validateVMSku(context.Background(), resourceSkusClient, oc.Location, string(oc.Properties.MasterProfile.VMSize), oc.Properties.WorkerProfiles)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
