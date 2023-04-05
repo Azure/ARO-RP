@@ -122,44 +122,45 @@ func TestRotateTokenPassword(t *testing.T) {
 		},
 	}
 
+	username := "aro-12345"
+	resourceID := "/subscriptions/93aeba23-2f76-4307-be82-02921df010cf/resourceGroups/global/providers/Microsoft.ContainerRegistry/registries/arointsvc"
+	ctx := context.Background()
+	controller := gomock.NewController(t)
+
+	env := mock_env.NewMockInterface(controller)
+	env.EXPECT().ACRResourceID().AnyTimes().Return(resourceID)
+	tokens := mock_containerregistry.NewMockTokensClient(controller)
+	registries := mock_containerregistry.NewMockRegistriesClient(controller)
+	r, err := azure.ParseResourceID(env.ACRResourceID())
+	if err != nil {
+		t.Fatal(err)
+	}
+	credentialResult := mgmtcontainerregistry.GenerateCredentialsResult{
+		Passwords: &[]mgmtcontainerregistry.TokenPassword{
+			{
+				Value: to.StringPtr("foo"),
+			},
+		},
+	}
+	registryProfile := api.RegistryProfile{
+		Username: username,
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resourceID := "/subscriptions/93aeba23-2f76-4307-be82-02921df010cf/resourceGroups/global/providers/Microsoft.ContainerRegistry/registries/arointsvc"
-			username := "aro-12345"
-
-			ctx := context.Background()
-			controller := gomock.NewController(t)
-
-			env := mock_env.NewMockInterface(controller)
-			env.EXPECT().ACRResourceID().AnyTimes().Return(resourceID)
-
 			fakeTokenProperties := mgmtcontainerregistry.TokenProperties{
 				Credentials: &mgmtcontainerregistry.TokenCredentialsProperties{
 					Passwords: &tt.tokenPasswordProperties,
 				},
 			}
-			tokens := mock_containerregistry.NewMockTokensClient(controller)
 			tokens.EXPECT().GetTokenProperties(ctx, "global", "arointsvc", username).Return(fakeTokenProperties, nil)
 
-			registries := mock_containerregistry.NewMockRegistriesClient(controller)
 			expectedCredentialParameters := mgmtcontainerregistry.GenerateCredentialsParameters{
 				TokenID: to.StringPtr(resourceID + "/tokens/" + username),
 				Name:    tt.expectedRenewalPassword,
 			}
-			credentialResult := mgmtcontainerregistry.GenerateCredentialsResult{
-				Passwords: &[]mgmtcontainerregistry.TokenPassword{
-					{
-						Value: to.StringPtr("foo"),
-					},
-				},
-			}
 			registries.EXPECT().GenerateCredentials(ctx, "global", "arointsvc", expectedCredentialParameters).
 				Return(credentialResult, nil)
-
-			r, err := azure.ParseResourceID(env.ACRResourceID())
-			if err != nil {
-				t.Fatal(err)
-			}
 
 			m := &manager{
 				env: env,
@@ -169,9 +170,6 @@ func TestRotateTokenPassword(t *testing.T) {
 				tokens:     tokens,
 			}
 
-			registryProfile := api.RegistryProfile{
-				Username: "aro-12345",
-			}
 			err = m.RotateTokenPassword(ctx, &registryProfile)
 			if err != nil {
 				t.Fatal(err)
