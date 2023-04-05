@@ -1,13 +1,13 @@
 {
     "kind": "APIResourceList",
     "apiVersion": "v1",
-    "groupVersion": "batch/v1beta1",
+    "groupVersion": "performance.openshift.io/v2",
     "resources": [
         {
-            "name": "cronjobs",
-            "singularName": "",
-            "namespaced": true,
-            "kind": "CronJob",
+            "name": "performanceprofiles",
+            "singularName": "performanceprofile",
+            "namespaced": false,
+            "kind": "PerformanceProfile",
             "verbs": [
                 "create",
                 "delete",
@@ -18,19 +18,13 @@
                 "update",
                 "watch"
             ],
-            "shortNames": [
-                "cj"
-            ],
-            "categories": [
-                "all"
-            ],
-            "storageVersionHash": "sd5LIXh4Fjs="
+            "storageVersionHash": "+AfVMGb9Yeo="
         },
         {
-            "name": "cronjobs/status",
+            "name": "performanceprofiles/status",
             "singularName": "",
-            "namespaced": true,
-            "kind": "CronJob",
+            "namespaced": false,
+            "kind": "PerformanceProfile",
             "verbs": [
                 "get",
                 "patch",

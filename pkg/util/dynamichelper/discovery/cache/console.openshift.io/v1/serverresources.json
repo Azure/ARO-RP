@@ -116,6 +116,23 @@
             ]
         },
         {
+            "name": "consoleplugins",
+            "singularName": "consoleplugin",
+            "namespaced": false,
+            "kind": "ConsolePlugin",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "ACCeQvz0mH0="
+        },
+        {
             "name": "consolequickstarts",
             "singularName": "consolequickstart",
             "namespaced": false,

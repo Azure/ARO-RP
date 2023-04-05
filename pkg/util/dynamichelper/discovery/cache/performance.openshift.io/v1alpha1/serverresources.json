@@ -1,13 +1,13 @@
 {
     "kind": "APIResourceList",
     "apiVersion": "v1",
-    "groupVersion": "autoscaling/v2beta1",
+    "groupVersion": "performance.openshift.io/v1alpha1",
     "resources": [
         {
-            "name": "horizontalpodautoscalers",
-            "singularName": "",
-            "namespaced": true,
-            "kind": "HorizontalPodAutoscaler",
+            "name": "performanceprofiles",
+            "singularName": "performanceprofile",
+            "namespaced": false,
+            "kind": "PerformanceProfile",
             "verbs": [
                 "create",
                 "delete",
@@ -18,19 +18,13 @@
                 "update",
                 "watch"
             ],
-            "shortNames": [
-                "hpa"
-            ],
-            "categories": [
-                "all"
-            ],
-            "storageVersionHash": "oQlkt7f5j/A="
+            "storageVersionHash": "+AfVMGb9Yeo="
         },
         {
-            "name": "horizontalpodautoscalers/status",
+            "name": "performanceprofiles/status",
             "singularName": "",
-            "namespaced": true,
-            "kind": "HorizontalPodAutoscaler",
+            "namespaced": false,
+            "kind": "PerformanceProfile",
             "verbs": [
                 "get",
                 "patch",

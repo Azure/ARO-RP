@@ -18,6 +18,9 @@
                 "update",
                 "watch"
             ],
+            "shortNames": [
+                "amcfg"
+            ],
             "categories": [
                 "prometheus-operator"
             ],

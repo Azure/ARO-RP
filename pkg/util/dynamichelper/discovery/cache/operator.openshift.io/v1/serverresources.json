@@ -275,6 +275,47 @@
             ]
         },
         {
+            "name": "insightsoperators",
+            "singularName": "insightsoperator",
+            "namespaced": false,
+            "kind": "InsightsOperator",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "mHoo1CahpYs="
+        },
+        {
+            "name": "insightsoperators/scale",
+            "singularName": "",
+            "namespaced": false,
+            "group": "autoscaling",
+            "version": "v1",
+            "kind": "Scale",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "insightsoperators/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "InsightsOperator",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
             "name": "kubeapiservers",
             "singularName": "kubeapiserver",
             "namespaced": false,

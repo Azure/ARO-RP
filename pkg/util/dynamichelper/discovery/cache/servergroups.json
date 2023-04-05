@@ -50,10 +50,6 @@
                 {
                     "groupVersion": "events.k8s.io/v1",
                     "version": "v1"
-                },
-                {
-                    "groupVersion": "events.k8s.io/v1beta1",
-                    "version": "v1beta1"
                 }
             ]
         },
@@ -99,10 +95,6 @@
                     "version": "v1"
                 },
                 {
-                    "groupVersion": "autoscaling/v2beta1",
-                    "version": "v2beta1"
-                },
-                {
                     "groupVersion": "autoscaling/v2beta2",
                     "version": "v2beta2"
                 }
@@ -118,10 +110,6 @@
                 {
                     "groupVersion": "batch/v1",
                     "version": "v1"
-                },
-                {
-                    "groupVersion": "batch/v1beta1",
-                    "version": "v1beta1"
                 }
             ]
         },
@@ -161,10 +149,6 @@
                 {
                     "groupVersion": "policy/v1",
                     "version": "v1"
-                },
-                {
-                    "groupVersion": "policy/v1beta1",
-                    "version": "v1beta1"
                 }
             ]
         },
@@ -260,10 +244,6 @@
                 {
                     "groupVersion": "node.k8s.io/v1",
                     "version": "v1"
-                },
-                {
-                    "groupVersion": "node.k8s.io/v1beta1",
-                    "version": "v1beta1"
                 }
             ]
         },
@@ -277,10 +257,6 @@
                 {
                     "groupVersion": "discovery.k8s.io/v1",
                     "version": "v1"
-                },
-                {
-                    "groupVersion": "discovery.k8s.io/v1beta1",
-                    "version": "v1beta1"
                 }
             ]
         },
@@ -600,6 +576,23 @@
             ]
         },
         {
+            "name": "machine.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "machine.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "machine.openshift.io/v1",
+                    "version": "v1"
+                },
+                {
+                    "groupVersion": "machine.openshift.io/v1beta1",
+                    "version": "v1beta1"
+                }
+            ]
+        },
+        {
             "name": "machineconfiguration.openshift.io",
             "preferredVersion": {
                 "groupVersion": "machineconfiguration.openshift.io/v1",
@@ -622,6 +615,10 @@
                 {
                     "groupVersion": "monitoring.coreos.com/v1",
                     "version": "v1"
+                },
+                {
+                    "groupVersion": "monitoring.coreos.com/v1beta1",
+                    "version": "v1beta1"
                 },
                 {
                     "groupVersion": "monitoring.coreos.com/v1alpha1",
@@ -681,6 +678,27 @@
             ]
         },
         {
+            "name": "performance.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "performance.openshift.io/v2",
+                "version": "v2"
+            },
+            "versions": [
+                {
+                    "groupVersion": "performance.openshift.io/v2",
+                    "version": "v2"
+                },
+                {
+                    "groupVersion": "performance.openshift.io/v1",
+                    "version": "v1"
+                },
+                {
+                    "groupVersion": "performance.openshift.io/v1alpha1",
+                    "version": "v1alpha1"
+                }
+            ]
+        },
+        {
             "name": "samples.operator.openshift.io",
             "preferredVersion": {
                 "groupVersion": "samples.operator.openshift.io/v1",
@@ -716,10 +734,6 @@
                 {
                     "groupVersion": "snapshot.storage.k8s.io/v1",
                     "version": "v1"
-                },
-                {
-                    "groupVersion": "snapshot.storage.k8s.io/v1beta1",
-                    "version": "v1beta1"
                 }
             ]
         },
@@ -836,19 +850,6 @@
             "versions": [
                 {
                     "groupVersion": "helm.openshift.io/v1beta1",
-                    "version": "v1beta1"
-                }
-            ]
-        },
-        {
-            "name": "machine.openshift.io",
-            "preferredVersion": {
-                "groupVersion": "machine.openshift.io/v1beta1",
-                "version": "v1beta1"
-            },
-            "versions": [
-                {
-                    "groupVersion": "machine.openshift.io/v1beta1",
                     "version": "v1beta1"
                 }
             ]

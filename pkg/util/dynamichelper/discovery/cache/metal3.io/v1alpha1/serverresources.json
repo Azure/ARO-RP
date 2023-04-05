@@ -85,6 +85,26 @@
             "storageVersionHash": "qcYszB47DJE="
         },
         {
+            "name": "hardwaredata",
+            "singularName": "hardwaredata",
+            "namespaced": true,
+            "kind": "HardwareData",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "shortNames": [
+                "hd"
+            ],
+            "storageVersionHash": "d3ZEE2XIvnM="
+        },
+        {
             "name": "hostfirmwaresettings",
             "singularName": "hostfirmwaresettings",
             "namespaced": true,

@@ -1,0 +1,48 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "machine.openshift.io/v1",
+    "resources": [
+        {
+            "name": "controlplanemachinesets",
+            "singularName": "controlplanemachineset",
+            "namespaced": true,
+            "kind": "ControlPlaneMachineSet",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "3DJk3ap4Ez8="
+        },
+        {
+            "name": "controlplanemachinesets/scale",
+            "singularName": "",
+            "namespaced": true,
+            "group": "autoscaling",
+            "version": "v1",
+            "kind": "Scale",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "controlplanemachinesets/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "ControlPlaneMachineSet",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        }
+    ]
+}

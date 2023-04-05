@@ -70,6 +70,17 @@
                 "netpol"
             ],
             "storageVersionHash": "YpfwF18m1G8="
+        },
+        {
+            "name": "networkpolicies/status",
+            "singularName": "",
+            "namespaced": true,
+            "kind": "NetworkPolicy",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
         }
     ]
 }

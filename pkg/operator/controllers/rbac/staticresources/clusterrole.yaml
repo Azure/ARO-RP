@@ -226,6 +226,7 @@ rules:
   - infrastructures
   - ingresses
   - networks
+  - nodes
   - oauths
   - operatorhubs
   - projects
@@ -350,6 +351,7 @@ rules:
 - apiGroups:
   - machine.openshift.io
   resources:
+  - controlplanemachinesets
   - machinehealthchecks
   - machines
   - machinesets
@@ -375,6 +377,7 @@ rules:
   - baremetalhosts
   - bmceventsubscriptions
   - firmwareschemas
+  - hardwaredata
   - hostfirmwaresettings
   - preprovisioningimages
   - provisionings
@@ -465,6 +468,7 @@ rules:
   - etcds
   - imagecontentsourcepolicies
   - ingresscontrollers
+  - insightsoperators
   - kubeapiservers
   - kubecontrollermanagers
   - kubeschedulers
@@ -501,10 +505,17 @@ rules:
   - get
   - list
 - apiGroups:
+  - performance.openshift.io
+  resources:
+  - performanceprofiles
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - policy
   resources:
   - poddisruptionbudgets
-  - podsecuritypolicies
   verbs:
   - get
   - list

@@ -1,13 +1,13 @@
 {
     "kind": "APIResourceList",
     "apiVersion": "v1",
-    "groupVersion": "events.k8s.io/v1beta1",
+    "groupVersion": "monitoring.coreos.com/v1beta1",
     "resources": [
         {
-            "name": "events",
-            "singularName": "",
+            "name": "alertmanagerconfigs",
+            "singularName": "alertmanagerconfig",
             "namespaced": true,
-            "kind": "Event",
+            "kind": "AlertmanagerConfig",
             "verbs": [
                 "create",
                 "delete",
@@ -19,9 +19,12 @@
                 "watch"
             ],
             "shortNames": [
-                "ev"
+                "amcfg"
             ],
-            "storageVersionHash": "r2yiGXH7wu8="
+            "categories": [
+                "prometheus-operator"
+            ],
+            "storageVersionHash": "95DNJ6wsUCg="
         }
     ]
 }
