@@ -110,6 +110,7 @@ jobs:
       . ./hack/e2e/run-rp-and-e2e.sh
       clean_e2e_db
     displayName: Cleanup (Azure)
+    condition: always()
   - template: ./templates/template-az-cli-logout.yml
 
   - task: PublishTestResults@2
