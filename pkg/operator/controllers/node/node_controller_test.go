@@ -19,6 +19,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestReconciler(t *testing.T) {
@@ -389,10 +390,7 @@ func TestReconciler(t *testing.T) {
 			ctx := context.Background()
 
 			_, err := r.Reconcile(ctx, request)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

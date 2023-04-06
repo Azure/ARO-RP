@@ -10,6 +10,8 @@ import (
 	operatorv1 "github.com/openshift/api/operator/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestCheck(t *testing.T) {
@@ -83,10 +85,7 @@ func TestCheck(t *testing.T) {
 			}
 
 			err := sp.Check(ctx)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Errorf("\n%s\n !=\n%s", err, tt.wantErr)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

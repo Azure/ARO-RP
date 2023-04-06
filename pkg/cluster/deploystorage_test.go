@@ -24,6 +24,7 @@ import (
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestEnsureResourceGroup(t *testing.T) {
@@ -198,10 +199,7 @@ func TestEnsureResourceGroup(t *testing.T) {
 			}
 
 			err := m.ensureResourceGroup(ctx)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
@@ -271,10 +269,7 @@ func TestSetMasterSubnetPolicies(t *testing.T) {
 			}
 
 			err := m.setMasterSubnetPolicies(ctx)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
@@ -365,10 +360,7 @@ func TestEnsureInfraID(t *testing.T) {
 			// hopefully setting a seed here means it passes consistently :)
 			utilrand.Seed(0)
 			err = m.ensureInfraID(ctx)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			checkDoc, err := dbOpenShiftClusters.Get(ctx, strings.ToLower(resourceID))
 			if err != nil {

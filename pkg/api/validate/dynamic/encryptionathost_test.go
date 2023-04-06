@@ -15,6 +15,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestValidateEncryptionAtHost(t *testing.T) {
@@ -151,10 +152,7 @@ func TestValidateEncryptionAtHost(t *testing.T) {
 			}
 
 			err := dv.ValidateEncryptionAtHost(ctx, tt.oc)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

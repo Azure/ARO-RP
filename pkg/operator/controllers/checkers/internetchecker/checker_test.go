@@ -15,6 +15,8 @@ import (
 	"time"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
+
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 type fakeResponse struct {
@@ -104,10 +106,7 @@ func TestCheck(t *testing.T) {
 				httpClient:   &testClient{responses: test.responses},
 			}
 			err := r.Check([]string{urltocheck})
-			if err != nil && err.Error() != test.wantErr ||
-				err == nil && test.wantErr != "" {
-				t.Error(err)
-			}
+			utilerror.AssertErrorMessage(t, err, test.wantErr)
 		})
 	}
 }

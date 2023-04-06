@@ -17,6 +17,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	mock_refreshable "github.com/Azure/ARO-RP/pkg/util/mocks/refreshable"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -333,10 +334,7 @@ func TestStepRunner(t *testing.T) {
 			steps := tt.steps(controller)
 
 			_, err := Run(ctx, log, 25*time.Millisecond, steps, currentTimeFunc)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			err = testlog.AssertLoggingOutput(h, tt.wantEntries)
 			if err != nil {

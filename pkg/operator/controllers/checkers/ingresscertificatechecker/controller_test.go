@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 type fakeChecker struct {
@@ -92,10 +93,7 @@ func TestReconcile(t *testing.T) {
 			}
 
 			result, err := r.Reconcile(ctx, ctrl.Request{})
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if !reflect.DeepEqual(tt.wantResult, result) {
 				t.Error(cmp.Diff(tt.wantResult, result))
