@@ -784,14 +784,36 @@ test_validate_outbound_type_data = [
         None
     ),
     (
-        "Should not raise exception when key is UserDefinedRouting.",
-        Mock(outbound_type='UserDefinedRouting'),
-        None
-    ),
-    (
         "Should not raise exception when key is empty.",
         Mock(outbound_type=None),
         None
+    ),
+    (
+        "Should not raise exception with UDR and ingress/apiserver visibility private",
+        Mock(
+            outbound_type="UserDefinedRouting",
+            apiserver_visibility="Private",
+            ingress_visibility="Private"
+        ),
+        None
+    ),
+    (
+        "Should raise exception with UDR and either ingress or apiserver visibility is public",
+        Mock(
+            outbound_type="UserDefinedRouting",
+            apiserver_visibility="Private",
+            ingress_visibility="Public"
+        ),
+        InvalidArgumentValueError
+    ),
+    (
+        "Should raise exception when key is UserDefinedRouting and apiserver/ingress visibilities are not defined.",
+        Mock(
+            outbound_type="UserDefinedRouting",
+            apiserver_visibility=None,
+            ingress_visibility=None
+        ),
+        InvalidArgumentValueError
     ),
     (
         "Should raise exception when key is a different value.",

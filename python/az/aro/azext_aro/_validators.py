@@ -120,9 +120,21 @@ def validate_pull_secret(namespace):
 
 def validate_outbound_type(namespace):
     outbound_type = getattr(namespace, 'outbound_type')
-    if outbound_type in {'UserDefinedRouting', 'Loadbalancer', None}:
-        return
-    raise InvalidArgumentValueError('Outbound type must be "UserDefinedRouting" or "Loadbalancer"')
+    if outbound_type not in {'UserDefinedRouting', 'Loadbalancer', None}:
+        raise InvalidArgumentValueError('Invalid --outbound-type: must be "UserDefinedRouting" or "Loadbalancer"')
+
+    ingress_visibility = getattr(namespace, 'ingress_visibility')
+    apiserver_visibility = getattr(namespace, 'apiserver_visibility')
+
+    if (outbound_type == 'UserDefinedRouting' and
+            (is_visibility_public(ingress_visibility) or is_visibility_public(apiserver_visibility))):
+        raise InvalidArgumentValueError('Invalid --outbound-type: cannot use UserDefinedRouting when ' +
+                                        'either --apiserver-visibility or --ingress-visibility is set ' +
+                                        'to Public or not defined')
+
+
+def is_visibility_public(visibility):
+    return visibility == 'Public' or visibility is None
 
 
 def validate_subnet(key):
