@@ -8,7 +8,7 @@ import (
 
 	azuretypes "github.com/openshift/installer/pkg/types/azure"
 
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestEnvironmentFromName(t *testing.T) {
@@ -34,7 +34,7 @@ func TestEnvironmentFromName(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := EnvironmentFromName(tt.azEnv)
 
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

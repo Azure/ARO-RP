@@ -16,7 +16,7 @@ import (
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 type fakeResponse struct {
@@ -106,7 +106,7 @@ func TestCheck(t *testing.T) {
 				httpClient:   &testClient{responses: test.responses},
 			}
 			err := r.Check([]string{urltocheck})
-			matcher.AssertErrHasWantMsg(t, err, test.wantErr)
+			utilerror.AssertErrorMessage(t, err, test.wantErr)
 		})
 	}
 }

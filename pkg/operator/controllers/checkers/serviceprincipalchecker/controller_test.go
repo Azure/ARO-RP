@@ -23,7 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 type fakeChecker func(ctx context.Context, AZEnvironment string) error
@@ -99,7 +99,7 @@ func TestReconcile(t *testing.T) {
 			}
 
 			result, err := r.Reconcile(ctx, ctrl.Request{})
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if !reflect.DeepEqual(tt.wantResult, result) {
 				t.Error(cmp.Diff(tt.wantResult, result))

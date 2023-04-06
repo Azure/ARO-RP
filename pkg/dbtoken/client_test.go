@@ -12,7 +12,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 type fakeClient struct {
@@ -94,7 +94,7 @@ func TestClient(t *testing.T) {
 			}
 
 			token, err := c.Token(ctx, "permission")
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if token != tt.wantToken {
 				t.Error(token)

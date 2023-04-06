@@ -21,7 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_authorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestValidateDiskEncryptionSets(t *testing.T) {
@@ -284,7 +284,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 					}
 
 					err := dv.ValidateDiskEncryptionSets(ctx, tt.oc)
-					matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+					utilerror.AssertErrorMessage(t, err, tt.wantErr)
 				})
 			}
 		})

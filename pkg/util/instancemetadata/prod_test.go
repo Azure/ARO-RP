@@ -18,7 +18,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_instancemetadata "github.com/Azure/ARO-RP/pkg/util/mocks/instancemetadata"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestPopulateInstanceMetadata(t *testing.T) {
@@ -139,7 +139,7 @@ func TestPopulateInstanceMetadata(t *testing.T) {
 
 			err := p.populateInstanceMetadata()
 
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if p.subscriptionID != tt.wantSubscriptionID {
 				t.Error(p.subscriptionID)
@@ -231,7 +231,7 @@ func TestPopulateTenantIDFromMSI(t *testing.T) {
 			}
 
 			err := p.populateTenantIDFromMSI(ctx)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if p.tenantID != tt.wantTenantID {
 				t.Error(p.tenantID)

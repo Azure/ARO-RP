@@ -20,7 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/uuid/fake"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestIsClusterDeploymentReady(t *testing.T) {
@@ -158,7 +158,7 @@ func TestIsClusterDeploymentReady(t *testing.T) {
 			}
 
 			result, err := c.IsClusterDeploymentReady(context.Background(), doc)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if tt.wantResult != result {
 				t.Error(result)
@@ -258,7 +258,7 @@ func TestIsClusterInstallationComplete(t *testing.T) {
 			}
 
 			result, err := c.IsClusterInstallationComplete(context.Background(), doc)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if tt.wantResult != result {
 				t.Error(result)
@@ -317,7 +317,7 @@ func TestResetCorrelationData(t *testing.T) {
 			}
 
 			err := c.ResetCorrelationData(context.Background(), doc)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if err == nil {
 				cd, err := c.hiveClientset.HiveV1().ClusterDeployments(fakeNamespace).Get(context.Background(), ClusterDeploymentName, metav1.GetOptions{})

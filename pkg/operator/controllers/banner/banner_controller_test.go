@@ -19,7 +19,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestBannerReconcile(t *testing.T) {
@@ -158,7 +158,7 @@ func TestBannerReconcile(t *testing.T) {
 			// function under test
 			_, err := r.Reconcile(ctx, ctrl.Request{})
 
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			resultBanner := &consolev1.ConsoleNotification{}
 			err = clientFake.Get(ctx, types.NamespacedName{Name: BannerName}, resultBanner)

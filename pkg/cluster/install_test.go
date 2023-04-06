@@ -27,8 +27,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
-	"github.com/Azure/ARO-RP/test/util/matcher"
 )
 
 func failingFunc(context.Context) error { return errors.New("oh no!") }
@@ -178,7 +178,7 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 			}
 
 			err := m.runSteps(ctx, tt.steps, "")
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			err = testlog.AssertLoggingOutput(h, tt.wantEntries)
 			if err != nil {

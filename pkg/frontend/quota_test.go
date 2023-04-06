@@ -15,7 +15,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestValidateQuota(t *testing.T) {
@@ -193,7 +193,7 @@ func TestValidateQuota(t *testing.T) {
 			}
 
 			err := validateQuota(ctx, oc, networkUsageClient, computeUsageClient)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

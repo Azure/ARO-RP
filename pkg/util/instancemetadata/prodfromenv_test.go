@@ -11,7 +11,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestProdEnvPopulateInstanceMetadata(t *testing.T) {
@@ -93,7 +93,7 @@ func TestProdEnvPopulateInstanceMetadata(t *testing.T) {
 			}
 
 			err := p.populateInstanceMetadata()
-			matcher.AssertErrHasWantMsg(t, err, test.wantErr)
+			utilerror.AssertErrorMessage(t, err, test.wantErr)
 
 			if !reflect.DeepEqual(p.instanceMetadata, test.wantInstanceMetadata) {
 				opts := cmp.AllowUnexported(instanceMetadata{})

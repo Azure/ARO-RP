@@ -13,7 +13,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestGatewayVerification(t *testing.T) {
@@ -128,7 +128,7 @@ func TestGatewayVerification(t *testing.T) {
 				t.Error(isAllowed)
 			}
 
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

@@ -11,7 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestCheck(t *testing.T) {
@@ -85,7 +85,7 @@ func TestCheck(t *testing.T) {
 			}
 
 			err := sp.Check(ctx)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

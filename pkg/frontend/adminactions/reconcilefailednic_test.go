@@ -16,7 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func getNic(subscription, resourceGroup, location, nicName string) mgmtnetwork.Interface {
@@ -87,7 +87,7 @@ func TestReconcileFailedNic(t *testing.T) {
 			}
 
 			err := a.NICReconcileFailedState(ctx, nicName)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

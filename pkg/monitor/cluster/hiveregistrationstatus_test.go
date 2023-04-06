@@ -22,7 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestEmitHiveRegistrationStatus(t *testing.T) {
@@ -106,7 +106,7 @@ func TestEmitHiveRegistrationStatus(t *testing.T) {
 			}
 
 			err := mon.emitHiveRegistrationStatus(context.Background())
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if tt.wantLog != "" {
 				x := hook.LastEntry()
@@ -154,7 +154,7 @@ func TestRetrieveClusterDeployment(t *testing.T) {
 			}
 
 			_, err := mon.retrieveClusterDeployment(context.Background())
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

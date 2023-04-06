@@ -12,7 +12,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_billing "github.com/Azure/ARO-RP/pkg/util/mocks/billing"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestEnsureBillingEntry(t *testing.T) {
@@ -55,7 +55,7 @@ func TestEnsureBillingEntry(t *testing.T) {
 			}
 
 			err := m.ensureBillingRecord(ctx)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

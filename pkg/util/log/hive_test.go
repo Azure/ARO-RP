@@ -13,7 +13,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestEnrichHiveWithCorrelationData(t *testing.T) {
@@ -131,7 +131,7 @@ func TestResetHiveCorrelationData(t *testing.T) {
 			}
 
 			err := ResetHiveCorrelationData(cd)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			var actualLogFields map[string]string
 			if val := cd.Annotations[additionalLogFieldsAnnotation]; val != "" {
@@ -197,7 +197,7 @@ func TestEnrichHiveWithResourceID(t *testing.T) {
 			}
 
 			err := EnrichHiveWithResourceID(cd, tt.resourceID)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			var actualLogFields map[string]string
 			if val := cd.Annotations[additionalLogFieldsAnnotation]; val != "" {

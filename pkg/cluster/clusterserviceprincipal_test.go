@@ -26,7 +26,7 @@ import (
 	mock_authorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 const fakeClusterSPObjectId = "00000000-0000-0000-0000-000000000000"
@@ -425,7 +425,7 @@ func TestUpdateOpenShiftSecret(t *testing.T) {
 			}
 
 			err := m.updateOpenShiftSecret(ctx)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			secret, _ := m.kubernetescli.CoreV1().Secrets("kube-system").Get(ctx, "azure-credentials", metav1.GetOptions{})
 

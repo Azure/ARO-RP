@@ -17,7 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestCheckIngressIP(t *testing.T) {
@@ -118,7 +118,7 @@ func TestCheckIngressIP(t *testing.T) {
 			oc := tt.oc()
 			ingressIP, err := checkIngressIP(oc.IngressProfiles)
 
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErrMsg)
+			utilerror.AssertErrorMessage(t, err, tt.wantErrMsg)
 
 			if tt.want != ingressIP {
 				t.Error(cmp.Diff(ingressIP, tt.want))
@@ -323,7 +323,7 @@ func TestCheckOperatorDeploymentVersion(t *testing.T) {
 			}
 
 			got, err := checkOperatorDeploymentVersion(ctx, clientset.AppsV1().Deployments("openshift-azure-operator"), tt.deployment.Name, tt.desiredVersion)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErrMsg)
+			utilerror.AssertErrorMessage(t, err, tt.wantErrMsg)
 
 			if tt.want != got {
 				t.Fatalf("error with CheckOperatorDeploymentVersion test %s: got %v wanted %v", tt.name, got, tt.want)
@@ -391,7 +391,7 @@ func TestCheckPodImageVersion(t *testing.T) {
 			}
 
 			got, err := checkPodImageVersion(ctx, clientset.CoreV1().Pods("openshift-azure-operator"), tt.pod.Name, tt.desiredVersion)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErrMsg)
+			utilerror.AssertErrorMessage(t, err, tt.wantErrMsg)
 
 			if tt.want != got {
 				t.Fatalf("error with CheckPodImageVersion test %s: got %v wanted %v", tt.name, got, tt.want)

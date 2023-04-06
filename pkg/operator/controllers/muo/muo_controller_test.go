@@ -20,7 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
 	mock_deployer "github.com/Azure/ARO-RP/pkg/util/mocks/deployer"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestMUOReconciler(t *testing.T) {
@@ -287,7 +287,7 @@ func TestMUOReconciler(t *testing.T) {
 				readinessPollTime: 1 * time.Second,
 			}
 			_, err := r.Reconcile(ctx, reconcile.Request{})
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

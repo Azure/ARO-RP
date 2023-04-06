@@ -21,7 +21,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestPullSecretReconciler(t *testing.T) {
@@ -368,7 +368,7 @@ func TestParseRedHatKeys(t *testing.T) {
 			}
 
 			out, err := r.parseRedHatKeys(tt.ps)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if !reflect.DeepEqual(out, tt.wantKeys) {
 				t.Fatalf("Enexpected keys found:\nwant: %v\ngot: %v", tt.wantKeys, out)
@@ -771,7 +771,7 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 			}
 
 			s, err := r.ensureGlobalPullSecret(ctx, tt.operatorPullSecret, tt.pullSecret)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantError)
+			utilerror.AssertErrorMessage(t, err, tt.wantError)
 
 			if !reflect.DeepEqual(s, tt.wantSecret) {
 				t.Fatalf(cmp.Diff(s, tt.wantSecret))

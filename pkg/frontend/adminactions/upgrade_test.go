@@ -15,7 +15,7 @@ import (
 	ktesting "k8s.io/client-go/testing"
 
 	"github.com/Azure/ARO-RP/pkg/util/version"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestUpgradeCluster(t *testing.T) {
@@ -175,7 +175,7 @@ func TestUpgradeCluster(t *testing.T) {
 			}
 
 			err := upgrade(ctx, k.log, k.configcli, []*version.Stream{stream43, stream44, stream45}, tt.upgradeY)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if updated != tt.wantUpdated {
 				t.Fatal(updated)

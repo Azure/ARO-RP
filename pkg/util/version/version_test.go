@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestNewVersion(t *testing.T) {
@@ -67,7 +67,7 @@ func TestParseVersion(t *testing.T) {
 	} {
 		t.Run(tt.vsn, func(t *testing.T) {
 			got, err := ParseVersion(tt.vsn)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Error(cmp.Diff(got, tt.want))
 			}

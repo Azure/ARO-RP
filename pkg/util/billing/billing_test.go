@@ -16,7 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestIsSubscriptionRegisteredForE2E(t *testing.T) {
@@ -224,7 +224,7 @@ func TestDelete(t *testing.T) {
 			}
 
 			err = m.Delete(ctx, &api.OpenShiftClusterDocument{ID: docID})
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if tt.wantDocuments != nil {
 				checker := testdatabase.NewChecker()
@@ -420,7 +420,7 @@ func TestEnsure(t *testing.T) {
 				t.Fatal(err)
 			}
 			err = m.Ensure(ctx, doc, subDoc)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if tt.wantDocuments != nil {
 				checker := testdatabase.NewChecker()

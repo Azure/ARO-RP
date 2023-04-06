@@ -16,7 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
 	mock_dynamic "github.com/Azure/ARO-RP/pkg/util/mocks/dynamic"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestCheck(t *testing.T) {
@@ -90,7 +90,7 @@ func TestCheck(t *testing.T) {
 			}
 
 			err := sp.Check(ctx, azuretypes.PublicCloud.Name())
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

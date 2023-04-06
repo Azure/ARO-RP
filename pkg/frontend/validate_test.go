@@ -10,7 +10,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestValidateAdminKubernetesPodLogs(t *testing.T) {
@@ -90,7 +90,7 @@ func TestValidateAdminKubernetesPodLogs(t *testing.T) {
 	} {
 		t.Run(tt.test, func(t *testing.T) {
 			err := validateAdminKubernetesPodLogs(tt.namespace, tt.name, tt.containerName)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

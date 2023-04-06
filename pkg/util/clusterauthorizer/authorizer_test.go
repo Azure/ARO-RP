@@ -24,7 +24,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_aad "github.com/Azure/ARO-RP/pkg/util/mocks/aad"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 type tokenRequirements struct {
@@ -76,7 +76,7 @@ func TestNewAzRefreshableAuthorizer(t *testing.T) {
 			clientFake := ctrlfake.NewClientBuilder().WithObjects(tt.secret).Build()
 
 			_, err := NewAzRefreshableAuthorizer(tt.log, tt.azCloudEnv, clientFake, aad)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
@@ -250,7 +250,7 @@ func TestAzCredentials(t *testing.T) {
 
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := AzCredentials(ctx, clientFake)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

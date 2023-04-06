@@ -17,7 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_hive "github.com/Azure/ARO-RP/pkg/util/mocks/hive"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestHiveClusterDeploymentReady(t *testing.T) {
@@ -65,7 +65,7 @@ func TestHiveClusterDeploymentReady(t *testing.T) {
 			m.hiveClusterManager = hiveMock
 
 			result, err := m.hiveClusterDeploymentReady(context.Background())
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if tt.wantResult != result {
 				t.Error(result)
@@ -109,7 +109,7 @@ func TestHiveResetCorrelationData(t *testing.T) {
 			m.hiveClusterManager = hiveMock
 
 			err := m.hiveResetCorrelationData(context.Background())
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
@@ -173,7 +173,7 @@ func TestHiveCreateNamespace(t *testing.T) {
 			}
 
 			err := m.hiveCreateNamespace(ctx)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if m.doc.OpenShiftCluster.Properties.HiveProfile.Namespace != tt.expectedNamespaceName {
 				t.Errorf("expected namespace to be %s, got %s",
@@ -253,7 +253,7 @@ func TestHiveEnsureResources(t *testing.T) {
 			}
 
 			err := m.hiveEnsureResources(ctx)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		},
 		)
 	}
@@ -306,7 +306,7 @@ func TestHiveDeleteResources(t *testing.T) {
 			}
 
 			err := m.hiveDeleteResources(ctx)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

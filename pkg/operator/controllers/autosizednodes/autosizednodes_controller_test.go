@@ -24,7 +24,7 @@ import (
 	// ARO unfortunately relies on implicit import and its side effect for this
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestAutosizednodesReconciler(t *testing.T) {
@@ -112,7 +112,7 @@ func TestAutosizednodesReconciler(t *testing.T) {
 			var c mcv1.KubeletConfig
 
 			err = r.client.Get(ctx, key, &c)
-			matcher.AssertErrHasWantMsg(t, err, test.wantErrMsg)
+			utilerror.AssertErrorMessage(t, err, test.wantErrMsg)
 
 			if !reflect.DeepEqual(test.wantConfig.Spec, c.Spec) {
 				t.Error(cmp.Diff(test.wantConfig.Spec, c.Spec))

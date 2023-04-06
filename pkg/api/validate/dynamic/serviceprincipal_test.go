@@ -21,7 +21,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_aad "github.com/Azure/ARO-RP/pkg/util/mocks/aad"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 type tokenRequirements struct {
@@ -101,7 +101,7 @@ func TestValidateServicePrincipal(t *testing.T) {
 			aad.EXPECT().GetToken(ctx, log, tt.tr.clientID, tt.tr.clientSecret, tt.tr.tenantID, tt.tr.aadEndpoint, tt.tr.graphEndpoint).MaxTimes(1).Return(token, tt.getTokenErr)
 
 			err = spDynamic.ValidateServicePrincipal(ctx, tt.tr.clientID, tt.tr.clientSecret, tt.tr.tenantID)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

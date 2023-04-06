@@ -15,7 +15,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestValidateVMSku(t *testing.T) {
@@ -209,7 +209,7 @@ func TestValidateVMSku(t *testing.T) {
 				Return(skus, tt.resourceSkusClientErr)
 
 			err := validateVMSku(context.Background(), oc, resourceSkusClient)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

@@ -12,7 +12,7 @@ import (
 	"github.com/golang/mock/gomock"
 
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestEmitGauge(t *testing.T) {
@@ -150,7 +150,7 @@ func TestParseSocketEnv(t *testing.T) {
 			s := &statsd{}
 			network, address, err := s.parseSocketEnv(tt.teststring)
 
-			matcher.AssertErrHasWantMsg(t, err, tt.wantError)
+			utilerror.AssertErrorMessage(t, err, tt.wantError)
 
 			if network != tt.wantNetwork {
 				t.Error(network)
@@ -201,7 +201,7 @@ func TestValidateSocketDefinition(t *testing.T) {
 
 			ok, err := s.validateSocketDefinition(tt.network, tt.address)
 
-			matcher.AssertErrHasWantMsg(t, err, tt.wantError)
+			utilerror.AssertErrorMessage(t, err, tt.wantError)
 
 			if ok != tt.expectToPass {
 				t.Error(ok)
@@ -281,7 +281,7 @@ func TestConnectionDetails(t *testing.T) {
 
 			network, address, err := s.connectionDetails()
 
-			matcher.AssertErrHasWantMsg(t, err, tt.wantError)
+			utilerror.AssertErrorMessage(t, err, tt.wantError)
 
 			if network != tt.network {
 				t.Error(network)

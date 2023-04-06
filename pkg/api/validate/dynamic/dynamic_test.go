@@ -20,7 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_authorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 var (
@@ -131,7 +131,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 			}
 
 			err = dv.validateVnetPermissions(ctx, vnetr)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
@@ -185,7 +185,7 @@ func TestGetRouteTableID(t *testing.T) {
 
 			// purposefully hardcoding path to "" so it is not needed in the wantErr message
 			_, err := getRouteTableID(vnet, masterSubnet)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
@@ -239,7 +239,7 @@ func TestGetNatGatewayID(t *testing.T) {
 
 			// purposefully hardcoding path to "" so it is not needed in the wantErr message
 			_, err := getNatGatewayID(vnet, masterSubnet)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
@@ -398,7 +398,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			}
 
 			err := dv.validateRouteTablePermissions(ctx, tt.subnet)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
@@ -557,7 +557,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			}
 
 			err := dv.validateNatGatewayPermissions(ctx, tt.subnet)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
@@ -701,7 +701,7 @@ func TestValidateCIDRRanges(t *testing.T) {
 					{ID: masterSubnet},
 					{ID: workerSubnet}},
 					oc.Properties.NetworkProfile.PodCIDR, oc.Properties.NetworkProfile.ServiceCIDR)
-				matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+				utilerror.AssertErrorMessage(t, err, tt.wantErr)
 			}
 		})
 	}
@@ -750,7 +750,7 @@ func TestValidateVnetLocation(t *testing.T) {
 			}
 
 			err = dv.validateVnetLocation(ctx, vnetr, "eastus")
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
@@ -935,7 +935,7 @@ func TestValidateSubnets(t *testing.T) {
 			}
 
 			err := dv.ValidateSubnets(ctx, oc, []Subnet{{ID: masterSubnet, Path: masterSubnetPath}})
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

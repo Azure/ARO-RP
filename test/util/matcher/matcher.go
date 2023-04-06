@@ -6,7 +6,6 @@ package matcher
 import (
 	"fmt"
 	"reflect"
-	"testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 )
@@ -60,15 +59,4 @@ func (m *AsyncOperationDocument) Matches(x interface{}) bool {
 
 func (m *AsyncOperationDocument) String() string {
 	return fmt.Sprintf("is equal to %v without comparing IDs", (*api.AsyncOperationDocument)(m))
-}
-
-// AssertErrHasWantMsg asserts that err.Error() is equal to wantMsg.
-func AssertErrHasWantMsg(t *testing.T, err error, wantMsg string) {
-	if err == nil && wantMsg != "" {
-		t.Errorf("did not get an error, but wanted error '%v'", wantMsg)
-	}
-
-	if err != nil && err.Error() != wantMsg {
-		t.Errorf("got error '%v', but wanted error '%v'", err, wantMsg)
-	}
 }

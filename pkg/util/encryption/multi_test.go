@@ -11,7 +11,7 @@ import (
 	"github.com/golang/mock/gomock"
 
 	mock_encryption "github.com/Azure/ARO-RP/pkg/util/mocks/encryption"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestOpen(t *testing.T) {
@@ -66,7 +66,7 @@ func TestOpen(t *testing.T) {
 			tt.mocks(firstOpener, secondOpener)
 
 			b, err := multi.Open(mockInput)
-			matcher.AssertErrHasWantMsg(t, err, tt.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 			if b != nil && !reflect.DeepEqual(tt.wantResult, b) ||
 				b == nil && tt.wantResult != nil {
 				t.Error(b)

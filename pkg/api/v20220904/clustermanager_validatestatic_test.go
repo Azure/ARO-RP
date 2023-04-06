@@ -6,7 +6,7 @@ package v20220904
 import (
 	"testing"
 
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 var ocmResource = string(`
@@ -73,7 +73,7 @@ func TestStatic(t *testing.T) {
 			c := &clusterManagerStaticValidator{}
 
 			err := c.Static(tt.ocmResource, tt.ocmResourceType)
-			matcher.AssertErrHasWantMsg(t, err, tt.err)
+			utilerror.AssertErrorMessage(t, err, tt.err)
 		})
 	}
 }
