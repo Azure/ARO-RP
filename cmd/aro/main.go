@@ -30,6 +30,7 @@ func usage() {
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s rp\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s operator {master,worker}\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s update-versions\n", os.Args[0])
+	fmt.Fprintf(flag.CommandLine.Output(), "  %s pull-certs url out_path\n", os.Args[0])
 	flag.PrintDefaults()
 }
 
@@ -83,6 +84,9 @@ func main() {
 	case "update-versions":
 		checkArgs(1)
 		err = updateOCPVersions(ctx, log)
+	case "pull-certs":
+		checkArgs(3)
+		pullCertsFromGetIssuers(flag.Arg(1), flag.Arg(2))
 	default:
 		usage()
 		os.Exit(2)
