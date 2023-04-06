@@ -6,6 +6,7 @@ package graph
 import (
 	"bytes"
 	"encoding/json"
+	"reflect"
 )
 
 // PersistedGraph is a graph read from the cluster storage account.
@@ -16,7 +17,24 @@ import (
 
 type PersistedGraph map[string]json.RawMessage
 
-func (pg PersistedGraph) Get(disallowUnknownFields bool, name string, out interface{}) error {
+func (pg PersistedGraph) Get(disallowUnknownFields bool, is ...interface{}) error {
+	for _, i := range is {
+		d := json.NewDecoder(bytes.NewReader(pg[reflect.TypeOf(i).Elem().String()]))
+
+		if disallowUnknownFields {
+			d.DisallowUnknownFields()
+		}
+
+		err := d.Decode(i)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (pg PersistedGraph) GetByName(disallowUnknownFields bool, name string, out interface{}) error {
 	d := json.NewDecoder(bytes.NewReader(pg[name]))
 
 	if disallowUnknownFields {
