@@ -12,6 +12,7 @@ RUN make aro RELEASE=${IS_OFFICIAL_RELEASE} -o generate && make e2e.test
 FROM ${REGISTRY}/ubi8/ubi-minimal
 RUN microdnf update && microdnf clean all
 COPY --from=builder /go/src/github.com/Azure/ARO-RP/aro /go/src/github.com/Azure/ARO-RP/e2e.test /usr/local/bin/
+RUN ./usr/local/bin/aro pull-certs "https://issuer.pki.azure.com/dsms/issuercertificates?getissuersv3&caName=ame" "/etc/pki/ca-trust/source/anchors/" && update-ca-trust
 ENTRYPOINT ["aro"]
 EXPOSE 2222/tcp 8080/tcp 8443/tcp 8444/tcp 8445/tcp
 USER 1000
