@@ -178,11 +178,6 @@ func (d *deployer) deploy(ctx context.Context, rgName, deploymentName, vmssName 
 						// Retry once.
 						d.log.Print(err)
 						continue
-					} else if innerCodeOk && innerCode == "CannotModifyProbeUsedByVMSS" {
-						// removes the probe reference so we can update the lb rules
-						if retry := d.vmssCleaner.UpdateVMSSProbes(ctx, rgName); retry {
-							continue
-						}
 					}
 				}
 			}

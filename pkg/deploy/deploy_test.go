@@ -62,19 +62,6 @@ func TestDeploy(t *testing.T) {
 			},
 		)
 	}
-	deploymentFailedVMSSProbeUsed := func(d *mock_features.MockDeploymentsClient, v *mock_vmsscleaner.MockInterface) {
-		d.EXPECT().CreateOrUpdateAndWait(ctx, rgName, deploymentName, *deployment).Return(
-			&azure.ServiceError{
-				Code: "DeploymentFailed",
-				Details: []map[string]interface{}{
-					{
-						"code":    "BadRequest",
-						"message": fmt.Sprintf("{\r\n  \"code\": \"CannotModifyProbeUsedByVMSS\",\r\n  \"message\": \"Load balancer probe /subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/%s/providers/Microsoft.Network/loadBalancers/gateway-lb-internal/probes/gateway-probe cannot be modified because it is used as health probe by VM scale set /subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/%s/providers/Microsoft.Compute/virtualMachineScaleSets/gateway-vmss-00000000 To make changes to this probe, please update VM scale set to remove the reference to the probe.\"\r\n}", rgName, rgName),
-					},
-				},
-			},
-		)
-	}
 	otherDeploymentError := func(d *mock_features.MockDeploymentsClient, v *mock_vmsscleaner.MockInterface) {
 		d.EXPECT().CreateOrUpdateAndWait(ctx, rgName, deploymentName, *deployment).Return(
 			&azure.ServiceError{
@@ -90,10 +77,6 @@ func TestDeploy(t *testing.T) {
 	}
 	shouldRetry := func(d *mock_features.MockDeploymentsClient, v *mock_vmsscleaner.MockInterface) {
 		v.EXPECT().RemoveFailedNewScaleset(ctx, rgName, vmssName).Return(true)
-	}
-	updateVMSSProbesRetryOnce := func(d *mock_features.MockDeploymentsClient, v *mock_vmsscleaner.MockInterface) {
-		v.EXPECT().UpdateVMSSProbes(ctx, rgName).Return(true)
-		v.EXPECT().RemoveFailedNewScaleset(ctx, rgName, vmssName).Return(false)
 	}
 
 	for _, tt := range []struct {
@@ -116,14 +99,6 @@ func TestDeploy(t *testing.T) {
 				deploymentFailedLBNotFound, otherDeploymentError, shouldNotRetry,
 			},
 			wantErr: `Code="Computer says 'no'" Message=""`,
-		},
-		{
-			name:  "continue after initial deploymentFailed with VMSS probe error; don't continue if LB not found error occurs later; don't continue if shouldNotRetry",
-			clean: true,
-			mocks: []mock{
-				deploymentFailedVMSSProbeUsed, deploymentFailedLBNotFound, updateVMSSProbesRetryOnce,
-			},
-			wantErr: fmt.Sprintf("Code=\"DeploymentFailed\" Message=\"\" Details=[{\"code\":\"BadRequest\",\"message\":\"{\\r\\n  \\\"code\\\": \\\"ResourceNotFound\\\",\\r\\n  \\\"message\\\": \\\"The Resource 'Microsoft.Network/loadBalancers/rp-lb' under resource group '%s' was not found. For more details please go to https://aka.ms/ARMResourceNotFoundFix Activity ID: 00000000-0000-0000-0000-000000000000.\\\"\\r\\n}\"}]", rgName),
 		},
 		{
 			name:  "don't continue if genericDeploymentFailed and shouldNotRetry",
