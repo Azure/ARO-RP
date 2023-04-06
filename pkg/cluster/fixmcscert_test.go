@@ -190,7 +190,7 @@ func TestFixMCSCert(t *testing.T) {
 				t.Error(err)
 			}
 
-			if !publicKeysEqual(cert.PublicKey.(*rsa.PublicKey), &key.PublicKey) {
+			if !cert.PublicKey.(*rsa.PublicKey).Equal(&key.PublicKey) {
 				t.Error("key mismatch")
 			}
 
@@ -203,9 +203,4 @@ func TestFixMCSCert(t *testing.T) {
 			}
 		})
 	}
-}
-
-// TODO: at Go >= 1.15, use (*rsa.PublicKey) Equal()
-func publicKeysEqual(a, b *rsa.PublicKey) bool {
-	return a.N.Cmp(b.N) == 0 && a.E == b.E
 }
