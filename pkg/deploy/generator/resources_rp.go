@@ -1036,7 +1036,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 					ID: to.StringPtr("[" + databaseName + "]"),
 				},
 				Options: &mgmtdocumentdb.CreateUpdateOptions{
-					Throughput: to.Int32Ptr(500),
+					Throughput: to.Int32Ptr(cosmosDbStandardProvisionedThroughputHack),
 				},
 			},
 			Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ")]"),
@@ -1058,7 +1058,9 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 					},
 					DefaultTTL: to.Int32Ptr(-1),
 				},
-				Options: &mgmtdocumentdb.CreateUpdateOptions{},
+				Options: &mgmtdocumentdb.CreateUpdateOptions{
+					Throughput: to.Int32Ptr(cosmosDbPortalProvisionedThroughputHack),
+				},
 			},
 			Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Portal')]"),
 			Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
@@ -1083,7 +1085,9 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 					},
 					DefaultTTL: to.Int32Ptr(-1),
 				},
-				Options: &mgmtdocumentdb.CreateUpdateOptions{},
+				Options: &mgmtdocumentdb.CreateUpdateOptions{
+					Throughput: to.Int32Ptr(cosmosDbGatewayProvisionedThroughputHack),
+				},
 			},
 			Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Gateway')]"),
 			Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
@@ -1095,10 +1099,14 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 		},
 	}
 
-	if g.production {
-		database.Resource.(*mgmtdocumentdb.SQLDatabaseCreateUpdateParameters).SQLDatabaseCreateUpdateProperties.Options.Throughput = to.Int32Ptr(cosmosDbStandardProvisionedThroughputHack)
-		portal.Resource.(*mgmtdocumentdb.SQLContainerCreateUpdateParameters).SQLContainerCreateUpdateProperties.Options.Throughput = to.Int32Ptr(cosmosDbPortalProvisionedThroughputHack)
-		gateway.Resource.(*mgmtdocumentdb.SQLContainerCreateUpdateParameters).SQLContainerCreateUpdateProperties.Options.Throughput = to.Int32Ptr(cosmosDbGatewayProvisionedThroughputHack)
+	if !g.production {
+		database.Resource.(*mgmtdocumentdb.SQLDatabaseCreateUpdateParameters).SQLDatabaseCreateUpdateProperties.Options = &mgmtdocumentdb.CreateUpdateOptions{
+			AutoscaleSettings: &mgmtdocumentdb.AutoscaleSettings{
+				MaxThroughput: to.Int32Ptr(500),
+			},
+		}
+		portal.Resource.(*mgmtdocumentdb.SQLContainerCreateUpdateParameters).SQLContainerCreateUpdateProperties.Options = &mgmtdocumentdb.CreateUpdateOptions{}
+		gateway.Resource.(*mgmtdocumentdb.SQLContainerCreateUpdateParameters).SQLContainerCreateUpdateProperties.Options = &mgmtdocumentdb.CreateUpdateOptions{}
 	}
 
 	rs := []*arm.Resource{
