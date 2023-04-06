@@ -16,7 +16,9 @@
                     "id": "[parameters('databaseName')]"
                 },
                 "options": {
-                    "throughput": 1000
+                    "autoscaleSettings": {
+                        "maxThroughput": "1000"
+                      }
                 }
             },
             "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'))]",
