@@ -29,7 +29,7 @@ func (m *manager) fixSREKubeconfig(ctx context.Context) error {
 	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.AROSREKubeconfig = aroSREInternalClient.File.Data
+		doc.OpenShiftCluster.Properties.AROSREKubeconfig = aroSREInternalClient
 		return nil
 	})
 	return err
