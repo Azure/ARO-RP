@@ -158,28 +158,26 @@ func (d *deployer) deploy(ctx context.Context, rgName, deploymentName, vmssName 
 		err = d.deployments.CreateOrUpdateAndWait(ctx, rgName, deploymentName, deployment)
 		serviceErr, isServiceError := err.(*azure.ServiceError)
 
-		// Check for two known errors that we know how to handle.
+		// Check for a known error that we know how to handle.
 		if isServiceError && serviceErr.Code == "DeploymentFailed" && len(serviceErr.Details) > 0 {
-			outerCode, outerCodeOk := serviceErr.Details[0]["code"].(string)
-			message, messageOk := serviceErr.Details[0]["message"].(string)
+			outerErr := azure.ServiceError{}
+			jsonEncoded, _ := json.Marshal(serviceErr.Details[0])
+			json.Unmarshal(jsonEncoded, &outerErr)
 
-			if outerCodeOk && messageOk && outerCode == "BadRequest" {
-				innerErr := map[string]interface{}{}
+			innerErr := azure.ServiceError{}
+			json.Unmarshal([]byte(outerErr.Message), &innerErr)
 
-				if jsonErr := json.Unmarshal([]byte(message), &innerErr); jsonErr == nil {
-					innerCode, innerCodeOk := innerErr["code"].(string)
-					innerMessage, innerMessageOk := innerErr["message"].(string)
+			isKnownLBError := i < 1 && innerErr.Code == "ResourceNotFound" && strings.Contains(innerErr.Message, "Microsoft.Network/loadBalancers/rp-lb")
 
-					if i < 1 && innerCodeOk && innerMessageOk && innerCode == "ResourceNotFound" && strings.Contains(innerMessage, "Microsoft.Network/loadBalancers/rp-lb") {
-						// on new RP deployments, we get a spurious DeploymentFailed error
-						// from the Microsoft.Insights/metricAlerts resources indicating
-						// that rp-lb can't be found, even though it exists and the
-						// resources correctly have a dependsOn stanza referring to it.
-						// Retry once.
-						d.log.Print(err)
-						continue
-					}
-				}
+			// On new RP deployments, we get a spurious DeploymentFailed error
+			// from the Microsoft.Insights/metricAlerts resources indicating
+			// that rp-lb can't be found, even though it exists and the
+			// resources correctly have a dependsOn stanza referring to it.
+			// Retry once, and only if this error is encountered on the first
+			// deployment attempt.
+			if isKnownLBError {
+				d.log.Print(err)
+				continue
 			}
 		}
 
