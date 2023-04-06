@@ -6,7 +6,6 @@ package graph
 import (
 	"bytes"
 	"encoding/json"
-	"reflect"
 )
 
 // PersistedGraph is a graph read from the cluster storage account.
@@ -17,33 +16,12 @@ import (
 
 type PersistedGraph map[string]json.RawMessage
 
-func (pg PersistedGraph) Get(disallowUnknownFields bool, is ...interface{}) error {
-	for _, i := range is {
-		d := json.NewDecoder(bytes.NewReader(pg[reflect.TypeOf(i).Elem().String()]))
+func (pg PersistedGraph) Get(disallowUnknownFields bool, name string, out interface{}) error {
+	d := json.NewDecoder(bytes.NewReader(pg[name]))
 
-		if disallowUnknownFields {
-			d.DisallowUnknownFields()
-		}
-
-		err := d.Decode(i)
-		if err != nil {
-			return err
-		}
+	if disallowUnknownFields {
+		d.DisallowUnknownFields()
 	}
 
-	return nil
-}
-
-// Set is currently only used in unit test context.  If you want to use this in
-// production, you will want to be very sure that you are not losing state that
-// you may need later
-func (pg PersistedGraph) Set(is ...interface{}) (err error) {
-	for _, i := range is {
-		pg[reflect.TypeOf(i).String()], err = json.Marshal(i)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return d.Decode(out)
 }
