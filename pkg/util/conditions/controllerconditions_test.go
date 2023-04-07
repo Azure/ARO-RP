@@ -17,6 +17,7 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 )
 
 func TestSetControllerConditions(t *testing.T) {
@@ -210,6 +211,8 @@ func TestSetControllerConditions(t *testing.T) {
 			if err != tt.wantErr {
 				t.Fatalf("wanted error %v, got %v", tt.wantErr, err)
 			}
+
+			utilconditions.AssertControllerConditions(t, ctx, clientFake, tt.expected)
 
 			result := &arov1alpha1.Cluster{}
 			if err = clientFake.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, result); err != nil {

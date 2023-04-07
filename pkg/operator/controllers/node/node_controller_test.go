@@ -5,7 +5,6 @@ package node
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"strconv"
 	"testing"
@@ -22,6 +21,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -442,6 +442,7 @@ func TestReconciler(t *testing.T) {
 
 			_, err := r.Reconcile(ctx, request)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			utilconditions.AssertControllerConditions(t, ctx, client, tt.wantConditions)
 		})
 	}
 }
@@ -473,14 +474,4 @@ func TestSetAnnotation(t *testing.T) {
 			}
 		})
 	}
-}
-
-func findCondition(conditions []operatorv1.OperatorCondition, conditionType string) (*operatorv1.OperatorCondition, error) {
-	for _, cond := range conditions {
-		if cond.Type == conditionType {
-			return &cond, nil
-		}
-	}
-
-	return nil, fmt.Errorf("condition %s not found", conditionType)
 }
