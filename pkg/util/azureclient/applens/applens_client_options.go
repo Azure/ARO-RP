@@ -5,6 +5,7 @@ package applens
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"net/http"
 	"time"
 
@@ -21,7 +22,21 @@ type ClientOptions struct {
 	azcore.ClientOptions
 }
 
-func NewClientOptions() *ClientOptions {
+func NewClientOptions(certPool *x509.CertPool) *ClientOptions {
+	var tlsConfig *tls.Config
+	if certPool != nil {
+		tlsConfig = &tls.Config{
+			RootCAs:       certPool,
+			Renegotiation: tls.RenegotiateFreelyAsClient,
+			MinVersion:    tls.VersionTLS12,
+		}
+	} else {
+		tlsConfig = &tls.Config{
+			Renegotiation: tls.RenegotiateFreelyAsClient,
+			MinVersion:    tls.VersionTLS12,
+		}
+	}
+
 	return &ClientOptions{
 		azcore.ClientOptions{
 			Retry: policy.RetryOptions{
@@ -40,11 +55,8 @@ func NewClientOptions() *ClientOptions {
 			},
 			Transport: &http.Client{
 				Transport: &http.Transport{
-					TLSNextProto: make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
-					TLSClientConfig: &tls.Config{
-						Renegotiation: tls.RenegotiateFreelyAsClient,
-						MinVersion:    tls.VersionTLS12,
-					},
+					TLSNextProto:    make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
+					TLSClientConfig: tlsConfig,
 				},
 			},
 		},

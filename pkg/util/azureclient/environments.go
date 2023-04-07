@@ -20,6 +20,8 @@ type AROEnvironment struct {
 	AppLensEndpoint          string
 	AppLensScope             string
 	AppLensTenantID          string
+	PkiIssuerUrlTemplate     string
+	PkiCaName                string
 	AuthzRemotePDPEndPoint   string
 	AzureRbacPDPEnvironment
 	Cloud cloud.Configuration
@@ -41,6 +43,8 @@ var (
 		AppLensEndpoint:          "https://diag-runtimehost-prod.trafficmanager.net/api/invoke",
 		AppLensScope:             "b9a1efcd-32ee-4330-834c-c04eb00f4b33",
 		AppLensTenantID:          "72f988bf-86f1-41af-91ab-2d7cd011db47",
+		PkiIssuerUrlTemplate:     "https://issuer.pki.azure.com/dsms/issuercertificates?getissuersv3&caName=%s",
+		PkiCaName:                "ame",
 		Cloud:                    cloud.AzurePublic,
 		AzureRbacPDPEnvironment: AzureRbacPDPEnvironment{
 			Endpoint:   "https://%s.authorization.azure.net/providers/Microsoft.Authorization/checkAccess?api-version=2021-06-01-preview",
@@ -58,6 +62,8 @@ var (
 		AppLensScope:             "https://microsoft.onmicrosoft.com/runtimehost",
 		AppLensTenantID:          "cab8a31a-1906-4287-a0d8-4eef66b95f6e",
 		Cloud:                    cloud.AzureGovernment,
+		PkiIssuerUrlTemplate:     "https://issuer.pki.azure.com/dsms/issuercertificates?getissuersv3&caName=%s",
+		PkiCaName:                "ame",
 		AzureRbacPDPEnvironment: AzureRbacPDPEnvironment{
 			Endpoint:   "https://%s.authorization.azure.us/providers/Microsoft.Authorization/checkAccess?api-version=2021-06-01-preview",
 			OAuthScope: "https://authorization.azure.us/.default",

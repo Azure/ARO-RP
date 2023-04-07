@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Azure/ARO-RP/pkg/util/pki"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
@@ -30,13 +31,15 @@ func (c *Client) Endpoint() string {
 // endpoint - The applens service endpoint to use.
 // cred - The credential used to authenticate with the applens service.
 // options - Optional AppLens client options.  Pass nil to accept default values.
-func NewClient(endpoint, scope string, cred azcore.TokenCredential, o *ClientOptions) (*Client, error) {
-	return &Client{endpoint: endpoint, pipeline: newPipeline([]policy.Policy{runtime.NewBearerTokenPolicy(cred, []string{fmt.Sprintf("%s/.default", scope)}, nil)}, o)}, nil
+func NewClient(endpoint, issuerUrlTemplate string, caName string, scope string, cred azcore.TokenCredential, o *ClientOptions) (*Client, error) {
+	return &Client{endpoint: endpoint, pipeline: newPipeline([]policy.Policy{runtime.NewBearerTokenPolicy(cred, []string{fmt.Sprintf("%s/.default", scope)}, nil)}, o, issuerUrlTemplate, caName, log)}, nil
 }
 
-func newPipeline(authPolicy []policy.Policy, options *ClientOptions) runtime.Pipeline {
+func newPipeline(authPolicy []policy.Policy, options *ClientOptions, issuerUrlTemplate string, caName string) runtime.Pipeline {
 	if options == nil {
-		options = NewClientOptions()
+		p := pki.NewPki(issuerUrlTemplate)
+		cp, _ := p.GetTlsCertPool(caName)
+		options = NewClientOptions(cp)
 	}
 
 	return runtime.NewPipeline("applens", serviceLibVersion,
