@@ -99,7 +99,7 @@ jobs:
       export CI=true
       . ./hack/e2e/run-rp-and-e2e.sh
 
-      delete_e2e_cluster
+      # delete_e2e_cluster
       kill_rp
       kill_vpn
     displayName: Cleanup
@@ -108,7 +108,7 @@ jobs:
   - script: |
       export CI=true
       . ./hack/e2e/run-rp-and-e2e.sh
-      clean_e2e_db
+      # clean_e2e_db
     displayName: Cleanup (Azure)
     condition: always()
   - template: ./templates/template-az-cli-logout.yml
