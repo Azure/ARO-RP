@@ -1,5 +1,8 @@
 package pki
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"crypto/tls"
 	"crypto/x509"

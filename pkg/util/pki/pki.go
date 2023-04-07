@@ -1,5 +1,8 @@
 package pki
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"crypto/x509"
 	"encoding/json"
@@ -49,7 +52,7 @@ func (k *pki) GetTlsCertPool(caName string) (*x509.CertPool, error) {
 // The v3 endpoint can be used to get ca certs
 // For example https://issuer.pki.azure.com/dsms/issuercertificates?getissuersv3&caName=ame
 // returns the ame certs
-func buildCertPoolForCaName(baseUrl string, caName string) (*x509.CertPool, error) {
+func buildCertPoolForCaName(baseUrl, caName string) (*x509.CertPool, error) {
 	url := fmt.Sprintf(baseUrl, caName)
 	response, err := http.Get(url)
 
