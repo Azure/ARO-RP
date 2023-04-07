@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/sirupsen/logrus"
@@ -104,7 +105,9 @@ func (d *dev) FPNewClientCertificateCredential(tenantID string) (*azidentity.Cli
 	fpPrivateKey, fpCertificates := d.fpCertificateRefresher.GetCertificates()
 
 	credential, err := azidentity.NewClientCertificateCredential(tenantID, d.fpClientID, fpCertificates, fpPrivateKey, &azidentity.ClientCertificateCredentialOptions{
-		AuthorityHost:        d.Environment().AuthorityHost,
+		ClientOptions: azcore.ClientOptions{
+			Cloud: d.Environment().Cloud,
+		},
 		SendCertificateChain: true,
 	})
 
