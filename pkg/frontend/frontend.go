@@ -238,44 +238,42 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 	r := router.With(f.authMiddleware.Authenticate)
 
 	r.Route("/subscriptions/{subscriptionId}", func(r chi.Router) {
-		r.Route("/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}", func(r chi.Router) {
-			r.Route("/{resourceType}", func(r chi.Router) {
-				r.With(f.apiVersionMiddleware.ValidateAPIVersion).Get("/", f.getOpenShiftClusters)
+		r.Route("/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}", func(r chi.Router) {
+			r.With(f.apiVersionMiddleware.ValidateAPIVersion).Get("/", f.getOpenShiftClusters)
 
-				r.Route("/{resourceName}", func(r chi.Router) {
-					r.With(f.apiVersionMiddleware.ValidateAPIVersion).Route("/", func(r chi.Router) {
-						// With API version check
-						if f.env.FeatureIsSet(env.FeatureEnableOCMEndpoints) {
-							r.Route("/{ocmResourceType}",
-								func(r chi.Router) {
-									r.Delete("/{ocmResourceName}", f.deleteClusterManagerConfiguration)
-									r.Get("/{ocmResourceName}", f.getClusterManagerConfiguration)
-									r.Patch("/{ocmResourceName}", f.putOrPatchClusterManagerConfiguration)
-									r.Put("/{ocmResourceName}", f.putOrPatchClusterManagerConfiguration)
-								},
-							)
-						}
+			r.Route("/{resourceName}", func(r chi.Router) {
+				r.With(f.apiVersionMiddleware.ValidateAPIVersion).Route("/", func(r chi.Router) {
+					// With API version check
+					if f.env.FeatureIsSet(env.FeatureEnableOCMEndpoints) {
+						r.Route("/{ocmResourceType}",
+							func(r chi.Router) {
+								r.Delete("/{ocmResourceName}", f.deleteClusterManagerConfiguration)
+								r.Get("/{ocmResourceName}", f.getClusterManagerConfiguration)
+								r.Patch("/{ocmResourceName}", f.putOrPatchClusterManagerConfiguration)
+								r.Put("/{ocmResourceName}", f.putOrPatchClusterManagerConfiguration)
+							},
+						)
+					}
 
-						r.Delete("/", f.deleteOpenShiftCluster)
-						r.Get("/", f.getOpenShiftCluster)
-						r.Patch("/", f.putOrPatchOpenShiftCluster)
-						r.Put("/", f.putOrPatchOpenShiftCluster)
+					r.Delete("/", f.deleteOpenShiftCluster)
+					r.Get("/", f.getOpenShiftCluster)
+					r.Patch("/", f.putOrPatchOpenShiftCluster)
+					r.Put("/", f.putOrPatchOpenShiftCluster)
 
-						r.Post("/listcredentials", f.postOpenShiftClusterCredentials)
+					r.Post("/listcredentials", f.postOpenShiftClusterCredentials)
 
-						r.Post("/listadmincredentials", f.postOpenShiftClusterKubeConfigCredentials)
-					})
-
-					r.Get("/detectors", f.listAppLensDetectors)
-
-					r.Get("/detectors/{detectorId}", f.getAppLensDetector)
+					r.Post("/listadmincredentials", f.postOpenShiftClusterKubeConfigCredentials)
 				})
-			})
 
-			r.Route("/deployments/{deploymentName}/preflight?api-version={api-version}", func(r chi.Router) {
-				r.Use(f.apiVersionMiddleware.ValidateAPIVersion)
-				r.Post("/", f.preflightValidation)
+				r.Get("/detectors", f.listAppLensDetectors)
+
+				r.Get("/detectors/{detectorId}", f.getAppLensDetector)
 			})
+		})
+
+		r.Route("/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/deployments/{deploymentName}/preflight?api-version={api-version}", func(r chi.Router) {
+			r.Use(f.apiVersionMiddleware.ValidateAPIVersion)
+			r.Post("/", f.preflightValidation)
 		})
 
 		r.Route("/providers/{resourceProviderNamespace}", func(r chi.Router) {
