@@ -94,6 +94,7 @@ run_vpn() {
     echo "########## 🚀 Run OpenVPN in background ##########"
     echo "Using Secret secrets/$VPN"
     sudo openvpn --config secrets/$VPN --daemon --writepid vpnpid
+    if [ $? -eq 0 ]; then echo "VPN connection succeeded"; else echo "VPN connection failed"; fi
     sleep 10
 }
 
