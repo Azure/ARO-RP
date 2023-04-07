@@ -32,7 +32,7 @@ func (c *Client) Endpoint() string {
 // cred - The credential used to authenticate with the applens service.
 // options - Optional AppLens client options.  Pass nil to accept default values.
 func NewClient(endpoint, issuerUrlTemplate string, caName string, scope string, cred azcore.TokenCredential, o *ClientOptions) (*Client, error) {
-	return &Client{endpoint: endpoint, pipeline: newPipeline([]policy.Policy{runtime.NewBearerTokenPolicy(cred, []string{fmt.Sprintf("%s/.default", scope)}, nil)}, o, issuerUrlTemplate, caName, log)}, nil
+	return &Client{endpoint: endpoint, pipeline: newPipeline([]policy.Policy{runtime.NewBearerTokenPolicy(cred, []string{fmt.Sprintf("%s/.default", scope)}, nil)}, o, issuerUrlTemplate, caName)}, nil
 }
 
 func newPipeline(authPolicy []policy.Policy, options *ClientOptions, issuerUrlTemplate string, caName string) runtime.Pipeline {

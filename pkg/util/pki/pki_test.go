@@ -59,6 +59,6 @@ func TestGetTlsConfig(t *testing.T) {
 		}
 		t.Errorf("Error calling %s", testUrl)
 	}
-	defer resp.Body.Close()
 
+	defer resp.Body.Close()
 }
