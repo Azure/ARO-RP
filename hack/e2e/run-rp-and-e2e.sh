@@ -135,9 +135,9 @@ clean_e2e_db() {
 delete_e2e_cluster() {
     echo "########## 🐛🐛🐛 NOT Deleting Cluster $CLUSTER 🐛🐛🐛 ##########"
     if [[ $CI ]]; then
-        echo ./cluster delete
+        echo "[DISABLED]" ./cluster delete
     else
-        echo go run ./hack/cluster delete
+        echo "[DISABLED]" go run ./hack/cluster delete
     fi
 }
 
@@ -173,6 +173,14 @@ echo "CLUSTER=$CLUSTER"
 echo
 echo "PROXY_HOSTNAME=$PROXY_HOSTNAME"
 echo "######################################"
+
+echo "Current IP:"
+ip a
+curl -vs https://ipv4.icanhazip.com
+curl -vs https://ipv6.icanhazip.com
+
+echo "Testing proxy:"
+curl -vs https://ipv4.icanhazip.com -x ${PROXY_HOSTNAME}:443
 
 [[ $LOCATION ]] || (
     echo ">> LOCATION is not set please validate your ./secrets/env"
