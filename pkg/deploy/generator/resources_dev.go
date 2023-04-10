@@ -47,7 +47,7 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtcompute.VirtualMachineScaleSet{
 			Sku: &mgmtcompute.Sku{
-				Name:     to.StringPtr(string(mgmtcompute.VirtualMachineSizeTypesStandardD2sV3)),
+				Name:     to.StringPtr(string(mgmtcompute.VirtualMachineSizeTypesStandardF2sV2)),
 				Tier:     to.StringPtr("Standard"),
 				Capacity: to.Int64Ptr(1),
 			},
