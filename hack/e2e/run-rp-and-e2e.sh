@@ -133,11 +133,11 @@ clean_e2e_db() {
 }
 
 delete_e2e_cluster() {
-    echo "########## 🧹 Deleting Cluster $CLUSTER ##########"
+    echo "########## 🐛🐛🐛 NOT Deleting Cluster $CLUSTER 🐛🐛🐛 ##########"
     if [[ $CI ]]; then
-        ./cluster delete
+        echo ./cluster delete
     else
-        go run ./hack/cluster delete
+        echo go run ./hack/cluster delete
     fi
 }
 
@@ -156,6 +156,7 @@ fi
 
 echo "######################################"
 echo "##### ARO V4 E2e helper sourced ######"
+echo "🐛🐞🦗🪲🐛🐞🦗🪲🐛🐞🦗🪲🐛🐞🦗🪲🐛🐞🦗"
 echo "######################################"
 echo "######## Current settings : ##########"
 echo
