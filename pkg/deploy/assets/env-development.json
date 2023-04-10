@@ -218,7 +218,7 @@
         },
         {
             "sku": {
-                "name": "Standard_D2s_v3",
+                "name": "Standard_F2s_v2",
                 "tier": "Standard",
                 "capacity": 1
             },
