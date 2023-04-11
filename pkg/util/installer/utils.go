@@ -87,12 +87,3 @@ func PemToPublicKey(data []byte) (*rsa.PublicKey, error) {
 	}
 	return publicKey, nil
 }
-
-// PemToCertificate converts a data block to x509.Certificate.
-func PemToCertificate(data []byte) (*x509.Certificate, error) {
-	block, _ := pem.Decode(data)
-	if block == nil {
-		return nil, errors.Errorf("could not find a PEM block in the certificate")
-	}
-	return x509.ParseCertificate(block.Bytes)
-}
