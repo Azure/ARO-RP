@@ -414,7 +414,6 @@ func (p *portal) internalServerError(w http.ResponseWriter, err error) {
 }
 
 func (p *portal) badRequest(w http.ResponseWriter, err error) {
-	p.log.Warn(err)
 	p.log.Debug(err)
 	http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 }
