@@ -62,37 +62,6 @@ func PrivateKey() (*rsa.PrivateKey, error) {
 	return rsaKey, nil
 }
 
-// SelfSignedCertificate creates a self signed certificate
-func SelfSignedCertificate(cfg *CertCfg, key *rsa.PrivateKey) (*x509.Certificate, error) {
-	serial, err := rand.Int(rand.Reader, new(big.Int).SetInt64(math.MaxInt64))
-	if err != nil {
-		return nil, err
-	}
-	cert := x509.Certificate{
-		BasicConstraintsValid: true,
-		IsCA:                  cfg.IsCA,
-		KeyUsage:              cfg.KeyUsages,
-		NotAfter:              time.Now().Add(cfg.Validity),
-		NotBefore:             time.Now(),
-		SerialNumber:          serial,
-		Subject:               cfg.Subject,
-	}
-	// verifies that the CN and/or OU for the cert is set
-	if len(cfg.Subject.CommonName) == 0 || len(cfg.Subject.OrganizationalUnit) == 0 {
-		return nil, errors.Errorf("certification's subject is not set, or invalid")
-	}
-	pub := key.Public()
-	cert.SubjectKeyId, err = generateSubjectKeyID(pub)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to set subject key identifier")
-	}
-	certBytes, err := x509.CreateCertificate(rand.Reader, &cert, &cert, key.Public(), key)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create certificate")
-	}
-	return x509.ParseCertificate(certBytes)
-}
-
 // SignedCertificate creates a new X.509 certificate based on a template.
 func SignedCertificate(
 	cfg *CertCfg,
@@ -180,20 +149,4 @@ func GenerateSignedCertificate(caKey *rsa.PrivateKey, caCert *x509.Certificate, 
 		return nil, nil, errors.Wrap(err, "failed to create a signed certificate")
 	}
 	return key, cert, nil
-}
-
-// GenerateSelfSignedCertificate generates a key/cert pair defined by CertCfg.
-func GenerateSelfSignedCertificate(cfg *CertCfg) (*rsa.PrivateKey, *x509.Certificate, error) {
-	key, err := PrivateKey()
-	if err != nil {
-		logrus.Debugf("Failed to generate a private key: %s", err)
-		return nil, nil, errors.Wrap(err, "failed to generate private key")
-	}
-
-	crt, err := SelfSignedCertificate(cfg, key)
-	if err != nil {
-		logrus.Debugf("Failed to create self-signed certificate: %s", err)
-		return nil, nil, errors.Wrap(err, "failed to create self-signed certificate")
-	}
-	return key, crt, nil
 }
