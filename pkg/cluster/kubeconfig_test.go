@@ -6,7 +6,6 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/json"
-	"encoding/pem"
 	"reflect"
 	"testing"
 	"time"
@@ -27,13 +26,19 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	b := x509.MarshalPKCS1PrivateKey(validCaKey)
-
+	encodedKey, err := utilpem.Encode(validCaKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	encodedCert, err := utilpem.Encode(validCaCerts[0])
+	if err != nil {
+		t.Fatal(err)
+	}
 	ca := &installer.AdminKubeConfigSignerCertKey{
 		SelfSignedCertKey: installer.SelfSignedCertKey{
 			CertKey: installer.CertKey{
-				CertRaw: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: validCaCerts[0].Raw}),
-				KeyRaw:  pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: b}),
+				CertRaw: encodedCert,
+				KeyRaw:  encodedKey,
 			},
 		},
 	}
@@ -93,12 +98,9 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 	}
 
 	innerpem := string(got.AuthInfos[0].AuthInfo.ClientCertificateData) + string(got.AuthInfos[0].AuthInfo.ClientKeyData)
-	innerkey, innercert, err := utilpem.Parse([]byte(innerpem))
+	innercert, err := utilpem.ParseFirstCertificate([]byte(innerpem))
 	if err != nil {
 		t.Fatal(err)
-	}
-	if innerkey == nil {
-		t.Error("Client Key is invalid.")
 	}
 
 	// validate the result in 2 stages: first verify the key and certificate
@@ -106,26 +108,26 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 	// then remove the AuthInfo struct from the result and validate
 	// rest of the fields by comparing with the template.
 
-	err = innercert[0].CheckSignatureFrom(validCaCerts[0])
+	err = innercert.CheckSignatureFrom(validCaCerts[0])
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	issuer := innercert[0].Issuer.String()
+	issuer := innercert.Issuer.String()
 	if issuer != "CN=validca" {
 		t.Error(issuer)
 	}
 
-	subject := innercert[0].Subject.String()
+	subject := innercert.Subject.String()
 	if subject != "CN=system:aro-service,O=system:masters" {
 		t.Error(subject)
 	}
 
-	if !innercert[0].NotAfter.After(time.Now().AddDate(9, 11, 0)) {
-		t.Error(innercert[0].NotAfter)
+	if !innercert.NotAfter.After(time.Now().AddDate(9, 11, 0)) {
+		t.Error(innercert.NotAfter)
 	}
 
-	keyUsage := innercert[0].KeyUsage
+	keyUsage := innercert.KeyUsage
 	expectedKeyUsage := x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature
 	if keyUsage != expectedKeyUsage {
 		t.Error("Invalid keyUsage.")
@@ -145,13 +147,19 @@ func TestGenerateUserAdminKubeconfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	b := x509.MarshalPKCS1PrivateKey(validCaKey)
-
+	encodedKey, err := utilpem.Encode(validCaKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	encodedCert, err := utilpem.Encode(validCaCerts[0])
+	if err != nil {
+		t.Fatal(err)
+	}
 	ca := &installer.AdminKubeConfigSignerCertKey{
 		SelfSignedCertKey: installer.SelfSignedCertKey{
 			CertKey: installer.CertKey{
-				CertRaw: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: validCaCerts[0].Raw}),
-				KeyRaw:  pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: b}),
+				CertRaw: encodedCert,
+				KeyRaw:  encodedKey,
 			},
 		},
 	}
@@ -211,12 +219,9 @@ func TestGenerateUserAdminKubeconfig(t *testing.T) {
 	}
 
 	innerpem := string(got.AuthInfos[0].AuthInfo.ClientCertificateData) + string(got.AuthInfos[0].AuthInfo.ClientKeyData)
-	innerkey, innercert, err := utilpem.Parse([]byte(innerpem))
+	innercert, err := utilpem.ParseFirstCertificate([]byte(innerpem))
 	if err != nil {
 		t.Fatal(err)
-	}
-	if innerkey == nil {
-		t.Error("Client Key is invalid.")
 	}
 
 	// validate the result in 2 stages: first verify the key and certificate
@@ -224,26 +229,26 @@ func TestGenerateUserAdminKubeconfig(t *testing.T) {
 	// then remove the AuthInfo struct from the result and validate
 	// rest of the fields by comparing with the template.
 
-	err = innercert[0].CheckSignatureFrom(validCaCerts[0])
+	err = innercert.CheckSignatureFrom(validCaCerts[0])
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	issuer := innercert[0].Issuer.String()
+	issuer := innercert.Issuer.String()
 	if issuer != "CN=validca" {
 		t.Error(issuer)
 	}
 
-	subject := innercert[0].Subject.String()
+	subject := innercert.Subject.String()
 	if subject != "CN=system:admin" {
 		t.Error(subject)
 	}
 
-	if !innercert[0].NotAfter.After(time.Now().AddDate(0, 11, 0)) {
-		t.Error(innercert[0].NotAfter)
+	if !innercert.NotAfter.After(time.Now().AddDate(0, 11, 0)) {
+		t.Error(innercert.NotAfter)
 	}
 
-	keyUsage := innercert[0].KeyUsage
+	keyUsage := innercert.KeyUsage
 	expectedKeyUsage := x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature
 	if keyUsage != expectedKeyUsage {
 		t.Error("Invalid keyUsage.")
@@ -265,13 +270,19 @@ func TestCheckUserAdminKubeconfigUpdated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	b := x509.MarshalPKCS1PrivateKey(validCaKey)
-
+	encodedKey, err := utilpem.Encode(validCaKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	encodedCert, err := utilpem.Encode(validCaCerts[0])
+	if err != nil {
+		t.Fatal(err)
+	}
 	ca := &installer.AdminKubeConfigSignerCertKey{
 		SelfSignedCertKey: installer.SelfSignedCertKey{
 			CertKey: installer.CertKey{
-				CertRaw: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: validCaCerts[0].Raw}),
-				KeyRaw:  pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: b}),
+				CertRaw: encodedCert,
+				KeyRaw:  encodedKey,
 			},
 		},
 	}
@@ -328,6 +339,16 @@ func TestCheckUserAdminKubeconfigUpdated(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			privPem, err := utilpem.Encode(priv)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			certPem, err := utilpem.Encode(cert)
+			if err != nil {
+				t.Fatal(err)
+			}
+
 			userAdminKubeconfig := &clientcmdv1.Config{
 				Clusters: []clientcmdv1.NamedCluster{
 					{
@@ -341,8 +362,8 @@ func TestCheckUserAdminKubeconfigUpdated(t *testing.T) {
 					{
 						Name: serviceName,
 						AuthInfo: clientcmdv1.AuthInfo{
-							ClientCertificateData: cert,
-							ClientKeyData:         priv,
+							ClientCertificateData: certPem,
+							ClientKeyData:         privPem,
 						},
 					},
 				},

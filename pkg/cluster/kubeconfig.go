@@ -150,6 +150,16 @@ func generateKubeconfig(pg graph.PersistedGraph, commonName string, organization
 		return nil, err
 	}
 
+	privPem, err := utilpem.Encode(priv)
+	if err != nil {
+		return nil, err
+	}
+
+	certPem, err := utilpem.Encode(cert)
+	if err != nil {
+		return nil, err
+	}
+
 	// create a Config for the new service kubeconfig based on the generated cluster admin Config
 	aroInternalClient := installer.AdminInternalClient{}
 	aroInternalClient.Config = &clientcmdv1.Config{
@@ -158,8 +168,8 @@ func generateKubeconfig(pg graph.PersistedGraph, commonName string, organization
 			{
 				Name: commonName,
 				AuthInfo: clientcmdv1.AuthInfo{
-					ClientCertificateData: cert,
-					ClientKeyData:         priv,
+					ClientCertificateData: certPem,
+					ClientKeyData:         privPem,
 				},
 			},
 		},

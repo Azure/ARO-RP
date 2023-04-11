@@ -80,8 +80,18 @@ func (m *manager) fixMCSCert(ctx context.Context) error {
 			return err
 		}
 
-		s.Data[corev1.TLSCertKey] = cert
-		s.Data[corev1.TLSPrivateKeyKey] = priv
+		privPem, err := utilpem.Encode(priv)
+		if err != nil {
+			return err
+		}
+
+		certPem, err := utilpem.Encode(cert)
+		if err != nil {
+			return err
+		}
+
+		s.Data[corev1.TLSCertKey] = certPem
+		s.Data[corev1.TLSPrivateKeyKey] = privPem
 
 		_, err = m.kubernetescli.CoreV1().Secrets("openshift-machine-config-operator").Update(ctx, s, metav1.UpdateOptions{})
 		return err
