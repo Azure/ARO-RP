@@ -32,6 +32,8 @@ type ParallelEnricher struct {
 	enrichers map[string]ClusterEnricher
 	emitter   metrics.Emitter
 	dialer    proxy.Dialer
+	//only used for testing because the metrics emission is async
+	metricsWG *sync.WaitGroup
 }
 
 type ClusterEnricher interface {
@@ -112,6 +114,11 @@ func (p ParallelEnricher) enrichOne(ctx context.Context, log *logrus.Entry, oc *
 
 			errors <- e.Enrich(ctx, log, oc, clients.k8s, clients.config, clients.machine, clients.operator)
 
+			//only used in testing
+			if p.metricsWG != nil {
+				p.metricsWG.Add(1)
+				defer p.metricsWG.Done()
+			}
 			p.emitter.EmitGauge(
 				"enricher.tasks.duration",
 				time.Since(t).Milliseconds(),
