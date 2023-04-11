@@ -4,15 +4,10 @@ package installer
 // Licensed under the Apache License 2.0.
 
 import (
-	"crypto"
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha1"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/asn1"
 	"math"
 	"math/big"
 	"net"
@@ -37,19 +32,11 @@ const (
 
 // CertCfg contains all needed fields to configure a new certificate
 type CertCfg struct {
-	DNSNames     []string
-	ExtKeyUsages []x509.ExtKeyUsage
-	IPAddresses  []net.IP
-	KeyUsages    x509.KeyUsage
-	Subject      pkix.Name
-	Validity     time.Duration
-	IsCA         bool
-}
-
-// rsaPublicKey reflects the ASN.1 structure of a PKCS#1 public key.
-type rsaPublicKey struct {
-	N *big.Int
-	E int
+	DNSNames    []string
+	IPAddresses []net.IP
+	KeyUsages   x509.KeyUsage
+	Subject     pkix.Name
+	Validity    time.Duration
 }
 
 // PrivateKey generates an RSA Private key and returns the value
@@ -77,48 +64,21 @@ func SignedCertificate(
 
 	certTmpl := x509.Certificate{
 		DNSNames:              csr.DNSNames,
-		ExtKeyUsage:           cfg.ExtKeyUsages,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		IPAddresses:           csr.IPAddresses,
 		KeyUsage:              cfg.KeyUsages,
 		NotAfter:              time.Now().Add(cfg.Validity),
 		NotBefore:             caCert.NotBefore,
 		SerialNumber:          serial,
 		Subject:               csr.Subject,
-		IsCA:                  cfg.IsCA,
 		Version:               3,
 		BasicConstraintsValid: true,
-	}
-	pub := key.Public()
-	certTmpl.SubjectKeyId, err = generateSubjectKeyID(pub)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to set subject key identifier")
 	}
 	certBytes, err := x509.CreateCertificate(rand.Reader, &certTmpl, caCert, key.Public(), caKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create x509 certificate")
 	}
 	return x509.ParseCertificate(certBytes)
-}
-
-// generateSubjectKeyID generates a SHA-1 hash of the subject public key.
-func generateSubjectKeyID(pub crypto.PublicKey) ([]byte, error) {
-	var publicKeyBytes []byte
-	var err error
-
-	switch pub := pub.(type) {
-	case *rsa.PublicKey:
-		publicKeyBytes, err = asn1.Marshal(rsaPublicKey{N: pub.N, E: pub.E})
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to Marshal ans1 public key")
-		}
-	case *ecdsa.PublicKey:
-		publicKeyBytes = elliptic.Marshal(pub.Curve, pub.X, pub.Y)
-	default:
-		return nil, errors.New("only RSA and ECDSA public keys supported")
-	}
-
-	hash := sha1.Sum(publicKeyBytes)
-	return hash[:], nil
 }
 
 // GenerateSignedCertificate generate a key and cert defined by CertCfg and signed by CA.

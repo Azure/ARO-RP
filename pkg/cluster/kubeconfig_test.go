@@ -328,10 +328,9 @@ func TestCheckUserAdminKubeconfigUpdated(t *testing.T) {
 			serviceName := "system:admin"
 
 			cfg := &installer.CertCfg{
-				Subject:      pkix.Name{CommonName: serviceName, Organization: nil},
-				KeyUsages:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-				ExtKeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
-				Validity:     tt.validity,
+				Subject:   pkix.Name{CommonName: serviceName, Organization: nil},
+				KeyUsages: x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+				Validity:  tt.validity,
 			}
 
 			priv, cert, err := installer.GenerateSignedCertKey(cfg, ca)
