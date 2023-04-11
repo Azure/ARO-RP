@@ -8,7 +8,8 @@ import (
 	"crypto/x509"
 
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
+
+	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 )
 
 // CertInterface contains cert.
@@ -51,33 +52,27 @@ type SignedCertKey struct {
 
 // Generate generates a cert/key pair signed by the specified parent CA.
 // see signedcertkey
-func GenerateSignedCertKey(
-	cfg *CertCfg,
-	parentCA CertKeyInterface,
-) ([]byte, []byte, error) {
+func GenerateSignedCertKey(cfg *CertCfg, parentCA CertKeyInterface) (*rsa.PrivateKey, *x509.Certificate, error) {
 	var key *rsa.PrivateKey
 	var crt *x509.Certificate
 	var err error
 
-	caKey, err := PemToPrivateKey(parentCA.Key())
+	caKey, err := utilpem.ParseFirstPrivateKey(parentCA.Key())
 	if err != nil {
-		logrus.Debugf("Failed to parse RSA private key: %s", err)
-		return nil, nil, errors.Wrap(err, "failed to parse rsa private key")
+		return nil, nil, err
 	}
 
-	caCert, err := PemToCertificate(parentCA.Cert())
+	cert, err := utilpem.ParseFirstCertificate(parentCA.Cert())
 	if err != nil {
-		logrus.Debugf("Failed to parse x509 certificate: %s", err)
-		return nil, nil, errors.Wrap(err, "failed to parse x509 certificate")
+		return nil, nil, err
 	}
 
-	key, crt, err = GenerateSignedCertificate(caKey, caCert, cfg)
+	key, crt, err = GenerateSignedCertificate(caKey, cert, cfg)
 	if err != nil {
-		logrus.Debugf("Failed to generate signed cert/key pair: %s", err)
 		return nil, nil, errors.Wrap(err, "failed to generate signed cert/key pair")
 	}
 
-	return PrivateKeyToPem(key), CertToPem(crt), nil
+	return key, crt, nil
 }
 
 // SelfSignedCertKey contains the private key and the cert that's self-signed.
