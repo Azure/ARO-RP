@@ -8,7 +8,9 @@ import (
 	"errors"
 	"net/http"
 	"testing"
+	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	"github.com/Azure/go-autorest/autorest"
@@ -18,6 +20,10 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
+	mock_remotepdp "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/authz/remotepdp"
+	mock_azcore "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azcore"
 	mock_authorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
@@ -699,7 +705,8 @@ func TestValidateCIDRRanges(t *testing.T) {
 
 				err := dv.validateCIDRRanges(ctx, []Subnet{
 					{ID: masterSubnet},
-					{ID: workerSubnet}},
+					{ID: workerSubnet},
+				},
 					oc.Properties.NetworkProfile.PodCIDR, oc.Properties.NetworkProfile.ServiceCIDR)
 				utilerror.AssertErrorMessage(t, err, tt.wantErr)
 			}
@@ -935,6 +942,462 @@ func TestValidateSubnets(t *testing.T) {
 			}
 
 			err := dv.ValidateSubnets(ctx, oc, []Subnet{{ID: masterSubnet, Path: masterSubnetPath}})
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
+
+// Unit tests for validateAccess using CheckAccessV2
+// This will totally replace the current unit tests using ListPermissions (ListForResource)
+// once fully migrated to CheckAccessV2
+
+var mockAccessToken = azcore.AccessToken{
+	Token:     "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJPbmxpbmUgSldUIEJ1aWxkZXIiLCJpYXQiOjE2ODExNDk2NjksImV4cCI6MTcxMjY4NTY2OSwiYXVkIjoid3d3LmV4YW1wbGUuY29tIiwic3ViIjoianJvY2tldEBleGFtcGxlLmNvbSIsIkdpdmVuTmFtZSI6IkpvaG5ueSIsIlN1cm5hbWUiOiJSb2NrZXQiLCJFbWFpbCI6Impyb2NrZXRAZXhhbXBsZS5jb20iLCJSb2xlIjpbIk1hbmFnZXIiLCJQcm9qZWN0IEFkbWluaXN0cmF0b3IiXSwib2lkIjoiYmlsbHlxZWlsbG9yIn0.3MZk1YRSME8FW0l2DzXsIilEZh08CzjVopy30lbvLqQ", // mocked up data
+	ExpiresOn: time.Now(),
+}
+
+func mockTokenCredential(tokenCred *mock_azcore.MockTokenCredential) {
+	tokenCred.EXPECT().
+		GetToken(gomock.Any(), gomock.Any()).
+		Return(mockAccessToken, nil)
+}
+
+func TestValidateVnetPermissionsWithCheckAccess(t *testing.T) {
+	ctx := context.Background()
+
+	for _, tt := range []struct {
+		name    string
+		mocks   func(*mock_azcore.MockTokenCredential, *mock_remotepdp.MockRemotePDPClient, context.CancelFunc)
+		wantErr string
+	}{
+		{
+			name: "pass",
+			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, _ context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Return(&remotepdp.AuthorizationDecisionResponse{
+						Value: []remotepdp.AuthorizationDecision{
+							{
+								AccessDecision: remotepdp.Allowed,
+							}, {
+								AccessDecision: remotepdp.Allowed,
+							},
+						},
+					}, nil)
+			},
+		},
+		{
+			name: "fail: missing permissions",
+			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Do(func(arg0, arg1 interface{}) {
+						cancel()
+					}).
+					Return(&remotepdp.AuthorizationDecisionResponse{
+						Value: []remotepdp.AuthorizationDecision{
+							{
+								AccessDecision: remotepdp.NotAllowed,
+							}, {
+								AccessDecision: remotepdp.Allowed,
+							},
+						},
+					}, nil)
+			},
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor permission on vnet '" + vnetID + "'.",
+		},
+		{
+			name: "fail: getting an invalid token from AAD",
+			mocks: func(tokenCred *mock_azcore.MockTokenCredential, _ *mock_remotepdp.MockRemotePDPClient, _ context.CancelFunc) {
+				tokenCred.EXPECT().GetToken(gomock.Any(), gomock.Any()).
+					Return(azcore.AccessToken{}, nil)
+			},
+			wantErr: "token contains an invalid number of segments",
+		},
+		{
+			name: "fail: getting an error when calling CheckAccessV2",
+			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Do(func(arg0, arg1 interface{}) {
+						cancel()
+					}).
+					Return(nil, errors.New("Unexpected failure calling CheckAccessV2"))
+			},
+			wantErr: "Unexpected failure calling CheckAccessV2",
+		},
+		{
+			name: "fail: getting a nil response from CheckAccessV2",
+			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Do(func(arg0, arg1 interface{}) {
+						cancel()
+					}).
+					Return(nil, nil)
+			},
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor permission on vnet '" + vnetID + "'.",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+
+			tokenCred := mock_azcore.NewMockTokenCredential(controller)
+
+			pdpClient := mock_remotepdp.NewMockRemotePDPClient(controller)
+			tt.mocks(tokenCred, pdpClient, cancel)
+
+			dv := &dynamic{
+				azEnv:                      &azureclient.PublicCloud,
+				authorizerType:             AuthorizerClusterServicePrincipal,
+				log:                        logrus.NewEntry(logrus.StandardLogger()),
+				pdpClient:                  pdpClient,
+				checkAccessSubjectInfoCred: tokenCred,
+			}
+
+			vnetr, err := azure.ParseResourceID(vnetID)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = dv.validateVnetPermissions(ctx, vnetr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestValidateRouteTablesPermissionsWithCheckAccess(t *testing.T) {
+	ctx := context.Background()
+
+	for _, tt := range []struct {
+		name           string
+		subnet         Subnet
+		pdpClientMocks func(*mock_azcore.MockTokenCredential, *mock_remotepdp.MockRemotePDPClient, context.CancelFunc)
+		vnetMocks      func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
+		wantErr        string
+	}{
+		{
+			name:   "fail: failed to get vnet",
+			subnet: Subnet{ID: masterSubnet},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, errors.New("failed to get vnet"))
+			},
+			wantErr: "failed to get vnet",
+		},
+		{
+			name:   "fail: master subnet doesn't exist",
+			subnet: Subnet{ID: masterSubnet},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnet.Subnets = nil
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
+			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + masterSubnet + "' could not be found.",
+		},
+		{
+			name:   "fail: worker subnet ID doesn't exist",
+			subnet: Subnet{ID: workerSubnet},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				(*vnet.Subnets)[1].ID = to.StringPtr("not valid")
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
+			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + workerSubnet + "' could not be found.",
+		},
+		{
+			name:   "pass: no route table to check",
+			subnet: Subnet{ID: masterSubnet},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				(*vnet.Subnets)[0].RouteTable = nil
+				(*vnet.Subnets)[1].RouteTable = nil
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
+		},
+		{
+			name:   "fail: permissions don't exist",
+			subnet: Subnet{ID: workerSubnet},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
+			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Do(func(arg0, arg1 interface{}) {
+						cancel()
+					}).
+					Return(&remotepdp.AuthorizationDecisionResponse{
+						Value: []remotepdp.AuthorizationDecision{
+							{
+								AccessDecision: remotepdp.Allowed,
+							}, {
+								AccessDecision: remotepdp.NotAllowed,
+							},
+						},
+					}, nil)
+			},
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor permission on route table '" + workerRtID + "'.",
+		},
+		{
+			name:   "pass",
+			subnet: Subnet{ID: workerSubnet},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
+			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Return(&remotepdp.AuthorizationDecisionResponse{
+						Value: []remotepdp.AuthorizationDecision{
+							{
+								AccessDecision: remotepdp.Allowed,
+							}, {
+								AccessDecision: remotepdp.Allowed,
+							},
+						},
+					}, nil)
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+
+			tokenCred := mock_azcore.NewMockTokenCredential(controller)
+
+			pdpClient := mock_remotepdp.NewMockRemotePDPClient(controller)
+
+			vnetClient := mock_network.NewMockVirtualNetworksClient(controller)
+
+			vnet := &mgmtnetwork.VirtualNetwork{
+				ID: &vnetID,
+				VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
+					Subnets: &[]mgmtnetwork.Subnet{
+						{
+							ID: &masterSubnet,
+							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+								RouteTable: &mgmtnetwork.RouteTable{
+									ID: &masterRtID,
+								},
+							},
+						},
+						{
+							ID: &workerSubnet,
+							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+								RouteTable: &mgmtnetwork.RouteTable{
+									ID: &workerRtID,
+								},
+							},
+						},
+					},
+				},
+			}
+
+			dv := &dynamic{
+				azEnv:                      &azureclient.PublicCloud,
+				authorizerType:             AuthorizerClusterServicePrincipal,
+				log:                        logrus.NewEntry(logrus.StandardLogger()),
+				checkAccessSubjectInfoCred: tokenCred,
+				pdpClient:                  pdpClient,
+				virtualNetworks:            vnetClient,
+			}
+
+			if tt.pdpClientMocks != nil {
+				tt.pdpClientMocks(tokenCred, pdpClient, cancel)
+			}
+
+			if tt.vnetMocks != nil {
+				tt.vnetMocks(vnetClient, *vnet)
+			}
+
+			err := dv.validateRouteTablePermissions(ctx, tt.subnet)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestValidateNatGatewaysPermissionsWithCheckAccess(t *testing.T) {
+	ctx := context.Background()
+
+	for _, tt := range []struct {
+		name           string
+		subnet         Subnet
+		pdpClientMocks func(*mock_azcore.MockTokenCredential, *mock_remotepdp.MockRemotePDPClient, context.CancelFunc)
+		vnetMocks      func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
+		wantErr        string
+	}{
+		{
+			name:   "fail: failed to get vnet",
+			subnet: Subnet{ID: masterSubnet},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, errors.New("failed to get vnet"))
+			},
+			wantErr: "failed to get vnet",
+		},
+		{
+			name:   "fail: master subnet doesn't exist",
+			subnet: Subnet{ID: masterSubnet},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnet.Subnets = nil
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
+			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + masterSubnet + "' could not be found.",
+		},
+		{
+			name:   "fail: worker subnet ID doesn't exist",
+			subnet: Subnet{ID: workerSubnet},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				(*vnet.Subnets)[1].ID = to.StringPtr("not valid")
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
+			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + workerSubnet + "' could not be found.",
+		},
+		{
+			name:   "fail: permissions don't exist",
+			subnet: Subnet{ID: workerSubnet},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
+			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				pdpClient.
+					EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Do(func(arg0, arg1 interface{}) {
+						cancel()
+					}).
+					Return(&remotepdp.AuthorizationDecisionResponse{
+						Value: []remotepdp.AuthorizationDecision{
+							{
+								AccessDecision: remotepdp.Allowed,
+							}, {
+								AccessDecision: remotepdp.NotAllowed,
+							},
+						},
+					}, nil)
+			},
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor permission on nat gateway '" + workerNgID + "'.",
+		},
+		{
+			name:   "pass",
+			subnet: Subnet{ID: workerSubnet},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
+			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Return(&remotepdp.AuthorizationDecisionResponse{
+						Value: []remotepdp.AuthorizationDecision{
+							{
+								AccessDecision: remotepdp.Allowed,
+							}, {
+								AccessDecision: remotepdp.Allowed,
+							},
+						},
+					}, nil)
+			},
+		},
+		{
+			name:   "pass: no nat gateway to check",
+			subnet: Subnet{ID: masterSubnet},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				(*vnet.Subnets)[0].NatGateway = nil
+				(*vnet.Subnets)[1].NatGateway = nil
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+
+			vnetClient := mock_network.NewMockVirtualNetworksClient(controller)
+
+			tokenCred := mock_azcore.NewMockTokenCredential(controller)
+
+			pdpClient := mock_remotepdp.NewMockRemotePDPClient(controller)
+
+			vnet := &mgmtnetwork.VirtualNetwork{
+				ID: &vnetID,
+				VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
+					Subnets: &[]mgmtnetwork.Subnet{
+						{
+							ID: &masterSubnet,
+							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+								NatGateway: &mgmtnetwork.SubResource{
+									ID: &masterNgID,
+								},
+							},
+						},
+						{
+							ID: &workerSubnet,
+							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+								NatGateway: &mgmtnetwork.SubResource{
+									ID: &workerNgID,
+								},
+							},
+						},
+					},
+				},
+			}
+
+			dv := &dynamic{
+				azEnv:                      &azureclient.PublicCloud,
+				authorizerType:             AuthorizerClusterServicePrincipal,
+				log:                        logrus.NewEntry(logrus.StandardLogger()),
+				checkAccessSubjectInfoCred: tokenCred,
+				pdpClient:                  pdpClient,
+				virtualNetworks:            vnetClient,
+			}
+
+			if tt.pdpClientMocks != nil {
+				tt.pdpClientMocks(tokenCred, pdpClient, cancel)
+			}
+
+			if tt.vnetMocks != nil {
+				tt.vnetMocks(vnetClient, *vnet)
+			}
+
+			err := dv.validateNatGatewayPermissions(ctx, tt.subnet)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
