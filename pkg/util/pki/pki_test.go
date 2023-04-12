@@ -6,6 +6,7 @@ package pki
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"net/http"
 	"testing"
 )
@@ -25,7 +26,8 @@ func TestGetTlsConfig(t *testing.T) {
 		t.Error("Expected non-nil CertPool")
 	}
 
-	if _, ok := caMap[caName]; !ok {
+	url := fmt.Sprintf(kpiUrl, caName)
+	if _, ok := caMap[url]; !ok {
 		t.Errorf("Expected caMap to contain entry for %s", caName)
 	}
 
