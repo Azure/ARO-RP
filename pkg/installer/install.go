@@ -42,7 +42,7 @@ func (m *manager) Install(ctx context.Context) error {
 		steps.Action(func(ctx context.Context) error {
 			return m.persistGraph(ctx, g)
 		}),
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.deployResourceTemplate)),
+		steps.Action(m.deployResourceTemplate),
 		steps.Action(m.initializeKubernetesClients),
 		steps.Condition(m.bootstrapConfigMapReady, 30*time.Minute, true),
 	}

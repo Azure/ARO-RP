@@ -6,6 +6,7 @@ package clusterdata
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -89,6 +90,7 @@ func TestEnrichOne(t *testing.T) {
 				enrichers: map[string]ClusterEnricher{
 					enricherName: enricherMock,
 				},
+				metricsWG: &sync.WaitGroup{},
 			}
 			if tt.enricherIsNil {
 				e.enrichers[enricherName] = nil
@@ -96,6 +98,8 @@ func TestEnrichOne(t *testing.T) {
 
 			ctx := context.Background()
 			e.enrichOne(ctx, log, &api.OpenShiftCluster{}, clients{}, tt.failedEnrichers)
+
+			e.metricsWG.Wait()
 		})
 	}
 }

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -20,14 +21,11 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/permissions"
-	"github.com/Azure/ARO-RP/pkg/util/refreshable"
-	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -40,7 +38,7 @@ type Subnet struct {
 }
 
 type ServicePrincipalValidator interface {
-	ValidateServicePrincipal(ctx context.Context, clientID, clientSecret, tenantID string) error
+	ValidateServicePrincipal(ctx context.Context, tokenCredential azcore.TokenCredential) error
 }
 
 // Dynamic validate in the operator context.
@@ -65,7 +63,6 @@ type dynamic struct {
 	resourceSkusClient compute.ResourceSkusClient
 	spComputeUsage     compute.UsageClient
 	spNetworkUsage     network.UsageClient
-	tokenClient        aad.TokenClient
 }
 
 type AuthorizerType string
@@ -75,7 +72,7 @@ const (
 	AuthorizerClusterServicePrincipal AuthorizerType = "cluster"
 )
 
-func NewValidator(log *logrus.Entry, env env.Interface, azEnv *azureclient.AROEnvironment, subscriptionID string, authorizer refreshable.Authorizer, authorizerType AuthorizerType, tokenClient aad.TokenClient) (Dynamic, error) {
+func NewValidator(log *logrus.Entry, env env.Interface, azEnv *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer, authorizerType AuthorizerType) (Dynamic, error) {
 	return &dynamic{
 		log:            log,
 		authorizerType: authorizerType,
@@ -88,16 +85,14 @@ func NewValidator(log *logrus.Entry, env env.Interface, azEnv *azureclient.AROEn
 		virtualNetworks:    newVirtualNetworksCache(network.NewVirtualNetworksClient(azEnv, subscriptionID, authorizer)),
 		diskEncryptionSets: compute.NewDiskEncryptionSetsClient(azEnv, subscriptionID, authorizer),
 		resourceSkusClient: compute.NewResourceSkusClient(azEnv, subscriptionID, authorizer),
-		tokenClient:        tokenClient,
 	}, nil
 }
 
-func NewServicePrincipalValidator(log *logrus.Entry, azEnv *azureclient.AROEnvironment, authorizerType AuthorizerType, tokenClient aad.TokenClient) (ServicePrincipalValidator, error) {
+func NewServicePrincipalValidator(log *logrus.Entry, azEnv *azureclient.AROEnvironment, authorizerType AuthorizerType) (ServicePrincipalValidator, error) {
 	return &dynamic{
 		log:            log,
 		authorizerType: authorizerType,
 		azEnv:          azEnv,
-		tokenClient:    tokenClient,
 	}, nil
 }
 
@@ -293,11 +288,6 @@ func (dv *dynamic) validateActions(ctx context.Context, r *azure.Resource, actio
 	return wait.PollImmediateUntil(20*time.Second, func() (bool, error) {
 		dv.log.Debug("retry validateActions")
 		perms, err := dv.permissions.ListForResource(ctx, r.ResourceGroup, r.Provider, "", r.ResourceType, r.ResourceName)
-
-		if detailedErr, ok := err.(autorest.DetailedError); ok &&
-			detailedErr.StatusCode == http.StatusForbidden {
-			return false, steps.ErrWantRefresh
-		}
 		if err != nil {
 			return false, err
 		}

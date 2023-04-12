@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest/azure"
 )
 
@@ -23,6 +25,11 @@ type AROEnvironment struct {
 	AuthzRemotePDPEndPoint   string
 	AzureRbacPDPEnvironment
 	Cloud cloud.Configuration
+	// Microsoft identity platform scopes used by ARO
+	// See https://learn.microsoft.com/EN-US/azure/active-directory/develop/scopes-oidc#the-default-scope
+	ResourceManagerScope      string
+	KeyVaultScope             string
+	ActiveDirectoryGraphScope string
 }
 
 // AzureRbacPDPEnvironment contains cloud specific instance of Authz RBAC PDP Remote Server
@@ -46,6 +53,9 @@ var (
 			Endpoint:   "https://%s.authorization.azure.net/providers/Microsoft.Authorization/checkAccess?api-version=2021-06-01-preview",
 			OAuthScope: "https://authorization.azure.net/.default",
 		},
+		ResourceManagerScope:      azure.PublicCloud.ResourceManagerEndpoint + "/.default",
+		KeyVaultScope:             azure.PublicCloud.ResourceIdentifiers.KeyVault + "/.default",
+		ActiveDirectoryGraphScope: azure.PublicCloud.GraphEndpoint + "/.default",
 	}
 
 	// USGovernmentCloud contains additional ARO information for the US Gov cloud environment.
@@ -62,6 +72,9 @@ var (
 			Endpoint:   "https://%s.authorization.azure.us/providers/Microsoft.Authorization/checkAccess?api-version=2021-06-01-preview",
 			OAuthScope: "https://authorization.azure.us/.default",
 		},
+		ResourceManagerScope:      azure.USGovernmentCloud.ResourceManagerEndpoint + "/.default",
+		KeyVaultScope:             azure.USGovernmentCloud.ResourceIdentifiers.KeyVault + "/.default",
+		ActiveDirectoryGraphScope: azure.USGovernmentCloud.GraphEndpoint + "/.default",
 	}
 )
 
@@ -74,4 +87,38 @@ func EnvironmentFromName(name string) (AROEnvironment, error) {
 		return USGovernmentCloud, nil
 	}
 	return AROEnvironment{}, fmt.Errorf("cloud environment %q is unsupported by ARO", name)
+}
+
+func (e *AROEnvironment) ClientCertificateCredentialOptions() *azidentity.ClientCertificateCredentialOptions {
+	return &azidentity.ClientCertificateCredentialOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: e.Cloud,
+		},
+		// Required for Subject Name/Issuer (SNI) authentication
+		SendCertificateChain: true,
+	}
+}
+
+func (e *AROEnvironment) ClientSecretCredentialOptions() *azidentity.ClientSecretCredentialOptions {
+	return &azidentity.ClientSecretCredentialOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: e.Cloud,
+		},
+	}
+}
+
+func (e *AROEnvironment) EnvironmentCredentialOptions() *azidentity.EnvironmentCredentialOptions {
+	return &azidentity.EnvironmentCredentialOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: e.Cloud,
+		},
+	}
+}
+
+func (e *AROEnvironment) ManagedIdentityCredentialOptions() *azidentity.ManagedIdentityCredentialOptions {
+	return &azidentity.ManagedIdentityCredentialOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: e.Cloud,
+		},
+	}
 }

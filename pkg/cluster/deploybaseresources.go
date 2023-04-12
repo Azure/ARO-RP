@@ -120,7 +120,7 @@ func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
 	return m.env.EnsureARMResourceGroupRoleAssignment(ctx, m.fpAuthorizer, resourceGroup)
 }
 
-func (m *manager) deployStorageTemplate(ctx context.Context) error {
+func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 
