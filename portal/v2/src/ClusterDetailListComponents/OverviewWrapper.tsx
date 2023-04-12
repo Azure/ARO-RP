@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react"
-import { AxiosResponse } from 'axios';
-import { FetchClusterInfo } from '../Request';
+import { AxiosResponse } from "axios"
+import { fetchClusterInfo } from "../Request"
 import { ICluster } from "../App"
-import { ClusterDetailComponent } from '../ClusterDetailList'
-import { OverviewComponent } from './Overview';
-import { IMessageBarStyles, MessageBar, MessageBarType, Stack } from '@fluentui/react';
-import { overviewKey } from "../ClusterDetail";
+import { ClusterDetailComponent } from "../ClusterDetailList"
+import { OverviewComponent } from "./Overview"
+import { IMessageBarStyles, MessageBar, MessageBarType, Stack } from "@fluentui/react"
+import { overviewKey } from "../ClusterDetail"
 
 const errorBarStyles: Partial<IMessageBarStyles> = { root: { marginBottom: 15 } }
 
@@ -27,8 +27,7 @@ export function OverviewWrapper(props: {
         isMultiline={false}
         onDismiss={() => setError(null)}
         dismissButtonAriaLabel="Close"
-        styles={errorBarStyles}
-      >
+        styles={errorBarStyles}>
         {error?.statusText}
       </MessageBar>
     )
@@ -54,12 +53,14 @@ export function OverviewWrapper(props: {
       setFetching(props.currentCluster.name)
     }
 
-    if (props.detailPanelSelected.toLowerCase() == overviewKey && 
-        fetching === "" &&
-        props.loaded &&
-        props.currentCluster.name != "") {
+    if (
+      props.detailPanelSelected.toLowerCase() == overviewKey &&
+      fetching === "" &&
+      props.loaded &&
+      props.currentCluster.name != ""
+    ) {
       setFetching("FETCHING")
-      FetchClusterInfo(props.currentCluster).then(onData)
+      fetchClusterInfo(props.currentCluster).then(onData)
     }
   }, [data, props.loaded, props.clusterName])
 
@@ -67,8 +68,11 @@ export function OverviewWrapper(props: {
     <Stack>
       <Stack.Item grow>{error && errorBar()}</Stack.Item>
       <Stack>
-        <OverviewComponent item={data} clusterName={props.currentCluster != null ? props.currentCluster.name : ""}/>
+        <OverviewComponent
+          item={data}
+          clusterName={props.currentCluster != null ? props.currentCluster.name : ""}
+        />
       </Stack>
-    </Stack>   
+    </Stack>
   )
 }

@@ -1,8 +1,4 @@
-import {
-  IPanelStyles,
-  Panel,
-  PanelType,
-} from "@fluentui/react/lib/Panel"
+import { IPanelStyles, Panel, PanelType } from "@fluentui/react/lib/Panel"
 import { useBoolean } from "@fluentui/react-hooks"
 import { useState, useEffect, useRef, MutableRefObject, ReactElement } from "react"
 import {
@@ -17,10 +13,10 @@ import {
   IIconStyles,
 } from "@fluentui/react"
 import { AxiosResponse } from "axios"
-import { FetchClusterInfo } from "./Request"
+import { fetchClusterInfo } from "./Request"
 import { ICluster, headerStyles } from "./App"
 import { Nav, INavLink, INavStyles } from "@fluentui/react/lib/Nav"
-import { ClusterDetailComponent } from "./ClusterDetailList"
+import { ClusterDetailComponent, MemoisedClusterDetailListComponent } from "./ClusterDetailList"
 import React from "react"
 
 const navStyles: Partial<INavStyles> = {
@@ -36,15 +32,6 @@ const navStyles: Partial<INavStyles> = {
     marginBottom: "0px",
   },
 }
-
-
-// let customPanelStyle: Partial<IPanelStyles> = {
-//   root: { top: "40px", left: "225px" },
-//   content: { paddingLeft: 30, paddingRight: 5 },
-//   navigation: {
-//     justifyContent: "flex-start",
-//   },
-// }
 
 const headerStyle: Partial<IStackStyles> = {
   root: {
@@ -81,6 +68,10 @@ export const overviewKey = "overview"
 export const nodesKey = "nodes"
 export const machinesKey = "machines"
 export const machineSetsKey = "machinesets"
+export const apiStatisticsKey = "apistatistics"
+export const kcmStatisticsKey = "kcmstatistics"
+export const dnsStatisticsKey = "dnsstatistics"
+export const ingressStatisticsKey = "ingressstatistics"
 
 const errorBarStyles: Partial<IMessageBarStyles> = { root: { marginBottom: 15 } }
 
@@ -122,32 +113,56 @@ export function ClusterDetailPanel(props: {
     {
       links: [
         {
-          name: 'Overview',
+          name: "Overview",
           key: overviewKey,
-          url: '#overview',
-          icon: 'ThisPC',
+          url: "#overview",
+          icon: "ThisPC",
         },
         {
-          name: 'Nodes',
+          name: "Nodes",
           key: nodesKey,
-          url: '#nodes',
-          icon: 'BuildQueue',
+          url: "#nodes",
+          icon: "BuildQueue",
         },
         {
-          name: 'Machines',
+          name: "Machines",
           key: machinesKey,
-          url: '#machines',
-          icon: 'BuildQueue',
+          url: "#machines",
+          icon: "BuildQueue",
         },
         {
-          name: 'MachineSets',
+          name: "MachineSets",
           key: machineSetsKey,
-          url: '#machinesets',
-          icon: 'BuildQueue',
+          url: "#machinesets",
+          icon: "BuildQueue",
+        },
+        {
+          name: "APIStatistics",
+          key: apiStatisticsKey,
+          url: "#apistatistics",
+          icon: "BIDashboard",
+        },
+        {
+          name: "KCMStatistics",
+          key: kcmStatisticsKey,
+          url: "#kcmstatistics",
+          icon: "BIDashboard",
+        },
+        {
+          name: "DNSStatistics",
+          key: dnsStatisticsKey,
+          url: "#dnsstatistics",
+          icon: "BIDashboard",
+        },
+        {
+          name: "IngressStatistics",
+          key: ingressStatisticsKey,
+          url: "#ingressstatistics",
+          icon: "BIDashboard",
         },
       ],
     },
-  ];
+  ]
 
   // updateData - updates the state of the component
   // can be used if we want a refresh button.
@@ -187,7 +202,7 @@ export function ClusterDetailPanel(props: {
     if (fetching === "" && props.loaded === "DONE" && resourceID != "") {
       setFetching("FETCHING")
       setError(null)
-      FetchClusterInfo(props.currentCluster).then(onData)
+      fetchClusterInfo(props.currentCluster).then(onData)
     }
   }, [data, fetching, setFetching])
 
@@ -217,15 +232,18 @@ export function ClusterDetailPanel(props: {
     }
   }
 
-  const [doubleChevronIconProp, setdoubleChevronIconProp] = useState({ iconName: "doublechevronleft"})
-  function _onClickDoubleChevronIcon() {
+  // const [doubleChevronIconProp, setdoubleChevronIconProp] = useState({ iconName: "doublechevronleft"})
+  const doubleChevronIconProp = useRef({ iconName: "doublechevronleft" })
+  const _onClickDoubleChevronIcon = () => {
     let customPanelStyleRootLeft
-    if (doubleChevronIconProp.iconName == "doublechevronright") {
+    if (doubleChevronIconProp.current.iconName == "doublechevronright") {
       customPanelStyleRootLeft = "225px"
-      setdoubleChevronIconProp({ iconName: "doublechevronleft"})
+      // setdoubleChevronIconProp({ iconName: "doublechevronleft"})
+      doubleChevronIconProp.current = { iconName: "doublechevronleft" }
     } else {
       customPanelStyleRootLeft = "0px"
-      setdoubleChevronIconProp({ iconName: "doublechevronright"})
+      // setdoubleChevronIconProp({ iconName: "doublechevronright"})
+      doubleChevronIconProp.current = { iconName: "doublechevronright" }
     }
 
     setcustomPanelStyle({
@@ -237,16 +255,14 @@ export function ClusterDetailPanel(props: {
     })
   }
 
-
-  const onRenderHeader = (
-  ): ReactElement => {
+  const onRenderHeader = (): ReactElement => {
     return (
       <>
         <Stack styles={headerStyle} horizontal>
           <Stack.Item styles={doubleChevronIconStyle}>
             <IconButton
               onClick={_onClickDoubleChevronIcon}
-              iconProps={doubleChevronIconProp}
+              iconProps={doubleChevronIconProp.current}
             />
           </Stack.Item>
         </Stack>
@@ -287,7 +303,7 @@ export function ClusterDetailPanel(props: {
           </Stack.Item>
           <Separator vertical />
           <Stack.Item grow>
-            <ClusterDetailComponent
+            <MemoisedClusterDetailListComponent
               item={data}
               cluster={props.currentCluster}
               isDataLoaded={dataLoaded}
