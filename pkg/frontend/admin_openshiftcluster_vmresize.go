@@ -5,16 +5,13 @@ package frontend
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	kruntime "k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
@@ -34,7 +31,7 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx con
 	resourceType := chi.URLParam(r, "resourceType")
 	resourceGroupName := chi.URLParam(r, "resourceGroupName")
 
-	action, doc, err := f.prepareAdminActions(log, ctx, vmName, strings.TrimPrefix(r.URL.Path, "/admin"), resourceType, resourceName, resourceGroupName)
+	action, _, err := f.prepareAdminActions(log, ctx, vmName, strings.TrimPrefix(r.URL.Path, "/admin"), resourceType, resourceName, resourceGroupName)
 	if err != nil {
 		return err
 	}
@@ -45,44 +42,30 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx con
 		return err
 	}
 
-	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster)
+	// checks if the Virtual machines exists in the Cluster RG
+	exists, err := action.ResourceGroupHasVM(ctx, vmName)
 	if err != nil {
 		return err
 	}
-
-	nodeList, err := k.KubeList(ctx, "node", "")
-	if err != nil {
-		return err
-	}
-
-	var u unstructured.Unstructured
-	var nodes corev1.NodeList
-	if err = json.Unmarshal(nodeList, &u); err != nil {
-		return err
-	}
-
-	err = kruntime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &nodes)
-	if err != nil {
-		return err
-	}
-
-	nodeExists := false
-	for _, node := range nodes.Items {
-		if _, ok := node.ObjectMeta.Labels["node-role.kubernetes.io/master"]; !ok {
-			continue
-		}
-
-		if strings.EqualFold(vmName, node.ObjectMeta.Name) {
-			nodeExists = true
-			break
-		}
-	}
-
-	if !nodeExists {
+	if !exists {
 		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "",
-			`"The master node '%s' under resource group '%s' was not found."`,
+			`"The VirtualMachine '%s' under resource group '%s' was not found."`,
 			vmName, resourceGroupName)
 	}
 
+	if !nodeIsMaster(vmName) {
+		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "",
+			`"The vmName '%s' provided cannot be resized. It is either not a master node or not adhering to the standard naming convention."`,
+			vmName)
+	}
+
 	return action.VMResize(ctx, vmName, vmSize)
+}
+
+// A bland check, to validate if the node is master by checking the vmName has substring 'master'
+// return false, when the node is either not a master node or not adhering to the standard naming convention.
+// return true, if regexp satisfies
+func nodeIsMaster(vmName string) bool {
+	r := regexp.MustCompile(`.*-master-[0-9]{1,}$`)
+	return r.MatchString(vmName)
 }
