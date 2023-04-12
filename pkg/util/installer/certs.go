@@ -7,8 +7,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 
-	"github.com/pkg/errors"
-
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 )
 
@@ -53,10 +51,6 @@ type SignedCertKey struct {
 // Generate generates a cert/key pair signed by the specified parent CA.
 // see signedcertkey
 func GenerateSignedCertKey(cfg *CertCfg, parentCA CertKeyInterface) (*rsa.PrivateKey, *x509.Certificate, error) {
-	var key *rsa.PrivateKey
-	var crt *x509.Certificate
-	var err error
-
 	caKey, err := utilpem.ParseFirstPrivateKey(parentCA.Key())
 	if err != nil {
 		return nil, nil, err
@@ -67,12 +61,7 @@ func GenerateSignedCertKey(cfg *CertCfg, parentCA CertKeyInterface) (*rsa.Privat
 		return nil, nil, err
 	}
 
-	key, crt, err = GenerateSignedCertificate(caKey, cert, cfg)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to generate signed cert/key pair")
-	}
-
-	return key, crt, nil
+	return GenerateSignedCertificate(caKey, cert, cfg)
 }
 
 // SelfSignedCertKey contains the private key and the cert that's self-signed.

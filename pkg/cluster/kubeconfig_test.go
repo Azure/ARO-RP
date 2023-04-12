@@ -98,7 +98,7 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 	}
 
 	innerpem := string(got.AuthInfos[0].AuthInfo.ClientCertificateData) + string(got.AuthInfos[0].AuthInfo.ClientKeyData)
-	innercert, err := utilpem.ParseFirstCertificate([]byte(innerpem))
+	_, innercert, err := utilpem.Parse([]byte(innerpem))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,26 +108,26 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 	// then remove the AuthInfo struct from the result and validate
 	// rest of the fields by comparing with the template.
 
-	err = innercert.CheckSignatureFrom(validCaCerts[0])
+	err = innercert[0].CheckSignatureFrom(validCaCerts[0])
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	issuer := innercert.Issuer.String()
+	issuer := innercert[0].Issuer.String()
 	if issuer != "CN=validca" {
 		t.Error(issuer)
 	}
 
-	subject := innercert.Subject.String()
+	subject := innercert[0].Subject.String()
 	if subject != "CN=system:aro-service,O=system:masters" {
 		t.Error(subject)
 	}
 
-	if !innercert.NotAfter.After(time.Now().AddDate(9, 11, 0)) {
-		t.Error(innercert.NotAfter)
+	if !innercert[0].NotAfter.After(time.Now().AddDate(9, 11, 0)) {
+		t.Error(innercert[0].NotAfter)
 	}
 
-	keyUsage := innercert.KeyUsage
+	keyUsage := innercert[0].KeyUsage
 	expectedKeyUsage := x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature
 	if keyUsage != expectedKeyUsage {
 		t.Error("Invalid keyUsage.")
@@ -219,7 +219,7 @@ func TestGenerateUserAdminKubeconfig(t *testing.T) {
 	}
 
 	innerpem := string(got.AuthInfos[0].AuthInfo.ClientCertificateData) + string(got.AuthInfos[0].AuthInfo.ClientKeyData)
-	innercert, err := utilpem.ParseFirstCertificate([]byte(innerpem))
+	_, innercert, err := utilpem.Parse([]byte(innerpem))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -229,26 +229,26 @@ func TestGenerateUserAdminKubeconfig(t *testing.T) {
 	// then remove the AuthInfo struct from the result and validate
 	// rest of the fields by comparing with the template.
 
-	err = innercert.CheckSignatureFrom(validCaCerts[0])
+	err = innercert[0].CheckSignatureFrom(validCaCerts[0])
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	issuer := innercert.Issuer.String()
+	issuer := innercert[0].Issuer.String()
 	if issuer != "CN=validca" {
 		t.Error(issuer)
 	}
 
-	subject := innercert.Subject.String()
+	subject := innercert[0].Subject.String()
 	if subject != "CN=system:admin" {
 		t.Error(subject)
 	}
 
-	if !innercert.NotAfter.After(time.Now().AddDate(0, 11, 0)) {
-		t.Error(innercert.NotAfter)
+	if !innercert[0].NotAfter.After(time.Now().AddDate(0, 11, 0)) {
+		t.Error(innercert[0].NotAfter)
 	}
 
-	keyUsage := innercert.KeyUsage
+	keyUsage := innercert[0].KeyUsage
 	expectedKeyUsage := x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature
 	if keyUsage != expectedKeyUsage {
 		t.Error("Invalid keyUsage.")
