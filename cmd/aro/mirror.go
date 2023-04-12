@@ -24,8 +24,7 @@ import (
 // These are versions that need to be skipped because they are unable
 // to be mirrored
 var doNotMirrorTags = map[string]struct{}{
-	"4.8.8":  {}, // release points to unreachable link
-	"4.7.27": {}, // release points to unreachable link
+	"4.8.8": {}, // release points to unreachable link
 }
 
 func getAuth(key string) (*types.DockerAuthConfig, error) {
@@ -82,7 +81,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	var releases []pkgmirror.Node
 	if len(flag.Args()) == 1 {
 		log.Print("reading release graph")
-		releases, err = pkgmirror.AddFromGraph(version.NewVersion(4, 6))
+		releases, err = pkgmirror.AddFromGraph(version.NewVersion(4, 8))
 		if err != nil {
 			return err
 		}
