@@ -10,24 +10,12 @@ import (
 	"testing"
 )
 
-func TestNewPki(t *testing.T) {
-	kpiUrl := "https://issuer.pki.azure.com/dsms/issuercertificates?getissuersv3&caName=%s"
-
-	p := NewPki(kpiUrl)
-
-	if p == nil {
-		t.Error("Expected non-nil Pki instance")
-	}
-}
-
 func TestGetTlsConfig(t *testing.T) {
 	kpiUrl := "https://issuer.pki.azure.com/dsms/issuercertificates?getissuersv3&caName=%s"
 	testUrl := "https://diag-runtimehost-prod.trafficmanager.net"
 
-	p := NewPki(kpiUrl)
-
 	caName := "ame"
-	caCertPool, err := p.GetTlsCertPool(caName)
+	caCertPool, err := GetTlsCertPool(kpiUrl, caName)
 
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)

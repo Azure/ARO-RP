@@ -10,39 +10,51 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"sync"
 )
 
 var caMap map[string]x509.CertPool
+var mu sync.RWMutex
+var once sync.Once
 
 type Pki interface {
-	GetTlsCertPool(caName string) (*x509.CertPool, error)
+	GetTlsCertPool(urlTemplate, caName string) (*x509.CertPool, error)
 }
 
-type pki struct {
-	urlTemplate string
-}
-
-func NewPki(kpiUrl string) Pki {
+func initCaMap() {
 	if caMap == nil {
 		caMap = make(map[string]x509.CertPool)
 	}
-
-	return &pki{
-		urlTemplate: kpiUrl,
-	}
 }
 
-func (k *pki) GetTlsCertPool(caName string) (*x509.CertPool, error) {
-	if caCertPool, ok := caMap[caName]; ok {
+func getCaCertPoolFromMap(key string) (x509.CertPool, bool) {
+	mu.RLock()
+	caCertPool, ok := caMap[key]
+	mu.RUnlock()
+	return caCertPool, ok
+}
+
+func setCaCertPoolInMap(key string, caCertPool x509.CertPool) {
+	mu.Lock()
+	caMap[key] = caCertPool
+	mu.Unlock()
+}
+
+func GetTlsCertPool(urlTemplate, caName string) (*x509.CertPool, error) {
+	once.Do(initCaMap)
+
+	url := fmt.Sprintf(urlTemplate, caName)
+	caCertPool, ok := getCaCertPoolFromMap(url)
+	if ok {
 		return &caCertPool, nil
 	} else {
-		caCertPool, err := buildCertPoolForCaName(k.urlTemplate, caName)
+		caCertPool, err := buildCertPoolForCaName(url)
 
 		if err != nil || caCertPool == nil {
 			return nil, err
 		}
 
-		caMap[caName] = *caCertPool
+		setCaCertPoolInMap(url, *caCertPool)
 
 		return caCertPool, nil
 	}
@@ -52,8 +64,7 @@ func (k *pki) GetTlsCertPool(caName string) (*x509.CertPool, error) {
 // The v3 endpoint can be used to get ca certs
 // For example https://issuer.pki.azure.com/dsms/issuercertificates?getissuersv3&caName=ame
 // returns the ame certs
-func buildCertPoolForCaName(baseUrl, caName string) (*x509.CertPool, error) {
-	url := fmt.Sprintf(baseUrl, caName)
+func buildCertPoolForCaName(url string) (*x509.CertPool, error) {
 	response, err := http.Get(url)
 
 	if err != nil {
@@ -63,7 +74,7 @@ func buildCertPoolForCaName(baseUrl, caName string) (*x509.CertPool, error) {
 	defer response.Body.Close()
 
 	// Create a new x509.CertPool
-	caCertPool := x509.NewCertPool()
+	caCertPool, _ := x509.SystemCertPool()
 
 	// Read in certs from endpoint
 	body, _ := ioutil.ReadAll(response.Body)

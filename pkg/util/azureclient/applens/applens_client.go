@@ -29,6 +29,8 @@ func (c *Client) Endpoint() string {
 
 // NewClient creates a new instance of AppLens client with Azure AD access token authentication. It uses the default pipeline configuration.
 // endpoint - The applens service endpoint to use.
+// issuerUrlTemplate - The URL template to fetch the certs used by AppLens example: https://issuer.pki.azure.com/dsms/issuercertificates?getissuersv3&caName=%s
+// caName - Is the certificate authority used by Applens example: ame
 // cred - The credential used to authenticate with the applens service.
 // options - Optional AppLens client options.  Pass nil to accept default values.
 func NewClient(endpoint, issuerUrlTemplate, caName, scope string, cred azcore.TokenCredential, o *ClientOptions) (*Client, error) {
@@ -37,8 +39,7 @@ func NewClient(endpoint, issuerUrlTemplate, caName, scope string, cred azcore.To
 
 func newPipeline(authPolicy []policy.Policy, options *ClientOptions, issuerUrlTemplate, caName string) runtime.Pipeline {
 	if options == nil {
-		p := pki.NewPki(issuerUrlTemplate)
-		cp, _ := p.GetTlsCertPool(caName)
+		cp, _ := pki.GetTlsCertPool(issuerUrlTemplate, caName)
 		options = NewClientOptions(cp)
 	}
 
