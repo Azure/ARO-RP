@@ -68,6 +68,14 @@ type deployer struct {
 	vmssCleaner vmsscleaner.Interface
 }
 
+// KnownDeploymentErrorType represents a type of error we encounter during an
+// RP/gateway deployment that we know how to handle via automation.
+type KnownDeploymentErrorType string
+
+const (
+	KnownDeploymentErrorTypeRPLBNotFound KnownDeploymentErrorType = "RPLBNotFound"
+)
+
 // New initiates new deploy utility object
 func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig, version string, tokenCredential azcore.TokenCredential) (Deployer, error) {
 	err := config.validate()
@@ -159,15 +167,12 @@ func (d *deployer) deploy(ctx context.Context, rgName, deploymentName, vmssName 
 		serviceErr, isServiceError := err.(*azure.ServiceError)
 
 		// Check for a known error that we know how to handle.
-		if isServiceError && serviceErr.Code == "DeploymentFailed" && len(serviceErr.Details) > 0 {
-			outerErr := azure.ServiceError{}
-			jsonEncoded, _ := json.Marshal(serviceErr.Details[0])
-			json.Unmarshal(jsonEncoded, &outerErr)
+		if isServiceError {
+			errorType, checkTypeErr := d.checkForKnownError(serviceErr, i)
 
-			innerErr := azure.ServiceError{}
-			json.Unmarshal([]byte(outerErr.Message), &innerErr)
-
-			isKnownLBError := i < 1 && innerErr.Code == "ResourceNotFound" && strings.Contains(innerErr.Message, "Microsoft.Network/loadBalancers/rp-lb")
+			if checkTypeErr != nil {
+				d.log.Printf("Encountered an error in checkForKnownError: %s", checkTypeErr)
+			}
 
 			// On new RP deployments, we get a spurious DeploymentFailed error
 			// from the Microsoft.Insights/metricAlerts resources indicating
@@ -175,7 +180,7 @@ func (d *deployer) deploy(ctx context.Context, rgName, deploymentName, vmssName 
 			// resources correctly have a dependsOn stanza referring to it.
 			// Retry once, and only if this error is encountered on the first
 			// deployment attempt.
-			if isKnownLBError {
+			if errorType == KnownDeploymentErrorTypeRPLBNotFound {
 				d.log.Print(err)
 				continue
 			}
@@ -190,4 +195,39 @@ func (d *deployer) deploy(ctx context.Context, rgName, deploymentName, vmssName 
 		break
 	}
 	return err
+}
+
+// checkForKnownError is a helper function that checks the errors nested within an Azure ServiceError
+// for a known error and returns the corresponding KnownDeploymentError if applicable.
+func (d *deployer) checkForKnownError(serviceErr *azure.ServiceError, deployAttempt int) (KnownDeploymentErrorType, error) {
+	if serviceErr.Code == "DeploymentFailed" && len(serviceErr.Details) > 0 {
+		outerErr := azure.ServiceError{}
+		jsonEncoded, err := json.Marshal(serviceErr.Details[0])
+
+		if err != nil {
+			return "", err
+		}
+
+		err = json.Unmarshal(jsonEncoded, &outerErr)
+
+		if err != nil {
+			return "", err
+		}
+
+		innerErr := azure.ServiceError{}
+		err = json.Unmarshal([]byte(outerErr.Message), &innerErr)
+
+		if err != nil {
+			return "", err
+		}
+
+		isFirstAttempt := deployAttempt < 1
+		isRPLBNotFound := innerErr.Code == "ResourceNotFound" && strings.Contains(innerErr.Message, "Microsoft.Network/loadBalancers/rp-lb")
+
+		if isFirstAttempt && isRPLBNotFound {
+			return KnownDeploymentErrorTypeRPLBNotFound, nil
+		}
+	}
+
+	return "", nil
 }

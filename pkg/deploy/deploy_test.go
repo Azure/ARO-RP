@@ -158,6 +158,130 @@ func TestDeploy(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckForKnownError(t *testing.T) {
+	rgName := "testRG"
+
+	rpLBNotFound := &azure.ServiceError{
+		Code: "DeploymentFailed",
+		Details: []map[string]interface{}{
+			{
+				"code":    "BadRequest",
+				"message": fmt.Sprintf("{\r\n  \"code\": \"ResourceNotFound\",\r\n  \"message\": \"The Resource 'Microsoft.Network/loadBalancers/rp-lb' under resource group '%s' was not found. For more details please go to https://aka.ms/ARMResourceNotFoundFix Activity ID: 00000000-0000-0000-0000-000000000000.\"\r\n}", rgName),
+			},
+		},
+	}
+
+	unfamiliarError := &azure.ServiceError{
+		Code: "DeploymentFailed",
+		Details: []map[string]interface{}{
+			{
+				"code":    "BadRequest",
+				"message": fmt.Sprintf("{\r\n  \"code\": \"Unfamiliar\",\r\n  \"message\": \"This is an unfamiliar error.\"\r\n}"),
+			},
+		},
+	}
+
+	multipleErrors := &azure.ServiceError{
+		Code: "DeploymentFailed",
+		Details: []map[string]interface{}{
+			{
+				"code":    "BadRequest",
+				"message": fmt.Sprintf("{\r\n  \"code\": \"Unfamiliar\",\r\n  \"message\": \"This is an unfamiliar error.\"\r\n}"),
+			},
+			{
+				"code":    "BadRequest",
+				"message": fmt.Sprintf("{\r\n  \"code\": \"ResourceNotFound\",\r\n  \"message\": \"The Resource 'Microsoft.Network/loadBalancers/rp-lb' under resource group '%s' was not found. For more details please go to https://aka.ms/ARMResourceNotFoundFix Activity ID: 00000000-0000-0000-0000-000000000000.\"\r\n}", rgName),
+			},
+		},
+	}
+
+	multipleErrorsFirstKnown := &azure.ServiceError{
+		Code: "DeploymentFailed",
+		Details: []map[string]interface{}{
+			{
+				"code":    "BadRequest",
+				"message": fmt.Sprintf("{\r\n  \"code\": \"ResourceNotFound\",\r\n  \"message\": \"The Resource 'Microsoft.Network/loadBalancers/rp-lb' under resource group '%s' was not found. For more details please go to https://aka.ms/ARMResourceNotFoundFix Activity ID: 00000000-0000-0000-0000-000000000000.\"\r\n}", rgName),
+			},
+			{
+				"code":    "BadRequest",
+				"message": fmt.Sprintf("{\r\n  \"code\": \"Unfamiliar\",\r\n  \"message\": \"This is an unfamiliar error.\"\r\n}"),
+			},
+		},
+	}
+
+	nestedErrorDoesntUnmarshal := &azure.ServiceError{
+		Code: "DeploymentFailed",
+		Details: []map[string]interface{}{
+			{
+				"code":    "BadRequest",
+				"message": "I am just a regular string and not a JSON-encoded string representing another ServiceError.",
+			},
+		},
+	}
+
+	for _, tt := range []struct {
+		name          string
+		serviceError  *azure.ServiceError
+		deployAttempt int
+		want          KnownDeploymentErrorType
+		wantErr       string
+	}{
+		{
+			name:          "Known RP LB ResourceNotFound error",
+			serviceError:  rpLBNotFound,
+			deployAttempt: 0,
+			want:          KnownDeploymentErrorTypeRPLBNotFound,
+		},
+		{
+			name:          "Known RP LB ResourceNotFound, but not first deploy attempt",
+			serviceError:  rpLBNotFound,
+			deployAttempt: 1,
+			want:          "",
+		},
+		{
+			name:          "Random unfamiliar error",
+			serviceError:  unfamiliarError,
+			deployAttempt: 0,
+			want:          "",
+		},
+		{
+			name:          "Multiple nested errors, first one is not familiar",
+			serviceError:  multipleErrors,
+			deployAttempt: 0,
+			want:          "",
+		},
+		{
+			name:          "Multiple nested errors, first one is familiar",
+			serviceError:  multipleErrorsFirstKnown,
+			deployAttempt: 0,
+			want:          KnownDeploymentErrorTypeRPLBNotFound,
+		},
+		{
+			name:          "No innermost nested error",
+			serviceError:  nestedErrorDoesntUnmarshal,
+			deployAttempt: 0,
+			want:          "",
+			wantErr:       "invalid character 'I' looking for beginning of value",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			d := deployer{}
+
+			got, err := d.checkForKnownError(tt.serviceError, tt.deployAttempt)
+
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+
+			if tt.want != got {
+				t.Errorf("%#v", got)
+			}
+		})
+	}
+}
+
 func TestGetParameters(t *testing.T) {
 	databaseAccountName := to.StringPtr("databaseAccountName")
 	adminApiCaBundle := to.StringPtr("adminApiCaBundle")
