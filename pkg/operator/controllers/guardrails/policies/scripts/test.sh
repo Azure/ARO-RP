@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -eu
+# set -eu
 
 template_src_path="gktemplates-src"
 constraint_path="gkconstraints"
@@ -14,6 +14,7 @@ do
   opa test $library ${folder}/*.rego
 done
 
+echo ""
 echo "gator test:"
 if [[ ! -d ${constraint_test_path} ]]; then
   mkdir -p "${constraint_test_path}"

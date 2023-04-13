@@ -15,9 +15,9 @@ tests:
     object: gator-test/ns_disallowed_pod.yaml
     assertions:
     - violations: yes
-      message: User test-user not allowed to operate in namespace openshift-config
+      message: service account test-user not allowed to operate in namespace openshift-config
   - name: ns-disallowed-deploy
     object: gator-test/ns_disallowed_deploy.yaml
     assertions:
     - violations: yes
-      message: User test-user not allowed to operate in namespace openshift-config
+      message: service account test-user not allowed to operate in namespace openshift-config

@@ -7,23 +7,23 @@ spec:
   match:
     kinds:
       - apiGroups: [""]
-        kinds: ["Service",
+        kinds: [
         "Pod",
-        "Deployment",
-        "Namespace",
-        "ReplicaSet",
-        "StatefulSets",
-        "DaemonSet",
-        "Jobs",
-        "CronJob",
-        "ReplicationController",
-        "Role",
-        "ClusterRole",
-        "roleBinding",
-        "ClusterRoleBinding",
         "Secret",
+        "Service",
         "ServiceAccount",
-        "CustomResourceDefinition",
-        "PodDisruptionBudget",
+        "ReplicationController",
         "ResourceQuota",
-        "PodSecurityPolicy"]
+        "PersistentVolume",
+        "PersistentVolumeClaim"
+        ]
+      - apiGroups: ["apps"]
+        kinds: ["Deployment","ReplicaSet", "StatefulSet", "DaemonSet"]
+      - groups: ["batch"]
+        kinds: ["Job","CronJob"]
+      - groups: ["rbac.authorization.k8s.io"]
+        kinds: ["Role","RoleBinding","ClusterRole","ClusterRoleBinding"]
+      - groups: ["policy"]
+        kinds: ["PodSecurityPolicy","PodDisruptionBudget"]
+      - groups: ["apiextensions"]
+        kinds: ["CustomResourceDefinition"]
