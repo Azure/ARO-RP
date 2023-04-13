@@ -177,7 +177,7 @@ func TestCheckForKnownError(t *testing.T) {
 		Details: []map[string]interface{}{
 			{
 				"code":    "BadRequest",
-				"message": fmt.Sprintf("{\r\n  \"code\": \"Unfamiliar\",\r\n  \"message\": \"This is an unfamiliar error.\"\r\n}"),
+				"message": "{\r\n  \"code\": \"Unfamiliar\",\r\n  \"message\": \"This is an unfamiliar error.\"\r\n}",
 			},
 		},
 	}
@@ -187,7 +187,7 @@ func TestCheckForKnownError(t *testing.T) {
 		Details: []map[string]interface{}{
 			{
 				"code":    "BadRequest",
-				"message": fmt.Sprintf("{\r\n  \"code\": \"Unfamiliar\",\r\n  \"message\": \"This is an unfamiliar error.\"\r\n}"),
+				"message": "{\r\n  \"code\": \"Unfamiliar\",\r\n  \"message\": \"This is an unfamiliar error.\"\r\n}",
 			},
 			{
 				"code":    "BadRequest",
@@ -205,7 +205,7 @@ func TestCheckForKnownError(t *testing.T) {
 			},
 			{
 				"code":    "BadRequest",
-				"message": fmt.Sprintf("{\r\n  \"code\": \"Unfamiliar\",\r\n  \"message\": \"This is an unfamiliar error.\"\r\n}"),
+				"message": "{\r\n  \"code\": \"Unfamiliar\",\r\n  \"message\": \"This is an unfamiliar error.\"\r\n}",
 			},
 		},
 	}
