@@ -10,10 +10,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Azure/ARO-RP/pkg/util/pki"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
+
+	"github.com/Azure/ARO-RP/pkg/util/pki"
 )
 
 // AppLens client is used to interact with the Azure AppLens service.
