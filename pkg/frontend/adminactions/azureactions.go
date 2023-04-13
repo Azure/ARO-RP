@@ -83,7 +83,7 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		routeTables:        network.NewRouteTablesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		storageAccounts:    storage.NewAccountsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		networkInterfaces:  network.NewInterfacesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
-		appLens:            applens.NewAppLensClient(env.Environment(), fpClientCertCred),
+		appLens:            applens.NewAppLensClient(env.Environment(), fpClientCertCred, log),
 	}, nil
 }
 

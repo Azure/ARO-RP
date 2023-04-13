@@ -13,12 +13,14 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
+	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/pki"
 )
 
 // AppLens client is used to interact with the Azure AppLens service.
 type Client struct {
+	log      *logrus.Entry
 	endpoint string
 	pipeline runtime.Pipeline
 }
@@ -29,18 +31,22 @@ func (c *Client) Endpoint() string {
 }
 
 // NewClient creates a new instance of AppLens client with Azure AD access token authentication. It uses the default pipeline configuration.
+// log - a pointer to the logrus instance to use for logging
 // endpoint - The applens service endpoint to use.
 // issuerUrlTemplate - The URL template to fetch the certs used by AppLens example: https://issuer.pki.azure.com/dsms/issuercertificates?getissuersv3&caName=%s
 // caName - Is the certificate authority used by Applens example: ame
 // cred - The credential used to authenticate with the applens service.
 // options - Optional AppLens client options.  Pass nil to accept default values.
-func NewClient(endpoint, issuerUrlTemplate, caName, scope string, cred azcore.TokenCredential, o *ClientOptions) (*Client, error) {
-	return &Client{endpoint: endpoint, pipeline: newPipeline([]policy.Policy{runtime.NewBearerTokenPolicy(cred, []string{fmt.Sprintf("%s/.default", scope)}, nil)}, o, issuerUrlTemplate, caName)}, nil
+func NewClient(log *logrus.Entry, endpoint, issuerUrlTemplate, caName, scope string, cred azcore.TokenCredential, o *ClientOptions) (*Client, error) {
+	return &Client{log: log, endpoint: endpoint, pipeline: newPipeline([]policy.Policy{runtime.NewBearerTokenPolicy(cred, []string{fmt.Sprintf("%s/.default", scope)}, nil)}, o, issuerUrlTemplate, caName)}, nil
 }
 
-func newPipeline(authPolicy []policy.Policy, options *ClientOptions, issuerUrlTemplate, caName string) runtime.Pipeline {
+func newPipeline(log *logrus.Entry, authPolicy []policy.Policy, options *ClientOptions, issuerUrlTemplate, caName string) runtime.Pipeline {
 	if options == nil {
-		cp, _ := pki.GetTlsCertPool(issuerUrlTemplate, caName)
+		cp, error := pki.GetTlsCertPool(issuerUrlTemplate, caName)
+		if error != nil {
+			log.Error(error)
+		}
 		options = NewClientOptions(cp)
 	}
 
