@@ -29,15 +29,15 @@ func initCaMap() {
 
 func getCaCertPoolFromMap(key string) (x509.CertPool, bool) {
 	mu.RLock()
+	defer mu.RUnlock()
 	caCertPool, ok := caMap[key]
-	mu.RUnlock()
 	return caCertPool, ok
 }
 
 func setCaCertPoolInMap(key string, caCertPool x509.CertPool) {
 	mu.Lock()
+	defer mu.Unlock()
 	caMap[key] = caCertPool
-	mu.Unlock()
 }
 
 func GetTlsCertPool(urlTemplate, caName string) (*x509.CertPool, error) {
