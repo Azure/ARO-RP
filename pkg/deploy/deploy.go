@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/jongio/azidext/go/azidext"
@@ -68,14 +68,8 @@ type deployer struct {
 }
 
 // New initiates new deploy utility object
-func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig, version string) (Deployer, error) {
+func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig, version string, tokenCredential azcore.TokenCredential) (Deployer, error) {
 	err := config.validate()
-	if err != nil {
-		return nil, err
-	}
-
-	options := _env.Environment().EnvironmentCredentialOptions()
-	tokenCredential, err := azidentity.NewEnvironmentCredential(options)
 	if err != nil {
 		return nil, err
 	}
