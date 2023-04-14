@@ -1985,6 +1985,10 @@
         "serviceCidr": {
           "description": "The CIDR used for OpenShift/Kubernetes Services.",
           "type": "string"
+        },
+        "outboundType": {
+          "$ref": "#/definitions/OutboundType",
+          "description": "The OutboundType used for egress traffic."
         }
       }
     },
@@ -2207,6 +2211,13 @@
           "type": "string"
         }
       }
+    },
+    "OutboundType": {
+      "enum": [
+        "Loadbalancer",
+        "UserDefinedRouting"
+      ],
+      "type": "string"
     },
     "ProvisioningState": {
       "description": "ProvisioningState represents a provisioning state.",

@@ -46,6 +46,8 @@ spec:
       serviceAccount: aro-operator-master
       priorityClassName: system-cluster-critical
       tolerations:
-      - key: node-role.kubernetes.io/master
+      - effect: NoExecute
         operator: Exists
-        effect: NoSchedule
+      - effect: NoSchedule
+        operator: Exists
+

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest"
@@ -20,6 +21,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate/dynamic"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
+	"github.com/Azure/ARO-RP/pkg/util/feature"
 )
 
 // OpenShiftClusterDynamicValidator is the dynamic validator interface
@@ -28,7 +31,13 @@ type OpenShiftClusterDynamicValidator interface {
 }
 
 // NewOpenShiftClusterDynamicValidator creates a new OpenShiftClusterDynamicValidator
-func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, subscriptionDoc *api.SubscriptionDocument, fpAuthorizer autorest.Authorizer) OpenShiftClusterDynamicValidator {
+func NewOpenShiftClusterDynamicValidator(
+	log *logrus.Entry,
+	env env.Interface,
+	oc *api.OpenShiftCluster,
+	subscriptionDoc *api.SubscriptionDocument,
+	fpAuthorizer autorest.Authorizer,
+) OpenShiftClusterDynamicValidator {
 	return &openShiftClusterDynamicValidator{
 		log: log,
 		env: env,
@@ -120,13 +129,63 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		})
 	}
 
+	var fpClientCred azcore.TokenCredential
+	var spClientCred azcore.TokenCredential
+	var pdpClient remotepdp.RemotePDPClient
+	spp := dv.oc.Properties.ServicePrincipalProfile
+
+	if feature.IsRegisteredForFeature(
+		dv.subscriptionDoc.Subscription.Properties,
+		api.FeatureFlagCheckAccessTestToggle,
+	) {
+		// TODO remove after successfully migrating to CheckAccess
+		dv.log.Info("CheckAccess Feature is set")
+		var err error
+		fpClientCred, err = dv.env.FPNewClientCertificateCredential(dv.subscriptionDoc.Subscription.Properties.TenantID)
+		if err != nil {
+			return err
+		}
+
+		spClientCred, err = azidentity.NewClientSecretCredential(
+			dv.subscriptionDoc.Subscription.Properties.TenantID,
+			spp.ClientID,
+			string(spp.ClientSecret),
+			nil,
+		)
+		if err != nil {
+			return err
+		}
+
+		aroEnv := dv.env.Environment()
+		pdpClient = remotepdp.NewRemotePDPClient(
+			fmt.Sprintf(aroEnv.Endpoint, dv.env.Location()),
+			aroEnv.OAuthScope,
+			fpClientCred,
+		)
+	}
+
 	// FP validation
-	fpDynamic, err := dynamic.NewValidator(dv.log, dv.env, dv.env.Environment(), dv.subscriptionDoc.ID, dv.fpAuthorizer, dynamic.AuthorizerFirstParty)
+	fpDynamic, err := dynamic.NewValidator(
+		dv.log,
+		dv.env,
+		dv.env.Environment(),
+		dv.subscriptionDoc.ID,
+		dv.fpAuthorizer,
+		dynamic.AuthorizerFirstParty,
+		fpClientCred,
+		pdpClient,
+	)
 	if err != nil {
 		return err
 	}
 
-	err = fpDynamic.ValidateVnet(ctx, dv.oc.Location, subnets, dv.oc.Properties.NetworkProfile.PodCIDR, dv.oc.Properties.NetworkProfile.ServiceCIDR)
+	err = fpDynamic.ValidateVnet(
+		ctx,
+		dv.oc.Location,
+		subnets,
+		dv.oc.Properties.NetworkProfile.PodCIDR,
+		dv.oc.Properties.NetworkProfile.ServiceCIDR,
+	)
 	if err != nil {
 		return err
 	}
@@ -136,7 +195,6 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
-	spp := dv.oc.Properties.ServicePrincipalProfile
 	tenantID := dv.subscriptionDoc.Subscription.Properties.TenantID
 	options := dv.env.Environment().ClientSecretCredentialOptions()
 	tokenCredential, err := azidentity.NewClientSecretCredential(
@@ -152,7 +210,16 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	}
 	spAuthorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
-	spDynamic, err := dynamic.NewValidator(dv.log, dv.env, dv.env.Environment(), dv.subscriptionDoc.ID, spAuthorizer, dynamic.AuthorizerClusterServicePrincipal)
+	spDynamic, err := dynamic.NewValidator(
+		dv.log,
+		dv.env,
+		dv.env.Environment(),
+		dv.subscriptionDoc.ID,
+		spAuthorizer,
+		dynamic.AuthorizerClusterServicePrincipal,
+		spClientCred,
+		pdpClient,
+	)
 	if err != nil {
 		return err
 	}
@@ -163,7 +230,13 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
-	err = spDynamic.ValidateVnet(ctx, dv.oc.Location, subnets, dv.oc.Properties.NetworkProfile.PodCIDR, dv.oc.Properties.NetworkProfile.ServiceCIDR)
+	err = spDynamic.ValidateVnet(
+		ctx,
+		dv.oc.Location,
+		subnets,
+		dv.oc.Properties.NetworkProfile.PodCIDR,
+		dv.oc.Properties.NetworkProfile.ServiceCIDR,
+	)
 	if err != nil {
 		return err
 	}
