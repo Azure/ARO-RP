@@ -1102,7 +1102,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 	if !g.production {
 		database.Resource.(*mgmtdocumentdb.SQLDatabaseCreateUpdateParameters).SQLDatabaseCreateUpdateProperties.Options = &mgmtdocumentdb.CreateUpdateOptions{
 			AutoscaleSettings: &mgmtdocumentdb.AutoscaleSettings{
-				MaxThroughput: to.Int32Ptr(500),
+				MaxThroughput: to.Int32Ptr(1000),
 			},
 		}
 		portal.Resource.(*mgmtdocumentdb.SQLContainerCreateUpdateParameters).SQLContainerCreateUpdateProperties.Options = &mgmtdocumentdb.CreateUpdateOptions{}

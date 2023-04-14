@@ -17,7 +17,7 @@
                 },
                 "options": {
                     "autoscaleSettings": {
-                        "maxThroughput": 500
+                        "maxThroughput": 1000
                     }
                 }
             },
