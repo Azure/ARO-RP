@@ -8,8 +8,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	remotepdp "github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
 	gomock "github.com/golang/mock/gomock"
+
+	remotepdp "github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
 )
 
 // MockRemotePDPClient is a mock of RemotePDPClient interface.
