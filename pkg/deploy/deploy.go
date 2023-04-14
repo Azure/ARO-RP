@@ -200,33 +200,35 @@ func (d *deployer) deploy(ctx context.Context, rgName, deploymentName, vmssName 
 // checkForKnownError is a helper function that checks the errors nested within an Azure ServiceError
 // for a known error and returns the corresponding KnownDeploymentErrorType if applicable.
 func (d *deployer) checkForKnownError(serviceErr *azure.ServiceError, deployAttempt int) (KnownDeploymentErrorType, error) {
-	if serviceErr.Code == "DeploymentFailed" && len(serviceErr.Details) > 0 {
-		outerErr := azure.ServiceError{}
-		jsonEncoded, err := json.Marshal(serviceErr.Details[0])
+	if serviceErr.Code != "DeploymentFailed" || len(serviceErr.Details) == 0 {
+		return "", nil
+	}
 
-		if err != nil {
-			return "", err
-		}
+	outerErr := azure.ServiceError{}
+	jsonEncoded, err := json.Marshal(serviceErr.Details[0])
 
-		err = json.Unmarshal(jsonEncoded, &outerErr)
+	if err != nil {
+		return "", err
+	}
 
-		if err != nil {
-			return "", err
-		}
+	err = json.Unmarshal(jsonEncoded, &outerErr)
 
-		innerErr := azure.ServiceError{}
-		err = json.Unmarshal([]byte(outerErr.Message), &innerErr)
+	if err != nil {
+		return "", err
+	}
 
-		if err != nil {
-			return "", err
-		}
+	innerErr := azure.ServiceError{}
+	err = json.Unmarshal([]byte(outerErr.Message), &innerErr)
 
-		isFirstAttempt := deployAttempt < 1
-		isRPLBNotFound := innerErr.Code == "ResourceNotFound" && strings.Contains(innerErr.Message, "Microsoft.Network/loadBalancers/rp-lb")
+	if err != nil {
+		return "", err
+	}
 
-		if isFirstAttempt && isRPLBNotFound {
-			return KnownDeploymentErrorTypeRPLBNotFound, nil
-		}
+	isFirstAttempt := deployAttempt < 1
+	isRPLBNotFound := innerErr.Code == "ResourceNotFound" && strings.Contains(innerErr.Message, "Microsoft.Network/loadBalancers/rp-lb")
+
+	if isFirstAttempt && isRPLBNotFound {
+		return KnownDeploymentErrorTypeRPLBNotFound, nil
 	}
 
 	return "", nil
