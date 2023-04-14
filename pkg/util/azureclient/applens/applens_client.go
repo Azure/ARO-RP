@@ -13,14 +13,12 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
-	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/pki"
 )
 
 // AppLens client is used to interact with the Azure AppLens service.
 type Client struct {
-	log      *logrus.Entry
 	endpoint string
 	pipeline runtime.Pipeline
 }
@@ -31,31 +29,40 @@ func (c *Client) Endpoint() string {
 }
 
 // NewClient creates a new instance of AppLens client with Azure AD access token authentication. It uses the default pipeline configuration.
-// log - a pointer to the logrus instance to use for logging
-// endpoint - The applens service endpoint to use.
+// endpoint - The AppLens service endpoint to use.
 // issuerUrlTemplate - The URL template to fetch the certs used by AppLens example: https://issuer.pki.azure.com/dsms/issuercertificates?getissuersv3&caName=%s
-// caName - Is the certificate authority used by Applens example: ame
-// cred - The credential used to authenticate with the applens service.
+// caName - Is the certificate authority used by AppLens example: ame
+// cred - The credential used to authenticate with the AppLens service.
 // options - Optional AppLens client options.  Pass nil to accept default values.
-func NewClient(log *logrus.Entry, endpoint, issuerUrlTemplate, caName, scope string, cred azcore.TokenCredential, o *ClientOptions) (*Client, error) {
-	return &Client{log: log, endpoint: endpoint, pipeline: newPipeline(log, []policy.Policy{runtime.NewBearerTokenPolicy(cred, []string{fmt.Sprintf("%s/.default", scope)}, nil)}, o, issuerUrlTemplate, caName)}, nil
+func NewClient(endpoint, issuerUrlTemplate, caName, scope string, cred azcore.TokenCredential, o *ClientOptions) (*Client, error) {
+	pipeline, err := newPipeline([]policy.Policy{runtime.NewBearerTokenPolicy(cred, []string{fmt.Sprintf("%s/.default", scope)}, nil)}, o, issuerUrlTemplate, caName)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &Client{endpoint: endpoint, pipeline: *pipeline}, nil
 }
 
-func newPipeline(log *logrus.Entry, authPolicy []policy.Policy, options *ClientOptions, issuerUrlTemplate, caName string) runtime.Pipeline {
+func newPipeline(authPolicy []policy.Policy, options *ClientOptions, issuerUrlTemplate, caName string) (*runtime.Pipeline, error) {
 	if options == nil {
-		cp, error := pki.GetTlsCertPool(issuerUrlTemplate, caName)
-		if error != nil {
-			log.Error(error)
+		cp, err := pki.GetTlsCertPool(issuerUrlTemplate, caName)
+		if err != nil {
+			return nil, err
 		}
 		options = NewClientOptions(cp)
 	}
 
-	return runtime.NewPipeline("applens", serviceLibVersion,
+	runtimePipeline := runtime.NewPipeline(
+		"applens", serviceLibVersion,
 		runtime.PipelineOptions{
 			PerCall:  []policy.Policy{},
 			PerRetry: authPolicy,
 		},
-		&options.ClientOptions)
+		&options.ClientOptions,
+	)
+
+	return &runtimePipeline, nil
 }
 
 // ListDetectors obtains the list of detectors for a service from AppLens.

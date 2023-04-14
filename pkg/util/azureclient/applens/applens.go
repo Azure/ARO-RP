@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
@@ -26,9 +25,14 @@ type appLensClient struct {
 var _ AppLensClient = &appLensClient{}
 
 // NewAppLensClient returns a new AppLensClient
-func NewAppLensClient(env *azureclient.AROEnvironment, cred azcore.TokenCredential, log *logrus.Entry) AppLensClient {
-	client, _ := NewClient(log, env.AppLensEndpoint, env.PkiIssuerUrlTemplate, env.PkiCaName, env.AppLensScope, cred, nil)
+func NewAppLensClient(env *azureclient.AROEnvironment, cred azcore.TokenCredential) (AppLensClient, error) {
+	client, err := NewClient(env.AppLensEndpoint, env.PkiIssuerUrlTemplate, env.PkiCaName, env.AppLensScope, cred, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
 	return &appLensClient{
 		Client: client,
-	}
+	}, nil
 }

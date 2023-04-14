@@ -13,19 +13,8 @@ import (
 	"sync"
 )
 
-var caMap map[string]x509.CertPool
+var caMap map[string]x509.CertPool = make(map[string]x509.CertPool)
 var mu sync.RWMutex
-var once sync.Once
-
-type Pki interface {
-	GetTlsCertPool(urlTemplate, caName string) (*x509.CertPool, error)
-}
-
-func initCaMap() {
-	if caMap == nil {
-		caMap = make(map[string]x509.CertPool)
-	}
-}
 
 func getCaCertPoolFromMap(key string) (x509.CertPool, bool) {
 	mu.RLock()
@@ -41,8 +30,6 @@ func setCaCertPoolInMap(key string, caCertPool x509.CertPool) {
 }
 
 func GetTlsCertPool(urlTemplate, caName string) (*x509.CertPool, error) {
-	once.Do(initCaMap)
-
 	url := fmt.Sprintf(urlTemplate, caName)
 	caCertPool, ok := getCaCertPoolFromMap(url)
 	if ok {
@@ -73,11 +60,20 @@ func buildCertPoolForCaName(url string) (*x509.CertPool, error) {
 
 	defer response.Body.Close()
 
-	// Create a new x509.CertPool
-	caCertPool, _ := x509.SystemCertPool()
+	// Create a CertPool
+	caCertPool, err := x509.SystemCertPool()
+
+	if err != nil {
+		return nil, err
+	}
 
 	// Read in certs from endpoint
-	body, _ := ioutil.ReadAll(response.Body)
+	body, err := ioutil.ReadAll(response.Body)
+
+	if err != nil {
+		return nil, err
+	}
+
 	var data map[string]interface{}
 	json.Unmarshal(body, &data)
 
