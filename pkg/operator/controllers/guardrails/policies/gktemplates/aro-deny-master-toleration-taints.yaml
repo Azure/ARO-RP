@@ -47,6 +47,7 @@ spec:
       libs:
         - |
           package lib.common
+          import future.keywords.in
 
           # shared structures, functions, etc.
 
@@ -118,12 +119,8 @@ spec:
           		"openshift-service-ca-operator"
           }
 
-          is_exempted_user(user) {
-            exempted_user[user]
-          }
-
-          exempted_user = {
-            # "default",
+          exempted_service_account = {
+            "default",
             "aro-sre",
             "openshift-apiserver-operator",
             "openshift-apiserver-sa",
@@ -200,24 +197,67 @@ spec:
             obj.kind == "Pod"
             spec := obj.spec.serviceAccountName
           } {
-            obj.kind == "ReplicationController"
-            spec := obj.spec.template.spec.serviceAccountName
-          } {
-            obj.kind == "ReplicaSet"
-            spec := obj.spec.template.spec.serviceAccountName
-          } {
-            obj.kind == "Deployment"
-            spec := obj.spec.template.spec.serviceAccountName
-          } {
-            obj.kind == "StatefulSet"
-            spec := obj.spec.template.spec.serviceAccountName
-          } {
-            obj.kind == "DaemonSet"
-            spec := obj.spec.template.spec.serviceAccountName
-          } {
-            obj.kind == "Job"
-            spec := obj.spec.template.spec.serviceAccountName
-          } {
             obj.kind == "CronJob"
             spec := obj.spec.jobTemplate.spec.template.spec.serviceAccountName
+          } {
+            obj.kind in ["ReplicationController","ReplicaSet","Deployment","StatefulSet","DaemonSet","Job"]
+            spec := obj.spec.template.spec.serviceAccountName
+          }
+
+          has_service_account(obj) {
+            obj.kind in ["Pod","CronJob","ReplicationController","ReplicaSet","Deployment","StatefulSet","DaemonSet","Job"]
+          }
+
+          get_user_info(review) = info {
+            has_field(review.userInfo, "username")
+            username := get_user(review)
+            info := sprintf("user name %v", [username])
+          } {
+            not has_field(review.userInfo, "username")
+            has_service_account(review.object)
+            sa := get_service_account(review.object)
+            info := sprintf("service account %v", [sa])
+          }
+
+          # this setup is to handle below case:
+          # user default::notfound not allowed to operate in namespace openshift-kube-scheduler
+          #
+          # assume for cmdline operations, userInfo is always present, which is the only key for user identity
+          # while for serviceAccount operations, no userInfo is present, and we have to rely on the serviceAccountName field in the object
+
+          is_exempted_account(review) {
+            has_field(review.userInfo, "username")
+            username := get_user(review)
+            is_exempted_user(username)
+            print("exempted user:", username)
+          } {
+            not has_field(review.userInfo, "username")
+            sa := get_service_account(review.object)
+            is_exempted_service_account(sa)
+            print("exempted account:", sa)
+          }
+
+          is_exempted_service_account(user) {
+            exempted_service_account[user]
+          }
+
+          get_user(review) = name {
+            not has_field(review.userInfo, "username")
+            name = "notfound"
+          } {
+            has_field(review.userInfo, "username")
+            name = review.userInfo.username
+            print(name)
+          }
+
+          has_field(object, field) = true {
+              object[field]
+          }
+
+          is_exempted_user(user) {
+            exempted_user[user]
+          }
+
+          exempted_user = {
+            "system:admin" # comment out temporarily for testing in console
           }
