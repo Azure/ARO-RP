@@ -8,13 +8,14 @@ import (
 	context "context"
 	reflect "reflect"
 
-	api "github.com/Azure/ARO-RP/pkg/api"
 	gomock "github.com/golang/mock/gomock"
 	versioned "github.com/openshift/client-go/config/clientset/versioned"
 	versioned0 "github.com/openshift/client-go/machine/clientset/versioned"
 	versioned1 "github.com/openshift/client-go/operator/clientset/versioned"
 	logrus "github.com/sirupsen/logrus"
 	kubernetes "k8s.io/client-go/kubernetes"
+
+	api "github.com/Azure/ARO-RP/pkg/api"
 )
 
 // MockClusterEnricher is a mock of ClusterEnricher interface.
