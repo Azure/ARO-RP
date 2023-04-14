@@ -198,7 +198,7 @@ func (d *deployer) deploy(ctx context.Context, rgName, deploymentName, vmssName 
 }
 
 // checkForKnownError is a helper function that checks the errors nested within an Azure ServiceError
-// for a known error and returns the corresponding KnownDeploymentError if applicable.
+// for a known error and returns the corresponding KnownDeploymentErrorType if applicable.
 func (d *deployer) checkForKnownError(serviceErr *azure.ServiceError, deployAttempt int) (KnownDeploymentErrorType, error) {
 	if serviceErr.Code == "DeploymentFailed" && len(serviceErr.Details) > 0 {
 		outerErr := azure.ServiceError{}
