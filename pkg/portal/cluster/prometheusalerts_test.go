@@ -18,7 +18,7 @@ import (
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
-func TestGetOpenShiftFiringAlerts(t *testing.T) {
+func TestFiringAlerts(t *testing.T) {
 	ctx := context.Background()
 	_, log := testlog.New()
 
@@ -35,6 +35,9 @@ func TestGetOpenShiftFiringAlerts(t *testing.T) {
 					Labels: model.LabelSet{
 						"alertname": "Firing Alert 1",
 						"namespace": "openshift-apiserver",
+						// "status":    "firing",
+						// "severity":  "Info",
+						// "summary":   "summary of the test alert",
 					},
 					StartsAt: time.Now().Add(-1),
 				},
@@ -51,6 +54,9 @@ func TestGetOpenShiftFiringAlerts(t *testing.T) {
 				{
 					AlertName: "Firing Alert 1",
 					Status:    "firing",
+					Namespace: "openshift-apiserver",
+					Severity:  "Info",
+					Summary:   "",
 				},
 			},
 		},

@@ -261,13 +261,13 @@ func (p *portal) getOpenShiftFiringAlerts(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	getOpenShiftFiringAlerts, err := fetcher.GetOpenShiftFiringAlerts(ctx)
+	firingAlerts, err := fetcher.GetOpenShiftFiringAlerts(ctx)
 	if err != nil {
 		p.internalServerError(w, err)
 		return
 	}
 
-	b, err := json.MarshalIndent(getOpenShiftFiringAlerts, "", "    ")
+	b, err := json.MarshalIndent(firingAlerts, "", "    ")
 	if err != nil {
 		p.internalServerError(w, err)
 		return
