@@ -1423,3 +1423,61 @@ func TestValidateNatGatewaysPermissionsWithCheckAccess(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckBYONsg(t *testing.T) {
+	subnetWithNSG := &mgmtnetwork.Subnet{
+		SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+			NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+				ID: &masterNSGv1,
+			},
+		},
+	}
+	subnetWithoutNSG := &mgmtnetwork.Subnet{
+		SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{},
+	}
+
+	for _, tt := range []struct {
+		name       string
+		subnetByID map[string]*mgmtnetwork.Subnet
+		byoNSG     bool
+		wantErr    string
+	}{
+		{
+			name: "pass: all subnets are attached (BYONSG)",
+			subnetByID: map[string]*mgmtnetwork.Subnet{
+				"A": subnetWithNSG,
+				"B": subnetWithNSG,
+			},
+			byoNSG: true,
+		},
+		{
+			name: "pass: no subnets are attached (no longer BYONSG)",
+			subnetByID: map[string]*mgmtnetwork.Subnet{
+				"A": subnetWithoutNSG,
+				"B": subnetWithoutNSG,
+			},
+			byoNSG: false,
+		},
+		{
+			name: "fail: parts of the subnets are attached",
+			subnetByID: map[string]*mgmtnetwork.Subnet{
+				"A": subnetWithNSG,
+				"B": subnetWithoutNSG,
+				"C": subnetWithNSG,
+			},
+			byoNSG:  false,
+			wantErr: "400: InvalidLinkedVNet: : When the enable-preconfigured-nsg option is specified, both the master and worker subnets should have network security groups (NSG) attached to them before starting the cluster installation.",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			dv := &dynamic{
+				log: logrus.NewEntry(logrus.StandardLogger()),
+			}
+			byoNSG, err := dv.checkByoNSG(tt.subnetByID)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			if byoNSG != tt.byoNSG {
+				t.Errorf("byoNSG got %t, want %t", byoNSG, tt.byoNSG)
+			}
+		})
+	}
+}

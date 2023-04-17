@@ -33,6 +33,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/token"
 )
 
+var (
+	errMsgNSGAttached            = "The provided subnet '%s' is invalid: must not have a network security group attached."
+	errMsgNSGNotAttached         = "The provided subnet '%s' is invalid: must have network security group '%s' attached."
+	errMsgNSGNotProperlyAttached = "When the enable-preconfigured-nsg option is specified, both the master and worker subnets should have network security groups (NSG) attached to them before starting the cluster installation."
+)
+
 type Subnet struct {
 	// ID is a resource id of the subnet
 	ID string
@@ -581,34 +587,33 @@ func (dv *dynamic) validateVnetLocation(ctx context.Context, vnetr azure.Resourc
 	return nil
 }
 
-func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error {
-	dv.log.Printf("validateSubnet")
+func (dv *dynamic) createSubnetMapByID(ctx context.Context, subnets []Subnet) (map[string]*mgmtnetwork.Subnet, error) {
 	if len(subnets) == 0 {
-		return fmt.Errorf("no subnets found")
+		return nil, fmt.Errorf("no subnets found")
 	}
+	subnetByID := make(map[string]*mgmtnetwork.Subnet)
 
 	for _, s := range subnets {
 		vnetID, _, err := subnet.Split(s.ID)
 		if err != nil {
-			return err
+			return nil, err
 		}
-
 		vnetr, err := azure.ParseResourceID(vnetID)
 		if err != nil {
-			return err
+			return nil, err
 		}
-
 		vnet, err := dv.virtualNetworks.Get(ctx, vnetr.ResourceGroup, vnetr.ResourceName, "")
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		ss, err := findSubnet(&vnet, s.ID)
 		if err != nil {
-			return err
+			return nil, err
 		}
+
 		if ss == nil {
-			return api.NewCloudError(
+			return nil, api.NewCloudError(
 				http.StatusBadRequest,
 				api.CloudErrorCodeInvalidLinkedVNet,
 				s.Path,
@@ -617,34 +622,80 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 			)
 		}
 
-		if oc.Properties.ProvisioningState == api.ProvisioningStateCreating {
-			if ss.SubnetPropertiesFormat != nil &&
-				ss.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
-				expectedNsgID, err := subnet.NetworkSecurityGroupID(oc, s.ID)
+		subnetByID[s.ID] = ss
+	}
+	return subnetByID, nil
+}
+
+// checkByoNSG checks whether all the subnets have or don't have NSG attached.
+// when the BYONsg feature flag is on and only some of the subnets are attached with an NSG,
+// it returns an error.  If none of the subnets is attached, it's no longer BYO NSG and the
+// cluster installation process should fall back to using the managed nsg.
+func (dv *dynamic) checkByoNSG(subnetByID map[string]*mgmtnetwork.Subnet) (bool, error) {
+	noNSGAttached := 0
+	allSubnetsAreAttached := len(subnetByID)
+
+	var attached int
+	for _, subnet := range subnetByID {
+		if subnet.NetworkSecurityGroup != nil && subnet.NetworkSecurityGroup.ID != nil {
+			attached++
+		}
+	}
+	if attached > noNSGAttached && attached < allSubnetsAreAttached {
+		dv.log.Info("BYO NSG: not all subnets are attached")
+		return false,
+			&api.CloudError{
+				StatusCode: http.StatusBadRequest,
+				CloudErrorBody: &api.CloudErrorBody{
+					Code:    api.CloudErrorCodeInvalidLinkedVNet,
+					Message: errMsgNSGNotProperlyAttached,
+				},
+			}
+	}
+	if attached == allSubnetsAreAttached {
+		dv.log.Info("all subnets are attached, BYO NSG")
+		return true, nil // correct setup by customer
+	}
+	dv.log.Info("no subnets are attached, no longer BYO NSG. Fall back to using cluster NSG.")
+	return false, nil
+}
+
+func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error {
+	subnetByID, err := dv.createSubnetMapByID(ctx, subnets)
+	if err != nil {
+		return err
+	}
+
+	if oc.Properties.NetworkProfile.PreconfiguredNSG {
+		oc.Properties.NetworkProfile.PreconfiguredNSG, err = dv.checkByoNSG(subnetByID)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, s := range subnets {
+		ss := subnetByID[s.ID]
+
+		switch oc.Properties.ProvisioningState {
+		case api.ProvisioningStateCreating:
+			if nsgExists(ss.SubnetPropertiesFormat) && !oc.Properties.NetworkProfile.PreconfiguredNSG {
+				expectedNsgID, err := getRecordedNsgID(oc, s.ID)
 				if err != nil {
 					return err
 				}
-
-				if !strings.EqualFold(*ss.SubnetPropertiesFormat.NetworkSecurityGroup.ID, expectedNsgID) {
-					return api.NewCloudError(
-						http.StatusBadRequest,
-						api.CloudErrorCodeInvalidLinkedVNet,
-						s.Path,
-						"The provided subnet '%s' is invalid: must not have a network security group attached.",
-						s.ID,
-					)
+				if !isTheSameNSG(*ss.SubnetPropertiesFormat.NetworkSecurityGroup.ID, expectedNsgID) {
+					return newSubnetValidationError(s.Path, errMsgNSGAttached, s.ID)
 				}
 			}
-		} else {
-			nsgID, err := subnet.NetworkSecurityGroupID(oc, *ss.ID)
+		default:
+			nsgID, err := getRecordedNsgID(oc, *ss.ID)
 			if err != nil {
 				return err
 			}
 
-			if ss.SubnetPropertiesFormat == nil ||
-				ss.SubnetPropertiesFormat.NetworkSecurityGroup == nil ||
-				!strings.EqualFold(*ss.SubnetPropertiesFormat.NetworkSecurityGroup.ID, nsgID) {
-				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, s.Path, "The provided subnet '%s' is invalid: must have network security group '%s' attached.", s.ID, nsgID)
+			if !nsgExists(ss.SubnetPropertiesFormat) ||
+				!isTheSameNSG(*ss.SubnetPropertiesFormat.NetworkSecurityGroup.ID, nsgID) {
+				return newSubnetValidationError(s.Path, errMsgNSGNotAttached, s.ID, nsgID)
 			}
 		}
 
@@ -677,6 +728,22 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 	}
 
 	return nil
+}
+
+func getRecordedNsgID(oc *api.OpenShiftCluster, subnetID string) (string, error) {
+	return subnet.NetworkSecurityGroupID(oc, subnetID)
+}
+
+func isTheSameNSG(found, inDB string) bool {
+	return strings.EqualFold(found, inDB)
+}
+
+func nsgExists(subnetProp *mgmtnetwork.SubnetPropertiesFormat) bool {
+	return subnetProp != nil && subnetProp.NetworkSecurityGroup != nil
+}
+
+func newSubnetValidationError(path, message string, refs ...interface{}) error {
+	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, message, refs...)
 }
 
 func getRouteTableID(vnet *mgmtnetwork.VirtualNetwork, subnetID string) (string, error) {

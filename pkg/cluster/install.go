@@ -23,6 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/installer"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
+	"github.com/Azure/ARO-RP/pkg/util/feature"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -46,6 +47,7 @@ func (m *manager) adminUpdate() []steps.Step {
 		steps.Action(m.initializeKubernetesClients), // must be first
 		steps.Action(m.ensureBillingRecord),         // belt and braces
 		steps.Action(m.ensureDefaults),
+		steps.Action(m.ensureBYONsg),
 		steps.Action(m.fixupClusterSPObjectID),
 		steps.Action(m.fixInfraID), // Old clusters lacks infraID in the database. Which makes code prone to errors.
 	}
@@ -58,7 +60,7 @@ func (m *manager) adminUpdate() []steps.Step {
 			steps.Action(m.populateRegistryStorageAccountName), // must go before migrateStorageAccounts
 			steps.Action(m.migrateStorageAccounts),
 			steps.Action(m.fixSSH),
-			//steps.Action(m.removePrivateDNSZone), // TODO(mj): re-enable once we communicate this out
+			// steps.Action(m.removePrivateDNSZone), // TODO(mj): re-enable once we communicate this out
 		)
 	}
 
@@ -232,6 +234,7 @@ func setFieldCreatedByHive(createdByHive bool) database.OpenShiftClusterDocument
 func (m *manager) bootstrap() []steps.Step {
 	s := []steps.Step{
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources),
+		steps.Action(m.ensureBYONsg),
 		steps.Action(m.ensureACRToken),
 		steps.Action(m.ensureInfraID),
 		steps.Action(m.ensureSSHKey),
@@ -374,6 +377,13 @@ func (m *manager) startInstallation(ctx context.Context) error {
 			// the bootstrap node retrieves its ignition payload
 			doc.OpenShiftCluster.Properties.Install = &api.Install{
 				Now: time.Now().UTC(),
+			}
+
+			// TODO remove this when introducing the BYONSG CLI option
+			byoNSG := feature.IsRegisteredForFeature(m.subscriptionDoc.Subscription.Properties, api.FeatureFlagBYONsg)
+			if byoNSG {
+				m.log.Logger.Info("BYO NSG feature flag is on")
+				doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG = true
 			}
 		}
 		return nil

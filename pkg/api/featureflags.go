@@ -22,4 +22,8 @@ const (
 	// FeatureFlagCheckAccessTestToggle is used for safely testing the new check access
 	// API in production. The toggle will be removed once the testing has been completed.
 	FeatureFlagCheckAccessTestToggle = "Microsoft.RedHatOpenShift/CheckAccessTestToggle"
+
+	// FeatureFlagBYONsg is used for indicating whether a customer subscription
+	// is registered for BYO NSG feature.
+	FeatureFlagBYONsg = "Microsoft.RedHatOpenShift/BYONsg"
 )

@@ -152,6 +152,7 @@ type NetworkProfile struct {
 	APIServerPrivateEndpointIP string `json:"privateEndpointIp,omitempty"`
 	GatewayPrivateEndpointIP   string `json:"gatewayPrivateEndpointIp,omitempty"`
 	GatewayPrivateLinkID       string `json:"gatewayPrivateLinkId,omitempty"`
+	PreconfiguredNSG           bool   `json:"preconfigureNSG,omitempty"`
 }
 
 // EncryptionAtHost represents encryption at host state

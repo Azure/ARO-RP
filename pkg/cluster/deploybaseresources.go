@@ -174,6 +174,10 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 }
 
 func (m *manager) attachNSGs(ctx context.Context) error {
+	if m.doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG {
+		return nil
+	}
+
 	for _, subnetID := range []string{
 		m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
 		m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID,
