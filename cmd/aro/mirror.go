@@ -12,6 +12,8 @@ import (
 	"os"
 	"strings"
 
+	"golang.org/x/exp/maps"
+
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/containers/image/v5/types"
 	"github.com/sirupsen/logrus"
@@ -130,12 +132,16 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	if env.Environment().Environment == azure.PublicCloud {
 		srcAcrGeneva := "linuxgeneva-microsoft" + acrDomainSuffix
 
-		mirrorImages := []string{
-			version.MdsdImage(srcAcrGeneva),
-			version.MdmImage(srcAcrGeneva),
+		mirrorImages := map[string]bool{
+			version.MdsdImage(srcAcrGeneva): true,
+			version.MdmImage(srcAcrGeneva):  true,
 		}
 
-		for _, ref := range mirrorImages {
+		// for mirroring future versions
+		mirrorImages[srcAcrGeneva+"/distroless/genevamdm:2.2023.331.1521-399d45-20230331t1638"] = true
+		mirrorImages[srcAcrGeneva+"/distroless/genevamdsd:mariner_20230413.1"] = true
+
+		for _, ref := range maps.Keys(mirrorImages) {
 			log.Printf("mirroring %s -> %s", ref, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref))
 			err = pkgmirror.Copy(ctx, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthGeneva)
 			if err != nil {
