@@ -12,11 +12,10 @@ import (
 	"os"
 	"strings"
 
-	"golang.org/x/exp/maps"
-
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/containers/image/v5/types"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/exp/maps"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	pkgmirror "github.com/Azure/ARO-RP/pkg/mirror"
