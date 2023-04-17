@@ -14,9 +14,23 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/proxy"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
+	"github.com/Azure/go-autorest/autorest"
 )
+
+type ResourceClientFactory interface {
+	NewResourcesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient
+}
+
+type VirtualMachinesClientFactory interface {
+	NewVirtualMachinesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient
+}
 
 // FetchClient is the interface that the Admin Portal Frontend uses to gather
 // information about clusters. It returns frontend-suitable data structures.
@@ -26,6 +40,10 @@ type FetchClient interface {
 	Machines(context.Context) (*MachineListInformation, error)
 	MachineSets(context.Context) (*MachineSetListInformation, error)
 	Statistics(context.Context, *http.Client, string, time.Duration, time.Time, string) ([]Metrics, error)
+}
+
+type AzureFetchClient interface {
+	VMAllocationStatus(context.Context) (map[string]string, error)
 }
 
 // client is an implementation of FetchClient. It currently contains a "fetcher"
@@ -48,6 +66,45 @@ type realFetcher struct {
 	configCli     configclient.Interface
 	kubernetesCli kubernetes.Interface
 	machineClient machineclient.Interface
+}
+
+// azureClient is the same implementation as client's, the only difference is that it will be used to fetch something from azure regarding a cluster.
+type azureClient struct {
+	log     *logrus.Entry
+	fetcher *azureSideFetcher
+}
+
+// azureSideFetcher is responsible for fetching information about azure resources of a k8s cluster. It
+// contains azure related authentication/authorization data and returns the frontend-suitable data
+// structures. The concrete implementation of AzureFetchClient wraps this.
+type azureSideFetcher struct {
+	log                          *logrus.Entry
+	resourceGroupName            string
+	subscriptionDoc              *api.SubscriptionDocument
+	env                          env.Interface
+	resourceClientFactory        ResourceClientFactory
+	virtualMachinesClientFactory VirtualMachinesClientFactory
+}
+
+type clientFactory struct{}
+
+func (cf clientFactory) NewResourcesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient {
+	return features.NewResourcesClient(environment, subscriptionID, authorizer)
+}
+
+func (cf clientFactory) NewVirtualMachinesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient {
+	return compute.NewVirtualMachinesClient(environment, subscriptionID, authorizer)
+}
+
+func newAzureSideFetcher(log *logrus.Entry, resourceGroupName string, subscriptionDoc *api.SubscriptionDocument, env env.Interface, resourceClientFactory ResourceClientFactory, virtualMachinesClientFactory VirtualMachinesClientFactory) azureSideFetcher {
+	return azureSideFetcher{
+		log:                          log,
+		resourceGroupName:            resourceGroupName,
+		subscriptionDoc:              subscriptionDoc,
+		env:                          env,
+		resourceClientFactory:        resourceClientFactory,
+		virtualMachinesClientFactory: virtualMachinesClientFactory,
+	}
 }
 
 func newRealFetcher(log *logrus.Entry, dialer proxy.Dialer, doc *api.OpenShiftClusterDocument) (*realFetcher, error) {
@@ -93,4 +150,14 @@ func NewFetchClient(log *logrus.Entry, dialer proxy.Dialer, cluster *api.OpenShi
 		cluster: cluster,
 		fetcher: fetcher,
 	}, nil
+}
+
+func NewAzureFetchClient(log *logrus.Entry, cluster *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, env env.Interface) AzureFetchClient {
+	resourceGroupName := stringutils.LastTokenByte(cluster.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	cf := clientFactory{}
+	azureSideFetcher := newAzureSideFetcher(log, resourceGroupName, subscriptionDoc, env, cf, cf)
+	return &azureClient{
+		log:     log,
+		fetcher: &azureSideFetcher,
+	}
 }
