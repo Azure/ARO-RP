@@ -132,6 +132,8 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	if env.Environment().Environment == azure.PublicCloud {
 		srcAcrGeneva := "linuxgeneva-microsoft" + acrDomainSuffix
 
+		// Mirror the versions that we have defined, as well as future versions
+		// for testing
 		mirrorImages := map[string]bool{
 			version.MdsdImage(srcAcrGeneva): true,
 			version.MdmImage(srcAcrGeneva):  true,
@@ -157,10 +159,10 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"registry.redhat.io/rhel8/support-tools:latest",
 		"registry.redhat.io/openshift4/ose-tools-rhel8:latest",
 		"registry.access.redhat.com/ubi8/ubi-minimal:latest",
-		"registry.access.redhat.com/ubi8/nodejs-14:latest",
+		// https://catalog.redhat.com/software/containers/ubi8/nodejs-18/6278e5c078709f5277f26998
+		"registry.access.redhat.com/ubi8/nodejs-18:latest",
 		// https://catalog.redhat.com/software/containers/ubi8/go-toolset/5ce8713aac3db925c03774d1
-		"registry.access.redhat.com/ubi8/go-toolset:1.17.12",
-		"registry.access.redhat.com/ubi8/go-toolset:1.18.4",
+		"registry.access.redhat.com/ubi8/go-toolset:1.18.10",
 		"mcr.microsoft.com/azure-cli:latest",
 
 		// https://quay.io/repository/app-sre/managed-upgrade-operator?tab=tags
