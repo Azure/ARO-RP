@@ -62,8 +62,8 @@ var (
 		AppLensScope:             "https://microsoft.onmicrosoft.com/runtimehost",
 		AppLensTenantID:          "cab8a31a-1906-4287-a0d8-4eef66b95f6e",
 		Cloud:                    cloud.AzureGovernment,
-		PkiIssuerUrlTemplate:     "https://issuer.pki.azure.com/dsms/issuercertificates?getissuersv3&caName=%s",
-		PkiCaName:                "ame",
+		PkiIssuerUrlTemplate:     "",
+		PkiCaName:                "",
 		AzureRbacPDPEnvironment: AzureRbacPDPEnvironment{
 			Endpoint:   "https://%s.authorization.azure.us/providers/Microsoft.Authorization/checkAccess?api-version=2021-06-01-preview",
 			OAuthScope: "https://authorization.azure.us/.default",

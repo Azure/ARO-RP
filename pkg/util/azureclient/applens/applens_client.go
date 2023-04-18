@@ -7,6 +7,7 @@ package applens
 
 import (
 	"context"
+	"crypto/x509"
 	"fmt"
 	"net/http"
 
@@ -45,10 +46,16 @@ func NewClient(endpoint, issuerUrlTemplate, caName, scope string, cred azcore.To
 }
 
 func newPipeline(authPolicy []policy.Policy, options *ClientOptions, issuerUrlTemplate, caName string) (*runtime.Pipeline, error) {
+	var cp *x509.CertPool = nil
+	var err error = nil
 	if options == nil {
-		cp, err := pki.GetTlsCertPool(issuerUrlTemplate, caName)
-		if err != nil {
-			return nil, err
+		// if provided pki info fetch the correct cert pool
+		// otherwise use the default of nil
+		if issuerUrlTemplate != "" && caName != "" {
+			cp, err = pki.GetTlsCertPool(issuerUrlTemplate, caName)
+			if err != nil {
+				return nil, err
+			}
 		}
 		options = NewClientOptions(cp)
 	}
