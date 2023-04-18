@@ -23,20 +23,6 @@ type ClientOptions struct {
 }
 
 func NewClientOptions(certPool *x509.CertPool) *ClientOptions {
-	var tlsConfig *tls.Config
-	if certPool != nil {
-		tlsConfig = &tls.Config{
-			RootCAs:       certPool,
-			Renegotiation: tls.RenegotiateFreelyAsClient,
-			MinVersion:    tls.VersionTLS12,
-		}
-	} else {
-		tlsConfig = &tls.Config{
-			Renegotiation: tls.RenegotiateFreelyAsClient,
-			MinVersion:    tls.VersionTLS12,
-		}
-	}
-
 	return &ClientOptions{
 		azcore.ClientOptions{
 			Retry: policy.RetryOptions{
@@ -55,8 +41,12 @@ func NewClientOptions(certPool *x509.CertPool) *ClientOptions {
 			},
 			Transport: &http.Client{
 				Transport: &http.Transport{
-					TLSNextProto:    make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
-					TLSClientConfig: tlsConfig,
+					TLSNextProto: make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
+					TLSClientConfig: &tls.Config{
+						RootCAs:       certPool,
+						Renegotiation: tls.RenegotiateFreelyAsClient,
+						MinVersion:    tls.VersionTLS12,
+					},
 				},
 			},
 		},
