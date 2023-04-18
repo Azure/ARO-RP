@@ -6,8 +6,8 @@ import { MachinesWrapper } from "./ClusterDetailListComponents/MachinesWrapper"
 import { MachineSetsWrapper } from "./ClusterDetailListComponents/MachineSetsWrapper"
 import { Statistics } from "./ClusterDetailListComponents/Statistics/Statistics"
 import { ClusterOperatorsWrapper } from "./ClusterDetailListComponents/ClusterOperatorsWrapper";
-import { ICluster } from "./App"
 
+import { ICluster } from "./App"
 
 interface ClusterDetailComponentProps {
   item: IClusterDetails
@@ -48,100 +48,42 @@ interface IClusterDetailComponentState {
   detailPanelSelected: string
 }
 
-export class ClusterDetailComponent extends Component<
-  ClusterDetailComponentProps,
-  IClusterDetailComponentState
-> {
+const detailComponents: Map<string, any> = new Map<string, any>([
+    ["nodes", NodesWrapper],
+    ["machines", MachinesWrapper],
+    ["machinesets", MachineSetsWrapper],
+    ["clusteroperators", ClusterOperatorsWrapper],
+    ["statistics", Statistics]
+])
+
+export class ClusterDetailComponent extends Component<ClusterDetailComponentProps, IClusterDetailComponentState> {
+
   constructor(props: ClusterDetailComponentProps | Readonly<ClusterDetailComponentProps>) {
     super(props)
   }
 
   public render() {
-    switch (this.props.detailPanelVisible.toLowerCase()) {
-      case "overview": {
+    if (this.props.cluster != undefined && this.props.detailPanelVisible != undefined) {
+      const panel = this.props.detailPanelVisible.toLowerCase()
+      if (panel == "overview") {
         return (
           <OverviewWrapper
-            clusterName={this.props.item.name}
+            clusterName={this.props.cluster.name}
             currentCluster={this.props.cluster!}
-            detailPanelSelected={this.props.detailPanelVisible}
+            detailPanelSelected={panel}
             loaded={this.props.isDataLoaded}
           />
         )
-      }
-      case "nodes": {
+      } else if (panel.includes("statistics")) {
+        const StatisticsView = detailComponents.get("statistics")
+        const type = panel.substring(0,panel.indexOf("statistics"))
         return (
-          <NodesWrapper
-            currentCluster={this.props.cluster!}
-            detailPanelSelected={this.props.detailPanelVisible}
-            loaded={this.props.isDataLoaded}
-          />
+          <StatisticsView currentCluster={this.props.cluster!} detailPanelSelected={panel} loaded = {this.props.isDataLoaded} statisticsType = {type}/>
         )
-      }
-      case "machines": {
+      } else {
+        const DetailView = detailComponents.get(panel)
         return (
-          <MachinesWrapper
-            currentCluster={this.props.cluster!}
-            detailPanelSelected={this.props.detailPanelVisible}
-            loaded={this.props.isDataLoaded}
-          />
-        )
-      }
-      case "machinesets": {
-        return (
-          <MachineSetsWrapper
-            currentCluster={this.props.cluster!}
-            detailPanelSelected={this.props.detailPanelVisible}
-            loaded={this.props.isDataLoaded}
-          />
-        )
-      }
-      case "apistatistics": {
-        return (
-          <Statistics
-            currentCluster={this.props.cluster!}
-            detailPanelSelected={this.props.detailPanelVisible}
-            loaded={this.props.isDataLoaded}
-            statisticsType={"api"}
-          />
-        )
-      }
-      case "kcmstatistics": {
-        return (
-          <Statistics
-            currentCluster={this.props.cluster!}
-            detailPanelSelected={this.props.detailPanelVisible}
-            loaded={this.props.isDataLoaded}
-            statisticsType={"kcm"}
-          />
-        )
-      }
-      case "dnsstatistics": {
-        return (
-          <Statistics
-            currentCluster={this.props.cluster!}
-            detailPanelSelected={this.props.detailPanelVisible}
-            loaded={this.props.isDataLoaded}
-            statisticsType={"dns"}
-          />
-        )
-      }
-      case "ingressstatistics": {
-        return (
-          <Statistics
-            currentCluster={this.props.cluster!}
-            detailPanelSelected={this.props.detailPanelVisible}
-            loaded={this.props.isDataLoaded}
-            statisticsType={"ingress"}
-          />
-        )
-      }
-      case "clusteroperators": {
-        return (
-          <ClusterOperatorsWrapper
-            currentCluster={this.props.cluster!}
-            detailPanelSelected={this.props.detailPanelVisible}
-            loaded={this.props.isDataLoaded}
-          />
+          <DetailView currentCluster={this.props.cluster!} detailPanelSelected={panel} loaded={this.props.isDataLoaded}/>
         )
       }
     }
