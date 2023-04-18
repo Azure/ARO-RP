@@ -62,8 +62,9 @@ var (
 		AppLensScope:             "https://microsoft.onmicrosoft.com/runtimehost",
 		AppLensTenantID:          "cab8a31a-1906-4287-a0d8-4eef66b95f6e",
 		Cloud:                    cloud.AzureGovernment,
-		PkiIssuerUrlTemplate:     "",
-		PkiCaName:                "",
+		// the .us tls cert is issued by DigiCerts, and no additional certs are needed from pki
+		PkiIssuerUrlTemplate: "",
+		PkiCaName:            "",
 		AzureRbacPDPEnvironment: AzureRbacPDPEnvironment{
 			Endpoint:   "https://%s.authorization.azure.us/providers/Microsoft.Authorization/checkAccess?api-version=2021-06-01-preview",
 			OAuthScope: "https://authorization.azure.us/.default",
