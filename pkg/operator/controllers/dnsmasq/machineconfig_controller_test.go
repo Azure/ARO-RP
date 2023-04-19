@@ -121,7 +121,7 @@ func TestMachineConfigReconciler(t *testing.T) {
 			).
 			Build()
 		dh := fakeDh(controller)
-		dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Times(1)
+		dh.EXPECT().Ensure(gomock.Any(), gomock.AssignableToTypeOf(&mcv1.MachineConfig{})).Times(1)
 
 		request := ctrl.Request{
 			NamespacedName: types.NamespacedName{

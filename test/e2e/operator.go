@@ -553,19 +553,6 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	AfterEach(func(ctx context.Context) {
-		By("cleaning up custom MachineConfigPool")
-		err := clients.MachineConfig.MachineconfigurationV1().MachineConfigPools().Delete(ctx, mcpName, metav1.DeleteOptions{})
-		if err != nil && !kerrors.IsNotFound(err) {
-			log.Warn(err)
-		}
-		By("cleaning up custom MachineConfig")
-		err = clients.MachineConfig.MachineconfigurationV1().MachineConfigs().Delete(ctx, mcName, metav1.DeleteOptions{})
-		if err != nil && !kerrors.IsNotFound(err) {
-			log.Warn(err)
-		}
-	})
-
 	It("must handle the lifetime of the `99-${MCP}-custom-dns MachineConfig for every MachineConfigPool ${MCP}", func(ctx context.Context) {
 		By("creating an ARO DNS MachineConfig when creating a custom MachineConfigPool")
 		Eventually(func(g Gomega, ctx context.Context) {
