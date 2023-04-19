@@ -38,28 +38,28 @@ func TestValidateQuota(t *testing.T) {
 								Value: to.StringPtr("cores"),
 							},
 							CurrentValue: to.Int32Ptr(100),
-							Limit:        to.Int64Ptr(204),
+							Limit:        to.Int64Ptr(212),
 						},
 						{
 							Name: &mgmtcompute.UsageName{
 								Value: to.StringPtr("virtualMachines"),
 							},
 							CurrentValue: to.Int32Ptr(100),
-							Limit:        to.Int64Ptr(113),
+							Limit:        to.Int64Ptr(114),
 						},
 						{
 							Name: &mgmtcompute.UsageName{
 								Value: to.StringPtr("standardDSv3Family"),
 							},
 							CurrentValue: to.Int32Ptr(100),
-							Limit:        to.Int64Ptr(204),
+							Limit:        to.Int64Ptr(212),
 						},
 						{
 							Name: &mgmtcompute.UsageName{
 								Value: to.StringPtr("PremiumDiskCount"),
 							},
 							CurrentValue: to.Int32Ptr(100),
-							Limit:        to.Int64Ptr(113),
+							Limit:        to.Int64Ptr(114),
 						},
 					}, nil)
 				nuc.EXPECT().
@@ -77,7 +77,7 @@ func TestValidateQuota(t *testing.T) {
 		},
 		{
 			name:    "not enough cores",
-			wantErr: "400: ResourceQuotaExceeded: : Resource quota of cores exceeded. Maximum allowed: 204, Current in use: 101, Additional requested: 104.",
+			wantErr: "400: ResourceQuotaExceeded: : Resource quota of cores exceeded. Maximum allowed: 212, Current in use: 101, Additional requested: 112.",
 			mocks: func(tt *test, cuc *mock_compute.MockUsageClient, nuc *mock_network.MockUsageClient) {
 				cuc.EXPECT().
 					List(ctx, "ocLocation").
@@ -87,14 +87,14 @@ func TestValidateQuota(t *testing.T) {
 								Value: to.StringPtr("cores"),
 							},
 							CurrentValue: to.Int32Ptr(101),
-							Limit:        to.Int64Ptr(204),
+							Limit:        to.Int64Ptr(212),
 						},
 					}, nil)
 			},
 		},
 		{
 			name:    "not enough virtualMachines",
-			wantErr: "400: ResourceQuotaExceeded: : Resource quota of virtualMachines exceeded. Maximum allowed: 113, Current in use: 101, Additional requested: 13.",
+			wantErr: "400: ResourceQuotaExceeded: : Resource quota of virtualMachines exceeded. Maximum allowed: 114, Current in use: 101, Additional requested: 14.",
 			mocks: func(tt *test, cuc *mock_compute.MockUsageClient, nuc *mock_network.MockUsageClient) {
 				cuc.EXPECT().
 					List(ctx, "ocLocation").
@@ -104,14 +104,14 @@ func TestValidateQuota(t *testing.T) {
 								Value: to.StringPtr("virtualMachines"),
 							},
 							CurrentValue: to.Int32Ptr(101),
-							Limit:        to.Int64Ptr(113),
+							Limit:        to.Int64Ptr(114),
 						},
 					}, nil)
 			},
 		},
 		{
 			name:    "not enough standardDSv3Family",
-			wantErr: "400: ResourceQuotaExceeded: : Resource quota of standardDSv3Family exceeded. Maximum allowed: 204, Current in use: 101, Additional requested: 104.",
+			wantErr: "400: ResourceQuotaExceeded: : Resource quota of standardDSv3Family exceeded. Maximum allowed: 212, Current in use: 101, Additional requested: 112.",
 			mocks: func(tt *test, cuc *mock_compute.MockUsageClient, nuc *mock_network.MockUsageClient) {
 				cuc.EXPECT().
 					List(ctx, "ocLocation").
@@ -121,14 +121,14 @@ func TestValidateQuota(t *testing.T) {
 								Value: to.StringPtr("standardDSv3Family"),
 							},
 							CurrentValue: to.Int32Ptr(101),
-							Limit:        to.Int64Ptr(204),
+							Limit:        to.Int64Ptr(212),
 						},
 					}, nil)
 			},
 		},
 		{
 			name:    "not enough premium disks",
-			wantErr: "400: ResourceQuotaExceeded: : Resource quota of PremiumDiskCount exceeded. Maximum allowed: 113, Current in use: 101, Additional requested: 13.",
+			wantErr: "400: ResourceQuotaExceeded: : Resource quota of PremiumDiskCount exceeded. Maximum allowed: 114, Current in use: 101, Additional requested: 14.",
 			mocks: func(tt *test, cuc *mock_compute.MockUsageClient, nuc *mock_network.MockUsageClient) {
 				cuc.EXPECT().
 					List(ctx, "ocLocation").
@@ -138,7 +138,7 @@ func TestValidateQuota(t *testing.T) {
 								Value: to.StringPtr("PremiumDiskCount"),
 							},
 							CurrentValue: to.Int32Ptr(101),
-							Limit:        to.Int64Ptr(113),
+							Limit:        to.Int64Ptr(114),
 						},
 					}, nil)
 			},

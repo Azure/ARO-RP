@@ -39,7 +39,7 @@ go run ./hack/db "$RESOURCEID" | jq -r .openShiftCluster.properties.sshKey | bas
 chmod 0600 id_rsa
 
 # seeing ARM cache issues with -g $CLUSTER_RESOURCEGROUP, so using --query
-IP=$(az network nic list --query "[?resourceGroup == '$CLUSTER_RESOURCEGROUP' && contains(name, '$1')].ipConfigurations[0].privateIpAddress" -o tsv)
+IP=$(az network nic list --query "[?resourceGroup == '$CLUSTER_RESOURCEGROUP' && contains(name, '$1')].ipConfigurations[0].privateIPAddress" -o tsv)
 
 if [[ $(grep -c . <<<"$IP") -ne 1 ]]; then
      echo -e "VM with pattern $1 not found in resourceGroup $CLUSTER_RESOURCEGROUP\n"

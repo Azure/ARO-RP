@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/containers/image/v5/types"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/exp/slices"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	pkgmirror "github.com/Azure/ARO-RP/pkg/mirror"
@@ -130,10 +131,17 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	if env.Environment().Environment == azure.PublicCloud {
 		srcAcrGeneva := "linuxgeneva-microsoft" + acrDomainSuffix
 
+		// Mirror the versions that we have defined, as well as future versions
+		// for testing
 		mirrorImages := []string{
 			version.MdsdImage(srcAcrGeneva),
 			version.MdmImage(srcAcrGeneva),
+			srcAcrGeneva + "/distroless/genevamdm:2.2023.331.1521-399d45-20230331t1638",
+			srcAcrGeneva + "/distroless/genevamdsd:mariner_20230413.1",
 		}
+		// Sort + compact to remove duplicates, if they exist
+		slices.Sort(mirrorImages)
+		mirrorImages = slices.Compact(mirrorImages)
 
 		for _, ref := range mirrorImages {
 			log.Printf("mirroring %s -> %s", ref, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref))
@@ -151,10 +159,10 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"registry.redhat.io/rhel8/support-tools:latest",
 		"registry.redhat.io/openshift4/ose-tools-rhel8:latest",
 		"registry.access.redhat.com/ubi8/ubi-minimal:latest",
-		"registry.access.redhat.com/ubi8/nodejs-14:latest",
+		// https://catalog.redhat.com/software/containers/ubi8/nodejs-18/6278e5c078709f5277f26998
+		"registry.access.redhat.com/ubi8/nodejs-18:latest",
 		// https://catalog.redhat.com/software/containers/ubi8/go-toolset/5ce8713aac3db925c03774d1
-		"registry.access.redhat.com/ubi8/go-toolset:1.17.12",
-		"registry.access.redhat.com/ubi8/go-toolset:1.18.4",
+		"registry.access.redhat.com/ubi8/go-toolset:1.18.10",
 		"mcr.microsoft.com/azure-cli:latest",
 
 		// https://quay.io/repository/app-sre/managed-upgrade-operator?tab=tags
