@@ -10,6 +10,10 @@ import (
 	"fmt"
 )
 
+type Encodable interface {
+	*x509.Certificate | *x509.CertificateRequest | *rsa.PublicKey | *rsa.PrivateKey
+}
+
 func Encode[V Encodable](inputs ...V) (r []byte, err error) {
 	for _, i := range inputs {
 		pemType := "UNKNOWN"

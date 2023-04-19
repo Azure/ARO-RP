@@ -11,10 +11,6 @@ import (
 	"fmt"
 )
 
-type Encodable interface {
-	*x509.Certificate | *x509.CertificateRequest | *rsa.PublicKey | *rsa.PrivateKey
-}
-
 func parsePrivateKey(block *pem.Block) (*rsa.PrivateKey, error) {
 	var key *rsa.PrivateKey
 	// try PKCS1
