@@ -17,6 +17,8 @@ from msrestazure.tools import parse_resource_id
 from msrestazure.azure_exceptions import CloudError
 from azext_aro._validators import validate_vnet, validate_cidr
 from azext_aro._rbac import has_role_assignment_on_resource
+from azext_aro.aaz.latest.network.vnet.subnet import Show as subnet_show
+from azext_aro.aaz.latest.network.vnet import Show as vnet_show
 import azext_aro.custom
 
 
@@ -57,11 +59,13 @@ def validate_resource(client, key, resource, actions):
     return errors
 
 
-def get_subnet(client, subnet, subnet_parts):
+def get_subnet(cli_ctx, subnet, subnet_parts):
     try:
-        subnet_obj = client.subnets.get(subnet_parts['resource_group'],
-                                        subnet_parts['name'],
-                                        subnet_parts['child_name_1'])
+        subnet_obj = subnet_show(cli_ctx=cli_ctx)(command_args={
+            'resource_group': subnet_parts['resource_group'],
+            'name': subnet_parts['child_name_1'],
+            'vnet_name': subnet_parts['name']
+        })
     except ResourceNotFoundError as err:
         raise InvalidArgumentValueError(
             f"Invalid -- subnet, error when getting '{subnet}': {str(err)}") from err
@@ -73,15 +77,29 @@ def get_subnet(client, subnet, subnet_parts):
     return subnet_obj
 
 
+def get_vnet(cli_ctx, key, vnet, vnet_parts):
+    try:
+        vnet_obj = vnet_show(cli_ctx=cli_ctx)(command_args={
+            'name': vnet_parts['name'],
+            'resource_group': vnet_parts['resource_group']
+        })
+    except ResourceNotFoundError as err:
+        raise InvalidArgumentValueError(
+            f"Invalid --{key.replace('_', '-')}, error when getting '{vnet}': {str(err)}") from err
+    except Exception as err:
+        raise CLIInternalError(
+            f"Unexpected error when getting vnet '{vnet}': {str(err)}") from err
+
+    return vnet_obj
+
+
 def get_clients(key, cmd):
     parts = parse_resource_id(key)
-    network_client = get_mgmt_service_client(
-        cmd.cli_ctx, ResourceType.MGMT_NETWORK)
 
     auth_client = get_mgmt_service_client(
         cmd.cli_ctx, ResourceType.MGMT_AUTHORIZATION, api_version="2015-07-01")
 
-    return parts, network_client, auth_client
+    return parts, auth_client
 
 
 # Function to create a progress tracker decorator for the dynamic validation functions
@@ -116,17 +134,9 @@ def dyn_validate_vnet(key):
 
         validate_vnet(cmd, namespace)
 
-        parts, network_client, auth_client = get_clients(vnet, cmd)
+        parts, auth_client = get_clients(vnet, cmd)
 
-        try:
-            network_client.virtual_networks.get(parts['resource_group'], parts['name'])
-        except ResourceNotFoundError as err:
-            raise InvalidArgumentValueError(
-                f"Invalid --{key.replace('_', '-')}, error when getting '{vnet}': {str(err)}") from err
-
-        except Exception as err:
-            raise CLIInternalError(
-                f"Unexpected error when getting vnet '{vnet}': {str(err)}") from err
+        get_vnet(cmd.cli_ctx, key, vnet, parts)
 
         errors = validate_resource(auth_client, key, parts, [
             "Microsoft.Network/virtualNetworks/join/action",
@@ -162,31 +172,20 @@ def dyn_validate_subnet_and_route_tables(key):
             subnet = namespace.vnet + '/subnets/' + subnet
             setattr(namespace, key, subnet)
 
-        parts, network_client, auth_client = get_clients(subnet, cmd)
+        parts, auth_client = get_clients(subnet, cmd)
 
-        try:
-            subnet_obj = network_client.subnets.get(parts['resource_group'],
-                                                    parts['name'],
-                                                    parts['child_name_1'])
+        subnet_obj = get_subnet(cmd.cli_ctx, subnet, parts)
 
-            route_table_obj = subnet_obj.route_table
-            if route_table_obj is not None:
-                route_parts = parse_resource_id(route_table_obj.id)
+        if subnet_obj.get('routeTable', None):
+            route_parts = parse_resource_id(subnet_obj['routeTable']['id'])
 
-                errors = validate_resource(auth_client, f"{key}_route_table", route_parts, [
-                    "Microsoft.Network/routeTables/join/action",
-                    "Microsoft.Network/routeTables/read",
-                    "Microsoft.Network/routeTables/write"])
-        except ResourceNotFoundError as err:
-            raise InvalidArgumentValueError(
-                f"Invalid -- subnet, error when getting '{subnet}': {str(err)}") from err
+            errors = validate_resource(auth_client, f"{key}_route_table", route_parts, [
+                "Microsoft.Network/routeTables/join/action",
+                "Microsoft.Network/routeTables/read",
+                "Microsoft.Network/routeTables/write"])
 
-        except Exception as err:
-            raise CLIInternalError(
-                f"Unexpected error when getting subnet '{subnet}': {str(err)}") from err
-
-        if subnet_obj.network_security_group is not None:
-            message = f"A Network Security Group \"{subnet_obj.network_security_group.id}\" "\
+        if subnet_obj.get('networkSecurityGroup', None):
+            message = f"A Network Security Group \"{subnet_obj['networkSecurityGroup']['id']}\" "\
                       "is already assigned to this subnet. Ensure there are no Network "\
                       "Security Groups assigned to cluster subnets before cluster creation"
             error = [key, parts['child_name_1'], message]
@@ -235,24 +234,27 @@ def dyn_validate_cidr_ranges():
         if service_cidr is not None:
             cidr_array["Service CIDR"] = ipaddress.IPv4Network(service_cidr)
 
-        network_client = get_mgmt_service_client(
-            cmd.cli_ctx, ResourceType.MGMT_NETWORK)
+        worker_subnet_obj = get_subnet(
+            cmd.cli_ctx, worker_subnet, worker_parts)
 
-        worker_subnet_obj = get_subnet(network_client, worker_subnet, worker_parts)
-
-        if worker_subnet_obj.address_prefix is None:
-            for address in worker_subnet_obj.address_prefixes:
-                cidr_array["Worker Subnet CIDR -- " + address] = ipaddress.IPv4Network(address)
+        if worker_subnet_obj.get('addressPrefix', None) is None:
+            for address in worker_subnet_obj.get('addressPrefixes'):
+                cidr_array["Worker Subnet CIDR -- " +
+                           address] = ipaddress.IPv4Network(address)
         else:
-            cidr_array["Worker Subnet CIDR"] = ipaddress.IPv4Network(worker_subnet_obj.address_prefix)
+            cidr_array["Worker Subnet CIDR"] = ipaddress.IPv4Network(
+                worker_subnet_obj.get('addressPrefix'))
 
-        master_subnet_obj = get_subnet(network_client, master_subnet, master_parts)
+        master_subnet_obj = get_subnet(
+            cmd.cli_ctx, master_subnet, master_parts)
 
-        if master_subnet_obj.address_prefix is None:
-            for address in master_subnet_obj.address_prefixes:
-                cidr_array["Master Subnet CIDR -- " + address] = ipaddress.IPv4Network(address)
+        if master_subnet_obj.get('addressPrefix', None) is None:
+            for address in master_subnet_obj.get('addressPrefixes'):
+                cidr_array["Master Subnet CIDR -- " +
+                           address] = ipaddress.IPv4Network(address)
         else:
-            cidr_array["Master Subnet CIDR"] = ipaddress.IPv4Network(master_subnet_obj.address_prefix)
+            cidr_array["Master Subnet CIDR"] = ipaddress.IPv4Network(
+                master_subnet_obj.get('addressPrefix'))
 
         ipv4_zero = ipaddress.IPv4Network("0.0.0.0/0")
 
