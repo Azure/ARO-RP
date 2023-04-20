@@ -97,7 +97,6 @@ func (m *manager) updateACRToken(ctx context.Context) error {
 			Name:      operator.SecretName,
 			Namespace: operator.Namespace,
 		},
-		Type: corev1.SecretTypeDockerConfigJson,
 		Data: make(map[string][]byte),
 	}
 	pullSecret.Data[corev1.DockerConfigJsonKey] = []byte(encodedDockerConfigJson)
