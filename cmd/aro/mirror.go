@@ -15,7 +15,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/containers/image/v5/types"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/exp/slices"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	pkgmirror "github.com/Azure/ARO-RP/pkg/mirror"
@@ -130,19 +129,10 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	// soverign clouds a separate mirror process mirrors from the public cloud
 	if env.Environment().Environment == azure.PublicCloud {
 		srcAcrGeneva := "linuxgeneva-microsoft" + acrDomainSuffix
-
-		// Mirror the versions that we have defined, as well as future versions
-		// for testing
 		mirrorImages := []string{
-			version.MdsdImage(srcAcrGeneva),
-			version.MdmImage(srcAcrGeneva),
 			srcAcrGeneva + "/distroless/genevamdm:2.2023.331.1521-399d45-20230331t1638",
 			srcAcrGeneva + "/distroless/genevamdsd:mariner_20230413.1",
 		}
-		// Sort + compact to remove duplicates, if they exist
-		slices.Sort(mirrorImages)
-		mirrorImages = slices.Compact(mirrorImages)
-
 		for _, ref := range mirrorImages {
 			log.Printf("mirroring %s -> %s", ref, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref))
 			err = pkgmirror.Copy(ctx, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthGeneva)
