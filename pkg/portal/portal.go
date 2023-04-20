@@ -305,7 +305,6 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router, prom *prometheus.Promethe
 	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/nodes").HandlerFunc(p.nodes)
 	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/machines").HandlerFunc(p.machines)
 	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/machine-sets").HandlerFunc(p.machineSets)
-	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}/statistics/{statisticsType}").HandlerFunc(p.statistics)
 	r.Path("/api/{subscription}/{resourceGroup}/{clusterName}").HandlerFunc(p.clusterInfo)
 
 	// prometheus
@@ -361,10 +360,16 @@ func (p *portal) indexV2(w http.ResponseWriter, r *http.Request) {
 // makeFetcher creates a cluster.FetchClient suitable for use by the Portal REST API
 func (p *portal) makeFetcher(ctx context.Context, r *http.Request) (cluster.FetchClient, error) {
 	apiVars := mux.Vars(r)
-	subscriptionID := apiVars["subscription"]
+
+	subscription := apiVars["subscription"]
 	resourceGroup := apiVars["resourceGroup"]
 	clusterName := apiVars["clusterName"]
-	resourceID := p.getResourceID(subscriptionID, resourceGroup, clusterName)
+
+	resourceID :=
+		strings.ToLower(
+			fmt.Sprintf(
+				"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s",
+				subscription, resourceGroup, clusterName))
 	if !validate.RxClusterID.MatchString(resourceID) {
 		return nil, fmt.Errorf("invalid resource ID")
 	}
@@ -401,19 +406,7 @@ func (p *portal) serve(path string) func(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-func (p *portal) getResourceID(subscriptionID, resourceGroup, clusterName string) string {
-	return strings.ToLower(
-		fmt.Sprintf(
-			"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s",
-			subscriptionID, resourceGroup, clusterName))
-}
-
 func (p *portal) internalServerError(w http.ResponseWriter, err error) {
 	p.log.Warn(err)
 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-}
-
-func (p *portal) badRequest(w http.ResponseWriter, err error) {
-	p.log.Debug(err)
-	http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 }

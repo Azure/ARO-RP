@@ -5,8 +5,10 @@ package portal
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -35,10 +37,12 @@ func (p *portal) clusterInfo(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	apiVars := mux.Vars(r)
+
 	subscription := apiVars["subscription"]
 	resourceGroup := apiVars["resourceGroup"]
 	clusterName := apiVars["clusterName"]
-	resourceId := p.getResourceID(subscription, resourceGroup, clusterName)
+
+	resourceId := strings.ToLower(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s", subscription, resourceGroup, clusterName))
 
 	doc, err := p.dbOpenShiftClusters.Get(ctx, resourceId)
 	if err != nil {

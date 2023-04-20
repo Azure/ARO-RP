@@ -5,8 +5,6 @@ package cluster
 
 import (
 	"context"
-	"net/http"
-	"time"
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
@@ -25,7 +23,6 @@ type FetchClient interface {
 	ClusterOperators(context.Context) (*ClusterOperatorsInformation, error)
 	Machines(context.Context) (*MachineListInformation, error)
 	MachineSets(context.Context) (*MachineSetListInformation, error)
-	Statistics(context.Context, *http.Client, string, time.Duration, time.Time, string) ([]Metrics, error)
 }
 
 // client is an implementation of FetchClient. It currently contains a "fetcher"
