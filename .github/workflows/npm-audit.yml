@@ -36,6 +36,6 @@ jobs:
       - name: Run NPM Build
         working-directory: ./portal/v2
         run: |
-          npm install
+          npm ci
           npm run build
           ../../hack/ci-utils/isClean.sh
