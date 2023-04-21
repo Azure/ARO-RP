@@ -92,7 +92,6 @@ func (p *portal) clusters(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(b)
 	_, err = w.Write(b)
 	if err != nil {
 		p.internalServerError(w, err)
@@ -122,7 +121,6 @@ func (p *portal) clusterOperators(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(b)
 	_, err = w.Write(b)
 	if err != nil {
 		p.internalServerError(w, err)
@@ -152,7 +150,6 @@ func (p *portal) nodes(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(b)
 	_, err = w.Write(b)
 	if err != nil {
 		p.internalServerError(w, err)
@@ -182,7 +179,6 @@ func (p *portal) machines(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(b)
 	_, err = w.Write(b)
 	if err != nil {
 		p.internalServerError(w, err)

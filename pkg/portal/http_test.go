@@ -27,7 +27,7 @@ type testPortal struct {
 	portalLogHook *test.Hook
 }
 
-func NewTestPortal(_env env.Interface, dbOpenShiftClusters database.OpenShiftClusters, dbPortal database.Portal, dbSubscription database.Subscriptions) *testPortal {
+func NewTestPortal(_env env.Core, dbOpenShiftClusters database.OpenShiftClusters, dbPortal database.Portal, dbSubscription database.Subscriptions) *testPortal {
 	_, portalAccessLog := testlog.New()
 	portalLogHook, portalLog := testlog.New()
 	auditHook, portalAuditLog := testlog.NewAudit()

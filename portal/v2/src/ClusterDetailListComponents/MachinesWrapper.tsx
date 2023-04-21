@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import { AxiosResponse } from "axios"
-import { fetchMachines, FetchVMAllocationStatus } from "../Request"
+import { fetchMachines, fetchVMAllocationStatus } from "../Request"
 import { ICluster } from "../App"
 import { MachinesListComponent } from "./MachinesList"
 import { IMessageBarStyles, MessageBar, MessageBarType, Stack } from "@fluentui/react"
@@ -115,7 +115,7 @@ export function MachinesWrapper(props: {
     ) {
       setFetching("FETCHING")
       fetchMachines(props.currentCluster).then(onData)
-      FetchVMAllocationStatus(props.currentCluster).then(onVMAllocationStatusData)
+      fetchVMAllocationStatus(props.currentCluster).then(onVMAllocationStatusData)
     }
   }, [data, props.loaded, props.detailPanelSelected])
 

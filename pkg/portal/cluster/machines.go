@@ -69,21 +69,16 @@ func (c *azureClient) VMAllocationStatus(ctx context.Context) (map[string]string
 }
 
 func (f *azureSideFetcher) vmAllocationStatus(ctx context.Context) (map[string]string, error) {
-	env := f.env
 	subscriptionDoc := f.subscriptionDoc
 	clusterRGName := f.resourceGroupName
-	aroEnvironment := env.Environment()
-	fpAuth, err := env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID, aroEnvironment.ResourceManagerEndpoint)
-	if err != nil {
-		return nil, err
-	}
-	// Getting Virtual Machine resources through the Cluster's Resource Group
-	computeResources, err := f.resourceClientFactory.NewResourcesClient(aroEnvironment, subscriptionDoc.ID, fpAuth).ListByResourceGroup(ctx, clusterRGName, "resourceType eq 'Microsoft.Compute/virtualMachines'", "", nil)
+	aroEnvironment := f.env.Environment()
+	spAuthorizer := f.spAuthorizer
+	computeResources, err := f.resourceClientFactory.NewResourcesClient(aroEnvironment, subscriptionDoc.ID, spAuthorizer).ListByResourceGroup(ctx, clusterRGName, "resourceType eq 'Microsoft.Compute/virtualMachines'", "", nil)
 	if err != nil {
 		return nil, err
 	}
 	vmAllocationStatus := make(map[string]string)
-	virtualMachineClient := f.virtualMachinesClientFactory.NewVirtualMachinesClient(aroEnvironment, subscriptionDoc.ID, fpAuth)
+	virtualMachineClient := f.virtualMachinesClientFactory.NewVirtualMachinesClient(aroEnvironment, subscriptionDoc.ID, spAuthorizer)
 	for _, res := range computeResources {
 		putAllocationStatusToMap(ctx, clusterRGName, vmAllocationStatus, res, virtualMachineClient, f.log)
 	}

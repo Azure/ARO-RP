@@ -26,7 +26,7 @@ import (
 )
 
 func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
-	_env, err := env.NewEnv(ctx, log)
+	_env, err := env.NewCore(ctx, log)
 	if err != nil {
 		return err
 	}

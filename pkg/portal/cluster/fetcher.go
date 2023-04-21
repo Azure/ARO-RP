@@ -21,7 +21,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/jongio/azidext/go/azidext"
 )
 
 type ResourceClientFactory interface {
@@ -81,7 +83,8 @@ type azureSideFetcher struct {
 	log                          *logrus.Entry
 	resourceGroupName            string
 	subscriptionDoc              *api.SubscriptionDocument
-	env                          env.Interface
+	spAuthorizer                 autorest.Authorizer
+	env                          env.Core
 	resourceClientFactory        ResourceClientFactory
 	virtualMachinesClientFactory VirtualMachinesClientFactory
 }
@@ -96,11 +99,12 @@ func (cf clientFactory) NewVirtualMachinesClient(environment *azureclient.AROEnv
 	return compute.NewVirtualMachinesClient(environment, subscriptionID, authorizer)
 }
 
-func newAzureSideFetcher(log *logrus.Entry, resourceGroupName string, subscriptionDoc *api.SubscriptionDocument, env env.Interface, resourceClientFactory ResourceClientFactory, virtualMachinesClientFactory VirtualMachinesClientFactory) azureSideFetcher {
+func newAzureSideFetcher(log *logrus.Entry, resourceGroupName string, subscriptionDoc *api.SubscriptionDocument, env env.Core, spAuthorizer autorest.Authorizer, resourceClientFactory ResourceClientFactory, virtualMachinesClientFactory VirtualMachinesClientFactory) azureSideFetcher {
 	return azureSideFetcher{
 		log:                          log,
 		resourceGroupName:            resourceGroupName,
 		subscriptionDoc:              subscriptionDoc,
+		spAuthorizer:                 spAuthorizer,
 		env:                          env,
 		resourceClientFactory:        resourceClientFactory,
 		virtualMachinesClientFactory: virtualMachinesClientFactory,
@@ -152,12 +156,22 @@ func NewFetchClient(log *logrus.Entry, dialer proxy.Dialer, cluster *api.OpenShi
 	}, nil
 }
 
-func NewAzureFetchClient(log *logrus.Entry, cluster *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, env env.Interface) AzureFetchClient {
-	resourceGroupName := stringutils.LastTokenByte(cluster.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+func NewAzureFetchClient(log *logrus.Entry, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, env env.Core) (AzureFetchClient, error) {
+	resourceGroupName := stringutils.LastTokenByte(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	spp := doc.OpenShiftCluster.Properties.ServicePrincipalProfile
+	tenantID := subscriptionDoc.Subscription.Properties.TenantID
+	options := env.Environment().ClientSecretCredentialOptions()
+	tokenCredential, err := azidentity.NewClientSecretCredential(
+		tenantID, spp.ClientID, string(spp.ClientSecret), options)
+	if err != nil {
+		return nil, err
+	}
+	scopes := []string{env.Environment().ResourceManagerScope}
+	spAuthorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 	cf := clientFactory{}
-	azureSideFetcher := newAzureSideFetcher(log, resourceGroupName, subscriptionDoc, env, cf, cf)
+	azureSideFetcher := newAzureSideFetcher(log, resourceGroupName, subscriptionDoc, env, spAuthorizer, cf, cf)
 	return &azureClient{
 		log:     log,
 		fetcher: &azureSideFetcher,
-	}
+	}, nil
 }

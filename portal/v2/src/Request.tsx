@@ -73,7 +73,7 @@ export const fetchMachines = async (cluster: ICluster): Promise<AxiosResponse | 
   }
 }
 
-export const FetchVMAllocationStatus = async (cluster: ICluster): Promise<AxiosResponse | null> => {
+export const fetchVMAllocationStatus = async (cluster: ICluster): Promise<AxiosResponse | null> => {
   try {
     const result = await axios(
       "/api/" +

@@ -47,7 +47,7 @@ type Runnable interface {
 }
 
 type portal struct {
-	env           env.Interface
+	env           env.Core
 	audit         *logrus.Entry
 	log           *logrus.Entry
 	baseAccessLog *logrus.Entry
@@ -81,7 +81,7 @@ type portal struct {
 	m metrics.Emitter
 }
 
-func NewPortal(env env.Interface,
+func NewPortal(env env.Core,
 	audit *logrus.Entry,
 	log *logrus.Entry,
 	baseAccessLog *logrus.Entry,
@@ -423,7 +423,12 @@ func (p *portal) makeAzureFetcher(ctx context.Context, r *http.Request) (cluster
 		return nil, err
 	}
 
-	return cluster.NewAzureFetchClient(p.log, doc, subscriptionDoc, p.env), nil
+	azureFetchClient, err := cluster.NewAzureFetchClient(p.log, doc, subscriptionDoc, p.env)
+	if err != nil {
+		return nil, err
+	}
+
+	return azureFetchClient, nil
 }
 
 func (p *portal) serve(path string) func(w http.ResponseWriter, r *http.Request) {
