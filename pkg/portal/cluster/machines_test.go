@@ -13,6 +13,10 @@ import (
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/go-test/deep"
+	"github.com/golang/mock/gomock"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -25,10 +29,6 @@ import (
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/go-test/deep"
-	"github.com/golang/mock/gomock"
 )
 
 func TestMachines(t *testing.T) {

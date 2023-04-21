@@ -7,12 +7,13 @@ import (
 	"context"
 	"strings"
 
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 )
 
 type MachinesInformation struct {
