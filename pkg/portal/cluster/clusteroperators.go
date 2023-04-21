@@ -10,9 +10,23 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Type for listing different operator conditions such as "progressing", "degraded" etc
+type OperatorCondition struct {
+	Type        configv1.ClusterStatusConditionType `json:"type"`
+	LastUpdated string                              `json:"lastUpdated"`
+	Status      configv1.ConditionStatus            `json:"status"`
+	Reason      string                              `json:"reason"`
+	Message     string                              `json:"message"`
+}
+
+// Type for holding information relating to a specific cluster operator. Certain conditions are listed
+// as properties (Available, Progressing, Degraded) as they are default for all operators
 type OperatorInformation struct {
-	Name      string                   `json:"name"`
-	Available configv1.ConditionStatus `json:"available"`
+	Name        string                   `json:"name"`
+	Available   configv1.ConditionStatus `json:"available"`
+	Progressing configv1.ConditionStatus `json:"progressing"`
+	Degraded    configv1.ConditionStatus `json:"degraded"`
+	Conditions  []OperatorCondition      `json:"conditions"`
 }
 
 type ClusterOperatorsInformation struct {
@@ -25,17 +39,39 @@ func clusterOperatorsInformationFromOperatorList(operators *configv1.ClusterOper
 	}
 
 	for _, co := range operators.Items {
-		var Available = configv1.ConditionUnknown
+		var available = configv1.ConditionUnknown
+		var progressing = configv1.ConditionUnknown
+		var degraded = configv1.ConditionUnknown
 
+		var conditions []OperatorCondition
 		for _, cnd := range co.Status.Conditions {
-			if cnd.Type == "Available" {
-				Available = cnd.Status
+			switch cnd.Type {
+			case configv1.OperatorAvailable:
+				available = cnd.Status
+			case configv1.OperatorProgressing:
+				progressing = cnd.Status
+			case configv1.OperatorDegraded:
+				degraded = cnd.Status
 			}
+
+			condition := OperatorCondition{
+
+				Message:     cnd.Message,
+				Reason:      cnd.Reason,
+				Status:      cnd.Status,
+				LastUpdated: cnd.LastTransitionTime.String(),
+				Type:        cnd.Type,
+			}
+
+			conditions = append(conditions, condition)
 		}
 
 		final.Operators = append(final.Operators, OperatorInformation{
-			Name:      co.Name,
-			Available: Available,
+			Name:        co.Name,
+			Available:   available,
+			Progressing: progressing,
+			Degraded:    degraded,
+			Conditions:  conditions,
 		})
 	}
 

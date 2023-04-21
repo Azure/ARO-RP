@@ -5,11 +5,13 @@ import { NodesWrapper } from "./ClusterDetailListComponents/NodesWrapper"
 import { MachinesWrapper } from "./ClusterDetailListComponents/MachinesWrapper"
 import { MachineSetsWrapper } from "./ClusterDetailListComponents/MachineSetsWrapper"
 import { Statistics } from "./ClusterDetailListComponents/Statistics/Statistics"
+import { ClusterOperatorsWrapper } from "./ClusterDetailListComponents/ClusterOperatorsWrapper";
 
 import { ICluster } from "./App"
 
+
 interface ClusterDetailComponentProps {
-  item: any
+  item: IClusterDetails
   cluster: ICluster | null
   isDataLoaded: boolean
   detailPanelVisible: string
@@ -125,6 +127,15 @@ export class ClusterDetailComponent extends Component<
             detailPanelSelected={this.props.detailPanelVisible}
             loaded={this.props.isDataLoaded}
             statisticsType={"ingress"}
+          />
+        )
+      }
+      case "clusteroperators": {
+        return (
+          <ClusterOperatorsWrapper
+            currentCluster={this.props.cluster!}
+            detailPanelSelected={this.props.detailPanelVisible}
+            loaded={this.props.isDataLoaded}
           />
         )
       }
