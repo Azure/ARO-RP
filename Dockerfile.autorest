@@ -1,5 +1,5 @@
 ARG REGISTRY
-FROM ${REGISTRY}/ubi8/nodejs-14
+FROM ${REGISTRY}/ubi8/nodejs-18
 
 LABEL MAINTAINER="aos-azure"
 
@@ -13,8 +13,6 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.n
     dnf install -y libunwind-devel libicu && \
     dnf install -y python3-pip && \
     dnf clean all --enablerepo=\*
-
-USER 1001
 
 # Autorest
 RUN npm install -g autorest@${AUTOREST_VERSION} && \
