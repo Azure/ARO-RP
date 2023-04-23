@@ -10,7 +10,7 @@ import (
 // Public facing document which lists supported VM Sizes:
 // https://learn.microsoft.com/en-us/azure/openshift/support-policies-v4#supported-virtual-machine-sizes
 
-// To add new instance types, needs Project Managment's involment and instructions are below.,
+// To add new instance types, needs Project Management's involvement and instructions are below.,
 // https://github.com/Azure/ARO-RP/blob/master/docs/adding-new-instance-types.md
 
 var SupportedMasterVmSizes = map[api.VMSize]api.VMSizeStruct{
