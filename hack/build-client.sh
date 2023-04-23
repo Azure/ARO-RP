@@ -94,7 +94,7 @@ do
   fi
 
   printf "\nGENERATING API v$API_VERSION\n"
-  printf '%*s\n' "${COLUMNS:-$(tput cols)}" '' | tr ' ' -
+  printf "%*s\n" "${COLUMNS:-$(tput cols)}" "" | tr " " -
 
   printf "CLEANING OLD API GENERATED FILES...\n"
   clean "$API_VERSION" "$FOLDER"
@@ -111,6 +111,8 @@ do
   printf "GENERATING PYTHON SDK...\n"
   generate_python "$AUTOREST_IMAGE" "$API_VERSION" "$FOLDER"
   printf "[\u2714] SUCCESS\n\n"
+  printf "%*s\n" "${COLUMNS:-$(tput cols)}" "" | tr " " -
+  printf "\n"
 done
 
 printf "[\u2714] CLIENT GENERATION COMPLETED SUCCESSFULLY\n"
