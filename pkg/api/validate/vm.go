@@ -13,7 +13,23 @@ import (
 // To add new instance types, needs Project Management's involvement and instructions are below.,
 // https://github.com/Azure/ARO-RP/blob/master/docs/adding-new-instance-types.md
 
-var SupportedMasterVmSizes = map[api.VMSize]api.VMSizeStruct{
+const VMRoleMaster string = "master"
+const VMRoleWorker string = "worker"
+
+var supportedVMSizesByRoleMap = map[string]map[api.VMSize]api.VMSizeStruct{
+	VMRoleMaster: supportedMasterVmSizes,
+	VMRoleWorker: supportedWorkerVmSizes,
+}
+
+func SupportedVMSizesByRole(vmRole string) map[api.VMSize]api.VMSizeStruct {
+	supportedvmsizes, exists := supportedVMSizesByRoleMap[vmRole]
+	if !exists {
+		return nil
+	}
+	return supportedvmsizes
+}
+
+var supportedMasterVmSizes = map[api.VMSize]api.VMSizeStruct{
 	// General purpose
 	api.VMSizeStandardD8sV3:  api.VMSizeStandardD8sV3Struct,
 	api.VMSizeStandardD16sV3: api.VMSizeStandardD16sV3Struct,
@@ -86,7 +102,7 @@ var SupportedMasterVmSizes = map[api.VMSize]api.VMSizeStruct{
 }
 
 // Document support
-var SupportedWorkerVmSizes = map[api.VMSize]api.VMSizeStruct{
+var supportedWorkerVmSizes = map[api.VMSize]api.VMSizeStruct{
 	// General purpose
 	api.VMSizeStandardD4sV3:  api.VMSizeStandardD4sV3Struct,
 	api.VMSizeStandardD8sV3:  api.VMSizeStandardD8sV3Struct,
@@ -216,7 +232,7 @@ func DiskSizeIsValid(sizeGB int) bool {
 
 func VMSizeIsValid(vmSize api.VMSize, requiredD2sV3Workers, isMaster bool) bool {
 	if isMaster {
-		_, supportedAsMaster := SupportedMasterVmSizes[vmSize]
+		_, supportedAsMaster := SupportedVMSizesByRole(VMRoleMaster)[vmSize]
 		return supportedAsMaster
 	}
 
@@ -224,7 +240,7 @@ func VMSizeIsValid(vmSize api.VMSize, requiredD2sV3Workers, isMaster bool) bool 
 		return false
 	}
 
-	_, supportedAsWorker := SupportedWorkerVmSizes[vmSize]
+	_, supportedAsWorker := SupportedVMSizesByRole(VMRoleWorker)[vmSize]
 	if supportedAsWorker || (requiredD2sV3Workers && vmSize == api.VMSizeStandardD2sV3) {
 		return true
 	}
@@ -238,11 +254,11 @@ func VMSizeFromName(vmSize api.VMSize) (api.VMSizeStruct, bool) {
 		return api.VMSizeStandardD2sV3Struct, true
 	}
 
-	if size, ok := SupportedWorkerVmSizes[vmSize]; ok {
+	if size, ok := SupportedVMSizesByRole(VMRoleWorker)[vmSize]; ok {
 		return size, true
 	}
 
-	if size, ok := SupportedMasterVmSizes[vmSize]; ok {
+	if size, ok := SupportedVMSizesByRole(VMRoleMaster)[vmSize]; ok {
 		return size, true
 	}
 	return api.VMSizeStruct{}, false
