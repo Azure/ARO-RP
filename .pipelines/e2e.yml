@@ -50,6 +50,8 @@ jobs:
   - script: |
       az account set -s $AZURE_SUBSCRIPTION_ID
       SECRET_SA_ACCOUNT_NAME=e2earosecrets make secrets
+      # export ARO_ADOPT_BY_HIVE=true
+      # export ARO_INSTALL_VIA_HIVE=true
       . secrets/env
 
       export CI=true

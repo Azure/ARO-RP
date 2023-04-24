@@ -14,7 +14,8 @@ import (
 )
 
 var _ = Describe("[Admin API] Get Hive Cluster Deployment action", func() {
-	BeforeEach(skipIfNotInDevelopmentEnv)
+	// Commenting to test the error
+	// BeforeEach(skipIfNotInDevelopmentEnv)
 
 	When("A hive managed cluster has its cluster deployment requested", func() {
 		It("is managed by hive", func(ctx context.Context) {

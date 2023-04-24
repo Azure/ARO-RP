@@ -15,7 +15,8 @@ import (
 )
 
 var _ = Describe("Hive manager creates a namespace", func() {
-	BeforeEach(skipIfNotInDevelopmentEnv)
+	// Commenting to test the error
+	// BeforeEach(skipIfNotInDevelopmentEnv)
 
 	var ns *corev1.Namespace
 
