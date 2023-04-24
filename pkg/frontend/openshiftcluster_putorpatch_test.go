@@ -677,7 +677,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			apiVersion: "2020-04-30",
 			request: func(oc interface{}) {
 				_oc := oc.(*v20200430.OpenShiftCluster)
-				_oc.Properties.ClusterProfile.Version = "4.10.40"
+				_oc.Properties.ClusterProfile.Version = defaultVersion
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -1604,7 +1604,6 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			apiVersion: "2023-04-01",
 			request: func(oc interface{}) {
 				_oc := oc.(*v20230401.OpenShiftCluster)
-				_oc.Properties.ClusterProfile.Version = "4.10.40"
 				_oc.Properties.ResourceTags = map[string]string{
 					"foo": "bar",
 					"bar": "baz",
@@ -1644,7 +1643,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							CreatedAt:           mockCurrentTime,
 							CreatedBy:           version.GitCommit,
 							ClusterProfile: api.ClusterProfile{
-								Version:              "4.10.40",
+								Version:              defaultVersion,
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
@@ -1675,8 +1674,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				Properties: v20230401.OpenShiftClusterProperties{
 					ProvisioningState: v20230401.ProvisioningStateCreating,
 					ClusterProfile: v20230401.ClusterProfile{
-						Version:              "4.10.40",
+						Version:              defaultVersion,
 						FipsValidatedModules: v20230401.FipsValidatedModulesDisabled,
+					},
+					NetworkProfile: v20230401.NetworkProfile{
+						OutboundType: v20230401.OutboundTypeLoadbalancer,
 					},
 					MasterProfile: v20230401.MasterProfile{
 						EncryptionAtHost: v20230401.EncryptionAtHostDisabled,
@@ -1813,6 +1815,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							EncryptionAtHost: v20230401.EncryptionAtHostDisabled,
 						},
 					},
+					NetworkProfile: v20230401.NetworkProfile{
+						OutboundType: v20230401.OutboundTypeLoadbalancer,
+					},
 					MasterProfile: v20230401.MasterProfile{
 						EncryptionAtHost: v20230401.EncryptionAtHostDisabled,
 					},
@@ -1945,6 +1950,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							EncryptionAtHost: v20230401.EncryptionAtHostDisabled,
 						},
 					},
+					NetworkProfile: v20230401.NetworkProfile{
+						OutboundType: v20230401.OutboundTypeLoadbalancer,
+					},
 					MasterProfile: v20230401.MasterProfile{
 						EncryptionAtHost: v20230401.EncryptionAtHostDisabled,
 					},
@@ -2074,6 +2082,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							Name:             "default",
 							EncryptionAtHost: v20230401.EncryptionAtHostDisabled,
 						},
+					},
+					NetworkProfile: v20230401.NetworkProfile{
+						OutboundType: v20230401.OutboundTypeLoadbalancer,
 					},
 					MasterProfile: v20230401.MasterProfile{
 						EncryptionAtHost: v20230401.EncryptionAtHostDisabled,
