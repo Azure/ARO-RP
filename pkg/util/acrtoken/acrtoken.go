@@ -153,6 +153,10 @@ func (m *manager) generateTokenPassword(ctx context.Context, passwordName mgmtco
 		return "", err
 	}
 
+	if passwordName == mgmtcontainerregistry.TokenPasswordNamePassword2 {
+		return *(*creds.Passwords)[1].Value, nil
+	}
+
 	return *(*creds.Passwords)[0].Value, nil
 }
 
