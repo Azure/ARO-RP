@@ -59,7 +59,7 @@ def validate_resource(client, key, resource, actions):
     return errors
 
 
-def get_subnet(cli_ctx, subnet, subnet_parts):
+def get_subnet(cli_ctx, key, subnet, subnet_parts):
     try:
         subnet_obj = subnet_show(cli_ctx=cli_ctx)(command_args={
             'resource_group': subnet_parts['resource_group'],
@@ -68,7 +68,7 @@ def get_subnet(cli_ctx, subnet, subnet_parts):
         })
     except ResourceNotFoundError as err:
         raise InvalidArgumentValueError(
-            f"Invalid -- subnet, error when getting '{subnet}': {str(err)}") from err
+            f"Invalid --{key.replace('_', '-')}, error when getting '{subnet}': {str(err)}") from err
 
     except Exception as err:
         raise CLIInternalError(
@@ -174,7 +174,7 @@ def dyn_validate_subnet_and_route_tables(key):
 
         parts, auth_client = get_clients(subnet, cmd)
 
-        subnet_obj = get_subnet(cmd.cli_ctx, subnet, parts)
+        subnet_obj = get_subnet(cmd.cli_ctx, key, subnet, parts)
 
         if subnet_obj.get('routeTable', None):
             route_parts = parse_resource_id(subnet_obj['routeTable']['id'])
@@ -235,7 +235,7 @@ def dyn_validate_cidr_ranges():
             cidr_array["Service CIDR"] = ipaddress.IPv4Network(service_cidr)
 
         worker_subnet_obj = get_subnet(
-            cmd.cli_ctx, worker_subnet, worker_parts)
+            cmd.cli_ctx, None, worker_subnet, worker_parts)
 
         if worker_subnet_obj.get('addressPrefix', None) is None:
             for address in worker_subnet_obj.get('addressPrefixes'):
@@ -246,7 +246,7 @@ def dyn_validate_cidr_ranges():
                 worker_subnet_obj.get('addressPrefix'))
 
         master_subnet_obj = get_subnet(
-            cmd.cli_ctx, master_subnet, master_parts)
+            cmd.cli_ctx, None, master_subnet, master_parts)
 
         if master_subnet_obj.get('addressPrefix', None) is None:
             for address in master_subnet_obj.get('addressPrefixes'):
