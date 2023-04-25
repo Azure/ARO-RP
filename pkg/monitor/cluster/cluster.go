@@ -155,6 +155,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitNodeConditions,
 		mon.emitPodConditions,
 		mon.emitDebugPodsCount,
+		mon.detectMHCQuotaFailure,
 		mon.emitReplicasetStatuses,
 		mon.emitStatefulsetStatuses,
 		mon.emitJobConditions,
