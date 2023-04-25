@@ -161,7 +161,7 @@ func EnrichWithResourceID(log *logrus.Entry, resourceID string) *logrus.Entry {
 	})
 }
 
-//EnrichWithClusterVersion set log fields based on cluster version
+// EnrichWithClusterVersion set log fields based on cluster version
 func EnrichWithClusterVersion(log *logrus.Entry, version string) *logrus.Entry {
 	if version == "" {
 		return log
