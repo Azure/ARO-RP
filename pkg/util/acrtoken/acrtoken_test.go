@@ -75,12 +75,14 @@ func TestRotateTokenPassword(t *testing.T) {
 	tests := []struct {
 		name                    string
 		tokenPasswordProperties []mgmtcontainerregistry.TokenPassword
-		expectedRenewalPassword mgmtcontainerregistry.TokenPasswordName
+		wantRenewalName         mgmtcontainerregistry.TokenPasswordName
+		wantPassword            string
 	}{
 		{
 			name:                    "uses password1 when token has no passwords present",
 			tokenPasswordProperties: []mgmtcontainerregistry.TokenPassword{},
-			expectedRenewalPassword: mgmtcontainerregistry.TokenPasswordNamePassword1,
+			wantRenewalName:         mgmtcontainerregistry.TokenPasswordNamePassword1,
+			wantPassword:            "foo",
 		},
 		{
 			name: "uses missing password when only one token password exists",
@@ -90,7 +92,8 @@ func TestRotateTokenPassword(t *testing.T) {
 					CreationTime: &date.Time{Time: time.Date(2022, time.April, 4, 0, 0, 0, 0, time.UTC)},
 				},
 			},
-			expectedRenewalPassword: mgmtcontainerregistry.TokenPasswordNamePassword2,
+			wantRenewalName: mgmtcontainerregistry.TokenPasswordNamePassword2,
+			wantPassword:    "bar",
 		},
 		{
 			name: "renews password1 when it is the oldest password",
@@ -104,7 +107,8 @@ func TestRotateTokenPassword(t *testing.T) {
 					CreationTime: &date.Time{Time: time.Date(2022, time.May, 20, 0, 0, 0, 0, time.UTC)},
 				},
 			},
-			expectedRenewalPassword: mgmtcontainerregistry.TokenPasswordNamePassword1,
+			wantRenewalName: mgmtcontainerregistry.TokenPasswordNamePassword1,
+			wantPassword:    "foo",
 		},
 		{
 			name: "renews password2 when it is the oldest password",
@@ -118,7 +122,8 @@ func TestRotateTokenPassword(t *testing.T) {
 					CreationTime: &date.Time{Time: time.Date(2022, time.April, 4, 0, 0, 0, 0, time.UTC)},
 				},
 			},
-			expectedRenewalPassword: mgmtcontainerregistry.TokenPasswordNamePassword2,
+			wantRenewalName: mgmtcontainerregistry.TokenPasswordNamePassword2,
+			wantPassword:    "bar",
 		},
 	}
 
@@ -140,6 +145,9 @@ func TestRotateTokenPassword(t *testing.T) {
 			{
 				Value: to.StringPtr("foo"),
 			},
+			{
+				Value: to.StringPtr("bar"),
+			},
 		},
 	}
 	registryProfile := api.RegistryProfile{
@@ -157,7 +165,7 @@ func TestRotateTokenPassword(t *testing.T) {
 
 			expectedCredentialParameters := mgmtcontainerregistry.GenerateCredentialsParameters{
 				TokenID: to.StringPtr(resourceID + "/tokens/" + username),
-				Name:    tt.expectedRenewalPassword,
+				Name:    tt.wantRenewalName,
 			}
 			registries.EXPECT().GenerateCredentials(ctx, "global", "arointsvc", expectedCredentialParameters).
 				Return(credentialResult, nil)
@@ -174,7 +182,7 @@ func TestRotateTokenPassword(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if registryProfile.Password != api.SecureString("foo") {
+			if registryProfile.Password != api.SecureString(tt.wantPassword) {
 				t.Error(registryProfile.Password)
 			}
 		})
