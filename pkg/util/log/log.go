@@ -161,6 +161,17 @@ func EnrichWithResourceID(log *logrus.Entry, resourceID string) *logrus.Entry {
 	})
 }
 
+//EnrichWithClusterVersion set log fields based on cluster version
+func EnrichWithClusterVersion(log *logrus.Entry, version string) *logrus.Entry {
+	if version == "" {
+		return log
+	}
+
+	return log.WithFields(logrus.Fields{
+		"version": strings.ToLower(version),
+	})
+}
+
 func relativeFilePathPrettier(f *runtime.Frame) (string, string) {
 	file := strings.TrimPrefix(f.File, repopath)
 	function := stringutils.LastTokenByte(f.Function, '/')
