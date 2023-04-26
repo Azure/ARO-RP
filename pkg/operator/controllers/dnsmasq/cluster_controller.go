@@ -86,15 +86,15 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, dh dynamichelper.Interface, roles ...mcv1.MachineConfigPool) error {
+func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, dh dynamichelper.Interface, mcps ...mcv1.MachineConfigPool) error {
 	var resources []kruntime.Object
-	for _, role := range roles {
-		resource, err := dnsmasq.MachineConfig(instance.Spec.Domain, instance.Spec.APIIntIP, instance.Spec.IngressIP, role.Name, instance.Spec.GatewayDomains, instance.Spec.GatewayPrivateEndpointIP)
+	for _, mcp := range mcps {
+		resource, err := dnsmasq.MachineConfig(instance.Spec.Domain, instance.Spec.APIIntIP, instance.Spec.IngressIP, mcp.Name, instance.Spec.GatewayDomains, instance.Spec.GatewayPrivateEndpointIP)
 		if err != nil {
 			return err
 		}
 
-		err = dynamichelper.SetControllerReferences([]kruntime.Object{resource}, &role)
+		err = dynamichelper.SetControllerReferences([]kruntime.Object{resource}, &mcp)
 		if err != nil {
 			return err
 		}
