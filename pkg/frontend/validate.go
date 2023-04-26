@@ -191,7 +191,7 @@ func validateNetworkInterfaceName(nicName string) error {
 
 func validateAdminMasterVMSize(vmSize string) error {
 	// check to ensure that the target size is supported as a master size
-	for k := range validate.SupportedMasterVmSizes {
+	for k := range validate.SupportedVMSizesByRole(validate.VMRoleMaster) {
 		if strings.EqualFold(string(k), vmSize) {
 			return nil
 		}

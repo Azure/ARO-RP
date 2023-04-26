@@ -95,7 +95,7 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *Ope
 	if err := sv.validateServicePrincipalProfile(path+".servicePrincipalProfile", &p.ServicePrincipalProfile); err != nil {
 		return err
 	}
-	if err := sv.validateNetworkProfile(path+".networkProfile", &p.NetworkProfile); err != nil {
+	if err := sv.validateNetworkProfile(path+".networkProfile", &p.NetworkProfile, p.APIServerProfile.Visibility, p.IngressProfiles[0].Visibility); err != nil {
 		return err
 	}
 	if err := sv.validateMasterProfile(path+".masterProfile", &p.MasterProfile); err != nil {
@@ -192,7 +192,7 @@ func (sv openShiftClusterStaticValidator) validateServicePrincipalProfile(path s
 	return nil
 }
 
-func (sv openShiftClusterStaticValidator) validateNetworkProfile(path string, np *NetworkProfile) error {
+func (sv openShiftClusterStaticValidator) validateNetworkProfile(path string, np *NetworkProfile, apiServerVisibility Visibility, ingressVisibility Visibility) error {
 	_, pod, err := net.ParseCIDR(np.PodCIDR)
 	if err != nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".podCidr", "The provided pod CIDR '%s' is invalid: '%s'.", np.PodCIDR, err)
@@ -220,6 +220,14 @@ func (sv openShiftClusterStaticValidator) validateNetworkProfile(path string, np
 		}
 	}
 
+	if np.OutboundType != "" {
+		if np.OutboundType != OutboundTypeLoadbalancer && np.OutboundType != OutboundTypeUserDefinedRouting {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".outboundType", "The provided outboundType '%s' is invalid: must be UserDefinedRouting or Loadbalancer.", np.OutboundType)
+		}
+		if np.OutboundType == OutboundTypeUserDefinedRouting && (apiServerVisibility != VisibilityPrivate || ingressVisibility != VisibilityPrivate) {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".outboundType", "The provided outboundType '%s' is invalid: cannot use UserDefinedRouting if either API Server Visibility or Ingress Visibility is public.", np.OutboundType)
+		}
+	}
 	return nil
 }
 

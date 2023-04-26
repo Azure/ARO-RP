@@ -20,6 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
 	mock_deployer "github.com/Azure/ARO-RP/pkg/util/mocks/deployer"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestMUOReconciler(t *testing.T) {
@@ -286,13 +287,7 @@ func TestMUOReconciler(t *testing.T) {
 				readinessPollTime: 1 * time.Second,
 			}
 			_, err := r.Reconcile(ctx, reconcile.Request{})
-			if err != nil && err.Error() != tt.wantErr {
-				t.Errorf("got error '%v', wanted error '%v'", err, tt.wantErr)
-			}
-
-			if err == nil && tt.wantErr != "" {
-				t.Errorf("did not get an error, but wanted error '%v'", tt.wantErr)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

@@ -5,7 +5,6 @@ package vmsscleaner
 
 import (
 	"context"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 
@@ -14,7 +13,6 @@ import (
 
 type Interface interface {
 	RemoveFailedNewScaleset(ctx context.Context, rgName, vmssToDelete string) (retry bool)
-	UpdateVMSSProbes(ctx context.Context, rgName string) (retry bool)
 }
 
 type cleaner struct {
@@ -62,31 +60,5 @@ func (c *cleaner) RemoveFailedNewScaleset(ctx context.Context, rgName, vmssToDel
 	}
 	// If vmssToDelete was found and deleted successfully, deployment can be retried
 	// If it was not returned from List, assume it does not exist and that deployment can be retried.
-	return true
-}
-
-// UpdateVMSSProbes attempts to remove the probes references so we can update the load balancer rules
-func (c *cleaner) UpdateVMSSProbes(ctx context.Context, rgName string) (retry bool) {
-	scalesets, err := c.vmss.List(ctx, rgName)
-	if err != nil {
-		c.log.Warn(err)
-		return false
-	}
-
-	for _, vmss := range scalesets {
-		name := *vmss.Name
-		if !strings.HasPrefix(name, "gateway-vmss-") {
-			continue
-		}
-
-		//removes the network profile healthprobe
-		vmss.VirtualMachineProfile.NetworkProfile.HealthProbe = nil
-		c.log.Printf("removing the probe reference from the vmss %s", name)
-		err = c.vmss.CreateOrUpdateAndWait(ctx, rgName, name, vmss)
-		if err != nil {
-			c.log.Warn(err)
-			return false // If update failed, gateway vmss still has a reference to the probe
-		}
-	}
 	return true
 }

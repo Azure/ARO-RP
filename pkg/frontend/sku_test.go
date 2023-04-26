@@ -15,6 +15,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestValidateVMSku(t *testing.T) {
@@ -207,11 +208,8 @@ func TestValidateVMSku(t *testing.T) {
 				List(gomock.Any(), fmt.Sprintf("location eq %v", "eastus")).
 				Return(skus, tt.resourceSkusClientErr)
 
-			err := validateVMSku(context.Background(), resourceSkusClient, oc.Location, string(oc.Properties.MasterProfile.VMSize), oc.Properties.WorkerProfiles)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			err := validateVMSku(context.Background(), oc, resourceSkusClient)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

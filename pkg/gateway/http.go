@@ -18,10 +18,6 @@ import (
 // handleConnect handles incoming HTTP proxy HTTPS CONNECT requests.  The Host
 // header will indicate where the incoming connection wants to be connected to.
 func (g *gateway) handleConnect(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodConnect {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
 	ctx := r.Context()
 
 	conn, ok := ctx.Value(contextKeyConnection).(*proxyproto.Conn)

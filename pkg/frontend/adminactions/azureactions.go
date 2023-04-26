@@ -60,12 +60,17 @@ type azureActions struct {
 func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster,
 	subscriptionDoc *api.SubscriptionDocument) (AzureActions, error) {
 	fpAuth, err := env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID,
-		env.Environment().ResourceManagerEndpoint)
+		env.Environment().ResourceManagerScope)
 	if err != nil {
 		return nil, err
 	}
 
 	fpClientCertCred, err := env.FPNewClientCertificateCredential(env.Environment().AppLensTenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	appLensClient, err := applens.NewAppLensClient(env.Environment(), fpClientCertCred)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +88,7 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		routeTables:        network.NewRouteTablesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		storageAccounts:    storage.NewAccountsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		networkInterfaces:  network.NewInterfacesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
-		appLens:            applens.NewAppLensClient(env.Environment(), fpClientCertCred),
+		appLens:            appLensClient,
 	}, nil
 }
 

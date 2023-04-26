@@ -18,6 +18,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestSetCondition(t *testing.T) {
@@ -35,7 +36,7 @@ func TestSetCondition(t *testing.T) {
 		input   *operatorv1.OperatorCondition
 
 		expected arov1alpha1.ClusterStatus
-		wantErr  error
+		wantErr  string
 	}{
 		{
 			name: "no condition provided",
@@ -210,9 +211,7 @@ func TestSetCondition(t *testing.T) {
 			clientFake := fake.NewClientBuilder().WithObjects(tt.objects...).Build()
 
 			err := SetCondition(ctx, clientFake, tt.input, role)
-			if err != nil && tt.wantErr != nil {
-				t.Fatal(err.Error())
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			result := &arov1alpha1.Cluster{}
 			err = clientFake.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, result)

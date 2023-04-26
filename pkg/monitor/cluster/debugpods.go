@@ -11,6 +11,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	kuval "k8s.io/apimachinery/pkg/util/validation"
@@ -23,16 +24,16 @@ import (
 // in order to detect recent events of debug-pod creation.
 func (mon *Monitor) emitDebugPodsCount(ctx context.Context) error {
 	m := map[string]string{
-		"reason":              "Started",
-		"involvedObject.kind": "Pod",
+		"reason":         "Started",
+		"regarding.kind": "Pod",
 		// oc debug node creates a pod with a "container-00"
 		// container name.
-		"involvedObject.fieldPath": "spec.containers{container-00}",
+		"regarding.fieldPath": "spec.containers{container-00}",
 	}
 	lo := metav1.ListOptions{
 		FieldSelector: fields.SelectorFromSet(m).String(),
 	}
-	events, err := mon.cli.CoreV1().Events("default").List(ctx, lo)
+	events, err := mon.cli.EventsV1().Events("default").List(ctx, lo)
 	if err != nil {
 		return err
 	}
@@ -52,18 +53,18 @@ func (mon *Monitor) emitDebugPodsCount(ctx context.Context) error {
 	return nil
 }
 
-func countDebugPods(debugPods []string, events []corev1.Event) int {
+func countDebugPods(debugPods []string, events []eventsv1.Event) int {
 	count := 0
 	for _, e := range events {
-		if eventIsNew(e) && stringutils.Contains(debugPods, e.InvolvedObject.Name) {
+		if eventIsNew(e) && stringutils.Contains(debugPods, e.Regarding.Name) {
 			count++
 		}
 	}
 	return count
 }
 
-func eventIsNew(event corev1.Event) bool {
-	return time.Since(event.LastTimestamp.Time) < time.Second*120
+func eventIsNew(event eventsv1.Event) bool {
+	return time.Since(event.Series.LastObservedTime.Time) < time.Second*120
 }
 
 func getDebugPodNames(nodes []corev1.Node) []string {

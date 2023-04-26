@@ -1,24 +1,24 @@
 import { useState, useEffect, useRef } from "react"
-import { AxiosResponse } from 'axios';
-import { FetchNodes } from '../Request';
+import { AxiosResponse } from "axios"
+import { fetchNodes } from "../Request"
 import { ICluster } from "../App"
-import { NodesListComponent } from './NodesList';
-import { IMessageBarStyles, MessageBar, MessageBarType, Stack } from '@fluentui/react';
-import { nodesKey } from "../ClusterDetail";
+import { NodesListComponent } from "./NodesList"
+import { IMessageBarStyles, MessageBar, MessageBarType, Stack } from "@fluentui/react"
+import { nodesKey } from "../ClusterDetail"
 
 export interface ICondition {
-  status: string,
-  lastHeartbeatTime: string,
-  lastTransitionTime: string,
+  status: string
+  lastHeartbeatTime: string
+  lastTransitionTime: string
   message: string
 }
 
 export interface ITaint {
-  key: string,
+  key: string
 }
 
 export interface IVolume {
-  Path: string,
+  Path: string
 }
 
 export interface IResourceUsage {
@@ -29,11 +29,11 @@ export interface IResourceUsage {
 }
 
 export interface INode {
-  name: string,
-  createdTime: string,
-  capacity: IResourceUsage,
+  name: string
+  createdTime: string
+  capacity: IResourceUsage
   allocatable: IResourceUsage
-  conditions?: ICondition[],
+  conditions?: ICondition[]
   taints?: ITaint[]
   labels?: Map<string, string>
   annotations?: Map<string, string>
@@ -52,7 +52,7 @@ export function NodesWrapper(props: {
   const [data, setData] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
   const state = useRef<NodesListComponent>(null)
-  
+
   const [fetching, setFetching] = useState("")
 
   const errorBarStyles: Partial<IMessageBarStyles> = { root: { marginBottom: 15 } }
@@ -64,8 +64,7 @@ export function NodesWrapper(props: {
         isMultiline={false}
         onDismiss={() => setError(null)}
         dismissButtonAriaLabel="Close"
-        styles={errorBarStyles}
-      >
+        styles={errorBarStyles}>
         {error?.statusText}
       </MessageBar>
     )
@@ -78,43 +77,47 @@ export function NodesWrapper(props: {
     setData(newData)
     const nodeList: INode[] = []
     if (state && state.current) {
-      newData.nodes.forEach((element: { name: any;
-                                        createdTime: any;
-                                        capacity: any;
-                                        allocatable: any;
-                                        taints: ITaint[],
-                                        conditions: ICondition[],
-                                        labels: Record<string, string>,
-                                        annotations: Record<string, string>,
-                                        volumes: IVolume[]}) => {
-        const node: INode = {
-          name: element.name,
-          createdTime: element.createdTime,
-          capacity: element.capacity,
-          allocatable: element.allocatable,
-        }
-        node.taints = []
-        element.taints.forEach((taint: ITaint) => {
-          node.taints!.push(taint)
-        });
-        node.conditions = []
-        element.conditions.forEach((condition: ICondition) => {
-          node.conditions!.push(condition)
-        });
-        node.labels = new Map([])
-        Object.entries(element.labels).forEach((label: [string, string]) => {
+      newData.nodes.forEach(
+        (element: {
+          name: any
+          createdTime: any
+          capacity: any
+          allocatable: any
+          taints: ITaint[]
+          conditions: ICondition[]
+          labels: Record<string, string>
+          annotations: Record<string, string>
+          volumes: IVolume[]
+        }) => {
+          const node: INode = {
+            name: element.name,
+            createdTime: element.createdTime,
+            capacity: element.capacity,
+            allocatable: element.allocatable,
+          }
+          node.taints = []
+          element.taints.forEach((taint: ITaint) => {
+            node.taints!.push(taint)
+          })
+          node.conditions = []
+          element.conditions.forEach((condition: ICondition) => {
+            node.conditions!.push(condition)
+          })
+          node.labels = new Map([])
+          Object.entries(element.labels).forEach((label: [string, string]) => {
             node.labels?.set(label[0], label[1])
-          });
-        node.volumes = []
-        element.volumes.forEach((volume: IVolume) => {
-          node.volumes!.push(volume)
-        });
-        node.annotations = new Map([])
-        Object.entries(element.annotations).forEach((annotation: [string, string]) => {
-          node.annotations?.set(annotation[0], annotation[1])
-        });
-        nodeList.push(node)
-      });
+          })
+          node.volumes = []
+          element.volumes.forEach((volume: IVolume) => {
+            node.volumes!.push(volume)
+          })
+          node.annotations = new Map([])
+          Object.entries(element.annotations).forEach((annotation: [string, string]) => {
+            node.annotations?.set(annotation[0], annotation[1])
+          })
+          nodeList.push(node)
+        }
+      )
       state.current.setState({ nodes: nodeList })
     }
   }
@@ -129,21 +132,27 @@ export function NodesWrapper(props: {
       setFetching(props.currentCluster.name)
     }
 
-    if (props.detailPanelSelected.toLowerCase() == nodesKey && 
-        fetching === "" &&
-        props.loaded &&
-        props.currentCluster.name != "") {
+    if (
+      props.detailPanelSelected.toLowerCase() == nodesKey &&
+      fetching === "" &&
+      props.loaded &&
+      props.currentCluster.name != ""
+    ) {
       setFetching("FETCHING")
-      FetchNodes(props.currentCluster).then(onData)
+      fetchNodes(props.currentCluster).then(onData)
     }
   }, [data, props.loaded, props.detailPanelSelected])
-  
+
   return (
     <Stack>
       <Stack.Item grow>{error && errorBar()}</Stack.Item>
       <Stack>
-        <NodesListComponent nodes={data!} ref={state} clusterName={props.currentCluster != null ? props.currentCluster.name : ""} />
+        <NodesListComponent
+          nodes={data!}
+          ref={state}
+          clusterName={props.currentCluster != null ? props.currentCluster.name : ""}
+        />
       </Stack>
-    </Stack>   
+    </Stack>
   )
 }

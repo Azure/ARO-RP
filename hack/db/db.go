@@ -10,7 +10,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest/azure/auth"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -31,12 +32,15 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	authorizer, err := auth.NewAuthorizerFromCLIWithResource(_env.Environment().ResourceManagerEndpoint)
+	tokenCredential, err := azidentity.NewAzureCLICredential(nil)
 	if err != nil {
 		return err
 	}
 
-	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceIdentifiers.KeyVault)
+	scopes := []string{_env.Environment().ResourceManagerScope}
+	authorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
+
+	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().KeyVaultScope)
 	if err != nil {
 		return err
 	}

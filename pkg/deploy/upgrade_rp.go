@@ -41,7 +41,8 @@ func (d *deployer) rpWaitForReadiness(ctx context.Context, vmssName string) erro
 	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		for _, vm := range scalesetVMs {
 			r, err := d.vmssvms.GetInstanceView(ctx, d.config.RPResourceGroupName, vmssName, *vm.InstanceID)
-			if err != nil || *r.VMHealth.Status.Code != "HealthState/healthy" {
+			instanceUnhealthy := r.VMHealth != nil && r.VMHealth.Status != nil && r.VMHealth.Status.Code != nil && *r.VMHealth.Status.Code != "HealthState/healthy"
+			if err != nil || instanceUnhealthy {
 				d.log.Printf("instance %s status %s", *vm.InstanceID, *r.VMHealth.Status.Code)
 				return false, nil
 			}

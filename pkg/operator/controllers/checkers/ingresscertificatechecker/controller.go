@@ -32,7 +32,7 @@ import (
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters/status,verbs=get;update;patch
 
 const (
-	ControllerName = "ServicePrincipalChecker"
+	ControllerName = "IngressCertificateChecker"
 )
 
 // Reconciler runs a number of checkers

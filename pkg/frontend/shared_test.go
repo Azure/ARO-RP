@@ -26,11 +26,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
+	mock_clusterdata "github.com/Azure/ARO-RP/pkg/util/mocks/clusterdata"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_keyvault "github.com/Azure/ARO-RP/pkg/util/mocks/keyvault"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
-	"github.com/Azure/ARO-RP/test/util/clusterdata"
 	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
 	"github.com/Azure/ARO-RP/test/util/listener"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -62,7 +62,7 @@ type testInfra struct {
 	controller *gomock.Controller
 	l          net.Listener
 	cli        *http.Client
-	enricher   clusterdata.TestEnricher
+	enricher   *mock_clusterdata.MockBestEffortEnricher
 	audit      *logrus.Entry
 	log        *logrus.Entry
 	fixture    *testdatabase.Fixture
@@ -111,6 +111,9 @@ func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *test
 		_env.EXPECT().FeatureIsSet(f).AnyTimes().Return(val)
 	}
 
+	enricherMock := mock_clusterdata.NewMockBestEffortEnricher(controller)
+	enricherMock.EXPECT().Enrich(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+
 	_, auditEntry := testlog.NewAudit()
 	log := logrus.NewEntry(logrus.StandardLogger())
 
@@ -123,7 +126,7 @@ func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *test
 		env:        _env,
 		controller: controller,
 		l:          l,
-		enricher:   clusterdata.NewTestEnricher(),
+		enricher:   enricherMock,
 		fixture:    fixture,
 		checker:    checker,
 		audit:      auditEntry,

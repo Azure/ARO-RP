@@ -11,31 +11,23 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest/adal"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/form3tech-oss/jwt-go"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
-type ServicePrincipalToken interface {
-	RefreshWithContext(context.Context) error
-	OAuthToken() string
-}
-
 type prod struct {
 	instanceMetadata
 
-	do                              func(*http.Request) (*http.Response, error)
-	newServicePrincipalTokenFromMSI func(string, string) (ServicePrincipalToken, error)
+	do func(*http.Request) (*http.Response, error)
 }
 
 func newProd(ctx context.Context) (InstanceMetadata, error) {
 	p := &prod{
 		do: http.DefaultClient.Do,
-		newServicePrincipalTokenFromMSI: func(msiEndpoint, resource string) (ServicePrincipalToken, error) {
-			return adal.NewServicePrincipalTokenFromMSI(msiEndpoint, resource)
-		},
 	}
 
 	err := p.populateInstanceMetadata()
@@ -52,24 +44,23 @@ func newProd(ctx context.Context) (InstanceMetadata, error) {
 }
 
 func (p *prod) populateTenantIDFromMSI(ctx context.Context) error {
-	msiEndpoint, err := adal.GetMSIVMEndpoint()
+	options := p.Environment().ManagedIdentityCredentialOptions()
+	tokenCredential, err := azidentity.NewManagedIdentityCredential(options)
 	if err != nil {
 		return err
 	}
 
-	token, err := p.newServicePrincipalTokenFromMSI(msiEndpoint, p.Environment().ResourceManagerEndpoint)
-	if err != nil {
-		return err
+	tokenRequestOptions := policy.TokenRequestOptions{
+		Scopes: []string{p.Environment().ResourceManagerScope},
 	}
-
-	err = token.RefreshWithContext(ctx)
+	token, err := tokenCredential.GetToken(ctx, tokenRequestOptions)
 	if err != nil {
 		return err
 	}
 
 	parser := &jwt.Parser{}
 	c := &azureclaim.AzureClaim{}
-	_, _, err = parser.ParseUnverified(token.OAuthToken(), c)
+	_, _, err = parser.ParseUnverified(token.Token, c)
 	if err != nil {
 		return fmt.Errorf("the provided service principal is invalid")
 	}

@@ -147,9 +147,9 @@ If you are already familiar with running the ARO RP locally, you can speed up th
 
 ## Connect ARO-RP with a Hive development cluster
 The env variables names defined in pkg/util/liveconfig/manager.go control the communication of the ARO-RP with Hive.
-- If you want to use ARO-RP + Hive, set *HIVE_KUBE_CONFIG_PATH* to the path of the kubeconfig of the AKS Dev cluster. [Info](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#debugging-openshift-cluster) about creating that kubeconfig (Step *Get an admin kubeconfig:*).
-- If you want to create clusters using the local ARO-RP + Hive instead of doing the standard cluster creation process (which doesn't use Hive), set *ARO_INSTALL_VIA_HIVE* to *true*.
-- If you want to enable the Hive adoption feature (which is performed during adminUpdate()), set *ARO_ADOPT_BY_HIVE* to *true*.
+- If you want to use ARO-RP + Hive, set `HIVE_KUBE_CONFIG_PATH` to the path of the kubeconfig of the AKS Dev cluster. [Info](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#debugging-aks-cluster) about creating that kubeconfig (Step *Access the cluster via API*).
+- If you want to create clusters using the local ARO-RP + Hive instead of doing the standard cluster creation process (which doesn't use Hive), set `ARO_INSTALL_VIA_HIVE` to *true*.
+- If you want to enable the Hive adoption feature (which is performed during adminUpdate()), set `ARO_ADOPT_BY_HIVE` to *true*.
 
 After setting the above environment variables (using *export* direclty in the terminal or including them in the *env* file), connect to the [VPN](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#debugging-aks-cluster) (*Connect to the VPN* section).
 
@@ -195,10 +195,10 @@ After that, when you [create](https://github.com/Azure/ARO-RP/blob/master/docs/d
   curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/stopvm?vmName=$VMNAME" --header "Content-Type: application/json" -d "{}"
   ```
 
-* Stop and deallocate a VM in a dev cluster
+* Stop and [deallocate a VM](https://learn.microsoft.com/en-us/azure/virtual-machines/states-billing) in a dev cluster
   ```bash
   VMNAME="aro-cluster-qplnw-master-0"
-  curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/stopvm?vmName=$VMNAME" --header "Content-Type: application/json" -d "{}"
+  curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/stopvm?vmName=$VMNAME&deallocateVM=True" --header "Content-Type: application/json" -d "{}"
   ```
 
 * Start a VM in a dev cluster
@@ -240,6 +240,12 @@ After that, when you [create](https://github.com/Azure/ARO-RP/blob/master/docs/d
   POD=<pod-name>
   CONTAINER=<container-name>
   curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/kubernetespodlogs?podname=$POD&namespace=$NAMESPACE&container=$CONTAINER"
+  ```
+
+* List Supported VM Sizes
+  ```bash
+  VMROLE=<master or worker>
+  curl -X GET -k "https://localhost:8443/admin/supportedvmsizes?vmRole=$VMROLE"
   ```
 
 ## OpenShift Version

@@ -100,6 +100,7 @@ const (
 	CloudErrorCodeResourceProviderNotRegistered      = "ResourceProviderNotRegistered"
 	CloudErrorCodeCannotDeleteLoadBalancerByID       = "CannotDeleteLoadBalancerWithPrivateLinkService"
 	CloudErrorCodeInUseSubnetCannotBeDeleted         = "InUseSubnetCannotBeDeleted"
+	CloudErrorCodeScopeLocked                        = "ScopeLocked"
 )
 
 // NewCloudError returns a new CloudError

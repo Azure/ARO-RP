@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -20,16 +22,14 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/permissions"
-	"github.com/Azure/ARO-RP/pkg/util/refreshable"
-	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/util/token"
 )
 
 type Subnet struct {
@@ -41,7 +41,7 @@ type Subnet struct {
 }
 
 type ServicePrincipalValidator interface {
-	ValidateServicePrincipal(ctx context.Context, clientID, clientSecret, tenantID string) error
+	ValidateServicePrincipal(ctx context.Context, tokenCredential azcore.TokenCredential) error
 }
 
 // Dynamic validate in the operator context.
@@ -50,7 +50,6 @@ type Dynamic interface {
 
 	ValidateVnet(ctx context.Context, location string, subnets []Subnet, additionalCIDRs ...string) error
 	ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error
-	ValidateProviders(ctx context.Context) error
 	ValidateDiskEncryptionSets(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidateEncryptionAtHost(ctx context.Context, oc *api.OpenShiftCluster) error
 }
@@ -58,17 +57,18 @@ type Dynamic interface {
 type dynamic struct {
 	log            *logrus.Entry
 	authorizerType AuthorizerType
-	env            env.Interface
-	azEnv          *azureclient.AROEnvironment
+	// This represents the Subject for CheckAccess.  Could be either FP or SP.
+	checkAccessSubjectInfoCred azcore.TokenCredential
+	env                        env.Interface
+	azEnv                      *azureclient.AROEnvironment
 
 	permissions        authorization.PermissionsClient
-	providers          features.ProvidersClient
 	virtualNetworks    virtualNetworksGetClient
 	diskEncryptionSets compute.DiskEncryptionSetsClient
 	resourceSkusClient compute.ResourceSkusClient
 	spComputeUsage     compute.UsageClient
 	spNetworkUsage     network.UsageClient
-	tokenClient        aad.TokenClient
+	pdpClient          remotepdp.RemotePDPClient
 }
 
 type AuthorizerType string
@@ -78,34 +78,53 @@ const (
 	AuthorizerClusterServicePrincipal AuthorizerType = "cluster"
 )
 
-func NewValidator(log *logrus.Entry, env env.Interface, azEnv *azureclient.AROEnvironment, subscriptionID string, authorizer refreshable.Authorizer, authorizerType AuthorizerType, tokenClient aad.TokenClient) (Dynamic, error) {
+func NewValidator(
+	log *logrus.Entry,
+	env env.Interface,
+	azEnv *azureclient.AROEnvironment,
+	subscriptionID string,
+	authorizer autorest.Authorizer,
+	authorizerType AuthorizerType,
+	cred azcore.TokenCredential,
+	pdpClient remotepdp.RemotePDPClient,
+) (Dynamic, error) {
 	return &dynamic{
-		log:            log,
-		authorizerType: authorizerType,
-		env:            env,
-		azEnv:          azEnv,
+		log:                        log,
+		authorizerType:             authorizerType,
+		env:                        env,
+		azEnv:                      azEnv,
+		checkAccessSubjectInfoCred: cred,
 
-		providers:          features.NewProvidersClient(azEnv, subscriptionID, authorizer),
-		spComputeUsage:     compute.NewUsageClient(azEnv, subscriptionID, authorizer),
-		spNetworkUsage:     network.NewUsageClient(azEnv, subscriptionID, authorizer),
-		permissions:        authorization.NewPermissionsClient(azEnv, subscriptionID, authorizer),
-		virtualNetworks:    newVirtualNetworksCache(network.NewVirtualNetworksClient(azEnv, subscriptionID, authorizer)),
+		spComputeUsage: compute.NewUsageClient(azEnv, subscriptionID, authorizer),
+		spNetworkUsage: network.NewUsageClient(azEnv, subscriptionID, authorizer),
+		permissions:    authorization.NewPermissionsClient(azEnv, subscriptionID, authorizer),
+		virtualNetworks: newVirtualNetworksCache(
+			network.NewVirtualNetworksClient(azEnv, subscriptionID, authorizer),
+		),
 		diskEncryptionSets: compute.NewDiskEncryptionSetsClient(azEnv, subscriptionID, authorizer),
 		resourceSkusClient: compute.NewResourceSkusClient(azEnv, subscriptionID, authorizer),
-		tokenClient:        tokenClient,
+		pdpClient:          pdpClient,
 	}, nil
 }
 
-func NewServicePrincipalValidator(log *logrus.Entry, azEnv *azureclient.AROEnvironment, authorizerType AuthorizerType, tokenClient aad.TokenClient) (ServicePrincipalValidator, error) {
+func NewServicePrincipalValidator(
+	log *logrus.Entry,
+	azEnv *azureclient.AROEnvironment,
+	authorizerType AuthorizerType,
+) (ServicePrincipalValidator, error) {
 	return &dynamic{
 		log:            log,
 		authorizerType: authorizerType,
 		azEnv:          azEnv,
-		tokenClient:    tokenClient,
 	}, nil
 }
 
-func (dv *dynamic) ValidateVnet(ctx context.Context, location string, subnets []Subnet, additionalCIDRs ...string) error {
+func (dv *dynamic) ValidateVnet(
+	ctx context.Context,
+	location string,
+	subnets []Subnet,
+	additionalCIDRs ...string,
+) error {
 	if len(subnets) == 0 {
 		return fmt.Errorf("no subnets provided")
 	}
@@ -179,11 +198,24 @@ func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resou
 	})
 
 	if err == wait.ErrWaitTimeout {
-		return api.NewCloudError(http.StatusBadRequest, errCode, "", "The %s service principal does not have Network Contributor permission on vnet '%s'.", dv.authorizerType, vnet.String())
+		return api.NewCloudError(
+			http.StatusBadRequest,
+			errCode,
+			"",
+			"The %s service principal does not have Network Contributor permission on vnet '%s'.",
+			dv.authorizerType,
+			vnet.String(),
+		)
 	}
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		detailedErr.StatusCode == http.StatusNotFound {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The vnet '%s' could not be found.", vnet.String())
+		return api.NewCloudError(
+			http.StatusBadRequest,
+			api.CloudErrorCodeInvalidLinkedVNet,
+			"",
+			"The vnet '%s' could not be found.",
+			vnet.String(),
+		)
 	}
 	return err
 }
@@ -228,11 +260,24 @@ func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) 
 		"Microsoft.Network/routeTables/write",
 	})
 	if err == wait.ErrWaitTimeout {
-		return api.NewCloudError(http.StatusBadRequest, errCode, "", "The %s service principal does not have Network Contributor permission on route table '%s'.", dv.authorizerType, rtID)
+		return api.NewCloudError(
+			http.StatusBadRequest,
+			errCode,
+			"",
+			"The %s service principal does not have Network Contributor permission on route table '%s'.",
+			dv.authorizerType,
+			rtID,
+		)
 	}
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		detailedErr.StatusCode == http.StatusNotFound {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedRouteTable, "", "The route table '%s' could not be found.", rtID)
+		return api.NewCloudError(
+			http.StatusBadRequest,
+			api.CloudErrorCodeInvalidLinkedRouteTable,
+			"",
+			"The route table '%s' could not be found.",
+			rtID,
+		)
 	}
 	return err
 }
@@ -281,44 +326,138 @@ func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) 
 		"Microsoft.Network/natGateways/write",
 	})
 	if err == wait.ErrWaitTimeout {
-		return api.NewCloudError(http.StatusBadRequest, errCode, "", "The %s service principal does not have Network Contributor permission on nat gateway '%s'.", dv.authorizerType, ngID)
+		return api.NewCloudError(
+			http.StatusBadRequest,
+			errCode,
+			"",
+			"The %s service principal does not have Network Contributor permission on nat gateway '%s'.",
+			dv.authorizerType,
+			ngID,
+		)
 	}
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		detailedErr.StatusCode == http.StatusNotFound {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedNatGateway, "", "The nat gateway '%s' could not be found.", ngID)
+		return api.NewCloudError(
+			http.StatusBadRequest,
+			api.CloudErrorCodeInvalidLinkedNatGateway,
+			"",
+			"The nat gateway '%s' could not be found.",
+			ngID,
+		)
 	}
 	return err
 }
 
 func (dv *dynamic) validateActions(ctx context.Context, r *azure.Resource, actions []string) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	c := closure{dv: dv, ctx: ctx, resource: r, actions: actions}
+	conditionalFunc := c.usingListPermissions
+	timeout := 20 * time.Second
+	if dv.pdpClient != nil {
+		conditionalFunc = c.usingCheckAccessV2
+		timeout = 65 * time.Second // checkAccess refreshes data every min. This allows ~3 retries.
+	}
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	return wait.PollImmediateUntil(20*time.Second, func() (bool, error) {
-		dv.log.Debug("retry validateActions")
-		perms, err := dv.permissions.ListForResource(ctx, r.ResourceGroup, r.Provider, "", r.ResourceType, r.ResourceName)
+	return wait.PollImmediateUntil(timeout, conditionalFunc, timeoutCtx.Done())
+}
 
-		if detailedErr, ok := err.(autorest.DetailedError); ok &&
-			detailedErr.StatusCode == http.StatusForbidden {
-			return false, steps.ErrWantRefresh
+// closure is the closure used in PollImmediateUntil's ConditionalFunc
+type closure struct {
+	dv       *dynamic
+	ctx      context.Context
+	resource *azure.Resource
+	actions  []string
+	oid      *string
+}
+
+// usingListPermissions is how the current check is done
+func (c closure) usingListPermissions() (bool, error) {
+	c.dv.log.Debug("retry validateActions with ListPermissions")
+	perms, err := c.dv.permissions.ListForResource(
+		c.ctx,
+		c.resource.ResourceGroup,
+		c.resource.Provider,
+		"",
+		c.resource.ResourceType,
+		c.resource.ResourceName,
+	)
+	if err != nil {
+		return false, err
+	}
+
+	for _, action := range c.actions {
+		ok, err := permissions.CanDoAction(perms, action)
+		if !ok || err != nil {
+			// TODO(jminter): I don't understand if there are genuinely
+			// cases where CanDoAction can return false then true shortly
+			// after. I'm a little skeptical; if it can't happen we can
+			// simplify this code.  We should add a metric on this.
+			return false, err
 		}
+	}
+	return true, nil
+}
+
+// usingCheckAccessV2 uses the new RBAC checkAccessV2 API
+func (c closure) usingCheckAccessV2() (bool, error) {
+	// TODO remove this when fully migrated to CheckAccess
+	c.dv.log.Debug("retry validateActions with CheckAccessV2")
+
+	// reusing oid during retries
+	if c.oid == nil {
+		scope := c.dv.azEnv.ResourceManagerEndpoint + "/.default"
+		t, err := c.dv.checkAccessSubjectInfoCred.GetToken(c.ctx, policy.TokenRequestOptions{Scopes: []string{scope}})
 		if err != nil {
 			return false, err
 		}
 
-		for _, action := range actions {
-			ok, err := permissions.CanDoAction(perms, action)
-			if !ok || err != nil {
-				// TODO(jminter): I don't understand if there are genuinely
-				// cases where CanDoAction can return false then true shortly
-				// after. I'm a little skeptical; if it can't happen we can
-				// simplify this code.  We should add a metric on this.
-				return false, err
-			}
+		oid, err := token.GetObjectId(t.Token)
+		if err != nil {
+			return false, err
 		}
+		c.oid = &oid
+	}
 
-		return true, nil
-	}, timeoutCtx.Done())
+	authReq := createAuthorizationRequest(*c.oid, c.resource.String(), c.actions...)
+	results, err := c.dv.pdpClient.CheckAccess(c.ctx, authReq)
+	if err != nil {
+		return false, err
+	}
+
+	if results == nil {
+		c.dv.log.Info("nil response returned from CheckAccessV2")
+		return false, nil
+	}
+
+	for _, result := range results.Value {
+		if result.AccessDecision != remotepdp.Allowed {
+			c.dv.log.Infof("%s has no access to %s", *c.oid, result.ActionId)
+			return false, nil
+		}
+	}
+
+	return true, nil
+}
+
+func createAuthorizationRequest(subject, resourceId string, actions ...string) remotepdp.AuthorizationRequest {
+	actionInfos := []remotepdp.ActionInfo{}
+	for _, action := range actions {
+		actionInfos = append(actionInfos, remotepdp.ActionInfo{Id: action})
+	}
+
+	return remotepdp.AuthorizationRequest{
+		Subject: remotepdp.SubjectInfo{
+			Attributes: remotepdp.SubjectAttributes{
+				ObjectId: subject,
+			},
+		},
+		Actions: actionInfos,
+		Resource: remotepdp.ResourceInfo{
+			Id: resourceId,
+		},
+	}
 }
 
 func (dv *dynamic) validateCIDRRanges(ctx context.Context, subnets []Subnet, additionalCIDRs ...string) error {
@@ -381,7 +520,13 @@ func (dv *dynamic) validateCIDRRanges(ctx context.Context, subnets []Subnet, add
 
 	err := cidr.VerifyNoOverlap(CIDRArray, &net.IPNet{IP: net.IPv4zero, Mask: net.IPMask(net.IPv4zero)})
 	if err != nil {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided CIDRs must not overlap: '%s'.", err)
+		return api.NewCloudError(
+			http.StatusBadRequest,
+			api.CloudErrorCodeInvalidLinkedVNet,
+			"",
+			"The provided CIDRs must not overlap: '%s'.",
+			err,
+		)
 	}
 
 	return nil
@@ -396,7 +541,14 @@ func (dv *dynamic) validateVnetLocation(ctx context.Context, vnetr azure.Resourc
 	}
 
 	if !strings.EqualFold(*vnet.Location, location) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The vnet location '%s' must match the cluster location '%s'.", *vnet.Location, location)
+		return api.NewCloudError(
+			http.StatusBadRequest,
+			api.CloudErrorCodeInvalidLinkedVNet,
+			"",
+			"The vnet location '%s' must match the cluster location '%s'.",
+			*vnet.Location,
+			location,
+		)
 	}
 
 	return nil
@@ -429,7 +581,13 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 			return err
 		}
 		if ss == nil {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, s.Path, "The provided subnet '%s' could not be found.", s.ID)
+			return api.NewCloudError(
+				http.StatusBadRequest,
+				api.CloudErrorCodeInvalidLinkedVNet,
+				s.Path,
+				"The provided subnet '%s' could not be found.",
+				s.ID,
+			)
 		}
 
 		if oc.Properties.ProvisioningState == api.ProvisioningStateCreating {
@@ -441,7 +599,13 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 				}
 
 				if !strings.EqualFold(*ss.SubnetPropertiesFormat.NetworkSecurityGroup.ID, expectedNsgID) {
-					return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, s.Path, "The provided subnet '%s' is invalid: must not have a network security group attached.", s.ID)
+					return api.NewCloudError(
+						http.StatusBadRequest,
+						api.CloudErrorCodeInvalidLinkedVNet,
+						s.Path,
+						"The provided subnet '%s' is invalid: must not have a network security group attached.",
+						s.ID,
+					)
 				}
 			}
 		} else {
@@ -459,7 +623,13 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 
 		if ss.SubnetPropertiesFormat == nil ||
 			ss.SubnetPropertiesFormat.ProvisioningState != mgmtnetwork.Succeeded {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, s.Path, "The provided subnet '%s' is not in a Succeeded state", s.ID)
+			return api.NewCloudError(
+				http.StatusBadRequest,
+				api.CloudErrorCodeInvalidLinkedVNet,
+				s.Path,
+				"The provided subnet '%s' is not in a Succeeded state",
+				s.ID,
+			)
 		}
 
 		_, net, err := net.ParseCIDR(*ss.AddressPrefix)
@@ -469,7 +639,13 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 
 		ones, _ := net.Mask.Size()
 		if ones > 27 {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, s.Path, "The provided subnet '%s' is invalid: must be /27 or larger.", s.ID)
+			return api.NewCloudError(
+				http.StatusBadRequest,
+				api.CloudErrorCodeInvalidLinkedVNet,
+				s.Path,
+				"The provided subnet '%s' is invalid: must be /27 or larger.",
+				s.ID,
+			)
 		}
 	}
 
@@ -511,7 +687,13 @@ func findSubnet(vnet *mgmtnetwork.VirtualNetwork, subnetID string) (*mgmtnetwork
 		}
 	}
 
-	return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided subnet '%s' could not be found.", subnetID)
+	return nil, api.NewCloudError(
+		http.StatusBadRequest,
+		api.CloudErrorCodeInvalidLinkedVNet,
+		"",
+		"The provided subnet '%s' could not be found.",
+		subnetID,
+	)
 }
 
 // uniqueSubnetSlice returns string subnets with unique values only

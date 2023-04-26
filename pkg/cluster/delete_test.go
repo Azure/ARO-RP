@@ -17,6 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestDeleteNic(t *testing.T) {
@@ -112,9 +113,7 @@ func TestDeleteNic(t *testing.T) {
 			}
 
 			err := m.deleteNic(ctx, nicName)
-			if err != nil && err.Error() != tt.wantErr {
-				t.Errorf("got error: '%s'", err.Error())
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

@@ -116,8 +116,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 
-		ocEnricher := f.ocEnricherFactory(log, f.env, f.m)
-		ocEnricher.Enrich(timeoutCtx, doc.OpenShiftCluster)
+		f.clusterEnricher.Enrich(timeoutCtx, log, doc.OpenShiftCluster)
 	}
 
 	var ext interface{}
@@ -195,6 +194,8 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		if err != nil {
 			return nil, err
 		}
+		// TODO: Remove this once 23-04-01 API release is complete.
+		determineOutboundType(ctx, doc, subscription)
 	} else {
 		doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
 
@@ -293,6 +294,11 @@ func (f *frontend) ValidateNewCluster(ctx context.Context, subscription *api.Sub
 	}
 
 	err = f.quotaValidator.ValidateQuota(ctx, f.env.Environment(), f.env, subscription.ID, subscription.Subscription.Properties.TenantID, cluster)
+	if err != nil {
+		return err
+	}
+
+	err = f.providersValidator.ValidateProviders(ctx, f.env.Environment(), f.env, subscription.ID, subscription.Subscription.Properties.TenantID)
 	if err != nil {
 		return err
 	}

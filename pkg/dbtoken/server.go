@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -95,14 +96,8 @@ func NewServer(
 	}, nil
 }
 
-var healthProbe http.Handler = http.HandlerFunc(healthCheck)
-
 func healthCheck(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.NotFound(w, r)
-		return
-	}
-	// empty 200
+	w.WriteHeader(200)
 }
 
 func (s *server) Run(ctx context.Context) error {
@@ -111,15 +106,17 @@ func (s *server) Run(ctx context.Context) error {
 	logHandler := Log(s.accessLog)
 	panicMiddleware := middleware.Panic(s.log)
 
-	muxRouter := http.NewServeMux()
+	chiRouter := chi.NewMux()
 
-	muxRouter.Handle("/healthz/ready", panicMiddleware(logHandler(healthProbe)))
+	chiRouter.Use(panicMiddleware, logHandler)
+
+	chiRouter.Get("/healthz/ready", healthCheck)
 
 	tokenRefresh := panicMiddleware(s.authenticate(logHandler(http.HandlerFunc(s.token))))
-	muxRouter.Handle("/token", tokenRefresh)
+	chiRouter.With(s.authenticate).Post("/token", tokenRefresh.ServeHTTP)
 
 	srv := &http.Server{
-		Handler:     muxRouter,
+		Handler:     chiRouter,
 		ReadTimeout: 10 * time.Second,
 		IdleTimeout: 2 * time.Minute,
 		ErrorLog:    log.New(s.log.Writer(), "", 0),
@@ -157,10 +154,6 @@ func (s *server) authenticate(h http.Handler) http.Handler {
 }
 
 func (s *server) token(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
 	ctx := r.Context()
 
 	permission := r.URL.Query().Get("permission")

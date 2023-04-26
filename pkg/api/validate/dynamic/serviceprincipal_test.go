@@ -5,33 +5,36 @@ package dynamic
 
 import (
 	"context"
-	"crypto/hmac"
-	"crypto/sha512"
-	"encoding/base64"
-	"encoding/json"
-	"fmt"
-	"math/rand"
-	"net/url"
 	"testing"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/adal"
-	"github.com/golang/mock/gomock"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	mock_aad "github.com/Azure/ARO-RP/pkg/util/mocks/aad"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 type tokenRequirements struct {
-	clientID      string
 	clientSecret  string
-	tenantID      string
-	aadEndpoint   string
-	graphEndpoint string
-	resource      string
-	claims        string
-	signMethod    string
+	claims        jwt.MapClaims
+	signingMethod jwt.SigningMethod
+}
+
+type signingMethodFake struct{}
+
+func (m signingMethodFake) Verify(signingString, signature string, key interface{}) error {
+	return nil
+}
+
+func (m signingMethodFake) Sign(signingString string, key interface{}) (string, error) {
+	return "", nil
+}
+
+func (m signingMethodFake) Alg() string {
+	return "fake"
 }
 
 func TestValidateServicePrincipal(t *testing.T) {
@@ -39,131 +42,57 @@ func TestValidateServicePrincipal(t *testing.T) {
 	log := logrus.NewEntry(logrus.StandardLogger())
 
 	for _, tt := range []struct {
-		tr          *tokenRequirements
-		name        string
-		wantErr     string
-		aadMock     func(*mock_aad.MockTokenClient, *tokenRequirements)
-		getTokenErr error
+		tr      *tokenRequirements
+		name    string
+		wantErr string
 	}{
 		{
 			name: "pass: Successful Validation",
-			tr:   newTokenRequirements(),
+			tr: &tokenRequirements{
+				clientSecret:  "my-secret",
+				signingMethod: jwt.SigningMethodHS256,
+			},
 		},
 		{
 			name: "fail: Provided service must not have Application.ReadWrite.OwnedBy permission",
 			tr: &tokenRequirements{
-				clientID:      "my-client",
 				clientSecret:  "my-secret",
-				tenantID:      "my-tenant.example.com",
-				aadEndpoint:   "https://login.microsoftonline.com/",
-				graphEndpoint: "https://graph.windows.net/",
-				resource:      "https://management.azure.com/",
-				claims:        `{ "Roles":["Application.ReadWrite.OwnedBy"] }`,
+				claims:        jwt.MapClaims{"roles": []string{"Application.ReadWrite.OwnedBy"}},
+				signingMethod: jwt.SigningMethodHS256,
 			},
 			wantErr: "400: InvalidServicePrincipalCredentials: properties.servicePrincipalProfile: The provided service principal must not have the Application.ReadWrite.OwnedBy permission.",
 		},
 		{
-			name:        "fail: Provided service must not have Application.ReadWrite.OwnedBy permission",
-			tr:          newTokenRequirements(),
-			getTokenErr: fmt.Errorf("parameter activeDirectoryEndpoint cannot be empty"),
-			wantErr:     "parameter activeDirectoryEndpoint cannot be empty",
-		},
-		{
 			name: "fail: unavailable signing method",
 			tr: &tokenRequirements{
-				clientID:      "my-client",
 				clientSecret:  "my-secret",
-				tenantID:      "my-tenant.example.com",
-				aadEndpoint:   "https://login.microsoftonline.com/",
-				graphEndpoint: "https://graph.windows.net/",
-				resource:      "https://management.azure.com/",
-				claims:        `{ "Roles":["Application.ReadWrite.OwnedBy"] }`,
-				signMethod:    "fake-signing-method",
+				claims:        jwt.MapClaims{"roles": []string{"Application.ReadWrite.OwnedBy"}},
+				signingMethod: signingMethodFake{},
 			},
 			wantErr: "400: InvalidServicePrincipalCredentials: properties.servicePrincipalProfile: signing method (alg) is unavailable.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			aad := mock_aad.NewMockTokenClient(controller)
-
-			token, err := createToken(tt.tr)
-			if err != nil {
-				t.Errorf("failed to create testing service principal token: %v\n", err)
-			}
-
-			spDynamic, err := NewServicePrincipalValidator(log, &azureclient.PublicCloud, AuthorizerClusterServicePrincipal, aad)
+			spDynamic, err := NewServicePrincipalValidator(log, &azureclient.PublicCloud, AuthorizerClusterServicePrincipal)
 			if err != nil {
 				t.Errorf("failed to create ServicePrincipalDynamicValidator: %v\n", err)
 			}
 
-			aad.EXPECT().GetToken(ctx, log, tt.tr.clientID, tt.tr.clientSecret, tt.tr.tenantID, tt.tr.aadEndpoint, tt.tr.graphEndpoint).MaxTimes(1).Return(token, tt.getTokenErr)
-
-			err = spDynamic.ValidateServicePrincipal(ctx, tt.tr.clientID, tt.tr.clientSecret, tt.tr.tenantID)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Errorf("\n%s\n !=\n%s", err, tt.wantErr)
-			}
+			err = spDynamic.ValidateServicePrincipal(ctx, tt.tr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
 
-// createToken manually creates an adal.ServicePrincipalToken
-func createToken(tr *tokenRequirements) (*adal.ServicePrincipalToken, error) {
-	if tr.signMethod == "" {
-		tr.signMethod = "HS256"
-	}
-	claimsEnc := base64.StdEncoding.EncodeToString([]byte(tr.claims))
-	headerEnc := base64.StdEncoding.EncodeToString([]byte(`{ "alg": "` + tr.signMethod + `", "typ": "JWT" }`))
-	signatureEnc := base64.StdEncoding.EncodeToString(
-		hmac.New(sha512.New, []byte(headerEnc+claimsEnc+tr.clientSecret)).Sum(nil),
-	)
-
-	r := rand.New(rand.NewSource(time.Now().UnixMicro()))
-	tk := adal.Token{
-		AccessToken:  headerEnc + "." + claimsEnc + "." + signatureEnc,
-		RefreshToken: fmt.Sprintf("rand-%d", r.Int()),
-		ExpiresIn:    json.Number("300"),
-		Resource:     tr.resource,
-		Type:         "refresh",
+// GetToken allows tokenRequirements to be used as an azcore.TokenCredential.
+func (tr *tokenRequirements) GetToken(ctx context.Context, options policy.TokenRequestOptions) (azcore.AccessToken, error) {
+	token, err := jwt.NewWithClaims(tr.signingMethod, tr.claims).SignedString([]byte(tr.clientSecret))
+	if err != nil {
+		return azcore.AccessToken{}, err
 	}
 
-	aadUrl, err := url.Parse(tr.aadEndpoint)
-	if err != nil {
-		return nil, err
-	}
-	authUrl, err := url.Parse("https://login.microsoftonline.com/my-tenant.example.com/oauth2/authorize")
-	if err != nil {
-		return nil, err
-	}
-	tokenUrl, err := url.Parse("https://login.microsoftonline.com/my-tenant.example.com/oauth2/token")
-	if err != nil {
-		return nil, err
-	}
-	if err != nil {
-		return nil, err
-	}
-	deviceCodeUrl, err := url.Parse("https://devicecode.com")
-	if err != nil {
-		return nil, err
-	}
-	return adal.NewServicePrincipalTokenFromManualToken(adal.OAuthConfig{
-		AuthorityEndpoint:  *aadUrl,
-		AuthorizeEndpoint:  *authUrl,
-		TokenEndpoint:      *tokenUrl,
-		DeviceCodeEndpoint: *deviceCodeUrl,
-	}, tr.clientID, tr.resource, tk)
-}
-
-func newTokenRequirements() *tokenRequirements {
-	return &tokenRequirements{
-		clientID:      "my-client",
-		clientSecret:  "my-secret",
-		tenantID:      "my-tenant.example.com",
-		aadEndpoint:   "https://login.microsoftonline.com/",
-		graphEndpoint: "https://graph.windows.net/",
-		resource:      "https://management.azure.com/",
-		claims:        `{}`,
-		signMethod:    "HS256",
-	}
+	return azcore.AccessToken{
+		Token:     token,
+		ExpiresOn: time.Now().Add(10 * time.Minute),
+	}, nil
 }

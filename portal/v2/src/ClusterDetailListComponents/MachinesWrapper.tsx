@@ -1,20 +1,19 @@
 import { useState, useEffect, useRef } from "react"
-import { AxiosResponse } from 'axios';
-import { FetchMachines, FetchVMAllocationStatus } from '../Request';
+import { AxiosResponse } from "axios"
+import { fetchMachines } from "../Request"
 import { ICluster } from "../App"
-import { MachinesListComponent } from './MachinesList';
-import { IMessageBarStyles, MessageBar, MessageBarType, Stack } from '@fluentui/react';
-import { machinesKey } from "../ClusterDetail";
-
+import { MachinesListComponent } from "./MachinesList"
+import { IMessageBarStyles, MessageBar, MessageBarType, Stack } from "@fluentui/react"
+import { machinesKey } from "../ClusterDetail"
 
 export interface IMachine {
-  name?: string,
-  createdTime: string,
-  lastUpdated: string,
-  errorReason: string,
-  errorMessage: string,
-  lastOperation: string,
-  lastOperationDate: string,
+  name?: string
+  createdTime: string
+  lastUpdated: string
+  errorReason: string
+  errorMessage: string
+  lastOperation: string
+  lastOperationDate: string
   status: string
 }
 
@@ -24,7 +23,6 @@ export function MachinesWrapper(props: {
   loaded: boolean
 }) {
   const [data, setData] = useState<any>([])
-  const [vmAllocationstatus, setVmallocationstatus] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
   const state = useRef<MachinesListComponent>(null)
   const [fetching, setFetching] = useState("")
@@ -38,8 +36,7 @@ export function MachinesWrapper(props: {
         isMultiline={false}
         onDismiss={() => setError(null)}
         dismissButtonAriaLabel="Close"
-        styles={errorBarStyles}
-      >
+        styles={errorBarStyles}>
         {error?.statusText}
       </MessageBar>
     )
@@ -52,38 +49,31 @@ export function MachinesWrapper(props: {
     setData(newData)
     const machineList: IMachine[] = []
     if (state && state.current) {
-      newData.machines.forEach((element: { name: string;
-                                           createdTime: string;
-                                           lastUpdated: string;
-                                           errorReason: string;
-                                           errorMessage: string;
-                                           lastOperation: string;
-                                           lastOperationDate: string;
-                                           status: string; }) => {
-        const machine: IMachine = {
-          name: element.name,
-          createdTime: element.createdTime,
-          lastUpdated: element.lastUpdated,
-          errorReason: element.errorReason,
-          errorMessage: element.errorMessage,
-          lastOperation: element.lastOperation,
-          lastOperationDate: element.lastOperationDate,
-          status: element.status,
+      newData.machines.forEach(
+        (element: {
+          name: string
+          createdTime: string
+          lastUpdated: string
+          errorReason: string
+          errorMessage: string
+          lastOperation: string
+          lastOperationDate: string
+          status: string
+        }) => {
+          const machine: IMachine = {
+            name: element.name,
+            createdTime: element.createdTime,
+            lastUpdated: element.lastUpdated,
+            errorReason: element.errorReason,
+            errorMessage: element.errorMessage,
+            lastOperation: element.lastOperation,
+            lastOperationDate: element.lastOperationDate,
+            status: element.status,
+          }
+          machineList.push(machine)
         }
-        machineList.push(machine)
-      });
+      )
       state.current.setState({ machines: machineList })
-    }
-  }
-
-  const updateVMAllocationStatusData = (newData: any) => {
-    let map = new Map<string, string>()  
-    for (var key in newData) {
-      map.set(key, newData[key])
-    } 
-    setVmallocationstatus(map)
-    if (state && state.current) {
-      state.current.setState({ vmAllocationStatus: map })
     }
   }
 
@@ -97,30 +87,27 @@ export function MachinesWrapper(props: {
       setFetching(props.currentCluster.name)
     }
 
-    const onVMAllocationStatusData = (result: AxiosResponse | null) => {
-      if (result?.status === 200) {
-        updateVMAllocationStatusData(result.data)
-      } else {
-        setError(result)
-      }
-    }
-
-    if (props.detailPanelSelected.toLowerCase() == machinesKey && 
-        fetching === "" &&
-        props.loaded &&
-        props.currentCluster.name != "") {
+    if (
+      props.detailPanelSelected.toLowerCase() == machinesKey &&
+      fetching === "" &&
+      props.loaded &&
+      props.currentCluster.name != ""
+    ) {
       setFetching("FETCHING")
-      FetchMachines(props.currentCluster).then(onData)
-      FetchVMAllocationStatus(props.currentCluster).then(onVMAllocationStatusData)
+      fetchMachines(props.currentCluster).then(onData)
     }
-  }, [data, props.loaded, props.detailPanelSelected, vmAllocationstatus])
+  }, [data, props.loaded, props.detailPanelSelected])
 
   return (
     <Stack>
       <Stack.Item grow>{error && errorBar()}</Stack.Item>
       <Stack>
-        <MachinesListComponent vmAllocationStatus={vmAllocationstatus} machines={data!} ref={state} clusterName={props.currentCluster != null ? props.currentCluster.name : ""} />
+        <MachinesListComponent
+          machines={data!}
+          ref={state}
+          clusterName={props.currentCluster != null ? props.currentCluster.name : ""}
+        />
       </Stack>
-    </Stack>   
+    </Stack>
   )
 }
