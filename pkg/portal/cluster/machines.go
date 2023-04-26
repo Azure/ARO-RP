@@ -5,9 +5,15 @@ package cluster
 
 import (
 	"context"
+	"strings"
 
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 )
 
 type MachinesInformation struct {
@@ -59,7 +65,47 @@ func (c *client) Machines(ctx context.Context) (*MachineListInformation, error) 
 	return c.fetcher.Machines(ctx)
 }
 
+func (c *azureClient) VMAllocationStatus(ctx context.Context) (map[string]string, error) {
+	return c.fetcher.vmAllocationStatus(ctx)
+}
+
+func (f *azureSideFetcher) vmAllocationStatus(ctx context.Context) (map[string]string, error) {
+	subscriptionDoc := f.subscriptionDoc
+	clusterRGName := f.resourceGroupName
+	aroEnvironment := f.env.Environment()
+	spAuthorizer := f.spAuthorizer
+	computeResources, err := f.resourceClientFactory.NewResourcesClient(aroEnvironment, subscriptionDoc.ID, spAuthorizer).ListByResourceGroup(ctx, clusterRGName, "resourceType eq 'Microsoft.Compute/virtualMachines'", "", nil)
+	if err != nil {
+		return nil, err
+	}
+	vmAllocationStatus := make(map[string]string)
+	virtualMachineClient := f.virtualMachinesClientFactory.NewVirtualMachinesClient(aroEnvironment, subscriptionDoc.ID, spAuthorizer)
+	for _, res := range computeResources {
+		putAllocationStatusToMap(ctx, clusterRGName, vmAllocationStatus, res, virtualMachineClient, f.log)
+	}
+
+	return vmAllocationStatus, nil
+}
+
 // Helper Functions
+func putAllocationStatusToMap(ctx context.Context, clusterRGName string, vmAllocationStatus map[string]string, res mgmtfeatures.GenericResourceExpanded, virtualMachineClient compute.VirtualMachinesClient, log *logrus.Entry) {
+	vm, err := virtualMachineClient.Get(ctx, clusterRGName, *res.Name, mgmtcompute.InstanceView)
+	if err != nil {
+		log.Warn(err) // can happen when the ARM cache is lagging
+		return
+	}
+
+	vmName := *vm.Name
+	instanceViewStatuses := vm.InstanceView.Statuses
+	for _, status := range *instanceViewStatuses {
+		if strings.HasPrefix(*status.Code, "PowerState/") {
+			vmAllocationStatus[vmName] = *status.Code
+			return
+		}
+	}
+	vmAllocationStatus[vmName] = ""
+}
+
 func getLastOperation(machine machinev1beta1.Machine) string {
 	lastOperation := "Unknown"
 	if machine.Status.LastOperation != nil &&
