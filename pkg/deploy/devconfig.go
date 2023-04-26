@@ -117,8 +117,13 @@ func DevConfig(_env env.Core) (*Config, error) {
 			ClusterMDSDConfigVersion:     to.StringPtr(version.DevClusterGenevaLoggingConfigVersion),
 			ClusterMDSDNamespace:         to.StringPtr(version.DevClusterGenevaLoggingNamespace),
 			ClusterParentDomainName:      to.StringPtr(os.Getenv("USER") + "-clusters." + os.Getenv("PARENT_DOMAIN_NAME")),
-			DBTokenClientID:              to.StringPtr(os.Getenv("AZURE_DBTOKEN_CLIENT_ID")),
-			DisableCosmosDBFirewall:      to.BoolPtr(true),
+			CosmosDB: &CosmosDBConfiguration{
+				StandardProvisionedThroughput: 1000,
+				PortalProvisionedThroughput:   400,
+				GatewayProvisionedThroughput:  400,
+			},
+			DBTokenClientID:         to.StringPtr(os.Getenv("AZURE_DBTOKEN_CLIENT_ID")),
+			DisableCosmosDBFirewall: to.BoolPtr(true),
 			ExtraClusterKeyvaultAccessPolicies: []interface{}{
 				adminKeyvaultAccessPolicy(_env),
 			},

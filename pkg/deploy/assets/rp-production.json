@@ -80,6 +80,14 @@
             "type": "string",
             "defaultValue": ""
         },
+        "cosmosDB": {
+            "type": "object",
+            "defaultValue": {
+                "gatewayProvisionedThroughput": 400,
+                "portalProvisionedThroughput": 400,
+                "standardProvisionedThroughput": 1000
+            }
+        },
         "databaseAccountName": {
             "type": "string"
         },
@@ -772,7 +780,7 @@
                     "id": "['ARO']"
                 },
                 "options": {
-                    "throughput": 1000
+                    "throughput": "[parameters('cosmosDB').standardProvisionedThroughput]"
                 }
             },
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO')]",
@@ -886,7 +894,7 @@
                     "defaultTtl": -1
                 },
                 "options": {
-                    "throughput": 400
+                    "throughput": "[parameters('cosmosDB').gatewayProvisionedThroughput]"
                 }
             },
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Gateway')]",
@@ -975,7 +983,7 @@
                     "defaultTtl": -1
                 },
                 "options": {
-                    "throughput": 400
+                    "throughput": "[parameters('cosmosDB').portalProvisionedThroughput]"
                 }
             },
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Portal')]",
