@@ -18,7 +18,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
 
-// NOTE: Make sure to change and always return 200, with any errors inside of the response message
 // /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/deployments/{deploymentName}/preflight?api-version={api-version}
 func (f *frontend) preflightValidation(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -82,7 +81,7 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 			Error:  err,
 		}
 	}
-	// portal extentsion repo should have a template
+
 	// unmarshal raw to OpenShiftCluster type
 	doc := &api.OpenShiftCluster{}
 	if !f.env.IsLocalDevelopmentMode() /* not local dev or CI */ {
