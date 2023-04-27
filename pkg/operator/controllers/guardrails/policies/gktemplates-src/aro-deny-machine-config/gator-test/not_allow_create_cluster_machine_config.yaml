@@ -12,4 +12,3 @@ request:
     metadata:
       name: 00-master
   dryRun: true
-  
