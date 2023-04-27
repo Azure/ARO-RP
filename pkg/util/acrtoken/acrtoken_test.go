@@ -143,9 +143,11 @@ func TestRotateTokenPassword(t *testing.T) {
 	credentialResult := mgmtcontainerregistry.GenerateCredentialsResult{
 		Passwords: &[]mgmtcontainerregistry.TokenPassword{
 			{
+				Name:  mgmtcontainerregistry.TokenPasswordNamePassword1,
 				Value: to.StringPtr("foo"),
 			},
 			{
+				Name:  mgmtcontainerregistry.TokenPasswordNamePassword2,
 				Value: to.StringPtr("bar"),
 			},
 		},
