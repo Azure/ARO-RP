@@ -72,6 +72,7 @@ export const apiStatisticsKey = "apistatistics"
 export const kcmStatisticsKey = "kcmstatistics"
 export const dnsStatisticsKey = "dnsstatistics"
 export const ingressStatisticsKey = "ingressstatistics"
+export const clusterOperatorsKey = "clusteroperators"
 
 const errorBarStyles: Partial<IMessageBarStyles> = { root: { marginBottom: 15 } }
 
@@ -115,20 +116,20 @@ export function ClusterDetailPanel(props: {
         {
           name: "Overview",
           key: overviewKey,
-          url: "#overview",
-          icon: "ThisPC",
+          url: '#overview',
+          icon: 'Info',
         },
         {
           name: "Nodes",
           key: nodesKey,
-          url: "#nodes",
-          icon: "BuildQueue",
+          url: '#nodes',
+          icon: 'BranchCommit',
         },
         {
           name: "Machines",
           key: machinesKey,
-          url: "#machines",
-          icon: "BuildQueue",
+          url: '#machines',
+          icon: 'ConnectVirtualMachine',
         },
         {
           name: "MachineSets",
@@ -159,6 +160,12 @@ export function ClusterDetailPanel(props: {
           key: ingressStatisticsKey,
           url: "#ingressstatistics",
           icon: "BIDashboard",
+        },
+        {
+          name: 'ClusterOperators',
+          key: clusterOperatorsKey,
+          url: '#clusteroperators',
+          icon: 'Shapes',
         },
       ],
     },
