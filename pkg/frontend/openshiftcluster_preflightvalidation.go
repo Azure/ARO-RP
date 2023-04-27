@@ -6,18 +6,21 @@ package frontend
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
 
+var validationSuccess = api.ValidationResult{
+	Status: api.ValidationStatusSucceeded,
+}
+
+// Preflight always returns a 200 status
 // /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/deployments/{deploymentName}/preflight?api-version={api-version}
 func (f *frontend) preflightValidation(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -27,101 +30,70 @@ func (f *frontend) preflightValidation(w http.ResponseWriter, r *http.Request) {
 	var b []byte
 
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
-	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
-	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData)
-	originalPath := r.Context().Value(middleware.ContextKeyOriginalPath).(string)
-	referer := r.Header.Get("Referer")
-
-	subId := chi.URLParam(r, "subscriptionId")
-	resourceGroupName := chi.URLParam(r, "resourceGroupName")
 
 	resources, err := unmarshalRequest(body)
-	if err != nil {
-		log.Warningf("Bad Request. The request content was invalid and could not be deserialized: %s.", err)
-	} else {
-		resourceCount := len(resources.Resources)
-		ch := make(chan api.ValidationResult, resourceCount)
+	if err == nil {
 		for _, raw := range resources.Resources {
 			// get typeMeta from the raw data
-			typeMeta := &api.ResourceTypeMeta{}
-			err = json.Unmarshal(raw, &typeMeta)
-			if err != nil {
+			typeMeta := api.ResourceTypeMeta{}
+			if err := json.Unmarshal(raw, &typeMeta); err != nil {
 				// failing to parse the preflight body is not considered a validation failure. continue
-				log.Warningf("Bad request. Failed to unmarshal ResourceTypeMeta: %s", err)
+				log.Warningf("bad request. Failed to unmarshal ResourceTypeMeta: %s", err)
 				continue
 			}
 			if strings.EqualFold(typeMeta.Type, "Microsoft.RedHatOpenShift/openShiftClusters") {
-				path := PreflightResourceId(subId, resourceGroupName, typeMeta.Name)
-				ch <- f._preflightValidation(ctx, log, raw, correlationData, systemData, path, originalPath, r.Method, referer, &header, f.apis[typeMeta.APIVersion].OpenShiftClusterConverter, f.apis[typeMeta.APIVersion].OpenShiftClusterStaticValidator, subId, typeMeta.APIVersion, resourceGroupName)
-			}
-		}
-		close(ch)
-
-		for res := range ch {
-			// go through and serialize into an array and make that the return body
-			if res.Status == api.ValidationStatusFailed {
-				log.Error("preflight validation failed with: %s", res.Error)
-				resultByte, err := json.Marshal(res.Error)
-				if err != nil {
-					log.Warningf("The response could not be serialized: %s.", err)
-				} else {
-					b = append(b, resultByte...)
+				res := f._preflightValidation(ctx, log, raw, typeMeta.APIVersion)
+				if res.Status == api.ValidationStatusFailed {
+					log.Warningf("preflight validation failed")
+					b = marshalValidationResult(res)
+					reply(log, w, header, b, statusCodeError(http.StatusOK))
+					return
 				}
 			}
 		}
+		log.Info("preflight validation succeeded")
+		b = marshalValidationResult(validationSuccess)
+		reply(log, w, header, b, statusCodeError(http.StatusOK))
+	} else {
+		b = marshalValidationResult(api.ValidationResult{
+			Status: api.ValidationStatusFailed,
+			Error: &api.ManagementErrorWithDetails{
+				Message: to.StringPtr(err.Error()),
+			},
+		})
+		reply(log, w, header, b, statusCodeError(http.StatusOK))
 	}
-	reply(log, w, header, b, nil)
 }
 
-func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, raw json.RawMessage, correlationData *api.CorrelationData, systemData *api.SystemData, path, originalPath, method, referer string, header *http.Header, converter api.OpenShiftClusterConverter, staticValidator api.OpenShiftClusterStaticValidator, subId, apiVersion string, resourceGroupName string) api.ValidationResult {
-	subscription, err := f.validateSubscriptionState(ctx, path, api.SubscriptionStateRegistered)
-	if err != nil {
-		return api.ValidationResult{
-			Status: api.ValidationStatusFailed,
-			Error:  err,
-		}
-	}
-
+func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, raw json.RawMessage, apiVersion string) api.ValidationResult {
 	// unmarshal raw to OpenShiftCluster type
 	doc := &api.OpenShiftCluster{}
+	doc.Properties.ProvisioningState = api.ProvisioningStateSucceeded
+
 	if !f.env.IsLocalDevelopmentMode() /* not local dev or CI */ {
 		doc.Properties.FeatureProfile.GatewayEnabled = true
 	}
 
-	var ext interface{}
-	ext = converter.ToExternal(doc)
-	err = json.Unmarshal(raw, &ext)
-	if err != nil {
+	converter := f.apis[apiVersion].OpenShiftClusterConverter
+	ext := converter.ToExternal(doc)
+	if err := json.Unmarshal(raw, &ext); err != nil {
 		return api.ValidationResult{
 			Status: api.ValidationStatusFailed,
-			Error:  err,
+			Error: &api.ManagementErrorWithDetails{
+				Message: to.StringPtr(err.Error()),
+			},
 		}
 	}
 
-	// For Put operation
 	converter.ToInternal(ext, doc)
-	err = staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sV3Workers), path)
-	if err != nil {
-		return api.ValidationResult{
-			Status: api.ValidationStatusFailed,
-			Error:  err,
-		}
-	}
 
-	// NOTE: Check if doc is set here or blank
-	err = f.skuValidator.ValidateVMSku(ctx, f.env.Environment(), f.env, subscription.ID, subscription.Subscription.Properties.TenantID, doc.Location, string(doc.Properties.MasterProfile.VMSize), doc.Properties.WorkerProfiles)
-	if err != nil {
+	if err := f.validateInstallVersion(ctx, doc); err != nil {
 		return api.ValidationResult{
 			Status: api.ValidationStatusFailed,
-			Error:  err,
-		}
-	}
-
-	err = f.validateInstallVersion(ctx, doc)
-	if err != nil {
-		return api.ValidationResult{
-			Status: api.ValidationStatusFailed,
-			Error:  err,
+			Error: &api.ManagementErrorWithDetails{
+				Code:    to.StringPtr(api.CloudErrorCodeInvalidParameter),
+				Message: to.StringPtr(err.Error()),
+			},
 		}
 	}
 
@@ -131,16 +103,16 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 func unmarshalRequest(body []byte) (*api.PreflightRequest, error) {
 	preflightRequest := &api.PreflightRequest{}
 	if err := json.Unmarshal(body, preflightRequest); err != nil {
-		return nil, fmt.Errorf("Failed to ummarshal preflightRequest: %w", err)
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
 	}
 	return preflightRequest, nil
 }
 
-// String function returns a string in form of azureResourceID
-func PreflightResourceId(subId string, resourceGroupName string, resourceName string) string {
-	return fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s", subId, resourceGroupName, resourceName)
-}
-
-var validationSuccess = api.ValidationResult{
-	Status: api.ValidationStatusSucceeded,
+func marshalValidationResult(results api.ValidationResult) []byte {
+	body, err := json.Marshal(results)
+	if err != nil {
+		return nil
+	} else {
+		return body
+	}
 }

@@ -1,5 +1,8 @@
 package api
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"encoding/json"
 )
@@ -11,14 +14,19 @@ type PreflightRequest struct {
 
 // ValidationResult is the validation result to return in the deployment preflight response body
 type ValidationResult struct {
-	Status ValidationStatus `json:"status"`
-	Error  error            `json:"error,omitempty"`
+	Status ValidationStatus            `json:"status"`
+	Error  *ManagementErrorWithDetails `json:"error,omitempty"`
 }
 
-// TypeMeta describes an individual API model object
-type TypeMeta struct {
-	// APIVersion is on every object
-	APIVersion string `json:"apiVersion"`
+type ManagementErrorWithDetails struct {
+	// Code - The error code returned from the server.
+	Code *string `json:"code,omitempty"`
+	// Message - The error message returned from the server.
+	Message *string `json:"message,omitempty"`
+	// Target - The target of the error.
+	Target *string `json:"target,omitempty"`
+	// Details - Validation error.
+	Details *[]ManagementErrorWithDetails `json:"details,omitempty"`
 }
 
 // ResourceTypeMeta is the Typemeta inside request body of preflight
@@ -26,8 +34,8 @@ type ResourceTypeMeta struct {
 	Name       string `json:"name"`
 	Type       string `json:"type"`
 	Location   string `json:"location"`
+	APIVersion string `json:"apiVersion"`
 	Properties `json:"properties"`
-	TypeMeta
 }
 
 type Properties map[string]interface{}

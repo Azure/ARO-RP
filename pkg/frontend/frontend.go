@@ -274,8 +274,8 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 			})
 		})
 
-		r.Route("/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/deployments/{deploymentName}/preflight?api-version={api-version}", func(r chi.Router) {
-			r.Use(f.apiVersionMiddleware.ValidateAPIVersion)
+		r.Route("/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/deployments/{deploymentName}/preflight", func(r chi.Router) {
+			r.Use(f.apiVersionMiddleware.ValidatePreflightAPIVersion)
 			r.Post("/", f.preflightValidation)
 		})
 

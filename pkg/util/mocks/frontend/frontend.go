@@ -126,17 +126,17 @@ func (m *MockSkuValidator) EXPECT() *MockSkuValidatorMockRecorder {
 }
 
 // ValidateVMSku mocks base method.
-func (m *MockSkuValidator) ValidateVMSku(arg0 context.Context, arg1 *azureclient.AROEnvironment, arg2 env.Interface, arg3, arg4, arg5, arg6 string, arg7 []api.WorkerProfile) error {
+func (m *MockSkuValidator) ValidateVMSku(arg0 context.Context, arg1 *azureclient.AROEnvironment, arg2 env.Interface, arg3, arg4 string, arg5 *api.OpenShiftCluster) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateVMSku", arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+	ret := m.ctrl.Call(m, "ValidateVMSku", arg0, arg1, arg2, arg3, arg4, arg5)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ValidateVMSku indicates an expected call of ValidateVMSku.
-func (mr *MockSkuValidatorMockRecorder) ValidateVMSku(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 interface{}) *gomock.Call {
+func (mr *MockSkuValidatorMockRecorder) ValidateVMSku(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateVMSku", reflect.TypeOf((*MockSkuValidator)(nil).ValidateVMSku), arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateVMSku", reflect.TypeOf((*MockSkuValidator)(nil).ValidateVMSku), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
 // MockProvidersValidator is a mock of ProvidersValidator interface.

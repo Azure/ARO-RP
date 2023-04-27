@@ -18,7 +18,7 @@ import (
 )
 
 type SkuValidator interface {
-	ValidateVMSku(ctx context.Context, azEnv *azureclient.AROEnvironment, environment env.Interface, subscriptionID, tenantID string, location string, masterProfileSku string, workerProfiles []api.WorkerProfile) error
+	ValidateVMSku(ctx context.Context, azEnv *azureclient.AROEnvironment, environment env.Interface, subscriptionID, tenantID string, oc *api.OpenShiftCluster) error
 }
 
 type skuValidator struct{}
@@ -30,13 +30,14 @@ func (s skuValidator) ValidateVMSku(ctx context.Context, azEnv *azureclient.AROE
 	}
 	resourceSkusClient := compute.NewResourceSkusClient(azEnv, subscriptionID, fpAuthorizer)
 
-	return validateVMSku(ctx, resourceSkusClient, location, masterProfileSku, workerProfiles)
+	return validateVMSku(ctx, oc, resourceSkusClient)
 }
 
 // validateVMSku uses resourceSkusClient to ensure that the VM sizes listed in the cluster document are available for use in the target region.
-func validateVMSku(ctx context.Context, resourceSkusClient compute.ResourceSkusClient, location string, masterProfileSku string, workerProfiles []api.WorkerProfile) error {
+func validateVMSku(ctx context.Context, oc *api.OpenShiftCluster, resourceSkusClient compute.ResourceSkusClient) error {
 	// Get a list of available worker SKUs, filtering by location. We initialized a new resourceSkusClient
 	// so that we can determine SKU availability within target cluster subscription instead of within RP subscription.
+	location := oc.Location
 	filter := fmt.Sprintf("location eq %s", location)
 	skus, err := resourceSkusClient.List(ctx, filter)
 	if err != nil {
@@ -44,6 +45,7 @@ func validateVMSku(ctx context.Context, resourceSkusClient compute.ResourceSkusC
 	}
 
 	filteredSkus := computeskus.FilterVMSizes(skus, location)
+	masterProfileSku := string(oc.Properties.MasterProfile.VMSize)
 
 	err = checkSKUAvailability(filteredSkus, location, "properties.masterProfile.VMSize", masterProfileSku)
 	if err != nil {
@@ -52,7 +54,7 @@ func validateVMSku(ctx context.Context, resourceSkusClient compute.ResourceSkusC
 
 	// In case there are multiple WorkerProfiles listed in the cluster document (such as post-install),
 	// compare VMSize in each WorkerProfile to the resourceSkusClient call above to ensure that the sku is available in region.
-	for i, workerprofile := range workerProfiles {
+	for i, workerprofile := range oc.Properties.WorkerProfiles {
 		workerProfileSku := string(workerprofile.VMSize)
 
 		err = checkSKUAvailability(filteredSkus, location, fmt.Sprintf("properties.workerProfiles[%d].VMSize", i), workerProfileSku)
