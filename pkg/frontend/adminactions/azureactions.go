@@ -5,7 +5,6 @@ package adminactions
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -132,18 +131,9 @@ func (a *azureActions) VMResize(ctx context.Context, vmName string, size string)
 }
 
 func (a *azureActions) AppLensGetDetector(ctx context.Context, detectorId string) ([]byte, error) {
-	resp, err := a.appLens.GetDetector(ctx, &applens.GetDetectorOptions{ResourceID: a.oc.ID, DetectorID: detectorId})
-
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(resp.Body)
+	return a.appLens.GetDetector(ctx, &applens.GetDetectorOptions{ResourceID: a.oc.ID, DetectorID: detectorId})
 }
 
 func (a *azureActions) AppLensListDetectors(ctx context.Context) ([]byte, error) {
-	resp, err := a.appLens.ListDetectors(ctx, &applens.ListDetectorsOptions{ResourceID: a.oc.ID})
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(resp.Body)
+	return a.appLens.ListDetectors(ctx, &applens.ListDetectorsOptions{ResourceID: a.oc.ID})
 }

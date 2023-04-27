@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -77,7 +78,7 @@ func newPipeline(authPolicy []policy.Policy, options *ClientOptions, issuerUrlTe
 // o - Options for Read operation.
 func (c *Client) ListDetectors(
 	ctx context.Context,
-	o *ListDetectorsOptions) (*http.Response, error) {
+	o *ListDetectorsOptions) ([]byte, error) {
 	if o == nil {
 		o = &ListDetectorsOptions{}
 	}
@@ -90,7 +91,9 @@ func (c *Client) ListDetectors(
 		return nil, err
 	}
 
-	return azResponse, nil
+	defer azResponse.Body.Close()
+
+	return io.ReadAll(azResponse.Body)
 }
 
 // GetDetector obtains detector information from AppLens.
@@ -98,7 +101,7 @@ func (c *Client) ListDetectors(
 // o - Options for Read operation.
 func (c *Client) GetDetector(
 	ctx context.Context,
-	o *GetDetectorOptions) (*http.Response, error) {
+	o *GetDetectorOptions) ([]byte, error) {
 	if o == nil {
 		o = &GetDetectorOptions{}
 	}
@@ -111,7 +114,9 @@ func (c *Client) GetDetector(
 		return nil, err
 	}
 
-	return azResponse, nil
+	defer azResponse.Body.Close()
+
+	return io.ReadAll(azResponse.Body)
 }
 
 func (c *Client) sendPostRequest(
