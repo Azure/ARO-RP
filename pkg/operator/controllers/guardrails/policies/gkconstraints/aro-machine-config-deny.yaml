@@ -6,5 +6,5 @@ spec:
   enforcementAction: {{.Enforcement}}
   match:
     kinds:
-      - apiGroups: [""]
+      - apiGroups: ["machineconfiguration.openshift.io"]
         kinds: ["MachineConfig"]

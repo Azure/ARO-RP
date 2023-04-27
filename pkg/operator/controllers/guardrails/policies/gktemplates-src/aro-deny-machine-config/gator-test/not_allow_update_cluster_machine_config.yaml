@@ -8,12 +8,12 @@ request:
     uid: 45884572-1cab-49e5-be4c-1d2eb0299776
   object:
     kind: MachineConfig
-    apiVersion: v1
+    apiVersion: machineconfiguration.openshift.io/v1
     metadata:
       name: 99-worker-generated-crio-fake
   oldObject:
     kind: MachineConfig
-    apiVersion: v1
+    apiVersion: machineconfiguration.openshift.io/v1
     metadata:
       name: 99-worker-generated-crio-seccomp-use-default
   dryRun: true
