@@ -1,0 +1,19 @@
+kind: AdmissionReview
+apiVersion: admission.k8s.io/v1
+request:
+  uid: d700ab7f-8f42-45ff-83f5-782c739806d9
+  operation: UPDATE
+  userInfo:
+    username: kube-review
+    uid: 45884572-1cab-49e5-be4c-1d2eb0299776
+  object:
+    kind: MachineConfig
+    apiVersion: machineconfiguration.openshift.io/v1
+    metadata:
+      name: 99-worker-generated-crio-fake
+  oldObject:
+    kind: MachineConfig
+    apiVersion: machineconfiguration.openshift.io/v1
+    metadata:
+      name: 99-worker-generated-crio-seccomp-use-default
+  dryRun: true
