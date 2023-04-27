@@ -5,6 +5,7 @@ package conditions
 
 import (
 	"context"
+	"strings"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -78,7 +79,7 @@ func cleanStaleConditions(cluster *arov1alpha1.Cluster, role string) (changed bo
 	}
 
 	for _, cond := range cluster.Status.Conditions {
-		if _, ok := current[cond.Type]; ok {
+		if _, ok := current[cond.Type]; ok || conditionIsControllerStatus(cond.Type) {
 			conditions = append(conditions, cond)
 		} else {
 			changed = true
@@ -93,6 +94,12 @@ func cleanStaleConditions(cluster *arov1alpha1.Cluster, role string) (changed bo
 	}
 
 	return
+}
+
+func conditionIsControllerStatus(conditionType string) bool {
+	return strings.HasSuffix(conditionType, "Controller"+operatorv1.OperatorStatusTypeAvailable) ||
+		strings.HasSuffix(conditionType, "Controller"+operatorv1.OperatorStatusTypeProgressing) ||
+		strings.HasSuffix(conditionType, "Controller"+operatorv1.OperatorStatusTypeDegraded)
 }
 
 // SetCondition adds (or updates) the set of conditions with the given
