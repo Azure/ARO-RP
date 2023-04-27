@@ -114,10 +114,6 @@ func (m *manager) RotateTokenPassword(ctx context.Context, rp *api.RegistryProfi
 
 	var passwordToRenew mgmtcontainerregistry.TokenPasswordName
 	switch {
-	// Passwords has zero entries: generate password 1
-	// this shouldn't ever happen, which guarantees it will happen
-	case len(tokenPasswords) == 0:
-		passwordToRenew = mgmtcontainerregistry.TokenPasswordNamePassword1
 	// Passwords only has one entry: renew password that isn't present
 	case len(tokenPasswords) == 1:
 		if tokenPasswords[0].Name == mgmtcontainerregistry.TokenPasswordNamePassword1 {
@@ -132,6 +128,10 @@ func (m *manager) RotateTokenPassword(ctx context.Context, rp *api.RegistryProfi
 		} else {
 			passwordToRenew = mgmtcontainerregistry.TokenPasswordNamePassword2
 		}
+	// default case, including passwords having zero entries: generate password 1
+	// this shouldn't ever happen, which guarantees it will happen
+	default:
+		passwordToRenew = mgmtcontainerregistry.TokenPasswordNamePassword1
 	}
 
 	newPassword, err := m.generateTokenPassword(ctx, passwordToRenew, rp)
