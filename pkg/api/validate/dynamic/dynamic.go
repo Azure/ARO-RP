@@ -197,27 +197,41 @@ func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resou
 		"Microsoft.Network/virtualNetworks/subnets/write",
 	})
 
+	noPermissionsErr := api.NewCloudError(
+		http.StatusBadRequest,
+		errCode,
+		"",
+		"The %s service principal does not have Network Contributor permission on vnet '%s'.",
+		dv.authorizerType,
+		vnet.String(),
+	)
+
 	if err == wait.ErrWaitTimeout {
-		return api.NewCloudError(
-			http.StatusBadRequest,
-			errCode,
-			"",
-			"The %s service principal does not have Network Contributor permission on vnet '%s'.",
-			dv.authorizerType,
-			vnet.String(),
-		)
+		return noPermissionsErr
 	}
-	if detailedErr, ok := err.(autorest.DetailedError); ok &&
-		detailedErr.StatusCode == http.StatusNotFound {
-		return api.NewCloudError(
-			http.StatusBadRequest,
-			api.CloudErrorCodeInvalidLinkedVNet,
-			"",
-			"The vnet '%s' could not be found.",
-			vnet.String(),
-		)
+	if detailedErr, ok := err.(autorest.DetailedError); ok {
+		switch detailedErr.StatusCode {
+		case http.StatusNotFound:
+			return api.NewCloudError(
+				http.StatusBadRequest,
+				api.CloudErrorCodeInvalidLinkedVNet,
+				"",
+				"The vnet '%s' could not be found.",
+				vnet.String(),
+			)
+		case http.StatusForbidden:
+			return noPermissionsErr
+		}
 	}
-	return err
+	if err != nil { // avoiding Internal Server Error
+		return &api.CloudError{
+			StatusCode: http.StatusBadRequest,
+			CloudErrorBody: &api.CloudErrorBody{
+				Code: err.Error(),
+			},
+		}
+	}
+	return nil
 }
 
 // validateRouteTablesPermissions will validate permissions on provided subnet

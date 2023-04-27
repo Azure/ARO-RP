@@ -114,6 +114,38 @@ func TestValidateVnetPermissions(t *testing.T) {
 			},
 			wantErr: "400: InvalidLinkedVNet: : The vnet '" + vnetID + "' could not be found.",
 		},
+		{
+			name: "fail: fp/sp has no permission on the target vnet (forbidden error)",
+			mocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel context.CancelFunc) {
+				permissionsClient.EXPECT().
+					ListForResource(gomock.Any(), resourceGroupName, resourceProvider, "", resourceType, vnetName).
+					Do(func(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) {
+						cancel()
+					}).
+					Return(
+						nil,
+						autorest.DetailedError{
+							StatusCode: http.StatusForbidden,
+						},
+					)
+			},
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor permission on vnet '" + vnetID + "'.",
+		},
+		{
+			name: "fail: unclassified error is wrapped into a cloud error",
+			mocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel context.CancelFunc) {
+				permissionsClient.EXPECT().
+					ListForResource(gomock.Any(), resourceGroupName, resourceProvider, "", resourceType, vnetName).
+					Do(func(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) {
+						cancel()
+					}).
+					Return(
+						nil,
+						errors.New("some failure"),
+					)
+			},
+			wantErr: "400: some failure: : ",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
@@ -1014,7 +1046,7 @@ func TestValidateVnetPermissionsWithCheckAccess(t *testing.T) {
 				tokenCred.EXPECT().GetToken(gomock.Any(), gomock.Any()).
 					Return(azcore.AccessToken{}, nil)
 			},
-			wantErr: "token contains an invalid number of segments",
+			wantErr: "400: token contains an invalid number of segments: : ",
 		},
 		{
 			name: "fail: getting an error when calling CheckAccessV2",
@@ -1027,7 +1059,7 @@ func TestValidateVnetPermissionsWithCheckAccess(t *testing.T) {
 					}).
 					Return(nil, errors.New("Unexpected failure calling CheckAccessV2"))
 			},
-			wantErr: "Unexpected failure calling CheckAccessV2",
+			wantErr: "400: Unexpected failure calling CheckAccessV2: : ",
 		},
 		{
 			name: "fail: getting a nil response from CheckAccessV2",
