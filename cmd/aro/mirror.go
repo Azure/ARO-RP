@@ -77,53 +77,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 
 	// Geneva allows anonymous pulls
 	var srcAuthGeneva *types.DockerAuthConfig
-
-	var releases []pkgmirror.Node
-	if len(flag.Args()) == 1 {
-		log.Print("reading release graph")
-		releases, err = pkgmirror.AddFromGraph(version.NewVersion(4, 8))
-		if err != nil {
-			return err
-		}
-	} else {
-		for _, arg := range flag.Args()[1:] {
-			if strings.EqualFold(arg, "latest") {
-				releases = append(releases, pkgmirror.Node{
-					Version: version.DefaultInstallStream.Version.String(),
-					Payload: version.DefaultInstallStream.PullSpec,
-				})
-			} else {
-				vers, err := version.ParseVersion(arg)
-				if err != nil {
-					return err
-				}
-
-				node, err := pkgmirror.VersionInfo(vers)
-				if err != nil {
-					return err
-				}
-
-				releases = append(releases, pkgmirror.Node{
-					Version: node.Version,
-					Payload: node.Payload,
-				})
-			}
-		}
-	}
-
 	var errorOccurred bool
-	for _, release := range releases {
-		if _, ok := doNotMirrorTags[release.Version]; ok {
-			log.Printf("skipping mirror of release %s", release.Version)
-			continue
-		}
-		log.Printf("mirroring release %s", release.Version)
-		err = pkgmirror.Mirror(ctx, log, dstAcr+acrDomainSuffix, release.Payload, dstAuth, srcAuthQuay)
-		if err != nil {
-			log.Errorf("%s: %s\n", release, err)
-			errorOccurred = true
-		}
-	}
 
 	// Geneva mirroring from upstream only takes place in Public Cloud, in
 	// soverign clouds a separate mirror process mirrors from the public cloud
@@ -158,7 +112,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		// https://quay.io/repository/app-sre/managed-upgrade-operator?tab=tags
 		"quay.io/app-sre/managed-upgrade-operator:v0.1.891-3d94c00",
 		// https://quay.io/repository/app-sre/hive?tab=tags
-		"quay.io/app-sre/hive:7cbb91212d",
+		"quay.io/app-sre/hive:22f12c1ac0 ",
 	} {
 		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
 
@@ -170,6 +124,53 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuth)
 		if err != nil {
 			log.Errorf("%s: %s\n", ref, err)
+			errorOccurred = true
+		}
+	}
+
+	// OCP release mirroring
+	var releases []pkgmirror.Node
+	if len(flag.Args()) == 1 {
+		log.Print("reading release graph")
+		releases, err = pkgmirror.AddFromGraph(version.NewVersion(4, 8))
+		if err != nil {
+			return err
+		}
+	} else {
+		for _, arg := range flag.Args()[1:] {
+			if strings.EqualFold(arg, "latest") {
+				releases = append(releases, pkgmirror.Node{
+					Version: version.DefaultInstallStream.Version.String(),
+					Payload: version.DefaultInstallStream.PullSpec,
+				})
+			} else {
+				vers, err := version.ParseVersion(arg)
+				if err != nil {
+					return err
+				}
+
+				node, err := pkgmirror.VersionInfo(vers)
+				if err != nil {
+					return err
+				}
+
+				releases = append(releases, pkgmirror.Node{
+					Version: node.Version,
+					Payload: node.Payload,
+				})
+			}
+		}
+	}
+
+	for _, release := range releases {
+		if _, ok := doNotMirrorTags[release.Version]; ok {
+			log.Printf("skipping mirror of release %s", release.Version)
+			continue
+		}
+		log.Printf("mirroring release %s", release.Version)
+		err = pkgmirror.Mirror(ctx, log, dstAcr+acrDomainSuffix, release.Payload, dstAuth, srcAuthQuay)
+		if err != nil {
+			log.Errorf("%s: %s\n", release, err)
 			errorOccurred = true
 		}
 	}
