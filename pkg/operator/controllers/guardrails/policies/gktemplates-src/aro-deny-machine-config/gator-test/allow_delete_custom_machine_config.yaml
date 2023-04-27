@@ -12,4 +12,3 @@ request:
     metadata:
       name: new-custom-mc
   dryRun: true
-  
