@@ -1,0 +1,10 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: ARODenyMachineConfig
+metadata:
+  name: aro-deny-cluster-machine-config-modification
+spec:
+  enforcementAction: {{.Enforcement}}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["MachineConfig"]
