@@ -77,6 +77,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// If enabled and managed=false, remove the GuardRails deployment
 	// If enabled and managed is missing, do nothing
 	if strings.EqualFold(managed, "true") {
+		// Check if standard GateKeeper is already running
+		if running, err := r.deployer.IsReady(ctx, "gatekeeper-system", "gatekeeper-audit"); err != nil && running {
+			r.log.Warn("standard GateKeeper is running, skipping Guardrails deployment")
+			return reconcile.Result{}, nil
+		}
+
 		// Deploy the GateKeeper manifests and config
 		deployConfig := r.getDefaultDeployConfig(ctx, instance)
 		err = r.deployer.CreateOrUpdate(ctx, instance, deployConfig)
@@ -84,7 +90,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			return reconcile.Result{}, err
 		}
 
-		// Check gatekeeper has become ready, wait up to readinessTimeout (default 5min)
+		// Check Gatekeeper has become ready, wait up to readinessTimeout (default 5min)
 		timeoutCtx, cancel := context.WithTimeout(ctx, r.readinessTimeout)
 		defer cancel()
 
