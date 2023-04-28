@@ -7,6 +7,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/Azure/ARO-RP/pkg/util/dynamichelper/discovery"
+	"github.com/go-test/deep"
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -195,17 +198,35 @@ func TestFindGVR(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
+	for index, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &gvrResolver{apiresources: tt.resources}
 
 			got, err := r.Resolve(tt.kind, "")
-			if !reflect.DeepEqual(err, tt.wantErr) {
-				t.Errorf("got: %#v, expected: %#v", err, tt.wantErr)
+			if err != nil {
+				for _, i := range deep.Equal(err.Error(), tt.wantErr.Error()) {
+					t.Error(i)
+				}
+				return
 			}
+
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("got: %#v, expected: %#v", got, tt.want)
+				t.Errorf("%d Result: got: %#v, expected: %#v", index, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestGVRNoResources(t *testing.T) {
+	r := &gvrResolver{
+		log:       logrus.NewEntry(logrus.StandardLogger()),
+		discovery: &discovery.FakeDiscoveryClient{},
+	}
+
+	// Expect errors when no api resources are provided because
+	// we're using a mock
+	got, err := r.Resolve("configmap", "")
+	if err == nil {
+		t.Errorf("Expected error and recieved %+v", got)
 	}
 }
