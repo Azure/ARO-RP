@@ -1,0 +1,26 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: aro-rw-host-mount
+tests:
+- name: aro-rw-host-mount
+  template: ../../gktemplates/aro-deny-host-mount.yaml
+  constraint: ../../gkconstraints-test/aro-rw-host-mount.yaml
+  cases:
+  - name: hostmount-allowed-pod
+    object: gator-test/hostmount_allowed_pod.yaml
+    assertions:
+    - violations: no
+  - name: hostmount-disallowed-pod
+    object: gator-test/hostmount_disallowed_pod.yaml
+    assertions:
+    - violations: yes
+      message: HostPath volume host is not allowed for write, pod nginx-host-mount.
+  - name: hostmount-allowed-pv
+    object: gator-test/hostmount_allowed_pv.yaml
+    assertions:
+    - violations: no
+  - name: hostmount-disallowed-pv
+    object: gator-test/hostmount_disallowed_pv.yaml
+    assertions:
+    - violations: yes

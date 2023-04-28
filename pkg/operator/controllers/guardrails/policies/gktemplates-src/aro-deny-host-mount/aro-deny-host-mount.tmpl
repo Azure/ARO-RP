@@ -1,0 +1,27 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: arohostmount
+  annotations:
+    metadata.gatekeeper.sh/title: "Host Mount"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: >-
+      To prevent the creation of non-OpenShift pods with dangerous read/write mounts
+spec:
+  crd:
+    spec:
+      names:
+        kind: AROHostMount
+      validation:
+        # Schema for the `parameters` field
+        openAPIV3Schema:
+          type: object
+          description: >-
+            To prevent the creation of non-OpenShift pods with dangerous read/write mounts
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+{{ file.Read "gktemplates-src/aro-deny-host-mount/src.rego" | strings.Indent 8 | strings.TrimSuffix "\n" }}
+      libs:
+        - |
+{{ file.Read "gktemplates-src/library/common.rego" | strings.Indent 10 | strings.TrimSuffix "\n" }}

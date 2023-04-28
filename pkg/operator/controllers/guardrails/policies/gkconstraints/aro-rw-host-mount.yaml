@@ -1,0 +1,12 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: AROHostMount
+metadata:
+  name: aro-rw-host-mount
+spec:
+  enforcementAction: {{.Enforcement}}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"] # disable PV check as it is not agreed, need revise
+        # kinds: ["Pod", "PersistentVolume"]
+

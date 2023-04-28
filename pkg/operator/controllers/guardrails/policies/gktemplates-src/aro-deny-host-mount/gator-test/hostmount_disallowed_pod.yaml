@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-host-mount
+  namespace: ts
+  labels:
+    app: nginx-host-mount-disallowed
+spec:
+  serviceAccountName: test
+  containers:
+    - name: nginx
+      image: nginx
+      volumeMounts:
+        - mountPath: /cache
+          name: host
+          readOnly: false
+  volumes:
+    - name: host
+      hostPath:
+        path: /test
+        type: Directory
