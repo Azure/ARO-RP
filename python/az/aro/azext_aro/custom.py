@@ -74,6 +74,24 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
 
     validate_subnets(master_subnet, worker_subnet)
 
+    aro_validate(cmd,
+        client,
+        resource_group_name,
+        resource_name,
+        master_subnet,
+        worker_subnet,
+        vnet=vnet,
+        cluster_resource_group=cluster_resource_group,
+        client_id=client_id,
+        client_secret=client_secret,
+        vnet_resource_group_name=vnet_resource_group_name,
+        disk_encryption_set=disk_encryption_set,
+        location=location,
+        version=version,
+        pod_cidr=pod_cidr,
+        service_cidr=service_cidr
+        )
+
     subscription_id = get_subscription_id(cmd.cli_ctx)
 
     random_id = generate_random_id()
@@ -232,13 +250,13 @@ def aro_validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
                 errors.append(new_err)
 
     if len(errors) > 0:
-        logger.error("Issues found blocking cluster creation.\n")
         headers = ["Type", "Name", "Error"]
-
         table = tabulate(errors, headers=headers, tablefmt="grid")
-        print(f"\n{table}")
+        full_err = f"Issues found blocking cluster creation.\n{table}"
+        logger.error(full_err)
+        raise ValidationError(full_err)
     else:
-        print("\nNo Issues on subscription blocking cluster creation\n")
+        logger.info("No Issues on subscription blocking cluster creation")
 
 
 def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False):
