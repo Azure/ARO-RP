@@ -220,12 +220,17 @@ func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resou
 				vnet.String(),
 			)
 		case http.StatusForbidden:
+			noPermissionsErr.Message = fmt.Sprintf(
+				"%s Original error message: %s",
+				noPermissionsErr.Message,
+				detailedErr.Message,
+			)
 			return noPermissionsErr
 		}
 	}
-	if err != nil { // avoiding Internal Server Error
+	if err != nil { // avoiding blank Internal Server Error
 		return &api.CloudError{
-			StatusCode: http.StatusBadRequest,
+			StatusCode: http.StatusInternalServerError,
 			CloudErrorBody: &api.CloudErrorBody{
 				Code: err.Error(),
 			},

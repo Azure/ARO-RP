@@ -126,10 +126,12 @@ func TestValidateVnetPermissions(t *testing.T) {
 						nil,
 						autorest.DetailedError{
 							StatusCode: http.StatusForbidden,
+							Message:    "some forbidden error on the resource.",
 						},
 					)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor permission on vnet '" + vnetID + "'.",
+
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor permission on vnet '" + vnetID + "'. Original error message: some forbidden error on the resource.",
 		},
 		{
 			name: "fail: unclassified error is wrapped into a cloud error",
@@ -144,7 +146,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 						errors.New("some failure"),
 					)
 			},
-			wantErr: "400: some failure: : ",
+			wantErr: "500: some failure: : ",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1046,7 +1048,7 @@ func TestValidateVnetPermissionsWithCheckAccess(t *testing.T) {
 				tokenCred.EXPECT().GetToken(gomock.Any(), gomock.Any()).
 					Return(azcore.AccessToken{}, nil)
 			},
-			wantErr: "400: token contains an invalid number of segments: : ",
+			wantErr: "500: token contains an invalid number of segments: : ",
 		},
 		{
 			name: "fail: getting an error when calling CheckAccessV2",
@@ -1059,7 +1061,7 @@ func TestValidateVnetPermissionsWithCheckAccess(t *testing.T) {
 					}).
 					Return(nil, errors.New("Unexpected failure calling CheckAccessV2"))
 			},
-			wantErr: "400: Unexpected failure calling CheckAccessV2: : ",
+			wantErr: "500: Unexpected failure calling CheckAccessV2: : ",
 		},
 		{
 			name: "fail: getting a nil response from CheckAccessV2",
