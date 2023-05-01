@@ -22,6 +22,14 @@ func (m *manager) hiveStrategy() steps.Step {
 	})
 }
 
+func (m *manager) aksStrategy() steps.Step {
+	return steps.ListStep([]steps.Step{
+		steps.Action(m.hiveCreateNamespace),
+		steps.Action(m.runInstallerInAKS),
+		steps.Action(m.generateKubeconfigs),
+	})
+}
+
 func (m *manager) builtinStrategy() steps.Step {
 	return steps.ListStep([]steps.Step{
 		steps.Action(m.runIntegratedInstaller),

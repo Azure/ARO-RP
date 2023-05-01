@@ -99,6 +99,7 @@ type manager struct {
 	imageregistrycli imageregistryclient.Interface
 
 	installViaHive     bool
+	installViaAKS      bool
 	adoptViaHive       bool
 	hiveClusterManager hive.ClusterManager
 

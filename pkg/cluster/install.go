@@ -255,6 +255,8 @@ func (m *manager) bootstrap() []steps.Step {
 		s = append(s,
 			m.hiveStrategy(),
 		)
+	} else if m.installViaAKS {
+		s = append(s, m.aksStrategy())
 	} else {
 		s = append(s,
 			m.builtinStrategy(),
