@@ -26,6 +26,7 @@ func (m *manager) aksStrategy() steps.Step {
 	return steps.ListStep([]steps.Step{
 		steps.Action(m.hiveCreateNamespace),
 		steps.Action(m.runInstallerInAKS),
+		steps.Condition(m.isInstallInAKSComplete, 60*time.Minute, true),
 		steps.Action(m.generateKubeconfigs),
 	})
 }

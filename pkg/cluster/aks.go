@@ -22,3 +22,12 @@ func (m *manager) runInstallerInAKS(ctx context.Context) error {
 
 	return aksmanager.Install(ctx, m.subscriptionDoc, m.doc, version)
 }
+
+func (m *manager) isInstallInAKSComplete(ctx context.Context) (bool, error) {
+	aksmanager, err := hive.NewAKSManagerFromHiveManager(m.hiveClusterManager)
+	if err != nil {
+		return false, err
+	}
+
+	return aksmanager.IsClusterInstallationComplete(ctx, m.doc)
+}
