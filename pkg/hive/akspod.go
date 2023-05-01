@@ -107,6 +107,7 @@ func (c *aksInstallationManager) Install(ctx context.Context, sub *api.Subscript
 	resources := []kruntime.Object{
 		sppSecret,
 		psSecret,
+		envSecret(doc.OpenShiftCluster.Properties.HiveProfile.Namespace, c.env.IsLocalDevelopmentMode()),
 		c.installPod(sub, doc, version),
 	}
 
@@ -175,8 +176,10 @@ func (c *aksInstallationManager) installPod(sub *api.SubscriptionDocument, doc *
 					RestartPolicy:      corev1.RestartPolicyNever,
 					Containers: []corev1.Container{
 						{
-							Image: version.Properties.InstallerPullspec,
-							Env:   envVars,
+							Name:       "installer",
+							Image:      version.Properties.InstallerPullspec,
+							Env:        envVars,
+							WorkingDir: "/output",
 							Command: []string{
 								"/bin/bash",
 								"-c",
@@ -186,6 +189,10 @@ func (c *aksInstallationManager) installPod(sub *api.SubscriptionDocument, doc *
 								{
 									Name:      "spp",
 									MountPath: "/.azure",
+								},
+								{
+									Name:      "output",
+									MountPath: "/output",
 								},
 							},
 						},
@@ -197,6 +204,12 @@ func (c *aksInstallationManager) installPod(sub *api.SubscriptionDocument, doc *
 								Secret: &corev1.SecretVolumeSource{
 									SecretName: clusterServicePrincipalSecretName,
 								},
+							},
+						},
+						{
+							Name: "output",
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{},
 							},
 						},
 					},
