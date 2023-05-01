@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 	mock_hive "github.com/Azure/ARO-RP/pkg/util/mocks/hive"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
@@ -212,8 +213,8 @@ func createManagerForTests(t *testing.T, existingNamespaceName string) *manager 
 		db:  fakeDb,
 		doc: doc,
 
-		adoptViaHive:   true,
-		installViaHive: true,
+		adoptViaHive:    true,
+		installStrategy: liveconfig.HiveStrategy,
 	}
 }
 

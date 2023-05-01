@@ -95,13 +95,24 @@ func (p *prod) HiveRestConfig(ctx context.Context, shard int) (*rest.Config, err
 	return rest.CopyConfig(kubeConfig), nil
 }
 
-func (p *prod) InstallViaHive(ctx context.Context) (bool, error) {
-	// TODO: Replace with RP Live Service Config (KeyVault)
+func (p *prod) InstallStrategy(ctx context.Context) (InstallStrategy, error) {
+	// use the old variable first for compat
 	installViaHive := os.Getenv(hiveInstallerEnableEnvVar)
 	if installViaHive != "" {
-		return true, nil
+		return HiveStrategy, nil
 	}
-	return false, nil
+
+	installStrategy := strings.ToLower(os.Getenv(installStrategyEnvVar))
+	switch installStrategy {
+	case "hive":
+		return HiveStrategy, nil
+	case "":
+	case "builtin":
+		return BuiltinStrategy, nil
+	case "aks":
+		return AKSStrategy, nil
+	}
+	return 0, fmt.Errorf("%s is not an install strategy", installStrategy)
 }
 
 func (p *prod) DefaultInstallerPullSpecOverride(ctx context.Context) string {

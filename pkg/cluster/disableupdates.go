@@ -7,6 +7,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 	configv1 "github.com/openshift/api/config/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
@@ -23,7 +24,7 @@ func (m *manager) disableUpdates(ctx context.Context) error {
 		cv.Spec.Channel = ""
 
 		// when installing via Hive we replace the quay.io domain with the ACR domain, so now we set it back to the expected domain
-		if m.installViaHive {
+		if m.installStrategy == liveconfig.HiveStrategy {
 			version, err := m.openShiftVersionFromVersion(ctx)
 			if err != nil {
 				return err

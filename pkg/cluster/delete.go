@@ -25,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
+	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -488,7 +489,7 @@ func (m *manager) Delete(ctx context.Context) error {
 		}
 	}
 
-	if m.adoptViaHive || m.installViaHive {
+	if m.adoptViaHive || m.installStrategy == liveconfig.HiveStrategy || m.installStrategy == liveconfig.AKSStrategy {
 		// Don't fail the deletion because of hive
 		// This should change when/if we start using hive for cluster deletion
 		err = m.hiveDeleteResources(ctx)

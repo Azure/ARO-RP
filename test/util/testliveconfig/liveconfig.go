@@ -24,8 +24,11 @@ func (t *testLiveConfig) HiveRestConfig(ctx context.Context, shard int) (*rest.C
 	return nil, errors.New("testLiveConfig does not have a Hive")
 }
 
-func (t *testLiveConfig) InstallViaHive(ctx context.Context) (bool, error) {
-	return t.installViaHive, nil
+func (t *testLiveConfig) InstallStrategy(ctx context.Context) (liveconfig.InstallStrategy, error) {
+	if t.installViaHive {
+		return liveconfig.HiveStrategy, nil
+	}
+	return liveconfig.BuiltinStrategy, nil
 }
 
 func (t *testLiveConfig) AdoptByHive(ctx context.Context) (bool, error) {

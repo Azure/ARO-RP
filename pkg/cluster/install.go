@@ -23,6 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/installer"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
+	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -251,13 +252,17 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.createCertificates),
 	}
 
-	if m.installViaHive {
+	switch m.installStrategy {
+	case liveconfig.HiveStrategy:
 		s = append(s,
 			m.hiveStrategy(),
 		)
-	} else if m.installViaAKS {
-		s = append(s, m.aksStrategy())
-	} else {
+	case liveconfig.AKSStrategy:
+		s = append(s,
+			m.aksStrategy(),
+			m.doHiveAdoptionIfConfigured(),
+		)
+	case liveconfig.BuiltinStrategy:
 		s = append(s,
 			m.builtinStrategy(),
 			m.doHiveAdoptionIfConfigured(),

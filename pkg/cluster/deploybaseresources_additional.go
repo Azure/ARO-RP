@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 )
 
@@ -100,7 +101,7 @@ func (m *manager) storageAccount(name, region string, encrypted bool) *arm.Resou
 	// when installing via Hive we need to allow Hive to persist the installConfig graph in the cluster's storage account
 	// TODO: add AKS shard support
 	hiveShard := 1
-	if m.installViaHive && strings.Index(name, "cluster") == 0 {
+	if m.installStrategy == liveconfig.HiveStrategy || m.installStrategy == liveconfig.AKSStrategy && strings.Index(name, "cluster") == 0 {
 		virtualNetworkRules = append(virtualNetworkRules, mgmtstorage.VirtualNetworkRule{
 			VirtualNetworkResourceID: to.StringPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/aks-net/subnets/PodSubnet-%03d", m.env.SubscriptionID(), m.env.ResourceGroup(), hiveShard)),
 			Action:                   mgmtstorage.Allow,

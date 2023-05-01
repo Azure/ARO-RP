@@ -37,6 +37,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
+	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 	"github.com/Azure/ARO-RP/pkg/util/storage"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -98,8 +99,7 @@ type manager struct {
 	arocli           aroclient.Interface
 	imageregistrycli imageregistryclient.Interface
 
-	installViaHive     bool
-	installViaAKS      bool
+	installStrategy    liveconfig.InstallStrategy
 	adoptViaHive       bool
 	hiveClusterManager hive.ClusterManager
 
@@ -135,7 +135,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 
 	storage := storage.NewManager(_env, r.SubscriptionID, fpAuthorizer)
 
-	installViaHive, err := _env.LiveConfig().InstallViaHive(ctx)
+	installStrategy, err := _env.LiveConfig().InstallStrategy(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +180,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		subnet:  subnet.NewManager(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		graph:   graph.NewManager(log, aead, storage),
 
-		installViaHive:                    installViaHive,
+		installStrategy:                   installStrategy,
 		adoptViaHive:                      adoptByHive,
 		hiveClusterManager:                hiveClusterManager,
 		now:                               func() time.Time { return time.Now() },

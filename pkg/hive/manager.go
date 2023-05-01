@@ -20,6 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
+	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
@@ -61,11 +62,11 @@ func NewFromEnv(ctx context.Context, log *logrus.Entry, env env.Interface) (Clus
 	if err != nil {
 		return nil, err
 	}
-	installViaHive, err := env.LiveConfig().InstallViaHive(ctx)
+	installStrategy, err := env.LiveConfig().InstallStrategy(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if !adoptByHive && !installViaHive {
+	if !adoptByHive && !(installStrategy == liveconfig.HiveStrategy || installStrategy == liveconfig.AKSStrategy) {
 		log.Infof("hive is disabled, skipping creation of ClusterManager")
 		return nil, nil
 	}

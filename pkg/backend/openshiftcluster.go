@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
+	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
@@ -103,7 +104,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 	}
 
 	// Only attempt to access Hive if we are installing via Hive or adopting clusters
-	installViaHive, err := ocb.env.LiveConfig().InstallViaHive(ctx)
+	installStrategy, err := ocb.env.LiveConfig().InstallStrategy(ctx)
 	if err != nil {
 		return err
 	}
@@ -114,7 +115,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 	}
 
 	var hr hive.ClusterManager
-	if installViaHive || adoptViaHive {
+	if installStrategy != liveconfig.BuiltinStrategy || adoptViaHive {
 		hiveShard := 1
 		hiveRestConfig, err := ocb.env.LiveConfig().HiveRestConfig(ctx, hiveShard)
 		if err != nil {
