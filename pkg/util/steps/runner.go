@@ -43,20 +43,34 @@ type Step interface {
 // time cost for each step run will be recorded for metrics usage
 func Run(ctx context.Context, log *logrus.Entry, pollInterval time.Duration, steps []Step, now func() time.Time) (map[string]int64, error) {
 	stepTimeRun := make(map[string]int64)
-	for _, step := range steps {
-		log.Infof("running step %s", step)
+	for _, _step := range steps {
+		var innerSteps []Step
 
-		startTime := time.Now()
-		err := step.run(ctx, log)
-
-		if err != nil {
-			log.Errorf("step %s encountered error: %s", step, err.Error())
-			return nil, err
+		// ListSteps are a wrapper of a list containing multiple steps as a
+		// convenience when assembling steps in if statements, not an actual
+		// executable step. Extract the steps and run them like any other.
+		liststep, ok := _step.(listStep)
+		if ok {
+			innerSteps = liststep.s
+		} else {
+			innerSteps = []Step{_step}
 		}
 
-		if now != nil {
-			currentTime := now()
-			stepTimeRun[step.metricsName()] = int64(currentTime.Sub(startTime).Seconds())
+		for _, step := range innerSteps {
+			log.Infof("running step %s", step)
+
+			startTime := time.Now()
+			err := step.run(ctx, log)
+
+			if err != nil {
+				log.Errorf("step %s encountered error: %s", step, err.Error())
+				return nil, err
+			}
+
+			if now != nil {
+				currentTime := now()
+				stepTimeRun[step.metricsName()] = int64(currentTime.Sub(startTime).Seconds())
+			}
 		}
 	}
 	return stepTimeRun, nil

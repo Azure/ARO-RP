@@ -251,39 +251,14 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.createCertificates),
 	}
 
-	if m.adoptViaHive || m.installViaHive {
-		// We will always need a Hive namespace, whether we are installing
-		// via Hive or adopting
-		s = append(s, steps.Action(m.hiveCreateNamespace))
-	}
-
 	if m.installViaHive {
 		s = append(s,
-			steps.Action(m.runHiveInstaller),
-			// Give Hive 60 minutes to install the cluster, since this includes
-			// all of bootstrapping being complete
-			steps.Condition(m.hiveClusterInstallationComplete, 60*time.Minute, true),
-			steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
-			steps.Action(m.generateKubeconfigs),
+			m.hiveStrategy(),
 		)
 	} else {
 		s = append(s,
-			steps.Action(m.runIntegratedInstaller),
-			steps.Action(m.generateKubeconfigs),
-		)
-
-		if m.adoptViaHive {
-			s = append(s,
-				steps.Action(m.hiveEnsureResources),
-				steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
-			)
-		}
-	}
-
-	if m.adoptViaHive || m.installViaHive {
-		s = append(s,
-			// Reset correlation data whether adopting or installing via Hive
-			steps.Action(m.hiveResetCorrelationData),
+			m.builtinStrategy(),
+			m.doHiveAdoptionIfConfigured(),
 		)
 	}
 
