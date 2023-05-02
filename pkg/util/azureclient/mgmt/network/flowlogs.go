@@ -29,6 +29,8 @@ var _ FlowLogsClient = &flowLogsClient{}
 func NewFlowLogsClient(environment *azureclient.AROEnvironment, tenantID string, authorizer autorest.Authorizer) FlowLogsClient {
 	client := mgmtnetwork.NewFlowLogsClientWithBaseURI(environment.ResourceManagerEndpoint, tenantID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
+
 	return &flowLogsClient{
 		FlowLogsClient: client,
 	}

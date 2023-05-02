@@ -29,6 +29,7 @@ var _ RecordSetsClient = &recordSetsClient{}
 func NewRecordSetsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) RecordSetsClient {
 	client := mgmtdns.NewRecordSetsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &recordSetsClient{
 		RecordSetsClient: client,

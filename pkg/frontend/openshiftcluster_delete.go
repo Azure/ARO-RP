@@ -36,7 +36,7 @@ func (f *frontend) deleteOpenShiftCluster(w http.ResponseWriter, r *http.Request
 }
 
 func (f *frontend) _deleteOpenShiftCluster(ctx context.Context, r *http.Request, header *http.Header, doc *api.OpenShiftClusterDocument) error {
-	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
+	correlationData := api.GetCorrelationDataFromCtx(r.Context())
 
 	_, err := f.validateSubscriptionState(ctx, doc.Key, api.SubscriptionStateRegistered, api.SubscriptionStateWarned, api.SubscriptionStateSuspended)
 	if err != nil {

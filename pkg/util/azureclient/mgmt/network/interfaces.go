@@ -28,6 +28,7 @@ var _ InterfacesClient = &interfacesClient{}
 func NewInterfacesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) InterfacesClient {
 	client := mgmtnetwork.NewInterfacesClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &interfacesClient{
 		InterfacesClient: client,

@@ -25,6 +25,7 @@ var _ VirtualNetworkLinksClient = &virtualNetworkLinksClient{}
 func NewVirtualNetworkLinksClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) VirtualNetworkLinksClient {
 	client := mgmtprivatedns.NewVirtualNetworkLinksClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &virtualNetworkLinksClient{
 		VirtualNetworkLinksClient: client,

@@ -27,6 +27,7 @@ var _ VaultsClient = &vaultsClient{}
 func NewVaultsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) VaultsClient {
 	client := mgmtkeyvault.NewVaultsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &vaultsClient{
 		VaultsClient: client,

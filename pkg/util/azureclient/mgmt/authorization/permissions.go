@@ -25,6 +25,7 @@ var _ PermissionsClient = &permissionsClient{}
 func NewPermissionsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) PermissionsClient {
 	client := mgmtauthorization.NewPermissionsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &permissionsClient{
 		PermissionsClient: client,

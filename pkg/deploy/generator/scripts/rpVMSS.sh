@@ -163,6 +163,18 @@ cat >/etc/fluentbit/fluentbit.conf <<'EOF'
 	Match journald
 	Rule $LOGKIND ifxaudit ifxaudit false
 
+[FILTER]
+	Name rewrite_tag
+	Match journald
+	Rule $LOGKIND outboundRequests outboundRequests false
+
+[FILTER]
+	Name modify
+	Match  outboundRequests
+	Remove CLIENT_PRINCIPAL_NAME
+	Remove FILE
+	Remove COMPONENT
+
 [OUTPUT]
 	Name forward
 	Match *
