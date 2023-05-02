@@ -8,7 +8,7 @@ E2E_FLAGS ?= -test.v --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2 
 MARINER_VERSION = 20230321
 FLUENTBIT_VERSION = 1.9.10
 FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$(MARINER_VERSION)
-AUTOREST_VERSION = 3.6.2
+AUTOREST_VERSION = 3.6.3
 AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
 
 ifneq ($(shell uname -s),Darwin)

@@ -23,7 +23,8 @@ function generate_golang() {
   local API_VERSION=$2
   local FOLDER=$3
 
-  # Generating Track 1 SDK. Needs work to migrate to Track 2.
+  # Generating Track 1 Golang SDK
+  # Needs work to migrate to Track 2
   docker run \
     --platform=linux/amd64 \
     --rm \
@@ -58,7 +59,7 @@ function generate_python() {
   local API_VERSION=$2
   local FOLDER=$3
 
-  # Generating Track 2 SDK
+  # Generating Track 2 Python SDK
   docker run \
     --platform=linux/amd64 \
     --rm \
@@ -92,8 +93,26 @@ do
     FOLDER=preview
   fi
 
+  printf "\nGENERATING API v$API_VERSION\n"
+  printf "%*s\n" "${COLUMNS:-$(tput cols)}" "" | tr " " -
+
+  printf "CLEANING OLD API GENERATED FILES...\n"
   clean "$API_VERSION" "$FOLDER"
+  printf "[\u2714] SUCCESS\n\n"
+
+  printf "GENERATING CHECKSUM...\n"
   checksum "$API_VERSION" "$FOLDER"
+  printf "[\u2714] SUCCESS\n\n"
+
+  printf "GENERATING GOLANG SDK...\n"
   generate_golang "$AUTOREST_IMAGE" "$API_VERSION" "$FOLDER"
+  printf "[\u2714] SUCCESS\n\n"
+
+  printf "GENERATING PYTHON SDK...\n"
   generate_python "$AUTOREST_IMAGE" "$API_VERSION" "$FOLDER"
+  printf "[\u2714] SUCCESS\n\n"
+  printf "%*s\n" "${COLUMNS:-$(tput cols)}" "" | tr " " -
+  printf "\n"
 done
+
+printf "[\u2714] CLIENT GENERATION COMPLETED SUCCESSFULLY\n"
