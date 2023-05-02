@@ -403,16 +403,39 @@ func TestUpdateOpenShiftSecret(t *testing.T) {
 			},
 		},
 		{
-			name: "not found - no fail",
+			name: "recreate secret when not found",
 			kubernetescli: func() *fake.Clientset {
 				return fake.NewSimpleClientset()
 			},
 			doc: api.OpenShiftCluster{
+				Location: "azure_region_value",
 				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: api.ServicePrincipalProfile{},
+					ServicePrincipalProfile: api.ServicePrincipalProfile{
+						ClientID:     "azure_client_id_value",
+						ClientSecret: "azure_client_secret_value",
+					},
+					InfraID: "azure_resource_prefix_value",
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: "fake/azure/paths/azure_resourcegroup_value",
+					},
 				},
 			},
-			wantErr: `secrets "azure-credentials" not found`,
+			subscriptionDoc: api.SubscriptionDocument{
+				ID: "azure_subscription_id_value",
+				Subscription: &api.Subscription{
+					Properties: &api.SubscriptionProperties{
+						TenantID: "azure_tenant_id_value",
+					},
+				},
+			},
+			expect: func() corev1.Secret {
+				secret := getFakeOpenShiftSecret()
+				secret.Data["azure_region"] = []byte("azure_region_value")
+				secret.Data["azure_resource_prefix"] = []byte("azure_resource_prefix_value")
+				secret.Data["azure_resourcegroup"] = []byte("azure_resourcegroup_value")
+				secret.Data["azure_subscription_id"] = []byte("azure_subscription_id_value")
+				return secret
+			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
