@@ -10,11 +10,13 @@ import (
 
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	"github.com/ghodss/yaml"
+	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -180,9 +182,30 @@ func (m *manager) updateOpenShiftSecret(ctx context.Context) error {
 		// azure_client_id: secret_id
 		// azure_client_secret: secret_value
 		// azure_tenant_id: tenant_id
-		secret, err := m.kubernetescli.CoreV1().Secrets("kube-system").Get(ctx, "azure-credentials", metav1.GetOptions{})
-		if err != nil {
+		secret, err := m.kubernetescli.CoreV1().Secrets(clusterauthorizer.AzureCredentialSecretNameSpace).Get(ctx, clusterauthorizer.AzureCredentialSecretName, metav1.GetOptions{})
+		if err != nil && !kerrors.IsNotFound(err) {
 			return err
+		}
+		if kerrors.IsNotFound(err) {
+			// rebuild secret
+			secret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      clusterauthorizer.AzureCredentialSecretName,
+					Namespace: clusterauthorizer.AzureCredentialSecretNameSpace,
+				},
+				Type: corev1.SecretTypeOpaque,
+				Data: make(map[string][]byte),
+			}
+			secret.Data["azure_subscription_id"] = []byte(m.subscriptionDoc.ID)
+			secret.Data["azure_resource_prefix"] = []byte(m.doc.OpenShiftCluster.Properties.InfraID)
+			resourceGroupID := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID
+			secret.Data["azure_resourcegroup"] = []byte(resourceGroupID[strings.LastIndex(resourceGroupID, "/")+1:])
+			secret.Data["azure_region"] = []byte(m.doc.OpenShiftCluster.Location)
+			// values set below
+			secret.Data["azure_client_id"] = []byte("")
+			secret.Data["azure_client_secret"] = []byte("")
+			secret.Data["azure_tenant_id"] = []byte("")
+			changed = true
 		}
 
 		if string(secret.Data["azure_client_id"]) != spp.ClientID {
@@ -201,7 +224,7 @@ func (m *manager) updateOpenShiftSecret(ctx context.Context) error {
 		}
 
 		if changed {
-			_, err = m.kubernetescli.CoreV1().Secrets("kube-system").Update(ctx, secret, metav1.UpdateOptions{})
+			_, err = m.kubernetescli.CoreV1().Secrets(clusterauthorizer.AzureCredentialSecretNameSpace).Update(ctx, secret, metav1.UpdateOptions{})
 			if err != nil {
 				return err
 			}
