@@ -175,6 +175,7 @@ func (m *manager) updateAROSecret(ctx context.Context) error {
 }
 
 func (m *manager) updateOpenShiftSecret(ctx context.Context) error {
+	var recreate bool
 	var changed bool
 	spp := m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -205,7 +206,7 @@ func (m *manager) updateOpenShiftSecret(ctx context.Context) error {
 			secret.Data["azure_client_id"] = []byte("")
 			secret.Data["azure_client_secret"] = []byte("")
 			secret.Data["azure_tenant_id"] = []byte("")
-			changed = true
+			recreate = true
 		}
 
 		if string(secret.Data["azure_client_id"]) != spp.ClientID {
@@ -223,7 +224,12 @@ func (m *manager) updateOpenShiftSecret(ctx context.Context) error {
 			changed = true
 		}
 
-		if changed {
+		if recreate {
+			_, err = m.kubernetescli.CoreV1().Secrets(clusterauthorizer.AzureCredentialSecretNameSpace).Create(ctx, secret, metav1.CreateOptions{})
+			if err != nil {
+				return err
+			}
+		} else if changed {
 			_, err = m.kubernetescli.CoreV1().Secrets(clusterauthorizer.AzureCredentialSecretNameSpace).Update(ctx, secret, metav1.UpdateOptions{})
 			if err != nil {
 				return err
@@ -236,7 +242,7 @@ func (m *manager) updateOpenShiftSecret(ctx context.Context) error {
 	}
 
 	// return early if not changed
-	if !changed {
+	if !changed && !recreate {
 		return nil
 	}
 
