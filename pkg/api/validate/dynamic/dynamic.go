@@ -87,7 +87,7 @@ func NewValidator(
 	authorizerType AuthorizerType,
 	cred azcore.TokenCredential,
 	pdpClient remotepdp.RemotePDPClient,
-) (Dynamic, error) {
+) Dynamic {
 	return &dynamic{
 		log:                        log,
 		authorizerType:             authorizerType,
@@ -104,19 +104,19 @@ func NewValidator(
 		diskEncryptionSets: compute.NewDiskEncryptionSetsClient(azEnv, subscriptionID, authorizer),
 		resourceSkusClient: compute.NewResourceSkusClient(azEnv, subscriptionID, authorizer),
 		pdpClient:          pdpClient,
-	}, nil
+	}
 }
 
 func NewServicePrincipalValidator(
 	log *logrus.Entry,
 	azEnv *azureclient.AROEnvironment,
 	authorizerType AuthorizerType,
-) (ServicePrincipalValidator, error) {
+) ServicePrincipalValidator {
 	return &dynamic{
 		log:            log,
 		authorizerType: authorizerType,
 		azEnv:          azEnv,
-	}, nil
+	}
 }
 
 func (dv *dynamic) ValidateVnet(

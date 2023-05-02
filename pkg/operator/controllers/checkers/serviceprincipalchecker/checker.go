@@ -24,7 +24,7 @@ type checker struct {
 
 	credentials        func(ctx context.Context) (*clusterauthorizer.Credentials, error)
 	getTokenCredential func(azEnv *azureclient.AROEnvironment, credentials *clusterauthorizer.Credentials) (azcore.TokenCredential, error)
-	newSPValidator     func(azEnv *azureclient.AROEnvironment) (dynamic.ServicePrincipalValidator, error)
+	newSPValidator     func(azEnv *azureclient.AROEnvironment) dynamic.ServicePrincipalValidator
 }
 
 func newServicePrincipalChecker(log *logrus.Entry, client client.Client) *checker {
@@ -35,7 +35,7 @@ func newServicePrincipalChecker(log *logrus.Entry, client client.Client) *checke
 			return clusterauthorizer.AzCredentials(ctx, client)
 		},
 		getTokenCredential: clusterauthorizer.GetTokenCredential,
-		newSPValidator: func(azEnv *azureclient.AROEnvironment) (dynamic.ServicePrincipalValidator, error) {
+		newSPValidator: func(azEnv *azureclient.AROEnvironment) dynamic.ServicePrincipalValidator {
 			return dynamic.NewServicePrincipalValidator(log, azEnv, dynamic.AuthorizerClusterServicePrincipal)
 		},
 	}
@@ -52,10 +52,7 @@ func (r *checker) Check(ctx context.Context, AZEnvironment string) error {
 		return err
 	}
 
-	spDynamic, err := r.newSPValidator(&azEnv)
-	if err != nil {
-		return err
-	}
+	spDynamic := r.newSPValidator(&azEnv)
 
 	tokenCredential, err := r.getTokenCredential(&azEnv, azCred)
 	if err != nil {
