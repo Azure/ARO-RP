@@ -31,6 +31,7 @@ func NewDeploymentsClient(environment *azureclient.AROEnvironment, subscriptionI
 	client.Authorizer = authorizer
 	client.PollingDelay = 10 * time.Second
 	client.PollingDuration = time.Hour
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &deploymentsClient{
 		DeploymentsClient: client,

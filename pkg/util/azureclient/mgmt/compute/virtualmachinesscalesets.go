@@ -24,6 +24,7 @@ var _ VirtualMachineScaleSetsClient = &virtualMachineScaleSetsClient{}
 func NewVirtualMachineScaleSetsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) VirtualMachineScaleSetsClient {
 	client := mgmtcompute.NewVirtualMachineScaleSetsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &virtualMachineScaleSetsClient{
 		VirtualMachineScaleSetsClient: client,

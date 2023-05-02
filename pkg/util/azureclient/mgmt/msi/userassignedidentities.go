@@ -27,6 +27,7 @@ var _ UserAssignedIdentitiesClient = &userAssignedIdentitiesClient{}
 func NewUserAssignedIdentitiesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) UserAssignedIdentitiesClient {
 	client := mgmtmsi.NewUserAssignedIdentitiesClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &userAssignedIdentitiesClient{
 		UserAssignedIdentitiesClient: client,

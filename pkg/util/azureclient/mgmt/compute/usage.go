@@ -25,6 +25,7 @@ var _ UsageClient = &usageClient{}
 func NewUsageClient(environment *azureclient.AROEnvironment, tenantID string, authorizer autorest.Authorizer) UsageClient {
 	client := mgmtcompute.NewUsageClientWithBaseURI(environment.ResourceManagerEndpoint, tenantID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &usageClient{
 		UsageClient: client,

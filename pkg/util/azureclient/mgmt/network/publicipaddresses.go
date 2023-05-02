@@ -28,6 +28,7 @@ var _ PublicIPAddressesClient = &publicIPAddressesClient{}
 func NewPublicIPAddressesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) PublicIPAddressesClient {
 	client := mgmtnetwork.NewPublicIPAddressesClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &publicIPAddressesClient{
 		PublicIPAddressesClient: client,

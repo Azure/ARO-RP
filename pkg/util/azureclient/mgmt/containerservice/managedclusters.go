@@ -25,6 +25,7 @@ var _ ManagedClustersClient = &managedClustersClient{}
 func NewManagedClustersClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) ManagedClustersClient {
 	client := mgmtcontainerservice.NewManagedClustersClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &managedClustersClient{
 		ManagedClustersClient: client,

@@ -30,6 +30,7 @@ func NewVirtualMachineScaleSetVMsClient(environment *azureclient.AROEnvironment,
 	client := mgmtcompute.NewVirtualMachineScaleSetVMsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 	client.PollingDuration = time.Hour
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &virtualMachineScaleSetVMsClient{
 		VirtualMachineScaleSetVMsClient: client,
