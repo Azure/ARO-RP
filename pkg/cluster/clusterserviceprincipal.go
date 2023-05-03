@@ -184,9 +184,6 @@ func (m *manager) updateOpenShiftSecret(ctx context.Context) error {
 		// azure_client_secret: secret_value
 		// azure_tenant_id: tenant_id
 		secret, err := m.kubernetescli.CoreV1().Secrets(clusterauthorizer.AzureCredentialSecretNameSpace).Get(ctx, clusterauthorizer.AzureCredentialSecretName, metav1.GetOptions{})
-		if err != nil && !kerrors.IsNotFound(err) {
-			return err
-		}
 		if kerrors.IsNotFound(err) {
 			// rebuild secret
 			secret = &corev1.Secret{
@@ -207,6 +204,8 @@ func (m *manager) updateOpenShiftSecret(ctx context.Context) error {
 			secret.Data["azure_client_secret"] = []byte("")
 			secret.Data["azure_tenant_id"] = []byte("")
 			recreate = true
+		} else if err != nil {
+			return err
 		}
 
 		if string(secret.Data["azure_client_id"]) != spp.ClientID {
