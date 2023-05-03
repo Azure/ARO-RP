@@ -95,7 +95,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 						nil,
 					)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor permission on vnet '" + vnetID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on vnet '" + vnetID + "'.",
 		},
 		{
 			name: "fail: not found",
@@ -131,7 +131,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 					)
 			},
 
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor permission on vnet '" + vnetID + "'. Original error message: some forbidden error on the resource.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on vnet '" + vnetID + "'.\nOriginal error message: some forbidden error on the resource.",
 		},
 		{
 			name: "fail: unclassified error is wrapped into a cloud error",
@@ -160,6 +160,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 			tt.mocks(permissionsClient, cancel)
 
 			dv := &dynamic{
+				appID:          "fff51942-b1f9-4119-9453-aaa922259eb7",
 				authorizerType: AuthorizerClusterServicePrincipal,
 				log:            logrus.NewEntry(logrus.StandardLogger()),
 				permissions:    permissionsClient,
@@ -350,7 +351,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 						nil,
 					)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor permission on route table '" + workerRtID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor role on route table '" + workerRtID + "'.",
 		},
 		{
 			name:   "pass",
@@ -509,7 +510,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 						nil,
 					)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor permission on nat gateway '" + workerNgID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor role on nat gateway '" + workerNgID + "'.",
 		},
 		{
 			name:   "pass",
@@ -1040,7 +1041,7 @@ func TestValidateVnetPermissionsWithCheckAccess(t *testing.T) {
 						},
 					}, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor permission on vnet '" + vnetID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on vnet '" + vnetID + "'.",
 		},
 		{
 			name: "fail: getting an invalid token from AAD",
@@ -1074,7 +1075,7 @@ func TestValidateVnetPermissionsWithCheckAccess(t *testing.T) {
 					}).
 					Return(nil, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor permission on vnet '" + vnetID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on vnet '" + vnetID + "'.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1091,6 +1092,7 @@ func TestValidateVnetPermissionsWithCheckAccess(t *testing.T) {
 
 			dv := &dynamic{
 				azEnv:                      &azureclient.PublicCloud,
+				appID:                      "fff51942-b1f9-4119-9453-aaa922259eb7",
 				authorizerType:             AuthorizerClusterServicePrincipal,
 				log:                        logrus.NewEntry(logrus.StandardLogger()),
 				pdpClient:                  pdpClient,
@@ -1186,7 +1188,7 @@ func TestValidateRouteTablesPermissionsWithCheckAccess(t *testing.T) {
 						},
 					}, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor permission on route table '" + workerRtID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor role on route table '" + workerRtID + "'.",
 		},
 		{
 			name:   "pass",
@@ -1340,7 +1342,7 @@ func TestValidateNatGatewaysPermissionsWithCheckAccess(t *testing.T) {
 						},
 					}, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor permission on nat gateway '" + workerNgID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor role on nat gateway '" + workerNgID + "'.",
 		},
 		{
 			name:   "pass",

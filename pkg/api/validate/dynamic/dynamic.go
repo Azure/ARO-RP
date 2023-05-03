@@ -56,6 +56,7 @@ type Dynamic interface {
 
 type dynamic struct {
 	log            *logrus.Entry
+	appID          string // for use when reporting an error
 	authorizerType AuthorizerType
 	// This represents the Subject for CheckAccess.  Could be either FP or SP.
 	checkAccessSubjectInfoCred azcore.TokenCredential
@@ -84,12 +85,14 @@ func NewValidator(
 	azEnv *azureclient.AROEnvironment,
 	subscriptionID string,
 	authorizer autorest.Authorizer,
+	appID string,
 	authorizerType AuthorizerType,
 	cred azcore.TokenCredential,
 	pdpClient remotepdp.RemotePDPClient,
 ) (Dynamic, error) {
 	return &dynamic{
 		log:                        log,
+		appID:                      appID,
 		authorizerType:             authorizerType,
 		env:                        env,
 		azEnv:                      azEnv,
@@ -201,8 +204,9 @@ func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resou
 		http.StatusBadRequest,
 		errCode,
 		"",
-		"The %s service principal does not have Network Contributor permission on vnet '%s'.",
+		"The %s service principal (Application ID: %s) does not have Network Contributor role on vnet '%s'.",
 		dv.authorizerType,
+		dv.appID,
 		vnet.String(),
 	)
 
@@ -210,6 +214,8 @@ func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resou
 		return noPermissionsErr
 	}
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
+		dv.log.Error(detailedErr)
+
 		switch detailedErr.StatusCode {
 		case http.StatusNotFound:
 			return api.NewCloudError(
@@ -221,7 +227,7 @@ func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resou
 			)
 		case http.StatusForbidden:
 			noPermissionsErr.Message = fmt.Sprintf(
-				"%s Original error message: %s",
+				"%s\nOriginal error message: %s",
 				noPermissionsErr.Message,
 				detailedErr.Message,
 			)
@@ -283,7 +289,7 @@ func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) 
 			http.StatusBadRequest,
 			errCode,
 			"",
-			"The %s service principal does not have Network Contributor permission on route table '%s'.",
+			"The %s service principal does not have Network Contributor role on route table '%s'.",
 			dv.authorizerType,
 			rtID,
 		)
@@ -349,7 +355,7 @@ func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) 
 			http.StatusBadRequest,
 			errCode,
 			"",
-			"The %s service principal does not have Network Contributor permission on nat gateway '%s'.",
+			"The %s service principal does not have Network Contributor role on nat gateway '%s'.",
 			dv.authorizerType,
 			ngID,
 		)
