@@ -85,7 +85,18 @@ func TestRotateTokenPassword(t *testing.T) {
 			wantPassword:            "foo",
 		},
 		{
-			name: "uses missing password when only one token password exists",
+			name: "uses password1 when only password2 exists",
+			tokenPasswordProperties: []mgmtcontainerregistry.TokenPassword{
+				{
+					Name:         mgmtcontainerregistry.TokenPasswordNamePassword2,
+					CreationTime: &date.Time{Time: time.Date(2022, time.April, 4, 0, 0, 0, 0, time.UTC)},
+				},
+			},
+			wantRenewalName: mgmtcontainerregistry.TokenPasswordNamePassword1,
+			wantPassword:    "foo",
+		},
+		{
+			name: "uses password2 when only password1 exists",
 			tokenPasswordProperties: []mgmtcontainerregistry.TokenPassword{
 				{
 					Name:         mgmtcontainerregistry.TokenPasswordNamePassword1,
