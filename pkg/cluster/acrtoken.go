@@ -64,7 +64,7 @@ func (m *manager) ensureACRToken(ctx context.Context) error {
 
 func (m *manager) rotateACRTokenPassword(ctx context.Context) error {
 	// we do not want to rotate tokens in local development
-	if m.env.IsLocalDevelopmentMode() {
+	if m.env.IsLocalDevelopmentMode() || m.env.IsCI() {
 		return nil
 	}
 
