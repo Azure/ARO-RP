@@ -141,7 +141,7 @@ func validWorkerProfile() []api.WorkerProfile {
 	}
 }
 
-func TestWorkerProfilesEnricherTask2(t *testing.T) {
+func TestWorkerProfilesEnricherTask(t *testing.T) {
 	log := logrus.NewEntry(logrus.StandardLogger())
 
 	invalidProvSpec := machinev1beta1.ProviderSpec{Value: &kruntime.RawExtension{
