@@ -74,11 +74,6 @@ func (m *manager) rotateACRTokenPassword(ctx context.Context) error {
 	}
 
 	registryProfile := tokenManager.GetRegistryProfile(m.doc.OpenShiftCluster)
-	if registryProfile == nil {
-		// shouldn't get here but return error if we do
-		return nil // TODO: add some error
-	}
-
 	err = tokenManager.RotateTokenPassword(ctx, registryProfile)
 	if err != nil {
 		return err
