@@ -73,19 +73,19 @@ func (m *manager) rotateACRTokenPassword(ctx context.Context) error {
 		return err
 	}
 
-	rp := tokenManager.GetRegistryProfile(m.doc.OpenShiftCluster)
-	if rp == nil {
+	registryProfile := tokenManager.GetRegistryProfile(m.doc.OpenShiftCluster)
+	if registryProfile == nil {
 		// shouldn't get here but return error if we do
 		return nil // TODO: add some error
 	}
 
-	err = tokenManager.RotateTokenPassword(ctx, rp)
+	err = tokenManager.RotateTokenPassword(ctx, registryProfile)
 	if err != nil {
 		return err
 	}
 	// update cluster pull secret in openshift-azure-operator namespace
 	// secret is stored as a .dockerconfigjson string in the .dockerconfigjson key
-	encodedDockerConfigJson, _, err := pullsecret.SetRegistryProfiles("", rp)
+	encodedDockerConfigJson, _, err := pullsecret.SetRegistryProfiles("", registryProfile)
 	if err != nil {
 		return err
 	}
