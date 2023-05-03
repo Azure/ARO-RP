@@ -82,7 +82,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				"[Action fixMCSCert-fm]",
 				"[Action fixMCSUserData-fm]",
 				"[Action ensureGatewayUpgrade-fm]",
-				"[Action updateACRToken-fm]",
+				"[Action rotateACRTokenPassword-fm]",
 				"[Action configureAPIServerCertificate-fm]",
 				"[Action configureIngressCertificate-fm]",
 				"[Action populateRegistryStorageAccountName-fm]",

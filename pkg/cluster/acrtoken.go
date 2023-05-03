@@ -62,7 +62,7 @@ func (m *manager) ensureACRToken(ctx context.Context) error {
 	return nil
 }
 
-func (m *manager) updateACRToken(ctx context.Context) error {
+func (m *manager) rotateACRTokenPassword(ctx context.Context) error {
 	// we do not want to rotate tokens in local development
 	// TODO: check for using rh-dev-env-pull on arointsvc along with or instead of local development
 	if m.env.IsLocalDevelopmentMode() {
