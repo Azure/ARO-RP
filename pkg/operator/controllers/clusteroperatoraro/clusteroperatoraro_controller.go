@@ -94,7 +94,15 @@ func (r *Reconciler) setClusterOperatorStatus(ctx context.Context, originalClust
 		Reason:             reasonAsExpected,
 	})
 
-	if equality.Semantic.DeepEqual(clusterOperatorObj.Status.Conditions, originalClusterOperatorObj.Status.Conditions) {
+	clusterOperatorObj.Status.Versions = []configv1.OperandVersion{
+		{
+			Name:    "operator",
+			Version: version.GitCommit,
+		},
+	}
+
+	if equality.Semantic.DeepEqual(clusterOperatorObj.Status.Conditions, originalClusterOperatorObj.Status.Conditions) &&
+		equality.Semantic.DeepEqual(clusterOperatorObj.Status.Versions, originalClusterOperatorObj.Status.Versions) {
 		return nil
 	}
 
