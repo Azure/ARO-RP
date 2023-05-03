@@ -153,23 +153,8 @@ func (m *manager) generateTokenPassword(ctx context.Context, passwordName mgmtco
 		return "", err
 	}
 
-	// response from Azure API has the following format
-	//   "passwords": [
-	//   {
-	//     "creationTime": Datetime value,
-	//     "expiry": Datetime value, or null if not set,
-	//     "name": "password1", hardcoded value from Azure
-	//     "value": string if password was just generated, otherwise null
-	//   },
-	//   {
-	//     "creationTime": Datetime value,
-	//     "expiry": Datetime value, or null if not set,
-	//     "name": "password2", hardcoded value from Azure
-	//     "value": string if password was just generated, otherwise null
-	//   }
-	// ]
-	// Azure always returns all passwords that exist on the token, but only the password being generated has a
-	// value
+	// response details from Azure API
+	// https://learn.microsoft.com/en-us/rest/api/containerregistry/tokens/create?tabs=Go#tokencreate
 
 	for _, pw := range *creds.Passwords {
 		if pw.Name == passwordName {
