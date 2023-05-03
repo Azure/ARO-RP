@@ -512,7 +512,7 @@ test_validate_subnet_data = [
     test_validate_subnet_data,
     ids=[i[0] for i in test_validate_subnet_data]
 )
-@ patch('azext_aro.aaz.latest.network.vnet.subnet.Show')
+@ patch('azext_aro._validators.subnet_show')
 @ patch('azext_aro._validators.get_subscription_id')
 @ patch('azext_aro._validators.parse_resource_id')
 @ patch('azext_aro._validators.is_valid_resource_id')
