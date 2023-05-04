@@ -229,7 +229,7 @@ func setFieldCreatedByHive(createdByHive bool) database.OpenShiftClusterDocument
 
 func (m *manager) bootstrap() []steps.Step {
 	s := []steps.Step{
-		steps.Action(m.validateResources),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources),
 		steps.Action(m.ensureACRToken),
 		steps.Action(m.ensureInfraID),
 		steps.Action(m.ensureSSHKey),
@@ -242,7 +242,7 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.ensureResourceGroup),
 		steps.Action(m.enableServiceEndpoints),
 		steps.Action(m.setMasterSubnetPolicies),
-		steps.Action(m.deployBaseResourceTemplate),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.deployBaseResourceTemplate),
 		steps.Action(m.attachNSGs),
 		steps.Action(m.updateAPIIPEarly),
 		steps.Action(m.createOrUpdateRouterIPEarly),
