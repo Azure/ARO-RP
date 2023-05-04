@@ -11,6 +11,8 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 )
 
+const cpuQuotaMetric = "backend.openshiftcluster.quotareached.cpu"
+
 func (mon *Monitor) detectMHCQuotaFailure(ctx context.Context) error {
 	m := map[string]string{
 		"reason":         "FailedCreate",
@@ -26,7 +28,7 @@ func (mon *Monitor) detectMHCQuotaFailure(ctx context.Context) error {
 
 	for _, event := range events.Items {
 		if eventIsNew(event) && messageMatchesQuota(event.Note) {
-			mon.emitGauge("backend.openshiftcluster.quotareached.cpu", int64(1), nil)
+			mon.emitGauge(cpuQuotaMetric, int64(1), nil)
 			break
 		}
 	}

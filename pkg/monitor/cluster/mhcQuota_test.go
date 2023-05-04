@@ -84,7 +84,7 @@ func TestMHCQuota2(t *testing.T) {
 			}
 
 			if tt.wantGauge {
-				m.EXPECT().EmitGauge("mhc.quotareached", int64(1), map[string]string{})
+				m.EXPECT().EmitGauge(cpuQuotaMetric, int64(1), map[string]string{})
 			}
 			err := mon.detectMHCQuotaFailure(ctx)
 			if err != nil {
