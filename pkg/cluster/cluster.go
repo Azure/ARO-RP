@@ -37,6 +37,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
+	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/storage"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -59,7 +60,7 @@ type manager struct {
 	billing           billing.Manager
 	doc               *api.OpenShiftClusterDocument
 	subscriptionDoc   *api.SubscriptionDocument
-	fpAuthorizer      autorest.Authorizer
+	fpAuthorizer      refreshable.Authorizer
 	localFpAuthorizer autorest.Authorizer
 	metricsEmitter    metrics.Emitter
 
@@ -122,7 +123,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	fpAuthorizer, err := _env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID, _env.Environment().ResourceManagerScope)
+	fpAuthorizer, err := refreshable.NewAuthorizer(_env, subscriptionDoc.Subscription.Properties.TenantID)
 	if err != nil {
 		return nil, err
 	}
