@@ -26,7 +26,7 @@ func (mon *Monitor) detectMHCQuotaFailure(ctx context.Context) error {
 
 	for _, event := range events.Items {
 		if eventIsNew(event) && messageMatchesQuota(event.Note) {
-			mon.emitGauge("mhc.quotareached", int64(1), nil)
+			mon.emitGauge("backend.openshiftcluster.quotareached.cpu", int64(1), nil)
 			break
 		}
 	}
