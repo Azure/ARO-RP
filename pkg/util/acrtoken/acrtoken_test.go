@@ -89,7 +89,7 @@ func TestRotateTokenPassword(t *testing.T) {
 			tokenPasswordProperties: []mgmtcontainerregistry.TokenPassword{
 				{
 					Name:         mgmtcontainerregistry.TokenPasswordNamePassword2,
-					CreationTime: &date.Time{Time: time.Date(2022, time.April, 4, 0, 0, 0, 0, time.UTC)},
+					CreationTime: &date.Time{Time: time.Now()},
 				},
 			},
 			wantRenewalName: mgmtcontainerregistry.TokenPasswordNamePassword1,
@@ -100,7 +100,7 @@ func TestRotateTokenPassword(t *testing.T) {
 			tokenPasswordProperties: []mgmtcontainerregistry.TokenPassword{
 				{
 					Name:         mgmtcontainerregistry.TokenPasswordNamePassword1,
-					CreationTime: &date.Time{Time: time.Date(2022, time.April, 4, 0, 0, 0, 0, time.UTC)},
+					CreationTime: &date.Time{Time: time.Now()},
 				},
 			},
 			wantRenewalName: mgmtcontainerregistry.TokenPasswordNamePassword2,
@@ -111,11 +111,11 @@ func TestRotateTokenPassword(t *testing.T) {
 			tokenPasswordProperties: []mgmtcontainerregistry.TokenPassword{
 				{
 					Name:         mgmtcontainerregistry.TokenPasswordNamePassword1,
-					CreationTime: &date.Time{Time: time.Date(2022, time.April, 4, 0, 0, 0, 0, time.UTC)},
+					CreationTime: &date.Time{Time: time.Now().Add(-60 * time.Hour * 24)},
 				},
 				{
 					Name:         mgmtcontainerregistry.TokenPasswordNamePassword2,
-					CreationTime: &date.Time{Time: time.Date(2022, time.May, 20, 0, 0, 0, 0, time.UTC)},
+					CreationTime: &date.Time{Time: time.Now()},
 				},
 			},
 			wantRenewalName: mgmtcontainerregistry.TokenPasswordNamePassword1,
@@ -126,11 +126,11 @@ func TestRotateTokenPassword(t *testing.T) {
 			tokenPasswordProperties: []mgmtcontainerregistry.TokenPassword{
 				{
 					Name:         mgmtcontainerregistry.TokenPasswordNamePassword1,
-					CreationTime: &date.Time{Time: time.Date(2022, time.May, 20, 0, 0, 0, 0, time.UTC)},
+					CreationTime: &date.Time{Time: time.Now()},
 				},
 				{
 					Name:         mgmtcontainerregistry.TokenPasswordNamePassword2,
-					CreationTime: &date.Time{Time: time.Date(2022, time.April, 4, 0, 0, 0, 0, time.UTC)},
+					CreationTime: &date.Time{Time: time.Now().Add(-60 * time.Hour * 24)},
 				},
 			},
 			wantRenewalName: mgmtcontainerregistry.TokenPasswordNamePassword2,
