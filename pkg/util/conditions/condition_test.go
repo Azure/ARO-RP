@@ -12,12 +12,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/clock"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestSetCondition(t *testing.T) {
@@ -31,32 +31,28 @@ func TestSetCondition(t *testing.T) {
 
 	for _, tt := range []struct {
 		name    string
-		objects []client.Object
+		cluster arov1alpha1.Cluster
 		input   *operatorv1.OperatorCondition
 
 		expected arov1alpha1.ClusterStatus
-		wantErr  error
+		wantErr  string
 	}{
 		{
 			name: "no condition provided",
-			objects: []client.Object{&arov1alpha1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: objectName,
-				},
-			}},
+			cluster: arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{Name: objectName},
+			},
 			expected: arov1alpha1.ClusterStatus{},
 		},
 		{
 			name: "new condition provided",
-			objects: []client.Object{&arov1alpha1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: objectName,
-				},
+			cluster: arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{Name: objectName},
 				Status: arov1alpha1.ClusterStatus{
 					Conditions:      []operatorv1.OperatorCondition{},
 					OperatorVersion: version,
 				},
-			}},
+			},
 			input: &operatorv1.OperatorCondition{
 				Type:   arov1alpha1.InternetReachableFromMaster,
 				Status: operatorv1.ConditionFalse,
@@ -74,10 +70,8 @@ func TestSetCondition(t *testing.T) {
 		},
 		{
 			name: "condition provided without status change - only update operator version",
-			objects: []client.Object{&arov1alpha1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: objectName,
-				},
+			cluster: arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{Name: objectName},
 				Status: arov1alpha1.ClusterStatus{
 					Conditions: []operatorv1.OperatorCondition{
 						{
@@ -87,7 +81,7 @@ func TestSetCondition(t *testing.T) {
 					},
 					OperatorVersion: "?",
 				},
-			}},
+			},
 			input: &operatorv1.OperatorCondition{
 				Type:   arov1alpha1.InternetReachableFromMaster,
 				Status: operatorv1.ConditionFalse,
@@ -104,10 +98,8 @@ func TestSetCondition(t *testing.T) {
 		},
 		{
 			name: "condition provided without status change - no update",
-			objects: []client.Object{&arov1alpha1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: objectName,
-				},
+			cluster: arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{Name: objectName},
 				Status: arov1alpha1.ClusterStatus{
 					Conditions: []operatorv1.OperatorCondition{
 						{
@@ -118,7 +110,7 @@ func TestSetCondition(t *testing.T) {
 					},
 					OperatorVersion: version,
 				},
-			}},
+			},
 			input: &operatorv1.OperatorCondition{
 				Type:               arov1alpha1.InternetReachableFromMaster,
 				Status:             operatorv1.ConditionFalse,
@@ -137,10 +129,8 @@ func TestSetCondition(t *testing.T) {
 		},
 		{
 			name: "update one of the existing conditions",
-			objects: []client.Object{&arov1alpha1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: objectName,
-				},
+			cluster: arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{Name: objectName},
 				Status: arov1alpha1.ClusterStatus{
 					Conditions: []operatorv1.OperatorCondition{
 						{
@@ -154,7 +144,7 @@ func TestSetCondition(t *testing.T) {
 					},
 					OperatorVersion: "?",
 				},
-			}},
+			},
 			input: &operatorv1.OperatorCondition{
 				Type:   arov1alpha1.InternetReachableFromMaster,
 				Status: operatorv1.ConditionTrue,
@@ -176,10 +166,8 @@ func TestSetCondition(t *testing.T) {
 		},
 		{
 			name: "cleanup stale conditions",
-			objects: []client.Object{&arov1alpha1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: objectName,
-				},
+			cluster: arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{Name: objectName},
 				Status: arov1alpha1.ClusterStatus{
 					Conditions: []operatorv1.OperatorCondition{
 						{
@@ -189,7 +177,7 @@ func TestSetCondition(t *testing.T) {
 					},
 					OperatorVersion: version,
 				},
-			}},
+			},
 			input: &operatorv1.OperatorCondition{
 				Type:   arov1alpha1.InternetReachableFromMaster,
 				Status: operatorv1.ConditionTrue,
@@ -207,16 +195,13 @@ func TestSetCondition(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			clientFake := fake.NewClientBuilder().WithObjects(tt.objects...).Build()
+			clientFake := fake.NewClientBuilder().WithObjects(&tt.cluster).Build()
 
 			err := SetCondition(ctx, clientFake, tt.input, role)
-			if err != nil && tt.wantErr != nil {
-				t.Fatal(err.Error())
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			result := &arov1alpha1.Cluster{}
-			err = clientFake.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, result)
-			if err != nil {
+			if err = clientFake.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, result); err != nil {
 				t.Fatal(err.Error())
 			}
 

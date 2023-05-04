@@ -1,5 +1,141 @@
 # Release History
 
+## 1.2.2 (2023-03-07)
+
+### Other Changes
+* Upgraded dependencies
+
+## 1.3.0-beta.3 (2023-02-07)
+
+### Features Added
+* By default, credentials set client capability "CP1" to enable support for
+  [Continuous Access Evaluation (CAE)](https://docs.microsoft.com/azure/active-directory/develop/app-resilience-continuous-access-evaluation).
+  This indicates to Azure Active Directory that your application can handle CAE claims challenges.
+  You can disable this behavior by setting the environment variable "AZURE_IDENTITY_DISABLE_CP1" to "true".
+* `InteractiveBrowserCredentialOptions.LoginHint` enables pre-populating the login
+  prompt with a username ([#15599](https://github.com/Azure/azure-sdk-for-go/pull/15599))
+* Service principal and user credentials support ADFS authentication on Azure Stack.
+  Specify "adfs" as the credential's tenant.
+* Applications running in private or disconnected clouds can prevent credentials from
+  requesting Azure AD instance metadata by setting the `DisableInstanceDiscovery`
+  field on credential options.
+* Many credentials can now be configured to authenticate in multiple tenants. The
+  options types for these credentials have an `AdditionallyAllowedTenants` field
+  that specifies additional tenants in which the credential may authenticate.
+
+## 1.2.1 (2023-01-26)
+
+### Other Changes
+* Upgrade MSAL to v0.8.1
+
+## 1.3.0-beta.2 (2023-01-10)
+
+### Features Added
+* Added `OnBehalfOfCredential` to support the on-behalf-of flow
+  ([#16642](https://github.com/Azure/azure-sdk-for-go/issues/16642))
+
+### Bugs Fixed
+* `AzureCLICredential` reports token expiration in local time (should be UTC)
+
+### Other Changes
+* `AzureCLICredential` imposes its default timeout only when the `Context`
+  passed to `GetToken()` has no deadline
+* Added `NewCredentialUnavailableError()`. This function constructs an error indicating
+  a credential can't authenticate and an encompassing `ChainedTokenCredential` should
+  try its next credential, if any.
+
+## 1.3.0-beta.1 (2022-12-13)
+
+### Features Added
+* `WorkloadIdentityCredential` and `DefaultAzureCredential` support
+  Workload Identity Federation on Kubernetes. `DefaultAzureCredential`
+  support requires environment variable configuration as set by the
+  Workload Identity webhook.
+  ([#15615](https://github.com/Azure/azure-sdk-for-go/issues/15615))
+
+## 1.2.0 (2022-11-08)
+
+### Other Changes
+* This version includes all fixes and features from 1.2.0-beta.*
+
+## 1.2.0-beta.3 (2022-10-11)
+
+### Features Added
+* `ManagedIdentityCredential` caches tokens in memory
+
+### Bugs Fixed
+* `ClientCertificateCredential` sends only the leaf cert for SNI authentication
+
+## 1.2.0-beta.2 (2022-08-10)
+
+### Features Added
+* Added `ClientAssertionCredential` to enable applications to authenticate
+  with custom client assertions
+
+### Other Changes
+* Updated AuthenticationFailedError with links to TROUBLESHOOTING.md for relevant errors
+* Upgraded `microsoft-authentication-library-for-go` requirement to v0.6.0
+
+## 1.2.0-beta.1 (2022-06-07)
+
+### Features Added
+* `EnvironmentCredential` reads certificate passwords from `AZURE_CLIENT_CERTIFICATE_PASSWORD`
+  ([#17099](https://github.com/Azure/azure-sdk-for-go/pull/17099))
+
+## 1.1.0 (2022-06-07)
+
+### Features Added
+* `ClientCertificateCredential` and `ClientSecretCredential` support ESTS-R. First-party
+  applications can set environment variable `AZURE_REGIONAL_AUTHORITY_NAME` with a
+  region name.
+  ([#15605](https://github.com/Azure/azure-sdk-for-go/issues/15605))
+
+## 1.0.1 (2022-06-07)
+
+### Other Changes
+* Upgrade `microsoft-authentication-library-for-go` requirement to v0.5.1
+  ([#18176](https://github.com/Azure/azure-sdk-for-go/issues/18176))
+
+## 1.0.0 (2022-05-12)
+
+### Features Added
+* `DefaultAzureCredential` reads environment variable `AZURE_CLIENT_ID` for the
+  client ID of a user-assigned managed identity
+  ([#17293](https://github.com/Azure/azure-sdk-for-go/pull/17293))
+
+### Breaking Changes
+* Removed `AuthorizationCodeCredential`. Use `InteractiveBrowserCredential` instead
+  to authenticate a user with the authorization code flow.
+* Instances of `AuthenticationFailedError` are now returned by pointer.
+* `GetToken()` returns `azcore.AccessToken` by value
+
+### Bugs Fixed
+* `AzureCLICredential` panics after receiving an unexpected error type
+  ([#17490](https://github.com/Azure/azure-sdk-for-go/issues/17490))
+
+### Other Changes
+* `GetToken()` returns an error when the caller specifies no scope
+* Updated to the latest versions of `golang.org/x/crypto`, `azcore` and `internal`
+
+## 0.14.0 (2022-04-05)
+
+### Breaking Changes
+* This module now requires Go 1.18
+* Removed `AuthorityHost`. Credentials are now configured for sovereign or private
+  clouds with the API in `azcore/cloud`, for example:
+  ```go
+  // before
+  opts := azidentity.ClientSecretCredentialOptions{AuthorityHost: azidentity.AzureGovernment}
+  cred, err := azidentity.NewClientSecretCredential(tenantID, clientID, secret, &opts)
+
+  // after
+  import "github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
+
+  opts := azidentity.ClientSecretCredentialOptions{}
+  opts.Cloud = cloud.AzureGovernment
+  cred, err := azidentity.NewClientSecretCredential(tenantID, clientID, secret, &opts)
+  ```
+
 ## 0.13.2 (2022-03-08)
 
 ### Bugs Fixed

@@ -5,7 +5,6 @@ package applens
 
 import (
 	"context"
-	"net/http"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 
@@ -14,8 +13,8 @@ import (
 
 // AppLensClient is a minimal interface for azure AppLensClient
 type AppLensClient interface {
-	GetDetector(ctx context.Context, o *GetDetectorOptions) (*http.Response, error)
-	ListDetectors(ctx context.Context, o *ListDetectorsOptions) (*http.Response, error)
+	GetDetector(ctx context.Context, o *GetDetectorOptions) ([]byte, error)
+	ListDetectors(ctx context.Context, o *ListDetectorsOptions) ([]byte, error)
 }
 
 type appLensClient struct {
@@ -25,9 +24,14 @@ type appLensClient struct {
 var _ AppLensClient = &appLensClient{}
 
 // NewAppLensClient returns a new AppLensClient
-func NewAppLensClient(env *azureclient.AROEnvironment, cred azcore.TokenCredential) AppLensClient {
-	client, _ := NewClient(env.AppLensEndpoint, env.AppLensScope, cred, nil)
+func NewAppLensClient(env *azureclient.AROEnvironment, cred azcore.TokenCredential) (AppLensClient, error) {
+	client, err := NewClient(env.AppLensEndpoint, env.PkiIssuerUrlTemplate, env.PkiCaName, env.AppLensScope, cred, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
 	return &appLensClient{
 		Client: client,
-	}
+	}, nil
 }

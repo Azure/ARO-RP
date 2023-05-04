@@ -19,12 +19,14 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/Azure/go-autorest/autorest/azure/auth"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/jongio/azidext/go/azidext"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	projectclient "github.com/openshift/client-go/project/clientset/versioned"
 	hiveclient "github.com/openshift/hive/pkg/client/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
+	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	"github.com/sirupsen/logrus"
 	"github.com/tebeka/selenium"
 	"k8s.io/client-go/kubernetes"
@@ -62,6 +64,7 @@ type clientSet struct {
 
 	RestConfig         *rest.Config
 	HiveRestConfig     *rest.Config
+	Monitoring         monitoringclient.Interface
 	Kubernetes         kubernetes.Interface
 	MachineAPI         machineclient.Interface
 	MachineConfig      mcoclient.Interface
@@ -261,10 +264,14 @@ func resourceIDFromEnv() string {
 }
 
 func newClientSet(ctx context.Context) (*clientSet, error) {
-	authorizer, err := auth.NewAuthorizerFromEnvironment()
+	options := _env.Environment().EnvironmentCredentialOptions()
+	tokenCredential, err := azidentity.NewEnvironmentCredential(options)
 	if err != nil {
 		return nil, err
 	}
+
+	scopes := []string{_env.Environment().ResourceManagerScope}
+	authorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
 	configv1, err := kubeadminkubeconfig.Get(ctx, log, _env, authorizer, resourceIDFromEnv())
 	if err != nil {
@@ -285,6 +292,11 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	}
 
 	cli, err := kubernetes.NewForConfig(restconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	monitoring, err := monitoringclient.NewForConfig(restconfig)
 	if err != nil {
 		return nil, err
 	}
@@ -362,6 +374,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		RestConfig:         restconfig,
 		HiveRestConfig:     hiveRestConfig,
 		Kubernetes:         cli,
+		Monitoring:         monitoring,
 		MachineAPI:         machineapicli,
 		MachineConfig:      mcocli,
 		AROClusters:        arocli,

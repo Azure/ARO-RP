@@ -46,7 +46,7 @@ func (p *Prometheus) Director(r *http.Request) {
 	cli := p.clientCache.Get(resourceID)
 	if cli == nil {
 		var err error
-		cli, err = p.cli(ctx, resourceID)
+		cli, err = p.Cli(ctx, resourceID)
 		if err != nil {
 			p.error(r, http.StatusInternalServerError, err)
 			return
@@ -56,8 +56,7 @@ func (p *Prometheus) Director(r *http.Request) {
 	}
 
 	r.RequestURI = ""
-	r.URL.Scheme = "http"
-	r.URL.Host = "prometheus-k8s-0:9090"
+	r.URL.Host, r.URL.Scheme = p.GetPrometheusHostAndScheme()
 	r.URL.Path = "/" + strings.Join(strings.Split(r.URL.Path, "/")[10:], "/")
 	r.Header.Del("Cookie")
 	r.Header.Del("Referer")
@@ -69,7 +68,11 @@ func (p *Prometheus) Director(r *http.Request) {
 	*r = *r.WithContext(context.WithValue(ctx, contextKeyClient, cli))
 }
 
-func (p *Prometheus) cli(ctx context.Context, resourceID string) (*http.Client, error) {
+func (p *Prometheus) GetPrometheusHostAndScheme() (string, string) {
+	return "prometheus-k8s-0:9090", "http"
+}
+
+func (p *Prometheus) Cli(ctx context.Context, resourceID string) (*http.Client, error) {
 	openShiftDoc, err := p.dbOpenShiftClusters.Get(ctx, resourceID)
 	if err != nil {
 		return nil, err

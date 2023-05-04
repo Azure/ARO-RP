@@ -62,8 +62,7 @@ func (f *frontend) _getOpenShiftClusters(ctx context.Context, log *logrus.Entry,
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	ocEnricher := f.ocEnricherFactory(log, f.env, f.m)
-	ocEnricher.Enrich(timeoutCtx, ocs...)
+	f.clusterEnricher.Enrich(timeoutCtx, log, ocs...)
 
 	for i := range ocs {
 		ocs[i].Properties.ClusterProfile.PullSecret = ""

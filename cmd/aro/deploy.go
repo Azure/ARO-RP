@@ -10,6 +10,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/sirupsen/logrus"
 
 	pkgdeploy "github.com/Azure/ARO-RP/pkg/deploy"
@@ -27,9 +29,15 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 	// env.NewCoreForCI is used in CI context to mock MSI, where env.NewCore uses
 	// MSI in production to populate env.Environment, Subscription, Location, etc
 	var _env env.Core
+	var tokenCredential azcore.TokenCredential
 	if os.Getenv("AZURE_EV2") != "" { // running in EV2 - use MSI
 		var err error
 		_env, err = env.NewCore(ctx, log)
+		if err != nil {
+			return err
+		}
+		options := _env.Environment().ManagedIdentityCredentialOptions()
+		tokenCredential, err = azidentity.NewManagedIdentityCredential(options)
 		if err != nil {
 			return err
 		}
@@ -47,6 +55,11 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 
 		var err error
 		_env, err = env.NewCoreForCI(ctx, log)
+		if err != nil {
+			return err
+		}
+		options := _env.Environment().EnvironmentCredentialOptions()
+		tokenCredential, err = azidentity.NewEnvironmentCredential(options)
 		if err != nil {
 			return err
 		}
@@ -71,7 +84,7 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	deployer, err := pkgdeploy.New(ctx, log, env, config, deployVersion)
+	deployer, err := pkgdeploy.New(ctx, log, env, config, deployVersion, tokenCredential)
 	if err != nil {
 		return err
 	}

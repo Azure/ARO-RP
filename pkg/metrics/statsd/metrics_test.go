@@ -12,11 +12,11 @@ import (
 
 func TestMarshalFloat(t *testing.T) {
 	f := metric{
-		metric:    "metric",
-		namespace: "namespace",
-		dims:      map[string]string{"key": "value"},
+		name:       "metric",
+		namespace:  "namespace",
+		dimensions: map[string]string{"key": "value"},
 
-		ts:         time.Unix(0, 0),
+		timestamp:  time.Unix(0, 0),
 		valueFloat: to.Float64Ptr(1.0),
 	}
 	b, err := f.marshalStatsd()
@@ -31,11 +31,11 @@ func TestMarshalFloat(t *testing.T) {
 
 func TestMarshalGauge(t *testing.T) {
 	g := metric{
-		metric:    "metric",
-		namespace: "namespace",
-		dims:      map[string]string{"key": "value"},
+		name:       "metric",
+		namespace:  "namespace",
+		dimensions: map[string]string{"key": "value"},
 
-		ts:         time.Unix(0, 0),
+		timestamp:  time.Unix(0, 0),
 		valueGauge: to.Int64Ptr(42),
 	}
 	b, err := g.marshalStatsd()

@@ -6,31 +6,15 @@ package cluster
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"reflect"
 	"regexp"
 	"sort"
 	"testing"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/go-test/deep"
-	"github.com/golang/mock/gomock"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	machinefake "github.com/openshift/client-go/machine/clientset/versioned/fake"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
-	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
-	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
-	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	mock_refreshable "github.com/Azure/ARO-RP/pkg/util/mocks/refreshable"
-	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -111,135 +95,5 @@ func TestMachines(t *testing.T) {
 	// No need to check every single machine
 	for _, r := range deep.Equal(expected.Machines[0], info.Machines[0]) {
 		t.Fatal(r)
-	}
-}
-
-type MockClientFactory struct {
-	mockResourcesClient       *mock_features.MockResourcesClient
-	mockVirtualMachinesClient *mock_compute.MockVirtualMachinesClient
-}
-
-func newMockClientFactory(mockResourcesClient *mock_features.MockResourcesClient, mockVirtualMachinesClient *mock_compute.MockVirtualMachinesClient) MockClientFactory {
-	return MockClientFactory{mockResourcesClient: mockResourcesClient, mockVirtualMachinesClient: mockVirtualMachinesClient}
-}
-
-func (mcf MockClientFactory) NewResourcesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient {
-	return mcf.mockResourcesClient
-}
-
-func (mcf MockClientFactory) NewVirtualMachinesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient {
-	return mcf.mockVirtualMachinesClient
-}
-
-func TestVMAllocationStatus(t *testing.T) {
-	ctx := context.Background()
-	subscriptionDoc := &api.SubscriptionDocument{
-		ID:          "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-		ResourceID:  "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-		Timestamp:   1668689726,
-		Self:        "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-		ETag:        "\"zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz\"",
-		Attachments: "attachments/",
-		Subscription: &api.Subscription{
-			State: "Registered",
-			Properties: &api.SubscriptionProperties{
-				TenantID: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-				RegisteredFeatures: []api.RegisteredFeatureProfile{
-					{Name: "Microsoft.RedHatOpenShift/RedHatEngineering", State: "Registered"},
-				},
-			},
-		},
-	}
-	controller := gomock.NewController(t)
-	mockEnv := mock_env.NewMockInterface(controller)
-	mockRefreshable := mock_refreshable.NewMockAuthorizer(controller)
-	mockResourcesClient := mock_features.NewMockResourcesClient(controller)
-	mockVirtualMachinesClient := mock_compute.NewMockVirtualMachinesClient(controller)
-	type test struct {
-		name                            string
-		returnedRefreshableAuthorizer   refreshable.Authorizer
-		returnedVM                      mgmtcompute.VirtualMachine
-		returnedGenericResourceExpanded []mgmtfeatures.GenericResourceExpanded
-		wantOutput                      map[string]string
-		wantErr                         error
-	}
-	for _, tt := range []*test{
-		{
-			name:                          "Successfully fetching VMs allocation status. Calling all the required methods.",
-			returnedRefreshableAuthorizer: mockRefreshable,
-			returnedGenericResourceExpanded: []mgmtfeatures.GenericResourceExpanded{
-				{
-					Kind: func(v string) *string { return &v }("something"),
-					Type: func(v string) *string { return &v }("Microsoft.Compute/virtualMachines"),
-					Name: func(v string) *string { return &v }("master-x"),
-				},
-			},
-			returnedVM: mgmtcompute.VirtualMachine{
-				Name: func(v string) *string { return &v }("master-x"),
-				VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
-					InstanceView: &mgmtcompute.VirtualMachineInstanceView{
-						Statuses: &[]mgmtcompute.InstanceViewStatus{
-							{
-								Code: func() *string {
-									s := new(string)
-									*s = "PowerState/running"
-									return s
-								}(),
-							},
-						},
-					},
-				},
-			},
-			wantOutput: map[string]string{"master-x": "PowerState/running"},
-			wantErr:    nil,
-		},
-		{
-			name:                            "No VM resource found",
-			returnedRefreshableAuthorizer:   mockRefreshable,
-			returnedGenericResourceExpanded: []mgmtfeatures.GenericResourceExpanded{},
-			wantOutput:                      map[string]string{},
-			wantErr:                         nil,
-		},
-		{
-			name:                            "Empty FP Authorizer",
-			returnedRefreshableAuthorizer:   nil,
-			returnedGenericResourceExpanded: nil,
-			wantOutput:                      nil,
-			wantErr:                         errors.New("Empty Athorizer"),
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			mockEnv.EXPECT().Environment().Return(&azureclient.AROEnvironment{
-				Environment: azure.Environment{
-					ResourceManagerEndpoint: "temp",
-				},
-			})
-			mockEnv.EXPECT().FPAuthorizer(gomock.Any(), gomock.Any()).Return(tt.returnedRefreshableAuthorizer, tt.wantErr)
-			if tt.returnedRefreshableAuthorizer != nil {
-				mockResourcesClient.EXPECT().ListByResourceGroup(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(tt.returnedGenericResourceExpanded, tt.wantErr)
-			}
-			if len(tt.returnedGenericResourceExpanded) > 0 {
-				mockVirtualMachinesClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.returnedVM, tt.wantErr)
-			}
-			_, log := testlog.New()
-			mcf := newMockClientFactory(mockResourcesClient, mockVirtualMachinesClient)
-			azureSideFetcher := &azureSideFetcher{
-				log:                          log,
-				resourceGroupName:            "someResourceGroup",
-				subscriptionDoc:              subscriptionDoc,
-				env:                          mockEnv,
-				resourceClientFactory:        mcf,
-				virtualMachinesClientFactory: mcf,
-			}
-			azureClient := &azureClient{fetcher: azureSideFetcher, log: log}
-			vmAllocationStatuses, err := azureClient.VMAllocationStatus(ctx)
-			if !reflect.DeepEqual(vmAllocationStatuses, tt.wantOutput) {
-				t.Error("Expected output", tt.wantOutput, "Got", vmAllocationStatuses)
-			}
-			if err != nil && err != tt.wantErr || err == nil && tt.wantErr != nil {
-				t.Error("Expected", tt.wantErr, "Got", err)
-			}
-		})
 	}
 }

@@ -38,7 +38,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceIdentifiers.KeyVault)
+	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().KeyVaultScope)
 	if err != nil {
 		return err
 	}

@@ -61,32 +61,32 @@ func New(ctx context.Context, log *logrus.Entry, env env.Core, account, namespac
 }
 
 // EmitFloat records float information
-func (s *statsd) EmitFloat(m string, value float64, dims map[string]string) {
+func (s *statsd) EmitFloat(metricName string, metricValue float64, dimensions map[string]string) {
 	s.emitMetric(&metric{
-		metric:     m,
-		dims:       dims,
-		valueFloat: &value,
+		name:       metricName,
+		dimensions: dimensions,
+		valueFloat: &metricValue,
 	})
 }
 
 // EmitGauge records gauge information
-func (s *statsd) EmitGauge(m string, value int64, dims map[string]string) {
+func (s *statsd) EmitGauge(metricName string, metricValue int64, dimensions map[string]string) {
 	s.emitMetric(&metric{
-		metric:     m,
-		dims:       dims,
-		valueGauge: &value,
+		name:       metricName,
+		dimensions: dimensions,
+		valueGauge: &metricValue,
 	})
 }
 
 func (s *statsd) emitMetric(m *metric) {
 	m.account = s.account
 	m.namespace = s.namespace
-	if m.dims == nil {
-		m.dims = map[string]string{}
+	if m.dimensions == nil {
+		m.dimensions = map[string]string{}
 	}
-	m.dims["location"] = s.env.Location()
-	m.dims["hostname"] = s.env.Hostname()
-	m.ts = s.now()
+	m.dimensions["location"] = s.env.Location()
+	m.dimensions["hostname"] = s.env.Hostname()
+	m.timestamp = s.now()
 
 	s.ch <- m
 }
@@ -169,7 +169,7 @@ func (s *statsd) dial() (err error) {
 }
 
 func (s *statsd) write(m *metric) (err error) {
-	if s.now().After(m.ts.Add(time.Minute)) {
+	if s.now().After(m.timestamp.Add(time.Minute)) {
 		return fmt.Errorf("discarding stale metric")
 	}
 

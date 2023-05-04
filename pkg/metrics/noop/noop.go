@@ -5,5 +5,5 @@ package noop
 
 type Noop struct{}
 
-func (c *Noop) EmitFloat(stat string, value float64, dims map[string]string) {}
-func (c *Noop) EmitGauge(stat string, value int64, dims map[string]string)   {}
+func (c *Noop) EmitFloat(metricName string, metricValue float64, dimensions map[string]string) {}
+func (c *Noop) EmitGauge(metricName string, metricValue int64, dimensions map[string]string)   {}

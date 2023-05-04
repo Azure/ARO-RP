@@ -4,6 +4,7 @@ package api
 // Licensed under the Apache License 2.0.
 
 import (
+	"sync"
 	"time"
 )
 
@@ -20,6 +21,9 @@ type OpenShiftCluster struct {
 	SystemData SystemData                 `json:"systemData,omitempty"`
 	Tags       map[string]string          `json:"tags,omitempty"`
 	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
+
+	//this property is used in the enrichers. Should not be marshalled
+	Lock sync.Mutex `json:"-"`
 }
 
 // CreatedByType by defines user type, which executed the request
@@ -308,7 +312,6 @@ const (
 	VMSizeStandardD16sV4 VMSize = "Standard_D16s_v4"
 	VMSizeStandardD32sV4 VMSize = "Standard_D32s_v4"
 	VMSizeStandardD64sV4 VMSize = "Standard_D64s_v4"
-	VMSizeStandardD96sV4 VMSize = "Standard_D96s_v4"
 
 	VMSizeStandardD4sV5  VMSize = "Standard_D4s_v5"
 	VMSizeStandardD8sV5  VMSize = "Standard_D8s_v5"
@@ -344,7 +347,6 @@ const (
 	VMSizeStandardE32sV4 VMSize = "Standard_E32s_v4"
 	VMSizeStandardE48sV4 VMSize = "Standard_E48s_v4"
 	VMSizeStandardE64sV4 VMSize = "Standard_E64s_v4"
-	VMSizeStandardE96sV4 VMSize = "Standard_E96s_v4"
 
 	VMSizeStandardE2sV5  VMSize = "Standard_E2s_v5"
 	VMSizeStandardE4sV5  VMSize = "Standard_E4s_v5"
@@ -434,7 +436,6 @@ var (
 	VMSizeStandardD16sV4Struct = VMSizeStruct{CoreCount: 16, Family: standardDSv4}
 	VMSizeStandardD32sV4Struct = VMSizeStruct{CoreCount: 32, Family: standardDSv4}
 	VMSizeStandardD64sV4Struct = VMSizeStruct{CoreCount: 64, Family: standardDSv4}
-	VMSizeStandardD96sV4Struct = VMSizeStruct{CoreCount: 96, Family: standardDSv4}
 
 	VMSizeStandardD4sV5Struct  = VMSizeStruct{CoreCount: 4, Family: standardDSv5}
 	VMSizeStandardD8sV5Struct  = VMSizeStruct{CoreCount: 8, Family: standardDSv5}
@@ -470,7 +471,6 @@ var (
 	VMSizeStandardE32sV4Struct = VMSizeStruct{CoreCount: 32, Family: standardESv4}
 	VMSizeStandardE48sV4Struct = VMSizeStruct{CoreCount: 48, Family: standardESv4}
 	VMSizeStandardE64sV4Struct = VMSizeStruct{CoreCount: 64, Family: standardESv4}
-	VMSizeStandardE96sV4Struct = VMSizeStruct{CoreCount: 96, Family: standardESv4}
 
 	VMSizeStandardE2sV5Struct  = VMSizeStruct{CoreCount: 2, Family: standardESv5}
 	VMSizeStandardE4sV5Struct  = VMSizeStruct{CoreCount: 4, Family: standardESv5}

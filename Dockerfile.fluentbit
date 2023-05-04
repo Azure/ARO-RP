@@ -1,8 +1,8 @@
 ARG MARINER_VERSION
-FROM ${REGISTRY}/cbl-mariner/base/core:2.0.${MARINER_VERSION}-amd64 as builder
-RUN tdnf repolist --refresh && \
-    tdnf update -y && \
-    tdnf install -y ca-certificates flex build-essential openssl-devel systemd-devel cmake wget tar
+FROM mcr.microsoft.com/cbl-mariner/base/core:2.0.${MARINER_VERSION}-amd64 as builder
+RUN tdnf repolist --refresh
+RUN tdnf update -yq
+RUN tdnf install -yq ca-certificates flex build-essential openssl-devel systemd-devel cmake wget tar
 ARG VERSION
 RUN mkdir /build && \
     cd /build && \
@@ -113,7 +113,7 @@ RUN cmake -B build/ \
 RUN make -C build
 RUN make -C build install
 
-FROM ${REGISTRY}/cbl-mariner/distroless/base:2.0.${MARINER_VERSION}-amd64
+FROM mcr.microsoft.com/cbl-mariner/distroless/base:2.0.${MARINER_VERSION}-amd64
 COPY --from=builder \
     /lib/libsystemd.so.0 \
     /lib/liblzma.so.5 \

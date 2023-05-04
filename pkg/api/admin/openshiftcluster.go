@@ -187,7 +187,6 @@ const (
 	VMSizeStandardD16sV4 VMSize = "Standard_D16s_v4"
 	VMSizeStandardD32sV4 VMSize = "Standard_D32s_v4"
 	VMSizeStandardD64sV4 VMSize = "Standard_D64s_v4"
-	VMSizeStandardD96sV4 VMSize = "Standard_D96s_v4"
 
 	VMSizeStandardD4sV5  VMSize = "Standard_D4s_v5"
 	VMSizeStandardD8sV5  VMSize = "Standard_D8s_v5"
@@ -223,7 +222,6 @@ const (
 	VMSizeStandardE32sV4 VMSize = "Standard_E32s_v4"
 	VMSizeStandardE48sV4 VMSize = "Standard_E48s_v4"
 	VMSizeStandardE64sV4 VMSize = "Standard_E64s_v4"
-	VMSizeStandardE96sV4 VMSize = "Standard_E96s_v4"
 
 	VMSizeStandardE2sV5  VMSize = "Standard_E2s_v5"
 	VMSizeStandardE4sV5  VMSize = "Standard_E4s_v5"

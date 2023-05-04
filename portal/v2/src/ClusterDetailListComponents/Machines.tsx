@@ -53,13 +53,12 @@ export class MachinesComponent extends Component<MachinesComponentProps, IMachin
     }
 
     private extractCurrentMachine = (machineName: string): IMachine => {
-        let currentMachine = this.state.machines[0]
         this.state.machines.forEach((machine: IMachine) => {
             if (machine.name === machineName) {
-                currentMachine = machine
+                return machine
             }
         })
-        return currentMachine
+        return this.state.machines[0]
     }
 
     public render() {

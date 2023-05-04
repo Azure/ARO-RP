@@ -126,6 +126,13 @@ type ServicePrincipalProfile struct {
 	ClientSecret string `json:"clientSecret,omitempty" mutable:"true"`
 }
 
+type OutboundType string
+
+const (
+	OutboundTypeUserDefinedRouting OutboundType = "UserDefinedRouting"
+	OutboundTypeLoadbalancer       OutboundType = "Loadbalancer"
+)
+
 // NetworkProfile represents a network profile.
 type NetworkProfile struct {
 	// The CIDR used for OpenShift/Kubernetes Pods.
@@ -133,6 +140,9 @@ type NetworkProfile struct {
 
 	// The CIDR used for OpenShift/Kubernetes Services.
 	ServiceCIDR string `json:"serviceCidr,omitempty"`
+
+	// The OutboundType used for egress traffic.
+	OutboundType OutboundType `json:"outboundType,omitempty"`
 }
 
 // EncryptionAtHost represents encryption at host state

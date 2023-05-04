@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/ghodss/yaml"
 	configv1 "github.com/openshift/api/config/v1"
+	cov1Helpers "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
 	"github.com/ugorji/go/codec"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -217,8 +218,49 @@ var _ = Describe("ARO Operator - RBAC", func() {
 	})
 })
 
+var _ = Describe("ARO Operator - MachineHealthCheck", func() {
+	const (
+		mhcNamespace            = "openshift-machine-api"
+		mhcName                 = "aro-machinehealthcheck"
+		mhcRemediationAlertName = "mhc-remediation-alert"
+	)
+
+	getMachineHealthCheck := func(g Gomega, ctx context.Context) {
+		_, err := clients.MachineAPI.MachineV1beta1().MachineHealthChecks(mhcNamespace).Get(ctx, mhcName, metav1.GetOptions{})
+		g.Expect(err).ToNot(HaveOccurred())
+	}
+
+	getMachineHealthCheckRemediationAlertName := func(g Gomega, ctx context.Context) {
+		_, err := clients.Monitoring.MonitoringV1().PrometheusRules(mhcNamespace).Get(ctx, mhcRemediationAlertName, metav1.GetOptions{})
+		g.Expect(err).ToNot(HaveOccurred())
+	}
+
+	It("must be recreated if deleted", func(ctx context.Context) {
+		By("deleting the machine health check")
+		err := clients.MachineAPI.MachineV1beta1().MachineHealthChecks(mhcNamespace).Delete(ctx, mhcName, metav1.DeleteOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		By("waiting for the machine health check to be restored")
+		Eventually(getMachineHealthCheck).WithContext(ctx).Should(Succeed())
+	})
+
+	It("the alerting rule must recreated if deleted", func(ctx context.Context) {
+		By("deleting the machine health remediation alert")
+		err := clients.Monitoring.MonitoringV1().PrometheusRules(mhcNamespace).Delete(ctx, mhcRemediationAlertName, metav1.DeleteOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		By("waiting for the machine health check remediation alert to be restored")
+		Eventually(getMachineHealthCheckRemediationAlertName).WithContext(ctx).Should(Succeed())
+	})
+
+})
+
 var _ = Describe("ARO Operator - Conditions", func() {
-	It("must have all the conditions set to true", func(ctx context.Context) {
+	const (
+		timeout = 30 * time.Second
+	)
+
+	It("must have all the conditions on the cluster resource set to true", func(ctx context.Context) {
 		Eventually(func(g Gomega, ctx context.Context) {
 			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 			g.Expect(err).NotTo(HaveOccurred())
@@ -227,6 +269,17 @@ var _ = Describe("ARO Operator - Conditions", func() {
 				g.Expect(conditions.IsTrue(co.Status.Conditions, condition)).To(BeTrue(), "Condition %s", condition)
 			}
 		}).WithContext(ctx).Should(Succeed())
+	})
+
+	It("must have all the conditions on the cluster operator set to the expected values", func(ctx context.Context) {
+		Eventually(func(g Gomega, ctx context.Context) {
+			co, err := clients.ConfigClient.ConfigV1().ClusterOperators().Get(ctx, "aro", metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+
+			g.Expect(cov1Helpers.IsStatusConditionTrue(co.Status.Conditions, configv1.OperatorAvailable))
+			g.Expect(cov1Helpers.IsStatusConditionFalse(co.Status.Conditions, configv1.OperatorProgressing))
+			g.Expect(cov1Helpers.IsStatusConditionFalse(co.Status.Conditions, configv1.OperatorDegraded))
+		}).WithContext(ctx).WithTimeout(timeout).Should(Succeed())
 	})
 })
 

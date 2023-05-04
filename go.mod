@@ -4,11 +4,10 @@ go 1.18
 
 require (
 	github.com/Azure/azure-sdk-for-go v63.1.0+incompatible
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v0.21.1
-	github.com/Azure/azure-sdk-for-go/sdk/azidentity v0.13.2
-	github.com/Azure/go-autorest/autorest v0.11.25
-	github.com/Azure/go-autorest/autorest/adal v0.9.18
-	github.com/Azure/go-autorest/autorest/azure/auth v0.5.11
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.4.0
+	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.2.2
+	github.com/Azure/go-autorest/autorest v0.11.27
+	github.com/Azure/go-autorest/autorest/adal v0.9.20
 	github.com/Azure/go-autorest/autorest/date v0.3.0
 	github.com/Azure/go-autorest/autorest/to v0.4.0
 	github.com/Azure/go-autorest/autorest/validation v0.3.1
@@ -29,6 +28,7 @@ require (
 	github.com/go-logr/logr v1.2.3
 	github.com/go-test/deep v1.0.8
 	github.com/gofrs/uuid v4.2.0+incompatible
+	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.5.8
 	github.com/googleapis/gnostic v0.6.8
@@ -37,6 +37,7 @@ require (
 	github.com/gorilla/securecookie v1.1.1
 	github.com/gorilla/sessions v1.2.1
 	github.com/jewzaam/go-cosmosdb v0.0.0-20220315232836-282b67c5b234
+	github.com/jongio/azidext/go/azidext v0.4.0
 	github.com/onsi/ginkgo/v2 v2.3.1
 	github.com/onsi/gomega v1.22.0
 	github.com/openshift/api v3.9.1-0.20191111211345-a27ff30ebf09+incompatible
@@ -50,6 +51,7 @@ require (
 	github.com/pires/go-proxyproto v0.6.2
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.50.0
+	github.com/prometheus-operator/prometheus-operator/pkg/client v0.48.1
 	github.com/prometheus/client_golang v1.12.1
 	github.com/prometheus/common v0.33.0
 	github.com/serge1peshcoff/selenium-go-conditions v0.0.0-20170824121757-5afbdb74596b
@@ -57,12 +59,12 @@ require (
 	github.com/stretchr/testify v1.7.1
 	github.com/tebeka/selenium v0.9.9
 	github.com/ugorji/go/codec v1.2.7
-	golang.org/x/crypto v0.0.0-20220331220935-ae2d96664a29
+	golang.org/x/crypto v0.6.0
 	golang.org/x/net v0.7.0
 	golang.org/x/oauth2 v0.0.0-20220411215720-9780585627b5
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 	golang.org/x/text v0.7.0
-	golang.org/x/tools v0.1.12
+	golang.org/x/tools v0.2.0
 	k8s.io/api v0.24.1
 	k8s.io/apiextensions-apiserver v0.24.1
 	k8s.io/apimachinery v0.24.1
@@ -80,12 +82,13 @@ require (
 require (
 	cloud.google.com/go/compute v1.5.0 // indirect
 	github.com/AlecAivazis/survey/v2 v2.3.4 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/internal v0.9.1 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/internal v1.2.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
+	github.com/Azure/go-autorest/autorest/azure/auth v0.5.11 // indirect
 	github.com/Azure/go-autorest/autorest/azure/cli v0.4.5 // indirect
 	github.com/Azure/go-autorest/logger v0.2.1 // indirect
-	github.com/AzureAD/microsoft-authentication-library-for-go v0.4.0 // indirect
+	github.com/AzureAD/microsoft-authentication-library-for-go v0.9.0 // indirect
 	github.com/BurntSushi/toml v1.1.0 // indirect
 	github.com/IBM-Cloud/bluemix-go v0.0.0-20220407050707-b4cd0d4da813 // indirect
 	github.com/IBM/go-sdk-core/v5 v5.9.5 // indirect
@@ -118,7 +121,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/docker/distribution v2.8.1+incompatible // indirect
-	github.com/docker/docker v20.10.14+incompatible // indirect
+	github.com/docker/docker v20.10.24+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.6.4 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
@@ -140,8 +143,6 @@ require (
 	github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0 // indirect
 	github.com/gobuffalo/flect v0.2.5 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
-	github.com/golang-jwt/jwt/v4 v4.4.1 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/btree v1.0.1 // indirect
@@ -194,7 +195,7 @@ require (
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.3-0.20211202193544-a5463b7f9c84 // indirect
-	github.com/opencontainers/runc v1.1.2 // indirect
+	github.com/opencontainers/runc v1.1.5 // indirect
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417 // indirect
 	github.com/openshift/cloud-credential-operator v0.0.0-20220316185125-ed0612946f4b // indirect
 	github.com/openshift/cluster-api v0.0.0-20191129101638-b09907ac6668 // indirect
@@ -206,13 +207,14 @@ require (
 	github.com/pascaldekloe/name v0.0.0-20180628100202-0fd16699aae1 // indirect
 	github.com/pborman/uuid v1.2.1 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
-	github.com/pkg/browser v0.0.0-20210115035449-ce105d075bb4 // indirect
+	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/pquerna/cachecontrol v0.1.0 // indirect
 	github.com/proglottis/gpgme v0.1.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
+	github.com/robfig/cron v1.2.0 // indirect
 	github.com/russross/blackfriday v1.6.0 // indirect
 	github.com/spf13/cobra v1.4.0 // indirect
 	github.com/spf13/pflag v1.0.6-0.20210604193023-d5e0c0615ace // indirect
@@ -229,7 +231,7 @@ require (
 	go.mozilla.org/pkcs7 v0.0.0-20210826202110-33d05740a352 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	go.starlark.net v0.0.0-20220328144851-d1966c6b9fcd // indirect
-	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
+	golang.org/x/mod v0.6.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/term v0.5.0 // indirect
 	golang.org/x/time v0.0.0-20220224211638-0e9765cccd65 // indirect
@@ -250,10 +252,12 @@ require (
 	k8s.io/gengo v0.0.0-20211129171323-c02415ce4185 // indirect
 	k8s.io/klog v1.0.0 // indirect
 	k8s.io/klog/v2 v2.60.1 // indirect
+	k8s.io/kube-aggregator v0.24.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20220401212409-b28bf2818661 // indirect
 	sigs.k8s.io/cluster-api-provider-aws v1.4.0 // indirect
 	sigs.k8s.io/cluster-api-provider-openstack v0.5.3 // indirect
 	sigs.k8s.io/json v0.0.0-20211208200746-9f7c6b3444d2 // indirect
+	sigs.k8s.io/kube-storage-version-migrator v0.0.4 // indirect
 	sigs.k8s.io/kustomize/api v0.11.4 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.13.6 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect

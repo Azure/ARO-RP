@@ -83,8 +83,9 @@ func validOpenShiftCluster(name, location string) *OpenShiftCluster {
 				ClientID:     "11111111-1111-1111-1111-111111111111",
 			},
 			NetworkProfile: NetworkProfile{
-				PodCIDR:     "10.128.0.0/14",
-				ServiceCIDR: "172.30.0.0/16",
+				PodCIDR:      "10.128.0.0/14",
+				ServiceCIDR:  "172.30.0.0/16",
+				OutboundType: OutboundTypeLoadbalancer,
 			},
 			MasterProfile: MasterProfile{
 				VMSize:           "Standard_D8s_v3",
@@ -487,6 +488,35 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 			},
 			wantErr: "400: InvalidParameter: properties.networkProfile.serviceCidr: The provided vnet CIDR '10.0.0.0/23' is invalid: must be /22 or larger.",
 		},
+		{
+			name: "OutboundType is empty",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.OutboundType = ""
+			},
+			wantErr: "",
+		},
+		{
+			name: "OutboundType is invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.OutboundType = "invalid"
+			},
+			wantErr: "400: InvalidParameter: properties.networkProfile.outboundType: The provided outboundType 'invalid' is invalid: must be UserDefinedRouting or Loadbalancer.",
+		},
+		{
+			name: "OutboundType is invalid with UserDefinedRouting and public ingress",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.OutboundType = OutboundTypeUserDefinedRouting
+				oc.Properties.IngressProfiles[0].Visibility = VisibilityPublic
+				oc.Properties.APIServerProfile.Visibility = VisibilityPrivate
+			},
+			wantErr: "400: InvalidParameter: properties.networkProfile.outboundType: The provided outboundType 'UserDefinedRouting' is invalid: cannot use UserDefinedRouting if either API Server Visibility or Ingress Visibility is public.",
+		},
+		{
+			name: "OutboundType Loadbalancer is valid",
+			modify: func(oc *OpenShiftCluster) {
+			},
+			wantErr: "",
+		},
 	}
 
 	runTests(t, testModeCreate, tests)
@@ -877,6 +907,13 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name:    "serviceCidr change",
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.ServiceCIDR = "0.0.0.0/0" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.serviceCidr: Changing property 'properties.networkProfile.serviceCidr' is not allowed.",
+		},
+		{
+			name: "outboundType change",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.OutboundType = OutboundTypeUserDefinedRouting
+			},
+			wantErr: "400: InvalidParameter: properties.networkProfile.outboundType: The provided outboundType 'UserDefinedRouting' is invalid: cannot use UserDefinedRouting if either API Server Visibility or Ingress Visibility is public.",
 		},
 		{
 			name: "master subnetId change",

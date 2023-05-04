@@ -27,6 +27,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -47,11 +48,12 @@ func newfakeMetricsEmitter() *fakeMetricsEmitter {
 	}
 }
 
-func (e *fakeMetricsEmitter) EmitGauge(topic string, value int64, dims map[string]string) {
-	e.Metrics[topic] = value
+func (e *fakeMetricsEmitter) EmitGauge(metricName string, metricValue int64, dimensions map[string]string) {
+	e.Metrics[metricName] = metricValue
 }
 
-func (e *fakeMetricsEmitter) EmitFloat(topic string, value float64, dims map[string]string) {}
+func (e *fakeMetricsEmitter) EmitFloat(metricName string, metricValue float64, dimensions map[string]string) {
+}
 
 var clusterOperator = &configv1.ClusterOperator{
 	ObjectMeta: metav1.ObjectMeta{
@@ -177,10 +179,7 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 			}
 
 			err := m.runSteps(ctx, tt.steps, "")
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			err = testlog.AssertLoggingOutput(h, tt.wantEntries)
 			if err != nil {
@@ -259,13 +258,12 @@ func TestInstallationTimeMetrics(t *testing.T) {
 			steps: []steps.Step{
 				steps.Action(successfulActionStep),
 				steps.Condition(successfulConditionStep, 30*time.Minute, true),
-				steps.AuthorizationRefreshingAction(nil, steps.Action(successfulActionStep)),
+				steps.Action(successfulActionStep),
 			},
 			wantedMetrics: map[string]int64{
-				"backend.openshiftcluster.install.duration.total.seconds":                             6,
+				"backend.openshiftcluster.install.duration.total.seconds":                             4,
 				"backend.openshiftcluster.install.action.successfulActionStep.duration.seconds":       2,
 				"backend.openshiftcluster.install.condition.successfulConditionStep.duration.seconds": 2,
-				"backend.openshiftcluster.install.refreshing.successfulActionStep.duration.seconds":   2,
 			},
 		},
 		{
@@ -275,13 +273,12 @@ func TestInstallationTimeMetrics(t *testing.T) {
 			steps: []steps.Step{
 				steps.Action(successfulActionStep),
 				steps.Condition(successfulConditionStep, 30*time.Minute, true),
-				steps.AuthorizationRefreshingAction(nil, steps.Action(successfulActionStep)),
+				steps.Action(successfulActionStep),
 			},
 			wantedMetrics: map[string]int64{
-				"backend.openshiftcluster.update.duration.total.seconds":                             9,
+				"backend.openshiftcluster.update.duration.total.seconds":                             6,
 				"backend.openshiftcluster.update.action.successfulActionStep.duration.seconds":       3,
 				"backend.openshiftcluster.update.condition.successfulConditionStep.duration.seconds": 3,
-				"backend.openshiftcluster.update.refreshing.successfulActionStep.duration.seconds":   3,
 			},
 		},
 	} {
