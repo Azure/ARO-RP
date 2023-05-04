@@ -133,21 +133,6 @@ func TestValidateVnetPermissions(t *testing.T) {
 
 			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on vnet '" + vnetID + "'.\nOriginal error message: some forbidden error on the resource.",
 		},
-		{
-			name: "fail: unclassified error is wrapped into a cloud error",
-			mocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel context.CancelFunc) {
-				permissionsClient.EXPECT().
-					ListForResource(gomock.Any(), resourceGroupName, resourceProvider, "", resourceType, vnetName).
-					Do(func(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) {
-						cancel()
-					}).
-					Return(
-						nil,
-						errors.New("some failure"),
-					)
-			},
-			wantErr: "500: some failure: : ",
-		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
@@ -1049,7 +1034,7 @@ func TestValidateVnetPermissionsWithCheckAccess(t *testing.T) {
 				tokenCred.EXPECT().GetToken(gomock.Any(), gomock.Any()).
 					Return(azcore.AccessToken{}, nil)
 			},
-			wantErr: "500: token contains an invalid number of segments: : ",
+			wantErr: "token contains an invalid number of segments",
 		},
 		{
 			name: "fail: getting an error when calling CheckAccessV2",
@@ -1062,7 +1047,7 @@ func TestValidateVnetPermissionsWithCheckAccess(t *testing.T) {
 					}).
 					Return(nil, errors.New("Unexpected failure calling CheckAccessV2"))
 			},
-			wantErr: "500: Unexpected failure calling CheckAccessV2: : ",
+			wantErr: "Unexpected failure calling CheckAccessV2",
 		},
 		{
 			name: "fail: getting a nil response from CheckAccessV2",

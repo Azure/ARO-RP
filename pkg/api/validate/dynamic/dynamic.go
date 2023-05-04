@@ -234,15 +234,7 @@ func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resou
 			return noPermissionsErr
 		}
 	}
-	if err != nil { // avoiding blank Internal Server Error
-		return &api.CloudError{
-			StatusCode: http.StatusInternalServerError,
-			CloudErrorBody: &api.CloudErrorBody{
-				Code: err.Error(),
-			},
-		}
-	}
-	return nil
+	return err
 }
 
 // validateRouteTablesPermissions will validate permissions on provided subnet
