@@ -13,7 +13,7 @@ import (
 
 const cpuQuotaMetric = "backend.openshiftcluster.quotareached.cpu"
 
-func (mon *Monitor) detectMHCQuotaFailure(ctx context.Context) error {
+func (mon *Monitor) detectQuotaFailure(ctx context.Context) error {
 	m := map[string]string{
 		"reason":         "FailedCreate",
 		"regarding.kind": "Machine",

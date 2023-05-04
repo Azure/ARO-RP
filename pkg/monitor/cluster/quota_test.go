@@ -86,7 +86,7 @@ func TestMHCQuota2(t *testing.T) {
 			if tt.wantGauge {
 				m.EXPECT().EmitGauge(cpuQuotaMetric, int64(1), map[string]string{})
 			}
-			err := mon.detectMHCQuotaFailure(ctx)
+			err := mon.detectQuotaFailure(ctx)
 			if err != nil {
 				t.Fatalf("got unexpected error: %v", err)
 			}
