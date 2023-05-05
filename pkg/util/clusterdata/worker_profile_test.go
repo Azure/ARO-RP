@@ -24,6 +24,99 @@ import (
 	errorHandling "github.com/Azure/ARO-RP/test/util/error"
 )
 
+func TestWorkerProfilesEnricherTask(t *testing.T) {
+	log := logrus.NewEntry(logrus.StandardLogger())
+
+	invalidProvSpec := machinev1beta1.ProviderSpec{Value: &kruntime.RawExtension{
+		Raw: []byte("invalid")}}
+
+	emptyProvSpec := machinev1beta1.ProviderSpec{}
+	noRawProvSpec := machinev1beta1.ProviderSpec{Value: &kruntime.RawExtension{}}
+
+	invalidWorkerProfile := []api.WorkerProfile{{Name: "fake-worker-profile-1", Count: 1}}
+	emptyWorkerProfile := []api.WorkerProfile{}
+
+	testCases := []struct {
+		name    string
+		client  machineclient.Interface
+		givenOc *api.OpenShiftCluster
+		wantOc  *api.OpenShiftCluster
+		wantErr string
+	}{
+		{
+			name:    "machine set objects exist - valid provider spec JSON",
+			client:  machinefake.NewSimpleClientset(createMachineSet("fake-worker-profile-1", validProvSpec()), createMachineSet("fake-worker-profile-2", validProvSpec())),
+			wantOc:  getWantOc(validWorkerProfile()),
+			givenOc: getGivenOc(clusterID),
+		},
+		{
+			name:    "machine set objects exist - invalid provider spec JSON",
+			client:  machinefake.NewSimpleClientset(createMachineSet("fake-worker-profile-1", invalidProvSpec)),
+			wantOc:  getWantOc(invalidWorkerProfile),
+			givenOc: getGivenOc(clusterID),
+		},
+		{
+			name:    "machine set objects exist - provider spec is missing",
+			client:  machinefake.NewSimpleClientset(createMachineSet("fake-worker-profile-1", emptyProvSpec)),
+			wantOc:  getWantOc(invalidWorkerProfile),
+			givenOc: getGivenOc(clusterID),
+		},
+		{
+			name:    "machine set objects exist - provider spec is missing raw value",
+			client:  machinefake.NewSimpleClientset(createMachineSet("fake-worker-profile-1", noRawProvSpec)),
+			wantOc:  getWantOc(invalidWorkerProfile),
+			givenOc: getGivenOc(clusterID),
+		},
+		{
+			name:    "machine set objects do not exist",
+			client:  machinefake.NewSimpleClientset(),
+			wantOc:  getWantOc(emptyWorkerProfile),
+			givenOc: getGivenOc(clusterID),
+		},
+		{
+			name:   "machine set list request failed",
+			client: createFakeClientWithError(),
+			wantOc: &api.OpenShiftCluster{
+				ID: clusterID,
+			},
+			givenOc: getGivenOc(clusterID),
+			wantErr: "fake list error",
+		},
+		{
+			name:   "invalid cluster object",
+			client: machinefake.NewSimpleClientset(),
+			wantOc: &api.OpenShiftCluster{
+				ID: "invalid",
+			},
+			givenOc: getGivenOc("invalid"),
+			wantErr: "parsing failed for invalid. Invalid resource Id format",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			//Given
+			clients := clients{
+				machine: tc.client,
+			}
+
+			e := machineClientEnricher{}
+
+			//When
+			e.SetDefaults(tc.givenOc)
+			err := e.Enrich(context.Background(), log, tc.givenOc, clients.k8s, clients.config, clients.machine, clients.operator)
+
+			//Then
+			errorHandling.AssertErrorMessage(t, err, tc.wantErr)
+
+			if !reflect.DeepEqual(tc.givenOc, tc.wantOc) {
+
+				t.Error(cmp.Diff(tc.givenOc, tc.wantOc))
+			}
+		})
+	}
+
+}
+
 const (
 	mockSubscriptionID = "00000000-0000-0000-0000-000000000000"
 	mockVnetRG         = "fake-vnet-rg"
@@ -100,23 +193,21 @@ func createFakeClientWithError() machineclient.Interface {
 }
 
 // This func creates and returns an OpenShiftCluster object with the given clusterid.
-func getGotOc(clusterid string) *api.OpenShiftCluster {
-	oc := &api.OpenShiftCluster{
+func getGivenOc(clusterid string) *api.OpenShiftCluster {
+	return &api.OpenShiftCluster{
 		ID: clusterid,
 	}
-	return oc
 }
 
 // This function creates and returns an OpenShiftCluster object
 // with the given worker profiles.
 func getWantOc(workerprofile []api.WorkerProfile) *api.OpenShiftCluster {
-	wantOc := &api.OpenShiftCluster{
+	return &api.OpenShiftCluster{
 		ID: clusterID,
 		Properties: api.OpenShiftClusterProperties{
 			WorkerProfiles: workerprofile,
 		},
 	}
-	return wantOc
 }
 
 // This func returns an api.WorkerProfile object that represents a valid worker profile for a machine.
@@ -139,101 +230,4 @@ func validWorkerProfile() []api.WorkerProfile {
 			Count:            1,
 		},
 	}
-}
-
-func TestWorkerProfilesEnricherTask(t *testing.T) {
-	log := logrus.NewEntry(logrus.StandardLogger())
-
-	invalidProvSpec := machinev1beta1.ProviderSpec{Value: &kruntime.RawExtension{
-		Raw: []byte("invalid")}}
-
-	emptyProvSpec := machinev1beta1.ProviderSpec{}
-	noRawProvSpec := machinev1beta1.ProviderSpec{Value: &kruntime.RawExtension{}}
-
-	invalidWorkerProfile := []api.WorkerProfile{{Name: "fake-worker-profile-1", Count: 1}}
-	emptyWorkerProfile := []api.WorkerProfile{}
-
-	testCases := []struct {
-		name    string
-		client  machineclient.Interface
-		gotOc   *api.OpenShiftCluster
-		wantOc  *api.OpenShiftCluster
-		wantErr string
-	}{
-		{ //Test case: 1
-			name:   "machine set objects exists - valid provider spec JSON",
-			client: machinefake.NewSimpleClientset(createMachineSet("fake-worker-profile-1", validProvSpec()), createMachineSet("fake-worker-profile-2", validProvSpec())),
-			wantOc: getWantOc(validWorkerProfile()),
-			gotOc:  getGotOc(clusterID),
-		},
-		{ //Test case: 2
-			name:   "machine set objects exists - invalid provider spec JSON",
-			client: machinefake.NewSimpleClientset(createMachineSet("fake-worker-profile-1", invalidProvSpec)),
-			wantOc: getWantOc(invalidWorkerProfile),
-			gotOc:  getGotOc(clusterID),
-		},
-		{ //Test case: 3
-			name:   "machine set objects exists - provider spec is missing",
-			client: machinefake.NewSimpleClientset(createMachineSet("fake-worker-profile-1", emptyProvSpec)),
-			wantOc: getWantOc(invalidWorkerProfile),
-			gotOc:  getGotOc(clusterID),
-		},
-		{ //Test case: 4
-			name:   "machine set objects exists - provider spec is missing raw value",
-			client: machinefake.NewSimpleClientset(createMachineSet("fake-worker-profile-1", noRawProvSpec)),
-			wantOc: getWantOc(invalidWorkerProfile),
-			gotOc:  getGotOc(clusterID),
-		},
-		{ //Test case: 5
-			name:   "machine set objects do not exist",
-			client: machinefake.NewSimpleClientset(),
-			wantOc: getWantOc(emptyWorkerProfile),
-			gotOc:  getGotOc(clusterID),
-		},
-		{ //Test case: 6
-			name:   "machine set list request failed",
-			client: createFakeClientWithError(),
-			wantOc: &api.OpenShiftCluster{
-				ID: clusterID,
-			},
-			gotOc:   getGotOc(clusterID),
-			wantErr: "fake list error",
-		},
-		{ //Test case: 7
-			name:   "invalid cluster object",
-			client: machinefake.NewSimpleClientset(),
-			wantOc: &api.OpenShiftCluster{
-				ID: "invalid",
-			},
-			gotOc:   getGotOc("invalid"),
-			wantErr: "parsing failed for invalid. Invalid resource Id format",
-		},
-	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			//Given
-			// Create a clients object with the given client object
-			clients := clients{
-				machine: tc.client,
-			}
-
-			// Create a machineClientEnricher instance and call the SetDefaults method with the given gotOc object
-			e := machineClientEnricher{}
-			e.SetDefaults(tc.gotOc)
-
-			//When
-			// Call the Enrich method on the machineClientEnricher instance with the given clients objects
-			err := e.Enrich(context.Background(), log, tc.gotOc, clients.k8s, clients.config, clients.machine, clients.operator)
-
-			//Then
-			// Check if the returned error matches the expected error using the AssertErrorMessage function
-			errorHandling.AssertErrorMessage(t, err, tc.wantErr)
-			// Check if the gotOc object after enrichment is equal to the expected wantOc object using the DeepEqual function
-			if !reflect.DeepEqual(tc.gotOc, tc.wantOc) {
-				// If they are not equal, report the differences between the two objects using the cmp.Diff function
-				t.Error(cmp.Diff(tc.gotOc, tc.wantOc))
-			}
-		})
-	}
-
 }
