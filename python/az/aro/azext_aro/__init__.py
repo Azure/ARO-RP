@@ -6,6 +6,11 @@ from azext_aro._params import load_arguments
 from azext_aro.commands import load_command_table
 from azure.cli.core import AzCommandsLoader, ModExtensionSuppress
 from azure.cli.core.commands import CliCommandType
+from azure.cli.core.aaz import load_aaz_command_table
+try:
+    from . import aaz
+except ImportError:
+    aaz = None
 
 
 class AroCommandsLoader(AzCommandsLoader):
@@ -20,11 +25,6 @@ class AroCommandsLoader(AzCommandsLoader):
                          custom_command_type=aro_custom)
 
     def load_command_table(self, args):
-        from azure.cli.core.aaz import load_aaz_command_table
-        try:
-            from . import aaz
-        except ImportError:
-            aaz = None
         if aaz:
             load_aaz_command_table(
                 loader=self,
