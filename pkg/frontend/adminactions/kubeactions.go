@@ -43,7 +43,7 @@ type kubeActions struct {
 	log *logrus.Entry
 	oc  *api.OpenShiftCluster
 
-	gvrResolver dynamichelper.GVRResolver
+	gvrResolver dynamichelper.GVRInterface
 
 	dyn       dynamic.Interface
 	configcli configclient.Interface

@@ -4,27 +4,35 @@ package dynamichelper
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"net/http"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/golang/mock/gomock"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	extensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	kjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/cli-runtime/pkg/resource"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
 )
 
 type mockGVRResolver struct{}
@@ -67,8 +75,8 @@ func TestEnsureDeleted(t *testing.T) {
 	}
 
 	dh := &DynamicHelper{
-		GVRResolver: mockGVRResolver,
-		restcli:     mockRestCLI,
+		GVRInterface: mockGVRResolver,
+		restcli:      mockRestCLI,
 	}
 
 	err := dh.EnsureDeleted(ctx, "configmap", "test-ns-1", "test-name-1")
@@ -643,5 +651,91 @@ func TestMakeURLSegments(t *testing.T) {
 				t.Error(cmp.Diff(got, tt.want))
 			}
 		})
+	}
+}
+
+func TestEnsure(t *testing.T) {
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+	manager := mock_dynamichelper.NewMockGVRInterface(controller)
+
+	manager.EXPECT().Resolve(
+		gomock.Eq("Event"),
+		gomock.Any(),
+	).DoAndReturn(func(groupKind, optionalVersion string) (*schema.GroupVersionResource, error) {
+		return &schema.GroupVersionResource{
+			Group:    "",
+			Version:  "v1",
+			Resource: "event",
+		}, nil
+	})
+
+	h := http.Header{}
+	h.Add("Content-Type", "application/yaml")
+	var d kruntime.Object = &corev1.Event{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Event",
+			APIVersion: "v1",
+		},
+	}
+	// Prepare the encoder
+	serializer := kjson.NewSerializerWithOptions(
+		kjson.DefaultMetaFactory, scheme.Scheme, scheme.Scheme,
+		kjson.SerializerOptions{Yaml: true},
+	)
+	yaml := scheme.Codecs.CodecForVersions(serializer, nil, schema.GroupVersions(scheme.Scheme.PrioritizedVersionsAllGroups()), nil)
+
+	buf := new(bytes.Buffer)
+	err := yaml.Encode(d, buf)
+	if err != nil {
+		t.Errorf("Failed to encode document: %s", err.Error())
+	}
+
+	frc := &fake.RESTClient{
+		GroupVersion:         schema.GroupVersion{Group: "", Version: "v1"},
+		NegotiatedSerializer: scheme.Codecs.WithoutConversion(),
+		Client: fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
+			switch req.Method {
+			case "GET":
+
+				switch req.URL.Path {
+				case "/api/v1/event":
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Header:     h,
+						Body:       io.NopCloser(buf),
+					}, nil
+				}
+			}
+
+			buf := new(bytes.Buffer)
+			notFoundError := kerrors.NewNotFound(schema.GroupResource{
+				Group:    "",
+				Resource: "event",
+			}, "name")
+
+			err := yaml.Encode(&notFoundError.ErrStatus, buf)
+			if err != nil {
+				return nil, err
+			}
+
+			return &http.Response{
+				StatusCode: int(notFoundError.Status().Code),
+				Status:     notFoundError.Status().Status,
+				Body:       io.NopCloser(buf),
+				Header:     h,
+			}, nil
+		}),
+	}
+
+	dh := &DynamicHelper{
+		log:          logrus.NewEntry(logrus.StandardLogger()),
+		GVRInterface: manager,
+		restcli:      frc,
+	}
+
+	err = dh.Ensure(context.Background(), d)
+	if err != nil {
+		t.Errorf("There was an error Ensuring: %s", err.Error())
 	}
 }

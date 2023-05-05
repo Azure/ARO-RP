@@ -7,13 +7,14 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/Azure/ARO-RP/pkg/util/dynamichelper/discovery"
 	"github.com/go-test/deep"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/restmapper"
+
+	utildiscovery "github.com/Azure/ARO-RP/pkg/util/dynamichelper/discovery"
 )
 
 func TestFindGVR(t *testing.T) {
@@ -220,7 +221,7 @@ func TestFindGVR(t *testing.T) {
 func TestGVRNoResources(t *testing.T) {
 	r := &gvrResolver{
 		log:       logrus.NewEntry(logrus.StandardLogger()),
-		discovery: &discovery.FakeDiscoveryClient{},
+		discovery: &utildiscovery.FakeDiscoveryClient{},
 	}
 
 	// Expect errors when no api resources are provided because

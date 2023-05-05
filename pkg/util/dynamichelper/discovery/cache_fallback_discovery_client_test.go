@@ -5,8 +5,6 @@ package discovery
 
 import (
 	"embed"
-	"errors"
-	"fmt"
 	"io"
 	"reflect"
 	"strings"

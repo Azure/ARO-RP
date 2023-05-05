@@ -48,7 +48,7 @@ type Interface interface {
 // DynamicHelper is a wrapper around a kubernetes admin api that provides utility functions
 // for retrieving any GVK with generic types.
 type DynamicHelper struct {
-	GVRResolver
+	GVRInterface
 
 	log     *logrus.Entry
 	restcli rest.Interface
@@ -64,7 +64,7 @@ func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {
 	}
 
 	var err error
-	dh.GVRResolver, err = NewGVRResolver(log, restconfig)
+	dh.GVRInterface, err = NewGVRResolver(log, restconfig)
 	if err != nil {
 		return nil, err
 	}

@@ -13,9 +13,9 @@ import (
 	utildiscovery "github.com/Azure/ARO-RP/pkg/util/dynamichelper/discovery"
 )
 
-// GVRResolver defines the interface for refreshing and resolving Groups and
+// GVRInterface defines the interface for refreshing and resolving Groups and
 // Versions and Resources from the kubenetes api
-type GVRResolver interface {
+type GVRInterface interface {
 	Refresh() error
 	Resolve(groupKind, optionalVersion string) (*schema.GroupVersionResource, error)
 }
@@ -30,7 +30,7 @@ type gvrResolver struct {
 // NewGVRResolver returns a new GVRResolver connected to the kubenernetes API using
 // either the provided restconfig or using a discovery client with hardcoded
 // configuration settings.
-func NewGVRResolver(log *logrus.Entry, restconfig *rest.Config) (GVRResolver, error) {
+func NewGVRResolver(log *logrus.Entry, restconfig *rest.Config) (GVRInterface, error) {
 	r := &gvrResolver{
 		log: log,
 	}
