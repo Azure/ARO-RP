@@ -45,20 +45,46 @@ func validateVMSku(ctx context.Context, oc *api.OpenShiftCluster, resourceSkusCl
 	}
 
 	filteredSkus := computeskus.FilterVMSizes(skus, location)
-	masterProfileSku := string(oc.Properties.MasterProfile.VMSize)
 
-	err = checkSKUAvailability(filteredSkus, location, "properties.masterProfile.VMSize", masterProfileSku)
-	if err != nil {
+	// If the default machine size (Standard_D8s_v5) isn't available, use Standard_D8s_v4, or Standard_D8s_v3
+	err = checkSKUAvailability(filteredSkus, location, "properties.masterProfile.VMSize", string(oc.Properties.MasterProfile.VMSize))
+	if err != nil && oc.Properties.MasterProfile.VMSize == api.VMSizeStandardD8sV5 {
+		oc.Properties.MasterProfile.VMSize = api.VMSizeStandardD8sV4
+
+		err = checkSKUAvailability(filteredSkus, location, "properties.masterProfile.VMSize", string(oc.Properties.MasterProfile.VMSize))
+		if err != nil && oc.Properties.MasterProfile.VMSize == api.VMSizeStandardD8sV4 {
+			oc.Properties.MasterProfile.VMSize = api.VMSizeStandardD8sV3
+
+			err = checkSKUAvailability(filteredSkus, location, "properties.masterProfile.VMSize", string(oc.Properties.MasterProfile.VMSize))
+			if err != nil {
+				return err
+			}
+		} else if err != nil {
+			return err
+		}
+	} else if err != nil {
 		return err
 	}
 
 	// In case there are multiple WorkerProfiles listed in the cluster document (such as post-install),
 	// compare VMSize in each WorkerProfile to the resourceSkusClient call above to ensure that the sku is available in region.
 	for i, workerprofile := range oc.Properties.WorkerProfiles {
-		workerProfileSku := string(workerprofile.VMSize)
+		err = checkSKUAvailability(filteredSkus, location, fmt.Sprintf("properties.workerProfiles[%d].VMSize", i), string(workerprofile.VMSize))
+		if err != nil && workerprofile.VMSize == api.VMSizeStandardD4sV5 {
+			workerprofile.VMSize = api.VMSizeStandardD4sV4
 
-		err = checkSKUAvailability(filteredSkus, location, fmt.Sprintf("properties.workerProfiles[%d].VMSize", i), workerProfileSku)
-		if err != nil {
+			err = checkSKUAvailability(filteredSkus, location, fmt.Sprintf("properties.workerProfiles[%d].VMSize", i), string(workerprofile.VMSize))
+			if err != nil && workerprofile.VMSize == api.VMSizeStandardD4sV4 {
+				workerprofile.VMSize = api.VMSizeStandardD4sV3
+
+				err = checkSKUAvailability(filteredSkus, location, fmt.Sprintf("properties.workerProfiles[%d].VMSize", i), string(workerprofile.VMSize))
+				if err != nil {
+					return err
+				}
+			} else if err != nil {
+				return err
+			}
+		} else if err != nil {
 			return err
 		}
 	}

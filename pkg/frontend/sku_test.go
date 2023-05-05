@@ -137,6 +137,22 @@ func TestValidateVMSku(t *testing.T) {
 			restrictedSku:     "Standard_L80",
 			wantErr:           "400: InvalidParameter: properties.masterProfile.VMSize: The selected SKU 'Standard_L80' is restricted in region 'eastus' for selected subscription",
 		},
+		{
+			name:              "Standard_D8s_v5 not available, but Standard_D8s_v4 is",
+			workerProfile1Sku: "Standard_D4s_v5",
+			workerProfile2Sku: "Standard_D4s_v5",
+			masterProfileSku:  "Standard_D8s_v5",
+			availableSku:      "Standard_D8s_v4",
+			availableSku2:     "Standard_D4s_v4",
+		},
+		{
+			name:              "Standard_D8s_v5 not available, but Standard_D8s_v3 is",
+			workerProfile1Sku: "Standard_D4s_v5",
+			workerProfile2Sku: "Standard_D4s_v5",
+			masterProfileSku:  "Standard_D8s_v5",
+			availableSku:      "Standard_D8s_v3",
+			availableSku2:     "Standard_D4s_v3",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.restrictedZones == nil {

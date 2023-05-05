@@ -460,7 +460,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 				SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 			},
 			MasterProfile: api.MasterProfile{
-				VMSize:              api.VMSizeStandardD8sV3,
+				VMSize:              api.VMSizeStandardD8sV5,
 				SubnetID:            fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-master", c.env.SubscriptionID(), vnetResourceGroup, clusterName),
 				EncryptionAtHost:    api.EncryptionAtHostEnabled,
 				DiskEncryptionSetID: diskEncryptionSetID,
@@ -468,7 +468,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 			WorkerProfiles: []api.WorkerProfile{
 				{
 					Name:                "worker",
-					VMSize:              api.VMSizeStandardD4sV3,
+					VMSize:              api.VMSizeStandardD4sV5,
 					DiskSizeGB:          128,
 					SubnetID:            fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-worker", c.env.SubscriptionID(), vnetResourceGroup, clusterName),
 					Count:               3,
