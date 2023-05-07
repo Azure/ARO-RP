@@ -73,12 +73,9 @@ func TestValidateServicePrincipal(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			spDynamic, err := NewServicePrincipalValidator(log, &azureclient.PublicCloud, AuthorizerClusterServicePrincipal)
-			if err != nil {
-				t.Errorf("failed to create ServicePrincipalDynamicValidator: %v\n", err)
-			}
+			spDynamic := NewServicePrincipalValidator(log, &azureclient.PublicCloud, AuthorizerClusterServicePrincipal)
 
-			err = spDynamic.ValidateServicePrincipal(ctx, tt.tr)
+			err := spDynamic.ValidateServicePrincipal(ctx, tt.tr)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}

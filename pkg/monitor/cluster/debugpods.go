@@ -64,6 +64,9 @@ func countDebugPods(debugPods []string, events []eventsv1.Event) int {
 }
 
 func eventIsNew(event eventsv1.Event) bool {
+	if event.Series == nil {
+		return time.Since(event.EventTime.Time) < time.Second*120
+	}
 	return time.Since(event.Series.LastObservedTime.Time) < time.Second*120
 }
 

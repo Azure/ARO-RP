@@ -165,21 +165,19 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	}
 
 	// FP validation
-	fpDynamic, err := dynamic.NewValidator(
+	fpDynamic := dynamic.NewValidator(
 		dv.log,
 		dv.env,
 		dv.env.Environment(),
 		dv.subscriptionDoc.ID,
 		dv.fpAuthorizer,
+		dv.env.FPClientID(),
 		dynamic.AuthorizerFirstParty,
 		fpClientCred,
 		pdpClient,
 	)
-	if err != nil {
-		return err
-	}
 
-	err = fpDynamic.ValidateVnet(
+	err := fpDynamic.ValidateVnet(
 		ctx,
 		dv.oc.Location,
 		subnets,
@@ -210,19 +208,17 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	}
 	spAuthorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
-	spDynamic, err := dynamic.NewValidator(
+	spDynamic := dynamic.NewValidator(
 		dv.log,
 		dv.env,
 		dv.env.Environment(),
 		dv.subscriptionDoc.ID,
 		spAuthorizer,
+		spp.ClientID,
 		dynamic.AuthorizerClusterServicePrincipal,
 		spClientCred,
 		pdpClient,
 	)
-	if err != nil {
-		return err
-	}
 
 	// SP validation
 	err = spDynamic.ValidateServicePrincipal(ctx, tokenCredential)
