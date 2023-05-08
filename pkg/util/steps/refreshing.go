@@ -73,7 +73,8 @@ func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus
 		// role propagation delay) then refresh and retry.
 		if timeoutCtx.Err() == nil && err != nil &&
 			(azureerrors.IsUnauthorizedClientError(err) ||
-				azureerrors.HasAuthorizationFailedError(err)) {
+				azureerrors.HasAuthorizationFailedError(err) ||
+				azureerrors.IsInvalidSecretError(err)) {
 			log.Printf("auth error, refreshing and retrying: %v", err)
 			// Try refreshing auth.
 			err = s.auth.Rebuild()
