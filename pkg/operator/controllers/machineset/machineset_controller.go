@@ -9,6 +9,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/to"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -19,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/util/conditions"
 )
 
 const (
@@ -54,9 +56,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	r.log.Debug("running")
+
+	cnds, err := conditions.GetControllerConditions(ctx, r.client, ControllerName)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	modifiedMachineset := &machinev1beta1.MachineSet{}
 	err = r.client.Get(ctx, types.NamespacedName{Name: request.Name, Namespace: machineSetsNamespace}, modifiedMachineset)
 	if err != nil {
+		cnds.Degraded.Status = operatorv1.ConditionTrue
+		cnds.Degraded.Message = err.Error()
+
+		conditions.SetControllerConditions(ctx, r.client, cnds)
+
 		return reconcile.Result{}, err
 	}
 
