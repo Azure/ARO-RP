@@ -1071,17 +1071,17 @@ func TestValidateVnetPermissionsWithCheckAccess(t *testing.T) {
 			defer cancel()
 
 			tokenCred := mock_azcore.NewMockTokenCredential(controller)
-
 			pdpClient := mock_remotepdp.NewMockRemotePDPClient(controller)
+			pdp := NewPDPChecker(pdpClient, tokenCred)
+
 			tt.mocks(tokenCred, pdpClient, cancel)
 
 			dv := &dynamic{
-				azEnv:                      &azureclient.PublicCloud,
-				appID:                      "fff51942-b1f9-4119-9453-aaa922259eb7",
-				authorizerType:             AuthorizerClusterServicePrincipal,
-				log:                        logrus.NewEntry(logrus.StandardLogger()),
-				pdpClient:                  pdpClient,
-				checkAccessSubjectInfoCred: tokenCred,
+				azEnv:          &azureclient.PublicCloud,
+				appID:          "fff51942-b1f9-4119-9453-aaa922259eb7",
+				authorizerType: AuthorizerClusterServicePrincipal,
+				log:            logrus.NewEntry(logrus.StandardLogger()),
+				pdpChecker:     pdp,
 			}
 
 			vnetr, err := azure.ParseResourceID(vnetID)
@@ -1207,8 +1207,8 @@ func TestValidateRouteTablesPermissionsWithCheckAccess(t *testing.T) {
 			defer cancel()
 
 			tokenCred := mock_azcore.NewMockTokenCredential(controller)
-
 			pdpClient := mock_remotepdp.NewMockRemotePDPClient(controller)
+			pdp := NewPDPChecker(pdpClient, tokenCred)
 
 			vnetClient := mock_network.NewMockVirtualNetworksClient(controller)
 
@@ -1237,12 +1237,11 @@ func TestValidateRouteTablesPermissionsWithCheckAccess(t *testing.T) {
 			}
 
 			dv := &dynamic{
-				azEnv:                      &azureclient.PublicCloud,
-				authorizerType:             AuthorizerClusterServicePrincipal,
-				log:                        logrus.NewEntry(logrus.StandardLogger()),
-				checkAccessSubjectInfoCred: tokenCred,
-				pdpClient:                  pdpClient,
-				virtualNetworks:            vnetClient,
+				azEnv:           &azureclient.PublicCloud,
+				authorizerType:  AuthorizerClusterServicePrincipal,
+				log:             logrus.NewEntry(logrus.StandardLogger()),
+				pdpChecker:      pdp,
+				virtualNetworks: vnetClient,
 			}
 
 			if tt.pdpClientMocks != nil {
@@ -1374,8 +1373,8 @@ func TestValidateNatGatewaysPermissionsWithCheckAccess(t *testing.T) {
 			vnetClient := mock_network.NewMockVirtualNetworksClient(controller)
 
 			tokenCred := mock_azcore.NewMockTokenCredential(controller)
-
 			pdpClient := mock_remotepdp.NewMockRemotePDPClient(controller)
+			pdp := NewPDPChecker(pdpClient, tokenCred)
 
 			vnet := &mgmtnetwork.VirtualNetwork{
 				ID: &vnetID,
@@ -1402,12 +1401,11 @@ func TestValidateNatGatewaysPermissionsWithCheckAccess(t *testing.T) {
 			}
 
 			dv := &dynamic{
-				azEnv:                      &azureclient.PublicCloud,
-				authorizerType:             AuthorizerClusterServicePrincipal,
-				log:                        logrus.NewEntry(logrus.StandardLogger()),
-				checkAccessSubjectInfoCred: tokenCred,
-				pdpClient:                  pdpClient,
-				virtualNetworks:            vnetClient,
+				azEnv:           &azureclient.PublicCloud,
+				authorizerType:  AuthorizerClusterServicePrincipal,
+				log:             logrus.NewEntry(logrus.StandardLogger()),
+				pdpChecker:      pdp,
+				virtualNetworks: vnetClient,
 			}
 
 			if tt.pdpClientMocks != nil {

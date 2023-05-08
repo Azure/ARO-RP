@@ -98,3 +98,10 @@ func AzCredentials(ctx context.Context, client client.Client) (*Credentials, err
 		TenantID:     clusterSPSecret.Data["azure_tenant_id"],
 	}, nil
 }
+
+func NewTokenCredentialForCluster(environment *azureclient.AROEnvironment, oc *api.OpenShiftCluster, sub *api.Subscription) (*azidentity.ClientSecretCredential, error) {
+	spp := oc.Properties.ServicePrincipalProfile
+	return azidentity.NewClientSecretCredential(
+		sub.Properties.TenantID, spp.ClientID, string(spp.ClientSecret), environment.ClientSecretCredentialOptions(),
+	)
+}

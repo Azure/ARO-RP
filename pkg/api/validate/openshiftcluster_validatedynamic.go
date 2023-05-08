@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest"
@@ -21,8 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate/dynamic"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
-	"github.com/Azure/ARO-RP/pkg/util/feature"
+	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
 )
 
 // OpenShiftClusterDynamicValidator is the dynamic validator interface
@@ -30,31 +28,65 @@ type OpenShiftClusterDynamicValidator interface {
 	Dynamic(context.Context) error
 }
 
-// NewOpenShiftClusterDynamicValidator creates a new OpenShiftClusterDynamicValidator
-func NewOpenShiftClusterDynamicValidator(
+// NewFirstPartyOpenShiftClusterDynamicValidator creates a new
+// OpenShiftClusterDynamicValidator that operates using the first party service
+// principal (FPSP)
+func NewFirstPartyOpenShiftClusterDynamicValidator(
 	log *logrus.Entry,
 	env env.Interface,
 	oc *api.OpenShiftCluster,
 	subscriptionDoc *api.SubscriptionDocument,
 	fpAuthorizer autorest.Authorizer,
+	pdpChecker *dynamic.PDPChecker,
 ) OpenShiftClusterDynamicValidator {
-	return &openShiftClusterDynamicValidator{
+	return &firstPartyOpenShiftClusterDynamicValidator{
 		log: log,
 		env: env,
 
 		oc:              oc,
 		subscriptionDoc: subscriptionDoc,
 		fpAuthorizer:    fpAuthorizer,
+		pdpChecker:      pdpChecker,
 	}
 }
 
-type openShiftClusterDynamicValidator struct {
+// NewClientOpenShiftClusterDynamicValidator creates a new
+// OpenShiftClusterDynamicValidator that operates using the client service
+// principal
+func NewClientOpenShiftClusterDynamicValidator(
+	log *logrus.Entry,
+	env env.Interface,
+	oc *api.OpenShiftCluster,
+	subscriptionDoc *api.SubscriptionDocument,
+	pdpChecker *dynamic.PDPChecker,
+) OpenShiftClusterDynamicValidator {
+	return &clientOpenShiftClusterDynamicValidator{
+		log: log,
+		env: env,
+
+		oc:              oc,
+		subscriptionDoc: subscriptionDoc,
+		pdpChecker:      pdpChecker,
+	}
+}
+
+type firstPartyOpenShiftClusterDynamicValidator struct {
 	log *logrus.Entry
 	env env.Interface
 
 	oc              *api.OpenShiftCluster
 	subscriptionDoc *api.SubscriptionDocument
 	fpAuthorizer    autorest.Authorizer
+	pdpChecker      *dynamic.PDPChecker
+}
+
+type clientOpenShiftClusterDynamicValidator struct {
+	log *logrus.Entry
+	env env.Interface
+
+	oc              *api.OpenShiftCluster
+	subscriptionDoc *api.SubscriptionDocument
+	pdpChecker      *dynamic.PDPChecker
 }
 
 func ensureAccessTokenClaims(ctx context.Context, tokenCredential *azidentity.ClientSecretCredential, scopes []string) error {
@@ -116,7 +148,7 @@ func ensureAccessTokenClaims(ctx context.Context, tokenCredential *azidentity.Cl
 }
 
 // Dynamic validates an OpenShift cluster
-func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
+func (dv *firstPartyOpenShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	// Get all subnets
 	subnets := []dynamic.Subnet{{
 		ID:   dv.oc.Properties.MasterProfile.SubnetID,
@@ -128,42 +160,6 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 			Path: fmt.Sprintf("properties.workerProfiles[%d].subnetId", i),
 		})
 	}
-
-	var fpClientCred azcore.TokenCredential
-	var spClientCred azcore.TokenCredential
-	var pdpClient remotepdp.RemotePDPClient
-	spp := dv.oc.Properties.ServicePrincipalProfile
-
-	if feature.IsRegisteredForFeature(
-		dv.subscriptionDoc.Subscription.Properties,
-		api.FeatureFlagCheckAccessTestToggle,
-	) {
-		// TODO remove after successfully migrating to CheckAccess
-		dv.log.Info("CheckAccess Feature is set")
-		var err error
-		fpClientCred, err = dv.env.FPNewClientCertificateCredential(dv.subscriptionDoc.Subscription.Properties.TenantID)
-		if err != nil {
-			return err
-		}
-
-		spClientCred, err = azidentity.NewClientSecretCredential(
-			dv.subscriptionDoc.Subscription.Properties.TenantID,
-			spp.ClientID,
-			string(spp.ClientSecret),
-			nil,
-		)
-		if err != nil {
-			return err
-		}
-
-		aroEnv := dv.env.Environment()
-		pdpClient = remotepdp.NewRemotePDPClient(
-			fmt.Sprintf(aroEnv.Endpoint, dv.env.Location()),
-			aroEnv.OAuthScope,
-			fpClientCred,
-		)
-	}
-
 	// FP validation
 	fpDynamic := dynamic.NewValidator(
 		dv.log,
@@ -173,8 +169,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		dv.fpAuthorizer,
 		dv.env.FPClientID(),
 		dynamic.AuthorizerFirstParty,
-		fpClientCred,
-		pdpClient,
+		dv.pdpChecker,
 	)
 
 	err := fpDynamic.ValidateVnet(
@@ -193,10 +188,25 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
-	tenantID := dv.subscriptionDoc.Subscription.Properties.TenantID
-	options := dv.env.Environment().ClientSecretCredentialOptions()
-	tokenCredential, err := azidentity.NewClientSecretCredential(
-		tenantID, spp.ClientID, string(spp.ClientSecret), options)
+	return nil
+}
+
+// Dynamic validates an OpenShift cluster
+func (dv *clientOpenShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
+	// Get all subnets
+	subnets := []dynamic.Subnet{{
+		ID:   dv.oc.Properties.MasterProfile.SubnetID,
+		Path: "properties.masterProfile.subnetId",
+	}}
+	for i, wp := range dv.oc.Properties.WorkerProfiles {
+		subnets = append(subnets, dynamic.Subnet{
+			ID:   wp.SubnetID,
+			Path: fmt.Sprintf("properties.workerProfiles[%d].subnetId", i),
+		})
+	}
+
+	tokenCredential, err := clusterauthorizer.NewTokenCredentialForCluster(
+		dv.env.Environment(), dv.oc, dv.subscriptionDoc.Subscription)
 	if err != nil {
 		return err
 	}
@@ -216,8 +226,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		spAuthorizer,
 		spp.ClientID,
 		dynamic.AuthorizerClusterServicePrincipal,
-		spClientCred,
-		pdpClient,
+		dv.pdpChecker,
 	)
 
 	// SP validation
