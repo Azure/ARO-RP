@@ -224,7 +224,7 @@ func (dv *clientOpenShiftClusterDynamicValidator) Dynamic(ctx context.Context) e
 		dv.env.Environment(),
 		dv.subscriptionDoc.ID,
 		spAuthorizer,
-		spp.ClientID,
+		dv.oc.Properties.ServicePrincipalProfile.ClientID,
 		dynamic.AuthorizerClusterServicePrincipal,
 		dv.pdpChecker,
 	)

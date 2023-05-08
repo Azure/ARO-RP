@@ -80,7 +80,7 @@ func NewValidator(
 	appID string,
 	authorizerType AuthorizerType,
 	pdpChecker *PDPChecker,
-) (Dynamic, error) {
+) Dynamic {
 	return &dynamic{
 		log:            log,
 		authorizerType: authorizerType,
@@ -96,7 +96,7 @@ func NewValidator(
 		diskEncryptionSets: compute.NewDiskEncryptionSetsClient(azEnv, subscriptionID, authorizer),
 		resourceSkusClient: compute.NewResourceSkusClient(azEnv, subscriptionID, authorizer),
 		pdpChecker:         pdpChecker,
-	}, nil
+	}
 }
 
 func NewServicePrincipalValidator(
