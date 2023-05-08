@@ -47,7 +47,7 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtcompute.VirtualMachineScaleSet{
 			Sku: &mgmtcompute.Sku{
-				Name:     to.StringPtr(string(mgmtcompute.VirtualMachineSizeTypesStandardD2sV3)),
+				Name:     to.StringPtr(string(mgmtcompute.VirtualMachineSizeTypesStandardF2sV2)),
 				Tier:     to.StringPtr("Standard"),
 				Capacity: to.Int64Ptr(1),
 			},
@@ -75,7 +75,7 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 						ImageReference: &mgmtcompute.ImageReference{
 							Publisher: to.StringPtr("RedHat"),
 							Offer:     to.StringPtr("RHEL"),
-							Sku:       to.StringPtr("7-LVM"),
+							Sku:       to.StringPtr("8-LVM"),
 							Version:   to.StringPtr("latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
@@ -119,13 +119,45 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 							{
 								Name: to.StringPtr("dev-proxy-vmss-cse"),
 								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
-									Publisher:               to.StringPtr("Microsoft.Azure.Extensions"),
-									Type:                    to.StringPtr("CustomScript"),
-									TypeHandlerVersion:      to.StringPtr("2.0"),
+									Publisher:          to.StringPtr("Microsoft.Azure.Extensions"),
+									Type:               to.StringPtr("CustomScript"),
+									TypeHandlerVersion: to.StringPtr("2.0"),
+									ProvisionAfterExtensions: &[]string{
+										"Microsoft.Azure.Monitor.AzureMonitorLinuxAgent",
+										"Microsoft.Azure.Security.Monitoring.AzureSecurityLinuxAgent",
+									},
 									AutoUpgradeMinorVersion: to.BoolPtr(true),
 									Settings:                map[string]interface{}{},
 									ProtectedSettings: map[string]interface{}{
 										"script": script,
+									},
+								},
+							},
+							{
+								Name: to.StringPtr("Microsoft.Azure.Monitor.AzureMonitorLinuxAgent"),
+								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
+									Publisher:               to.StringPtr("Microsoft.Azure.Monitor"),
+									Type:                    to.StringPtr("AzureMonitorLinuxAgent"),
+									TypeHandlerVersion:      to.StringPtr("1.0"),
+									AutoUpgradeMinorVersion: to.BoolPtr(true),
+									EnableAutomaticUpgrade:  to.BoolPtr(true),
+									Settings: map[string]interface{}{
+										"GCS_AUTO_CONFIG": true,
+									},
+								},
+							},
+							{
+								Name: to.StringPtr("Microsoft.Azure.Security.Monitoring.AzureSecurityLinuxAgent"),
+								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
+									Publisher:               to.StringPtr("Microsoft.Azure.Security.Monitoring"),
+									Type:                    to.StringPtr("AzureSecurityLinuxAgent"),
+									TypeHandlerVersion:      to.StringPtr("2.0"),
+									AutoUpgradeMinorVersion: to.BoolPtr(true),
+									EnableAutomaticUpgrade:  to.BoolPtr(true),
+									Settings: map[string]interface{}{
+										"enableGenevaUpload":               true,
+										"enableAutoConfig":                 true,
+										"reportSuccessOnUnsupportedDistro": true,
 									},
 								},
 							},
@@ -231,130 +263,6 @@ func (g *generator) devVPN() *arm.Resource {
 		DependsOn: []string{
 			"[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]",
 			"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vpn-vnet')]",
-		},
-	}
-}
-
-func (g *generator) devCIPool() *arm.Resource {
-	parts := []string{
-		fmt.Sprintf("base64ToString('%s')", base64.StdEncoding.EncodeToString([]byte("set -e\n\n"))),
-	}
-
-	for _, variable := range []string{
-		"ciAzpToken",
-		"ciPoolName"} {
-		parts = append(parts,
-			fmt.Sprintf("'%s='''", strings.ToUpper(variable)),
-			fmt.Sprintf("parameters('%s')", variable),
-			"'''\n'",
-		)
-	}
-
-	trailer := base64.StdEncoding.EncodeToString(scriptDevCIPool)
-
-	parts = append(parts, "'\n'", fmt.Sprintf("base64ToString('%s')", trailer))
-
-	script := fmt.Sprintf("[base64(concat(%s))]", strings.Join(parts, ","))
-
-	return &arm.Resource{
-		Resource: &mgmtcompute.VirtualMachineScaleSet{
-			Sku: &mgmtcompute.Sku{
-				Name:     to.StringPtr(string(mgmtcompute.VirtualMachineSizeTypesStandardD2sV3)),
-				Tier:     to.StringPtr("Standard"),
-				Capacity: to.Int64Ptr(1337),
-			},
-			VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
-				UpgradePolicy: &mgmtcompute.UpgradePolicy{
-					Mode: mgmtcompute.UpgradeModeManual,
-				},
-				VirtualMachineProfile: &mgmtcompute.VirtualMachineScaleSetVMProfile{
-					OsProfile: &mgmtcompute.VirtualMachineScaleSetOSProfile{
-						ComputerNamePrefix: to.StringPtr("ci-"),
-						AdminUsername:      to.StringPtr("cloud-user"),
-						LinuxConfiguration: &mgmtcompute.LinuxConfiguration{
-							DisablePasswordAuthentication: to.BoolPtr(true),
-							SSH: &mgmtcompute.SSHConfiguration{
-								PublicKeys: &[]mgmtcompute.SSHPublicKey{
-									{
-										Path:    to.StringPtr("/home/cloud-user/.ssh/authorized_keys"),
-										KeyData: to.StringPtr("[parameters('sshPublicKey')]"),
-									},
-								},
-							},
-						},
-					},
-					StorageProfile: &mgmtcompute.VirtualMachineScaleSetStorageProfile{
-						ImageReference: &mgmtcompute.ImageReference{
-							Publisher: to.StringPtr("RedHat"),
-							Offer:     to.StringPtr("RHEL"),
-							Sku:       to.StringPtr("8-LVM"),
-							Version:   to.StringPtr("latest"),
-						},
-						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
-							CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
-							ManagedDisk: &mgmtcompute.VirtualMachineScaleSetManagedDiskParameters{
-								StorageAccountType: mgmtcompute.StorageAccountTypesPremiumLRS,
-							},
-							DiskSizeGB: to.Int32Ptr(200),
-						},
-					},
-					NetworkProfile: &mgmtcompute.VirtualMachineScaleSetNetworkProfile{
-						NetworkInterfaceConfigurations: &[]mgmtcompute.VirtualMachineScaleSetNetworkConfiguration{
-							{
-								Name: to.StringPtr("ci-vmss-nic"),
-								VirtualMachineScaleSetNetworkConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetNetworkConfigurationProperties{
-									Primary: to.BoolPtr(true),
-									IPConfigurations: &[]mgmtcompute.VirtualMachineScaleSetIPConfiguration{
-										{
-											Name: to.StringPtr("ci-vmss-ipconfig"),
-											VirtualMachineScaleSetIPConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetIPConfigurationProperties{
-												Subnet: &mgmtcompute.APIEntityReference{
-													ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'dev-vnet', 'ToolingSubnet')]"),
-												},
-												Primary: to.BoolPtr(true),
-												PublicIPAddressConfiguration: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfiguration{
-													Name: to.StringPtr("ci-vmss-pip"),
-													VirtualMachineScaleSetPublicIPAddressConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationProperties{
-														DNSSettings: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationDNSSettings{
-															DomainNameLabel: to.StringPtr("aro-ci"),
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-					ExtensionProfile: &mgmtcompute.VirtualMachineScaleSetExtensionProfile{
-						Extensions: &[]mgmtcompute.VirtualMachineScaleSetExtension{
-							{
-								Name: to.StringPtr("ci-vmss-cse"),
-								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
-									Publisher:               to.StringPtr("Microsoft.Azure.Extensions"),
-									Type:                    to.StringPtr("CustomScript"),
-									TypeHandlerVersion:      to.StringPtr("2.0"),
-									AutoUpgradeMinorVersion: to.BoolPtr(true),
-									Settings:                map[string]interface{}{},
-									ProtectedSettings: map[string]interface{}{
-										"script": script,
-									},
-								},
-							},
-						},
-					},
-				},
-				Overprovision: to.BoolPtr(false),
-			},
-			Name:     to.StringPtr("ci-vmss"),
-			Type:     to.StringPtr("Microsoft.Compute/virtualMachineScaleSets"),
-			Location: to.StringPtr("[resourceGroup().location]"),
-		},
-		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
-		Condition:  "[greater(parameters('ciCapacity'), 0)]", // TODO(mj): Refactor g.conditionStanza for better usage
-		DependsOn: []string{
-			"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
 		},
 	}
 }

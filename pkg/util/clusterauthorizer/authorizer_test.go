@@ -5,35 +5,25 @@ package clusterauthorizer
 
 import (
 	"context"
-	"crypto/hmac"
-	"crypto/sha512"
-	"encoding/base64"
-	"encoding/json"
-	"fmt"
-	"math/rand"
-	"net/url"
 	"testing"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/adal"
-	"github.com/golang/mock/gomock"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	mock_aad "github.com/Azure/ARO-RP/pkg/util/mocks/aad"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 type tokenRequirements struct {
-	clientID     string
-	clientSecret string
-	tenantID     string
-	aadEndpoint  string
-	resource     string
-	claims       string
-	signMethod   string
+	clientSecret  string
+	claims        jwt.MapClaims
+	signingMethod jwt.SigningMethod
 }
 
 var (
@@ -69,16 +59,10 @@ func TestNewAzRefreshableAuthorizer(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			aad := mock_aad.NewMockTokenClient(controller)
-
 			clientFake := ctrlfake.NewClientBuilder().WithObjects(tt.secret).Build()
 
-			_, err := NewAzRefreshableAuthorizer(tt.log, tt.azCloudEnv, clientFake, aad)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Errorf("\n%v\n !=\n%v", err, tt.wantErr)
-			}
+			_, err := NewAzRefreshableAuthorizer(tt.log, tt.azCloudEnv, clientFake)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
@@ -89,19 +73,11 @@ func TestNewRefreshableAuthorizerToken(t *testing.T) {
 	log := logrus.NewEntry(logrus.StandardLogger())
 
 	for _, tt := range []struct {
-		name        string
-		secret      *corev1.Secret
-		tr          *tokenRequirements
-		getTokenErr error
-		wantErr     string
+		name    string
+		secret  *corev1.Secret
+		tr      *tokenRequirements
+		wantErr string
 	}{
-		{
-			name:        "fail: Invalid principal credentials",
-			secret:      newV1CoreSecret(azureSecretName, nameSpace),
-			tr:          newTokenRequirements(),
-			getTokenErr: fmt.Errorf("400: InvalidServicePrincipalCredentials: properties.servicePrincipalProfile: The provided service principal credentials are invalid."),
-			wantErr:     "400: InvalidServicePrincipalCredentials: properties.servicePrincipalProfile: The provided service principal credentials are invalid.",
-		},
 		{
 			name: "fail: Missing client secret",
 			secret: &corev1.Secret{
@@ -117,40 +93,22 @@ func TestNewRefreshableAuthorizerToken(t *testing.T) {
 			wantErr: "azure_client_secret does not exist in the secret",
 		},
 		{
-			name: "fail: invalid signing method",
+			name: "pass: create new bearer authorizer token",
 			tr: &tokenRequirements{
-				clientID:     "my-client",
-				clientSecret: "my-secret",
-				tenantID:     "my-tenant.example.com",
-				aadEndpoint:  "https://login.microsoftonline.com/",
-				resource:     "https://management.azure.com/",
-				claims:       `{}`,
-				signMethod:   "fake-signing-method",
+				clientSecret:  "my-secret",
+				signingMethod: jwt.SigningMethodHS256,
 			},
-			secret:  newV1CoreSecret(azureSecretName, nameSpace),
-			wantErr: "signing method (alg) is unavailable.",
-		},
-		{
-			name:   "pass: create new bearer authorizer token",
-			tr:     newTokenRequirements(),
 			secret: newV1CoreSecret(azureSecretName, nameSpace),
 		},
 	} {
 		clientFake := ctrlfake.NewClientBuilder().WithObjects(tt.secret).Build()
 
-		controller := gomock.NewController(t)
-		aad := mock_aad.NewMockTokenClient(controller)
-		if tt.tr != nil {
-			token, err := createToken(tt.tr)
-			if err != nil {
-				t.Errorf("failed to manually create token for mock aad")
-			}
-			aad.EXPECT().GetToken(ctx, log, tt.tr.clientID, tt.tr.clientSecret, tt.tr.tenantID, tt.tr.aadEndpoint, tt.tr.resource).MaxTimes(1).Return(token, tt.getTokenErr)
-		}
-
-		azRefreshAuthorizer, err := NewAzRefreshableAuthorizer(log, &azureclient.PublicCloud, clientFake, aad)
+		azRefreshAuthorizer, err := NewAzRefreshableAuthorizer(log, &azureclient.PublicCloud, clientFake)
 		if err != nil {
 			t.Errorf("failed to create azRefreshAuthorizer, %v", err)
+		}
+		azRefreshAuthorizer.getTokenCredential = func(*azureclient.AROEnvironment, *Credentials) (azcore.TokenCredential, error) {
+			return tt.tr, nil
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
@@ -252,71 +210,22 @@ func TestAzCredentials(t *testing.T) {
 
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := AzCredentials(ctx, clientFake)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Errorf("\n%v\n !=\n%v", err, tt.wantErr)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
 
-// createToken manually creates an adal.ServicePrincipalToken
-func createToken(tr *tokenRequirements) (*adal.ServicePrincipalToken, error) {
-	if tr.signMethod == "" {
-		tr.signMethod = "HS256"
-	}
-	claimsEnc := base64.StdEncoding.EncodeToString([]byte(tr.claims))
-	headerEnc := base64.StdEncoding.EncodeToString([]byte(`{ "alg": "` + tr.signMethod + `", "typ": "JWT" }`))
-	signatureEnc := base64.StdEncoding.EncodeToString(
-		hmac.New(sha512.New, []byte(headerEnc+claimsEnc+tr.clientSecret)).Sum(nil),
-	)
-
-	r := rand.New(rand.NewSource(time.Now().UnixMicro()))
-	tk := adal.Token{
-		AccessToken:  headerEnc + "." + claimsEnc + "." + signatureEnc,
-		RefreshToken: fmt.Sprintf("rand-%d", r.Int()),
-		ExpiresIn:    json.Number("300"),
-		Resource:     tr.resource,
-		Type:         "refresh",
+// GetToken allows tokenRequirements to be used as an azcore.TokenCredential.
+func (tr *tokenRequirements) GetToken(ctx context.Context, options policy.TokenRequestOptions) (azcore.AccessToken, error) {
+	token, err := jwt.NewWithClaims(tr.signingMethod, tr.claims).SignedString([]byte(tr.clientSecret))
+	if err != nil {
+		return azcore.AccessToken{}, err
 	}
 
-	aadUrl, err := url.Parse(tr.aadEndpoint)
-	if err != nil {
-		return nil, err
-	}
-	authUrl, err := url.Parse("https://login.microsoftonline.com/my-tenant.example.com/oauth2/authorize")
-	if err != nil {
-		return nil, err
-	}
-	tokenUrl, err := url.Parse("https://login.microsoftonline.com/my-tenant.example.com/oauth2/token")
-	if err != nil {
-		return nil, err
-	}
-	if err != nil {
-		return nil, err
-	}
-	deviceCodeUrl, err := url.Parse("https://devicecode.com")
-	if err != nil {
-		return nil, err
-	}
-	return adal.NewServicePrincipalTokenFromManualToken(adal.OAuthConfig{
-		AuthorityEndpoint:  *aadUrl,
-		AuthorizeEndpoint:  *authUrl,
-		TokenEndpoint:      *tokenUrl,
-		DeviceCodeEndpoint: *deviceCodeUrl,
-	}, tr.clientID, tr.resource, tk)
-}
-
-func newTokenRequirements() *tokenRequirements {
-	return &tokenRequirements{
-		clientID:     "my-client",
-		clientSecret: "my-secret",
-		tenantID:     "my-tenant.example.com",
-		aadEndpoint:  "https://login.microsoftonline.com/",
-		resource:     "https://management.azure.com/",
-		claims:       `{}`,
-		signMethod:   "HS256",
-	}
+	return azcore.AccessToken{
+		Token:     token,
+		ExpiresOn: time.Now().Add(10 * time.Minute),
+	}, nil
 }
 
 func newV1CoreSecret(azSecretName, ns string) *corev1.Secret {

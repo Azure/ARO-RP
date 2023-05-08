@@ -4,8 +4,9 @@ package v20220904
 // Licensed under the Apache License 2.0.
 
 import (
-	"fmt"
 	"testing"
+
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 var ocmResource = string(`
@@ -35,56 +36,44 @@ var ocmResourceEncoded = "eyAKICAiYXBpVmVyc2lvbiI6ICJoaXZlLm9wZW5zaGlmdC5pby92MS
 
 func TestStatic(t *testing.T) {
 	for _, tt := range []struct {
-		name        string
-		ocmResource string
-		vars        map[string]string
-		wantErr     bool
-		err         string
+		name            string
+		ocmResource     string
+		ocmResourceType string
+		wantErr         bool
+		err             string
 	}{
 		{
-			name:        "payload Kind matches",
-			ocmResource: ocmResource,
-			vars: map[string]string{
-				"ocmResourceType": "syncset",
-			},
-			wantErr: false,
+			name:            "payload Kind matches",
+			ocmResource:     ocmResource,
+			ocmResourceType: "syncset",
+			wantErr:         false,
 		},
 		{
-			name:        "payload Kind matches and is a base64 encoded string",
-			ocmResource: ocmResourceEncoded,
-			vars: map[string]string{
-				"ocmResourceType": "syncset",
-			},
-			wantErr: false,
+			name:            "payload Kind matches and is a base64 encoded string",
+			ocmResource:     ocmResourceEncoded,
+			ocmResourceType: "syncset",
+			wantErr:         false,
 		},
 		{
-			name:        "payload Kind does not match",
-			ocmResource: ocmResource,
-			vars: map[string]string{
-				"ocmResourceType": "route",
-			},
-			wantErr: true,
-			err:     "wanted Kind 'route', resource is Kind 'syncset'",
+			name:            "payload Kind does not match",
+			ocmResource:     ocmResource,
+			ocmResourceType: "route",
+			wantErr:         true,
+			err:             "wanted Kind 'route', resource is Kind 'syncset'",
 		},
 		{
-			name:        "payload Kind does not match and is a base64 encoded string",
-			ocmResource: ocmResourceEncoded,
-			vars: map[string]string{
-				"ocmResourceType": "route",
-			},
-			wantErr: true,
-			err:     "wanted Kind 'route', resource is Kind 'syncset'",
+			name:            "payload Kind does not match and is a base64 encoded string",
+			ocmResource:     ocmResourceEncoded,
+			ocmResourceType: "route",
+			wantErr:         true,
+			err:             "wanted Kind 'route', resource is Kind 'syncset'",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &clusterManagerStaticValidator{}
 
-			err := c.Static(tt.ocmResource, tt.vars)
-			if err != nil && tt.wantErr {
-				if fmt.Sprint(err) != tt.err {
-					t.Errorf("wanted '%v', got '%v'", tt.err, err)
-				}
-			}
+			err := c.Static(tt.ocmResource, tt.ocmResourceType)
+			utilerror.AssertErrorMessage(t, err, tt.err)
 		})
 	}
 }

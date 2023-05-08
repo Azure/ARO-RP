@@ -31,12 +31,14 @@ This document goes through the development dependencies one requires in order to
 
 1. Install [golangci-lint](https://golangci-lint.run/) and [yamllint](https://yamllint.readthedocs.io/en/stable/quickstart.html#installing-yamllint) (optional but your code is required to comply to pass the CI)
 
-### Fedora Packages
+### Fedora / RHEL Packages
 
 1. Install the `gpgme-devel`, `libassuan-devel`, and `openssl` packages.
     > `sudo dnf install -y gpgme-devel libassuan-devel openssl`
 
-1. Install [Docker 17.05+](https://docs.docker.com/engine/install/fedora/) or later, used as an alternative to podman.
+> __NOTE:__: If using RHEL, register the system with `subscription-manager register`, and then enable the [CodeReady Linux Builder](https://access.redhat.com/articles/4348511) repository to install *-devel packages. For other packages not in the base repositories, such as OpenVPN, you can [enable the EPEL repository](https://docs.fedoraproject.org/en-US/epel/#_quickstart) to install them.
+
+1. Optionally install [Docker 17.05+](https://docs.docker.com/engine/install/fedora/) or later as an alternative to podman.
 
 ### Debian Packages
 

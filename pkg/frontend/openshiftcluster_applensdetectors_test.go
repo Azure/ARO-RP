@@ -66,17 +66,6 @@ func TestAppLensDetectors(t *testing.T) {
 			wantStatusCode: http.StatusOK,
 			wantResponse:   []byte(`{"Kind": "test"}` + "\n"),
 		},
-		{
-			method:      http.MethodGet,
-			name:        "no applens detector specified",
-			resourceID:  fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			detectorID:  "",
-			getDetector: true,
-			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
-			},
-			wantStatusCode: http.StatusNotFound,
-			wantError:      "404: NotFound: : The requested path could not be found.",
-		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ti := newTestInfra(t).WithSubscriptions().WithOpenShiftClusters()

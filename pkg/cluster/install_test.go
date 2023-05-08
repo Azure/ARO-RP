@@ -27,6 +27,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -47,11 +48,12 @@ func newfakeMetricsEmitter() *fakeMetricsEmitter {
 	}
 }
 
-func (e *fakeMetricsEmitter) EmitGauge(topic string, value int64, dims map[string]string) {
-	e.Metrics[topic] = value
+func (e *fakeMetricsEmitter) EmitGauge(metricName string, metricValue int64, dimensions map[string]string) {
+	e.Metrics[metricName] = metricValue
 }
 
-func (e *fakeMetricsEmitter) EmitFloat(topic string, value float64, dims map[string]string) {}
+func (e *fakeMetricsEmitter) EmitFloat(metricName string, metricValue float64, dimensions map[string]string) {
+}
 
 var clusterOperator = &configv1.ClusterOperator{
 	ObjectMeta: metav1.ObjectMeta{
@@ -176,11 +178,8 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				now:           func() time.Time { return time.Now() },
 			}
 
-			err := m.runSteps(ctx, tt.steps, false)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			err := m.runSteps(ctx, tt.steps, "")
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			err = testlog.AssertLoggingOutput(h, tt.wantEntries)
 			if err != nil {
@@ -239,28 +238,47 @@ func TestInstallationTimeMetrics(t *testing.T) {
 
 	for _, tt := range []struct {
 		name          string
+		metricsTopic  string
+		timePerStep   int64
 		steps         []steps.Step
 		wantedMetrics map[string]int64
 	}{
 		{
-			name: "Failed step run will not generate any install time metrics",
+			name:         "Failed step run will not generate any install time metrics",
+			metricsTopic: "install",
 			steps: []steps.Step{
 				steps.Action(successfulActionStep),
 				steps.Action(failingFunc),
 			},
 		},
 		{
-			name: "Succeeded step run will generate a valid install time metrics",
+			name:         "Succeeded step run for cluster installation will generate a valid install time metrics",
+			metricsTopic: "install",
+			timePerStep:  2,
 			steps: []steps.Step{
 				steps.Action(successfulActionStep),
 				steps.Condition(successfulConditionStep, 30*time.Minute, true),
-				steps.AuthorizationRefreshingAction(nil, steps.Action(successfulActionStep)),
+				steps.Action(successfulActionStep),
 			},
 			wantedMetrics: map[string]int64{
-				"backend.openshiftcluster.installtime.total":                             6,
-				"backend.openshiftcluster.installtime.action.successfulActionStep":       2,
-				"backend.openshiftcluster.installtime.condition.successfulConditionStep": 2,
-				"backend.openshiftcluster.installtime.refreshing.successfulActionStep":   2,
+				"backend.openshiftcluster.install.duration.total.seconds":                             4,
+				"backend.openshiftcluster.install.action.successfulActionStep.duration.seconds":       2,
+				"backend.openshiftcluster.install.condition.successfulConditionStep.duration.seconds": 2,
+			},
+		},
+		{
+			name:         "Succeeded step run for cluster update will generate a valid install time metrics",
+			metricsTopic: "update",
+			timePerStep:  3,
+			steps: []steps.Step{
+				steps.Action(successfulActionStep),
+				steps.Condition(successfulConditionStep, 30*time.Minute, true),
+				steps.Action(successfulActionStep),
+			},
+			wantedMetrics: map[string]int64{
+				"backend.openshiftcluster.update.duration.total.seconds":                             6,
+				"backend.openshiftcluster.update.action.successfulActionStep.duration.seconds":       3,
+				"backend.openshiftcluster.update.condition.successfulConditionStep.duration.seconds": 3,
 			},
 		},
 	} {
@@ -269,10 +287,10 @@ func TestInstallationTimeMetrics(t *testing.T) {
 			m := &manager{
 				log:            log,
 				metricsEmitter: fm,
-				now:            func() time.Time { return time.Now().Add(2 * time.Second) },
+				now:            func() time.Time { return time.Now().Add(time.Duration(tt.timePerStep) * time.Second) },
 			}
 
-			err := m.runSteps(ctx, tt.steps, true)
+			err := m.runSteps(ctx, tt.steps, tt.metricsTopic)
 			if err != nil {
 				if len(fm.Metrics) != 0 {
 					t.Error("fake metrics obj should be empty when run steps failed")
@@ -282,10 +300,10 @@ func TestInstallationTimeMetrics(t *testing.T) {
 					for k, v := range tt.wantedMetrics {
 						time, ok := fm.Metrics[k]
 						if !ok {
-							t.Errorf("unexpected metrics topic: %s", k)
+							t.Errorf("unexpected metrics key: %s", k)
 						}
 						if time != v {
-							t.Errorf("incorrect fake metrics obj, want: %d, got: %d", v, time)
+							t.Errorf("incorrect fake metrics value, want: %d, got: %d", v, time)
 						}
 					}
 				}

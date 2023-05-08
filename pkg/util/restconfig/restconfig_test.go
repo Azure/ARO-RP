@@ -11,6 +11,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_proxy "github.com/Azure/ARO-RP/pkg/util/mocks/proxy"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestDialContext(t *testing.T) {
@@ -65,10 +66,7 @@ func TestDialContext(t *testing.T) {
 			dial := DialContext(dialer, oc)
 
 			_, err := dial(testCtx, tt.dialNetwork, tt.dialAddress)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

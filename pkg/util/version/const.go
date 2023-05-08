@@ -27,12 +27,16 @@ var GitCommit = "unknown"
 
 // DefaultInstallStream describes stream we are defaulting to for all new clusters
 var DefaultInstallStream = &Stream{
-	Version:  NewVersion(4, 10, 40),
-	PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:b9fad814fb4442e7e852b0614d9bb4e2ebc5e1a2fa51623aa838b4ee0e4a5369",
+	Version:  NewVersion(4, 10, 54),
+	PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:7e44fa5f6aa15f9492341c4714bba4dc5089c968f2bf77fb8d4cdf189634f8f5",
 }
 
 var HiveInstallStreams = []*Stream{
 	DefaultInstallStream,
+	{
+		Version:  NewVersion(4, 10, 40),
+		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:b9fad814fb4442e7e852b0614d9bb4e2ebc5e1a2fa51623aa838b4ee0e4a5369",
+	},
 	{
 		Version:  NewVersion(4, 11, 26),
 		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:1c3913a65b0a10b4a0650f54e545fe928360a94767acea64c0bd10faa52c945a",
@@ -72,19 +76,19 @@ var (
 
 // FluentbitImage contains the location of the Fluentbit container image
 func FluentbitImage(acrDomain string) string {
-	return acrDomain + "/fluentbit:1.9.9-1"
+	return acrDomain + "/fluentbit:1.9.10-cm20230321"
 }
 
 // MdmImage contains the location of the MDM container image
 // https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
 func MdmImage(acrDomain string) string {
-	return acrDomain + "/distroless/genevamdm:mariner_20221026.2"
+	return acrDomain + "/genevamdm:2.2023.331.1521-399d45-20230331t1638"
 }
 
 // MdsdImage contains the location of the MDSD container image
 // see https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
 func MdsdImage(acrDomain string) string {
-	return acrDomain + "/genevamdsd:master_20221018.2"
+	return acrDomain + "/genevamdsd:mariner_20230413.1"
 }
 
 // MUOImage contains the location of the Managed Upgrade Operator container image

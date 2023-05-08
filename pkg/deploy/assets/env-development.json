@@ -2,18 +2,6 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "ciAzpToken": {
-            "type": "string",
-            "defaultValue": ""
-        },
-        "ciCapacity": {
-            "type": "int",
-            "defaultValue": 0
-        },
-        "ciPoolName": {
-            "type": "string",
-            "defaultValue": ""
-        },
         "proxyCert": {
             "type": "string"
         },
@@ -156,105 +144,6 @@
             ]
         },
         {
-            "sku": {
-                "name": "Standard_D2s_v3",
-                "tier": "Standard",
-                "capacity": "[parameters('ciCapacity')]"
-            },
-            "properties": {
-                "upgradePolicy": {
-                    "mode": "Manual"
-                },
-                "virtualMachineProfile": {
-                    "osProfile": {
-                        "computerNamePrefix": "ci-",
-                        "adminUsername": "cloud-user",
-                        "linuxConfiguration": {
-                            "disablePasswordAuthentication": true,
-                            "ssh": {
-                                "publicKeys": [
-                                    {
-                                        "path": "/home/cloud-user/.ssh/authorized_keys",
-                                        "keyData": "[parameters('sshPublicKey')]"
-                                    }
-                                ]
-                            }
-                        }
-                    },
-                    "storageProfile": {
-                        "imageReference": {
-                            "publisher": "RedHat",
-                            "offer": "RHEL",
-                            "sku": "8-LVM",
-                            "version": "latest"
-                        },
-                        "osDisk": {
-                            "createOption": "FromImage",
-                            "diskSizeGB": 200,
-                            "managedDisk": {
-                                "storageAccountType": "Premium_LRS"
-                            }
-                        }
-                    },
-                    "networkProfile": {
-                        "networkInterfaceConfigurations": [
-                            {
-                                "name": "ci-vmss-nic",
-                                "properties": {
-                                    "primary": true,
-                                    "ipConfigurations": [
-                                        {
-                                            "name": "ci-vmss-ipconfig",
-                                            "properties": {
-                                                "subnet": {
-                                                    "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'dev-vnet', 'ToolingSubnet')]"
-                                                },
-                                                "primary": true,
-                                                "publicIPAddressConfiguration": {
-                                                    "name": "ci-vmss-pip",
-                                                    "properties": {
-                                                        "dnsSettings": {
-                                                            "domainNameLabel": "aro-ci"
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    ]
-                                }
-                            }
-                        ]
-                    },
-                    "extensionProfile": {
-                        "extensions": [
-                            {
-                                "name": "ci-vmss-cse",
-                                "properties": {
-                                    "publisher": "Microsoft.Azure.Extensions",
-                                    "type": "CustomScript",
-                                    "typeHandlerVersion": "2.0",
-                                    "autoUpgradeMinorVersion": true,
-                                    "settings": {},
-                                    "protectedSettings": {
-                                        "script": "[base64(concat(base64ToString('c2V0IC1lCgo='),'CIAZPTOKEN=''',parameters('ciAzpToken'),'''\n','CIPOOLNAME=''',parameters('ciPoolName'),'''\n','\n',base64ToString('IyBIYWNrIC0gd2FpdCBvbiBjcmVhdGUgYmVjYXVzZSB0aGUgV0FMaW51eEFnZW50IHNvbWV0aW1lcyBjb25mbGljdHMgd2l0aCB0aGUgeXVtIHVwZGF0ZSAteSBiZWxvdwpzbGVlcCA2MAoKZWNobyAicnVubmluZyBSSFVJIGZpeCIKeXVtIHVwZGF0ZSAteSAtLWRpc2FibGVyZXBvPScqJyAtLWVuYWJsZXJlcG89J3JodWktbWljcm9zb2Z0LWF6dXJlKicKCmZvciBhdHRlbXB0IGluIHsxLi41fTsgZG8KICB5dW0gLXkgdXBkYXRlICYmIGJyZWFrCiAgaWYgW1sgJHthdHRlbXB0fSAtbHQgNSBdXTsgdGhlbiBzbGVlcCAxMDsgZWxzZSBleGl0IDE7IGZpCmRvbmUKCkRFVklDRV9QQVJUSVRJT049JChwdnMgfCBncmVwICcvZGV2LycgfCBhd2sgJ3twcmludCAkMX0nIHwgZ3JlcCAtb1AgJ1thLXpdezN9WzAtOV0kJykKREVWSUNFPSQoZWNobyAkREVWSUNFX1BBUlRJVElPTiB8IGdyZXAgLW9QICdeW2Etel17M30nKQpQQVJUSVRJT049JChlY2hvICRERVZJQ0VfUEFSVElUSU9OIHwgZ3JlcCAtb1AgJ1swLTldJCcpCgojIEZpeCB0aGUgIkdQVCBQTUJSIHNpemUgbWlzbWF0Y2ggKDEzNDIxNzcyNyAhPSAyNjg0MzU0NTUpIgplY2hvICJ3IiB8IGZkaXNrIC9kZXYvJHtERVZJQ0V9CgojIFN0ZXBzIGZyb20gaHR0cHM6Ly9hY2Nlc3MucmVkaGF0LmNvbS9zb2x1dGlvbnMvNTgwODAwMQojIDEuIERlbGV0ZSB0aGUgTFZNIHBhcnRpdGlvbiAiZFxuMlxuIgojIDIuIFJlY3JlYXRlIHRoZSBwYXJ0aXRpb24gIm5cbjJcbiIKIyAzLiBBY2NlcHQgdGhlIGRlZmF1bHQgc3RhcnQgYW5kIGVuZCBzZWN0b3JzICgyIHggXG4pCiMgNC4gTFZNMl9tZW1iZXIgc2lnbmF0dXJlIHJlbWFpbnMgYnkgZGVmYXVsdAojIDUuIENoYW5nZSB0eXBlIHRvIExpbnV4IExWTSAidFxuMlxuMzFcbgojIDYuIFdyaXRlIG5ldyB0YWJsZSAid1xuIgoKZmRpc2sgL2Rldi8ke0RFVklDRX0gPDxFT0YKZAoke1BBUlRJVElPTn0Kbgoke1BBUlRJVElPTn0KCgp0CiR7UEFSVElUSU9OfQozMQp3CkVPRgoKcGFydHggLXUgL2Rldi8ke0RFVklDRX0KcHZyZXNpemUgL2Rldi8ke0RFVklDRV9QQVJUSVRJT059CgpsdmV4dGVuZCAtbCArNTAlRlJFRSAvZGV2L3Jvb3R2Zy9ob21lbHYKeGZzX2dyb3dmcyAvaG9tZQoKbHZleHRlbmQgLWwgKzUwJUZSRUUgL2Rldi9yb290dmcvdG1wbHYKeGZzX2dyb3dmcyAvdG1wCgpsdmV4dGVuZCAtbCArMTAwJUZSRUUgL2Rldi9yb290dmcvdmFybHYKeGZzX2dyb3dmcyAvdmFyCgpycG0gLS1pbXBvcnQgaHR0cHM6Ly9kbC5mZWRvcmFwcm9qZWN0Lm9yZy9wdWIvZXBlbC9SUE0tR1BHLUtFWS1FUEVMLTgKcnBtIC0taW1wb3J0IGh0dHBzOi8vcGFja2FnZXMubWljcm9zb2Z0LmNvbS9rZXlzL21pY3Jvc29mdC5hc2MKCnl1bSAteSBpbnN0YWxsIGh0dHBzOi8vZGwuZmVkb3JhcHJvamVjdC5vcmcvcHViL2VwZWwvZXBlbC1yZWxlYXNlLWxhdGVzdC04Lm5vYXJjaC5ycG0KCmNhdCA+L2V0Yy95dW0ucmVwb3MuZC9henVyZS5yZXBvIDw8J0VPRicKW2F6dXJlLWNsaV0KbmFtZT1henVyZS1jbGkKYmFzZXVybD1odHRwczovL3BhY2thZ2VzLm1pY3Jvc29mdC5jb20veXVtcmVwb3MvYXp1cmUtY2xpCmVuYWJsZWQ9eWVzCmdwZ2NoZWNrPXllcwpFT0YKCnl1bSAteSBpbnN0YWxsIGF6dXJlLWNsaSBwb2RtYW4gcG9kbWFuLWRvY2tlciBqcSBnY2MgZ3BnbWUtZGV2ZWwgbGliYXNzdWFuLWRldmVsIGdpdCBtYWtlIHRtcHdhdGNoIHB5dGhvbjMtZGV2ZWwgaHRvcCBnby10b29sc2V0LTEuMTcuMTItMS5tb2R1bGUrZWw4LjYuMCsxNjAxNCthMzcyYzAwYiBvcGVudnBuCgojIFN1cHByZXNzIGVtdWxhdGlvbiBvdXRwdXQgZm9yIHBvZG1hbiBpbnN0ZWFkIG9mIGRvY2tlciBmb3IgYXogYWNyIGNvbXBhdGFiaWxpdHkKbWtkaXIgLXAgL2V0Yy9jb250YWluZXJzLwp0b3VjaCAvZXRjL2NvbnRhaW5lcnMvbm9kb2NrZXIKClZTVFNfQUdFTlRfVkVSU0lPTj0yLjIwNi4xCm1rZGlyIC9ob21lL2Nsb3VkLXVzZXIvYWdlbnQKcHVzaGQgL2hvbWUvY2xvdWQtdXNlci9hZ2VudApjdXJsIC1zIGh0dHBzOi8vdnN0c2FnZW50cGFja2FnZS5henVyZWVkZ2UubmV0L2FnZW50LyR7VlNUU19BR0VOVF9WRVJTSU9OfS92c3RzLWFnZW50LWxpbnV4LXg2NC0ke1ZTVFNfQUdFTlRfVkVSU0lPTn0udGFyLmd6IHwgdGFyIC14egpjaG93biAtUiBjbG91ZC11c2VyOmNsb3VkLXVzZXIgLgoKLi9iaW4vaW5zdGFsbGRlcGVuZGVuY2llcy5zaApzdWRvIC11IGNsb3VkLXVzZXIgLi9jb25maWcuc2ggLS11bmF0dGVuZGVkIC0tdXJsIGh0dHBzOi8vZGV2LmF6dXJlLmNvbS9tc2F6dXJlIC0tYXV0aCBwYXQgLS10b2tlbiAiJENJQVpQVE9LRU4iIC0tcG9vbCAiJENJUE9PTE5BTUUiIC0tYWdlbnQgIkFSTy1SSEVMLSRIT1NUTkFNRSIgLS1yZXBsYWNlCi4vc3ZjLnNoIGluc3RhbGwgY2xvdWQtdXNlcgpwb3BkCgpjYXQgPi9ob21lL2Nsb3VkLXVzZXIvYWdlbnQvLnBhdGggPDwnRU9GJwovdXNyL2xvY2FsL2JpbjovdXNyL2JpbjovdXNyL2xvY2FsL3NiaW46L3Vzci9zYmluOi9ob21lL2Nsb3VkLXVzZXIvLmxvY2FsL2JpbjovaG9tZS9jbG91ZC11c2VyL2JpbgpFT0YKCiMgU2V0IHRoZSBhZ2VudCdzICJTeXN0ZW0gY2FwYWJpbGl0aWVzIiBmb3IgdGVzdHMgKGdvLTEuMTcgYW5kIEdPTEFOR19GSVBTKSBpbiB0aGUgYWdlbnQncyAuZW52IGZpbGUKIyBhbmQgYWRkIGEgSEFDSyBmb3IgWERHX1JVTlRJTUVfRElSOiBodHRwczovL2dpdGh1Yi5jb20vY29udGFpbmVycy9wb2RtYW4vaXNzdWVzLzQyNwpjYXQgPi9ob21lL2Nsb3VkLXVzZXIvYWdlbnQvLmVudiA8PCdFT0YnCmdvLTEuMTc9dHJ1ZQpHT0xBTkdfRklQUz0xClhER19SVU5USU1FX0RJUj0vcnVuL3VzZXIvMTAwMApFT0YKCmNhdCA+L2V0Yy9jcm9uLndlZWtseS95dW11cGRhdGUgPDwnRU9GJwojIS9iaW4vYmFzaAoKeXVtIHVwZGF0ZSAteQpFT0YKY2htb2QgK3ggL2V0Yy9jcm9uLndlZWtseS95dW11cGRhdGUKCmNhdCA+L2V0Yy9jcm9uLmhvdXJseS90bXB3YXRjaCA8PCdFT0YnCiMhL2Jpbi9iYXNoCgpleGVjIC9zYmluL3RtcHdhdGNoIDI0aCAvdG1wCkVPRgpjaG1vZCAreCAvZXRjL2Nyb24uaG91cmx5L3RtcHdhdGNoCgojIEhBQ0sgLSBwb2RtYW4gZG9lc24ndCBhbHdheXMgdGVybWluYXRlIG9yIGNsZWFuIHVwIGl0J3MgcGF1c2UucGlkIGZpbGUgY2F1c2luZwojICdjYW5ub3QgcmVleGVjIGVycm9ycycgc28gYXR0ZW1wdCB0byBjbGVhbiBpdCB1cCBldmVyeSBtaW51dGUgdG8ga2VlcCBwaXBlbGluZXMgcnVubmluZwojIHNtb290aGx5CmNhdCA+L3Vzci9sb2NhbC9iaW4vZml4LXBvZG1hbi1wYXVzZS5zaCA8PCdFT0YnCiMhL2Jpbi9iYXNoCgpQQVVTRV9GSUxFPScvdG1wL3BvZG1hbi1ydW4tMTAwMC9saWJwb2QvdG1wL3BhdXNlLnBpZCcKCmlmIFsgLWYgIiR7UEFVU0VfRklMRX0iIF07IHRoZW4KCVBJRD0kKGNhdCAke1BBVVNFX0ZJTEV9KQoJaWYgISBwcyAtcCAkUElEID4gL2Rldi9udWxsOyB0aGVuCgkJcm0gJFBBVVNFX0ZJTEUKCWZpCmZpCkVPRgpjaG1vZCAreCAvdXNyL2xvY2FsL2Jpbi9maXgtcG9kbWFuLXBhdXNlLnNoCgojIEhBQ0sgLSAvdG1wIHdpbGwgZmlsbCB1cCBjYXVzaW5nIGJ1aWxkIGZhaWx1cmVzCiMgZGVsZXRlIGFueXRoaW5nIG5vdCBhY2Nlc3NlZCB3aXRoaW4gMiBkYXlzCmNhdCA+L3Vzci9sb2NhbC9iaW4vY2xlYW4tdG1wLnNoIDw8J0VPRicKIyEvYmluL2Jhc2gKCmZpbmQgL3RtcCAtdHlwZSBmIFwoICEgLXVzZXIgcm9vdCBcKSAtYXRpbWUgKzIgLWRlbGV0ZQoKRU9GCmNobW9kICt4IC91c3IvbG9jYWwvYmluL2NsZWFuLXRtcC5zaAoKZWNobyAiMCAwICovMSAqICogL3Vzci9sb2NhbC9iaW4vY2xlYW4tdG1wLnNoIiA+PiBjcm9uCmVjaG8gIiogKiAqICogKiAvdXNyL2xvY2FsL2Jpbi9maXgtcG9kbWFuLXBhdXNlLnNoIiA+PiBjcm9uCgojIEhBQ0sgLSBodHRwczovL2dpdGh1Yi5jb20vY29udGFpbmVycy9wb2RtYW4vaXNzdWVzLzkwMDIKZWNobyAiQHJlYm9vdCBsb2dpbmN0bCBlbmFibGUtbGluZ2VyIGNsb3VkLXVzZXIiID4+IGNyb24KCmNyb250YWIgY3JvbgpybSBjcm9uCgooc2xlZXAgMzA7IHJlYm9vdCkgJgo=')))]"
-                                    }
-                                }
-                            }
-                        ]
-                    }
-                },
-                "overprovision": false
-            },
-            "name": "ci-vmss",
-            "type": "Microsoft.Compute/virtualMachineScaleSets",
-            "location": "[resourceGroup().location]",
-            "condition": "[greater(parameters('ciCapacity'), 0)]",
-            "apiVersion": "2020-12-01",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]"
-            ]
-        },
-        {
             "name": "[concat(take(resourceGroup().name,10), '-dev-sharedKV')]",
             "type": "Microsoft.KeyVault/vaults",
             "location": "[resourceGroup().location]",
@@ -329,7 +218,7 @@
         },
         {
             "sku": {
-                "name": "Standard_D2s_v3",
+                "name": "Standard_F2s_v2",
                 "tier": "Standard",
                 "capacity": 1
             },
@@ -357,7 +246,7 @@
                         "imageReference": {
                             "publisher": "RedHat",
                             "offer": "RHEL",
-                            "sku": "7-LVM",
+                            "sku": "8-LVM",
                             "version": "latest"
                         },
                         "osDisk": {
@@ -407,7 +296,39 @@
                                     "autoUpgradeMinorVersion": true,
                                     "settings": {},
                                     "protectedSettings": {
-                                        "script": "[base64(concat(base64ToString('c2V0IC1leAoK'),'PROXYIMAGE=$(base64 -d \u003c\u003c\u003c''',base64(parameters('proxyImage')),''')\n','PROXYIMAGEAUTH=$(base64 -d \u003c\u003c\u003c''',base64(parameters('proxyImageAuth')),''')\n','PROXYCERT=''',parameters('proxyCert'),'''\n','PROXYCLIENTCERT=''',parameters('proxyClientCert'),'''\n','PROXYKEY=''',parameters('proxyKey'),'''\n','\n',base64ToString('ZWNobyAicnVubmluZyBSSFVJIGZpeCIKeXVtIHVwZGF0ZSAteSAtLWRpc2FibGVyZXBvPScqJyAtLWVuYWJsZXJlcG89J3JodWktbWljcm9zb2Z0LWF6dXJlKicKCnl1bSAteSAteCBXQUxpbnV4QWdlbnQgLXggV0FMaW51eEFnZW50LXVkZXYgdXBkYXRlCnl1bSAteSBpbnN0YWxsIGRvY2tlcgoKZmlyZXdhbGwtY21kIC0tYWRkLXBvcnQ9NDQzL3RjcCAtLXBlcm1hbmVudAoKbWtkaXIgL3Jvb3QvLmRvY2tlcgpjYXQgPi9yb290Ly5kb2NrZXIvY29uZmlnLmpzb24gPDxFT0YKewoJImF1dGhzIjogewoJCSIke1BST1hZSU1BR0UlJS8qfSI6IHsKCQkJImF1dGgiOiAiJFBST1hZSU1BR0VBVVRIIgoJCX0KCX0KfQpFT0YKc3lzdGVtY3RsIHN0YXJ0IGRvY2tlci5zZXJ2aWNlCmRvY2tlciBwdWxsICIkUFJPWFlJTUFHRSIKCm1rZGlyIC9ldGMvcHJveHkKYmFzZTY0IC1kIDw8PCIkUFJPWFlDRVJUIiA+L2V0Yy9wcm94eS9wcm94eS5jcnQKYmFzZTY0IC1kIDw8PCIkUFJPWFlLRVkiID4vZXRjL3Byb3h5L3Byb3h5LmtleQpiYXNlNjQgLWQgPDw8IiRQUk9YWUNMSUVOVENFUlQiID4vZXRjL3Byb3h5L3Byb3h5LWNsaWVudC5jcnQKY2hvd24gLVIgMTAwMDoxMDAwIC9ldGMvcHJveHkKY2htb2QgMDYwMCAvZXRjL3Byb3h5L3Byb3h5LmtleQoKY2F0ID4vZXRjL3N5c2NvbmZpZy9wcm94eSA8PEVPRgpQUk9YWV9JTUFHRT0nJFBST1hZSU1BR0UnCkVPRgoKY2F0ID4vZXRjL3N5c3RlbWQvc3lzdGVtL3Byb3h5LnNlcnZpY2UgPDwnRU9GJwpbVW5pdF0KQWZ0ZXI9ZG9ja2VyLnNlcnZpY2UKUmVxdWlyZXM9ZG9ja2VyLnNlcnZpY2UKCltTZXJ2aWNlXQpFbnZpcm9ubWVudEZpbGU9L2V0Yy9zeXNjb25maWcvcHJveHkKRXhlY1N0YXJ0UHJlPS0vdXNyL2Jpbi9kb2NrZXIgcm0gLWYgJW4KRXhlY1N0YXJ0PS91c3IvYmluL2RvY2tlciBydW4gLS1ybSAtLW5hbWUgJW4gLXAgNDQzOjg0NDMgLXYgL2V0Yy9wcm94eTovc2VjcmV0cyAkUFJPWFlfSU1BR0UKRXhlY1N0b3A9L3Vzci9iaW4vZG9ja2VyIHN0b3AgJW4KUmVzdGFydD1hbHdheXMKUmVzdGFydFNlYz0xClN0YXJ0TGltaXRJbnRlcnZhbD0wCgpbSW5zdGFsbF0KV2FudGVkQnk9bXVsdGktdXNlci50YXJnZXQKRU9GCgpzeXN0ZW1jdGwgZW5hYmxlIHByb3h5LnNlcnZpY2UKCmNhdCA+L2V0Yy9jcm9uLndlZWtseS9wdWxsLWltYWdlIDw8J0VPRicKIyEvYmluL2Jhc2gKCmRvY2tlciBwdWxsICRQUk9YWUlNQUdFCnN5c3RlbWN0bCByZXN0YXJ0IHByb3h5LnNlcnZpY2UKRU9GCmNobW9kICt4IC9ldGMvY3Jvbi53ZWVrbHkvcHVsbC1pbWFnZQoKY2F0ID4vZXRjL2Nyb24ud2Vla2x5L3l1bXVwZGF0ZSA8PCdFT0YnCiMhL2Jpbi9iYXNoCgp5dW0gdXBkYXRlIC15CkVPRgpjaG1vZCAreCAvZXRjL2Nyb24ud2Vla2x5L3l1bXVwZGF0ZQoKKHNsZWVwIDMwOyByZWJvb3QpICYK')))]"
+                                        "script": "[base64(concat(base64ToString('c2V0IC1leAoK'),'PROXYIMAGE=$(base64 -d \u003c\u003c\u003c''',base64(parameters('proxyImage')),''')\n','PROXYIMAGEAUTH=$(base64 -d \u003c\u003c\u003c''',base64(parameters('proxyImageAuth')),''')\n','PROXYCERT=''',parameters('proxyCert'),'''\n','PROXYCLIENTCERT=''',parameters('proxyClientCert'),'''\n','PROXYKEY=''',parameters('proxyKey'),'''\n','\n',base64ToString('ZWNobyAicnVubmluZyBSSFVJIGZpeCIKeXVtIHVwZGF0ZSAteSAtLWRpc2FibGVyZXBvPScqJyAtLWVuYWJsZXJlcG89J3JodWktbWljcm9zb2Z0LWF6dXJlKicKCnl1bSAteSAteCBXQUxpbnV4QWdlbnQgLXggV0FMaW51eEFnZW50LXVkZXYgdXBkYXRlCnl1bSAteSBpbnN0YWxsIHBvZG1hbi1kb2NrZXIKCmZpcmV3YWxsLWNtZCAtLWFkZC1wb3J0PTQ0My90Y3AgLS1wZXJtYW5lbnQKCm1rZGlyIC9yb290Ly5kb2NrZXIKY2F0ID4vcm9vdC8uZG9ja2VyL2NvbmZpZy5qc29uIDw8RU9GCnsKCSJhdXRocyI6IHsKCQkiJHtQUk9YWUlNQUdFJSUvKn0iOiB7CgkJCSJhdXRoIjogIiRQUk9YWUlNQUdFQVVUSCIKCQl9Cgl9Cn0KRU9GCgpta2RpciAtcCAvZXRjL2NvbnRhaW5lcnMvCnRvdWNoIC9ldGMvY29udGFpbmVycy9ub2RvY2tlcgoKZG9ja2VyIHB1bGwgIiRQUk9YWUlNQUdFIgoKbWtkaXIgL2V0Yy9wcm94eQpiYXNlNjQgLWQgPDw8IiRQUk9YWUNFUlQiID4vZXRjL3Byb3h5L3Byb3h5LmNydApiYXNlNjQgLWQgPDw8IiRQUk9YWUtFWSIgPi9ldGMvcHJveHkvcHJveHkua2V5CmJhc2U2NCAtZCA8PDwiJFBST1hZQ0xJRU5UQ0VSVCIgPi9ldGMvcHJveHkvcHJveHktY2xpZW50LmNydApjaG93biAtUiAxMDAwOjEwMDAgL2V0Yy9wcm94eQpjaG1vZCAwNjAwIC9ldGMvcHJveHkvcHJveHkua2V5CgpjYXQgPi9ldGMvc3lzY29uZmlnL3Byb3h5IDw8RU9GClBST1hZX0lNQUdFPSckUFJPWFlJTUFHRScKRU9GCgpjYXQgPi9ldGMvc3lzdGVtZC9zeXN0ZW0vcHJveHkuc2VydmljZSA8PCdFT0YnCltVbml0XQpBZnRlcj1uZXR3b3JrLW9ubGluZS50YXJnZXQKV2FudHM9bmV0d29yay1vbmxpbmUudGFyZ2V0CgpbU2VydmljZV0KRW52aXJvbm1lbnRGaWxlPS9ldGMvc3lzY29uZmlnL3Byb3h5CkV4ZWNTdGFydFByZT0tL3Vzci9iaW4vZG9ja2VyIHJtIC1mICVuCkV4ZWNTdGFydD0vdXNyL2Jpbi9kb2NrZXIgcnVuIC0tcm0gLS1uYW1lICVuIC1wIDQ0Mzo4NDQzIC12IC9ldGMvcHJveHk6L3NlY3JldHMgJFBST1hZX0lNQUdFCkV4ZWNTdG9wPS91c3IvYmluL2RvY2tlciBzdG9wICVuClJlc3RhcnQ9YWx3YXlzClJlc3RhcnRTZWM9MQpTdGFydExpbWl0SW50ZXJ2YWw9MAoKW0luc3RhbGxdCldhbnRlZEJ5PW11bHRpLXVzZXIudGFyZ2V0CkVPRgoKc3lzdGVtY3RsIGVuYWJsZSBwcm94eS5zZXJ2aWNlCgpjYXQgPi9ldGMvY3Jvbi53ZWVrbHkvcHVsbC1pbWFnZSA8PCdFT0YnCiMhL2Jpbi9iYXNoCgpkb2NrZXIgcHVsbCAkUFJPWFlJTUFHRQpzeXN0ZW1jdGwgcmVzdGFydCBwcm94eS5zZXJ2aWNlCkVPRgpjaG1vZCAreCAvZXRjL2Nyb24ud2Vla2x5L3B1bGwtaW1hZ2UKCmNhdCA+L2V0Yy9jcm9uLndlZWtseS95dW11cGRhdGUgPDwnRU9GJwojIS9iaW4vYmFzaAoKeXVtIHVwZGF0ZSAteQpFT0YKY2htb2QgK3ggL2V0Yy9jcm9uLndlZWtseS95dW11cGRhdGUKCigKCXNsZWVwIDMwCglyZWJvb3QKKSAmCg==')))]"
+                                    },
+                                    "provisionAfterExtensions": [
+                                        "Microsoft.Azure.Monitor.AzureMonitorLinuxAgent",
+                                        "Microsoft.Azure.Security.Monitoring.AzureSecurityLinuxAgent"
+                                    ]
+                                }
+                            },
+                            {
+                                "name": "Microsoft.Azure.Monitor.AzureMonitorLinuxAgent",
+                                "properties": {
+                                    "publisher": "Microsoft.Azure.Monitor",
+                                    "type": "AzureMonitorLinuxAgent",
+                                    "typeHandlerVersion": "1.0",
+                                    "autoUpgradeMinorVersion": true,
+                                    "enableAutomaticUpgrade": true,
+                                    "settings": {
+                                        "GCS_AUTO_CONFIG": true
+                                    }
+                                }
+                            },
+                            {
+                                "name": "Microsoft.Azure.Security.Monitoring.AzureSecurityLinuxAgent",
+                                "properties": {
+                                    "publisher": "Microsoft.Azure.Security.Monitoring",
+                                    "type": "AzureSecurityLinuxAgent",
+                                    "typeHandlerVersion": "2.0",
+                                    "autoUpgradeMinorVersion": true,
+                                    "enableAutomaticUpgrade": true,
+                                    "settings": {
+                                        "enableAutoConfig": true,
+                                        "enableGenevaUpload": true,
+                                        "reportSuccessOnUnsupportedDistro": true
                                     }
                                 }
                             }

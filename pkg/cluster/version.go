@@ -28,6 +28,30 @@ type openShiftClusterDocumentVersionerService struct{}
 func (service *openShiftClusterDocumentVersionerService) Get(ctx context.Context, doc *api.OpenShiftClusterDocument, dbOpenShiftVersions database.OpenShiftVersions, env env.Interface, installViaHive bool) (*api.OpenShiftVersion, error) {
 	requestedInstallVersion := doc.OpenShiftCluster.Properties.ClusterProfile.Version
 
+	// Honor any installer pull spec override
+	installerPullSpec := env.LiveConfig().DefaultInstallerPullSpecOverride(ctx)
+	if installerPullSpec == "" {
+		installerPullSpec = fmt.Sprintf("%s/aro-installer:release-%s", env.ACRDomain(), version.DefaultInstallStream.Version.MinorVersion())
+	}
+
+	// add the default OCP version as we require it as an install target
+	// if this is removed, we need to also update the logic in
+	// pkg/frontend/frontend.go, pkg/frontend/validate.go
+	defaultVersion := &api.OpenShiftVersion{
+		Properties: api.OpenShiftVersionProperties{
+			Version:           version.DefaultInstallStream.Version.String(),
+			OpenShiftPullspec: version.DefaultInstallStream.PullSpec,
+			InstallerPullspec: installerPullSpec,
+			Enabled:           true,
+		},
+	}
+
+	if requestedInstallVersion == defaultVersion.Properties.Version {
+		return defaultVersion, nil
+	}
+
+	// TODO: Refactor to use changefeeds rather than querying the database every time
+	// should also leverage shared changefeed or shared logic
 	docs, err := dbOpenShiftVersions.ListAll(ctx)
 	if err != nil {
 		return nil, err
@@ -46,12 +70,6 @@ func (service *openShiftClusterDocumentVersionerService) Get(ctx context.Context
 	if len(activeOpenShiftVersions) == 0 {
 		if requestedInstallVersion != version.DefaultInstallStream.Version.String() {
 			return nil, errUnsupportedVersion
-		}
-
-		installerPullSpec := env.LiveConfig().DefaultInstallerPullSpecOverride(ctx)
-		if installerPullSpec == "" {
-			// If no ENV var was set as an override, then use the default image name:tag format we build in the ARO-Installer build & push pipeline
-			installerPullSpec = fmt.Sprintf("%s/aro-installer:release-%d.%d", env.ACRDomain(), version.DefaultInstallStream.Version.V[0], version.DefaultInstallStream.Version.V[1])
 		}
 
 		openshiftPullSpec := version.DefaultInstallStream.PullSpec

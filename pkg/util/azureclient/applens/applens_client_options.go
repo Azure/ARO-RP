@@ -5,6 +5,7 @@ package applens
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"net/http"
 	"time"
 
@@ -21,12 +22,18 @@ type ClientOptions struct {
 	azcore.ClientOptions
 }
 
-func NewClientOptions() *ClientOptions {
+func NewClientOptions(certPool *x509.CertPool) *ClientOptions {
 	return &ClientOptions{
 		azcore.ClientOptions{
 			Retry: policy.RetryOptions{
 				MaxRetries: 3,
-				RetryDelay: time.Second * 10,
+				// ARO-2567
+				// If the retry logic takes longer than 60 seconds,
+				// the correct error message will not be captured.
+				// With a setting of 3 seconds it was erroring out
+				// in ~30 seconds (3 seconds + 12 seconds + round
+				// trip / response time from all 3 calls).
+				RetryDelay: time.Second * 3,
 			},
 			Telemetry: policy.TelemetryOptions{
 				ApplicationID: userAgent,
@@ -36,6 +43,7 @@ func NewClientOptions() *ClientOptions {
 				Transport: &http.Transport{
 					TLSNextProto: make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
 					TLSClientConfig: &tls.Config{
+						RootCAs:       certPool,
 						Renegotiation: tls.RenegotiateFreelyAsClient,
 						MinVersion:    tls.VersionTLS12,
 					},

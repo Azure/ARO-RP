@@ -6,7 +6,7 @@ import { IColumn } from '@fluentui/react/lib/DetailsList';
 import { ShimmeredDetailsList } from '@fluentui/react/lib/ShimmeredDetailsList';
 import { IMachine } from "./MachinesWrapper";
 import { MachinesComponent } from "./Machines"
-
+import { _copyAndSort } from '../Utilities';
 
 
 export declare interface IMachinesList {
@@ -114,11 +114,6 @@ export function MachinesListHelperComponent(props: {
   function _onMachineInfoLinkClick(machine: string) {
     setMachinesDetailsVisible(!machinesDetailsVisible)
     setCurrentMachine(machine)
-  }
-
-  function _copyAndSort<T>(items: T[], columnKey: string, isSortedDescending?: boolean): T[] {
-    const key = columnKey as keyof T;
-    return items.slice(0).sort((a: T, b: T) => ((isSortedDescending ? a[key] < b[key] : a[key] > b[key]) ? 1 : -1));
   }
 
   function _onColumnClick(event: React.MouseEvent<HTMLElement>, column: IColumn): void {

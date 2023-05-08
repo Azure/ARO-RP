@@ -1,27 +1,23 @@
 import { useState, useEffect, useRef } from "react"
-import { AxiosResponse } from 'axios';
-import { FetchMachines } from '../Request';
-import { ICluster } from "../App"
-import { MachinesListComponent } from './MachinesList';
-import { IMessageBarStyles, MessageBar, MessageBarType, Stack } from '@fluentui/react';
-import { machinesKey } from "../ClusterDetail";
+import { AxiosResponse } from "axios"
+import { fetchMachines } from "../Request"
+import { MachinesListComponent } from "./MachinesList"
+import { IMessageBarStyles, MessageBar, MessageBarType, Stack } from "@fluentui/react"
+import { machinesKey } from "../ClusterDetail"
+import { WrapperProps } from "../ClusterDetailList"
 
 export interface IMachine {
-  name?: string,
-  createdTime: string,
-  lastUpdated: string,
-  errorReason: string,
-  errorMessage: string,
-  lastOperation: string,
-  lastOperationDate: string,
+  name?: string
+  createdTime: string
+  lastUpdated: string
+  errorReason: string
+  errorMessage: string
+  lastOperation: string
+  lastOperationDate: string
   status: string
 }
 
-export function MachinesWrapper(props: {
-  currentCluster: ICluster
-  detailPanelSelected: string
-  loaded: boolean
-}) {
+export function MachinesWrapper(props: WrapperProps) {
   const [data, setData] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
   const state = useRef<MachinesListComponent>(null)
@@ -36,8 +32,7 @@ export function MachinesWrapper(props: {
         isMultiline={false}
         onDismiss={() => setError(null)}
         dismissButtonAriaLabel="Close"
-        styles={errorBarStyles}
-      >
+        styles={errorBarStyles}>
         {error?.statusText}
       </MessageBar>
     )
@@ -50,26 +45,30 @@ export function MachinesWrapper(props: {
     setData(newData)
     const machineList: IMachine[] = []
     if (state && state.current) {
-      newData.machines.forEach((element: { name: string;
-                                           createdTime: string;
-                                           lastUpdated: string;
-                                           errorReason: string;
-                                           errorMessage: string;
-                                           lastOperation: string;
-                                           lastOperationDate: string;
-                                           status: string; }) => {
-        const machine: IMachine = {
-          name: element.name,
-          createdTime: element.createdTime,
-          lastUpdated: element.lastUpdated,
-          errorReason: element.errorReason,
-          errorMessage: element.errorMessage,
-          lastOperation: element.lastOperation,
-          lastOperationDate: element.lastOperationDate,
-          status: element.status,
+      newData.machines.forEach(
+        (element: {
+          name: string
+          createdTime: string
+          lastUpdated: string
+          errorReason: string
+          errorMessage: string
+          lastOperation: string
+          lastOperationDate: string
+          status: string
+        }) => {
+          const machine: IMachine = {
+            name: element.name,
+            createdTime: element.createdTime,
+            lastUpdated: element.lastUpdated,
+            errorReason: element.errorReason,
+            errorMessage: element.errorMessage,
+            lastOperation: element.lastOperation,
+            lastOperationDate: element.lastOperationDate,
+            status: element.status,
+          }
+          machineList.push(machine)
         }
-        machineList.push(machine)
-      });
+      )
       state.current.setState({ machines: machineList })
     }
   }
@@ -81,15 +80,19 @@ export function MachinesWrapper(props: {
       } else {
         setError(result)
       }
-      setFetching(props.currentCluster.name)
+      if(props.currentCluster) {
+        setFetching(props.currentCluster.name)
+      }
     }
 
-    if (props.detailPanelSelected.toLowerCase() == machinesKey && 
-        fetching === "" &&
-        props.loaded &&
-        props.currentCluster.name != "") {
+    if (
+      props.detailPanelSelected.toLowerCase() == machinesKey &&
+      fetching === "" &&
+      props.loaded &&
+      props.currentCluster
+    ) {
       setFetching("FETCHING")
-      FetchMachines(props.currentCluster).then(onData)
+      fetchMachines(props.currentCluster).then(onData)
     }
   }, [data, props.loaded, props.detailPanelSelected])
 
@@ -97,8 +100,12 @@ export function MachinesWrapper(props: {
     <Stack>
       <Stack.Item grow>{error && errorBar()}</Stack.Item>
       <Stack>
-        <MachinesListComponent machines={data!} ref={state} clusterName={props.currentCluster != null ? props.currentCluster.name : ""} />
+        <MachinesListComponent
+          machines={data!}
+          ref={state}
+          clusterName={props.currentCluster != null ? props.currentCluster.name : ""}
+        />
       </Stack>
-    </Stack>   
+    </Stack>
   )
 }

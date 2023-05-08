@@ -12,11 +12,11 @@ import (
 
 // metric represents generic metric structure
 type metric struct {
-	metric    string
-	account   string
-	namespace string
-	dims      map[string]string
-	ts        time.Time
+	name       string
+	account    string
+	namespace  string
+	dimensions map[string]string
+	timestamp  time.Time
 
 	valueGauge *int64
 	valueFloat *float64
@@ -31,11 +31,11 @@ func (m *metric) MarshalJSON() ([]byte, error) {
 		Dims      map[string]string
 		TS        string
 	}{
-		Metric:    m.metric,
+		Metric:    m.name,
 		Account:   m.account,
 		Namespace: m.namespace,
-		Dims:      m.dims,
-		TS:        m.ts.UTC().Format("2006-01-02T15:04:05.000"),
+		Dims:      m.dimensions,
+		TS:        m.timestamp.UTC().Format("2006-01-02T15:04:05.000"),
 	})
 }
 

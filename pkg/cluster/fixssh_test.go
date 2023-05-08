@@ -136,7 +136,7 @@ func lbAfter(lbID string) *mgmtnetwork.LoadBalancer {
 	}
 }
 
-func ifBefore(lbID string, i int, ilbBackendPool string) *mgmtnetwork.Interface {
+func ifBefore(ilbID string, elbID string, i int, ilbBackendPool string, elbBackendPool string) *mgmtnetwork.Interface {
 	return &mgmtnetwork.Interface{
 		InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
 			VirtualMachine: &mgmtnetwork.SubResource{
@@ -153,7 +153,7 @@ func ifBefore(lbID string, i int, ilbBackendPool string) *mgmtnetwork.Interface 
 	}
 }
 
-func ifNoVmBefore(lbID string, i int, ilbBackendPool string) *mgmtnetwork.Interface {
+func ifNoVmBefore(ilbID string, elbID string, i int, ilbBackendPool string, elbBackendPool string) *mgmtnetwork.Interface {
 	return &mgmtnetwork.Interface{
 		InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
 			VirtualMachine: nil,
@@ -162,7 +162,7 @@ func ifNoVmBefore(lbID string, i int, ilbBackendPool string) *mgmtnetwork.Interf
 					InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
 						LoadBalancerBackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 							{
-								ID: to.StringPtr(fmt.Sprintf(lbID+"/backendAddressPools/ssh-%d", i)),
+								ID: to.StringPtr(fmt.Sprintf(ilbID+"/backendAddressPools/ssh-%d", i)),
 							},
 						},
 					},
@@ -178,7 +178,7 @@ func ifNoVmAfter(nic *mgmtnetwork.Interface) *mgmtnetwork.Interface {
 	return nic
 }
 
-func ifAfter(lbID string, i int, ilbBackendPool string) *mgmtnetwork.Interface {
+func ifAfter(ilbID string, elbID string, i int, ilbBackendPool string, elbBackendPool string) *mgmtnetwork.Interface {
 	return &mgmtnetwork.Interface{
 		InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
 			VirtualMachine: &mgmtnetwork.SubResource{
@@ -189,10 +189,13 @@ func ifAfter(lbID string, i int, ilbBackendPool string) *mgmtnetwork.Interface {
 					InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
 						LoadBalancerBackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 							{
-								ID: to.StringPtr(fmt.Sprintf(lbID+"/backendAddressPools/ssh-%d", i)),
+								ID: to.StringPtr(fmt.Sprintf(ilbID+"/backendAddressPools/ssh-%d", i)),
 							},
 							{
-								ID: to.StringPtr(fmt.Sprintf(lbID+"/backendAddressPools/%s", ilbBackendPool)),
+								ID: to.StringPtr(fmt.Sprintf(ilbID+"/backendAddressPools/%s", ilbBackendPool)),
+							},
+							{
+								ID: to.StringPtr(fmt.Sprintf(elbID+"/backendAddressPools/%s", elbBackendPool)),
 							},
 						},
 					},
@@ -201,89 +204,118 @@ func ifAfter(lbID string, i int, ilbBackendPool string) *mgmtnetwork.Interface {
 		},
 	}
 }
+
 func TestFixSSH(t *testing.T) {
 	for _, tt := range []struct {
 		name                string
 		architectureVersion api.ArchitectureVersion
-		lb                  string
-		lbID                string
+		ilb                 string
+		ilbID               string
+		elb                 string
+		elbID               string
+		elbV1ID             string
 		loadbalancer        func(string) *mgmtnetwork.LoadBalancer
-		iface               func(string, int, string) *mgmtnetwork.Interface
+		iface               func(string, string, int, string, string) *mgmtnetwork.Interface
 		iNameF              string
 		ifaceNoVmAttached   bool // create the NIC without a master VM attached, to simulate a master node replacement
 		lbErrorExpected     bool
 		writeExpected       bool // do we expect write to happen as part of this test
 		fallbackExpected    bool // do we expect fallback nic.Get as part of this test
 		nicErrorExpected    bool
+		noOperationExpected bool
 		wantError           string
 		ilbBackendPool      string
+		elbBackendPool      string
 	}{
 		{
 			name:          "updates v1 resources correctly",
-			lb:            infraID + "-internal-lb",
-			lbID:          "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
+			ilb:           infraID + "-internal-lb",
+			ilbID:         "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
 			loadbalancer:  lbBefore,
 			iface:         ifBefore,
 			iNameF:        "%s-master%d-nic",
 			writeExpected: true,
+			elb:           infraID + "-public-lb",
+			elbV1ID:       "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID,
+			elbID:         "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-public-lb",
 		},
 		{
-			name:           "v1 noop",
-			lb:             infraID + "-internal-lb",
-			lbID:           "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
-			loadbalancer:   lbAfter,
-			iface:          ifAfter,
-			iNameF:         "%s-master%d-nic",
-			ilbBackendPool: infraID + "-internal-controlplane-v4",
+			name:                "v1 noop",
+			ilb:                 infraID + "-internal-lb",
+			ilbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
+			loadbalancer:        lbAfter,
+			iface:               ifAfter,
+			iNameF:              "%s-master%d-nic",
+			elb:                 infraID + "-public-lb",
+			elbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-public-lb",
+			ilbBackendPool:      infraID + "-internal-controlplane-v4",
+			elbBackendPool:      infraID + "-public-lb-control-plane-v4",
+			noOperationExpected: true,
 		},
 		{
 			name:                "updates v2 resources correctly",
 			architectureVersion: api.ArchitectureVersionV2,
-			lb:                  infraID + "-internal",
-			lbID:                "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal",
+			ilb:                 infraID + "-internal",
+			ilbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal",
 			loadbalancer:        lbBefore,
 			iface:               ifBefore,
 			iNameF:              "%s-master%d-nic",
 			writeExpected:       true,
+			elb:                 infraID,
+			elbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID,
+			ilbBackendPool:      infraID,
+			elbBackendPool:      infraID,
 		},
 		{
 			name:                "v2 noop",
 			architectureVersion: api.ArchitectureVersionV2,
-			lb:                  infraID + "-internal",
-			lbID:                "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal",
+			ilb:                 infraID + "-internal",
+			ilbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal",
 			loadbalancer:        lbAfter,
 			iface:               ifAfter,
 			iNameF:              "%s-master%d-nic",
+			elb:                 infraID,
+			elbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID,
 			ilbBackendPool:      infraID,
+			elbBackendPool:      infraID,
+			noOperationExpected: true,
 		},
 		{
 			name:                "updates v2 resources correctly with masters recreated",
 			architectureVersion: api.ArchitectureVersionV2,
-			lb:                  infraID + "-internal",
-			lbID:                "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal",
+			ilb:                 infraID + "-internal",
+			ilbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal",
 			loadbalancer:        lbBefore,
 			iface:               ifBefore,
 			iNameF:              "%s-master-%d-nic",
 			writeExpected:       true,
 			fallbackExpected:    true,
+			elb:                 infraID,
+			elbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID,
+			ilbBackendPool:      infraID,
+			elbBackendPool:      infraID,
 		},
 		{
 			name:                "updates v2 resources correctly with masters recreated and no VM attached to the installer NIC",
 			architectureVersion: api.ArchitectureVersionV2,
-			lb:                  infraID + "-internal",
-			lbID:                "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal",
+			ilb:                 infraID + "-internal",
+			ilbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal",
 			loadbalancer:        lbBefore,
 			iface:               ifNoVmBefore,
 			iNameF:              "%s-master-%d-nic",
 			ifaceNoVmAttached:   true,
 			writeExpected:       true,
 			fallbackExpected:    true,
+			elb:                 infraID,
+			elbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID,
+			ilbBackendPool:      infraID,
+			elbBackendPool:      infraID,
 		},
 		{
 			name:                "FixSSH function returns an error while Fetching LB",
 			architectureVersion: api.ArchitectureVersionV2,
-			lb:                  infraID + "-internal",
-			lbID:                "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal",
+			ilb:                 infraID + "-internal",
+			ilbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal",
 			loadbalancer:        lbBefore,
 			iface:               ifNoVmBefore,
 			iNameF:              "%s-master%d-nic",
@@ -296,8 +328,8 @@ func TestFixSSH(t *testing.T) {
 		{
 			name:                "FixSSH function returns an error while Fetching NIC",
 			architectureVersion: api.ArchitectureVersionV2,
-			lb:                  infraID + "-internal",
-			lbID:                "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal",
+			ilb:                 infraID + "-internal",
+			ilbID:               "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/" + resourceGroup + "/providers/Microsoft.Network/loadBalancers/" + infraID + "-internal",
 			loadbalancer:        lbBefore,
 			iface:               ifNoVmBefore,
 			iNameF:              "%s-master-%d-nic",
@@ -316,20 +348,20 @@ func TestFixSSH(t *testing.T) {
 			loadBalancers := mock_network.NewMockLoadBalancersClient(ctrl)
 
 			if tt.lbErrorExpected {
-				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.lb, "").Return(mgmtnetwork.LoadBalancer{}, fmt.Errorf("Loadbalancer not found"))
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.ilb, "").Return(mgmtnetwork.LoadBalancer{}, fmt.Errorf("Loadbalancer not found"))
 			} else {
-				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.lb, "").Return(*tt.loadbalancer(tt.lbID), nil)
+				loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.ilb, "").Return(*tt.loadbalancer(tt.ilbID), nil)
 				if tt.writeExpected {
-					loadBalancers.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, tt.lb, *lbAfter(tt.lbID))
+					loadBalancers.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, tt.ilb, *lbAfter(tt.ilbID))
 				}
 			}
 
 			for i := 0; i < 3; i++ {
-				vmNicBefore := tt.iface(tt.lbID, i, tt.ilbBackendPool)
+				vmNicBefore := tt.iface(tt.ilbID, tt.elbID, i, tt.ilbBackendPool, tt.elbBackendPool)
 
 				if tt.fallbackExpected { // bit of hack to check fallback.
 					if tt.ifaceNoVmAttached {
-						vmNicBefore = ifNoVmBefore(tt.lbID, i, tt.ilbBackendPool)
+						vmNicBefore = ifNoVmBefore(tt.ilbID, tt.elbID, i, tt.ilbBackendPool, tt.elbBackendPool)
 						interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf("%s-master%d-nic", infraID, i), "").Return(*vmNicBefore, nil)
 					} else {
 						interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf("%s-master%d-nic", infraID, i), "").Return(mgmtnetwork.Interface{}, fmt.Errorf("nic not found"))
@@ -342,6 +374,13 @@ func TestFixSSH(t *testing.T) {
 					break
 				} else if tt.lbErrorExpected {
 					interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), "").Times(0)
+				} else if tt.architectureVersion == api.ArchitectureVersionV2 && tt.noOperationExpected {
+					interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), "").Return(*vmNicBefore, nil)
+					loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
+				} else if tt.noOperationExpected {
+					interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), "").Return(*vmNicBefore, nil)
+					loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, infraID, "").Return(*tt.loadbalancer(tt.elbV1ID), nil)
+					loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
 				} else {
 					interfaces.EXPECT().Get(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), "").Return(*vmNicBefore, nil)
 				}
@@ -350,7 +389,16 @@ func TestFixSSH(t *testing.T) {
 					if tt.ifaceNoVmAttached {
 						interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf("%s-master%d-nic", infraID, i), *vmNicBefore)
 						interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), *ifNoVmAfter(vmNicBefore))
+						loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
+						interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), *ifNoVmAfter(vmNicBefore))
+					} else if tt.architectureVersion == api.ArchitectureVersionV2 {
+						interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), *vmNicBefore)
+						loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
+						interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), *vmNicBefore)
 					} else {
+						loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, infraID, "").Return(*tt.loadbalancer(tt.elbV1ID), nil)
+						interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), *vmNicBefore)
+						loadBalancers.EXPECT().Get(gomock.Any(), resourceGroup, tt.elb, "").Return(*tt.loadbalancer(tt.elbID), nil)
 						interfaces.EXPECT().CreateOrUpdateAndWait(gomock.Any(), resourceGroup, fmt.Sprintf(tt.iNameF, infraID, i), *vmNicBefore)
 					}
 				}

@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	cryptossh "golang.org/x/crypto/ssh"
 
@@ -29,7 +28,7 @@ const (
 	sshNewTimeout = time.Minute
 )
 
-type ssh struct {
+type SSH struct {
 	env           env.Core
 	log           *logrus.Entry
 	baseAccessLog *logrus.Entry
@@ -54,8 +53,8 @@ func New(env env.Core,
 	dbOpenShiftClusters database.OpenShiftClusters,
 	dbPortal database.Portal,
 	dialer proxy.Dialer,
-	aadAuthenticatedRouter *mux.Router) (*ssh, error) {
-	s := &ssh{
+) (*SSH, error) {
+	s := &SSH{
 		env:           env,
 		log:           log,
 		baseAccessLog: baseAccessLog,
@@ -78,8 +77,6 @@ func New(env env.Core,
 
 	s.baseServerConfig.AddHostKey(signer)
 
-	aadAuthenticatedRouter.NewRoute().Methods(http.MethodPost).Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/ssh/new").HandlerFunc(s.new)
-
 	return s, nil
 }
 
@@ -93,7 +90,9 @@ type response struct {
 	Error    string `json:"error,omitempty"`
 }
 
-func (s *ssh) new(w http.ResponseWriter, r *http.Request) {
+// New creates a new temporary password from the request params and sends it
+// through the writer
+func (s *SSH) New(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	parts := strings.Split(r.URL.Path, "/")
@@ -171,7 +170,7 @@ func (s *ssh) new(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *ssh) sendResponse(w http.ResponseWriter, resp *response) {
+func (s *SSH) sendResponse(w http.ResponseWriter, resp *response) {
 	b, err := json.MarshalIndent(resp, "", "    ")
 	if err != nil {
 		s.internalServerError(w, err)
@@ -182,7 +181,7 @@ func (s *ssh) sendResponse(w http.ResponseWriter, resp *response) {
 	_, _ = w.Write(b)
 }
 
-func (s *ssh) internalServerError(w http.ResponseWriter, err error) {
+func (s *SSH) internalServerError(w http.ResponseWriter, err error) {
 	s.log.Warn(err)
 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }

@@ -51,8 +51,13 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	resource := os.Getenv("AZURE_DBTOKEN_CLIENT_ID")
-	msiRefresherAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextGateway, resource)
+	// Access token GET request needs to be:
+	// http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=$AZURE_DBTOKEN_CLIENT_ID
+	//
+	// In this context, the "resource" parameter is passed to azidentity as a
+	// "scope" argument even though a scope normally consists of an endpoint URL.
+	scope := os.Getenv("AZURE_DBTOKEN_CLIENT_ID")
+	msiRefresherAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextGateway, scope)
 	if err != nil {
 		return err
 	}
@@ -95,9 +100,14 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
+	healthListener, err := utilnet.Listen("tcp", ":8081", pkggateway.SocketSize)
+	if err != nil {
+		return err
+	}
+
 	log.Print("listening")
 
-	p, err := pkggateway.NewGateway(ctx, _env, log.WithField("component", "gateway"), log.WithField("component", "gateway-access"), dbGateway, httpsl, httpl, os.Getenv("ACR_RESOURCE_ID"), os.Getenv("GATEWAY_DOMAINS"), m)
+	p, err := pkggateway.NewGateway(ctx, _env, log.WithField("component", "gateway"), log.WithField("component", "gateway-access"), dbGateway, httpsl, httpl, healthListener, os.Getenv("ACR_RESOURCE_ID"), os.Getenv("GATEWAY_DOMAINS"), m)
 	if err != nil {
 		return err
 	}

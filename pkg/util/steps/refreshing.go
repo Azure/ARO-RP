@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -23,25 +22,25 @@ var ErrWantRefresh = errors.New("want refresh")
 // `authorizer` if the step returns an Azure AuthenticationError and rerun it.
 // The step will be retried until `retryTimeout` is hit. Any other error will be
 // returned directly.
-func AuthorizationRefreshingAction(authorizer refreshable.Authorizer, step Step) Step {
-	return authorizationRefreshingActionStep{
-		step:       step,
-		authorizer: authorizer,
+func AuthorizationRetryingAction(r refreshable.Authorizer, action actionFunction) Step {
+	return &authorizationRefreshingActionStep{
+		auth: r,
+		f:    action,
 	}
 }
 
 type authorizationRefreshingActionStep struct {
-	step         Step
-	authorizer   refreshable.Authorizer
+	f            actionFunction
+	auth         refreshable.Authorizer
 	retryTimeout time.Duration
 	pollInterval time.Duration
 }
 
-func (s authorizationRefreshingActionStep) run(ctx context.Context, log *logrus.Entry) error {
+func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus.Entry) error {
 	var pollInterval time.Duration
 	var retryTimeout time.Duration
 
-	// If no pollInterval has been set, use a default
+	// ARM role caching can be 5 minutes
 	if s.retryTimeout == time.Duration(0) {
 		retryTimeout = 10 * time.Minute
 	} else {
@@ -50,7 +49,7 @@ func (s authorizationRefreshingActionStep) run(ctx context.Context, log *logrus.
 
 	// If no pollInterval has been set, use a default
 	if s.pollInterval == time.Duration(0) {
-		pollInterval = 10 * time.Second
+		pollInterval = 30 * time.Second
 	} else {
 		pollInterval = s.pollInterval
 	}
@@ -67,30 +66,27 @@ func (s authorizationRefreshingActionStep) run(ctx context.Context, log *logrus.
 		// We use the outer context, not the timeout context, as we do not want
 		// to time out the condition function itself, only stop retrying once
 		// timeoutCtx's timeout has fired.
-		err := s.step.run(ctx, log)
+		err := s.f(ctx)
 
-		// Don't refresh if we have timed out
-		if timeoutCtx.Err() == nil &&
-			(azureerrors.HasAuthorizationFailedError(err) ||
-				azureerrors.HasLinkedAuthorizationFailedError(err) ||
-				err == ErrWantRefresh) {
-			log.Print(err)
+		// If we haven't timed out and there is an error that is either an
+		// unauthorized client (AADSTS700016) or "AuthorizationFailed" (likely
+		// role propagation delay) then refresh and retry.
+		if timeoutCtx.Err() == nil && err != nil &&
+			(azureerrors.IsUnauthorizedClientError(err) ||
+				azureerrors.HasAuthorizationFailedError(err)) {
+			log.Printf("auth error, refreshing and retrying: %v", err)
 			// Try refreshing auth.
-			if s.authorizer == nil {
-				return false, nil // retry step
-			}
-			_, err = s.authorizer.RefreshWithContext(ctx, log)
+			err = s.auth.Rebuild()
 			return false, err // retry step
 		}
 		return true, err
 	}, timeoutCtx.Done())
 }
 
-func (s authorizationRefreshingActionStep) String() string {
-	return fmt.Sprintf("[AuthorizationRefreshingAction %s]", s.step)
+func (s *authorizationRefreshingActionStep) String() string {
+	return fmt.Sprintf("[AuthorizationRetryingAction %s]", FriendlyName(s.f))
 }
 
-func (s authorizationRefreshingActionStep) metricsTopic() string {
-	trimedName := strings.ReplaceAll(strings.ReplaceAll(s.step.String(), "[", ""), "]", "")
-	return fmt.Sprintf("refreshing.%s", shortName(trimedName))
+func (s *authorizationRefreshingActionStep) metricsName() string {
+	return fmt.Sprintf("authorizationretryingaction.%s", shortName(FriendlyName(s.f)))
 }

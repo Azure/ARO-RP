@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -34,8 +34,7 @@ func (f *frontend) postAdminOpenShiftClusterApproveCSR(w http.ResponseWriter, r 
 }
 
 func (f *frontend) _postAdminOpenShiftClusterApproveCSR(ctx context.Context, r *http.Request, log *logrus.Entry) error {
-	vars := mux.Vars(r)
-	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
+	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 
 	csrName := r.URL.Query().Get("csrName")
 	if csrName != "" {

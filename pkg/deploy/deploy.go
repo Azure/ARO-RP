@@ -5,12 +5,14 @@ package deploy
 
 import (
 	"context"
+	"encoding/json"
 	"reflect"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/azure/auth"
+	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/vmsscleaner"
@@ -66,22 +68,26 @@ type deployer struct {
 	vmssCleaner vmsscleaner.Interface
 }
 
+// KnownDeploymentErrorType represents a type of error we encounter during an
+// RP/gateway deployment that we know how to handle via automation.
+type KnownDeploymentErrorType string
+
+const (
+	KnownDeploymentErrorTypeRPLBNotFound KnownDeploymentErrorType = "RPLBNotFound"
+)
+
 // New initiates new deploy utility object
-func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig, version string) (Deployer, error) {
+func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig, version string, tokenCredential azcore.TokenCredential) (Deployer, error) {
 	err := config.validate()
 	if err != nil {
 		return nil, err
 	}
 
-	authorizer, err := auth.NewAuthorizerFromEnvironment()
-	if err != nil {
-		return nil, err
-	}
+	scopes := []string{_env.Environment().ResourceManagerScope}
+	authorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
-	kvAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(_env.Environment().ResourceIdentifiers.KeyVault)
-	if err != nil {
-		return nil, err
-	}
+	scopes = []string{_env.Environment().KeyVaultScope}
+	kvAuthorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
 	vmssClient := compute.NewVirtualMachineScaleSetsClient(_env.Environment(), config.SubscriptionID, authorizer)
 
@@ -158,23 +164,72 @@ func (d *deployer) deploy(ctx context.Context, rgName, deploymentName, vmssName 
 	for i := 0; i < 3; i++ {
 		d.log.Printf("deploying %s", deploymentName)
 		err = d.deployments.CreateOrUpdateAndWait(ctx, rgName, deploymentName, deployment)
-		if serviceErr, ok := err.(*azure.ServiceError); ok &&
-			serviceErr.Code == "DeploymentFailed" &&
-			i < 1 {
-			// on new RP deployments, we get a spurious DeploymentFailed error
+		serviceErr, isServiceError := err.(*azure.ServiceError)
+
+		// Check for a known error that we know how to handle.
+		if isServiceError {
+			errorType, checkTypeErr := d.checkForKnownError(serviceErr, i)
+
+			if checkTypeErr != nil {
+				d.log.Printf("Encountered an error in checkForKnownError: %s", checkTypeErr)
+			}
+
+			// On new RP deployments, we get a spurious DeploymentFailed error
 			// from the Microsoft.Insights/metricAlerts resources indicating
 			// that rp-lb can't be found, even though it exists and the
 			// resources correctly have a dependsOn stanza referring to it.
-			// Retry once.
-			d.log.Print(err)
-			continue
+			// Retry once, and only if this error is encountered on the first
+			// deployment attempt.
+			if errorType == KnownDeploymentErrorTypeRPLBNotFound {
+				d.log.Print(err)
+				continue
+			}
 		}
+
+		// For errors we don't know how to handle, delete the failed VMSS and retry the deployment.
 		if err != nil && *d.config.Configuration.VMSSCleanupEnabled {
 			if retry := d.vmssCleaner.RemoveFailedNewScaleset(ctx, rgName, vmssName); retry {
-				continue // Retry deployment after deleting failed VMSS.
+				continue
 			}
 		}
 		break
 	}
 	return err
+}
+
+// checkForKnownError is a helper function that checks the errors nested within an Azure ServiceError
+// for a known error and returns the corresponding KnownDeploymentErrorType if applicable.
+func (d *deployer) checkForKnownError(serviceErr *azure.ServiceError, deployAttempt int) (KnownDeploymentErrorType, error) {
+	if serviceErr.Code != "DeploymentFailed" || len(serviceErr.Details) == 0 {
+		return "", nil
+	}
+
+	outerErr := azure.ServiceError{}
+	jsonEncoded, err := json.Marshal(serviceErr.Details[0])
+
+	if err != nil {
+		return "", err
+	}
+
+	err = json.Unmarshal(jsonEncoded, &outerErr)
+
+	if err != nil {
+		return "", err
+	}
+
+	innerErr := azure.ServiceError{}
+	err = json.Unmarshal([]byte(outerErr.Message), &innerErr)
+
+	if err != nil {
+		return "", err
+	}
+
+	isFirstAttempt := deployAttempt < 1
+	isRPLBNotFound := innerErr.Code == "ResourceNotFound" && strings.Contains(innerErr.Message, "Microsoft.Network/loadBalancers/rp-lb")
+
+	if isFirstAttempt && isRPLBNotFound {
+		return KnownDeploymentErrorTypeRPLBNotFound, nil
+	}
+
+	return "", nil
 }

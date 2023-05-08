@@ -15,6 +15,8 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
+
+	testhttp "github.com/Azure/ARO-RP/test/util/http"
 )
 
 func TestEnsureErrorIsGeneratedOnResponse(t *testing.T) {
@@ -27,11 +29,11 @@ func TestEnsureErrorIsGeneratedOnResponse(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	srv, close := NewTLSServer()
+	srv, close := testhttp.NewTLSServer()
 	defer close()
 	srv.SetResponse(
-		WithBody(jsonString),
-		WithStatusCode(404))
+		testhttp.WithBody(jsonString),
+		testhttp.WithStatusCode(404))
 
 	pl := runtime.NewPipeline("applenstest", "v1.0.0", runtime.PipelineOptions{}, &policy.ClientOptions{Transport: srv})
 	client := &Client{endpoint: srv.URL(), pipeline: pl}
@@ -51,10 +53,10 @@ func TestEnsureErrorIsGeneratedOnResponse(t *testing.T) {
 }
 
 func TestEnsureErrorIsNotGeneratedOnResponse(t *testing.T) {
-	srv, close := NewTLSServer()
+	srv, close := testhttp.NewTLSServer()
 	defer close()
 	srv.SetResponse(
-		WithStatusCode(200))
+		testhttp.WithStatusCode(200))
 
 	pl := runtime.NewPipeline("applenstest", "v1.0.0", runtime.PipelineOptions{}, &policy.ClientOptions{Transport: srv})
 	client := &Client{endpoint: srv.URL(), pipeline: pl}
@@ -65,10 +67,10 @@ func TestEnsureErrorIsNotGeneratedOnResponse(t *testing.T) {
 }
 
 func TestRequestEnricherIsCalled(t *testing.T) {
-	srv, close := NewTLSServer()
+	srv, close := testhttp.NewTLSServer()
 	defer close()
 	srv.SetResponse(
-		WithStatusCode(200))
+		testhttp.WithStatusCode(200))
 
 	pl := runtime.NewPipeline("applenstest", "v1.0.0", runtime.PipelineOptions{}, &policy.ClientOptions{Transport: srv})
 	client := &Client{endpoint: srv.URL(), pipeline: pl}
@@ -88,10 +90,10 @@ func TestRequestEnricherIsCalled(t *testing.T) {
 }
 
 func TestNoOptionsIsCalled(t *testing.T) {
-	srv, close := NewTLSServer()
+	srv, close := testhttp.NewTLSServer()
 	defer close()
 	srv.SetResponse(
-		WithStatusCode(200))
+		testhttp.WithStatusCode(200))
 
 	pl := runtime.NewPipeline("applenstest", "v1.0.0", runtime.PipelineOptions{}, &policy.ClientOptions{Transport: srv})
 	client := &Client{endpoint: srv.URL(), pipeline: pl}
@@ -103,7 +105,7 @@ func TestNoOptionsIsCalled(t *testing.T) {
 }
 
 func TestCreateRequest(t *testing.T) {
-	srv, close := NewTLSServer()
+	srv, close := testhttp.NewTLSServer()
 	defer close()
 	pl := runtime.NewPipeline("applenstest", "v1.0.0", runtime.PipelineOptions{}, &policy.ClientOptions{Transport: srv})
 	client := &Client{endpoint: srv.URL(), pipeline: pl}
@@ -123,10 +125,10 @@ func TestCreateRequest(t *testing.T) {
 }
 
 func TestSendPost(t *testing.T) {
-	srv, close := NewTLSServer()
+	srv, close := testhttp.NewTLSServer()
 	defer close()
 	srv.SetResponse(
-		WithStatusCode(200))
+		testhttp.WithStatusCode(200))
 	verifier := pipelineVerifier{}
 	pl := runtime.NewPipeline("applenstest", "v1.0.0", runtime.PipelineOptions{PerCall: []policy.Policy{&verifier}}, &policy.ClientOptions{Transport: srv})
 	client := &Client{endpoint: srv.URL(), pipeline: pl}
@@ -142,10 +144,10 @@ func TestSendPost(t *testing.T) {
 }
 
 func TestGetDetector(t *testing.T) {
-	srv, close := NewTLSServer()
+	srv, close := testhttp.NewTLSServer()
 	defer close()
 	srv.SetResponse(
-		WithStatusCode(200))
+		testhttp.WithStatusCode(200))
 	verifier := pipelineVerifier{}
 	pl := runtime.NewPipeline("applenstest", "v1.0.0", runtime.PipelineOptions{PerCall: []policy.Policy{&verifier}}, &policy.ClientOptions{Transport: srv})
 	client := &Client{endpoint: srv.URL(), pipeline: pl}
@@ -183,10 +185,10 @@ func TestGetDetector(t *testing.T) {
 }
 
 func TestListDetectors(t *testing.T) {
-	srv, close := NewTLSServer()
+	srv, close := testhttp.NewTLSServer()
 	defer close()
 	srv.SetResponse(
-		WithStatusCode(200))
+		testhttp.WithStatusCode(200))
 	verifier := pipelineVerifier{}
 	pl := runtime.NewPipeline("applenstest", "v1.0.0", runtime.PipelineOptions{PerCall: []policy.Policy{&verifier}}, &policy.ClientOptions{Transport: srv})
 	client := &Client{endpoint: srv.URL(), pipeline: pl}

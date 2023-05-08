@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -19,14 +19,15 @@ import (
 func (f *frontend) getClusterManagerConfiguration(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
-	vars := mux.Vars(r)
+
+	ocmResourceType := chi.URLParam(r, "ocmResourceType")
 
 	var (
 		b   []byte
 		err error
 	)
 
-	apiVersion, ocmResourceType := r.URL.Query().Get(api.APIVersionKey), vars["ocmResourceType"]
+	apiVersion := r.URL.Query().Get(api.APIVersionKey)
 
 	err = f.validateOcmResourceType(apiVersion, ocmResourceType)
 	if err != nil {
@@ -34,7 +35,7 @@ func (f *frontend) getClusterManagerConfiguration(w http.ResponseWriter, r *http
 		return
 	}
 
-	switch vars["ocmResourceType"] {
+	switch ocmResourceType {
 	case "syncset":
 		b, err = f._getSyncSetConfiguration(ctx, log, r, f.apis[apiVersion].SyncSetConverter)
 	case "machinepool":
@@ -51,9 +52,7 @@ func (f *frontend) getClusterManagerConfiguration(w http.ResponseWriter, r *http
 }
 
 func (f *frontend) _getSyncSetConfiguration(ctx context.Context, log *logrus.Entry, r *http.Request, converter api.SyncSetConverter) ([]byte, error) {
-	vars := mux.Vars(r)
-
-	resType, resName, ocmResType, ocmResName, resGroupName := vars["resourceType"], vars["resourceName"], vars["ocmResourceType"], vars["ocmResourceName"], vars["resourceGroupName"]
+	resType, resName, ocmResType, ocmResName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "ocmResourceType"), chi.URLParam(r, "ocmResourceName"), chi.URLParam(r, "resourceGroupName")
 	doc, err := f.validateResourceForGet(ctx, resType, resName, ocmResType, ocmResName, resGroupName, r.URL.Path, r)
 	if err != nil {
 		return nil, err
@@ -64,9 +63,7 @@ func (f *frontend) _getSyncSetConfiguration(ctx context.Context, log *logrus.Ent
 }
 
 func (f *frontend) _getMachinePoolConfiguration(ctx context.Context, log *logrus.Entry, r *http.Request, converter api.MachinePoolConverter) ([]byte, error) {
-	vars := mux.Vars(r)
-
-	resType, resName, ocmResType, ocmResName, resGroupName := vars["resourceType"], vars["resourceName"], vars["ocmResourceType"], vars["ocmResourceName"], vars["resourceGroupName"]
+	resType, resName, ocmResType, ocmResName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "ocmResourceType"), chi.URLParam(r, "ocmResourceName"), chi.URLParam(r, "resourceGroupName")
 	doc, err := f.validateResourceForGet(ctx, resType, resName, ocmResType, ocmResName, resGroupName, r.URL.Path, r)
 	if err != nil {
 		return nil, err
@@ -77,9 +74,7 @@ func (f *frontend) _getMachinePoolConfiguration(ctx context.Context, log *logrus
 }
 
 func (f *frontend) _getSyncIdentityProviderConfiguration(ctx context.Context, log *logrus.Entry, r *http.Request, converter api.SyncIdentityProviderConverter) ([]byte, error) {
-	vars := mux.Vars(r)
-
-	resType, resName, ocmResType, ocmResName, resGroupName := vars["resourceType"], vars["resourceName"], vars["ocmResourceType"], vars["ocmResourceName"], vars["resourceGroupName"]
+	resType, resName, ocmResType, ocmResName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "ocmResourceType"), chi.URLParam(r, "ocmResourceName"), chi.URLParam(r, "resourceGroupName")
 	doc, err := f.validateResourceForGet(ctx, resType, resName, ocmResType, ocmResName, resGroupName, r.URL.Path, r)
 	if err != nil {
 		return nil, err
@@ -90,8 +85,7 @@ func (f *frontend) _getSyncIdentityProviderConfiguration(ctx context.Context, lo
 }
 
 func (f *frontend) _getSecretConfiguration(ctx context.Context, log *logrus.Entry, r *http.Request, converter api.SecretConverter) ([]byte, error) {
-	vars := mux.Vars(r)
-	resType, resName, ocmResType, ocmResName, resGroupName := vars["resourceType"], vars["resourceName"], vars["ocmResourceType"], vars["ocmResourceName"], vars["resourceGroupName"]
+	resType, resName, ocmResType, ocmResName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "ocmResourceType"), chi.URLParam(r, "ocmResourceName"), chi.URLParam(r, "resourceGroupName")
 	doc, err := f.validateResourceForGet(ctx, resType, resName, ocmResType, ocmResName, resGroupName, r.URL.Path, r)
 	if err != nil {
 		return nil, err

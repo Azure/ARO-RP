@@ -17,6 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_dns "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/dns"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestCreate(t *testing.T) {
@@ -133,10 +134,7 @@ func TestCreate(t *testing.T) {
 			}
 
 			err := m.Create(ctx, tt.oc)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
@@ -250,10 +248,7 @@ func TestUpdate(t *testing.T) {
 			}
 
 			err := m.Update(ctx, tt.oc, "1.2.3.4")
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
@@ -408,10 +403,7 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 			}
 
 			err := m.CreateOrUpdateRouter(ctx, tt.oc, tt.routerIP)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
@@ -527,10 +519,7 @@ func TestDelete(t *testing.T) {
 			}
 
 			err := m.Delete(ctx, tt.oc)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
@@ -585,10 +574,7 @@ func TestManagedDomain(t *testing.T) {
 			if got != tt.want {
 				t.Error(got)
 			}
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
@@ -640,10 +626,7 @@ func TestManagedDomainPrefix(t *testing.T) {
 			if got != tt.want {
 				t.Error(got)
 			}
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

@@ -59,6 +59,13 @@
         "clustersInstallViaHive": {
             "value": ""
         },
+        "cosmosDB": {
+            "value": {
+                "gatewayProvisionedThroughput": 400,
+                "portalProvisionedThroughput": 400,
+                "standardProvisionedThroughput": 1000
+            }
+        },
         "databaseAccountName": {
             "value": ""
         },

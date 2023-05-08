@@ -7,7 +7,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 
@@ -32,9 +32,9 @@ func (f *frontend) putSubscription(w http.ResponseWriter, r *http.Request) {
 
 func (f *frontend) _putSubscription(ctx context.Context, r *http.Request) ([]byte, error) {
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
-	vars := mux.Vars(r)
+	subId := chi.URLParam(r, "subscriptionId")
 
-	doc, err := f.dbSubscriptions.Get(ctx, vars["subscriptionId"])
+	doc, err := f.dbSubscriptions.Get(ctx, subId)
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (f *frontend) _putSubscription(ctx context.Context, r *http.Request) ([]byt
 
 	if isCreate {
 		doc = &api.SubscriptionDocument{
-			ID:           vars["subscriptionId"],
+			ID:           subId,
 			Subscription: &api.Subscription{},
 		}
 	}

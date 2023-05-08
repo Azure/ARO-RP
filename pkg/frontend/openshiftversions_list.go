@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -18,11 +18,11 @@ import (
 
 func (f *frontend) listInstallVersions(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	vars := mux.Vars(r)
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	apiVersion := r.URL.Query().Get(api.APIVersionKey)
+	resourceProviderNamespace := chi.URLParam(r, "resourceProviderNamespace")
 	if f.apis[apiVersion].OpenShiftVersionConverter == nil {
-		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The endpoint could not be found in the namespace '%s' for api version '%s'.", vars["resourceProviderNamespace"], apiVersion)
+		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The endpoint could not be found in the namespace '%s' for api version '%s'.", resourceProviderNamespace, apiVersion)
 		return
 	}
 

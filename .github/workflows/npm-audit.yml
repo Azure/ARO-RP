@@ -23,3 +23,19 @@ jobs:
       - name: Run NPM Audit
         run: bash ${GITHUB_WORKSPACE}/hack/github-actions/npm_audit.sh
         shell: bash
+  npm-build-check:
+    name: npm-build-check
+    runs-on: ubuntu-latest
+    steps:
+      - name: setup Node.JS
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.16.0
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      - name: Run NPM Build
+        working-directory: ./portal/v2
+        run: |
+          npm ci
+          npm run build
+          ../../hack/ci-utils/isClean.sh
