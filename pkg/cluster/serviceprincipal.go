@@ -8,22 +8,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	azgraphrbac "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/jongio/azidext/go/azidext"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
+	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
 )
 
 // initializeClusterSPClients initialized clients, based on cluster service principal
 func (m *manager) initializeClusterSPClients(ctx context.Context) error {
-	spp := m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
-	options := m.env.Environment().ClientSecretCredentialOptions()
-	credential, err := azidentity.NewClientSecretCredential(
-		m.subscriptionDoc.Subscription.Properties.TenantID,
-		spp.ClientID, string(spp.ClientSecret), options)
+	credential, err := clusterauthorizer.NewTokenCredentialForCluster(
+		m.env.Environment(), m.doc.OpenShiftCluster, m.subscriptionDoc.Subscription)
 	if err != nil {
 		return err
 	}
