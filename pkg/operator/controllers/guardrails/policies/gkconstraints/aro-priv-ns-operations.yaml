@@ -8,14 +8,14 @@ spec:
     kinds:
       - apiGroups: [""]
         kinds: [
-        "Pod",
-        "Secret",
-        "Service",
-        "ServiceAccount",
-        "ReplicationController",
-        "ResourceQuota",
-        "PersistentVolume",
-        "PersistentVolumeClaim"
+          "Pod",
+          "Secret",
+          "Service",
+          "ServiceAccount",
+          "ReplicationController",
+          "ResourceQuota",
+          "PersistentVolume",
+          "PersistentVolumeClaim"
         ]
       - apiGroups: ["apps"]
         kinds: ["Deployment", "ReplicaSet", "StatefulSet", "DaemonSet"]
