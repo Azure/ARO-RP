@@ -7,6 +7,5 @@ spec:
   match:
     kinds:
       - apiGroups: [""]
-        kinds: ["Pod"] # disable PV check as it is not agreed, need revise
         # kinds: ["Pod", "PersistentVolume"]
-
+        kinds: ["Pod"] # disable PV check as it is not agreed, need revise
