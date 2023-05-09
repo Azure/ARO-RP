@@ -10,23 +10,15 @@ import (
 )
 
 func (m *manager) validateResourcesFromFP(ctx context.Context) error {
-	pdpChecker, err := validate.CreatePDPClient(m.env, m.log, m.doc.OpenShiftCluster, m.subscriptionDoc.Subscription)
-	if err != nil {
-		return err
-	}
 	ocDynamicValidator := validate.NewFirstPartyOpenShiftClusterDynamicValidator(
-		m.log, m.env, m.doc.OpenShiftCluster, m.subscriptionDoc, m.fpAuthorizer, pdpChecker,
+		m.log, m.env, m.doc.OpenShiftCluster, m.subscriptionDoc, m.fpAuthorizer,
 	)
 	return ocDynamicValidator.Dynamic(ctx)
 }
 
 func (m *manager) validateResourcesFromSP(ctx context.Context) error {
-	pdpChecker, err := validate.CreatePDPClient(m.env, m.log, m.doc.OpenShiftCluster, m.subscriptionDoc.Subscription)
-	if err != nil {
-		return err
-	}
 	ocDynamicValidator := validate.NewClientOpenShiftClusterDynamicValidator(
-		m.log, m.env, m.doc.OpenShiftCluster, m.subscriptionDoc, pdpChecker,
+		m.log, m.env, m.doc.OpenShiftCluster, m.subscriptionDoc,
 	)
 	return ocDynamicValidator.Dynamic(ctx)
 }

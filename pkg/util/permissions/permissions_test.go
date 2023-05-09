@@ -79,7 +79,7 @@ func TestCanDoAction(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ok, err := CanDoAction(test.permissions, test.action)
+			ok, err := canDoAction(test.permissions, test.action)
 			if err != nil {
 				t.Fatalf("unexpected error: %#v", err)
 			}

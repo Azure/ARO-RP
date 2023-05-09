@@ -26,6 +26,7 @@ import (
 	mock_azcore "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azcore"
 	mock_authorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
+	"github.com/Azure/ARO-RP/pkg/util/permissions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -144,11 +145,12 @@ func TestValidateVnetPermissions(t *testing.T) {
 			permissionsClient := mock_authorization.NewMockPermissionsClient(controller)
 			tt.mocks(permissionsClient, cancel)
 
-			dv := &dynamic{
-				appID:          "fff51942-b1f9-4119-9453-aaa922259eb7",
-				authorizerType: AuthorizerClusterServicePrincipal,
-				log:            logrus.NewEntry(logrus.StandardLogger()),
-				permissions:    permissionsClient,
+			log := logrus.NewEntry(logrus.StandardLogger())
+			dv := &dynamicNetworkValidator{
+				appID:                "fff51942-b1f9-4119-9453-aaa922259eb7",
+				authorizerType:       AuthorizerClusterServicePrincipal,
+				log:                  log,
+				permissionsValidator: permissions.NewPermissionsValidatorWithPermissionsClient(log, permissionsClient),
 			}
 
 			vnetr, err := azure.ParseResourceID(vnetID)
@@ -408,11 +410,12 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 				},
 			}
 
-			dv := &dynamic{
-				authorizerType:  AuthorizerClusterServicePrincipal,
-				log:             logrus.NewEntry(logrus.StandardLogger()),
-				permissions:     permissionsClient,
-				virtualNetworks: vnetClient,
+			log := logrus.NewEntry(logrus.StandardLogger())
+			dv := &dynamicNetworkValidator{
+				authorizerType:       AuthorizerClusterServicePrincipal,
+				log:                  log,
+				permissionsValidator: permissions.NewPermissionsValidatorWithPermissionsClient(log, permissionsClient),
+				virtualNetworks:      vnetClient,
 			}
 
 			if tt.permissionMocks != nil {
@@ -567,11 +570,12 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 				},
 			}
 
-			dv := &dynamic{
-				authorizerType:  AuthorizerClusterServicePrincipal,
-				log:             logrus.NewEntry(logrus.StandardLogger()),
-				permissions:     permissionsClient,
-				virtualNetworks: vnetClient,
+			log := logrus.NewEntry(logrus.StandardLogger())
+			dv := &dynamicNetworkValidator{
+				authorizerType:       AuthorizerClusterServicePrincipal,
+				log:                  log,
+				permissionsValidator: permissions.NewPermissionsValidatorWithPermissionsClient(log, permissionsClient),
+				virtualNetworks:      vnetClient,
 			}
 
 			if tt.permissionMocks != nil {
@@ -718,7 +722,7 @@ func TestValidateCIDRRanges(t *testing.T) {
 					tt.vnetMocks(vnetClient, vnet)
 				}
 
-				dv := &dynamic{
+				dv := &dynamicNetworkValidator{
 					log:             logrus.NewEntry(logrus.StandardLogger()),
 					virtualNetworks: vnetClient,
 				}
@@ -766,7 +770,7 @@ func TestValidateVnetLocation(t *testing.T) {
 				Get(gomock.Any(), resourceGroupName, vnetName, "").
 				Return(vnet, nil)
 
-			dv := &dynamic{
+			dv := &dynamicNetworkValidator{
 				log:             logrus.NewEntry(logrus.StandardLogger()),
 				virtualNetworks: vnetClient,
 			}
@@ -956,7 +960,7 @@ func TestValidateSubnets(t *testing.T) {
 			if tt.vnetMocks != nil {
 				tt.vnetMocks(vnetClient, vnet)
 			}
-			dv := &dynamic{
+			dv := &dynamicNetworkValidator{
 				virtualNetworks: vnetClient,
 				log:             logrus.NewEntry(logrus.StandardLogger()),
 			}
@@ -1072,16 +1076,15 @@ func TestValidateVnetPermissionsWithCheckAccess(t *testing.T) {
 
 			tokenCred := mock_azcore.NewMockTokenCredential(controller)
 			pdpClient := mock_remotepdp.NewMockRemotePDPClient(controller)
-			pdp := NewPDPChecker(pdpClient, tokenCred)
-
 			tt.mocks(tokenCred, pdpClient, cancel)
 
-			dv := &dynamic{
-				azEnv:          &azureclient.PublicCloud,
-				appID:          "fff51942-b1f9-4119-9453-aaa922259eb7",
-				authorizerType: AuthorizerClusterServicePrincipal,
-				log:            logrus.NewEntry(logrus.StandardLogger()),
-				pdpChecker:     pdp,
+			log := logrus.NewEntry(logrus.StandardLogger())
+			dv := &dynamicNetworkValidator{
+				azEnv:                &azureclient.PublicCloud,
+				appID:                "fff51942-b1f9-4119-9453-aaa922259eb7",
+				authorizerType:       AuthorizerClusterServicePrincipal,
+				log:                  log,
+				permissionsValidator: permissions.NewPermissionsValidatorWithPDP(log, pdpClient, tokenCred, "resourcemanager"),
 			}
 
 			vnetr, err := azure.ParseResourceID(vnetID)
@@ -1208,8 +1211,6 @@ func TestValidateRouteTablesPermissionsWithCheckAccess(t *testing.T) {
 
 			tokenCred := mock_azcore.NewMockTokenCredential(controller)
 			pdpClient := mock_remotepdp.NewMockRemotePDPClient(controller)
-			pdp := NewPDPChecker(pdpClient, tokenCred)
-
 			vnetClient := mock_network.NewMockVirtualNetworksClient(controller)
 
 			vnet := &mgmtnetwork.VirtualNetwork{
@@ -1236,12 +1237,13 @@ func TestValidateRouteTablesPermissionsWithCheckAccess(t *testing.T) {
 				},
 			}
 
-			dv := &dynamic{
-				azEnv:           &azureclient.PublicCloud,
-				authorizerType:  AuthorizerClusterServicePrincipal,
-				log:             logrus.NewEntry(logrus.StandardLogger()),
-				pdpChecker:      pdp,
-				virtualNetworks: vnetClient,
+			log := logrus.NewEntry(logrus.StandardLogger())
+			dv := &dynamicNetworkValidator{
+				azEnv:                &azureclient.PublicCloud,
+				authorizerType:       AuthorizerClusterServicePrincipal,
+				log:                  log,
+				permissionsValidator: permissions.NewPermissionsValidatorWithPDP(log, pdpClient, tokenCred, "resourcemanager"),
+				virtualNetworks:      vnetClient,
 			}
 
 			if tt.pdpClientMocks != nil {
@@ -1374,7 +1376,6 @@ func TestValidateNatGatewaysPermissionsWithCheckAccess(t *testing.T) {
 
 			tokenCred := mock_azcore.NewMockTokenCredential(controller)
 			pdpClient := mock_remotepdp.NewMockRemotePDPClient(controller)
-			pdp := NewPDPChecker(pdpClient, tokenCred)
 
 			vnet := &mgmtnetwork.VirtualNetwork{
 				ID: &vnetID,
@@ -1400,12 +1401,13 @@ func TestValidateNatGatewaysPermissionsWithCheckAccess(t *testing.T) {
 				},
 			}
 
-			dv := &dynamic{
-				azEnv:           &azureclient.PublicCloud,
-				authorizerType:  AuthorizerClusterServicePrincipal,
-				log:             logrus.NewEntry(logrus.StandardLogger()),
-				pdpChecker:      pdp,
-				virtualNetworks: vnetClient,
+			log := logrus.NewEntry(logrus.StandardLogger())
+			dv := &dynamicNetworkValidator{
+				azEnv:                &azureclient.PublicCloud,
+				authorizerType:       AuthorizerClusterServicePrincipal,
+				log:                  log,
+				permissionsValidator: permissions.NewPermissionsValidatorWithPDP(log, pdpClient, tokenCred, "resourcemanager"),
+				virtualNetworks:      vnetClient,
 			}
 
 			if tt.pdpClientMocks != nil {

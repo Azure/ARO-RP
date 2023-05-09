@@ -72,7 +72,7 @@ func (dv *dynamic) validateDiskEncryptionSetPermissions(ctx context.Context, des
 		errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
 	}
 
-	err := dv.validateActions(ctx, desr, []string{
+	err := dv.permissionsValidator.ValidateActions(ctx, desr, []string{
 		"Microsoft.Compute/diskEncryptionSets/read",
 	})
 

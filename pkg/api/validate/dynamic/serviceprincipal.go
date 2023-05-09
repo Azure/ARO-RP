@@ -10,12 +10,36 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/form3tech-oss/jwt-go"
+	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
-func (dv *dynamic) ValidateServicePrincipal(ctx context.Context, tokenCredential azcore.TokenCredential) error {
+type ServicePrincipalValidator interface {
+	ValidateServicePrincipal(ctx context.Context, tokenCredential azcore.TokenCredential) error
+}
+
+type dynamicServicePrincipal struct {
+	log            *logrus.Entry
+	authorizerType AuthorizerType
+	azEnv          *azureclient.AROEnvironment
+}
+
+func NewServicePrincipalValidator(
+	log *logrus.Entry,
+	azEnv *azureclient.AROEnvironment,
+	authorizerType AuthorizerType,
+) ServicePrincipalValidator {
+	return &dynamicServicePrincipal{
+		log:            log,
+		authorizerType: authorizerType,
+		azEnv:          azEnv,
+	}
+}
+
+func (dv *dynamicServicePrincipal) ValidateServicePrincipal(ctx context.Context, tokenCredential azcore.TokenCredential) error {
 	dv.log.Print("ValidateServicePrincipal")
 
 	tokenRequestOptions := policy.TokenRequestOptions{

@@ -21,6 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/validate/dynamic"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
+	"github.com/Azure/ARO-RP/pkg/util/permissions"
 )
 
 // OpenShiftClusterDynamicValidator is the dynamic validator interface
@@ -37,7 +38,6 @@ func NewFirstPartyOpenShiftClusterDynamicValidator(
 	oc *api.OpenShiftCluster,
 	subscriptionDoc *api.SubscriptionDocument,
 	fpAuthorizer autorest.Authorizer,
-	pdpChecker *dynamic.PDPChecker,
 ) OpenShiftClusterDynamicValidator {
 	return &firstPartyOpenShiftClusterDynamicValidator{
 		log: log,
@@ -46,7 +46,6 @@ func NewFirstPartyOpenShiftClusterDynamicValidator(
 		oc:              oc,
 		subscriptionDoc: subscriptionDoc,
 		fpAuthorizer:    fpAuthorizer,
-		pdpChecker:      pdpChecker,
 	}
 }
 
@@ -58,7 +57,6 @@ func NewClientOpenShiftClusterDynamicValidator(
 	env env.Interface,
 	oc *api.OpenShiftCluster,
 	subscriptionDoc *api.SubscriptionDocument,
-	pdpChecker *dynamic.PDPChecker,
 ) OpenShiftClusterDynamicValidator {
 	return &clientOpenShiftClusterDynamicValidator{
 		log: log,
@@ -66,7 +64,6 @@ func NewClientOpenShiftClusterDynamicValidator(
 
 		oc:              oc,
 		subscriptionDoc: subscriptionDoc,
-		pdpChecker:      pdpChecker,
 	}
 }
 
@@ -77,7 +74,6 @@ type firstPartyOpenShiftClusterDynamicValidator struct {
 	oc              *api.OpenShiftCluster
 	subscriptionDoc *api.SubscriptionDocument
 	fpAuthorizer    autorest.Authorizer
-	pdpChecker      *dynamic.PDPChecker
 }
 
 type clientOpenShiftClusterDynamicValidator struct {
@@ -86,7 +82,6 @@ type clientOpenShiftClusterDynamicValidator struct {
 
 	oc              *api.OpenShiftCluster
 	subscriptionDoc *api.SubscriptionDocument
-	pdpChecker      *dynamic.PDPChecker
 }
 
 func ensureAccessTokenClaims(ctx context.Context, tokenCredential *azidentity.ClientSecretCredential, scopes []string) error {
@@ -160,7 +155,12 @@ func (dv *firstPartyOpenShiftClusterDynamicValidator) Dynamic(ctx context.Contex
 			Path: fmt.Sprintf("properties.workerProfiles[%d].subnetId", i),
 		})
 	}
-	// FP validation
+
+	auth, err := permissions.NewPermissionsValidator(dv.env, dv.log, dv.fpAuthorizer, dv.oc, dv.subscriptionDoc)
+	if err != nil {
+		return err
+	}
+
 	fpDynamic := dynamic.NewValidator(
 		dv.log,
 		dv.env,
@@ -169,21 +169,32 @@ func (dv *firstPartyOpenShiftClusterDynamicValidator) Dynamic(ctx context.Contex
 		dv.fpAuthorizer,
 		dv.env.FPClientID(),
 		dynamic.AuthorizerFirstParty,
-		dv.pdpChecker,
+		auth,
 	)
 
-	err := fpDynamic.ValidateVnet(
+	err = fpDynamic.ValidateDiskEncryptionSets(ctx, dv.oc)
+	if err != nil {
+		return err
+	}
+
+	fpDynamicVnet := dynamic.NewVirtualNetworkValidator(
+		dv.log,
+		dv.env,
+		dv.env.Environment(),
+		dv.subscriptionDoc.ID,
+		dv.fpAuthorizer,
+		dv.env.FPClientID(),
+		dynamic.AuthorizerFirstParty,
+		auth,
+	)
+
+	err = fpDynamicVnet.ValidateVnet(
 		ctx,
 		dv.oc.Location,
 		subnets,
 		dv.oc.Properties.NetworkProfile.PodCIDR,
 		dv.oc.Properties.NetworkProfile.ServiceCIDR,
 	)
-	if err != nil {
-		return err
-	}
-
-	err = fpDynamic.ValidateDiskEncryptionSets(ctx, dv.oc)
 	if err != nil {
 		return err
 	}
@@ -218,6 +229,21 @@ func (dv *clientOpenShiftClusterDynamicValidator) Dynamic(ctx context.Context) e
 	}
 	spAuthorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
+	auth, err := permissions.NewPermissionsValidator(dv.env, dv.log, spAuthorizer, dv.oc, dv.subscriptionDoc)
+	if err != nil {
+		return err
+	}
+
+	spValidator := dynamic.NewServicePrincipalValidator(
+		dv.log, dv.env.Environment(), dynamic.AuthorizerClusterServicePrincipal,
+	)
+
+	// SP validation
+	err = spValidator.ValidateServicePrincipal(ctx, tokenCredential)
+	if err != nil {
+		return err
+	}
+
 	spDynamic := dynamic.NewValidator(
 		dv.log,
 		dv.env,
@@ -226,16 +252,31 @@ func (dv *clientOpenShiftClusterDynamicValidator) Dynamic(ctx context.Context) e
 		spAuthorizer,
 		dv.oc.Properties.ServicePrincipalProfile.ClientID,
 		dynamic.AuthorizerClusterServicePrincipal,
-		dv.pdpChecker,
+		auth,
 	)
 
-	// SP validation
-	err = spDynamic.ValidateServicePrincipal(ctx, tokenCredential)
+	err = spDynamic.ValidateDiskEncryptionSets(ctx, dv.oc)
 	if err != nil {
 		return err
 	}
 
-	err = spDynamic.ValidateVnet(
+	err = spDynamic.ValidateEncryptionAtHost(ctx, dv.oc)
+	if err != nil {
+		return err
+	}
+
+	spNetworkDynamic := dynamic.NewVirtualNetworkValidator(
+		dv.log,
+		dv.env,
+		dv.env.Environment(),
+		dv.subscriptionDoc.ID,
+		spAuthorizer,
+		dv.oc.Properties.ServicePrincipalProfile.ClientID,
+		dynamic.AuthorizerClusterServicePrincipal,
+		auth,
+	)
+
+	err = spNetworkDynamic.ValidateVnet(
 		ctx,
 		dv.oc.Location,
 		subnets,
@@ -246,17 +287,7 @@ func (dv *clientOpenShiftClusterDynamicValidator) Dynamic(ctx context.Context) e
 		return err
 	}
 
-	err = spDynamic.ValidateSubnets(ctx, dv.oc, subnets)
-	if err != nil {
-		return err
-	}
-
-	err = spDynamic.ValidateDiskEncryptionSets(ctx, dv.oc)
-	if err != nil {
-		return err
-	}
-
-	err = spDynamic.ValidateEncryptionAtHost(ctx, dv.oc)
+	err = spNetworkDynamic.ValidateSubnets(ctx, dv.oc, subnets)
 	if err != nil {
 		return err
 	}

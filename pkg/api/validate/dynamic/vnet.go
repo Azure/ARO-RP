@@ -14,13 +14,65 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/apparentlymart/go-cidr/cidr"
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
+	"github.com/Azure/ARO-RP/pkg/util/permissions"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
-func (dv *dynamic) ValidateVnet(
+type Subnet struct {
+	// ID is a resource id of the subnet
+	ID string
+
+	// Path is a path in the cluster document. For example, properties.workerProfiles[0].subnetId
+	Path string
+}
+
+type NetworkValidator interface {
+	ValidateVnet(ctx context.Context, location string, subnets []Subnet, additionalCIDRs ...string) error
+	ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error
+}
+
+type dynamicNetworkValidator struct {
+	log            *logrus.Entry
+	appID          string // for use when reporting an error
+	authorizerType AuthorizerType
+	env            env.Interface
+	azEnv          *azureclient.AROEnvironment
+
+	virtualNetworks      virtualNetworksGetClient
+	permissionsValidator permissions.PermissionsValidator
+}
+
+func NewVirtualNetworkValidator(
+	log *logrus.Entry,
+	env env.Interface,
+	azEnv *azureclient.AROEnvironment,
+	subscriptionID string,
+	authorizer autorest.Authorizer,
+	appID string,
+	authorizerType AuthorizerType,
+	permissionsValidator permissions.PermissionsValidator,
+) NetworkValidator {
+	return &dynamicNetworkValidator{
+		log:            log,
+		authorizerType: authorizerType,
+		env:            env,
+		azEnv:          azEnv,
+
+		virtualNetworks: newVirtualNetworksCache(
+			network.NewVirtualNetworksClient(azEnv, subscriptionID, authorizer),
+		),
+		permissionsValidator: permissionsValidator,
+	}
+}
+
+func (dv *dynamicNetworkValidator) ValidateVnet(
 	ctx context.Context,
 	location string,
 	subnets []Subnet,
@@ -81,7 +133,7 @@ func (dv *dynamic) ValidateVnet(
 	return dv.validateCIDRRanges(ctx, subnets, additionalCIDRs...)
 }
 
-func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resource) error {
+func (dv *dynamicNetworkValidator) validateVnetPermissions(ctx context.Context, vnet azure.Resource) error {
 	dv.log.Printf("validateVnetPermissions")
 
 	errCode := api.CloudErrorCodeInvalidResourceProviderPermissions
@@ -89,7 +141,7 @@ func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resou
 		errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
 	}
 
-	err := dv.validateActions(ctx, &vnet, []string{
+	err := dv.permissionsValidator.ValidateActions(ctx, &vnet, []string{
 		"Microsoft.Network/virtualNetworks/join/action",
 		"Microsoft.Network/virtualNetworks/read",
 		"Microsoft.Network/virtualNetworks/write",
@@ -136,7 +188,7 @@ func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resou
 }
 
 // validateRouteTablesPermissions will validate permissions on provided subnet
-func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) error {
+func (dv *dynamicNetworkValidator) validateRouteTablePermissions(ctx context.Context, s Subnet) error {
 	dv.log.Printf("validateRouteTablePermissions")
 
 	vnetID, _, err := subnet.Split(s.ID)
@@ -169,7 +221,7 @@ func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) 
 		errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
 	}
 
-	err = dv.validateActions(ctx, &rtr, []string{
+	err = dv.permissionsValidator.ValidateActions(ctx, &rtr, []string{
 		"Microsoft.Network/routeTables/join/action",
 		"Microsoft.Network/routeTables/read",
 		"Microsoft.Network/routeTables/write",
@@ -198,7 +250,7 @@ func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) 
 }
 
 // validateNatGatewayPermissions will validate permissions on provided subnet
-func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) error {
+func (dv *dynamicNetworkValidator) validateNatGatewayPermissions(ctx context.Context, s Subnet) error {
 	dv.log.Printf("validateNatGatewayPermissions")
 
 	vnetID, _, err := subnet.Split(s.ID)
@@ -235,7 +287,7 @@ func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) 
 		errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
 	}
 
-	err = dv.validateActions(ctx, &ngr, []string{
+	err = dv.permissionsValidator.ValidateActions(ctx, &ngr, []string{
 		"Microsoft.Network/natGateways/join/action",
 		"Microsoft.Network/natGateways/read",
 		"Microsoft.Network/natGateways/write",
@@ -263,7 +315,7 @@ func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) 
 	return err
 }
 
-func (dv *dynamic) validateCIDRRanges(ctx context.Context, subnets []Subnet, additionalCIDRs ...string) error {
+func (dv *dynamicNetworkValidator) validateCIDRRanges(ctx context.Context, subnets []Subnet, additionalCIDRs ...string) error {
 	dv.log.Print("ValidateCIDRRanges")
 
 	// During cluster runtime they get enriched and contains multiple
@@ -335,7 +387,7 @@ func (dv *dynamic) validateCIDRRanges(ctx context.Context, subnets []Subnet, add
 	return nil
 }
 
-func (dv *dynamic) validateVnetLocation(ctx context.Context, vnetr azure.Resource, location string) error {
+func (dv *dynamicNetworkValidator) validateVnetLocation(ctx context.Context, vnetr azure.Resource, location string) error {
 	dv.log.Print("validateVnetLocation")
 
 	vnet, err := dv.virtualNetworks.Get(ctx, vnetr.ResourceGroup, vnetr.ResourceName, "")
@@ -357,7 +409,7 @@ func (dv *dynamic) validateVnetLocation(ctx context.Context, vnetr azure.Resourc
 	return nil
 }
 
-func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error {
+func (dv *dynamicNetworkValidator) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error {
 	dv.log.Printf("validateSubnet")
 	if len(subnets) == 0 {
 		return fmt.Errorf("no subnets found")

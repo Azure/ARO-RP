@@ -52,6 +52,48 @@ func (mr *MockServicePrincipalValidatorMockRecorder) ValidateServicePrincipal(ct
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateServicePrincipal", reflect.TypeOf((*MockServicePrincipalValidator)(nil).ValidateServicePrincipal), ctx, tokenCredential)
 }
 
+// MockVNetValidator is a mock of VNetValidator interface.
+type MockVNetValidator struct {
+	ctrl     *gomock.Controller
+	recorder *MockVNetValidatorMockRecorder
+}
+
+// MockVNetValidatorMockRecorder is the mock recorder for MockVNetValidator.
+type MockVNetValidatorMockRecorder struct {
+	mock *MockVNetValidator
+}
+
+// NewMockVNetValidator creates a new mock instance.
+func NewMockVNetValidator(ctrl *gomock.Controller) *MockVNetValidator {
+	mock := &MockVNetValidator{ctrl: ctrl}
+	mock.recorder = &MockVNetValidatorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockVNetValidator) EXPECT() *MockVNetValidatorMockRecorder {
+	return m.recorder
+}
+
+// ValidateVnet mocks base method.
+func (m *MockVNetValidator) ValidateVnet(ctx context.Context, location string, subnets []dynamic.Subnet, additionalCIDRs ...string) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, location, subnets}
+	for _, a := range additionalCIDRs {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ValidateVnet", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateVnet indicates an expected call of ValidateVnet.
+func (mr *MockVNetValidatorMockRecorder) ValidateVnet(ctx, location, subnets interface{}, additionalCIDRs ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, location, subnets}, additionalCIDRs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateVnet", reflect.TypeOf((*MockVNetValidator)(nil).ValidateVnet), varargs...)
+}
+
 // MockDynamic is a mock of Dynamic interface.
 type MockDynamic struct {
 	ctrl     *gomock.Controller

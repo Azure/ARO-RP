@@ -21,6 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_authorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
+	"github.com/Azure/ARO-RP/pkg/util/permissions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -276,11 +277,12 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 						tt.mocks(permissionsClient, diskEncryptionSetsClient, cancel)
 					}
 
+					log := logrus.NewEntry(logrus.StandardLogger())
 					dv := &dynamic{
-						authorizerType:     authorizerType,
-						log:                logrus.NewEntry(logrus.StandardLogger()),
-						permissions:        permissionsClient,
-						diskEncryptionSets: diskEncryptionSetsClient,
+						authorizerType:       authorizerType,
+						log:                  log,
+						permissionsValidator: permissions.NewPermissionsValidatorWithPermissionsClient(log, permissionsClient),
+						diskEncryptionSets:   diskEncryptionSetsClient,
 					}
 
 					err := dv.ValidateDiskEncryptionSets(ctx, tt.oc)
