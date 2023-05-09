@@ -1,0 +1,29 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: deny-regularuser-apigroup-resrouces-access
+tests:
+- name: deny-regularuser-access-resources-in-certain-apigroup
+  template: ../../gktemplates/aro-deny-regularuser-apigroups.yaml
+  constraint: ../../gkconstraints-test/aro-regularuser-apigroup-access.yaml
+  cases:
+  - name: not-allow-access-apigroup-resources
+    object: gator-test/not_allowed_access_apigroup_resources.yaml
+    assertions:
+    - violations: yes
+  - name: allow-access-apigroup-resources
+    object: gator-test/allowed_access_apigroup_resources.yaml
+    assertions:
+    - violations: no
+  - name: allow-access-apigroup-resources-admin
+    object: gator-test/allowed_access_apigroup_resources_admin.yaml
+    assertions:
+    - violations: no
+  - name: allow-access-other-apigroup-resources-regular
+    object: gator-test/allowed_access_apigroup_resources_regular.yaml
+    assertions:
+    - violations: no
+  - name: allow-access-other-apigroup-resources-delete
+    object: gator-test/allowed_access_apigroup_resources_update.yaml
+    assertions:
+    - violations: no

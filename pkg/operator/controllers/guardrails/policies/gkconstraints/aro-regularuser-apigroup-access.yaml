@@ -1,0 +1,10 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: ARODenyRegularUserApigroups
+metadata:
+  name: aro-regularuser-apigroup-deny
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups: ["admissionregistration.k8s.io"]
+        kinds: ["*"]
