@@ -22,7 +22,7 @@ violation[{"msg": msg}] {
 
   msg := sprintf("HostPath volume %v is not allowed for write, pod %v.", [volume.name, input.review.object.metadata.name])
 } {
-  
+
   is_pv(input.review.object)
 
   # allow the exempted users?
