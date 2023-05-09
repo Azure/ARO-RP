@@ -39,16 +39,19 @@ import (
 // Interface defines a set of methods which allow retrieving and updating
 // GVKs from the kubernets api.
 type Interface interface {
-	Refresh() error                                                             // Refresh the in-memory storage of the GVK
-	EnsureDeleted(ctx context.Context, groupKind, namespace, name string) error // Ensures the deletion of the GVK
-	Ensure(ctx context.Context, objs ...kruntime.Object) error                  // Ensures the GVK exists and is correct
+	Refresh() error                                                                              // Refresh the in-memory storage of the GVK
+	GetResource(ctx context.Context, groupKind, namespace, name string) (kruntime.Object, error) // Retrieve GVK resource
+	EnsureDeleted(ctx context.Context, groupKind, namespace, name string) error                  // Ensures the deletion of the GVK
+	Ensure(ctx context.Context, objs ...kruntime.Object) error                                   // Ensures the GVK exists and is correct
 }
 
-type dynamicHelper struct {
+// DynamicHelper is a wrapper around a kubernetes admin api that provides utility functions
+// for retrieving any GVK with generic types.
+type DynamicHelper struct {
 	GVRResolver
 
 	log     *logrus.Entry
-	restcli rest.Interface
+	Restcli rest.Interface
 }
 
 // New creates a new dynamichelper with the desired Interface
@@ -56,7 +59,7 @@ type dynamicHelper struct {
 // Using the provided restconfig we connect to the cluster
 // and return the dynamichelper.Interface.
 func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {
-	dh := &dynamicHelper{
+	dh := &DynamicHelper{
 		log: log,
 	}
 
@@ -70,7 +73,7 @@ func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {
 	restconfig.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
 	restconfig.GroupVersion = &schema.GroupVersion{}
 
-	dh.restcli, err = rest.RESTClientFor(restconfig)
+	dh.Restcli, err = rest.RESTClientFor(restconfig)
 	if err != nil {
 		return nil, err
 	}
@@ -78,15 +81,31 @@ func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {
 	return dh, nil
 }
 
+// GetResource uses the rest cluster connection to retrieves the GVR from
+// the requested namespace
+func (dh *DynamicHelper) GetResource(ctx context.Context, groupKind, namespace, name string) (kruntime.Object, error) {
+	gvr, err := dh.Resolve(groupKind, "")
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := dh.Restcli.Get().AbsPath(makeURLSegments(gvr, namespace, name)...).Do(ctx).Get()
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
 // EnsureDeleted uses the rest cluster connection to delete the GVK from
 // the requested namespace
-func (dh *dynamicHelper) EnsureDeleted(ctx context.Context, groupKind, namespace, name string) error {
+func (dh *DynamicHelper) EnsureDeleted(ctx context.Context, groupKind, namespace, name string) error {
 	gvr, err := dh.Resolve(groupKind, "")
 	if err != nil {
 		return err
 	}
 
-	err = dh.restcli.Delete().AbsPath(makeURLSegments(gvr, namespace, name)...).Do(ctx).Error()
+	err = dh.Restcli.Delete().AbsPath(makeURLSegments(gvr, namespace, name)...).Do(ctx).Error()
 	if kerrors.IsNotFound(err) {
 		err = nil
 	}
@@ -96,7 +115,7 @@ func (dh *dynamicHelper) EnsureDeleted(ctx context.Context, groupKind, namespace
 // Ensure ensures that one or more objects match their desired state. Only updates
 // objects that need to be updated. Assumes that all provided objects are fully-
 // formed and contain a group, version and kind.
-func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...kruntime.Object) error {
+func (dh *DynamicHelper) Ensure(ctx context.Context, objs ...kruntime.Object) error {
 	for _, o := range objs {
 		err := dh.ensureOne(ctx, o)
 		if err != nil {
@@ -107,7 +126,7 @@ func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...kruntime.Object) er
 	return nil
 }
 
-func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) error {
+func (dh *DynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) error {
 	// Grab all possible GVKs for object
 	gvks, _, err := scheme.Scheme.ObjectKinds(new)
 	if err != nil {
@@ -138,10 +157,10 @@ func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) err
 	// Perform the update retrying if other clients are accessing the object
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		// Retrieve the old object
-		old, err := dh.restcli.Get().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), acc.GetName())...).Do(ctx).Get()
+		old, err := dh.Restcli.Get().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), acc.GetName())...).Do(ctx).Get()
 		if kerrors.IsNotFound(err) {
 			dh.log.Printf("Create %s", keyFunc(gvk.GroupKind(), acc.GetNamespace(), acc.GetName()))
-			return dh.restcli.Post().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), "")...).Body(new).Do(ctx).Error()
+			return dh.Restcli.Post().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), "")...).Body(new).Do(ctx).Error()
 		}
 		if err != nil {
 			return err
@@ -155,7 +174,7 @@ func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) err
 
 		dh.log.Printf("Update %s: %s", keyFunc(gvk.GroupKind(), acc.GetNamespace(), acc.GetName()), diff)
 		// Update the object in the api
-		return dh.restcli.Put().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), acc.GetName())...).Body(new).Do(ctx).Error()
+		return dh.Restcli.Put().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), acc.GetName())...).Body(new).Do(ctx).Error()
 	})
 }
 

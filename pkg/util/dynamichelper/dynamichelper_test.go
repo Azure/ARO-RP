@@ -66,9 +66,9 @@ func TestEsureDeleted(t *testing.T) {
 		}),
 	}
 
-	dh := &dynamicHelper{
+	dh := &DynamicHelper{
 		GVRResolver: mockGVRResolver,
-		restcli:     mockRestCLI,
+		Restcli:     mockRestCLI,
 	}
 
 	err := dh.EnsureDeleted(ctx, "configmap", "test-ns-1", "test-name-1")
