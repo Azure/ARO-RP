@@ -162,7 +162,7 @@ func (m *manager) clusterWasCreatedByHive() bool {
 func (m *manager) Update(ctx context.Context) error {
 	s := []steps.Step{
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResourcesFromFP),
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResourcesFromSP),
+		steps.AuthorizationRetryingAction(nil, m.validateResourcesFromSP),
 		steps.Action(m.initializeKubernetesClients), // All init steps are first
 		steps.Action(m.initializeOperatorDeployer),  // depends on kube clients
 		steps.Action(m.initializeClusterSPClients),
@@ -231,10 +231,10 @@ func setFieldCreatedByHive(createdByHive bool) database.OpenShiftClusterDocument
 func (m *manager) bootstrap() []steps.Step {
 	s := []steps.Step{
 		// Validate the resources in separate first party service principal and
-		// client service principal steps so that if we need to refresh the
-		// PDPClient we are doing it as minimally as possible.
+		// client service principal steps since there is no reason to refresh
+		// the fpAuthorizer for cluster service principal failures
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResourcesFromFP),
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResourcesFromSP),
+		steps.AuthorizationRetryingAction(nil, m.validateResourcesFromSP),
 		steps.Action(m.ensureACRToken),
 		steps.Action(m.ensureInfraID),
 		steps.Action(m.ensureSSHKey),
