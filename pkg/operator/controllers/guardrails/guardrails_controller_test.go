@@ -70,6 +70,7 @@ func TestGuardRailsReconciler(t *testing.T) {
 					MutatingWebhookFailurePolicy:   "Ignore",
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
+				md.EXPECT().IsReady(gomock.Any(), "gatekeeper-system", "gatekeeper-audit").Return(true, nil)
 				md.EXPECT().IsReady(gomock.Any(), "wonderful-namespace", "gatekeeper-audit").Return(true, nil)
 				md.EXPECT().IsReady(gomock.Any(), "wonderful-namespace", "gatekeeper-controller-manager").Return(true, nil)
 			},
@@ -98,6 +99,7 @@ func TestGuardRailsReconciler(t *testing.T) {
 					MutatingWebhookFailurePolicy:   "Ignore",
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
+				md.EXPECT().IsReady(gomock.Any(), "gatekeeper-system", "gatekeeper-audit").Return(true, nil)
 				md.EXPECT().IsReady(gomock.Any(), "openshift-azure-guardrails", "gatekeeper-audit").Return(true, nil)
 				md.EXPECT().IsReady(gomock.Any(), "openshift-azure-guardrails", "gatekeeper-controller-manager").Return(true, nil)
 			},
@@ -127,6 +129,7 @@ func TestGuardRailsReconciler(t *testing.T) {
 					MutatingWebhookFailurePolicy:   "Ignore",
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
+				md.EXPECT().IsReady(gomock.Any(), "gatekeeper-system", "gatekeeper-audit").Return(true, nil)
 				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
 			},
 			wantErr: "GateKeeper deployment timed out on Ready: timed out waiting for the condition",
@@ -139,6 +142,7 @@ func TestGuardRailsReconciler(t *testing.T) {
 				controllerPullSpec: "wonderfulPullspec",
 			},
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
+				md.EXPECT().IsReady(gomock.Any(), "gatekeeper-system", "gatekeeper-audit").Return(true, nil)
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, gomock.AssignableToTypeOf(&config.GuardRailsDeploymentConfig{})).Return(errors.New("failed ensure"))
 			},
 			wantErr: "failed ensure",
