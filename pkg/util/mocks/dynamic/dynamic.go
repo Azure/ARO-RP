@@ -8,91 +8,10 @@ import (
 	context "context"
 	reflect "reflect"
 
-	azcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	gomock "github.com/golang/mock/gomock"
 
 	api "github.com/Azure/ARO-RP/pkg/api"
-	dynamic "github.com/Azure/ARO-RP/pkg/api/validate/dynamic"
 )
-
-// MockServicePrincipalValidator is a mock of ServicePrincipalValidator interface.
-type MockServicePrincipalValidator struct {
-	ctrl     *gomock.Controller
-	recorder *MockServicePrincipalValidatorMockRecorder
-}
-
-// MockServicePrincipalValidatorMockRecorder is the mock recorder for MockServicePrincipalValidator.
-type MockServicePrincipalValidatorMockRecorder struct {
-	mock *MockServicePrincipalValidator
-}
-
-// NewMockServicePrincipalValidator creates a new mock instance.
-func NewMockServicePrincipalValidator(ctrl *gomock.Controller) *MockServicePrincipalValidator {
-	mock := &MockServicePrincipalValidator{ctrl: ctrl}
-	mock.recorder = &MockServicePrincipalValidatorMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockServicePrincipalValidator) EXPECT() *MockServicePrincipalValidatorMockRecorder {
-	return m.recorder
-}
-
-// ValidateServicePrincipal mocks base method.
-func (m *MockServicePrincipalValidator) ValidateServicePrincipal(ctx context.Context, tokenCredential azcore.TokenCredential) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateServicePrincipal", ctx, tokenCredential)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ValidateServicePrincipal indicates an expected call of ValidateServicePrincipal.
-func (mr *MockServicePrincipalValidatorMockRecorder) ValidateServicePrincipal(ctx, tokenCredential interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateServicePrincipal", reflect.TypeOf((*MockServicePrincipalValidator)(nil).ValidateServicePrincipal), ctx, tokenCredential)
-}
-
-// MockVNetValidator is a mock of VNetValidator interface.
-type MockVNetValidator struct {
-	ctrl     *gomock.Controller
-	recorder *MockVNetValidatorMockRecorder
-}
-
-// MockVNetValidatorMockRecorder is the mock recorder for MockVNetValidator.
-type MockVNetValidatorMockRecorder struct {
-	mock *MockVNetValidator
-}
-
-// NewMockVNetValidator creates a new mock instance.
-func NewMockVNetValidator(ctrl *gomock.Controller) *MockVNetValidator {
-	mock := &MockVNetValidator{ctrl: ctrl}
-	mock.recorder = &MockVNetValidatorMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockVNetValidator) EXPECT() *MockVNetValidatorMockRecorder {
-	return m.recorder
-}
-
-// ValidateVnet mocks base method.
-func (m *MockVNetValidator) ValidateVnet(ctx context.Context, location string, subnets []dynamic.Subnet, additionalCIDRs ...string) error {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, location, subnets}
-	for _, a := range additionalCIDRs {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ValidateVnet", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ValidateVnet indicates an expected call of ValidateVnet.
-func (mr *MockVNetValidatorMockRecorder) ValidateVnet(ctx, location, subnets interface{}, additionalCIDRs ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, location, subnets}, additionalCIDRs...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateVnet", reflect.TypeOf((*MockVNetValidator)(nil).ValidateVnet), varargs...)
-}
 
 // MockDynamic is a mock of Dynamic interface.
 type MockDynamic struct {
@@ -143,51 +62,4 @@ func (m *MockDynamic) ValidateEncryptionAtHost(ctx context.Context, oc *api.Open
 func (mr *MockDynamicMockRecorder) ValidateEncryptionAtHost(ctx, oc interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateEncryptionAtHost", reflect.TypeOf((*MockDynamic)(nil).ValidateEncryptionAtHost), ctx, oc)
-}
-
-// ValidateServicePrincipal mocks base method.
-func (m *MockDynamic) ValidateServicePrincipal(ctx context.Context, tokenCredential azcore.TokenCredential) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateServicePrincipal", ctx, tokenCredential)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ValidateServicePrincipal indicates an expected call of ValidateServicePrincipal.
-func (mr *MockDynamicMockRecorder) ValidateServicePrincipal(ctx, tokenCredential interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateServicePrincipal", reflect.TypeOf((*MockDynamic)(nil).ValidateServicePrincipal), ctx, tokenCredential)
-}
-
-// ValidateSubnets mocks base method.
-func (m *MockDynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster, subnets []dynamic.Subnet) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateSubnets", ctx, oc, subnets)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ValidateSubnets indicates an expected call of ValidateSubnets.
-func (mr *MockDynamicMockRecorder) ValidateSubnets(ctx, oc, subnets interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateSubnets", reflect.TypeOf((*MockDynamic)(nil).ValidateSubnets), ctx, oc, subnets)
-}
-
-// ValidateVnet mocks base method.
-func (m *MockDynamic) ValidateVnet(ctx context.Context, location string, subnets []dynamic.Subnet, additionalCIDRs ...string) error {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, location, subnets}
-	for _, a := range additionalCIDRs {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ValidateVnet", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ValidateVnet indicates an expected call of ValidateVnet.
-func (mr *MockDynamicMockRecorder) ValidateVnet(ctx, location, subnets interface{}, additionalCIDRs ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, location, subnets}, additionalCIDRs...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateVnet", reflect.TypeOf((*MockDynamic)(nil).ValidateVnet), varargs...)
 }
