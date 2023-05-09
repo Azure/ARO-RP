@@ -56,6 +56,7 @@ func (c *core) NewLiveConfigManager(ctx context.Context) (liveconfig.Manager, er
 }
 
 func NewCore(ctx context.Context, log *logrus.Entry) (Core, error) {
+	// assign results of package-level functions to struct's environment flags
 	isLocalDevelopmentMode := IsLocalDevelopmentMode()
 	isCI := IsCI()
 	if isLocalDevelopmentMode {
