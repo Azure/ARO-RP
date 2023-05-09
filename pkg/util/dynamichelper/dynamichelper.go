@@ -51,7 +51,7 @@ type DynamicHelper struct {
 	GVRResolver
 
 	log     *logrus.Entry
-	Restcli rest.Interface
+	restcli rest.Interface
 }
 
 // New creates a new dynamichelper with the desired Interface
@@ -73,7 +73,7 @@ func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {
 	restconfig.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
 	restconfig.GroupVersion = &schema.GroupVersion{}
 
-	dh.Restcli, err = rest.RESTClientFor(restconfig)
+	dh.restcli, err = rest.RESTClientFor(restconfig)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func (dh *DynamicHelper) GetResource(ctx context.Context, groupKind, namespace, 
 		return nil, err
 	}
 
-	result, err := dh.Restcli.Get().AbsPath(makeURLSegments(gvr, namespace, name)...).Do(ctx).Get()
+	result, err := dh.restcli.Get().AbsPath(makeURLSegments(gvr, namespace, name)...).Do(ctx).Get()
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +105,7 @@ func (dh *DynamicHelper) EnsureDeleted(ctx context.Context, groupKind, namespace
 		return err
 	}
 
-	err = dh.Restcli.Delete().AbsPath(makeURLSegments(gvr, namespace, name)...).Do(ctx).Error()
+	err = dh.restcli.Delete().AbsPath(makeURLSegments(gvr, namespace, name)...).Do(ctx).Error()
 	if kerrors.IsNotFound(err) {
 		err = nil
 	}
@@ -157,10 +157,10 @@ func (dh *DynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) err
 	// Perform the update retrying if other clients are accessing the object
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		// Retrieve the old object
-		old, err := dh.Restcli.Get().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), acc.GetName())...).Do(ctx).Get()
+		old, err := dh.restcli.Get().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), acc.GetName())...).Do(ctx).Get()
 		if kerrors.IsNotFound(err) {
 			dh.log.Printf("Create %s", keyFunc(gvk.GroupKind(), acc.GetNamespace(), acc.GetName()))
-			return dh.Restcli.Post().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), "")...).Body(new).Do(ctx).Error()
+			return dh.restcli.Post().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), "")...).Body(new).Do(ctx).Error()
 		}
 		if err != nil {
 			return err
@@ -174,7 +174,7 @@ func (dh *DynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) err
 
 		dh.log.Printf("Update %s: %s", keyFunc(gvk.GroupKind(), acc.GetNamespace(), acc.GetName()), diff)
 		// Update the object in the api
-		return dh.Restcli.Put().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), acc.GetName())...).Body(new).Do(ctx).Error()
+		return dh.restcli.Put().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), acc.GetName())...).Body(new).Do(ctx).Error()
 	})
 }
 
