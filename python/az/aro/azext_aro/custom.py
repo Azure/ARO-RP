@@ -91,9 +91,9 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
         raise ResourceNotFoundError("RP service principal not found.")
 
     if rp_mode_development():
-        worker_vm_size = worker_vm_size or 'Standard_D2s_v3'
+        worker_vm_size = worker_vm_size or 'Standard_D2s_v5'
     else:
-        worker_vm_size = worker_vm_size or 'Standard_D4s_v3'
+        worker_vm_size = worker_vm_size or 'Standard_D4s_v5'
 
     if apiserver_visibility is not None:
         apiserver_visibility = apiserver_visibility.capitalize()
@@ -122,7 +122,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
             service_cidr=service_cidr or '172.30.0.0/16',
         ),
         master_profile=openshiftcluster.MasterProfile(
-            vm_size=master_vm_size or 'Standard_D8s_v3',
+            vm_size=master_vm_size or 'Standard_D8s_v5',
             subnet_id=master_subnet,
             encryption_at_host='Enabled' if master_encryption_at_host else 'Disabled',
             disk_encryption_set_id=disk_encryption_set,
