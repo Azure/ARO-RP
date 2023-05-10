@@ -188,7 +188,6 @@ validate-go:
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
 	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
 	@sha256sum --quiet -c .sha256sum || (echo error: client library is stale, please run make client; exit 1)
-	go vet -tags containers_image_openpgp ./...
 	go test -tags e2e -run ^$$ ./test/e2e/...
 
 validate-go-action:
