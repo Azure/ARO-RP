@@ -91,7 +91,8 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
         raise ResourceNotFoundError("RP service principal not found.")
 
     if rp_mode_development():
-        worker_vm_size = worker_vm_size or 'Standard_D2s_v5'
+        # the RP doesn't support sizes Standard_D2s_v5 or Standard_D2s_v4, so continue to use Standard_D2s_v3 to save cost
+        worker_vm_size = worker_vm_size or 'Standard_D2s_v3'
     else:
         worker_vm_size = worker_vm_size or 'Standard_D4s_v5'
 
