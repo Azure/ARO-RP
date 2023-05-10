@@ -28,6 +28,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/permissions"
+	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/token"
 )
@@ -400,6 +401,16 @@ func (c closure) usingListPermissions() (bool, error) {
 		c.resource.ResourceType,
 		c.resource.ResourceName,
 	)
+	if err != nil {
+		return false, err
+	}
+
+	// If we get a StatusForbidden, try refreshing the SP (since with a
+	// brand-new SP it might take time to propagate)
+	if detailedErr, ok := err.(autorest.DetailedError); ok &&
+		detailedErr.StatusCode == http.StatusForbidden {
+		return false, steps.ErrWantRefresh
+	}
 	if err != nil {
 		return false, err
 	}
