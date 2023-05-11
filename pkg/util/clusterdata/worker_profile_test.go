@@ -24,10 +24,16 @@ import (
 	errorHandling "github.com/Azure/ARO-RP/test/util/error"
 )
 
+const (
+	mockSubscriptionID = "00000000-0000-0000-0000-000000000000"
+	mockVnetRG         = "fake-vnet-rg"
+	mockVnetName       = "fake-vnet"
+	mockSubnetName     = "cluster-worker"
+)
+
 func TestWorkerProfilesEnricherTask(t *testing.T) {
 	log := logrus.NewEntry(logrus.StandardLogger())
 
-	const mockSubscriptionID = "00000000-0000-0000-0000-000000000000"
 	var clusterID = fmt.Sprintf(
 		"/subscriptions/%s/resourceGroups/group/providers/Microsoft.RedHatOpenShift/openShiftClusters/cluster",
 		mockSubscriptionID,
@@ -52,31 +58,31 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 		{
 			name:    "machine set objects exist - valid provider spec JSON",
 			client:  machinefake.NewSimpleClientset(createMachineSet("fake-worker-profile-1", validProvSpec()), createMachineSet("fake-worker-profile-2", validProvSpec())),
-			wantOc:  getWantOc(validWorkerProfile()),
+			wantOc:  getWantOc(clusterID, validWorkerProfile()),
 			givenOc: getGivenOc(clusterID),
 		},
 		{
 			name:    "machine set objects exist - invalid provider spec JSON",
 			client:  machinefake.NewSimpleClientset(createMachineSet("fake-worker-profile-1", invalidProvSpec)),
-			wantOc:  getWantOc(invalidWorkerProfile),
+			wantOc:  getWantOc(clusterID, invalidWorkerProfile),
 			givenOc: getGivenOc(clusterID),
 		},
 		{
 			name:    "machine set objects exist - provider spec is missing",
 			client:  machinefake.NewSimpleClientset(createMachineSet("fake-worker-profile-1", emptyProvSpec)),
-			wantOc:  getWantOc(invalidWorkerProfile),
+			wantOc:  getWantOc(clusterID, invalidWorkerProfile),
 			givenOc: getGivenOc(clusterID),
 		},
 		{
 			name:    "machine set objects exist - provider spec is missing raw value",
 			client:  machinefake.NewSimpleClientset(createMachineSet("fake-worker-profile-1", noRawProvSpec)),
-			wantOc:  getWantOc(invalidWorkerProfile),
+			wantOc:  getWantOc(clusterID, invalidWorkerProfile),
 			givenOc: getGivenOc(clusterID),
 		},
 		{
 			name:    "machine set objects do not exist",
 			client:  machinefake.NewSimpleClientset(),
-			wantOc:  getWantOc(emptyWorkerProfile),
+			wantOc:  getWantOc(clusterID, emptyWorkerProfile),
 			givenOc: getGivenOc(clusterID),
 		},
 		{
@@ -123,7 +129,7 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 
 // This function creates a new MachineSet object with the given name and ProviderSpec.
 func createMachineSet(name string, ProvSpec machinev1beta1.ProviderSpec) *machinev1beta1.MachineSet {
-	machset := &machinev1beta1.MachineSet{
+	return &machinev1beta1.MachineSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: "openshift-machine-api",
@@ -140,18 +146,10 @@ func createMachineSet(name string, ProvSpec machinev1beta1.ProviderSpec) *machin
 			},
 		},
 	}
-
-	return machset
 }
 
 // This func returns a ProviderSpec object that represents a valid provider-specific configuration for a machine.
 func validProvSpec() machinev1beta1.ProviderSpec {
-	const (
-		mockVnetRG     = "fake-vnet-rg"
-		mockVnetName   = "fake-vnet"
-		mockSubnetName = "cluster-worker"
-	)
-
 	return machinev1beta1.ProviderSpec{
 		Value: &kruntime.RawExtension{
 			Raw: []byte(fmt.Sprintf(`{
@@ -190,15 +188,9 @@ func getGivenOc(clusterid string) *api.OpenShiftCluster {
 
 // This function creates and returns an OpenShiftCluster object
 // with the given worker profiles.
-func getWantOc(workerprofile []api.WorkerProfile) *api.OpenShiftCluster {
-	const mockSubscriptionID = "00000000-0000-0000-0000-000000000000"
-	var clusterID = fmt.Sprintf(
-		"/subscriptions/%s/resourceGroups/group/providers/Microsoft.RedHatOpenShift/openShiftClusters/cluster",
-		mockSubscriptionID,
-	)
-
+func getWantOc(clusID string, workerprofile []api.WorkerProfile) *api.OpenShiftCluster {
 	return &api.OpenShiftCluster{
-		ID: clusterID,
+		ID: clusID,
 		Properties: api.OpenShiftClusterProperties{
 			WorkerProfiles: workerprofile,
 		},
@@ -207,13 +199,6 @@ func getWantOc(workerprofile []api.WorkerProfile) *api.OpenShiftCluster {
 
 // This func returns an api.WorkerProfile object that represents a valid worker profile for a machine.
 func validWorkerProfile() []api.WorkerProfile {
-	const (
-		mockSubscriptionID = "00000000-0000-0000-0000-000000000000"
-		mockVnetRG         = "fake-vnet-rg"
-		mockVnetName       = "fake-vnet"
-		mockSubnetName     = "cluster-worker"
-	)
-
 	var workerSubnetID = fmt.Sprintf(
 		"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/%s/subnets/%s",
 		mockSubscriptionID, mockVnetRG, mockVnetName, mockSubnetName,
