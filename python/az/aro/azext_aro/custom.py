@@ -89,7 +89,8 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
         location=location,
         version=version,
         pod_cidr=pod_cidr,
-        service_cidr=service_cidr
+        service_cidr=service_cidr,
+        warnings_as_text=True
         )
 
     subscription_id = get_subscription_id(cmd.cli_ctx)
@@ -191,7 +192,8 @@ def aro_validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
                  location=None,  # pylint: disable=unused-argument
                  version=None,
                  pod_cidr=None,  # pylint: disable=unused-argument
-                 service_cidr=None  # pylint: disable=unused-argument
+                 service_cidr=None,  # pylint: disable=unused-argument
+                 warnings_as_text=False
                  ):
 
     class mockoc:  # pylint: disable=too-few-public-methods
@@ -237,7 +239,7 @@ def aro_validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
     error_objects = validate_cluster_create(version,
                                             resources,
                                             sp_obj_ids)
-    errors = []
+    errors_and_warnings = []
     for error_func in error_objects:
         namespace = collections.namedtuple("Namespace", locals().keys())(*locals().values())
         error_obj = error_func(cmd, namespace)
@@ -247,16 +249,36 @@ def aro_validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
                 new_err = []
                 for txt in err:
                     new_err.append(textwrap.fill(txt, width=160))
-                errors.append(new_err)
+                errors_and_warnings.append(new_err)
+
+    if len(errors_and_warnings) > 0:
+        # Separate errors and warnings into separate arrays
+        warnings=[]
+        errors=[]
+        for issue in errors_and_warnings:
+            if issue[2] == "Warning":
+                warnings.append(issue)
+            else:
+                errors.append(issue)
+    else:
+        logger.info("No validation errors or warnings")
+    
+    if len(warnings) > 0:
+        if len(errors) == 0 and warnings_as_text:
+            full_msg="The following issues will have a minor impact on cluster creation:"
+            for warning in warnings:
+                full_msg = full_msg + f"\n{warning[3]}"
+        else:
+            headers = ["Type", "Name", "Error"]
+            table = tabulate(warnings, headers=headers, tablefmt="grid")
+            full_msg = f"The following issues will have a minor impact on cluster creation:\n{table}"
+        logger.warning(full_msg)
 
     if len(errors) > 0:
         headers = ["Type", "Name", "Error"]
         table = tabulate(errors, headers=headers, tablefmt="grid")
-        full_err = f"Issues found blocking cluster creation.\n{table}"
-        logger.error(full_err)
-        raise ValidationError(full_err)
-    else:
-        logger.info("No Issues on subscription blocking cluster creation")
+        full_msg = f"The following errors are fatal and will block cluster creation:\n{table}"
+        raise ValidationError(full_msg)
 
 
 def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False):
