@@ -53,8 +53,13 @@ func TestSupportedvmsizes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			f := &frontend{}
 			gotResponse, err := f.supportedVMSizesForRole(tt.vmRole)
-			if err != nil && err.Error() != tt.wantError || err == nil && tt.wantError != "" {
+			// err is not nil, but not the expected error
+			if err != nil && err.Error() != tt.wantError {
 				t.Error(err)
+			}
+			// err is nil but we expected an error
+			if err == nil && tt.wantError != "" {
+				t.Errorf("unexpected error %v , wanted error %s", err, tt.wantError)
 			}
 			// if gotResponse and wantResponse are nil, skip
 			if gotResponse != nil || tt.wantResponse != nil {
