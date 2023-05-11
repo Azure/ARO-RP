@@ -146,7 +146,6 @@ func createMachineSet(name string, ProvSpec machinev1beta1.ProviderSpec) *machin
 
 // This func returns a ProviderSpec object that represents a valid provider-specific configuration for a machine.
 func validProvSpec() machinev1beta1.ProviderSpec {
-
 	const (
 		mockVnetRG     = "fake-vnet-rg"
 		mockVnetName   = "fake-vnet"
@@ -192,7 +191,6 @@ func getGivenOc(clusterid string) *api.OpenShiftCluster {
 // This function creates and returns an OpenShiftCluster object
 // with the given worker profiles.
 func getWantOc(workerprofile []api.WorkerProfile) *api.OpenShiftCluster {
-
 	const mockSubscriptionID = "00000000-0000-0000-0000-000000000000"
 	var clusterID = fmt.Sprintf(
 		"/subscriptions/%s/resourceGroups/group/providers/Microsoft.RedHatOpenShift/openShiftClusters/cluster",
@@ -209,7 +207,6 @@ func getWantOc(workerprofile []api.WorkerProfile) *api.OpenShiftCluster {
 
 // This func returns an api.WorkerProfile object that represents a valid worker profile for a machine.
 func validWorkerProfile() []api.WorkerProfile {
-
 	const (
 		mockSubscriptionID = "00000000-0000-0000-0000-000000000000"
 		mockVnetRG         = "fake-vnet-rg"
