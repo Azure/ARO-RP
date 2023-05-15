@@ -19,6 +19,7 @@ import (
 // etc.)
 type Core interface {
 	IsLocalDevelopmentMode() bool
+	IsCI() bool
 	NewMSIAuthorizer(MSIContext, ...string) (autorest.Authorizer, error)
 	NewLiveConfigManager(context.Context) (liveconfig.Manager, error)
 	instancemetadata.InstanceMetadata
@@ -28,10 +29,15 @@ type core struct {
 	instancemetadata.InstanceMetadata
 
 	isLocalDevelopmentMode bool
+	isCI                   bool
 }
 
 func (c *core) IsLocalDevelopmentMode() bool {
 	return c.isLocalDevelopmentMode
+}
+
+func (c *core) IsCI() bool {
+	return c.isCI
 }
 
 func (c *core) NewLiveConfigManager(ctx context.Context) (liveconfig.Manager, error) {
@@ -50,7 +56,9 @@ func (c *core) NewLiveConfigManager(ctx context.Context) (liveconfig.Manager, er
 }
 
 func NewCore(ctx context.Context, log *logrus.Entry) (Core, error) {
+	// assign results of package-level functions to struct's environment flags
 	isLocalDevelopmentMode := IsLocalDevelopmentMode()
+	isCI := IsCI()
 	if isLocalDevelopmentMode {
 		log.Info("running in local development mode")
 	}
@@ -66,6 +74,7 @@ func NewCore(ctx context.Context, log *logrus.Entry) (Core, error) {
 		InstanceMetadata: im,
 
 		isLocalDevelopmentMode: isLocalDevelopmentMode,
+		isCI:                   isCI,
 	}, nil
 }
 
