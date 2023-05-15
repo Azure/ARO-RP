@@ -271,11 +271,20 @@ type NetworkProfile struct {
 	MTUSize                MTUSize                `json:"mtuSize,omitempty"`
 	OutboundType           OutboundType           `json:"outboundType,omitempty"`
 
-	APIServerPrivateEndpointIP string `json:"privateEndpointIp,omitempty"`
-	GatewayPrivateEndpointIP   string `json:"gatewayPrivateEndpointIp,omitempty"`
-	GatewayPrivateLinkID       string `json:"gatewayPrivateLinkId,omitempty"`
-	PreconfiguredNSG           bool   `json:"preconfigureNSG,omitempty"`
+	APIServerPrivateEndpointIP string           `json:"privateEndpointIp,omitempty"`
+	GatewayPrivateEndpointIP   string           `json:"gatewayPrivateEndpointIp,omitempty"`
+	GatewayPrivateLinkID       string           `json:"gatewayPrivateLinkId,omitempty"`
+	PreconfiguredNSG           PreconfiguredNSG `json:"preconfiguredNSG,omitempty"`
 }
+
+// PreconfiguredNSG represents whether customers want to use their own NSG attached to the subnets
+type PreconfiguredNSG string
+
+// PreconfiguredNSG constants
+const (
+	PreconfiguredNSGEnabled  PreconfiguredNSG = "Enabled"
+	PreconfiguredNSGDisabled PreconfiguredNSG = "Disabled"
+)
 
 // EncryptionAtHost represents encryption at host.
 type EncryptionAtHost string

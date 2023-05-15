@@ -174,7 +174,7 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 }
 
 func (m *manager) attachNSGs(ctx context.Context) error {
-	if m.doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG {
+	if m.doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG == api.PreconfiguredNSGEnabled {
 		return nil
 	}
 

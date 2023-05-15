@@ -21,6 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	"github.com/Azure/ARO-RP/pkg/util/feature"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -196,6 +197,12 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		}
 		// TODO: Remove this once 23-04-01 API release is complete.
 		determineOutboundType(ctx, doc, subscription)
+
+		// TODO remove this when introducing the BYONSG CLI option
+		if feature.IsRegisteredForFeature(subscription.Subscription.Properties, api.FeatureFlagPreconfiguredNSG) {
+			log.Logger.Info("PreconfiguredNSG feature flag is on")
+			doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
+		}
 	} else {
 		doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
 

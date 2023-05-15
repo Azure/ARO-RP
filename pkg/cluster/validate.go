@@ -22,9 +22,9 @@ func (m *manager) validateResources(ctx context.Context) error {
 	// If the validation found that it's no longer BYONSG, update the doc
 	// TODO this very like not needed when the API change for BYONSG is introduced
 	if byoNSG != m.doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG {
-		m.log.Infof("No longer BYONSG, updating the doc's flag from %t to %t", byoNSG, m.doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG)
+		m.log.Infof("No longer BYONSG, updating the doc's flag from %s to %s", byoNSG, m.doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG)
 		m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-			doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG = !byoNSG
+			doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGDisabled
 			return nil
 		})
 	}

@@ -857,6 +857,7 @@ func TestValidateSubnets(t *testing.T) {
 			name: "pass: provisioning state creating: subnet has expected NSG attached",
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.ProvisioningState = api.ProvisioningStateCreating
+				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGDisabled
 			},
 			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
 				vnetClient.EXPECT().
@@ -868,6 +869,7 @@ func TestValidateSubnets(t *testing.T) {
 			name: "fail: provisioning state creating: subnet has incorrect NSG attached",
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.ProvisioningState = api.ProvisioningStateCreating
+				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGDisabled
 			},
 			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
 				(*vnet.Subnets)[0].NetworkSecurityGroup.ID = to.StringPtr("not-the-correct-nsg")
@@ -876,6 +878,19 @@ func TestValidateSubnets(t *testing.T) {
 					Return(vnet, nil)
 			},
 			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + masterSubnet + "' is invalid: must not have a network security group attached.",
+		},
+		{
+			name: "pass: byonsg skips validating if an NSG is attached",
+			modifyOC: func(oc *api.OpenShiftCluster) {
+				oc.Properties.ProvisioningState = api.ProvisioningStateCreating
+				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
+			},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				(*vnet.Subnets)[0].NetworkSecurityGroup.ID = to.StringPtr("attached")
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
 		},
 		{
 			name: "fail: invalid architecture version returns no NSG",
@@ -897,7 +912,52 @@ func TestValidateSubnets(t *testing.T) {
 					Get(gomock.Any(), resourceGroupName, vnetName, "").
 					Return(vnet, nil)
 			},
+			modifyOC: func(oc *api.OpenShiftCluster) {
+				oc.Properties.ProvisioningState = api.ProvisioningStateUpdating
+				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGDisabled
+			},
 			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + masterSubnet + "' is invalid: must have network security group '" + masterNSGv1 + "' attached.",
+		},
+		{
+			name: "pass: byonsg doesn't check if nsg ids are matched after creating",
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				(*vnet.Subnets)[0].NetworkSecurityGroup.ID = to.StringPtr("don't care what it is")
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
+			modifyOC: func(oc *api.OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
+				oc.Properties.ProvisioningState = api.ProvisioningStateUpdating
+			},
+		},
+		{
+			name: "fail: no nsg attached during update",
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				(*vnet.Subnets)[0].NetworkSecurityGroup.ID = nil
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
+			modifyOC: func(oc *api.OpenShiftCluster) {
+				oc.Properties.ProvisioningState = api.ProvisioningStateUpdating
+				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGDisabled
+			},
+			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + masterSubnet + "' is invalid: must have network security group '" + masterNSGv1 + "' attached.",
+		},
+		{
+			name: "fail: byonsg requires an nsg to be attached during update",
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				(*vnet.Subnets)[0].NetworkSecurityGroup.ID = nil
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
+			modifyOC: func(oc *api.OpenShiftCluster) {
+				oc.Properties.ProvisioningState = api.ProvisioningStateUpdating
+				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
+			},
+			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '" + masterSubnet + "' is invalid: must have a network security group attached.",
 		},
 		{
 			name: "fail: invalid subnet CIDR",
@@ -1437,10 +1497,10 @@ func TestCheckBYONsg(t *testing.T) {
 	}
 
 	for _, tt := range []struct {
-		name       string
-		subnetByID map[string]*mgmtnetwork.Subnet
-		byoNSG     bool
-		wantErr    string
+		name             string
+		subnetByID       map[string]*mgmtnetwork.Subnet
+		preconfiguredNSG api.PreconfiguredNSG
+		wantErr          string
 	}{
 		{
 			name: "pass: all subnets are attached (BYONSG)",
@@ -1448,7 +1508,7 @@ func TestCheckBYONsg(t *testing.T) {
 				"A": subnetWithNSG,
 				"B": subnetWithNSG,
 			},
-			byoNSG: true,
+			preconfiguredNSG: api.PreconfiguredNSGEnabled,
 		},
 		{
 			name: "pass: no subnets are attached (no longer BYONSG)",
@@ -1456,7 +1516,7 @@ func TestCheckBYONsg(t *testing.T) {
 				"A": subnetWithoutNSG,
 				"B": subnetWithoutNSG,
 			},
-			byoNSG: false,
+			preconfiguredNSG: api.PreconfiguredNSGDisabled,
 		},
 		{
 			name: "fail: parts of the subnets are attached",
@@ -1465,18 +1525,18 @@ func TestCheckBYONsg(t *testing.T) {
 				"B": subnetWithoutNSG,
 				"C": subnetWithNSG,
 			},
-			byoNSG:  false,
-			wantErr: "400: InvalidLinkedVNet: : When the enable-preconfigured-nsg option is specified, both the master and worker subnets should have network security groups (NSG) attached to them before starting the cluster installation.",
+			preconfiguredNSG: api.PreconfiguredNSGDisabled,
+			wantErr:          "400: InvalidLinkedVNet: : When the enable-preconfigured-nsg option is specified, both the master and worker subnets should have network security groups (NSG) attached to them before starting the cluster installation.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			dv := &dynamic{
 				log: logrus.NewEntry(logrus.StandardLogger()),
 			}
-			byoNSG, err := dv.checkByoNSG(tt.subnetByID)
+			preconfiguredNSG, err := dv.checkPreconfiguredNSG(tt.subnetByID)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-			if byoNSG != tt.byoNSG {
-				t.Errorf("byoNSG got %t, want %t", byoNSG, tt.byoNSG)
+			if preconfiguredNSG != tt.preconfiguredNSG {
+				t.Errorf("preconfiguredNSG got %s, want %s", preconfiguredNSG, tt.preconfiguredNSG)
 			}
 		})
 	}

@@ -16,6 +16,7 @@ func validOpenShiftClusterDocument() *OpenShiftClusterDocument {
 				NetworkProfile: NetworkProfile{
 					SoftwareDefinedNetwork: SoftwareDefinedNetworkOpenShiftSDN,
 					OutboundType:           OutboundTypeLoadbalancer,
+					PreconfiguredNSG:       PreconfiguredNSGDisabled,
 				},
 				MasterProfile: MasterProfile{
 					EncryptionAtHost: EncryptionAtHostDisabled,

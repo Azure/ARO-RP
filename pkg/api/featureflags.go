@@ -23,7 +23,7 @@ const (
 	// API in production. The toggle will be removed once the testing has been completed.
 	FeatureFlagCheckAccessTestToggle = "Microsoft.RedHatOpenShift/CheckAccessTestToggle"
 
-	// FeatureFlagBYONsg is used for indicating whether a customer subscription
-	// is registered for BYO NSG feature.
-	FeatureFlagBYONsg = "Microsoft.RedHatOpenShift/BYONsg"
+	// FeatureFlagPreconfiguredNSG is used for indicating whether a customer subscription
+	// is registered for customer bringing their own NSG
+	FeatureFlagPreconfiguredNSG = "Microsoft.RedHatOpenShift/PreconfiguredNSG"
 )
