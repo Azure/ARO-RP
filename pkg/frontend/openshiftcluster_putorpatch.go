@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -37,10 +37,13 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 	originalPath := r.Context().Value(middleware.ContextKeyOriginalPath).(string)
 	referer := r.Header.Get("Referer")
 
+	subId := chi.URLParam(r, "subscriptionId")
+	resourceProviderNamespace := chi.URLParam(r, "resourceProviderNamespace")
+
 	apiVersion := r.URL.Query().Get(api.APIVersionKey)
 	err := cosmosdb.RetryOnPreconditionFailed(func() error {
 		var err error
-		b, err = f._putOrPatchOpenShiftCluster(ctx, log, body, correlationData, systemData, r.URL.Path, originalPath, r.Method, referer, &header, f.apis[apiVersion].OpenShiftClusterConverter, f.apis[apiVersion].OpenShiftClusterStaticValidator, mux.Vars(r), apiVersion)
+		b, err = f._putOrPatchOpenShiftCluster(ctx, log, body, correlationData, systemData, r.URL.Path, originalPath, r.Method, referer, &header, f.apis[apiVersion].OpenShiftClusterConverter, f.apis[apiVersion].OpenShiftClusterStaticValidator, subId, resourceProviderNamespace, apiVersion)
 		return err
 	})
 
@@ -48,7 +51,7 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 	reply(log, w, header, b, err)
 }
 
-func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.Entry, body []byte, correlationData *api.CorrelationData, systemData *api.SystemData, path, originalPath, method, referer string, header *http.Header, converter api.OpenShiftClusterConverter, staticValidator api.OpenShiftClusterStaticValidator, vars map[string]string, apiVersion string) ([]byte, error) {
+func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.Entry, body []byte, correlationData *api.CorrelationData, systemData *api.SystemData, path, originalPath, method, referer string, header *http.Header, converter api.OpenShiftClusterConverter, staticValidator api.OpenShiftClusterStaticValidator, subId, resourceProviderNamespace string, apiVersion string) ([]byte, error) {
 	subscription, err := f.validateSubscriptionState(ctx, path, api.SubscriptionStateRegistered)
 	if err != nil {
 		return nil, err
@@ -113,8 +116,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 
-		ocEnricher := f.ocEnricherFactory(log, f.env, f.m)
-		ocEnricher.Enrich(timeoutCtx, doc.OpenShiftCluster)
+		f.clusterEnricher.Enrich(timeoutCtx, log, doc.OpenShiftCluster)
 	}
 
 	var ext interface{}
@@ -192,6 +194,8 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		if err != nil {
 			return nil, err
 		}
+		// TODO: Remove this once 23-04-01 API release is complete.
+		determineOutboundType(ctx, doc, subscription)
 	} else {
 		doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
 
@@ -208,8 +212,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	// SetDefaults will set defaults on cluster document
 	api.SetDefaults(doc)
 
-	subId := vars["subscriptionId"]
-	resourceProviderNamespace := vars["resourceProviderNamespace"]
 	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, subId, resourceProviderNamespace, doc)
 	if err != nil {
 		return nil, err
@@ -285,5 +287,21 @@ func (f *frontend) ValidateNewCluster(ctx context.Context, subscription *api.Sub
 	if err != nil {
 		return err
 	}
-	return f.quotaValidator.ValidateQuota(ctx, f.env.Environment(), f.env, subscription.ID, subscription.Subscription.Properties.TenantID, cluster)
+
+	err = f.skuValidator.ValidateVMSku(ctx, f.env.Environment(), f.env, subscription.ID, subscription.Subscription.Properties.TenantID, cluster)
+	if err != nil {
+		return err
+	}
+
+	err = f.quotaValidator.ValidateQuota(ctx, f.env.Environment(), f.env, subscription.ID, subscription.Subscription.Properties.TenantID, cluster)
+	if err != nil {
+		return err
+	}
+
+	err = f.providersValidator.ValidateProviders(ctx, f.env.Environment(), f.env, subscription.ID, subscription.Subscription.Properties.TenantID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

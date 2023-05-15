@@ -11,7 +11,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -22,17 +22,17 @@ import (
 func (f *frontend) getOpenShiftClusters(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
-	vars := mux.Vars(r)
+	resourceGroupName := chi.URLParam(r, "resourceGroupName")
+	subscriptionId := chi.URLParam(r, "subscriptionId")
 
 	b, err := f._getOpenShiftClusters(ctx, log, r, f.apis[r.URL.Query().Get(api.APIVersionKey)].OpenShiftClusterConverter, func(skipToken string) (cosmosdb.OpenShiftClusterDocumentIterator, error) {
-		prefix := "/subscriptions/" + vars["subscriptionId"] + "/"
-		if vars["resourceGroupName"] != "" {
-			prefix += "resourcegroups/" + vars["resourceGroupName"] + "/"
+		prefix := "/subscriptions/" + subscriptionId + "/"
+		if resourceGroupName != "" {
+			prefix += "resourcegroups/" + resourceGroupName + "/"
 		}
 
-		return f.dbOpenShiftClusters.ListByPrefix(vars["subscriptionId"], prefix, skipToken)
+		return f.dbOpenShiftClusters.ListByPrefix(subscriptionId, prefix, skipToken)
 	})
-
 	reply(log, w, nil, b, err)
 }
 
@@ -62,8 +62,7 @@ func (f *frontend) _getOpenShiftClusters(ctx context.Context, log *logrus.Entry,
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	ocEnricher := f.ocEnricherFactory(log, f.env, f.m)
-	ocEnricher.Enrich(timeoutCtx, ocs...)
+	f.clusterEnricher.Enrich(timeoutCtx, log, ocs...)
 
 	for i := range ocs {
 		ocs[i].Properties.ClusterProfile.PullSecret = ""

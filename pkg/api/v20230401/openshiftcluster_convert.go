@@ -36,8 +36,9 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 				ClientSecret: string(oc.Properties.ServicePrincipalProfile.ClientSecret),
 			},
 			NetworkProfile: NetworkProfile{
-				PodCIDR:     oc.Properties.NetworkProfile.PodCIDR,
-				ServiceCIDR: oc.Properties.NetworkProfile.ServiceCIDR,
+				PodCIDR:      oc.Properties.NetworkProfile.PodCIDR,
+				ServiceCIDR:  oc.Properties.NetworkProfile.ServiceCIDR,
+				OutboundType: OutboundType(oc.Properties.NetworkProfile.OutboundType),
 			},
 			MasterProfile: MasterProfile{
 				VMSize:              VMSize(oc.Properties.MasterProfile.VMSize),
@@ -142,6 +143,7 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	out.Properties.ServicePrincipalProfile.ClientSecret = api.SecureString(oc.Properties.ServicePrincipalProfile.ClientSecret)
 	out.Properties.NetworkProfile.PodCIDR = oc.Properties.NetworkProfile.PodCIDR
 	out.Properties.NetworkProfile.ServiceCIDR = oc.Properties.NetworkProfile.ServiceCIDR
+	out.Properties.NetworkProfile.OutboundType = api.OutboundType(oc.Properties.NetworkProfile.OutboundType)
 	out.Properties.MasterProfile.VMSize = api.VMSize(oc.Properties.MasterProfile.VMSize)
 	out.Properties.MasterProfile.SubnetID = oc.Properties.MasterProfile.SubnetID
 	out.Properties.MasterProfile.EncryptionAtHost = api.EncryptionAtHost(oc.Properties.MasterProfile.EncryptionAtHost)

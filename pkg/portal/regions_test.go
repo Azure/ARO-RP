@@ -40,7 +40,7 @@ func TestRegionListPublic(t *testing.T) {
 	}
 
 	aadAuthenticatedRouter := mux.NewRouter()
-	p.aadAuthenticatedRoutes(aadAuthenticatedRouter)
+	p.aadAuthenticatedRoutes(aadAuthenticatedRouter, nil, nil, nil)
 	w := httptest.NewRecorder()
 	aadAuthenticatedRouter.ServeHTTP(w, req)
 
@@ -251,7 +251,7 @@ func TestRegionListFF(t *testing.T) {
 	}
 
 	aadAuthenticatedRouter := mux.NewRouter()
-	p.aadAuthenticatedRoutes(aadAuthenticatedRouter)
+	p.aadAuthenticatedRoutes(aadAuthenticatedRouter, nil, nil, nil)
 	w := httptest.NewRecorder()
 	aadAuthenticatedRouter.ServeHTTP(w, req)
 

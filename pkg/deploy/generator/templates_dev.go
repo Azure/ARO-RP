@@ -33,7 +33,6 @@ func (g *generator) devSharedTemplate() *arm.Template {
 		g.devVnet(),
 		g.devVPNVnet(),
 		g.devVPN(),
-		g.devCIPool(),
 		g.devDiskEncryptionKeyvault(),
 		g.devDiskEncryptionKey(),
 		g.devDiskEncryptionKeyVaultAccessPolicy(),
@@ -81,9 +80,6 @@ func (g *generator) devSharedTemplate() *arm.Template {
 		))
 
 	for _, param := range []string{
-		"ciAzpToken",
-		"ciCapacity",
-		"ciPoolName",
 		"proxyCert",
 		"proxyClientCert",
 		"proxyDomainNameLabel",
@@ -98,11 +94,6 @@ func (g *generator) devSharedTemplate() *arm.Template {
 		typ := "string"
 		var defaultValue interface{}
 		switch param {
-		case "ciAzpToken", "ciPoolName":
-			defaultValue = ""
-		case "ciCapacity":
-			typ = "int"
-			defaultValue = 0
 		case "proxyImageAuth", "proxyKey":
 			typ = "securestring"
 		case "publicIPAddressAllocationMethod":

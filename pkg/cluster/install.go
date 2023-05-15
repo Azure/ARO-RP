@@ -31,7 +31,7 @@ import (
 // AdminUpdate performs an admin update of an ARO cluster
 func (m *manager) AdminUpdate(ctx context.Context) error {
 	toRun := m.adminUpdate()
-	return m.runSteps(ctx, toRun, false)
+	return m.runSteps(ctx, toRun, "adminUpdate")
 }
 
 func (m *manager) adminUpdate() []steps.Step {
@@ -52,9 +52,9 @@ func (m *manager) adminUpdate() []steps.Step {
 
 	if isEverything {
 		toRun = append(toRun,
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)), // re-create RP RBAC if needed after tenant migration
+			steps.Action(m.ensureResourceGroup), // re-create RP RBAC if needed after tenant migration
 			steps.Action(m.createOrUpdateDenyAssignment),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.enableServiceEndpoints)),
+			steps.Action(m.enableServiceEndpoints),
 			steps.Action(m.populateRegistryStorageAccountName), // must go before migrateStorageAccounts
 			steps.Action(m.migrateStorageAccounts),
 			steps.Action(m.fixSSH),
@@ -161,7 +161,7 @@ func (m *manager) clusterWasCreatedByHive() bool {
 
 func (m *manager) Update(ctx context.Context) error {
 	s := []steps.Step{
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
+		steps.Action(m.validateResources),
 		steps.Action(m.initializeKubernetesClients), // All init steps are first
 		steps.Action(m.initializeOperatorDeployer),  // depends on kube clients
 		steps.Action(m.initializeClusterSPClients),
@@ -189,7 +189,7 @@ func (m *manager) Update(ctx context.Context) error {
 		)
 	}
 
-	return m.runSteps(ctx, s, false)
+	return m.runSteps(ctx, s, "update")
 }
 
 func (m *manager) runIntegratedInstaller(ctx context.Context) error {
@@ -229,25 +229,24 @@ func setFieldCreatedByHive(createdByHive bool) database.OpenShiftClusterDocument
 
 func (m *manager) bootstrap() []steps.Step {
 	s := []steps.Step{
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources),
 		steps.Action(m.ensureACRToken),
 		steps.Action(m.ensureInfraID),
 		steps.Action(m.ensureSSHKey),
 		steps.Action(m.ensureStorageSuffix),
 		steps.Action(m.populateMTUSize),
-		steps.Action(m.determineOutboundType),
 
 		steps.Action(m.createDNS),
 		steps.Action(m.initializeClusterSPClients), // must run before clusterSPObjectID
 		steps.Action(m.clusterSPObjectID),
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureResourceGroup)),
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.enableServiceEndpoints)),
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.setMasterSubnetPolicies)),
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.deployStorageTemplate)),
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.attachNSGs)),
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.updateAPIIPEarly)),
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.createOrUpdateRouterIPEarly)),
-		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.ensureGatewayCreate)),
+		steps.Action(m.ensureResourceGroup),
+		steps.Action(m.enableServiceEndpoints),
+		steps.Action(m.setMasterSubnetPolicies),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.deployBaseResourceTemplate),
+		steps.Action(m.attachNSGs),
+		steps.Action(m.updateAPIIPEarly),
+		steps.Action(m.createOrUpdateRouterIPEarly),
+		steps.Action(m.ensureGatewayCreate),
 		steps.Action(m.createAPIServerPrivateEndpoint),
 		steps.Action(m.createCertificates),
 	}
@@ -265,12 +264,12 @@ func (m *manager) bootstrap() []steps.Step {
 			// all of bootstrapping being complete
 			steps.Condition(m.hiveClusterInstallationComplete, 60*time.Minute, true),
 			steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.generateKubeconfigs)),
+			steps.Action(m.generateKubeconfigs),
 		)
 	} else {
 		s = append(s,
 			steps.Action(m.runIntegratedInstaller),
-			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.generateKubeconfigs)),
+			steps.Action(m.generateKubeconfigs),
 		)
 
 		if m.adoptViaHive {
@@ -337,21 +336,24 @@ func (m *manager) Install(ctx context.Context) error {
 		return fmt.Errorf("unrecognised phase %s", m.doc.OpenShiftCluster.Properties.Install.Phase)
 	}
 	m.log.Printf("starting phase %s", m.doc.OpenShiftCluster.Properties.Install.Phase)
-	return m.runSteps(ctx, steps[m.doc.OpenShiftCluster.Properties.Install.Phase], true)
+	return m.runSteps(ctx, steps[m.doc.OpenShiftCluster.Properties.Install.Phase], "install")
 }
 
-func (m *manager) runSteps(ctx context.Context, s []steps.Step, emitMetrics bool) error {
+func (m *manager) runSteps(ctx context.Context, s []steps.Step, metricsTopic string) error {
 	var err error
-	if emitMetrics {
+	if metricsTopic != "" {
 		var stepsTimeRun map[string]int64
 		stepsTimeRun, err = steps.Run(ctx, m.log, 10*time.Second, s, m.now)
 		if err == nil {
 			var totalInstallTime int64
-			for topic, duration := range stepsTimeRun {
-				m.metricsEmitter.EmitGauge(fmt.Sprintf("backend.openshiftcluster.installtime.%s", topic), duration, nil)
+			for stepName, duration := range stepsTimeRun {
+				metricName := fmt.Sprintf("backend.openshiftcluster.%s.%s.duration.seconds", metricsTopic, stepName)
+				m.metricsEmitter.EmitGauge(metricName, duration, nil)
 				totalInstallTime += duration
 			}
-			m.metricsEmitter.EmitGauge("backend.openshiftcluster.installtime.total", totalInstallTime, nil)
+
+			metricName := fmt.Sprintf("backend.openshiftcluster.%s.duration.total.seconds", metricsTopic)
+			m.metricsEmitter.EmitGauge(metricName, totalInstallTime, nil)
 		}
 	} else {
 		_, err = steps.Run(ctx, m.log, 10*time.Second, s, nil)

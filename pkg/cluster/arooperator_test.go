@@ -14,6 +14,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_deploy "github.com/Azure/ARO-RP/pkg/util/mocks/operator/deploy"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestEnsureAROOperator(t *testing.T) {
@@ -121,10 +122,7 @@ func TestEnsureAROOperator(t *testing.T) {
 			}
 
 			err := m.ensureAROOperator(ctx)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

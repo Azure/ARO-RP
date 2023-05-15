@@ -52,6 +52,7 @@ func (ocb *openShiftClusterBackend) try(ctx context.Context) (bool, error) {
 	log := ocb.baseLog
 	log = utillog.EnrichWithResourceID(log, doc.OpenShiftCluster.ID)
 	log = utillog.EnrichWithCorrelationData(log, doc.CorrelationData)
+	log = utillog.EnrichWithClusterVersion(log, doc.OpenShiftCluster.Properties.ClusterProfile.Version)
 
 	if doc.Dequeues > maxDequeueCount {
 		err := fmt.Errorf("dequeued %d times, failing", doc.Dequeues)
@@ -259,6 +260,7 @@ func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, lo
 			}
 
 			if oc != nil {
+				//nolint:govet
 				ocCopy := *oc
 				ocCopy.Properties.ProvisioningState = provisioningState
 				ocCopy.Properties.LastProvisioningState = ""

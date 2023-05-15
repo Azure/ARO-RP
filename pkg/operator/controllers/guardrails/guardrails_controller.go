@@ -116,7 +116,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			}
 
 			// Deploy the GateKeeper Constraint
-			err = r.ensurePolicy(ctx, gkPolicyConraints, gkConstraintsPath)
+			err = r.ensurePolicy(ctx, gkPolicyConstraints, gkConstraintsPath)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
@@ -129,7 +129,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			// stop the gatekeeper policies re-enforce ticker
 			r.stopTicker()
 
-			err = r.removePolicy(ctx, gkPolicyConraints, gkConstraintsPath)
+			err = r.removePolicy(ctx, gkPolicyConstraints, gkConstraintsPath)
 			if err != nil {
 				return reconcile.Result{}, err
 			}

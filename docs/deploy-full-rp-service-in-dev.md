@@ -24,6 +24,12 @@
     . ./env-int
     ```
 
+1. If you plan on using hive to install the cluster, set your hive environment variables
+    ```bash
+    export ARO_INSTALL_VIA_HIVE=true
+    export ARO_ADOPT_BY_HIVE=true
+    ```
+
 1. Generate the development RP configuration
     ```bash
     make dev-config.yaml
@@ -262,6 +268,11 @@
     ```
 
     > __NOTE:__ `make tunnel` will print the public IP of your new RP VM NIC. Ensure that it's correct.
+
+1. Update the versions present available to install (run this as many times as you need for versions)
+    ```bash
+    curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '{ "properties": { "version": "4.x.y", "enabled": true, "openShiftPullspec": "quay.io/openshift-release-dev/ocp-release@sha256:<sha256>", "installerPullspec": "<name>.azurecr.io/installer:release-4.x" }}'
+    ```
 
 1. Update environment variable to deploy in a different resource group
     ```bash

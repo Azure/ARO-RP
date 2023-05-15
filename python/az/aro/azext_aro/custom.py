@@ -1,9 +1,11 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the Apache License 2.0.
 
+import collections
 import random
 import os
 from base64 import b64decode
+import textwrap
 
 import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2022_09_04.models as openshiftcluster
 
@@ -18,12 +20,15 @@ from azext_aro._rbac import assign_role_to_resource, \
     has_role_assignment_on_resource
 from azext_aro._rbac import ROLE_NETWORK_CONTRIBUTOR, ROLE_READER
 from azext_aro._validators import validate_subnets
+from azext_aro._dynamic_validators import validate_cluster_create
 
 from knack.log import get_logger
 
 from msrestazure.azure_exceptions import CloudError
 from msrestazure.tools import resource_id, parse_resource_id
 from msrest.exceptions import HttpOperationError
+
+from tabulate import tabulate
 
 logger = get_logger(__name__)
 
@@ -153,6 +158,89 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                        parameters=oc)
 
 
+def aro_validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
+                 client,  # pylint: disable=unused-argument
+                 resource_group_name,  # pylint: disable=unused-argument
+                 resource_name,  # pylint: disable=unused-argument
+                 master_subnet,
+                 worker_subnet,
+                 vnet=None,
+                 cluster_resource_group=None,  # pylint: disable=unused-argument
+                 client_id=None,
+                 client_secret=None,  # pylint: disable=unused-argument
+                 vnet_resource_group_name=None,  # pylint: disable=unused-argument
+                 disk_encryption_set=None,
+                 location=None,  # pylint: disable=unused-argument
+                 version=None,
+                 pod_cidr=None,  # pylint: disable=unused-argument
+                 service_cidr=None  # pylint: disable=unused-argument
+                 ):
+
+    class mockoc:  # pylint: disable=too-few-public-methods
+        def __init__(self, disk_encryption_id, master_subnet_id, worker_subnet_id):
+            self.master_profile = openshiftcluster.MasterProfile(
+                subnet_id=master_subnet_id,
+                disk_encryption_set_id=disk_encryption_id
+            )
+            self.worker_profiles = [openshiftcluster.WorkerProfile(
+                subnet_id=worker_subnet_id
+            )]
+
+    aad = AADManager(cmd.cli_ctx)
+
+    rp_client_sp_id = aad.get_service_principal_id(resolve_rp_client_id())
+    if not rp_client_sp_id:
+        raise ResourceNotFoundError("RP service principal not found.")
+
+    sp_obj_ids = [rp_client_sp_id]
+
+    if client_id is not None:
+        sp_obj_ids.append(aad.get_service_principal_id(client_id))
+
+    cluster = mockoc(disk_encryption_set, master_subnet, worker_subnet)
+    try:
+        # Get cluster resources we need to assign permissions on, sort to ensure the same order of operations
+        resources = {ROLE_NETWORK_CONTRIBUTOR: sorted(get_cluster_network_resources(cmd.cli_ctx, cluster, True)),
+                     ROLE_READER: sorted(get_disk_encryption_resources(cluster))}
+    except (CloudError, HttpOperationError) as e:
+        logger.error(e.message)
+        raise
+
+    if vnet is None:
+        master_parts = parse_resource_id(master_subnet)
+        vnet = resource_id(
+            subscription=master_parts['subscription'],
+            resource_group=master_parts['resource_group'],
+            namespace='Microsoft.Network',
+            type='virtualNetworks',
+            name=master_parts['name'],
+        )
+
+    error_objects = validate_cluster_create(version,
+                                            resources,
+                                            sp_obj_ids)
+    errors = []
+    for error_func in error_objects:
+        namespace = collections.namedtuple("Namespace", locals().keys())(*locals().values())
+        error_obj = error_func(cmd, namespace)
+        if error_obj != []:
+            for err in error_obj:
+                # Wrap text so tabulate returns a pretty table
+                new_err = []
+                for txt in err:
+                    new_err.append(textwrap.fill(txt, width=160))
+                errors.append(new_err)
+
+    if len(errors) > 0:
+        logger.error("Issues found blocking cluster creation.\n")
+        headers = ["Type", "Name", "Error"]
+
+        table = tabulate(errors, headers=headers, tablefmt="grid")
+        print(f"\n{table}")
+    else:
+        print("\nNo Issues on subscription blocking cluster creation\n")
+
+
 def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False):
     # TODO: clean up rbac
     rp_client_sp_id = None
@@ -200,17 +288,7 @@ def aro_list_credentials(client, resource_group_name, resource_name):
     return client.open_shift_clusters.list_credentials(resource_group_name, resource_name)
 
 
-def aro_list_admin_credentials(cmd, client, resource_group_name, resource_name, file="kubeconfig"):
-    # check for the presence of the feature flag and warn
-    # the check shouldn't block the API call - ARM can cache a feature state for several minutes
-    feature_client = get_mgmt_service_client(cmd.cli_ctx, ResourceType.MGMT_RESOURCE_FEATURES)
-    feature = feature_client.features.get(resource_provider_namespace="Microsoft.RedHatOpenShift",
-                                          feature_name="AdminKubeconfig")
-    accepted_states = ["Registered",
-                       "Registering"]
-    if feature.properties.state not in accepted_states:
-        logger.warning("This operation requires the Microsoft.RedHatOpenShift/AdminKubeconfig feature to be registered")
-        logger.warning("To register run: az feature register --namespace Microsoft.RedHatOpenShift -n AdminKubeconfig")
+def aro_get_admin_kubeconfig(client, resource_group_name, resource_name, file="kubeconfig"):
     query_result = client.open_shift_clusters.list_admin_credentials(resource_group_name, resource_name)
     file_mode = "x"
     yaml_data = b64decode(query_result.kubeconfig).decode('UTF-8')

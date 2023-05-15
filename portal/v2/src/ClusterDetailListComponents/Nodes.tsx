@@ -111,7 +111,7 @@ const renderNodes = (node: INode) => {
             </PivotItem>;
 };
 
-function PivotOverflowMenuExample(props: {
+function Nodes(props: {
     nodes: any,
     nodeName: string
 }) {   
@@ -146,7 +146,7 @@ export class NodesComponent extends Component<NodesComponentProps, INodesState> 
         return (
         <Stack styles={contentStackStylesNormal}>
             <Stack>
-                <PivotOverflowMenuExample nodes={this.state.nodes} nodeName={this.state.nodeName}/>
+                <Nodes nodes={this.state.nodes} nodeName={this.state.nodeName}/>
             </Stack>
         </Stack>
         )

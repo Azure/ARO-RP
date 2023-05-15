@@ -42,6 +42,11 @@ class FipsValidatedModules(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
     DISABLED = "Disabled"
     ENABLED = "Enabled"
 
+class OutboundType(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
+
+    LOADBALANCER = "Loadbalancer"
+    USER_DEFINED_ROUTING = "UserDefinedRouting"
+
 class ProvisioningState(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
     """ProvisioningState represents a provisioning state.
     """

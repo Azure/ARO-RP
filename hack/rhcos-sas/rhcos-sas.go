@@ -10,8 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
-	"github.com/Azure/go-autorest/autorest/azure/auth"
+	"github.com/jongio/azidext/go/azidext"
 	"github.com/openshift/installer/pkg/types"
 	"github.com/sirupsen/logrus"
 
@@ -32,10 +33,13 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	authorizer, err := auth.NewAuthorizerFromCLIWithResource(_env.Environment().ResourceManagerEndpoint)
+	tokenCredential, err := azidentity.NewAzureCLICredential(nil)
 	if err != nil {
 		return err
 	}
+
+	scopes := []string{_env.Environment().ResourceManagerScope}
+	authorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
 	accounts := storage.NewAccountsClient(_env.Environment(), subscriptionID, authorizer)
 

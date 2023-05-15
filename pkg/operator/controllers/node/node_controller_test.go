@@ -8,7 +8,9 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
+	"time"
 
+	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,9 +21,28 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestReconciler(t *testing.T) {
+	transitionTime := metav1.Time{Time: time.Now()}
+	defaultAvailable := operatorv1.OperatorCondition{
+		Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeAvailable,
+		Status:             operatorv1.ConditionTrue,
+		LastTransitionTime: transitionTime,
+	}
+	defaultProgressing := operatorv1.OperatorCondition{
+		Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeProgressing,
+		Status:             operatorv1.ConditionFalse,
+		LastTransitionTime: transitionTime,
+	}
+	defaultDegraded := operatorv1.OperatorCondition{
+		Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+		Status:             operatorv1.ConditionFalse,
+		LastTransitionTime: transitionTime,
+	}
+
 	tests := []struct {
 		name            string
 		nodeName        string
@@ -29,6 +50,8 @@ func TestReconciler(t *testing.T) {
 		clusterNotFound bool
 		featureFlag     bool
 		wantErr         string
+		startConditions []operatorv1.OperatorCondition
+		wantConditions  []operatorv1.OperatorCondition
 	}{
 		{
 			name:     "node is a master, don't touch it",
@@ -41,8 +64,9 @@ func TestReconciler(t *testing.T) {
 					},
 				},
 			},
-			featureFlag: true,
-			wantErr:     "",
+			featureFlag:    true,
+			wantErr:        "",
+			wantConditions: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded},
 		},
 		{
 			name:     "node doesn't exist",
@@ -54,6 +78,14 @@ func TestReconciler(t *testing.T) {
 			},
 			featureFlag: true,
 			wantErr:     `nodes "nonexistent-node" not found`,
+			wantConditions: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing,
+				{
+					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+					Status:             operatorv1.ConditionTrue,
+					LastTransitionTime: transitionTime,
+					Message:            `nodes "nonexistent-node" not found`,
+				},
+			},
 		},
 		{
 			name:            "can't fetch cluster instance",
@@ -81,8 +113,9 @@ func TestReconciler(t *testing.T) {
 					},
 				},
 			},
-			featureFlag: true,
-			wantErr:     "",
+			featureFlag:    true,
+			wantErr:        "",
+			wantConditions: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded},
 		},
 		{
 			name:     "isDraining false, delete our annotation",
@@ -95,8 +128,9 @@ func TestReconciler(t *testing.T) {
 					},
 				},
 			},
-			featureFlag: true,
-			wantErr:     "",
+			featureFlag:    true,
+			wantErr:        "",
+			wantConditions: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded},
 		},
 		{
 			name:     "isDraining false, node is unschedulable=false",
@@ -117,8 +151,9 @@ func TestReconciler(t *testing.T) {
 					Unschedulable: false,
 				},
 			},
-			featureFlag: true,
-			wantErr:     "",
+			featureFlag:    true,
+			wantErr:        "",
+			wantConditions: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded},
 		},
 		{
 			name:     "isDraining false, annotationDesiredConfig is blank",
@@ -145,8 +180,9 @@ func TestReconciler(t *testing.T) {
 					},
 				},
 			},
-			featureFlag: true,
-			wantErr:     "",
+			featureFlag:    true,
+			wantErr:        "",
+			wantConditions: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded},
 		},
 		{
 			name:     "isDraining false, annotationCurrentConfig is blank",
@@ -173,8 +209,9 @@ func TestReconciler(t *testing.T) {
 					},
 				},
 			},
-			featureFlag: true,
-			wantErr:     "",
+			featureFlag:    true,
+			wantErr:        "",
+			wantConditions: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded},
 		},
 		{
 			name:     "isDraining false, no conditions are met",
@@ -201,8 +238,9 @@ func TestReconciler(t *testing.T) {
 					},
 				},
 			},
-			featureFlag: true,
-			wantErr:     "",
+			featureFlag:    true,
+			wantErr:        "",
+			wantConditions: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded},
 		},
 		{
 			name:     "isDraining false, current config matches desired",
@@ -229,8 +267,9 @@ func TestReconciler(t *testing.T) {
 					},
 				},
 			},
-			featureFlag: true,
-			wantErr:     "",
+			featureFlag:    true,
+			wantErr:        "",
+			wantConditions: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded},
 		},
 		{
 			name:     "isDraining true, set annotation",
@@ -258,33 +297,16 @@ func TestReconciler(t *testing.T) {
 			},
 			featureFlag: true,
 			wantErr:     "",
-		},
-		{
-			name:     "isDraining true, set annotation",
-			nodeName: "aro-fake-node-0",
-			nodeObject: &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "aro-fake-node-0",
-					Annotations: map[string]string{
-						annotationCurrentConfig: "config",
-						annotationDesiredConfig: "config-2",
-						annotationState:         stateWorking,
-					},
+			wantConditions: []operatorv1.OperatorCondition{
+				defaultAvailable,
+				{
+					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeProgressing,
+					Status:             operatorv1.ConditionTrue,
+					LastTransitionTime: transitionTime,
+					Message:            `Draining node aro-fake-node-0`,
 				},
-				Spec: corev1.NodeSpec{
-					Unschedulable: true,
-				},
-				Status: corev1.NodeStatus{
-					Conditions: []corev1.NodeCondition{
-						{
-							Type:   corev1.NodeReady,
-							Status: corev1.ConditionTrue,
-						},
-					},
-				},
+				defaultDegraded,
 			},
-			featureFlag: true,
-			wantErr:     "",
 		},
 		{
 			name:     "isDraining true, degraded state, unable to drain",
@@ -313,6 +335,16 @@ func TestReconciler(t *testing.T) {
 			},
 			featureFlag: true,
 			wantErr:     "",
+			wantConditions: []operatorv1.OperatorCondition{
+				defaultAvailable,
+				{
+					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeProgressing,
+					Status:             operatorv1.ConditionTrue,
+					LastTransitionTime: transitionTime,
+					Message:            `Draining node aro-fake-node-0`,
+				},
+				defaultDegraded,
+			},
 		},
 		{
 			name:     `node has nil annotations, return ""`,
@@ -325,6 +357,11 @@ func TestReconciler(t *testing.T) {
 			},
 			featureFlag: true,
 			wantErr:     "",
+			wantConditions: []operatorv1.OperatorCondition{
+				defaultAvailable,
+				defaultProgressing,
+				defaultDegraded,
+			},
 		},
 		{
 			name:     "node is draining, deadline was exceeded, execute the drain",
@@ -354,6 +391,15 @@ func TestReconciler(t *testing.T) {
 			},
 			featureFlag: true,
 			wantErr:     "",
+			startConditions: []operatorv1.OperatorCondition{
+				{
+					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeProgressing,
+					Status:             operatorv1.ConditionTrue,
+					LastTransitionTime: transitionTime,
+					Message:            `Draining node aro-fake-node-0`,
+				},
+			},
+			wantConditions: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded},
 		},
 	}
 
@@ -361,7 +407,7 @@ func TestReconciler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			clientBuilder := ctrlfake.NewClientBuilder()
 			if !tt.clusterNotFound {
-				clientBuilder = clientBuilder.WithObjects(&arov1alpha1.Cluster{
+				cluster := &arov1alpha1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
 					Spec: arov1alpha1.ClusterSpec{
 						InfraID: "aro-fake",
@@ -369,18 +415,24 @@ func TestReconciler(t *testing.T) {
 							controllerEnabled: strconv.FormatBool(tt.featureFlag),
 						},
 					},
-				})
+				}
+				if len(tt.startConditions) > 0 {
+					cluster.Status.Conditions = append(cluster.Status.Conditions, tt.startConditions...)
+				}
+				clientBuilder = clientBuilder.WithObjects(cluster)
 			}
 
 			if tt.nodeObject != nil {
 				clientBuilder = clientBuilder.WithObjects(tt.nodeObject)
 			}
 
+			client := clientBuilder.Build()
+
 			r := &Reconciler{
 				log: logrus.NewEntry(logrus.StandardLogger()),
 
 				kubernetescli: fake.NewSimpleClientset(tt.nodeObject),
-				client:        clientBuilder.Build(),
+				client:        client,
 			}
 
 			request := ctrl.Request{}
@@ -389,10 +441,8 @@ func TestReconciler(t *testing.T) {
 			ctx := context.Background()
 
 			_, err := r.Reconcile(ctx, request)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			utilconditions.AssertControllerConditions(t, ctx, client, tt.wantConditions)
 		})
 	}
 }

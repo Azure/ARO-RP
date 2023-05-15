@@ -42,7 +42,7 @@ const (
 // Unfortunately the signature of httputil.ReverseProxy.Director does not allow
 // us to return values.  We get around this limitation slightly naughtily by
 // storing return information in the request context.
-func (k *kubeconfig) director(r *http.Request) {
+func (k *Kubeconfig) director(r *http.Request) {
 	ctx := r.Context()
 
 	portalDoc, _ := ctx.Value(middleware.ContextKeyPortalDoc).(*api.PortalDocument)
@@ -93,7 +93,7 @@ func (k *kubeconfig) director(r *http.Request) {
 
 // cli returns an appropriately configured HTTP client for forwarding the
 // incoming request to a cluster
-func (k *kubeconfig) cli(ctx context.Context, resourceID string, elevated bool) (*http.Client, error) {
+func (k *Kubeconfig) cli(ctx context.Context, resourceID string, elevated bool) (*http.Client, error) {
 	openShiftDoc, err := k.dbOpenShiftClusters.Get(ctx, resourceID)
 	if err != nil {
 		return nil, err
@@ -154,7 +154,7 @@ func (k *kubeconfig) cli(ctx context.Context, resourceID string, elevated bool) 
 // roundTripper is called by ReverseProxy to make the onward request happen.  We
 // check if we had an error earlier and return that if we did.  Otherwise we dig
 // out the client and call it.
-func (k *kubeconfig) roundTripper(r *http.Request) (*http.Response, error) {
+func (k *Kubeconfig) roundTripper(r *http.Request) (*http.Response, error) {
 	if resp, ok := r.Context().Value(contextKeyResponse).(*http.Response); ok {
 		return resp, nil
 	}
@@ -172,9 +172,9 @@ func (k *kubeconfig) roundTripper(r *http.Request) (*http.Response, error) {
 	return resp, err
 }
 
-func (k *kubeconfig) error(r *http.Request, statusCode int, err error) {
+func (k *Kubeconfig) error(r *http.Request, statusCode int, err error) {
 	if err != nil {
-		k.log.Warn(err)
+		k.Log.Warn(err)
 	}
 
 	w := responsewriter.New(r)

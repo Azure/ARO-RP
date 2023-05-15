@@ -4,6 +4,9 @@ package discovery
 // Licensed under the Apache License 2.0.
 
 import (
+	"embed"
+	"io"
+	"io/fs"
 	"path/filepath"
 
 	"github.com/sirupsen/logrus"
@@ -13,20 +16,25 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
+//go:embed cache
+var embeddedFiles embed.FS
+
 // NewCacheFallbackDiscoveryClient creates a new discovery client which wraps delegate client
 // and uses hardcoded discovery information in case the delegate client fails.
 func NewCacheFallbackDiscoveryClient(log *logrus.Entry, delegate discovery.DiscoveryInterface) discovery.DiscoveryInterface {
 	return &cacheFallbackDiscoveryClient{
 		DiscoveryInterface: delegate,
 		log:                log,
-		asset:              Asset,
+		cache:              embeddedFiles,
+		cacheDir:           "cache",
 	}
 }
 
 type cacheFallbackDiscoveryClient struct {
 	discovery.DiscoveryInterface
-	log   *logrus.Entry
-	asset func(name string) ([]byte, error)
+	log      *logrus.Entry
+	cache    fs.FS
+	cacheDir string
 }
 
 // ServerResourcesForGroupVersion returns the supported resources for a group and version.
@@ -86,10 +94,14 @@ func (d *cacheFallbackDiscoveryClient) ServerPreferredNamespacedResources() ([]*
 }
 
 func (d *cacheFallbackDiscoveryClient) getCached(filename string, out kruntime.Object) error {
-	cachedBytes, err := d.asset(filename)
+	f, err := d.cache.Open(filepath.Join(d.cacheDir, filename))
+	if err != nil {
+		return err
+	}
+	bytes, err := io.ReadAll(f)
 	if err != nil {
 		return err
 	}
 
-	return kruntime.DecodeInto(scheme.Codecs.UniversalDecoder(), cachedBytes, out)
+	return kruntime.DecodeInto(scheme.Codecs.UniversalDecoder(), bytes, out)
 }

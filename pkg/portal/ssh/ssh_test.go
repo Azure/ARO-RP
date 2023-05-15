@@ -138,12 +138,13 @@ func TestNew(t *testing.T) {
 			env := mock_env.NewMockCore(ctrl)
 			env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 
-			aadAuthenticatedRouter := &mux.Router{}
-
-			_, err = New(env, logrus.NewEntry(logrus.StandardLogger()), nil, nil, hostKey, elevatedGroupIDs, nil, dbPortal, nil, aadAuthenticatedRouter)
+			s, err := New(env, logrus.NewEntry(logrus.StandardLogger()), nil, nil, hostKey, elevatedGroupIDs, nil, dbPortal, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			router := mux.NewRouter()
+			router.Methods(http.MethodPost).Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/ssh/new").HandlerFunc(s.New)
 
 			if tt.r != nil {
 				tt.r(r)
@@ -151,7 +152,7 @@ func TestNew(t *testing.T) {
 
 			w := responsewriter.New(r)
 
-			aadAuthenticatedRouter.ServeHTTP(w, r)
+			router.ServeHTTP(w, r)
 
 			portalClient.SetError(nil)
 

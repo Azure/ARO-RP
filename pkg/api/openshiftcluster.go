@@ -4,6 +4,7 @@ package api
 // Licensed under the Apache License 2.0.
 
 import (
+	"sync"
 	"time"
 )
 
@@ -20,6 +21,9 @@ type OpenShiftCluster struct {
 	SystemData SystemData                 `json:"systemData,omitempty"`
 	Tags       map[string]string          `json:"tags,omitempty"`
 	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
+
+	//this property is used in the enrichers. Should not be marshalled
+	Lock sync.Mutex `json:"-"`
 }
 
 // CreatedByType by defines user type, which executed the request
@@ -297,29 +301,85 @@ type VMSize string
 // VMSize constants
 // add required resources in pkg/api/validate/dynamic/quota.go when adding a new VMSize
 const (
-	VMSizeStandardD2sV3 VMSize = "Standard_D2s_v3"
-
-	VMSizeStandardD4asV4  VMSize = "Standard_D4as_v4"
-	VMSizeStandardD8asV4  VMSize = "Standard_D8as_v4"
-	VMSizeStandardD16asV4 VMSize = "Standard_D16as_v4"
-	VMSizeStandardD32asV4 VMSize = "Standard_D32as_v4"
-
+	VMSizeStandardD2sV3  VMSize = "Standard_D2s_v3"
 	VMSizeStandardD4sV3  VMSize = "Standard_D4s_v3"
 	VMSizeStandardD8sV3  VMSize = "Standard_D8s_v3"
 	VMSizeStandardD16sV3 VMSize = "Standard_D16s_v3"
 	VMSizeStandardD32sV3 VMSize = "Standard_D32s_v3"
 
-	VMSizeStandardE4sV3     VMSize = "Standard_E4s_v3"
-	VMSizeStandardE8sV3     VMSize = "Standard_E8s_v3"
-	VMSizeStandardE16sV3    VMSize = "Standard_E16s_v3"
-	VMSizeStandardE32sV3    VMSize = "Standard_E32s_v3"
+	VMSizeStandardD4sV4  VMSize = "Standard_D4s_v4"
+	VMSizeStandardD8sV4  VMSize = "Standard_D8s_v4"
+	VMSizeStandardD16sV4 VMSize = "Standard_D16s_v4"
+	VMSizeStandardD32sV4 VMSize = "Standard_D32s_v4"
+	VMSizeStandardD64sV4 VMSize = "Standard_D64s_v4"
+
+	VMSizeStandardD4sV5  VMSize = "Standard_D4s_v5"
+	VMSizeStandardD8sV5  VMSize = "Standard_D8s_v5"
+	VMSizeStandardD16sV5 VMSize = "Standard_D16s_v5"
+	VMSizeStandardD32sV5 VMSize = "Standard_D32s_v5"
+	VMSizeStandardD64sV5 VMSize = "Standard_D64s_v5"
+	VMSizeStandardD96sV5 VMSize = "Standard_D96s_v5"
+
+	VMSizeStandardD4asV4  VMSize = "Standard_D4as_v4"
+	VMSizeStandardD8asV4  VMSize = "Standard_D8as_v4"
+	VMSizeStandardD16asV4 VMSize = "Standard_D16as_v4"
+	VMSizeStandardD32asV4 VMSize = "Standard_D32as_v4"
+	VMSizeStandardD64asV4 VMSize = "Standard_D64as_v4"
+	VMSizeStandardD96asV4 VMSize = "Standard_D96as_v4"
+
+	VMSizeStandardD4asV5  VMSize = "Standard_D4as_v5"
+	VMSizeStandardD8asV5  VMSize = "Standard_D8as_v5"
+	VMSizeStandardD16asV5 VMSize = "Standard_D16as_v5"
+	VMSizeStandardD32asV5 VMSize = "Standard_D32as_v5"
+	VMSizeStandardD64asV5 VMSize = "Standard_D64as_v5"
+	VMSizeStandardD96asV5 VMSize = "Standard_D96as_v5"
+
+	VMSizeStandardE4sV3  VMSize = "Standard_E4s_v3"
+	VMSizeStandardE8sV3  VMSize = "Standard_E8s_v3"
+	VMSizeStandardE16sV3 VMSize = "Standard_E16s_v3"
+	VMSizeStandardE32sV3 VMSize = "Standard_E32s_v3"
+
+	VMSizeStandardE2sV4  VMSize = "Standard_E2s_v4"
+	VMSizeStandardE4sV4  VMSize = "Standard_E4s_v4"
+	VMSizeStandardE8sV4  VMSize = "Standard_E8s_v4"
+	VMSizeStandardE16sV4 VMSize = "Standard_E16s_v4"
+	VMSizeStandardE20sV4 VMSize = "Standard_E20s_v4"
+	VMSizeStandardE32sV4 VMSize = "Standard_E32s_v4"
+	VMSizeStandardE48sV4 VMSize = "Standard_E48s_v4"
+	VMSizeStandardE64sV4 VMSize = "Standard_E64s_v4"
+
+	VMSizeStandardE2sV5  VMSize = "Standard_E2s_v5"
+	VMSizeStandardE4sV5  VMSize = "Standard_E4s_v5"
+	VMSizeStandardE8sV5  VMSize = "Standard_E8s_v5"
+	VMSizeStandardE16sV5 VMSize = "Standard_E16s_v5"
+	VMSizeStandardE20sV5 VMSize = "Standard_E20s_v5"
+	VMSizeStandardE32sV5 VMSize = "Standard_E32s_v5"
+	VMSizeStandardE48sV5 VMSize = "Standard_E48s_v5"
+	VMSizeStandardE64sV5 VMSize = "Standard_E64s_v5"
+	VMSizeStandardE96sV5 VMSize = "Standard_E96s_v5"
+
+	VMSizeStandardE4asV4  VMSize = "Standard_E4as_v4"
+	VMSizeStandardE8asV4  VMSize = "Standard_E8as_v4"
+	VMSizeStandardE16asV4 VMSize = "Standard_E16as_v4"
+	VMSizeStandardE20asV4 VMSize = "Standard_E20as_v4"
+	VMSizeStandardE32asV4 VMSize = "Standard_E32as_v4"
+	VMSizeStandardE48asV4 VMSize = "Standard_E48as_v4"
+	VMSizeStandardE64asV4 VMSize = "Standard_E64as_v4"
+	VMSizeStandardE96asV4 VMSize = "Standard_E96as_v4"
+
+	VMSizeStandardE8asV5  VMSize = "Standard_E8as_v5"
+	VMSizeStandardE16asV5 VMSize = "Standard_E16as_v5"
+	VMSizeStandardE20asV5 VMSize = "Standard_E20as_v5"
+	VMSizeStandardE32asV5 VMSize = "Standard_E32as_v5"
+	VMSizeStandardE48asV5 VMSize = "Standard_E48as_v5"
+	VMSizeStandardE64asV5 VMSize = "Standard_E64as_v5"
+	VMSizeStandardE96asV5 VMSize = "Standard_E96as_v5"
+
 	VMSizeStandardE64isV3   VMSize = "Standard_E64is_v3"
-	VMSizeStandardE64iV3    VMSize = "Standard_E64i_v3"
 	VMSizeStandardE80isV4   VMSize = "Standard_E80is_v4"
 	VMSizeStandardE80idsV4  VMSize = "Standard_E80ids_v4"
-	VMSizeStandardE104iV5   VMSize = "Standard_E104i_v5"
+	VMSizeStandardE96dsV5   VMSize = "Standard_E96ds_v5"
 	VMSizeStandardE104isV5  VMSize = "Standard_E104is_v5"
-	VMSizeStandardE104idV5  VMSize = "Standard_E104id_v5"
 	VMSizeStandardE104idsV5 VMSize = "Standard_E104ids_v5"
 
 	VMSizeStandardF4sV2  VMSize = "Standard_F4s_v2"
@@ -329,18 +389,23 @@ const (
 	VMSizeStandardF72sV2 VMSize = "Standard_F72s_v2"
 
 	VMSizeStandardM128ms VMSize = "Standard_M128ms"
-	VMSizeStandardG5     VMSize = "Standard_G5"
-	VMSizeStandardGS5    VMSize = "Standard_GS5"
 
-	VMSizeStandardL4s    VMSize = "Standard_L4s"
-	VMSizeStandardL8s    VMSize = "Standard_L8s"
-	VMSizeStandardL16s   VMSize = "Standard_L16s"
-	VMSizeStandardL32s   VMSize = "Standard_L32s"
+	VMSizeStandardL4s  VMSize = "Standard_L4s"
+	VMSizeStandardL8s  VMSize = "Standard_L8s"
+	VMSizeStandardL16s VMSize = "Standard_L16s"
+	VMSizeStandardL32s VMSize = "Standard_L32s"
+
 	VMSizeStandardL8sV2  VMSize = "Standard_L8s_v2"
 	VMSizeStandardL16sV2 VMSize = "Standard_L16s_v2"
 	VMSizeStandardL32sV2 VMSize = "Standard_L32s_v2"
 	VMSizeStandardL48sV2 VMSize = "Standard_L48s_v2"
 	VMSizeStandardL64sV2 VMSize = "Standard_L64s_v2"
+
+	VMSizeStandardL8sV3  VMSize = "Standard_L8s_v3"
+	VMSizeStandardL16sV3 VMSize = "Standard_L16s_v3"
+	VMSizeStandardL32sV3 VMSize = "Standard_L32s_v3"
+	VMSizeStandardL48sV3 VMSize = "Standard_L48s_v3"
+	VMSizeStandardL64sV3 VMSize = "Standard_L64s_v3"
 
 	// GPU VMs
 	VMSizeStandardNC4asT4V3  VMSize = "Standard_NC4as_T4_v3"
@@ -360,29 +425,85 @@ type VMSizeStruct struct {
 }
 
 var (
-	VMSizeStandardD2sV3Struct = VMSizeStruct{CoreCount: 2, Family: standardDSv3}
-
-	VMSizeStandardD4asV4Struct  = VMSizeStruct{CoreCount: 4, Family: standardDASv4}
-	VMSizeStandardD8asV4Struct  = VMSizeStruct{CoreCount: 8, Family: standardDASv4}
-	VMSizeStandardD16asV4Struct = VMSizeStruct{CoreCount: 16, Family: standardDASv4}
-	VMSizeStandardD32asV4Struct = VMSizeStruct{CoreCount: 32, Family: standardDASv4}
-
+	VMSizeStandardD2sV3Struct  = VMSizeStruct{CoreCount: 2, Family: standardDSv3}
 	VMSizeStandardD4sV3Struct  = VMSizeStruct{CoreCount: 4, Family: standardDSv3}
 	VMSizeStandardD8sV3Struct  = VMSizeStruct{CoreCount: 8, Family: standardDSv3}
 	VMSizeStandardD16sV3Struct = VMSizeStruct{CoreCount: 16, Family: standardDSv3}
 	VMSizeStandardD32sV3Struct = VMSizeStruct{CoreCount: 32, Family: standardDSv3}
 
-	VMSizeStandardE4sV3Struct     = VMSizeStruct{CoreCount: 4, Family: standardESv3}
-	VMSizeStandardE8sV3Struct     = VMSizeStruct{CoreCount: 8, Family: standardESv3}
-	VMSizeStandardE16sV3Struct    = VMSizeStruct{CoreCount: 16, Family: standardESv3}
-	VMSizeStandardE32sV3Struct    = VMSizeStruct{CoreCount: 32, Family: standardESv3}
+	VMSizeStandardD4sV4Struct  = VMSizeStruct{CoreCount: 4, Family: standardDSv4}
+	VMSizeStandardD8sV4Struct  = VMSizeStruct{CoreCount: 8, Family: standardDSv4}
+	VMSizeStandardD16sV4Struct = VMSizeStruct{CoreCount: 16, Family: standardDSv4}
+	VMSizeStandardD32sV4Struct = VMSizeStruct{CoreCount: 32, Family: standardDSv4}
+	VMSizeStandardD64sV4Struct = VMSizeStruct{CoreCount: 64, Family: standardDSv4}
+
+	VMSizeStandardD4sV5Struct  = VMSizeStruct{CoreCount: 4, Family: standardDSv5}
+	VMSizeStandardD8sV5Struct  = VMSizeStruct{CoreCount: 8, Family: standardDSv5}
+	VMSizeStandardD16sV5Struct = VMSizeStruct{CoreCount: 16, Family: standardDSv5}
+	VMSizeStandardD32sV5Struct = VMSizeStruct{CoreCount: 32, Family: standardDSv5}
+	VMSizeStandardD64sV5Struct = VMSizeStruct{CoreCount: 64, Family: standardDSv5}
+	VMSizeStandardD96sV5Struct = VMSizeStruct{CoreCount: 96, Family: standardDSv5}
+
+	VMSizeStandardD4asV4Struct  = VMSizeStruct{CoreCount: 4, Family: standardDASv4}
+	VMSizeStandardD8asV4Struct  = VMSizeStruct{CoreCount: 8, Family: standardDASv4}
+	VMSizeStandardD16asV4Struct = VMSizeStruct{CoreCount: 16, Family: standardDASv4}
+	VMSizeStandardD32asV4Struct = VMSizeStruct{CoreCount: 32, Family: standardDASv4}
+	VMSizeStandardD64asV4Struct = VMSizeStruct{CoreCount: 64, Family: standardDASv4}
+	VMSizeStandardD96asV4Struct = VMSizeStruct{CoreCount: 96, Family: standardDASv4}
+
+	VMSizeStandardD4asV5Struct  = VMSizeStruct{CoreCount: 4, Family: standardDASv5}
+	VMSizeStandardD8asV5Struct  = VMSizeStruct{CoreCount: 8, Family: standardDASv5}
+	VMSizeStandardD16asV5Struct = VMSizeStruct{CoreCount: 16, Family: standardDASv5}
+	VMSizeStandardD32asV5Struct = VMSizeStruct{CoreCount: 32, Family: standardDASv5}
+	VMSizeStandardD64asV5Struct = VMSizeStruct{CoreCount: 64, Family: standardDASv5}
+	VMSizeStandardD96asV5Struct = VMSizeStruct{CoreCount: 96, Family: standardDASv5}
+
+	VMSizeStandardE4sV3Struct  = VMSizeStruct{CoreCount: 4, Family: standardESv3}
+	VMSizeStandardE8sV3Struct  = VMSizeStruct{CoreCount: 8, Family: standardESv3}
+	VMSizeStandardE16sV3Struct = VMSizeStruct{CoreCount: 16, Family: standardESv3}
+	VMSizeStandardE32sV3Struct = VMSizeStruct{CoreCount: 32, Family: standardESv3}
+
+	VMSizeStandardE2sV4Struct  = VMSizeStruct{CoreCount: 2, Family: standardESv4}
+	VMSizeStandardE4sV4Struct  = VMSizeStruct{CoreCount: 4, Family: standardESv4}
+	VMSizeStandardE8sV4Struct  = VMSizeStruct{CoreCount: 8, Family: standardESv4}
+	VMSizeStandardE16sV4Struct = VMSizeStruct{CoreCount: 16, Family: standardESv4}
+	VMSizeStandardE20sV4Struct = VMSizeStruct{CoreCount: 20, Family: standardESv4}
+	VMSizeStandardE32sV4Struct = VMSizeStruct{CoreCount: 32, Family: standardESv4}
+	VMSizeStandardE48sV4Struct = VMSizeStruct{CoreCount: 48, Family: standardESv4}
+	VMSizeStandardE64sV4Struct = VMSizeStruct{CoreCount: 64, Family: standardESv4}
+
+	VMSizeStandardE2sV5Struct  = VMSizeStruct{CoreCount: 2, Family: standardESv5}
+	VMSizeStandardE4sV5Struct  = VMSizeStruct{CoreCount: 4, Family: standardESv5}
+	VMSizeStandardE8sV5Struct  = VMSizeStruct{CoreCount: 8, Family: standardESv5}
+	VMSizeStandardE16sV5Struct = VMSizeStruct{CoreCount: 16, Family: standardESv5}
+	VMSizeStandardE20sV5Struct = VMSizeStruct{CoreCount: 20, Family: standardESv5}
+	VMSizeStandardE32sV5Struct = VMSizeStruct{CoreCount: 32, Family: standardESv5}
+	VMSizeStandardE48sV5Struct = VMSizeStruct{CoreCount: 48, Family: standardESv5}
+	VMSizeStandardE64sV5Struct = VMSizeStruct{CoreCount: 64, Family: standardESv5}
+	VMSizeStandardE96sV5Struct = VMSizeStruct{CoreCount: 96, Family: standardESv5}
+
+	VMSizeStandardE4asV4Struct  = VMSizeStruct{CoreCount: 4, Family: standardEASv4}
+	VMSizeStandardE8asV4Struct  = VMSizeStruct{CoreCount: 8, Family: standardEASv4}
+	VMSizeStandardE16asV4Struct = VMSizeStruct{CoreCount: 16, Family: standardEASv4}
+	VMSizeStandardE20asV4Struct = VMSizeStruct{CoreCount: 20, Family: standardEASv4}
+	VMSizeStandardE32asV4Struct = VMSizeStruct{CoreCount: 32, Family: standardEASv4}
+	VMSizeStandardE48asV4Struct = VMSizeStruct{CoreCount: 48, Family: standardEASv4}
+	VMSizeStandardE64asV4Struct = VMSizeStruct{CoreCount: 64, Family: standardEASv4}
+	VMSizeStandardE96asV4Struct = VMSizeStruct{CoreCount: 96, Family: standardEASv4}
+
+	VMSizeStandardE8asV5Struct  = VMSizeStruct{CoreCount: 8, Family: standardEASv5}
+	VMSizeStandardE16asV5Struct = VMSizeStruct{CoreCount: 16, Family: standardEASv5}
+	VMSizeStandardE20asV5Struct = VMSizeStruct{CoreCount: 20, Family: standardEASv5}
+	VMSizeStandardE32asV5Struct = VMSizeStruct{CoreCount: 32, Family: standardEASv5}
+	VMSizeStandardE48asV5Struct = VMSizeStruct{CoreCount: 48, Family: standardEASv5}
+	VMSizeStandardE64asV5Struct = VMSizeStruct{CoreCount: 64, Family: standardEASv5}
+	VMSizeStandardE96asV5Struct = VMSizeStruct{CoreCount: 96, Family: standardEASv5}
+
 	VMSizeStandardE64isV3Struct   = VMSizeStruct{CoreCount: 64, Family: standardESv3}
-	VMSizeStandardE64iV3Struct    = VMSizeStruct{CoreCount: 64, Family: standardESv3}
 	VMSizeStandardE80isV4Struct   = VMSizeStruct{CoreCount: 80, Family: standardEISv4}
 	VMSizeStandardE80idsV4Struct  = VMSizeStruct{CoreCount: 80, Family: standardEIDSv4}
-	VMSizeStandardE104iV5Struct   = VMSizeStruct{CoreCount: 104, Family: standardEIv5}
+	VMSizeStandardE96dsV5Struct   = VMSizeStruct{CoreCount: 96, Family: standardEDSv5}
 	VMSizeStandardE104isV5Struct  = VMSizeStruct{CoreCount: 104, Family: standardEISv5}
-	VMSizeStandardE104idV5Struct  = VMSizeStruct{CoreCount: 104, Family: standardEIDv5}
 	VMSizeStandardE104idsV5Struct = VMSizeStruct{CoreCount: 104, Family: standardEIDSv5}
 
 	VMSizeStandardF4sV2Struct  = VMSizeStruct{CoreCount: 4, Family: standardFSv2}
@@ -392,18 +513,23 @@ var (
 	VMSizeStandardF72sV2Struct = VMSizeStruct{CoreCount: 72, Family: standardFSv2}
 
 	VMSizeStandardM128msStruct = VMSizeStruct{CoreCount: 128, Family: standardMS}
-	VMSizeStandardG5Struct     = VMSizeStruct{CoreCount: 32, Family: standardGFamily}
-	VMSizeStandardGS5Struct    = VMSizeStruct{CoreCount: 32, Family: standardGFamily}
 
-	VMSizeStandardL4sStruct    = VMSizeStruct{CoreCount: 4, Family: standardLSv2}
-	VMSizeStandardL8sStruct    = VMSizeStruct{CoreCount: 8, Family: standardLSv2}
-	VMSizeStandardL16sStruct   = VMSizeStruct{CoreCount: 16, Family: standardLSv2}
-	VMSizeStandardL32sStruct   = VMSizeStruct{CoreCount: 32, Family: standardLSv2}
+	VMSizeStandardL4sStruct  = VMSizeStruct{CoreCount: 4, Family: standardLSv2}
+	VMSizeStandardL8sStruct  = VMSizeStruct{CoreCount: 8, Family: standardLSv2}
+	VMSizeStandardL16sStruct = VMSizeStruct{CoreCount: 16, Family: standardLSv2}
+	VMSizeStandardL32sStruct = VMSizeStruct{CoreCount: 32, Family: standardLSv2}
+
 	VMSizeStandardL8sV2Struct  = VMSizeStruct{CoreCount: 8, Family: standardLSv2}
 	VMSizeStandardL16sV2Struct = VMSizeStruct{CoreCount: 16, Family: standardLSv2}
 	VMSizeStandardL32sV2Struct = VMSizeStruct{CoreCount: 32, Family: standardLSv2}
 	VMSizeStandardL48sV2Struct = VMSizeStruct{CoreCount: 48, Family: standardLSv2}
 	VMSizeStandardL64sV2Struct = VMSizeStruct{CoreCount: 64, Family: standardLSv2}
+
+	VMSizeStandardL8sV3Struct  = VMSizeStruct{CoreCount: 8, Family: standardLSv3}
+	VMSizeStandardL16sV3Struct = VMSizeStruct{CoreCount: 16, Family: standardLSv3}
+	VMSizeStandardL32sV3Struct = VMSizeStruct{CoreCount: 32, Family: standardLSv3}
+	VMSizeStandardL48sV3Struct = VMSizeStruct{CoreCount: 48, Family: standardLSv3}
+	VMSizeStandardL64sV3Struct = VMSizeStruct{CoreCount: 64, Family: standardLSv3}
 
 	//Struct GPU nodes
 	//Struct the formatting of the ncasv3_t4 family is different.  This can be seen through a
@@ -420,21 +546,28 @@ var (
 )
 
 const (
-	standardDSv3    = "standardDSv3Family"
-	standardDASv4   = "standardDASv4Family"
-	standardESv3    = "standardESv3Family"
-	standardEISv4   = "standardEISv4Family"
-	standardEIDSv4  = "standardEIDSv4Family"
-	standardEIv5    = "standardEIv5Family"
-	standardEISv5   = "standardEISv5Family"
-	standardEIDSv5  = "standardEIDSv5Family"
-	standardEIDv5   = "standardEIDv5Family"
-	standardFSv2    = "standardFSv2Family"
-	standardMS      = "standardMSFamily"
-	standardGFamily = "standardGFamily"
-	standardLSv2    = "standardLsv2Family"
-	standardNCAS    = "Standard NCASv3_T4 Family"
-	standardNCSv3   = "Standard NCSv3 Family"
+	standardDSv3   = "standardDSv3Family"
+	standardDSv4   = "standardDSv4Family"
+	standardDSv5   = "standardDSv5Family"
+	standardDASv4  = "standardDASv4Family"
+	standardDASv5  = "standardDASv5Family"
+	standardESv3   = "standardESv3Family"
+	standardESv4   = "standardESv4Family"
+	standardESv5   = "standardESv5Family"
+	standardEASv4  = "standardEASv4Family"
+	standardEASv5  = "standardEASv5Family"
+	standardEISv4  = "standardEISv4Family"
+	standardEIDSv4 = "standardEIDSv4Family"
+	standardEISv5  = "standardEISv5Family"
+	standardEDSv5  = "standardEDSv5Family"
+	standardEIDSv5 = "standardEIDSv5Family"
+	standardEIDv5  = "standardEIDv5Family"
+	standardFSv2   = "standardFSv2Family"
+	standardMS     = "standardMSFamily"
+	standardLSv2   = "standardLsv2Family"
+	standardLSv3   = "standardLsv3Family"
+	standardNCAS   = "Standard NCASv3_T4 Family"
+	standardNCSv3  = "Standard NCSv3 Family"
 )
 
 // WorkerProfile represents a worker profile

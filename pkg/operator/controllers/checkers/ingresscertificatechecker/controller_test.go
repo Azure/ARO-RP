@@ -5,7 +5,6 @@ package ingresscertificatechecker
 
 import (
 	"context"
-	"errors"
 	"reflect"
 	"testing"
 	"time"
@@ -23,12 +22,15 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
-type fakeChecker func(ctx context.Context) error
+type fakeChecker struct {
+	expectedResult error
+}
 
 func (fc fakeChecker) Check(ctx context.Context) error {
-	return fc(ctx)
+	return fc.expectedResult
 }
 
 func TestReconcile(t *testing.T) {
@@ -50,18 +52,10 @@ func TestReconcile(t *testing.T) {
 			wantResult:           reconcile.Result{RequeueAfter: time.Hour},
 		},
 		{
-			name:                 "check failed with an error",
+			name:                 "reconciler handles correctly any error returned from the reconciler.checker",
 			wantConditionStatus:  operatorv1.ConditionFalse,
-			wantConditionMessage: "fake basic error",
-			checkerReturnErr:     errors.New("fake basic error"),
-			wantErr:              "fake basic error",
-			wantResult:           reconcile.Result{RequeueAfter: time.Hour},
-		},
-		{
-			name:                 "no default cert set",
-			wantConditionStatus:  operatorv1.ConditionFalse,
-			wantConditionMessage: "ingress has no default certificate set",
-			checkerReturnErr:     errNoDefaultCertificate,
+			wantConditionMessage: errNoCertificateAndCustomDomain.Error(),
+			checkerReturnErr:     errNoCertificateAndCustomDomain,
 			wantResult:           reconcile.Result{RequeueAfter: time.Hour},
 		},
 		{
@@ -92,19 +86,14 @@ func TestReconcile(t *testing.T) {
 			clientFake := fake.NewClientBuilder().WithObjects(instance).Build()
 
 			r := &Reconciler{
-				log:  utillog.GetLogger(),
-				role: "master",
-				checker: fakeChecker(func(ctx context.Context) error {
-					return tt.checkerReturnErr
-				}),
-				client: clientFake,
+				log:     utillog.GetLogger(),
+				role:    "master",
+				checker: fakeChecker{expectedResult: tt.checkerReturnErr},
+				client:  clientFake,
 			}
 
 			result, err := r.Reconcile(ctx, ctrl.Request{})
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if !reflect.DeepEqual(tt.wantResult, result) {
 				t.Error(cmp.Diff(tt.wantResult, result))

@@ -2,7 +2,7 @@ echo "running RHUI fix"
 yum update -y --disablerepo='*' --enablerepo='rhui-microsoft-azure*'
 
 yum -y -x WALinuxAgent -x WALinuxAgent-udev update
-yum -y install docker
+yum -y install podman-docker
 
 firewall-cmd --add-port=443/tcp --permanent
 
@@ -16,7 +16,10 @@ cat >/root/.docker/config.json <<EOF
 	}
 }
 EOF
-systemctl start docker.service
+
+mkdir -p /etc/containers/
+touch /etc/containers/nodocker
+
 docker pull "$PROXYIMAGE"
 
 mkdir /etc/proxy
@@ -32,8 +35,8 @@ EOF
 
 cat >/etc/systemd/system/proxy.service <<'EOF'
 [Unit]
-After=docker.service
-Requires=docker.service
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 EnvironmentFile=/etc/sysconfig/proxy
@@ -65,4 +68,7 @@ yum update -y
 EOF
 chmod +x /etc/cron.weekly/yumupdate
 
-(sleep 30; reboot) &
+(
+	sleep 30
+	reboot
+) &

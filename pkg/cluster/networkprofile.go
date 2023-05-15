@@ -60,19 +60,3 @@ func patchMTUSize(m *manager, ctx context.Context, mtuSize api.MTUSize) error {
 	})
 	return err
 }
-
-func (m *manager) determineOutboundType(ctx context.Context) error {
-	var err error
-	// Determine if this is a cluster with user defined routing
-	outboundType := api.OutboundTypeLoadbalancer
-	if m.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPrivate &&
-		m.doc.OpenShiftCluster.Properties.IngressProfiles[0].Visibility == api.VisibilityPrivate &&
-		feature.IsRegisteredForFeature(m.subscriptionDoc.Subscription.Properties, api.FeatureFlagUserDefinedRouting) {
-		outboundType = api.OutboundTypeUserDefinedRouting
-	}
-	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType = outboundType
-		return nil
-	})
-	return err
-}

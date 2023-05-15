@@ -11,6 +11,7 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 )
 
+// this is specifically for the Guardrails
 type UnstructuredObj struct {
 	*unstructured.Unstructured
 }

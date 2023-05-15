@@ -73,6 +73,6 @@ func (c conditionStep) String() string {
 	return fmt.Sprintf("[Condition %s, timeout %s]", FriendlyName(c.f), c.timeout)
 }
 
-func (c conditionStep) metricsTopic() string {
+func (c conditionStep) metricsName() string {
 	return fmt.Sprintf("condition.%s", shortName(FriendlyName(c.f)))
 }

@@ -9,6 +9,8 @@ import (
 	"encoding/hex"
 	"io"
 	"testing"
+
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestNewXChaCha20Poly1305(t *testing.T) {
@@ -34,10 +36,7 @@ func TestNewXChaCha20Poly1305(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := NewXChaCha20Poly1305(context.Background(), tt.key)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Fatal(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
@@ -76,10 +75,7 @@ func TestXChaCha20Poly1305Open(t *testing.T) {
 			}
 
 			opened, err := aead.Open(tt.input)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Fatal(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if !bytes.Equal(tt.wantOpened, opened) {
 				t.Error(string(opened))
@@ -126,10 +122,7 @@ func TestXChaCha20Poly1305Seal(t *testing.T) {
 			aead.(*xChaCha20Poly1305).randReader = tt.randReader
 
 			sealed, err := aead.Seal(tt.input)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Fatal(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if !bytes.Equal(tt.wantSealed, sealed) {
 				t.Error(hex.EncodeToString(sealed))

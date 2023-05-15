@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -53,13 +53,12 @@ func (f *frontend) _appLensDetectors(ctx context.Context, r *http.Request, log *
 		return nil, err
 	}
 
-	vars := mux.Vars(r)
-	return a.AppLensGetDetector(ctx, vars["detectorId"])
+	detectorId := chi.URLParam(r, "detectorId")
+	return a.AppLensGetDetector(ctx, detectorId)
 }
 
 func (f *frontend) _createAzureActionsFactory(ctx context.Context, r *http.Request, log *logrus.Entry) (adminactions.AzureActions, error) {
-	vars := mux.Vars(r)
-	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
+	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 
 	resourceID := strings.TrimSuffix(r.URL.Path, "/detectors")
 	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)

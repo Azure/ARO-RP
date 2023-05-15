@@ -264,7 +264,16 @@ func deleteByIdCloudError(err error) error {
 	case strings.Contains(detailedError.Original.Error(), "AuthorizationFailed"):
 		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden,
 			"features.ResourcesClient#DeleteByID", detailedError.Original.Error())
+
+	case strings.Contains(detailedError.Original.Error(), "InUseSubnetCannotBeDeleted"):
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInUseSubnetCannotBeDeleted,
+			"features.ResourcesClient#DeleteByID", detailedError.Original.Error())
+
+	case strings.Contains(detailedError.Original.Error(), "ScopeLocked"):
+		return api.NewCloudError(http.StatusConflict, api.CloudErrorCodeScopeLocked,
+			"features.ResourcesClient#DeleteByID", detailedError.Original.Error())
 	}
+
 	return err
 }
 
