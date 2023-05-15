@@ -14,16 +14,19 @@ spec:
         "ServiceAccount",
         "ReplicationController",
         "ResourceQuota",
-        "PersistentVolume",
-        "PersistentVolumeClaim"
         ]
       - apiGroups: ["apps"]
         kinds: ["Deployment", "ReplicaSet", "StatefulSet", "DaemonSet"]
-      - groups: ["batch"]
+      - apiGroups: ["batch"]
         kinds: ["Job", "CronJob"]
-      - groups: ["rbac.authorization.k8s.io"]
-        kinds: ["Role", "RoleBinding", "ClusterRole", "ClusterRoleBinding"]
-      - groups: ["policy"]
-        kinds: ["PodSecurityPolicy", "PodDisruptionBudget"]
-      - groups: ["apiextensions"]
-        kinds: ["CustomResourceDefinition"]
+      - apiGroups: ["rbac.authorization.k8s.io"]
+        kinds: ["Role", "RoleBinding"]
+      - apiGroups: ["policy"]
+        kinds: ["PodDisruptionBudget"]
+      # non-namespaced resources
+      # - apiGroups: [""]
+      #   kinds: ["PersistentVolume", "PersistentVolumeClaim"]
+      # - apiGroups: ["rbac.authorization.k8s.io"]
+      #   kinds: ["ClusterRole", "ClusterRoleBinding"]
+      # - apiGroups: ["apiextensions"]
+      #   kinds: ["CustomResourceDefinition"]
