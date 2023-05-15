@@ -33,11 +33,6 @@ const (
 // this has to be an application-level proxy so we can replace the validated
 // one-time password that the SRE uses to authenticate with the cluster SSH key.
 //
-// Given that we're now an application-level proxy, we pull a second trick as
-// well: we inject SSH agent forwarding into the portal->cluster connection leg,
-// enabling an SRE to ssh from a master node to a worker node without needing an
-// additional credential.
-//
 // SSH itself is a multiplexed protocol.  Within a single TCP connection there
 // can exist multiple SSH channels.  Administrative requests and responses can
 // also be sent, both on any channel and/or globally.  Channel creations and
@@ -183,14 +178,8 @@ func (s *SSH) newConn(ctx context.Context, clientConn net.Conn) error {
 		}).Print("disconnected")
 	}()
 
-	keyring := agent.NewKeyring()
-	err = keyring.Add(agent.AddedKey{PrivateKey: key})
-	if err != nil {
-		return err
-	}
-
 	// Proxy channels and requests between the two connections.
-	return s.proxyConn(ctx, accessLog, keyring, upstreamConn, downstreamConn, upstreamNewChannels, downstreamNewChannels, upstreamRequests, downstreamRequests)
+	return s.proxyConn(ctx, accessLog, nil, upstreamConn, downstreamConn, upstreamNewChannels, downstreamNewChannels, upstreamRequests, downstreamRequests)
 }
 
 // proxyConn handles incoming new channel and administrative requests.  It calls
@@ -211,8 +200,7 @@ func (s *SSH) proxyConn(ctx context.Context, accessLog *logrus.Entry, keyring ag
 				return nil
 			}
 
-			// on the first SRE->cluster session, inject an advertisement of
-			// agent availability.
+			// on the first SRE->cluster session, start a keepalive routine
 			var firstSession bool
 			if !sessionOpened && nc.ChannelType() == "session" {
 				firstSession = true
@@ -228,16 +216,7 @@ func (s *SSH) proxyConn(ctx context.Context, accessLog *logrus.Entry, keyring ag
 				return nil
 			}
 
-			if nc.ChannelType() == "auth-agent@openssh.com" {
-				// hijack and handle incoming cluster->SRE agent requests
-				go func() {
-					_ = s.handleAgent(accessLog, nc, keyring)
-				}()
-			} else {
-				go func() {
-					_ = s.newChannel(ctx, accessLog, nc, downstreamConn, upstreamConn, false)
-				}()
-			}
+			go s.newChannel(ctx, accessLog, nc, downstreamConn, upstreamConn, false)
 
 		case request := <-upstreamRequests:
 			if request == nil {
@@ -254,24 +233,6 @@ func (s *SSH) proxyConn(ctx context.Context, accessLog *logrus.Entry, keyring ag
 			_ = s.proxyGlobalRequest(request, upstreamConn)
 		}
 	}
-}
-
-func (s *SSH) handleAgent(accessLog *logrus.Entry, nc cryptossh.NewChannel, keyring agent.Agent) error {
-	ch, rs, err := nc.Accept()
-	if err != nil {
-		return err
-	}
-	defer ch.Close()
-
-	channelLog := accessLog.WithFields(logrus.Fields{
-		"channel": nc.ChannelType(),
-	})
-	channelLog.Printf("opened")
-	defer channelLog.Printf("closed")
-
-	go cryptossh.DiscardRequests(rs)
-
-	return agent.ServeAgent(keyring, ch)
 }
 
 // newChannel handles an incoming request to create a new channel.  If the
@@ -299,11 +260,6 @@ func (s *SSH) newChannel(ctx context.Context, accessLog *logrus.Entry, nc crypto
 	defer channelLog.Printf("closed")
 
 	if firstSession {
-		_, err = ch2.SendRequest("auth-agent-req@openssh.com", true, nil)
-		if err != nil {
-			return err
-		}
-
 		go s.keepAliveConn(ctx, ch1)
 	}
 
