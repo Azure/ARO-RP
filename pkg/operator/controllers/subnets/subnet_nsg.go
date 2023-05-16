@@ -7,11 +7,16 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
+)
+
+const (
+	AnnotationTimestamp = "aro.openshift.io/lastSubnetReconcileTimestamp"
 )
 
 func (r *reconcileManager) ensureSubnetNSG(ctx context.Context, s subnet.Subnet) error {
@@ -43,5 +48,17 @@ func (r *reconcileManager) ensureSubnetNSG(ctx context.Context, s subnet.Subnet)
 	r.log.Infof("Fixing NSG from %s to %s", oldNSG, correctNSGResourceID)
 	subnetObject.NetworkSecurityGroup = &mgmtnetwork.SecurityGroup{ID: &correctNSGResourceID}
 	err = r.subnets.CreateOrUpdate(ctx, s.ResourceID, subnetObject)
-	return err
+	if err != nil {
+		return err
+	}
+
+	return r.updateReconcileSubnetAnnotation(ctx)
+}
+
+func (r *reconcileManager) updateReconcileSubnetAnnotation(ctx context.Context) error {
+	if r.instance.Annotations == nil {
+		r.instance.Annotations = make(map[string]string)
+	}
+	r.instance.Annotations[AnnotationTimestamp] = time.Now().Format(time.RFC1123)
+	return r.client.Update(ctx, r.instance)
 }

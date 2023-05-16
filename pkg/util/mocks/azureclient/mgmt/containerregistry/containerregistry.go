@@ -63,6 +63,21 @@ func (mr *MockTokensClientMockRecorder) DeleteAndWait(arg0, arg1, arg2, arg3 int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockTokensClient)(nil).DeleteAndWait), arg0, arg1, arg2, arg3)
 }
 
+// GetTokenProperties mocks base method.
+func (m *MockTokensClient) GetTokenProperties(arg0 context.Context, arg1, arg2, arg3 string) (containerregistry.TokenProperties, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTokenProperties", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(containerregistry.TokenProperties)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTokenProperties indicates an expected call of GetTokenProperties.
+func (mr *MockTokensClientMockRecorder) GetTokenProperties(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTokenProperties", reflect.TypeOf((*MockTokensClient)(nil).GetTokenProperties), arg0, arg1, arg2, arg3)
+}
+
 // MockRegistriesClient is a mock of RegistriesClient interface.
 type MockRegistriesClient struct {
 	ctrl     *gomock.Controller
