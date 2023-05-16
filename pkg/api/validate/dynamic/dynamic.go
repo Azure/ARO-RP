@@ -367,18 +367,17 @@ func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) 
 }
 
 func (dv *dynamic) validateActions(ctx context.Context, r *azure.Resource, actions []string) error {
-	c := closure{dv: dv, ctx: ctx, resource: r, actions: actions}
-	conditionalFunc := c.usingListPermissions
-	timeout := 20 * time.Second
-	if dv.pdpClient != nil {
-		conditionalFunc = c.usingCheckAccessV2
-		timeout = 65 * time.Second // checkAccess refreshes data every min. This allows ~3 retries.
-	}
-
-	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
+	// ARM has a 5 minute cache around role assignment creation, so wait one minute longer
+	timeoutCtx, cancel := context.WithTimeout(ctx, 6*time.Minute)
 	defer cancel()
 
-	return wait.PollImmediateUntil(timeout, conditionalFunc, timeoutCtx.Done())
+	c := closure{dv: dv, ctx: ctx, resource: r, actions: actions}
+	conditionalFunc := c.usingListPermissions
+	if dv.pdpClient != nil {
+		conditionalFunc = c.usingCheckAccessV2
+	}
+
+	return wait.PollImmediateUntil(30*time.Second, conditionalFunc, timeoutCtx.Done())
 }
 
 // closure is the closure used in PollImmediateUntil's ConditionalFunc
