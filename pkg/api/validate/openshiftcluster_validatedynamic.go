@@ -134,12 +134,18 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	var pdpClient remotepdp.RemotePDPClient
 	spp := dv.oc.Properties.ServicePrincipalProfile
 
-	if feature.IsRegisteredForFeature(
+	useCheckAccess, err := dv.env.LiveConfig().UseCheckAccess(ctx)
+	dv.log.Info("USE_CHECKACCESS: ", useCheckAccess)
+	if err != nil {
+		return err
+	}
+
+	if useCheckAccess || feature.IsRegisteredForFeature(
 		dv.subscriptionDoc.Subscription.Properties,
 		api.FeatureFlagCheckAccessTestToggle,
 	) {
 		// TODO remove after successfully migrating to CheckAccess
-		dv.log.Info("CheckAccess Feature is set")
+		dv.log.Info("Using CheckAccess instead of ListPermissions")
 		var err error
 		fpClientCred, err = dv.env.FPNewClientCertificateCredential(dv.subscriptionDoc.Subscription.Properties.TenantID)
 		if err != nil {
@@ -177,7 +183,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		pdpClient,
 	)
 
-	err := fpDynamic.ValidateVnet(
+	err = fpDynamic.ValidateVnet(
 		ctx,
 		dv.oc.Location,
 		subnets,

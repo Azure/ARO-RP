@@ -5,8 +5,6 @@ package cluster
 
 import (
 	"context"
-	"os"
-	"strconv"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest"
@@ -105,8 +103,6 @@ type manager struct {
 	adoptViaHive       bool
 	hiveClusterManager hive.ClusterManager
 
-	useCheckAccess bool
-
 	aroOperatorDeployer deploy.Operator
 
 	now func() time.Time
@@ -149,11 +145,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	useCheckAccess, err := strconv.ParseBool(os.Getenv("USE_CHECKACCESS"))
-	if err != nil {
-		useCheckAccess = false
-	}
-
 	return &manager{
 		log:                   log,
 		env:                   _env,
@@ -192,7 +183,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		installViaHive:                    installViaHive,
 		adoptViaHive:                      adoptByHive,
 		hiveClusterManager:                hiveClusterManager,
-		useCheckAccess:                    useCheckAccess,
 		now:                               func() time.Time { return time.Now() },
 		openShiftClusterDocumentVersioner: new(openShiftClusterDocumentVersionerService),
 	}, nil

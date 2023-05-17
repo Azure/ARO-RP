@@ -430,18 +430,20 @@ func (c closure) usingListPermissions() (bool, error) {
 // usingCheckAccessV2 uses the new RBAC checkAccessV2 API
 func (c closure) usingCheckAccessV2() (bool, error) {
 	// TODO remove this when fully migrated to CheckAccess
-	c.dv.log.Debug("retry validateActions with CheckAccessV2")
+	c.dv.log.Info("validateActions with CheckAccessV2")
 
 	// reusing oid during retries
 	if c.oid == nil {
 		scope := c.dv.azEnv.ResourceManagerEndpoint + "/.default"
 		t, err := c.dv.checkAccessSubjectInfoCred.GetToken(c.ctx, policy.TokenRequestOptions{Scopes: []string{scope}})
 		if err != nil {
+			c.dv.log.Error("Unable to get the token from AAD", err)
 			return false, err
 		}
 
 		oid, err := token.GetObjectId(t.Token)
 		if err != nil {
+			c.dv.log.Error("Unable to parse the token oid claim")
 			return false, err
 		}
 		c.oid = &oid
@@ -450,6 +452,7 @@ func (c closure) usingCheckAccessV2() (bool, error) {
 	authReq := createAuthorizationRequest(*c.oid, c.resource.String(), c.actions...)
 	results, err := c.dv.pdpClient.CheckAccess(c.ctx, authReq)
 	if err != nil {
+		c.dv.log.Error("Unexpected error when calling CheckAccessV2", err)
 		return false, err
 	}
 
@@ -458,9 +461,19 @@ func (c closure) usingCheckAccessV2() (bool, error) {
 		return false, nil
 	}
 
-	for _, result := range results.Value {
-		if result.AccessDecision != remotepdp.Allowed {
-			c.dv.log.Infof("%s has no access to %s", *c.oid, result.ActionId)
+	for _, action := range c.actions {
+		found := false
+		for _, result := range results.Value {
+			if result.ActionId == action {
+				found = true
+				if result.AccessDecision == remotepdp.Allowed {
+					break
+				}
+				return false, nil
+			}
+		}
+		if !found {
+			c.dv.log.Infof("The result didn't include permission %s", action)
 			return false, nil
 		}
 	}

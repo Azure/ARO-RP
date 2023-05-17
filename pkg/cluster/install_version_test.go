@@ -103,7 +103,7 @@ func TestGetOpenShiftVersionFromVersion(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			tlc := testliveconfig.NewTestLiveConfig(false, false)
+			tlc := testliveconfig.NewTestLiveConfig(false, false, false)
 			_env := mock_env.NewMockInterface(controller)
 			_env.EXPECT().ACRDomain().AnyTimes().Return(testACRDomain)
 			_env.EXPECT().LiveConfig().AnyTimes().Return(tlc)
