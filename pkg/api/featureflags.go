@@ -18,4 +18,8 @@ const (
 	// FeatureFlagUserDefinedRouting is the feature in the subscription that is used to indicate we need to
 	// provision a private cluster without an IP address
 	FeatureFlagUserDefinedRouting = "Microsoft.RedHatOpenShift/UserDefinedRouting"
+
+	// FeatureFlagCheckAccessTestToggle is used for safely testing the new check access
+	// API in production. The toggle will be removed once the testing has been completed.
+	FeatureFlagCheckAccessTestToggle = "Microsoft.RedHatOpenShift/CheckAccessTestToggle"
 )

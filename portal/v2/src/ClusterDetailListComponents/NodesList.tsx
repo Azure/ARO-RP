@@ -6,6 +6,7 @@ import { IColumn } from '@fluentui/react/lib/DetailsList';
 import { ShimmeredDetailsList } from '@fluentui/react/lib/ShimmeredDetailsList';
 import { INode } from "./NodesWrapper";
 import { NodesComponent } from "./Nodes"
+import { _copyAndSort } from '../Utilities';
 
 export declare interface INodeList {
   name: string;
@@ -126,11 +127,6 @@ export function NodeListHelperComponent(props: {
   function _onNodeInfoLinkClick(node: string) {
     setNodesDetailsVisible(!nodeDetailsVisible)
     setCurrentNode(node)
-  }
-
-  function _copyAndSort<T>(items: T[], columnKey: string, isSortedDescending?: boolean): T[] {
-    const key = columnKey as keyof T;
-    return items.slice(0).sort((a: T, b: T) => ((isSortedDescending ? a[key] < b[key] : a[key] > b[key]) ? 1 : -1));
   }
 
   function _onColumnClick(event: React.MouseEvent<HTMLElement>, column: IColumn): void {

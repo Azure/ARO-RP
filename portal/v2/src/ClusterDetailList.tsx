@@ -1,12 +1,16 @@
 import { Component } from "react"
-import { OverviewWrapper } from './ClusterDetailListComponents/OverviewWrapper';
-import { NodesWrapper } from './ClusterDetailListComponents/NodesWrapper';
-import { MachinesWrapper } from "./ClusterDetailListComponents/MachinesWrapper";
-import { MachineSetsWrapper } from "./ClusterDetailListComponents/MachineSetsWrapper";
+import React from "react"
+import { OverviewWrapper } from "./ClusterDetailListComponents/OverviewWrapper"
+import { NodesWrapper } from "./ClusterDetailListComponents/NodesWrapper"
+import { MachinesWrapper } from "./ClusterDetailListComponents/MachinesWrapper"
+import { MachineSetsWrapper } from "./ClusterDetailListComponents/MachineSetsWrapper"
+import { Statistics } from "./ClusterDetailListComponents/Statistics/Statistics"
+import { ClusterOperatorsWrapper } from "./ClusterDetailListComponents/ClusterOperatorsWrapper";
+
 import { ICluster } from "./App"
 
 interface ClusterDetailComponentProps {
-  item: any
+  item: IClusterDetails
   cluster: ICluster | null
   isDataLoaded: boolean
   detailPanelVisible: string
@@ -33,43 +37,57 @@ export interface IClusterDetails {
   installStatus: string
 }
 
+export interface WrapperProps {
+  currentCluster: ICluster | null
+  detailPanelSelected: string
+  loaded: boolean
+}
+
 interface IClusterDetailComponentState {
   item: IClusterDetails // why both state and props?
   detailPanelSelected: string
 }
 
+const detailComponents: Map<string, any> = new Map<string, any>([
+    ["nodes", NodesWrapper],
+    ["machines", MachinesWrapper],
+    ["machinesets", MachineSetsWrapper],
+    ["clusteroperators", ClusterOperatorsWrapper],
+    ["statistics", Statistics]
+])
+
 export class ClusterDetailComponent extends Component<ClusterDetailComponentProps, IClusterDetailComponentState> {
 
   constructor(props: ClusterDetailComponentProps | Readonly<ClusterDetailComponentProps>) {
-    super(props);
+    super(props)
   }
 
   public render() {
-    switch (this.props.detailPanelVisible.toLowerCase()) {
-      case "overview":
-      {
+    if (this.props.cluster != undefined && this.props.detailPanelVisible != undefined) {
+      const panel = this.props.detailPanelVisible.toLowerCase()
+      if (panel == "overview") {
         return (
-          <OverviewWrapper clusterName= {this.props.item.name} currentCluster={this.props.cluster!} detailPanelSelected={this.props.detailPanelVisible} loaded={this.props.isDataLoaded}/>
+          <OverviewWrapper
+            clusterName={this.props.cluster.name}
+            currentCluster={this.props.cluster!}
+            detailPanelSelected={panel}
+            loaded={this.props.isDataLoaded}
+          />
+        )
+      } else if (panel.includes("statistics")) {
+        const StatisticsView = detailComponents.get("statistics")
+        const type = panel.substring(0,panel.indexOf("statistics"))
+        return (
+          <StatisticsView currentCluster={this.props.cluster!} detailPanelSelected={panel} loaded = {this.props.isDataLoaded} statisticsType = {type}/>
+        )
+      } else {
+        const DetailView = detailComponents.get(panel)
+        return (
+          <DetailView currentCluster={this.props.cluster!} detailPanelSelected={panel} loaded={this.props.isDataLoaded}/>
         )
       }
-      case "nodes":
-        {
-          return (
-            <NodesWrapper currentCluster={this.props.cluster!} detailPanelSelected={this.props.detailPanelVisible} loaded={this.props.isDataLoaded}/>
-          );
-        }
-        case "machines":
-        {
-          return (
-            <MachinesWrapper currentCluster={this.props.cluster!} detailPanelSelected={this.props.detailPanelVisible} loaded={this.props.isDataLoaded}/>
-          );
-        }
-        case "machinesets":
-        {
-          return (
-            <MachineSetsWrapper currentCluster={this.props.cluster!} detailPanelSelected={this.props.detailPanelVisible} loaded={this.props.isDataLoaded}/>
-          );
-        }
-      }
+    }
   }
 }
+
+export const MemoisedClusterDetailListComponent = React.memo(ClusterDetailComponent)

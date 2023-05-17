@@ -69,7 +69,7 @@ var staticFiles embed.FS
 var gkPolicyTemplates embed.FS
 
 //go:embed policies/gkconstraints
-var gkPolicyConraints embed.FS
+var gkPolicyConstraints embed.FS
 
 var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
 

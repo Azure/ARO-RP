@@ -8,6 +8,9 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/golang/mock/gomock"
 	azuretypes "github.com/openshift/installer/pkg/types/azure"
 	"github.com/sirupsen/logrus"
@@ -16,7 +19,19 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
 	mock_dynamic "github.com/Azure/ARO-RP/pkg/util/mocks/dynamic"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
+
+type fakeTokenCredential struct{}
+
+func (c fakeTokenCredential) GetToken(ctx context.Context, options policy.TokenRequestOptions) (azcore.AccessToken, error) {
+	token, err := jwt.New(jwt.SigningMethodHS256).SignedString([]byte{})
+	if err != nil {
+		return azcore.AccessToken{}, err
+	}
+
+	return azcore.AccessToken{Token: token}, nil
+}
 
 func TestCheck(t *testing.T) {
 	ctx := context.Background()
@@ -38,25 +53,20 @@ func TestCheck(t *testing.T) {
 			credentialsExist: true,
 			validator: func(controller *gomock.Controller) dynamic.ServicePrincipalValidator {
 				validator := mock_dynamic.NewMockDynamic(controller)
-				validator.EXPECT().ValidateServicePrincipal(ctx, string(mockCredentials.ClientID), string(mockCredentials.ClientSecret), string(mockCredentials.TenantID))
+				validator.EXPECT().ValidateServicePrincipal(ctx, &fakeTokenCredential{})
 				return validator
 			},
 		},
 		{
-			name:             "could not instantiate a validator",
+			name:             "fake validation on Service Principal error",
 			credentialsExist: true,
 			validator: func(controller *gomock.Controller) dynamic.ServicePrincipalValidator {
 				validator := mock_dynamic.NewMockDynamic(controller)
-				validator.EXPECT().ValidateServicePrincipal(ctx, string(mockCredentials.ClientID), string(mockCredentials.ClientSecret), string(mockCredentials.TenantID)).
+				validator.EXPECT().ValidateServicePrincipal(ctx, &fakeTokenCredential{}).
 					Return(errors.New("fake validation error"))
 				return validator
 			},
 			wantErr: "fake validation error",
-		},
-		{
-			name:             "could not instantiate a validator",
-			credentialsExist: true,
-			wantErr:          "fake validator constructor error",
 		},
 		{
 			name:    "could not get service principal credentials",
@@ -80,19 +90,19 @@ func TestCheck(t *testing.T) {
 					}
 					return nil, errors.New("fake credentials get error")
 				},
-				newSPValidator: func(azEnv *azureclient.AROEnvironment) (dynamic.ServicePrincipalValidator, error) {
+				getTokenCredential: func(*azureclient.AROEnvironment, *clusterauthorizer.Credentials) (azcore.TokenCredential, error) {
+					return &fakeTokenCredential{}, nil
+				},
+				newSPValidator: func(azEnv *azureclient.AROEnvironment) dynamic.ServicePrincipalValidator {
 					if validatorMock != nil {
-						return validatorMock, nil
+						return validatorMock
 					}
-					return nil, errors.New("fake validator constructor error")
+					return nil
 				},
 			}
 
 			err := sp.Check(ctx, azuretypes.PublicCloud.Name())
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Errorf("\n%s\n !=\n%s", err, tt.wantErr)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

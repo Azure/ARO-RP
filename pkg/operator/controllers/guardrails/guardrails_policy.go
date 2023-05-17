@@ -137,7 +137,7 @@ func (r *Reconciler) policyTicker(ctx context.Context, instance *arov1alpha1.Clu
 			r.log.Infof("policyTicker reset to %d min", r.reconciliationMinutes)
 			ticker.Reset(time.Duration(r.reconciliationMinutes) * time.Minute)
 		case <-ticker.C:
-			err = r.ensurePolicy(ctx, gkPolicyConraints, gkConstraintsPath)
+			err = r.ensurePolicy(ctx, gkPolicyConstraints, gkConstraintsPath)
 			if err != nil {
 				r.log.Errorf("policyTicker ensurePolicy error %s", err.Error())
 			}

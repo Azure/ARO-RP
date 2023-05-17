@@ -7,18 +7,18 @@ import (
 	"context"
 	"os"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
-	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
@@ -47,13 +47,13 @@ import (
 // In INT/PROD I believe it is invisible.
 
 type ARMHelper interface {
-	EnsureARMResourceGroupRoleAssignment(context.Context, refreshable.Authorizer, string) error
+	EnsureARMResourceGroupRoleAssignment(context.Context, autorest.Authorizer, string) error
 }
 
 // noopARMHelper is used in INT and PROD.  It does nothing.
 type noopARMHelper struct{}
 
-func (*noopARMHelper) EnsureARMResourceGroupRoleAssignment(context.Context, refreshable.Authorizer, string) error {
+func (*noopARMHelper) EnsureARMResourceGroupRoleAssignment(context.Context, autorest.Authorizer, string) error {
 	return nil
 }
 
@@ -72,21 +72,18 @@ func newARMHelper(ctx context.Context, log *logrus.Entry, env Interface) (ARMHel
 		return &noopARMHelper{}, nil
 	}
 
-	var armAuthorizer autorest.Authorizer
+	var tokenCredential azcore.TokenCredential
+	var err error
+
 	if os.Getenv("AZURE_ARM_CLIENT_SECRET") != "" {
 		// TODO: migrate away from AZURE_ARM_CLIENT_SECRET and remove this code
 		// path
 
-		ccc := auth.ClientCredentialsConfig{
-			ClientID:     os.Getenv("AZURE_ARM_CLIENT_ID"),
-			ClientSecret: os.Getenv("AZURE_ARM_CLIENT_SECRET"),
-			TenantID:     env.TenantID(),
-			Resource:     env.Environment().ResourceManagerEndpoint,
-			AADEndpoint:  env.Environment().ActiveDirectoryEndpoint,
-		}
-
-		var err error
-		armAuthorizer, err = ccc.Authorizer()
+		tokenCredential, err = azidentity.NewClientSecretCredential(
+			env.TenantID(),
+			os.Getenv("AZURE_ARM_CLIENT_ID"),
+			os.Getenv("AZURE_ARM_CLIENT_SECRET"),
+			env.Environment().ClientSecretCredentialOptions())
 		if err != nil {
 			return nil, err
 		}
@@ -96,20 +93,18 @@ func newARMHelper(ctx context.Context, log *logrus.Entry, env Interface) (ARMHel
 			return nil, err
 		}
 
-		oauthConfig, err := adal.NewOAuthConfig(env.Environment().ActiveDirectoryEndpoint, env.TenantID())
+		options := env.Environment().ClientCertificateCredentialOptions()
+		tokenCredential, err = azidentity.NewClientCertificateCredential(
+			env.TenantID(), os.Getenv("AZURE_ARM_CLIENT_ID"), certs, key, options)
 		if err != nil {
 			return nil, err
 		}
-
-		sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, os.Getenv("AZURE_ARM_CLIENT_ID"), certs[0], key, env.Environment().ResourceManagerEndpoint)
-		if err != nil {
-			return nil, err
-		}
-
-		armAuthorizer = autorest.NewBearerAuthorizer(sp)
 	}
 
-	fpGraphAuthorizer, err := env.FPAuthorizer(env.TenantID(), env.Environment().GraphEndpoint)
+	scopes := []string{env.Environment().ResourceManagerScope}
+	armAuthorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
+
+	fpGraphAuthorizer, err := env.FPAuthorizer(env.TenantID(), env.Environment().ActiveDirectoryGraphScope)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +118,7 @@ func newARMHelper(ctx context.Context, log *logrus.Entry, env Interface) (ARMHel
 	}, nil
 }
 
-func (ah *armHelper) EnsureARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer refreshable.Authorizer, resourceGroup string) error {
+func (ah *armHelper) EnsureARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer autorest.Authorizer, resourceGroup string) error {
 	ah.log.Print("ensuring resource group role assignment")
 
 	res, err := ah.applications.GetServicePrincipalsIDByAppID(ctx, ah.env.FPClientID())

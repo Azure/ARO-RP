@@ -9,15 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	v20200430 "github.com/Azure/ARO-RP/pkg/api/v20200430"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
-	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
-	"github.com/Azure/ARO-RP/pkg/proxy"
-	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
@@ -97,9 +92,7 @@ func TestGetOpenShiftCluster(t *testing.T) {
 				ti.openShiftClustersClient.SetError(tt.dbError)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, nil, api.APIs, &noop.Noop{}, nil, nil, nil, nil, func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Emitter) clusterdata.OpenShiftClusterEnricher {
-				return ti.enricher
-			})
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, nil, api.APIs, &noop.Noop{}, nil, nil, nil, nil, ti.enricher)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -120,11 +113,6 @@ func TestGetOpenShiftCluster(t *testing.T) {
 
 			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, wantResponse)
 			if err != nil {
-				t.Error(err)
-			}
-
-			errs := ti.enricher.Check(tt.wantEnriched)
-			for _, err := range errs {
 				t.Error(err)
 			}
 		})

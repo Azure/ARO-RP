@@ -10,11 +10,11 @@ import (
 	"os"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/Azure/go-autorest/autorest/adal"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
-	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -84,30 +84,20 @@ func (d *dev) Listen() (net.Listener, error) {
 	return net.Listen("tcp", "localhost:8443")
 }
 
-func (d *dev) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, error) {
-	oauthConfig, err := adal.NewOAuthConfig(d.Environment().ActiveDirectoryEndpoint, tenantID)
+func (d *dev) FPAuthorizer(tenantID string, scopes ...string) (autorest.Authorizer, error) {
+	tokenCredential, err := d.FPNewClientCertificateCredential(tenantID)
 	if err != nil {
 		return nil, err
 	}
 
-	fpPrivateKey, fpCertificates := d.fpCertificateRefresher.GetCertificates()
-
-	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, d.fpClientID, fpCertificates[0], fpPrivateKey, resource)
-	if err != nil {
-		return nil, err
-	}
-
-	return refreshable.NewAuthorizer(sp), nil
+	return azidext.NewTokenCredentialAdapter(tokenCredential, scopes), nil
 }
 
 func (d *dev) FPNewClientCertificateCredential(tenantID string) (*azidentity.ClientCertificateCredential, error) {
 	fpPrivateKey, fpCertificates := d.fpCertificateRefresher.GetCertificates()
 
-	credential, err := azidentity.NewClientCertificateCredential(tenantID, d.fpClientID, fpCertificates, fpPrivateKey, &azidentity.ClientCertificateCredentialOptions{
-		AuthorityHost:        d.Environment().AuthorityHost,
-		SendCertificateChain: true,
-	})
-
+	options := d.Environment().ClientCertificateCredentialOptions()
+	credential, err := azidentity.NewClientCertificateCredential(tenantID, d.fpClientID, fpCertificates, fpPrivateKey, options)
 	if err != nil {
 		return nil, err
 	}

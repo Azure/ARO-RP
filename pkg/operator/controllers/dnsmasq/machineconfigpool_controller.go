@@ -63,7 +63,7 @@ func (r *MachineConfigPoolReconciler) Reconcile(ctx context.Context, request ctr
 		return reconcile.Result{}, err
 	}
 
-	err = reconcileMachineConfigs(ctx, instance, r.dh, request.Name)
+	err = reconcileMachineConfigs(ctx, instance, r.dh, *mcp)
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err

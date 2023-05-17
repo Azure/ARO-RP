@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -20,7 +20,6 @@ import (
 func (f *frontend) putOrPatchClusterManagerConfiguration(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
-	vars := mux.Vars(r)
 
 	var (
 		header http.Header
@@ -28,7 +27,7 @@ func (f *frontend) putOrPatchClusterManagerConfiguration(w http.ResponseWriter, 
 		err    error
 	)
 
-	apiVersion, ocmResourceType := r.URL.Query().Get(api.APIVersionKey), vars["ocmResourceType"]
+	apiVersion, ocmResourceType := r.URL.Query().Get(api.APIVersionKey), chi.URLParam(r, "ocmResourceType")
 
 	err = f.validateOcmResourceType(apiVersion, ocmResourceType)
 	if err != nil {
@@ -58,9 +57,8 @@ func (f *frontend) _putOrPatchSyncSet(ctx context.Context, log *logrus.Entry, r 
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
 	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
-	vars := mux.Vars(r)
-	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
-	ocmResourceType, ocmResourceName := vars["ocmResourceType"], vars["ocmResourceName"]
+	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
+	ocmResourceType, ocmResourceName := chi.URLParam(r, "ocmResourceType"), chi.URLParam(r, "ocmResourceName")
 	originalPath, err := f.extractOriginalPath(ctx, r, resType, resName, resGroupName)
 	if err != nil {
 		return nil, err
@@ -80,7 +78,7 @@ func (f *frontend) _putOrPatchSyncSet(ctx context.Context, log *logrus.Entry, r 
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
 	}
 
-	err = staticValidator.Static(resources, vars)
+	err = staticValidator.Static(resources, ocmResourceType)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The 'Kind' in the request payload does not match 'Kind' in the request path: %q.", err)
 	}
@@ -131,9 +129,8 @@ func (f *frontend) _putOrPatchMachinePool(ctx context.Context, log *logrus.Entry
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
 	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
-	vars := mux.Vars(r)
-	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
-	ocmResourceType, ocmResourceName := vars["ocmResourceType"], vars["ocmResourceName"]
+	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
+	ocmResourceType, ocmResourceName := chi.URLParam(r, "ocmResourceType"), chi.URLParam(r, "ocmResourceName")
 
 	originalPath, err := f.extractOriginalPath(ctx, r, resType, resName, resGroupName)
 	if err != nil {
@@ -154,7 +151,7 @@ func (f *frontend) _putOrPatchMachinePool(ctx context.Context, log *logrus.Entry
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
 	}
 
-	err = staticValidator.Static(resources, vars)
+	err = staticValidator.Static(resources, ocmResourceType)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The 'Kind' in the request payload does not match 'Kind' in the request path: %q.", err)
 	}
@@ -205,9 +202,8 @@ func (f *frontend) _putOrPatchSyncIdentityProvider(ctx context.Context, log *log
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
 	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
-	vars := mux.Vars(r)
-	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
-	ocmResourceType, ocmResourceName := vars["ocmResourceType"], vars["ocmResourceName"]
+	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
+	ocmResourceType, ocmResourceName := chi.URLParam(r, "ocmResourceType"), chi.URLParam(r, "ocmResourceName")
 
 	originalPath, err := f.extractOriginalPath(ctx, r, resType, resName, resGroupName)
 	if err != nil {
@@ -228,7 +224,7 @@ func (f *frontend) _putOrPatchSyncIdentityProvider(ctx context.Context, log *log
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
 	}
 
-	err = staticValidator.Static(resources, vars)
+	err = staticValidator.Static(resources, ocmResourceType)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The 'Kind' in the request payload does not match 'Kind' in the request path: %q.", err)
 	}
@@ -279,9 +275,8 @@ func (f *frontend) _putOrPatchSecret(ctx context.Context, log *logrus.Entry, r *
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
 	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
-	vars := mux.Vars(r)
-	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
-	ocmResourceType, ocmResourceName := vars["ocmResourceType"], vars["ocmResourceName"]
+	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
+	ocmResourceType, ocmResourceName := chi.URLParam(r, "ocmResourceType"), chi.URLParam(r, "ocmResourceName")
 
 	originalPath, err := f.extractOriginalPath(ctx, r, resType, resName, resGroupName)
 	if err != nil {
@@ -302,7 +297,7 @@ func (f *frontend) _putOrPatchSecret(ctx context.Context, log *logrus.Entry, r *
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
 	}
 
-	err = staticValidator.Static(resources, vars)
+	err = staticValidator.Static(resources, ocmResourceType)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The 'Kind' in the request payload does not match 'Kind' in the request path: %q.", err)
 	}

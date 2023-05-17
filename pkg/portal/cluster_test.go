@@ -76,7 +76,7 @@ func TestClusterList(t *testing.T) {
 	}
 
 	aadAuthenticatedRouter := mux.NewRouter()
-	p.aadAuthenticatedRoutes(aadAuthenticatedRouter)
+	p.aadAuthenticatedRoutes(aadAuthenticatedRouter, nil, nil, nil)
 	w := httptest.NewRecorder()
 	aadAuthenticatedRouter.ServeHTTP(w, req)
 
@@ -197,7 +197,7 @@ func TestClusterDetail(t *testing.T) {
 	}
 
 	aadAuthenticatedRouter := mux.NewRouter()
-	p.aadAuthenticatedRoutes(aadAuthenticatedRouter)
+	p.aadAuthenticatedRoutes(aadAuthenticatedRouter, nil, nil, nil)
 	w := httptest.NewRecorder()
 	aadAuthenticatedRouter.ServeHTTP(w, req)
 

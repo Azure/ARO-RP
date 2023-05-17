@@ -39,7 +39,7 @@ func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, c
 // creation
 // It is a method on struct so we can make use of interfaces.
 func (q quotaValidator) ValidateQuota(ctx context.Context, azEnv *azureclient.AROEnvironment, environment env.Interface, subscriptionID, tenantID string, oc *api.OpenShiftCluster) error {
-	fpAuthorizer, err := environment.FPAuthorizer(tenantID, environment.Environment().ResourceManagerEndpoint)
+	fpAuthorizer, err := environment.FPAuthorizer(tenantID, environment.Environment().ResourceManagerScope)
 	if err != nil {
 		return err
 	}
@@ -54,7 +54,7 @@ func validateQuota(ctx context.Context, oc *api.OpenShiftCluster, spNetworkUsage
 	// If ValidateQuota runs outside install process, we should skip quota validation
 	requiredResources := map[string]int{}
 
-	err := addRequiredResources(requiredResources, oc.Properties.MasterProfile.VMSize, 3)
+	err := addRequiredResources(requiredResources, oc.Properties.MasterProfile.VMSize, 4)
 	if err != nil {
 		return err
 	}

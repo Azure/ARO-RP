@@ -4,8 +4,6 @@ package instancemetadata
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -14,10 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golang/mock/gomock"
-
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	mock_instancemetadata "github.com/Azure/ARO-RP/pkg/util/mocks/instancemetadata"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestPopulateInstanceMetadata(t *testing.T) {
@@ -138,10 +134,7 @@ func TestPopulateInstanceMetadata(t *testing.T) {
 
 			err := p.populateInstanceMetadata()
 
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Fatal(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if p.subscriptionID != tt.wantSubscriptionID {
 				t.Error(p.subscriptionID)
@@ -157,90 +150,6 @@ func TestPopulateInstanceMetadata(t *testing.T) {
 
 			if !reflect.DeepEqual(p.environment, tt.wantEnvironment) {
 				t.Error(p.environment)
-			}
-		})
-	}
-}
-
-func TestPopulateTenantIDFromMSI(t *testing.T) {
-	ctx := context.Background()
-
-	for _, tt := range []struct {
-		name         string
-		mocks        func(*mock_instancemetadata.MockServicePrincipalToken)
-		wantTenantID string
-		wantErr      string
-	}{
-		{
-			name: "valid",
-			mocks: func(token *mock_instancemetadata.MockServicePrincipalToken) {
-				token.EXPECT().
-					RefreshWithContext(gomock.Any()).
-					Return(nil)
-
-				token.EXPECT().
-					OAuthToken().
-					Return(base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"none"}`)) + "." +
-						base64.RawURLEncoding.EncodeToString([]byte(`{"tid":"rpTenantID"}`)) + ".")
-			},
-			wantTenantID: "rpTenantID",
-		},
-		{
-			name: "fresh error",
-			mocks: func(token *mock_instancemetadata.MockServicePrincipalToken) {
-				token.EXPECT().
-					RefreshWithContext(gomock.Any()).
-					Return(fmt.Errorf("random error"))
-			},
-			wantErr: "random error",
-		},
-		{
-			name: "oauthtoken invalid",
-			mocks: func(token *mock_instancemetadata.MockServicePrincipalToken) {
-				token.EXPECT().
-					RefreshWithContext(gomock.Any()).
-					Return(nil)
-
-				token.EXPECT().
-					OAuthToken().
-					Return("invalid")
-			},
-			wantErr: "token contains an invalid number of segments",
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			token := mock_instancemetadata.NewMockServicePrincipalToken(controller)
-			if tt.mocks != nil {
-				tt.mocks(token)
-			}
-
-			p := &prod{
-				newServicePrincipalTokenFromMSI: func(msiEndpoint, resource string) (ServicePrincipalToken, error) {
-					if msiEndpoint != "http://169.254.169.254/metadata/identity/oauth2/token" {
-						return nil, fmt.Errorf("unexpected endpoint %q", msiEndpoint)
-					}
-					if resource != azureclient.PublicCloud.ResourceManagerEndpoint {
-						return nil, fmt.Errorf("unexpected resource %q", resource)
-					}
-					return token, nil
-				},
-				instanceMetadata: instanceMetadata{
-					environment: &azureclient.PublicCloud,
-				},
-			}
-
-			err := p.populateTenantIDFromMSI(ctx)
-
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Fatal(err)
-			}
-
-			if p.tenantID != tt.wantTenantID {
-				t.Error(p.tenantID)
 			}
 		})
 	}

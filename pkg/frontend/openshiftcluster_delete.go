@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -53,9 +53,8 @@ func (f *frontend) _deleteOpenShiftCluster(ctx context.Context, r *http.Request,
 	doc.CorrelationData = correlationData
 	doc.Dequeues = 0
 
-	vars := mux.Vars(r)
-	subId := vars["subscriptionId"]
-	resourceProviderNamespace := vars["resourceProviderNamespace"]
+	subId := chi.URLParam(r, "subscriptionId")
+	resourceProviderNamespace := chi.URLParam(r, "resourceProviderNamespace")
 
 	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, subId, resourceProviderNamespace, doc)
 	if err != nil {

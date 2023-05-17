@@ -12,8 +12,7 @@ import (
 
 type clusterManagerStaticValidator struct{}
 
-func (c clusterManagerStaticValidator) Static(body string, vars map[string]string) error {
-	ocmResourceType := vars["ocmResourceType"]
+func (c clusterManagerStaticValidator) Static(body string, ocmResourceType string) error {
 	var resource map[string]interface{}
 
 	if decodedBody, err := base64.StdEncoding.DecodeString(body); err == nil {

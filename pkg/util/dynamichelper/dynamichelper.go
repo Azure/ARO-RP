@@ -77,24 +77,11 @@ func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {
 	return dh, nil
 }
 
-func (dh *dynamicHelper) resolve(groupKind, optionalVersion string) (*schema.GroupVersionResource, error) {
-	gvr, err := dh.Resolve(groupKind, optionalVersion)
-	if err == nil {
-		return gvr, err
-	}
-	// refresh may sometimes solve the issue
-	if errNew := dh.Refresh(); errNew != nil {
-		dh.log.Errorf("dynamicHelper Refresh failed with error: %v", errNew)
-		return gvr, err
-	}
-	return dh.Resolve(groupKind, optionalVersion)
-}
-
 func (dh *dynamicHelper) EnsureDeleted(ctx context.Context, groupKind, namespace, name string) error {
 	return dh.EnsureDeletedGVR(ctx, groupKind, namespace, name, "")
 }
 func (dh *dynamicHelper) EnsureDeletedGVR(ctx context.Context, groupKind, namespace, name, optionalVersion string) error {
-	gvr, err := dh.resolve(groupKind, optionalVersion)
+	gvr, err := dh.Resolve(groupKind, optionalVersion)
 	if err != nil {
 		return err
 	}
@@ -132,8 +119,10 @@ func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...kruntime.Object) er
 	return nil
 }
 
+// the UnstructuredObj related stuff is specifically for the Guardrails
+// to handle the gatekeeper Constraint as it does not have a scheme that can be imported
 func (dh *dynamicHelper) ensureUnstructuredObj(ctx context.Context, uns *unstructured.Unstructured) error {
-	gvr, err := dh.resolve(uns.GroupVersionKind().GroupKind().String(), uns.GroupVersionKind().Version)
+	gvr, err := dh.Resolve(uns.GroupVersionKind().GroupKind().String(), uns.GroupVersionKind().Version)
 	if err != nil {
 		return err
 	}
@@ -199,7 +188,7 @@ func GetEnforcementAction(obj *unstructured.Unstructured) (string, error) {
 }
 
 func (dh *dynamicHelper) deleteUnstructuredObj(ctx context.Context, groupKind, namespace, name string) error {
-	gvr, err := dh.resolve(groupKind, "")
+	gvr, err := dh.Resolve(groupKind, "")
 	if err != nil {
 		return err
 	}
@@ -224,7 +213,7 @@ func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) err
 
 	gvk := gvks[0]
 
-	gvr, err := dh.resolve(gvk.GroupKind().String(), gvk.Version)
+	gvr, err := dh.Resolve(gvk.GroupKind().String(), gvk.Version)
 	if err != nil {
 		return err
 	}

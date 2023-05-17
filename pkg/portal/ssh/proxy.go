@@ -58,7 +58,7 @@ const (
 	sshTimeout = time.Hour // never allow a connection to live longer than an hour.
 )
 
-func (s *ssh) Run() error {
+func (s *SSH) Run() error {
 	go func() {
 		defer recover.Panic(s.log)
 
@@ -79,7 +79,7 @@ func (s *ssh) Run() error {
 	return nil
 }
 
-func (s *ssh) newConn(ctx context.Context, clientConn net.Conn) error {
+func (s *SSH) newConn(ctx context.Context, clientConn net.Conn) error {
 	defer clientConn.Close()
 
 	config := &cryptossh.ServerConfig{}
@@ -195,7 +195,7 @@ func (s *ssh) newConn(ctx context.Context, clientConn net.Conn) error {
 
 // proxyConn handles incoming new channel and administrative requests.  It calls
 // newChannel to handle new channels, each on a new goroutine.
-func (s *ssh) proxyConn(ctx context.Context, accessLog *logrus.Entry, keyring agent.Agent, upstreamConn, downstreamConn cryptossh.Conn, upstreamNewChannels, downstreamNewChannels <-chan cryptossh.NewChannel, upstreamRequests, downstreamRequests <-chan *cryptossh.Request) error {
+func (s *SSH) proxyConn(ctx context.Context, accessLog *logrus.Entry, keyring agent.Agent, upstreamConn, downstreamConn cryptossh.Conn, upstreamNewChannels, downstreamNewChannels <-chan cryptossh.NewChannel, upstreamRequests, downstreamRequests <-chan *cryptossh.Request) error {
 	timer := time.NewTimer(sshTimeout)
 	defer timer.Stop()
 
@@ -256,7 +256,7 @@ func (s *ssh) proxyConn(ctx context.Context, accessLog *logrus.Entry, keyring ag
 	}
 }
 
-func (s *ssh) handleAgent(accessLog *logrus.Entry, nc cryptossh.NewChannel, keyring agent.Agent) error {
+func (s *SSH) handleAgent(accessLog *logrus.Entry, nc cryptossh.NewChannel, keyring agent.Agent) error {
 	ch, rs, err := nc.Accept()
 	if err != nil {
 		return err
@@ -277,7 +277,7 @@ func (s *ssh) handleAgent(accessLog *logrus.Entry, nc cryptossh.NewChannel, keyr
 // newChannel handles an incoming request to create a new channel.  If the
 // channel creation is successful, it calls proxyChannel to proxy the channel
 // between SRE and cluster.
-func (s *ssh) newChannel(ctx context.Context, accessLog *logrus.Entry, nc cryptossh.NewChannel, upstreamConn, downstreamConn cryptossh.Conn, firstSession bool) error {
+func (s *SSH) newChannel(ctx context.Context, accessLog *logrus.Entry, nc cryptossh.NewChannel, upstreamConn, downstreamConn cryptossh.Conn, firstSession bool) error {
 	defer recover.Panic(s.log)
 
 	ch2, rs2, err := downstreamConn.OpenChannel(nc.ChannelType(), nc.ExtraData())
@@ -310,7 +310,7 @@ func (s *ssh) newChannel(ctx context.Context, accessLog *logrus.Entry, nc crypto
 	return s.proxyChannel(ch1, ch2, rs1, rs2)
 }
 
-func (s *ssh) proxyGlobalRequest(r *cryptossh.Request, c cryptossh.Conn) error {
+func (s *SSH) proxyGlobalRequest(r *cryptossh.Request, c cryptossh.Conn) error {
 	ok, payload, err := c.SendRequest(r.Type, r.WantReply, r.Payload)
 	if err != nil {
 		return err
@@ -319,7 +319,7 @@ func (s *ssh) proxyGlobalRequest(r *cryptossh.Request, c cryptossh.Conn) error {
 	return r.Reply(ok, payload)
 }
 
-func (s *ssh) proxyRequest(r *cryptossh.Request, ch cryptossh.Channel) error {
+func (s *SSH) proxyRequest(r *cryptossh.Request, ch cryptossh.Channel) error {
 	ok, err := ch.SendRequest(r.Type, r.WantReply, r.Payload)
 	if err != nil {
 		return err
@@ -328,7 +328,7 @@ func (s *ssh) proxyRequest(r *cryptossh.Request, ch cryptossh.Channel) error {
 	return r.Reply(ok, nil)
 }
 
-func (s *ssh) proxyChannel(ch1, ch2 cryptossh.Channel, rs1, rs2 <-chan *cryptossh.Request) error {
+func (s *SSH) proxyChannel(ch1, ch2 cryptossh.Channel, rs1, rs2 <-chan *cryptossh.Request) error {
 	g := errgroup.Group{}
 
 	g.Go(func() error {
@@ -382,7 +382,7 @@ func (s *ssh) proxyChannel(ch1, ch2 cryptossh.Channel, rs1, rs2 <-chan *cryptoss
 	return g.Wait()
 }
 
-func (s *ssh) keepAliveConn(ctx context.Context, channel cryptossh.Channel) {
+func (s *SSH) keepAliveConn(ctx context.Context, channel cryptossh.Channel) {
 	ticker := time.NewTicker(keepAliveInterval)
 	defer ticker.Stop()
 

@@ -17,6 +17,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/version"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestConfigureStorageClass(t *testing.T) {
@@ -148,10 +149,7 @@ func TestConfigureStorageClass(t *testing.T) {
 			}
 
 			err = m.configureDefaultStorageClass(ctx)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if tt.wantNewSC {
 				oldSC, err := kubernetescli.StorageV1().StorageClasses().Get(ctx, storageClassName, metav1.GetOptions{})

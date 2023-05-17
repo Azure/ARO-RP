@@ -189,11 +189,15 @@ func validateNetworkInterfaceName(nicName string) error {
 	return nil
 }
 
-func validateAdminVMSize(vmSize string) error {
-	if vmSize == "" {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided vmSize '%s' is invalid.", vmSize)
+func validateAdminMasterVMSize(vmSize string) error {
+	// check to ensure that the target size is supported as a master size
+	for k := range validate.SupportedVMSizesByRole(validate.VMRoleMaster) {
+		if strings.EqualFold(string(k), vmSize) {
+			return nil
+		}
 	}
-	return nil
+
+	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided vmSize '%s' is unsupported for master.", vmSize)
 }
 
 // validateInstallVersion validates the install version set in the clusterprofile.version

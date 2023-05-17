@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -32,8 +32,7 @@ func (f *frontend) getAdminKubernetesObjects(w http.ResponseWriter, r *http.Requ
 
 func (f *frontend) _getAdminKubernetesObjects(ctx context.Context, r *http.Request, log *logrus.Entry) ([]byte, error) {
 	var err error
-	vars := mux.Vars(r)
-	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
+	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 
 	groupKind, namespace, name := r.URL.Query().Get("kind"), r.URL.Query().Get("namespace"), r.URL.Query().Get("name")
 
@@ -93,8 +92,7 @@ func (f *frontend) deleteAdminKubernetesObjects(w http.ResponseWriter, r *http.R
 }
 
 func (f *frontend) _deleteAdminKubernetesObjects(ctx context.Context, r *http.Request, log *logrus.Entry) error {
-	vars := mux.Vars(r)
-	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
+	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 
 	groupKind, namespace, name := r.URL.Query().Get("kind"), r.URL.Query().Get("namespace"), r.URL.Query().Get("name")
 	force := strings.EqualFold(r.URL.Query().Get("force"), "true")
@@ -152,8 +150,7 @@ func (f *frontend) postAdminKubernetesObjects(w http.ResponseWriter, r *http.Req
 
 func (f *frontend) _postAdminKubernetesObjects(ctx context.Context, r *http.Request, log *logrus.Entry) error {
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
-	vars := mux.Vars(r)
-	resType, resName, resGroupName := vars["resourceType"], vars["resourceName"], vars["resourceGroupName"]
+	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 

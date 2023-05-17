@@ -37,7 +37,7 @@ func SetDefaults(doc *OpenShiftClusterDocument) {
 			doc.OpenShiftCluster.Properties.OperatorFlags = DefaultOperatorFlags()
 		}
 
-		// If there's no userDefinedRouting, set default one
+		// If there's no OutboundType, set default one
 		if doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType == "" {
 			doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType = OutboundTypeLoadbalancer
 		}

@@ -11,6 +11,10 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/gorilla/mux"
+
+	"github.com/Azure/ARO-RP/pkg/portal/cluster"
+	"github.com/Azure/ARO-RP/pkg/portal/prometheus"
 )
 
 type AdminOpenShiftCluster struct {
@@ -189,4 +193,61 @@ func (p *portal) machineSets(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(b)
+}
+
+func (p *portal) statistics(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	duration := r.URL.Query().Get("duration")
+	parsedDuration, err := time.ParseDuration(duration)
+	if err != nil {
+		p.badRequest(w, err)
+		return
+	}
+	endTimeString := r.URL.Query().Get("endtime")
+	endTime, err := time.Parse(time.RFC3339, endTimeString)
+	if err != nil {
+		p.badRequest(w, err)
+		return
+	}
+	apiVars := mux.Vars(r)
+	statisticsType := apiVars["statisticsType"]
+	subscriptionID := apiVars["subscription"]
+	resourceGroup := apiVars["resourceGroup"]
+	clusterName := apiVars["clusterName"]
+	resourceID := p.getResourceID(subscriptionID, resourceGroup, clusterName)
+	promQuery, err := cluster.GetPromQuery(statisticsType)
+	if err != nil {
+		p.badRequest(w, err)
+		return
+	}
+	prom := prometheus.New(p.log, p.dbOpenShiftClusters, p.dialer)
+	httpClient, err := prom.Cli(ctx, resourceID)
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	fetcher, err := p.makeFetcher(ctx, r)
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+	promHost, promScheme := prom.GetPrometheusHostAndScheme()
+	prometheusURL := promScheme + "://" + promHost
+	APIStatistics, err := fetcher.Statistics(ctx, httpClient, promQuery, parsedDuration, endTime, prometheusURL)
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+	b, err := json.MarshalIndent(APIStatistics, "", "    ")
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_, err = w.Write(b)
+	if err != nil {
+		p.log.Error(err)
+	}
 }

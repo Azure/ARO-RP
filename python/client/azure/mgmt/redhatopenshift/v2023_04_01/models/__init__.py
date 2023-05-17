@@ -91,6 +91,7 @@ from ._azure_red_hat_open_shift_client_enums import (
     CreatedByType,
     EncryptionAtHost,
     FipsValidatedModules,
+    OutboundType,
     ProvisioningState,
     Visibility,
 )
@@ -134,6 +135,7 @@ __all__ = [
     'CreatedByType',
     'EncryptionAtHost',
     'FipsValidatedModules',
+    'OutboundType',
     'ProvisioningState',
     'Visibility',
 ]

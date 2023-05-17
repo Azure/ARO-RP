@@ -23,6 +23,7 @@ import (
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestCreateOrUpdateRouterIPFromCluster(t *testing.T) {
@@ -169,10 +170,7 @@ func TestCreateOrUpdateRouterIPFromCluster(t *testing.T) {
 			}
 
 			err = m.createOrUpdateRouterIPFromCluster(ctx)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			for _, err = range checker.CheckOpenShiftClusters(dbClient) {
 				t.Error(err)
@@ -315,10 +313,7 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 			}
 
 			err = m.createOrUpdateRouterIPEarly(ctx)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			for _, err = range checker.CheckOpenShiftClusters(dbClient) {
 				t.Error(err)
@@ -479,10 +474,7 @@ func TestPopulateDatabaseIntIP(t *testing.T) {
 			}
 
 			err = m.populateDatabaseIntIP(ctx)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			for _, err = range checker.CheckOpenShiftClusters(dbClient) {
 				t.Error(err)
@@ -641,10 +633,7 @@ func TestUpdateAPIIPEarly(t *testing.T) {
 			}
 
 			err = m.updateAPIIPEarly(ctx)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Error(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			for _, err = range checker.CheckOpenShiftClusters(dbClient) {
 				t.Error(err)
@@ -850,10 +839,7 @@ func TestEnsureGatewayCreate(t *testing.T) {
 			}
 
 			err = m.ensureGatewayCreate(ctx)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Fatal(err)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			c := testdatabase.NewChecker()
 			if tt.checker != nil {
