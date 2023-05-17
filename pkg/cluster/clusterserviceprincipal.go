@@ -186,23 +186,25 @@ func (m *manager) updateOpenShiftSecret(ctx context.Context) error {
 		secret, err := m.kubernetescli.CoreV1().Secrets(clusterauthorizer.AzureCredentialSecretNameSpace).Get(ctx, clusterauthorizer.AzureCredentialSecretName, metav1.GetOptions{})
 		if kerrors.IsNotFound(err) {
 			// rebuild secret
+			resourceGroupID := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID
 			secret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      clusterauthorizer.AzureCredentialSecretName,
 					Namespace: clusterauthorizer.AzureCredentialSecretNameSpace,
 				},
 				Type: corev1.SecretTypeOpaque,
-				Data: make(map[string][]byte),
+				Data: map[string][]byte{
+
+					"azure_subscription_id": []byte(m.subscriptionDoc.ID),
+					"azure_resource_prefix": []byte(m.doc.OpenShiftCluster.Properties.InfraID),
+					"azure_resourcegroup":   []byte(resourceGroupID[strings.LastIndex(resourceGroupID, "/")+1:]),
+					"azure_region":          []byte(m.doc.OpenShiftCluster.Location),
+					// values set below
+					"azure_client_id":     []byte(""),
+					"azure_client_secret": []byte(""),
+					"azure_tenant_id":     []byte(""),
+				},
 			}
-			secret.Data["azure_subscription_id"] = []byte(m.subscriptionDoc.ID)
-			secret.Data["azure_resource_prefix"] = []byte(m.doc.OpenShiftCluster.Properties.InfraID)
-			resourceGroupID := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID
-			secret.Data["azure_resourcegroup"] = []byte(resourceGroupID[strings.LastIndex(resourceGroupID, "/")+1:])
-			secret.Data["azure_region"] = []byte(m.doc.OpenShiftCluster.Location)
-			// values set below
-			secret.Data["azure_client_id"] = []byte("")
-			secret.Data["azure_client_secret"] = []byte("")
-			secret.Data["azure_tenant_id"] = []byte("")
 			recreate = true
 		} else if err != nil {
 			return err
