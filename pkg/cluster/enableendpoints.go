@@ -8,9 +8,9 @@ import (
 	"fmt"
 )
 
-// enableServiceEndpoints should enable service endpoints on
+// ensureServiceEndpoints should enable service endpoints on
 // subnets for storage account access
-func (m *manager) enableServiceEndpoints(ctx context.Context) error {
+func (m *manager) ensureServiceEndpoints(ctx context.Context) error {
 	subnetIds, err := m.getSubnetIds()
 	if err != nil {
 		return err

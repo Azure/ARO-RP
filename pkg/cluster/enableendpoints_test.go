@@ -23,7 +23,7 @@ var (
 	subnetIdMaster    = "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
 )
 
-func TestEnableServiceEndpointsShouldCall_SubnetManager_CreateOrUpdateFromIds_AndReturnNoError(t *testing.T) {
+func TestEnsureServiceEndpointsShouldCall_SubnetManager_CreateOrUpdateFromIds_AndReturnNoError(t *testing.T) {
 	oc := &api.OpenShiftCluster{
 		Properties: api.OpenShiftClusterProperties{
 			MasterProfile: api.MasterProfile{SubnetID: subnetIdMaster},
@@ -54,7 +54,7 @@ func TestEnableServiceEndpointsShouldCall_SubnetManager_CreateOrUpdateFromIds_An
 		},
 	}
 
-	err := m.enableServiceEndpoints(ctx)
+	err := m.ensureServiceEndpoints(ctx)
 	expectedError := ""
 
 	if (err != nil && err.Error() != expectedError) || (err == nil && expectedError != "") {
@@ -62,7 +62,7 @@ func TestEnableServiceEndpointsShouldCall_SubnetManager_CreateOrUpdateFromIds_An
 	}
 }
 
-func TestEnableServiceEndpointsShouldReturnWorkerProfileHasNoSubnetIdErrorAndShouldNotCall_SubnetManager_CreateOrUpdateFromIds(t *testing.T) {
+func TestEnsureServiceEndpointsShouldReturnWorkerProfileHasNoSubnetIdErrorAndShouldNotCall_SubnetManager_CreateOrUpdateFromIds(t *testing.T) {
 	oc := &api.OpenShiftCluster{
 		Properties: api.OpenShiftClusterProperties{
 			MasterProfile: api.MasterProfile{
@@ -97,7 +97,7 @@ func TestEnableServiceEndpointsShouldReturnWorkerProfileHasNoSubnetIdErrorAndSho
 		},
 	}
 
-	err := m.enableServiceEndpoints(ctx)
+	err := m.ensureServiceEndpoints(ctx)
 	expectedError := "WorkerProfile 'profile_name' has no SubnetID; check that the corresponding MachineSet is valid"
 
 	if (err != nil && err.Error() != expectedError) || (err == nil && expectedError != "") {
