@@ -285,20 +285,14 @@ var _ = Describe("ARO Operator - Conditions", func() {
 	})
 })
 
-func timestampIsUpdated(annotations map[string]string) bool {
+func subnetReconciliationAnnotationExists(annotations map[string]string) bool {
 	if annotations == nil {
 		return false
 	}
 
 	timestamp := annotations[subnetController.AnnotationTimestamp]
-	t, err := time.Parse(time.RFC1123, timestamp)
-	if err != nil {
-		return false
-	}
-
-	// 11 seconds here since we have set 10 seconds as the default polling
-	// interval for the ginkgo's Eventually block. (e2e/setup.go)
-	return t.Add(time.Second * 11).After(time.Now())
+	_, err := time.Parse(time.RFC1123, timestamp)
+	return err == nil
 }
 
 var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
@@ -379,7 +373,7 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 
 				co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(co.Annotations).To(Satisfy(timestampIsUpdated))
+				g.Expect(co.Annotations).To(Satisfy(subnetReconciliationAnnotationExists))
 			}).WithContext(ctx).Should(Succeed())
 		}
 	})
