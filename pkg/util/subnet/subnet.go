@@ -29,7 +29,7 @@ type Manager interface {
 	GetAll(ctx context.Context, subnetIds []string) ([]*mgmtnetwork.Subnet, error)
 	GetHighestFreeIP(ctx context.Context, subnetID string) (string, error)
 	CreateOrUpdate(ctx context.Context, subnetID string, subnet *mgmtnetwork.Subnet) error
-	CreateOrUpdateFromIds(ctx context.Context, subnetIds []string) error
+	CreateOrUpdateFromIds(ctx context.Context, subnetIds []string, gatewayEnabled bool) error
 }
 
 type manager struct {
@@ -142,10 +142,15 @@ func (m *manager) GetAll(ctx context.Context, subnetIds []string) ([]*mgmtnetwor
 	return subnets, nil
 }
 
-func (m *manager) CreateOrUpdateFromIds(ctx context.Context, subnetIds []string) error {
+func (m *manager) CreateOrUpdateFromIds(ctx context.Context, subnetIds []string, gatewayEnabled bool) error {
 	subnets, err := m.GetAll(ctx, subnetIds)
 	if err != nil {
 		return err
+	}
+
+	// If egress lockdown is enabled, do not add service endpoints to the subnets.
+	if gatewayEnabled {
+		return m.createOrUpdateSubnets(ctx, subnets)
 	}
 
 	subnetsToBeUpdated := addEndpointsToSubnets(api.SubnetsEndpoints, subnets)

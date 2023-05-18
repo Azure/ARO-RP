@@ -44,7 +44,7 @@ func TestEnsureServiceEndpointsShouldCall_SubnetManager_CreateOrUpdateFromIds_An
 
 	subnetManagerMock.
 		EXPECT().
-		CreateOrUpdateFromIds(ctx, subnetIds).
+		CreateOrUpdateFromIds(ctx, subnetIds, false).
 		Return(nil)
 
 	m := &manager{
@@ -86,7 +86,7 @@ func TestEnsureServiceEndpointsShouldReturnWorkerProfileHasNoSubnetIdErrorAndSho
 
 	subnetManagerMock.
 		EXPECT().
-		CreateOrUpdateFromIds(gomock.Any(), gomock.Any()).
+		CreateOrUpdateFromIds(gomock.Any(), gomock.Any(), gomock.Any()).
 		Times(0).
 		Return(nil)
 

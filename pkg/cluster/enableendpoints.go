@@ -16,7 +16,7 @@ func (m *manager) ensureServiceEndpoints(ctx context.Context) error {
 		return err
 	}
 
-	return m.subnet.CreateOrUpdateFromIds(ctx, subnetIds)
+	return m.subnet.CreateOrUpdateFromIds(ctx, subnetIds, m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled)
 }
 
 func (m *manager) getSubnetIds() ([]string, error) {
