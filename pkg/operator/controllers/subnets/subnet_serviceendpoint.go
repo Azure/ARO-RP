@@ -12,10 +12,19 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 func (r *reconcileManager) ensureSubnetServiceEndpoints(ctx context.Context, s subnet.Subnet) error {
+	// Do not add/reconcile service endpoints if egress lockdown is enabled.
+	if gatewayEnabled(r.instance) {
+		r.log.Info("Skipping service endpoint reconciliation since egress lockdown is enabled")
+		return nil
+	}
+
+	r.log.Info("Reconciling service endpoints")
+
 	subnetObject, err := r.subnets.Get(ctx, s.ResourceID)
 	if err != nil {
 		return err
@@ -57,4 +66,8 @@ func (r *reconcileManager) ensureSubnetServiceEndpoints(ctx context.Context, s s
 		}
 	}
 	return nil
+}
+
+func gatewayEnabled(cluster *arov1alpha1.Cluster) bool {
+	return len(cluster.Spec.GatewayDomains) > 0
 }

@@ -327,6 +327,43 @@ func TestReconcileManager(t *testing.T) {
 			},
 		},
 		{
+			name:                        "Architecture V2 - no endpoint fixup because egress lockdown enabled",
+			operatorFlagEnabled:         true,
+			operatorFlagNSG:             true,
+			operatorFlagServiceEndpoint: true,
+			wantAnnotationsUpdated:      false,
+			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
+				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
+					{
+						ResourceID: subnetResourceIdWorker,
+						IsMaster:   true,
+					},
+					{
+						ResourceID: subnetResourceIdWorker,
+						IsMaster:   false,
+					},
+				}, nil)
+
+				// master
+				subnetObjectMaster := getValidSubnet()
+				subnetObjectMaster.SubnetPropertiesFormat.ServiceEndpoints = nil
+				subnetObjectMaster.ServiceEndpoints = nil
+				subnetObjectMaster.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
+				mock.EXPECT().Get(gomock.Any(), subnetResourceIdWorker).Return(subnetObjectMaster, nil).MaxTimes(2)
+
+				// worker
+				subnetObjectWorker := getValidSubnet()
+				subnetObjectWorker.SubnetPropertiesFormat.ServiceEndpoints = nil
+				subnetObjectWorker.ServiceEndpoints = nil
+				subnetObjectWorker.NetworkSecurityGroup.ID = to.StringPtr(nsgv2ResourceId)
+				mock.EXPECT().Get(gomock.Any(), subnetResourceIdWorker).Return(subnetObjectWorker, nil).MaxTimes(2)
+			},
+			instance: func(instace *arov1alpha1.Cluster) {
+				instace.Spec.ArchitectureVersion = int(api.ArchitectureVersionV2)
+				instace.Spec.GatewayDomains = []string{"somegatewaydomain.com"}
+			},
+		},
+		{
 			name:                        "Architecture V2 - empty NSG",
 			operatorFlagEnabled:         true,
 			operatorFlagNSG:             true,
