@@ -7,39 +7,42 @@ import (
 	"bytes"
 	"testing"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 )
 
-func TestEncode(t *testing.T) {
+var _ = Describe("PEM", func() {
 	validCaKey, validCaCerts, err := utiltls.GenerateKeyAndCertificate("validca", nil, nil, true, false)
-	if err != nil {
-		t.Fatal(err)
-	}
+	Expect(err).To(BeNil())
 
-	keyOut, err := Encode(validCaKey)
-	if err != nil {
-		t.Fatal(err)
-	}
+	Describe("encoding keys", func() {
+		It("succeeds", func() {
+			keyOut, err := Encode(validCaKey)
+			Expect(err).To(BeNil())
+			Expect(keyOut).To(ContainSubstring("BEGIN RSA PRIVATE KEY"))
+		})
+	})
 
-	if !bytes.Contains(keyOut, []byte("BEGIN RSA PRIVATE KEY")) {
-		t.Fatal(string(keyOut))
-	}
+	Describe("encoding single certificate", func() {
+		It("succeeds", func() {
+			certsOut, err := Encode(validCaCerts...)
+			Expect(err).To(BeNil())
+			Expect(certsOut).To(ContainSubstring("BEGIN CERTIFICATE"))
+		})
+	})
 
-	certsOut, err := Encode(validCaCerts...)
-	if err != nil {
-		t.Fatal(err)
-	}
+	Describe("encoding multiple certificates", func() {
+		It("succeeds", func() {
+			certsOut, err := Encode(validCaCerts[0], validCaCerts[0])
+			Expect(err).To(BeNil())
+			Expect(bytes.Count(certsOut, []byte("BEGIN CERTIFICATE"))).To(Equal(2))
+		})
+	})
+})
 
-	if !bytes.Contains(certsOut, []byte("BEGIN CERTIFICATE")) {
-		t.Fatal(string(certsOut))
-	}
-
-	multiOut, err := Encode(validCaCerts[0], validCaCerts[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if bytes.Count(multiOut, []byte("BEGIN CERTIFICATE")) != 2 {
-		t.Fatal(string(multiOut))
-	}
+func TestPEM(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "PEM Suite")
 }
