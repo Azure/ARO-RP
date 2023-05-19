@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/fake"
-	clienttesting "k8s.io/client-go/testing"
+	ktesting "k8s.io/client-go/testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
@@ -470,19 +470,19 @@ func TestUpdateOpenShiftSecret(t *testing.T) {
 // See https://github.com/kubernetes/client-go/issues/1184 for more details.
 func cliWithApply(object ...runtime.Object) *fake.Clientset {
 	fc := fake.NewSimpleClientset(object...)
-	fc.PrependReactor("patch", "secrets", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
-		pa := action.(clienttesting.PatchAction)
+	fc.PrependReactor("patch", "secrets", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+		pa := action.(ktesting.PatchAction)
 		if pa.GetPatchType() == types.ApplyPatchType {
 			// Apply patches are supposed to upsert, but fake client fails if the object doesn't exist,
 			// if an apply patch occurs for a secret that doesn't yet exist, create it.
 			// However, we already hold the fakeclient lock, so we can't use the front door.
-			rfunc := clienttesting.ObjectReaction(fc.Tracker())
+			rfunc := ktesting.ObjectReaction(fc.Tracker())
 			_, obj, err := rfunc(
-				clienttesting.NewGetAction(pa.GetResource(), pa.GetNamespace(), pa.GetName()),
+				ktesting.NewGetAction(pa.GetResource(), pa.GetNamespace(), pa.GetName()),
 			)
 			if kerrors.IsNotFound(err) || obj == nil {
 				_, _, _ = rfunc(
-					clienttesting.NewCreateAction(
+					ktesting.NewCreateAction(
 						pa.GetResource(),
 						pa.GetNamespace(),
 						&corev1.Secret{
@@ -494,7 +494,7 @@ func cliWithApply(object ...runtime.Object) *fake.Clientset {
 					),
 				)
 			}
-			return rfunc(clienttesting.NewPatchAction(
+			return rfunc(ktesting.NewPatchAction(
 				pa.GetResource(),
 				pa.GetNamespace(),
 				pa.GetName(),
