@@ -1,42 +1,17 @@
 ---
 # MegaLinter GitHub Action configuration file
-# More info at https://megalinter.github.io
+# More info at https://oxsecurity.github.io/megalinter
 name: mega-linter-yaml
 
 on:
-  # Trigger mega-linter at every push. Action will also be visible from Pull Requests to main
-  push: # Comment this line to trigger action only on pull-requests (not recommended if you don't pay for GH Actions)
   pull_request:
-
-env: # Comment env block if you do not want to apply fixes
-  APPLY_FIXES: none # When active, APPLY_FIXES must also be defined as environment variable (in github/workflows/mega-linter.yml or other CI tool)
 
 jobs:
   build:
     name: mega-linter-yaml
     runs-on: ubuntu-latest
     steps:
-      # Git Checkout
       - name: Checkout Code
-        uses: actions/checkout@v2
-        with:
-          token: ${{ secrets.PAT || secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
-
-      # MegaLinter
+        uses: actions/checkout@v3
       - name: yamllint
-        id: ml
-        # You can override MegaLinter flavor used to have faster performances
-        # More info at https://megalinter.github.io/flavors/
-        uses: megalinter/megalinter/flavors/ci_light@v5
-        env:
-          # All available variables are described in documentation
-          # https://megalinter.github.io/configuration/
-          VALIDATE_ALL_CODEBASE: true
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # ADD YOUR CUSTOM ENV VARIABLES HERE OR DEFINE THEM IN A FILE .mega-linter.yml AT THE ROOT OF YOUR REPOSITORY
-          # DISABLE: COPYPASTE,SPELL # Uncomment to disable copy-paste and spell checks
-          ENABLE_LINTERS: YAML_YAMLLINT
-            #          YAML_YAMLLINT_CONFIG_FILE: .yaml-lint.yml
-            #          YAML_YAMLLINT_RULES_PATH: .github/linters
-          PRINT_ALPACA: false
+        uses: oxsecurity/megalinter/flavors/ci_light@v6
