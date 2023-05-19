@@ -28,18 +28,27 @@ test_delete_violation {
     count(results) == 1
 }
 
-test_no_violation {
+test_violation_system_account {
     input := {
         "review": fake_regularuser_validation_input_review("CREATE", "system:allowed")
     }
 
     results := violation with input as input
-    count(results) == 0
+    count(results) == 1
+}
+
+test_violation_kube_account {
+    input := {
+        "review": fake_regularuser_validation_input_review("CREATE", "kube:admin")
+    }
+
+    results := violation with input as input
+    count(results) == 1
 }
 
 test_no_violation {
     input := {
-        "review": fake_regularuser_validation_input_review("CREATE", "kube:allowed")
+        "review": fake_regularuser_validation_input_review("CREATE", "system:admin")
     }
 
     results := violation with input as input

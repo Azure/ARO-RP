@@ -4,11 +4,27 @@ request:
   uid: d700ab7f-8f42-45ff-83f5-782c739806d9
   operation: UPDATE
   userInfo:
-    username: kube:allowed
+    username: system:admin
     uid: 45884572-1cab-49e5-be4c-1d2eb0299776
   object:
-    kind: MachineConfig
+    kind: ValidatingWebhookConfiguration
     apiVersion: admissionregistration.k8s.io/v1
     metadata:
-      name: test-mc-2
+      name: my-webhook-configuration-3
+    webhooks:
+    - name: my-webhook.example.com
+      rules:
+      - apiGroups: ["admissionregistration.k8s.io"]
+        apiVersions: ["v1"]
+        operations: ["UPDATE"]
+        resources: ["pods"]
+        scope: "Namespaced"
+      clientConfig:
+        service:
+          namespace: "default"
+          name: "my-webhook-service"
+        caBundle: "CA_BUNDLE"
+      admissionReviewVersions: ["v1", "v1beta1"]
+      sideEffects: None
+      timeoutSeconds: 5
   dryRun: true
