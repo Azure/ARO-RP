@@ -18,6 +18,12 @@ test_input_allowed_ns2 {
   count(results) == 0
 }
 
+test_input_allowed_ns3 {
+  input := { "review": input_ns(input_disallowed_ns1, priv_sa, non_priv_user) }
+  results := violation with input as input
+  count(results) == 1
+}
+
 input_ns(ns, serviceAccountName, username) = output {
   output = {
     "object": {

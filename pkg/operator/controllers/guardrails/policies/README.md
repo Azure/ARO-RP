@@ -115,38 +115,35 @@ kind: AROPrivilegedNamespace
 metadata:
   name: aro-privileged-namespace-deny
 spec:
+  enforcementAction: {{.Enforcement}}
   match:
     kinds:
       - apiGroups: [""]
-        kinds: ["Service",
+        kinds: [
         "Pod",
-        "Deployment",
-        "Namespace",
-        "ReplicaSet",
-        "StatefulSets",
-        "DaemonSet",
-        "Jobs",
-        "CronJob",
-        "ReplicationController",
-        "Role",
-        "ClusterRole",
-        "roleBinding",
-        "ClusterRoleBinding",
         "Secret",
+        "Service",
         "ServiceAccount",
-        "CustomResourceDefinition",
-        "PodDisruptionBudget",
+        "ReplicationController",
         "ResourceQuota",
-        "PodSecurityPolicy"]
+        ]
+      - apiGroups: ["apps"]
+        kinds: ["Deployment", "ReplicaSet", "StatefulSet", "DaemonSet"]
+      - apiGroups: ["batch"]
+        kinds: ["Job", "CronJob"]
+      - apiGroups: ["rbac.authorization.k8s.io"]
+        kinds: ["Role", "RoleBinding"]
+      - apiGroups: ["policy"]
+        kinds: ["PodDisruptionBudget"]
 ```
 
 ## Test the rego
 
-* install opa cli, refer https://www.openpolicyagent.org/docs/v0.11.0/get-started/
+* install opa cli, refer https://github.com/open-policy-agent/opa/releases/
 
 * after _test.go is done, test it out, and fix the problem
   ```sh
-  opa test *.rego [-v] #-v for verbose
+  opa test ../library/common.rego *.rego [-v] #-v for verbose
   ```
 
 ## Generate the Constraint Templates
