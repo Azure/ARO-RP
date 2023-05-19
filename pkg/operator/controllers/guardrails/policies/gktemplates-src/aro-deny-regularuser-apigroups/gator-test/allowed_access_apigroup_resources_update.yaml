@@ -14,11 +14,11 @@ request:
     webhooks:
     - name: my-webhook.example.com
       rules:
-      - apiGroups:   ["admissionregistration.k8s.io"]
+      - apiGroups: ["admissionregistration.k8s.io"]
         apiVersions: ["v1"]
-        operations:  ["UPDATE"]
-        resources:   ["pods"]
-        scope:       "Namespaced"
+        operations: ["UPDATE"]
+        resources: ["pods"]
+        scope: "Namespaced"
       clientConfig:
         service:
           namespace: "default"
