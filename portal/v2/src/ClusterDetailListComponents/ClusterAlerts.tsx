@@ -78,43 +78,54 @@ function ClusterDetailCell(
 function showClusterAlerts(alertsData: any) {
         let entries = alertsData
         return (
-        <Stack styles={contentStackStylesNormal}>
-          <Stack horizontal>
-            <Stack styles={KeyColumnStyle}>
+          <Stack styles={contentStackStylesNormal}>
+            <Stack horizontal>
+              <Stack styles={ValueColumnStyle}>
+                {entries.map((value: any, index: number) => (
+                  <ClusterDetailCell style={ValueStyle} key={index} value={value.alertname}/>
+                ))}
+            </Stack>
+         <div style={{ marginRight: '20px' }}></div>
+
+         <Stack horizontal>
+            <Stack styles={ValueColumnStyle}>
               {entries.map((value: any, index: number) => (
-                <ClusterDetailCell style={KeyStyle} key={index} value={value.alertname} />
+                <ClusterDetailCell style={ValueStyle} key={index} value={value.namespace} />
               ))}
             </Stack>
 
-            <Stack styles={KeyColumnStyle}>
-              {Array(entries.length)
-                .fill(":")
-                .map((value: any, index: number) => (
-                  <ClusterDetailCell style={KeyStyle} key={index} value={value} />
-                ))}
+            <div style={{ marginRight: '20px' }}></div>
+
+          <Stack horizontal >
+            <Stack styles={ValueColumnStyle}>
+              {entries.map((value: any, index: number) => (
+                <ClusterDetailCell style={ValueStyle} key={index} value={value.severity} />
+              ))}
+            </Stack>
+            <div style={{ marginRight: '20px' }}></div>
+
+          <Stack horizontal>
+            <Stack styles={ValueColumnStyle}>
+              {entries.map((value: any, index: number) => (
+                <ClusterDetailCell style={ValueStyle} key={index} value={value.Summary} />
+              ))}
             </Stack>
 
+            <div style={{ marginRight: '20px' }}></div>
+
             <Stack styles={ValueColumnStyle}>
-              {entries.map((value: any, index: number) => {
-                 return (
-                     <ClusterDetailCell
-                        style={ValueStyle}
-                        key={index}
-                        value={
-                          value.status != null &&
-                          value.status.length > 0
-                            ? value.status
-                            : "Undefined"
-                        }
-                      />
-                    )
-              }
-            )}
+              {entries.map((value: any, index: number) => (
+                <ClusterDetailCell style={ValueStyle} key={index} value={value.status} />
+              ))}
             </Stack>
           </Stack>
+         </Stack>
         </Stack>
-      )
-      }
+       </Stack>
+  </Stack>
+
+)
+}
 
 function clusterAlertsShimmer() {
         const headerEntries = Object.entries(clusterAlertHeadings)

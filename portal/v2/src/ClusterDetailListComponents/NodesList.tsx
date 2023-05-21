@@ -26,7 +26,7 @@ export interface INodeListState {
 }
 
 export class NodesListComponent extends React.Component<NodeListComponentProps, INodeListState> {
-  
+
   constructor(props: NodeListComponentProps) {
       super(props)
 
@@ -35,8 +35,8 @@ export class NodesListComponent extends React.Component<NodeListComponentProps, 
           clusterName: this.props.clusterName,
       }
   }
-  
-  
+
+
   public render() {
     return (
         <NodeListHelperComponent nodes={this.state.nodes} clusterName={this.state.clusterName}/>
@@ -131,7 +131,7 @@ export function NodeListHelperComponent(props: {
 
   function _onColumnClick(event: React.MouseEvent<HTMLElement>, column: IColumn): void {
     let nodeLocal: INodeList[] = nodeList;
-  
+
     let isSortedDescending = column.isSortedDescending;
     if (column.isSorted) {
       isSortedDescending = !isSortedDescending;
@@ -160,7 +160,7 @@ export function NodeListHelperComponent(props: {
       let schedulable: string = "True"
       let instanceType: string = node.labels?.get("node.kubernetes.io/instance-type")!
 
-      if (node.conditions![3].status === "True") {        
+      if (node.conditions![3].status === "True") {
         node.taints?.forEach(taint => {
           schedulable = taint.key === "node.kubernetes.io/unschedulable" ? "False" : "True"
         })
@@ -184,7 +184,7 @@ export function NodeListHelperComponent(props: {
       },
     },
   }
-  
+
   const backIconProp = {iconName: "back"}
   function _onClickBackToNodeList() {
     setNodesDetailsVisible(false)

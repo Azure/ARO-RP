@@ -35,9 +35,9 @@ func TestFiringAlerts(t *testing.T) {
 					Labels: model.LabelSet{
 						"alertname": "Firing Alert 1",
 						"namespace": "openshift-apiserver",
-						// "status":    "firing",
-						// "severity":  "Info",
-						// "summary":   "summary of the test alert",
+						"status":    "firing",
+						"severity":  "Info",
+						"summary":   "summary of the test alert",
 					},
 					StartsAt: time.Now().Add(-1),
 				},

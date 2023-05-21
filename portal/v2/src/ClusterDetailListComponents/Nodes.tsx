@@ -19,14 +19,14 @@ const stackItemStyles: IStackItemStyles = {
 const NodeOverviewDetails: INodeOverviewDetails = {
     createdTime: 'Created Time'
   }
-  
+
   const ResourceDetails: IResourceUsage = {
     CPU: "CPU",
     Memory: "Memory",
     StorageVolume: "Storage Volume",
     Pods: "Pods"
   }
-  
+
   const ConditionDetails: ICondition = {
     status: "Status",
     lastHeartbeatTime: "Last Heartbeat Time",
@@ -114,16 +114,16 @@ const renderNodes = (node: INode) => {
 function Nodes(props: {
     nodes: any,
     nodeName: string
-}) {   
+}) {
     let currentNode: INode
-    
+
     props.nodes.forEach((node: INode) => {
         if (node.name === props.nodeName) {
             currentNode = node
             return
         }
     })
-    
+
     return (
             <>
                 {renderNodes(currentNode!)}
@@ -142,7 +142,7 @@ export class NodesComponent extends Component<NodesComponentProps, INodesState> 
         }
     }
 
-    public render() {        
+    public render() {
         return (
         <Stack styles={contentStackStylesNormal}>
             <Stack>
