@@ -147,6 +147,8 @@ exempted_service_account = {
   "service-ca-operator",
   "service-ca",
   "pruner",
+  "machine-api-termination-handler",
+  "aro-operator-master",
   "installer-sa"
 }
 
