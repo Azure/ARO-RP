@@ -8,12 +8,12 @@ spec:
     kinds:
       - apiGroups: [""]
         kinds: [
-        "Pod",
-        "Secret",
-        "Service",
-        "ServiceAccount",
-        "ReplicationController",
-        "ResourceQuota",
+          "Pod",
+          "Secret",
+          "Service",
+          "ServiceAccount",
+          "ReplicationController",
+          "ResourceQuota",
         ]
       - apiGroups: ["apps"]
         kinds: ["Deployment", "ReplicaSet", "StatefulSet", "DaemonSet"]
