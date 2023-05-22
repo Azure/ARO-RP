@@ -95,6 +95,13 @@ export const fetchClusterOperators = async (cluster: ICluster): Promise<AxiosRes
   try {
     const result = await axios(
       ["/api", cluster.subscription, cluster.resourceGroup, cluster.name, "clusteroperators"].join("/"))
+      return result
+    } catch (e: any) {
+      const err = e.response as AxiosResponse
+      return OnError(err)
+    }
+  }
+
 export const FetchClusterAlerts = async (cluster: ICluster): Promise<AxiosResponse | null> => {
   try {
     const result = await axios(

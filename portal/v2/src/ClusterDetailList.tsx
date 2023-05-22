@@ -55,7 +55,8 @@ const detailComponents: Map<string, any> = new Map<string, any>([
     ["machines", MachinesWrapper],
     ["machinesets", MachineSetsWrapper],
     ["clusteroperators", ClusterOperatorsWrapper],
-    ["statistics", Statistics]
+    ["statistics", Statistics],
+    ["clusteralerts", ClusterAlertsWrapper]
 ])
 
 export class ClusterDetailComponent extends Component<ClusterDetailComponentProps, IClusterDetailComponentState> {
@@ -83,16 +84,6 @@ export class ClusterDetailComponent extends Component<ClusterDetailComponentProp
           <StatisticsView currentCluster={this.props.cluster!} detailPanelSelected={panel} loaded = {this.props.isDataLoaded} statisticsType = {type}/>
         )
       } else {
-        case "clusteralerts": {
-          return (
-            <ClusterAlertsWrapper
-              clusterName={this.props.item.name}
-              currentCluster={this.props.cluster!}
-              detailPanelSelected={this.props.detailPanelVisible}
-              loaded={this.props.isDataLoaded}
-            />
-          );
-        }
       const DetailView = detailComponents.get(panel)
         return (
           <DetailView currentCluster={this.props.cluster!} detailPanelSelected={panel} loaded={this.props.isDataLoaded}/>
