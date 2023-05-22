@@ -14,11 +14,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
 
-var validVMRoles = map[string]map[api.VMSize]api.VMSizeStruct{
-	"master": validate.SupportedMasterVmSizes,
-	"worker": validate.SupportedWorkerVmSizes,
-}
-
 func (f *frontend) supportedvmsizes(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
@@ -28,10 +23,10 @@ func (f *frontend) supportedvmsizes(w http.ResponseWriter, r *http.Request) {
 }
 
 func (f *frontend) supportedVMSizesForRole(vmRole string) ([]byte, error) {
-	vmsizes, exists := validVMRoles[vmRole]
-	if !exists {
+	if vmRole != validate.VMRoleMaster && vmRole != validate.VMRoleWorker {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided vmRole '%s' is invalid. vmRole can only be master or worker", vmRole)
 	}
+	vmsizes := validate.SupportedVMSizesByRole(vmRole)
 	b, err := json.MarshalIndent(vmsizes, "", "    ")
 	if err != nil {
 		return b, err

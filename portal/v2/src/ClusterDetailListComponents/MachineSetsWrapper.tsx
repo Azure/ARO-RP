@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react"
 import { AxiosResponse } from "axios"
 import { fetchMachineSets } from "../Request"
-import { ICluster } from "../App"
 import { IMessageBarStyles, MessageBar, MessageBarType, Stack } from "@fluentui/react"
 import { machineSetsKey } from "../ClusterDetail"
 import { MachineSetsListComponent } from "./MachineSetsList"
+import { WrapperProps } from "../ClusterDetailList"
 
 export interface IMachineSet {
   name?: string
@@ -32,11 +32,7 @@ export interface IManagedDisk {
   storageAccountType: string
 }
 
-export function MachineSetsWrapper(props: {
-  currentCluster: ICluster
-  detailPanelSelected: string
-  loaded: boolean
-}) {
+export function MachineSetsWrapper(props: WrapperProps) {
   const [data, setData] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
   const state = useRef<MachineSetsListComponent>(null)
@@ -106,15 +102,15 @@ export function MachineSetsWrapper(props: {
       } else {
         setError(result)
       }
-      setFetching(props.currentCluster.name)
+      if(props.currentCluster) {
+        setFetching(props.currentCluster.name)
+      }
     }
 
-    if (
-      props.detailPanelSelected.toLowerCase() == machineSetsKey &&
-      fetching === "" &&
-      props.loaded &&
-      props.currentCluster.name != ""
-    ) {
+    if (props.detailPanelSelected.toLowerCase() == machineSetsKey && 
+        fetching === "" &&
+        props.loaded &&
+        props.currentCluster) {
       setFetching("FETCHING")
       fetchMachineSets(props.currentCluster).then(onData)
     }

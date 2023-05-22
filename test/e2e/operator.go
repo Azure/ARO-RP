@@ -19,6 +19,8 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/ghodss/yaml"
 	configv1 "github.com/openshift/api/config/v1"
+	cov1Helpers "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
+	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/ugorji/go/codec"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -28,6 +30,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	imageController "github.com/Azure/ARO-RP/pkg/operator/controllers/imageconfig"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
+	subnetController "github.com/Azure/ARO-RP/pkg/operator/controllers/subnets"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -255,7 +258,11 @@ var _ = Describe("ARO Operator - MachineHealthCheck", func() {
 })
 
 var _ = Describe("ARO Operator - Conditions", func() {
-	It("must have all the conditions set to true", func(ctx context.Context) {
+	const (
+		timeout = 30 * time.Second
+	)
+
+	It("must have all the conditions on the cluster resource set to true", func(ctx context.Context) {
 		Eventually(func(g Gomega, ctx context.Context) {
 			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 			g.Expect(err).NotTo(HaveOccurred())
@@ -265,7 +272,28 @@ var _ = Describe("ARO Operator - Conditions", func() {
 			}
 		}).WithContext(ctx).Should(Succeed())
 	})
+
+	It("must have all the conditions on the cluster operator set to the expected values", func(ctx context.Context) {
+		Eventually(func(g Gomega, ctx context.Context) {
+			co, err := clients.ConfigClient.ConfigV1().ClusterOperators().Get(ctx, "aro", metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+
+			g.Expect(cov1Helpers.IsStatusConditionTrue(co.Status.Conditions, configv1.OperatorAvailable))
+			g.Expect(cov1Helpers.IsStatusConditionFalse(co.Status.Conditions, configv1.OperatorProgressing))
+			g.Expect(cov1Helpers.IsStatusConditionFalse(co.Status.Conditions, configv1.OperatorDegraded))
+		}).WithContext(ctx).WithTimeout(timeout).Should(Succeed())
+	})
 })
+
+func subnetReconciliationAnnotationExists(annotations map[string]string) bool {
+	if annotations == nil {
+		return false
+	}
+
+	timestamp := annotations[subnetController.AnnotationTimestamp]
+	_, err := time.Parse(time.RFC1123, timestamp)
+	return err == nil
+}
 
 var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 	var vnetName, location, resourceGroup string
@@ -342,6 +370,10 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 				s, err := clients.Subnet.Get(ctx, resourceGroup, vnetName, subnet, "")
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(*s.NetworkSecurityGroup.ID).To(Equal(*correctNSG))
+
+				co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(co.Annotations).To(Satisfy(subnetReconciliationAnnotationExists))
 			}).WithContext(ctx).Should(Succeed())
 		}
 	})
@@ -498,5 +530,61 @@ var _ = Describe("ARO Operator - ImageConfig Reconciler", func() {
 		By("checking that Image config eventually doesn't include ARO service registries")
 		expectedBlocklist := []string{optionalRegistry}
 		Eventually(verifyLists(nil, expectedBlocklist)).WithContext(ctx).Should(Succeed())
+	})
+})
+
+var _ = Describe("ARO Operator - dnsmasq", func() {
+	const (
+		timeout = 1 * time.Minute
+		polling = 10 * time.Second
+	)
+	mcpName := "test-aro-custom-mcp"
+	mcName := fmt.Sprintf("99-%s-aro-dns", mcpName)
+
+	customMcp := mcv1.MachineConfigPool{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "machineconfiguration.openshift.io/v1",
+			Kind:       "MachineConfigPool",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: mcpName,
+		},
+		Spec: mcv1.MachineConfigPoolSpec{},
+	}
+
+	getMachineConfigNames := func(g Gomega, ctx context.Context) []string {
+		machineConfigs, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigs().List(ctx, metav1.ListOptions{})
+		g.Expect(err).NotTo(HaveOccurred())
+		names := []string{}
+		for _, mc := range machineConfigs.Items {
+			names = append(names, mc.Name)
+		}
+		return names
+	}
+
+	BeforeEach(func(ctx context.Context) {
+		By("Create custom MachineConfigPool")
+		_, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigPools().Create(ctx, &customMcp, metav1.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("must handle the lifetime of the `99-${MCP}-custom-dns MachineConfig for every MachineConfigPool ${MCP}", func(ctx context.Context) {
+		By("creating an ARO DNS MachineConfig when creating a custom MachineConfigPool")
+		Eventually(func(g Gomega, ctx context.Context) {
+			machineConfigs := getMachineConfigNames(g, ctx)
+			g.Expect(machineConfigs).To(ContainElement(mcName))
+
+			customMachineConfig, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigs().Get(ctx, mcName, metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(customMachineConfig.ObjectMeta.OwnerReferences[0].Name).To(Equal(mcpName))
+		}).WithContext(ctx).WithTimeout(timeout).WithPolling(polling).Should(Succeed())
+
+		By("deleting the ARO DNS MachineConfig when deleting the custom MachineConfigPool")
+		err := clients.MachineConfig.MachineconfigurationV1().MachineConfigPools().Delete(ctx, mcpName, metav1.DeleteOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(func(g Gomega) {
+			machineConfigs := getMachineConfigNames(g, ctx)
+			g.Expect(machineConfigs).NotTo(ContainElement(mcName))
+		}).WithContext(ctx).WithTimeout(timeout).WithPolling(polling).Should(Succeed())
 	})
 })

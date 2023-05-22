@@ -71,8 +71,11 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		r.log.Error(err)
 		return reconcile.Result{}, err
 	}
+	if mcp.GetDeletionTimestamp() != nil {
+		return reconcile.Result{}, nil
+	}
 
-	err = reconcileMachineConfigs(ctx, instance, r.dh, role)
+	err = reconcileMachineConfigs(ctx, instance, r.dh, *mcp)
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err

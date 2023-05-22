@@ -5,7 +5,6 @@ package adminactions
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -70,6 +69,11 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		return nil, err
 	}
 
+	appLensClient, err := applens.NewAppLensClient(env.Environment(), fpClientCertCred)
+	if err != nil {
+		return nil, err
+	}
+
 	return &azureActions{
 		log: log,
 		env: env,
@@ -83,7 +87,7 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		routeTables:        network.NewRouteTablesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		storageAccounts:    storage.NewAccountsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		networkInterfaces:  network.NewInterfacesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
-		appLens:            applens.NewAppLensClient(env.Environment(), fpClientCertCred),
+		appLens:            appLensClient,
 	}, nil
 }
 
@@ -127,18 +131,9 @@ func (a *azureActions) VMResize(ctx context.Context, vmName string, size string)
 }
 
 func (a *azureActions) AppLensGetDetector(ctx context.Context, detectorId string) ([]byte, error) {
-	resp, err := a.appLens.GetDetector(ctx, &applens.GetDetectorOptions{ResourceID: a.oc.ID, DetectorID: detectorId})
-
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(resp.Body)
+	return a.appLens.GetDetector(ctx, &applens.GetDetectorOptions{ResourceID: a.oc.ID, DetectorID: detectorId})
 }
 
 func (a *azureActions) AppLensListDetectors(ctx context.Context) ([]byte, error) {
-	resp, err := a.appLens.ListDetectors(ctx, &applens.ListDetectorsOptions{ResourceID: a.oc.ID})
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(resp.Body)
+	return a.appLens.ListDetectors(ctx, &applens.ListDetectorsOptions{ResourceID: a.oc.ID})
 }

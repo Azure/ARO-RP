@@ -28,6 +28,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/permissions"
+	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/token"
 )
@@ -56,6 +57,7 @@ type Dynamic interface {
 
 type dynamic struct {
 	log            *logrus.Entry
+	appID          string // for use when reporting an error
 	authorizerType AuthorizerType
 	// This represents the Subject for CheckAccess.  Could be either FP or SP.
 	checkAccessSubjectInfoCred azcore.TokenCredential
@@ -84,12 +86,14 @@ func NewValidator(
 	azEnv *azureclient.AROEnvironment,
 	subscriptionID string,
 	authorizer autorest.Authorizer,
+	appID string,
 	authorizerType AuthorizerType,
 	cred azcore.TokenCredential,
 	pdpClient remotepdp.RemotePDPClient,
-) (Dynamic, error) {
+) Dynamic {
 	return &dynamic{
 		log:                        log,
+		appID:                      appID,
 		authorizerType:             authorizerType,
 		env:                        env,
 		azEnv:                      azEnv,
@@ -104,19 +108,19 @@ func NewValidator(
 		diskEncryptionSets: compute.NewDiskEncryptionSetsClient(azEnv, subscriptionID, authorizer),
 		resourceSkusClient: compute.NewResourceSkusClient(azEnv, subscriptionID, authorizer),
 		pdpClient:          pdpClient,
-	}, nil
+	}
 }
 
 func NewServicePrincipalValidator(
 	log *logrus.Entry,
 	azEnv *azureclient.AROEnvironment,
 	authorizerType AuthorizerType,
-) (ServicePrincipalValidator, error) {
+) ServicePrincipalValidator {
 	return &dynamic{
 		log:            log,
 		authorizerType: authorizerType,
 		azEnv:          azEnv,
-	}, nil
+	}
 }
 
 func (dv *dynamic) ValidateVnet(
@@ -197,25 +201,39 @@ func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resou
 		"Microsoft.Network/virtualNetworks/subnets/write",
 	})
 
+	noPermissionsErr := api.NewCloudError(
+		http.StatusBadRequest,
+		errCode,
+		"",
+		"The %s service principal (Application ID: %s) does not have Network Contributor role on vnet '%s'.",
+		dv.authorizerType,
+		dv.appID,
+		vnet.String(),
+	)
+
 	if err == wait.ErrWaitTimeout {
-		return api.NewCloudError(
-			http.StatusBadRequest,
-			errCode,
-			"",
-			"The %s service principal does not have Network Contributor permission on vnet '%s'.",
-			dv.authorizerType,
-			vnet.String(),
-		)
+		return noPermissionsErr
 	}
-	if detailedErr, ok := err.(autorest.DetailedError); ok &&
-		detailedErr.StatusCode == http.StatusNotFound {
-		return api.NewCloudError(
-			http.StatusBadRequest,
-			api.CloudErrorCodeInvalidLinkedVNet,
-			"",
-			"The vnet '%s' could not be found.",
-			vnet.String(),
-		)
+	if detailedErr, ok := err.(autorest.DetailedError); ok {
+		dv.log.Error(detailedErr)
+
+		switch detailedErr.StatusCode {
+		case http.StatusNotFound:
+			return api.NewCloudError(
+				http.StatusBadRequest,
+				api.CloudErrorCodeInvalidLinkedVNet,
+				"",
+				"The vnet '%s' could not be found.",
+				vnet.String(),
+			)
+		case http.StatusForbidden:
+			noPermissionsErr.Message = fmt.Sprintf(
+				"%s\nOriginal error message: %s",
+				noPermissionsErr.Message,
+				detailedErr.Message,
+			)
+			return noPermissionsErr
+		}
 	}
 	return err
 }
@@ -264,7 +282,7 @@ func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) 
 			http.StatusBadRequest,
 			errCode,
 			"",
-			"The %s service principal does not have Network Contributor permission on route table '%s'.",
+			"The %s service principal does not have Network Contributor role on route table '%s'.",
 			dv.authorizerType,
 			rtID,
 		)
@@ -330,7 +348,7 @@ func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) 
 			http.StatusBadRequest,
 			errCode,
 			"",
-			"The %s service principal does not have Network Contributor permission on nat gateway '%s'.",
+			"The %s service principal does not have Network Contributor role on nat gateway '%s'.",
 			dv.authorizerType,
 			ngID,
 		)
@@ -349,18 +367,17 @@ func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) 
 }
 
 func (dv *dynamic) validateActions(ctx context.Context, r *azure.Resource, actions []string) error {
-	c := closure{dv: dv, ctx: ctx, resource: r, actions: actions}
-	conditionalFunc := c.usingListPermissions
-	timeout := 20 * time.Second
-	if dv.pdpClient != nil {
-		conditionalFunc = c.usingCheckAccessV2
-		timeout = 65 * time.Second // checkAccess refreshes data every min. This allows ~3 retries.
-	}
-
-	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
+	// ARM has a 5 minute cache around role assignment creation, so wait one minute longer
+	timeoutCtx, cancel := context.WithTimeout(ctx, 6*time.Minute)
 	defer cancel()
 
-	return wait.PollImmediateUntil(timeout, conditionalFunc, timeoutCtx.Done())
+	c := closure{dv: dv, ctx: ctx, resource: r, actions: actions}
+	conditionalFunc := c.usingListPermissions
+	if dv.pdpClient != nil {
+		conditionalFunc = c.usingCheckAccessV2
+	}
+
+	return wait.PollImmediateUntil(30*time.Second, conditionalFunc, timeoutCtx.Done())
 }
 
 // closure is the closure used in PollImmediateUntil's ConditionalFunc
@@ -383,6 +400,16 @@ func (c closure) usingListPermissions() (bool, error) {
 		c.resource.ResourceType,
 		c.resource.ResourceName,
 	)
+	if err != nil {
+		return false, err
+	}
+
+	// If we get a StatusForbidden, try refreshing the SP (since with a
+	// brand-new SP it might take time to propagate)
+	if detailedErr, ok := err.(autorest.DetailedError); ok &&
+		detailedErr.StatusCode == http.StatusForbidden {
+		return false, steps.ErrWantRefresh
+	}
 	if err != nil {
 		return false, err
 	}

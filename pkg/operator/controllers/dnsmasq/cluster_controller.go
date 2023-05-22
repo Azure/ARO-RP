@@ -65,12 +65,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		return reconcile.Result{}, err
 	}
 
-	roles := make([]string, 0, len(mcps.Items))
-	for _, mcp := range mcps.Items {
-		roles = append(roles, mcp.Name)
-	}
-
-	err = reconcileMachineConfigs(ctx, instance, r.dh, roles...)
+	err = reconcileMachineConfigs(ctx, instance, r.dh, mcps.Items...)
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err
@@ -79,31 +74,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 	return reconcile.Result{}, nil
 }
 
-func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, dh dynamichelper.Interface, roles ...string) error {
-	var resources []kruntime.Object
-	for _, role := range roles {
-		resource, err := dnsmasq.MachineConfig(instance.Spec.Domain, instance.Spec.APIIntIP, instance.Spec.IngressIP, role, instance.Spec.GatewayDomains, instance.Spec.GatewayPrivateEndpointIP)
-		if err != nil {
-			return err
-		}
-
-		resources = append(resources, resource)
-	}
-
-	err := dynamichelper.SetControllerReferences(resources, instance)
-	if err != nil {
-		return err
-	}
-
-	err = dynamichelper.Prepare(resources)
-	if err != nil {
-		return err
-	}
-
-	return dh.Ensure(ctx, resources...)
-}
-
-// SetupWithManager setup our manager
+// SetupWithManager setup our mananger
 func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return o.GetName() == arov1alpha1.SingletonClusterName
@@ -113,4 +84,28 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
 		Named(ClusterControllerName).
 		Complete(r)
+}
+
+func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, dh dynamichelper.Interface, mcps ...mcv1.MachineConfigPool) error {
+	var resources []kruntime.Object
+	for _, mcp := range mcps {
+		resource, err := dnsmasq.MachineConfig(instance.Spec.Domain, instance.Spec.APIIntIP, instance.Spec.IngressIP, mcp.Name, instance.Spec.GatewayDomains, instance.Spec.GatewayPrivateEndpointIP)
+		if err != nil {
+			return err
+		}
+
+		err = dynamichelper.SetControllerReferences([]kruntime.Object{resource}, &mcp)
+		if err != nil {
+			return err
+		}
+
+		resources = append(resources, resource)
+	}
+
+	err := dynamichelper.Prepare(resources)
+	if err != nil {
+		return err
+	}
+
+	return dh.Ensure(ctx, resources...)
 }

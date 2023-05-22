@@ -47,6 +47,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"clusterMdsdAccount",
 			"clusterMdsdConfigVersion",
 			"clusterMdsdNamespace",
+			"cosmosDB",
 			"dbtokenClientId",
 			"disableCosmosDBFirewall",
 			"fluentbitImage",
@@ -108,6 +109,13 @@ func (g *generator) rpTemplate() *arm.Template {
 		case "vmssCleanupEnabled":
 			p.Type = "bool"
 			p.DefaultValue = true
+		case "cosmosDB":
+			p.Type = "object"
+			p.DefaultValue = map[string]int{
+				"standardProvisionedThroughput": 1000,
+				"portalProvisionedThroughput":   400,
+				"gatewayProvisionedThroughput":  400,
+			}
 		case "rpVmssCapacity":
 			p.Type = "int"
 			p.DefaultValue = 3

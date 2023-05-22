@@ -53,30 +53,176 @@ func TestClusterOperators(t *testing.T) {
 	expected := &ClusterOperatorsInformation{
 		Operators: []OperatorInformation{
 			{
-				Name:      "authentication",
-				Available: "True",
+				Name:        "authentication",
+				Available:   "True",
+				Degraded:    "False",
+				Progressing: "False",
+				Conditions: []OperatorCondition{
+					{
+						Reason: "AsExpected",
+						Status: "False",
+						Type:   "Degraded",
+					},
+					{
+						Reason: "AsExpected",
+						Status: "False",
+						Type:   "Progressing",
+					},
+					{
+						Message: "OAuthServerDeploymentAvailable: availableReplicas==2",
+						Reason:  "AsExpected",
+						Status:  "True",
+						Type:    "Available",
+					},
+					{
+						Reason: "AsExpected",
+						Status: "True",
+						Type:   "Upgradeable",
+					},
+				},
 			},
 			{
-				Name:      "cluster-autoscaler",
-				Available: "True",
+				Name:        "cluster-autoscaler",
+				Available:   "True",
+				Degraded:    "False",
+				Progressing: "False",
+				Conditions: []OperatorCondition{
+					{
+						Message: "at version 4.6.26",
+						Reason:  "AsExpected",
+						Status:  "True",
+						Type:    "Available",
+					},
+					{
+						Status: "False",
+						Type:   "Progressing",
+					},
+					{
+						Status: "False",
+						Type:   "Degraded",
+					},
+					{
+						Status: "True",
+						Type:   "Upgradeable",
+					},
+				},
 			},
 			{
-				Name:      "cloud-credential",
-				Available: "True",
+				Name:        "cloud-credential",
+				Available:   "True",
+				Degraded:    "False",
+				Progressing: "False",
+				Conditions: []OperatorCondition{
+					{
+						Status: "True",
+						Type:   "Available",
+					},
+					{
+						Status: "False",
+						Type:   "Degraded",
+					},
+					{
+						Status: "False",
+						Type:   "Progressing",
+					},
+					{
+						Status: "True",
+						Type:   "Upgradeable",
+					},
+				},
 			},
 			{
-				Name:      "config-operator",
-				Available: "True",
+				Name:        "config-operator",
+				Available:   "True",
+				Degraded:    "False",
+				Progressing: "False",
+				Conditions: []OperatorCondition{
+					{
+						Reason: "AsExpected",
+						Status: "False",
+						Type:   "Degraded",
+					},
+					{
+						Reason: "AsExpected",
+						Status: "False",
+						Type:   "Progressing",
+					},
+					{
+
+						Reason: "AsExpected",
+						Status: "True",
+						Type:   "Available",
+					},
+					{
+						Reason: "AsExpected",
+						Status: "True",
+						Type:   "Upgradeable",
+					},
+				},
 			},
 			{
-				Name:      "console",
-				Available: "True",
+				Name:        "console",
+				Available:   "True",
+				Degraded:    "False",
+				Progressing: "False",
+				Conditions: []OperatorCondition{
+					{
+						Reason: "AsExpected",
+						Status: "False",
+						Type:   "Degraded",
+					},
+					{
+						Reason: "AsExpected",
+						Status: "False",
+						Type:   "Progressing",
+					},
+					{
+						Reason: "AsExpected",
+						Status: "True",
+						Type:   "Available",
+					},
+					{
+						Reason: "AsExpected",
+						Status: "True",
+						Type:   "Upgradeable",
+					},
+				},
 			},
 			{
-				Name:      "aro",
-				Available: "True",
+				Name:        "aro",
+				Available:   "True",
+				Degraded:    "False",
+				Progressing: "False",
+				Conditions: []OperatorCondition{
+					{
+						Reason: "AsExpected",
+						Status: "True",
+						Type:   "Available",
+					},
+					{
+						Reason: "AsExpected",
+						Status: "False",
+						Type:   "Progressing",
+					},
+					{
+						Reason: "AsExpected",
+						Status: "False",
+						Type:   "Degraded",
+					},
+					{
+						Reason: "AsExpected",
+						Status: "True",
+						Type:   "Upgradeable",
+					},
+				},
 			},
 		},
+	}
+
+	for i, r := range info.Operators {
+		for j := range r.Conditions {
+			info.Operators[i].Conditions[j].LastUpdated = ""
+		}
 	}
 
 	sort.SliceStable(info.Operators, func(i, j int) bool { return info.Operators[i].Name < info.Operators[j].Name })

@@ -58,7 +58,7 @@ func TestCheck(t *testing.T) {
 			},
 		},
 		{
-			name:             "could not instantiate a validator",
+			name:             "fake validation on Service Principal error",
 			credentialsExist: true,
 			validator: func(controller *gomock.Controller) dynamic.ServicePrincipalValidator {
 				validator := mock_dynamic.NewMockDynamic(controller)
@@ -67,11 +67,6 @@ func TestCheck(t *testing.T) {
 				return validator
 			},
 			wantErr: "fake validation error",
-		},
-		{
-			name:             "could not instantiate a validator",
-			credentialsExist: true,
-			wantErr:          "fake validator constructor error",
 		},
 		{
 			name:    "could not get service principal credentials",
@@ -98,11 +93,11 @@ func TestCheck(t *testing.T) {
 				getTokenCredential: func(*azureclient.AROEnvironment, *clusterauthorizer.Credentials) (azcore.TokenCredential, error) {
 					return &fakeTokenCredential{}, nil
 				},
-				newSPValidator: func(azEnv *azureclient.AROEnvironment) (dynamic.ServicePrincipalValidator, error) {
+				newSPValidator: func(azEnv *azureclient.AROEnvironment) dynamic.ServicePrincipalValidator {
 					if validatorMock != nil {
-						return validatorMock, nil
+						return validatorMock
 					}
-					return nil, errors.New("fake validator constructor error")
+					return nil
 				},
 			}
 

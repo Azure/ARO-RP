@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react"
-import { AxiosResponse } from "axios"
-import { fetchNodes } from "../Request"
-import { ICluster } from "../App"
-import { NodesListComponent } from "./NodesList"
-import { IMessageBarStyles, MessageBar, MessageBarType, Stack } from "@fluentui/react"
-import { nodesKey } from "../ClusterDetail"
+import { AxiosResponse } from 'axios';
+import { fetchNodes } from '../Request';
+import { NodesListComponent } from './NodesList';
+import { IMessageBarStyles, MessageBar, MessageBarType, Stack } from '@fluentui/react';
+import { nodesKey } from "../ClusterDetail";
+import { WrapperProps } from "../ClusterDetailList";
 
 export interface ICondition {
   status: string
@@ -44,11 +44,7 @@ export interface INodeOverviewDetails {
   createdTime: string
 }
 
-export function NodesWrapper(props: {
-  currentCluster: ICluster
-  detailPanelSelected: string
-  loaded: boolean
-}) {
+export function NodesWrapper(props: WrapperProps) {
   const [data, setData] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
   const state = useRef<NodesListComponent>(null)
@@ -129,14 +125,16 @@ export function NodesWrapper(props: {
       } else {
         setError(result)
       }
-      setFetching(props.currentCluster.name)
+      if(props.currentCluster) {
+        setFetching(props.currentCluster.name)
+      }
     }
 
     if (
       props.detailPanelSelected.toLowerCase() == nodesKey &&
       fetching === "" &&
       props.loaded &&
-      props.currentCluster.name != ""
+      props.currentCluster
     ) {
       setFetching("FETCHING")
       fetchNodes(props.currentCluster).then(onData)

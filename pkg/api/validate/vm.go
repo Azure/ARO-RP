@@ -10,10 +10,26 @@ import (
 // Public facing document which lists supported VM Sizes:
 // https://learn.microsoft.com/en-us/azure/openshift/support-policies-v4#supported-virtual-machine-sizes
 
-// To add new instance types, needs Project Managment's involment and instructions are below.,
+// To add new instance types, needs Project Management's involvement and instructions are below.,
 // https://github.com/Azure/ARO-RP/blob/master/docs/adding-new-instance-types.md
 
-var SupportedMasterVmSizes = map[api.VMSize]api.VMSizeStruct{
+const VMRoleMaster string = "master"
+const VMRoleWorker string = "worker"
+
+var supportedVMSizesByRoleMap = map[string]map[api.VMSize]api.VMSizeStruct{
+	VMRoleMaster: supportedMasterVmSizes,
+	VMRoleWorker: supportedWorkerVmSizes,
+}
+
+func SupportedVMSizesByRole(vmRole string) map[api.VMSize]api.VMSizeStruct {
+	supportedvmsizes, exists := supportedVMSizesByRoleMap[vmRole]
+	if !exists {
+		return nil
+	}
+	return supportedvmsizes
+}
+
+var supportedMasterVmSizes = map[api.VMSize]api.VMSizeStruct{
 	// General purpose
 	api.VMSizeStandardD8sV3:  api.VMSizeStandardD8sV3Struct,
 	api.VMSizeStandardD16sV3: api.VMSizeStandardD16sV3Struct,
@@ -62,7 +78,7 @@ var SupportedMasterVmSizes = map[api.VMSize]api.VMSizeStruct{
 	api.VMSizeStandardE32asV4: api.VMSizeStandardE32asV4Struct,
 	api.VMSizeStandardE48asV4: api.VMSizeStandardE48asV4Struct,
 	api.VMSizeStandardE64asV4: api.VMSizeStandardE64asV4Struct,
-	api.VMSizeStandardE96asV4: api.VMSizeStandardE64asV4Struct,
+	api.VMSizeStandardE96asV4: api.VMSizeStandardE96asV4Struct,
 
 	api.VMSizeStandardE8asV5:  api.VMSizeStandardE8asV5Struct,
 	api.VMSizeStandardE16asV5: api.VMSizeStandardE16asV5Struct,
@@ -86,7 +102,7 @@ var SupportedMasterVmSizes = map[api.VMSize]api.VMSizeStruct{
 }
 
 // Document support
-var SupportedWorkerVmSizes = map[api.VMSize]api.VMSizeStruct{
+var supportedWorkerVmSizes = map[api.VMSize]api.VMSizeStruct{
 	// General purpose
 	api.VMSizeStandardD4sV3:  api.VMSizeStandardD4sV3Struct,
 	api.VMSizeStandardD8sV3:  api.VMSizeStandardD8sV3Struct,
@@ -98,7 +114,6 @@ var SupportedWorkerVmSizes = map[api.VMSize]api.VMSizeStruct{
 	api.VMSizeStandardD16sV4: api.VMSizeStandardD16sV4Struct,
 	api.VMSizeStandardD32sV4: api.VMSizeStandardD32sV4Struct,
 	api.VMSizeStandardD64sV4: api.VMSizeStandardD64sV4Struct,
-	api.VMSizeStandardD96sV4: api.VMSizeStandardD96sV4Struct,
 
 	api.VMSizeStandardD4sV5:  api.VMSizeStandardD4sV5Struct,
 	api.VMSizeStandardD8sV5:  api.VMSizeStandardD8sV5Struct,
@@ -135,7 +150,6 @@ var SupportedWorkerVmSizes = map[api.VMSize]api.VMSizeStruct{
 	api.VMSizeStandardE32sV4: api.VMSizeStandardE32sV4Struct,
 	api.VMSizeStandardE48sV4: api.VMSizeStandardE48sV4Struct,
 	api.VMSizeStandardE64sV4: api.VMSizeStandardE64sV4Struct,
-	api.VMSizeStandardE96sV4: api.VMSizeStandardE96sV4Struct,
 
 	api.VMSizeStandardE2sV5:  api.VMSizeStandardE2sV5Struct,
 	api.VMSizeStandardE4sV5:  api.VMSizeStandardE4sV5Struct,
@@ -154,7 +168,7 @@ var SupportedWorkerVmSizes = map[api.VMSize]api.VMSizeStruct{
 	api.VMSizeStandardE32asV4: api.VMSizeStandardE32asV4Struct,
 	api.VMSizeStandardE48asV4: api.VMSizeStandardE48asV4Struct,
 	api.VMSizeStandardE64asV4: api.VMSizeStandardE64asV4Struct,
-	api.VMSizeStandardE96asV4: api.VMSizeStandardE64asV4Struct,
+	api.VMSizeStandardE96asV4: api.VMSizeStandardE96asV4Struct,
 
 	api.VMSizeStandardE8asV5:  api.VMSizeStandardE8asV5Struct,
 	api.VMSizeStandardE16asV5: api.VMSizeStandardE16asV5Struct,
@@ -218,7 +232,7 @@ func DiskSizeIsValid(sizeGB int) bool {
 
 func VMSizeIsValid(vmSize api.VMSize, requiredD2sV3Workers, isMaster bool) bool {
 	if isMaster {
-		_, supportedAsMaster := SupportedMasterVmSizes[vmSize]
+		_, supportedAsMaster := SupportedVMSizesByRole(VMRoleMaster)[vmSize]
 		return supportedAsMaster
 	}
 
@@ -226,7 +240,7 @@ func VMSizeIsValid(vmSize api.VMSize, requiredD2sV3Workers, isMaster bool) bool 
 		return false
 	}
 
-	_, supportedAsWorker := SupportedWorkerVmSizes[vmSize]
+	_, supportedAsWorker := SupportedVMSizesByRole(VMRoleWorker)[vmSize]
 	if supportedAsWorker || (requiredD2sV3Workers && vmSize == api.VMSizeStandardD2sV3) {
 		return true
 	}
@@ -240,11 +254,11 @@ func VMSizeFromName(vmSize api.VMSize) (api.VMSizeStruct, bool) {
 		return api.VMSizeStandardD2sV3Struct, true
 	}
 
-	if size, ok := SupportedWorkerVmSizes[vmSize]; ok {
+	if size, ok := SupportedVMSizesByRole(VMRoleWorker)[vmSize]; ok {
 		return size, true
 	}
 
-	if size, ok := SupportedMasterVmSizes[vmSize]; ok {
+	if size, ok := SupportedVMSizesByRole(VMRoleMaster)[vmSize]; ok {
 		return size, true
 	}
 	return api.VMSizeStruct{}, false

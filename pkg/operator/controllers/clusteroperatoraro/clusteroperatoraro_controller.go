@@ -7,8 +7,12 @@ import (
 	"context"
 
 	configv1 "github.com/openshift/api/config/v1"
-	"github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
+	operatorv1 "github.com/openshift/api/operator/v1"
+	configv1helpers "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
+	"github.com/openshift/library-go/pkg/operator/status"
+	operatorv1helpers "github.com/openshift/library-go/pkg/operator/v1helpers"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/api/equality"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -74,44 +78,30 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{}, r.setClusterOperatorStatus(ctx, co)
+	return reconcile.Result{}, r.setClusterOperatorStatus(ctx, co, instance)
 }
 
-func (r *Reconciler) setClusterOperatorStatus(ctx context.Context, co *configv1.ClusterOperator) error {
-	// TODO: Replace with a real conditions based on aro operator conditions
-	currentTime := metav1.Now()
-	conditions := []configv1.ClusterOperatorStatusCondition{
-		{
-			Type:               configv1.OperatorAvailable,
-			Status:             configv1.ConditionTrue,
-			LastTransitionTime: currentTime,
-			Reason:             reasonAsExpected,
-		},
-		{
-			Type:               configv1.OperatorProgressing,
-			Status:             configv1.ConditionFalse,
-			LastTransitionTime: currentTime,
-			Reason:             reasonAsExpected,
-		},
-		{
-			Type:               configv1.OperatorDegraded,
-			Status:             configv1.ConditionFalse,
-			LastTransitionTime: currentTime,
-			Reason:             reasonAsExpected,
-		},
-		{
-			Type:               configv1.OperatorUpgradeable,
-			Status:             configv1.ConditionTrue,
-			LastTransitionTime: currentTime,
-			Reason:             reasonAsExpected,
-		},
+func (r *Reconciler) setClusterOperatorStatus(ctx context.Context, originalClusterOperatorObj *configv1.ClusterOperator, cluster *arov1alpha1.Cluster) error {
+	clusterOperatorObj := originalClusterOperatorObj.DeepCopy()
+
+	configv1helpers.SetStatusCondition(&clusterOperatorObj.Status.Conditions, status.UnionClusterCondition("Available", operatorv1.ConditionTrue, nil, cluster.Status.Conditions...))
+	configv1helpers.SetStatusCondition(&clusterOperatorObj.Status.Conditions, status.UnionClusterCondition("Progressing", operatorv1.ConditionFalse, nil, cluster.Status.Conditions...))
+
+	// We always set the Degraded status to false, as the operator being in Degraded state will prevent cluster upgrade.
+	configv1helpers.SetStatusCondition(&clusterOperatorObj.Status.Conditions, configv1.ClusterOperatorStatusCondition{
+		Type:               configv1.OperatorDegraded,
+		Status:             configv1.ConditionFalse,
+		LastTransitionTime: metav1.Now(),
+		Reason:             reasonAsExpected,
+	})
+
+	operatorv1helpers.SetOperandVersion(&clusterOperatorObj.Status.Versions, configv1.OperandVersion{Name: "operator", Version: version.GitCommit})
+
+	if equality.Semantic.DeepEqual(clusterOperatorObj, originalClusterOperatorObj) {
+		return nil
 	}
 
-	for _, c := range conditions {
-		v1helpers.SetStatusCondition(&co.Status.Conditions, c)
-	}
-
-	return r.client.Status().Update(ctx, co)
+	return r.client.Status().Update(ctx, clusterOperatorObj)
 }
 
 func (r *Reconciler) getOrCreateClusterOperator(ctx context.Context) (*configv1.ClusterOperator, error) {
