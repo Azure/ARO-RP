@@ -24,13 +24,13 @@ import (
 // kubeconfig for the ARO service, based on the admin kubeconfig found in the
 // graph.
 func (m *manager) generateAROServiceKubeconfig(pg graph.PersistedGraph) ([]byte, error) {
-	return generateKubeconfig(pg, "system:aro-service", []string{"system:masters"}, installer.ValidityTenYears, true)
+	return generateKubeconfig(pg, "system:aro-service", []string{"system:masters"}, installer.TenYears, true)
 }
 
 // generateAROSREKubeconfig generates additional admin credentials and a
 // kubeconfig for ARO SREs, based on the admin kubeconfig found in the graph.
 func (m *manager) generateAROSREKubeconfig(pg graph.PersistedGraph) ([]byte, error) {
-	return generateKubeconfig(pg, "system:aro-sre", nil, installer.ValidityTenYears, true)
+	return generateKubeconfig(pg, "system:aro-sre", nil, installer.TenYears, true)
 }
 
 // checkUserAdminKubeconfigUpdated checks if the user kubeconfig is
@@ -81,7 +81,7 @@ func (m *manager) checkUserAdminKubeconfigUpdated() bool {
 // generateUserAdminKubeconfig generates additional admin credentials and a
 // kubeconfig for ARO User, based on the admin kubeconfig found in the graph.
 func (m *manager) generateUserAdminKubeconfig(pg graph.PersistedGraph) ([]byte, error) {
-	return generateKubeconfig(pg, "system:admin", nil, installer.ValidityOneYear, false)
+	return generateKubeconfig(pg, "system:admin", nil, installer.OneYear, false)
 }
 
 func (m *manager) generateKubeconfigs(ctx context.Context) error {

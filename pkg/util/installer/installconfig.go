@@ -8,9 +8,6 @@ package installer
 // Networking defines the pod network provider in the cluster.
 type Networking struct {
 	// NetworkType is the type of network to install. The default is OpenShiftSDN
-	//
-	// +kubebuilder:default=OpenShiftSDN
-	// +optional
 	NetworkType string `json:"networkType,omitempty"`
 }
 

@@ -68,7 +68,7 @@ func (m *manager) fixMCSCert(ctx context.Context) error {
 
 		cfg := &installer.CertCfg{
 			Subject:     pkix.Name{CommonName: "system:machine-config-server"},
-			Validity:    installer.ValidityTenYears,
+			Validity:    installer.TenYears,
 			IPAddresses: []net.IP{intIP},
 			DNSNames:    []string{"api-int." + domain, intIP.String()},
 		}

@@ -20,14 +20,14 @@ import (
 const (
 	keySize = 2048
 
-	// ValidityOneDay sets the validity of a cert to 24 hours.
-	ValidityOneDay = time.Hour * 24
+	// OneDay sets the validity of a cert to 24 hours.
+	OneDay = time.Hour * 24
 
-	// ValidityOneYear sets the validity of a cert to 1 year.
-	ValidityOneYear = ValidityOneDay * 365
+	// OneYear sets the validity of a cert to 1 year.
+	OneYear = OneDay * 365
 
-	// ValidityTenYears sets the validity of a cert to 10 years.
-	ValidityTenYears = ValidityOneYear * 10
+	// TenYears sets the validity of a cert to 10 years.
+	TenYears = OneYear * 10
 )
 
 // CertCfg contains all needed fields to configure a new certificate

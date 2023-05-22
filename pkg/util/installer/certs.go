@@ -10,17 +10,11 @@ import (
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 )
 
-// CertInterface contains cert.
-// See openshift/installer/pkg/asset/tls/tls.go
-type CertInterface interface {
-	// Cert returns the certificate.
-	Cert() []byte
-}
-
 // CertKeyInterface contains a private key and the associated cert.
 // See openshift/installer/pkg/asset/tls/tls.go
 type CertKeyInterface interface {
-	CertInterface
+	// Cert returns the certificate.
+	Cert() []byte
 	// Key returns the private key.
 	Key() []byte
 }

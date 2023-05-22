@@ -295,17 +295,17 @@ func TestCheckUserAdminKubeconfigUpdated(t *testing.T) {
 	}{
 		{
 			name:           "valid and updated",
-			validity:       installer.ValidityOneYear,
+			validity:       installer.OneYear,
 			expectedResult: true,
 		},
 		{
 			name:           "clientauth cert expires soon",
-			validity:       89 * installer.ValidityOneDay,
+			validity:       89 * 24 * time.Hour,
 			expectedResult: false,
 		},
 		{
 			name:     "url needs updating and cacert populated",
-			validity: installer.ValidityOneYear,
+			validity: installer.OneYear,
 			mutateConfig: func(c *clientcmdv1.Config) *clientcmdv1.Config {
 				c.Clusters[0].Cluster.Server = "https://api-int.hash.rg.mydomain:6443"
 				c.Clusters[0].Cluster.CertificateAuthorityData = []byte("unexpected content")
@@ -315,7 +315,7 @@ func TestCheckUserAdminKubeconfigUpdated(t *testing.T) {
 		},
 		{
 			name:     "empty client key",
-			validity: installer.ValidityOneYear,
+			validity: installer.OneYear,
 			mutateConfig: func(c *clientcmdv1.Config) *clientcmdv1.Config {
 				c.AuthInfos[0].AuthInfo.ClientKeyData = nil
 				return c

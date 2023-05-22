@@ -16,11 +16,6 @@ type AdminKubeConfigSignerCertKey struct {
 	SelfSignedCertKey
 }
 
-// AdminKubeConfigClientCertKey is the asset that generates the key/cert pair for admin client to apiserver.
-type AdminKubeConfigClientCertKey struct {
-	SignedCertKey
-}
-
 type kubeconfig struct {
 	Config *clientcmdv1.Config
 }
