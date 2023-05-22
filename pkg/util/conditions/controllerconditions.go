@@ -41,30 +41,30 @@ func GetControllerConditions(ctx context.Context, c client.Client, controllerNam
 		return conditions, err
 	}
 
-	for _, cond := range cluster.Status.Conditions {
+	for i, cond := range cluster.Status.Conditions {
 		switch cond.Type {
 		case conditionName(controllerName, operatorv1.OperatorStatusTypeAvailable):
-			conditions.Available = &cond
+			conditions.Available = &cluster.Status.Conditions[i]
 		case conditionName(controllerName, operatorv1.OperatorStatusTypeProgressing):
-			conditions.Progressing = &cond
+			conditions.Progressing = &cluster.Status.Conditions[i]
 		case conditionName(controllerName, operatorv1.OperatorStatusTypeDegraded):
-			conditions.Degraded = &cond
+			conditions.Degraded = &cluster.Status.Conditions[i]
 		}
 	}
 
 	return conditions, nil
 }
 
-func SetControllerConditions(ctx context.Context, c client.Client, conditions ControllerConditions) error {
+func SetControllerConditions(ctx context.Context, c client.Client, cnds ControllerConditions) error {
 	cluster, err := getCluster(ctx, c)
 	if err != nil {
 		return err
 	}
 
 	newConditions := cluster.Status.DeepCopy().Conditions
-	v1helpers.SetOperatorCondition(&newConditions, *conditions.Available)
-	v1helpers.SetOperatorCondition(&newConditions, *conditions.Progressing)
-	v1helpers.SetOperatorCondition(&newConditions, *conditions.Degraded)
+	v1helpers.SetOperatorCondition(&newConditions, *cnds.Available)
+	v1helpers.SetOperatorCondition(&newConditions, *cnds.Progressing)
+	v1helpers.SetOperatorCondition(&newConditions, *cnds.Degraded)
 
 	if equality.Semantic.DeepEqual(cluster.Status.Conditions, newConditions) {
 		return nil
@@ -75,6 +75,31 @@ func SetControllerConditions(ctx context.Context, c client.Client, conditions Co
 		return fmt.Errorf("error updating controller conditions: %w", err)
 	}
 	return nil
+}
+
+func SetControllerDegraded(ctx context.Context, c client.Client, cnds ControllerConditions, err error) error {
+	cnds.Degraded.Status = operatorv1.ConditionTrue
+	cnds.Degraded.Message = err.Error()
+
+	return SetControllerConditions(ctx, c, cnds)
+}
+
+func ClearControllerDegraded(ctx context.Context, c client.Client, cnds ControllerConditions) error {
+	cnds.Degraded.Status = operatorv1.ConditionFalse
+	cnds.Degraded.Message = ""
+
+	return SetControllerConditions(ctx, c, cnds)
+}
+
+func ClearControllerConditions(ctx context.Context, c client.Client, cnds ControllerConditions) error {
+	cnds.Available.Status = operatorv1.ConditionTrue
+	cnds.Available.Message = ""
+	cnds.Progressing.Status = operatorv1.ConditionFalse
+	cnds.Progressing.Message = ""
+	cnds.Degraded.Status = operatorv1.ConditionFalse
+	cnds.Degraded.Message = ""
+
+	return SetControllerConditions(ctx, c, cnds)
 }
 
 func getCluster(ctx context.Context, c client.Client) (*arov1alpha1.Cluster, error) {

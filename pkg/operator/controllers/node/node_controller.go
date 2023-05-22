@@ -65,17 +65,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	cnds, err := conditions.GetControllerConditions(ctx, r.client, ControllerName)
 	if err != nil {
+		r.log.Error(err)
 		return reconcile.Result{}, err
 	}
 	node := &corev1.Node{}
 	err = r.client.Get(ctx, types.NamespacedName{Name: request.Name}, node)
 	if err != nil {
 		r.log.Error(err)
-
-		cnds.Degraded.Status = operatorv1.ConditionTrue
-		cnds.Degraded.Message = err.Error()
-
-		conditions.SetControllerConditions(ctx, r.client, cnds)
+		conditions.SetControllerDegraded(ctx, r.client, cnds, err)
 
 		return reconcile.Result{}, err
 	}
@@ -99,12 +96,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 		err = r.client.Update(ctx, node)
 		if err != nil {
-			cnds.Degraded.Status = operatorv1.ConditionTrue
-			cnds.Degraded.Message = err.Error()
 			r.log.Error(err)
+			conditions.SetControllerDegraded(ctx, r.client, cnds, err)
 		}
 
-		conditions.SetControllerConditions(ctx, r.client, cnds)
 		return reconcile.Result{}, err
 	}
 
@@ -117,10 +112,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		err = r.client.Update(ctx, node)
 		if err != nil {
 			r.log.Error(err)
-			cnds.Degraded.Status = operatorv1.ConditionTrue
-			cnds.Degraded.Message = err.Error()
-
-			conditions.SetControllerConditions(ctx, r.client, cnds)
+			conditions.SetControllerDegraded(ctx, r.client, cnds, err)
 			return reconcile.Result{}, err
 		}
 	}
@@ -152,9 +144,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}, request.Name)
 	if err != nil {
 		r.log.Error(err)
-		cnds.Degraded.Status = operatorv1.ConditionTrue
-		cnds.Degraded.Message = err.Error()
-		conditions.SetControllerConditions(ctx, r.client, cnds)
+		conditions.SetControllerDegraded(ctx, r.client, cnds, err)
 
 		return reconcile.Result{}, err
 	}
@@ -165,21 +155,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	err = r.client.Update(ctx, node)
 	if err != nil {
 		r.log.Error(err)
-		cnds.Degraded.Status = operatorv1.ConditionTrue
-		cnds.Degraded.Message = err.Error()
-		conditions.SetControllerConditions(ctx, r.client, cnds)
+		conditions.SetControllerDegraded(ctx, r.client, cnds, err)
 		return reconcile.Result{}, err
 	}
 
-	// set all conditions to default state
-	cnds.Available.Status = operatorv1.ConditionTrue
-	cnds.Available.Message = ""
-	cnds.Progressing.Status = operatorv1.ConditionFalse
-	cnds.Progressing.Message = ""
-	cnds.Degraded.Status = operatorv1.ConditionFalse
-	cnds.Degraded.Message = ""
-
-	return reconcile.Result{}, conditions.SetControllerConditions(ctx, r.client, cnds)
+	return reconcile.Result{}, conditions.ClearControllerConditions(ctx, r.client, cnds)
 }
 
 // SetupWithManager setup our mananger

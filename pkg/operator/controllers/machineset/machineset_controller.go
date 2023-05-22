@@ -9,7 +9,6 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/to"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -59,16 +58,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	cnds, err := conditions.GetControllerConditions(ctx, r.client, ControllerName)
 	if err != nil {
+		r.log.Error(err)
 		return reconcile.Result{}, err
 	}
 
 	modifiedMachineset := &machinev1beta1.MachineSet{}
 	err = r.client.Get(ctx, types.NamespacedName{Name: request.Name, Namespace: machineSetsNamespace}, modifiedMachineset)
 	if err != nil {
-		cnds.Degraded.Status = operatorv1.ConditionTrue
-		cnds.Degraded.Message = err.Error()
-
-		conditions.SetControllerConditions(ctx, r.client, cnds)
+		r.log.Error(err)
+		conditions.SetControllerDegraded(ctx, r.client, cnds, err)
 
 		return reconcile.Result{}, err
 	}
@@ -80,6 +78,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		LabelSelector: selector,
 	})
 	if err != nil {
+		r.log.Error(err)
+		conditions.SetControllerDegraded(ctx, r.client, cnds, err)
+
 		return reconcile.Result{}, err
 	}
 
@@ -88,7 +89,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	for _, machineset := range machinesets.Items {
 		// If there are any custom machinesets in the list, bail and don't requeue
 		if !strings.Contains(machineset.Name, instance.Spec.InfraID) {
-			return reconcile.Result{}, nil
+			return reconcile.Result{}, conditions.ClearControllerDegraded(ctx, r.client, cnds)
 		}
 		if machineset.Spec.Replicas != nil {
 			replicaCount += int(*machineset.Spec.Replicas)
@@ -101,11 +102,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		modifiedMachineset.Spec.Replicas = to.Int32Ptr(int32(minSupportedReplicas-replicaCount) + *modifiedMachineset.Spec.Replicas)
 		err := r.client.Update(ctx, modifiedMachineset)
 		if err != nil {
+			r.log.Error(err)
+			conditions.SetControllerDegraded(ctx, r.client, cnds, err)
+
 			return reconcile.Result{}, err
 		}
 	}
 
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, conditions.ClearControllerConditions(ctx, r.client, cnds)
 }
 
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {

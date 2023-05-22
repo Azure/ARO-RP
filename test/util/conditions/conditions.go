@@ -20,6 +20,7 @@ import (
 
 // AssertControllerConditions asserts that the ARO cluster resource contains the conditions expected in wantConditions.
 func AssertControllerConditions(t *testing.T, ctx context.Context, client client.Client, wantConditions []operatorv1.OperatorCondition) {
+	t.Helper()
 	if len(wantConditions) == 0 {
 		return
 	}
@@ -33,7 +34,7 @@ func AssertControllerConditions(t *testing.T, ctx context.Context, client client
 		if err != nil {
 			t.Error(err)
 		}
-		if diff := cmp.Diff(gotCondition, &wantCondition, cmpopts.EquateApproxTime(time.Second)); diff != "" {
+		if diff := cmp.Diff(&wantCondition, gotCondition, cmpopts.EquateApproxTime(time.Second)); diff != "" {
 			t.Error(diff)
 		}
 	}
