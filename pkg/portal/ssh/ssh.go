@@ -6,7 +6,6 @@ package ssh
 import (
 	"bytes"
 	"crypto/rsa"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"mime"
@@ -18,6 +17,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	cryptossh "golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/knownhosts"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
@@ -186,8 +186,7 @@ func (s *SSH) sendResponse(w http.ResponseWriter, hostname, username, password, 
 		}
 		return
 	}
-	encodedKey := base64.StdEncoding.EncodeToString(s.hostPubKey.Marshal())
-	command, err := createLoginCommand(isLocalDevelopmentMode, username, hostname, encodedKey)
+	command, err := createLoginCommand(isLocalDevelopmentMode, username, hostname, s.hostPubKey)
 	resp := response{Command: command, Password: password}
 	if err != nil {
 		s.internalServerError(w, err)
@@ -204,11 +203,12 @@ func (s *SSH) internalServerError(w http.ResponseWriter, err error) {
 }
 
 const (
-	sshCommand = "echo '{{ .Hostname }} ssh-rsa {{.PublicKey}}' > {{.Hostname}}_known_host ; " +
+	sshCommand = "echo '{{ .KnownHostLine }}' > {{.Hostname}}_known_host ; " +
 		"ssh -o UserKnownHostsFile={{.Hostname}}_known_host{{if .IsLocalDevelopmentMode}} -p 2222{{end}} {{.User}}@{{.Hostname}}"
 )
 
-func createLoginCommand(isLocalDevelopmentMode bool, user, host, publicKey string) (string, error) {
+func createLoginCommand(isLocalDevelopmentMode bool, user, host string, publicKey cryptossh.PublicKey) (string, error) {
+	line := knownhosts.Line([]string{host}, publicKey)
 	tmp := template.New("command")
 	tmp, err := tmp.Parse(sshCommand)
 	if err != nil {
@@ -217,10 +217,10 @@ func createLoginCommand(isLocalDevelopmentMode bool, user, host, publicKey strin
 	type fields struct {
 		User                   string
 		Hostname               string
-		PublicKey              string
+		KnownHostLine          string
 		IsLocalDevelopmentMode bool
 	}
 	var buff bytes.Buffer
-	err = tmp.Execute(&buff, fields{user, host, publicKey, isLocalDevelopmentMode})
+	err = tmp.Execute(&buff, fields{user, host, line, isLocalDevelopmentMode})
 	return buff.String(), err
 }

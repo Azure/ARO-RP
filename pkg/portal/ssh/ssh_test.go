@@ -6,7 +6,6 @@ package ssh
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,6 +16,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	cryptossh "golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/knownhosts"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -42,7 +42,7 @@ func TestNew(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	encodedKey := base64.StdEncoding.EncodeToString(hostPubKey.Marshal())
+	khline := knownhosts.Line([]string{"localhost"}, hostPubKey)
 
 	for _, tt := range []struct {
 		name           string
@@ -68,7 +68,7 @@ func TestNew(t *testing.T) {
 			},
 			wantStatusCode: http.StatusOK,
 			wantBody: `{
-    "command": "echo 'localhost ssh-rsa ` + encodedKey + `' > localhost_known_host ; ssh -o UserKnownHostsFile=localhost_known_host username@localhost",
+    "command": "echo '` + khline + `' > localhost_known_host ; ssh -o UserKnownHostsFile=localhost_known_host username@localhost",
     "password": "03030303-0303-0303-0303-030303030001"
 }
 `,
