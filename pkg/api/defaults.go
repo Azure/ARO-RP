@@ -83,5 +83,7 @@ func DefaultOperatorFlags() OperatorFlags {
 		"aro.autosizednodes.enabled":               flagFalse,
 		"rh.srep.muo.enabled":                      flagTrue,
 		"rh.srep.muo.managed":                      flagTrue,
+		"aro.guardrails.enabled":                   flagFalse,
+		"aro.guardrails.deploy.managed":            flagFalse,
 	}
 }
