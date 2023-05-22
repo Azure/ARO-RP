@@ -10,6 +10,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 )
 
@@ -129,7 +130,7 @@ func TestSubjectNameAndIssuer(t *testing.T) {
 						return nil, errors.New("noop")
 					}
 
-					return utiltls.CertAsBytes(validCaCerts...)
+					return utilpem.Encode(validCaCerts...)
 				},
 			}
 			err := authorizer.readCABundle(caBundlePath)
@@ -171,7 +172,7 @@ func TestSubjectNameAndIssuerReadCABundle(t *testing.T) {
 		{
 			name: "valid ca cert",
 			readFile: func(string) ([]byte, error) {
-				return utiltls.CertAsBytes(validCaCerts...)
+				return utilpem.Encode(validCaCerts...)
 			},
 			want: true,
 		},
