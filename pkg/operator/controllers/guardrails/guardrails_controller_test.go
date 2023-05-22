@@ -82,7 +82,7 @@ func TestGuardRailsReconciler(t *testing.T) {
 			},
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.GuardRailsDeploymentConfig{
-					Pullspec:                       "acrtest.example.com/gatekeeper:v3.10.0",
+					Pullspec:                       "quay.io/jeyuan/gatekeeper:v3.10.0",
 					Namespace:                      "openshift-azure-guardrails",
 					ManagerRequestsCPU:             "100m",
 					ManagerLimitCPU:                "1000m",
