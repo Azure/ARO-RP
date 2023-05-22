@@ -30,6 +30,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	imageController "github.com/Azure/ARO-RP/pkg/operator/controllers/imageconfig"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
+	subnetController "github.com/Azure/ARO-RP/pkg/operator/controllers/subnets"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -284,6 +285,16 @@ var _ = Describe("ARO Operator - Conditions", func() {
 	})
 })
 
+func subnetReconciliationAnnotationExists(annotations map[string]string) bool {
+	if annotations == nil {
+		return false
+	}
+
+	timestamp := annotations[subnetController.AnnotationTimestamp]
+	_, err := time.Parse(time.RFC1123, timestamp)
+	return err == nil
+}
+
 var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 	var vnetName, location, resourceGroup string
 	var subnetsToReconcile map[string]*string
@@ -359,6 +370,10 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 				s, err := clients.Subnet.Get(ctx, resourceGroup, vnetName, subnet, "")
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(*s.NetworkSecurityGroup.ID).To(Equal(*correctNSG))
+
+				co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(co.Annotations).To(Satisfy(subnetReconciliationAnnotationExists))
 			}).WithContext(ctx).Should(Succeed())
 		}
 	})
