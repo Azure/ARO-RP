@@ -265,9 +265,9 @@ def aro_validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
     
     if len(warnings) > 0:
         if len(errors) == 0 and warnings_as_text:
-            full_msg="The following issues will have a minor impact on cluster creation:"
+            full_msg=""
             for warning in warnings:
-                full_msg = full_msg + f"\n{warning[3]}"
+                full_msg = full_msg + f"{warning[3]}\n"
         else:
             headers = ["Type", "Name", "Severity", "Description"]
             table = tabulate(warnings, headers=headers, tablefmt="grid")
