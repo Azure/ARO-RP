@@ -36,7 +36,7 @@ func (m *manager) updateClusterData(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	err = pg.GetByName(false, "*install.InstallConfig", &installConfig)
+	err = pg.GetByName(false, "*installconfig.InstallConfig", &installConfig)
 	if err != nil {
 		return err
 	}

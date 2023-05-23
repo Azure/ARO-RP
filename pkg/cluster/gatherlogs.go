@@ -16,7 +16,6 @@ import (
 
 func (m *manager) gatherFailureLogs(ctx context.Context) {
 	for _, f := range []func(context.Context) (interface{}, error){
-		m.logPersistedGraphKeys,
 		m.logClusterVersion,
 		m.logNodes,
 		m.logClusterOperators,
@@ -102,16 +101,4 @@ func (m *manager) logIngressControllers(ctx context.Context) (interface{}, error
 	}
 
 	return ics.Items, nil
-}
-
-func (m *manager) logPersistedGraphKeys(ctx context.Context) (interface{}, error) {
-	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
-
-	pg, err := m.graph.LoadPersisted(ctx, resourceGroup, account)
-	if err != nil {
-		return nil, err
-	}
-
-	return maps.Keys(pg), nil
 }
