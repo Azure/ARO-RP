@@ -10,7 +10,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/util/steps"
-	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
 func (m *manager) gatherFailureLogs(ctx context.Context) {
