@@ -19,11 +19,11 @@ import (
 func (r *reconcileManager) ensureSubnetServiceEndpoints(ctx context.Context, s subnet.Subnet) error {
 	// Do not add/reconcile service endpoints if egress lockdown is enabled.
 	if gatewayEnabled(r.instance) {
-		r.log.Info("Skipping service endpoint reconciliation since egress lockdown is enabled")
+		r.log.Debug("Skipping service endpoint reconciliation since egress lockdown is enabled")
 		return nil
 	}
 
-	r.log.Info("Reconciling service endpoints")
+	r.log.Debug("Reconciling service endpoints")
 
 	subnetObject, err := r.subnets.Get(ctx, s.ResourceID)
 	if err != nil {
