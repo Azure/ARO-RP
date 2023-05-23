@@ -32,11 +32,12 @@ const (
 
 // CertCfg contains all needed fields to configure a new certificate
 type CertCfg struct {
-	DNSNames    []string
-	IPAddresses []net.IP
-	KeyUsages   x509.KeyUsage
-	Subject     pkix.Name
-	Validity    time.Duration
+	DNSNames     []string
+	IPAddresses  []net.IP
+	KeyUsages    x509.KeyUsage
+	ExtKeyUsages []x509.ExtKeyUsage
+	Subject      pkix.Name
+	Validity     time.Duration
 }
 
 // PrivateKey generates an RSA Private key and returns the value
@@ -64,7 +65,7 @@ func SignedCertificate(
 
 	certTmpl := x509.Certificate{
 		DNSNames:              csr.DNSNames,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		ExtKeyUsage:           cfg.ExtKeyUsages,
 		IPAddresses:           csr.IPAddresses,
 		KeyUsage:              cfg.KeyUsages,
 		NotAfter:              time.Now().Add(cfg.Validity),

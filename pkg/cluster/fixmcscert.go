@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"crypto/x509"
 	"crypto/x509/pkix"
 	"fmt"
 	"net"
@@ -67,10 +68,11 @@ func (m *manager) fixMCSCert(ctx context.Context) error {
 		}
 
 		cfg := &installer.CertCfg{
-			Subject:     pkix.Name{CommonName: "system:machine-config-server"},
-			Validity:    installer.TenYears,
-			IPAddresses: []net.IP{intIP},
-			DNSNames:    []string{"api-int." + domain, intIP.String()},
+			Subject:      pkix.Name{CommonName: "system:machine-config-server"},
+			ExtKeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+			Validity:     installer.TenYears,
+			IPAddresses:  []net.IP{intIP},
+			DNSNames:     []string{"api-int." + domain, intIP.String()},
 		}
 
 		priv, cert, err := installer.GenerateSignedCertKey(cfg, rootCA)
