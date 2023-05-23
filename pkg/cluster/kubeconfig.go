@@ -141,7 +141,7 @@ func generateKubeconfig(pg graph.PersistedGraph, commonName string, organization
 	cfg := &installer.CertCfg{
 		Subject:      pkix.Name{CommonName: commonName, Organization: organization},
 		KeyUsages:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		ExtKeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 		Validity:     validity,
 	}
 
