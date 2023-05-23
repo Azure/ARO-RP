@@ -6,6 +6,7 @@ package graph
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"reflect"
 )
 
@@ -35,8 +36,12 @@ func (pg PersistedGraph) Get(disallowUnknownFields bool, is ...interface{}) erro
 }
 
 func (pg PersistedGraph) GetByName(disallowUnknownFields bool, name string, out interface{}) error {
-	d := json.NewDecoder(bytes.NewReader(pg[name]))
+	graphItem, ok := pg[name]
+	if !ok {
+		return fmt.Errorf("entry '%s' not found in persisted graph", name)
+	}
 
+	d := json.NewDecoder(bytes.NewReader(graphItem))
 	if disallowUnknownFields {
 		d.DisallowUnknownFields()
 	}
