@@ -437,13 +437,13 @@ func (c closure) usingCheckAccessV2() (bool, error) {
 		scope := c.dv.azEnv.ResourceManagerEndpoint + "/.default"
 		t, err := c.dv.checkAccessSubjectInfoCred.GetToken(c.ctx, policy.TokenRequestOptions{Scopes: []string{scope}})
 		if err != nil {
-			c.dv.log.Error("Unable to get the token from AAD", err)
+			c.dv.log.Error("Unable to get the token from AAD: ", err)
 			return false, err
 		}
 
 		oid, err := token.GetObjectId(t.Token)
 		if err != nil {
-			c.dv.log.Error("Unable to parse the token oid claim")
+			c.dv.log.Error("Unable to parse the token oid claim: ", err)
 			return false, err
 		}
 		c.oid = &oid
@@ -452,7 +452,7 @@ func (c closure) usingCheckAccessV2() (bool, error) {
 	authReq := createAuthorizationRequest(*c.oid, c.resource.String(), c.actions...)
 	results, err := c.dv.pdpClient.CheckAccess(c.ctx, authReq)
 	if err != nil {
-		c.dv.log.Error("Unexpected error when calling CheckAccessV2", err)
+		c.dv.log.Error("Unexpected error when calling CheckAccessV2: ", err)
 		return false, err
 	}
 
