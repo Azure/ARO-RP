@@ -591,12 +591,22 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 
 var _ = Describe("ARO Operator - Guardrails", func() {
 	const (
+		guardrailsEnabledFlag         = "aro.guardrails.enabled"
+		guardrailsDeployManagedFlag   = "aro.guardrails.deploy.managed"
 		guardrailsNamespace           = "openshift-azure-guardrails"
 		gkControllerManagerDeployment = "gatekeeper-controller-manager"
 		gkAuditDeployment             = "gatekeeper-audit"
 	)
 
 	It("Controller Manager must be restored if deleted", func(ctx context.Context) {
+		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		if !instance.Spec.OperatorFlags.GetSimpleBoolean(guardrailsEnabledFlag) ||
+			!instance.Spec.OperatorFlags.GetSimpleBoolean(guardrailsDeployManagedFlag) {
+			Skip("Guardrails Controller is not enabled, skipping test")
+		}
+
 		deleteControllerManagerDeployment := func(ctx context.Context) error {
 			return clients.Kubernetes.
 				AppsV1().
@@ -624,6 +634,14 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 	})
 
 	It("Audit must be restored if deleted", func(ctx context.Context) {
+		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		if !instance.Spec.OperatorFlags.GetSimpleBoolean(guardrailsEnabledFlag) ||
+			!instance.Spec.OperatorFlags.GetSimpleBoolean(guardrailsDeployManagedFlag) {
+			Skip("Guardrails Controller is not enabled, skipping test")
+		}
+
 		deleteAuditDeployment := func(ctx context.Context) error {
 			return clients.Kubernetes.
 				AppsV1().
