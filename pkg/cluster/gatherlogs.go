@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 
-	"golang.org/x/exp/maps"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/util/steps"
