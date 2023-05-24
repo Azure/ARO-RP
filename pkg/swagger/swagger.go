@@ -9,6 +9,8 @@ import (
 	"os"
 	"reflect"
 
+	"k8s.io/utils/strings/slices"
+
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -202,7 +204,7 @@ func Run(api, outputDir string) error {
 		// If this resource is not a proxy resource mark as tracked resource
 		// otherwise, its a proxy resource and we remove the proxyResource .Allof ref for the Update definition
 		// in order to make azure-rest-specs-api validation happy
-		if !contains(proxyResources, azureResource) {
+		if !slices.Contains(proxyResources, azureResource) {
 			s.Definitions[azureResource].AllOf = []Schema{
 				{
 					Ref: "../../../../../common-types/resource-management/" + g.commonTypesVersion + "/types.json#/definitions/TrackedResource",
@@ -296,16 +298,4 @@ func removeNamedSchemas(list NameSchemas, remove string) NameSchemas {
 	}
 
 	return result
-}
-
-// TODO: once we upgrade to go 1.18 we can use the slices.Contains function
-// until then, heres this helper func to check if the slice exists after we put it in a map
-func contains(slice []string, item string) bool {
-	set := make(map[string]struct{}, len(slice))
-	for _, s := range slice {
-		set[s] = struct{}{}
-	}
-
-	_, ok := set[item]
-	return ok
 }
