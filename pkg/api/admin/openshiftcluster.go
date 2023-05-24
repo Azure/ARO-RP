@@ -130,10 +130,10 @@ const (
 	MTU3900 MTUSize = 3900
 )
 
-// OutboundType represents the type of routing a cluster is using
+// OutboundType represents the type of routing a cluster is using.
 type OutboundType string
 
-// OutboundType constants
+// OutboundType constants.
 const (
 	OutboundTypeUserDefinedRouting OutboundType = "UserDefinedRouting"
 	OutboundTypeLoadbalancer       OutboundType = "Loadbalancer"

@@ -126,8 +126,10 @@ type ServicePrincipalProfile struct {
 	ClientSecret string `json:"clientSecret,omitempty" mutable:"true"`
 }
 
+// OutboundType represents the type of routing a cluster is using.
 type OutboundType string
 
+// OutboundType constants.
 const (
 	OutboundTypeUserDefinedRouting OutboundType = "UserDefinedRouting"
 	OutboundTypeLoadbalancer       OutboundType = "Loadbalancer"
