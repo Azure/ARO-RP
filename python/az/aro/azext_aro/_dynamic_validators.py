@@ -23,6 +23,7 @@ import azext_aro.custom
 logger = get_logger(__name__)
 log_entry_type = {'warn': 'Warning', 'error': 'Error'}
 
+
 def can_do_action(perms, action):
     for perm in perms:
         for not_action in perm.not_actions:
@@ -261,12 +262,14 @@ def dyn_validate_cidr_ranges():
             key = item[0]
             cidr = item[1]
             if not cidr.overlaps(ipv4_zero):
-                addresses.append([ERROR_KEY, key, log_entry_type["error"], f"{cidr} is not valid as it does not overlap with {ipv4_zero}"])
+                addresses.append([ERROR_KEY, key, log_entry_type["error"],
+                                  f"{cidr} is not valid as it does not overlap with {ipv4_zero}"])
             for item2 in cidr_array.items():
                 compare = item2[1]
                 if cidr is not compare:
                     if cidr.overlaps(compare):
-                        addresses.append([ERROR_KEY, key, log_entry_type["error"],f"{cidr} is not valid as it overlaps with {compare}"])
+                        addresses.append([ERROR_KEY, key, log_entry_type["error"],
+                                          f"{cidr} is not valid as it overlaps with {compare}"])
 
         return addresses
 
@@ -293,7 +296,7 @@ def dyn_validate_resource_permissions(service_principle_ids, resources):
                             parts = parse_resource_id(resource)
                             errors.append(["Resource Permissions",
                                            parts['type'],
-                                            log_entry_type["warn"],
+                                           log_entry_type["warn"],
                                            f"Resource {parts['name']} is missing role assignment " +
                                            f"{role} for service principal {sp_id} " +
                                            "(These roles will be automatically added during cluster creation)"])
