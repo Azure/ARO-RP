@@ -74,6 +74,24 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
 
     validate_subnets(master_subnet, worker_subnet)
 
+    validate(cmd,
+             client,
+             resource_group_name,
+             resource_name,
+             master_subnet,
+             worker_subnet,
+             vnet=vnet,
+             cluster_resource_group=cluster_resource_group,
+             client_id=client_id,
+             client_secret=client_secret,
+             vnet_resource_group_name=vnet_resource_group_name,
+             disk_encryption_set=disk_encryption_set,
+             location=location,
+             version=version,
+             pod_cidr=pod_cidr,
+             service_cidr=service_cidr,
+             warnings_as_text=True)
+
     subscription_id = get_subscription_id(cmd.cli_ctx)
 
     random_id = generate_random_id()
@@ -158,23 +176,23 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                        parameters=oc)
 
 
-def aro_validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
-                 client,  # pylint: disable=unused-argument
-                 resource_group_name,  # pylint: disable=unused-argument
-                 resource_name,  # pylint: disable=unused-argument
-                 master_subnet,
-                 worker_subnet,
-                 vnet=None,
-                 cluster_resource_group=None,  # pylint: disable=unused-argument
-                 client_id=None,
-                 client_secret=None,  # pylint: disable=unused-argument
-                 vnet_resource_group_name=None,  # pylint: disable=unused-argument
-                 disk_encryption_set=None,
-                 location=None,  # pylint: disable=unused-argument
-                 version=None,
-                 pod_cidr=None,  # pylint: disable=unused-argument
-                 service_cidr=None  # pylint: disable=unused-argument
-                 ):
+def validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
+             client,  # pylint: disable=unused-argument
+             resource_group_name,  # pylint: disable=unused-argument
+             resource_name,  # pylint: disable=unused-argument
+             master_subnet,
+             worker_subnet,
+             vnet=None,
+             cluster_resource_group=None,  # pylint: disable=unused-argument
+             client_id=None,
+             client_secret=None,  # pylint: disable=unused-argument
+             vnet_resource_group_name=None,  # pylint: disable=unused-argument
+             disk_encryption_set=None,
+             location=None,  # pylint: disable=unused-argument
+             version=None,
+             pod_cidr=None,  # pylint: disable=unused-argument
+             service_cidr=None,  # pylint: disable=unused-argument
+             warnings_as_text=False):
 
     class mockoc:  # pylint: disable=too-few-public-methods
         def __init__(self, disk_encryption_id, master_subnet_id, worker_subnet_id):
@@ -219,7 +237,7 @@ def aro_validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
     error_objects = validate_cluster_create(version,
                                             resources,
                                             sp_obj_ids)
-    errors = []
+    errors_and_warnings = []
     for error_func in error_objects:
         namespace = collections.namedtuple("Namespace", locals().keys())(*locals().values())
         error_obj = error_func(cmd, namespace)
@@ -229,16 +247,77 @@ def aro_validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
                 new_err = []
                 for txt in err:
                     new_err.append(textwrap.fill(txt, width=160))
-                errors.append(new_err)
+                errors_and_warnings.append(new_err)
+
+    warnings = []
+    errors = []
+    if len(errors_and_warnings) > 0:
+        # Separate errors and warnings into separate arrays
+        for issue in errors_and_warnings:
+            if issue[2] == "Warning":
+                warnings.append(issue)
+            else:
+                errors.append(issue)
+    else:
+        logger.info("No validation errors or warnings")
+
+    if len(warnings) > 0:
+        if len(errors) == 0 and warnings_as_text:
+            full_msg = ""
+            for warning in warnings:
+                full_msg = full_msg + f"{warning[3]}\n"
+        else:
+            headers = ["Type", "Name", "Severity", "Description"]
+            table = tabulate(warnings, headers=headers, tablefmt="grid")
+            full_msg = f"The following issues will have a minor impact on cluster creation:\n{table}"
+        logger.warning(full_msg)
 
     if len(errors) > 0:
-        logger.error("Issues found blocking cluster creation.\n")
-        headers = ["Type", "Name", "Error"]
-
+        if len(warnings) > 0:
+            full_msg = "\n"
+        else:
+            full_msg = ""
+        headers = ["Type", "Name", "Severity", "Description"]
         table = tabulate(errors, headers=headers, tablefmt="grid")
-        print(f"\n{table}")
-    else:
-        print("\nNo Issues on subscription blocking cluster creation\n")
+        full_msg = full_msg + f"The following errors are fatal and will block cluster creation:\n{table}"
+        raise ValidationError(full_msg)
+
+
+def aro_validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
+                 client,  # pylint: disable=unused-argument
+                 resource_group_name,  # pylint: disable=unused-argument
+                 resource_name,  # pylint: disable=unused-argument
+                 master_subnet,
+                 worker_subnet,
+                 vnet=None,
+                 cluster_resource_group=None,  # pylint: disable=unused-argument
+                 client_id=None,
+                 client_secret=None,  # pylint: disable=unused-argument
+                 vnet_resource_group_name=None,  # pylint: disable=unused-argument
+                 disk_encryption_set=None,
+                 location=None,  # pylint: disable=unused-argument
+                 version=None,
+                 pod_cidr=None,  # pylint: disable=unused-argument
+                 service_cidr=None,  # pylint: disable=unused-argument
+                 ):
+
+    validate(cmd,
+             client,
+             resource_group_name,
+             resource_name,
+             master_subnet,
+             worker_subnet,
+             vnet=vnet,
+             cluster_resource_group=cluster_resource_group,
+             client_id=client_id,
+             client_secret=client_secret,
+             vnet_resource_group_name=vnet_resource_group_name,
+             disk_encryption_set=disk_encryption_set,
+             location=location,
+             version=version,
+             pod_cidr=pod_cidr,
+             service_cidr=service_cidr,
+             warnings_as_text=False)
 
 
 def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False):
