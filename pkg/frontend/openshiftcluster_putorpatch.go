@@ -82,6 +82,11 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 					CreatedAt:           f.now().UTC(),
 					CreatedBy:           version.GitCommit,
 					ProvisionedBy:       version.GitCommit,
+					// Hardcoded resource tags for testing
+					ResourceTags: map[string]string{
+						"hello": "hi",
+						"test":  "isworking",
+					},
 				},
 			},
 		}

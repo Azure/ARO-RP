@@ -157,12 +157,14 @@ func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
 
 func (m *manager) ensureTaggingPolicy(ctx context.Context) error {
 	displayName := tagPolicyDisplayName(m.doc.OpenShiftCluster.Properties.InfraID)
-	definition := resourceTaggingPolicyDefinition(displayName)
-	definition, err := m.definitions.CreateOrUpdate(ctx, displayName, definition)
+	//definition := resourceTaggingPolicyDefinition(displayName)
+	//definition, err := m.definitions.CreateOrUpdate(ctx, displayName, definition)
 
-	if err != nil {
-		return err
-	}
+	/*
+		if err != nil {
+			return err
+		}
+	*/
 
 	parameters := map[string]*mgmtpolicy.ParameterValuesValue{}
 	i := 0
@@ -212,8 +214,9 @@ func (m *manager) ensureTaggingPolicy(ctx context.Context) error {
 	assignment.Location = &m.doc.OpenShiftCluster.Location
 
 	assignment.AssignmentProperties = &mgmtpolicy.AssignmentProperties{
-		DisplayName:        to.StringPtr(displayName),
-		PolicyDefinitionID: definition.ID,
+		DisplayName: to.StringPtr(displayName),
+		//PolicyDefinitionID: definition.ID,
+		PolicyDefinitionID: to.StringPtr(fmt.Sprintf("/subscriptions/%s/providers/Microsoft.Authorization/policyDefinitions/8cac3d41-ac5a-447c-97e0-52c54cf4575b", m.subscriptionDoc.ID)),
 		Scope:              to.StringPtr(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID),
 		Parameters:         parameters,
 		EnforcementMode:    mgmtpolicy.Default,
@@ -223,7 +226,7 @@ func (m *manager) ensureTaggingPolicy(ctx context.Context) error {
 		Type: mgmtpolicy.SystemAssigned,
 	}
 
-	assignment, err = m.assignments.Create(ctx, m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, displayName, assignment)
+	assignment, err := m.assignments.Create(ctx, m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, displayName, assignment)
 
 	if err != nil {
 		return err
