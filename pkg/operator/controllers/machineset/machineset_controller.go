@@ -18,7 +18,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 )
 
@@ -44,8 +43,7 @@ func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance := &arov1alpha1.Cluster{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+	instance, err := r.GetCluster(ctx)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

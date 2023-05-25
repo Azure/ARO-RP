@@ -23,7 +23,7 @@ type AROController struct {
 }
 
 func (c *AROController) SetConditions(ctx context.Context, cnds ...*operatorv1.OperatorCondition) {
-	cluster, err := c.getCluster(ctx)
+	cluster, err := c.GetCluster(ctx)
 	if err != nil {
 		c.Log.Warn("Failed to retrieve ARO cluster resource")
 		return
@@ -72,7 +72,7 @@ func (c *AROController) ClearConditions(ctx context.Context) {
 	c.SetConditions(ctx, c.defaultAvailable(), c.defaultProgressing(), c.defaultDegraded())
 }
 
-func (c *AROController) getCluster(ctx context.Context) (*arov1alpha1.Cluster, error) {
+func (c *AROController) GetCluster(ctx context.Context) (*arov1alpha1.Cluster, error) {
 	cluster := &arov1alpha1.Cluster{}
 	err := c.Client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, cluster)
 
