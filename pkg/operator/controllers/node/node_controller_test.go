@@ -443,12 +443,7 @@ func TestReconciler(t *testing.T) {
 
 			client := clientBuilder.Build()
 
-			r := &Reconciler{
-				log: logrus.NewEntry(logrus.StandardLogger()),
-
-				kubernetescli: fake.NewSimpleClientset(tt.nodeObject),
-				client:        client,
-			}
+			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), client, fake.NewSimpleClientset(tt.nodeObject))
 
 			request := ctrl.Request{}
 			request.Name = tt.nodeName

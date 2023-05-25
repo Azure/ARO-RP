@@ -19,7 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/conditions"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 )
 
 const (
@@ -29,57 +29,52 @@ const (
 )
 
 type Reconciler struct {
-	log *logrus.Entry
-
-	client client.Client
+	base.AROController
 }
 
 // MachineSet reconciler watches MachineSet objects for changes, evaluates total worker replica count, and reverts changes if needed.
 func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
-		log:    log,
-		client: client,
+		AROController: base.AROController{
+			Log:    log,
+			Client: client,
+			Name:   ControllerName,
+		},
 	}
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance := &arov1alpha1.Cluster{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+	err := r.Client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ControllerEnabled) {
-		r.log.Debug("controller is disabled")
+		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
-	r.log.Debug("running")
-
-	cnds, err := conditions.GetControllerConditions(ctx, r.client, ControllerName)
-	if err != nil {
-		r.log.Error(err)
-		return reconcile.Result{}, err
-	}
+	r.Log.Debug("running")
 
 	modifiedMachineset := &machinev1beta1.MachineSet{}
-	err = r.client.Get(ctx, types.NamespacedName{Name: request.Name, Namespace: machineSetsNamespace}, modifiedMachineset)
+	err = r.Client.Get(ctx, types.NamespacedName{Name: request.Name, Namespace: machineSetsNamespace}, modifiedMachineset)
 	if err != nil {
-		r.log.Error(err)
-		conditions.SetControllerDegraded(ctx, r.client, cnds, err)
+		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
 
 		return reconcile.Result{}, err
 	}
 
 	machinesets := &machinev1beta1.MachineSetList{}
 	selector, _ := labels.Parse("machine.openshift.io/cluster-api-machine-role=worker")
-	err = r.client.List(ctx, machinesets, &client.ListOptions{
+	err = r.Client.List(ctx, machinesets, &client.ListOptions{
 		Namespace:     machineSetsNamespace,
 		LabelSelector: selector,
 	})
 	if err != nil {
-		r.log.Error(err)
-		conditions.SetControllerDegraded(ctx, r.client, cnds, err)
+		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
 
 		return reconcile.Result{}, err
 	}
@@ -89,7 +84,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	for _, machineset := range machinesets.Items {
 		// If there are any custom machinesets in the list, bail and don't requeue
 		if !strings.Contains(machineset.Name, instance.Spec.InfraID) {
-			return reconcile.Result{}, conditions.ClearControllerDegraded(ctx, r.client, cnds)
+			r.ClearDegraded(ctx)
+
+			return reconcile.Result{}, nil
 		}
 		if machineset.Spec.Replicas != nil {
 			replicaCount += int(*machineset.Spec.Replicas)
@@ -97,19 +94,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	if replicaCount < minSupportedReplicas {
-		r.log.Infof("Found less than %v worker replicas. The MachineSet controller will attempt scaling.", minSupportedReplicas)
+		r.Log.Infof("Found less than %v worker replicas. The MachineSet controller will attempt scaling.", minSupportedReplicas)
 		// Add replicas to the object, and call Update
 		modifiedMachineset.Spec.Replicas = to.Int32Ptr(int32(minSupportedReplicas-replicaCount) + *modifiedMachineset.Spec.Replicas)
-		err := r.client.Update(ctx, modifiedMachineset)
+		err := r.Client.Update(ctx, modifiedMachineset)
 		if err != nil {
-			r.log.Error(err)
-			conditions.SetControllerDegraded(ctx, r.client, cnds, err)
+			r.Log.Error(err)
+			r.SetDegraded(ctx, err)
 
 			return reconcile.Result{}, err
 		}
 	}
 
-	return reconcile.Result{}, conditions.ClearControllerConditions(ctx, r.client, cnds)
+	r.ClearConditions(ctx)
+	return reconcile.Result{}, nil
 }
 
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {

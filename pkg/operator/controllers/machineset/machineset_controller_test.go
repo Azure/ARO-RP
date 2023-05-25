@@ -188,11 +188,12 @@ func TestReconciler(t *testing.T) {
 			wantConditions:  defaultConditions,
 		},
 		{
-			name:           "machineset-0 not found",
-			objectName:     "aro-fake-machineset-0",
-			featureFlag:    true,
-			assertReplicas: false,
-			wantErr:        `machinesets.machine.openshift.io "aro-fake-machineset-0" not found`,
+			name:            "machineset-0 not found",
+			objectName:      "aro-fake-machineset-0",
+			featureFlag:     true,
+			assertReplicas:  false,
+			wantErr:         `machinesets.machine.openshift.io "aro-fake-machineset-0" not found`,
+			startConditions: defaultConditions,
 			wantConditions: []operatorv1.OperatorCondition{
 				defaultAvailable,
 				defaultProgressing,
@@ -226,10 +227,7 @@ func TestReconciler(t *testing.T) {
 				WithObjects(tt.machinesets...).
 				Build()
 
-			r := &Reconciler{
-				log:    logrus.NewEntry(logrus.StandardLogger()),
-				client: clientFake,
-			}
+			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientFake)
 
 			request := ctrl.Request{}
 			request.Name = tt.objectName
@@ -242,7 +240,7 @@ func TestReconciler(t *testing.T) {
 
 			if tt.assertReplicas {
 				modifiedMachineset := &machinev1beta1.MachineSet{}
-				err = r.client.Get(ctx, types.NamespacedName{Name: request.Name, Namespace: machineSetsNamespace}, modifiedMachineset)
+				err = r.Client.Get(ctx, types.NamespacedName{Name: request.Name, Namespace: machineSetsNamespace}, modifiedMachineset)
 				if err != nil {
 					t.Error(err)
 				}
