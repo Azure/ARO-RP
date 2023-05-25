@@ -134,7 +134,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		}
 	})
 
-	FIt("Should be able to populate cluster alerts panel correctly", func() {
+	It("Should be able to populate cluster alerts panel correctly", func() {
 		const (
 			clusterAlertEntries      = 5
 			clusterAlertsDivSelector = "div[name='ClusterAlerts']"
