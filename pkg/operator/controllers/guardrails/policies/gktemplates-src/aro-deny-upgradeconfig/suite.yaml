@@ -27,7 +27,7 @@ tests:
     object: gator-test/allow_system_user_update_managed_upgrade_operator.yaml
     assertions:
     - violations: no
-  - name: update-upgradeconfig-allowed-regular-user
+  - name: update-upgradeconfig-not-allowed-regular-user
     object: gator-test/not_allow_regular_user_update_managed_upgrade_operator.yaml
     assertions:
     - violations: yes

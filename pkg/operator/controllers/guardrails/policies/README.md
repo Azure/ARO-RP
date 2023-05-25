@@ -146,6 +146,17 @@ spec:
   opa test ../library/common.rego *.rego [-v] #-v for verbose
   ```
 
+* Using docker, get the OPA docker image - https://hub.docker.com/r/openpolicyagent/opa/. 
+  Run the test as:
+```sh
+#### Format ####
+docker run -it <HOST_SOURCE_DIRECTORY>:<CONTAINER_TARGET_DIRECTORY>:Z openpolicyagent/opa test [<LIBRARY>/*.rego] <CONTAINER_TARGET_DIRECTORY>/src.rego <CONTAINER_TARGET_DIRECTORY>/src_test.rego
+
+
+##### Example #####
+$ docker run -it -v /home/ecardena/dev/ARO-RP/pkg/operator/controllers/guardrails/policies/gktemplates-src:/gktemplates-src:Z openpolicyagent/opa test /gktemplates-src/library/common.rego /gktemplates-src/aro-deny-upgradeconfig/src.rego /gktemplates-src/aro-deny-upgradeconfig/src_test.rego -v
+```
+
 ## Generate the Constraint Templates
 
 * install gomplate which is used by generate.sh, see https://docs.gomplate.ca/installing/

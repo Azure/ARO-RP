@@ -46,4 +46,4 @@ request:
   uid: d7d1754c-510c-4c1d-8352-25a6a265b2c5
   userInfo:
     uid: cbf07b83-0a79-4979-9d57-ca8a0d150dcf
-    username: system
+    username: system:admin

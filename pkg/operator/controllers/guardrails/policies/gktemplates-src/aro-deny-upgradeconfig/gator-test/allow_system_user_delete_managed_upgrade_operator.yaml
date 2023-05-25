@@ -46,4 +46,4 @@ request:
   uid: 2ed5686f-74cd-41e2-96a2-afcf766fae51
   userInfo:
     uid: 1527f3d6-2e89-4b5f-a4bf-8953365c2016
-    username: system
+    username: system:admin
