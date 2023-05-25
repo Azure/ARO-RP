@@ -15,6 +15,7 @@ import (
 type GetDetectorOptions struct {
 	ResourceID string
 	DetectorID string
+	Location   string
 }
 
 func (options *GetDetectorOptions) toHeader() http.Header {

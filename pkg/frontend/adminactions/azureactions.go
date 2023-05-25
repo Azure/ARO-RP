@@ -131,7 +131,7 @@ func (a *azureActions) VMResize(ctx context.Context, vmName string, size string)
 }
 
 func (a *azureActions) AppLensGetDetector(ctx context.Context, detectorId string) ([]byte, error) {
-	return a.appLens.GetDetector(ctx, &applens.GetDetectorOptions{ResourceID: a.oc.ID, DetectorID: detectorId})
+	return a.appLens.GetDetector(ctx, &applens.GetDetectorOptions{ResourceID: a.oc.ID, DetectorID: detectorId, Location: a.oc.Location})
 }
 
 func (a *azureActions) AppLensListDetectors(ctx context.Context) ([]byte, error) {

@@ -8,6 +8,7 @@ package applens
 import (
 	"context"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -23,6 +24,22 @@ import (
 type Client struct {
 	endpoint string
 	pipeline runtime.Pipeline
+}
+
+// https://github.com/ShekharGupta1988/AppServiceDiagnosticsAPISample/blob/e75a5e2b91f45054c117abf94b2bb6ff6fd74da7/src/SampleAPIServer/Models/ResponseMessageCollectionEnvelope.cs#L17
+type ResponseMessageCollectionEnvelope struct {
+	Value    []interface{} `json:"value,omitempty"`
+	NextLink string        `json:"nextLink,omitempty"`
+	Id       string        `json:"id,omitempty"`
+}
+
+// https://github.com/ShekharGupta1988/AppServiceDiagnosticsAPISample/blob/e75a5e2b91f45054c117abf94b2bb6ff6fd74da7/src/SampleAPIServer/Models/ResponseMessageEnvelope.cs#L13
+type ResponseMessageEnvelope struct {
+	Id         string      `json:"id,omitempty"`
+	Name       string      `json:"name,omitempty"`
+	Type       string      `json:"type,omitempty"`
+	Location   string      `json:"location,omitempty"`
+	Properties interface{} `json:"properties,omitempty"`
 }
 
 // Endpoint used to create the client.
@@ -93,7 +110,19 @@ func (c *Client) ListDetectors(
 
 	defer azResponse.Body.Close()
 
-	return io.ReadAll(azResponse.Body)
+	listJson, err := io.ReadAll(azResponse.Body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	envelope, err := newResponseMessageCollectionEnvelope(listJson, "", o.ResourceID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(envelope)
 }
 
 // GetDetector obtains detector information from AppLens.
@@ -116,7 +145,19 @@ func (c *Client) GetDetector(
 
 	defer azResponse.Body.Close()
 
-	return io.ReadAll(azResponse.Body)
+	detectorJson, err := io.ReadAll(azResponse.Body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	envelope, err := newResponseMessageEnvelope(o.ResourceID, o.DetectorID, "Microsoft.RedHatOpenShift/OpenShiftClusters/detectors", o.Location, detectorJson)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(envelope)
 }
 
 func (c *Client) sendPostRequest(
@@ -165,4 +206,36 @@ func (c *Client) executeAndEnsureSuccessResponse(request *policy.Request) (*http
 	}
 
 	return nil, newAppLensError(response)
+}
+
+func newResponseMessageCollectionEnvelope(valueJson []byte, nextLink, collectionResourceId string) (*ResponseMessageCollectionEnvelope, error) {
+	var converted []interface{}
+	err := json.Unmarshal(valueJson, &converted)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &ResponseMessageCollectionEnvelope{
+		Value:    converted,
+		NextLink: nextLink,
+		Id:       collectionResourceId,
+	}, nil
+}
+
+func newResponseMessageEnvelope(id, name, _type, location string, propertiesJson []byte) (*ResponseMessageEnvelope, error) {
+	var converted interface{}
+	err := json.Unmarshal(propertiesJson, &converted)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &ResponseMessageEnvelope{
+		Id:         id,
+		Name:       name,
+		Type:       _type,
+		Location:   location,
+		Properties: converted,
+	}, nil
 }
