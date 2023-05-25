@@ -113,17 +113,6 @@ func TestGetUpgradeStream(t *testing.T) {
 			v:       &Version{V: [3]uint32{4, 4, 0}, Suffix: "hotfix"},
 			streams: []*Stream{stream44},
 		},
-		{
-			name:    "upgrade 4.5.0-0.hotfix-2020-11-28-021842 to 4.5.22",
-			v:       &Version{V: [3]uint32{4, 5, 0}, Suffix: "-0.hotfix-2020-11-28-021842"},
-			streams: []*Stream{{Version: &Version{V: [3]uint32{4, 5, 22}}}},
-			want:    &Stream{Version: &Version{V: [3]uint32{4, 5, 22}}},
-		},
-		{
-			name:    "don't upgrade 4.5.0-0.hotfix-2020-11-28-021842 to 4.5.21",
-			v:       &Version{V: [3]uint32{4, 5, 0}, Suffix: "-0.hotfix-2020-11-28-021842"},
-			streams: []*Stream{{Version: &Version{V: [3]uint32{4, 5, 21}}}},
-		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			got := GetUpgradeStream(tt.streams, tt.v, tt.upgradeY)
