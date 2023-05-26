@@ -6,7 +6,6 @@ import future.keywords.in
 # Use object
 violation[{"msg": msg}] {
 	input.review.operation in ["CREATE"]
-	name := input.review.object.metadata.name
 
 	## Check user type
 	not is_exempted_account(input.review)
@@ -26,8 +25,7 @@ violation[{"msg": msg}] {
 # Use oldObject
 violation[{"msg": msg}] {
 	input.review.operation in ["UPDATE", "DELETE"]
-	name := input.review.object.metadata.name
-
+	
 	## Check user type
 	not is_exempted_account(input.review)
 

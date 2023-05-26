@@ -4,8 +4,8 @@ metadata:
   name: upgradeconfig
 tests:
 - name: upgradeconfig-tests
-  template: ../../gktemplates/aro-deny-upgradeconfig.yaml
-  constraint: ../../gkconstraints-test/aro-upgradeconfig.yaml
+  template: ../../gktemplates/aro-upgradeconfig-deny.yaml
+  constraint: ../../gkconstraints-test/aro-upgradeconfig-deny.yaml
   cases:
   - name: create-upgradeconfig-allowed-regular-user
     object: gator-test/allow_regular_user_create_managed_upgrade_operator.yaml

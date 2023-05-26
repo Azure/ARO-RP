@@ -1,7 +1,7 @@
 apiVersion: templates.gatekeeper.sh/v1
 kind: ConstraintTemplate
 metadata:
-  name: aroupgradeconfig
+  name: arodenyupgradeconfig
   annotations:
     metadata.gatekeeper.sh/title: "UpgradeConfig"
     metadata.gatekeeper.sh/version: 1.0.0
@@ -12,7 +12,7 @@ spec:
   crd:
     spec:
       names:
-        kind: AROUpgradeConfig
+        kind: ARODenyUpgradeConfig
       validation:
         # Schema for the `parameters` field
         openAPIV3Schema:
