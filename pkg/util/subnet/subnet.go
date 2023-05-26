@@ -148,14 +148,14 @@ func (m *manager) CreateOrUpdateFromIds(ctx context.Context, subnetIds []string,
 		return err
 	}
 
-	// If egress lockdown is enabled, do not add service endpoints to the subnets.
-	if gatewayEnabled {
-		return m.createOrUpdateSubnets(ctx, subnets)
+	// Only add service endpoints to the subnets if egress lockdown is not enabled.
+	if !gatewayEnabled {
+		subnetsToBeUpdated := addEndpointsToSubnets(api.SubnetsEndpoints, subnets)
+
+		return m.createOrUpdateSubnets(ctx, subnetsToBeUpdated)
 	}
 
-	subnetsToBeUpdated := addEndpointsToSubnets(api.SubnetsEndpoints, subnets)
-
-	return m.createOrUpdateSubnets(ctx, subnetsToBeUpdated)
+	return m.createOrUpdateSubnets(ctx, subnets)
 }
 
 func (m *manager) createOrUpdateSubnets(ctx context.Context, subnets []*mgmtnetwork.Subnet) error {
