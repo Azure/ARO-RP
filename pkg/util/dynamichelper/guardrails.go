@@ -9,7 +9,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -19,6 +18,9 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
+
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
 // the UnstructuredObj related stuff is specifically for the Guardrails
