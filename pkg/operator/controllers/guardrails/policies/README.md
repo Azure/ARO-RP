@@ -115,38 +115,35 @@ kind: AROPrivilegedNamespace
 metadata:
   name: aro-privileged-namespace-deny
 spec:
+  enforcementAction: {{.Enforcement}}
   match:
     kinds:
       - apiGroups: [""]
-        kinds: ["Service",
+        kinds: [
         "Pod",
-        "Deployment",
-        "Namespace",
-        "ReplicaSet",
-        "StatefulSets",
-        "DaemonSet",
-        "Jobs",
-        "CronJob",
-        "ReplicationController",
-        "Role",
-        "ClusterRole",
-        "roleBinding",
-        "ClusterRoleBinding",
         "Secret",
+        "Service",
         "ServiceAccount",
-        "CustomResourceDefinition",
-        "PodDisruptionBudget",
+        "ReplicationController",
         "ResourceQuota",
-        "PodSecurityPolicy"]
+        ]
+      - apiGroups: ["apps"]
+        kinds: ["Deployment", "ReplicaSet", "StatefulSet", "DaemonSet"]
+      - apiGroups: ["batch"]
+        kinds: ["Job", "CronJob"]
+      - apiGroups: ["rbac.authorization.k8s.io"]
+        kinds: ["Role", "RoleBinding"]
+      - apiGroups: ["policy"]
+        kinds: ["PodDisruptionBudget"]
 ```
 
 ## Test the rego
 
-* install opa cli, refer https://www.openpolicyagent.org/docs/v0.11.0/get-started/
+* install opa cli, refer https://github.com/open-policy-agent/opa/releases/
 
 * after _test.go is done, test it out, and fix the problem
   ```sh
-  opa test *.rego [-v] #-v for verbose
+  opa test ../library/common.rego *.rego [-v] #-v for verbose
   ```
 
 ## Generate the Constraint Templates
@@ -228,3 +225,81 @@ or below cmd after test.sh has been executed:
 ```sh
 gator verify . [-v] #-v for verbose
 ```
+
+It is now good to test your policy on a real cluster.
+
+
+
+## Enable your policy on a dev cluster
+
+Set up local dev env following “Deploy development RP” section if not already: https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md
+
+Deploy a dev cluster $CLUSTER in your preferred region, cmd example:
+```sh
+CLUSTER=jeff-test-aro go run ./hack/cluster create
+```
+
+Scale the standard aro operator to 0, cmd:
+```sh
+oc scale -n openshift-azure-operator deployment/aro-operator-master --replicas=0
+```
+
+Run aro operator from local code, cmd example:
+```sh
+CLUSTER=jeff-test-aro go run -tags aro,containers_image_openpgp ./cmd/aro operator master
+```
+
+Wait a couple of minutes until aro operator fully synchronized
+
+Enable guardrails, set it to managed, cmd:
+```sh
+oc patch cluster.aro.openshift.io cluster --type json -p '[{ "op": "replace", "path": "/spec/operatorflags/aro.guardrails.deploy.managed", "value":"true" }]'
+oc patch cluster.aro.openshift.io cluster --type json -p '[{ "op": "replace", "path": "/spec/operatorflags/aro.guardrails.enabled", "value":"true" }]'
+```
+The sequence for above cmds is essential, please dont change the order!
+
+Use below cmd to verify the gatekeeper is deployed and ready
+```sh
+$ oc get all -n openshift-azure-guardrails
+NAME                                                READY   STATUS    RESTARTS   AGE
+pod/gatekeeper-audit-67c4c669c7-mrr6w               1/1     Running   0          10h
+pod/gatekeeper-controller-manager-b887b69bd-mzhsh   1/1     Running   0          10h
+pod/gatekeeper-controller-manager-b887b69bd-tb8zc   1/1     Running   0          10h
+pod/gatekeeper-controller-manager-b887b69bd-xnvv4   1/1     Running   0          10h
+
+NAME                                 TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+service/gatekeeper-webhook-service   ClusterIP   172.30.51.233   <none>        443/TCP   35h
+
+NAME                                            READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/gatekeeper-audit                1/1     1            1           10h
+deployment.apps/gatekeeper-controller-manager   3/3     3            3           10h
+
+NAME                                                      DESIRED   CURRENT   READY   AGE
+replicaset.apps/gatekeeper-audit-67c4c669c7               1         1         1       10h
+replicaset.apps/gatekeeper-controller-manager-b887b69bd   3         3         3       10h
+```
+
+Verify ConstraintTemplate is created
+```sh
+$ oc get constrainttemplate
+NAME            AGE
+arodenylabels   20h
+$ oc get constraint
+```
+
+
+Enforce the machine rule, cmd:
+```sh
+oc patch cluster.aro.openshift.io cluster --type json -p '[{ "op": "replace", "path": "/spec/operatorflags/aro.guardrails.policies.aro-machines-deny.managed", "value":"true" }]'
+oc patch cluster.aro.openshift.io cluster --type json -p '[{ "op": "replace", "path": "/spec/operatorflags/aro.guardrails.policies.aro-machines-deny.enforcement", "value":"deny" }]'
+```
+Note: the feature flag name is the corresponding Constraint FILE name, which can be found under pkg/operator/controllers/guardrails/policies/gkconstraints/, Eg, aro-machines-deny.yaml
+
+Verify corresponding gatekeeper Constraint has been created:
+```sh
+$ oc get constraint
+NAME                ENFORCEMENT-ACTION   TOTAL-VIOLATIONS
+aro-machines-deny   deny
+```
+
+Once the constraint is created, you are all good to rock with your policy!

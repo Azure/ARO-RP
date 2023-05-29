@@ -10,16 +10,13 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
@@ -144,21 +141,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 // SetupWithManager setup our manager
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
-	pullSecretPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
-		return (o.GetName() == pullSecretName.Name && o.GetNamespace() == pullSecretName.Namespace)
-	})
-
 	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return o.GetName() == arov1alpha1.SingletonClusterName
 	})
 
 	grBuilder := ctrl.NewControllerManagedBy(mgr).
-		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
-		Watches(
-			&source.Kind{Type: &corev1.Secret{}},
-			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(pullSecretPredicate),
-		)
+		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate))
 
 	resources, err := r.deployer.Template(&config.GuardRailsDeploymentConfig{}, staticFiles)
 	if err != nil {

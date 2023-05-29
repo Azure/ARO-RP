@@ -149,8 +149,8 @@ func (depl *deployer) removeOne(ctx context.Context, obj kruntime.Object) (strin
 	}
 	name := nameValue.String()
 	ns := nsValue.String()
-	if reflect.TypeOf(obj).String() == "*v1.Namespace" {
-		// dont delete the namespace for now
+	if obj.GetObjectKind().GroupVersionKind().GroupKind().String() == "Namespace" {
+		// don't delete the namespace for now
 		return name, nil
 	}
 	errDelete := depl.dh.EnsureDeletedGVR(ctx, obj.GetObjectKind().GroupVersionKind().GroupKind().String(), ns, name, "")
