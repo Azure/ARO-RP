@@ -1022,6 +1022,67 @@
             ]
         },
         {
+            "properties": {
+                "severity": 2,
+                "enabled": true,
+                "scopes": [
+                    "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+                ],
+                "evaluationFrequency": "PT5M",
+                "windowSize": "PT1H",
+                "targetResourceType": "Microsoft.DocumentDB/databaseAccounts",
+                "criteria": {
+                    "allOf": [
+                        {
+                            "operator": "GreaterThan",
+                            "threshold": 10,
+                            "AdditionalProperties": null,
+                            "name": "ThrottledRequestCheck",
+                            "metricName": "TotalRequests",
+                            "metricNamespace": "Microsoft.DocumentDB/databaseAccounts",
+                            "timeAggregation": "Count",
+                            "dimensions": [
+                                {
+                                    "name": "StatusCode",
+                                    "operator": "Include",
+                                    "values": [
+                                        "429"
+                                    ]
+                                }
+                            ],
+                            "criterionType": "StaticThresholdCriterion"
+                        },
+                        {
+                            "operator": "GreaterThan",
+                            "threshold": 90,
+                            "AdditionalProperties": null,
+                            "name": "RUConsumptionCheck",
+                            "metricName": "NormalizedRUConsumption",
+                            "metricNamespace": "Microsoft.DocumentDB/databaseAccounts",
+                            "timeAggregation": "Maximum",
+                            "criterionType": "StaticThresholdCriterion"
+                        }
+                    ],
+                    "AdditionalProperties": null,
+                    "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria"
+                },
+                "autoMitigate": true,
+                "actions": [
+                    {
+                        "actionGroupId": "[resourceId(parameters('subscriptionResourceGroupName'), 'Microsoft.Insights/actionGroups', 'rp-health-ag')]",
+                        "webHookProperties": null
+                    }
+                ]
+            },
+            "name": "[concat('rp-cosmosdb-alert-', resourceGroup().location)]",
+            "type": "Microsoft.Insights/metricAlerts",
+            "location": "global",
+            "apiVersion": "2018-03-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ]
+        },
+        {
             "name": "[guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader')]",
             "type": "Microsoft.Authorization/roleAssignments",
             "properties": {

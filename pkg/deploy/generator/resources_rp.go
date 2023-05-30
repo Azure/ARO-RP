@@ -1024,6 +1024,7 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 
 	if g.production {
 		rs = append(rs, g.database("'ARO'", true)...)
+		rs = append(rs, g.rpCosmosDBAlert(10, 90, 2, "rp-cosmosdb-alert", "PT5M", "PT1H"))
 	}
 
 	return rs
@@ -1308,6 +1309,67 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 	}
 
 	return rs
+}
+
+func (g *generator) rpCosmosDBAlert(throttledRequestThreshold float64, ruConsumptionThreshold float64, severity int32, name string, evalFreq string, windowSize string) *arm.Resource {
+	throttledRequestMetricCriteria := mgmtinsights.MetricCriteria{
+		CriterionType:   mgmtinsights.CriterionTypeStaticThresholdCriterion,
+		MetricName:      to.StringPtr("TotalRequests"),
+		MetricNamespace: to.StringPtr("Microsoft.DocumentDB/databaseAccounts"),
+		Name:            to.StringPtr("ThrottledRequestCheck"),
+		Operator:        mgmtinsights.OperatorGreaterThan,
+		Threshold:       to.Float64Ptr(throttledRequestThreshold),
+		TimeAggregation: mgmtinsights.Count,
+		Dimensions: &[]mgmtinsights.MetricDimension{
+			{
+				Name:     to.StringPtr("StatusCode"),
+				Operator: to.StringPtr("Include"),
+				Values:   &[]string{"429"},
+			},
+		},
+	}
+
+	ruConsumptionMetricCriteria := mgmtinsights.MetricCriteria{
+		CriterionType:   mgmtinsights.CriterionTypeStaticThresholdCriterion,
+		MetricName:      to.StringPtr("NormalizedRUConsumption"),
+		MetricNamespace: to.StringPtr("Microsoft.DocumentDB/databaseAccounts"),
+		Name:            to.StringPtr("RUConsumptionCheck"),
+		Operator:        mgmtinsights.OperatorGreaterThan,
+		Threshold:       to.Float64Ptr(ruConsumptionThreshold),
+		TimeAggregation: mgmtinsights.Maximum,
+	}
+
+	return &arm.Resource{
+		Resource: mgmtinsights.MetricAlertResource{
+			MetricAlertProperties: &mgmtinsights.MetricAlertProperties{
+				Actions: &[]mgmtinsights.MetricAlertAction{
+					{
+						ActionGroupID: to.StringPtr("[resourceId(parameters('subscriptionResourceGroupName'), 'Microsoft.Insights/actionGroups', 'rp-health-ag')]"),
+					},
+				},
+				Enabled:             to.BoolPtr(true),
+				EvaluationFrequency: to.StringPtr(evalFreq),
+				Severity:            to.Int32Ptr(severity),
+				Scopes: &[]string{
+					"[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
+				},
+				WindowSize:         to.StringPtr(windowSize),
+				TargetResourceType: to.StringPtr("Microsoft.DocumentDB/databaseAccounts"),
+				AutoMitigate:       to.BoolPtr(true),
+				Criteria: mgmtinsights.MetricAlertSingleResourceMultipleMetricCriteria{
+					AllOf:     &[]mgmtinsights.MetricCriteria{throttledRequestMetricCriteria, ruConsumptionMetricCriteria},
+					OdataType: mgmtinsights.OdataTypeMicrosoftAzureMonitorSingleResourceMultipleMetricCriteria,
+				},
+			},
+			Name:     to.StringPtr("[concat('" + name + "-', resourceGroup().location)]"),
+			Type:     to.StringPtr("Microsoft.Insights/metricAlerts"),
+			Location: to.StringPtr("global"),
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.Insights"),
+		DependsOn: []string{
+			"[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
+		},
+	}
 }
 
 func (g *generator) rpRoleDefinitionTokenContributor() *arm.Resource {
