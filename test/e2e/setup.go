@@ -81,6 +81,7 @@ var (
 	_env              env.Core
 	vnetResourceGroup string
 	clusterName       string
+	osClusterVersion  string
 	clusterResourceID string
 	clients           *clientSet
 
@@ -456,6 +457,7 @@ func setup(ctx context.Context) error {
 		vnetResourceGroup = os.Getenv("CLUSTER")
 	}
 	clusterName = os.Getenv("CLUSTER")
+	osClusterVersion = os.Getenv("OS_CLUSTER_VERSION")
 
 	if os.Getenv("CI") != "" { // always create cluster in CI
 		cluster, err := cluster.New(log, _env, os.Getenv("CI") != "")
@@ -463,7 +465,7 @@ func setup(ctx context.Context) error {
 			return err
 		}
 
-		err = cluster.Create(ctx, vnetResourceGroup, clusterName)
+		err = cluster.Create(ctx, vnetResourceGroup, clusterName, osClusterVersion)
 		if err != nil {
 			return err
 		}
