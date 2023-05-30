@@ -214,6 +214,29 @@ class Display(msrest.serialization.Model):
         self.description = kwargs.get('description', None)
 
 
+class EffectiveOutboundIP(msrest.serialization.Model):
+    """EffectiveOutboundIP represents an effective outbound IP resource of the cluster public load balancer.
+
+    :ivar id: The fully qualified Azure resource id.
+    :vartype id: str
+    """
+
+    _attribute_map = {
+        'id': {'key': 'id', 'type': 'str'},
+    }
+
+    def __init__(
+        self,
+        **kwargs
+    ):
+        """
+        :keyword id: The fully qualified Azure resource id.
+        :paramtype id: str
+        """
+        super(EffectiveOutboundIP, self).__init__(**kwargs)
+        self.id = kwargs.get('id', None)
+
+
 class IngressProfile(msrest.serialization.Model):
     """IngressProfile represents an ingress profile.
 
@@ -247,6 +270,68 @@ class IngressProfile(msrest.serialization.Model):
         self.name = kwargs.get('name', None)
         self.visibility = kwargs.get('visibility', None)
         self.ip = kwargs.get('ip', None)
+
+
+class LoadbalancerProfile(msrest.serialization.Model):
+    """LoadbalancerProfile represents the profile of the cluster public loadbalancer.
+
+    :ivar managed_outbound_ips: The desired managed outbound IPs for the cluster public load
+     balancer.
+    :vartype managed_outbound_ips:
+     ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.ManagedOutboundIPs
+    :ivar effective_outbound_ips: The list of effective outbound IP addresses of the public load
+     balancer.
+    :vartype effective_outbound_ips:
+     list[~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.EffectiveOutboundIP]
+    :ivar outbound_ips: The desired outbound IP resources for the cluster load balancer.
+    :vartype outbound_ips: list[~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.OutboundIP]
+    :ivar outbound_ip_prefixes: The desired outbound IP Prefix resources for the cluster load
+     balancer.
+    :vartype outbound_ip_prefixes:
+     list[~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.OutboundIPPrefix]
+    :ivar allocated_outbound_ports: The desired number of allocated SNAT ports per VM. Allowed
+     values are in the range of 0 to 64000 (inclusive). The default value is 1024.
+    :vartype allocated_outbound_ports: int
+    """
+
+    _attribute_map = {
+        'managed_outbound_ips': {'key': 'managedOutboundIps', 'type': 'ManagedOutboundIPs'},
+        'effective_outbound_ips': {'key': 'effectiveOutboundIps', 'type': '[EffectiveOutboundIP]'},
+        'outbound_ips': {'key': 'outboundIps', 'type': '[OutboundIP]'},
+        'outbound_ip_prefixes': {'key': 'outboundIpPrefixes', 'type': '[OutboundIPPrefix]'},
+        'allocated_outbound_ports': {'key': 'allocatedOutboundPorts', 'type': 'int'},
+    }
+
+    def __init__(
+        self,
+        **kwargs
+    ):
+        """
+        :keyword managed_outbound_ips: The desired managed outbound IPs for the cluster public load
+         balancer.
+        :paramtype managed_outbound_ips:
+         ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.ManagedOutboundIPs
+        :keyword effective_outbound_ips: The list of effective outbound IP addresses of the public load
+         balancer.
+        :paramtype effective_outbound_ips:
+         list[~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.EffectiveOutboundIP]
+        :keyword outbound_ips: The desired outbound IP resources for the cluster load balancer.
+        :paramtype outbound_ips:
+         list[~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.OutboundIP]
+        :keyword outbound_ip_prefixes: The desired outbound IP Prefix resources for the cluster load
+         balancer.
+        :paramtype outbound_ip_prefixes:
+         list[~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.OutboundIPPrefix]
+        :keyword allocated_outbound_ports: The desired number of allocated SNAT ports per VM. Allowed
+         values are in the range of 0 to 64000 (inclusive). The default value is 1024.
+        :paramtype allocated_outbound_ports: int
+        """
+        super(LoadbalancerProfile, self).__init__(**kwargs)
+        self.managed_outbound_ips = kwargs.get('managed_outbound_ips', None)
+        self.effective_outbound_ips = kwargs.get('effective_outbound_ips', None)
+        self.outbound_ips = kwargs.get('outbound_ips', None)
+        self.outbound_ip_prefixes = kwargs.get('outbound_ip_prefixes', None)
+        self.allocated_outbound_ports = kwargs.get('allocated_outbound_ports', None)
 
 
 class Resource(msrest.serialization.Model):
@@ -444,6 +529,33 @@ class MachinePoolUpdate(msrest.serialization.Model):
         self.resources = kwargs.get('resources', None)
 
 
+class ManagedOutboundIPs(msrest.serialization.Model):
+    """ManagedOutboundIPs represents the desired managed outbound IPs for the cluster public load balancer.
+
+    :ivar count: Count represents the desired number of IPv4 outbound IPs created and managed by
+     Azure for the cluster public load balancer.  Allowed values are in the range of 1 - 20.  The
+     default value is 1.
+    :vartype count: int
+    """
+
+    _attribute_map = {
+        'count': {'key': 'count', 'type': 'int'},
+    }
+
+    def __init__(
+        self,
+        **kwargs
+    ):
+        """
+        :keyword count: Count represents the desired number of IPv4 outbound IPs created and managed by
+         Azure for the cluster public load balancer.  Allowed values are in the range of 1 - 20.  The
+         default value is 1.
+        :paramtype count: int
+        """
+        super(ManagedOutboundIPs, self).__init__(**kwargs)
+        self.count = kwargs.get('count', None)
+
+
 class MasterProfile(msrest.serialization.Model):
     """MasterProfile represents a master profile.
 
@@ -502,12 +614,16 @@ class NetworkProfile(msrest.serialization.Model):
      "Loadbalancer", "UserDefinedRouting".
     :vartype outbound_type: str or
      ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.OutboundType
+    :ivar load_balancer_profile: The cluster load balancer profile.
+    :vartype load_balancer_profile:
+     ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.LoadbalancerProfile
     """
 
     _attribute_map = {
         'pod_cidr': {'key': 'podCidr', 'type': 'str'},
         'service_cidr': {'key': 'serviceCidr', 'type': 'str'},
         'outbound_type': {'key': 'outboundType', 'type': 'str'},
+        'load_balancer_profile': {'key': 'loadBalancerProfile', 'type': 'LoadbalancerProfile'},
     }
 
     def __init__(
@@ -523,11 +639,15 @@ class NetworkProfile(msrest.serialization.Model):
          "Loadbalancer", "UserDefinedRouting".
         :paramtype outbound_type: str or
          ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.OutboundType
+        :keyword load_balancer_profile: The cluster load balancer profile.
+        :paramtype load_balancer_profile:
+         ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.LoadbalancerProfile
         """
         super(NetworkProfile, self).__init__(**kwargs)
         self.pod_cidr = kwargs.get('pod_cidr', None)
         self.service_cidr = kwargs.get('service_cidr', None)
         self.outbound_type = kwargs.get('outbound_type', None)
+        self.load_balancer_profile = kwargs.get('load_balancer_profile', None)
 
 
 class TrackedResource(Resource):
@@ -1032,6 +1152,52 @@ class OperationList(msrest.serialization.Model):
         super(OperationList, self).__init__(**kwargs)
         self.value = kwargs.get('value', None)
         self.next_link = kwargs.get('next_link', None)
+
+
+class OutboundIP(msrest.serialization.Model):
+    """OutboundIP represents a desired outbound IP resource for the cluster load balancer.
+
+    :ivar id: The fully qualified Azure resource id.
+    :vartype id: str
+    """
+
+    _attribute_map = {
+        'id': {'key': 'id', 'type': 'str'},
+    }
+
+    def __init__(
+        self,
+        **kwargs
+    ):
+        """
+        :keyword id: The fully qualified Azure resource id.
+        :paramtype id: str
+        """
+        super(OutboundIP, self).__init__(**kwargs)
+        self.id = kwargs.get('id', None)
+
+
+class OutboundIPPrefix(msrest.serialization.Model):
+    """OutboundIPPrefix represents a desired outbound IP Prefix resource for the cluster load balancer.
+
+    :ivar id: The fully qualified Azure resource id.
+    :vartype id: str
+    """
+
+    _attribute_map = {
+        'id': {'key': 'id', 'type': 'str'},
+    }
+
+    def __init__(
+        self,
+        **kwargs
+    ):
+        """
+        :keyword id: The fully qualified Azure resource id.
+        :paramtype id: str
+        """
+        super(OutboundIPPrefix, self).__init__(**kwargs)
+        self.id = kwargs.get('id', None)
 
 
 class Secret(ProxyResource):

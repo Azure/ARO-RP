@@ -112,6 +112,13 @@ type Display struct {
 	Description *string `json:"description,omitempty"`
 }
 
+// EffectiveOutboundIP effectiveOutboundIP represents an effective outbound IP resource of the cluster
+// public load balancer.
+type EffectiveOutboundIP struct {
+	// ID - The fully qualified Azure resource id.
+	ID *string `json:"id,omitempty"`
+}
+
 // IngressProfile ingressProfile represents an ingress profile.
 type IngressProfile struct {
 	// Name - The ingress profile name.
@@ -120,6 +127,20 @@ type IngressProfile struct {
 	Visibility Visibility `json:"visibility,omitempty"`
 	// IP - The IP of the ingress.
 	IP *string `json:"ip,omitempty"`
+}
+
+// LoadbalancerProfile loadbalancerProfile represents the profile of the cluster public loadbalancer.
+type LoadbalancerProfile struct {
+	// ManagedOutboundIps - The desired managed outbound IPs for the cluster public load balancer.
+	ManagedOutboundIps *ManagedOutboundIPs `json:"managedOutboundIps,omitempty"`
+	// EffectiveOutboundIps - The list of effective outbound IP addresses of the public load balancer.
+	EffectiveOutboundIps *[]EffectiveOutboundIP `json:"effectiveOutboundIps,omitempty"`
+	// OutboundIps - The desired outbound IP resources for the cluster load balancer.
+	OutboundIps *[]OutboundIP `json:"outboundIps,omitempty"`
+	// OutboundIPPrefixes - The desired outbound IP Prefix resources for the cluster load balancer.
+	OutboundIPPrefixes *[]OutboundIPPrefix `json:"outboundIpPrefixes,omitempty"`
+	// AllocatedOutboundPorts - The desired number of allocated SNAT ports per VM. Allowed values are in the range of 0 to 64000 (inclusive). The default value is 1024.
+	AllocatedOutboundPorts *int32 `json:"allocatedOutboundPorts,omitempty"`
 }
 
 // MachinePool machinePool represents a MachinePool
@@ -420,6 +441,13 @@ func (mpu *MachinePoolUpdate) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
+// ManagedOutboundIPs managedOutboundIPs represents the desired managed outbound IPs for the cluster public
+// load balancer.
+type ManagedOutboundIPs struct {
+	// Count - Count represents the desired number of IPv4 outbound IPs created and managed by Azure for the cluster public load balancer.  Allowed values are in the range of 1 - 20.  The default value is 1.
+	Count *int32 `json:"count,omitempty"`
+}
+
 // MasterProfile masterProfile represents a master profile.
 type MasterProfile struct {
 	// VMSize - The size of the master VMs.
@@ -440,6 +468,8 @@ type NetworkProfile struct {
 	ServiceCidr *string `json:"serviceCidr,omitempty"`
 	// OutboundType - The OutboundType used for egress traffic. Possible values include: 'Loadbalancer', 'UserDefinedRouting'
 	OutboundType OutboundType `json:"outboundType,omitempty"`
+	// LoadBalancerProfile - The cluster load balancer profile.
+	LoadBalancerProfile *LoadbalancerProfile `json:"loadBalancerProfile,omitempty"`
 }
 
 // OpenShiftCluster openShiftCluster represents an Azure Red Hat OpenShift cluster.
@@ -1354,6 +1384,19 @@ func NewOperationListPage(cur OperationList, getNextPage func(context.Context, O
 		fn: getNextPage,
 		ol: cur,
 	}
+}
+
+// OutboundIP outboundIP represents a desired outbound IP resource for the cluster load balancer.
+type OutboundIP struct {
+	// ID - The fully qualified Azure resource id.
+	ID *string `json:"id,omitempty"`
+}
+
+// OutboundIPPrefix outboundIPPrefix represents a desired outbound IP Prefix resource for the cluster load
+// balancer.
+type OutboundIPPrefix struct {
+	// ID - The fully qualified Azure resource id.
+	ID *string `json:"id,omitempty"`
 }
 
 // ProxyResource the resource model definition for a Azure Resource Manager proxy resource. It will not
