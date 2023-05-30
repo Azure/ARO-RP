@@ -11,7 +11,7 @@ FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$
 AUTOREST_VERSION = 3.6.3
 AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
 GATEKEEPER_VERSION = 3.10.0
-GATEKEEPER_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/guardrails:$(GATEKEEPER_VERSION)
+GATEKEEPER_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/gatekeeper:$(GATEKEEPER_VERSION)
 
 ifneq ($(shell uname -s),Darwin)
     export CGO_CFLAGS=-Dgpgme_off_t=off_t
@@ -104,8 +104,8 @@ image-proxy:
 	docker pull $(REGISTRY)/ubi8/ubi-minimal
 	docker build --platform=linux/amd64 --no-cache -f Dockerfile.proxy -t $(REGISTRY)/proxy:latest --build-arg REGISTRY=$(REGISTRY) .
 
-image-guardrails:
-	docker build --platform=linux/amd64 --network=host --build-arg GATEKEEPER_VERSION=$(GATEKEEPER_VERSION) --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.guardrails -t $(GATEKEEPER_IMAGE) .
+image-gatekeeper:
+	docker build --platform=linux/amd64 --network=host --build-arg GATEKEEPER_VERSION=$(GATEKEEPER_VERSION) --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.gatekeeper -t $(GATEKEEPER_IMAGE) .
 
 publish-image-aro: image-aro
 	docker push $(ARO_IMAGE)
@@ -130,7 +130,7 @@ publish-image-fluentbit: image-fluentbit
 publish-image-proxy: image-proxy
 	docker push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest
 
-publish-image-guardrails: image-guardrails
+publish-image-gatekeeper: image-gatekeeper
 	docker push $(GATEKEEPER_IMAGE)
 
 image-e2e:

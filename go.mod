@@ -60,15 +60,15 @@ require (
 	github.com/stretchr/testify v1.7.1
 	github.com/tebeka/selenium v0.9.9
 	github.com/ugorji/go/codec v1.2.7
-	golang.org/x/crypto v0.6.0
-	golang.org/x/net v0.7.0
+	golang.org/x/crypto v0.9.0
+	golang.org/x/net v0.10.0
 	golang.org/x/oauth2 v0.0.0-20220411215720-9780585627b5
-	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
-	golang.org/x/text v0.7.0
-	golang.org/x/tools v0.2.0
 	k8s.io/api v0.24.7
 	k8s.io/apiextensions-apiserver v0.24.7
 	k8s.io/apimachinery v0.24.7
+	golang.org/x/sync v0.1.0
+	golang.org/x/text v0.9.0
+	golang.org/x/tools v0.6.0
 	k8s.io/cli-runtime v0.24.1
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/code-generator v0.24.1
@@ -235,9 +235,9 @@ require (
 	go.mozilla.org/pkcs7 v0.0.0-20210826202110-33d05740a352 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	go.starlark.net v0.0.0-20220328144851-d1966c6b9fcd // indirect
-	golang.org/x/mod v0.6.0 // indirect
-	golang.org/x/sys v0.5.0 // indirect
-	golang.org/x/term v0.5.0 // indirect
+	golang.org/x/mod v0.8.0 // indirect
+	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/term v0.8.0 // indirect
 	golang.org/x/time v0.0.0-20220224211638-0e9765cccd65 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	google.golang.org/api v0.74.0 // indirect
