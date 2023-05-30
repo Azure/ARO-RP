@@ -33,7 +33,7 @@ func (mon *Monitor) emitDebugPodsCount(ctx context.Context) error {
 	lo := metav1.ListOptions{
 		FieldSelector: fields.SelectorFromSet(m).String(),
 	}
-	events, err := mon.cli.EventsV1().Events("default").List(ctx, lo)
+	events, err := mon.cli.EventsV1().Events("").List(ctx, lo)
 	if err != nil {
 		return err
 	}
