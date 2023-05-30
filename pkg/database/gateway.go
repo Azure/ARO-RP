@@ -27,7 +27,7 @@ type Gateway interface {
 	NewUUID() string
 }
 
-func NewGateway(ctx context.Context, isDevelopmentMode bool, dbc cosmosdb.DatabaseClient, dbName string) (Gateway, error) {
+func NewGateway(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string) (Gateway, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbName)
 
 	documentClient := cosmosdb.NewGatewayDocumentClient(collc, collGateway)

@@ -29,7 +29,7 @@ type OpenShiftVersions interface {
 	NewUUID() string
 }
 
-func NewOpenShiftVersions(ctx context.Context, isDevelopmentMode bool, dbc cosmosdb.DatabaseClient, dbName string) (OpenShiftVersions, error) {
+func NewOpenShiftVersions(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string) (OpenShiftVersions, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbName)
 
 	documentClient := cosmosdb.NewOpenShiftVersionDocumentClient(collc, collOpenShiftVersion)

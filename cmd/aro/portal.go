@@ -92,16 +92,17 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
+	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+		return err
+	}
+
 	dbAccountName := os.Getenv(DatabaseAccountName)
 	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer, dbAccountName)
 	if err != nil {
 		return err
 	}
 
-	if err := env.ValidateVars(DatabaseAccountName); err != nil {
-		return err
-	}
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, m, aead, os.Getenv(DatabaseAccountName))
+	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, m, aead, dbAccountName)
 	if err != nil {
 		return err
 	}
@@ -110,12 +111,12 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
-	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
+	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, dbc, dbName)
 	if err != nil {
 		return err
 	}
 
-	dbPortal, err := database.NewPortal(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
+	dbPortal, err := database.NewPortal(ctx, dbc, dbName)
 	if err != nil {
 		return err
 	}

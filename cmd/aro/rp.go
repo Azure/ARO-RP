@@ -96,16 +96,17 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
+	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+		return err
+	}
+
 	dbAccountName := os.Getenv(DatabaseAccountName)
 	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer, dbAccountName)
 	if err != nil {
 		return err
 	}
 
-	if err := env.ValidateVars(DatabaseAccountName); err != nil {
-		return err
-	}
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, metrics, aead, os.Getenv(DatabaseAccountName))
+	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, metrics, aead, dbAccountName)
 	if err != nil {
 		return err
 	}
@@ -119,32 +120,32 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	dbClusterManagerConfiguration, err := database.NewClusterManagerConfigurations(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
+	dbClusterManagerConfiguration, err := database.NewClusterManagerConfigurations(ctx, dbc, dbName)
 	if err != nil {
 		return err
 	}
 
-	dbBilling, err := database.NewBilling(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
+	dbBilling, err := database.NewBilling(ctx, dbc, dbName)
 	if err != nil {
 		return err
 	}
 
-	dbGateway, err := database.NewGateway(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
+	dbGateway, err := database.NewGateway(ctx, dbc, dbName)
 	if err != nil {
 		return err
 	}
 
-	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
+	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, dbc, dbName)
 	if err != nil {
 		return err
 	}
 
-	dbSubscriptions, err := database.NewSubscriptions(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
+	dbSubscriptions, err := database.NewSubscriptions(ctx, dbc, dbName)
 	if err != nil {
 		return err
 	}
 
-	dbOpenShiftVersions, err := database.NewOpenShiftVersions(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
+	dbOpenShiftVersions, err := database.NewOpenShiftVersions(ctx, dbc, dbName)
 	if err != nil {
 		return err
 	}

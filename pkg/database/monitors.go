@@ -30,7 +30,7 @@ type Monitors interface {
 }
 
 // NewMonitors returns a new Monitors
-func NewMonitors(ctx context.Context, isLocalDevelopmentMode bool, dbc cosmosdb.DatabaseClient, dbName string) (Monitors, error) {
+func NewMonitors(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string) (Monitors, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbName)
 
 	triggers := []*cosmosdb.Trigger{

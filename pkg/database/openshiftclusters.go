@@ -56,7 +56,7 @@ type OpenShiftClusters interface {
 }
 
 // NewOpenShiftClusters returns a new OpenShiftClusters
-func NewOpenShiftClusters(ctx context.Context, isLocalDevelopmentMode bool, dbc cosmosdb.DatabaseClient, dbName string) (OpenShiftClusters, error) {
+func NewOpenShiftClusters(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string) (OpenShiftClusters, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbName)
 
 	triggers := []*cosmosdb.Trigger{

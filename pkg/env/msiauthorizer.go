@@ -31,20 +31,20 @@ func (c *core) NewMSIAuthorizer(msiContext MSIContext, scopes ...string) (autore
 	}
 
 	tenantIdKey := "AZURE_TENANT_ID"
-	azureClientId := "AZURE_" + string(msiContext) + "_CLIENT_ID"
-	azureClientSecret := "AZURE_" + string(msiContext) + "_CLIENT_SECRET"
-	// TODO(Aldo): inject values instead of validating + reading env vars.
-	if err := ValidateVars(azureClientId, azureClientSecret, tenantIdKey); err != nil {
+	azureClientIdKey := "AZURE_" + string(msiContext) + "_CLIENT_ID"
+	azureClientSecretKey := "AZURE_" + string(msiContext) + "_CLIENT_SECRET"
+
+	if err := ValidateVars(azureClientIdKey, azureClientSecretKey, tenantIdKey); err != nil {
 		return nil, fmt.Errorf("%v (development mode)", err.Error())
 	}
 
-	options := c.Environment().ClientSecretCredentialOptions()
-	tokenCredential, err := azidentity.NewClientSecretCredential(
-		os.Getenv(tenantIdKey),
-		os.Getenv(azureClientId),
-		os.Getenv(azureClientSecret),
-		options)
+	tenantId := os.Getenv(tenantIdKey)
+	azureClientId := os.Getenv(azureClientIdKey)
+	azureClientSecret := os.Getenv(azureClientSecretKey)
 
+	options := c.Environment().ClientSecretCredentialOptions()
+
+	tokenCredential, err := azidentity.NewClientSecretCredential(tenantId, azureClientId, azureClientSecret, options)
 	if err != nil {
 		return nil, err
 	}

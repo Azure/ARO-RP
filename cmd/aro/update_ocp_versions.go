@@ -84,16 +84,17 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 		return nil, err
 	}
 
+	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+		return nil, err
+	}
+
 	dbAccountName := os.Getenv(DatabaseAccountName)
 	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer, dbAccountName)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := env.ValidateVars(DatabaseAccountName); err != nil {
-		return nil, err
-	}
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, m, aead, os.Getenv(DatabaseAccountName))
+	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, m, aead, dbAccountName)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +103,7 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 	if err != nil {
 		return nil, err
 	}
-	dbOpenShiftVersions, err := database.NewOpenShiftVersions(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
+	dbOpenShiftVersions, err := database.NewOpenShiftVersions(ctx, dbc, dbName)
 	if err != nil {
 		return nil, err
 	}

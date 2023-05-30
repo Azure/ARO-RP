@@ -82,16 +82,17 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
+	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+		return err
+	}
+
 	dbAccountName := os.Getenv(DatabaseAccountName)
 	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer, dbAccountName)
 	if err != nil {
 		return err
 	}
 
-	if err := env.ValidateVars(DatabaseAccountName); err != nil {
-		return err
-	}
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, &noop.Noop{}, aead, os.Getenv(DatabaseAccountName))
+	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, &noop.Noop{}, aead, dbAccountName)
 	if err != nil {
 		return err
 	}
@@ -100,17 +101,17 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
-	dbMonitors, err := database.NewMonitors(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
+	dbMonitors, err := database.NewMonitors(ctx, dbc, dbName)
 	if err != nil {
 		return err
 	}
 
-	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
+	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, dbc, dbName)
 	if err != nil {
 		return err
 	}
 
-	dbSubscriptions, err := database.NewSubscriptions(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
+	dbSubscriptions, err := database.NewSubscriptions(ctx, dbc, dbName)
 	if err != nil {
 		return err
 	}

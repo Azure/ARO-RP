@@ -73,17 +73,14 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
-	dbRefresher, err := pkgdbtoken.NewRefresher(log, _env, msiRefresherAuthorizer, insecureSkipVerify, dbc, "gateway", m, "gateway", url)
-	if err != nil {
-		return err
-	}
+	dbRefresher := pkgdbtoken.NewRefresher(log, _env, msiRefresherAuthorizer, insecureSkipVerify, dbc, "gateway", m, "gateway", url)
 
 	dbName, err := DBName(_env.IsLocalDevelopmentMode())
 	if err != nil {
 		return err
 	}
 
-	dbGateway, err := database.NewGateway(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
+	dbGateway, err := database.NewGateway(ctx, dbc, dbName)
 	if err != nil {
 		return err
 	}
@@ -142,5 +139,6 @@ func getURL(isLocalDevelopmentMode bool) (string, error) {
 	if err := env.ValidateVars(DBTokenUrl); err != nil {
 		return "", err
 	}
+
 	return os.Getenv(DBTokenUrl), nil
 }

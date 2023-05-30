@@ -39,7 +39,7 @@ type refresher struct {
 	tokenRefreshed bool
 }
 
-func NewRefresher(log *logrus.Entry, env env.Core, authorizer autorest.Authorizer, insecureSkipVerify bool, dbc cosmosdb.DatabaseClient, permission string, m metrics.Emitter, metricPrefix string, url string) (Refresher, error) {
+func NewRefresher(log *logrus.Entry, env env.Core, authorizer autorest.Authorizer, insecureSkipVerify bool, dbc cosmosdb.DatabaseClient, permission string, m metrics.Emitter, metricPrefix string, url string) Refresher {
 	return &refresher{
 		log: log,
 		c:   NewClient(env, authorizer, insecureSkipVerify, url),
@@ -49,7 +49,7 @@ func NewRefresher(log *logrus.Entry, env env.Core, authorizer autorest.Authorize
 
 		m:            m,
 		metricPrefix: metricPrefix,
-	}, nil
+	}
 }
 
 func (r *refresher) checkRefreshAndReset() bool {
