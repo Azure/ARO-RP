@@ -68,6 +68,35 @@ func (mr *MockInterfaceMockRecorder) EnsureDeleted(arg0, arg1, arg2, arg3 interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureDeleted", reflect.TypeOf((*MockInterface)(nil).EnsureDeleted), arg0, arg1, arg2, arg3)
 }
 
+// EnsureDeletedGVR mocks base method.
+func (m *MockInterface) EnsureDeletedGVR(arg0 context.Context, arg1, arg2, arg3, arg4 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureDeletedGVR", arg0, arg1, arg2, arg3, arg4)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EnsureDeletedGVR indicates an expected call of EnsureDeletedGVR.
+func (mr *MockInterfaceMockRecorder) EnsureDeletedGVR(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureDeletedGVR", reflect.TypeOf((*MockInterface)(nil).EnsureDeletedGVR), arg0, arg1, arg2, arg3, arg4)
+}
+
+// IsConstraintTemplateReady mocks base method.
+func (m *MockInterface) IsConstraintTemplateReady(arg0 context.Context, arg1 string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsConstraintTemplateReady", arg0, arg1)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsConstraintTemplateReady indicates an expected call of IsConstraintTemplateReady.
+func (mr *MockInterfaceMockRecorder) IsConstraintTemplateReady(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsConstraintTemplateReady", reflect.TypeOf((*MockInterface)(nil).IsConstraintTemplateReady), arg0, arg1)
+}
+
 // Refresh mocks base method.
 func (m *MockInterface) Refresh() error {
 	m.ctrl.T.Helper()

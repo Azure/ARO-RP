@@ -12,6 +12,7 @@ import (
 	"io"
 	"io/fs"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"text/template"
 
@@ -32,6 +33,7 @@ type Deployer interface {
 	Remove(context.Context, interface{}) error
 	IsReady(context.Context, string, string) (bool, error)
 	Template(interface{}, fs.FS) ([]kruntime.Object, error)
+	IsConstraintTemplateReady(context.Context, interface{}) (bool, error)
 }
 
 type deployer struct {
@@ -105,19 +107,27 @@ func (depl *deployer) Remove(ctx context.Context, data interface{}) error {
 	}
 
 	var errs []error
+	namespaceName := ""
 	for _, obj := range resources {
-		// delete any deployments we have
-		if deployment, ok := obj.(*appsv1.Deployment); ok {
-			err := depl.dh.EnsureDeleted(ctx, "Deployment", deployment.Namespace, deployment.Name)
-			// Don't error out because then we might delete some resources and not others
-			if err != nil {
-				errs = append(errs, err)
-			}
+		nsName, err := depl.removeOne(ctx, obj)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		if nsName != "" {
+			namespaceName = nsName
+		}
+	}
+	if namespaceName != "" {
+		// remove the namespace
+		err := depl.dh.EnsureDeleted(ctx, "Namespace", "", namespaceName)
+		if err != nil {
+			errs = append(errs, err)
 		}
 	}
 
 	if len(errs) != 0 {
-		errContent := []string{"error removing deployment:"}
+		errContent := []string{"error removing resource:"}
 		for _, err := range errs {
 			errContent = append(errContent, err.Error())
 		}
@@ -125,6 +135,47 @@ func (depl *deployer) Remove(ctx context.Context, data interface{}) error {
 	}
 
 	return nil
+}
+
+func (depl *deployer) removeOne(ctx context.Context, obj kruntime.Object) (string, error) {
+	// remove everything we created that has name and ns
+	nameValue, err := getField(obj, "Name")
+	if err != nil {
+		return "", err
+	}
+	nsValue, err := getField(obj, "Namespace")
+	if err != nil {
+		return "", err
+	}
+	name := nameValue.String()
+	ns := nsValue.String()
+	if obj.GetObjectKind().GroupVersionKind().GroupKind().String() == "Namespace" {
+		// don't delete the namespace for now
+		return name, nil
+	}
+	errDelete := depl.dh.EnsureDeletedGVR(ctx, obj.GetObjectKind().GroupVersionKind().GroupKind().String(), ns, name, "")
+	if errDelete != nil {
+		return "", errDelete
+	}
+	return "", nil
+}
+
+func getField(obj interface{}, fieldName string) (reflect.Value, error) {
+	if fieldName == "" {
+		return reflect.Value{}, errors.New("empty field name")
+	}
+	if reflect.TypeOf(obj).Kind() != reflect.Ptr {
+		return reflect.Value{}, errors.New("obj not ptr")
+	}
+	elem := reflect.ValueOf(obj).Elem()
+	if elem.Kind() != reflect.Struct {
+		return reflect.Value{}, errors.New("obj not pointing to struct")
+	}
+	field := elem.FieldByName(fieldName)
+	if !field.IsValid() {
+		return reflect.Value{}, errors.New("not found field: " + fieldName)
+	}
+	return field, nil
 }
 
 func (depl *deployer) IsReady(ctx context.Context, namespace, deploymentName string) (bool, error) {
@@ -138,4 +189,24 @@ func (depl *deployer) IsReady(ctx context.Context, namespace, deploymentName str
 	}
 
 	return ready.DeploymentIsReady(d), nil
+}
+
+func (depl *deployer) IsConstraintTemplateReady(ctx context.Context, config interface{}) (bool, error) {
+	resources, err := depl.Template(config, depl.fs)
+	if err != nil {
+		return false, err
+	}
+	for _, resource := range resources {
+		if reflect.TypeOf(resource).String() == "*v1.ConstraintTemplate" {
+			name, err := getField(resource, "Name")
+			if err != nil {
+				return false, err
+			}
+			ready, err := depl.dh.IsConstraintTemplateReady(ctx, name.String())
+			if !ready || err != nil {
+				return ready, err
+			}
+		}
+	}
+	return true, nil
 }

@@ -55,16 +55,20 @@ func (r *gvrResolver) Refresh() (err error) {
 
 func (r *gvrResolver) Resolve(groupKind, optionalVersion string) (*schema.GroupVersionResource, error) {
 	if r.apiresources == nil {
-		err := r.Refresh()
-		if err != nil {
+		if err := r.Refresh(); err != nil {
 			return nil, err
 		}
 	}
 
 	mapper := restmapper.NewDiscoveryRESTMapper(r.apiresources)
-	result, err := mapper.ResourceFor(schema.ParseGroupResource(groupKind).WithVersion(optionalVersion))
-	if err != nil {
+	if result, err := mapper.ResourceFor(schema.ParseGroupResource(groupKind).WithVersion(optionalVersion)); err == nil {
+		return &result, nil
+	}
+
+	// retry after refresh
+	if err := r.Refresh(); err != nil {
 		return nil, err
 	}
+	result, err := mapper.ResourceFor(schema.ParseGroupResource(groupKind).WithVersion(optionalVersion))
 	return &result, err
 }

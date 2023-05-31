@@ -588,3 +588,83 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 		}).WithContext(ctx).WithTimeout(timeout).WithPolling(polling).Should(Succeed())
 	})
 })
+
+var _ = Describe("ARO Operator - Guardrails", func() {
+	const (
+		guardrailsEnabledFlag         = "aro.guardrails.enabled"
+		guardrailsDeployManagedFlag   = "aro.guardrails.deploy.managed"
+		guardrailsNamespace           = "openshift-azure-guardrails"
+		gkControllerManagerDeployment = "gatekeeper-controller-manager"
+		gkAuditDeployment             = "gatekeeper-audit"
+	)
+
+	It("Controller Manager must be restored if deleted", func(ctx context.Context) {
+		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		if !instance.Spec.OperatorFlags.GetSimpleBoolean(guardrailsEnabledFlag) ||
+			!instance.Spec.OperatorFlags.GetSimpleBoolean(guardrailsDeployManagedFlag) {
+			Skip("Guardrails Controller is not enabled, skipping test")
+		}
+
+		deleteControllerManagerDeployment := func(ctx context.Context) error {
+			return clients.Kubernetes.
+				AppsV1().
+				Deployments(guardrailsNamespace).
+				Delete(ctx, gkControllerManagerDeployment, metav1.DeleteOptions{})
+		}
+
+		controllerManagerDeploymentExists := func(g Gomega, ctx context.Context) {
+			_, err := clients.Kubernetes.
+				AppsV1().
+				Deployments(guardrailsNamespace).
+				Get(ctx, gkControllerManagerDeployment, metav1.GetOptions{})
+
+			g.Expect(err).ToNot(HaveOccurred())
+		}
+
+		By("waiting for the gatekeeper Controller Manager deployment to be ready")
+		Eventually(controllerManagerDeploymentExists).WithContext(ctx).Should(Succeed())
+
+		By("deleting the gatekeeper Controller Manager deployment")
+		Expect(deleteControllerManagerDeployment(ctx)).Should(Succeed())
+
+		By("waiting for the gatekeeper Controller Manager deployment to be reconciled")
+		Eventually(controllerManagerDeploymentExists).WithContext(ctx).Should(Succeed())
+	})
+
+	It("Audit must be restored if deleted", func(ctx context.Context) {
+		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		if !instance.Spec.OperatorFlags.GetSimpleBoolean(guardrailsEnabledFlag) ||
+			!instance.Spec.OperatorFlags.GetSimpleBoolean(guardrailsDeployManagedFlag) {
+			Skip("Guardrails Controller is not enabled, skipping test")
+		}
+
+		deleteAuditDeployment := func(ctx context.Context) error {
+			return clients.Kubernetes.
+				AppsV1().
+				Deployments(guardrailsNamespace).
+				Delete(ctx, gkAuditDeployment, metav1.DeleteOptions{})
+		}
+
+		auditDeploymentExists := func(g Gomega, ctx context.Context) {
+			_, err := clients.Kubernetes.
+				AppsV1().
+				Deployments(guardrailsNamespace).
+				Get(ctx, gkAuditDeployment, metav1.GetOptions{})
+
+			g.Expect(err).ToNot(HaveOccurred())
+		}
+
+		By("waiting for the gatekeeper Audit deployment to be ready")
+		Eventually(auditDeploymentExists).WithContext(ctx).Should(Succeed())
+
+		By("deleting the gatekeeper Audit deployment")
+		Expect(deleteAuditDeployment(ctx)).Should(Succeed())
+
+		By("waiting for the gatekeeper Audit deployment to be reconciled")
+		Eventually(auditDeploymentExists).WithContext(ctx).Should(Succeed())
+	})
+})
