@@ -21,10 +21,27 @@ import (
 func TestSetConditions(t *testing.T) {
 	ctx := context.Background()
 
-	controllerName := "FakeController"
+	controllerName := "Fake"
 
 	now := metav1.NewTime(time.Now())
 	past := metav1.NewTime(now.Add(-1 * time.Hour))
+
+	internetReachable := operatorv1.OperatorCondition{
+		Type:               arov1alpha1.InternetReachableFromMaster,
+		Status:             operatorv1.ConditionFalse,
+		LastTransitionTime: now,
+	}
+
+	defaultAvailable := utilconditions.ControllerDefaultAvailable(controllerName)
+	defaultProgressing := utilconditions.ControllerDefaultProgressing(controllerName)
+	defaultDegraded := utilconditions.ControllerDefaultDegraded(controllerName)
+
+	defaultAvailableInPast := *defaultAvailable.DeepCopy()
+	defaultAvailableInPast.LastTransitionTime = past
+
+	unavailable := *defaultAvailable.DeepCopy()
+	unavailable.Status = operatorv1.ConditionFalse
+	unavailable.Message = "Something bad happened"
 
 	for _, tt := range []struct {
 		name  string
@@ -33,203 +50,22 @@ func TestSetConditions(t *testing.T) {
 		want  []operatorv1.OperatorCondition
 	}{
 		{
-			name: "sets all provided conditions",
-			start: []operatorv1.OperatorCondition{
-				{
-					Type:               arov1alpha1.InternetReachableFromMaster,
-					Status:             operatorv1.ConditionFalse,
-					LastTransitionTime: now,
-				},
-			},
-			input: []*operatorv1.OperatorCondition{
-				{
-					Type:   "FakeController" + operatorv1.OperatorStatusTypeAvailable,
-					Status: operatorv1.ConditionTrue,
-				},
-				{
-					Type:   "FakeController" + operatorv1.OperatorStatusTypeProgressing,
-					Status: operatorv1.ConditionFalse,
-				},
-				{
-					Type:   "FakeController" + operatorv1.OperatorStatusTypeDegraded,
-					Status: operatorv1.ConditionFalse,
-				},
-			},
-			want: []operatorv1.OperatorCondition{
-				{
-					Type:               arov1alpha1.InternetReachableFromMaster,
-					Status:             operatorv1.ConditionFalse,
-					LastTransitionTime: now,
-				},
-				{
-					Type:               "FakeController" + operatorv1.OperatorStatusTypeAvailable,
-					Status:             operatorv1.ConditionTrue,
-					LastTransitionTime: now,
-				},
-				{
-					Type:               "FakeController" + operatorv1.OperatorStatusTypeProgressing,
-					Status:             operatorv1.ConditionFalse,
-					LastTransitionTime: now,
-				},
-				{
-					Type:               "FakeController" + operatorv1.OperatorStatusTypeDegraded,
-					Status:             operatorv1.ConditionFalse,
-					LastTransitionTime: now,
-				},
-			},
+			name:  "sets all provided conditions",
+			start: []operatorv1.OperatorCondition{internetReachable},
+			input: []*operatorv1.OperatorCondition{&defaultAvailable, &defaultProgressing, &defaultDegraded},
+			want:  []operatorv1.OperatorCondition{internetReachable, defaultAvailable, defaultProgressing, defaultDegraded},
 		},
 		{
-			name: "if condition exists and status matches, does not update",
-			start: []operatorv1.OperatorCondition{
-				{
-					Type:               arov1alpha1.InternetReachableFromMaster,
-					Status:             operatorv1.ConditionFalse,
-					LastTransitionTime: now,
-				},
-				{
-					Type:               "FakeController" + operatorv1.OperatorStatusTypeAvailable,
-					Status:             operatorv1.ConditionTrue,
-					LastTransitionTime: past,
-				},
-			},
-			input: []*operatorv1.OperatorCondition{
-				{
-					Type:   "FakeController" + operatorv1.OperatorStatusTypeAvailable,
-					Status: operatorv1.ConditionTrue,
-				},
-				{
-					Type:   "FakeController" + operatorv1.OperatorStatusTypeProgressing,
-					Status: operatorv1.ConditionFalse,
-				},
-				{
-					Type:   "FakeController" + operatorv1.OperatorStatusTypeDegraded,
-					Status: operatorv1.ConditionFalse,
-				},
-			},
-			want: []operatorv1.OperatorCondition{
-				{
-					Type:               arov1alpha1.InternetReachableFromMaster,
-					Status:             operatorv1.ConditionFalse,
-					LastTransitionTime: now,
-				},
-				{
-					Type:               "FakeController" + operatorv1.OperatorStatusTypeAvailable,
-					Status:             operatorv1.ConditionTrue,
-					LastTransitionTime: past,
-				},
-				{
-					Type:               "FakeController" + operatorv1.OperatorStatusTypeProgressing,
-					Status:             operatorv1.ConditionFalse,
-					LastTransitionTime: now,
-				},
-				{
-					Type:               "FakeController" + operatorv1.OperatorStatusTypeDegraded,
-					Status:             operatorv1.ConditionFalse,
-					LastTransitionTime: now,
-				},
-			},
+			name:  "if condition exists and status matches, does not update",
+			start: []operatorv1.OperatorCondition{internetReachable, defaultAvailableInPast},
+			input: []*operatorv1.OperatorCondition{&defaultAvailable, &defaultProgressing, &defaultDegraded},
+			want:  []operatorv1.OperatorCondition{internetReachable, defaultAvailableInPast, defaultProgressing, defaultDegraded},
 		},
 		{
-			name: "if condition exists and status matches, does not update",
-			start: []operatorv1.OperatorCondition{
-				{
-					Type:               arov1alpha1.InternetReachableFromMaster,
-					Status:             operatorv1.ConditionFalse,
-					LastTransitionTime: now,
-				},
-				{
-					Type:               "FakeController" + operatorv1.OperatorStatusTypeAvailable,
-					Status:             operatorv1.ConditionTrue,
-					LastTransitionTime: past,
-				},
-			},
-			input: []*operatorv1.OperatorCondition{
-				{
-					Type:   "FakeController" + operatorv1.OperatorStatusTypeAvailable,
-					Status: operatorv1.ConditionTrue,
-				},
-				{
-					Type:   "FakeController" + operatorv1.OperatorStatusTypeProgressing,
-					Status: operatorv1.ConditionFalse,
-				},
-				{
-					Type:   "FakeController" + operatorv1.OperatorStatusTypeDegraded,
-					Status: operatorv1.ConditionFalse,
-				},
-			},
-			want: []operatorv1.OperatorCondition{
-				{
-					Type:               arov1alpha1.InternetReachableFromMaster,
-					Status:             operatorv1.ConditionFalse,
-					LastTransitionTime: now,
-				},
-				{
-					Type:               "FakeController" + operatorv1.OperatorStatusTypeAvailable,
-					Status:             operatorv1.ConditionTrue,
-					LastTransitionTime: past,
-				},
-				{
-					Type:               "FakeController" + operatorv1.OperatorStatusTypeProgressing,
-					Status:             operatorv1.ConditionFalse,
-					LastTransitionTime: now,
-				},
-				{
-					Type:               "FakeController" + operatorv1.OperatorStatusTypeDegraded,
-					Status:             operatorv1.ConditionFalse,
-					LastTransitionTime: now,
-				},
-			},
-		},
-		{
-			name: "if condition exists and status does not match, updates",
-			start: []operatorv1.OperatorCondition{
-				{
-					Type:               arov1alpha1.InternetReachableFromMaster,
-					Status:             operatorv1.ConditionFalse,
-					LastTransitionTime: now,
-				},
-				{
-					Type:               "FakeController" + operatorv1.OperatorStatusTypeAvailable,
-					Status:             operatorv1.ConditionTrue,
-					LastTransitionTime: past,
-				},
-			},
-			input: []*operatorv1.OperatorCondition{
-				{
-					Type:   "FakeController" + operatorv1.OperatorStatusTypeAvailable,
-					Status: operatorv1.ConditionFalse,
-				},
-				{
-					Type:   "FakeController" + operatorv1.OperatorStatusTypeProgressing,
-					Status: operatorv1.ConditionFalse,
-				},
-				{
-					Type:   "FakeController" + operatorv1.OperatorStatusTypeDegraded,
-					Status: operatorv1.ConditionFalse,
-				},
-			},
-			want: []operatorv1.OperatorCondition{
-				{
-					Type:               arov1alpha1.InternetReachableFromMaster,
-					Status:             operatorv1.ConditionFalse,
-					LastTransitionTime: now,
-				},
-				{
-					Type:               "FakeController" + operatorv1.OperatorStatusTypeAvailable,
-					Status:             operatorv1.ConditionFalse,
-					LastTransitionTime: now,
-				},
-				{
-					Type:               "FakeController" + operatorv1.OperatorStatusTypeProgressing,
-					Status:             operatorv1.ConditionFalse,
-					LastTransitionTime: now,
-				},
-				{
-					Type:               "FakeController" + operatorv1.OperatorStatusTypeDegraded,
-					Status:             operatorv1.ConditionFalse,
-					LastTransitionTime: now,
-				},
-			},
+			name:  "if condition exists and status does not match, updates",
+			start: []operatorv1.OperatorCondition{internetReachable, defaultAvailableInPast},
+			input: []*operatorv1.OperatorCondition{&unavailable, &defaultProgressing, &defaultDegraded},
+			want:  []operatorv1.OperatorCondition{internetReachable, unavailable, defaultProgressing, defaultDegraded},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

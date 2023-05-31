@@ -27,21 +27,9 @@ import (
 
 func TestReconciler(t *testing.T) {
 	transitionTime := metav1.Time{Time: time.Now()}
-	defaultAvailable := operatorv1.OperatorCondition{
-		Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeAvailable,
-		Status:             operatorv1.ConditionTrue,
-		LastTransitionTime: transitionTime,
-	}
-	defaultProgressing := operatorv1.OperatorCondition{
-		Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeProgressing,
-		Status:             operatorv1.ConditionFalse,
-		LastTransitionTime: transitionTime,
-	}
-	defaultDegraded := operatorv1.OperatorCondition{
-		Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
-		Status:             operatorv1.ConditionFalse,
-		LastTransitionTime: transitionTime,
-	}
+	defaultAvailable := utilconditions.ControllerDefaultAvailable(ControllerName)
+	defaultProgressing := utilconditions.ControllerDefaultProgressing(ControllerName)
+	defaultDegraded := utilconditions.ControllerDefaultDegraded(ControllerName)
 	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
 
 	tests := []struct {
