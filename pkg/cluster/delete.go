@@ -419,11 +419,13 @@ func (m *manager) Delete(ctx context.Context) error {
 		return err
 	}
 
-	m.log.Printf("deleting tag policy definition")
-	_, err = m.definitions.Delete(ctx, tagPolicyDisplayName(m.doc.OpenShiftCluster.Properties.InfraID))
-	if err != nil {
-		return err
-	}
+	/*
+		m.log.Printf("deleting tag policy definition")
+		_, err = m.definitions.Delete(ctx, tagPolicyDisplayName(m.doc.OpenShiftCluster.Properties.InfraID))
+		if err != nil {
+			return err
+		}
+	*/
 
 	m.log.Printf("deleting dns")
 	err = m.dns.Delete(ctx, m.doc.OpenShiftCluster)
