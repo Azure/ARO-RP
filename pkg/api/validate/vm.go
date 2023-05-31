@@ -78,7 +78,7 @@ var supportedMasterVmSizes = map[api.VMSize]api.VMSizeStruct{
 	api.VMSizeStandardE32asV4: api.VMSizeStandardE32asV4Struct,
 	api.VMSizeStandardE48asV4: api.VMSizeStandardE48asV4Struct,
 	api.VMSizeStandardE64asV4: api.VMSizeStandardE64asV4Struct,
-	api.VMSizeStandardE96asV4: api.VMSizeStandardE64asV4Struct,
+	api.VMSizeStandardE96asV4: api.VMSizeStandardE96asV4Struct,
 
 	api.VMSizeStandardE8asV5:  api.VMSizeStandardE8asV5Struct,
 	api.VMSizeStandardE16asV5: api.VMSizeStandardE16asV5Struct,
@@ -168,7 +168,7 @@ var supportedWorkerVmSizes = map[api.VMSize]api.VMSizeStruct{
 	api.VMSizeStandardE32asV4: api.VMSizeStandardE32asV4Struct,
 	api.VMSizeStandardE48asV4: api.VMSizeStandardE48asV4Struct,
 	api.VMSizeStandardE64asV4: api.VMSizeStandardE64asV4Struct,
-	api.VMSizeStandardE96asV4: api.VMSizeStandardE64asV4Struct,
+	api.VMSizeStandardE96asV4: api.VMSizeStandardE96asV4Struct,
 
 	api.VMSizeStandardE8asV5:  api.VMSizeStandardE8asV5Struct,
 	api.VMSizeStandardE16asV5: api.VMSizeStandardE16asV5Struct,

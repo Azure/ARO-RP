@@ -13,6 +13,7 @@ import (
 type TokensAddons interface {
 	CreateAndWait(ctx context.Context, resourceGroupName string, registryName string, tokenName string, tokenCreateParameters mgmtcontainerregistry.Token) error
 	DeleteAndWait(ctx context.Context, resourceGroupName string, registryName string, tokenName string) error
+	GetTokenProperties(ctx context.Context, resourceGroupName, registryName, tokenName string) (mgmtcontainerregistry.TokenProperties, error)
 }
 
 func (t *tokensClient) CreateAndWait(ctx context.Context, resourceGroupName string, registryName string, tokenName string, tokenCreateParameters mgmtcontainerregistry.Token) error {
@@ -29,4 +30,13 @@ func (t *tokensClient) DeleteAndWait(ctx context.Context, resourceGroupName stri
 		return err
 	}
 	return future.WaitForCompletionRef(ctx, t.Client)
+}
+
+func (t *tokensClient) GetTokenProperties(ctx context.Context, resourceGroupName, registryName, tokenName string) (mgmtcontainerregistry.TokenProperties, error) {
+	var token mgmtcontainerregistry.Token
+	token, err := t.TokensClient.Get(ctx, resourceGroupName, registryName, tokenName)
+	if err != nil {
+		return mgmtcontainerregistry.TokenProperties{}, err
+	}
+	return *token.TokenProperties, nil
 }

@@ -46,6 +46,8 @@ type Reconciler struct {
 type reconcileManager struct {
 	log *logrus.Entry
 
+	client client.Client
+
 	instance       *arov1alpha1.Cluster
 	subscriptionID string
 
@@ -105,16 +107,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	manager := reconcileManager{
 		log:            r.log,
+		client:         r.client,
 		instance:       instance,
 		subscriptionID: resource.SubscriptionID,
 		kubeSubnets:    subnet.NewKubeManager(r.client, resource.SubscriptionID),
 		subnets:        subnet.NewManager(&azEnv, resource.SubscriptionID, authorizer),
 	}
 
-	return reconcile.Result{}, manager.reconcileSubnets(ctx, instance)
+	return reconcile.Result{}, manager.reconcileSubnets(ctx)
 }
 
-func (r *reconcileManager) reconcileSubnets(ctx context.Context, instance *arov1alpha1.Cluster) error {
+func (r *reconcileManager) reconcileSubnets(ctx context.Context) error {
 	subnets, err := r.kubeSubnets.List(ctx)
 	if err != nil {
 		return err
@@ -125,14 +128,14 @@ func (r *reconcileManager) reconcileSubnets(ctx context.Context, instance *arov1
 	// This potentially calls an update twice for the same loop, but this is the price
 	// to pay for keeping logic split, separate, and simple
 	for _, s := range subnets {
-		if instance.Spec.OperatorFlags.GetSimpleBoolean(controllerNSGManaged) {
+		if r.instance.Spec.OperatorFlags.GetSimpleBoolean(controllerNSGManaged) {
 			err = r.ensureSubnetNSG(ctx, s)
 			if err != nil {
 				combinedErrors = append(combinedErrors, err.Error())
 			}
 		}
 
-		if instance.Spec.OperatorFlags.GetSimpleBoolean(controllerServiceEndpointManaged) {
+		if r.instance.Spec.OperatorFlags.GetSimpleBoolean(controllerServiceEndpointManaged) {
 			err = r.ensureSubnetServiceEndpoints(ctx, s)
 			if err != nil {
 				combinedErrors = append(combinedErrors, err.Error())

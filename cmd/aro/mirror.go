@@ -84,8 +84,9 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	if env.Environment().Environment == azure.PublicCloud {
 		srcAcrGeneva := "linuxgeneva-microsoft" + acrDomainSuffix
 		mirrorImages := []string{
-			srcAcrGeneva + "/distroless/genevamdm:2.2023.331.1521-399d45-20230331t1638",
-			srcAcrGeneva + "/distroless/genevamdsd:mariner_20230413.1",
+			// https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
+			srcAcrGeneva + "/distroless/genevamdm:2.2023.505.1124-45da18-20230505t1700",
+			srcAcrGeneva + "/distroless/genevamdsd:mariner_20230517.1",
 		}
 		for _, ref := range mirrorImages {
 			log.Printf("mirroring %s -> %s", ref, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref))
@@ -103,16 +104,18 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"registry.redhat.io/rhel8/support-tools:latest",
 		"registry.redhat.io/openshift4/ose-tools-rhel8:latest",
 		"registry.access.redhat.com/ubi8/ubi-minimal:latest",
+		"mcr.microsoft.com/azure-cli:latest",
+
 		// https://catalog.redhat.com/software/containers/ubi8/nodejs-18/6278e5c078709f5277f26998
 		"registry.access.redhat.com/ubi8/nodejs-18:latest",
+
 		// https://catalog.redhat.com/software/containers/ubi8/go-toolset/5ce8713aac3db925c03774d1
 		"registry.access.redhat.com/ubi8/go-toolset:1.18.10",
-		"mcr.microsoft.com/azure-cli:latest",
 
 		// https://quay.io/repository/app-sre/managed-upgrade-operator?tab=tags
 		"quay.io/app-sre/managed-upgrade-operator:v0.1.891-3d94c00",
-		// https://quay.io/repository/app-sre/hive?tab=tags
 
+		// https://quay.io/repository/app-sre/hive?tab=tags
 		// TODO: move to official hive image once we fix memory leak
 		"quay.io/bvesel/hive:fec14dcf0-20230504",
 	} {

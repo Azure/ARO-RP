@@ -74,6 +74,20 @@ func (mr *MockCoreMockRecorder) Hostname() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Hostname", reflect.TypeOf((*MockCore)(nil).Hostname))
 }
 
+// IsCI mocks base method.
+func (m *MockCore) IsCI() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsCI")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsCI indicates an expected call of IsCI.
+func (mr *MockCoreMockRecorder) IsCI() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsCI", reflect.TypeOf((*MockCore)(nil).IsCI))
+}
+
 // IsLocalDevelopmentMode mocks base method.
 func (m *MockCore) IsLocalDevelopmentMode() bool {
 	m.ctrl.T.Helper()
@@ -531,6 +545,20 @@ func (m *MockInterface) InitializeAuthorizers() error {
 func (mr *MockInterfaceMockRecorder) InitializeAuthorizers() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitializeAuthorizers", reflect.TypeOf((*MockInterface)(nil).InitializeAuthorizers))
+}
+
+// IsCI mocks base method.
+func (m *MockInterface) IsCI() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsCI")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsCI indicates an expected call of IsCI.
+func (mr *MockInterfaceMockRecorder) IsCI() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsCI", reflect.TypeOf((*MockInterface)(nil).IsCI))
 }
 
 // IsLocalDevelopmentMode mocks base method.

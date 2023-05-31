@@ -36,11 +36,11 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
+	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
-	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 )
 
 //go:embed staticresources
@@ -172,12 +172,12 @@ func (o *operator) resources() ([]kruntime.Object, error) {
 
 	// then dynamic resources
 	key, cert := o.env.ClusterGenevaLoggingSecret()
-	gcsKeyBytes, err := utiltls.PrivateKeyAsBytes(key)
+	gcsKeyBytes, err := utilpem.Encode(key)
 	if err != nil {
 		return nil, err
 	}
 
-	gcsCertBytes, err := utiltls.CertAsBytes(cert)
+	gcsCertBytes, err := utilpem.Encode(cert)
 	if err != nil {
 		return nil, err
 	}
@@ -367,11 +367,11 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 
 func (o *operator) RenewMDSDCertificate(ctx context.Context) error {
 	key, cert := o.env.ClusterGenevaLoggingSecret()
-	gcsKeyBytes, err := utiltls.PrivateKeyAsBytes(key)
+	gcsKeyBytes, err := utilpem.Encode(key)
 	if err != nil {
 		return err
 	}
-	gcsCertBytes, err := utiltls.CertAsBytes(cert)
+	gcsCertBytes, err := utilpem.Encode(cert)
 	if err != nil {
 		return err
 	}

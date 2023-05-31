@@ -76,19 +76,19 @@ var (
 
 // FluentbitImage contains the location of the Fluentbit container image
 func FluentbitImage(acrDomain string) string {
-	return acrDomain + "/fluentbit:1.9.10-cm20230321"
+	return acrDomain + "/fluentbit:1.9.10-cm20230426"
 }
 
 // MdmImage contains the location of the MDM container image
 // https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
 func MdmImage(acrDomain string) string {
-	return acrDomain + "/genevamdm:2.2023.331.1521-399d45-20230331t1638"
+	return acrDomain + "/genevamdm:2.2023.505.1124-45da18-20230505t1700"
 }
 
 // MdsdImage contains the location of the MDSD container image
-// see https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
+// https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
 func MdsdImage(acrDomain string) string {
-	return acrDomain + "/genevamdsd:mariner_20230413.1"
+	return acrDomain + "/genevamdsd:mariner_20230517.1"
 }
 
 // MUOImage contains the location of the Managed Upgrade Operator container image
@@ -98,5 +98,5 @@ func MUOImage(acrDomain string) string {
 
 // GateKeeperImage contains the location of the GateKeeper container image
 func GateKeeperImage(acrDomain string) string {
-	return "quay.io/jeyuan/gatekeeper:v3.10.0" // temporarily put here, change to the given location once decided
+	return acrDomain + "/gatekeeper:v3.10.0"
 }

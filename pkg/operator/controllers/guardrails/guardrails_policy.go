@@ -24,18 +24,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
-func (r *Reconciler) getPolicyConfig(ctx context.Context, na string) (string, string, error) {
+func (r *Reconciler) getPolicyConfig(ctx context.Context, instance *arov1alpha1.Cluster, na string) (string, string, error) {
 	parts := strings.Split(na, ".")
 	if len(parts) < 1 {
 		return "", "", errors.New("unrecognised name: " + na)
 	}
 	name := parts[0]
-
-	instance := &arov1alpha1.Cluster{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
-	if err != nil {
-		return "", "", err
-	}
 
 	managedPath := fmt.Sprintf(controllerPolicyManagedTemplate, name)
 	managed := instance.Spec.OperatorFlags.GetWithDefault(managedPath, "false")
@@ -52,10 +46,16 @@ func (r *Reconciler) ensurePolicy(ctx context.Context, fs embed.FS, path string)
 		return err
 	}
 
+	instance := &arov1alpha1.Cluster{}
+	err = r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+	if err != nil {
+		return err
+	}
+
 	creates := make([]kruntime.Object, 0)
 	buffer := new(bytes.Buffer)
 	for _, templ := range template.Templates() {
-		managed, enforcement, err := r.getPolicyConfig(ctx, templ.Name())
+		managed, enforcement, err := r.getPolicyConfig(ctx, instance, templ.Name())
 		if err != nil {
 			return err
 		}
