@@ -22,4 +22,8 @@ const (
 	// FeatureFlagCheckAccessTestToggle is used for safely testing the new check access
 	// API in production. The toggle will be removed once the testing has been completed.
 	FeatureFlagCheckAccessTestToggle = "Microsoft.RedHatOpenShift/CheckAccessTestToggle"
+
+	// FeatureFlagPreconfiguredNSG is used for indicating whether a customer subscription
+	// is registered for customer bringing their own NSG
+	FeatureFlagPreconfiguredNSG = "Microsoft.RedHatOpenShift/PreconfiguredNSG"
 )

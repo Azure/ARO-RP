@@ -58,7 +58,7 @@ func (m *manager) adminUpdate() []steps.Step {
 			steps.Action(m.populateRegistryStorageAccountName), // must go before migrateStorageAccounts
 			steps.Action(m.migrateStorageAccounts),
 			steps.Action(m.fixSSH),
-			//steps.Action(m.removePrivateDNSZone), // TODO(mj): re-enable once we communicate this out
+			// steps.Action(m.removePrivateDNSZone), // TODO(mj): re-enable once we communicate this out
 		)
 	}
 
@@ -232,6 +232,7 @@ func setFieldCreatedByHive(createdByHive bool) database.OpenShiftClusterDocument
 func (m *manager) bootstrap() []steps.Step {
 	s := []steps.Step{
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources),
+		steps.Action(m.ensurePreconfiguredNSG),
 		steps.Action(m.ensureACRToken),
 		steps.Action(m.ensureInfraID),
 		steps.Action(m.ensureSSHKey),

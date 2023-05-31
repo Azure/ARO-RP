@@ -110,7 +110,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							},
 							MaintenanceTask: api.MaintenanceTaskEverything,
 							NetworkProfile: api.NetworkProfile{
-								OutboundType: api.OutboundTypeLoadbalancer,
+								OutboundType:     api.OutboundTypeLoadbalancer,
+								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -198,7 +199,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
-								OutboundType: api.OutboundTypeLoadbalancer,
+								OutboundType:     api.OutboundTypeLoadbalancer,
+								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -279,7 +281,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							LastProvisioningState: api.ProvisioningStateSucceeded,
 							MaintenanceTask:       api.MaintenanceTaskEverything,
 							NetworkProfile: api.NetworkProfile{
-								OutboundType: api.OutboundTypeLoadbalancer,
+								OutboundType:     api.OutboundTypeLoadbalancer,
+								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
 							},
 							ClusterProfile: api.ClusterProfile{
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
@@ -364,7 +367,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							},
 							MaintenanceTask: api.MaintenanceTaskOperator,
 							NetworkProfile: api.NetworkProfile{
-								OutboundType: api.OutboundTypeLoadbalancer,
+								OutboundType:     api.OutboundTypeLoadbalancer,
+								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -448,7 +452,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							},
 							MaintenanceTask: api.MaintenanceTaskOperator,
 							NetworkProfile: api.NetworkProfile{
-								OutboundType: api.OutboundTypeLoadbalancer,
+								OutboundType:     api.OutboundTypeLoadbalancer,
+								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -708,7 +713,8 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
-								OutboundType: api.OutboundTypeLoadbalancer,
+								OutboundType:     api.OutboundTypeLoadbalancer,
+								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -941,6 +947,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 								OutboundType:           api.OutboundTypeLoadbalancer,
+								PreconfiguredNSG:       api.PreconfiguredNSGDisabled,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -979,6 +986,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 								OutboundType:           api.OutboundTypeLoadbalancer,
+								PreconfiguredNSG:       api.PreconfiguredNSGDisabled,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1059,7 +1067,8 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
 							NetworkProfile: api.NetworkProfile{
-								OutboundType: api.OutboundTypeLoadbalancer,
+								OutboundType:     api.OutboundTypeLoadbalancer,
+								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1240,6 +1249,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 								OutboundType:           api.OutboundTypeLoadbalancer,
+								PreconfiguredNSG:       api.PreconfiguredNSGDisabled,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1349,6 +1359,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							NetworkProfile: api.NetworkProfile{
 								SoftwareDefinedNetwork: api.SoftwareDefinedNetworkOpenShiftSDN,
 								OutboundType:           api.OutboundTypeLoadbalancer,
+								PreconfiguredNSG:       api.PreconfiguredNSGDisabled,
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -1813,9 +1824,10 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 								ClientSecret: "00000000-0000-0000-0000-000000000000",
 							},
 							NetworkProfile: api.NetworkProfile{
-								PodCIDR:      "10.0.0.0/16",
-								ServiceCIDR:  "10.1.0.0/16",
-								OutboundType: api.OutboundTypeLoadbalancer,
+								PodCIDR:          "10.0.0.0/16",
+								ServiceCIDR:      "10.1.0.0/16",
+								OutboundType:     api.OutboundTypeLoadbalancer,
+								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
 							},
 							APIServerProfile: api.APIServerProfile{
 								Visibility: api.VisibilityPrivate,
