@@ -8,15 +8,16 @@ import (
 	"fmt"
 )
 
-// enableServiceEndpoints should enable service endpoints on
-// subnets for storage account access
-func (m *manager) enableServiceEndpoints(ctx context.Context) error {
+// ensureServiceEndpoints should enable service endpoints on
+// subnets for storage account access, but only if egress lockdown is
+// not enabled.
+func (m *manager) ensureServiceEndpoints(ctx context.Context) error {
 	subnetIds, err := m.getSubnetIds()
 	if err != nil {
 		return err
 	}
 
-	return m.subnet.CreateOrUpdateFromIds(ctx, subnetIds)
+	return m.subnet.CreateOrUpdateFromIds(ctx, subnetIds, m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled)
 }
 
 func (m *manager) getSubnetIds() ([]string, error) {
