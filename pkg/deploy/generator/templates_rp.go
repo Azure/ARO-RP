@@ -85,6 +85,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"clustersInstallViaHive",
 			"clusterDefaultInstallerPullspec",
 			"clustersAdoptByHive",
+			"useCheckAccess",
 		)
 	}
 

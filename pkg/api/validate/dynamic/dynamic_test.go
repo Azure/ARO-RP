@@ -976,6 +976,92 @@ var mockAccessToken = azcore.AccessToken{
 	ExpiresOn: time.Now(),
 }
 
+var (
+	validSubnetsAuthorizationDecisions = remotepdp.AuthorizationDecisionResponse{
+		Value: []remotepdp.AuthorizationDecision{
+			{
+				ActionId:       "Microsoft.Network/virtualNetworks/join/action",
+				AccessDecision: remotepdp.Allowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/virtualNetworks/read",
+				AccessDecision: remotepdp.Allowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/virtualNetworks/write",
+				AccessDecision: remotepdp.Allowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/virtualNetworks/subnets/join/action",
+				AccessDecision: remotepdp.Allowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/virtualNetworks/subnets/read",
+				AccessDecision: remotepdp.Allowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/virtualNetworks/subnets/write",
+				AccessDecision: remotepdp.Allowed,
+			},
+		},
+	}
+
+	invalidSubnetsAuthorizationDecisionsReadNotAllowed = remotepdp.AuthorizationDecisionResponse{
+		Value: []remotepdp.AuthorizationDecision{
+			{
+				ActionId:       "Microsoft.Network/virtualNetworks/join/action",
+				AccessDecision: remotepdp.Allowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/virtualNetworks/read",
+				AccessDecision: remotepdp.NotAllowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/virtualNetworks/write",
+				AccessDecision: remotepdp.Allowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/virtualNetworks/subnets/join/action",
+				AccessDecision: remotepdp.Allowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/virtualNetworks/subnets/read",
+				AccessDecision: remotepdp.Allowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/virtualNetworks/subnets/write",
+				AccessDecision: remotepdp.Allowed,
+			},
+		},
+	}
+
+	invalidSubnetsAuthorizationDecisionsMissingWrite = remotepdp.AuthorizationDecisionResponse{
+		Value: []remotepdp.AuthorizationDecision{
+			{
+				ActionId:       "Microsoft.Network/virtualNetworks/join/action",
+				AccessDecision: remotepdp.Allowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/virtualNetworks/read",
+				AccessDecision: remotepdp.NotAllowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/virtualNetworks/write",
+				AccessDecision: remotepdp.Allowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/virtualNetworks/subnets/join/action",
+				AccessDecision: remotepdp.Allowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/virtualNetworks/subnets/read",
+				AccessDecision: remotepdp.Allowed,
+			},
+			// deliberately missing subnets write
+		},
+	}
+)
+
 func mockTokenCredential(tokenCred *mock_azcore.MockTokenCredential) {
 	tokenCred.EXPECT().
 		GetToken(gomock.Any(), gomock.Any()).
@@ -996,15 +1082,7 @@ func TestValidateVnetPermissionsWithCheckAccess(t *testing.T) {
 				mockTokenCredential(tokenCred)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Return(&remotepdp.AuthorizationDecisionResponse{
-						Value: []remotepdp.AuthorizationDecision{
-							{
-								AccessDecision: remotepdp.Allowed,
-							}, {
-								AccessDecision: remotepdp.Allowed,
-							},
-						},
-					}, nil)
+					Return(&validSubnetsAuthorizationDecisions, nil)
 			},
 		},
 		{
@@ -1016,15 +1094,20 @@ func TestValidateVnetPermissionsWithCheckAccess(t *testing.T) {
 					Do(func(arg0, arg1 interface{}) {
 						cancel()
 					}).
-					Return(&remotepdp.AuthorizationDecisionResponse{
-						Value: []remotepdp.AuthorizationDecision{
-							{
-								AccessDecision: remotepdp.NotAllowed,
-							}, {
-								AccessDecision: remotepdp.Allowed,
-							},
-						},
-					}, nil)
+					Return(&invalidSubnetsAuthorizationDecisionsReadNotAllowed, nil)
+			},
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on vnet '" + vnetID + "'.",
+		},
+		{
+			name: "fail: CheckAccess Return less entries than requested",
+			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Do(func(arg0, arg1 interface{}) {
+						cancel()
+					}).
+					Return(&invalidSubnetsAuthorizationDecisionsMissingWrite, nil)
 			},
 			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on vnet '" + vnetID + "'.",
 		},
@@ -1095,6 +1178,54 @@ func TestValidateVnetPermissionsWithCheckAccess(t *testing.T) {
 	}
 }
 
+var (
+	invalidRouteTablesAuthorizationDecisionsWriteNotAllowed = remotepdp.AuthorizationDecisionResponse{
+		Value: []remotepdp.AuthorizationDecision{
+			{
+				ActionId:       "Microsoft.Network/routeTables/join/action",
+				AccessDecision: remotepdp.Allowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/routeTables/read",
+				AccessDecision: remotepdp.Allowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/routeTables/write",
+				AccessDecision: remotepdp.NotAllowed,
+			},
+		},
+	}
+	invalidRouteTablesAuthorizationDecisionsMissingWrite = remotepdp.AuthorizationDecisionResponse{
+		Value: []remotepdp.AuthorizationDecision{
+			{
+				ActionId:       "Microsoft.Network/routeTables/join/action",
+				AccessDecision: remotepdp.Allowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/routeTables/read",
+				AccessDecision: remotepdp.Allowed,
+			},
+			// deliberately missing routetables write
+		},
+	}
+	validRouteTablesAuthorizationDecisions = remotepdp.AuthorizationDecisionResponse{
+		Value: []remotepdp.AuthorizationDecision{
+			{
+				ActionId:       "Microsoft.Network/routeTables/join/action",
+				AccessDecision: remotepdp.Allowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/routeTables/read",
+				AccessDecision: remotepdp.Allowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/routeTables/write",
+				AccessDecision: remotepdp.Allowed,
+			},
+		},
+	}
+)
+
 func TestValidateRouteTablesPermissionsWithCheckAccess(t *testing.T) {
 	ctx := context.Background()
 
@@ -1163,15 +1294,26 @@ func TestValidateRouteTablesPermissionsWithCheckAccess(t *testing.T) {
 					Do(func(arg0, arg1 interface{}) {
 						cancel()
 					}).
-					Return(&remotepdp.AuthorizationDecisionResponse{
-						Value: []remotepdp.AuthorizationDecision{
-							{
-								AccessDecision: remotepdp.Allowed,
-							}, {
-								AccessDecision: remotepdp.NotAllowed,
-							},
-						},
-					}, nil)
+					Return(&invalidRouteTablesAuthorizationDecisionsWriteNotAllowed, nil)
+			},
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor role on route table '" + workerRtID + "'.",
+		},
+		{
+			name:   "fail: CheckAccessV2 doesn't return all the entries",
+			subnet: Subnet{ID: workerSubnet},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
+			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Do(func(arg0, arg1 interface{}) {
+						cancel()
+					}).
+					Return(&invalidRouteTablesAuthorizationDecisionsMissingWrite, nil)
 			},
 			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor role on route table '" + workerRtID + "'.",
 		},
@@ -1187,15 +1329,7 @@ func TestValidateRouteTablesPermissionsWithCheckAccess(t *testing.T) {
 				mockTokenCredential(tokenCred)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Return(&remotepdp.AuthorizationDecisionResponse{
-						Value: []remotepdp.AuthorizationDecision{
-							{
-								AccessDecision: remotepdp.Allowed,
-							}, {
-								AccessDecision: remotepdp.Allowed,
-							},
-						},
-					}, nil)
+					Return(&validRouteTablesAuthorizationDecisions, nil)
 			},
 		},
 	} {
@@ -1259,6 +1393,54 @@ func TestValidateRouteTablesPermissionsWithCheckAccess(t *testing.T) {
 	}
 }
 
+var (
+	invalidNatGWAuthorizationDecisionsReadNotAllowed = remotepdp.AuthorizationDecisionResponse{
+		Value: []remotepdp.AuthorizationDecision{
+			{
+				ActionId:       "Microsoft.Network/natGateways/join/action",
+				AccessDecision: remotepdp.Allowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/natGateways/read",
+				AccessDecision: remotepdp.NotAllowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/natGateways/write",
+				AccessDecision: remotepdp.Allowed,
+			},
+		},
+	}
+	invalidNatGWAuthorizationDecisionsMissingWrite = remotepdp.AuthorizationDecisionResponse{
+		Value: []remotepdp.AuthorizationDecision{
+			{
+				ActionId:       "Microsoft.Network/natGateways/join/action",
+				AccessDecision: remotepdp.Allowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/natGateways/read",
+				AccessDecision: remotepdp.Allowed,
+			},
+			// deliberately missing natGateway write
+		},
+	}
+	validNatGWAuthorizationDecision = remotepdp.AuthorizationDecisionResponse{
+		Value: []remotepdp.AuthorizationDecision{
+			{
+				ActionId:       "Microsoft.Network/natGateways/join/action",
+				AccessDecision: remotepdp.Allowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/natGateways/read",
+				AccessDecision: remotepdp.Allowed,
+			},
+			{
+				ActionId:       "Microsoft.Network/natGateways/write",
+				AccessDecision: remotepdp.Allowed,
+			},
+		},
+	}
+)
+
 func TestValidateNatGatewaysPermissionsWithCheckAccess(t *testing.T) {
 	ctx := context.Background()
 
@@ -1317,15 +1499,27 @@ func TestValidateNatGatewaysPermissionsWithCheckAccess(t *testing.T) {
 					Do(func(arg0, arg1 interface{}) {
 						cancel()
 					}).
-					Return(&remotepdp.AuthorizationDecisionResponse{
-						Value: []remotepdp.AuthorizationDecision{
-							{
-								AccessDecision: remotepdp.Allowed,
-							}, {
-								AccessDecision: remotepdp.NotAllowed,
-							},
-						},
-					}, nil)
+					Return(&invalidNatGWAuthorizationDecisionsReadNotAllowed, nil)
+			},
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor role on nat gateway '" + workerNgID + "'.",
+		},
+		{
+			name:   "fail: CheckAccessV2 doesn't return all permissions",
+			subnet: Subnet{ID: workerSubnet},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
+			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				pdpClient.
+					EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Do(func(arg0, arg1 interface{}) {
+						cancel()
+					}).
+					Return(&invalidNatGWAuthorizationDecisionsMissingWrite, nil)
 			},
 			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor role on nat gateway '" + workerNgID + "'.",
 		},
@@ -1341,15 +1535,7 @@ func TestValidateNatGatewaysPermissionsWithCheckAccess(t *testing.T) {
 				mockTokenCredential(tokenCred)
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
-					Return(&remotepdp.AuthorizationDecisionResponse{
-						Value: []remotepdp.AuthorizationDecision{
-							{
-								AccessDecision: remotepdp.Allowed,
-							}, {
-								AccessDecision: remotepdp.Allowed,
-							},
-						},
-					}, nil)
+					Return(&validNatGWAuthorizationDecision, nil)
 			},
 		},
 		{

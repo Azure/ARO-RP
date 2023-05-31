@@ -490,6 +490,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"clustersInstallViaHive",
 		"clustersAdoptByHive",
 		"clusterDefaultInstallerPullspec",
+		"useCheckAccess",
 	} {
 		parts = append(parts,
 			fmt.Sprintf("'%s=$(base64 -d <<<'''", strings.ToUpper(variable)),
