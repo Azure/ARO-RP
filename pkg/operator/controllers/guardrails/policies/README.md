@@ -87,7 +87,7 @@ test_input_allowed_ns {
 }
 
 test_input_disallowed_ns1 {
-  input := { "review": input_review(input_disallowed_ns1) }
+  input := { "review": input_ns(input_disallowed_ns1) }
   results := violation with input as input
   count(results) == 1
 }
