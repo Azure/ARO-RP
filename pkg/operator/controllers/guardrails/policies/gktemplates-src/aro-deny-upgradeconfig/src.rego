@@ -19,9 +19,7 @@ violation[{"msg": msg}] {
 	# ## If regular user and 
 	# ## HAS cloud.openshift.com entry (`source: OCM` indicates pull-secret exists) in openshift-config/pull-secret Secret
 	# ## NOT ALLOWED
-	# config_data := data.inventory.namespace["openshift-managed-upgrade-operator"]["v1"]["ConfigMap"]["managed-upgrade-operator-config"]["data"]["config.yaml"]
-	# regex.match("source: OCM", config_data)
-	# msg := "Modifying the UpgradeConfig is not allowed for regular users. This includes attempting to create, edit, or delete the UpgradeConfig."
-	msg := data.inventory.namespace["openshift-managed-upgrade-operator"]["v1"]["ConfigMap"]
-
+	config_data := data.inventory.namespace["openshift-managed-upgrade-operator"]["v1"]["ConfigMap"]["managed-upgrade-operator-config"]["data"]["config.yaml"]
+	regex.match("source: OCM", config_data)
+	msg := "Modifying the UpgradeConfig is not allowed for regular users. This includes attempting to create, edit, or delete the UpgradeConfig."
 }

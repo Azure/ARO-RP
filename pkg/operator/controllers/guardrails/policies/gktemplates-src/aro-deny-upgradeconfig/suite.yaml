@@ -4,42 +4,78 @@ metadata:
   name: upgradeconfig
 tests:
 - name: upgradeconfig-tests
-  template: ../../gktemplates/aro-upgradeconfig-deny.yaml
+  template: ../../gktemplates/aro-deny-upgradeconfig.yaml
   constraint: ../../gkconstraints-test/aro-upgradeconfig-deny.yaml
   cases:
   - name: create-upgradeconfig-allowed-regular-user
-    object: gator-test/allow_regular_user_create_managed_upgrade_operator.yaml
+    object: gator-test/regular_user_create_managed_upgrade_operator.yaml
+    inventory: 
+    - gator-test/inventory_config_local.yaml
     assertions:
     - violations: no
-  - name: create-upgradeconfig-allowed-system-user
-    object: gator-test/allow_system_user_create_managed_upgrade_operator.yaml
+  - name: create-upgradeconfig-allowed-system-user-local
+    object: gator-test/system_user_create_managed_upgrade_operator.yaml
+    inventory: 
+    - gator-test/inventory_config_local.yaml
+    assertions:
+    - violations: no
+  - name: create-upgradeconfig-allowed-system-user-ocm
+    object: gator-test/system_user_create_managed_upgrade_operator.yaml
+    inventory: 
+    - gator-test/inventory_config_ocm.yaml
     assertions:
     - violations: no
   - name: create-upgradeconfig-not-allowed-regular-user
-    object: gator-test/not_allow_regular_user_create_managed_upgrade_operator.yaml
+    object: /gator-test/regular_user_create_managed_upgrade_operator.yaml
+    inventory: 
+    - gator-test/inventory_config_ocm.yaml
     assertions:
     - violations: yes
   - name: update-upgradeconfig-allowed-regular-user
-    object: gator-test/allow_regular_user_update_managed_upgrade_operator.yaml
+    object: gator-test/regular_user_update_managed_upgrade_operator.yaml
+    inventory: 
+    - gator-test/inventory_config_local.yaml
     assertions:
     - violations: no
-  - name: update-upgradeconfig-allowed-system-user
-    object: gator-test/allow_system_user_update_managed_upgrade_operator.yaml
+  - name: update-upgradeconfig-allowed-system-user-local
+    object: gator-test/system_user_update_managed_upgrade_operator.yaml
+    inventory: 
+    - gator-test/inventory_config_local.yaml
+    assertions:
+    - violations: no
+  - name: update-upgradeconfig-allowed-system-user-local
+    object: gator-test/system_user_update_managed_upgrade_operator.yaml
+    inventory: 
+    - gator-test/inventory_config_ocm.yaml
     assertions:
     - violations: no
   - name: update-upgradeconfig-not-allowed-regular-user
-    object: gator-test/not_allow_regular_user_update_managed_upgrade_operator.yaml
+    object: /gator-test/regular_user_update_managed_upgrade_operator.yaml
+    inventory: 
+    - gator-test/inventory_config_ocm.yaml
     assertions:
     - violations: yes
   - name: delete-upgradeconfig-allowed-regular-user
-    object: gator-test/allow_regular_user_delete_managed_upgrade_operator.yaml
+    object: gator-test/regular_user_delete_managed_upgrade_operator.yaml
+    inventory: 
+    - gator-test/inventory_config_local.yaml
     assertions:
     - violations: no
-  - name: delete-upgradeconfig-allowed-system-user
-    object: gator-test/allow_system_user_delete_managed_upgrade_operator.yaml
+  - name: delete-upgradeconfig-allowed-system-user-local
+    object: gator-test/system_user_delete_managed_upgrade_operator.yaml
+    inventory: 
+    - gator-test/inventory_config_local.yaml
     assertions:
     - violations: no
-  - name: delete-upgradeconfig-allowed-regular-user
-    object: gator-test/not_allow_regular_user_delete_managed_upgrade_operator.yaml
+  - name: delete-upgradeconfig-allowed-system-user-ocm
+    object: gator-test/system_user_delete_managed_upgrade_operator.yaml
+    inventory: 
+    - gator-test/inventory_config_ocm.yaml
+    assertions:
+    - violations: no
+  - name: delete-upgradeconfig-not-allowed-regular-user
+    object: gator-test/regular_user_delete_managed_upgrade_operator.yaml
+    inventory: 
+    - gator-test/inventory_config_ocm.yaml
     assertions:
     - violations: yes

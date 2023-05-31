@@ -24,6 +24,7 @@ spec:
       automountServiceAccountToken: true
       containers:
       - args:
+        - --audit-from-cache=true
         - --operation=audit
         - --operation=status
         - --operation=mutation-status
