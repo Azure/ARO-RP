@@ -6,4 +6,5 @@ package encryption
 type AEAD interface {
 	Open([]byte) ([]byte, error)
 	Seal([]byte) ([]byte, error)
+	SealSecretVersion() string
 }

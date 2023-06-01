@@ -14,8 +14,9 @@ import (
 )
 
 type aes256Sha512 struct {
-	aead       cipher.AEAD
-	randReader io.Reader
+	aead          cipher.AEAD
+	randReader    io.Reader
+	secretVersion string
 }
 
 var _ AEAD = (*aes256Sha512)(nil)
@@ -49,4 +50,8 @@ func (c *aes256Sha512) Seal(input []byte) ([]byte, error) {
 	}
 
 	return c.aead.Seal(nil, nonce, input, nil), nil
+}
+
+func (c *aes256Sha512) SealSecretVersion() string {
+	return c.secretVersion
 }

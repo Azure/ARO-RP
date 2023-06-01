@@ -45,6 +45,8 @@ type OpenShiftClusterDocument struct {
 	OpenShiftCluster *OpenShiftCluster `json:"openShiftCluster,omitempty"`
 
 	CorrelationData *CorrelationData `json:"correlationData,omitempty" deep:"-"`
+
+	SecretVersion string `json:"secretVersion,omitempty"`
 }
 
 func (c *OpenShiftClusterDocument) String() string {

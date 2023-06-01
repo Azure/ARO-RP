@@ -393,7 +393,7 @@ func (d *deployer) ensureAndRotateSecret(ctx context.Context, kv keyvault.Manage
 
 	for _, secret := range existingSecrets {
 		if filepath.Base(*secret.ID) == secretName {
-			latestVersion, err := kv.GetSecret(ctx, secretName)
+			latestVersion, err := kv.GetSecret(ctx, secretName, "")
 			if err != nil {
 				return err
 			}
