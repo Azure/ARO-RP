@@ -11,13 +11,13 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
-	hiveclient "github.com/openshift/hive/pkg/client/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics"
@@ -41,7 +41,7 @@ type Monitor struct {
 	m          metrics.Emitter
 	arocli     aroclient.Interface
 
-	hiveclientset hiveclient.Interface
+	hiveclientset client.Client
 
 	// access below only via the helper functions in cache.go
 	cache struct {
@@ -91,10 +91,10 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		return nil, err
 	}
 
-	var hiveclientset hiveclient.Interface
+	var hiveclientset client.Client
 	if hiveRestConfig != nil {
 		var err error
-		hiveclientset, err = hiveclient.NewForConfig(hiveRestConfig)
+		hiveclientset, err = client.New(hiveRestConfig, client.Options{})
 		if err != nil {
 			// TODO(hive): Update to fail once we have Hive everywhere in prod and dev
 			log.Error(err)

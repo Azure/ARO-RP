@@ -9,7 +9,7 @@ import (
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/ARO-RP/pkg/hive"
 )
@@ -42,7 +42,11 @@ func (mon *Monitor) emitHiveRegistrationStatus(ctx context.Context) error {
 }
 
 func (mon *Monitor) retrieveClusterDeployment(ctx context.Context) (*hivev1.ClusterDeployment, error) {
-	cd, err := mon.hiveclientset.HiveV1().ClusterDeployments(mon.oc.Properties.HiveProfile.Namespace).Get(ctx, hive.ClusterDeploymentName, metav1.GetOptions{})
+	cd := &hivev1.ClusterDeployment{}
+	err := mon.hiveclientset.Get(ctx, client.ObjectKey{
+		Namespace: mon.oc.Properties.HiveProfile.Namespace,
+		Name:      hive.ClusterDeploymentName,
+	}, cd)
 	if err != nil {
 		return nil, err
 	}

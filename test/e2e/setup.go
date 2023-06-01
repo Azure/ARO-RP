@@ -24,7 +24,6 @@ import (
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	projectclient "github.com/openshift/client-go/project/clientset/versioned"
-	hiveclient "github.com/openshift/hive/pkg/client/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	"github.com/sirupsen/logrus"
@@ -34,6 +33,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/tools/clientcmd/api/latest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -71,7 +71,7 @@ type clientSet struct {
 	AROClusters        aroclient.Interface
 	ConfigClient       configclient.Interface
 	Project            projectclient.Interface
-	Hive               hiveclient.Interface
+	Hive               client.Client
 	HiveAKS            kubernetes.Interface
 	HiveClusterManager hive.ClusterManager
 }
@@ -327,7 +327,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	}
 
 	var hiveRestConfig *rest.Config
-	var hiveClientSet *hiveclient.Clientset
+	var hiveClientSet client.Client
 	var hiveAKS *kubernetes.Clientset
 	var hiveCM hive.ClusterManager
 
@@ -343,7 +343,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 			return nil, err
 		}
 
-		hiveClientSet, err = hiveclient.NewForConfig(hiveRestConfig)
+		hiveClientSet, err = client.New(hiveRestConfig, client.Options{})
 		if err != nil {
 			return nil, err
 		}
