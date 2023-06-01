@@ -1023,7 +1023,7 @@
         },
         {
             "properties": {
-                "severity": 2,
+                "severity": 3,
                 "enabled": true,
                 "scopes": [
                     "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"

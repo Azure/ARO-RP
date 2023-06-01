@@ -1024,7 +1024,7 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 
 	if g.production {
 		rs = append(rs, g.database("'ARO'", true)...)
-		rs = append(rs, g.rpCosmosDBAlert(10, 90, 2, "rp-cosmosdb-alert", "PT5M", "PT1H"))
+		rs = append(rs, g.rpCosmosDBAlert(10, 90, 3, "rp-cosmosdb-alert", "PT5M", "PT1H"))
 	}
 
 	return rs
