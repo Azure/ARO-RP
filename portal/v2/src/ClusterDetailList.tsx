@@ -37,11 +37,33 @@ export interface IClusterDetails {
   installStatus: string
 }
 
-export interface WrapperProps {
-  currentCluster: ICluster | null
-  detailPanelSelected: string
-  loaded: boolean
+export interface FeatureFlags {
+  "aro.alertwebhook.enabled" : string
+  "aro.autosizednodes.enable": string
+  "aro.azuresubnets.enabled": string
+  "aro.azuresubnets.nsg.managed": string
+  "aro.azuresubnets.serviceendpoint.managed": string
+  "aro.banner.enabled": string
+  "aro.checker.enabled": string
+  "aro.dnsmasq.enabled": string
+  "aro.genevalogging.enabled": string
+  "aro.imageconfig.enabled": string
+  "aro.machine.enabled": string
+  "aro.machinehealthcheck.enabled": string
+  "aro.machinehealthcheck.managed": string
+  "aro.machineset.enabled": string
+  "aro.monitoring.enabled": string
+  "aro.nodedrainer.enabled": string
+  "aro.pullsecret.enabled": string
+  "aro.pullsecret.managed": string
+  "aro.rbac.enabled": string
+  "aro.routefix.enabled": string
+  "aro.storageaccounts.enabled": string
+  "aro.workaround.enabled": string
+  "rh.srep.muo.enabled": string
+  "rh.srep.muo.managed": string
 }
+
 
 interface IClusterDetailComponentState {
   item: IClusterDetails // why both state and props?

@@ -73,7 +73,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 	})
 
 	It("Should be able to populate cluster info panel correctly", func() {
-		const CLUSTER_INFO_HEADINGS = 10
+		const clusterInfoHeadings = 10
 
 		err := wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[data-automation-key='name']"))
 		if err != nil {
@@ -100,11 +100,11 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 			SaveScreenshotAndExit(wd, err)
 		}
 
-		Expect(len(panelSpans)).To(Equal(CLUSTER_INFO_HEADINGS * 3))
+		Expect(len(panelSpans)).To(Equal(clusterInfoHeadings * 3))
 
-		panelFields := panelSpans[0 : CLUSTER_INFO_HEADINGS-1]
-		panelColons := panelSpans[CLUSTER_INFO_HEADINGS : CLUSTER_INFO_HEADINGS*2-1]
-		panelValues := panelSpans[CLUSTER_INFO_HEADINGS*2 : len(panelSpans)-1]
+		panelFields := panelSpans[0 : clusterInfoHeadings-1]
+		panelColons := panelSpans[clusterInfoHeadings : clusterInfoHeadings*2-1]
+		panelValues := panelSpans[clusterInfoHeadings*2 : len(panelSpans)-1]
 
 		for _, panelField := range panelFields {
 			panelText, err := panelField.Text()
@@ -131,6 +131,86 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 			}
 
 			Expect(panelText).To(Not(Equal("")))
+		}
+	})
+
+	It("Should be able to populate feature flag panel correctly", func() {
+		const (
+			clusterFeatureHeadings = 24
+			featureFlagDivSelector = "div[name='Feature Flags']"
+		)
+
+		err := wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[data-automation-key='name']"))
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		cluster, err := wd.FindElement(selenium.ByCSSSelector, "div[data-automation-key='name']")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		err = cluster.Click()
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		err = wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, featureFlagDivSelector))
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		featureflagpanel, err := wd.FindElement(selenium.ByCSSSelector, featureFlagDivSelector)
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		err = featureflagpanel.Click()
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		err = wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByID, "ClusterDetailCell"), 2*time.Minute)
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		featureFlagPanelSpans, err := wd.FindElements(selenium.ByID, "ClusterDetailCell")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		Expect(len(featureFlagPanelSpans)).To(Equal(clusterFeatureHeadings * 3))
+
+		featureFlagPanelFields := featureFlagPanelSpans[0 : clusterFeatureHeadings-1]
+		featureFlagPanelColons := featureFlagPanelSpans[clusterFeatureHeadings : clusterFeatureHeadings*2-1]
+		featureFlagPanelValues := featureFlagPanelSpans[clusterFeatureHeadings*2 : len(featureFlagPanelSpans)-1]
+
+		for _, featureFlagPanelField := range featureFlagPanelFields {
+			featureFlagPanelText, err := featureFlagPanelField.Text()
+			if err != nil {
+				SaveScreenshotAndExit(wd, err)
+			}
+
+			Expect(featureFlagPanelText).To(Not(Equal("")))
+		}
+
+		for _, featureFlagPanelField := range featureFlagPanelColons {
+			featureFlagPanelText, err := featureFlagPanelField.Text()
+			if err != nil {
+				SaveScreenshotAndExit(wd, err)
+			}
+
+			Expect(featureFlagPanelText).To(Equal(":"))
+		}
+
+		for _, featureFlagPanelField := range featureFlagPanelValues {
+			featureFlagPanelText, err := featureFlagPanelField.Text()
+			if err != nil {
+				SaveScreenshotAndExit(wd, err)
+			}
+
+			Expect(featureFlagPanelText).To(Not(Equal("")))
 		}
 	})
 
