@@ -10,9 +10,9 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	"github.com/Azure/go-autorest/autorest/azure"
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/golang/mock/gomock"
-	azuretypes "github.com/openshift/installer/pkg/types/azure"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api/validate/dynamic"
@@ -101,7 +101,7 @@ func TestCheck(t *testing.T) {
 				},
 			}
 
-			err := sp.Check(ctx, azuretypes.PublicCloud.Name())
+			err := sp.Check(ctx, azure.PublicCloud.Name)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}

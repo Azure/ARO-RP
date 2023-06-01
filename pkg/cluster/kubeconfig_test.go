@@ -5,20 +5,18 @@ package cluster
 import (
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/pem"
+	"encoding/json"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/ghodss/yaml"
-	"github.com/openshift/installer/pkg/asset/kubeconfig"
-	"github.com/openshift/installer/pkg/asset/tls"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	"github.com/Azure/ARO-RP/pkg/util/installer"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 )
@@ -28,13 +26,19 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	b := x509.MarshalPKCS1PrivateKey(validCaKey)
-
-	ca := &tls.AdminKubeConfigSignerCertKey{
-		SelfSignedCertKey: tls.SelfSignedCertKey{
-			CertKey: tls.CertKey{
-				CertRaw: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: validCaCerts[0].Raw}),
-				KeyRaw:  pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: b}),
+	encodedKey, err := utilpem.Encode(validCaKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	encodedCert, err := utilpem.Encode(validCaCerts[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	ca := &installer.AdminKubeConfigSignerCertKey{
+		SelfSignedCertKey: installer.SelfSignedCertKey{
+			CertKey: installer.CertKey{
+				CertRaw: encodedCert,
+				KeyRaw:  encodedKey,
 			},
 		},
 	}
@@ -43,7 +47,7 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 	clusterName := "api-hash-rg-mydomain:6443"
 	serviceName := "system:aro-service"
 
-	adminInternalClient := &kubeconfig.AdminInternalClient{}
+	adminInternalClient := &installer.AdminInternalClient{}
 	adminInternalClient.Config = &clientcmdv1.Config{
 		Clusters: []clientcmdv1.NamedCluster{
 			{
@@ -69,10 +73,16 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 
 	pg := graph.PersistedGraph{}
 
-	err = pg.Set(ca, adminInternalClient)
+	caData, err := json.Marshal(ca)
 	if err != nil {
 		t.Fatal(err)
 	}
+	clientData, err := json.Marshal(adminInternalClient)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pg["*kubeconfig.AdminInternalClient"] = clientData
+	pg["*tls.AdminKubeConfigSignerCertKey"] = caData
 
 	m := &manager{}
 
@@ -82,18 +92,15 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 	}
 
 	var got *clientcmdv1.Config
-	err = yaml.Unmarshal(aroServiceInternalClient.File.Data, &got)
+	err = yaml.Unmarshal(aroServiceInternalClient, &got)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	innerpem := string(got.AuthInfos[0].AuthInfo.ClientCertificateData) + string(got.AuthInfos[0].AuthInfo.ClientKeyData)
-	innerkey, innercert, err := utilpem.Parse([]byte(innerpem))
+	_, innercert, err := utilpem.Parse([]byte(innerpem))
 	if err != nil {
 		t.Fatal(err)
-	}
-	if innerkey == nil {
-		t.Error("Client Key is invalid.")
 	}
 
 	// validate the result in 2 stages: first verify the key and certificate
@@ -140,13 +147,19 @@ func TestGenerateUserAdminKubeconfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	b := x509.MarshalPKCS1PrivateKey(validCaKey)
-
-	ca := &tls.AdminKubeConfigSignerCertKey{
-		SelfSignedCertKey: tls.SelfSignedCertKey{
-			CertKey: tls.CertKey{
-				CertRaw: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: validCaCerts[0].Raw}),
-				KeyRaw:  pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: b}),
+	encodedKey, err := utilpem.Encode(validCaKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	encodedCert, err := utilpem.Encode(validCaCerts[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	ca := &installer.AdminKubeConfigSignerCertKey{
+		SelfSignedCertKey: installer.SelfSignedCertKey{
+			CertKey: installer.CertKey{
+				CertRaw: encodedCert,
+				KeyRaw:  encodedKey,
 			},
 		},
 	}
@@ -155,7 +168,7 @@ func TestGenerateUserAdminKubeconfig(t *testing.T) {
 	clusterName := "api-hash-rg-mydomain:6443"
 	serviceName := "system:admin"
 
-	adminInternalClient := &kubeconfig.AdminInternalClient{}
+	adminInternalClient := &installer.AdminInternalClient{}
 	adminInternalClient.Config = &clientcmdv1.Config{
 		Clusters: []clientcmdv1.NamedCluster{
 			{
@@ -181,10 +194,16 @@ func TestGenerateUserAdminKubeconfig(t *testing.T) {
 
 	pg := graph.PersistedGraph{}
 
-	err = pg.Set(ca, adminInternalClient)
+	caData, err := json.Marshal(ca)
 	if err != nil {
 		t.Fatal(err)
 	}
+	clientData, err := json.Marshal(adminInternalClient)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pg["*kubeconfig.AdminInternalClient"] = clientData
+	pg["*tls.AdminKubeConfigSignerCertKey"] = caData
 
 	m := &manager{}
 
@@ -194,18 +213,15 @@ func TestGenerateUserAdminKubeconfig(t *testing.T) {
 	}
 
 	var got *clientcmdv1.Config
-	err = yaml.Unmarshal(aroServiceInternalClient.File.Data, &got)
+	err = yaml.Unmarshal(aroServiceInternalClient, &got)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	innerpem := string(got.AuthInfos[0].AuthInfo.ClientCertificateData) + string(got.AuthInfos[0].AuthInfo.ClientKeyData)
-	innerkey, innercert, err := utilpem.Parse([]byte(innerpem))
+	_, innercert, err := utilpem.Parse([]byte(innerpem))
 	if err != nil {
 		t.Fatal(err)
-	}
-	if innerkey == nil {
-		t.Error("Client Key is invalid.")
 	}
 
 	// validate the result in 2 stages: first verify the key and certificate
@@ -254,13 +270,19 @@ func TestCheckUserAdminKubeconfigUpdated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	b := x509.MarshalPKCS1PrivateKey(validCaKey)
-
-	ca := &tls.AdminKubeConfigSignerCertKey{
-		SelfSignedCertKey: tls.SelfSignedCertKey{
-			CertKey: tls.CertKey{
-				CertRaw: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: validCaCerts[0].Raw}),
-				KeyRaw:  pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: b}),
+	encodedKey, err := utilpem.Encode(validCaKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	encodedCert, err := utilpem.Encode(validCaCerts[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	ca := &installer.AdminKubeConfigSignerCertKey{
+		SelfSignedCertKey: installer.SelfSignedCertKey{
+			CertKey: installer.CertKey{
+				CertRaw: encodedCert,
+				KeyRaw:  encodedKey,
 			},
 		},
 	}
@@ -273,17 +295,17 @@ func TestCheckUserAdminKubeconfigUpdated(t *testing.T) {
 	}{
 		{
 			name:           "valid and updated",
-			validity:       tls.ValidityOneYear,
+			validity:       installer.OneYear,
 			expectedResult: true,
 		},
 		{
 			name:           "clientauth cert expires soon",
-			validity:       89 * tls.ValidityOneDay,
+			validity:       89 * 24 * time.Hour,
 			expectedResult: false,
 		},
 		{
 			name:     "url needs updating and cacert populated",
-			validity: tls.ValidityOneYear,
+			validity: installer.OneYear,
 			mutateConfig: func(c *clientcmdv1.Config) *clientcmdv1.Config {
 				c.Clusters[0].Cluster.Server = "https://api-int.hash.rg.mydomain:6443"
 				c.Clusters[0].Cluster.CertificateAuthorityData = []byte("unexpected content")
@@ -293,7 +315,7 @@ func TestCheckUserAdminKubeconfigUpdated(t *testing.T) {
 		},
 		{
 			name:     "empty client key",
-			validity: tls.ValidityOneYear,
+			validity: installer.OneYear,
 			mutateConfig: func(c *clientcmdv1.Config) *clientcmdv1.Config {
 				c.AuthInfos[0].AuthInfo.ClientKeyData = nil
 				return c
@@ -305,16 +327,24 @@ func TestCheckUserAdminKubeconfigUpdated(t *testing.T) {
 			clusterName := "api-hash-rg-mydomain:6443"
 			serviceName := "system:admin"
 
-			cfg := &tls.CertCfg{
+			cfg := &installer.CertCfg{
 				Subject:      pkix.Name{CommonName: serviceName, Organization: nil},
 				KeyUsages:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 				ExtKeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 				Validity:     tt.validity,
 			}
 
-			var clientCertKey tls.AdminKubeConfigClientCertKey
+			priv, cert, err := installer.GenerateSignedCertKey(cfg, ca)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-			err = clientCertKey.SignedCertKey.Generate(cfg, ca, strings.ReplaceAll(serviceName, ":", "-"), tls.DoNotAppendParent)
+			privPem, err := utilpem.Encode(priv)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			certPem, err := utilpem.Encode(cert)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -332,8 +362,8 @@ func TestCheckUserAdminKubeconfigUpdated(t *testing.T) {
 					{
 						Name: serviceName,
 						AuthInfo: clientcmdv1.AuthInfo{
-							ClientCertificateData: clientCertKey.CertRaw,
-							ClientKeyData:         clientCertKey.KeyRaw,
+							ClientCertificateData: certPem,
+							ClientKeyData:         privPem,
 						},
 					},
 				},

@@ -63,3 +63,29 @@ func Parse(b []byte) (key *rsa.PrivateKey, certs []*x509.Certificate, err error)
 
 	return key, certs, nil
 }
+
+func ParseFirstCertificate(b []byte) (*x509.Certificate, error) {
+	_, certs, err := Parse(b)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(certs) == 0 {
+		return nil, errors.New("unable to find certificate")
+	}
+
+	return certs[0], nil
+}
+
+func ParseFirstPrivateKey(b []byte) (*rsa.PrivateKey, error) {
+	key, _, err := Parse(b)
+	if err != nil {
+		return nil, err
+	}
+
+	if key == nil {
+		return nil, errors.New("unable to find key")
+	}
+
+	return key, nil
+}

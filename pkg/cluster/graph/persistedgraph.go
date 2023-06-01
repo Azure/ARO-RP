@@ -6,6 +6,7 @@ package graph
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"reflect"
 )
 
@@ -34,16 +35,16 @@ func (pg PersistedGraph) Get(disallowUnknownFields bool, is ...interface{}) erro
 	return nil
 }
 
-// Set is currently only used in unit test context.  If you want to use this in
-// production, you will want to be very sure that you are not losing state that
-// you may need later
-func (pg PersistedGraph) Set(is ...interface{}) (err error) {
-	for _, i := range is {
-		pg[reflect.TypeOf(i).String()], err = json.Marshal(i)
-		if err != nil {
-			return err
-		}
+func (pg PersistedGraph) GetByName(disallowUnknownFields bool, name string, out interface{}) error {
+	graphItem, ok := pg[name]
+	if !ok {
+		return fmt.Errorf("entry '%s' not found in persisted graph", name)
 	}
 
-	return nil
+	d := json.NewDecoder(bytes.NewReader(graphItem))
+	if disallowUnknownFields {
+		d.DisallowUnknownFields()
+	}
+
+	return d.Decode(out)
 }
