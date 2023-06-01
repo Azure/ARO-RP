@@ -38,6 +38,7 @@ func (options *GetDetectorOptions) toHeader() http.Header {
 // ListDetectorOptions includes options for ListDetector operation.
 type ListDetectorsOptions struct {
 	ResourceID string
+	Location   string
 }
 
 func (options *ListDetectorsOptions) toHeader() http.Header {

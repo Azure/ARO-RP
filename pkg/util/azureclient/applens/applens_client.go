@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"path"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
@@ -26,20 +27,16 @@ type Client struct {
 	pipeline runtime.Pipeline
 }
 
-// https://github.com/ShekharGupta1988/AppServiceDiagnosticsAPISample/blob/e75a5e2b91f45054c117abf94b2bb6ff6fd74da7/src/SampleAPIServer/Models/ResponseMessageCollectionEnvelope.cs#L17
-type ResponseMessageCollectionEnvelope struct {
-	Value    []interface{} `json:"value,omitempty"`
-	NextLink string        `json:"nextLink,omitempty"`
-	Id       string        `json:"id,omitempty"`
-}
-
-// https://github.com/ShekharGupta1988/AppServiceDiagnosticsAPISample/blob/e75a5e2b91f45054c117abf94b2bb6ff6fd74da7/src/SampleAPIServer/Models/ResponseMessageEnvelope.cs#L13
 type ResponseMessageEnvelope struct {
 	Id         string      `json:"id,omitempty"`
 	Name       string      `json:"name,omitempty"`
 	Type       string      `json:"type,omitempty"`
 	Location   string      `json:"location,omitempty"`
 	Properties interface{} `json:"properties,omitempty"`
+}
+
+type ResponseMessageCollectionEnvelope struct {
+	Value []ResponseMessageEnvelope `json:"value,omitempty"`
 }
 
 // Endpoint used to create the client.
@@ -95,7 +92,7 @@ func newPipeline(authPolicy []policy.Policy, options *ClientOptions, issuerUrlTe
 // o - Options for Read operation.
 func (c *Client) ListDetectors(
 	ctx context.Context,
-	o *ListDetectorsOptions) ([]byte, error) {
+	o *ListDetectorsOptions) (*ResponseMessageCollectionEnvelope, error) {
 	if o == nil {
 		o = &ListDetectorsOptions{}
 	}
@@ -110,19 +107,13 @@ func (c *Client) ListDetectors(
 
 	defer azResponse.Body.Close()
 
-	listJson, err := io.ReadAll(azResponse.Body)
+	bodyJson, err := io.ReadAll(azResponse.Body)
 
 	if err != nil {
 		return nil, err
 	}
 
-	envelope, err := newResponseMessageCollectionEnvelope(listJson, "", o.ResourceID)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return json.Marshal(envelope)
+	return newResponseMessageCollectionEnvelope(bodyJson, o.ResourceID, o.Location)
 }
 
 // GetDetector obtains detector information from AppLens.
@@ -130,7 +121,7 @@ func (c *Client) ListDetectors(
 // o - Options for Read operation.
 func (c *Client) GetDetector(
 	ctx context.Context,
-	o *GetDetectorOptions) ([]byte, error) {
+	o *GetDetectorOptions) (*ResponseMessageEnvelope, error) {
 	if o == nil {
 		o = &GetDetectorOptions{}
 	}
@@ -151,13 +142,7 @@ func (c *Client) GetDetector(
 		return nil, err
 	}
 
-	envelope, err := newResponseMessageEnvelope(o.ResourceID, o.DetectorID, "Microsoft.RedHatOpenShift/OpenShiftClusters/detectors", o.Location, detectorJson)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return json.Marshal(envelope)
+	return newResponseMessageEnvelope(o.ResourceID, o.DetectorID, o.Location, detectorJson)
 }
 
 func (c *Client) sendPostRequest(
@@ -208,22 +193,49 @@ func (c *Client) executeAndEnsureSuccessResponse(request *policy.Request) (*http
 	return nil, newAppLensError(response)
 }
 
-func newResponseMessageCollectionEnvelope(valueJson []byte, nextLink, collectionResourceId string) (*ResponseMessageCollectionEnvelope, error) {
-	var converted []interface{}
-	err := json.Unmarshal(valueJson, &converted)
+func newResponseMessageCollectionEnvelope(valueJson []byte, resourceID, location string) (*ResponseMessageCollectionEnvelope, error) {
+	var results []interface{}
+	err := json.Unmarshal(valueJson, &results)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return &ResponseMessageCollectionEnvelope{
-		Value:    converted,
-		NextLink: nextLink,
-		Id:       collectionResourceId,
-	}, nil
+	listResult := ResponseMessageCollectionEnvelope{}
+	for _, v := range results {
+		if id := getDetectorID(v); len(id) > 0 {
+			detector := ResponseMessageEnvelope{
+				Id:         path.Join(resourceID, "detectors", id),
+				Name:       id,
+				Location:   location,
+				Type:       "Microsoft.RedHatOpenShift/OpenShiftClusters/detectors",
+				Properties: v,
+			}
+			listResult.Value = append(listResult.Value, detector)
+		}
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &listResult, nil
 }
 
-func newResponseMessageEnvelope(id, name, _type, location string, propertiesJson []byte) (*ResponseMessageEnvelope, error) {
+func getDetectorID(detector interface{}) string {
+	if propertyMap, ok := detector.(map[string]interface{}); ok {
+		if metadataMap, ok := propertyMap["metadata"].(map[string]interface{}); ok {
+			if idObj, ok := metadataMap["id"]; ok {
+				if id, ok := idObj.(string); ok {
+					return id
+				}
+			}
+		}
+	}
+	return ""
+}
+
+func newResponseMessageEnvelope(resourceID, name, location string, propertiesJson []byte) (*ResponseMessageEnvelope, error) {
 	var converted interface{}
 	err := json.Unmarshal(propertiesJson, &converted)
 
@@ -232,9 +244,9 @@ func newResponseMessageEnvelope(id, name, _type, location string, propertiesJson
 	}
 
 	return &ResponseMessageEnvelope{
-		Id:         id,
+		Id:         path.Join(resourceID, "detectors", name),
 		Name:       name,
-		Type:       _type,
+		Type:       "Microsoft.RedHatOpenShift/OpenShiftClusters/detectors",
 		Location:   location,
 		Properties: converted,
 	}, nil
