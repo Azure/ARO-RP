@@ -40,15 +40,14 @@ func getAuth(key string) (*types.DockerAuthConfig, error) {
 }
 
 func mirror(ctx context.Context, log *logrus.Entry) error {
-	for _, key := range []string{
+	err := env.ValidateVars(
 		"DST_AUTH",
 		"DST_ACR_NAME",
 		"SRC_AUTH_QUAY",
-		"SRC_AUTH_REDHAT",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return fmt.Errorf("environment variable %q unset", key)
-		}
+		"SRC_AUTH_REDHAT")
+
+	if err != nil {
+		return err
 	}
 
 	env, err := env.NewCoreForCI(ctx, log)

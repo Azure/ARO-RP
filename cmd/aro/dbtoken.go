@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"os"
 
@@ -27,23 +26,13 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	for _, key := range []string{
-		"AZURE_GATEWAY_SERVICE_PRINCIPAL_ID",
-		"AZURE_DBTOKEN_CLIENT_ID",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return fmt.Errorf("environment variable %q unset", key)
-		}
+	if err := env.ValidateVars("AZURE_GATEWAY_SERVICE_PRINCIPAL_ID", "AZURE_DBTOKEN_CLIENT_ID"); err != nil {
+		return err
 	}
 
 	if !_env.IsLocalDevelopmentMode() {
-		for _, key := range []string{
-			"MDM_ACCOUNT",
-			"MDM_NAMESPACE",
-		} {
-			if _, found := os.LookupEnv(key); !found {
-				return fmt.Errorf("environment variable %q unset", key)
-			}
+		if err := env.ValidateVars("MDM_ACCOUNT", "MDM_NAMESPACE"); err != nil {
+			return err
 		}
 	}
 
@@ -66,33 +55,39 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 
 	go g.Run()
 
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer)
+	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+		return err
+	}
+
+	dbAccountName := os.Getenv(DatabaseAccountName)
+
+	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer, dbAccountName)
 	if err != nil {
 		return err
 	}
 
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, m, nil)
+	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, m, nil, dbAccountName)
 	if err != nil {
 		return err
 	}
 
-	dbid, err := database.Name(_env.IsLocalDevelopmentMode())
+	dbName, err := DBName(_env.IsLocalDevelopmentMode())
 	if err != nil {
 		return err
 	}
 
-	userc := cosmosdb.NewUserClient(dbc, dbid)
+	userc := cosmosdb.NewUserClient(dbc, dbName)
 
-	err = pkgdbtoken.ConfigurePermissions(ctx, dbid, userc)
+	err = pkgdbtoken.ConfigurePermissions(ctx, dbName, userc)
 	if err != nil {
 		return err
 	}
 
-	dbtokenKeyvaultURI, err := keyvault.URI(_env, env.DBTokenKeyvaultSuffix)
-	if err != nil {
+	if err := env.ValidateVars(KeyVaultPrefix); err != nil {
 		return err
 	}
-
+	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
+	dbtokenKeyvaultURI := keyvault.URI(_env, env.DBTokenKeyvaultSuffix, keyVaultPrefix)
 	dbtokenKeyvault := keyvault.NewManager(msiKVAuthorizer, dbtokenKeyvaultURI)
 
 	servingKey, servingCerts, err := dbtokenKeyvault.GetCertificateSecret(ctx, env.DBTokenServerSecretName)

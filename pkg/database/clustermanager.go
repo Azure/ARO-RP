@@ -36,13 +36,8 @@ type ClusterManagerConfigurations interface {
 	NewUUID() string
 }
 
-func NewClusterManagerConfigurations(ctx context.Context, isDevelopmentMode bool, dbc cosmosdb.DatabaseClient) (ClusterManagerConfigurations, error) {
-	dbid, err := Name(isDevelopmentMode)
-	if err != nil {
-		return nil, err
-	}
-
-	collc := cosmosdb.NewCollectionClient(dbc, dbid)
+func NewClusterManagerConfigurations(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string) (ClusterManagerConfigurations, error) {
+	collc := cosmosdb.NewCollectionClient(dbc, dbName)
 
 	documentClient := cosmosdb.NewClusterManagerConfigurationDocumentClient(collc, collClusterManager)
 	return NewClusterManagerConfigurationsWithProvidedClient(documentClient, collc, uuid.DefaultGenerator.Generate(), uuid.DefaultGenerator), nil

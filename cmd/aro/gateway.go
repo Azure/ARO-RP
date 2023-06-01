@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"strings"
@@ -29,12 +28,8 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	for _, key := range []string{
-		"AZURE_DBTOKEN_CLIENT_ID",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return fmt.Errorf("environment variable %q unset", key)
-		}
+	if err = env.ValidateVars("AZURE_DBTOKEN_CLIENT_ID"); err != nil {
+		return err
 	}
 
 	m := statsd.New(ctx, log.WithField("component", "gateway"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
@@ -46,7 +41,10 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 
 	go g.Run()
 
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, nil, m, nil)
+	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+		return err
+	}
+	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, nil, m, nil, os.Getenv(DatabaseAccountName))
 	if err != nil {
 		return err
 	}
@@ -71,12 +69,18 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	dbRefresher, err := pkgdbtoken.NewRefresher(log, _env, msiRefresherAuthorizer, insecureSkipVerify, dbc, "gateway", m, "gateway")
+	url, err := getURL(_env.IsLocalDevelopmentMode())
+	if err != nil {
+		return err
+	}
+	dbRefresher := pkgdbtoken.NewRefresher(log, _env, msiRefresherAuthorizer, insecureSkipVerify, dbc, "gateway", m, "gateway", url)
+
+	dbName, err := DBName(_env.IsLocalDevelopmentMode())
 	if err != nil {
 		return err
 	}
 
-	dbGateway, err := database.NewGateway(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	dbGateway, err := database.NewGateway(ctx, dbc, dbName)
 	if err != nil {
 		return err
 	}
@@ -125,4 +129,16 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 	<-done
 
 	return nil
+}
+
+func getURL(isLocalDevelopmentMode bool) (string, error) {
+	if isLocalDevelopmentMode {
+		return "https://localhost:8445", nil
+	}
+
+	if err := env.ValidateVars(DBTokenUrl); err != nil {
+		return "", err
+	}
+
+	return os.Getenv(DBTokenUrl), nil
 }

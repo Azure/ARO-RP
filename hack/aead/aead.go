@@ -21,6 +21,10 @@ import (
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
+const (
+	KeyVaultPrefix = "KEYVAULT_PREFIX"
+)
+
 func run(ctx context.Context, log *logrus.Entry) error {
 	fileName := flag.String("file", "-", "File to read. '-' for stdin.")
 
@@ -56,11 +60,11 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	serviceKeyvaultURI, err := keyvault.URI(_env, env.ServiceKeyvaultSuffix)
-	if err != nil {
+	if err := env.ValidateVars(KeyVaultPrefix); err != nil {
 		return err
 	}
-
+	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
+	serviceKeyvaultURI := keyvault.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
 	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
 
 	aead, err := encryption.NewMulti(ctx, serviceKeyvault, env.EncryptionSecretV2Name, env.EncryptionSecretName)

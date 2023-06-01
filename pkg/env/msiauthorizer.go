@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/jongio/azidext/go/azidext"
@@ -21,30 +20,31 @@ const (
 )
 
 func (c *core) NewMSIAuthorizer(msiContext MSIContext, scopes ...string) (autorest.Authorizer, error) {
-	var tokenCredential azcore.TokenCredential
-	var err error
-
 	if !c.IsLocalDevelopmentMode() {
 		options := c.Environment().ManagedIdentityCredentialOptions()
-		tokenCredential, err = azidentity.NewManagedIdentityCredential(options)
-	} else {
-		for _, key := range []string{
-			"AZURE_" + string(msiContext) + "_CLIENT_ID",
-			"AZURE_" + string(msiContext) + "_CLIENT_SECRET",
-			"AZURE_TENANT_ID",
-		} {
-			if _, found := os.LookupEnv(key); !found {
-				return nil, fmt.Errorf("environment variable %q unset (development mode)", key)
-			}
+		tokenCredential, err := azidentity.NewManagedIdentityCredential(options)
+		if err != nil {
+			return nil, err
 		}
 
-		options := c.Environment().ClientSecretCredentialOptions()
-		tokenCredential, err = azidentity.NewClientSecretCredential(
-			os.Getenv("AZURE_TENANT_ID"),
-			os.Getenv("AZURE_"+string(msiContext)+"_CLIENT_ID"),
-			os.Getenv("AZURE_"+string(msiContext)+"_CLIENT_SECRET"),
-			options)
+		return azidext.NewTokenCredentialAdapter(tokenCredential, scopes), nil
 	}
+
+	tenantIdKey := "AZURE_TENANT_ID"
+	azureClientIdKey := "AZURE_" + string(msiContext) + "_CLIENT_ID"
+	azureClientSecretKey := "AZURE_" + string(msiContext) + "_CLIENT_SECRET"
+
+	if err := ValidateVars(azureClientIdKey, azureClientSecretKey, tenantIdKey); err != nil {
+		return nil, fmt.Errorf("%v (development mode)", err.Error())
+	}
+
+	tenantId := os.Getenv(tenantIdKey)
+	azureClientId := os.Getenv(azureClientIdKey)
+	azureClientSecret := os.Getenv(azureClientSecretKey)
+
+	options := c.Environment().ClientSecretCredentialOptions()
+
+	tokenCredential, err := azidentity.NewClientSecretCredential(tenantId, azureClientId, azureClientSecret, options)
 	if err != nil {
 		return nil, err
 	}

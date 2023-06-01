@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 
 	"github.com/Azure/go-autorest/autorest"
 
@@ -31,20 +30,7 @@ type client struct {
 	url        string
 }
 
-func NewClient(env env.Core, authorizer autorest.Authorizer, insecureSkipVerify bool) (Client, error) {
-	url := "https://localhost:8445"
-	if !env.IsLocalDevelopmentMode() {
-		for _, key := range []string{
-			"DBTOKEN_URL",
-		} {
-			if _, found := os.LookupEnv(key); !found {
-				return nil, fmt.Errorf("environment variable %q unset", key)
-			}
-		}
-
-		url = os.Getenv("DBTOKEN_URL")
-	}
-
+func NewClient(_env env.Core, authorizer autorest.Authorizer, insecureSkipVerify bool, url string) Client {
 	return &client{
 		c: &http.Client{
 			Transport: &http.Transport{
@@ -57,7 +43,7 @@ func NewClient(env env.Core, authorizer autorest.Authorizer, insecureSkipVerify 
 		},
 		authorizer: authorizer,
 		url:        url,
-	}, nil
+	}
 }
 
 func (c *client) Token(ctx context.Context, permission string) (string, error) {

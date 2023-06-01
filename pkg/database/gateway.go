@@ -27,13 +27,8 @@ type Gateway interface {
 	NewUUID() string
 }
 
-func NewGateway(ctx context.Context, isDevelopmentMode bool, dbc cosmosdb.DatabaseClient) (Gateway, error) {
-	dbid, err := Name(isDevelopmentMode)
-	if err != nil {
-		return nil, err
-	}
-
-	collc := cosmosdb.NewCollectionClient(dbc, dbid)
+func NewGateway(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string) (Gateway, error) {
+	collc := cosmosdb.NewCollectionClient(dbc, dbName)
 
 	documentClient := cosmosdb.NewGatewayDocumentClient(collc, collGateway)
 	return NewGatewayWithProvidedClient(documentClient, uuid.DefaultGenerator), nil

@@ -18,17 +18,17 @@ import (
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
+const (
+	Cluster = "CLUSTER"
+)
+
 func run(ctx context.Context, log *logrus.Entry) error {
 	if len(os.Args) != 2 {
 		return fmt.Errorf("usage: CLUSTER=x %s {create,delete}", os.Args[0])
 	}
 
-	for _, key := range []string{
-		"CLUSTER",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return fmt.Errorf("environment variable %q unset", key)
-		}
+	if err := env.ValidateVars(Cluster); err != nil {
+		return err
 	}
 
 	env, err := env.NewCore(ctx, log)
@@ -38,9 +38,9 @@ func run(ctx context.Context, log *logrus.Entry) error {
 
 	vnetResourceGroup := os.Getenv("RESOURCEGROUP") // TODO: remove this when we deploy and peer a vnet per cluster create
 	if os.Getenv("CI") != "" {
-		vnetResourceGroup = os.Getenv("CLUSTER")
+		vnetResourceGroup = os.Getenv(Cluster)
 	}
-	clusterName := os.Getenv("CLUSTER")
+	clusterName := os.Getenv(Cluster)
 
 	c, err := cluster.New(log, env, os.Getenv("CI") != "")
 	if err != nil {

@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
+	"fmt"
 	"net"
 	"os"
 	"strings"
@@ -55,6 +56,7 @@ const (
 	PortalKeyvaultSuffix             = "-por"
 	ServiceKeyvaultSuffix            = "-svc"
 	RPPrivateEndpointPrefix          = "rp-pe-"
+	ProxyHostName                    = "PROXY_HOSTNAME"
 )
 
 // Interface is clunky and somewhat legacy and only used in the RP codebase (not
@@ -100,6 +102,9 @@ type Interface interface {
 
 func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
 	if IsLocalDevelopmentMode() {
+		if err := ValidateVars(ProxyHostName); err != nil {
+			return nil, err
+		}
 		return newDev(ctx, log)
 	}
 
@@ -112,4 +117,16 @@ func IsLocalDevelopmentMode() bool {
 
 func IsCI() bool {
 	return strings.EqualFold(os.Getenv("CI"), "true")
+}
+
+// ValidateVars iterates over all the elements of vars and
+// if it does not exist an environment variable with that name, it will return an error.
+// Otherwise it returns nil.
+func ValidateVars(vars ...string) error {
+	for _, v := range vars {
+		if _, found := os.LookupEnv(v); !found {
+			return fmt.Errorf("environment variable %q unset", v)
+		}
+	}
+	return nil
 }

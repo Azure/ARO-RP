@@ -28,13 +28,8 @@ type Portal interface {
 }
 
 // NewPortal returns a new Portal
-func NewPortal(ctx context.Context, isLocalDevelopmentMode bool, dbc cosmosdb.DatabaseClient) (Portal, error) {
-	dbid, err := Name(isLocalDevelopmentMode)
-	if err != nil {
-		return nil, err
-	}
-
-	collc := cosmosdb.NewCollectionClient(dbc, dbid)
+func NewPortal(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string) (Portal, error) {
+	collc := cosmosdb.NewCollectionClient(dbc, dbName)
 
 	documentClient := cosmosdb.NewPortalDocumentClient(collc, collPortal)
 	return NewPortalWithProvidedClient(documentClient, uuid.DefaultGenerator), nil

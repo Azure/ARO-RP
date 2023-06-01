@@ -33,13 +33,8 @@ type Subscriptions interface {
 }
 
 // NewSubscriptions returns a new Subscriptions
-func NewSubscriptions(ctx context.Context, isLocalDevelopmentMode bool, dbc cosmosdb.DatabaseClient) (Subscriptions, error) {
-	dbid, err := Name(isLocalDevelopmentMode)
-	if err != nil {
-		return nil, err
-	}
-
-	collc := cosmosdb.NewCollectionClient(dbc, dbid)
+func NewSubscriptions(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string) (Subscriptions, error) {
+	collc := cosmosdb.NewCollectionClient(dbc, dbName)
 
 	triggers := []*cosmosdb.Trigger{
 		{

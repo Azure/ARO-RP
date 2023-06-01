@@ -6,9 +6,7 @@ package database
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"net/http"
-	"os"
 	"reflect"
 	"time"
 
@@ -37,15 +35,7 @@ const (
 	collSubscriptions     = "Subscriptions"
 )
 
-func NewDatabaseClient(log *logrus.Entry, env env.Core, authorizer cosmosdb.Authorizer, m metrics.Emitter, aead encryption.AEAD) (cosmosdb.DatabaseClient, error) {
-	for _, key := range []string{
-		"DATABASE_ACCOUNT_NAME",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return nil, fmt.Errorf("environment variable %q unset", key)
-		}
-	}
-
+func NewDatabaseClient(log *logrus.Entry, _env env.Core, authorizer cosmosdb.Authorizer, m metrics.Emitter, aead encryption.AEAD, databaseAccountName string) (cosmosdb.DatabaseClient, error) {
 	h, err := NewJSONHandle(aead)
 	if err != nil {
 		return nil, err
@@ -60,21 +50,13 @@ func NewDatabaseClient(log *logrus.Entry, env env.Core, authorizer cosmosdb.Auth
 		Timeout: 30 * time.Second,
 	}
 
-	return cosmosdb.NewDatabaseClient(log, c, h, os.Getenv("DATABASE_ACCOUNT_NAME")+"."+env.Environment().CosmosDBDNSSuffix, authorizer), nil
+	return cosmosdb.NewDatabaseClient(log, c, h, databaseAccountName+"."+_env.Environment().CosmosDBDNSSuffix, authorizer), nil
 }
 
-func NewMasterKeyAuthorizer(ctx context.Context, _env env.Core, msiAuthorizer autorest.Authorizer) (cosmosdb.Authorizer, error) {
-	for _, key := range []string{
-		"DATABASE_ACCOUNT_NAME",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return nil, fmt.Errorf("environment variable %q unset", key)
-		}
-	}
-
+func NewMasterKeyAuthorizer(ctx context.Context, _env env.Core, msiAuthorizer autorest.Authorizer, databaseAccountName string) (cosmosdb.Authorizer, error) {
 	databaseaccounts := documentdb.NewDatabaseAccountsClient(_env.Environment(), _env.SubscriptionID(), msiAuthorizer)
 
-	keys, err := databaseaccounts.ListKeys(ctx, _env.ResourceGroup(), os.Getenv("DATABASE_ACCOUNT_NAME"))
+	keys, err := databaseaccounts.ListKeys(ctx, _env.ResourceGroup(), databaseAccountName)
 	if err != nil {
 		return nil, err
 	}
@@ -106,20 +88,4 @@ func NewJSONHandle(aead encryption.AEAD) (*codec.JsonHandle, error) {
 	}
 
 	return h, nil
-}
-
-func Name(isLocalDevelopmentMode bool) (string, error) {
-	if !isLocalDevelopmentMode {
-		return "ARO", nil
-	}
-
-	for _, key := range []string{
-		"DATABASE_NAME",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return "", fmt.Errorf("environment variable %q unset (development mode)", key)
-		}
-	}
-
-	return os.Getenv("DATABASE_NAME"), nil
 }
