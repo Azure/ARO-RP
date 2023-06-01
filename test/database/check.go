@@ -25,6 +25,7 @@ type Checker struct {
 	portalDocuments           []*api.PortalDocument
 	gatewayDocuments          []*api.GatewayDocument
 	openShiftVersionDocuments []*api.OpenShiftVersionDocument
+	validationResult          []*api.ValidationResult
 }
 
 func NewChecker() *Checker {
@@ -105,6 +106,17 @@ func (f *Checker) AddOpenShiftVersionDocuments(docs ...*api.OpenShiftVersionDocu
 		}
 
 		f.openShiftVersionDocuments = append(f.openShiftVersionDocuments, docCopy.(*api.OpenShiftVersionDocument))
+	}
+}
+
+func (f *Checker) AddValidationResult(docs ...*api.ValidationResult) {
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.validationResult = append(f.validationResult, docCopy.(*api.ValidationResult))
 	}
 }
 

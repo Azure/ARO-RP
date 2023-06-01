@@ -192,3 +192,7 @@ func (i *fakeOpenShiftClustersQueueLengthIterator) Continuation() string {
 func GetResourcePath(subscriptionID string, resourceID string) string {
 	return fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s", subscriptionID, resourceID)
 }
+
+func GetPreflightPath(subscriptionID string, deploymentID string) string {
+	return fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/deployments/%s/preflight", subscriptionID, deploymentID)
+}

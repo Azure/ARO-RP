@@ -178,7 +178,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	f.systemDataClusterDocEnricher(doc, systemData)
 
 	if isCreate {
-		err = f.validateInstallVersion(ctx, doc)
+		err = f.validateInstallVersion(ctx, doc.OpenShiftCluster)
 		if err != nil {
 			return nil, err
 		}
