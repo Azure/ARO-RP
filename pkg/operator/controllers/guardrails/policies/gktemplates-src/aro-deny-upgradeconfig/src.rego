@@ -3,7 +3,6 @@ package arodenyupgradeconfig
 import data.lib.common.is_exempted_account
 import future.keywords.in
 
-
 # Use object
 # To retrieve from a different resource, data.inventory.namespace["openshift-managed-upgrade-operator"]["v1"]["ConfigMap"]["managed-upgrade-operator-config"]["data"]["config.yaml"]
 violation[{"msg": msg}] {
