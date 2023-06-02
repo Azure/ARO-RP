@@ -199,7 +199,8 @@
             "type": "string"
         },
         "useCheckAccess": {
-            "type": "string"
+            "type": "string",
+            "defaultValue": ""
         },
         "vmSize": {
             "type": "string",
