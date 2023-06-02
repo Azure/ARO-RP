@@ -942,15 +942,6 @@ github.com/openshift/cluster-api-provider-ovirt/pkg/apis/ovirtprovider/v1beta1
 # github.com/openshift/console-operator v0.0.0-20220407014945-45d37e70e0c2 => github.com/openshift/console-operator v0.0.0-20220318130441-e44516b9c315
 ## explicit; go 1.16
 github.com/openshift/console-operator/pkg/api
-# github.com/openshift/hive v1.1.16 => github.com/openshift/hive v1.1.17-0.20220719141355-c63c9b0281d8
-## explicit; go 1.18
-github.com/openshift/hive/pkg/client/clientset/versioned
-github.com/openshift/hive/pkg/client/clientset/versioned/fake
-github.com/openshift/hive/pkg/client/clientset/versioned/scheme
-github.com/openshift/hive/pkg/client/clientset/versioned/typed/hive/v1
-github.com/openshift/hive/pkg/client/clientset/versioned/typed/hive/v1/fake
-github.com/openshift/hive/pkg/client/clientset/versioned/typed/hiveinternal/v1alpha1
-github.com/openshift/hive/pkg/client/clientset/versioned/typed/hiveinternal/v1alpha1/fake
 # github.com/openshift/hive/apis v0.0.0 => github.com/openshift/hive/apis v0.0.0-20220719141355-c63c9b0281d8
 ## explicit; go 1.18
 github.com/openshift/hive/apis/hive/v1
@@ -966,7 +957,6 @@ github.com/openshift/hive/apis/hive/v1/none
 github.com/openshift/hive/apis/hive/v1/openstack
 github.com/openshift/hive/apis/hive/v1/ovirt
 github.com/openshift/hive/apis/hive/v1/vsphere
-github.com/openshift/hive/apis/hiveinternal/v1alpha1
 github.com/openshift/hive/apis/scheme
 # github.com/openshift/installer v0.16.1 => github.com/jewzaam/installer-aro v0.9.0-master.0.20220524230743-7e2aa7a0cc1a
 ## explicit; go 1.17
@@ -1194,6 +1184,8 @@ github.com/stefanberger/go-pkcs11uri
 # github.com/stoewer/go-strcase v1.2.0
 ## explicit; go 1.11
 github.com/stoewer/go-strcase
+# github.com/stretchr/objx v0.3.0
+## explicit; go 1.12
 # github.com/stretchr/testify v1.7.1
 ## explicit; go 1.13
 github.com/stretchr/testify/assert
@@ -1297,6 +1289,8 @@ go.starlark.net/resolve
 go.starlark.net/starlark
 go.starlark.net/starlarkstruct
 go.starlark.net/syntax
+# go.uber.org/atomic v1.8.0
+## explicit; go 1.13
 # golang.org/x/crypto v0.9.0
 ## explicit; go 1.17
 golang.org/x/crypto/bcrypt

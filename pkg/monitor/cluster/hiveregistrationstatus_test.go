@@ -10,14 +10,14 @@ import (
 
 	"github.com/golang/mock/gomock"
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
-	hiveclient "github.com/openshift/hive/pkg/client/clientset/versioned"
-	hivefake "github.com/openshift/hive/pkg/client/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/hive"
@@ -87,13 +87,13 @@ func TestEmitHiveRegistrationStatus(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			var hiveclient hiveclient.Interface
+			var hiveclient client.Client
 			if tt.withClient {
-				fakeclient := hivefake.NewSimpleClientset()
+				fakeclient := fakeclient.NewClientBuilder()
 				if tt.cd != nil {
-					fakeclient.Tracker().Add(tt.cd)
+					fakeclient = fakeclient.WithRuntimeObjects(tt.cd)
 				}
-				hiveclient = fakeclient
+				hiveclient = fakeclient.Build()
 			}
 
 			logger, hook := test.NewNullLogger()
@@ -136,13 +136,13 @@ func TestRetrieveClusterDeployment(t *testing.T) {
 		wantErr: fmt.Sprintf("clusterdeployments.hive.openshift.io %q not found", hive.ClusterDeploymentName),
 	}} {
 		t.Run(tt.name, func(t *testing.T) {
-			fakeclient := hivefake.NewSimpleClientset()
+			fakeclient := fakeclient.NewClientBuilder()
 			if tt.cd != nil {
-				fakeclient.Tracker().Add(tt.cd)
+				fakeclient = fakeclient.WithRuntimeObjects(tt.cd)
 			}
 
 			mon := &Monitor{
-				hiveclientset: fakeclient,
+				hiveclientset: fakeclient.Build(),
 				oc: &api.OpenShiftCluster{
 					Name: "testcluster",
 					Properties: api.OpenShiftClusterProperties{
