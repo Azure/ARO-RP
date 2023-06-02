@@ -41,6 +41,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		vnetResourceGroup = os.Getenv("CLUSTER")
 	}
 	clusterName := os.Getenv("CLUSTER")
+
 	osClusterVersion := os.Getenv("OS_CLUSTER_VERSION")
 
 	c, err := cluster.New(log, env, os.Getenv("CI") != "")
