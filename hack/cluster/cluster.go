@@ -41,6 +41,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		vnetResourceGroup = os.Getenv("CLUSTER")
 	}
 	clusterName := os.Getenv("CLUSTER")
+	osClusterVersion := os.Getenv("OS_CLUSTER_VERSION")
 
 	c, err := cluster.New(log, env, os.Getenv("CI") != "")
 	if err != nil {
@@ -49,7 +50,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 
 	switch strings.ToLower(os.Args[1]) {
 	case "create":
-		return c.Create(ctx, vnetResourceGroup, clusterName)
+		return c.Create(ctx, vnetResourceGroup, clusterName, osClusterVersion)
 	case "delete":
 		return c.Delete(ctx, vnetResourceGroup, clusterName)
 	default:
