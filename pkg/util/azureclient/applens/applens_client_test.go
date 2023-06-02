@@ -309,7 +309,7 @@ func TestListDetectors(t *testing.T) {
 		t.Error("Expected detector Name does not match")
 	}
 
-	if detectors.Value[0].Type != "Microsoft.RedHatOpenShift/OpenShiftClusters/detectors" {
+	if detectors.Value[0].Type != "Microsoft.RedHatOpenShift/openShiftClusters/detectors" {
 		t.Error("Expected detector Name does not match")
 	}
 
@@ -372,7 +372,7 @@ func TestListDetectorAroAuthHealth(t *testing.T) {
 		t.Error("Expected name of detector does not match")
 	}
 
-	if detector.Type != "Microsoft.RedHatOpenShift/OpenShiftClusters/detectors" {
+	if detector.Type != "Microsoft.RedHatOpenShift/openShiftClusters/detectors" {
 		t.Error("Expected type of detector does not match")
 	}
 

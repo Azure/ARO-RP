@@ -208,15 +208,11 @@ func newResponseMessageCollectionEnvelope(valueJson []byte, resourceID, location
 				Id:         path.Join(resourceID, "detectors", id),
 				Name:       id,
 				Location:   location,
-				Type:       "Microsoft.RedHatOpenShift/OpenShiftClusters/detectors",
+				Type:       "Microsoft.RedHatOpenShift/openShiftClusters/detectors",
 				Properties: v,
 			}
 			listResult.Value = append(listResult.Value, detector)
 		}
-	}
-
-	if err != nil {
-		return nil, err
 	}
 
 	return &listResult, nil
@@ -246,7 +242,7 @@ func newResponseMessageEnvelope(resourceID, name, location string, propertiesJso
 	return &ResponseMessageEnvelope{
 		Id:         path.Join(resourceID, "detectors", name),
 		Name:       name,
-		Type:       "Microsoft.RedHatOpenShift/OpenShiftClusters/detectors",
+		Type:       "Microsoft.RedHatOpenShift/openShiftClusters/detectors",
 		Location:   location,
 		Properties: converted,
 	}, nil
