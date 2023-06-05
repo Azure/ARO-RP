@@ -126,7 +126,7 @@ type ServicePrincipalProfile struct {
 	ClientSecret string `json:"clientSecret,omitempty" mutable:"true"`
 }
 
-// OutboundType represents the type of routing a cluster is using.
+// The outbound routing strategy used to provide your cluster egress to the internet.
 type OutboundType string
 
 // OutboundType constants.

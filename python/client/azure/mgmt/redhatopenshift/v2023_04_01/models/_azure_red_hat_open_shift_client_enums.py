@@ -43,7 +43,7 @@ class FipsValidatedModules(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
     ENABLED = "Enabled"
 
 class OutboundType(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
-    """OutboundType represents the type of routing a cluster is using.
+    """The outbound routing strategy used to provide your cluster egress to the internet.
     """
 
     LOADBALANCER = "Loadbalancer"
