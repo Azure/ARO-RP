@@ -161,10 +161,18 @@ func (d *deployer) getParameters(ps map[string]interface{}) *arm.Parameters {
 }
 
 func (d *deployer) deploy(ctx context.Context, rgName, deploymentName, vmssName string, deployment mgmtfeatures.Deployment) (err error) {
-	for i := 0; i < 3; i++ {
+	numAttempts := 3
+
+	for i := 0; i < numAttempts; i++ {
 		d.log.Printf("deploying %s", deploymentName)
 		err = d.deployments.CreateOrUpdateAndWait(ctx, rgName, deploymentName, deployment)
 		serviceErr, isServiceError := err.(*azure.ServiceError)
+
+		// As long as this is not the final deployment attempt,
+		// unconditionally log the error before inspecting it.
+		if err != nil && i < numAttempts-1 {
+			d.log.Print(err)
+		}
 
 		// Check for a known error that we know how to handle.
 		if isServiceError {
@@ -181,7 +189,7 @@ func (d *deployer) deploy(ctx context.Context, rgName, deploymentName, vmssName 
 			// Retry once, and only if this error is encountered on the first
 			// deployment attempt.
 			if errorType == KnownDeploymentErrorTypeRPLBNotFound {
-				d.log.Print(err)
+				d.log.Printf("Deployment encountered known ResourceNotFound error for RP LB; retrying.")
 				continue
 			}
 		}
