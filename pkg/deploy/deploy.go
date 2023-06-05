@@ -189,7 +189,7 @@ func (d *deployer) deploy(ctx context.Context, rgName, deploymentName, vmssName 
 			// Retry once, and only if this error is encountered on the first
 			// deployment attempt.
 			if errorType == KnownDeploymentErrorTypeRPLBNotFound {
-				d.log.Printf("Deployment encountered known ResourceNotFound error for RP LB; retrying.")
+				d.log.Print("Deployment encountered known ResourceNotFound error for RP LB; retrying.")
 				continue
 			}
 		}
