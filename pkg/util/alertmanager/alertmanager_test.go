@@ -1,38 +1,45 @@
 package alertmanager_test
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/prometheus/common/model"
-	"github.com/sirupsen/logrus"
-	"k8s.io/client-go/rest"
 
-	"github.com/Azure/ARO-RP/pkg/util/alertmanager"
+	mock_alertmanager "github.com/Azure/ARO-RP/pkg/util/mocks/alertmanager"
+)
+
+const (
+	alertmanagerService = "http://alertmanager-main.openshift-monitoring.svc:9093/api/v2/alerts"
 )
 
 func TestAlertManager_FetchPrometheusAlerts(t *testing.T) {
+	ctx := context.Background()
+	var alerts []model.Alert
 
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		mockResponse := `[{"labels": {"alertname": "TestingAlert"}, "annotations": {"summary": "Testing summary"}}]`
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(mockResponse))
 	}))
 	defer mockServer.Close()
 
-	mockConfig := &rest.Config{}
-	mockLog := logrus.NewEntry(logrus.New())
+	controller := gomock.NewController(t)
+	defer controller.Finish()
 
-	am := alertmanager.NewAlertManager(mockConfig, mockLog)
+	mockAlertManagerClient := mock_alertmanager.NewMockAlertManager(controller)
 
-	alertmanagerService := mockServer.URL + "/api/v2/alerts"
-
-	alerts, err := am.FetchPrometheusAlerts(context.Background(), alertmanagerService)
-	if err != nil {
-		t.Fatalf("Error fetching alerts: %v", err)
+	alerts = []model.Alert{
+		{
+			Labels:      model.LabelSet{"alertname": "TestAlert"},
+			Annotations: model.LabelSet{"summary": "Test summary"},
+		},
 	}
 
 	expectedAlerts := []model.Alert{
@@ -41,6 +48,9 @@ func TestAlertManager_FetchPrometheusAlerts(t *testing.T) {
 			Annotations: model.LabelSet{"summary": "Test summary"},
 		},
 	}
+
+	mockAlertManagerClient.EXPECT().FetchPrometheusAlerts(ctx, alertmanagerService).AnyTimes().Return(alerts, nil)
+
 	if len(alerts) != len(expectedAlerts) {
 		t.Fatalf("Expected %d alerts, got %d", len(expectedAlerts), len(alerts))
 	}

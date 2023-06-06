@@ -16,7 +16,7 @@ import (
 	"github.com/prometheus/common/model"
 	"github.com/sirupsen/logrus"
 
-	mockAlertManager "github.com/Azure/ARO-RP/pkg/util/mocks/alertmanager"
+	mock_alertmanager "github.com/Azure/ARO-RP/pkg/util/mocks/alertmanager"
 )
 
 func TestFiringAlerts(t *testing.T) {
@@ -95,7 +95,7 @@ func TestFiringAlerts(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			mockAlertManagerClient := mockAlertManager.NewMockAlertManager(controller)
+			mockAlertManagerClient := mock_alertmanager.NewMockAlertManager(controller)
 
 			mockAlertManagerClient.EXPECT().FetchPrometheusAlerts(ctx, alertmanagerService).AnyTimes().Return(tt.returedData, tt.errorExpected)
 
@@ -107,6 +107,7 @@ func TestFiringAlerts(t *testing.T) {
 			c := &client{fetcher: rf, log: entry}
 
 			alerts, err := c.GetOpenShiftFiringAlerts(ctx)
+
 			if err != nil && !strings.EqualFold(tt.errorExpected.Error(), err.Error()) {
 				t.Error(err)
 				return
