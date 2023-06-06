@@ -36,16 +36,16 @@ func (m *MockAlertManager) EXPECT() *MockAlertManagerMockRecorder {
 }
 
 // FetchPrometheusAlerts mocks base method.
-func (m *MockAlertManager) FetchPrometheusAlerts(arg0 context.Context) ([]model.Alert, error) {
+func (m *MockAlertManager) FetchPrometheusAlerts(arg0 context.Context, arg1 string) ([]model.Alert, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FetchPrometheusAlerts", arg0)
+	ret := m.ctrl.Call(m, "FetchPrometheusAlerts", arg0, arg1)
 	ret0, _ := ret[0].([]model.Alert)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // FetchPrometheusAlerts indicates an expected call of FetchPrometheusAlerts.
-func (mr *MockAlertManagerMockRecorder) FetchPrometheusAlerts(arg0 interface{}) *gomock.Call {
+func (mr *MockAlertManagerMockRecorder) FetchPrometheusAlerts(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchPrometheusAlerts", reflect.TypeOf((*MockAlertManager)(nil).FetchPrometheusAlerts), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchPrometheusAlerts", reflect.TypeOf((*MockAlertManager)(nil).FetchPrometheusAlerts), arg0, arg1)
 }

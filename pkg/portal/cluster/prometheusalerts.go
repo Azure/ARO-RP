@@ -4,12 +4,15 @@ package cluster
 // Licensed under the Apache License 2.0.
 import (
 	"context"
-	"fmt"
 
 	"github.com/Azure/ARO-RP/pkg/util/namespace"
 )
 
-type FiringAlert struct {
+const (
+	alertmanagerService = "http://alertmanager-main.openshift-monitoring.svc:9093/api/v2/alerts"
+)
+
+type Alert struct {
 	AlertName string `json:"alertname"`
 	Status    string `json:"status"`
 	Namespace string `json:"namespace"`
@@ -17,13 +20,13 @@ type FiringAlert struct {
 	Summary   string `jsodn:"summary"`
 }
 
-func (c *client) GetOpenShiftFiringAlerts(ctx context.Context) ([]FiringAlert, error) {
-	alerts, err := c.fetcher.alertManagerClient.FetchPrometheusAlerts(ctx)
+func (c *client) GetOpenShiftFiringAlerts(ctx context.Context) ([]Alert, error) {
+	alerts, err := c.fetcher.alertManagerClient.FetchPrometheusAlerts(ctx, alertmanagerService)
 	if err != nil {
 		return nil, err
 	}
 
-	firingAlerts := []FiringAlert{}
+	firingAlerts := []Alert{}
 
 	for _, alert := range alerts {
 		if !namespace.IsOpenShiftNamespace(string(alert.Labels["namespace"])) {
@@ -31,7 +34,7 @@ func (c *client) GetOpenShiftFiringAlerts(ctx context.Context) ([]FiringAlert, e
 		}
 
 		if alert.Status() == "firing" {
-			firingAlert := FiringAlert{
+			firingAlert := Alert{
 				AlertName: alert.Name(),
 				Status:    string(alert.Status()),
 				Namespace: string(alert.Labels["namespace"]),
@@ -41,6 +44,5 @@ func (c *client) GetOpenShiftFiringAlerts(ctx context.Context) ([]FiringAlert, e
 			firingAlerts = append(firingAlerts, firingAlert)
 		}
 	}
-	fmt.Print(firingAlerts)
 	return firingAlerts, nil
 }

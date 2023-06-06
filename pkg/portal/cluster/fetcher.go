@@ -27,7 +27,7 @@ type FetchClient interface {
 	Machines(context.Context) (*MachineListInformation, error)
 	MachineSets(context.Context) (*MachineSetListInformation, error)
 	Statistics(context.Context, *http.Client, string, time.Duration, time.Time, string) ([]Metrics, error)
-	GetOpenShiftFiringAlerts(context.Context) ([]FiringAlert, error)
+	GetOpenShiftFiringAlerts(context.Context) ([]Alert, error)
 }
 
 // client is an implementation of FetchClient. It currently contains a "fetcher"

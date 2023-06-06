@@ -274,5 +274,8 @@ func (p *portal) getOpenShiftFiringAlerts(w http.ResponseWriter, r *http.Request
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(b)
+	_, err = w.Write(b)
+	if err != nil {
+		p.log.Error(err)
+	}
 }

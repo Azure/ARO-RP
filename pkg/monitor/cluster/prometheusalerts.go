@@ -36,7 +36,7 @@ func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
 
 					return portforward.DialContext(ctx, mon.log, mon.restconfig, "openshift-monitoring", fmt.Sprintf("alertmanager-main-%d", i), port)
 				},
-				// HACK: without this, keepalive connections don't get closed,
+				// remove this: without this, keepalive connections don't get closed,
 				// resulting in excessive open TCP connections, lots of
 				// goroutines not exiting and memory not being freed.
 				// TODO: consider persisting hc between calls to Monitor().  If
@@ -51,7 +51,6 @@ func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-
 		resp, err = hc.Do(req)
 		if err == nil {
 			break

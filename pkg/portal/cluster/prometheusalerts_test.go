@@ -6,6 +6,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 	"testing"
 	"time"
@@ -13,19 +14,22 @@ import (
 	"github.com/go-test/deep"
 	"github.com/golang/mock/gomock"
 	"github.com/prometheus/common/model"
+	"github.com/sirupsen/logrus"
 
-	mock_alertmanager "github.com/Azure/ARO-RP/pkg/util/mocks/alertmanager"
-	testlog "github.com/Azure/ARO-RP/test/util/log"
+	mockAlertManager "github.com/Azure/ARO-RP/pkg/util/mocks/alertmanager"
 )
 
 func TestFiringAlerts(t *testing.T) {
 	ctx := context.Background()
-	_, log := testlog.New()
+
+	logger := logrus.New()
+	logger.SetOutput(io.Discard)
+	entry := logrus.NewEntry(logger)
 
 	for _, tt := range []struct {
 		name          string
 		returedData   []model.Alert
-		expected      []FiringAlert
+		expected      []Alert
 		errorExpected error
 	}{
 		{
@@ -50,7 +54,7 @@ func TestFiringAlerts(t *testing.T) {
 					EndsAt:   time.Now().Add(-1),
 				},
 			},
-			expected: []FiringAlert{
+			expected: []Alert{
 				{
 					AlertName: "Firing Alert 1",
 					Status:    "firing",
@@ -78,12 +82,12 @@ func TestFiringAlerts(t *testing.T) {
 					StartsAt: time.Now().Add(-1),
 				},
 			},
-			expected: []FiringAlert{},
+			expected: []Alert{},
 		},
 		{
 			name:          "handles error gracefully",
 			returedData:   []model.Alert{},
-			expected:      []FiringAlert{},
+			expected:      []Alert{},
 			errorExpected: fmt.Errorf("some error"),
 		},
 	} {
@@ -91,16 +95,16 @@ func TestFiringAlerts(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			mockAlertManagerClient := mock_alertmanager.NewMockAlertManager(controller)
+			mockAlertManagerClient := mockAlertManager.NewMockAlertManager(controller)
 
-			mockAlertManagerClient.EXPECT().FetchPrometheusAlerts(ctx).AnyTimes().Return(tt.returedData, tt.errorExpected)
+			mockAlertManagerClient.EXPECT().FetchPrometheusAlerts(ctx, alertmanagerService).AnyTimes().Return(tt.returedData, tt.errorExpected)
 
 			rf := &realFetcher{
 				alertManagerClient: mockAlertManagerClient,
-				log:                log,
+				log:                entry,
 			}
 
-			c := &client{fetcher: rf, log: log}
+			c := &client{fetcher: rf, log: entry}
 
 			alerts, err := c.GetOpenShiftFiringAlerts(ctx)
 			if err != nil && !strings.EqualFold(tt.errorExpected.Error(), err.Error()) {
