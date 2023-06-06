@@ -1,0 +1,81 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: clusterversion
+tests:
+  - name: clusterversion-tests
+    template: ../../gktemplates/aro-deny-clusterversion.yaml
+    constraint: ../../gkconstraints-test/aro-clusterversion-deny.yaml
+    cases:
+      - name: create-clusterversion-allowed-regular-user
+        object: gator-test/regular_user_create_clusterversion.yaml
+        inventory:
+          - gator-test/inventory_config_local.yaml
+        assertions:
+          - violations: no
+      - name: create-clusterversion-allowed-system-user-local
+        object: gator-test/system_user_create_clusterversion.yaml
+        inventory:
+          - gator-test/inventory_config_local.yaml
+        assertions:
+          - violations: no
+      - name: create-clusterversion-allowed-system-user-ocm
+        object: gator-test/system_user_create_clusterversion.yaml
+        inventory:
+          - gator-test/inventory_config_ocm.yaml
+        assertions:
+          - violations: no
+      - name: create-clusterversion-not-allowed-regular-user
+        object: /gator-test/regular_user_create_clusterversion.yaml
+        inventory:
+          - gator-test/inventory_config_ocm.yaml
+        assertions:
+          - violations: yes
+      - name: update-clusterversion-allowed-regular-user
+        object: gator-test/regular_user_update_clusterversion.yaml
+        inventory:
+          - gator-test/inventory_config_local.yaml
+        assertions:
+          - violations: no
+      - name: update-clusterversion-allowed-system-user-local
+        object: gator-test/system_user_update_clusterversion.yaml
+        inventory:
+          - gator-test/inventory_config_local.yaml
+        assertions:
+          - violations: no
+      - name: update-clusterversion-allowed-system-user-local
+        object: gator-test/system_user_update_clusterversion.yaml
+        inventory:
+          - gator-test/inventory_config_ocm.yaml
+        assertions:
+          - violations: no
+      - name: update-clusterversion-not-allowed-regular-user
+        object: /gator-test/regular_user_update_clusterversion.yaml
+        inventory:
+          - gator-test/inventory_config_ocm.yaml
+        assertions:
+          - violations: yes
+      - name: delete-clusterversion-allowed-regular-user
+        object: gator-test/regular_user_delete_clusterversion.yaml
+        inventory:
+          - gator-test/inventory_config_local.yaml
+        assertions:
+          - violations: no
+      - name: delete-clusterversion-allowed-system-user-local
+        object: gator-test/system_user_delete_clusterversion.yaml
+        inventory:
+          - gator-test/inventory_config_local.yaml
+        assertions:
+          - violations: no
+      - name: delete-clusterversion-allowed-system-user-ocm
+        object: gator-test/system_user_delete_clusterversion.yaml
+        inventory:
+          - gator-test/inventory_config_ocm.yaml
+        assertions:
+          - violations: no
+      - name: delete-clusterversion-not-allowed-regular-user
+        object: gator-test/regular_user_delete_clusterversion.yaml
+        inventory:
+          - gator-test/inventory_config_ocm.yaml
+        assertions:
+          - violations: yes

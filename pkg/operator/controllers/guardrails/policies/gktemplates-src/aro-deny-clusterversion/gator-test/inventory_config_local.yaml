@@ -1,0 +1,16 @@
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2023-06-31T03:24:37Z"
+  name: managed-upgrade-operator-config
+  namespace: openshift-managed-upgrade-operator
+apiVersion: v1
+name: managed-upgrade-operator-config
+data:
+  config.yaml: "configManager:\n  source: LOCAL\n  \n  localConfigName: managed-upgrade-config\n
+    \ watchInterval: 15\nmaintenance:\n  controlPlaneTime: 90\n  ignoredAlerts:\n
+    \   controlPlaneCriticals:\n    - ClusterOperatorDown\n    - ClusterOperatorDegraded\nupgradeType:
+    ARO\nupgradeWindow:\n  delayTrigger: 30\n  timeOut: 120\nnodeDrain:\n  timeOut:
+    45\n  expectedNodeDrainTime: 8\nscale:\n  timeOut: 30\nhealthCheck:\n  ignoredCriticals:\n
+    \ - PrometheusRuleFailures\n  - CannotRetrieveUpdates\n  - FluentdNodeDown\n  ignoredNamespaces:\n
+    \ - openshift-logging\n  - openshift-redhat-marketplace\n  - openshift-operators\n
+    \ - openshift-user-workload-monitoring\n  - openshift-pipelines\n  - openshift-azure-logging\n"
