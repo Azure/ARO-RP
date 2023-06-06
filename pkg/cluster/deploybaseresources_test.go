@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -52,6 +53,10 @@ func TestEnsureResourceGroup(t *testing.T) {
 		ServiceError: &azure.ServiceError{Code: "RequestDisallowedByPolicy"},
 	}, "", "", nil, "")
 
+	resourceGroupNotFound := autorest.NewErrorWithError(&azure.RequestError{
+		ServiceError: &azure.ServiceError{Code: "ResourceGroupNotFound"},
+	}, "", "", &http.Response{StatusCode: http.StatusNotFound}, "")
+
 	for _, tt := range []struct {
 		name              string
 		provisioningState api.ProvisioningState
@@ -62,6 +67,10 @@ func TestEnsureResourceGroup(t *testing.T) {
 			name:              "success - rg doesn't exist",
 			provisioningState: api.ProvisioningStateCreating,
 			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
+				rg.EXPECT().
+					Get(gomock.Any(), resourceGroupName).
+					Return(mgmtfeatures.ResourceGroup{}, resourceGroupNotFound)
+
 				rg.EXPECT().
 					CreateOrUpdate(gomock.Any(), resourceGroupName, group).
 					Return(group, nil)
@@ -83,6 +92,10 @@ func TestEnsureResourceGroup(t *testing.T) {
 				groupWithLocalDevTags.Tags = map[string]*string{
 					"purge": to.StringPtr("true"),
 				}
+				rg.EXPECT().
+					Get(gomock.Any(), resourceGroupName).
+					Return(mgmtfeatures.ResourceGroup{}, resourceGroupNotFound)
+
 				rg.EXPECT().
 					CreateOrUpdate(gomock.Any(), resourceGroupName, groupWithLocalDevTags).
 					Return(groupWithLocalDevTags, nil)
@@ -132,6 +145,10 @@ func TestEnsureResourceGroup(t *testing.T) {
 			provisioningState: api.ProvisioningStateCreating,
 			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
 				rg.EXPECT().
+					Get(gomock.Any(), resourceGroupName).
+					Return(group, nil)
+
+				rg.EXPECT().
 					CreateOrUpdate(gomock.Any(), resourceGroupName, group).
 					Return(group, resourceGroupManagedByMismatch)
 
@@ -146,6 +163,10 @@ func TestEnsureResourceGroup(t *testing.T) {
 			provisioningState: api.ProvisioningStateCreating,
 			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
 				rg.EXPECT().
+					Get(gomock.Any(), resourceGroupName).
+					Return(group, nil)
+
+				rg.EXPECT().
 					CreateOrUpdate(gomock.Any(), resourceGroupName, group).
 					Return(group, disallowedByPolicy)
 
@@ -159,6 +180,10 @@ func TestEnsureResourceGroup(t *testing.T) {
 			name:              "fail - CreateOrUpdate returns generic error",
 			provisioningState: api.ProvisioningStateCreating,
 			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
+				rg.EXPECT().
+					Get(gomock.Any(), resourceGroupName).
+					Return(group, nil)
+
 				rg.EXPECT().
 					CreateOrUpdate(gomock.Any(), resourceGroupName, group).
 					Return(group, errors.New("generic error"))
