@@ -62,7 +62,7 @@ func (f *frontend) _postAdminOpenShiftClusterVMResize(log *logrus.Entry, ctx con
 	return action.VMResize(ctx, vmName, vmSize)
 }
 
-// A bland check, to validate if the node is master by checking the vmName has substring 'master'
+// A bland check, to validate if the node is master by checking vmName ends with pattern "-master-[0-9]"
 // return false, when the node is either not a master node or not adhering to the standard naming convention.
 // return true, if regexp satisfies
 func nodeIsMaster(vmName string) bool {
