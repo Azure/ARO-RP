@@ -7,9 +7,11 @@ import (
 	"context"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/Azure/go-autorest/autorest/to"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -20,10 +22,17 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestReconciler(t *testing.T) {
+	transitionTime := metav1.Time{Time: time.Now()}
+	defaultAvailable := utilconditions.ControllerDefaultAvailable(ControllerName)
+	defaultProgressing := utilconditions.ControllerDefaultProgressing(ControllerName)
+	defaultDegraded := utilconditions.ControllerDefaultDegraded(ControllerName)
+	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
+
 	fakeMachineSets := func(replicas0 int32, replicas1 int32, replicas2 int32) []client.Object {
 		workerMachineSet0 := &machinev1beta1.MachineSet{
 			ObjectMeta: metav1.ObjectMeta{
@@ -65,31 +74,37 @@ func TestReconciler(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
-		objectName     string
-		machinesets    []client.Object
-		wantReplicas   int32
-		featureFlag    bool
-		assertReplicas bool
-		wantErr        string
+		name            string
+		objectName      string
+		machinesets     []client.Object
+		wantReplicas    int32
+		featureFlag     bool
+		assertReplicas  bool
+		wantErr         string
+		startConditions []operatorv1.OperatorCondition
+		wantConditions  []operatorv1.OperatorCondition
 	}{
 		{
-			name:           "no worker replicas, machineset-0 modified",
-			objectName:     "aro-fake-machineset-0",
-			machinesets:    fakeMachineSets(0, 0, 0),
-			wantReplicas:   2,
-			featureFlag:    true,
-			assertReplicas: true,
-			wantErr:        "",
+			name:            "no worker replicas, machineset-0 modified",
+			objectName:      "aro-fake-machineset-0",
+			machinesets:     fakeMachineSets(0, 0, 0),
+			wantReplicas:    2,
+			featureFlag:     true,
+			assertReplicas:  true,
+			wantErr:         "",
+			startConditions: defaultConditions,
+			wantConditions:  defaultConditions,
 		},
 		{
-			name:           "no worker replicas, feature flag is false",
-			objectName:     "aro-fake-machineset-0",
-			machinesets:    fakeMachineSets(0, 0, 0),
-			wantReplicas:   0,
-			featureFlag:    false,
-			assertReplicas: true,
-			wantErr:        "",
+			name:            "no worker replicas, feature flag is false",
+			objectName:      "aro-fake-machineset-0",
+			machinesets:     fakeMachineSets(0, 0, 0),
+			wantReplicas:    0,
+			featureFlag:     false,
+			assertReplicas:  true,
+			wantErr:         "",
+			startConditions: defaultConditions,
+			wantConditions:  defaultConditions,
 		},
 		{
 			name:       "no worker replicas, custom machineset is present",
@@ -111,10 +126,12 @@ func TestReconciler(t *testing.T) {
 					},
 				)
 			}(),
-			wantReplicas:   0,
-			featureFlag:    true,
-			assertReplicas: true,
-			wantErr:        "",
+			wantReplicas:    0,
+			featureFlag:     true,
+			assertReplicas:  true,
+			wantErr:         "",
+			startConditions: defaultConditions,
+			wantConditions:  defaultConditions,
 		},
 		{
 			name:           "one worker replica, machineset-0 modified",
@@ -124,31 +141,57 @@ func TestReconciler(t *testing.T) {
 			featureFlag:    true,
 			assertReplicas: true,
 			wantErr:        "",
+			startConditions: []operatorv1.OperatorCondition{
+				defaultAvailable,
+				defaultProgressing,
+				{
+					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+					Status:             operatorv1.ConditionTrue,
+					LastTransitionTime: transitionTime,
+					Message:            `machinesets.machine.openshift.io "aro-fake-machineset-0" not found`,
+				},
+			},
+			wantConditions: defaultConditions,
 		},
 		{
-			name:           "two worker replicas, machineset-0 modified",
-			objectName:     "aro-fake-machineset-0",
-			machinesets:    fakeMachineSets(1, 1, 0),
-			wantReplicas:   1,
-			featureFlag:    true,
-			assertReplicas: true,
-			wantErr:        "",
+			name:            "two worker replicas, machineset-0 modified",
+			objectName:      "aro-fake-machineset-0",
+			machinesets:     fakeMachineSets(1, 1, 0),
+			wantReplicas:    1,
+			featureFlag:     true,
+			assertReplicas:  true,
+			wantErr:         "",
+			startConditions: defaultConditions,
+			wantConditions:  defaultConditions,
 		},
 		{
-			name:           "two worker replicas in machineset-1, machineset-0 modified",
-			objectName:     "aro-fake-machineset-0",
-			machinesets:    fakeMachineSets(0, 2, 0),
-			wantReplicas:   0,
-			featureFlag:    true,
-			assertReplicas: true,
-			wantErr:        "",
+			name:            "two worker replicas in machineset-1, machineset-0 modified",
+			objectName:      "aro-fake-machineset-0",
+			machinesets:     fakeMachineSets(0, 2, 0),
+			wantReplicas:    0,
+			featureFlag:     true,
+			assertReplicas:  true,
+			wantErr:         "",
+			startConditions: defaultConditions,
+			wantConditions:  defaultConditions,
 		},
 		{
-			name:           "machineset-0 not found",
-			objectName:     "aro-fake-machineset-0",
-			featureFlag:    true,
-			assertReplicas: false,
-			wantErr:        `machinesets.machine.openshift.io "aro-fake-machineset-0" not found`,
+			name:            "machineset-0 not found",
+			objectName:      "aro-fake-machineset-0",
+			featureFlag:     true,
+			assertReplicas:  false,
+			wantErr:         `machinesets.machine.openshift.io "aro-fake-machineset-0" not found`,
+			startConditions: defaultConditions,
+			wantConditions: []operatorv1.OperatorCondition{
+				defaultAvailable,
+				defaultProgressing,
+				{
+					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+					Status:             operatorv1.ConditionTrue,
+					LastTransitionTime: transitionTime,
+					Message:            `machinesets.machine.openshift.io "aro-fake-machineset-0" not found`,
+				},
+			},
 		},
 	}
 
@@ -162,14 +205,17 @@ func TestReconciler(t *testing.T) {
 						ControllerEnabled: strconv.FormatBool(tt.featureFlag),
 					},
 				},
+				Status: arov1alpha1.ClusterStatus{
+					Conditions: tt.startConditions,
+				},
 			}
 
-			clientFake := ctrlfake.NewClientBuilder().WithObjects(instance).WithObjects(tt.machinesets...).Build()
+			clientFake := ctrlfake.NewClientBuilder().
+				WithObjects(instance).
+				WithObjects(tt.machinesets...).
+				Build()
 
-			r := &Reconciler{
-				log:    logrus.NewEntry(logrus.StandardLogger()),
-				client: clientFake,
-			}
+			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientFake)
 
 			request := ctrl.Request{}
 			request.Name = tt.objectName
@@ -178,10 +224,11 @@ func TestReconciler(t *testing.T) {
 
 			_, err := r.Reconcile(ctx, request)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			utilconditions.AssertControllerConditions(t, ctx, clientFake, tt.wantConditions)
 
 			if tt.assertReplicas {
 				modifiedMachineset := &machinev1beta1.MachineSet{}
-				err = r.client.Get(ctx, types.NamespacedName{Name: request.Name, Namespace: machineSetsNamespace}, modifiedMachineset)
+				err = r.Client.Get(ctx, types.NamespacedName{Name: request.Name, Namespace: machineSetsNamespace}, modifiedMachineset)
 				if err != nil {
 					t.Error(err)
 				}

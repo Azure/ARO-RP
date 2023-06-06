@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,8 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/conditions"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 )
 
@@ -34,48 +32,41 @@ const (
 // Reconciler spots nodes that look like they're stuck upgrading.  When this
 // happens, it tries to drain them disabling eviction (so PDBs don't count).
 type Reconciler struct {
-	log *logrus.Entry
+	base.AROController
 
 	kubernetescli kubernetes.Interface
-
-	client client.Client
 }
 
 func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface) *Reconciler {
 	return &Reconciler{
-		log:           log,
+		AROController: base.AROController{
+			Log:    log,
+			Client: client,
+			Name:   ControllerName,
+		},
+
 		kubernetescli: kubernetescli,
-		client:        client,
 	}
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance := &arov1alpha1.Cluster{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+	instance, err := r.GetCluster(ctx)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		r.log.Debug("controller is disabled")
+		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
-	r.log.Debug("running")
+	r.Log.Debug("running")
 
-	cnds, err := conditions.GetControllerConditions(ctx, r.client, ControllerName)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
 	node := &corev1.Node{}
-	err = r.client.Get(ctx, types.NamespacedName{Name: request.Name}, node)
+	err = r.Client.Get(ctx, types.NamespacedName{Name: request.Name}, node)
 	if err != nil {
-		r.log.Error(err)
-
-		cnds.Degraded.Status = operatorv1.ConditionTrue
-		cnds.Degraded.Message = err.Error()
-
-		conditions.SetControllerConditions(ctx, r.client, cnds)
+		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
 
 		return reconcile.Result{}, err
 	}
@@ -83,7 +74,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// don't interfere with masters, don't want to trample etcd-quorum-guard.
 	if node.Labels != nil {
 		if _, ok := node.Labels["node-role.kubernetes.io/master"]; ok {
-			conditions.SetControllerConditions(ctx, r.client, cnds)
+			r.ClearConditions(ctx)
 			return reconcile.Result{}, nil
 		}
 	}
@@ -91,20 +82,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	if !isDraining(node) {
 		// we're not draining: ensure our annotation is not set and return
 		if getAnnotation(&node.ObjectMeta, annotationDrainStartTime) == "" {
-			conditions.SetControllerConditions(ctx, r.client, cnds)
+			r.ClearConditions(ctx)
 			return reconcile.Result{}, nil
 		}
 
 		delete(node.Annotations, annotationDrainStartTime)
 
-		err = r.client.Update(ctx, node)
+		err = r.Client.Update(ctx, node)
 		if err != nil {
-			cnds.Degraded.Status = operatorv1.ConditionTrue
-			cnds.Degraded.Message = err.Error()
-			r.log.Error(err)
+			r.Log.Error(err)
+			r.SetDegraded(ctx, err)
 		}
 
-		conditions.SetControllerConditions(ctx, r.client, cnds)
 		return reconcile.Result{}, err
 	}
 
@@ -114,13 +103,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		t = time.Now().UTC()
 		setAnnotation(&node.ObjectMeta, annotationDrainStartTime, t.Format(time.RFC3339))
 
-		err = r.client.Update(ctx, node)
+		err = r.Client.Update(ctx, node)
 		if err != nil {
-			r.log.Error(err)
-			cnds.Degraded.Status = operatorv1.ConditionTrue
-			cnds.Degraded.Message = err.Error()
+			r.Log.Error(err)
+			r.SetDegraded(ctx, err)
 
-			conditions.SetControllerConditions(ctx, r.client, cnds)
 			return reconcile.Result{}, err
 		}
 	}
@@ -129,10 +116,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	deadline := t.Add(gracePeriod)
 	now := time.Now()
 	if deadline.After(now) {
-		cnds.Progressing.Status = operatorv1.ConditionTrue
-		cnds.Progressing.Message = fmt.Sprintf("Draining node %s", request.Name)
+		r.SetProgressing(ctx, fmt.Sprintf("Draining node %s", request.Name))
 
-		return reconcile.Result{RequeueAfter: deadline.Sub(now)}, conditions.SetControllerConditions(ctx, r.client, cnds)
+		return reconcile.Result{RequeueAfter: deadline.Sub(now)}, nil
 	}
 
 	// drain the node disabling eviction
@@ -145,16 +131,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		DeleteEmptyDirData:  true,
 		DisableEviction:     true,
 		OnPodDeletedOrEvicted: func(pod *corev1.Pod, usingEviction bool) {
-			r.log.Printf("deleted pod %s/%s", pod.Namespace, pod.Name)
+			r.Log.Printf("deleted pod %s/%s", pod.Namespace, pod.Name)
 		},
-		Out:    r.log.Writer(),
-		ErrOut: r.log.Writer(),
+		Out:    r.Log.Writer(),
+		ErrOut: r.Log.Writer(),
 	}, request.Name)
 	if err != nil {
-		r.log.Error(err)
-		cnds.Degraded.Status = operatorv1.ConditionTrue
-		cnds.Degraded.Message = err.Error()
-		conditions.SetControllerConditions(ctx, r.client, cnds)
+		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
 
 		return reconcile.Result{}, err
 	}
@@ -162,24 +146,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// ensure our annotation is not set and return
 	delete(node.Annotations, annotationDrainStartTime)
 
-	err = r.client.Update(ctx, node)
+	err = r.Client.Update(ctx, node)
 	if err != nil {
-		r.log.Error(err)
-		cnds.Degraded.Status = operatorv1.ConditionTrue
-		cnds.Degraded.Message = err.Error()
-		conditions.SetControllerConditions(ctx, r.client, cnds)
+		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
+
 		return reconcile.Result{}, err
 	}
 
-	// set all conditions to default state
-	cnds.Available.Status = operatorv1.ConditionTrue
-	cnds.Available.Message = ""
-	cnds.Progressing.Status = operatorv1.ConditionFalse
-	cnds.Progressing.Message = ""
-	cnds.Degraded.Status = operatorv1.ConditionFalse
-	cnds.Degraded.Message = ""
-
-	return reconcile.Result{}, conditions.SetControllerConditions(ctx, r.client, cnds)
+	r.ClearConditions(ctx)
+	return reconcile.Result{}, nil
 }
 
 // SetupWithManager setup our mananger

@@ -27,21 +27,10 @@ import (
 
 func TestReconciler(t *testing.T) {
 	transitionTime := metav1.Time{Time: time.Now()}
-	defaultAvailable := operatorv1.OperatorCondition{
-		Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeAvailable,
-		Status:             operatorv1.ConditionTrue,
-		LastTransitionTime: transitionTime,
-	}
-	defaultProgressing := operatorv1.OperatorCondition{
-		Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeProgressing,
-		Status:             operatorv1.ConditionFalse,
-		LastTransitionTime: transitionTime,
-	}
-	defaultDegraded := operatorv1.OperatorCondition{
-		Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
-		Status:             operatorv1.ConditionFalse,
-		LastTransitionTime: transitionTime,
-	}
+	defaultAvailable := utilconditions.ControllerDefaultAvailable(ControllerName)
+	defaultProgressing := utilconditions.ControllerDefaultProgressing(ControllerName)
+	defaultDegraded := utilconditions.ControllerDefaultDegraded(ControllerName)
+	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
 
 	tests := []struct {
 		name            string
@@ -64,9 +53,10 @@ func TestReconciler(t *testing.T) {
 					},
 				},
 			},
-			featureFlag:    true,
-			wantErr:        "",
-			wantConditions: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded},
+			featureFlag:     true,
+			wantErr:         "",
+			startConditions: defaultConditions,
+			wantConditions:  defaultConditions,
 		},
 		{
 			name:     "node doesn't exist",
@@ -76,8 +66,9 @@ func TestReconciler(t *testing.T) {
 					Name: "aro-fake-node-0",
 				},
 			},
-			featureFlag: true,
-			wantErr:     `nodes "nonexistent-node" not found`,
+			featureFlag:     true,
+			wantErr:         `nodes "nonexistent-node" not found`,
+			startConditions: defaultConditions,
 			wantConditions: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing,
 				{
 					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
@@ -113,9 +104,10 @@ func TestReconciler(t *testing.T) {
 					},
 				},
 			},
-			featureFlag:    true,
-			wantErr:        "",
-			wantConditions: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded},
+			featureFlag:     true,
+			wantErr:         "",
+			startConditions: defaultConditions,
+			wantConditions:  defaultConditions,
 		},
 		{
 			name:     "isDraining false, delete our annotation",
@@ -128,9 +120,10 @@ func TestReconciler(t *testing.T) {
 					},
 				},
 			},
-			featureFlag:    true,
-			wantErr:        "",
-			wantConditions: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded},
+			featureFlag:     true,
+			wantErr:         "",
+			startConditions: defaultConditions,
+			wantConditions:  defaultConditions,
 		},
 		{
 			name:     "isDraining false, node is unschedulable=false",
@@ -151,9 +144,10 @@ func TestReconciler(t *testing.T) {
 					Unschedulable: false,
 				},
 			},
-			featureFlag:    true,
-			wantErr:        "",
-			wantConditions: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded},
+			featureFlag:     true,
+			wantErr:         "",
+			startConditions: defaultConditions,
+			wantConditions:  defaultConditions,
 		},
 		{
 			name:     "isDraining false, annotationDesiredConfig is blank",
@@ -180,9 +174,10 @@ func TestReconciler(t *testing.T) {
 					},
 				},
 			},
-			featureFlag:    true,
-			wantErr:        "",
-			wantConditions: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded},
+			featureFlag:     true,
+			wantErr:         "",
+			startConditions: defaultConditions,
+			wantConditions:  defaultConditions,
 		},
 		{
 			name:     "isDraining false, annotationCurrentConfig is blank",
@@ -209,9 +204,10 @@ func TestReconciler(t *testing.T) {
 					},
 				},
 			},
-			featureFlag:    true,
-			wantErr:        "",
-			wantConditions: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded},
+			featureFlag:     true,
+			wantErr:         "",
+			startConditions: defaultConditions,
+			wantConditions:  defaultConditions,
 		},
 		{
 			name:     "isDraining false, no conditions are met",
@@ -238,9 +234,10 @@ func TestReconciler(t *testing.T) {
 					},
 				},
 			},
-			featureFlag:    true,
-			wantErr:        "",
-			wantConditions: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded},
+			featureFlag:     true,
+			wantErr:         "",
+			startConditions: defaultConditions,
+			wantConditions:  defaultConditions,
 		},
 		{
 			name:     "isDraining false, current config matches desired",
@@ -267,9 +264,10 @@ func TestReconciler(t *testing.T) {
 					},
 				},
 			},
-			featureFlag:    true,
-			wantErr:        "",
-			wantConditions: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded},
+			featureFlag:     true,
+			wantErr:         "",
+			startConditions: defaultConditions,
+			wantConditions:  defaultConditions,
 		},
 		{
 			name:     "isDraining true, set annotation",
@@ -295,8 +293,9 @@ func TestReconciler(t *testing.T) {
 					},
 				},
 			},
-			featureFlag: true,
-			wantErr:     "",
+			featureFlag:     true,
+			wantErr:         "",
+			startConditions: defaultConditions,
 			wantConditions: []operatorv1.OperatorCondition{
 				defaultAvailable,
 				{
@@ -333,8 +332,9 @@ func TestReconciler(t *testing.T) {
 					},
 				},
 			},
-			featureFlag: true,
-			wantErr:     "",
+			featureFlag:     true,
+			wantErr:         "",
+			startConditions: defaultConditions,
 			wantConditions: []operatorv1.OperatorCondition{
 				defaultAvailable,
 				{
@@ -355,8 +355,9 @@ func TestReconciler(t *testing.T) {
 					Annotations: nil,
 				},
 			},
-			featureFlag: true,
-			wantErr:     "",
+			featureFlag:     true,
+			wantErr:         "",
+			startConditions: defaultConditions,
 			wantConditions: []operatorv1.OperatorCondition{
 				defaultAvailable,
 				defaultProgressing,
@@ -392,12 +393,14 @@ func TestReconciler(t *testing.T) {
 			featureFlag: true,
 			wantErr:     "",
 			startConditions: []operatorv1.OperatorCondition{
+				defaultAvailable,
 				{
 					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeProgressing,
 					Status:             operatorv1.ConditionTrue,
 					LastTransitionTime: transitionTime,
 					Message:            `Draining node aro-fake-node-0`,
 				},
+				defaultDegraded,
 			},
 			wantConditions: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded},
 		},
@@ -428,12 +431,7 @@ func TestReconciler(t *testing.T) {
 
 			client := clientBuilder.Build()
 
-			r := &Reconciler{
-				log: logrus.NewEntry(logrus.StandardLogger()),
-
-				kubernetescli: fake.NewSimpleClientset(tt.nodeObject),
-				client:        client,
-			}
+			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), client, fake.NewSimpleClientset(tt.nodeObject))
 
 			request := ctrl.Request{}
 			request.Name = tt.nodeName
