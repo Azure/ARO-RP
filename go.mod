@@ -262,9 +262,11 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.13.6 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
+	github.com/hashicorp/vault v1.1.2
 )
 
 exclude (
+	github.com/hashicorp/vault v1.1.3
 	github.com/containerd/containerd v1.2.10
 	// exclude github.com/containerd/containerd < 1.6.1, 1.5.10, 1.14.12 https://nvd.nist.gov/vuln/detail/CVE-2022-23648
 	github.com/containerd/containerd v1.2.7
@@ -327,8 +329,6 @@ exclude (
 	github.com/hashicorp/vault v1.1.0-beta1
 	github.com/hashicorp/vault v1.1.0-beta2
 	github.com/hashicorp/vault v1.1.1
-	github.com/hashicorp/vault v1.1.2
-	github.com/hashicorp/vault v1.1.3
 	github.com/hashicorp/vault v1.1.4
 	github.com/hashicorp/vault v1.1.5
 	github.com/hashicorp/vault v1.2.0
