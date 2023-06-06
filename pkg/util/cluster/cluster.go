@@ -138,7 +138,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 	return c, nil
 }
 
-func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName string) error {
+func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName string, osClusterVersion string) error {
 	clusterGet, err := c.openshiftclustersv20220904.Get(ctx, vnetResourceGroup, clusterName)
 	if err == nil {
 		if clusterGet.ProvisioningState == mgmtredhatopenshift20220904.Failed {
@@ -313,7 +313,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	}
 
 	c.log.Info("creating cluster")
-	err = c.createCluster(ctx, vnetResourceGroup, clusterName, appID, appSecret, diskEncryptionSetID, visibility)
+	err = c.createCluster(ctx, vnetResourceGroup, clusterName, appID, appSecret, diskEncryptionSetID, visibility, osClusterVersion)
 
 	if err != nil {
 		return err
@@ -437,7 +437,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 // createCluster created new clusters, based on where it is running.
 // development - using preview api
 // production - using stable GA api
-func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterName, clientID, clientSecret, diskEncryptionSetID string, visibility api.Visibility) error {
+func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterName, clientID, clientSecret, diskEncryptionSetID string, visibility api.Visibility, osClusterVersion string) error {
 	// using internal representation for "singe source" of options
 	oc := api.OpenShiftCluster{
 		Properties: api.OpenShiftClusterProperties{
@@ -445,6 +445,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 				Domain:               strings.ToLower(clusterName),
 				ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.env.SubscriptionID(), "aro-"+clusterName),
 				FipsValidatedModules: api.FipsValidatedModulesEnabled,
+				Version:              osClusterVersion,
 			},
 			ServicePrincipalProfile: api.ServicePrincipalProfile{
 				ClientID:     clientID,
