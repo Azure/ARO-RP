@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/coreos/go-oidc"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -20,7 +21,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
-	"github.com/Azure/ARO-RP/pkg/util/oidc"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
@@ -155,10 +155,11 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 	}
 
 	clientID := os.Getenv("AZURE_PORTAL_CLIENT_ID")
-	verifier, err := oidc.NewVerifier(ctx, _env.Environment().ActiveDirectoryEndpoint+_env.TenantID()+"/v2.0", clientID)
+	provider, err := oidc.NewProvider(ctx, _env.Environment().ActiveDirectoryEndpoint+_env.TenantID()+"/v2.0")
 	if err != nil {
 		return err
 	}
+	verifier := provider.Verifier(&oidc.Config{ClientID: clientID})
 
 	// In development the portal API is proxied by the frontend dev server which is
 	// hosted at localhost:3000, so the hostname needs to be set to that.

@@ -7,29 +7,25 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
-	"encoding/json"
-	"fmt"
+	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"reflect"
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/form3tech-oss/jwt-go"
-	"github.com/go-test/deep"
+	"github.com/coreos/go-oidc"
+	"github.com/golang-jwt/jwt"
 	"github.com/golang/mock/gomock"
-	"github.com/gorilla/mux"
-	"github.com/gorilla/securecookie"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/oidc"
 	"github.com/Azure/ARO-RP/pkg/util/roundtripper"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -44,6 +40,101 @@ func init() {
 	clientkey, clientcerts, err = utiltls.GenerateKeyAndCertificate("client", nil, nil, false, true)
 	if err != nil {
 		panic(err)
+	}
+}
+
+func TestNewAAD(t *testing.T) {
+	_, err := NewAAD(nil, nil, nil, nil, "", nil, "", nil, nil, nil, &oidc.IDTokenVerifier{})
+	if err.Error() != "invalid sessionKey" {
+		t.Error(err)
+	}
+}
+
+type fakeAccessValidator struct {
+	forbidden bool
+	user      string
+	expiry    time.Time
+	groups    []string
+	err       error
+}
+
+func (f fakeAccessValidator) validateAccess(ctx context.Context, rawIDToken string, now time.Time) (bool, string, []string, time.Time, error) {
+	return f.forbidden, f.user, f.groups, f.expiry, f.err
+}
+
+func TestAAD(t *testing.T) {
+	var tests = []struct {
+		name            string
+		userReturn      string
+		errReturn       error
+		forbiddenReturn bool
+		groupsReturn    []string
+		wantUser        string
+		wantGroups      []string
+	}{
+		{name: "authenticated", userReturn: "mattHicks", groupsReturn: []string{"ceo"}, wantUser: "mattHicks", wantGroups: []string{"ceo"}},
+		{name: "forbidden", forbiddenReturn: true},
+		{name: "error", errReturn: errors.New("expired")},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			aadStruct := &aad{accessValidator: fakeAccessValidator{user: tt.userReturn, groups: tt.groupsReturn, forbidden: tt.forbiddenReturn, err: tt.errReturn}}
+
+			dummyRequest, _ := http.NewRequest(http.MethodGet, "https://redhat.com/hello", nil)
+			dummyRequest.AddCookie(&http.Cookie{Name: OIDCCookie, Value: "supertoken"})
+			writer := httptest.NewRecorder()
+
+			// this simulates a handler that is called after AAD, to check if we have the right values in the
+			// context. It will be called from aadStruct.AAD
+			nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				user := r.Context().Value(ContextKeyUsername).(string)
+				if user != tt.wantUser {
+					t.Errorf("wanted user to be %s but got %s ", tt.wantUser, user)
+				}
+				groups := r.Context().Value(ContextKeyGroups).([]string)
+				if diff := cmp.Diff(groups, tt.wantGroups); diff != "" {
+					t.Errorf("unexpected groups value %s", diff)
+				}
+			})
+
+			aadStruct.AAD(nextHandler).ServeHTTP(writer, dummyRequest)
+
+			if tt.forbiddenReturn && writer.Result().StatusCode != http.StatusForbidden {
+				t.Errorf("was expecting status code to be 403 but got %d", writer.Result().StatusCode)
+			} else if tt.errReturn != nil && writer.Result().StatusCode != http.StatusTemporaryRedirect {
+				t.Errorf("was expecting status code to be 302 but got %d", writer.Result().StatusCode)
+			}
+		})
+	}
+}
+
+func TestLogout(t *testing.T) {
+	request, err := http.NewRequest(http.MethodGet, "https://redhat.com", nil)
+	if err != nil {
+		t.Fatal("could not create the request", err)
+	}
+	request.AddCookie(&http.Cookie{
+		Name:  OIDCCookie,
+		Value: "I love potatoes",
+	})
+
+	writer := httptest.NewRecorder()
+
+	aadStruct := &aad{}
+	aadStruct.Logout("/").ServeHTTP(writer, request)
+
+	found := false
+	for _, v := range writer.Result().Cookies() {
+		if v.Name == OIDCCookie {
+			found = true
+			if v.MaxAge != -1 {
+				t.Error("cookie does not have expected max age field")
+			}
+		}
+	}
+
+	if !found {
+		t.Error("cookie was not found")
 	}
 }
 
@@ -65,758 +156,70 @@ func (o *noopOauther) Exchange(context.Context, string, ...oauth2.AuthCodeOption
 	return t.WithExtra(o.tokenMap), nil
 }
 
-func TestNewAAD(t *testing.T) {
-	_, err := NewAAD(nil, nil, nil, nil, "", nil, "", nil, nil, nil, nil, nil)
-	if err.Error() != "invalid sessionKey" {
-		t.Error(err)
-	}
-}
-
-func TestAAD(t *testing.T) {
-	for _, tt := range []struct {
-		name              string
-		request           func(*aad) (*http.Request, error)
-		wantStatusCode    int
-		wantAuthenticated bool
-		wantUsername      string
-		wantGroups        []string
-	}{
-		{
-			name: "authenticated",
-			request: func(a *aad) (*http.Request, error) {
-				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
-					SessionKeyUsername: "username",
-					SessionKeyGroups:   []string{"group1", "group2"},
-					SessionKeyExpires:  int64(1),
-				}, a.store.Codecs...)
-				if err != nil {
-					return nil, err
-				}
-
-				return &http.Request{
-					Header: http.Header{
-						"Cookie": []string{SessionName + "=" + cookie},
-					},
-				}, nil
-			},
-			wantAuthenticated: true,
-			wantUsername:      "username",
-			wantGroups:        []string{"group1", "group2"},
-		},
-		{
-			name: "expired - not authenticated",
-			request: func(a *aad) (*http.Request, error) {
-				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
-					SessionKeyUsername: "username",
-					SessionKeyGroups:   []string{"group1", "group2"},
-					SessionKeyExpires:  int64(-1),
-				}, a.store.Codecs...)
-				if err != nil {
-					return nil, err
-				}
-
-				return &http.Request{
-					Header: http.Header{
-						"Cookie": []string{SessionName + "=" + cookie},
-					},
-				}, nil
-			},
-		},
-		{
-			name: "no cookie - not authenticated",
-			request: func(a *aad) (*http.Request, error) {
-				return &http.Request{}, nil
-			},
-		},
-		{
-			name: "invalid cookie",
-			request: func(a *aad) (*http.Request, error) {
-				return &http.Request{
-					Header: http.Header{
-						"Cookie": []string{"session=xxx"},
-					},
-					URL: &url.URL{Path: ""},
-				}, nil
-			},
-			wantStatusCode: http.StatusTemporaryRedirect,
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-			env := mock_env.NewMockInterface(controller)
-			env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
-			env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
-			env.EXPECT().TenantID().AnyTimes().Return("common")
-
-			_, audit := testlog.NewAudit()
-			_, baseLog := testlog.New()
-			_, baseAccessLog := testlog.New()
-			a, err := NewAAD(baseLog, audit, env, baseAccessLog, "", make([]byte, 32), "", nil, nil, nil, mux.NewRouter(), nil)
-			if err != nil {
-				t.Fatal(err)
-			}
-			a.now = func() time.Time { return time.Unix(0, 0) }
-
-			var username string
-			var usernameok bool
-			var groups []string
-			var groupsok bool
-			h := a.AAD(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				username, usernameok = r.Context().Value(ContextKeyUsername).(string)
-				groups, groupsok = r.Context().Value(ContextKeyGroups).([]string)
-			}))
-
-			r, err := tt.request(a)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			w := httptest.NewRecorder()
-
-			h.ServeHTTP(w, r)
-
-			if tt.wantStatusCode != 0 && w.Code != tt.wantStatusCode {
-				t.Error(w.Code)
-			}
-
-			if username != tt.wantUsername {
-				t.Error(username)
-			}
-			if usernameok != tt.wantAuthenticated {
-				t.Error(usernameok)
-			}
-			if !reflect.DeepEqual(groups, tt.wantGroups) {
-				t.Error(groups)
-			}
-			if groupsok != tt.wantAuthenticated {
-				t.Error(groupsok)
-			}
-		})
-	}
-}
-
-func TestCheckAuthentication(t *testing.T) {
-	for _, tt := range []struct {
-		name              string
-		request           func(*aad) (*http.Request, error)
-		wantStatusCode    int
-		wantAuthenticated bool
-	}{
-		{
-			name: "authenticated",
-			request: func(a *aad) (*http.Request, error) {
-				ctx := context.Background()
-				ctx = context.WithValue(ctx, ContextKeyUsername, "user")
-				return http.NewRequestWithContext(ctx, http.MethodGet, "/api/info", nil)
-			},
-			wantAuthenticated: true,
-			wantStatusCode:    http.StatusOK,
-		},
-		{
-			name: "not authenticated",
-			request: func(a *aad) (*http.Request, error) {
-				ctx := context.Background()
-				return http.NewRequestWithContext(ctx, http.MethodGet, "/api/info", nil)
-			},
-			wantStatusCode: http.StatusTemporaryRedirect,
-		},
-		{
-			name: "not authenticated",
-			request: func(a *aad) (*http.Request, error) {
-				ctx := context.Background()
-				return http.NewRequestWithContext(ctx, http.MethodGet, "/callback", nil)
-			},
-			wantStatusCode: http.StatusTemporaryRedirect,
-		},
-		{
-			name: "invalid cookie",
-			request: func(a *aad) (*http.Request, error) {
-				return &http.Request{
-					Header: http.Header{
-						"Cookie": []string{"session=xxx"},
-					},
-				}, nil
-			},
-			wantStatusCode: http.StatusForbidden,
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-			env := mock_env.NewMockInterface(controller)
-			env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
-			env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
-			env.EXPECT().TenantID().AnyTimes().Return("common")
-
-			_, audit := testlog.NewAudit()
-			_, baseLog := testlog.New()
-			_, baseAccessLog := testlog.New()
-			a, err := NewAAD(baseLog, audit, env, baseAccessLog, "", make([]byte, 32), "", nil, nil, nil, mux.NewRouter(), nil)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			var authenticated bool
-			h := a.CheckAuthentication(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				_, authenticated = r.Context().Value(ContextKeyUsername).(string)
-			}))
-
-			r, err := tt.request(a)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			w := httptest.NewRecorder()
-
-			h.ServeHTTP(w, r)
-
-			if w.Code != tt.wantStatusCode {
-				t.Error(w.Code, tt.wantStatusCode)
-			}
-
-			if authenticated != tt.wantAuthenticated {
-				t.Fatal(authenticated)
-			}
-
-			if tt.wantStatusCode == http.StatusInternalServerError {
-				return
-			}
-		})
-	}
-}
-
-func TestLogin(t *testing.T) {
-	for _, tt := range []struct {
-		name           string
-		request        func(*aad) (*http.Request, error)
-		wantStatusCode int
-	}{
-		{
-			name: "authenticated",
-			request: func(a *aad) (*http.Request, error) {
-				ctx := context.Background()
-				ctx = context.WithValue(ctx, ContextKeyUsername, "user")
-				return http.NewRequestWithContext(ctx, http.MethodGet, "/login", nil)
-			},
-			wantStatusCode: http.StatusTemporaryRedirect,
-		},
-		{
-			name: "not authenticated",
-			request: func(a *aad) (*http.Request, error) {
-				ctx := context.Background()
-				return http.NewRequestWithContext(ctx, http.MethodGet, "/login", nil)
-			},
-			wantStatusCode: http.StatusTemporaryRedirect,
-		},
-		{
-			name: "invalid cookie",
-			request: func(a *aad) (*http.Request, error) {
-				return &http.Request{
-					Header: http.Header{
-						"Cookie": []string{"session=xxx"},
-					},
-				}, nil
-			},
-			wantStatusCode: http.StatusInternalServerError,
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-			env := mock_env.NewMockInterface(controller)
-			env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
-			env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
-			env.EXPECT().TenantID().AnyTimes().Return("common")
-
-			_, audit := testlog.NewAudit()
-			_, baseLog := testlog.New()
-			_, baseAccessLog := testlog.New()
-			a, err := NewAAD(baseLog, audit, env, baseAccessLog, "", make([]byte, 32), "", nil, nil, nil, mux.NewRouter(), nil)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			h := http.HandlerFunc(a.Login)
-
-			r, err := tt.request(a)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			w := httptest.NewRecorder()
-
-			h.ServeHTTP(w, r)
-
-			if w.Code != tt.wantStatusCode {
-				t.Error(w.Code, tt.wantStatusCode)
-			}
-
-			if tt.wantStatusCode == http.StatusInternalServerError {
-				return
-			}
-
-			if !strings.HasPrefix(w.Header().Get("Location"), "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=&redirect_uri=https%3A%2F%2F%2Fcallback&response_type=code&scope=openid+profile&state=") {
-				t.Error(w.Header().Get("Location"))
-			}
-		})
-	}
-}
-
-func TestLogout(t *testing.T) {
-	for _, tt := range []struct {
-		name           string
-		request        func(*aad) (*http.Request, error)
-		wantStatusCode int
-	}{
-		{
-			name: "authenticated",
-			request: func(a *aad) (*http.Request, error) {
-				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
-					SessionKeyUsername: "username",
-					SessionKeyGroups:   []string{"group1", "group2"},
-					SessionKeyExpires:  int64(0),
-				}, a.store.Codecs...)
-				if err != nil {
-					return nil, err
-				}
-
-				return &http.Request{
-					URL: &url.URL{},
-					Header: http.Header{
-						"Cookie": []string{SessionName + "=" + cookie},
-					},
-				}, nil
-			},
-			wantStatusCode: http.StatusSeeOther,
-		},
-		{
-			name: "no cookie - not authenticated",
-			request: func(a *aad) (*http.Request, error) {
-				return &http.Request{
-					URL: &url.URL{},
-				}, nil
-			},
-			wantStatusCode: http.StatusSeeOther,
-		},
-		{
-			name: "invalid cookie",
-			request: func(a *aad) (*http.Request, error) {
-				return &http.Request{
-					Header: http.Header{
-						"Cookie": []string{"session=xxx"},
-					},
-				}, nil
-			},
-			wantStatusCode: http.StatusInternalServerError,
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-			env := mock_env.NewMockInterface(controller)
-			env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
-			env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
-			env.EXPECT().TenantID().AnyTimes().Return("common")
-
-			_, audit := testlog.NewAudit()
-			_, baseLog := testlog.New()
-			_, baseAccessLog := testlog.New()
-			a, err := NewAAD(baseLog, audit, env, baseAccessLog, "", make([]byte, 32), "", nil, nil, nil, mux.NewRouter(), nil)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			h := a.Logout("/bye")
-
-			r, err := tt.request(a)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			w := httptest.NewRecorder()
-
-			h.ServeHTTP(w, r)
-
-			if w.Code != tt.wantStatusCode {
-				t.Error(w.Code)
-			}
-
-			if tt.wantStatusCode == http.StatusInternalServerError {
-				return
-			}
-
-			if w.Header().Get("Location") != "/bye" {
-				t.Error(w.Header().Get("Location"))
-			}
-
-			var m map[interface{}]interface{}
-			cookies := w.Result().Cookies()
-			err = securecookie.DecodeMulti(SessionName, cookies[len(cookies)-1].Value, &m, a.store.Codecs...)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if len(m) != 0 {
-				t.Error(len(m))
-			}
-		})
-	}
-}
-
 func TestCallback(t *testing.T) {
-	clientID := "00000000-0000-0000-0000-000000000000"
-	groups := []string{
-		"00000000-0000-0000-0000-000000000001",
-	}
-	username := "user"
-
-	idToken, err := json.Marshal(claims{
-		Groups:            groups,
-		PreferredUsername: username,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	for _, tt := range []struct {
-		name              string
-		request           func(*aad) (*http.Request, error)
-		oauther           oauther
-		verifier          oidc.Verifier
-		wantAuthenticated bool
-		wantError         string
-		wantForbidden     bool
+	var tests = []struct {
+		name            string
+		wantStatusCode  int
+		wantLocation    string
+		exchangeError   error
+		token           string
+		validatorErr    error
+		validatorExpiry time.Time
+		hasStateCookie  bool
+		stateMismatch   bool
+		wantOIDCCookie  bool
 	}{
-		{
-			name: "success",
-			request: func(a *aad) (*http.Request, error) {
-				uuid := uuid.DefaultGenerator.Generate()
-
-				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
-					sessionKeyState: uuid,
-				}, a.store.Codecs...)
-				if err != nil {
-					return nil, err
-				}
-
-				return &http.Request{
-					URL: &url.URL{},
-					Header: http.Header{
-						"Cookie": []string{SessionName + "=" + cookie},
-					},
-					Form: url.Values{
-						"state": []string{uuid},
-					},
-				}, nil
-			},
-			oauther: &noopOauther{
-				tokenMap: map[string]interface{}{
-					"id_token": string(idToken),
-				},
-			},
-			verifier:          &oidc.NoopVerifier{},
-			wantAuthenticated: true,
-		},
-		{
-			name: "fail - invalid cookie",
-			request: func(a *aad) (*http.Request, error) {
-				return &http.Request{
-					Header: http.Header{
-						"Cookie": []string{"session=xxx"},
-					},
-				}, nil
-			},
-			wantError: "Internal Server Error\n",
-		},
-		{
-			name: "fail - corrupt sessionKeyState",
-			request: func(a *aad) (*http.Request, error) {
-				return &http.Request{
-					URL: &url.URL{},
-				}, nil
-			},
-			oauther: &noopOauther{},
-		},
-		{
-			name: "fail - state mismatch",
-			request: func(a *aad) (*http.Request, error) {
-				uuid := uuid.DefaultGenerator.Generate()
-
-				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
-					sessionKeyState: uuid,
-				}, a.store.Codecs...)
-				if err != nil {
-					return nil, err
-				}
-
-				return &http.Request{
-					URL: &url.URL{},
-					Header: http.Header{
-						"Cookie": []string{SessionName + "=" + cookie},
-					},
-					Form: url.Values{
-						"state": []string{"bad"},
-					},
-				}, nil
-			},
-			wantError: "Internal Server Error\n",
-		},
-		{
-			name: "fail - error returned",
-			request: func(a *aad) (*http.Request, error) {
-				uuid := uuid.DefaultGenerator.Generate()
-
-				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
-					sessionKeyState: uuid,
-				}, a.store.Codecs...)
-				if err != nil {
-					return nil, err
-				}
-
-				return &http.Request{
-					URL: &url.URL{},
-					Header: http.Header{
-						"Cookie": []string{SessionName + "=" + cookie},
-					},
-					Form: url.Values{
-						"state":             []string{uuid},
-						"error":             []string{"bad things happened."},
-						"error_description": []string{"really bad things."},
-					},
-				}, nil
-			},
-			wantError: "Internal Server Error\n",
-		},
-		{
-			name: "fail - oauther failed",
-			request: func(a *aad) (*http.Request, error) {
-				uuid := uuid.DefaultGenerator.Generate()
-
-				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
-					sessionKeyState: uuid,
-				}, a.store.Codecs...)
-				if err != nil {
-					return nil, err
-				}
-
-				return &http.Request{
-					URL: &url.URL{},
-					Header: http.Header{
-						"Cookie": []string{SessionName + "=" + cookie},
-					},
-					Form: url.Values{
-						"state": []string{uuid},
-					},
-				}, nil
-			},
-			oauther: &noopOauther{
-				err: fmt.Errorf("failed"),
-			},
-			wantError: "Internal Server Error\n",
-		},
-		{
-			name: "fail - no idtoken",
-			request: func(a *aad) (*http.Request, error) {
-				uuid := uuid.DefaultGenerator.Generate()
-
-				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
-					sessionKeyState: uuid,
-				}, a.store.Codecs...)
-				if err != nil {
-					return nil, err
-				}
-
-				return &http.Request{
-					URL: &url.URL{},
-					Header: http.Header{
-						"Cookie": []string{SessionName + "=" + cookie},
-					},
-					Form: url.Values{
-						"state": []string{uuid},
-					},
-				}, nil
-			},
-			oauther:   &noopOauther{},
-			wantError: "Internal Server Error\n",
-		},
-		{
-			name: "fail - verifier error",
-			request: func(a *aad) (*http.Request, error) {
-				uuid := uuid.DefaultGenerator.Generate()
-
-				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
-					sessionKeyState: uuid,
-				}, a.store.Codecs...)
-				if err != nil {
-					return nil, err
-				}
-
-				return &http.Request{
-					URL: &url.URL{},
-					Header: http.Header{
-						"Cookie": []string{SessionName + "=" + cookie},
-					},
-					Form: url.Values{
-						"state": []string{uuid},
-					},
-				}, nil
-			},
-			oauther: &noopOauther{
-				tokenMap: map[string]interface{}{"id_token": ""},
-			},
-			verifier: &oidc.NoopVerifier{
-				Err: fmt.Errorf("failed"),
-			},
-			wantError: "Internal Server Error\n",
-		},
-		{
-			name: "fail - invalid claims",
-			request: func(a *aad) (*http.Request, error) {
-				uuid := uuid.DefaultGenerator.Generate()
-
-				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
-					sessionKeyState: uuid,
-				}, a.store.Codecs...)
-				if err != nil {
-					return nil, err
-				}
-
-				return &http.Request{
-					URL: &url.URL{},
-					Header: http.Header{
-						"Cookie": []string{SessionName + "=" + cookie},
-					},
-					Form: url.Values{
-						"state": []string{uuid},
-					},
-				}, nil
-			},
-			oauther: &noopOauther{
-				tokenMap: map[string]interface{}{
-					"id_token": "",
-				},
-			},
-			verifier:  &oidc.NoopVerifier{},
-			wantError: "Internal Server Error\n",
-		},
-		{
-			name: "fail - group mismatch",
-			request: func(a *aad) (*http.Request, error) {
-				uuid := uuid.DefaultGenerator.Generate()
-
-				cookie, err := securecookie.EncodeMulti(SessionName, map[interface{}]interface{}{
-					sessionKeyState: uuid,
-				}, a.store.Codecs...)
-				if err != nil {
-					return nil, err
-				}
-
-				return &http.Request{
-					URL: &url.URL{},
-					Header: http.Header{
-						"Cookie": []string{SessionName + "=" + cookie},
-					},
-					Form: url.Values{
-						"state": []string{uuid},
-					},
-				}, nil
-			},
-			oauther: &noopOauther{
-				tokenMap: map[string]interface{}{
-					"id_token": "null",
-				},
-			},
-			verifier:      &oidc.NoopVerifier{},
-			wantForbidden: true,
-		},
-	} {
+		{name: "no state cookie", hasStateCookie: false, wantStatusCode: http.StatusTemporaryRedirect, wantLocation: "/api/login"},
+		{name: "state mismatch", stateMismatch: true, hasStateCookie: true, wantStatusCode: http.StatusInternalServerError},
+		{name: "exchange error", hasStateCookie: true, wantStatusCode: http.StatusInternalServerError, exchangeError: errors.New("err")},
+		{name: "no id token", hasStateCookie: true, wantStatusCode: http.StatusInternalServerError},
+		{name: "validator error", hasStateCookie: true, wantStatusCode: http.StatusTemporaryRedirect, wantLocation: "/api/login", token: "supertoken", validatorErr: errors.New("validator error")},
+		{name: "all good", hasStateCookie: true, wantStatusCode: http.StatusTemporaryRedirect, wantLocation: "/", token: "supertoken", wantOIDCCookie: true},
+	}
+	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-			env := mock_env.NewMockInterface(controller)
-			env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
-			env.EXPECT().Environment().AnyTimes().Return(&azureclient.PublicCloud)
-			env.EXPECT().TenantID().AnyTimes().Return("common")
+			logger := logrus.New()
+			logger.Out = io.Discard
+			aad := &aad{log: logrus.NewEntry(logger), now: time.Now}
 
-			_, audit := testlog.NewAudit()
-			_, baseLog := testlog.New()
-			_, baseAccessLog := testlog.New()
-			a, err := NewAAD(baseLog, audit, env, baseAccessLog, "", make([]byte, 32), clientID, clientkey, clientcerts, groups, mux.NewRouter(), tt.verifier)
-			if err != nil {
-				t.Fatal(err)
+			tokenMap := make(map[string]interface{})
+			if tt.token != "" {
+				tokenMap["id_token"] = tt.token
 			}
-			a.now = func() time.Time { return time.Unix(0, 0) }
-			a.oauther = tt.oauther
+			aad.oauther = &noopOauther{err: tt.exchangeError, tokenMap: tokenMap}
+			aad.accessValidator = fakeAccessValidator{err: tt.validatorErr, expiry: tt.validatorExpiry}
 
-			r, err := tt.request(a)
-			if err != nil {
-				t.Fatal(err)
+			writer := httptest.NewRecorder()
+			request := httptest.NewRequest(http.MethodGet, "/callback", nil)
+			if tt.hasStateCookie {
+				request.AddCookie(&http.Cookie{Name: stateCookie, Value: "some value"})
 			}
 
-			w := httptest.NewRecorder()
-
-			a.callback(w, r)
-
-			if tt.wantError != "" {
-				if w.Code != http.StatusInternalServerError {
-					t.Error(w.Code)
-				}
-
-				if w.Body.String() != tt.wantError {
-					t.Error(w.Body.String())
-				}
-
-				return
+			request.Form = map[string][]string{"state": {"some value"}}
+			if tt.stateMismatch {
+				request.Form = map[string][]string{"state": {"some other value"}}
 			}
 
-			type cookie map[interface{}]interface{}
-			var m cookie
-			cookies := w.Result().Cookies()
-			err = securecookie.DecodeMulti(SessionName, cookies[len(cookies)-1].Value, &m, a.store.Codecs...)
-			if err != nil {
-				t.Fatal(err)
+			aad.Callback(writer, request)
+
+			if writer.Result().StatusCode != tt.wantStatusCode {
+				t.Errorf("wanted status code to be %d but got %d", tt.wantStatusCode, writer.Result().StatusCode)
 			}
-
-			switch {
-			case tt.wantAuthenticated:
-				if w.Code != http.StatusTemporaryRedirect {
-					t.Error(w.Code)
+			if tt.wantLocation != writer.Result().Header.Get("Location") {
+				t.Errorf("wanted location header to be %s but got %s", tt.wantLocation, writer.Result().Header.Get("Location"))
+			}
+			if tt.wantOIDCCookie {
+				hasCookie := false
+				for _, v := range writer.Result().Cookies() {
+					if v.Name == OIDCCookie && v.Value == tt.token && v.SameSite == http.SameSiteStrictMode && v.Secure == true && v.HttpOnly == true {
+						hasCookie = true
+						break
+					}
 				}
-
-				if w.Header().Get("Location") != "/" {
-					t.Error(w.Header().Get("Location"))
+				if !hasCookie {
+					t.Error("did not have the right cookie")
 				}
-
-				for _, l := range deep.Equal(m, cookie{
-					SessionKeyExpires:  int64(3600),
-					SessionKeyGroups:   groups,
-					SessionKeyUsername: username,
-				}) {
-					t.Error(l)
-				}
-
-			case tt.wantForbidden:
-				if w.Code != http.StatusForbidden {
-					t.Error(w.Code)
-				}
-
-				if w.Header().Get("Location") != "/" {
-					t.Error(w.Header().Get("Location"))
-				}
-
-				for _, l := range deep.Equal(m, cookie{}) {
-					t.Error(l)
-				}
-			default:
-				if w.Code != http.StatusTemporaryRedirect {
-					t.Error(w.Code)
-				}
-
-				if w.Header().Get("Location") != "/authcodeurl" {
-					t.Error(w.Header().Get("Location"))
-				}
-				return
 			}
 		})
 	}
@@ -834,7 +237,7 @@ func TestClientAssertion(t *testing.T) {
 	_, audit := testlog.NewAudit()
 	_, baseLog := testlog.New()
 	_, baseAccessLog := testlog.New()
-	a, err := NewAAD(baseLog, audit, env, baseAccessLog, "", make([]byte, 32), clientID, clientkey, clientcerts, nil, mux.NewRouter(), nil)
+	a, err := NewAAD(baseLog, audit, env, baseAccessLog, "", make([]byte, 32), clientID, clientkey, clientcerts, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

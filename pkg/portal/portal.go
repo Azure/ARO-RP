@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/coreos/go-oidc"
 	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
@@ -36,7 +37,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/portal/ssh"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
-	"github.com/Azure/ARO-RP/pkg/util/oidc"
 )
 
 type Runnable interface {
@@ -50,7 +50,7 @@ type portal struct {
 	baseAccessLog *logrus.Entry
 	l             net.Listener
 	sshl          net.Listener
-	verifier      oidc.Verifier
+	verifier      *oidc.IDTokenVerifier
 
 	hostname     string
 	servingKey   *rsa.PrivateKey
@@ -83,7 +83,7 @@ func NewPortal(env env.Core,
 	baseAccessLog *logrus.Entry,
 	l net.Listener,
 	sshl net.Listener,
-	verifier oidc.Verifier,
+	verifier *oidc.IDTokenVerifier,
 	hostname string,
 	servingKey *rsa.PrivateKey,
 	servingCerts []*x509.Certificate,
@@ -160,7 +160,9 @@ func (p *portal) setupRouter(kconfig *kubeconfig.Kubeconfig, prom *prometheus.Pr
 	allGroups := append([]string{}, p.groupIDs...)
 	allGroups = append(allGroups, p.elevatedGroupIDs...)
 
-	p.aad, err = middleware.NewAAD(p.log, p.audit, p.env, p.baseAccessLog, p.hostname, p.sessionKey, p.clientID, p.clientKey, p.clientCerts, allGroups, unauthenticatedRouter, p.verifier)
+	p.aad, err = middleware.NewAAD(p.log, p.audit, p.env, p.baseAccessLog, p.hostname, p.sessionKey, p.clientID, p.clientKey, p.clientCerts, allGroups,
+		p.verifier)
+	p.aadRoutes(unauthenticatedRouter)
 	if err != nil {
 		return nil, err
 	}
@@ -168,12 +170,17 @@ func (p *portal) setupRouter(kconfig *kubeconfig.Kubeconfig, prom *prometheus.Pr
 	aadAuthenticatedRouter := r.NewRoute().Subrouter()
 	aadAuthenticatedRouter.Use(p.aad.AAD)
 	aadAuthenticatedRouter.Use(middleware.Log(p.env, p.audit, p.baseAccessLog))
-	aadAuthenticatedRouter.Use(p.aad.CheckAuthentication)
 	aadAuthenticatedRouter.Use(csrf.Protect(p.sessionKey, csrf.SameSite(csrf.SameSiteStrictMode), csrf.MaxAge(0), csrf.Path("/")))
 
 	p.aadAuthenticatedRoutes(aadAuthenticatedRouter, prom, kconfig, sshStruct)
 
 	return r, nil
+}
+
+func (p *portal) aadRoutes(r *mux.Router) {
+	r.Methods(http.MethodGet).Path("/callback").Handler(middleware.Log(p.env, p.audit, p.baseAccessLog)(http.HandlerFunc(p.aad.Callback)))
+	r.Methods(http.MethodGet).Path("/api/login").Handler(middleware.Log(p.env, p.audit, p.baseAccessLog)(http.HandlerFunc(p.aad.Login)))
+	r.Methods(http.MethodPost).Path("/api/logout").Handler(middleware.Log(p.env, p.audit, p.baseAccessLog)(p.aad.Logout("/")))
 }
 
 func (p *portal) setupServices() (*kubeconfig.Kubeconfig, *prometheus.Prometheus, *ssh.SSH, error) {
