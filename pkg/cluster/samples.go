@@ -20,10 +20,12 @@ func (m *manager) disableSamples(ctx context.Context) error {
 		return nil
 	}
 
-	return retry.OnError(retry.DefaultRetry,
+	return retry.OnError(
+		retry.DefaultRetry,
 		func(err error) bool {
 			return errors.IsConflict(err) || errors.IsNotFound(err)
-		}, func() error {
+		},
+		func() error {
 			c, err := m.samplescli.SamplesV1().Configs().Get(ctx, "cluster", metav1.GetOptions{})
 			if err != nil {
 				return err
