@@ -1,30 +1,42 @@
 package aroprivilegednamespace
 
 test_input_allowed_ns {
-  input := { "review": input_ns(input_allowed_ns, non_priv_sa, non_priv_user) }
+  input := { "review": input_ns(input_allowed_ns, non_priv_sa, nonpriv_username_nonpriv_group_userinfo) }
   results := violation with input as input
   count(results) == 0
 }
 
 test_input_disallowed_ns1 {
-  input := { "review": input_ns(input_disallowed_ns1, non_priv_sa, non_priv_user) }
+  input := { "review": input_ns(input_disallowed_ns1, non_priv_sa, nonpriv_username_nonpriv_group_userinfo) }
   results := violation with input as input
   count(results) == 1
 }
 
 test_input_allowed_ns2 {
-  input := { "review": input_ns(input_disallowed_ns1, priv_sa, priv_user) }
+  input := { "review": input_ns(input_disallowed_ns1, priv_sa, priv_username_nonpriv_group_userinfo) }
   results := violation with input as input
   count(results) == 0
 }
 
 test_input_allowed_ns3 {
-  input := { "review": input_ns(input_disallowed_ns1, priv_sa, non_priv_user) }
+  input := { "review": input_ns(input_disallowed_ns1, priv_sa, nonpriv_username_nonpriv_group_userinfo) }
   results := violation with input as input
   count(results) == 1
 }
 
-input_ns(ns, serviceAccountName, username) = output {
+test_input_allowed_ns_new {
+  input := { "review": input_ns(input_allowed_ns, non_priv_sa, nonpriv_username_nonpriv_group_userinfo) }
+  results := violation with input as input
+  count(results) == 0
+}
+
+test_input_disallowed_ns1_new {
+  input := { "review": input_ns(input_disallowed_ns1, non_priv_sa, nonpriv_username_priv_group_userinfo) }
+  results := violation with input as input
+  count(results) == 0
+}
+
+input_ns(ns, serviceAccountName, userinfo) = output {
   output = {
     "object": {
       "apiVersion": "v1",
@@ -42,51 +54,49 @@ input_ns(ns, serviceAccountName, username) = output {
         ]        
       }
     },
-    "userInfo":{
-       "groups":[
-          "system:masters",
-          "system:authenticated"
-       ],
-       "username": username # "system:admin"
-    }
+    "userInfo":userinfo
   }
 }
 
-input_allowed_ns = "mytest"
 
-input_disallowed_ns1 = "openshift-config"
-
-priv_sa = "geneva"
-non_priv_sa = "testsa"
-
-priv_user = "system:admin"
-non_priv_user = "testuser"
-
-test_input_allowed_ns_new {
-  input := { "review": input_ns(input_allowed_ns, non_priv_sa, non_priv_user) }
-  results := violation with input as input
-  count(results) == 0
-}
-
-test_input_disallowed_ns1_new {
-  input := { "review": input_ns(input_disallowed_ns1, non_priv_sa, priv_user) }
-  results := violation with input as input
-  count(results) == 0
-}
-
-test_input_disallow_pullsecret_deletion {
-  input := get_input_with_username(non_priv_user)
+test_input_disallow_pullsecret_deletion1 {
+  input := get_input_with_userinfo(nonpriv_username_nonpriv_group_userinfo)
   results := violation with input as input
   count(results) == 1
 }
 
-test_input_allow_pullsecret_deletion {
-  input := get_input_with_username(priv_user)
+test_input_disallow_pullsecret_deletion2 {
+  input := get_input_with_userinfo(nonpriv_username_empty_priv_group_userinfo)
+  results := violation with input as input
+  count(results) == 1
+}
+
+test_input_allow_pullsecret_deletion1 {
+  input := get_input_with_userinfo(priv_username_priv_group_userinfo)
   results := violation with input as input
   count(results) == 0
 }
 
-get_input_with_username(username) = output {
+test_input_allow_pullsecret_deletion2 {
+  input := get_input_with_userinfo(nonpriv_username_priv_group_userinfo)
+  results := violation with input as input
+  count(results) == 0
+}
+
+test_input_allow_pullsecret_deletion3 {
+  input := get_input_with_userinfo(priv_username_nonpriv_group_userinfo)
+  results := violation with input as input
+  count(results) == 0
+}
+
+test_input_allow_pullsecret_deletion4 {
+  input := get_input_with_userinfo(priv_username_empty_priv_group_userinfo)
+  results := violation with input as input
+  count(results) == 0
+}
+
+
+get_input_with_userinfo(userinfo) = output {
   output := {
     "parameters":{},
     "review":{
@@ -134,13 +144,48 @@ get_input_with_username(username) = output {
           "version":"v1"
         },
         "uid":"d914431c-547c-4714-927e-309576e99b48",
-        "userInfo":{
-          "groups":[
-              "system:masters",
-              "system:authenticated"
-          ],
-          "username":username
-        }
+        "userInfo": userinfo
     }
   }
 }
+
+input_allowed_ns = "mytest"
+
+input_disallowed_ns1 = "openshift-config"
+
+priv_sa = "geneva"
+non_priv_sa = "testsa"
+
+priv_user = "system:admin"
+non_priv_user = "testuser"
+
+priv_groups = ["system:masters", "system:authenticated"]
+non_priv_groups = ["system:cluster-admins", "system:authenticated"]
+
+priv_username_nonpriv_group_userinfo = {
+          "groups":non_priv_groups,
+          "username":priv_user
+        }
+
+nonpriv_username_nonpriv_group_userinfo = {
+          "groups":non_priv_groups,
+          "username":non_priv_user
+        }
+
+priv_username_priv_group_userinfo = {
+          "groups":priv_groups,
+          "username":priv_user
+        }
+
+nonpriv_username_priv_group_userinfo = {
+          "groups":priv_groups,
+          "username":non_priv_user
+        }
+
+nonpriv_username_empty_priv_group_userinfo = {
+          "username":non_priv_user
+        }
+
+priv_username_empty_priv_group_userinfo = {
+          "username":priv_user
+        }
