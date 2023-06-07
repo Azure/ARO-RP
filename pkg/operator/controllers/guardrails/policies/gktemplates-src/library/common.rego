@@ -17,6 +17,7 @@ privileged_ns = {
   "openshift-azure-logging",
   "openshift-azure-operator",
   "openshift-managed-upgrade-operator",
+  "openshift-azure-guardrails",
 
   # OCP namespaces
   "openshift",
@@ -149,7 +150,10 @@ exempted_service_account = {
   "pruner",
   "machine-api-termination-handler",
   "aro-operator-master",
-  "installer-sa"
+  "installer-sa",
+
+  # gatekeeper specific
+  "gatekeeper-admin"
 }
 
 get_service_account(obj) = spec {
