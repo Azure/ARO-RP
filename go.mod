@@ -148,10 +148,7 @@ require (
 	github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0 // indirect
 	github.com/gobuffalo/flect v0.2.5 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-<<<<<<< HEAD
-=======
 	github.com/golang-jwt/jwt/v4 v4.4.1 // indirect
->>>>>>> fee91e520 (AAD redesign (auth process and route definition))
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/btree v1.0.1 // indirect
