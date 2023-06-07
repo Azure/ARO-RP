@@ -19,8 +19,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/containerinstall"
 	"github.com/Azure/ARO-RP/pkg/database"
-	"github.com/Azure/ARO-RP/pkg/installer"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
@@ -202,14 +202,18 @@ func (m *manager) Update(ctx context.Context) error {
 	return m.runSteps(ctx, s, "update")
 }
 
-func (m *manager) runIntegratedInstaller(ctx context.Context) error {
+func (m *manager) runPodmanInstaller(ctx context.Context) error {
 	version, err := m.openShiftVersionFromVersion(ctx)
 	if err != nil {
 		return err
 	}
 
-	i := installer.NewInstaller(m.log, m.env, m.doc.ID, m.doc.OpenShiftCluster, m.subscriptionDoc.Subscription, version, m.fpAuthorizer, m.deployments, m.graph)
-	return i.Install(ctx)
+	i, err := containerinstall.New(ctx, m.log, m.env)
+	if err != nil {
+		return err
+	}
+
+	return i.Install(ctx, m.subscriptionDoc, m.doc, version)
 }
 
 func (m *manager) runHiveInstaller(ctx context.Context) error {
@@ -283,7 +287,7 @@ func (m *manager) bootstrap() []steps.Step {
 		)
 	} else {
 		s = append(s,
-			steps.Action(m.runIntegratedInstaller),
+			steps.Action(m.runPodmanInstaller),
 			steps.Action(m.generateKubeconfigs),
 		)
 
