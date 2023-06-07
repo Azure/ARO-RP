@@ -75,6 +75,9 @@
         "disableCosmosDBFirewall": {
             "value": false
         },
+        "disableOauth": {
+            "value": "false"
+        },
         "fluentbitImage": {
             "value": ""
         },

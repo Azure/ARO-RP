@@ -440,7 +440,7 @@ func TestProxy(t *testing.T) {
 			}
 
 			if string(b) != tt.wantBody {
-				t.Errorf("%q", string(b))
+				t.Errorf("wanted %s but got %s", tt.wantBody, string(b))
 			}
 		})
 	}

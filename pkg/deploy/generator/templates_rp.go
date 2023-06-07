@@ -49,6 +49,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"clusterMdsdNamespace",
 			"cosmosDB",
 			"dbtokenClientId",
+			"disableOauth",
 			"disableCosmosDBFirewall",
 			"fluentbitImage",
 			"fpClientId",
@@ -145,6 +146,8 @@ func (g *generator) rpTemplate() *arm.Template {
 			"clusterDefaultInstallerPullspec",
 			"useCheckAccess":
 			p.DefaultValue = ""
+		case "disableOauth":
+			p.DefaultValue = "false"
 		}
 		t.Parameters[param] = p
 	}

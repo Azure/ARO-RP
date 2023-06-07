@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"crypto/rsa"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"mime"
 	"net"
@@ -132,7 +133,12 @@ func (s *SSH) New(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	elevated := len(middleware.GroupsIntersect(s.elevatedGroupIDs, ctx.Value(middleware.ContextKeyGroups).([]string))) > 0
+	groups, ok := ctx.Value(middleware.ContextKeyGroups).([]string)
+	if !ok {
+		s.internalServerError(w, errors.New("could not find any groups"))
+		return
+	}
+	elevated := len(middleware.GroupsIntersect(s.elevatedGroupIDs, groups)) > 0
 	if !elevated {
 		s.sendResponse(w, "", "", "", "Elevated access is required.", s.env.IsLocalDevelopmentMode())
 		return

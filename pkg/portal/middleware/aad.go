@@ -14,20 +14,19 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/adal"
-	"github.com/gorilla/mux"
-	"github.com/gorilla/securecookie"
-	"github.com/gorilla/sessions"
+	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/oidc"
 	"github.com/Azure/ARO-RP/pkg/util/roundtripper"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 const (
 	SessionName = "session"
+	OIDCCookie  = "oidc_cookie"
+	stateCookie = "oidc_state_cookie"
 	// Expiration time in unix format
 	SessionKeyExpires  = "expires"
 	sessionKeyState    = "state"
@@ -38,7 +37,7 @@ const (
 // AAD is responsible for ensuring that we have a valid login session with AAD.
 type AAD interface {
 	AAD(http.Handler) http.Handler
-	CheckAuthentication(http.Handler) http.Handler
+	Callback(w http.ResponseWriter, r *http.Request)
 	Login(http.ResponseWriter, *http.Request)
 	Logout(string) http.Handler
 }
@@ -46,6 +45,16 @@ type AAD interface {
 type oauther interface {
 	AuthCodeURL(string, ...oauth2.AuthCodeOption) string
 	Exchange(context.Context, string, ...oauth2.AuthCodeOption) (*oauth2.Token, error)
+}
+
+// this interface's only purpose is testability because generating JWT is hard
+type accessValidator interface {
+	validateAccess(ctx context.Context, rawIDToken string, now time.Time) (forbidden bool, username string, groups []string, expiry time.Time, err error)
+}
+
+type defaultAccessValidator struct {
+	allowedGroups []string
+	verifier      *oidc.IDTokenVerifier
 }
 
 type claims struct {
@@ -64,10 +73,9 @@ type aad struct {
 	clientKey   *rsa.PrivateKey
 	clientCerts []*x509.Certificate
 
-	store     *sessions.CookieStore
-	oauther   oauther
-	verifier  oidc.Verifier
-	allGroups []string
+	oauther         oauther
+	accessValidator accessValidator
+	allGroups       []string
 
 	sessionTimeout time.Duration
 }
@@ -82,8 +90,8 @@ func NewAAD(log *logrus.Entry,
 	clientKey *rsa.PrivateKey,
 	clientCerts []*x509.Certificate,
 	allGroups []string,
-	unauthenticatedRouter *mux.Router,
-	verifier oidc.Verifier) (*aad, error) {
+	verifier *oidc.IDTokenVerifier,
+) (*aad, error) {
 	if len(sessionKey) != 32 {
 		return nil, errors.New("invalid sessionKey")
 	}
@@ -103,7 +111,6 @@ func NewAAD(log *logrus.Entry,
 		clientID:    clientID,
 		clientKey:   clientKey,
 		clientCerts: clientCerts,
-		store:       sessions.NewCookieStore(sessionKey),
 		oauther: &oauth2.Config{
 			ClientID:    clientID,
 			Endpoint:    endpoint,
@@ -113,20 +120,11 @@ func NewAAD(log *logrus.Entry,
 				"profile",
 			},
 		},
-		verifier:  verifier,
-		allGroups: allGroups,
+		accessValidator: defaultAccessValidator{allowedGroups: allGroups, verifier: verifier},
+		allGroups:       allGroups,
 
 		sessionTimeout: time.Hour,
 	}
-
-	a.store.MaxAge(0)
-	a.store.Options.Secure = true
-	a.store.Options.HttpOnly = true
-	a.store.Options.SameSite = http.SameSiteLaxMode
-
-	unauthenticatedRouter.NewRoute().Methods(http.MethodGet).Path("/callback").Handler(Log(env, audit, baseAccessLog)(http.HandlerFunc(a.callback)))
-	unauthenticatedRouter.NewRoute().Methods(http.MethodGet).Path("/api/login").Handler(Log(env, audit, baseAccessLog)(http.HandlerFunc(a.Login)))
-	unauthenticatedRouter.NewRoute().Methods(http.MethodPost).Path("/api/logout").Handler(Log(env, audit, baseAccessLog)(a.Logout("/")))
 
 	return a, nil
 }
@@ -134,128 +132,66 @@ func NewAAD(log *logrus.Entry,
 // AAD is the early stage handler which adds a username to the context if it
 // can.  It lets the request through regardless (this is so that failures can be
 // logged).
+// Did we though? checkauth didn't do any logging and redirected to login
 func (a *aad) AAD(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		session, err := a.store.Get(r, SessionName)
+		oidcToken, err := r.Cookie(OIDCCookie)
 		if err != nil {
-			cookieError, ok := err.(securecookie.Error)
-			if ok && cookieError != nil && cookieError.IsDecode() {
-				cookie := &http.Cookie{
-					Name:    SessionName,
-					Path:    "/",
-					Expires: time.Unix(0, 0),
-				}
-				http.SetCookie(w, cookie)
-				http.Redirect(w, r, "/api/login", http.StatusTemporaryRedirect)
-			} else {
-				a.internalServerError(w, err)
-			}
+			http.Redirect(w, r, "/api/login", http.StatusTemporaryRedirect)
 			return
 		}
-
-		expires, ok := session.Values[SessionKeyExpires].(int64)
-		if !ok || time.Unix(expires, 0).Before(a.now()) {
-			h.ServeHTTP(w, r)
+		forbidden, username, groups, _, err := a.accessValidator.validateAccess(r.Context(), oidcToken.Value, time.Now())
+		if forbidden {
+			a.log.Debug(groups)
+			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+			return
+		}
+		if err != nil {
+			http.Redirect(w, r, "/api/login", http.StatusTemporaryRedirect)
 			return
 		}
 
 		ctx := r.Context()
-		ctx = context.WithValue(ctx, ContextKeyUsername, session.Values[SessionKeyUsername])
-		ctx = context.WithValue(ctx, ContextKeyGroups, session.Values[SessionKeyGroups])
+		ctx = context.WithValue(ctx, ContextKeyUsername, username)
+		ctx = context.WithValue(ctx, ContextKeyGroups, groups)
 		r = r.WithContext(ctx)
 
 		h.ServeHTTP(w, r)
 	})
 }
 
-// CheckAuthentication is the handler which prevents access to requests without
-// valid authentication.
-func (a *aad) CheckAuthentication(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		if ctx.Value(ContextKeyUsername) == nil {
-			if r.URL != nil {
-				http.Redirect(w, r, "/api/login", http.StatusTemporaryRedirect)
-				return
-			}
-			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
-			return
-		}
-		h.ServeHTTP(w, r)
-	})
-}
-
-// Login will redirect the user to a login page.
+// Login will redirect the user to a OAUTH login page with a state (CSRF protection).
 func (a *aad) Login(w http.ResponseWriter, r *http.Request) {
-	a.redirect(w, r)
-}
-
-func (a *aad) Logout(url string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		session, err := a.store.Get(r, SessionName)
-		if err != nil {
-			a.internalServerError(w, err)
-			return
-		}
-
-		session.Values = nil
-
-		err = session.Save(r, w)
-		if err != nil {
-			a.internalServerError(w, err)
-			return
-		}
-
-		http.Redirect(w, r, url, http.StatusSeeOther)
-	})
-}
-
-func (a *aad) redirect(w http.ResponseWriter, r *http.Request) {
-	session, err := a.store.Get(r, SessionName)
-	if err != nil {
-		a.internalServerError(w, err)
-		return
-	}
-
 	state := uuid.DefaultGenerator.Generate()
 
-	session.Values = map[interface{}]interface{}{
-		sessionKeyState: state,
-	}
-
-	err = session.Save(r, w)
-	if err != nil {
-		a.internalServerError(w, err)
-		return
-	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     stateCookie,
+		Value:    state,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteStrictMode,
+	})
 
 	http.Redirect(w, r, a.oauther.AuthCodeURL(state), http.StatusTemporaryRedirect)
 }
 
-func (a *aad) callback(w http.ResponseWriter, r *http.Request) {
+func (a *aad) Logout(url string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.SetCookie(w, &http.Cookie{Name: OIDCCookie, MaxAge: -1})
+		http.Redirect(w, r, url, http.StatusSeeOther)
+	})
+}
+
+func (a *aad) Callback(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	session, err := a.store.Get(r, SessionName)
+	state, err := r.Cookie(stateCookie)
 	if err != nil {
-		a.internalServerError(w, err)
+		http.Redirect(w, r, "/api/login", http.StatusTemporaryRedirect)
 		return
 	}
 
-	state, ok := session.Values[sessionKeyState].(string)
-	if !ok {
-		a.redirect(w, r)
-		return
-	}
-
-	delete(session.Values, sessionKeyState)
-
-	err = session.Save(r, w)
-	if err != nil {
-		a.internalServerError(w, err)
-		return
-	}
-
-	if r.FormValue("state") != state {
+	if r.FormValue("state") != state.Value {
 		a.internalServerError(w, errors.New("state mismatch"))
 		return
 	}
@@ -286,35 +222,63 @@ func (a *aad) callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idToken, err := a.verifier.Verify(r.Context(), rawIDToken)
+	_, _, _, expiry, err := a.accessValidator.validateAccess(r.Context(), rawIDToken, a.now())
 	if err != nil {
-		a.internalServerError(w, err)
+		// we could not identify the user so we make them try to login again
+		http.Redirect(w, r, "/api/login", http.StatusTemporaryRedirect)
 		return
 	}
 
-	var claims claims
-	err = idToken.Claims(&claims)
-	if err != nil {
-		a.internalServerError(w, err)
-		return
-	}
+	// only keep the cookie for the validity time of the token
+	http.SetCookie(w, &http.Cookie{
+		Name:     OIDCCookie,
+		Value:    rawIDToken,
+		Expires:  expiry,
+		SameSite: http.SameSiteStrictMode,
+		Secure:   true,
+		HttpOnly: true,
+	})
 
-	groupsIntersect := GroupsIntersect(a.allGroups, claims.Groups)
-	if len(groupsIntersect) == 0 {
-		http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
-	}
-
-	session.Values[SessionKeyUsername] = claims.PreferredUsername
-	session.Values[SessionKeyGroups] = groupsIntersect
-	session.Values[SessionKeyExpires] = a.now().Add(a.sessionTimeout).Unix()
-
-	err = session.Save(r, w)
-	if err != nil {
-		a.internalServerError(w, err)
-		return
-	}
+	// delete the state cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:   stateCookie,
+		Value:  "",
+		MaxAge: -1,
+	})
 
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+}
+
+func extractInfoFromToken(token *oidc.IDToken) (preferredUsername string, groups []string, err error) {
+	var claims claims
+
+	err = token.Claims(&claims)
+	if err != nil {
+		return "", nil, err
+	}
+
+	return claims.PreferredUsername, claims.Groups, nil
+}
+
+func (d defaultAccessValidator) validateAccess(ctx context.Context, rawIDToken string, now time.Time) (forbidden bool, username string, groups []string, expiry time.Time, err error) {
+	idToken, err := d.verifier.Verify(ctx, rawIDToken)
+	if err != nil {
+		return false, "", nil, time.Time{}, err
+	}
+
+	if idToken.Expiry.Before(now) {
+		// token has expired
+		return false, "", nil, idToken.Expiry, nil
+	}
+	username, groups, err = extractInfoFromToken(idToken)
+	if err != nil {
+		return false, "", nil, time.Time{}, err
+	}
+	groupsIntersect := GroupsIntersect(d.allowedGroups, groups)
+	if len(groupsIntersect) == 0 {
+		return true, username, groups, idToken.Expiry, nil
+	}
+	return false, username, groups, idToken.Expiry, nil
 }
 
 // clientAssertion adds a JWT client assertion according to

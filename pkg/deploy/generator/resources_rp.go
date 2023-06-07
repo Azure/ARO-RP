@@ -464,6 +464,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"clusterMdsdNamespace",
 		"clusterParentDomainName",
 		"databaseAccountName",
+		"disableOauth",
 		"dbtokenClientId",
 		"fluentbitImage",
 		"fpClientId",
