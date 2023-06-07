@@ -281,6 +281,21 @@ func (mr *MockAzureActionsMockRecorder) NICReconcileFailedState(arg0, arg1 inter
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NICReconcileFailedState", reflect.TypeOf((*MockAzureActions)(nil).NICReconcileFailedState), arg0, arg1)
 }
 
+// ResourceGroupHasVM mocks base method.
+func (m *MockAzureActions) ResourceGroupHasVM(arg0 context.Context, arg1 string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResourceGroupHasVM", arg0, arg1)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ResourceGroupHasVM indicates an expected call of ResourceGroupHasVM.
+func (mr *MockAzureActionsMockRecorder) ResourceGroupHasVM(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourceGroupHasVM", reflect.TypeOf((*MockAzureActions)(nil).ResourceGroupHasVM), arg0, arg1)
+}
+
 // ResourcesList mocks base method.
 func (m *MockAzureActions) ResourcesList(arg0 context.Context, arg1 []features.GenericResourceExpanded, arg2 io.WriteCloser) error {
 	m.ctrl.T.Helper()
