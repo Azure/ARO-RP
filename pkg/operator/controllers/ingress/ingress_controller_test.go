@@ -17,10 +17,16 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestReconciler(t *testing.T) {
+	defaultAvailable := utilconditions.ControllerDefaultAvailable(ControllerName)
+	defaultProgressing := utilconditions.ControllerDefaultProgressing(ControllerName)
+	defaultDegraded := utilconditions.ControllerDefaultDegraded(ControllerName)
+	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
+
 	fakeCluster := func(controllerEnabledFlag string) *arov1alpha1.Cluster {
 		return &arov1alpha1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
@@ -40,15 +46,21 @@ func TestReconciler(t *testing.T) {
 		ingressController     *operatorv1.IngressController
 		expectedReplica       int32
 		expectedError         string
+		startConditions       []operatorv1.OperatorCondition
+		wantConditions        []operatorv1.OperatorCondition
 	}{
 		{
 			name:                  "aro ingress controller disabled",
 			controllerEnabledFlag: "false",
+			startConditions:       defaultConditions,
+			wantConditions:        defaultConditions,
 		},
 		{
 			name:                  "openshift ingress controller not found",
 			controllerEnabledFlag: "true",
 			expectedError:         "ingresscontrollers.operator.openshift.io \"default\" not found",
+			startConditions:       defaultConditions,
+			wantConditions:        defaultConditions,
 		},
 		{
 			name:                  "openshift ingress controller has 3 replicas",
@@ -63,6 +75,8 @@ func TestReconciler(t *testing.T) {
 				},
 			},
 			expectedReplica: 3,
+			startConditions: defaultConditions,
+			wantConditions:  defaultConditions,
 		},
 		{
 			name:                  "openshift ingress controller has 2 replicas (minimum required replicas)",
@@ -77,6 +91,8 @@ func TestReconciler(t *testing.T) {
 				},
 			},
 			expectedReplica: minimumReplicas,
+			startConditions: defaultConditions,
+			wantConditions:  defaultConditions,
 		},
 		{
 			name:                  "openshift ingress controller has 1 replica",
@@ -91,6 +107,8 @@ func TestReconciler(t *testing.T) {
 				},
 			},
 			expectedReplica: minimumReplicas,
+			startConditions: defaultConditions,
+			wantConditions:  defaultConditions,
 		},
 		{
 			name:                  "openshift ingress controller has 0 replica",
@@ -105,6 +123,8 @@ func TestReconciler(t *testing.T) {
 				},
 			},
 			expectedReplica: minimumReplicas,
+			startConditions: defaultConditions,
+			wantConditions:  defaultConditions,
 		},
 	}
 
@@ -118,10 +138,7 @@ func TestReconciler(t *testing.T) {
 			}
 			clientFake := clientBuilder.Build()
 
-			r := &Reconciler{
-				log:    logrus.NewEntry(logrus.StandardLogger()),
-				client: clientFake,
-			}
+			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientFake)
 
 			request := ctrl.Request{}
 			ctx := context.Background()
@@ -131,7 +148,7 @@ func TestReconciler(t *testing.T) {
 
 			if tt.ingressController != nil {
 				ingress := &operatorv1.IngressController{}
-				err = r.client.Get(ctx, types.NamespacedName{Namespace: openshiftIngressControllerNamespace, Name: openshiftIngressControllerName}, ingress)
+				err = r.Client.Get(ctx, types.NamespacedName{Namespace: openshiftIngressControllerNamespace, Name: openshiftIngressControllerName}, ingress)
 				if err != nil {
 					t.Error(err)
 				}

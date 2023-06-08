@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 )
 
 const (
@@ -31,47 +32,51 @@ const (
 // Reconciler spots openshift ingress controllers has abnormal replica counts (less than 2)
 // when happens, it tries to rescale the controller to 2 replicas, i.e., the minimum required replicas
 type Reconciler struct {
-	log *logrus.Entry
-
-	client client.Client
+	base.AROController
 }
 
 func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
-		log:    log,
-		client: client,
+		AROController: base.AROController{
+			Log:    log,
+			Client: client,
+		},
 	}
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance := &arov1alpha1.Cluster{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+	err := r.Client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
+		r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		r.log.Debug("controller is disabled")
+		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
-	r.log.Debug("running")
+	r.Log.Debug("running")
 	ingress := &operatorv1.IngressController{}
-	err = r.client.Get(ctx, types.NamespacedName{Namespace: openshiftIngressControllerNamespace, Name: openshiftIngressControllerName}, ingress)
+	err = r.Client.Get(ctx, types.NamespacedName{Namespace: openshiftIngressControllerNamespace, Name: openshiftIngressControllerName}, ingress)
 	if err != nil {
-		r.log.Error(err)
+		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
 	}
 
 	if ingress.Spec.Replicas != nil && *ingress.Spec.Replicas < minimumReplicas {
 		ingress.Spec.Replicas = to.Int32Ptr(minimumReplicas)
-		err := r.client.Update(ctx, ingress)
+		err := r.Client.Update(ctx, ingress)
 		if err != nil {
-			r.log.Error(err)
+			r.Log.Error(err)
+			r.SetDegraded(ctx, err)
 			return reconcile.Result{}, err
 		}
 	}
 
+	r.ClearConditions(ctx)
 	return reconcile.Result{}, nil
 }
 
