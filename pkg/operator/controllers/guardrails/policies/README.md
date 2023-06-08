@@ -150,13 +150,21 @@ spec:
 
 * install gomplate which is used by generate.sh, see https://docs.gomplate.ca/installing/
 
-* execute generate.sh under policies, which will generate the acutal Constraint Templates under gktemplates folder, example:
+* execute generate.sh under policies, which will generate the acutal Constraint Templates to gktemplates folder, example:
+
 
   ```sh
+  # Generate all the Constraint Templates
   ARO-RP/pkg/operator/controllers/guardrails/policies$ ./scripts/generate.sh 
   Generating gktemplates/aro-deny-delete.yaml from gktemplates-src/aro-deny-delete/aro-deny-delete.tmpl
   Generating gktemplates/aro-deny-privileged-namespace.yaml from gktemplates-src/aro-deny-privileged-namespace/aro-deny-privileged-namespace.tmpl
   Generating gktemplates/aro-deny-labels.yaml from gktemplates-src/aro-deny-labels/aro-deny-labels.tmpl
+  ```
+
+  ```sh
+  # Generate a specific Constraint Template by providing the specific policy directory under gktemplates-src folder
+  ARO-RP/pkg/operator/controllers/guardrails/policies$ ./scripts/generate.sh aro-deny-machine-config
+  Generating gktemplates/aro-deny-machine-config.yaml from gktemplates-src/aro-deny-machine-config/aro-deny-machine-config.tmpl
   ```
 
 ## Test policy with Gator
@@ -218,7 +226,13 @@ gator test can be done via cmd:
 
 test.sh executes both opa test and gator verify
 ```sh
+# Run tests for all the policies
 ARO-RP/pkg/operator/controllers/guardrails/policies$ ./scripts/test.sh
+```
+```sh
+# Run tests for a specific policy
+# Providing the policy directory under gktemplates-src folder and the correspondent Constraint file under gkconstraints folder
+ARO-RP/pkg/operator/controllers/guardrails/policies$ ./scripts/test.sh aro-deny-machine-config aro-machine-config-deny.yaml
 ```
 
 or below cmd after test.sh has been executed:
@@ -251,7 +265,7 @@ request:
       name: 99-worker-generated-crio-seccomp-use-default
   dryRun: true
 ```
-A tool [admr-gen](https://github.com/ArrisLee/admr-gen) has been created and can be utilized to generate fake admission review requests in an easier way.
+A tool [admr-gen](https://github.com/ArrisLee/admr-gen) has been created and can be utilized to generate mocked kube admission review requests in an easier way.
 
 ## Enable and test your policy on a dev cluster
 
