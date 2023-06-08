@@ -186,6 +186,7 @@ func (m *manager) updateOpenShiftSecret(ctx context.Context) error {
 		secret, err := m.kubernetescli.CoreV1().Secrets(clusterauthorizer.AzureCredentialSecretNameSpace).Get(ctx, clusterauthorizer.AzureCredentialSecretName, metav1.GetOptions{})
 		if kerrors.IsNotFound(err) {
 			secret = m.newAzureCredentialSecret()
+			recreate = true
 		} else if err != nil {
 			return err
 		}
