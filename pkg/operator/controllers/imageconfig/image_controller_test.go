@@ -244,10 +244,7 @@ func TestImageConfigReconciler(t *testing.T) {
 
 			clientFake := ctrlfake.NewClientBuilder().WithObjects(instance, tt.image).Build()
 
-			r := &Reconciler{
-				log:    logrus.NewEntry(logrus.StandardLogger()),
-				client: clientFake,
-			}
+			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientFake)
 			request := ctrl.Request{}
 			request.Name = "cluster"
 
@@ -255,7 +252,7 @@ func TestImageConfigReconciler(t *testing.T) {
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			imgcfg := &configv1.Image{}
-			err = r.client.Get(ctx, types.NamespacedName{Name: request.Name}, imgcfg)
+			err = r.Client.Get(ctx, types.NamespacedName{Name: request.Name}, imgcfg)
 			if err != nil {
 				t.Fatal(err)
 			}
