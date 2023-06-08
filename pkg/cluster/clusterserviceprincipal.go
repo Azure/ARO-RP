@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	applyv1 "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
@@ -176,6 +175,7 @@ func (m *manager) updateAROSecret(ctx context.Context) error {
 }
 
 func (m *manager) updateOpenShiftSecret(ctx context.Context) error {
+	var recreate bool
 	var changed bool
 	spp := m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -205,9 +205,13 @@ func (m *manager) updateOpenShiftSecret(ctx context.Context) error {
 			changed = true
 		}
 
-		if changed {
-			secretApplyConfig := applyv1.Secret(secret.Name, secret.Namespace).WithData(secret.Data)
-			_, err = m.kubernetescli.CoreV1().Secrets(clusterauthorizer.AzureCredentialSecretNameSpace).Apply(ctx, secretApplyConfig, metav1.ApplyOptions{FieldManager: "aro-rp"})
+		if recreate {
+			_, err = m.kubernetescli.CoreV1().Secrets(clusterauthorizer.AzureCredentialSecretNameSpace).Create(ctx, secret, metav1.CreateOptions{})
+			if err != nil {
+				return err
+			}
+		} else if changed {
+			_, err = m.kubernetescli.CoreV1().Secrets(clusterauthorizer.AzureCredentialSecretNameSpace).Update(ctx, secret, metav1.UpdateOptions{})
 			if err != nil {
 				return err
 			}
@@ -219,7 +223,7 @@ func (m *manager) updateOpenShiftSecret(ctx context.Context) error {
 	}
 
 	// return early if not changed
-	if !changed {
+	if !changed && !recreate {
 		return nil
 	}
 
