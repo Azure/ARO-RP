@@ -18,12 +18,8 @@ import (
 	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/fake"
-	ktesting "k8s.io/client-go/testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
@@ -331,7 +327,7 @@ func TestUpdateOpenShiftSecret(t *testing.T) {
 			name: "noop",
 			kubernetescli: func() *fake.Clientset {
 				secret := getFakeOpenShiftSecret()
-				return cliWithApply(&secret)
+				return fake.NewSimpleClientset(&secret)
 			},
 			doc: api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
@@ -356,7 +352,7 @@ func TestUpdateOpenShiftSecret(t *testing.T) {
 			name: "update secret",
 			kubernetescli: func() *fake.Clientset {
 				secret := getFakeOpenShiftSecret()
-				return cliWithApply(&secret)
+				return fake.NewSimpleClientset(&secret)
 			},
 			doc: api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
@@ -383,7 +379,7 @@ func TestUpdateOpenShiftSecret(t *testing.T) {
 			name: "update tenant",
 			kubernetescli: func() *fake.Clientset {
 				secret := getFakeOpenShiftSecret()
-				return cliWithApply(&secret)
+				return fake.NewSimpleClientset(&secret)
 			},
 			doc: api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
@@ -407,39 +403,16 @@ func TestUpdateOpenShiftSecret(t *testing.T) {
 			},
 		},
 		{
-			name: "recreate secret when not found",
+			name: "not found - no fail",
 			kubernetescli: func() *fake.Clientset {
-				return cliWithApply()
+				return fake.NewSimpleClientset()
 			},
 			doc: api.OpenShiftCluster{
-				Location: "azure_region_value",
 				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: api.ServicePrincipalProfile{
-						ClientID:     "azure_client_id_value",
-						ClientSecret: "azure_client_secret_value",
-					},
-					InfraID: "azure_resource_prefix_value",
-					ClusterProfile: api.ClusterProfile{
-						ResourceGroupID: "fake/azure/paths/azure_resourcegroup_value",
-					},
+					ServicePrincipalProfile: api.ServicePrincipalProfile{},
 				},
 			},
-			subscriptionDoc: api.SubscriptionDocument{
-				ID: "azure_subscription_id_value",
-				Subscription: &api.Subscription{
-					Properties: &api.SubscriptionProperties{
-						TenantID: "azure_tenant_id_value",
-					},
-				},
-			},
-			expect: func() corev1.Secret {
-				secret := getFakeOpenShiftSecret()
-				secret.Data["azure_region"] = []byte("azure_region_value")
-				secret.Data["azure_resource_prefix"] = []byte("azure_resource_prefix_value")
-				secret.Data["azure_resourcegroup"] = []byte("azure_resourcegroup_value")
-				secret.Data["azure_subscription_id"] = []byte("azure_subscription_id_value")
-				return secret
-			},
+			wantErr: `secrets "azure-credentials" not found`,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -464,45 +437,4 @@ func TestUpdateOpenShiftSecret(t *testing.T) {
 			}
 		})
 	}
-}
-
-// The current kubernetes testing client does not propery handle Apply actions so we reimplement it here.
-// See https://github.com/kubernetes/client-go/issues/1184 for more details.
-func cliWithApply(object ...runtime.Object) *fake.Clientset {
-	fc := fake.NewSimpleClientset(object...)
-	fc.PrependReactor("patch", "secrets", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
-		pa := action.(ktesting.PatchAction)
-		if pa.GetPatchType() == types.ApplyPatchType {
-			// Apply patches are supposed to upsert, but fake client fails if the object doesn't exist,
-			// if an apply patch occurs for a secret that doesn't yet exist, create it.
-			// However, we already hold the fakeclient lock, so we can't use the front door.
-			rfunc := ktesting.ObjectReaction(fc.Tracker())
-			_, obj, err := rfunc(
-				ktesting.NewGetAction(pa.GetResource(), pa.GetNamespace(), pa.GetName()),
-			)
-			if kerrors.IsNotFound(err) || obj == nil {
-				_, _, _ = rfunc(
-					ktesting.NewCreateAction(
-						pa.GetResource(),
-						pa.GetNamespace(),
-						&corev1.Secret{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      pa.GetName(),
-								Namespace: pa.GetNamespace(),
-							},
-						},
-					),
-				)
-			}
-			return rfunc(ktesting.NewPatchAction(
-				pa.GetResource(),
-				pa.GetNamespace(),
-				pa.GetName(),
-				types.StrategicMergePatchType,
-				pa.GetPatch()))
-		}
-		return false, nil, nil
-	},
-	)
-	return fc
 }
