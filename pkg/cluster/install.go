@@ -162,7 +162,7 @@ func (m *manager) clusterWasCreatedByHive() bool {
 
 func (m *manager) Update(ctx context.Context) error {
 	s := []steps.Step{
-		steps.Action(m.validateResources),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources),
 		steps.Action(m.initializeKubernetesClients), // All init steps are first
 		steps.Action(m.initializeOperatorDeployer),  // depends on kube clients
 		steps.Action(m.initializeClusterSPClients),
