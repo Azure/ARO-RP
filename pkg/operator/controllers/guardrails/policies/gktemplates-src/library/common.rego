@@ -17,6 +17,7 @@ privileged_ns = {
   "openshift-azure-logging",
   "openshift-azure-operator",
   "openshift-managed-upgrade-operator",
+  "openshift-azure-guardrails",
 
   # OCP namespaces
   "openshift",
@@ -149,7 +150,10 @@ exempted_service_account = {
   "pruner",
   "machine-api-termination-handler",
   "aro-operator-master",
-  "installer-sa"
+  "installer-sa",
+
+  # gatekeeper specific
+  "gatekeeper-admin"
 }
 
 get_service_account(obj) = spec {
@@ -187,8 +191,9 @@ get_user_info(review) = info {
 is_exempted_account(review) {
   has_field(review.userInfo, "username")
   username := get_user(review)
-  is_exempted_user(username)
-  print("exempted user:", username)
+  groups := get_user_group(review)
+  is_exempted_user_or_groups(username, groups)
+  # print("exempted user/groups:", username, groups)
 } {
   not has_field(review.userInfo, "username")
   sa := get_service_account(review.object)
@@ -209,6 +214,27 @@ get_user(review) = name {
   print(name)
 }
 
+get_user_group(review) = out {
+    not review.userInfo
+    out = []
+}
+get_user_group(review) = out {
+    not review.userInfo.groups
+    out = []
+}
+get_user_group(review) = out {
+    out = review.userInfo.groups
+}
+
+is_exempted_user_or_groups(user, groups) {
+  exempted_user[user]
+  print("exempted user:", user)
+} {
+  group := [ g | g := groups[_]; (g in cast_set(exempted_groups)) ]
+  count(group) > 0
+  print("exempted group:", group)
+}
+
 has_field(object, field) = true {
     object[field]
 }
@@ -219,4 +245,9 @@ is_exempted_user(user) {
 
 exempted_user = {
   "system:admin" # comment out temporarily for testing in console
+}
+
+exempted_groups = {
+  # "system:cluster-admins", # kube:admin
+  "system:masters" # system:admin
 }

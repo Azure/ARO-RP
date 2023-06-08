@@ -56,10 +56,10 @@ input_pod(ns, account, username, priv, ro_host_mount) = output {
       }
     },
     "userInfo":{
-       "groups":[
-          "system:masters",
-          "system:authenticated"
-       ],
+      #  "groups":[
+      #     "system:masters",
+      #     "system:authenticated"
+      #  ],
        "username": username # "system:admin"
     }
   }
@@ -130,10 +130,10 @@ get_input_pv_with_username(username, access) = output {
       }
     },
     "userInfo":{
-       "groups":[
-          "system:masters",
-          "system:authenticated"
-       ],
+      #  "groups":[
+      #     "system:masters",
+      #     "system:authenticated"
+      #  ],
        "username": username # "system:admin"
     }
   }
