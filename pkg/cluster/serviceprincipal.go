@@ -51,6 +51,8 @@ func (m *manager) clusterSPObjectID(ctx context.Context) error {
 		var res azgraphrbac.ServicePrincipalObjectResult
 		res, err = m.spApplications.GetServicePrincipalsIDByAppID(ctx, spp.ClientID)
 		if err != nil {
+			// TODO - with migration to MSGraph, this error is different now.
+			// it's fixed with a refreshing action, but we should fix it here too
 			if strings.Contains(err.Error(), "Authorization_IdentityNotFound") {
 				m.log.Info(err)
 				return false, nil
