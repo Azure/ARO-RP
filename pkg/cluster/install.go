@@ -46,7 +46,11 @@ func (m *manager) adminUpdate() []steps.Step {
 		steps.Action(m.initializeKubernetesClients), // must be first
 		steps.Action(m.ensureBillingRecord),         // belt and braces
 		steps.Action(m.ensureDefaults),
-		steps.Action(m.fixupClusterSPObjectID),
+
+		// TODO: this relies on an authorizer that isn't exposed in the manager
+		// struct, so we'll rebuild the fpAuthorizer and use the error catching
+		// to advance
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixupClusterSPObjectID),
 		steps.Action(m.fixInfraID), // Old clusters lacks infraID in the database. Which makes code prone to errors.
 	}
 
@@ -162,11 +166,15 @@ func (m *manager) clusterWasCreatedByHive() bool {
 
 func (m *manager) Update(ctx context.Context) error {
 	s := []steps.Step{
-		steps.Action(m.validateResources),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources),
 		steps.Action(m.initializeKubernetesClients), // All init steps are first
 		steps.Action(m.initializeOperatorDeployer),  // depends on kube clients
 		steps.Action(m.initializeClusterSPClients),
-		steps.Action(m.clusterSPObjectID),
+
+		// TODO: this relies on an authorizer that isn't exposed in the manager
+		// struct, so we'll rebuild the fpAuthorizer and use the error catching
+		// to advance
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterSPObjectID),
 		// credentials rotation flow steps
 		steps.Action(m.createOrUpdateClusterServicePrincipalRBAC),
 		steps.Action(m.createOrUpdateDenyAssignment),
@@ -241,7 +249,11 @@ func (m *manager) bootstrap() []steps.Step {
 
 		steps.Action(m.createDNS),
 		steps.Action(m.initializeClusterSPClients), // must run before clusterSPObjectID
-		steps.Action(m.clusterSPObjectID),
+
+		// TODO: this relies on an authorizer that isn't exposed in the manager
+		// struct, so we'll rebuild the fpAuthorizer and use the error catching
+		// to advance
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterSPObjectID),
 		steps.Action(m.ensureResourceGroup),
 		steps.Action(m.ensureServiceEndpoints),
 		steps.Action(m.setMasterSubnetPolicies),
