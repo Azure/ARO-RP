@@ -10,14 +10,11 @@ import (
 
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	"github.com/ghodss/yaml"
-	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	applyv1 "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -183,10 +180,8 @@ func (m *manager) updateOpenShiftSecret(ctx context.Context) error {
 		// azure_client_id: secret_id
 		// azure_client_secret: secret_value
 		// azure_tenant_id: tenant_id
-		secret, err := m.kubernetescli.CoreV1().Secrets(clusterauthorizer.AzureCredentialSecretNameSpace).Get(ctx, clusterauthorizer.AzureCredentialSecretName, metav1.GetOptions{})
-		if kerrors.IsNotFound(err) {
-			secret = m.newAzureCredentialSecret()
-		} else if err != nil {
+		secret, err := m.kubernetescli.CoreV1().Secrets("kube-system").Get(ctx, "azure-credentials", metav1.GetOptions{})
+		if err != nil {
 			return err
 		}
 
@@ -206,8 +201,7 @@ func (m *manager) updateOpenShiftSecret(ctx context.Context) error {
 		}
 
 		if changed {
-			secretApplyConfig := applyv1.Secret(secret.Name, secret.Namespace).WithData(secret.Data)
-			_, err = m.kubernetescli.CoreV1().Secrets(clusterauthorizer.AzureCredentialSecretNameSpace).Apply(ctx, secretApplyConfig, metav1.ApplyOptions{FieldManager: "aro-rp"})
+			_, err = m.kubernetescli.CoreV1().Secrets("kube-system").Update(ctx, secret, metav1.UpdateOptions{})
 			if err != nil {
 				return err
 			}
@@ -234,25 +228,4 @@ func (m *manager) updateOpenShiftSecret(ctx context.Context) error {
 		m.log.Error(err)
 	}
 	return nil
-}
-
-func (m *manager) newAzureCredentialSecret() *corev1.Secret {
-	resourceGroupID := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID
-	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      clusterauthorizer.AzureCredentialSecretName,
-			Namespace: clusterauthorizer.AzureCredentialSecretNameSpace,
-		},
-		Type: corev1.SecretTypeOpaque,
-		Data: map[string][]byte{
-
-			"azure_subscription_id": []byte(m.subscriptionDoc.ID),
-			"azure_resource_prefix": []byte(m.doc.OpenShiftCluster.Properties.InfraID),
-			"azure_resourcegroup":   []byte(resourceGroupID[strings.LastIndex(resourceGroupID, "/")+1:]),
-			"azure_region":          []byte(m.doc.OpenShiftCluster.Location),
-			"azure_client_id":       []byte(""),
-			"azure_client_secret":   []byte(""),
-			"azure_tenant_id":       []byte(""),
-		},
-	}
 }
