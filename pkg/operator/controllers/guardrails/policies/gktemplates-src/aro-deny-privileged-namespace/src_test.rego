@@ -7,31 +7,55 @@ test_input_allowed_ns {
 }
 
 test_input_disallowed_ns1 {
-  input := { "review": input_ns(input_disallowed_ns1, non_priv_sa, nonpriv_username_nonpriv_group_userinfo) }
+  input := { "review": input_ns(input_disallowed_ns, non_priv_sa, nonpriv_username_nonpriv_group_userinfo) }
   results := violation with input as input
   count(results) == 1
 }
 
-test_input_allowed_ns2 {
-  input := { "review": input_ns(input_disallowed_ns1, priv_sa, priv_username_nonpriv_group_userinfo) }
+test_input_disallowed_ns2 {
+  input := { "review": input_ns(input_disallowed_ns, priv_sa, priv_username_nonpriv_group_userinfo) }
   results := violation with input as input
   count(results) == 0
 }
 
-test_input_allowed_ns3 {
-  input := { "review": input_ns(input_disallowed_ns1, priv_sa, nonpriv_username_nonpriv_group_userinfo) }
+test_input_disallowed_ns3 {
+  input := { "review": input_ns(input_disallowed_ns, priv_sa, nonpriv_username_nonpriv_group_userinfo) }
   results := violation with input as input
-  count(results) == 1
+  count(results) == 0
 }
 
-test_input_allowed_ns_new {
+test_input_allowed_ns4 {
   input := { "review": input_ns(input_allowed_ns, non_priv_sa, nonpriv_username_nonpriv_group_userinfo) }
   results := violation with input as input
   count(results) == 0
 }
 
-test_input_disallowed_ns1_new {
-  input := { "review": input_ns(input_disallowed_ns1, non_priv_sa, nonpriv_username_priv_group_userinfo) }
+test_input_disallowed_ns5 {
+  input := { "review": input_ns(input_disallowed_ns, non_priv_sa, nonpriv_username_priv_group_userinfo) }
+  results := violation with input as input
+  count(results) == 0
+}
+
+test_input_disallowed_ns6 {
+  input := { "review": input_ns(input_disallowed_ns, non_priv_sa, "") }
+  results := violation with input as input
+  count(results) == 1
+}
+
+test_input_disallowed_ns6 {
+  input := { "review": input_ns(input_disallowed_ns, priv_sa, "") }
+  results := violation with input as input
+  count(results) == 0
+}
+
+test_input_allowed_ns7 {
+  input := { "review": input_ns(input_allowed_ns, non_priv_sa, "") }
+  results := violation with input as input
+  count(results) == 0
+}
+
+test_input_allowed_ns8 {
+  input := { "review": input_ns(input_allowed_ns, priv_sa, "") }
   results := violation with input as input
   count(results) == 0
 }
@@ -151,7 +175,7 @@ get_input_with_userinfo(userinfo) = output {
 
 input_allowed_ns = "mytest"
 
-input_disallowed_ns1 = "openshift-config"
+input_disallowed_ns = "openshift-config"
 
 priv_sa = "geneva"
 non_priv_sa = "testsa"

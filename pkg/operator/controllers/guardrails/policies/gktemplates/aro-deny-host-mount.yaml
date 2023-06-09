@@ -292,23 +292,50 @@ spec:
             info := sprintf("service account %v", [sa])
           }
 
-          # this setup is to handle below case:
-          # user default::notfound not allowed to operate in namespace openshift-kube-scheduler
+          # check if username or ServiceAccountName or group is exempted
+          # return true if one of them is exempted
           #
-          # assume for cmdline operations, userInfo is always present, which is the only key for user identity
-          # while for serviceAccount operations, no userInfo is present, and we have to rely on the serviceAccountName field in the object
+          # has to be flexible as need to handle
+          # for network operator, it provides:
+          #   "serviceAccountName": "multus"
+          #   ...
+          #   userInfo:
+          #     extra:
+          #       authentication.kubernetes.io/pod-name:
+          #       - network-operator-5967c954f9-98rgj
+          #       authentication.kubernetes.io/pod-uid:
+          #       - 676de236-52cf-4173-8d6b-d4c24a241d62
+          #     groups:
+          #     - system:serviceaccounts
+          #     - system:serviceaccounts:openshift-network-operator
+          #     - system:authenticated
+          #     uid: bb9628bf-6fb4-4bdf-8e7b-c61c64ae752c
+          #     username: system:serviceaccount:openshift-network-operator:default
+          # in previous restrict mode implementation, when username exists, only validate username
+          # and ignore serviceAccountName, above case will not be allowed
 
           is_exempted_account(review) {
-            has_field(review.userInfo, "username")
-            username := get_user(review)
-            groups := get_user_group(review)
-            is_exempted_user_or_groups(username, groups)
-            # print("exempted user/groups:", username, groups)
-          } {
             not has_field(review.userInfo, "username")
             sa := get_service_account(review.object)
             is_exempted_service_account(sa)
-            print("exempted account:", sa)
+            print("exempted serviceAccount:", sa)
+          } {
+            has_field(review.userInfo, "username")
+            is_exempted_user_or_groups_or_sa(review)
+          }
+
+          # requires username to be present
+          is_exempted_user_or_groups_or_sa(review) {
+            username := get_user(review)
+            groups := get_user_group(review)
+            is_exempted_user_or_groups(username, groups)
+          } {
+            username := get_user(review)
+            groups := get_user_group(review)
+            not is_exempted_user_or_groups(username, groups)
+            sa := get_service_account(review.object)
+            is_exempted_service_account(sa)
+            print("exempted sa:", sa)
           }
 
           is_exempted_service_account(user) {
@@ -359,5 +386,9 @@ spec:
 
           exempted_groups = {
             # "system:cluster-admins", # kube:admin
+            "system:serviceaccounts", # to allow all system service account?
+            # "system:serviceaccounts:openshift-monitoring", # monitoring operator
+            # "system:serviceaccounts:openshift-network-operator", # network operator
+            # "system:serviceaccounts:openshift-machine-config-operator", # machine-config-operator, however the request provide correct sa name
             "system:masters" # system:admin
           }
