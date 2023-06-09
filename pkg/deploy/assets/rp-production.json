@@ -1059,7 +1059,7 @@
                             "name": "RUConsumptionCheck",
                             "metricName": "NormalizedRUConsumption",
                             "metricNamespace": "Microsoft.DocumentDB/databaseAccounts",
-                            "timeAggregation": "Maximum",
+                            "timeAggregation": "Average",
                             "criterionType": "StaticThresholdCriterion"
                         }
                     ],

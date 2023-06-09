@@ -1336,7 +1336,7 @@ func (g *generator) rpCosmosDBAlert(throttledRequestThreshold float64, ruConsump
 		Name:            to.StringPtr("RUConsumptionCheck"),
 		Operator:        mgmtinsights.OperatorGreaterThan,
 		Threshold:       to.Float64Ptr(ruConsumptionThreshold),
-		TimeAggregation: mgmtinsights.Maximum,
+		TimeAggregation: mgmtinsights.Average,
 	}
 
 	return &arm.Resource{
