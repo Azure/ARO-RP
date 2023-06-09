@@ -9,6 +9,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/containers/podman/v4/pkg/bindings/containers"
+	"github.com/containers/podman/v4/pkg/bindings/images"
 	"github.com/containers/podman/v4/pkg/specgen"
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -34,7 +35,7 @@ func TestPodman(t *testing.T) {
 	s.Name = randomName
 	s.Entrypoint = []string{"/bin/bash", "-c", "echo 'hello'"}
 
-	err = pullContainer(conn, TEST_PULLSPEC, "missing")
+	err = pullContainer(conn, TEST_PULLSPEC, &images.PullOptions{Policy: to.StringPtr("missing")})
 	if err != nil {
 		t.Fatal(err)
 	}

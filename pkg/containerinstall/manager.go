@@ -19,6 +19,7 @@ type ContainerInstaller interface {
 type manager struct {
 	conn context.Context
 	log  *logrus.Entry
+	env  env.Interface
 
 	doc     *api.OpenShiftClusterDocument
 	sub     *api.SubscriptionDocument
@@ -39,6 +40,7 @@ func New(ctx context.Context, log *logrus.Entry, env env.Interface) (ContainerIn
 	return &manager{
 		conn:          conn,
 		log:           log,
+		env:           env,
 		isDevelopment: isDevelopment,
 	}, nil
 }

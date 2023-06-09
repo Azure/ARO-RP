@@ -6,15 +6,19 @@ package containerinstall
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/containers/podman/v4/pkg/bindings/containers"
+	"github.com/containers/podman/v4/pkg/bindings/images"
 	"github.com/containers/podman/v4/pkg/bindings/secrets"
 	"github.com/containers/podman/v4/pkg/specgen"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -39,14 +43,51 @@ var (
 	}
 )
 
+type auths struct {
+	Auths map[string]map[string]interface{} `json:"auths,omitempty"`
+}
+
 func (m *manager) Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion) error {
 	m.sub = sub
 	m.doc = doc
 	m.version = version
 
+	pullSecrets := &auths{}
+	err := json.Unmarshal([]byte(os.Getenv("PULL_SECRET")), pullSecrets)
+	if err != nil {
+		return err
+	}
+
+	auth, ok := pullSecrets.Auths[m.env.ACRDomain()]
+	if !ok {
+		return fmt.Errorf("missing %s key in PULL_SECRET", m.env.ACRDomain())
+	}
+
+	token, ok := auth["auth"]
+	if !ok {
+		return errors.New("maformed auth token")
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(token.(string))
+	if err != nil {
+		return err
+	}
+
+	split := strings.Split(string(decoded), ":")
+	if len(split) != 2 {
+		return fmt.Errorf("not username:pass in %s config", m.env.ACRDomain())
+	}
+
 	s := []steps.Step{
 		steps.Action(func(context.Context) error {
-			return pullContainer(m.conn, m.version.Properties.InstallerPullspec, "")
+			options := &images.PullOptions{
+				Quiet:    to.BoolPtr(true),
+				Policy:   to.StringPtr("always"),
+				Username: to.StringPtr(split[0]),
+				Password: to.StringPtr(split[1]),
+			}
+
+			return pullContainer(m.conn, m.version.Properties.InstallerPullspec, options)
 		}),
 		steps.Action(m.writeFiles),
 		steps.Action(m.startContainer),
@@ -54,7 +95,7 @@ func (m *manager) Install(ctx context.Context, sub *api.SubscriptionDocument, do
 		steps.Action(m.cleanupContainers),
 	}
 
-	_, err := steps.Run(ctx, m.log, 10*time.Second, s, nil)
+	_, err = steps.Run(ctx, m.log, 10*time.Second, s, nil)
 	if err != nil {
 		return err
 	}

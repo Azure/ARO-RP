@@ -8,7 +8,6 @@ import (
 	"errors"
 	"os"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/containers/podman/v4/pkg/bindings"
 	"github.com/containers/podman/v4/pkg/bindings/containers"
 	"github.com/containers/podman/v4/pkg/bindings/images"
@@ -56,8 +55,8 @@ func getContainerLogs(ctx context.Context, log *logrus.Entry, containerName stri
 	return err
 }
 
-func pullContainer(ctx context.Context, pullspec string, policy string) error {
-	_, err := images.Pull(ctx, pullspec, &images.PullOptions{Quiet: to.BoolPtr(true), Policy: to.StringPtr(policy)})
+func pullContainer(ctx context.Context, pullspec string, options *images.PullOptions) error {
+	_, err := images.Pull(ctx, pullspec, options)
 	return err
 }
 
