@@ -75,30 +75,15 @@ func newARMHelper(ctx context.Context, log *logrus.Entry, env Interface) (ARMHel
 	var tokenCredential azcore.TokenCredential
 	var err error
 
-	if os.Getenv("AZURE_ARM_CLIENT_SECRET") != "" {
-		// TODO: migrate away from AZURE_ARM_CLIENT_SECRET and remove this code
-		// path
+	key, certs, err := env.ServiceKeyvault().GetCertificateSecret(ctx, RPDevARMSecretName)
+	if err != nil {
+		return nil, err
+	}
 
-		tokenCredential, err = azidentity.NewClientSecretCredential(
-			env.TenantID(),
-			os.Getenv("AZURE_ARM_CLIENT_ID"),
-			os.Getenv("AZURE_ARM_CLIENT_SECRET"),
-			env.Environment().ClientSecretCredentialOptions())
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		key, certs, err := env.ServiceKeyvault().GetCertificateSecret(ctx, RPDevARMSecretName)
-		if err != nil {
-			return nil, err
-		}
-
-		options := env.Environment().ClientCertificateCredentialOptions()
-		tokenCredential, err = azidentity.NewClientCertificateCredential(
-			env.TenantID(), os.Getenv("AZURE_ARM_CLIENT_ID"), certs, key, options)
-		if err != nil {
-			return nil, err
-		}
+	options := env.Environment().ClientCertificateCredentialOptions()
+	tokenCredential, err = azidentity.NewClientCertificateCredential(env.TenantID(), os.Getenv("AZURE_ARM_CLIENT_ID"), certs, key, options)
+	if err != nil {
+		return nil, err
 	}
 
 	scopes := []string{env.Environment().ResourceManagerScope}
