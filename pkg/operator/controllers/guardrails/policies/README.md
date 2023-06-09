@@ -321,7 +321,6 @@ Verify ConstraintTemplate is created
 $ oc get constrainttemplate
 NAME            AGE
 arodenylabels   20h
-$ oc get constraint
 ```
 
 

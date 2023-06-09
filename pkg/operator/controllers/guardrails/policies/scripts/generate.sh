@@ -3,10 +3,21 @@
 set -e
 IFS=$'\n\t'
 
+usage() {
+  echo "Usage: $0 [policy_folder]"
+  echo "  policy_folder: Optional parameter to specify a specific policy folder to generate templates for."
+  echo "                 If not provided, all policy folders will be generated."
+  exit 1
+}
+
 template_src_path="gktemplates-src"
 template_path="gktemplates"
 
 main() {
+  if [[ $1 == "-h" || $1 == "--help" ]]; then
+    usage
+  fi
+
   if [[ ! -d ${template_path} ]]; then
     mkdir -p "${template_path}"
   fi
