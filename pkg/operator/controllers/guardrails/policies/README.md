@@ -137,7 +137,7 @@ spec:
         kinds: ["PodDisruptionBudget"]
 ```
 
-## Test the rego
+## Test Rego source code
 
 * install opa cli, refer https://github.com/open-policy-agent/opa/releases/
 
@@ -150,16 +150,24 @@ spec:
 
 * install gomplate which is used by generate.sh, see https://docs.gomplate.ca/installing/
 
-* execute generate.sh under policies, which will generate the acutal Constraint Templates under gktemplates folder, example:
+* execute generate.sh under policies, which will generate the acutal Constraint Templates to gktemplates folder, example:
+
 
   ```sh
+  # Generate all the Constraint Templates
   ARO-RP/pkg/operator/controllers/guardrails/policies$ ./scripts/generate.sh 
   Generating gktemplates/aro-deny-delete.yaml from gktemplates-src/aro-deny-delete/aro-deny-delete.tmpl
   Generating gktemplates/aro-deny-privileged-namespace.yaml from gktemplates-src/aro-deny-privileged-namespace/aro-deny-privileged-namespace.tmpl
   Generating gktemplates/aro-deny-labels.yaml from gktemplates-src/aro-deny-labels/aro-deny-labels.tmpl
   ```
 
-## gator test
+  ```sh
+  # Generate a specific Constraint Template by providing the specific policy directory under gktemplates-src folder
+  ARO-RP/pkg/operator/controllers/guardrails/policies$ ./scripts/generate.sh aro-deny-machine-config
+  Generating gktemplates/aro-deny-machine-config.yaml from gktemplates-src/aro-deny-machine-config/aro-deny-machine-config.tmpl
+  ```
+
+## Test policy with Gator
 
 Create suite.yaml and testcases in gator-test folder under the folder created for the new policy, refer example below:
 
@@ -190,7 +198,7 @@ tests:
 ```
 gkconstraints-test here stores the target yaml files after expanding "{{.Enforcement}}" symbol.
 
-gator tests ConstraintTemplate and Constraint together, items under cases keyword are test cases indicator, everyone pointing to a yaml file in gator-test, which provides test input for one scenario, example:
+Gator tests ConstraintTemplate and Constraint together, items under cases keyword are test cases indicator, everyone pointing to a yaml file in gator-test, which provides test input for one scenario, example:
 
 ```yaml
 apiVersion: v1
@@ -212,13 +220,19 @@ spec:
           cpu: "100m"
           memory: "30Mi"
 ```
-the assertions section is the expected result
+the `assertions` section is the expected result
 
-gator test is done via cmd:
+gator test can be done via cmd:
 
 test.sh executes both opa test and gator verify
 ```sh
+# Run tests for all the policies
 ARO-RP/pkg/operator/controllers/guardrails/policies$ ./scripts/test.sh
+```
+```sh
+# Run tests for a specific policy
+# Providing the policy directory under gktemplates-src folder and the correspondent Constraint file under gkconstraints folder
+ARO-RP/pkg/operator/controllers/guardrails/policies$ ./scripts/test.sh aro-deny-machine-config aro-machine-config-deny.yaml
 ```
 
 or below cmd after test.sh has been executed:
@@ -226,11 +240,34 @@ or below cmd after test.sh has been executed:
 gator verify . [-v] #-v for verbose
 ```
 
-It is now good to test your policy on a real cluster.
+Sometimes we need to mock kube admission review request especially as Gator test inputs when verifying policies that check specific operations (e.g., CREATE, DELETE or UPDATE).
 
+Please refer the yaml file below as a sample of kube admission review request:
 
+```yaml
+kind: AdmissionReview
+apiVersion: admission.k8s.io/v1
+request:
+  uid: d700ab7f-8f42-45ff-83f5-782c739806d9
+  operation: UPDATE
+  userInfo:
+    username: kube-review
+    uid: 45884572-1cab-49e5-be4c-1d2eb0299776
+  object:
+    kind: MachineConfig
+    apiVersion: machineconfiguration.openshift.io/v1
+    metadata:
+      name: 99-worker-generated-crio-fake
+  oldObject:
+    kind: MachineConfig
+    apiVersion: machineconfiguration.openshift.io/v1
+    metadata:
+      name: 99-worker-generated-crio-seccomp-use-default
+  dryRun: true
+```
+A tool [admr-gen](https://github.com/ArrisLee/admr-gen) has been created and can be utilized to generate mocked kube admission review requests in an easier way.
 
-## Enable your policy on a dev cluster
+## Enable and test your policy on a dev cluster
 
 Set up local dev env following “Deploy development RP” section if not already: https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md
 
