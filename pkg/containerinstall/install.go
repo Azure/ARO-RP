@@ -234,6 +234,12 @@ func (m *manager) secretFile(from, name string) error {
 
 func (m *manager) cleanupContainers(ctx context.Context) error {
 	containerName := "installer-" + m.doc.ID
+
+	if !m.success {
+		m.log.Info("cleaning up failed container %s", containerName)
+		getContainerLogs(m.conn, m.log, containerName)
+	}
+
 	_, err := containers.Remove(m.conn, containerName, &containers.RemoveOptions{Force: to.BoolPtr(true), Ignore: to.BoolPtr(true)})
 	if err != nil {
 		m.log.Errorf("unable to remove container: %v", err)
