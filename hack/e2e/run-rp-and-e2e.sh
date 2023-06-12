@@ -60,7 +60,7 @@ validate_portal_running() {
         sleep 5
         http_code=$(curl -k -s -o /dev/null -w '%{http_code}' https://localhost:8444/api/info)
         case $http_code in
-        "403")
+        "307")
             echo "########## ✅ ARO Admin Portal Running ##########"
             break
             ;;

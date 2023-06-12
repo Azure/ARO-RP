@@ -14,7 +14,7 @@ resources:
     image: docker.io/selenium/standalone-edge:latest
     ports:
     - 4444:4444
-    options: --name=selenium --shm-size=2g --user=0
+    options: --name=selenium --shm-size=2g
 
 
 # Azure DevOps Pipeline running e2e tests
