@@ -13,6 +13,7 @@ permissions:
   # pull-requests: read
 jobs:
   golangci:
+    if: github.event.pull_request.draft == false
     name: golangci-lint
     runs-on: ubuntu-latest
     steps:

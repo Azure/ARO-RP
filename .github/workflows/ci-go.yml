@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   ci-from-docker:
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -24,6 +25,7 @@ jobs:
           context: .
           containerfiles: ./Dockerfile.ci
   vendor-check:
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
       - run: |

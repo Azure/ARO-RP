@@ -11,6 +11,7 @@ permissions:
   contents: read
 jobs:
   npm-audit-portal-v2:
+    if: github.event.pull_request.draft == false
     name: npm-audit-portal-v2
     runs-on: ubuntu-latest
     steps:
@@ -24,6 +25,7 @@ jobs:
         run: bash ${GITHUB_WORKSPACE}/hack/github-actions/npm_audit.sh
         shell: bash
   npm-build-check:
+    if: github.event.pull_request.draft == false
     name: npm-build-check
     runs-on: ubuntu-latest
     steps:

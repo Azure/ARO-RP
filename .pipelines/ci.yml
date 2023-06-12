@@ -17,6 +17,7 @@ pr:
   paths:
     exclude:
     - docs/*
+  drafts: false
 
 resources:
   containers:
