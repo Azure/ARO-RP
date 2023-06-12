@@ -37,8 +37,6 @@ require (
 	github.com/googleapis/gnostic v0.6.8
 	github.com/gorilla/csrf v1.7.1
 	github.com/gorilla/mux v1.8.0
-	github.com/gorilla/securecookie v1.1.1
-	github.com/gorilla/sessions v1.2.1
 	github.com/jewzaam/go-cosmosdb v0.0.0-20220315232836-282b67c5b234
 	github.com/jongio/azidext/go/azidext v0.4.0
 	github.com/microsoftgraph/msgraph-sdk-go v1.4.0
@@ -161,6 +159,7 @@ require (
 	github.com/googleapis/gax-go/v2 v2.2.0 // indirect
 	github.com/gophercloud/gophercloud v0.24.0 // indirect
 	github.com/gophercloud/utils v0.0.0-20220307143606-8e7800759d16 // indirect
+	github.com/gorilla/securecookie v1.1.1 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/h2non/filetype v1.1.3 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect

@@ -627,9 +627,6 @@ github.com/gorilla/mux
 # github.com/gorilla/securecookie v1.1.1
 ## explicit
 github.com/gorilla/securecookie
-# github.com/gorilla/sessions v1.2.1
-## explicit
-github.com/gorilla/sessions
 # github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79
 ## explicit
 github.com/gregjones/httpcache
