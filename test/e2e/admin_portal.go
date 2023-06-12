@@ -18,7 +18,6 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 	BeforeEach(
 		func() {
 			skipIfNotInDevelopmentEnv()
-			skipIfDockerNotWorking()
 		},
 	)
 	var wdPoint *selenium.WebDriver
@@ -205,7 +204,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 	})
 
 	It("Should be able to navigate to other regions", func() {
-		NUMBER_OF_REGIONS := 40
+		NUMBER_OF_REGIONS := 41
 		err := wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByID, "RegionNavButton"), time.Second*30)
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
@@ -246,7 +245,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 	})
 
 	It("Should open an error modal for an invalid resource ID parameter in the URL", func() {
-		wd.Get(host + "/v2" + "?resourceid=" + "invalidResourceId")
+		wd.Get(host + "?resourceid=" + "invalidResourceId")
 
 		wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[role='document']"), time.Second*3)
 		errorModal, err := wd.FindElement(selenium.ByCSSSelector, "div[role='document']")
@@ -258,7 +257,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 	})
 
 	It("Should display the correct cluster detail view for the resource ID parameter in the URL", func() {
-		wd.Get(host + "/v2" + "?resourceid=" + resourceIDFromEnv())
+		wd.Get(host + "?resourceid=" + resourceIDFromEnv())
 		wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByID, "ClusterDetailPanel"), time.Second*3)
 
 		detailPanel, err := wd.FindElement(selenium.ByID, "ClusterDetailPanel")
@@ -268,7 +267,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 
 		Expect(detailPanel.IsDisplayed()).To(BeTrue())
 
-		elem, err := wd.FindElement(selenium.ByCSSSelector, "div[class='titleText-109']")
+		elem, err := wd.FindElement(selenium.ByCSSSelector, "div[class='titleText-112']")
 		if err != nil {
 			SaveScreenshotAndExit(wd, err)
 		}

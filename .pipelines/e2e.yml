@@ -12,7 +12,9 @@ resources:
     options: --user=0 --cap-add=NET_ADMIN --device /dev/net/tun --name vpn
   - container: selenium
     image: docker.io/selenium/standalone-edge:latest
-    options: --shm-size=2g
+    ports:
+    - 4444:4444
+    options: -d --name selenium --shm-size=2g --network=host
 
 
 # Azure DevOps Pipeline running e2e tests
@@ -25,8 +27,8 @@ jobs:
   timeoutInMinutes: 180
   pool:
     name: 1es-aro-ci-pool
-  #services:
-  #  selenium: selenium
+  services:
+   selenium: selenium
   steps:
   - template: ./templates/template-checkout.yml
 
@@ -63,8 +65,8 @@ jobs:
       . ./hack/e2e/run-rp-and-e2e.sh
 
       run_vpn
-      # run_portal
-      # validate_portal_running
+      run_portal
+      validate_portal_running
 
       run_rp
       validate_rp_running

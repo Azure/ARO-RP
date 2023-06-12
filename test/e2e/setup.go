@@ -48,8 +48,6 @@ import (
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
 
-const seleniumContainerName = "selenium-edge-standalone"
-
 type clientSet struct {
 	Operations        redhatopenshift20220904.OperationsClient
 	OpenshiftClusters redhatopenshift20220904.OpenShiftClustersClient
@@ -84,21 +82,11 @@ var (
 	osClusterVersion  string
 	clusterResourceID string
 	clients           *clientSet
-
-	dockerSucceeded bool
 )
 
 func skipIfNotInDevelopmentEnv() {
 	if !_env.IsLocalDevelopmentMode() {
 		Skip("skipping tests in non-development environment")
-	}
-}
-
-func skipIfDockerNotWorking() {
-	// docker cmds will fail in INT until we figure out a solution since
-	// it is running from docker already
-	if !dockerSucceeded {
-		Skip("skipping admin portal tests as docker is not available")
 	}
 }
 
@@ -220,7 +208,7 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 		host = fmt.Sprintf("https://localhost:%d", hostPort)
 	}
 
-	if err := wd.Get(host + "/api/info"); err != nil {
+	if err := wd.Get(host + "/healthz/ready"); err != nil {
 		log.Infof("Could not get to %s. With error : %s", host, err.Error())
 	}
 
@@ -387,51 +375,6 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	}, nil
 }
 
-func setupSelenium(ctx context.Context) error {
-	log.Infof("Starting Selenium Grid")
-	cmd := exec.CommandContext(ctx, "docker", "pull", "selenium/standalone-edge:latest")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Printf("Error occurred pulling selenium image\n Output: %s\n Error: %s\n", output, err)
-		dockerSucceeded = false
-	}
-
-	log.Infof("Selenium Image Pull Output : %s\n", output)
-
-	cmd = exec.CommandContext(ctx, "docker", "run", "-d", "-p", "4444:4444", "--name", seleniumContainerName, "--network=host", "--shm-size=2g", "selenium/standalone-edge:latest")
-	output, err = cmd.CombinedOutput()
-	if err != nil {
-		log.Printf("Error occurred starting selenium grid\n Output: %s\n Error: %s\n", output, err)
-		dockerSucceeded = false
-	}
-
-	log.Infof("Selenium Container Run Output : %s\n", output)
-
-	return err
-}
-
-func tearDownSelenium(ctx context.Context) error {
-	log.Infof("Stopping Selenium Grid")
-	cmd := exec.CommandContext(ctx, "docker", "stop", seleniumContainerName)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Printf("Error occurred stopping selenium container\n Output: %s\n Error: %s\n", output, err)
-		dockerSucceeded = false
-		return err
-	}
-
-	log.Infof("Removing Selenium Grid container")
-	cmd = exec.CommandContext(ctx, "docker", "rm", seleniumContainerName)
-	output, err = cmd.CombinedOutput()
-	if err != nil {
-		log.Printf("Error occurred removing selenium grid container\n Output: %s\n Error: %s\n", output, err)
-		dockerSucceeded = false
-		return err
-	}
-
-	return nil
-}
-
 func setup(ctx context.Context) error {
 	err := env.ValidateVars(
 		"AZURE_CLIENT_ID",
@@ -477,21 +420,6 @@ func setup(ctx context.Context) error {
 		return err
 	}
 
-	if os.Getenv("AGENT_NAME") != "" {
-		// Skip in pipelines for now
-		dockerSucceeded = false
-	} else {
-		cmd := exec.CommandContext(ctx, "which", "docker")
-		_, err = cmd.CombinedOutput()
-		if err == nil {
-			dockerSucceeded = true
-		}
-
-		if dockerSucceeded {
-			setupSelenium(ctx)
-		}
-	}
-
 	return nil
 }
 
@@ -525,13 +453,6 @@ var _ = BeforeSuite(func() {
 
 var _ = AfterSuite(func() {
 	log.Info("AfterSuite")
-
-	// Azure Pipelines will tear down the image if needed
-	if dockerSucceeded && os.Getenv("AGENT_NAME") == "" {
-		if err := tearDownSelenium(context.Background()); err != nil {
-			log.Printf(err.Error())
-		}
-	}
 
 	if err := done(context.Background()); err != nil {
 		panic(err)
