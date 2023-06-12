@@ -100,7 +100,6 @@ func NewPortal(env env.Core,
 	dialer proxy.Dialer,
 	m metrics.Emitter,
 ) Runnable {
-
 	return &portal{
 		env:           env,
 		audit:         audit,
@@ -132,7 +131,6 @@ func NewPortal(env env.Core,
 }
 
 func (p *portal) setupRouter(kconfig *kubeconfig.Kubeconfig, prom *prometheus.Prometheus, sshStruct *ssh.SSH) (*mux.Router, error) {
-
 	r := mux.NewRouter()
 	r.Use(middleware.Panic(p.log))
 
