@@ -22,12 +22,12 @@ const (
 func (c *core) NewMSIAuthorizer(msiContext MSIContext, scopes ...string) (autorest.Authorizer, error) {
 	if !c.IsLocalDevelopmentMode() {
 		options := c.Environment().ManagedIdentityCredentialOptions()
-		tokenCredential, err := azidentity.NewManagedIdentityCredential(options)
+		msiTokenCredential, err := azidentity.NewManagedIdentityCredential(options)
 		if err != nil {
 			return nil, err
 		}
 
-		return azidext.NewTokenCredentialAdapter(tokenCredential, scopes), nil
+		return azidext.NewTokenCredentialAdapter(msiTokenCredential, scopes), nil
 	}
 
 	tenantIdKey := "AZURE_TENANT_ID"
@@ -44,10 +44,10 @@ func (c *core) NewMSIAuthorizer(msiContext MSIContext, scopes ...string) (autore
 
 	options := c.Environment().ClientSecretCredentialOptions()
 
-	tokenCredential, err := azidentity.NewClientSecretCredential(tenantId, azureClientId, azureClientSecret, options)
+	clientSecretCredential, err := azidentity.NewClientSecretCredential(tenantId, azureClientId, azureClientSecret, options)
 	if err != nil {
 		return nil, err
 	}
 
-	return azidext.NewTokenCredentialAdapter(tokenCredential, scopes), nil
+	return azidext.NewTokenCredentialAdapter(clientSecretCredential, scopes), nil
 }

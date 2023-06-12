@@ -60,7 +60,7 @@ type Subnet struct {
 }
 
 type ServicePrincipalValidator interface {
-	ValidateServicePrincipal(ctx context.Context, tokenCredential azcore.TokenCredential) error
+	ValidateServicePrincipal(ctx context.Context, spTokenCredential azcore.TokenCredential) error
 }
 
 // Dynamic validate in the operator context.

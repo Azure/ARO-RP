@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	"github.com/Azure/go-autorest/autorest"
@@ -74,7 +73,6 @@ func newARMHelper(ctx context.Context, log *logrus.Entry, env Interface) (ARMHel
 		return &noopARMHelper{}, nil
 	}
 
-	var tokenCredential azcore.TokenCredential
 	var err error
 
 	key, certs, err := env.ServiceKeyvault().GetCertificateSecret(ctx, RPDevARMSecretName)
@@ -83,21 +81,21 @@ func newARMHelper(ctx context.Context, log *logrus.Entry, env Interface) (ARMHel
 	}
 
 	options := env.Environment().ClientCertificateCredentialOptions()
-	tokenCredential, err = azidentity.NewClientCertificateCredential(env.TenantID(), os.Getenv("AZURE_ARM_CLIENT_ID"), certs, key, options)
+	armHelperTokenCredential, err := azidentity.NewClientCertificateCredential(env.TenantID(), os.Getenv("AZURE_ARM_CLIENT_ID"), certs, key, options)
 	if err != nil {
 		return nil, err
 	}
 
 	scopes := []string{env.Environment().ResourceManagerScope}
-	armAuthorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
+	armHelperAuthorizer := azidext.NewTokenCredentialAdapter(armHelperTokenCredential, scopes)
 
 	// Graph service client uses the first party service principal.
-	tokenCredential, err = env.FPNewClientCertificateCredential(env.TenantID())
+	fpTokenCredential, err := env.FPNewClientCertificateCredential(env.TenantID())
 	if err != nil {
 		return nil, err
 	}
 
-	fpGraphClient, err := env.Environment().NewGraphServiceClient(tokenCredential)
+	fpGraphClient, err := env.Environment().NewGraphServiceClient(fpTokenCredential)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +105,7 @@ func newARMHelper(ctx context.Context, log *logrus.Entry, env Interface) (ARMHel
 		env: env,
 
 		fpGraphClient:   fpGraphClient,
-		roleassignments: authorization.NewRoleAssignmentsClient(env.Environment(), env.SubscriptionID(), armAuthorizer),
+		roleassignments: authorization.NewRoleAssignmentsClient(env.Environment(), env.SubscriptionID(), armHelperAuthorizer),
 	}, nil
 }
 

@@ -315,12 +315,12 @@ func (p *prod) FeatureIsSet(f Feature) bool {
 }
 
 func (p *prod) FPAuthorizer(tenantID string, scopes ...string) (autorest.Authorizer, error) {
-	tokenCredential, err := p.FPNewClientCertificateCredential(tenantID)
+	fpTokenCredential, err := p.FPNewClientCertificateCredential(tenantID)
 	if err != nil {
 		return nil, err
 	}
 
-	return azidext.NewTokenCredentialAdapter(tokenCredential, scopes), nil
+	return azidext.NewTokenCredentialAdapter(fpTokenCredential, scopes), nil
 }
 
 func (p *prod) FPClientID() string {
