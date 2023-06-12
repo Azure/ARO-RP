@@ -86,7 +86,6 @@ spec:
             port: 9090
         resources:
           limits:
-            cpu: {{.ManagerLimitCPU}}
             memory: {{.ManagerLimitMem}}
           requests:
             cpu: {{.ManagerRequestsCPU}}
