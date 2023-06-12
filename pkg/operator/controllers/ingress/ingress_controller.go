@@ -40,15 +40,14 @@ func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 		AROController: base.AROController{
 			Log:    log,
 			Client: client,
+			Name:   ControllerName,
 		},
 	}
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance := &arov1alpha1.Cluster{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+	instance, err := r.GetCluster(ctx)
 	if err != nil {
-		r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
 	}
 

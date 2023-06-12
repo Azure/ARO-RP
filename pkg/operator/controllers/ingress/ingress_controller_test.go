@@ -6,6 +6,7 @@ package ingress
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/Azure/go-autorest/autorest/to"
 	operatorv1 "github.com/openshift/api/operator/v1"
@@ -22,6 +23,7 @@ import (
 )
 
 func TestReconciler(t *testing.T) {
+	transitionTime := metav1.Time{Time: time.Now()}
 	defaultAvailable := utilconditions.ControllerDefaultAvailable(ControllerName)
 	defaultProgressing := utilconditions.ControllerDefaultProgressing(ControllerName)
 	defaultDegraded := utilconditions.ControllerDefaultDegraded(ControllerName)
@@ -60,7 +62,16 @@ func TestReconciler(t *testing.T) {
 			controllerEnabledFlag: "true",
 			expectedError:         "ingresscontrollers.operator.openshift.io \"default\" not found",
 			startConditions:       defaultConditions,
-			wantConditions:        defaultConditions,
+			wantConditions: []operatorv1.OperatorCondition{
+				defaultAvailable,
+				defaultProgressing,
+				{
+					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+					Status:             operatorv1.ConditionTrue,
+					LastTransitionTime: transitionTime,
+					Message:            `ingresscontrollers.operator.openshift.io "default" not found`,
+				},
+			},
 		},
 		{
 			name:                  "openshift ingress controller has 3 replicas",
@@ -107,8 +118,17 @@ func TestReconciler(t *testing.T) {
 				},
 			},
 			expectedReplica: minimumReplicas,
-			startConditions: defaultConditions,
-			wantConditions:  defaultConditions,
+			startConditions: []operatorv1.OperatorCondition{
+				defaultAvailable,
+				defaultProgressing,
+				{
+					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+					Status:             operatorv1.ConditionTrue,
+					LastTransitionTime: transitionTime,
+					Message:            `ingresscontrollers.operator.openshift.io has 1 replica`,
+				},
+			},
+			wantConditions: defaultConditions,
 		},
 		{
 			name:                  "openshift ingress controller has 0 replica",
@@ -123,14 +143,26 @@ func TestReconciler(t *testing.T) {
 				},
 			},
 			expectedReplica: minimumReplicas,
-			startConditions: defaultConditions,
-			wantConditions:  defaultConditions,
+			startConditions: []operatorv1.OperatorCondition{
+				defaultAvailable,
+				defaultProgressing,
+				{
+					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+					Status:             operatorv1.ConditionTrue,
+					LastTransitionTime: transitionTime,
+					Message:            `ingresscontrollers.operator.openshift.io has 0 replica`,
+				},
+			},
+			wantConditions: defaultConditions,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			clusterMock := fakeCluster(tt.controllerEnabledFlag)
+			if len(tt.startConditions) > 0 {
+				clusterMock.Status.Conditions = append(clusterMock.Status.Conditions, tt.startConditions...)
+			}
 
 			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(clusterMock)
 			if tt.ingressController != nil {
@@ -145,6 +177,7 @@ func TestReconciler(t *testing.T) {
 
 			_, err := r.Reconcile(ctx, request)
 			utilerror.AssertErrorMessage(t, err, tt.expectedError)
+			utilconditions.AssertControllerConditions(t, ctx, clientFake, tt.wantConditions)
 
 			if tt.ingressController != nil {
 				ingress := &operatorv1.IngressController{}
