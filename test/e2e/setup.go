@@ -39,6 +39,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/hive"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
+	"github.com/Azure/ARO-RP/pkg/portal/middleware"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
@@ -48,7 +49,10 @@ import (
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
 
-const seleniumContainerName = "selenium-edge-standalone"
+const (
+	seleniumContainerName = "selenium-edge-standalone"
+	elevatedGroupsEnv     = "AZURE_PORTAL_ELEVATED_GROUP_IDS"
+)
 
 type clientSet struct {
 	Operations        redhatopenshift20220904.OperationsClient
@@ -224,35 +228,26 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 		log.Infof("Could not get to %s. With error : %s", host, err.Error())
 	}
 
-	var portalAuthCmd string
-	var portalAuthArgs = make([]string, 0)
-	if os.Getenv("CI") != "" {
-		// In CI we have a prebuilt portalauth binary
-		portalAuthCmd = "./portalauth"
-	} else {
-		portalAuthCmd = "go"
-		portalAuthArgs = []string{"run", "./hack/portalauth"}
+	elevatedGroups, ok := os.LookupEnv("AZURE_PORTAL_ELEVATED_GROUP_IDS")
+	if !ok {
+		log.Fatal("AZURE_PORTAL_ELEVATED_GROUPS_IDS is not set")
 	}
 
-	portalAuthArgs = append(portalAuthArgs, "-username", "test", "-groups", "$AZURE_PORTAL_ELEVATED_GROUP_IDS")
-
-	cmd := exec.Command(portalAuthCmd, portalAuthArgs...)
-	output, err := cmd.Output()
-	if err != nil {
-		log.Fatalf("Error occurred creating session cookie\n Output: %s\n Error: %s\n", output, err)
+	cookieGroup := &selenium.Cookie{
+		Name:   middleware.IntGroupsKey,
+		Value:  elevatedGroups,
+		Expiry: math.MaxUint32,
 	}
-
-	os.Setenv("SESSION", string(output))
-
-	log.Infof("Session Output : %s\n", os.Getenv("SESSION"))
-
-	cookie := &selenium.Cookie{
-		Name:   "session",
-		Value:  os.Getenv("SESSION"),
+	cookieUser := &selenium.Cookie{
+		Name:   middleware.IntUsernameKey,
+		Value:  "test",
 		Expiry: math.MaxUint32,
 	}
 
-	if err := wd.AddCookie(cookie); err != nil {
+	if err := wd.AddCookie(cookieGroup); err != nil {
+		panic(err)
+	}
+	if err := wd.AddCookie(cookieUser); err != nil {
 		panic(err)
 	}
 	return host, &wd

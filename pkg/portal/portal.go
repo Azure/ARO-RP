@@ -15,6 +15,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -99,6 +100,7 @@ func NewPortal(env env.Core,
 	dialer proxy.Dialer,
 	m metrics.Emitter,
 ) Runnable {
+
 	return &portal{
 		env:           env,
 		audit:         audit,
@@ -130,6 +132,7 @@ func NewPortal(env env.Core,
 }
 
 func (p *portal) setupRouter(kconfig *kubeconfig.Kubeconfig, prom *prometheus.Prometheus, sshStruct *ssh.SSH) (*mux.Router, error) {
+
 	r := mux.NewRouter()
 	r.Use(middleware.Panic(p.log))
 
@@ -160,8 +163,14 @@ func (p *portal) setupRouter(kconfig *kubeconfig.Kubeconfig, prom *prometheus.Pr
 	allGroups := append([]string{}, p.groupIDs...)
 	allGroups = append(allGroups, p.elevatedGroupIDs...)
 
-	p.aad, err = middleware.NewAAD(p.log, p.audit, p.env, p.baseAccessLog, p.hostname, p.sessionKey, p.clientID, p.clientKey, p.clientCerts, allGroups,
-		p.verifier)
+	// we get the env var from within the function because it is not meant to be configurable
+	disableOauthOption := os.Getenv("DISABLE_OAUTH")
+	if disableOauthOption == "true" {
+		p.aad = middleware.IntAAD{}
+	} else {
+		p.aad, err = middleware.NewAAD(p.log, p.audit, p.env, p.baseAccessLog, p.hostname, p.sessionKey, p.clientID, p.clientKey, p.clientCerts, allGroups,
+			p.verifier)
+	}
 	p.aadRoutes(unauthenticatedRouter)
 	if err != nil {
 		return nil, err
