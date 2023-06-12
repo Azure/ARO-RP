@@ -8,8 +8,10 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
+	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
+	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -20,17 +22,26 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 // Test reconcile function
 func TestImageConfigReconciler(t *testing.T) {
+	transitionTime := metav1.Time{Time: time.Now()}
+	defaultAvailable := utilconditions.ControllerDefaultAvailable(ControllerName)
+	defaultProgressing := utilconditions.ControllerDefaultProgressing(ControllerName)
+	defaultDegraded := utilconditions.ControllerDefaultDegraded(ControllerName)
+	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
+
 	type test struct {
 		name                string
 		instance            *arov1alpha1.Cluster
 		image               *configv1.Image
 		wantRegistrySources configv1.RegistrySources
 		wantErr             string
+		startConditions     []operatorv1.OperatorCondition
+		wantConditions      []operatorv1.OperatorCondition
 	}
 
 	for _, tt := range []*test{
@@ -45,6 +56,9 @@ func TestImageConfigReconciler(t *testing.T) {
 						controllerEnabled: strconv.FormatBool(false),
 					},
 					Location: "eastus",
+				},
+				Status: arov1alpha1.ClusterStatus{
+					Conditions: defaultConditions,
 				},
 			},
 			image: &configv1.Image{
@@ -62,6 +76,8 @@ func TestImageConfigReconciler(t *testing.T) {
 					"quay.io",
 				},
 			},
+			startConditions: defaultConditions,
+			wantConditions:  defaultConditions,
 		},
 		{
 			name: "Image config registry source is empty, no action",
@@ -69,6 +85,8 @@ func TestImageConfigReconciler(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
 			},
 			wantRegistrySources: configv1.RegistrySources{},
+			startConditions:     defaultConditions,
+			wantConditions:      defaultConditions,
 		},
 		{
 			name: "allowedRegistries exists with duplicates, function should appropriately add registries",
@@ -91,6 +109,8 @@ func TestImageConfigReconciler(t *testing.T) {
 					"arointsvc.eastus.data.azurecr.io",
 				},
 			},
+			startConditions: defaultConditions,
+			wantConditions:  defaultConditions,
 		},
 		{
 			name: "blockedRegistries exists, function should delete registries",
@@ -111,6 +131,8 @@ func TestImageConfigReconciler(t *testing.T) {
 					"quay.io",
 				},
 			},
+			startConditions: defaultConditions,
+			wantConditions:  defaultConditions,
 		},
 		{
 			name: "AZEnvironment is unset, no action",
@@ -120,6 +142,9 @@ func TestImageConfigReconciler(t *testing.T) {
 					OperatorFlags: arov1alpha1.OperatorFlags{
 						controllerEnabled: strconv.FormatBool(true),
 					},
+				},
+				Status: arov1alpha1.ClusterStatus{
+					Conditions: defaultConditions,
 				},
 			},
 			image: &configv1.Image{
@@ -137,6 +162,8 @@ func TestImageConfigReconciler(t *testing.T) {
 					"quay.io",
 				},
 			},
+			startConditions: defaultConditions,
+			wantConditions:  defaultConditions,
 		},
 		{
 			name: "Both AllowedRegistries and BlockedRegistries are present, function should fail silently and not requeue",
@@ -163,7 +190,18 @@ func TestImageConfigReconciler(t *testing.T) {
 					"quay.io",
 				},
 			},
-			wantErr: `both AllowedRegistries and BlockedRegistries are present`,
+			wantErr:         `both AllowedRegistries and BlockedRegistries are present`,
+			startConditions: defaultConditions,
+			wantConditions: []operatorv1.OperatorCondition{
+				defaultAvailable,
+				defaultProgressing,
+				{
+					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+					Status:             operatorv1.ConditionTrue,
+					LastTransitionTime: transitionTime,
+					Message:            `both AllowedRegistries and BlockedRegistries are present`,
+				},
+			},
 		},
 		{
 			name: "uses Public Cloud cluster's ACRDomain configuration for both Azure registries",
@@ -193,6 +231,8 @@ func TestImageConfigReconciler(t *testing.T) {
 					"fakesvc.anyplace.data.azurecr.io",
 				},
 			},
+			startConditions: defaultConditions,
+			wantConditions:  defaultConditions,
 		},
 		{
 			name: "uses USGov Cloud cluster's ACRDomain configuration for both Azure registries",
@@ -222,6 +262,8 @@ func TestImageConfigReconciler(t *testing.T) {
 					"fakesvc.anyplace.data.azurecr.us",
 				},
 			},
+			startConditions: defaultConditions,
+			wantConditions:  defaultConditions,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -237,6 +279,9 @@ func TestImageConfigReconciler(t *testing.T) {
 					},
 					Location: "eastus",
 				},
+				Status: arov1alpha1.ClusterStatus{
+					Conditions: tt.startConditions,
+				},
 			}
 			if tt.instance != nil {
 				instance = tt.instance
@@ -250,6 +295,7 @@ func TestImageConfigReconciler(t *testing.T) {
 
 			_, err := r.Reconcile(ctx, request)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			utilconditions.AssertControllerConditions(t, ctx, clientFake, tt.wantConditions)
 
 			imgcfg := &configv1.Image{}
 			err = r.Client.Get(ctx, types.NamespacedName{Name: request.Name}, imgcfg)

@@ -74,12 +74,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	imageconfig := &configv1.Image{}
 	err = r.Client.Get(ctx, types.NamespacedName{Name: request.Name}, imageconfig)
 	if err != nil {
+		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
+
 		return reconcile.Result{}, err
 	}
 
 	// Fail fast if both are not nil
 	if imageconfig.Spec.RegistrySources.AllowedRegistries != nil && imageconfig.Spec.RegistrySources.BlockedRegistries != nil {
 		err := errors.New("both AllowedRegistries and BlockedRegistries are present")
+		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
 	}
 
@@ -104,7 +109,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// Update image config registry
-	return reconcile.Result{}, r.Client.Update(ctx, imageconfig)
+	err = r.Client.Update(ctx, imageconfig)
+	if err != nil {
+		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
+
+		return reconcile.Result{}, err
+	}
+
+	r.ClearConditions(ctx)
+	return reconcile.Result{}, nil
 }
 
 // SetupWithManager setup the manager
