@@ -101,6 +101,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 					KeyvaultDNSSuffix:           &_env.Environment().KeyVaultDNSSuffix,
 					KeyvaultPrefix:              &keyvaultPrefix,
 					StorageAccountDomain:        to.StringPtr(os.Getenv("USER") + "aro" + _env.Location() + ".blob." + _env.Environment().StorageEndpointSuffix),
+					DisableOauth:                to.StringPtr("true"),
 				},
 			},
 		},
