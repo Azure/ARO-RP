@@ -160,7 +160,7 @@ func (m *manager) containerFinished(context.Context) (bool, error) {
 		return false, err
 	}
 
-	if inspectData.State.Status == "exited" {
+	if inspectData.State.Status == "exited" || inspectData.State.Status == "stopped" {
 		if inspectData.State.ExitCode != 0 {
 			getContainerLogs(m.conn, m.log, containerName)
 			return true, fmt.Errorf("container exited with %d", inspectData.State.ExitCode)
