@@ -20,7 +20,6 @@ import React, {
   useImperativeHandle,
   useEffect,
   forwardRef,
-  MutableRefObject,
 } from "react"
 
 const cancelIcon: IIconProps = { iconName: "Cancel" }
@@ -31,10 +30,6 @@ const machineOptions = [
   { key: 1, text: "master-1" },
   { key: 2, text: "master-2" },
 ]
-
-type SSHModalProps = {
-  dummyVar: MutableRefObject<string>
-}
 
 const theme = getTheme()
 const contentStyles = mergeStyleSets({
@@ -82,7 +77,7 @@ const iconButtonStyles = {
 const sshDocs: string =
   "https://msazure.visualstudio.com/AzureRedHatOpenShift/_wiki/wikis/ARO.wiki/136823/ARO-SRE-portal?anchor=ssh-(elevated)"
 
-export const SSHModal = forwardRef<any, SSHModalProps>(({ dummyVar }, ref) => {
+export const SSHModal = forwardRef<any, any>((ref) => {
   const [isModalOpen, { setTrue: showModal, setFalse: hideModal }] = useBoolean(false)
 
   const titleId = useId("title")
@@ -113,7 +108,6 @@ export const SSHModal = forwardRef<any, SSHModalProps>(({ dummyVar }, ref) => {
           data: {
             master: machineName?.key,
           },
-          headers: { "X-CSRF-Token": dummyVar.current },
         })
         setData(result.data)
         setRequestable()
@@ -127,7 +121,7 @@ export const SSHModal = forwardRef<any, SSHModalProps>(({ dummyVar }, ref) => {
       fetchData()
     }
     return
-  }, [resourceID, machineName, dummyVar, update, sshRequested, setRequestable])
+  }, [resourceID, machineName, update, sshRequested, setRequestable])
 
   const onChange = (
     event: React.FormEvent<HTMLDivElement>,

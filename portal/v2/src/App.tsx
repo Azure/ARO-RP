@@ -195,7 +195,6 @@ function App(props: { params: any }) {
   const [contentStackStyles, setContentStackStyles] =
     useState<IStackStyles>(contentStackStylesNormal)
   const sshRef = useRef<typeof SSHModal | null>(null)
-  const emptyRef = useRef<string>("")
 
   const _onCloseDetailPanel = () => {
     setCurrentCluster(null)
@@ -333,7 +332,7 @@ function App(props: { params: any }) {
             />
           </Stack.Item>
         </Stack>
-        <SSHModal dummyVar={emptyRef} ref={sshRef} />
+        <SSHModal ref={sshRef} />
       </Stack>
     </>
   )
