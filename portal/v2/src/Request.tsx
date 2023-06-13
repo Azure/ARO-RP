@@ -124,16 +124,12 @@ export const ProcessLogOut = async (): Promise<any> => {
 }
 
 export const RequestKubeconfig = async (
-  csrfToken: string,
   resourceID: string
 ): Promise<AxiosResponse | null> => {
   try {
     const result = await axios({
       method: "POST",
       url: resourceID + "/kubeconfig/new",
-      headers: {
-        "X-CSRF-Token": csrfToken,
-      },
     })
     return result
   } catch (e: any) {

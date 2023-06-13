@@ -195,7 +195,7 @@ function App(props: { params: any }) {
   const [contentStackStyles, setContentStackStyles] =
     useState<IStackStyles>(contentStackStylesNormal)
   const sshRef = useRef<typeof SSHModal | null>(null)
-  const csrfRef = useRef<string>("")
+  const emptyRef = useRef<string>("")
 
   const _onCloseDetailPanel = () => {
     setCurrentCluster(null)
@@ -206,7 +206,6 @@ function App(props: { params: any }) {
     const onData = (result: AxiosResponse | null) => {
       if (result?.status === 200) {
         updateData(result.data)
-        csrfRef.current = result.data.csrf
       } else {
         setError(result)
       }
@@ -321,23 +320,20 @@ function App(props: { params: any }) {
           <Stack.Item grow>{error && errorBar()}</Stack.Item>
           <Stack.Item grow>
             <ClusterList
-              csrfToken={csrfRef}
               sshBox={sshRef}
               setCurrentCluster={setCurrentCluster}
-              csrfTokenAvailable={fetching}
               params={props.params}
             />
           </Stack.Item>
           <Stack.Item grow>
             <ClusterDetailPanel
-              csrfToken={csrfRef}
               loaded={fetching}
               currentCluster={currentCluster}
               onClose={_onCloseDetailPanel}
             />
           </Stack.Item>
         </Stack>
-        <SSHModal csrfToken={csrfRef} ref={sshRef} />
+        <SSHModal dummyVar={emptyRef} ref={sshRef} />
       </Stack>
     </>
   )

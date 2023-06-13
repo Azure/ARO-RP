@@ -22,7 +22,6 @@ jQuery.extend({
             form.append(input);
         });
 
-        form.append($("input[name='gorilla.csrf.Token']").first());
         form.appendTo("body").submit();
     }
 });
@@ -68,9 +67,6 @@ jQuery(function () {
         $.ajax({
             method: "POST",
             url: $("#selResourceId").val() + "/ssh/new",
-            headers: {
-                "X-CSRF-Token": $("input[name='gorilla.csrf.Token']").val(),
-            },
             contentType: "application/json",
             data: JSON.stringify({
                 "master": parseInt($("#selMaster").val()),

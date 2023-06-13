@@ -1,14 +1,13 @@
 import { IconButton, TooltipHost } from "@fluentui/react"
 import { AxiosResponse } from "axios"
 import { RequestKubeconfig } from "./Request"
-import { MutableRefObject, useEffect, useLayoutEffect } from "react"
+import { useEffect, useLayoutEffect } from "react"
 import { useState } from "react"
 import { useRef } from "react"
 import { forwardRef } from "react"
 import { parse as parseContentDisposition } from "content-disposition"
 
 type KubeconfigButtonProps = {
-  csrfToken: MutableRefObject<string>
   resourceId: string
 }
 
@@ -18,7 +17,7 @@ type FileDownload = {
 }
 
 export const KubeconfigButton = forwardRef<any, KubeconfigButtonProps>(
-  ({ csrfToken, resourceId }) => {
+  ({ resourceId }) => {
     const [data, setData] = useState<FileDownload>({ name: "", content: "" })
     const [error, setError] = useState<AxiosResponse | null>(null)
     const [fetching, setFetching] = useState("DONE")
@@ -40,9 +39,9 @@ export const KubeconfigButton = forwardRef<any, KubeconfigButtonProps>(
 
       if (fetching === "") {
         setFetching("FETCHING")
-        RequestKubeconfig(csrfToken.current, resourceId).then(onData)
+        RequestKubeconfig(resourceId).then(onData)
       }
-    }, [fetching, error, data, resourceId, csrfToken])
+    }, [fetching, error, data, resourceId])
 
     useLayoutEffect(() => {
       if (data.content && buttonRef && buttonRef.current) {

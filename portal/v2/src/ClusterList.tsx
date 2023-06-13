@@ -144,7 +144,6 @@ interface ClusterListComponentProps {
   items: ICluster[]
   sshModalRef: MutableRefObject<any>
   setCurrentCluster: (item: ICluster) => void
-  csrfToken: MutableRefObject<string>
 }
 
 /* eslint-enable */
@@ -311,7 +310,7 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
                 onClick={() => this._onSSHClick(item)}
               />
             </TooltipHost>
-            <KubeconfigButton resourceId={item.resourceId} csrfToken={props.csrfToken} />
+            <KubeconfigButton resourceId={item.resourceId} />
             {/* <TooltipHost content={`Geneva`}>
               <IconButton
                 iconProps={{iconName: "Health"}}
@@ -416,10 +415,8 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
 }
 
 export function ClusterList(props: {
-  csrfToken: MutableRefObject<string>
   sshBox: MutableRefObject<any>
   setCurrentCluster: any
-  csrfTokenAvailable: string
   params: any
 }) {
   const [data, setData] = useState<any>([])
@@ -460,7 +457,7 @@ export function ClusterList(props: {
       setFetching("DONE")
     }
 
-    if (fetching === "" && props.csrfTokenAvailable === "DONE") {
+    if (fetching === "") {
       setFetching("FETCHING")
       fetchClusters().then(onData)
     }
@@ -479,7 +476,7 @@ export function ClusterList(props: {
 
       props.setCurrentCluster(currentCluster)
     }
-  }, [data, fetching, setFetching, props.csrfTokenAvailable])
+  }, [data, fetching, setFetching])
 
   const _items: ICommandBarItemProps[] = [
     {
@@ -519,7 +516,6 @@ export function ClusterList(props: {
         ref={state} // why do we need ref here?
         sshModalRef={props.sshBox}
         setCurrentCluster={props.setCurrentCluster}
-        csrfToken={props.csrfToken}
       />
     </Stack>
   )

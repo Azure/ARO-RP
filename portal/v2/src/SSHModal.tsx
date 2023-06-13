@@ -33,7 +33,7 @@ const machineOptions = [
 ]
 
 type SSHModalProps = {
-  csrfToken: MutableRefObject<string>
+  dummyVar: MutableRefObject<string>
 }
 
 const theme = getTheme()
@@ -82,7 +82,7 @@ const iconButtonStyles = {
 const sshDocs: string =
   "https://msazure.visualstudio.com/AzureRedHatOpenShift/_wiki/wikis/ARO.wiki/136823/ARO-SRE-portal?anchor=ssh-(elevated)"
 
-export const SSHModal = forwardRef<any, SSHModalProps>(({ csrfToken }, ref) => {
+export const SSHModal = forwardRef<any, SSHModalProps>(({ dummyVar }, ref) => {
   const [isModalOpen, { setTrue: showModal, setFalse: hideModal }] = useBoolean(false)
 
   const titleId = useId("title")
@@ -113,7 +113,7 @@ export const SSHModal = forwardRef<any, SSHModalProps>(({ csrfToken }, ref) => {
           data: {
             master: machineName?.key,
           },
-          headers: { "X-CSRF-Token": csrfToken.current },
+          headers: { "X-CSRF-Token": dummyVar.current },
         })
         setData(result.data)
         setRequestable()
@@ -127,7 +127,7 @@ export const SSHModal = forwardRef<any, SSHModalProps>(({ csrfToken }, ref) => {
       fetchData()
     }
     return
-  }, [resourceID, machineName, csrfToken, update, sshRequested, setRequestable])
+  }, [resourceID, machineName, dummyVar, update, sshRequested, setRequestable])
 
   const onChange = (
     event: React.FormEvent<HTMLDivElement>,

@@ -1,6 +1,6 @@
 import { IPanelStyles, Panel, PanelType } from "@fluentui/react/lib/Panel"
 import { useBoolean } from "@fluentui/react-hooks"
-import { useState, useEffect, useRef, MutableRefObject, ReactElement } from "react"
+import { useState, useEffect, useRef, ReactElement } from "react"
 import {
   IMessageBarStyles,
   MessageBar,
@@ -77,7 +77,6 @@ export const clusterOperatorsKey = "clusteroperators"
 const errorBarStyles: Partial<IMessageBarStyles> = { root: { marginBottom: 15 } }
 
 export function ClusterDetailPanel(props: {
-  csrfToken: MutableRefObject<string>
   currentCluster: ICluster | null
   onClose: any
   loaded: string
