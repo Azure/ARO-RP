@@ -94,12 +94,6 @@ func TestInfo(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		// copy through the CSRF token if it's non-blank, since we can't make it
-		// a known value
-		if readResp.CSRFToken != "" {
-			tt.expectedResponse.CSRFToken = readResp.CSRFToken
-		}
-
 		for _, l := range deep.Equal(readResp, tt.expectedResponse) {
 			t.Error(l)
 		}

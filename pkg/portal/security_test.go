@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -291,7 +290,6 @@ func TestSecurity(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				err = addCSRF(req)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -394,25 +392,6 @@ func TestSecurity(t *testing.T) {
 			})
 		}
 	}
-}
-
-func addCSRF(req *http.Request) error {
-	if req.Method != http.MethodPost {
-		return nil
-	}
-
-	req.Header.Set("X-CSRF-Token", base64.StdEncoding.EncodeToString(make([]byte, 64)))
-
-	sc := securecookie.New(make([]byte, 32), nil)
-	sc.SetSerializer(securecookie.JSONEncoder{})
-
-	cookie, err := sc.Encode("_gorilla_csrf", make([]byte, 32))
-	if err != nil {
-		return err
-	}
-	req.Header.Add("Cookie", "_gorilla_csrf="+cookie)
-
-	return nil
 }
 
 func addAuth(req *http.Request, groups []string) error {

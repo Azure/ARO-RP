@@ -81,7 +81,6 @@ func (p *testPortal) Request(method string, path string, authenticated bool, ele
 		return nil, err
 	}
 
-	err = addCSRF(req)
 	if err != nil {
 		return nil, err
 	}

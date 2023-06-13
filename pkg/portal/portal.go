@@ -19,7 +19,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
@@ -169,7 +168,6 @@ func (p *portal) setupRouter(kconfig *kubeconfig.Kubeconfig, prom *prometheus.Pr
 	aadAuthenticatedRouter.Use(p.aad.AAD)
 	aadAuthenticatedRouter.Use(middleware.Log(p.env, p.audit, p.baseAccessLog))
 	aadAuthenticatedRouter.Use(p.aad.CheckAuthentication)
-	aadAuthenticatedRouter.Use(csrf.Protect(p.sessionKey, csrf.SameSite(csrf.SameSiteStrictMode), csrf.MaxAge(0), csrf.Path("/")))
 
 	p.aadAuthenticatedRoutes(aadAuthenticatedRouter, prom, kconfig, sshStruct)
 
@@ -331,8 +329,7 @@ func (p *portal) index(w http.ResponseWriter, r *http.Request) {
 	buf := &bytes.Buffer{}
 
 	err := p.templateV1.ExecuteTemplate(buf, "index.html", map[string]interface{}{
-		"location":       p.env.Location(),
-		csrf.TemplateTag: csrf.TemplateField(r),
+		"location": p.env.Location(),
 	})
 	if err != nil {
 		p.internalServerError(w, err)
@@ -346,8 +343,7 @@ func (p *portal) indexV2(w http.ResponseWriter, r *http.Request) {
 	buf := &bytes.Buffer{}
 
 	err := p.templateV2.ExecuteTemplate(buf, "index.html", map[string]interface{}{
-		"location":       p.env.Location(),
-		csrf.TemplateTag: csrf.TemplateField(r),
+		"location": p.env.Location(),
 	})
 
 	if err != nil {

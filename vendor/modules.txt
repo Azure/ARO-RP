@@ -607,9 +607,6 @@ github.com/gophercloud/utils/openstack/compute/v2/availabilityzones
 github.com/gophercloud/utils/openstack/compute/v2/flavors
 github.com/gophercloud/utils/openstack/imageservice/v2/images
 github.com/gophercloud/utils/openstack/networking/v2/networks
-# github.com/gorilla/csrf v1.7.1
-## explicit; go 1.13
-github.com/gorilla/csrf
 # github.com/gorilla/mux v1.8.0
 ## explicit; go 1.12
 github.com/gorilla/mux

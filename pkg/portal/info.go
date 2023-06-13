@@ -7,15 +7,12 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/gorilla/csrf"
-
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type PortalInfo struct {
 	Location  string `json:"location"`
-	CSRFToken string `json:"csrf"`
 	Elevated  bool   `json:"elevated"`
 	Username  string `json:"username"`
 	RPVersion string `json:"rpversion"`
@@ -27,7 +24,6 @@ func (p *portal) info(w http.ResponseWriter, r *http.Request) {
 
 	resp := PortalInfo{
 		Location:  p.env.Location(),
-		CSRFToken: csrf.Token(r),
 		Elevated:  elevated,
 		Username:  ctx.Value(middleware.ContextKeyUsername).(string),
 		RPVersion: version.GitCommit,
