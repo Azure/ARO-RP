@@ -7,7 +7,9 @@ metadata:
     gatekeeper.sh/system: "yes"
     pod-security.kubernetes.io/audit: restricted
     pod-security.kubernetes.io/audit-version: latest
-    pod-security.kubernetes.io/enforce: restricted
+    # change from restricted to baseline to accommodate
+    # https://cloud.redhat.com/blog/pod-security-admission-in-openshift-4.11
+    pod-security.kubernetes.io/enforce: baseline
     pod-security.kubernetes.io/enforce-version: v1.24
     pod-security.kubernetes.io/warn: restricted
     pod-security.kubernetes.io/warn-version: latest
