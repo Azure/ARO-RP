@@ -113,15 +113,8 @@ for testing. When submitting pull requests, tests that include `azdev style`,
 `azdev linter`, and `azdev test aro` should pass to ensure that changes will not
 impact CI pipelines.
 
-### Reviews
-
-You can use the following command (or similar) to generate a code diff:
-
-```
-diff --color=always -uNr -x '*.pyc' -x vendored_sdks -x tests \
-    ~/src/azure-cli/src/azure-cli/azure/cli/command_modules/aro/ \
-    ~/go/src/github.com/Azure/ARO-RP/python/az/aro/azext_aro/
-```
+Additional instructions for merging changes upstream are contained in internal
+documentation.
 
 ## Caveats
 
