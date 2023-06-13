@@ -46,11 +46,7 @@ func (m *manager) adminUpdate() []steps.Step {
 		steps.Action(m.initializeKubernetesClients), // must be first
 		steps.Action(m.ensureBillingRecord),         // belt and braces
 		steps.Action(m.ensureDefaults),
-
-		// TODO: this relies on an authorizer that isn't exposed in the manager
-		// struct, so we'll rebuild the fpAuthorizer and use the error catching
-		// to advance
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixupClusterSPObjectID),
+		steps.Action(m.fixupClusterSPObjectID),
 		steps.Action(m.fixInfraID), // Old clusters lacks infraID in the database. Which makes code prone to errors.
 	}
 
