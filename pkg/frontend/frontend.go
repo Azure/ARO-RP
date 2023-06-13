@@ -302,6 +302,7 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 			r.Put("/", f.putAdminOpenShiftVersion)
 		})
 		r.Get("/supportedvmsizes", f.supportedvmsizes)
+		r.Get("/clusterdeployment", f.getAdminHiveClusterDeployment)
 
 		r.Route("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/kubernetesobjects",
 			func(r chi.Router) {
@@ -321,8 +322,6 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 				r.Get("/resources", f.listAdminOpenShiftClusterResources)
 
 				r.Get("/serialconsole", f.getAdminOpenShiftClusterSerialConsole)
-
-				r.Get("/clusterdeployment", f.getAdminHiveClusterDeployment)
 
 				r.Post("/redeployvm", f.postAdminOpenShiftClusterRedeployVM)
 
