@@ -19,6 +19,7 @@ require (
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/coreos/go-semver v0.3.0
 	github.com/coreos/go-systemd/v22 v22.3.2
+	github.com/coreos/ignition v0.35.0
 	github.com/coreos/ignition/v2 v2.14.0
 	github.com/coreos/stream-metadata-go v0.2.0
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible
@@ -59,6 +60,7 @@ require (
 	github.com/stretchr/testify v1.7.1
 	github.com/tebeka/selenium v0.9.9
 	github.com/ugorji/go/codec v1.2.7
+	github.com/vincent-petithory/dataurl v1.0.0
 	golang.org/x/crypto v0.9.0
 	golang.org/x/net v0.10.0
 	golang.org/x/oauth2 v0.0.0-20220411215720-9780585627b5
@@ -117,7 +119,6 @@ require (
 	github.com/containers/ocicrypt v1.1.3 // indirect
 	github.com/containers/storage v1.39.0 // indirect
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
-	github.com/coreos/ignition v0.35.0 // indirect
 	github.com/coreos/vcontext v0.0.0-20220326205524-7fcaf69e7050 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
@@ -227,7 +228,6 @@ require (
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/vbatts/tar-split v0.11.2 // indirect
 	github.com/vbauerster/mpb/v7 v7.4.1 // indirect
-	github.com/vincent-petithory/dataurl v1.0.0 // indirect
 	github.com/vmware/govmomi v0.27.4 // indirect
 	github.com/xlab/treeprint v1.1.0 // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
