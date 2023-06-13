@@ -10,9 +10,13 @@ This document goes through the development dependencies one requires in order to
 
 1. Configure `GOPATH` as an OS environment variable in your shell (a requirement of some dependencies for `make generate`). If you want to keep the default path, you can add something like `GOPATH=$(go env GOPATH)` to your shell's profile/RC file.
 
-1. Install [Python 3.6+](https://www.python.org/downloads), if you haven't already.  You will also need `python-setuptools` installed, if you don't have it installed already.
+1. Install [Python 3.6-3.10](https://www.python.org/downloads), if you haven't already.  You will also need `python-setuptools` installed, if you don't have it installed already. Python versions earlier than 3.6 or later than 3.10 are not supported as of now.
 
 1. Install the [az client](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli), if you haven't already.
+
+    > Depending on the default version of Python available on your system, it may be convenient to set up the above within a virtual env. You can do so by running the `make pyenv` Makefile target within this repository.
+    > Ensure that your `python3` command points to a valid version of Python in the above range, e.g. 3.10, when running the command. 
+    > You can then install the Azure CLI via Pip: `pip install azure-cli`.
 
 1. Install [OpenVPN](https://openvpn.net/community-downloads) if it is not already installed
 
