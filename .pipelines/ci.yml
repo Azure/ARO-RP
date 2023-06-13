@@ -14,10 +14,10 @@ pr:
   branches:
     include:
     - master
+  drafts: false
   paths:
     exclude:
     - docs/*
-  drafts: false
 
 resources:
   containers:

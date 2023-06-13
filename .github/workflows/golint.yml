@@ -49,6 +49,7 @@ jobs:
           # Optional: if set to true then the action don't cache or restore ~/.cache/go-build.
           # skip-build-cache: true
   validate-go:
+    if: github.event.pull_request.draft == false
     name: validate-go
     runs-on: ubuntu-latest
     steps:
