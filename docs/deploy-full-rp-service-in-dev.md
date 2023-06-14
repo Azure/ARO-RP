@@ -3,31 +3,61 @@
 ## Prerequisites
 
 1. Your development environment is prepared according to the steps outlined in [Prepare Your Dev Environment](./prepare-your-dev-environment.md)
-
+2. During the deployment, it's recommended to avoid editing files in your
+   ARO-RP repository so that `git status` reports a clean working tree.
+   Otherwise aro container image will have `-dirty` suffix, which can be
+   problematic:
+    - if the working tree becomes dirty during the process (eg. because you
+      create a temporary helper script to run some of the setup), you could end
+      up with different image tag pushed in the azure image registry compared
+      to the tag expected by aro deployer
+    - with a dirty tag, it's not clear what's actually in the image
 
 ## Deploying an int-like Development RP
 
-1. Fetch the most up-to-date secrets with `make secrets`
+1. Fetch the most up-to-date secrets specifying `SECRET_SA_ACCOUNT_NAME` to the
+   name of the storage account containing your shared development environment
+   secrets, eg.:
 
-1. Copy and source your environment file.
-    ```bash
-    cp env.example env
-    vi env
-    . ./env
-    ```
+   ```bash
+   SECRET_SA_ACCOUNT_NAME=rharosecretsdev make secrets
+   ```
 
-1. Create a full environment file, which overrides some default `./env` options when sourced
-    * if using a public key separate from `~/.ssh/id_rsa.pub`, source it with `export SSH_PUBLIC_KEY=~/.ssh/id_separate.pub`
+1. Copy and tweak your environment file:
+
+   ```bash
+   cp env.example env
+   vi env
+   ```
+
+   You don't need to change anything in the env file, unless you plan on using
+   hive to install the cluster. In that case add the following hive environment
+   variables into your env file:
+
+   ```bash
+   export ARO_INSTALL_VIA_HIVE=true
+   export ARO_ADOPT_BY_HIVE=true
+   ```
+
+1. Create a full environment file, which overrides some defaults from `./env` options when sourced
+
     ```bash
     cp env-int.example env-int
     vi env-int
-    . ./env-int
     ```
 
-1. If you plan on using hive to install the cluster, set your hive environment variables
+    What to change in `env-int` file:
+
+    * if using a public key separate from `~/.ssh/id_rsa.pub` (for ssh access to RP and Gateway vmss instances), source it with `export SSH_PUBLIC_KEY=~/.ssh/id_separate.pub`
+    * don't try to change `$USER` prefix used there
+    * set tag of `FLUENTBIT_IMAGE` value to match the default from `pkg/util/version/const.go`,
+      eg. `FLUENTBIT_IMAGE=${USER}aro.azurecr.io/fluentbit:1.9.10-cm20230426`
+    * if you actually care about fluentbit image version, you need to change the default both in the env-int file and for ARO Deployer, which is out of scope of this guide
+
+1. And finally source the env:
+
     ```bash
-    export ARO_INSTALL_VIA_HIVE=true
-    export ARO_ADOPT_BY_HIVE=true
+    . ./env-int
     ```
 
 1. Generate the development RP configuration
@@ -75,6 +105,8 @@
 1. Mirror the OpenShift images to your new ACR
     <!-- TODO (bv) allow mirroring through a pipeline would be faster and a nice to have -->
     > __NOTE:__ Running the mirroring through a VM in Azure rather than a local workstation is recommended for better performance.
+    > __NOTE:__ Value of `USER_PULL_SECRET` variable comes from the secrets, which are sourced via `env-int` file
+    > __NOTE:__ `DST_AUTH` token or the login to the registry expires after some time
 
     1. Setup mirroring environment variables
         ```bash
@@ -107,7 +139,20 @@
 
         > If running this step from a VM separate from your workstation, ensure the commit tag used to build the image matches the commit tag where `make deploy` is run.
 
-        > Due to security compliance requirements, `make publish-image-*` targets pull from `arointsvc.azurecr.io`. You can either authenticate to this registry using `az acr login --name arointsvc` to pull the image, or modify the $RP_IMAGE_ACR environment variable locally to point to `registry.access.redhat.com` instead.
+        > For local builds and CI builds without `RP_IMAGE_ACR` environment
+        > variable set, `make publish-image-*` targets will pull from
+        > `registry.access.redhat.com`.
+        > If you need to use Azure container registry instead due to security
+        > compliance requirements, modify the `RP_IMAGE_ACR` environment
+        > variable to point to `arointsvc` or `arosvc` instead. You will need
+        > authenticate to this registry using `az acr login --name arointsvc`
+        > to pull the images.
+
+        > If the push fails on error like `unable to retrieve auth token:
+        > invalid username/password: unauthorized: authentication required`,
+        > try to create `DST_AUTH` variable and login to the container
+        > registry (as explained in steps above) again. It will resolve the
+        > failure in case of an expired auth token.
 
         ```bash
         make publish-image-aro-multistage
@@ -200,7 +245,9 @@
     az vmss delete -g ${RESOURCEGROUP} --name rp-vmss-$(git rev-parse --short=7 HEAD)$([[ $(git status --porcelain) = "" ]] || echo -dirty) && az vmss delete -g $USER-gwy-$LOCATION --name gateway-vmss-$(git rev-parse --short=7 HEAD)$([[ $(git status --porcelain) = "" ]] || echo -dirty)
     ```
 
-1. Run `make deploy`
+1. Run `make deploy`. When the command finishes, there should be one VMSS for
+   the RP with a single vm instance, and another VMSS with a single vm for
+   Gateway.
 
 1. Create storage account and role assignment required for workload identity clusters
     ```
