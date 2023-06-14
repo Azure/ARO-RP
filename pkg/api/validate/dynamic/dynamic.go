@@ -38,6 +38,7 @@ var (
 	errMsgOriginalNSGNotAttached            = "The provided subnet '%s' is invalid: must have network security group '%s' attached."
 	errMsgNSGNotAttached                    = "The provided subnet '%s' is invalid: must have a network security group attached."
 	errMsgNSGNotProperlyAttached            = "When the enable-preconfigured-nsg option is specified, both the master and worker subnets should have network security groups (NSG) attached to them before starting the cluster installation."
+	errMsgSPHasNoRequiredPermissionsOnNSG   = "The %s service principal (Application ID: %s) does not have Network Contributor role on network security group '%s'. This is required when the enable-preconfigured-nsg option is specified."
 	errMsgSubnetNotFound                    = "The provided subnet '%s' could not be found."
 	errMsgSubnetNotInSucceededState         = "The provided subnet '%s' is not in a Succeeded state"
 	errMsgSubnetInvalidSize                 = "The provided subnet '%s' is invalid: must be /27 or larger."
@@ -71,6 +72,7 @@ type Dynamic interface {
 	ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error
 	ValidateDiskEncryptionSets(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidateEncryptionAtHost(ctx context.Context, oc *api.OpenShiftCluster) error
+	ValidatePreConfiguredNSGs(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error
 }
 
 type dynamic struct {
@@ -775,6 +777,61 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 				errMsgSubnetInvalidSize,
 				s.ID,
 			)
+		}
+	}
+
+	return nil
+}
+
+func (dv *dynamic) ValidatePreConfiguredNSGs(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error {
+	dv.log.Print("ValidatePreConfiguredNSGs")
+
+	if oc.Properties.NetworkProfile.PreconfiguredNSG != api.PreconfiguredNSGEnabled {
+		return nil // exit early
+	}
+
+	subnetByID, err := dv.createSubnetMapByID(ctx, subnets)
+	if err != nil {
+		return err
+	}
+
+	for _, s := range subnetByID {
+		nsgID := s.NetworkSecurityGroup.ID
+		if nsgID == nil || *nsgID == "" {
+			return api.NewCloudError(
+				http.StatusBadRequest,
+				api.CloudErrorCodeNotFound,
+				"",
+				errMsgNSGNotProperlyAttached,
+			)
+		}
+
+		nsg, err := azure.ParseResourceID(*nsgID)
+		if err != nil {
+			return err
+		}
+
+		err = dv.validateActions(ctx, &nsg, []string{
+			"Microsoft.Network/networkSecurityGroups/join/action",
+		})
+
+		if err == wait.ErrWaitTimeout {
+			errCode := api.CloudErrorCodeInvalidResourceProviderPermissions
+			if dv.authorizerType == AuthorizerClusterServicePrincipal {
+				errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
+			}
+			return api.NewCloudError(
+				http.StatusBadRequest,
+				errCode,
+				"",
+				errMsgSPHasNoRequiredPermissionsOnNSG,
+				dv.authorizerType,
+				dv.appID,
+				*nsgID,
+			)
+		}
+		if err != nil {
+			return err
 		}
 	}
 
