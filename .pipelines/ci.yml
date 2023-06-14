@@ -1,4 +1,17 @@
 # Azure DevOps Pipeline running CI
+#
+# Note: This pipeline uses a secret variable "github_codeql_upload_token".
+#       This is a GitHub Personal Access Token (Classic) owned by mbarnes.
+#       It has no expiration and only has the "security_events" scope for
+#       the purpose of uploading CodeQL results.
+#
+#       However, for this secret to be available to pull requests from
+#       forked ARO-RP repositories, the pipeline option "Make secrets
+#       available to builds of forks" is enabled.
+#
+#       More information:
+#       https://learn.microsoft.com/en-us/azure/devops/pipelines/repos/github#contributions-from-forks
+#
 trigger:
   branches:
     include:
@@ -31,6 +44,20 @@ variables:
 - template: vars.yml
 
 jobs:
+- job: Golang_CodeQL
+  pool:
+    name: 1es-aro-ci-pool
+  variables:
+    HOME: $(Agent.BuildDirectory)
+  steps:
+    - template: ./templates/template-checkout.yml
+    - template: ./templates/template-codeql.yml
+      parameters:
+        language: go
+        target: golang
+        github_token: $(github_codeql_upload_token)
+  timeoutInMinutes: 120
+
 - job: Python_Unit_Tests
   pool:
     name: 1es-aro-ci-pool

@@ -60,8 +60,6 @@ linters-settings:
         alias: testdynamichelper
       - pkg: github.com/Azure/ARO-RP/test/util/log
         alias: testlog
-      - pkg: github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac
-        alias: azgraphrbac
       - pkg: github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault
         alias: azkeyvault
       - pkg: github.com/Azure/azure-sdk-for-go/storage
