@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+	msgraph_errors "github.com/microsoftgraph/msgraph-sdk-go/models/odataerrors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -51,6 +53,9 @@ func Run(ctx context.Context, log *logrus.Entry, pollInterval time.Duration, ste
 
 		if err != nil {
 			log.Errorf("step %s encountered error: %s", step, err.Error())
+			if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
+				spew.Fdump(log.Writer(), oDataError.GetError())
+			}
 			return nil, err
 		}
 

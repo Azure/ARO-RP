@@ -6,57 +6,44 @@ package cluster
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"time"
 
-	azgraphrbac "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/date"
+	msgraph_apps "github.com/microsoftgraph/msgraph-sdk-go/applications"
+	msgraph_models "github.com/microsoftgraph/msgraph-sdk-go/models"
+	msgraph_errors "github.com/microsoftgraph/msgraph-sdk-go/models/odataerrors"
 	"k8s.io/apimachinery/pkg/util/wait"
-
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
-func (c *Cluster) getServicePrincipal(ctx context.Context, appID string) (string, error) {
-	// TODO: we are listing here rather than calling
-	// i.applications.GetServicePrincipalsIDByAppID() due to some missing
-	// permission with our dev/e2e applications
-	sps, err := c.serviceprincipals.List(ctx, fmt.Sprintf("appId eq '%s'", appID))
-	if err != nil {
-		return "", err
-	}
-
-	switch len(sps) {
-	case 0:
-		return "", nil
-	case 1:
-		return *sps[0].ObjectID, nil
-	default:
-		return "", fmt.Errorf("%d service principals found for appId %s", len(sps), appID)
-	}
-}
-
 func (c *Cluster) createApplication(ctx context.Context, displayName string) (string, string, error) {
-	password := uuid.DefaultGenerator.Generate()
-
-	app, err := c.applications.Create(ctx, azgraphrbac.ApplicationCreateParameters{
-		DisplayName: &displayName,
-		PasswordCredentials: &[]azgraphrbac.PasswordCredential{
-			{
-				EndDate: &date.Time{Time: time.Now().AddDate(1, 0, 0)},
-				Value:   &password,
-			},
-		},
-	})
+	appBody := msgraph_models.NewApplication()
+	appBody.SetDisplayName(&displayName)
+	appResult, err := c.spGraphClient.Applications().Post(ctx, appBody, nil)
 	if err != nil {
 		return "", "", err
 	}
 
-	return *app.AppID, password, nil
+	id := *appResult.GetId()
+	endDateTime := time.Now().AddDate(1, 0, 0)
+
+	pwCredential := msgraph_models.NewPasswordCredential()
+	pwCredential.SetDisplayName(&displayName)
+	pwCredential.SetEndDateTime(&endDateTime)
+
+	pwCredentialRequestBody := msgraph_apps.NewItemAddPasswordPostRequestBody()
+	pwCredentialRequestBody.SetPasswordCredential(pwCredential)
+	// ByApplicationId is confusingly named, but it refers to
+	// the application's Object ID, not to the Application ID.
+	// https://learn.microsoft.com/en-us/graph/api/application-addpassword?view=graph-rest-1.0&tabs=http#http-request
+	pwResult, err := c.spGraphClient.Applications().ByApplicationId(id).AddPassword().Post(ctx, pwCredentialRequestBody, nil)
+	if err != nil {
+		return "", "", err
+	}
+
+	return *appResult.GetAppId(), *pwResult.GetSecretText(), nil
 }
 
 func (c *Cluster) createServicePrincipal(ctx context.Context, appID string) (string, error) {
-	var sp azgraphrbac.ServicePrincipal
+	var result msgraph_models.ServicePrincipalable
 	var err error
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
@@ -66,11 +53,12 @@ func (c *Cluster) createServicePrincipal(ctx context.Context, appID string) (str
 	// wait.PollImmediateUntil. Doing this will not propagate the latest error
 	// to the user in case when wait exceeds the timeout
 	_ = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		sp, err = c.serviceprincipals.Create(ctx, azgraphrbac.ServicePrincipalCreateParameters{
-			AppID: &appID,
-		})
-		if detailedErr, ok := err.(autorest.DetailedError); ok &&
-			detailedErr.StatusCode == http.StatusForbidden {
+		requestBody := msgraph_models.NewServicePrincipal()
+		requestBody.SetAppId(&appID)
+		result, err = c.spGraphClient.ServicePrincipals().Post(ctx, requestBody, nil)
+
+		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok &&
+			*oDataError.GetError().GetCode() == "accessDenied" {
 			// goal is to retry the following error:
 			// graphrbac.ServicePrincipalsClient#Create: Failure responding to
 			// request: StatusCode=403 -- Original Error: autorest/azure:
@@ -89,22 +77,32 @@ func (c *Cluster) createServicePrincipal(ctx context.Context, appID string) (str
 		return "", err
 	}
 
-	return *sp.ObjectID, nil
+	return *result.GetId(), nil
 }
 
 func (c *Cluster) deleteApplication(ctx context.Context, appID string) error {
-	apps, err := c.applications.List(ctx, fmt.Sprintf("appId eq '%s'", appID))
+	filter := fmt.Sprintf("appId eq '%s'", appID)
+	requestConfiguration := &msgraph_apps.ApplicationsRequestBuilderGetRequestConfiguration{
+		QueryParameters: &msgraph_apps.ApplicationsRequestBuilderGetQueryParameters{
+			Filter: &filter,
+			Select: []string{"id"},
+		},
+	}
+	result, err := c.spGraphClient.Applications().Get(ctx, requestConfiguration)
 	if err != nil {
 		return err
 	}
 
+	apps := result.GetValue()
 	switch len(apps) {
 	case 0:
 		return nil
 	case 1:
 		c.log.Print("deleting AAD application")
-		_, err = c.applications.Delete(ctx, *apps[0].ObjectID)
-		return err
+		// ByApplicationId is confusingly named, but it refers to
+		// the application's Object ID, not to the Application ID.
+		// https://learn.microsoft.com/en-us/graph/api/application-delete?view=graph-rest-1.0&tabs=http#http-request
+		return c.spGraphClient.Applications().ByApplicationId(*apps[0].GetId()).Delete(ctx, nil)
 	default:
 		return fmt.Errorf("%d applications found for appId %s", len(apps), appID)
 	}

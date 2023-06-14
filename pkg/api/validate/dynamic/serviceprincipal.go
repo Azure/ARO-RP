@@ -19,7 +19,7 @@ func (dv *dynamic) ValidateServicePrincipal(ctx context.Context, tokenCredential
 	dv.log.Print("ValidateServicePrincipal")
 
 	tokenRequestOptions := policy.TokenRequestOptions{
-		Scopes: []string{dv.azEnv.ActiveDirectoryGraphScope},
+		Scopes: []string{dv.azEnv.MicrosoftGraphScope},
 	}
 	token, err := tokenCredential.GetToken(ctx, tokenRequestOptions)
 	if err != nil {
