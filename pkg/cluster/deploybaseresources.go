@@ -246,8 +246,6 @@ func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
 
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
 		if strings.Contains(detailedErr.Original.Error(), "RequestDisallowedByPolicy") {
-			b, _ := json.Marshal(detailedErr)
-			print(b)
 			return &api.CloudError{
 				StatusCode: http.StatusBadRequest,
 				CloudErrorBody: &api.CloudErrorBody{
