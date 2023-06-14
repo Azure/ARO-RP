@@ -27,9 +27,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
-// Rotate the secret on every deploy of the RP if the most recent
-// secret is greater than 7 days old
-const rotateSecretAfter = time.Hour * 168
+const (
+	// Rotate the secret on every deploy of the RP if the most recent
+	// secret is greater than 7 days old
+	rotateSecretAfter    = time.Hour * 168
+	rpRestartScript      = "systemctl restart aro-rp"
+	gatewayRestartScript = "systemctl restart aro-gateway"
+)
 
 // PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
 // deployment
@@ -393,11 +397,11 @@ func (d *deployer) configureServiceSecrets(ctx context.Context) error {
 	}
 
 	if isRotated {
-		err = d.restartOldScalesets(ctx, "systemctl restart aro-gateway", d.config.GatewayResourceGroupName)
+		err = d.restartOldScalesets(ctx, d.config.GatewayResourceGroupName)
 		if err != nil {
 			return err
 		}
-		err = d.restartOldScalesets(ctx, "systemctl restart aro-rp", d.config.RPResourceGroupName)
+		err = d.restartOldScalesets(ctx, d.config.RPResourceGroupName)
 		if err != nil {
 			return err
 		}
@@ -482,7 +486,7 @@ func (d *deployer) ensureSecretKey(ctx context.Context, kv keyvault.Manager, sec
 	})
 }
 
-func (d *deployer) restartOldScalesets(ctx context.Context, script string, resourceGroupName string) error {
+func (d *deployer) restartOldScalesets(ctx context.Context, resourceGroupName string) error {
 	d.log.Print("restarting old scalesets")
 	scalesets, err := d.vmss.List(ctx, resourceGroupName)
 	if err != nil {
@@ -490,7 +494,7 @@ func (d *deployer) restartOldScalesets(ctx context.Context, script string, resou
 	}
 
 	for _, vmss := range scalesets {
-		err = d.restartOldScaleset(ctx, *vmss.Name, script, resourceGroupName)
+		err = d.restartOldScaleset(ctx, *vmss.Name, resourceGroupName)
 		if err != nil {
 			return err
 		}
@@ -499,7 +503,17 @@ func (d *deployer) restartOldScalesets(ctx context.Context, script string, resou
 	return nil
 }
 
-func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string, script string, resourceGroupName string) error {
+func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string, resourceGroupName string) error {
+	var restartScript string
+	switch {
+	case strings.HasPrefix(vmssName, gatewayVMSSPrefix):
+		restartScript = gatewayRestartScript
+	case strings.HasPrefix(vmssName, rpVMSSPrefix):
+		restartScript = rpRestartScript
+	default:
+		return nil
+	}
+
 	scalesetVMs, err := d.vmssvms.List(ctx, resourceGroupName, vmssName, "", "", "")
 	if err != nil {
 		return err
@@ -511,7 +525,7 @@ func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string, scri
 		go func(id string) {
 			errors <- d.vmssvms.RunCommandAndWait(ctx, resourceGroupName, vmssName, id, mgmtcompute.RunCommandInput{
 				CommandID: to.StringPtr("RunShellScript"),
-				Script:    &[]string{script},
+				Script:    &[]string{restartScript},
 			})
 		}(*vm.InstanceID)
 	}
