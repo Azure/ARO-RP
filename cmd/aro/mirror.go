@@ -115,8 +115,9 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"quay.io/app-sre/managed-upgrade-operator:v0.1.891-3d94c00",
 
 		// https://quay.io/repository/app-sre/hive?tab=tags
+		// Temporary image to evaluate memory leak
 		// TODO: move to official hive image once we fix memory leak
-		"quay.io/bvesel/hive:fec14dcf0-20230504",
+		"quay.io/app-sre/hive:32e143a294",
 	} {
 		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
 
