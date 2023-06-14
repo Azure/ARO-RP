@@ -227,7 +227,8 @@ func (m *manager) attachNSGs(ctx context.Context) error {
 
 func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
 	// TODO: there is probably an undesirable race condition here - check if etags can help.
-	s, err := m.subnet.Get(ctx, m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
+	subnetId := m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID
+	s, err := m.subnet.Get(ctx, subnetId)
 	if err != nil {
 		return err
 	}
@@ -241,7 +242,33 @@ func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
 	}
 	s.SubnetPropertiesFormat.PrivateLinkServiceNetworkPolicies = to.StringPtr("Disabled")
 
-	return m.subnet.CreateOrUpdate(ctx, m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID, s)
+	err = m.subnet.CreateOrUpdate(ctx, subnetId, s)
+
+	if detailedErr, ok := err.(autorest.DetailedError); ok {
+		if strings.Contains(detailedErr.Original.Error(), "RequestDisallowedByPolicy") {
+			b, _ := json.Marshal(detailedErr)
+			print(b)
+			return &api.CloudError{
+				StatusCode: http.StatusBadRequest,
+				CloudErrorBody: &api.CloudErrorBody{
+					Code: api.CloudErrorCodeRequestDisallowedByPolicy,
+					Message: fmt.Sprintf("Resource %s was disallowed by policy.",
+						subnetId[strings.LastIndex(subnetId, "/")+1:],
+					),
+					Details: []api.CloudErrorBody{
+						{
+							Code: api.CloudErrorCodeRequestDisallowedByPolicy,
+							Message: fmt.Sprintf("Policy definition : %s\nPolicy Assignment : %s",
+								regexp.MustCompile(`policyDefinitionName":"([^"]+)"`).FindStringSubmatch(detailedErr.Original.Error())[1],
+								regexp.MustCompile(`policyAssignmentName":"([^"]+)"`).FindStringSubmatch(detailedErr.Original.Error())[1],
+							),
+						},
+					},
+				},
+			}
+		}
+	}
+	return err
 }
 
 // generateInfraID take base and returns a ID that

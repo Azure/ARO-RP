@@ -101,6 +101,7 @@ const (
 	CloudErrorCodeCannotDeleteLoadBalancerByID       = "CannotDeleteLoadBalancerWithPrivateLinkService"
 	CloudErrorCodeInUseSubnetCannotBeDeleted         = "InUseSubnetCannotBeDeleted"
 	CloudErrorCodeScopeLocked                        = "ScopeLocked"
+	CloudErrorCodeRequestDisallowedByPolicy          = "RequestDisallowedByPolicy"
 )
 
 // NewCloudError returns a new CloudError
