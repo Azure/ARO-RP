@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
@@ -33,15 +34,16 @@ const (
 )
 
 type Reconciler struct {
-	log *logrus.Entry
-
-	client client.Client
+	base.AROController
 }
 
 func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
-		log:    log,
-		client: client,
+		AROController: base.AROController{
+			Log:    log,
+			Client: client,
+			Name:   ControllerName,
+		},
 	}
 }
 
@@ -51,17 +53,17 @@ func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 // - Fails fast if both are not nil, unsupported
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance := &arov1alpha1.Cluster{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+	err := r.Client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		r.log.Debug("controller is disabled")
+		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
-	r.log.Debug("running")
+	r.Log.Debug("running")
 	requiredRegistries, err := GetCloudAwareRegistries(instance)
 	if err != nil {
 		// Not returning error as it will requeue again
@@ -70,14 +72,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// Get image.config yaml
 	imageconfig := &configv1.Image{}
-	err = r.client.Get(ctx, types.NamespacedName{Name: request.Name}, imageconfig)
+	err = r.Client.Get(ctx, types.NamespacedName{Name: request.Name}, imageconfig)
 	if err != nil {
+		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
+
 		return reconcile.Result{}, err
 	}
 
 	// Fail fast if both are not nil
 	if imageconfig.Spec.RegistrySources.AllowedRegistries != nil && imageconfig.Spec.RegistrySources.BlockedRegistries != nil {
 		err := errors.New("both AllowedRegistries and BlockedRegistries are present")
+		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
 	}
 
@@ -102,7 +109,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// Update image config registry
-	return reconcile.Result{}, r.client.Update(ctx, imageconfig)
+	err = r.Client.Update(ctx, imageconfig)
+	if err != nil {
+		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
+
+		return reconcile.Result{}, err
+	}
+
+	r.ClearConditions(ctx)
+	return reconcile.Result{}, nil
 }
 
 // SetupWithManager setup the manager
