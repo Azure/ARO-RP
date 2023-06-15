@@ -236,7 +236,7 @@ func (m *manager) cleanupContainers(ctx context.Context) error {
 	containerName := "installer-" + m.doc.ID
 
 	if !m.success {
-		m.log.Info("cleaning up failed container %s", containerName)
+		m.log.Infof("cleaning up failed container %s", containerName)
 		getContainerLogs(m.conn, m.log, containerName)
 	}
 
