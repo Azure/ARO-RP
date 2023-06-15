@@ -282,8 +282,37 @@ require (
 )
 
 exclude (
-	github.com/containerd/containerd v1.2.10
+	// exclude Azure SDKs that we are not compatible with
+	github.com/Azure/azure-sdk-for-go v48.0.0+incompatible
+	github.com/Azure/azure-sdk-for-go v55.0.0+incompatible
+	github.com/Azure/azure-sdk-for-go v63.2.0+incompatible
+	github.com/Azure/azure-sdk-for-go v63.3.0+incompatible
+	github.com/Azure/azure-sdk-for-go v63.4.0+incompatible
+	github.com/Azure/azure-sdk-for-go v64.0.0+incompatible
+	github.com/Azure/azure-sdk-for-go v64.1.0+incompatible
+	github.com/Azure/azure-sdk-for-go v64.2.0+incompatible
+	github.com/Azure/azure-sdk-for-go v65.0.0+incompatible
+	github.com/Azure/azure-sdk-for-go v66.0.0+incompatible
+	github.com/Azure/azure-sdk-for-go v67.0.0+incompatible
+	github.com/Azure/azure-sdk-for-go v67.1.0+incompatible
+	github.com/Azure/azure-sdk-for-go v67.2.0+incompatible
+	github.com/Azure/azure-sdk-for-go v67.3.0+incompatible
+	github.com/Azure/azure-sdk-for-go v67.4.0+incompatible
+	github.com/Azure/azure-sdk-for-go v68.0.0+incompatible
+	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78
+	github.com/Azure/go-ansiterm v0.0.0-20210608223527-2377c96fe795
+	github.com/Azure/go-autorest/autorest v0.11.12
+	github.com/Azure/go-autorest/autorest v0.11.18
+	github.com/Azure/go-autorest/autorest v0.11.24
+	github.com/Azure/go-autorest/autorest v0.9.0
+	github.com/Azure/go-autorest/autorest/adal v0.9.13
+	github.com/Azure/go-autorest/autorest/adal v0.9.18
+	github.com/Azure/go-autorest/autorest/adal v0.9.5
+	github.com/Azure/go-autorest/autorest/mocks v0.4.1
+	github.com/Azure/go-autorest/autorest/to v0.3.0
+	github.com/Azure/go-autorest/autorest/validation v0.1.0
 	// exclude github.com/containerd/containerd < 1.6.1, 1.5.10, 1.14.12 https://nvd.nist.gov/vuln/detail/CVE-2022-23648
+	github.com/containerd/containerd v1.2.10
 	github.com/containerd/containerd v1.2.7
 	github.com/containerd/containerd v1.3.0
 	github.com/containerd/containerd v1.3.2
