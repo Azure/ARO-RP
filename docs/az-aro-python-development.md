@@ -10,7 +10,7 @@ There are currently two codebases for the `az aro` command:
   `az aro` module.
 
 The upstream `az aro` command module is distributed with `az` and is
-automaticallypresent in the Azure cloud shell. Development/maintenance of this
+automatically present in the Azure cloud shell. Development/maintenance of this
 module within the Azure CLI is handled the same as any other first-party Azure
 CLI module. You can read more about how command modules are authored and
 maintained [here](https://github.com/Azure/azure-cli/tree/dev/doc/authoring_command_modules).
