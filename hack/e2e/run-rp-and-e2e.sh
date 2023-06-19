@@ -142,8 +142,8 @@ validate_podman_running() {
 
 run_selenium() {
     echo "########## 🚀 Run Selenium in background ##########"
-    podman -r --url http://localhost:8888 pull docker.io/selenium/standalone-edge:latest
-    podman -r --url http://localhost:8888 run -d --name selenium-edge-standalone --network=host --shm-size=2g docker.io/selenium/standalone-edge:latest
+    podman -r --url tcp://localhost:8888 pull docker.io/selenium/standalone-edge:latest
+    podman -r --url tcp://localhost:8888 run -d --name selenium-edge-standalone --network=host --shm-size=2g docker.io/selenium/standalone-edge:latest
 
 }
 
