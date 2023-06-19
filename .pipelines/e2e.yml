@@ -8,12 +8,8 @@ resources:
     trigger: true
   containers:
   - container: container
-    image: registry.access.redhat.com/ubi8/toolbox:8.7
-    options: --user=0 --cap-add=NET_ADMIN --device /dev/net/tun --name vpn
-  - container: selenium
-    image: docker.io/selenium/standalone-edge:latest
-    options: --shm-size=2g
-
+    image: registry.access.redhat.com/ubi8/toolbox:8.8
+    options: --user=0 --privileged -v /dev/shm:/dev/shm --device /dev/net/tun --name vpn
 
 # Azure DevOps Pipeline running e2e tests
 variables:
@@ -23,10 +19,11 @@ variables:
 jobs:
 - job: E2E
   timeoutInMinutes: 180
+  variables:
+    ARO_PODMAN_SOCKET: "tcp://localhost:8888"
+    ARO_SELENIUM_HOSTNAME: "localhost"
   pool:
     name: 1es-aro-ci-pool
-  #services:
-  #  selenium: selenium
   steps:
   - template: ./templates/template-checkout.yml
 
@@ -63,8 +60,15 @@ jobs:
       . ./hack/e2e/run-rp-and-e2e.sh
 
       run_vpn
-      # run_portal
-      # validate_portal_running
+
+      run_podman
+      validate_podman_running
+
+      run_portal
+      validate_portal_running
+
+      run_selenium
+      validate_selenium_running
 
       run_rp
       validate_rp_running
@@ -101,6 +105,8 @@ jobs:
 
       delete_e2e_cluster
       kill_rp
+      kill_selenium
+      kill_podman
       kill_vpn
     displayName: Cleanup
     condition: always()

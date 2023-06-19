@@ -102,6 +102,79 @@ kill_vpn() {
     while read pid; do sudo kill $pid; done <vpnpid
 }
 
+run_podman() {
+    echo "########## 🚀 Run Podman in background ##########"
+    podman --log-level=debug system service --time=0 tcp://127.0.0.1:8888 >podmanlog &
+}
+
+kill_podman() {
+    echo "podman logs:"
+    cat podmanlog
+    echo "########## Kill the podman running in background ##########"
+    rppid=$(lsof -t -i :8888)
+    kill $rppid
+    wait $rppid
+}
+
+validate_podman_running() {
+    echo "########## ？Checking podman Status ##########"
+    ELAPSED=0
+    while true; do
+        sleep 5
+        http_code=$(curl -k -s -o /dev/null -w '%{http_code}' http://localhost:8888/v1.30/_ping || true)
+        case $http_code in
+        "200")
+            echo "########## ✅ Podman Running ##########"
+            break
+            ;;
+        *)
+            echo "Attempt $ELAPSED - podman is NOT up. Code : $http_code, waiting"
+            sleep 2
+            # after 40 secs return exit 1 to not block ci
+            ELAPSED=$((ELAPSED + 1))
+            if [ $ELAPSED -eq 20 ]; then
+                exit 1
+            fi
+            ;;
+        esac
+    done
+}
+
+run_selenium() {
+    echo "########## 🚀 Run Selenium in background ##########"
+    podman -r --url http://localhost:8888 pull docker.io/selenium/standalone-edge:latest
+    podman -r --url http://localhost:8888 run -d --name selenium-edge-standalone --network=host --shm-size=2g docker.io/selenium/standalone-edge:latest
+
+}
+
+kill_selenium() {
+    podman stop -i selenium-edge-standalone
+}
+
+validate_selenium_running() {
+    echo "########## ？Checking selenium Status ##########"
+    ELAPSED=0
+    while true; do
+        sleep 5
+        http_code=$(curl -k -s -o /dev/null -w '%{http_code}' http://localhost:4444/status || true)
+        case $http_code in
+        "200")
+            echo "########## ✅ Podman Running ##########"
+            break
+            ;;
+        *)
+            echo "Attempt $ELAPSED - selenium is NOT up. Code : $http_code, waiting"
+            sleep 2
+            # after 40 secs return exit 1 to not block ci
+            ELAPSED=$((ELAPSED + 1))
+            if [ $ELAPSED -eq 20 ]; then
+                exit 1
+            fi
+            ;;
+        esac
+    done
+}
+
 deploy_e2e_db() {
     echo "########## 📦 Creating new DB $DATABASE_NAME in $DATABASE_ACCOUNT_NAME ##########"
 

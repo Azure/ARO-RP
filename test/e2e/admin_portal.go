@@ -18,7 +18,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 	BeforeEach(
 		func() {
 			skipIfNotInDevelopmentEnv()
-			skipIfDockerNotWorking()
+			skipIfSeleniumNotEnabled()
 		},
 	)
 	var wdPoint *selenium.WebDriver
