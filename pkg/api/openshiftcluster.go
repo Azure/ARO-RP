@@ -128,6 +128,8 @@ type OpenShiftClusterProperties struct {
 
 	WorkerProfiles []WorkerProfile `json:"workerProfiles,omitempty"`
 
+	WorkerProfilesStatus []WorkerProfile `json:"workerProfilesStatus,omitempty"`
+
 	APIServerProfile APIServerProfile `json:"apiserverProfile,omitempty"`
 
 	IngressProfiles []IngressProfile `json:"ingressProfiles,omitempty"`
