@@ -81,10 +81,6 @@ func (p *testPortal) Request(method string, path string, authenticated bool, ele
 		return nil, err
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
 	if authenticated {
 		var groups []string
 		if elevated {

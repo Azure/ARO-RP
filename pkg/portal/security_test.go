@@ -290,10 +290,6 @@ func TestSecurity(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				if err != nil {
-					t.Fatal(err)
-				}
-
 				if tt2.authenticated {
 					var groups []string
 					if tt2.elevated {
