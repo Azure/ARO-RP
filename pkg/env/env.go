@@ -109,3 +109,7 @@ func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
 func IsLocalDevelopmentMode() bool {
 	return strings.EqualFold(os.Getenv("RP_MODE"), "development")
 }
+
+func IsCI() bool {
+	return strings.EqualFold(os.Getenv("CI"), "true")
+}

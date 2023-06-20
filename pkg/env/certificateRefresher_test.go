@@ -117,33 +117,6 @@ PeihXgcD511I3eMq7A8r7+xlNFEFYaleYwmoYSOt0cBGtoZttXDYacR/xvEkVaxO
 1LQ=
 -----END CERTIFICATE-----`
 
-// equalPrivKey is added manually, it has been added to go1.15, whilst ARO uses go1.14
-// TODO: Remove once ARO is on go1.15
-func equalPrivKey(one, other *rsa.PrivateKey) bool {
-	if one == nil && other == nil {
-		return true
-	}
-
-	pubEqual := one.PublicKey.N.Cmp(other.PublicKey.N) == 0 && one.PublicKey.E == other.PublicKey.E
-	expEqual := one.D.Cmp(other.D) == 0
-	if !pubEqual || !expEqual {
-		return false
-	}
-
-	primesEqual := len(one.Primes) == len(other.Primes)
-	if !primesEqual {
-		return false
-	}
-
-	for i := range one.Primes {
-		if one.Primes[i].Cmp(other.Primes[i]) != 0 {
-			return false
-		}
-	}
-
-	return true
-}
-
 func TestRefreshingCertificate(t *testing.T) {
 	mockController := gomock.NewController(t)
 
@@ -311,7 +284,7 @@ func TestRefreshingCertificate(t *testing.T) {
 			tick(cancel)
 
 			testkey, testCerts := refreshing.GetCertificates()
-			if !equalPrivKey(testkey, test.wantKey) {
+			if !testkey.Equal(test.wantKey) {
 				t.Error("returned private key does not match")
 			}
 

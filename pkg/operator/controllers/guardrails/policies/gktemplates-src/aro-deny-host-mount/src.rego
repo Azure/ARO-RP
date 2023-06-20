@@ -3,7 +3,6 @@ package arohostmount
 import future.keywords.in
 import data.lib.common.is_priv_namespace
 import data.lib.common.is_exempted_account
-import data.lib.common.get_user
 
 violation[{"msg": msg}] {
 
@@ -11,7 +10,6 @@ violation[{"msg": msg}] {
   ns := input.review.object.metadata.namespace
   not is_priv_namespace(ns)
 
-  # user := get_user(input.review)
   not is_exempted_account(input.review)
 
   c := input_containers[_]

@@ -24,6 +24,7 @@ type Manager interface {
 	NewRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProfile
 	PutRegistryProfile(oc *api.OpenShiftCluster, rp *api.RegistryProfile)
 	EnsureTokenAndPassword(ctx context.Context, rp *api.RegistryProfile) (string, error)
+	RotateTokenPassword(ctx context.Context, rp *api.RegistryProfile) error
 	Delete(ctx context.Context, rp *api.RegistryProfile) error
 }
 
@@ -98,12 +99,67 @@ func (m *manager) EnsureTokenAndPassword(ctx context.Context, rp *api.RegistryPr
 		return "", err
 	}
 
+	return m.generateTokenPassword(ctx, mgmtcontainerregistry.TokenPasswordNamePassword1, rp)
+}
+
+// RotateTokenPassword chooses either the unused token password or the token
+// password with the oldest creation date, generates a new password, and
+// then updates the registry profile with the newly generated password.
+func (m *manager) RotateTokenPassword(ctx context.Context, rp *api.RegistryProfile) error {
+	tokenProperties, err := m.tokens.GetTokenProperties(ctx, m.r.ResourceGroup, m.r.ResourceName, rp.Username)
+	if err != nil {
+		return err
+	}
+	tokenPasswords := *tokenProperties.Credentials.Passwords
+
+	var passwordToRenew mgmtcontainerregistry.TokenPasswordName
+	switch {
+	// Passwords only has one entry: renew password that isn't present
+	case len(tokenPasswords) == 1:
+		if tokenPasswords[0].Name == mgmtcontainerregistry.TokenPasswordNamePassword1 {
+			passwordToRenew = mgmtcontainerregistry.TokenPasswordNamePassword2
+		} else {
+			passwordToRenew = mgmtcontainerregistry.TokenPasswordNamePassword1
+		}
+	// Passwords has two entries: compare creation dates, renew oldest
+	case len(tokenPasswords) == 2:
+		if tokenPasswords[0].CreationTime.Before(tokenPasswords[1].CreationTime.Time) {
+			passwordToRenew = mgmtcontainerregistry.TokenPasswordNamePassword1
+		} else {
+			passwordToRenew = mgmtcontainerregistry.TokenPasswordNamePassword2
+		}
+	// default case, including passwords having zero entries: generate password 1
+	// this shouldn't ever happen, which guarantees it will happen
+	default:
+		passwordToRenew = mgmtcontainerregistry.TokenPasswordNamePassword1
+	}
+
+	newPassword, err := m.generateTokenPassword(ctx, passwordToRenew, rp)
+	if err != nil {
+		return err
+	}
+	rp.Password = api.SecureString(newPassword)
+	return nil
+}
+
+// generateTokenPassword takes an existing ACR token and generates
+// a password for the specified password name
+func (m *manager) generateTokenPassword(ctx context.Context, passwordName mgmtcontainerregistry.TokenPasswordName, rp *api.RegistryProfile) (string, error) {
 	creds, err := m.registries.GenerateCredentials(ctx, m.r.ResourceGroup, m.r.ResourceName, mgmtcontainerregistry.GenerateCredentialsParameters{
 		TokenID: to.StringPtr(m.env.ACRResourceID() + "/tokens/" + rp.Username),
-		Name:    mgmtcontainerregistry.TokenPasswordNamePassword1,
+		Name:    passwordName,
 	})
 	if err != nil {
 		return "", err
+	}
+
+	// response details from Azure API
+	// https://learn.microsoft.com/en-us/rest/api/containerregistry/tokens/create?tabs=Go#tokencreate
+
+	for _, pw := range *creds.Passwords {
+		if pw.Name == passwordName {
+			return *pw.Value, nil
+		}
 	}
 
 	return *(*creds.Passwords)[0].Value, nil

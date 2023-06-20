@@ -128,8 +128,8 @@ def test_validate_cidr(
     else:
         addresses = validate_cidr_fn(cmd_mock, namespace_mock)
 
-        if (addresses[0][2] != expected_addresses):
-            raise Exception(f"Error returned was not expected\n Expected : {expected_addresses}\n Actual   : {addresses[0][2]}")
+        if (addresses[0][3] != expected_addresses):
+            raise Exception(f"Error returned was not expected\n Expected : {expected_addresses}\n Actual   : {addresses[0][3]}")
 
 
 test_validate_subnets_data = [
@@ -242,8 +242,8 @@ def test_validate_subnets(
     else:
         missing_perms = validate_subnet_fn(cmd_mock, namespace_mock)
 
-        if (missing_perms[0][2] != expected_missing_perms):
-            raise Exception(f"Error returned was not expected\n Expected : {expected_missing_perms}\n Actual   : {missing_perms[0][2]}")
+        if (missing_perms[0][3] != expected_missing_perms):
+            raise Exception(f"Error returned was not expected\n Expected : {expected_missing_perms}\n Actual   : {missing_perms[0][3]}")
 
 
 test_validate_vnets_data = [
@@ -335,8 +335,8 @@ def test_validate_vnets(
     else:
         missing_perms = validate_vnet_fn(cmd_mock, namespace_mock)
 
-        if (missing_perms[0][2] != expected_missing_perms):
-            raise Exception(f"Error returned was not expected\n Expected : {expected_missing_perms}\n Actual   : {missing_perms[0][2]}")
+        if (missing_perms[0][3] != expected_missing_perms):
+            raise Exception(f"Error returned was not expected\n Expected : {expected_missing_perms}\n Actual   : {missing_perms[0][3]}")
 
 
 test_validate_resource_data = [
@@ -406,8 +406,8 @@ def test_validate_resources(
     else:
         missing_perms = validate_res_perms_fn(cmd_mock, namespace_mock)
 
-        if (missing_perms[0][2] != expected_missing_perms):
-            raise Exception(f"Error returned was not expected\n Expected : {expected_missing_perms}\n Actual   : {missing_perms[0][2]}")
+        if (missing_perms[0][3] != expected_missing_perms):
+            raise Exception(f"Error returned was not expected\n Expected : {expected_missing_perms}\n Actual   : {missing_perms[0][3]}")
 
 
 test_validate_version_data = [
@@ -448,9 +448,9 @@ def test_validate_version(
         errors = validate_version_fn(cmd_mock, namespace_mock)
 
         if (len(errors) > 0):
-            raise Exception(f"Unexpected Error: {errors[0][2]}")
+            raise Exception(f"Unexpected Error: {errors[0][3]}")
     else:
         errors = validate_version_fn(cmd_mock, namespace_mock)
 
-        if (errors[0][2] != expected_errors):
-            raise Exception(f"Error returned was not expected\n Expected : {expected_errors}\n Actual   : {errors[0][2]}")
+        if (errors[0][3] != expected_errors):
+            raise Exception(f"Error returned was not expected\n Expected : {expected_errors}\n Actual   : {errors[0][3]}")

@@ -5,6 +5,7 @@ package subnets
 
 import (
 	"context"
+	"reflect"
 	"strconv"
 	"testing"
 
@@ -12,10 +13,13 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -38,6 +42,9 @@ var (
 
 func getValidClusterInstance(operatorFlagEnabled bool, operatorFlagNSG bool, operatorFlagServiceEndpoint bool) *arov1alpha1.Cluster {
 	return &arov1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: arov1alpha1.SingletonClusterName,
+		},
 		Spec: arov1alpha1.ClusterSpec{
 			ArchitectureVersion:    0,
 			ClusterResourceGroupID: clusterResourceGroupId,
@@ -79,6 +86,7 @@ func TestReconcileManager(t *testing.T) {
 		operatorFlagEnabled         bool
 		operatorFlagNSG             bool
 		operatorFlagServiceEndpoint bool
+		wantAnnotationsUpdated      bool
 		wantErr                     error
 	}{
 		{
@@ -86,6 +94,7 @@ func TestReconcileManager(t *testing.T) {
 			operatorFlagEnabled:         false,
 			operatorFlagNSG:             false,
 			operatorFlagServiceEndpoint: false,
+			wantAnnotationsUpdated:      false,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
@@ -111,6 +120,7 @@ func TestReconcileManager(t *testing.T) {
 			operatorFlagEnabled:         true,
 			operatorFlagNSG:             true,
 			operatorFlagServiceEndpoint: true,
+			wantAnnotationsUpdated:      false,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
@@ -136,6 +146,7 @@ func TestReconcileManager(t *testing.T) {
 			operatorFlagEnabled:         true,
 			operatorFlagNSG:             true,
 			operatorFlagServiceEndpoint: true,
+			wantAnnotationsUpdated:      true,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
@@ -170,6 +181,7 @@ func TestReconcileManager(t *testing.T) {
 			operatorFlagEnabled:         true,
 			operatorFlagNSG:             true,
 			operatorFlagServiceEndpoint: true,
+			wantAnnotationsUpdated:      true,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
@@ -199,6 +211,7 @@ func TestReconcileManager(t *testing.T) {
 			operatorFlagEnabled:         true,
 			operatorFlagNSG:             true,
 			operatorFlagServiceEndpoint: true,
+			wantAnnotationsUpdated:      false,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
@@ -228,6 +241,7 @@ func TestReconcileManager(t *testing.T) {
 			operatorFlagEnabled:         true,
 			operatorFlagNSG:             true,
 			operatorFlagServiceEndpoint: true,
+			wantAnnotationsUpdated:      true,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
@@ -265,6 +279,7 @@ func TestReconcileManager(t *testing.T) {
 			operatorFlagEnabled:         true,
 			operatorFlagNSG:             true,
 			operatorFlagServiceEndpoint: true,
+			wantAnnotationsUpdated:      false,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
@@ -316,6 +331,7 @@ func TestReconcileManager(t *testing.T) {
 			operatorFlagEnabled:         true,
 			operatorFlagNSG:             true,
 			operatorFlagServiceEndpoint: true,
+			wantAnnotationsUpdated:      true,
 			subnetMock: func(mock *mock_subnet.MockManager, kmock *mock_subnet.MockKubeManager) {
 				kmock.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
 					{
@@ -364,15 +380,18 @@ func TestReconcileManager(t *testing.T) {
 				tt.instance(instance)
 			}
 
+			clientFake := fake.NewClientBuilder().WithObjects(instance).Build()
 			r := reconcileManager{
 				log:            log,
+				client:         clientFake,
 				instance:       instance,
 				subscriptionID: subscriptionId,
 				subnets:        subnets,
 				kubeSubnets:    kubeSubnets,
 			}
 
-			err := r.reconcileSubnets(context.Background(), instance)
+			instanceCopy := *r.instance
+			err := r.reconcileSubnets(context.Background())
 			if err != nil {
 				if tt.wantErr == nil {
 					t.Fatal(err)
@@ -380,6 +399,10 @@ func TestReconcileManager(t *testing.T) {
 				if err.Error() != tt.wantErr.Error() || err == nil && tt.wantErr != nil {
 					t.Errorf("Expected Error %s, got %s when processing %s testcase", tt.wantErr.Error(), err.Error(), tt.name)
 				}
+			}
+
+			if tt.wantAnnotationsUpdated && reflect.DeepEqual(instanceCopy, *r.instance) {
+				t.Errorf("Expected annotations to be updated")
 			}
 		})
 	}

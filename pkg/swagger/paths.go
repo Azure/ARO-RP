@@ -9,6 +9,7 @@ import (
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+	"k8s.io/utils/strings/slices"
 )
 
 // populateParameters populates a parameters block.  Always expect an
@@ -58,7 +59,7 @@ func (g *generator) populateParameters(n int, typ, friendlyName string) (s []int
 			Required:    true,
 			Type:        "string",
 		}
-		if contains(proxyResources, friendlyName) {
+		if slices.Contains(proxyResources, friendlyName) {
 			resourceNameParameter.Description = "The name of the OpenShift cluster resource."
 			resourceNameParameter.Pattern = resourceNamePattern
 			resourceNameParameter.MinLength = 1

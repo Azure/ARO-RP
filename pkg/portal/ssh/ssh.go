@@ -4,6 +4,7 @@ package ssh
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"crypto/rsa"
 	"encoding/json"
 	"fmt"
@@ -11,10 +12,12 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/sirupsen/logrus"
 	cryptossh "golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/knownhosts"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
@@ -42,6 +45,8 @@ type SSH struct {
 	dialer proxy.Dialer
 
 	baseServerConfig *cryptossh.ServerConfig
+
+	hostPubKey cryptossh.PublicKey
 }
 
 func New(env env.Core,
@@ -54,6 +59,11 @@ func New(env env.Core,
 	dbPortal database.Portal,
 	dialer proxy.Dialer,
 ) (*SSH, error) {
+	hostPubKey, err := cryptossh.NewPublicKey(&hostKey.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+
 	s := &SSH{
 		env:           env,
 		log:           log,
@@ -68,6 +78,8 @@ func New(env env.Core,
 		dialer: dialer,
 
 		baseServerConfig: &cryptossh.ServerConfig{},
+
+		hostPubKey: hostPubKey,
 	}
 
 	signer, err := cryptossh.NewSignerFromSigner(hostKey)
@@ -122,9 +134,7 @@ func (s *SSH) New(w http.ResponseWriter, r *http.Request) {
 
 	elevated := len(middleware.GroupsIntersect(s.elevatedGroupIDs, ctx.Value(middleware.ContextKeyGroups).([]string))) > 0
 	if !elevated {
-		s.sendResponse(w, &response{
-			Error: "Elevated access is required.",
-		})
+		s.sendResponse(w, "", "", "", "Elevated access is required.", s.env.IsLocalDevelopmentMode())
 		return
 	}
 
@@ -159,29 +169,58 @@ func (s *SSH) New(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	port := ""
-	if s.env.IsLocalDevelopmentMode() {
-		port = "-p 2222 "
-	}
-
-	s.sendResponse(w, &response{
-		Command:  fmt.Sprintf("ssh %s%s@%s", port, username, host),
-		Password: password,
-	})
+	s.sendResponse(w, host, username, password, "", s.env.IsLocalDevelopmentMode())
 }
 
-func (s *SSH) sendResponse(w http.ResponseWriter, resp *response) {
-	b, err := json.MarshalIndent(resp, "", "    ")
-	if err != nil {
-		s.internalServerError(w, err)
+func (s *SSH) sendResponse(w http.ResponseWriter, hostname, username, password, error string, isLocalDevelopmentMode bool) {
+	w.Header().Set("Content-Type", "application/json")
+
+	enc := json.NewEncoder(w)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "    ")
+
+	if error != "" {
+		err := enc.Encode(response{Error: error})
+		if err != nil {
+			s.internalServerError(w, err)
+		}
 		return
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(b)
+	command, err := createLoginCommand(isLocalDevelopmentMode, username, hostname, s.hostPubKey)
+	resp := response{Command: command, Password: password}
+	if err != nil {
+		s.internalServerError(w, err)
+	}
+	err = enc.Encode(resp)
+	if err != nil {
+		s.internalServerError(w, err)
+	}
 }
 
 func (s *SSH) internalServerError(w http.ResponseWriter, err error) {
 	s.log.Warn(err)
 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+}
+
+const (
+	sshCommand = "echo '{{ .KnownHostLine }}' > {{.Hostname}}_known_host ; " +
+		"ssh -o UserKnownHostsFile={{.Hostname}}_known_host{{if .IsLocalDevelopmentMode}} -p 2222{{end}} {{.User}}@{{.Hostname}}"
+)
+
+func createLoginCommand(isLocalDevelopmentMode bool, user, host string, publicKey cryptossh.PublicKey) (string, error) {
+	line := knownhosts.Line([]string{host}, publicKey)
+	tmp := template.New("command")
+	tmp, err := tmp.Parse(sshCommand)
+	if err != nil {
+		return "", err
+	}
+	type fields struct {
+		User                   string
+		Hostname               string
+		KnownHostLine          string
+		IsLocalDevelopmentMode bool
+	}
+	var buff bytes.Buffer
+	err = tmp.Execute(&buff, fields{user, host, line, isLocalDevelopmentMode})
+	return buff.String(), err
 }

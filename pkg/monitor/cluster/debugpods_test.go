@@ -33,6 +33,11 @@ func TestEmitDebugPodsCount(t *testing.T) {
 				Name: "master-2",
 			},
 		},
+		&corev1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "master-3",
+			},
+		},
 	)
 
 	cli.PrependReactor("list", "events", reactorFn)
@@ -46,7 +51,7 @@ func TestEmitDebugPodsCount(t *testing.T) {
 		m:   m,
 	}
 
-	m.EXPECT().EmitGauge("debugpods.count", int64(1), map[string]string{})
+	m.EXPECT().EmitGauge("debugpods.count", int64(2), map[string]string{})
 	err := mon.emitDebugPodsCount(ctx)
 	if err != nil {
 		t.Fatalf("got unexpected error: %v", err)
@@ -81,6 +86,20 @@ func reactorFn(_ ktesting.Action) (handled bool, ret kruntime.Object, err error)
 			Regarding: corev1.ObjectReference{
 				Kind: "Pod",
 				Name: "master-2-debug",
+			},
+			Series: &eventsv1.EventSeries{
+				LastObservedTime: metav1.NewMicroTime(now.Time),
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "master-3-started",
+				Namespace: "random",
+			},
+			Reason: "Started",
+			Regarding: corev1.ObjectReference{
+				Kind: "Pod",
+				Name: "master-3-debug",
 			},
 			Series: &eventsv1.EventSeries{
 				LastObservedTime: metav1.NewMicroTime(now.Time),
