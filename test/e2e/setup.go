@@ -205,8 +205,7 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 	// Navigate to the simple playground interface.
 	host, exists := os.LookupEnv("PORTAL_HOSTNAME")
 	if !exists {
-		// host = fmt.Sprintf("https://localhost:%d", hostPort)
-		host = fmt.Sprintf("https://container:%d", hostPort)
+		host = fmt.Sprintf("https://localhost:%d", hostPort)
 	}
 
 	if err := wd.Get(host + "/healthz/ready"); err != nil {
