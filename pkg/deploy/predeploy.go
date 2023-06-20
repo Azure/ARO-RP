@@ -505,11 +505,14 @@ func (d *deployer) restartOldScalesets(ctx context.Context, resourceGroupName st
 
 func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string, resourceGroupName string) error {
 	var restartScript string
+	var waitForReadiness func(ctx context.Context, vmssName string) error
 	switch {
 	case strings.HasPrefix(vmssName, gatewayVMSSPrefix):
 		restartScript = gatewayRestartScript
+		waitForReadiness = d.gatewayWaitForReadiness
 	case strings.HasPrefix(vmssName, rpVMSSPrefix):
 		restartScript = rpRestartScript
+		waitForReadiness = d.rpWaitForReadiness
 	default:
 		return nil
 	}
@@ -536,6 +539,15 @@ func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string, reso
 		if err != nil {
 			return err
 		}
+	}
+
+	// wait for load balancer probe to change the health status
+	time.Sleep(30 * time.Second)
+	timeoutCtx, cancel := context.WithTimeout(ctx, time.Hour)
+	defer cancel()
+	err = waitForReadiness(timeoutCtx, vmssName)
+	if err != nil {
+		return err
 	}
 	return nil
 }
