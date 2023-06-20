@@ -15,6 +15,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/sirupsen/logrus"
 	cryptossh "golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
@@ -28,7 +29,7 @@ import (
 )
 
 const (
-	sshNewTimeout = time.Minute
+	sshNewTimeout = time.Hour
 )
 
 type SSH struct {
@@ -47,6 +48,8 @@ type SSH struct {
 	baseServerConfig *cryptossh.ServerConfig
 
 	hostPubKey cryptossh.PublicKey
+
+	tokenVerifier oidc.IDTokenVerifier
 }
 
 func New(env env.Core,
@@ -58,6 +61,7 @@ func New(env env.Core,
 	dbOpenShiftClusters database.OpenShiftClusters,
 	dbPortal database.Portal,
 	dialer proxy.Dialer,
+	verifier oidc.IDTokenVerifier,
 ) (*SSH, error) {
 	hostPubKey, err := cryptossh.NewPublicKey(&hostKey.PublicKey)
 	if err != nil {
@@ -80,6 +84,8 @@ func New(env env.Core,
 		baseServerConfig: &cryptossh.ServerConfig{},
 
 		hostPubKey: hostPubKey,
+
+		tokenVerifier: verifier,
 	}
 
 	signer, err := cryptossh.NewSignerFromSigner(hostKey)
@@ -141,9 +147,11 @@ func (s *SSH) New(w http.ResponseWriter, r *http.Request) {
 	username := r.Context().Value(middleware.ContextKeyUsername).(string)
 	username = strings.SplitN(username, "@", 2)[0]
 
-	password := s.dbPortal.NewUUID()
+	password, err := r.Cookie(middleware.OIDCCookie)
+	if err != nil {
+		s.internalServerError(w, err)
+	}
 	portalDoc := &api.PortalDocument{
-		ID:  password,
 		TTL: int(sshNewTimeout / time.Second),
 		Portal: &api.Portal{
 			Username: ctx.Value(middleware.ContextKeyUsername).(string),
@@ -155,10 +163,6 @@ func (s *SSH) New(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = s.dbPortal.Create(ctx, portalDoc)
-	if err != nil {
-		s.internalServerError(w, err)
-		return
-	}
 
 	host := r.Host
 	if strings.ContainsRune(r.Host, ':') {
@@ -169,7 +173,7 @@ func (s *SSH) New(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	s.sendResponse(w, host, username, password, "", s.env.IsLocalDevelopmentMode())
+	s.sendResponse(w, host, username, password.Value, "", s.env.IsLocalDevelopmentMode())
 }
 
 func (s *SSH) sendResponse(w http.ResponseWriter, hostname, username, password, error string, isLocalDevelopmentMode bool) {

@@ -248,7 +248,7 @@ func (a *aad) Callback(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
 
-func extractInfoFromToken(token *oidc.IDToken) (preferredUsername string, groups []string, err error) {
+func ExtractInfoFromToken(token *oidc.IDToken) (preferredUsername string, groups []string, err error) {
 	var claims claims
 
 	err = token.Claims(&claims)
@@ -269,7 +269,7 @@ func (d defaultAccessValidator) validateAccess(ctx context.Context, rawIDToken s
 		// token has expired
 		return false, "", nil, idToken.Expiry, nil
 	}
-	username, groups, err = extractInfoFromToken(idToken)
+	username, groups, err = ExtractInfoFromToken(idToken)
 	if err != nil {
 		return false, "", nil, time.Time{}, err
 	}

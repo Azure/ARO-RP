@@ -18,9 +18,9 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/portal/middleware"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 const (
@@ -88,29 +88,28 @@ func (s *SSH) newConn(ctx context.Context, clientConn net.Conn) error {
 	var portalDoc *api.PortalDocument
 	var connmetadata cryptossh.ConnMetadata
 
+	var username string
 	// PasswordCallback is called via NewServerConn to validate the one-time
 	// password provided.
 	config.PasswordCallback = func(_connmetadata cryptossh.ConnMetadata, pw []byte) (*cryptossh.Permissions, error) {
 		connmetadata = _connmetadata
 
-		password, err := uuid.FromString(string(pw))
+		token, err := s.tokenVerifier.Verify(ctx, string(pw))
 		if err != nil {
-			return nil, fmt.Errorf("invalid username") // don't echo password attempt to logs
+			return nil, fmt.Errorf("invalid username")
 		}
 
-		portalDoc, err = s.dbPortal.Patch(ctx, password.String(), func(portalDoc *api.PortalDocument) error {
-			if portalDoc.Portal.SSH == nil ||
-				connmetadata.User() != strings.SplitN(portalDoc.Portal.Username, "@", 2)[0] ||
-				portalDoc.Portal.SSH.Authenticated {
-				return fmt.Errorf("invalid username")
-			}
+		//username is scoped differently so we need to declare groups first
+		var groups []string
+		username, groups, err = middleware.ExtractInfoFromToken(token)
 
-			portalDoc.Portal.SSH.Authenticated = true
+		if username != connmetadata.User() {
+			return nil, fmt.Errorf("invalid username")
+		}
 
-			return nil
-		})
-		if err != nil {
-			return nil, fmt.Errorf("invalid username") // don't echo password attempt to logs
+		elevated := len(middleware.GroupsIntersect(s.elevatedGroupIDs, groups)) > 0
+		if !elevated {
+			return nil, fmt.Errorf("invalid username")
 		}
 
 		return nil, nil
@@ -134,7 +133,7 @@ func (s *SSH) newConn(ctx context.Context, clientConn net.Conn) error {
 	accessLog = accessLog.WithFields(logrus.Fields{
 		"hostname":    fmt.Sprintf("master-%d", portalDoc.Portal.SSH.Master),
 		"remote_addr": clientConn.RemoteAddr().String(),
-		"username":    portalDoc.Portal.Username,
+		"username":    username,
 	})
 
 	accessLog.Print("authentication succeeded")

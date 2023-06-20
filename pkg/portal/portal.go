@@ -190,8 +190,8 @@ func (p *portal) aadRoutes(r *mux.Router) {
 	r.Methods(http.MethodPost).Path("/api/logout").Handler(middleware.Log(p.env, p.audit, p.baseAccessLog)(p.aad.Logout("/")))
 }
 
-func (p *portal) setupServices() (*kubeconfig.Kubeconfig, *prometheus.Prometheus, *ssh.SSH, error) {
-	ssh, err := ssh.New(p.env, p.log, p.baseAccessLog, p.sshl, p.sshKey, p.elevatedGroupIDs, p.dbOpenShiftClusters, p.dbPortal, p.dialer)
+func (p *portal) setupServices(verifier oidc.IDTokenVerifier) (*kubeconfig.Kubeconfig, *prometheus.Prometheus, *ssh.SSH, error) {
+	ssh, err := ssh.New(p.env, p.log, p.baseAccessLog, p.sshl, p.sshKey, p.elevatedGroupIDs, p.dbOpenShiftClusters, p.dbPortal, p.dialer, verifier)
 	if err != nil {
 		return nil, nil, nil, err
 	}
