@@ -30,6 +30,8 @@ spec:
         - --logtostderr
         - --disable-opa-builtin={http.send}
         - --disable-cert-rotation
+        - --constraint-violations-limit=100
+        - --audit-interval=600
         command:
         - /manager
         env:
