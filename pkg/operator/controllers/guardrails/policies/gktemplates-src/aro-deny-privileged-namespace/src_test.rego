@@ -1,66 +1,54 @@
 package aroprivilegednamespace
 
 test_input_allowed_ns {
-  input := { "review": input_ns(input_allowed_ns, non_priv_sa, nonpriv_username_nonpriv_group_userinfo) }
+  input := { "review": get_input_with_ns_userinfo(input_allowed_ns, nonpriv_username_nonpriv_group_userinfo) }
   results := violation with input as input
   count(results) == 0
 }
 
 test_input_disallowed_ns1 {
-  input := { "review": input_ns(input_disallowed_ns, non_priv_sa, nonpriv_username_nonpriv_group_userinfo) }
+  input := { "review": get_input_with_ns_userinfo(input_disallowed_ns, nonpriv_username_nonpriv_group_userinfo) }
   results := violation with input as input
   count(results) == 1
 }
 
 test_input_disallowed_ns2 {
-  input := { "review": input_ns(input_disallowed_ns, priv_sa, priv_username_nonpriv_group_userinfo) }
+  input := { "review": get_input_with_ns_userinfo(input_disallowed_ns, priv_username_nonpriv_group_userinfo) }
   results := violation with input as input
   count(results) == 0
 }
 
 test_input_disallowed_ns3 {
-  input := { "review": input_ns(input_disallowed_ns, priv_sa, nonpriv_username_nonpriv_group_userinfo) }
+  input := { "review": get_input_with_ns_userinfo(input_disallowed_ns, nonpriv_username_nonpriv_group_userinfo) }
   results := violation with input as input
-  count(results) == 0
+  count(results) == 1
 }
 
 test_input_allowed_ns4 {
-  input := { "review": input_ns(input_allowed_ns, non_priv_sa, nonpriv_username_nonpriv_group_userinfo) }
+  input := { "review": get_input_with_ns_userinfo(input_allowed_ns, nonpriv_username_nonpriv_group_userinfo) }
   results := violation with input as input
   count(results) == 0
 }
 
 test_input_disallowed_ns5 {
-  input := { "review": input_ns(input_disallowed_ns, non_priv_sa, nonpriv_username_priv_group_userinfo) }
+  input := { "review": get_input_with_ns_userinfo(input_disallowed_ns, nonpriv_username_priv_group_userinfo) }
   results := violation with input as input
   count(results) == 0
 }
 
 test_input_disallowed_ns6 {
-  input := { "review": input_ns(input_disallowed_ns, non_priv_sa, "") }
-  results := violation with input as input
-  count(results) == 1
-}
-
-test_input_disallowed_ns6 {
-  input := { "review": input_ns(input_disallowed_ns, priv_sa, "") }
+  input := { "review": get_input_with_ns_userinfo(input_disallowed_ns, "") }
   results := violation with input as input
   count(results) == 0
 }
 
 test_input_allowed_ns7 {
-  input := { "review": input_ns(input_allowed_ns, non_priv_sa, "") }
+  input := { "review": get_input_with_ns_userinfo(input_allowed_ns, "") }
   results := violation with input as input
   count(results) == 0
 }
 
-test_input_allowed_ns8 {
-  input := { "review": input_ns(input_allowed_ns, priv_sa, "") }
-  results := violation with input as input
-  count(results) == 0
-}
-
-input_ns(ns, serviceAccountName, userinfo) = output {
+get_input_with_ns_userinfo(ns, userinfo) = output {
   output = {
     "object": {
       "apiVersion": "v1",
@@ -69,7 +57,6 @@ input_ns(ns, serviceAccountName, userinfo) = output {
         "namespace": ns
       },
       "spec": {
-        "serviceAccountName":serviceAccountName,
         "containers":[
             {
               "image":"nginx",
@@ -82,45 +69,75 @@ input_ns(ns, serviceAccountName, userinfo) = output {
   }
 }
 
+test_input_allowed_ns8 {
+  input := { "review": get_input_ns_with_empty_userinfo(input_allowed_ns) }
+  results := violation with input as input
+  count(results) == 0
+}
+
+test_input_allowed_ns9 {
+  input := { "review": get_input_ns_with_empty_userinfo(input_disallowed_ns) }
+  results := violation with input as input
+  count(results) == 0
+}
+
+get_input_ns_with_empty_userinfo(ns) = output {
+  output = {
+    "object": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "metadata": {
+        "namespace": ns
+      },
+      "spec": {
+        "containers":[
+            {
+              "image":"nginx",
+              "name":"test"
+            }
+        ]        
+      }
+    }
+  }
+}
 
 test_input_disallow_pullsecret_deletion1 {
-  input := get_input_with_userinfo(nonpriv_username_nonpriv_group_userinfo)
+  input := delete_pullsecret_with_userinfo(nonpriv_username_nonpriv_group_userinfo)
   results := violation with input as input
   count(results) == 1
 }
 
 test_input_disallow_pullsecret_deletion2 {
-  input := get_input_with_userinfo(nonpriv_username_empty_priv_group_userinfo)
+  input := delete_pullsecret_with_userinfo(nonpriv_username_empty_priv_group_userinfo)
   results := violation with input as input
   count(results) == 1
 }
 
 test_input_allow_pullsecret_deletion1 {
-  input := get_input_with_userinfo(priv_username_priv_group_userinfo)
+  input := delete_pullsecret_with_userinfo(priv_username_priv_group_userinfo)
   results := violation with input as input
   count(results) == 0
 }
 
 test_input_allow_pullsecret_deletion2 {
-  input := get_input_with_userinfo(nonpriv_username_priv_group_userinfo)
+  input := delete_pullsecret_with_userinfo(nonpriv_username_priv_group_userinfo)
   results := violation with input as input
   count(results) == 0
 }
 
 test_input_allow_pullsecret_deletion3 {
-  input := get_input_with_userinfo(priv_username_nonpriv_group_userinfo)
+  input := delete_pullsecret_with_userinfo(priv_username_nonpriv_group_userinfo)
   results := violation with input as input
   count(results) == 0
 }
 
 test_input_allow_pullsecret_deletion4 {
-  input := get_input_with_userinfo(priv_username_empty_priv_group_userinfo)
+  input := delete_pullsecret_with_userinfo(priv_username_empty_priv_group_userinfo)
   results := violation with input as input
   count(results) == 0
 }
 
-
-get_input_with_userinfo(userinfo) = output {
+delete_pullsecret_with_userinfo(userinfo) = output {
   output := {
     "parameters":{},
     "review":{
@@ -176,9 +193,6 @@ get_input_with_userinfo(userinfo) = output {
 input_allowed_ns = "mytest"
 
 input_disallowed_ns = "openshift-config"
-
-priv_sa = "geneva"
-non_priv_sa = "testsa"
 
 priv_user = "system:admin"
 non_priv_user = "testuser"

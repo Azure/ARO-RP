@@ -43,4 +43,4 @@ request:
   uid: c05390a2-92cf-4a7d-9b8b-668184385d5f
   userInfo:
     uid: 9c61168e-77cb-4c42-82d4-be86313124d3
-    username: testuser
+    username: system:admin
