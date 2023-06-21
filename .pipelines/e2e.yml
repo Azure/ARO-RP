@@ -74,7 +74,7 @@ jobs:
       validate_rp_running
 
       register_sub
-      
+
       export AGENT_HOSTNAME=$(ip addr show $(ip route | awk '/default/ { print $5 }') | grep "inet" | head -n 1 | awk '/inet/ {print $2}' | cut -d'/' -f1)
 
       make test-e2e -o e2e.test
