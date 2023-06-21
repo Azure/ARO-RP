@@ -31,7 +31,6 @@ jobs:
     name: 1es-aro-ci-pool
   services:
    selenium: selenium
-   container: container
   steps:
   - template: ./templates/template-checkout.yml
 
