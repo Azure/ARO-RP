@@ -39,6 +39,12 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 				PodCIDR:      oc.Properties.NetworkProfile.PodCIDR,
 				ServiceCIDR:  oc.Properties.NetworkProfile.ServiceCIDR,
 				OutboundType: OutboundType(oc.Properties.NetworkProfile.OutboundType),
+				LoadbalancerProfile: LoadbalancerProfile{
+					ManagedOutboundIPs: ManagedOutboundIPs{
+						Count: oc.Properties.NetworkProfile.LoadbalancerProfile.ManagedOutboundIPs.Count,
+					},
+					AllocatedOutboundPorts: oc.Properties.NetworkProfile.LoadbalancerProfile.AllocatedOutboundPorts,
+				},
 			},
 			MasterProfile: MasterProfile{
 				VMSize:              VMSize(oc.Properties.MasterProfile.VMSize),
@@ -52,6 +58,33 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 				IP:         oc.Properties.APIServerProfile.IP,
 			},
 		},
+	}
+
+	if oc.Properties.NetworkProfile.LoadbalancerProfile.EffectiveOutboundIPs != nil {
+		out.Properties.NetworkProfile.LoadbalancerProfile.EffectiveOutboundIPs = make([]EffectiveOutboundIP, len(oc.Properties.NetworkProfile.LoadbalancerProfile.EffectiveOutboundIPs))
+		for _, effectiveIP := range oc.Properties.NetworkProfile.LoadbalancerProfile.EffectiveOutboundIPs {
+			out.Properties.NetworkProfile.LoadbalancerProfile.EffectiveOutboundIPs = append(out.Properties.NetworkProfile.LoadbalancerProfile.EffectiveOutboundIPs, EffectiveOutboundIP{
+				ID: effectiveIP.ID,
+			})
+		}
+	}
+
+	if oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPs != nil {
+		out.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPs = make([]OutboundIP, len(oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPs))
+		for _, outboundIP := range oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPs {
+			out.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPs = append(out.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPs, OutboundIP{
+				ID: outboundIP.ID,
+			})
+		}
+	}
+
+	if oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPPrefixes != nil {
+		out.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPPrefixes = make([]OutboundIPPrefix, len(oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPPrefixes))
+		for _, outboundIPPrefix := range oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPPrefixes {
+			out.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPPrefixes = append(out.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPPrefixes, OutboundIPPrefix{
+				ID: outboundIPPrefix.ID,
+			})
+		}
 	}
 
 	if oc.Properties.WorkerProfiles != nil {
@@ -144,6 +177,20 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	out.Properties.NetworkProfile.PodCIDR = oc.Properties.NetworkProfile.PodCIDR
 	out.Properties.NetworkProfile.ServiceCIDR = oc.Properties.NetworkProfile.ServiceCIDR
 	out.Properties.NetworkProfile.OutboundType = api.OutboundType(oc.Properties.NetworkProfile.OutboundType)
+	out.Properties.NetworkProfile.LoadbalancerProfile.ManagedOutboundIPs.Count = oc.Properties.NetworkProfile.LoadbalancerProfile.ManagedOutboundIPs.Count
+	out.Properties.NetworkProfile.LoadbalancerProfile.AllocatedOutboundPorts = oc.Properties.NetworkProfile.LoadbalancerProfile.AllocatedOutboundPorts
+	if oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPs != nil {
+		out.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPs = make([]api.OutboundIP, len(oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPs))
+		for i := range oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPs {
+			out.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPs[i].ID = oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPs[i].ID
+		}
+	}
+	if oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPPrefixes != nil {
+		out.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPPrefixes = make([]api.OutboundIPPrefix, len(oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPPrefixes))
+		for i := range oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPPrefixes {
+			out.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPPrefixes[i].ID = oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPPrefixes[i].ID
+		}
+	}
 	out.Properties.MasterProfile.VMSize = api.VMSize(oc.Properties.MasterProfile.VMSize)
 	out.Properties.MasterProfile.SubnetID = oc.Properties.MasterProfile.SubnetID
 	out.Properties.MasterProfile.EncryptionAtHost = api.EncryptionAtHost(oc.Properties.MasterProfile.EncryptionAtHost)
