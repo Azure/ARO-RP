@@ -1,7 +1,7 @@
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: ARODenyClusterVersion
 metadata:
-  name: aro-deny-clusterversion-modification
+  name: aro-clusterversion-deny
 spec:
   enforcementAction: {{.Enforcement}}
   match:
