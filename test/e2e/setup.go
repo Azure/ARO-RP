@@ -4,16 +4,14 @@ package e2e
 // Licensed under the Apache License 2.0.
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"image/png"
 	"math"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
+	"regexp"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -45,10 +43,11 @@ import (
 	redhatopenshift20220904 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2022-09-04/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
 
-const seleniumContainerName = "selenium-edge-standalone"
+var disallowedInFilenameRegex = regexp.MustCompile(`[<>:"/\\|?*\x00-\x1F]`)
 
 type clientSet struct {
 	Operations        redhatopenshift20220904.OperationsClient
@@ -84,8 +83,6 @@ var (
 	osClusterVersion  string
 	clusterResourceID string
 	clients           *clientSet
-
-	dockerSucceeded bool
 )
 
 func skipIfNotInDevelopmentEnv() {
@@ -114,17 +111,18 @@ func SaveScreenshotAndExit(wd selenium.WebDriver, e error) {
 		panic(err)
 	}
 
-	imageData, err := png.Decode(bytes.NewReader(imageBytes))
-	if err != nil {
-		panic(err)
-	}
-
 	sourceString, err := wd.PageSource()
 	if err != nil {
 		panic(err)
 	}
 
-	errorString := strings.ReplaceAll(e.Error(), " ", "_")
+	errorString := disallowedInFilenameRegex.ReplaceAllString(e.Error(), "_")
+
+	// If the string is too long, snip it and add a random component, keeping to
+	// 100 characters total filename length once the file type is added on
+	if len(errorString) > 95 {
+		errorString = errorString[:59] + "_" + uuid.DefaultGenerator.Generate()
+	}
 
 	imagePath := "./" + errorString + ".png"
 	sourcePath := "./" + errorString + ".html"
@@ -138,32 +136,12 @@ func SaveScreenshotAndExit(wd selenium.WebDriver, e error) {
 		panic(err)
 	}
 
-	image, err := os.Create(imageAbsPath)
+	err = os.WriteFile(imageAbsPath, imageBytes, 0666)
 	if err != nil {
 		panic(err)
 	}
 
-	source, err := os.Create(sourceAbsPath)
-	if err != nil {
-		panic(err)
-	}
-
-	err = png.Encode(image, imageData)
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = source.WriteString(sourceString)
-	if err != nil {
-		panic(err)
-	}
-
-	err = image.Close()
-	if err != nil {
-		panic(err)
-	}
-
-	err = source.Close()
+	err = os.WriteFile(sourceAbsPath, []byte(sourceString), 0666)
 	if err != nil {
 		panic(err)
 	}
