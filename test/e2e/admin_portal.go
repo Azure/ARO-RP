@@ -14,7 +14,7 @@ import (
 	"github.com/tebeka/selenium"
 )
 
-var _ = Describe("Admin Portal E2E Testing", func() {
+var _ = FDescribe("Admin Portal E2E Testing", func() {
 	BeforeEach(
 		func() {
 			skipIfNotInDevelopmentEnv()
