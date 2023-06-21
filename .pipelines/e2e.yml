@@ -74,12 +74,9 @@ jobs:
       validate_rp_running
 
       register_sub
-      export AGENT_HOSTNAME=$(Agent.WorkFolderIP)
-      export AGENT_HOSTNAME2="$(Agent.WorkFolderIP)"
-      echo $AGENT_HOSTNAME
-      echo $AGENT_HOSTNAME2
-      echo $(Agent.WorkFolderIP)
-      echo "$(Agent.WorkFolderIP)"
+      
+      export AGENT_HOSTNAME=$(ip addr show $(ip route | awk '/default/ { print $5 }') | grep "inet" | head -n 1 | awk '/inet/ {print $2}' | cut -d'/' -f1)
+
       make test-e2e -o e2e.test
     displayName: Execute Tests
     target: container
