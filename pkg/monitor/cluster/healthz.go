@@ -33,5 +33,9 @@ func (mon *Monitor) getAPIServerPingCode(ctx context.Context) (int, error) {
 		StatusCode(&statusCode).
 		Error()
 
+	mon.emitGauge("apiserver.healthz.ping.code", 1, map[string]string{
+		"code": strconv.FormatInt(int64(statusCode), 10),
+	})
+
 	return statusCode, err
 }
