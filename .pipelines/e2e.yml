@@ -72,7 +72,7 @@ jobs:
       validate_rp_running
 
       register_sub
-
+      curl -xv https://localhost:8444/api/info
       make test-e2e -o e2e.test
     displayName: Execute Tests
     target: container
