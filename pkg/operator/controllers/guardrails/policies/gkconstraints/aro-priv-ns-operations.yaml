@@ -24,7 +24,7 @@ spec:
       - apiGroups: ["policy"]
         kinds: ["PodDisruptionBudget"]
       - apiGroups: ["machine.openshift.io"]
-        kinds: ["Machine", "MachineSet"]
+        kinds: ["Machine"]
       # non-namespaced resources
       # - apiGroups: [""]
       #   kinds: ["PersistentVolume", "PersistentVolumeClaim"]
