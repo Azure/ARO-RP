@@ -192,7 +192,7 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 		host = fmt.Sprintf("https://localhost:%d", hostPort)
 	}
 
-	if err := wd.Get(host + "/api/info"); err != nil {
+	if err := wd.Get(host + "/healthz/ready"); err != nil {
 		log.Infof("Could not get to %s. With error : %s", host, err.Error())
 	}
 
