@@ -1,7 +1,7 @@
 steps:
-- script: |
-    set -e
-    az logout
-    rm -rf ~/.azure
-  displayName: 🗝 AZ Logout
-  condition: always()
+  - script: |
+      set -e
+      az logout
+      rm -rf ~/.azure
+    displayName: 🗝 AZ Logout
+    condition: always()
