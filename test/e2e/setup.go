@@ -208,7 +208,7 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 	if !exists {
 		host = fmt.Sprintf("https://localhost:%d", hostPort)
 	}
-	host = fmt.Sprintf("https://%s:%d", host, hostPort)
+	host = fmt.Sprintf("https://%s:%d", "vpn", hostPort)
 	fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>", host)
 
 	if err := wd.Get(host + "/healthz/ready"); err != nil {
