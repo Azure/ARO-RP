@@ -2093,6 +2093,14 @@
           },
           "x-ms-identifiers": []
         },
+        "workerProfilesStatus": {
+          "description": "The cluster worker profiles status.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WorkerProfile"
+          },
+          "x-ms-identifiers": []
+        },
         "apiserverProfile": {
           "$ref": "#/definitions/APIServerProfile",
           "description": "The cluster API server profile."
