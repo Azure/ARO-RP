@@ -24,7 +24,9 @@
           "podCidr": "10.128.0.0/14",
           "serviceCidr": "172.30.0.0/16",
           "loadBalancerProfile": {
-            "managedOutboundIps": {}
+            "managedOutboundIps": {
+              "count": 1
+            }
           }
         },
         "masterProfile": {
@@ -88,7 +90,14 @@
             "podCidr": "10.128.0.0/14",
             "serviceCidr": "172.30.0.0/16",
             "loadBalancerProfile": {
-              "managedOutboundIps": {}
+              "managedOutboundIps": {
+                "count": 1
+              },
+              "effectiveOutboundIps": [
+                {
+                  "id": "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup/provides/Microsoft.Network/publicIPAddresses/publicIPAddressName"
+                }
+              ]
             }
           },
           "masterProfile": {
@@ -153,7 +162,14 @@
             "podCidr": "10.128.0.0/14",
             "serviceCidr": "172.30.0.0/16",
             "loadBalancerProfile": {
-              "managedOutboundIps": {}
+              "managedOutboundIps": {
+                "count": 1
+              },
+              "effectiveOutboundIps": [
+                {
+                  "id": "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup/provides/Microsoft.Network/publicIPAddresses/publicIPAddressName"
+                }
+              ]
             }
           },
           "masterProfile": {
