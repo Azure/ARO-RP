@@ -1,3 +1,5 @@
+#!/bin/bash
+
 echo "setting ssh password authentication"
 # We need to manually set PasswordAuthentication to true in order for the VMSS Access JIT to work
 sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
@@ -9,8 +11,14 @@ yum update -y --disablerepo='*' --enablerepo='rhui-microsoft-azure*'
 echo "running yum update"
 yum -y -x WALinuxAgent -x WALinuxAgent-udev update --allowerasing
 
+echo "extending partition table"
+# Linux block devices are inconsistently named
+# it's difficult to tie the lvm pv to the physical disk using /dev/disk files, which is why lvs is used here
+physicalDisk="$(lvs -o devices -a | head -n2 | tail -n1 | cut -d ' ' -f 3 | cut -d \( -f 1 | tr -d '[:digit:]')"
+growpart "$physicalDisk" 2
+
 echo "extending filesystems"
-lvextend -l +50%FREE /dev/rootvg/rootlv
+lvextend -l +20%FREE /dev/rootvg/rootlv
 xfs_growfs /
 
 lvextend -l +100%FREE /dev/rootvg/varlv
