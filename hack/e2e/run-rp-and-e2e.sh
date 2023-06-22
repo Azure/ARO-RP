@@ -10,8 +10,8 @@ if [[ $CI ]]; then
     set -a
     HIVEKUBECONFIGPATH="secrets/e2e-aks-kubeconfig"
     HIVE_KUBE_CONFIG_PATH_1="secrets/aks.kubeconfig"
-    CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
-    DATABASE_NAME="v4-e2e-V$BUILD_BUILDID-$LOCATION"
+    CLUSTER="v4-e2e-V75193843-eastus"
+    DATABASE_NAME="v4-e2e-V75193843-eastus"
     PRIVATE_CLUSTER=true
     E2E_DELETE_CLUSTER=false
     set +a
