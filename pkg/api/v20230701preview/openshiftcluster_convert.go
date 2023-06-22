@@ -55,9 +55,26 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 	}
 
 	if oc.Properties.WorkerProfiles != nil {
-		out.Properties.WorkerProfiles = make([]WorkerProfile, 0, len(oc.Properties.WorkerProfiles))
-		for _, p := range oc.Properties.WorkerProfiles {
+		workerProfiles := oc.Properties.WorkerProfiles
+		out.Properties.WorkerProfiles = make([]WorkerProfile, 0, len(workerProfiles))
+		for _, p := range workerProfiles {
 			out.Properties.WorkerProfiles = append(out.Properties.WorkerProfiles, WorkerProfile{
+				Name:                p.Name,
+				VMSize:              VMSize(p.VMSize),
+				DiskSizeGB:          p.DiskSizeGB,
+				SubnetID:            p.SubnetID,
+				Count:               p.Count,
+				EncryptionAtHost:    EncryptionAtHost(p.EncryptionAtHost),
+				DiskEncryptionSetID: p.DiskEncryptionSetID,
+			})
+		}
+	}
+
+	if oc.Properties.WorkerProfilesStatus != nil {
+		workerProfiles := oc.Properties.WorkerProfilesStatus
+		out.Properties.WorkerProfilesStatus = make([]WorkerProfile, 0, len(workerProfiles))
+		for _, p := range workerProfiles {
+			out.Properties.WorkerProfilesStatus = append(out.Properties.WorkerProfilesStatus, WorkerProfile{
 				Name:                p.Name,
 				VMSize:              VMSize(p.VMSize),
 				DiskSizeGB:          p.DiskSizeGB,
