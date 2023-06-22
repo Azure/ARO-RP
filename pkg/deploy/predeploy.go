@@ -30,7 +30,7 @@ import (
 const (
 	// Rotate the secret on every deploy of the RP if the most recent
 	// secret is greater than 7 days old
-	rotateSecretAfter    = time.Hour * 168
+	rotateSecretAfter    = time.Hour * 24 * 7
 	rpRestartScript      = "systemctl restart aro-rp"
 	gatewayRestartScript = "systemctl restart aro-gateway"
 )
@@ -533,7 +533,7 @@ func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string, reso
 		}(*vm.InstanceID)
 	}
 
-	d.log.Print("waiting for instances to restart")
+	d.log.Print("waiting for restart script to complete")
 	for range scalesetVMs {
 		err := <-errors
 		if err != nil {
