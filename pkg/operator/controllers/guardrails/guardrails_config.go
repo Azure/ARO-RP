@@ -8,8 +8,6 @@ import (
 	"embed"
 	"strings"
 
-	"k8s.io/apimachinery/pkg/types"
-
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -70,8 +68,6 @@ var gkPolicyTemplates embed.FS
 
 //go:embed policies/gkconstraints
 var gkPolicyConstraints embed.FS
-
-var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
 
 func (r *Reconciler) getDefaultDeployConfig(ctx context.Context, instance *arov1alpha1.Cluster) *config.GuardRailsDeploymentConfig {
 	// apply the default value if the flag is empty or missing

@@ -1,0 +1,40 @@
+apiVersion: config.gatekeeper.sh/v1alpha1
+kind: Config
+metadata:
+  name: config
+  namespace: "openshift-azure-guardrails"
+spec:
+  match:
+    - excludedNamespaces:
+        [
+          "kube-*",
+          "openshift-kube-*",
+          "openshift",
+          "openshift-etcd*",
+          "openshift-monitoring",
+          "default",
+          "gatekeeper-system",
+          "openshift-apiserver*",
+          "openshift-authentication*",
+          "openshift-logging",
+          "openshift-redhat-marketplace",
+          "openshift-operators",
+          "openshift-user-workload-monitoring",
+          "openshift-pipelines",
+          "openshift-marketplace",
+          "openshift-multus",
+          "openshift-network*",
+          "openshift-vsphere-*",
+          "openshift-config-*",
+          "openshift-console",
+          "openshift-service-ca*",
+          "openshift-azure*",
+          "openshift-cloud*",
+          "openshift-sdn",
+        ]
+      processes: ["*"]
+  sync:
+    syncOnly:
+      - group: ""
+        version: "v1"
+        kind: "ConfigMap"

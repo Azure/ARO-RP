@@ -26,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_proxy "github.com/Azure/ARO-RP/pkg/util/mocks/proxy"
+	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	"github.com/Azure/ARO-RP/test/util/listener"
@@ -73,17 +74,17 @@ func testKubeconfig(cacerts []*x509.Certificate, clientkey *rsa.PrivateKey, clie
 	}
 
 	var err error
-	kc.AuthInfos[0].AuthInfo.ClientKeyData, err = utiltls.PrivateKeyAsBytes(clientkey)
+	kc.AuthInfos[0].AuthInfo.ClientKeyData, err = utilpem.Encode(clientkey)
 	if err != nil {
 		return nil, err
 	}
 
-	kc.AuthInfos[0].AuthInfo.ClientCertificateData, err = utiltls.CertAsBytes(clientcerts[0])
+	kc.AuthInfos[0].AuthInfo.ClientCertificateData, err = utilpem.Encode(clientcerts[0])
 	if err != nil {
 		return nil, err
 	}
 
-	kc.Clusters[0].Cluster.CertificateAuthorityData, err = utiltls.CertAsBytes(cacerts[0])
+	kc.Clusters[0].Cluster.CertificateAuthorityData, err = utilpem.Encode(cacerts[0])
 	if err != nil {
 		return nil, err
 	}

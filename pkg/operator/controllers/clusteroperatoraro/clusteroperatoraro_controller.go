@@ -8,8 +8,9 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
-	"github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
+	configv1helpers "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
 	"github.com/openshift/library-go/pkg/operator/status"
+	operatorv1helpers "github.com/openshift/library-go/pkg/operator/v1helpers"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/equality"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -83,26 +84,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 func (r *Reconciler) setClusterOperatorStatus(ctx context.Context, originalClusterOperatorObj *configv1.ClusterOperator, cluster *arov1alpha1.Cluster) error {
 	clusterOperatorObj := originalClusterOperatorObj.DeepCopy()
 
-	v1helpers.SetStatusCondition(&clusterOperatorObj.Status.Conditions, status.UnionClusterCondition("Available", operatorv1.ConditionTrue, nil, cluster.Status.Conditions...))
-	v1helpers.SetStatusCondition(&clusterOperatorObj.Status.Conditions, status.UnionClusterCondition("Progressing", operatorv1.ConditionFalse, nil, cluster.Status.Conditions...))
+	configv1helpers.SetStatusCondition(&clusterOperatorObj.Status.Conditions, status.UnionClusterCondition("Available", operatorv1.ConditionTrue, nil, cluster.Status.Conditions...))
+	configv1helpers.SetStatusCondition(&clusterOperatorObj.Status.Conditions, status.UnionClusterCondition("Progressing", operatorv1.ConditionFalse, nil, cluster.Status.Conditions...))
 
 	// We always set the Degraded status to false, as the operator being in Degraded state will prevent cluster upgrade.
-	v1helpers.SetStatusCondition(&clusterOperatorObj.Status.Conditions, configv1.ClusterOperatorStatusCondition{
+	configv1helpers.SetStatusCondition(&clusterOperatorObj.Status.Conditions, configv1.ClusterOperatorStatusCondition{
 		Type:               configv1.OperatorDegraded,
 		Status:             configv1.ConditionFalse,
 		LastTransitionTime: metav1.Now(),
 		Reason:             reasonAsExpected,
 	})
 
-	clusterOperatorObj.Status.Versions = []configv1.OperandVersion{
-		{
-			Name:    "operator",
-			Version: version.GitCommit,
-		},
-	}
+	operatorv1helpers.SetOperandVersion(&clusterOperatorObj.Status.Versions, configv1.OperandVersion{Name: "operator", Version: version.GitCommit})
 
-	if equality.Semantic.DeepEqual(clusterOperatorObj.Status.Conditions, originalClusterOperatorObj.Status.Conditions) &&
-		equality.Semantic.DeepEqual(clusterOperatorObj.Status.Versions, originalClusterOperatorObj.Status.Versions) {
+	if equality.Semantic.DeepEqual(clusterOperatorObj, originalClusterOperatorObj) {
 		return nil
 	}
 

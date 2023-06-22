@@ -106,6 +106,10 @@ func (m *manager) checkandUpdateNIC(ctx context.Context, resourceGroup string, i
 			return err
 		}
 
+		if m.doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType == api.OutboundTypeUserDefinedRouting {
+			return nil
+		}
+
 		elbName := infraID
 		if m.doc.OpenShiftCluster.Properties.ArchitectureVersion == api.ArchitectureVersionV1 {
 			err = m.updateV1ELBAddressPool(ctx, &nic, nicName, resourceGroup, infraID)

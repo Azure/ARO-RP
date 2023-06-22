@@ -9,7 +9,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
-	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
+	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -23,12 +23,12 @@ func GetConfig(env env.Interface, oc *api.OpenShiftCluster) (*bootstraplogging.C
 
 	key, cert := env.ClusterGenevaLoggingSecret()
 
-	gcsKeyBytes, err := utiltls.PrivateKeyAsBytes(key)
+	gcsKeyBytes, err := utilpem.Encode(key)
 	if err != nil {
 		return nil, err
 	}
 
-	gcsCertBytes, err := utiltls.CertAsBytes(cert)
+	gcsCertBytes, err := utilpem.Encode(cert)
 	if err != nil {
 		return nil, err
 	}

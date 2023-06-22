@@ -7,7 +7,7 @@ echo "running RHUI fix"
 yum update -y --disablerepo='*' --enablerepo='rhui-microsoft-azure*'
 
 echo "running yum update"
-yum -y -x WALinuxAgent -x WALinuxAgent-udev update
+yum -y -x WALinuxAgent -x WALinuxAgent-udev update --allowerasing
 
 echo "extending filesystems"
 lvextend -l +50%FREE /dev/rootvg/rootlv

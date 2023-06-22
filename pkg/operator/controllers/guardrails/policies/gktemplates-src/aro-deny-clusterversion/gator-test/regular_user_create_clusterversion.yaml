@@ -1,0 +1,189 @@
+apiVersion: admission.k8s.io/v1
+kind: AdmissionReview
+request:
+  dryRun: true
+  kind:
+    group: ""
+    kind: ClusterVersion
+    version: config.openshift.io/v1
+  object:
+    apiVersion: config.openshift.io/v1
+    kind: ClusterVersion
+    metadata:
+      creationTimestamp: "2023-06-06T00:55:30Z"
+      generation: 4
+      managedFields:
+      - apiVersion: config.openshift.io/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            .: {}
+            f:clusterID: {}
+        manager: cluster-bootstrap
+        operation: Update
+        time: "2023-06-06T00:55:30Z"
+      - apiVersion: config.openshift.io/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:spec:
+            f:channel: {}
+        manager: Mozilla
+        operation: Update
+        time: "2023-06-06T02:11:08Z"
+      - apiVersion: config.openshift.io/v1
+        fieldsType: FieldsV1
+        fieldsV1:
+          f:status:
+            .: {}
+            f:availableUpdates: {}
+            f:conditions: {}
+            f:desired:
+              .: {}
+              f:channels: {}
+              f:image: {}
+              f:url: {}
+              f:version: {}
+            f:history: {}
+            f:observedGeneration: {}
+            f:versionHash: {}
+        manager: cluster-version-operator
+        operation: Update
+        subresource: status
+        time: "2023-06-06T02:11:08Z"
+      name: version
+      resourceVersion: "47134"
+      uid: c0e0056b-1fd6-40d8-8f76-f66a94d0d890
+    spec:
+      channel: stable-4.10
+      clusterID: 19dc3852-f044-4183-beff-58c1a9fae0c5
+    status:
+      availableUpdates:
+      - channels:
+        - candidate-4.10
+        - candidate-4.11
+        - eus-4.10
+        - eus-4.12
+        - fast-4.10
+        - fast-4.11
+        - stable-4.10
+        - stable-4.11
+        image: quay.io/openshift-release-dev/ocp-release@sha256:d6efa3107f28b3eab7d44034e52a94296027ecf5d84826bc69ad6f91f006186c
+        url: https://access.redhat.com/errata/RHBA-2023:3217
+        version: 4.10.60
+      - channels:
+        - candidate-4.10
+        - candidate-4.11
+        - eus-4.10
+        - eus-4.12
+        - fast-4.10
+        - fast-4.11
+        - stable-4.10
+        - stable-4.11
+        image: quay.io/openshift-release-dev/ocp-release@sha256:0a737fac208f55a5d031b58adfb76fdafa7d129ee86552745fe3ff8de29c5ebc
+        url: https://access.redhat.com/errata/RHBA-2023:2018
+        version: 4.10.59
+      - channels:
+        - candidate-4.10
+        - candidate-4.11
+        - eus-4.10
+        - eus-4.12
+        - fast-4.10
+        - fast-4.11
+        - stable-4.10
+        - stable-4.11
+        image: quay.io/openshift-release-dev/ocp-release@sha256:7c2f759d9b8c42fa6f94ea1c0807a6418ad6d5fa904ab69ffaf05bc1c2a86c14
+        url: https://access.redhat.com/errata/RHBA-2023:1867
+        version: 4.10.58
+      - channels:
+        - candidate-4.10
+        - candidate-4.11
+        - eus-4.10
+        - eus-4.12
+        - fast-4.10
+        - fast-4.11
+        - stable-4.10
+        - stable-4.11
+        image: quay.io/openshift-release-dev/ocp-release@sha256:744f7f457a8fa55c441bc05f89e651d24b1b263c3fca57dc7cf60228045ec646
+        url: https://access.redhat.com/errata/RHBA-2023:1782
+        version: 4.10.57
+      - channels:
+        - candidate-4.10
+        - candidate-4.11
+        - eus-4.10
+        - eus-4.12
+        - fast-4.10
+        - fast-4.11
+        - stable-4.10
+        - stable-4.11
+        image: quay.io/openshift-release-dev/ocp-release@sha256:60f6c51a852f084a020c3dc32b92cbd91ed293b82c6c5b48aac51460566688c7
+        url: https://access.redhat.com/errata/RHSA-2023:1656
+        version: 4.10.56
+      - channels:
+        - candidate-4.10
+        - candidate-4.11
+        - eus-4.10
+        - eus-4.12
+        - fast-4.10
+        - fast-4.11
+        - stable-4.10
+        - stable-4.11
+        image: quay.io/openshift-release-dev/ocp-release@sha256:ab559ed58d816f63af34735a7542864d9e41af3c75a7abe731e0526fbce80d5e
+        url: https://access.redhat.com/errata/RHSA-2023:1392
+        version: 4.10.55
+      conditions:
+      - lastTransitionTime: "2023-06-06T02:11:08Z"
+        status: "True"
+        type: RetrievedUpdates
+      - lastTransitionTime: "2023-06-06T00:55:30Z"
+        message: Payload loaded version="4.10.54" image="quay.io/openshift-release-dev/ocp-release@sha256:7e44fa5f6aa15f9492341c4714bba4dc5089c968f2bf77fb8d4cdf189634f8f5"
+        reason: PayloadLoaded
+        status: "True"
+        type: ReleaseAccepted
+      - lastTransitionTime: "2023-06-06T01:21:51Z"
+        message: Done applying 4.10.54
+        status: "True"
+        type: Available
+      - lastTransitionTime: "2023-06-06T01:21:51Z"
+        status: "False"
+        type: Failing
+      - lastTransitionTime: "2023-06-06T01:21:51Z"
+        message: Cluster version is 4.10.54
+        status: "False"
+        type: Progressing
+      desired:
+        channels:
+        - candidate-4.10
+        - candidate-4.11
+        - eus-4.10
+        - eus-4.12
+        - fast-4.10
+        - fast-4.11
+        - stable-4.10
+        - stable-4.11
+        image: quay.io/openshift-release-dev/ocp-release@sha256:7e44fa5f6aa15f9492341c4714bba4dc5089c968f2bf77fb8d4cdf189634f8f5
+        url: https://access.redhat.com/errata/RHSA-2023:1154
+        version: 4.10.54
+      history:
+      - completionTime: "2023-06-06T01:21:51Z"
+        image: quay.io/openshift-release-dev/ocp-release@sha256:7e44fa5f6aa15f9492341c4714bba4dc5089c968f2bf77fb8d4cdf189634f8f5
+        startedTime: "2023-06-06T00:55:30Z"
+        state: Completed
+        verified: false
+        version: 4.10.54
+      observedGeneration: 4
+      versionHash: EkwGzQA2IU4=
+  oldObject: null
+  operation: CREATE
+  options: null
+  requestKind:
+    group: ""
+    kind: ClusterVersion
+    version: config.openshift.io/v1
+  resource:
+    group: ""
+    resource: ClusterVersion
+    version: config.openshift.io/v1
+  uid: ddc9ff1c-913f-4421-8b78-f512a839da45
+  userInfo:
+    uid: bc164435-e066-42f9-ae3e-e21164ebb1c0
+    username: fake-k8s-regular-user

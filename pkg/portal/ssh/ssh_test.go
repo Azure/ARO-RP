@@ -15,6 +15,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
+	cryptossh "golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/knownhosts"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -36,6 +38,11 @@ func TestNew(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	hostPubKey, err := cryptossh.NewPublicKey(&hostKey.PublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	khline := knownhosts.Line([]string{"localhost"}, hostPubKey)
 
 	for _, tt := range []struct {
 		name           string
@@ -60,7 +67,11 @@ func TestNew(t *testing.T) {
 				})
 			},
 			wantStatusCode: http.StatusOK,
-			wantBody:       "{\n    \"command\": \"ssh username@localhost\",\n    \"password\": \"03030303-0303-0303-0303-030303030001\"\n}",
+			wantBody: `{
+    "command": "echo '` + khline + `' > localhost_known_host ; ssh -o UserKnownHostsFile=localhost_known_host username@localhost",
+    "password": "03030303-0303-0303-0303-030303030001"
+}
+`,
 		},
 		{
 			name: "bad path",
@@ -100,7 +111,7 @@ func TestNew(t *testing.T) {
 				*r = *r.WithContext(context.WithValue(r.Context(), middleware.ContextKeyGroups, []string{}))
 			},
 			wantStatusCode: http.StatusOK,
-			wantBody:       "{\n    \"error\": \"Elevated access is required.\"\n}",
+			wantBody:       "{\n    \"error\": \"Elevated access is required.\"\n}\n",
 		},
 		{
 			name: "sad database",
@@ -180,7 +191,7 @@ func TestNew(t *testing.T) {
 			}
 
 			if string(b) != tt.wantBody {
-				t.Errorf("%q", string(b))
+				t.Errorf("wanted %s but got %s", tt.wantBody, string(b))
 			}
 		})
 	}

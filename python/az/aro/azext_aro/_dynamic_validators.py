@@ -21,6 +21,7 @@ import azext_aro.custom
 
 
 logger = get_logger(__name__)
+log_entry_type = {'warn': 'Warning', 'error': 'Error'}
 
 
 def can_do_action(perms, action):
@@ -51,7 +52,7 @@ def validate_resource(client, key, resource, actions):
         perms_list = list(perms_copy)
         error = can_do_action(perms_list, action)
         if error is not None:
-            row = [key, resource['name'], error]
+            row = [key, resource['name'], log_entry_type["error"], error]
             errors.append(row)
 
     return errors
@@ -189,7 +190,7 @@ def dyn_validate_subnet_and_route_tables(key):
             message = f"A Network Security Group \"{subnet_obj.network_security_group.id}\" "\
                       "is already assigned to this subnet. Ensure there are no Network "\
                       "Security Groups assigned to cluster subnets before cluster creation"
-            error = [key, parts['child_name_1'], message]
+            error = [key, parts['child_name_1'], log_entry_type["error"], message]
             errors.append(error)
 
         return errors
@@ -229,6 +230,7 @@ def dyn_validate_cidr_ranges():
             if node_mask < 2:
                 addresses.append(["Pod CIDR",
                                   "Pod CIDR Capacity",
+                                  log_entry_type["error"],
                                   f"{pod_cidr} does not contain enough addresses for 3 master nodes " +
                                   "(Requires cidr prefix of 21 or lower)"])
             cidr_array["Pod CIDR"] = ipaddress.IPv4Network(pod_cidr)
@@ -260,12 +262,14 @@ def dyn_validate_cidr_ranges():
             key = item[0]
             cidr = item[1]
             if not cidr.overlaps(ipv4_zero):
-                addresses.append([ERROR_KEY, key, f"{cidr} is not valid as it does not overlap with {ipv4_zero}"])
+                addresses.append([ERROR_KEY, key, log_entry_type["error"],
+                                  f"{cidr} is not valid as it does not overlap with {ipv4_zero}"])
             for item2 in cidr_array.items():
                 compare = item2[1]
                 if cidr is not compare:
                     if cidr.overlaps(compare):
-                        addresses.append([ERROR_KEY, key, f"{cidr} is not valid as it overlaps with {compare}"])
+                        addresses.append([ERROR_KEY, key, log_entry_type["error"],
+                                          f"{cidr} is not valid as it overlaps with {compare}"])
 
         return addresses
 
@@ -292,6 +296,7 @@ def dyn_validate_resource_permissions(service_principle_ids, resources):
                             parts = parse_resource_id(resource)
                             errors.append(["Resource Permissions",
                                            parts['type'],
+                                           log_entry_type["warn"],
                                            f"Resource {parts['name']} is missing role assignment " +
                                            f"{role} for service principal {sp_id} " +
                                            "(These roles will be automatically added during cluster creation)"])
@@ -324,6 +329,7 @@ def dyn_validate_version():
         if not found:
             errors.append(["OpenShift Version",
                            namespace.version,
+                           log_entry_type["error"],
                            f"{namespace.version} is not a valid version, valid versions are {versions}"])
 
         return errors
