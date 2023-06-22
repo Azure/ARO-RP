@@ -42,20 +42,23 @@ type generator struct {
 	exampleOpenShiftClusterPutParameter            func() interface{}
 	exampleOpenShiftClusterPatchParameter          func() interface{}
 	exampleOpenShiftClusterResponse                func() interface{}
+	exampleOpenShiftClusterGetResponse             func() interface{}
+	exampleOpenShiftClusterPutOrPatchResponse      func() interface{}
 	exampleOpenShiftClusterCredentialsResponse     func() interface{}
 	exampleOpenShiftClusterAdminKubeconfigResponse func() interface{}
 	exampleOpenShiftClusterListResponse            func() interface{}
 	exampleOpenShiftVersionListResponse            func() interface{}
 	exampleOperationListResponse                   func() interface{}
 
-	systemData         bool
-	kubeConfig         bool
-	installVersionList bool
-	clusterManager     bool
-	xmsEnum            []string
-	xmsSecretList      []string
-	xmsIdentifiers     []string
-	commonTypesVersion string
+	systemData           bool
+	kubeConfig           bool
+	installVersionList   bool
+	clusterManager       bool
+	workerProfilesStatus bool
+	xmsEnum              []string
+	xmsSecretList        []string
+	xmsIdentifiers       []string
+	commonTypesVersion   string
 }
 
 var apis = map[string]*generator{
@@ -190,21 +193,23 @@ var apis = map[string]*generator{
 		exampleSecretListResponse:                      v20230701preview.ExampleSecretListResponse,
 		exampleOpenShiftClusterPutParameter:            v20230701preview.ExampleOpenShiftClusterPutParameter,
 		exampleOpenShiftClusterPatchParameter:          v20230701preview.ExampleOpenShiftClusterPatchParameter,
-		exampleOpenShiftClusterResponse:                v20230701preview.ExampleOpenShiftClusterResponse,
+		exampleOpenShiftClusterGetResponse:             v20230701preview.ExampleOpenShiftClusterGetResponse,
+		exampleOpenShiftClusterPutOrPatchResponse:      v20230701preview.ExampleOpenShiftClusterPutOrPatchResponse,
 		exampleOpenShiftClusterCredentialsResponse:     v20230701preview.ExampleOpenShiftClusterCredentialsResponse,
 		exampleOpenShiftClusterListResponse:            v20230701preview.ExampleOpenShiftClusterListResponse,
 		exampleOpenShiftClusterAdminKubeconfigResponse: v20230701preview.ExampleOpenShiftClusterAdminKubeconfigResponse,
 		exampleOpenShiftVersionListResponse:            v20230701preview.ExampleOpenShiftVersionListResponse,
 		exampleOperationListResponse:                   api.ExampleOperationListResponse,
 
-		xmsEnum:            []string{"EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility"},
-		xmsSecretList:      []string{"kubeconfig", "kubeadminPassword", "secretResources"},
-		xmsIdentifiers:     []string{},
-		commonTypesVersion: "v3",
-		systemData:         true,
-		clusterManager:     true,
-		installVersionList: true,
-		kubeConfig:         true,
+		xmsEnum:              []string{"EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility"},
+		xmsSecretList:        []string{"kubeconfig", "kubeadminPassword", "secretResources"},
+		xmsIdentifiers:       []string{},
+		commonTypesVersion:   "v3",
+		systemData:           true,
+		clusterManager:       true,
+		installVersionList:   true,
+		kubeConfig:           true,
+		workerProfilesStatus: true,
 	},
 }
 
