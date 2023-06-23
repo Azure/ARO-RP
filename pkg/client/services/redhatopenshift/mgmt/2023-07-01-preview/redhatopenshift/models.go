@@ -746,6 +746,8 @@ type OpenShiftClusterProperties struct {
 	MasterProfile *MasterProfile `json:"masterProfile,omitempty"`
 	// WorkerProfiles - The cluster worker profiles.
 	WorkerProfiles *[]WorkerProfile `json:"workerProfiles,omitempty"`
+	// WorkerProfilesStatus - The cluster worker profiles status.
+	WorkerProfilesStatus *[]WorkerProfile `json:"workerProfilesStatus,omitempty"`
 	// ApiserverProfile - The cluster API server profile.
 	ApiserverProfile *APIServerProfile `json:"apiserverProfile,omitempty"`
 	// IngressProfiles - The cluster ingress profiles.
