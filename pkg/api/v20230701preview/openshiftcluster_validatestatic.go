@@ -98,6 +98,9 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *Ope
 	if err := sv.validateNetworkProfile(path+".networkProfile", &p.NetworkProfile, p.APIServerProfile.Visibility, p.IngressProfiles[0].Visibility); err != nil {
 		return err
 	}
+	if err := sv.validateLoadBalancerProfile(path+".networkProfile.loadBalancerProfile", p.NetworkProfile.LoadbalancerProfile); err != nil {
+		return err
+	}
 	if err := sv.validateMasterProfile(path+".masterProfile", &p.MasterProfile); err != nil {
 		return err
 	}
@@ -227,6 +230,39 @@ func (sv openShiftClusterStaticValidator) validateNetworkProfile(path string, np
 		if np.OutboundType == OutboundTypeUserDefinedRouting && (apiServerVisibility != VisibilityPrivate || ingressVisibility != VisibilityPrivate) {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".outboundType", "The provided outboundType '%s' is invalid: cannot use UserDefinedRouting if either API Server Visibility or Ingress Visibility is public.", np.OutboundType)
 		}
+	}
+
+	if np.OutboundType == OutboundTypeUserDefinedRouting && np.LoadbalancerProfile != nil {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".loadBalancerProfile", "The provided loadBalancerProfile is invalid: cannot use a loadBalancerProfile if outboundType is UserDefinedRouting.")
+	}
+
+	return nil
+}
+
+func (sv openShiftClusterStaticValidator) validateLoadBalancerProfile(path string, lbp *LoadbalancerProfile) error {
+	if lbp != nil {
+		var isManagedOutboundIPCount = lbp.ManagedOutboundIPs != nil
+		var isOutboundIPs = lbp.OutboundIPs != nil
+		var isOutboundIPPrefixes = lbp.OutboundIPPrefixes != nil
+
+		if isManagedOutboundIPCount && !isOutboundIPPrefixes && !isOutboundIPs {
+			if !(lbp.ManagedOutboundIPs.Count > 0 && lbp.ManagedOutboundIPs.Count <= 20) {
+				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".managedOutboundIps.count", "The provided managedOutboundIps.count %d is invalid: managedOutboundIps.count must be in the range of 1 to 20 (inclusive).", lbp.ManagedOutboundIPs.Count)
+			}
+		} else if isOutboundIPs && !isOutboundIPPrefixes && !isManagedOutboundIPCount {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".outboundIps", "The field outboundIps is not implemented at this time, please check back later.")
+		} else if isOutboundIPPrefixes && !isOutboundIPs && !isManagedOutboundIPCount {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".outboundIpPrefixes", "The field outboundIpPrefixes is not implemented at this time, please check back later.")
+		} else if !isManagedOutboundIPCount && !isOutboundIPPrefixes && !isOutboundIPs {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, "The provided loadBalancerProfile is invalid: must specify one of managedOutboundIps, outboundIps, or outboundIpPrefixes.")
+		} else {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, "The provided loadBalancerProfile is invalid: can only use one of managedOutboundIps, outboundIps, or outboundIpPrefixes at a time.")
+		}
+
+		if lbp.AllocatedOutboundPorts != nil {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".allocatedOutboundPorts", "The field allocatedOutboundPorts is not implemented at this time, please check back later.")
+		}
+
 	}
 	return nil
 }
