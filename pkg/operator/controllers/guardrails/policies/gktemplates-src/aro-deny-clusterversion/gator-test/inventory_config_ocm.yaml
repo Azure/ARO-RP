@@ -14,3 +14,4 @@ data:
     \ - PrometheusRuleFailures\n  - CannotRetrieveUpdates\n  - FluentdNodeDown\n  ignoredNamespaces:\n
     \ - openshift-logging\n  - openshift-redhat-marketplace\n  - openshift-operators\n
     \ - openshift-user-workload-monitoring\n  - openshift-pipelines\n  - openshift-azure-logging\n"
+    
