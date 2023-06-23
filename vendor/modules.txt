@@ -1196,7 +1196,7 @@ github.com/openshift/library-go/pkg/operator/resource/resourcehelper
 github.com/openshift/library-go/pkg/operator/resource/resourcemerge
 github.com/openshift/library-go/pkg/operator/status
 github.com/openshift/library-go/pkg/operator/v1helpers
-# github.com/openshift/machine-config-operator v3.11.0+incompatible => github.com/openshift/machine-config-operator v0.0.1-0.20220319215057-e6ba00b88555
+# github.com/openshift/machine-config-operator v0.0.1-0.20230519222939-1abc13efbb0d => github.com/openshift/machine-config-operator v0.0.1-0.20220319215057-e6ba00b88555
 ## explicit; go 1.17
 github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1
 github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned
