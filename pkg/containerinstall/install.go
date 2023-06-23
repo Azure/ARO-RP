@@ -87,9 +87,10 @@ func (m *manager) Install(ctx context.Context, sub *api.SubscriptionDocument, do
 				Password: to.StringPtr(split[1]),
 			}
 
-			return pullContainer(m.conn, m.version.Properties.InstallerPullspec, options)
+			_, err = images.Pull(m.conn, m.version.Properties.InstallerPullspec, options)
+			return err
 		}),
-		steps.Action(m.writeFiles),
+		steps.Action(m.createSecrets),
 		steps.Action(m.startContainer),
 		steps.Condition(m.containerFinished, 60*time.Minute, false),
 		steps.Action(m.cleanupContainers),
@@ -164,15 +165,14 @@ func (m *manager) containerFinished(context.Context) (bool, error) {
 		if inspectData.State.ExitCode != 0 {
 			getContainerLogs(m.conn, m.log, containerName)
 			return true, fmt.Errorf("container exited with %d", inspectData.State.ExitCode)
-		} else {
-			m.success = true
-			return true, nil
 		}
+		m.success = true
+		return true, nil
 	}
 	return false, nil
 }
 
-func (m *manager) writeFiles(ctx context.Context) error {
+func (m *manager) createSecrets(ctx context.Context) error {
 	encCluster, err := json.Marshal(m.doc.OpenShiftCluster)
 	if err != nil {
 		return err
@@ -191,38 +191,36 @@ func (m *manager) writeFiles(ctx context.Context) error {
 		return err
 	}
 
-	if m.isDevelopment {
-		basepath := os.Getenv("ARO_CHECKOUT_PATH")
-		if basepath == "" {
-			// This assumes we are running from an ARO-RP checkout in development
-			var err error
-			_, curmod, _, _ := runtime.Caller(0)
-			basepath, err = filepath.Abs(filepath.Join(filepath.Dir(curmod), "../.."))
-			if err != nil {
-				return err
-			}
-		}
-
-		err = m.secretFile(filepath.Join(basepath, "secrets/proxy.crt"), "proxy.crt")
-		if err != nil {
-			return err
-		}
-
-		err = m.secretFile(filepath.Join(basepath, "secrets/proxy-client.crt"), "proxy-client.crt")
-		if err != nil {
-			return err
-		}
-
-		err = m.secretFile(filepath.Join(basepath, "secrets/proxy-client.key"), "proxy-client.key")
+	basepath := os.Getenv("ARO_CHECKOUT_PATH")
+	if basepath == "" {
+		// This assumes we are running from an ARO-RP checkout in development
+		var err error
+		_, curmod, _, _ := runtime.Caller(0)
+		basepath, err = filepath.Abs(filepath.Join(filepath.Dir(curmod), "../.."))
 		if err != nil {
 			return err
 		}
 	}
 
+	err = m.secretFromFile(filepath.Join(basepath, "secrets/proxy.crt"), "proxy.crt")
+	if err != nil {
+		return err
+	}
+
+	err = m.secretFromFile(filepath.Join(basepath, "secrets/proxy-client.crt"), "proxy-client.crt")
+	if err != nil {
+		return err
+	}
+
+	err = m.secretFromFile(filepath.Join(basepath, "secrets/proxy-client.key"), "proxy-client.key")
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (m *manager) secretFile(from, name string) error {
+func (m *manager) secretFromFile(from, name string) error {
 	f, err := os.Open(from)
 	if err != nil {
 		return err
@@ -248,7 +246,7 @@ func (m *manager) cleanupContainers(ctx context.Context) error {
 	for _, secretName := range []string{"99_aro.json", "99_sub.json", "proxy.crt", "proxy-client.crt", "proxy-client.key"} {
 		err = secrets.Remove(m.conn, m.doc.ID+"-"+secretName)
 		if err != nil {
-			m.log.Errorf("unable to remove secret %s: %v", m.doc.ID+"-"+secretName, err)
+			m.log.Debugf("unable to remove secret %s: %v", m.doc.ID+"-"+secretName, err)
 		}
 	}
 	return nil

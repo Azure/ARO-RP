@@ -5,6 +5,7 @@ package containerinstall
 
 import (
 	"context"
+	"errors"
 
 	"github.com/sirupsen/logrus"
 
@@ -25,22 +26,23 @@ type manager struct {
 	sub     *api.SubscriptionDocument
 	version *api.OpenShiftVersion
 
-	isDevelopment bool
-
 	success bool
 }
 
 func New(ctx context.Context, log *logrus.Entry, env env.Interface) (ContainerInstaller, error) {
 	isDevelopment := env.IsLocalDevelopmentMode()
-	conn, err := getConnection(ctx, isDevelopment)
+	if !isDevelopment {
+		return nil, errors.New("running cluster installs in a container is only run in development")
+	}
+
+	conn, err := getConnection(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	return &manager{
-		conn:          conn,
-		log:           log,
-		env:           env,
-		isDevelopment: isDevelopment,
+		conn: conn,
+		log:  log,
+		env:  env,
 	}, nil
 }

@@ -23,7 +23,7 @@ const TEST_PULLSPEC = "registry.access.redhat.com/ubi8/go-toolset:1.18.4"
 
 func TestPodman(t *testing.T) {
 	ctx := context.Background()
-	conn, err := getConnection(ctx, true)
+	conn, err := getConnection(ctx)
 	if err != nil {
 		t.Skipf("unable to access podman: %v", err)
 	}
@@ -35,7 +35,7 @@ func TestPodman(t *testing.T) {
 	s.Name = randomName
 	s.Entrypoint = []string{"/bin/bash", "-c", "echo 'hello'"}
 
-	err = pullContainer(conn, TEST_PULLSPEC, &images.PullOptions{Policy: to.StringPtr("missing")})
+	_, err = images.Pull(conn, TEST_PULLSPEC, &images.PullOptions{Policy: to.StringPtr("missing")})
 	if err != nil {
 		t.Fatal(err)
 	}
