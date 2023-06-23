@@ -137,6 +137,8 @@ spec:
         kinds: ["PodDisruptionBudget"]
 ```
 
+Make sure the filename of constraint is the same as the .metadata.name of the Constraint object, as it is the feature flag name that will be used to turn on / off the policy.
+
 ## Test Rego source code
 
 * install opa cli, refer https://github.com/open-policy-agent/opa/releases/
@@ -179,7 +181,7 @@ metadata:
 tests:
 - name: privileged-namespace
   template: ../../gktemplates/aro-deny-privileged-namespace.yaml
-  constraint: ../../gkconstraints-test/aro-priv-ns-operations.yaml
+  constraint: ../../gkconstraints-test/aro-privileged-namespace-deny.yaml
   cases:
   - name: ns-allowed-pod
     object: gator-test/ns_allowed_pod.yaml
