@@ -1,4 +1,4 @@
-package aroprivilegednamespace
+package arodenyprivilegednamespace
 
 import data.lib.common.is_priv_namespace
 import data.lib.common.is_exempted_account

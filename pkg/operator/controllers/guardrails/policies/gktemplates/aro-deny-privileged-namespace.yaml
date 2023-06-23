@@ -1,7 +1,7 @@
 apiVersion: templates.gatekeeper.sh/v1
 kind: ConstraintTemplate
 metadata:
-  name: aroprivilegednamespace
+  name: arodenyprivilegednamespace
   annotations:
     metadata.gatekeeper.sh/title: "Privileged Namespace"
     metadata.gatekeeper.sh/version: 1.0.0
@@ -11,7 +11,7 @@ spec:
   crd:
     spec:
       names:
-        kind: AROPrivilegedNamespace
+        kind: ARODenyPrivilegedNamespace
       validation:
         # Schema for the `parameters` field
         openAPIV3Schema:
@@ -21,7 +21,7 @@ spec:
   targets:
     - target: admission.k8s.gatekeeper.sh
       rego: |
-        package aroprivilegednamespace
+        package arodenyprivilegednamespace
 
         import data.lib.common.is_priv_namespace
         import data.lib.common.is_exempted_account

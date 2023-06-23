@@ -1,11 +1,11 @@
 kind: Suite
 apiVersion: test.gatekeeper.sh/v1alpha1
 metadata:
-  name: aro-rw-host-mount
+  name: aro-deny-host-mount
 tests:
-- name: aro-rw-host-mount
+- name: aro-deny-host-mount
   template: ../../gktemplates/aro-deny-host-mount.yaml
-  constraint: ../../gkconstraints-test/aro-rw-host-mount.yaml
+  constraint: ../../gkconstraints-test/aro-rw-host-mount-deny.yaml
   cases:
   - name: hostmount-allowed-pod
     object: gator-test/hostmount_allowed_pod.yaml

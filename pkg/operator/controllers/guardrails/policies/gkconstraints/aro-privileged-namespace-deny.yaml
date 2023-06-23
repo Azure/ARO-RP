@@ -1,5 +1,5 @@
 apiVersion: constraints.gatekeeper.sh/v1beta1
-kind: AROPrivilegedNamespace
+kind: ARODenyPrivilegedNamespace
 metadata:
   name: aro-privileged-namespace-deny
 spec:

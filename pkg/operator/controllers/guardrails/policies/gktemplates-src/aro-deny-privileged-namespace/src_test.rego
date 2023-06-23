@@ -1,4 +1,4 @@
-package aroprivilegednamespace
+package arodenyprivilegednamespace
 
 test_input_allowed_ns {
   input := { "review": get_input_with_ns_userinfo(input_allowed_ns, nonpriv_username_nonpriv_group_userinfo) }
