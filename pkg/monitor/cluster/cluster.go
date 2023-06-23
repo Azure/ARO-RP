@@ -91,32 +91,33 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		return nil, err
 	}
 
-	var hiveclientset client.Client
-	if hiveRestConfig != nil {
-		var err error
-		hiveclientset, err = client.New(hiveRestConfig, client.Options{})
-		if err != nil {
-			// TODO(hive): Update to fail once we have Hive everywhere in prod and dev
-			log.Error(err)
-		}
-	}
-
-	return &Monitor{
+	var monitor = &Monitor{
 		log:       log,
 		hourlyRun: hourlyRun,
 
 		oc:   oc,
 		dims: dims,
 
-		restconfig:    restConfig,
-		cli:           cli,
-		configcli:     configcli,
-		maocli:        maocli,
-		mcocli:        mcocli,
-		arocli:        arocli,
-		m:             m,
-		hiveclientset: hiveclientset,
-	}, nil
+		restconfig: restConfig,
+		cli:        cli,
+		configcli:  configcli,
+		maocli:     maocli,
+		mcocli:     mcocli,
+		arocli:     arocli,
+		m:          m,
+	}
+
+	var hiveclientset client.Client
+	if hiveRestConfig != nil {
+		var err error
+		hiveclientset, err = client.New(hiveRestConfig, client.Options{})
+		if err != nil {
+			log.Error(err)
+		} else {
+			monitor.hiveclientset = hiveclientset
+		}
+	}
+	return monitor, nil
 }
 
 // Monitor checks the API server health of a cluster
