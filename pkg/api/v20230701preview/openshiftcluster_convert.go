@@ -178,6 +178,18 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 			out.Properties.WorkerProfiles[i].DiskEncryptionSetID = oc.Properties.WorkerProfiles[i].DiskEncryptionSetID
 		}
 	}
+	if oc.Properties.WorkerProfilesStatus != nil {
+		out.Properties.WorkerProfilesStatus = make([]api.WorkerProfile, len(oc.Properties.WorkerProfilesStatus))
+		for i := range oc.Properties.WorkerProfilesStatus {
+			out.Properties.WorkerProfilesStatus[i].Name = oc.Properties.WorkerProfilesStatus[i].Name
+			out.Properties.WorkerProfilesStatus[i].VMSize = api.VMSize(oc.Properties.WorkerProfilesStatus[i].VMSize)
+			out.Properties.WorkerProfilesStatus[i].DiskSizeGB = oc.Properties.WorkerProfilesStatus[i].DiskSizeGB
+			out.Properties.WorkerProfilesStatus[i].SubnetID = oc.Properties.WorkerProfilesStatus[i].SubnetID
+			out.Properties.WorkerProfilesStatus[i].Count = oc.Properties.WorkerProfilesStatus[i].Count
+			out.Properties.WorkerProfilesStatus[i].EncryptionAtHost = api.EncryptionAtHost(oc.Properties.WorkerProfilesStatus[i].EncryptionAtHost)
+			out.Properties.WorkerProfilesStatus[i].DiskEncryptionSetID = oc.Properties.WorkerProfilesStatus[i].DiskEncryptionSetID
+		}
+	}
 	out.Properties.APIServerProfile.Visibility = api.Visibility(oc.Properties.APIServerProfile.Visibility)
 	out.Properties.APIServerProfile.URL = oc.Properties.APIServerProfile.URL
 	out.Properties.APIServerProfile.IP = oc.Properties.APIServerProfile.IP
