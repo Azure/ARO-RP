@@ -165,7 +165,7 @@ func TestReconcileManager(t *testing.T) {
 			},
 		},
 		{
-			name:         "Operator Flag enabled - limited rules that do not include cluster subnets (because egress lockdown is enabled) to all accounts",
+			name:         "Operator Flag enabled - nothing to do because egress lockdown is enabled",
 			operatorFlag: true,
 			instance: func(cluster *arov1alpha1.Cluster) {
 				cluster.Spec.GatewayDomains = []string{"somegatewaydomain.com"}
