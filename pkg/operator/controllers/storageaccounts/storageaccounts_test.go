@@ -164,6 +164,20 @@ func TestReconcileManager(t *testing.T) {
 				storage.EXPECT().Update(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, updated)
 			},
 		},
+		{
+			name:         "Operator Flag enabled - limited rules that do not include cluster subnets (because egress lockdown is enabled) to all accounts",
+			operatorFlag: true,
+			instance: func(cluster *arov1alpha1.Cluster) {
+				cluster.Spec.GatewayDomains = []string{"somegatewaydomain.com"}
+			},
+			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager) {
+				// storage objects in azure
+				result := getValidAccount([]string{})
+
+				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, gomock.Any()).Return(*result, nil)
+				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, gomock.Any()).Return(*result, nil)
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
