@@ -27,21 +27,13 @@ func getConnection(ctx context.Context) (context.Context, error) {
 func getContainerLogs(ctx context.Context, log *logrus.Entry, containerName string) error {
 	stdout, stderr := make(chan string, 1024), make(chan string, 1024)
 	go func() {
-		for {
-			v, ok := <-stdout
-			if !ok {
-				return
-			}
+		for v := range stdout {
 			log.Infof("stdout: %s", v)
 		}
 	}()
 
 	go func() {
-		for {
-			v, ok := <-stderr
-			if !ok {
-				return
-			}
+		for v := range stderr {
 			log.Errorf("stderr: %s", v)
 		}
 	}()
