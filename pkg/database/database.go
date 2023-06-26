@@ -6,7 +6,9 @@ package database
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net/http"
+	"os"
 	"reflect"
 	"time"
 
@@ -53,7 +55,29 @@ func NewDatabaseClient(log *logrus.Entry, _env env.Core, authorizer cosmosdb.Aut
 	return cosmosdb.NewDatabaseClient(log, c, h, databaseAccountName+"."+_env.Environment().CosmosDBDNSSuffix, authorizer), nil
 }
 
+func NewDatabaseClientWithTransport(log *logrus.Entry, _env env.Core, authorizer cosmosdb.Authorizer, m metrics.Emitter, aead encryption.AEAD, databaseAccountName string, transport http.RoundTripper) (cosmosdb.DatabaseClient, error) {
+	h, err := NewJSONHandle(aead)
+	if err != nil {
+		return nil, err
+	}
+
+	c := &http.Client{
+		Transport: transport,
+		Timeout:   30 * time.Second,
+	}
+
+	return cosmosdb.NewDatabaseClient(log, c, h, databaseAccountName+"."+_env.Environment().CosmosDBDNSSuffix, authorizer), nil
+}
+
 func NewMasterKeyAuthorizer(ctx context.Context, _env env.Core, msiAuthorizer autorest.Authorizer, databaseAccountName string) (cosmosdb.Authorizer, error) {
+	for _, key := range []string{
+		"DATABASE_ACCOUNT_NAME",
+	} {
+		if _, found := os.LookupEnv(key); !found {
+			return nil, fmt.Errorf("environment variable %q unset", key)
+		}
+	}
+
 	databaseaccounts := documentdb.NewDatabaseAccountsClient(_env.Environment(), _env.SubscriptionID(), msiAuthorizer)
 
 	keys, err := databaseaccounts.ListKeys(ctx, _env.ResourceGroup(), databaseAccountName)

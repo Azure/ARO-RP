@@ -11,7 +11,6 @@ import (
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -23,7 +22,6 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/openshift/installer/pkg/aro/dnsv2"
-	mcfgv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 )
 
 const (
@@ -113,7 +111,7 @@ func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster,
 	return dh.Ensure(ctx, resources...)
 }
 
-func generateMachineConfig(clusterDomain, apiIntIP, ingressIP, role string, gatewayDomains []string, gatewayPrivateEndpointIP string) (*mcfgv1.MachineConfig, error) {
+func generateMachineConfig(clusterDomain, apiIntIP, ingressIP, role string, gatewayDomains []string, gatewayPrivateEndpointIP string) (*mcv1.MachineConfig, error) {
 	ignConfig, err := dnsv2.Ignition2Config(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP)
 	if err != nil {
 		return nil, err
@@ -131,15 +129,15 @@ func generateMachineConfig(clusterDomain, apiIntIP, ingressIP, role string, gate
 		return nil, err
 	}
 
-	rawExt := runtime.RawExtension{}
+	rawExt := kruntime.RawExtension{}
 	rawExt.Raw, err = json.Marshal(i)
 	if err != nil {
 		return nil, err
 	}
 
-	return &mcfgv1.MachineConfig{
+	return &mcv1.MachineConfig{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: mcfgv1.SchemeGroupVersion.String(),
+			APIVersion: mcv1.SchemeGroupVersion.String(),
 			Kind:       "MachineConfig",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -148,7 +146,7 @@ func generateMachineConfig(clusterDomain, apiIntIP, ingressIP, role string, gate
 				"machineconfiguration.openshift.io/role": role,
 			},
 		},
-		Spec: mcfgv1.MachineConfigSpec{
+		Spec: mcv1.MachineConfigSpec{
 			Config: rawExt,
 		},
 	}, nil
