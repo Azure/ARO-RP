@@ -126,8 +126,10 @@ type OpenShiftClusterProperties struct {
 
 	MasterProfile MasterProfile `json:"masterProfile,omitempty"`
 
+	// WorkerProfiles is used to store the worker profile data that was sent in the api request
 	WorkerProfiles []WorkerProfile `json:"workerProfiles,omitempty"`
 
+	// WorkerProfilesStatus is used to store the enriched worker profile data
 	WorkerProfilesStatus []WorkerProfile `json:"workerProfilesStatus,omitempty"`
 
 	APIServerProfile APIServerProfile `json:"apiserverProfile,omitempty"`
