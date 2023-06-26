@@ -14,8 +14,8 @@ yum -y -x WALinuxAgent -x WALinuxAgent-udev update --allowerasing
 echo "extending partition table"
 # Linux block devices are inconsistently named
 # it's difficult to tie the lvm pv to the physical disk using /dev/disk files, which is why lvs is used here
-physicalDisk="$(lvs -o devices -a | head -n2 | tail -n1 | cut -d ' ' -f 3 | cut -d \( -f 1 | tr -d '[:digit:]')"
-growpart "$physicalDisk" 2
+physical_disk="$(lvs -o devices -a | head -n2 | tail -n1 | cut -d ' ' -f 3 | cut -d \( -f 1 | tr -d '[:digit:]')"
+growpart "$physical_disk" 2
 
 echo "extending filesystems"
 lvextend -l +20%FREE /dev/rootvg/rootlv
@@ -33,7 +33,12 @@ for attempt in {1..5}; do
 done
 
 echo "configuring logrotate"
-cat >/etc/logrotate.conf <<'EOF'
+
+# gateway_logdir is a readonly variable that specifies the host path mount point for the gateway container log file
+# for the purpose of rotating the gateway logs
+declare -r gateway_logdir='/var/log/aro-gateway'
+
+cat >/etc/logrotate.conf <<EOF
 # see "man logrotate" for details
 # rotate log files weekly
 weekly
@@ -66,6 +71,18 @@ include /etc/logrotate.d
     monthly
     create 0600 root utmp
     rotate 1
+}
+
+# Maximum log directory size is 100G with this configuration
+# Setting limit to 100G to allow space for other logging services
+# copytruncate is a critical option used to prevent logs from being shipped twice
+${gateway_logdir} {
+    size 20G
+    rotate 5
+    create 0600 root root
+    copytruncate
+    noolddir
+    compress
 }
 EOF
 
@@ -250,7 +267,7 @@ GATEWAY_FEATURES='$GATEWAYFEATURES'
 RPIMAGE='$RPIMAGE'
 EOF
 
-cat >/etc/systemd/system/aro-gateway.service <<'EOF'
+cat >/etc/systemd/system/aro-gateway.service <<EOF
 [Unit]
 After=network-online.target
 Wants=network-online.target
@@ -258,6 +275,7 @@ Wants=network-online.target
 [Service]
 EnvironmentFile=/etc/sysconfig/aro-gateway
 ExecStartPre=-/usr/bin/docker rm -f %N
+ExecStartPre=/usr/bin/mkdir -p ${gateway_logdir}
 ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
@@ -277,7 +295,8 @@ ExecStart=/usr/bin/docker run \
   -p 443:8443 \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
-  $RPIMAGE \
+  -v /ctr.log:${gateway_logdir}:z \
+  \$RPIMAGE \
   gateway
 ExecStop=/usr/bin/docker stop -t 3600 %N
 TimeoutStopSec=3600
