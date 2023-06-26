@@ -39,18 +39,6 @@ func (f *frontend) _getAdminHiveClusterDeployment(ctx context.Context, resourceI
 	if resourceID == "" && clusterDeploymentNamespace == "" {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "Parameters resourceID '%s' clusterDeploymentNamespace '%s' are both empty, atleast one should have a valid value.", resourceID, clusterDeploymentNamespace)
 	}
-	if resourceID == "" && clusterDeploymentNamespace != "" {
-		doc = &api.OpenShiftClusterDocument{
-			OpenShiftCluster: &api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					HiveProfile: api.HiveProfile{
-						Namespace: clusterDeploymentNamespace,
-					},
-				},
-			},
-		}
-	}
-
 	// if resourceID is not null, fetch the clusterDeploymentNamespace using the resourceID
 	// when parameteres resourceID and clusterDeploymentNamespace are not null, clusterDeploymentNamespace will be ignored
 	if resourceID != "" {
@@ -60,6 +48,16 @@ func (f *frontend) _getAdminHiveClusterDeployment(ctx context.Context, resourceI
 		}
 		if doc.OpenShiftCluster.Properties.HiveProfile.Namespace == "" {
 			return nil, api.NewCloudError(http.StatusNoContent, api.CloudErrorCodeResourceNotFound, "", "cluster '%s' is not managed by hive", resourceID)
+		}
+	} else {
+		doc = &api.OpenShiftClusterDocument{
+			OpenShiftCluster: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					HiveProfile: api.HiveProfile{
+						Namespace: clusterDeploymentNamespace,
+					},
+				},
+			},
 		}
 	}
 
