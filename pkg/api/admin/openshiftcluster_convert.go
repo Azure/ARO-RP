@@ -26,6 +26,7 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 			FailedProvisioningState: ProvisioningState(oc.Properties.FailedProvisioningState),
 			LastAdminUpdateError:    oc.Properties.LastAdminUpdateError,
 			MaintenanceTask:         MaintenanceTask(oc.Properties.MaintenanceTask),
+			MaintenanceState:        MaintenanceState(oc.Properties.MaintenanceState),
 			OperatorFlags:           OperatorFlags(oc.Properties.OperatorFlags),
 			OperatorVersion:         oc.Properties.OperatorVersion,
 			CreatedAt:               oc.Properties.CreatedAt,
@@ -173,6 +174,7 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	out.Properties.FailedProvisioningState = api.ProvisioningState(oc.Properties.FailedProvisioningState)
 	out.Properties.LastAdminUpdateError = oc.Properties.LastAdminUpdateError
 	out.Properties.MaintenanceTask = api.MaintenanceTask(oc.Properties.MaintenanceTask)
+	out.Properties.MaintenanceState = api.MaintenanceState(oc.Properties.MaintenanceState)
 	out.Properties.OperatorFlags = api.OperatorFlags(oc.Properties.OperatorFlags)
 	out.Properties.OperatorVersion = oc.Properties.OperatorVersion
 	out.Properties.CreatedBy = oc.Properties.CreatedBy

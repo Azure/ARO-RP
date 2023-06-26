@@ -690,6 +690,85 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			},
 			wantErr: "400: InvalidParameter: properties.maintenanceTask: Invalid enum parameter.",
 		},
+		{
+			name: "maintenanceState change to blank allowed",
+			oc: func() *OpenShiftCluster {
+				return &OpenShiftCluster{
+					Properties: OpenShiftClusterProperties{
+						MaintenanceState: MaintenanceStateNone,
+					},
+				}
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.MaintenanceState = ""
+			},
+		},
+		{
+			name: "maintenanceState change to none allowed",
+			oc: func() *OpenShiftCluster {
+				return &OpenShiftCluster{
+					Properties: OpenShiftClusterProperties{
+						MaintenanceState: "",
+					},
+				}
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.MaintenanceState = MaintenanceStateNone
+			},
+		},
+		{
+			name: "maintenanceState change to pending allowed",
+			oc: func() *OpenShiftCluster {
+				return &OpenShiftCluster{
+					Properties: OpenShiftClusterProperties{
+						MaintenanceState: MaintenanceStateNone,
+					},
+				}
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.MaintenanceState = MaintenanceStatePending
+			},
+		},
+		{
+			name: "maintenanceState change to planned allowed",
+			oc: func() *OpenShiftCluster {
+				return &OpenShiftCluster{
+					Properties: OpenShiftClusterProperties{
+						MaintenanceState: MaintenanceStateNone,
+					},
+				}
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.MaintenanceState = MaintenanceStatePlanned
+			},
+		},
+		{
+			name: "maintenanceState change to unplanned allowed",
+			oc: func() *OpenShiftCluster {
+				return &OpenShiftCluster{
+					Properties: OpenShiftClusterProperties{
+						MaintenanceState: MaintenanceStateNone,
+					},
+				}
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.MaintenanceState = MaintenanceStateUnplanned
+			},
+		},
+		{
+			name: "maintenanceState change to other values is disallowed",
+			oc: func() *OpenShiftCluster {
+				return &OpenShiftCluster{
+					Properties: OpenShiftClusterProperties{
+						MaintenanceState: MaintenanceStateNone,
+					},
+				}
+			},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.MaintenanceState = "adfasdfadf"
+			},
+			wantErr: "400: InvalidParameter: properties.maintenanceState: Invalid enum parameter.",
+		},
 	}
 
 	for _, tt := range tests {
