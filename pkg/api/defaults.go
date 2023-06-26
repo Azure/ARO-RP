@@ -46,6 +46,11 @@ func SetDefaults(doc *OpenShiftClusterDocument) {
 		if doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG == "" {
 			doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG = PreconfiguredNSGDisabled
 		}
+
+		// If there's no maintenance states, set to none
+		if doc.OpenShiftCluster.Properties.MaintenanceState == "" {
+			doc.OpenShiftCluster.Properties.MaintenanceState = MaintenanceStateNone
+		}
 	}
 }
 
