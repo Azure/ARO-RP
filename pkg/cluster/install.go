@@ -208,7 +208,7 @@ func (m *manager) runPodmanInstaller(ctx context.Context) error {
 		return err
 	}
 
-	i, err := containerinstall.New(ctx, m.log, m.env)
+	i, err := containerinstall.New(ctx, m.log, m.env, m.doc.ID)
 	if err != nil {
 		return err
 	}

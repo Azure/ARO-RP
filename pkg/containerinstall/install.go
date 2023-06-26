@@ -24,6 +24,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
 
@@ -48,55 +49,25 @@ type auths struct {
 }
 
 func (m *manager) Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion) error {
-	m.sub = sub
-	m.doc = doc
-	m.version = version
-
-	pullSecrets := &auths{}
-	err := json.Unmarshal([]byte(os.Getenv("PULL_SECRET")), pullSecrets)
-	if err != nil {
-		return err
-	}
-
-	auth, ok := pullSecrets.Auths[m.env.ACRDomain()]
-	if !ok {
-		return fmt.Errorf("missing %s key in PULL_SECRET", m.env.ACRDomain())
-	}
-
-	token, ok := auth["auth"]
-	if !ok {
-		return errors.New("maformed auth token")
-	}
-
-	decoded, err := base64.StdEncoding.DecodeString(token.(string))
-	if err != nil {
-		return err
-	}
-
-	split := strings.Split(string(decoded), ":")
-	if len(split) != 2 {
-		return fmt.Errorf("not username:pass in %s config", m.env.ACRDomain())
-	}
-
 	s := []steps.Step{
 		steps.Action(func(context.Context) error {
 			options := &images.PullOptions{
 				Quiet:    to.BoolPtr(true),
 				Policy:   to.StringPtr("always"),
-				Username: to.StringPtr(split[0]),
-				Password: to.StringPtr(split[1]),
+				Username: to.StringPtr(m.pullSecret[0]),
+				Password: to.StringPtr(m.pullSecret[1]),
 			}
 
-			_, err = images.Pull(m.conn, m.version.Properties.InstallerPullspec, options)
+			_, err := images.Pull(m.conn, version.Properties.InstallerPullspec, options)
 			return err
 		}),
-		steps.Action(m.createSecrets),
-		steps.Action(m.startContainer),
+		steps.Action(func(context.Context) error { return m.createSecrets(ctx, doc, sub) }),
+		steps.Action(func(context.Context) error { return m.startContainer(ctx, version) }),
 		steps.Condition(m.containerFinished, 60*time.Minute, false),
 		steps.Action(m.cleanupContainers),
 	}
 
-	_, err = steps.Run(ctx, m.log, 10*time.Second, s, nil)
+	_, err := steps.Run(ctx, m.log, 10*time.Second, s, nil)
 	if err != nil {
 		return err
 	}
@@ -110,7 +81,7 @@ func (m *manager) putSecret(secretName string) specgen.Secret {
 	uid := uint32(os.Getuid())
 	gid := uint32(os.Getgid())
 	return specgen.Secret{
-		Source: m.doc.ID + "-" + secretName,
+		Source: m.clusterUUID + "-" + secretName,
 		Target: "/.azure/" + secretName,
 		UID:    uid,
 		GID:    gid,
@@ -118,9 +89,9 @@ func (m *manager) putSecret(secretName string) specgen.Secret {
 	}
 }
 
-func (m *manager) startContainer(ctx context.Context) error {
-	s := specgen.NewSpecGenerator(m.version.Properties.InstallerPullspec, false)
-	s.Name = "installer-" + m.doc.ID
+func (m *manager) startContainer(ctx context.Context, version *api.OpenShiftVersion) error {
+	s := specgen.NewSpecGenerator(version.Properties.InstallerPullspec, false)
+	s.Name = "installer-" + m.clusterUUID
 	s.User = fmt.Sprintf("%d", os.Getuid())
 
 	s.Secrets = []specgen.Secret{
@@ -133,9 +104,9 @@ func (m *manager) startContainer(ctx context.Context) error {
 
 	s.Env = map[string]string{
 		"ARO_RP_MODE":               "development",
-		"ARO_UUID":                  m.doc.ID,
+		"ARO_UUID":                  m.clusterUUID,
 		"OPENSHIFT_INSTALL_INVOKER": "hive",
-		"OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE": m.version.Properties.OpenShiftPullspec,
+		"OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE": version.Properties.OpenShiftPullspec,
 	}
 
 	for _, i := range devEnvVars {
@@ -155,7 +126,7 @@ func (m *manager) startContainer(ctx context.Context) error {
 }
 
 func (m *manager) containerFinished(context.Context) (bool, error) {
-	containerName := "installer-" + m.doc.ID
+	containerName := "installer-" + m.clusterUUID
 	inspectData, err := containers.Inspect(m.conn, containerName, nil)
 	if err != nil {
 		return false, err
@@ -172,21 +143,21 @@ func (m *manager) containerFinished(context.Context) (bool, error) {
 	return false, nil
 }
 
-func (m *manager) createSecrets(ctx context.Context) error {
-	encCluster, err := json.Marshal(m.doc.OpenShiftCluster)
+func (m *manager) createSecrets(ctx context.Context, doc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument) error {
+	encCluster, err := json.Marshal(doc.OpenShiftCluster)
 	if err != nil {
 		return err
 	}
-	_, err = secrets.Create(m.conn, bytes.NewBuffer(encCluster), &secrets.CreateOptions{Name: to.StringPtr(m.doc.ID + "-99_aro.json")})
+	_, err = secrets.Create(m.conn, bytes.NewBuffer(encCluster), &secrets.CreateOptions{Name: to.StringPtr(m.clusterUUID + "-99_aro.json")})
 	if err != nil {
 		return err
 	}
 
-	encSub, err := json.Marshal(m.sub.Subscription)
+	encSub, err := json.Marshal(sub.Subscription)
 	if err != nil {
 		return err
 	}
-	_, err = secrets.Create(m.conn, bytes.NewBuffer(encSub), &secrets.CreateOptions{Name: to.StringPtr(m.doc.ID + "-99_sub.json")})
+	_, err = secrets.Create(m.conn, bytes.NewBuffer(encSub), &secrets.CreateOptions{Name: to.StringPtr(m.clusterUUID + "-99_sub.json")})
 	if err != nil {
 		return err
 	}
@@ -226,12 +197,12 @@ func (m *manager) secretFromFile(from, name string) error {
 		return err
 	}
 
-	_, err = secrets.Create(m.conn, f, &secrets.CreateOptions{Name: to.StringPtr(m.doc.ID + "-" + name)})
+	_, err = secrets.Create(m.conn, f, &secrets.CreateOptions{Name: to.StringPtr(m.clusterUUID + "-" + name)})
 	return err
 }
 
 func (m *manager) cleanupContainers(ctx context.Context) error {
-	containerName := "installer-" + m.doc.ID
+	containerName := "installer-" + m.clusterUUID
 
 	if !m.success {
 		m.log.Infof("cleaning up failed container %s", containerName)
@@ -244,10 +215,41 @@ func (m *manager) cleanupContainers(ctx context.Context) error {
 	}
 
 	for _, secretName := range []string{"99_aro.json", "99_sub.json", "proxy.crt", "proxy-client.crt", "proxy-client.key"} {
-		err = secrets.Remove(m.conn, m.doc.ID+"-"+secretName)
+		err = secrets.Remove(m.conn, m.clusterUUID+"-"+secretName)
 		if err != nil {
-			m.log.Debugf("unable to remove secret %s: %v", m.doc.ID+"-"+secretName, err)
+			m.log.Debugf("unable to remove secret %s: %v", m.clusterUUID+"-"+secretName, err)
 		}
 	}
 	return nil
+}
+
+func pullSecretFromEnv(_env env.Interface) (out [2]string, err error) {
+	pullSecrets := &auths{}
+	err = json.Unmarshal([]byte(os.Getenv("PULL_SECRET")), pullSecrets)
+	if err != nil {
+		return
+	}
+
+	auth, ok := pullSecrets.Auths[_env.ACRDomain()]
+	if !ok {
+		return out, fmt.Errorf("missing %s key in PULL_SECRET", _env.ACRDomain())
+	}
+
+	token, ok := auth["auth"]
+	if !ok {
+		return out, errors.New("maformed auth token")
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(token.(string))
+	if err != nil {
+		return out, err
+	}
+
+	split := strings.Split(string(decoded), ":")
+	if len(split) != 2 {
+		return out, fmt.Errorf("not username:pass in %s config", _env.ACRDomain())
+	}
+
+	out = [2]string{split[0], split[1]}
+	return out, nil
 }

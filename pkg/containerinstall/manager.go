@@ -22,17 +22,21 @@ type manager struct {
 	log  *logrus.Entry
 	env  env.Interface
 
-	doc     *api.OpenShiftClusterDocument
-	sub     *api.SubscriptionDocument
-	version *api.OpenShiftVersion
+	clusterUUID string
+	pullSecret  [2]string
 
 	success bool
 }
 
-func New(ctx context.Context, log *logrus.Entry, env env.Interface) (ContainerInstaller, error) {
+func New(ctx context.Context, log *logrus.Entry, env env.Interface, clusterUUID string) (ContainerInstaller, error) {
 	isDevelopment := env.IsLocalDevelopmentMode()
 	if !isDevelopment {
 		return nil, errors.New("running cluster installs in a container is only run in development")
+	}
+
+	pullSecret, err := pullSecretFromEnv(env)
+	if err != nil {
+		return nil, err
 	}
 
 	conn, err := getConnection(ctx)
@@ -44,5 +48,8 @@ func New(ctx context.Context, log *logrus.Entry, env env.Interface) (ContainerIn
 		conn: conn,
 		log:  log,
 		env:  env,
+
+		clusterUUID: clusterUUID,
+		pullSecret:  pullSecret,
 	}, nil
 }
