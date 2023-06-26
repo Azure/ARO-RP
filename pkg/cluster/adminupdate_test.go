@@ -252,6 +252,24 @@ func TestAdminUpdateSteps(t *testing.T) {
 				"[Action updateProvisionedBy-fm]",
 			},
 		},
+		{
+			name: "Maintenance State Update",
+			fixture: func() (*api.OpenShiftClusterDocument, bool) {
+				doc := baseClusterDoc()
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
+				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskStateUpdate
+				return doc, true
+			},
+			shouldRunSteps: []string{
+				"[Action initializeKubernetesClients-fm]",
+				"[Action ensureBillingRecord-fm]",
+				"[Action ensureDefaults-fm]",
+				"[AuthorizationRetryingAction fixupClusterSPObjectID-fm]",
+				"[Action fixInfraID-fm]",
+				"[Action startVMs-fm]",
+				"[Condition apiServersReady-fm, timeout 30m0s]",
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			doc, adoptViaHive := tt.fixture()

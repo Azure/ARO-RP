@@ -176,9 +176,10 @@ const (
 type MaintenanceTask string
 
 const (
-	MaintenanceTaskEverything MaintenanceTask = "Everything"
-	MaintenanceTaskOperator   MaintenanceTask = "OperatorUpdate"
-	MaintenanceTaskRenewCerts MaintenanceTask = "CertificatesRenewal"
+	MaintenanceTaskEverything  MaintenanceTask = "Everything"
+	MaintenanceTaskOperator    MaintenanceTask = "OperatorUpdate"
+	MaintenanceTaskRenewCerts  MaintenanceTask = "CertificatesRenewal"
+	MaintenanceTaskStateUpdate MaintenanceTask = "MaintenanceStateUpdate"
 )
 
 // MaintenanceState represents a maintenance state
