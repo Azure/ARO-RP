@@ -25,6 +25,7 @@ var validationSuccess = api.ValidationResult{
 func (f *frontend) preflightValidation(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
+	log.Info("preflight validation start")
 
 	var header http.Header
 	var b []byte
@@ -41,6 +42,7 @@ func (f *frontend) preflightValidation(w http.ResponseWriter, r *http.Request) {
 				log.Warningf("bad request. Failed to unmarshal ResourceTypeMeta: %s", err)
 				continue
 			}
+			log.Info(typeMeta.Type)
 			if strings.EqualFold(typeMeta.Type, "Microsoft.RedHatOpenShift/openShiftClusters") {
 				res := f._preflightValidation(ctx, log, raw, typeMeta.APIVersion)
 				if res.Status == api.ValidationStatusFailed {
@@ -84,6 +86,19 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 			},
 		}
 	}
+
+	var i interface{}
+	if err := json.Unmarshal([]byte(raw), &i); err != nil {
+		panic(err)
+	}
+	if m, ok := i.(map[string]interface{}); ok {
+		if j, ok := m["properties"].(map[string]interface{}); ok {
+			delete(j, "servicePrincipalProfile")
+		}
+	}
+
+	body, _ := json.Marshal(i)
+	log.Info(string(body))
 
 	converter.ToInternal(ext, doc)
 
