@@ -100,6 +100,7 @@ type OpenShiftClusterProperties struct {
 	FailedProvisioningState ProvisioningState   `json:"failedProvisioningState,omitempty"`
 	LastAdminUpdateError    string              `json:"lastAdminUpdateError,omitempty"`
 	MaintenanceTask         MaintenanceTask     `json:"maintenanceTask,omitempty"`
+	MaintenanceState        MaintenanceState    `json:"maintenanceState,omitempty"`
 
 	// Operator feature/option flags
 	OperatorFlags   OperatorFlags `json:"operatorFlags,omitempty"`
