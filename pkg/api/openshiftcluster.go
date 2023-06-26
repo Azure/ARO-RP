@@ -180,6 +180,17 @@ const (
 	MaintenanceTaskRenewCerts MaintenanceTask = "CertificatesRenewal"
 )
 
+// MaintenanceState represents a maintenance state
+type MaintenanceState string
+
+// MaintenanceState constants
+const (
+	MaintenanceStateNone      MaintenanceState = "None"
+	MaintenanceStatePending   MaintenanceState = "Pending"
+	MaintenanceStatePlanned   MaintenanceState = "Planned"
+	MaintenanceStateUnplanned MaintenanceState = "Unplanned"
+)
+
 // Cluster-scoped flags
 type OperatorFlags map[string]string
 
