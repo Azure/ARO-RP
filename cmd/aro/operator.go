@@ -24,6 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/serviceprincipalchecker"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/clusteroperatoraro"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/dnsmasq"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/dnsv2"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/imageconfig"
@@ -126,6 +127,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", rbac.ControllerName, err)
 		}
+		// dnsmasq
 		if err = (dnsmasq.NewClusterReconciler(
 			log.WithField("controller", dnsmasq.ClusterControllerName),
 			client, dh)).SetupWithManager(mgr); err != nil {
@@ -140,6 +142,12 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			log.WithField("controller", dnsmasq.MachineConfigPoolControllerName),
 			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", dnsmasq.MachineConfigPoolControllerName, err)
+		}
+		// dnsv2
+		if err = (dnsmasq.NewClusterReconciler(
+			log.WithField("controller", dnsv2.ClusterControllerName),
+			client, dh)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", dnsv2.ClusterControllerName, err)
 		}
 		if err = (node.NewReconciler(
 			log.WithField("controller", node.ControllerName),
