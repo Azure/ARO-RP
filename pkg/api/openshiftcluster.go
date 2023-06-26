@@ -204,6 +204,10 @@ func (t ProvisioningState) String() string {
 	return string(t)
 }
 
+func (t MaintenanceState) String() string {
+	return string(t)
+}
+
 // FipsValidatedModules determines if FIPS is used.
 type FipsValidatedModules string
 
