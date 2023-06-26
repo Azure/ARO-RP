@@ -91,18 +91,18 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 	}
 
 	options := environment.Environment().EnvironmentCredentialOptions()
-	tokenCredential, err := azidentity.NewEnvironmentCredential(options)
+	spTokenCredential, err := azidentity.NewEnvironmentCredential(options)
 	if err != nil {
 		return nil, err
 	}
 
-	spGraphClient, err := environment.Environment().NewGraphServiceClient(tokenCredential)
+	spGraphClient, err := environment.Environment().NewGraphServiceClient(spTokenCredential)
 	if err != nil {
 		return nil, err
 	}
 
 	scopes := []string{environment.Environment().ResourceManagerScope}
-	authorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
+	authorizer := azidext.NewTokenCredentialAdapter(spTokenCredential, scopes)
 
 	c := &Cluster{
 		log: log,

@@ -57,7 +57,7 @@ type openShiftClusterDynamicValidator struct {
 	fpAuthorizer    autorest.Authorizer
 }
 
-func ensureAccessTokenClaims(ctx context.Context, tokenCredential *azidentity.ClientSecretCredential, scopes []string) error {
+func ensureAccessTokenClaims(ctx context.Context, spTokenCredential azcore.TokenCredential, scopes []string) error {
 	var err error
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
@@ -68,7 +68,7 @@ func ensureAccessTokenClaims(ctx context.Context, tokenCredential *azidentity.Cl
 	// latest error to the user in case the wait exceeds the timeout.
 	_ = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		options := policy.TokenRequestOptions{Scopes: scopes}
-		token, err := tokenCredential.GetToken(ctx, options)
+		token, err := spTokenCredential.GetToken(ctx, options)
 		if err != nil {
 			return false, err
 		}
@@ -201,18 +201,18 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 
 	tenantID := dv.subscriptionDoc.Subscription.Properties.TenantID
 	options := dv.env.Environment().ClientSecretCredentialOptions()
-	tokenCredential, err := azidentity.NewClientSecretCredential(
+	spTokenCredential, err := azidentity.NewClientSecretCredential(
 		tenantID, spp.ClientID, string(spp.ClientSecret), options)
 	if err != nil {
 		return err
 	}
 
 	scopes := []string{dv.env.Environment().ResourceManagerScope}
-	err = ensureAccessTokenClaims(ctx, tokenCredential, scopes)
+	err = ensureAccessTokenClaims(ctx, spTokenCredential, scopes)
 	if err != nil {
 		return err
 	}
-	spAuthorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
+	spAuthorizer := azidext.NewTokenCredentialAdapter(spTokenCredential, scopes)
 
 	spDynamic := dynamic.NewValidator(
 		dv.log,
@@ -227,7 +227,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	)
 
 	// SP validation
-	err = spDynamic.ValidateServicePrincipal(ctx, tokenCredential)
+	err = spDynamic.ValidateServicePrincipal(ctx, spTokenCredential)
 	if err != nil {
 		return err
 	}

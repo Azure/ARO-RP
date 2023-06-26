@@ -45,7 +45,7 @@ func newProd(ctx context.Context) (InstanceMetadata, error) {
 
 func (p *prod) populateTenantIDFromMSI(ctx context.Context) error {
 	options := p.Environment().ManagedIdentityCredentialOptions()
-	tokenCredential, err := azidentity.NewManagedIdentityCredential(options)
+	msiTokenCredential, err := azidentity.NewManagedIdentityCredential(options)
 	if err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func (p *prod) populateTenantIDFromMSI(ctx context.Context) error {
 	tokenRequestOptions := policy.TokenRequestOptions{
 		Scopes: []string{p.Environment().ResourceManagerScope},
 	}
-	token, err := tokenCredential.GetToken(ctx, tokenRequestOptions)
+	token, err := msiTokenCredential.GetToken(ctx, tokenRequestOptions)
 	if err != nil {
 		return err
 	}

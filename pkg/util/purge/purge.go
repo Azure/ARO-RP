@@ -37,13 +37,13 @@ type ResourceCleaner struct {
 // NewResourceCleaner instantiates the new RC object
 func NewResourceCleaner(log *logrus.Entry, env env.Core, shouldDelete checkFn, dryRun bool) (*ResourceCleaner, error) {
 	options := env.Environment().EnvironmentCredentialOptions()
-	tokenCredential, err := azidentity.NewEnvironmentCredential(options)
+	spTokenCredential, err := azidentity.NewEnvironmentCredential(options)
 	if err != nil {
 		return nil, err
 	}
 
 	scopes := []string{env.Environment().ResourceManagerScope}
-	authorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
+	authorizer := azidext.NewTokenCredentialAdapter(spTokenCredential, scopes)
 
 	return &ResourceCleaner{
 		log:    log,

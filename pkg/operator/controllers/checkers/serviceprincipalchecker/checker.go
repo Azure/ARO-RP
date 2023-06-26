@@ -54,10 +54,10 @@ func (r *checker) Check(ctx context.Context, AZEnvironment string) error {
 
 	spDynamic := r.newSPValidator(&azEnv)
 
-	tokenCredential, err := r.getTokenCredential(&azEnv, azCred)
+	spTokenCredential, err := r.getTokenCredential(&azEnv, azCred)
 	if err != nil {
 		return err
 	}
 
-	return spDynamic.ValidateServicePrincipal(ctx, tokenCredential)
+	return spDynamic.ValidateServicePrincipal(ctx, spTokenCredential)
 }
