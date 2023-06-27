@@ -13,24 +13,30 @@ import (
 	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
 func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(r.instance.Spec.ClusterResourceGroupID, '/')
 
-	subnets, err := r.kubeSubnets.List(ctx)
-	if err != nil {
-		return err
-	}
-
 	serviceSubnets := r.instance.Spec.ServiceSubnets
-	for _, subnet := range subnets {
-		serviceSubnets = append(serviceSubnets, subnet.ResourceID)
+
+	// Only include the master and worker subnets in the storage accounts' virtual
+	// network rules if egress lockdown is not enabled.
+	if !operator.GatewayEnabled(r.instance) {
+		subnets, err := r.kubeSubnets.List(ctx)
+		if err != nil {
+			return err
+		}
+
+		for _, subnet := range subnets {
+			serviceSubnets = append(serviceSubnets, subnet.ResourceID)
+		}
 	}
 
 	rc := &imageregistryv1.Config{}
-	err = r.client.Get(ctx, types.NamespacedName{Name: "cluster"}, rc)
+	err := r.client.Get(ctx, types.NamespacedName{Name: "cluster"}, rc)
 	if err != nil {
 		return err
 	}
