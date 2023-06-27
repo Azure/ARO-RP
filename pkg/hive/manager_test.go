@@ -24,7 +24,7 @@ import (
 )
 
 func TestIsClusterDeploymentReady(t *testing.T) {
-	fakeNamespace := "fake-namespace"
+	fakeNamespace := "aro-00000000-0000-0000-0000-000000000000"
 	doc := &api.OpenShiftClusterDocument{
 		OpenShiftCluster: &api.OpenShiftCluster{
 			Properties: api.OpenShiftClusterProperties{
@@ -168,7 +168,7 @@ func TestIsClusterDeploymentReady(t *testing.T) {
 }
 
 func TestIsClusterInstallationComplete(t *testing.T) {
-	fakeNamespace := "fake-namespace"
+	fakeNamespace := "aro-00000000-0000-0000-0000-000000000000"
 	doc := &api.OpenShiftClusterDocument{
 		OpenShiftCluster: &api.OpenShiftCluster{
 			Properties: api.OpenShiftClusterProperties{
@@ -268,7 +268,7 @@ func TestIsClusterInstallationComplete(t *testing.T) {
 }
 
 func TestResetCorrelationData(t *testing.T) {
-	fakeNamespace := "fake-namespace"
+	fakeNamespace := "aro-00000000-0000-0000-0000-000000000000"
 	doc := &api.OpenShiftClusterDocument{
 		OpenShiftCluster: &api.OpenShiftCluster{
 			Properties: api.OpenShiftClusterProperties{
@@ -333,6 +333,7 @@ func TestResetCorrelationData(t *testing.T) {
 }
 
 func TestCreateNamespace(t *testing.T) {
+	const docID = "00000000-0000-0000-0000-000000000000"
 	for _, tc := range []struct {
 		name             string
 		nsNames          []string
@@ -374,7 +375,7 @@ func TestCreateNamespace(t *testing.T) {
 				uuid.DefaultGenerator = uuidfake.NewGenerator(tc.nsNames)
 			}
 
-			ns, err := c.CreateNamespace(context.Background())
+			ns, err := c.CreateNamespace(context.Background(), docID)
 			if err != nil && !tc.shouldFail {
 				t.Error(err)
 			}
@@ -393,7 +394,7 @@ func TestCreateNamespace(t *testing.T) {
 }
 
 func TestGetClusterDeployment(t *testing.T) {
-	fakeNamespace := "fake-namespace"
+	fakeNamespace := "aro-00000000-0000-0000-0000-000000000000"
 	doc := &api.OpenShiftClusterDocument{
 		OpenShiftCluster: &api.OpenShiftCluster{
 			Properties: api.OpenShiftClusterProperties{

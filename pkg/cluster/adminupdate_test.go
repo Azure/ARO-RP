@@ -215,7 +215,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				doc := baseClusterDoc()
 				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
 				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskEverything
-				doc.OpenShiftCluster.Properties.HiveProfile.Namespace = "some_namespace"
+				doc.OpenShiftCluster.Properties.HiveProfile.Namespace = "aro-00000000-0000-0000-0000-000000000000"
 				doc.OpenShiftCluster.Properties.HiveProfile.CreatedByHive = true
 				return doc, true
 			},

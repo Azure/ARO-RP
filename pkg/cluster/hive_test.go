@@ -21,8 +21,7 @@ import (
 )
 
 func TestHiveClusterDeploymentReady(t *testing.T) {
-	fakeNamespace := "fake-namespace"
-
+	fakeNamespace := "aro-00000000-0000-0000-0000-000000000000"
 	for _, tt := range []struct {
 		name       string
 		mocks      func(hiveMock *mock_hive.MockClusterManager, doc *api.OpenShiftClusterDocument)
@@ -75,7 +74,7 @@ func TestHiveClusterDeploymentReady(t *testing.T) {
 }
 
 func TestHiveResetCorrelationData(t *testing.T) {
-	fakeNamespace := "fake-namespace"
+	fakeNamespace := "aro-00000000-0000-0000-0000-000000000000"
 
 	for _, tt := range []struct {
 		name  string
@@ -115,6 +114,8 @@ func TestHiveResetCorrelationData(t *testing.T) {
 }
 
 func TestHiveCreateNamespace(t *testing.T) {
+	fakeNamespace := "aro-00000000-0000-0000-0000-000000000000"
+	fakeNewNamespace := "aro-11111111-1111-1111-1111-111111111111"
 	for _, tt := range []struct {
 		testName              string
 		existingNamespaceName string
@@ -126,36 +127,36 @@ func TestHiveCreateNamespace(t *testing.T) {
 		{
 			testName:              "creates namespace if it doesn't exist",
 			existingNamespaceName: "",
-			newNamespaceName:      "new-namespace",
+			newNamespaceName:      fakeNamespace,
 			clusterManagerMock: func(mockCtrl *gomock.Controller, namespaceName string) *mock_hive.MockClusterManager {
 				namespaceToReturn := &corev1.Namespace{}
 				namespaceToReturn.Name = namespaceName
 				mockClusterManager := mock_hive.NewMockClusterManager(mockCtrl)
-				mockClusterManager.EXPECT().CreateNamespace(gomock.Any()).Return(namespaceToReturn, nil)
+				mockClusterManager.EXPECT().CreateNamespace(gomock.Any(), gomock.Any()).Return(namespaceToReturn, nil)
 				return mockClusterManager
 			},
-			expectedNamespaceName: "new-namespace",
+			expectedNamespaceName: fakeNamespace,
 			wantErr:               "",
 		},
 		{
 			testName:              "doesn't create namespace if it already exists",
-			existingNamespaceName: "existing-namespace",
-			newNamespaceName:      "new-namespace",
-			expectedNamespaceName: "existing-namespace",
+			existingNamespaceName: fakeNamespace,
+			newNamespaceName:      fakeNewNamespace,
+			expectedNamespaceName: fakeNamespace,
 			clusterManagerMock: func(mockCtrl *gomock.Controller, namespaceName string) *mock_hive.MockClusterManager {
 				mockClusterManager := mock_hive.NewMockClusterManager(mockCtrl)
-				mockClusterManager.EXPECT().CreateNamespace(gomock.Any()).Times(0)
+				mockClusterManager.EXPECT().CreateNamespace(gomock.Any(), gomock.Any()).Times(0)
 				return mockClusterManager
 			},
 		},
 		{
 			testName:              "returns error if cluster manager returns error",
 			existingNamespaceName: "",
-			newNamespaceName:      "new-namespace",
+			newNamespaceName:      fakeNamespace,
 			expectedNamespaceName: "",
 			clusterManagerMock: func(mockCtrl *gomock.Controller, namespaceName string) *mock_hive.MockClusterManager {
 				mockClusterManager := mock_hive.NewMockClusterManager(mockCtrl)
-				mockClusterManager.EXPECT().CreateNamespace(gomock.Any()).Return(nil, fmt.Errorf("cluster manager error"))
+				mockClusterManager.EXPECT().CreateNamespace(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("cluster manager error"))
 				return mockClusterManager
 			},
 			wantErr: "cluster manager error",
