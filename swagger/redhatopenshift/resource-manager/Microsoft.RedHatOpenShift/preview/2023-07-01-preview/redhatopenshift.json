@@ -2099,6 +2099,7 @@
           "items": {
             "$ref": "#/definitions/WorkerProfile"
           },
+          "readOnly": true,
           "x-ms-identifiers": []
         },
         "apiserverProfile": {
