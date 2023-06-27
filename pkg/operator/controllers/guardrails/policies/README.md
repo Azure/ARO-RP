@@ -31,54 +31,53 @@ Constraint is manually created
 apiVersion: templates.gatekeeper.sh/v1
 kind: ConstraintTemplate
 metadata:
-  name: aroprivilegednamespace
+  name: arodenyprivilegednamespace
   annotations:
     metadata.gatekeeper.sh/title: "Privileged Namespace"
     metadata.gatekeeper.sh/version: 1.0.0
     description: >-
       Disallows creating, updating or deleting resources in privileged namespaces.
-      including, ["^kube.*|^openshift.*|^default$|^redhat.*|^com$|^io$|^in$"]
 spec:
   crd:
     spec:
       names:
-        kind: AROPrivilegedNamespace
+        kind: ARODenyPrivilegedNamespace
       validation:
         # Schema for the `parameters` field
         openAPIV3Schema:
           type: object
           description: >-
             Disallows creating, updating or deleting resources in privileged namespaces.
-            including, ["^kube.*|^openshift.*|^default$|^redhat.*|^com$|^io$|^in$"]
   targets:
     - target: admission.k8s.gatekeeper.sh
       rego: |
 {{ file.Read "gktemplates-src/aro-deny-privileged-namespace/src.rego" | strings.Indent 8 | strings.TrimSuffix "\n" }}
+      libs:
+        - |
+{{ file.Read "gktemplates-src/library/common.rego" | strings.Indent 10 | strings.TrimSuffix "\n" }}
+
 ```
 
 
 * Create the src.rego file in the same folder, howto https://www.openpolicyagent.org/docs/latest/policy-language/, example:
 ```
-package aroprivilegednamespace
+package arodenyprivilegednamespace
 
-violation[{"msg": msg, "details": {}}] {
-  input_priv_namespace(input.review.object.metadata.namespace)
-  msg := sprintf("Operation in privileged namespace %v is not allowed", [input.review.object.metadata.namespace])
-}
+import data.lib.common.is_priv_namespace
+import data.lib.common.is_exempted_account
+import data.lib.common.get_username
 
-input_priv_namespace(ns) {
-  any([ns == "default",
-  ns == "com",
-  ns == "io",
-  ns == "in",
-  startswith(ns, "openshift"),
-  startswith(ns, "kube"),
-  startswith(ns, "redhat")])
+violation[{"msg": msg}] {
+  ns := input.review.object.metadata.namespace
+  is_priv_namespace(ns)
+  not is_exempted_account(input.review)
+  username := get_username(input.review)
+  msg := sprintf("user %v not allowed to operate in namespace %v", [username, ns])
 }
 ```
 * Create src_test.rego for unit tests in the same foler, which will be called by test.sh, howto https://www.openpolicyagent.org/docs/latest/policy-testing/, example:
 ```
-package aroprivilegednamespace
+package arodenyprivilegednamespace
 
 test_input_allowed_ns {
   input := { "review": input_ns(input_allowed_ns) }
@@ -111,7 +110,7 @@ input_disallowed_ns1 = "openshift-config"
 
 ```yaml
 apiVersion: constraints.gatekeeper.sh/v1beta1
-kind: AROPrivilegedNamespace
+kind: ARODenyPrivilegedNamespace
 metadata:
   name: aro-privileged-namespace-deny
 spec:
@@ -137,7 +136,9 @@ spec:
         kinds: ["PodDisruptionBudget"]
 ```
 
-## Test the rego
+## Test Rego source code
+
+Make sure the filename of constraint is the same as the .metadata.name of the Constraint object, as it is the feature flag name that will be used to turn on / off the policy.
 
 * install opa cli, refer https://github.com/open-policy-agent/opa/releases/
 
@@ -205,7 +206,7 @@ metadata:
 tests:
 - name: privileged-namespace
   template: ../../gktemplates/aro-deny-privileged-namespace.yaml
-  constraint: ../../gkconstraints-test/aro-priv-ns-operations.yaml
+  constraint: ../../gkconstraints-test/aro-privileged-namespace-deny.yaml
   cases:
   - name: ns-allowed-pod
     object: gator-test/ns_allowed_pod.yaml

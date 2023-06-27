@@ -98,6 +98,5 @@ func MUOImage(acrDomain string) string {
 
 // GateKeeperImage contains the location of the GateKeeper container image
 func GateKeeperImage(acrDomain string) string {
-	// return acrDomain + "/gatekeeper:v3.10.0"
-	return "quay.io/jeyuan/gatekeeper:v3.10.0" // todo: this is for local dev cluster, change to the above one when merging to master
+	return acrDomain + "/gatekeeper:v3.10.0"
 }
