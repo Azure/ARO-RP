@@ -19,6 +19,7 @@ import (
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
@@ -487,7 +488,6 @@ func (d *deployer) ensureSecretKey(ctx context.Context, kv keyvault.Manager, sec
 }
 
 func (d *deployer) restartOldScalesets(ctx context.Context, resourceGroupName string) error {
-	d.log.Print("restarting old scalesets")
 	scalesets, err := d.vmss.List(ctx, resourceGroupName)
 	if err != nil {
 		return err
@@ -505,14 +505,11 @@ func (d *deployer) restartOldScalesets(ctx context.Context, resourceGroupName st
 
 func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string, resourceGroupName string) error {
 	var restartScript string
-	var waitForReadiness func(ctx context.Context, vmssName string) error
 	switch {
 	case strings.HasPrefix(vmssName, gatewayVMSSPrefix):
 		restartScript = gatewayRestartScript
-		waitForReadiness = d.gatewayWaitForReadiness
 	case strings.HasPrefix(vmssName, rpVMSSPrefix):
 		restartScript = rpRestartScript
-		waitForReadiness = d.rpWaitForReadiness
 	default:
 		return nil
 	}
@@ -522,32 +519,42 @@ func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string, reso
 		return err
 	}
 
-	d.log.Printf("restarting scaleset %s", vmssName)
-	errors := make(chan error, len(scalesetVMs))
 	for _, vm := range scalesetVMs {
-		go func(id string) {
-			errors <- d.vmssvms.RunCommandAndWait(ctx, resourceGroupName, vmssName, id, mgmtcompute.RunCommandInput{
-				CommandID: to.StringPtr("RunShellScript"),
-				Script:    &[]string{restartScript},
-			})
-		}(*vm.InstanceID)
-	}
+		d.log.Print("waiting for restart script to complete on older vmss %s, instance %s", vmssName, *vm.InstanceID)
+		err = d.vmssvms.RunCommandAndWait(ctx, resourceGroupName, vmssName, *vm.InstanceID, mgmtcompute.RunCommandInput{
+			CommandID: to.StringPtr("RunShellScript"),
+			Script:    &[]string{restartScript},
+		})
 
-	d.log.Print("waiting for restart script to complete")
-	for range scalesetVMs {
-		err := <-errors
+		if err != nil {
+			return err
+		}
+
+		// wait for load balancer probe to change the vm health status
+		time.Sleep(30 * time.Second)
+		timeoutCtx, cancel := context.WithTimeout(ctx, time.Hour)
+		defer cancel()
+		err = d.waitForReadiness(timeoutCtx, vmssName, *vm.InstanceID)
 		if err != nil {
 			return err
 		}
 	}
 
-	// wait for load balancer probe to change the health status
-	time.Sleep(30 * time.Second)
-	timeoutCtx, cancel := context.WithTimeout(ctx, time.Hour)
-	defer cancel()
-	err = waitForReadiness(timeoutCtx, vmssName)
-	if err != nil {
-		return err
-	}
 	return nil
+}
+
+func (d *deployer) waitForReadiness(ctx context.Context, vmssName string, vmInstanceID string) error {
+	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+		return d.isVMInstanceHealthy(ctx, vmssName, vmInstanceID), nil
+	}, ctx.Done())
+}
+
+func (d *deployer) isVMInstanceHealthy(ctx context.Context, vmssName string, vmInstanceID string) bool {
+	r, err := d.vmssvms.GetInstanceView(ctx, d.config.RPResourceGroupName, vmssName, vmInstanceID)
+	instanceUnhealthy := r.VMHealth != nil && r.VMHealth.Status != nil && r.VMHealth.Status.Code != nil && *r.VMHealth.Status.Code != "HealthState/healthy"
+	if err != nil || instanceUnhealthy {
+		d.log.Printf("instance %s status %s", vmInstanceID, *r.VMHealth.Status.Code)
+		return false
+	}
+	return true
 }

@@ -40,10 +40,7 @@ func (d *deployer) gatewayWaitForReadiness(ctx context.Context, vmssName string)
 	d.log.Printf("waiting for %s instances to be healthy", vmssName)
 	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		for _, vm := range scalesetVMs {
-			r, err := d.vmssvms.GetInstanceView(ctx, d.config.GatewayResourceGroupName, vmssName, *vm.InstanceID)
-			instanceUnhealthy := r.VMHealth != nil && r.VMHealth.Status != nil && r.VMHealth.Status.Code != nil && *r.VMHealth.Status.Code != "HealthState/healthy"
-			if err != nil || instanceUnhealthy {
-				d.log.Printf("instance %s status %s", *vm.InstanceID, *r.VMHealth.Status.Code)
+			if !d.isVMInstanceHealthy(ctx, vmssName, *vm.InstanceID) {
 				return false, nil
 			}
 		}
