@@ -693,6 +693,7 @@ class OpenShiftCluster(TrackedResource):
         'type': {'readonly': True},
         'system_data': {'readonly': True},
         'location': {'required': True},
+        'worker_profiles_status': {'readonly': True},
     }
 
     _attribute_map = {
@@ -726,7 +727,6 @@ class OpenShiftCluster(TrackedResource):
         network_profile: Optional["NetworkProfile"] = None,
         master_profile: Optional["MasterProfile"] = None,
         worker_profiles: Optional[List["WorkerProfile"]] = None,
-        worker_profiles_status: Optional[List["WorkerProfile"]] = None,
         apiserver_profile: Optional["APIServerProfile"] = None,
         ingress_profiles: Optional[List["IngressProfile"]] = None,
         **kwargs
@@ -757,9 +757,6 @@ class OpenShiftCluster(TrackedResource):
         :keyword worker_profiles: The cluster worker profiles.
         :paramtype worker_profiles:
          list[~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.WorkerProfile]
-        :keyword worker_profiles_status: The cluster worker profiles status.
-        :paramtype worker_profiles_status:
-         list[~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.WorkerProfile]
         :keyword apiserver_profile: The cluster API server profile.
         :paramtype apiserver_profile:
          ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.APIServerProfile
@@ -775,7 +772,7 @@ class OpenShiftCluster(TrackedResource):
         self.network_profile = network_profile
         self.master_profile = master_profile
         self.worker_profiles = worker_profiles
-        self.worker_profiles_status = worker_profiles_status
+        self.worker_profiles_status = None
         self.apiserver_profile = apiserver_profile
         self.ingress_profiles = ingress_profiles
 
@@ -909,6 +906,7 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
 
     _validation = {
         'system_data': {'readonly': True},
+        'worker_profiles_status': {'readonly': True},
     }
 
     _attribute_map = {
@@ -937,7 +935,6 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         network_profile: Optional["NetworkProfile"] = None,
         master_profile: Optional["MasterProfile"] = None,
         worker_profiles: Optional[List["WorkerProfile"]] = None,
-        worker_profiles_status: Optional[List["WorkerProfile"]] = None,
         apiserver_profile: Optional["APIServerProfile"] = None,
         ingress_profiles: Optional[List["IngressProfile"]] = None,
         **kwargs
@@ -966,9 +963,6 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         :keyword worker_profiles: The cluster worker profiles.
         :paramtype worker_profiles:
          list[~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.WorkerProfile]
-        :keyword worker_profiles_status: The cluster worker profiles status.
-        :paramtype worker_profiles_status:
-         list[~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.WorkerProfile]
         :keyword apiserver_profile: The cluster API server profile.
         :paramtype apiserver_profile:
          ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.APIServerProfile
@@ -986,7 +980,7 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         self.network_profile = network_profile
         self.master_profile = master_profile
         self.worker_profiles = worker_profiles
-        self.worker_profiles_status = worker_profiles_status
+        self.worker_profiles_status = None
         self.apiserver_profile = apiserver_profile
         self.ingress_profiles = ingress_profiles
 

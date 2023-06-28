@@ -141,6 +141,9 @@ func (tw *typeWalker) schemaFromType(t types.Type, deps map[*types.Named]struct{
 
 				properties := tw.schemaFromType(field.Type(), deps)
 				properties.Description = strings.Trim(node.Doc.Text(), "\n")
+				if field.Name() == "WorkerProfilesStatus" {
+					properties.ReadOnly = true
+				}
 
 				ns := NameSchema{
 					Name:   name,

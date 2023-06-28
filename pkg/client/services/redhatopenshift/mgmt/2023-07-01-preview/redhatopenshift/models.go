@@ -746,12 +746,45 @@ type OpenShiftClusterProperties struct {
 	MasterProfile *MasterProfile `json:"masterProfile,omitempty"`
 	// WorkerProfiles - The cluster worker profiles.
 	WorkerProfiles *[]WorkerProfile `json:"workerProfiles,omitempty"`
-	// WorkerProfilesStatus - The cluster worker profiles status.
+	// WorkerProfilesStatus - READ-ONLY; The cluster worker profiles status.
 	WorkerProfilesStatus *[]WorkerProfile `json:"workerProfilesStatus,omitempty"`
 	// ApiserverProfile - The cluster API server profile.
 	ApiserverProfile *APIServerProfile `json:"apiserverProfile,omitempty"`
 	// IngressProfiles - The cluster ingress profiles.
 	IngressProfiles *[]IngressProfile `json:"ingressProfiles,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for OpenShiftClusterProperties.
+func (oscp OpenShiftClusterProperties) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if oscp.ProvisioningState != "" {
+		objectMap["provisioningState"] = oscp.ProvisioningState
+	}
+	if oscp.ClusterProfile != nil {
+		objectMap["clusterProfile"] = oscp.ClusterProfile
+	}
+	if oscp.ConsoleProfile != nil {
+		objectMap["consoleProfile"] = oscp.ConsoleProfile
+	}
+	if oscp.ServicePrincipalProfile != nil {
+		objectMap["servicePrincipalProfile"] = oscp.ServicePrincipalProfile
+	}
+	if oscp.NetworkProfile != nil {
+		objectMap["networkProfile"] = oscp.NetworkProfile
+	}
+	if oscp.MasterProfile != nil {
+		objectMap["masterProfile"] = oscp.MasterProfile
+	}
+	if oscp.WorkerProfiles != nil {
+		objectMap["workerProfiles"] = oscp.WorkerProfiles
+	}
+	if oscp.ApiserverProfile != nil {
+		objectMap["apiserverProfile"] = oscp.ApiserverProfile
+	}
+	if oscp.IngressProfiles != nil {
+		objectMap["ingressProfiles"] = oscp.IngressProfiles
+	}
+	return json.Marshal(objectMap)
 }
 
 // OpenShiftClustersCreateOrUpdateFuture an abstraction for monitoring and retrieving the results of a
