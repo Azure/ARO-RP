@@ -99,7 +99,8 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 	}
 
 	// Standard_D8s_v3 is only available in one zone in centraluseuap, so we need a non-zonal install in that region
-	if strings.EqualFold(m.oc.Location, "centraluseuap") {
+	// eastus2euap has zonal allocation issues right now - hardcode it to non-zonal
+	if strings.EqualFold(m.oc.Location, "centraluseuap") || strings.EqualFold(m.oc.Location, "eastus2euap") {
 		workerZones = []string{""}
 		masterZones = []string{""}
 	}
