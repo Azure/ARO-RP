@@ -21,7 +21,6 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
-	"github.com/openshift/installer/pkg/aro/dnsv2"
 )
 
 const (
@@ -112,7 +111,7 @@ func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster,
 }
 
 func generateMachineConfig(clusterDomain, apiIntIP, ingressIP, role string, gatewayDomains []string, gatewayPrivateEndpointIP string) (*mcv1.MachineConfig, error) {
-	ignConfig, err := dnsv2.Ignition2Config(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP)
+	ignConfig, err := Ignition2Config(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP)
 	if err != nil {
 		return nil, err
 	}
