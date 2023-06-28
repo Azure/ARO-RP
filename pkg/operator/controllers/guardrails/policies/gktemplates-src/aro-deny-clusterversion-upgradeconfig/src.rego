@@ -1,4 +1,4 @@
-package arodenyupgradeconfig
+package arodenyclusterversionupgradeconfig
 
 import data.lib.common.is_exempted_account
 import future.keywords.in
@@ -20,5 +20,5 @@ violation[{"msg": msg}] {
 	# ## NOT ALLOWED
 	config_data := data.inventory.namespace["openshift-managed-upgrade-operator"]["v1"]["ConfigMap"]["managed-upgrade-operator-config"]["data"]["config.yaml"]
 	regex.match("source: OCM", config_data)
-	msg := "Modifying the UpgradeConfig is not allowed for regular users. This includes attempting to create, edit, or delete the UpgradeConfig."
+	msg := "Modifying this resource is not allowed for regular users. This includes attempting to create, edit, or delete."
 }
