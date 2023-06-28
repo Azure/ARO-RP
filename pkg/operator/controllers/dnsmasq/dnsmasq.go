@@ -157,7 +157,7 @@ func startpre() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func ignition2Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains []string, gatewayPrivateEndpointIP string) (*ign2types.Config, error) {
+func ignition2Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains []string, gatewayPrivateEndpointIP string, restartDnsmasq bool) (*ign2types.Config, error) {
 	service, err := service()
 	if err != nil {
 		return nil, err
@@ -173,7 +173,7 @@ func ignition2Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains [
 		return nil, err
 	}
 
-	return &ign2types.Config{
+	ign := &ign2types.Config{
 		Ignition: ign2types.Ignition{
 			Version: ign2types.MaxVersion.String(),
 		},
@@ -222,11 +222,37 @@ func ignition2Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains [
 				},
 			},
 		},
-	}, nil
+	}
+
+	if restartDnsmasq {
+		restartDnsmasqRaw, err := nmDispatcherRestartDnsmasq()
+		if err != nil {
+			return nil, err
+		}
+
+		ign.Storage.Files = append(ign.Storage.Files, ign2types.File{
+			Node: ign2types.Node{
+				Filesystem: "root",
+				Overwrite:  to.BoolPtr(true),
+				Path:       "/etc/NetworkManager/dispatcher.d/99-dnsmasq-restart",
+				User: &ign2types.NodeUser{
+					Name: "root",
+				},
+			},
+			FileEmbedded1: ign2types.FileEmbedded1{
+				Contents: ign2types.FileContents{
+					Source: dataurl.EncodeBytes(restartDnsmasqRaw),
+				},
+				Mode: to.IntPtr(0744),
+			},
+		})
+	}
+
+	return ign, nil
 }
 
-func dnsmasqMachineConfig(clusterDomain, apiIntIP, ingressIP, role string, gatewayDomains []string, gatewayPrivateEndpointIP string) (*mcv1.MachineConfig, error) {
-	ignConfig, err := ignition2Config(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP)
+func dnsmasqMachineConfig(clusterDomain, apiIntIP, ingressIP, role string, gatewayDomains []string, gatewayPrivateEndpointIP string, restartDnsmasq bool) (*mcv1.MachineConfig, error) {
+	ignConfig, err := ignition2Config(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP, restartDnsmasq)
 	if err != nil {
 		return nil, err
 	}
