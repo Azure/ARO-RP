@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
 
@@ -32,29 +33,7 @@ func (f *frontend) preflightValidation(w http.ResponseWriter, r *http.Request) {
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 
 	resources, err := unmarshalRequest(body)
-	if err == nil {
-		for _, raw := range resources.Resources {
-			// get typeMeta from the raw data
-			typeMeta := api.ResourceTypeMeta{}
-			if err := json.Unmarshal(raw, &typeMeta); err != nil {
-				// failing to parse the preflight body is not considered a validation failure. continue
-				log.Warningf("bad request. Failed to unmarshal ResourceTypeMeta: %s", err)
-				continue
-			}
-			if strings.EqualFold(typeMeta.Type, "Microsoft.RedHatOpenShift/openShiftClusters") {
-				res := f._preflightValidation(ctx, log, raw, typeMeta.APIVersion)
-				if res.Status == api.ValidationStatusFailed {
-					log.Warningf("preflight validation failed")
-					b = marshalValidationResult(res)
-					reply(log, w, header, b, statusCodeError(http.StatusOK))
-					return
-				}
-			}
-		}
-		log.Info("preflight validation succeeded")
-		b = marshalValidationResult(validationSuccess)
-		reply(log, w, header, b, statusCodeError(http.StatusOK))
-	} else {
+	if err != nil {
 		b = marshalValidationResult(api.ValidationResult{
 			Status: api.ValidationStatusFailed,
 			Error: &api.ManagementErrorWithDetails{
@@ -63,19 +42,43 @@ func (f *frontend) preflightValidation(w http.ResponseWriter, r *http.Request) {
 		})
 		reply(log, w, header, b, statusCodeError(http.StatusOK))
 	}
+
+	for _, raw := range resources.Resources {
+		// get typeMeta from the raw data
+		typeMeta := api.ResourceTypeMeta{}
+		if err := json.Unmarshal(raw, &typeMeta); err != nil {
+			// failing to parse the preflight body is not considered a validation failure. continue
+			log.Warningf("bad request. Failed to unmarshal ResourceTypeMeta: %s", err)
+			continue
+		}
+		if strings.EqualFold(typeMeta.Type, "Microsoft.RedHatOpenShift/openShiftClusters") {
+			res := f._preflightValidation(ctx, log, raw, typeMeta.APIVersion, typeMeta.Id)
+			if res.Status == api.ValidationStatusFailed {
+				log.Warningf("preflight validation failed")
+				b = marshalValidationResult(res)
+				reply(log, w, header, b, statusCodeError(http.StatusOK))
+				return
+			}
+		}
+	}
+
+	log.Info("preflight validation succeeded")
+	b = marshalValidationResult(validationSuccess)
+	reply(log, w, header, b, statusCodeError(http.StatusOK))
 }
 
-func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, raw json.RawMessage, apiVersion string) api.ValidationResult {
+func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, raw json.RawMessage, apiVersion string, path string) api.ValidationResult {
 	// unmarshal raw to OpenShiftCluster type
-	doc := &api.OpenShiftCluster{}
-	doc.Properties.ProvisioningState = api.ProvisioningStateSucceeded
+	oc := &api.OpenShiftCluster{}
+	oc.Properties.ProvisioningState = api.ProvisioningStateSucceeded
 
 	if !f.env.IsLocalDevelopmentMode() /* not local dev or CI */ {
-		doc.Properties.FeatureProfile.GatewayEnabled = true
+		oc.Properties.FeatureProfile.GatewayEnabled = true
 	}
 
 	converter := f.apis[apiVersion].OpenShiftClusterConverter
-	ext := converter.ToExternal(doc)
+	staticValidator := f.apis[apiVersion].OpenShiftClusterStaticValidator
+	ext := converter.ToExternal(oc)
 	if err := json.Unmarshal(raw, &ext); err != nil {
 		return api.ValidationResult{
 			Status: api.ValidationStatusFailed,
@@ -85,9 +88,17 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 		}
 	}
 
-	converter.ToInternal(ext, doc)
+	converter.ToInternal(ext, oc)
+	if err := staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sV3Workers), path); err != nil {
+		return api.ValidationResult{
+			Status: api.ValidationStatusFailed,
+			Error: &api.ManagementErrorWithDetails{
+				Message: to.StringPtr(err.Error()),
+			},
+		}
+	}
 
-	if err := f.validateInstallVersion(ctx, doc); err != nil {
+	if err := f.validateInstallVersion(ctx, oc); err != nil {
 		return api.ValidationResult{
 			Status: api.ValidationStatusFailed,
 			Error: &api.ManagementErrorWithDetails{
