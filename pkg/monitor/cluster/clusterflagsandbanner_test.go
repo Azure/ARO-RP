@@ -124,7 +124,7 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 			expectFlagsMetricsValue: 1,
 			expectFlagsMetricsDims: map[string]string{
 				"aro.imageconfig.enabled":    "false",
-				"aro.dnsmasq.enabled":        "false",
+				"aro.dnsmasq.enabled":        "true",
 				"aro.genevalogging.enabled":  "false",
 				"aro.autosizednodes.enabled": "true",
 			},
@@ -167,7 +167,7 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 			expectFlagsMetricsValue: 1,
 			expectFlagsMetricsDims: map[string]string{
 				"aro.imageconfig.enabled":    "false",
-				"aro.dnsmasq.enabled":        "false",
+				"aro.dnsmasq.enabled":        "true",
 				"aro.genevalogging.enabled":  "false",
 				"aro.autosizednodes.enabled": "true",
 			},
