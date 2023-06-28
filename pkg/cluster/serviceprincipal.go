@@ -19,14 +19,14 @@ import (
 func (m *manager) initializeClusterSPClients(ctx context.Context) error {
 	spp := m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
 	options := m.env.Environment().ClientSecretCredentialOptions()
-	tokenCredential, err := azidentity.NewClientSecretCredential(
+	spTokenCredential, err := azidentity.NewClientSecretCredential(
 		m.subscriptionDoc.Subscription.Properties.TenantID,
 		spp.ClientID, string(spp.ClientSecret), options)
 	if err != nil {
 		return err
 	}
 
-	m.spGraphClient, err = m.env.Environment().NewGraphServiceClient(tokenCredential)
+	m.spGraphClient, err = m.env.Environment().NewGraphServiceClient(spTokenCredential)
 
 	return err
 }

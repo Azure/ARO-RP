@@ -46,6 +46,8 @@ extends:
       suppression:
         suppressionFile: $(Build.SourcesDirectory)\.gdn\.gdnsuppress
         suppressionSet: default
+    git:
+      longpaths: true
 
     stages:
     - stage: Build_ARO
