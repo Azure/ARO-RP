@@ -135,10 +135,9 @@ spec:
       - apiGroups: ["policy"]
         kinds: ["PodDisruptionBudget"]
 ```
+Make sure the filename of constraint is the same as the .metadata.name of the Constraint object, as it is the feature flag name that will be used to turn on / off the policy.
 
 ## Test Rego source code
-
-Make sure the filename of constraint is the same as the .metadata.name of the Constraint object, as it is the feature flag name that will be used to turn on / off the policy.
 
 * install opa cli, refer https://github.com/open-policy-agent/opa/releases/
 
