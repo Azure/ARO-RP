@@ -806,36 +806,40 @@ func (dv *dynamic) ValidatePreConfiguredNSGs(ctx context.Context, oc *api.OpenSh
 			)
 		}
 
-		nsg, err := azure.ParseResourceID(*nsgID)
-		if err != nil {
-			return err
-		}
-
-		err = dv.validateActions(ctx, &nsg, []string{
-			"Microsoft.Network/networkSecurityGroups/join/action",
-		})
-
-		if err == wait.ErrWaitTimeout {
-			errCode := api.CloudErrorCodeInvalidResourceProviderPermissions
-			if dv.authorizerType == AuthorizerClusterServicePrincipal {
-				errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
-			}
-			return api.NewCloudError(
-				http.StatusBadRequest,
-				errCode,
-				"",
-				errMsgSPHasNoRequiredPermissionsOnNSG,
-				dv.authorizerType,
-				dv.appID,
-				*nsgID,
-			)
-		}
-		if err != nil {
+		if err := dv.validateNSGPermissions(ctx, *nsgID); err != nil {
 			return err
 		}
 	}
-
 	return nil
+}
+
+func (dv *dynamic) validateNSGPermissions(ctx context.Context, nsgID string) error {
+	nsg, err := azure.ParseResourceID(nsgID)
+	if err != nil {
+		return err
+	}
+
+	err = dv.validateActions(ctx, &nsg, []string{
+		"Microsoft.Network/networkSecurityGroups/join/action",
+	})
+
+	if err == wait.ErrWaitTimeout {
+		errCode := api.CloudErrorCodeInvalidResourceProviderPermissions
+		if dv.authorizerType == AuthorizerClusterServicePrincipal {
+			errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
+		}
+		return api.NewCloudError(
+			http.StatusBadRequest,
+			errCode,
+			"",
+			errMsgSPHasNoRequiredPermissionsOnNSG,
+			dv.authorizerType,
+			dv.appID,
+			nsgID,
+		)
+	}
+
+	return err
 }
 
 func isTheSameNSG(found, inDB string) bool {
