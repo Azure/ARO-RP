@@ -440,6 +440,8 @@ type NetworkProfile struct {
 	ServiceCidr *string `json:"serviceCidr,omitempty"`
 	// OutboundType - The OutboundType used for egress traffic. Possible values include: 'Loadbalancer', 'UserDefinedRouting'
 	OutboundType OutboundType `json:"outboundType,omitempty"`
+	// PreconfiguredNSG - Specifies whether subnets are pre-attached with an NSG. Possible values include: 'PreconfiguredNSGDisabled', 'PreconfiguredNSGEnabled'
+	PreconfiguredNSG PreconfiguredNSG `json:"preconfiguredNSG,omitempty"`
 }
 
 // OpenShiftCluster openShiftCluster represents an Azure Red Hat OpenShift cluster.

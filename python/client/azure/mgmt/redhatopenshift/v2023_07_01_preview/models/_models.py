@@ -502,12 +502,17 @@ class NetworkProfile(msrest.serialization.Model):
      "Loadbalancer", "UserDefinedRouting".
     :vartype outbound_type: str or
      ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.OutboundType
+    :ivar preconfigured_nsg: Specifies whether subnets are pre-attached with an NSG. Possible
+     values include: "Disabled", "Enabled".
+    :vartype preconfigured_nsg: str or
+     ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.PreconfiguredNSG
     """
 
     _attribute_map = {
         'pod_cidr': {'key': 'podCidr', 'type': 'str'},
         'service_cidr': {'key': 'serviceCidr', 'type': 'str'},
         'outbound_type': {'key': 'outboundType', 'type': 'str'},
+        'preconfigured_nsg': {'key': 'preconfiguredNSG', 'type': 'str'},
     }
 
     def __init__(
@@ -523,11 +528,16 @@ class NetworkProfile(msrest.serialization.Model):
          "Loadbalancer", "UserDefinedRouting".
         :paramtype outbound_type: str or
          ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.OutboundType
+        :keyword preconfigured_nsg: Specifies whether subnets are pre-attached with an NSG. Possible
+         values include: "Disabled", "Enabled".
+        :paramtype preconfigured_nsg: str or
+         ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.PreconfiguredNSG
         """
         super(NetworkProfile, self).__init__(**kwargs)
         self.pod_cidr = kwargs.get('pod_cidr', None)
         self.service_cidr = kwargs.get('service_cidr', None)
         self.outbound_type = kwargs.get('outbound_type', None)
+        self.preconfigured_nsg = kwargs.get('preconfigured_nsg', None)
 
 
 class TrackedResource(Resource):

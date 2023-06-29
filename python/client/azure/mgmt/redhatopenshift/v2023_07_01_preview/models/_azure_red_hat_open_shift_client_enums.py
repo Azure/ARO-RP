@@ -47,6 +47,13 @@ class OutboundType(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
     LOADBALANCER = "Loadbalancer"
     USER_DEFINED_ROUTING = "UserDefinedRouting"
 
+class PreconfiguredNSG(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
+    """PreconfiguredNSG represents whether customers want to use their own NSG attached to the subnets
+    """
+
+    DISABLED = "Disabled"
+    ENABLED = "Enabled"
+
 class ProvisioningState(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
     """ProvisioningState represents a provisioning state.
     """
