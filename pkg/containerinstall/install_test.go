@@ -7,13 +7,16 @@ import (
 	"context"
 	"testing"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/containers/podman/v4/pkg/bindings/containers"
 	"github.com/containers/podman/v4/pkg/bindings/images"
 	"github.com/containers/podman/v4/pkg/specgen"
-	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -21,66 +24,77 @@ import (
 
 const TEST_PULLSPEC = "registry.access.redhat.com/ubi8/go-toolset:1.18.4"
 
-func TestPodman(t *testing.T) {
-	ctx := context.Background()
-	conn, err := getConnection(ctx)
-	if err != nil {
-		t.Skipf("unable to access podman: %v", err)
-	}
+var _ = Describe("Podman", Ordered, func() {
+	var err error
+	var conn context.Context
+	var hook *test.Hook
+	var log *logrus.Entry
+	var containerName string
+	var containerID string
 
-	hook, log := testlog.New()
-	randomName := uuid.DefaultGenerator.Generate()
+	BeforeAll(func(ctx context.Context) {
+		var err error
+		conn, err = getConnection(ctx)
+		if err != nil {
+			Skip("unable to access podman: %v")
+		}
 
-	s := specgen.NewSpecGenerator(TEST_PULLSPEC, false)
-	s.Name = randomName
-	s.Entrypoint = []string{"/bin/bash", "-c", "echo 'hello'"}
+		hook, log = testlog.New()
+		containerName = uuid.DefaultGenerator.Generate()
+	})
 
-	_, err = images.Pull(conn, TEST_PULLSPEC, &images.PullOptions{Policy: to.StringPtr("missing")})
-	if err != nil {
-		t.Fatal(err)
-	}
+	It("can pull images", func() {
+		_, err = images.Pull(conn, TEST_PULLSPEC, &images.PullOptions{Policy: to.StringPtr("missing")})
+		Expect(err).To(BeNil())
+	})
 
-	id, err := runContainer(conn, log, s)
-	if err != nil {
-		t.Fatal(err)
-	}
+	It("can start a container", func() {
+		s := specgen.NewSpecGenerator(TEST_PULLSPEC, false)
+		s.Name = containerName
+		s.Entrypoint = []string{"/bin/bash", "-c", "echo 'hello'"}
 
-	exit, err := containers.Wait(conn, id, nil)
-	if err != nil {
-		t.Error(err)
-	}
-	if exit != 0 {
-		t.Errorf("exit code was %d, not 0", exit)
-	}
+		containerID, err = runContainer(conn, log, s)
+		Expect(err).To(BeNil())
+	})
 
-	err = getContainerLogs(conn, log, id)
-	if err != nil {
-		t.Error(err)
-	}
+	It("can wait for completion", func() {
+		exit, err := containers.Wait(conn, containerID, nil)
+		Expect(err).To(BeNil())
+		Expect(exit).To(Equal(0), "exit code was %d, not 0", exit)
+	})
 
-	_, err = containers.Remove(conn, id, &containers.RemoveOptions{Force: to.BoolPtr(true)})
-	if err != nil {
-		t.Error(err)
-	}
+	It("can fetch container logs", func() {
+		err = getContainerLogs(conn, log, containerID)
+		Expect(err).To(BeNil())
 
-	entries := []map[string]types.GomegaMatcher{
+		entries := []map[string]types.GomegaMatcher{
+			{
+				"msg":   Equal("created container " + containerName + " with ID " + containerID),
+				"level": Equal(logrus.InfoLevel),
+			},
+			{
+				"msg":   Equal("started container " + containerID),
+				"level": Equal(logrus.InfoLevel),
+			},
+			{
+				"msg":   Equal("stdout: hello\n"),
+				"level": Equal(logrus.InfoLevel),
+			},
+		}
 
-		{
-			"msg":   gomega.Equal("created container " + randomName + " with ID " + id),
-			"level": gomega.Equal(logrus.InfoLevel),
-		},
-		{
-			"msg":   gomega.Equal("started container " + id),
-			"level": gomega.Equal(logrus.InfoLevel),
-		},
-		{
-			"msg":   gomega.Equal("stdout: hello\n"),
-			"level": gomega.Equal(logrus.InfoLevel),
-		},
-	}
+		err = testlog.AssertLoggingOutput(hook, entries)
+		Expect(err).To(BeNil())
+	})
 
-	err = testlog.AssertLoggingOutput(hook, entries)
-	if err != nil {
-		t.Fatal(err)
-	}
+	AfterAll(func() {
+		if containerID != "" {
+			_, err = containers.Remove(conn, containerID, &containers.RemoveOptions{Force: to.BoolPtr(true)})
+			Expect(err).To(BeNil())
+		}
+	})
+})
+
+func TestContainerInstall(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "ContainerInstall Suite")
 }

@@ -6,14 +6,11 @@ package containerinstall
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/to"
@@ -24,7 +21,6 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
 
@@ -44,18 +40,14 @@ var (
 	}
 )
 
-type auths struct {
-	Auths map[string]map[string]interface{} `json:"auths,omitempty"`
-}
-
 func (m *manager) Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion) error {
 	s := []steps.Step{
 		steps.Action(func(context.Context) error {
 			options := &images.PullOptions{
 				Quiet:    to.BoolPtr(true),
 				Policy:   to.StringPtr("always"),
-				Username: to.StringPtr(m.pullSecret[0]),
-				Password: to.StringPtr(m.pullSecret[1]),
+				Username: to.StringPtr(m.pullSecret.Username),
+				Password: to.StringPtr(m.pullSecret.Password),
 			}
 
 			_, err := images.Pull(m.conn, version.Properties.InstallerPullspec, options)
@@ -109,8 +101,8 @@ func (m *manager) startContainer(ctx context.Context, version *api.OpenShiftVers
 		"OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE": version.Properties.OpenShiftPullspec,
 	}
 
-	for _, i := range devEnvVars {
-		s.Env["ARO_"+i] = os.Getenv(i)
+	for _, envvar := range devEnvVars {
+		s.Env["ARO_"+envvar] = os.Getenv(envvar)
 	}
 
 	s.Mounts = append(s.Mounts, specs.Mount{
@@ -221,35 +213,4 @@ func (m *manager) cleanupContainers(ctx context.Context) error {
 		}
 	}
 	return nil
-}
-
-func pullSecretFromEnv(_env env.Interface) (out [2]string, err error) {
-	pullSecrets := &auths{}
-	err = json.Unmarshal([]byte(os.Getenv("PULL_SECRET")), pullSecrets)
-	if err != nil {
-		return
-	}
-
-	auth, ok := pullSecrets.Auths[_env.ACRDomain()]
-	if !ok {
-		return out, fmt.Errorf("missing %s key in PULL_SECRET", _env.ACRDomain())
-	}
-
-	token, ok := auth["auth"]
-	if !ok {
-		return out, errors.New("maformed auth token")
-	}
-
-	decoded, err := base64.StdEncoding.DecodeString(token.(string))
-	if err != nil {
-		return out, err
-	}
-
-	split := strings.Split(string(decoded), ":")
-	if len(split) != 2 {
-		return out, fmt.Errorf("not username:pass in %s config", _env.ACRDomain())
-	}
-
-	out = [2]string{split[0], split[1]}
-	return out, nil
 }

@@ -6,11 +6,13 @@ package containerinstall
 import (
 	"context"
 	"errors"
+	"os"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
 type ContainerInstaller interface {
@@ -23,7 +25,7 @@ type manager struct {
 	env  env.Interface
 
 	clusterUUID string
-	pullSecret  [2]string
+	pullSecret  *pullsecret.UserPass
 
 	success bool
 }
@@ -34,7 +36,7 @@ func New(ctx context.Context, log *logrus.Entry, env env.Interface, clusterUUID 
 		return nil, errors.New("running cluster installs in a container is only run in development")
 	}
 
-	pullSecret, err := pullSecretFromEnv(env)
+	pullSecret, err := pullsecret.Extract(os.Getenv("PULL_SECRET"), env.ACRDomain())
 	if err != nil {
 		return nil, err
 	}
