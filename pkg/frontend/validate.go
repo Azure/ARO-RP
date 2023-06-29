@@ -211,7 +211,6 @@ func (f *frontend) validateInstallVersion(ctx context.Context, doc *api.OpenShif
 	}
 
 	f.mu.RLock()
-	// we add the default installation version to the enabled ocp versions so no special case
 	_, ok := f.enabledOcpVersions[doc.Properties.ClusterProfile.Version]
 	f.mu.RUnlock()
 
