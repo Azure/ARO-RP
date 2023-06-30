@@ -126,8 +126,11 @@ func makeConfig() mcv1.KubeletConfig {
 		Spec: mcv1.KubeletConfigSpec{
 			AutoSizingReserved: util.BoolToPtr(true),
 			MachineConfigPoolSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"pools.operator.machineconfiguration.openshift.io/worker": "",
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "machineconfiguration.openshift.io/mco-built-in",
+						Operator: metav1.LabelSelectorOpExists,
+					},
 				},
 			},
 		},
