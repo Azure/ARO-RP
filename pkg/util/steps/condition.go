@@ -59,7 +59,9 @@ func (c conditionStep) run(ctx context.Context, log *logrus.Entry) error {
 		// We use the outer context, not the timeout context, as we do not want
 		// to time out the condition function itself, only stop retrying once
 		// timeoutCtx's timeout has fired.
-		return c.f(ctx)
+		check, err := c.f(ctx)
+		log.Printf("Polling for condition %t", check)
+		return check, err
 	}, timeoutCtx.Done())
 
 	if err != nil && !c.fail {

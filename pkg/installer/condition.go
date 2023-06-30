@@ -14,6 +14,9 @@ import (
 
 func (m *manager) bootstrapConfigMapReady(ctx context.Context) (bool, error) {
 	cm, err := m.kubernetescli.CoreV1().ConfigMaps("kube-system").Get(ctx, "bootstrap", metav1.GetOptions{})
+
+	m.log.Printf("bootstrapConfigMap data %s", cm.Data)
+
 	if err != nil && m.env.IsLocalDevelopmentMode() {
 		m.log.Printf("bootstrapConfigMapReady condition error %s", err)
 	}
