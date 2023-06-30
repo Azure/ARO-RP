@@ -17,5 +17,6 @@ func (m *manager) bootstrapConfigMapReady(ctx context.Context) (bool, error) {
 	if err != nil && m.env.IsLocalDevelopmentMode() {
 		m.log.Printf("bootstrapConfigMapReady condition error %s", err)
 	}
+	m.log.Infof("error was %s and configmap was %s", err, cm.String())
 	return err == nil && cm.Data["status"] == "complete", nil
 }
