@@ -18,7 +18,7 @@ variables:
 # Run the test suite and collect must-gather
 jobs:
 - job: E2E
-  timeoutInMinutes: 180
+  timeoutInMinutes: 240
   variables:
     ARO_PODMAN_SOCKET: "tcp://localhost:8888"
     ARO_SELENIUM_HOSTNAME: "localhost"

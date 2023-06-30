@@ -44,7 +44,7 @@ func (m *manager) Install(ctx context.Context) error {
 		}),
 		steps.Action(m.deployResourceTemplate),
 		steps.Action(m.initializeKubernetesClients),
-		steps.Condition(m.bootstrapConfigMapReady, 30*time.Minute, true),
+		steps.Condition(m.bootstrapConfigMapReady, time.Hour, true),
 	}
 
 	_, err := steps.Run(ctx, m.log, 10*time.Second, s, nil)
