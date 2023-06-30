@@ -784,6 +784,33 @@ test_validate_outbound_type_data = [
         None
     ),
     (
+        "Should not raise exception when key is Loadbalancer and ingress visibility private",
+        Mock(
+            outbound_type='Loadbalancer',
+            apiserver_visibility="Public",
+            ingress_visibility="Private"
+        ),
+        None
+    ),
+    (
+        "Should not raise exception when key is Loadbalancer and apiserver visibility private",
+        Mock(
+            outbound_type='Loadbalancer',
+            apiserver_visibility="Private",
+            ingress_visibility="Public"
+        ),
+        None
+    ),
+    (
+        "Should not raise exception when key is Loadbalancer and ingress/apiserver visibility private",
+        Mock(
+            outbound_type='Loadbalancer',
+            apiserver_visibility="Private",
+            ingress_visibility="Private"
+        ),
+        None
+    ),
+    (
         "Should not raise exception when key is empty.",
         Mock(outbound_type=None),
         None
@@ -798,10 +825,28 @@ test_validate_outbound_type_data = [
         None
     ),
     (
-        "Should raise exception with UDR and either ingress or apiserver visibility is public",
+        "Should raise exception with UDR and ingress visibility is public",
         Mock(
             outbound_type="UserDefinedRouting",
             apiserver_visibility="Private",
+            ingress_visibility="Public"
+        ),
+        InvalidArgumentValueError
+    ),
+    (
+        "Should raise exception with UDR and apiserver visibility is public",
+        Mock(
+            outbound_type="UserDefinedRouting",
+            apiserver_visibility="Public",
+            ingress_visibility="Private"
+        ),
+        InvalidArgumentValueError
+    ),
+    (
+        "Should raise exception with UDR and apiserver/ingress visibility is public",
+        Mock(
+            outbound_type="UserDefinedRouting",
+            apiserver_visibility="Public",
             ingress_visibility="Public"
         ),
         InvalidArgumentValueError
