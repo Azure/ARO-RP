@@ -6,6 +6,7 @@ package cluster
 import (
 	"context"
 
+	"github.com/davecgh/go-spew/spew"
 	configv1 "github.com/openshift/api/config/v1"
 	consoleapi "github.com/openshift/console-operator/pkg/api"
 	corev1 "k8s.io/api/core/v1"
@@ -22,6 +23,7 @@ func (m *manager) bootstrapConfigMapReady(ctx context.Context) (bool, error) {
 	if err != nil && m.env.IsLocalDevelopmentMode() {
 		m.log.Printf("bootstrapConfigMapReady condition error %s", err)
 	}
+	m.log.Printf(spew.Sdump(cm))
 	return err == nil && cm.Data["status"] == "complete", nil
 }
 
