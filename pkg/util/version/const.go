@@ -25,6 +25,14 @@ const (
 
 var GitCommit = "unknown"
 
+// InstallerImageDigest is the mapping of a minor version to the aro-installer wrapper digest
+// this allows us to utilize SDP instead of pushing up the tag and it rolling out to all regions
+// at once
+var InstallerImageDigest = map[string]string{
+	NewVersion(4, 10).MinorVersion(): "eef5f0d82ab07c866999f99a632edafd845e0dc48a0f06eac9df46b0ab882231",
+	NewVersion(4, 11).MinorVersion(): "82869dd10841046c4b98fc46c6f87030c82b320b82f990610c1fa87150004730",
+}
+
 // DefaultInstallStream describes stream we are defaulting to for all new clusters
 var DefaultInstallStream = &Stream{
 	Version:  NewVersion(4, 10, 54),

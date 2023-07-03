@@ -105,6 +105,8 @@ func (p *prod) InstallViaHive(ctx context.Context) (bool, error) {
 }
 
 func (p *prod) DefaultInstallerPullSpecOverride(ctx context.Context) string {
+	// TODO: we should probably not have an override in prod, but it may have unintended
+	// consequences in an int-like development RP
 	return os.Getenv(hiveDefaultPullSpecEnvVar)
 }
 

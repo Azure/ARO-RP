@@ -46,6 +46,7 @@ import (
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type Cluster struct {
@@ -493,6 +494,11 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 			return err
 		}
 
+		err = c.insertDefaultVersionIntoCosmosdb(ctx)
+		if err != nil {
+			return err
+		}
+
 		oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
 	}
 
@@ -529,6 +535,45 @@ func (c *Cluster) registerSubscription(ctx context.Context) error {
 	}
 
 	req, err := http.NewRequest(http.MethodPut, "https://localhost:8443/subscriptions/"+c.env.SubscriptionID()+"?api-version=2.0", bytes.NewReader(b))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	cli := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+	}
+
+	resp, err := cli.Do(req)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+func (c *Cluster) insertDefaultVersionIntoCosmosdb(ctx context.Context) error {
+	defaultVersion := version.DefaultInstallStream
+	b, err := json.Marshal(&api.OpenShiftVersion{
+		Properties: api.OpenShiftVersionProperties{
+			Version:           defaultVersion.Version.String(),
+			OpenShiftPullspec: defaultVersion.PullSpec,
+			// HACK: we hardcode this to arointsvc, the integrated installer does not use this and you can still
+			// override it via the LiveConfig
+			InstallerPullspec: fmt.Sprintf("arointsvc.azurecr.io/aro-installer:release-%s", version.DefaultInstallStream.Version.MinorVersion()),
+			Enabled:           true,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, "https://localhost:8443/admin/versions", bytes.NewReader(b))
 	if err != nil {
 		return err
 	}
