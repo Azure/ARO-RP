@@ -7,6 +7,7 @@ import (
 	"context"
 	"os"
 
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/containers/podman/v4/pkg/bindings"
 	"github.com/containers/podman/v4/pkg/bindings/containers"
 	"github.com/containers/podman/v4/pkg/specgen"
@@ -37,7 +38,13 @@ func getContainerLogs(ctx context.Context, log *logrus.Entry, containerName stri
 			log.Errorf("stderr: %s", v)
 		}
 	}()
-	err := containers.Logs(ctx, containerName, nil, stdout, stderr)
+	err := containers.Logs(
+		ctx,
+		containerName,
+		&containers.LogOptions{Stderr: to.BoolPtr(true), Stdout: to.BoolPtr(true)},
+		stdout,
+		stderr,
+	)
 	return err
 }
 
