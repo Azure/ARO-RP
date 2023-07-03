@@ -137,6 +137,92 @@ spec:
 ```
 Make sure the filename of constraint is the same as the .metadata.name of the Constraint object, as it is the feature flag name that will be used to turn on / off the policy.
 
+
+# Syncing of data into OPA using `data.inventory`
+
+* Not all data you need are found on the `'input.review'` object. For example, if your policy is for blocking modification of the UpgradeConfig, and you need to check if the cluster is connected to OCM via the ConfigMap of `'openshift-managed-upgrade-operator'`, the info you need will not available on the `'input.review'` object because it only contains data from the UpgradeConfig the user is trying to modify. In this case, you need to sync data of the ConfigMap into OPA via `'data.inventory'` document so your rule can access it. In order to create such policies, you need to follow the steps below:
+
+  * Set the `'audit-from-cache'` flag to true in ".../gktemplates/aro-deny-upgradeconfig.yaml".
+  ```yaml
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    labels:
+      control-plane: audit-controller
+      gatekeeper.sh/operation: audit
+      gatekeeper.sh/system: "yes"
+    name: gatekeeper-audit
+    namespace: {{.Namespace}}
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        control-plane: audit-controller
+        gatekeeper.sh/operation: audit
+        gatekeeper.sh/system: "yes"
+    template:
+      metadata:
+        labels:
+          control-plane: audit-controller
+          gatekeeper.sh/operation: audit
+          gatekeeper.sh/system: "yes"
+      spec:
+        automountServiceAccountToken: true
+        containers:
+        - args:
+          - --audit-from-cache=true    ----->>>>>SET THIS FLAG TO TRUE
+  ```
+  * Create and apply the sync config resource to the cluster. Only resources in syncOnly will be synced into OPA. See template below. For more info, please check https://open-policy-agent.github.io/gatekeeper/website/docs/v3.10.x/exempt-namespaces 
+
+  ```yaml
+    apiVersion: config.gatekeeper.sh/v1alpha1
+    kind: Config
+    metadata:
+      name: config
+      namespace: "openshift-azure-guardrails"
+    spec:
+      match:
+        - excludedNamespaces: [""]  # Namespaces to exclude from the sync data. It is always best to remove any data that is not needed for your policy
+        processes: [""] # Includes all processes
+      sync:
+      syncOnly:
+        - group: ""   # Populate as needed
+        version: "" # Populate as needed
+        kind: ""    # Populate as needed
+        # Add resources as needed
+  ```
+    * Below is a sample implementation of a sync config resource which allows syncing data of all ConfigMap and Namespace resources with the version `v1`. Avoid using `excludedNamespaces` because it prevents other policies from woring.
+    ```yaml
+    apiVersion: config.gatekeeper.sh/v1alpha1
+    kind: Config
+    metadata:
+      name: config
+      namespace: "openshift-azure-guardrails"
+    spec:
+      sync:
+        syncOnly:
+          - group: ""
+            version: "v1"
+            kind: "ConfigMap"
+          - group: ""
+            version: "v1"
+            kind: "Namespace"
+
+    ```
+  * Write your rego rule. To access data from `'data.inventory'`, follow the format below:
+      
+    * For cluster-scoped objects: `'data.inventory.cluster[<groupVersion>][<kind>][<name>]'`. Example below.
+      
+    ```Rego
+      data.inventory.cluster["v1"].Namespace["gatekeeper"]
+    ```
+    * For namespace-scoped objects: `'data.inventory.namespace[<namespace>][groupVersion][<kind>][<name>]'`. Example below.
+    ```Rego
+    data.inventory.namespace["openshift-managed-upgrade-operator"]["v1"]["ConfigMap"]["managed-upgrade-operator-config"]["data"]["config.yaml"]
+    ```
+  * For more info on syncing your data into OPA, please check the official Gatekeeper documentation https://open-policy-agent.github.io/gatekeeper/website/docs/v3.10.x/sync 
+
+
 ## Test Rego source code
 
 * install opa cli, refer https://github.com/open-policy-agent/opa/releases/
