@@ -6,7 +6,7 @@ import { MachinesWrapper } from "./ClusterDetailListComponents/MachinesWrapper"
 import { MachineSetsWrapper } from "./ClusterDetailListComponents/MachineSetsWrapper"
 import { Statistics } from "./ClusterDetailListComponents/Statistics/Statistics"
 import { ClusterOperatorsWrapper } from "./ClusterDetailListComponents/ClusterOperatorsWrapper";
-
+import { ClusterAlertsWrapper } from "./ClusterDetailListComponents/ClusterAlertsWrapper";
 import { ICluster } from "./App"
 
 interface ClusterDetailComponentProps {
@@ -43,6 +43,8 @@ export interface WrapperProps {
   loaded: boolean
 }
 
+export let ClusterAlertsMap: any = {}
+
 interface IClusterDetailComponentState {
   item: IClusterDetails // why both state and props?
   detailPanelSelected: string
@@ -53,7 +55,8 @@ const detailComponents: Map<string, any> = new Map<string, any>([
     ["machines", MachinesWrapper],
     ["machinesets", MachineSetsWrapper],
     ["clusteroperators", ClusterOperatorsWrapper],
-    ["statistics", Statistics]
+    ["statistics", Statistics],
+    ["clusteralerts", ClusterAlertsWrapper]
 ])
 
 export class ClusterDetailComponent extends Component<ClusterDetailComponentProps, IClusterDetailComponentState> {
@@ -81,7 +84,7 @@ export class ClusterDetailComponent extends Component<ClusterDetailComponentProp
           <StatisticsView currentCluster={this.props.cluster!} detailPanelSelected={panel} loaded = {this.props.isDataLoaded} statisticsType = {type}/>
         )
       } else {
-        const DetailView = detailComponents.get(panel)
+      const DetailView = detailComponents.get(panel)
         return (
           <DetailView currentCluster={this.props.cluster!} detailPanelSelected={panel} loaded={this.props.isDataLoaded}/>
         )
