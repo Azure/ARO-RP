@@ -52,6 +52,7 @@ spec:
       containers:
       - args:
         - --port=8443
+        - --log-denies=true
         - --logtostderr
         # - --exempt-namespace={{.Namespace}} # remove this line to allow policy to be enforced in the ns
         - --operation=webhook
