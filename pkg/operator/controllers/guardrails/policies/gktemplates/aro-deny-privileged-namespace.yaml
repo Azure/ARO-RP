@@ -95,11 +95,13 @@ spec:
           }
 
           exempted_user = {
+            "system:kube-controller-manager",
             "system:admin" # comment out temporarily for testing in console
           }
 
           exempted_groups = {
             # "system:cluster-admins", # dont allow kube:admin
+            "system:nodes", # eg, "username": "system:node:jeff-test-cluster-pcnp4-master-2"
             "system:serviceaccounts", # to allow all system service account?
             # "system:serviceaccounts:openshift-monitoring", # monitoring operator
             # "system:serviceaccounts:openshift-network-operator", # network operator
