@@ -136,6 +136,7 @@ func NewAAD(log *logrus.Entry,
 // logged).
 func (a *aad) AAD(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		a.log.Errorf("there are %d cookies", len(r.Cookies()))
 		session, err := a.store.Get(r, SessionName)
 		if err != nil {
 			cookieError, ok := err.(securecookie.Error)
