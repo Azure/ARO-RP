@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -19,30 +20,23 @@ import (
 
 func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error {
 	// report NotAfter dates for Geneva (always), Ingress, and API (on managed domain) certificates
-	var certs []x509.Certificate
+	var certs []*x509.Certificate
 
 	mdsdCert, err := mon.getCertificate(ctx, operator.SecretName, operator.Namespace, genevalogging.GenevaCertName)
 	if err != nil {
 		return err
 	}
-	certs = append(certs, *mdsdCert[0])
+	certs = append(certs, mdsdCert)
 
 	if dns.IsManagedDomain(mon.oc.Properties.ClusterProfile.Domain) {
 		infraID := mon.oc.Properties.InfraID
-		ingressCertificateName := infraID + "-ingress"
-		apiCertificateName := infraID + "-apiserver"
-
-		ingressCertificate, err := mon.getCertificate(ctx, ingressCertificateName, operator.Namespace, corev1.TLSCertKey)
-		if err != nil {
-			return err
+		for _, secretName := range []string{infraID + "-ingress", infraID + "-apiserver"} {
+			certificate, err := mon.getCertificate(ctx, secretName, operator.Namespace, corev1.TLSCertKey)
+			if err != nil {
+				return err
+			}
+			certs = append(certs, certificate)
 		}
-
-		apiCertificate, err := mon.getCertificate(ctx, apiCertificateName, operator.Namespace, corev1.TLSCertKey)
-		if err != nil {
-			return err
-		}
-
-		certs = append(certs, *ingressCertificate[0], *apiCertificate[0])
 	}
 
 	for _, cert := range certs {
@@ -55,12 +49,16 @@ func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error
 	return nil
 }
 
-func (mon *Monitor) getCertificate(ctx context.Context, secretName, secretNamespace, secretKey string) ([]*x509.Certificate, error) {
+func (mon *Monitor) getCertificate(ctx context.Context, secretName, secretNamespace, secretKey string) (*x509.Certificate, error) {
 	secret, err := mon.cli.CoreV1().Secrets(secretNamespace).Get(ctx, secretName, metav1.GetOptions{})
 	if err != nil {
-		return nil, err
+		return &x509.Certificate{}, err
 	}
 
 	certBlock, _ := pem.Decode(secret.Data[secretKey])
-	return x509.ParseCertificates(certBlock.Bytes)
+	if certBlock == nil {
+		return &x509.Certificate{}, fmt.Errorf("certificate data for %s not found", secretName)
+	}
+	// we only care about the first certificate in the block
+	return x509.ParseCertificate(certBlock.Bytes)
 }
