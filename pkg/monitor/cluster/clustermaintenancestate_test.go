@@ -7,9 +7,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/golang/mock/gomock"
-	
+
+	"github.com/Azure/ARO-RP/pkg/api"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 )
 
