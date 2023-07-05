@@ -5,13 +5,18 @@ package dnsv2
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
 	"text/template"
 
 	"github.com/vincent-petithory/dataurl"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	ign2types "github.com/coreos/ignition/config/v2_2/types"
 	ignutil "github.com/coreos/ignition/v2/config/util"
 	ign3types "github.com/coreos/ignition/v2/config/v3_2/types"
+	mcfgv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Potentially add the IP of -n openshift-image-registry Service/image-registry, marked with # openshift-generated-node-resolver
@@ -254,6 +259,47 @@ func Ignition3Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains [
 					Name:     "aro-coredns.service",
 				},
 			},
+		},
+	}, nil
+}
+
+func MachineConfig(clusterDomain, apiIntIP, ingressIP, role string, gatewayDomains []string, gatewayPrivateEndpointIP string) (*mcfgv1.MachineConfig, error) {
+	ignConfig, err := Ignition2Config(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP)
+	if err != nil {
+		return nil, err
+	}
+
+	b, err := json.Marshal(ignConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	// canonicalise the machineconfig payload the same way as MCO
+	var i interface{}
+	err = json.Unmarshal(b, &i)
+	if err != nil {
+		return nil, err
+	}
+
+	rawExt := runtime.RawExtension{}
+	rawExt.Raw, err = json.Marshal(i)
+	if err != nil {
+		return nil, err
+	}
+
+	return &mcfgv1.MachineConfig{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: mcfgv1.SchemeGroupVersion.String(),
+			Kind:       "MachineConfig",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: fmt.Sprintf("99-%s-aro-dns", role),
+			Labels: map[string]string{
+				"machineconfiguration.openshift.io/role": role,
+			},
+		},
+		Spec: mcfgv1.MachineConfigSpec{
+			Config: rawExt,
 		},
 	}, nil
 }

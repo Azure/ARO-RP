@@ -25,6 +25,7 @@ import (
 	"github.com/vincent-petithory/dataurl"
 
 	"github.com/openshift/installer/data"
+	"github.com/openshift/installer/pkg/aro/dnsmasq"
 	"github.com/openshift/installer/pkg/aro/dnsv2"
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/bootstraplogging"
@@ -209,20 +210,20 @@ func (a *Common) generateConfig(dependencies asset.Parents, templateData *bootst
 		}},
 	)
 
-	// dnsmasqIgnConfig, err := dnsmasq.Ignition3Config(installConfig.Config.ClusterDomain(), aroDNSConfig.APIIntIP, aroDNSConfig.IngressIP, aroDNSConfig.GatewayDomains, aroDNSConfig.GatewayPrivateEndpointIP)
-	// if err != nil {
-	// 	return err
-	// }
+	dnsmasqEnabled := false // TODO: make this configurable
+	var dnsmasqIgnConfig *igntypes.Config
 
-	// a.Config.Storage.Files = append(a.Config.Storage.Files, dnsmasqIgnConfig.Storage.Files...)
-	// a.Config.Systemd.Units = append(a.Config.Systemd.Units, dnsmasqIgnConfig.Systemd.Units...)
-
-	aroDnsIgnConfig, err := dnsv2.Ignition3Config(installConfig.Config.ClusterDomain(), aroDNSConfig.APIIntIP, aroDNSConfig.IngressIP, aroDNSConfig.GatewayDomains, aroDNSConfig.GatewayPrivateEndpointIP)
+	if dnsmasqEnabled {
+		dnsmasqIgnConfig, err = dnsmasq.Ignition3Config(installConfig.Config.ClusterDomain(), aroDNSConfig.APIIntIP, aroDNSConfig.IngressIP, aroDNSConfig.GatewayDomains, aroDNSConfig.GatewayPrivateEndpointIP)
+	} else {
+		dnsmasqIgnConfig, err = dnsv2.Ignition3Config(installConfig.Config.ClusterDomain(), aroDNSConfig.APIIntIP, aroDNSConfig.IngressIP, aroDNSConfig.GatewayDomains, aroDNSConfig.GatewayPrivateEndpointIP)
+	}
 	if err != nil {
 		return err
 	}
-	a.Config.Storage.Files = append(a.Config.Storage.Files, aroDnsIgnConfig.Storage.Files...)
-	a.Config.Systemd.Units = append(a.Config.Systemd.Units, aroDnsIgnConfig.Systemd.Units...)
+
+	a.Config.Storage.Files = append(a.Config.Storage.Files, dnsmasqIgnConfig.Storage.Files...)
+	a.Config.Systemd.Units = append(a.Config.Systemd.Units, dnsmasqIgnConfig.Systemd.Units...)
 
 	return nil
 }
