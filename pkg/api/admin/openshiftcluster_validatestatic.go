@@ -69,7 +69,6 @@ func invalidMaintenanceState(state MaintenanceState) bool {
 		fallthrough
 	case MaintenanceStateUnplanned:
 		return false
-
 	}
 
 	return true

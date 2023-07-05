@@ -8,8 +8,9 @@ import (
 	"testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	"github.com/golang/mock/gomock"
+	
+	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 )
 
 func TestEmitClusterMaintenanceState(t *testing.T) {
