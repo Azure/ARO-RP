@@ -9,6 +9,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"os"
 	"strings"
@@ -199,9 +200,14 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		return err
 	}
 
-	addressPrefix, masterSubnet, workerSubnet, err := c.getUnusedAddressSpaces(ctx, vnetResourceGroup)
-	if err != nil {
-		return err
+	var addressPrefix, masterSubnet, workerSubnet string
+	if c.ci {
+		addressPrefix, masterSubnet, workerSubnet = c.generateSubnets()
+	} else {
+		addressPrefix, masterSubnet, workerSubnet, err = c.getUnusedAddressSpaces(ctx, vnetResourceGroup)
+		if err != nil {
+			return err
+		}
 	}
 
 	var kvName string
@@ -344,6 +350,19 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 
 	c.log.Info("done")
 	return nil
+}
+
+func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, workerSubnet string) {
+	// pick a random 23 in range [10.3.0.0, 10.127.255.0]
+	// 10.0.0.0/16 is used by dev-vnet to host CI
+	// 10.1.0.0/24 is used by rp-vnet to host Proxy VM
+	// 10.2.0.0/24 is used by dev-vpn-vnet to host VirtualNetworkGateway
+	rand.Seed(time.Now().UnixNano())
+	x, y := rand.Intn((124))+3, 2*rand.Intn(128)
+	vnetPrefix = fmt.Sprintf("10.%d.%d.0/23", x, y)
+	masterSubnet = fmt.Sprintf("10.%d.%d.0/24", x, y)
+	workerSubnet = fmt.Sprintf("10.%d.%d.0/24", x, y+1)
+	return
 }
 
 func (c *Cluster) getUnusedAddressSpaces(ctx context.Context, vnetResourceGroup string) (string, string, string, error) {
