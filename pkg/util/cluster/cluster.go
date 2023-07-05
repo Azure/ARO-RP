@@ -49,7 +49,7 @@ import (
 )
 
 const (
-	devVnet = "dev-vnet"
+	devVnetName = "dev-vnet"
 )
 
 type Cluster struct {
@@ -348,7 +348,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 
 func (c *Cluster) getUnusedAddressSpaces(ctx context.Context, vnetResourceGroup string) (string, string, string, error) {
 	addressSpaces := make([]string, 0)
-	subnetListResultPage, err := c.subnets.List(ctx, vnetResourceGroup, devVnet)
+	subnetListResultPage, err := c.subnets.List(ctx, vnetResourceGroup, devVnetName)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -357,7 +357,7 @@ func (c *Cluster) getUnusedAddressSpaces(ctx context.Context, vnetResourceGroup 
 		mp[*subnet.AddressPrefix] = true
 	}
 
-	devVnet, err := c.vnets.Get(ctx, c.env.ResourceGroup(), devVnet, "")
+	devVnet, err := c.vnets.Get(ctx, c.env.ResourceGroup(), devVnetName, "")
 	if err != nil {
 		return "", "", "", err
 	}
@@ -370,7 +370,7 @@ func (c *Cluster) getUnusedAddressSpaces(ctx context.Context, vnetResourceGroup 
 	}
 
 	if len(addressSpaces) < 2 {
-		return "", "", "", fmt.Errorf("not enough address space available in the virtual network %s", devVnet)
+		return "", "", "", fmt.Errorf("not enough address space available in the virtual network %s", devVnetName)
 	}
 	addressPrefix := addressSpaces[0][:len(addressSpaces[0])-1] + "3"
 	return addressPrefix, addressSpaces[0], addressSpaces[1], nil
