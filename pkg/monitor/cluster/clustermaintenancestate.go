@@ -10,5 +10,7 @@ func (mon *Monitor) emitClusterMaintenanceState(ctx context.Context) error {
 		"maintenanceState": mon.oc.Properties.MaintenanceState.String(),
 	})
 
+	mon.log.Infof("cluster %s has maintenance state: %s", mon.oc.Name, mon.oc.Properties.MaintenanceState.String())
+
 	return nil
 }
