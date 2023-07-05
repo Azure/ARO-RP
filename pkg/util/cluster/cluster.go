@@ -9,7 +9,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"os"
 	"strings"
@@ -49,6 +48,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
+const (
+	devVnet = "dev-vnet"
+)
+
 type Cluster struct {
 	log          *logrus.Entry
 	env          env.Core
@@ -64,6 +67,7 @@ type Cluster struct {
 	openshiftclustersv20220904        redhatopenshift20220904.OpenShiftClustersClient
 	securitygroups                    network.SecurityGroupsClient
 	subnets                           network.SubnetsClient
+	vnets                             network.VirtualNetworksClient
 	routetables                       network.RouteTablesClient
 	roleassignments                   authorization.RoleAssignmentsClient
 	peerings                          network.VirtualNetworkPeeringsClient
@@ -119,6 +123,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		openshiftclustersv20220904:        redhatopenshift20220904.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		securitygroups:                    network.NewSecurityGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		subnets:                           network.NewSubnetsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		vnets:                             network.NewVirtualNetworksClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		routetables:                       network.NewRouteTablesClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		roleassignments:                   authorization.NewRoleAssignmentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		peerings:                          network.NewVirtualNetworkPeeringsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
@@ -194,7 +199,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		return err
 	}
 
-	addressPrefix, masterSubnet, workerSubnet := c.generateSubnets()
+	addressPrefix, masterSubnet, workerSubnet, err := c.getUnusedAddressSpaces(ctx, vnetResourceGroup)
 	if err != nil {
 		return err
 	}
@@ -341,23 +346,34 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	return nil
 }
 
-func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, workerSubnet string) {
-	// pick a random 23 in range [10.3.0.0, 10.127.255.0]
-	// 10.0.0.0/16 is used by dev-vnet to host CI
-	// 10.1.0.0/24 is used by rp-vnet to host Proxy VM
-	// 10.2.0.0/24 is used by dev-vpn-vnet to host VirtualNetworkGateway
-	var x, y int
-	rand.Seed(time.Now().UnixNano())
-	// Local Dev clusters are limited to /16 dev-vnet
-	if !c.ci {
-		x, y = 0, 2*rand.Intn(128)
-	} else {
-		x, y = rand.Intn((124))+3, 2*rand.Intn(128)
+func (c *Cluster) getUnusedAddressSpaces(ctx context.Context, vnetResourceGroup string) (string, string, string, error) {
+	addressSpaces := make([]string, 0)
+	subnetListResultPage, err := c.subnets.List(ctx, vnetResourceGroup, devVnet)
+	if err != nil {
+		return "", "", "", err
 	}
-	vnetPrefix = fmt.Sprintf("10.%d.%d.0/23", x, y)
-	masterSubnet = fmt.Sprintf("10.%d.%d.0/24", x, y)
-	workerSubnet = fmt.Sprintf("10.%d.%d.0/24", x, y+1)
-	return
+	mp := make(map[string]bool)
+	for _, subnet := range subnetListResultPage.Values() {
+		mp[*subnet.AddressPrefix] = true
+	}
+
+	devVnet, err := c.vnets.Get(ctx, c.env.ResourceGroup(), devVnet, "")
+	if err != nil {
+		return "", "", "", err
+	}
+
+	for _, addressPrefix := range *devVnet.AddressSpace.AddressPrefixes {
+		if mp[addressPrefix] {
+			continue
+		}
+		addressSpaces = append(addressSpaces, addressPrefix)
+	}
+
+	if len(addressSpaces) < 2 {
+		return "", "", "", fmt.Errorf("not enough address space available in the virtual network %s", devVnet)
+	}
+	addressPrefix := addressSpaces[0][:len(addressSpaces[0])-1] + "3"
+	return addressPrefix, addressSpaces[0], addressSpaces[1], nil
 }
 
 func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName string) error {
