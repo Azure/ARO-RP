@@ -75,7 +75,7 @@ func (v *Version) Eq(w *Version) bool {
 			return false
 		}
 	}
-	return true
+	return v.Suffix == w.Suffix
 }
 
 func (v *Version) MinorVersion() string {

@@ -68,6 +68,13 @@ yum update -y
 EOF
 chmod +x /etc/cron.weekly/yumupdate
 
+cat >/etc/cron.daily/restart-proxy <<'EOF'
+#!/bin/bash
+
+systemctl restart proxy.service
+EOF
+chmod +x /etc/cron.daily/restart-proxy
+
 (
 	sleep 30
 	reboot

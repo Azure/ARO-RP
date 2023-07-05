@@ -161,6 +161,17 @@ func EnrichWithResourceID(log *logrus.Entry, resourceID string) *logrus.Entry {
 	})
 }
 
+// EnrichWithClusterDeploymentNamespace sets log fields based on hiveProfile.Namespace
+func EnrichWithClusterDeploymentNamespace(log *logrus.Entry, clusterDeploymentNamespace string) *logrus.Entry {
+	if clusterDeploymentNamespace == "" {
+		return log
+	}
+
+	return log.WithFields(logrus.Fields{
+		"cluster_deployment_namespace": strings.ToLower(clusterDeploymentNamespace),
+	})
+}
+
 // EnrichWithClusterVersion set log fields based on cluster version
 func EnrichWithClusterVersion(log *logrus.Entry, version string) *logrus.Entry {
 	if version == "" {

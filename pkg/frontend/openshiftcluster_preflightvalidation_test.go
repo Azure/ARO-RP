@@ -13,6 +13,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
@@ -158,13 +159,22 @@ func TestPreflightValidation(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, nil, api.APIs, &noop.Noop{}, nil, nil, nil, nil, nil)
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, ti.openShiftVersionsDatabase, api.APIs, &noop.Noop{}, nil, nil, nil, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 			oc := tt.preflightRequest()
 
 			go f.Run(ctx, nil, nil)
+			f.mu.Lock()
+			f.enabledOcpVersions = map[string]*api.OpenShiftVersion{
+				version.DefaultInstallStream.Version.String(): {
+					Properties: api.OpenShiftVersionProperties{
+						Version: version.DefaultInstallStream.Version.String(),
+					},
+				},
+			}
+			f.mu.Unlock()
 
 			headers := http.Header{
 				"Content-Type": []string{"application/json"},

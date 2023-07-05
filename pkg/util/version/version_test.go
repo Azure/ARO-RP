@@ -103,3 +103,41 @@ func TestLt(t *testing.T) {
 		})
 	}
 }
+
+func TestEq(t *testing.T) {
+	for i, tt := range []struct {
+		input *Version
+		vsn   string
+		equal bool
+	}{
+		{
+			input: NewVersion(4, 4, 10),
+			vsn:   "4.4.10",
+			equal: true,
+		},
+		{
+			input: NewVersion(4, 1, 10),
+			vsn:   "4.3.10",
+		},
+		{
+			input: NewVersion(4, 4),
+			vsn:   "4.3.1",
+		},
+		{
+			input: NewVersion(4, 4, 10),
+			vsn:   "4.4.10-rc1",
+		},
+	} {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			vsn, err := ParseVersion(tt.vsn)
+			if err != nil {
+				t.Error(err)
+			}
+
+			got := tt.input.Eq(vsn)
+			if got != tt.equal {
+				t.Error(got)
+			}
+		})
+	}
+}

@@ -649,6 +649,15 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		},
 	}
 
+	defaultVersionChangeFeed := map[string]*api.OpenShiftVersion{
+		version.DefaultInstallStream.Version.String(): {
+			Properties: api.OpenShiftVersionProperties{
+				Version: version.DefaultInstallStream.Version.String(),
+				Enabled: true,
+			},
+		},
+	}
+
 	mockSubID := "00000000-0000-0000-0000-000000000000"
 	mockCurrentTime := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 
@@ -657,6 +666,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		request                 func(*v20200430.OpenShiftCluster)
 		isPatch                 bool
 		fixture                 func(*testdatabase.Fixture)
+		changeFeed              map[string]*api.OpenShiftVersion
 		quotaValidatorError     error
 		skuValidatorError       error
 		providersValidatorError error
@@ -686,6 +696,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
+			changeFeed:             defaultVersionChangeFeed,
 			wantSystemDataEnriched: true,
 			wantDocuments: func(c *testdatabase.Checker) {
 				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
@@ -758,6 +769,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
+			changeFeed:          defaultVersionChangeFeed,
 			quotaValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided VM SKU %s is not supported.", "something"),
 			wantEnriched:        []string{},
 			wantStatusCode:      http.StatusBadRequest,
@@ -779,6 +791,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
+			changeFeed:          defaultVersionChangeFeed,
 			quotaValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeQuotaExceeded, "", "Resource quota of vm exceeded. Maximum allowed: 0, Current in use: 0, Additional requested: 1."),
 			wantEnriched:        []string{},
 			wantStatusCode:      http.StatusBadRequest,
@@ -800,6 +813,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
+			changeFeed:        defaultVersionChangeFeed,
 			skuValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The selected SKU '%v' is unavailable in region '%v'", "Standard_Sku", "somewhere"),
 			wantEnriched:      []string{},
 			wantStatusCode:    http.StatusBadRequest,
@@ -821,6 +835,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
+			changeFeed:        defaultVersionChangeFeed,
 			skuValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The selected SKU '%v' is restricted in region '%v' for selected subscription", "Standard_Sku", "somewhere"),
 			wantEnriched:      []string{},
 			wantStatusCode:    http.StatusBadRequest,
@@ -843,6 +858,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
+			changeFeed:              defaultVersionChangeFeed,
 			providersValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceProviderNotRegistered, "", "The resource provider '%s' is not registered.", "Microsoft.Authorization"),
 			wantEnriched:            []string{},
 			wantStatusCode:          http.StatusBadRequest,
@@ -864,6 +880,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
+			changeFeed:              defaultVersionChangeFeed,
 			providersValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceProviderNotRegistered, "", "The resource provider '%s' is not registered.", "Microsoft.Compute"),
 			wantEnriched:            []string{},
 			wantStatusCode:          http.StatusBadRequest,
@@ -885,6 +902,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
+			changeFeed:              defaultVersionChangeFeed,
 			providersValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceProviderNotRegistered, "", "The resource provider '%s' is not registered.", "Microsoft.Network"),
 			wantEnriched:            []string{},
 			wantStatusCode:          http.StatusBadRequest,
@@ -906,6 +924,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
+			changeFeed:              defaultVersionChangeFeed,
 			providersValidatorError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeResourceProviderNotRegistered, "", "The resource provider '%s' is not registered.", "Microsoft.Storage"),
 			wantEnriched:            []string{},
 			wantStatusCode:          http.StatusBadRequest,
@@ -1515,6 +1534,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
+			changeFeed:             defaultVersionChangeFeed,
 			wantSystemDataEnriched: true,
 			wantAsync:              true,
 			wantStatusCode:         http.StatusBadRequest,
@@ -1560,6 +1580,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				})
 			},
+			changeFeed:             defaultVersionChangeFeed,
 			wantSystemDataEnriched: true,
 			wantAsync:              true,
 			wantStatusCode:         http.StatusBadRequest,
@@ -1608,6 +1629,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			}
 
 			go f.Run(ctx, nil, nil)
+			f.mu.Lock()
+			f.enabledOcpVersions = tt.changeFeed
+			f.mu.Unlock()
 
 			oc := &v20200430.OpenShiftCluster{}
 			if tt.request != nil {
