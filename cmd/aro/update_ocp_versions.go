@@ -31,11 +31,18 @@ func getLatestOCPVersions(ctx context.Context, log *logrus.Entry) ([]api.OpenShi
 	ocpVersions := []api.OpenShiftVersion{}
 
 	for _, vers := range version.HiveInstallStreams {
+		installerPullSpec := fmt.Sprintf("%s/aro-installer:%s", dstRepo, vers.Version.MinorVersion())
+		digest, ok := version.InstallerImageDigest[vers.Version.MinorVersion()]
+		if !ok {
+			return nil, fmt.Errorf("no digest found for version %s", vers.Version.String())
+		}
+
+		installerPullSpec = fmt.Sprintf("%s@sha256:%s", installerPullSpec, digest)
 		ocpVersions = append(ocpVersions, api.OpenShiftVersion{
 			Properties: api.OpenShiftVersionProperties{
 				Version:           vers.Version.String(),
 				OpenShiftPullspec: vers.PullSpec,
-				InstallerPullspec: fmt.Sprintf("%s/aro-installer:release-%s", dstRepo, vers.Version.MinorVersion()),
+				InstallerPullspec: installerPullSpec,
 				Enabled:           true,
 			},
 		})

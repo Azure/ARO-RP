@@ -53,6 +53,7 @@ func (ocb *openShiftClusterBackend) try(ctx context.Context) (bool, error) {
 	log = utillog.EnrichWithResourceID(log, doc.OpenShiftCluster.ID)
 	log = utillog.EnrichWithCorrelationData(log, doc.CorrelationData)
 	log = utillog.EnrichWithClusterVersion(log, doc.OpenShiftCluster.Properties.ClusterProfile.Version)
+	log = utillog.EnrichWithClusterDeploymentNamespace(log, doc.OpenShiftCluster.Properties.HiveProfile.Namespace)
 
 	if doc.Dequeues > maxDequeueCount {
 		err := fmt.Errorf("dequeued %d times, failing", doc.Dequeues)
