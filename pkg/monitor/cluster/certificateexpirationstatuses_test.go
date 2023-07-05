@@ -65,6 +65,9 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			_, genevaCert, err := utiltls.GenerateTestKeyAndCertificate("geneva.certificate", nil, nil, false, false, func(template *x509.Certificate) {
 				template.NotAfter = expiration
 			})
+			if err != nil {
+				t.Fatal(err)
+			}
 			secrets = append(secrets, &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "cluster",
