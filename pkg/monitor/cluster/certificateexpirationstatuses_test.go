@@ -118,7 +118,6 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			for _, gauge := range tt.wantExpirations {
 				m.EXPECT().EmitGauge("certificate.expirationdate", int64(1), gauge)
 			}
-			m.EXPECT().EmitGauge("managedCertificates.count", int64(len(tt.wantExpirations)), map[string]string{})
 
 			mon := &Monitor{
 				cli: fake.NewSimpleClientset(secrets...),

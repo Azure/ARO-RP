@@ -45,7 +45,6 @@ func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error
 			"expirationDate": cert.NotAfter.UTC().Format(time.RFC3339),
 		})
 	}
-	mon.emitGauge("managedCertificates.count", int64(len(certs)), nil)
 	return nil
 }
 
