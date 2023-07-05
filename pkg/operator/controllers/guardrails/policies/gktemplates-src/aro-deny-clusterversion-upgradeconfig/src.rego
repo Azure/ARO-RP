@@ -14,7 +14,6 @@ violation[{"msg": msg}] {
 	# ## If regular user and
 	# ## has NO cloud.openshift.com entry in openshift-config/pull-secret Secret
 	# ## ALLOW EDITING
-
 	# ## If regular user and 
 	# ## HAS cloud.openshift.com entry (`source: OCM` indicates pull-secret exists) in openshift-config/pull-secret Secret
 	# ## NOT ALLOWED

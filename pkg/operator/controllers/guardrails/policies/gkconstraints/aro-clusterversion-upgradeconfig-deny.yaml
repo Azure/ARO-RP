@@ -10,6 +10,5 @@ spec:
         kinds: ["ConfigMap"]
       - apiGroups: ["upgrade.managed.openshift.io"]
         kinds: ["UpgradeConfig"]
-        namespaces: ["openshift-managed-upgrade-operator",""]
       - apiGroups: ["config.openshift.io"]
         kinds: ["ClusterVersion"]
