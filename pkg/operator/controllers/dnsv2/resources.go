@@ -7,11 +7,10 @@ import (
 	"bytes"
 	"text/template"
 
-	"github.com/vincent-petithory/dataurl"
-
 	ign2types "github.com/coreos/ignition/config/v2_2/types"
 	ignutil "github.com/coreos/ignition/v2/config/util"
 	ign3types "github.com/coreos/ignition/v2/config/v3_2/types"
+	"github.com/vincent-petithory/dataurl"
 )
 
 // Potentially add the IP of -n openshift-image-registry Service/image-registry, marked with # openshift-generated-node-resolver

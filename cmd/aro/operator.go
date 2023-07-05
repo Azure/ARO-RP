@@ -127,6 +127,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", rbac.ControllerName, err)
 		}
+
 		// dnsmasq
 		if err = (dnsmasq.NewClusterReconciler(
 			log.WithField("controller", dnsmasq.ClusterControllerName),
@@ -144,11 +145,22 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			return fmt.Errorf("unable to create controller %s: %v", dnsmasq.MachineConfigPoolControllerName, err)
 		}
 		// dnsv2
-		if err = (dnsmasq.NewClusterReconciler(
+		if err = (dnsv2.NewClusterReconciler(
 			log.WithField("controller", dnsv2.ClusterControllerName),
 			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", dnsv2.ClusterControllerName, err)
 		}
+		if err = (dnsv2.NewMachineConfigReconciler(
+			log.WithField("controller", dnsv2.MachineConfigControllerName),
+			client, dh)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", dnsv2.MachineConfigControllerName, err)
+		}
+		if err = (dnsv2.NewMachineConfigPoolReconciler(
+			log.WithField("controller", dnsv2.MachineConfigPoolControllerName),
+			client, dh)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", dnsv2.MachineConfigPoolControllerName, err)
+		}
+
 		if err = (node.NewReconciler(
 			log.WithField("controller", node.ControllerName),
 			client, kubernetescli)).SetupWithManager(mgr); err != nil {

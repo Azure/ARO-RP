@@ -14,11 +14,12 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/klog/v2"
+
 	"github.com/Azure/ARO-RP/pkg/env"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/version"
-	"k8s.io/klog/v2"
 )
 
 func usage() {
