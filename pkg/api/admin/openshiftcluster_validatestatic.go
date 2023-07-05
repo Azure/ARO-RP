@@ -41,11 +41,16 @@ func (sv openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftCl
 }
 
 func invalidMaintenanceTask(task MaintenanceTask) bool {
-	if task == "" ||
-		task == MaintenanceTaskEverything ||
-		task == MaintenanceTaskOperator ||
-		task == MaintenanceTaskRenewCerts ||
-		task == MaintenanceTaskStateUpdate {
+	switch task {
+	case "":
+		fallthrough
+	case MaintenanceTaskEverything:
+		fallthrough
+	case MaintenanceTaskOperator:
+		fallthrough
+	case MaintenanceTaskRenewCerts:
+		fallthrough
+	case MaintenanceTaskStateUpdate:
 		return false
 	}
 
@@ -53,12 +58,18 @@ func invalidMaintenanceTask(task MaintenanceTask) bool {
 }
 
 func invalidMaintenanceState(state MaintenanceState) bool {
-	if state == "" ||
-		state == MaintenanceStateNone ||
-		state == MaintenanceStatePending ||
-		state == MaintenanceStatePlanned ||
-		state == MaintenanceStateUnplanned {
+	switch state {
+	case "":
+		fallthrough
+	case MaintenanceStateNone:
+		fallthrough
+	case MaintenanceStatePending:
+		fallthrough
+	case MaintenanceStatePlanned:
+		fallthrough
+	case MaintenanceStateUnplanned:
 		return false
+
 	}
 
 	return true
