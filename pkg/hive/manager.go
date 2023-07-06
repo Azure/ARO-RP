@@ -5,8 +5,14 @@ package hive
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"regexp"
+	"sort"
+	"strings"
 
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -195,14 +201,9 @@ func (hr *clusterManager) IsClusterInstallationComplete(ctx context.Context, doc
 		return true, nil
 	}
 
-	checkFailureConditions := map[hivev1.ClusterDeploymentConditionType]corev1.ConditionStatus{
-		hivev1.ProvisionFailedCondition: corev1.ConditionTrue,
-	}
-
 	for _, cond := range cd.Status.Conditions {
-		conditionStatus, found := checkFailureConditions[cond.Type]
-		if found && conditionStatus == cond.Status {
-			return false, fmt.Errorf("clusterdeployment has failed: %s == %s", cond.Type, cond.Status)
+		if cond.Type == hivev1.ProvisionFailedCondition {
+			return false, hr.handleProvisionFailed(ctx, cd, cond)
 		}
 	}
 
@@ -236,4 +237,80 @@ func (hr *clusterManager) ResetCorrelationData(ctx context.Context, doc *api.Ope
 
 		return hr.hiveClientset.Update(ctx, cd)
 	})
+}
+
+func (hr *clusterManager) handleProvisionFailed(ctx context.Context, cd *hivev1.ClusterDeployment, cond hivev1.ClusterDeploymentCondition) error {
+	if cond.Status != corev1.ConditionTrue {
+		return nil
+	}
+
+	switch cond.Reason {
+	case ProvisionFailedReasonInvalidTemplateDeployment:
+		// TODO: refactor this case body to dedicated handler. Extract reusable components (install log JSON parsing)
+		latestProvision, err := hr.latestProvisionForDeployment(ctx, cd)
+		if err != nil {
+			return err
+		}
+		installLog := *latestProvision.Spec.InstallLog
+		installLog = strings.TrimSpace(installLog)
+		installLogLines := strings.Split(installLog, "\n")
+		lastLine := installLogLines[len(installLogLines)-1]
+
+		regex := regexp.MustCompile(`(\{.*\})`)
+		responseJson := regex.FindStringSubmatch(lastLine)[1]
+
+		response := &mgmtfeatures.ErrorResponse{}
+		if err := json.Unmarshal([]byte(responseJson), response); err != nil {
+			return err
+		}
+
+		cloudErr := &api.CloudError{
+			StatusCode: http.StatusBadRequest,
+			CloudErrorBody: &api.CloudErrorBody{
+				Code:    api.CloudErrorCodeDeploymentFailed,
+				Message: "The deployment failed. Please see details for more information.",
+				Details: make([]api.CloudErrorBody, len(*response.Details)),
+			},
+		}
+
+		for i, detail := range *response.Details {
+			cloudErr.CloudErrorBody.Details[i] = api.CloudErrorBody{
+				Code:    *detail.Code,
+				Message: *detail.Message,
+				Target:  *detail.Target,
+			}
+		}
+
+		return cloudErr
+	default:
+		return &api.CloudError{
+			StatusCode: http.StatusInternalServerError,
+			CloudErrorBody: &api.CloudErrorBody{
+				Code:    api.CloudErrorCodeInternalServerError,
+				Message: "Deployment failed.",
+			},
+		}
+	}
+}
+
+func (hr *clusterManager) latestProvisionForDeployment(ctx context.Context, cd *hivev1.ClusterDeployment) (*hivev1.ClusterProvision, error) {
+	provisionList := &hivev1.ClusterProvisionList{}
+	if err := hr.hiveClientset.List(
+		ctx,
+		provisionList,
+		client.InNamespace(cd.Namespace),
+		client.MatchingLabels(map[string]string{"hive.openshift.io/cluster-deployment-name": cd.Name}),
+	); err != nil {
+		hr.log.WithError(err).Warn("could not list provisions for clusterdeployment")
+		return nil, err
+	}
+	if len(provisionList.Items) == 0 {
+		return nil, nil
+	}
+	provisions := make([]*hivev1.ClusterProvision, len(provisionList.Items))
+	for i := range provisionList.Items {
+		provisions[i] = &provisionList.Items[i]
+	}
+	sort.Slice(provisions, func(i, j int) bool { return provisions[i].Spec.Attempt > provisions[j].Spec.Attempt })
+	return provisions[0], nil
 }
