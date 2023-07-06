@@ -14,6 +14,7 @@ spec:
         "ServiceAccount",
         "ReplicationController",
         "ResourceQuota",
+        "Namespace",
         ]
       - apiGroups: ["apps"]
         kinds: ["Deployment", "ReplicaSet", "StatefulSet", "DaemonSet"]
