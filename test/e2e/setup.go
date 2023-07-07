@@ -220,7 +220,7 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 
 	cookie := &selenium.Cookie{
 		Name:   "session",
-		Value:  os.Getenv("SESSION"),
+		Value:  "potato",
 		Expiry: math.MaxUint32,
 	}
 
