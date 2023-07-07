@@ -155,6 +155,7 @@ func (a *aad) AAD(h http.Handler) http.Handler {
 				}
 				http.SetCookie(w, cookie)
 				http.Redirect(w, r, "/api/login", http.StatusTemporaryRedirect)
+				a.log.Errorf("redirecting to login page")
 			} else {
 				a.internalServerError(w, err)
 			}
@@ -183,6 +184,8 @@ func (a *aad) CheckAuthentication(h http.Handler) http.Handler {
 		ctx := r.Context()
 		if ctx.Value(ContextKeyUsername) == nil {
 			if r.URL != nil {
+
+				a.log.Errorf("redirecting to login page from check auth")
 				http.Redirect(w, r, "/api/login", http.StatusTemporaryRedirect)
 				return
 			}
@@ -231,12 +234,14 @@ func (a *aad) redirect(w http.ResponseWriter, r *http.Request) {
 		sessionKeyState: state,
 	}
 
+	a.log.Error("saving session")
 	err = session.Save(r, w)
 	if err != nil {
 		a.internalServerError(w, err)
 		return
 	}
 
+	a.log.Errorf("login function redirecting to login page %s", a.oauther.AuthCodeURL(state))
 	http.Redirect(w, r, a.oauther.AuthCodeURL(state), http.StatusTemporaryRedirect)
 }
 
@@ -257,6 +262,7 @@ func (a *aad) callback(w http.ResponseWriter, r *http.Request) {
 
 	delete(session.Values, sessionKeyState)
 
+	a.log.Error("saving session")
 	err = session.Save(r, w)
 	if err != nil {
 		a.internalServerError(w, err)
@@ -282,6 +288,7 @@ func (a *aad) callback(w http.ResponseWriter, r *http.Request) {
 		Transport: roundtripper.RoundTripperFunc(a.clientAssertion),
 	})
 
+	a.log.Error("getting the token from oauther")
 	token, err := a.oauther.Exchange(cliCtx, r.FormValue("code"))
 	if err != nil {
 		a.internalServerError(w, err)
@@ -316,6 +323,7 @@ func (a *aad) callback(w http.ResponseWriter, r *http.Request) {
 	session.Values[SessionKeyGroups] = groupsIntersect
 	session.Values[SessionKeyExpires] = a.now().Add(a.sessionTimeout).Unix()
 
+	a.log.Error("saving session")
 	err = session.Save(r, w)
 	if err != nil {
 		a.internalServerError(w, err)
