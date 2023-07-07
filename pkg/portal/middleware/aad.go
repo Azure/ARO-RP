@@ -141,7 +141,7 @@ func (a *aad) AAD(h http.Handler) http.Handler {
 			a.log.Errorf("name %s", cookie.Name)
 			a.log.Errorf("path %s", cookie.Domain)
 			a.log.Errorf("domain %s", cookie.Domain)
-			a.log.Errorf("len of value %s", len(cookie.Value))
+			a.log.Errorf("len of value %d", len(cookie.Value))
 		}
 		session, err := a.store.Get(r, SessionName)
 		if err != nil {
