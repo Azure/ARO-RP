@@ -142,6 +142,7 @@ cat >/etc/fluentbit/fluentbit.conf <<'EOF'
 	Name systemd
 	Tag journald
 	Systemd_Filter _COMM=aro
+	DB /var/lib/fluent/journaldb
 
 [FILTER]
 	Name modify
