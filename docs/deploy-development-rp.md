@@ -8,7 +8,9 @@
 
 1. Build the development `az aro` extension:
 
-   `make az`
+   ```bash
+   make az
+   ```
 
 1. Verify that the ARO extension path is in your `az` configuration:
 
@@ -78,7 +80,7 @@
      --parameters \
        "databaseAccountName=$DATABASE_ACCOUNT_NAME" \
        "databaseName=$DATABASE_NAME" \
-     >/dev/null
+     1>/dev/null
    ```
 
 
@@ -97,7 +99,7 @@
    ```
 
 1. To create a cluster, EITHER follow the instructions in [Create, access, and
-   manage an Azure Red Hat OpenShift 4.3 Cluster][1].  Note that as long as the
+   manage an Azure Red Hat OpenShift 4 Cluster][1].  Note that as long as the
    `RP_MODE` environment variable is set to `development`, the `az aro` client
    will connect to your local RP.
 
@@ -141,6 +143,14 @@
      ```bash
      journalctl _COMM=aro -o json --since "15 min ago" -f | jq -r 'select (.COMPONENT != null and (.COMPONENT | contains("access"))|not) | .MESSAGE'
      ```
+  
+   * Optionally, create these aliases for viewing logs
+      ```bash
+      cat >>~/.bashrc <<'EOF'
+      alias rp-logs='journalctl _COMM=aro -o json --since "15 min ago" -f | jq -r '\''select (.COMPONENT != null and (.COMPONENT | contains("access"))|not) | .MESSAGE'\'''
+      alias rp-logs-all='journalctl _COMM=aro -o json -e | jq -r '\''select (.COMPONENT != null and (.COMPONENT | contains("access"))|not) | .MESSAGE'\'''
+      EOF
+      ```
 
 ## Automatically run local RP
 If you are already familiar with running the ARO RP locally, you can speed up the process executing the [local_dev_env.sh](../hack/devtools/local_dev_env.sh) script.
@@ -151,7 +161,7 @@ The env variables names defined in pkg/util/liveconfig/manager.go control the co
 - If you want to create clusters using the local ARO-RP + Hive instead of doing the standard cluster creation process (which doesn't use Hive), set `ARO_INSTALL_VIA_HIVE` to *true*.
 - If you want to enable the Hive adoption feature (which is performed during adminUpdate()), set `ARO_ADOPT_BY_HIVE` to *true*.
 
-After setting the above environment variables (using *export* direclty in the terminal or including them in the *env* file), connect to the [VPN](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#debugging-aks-cluster) (*Connect to the VPN* section).
+After setting the above environment variables (using *export* directly in the terminal or including them in the *env* file), connect to the [VPN](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#debugging-aks-cluster) (*Connect to the VPN* section).
 
 Then proceed to [run](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#run-the-rp-and-create-a-cluster) the ARO-RP as usual. 
 
@@ -274,7 +284,7 @@ After that, when you [create](https://github.com/Azure/ARO-RP/blob/master/docs/d
 
   ```bash
   curl -X PUT -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/syncsets/mySyncSet?api-version=2022-09-04" --header "Content-Type: application/json" -d @./hack/ocm/syncset.b64
-
+  ```
 
 ## Debugging OpenShift Cluster
 
@@ -342,7 +352,7 @@ To access the cluster for oc / kubectl or SSH'ing into the cluster you need to c
 * "SSH" into a cluster node:
 
   * Run the ssh-aks.sh script, specifying the cluster name and the node number of the VM you are trying to ssh to.
-  ```
+  ```bash
   hack/ssk-aks.sh aro-aks-cluster 0 # The first VM node in 'aro-aks-cluster'
   hack/ssk-aks.sh aro-aks-cluster 1 # The second VM node in 'aro-aks-cluster'
   hack/ssk-aks.sh aro-aks-cluster 2 # The third VM node in 'aro-aks-cluster'
