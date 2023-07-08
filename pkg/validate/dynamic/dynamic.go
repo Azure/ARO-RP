@@ -71,6 +71,7 @@ type Dynamic interface {
 	ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error
 	ValidateDiskEncryptionSets(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidateEncryptionAtHost(ctx context.Context, oc *api.OpenShiftCluster) error
+	ValidateLoadBalancerProfile(ctx context.Context, oc *api.OpenShiftCluster) error
 }
 
 type dynamic struct {
@@ -82,13 +83,14 @@ type dynamic struct {
 	env                        env.Interface
 	azEnv                      *azureclient.AROEnvironment
 
-	permissions        authorization.PermissionsClient
-	virtualNetworks    virtualNetworksGetClient
-	diskEncryptionSets compute.DiskEncryptionSetsClient
-	resourceSkusClient compute.ResourceSkusClient
-	spComputeUsage     compute.UsageClient
-	spNetworkUsage     network.UsageClient
-	pdpClient          remotepdp.RemotePDPClient
+	permissions                           authorization.PermissionsClient
+	virtualNetworks                       virtualNetworksGetClient
+	diskEncryptionSets                    compute.DiskEncryptionSetsClient
+	resourceSkusClient                    compute.ResourceSkusClient
+	spComputeUsage                        compute.UsageClient
+	spNetworkUsage                        network.UsageClient
+	loadBalancerBackendAddressPoolsClient network.LoadBalancerBackendAddressPoolsClient
+	pdpClient                             remotepdp.RemotePDPClient
 }
 
 type AuthorizerType string
@@ -123,9 +125,10 @@ func NewValidator(
 		virtualNetworks: newVirtualNetworksCache(
 			network.NewVirtualNetworksClient(azEnv, subscriptionID, authorizer),
 		),
-		diskEncryptionSets: compute.NewDiskEncryptionSetsClient(azEnv, subscriptionID, authorizer),
-		resourceSkusClient: compute.NewResourceSkusClient(azEnv, subscriptionID, authorizer),
-		pdpClient:          pdpClient,
+		diskEncryptionSets:                    compute.NewDiskEncryptionSetsClient(azEnv, subscriptionID, authorizer),
+		resourceSkusClient:                    compute.NewResourceSkusClient(azEnv, subscriptionID, authorizer),
+		pdpClient:                             pdpClient,
+		loadBalancerBackendAddressPoolsClient: network.NewLoadBalancerBackendAddressPoolsClient(azEnv, subscriptionID, authorizer),
 	}
 }
 
