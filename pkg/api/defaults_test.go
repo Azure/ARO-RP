@@ -17,6 +17,11 @@ func validOpenShiftClusterDocument() *OpenShiftClusterDocument {
 					SoftwareDefinedNetwork: SoftwareDefinedNetworkOpenShiftSDN,
 					OutboundType:           OutboundTypeLoadbalancer,
 					PreconfiguredNSG:       PreconfiguredNSGDisabled,
+					LoadbalancerProfile: &LoadbalancerProfile{
+						ManagedOutboundIPs: &ManagedOutboundIPs{
+							Count: 1,
+						},
+					},
 				},
 				MasterProfile: MasterProfile{
 					EncryptionAtHost: EncryptionAtHostDisabled,
@@ -106,6 +111,16 @@ func TestSetDefaults(t *testing.T) {
 			},
 			input: func(base *OpenShiftClusterDocument) {
 				base.OpenShiftCluster.Properties.OperatorFlags = OperatorFlags{}
+			},
+		},
+		{
+			name: "default lb profile",
+			want: func() *OpenShiftClusterDocument {
+				doc := validOpenShiftClusterDocument()
+				return doc
+			},
+			input: func(base *OpenShiftClusterDocument) {
+				base.OpenShiftCluster.Properties.NetworkProfile.LoadbalancerProfile = nil
 			},
 		},
 	} {
