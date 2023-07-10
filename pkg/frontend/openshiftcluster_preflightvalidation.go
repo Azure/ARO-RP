@@ -67,7 +67,7 @@ func (f *frontend) preflightValidation(w http.ResponseWriter, r *http.Request) {
 	reply(log, w, header, b, statusCodeError(http.StatusOK))
 }
 
-func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, raw json.RawMessage, apiVersion string, path string) api.ValidationResult {
+func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, raw json.RawMessage, apiVersion string, resourceID string) api.ValidationResult {
 	// unmarshal raw to OpenShiftCluster type
 	oc := &api.OpenShiftCluster{}
 	oc.Properties.ProvisioningState = api.ProvisioningStateSucceeded
@@ -89,7 +89,7 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 	}
 
 	converter.ToInternal(ext, oc)
-	if err := staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sV3Workers), path); err != nil {
+	if err := staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sV3Workers), resourceID); err != nil {
 		return api.ValidationResult{
 			Status: api.ValidationStatusFailed,
 			Error: &api.ManagementErrorWithDetails{
