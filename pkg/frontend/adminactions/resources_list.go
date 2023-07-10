@@ -11,10 +11,10 @@ import (
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
 
+	api_subnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
-	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 var commaAsByteArray = []byte(",")
@@ -113,7 +113,7 @@ func (a *azureActions) writeObject(writer io.Writer, resource arm.Resource) {
 }
 
 func (a *azureActions) appendAzureNetworkResources(ctx context.Context, armResources []arm.Resource) ([]arm.Resource, error) {
-	vNetID, _, err := subnet.Split(a.oc.Properties.MasterProfile.SubnetID)
+	vNetID, _, err := api_subnet.Split(a.oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return nil, err
 	}

@@ -13,10 +13,10 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	api_subnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/util/immutable"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
-	"github.com/Azure/ARO-RP/pkg/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
@@ -248,11 +248,11 @@ func (sv openShiftClusterStaticValidator) validateWorkerProfile(path string, wp 
 	if !validate.RxSubnetID.MatchString(wp.SubnetID) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".subnetId", "The provided worker VM subnet '%s' is invalid.", wp.SubnetID)
 	}
-	workerVnetID, _, err := subnet.Split(wp.SubnetID)
+	workerVnetID, _, err := api_subnet.Split(wp.SubnetID)
 	if err != nil {
 		return err
 	}
-	masterVnetID, _, err := subnet.Split(mp.SubnetID)
+	masterVnetID, _, err := api_subnet.Split(mp.SubnetID)
 	if err != nil {
 		return err
 	}

@@ -8,9 +8,9 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 func (m *manager) clusterNSG(infraID, location string) *arm.Resource {

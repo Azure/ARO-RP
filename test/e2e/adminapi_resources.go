@@ -15,8 +15,8 @@ import (
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
 
+	api_subnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
-	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 var _ = Describe("[Admin API] List Azure resources action", func() {
@@ -44,7 +44,7 @@ var _ = Describe("[Admin API] List Azure resources action", func() {
 		expectedResourceIDs = append(expectedResourceIDs, strings.ToLower(*diskEncryptionSet.ID))
 
 		By("adding VNet to the list of expected resource IDs")
-		vnetID, _, err := subnet.Split(*oc.OpenShiftClusterProperties.MasterProfile.SubnetID)
+		vnetID, _, err := api_subnet.Split(*oc.OpenShiftClusterProperties.MasterProfile.SubnetID)
 		Expect(err).NotTo(HaveOccurred())
 		expectedResourceIDs = append(expectedResourceIDs, strings.ToLower(vnetID))
 

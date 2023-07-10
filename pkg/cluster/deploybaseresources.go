@@ -19,10 +19,10 @@ import (
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
-	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 func (m *manager) createDNS(ctx context.Context) error {

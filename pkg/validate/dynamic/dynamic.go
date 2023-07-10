@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	api_subnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
@@ -29,7 +30,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/permissions"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
-	"github.com/Azure/ARO-RP/pkg/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/token"
 )
 
@@ -160,7 +160,7 @@ func (dv *dynamic) ValidateVnet(
 	// get unique vnets from subnets
 	vnets := make(map[string]azure.Resource)
 	for _, s := range subnets {
-		vnetID, _, err := subnet.Split(s.ID)
+		vnetID, _, err := api_subnet.Split(s.ID)
 		if err != nil {
 			return err
 		}
@@ -260,7 +260,7 @@ func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resou
 func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) error {
 	dv.log.Printf("validateRouteTablePermissions")
 
-	vnetID, _, err := subnet.Split(s.ID)
+	vnetID, _, err := api_subnet.Split(s.ID)
 	if err != nil {
 		return err
 	}
@@ -322,7 +322,7 @@ func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) 
 func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) error {
 	dv.log.Printf("validateNatGatewayPermissions")
 
-	vnetID, _, err := subnet.Split(s.ID)
+	vnetID, _, err := api_subnet.Split(s.ID)
 	if err != nil {
 		return err
 	}
@@ -530,7 +530,7 @@ func (dv *dynamic) validateCIDRRanges(ctx context.Context, subnets []Subnet, add
 
 	// unique names of subnets from all node pools
 	for _, s := range subnets {
-		vnetID, _, err := subnet.Split(s.ID)
+		vnetID, _, err := api_subnet.Split(s.ID)
 		if err != nil {
 			return err
 		}
@@ -619,7 +619,7 @@ func (dv *dynamic) createSubnetMapByID(ctx context.Context, subnets []Subnet) (m
 	subnetByID := make(map[string]*mgmtnetwork.Subnet)
 
 	for _, s := range subnets {
-		vnetID, _, err := subnet.Split(s.ID)
+		vnetID, _, err := api_subnet.Split(s.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -709,7 +709,7 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 
 		if oc.Properties.ProvisioningState == api.ProvisioningStateCreating {
 			if subnetHasNSGAttached(ss) && oc.Properties.NetworkProfile.PreconfiguredNSG != api.PreconfiguredNSGEnabled {
-				expectedNsgID, err := subnet.NetworkSecurityGroupID(oc, s.ID)
+				expectedNsgID, err := api_subnet.NetworkSecurityGroupID(oc, s.ID)
 				if err != nil {
 					return err
 				}
@@ -721,7 +721,7 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 				}
 			}
 		} else {
-			nsgID, err := subnet.NetworkSecurityGroupID(oc, *ss.ID)
+			nsgID, err := api_subnet.NetworkSecurityGroupID(oc, *ss.ID)
 			if err != nil {
 				return err
 			}
