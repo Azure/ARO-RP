@@ -20,6 +20,14 @@ import (
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
+type certInfo struct {
+	secretName, certSubject string
+}
+
+const (
+	managedDomainName   = "contoso.aroapp.io"
+	unmanagedDomainName = "aro.contoso.com"
+)
 
 func TestEmitCertificateExpirationStatuses(t *testing.T) {
 	expiration := time.Now().Add(time.Hour * 24 * 5)
@@ -27,10 +35,11 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 	for _, tt := range []struct {
 		name            string
 		isManaged       bool
+		certsPresent    []certInfo
 		wantExpirations []map[string]string
 	}{
 		{
-			name:      "unmanaged domain",
+			name:      "only emits MDSD status for unmanaged domain",
 			isManaged: false,
 			wantExpirations: []map[string]string{
 				{
@@ -40,8 +49,12 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			},
 		},
 		{
-			name:      "managed domain",
+			name:      "includes ingress and API status for managed domain",
 			isManaged: true,
+			certsPresent: []certInfo{
+				{"foo12-ingress", managedDomainName},
+				{"foo12-apiserver", "api."+managedDomainName},
+			},
 			wantExpirations: []map[string]string{
 				{
 					"subject":        "geneva.certificate",
@@ -62,13 +75,11 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			ctx := context.Background()
 
 			var secrets []runtime.Object
-			_, genevaCert, err := utiltls.GenerateTestKeyAndCertificate("geneva.certificate", nil, nil, false, false, func(template *x509.Certificate) {
-				template.NotAfter = expiration
-			})
+			_, genevaCert, err := utiltls.GenerateTestKeyAndCertificate("geneva.certificate", nil, nil, false, false, tweakTemplateFn(expiration))
 			if err != nil {
 				t.Fatal(err)
 			}
-			secrets = append(secrets, &corev1.Secret{
+			s := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "cluster",
 					Namespace: "openshift-azure-operator",
@@ -79,40 +90,15 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 						Bytes: genevaCert[0].Raw,
 					}),
 				},
-			})
-
-			var domain string
-			if tt.isManaged {
-				domain = "contoso.aroapp.io"
-				for _, sec := range []struct{ secretName, certSubject string }{
-					{
-						"foo12-ingress",
-						domain,
-					},
-					{
-						"foo12-apiserver",
-						"api." + domain,
-					},
-				} {
-					_, cert, _ := utiltls.GenerateTestKeyAndCertificate(sec.certSubject, nil, nil, false, false, func(template *x509.Certificate) {
-						template.NotAfter = expiration
-					})
-					secrets = append(secrets, &corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      sec.secretName,
-							Namespace: "openshift-azure-operator",
-						},
-						Data: map[string][]byte{
-							"tls.crt": pem.EncodeToMemory(&pem.Block{
-								Type:  "CERTIFICATE",
-								Bytes: cert[0].Raw,
-							}),
-						},
-					})
-				}
-			} else {
-				domain = "aro.contoso.com"
 			}
+			secrets = append(secrets, s)
+			secretsFromCertInfo := getSecretsFromCertsInfo(tt.certsPresent, tweakTemplateFn(expiration))
+			secrets = append(secrets, secretsFromCertInfo...)
+
+			domain := unmanagedDomainName
+			if tt.isManaged {
+				domain = managedDomainName
+			} 
 
 			m := mock_metrics.NewMockEmitter(gomock.NewController(t))
 			for _, gauge := range tt.wantExpirations {
@@ -138,4 +124,31 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			}
 		})
 	}
+}
+
+func tweakTemplateFn(expiration time.Time) func(*x509.Certificate) {
+	return func(template *x509.Certificate) {
+		template.NotAfter = expiration
+	}
+}
+
+func getSecretsFromCertsInfo(certsInfo []certInfo, tweakTemplateFn func(*x509.Certificate)) []runtime.Object {
+    var secrets []runtime.Object
+    for _, sec := range certsInfo {
+        _, cert, _ := utiltls.GenerateTestKeyAndCertificate(sec.certSubject, nil, nil, false, false, tweakTemplateFn)
+        s := &corev1.Secret{
+            ObjectMeta: metav1.ObjectMeta{
+                Name:      sec.secretName,
+                Namespace: "openshift-azure-operator",
+            },
+            Data: map[string][]byte{
+                "tls.crt": pem.EncodeToMemory(&pem.Block{
+                    Type:  "CERTIFICATE",
+                    Bytes: cert[0].Raw,
+                }),
+            },
+        }
+        secrets = append(secrets, s)
+    }
+    return secrets
 }
