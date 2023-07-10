@@ -19,10 +19,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/validate/dynamic"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
 	"github.com/Azure/ARO-RP/pkg/util/feature"
+	"github.com/Azure/ARO-RP/pkg/validate/dynamic"
 )
 
 // OpenShiftClusterDynamicValidator is the dynamic validator interface
