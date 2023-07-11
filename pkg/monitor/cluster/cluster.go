@@ -141,16 +141,14 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 	statusCode, err := mon.emitAPIServerHealthzCode(ctx)
 	if err != nil {
 		errs = append(errs, err)
-		friendlyFuncName := steps.FriendlyName(mon.emitAPIServerHealthzCode)
-		mon.log.Printf("%s: %s", friendlyFuncName, err)
-		mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": friendlyFuncName})
+		mon.emitFailureToGatherMetric(steps.FriendlyName(mon.emitAPIServerHealthzCode), err)
 	}
 	// If API is not returning 200, fallback to checking ping and short circuit the rest of the checks
 	if statusCode != http.StatusOK {
 		err := mon.emitAPIServerPingCode(ctx)
 		if err != nil {
 			errs = append(errs, err)
-			mon.log.Printf("%s: %s", steps.FriendlyName(mon.emitAPIServerPingCode), err)
+			mon.emitFailureToGatherMetric(steps.FriendlyName(mon.emitAPIServerPingCode), err)
 		}
 		return
 	}
@@ -181,14 +179,17 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		err = f(ctx)
 		if err != nil {
 			errs = append(errs, err)
-			friendlyFuncName := steps.FriendlyName(f)
-			mon.log.Printf("%s: %s", friendlyFuncName, err)
-			mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": friendlyFuncName})
+			mon.emitFailureToGatherMetric(steps.FriendlyName(f), err)
 			// keep going
 		}
 	}
 
 	return
+}
+
+func (mon *Monitor) emitFailureToGatherMetric(friendlyFuncName string, err error) {
+	mon.log.Printf("%s: %s", friendlyFuncName, err)
+	mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": friendlyFuncName})
 }
 
 func (mon *Monitor) emitGauge(m string, value int64, dims map[string]string) {
