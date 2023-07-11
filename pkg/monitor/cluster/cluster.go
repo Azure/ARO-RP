@@ -137,7 +137,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		})
 	}
 
-	// If API is not returning 200, fallback to checking ping and short circuit the rest of the checks
+	//this API server healthz check must be first, our geneva monitor relies on this metric to always be emitted.
 	statusCode, err := mon.emitAPIServerHealthzCode(ctx)
 	if err != nil {
 		errs = append(errs, err)
@@ -145,6 +145,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.log.Printf("%s: %s", friendlyFuncName, err)
 		mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": friendlyFuncName})
 	}
+	// If API is not returning 200, fallback to checking ping and short circuit the rest of the checks
 	if statusCode != http.StatusOK {
 		err := mon.emitAPIServerPingCode(ctx)
 		if err != nil {
