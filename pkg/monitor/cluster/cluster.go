@@ -137,7 +137,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		})
 	}
 
-	// If API is not returning 200, don't need to run the next checks
+	// If API is not returning 200, fallback to checking ping and short circuit the rest of the checks
 	statusCode, err := mon.emitAPIServerHealthzCode(ctx)
 	if err != nil {
 		errs = append(errs, err)
@@ -146,6 +146,11 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": friendlyFuncName})
 	}
 	if statusCode != http.StatusOK {
+		err := mon.emitAPIServerPingCode(ctx)
+		if err != nil {
+			errs = append(errs, err)
+			mon.log.Printf("%s: %s", steps.FriendlyName(mon.emitAPIServerPingCode), err)
+		}
 		return
 	}
 	for _, f := range []func(context.Context) error{
