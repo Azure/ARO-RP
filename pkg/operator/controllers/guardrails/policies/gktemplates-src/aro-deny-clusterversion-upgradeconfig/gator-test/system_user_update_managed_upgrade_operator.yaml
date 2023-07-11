@@ -1,0 +1,48 @@
+apiVersion: admission.k8s.io/v1
+kind: AdmissionReview
+request:
+  dryRun: true
+  kind:
+    group: ""
+    kind: UpgradeConfig
+    version: upgrade.managed.openshift.io/v1alpha1
+  object:
+    apiVersion: upgrade.managed.openshift.io/v1alpha1
+    kind: UpgradeConfig
+    metadata:
+      name: managed-upgrade-config
+      namespace: openshift-managed-upgrade-operator
+    spec:
+      PDBForceDrainTimeout: 60
+      desired:
+        channel: stable-4.10
+        version: 4.10.55
+      type: ARO
+      upgradeAt: "2023-05-29T10:00:00Z"
+  oldObject:
+    apiVersion: upgrade.managed.openshift.io/v1alpha1
+    kind: UpgradeConfig
+    metadata:
+      name: managed-upgrade-config-old
+      namespace: openshift-managed-upgrade-operator
+    spec:
+      PDBForceDrainTimeout: 60
+      desired:
+        channel: stable-4.10
+        version: 4.10.55
+      type: ARO
+      upgradeAt: "2023-05-29T10:00:00Z"
+  operation: UPDATE
+  options: null
+  requestKind:
+    group: ""
+    kind: UpgradeConfig
+    version: upgrade.managed.openshift.io/v1alpha1
+  resource:
+    group: ""
+    resource: UpgradeConfig
+    version: upgrade.managed.openshift.io/v1alpha1
+  uid: 42bc7c7d-cde2-43ad-afe0-42c7db2e2923
+  userInfo:
+    uid: 85c23dfa-51a2-4481-beb1-c92848b2730a
+    username: system:admin

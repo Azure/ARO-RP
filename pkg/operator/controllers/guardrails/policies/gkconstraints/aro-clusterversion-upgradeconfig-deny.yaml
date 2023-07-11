@@ -1,0 +1,14 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: ARODenyClusterVersionUpgradeConfig
+metadata:
+  name: aro-clusterversion-upgradeconfig-deny
+spec:
+  enforcementAction: {{.Enforcement}}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["ConfigMap"]
+      - apiGroups: ["upgrade.managed.openshift.io"]
+        kinds: ["UpgradeConfig"]
+      - apiGroups: ["config.openshift.io"]
+        kinds: ["ClusterVersion"]

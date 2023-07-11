@@ -135,8 +135,93 @@ spec:
       - apiGroups: ["policy"]
         kinds: ["PodDisruptionBudget"]
 ```
-
 Make sure the filename of constraint is the same as the .metadata.name of the Constraint object, as it is the feature flag name that will be used to turn on / off the policy.
+
+
+# Syncing of data into OPA using `data.inventory`
+
+* Not all data you need are found on the `'input.review'` object. For example, if your policy is for blocking modification of the UpgradeConfig, and you need to check if the cluster is connected to OCM via the ConfigMap of `'openshift-managed-upgrade-operator'`, the info you need will not available on the `'input.review'` object because it only contains data from the UpgradeConfig the user is trying to modify. In this case, you need to sync data of the ConfigMap into OPA via `'data.inventory'` document so your rule can access it. In order to create such policies, you need to follow the steps below:
+
+  * Set the `'audit-from-cache'` flag to true in ".../gktemplates/aro-deny-upgradeconfig.yaml".
+  ```yaml
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    labels:
+      control-plane: audit-controller
+      gatekeeper.sh/operation: audit
+      gatekeeper.sh/system: "yes"
+    name: gatekeeper-audit
+    namespace: {{.Namespace}}
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        control-plane: audit-controller
+        gatekeeper.sh/operation: audit
+        gatekeeper.sh/system: "yes"
+    template:
+      metadata:
+        labels:
+          control-plane: audit-controller
+          gatekeeper.sh/operation: audit
+          gatekeeper.sh/system: "yes"
+      spec:
+        automountServiceAccountToken: true
+        containers:
+        - args:
+          - --audit-from-cache=true    ----->>>>>SET THIS FLAG TO TRUE
+  ```
+  * Create and apply the sync config resource to the cluster. Only resources in syncOnly will be synced into OPA. See template below. For more info, please check https://open-policy-agent.github.io/gatekeeper/website/docs/v3.10.x/exempt-namespaces 
+
+  ```yaml
+    apiVersion: config.gatekeeper.sh/v1alpha1
+    kind: Config
+    metadata:
+      name: config
+      namespace: "openshift-azure-guardrails"
+    spec:
+      match:
+        - excludedNamespaces: [""]  # Namespaces to exclude from the sync data. It is always best to remove any data that is not needed for your policy
+        processes: [""] # Includes all processes
+      sync:
+      syncOnly:
+        - group: ""   # Populate as needed
+        version: "" # Populate as needed
+        kind: ""    # Populate as needed
+        # Add resources as needed
+  ```
+    * Below is a sample implementation of a sync config resource which allows syncing data of all ConfigMap and Namespace resources with the version `v1`. Avoid using `excludedNamespaces` because it prevents other policies from woring.
+    ```yaml
+    apiVersion: config.gatekeeper.sh/v1alpha1
+    kind: Config
+    metadata:
+      name: config
+      namespace: "openshift-azure-guardrails"
+    spec:
+      sync:
+        syncOnly:
+          - group: ""
+            version: "v1"
+            kind: "ConfigMap"
+          - group: ""
+            version: "v1"
+            kind: "Namespace"
+
+    ```
+  * Write your rego rule. To access data from `'data.inventory'`, follow the format below:
+      
+    * For cluster-scoped objects: `'data.inventory.cluster[<groupVersion>][<kind>][<name>]'`. Example below.
+      
+    ```Rego
+      data.inventory.cluster["v1"].Namespace["gatekeeper"]
+    ```
+    * For namespace-scoped objects: `'data.inventory.namespace[<namespace>][groupVersion][<kind>][<name>]'`. Example below.
+    ```Rego
+    data.inventory.namespace["openshift-managed-upgrade-operator"]["v1"]["ConfigMap"]["managed-upgrade-operator-config"]["data"]["config.yaml"]
+    ```
+  * For more info on syncing your data into OPA, please check the official Gatekeeper documentation https://open-policy-agent.github.io/gatekeeper/website/docs/v3.10.x/sync 
+
 
 ## Test Rego source code
 
@@ -146,6 +231,32 @@ Make sure the filename of constraint is the same as the .metadata.name of the Co
   ```sh
   opa test ../library/common.rego *.rego [-v] #-v for verbose
   ```
+
+* Using docker, get the OPA docker image - https://hub.docker.com/r/openpolicyagent/opa/. 
+  Run the test as:
+```sh
+#### Format ####
+docker run -it <HOST_SOURCE_DIRECTORY>:<CONTAINER_TARGET_DIRECTORY>:Z openpolicyagent/opa test [<LIBRARY>/*.rego] <CONTAINER_TARGET_DIRECTORY>/src.rego <CONTAINER_TARGET_DIRECTORY>/src_test.rego
+
+
+##### Example #####
+$ docker run -it -v /home/ecardena/dev/ARO-RP/pkg/operator/controllers/guardrails/policies/gktemplates-src:/gktemplates-src:Z openpolicyagent/opa test /gktemplates-src/library/common.rego /gktemplates-src/aro-deny-upgradeconfig/src.rego /gktemplates-src/aro-deny-upgradeconfig/src_test.rego -v
+```
+
+
+### Testing rego using `data.inventory`
+
+When checking for violation on your test case, append `'with data.inventory as <inventory_data_variable_name>'`. For example, on your src_test.rego:
+
+```Rego
+test_input_allowed_system_user_update_upgradeconfig {
+	input := {"review": input_configmap("system:admin", "system:admin", "UPDATE")}
+	inv := inv_data(create_data_ocm([]))
+	results := violation with input as input with data.inventory as inv
+	count(results) == 0
+}
+```
+
 
 ## Generate the Constraint Templates
 
@@ -240,7 +351,28 @@ or below cmd after test.sh has been executed:
 ```sh
 gator verify . [-v] #-v for verbose
 ```
+<br>
 
+### Gator test your policy using `data.inventory`
+* In order to test your rego policy that's using `data.inventory`, you need to add `'inventory: <path to your mock data.inventory>'`. For example:
+
+```yaml
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: upgradeconfig
+tests:
+  - name: upgradeconfig-tests
+    template: ../../gktemplates/aro-deny-upgradeconfig.yaml
+    constraint: ../../gkconstraints-test/aro-upgradeconfig-deny.yaml
+    cases:
+      - name: create-upgradeconfig-allowed-regular-user
+        object: gator-test/regular_user_create_managed_upgrade_operator.yaml
+        inventory:
+          - gator-test/inventory_config_local.yaml
+        assertions:
+          - violations: no
+```
 Sometimes we need to mock kube admission review request especially as Gator test inputs when verifying policies that check specific operations (e.g., CREATE, DELETE or UPDATE).
 
 Please refer the yaml file below as a sample of kube admission review request:

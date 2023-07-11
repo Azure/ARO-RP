@@ -1,0 +1,157 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: clusterversion-upgradeconfig
+tests:
+  - name: upgradeconfig-tests
+    template: ../../gktemplates/aro-deny-clusterversion-upgradeconfig.yaml
+    constraint: ../../gkconstraints-test/aro-clusterversion-upgradeconfig-deny.yaml
+    cases:
+      - name: create-upgradeconfig-allowed-regular-user
+        object: gator-test/regular_user_create_managed_upgrade_operator.yaml
+        inventory:
+          - gator-test/inventory_config_local_upgradeconfig.yaml
+        assertions:
+          - violations: no
+      - name: create-upgradeconfig-allowed-system-user-local
+        object: gator-test/system_user_create_managed_upgrade_operator.yaml
+        inventory:
+          - gator-test/inventory_config_local_upgradeconfig.yaml
+        assertions:
+          - violations: no
+      - name: create-upgradeconfig-allowed-system-user-ocm
+        object: gator-test/system_user_create_managed_upgrade_operator.yaml
+        inventory:
+          - gator-test/inventory_config_ocm_upgradeconfig.yaml
+        assertions:
+          - violations: no
+      - name: create-upgradeconfig-not-allowed-regular-user
+        object: /gator-test/regular_user_create_managed_upgrade_operator.yaml
+        inventory:
+          - gator-test/inventory_config_ocm_upgradeconfig.yaml
+        assertions:
+          - violations: yes
+      - name: update-upgradeconfig-allowed-regular-user
+        object: gator-test/regular_user_update_managed_upgrade_operator.yaml
+        inventory:
+          - gator-test/inventory_config_local_upgradeconfig.yaml
+        assertions:
+          - violations: no
+      - name: update-upgradeconfig-allowed-system-user-local
+        object: gator-test/system_user_update_managed_upgrade_operator.yaml
+        inventory:
+          - gator-test/inventory_config_local_upgradeconfig.yaml
+        assertions:
+          - violations: no
+      - name: update-upgradeconfig-allowed-system-user-local
+        object: gator-test/system_user_update_managed_upgrade_operator.yaml
+        inventory:
+          - gator-test/inventory_config_ocm_upgradeconfig.yaml
+        assertions:
+          - violations: no
+      - name: update-upgradeconfig-not-allowed-regular-user
+        object: /gator-test/regular_user_update_managed_upgrade_operator.yaml
+        inventory:
+          - gator-test/inventory_config_ocm_upgradeconfig.yaml
+        assertions:
+          - violations: yes
+      - name: delete-upgradeconfig-allowed-regular-user
+        object: gator-test/regular_user_delete_managed_upgrade_operator.yaml
+        inventory:
+          - gator-test/inventory_config_local_upgradeconfig.yaml
+        assertions:
+          - violations: no
+      - name: delete-upgradeconfig-allowed-system-user-local
+        object: gator-test/system_user_delete_managed_upgrade_operator.yaml
+        inventory:
+          - gator-test/inventory_config_local_upgradeconfig.yaml
+        assertions:
+          - violations: no
+      - name: delete-upgradeconfig-allowed-system-user-ocm
+        object: gator-test/system_user_delete_managed_upgrade_operator.yaml
+        inventory:
+          - gator-test/inventory_config_ocm_upgradeconfig.yaml
+        assertions:
+          - violations: no
+      - name: delete-upgradeconfig-not-allowed-regular-user
+        object: gator-test/regular_user_delete_managed_upgrade_operator.yaml
+        inventory:
+          - gator-test/inventory_config_ocm_upgradeconfig.yaml
+        assertions:
+          - violations: yes
+  - name: clusterversion-tests
+    template: ../../gktemplates/aro-deny-clusterversion-upgradeconfig.yaml
+    constraint: ../../gkconstraints-test/aro-clusterversion-upgradeconfig-deny.yaml
+    cases:
+      - name: create-clusterversion-allowed-regular-user
+        object: gator-test/regular_user_create_clusterversion.yaml
+        inventory:
+          - gator-test/inventory_config_local_clusterversion.yaml
+        assertions:
+          - violations: no
+      - name: create-clusterversion-allowed-system-user-local
+        object: gator-test/system_user_create_clusterversion.yaml
+        inventory:
+          - gator-test/inventory_config_local_clusterversion.yaml
+        assertions:
+          - violations: no
+      - name: create-clusterversion-allowed-system-user-ocm
+        object: gator-test/system_user_create_clusterversion.yaml
+        inventory:
+          - gator-test/inventory_config_ocm_clusterversion.yaml
+        assertions:
+          - violations: no
+      - name: create-clusterversion-not-allowed-regular-user
+        object: /gator-test/regular_user_create_clusterversion.yaml
+        inventory:
+          - gator-test/inventory_config_ocm_clusterversion.yaml
+        assertions:
+          - violations: yes
+      - name: update-clusterversion-allowed-regular-user
+        object: gator-test/regular_user_update_clusterversion.yaml
+        inventory:
+          - gator-test/inventory_config_local_clusterversion.yaml
+        assertions:
+          - violations: no
+      - name: update-clusterversion-allowed-system-user-local
+        object: gator-test/system_user_update_clusterversion.yaml
+        inventory:
+          - gator-test/inventory_config_local_clusterversion.yaml
+        assertions:
+          - violations: no
+      - name: update-clusterversion-allowed-system-user-local
+        object: gator-test/system_user_update_clusterversion.yaml
+        inventory:
+          - gator-test/inventory_config_ocm_clusterversion.yaml
+        assertions:
+          - violations: no
+      - name: update-clusterversion-not-allowed-regular-user
+        object: /gator-test/regular_user_update_clusterversion.yaml
+        inventory:
+          - gator-test/inventory_config_ocm_clusterversion.yaml
+        assertions:
+          - violations: yes
+      - name: delete-clusterversion-allowed-regular-user
+        object: gator-test/regular_user_delete_clusterversion.yaml
+        inventory:
+          - gator-test/inventory_config_local_clusterversion.yaml
+        assertions:
+          - violations: no
+      - name: delete-clusterversion-allowed-system-user-local
+        object: gator-test/system_user_delete_clusterversion.yaml
+        inventory:
+          - gator-test/inventory_config_local_clusterversion.yaml
+        assertions:
+          - violations: no
+      - name: delete-clusterversion-allowed-system-user-ocm
+        object: gator-test/system_user_delete_clusterversion.yaml
+        inventory:
+          - gator-test/inventory_config_ocm_clusterversion.yaml
+        assertions:
+          - violations: no
+      - name: delete-clusterversion-not-allowed-regular-user
+        object: gator-test/regular_user_delete_clusterversion.yaml
+        inventory:
+          - gator-test/inventory_config_ocm_clusterversion.yaml
+        assertions:
+          - violations: yes
