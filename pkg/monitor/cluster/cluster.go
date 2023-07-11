@@ -137,18 +137,18 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		})
 	}
 
-	// If API Server is unreachable, don't need to run the next checks
-	statusCode, err := mon.getAPIServerPingCode(ctx)
-	if err != nil || statusCode != http.StatusOK {
+	// If API is not returning 200, don't need to run the next checks
+	statusCode, err := mon.emitAPIServerHealthzCode(ctx)
+	if err != nil {
 		errs = append(errs, err)
-		friendlyFuncName := steps.FriendlyName(mon.getAPIServerPingCode)
+		friendlyFuncName := steps.FriendlyName(mon.emitAPIServerHealthzCode)
 		mon.log.Printf("%s: %s", friendlyFuncName, err)
 		mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": friendlyFuncName})
+	}
+	if statusCode != http.StatusOK {
 		return
 	}
-
 	for _, f := range []func(context.Context) error{
-		mon.emitAPIServerHealthzCode,
 		mon.emitAroOperatorHeartbeat,
 		mon.emitAroOperatorConditions,
 		mon.emitNSGReconciliation,
