@@ -53,7 +53,7 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			isManaged: true,
 			certsPresent: []certInfo{
 				{"foo12-ingress", managedDomainName},
-				{"foo12-apiserver", "api."+managedDomainName},
+				{"foo12-apiserver", "api." + managedDomainName},
 			},
 			wantExpirations: []map[string]string{
 				{
@@ -98,7 +98,7 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			domain := unmanagedDomainName
 			if tt.isManaged {
 				domain = managedDomainName
-			} 
+			}
 
 			m := mock_metrics.NewMockEmitter(gomock.NewController(t))
 			for _, gauge := range tt.wantExpirations {
@@ -124,6 +124,106 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			}
 		})
 	}
+	t.Run("returns error when cluster secret has been deleted", func(t *testing.T) {
+		wantErr := `secrets "cluster" not found`
+
+		ctx := context.Background()
+		m := mock_metrics.NewMockEmitter(gomock.NewController(t))
+		mon := &Monitor{
+			cli: fake.NewSimpleClientset(),
+			m:   m,
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						Domain: managedDomainName,
+					},
+					InfraID: "foo12",
+				},
+			},
+		}
+
+		err := mon.emitCertificateExpirationStatuses(ctx)
+		if err.Error() != wantErr {
+			t.Errorf("expected error `%v` but got `%v`", wantErr, err)
+		}
+	})
+
+	t.Run("returns error when managed domain secret has been deleted", func(t *testing.T) {
+		wantErr := `secrets "foo12-ingress" not found`
+
+		var secrets []runtime.Object
+		_, genevaCert, err := utiltls.GenerateTestKeyAndCertificate("geneva.certificate", nil, nil, false, false, tweakTemplateFn(expiration))
+		if err != nil {
+			t.Fatal(err)
+		}
+		s := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "cluster",
+				Namespace: "openshift-azure-operator",
+			},
+			Data: map[string][]byte{
+				"gcscert.pem": pem.EncodeToMemory(&pem.Block{
+					Type:  "CERTIFICATE",
+					Bytes: genevaCert[0].Raw,
+				}),
+			},
+		}
+		secrets = append(secrets, s)
+
+		ctx := context.Background()
+		m := mock_metrics.NewMockEmitter(gomock.NewController(t))
+		mon := &Monitor{
+			cli: fake.NewSimpleClientset(secrets...),
+			m:   m,
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						Domain: managedDomainName,
+					},
+					InfraID: "foo12",
+				},
+			},
+		}
+
+		err = mon.emitCertificateExpirationStatuses(ctx)
+		if err.Error() != wantErr {
+			t.Errorf("expected error `%v` but got `%v`", wantErr, err)
+		}
+	})
+
+	t.Run("returns error when secret is present but certificate data has been deleted", func(t *testing.T) {
+		wantErr := `certificate "gcscert.pem" not found on secret "cluster"`
+
+		var secrets []runtime.Object
+		s := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "cluster",
+				Namespace: "openshift-azure-operator",
+			},
+			Data: map[string][]byte{},
+		}
+		secrets = append(secrets, s)
+
+		ctx := context.Background()
+		m := mock_metrics.NewMockEmitter(gomock.NewController(t))
+		mon := &Monitor{
+			cli: fake.NewSimpleClientset(secrets...),
+			m:   m,
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						Domain: managedDomainName,
+					},
+					InfraID: "foo12",
+				},
+			},
+		}
+
+		err := mon.emitCertificateExpirationStatuses(ctx)
+		if err.Error() != wantErr {
+			t.Errorf("expected error `%v` but got `%v`", wantErr, err)
+		}
+	})
 }
 
 func tweakTemplateFn(expiration time.Time) func(*x509.Certificate) {
@@ -133,22 +233,22 @@ func tweakTemplateFn(expiration time.Time) func(*x509.Certificate) {
 }
 
 func getSecretsFromCertsInfo(certsInfo []certInfo, tweakTemplateFn func(*x509.Certificate)) []runtime.Object {
-    var secrets []runtime.Object
-    for _, sec := range certsInfo {
-        _, cert, _ := utiltls.GenerateTestKeyAndCertificate(sec.certSubject, nil, nil, false, false, tweakTemplateFn)
-        s := &corev1.Secret{
-            ObjectMeta: metav1.ObjectMeta{
-                Name:      sec.secretName,
-                Namespace: "openshift-azure-operator",
-            },
-            Data: map[string][]byte{
-                "tls.crt": pem.EncodeToMemory(&pem.Block{
-                    Type:  "CERTIFICATE",
-                    Bytes: cert[0].Raw,
-                }),
-            },
-        }
-        secrets = append(secrets, s)
-    }
-    return secrets
+	var secrets []runtime.Object
+	for _, sec := range certsInfo {
+		_, cert, _ := utiltls.GenerateTestKeyAndCertificate(sec.certSubject, nil, nil, false, false, tweakTemplateFn)
+		s := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      sec.secretName,
+				Namespace: "openshift-azure-operator",
+			},
+			Data: map[string][]byte{
+				"tls.crt": pem.EncodeToMemory(&pem.Block{
+					Type:  "CERTIFICATE",
+					Bytes: cert[0].Raw,
+				}),
+			},
+		}
+		secrets = append(secrets, s)
+	}
+	return secrets
 }

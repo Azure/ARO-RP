@@ -56,7 +56,7 @@ func (mon *Monitor) getCertificate(ctx context.Context, secretName, secretNamesp
 
 	certBlock, _ := pem.Decode(secret.Data[secretKey])
 	if certBlock == nil {
-		return &x509.Certificate{}, fmt.Errorf("certificate data for %s not found", secretName)
+		return &x509.Certificate{}, fmt.Errorf(`certificate "%s" not found on secret "%s"`, secretKey, secretName)
 	}
 	// we only care about the first certificate in the block
 	return x509.ParseCertificate(certBlock.Bytes)
