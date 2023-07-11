@@ -26,6 +26,7 @@ import (
 
 	"github.com/openshift/installer/data"
 	"github.com/openshift/installer/pkg/aro/dnsmasq"
+	"github.com/openshift/installer/pkg/aro/dnsv2"
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/bootstraplogging"
 	"github.com/openshift/installer/pkg/asset/ignition"
@@ -209,7 +210,14 @@ func (a *Common) generateConfig(dependencies asset.Parents, templateData *bootst
 		}},
 	)
 
-	dnsmasqIgnConfig, err := dnsmasq.Ignition3Config(installConfig.Config.ClusterDomain(), aroDNSConfig.APIIntIP, aroDNSConfig.IngressIP, aroDNSConfig.GatewayDomains, aroDNSConfig.GatewayPrivateEndpointIP)
+	dnsmasqEnabled := false // TODO: make this configurable
+	var dnsmasqIgnConfig *igntypes.Config
+
+	if dnsmasqEnabled {
+		dnsmasqIgnConfig, err = dnsmasq.Ignition3Config(installConfig.Config.ClusterDomain(), aroDNSConfig.APIIntIP, aroDNSConfig.IngressIP, aroDNSConfig.GatewayDomains, aroDNSConfig.GatewayPrivateEndpointIP)
+	} else {
+		dnsmasqIgnConfig, err = dnsv2.Ignition3Config(installConfig.Config.ClusterDomain(), aroDNSConfig.APIIntIP, aroDNSConfig.IngressIP, aroDNSConfig.GatewayDomains, aroDNSConfig.GatewayPrivateEndpointIP)
+	}
 	if err != nil {
 		return err
 	}

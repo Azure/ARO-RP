@@ -29,6 +29,7 @@ import (
 	openstackprovider "sigs.k8s.io/cluster-api-provider-openstack/pkg/apis/openstackproviderconfig/v1alpha1"
 
 	"github.com/openshift/installer/pkg/aro/dnsmasq"
+	"github.com/openshift/installer/pkg/aro/dnsv2"
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/ignition/machine"
 	"github.com/openshift/installer/pkg/asset/installconfig"
@@ -235,7 +236,15 @@ func (w *Worker) Generate(dependencies asset.Parents) error {
 			}
 			machineConfigs = append(machineConfigs, ignFIPS)
 		}
-		ignARODNS, err := dnsmasq.MachineConfig(installConfig.Config.ClusterDomain(), aroDNSConfig.APIIntIP, aroDNSConfig.IngressIP, "worker", aroDNSConfig.GatewayDomains, aroDNSConfig.GatewayPrivateEndpointIP)
+
+		dnsmasqEnabled := false // TODO: make this configurable
+		var ignARODNS *mcfgv1.MachineConfig
+
+		if dnsmasqEnabled {
+			ignARODNS, err = dnsmasq.MachineConfig(installConfig.Config.ClusterDomain(), aroDNSConfig.APIIntIP, aroDNSConfig.IngressIP, "worker", aroDNSConfig.GatewayDomains, aroDNSConfig.GatewayPrivateEndpointIP)
+		} else {
+			ignARODNS, err = dnsv2.MachineConfig(installConfig.Config.ClusterDomain(), aroDNSConfig.APIIntIP, aroDNSConfig.IngressIP, "worker", aroDNSConfig.GatewayDomains, aroDNSConfig.GatewayPrivateEndpointIP)
+		}
 		if err != nil {
 			return errors.Wrap(err, "failed to create ignition for ARO DNS for worker machines")
 		}

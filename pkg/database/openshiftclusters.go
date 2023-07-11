@@ -148,7 +148,7 @@ func (c *openShiftClusters) Get(ctx context.Context, key string) (*api.OpenShift
 	case len(docs.OpenShiftClusterDocuments) == 1:
 		return docs.OpenShiftClusterDocuments[0], nil
 	default:
-		return nil, &cosmosdb.Error{StatusCode: http.StatusNotFound}
+		return nil, &cosmosdb.Error{StatusCode: http.StatusNotFound, Message: "No cluster documents found"}
 	}
 }
 

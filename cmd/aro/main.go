@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/klog/v2"
+
 	"github.com/Azure/ARO-RP/pkg/env"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
@@ -36,9 +38,11 @@ func usage() {
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
+	klog.InitFlags(nil)
 
 	flag.Usage = usage
 	flag.Parse()
+	klog.V(10).Info("Logging enabled.")
 
 	ctx := context.Background()
 	audit := utillog.GetAuditEntry()
