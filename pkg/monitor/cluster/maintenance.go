@@ -64,23 +64,19 @@ func (mon *Monitor) emitPucmState(ctx context.Context) error {
 }
 
 func getPucmState(clusterProperties api.OpenShiftClusterProperties) pucmState {
-	var state pucmState
-
 	if pucmOngoing(clusterProperties) {
 		if clusterProperties.PucmPending {
-			state = pucmPlannedOngoing
+			return pucmPlannedOngoing
 		} else {
-			state = pucmUnplannedOngoing
+			return pucmUnplannedOngoing
 		}
 	} else {
 		if clusterProperties.PucmPending {
-			state = pucmPending
-		} else {
-			state = pucmNone
+			return pucmPending
 		}
 	}
 
-	return state
+	return pucmNone
 }
 
 func pucmOngoing(clusterProperties api.OpenShiftClusterProperties) bool {
