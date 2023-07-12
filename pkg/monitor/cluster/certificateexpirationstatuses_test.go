@@ -34,14 +34,14 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 	expirationString := expiration.UTC().Format(time.RFC3339)
 	for _, tt := range []struct {
 		name            string
-		isManaged       bool
+		domain string
 		certsPresent    []certInfo
 		wantExpirations []map[string]string
 		wantErr         string
 	}{
 		{
 			name:         "only emits MDSD status for unmanaged domain",
-			isManaged:    false,
+			domain: unmanagedDomainName,
 			certsPresent: []certInfo{{"cluster", "geneva.certificate"}},
 			wantExpirations: []map[string]string{
 				{
@@ -52,7 +52,7 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 		},
 		{
 			name:      "includes ingress and API status for managed domain",
-			isManaged: true,
+			domain: managedDomainName,
 			certsPresent: []certInfo{
 				{"cluster", "geneva.certificate"},
 				{"foo12-ingress", managedDomainName},
@@ -75,12 +75,12 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 		},
 		{
 			name:      "returns error when cluster secret has been deleted",
-			isManaged: false,
+			domain: unmanagedDomainName,
 			wantErr:   `secrets "cluster" not found`,
 		},
 		{
 			name:      "returns error when managed domain secret has been deleted",
-			isManaged: true,
+			domain: managedDomainName,
 			certsPresent: []certInfo{
 				{"cluster", "geneva.certificate"},
 				{"foo12-ingress", managedDomainName},
@@ -98,11 +98,6 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			}
 			secrets = append(secrets, secretsFromCertInfo...)
 
-			domain := unmanagedDomainName
-			if tt.isManaged {
-				domain = managedDomainName
-			}
-
 			m := mock_metrics.NewMockEmitter(gomock.NewController(t))
 			for _, gauge := range tt.wantExpirations {
 				m.EXPECT().EmitGauge("certificate.expirationdate", int64(1), gauge)
@@ -114,7 +109,7 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 				oc: &api.OpenShiftCluster{
 					Properties: api.OpenShiftClusterProperties{
 						ClusterProfile: api.ClusterProfile{
-							Domain: domain,
+							Domain: tt.domain,
 						},
 						InfraID: "foo12",
 					},
