@@ -362,6 +362,3 @@ func (ocb *openShiftClusterBackend) emitMetrics(doc *api.OpenShiftClusterDocumen
 		"newProvisioningState": string(provisioningState),
 	})
 }
-
-func (ocb *openShiftClusterBackend) updatePUCMPendingState(doc *api.OpenShiftClusterDocument) *api.OpenShiftClusterDocument {
-}
