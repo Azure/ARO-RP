@@ -63,12 +63,12 @@ require (
 	github.com/tebeka/selenium v0.9.9
 	github.com/ugorji/go/codec v1.2.7
 	github.com/vincent-petithory/dataurl v1.0.0
-	golang.org/x/crypto v0.9.0
-	golang.org/x/net v0.10.0
+	golang.org/x/crypto v0.11.0
+	golang.org/x/net v0.12.0
 	golang.org/x/oauth2 v0.0.0-20220411215720-9780585627b5
-	golang.org/x/sync v0.1.0
-	golang.org/x/text v0.9.0
-	golang.org/x/tools v0.6.0
+	golang.org/x/sync v0.3.0
+	golang.org/x/text v0.11.0
+	golang.org/x/tools v0.11.0
 	k8s.io/api v0.25.0
 	k8s.io/apiextensions-apiserver v0.25.0
 	k8s.io/apimachinery v0.25.0
@@ -248,9 +248,9 @@ require (
 	go.opentelemetry.io/otel/trace v1.15.1 // indirect
 	go.starlark.net v0.0.0-20220328144851-d1966c6b9fcd // indirect
 	go.uber.org/atomic v1.8.0 // indirect
-	golang.org/x/mod v0.8.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
-	golang.org/x/term v0.8.0 // indirect
+	golang.org/x/mod v0.12.0 // indirect
+	golang.org/x/sys v0.10.0 // indirect
+	golang.org/x/term v0.10.0 // indirect
 	golang.org/x/time v0.0.0-20220609170525-579cf78fd858 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	google.golang.org/api v0.74.0 // indirect
