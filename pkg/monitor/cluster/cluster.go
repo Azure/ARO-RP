@@ -153,6 +153,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		return
 	}
 	for _, f := range []func(context.Context) error{
+		mon.emitPucmState,
 		mon.emitAroOperatorHeartbeat,
 		mon.emitAroOperatorConditions,
 		mon.emitNSGReconciliation,

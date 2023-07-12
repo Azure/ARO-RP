@@ -157,6 +157,8 @@ type OpenShiftClusterProperties struct {
 	RegistryProfiles []*RegistryProfile `json:"registryProfiles,omitempty"`
 
 	HiveProfile HiveProfile `json:"hiveProfile,omitempty"`
+
+	PucmPending bool `json:"pucmPending,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state
