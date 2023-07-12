@@ -35,14 +35,14 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 	expirationString := expiration.UTC().Format(time.RFC3339)
 	for _, tt := range []struct {
 		name            string
-		domain string
+		domain          string
 		certsPresent    []certInfo
 		wantExpirations []map[string]string
 		wantErr         string
 	}{
 		{
 			name:         "only emits MDSD status for unmanaged domain",
-			domain: unmanagedDomainName,
+			domain:       unmanagedDomainName,
 			certsPresent: []certInfo{{"cluster", "geneva.certificate"}},
 			wantExpirations: []map[string]string{
 				{
@@ -52,7 +52,7 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			},
 		},
 		{
-			name:      "includes ingress and API status for managed domain",
+			name:   "includes ingress and API status for managed domain",
 			domain: managedDomainName,
 			certsPresent: []certInfo{
 				{"cluster", "geneva.certificate"},
@@ -75,12 +75,12 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			},
 		},
 		{
-			name:      "returns error when cluster secret has been deleted",
-			domain: unmanagedDomainName,
-			wantErr:   `secrets "cluster" not found`,
+			name:    "returns error when cluster secret has been deleted",
+			domain:  unmanagedDomainName,
+			wantErr: `secrets "cluster" not found`,
 		},
 		{
-			name:      "returns error when managed domain secret has been deleted",
+			name:   "returns error when managed domain secret has been deleted",
 			domain: managedDomainName,
 			certsPresent: []certInfo{
 				{"cluster", "geneva.certificate"},
@@ -104,18 +104,7 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 				m.EXPECT().EmitGauge("certificate.expirationdate", int64(1), gauge)
 			}
 
-			mon := &Monitor{
-				cli: fake.NewSimpleClientset(secrets...),
-				m:   m,
-				oc: &api.OpenShiftCluster{
-					Properties: api.OpenShiftClusterProperties{
-						ClusterProfile: api.ClusterProfile{
-							Domain: tt.domain,
-						},
-						InfraID: "foo12",
-					},
-				},
-			}
+			mon := buildMonitor(m, tt.domain, secrets...)
 
 			err = mon.emitCertificateExpirationStatuses(ctx)
 
@@ -124,37 +113,18 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 	}
 
 	t.Run("returns error when secret is present but certificate data has been deleted", func(t *testing.T) {
-		wantErr := `certificate "gcscert.pem" not found on secret "cluster"`
-
 		var secrets []runtime.Object
-		s := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "cluster",
-				Namespace: "openshift-azure-operator",
-			},
-			Data: map[string][]byte{},
-		}
+		data := map[string][]byte{}
+		s := buildSecret("cluster", data)
 		secrets = append(secrets, s)
 
 		ctx := context.Background()
 		m := mock_metrics.NewMockEmitter(gomock.NewController(t))
-		mon := &Monitor{
-			cli: fake.NewSimpleClientset(secrets...),
-			m:   m,
-			oc: &api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					ClusterProfile: api.ClusterProfile{
-						Domain: managedDomainName,
-					},
-					InfraID: "foo12",
-				},
-			},
-		}
+		mon := buildMonitor(m, managedDomainName, secrets...)
 
+		wantErr := `certificate "gcscert.pem" not found on secret "cluster"`
 		err := mon.emitCertificateExpirationStatuses(ctx)
-		if err.Error() != wantErr {
-			t.Errorf("expected error `%v` but got `%v`", wantErr, err)
-		}
+		utilerror.AssertErrorMessage(t, err, wantErr)
 	})
 }
 
@@ -175,19 +145,41 @@ func generateTestSecrets(certsInfo []certInfo, tweakTemplateFn func(*x509.Certif
 		if sec.secretName == "cluster" {
 			certKey = "gcscert.pem"
 		}
-		s := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      sec.secretName,
-				Namespace: "openshift-azure-operator",
-			},
-			Data: map[string][]byte{
-				certKey: pem.EncodeToMemory(&pem.Block{
-					Type:  "CERTIFICATE",
-					Bytes: cert[0].Raw,
-				}),
-			},
+		data := map[string][]byte{
+			certKey: pem.EncodeToMemory(&pem.Block{
+				Type:  "CERTIFICATE",
+				Bytes: cert[0].Raw,
+			}),
 		}
+		s := buildSecret(sec.secretName, data)
 		secrets = append(secrets, s)
 	}
 	return secrets, nil
+}
+
+func buildSecret(secretName string, data map[string][]byte) *corev1.Secret {
+	s := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: "openshift-azure-operator",
+		},
+		Data: data,
+	}
+	return s
+}
+
+func buildMonitor(m *mock_metrics.MockEmitter, domain string, secrets ...runtime.Object) *Monitor {
+	mon := &Monitor{
+		cli: fake.NewSimpleClientset(secrets...),
+		m:   m,
+		oc: &api.OpenShiftCluster{
+			Properties: api.OpenShiftClusterProperties{
+				ClusterProfile: api.ClusterProfile{
+					Domain: domain,
+				},
+				InfraID: "foo12",
+			},
+		},
+	}
+	return mon
 }
