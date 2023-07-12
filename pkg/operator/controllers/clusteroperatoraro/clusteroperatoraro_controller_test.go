@@ -185,6 +185,40 @@ func TestConditions(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Controller degraded does NOT set Degraded=True",
+			controllerConditions: []operatorv1.OperatorCondition{
+				utilconditions.ControllerDefaultDegraded("ControllerA"),
+				{
+					Type:               "ControllerBDegraded",
+					Status:             operatorv1.ConditionTrue,
+					LastTransitionTime: metav1.NewTime(time.Now()),
+					Reason:             "SomeProcess",
+					Message:            "Something bad is happening",
+				},
+				utilconditions.ControllerDefaultDegraded("ControllerC"),
+			},
+			wantConditions: []configv1.ClusterOperatorStatusCondition{
+				{
+					Type:               configv1.OperatorAvailable,
+					Status:             configv1.ConditionUnknown,
+					LastTransitionTime: metav1.NewTime(time.Now()),
+					Reason:             "NoData",
+				},
+				{
+					Type:               configv1.OperatorProgressing,
+					Status:             configv1.ConditionUnknown,
+					LastTransitionTime: metav1.NewTime(time.Now()),
+					Reason:             "NoData",
+				},
+				{
+					Type:               configv1.OperatorDegraded,
+					Status:             configv1.ConditionFalse,
+					LastTransitionTime: metav1.NewTime(time.Now()),
+					Reason:             "AsExpected",
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
