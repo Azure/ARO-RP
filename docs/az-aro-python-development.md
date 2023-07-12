@@ -16,7 +16,7 @@ CLI module. You can read more about how command modules are authored and
 maintained [here](https://github.com/Azure/azure-cli/tree/dev/doc/authoring_command_modules).
 
 The downstream extension can be installed by an end user to override the module
-(e.g. to fix an issue rapidly).  We also use the extension directly from this
+(e.g. to use preview features).  We also use the extension directly from this
 codebase for development and testing of new API versions.  Customers are
 advised to use the upstream CLI. You can read more about how extensions are
 authored [here](https://github.com/Azure/azure-cli/blob/dev/doc/extensions/authoring.md),
