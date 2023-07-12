@@ -10,6 +10,7 @@ import (
 	"github.com/golang/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/metrics"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 )
 
@@ -27,10 +28,7 @@ func TestEmitPucmState(t *testing.T) {
 			ProvisioningState: api.ProvisioningStateAdminUpdating,
 		},
 	}
-	mon := &Monitor{
-		m:  m,
-		oc: oc,
-	}
+	mon := getMonitor(oc, m)
 	m.EXPECT().EmitGauge("cluster.maintenance.pucm", int64(1), map[string]string{
 		"state": pucmUnplannedOngoing.String(),
 	})
@@ -47,7 +45,7 @@ func TestEmitPucmState(t *testing.T) {
 			PucmPending:       true,
 		},
 	}
-
+	mon = getMonitor(oc, m)
 	m.EXPECT().EmitGauge("cluster.maintenance.pucm", int64(1), map[string]string{
 		"state": pucmPlannedOngoing.String(),
 	})
@@ -64,7 +62,7 @@ func TestEmitPucmState(t *testing.T) {
 			PucmPending:       true,
 		},
 	}
-
+	mon = getMonitor(oc, m)
 	m.EXPECT().EmitGauge("cluster.maintenance.pucm", int64(1), map[string]string{
 		"state": pucmPending.String(),
 	})
@@ -80,7 +78,7 @@ func TestEmitPucmState(t *testing.T) {
 			ProvisioningState: api.ProvisioningStateSucceeded,
 		},
 	}
-
+	mon = getMonitor(oc, m)
 	m.EXPECT().EmitGauge("cluster.maintenance.pucm", int64(1), map[string]string{
 		"state": pucmNone.String(),
 	})
@@ -88,5 +86,12 @@ func TestEmitPucmState(t *testing.T) {
 	err = mon.emitPucmState(ctx)
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func getMonitor(oc *api.OpenShiftCluster, m metrics.Emitter) *Monitor {
+	return &Monitor{
+		m:  m,
+		oc: oc,
 	}
 }
