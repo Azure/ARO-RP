@@ -16,6 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 // Copyright (c) Microsoft Corporation.
@@ -117,13 +118,8 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			}
 
 			err = mon.emitCertificateExpirationStatuses(ctx)
-			if tt.wantErr != "" {
-				if tt.wantErr != err.Error() {
-					t.Errorf("expected error `%v` but got `%v`", tt.wantErr, err)
-				}
-			} else if err != nil {
-				t.Errorf("got error %v", err)
-			}
+
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 
