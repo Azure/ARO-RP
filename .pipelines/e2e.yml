@@ -30,7 +30,7 @@ jobs:
   - script: |
       set -xe
       sudo rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-      sudo dnf install -y openvpn make podman
+      sudo dnf install -y openvpn make podman jq azure-cli
     displayName: Setup (Container)
     target: container
 
@@ -86,7 +86,7 @@ jobs:
       hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER >admin.kubeconfig
       export KUBECONFIG=admin.kubeconfig
 
-      wget https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftVersion)/openshift-client-linux-$(OpenShiftVersion).tar.gz
+      wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftVersion)/openshift-client-linux-$(OpenShiftVersion).tar.gz
       tar xf openshift-client-linux-$(OpenShiftVersion).tar.gz
       ./oc adm must-gather
       tar cf must-gather.tar.gz must-gather.local.*
