@@ -60,7 +60,6 @@ func (mon *Monitor) emitPucmState(ctx context.Context) error {
 	mon.emitGauge("cluster.maintenance.pucm", 1, map[string]string{
 		"state": state.String(),
 	})
-	mon.log.Infof("Cluster %s with PUCM state %s and time %s", mon.oc.Name, state.String(), time.Now().String())
 
 	return nil
 }
