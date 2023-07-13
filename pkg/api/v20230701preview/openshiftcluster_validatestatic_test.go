@@ -668,6 +668,25 @@ func TestOpenShiftClusterStaticValidateLoadBalancerProfile(t *testing.T) {
 		},
 	}
 
+	createTests := []*validateTest{
+		{
+			name: "LoadbalancerProfile.EffectiveOutboundIPs is read only",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.LoadbalancerProfile = &LoadbalancerProfile{
+					ManagedOutboundIPs: &ManagedOutboundIPs{
+						Count: 1,
+					},
+					EffectiveOutboundIPs: []EffectiveOutboundIP{
+						{
+							ID: "someId",
+						},
+					},
+				}
+			},
+			wantErr: "400: InvalidParameter: properties.networkProfile.loadBalancerProfile.effectiveOutboundIps: The field effectiveOutboundIps is read only.",
+		},
+	}
+	runTests(t, testModeCreate, createTests)
 	runTests(t, testModeCreate, tests)
 	runTests(t, testModeUpdate, tests)
 }
@@ -1156,7 +1175,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 					},
 				}
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.loadBalancerProfile.effectiveOutboundIps: Changing property 'properties.networkProfile.loadBalancerProfile.effectiveOutboundIps' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.loadBalancerProfile.effectiveOutboundIps[0].id: Changing property 'properties.networkProfile.loadBalancerProfile.effectiveOutboundIps[0].id' is not allowed.",
 		},
 	}
 
