@@ -161,7 +161,10 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		if err != nil {
 			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
 		}
-		ocb.setNoPucmPending(ctx, doc)
+		doc, err = ocb.setNoPucmPending(ctx, doc)
+		if err != nil {
+			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
+		}
 		return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateSucceeded, nil)
 
 	case api.ProvisioningStateUpdating:
