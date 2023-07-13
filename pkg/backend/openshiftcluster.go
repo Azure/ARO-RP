@@ -161,7 +161,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		if err != nil {
 			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
 		}
-		doc.OpenShiftCluster.Properties.PucmPending = false
+		ocb.setNoPucmPending(ctx, doc)
 		return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateSucceeded, nil)
 
 	case api.ProvisioningStateUpdating:
@@ -360,5 +360,12 @@ func (ocb *openShiftClusterBackend) emitMetrics(doc *api.OpenShiftClusterDocumen
 	ocb.m.EmitGauge("backend.openshiftcluster.count", 1, map[string]string{
 		"oldProvisioningState": string(doc.OpenShiftCluster.Properties.ProvisioningState),
 		"newProvisioningState": string(provisioningState),
+	})
+}
+
+func (ocb *openShiftClusterBackend) setNoPucmPending(ctx context.Context, doc *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error) {
+	return ocb.dbOpenShiftClusters.Patch(ctx, doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.PucmPending = false
+		return nil
 	})
 }
