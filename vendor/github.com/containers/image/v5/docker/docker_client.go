@@ -1,13 +1,11 @@
 package docker
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -654,7 +652,7 @@ func (c *dockerClient) getBearerTokenOAuth2(ctx context.Context, challenge chall
 	params.Add("refresh_token", c.auth.IdentityToken)
 	params.Add("client_id", "containers/image")
 
-	authReq.Body = ioutil.NopCloser(bytes.NewBufferString(params.Encode()))
+	authReq.Body = io.NopCloser(strings.NewReader(params.Encode()))
 	authReq.Header.Add("User-Agent", c.userAgent)
 	authReq.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	logrus.Debugf("%s %s", authReq.Method, authReq.URL.Redacted())
