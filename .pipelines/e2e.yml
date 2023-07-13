@@ -30,7 +30,7 @@ jobs:
   - script: |
       set -xe
       sudo rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-      sudo dnf install -y openvpn make podman jq azure-cli
+      sudo dnf install -y openvpn make podman
     displayName: Setup (Container)
     target: container
 
@@ -92,12 +92,10 @@ jobs:
       tar cf must-gather.tar.gz must-gather.local.*
     displayName: Collect must-gather
     condition: failed()
-    target: container
   - publish: must-gather.tar.gz
     artifact: must-gather
     displayName: Append must-gather to Pipeline
     condition: failed()
-    target: container
 
   - script: |
       export CI=true
