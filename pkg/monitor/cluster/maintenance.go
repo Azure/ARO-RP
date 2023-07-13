@@ -4,8 +4,7 @@ package cluster
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
-	"time"
+	"context"	
 
 	"github.com/Azure/ARO-RP/pkg/api"
 )
