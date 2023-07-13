@@ -323,6 +323,4 @@ func setUpdateProvisioningState(doc *api.OpenShiftClusterDocument, apiVersion st
 		// Non-admin update (ex: customer cluster update)
 		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
 	}
-
-	return
 }
