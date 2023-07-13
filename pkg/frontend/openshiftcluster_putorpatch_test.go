@@ -589,7 +589,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
 					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					AsyncOperation: &api.AsyncOperation{
-						InitialProvisioningState: api.ProvisioningStateSucceeded,
+						InitialProvisioningState: api.ProvisioningStateUpdating,
 						ProvisioningState:        api.ProvisioningStateUpdating,
 					},
 				})
@@ -605,7 +605,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							ClusterProfile: api.ClusterProfile{
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
-							MaintenanceTask: "",
+							MaintenanceTask: api.MaintenanceTaskPucmPending,
 							NetworkProfile: api.NetworkProfile{
 								OutboundType:     api.OutboundTypeLoadbalancer,
 								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
@@ -614,6 +614,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
 							},
 							PucmPending: true,
+							OperatorFlags: api.DefaultOperatorFlags(),
 						},
 					},
 				})
