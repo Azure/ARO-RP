@@ -613,7 +613,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
 							},
-							PucmPending: true,
+							PucmPending:   true,
 							OperatorFlags: api.DefaultOperatorFlags(),
 						},
 					},
@@ -621,6 +621,26 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			},
 			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
+			wantResponse: &admin.OpenShiftCluster{
+				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+				Tags: map[string]string{"tag": "will-be-kept"},
+				Properties: admin.OpenShiftClusterProperties{
+					ProvisioningState:     admin.ProvisioningStateUpdating,
+					LastProvisioningState: admin.ProvisioningStateSucceeded,
+					ClusterProfile: admin.ClusterProfile{
+						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
+					},
+					MaintenanceTask: admin.MaintenanceTaskPucmPending,
+					NetworkProfile: admin.NetworkProfile{
+						OutboundType: admin.OutboundTypeLoadbalancer,
+					},
+					MasterProfile: admin.MasterProfile{
+						EncryptionAtHost: admin.EncryptionAtHostDisabled,
+					},
+					OperatorFlags: admin.OperatorFlags(api.DefaultOperatorFlags()),
+				},
+			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
