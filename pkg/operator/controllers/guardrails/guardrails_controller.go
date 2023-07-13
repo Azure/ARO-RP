@@ -112,6 +112,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 				return reconcile.Result{}, fmt.Errorf("GateKeeper ConstraintTemplates timed out on creation: %w", err)
 			}
 
+			// Deploy the GateKeeper Config
+			err = r.ensureGatekeeperConfig(ctx, gkConfigConfig, gkConfigPath)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+
 			// Deploy the GateKeeper Constraint
 			err = r.ensurePolicy(ctx, gkPolicyConstraints, gkConstraintsPath)
 			if err != nil {
@@ -127,6 +133,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			r.stopTicker()
 
 			err = r.removePolicy(ctx, gkPolicyConstraints, gkConstraintsPath)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+
+			err = r.removeGatekeeperConfig(ctx, gkConfigConfig, gkConfigPath)
 			if err != nil {
 				return reconcile.Result{}, err
 			}

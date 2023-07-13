@@ -142,7 +142,7 @@ Make sure the filename of constraint is the same as the .metadata.name of the Co
 
 * Not all data you need are found on the `'input.review'` object. For example, if your policy is for blocking modification of the UpgradeConfig, and you need to check if the cluster is connected to OCM via the ConfigMap of `'openshift-managed-upgrade-operator'`, the info you need will not available on the `'input.review'` object because it only contains data from the UpgradeConfig the user is trying to modify. In this case, you need to sync data of the ConfigMap into OPA via `'data.inventory'` document so your rule can access it. In order to create such policies, you need to follow the steps below:
 
-  * Set the `'audit-from-cache'` flag to true in ".../gktemplates/aro-deny-upgradeconfig.yaml".
+  * Set the `'audit-from-cache'` flag to true in "guardrails/staticresources/gk_audit_controller_deployment.yaml".
   ```yaml
   apiVersion: apps/v1
   kind: Deployment
@@ -172,7 +172,7 @@ Make sure the filename of constraint is the same as the .metadata.name of the Co
         - args:
           - --audit-from-cache=true    ----->>>>>SET THIS FLAG TO TRUE
   ```
-  * Create and apply the sync config resource to the cluster. Only resources in syncOnly will be synced into OPA. See template below. For more info, please check https://open-policy-agent.github.io/gatekeeper/website/docs/v3.10.x/exempt-namespaces 
+  * Modify the sync config resource file (guardrails/policies/gkconfig/gatekeeper-config.yaml). All policies that relie on data.inventory have to collaborate on the same config file, as gatekeeper only allow one config.config.gatekeeper.sh instance. Only resources in syncOnly will be synced into OPA, and please carefully only sync the necessary resources as it impacts the performance, see template below. For more info about field excludedNamespaces, please check https://open-policy-agent.github.io/gatekeeper/website/docs/v3.10.x/exempt-namespaces 
 
   ```yaml
     apiVersion: config.gatekeeper.sh/v1alpha1
@@ -210,9 +210,9 @@ Make sure the filename of constraint is the same as the .metadata.name of the Co
 
     ```
   * Write your rego rule. To access data from `'data.inventory'`, follow the format below:
-      
+
     * For cluster-scoped objects: `'data.inventory.cluster[<groupVersion>][<kind>][<name>]'`. Example below.
-      
+
     ```Rego
       data.inventory.cluster["v1"].Namespace["gatekeeper"]
     ```

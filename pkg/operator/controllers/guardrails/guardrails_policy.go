@@ -90,6 +90,68 @@ func (r *Reconciler) ensurePolicy(ctx context.Context, fs embed.FS, path string)
 	return nil
 }
 
+func (r *Reconciler) ensureGatekeeperConfig(ctx context.Context, fs embed.FS, path string) error {
+	template, err := template.ParseFS(fs, filepath.Join(path, "*"))
+	if err != nil {
+		return err
+	}
+
+	instance := &arov1alpha1.Cluster{}
+	err = r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+	if err != nil {
+		return err
+	}
+
+	creates := make([]kruntime.Object, 0)
+	buffer := new(bytes.Buffer)
+	for _, templ := range template.Templates() {
+		policyConfig := &config.GuardRailsConfigConfig{
+			Namespace: instance.Spec.OperatorFlags.GetWithDefault(controllerNamespace, defaultNamespace),
+		}
+		err = templ.Execute(buffer, policyConfig)
+		if err != nil {
+			return err
+		}
+		data := buffer.Bytes()
+
+		uns, err := dynamichelper.DecodeUnstructured(data)
+		if err != nil {
+			return err
+		}
+
+		creates = append(creates, uns)
+	}
+	err = r.dh.Ensure(ctx, creates...)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *Reconciler) removeGatekeeperConfig(ctx context.Context, fs embed.FS, path string) error {
+	template, err := template.ParseFS(fs, filepath.Join(path, "*"))
+	if err != nil {
+		return err
+	}
+	buffer := new(bytes.Buffer)
+	for _, templ := range template.Templates() {
+		err := templ.Execute(buffer, nil)
+		if err != nil {
+			return err
+		}
+		data := buffer.Bytes()
+		uns, err := dynamichelper.DecodeUnstructured(data)
+		if err != nil {
+			return err
+		}
+		err = r.dh.EnsureDeletedGVR(ctx, uns.GroupVersionKind().GroupKind().String(), uns.GetNamespace(), uns.GetName(), uns.GroupVersionKind().Version)
+		if err != nil && !kerrors.IsNotFound(err) && !strings.Contains(strings.ToLower(err.Error()), "notfound") {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *Reconciler) removePolicy(ctx context.Context, fs embed.FS, path string) error {
 	template, err := template.ParseFS(fs, filepath.Join(path, "*"))
 	if err != nil {

@@ -24,3 +24,7 @@ type GuardRailsDeploymentConfig struct {
 type GuardRailsPolicyConfig struct {
 	Enforcement string
 }
+
+type GuardRailsConfigConfig struct {
+	Namespace string
+}

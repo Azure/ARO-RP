@@ -58,6 +58,7 @@ const (
 	gkDeploymentPath  = "staticresources"
 	gkTemplatePath    = "policies/gktemplates"
 	gkConstraintsPath = "policies/gkconstraints"
+	gkConfigPath      = "policies/gkconfig"
 )
 
 //go:embed staticresources
@@ -68,6 +69,9 @@ var gkPolicyTemplates embed.FS
 
 //go:embed policies/gkconstraints
 var gkPolicyConstraints embed.FS
+
+//go:embed policies/gkconfig
+var gkConfigConfig embed.FS
 
 func (r *Reconciler) getDefaultDeployConfig(ctx context.Context, instance *arov1alpha1.Cluster) *config.GuardRailsDeploymentConfig {
 	// apply the default value if the flag is empty or missing
