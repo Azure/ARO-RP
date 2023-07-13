@@ -153,7 +153,6 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		return
 	}
 	for _, f := range []func(context.Context) error{
-		mon.emitPucmState,
 		mon.emitAroOperatorHeartbeat,
 		mon.emitAroOperatorConditions,
 		mon.emitNSGReconciliation,
@@ -175,6 +174,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitSummary,
 		mon.emitHiveRegistrationStatus,
 		mon.emitOperatorFlagsAndSupportBanner,
+		mon.emitPucmState,
 		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable
 	} {
 		err = f(ctx)
