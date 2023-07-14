@@ -5,6 +5,12 @@ run:
     - vendor
   skip-dirs-use-default: true
   modules-download-mode: vendor
+  build-tags:
+    - "aro"
+    - "containers_image_openpgp"
+    - "exclude_graphdriver_devicemapper"
+    - "exclude_graphdriver_btrfs"
+  go: "1.18"
 
 issues:
   exclude-rules:

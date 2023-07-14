@@ -84,8 +84,8 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		srcAcrGeneva := "linuxgeneva-microsoft" + acrDomainSuffix
 		mirrorImages := []string{
 			// https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
-			srcAcrGeneva + "/distroless/genevamdm:2.2023.505.1124-45da18-20230505t1700",
-			srcAcrGeneva + "/distroless/genevamdsd:mariner_20230517.1",
+			srcAcrGeneva + "/distroless/genevamdm:2.2023.609.2051-821f47-20230706t0953",
+			srcAcrGeneva + "/distroless/genevamdsd:mariner_20230706.2",
 		}
 		for _, ref := range mirrorImages {
 			log.Printf("mirroring %s -> %s", ref, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref))

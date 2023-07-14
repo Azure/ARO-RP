@@ -1,7 +1,7 @@
 ARG REGISTRY
 FROM ${REGISTRY}/ubi8/go-toolset:1.18.10-1 AS builder
 ARG GATEKEEPER_VERSION
-ENV DOWNLOAD_URL=https://github.com/open-policy-agent/gatekeeper/archive/v${GATEKEEPER_VERSION}.tar.gz
+ENV DOWNLOAD_URL=https://github.com/open-policy-agent/gatekeeper/archive/${GATEKEEPER_VERSION}.tar.gz
 
 ARG BUILDKIT_SBOM_SCAN_STAGE=true
 
