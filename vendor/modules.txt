@@ -1601,7 +1601,7 @@ github.com/tebeka/selenium/chrome
 github.com/tebeka/selenium/firefox
 github.com/tebeka/selenium/internal/zip
 github.com/tebeka/selenium/log
-# github.com/theupdateframework/go-tuf v0.3.1
+# github.com/theupdateframework/go-tuf v0.3.2
 ## explicit; go 1.18
 github.com/theupdateframework/go-tuf/encrypted
 # github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399
