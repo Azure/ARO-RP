@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"text/template"
 
+	"github.com/Azure/go-autorest/autorest/to"
 	ign2types "github.com/coreos/ignition/config/v2_2/types"
-	ignutil "github.com/coreos/ignition/v2/config/util"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/vincent-petithory/dataurl"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -182,7 +182,7 @@ func ignition2Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains [
 				{
 					Node: ign2types.Node{
 						Filesystem: "root",
-						Overwrite:  ignutil.BoolToPtr(true),
+						Overwrite:  to.BoolPtr(true),
 						Path:       "/etc/dnsmasq.conf",
 						User: &ign2types.NodeUser{
 							Name: "root",
@@ -192,13 +192,13 @@ func ignition2Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains [
 						Contents: ign2types.FileContents{
 							Source: dataurl.EncodeBytes(config),
 						},
-						Mode: ignutil.IntToPtr(0644),
+						Mode: to.IntPtr(0644),
 					},
 				},
 				{
 					Node: ign2types.Node{
 						Filesystem: "root",
-						Overwrite:  ignutil.BoolToPtr(true),
+						Overwrite:  to.BoolPtr(true),
 						Path:       "/usr/local/bin/aro-dnsmasq-pre.sh",
 						User: &ign2types.NodeUser{
 							Name: "root",
@@ -208,7 +208,7 @@ func ignition2Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains [
 						Contents: ign2types.FileContents{
 							Source: dataurl.EncodeBytes(startpre),
 						},
-						Mode: ignutil.IntToPtr(0744),
+						Mode: to.IntPtr(0744),
 					},
 				},
 			},
@@ -217,7 +217,7 @@ func ignition2Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains [
 			Units: []ign2types.Unit{
 				{
 					Contents: service,
-					Enabled:  ignutil.BoolToPtr(true),
+					Enabled:  to.BoolPtr(true),
 					Name:     "dnsmasq.service",
 				},
 			},
