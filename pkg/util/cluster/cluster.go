@@ -563,8 +563,8 @@ func (c *Cluster) insertDefaultVersionIntoCosmosdb(ctx context.Context) error {
 		Properties: api.OpenShiftVersionProperties{
 			Version:           defaultVersion.Version.String(),
 			OpenShiftPullspec: defaultVersion.PullSpec,
-			// HACK: we hardcode this to arointsvc, the integrated installer does not use this and you can still
-			// override it via the LiveConfig
+			// HACK: we hardcode this to the latest installer image in arointsvc
+			// if it is not overridden with ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC or LiveConfig
 			InstallerPullspec: fmt.Sprintf("arointsvc.azurecr.io/aro-installer:release-%s", version.DefaultInstallStream.Version.MinorVersion()),
 			Enabled:           true,
 		},
