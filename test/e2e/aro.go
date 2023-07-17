@@ -22,6 +22,9 @@ import (
 // a cluster is an ARO cluster. This should help us catch regressions
 // when migrating between installers (e.g. vendored one vs CLI one run by Hive)
 var _ = Describe("ARO Cluster", func() {
+	It("test fails", func(ctx context.Context) {
+		Expect(false).To(Equal(true))
+	})
 	It("must have ARO-specific machine configs", func(ctx context.Context) {
 		expectedMachineConfigs := []string{
 			"90-aro-worker-registries",
