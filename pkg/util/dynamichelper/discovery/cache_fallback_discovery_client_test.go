@@ -36,7 +36,8 @@ func TestVersion(t *testing.T) {
 	}
 
 	assetsVersion := strings.TrimSuffix(string(b), "\n")
-	if assetsVersion != version.DefaultInstallStream.Version.String() {
+	// NOTE: This is checking for the version of the oldest supported minor stream.
+	if assetsVersion != version.DefaultInstallStreams[10].Version.String() {
 		t.Error("discovery cache is out of date: run make discoverycache")
 	}
 }
