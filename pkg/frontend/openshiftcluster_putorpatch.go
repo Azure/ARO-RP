@@ -306,7 +306,7 @@ func (f *frontend) ValidateNewCluster(ctx context.Context, subscription *api.Sub
 	return nil
 }
 
-// Sets either the admin update or update provisioning state
+// setUpdateProvisioningState Sets either the admin update or update provisioning state
 func setUpdateProvisioningState(doc *api.OpenShiftClusterDocument, apiVersion string) {
 	switch apiVersion {
 	case admin.APIVersion:
