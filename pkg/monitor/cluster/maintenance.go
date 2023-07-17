@@ -67,13 +67,10 @@ func getPucmState(clusterProperties api.OpenShiftClusterProperties) pucmState {
 	if pucmOngoing(clusterProperties) {
 		if clusterProperties.PucmPending {
 			return pucmPlannedOngoing
-		} else {
-			return pucmUnplannedOngoing
 		}
-	} else {
-		if clusterProperties.PucmPending {
-			return pucmPending
-		}
+		return pucmUnplannedOngoing
+	} else if clusterProperties.PucmPending {
+		return pucmPending
 	}
 
 	return pucmNone
