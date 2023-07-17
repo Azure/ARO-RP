@@ -33,28 +33,28 @@ func TestEmitPucmState(t *testing.T) {
 			expectedPucmState: pucmPending,
 		},
 		{
-			name:              "state unplanned ongoing - admin updating in flight and no admin update error",
+			name:              "state unplanned - admin updating in flight and no admin update error",
 			provisioningState: api.ProvisioningStateAdminUpdating,
-			expectedPucmState: pucmUnplannedOngoing,
+			expectedPucmState: pucmUnplanned,
 		},
 		{
-			name:              "state planned ongoing - admin updating in flight and no admin update error",
+			name:              "state planned - admin updating in flight and no admin update error",
 			provisioningState: api.ProvisioningStateAdminUpdating,
 			pucmPending:       true,
-			expectedPucmState: pucmPlannedOngoing,
+			expectedPucmState: pucmPlanned,
 		},
 		{
-			name:              "state unplanned ongoing - not admin updating but admin update error",
+			name:              "state unplanned - not admin updating but admin update error",
 			provisioningState: api.ProvisioningStateFailed,
 			adminUpdateErr:    "PUCM failed",
-			expectedPucmState: pucmUnplannedOngoing,
+			expectedPucmState: pucmUnplanned,
 		},
 		{
-			name:              "state planned ongoing - not admin updating but admin update error",
+			name:              "state planned - not admin updating but admin update error",
 			provisioningState: api.ProvisioningStateFailed,
 			pucmPending:       true,
 			adminUpdateErr:    "PUCM failed",
-			expectedPucmState: pucmPlannedOngoing,
+			expectedPucmState: pucmPlanned,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

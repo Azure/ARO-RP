@@ -48,10 +48,10 @@ func (p pucmState) String() string {
 }
 
 const (
-	pucmNone             pucmState = "none"
-	pucmPending          pucmState = "pending"
-	pucmPlannedOngoing   pucmState = "planned_ongoing"
-	pucmUnplannedOngoing pucmState = "unplanned_ongoing"
+	pucmNone      pucmState = "none"
+	pucmPending   pucmState = "pending"
+	pucmPlanned   pucmState = "planned"
+	pucmUnplanned pucmState = "unplanned"
 )
 
 func (mon *Monitor) emitPucmState(ctx context.Context) error {
@@ -66,9 +66,9 @@ func (mon *Monitor) emitPucmState(ctx context.Context) error {
 func getPucmState(clusterProperties api.OpenShiftClusterProperties) pucmState {
 	if pucmOngoing(clusterProperties) {
 		if clusterProperties.PucmPending {
-			return pucmPlannedOngoing
+			return pucmPlanned
 		}
-		return pucmUnplannedOngoing
+		return pucmUnplanned
 	} else if clusterProperties.PucmPending {
 		return pucmPending
 	}
