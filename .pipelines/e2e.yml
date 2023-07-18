@@ -79,13 +79,17 @@ jobs:
     displayName: Execute Tests
     target: container
 
-  # must-gather collection must be run inside the container so it can access the VPN
   - script: |
       export CI=true
-      . secrets/env
       . ./hack/e2e/run-rp-and-e2e.sh
 
       hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER >admin.kubeconfig
+    displayName: Get admin kubeconfig for must-gather
+    condition: failed()
+  # must-gather collection must be run inside the container so it can access the VPN
+  - script: |
+      export CI=true
+      . ./hack/e2e/run-rp-and-e2e.sh
       export KUBECONFIG=admin.kubeconfig
 
       wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftVersion)/openshift-client-linux-$(OpenShiftVersion).tar.gz
