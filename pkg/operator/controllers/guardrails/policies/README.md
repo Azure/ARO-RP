@@ -279,7 +279,7 @@ test_input_allowed_system_user_update_upgradeconfig {
   Generating gktemplates/aro-deny-machine-config.yaml from gktemplates-src/aro-deny-machine-config/aro-deny-machine-config.tmpl
   ```
 
-## Test policy with Gator
+## Test policy with gator
 
 Create suite.yaml and testcases in gator-test folder under the folder created for the new policy, refer example below:
 
@@ -310,7 +310,7 @@ tests:
 ```
 gkconstraints-test here stores the target yaml files after expanding "{{.Enforcement}}" symbol.
 
-Gator tests ConstraintTemplate and Constraint together, items under cases keyword are test cases indicator, everyone pointing to a yaml file in gator-test, which provides test input for one scenario, example:
+gator tests ConstraintTemplate and Constraint together, items under cases keyword are test cases indicator, everyone pointing to a yaml file in gator-test, which provides test input for one scenario, example:
 
 ```yaml
 apiVersion: v1
@@ -351,9 +351,8 @@ or below cmd after test.sh has been executed:
 ```sh
 gator verify . [-v] #-v for verbose
 ```
-<br>
 
-### Gator test your policy using `data.inventory`
+### gator test your policy using `data.inventory`
 * In order to test your rego policy that's using `data.inventory`, you need to add `'inventory: <path to your mock data.inventory>'`. For example:
 
 ```yaml
@@ -373,7 +372,7 @@ tests:
         assertions:
           - violations: no
 ```
-Sometimes we need to mock kube admission review request especially as Gator test inputs when verifying policies that check specific operations (e.g., CREATE, DELETE or UPDATE).
+Sometimes we need to mock kube admission review request especially as gator test inputs when verifying policies that check specific operations (e.g., CREATE, DELETE or UPDATE).
 
 Please refer the yaml file below as a sample of kube admission review request:
 
