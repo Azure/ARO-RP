@@ -538,7 +538,6 @@ exclude (
 	google.golang.org/protobuf v1.25.0
 	google.golang.org/protobuf v1.26.0
 	google.golang.org/protobuf v1.26.0-rc.1
-
 )
 
 // exclude ancient k8s versions
