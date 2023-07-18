@@ -1,0 +1,51 @@
+apiVersion: admission.k8s.io/v1
+kind: AdmissionReview
+request:
+  dryRun: true
+  kind:
+    group: ""
+    kind: Pod
+    version: v1
+  object:
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: nginx-host-mount
+      namespace: test
+    spec:
+      containers:
+      - args:
+        - run
+        - --server
+        - --addr=localhost:8080
+        image: openpolicyagent/opa:0.9.2
+        name: test
+        resources:
+          limits:
+            cpu: 100m
+            memory: 30Mi
+        volumeMounts:
+        - mountPath: /cache
+          name: host
+          readOnly: true
+      serviceAccountName: test-user
+      volumes:
+      - hostPath:
+          path: /test
+          type: Directory
+        name: host
+  oldObject: null
+  operation: CREATE
+  options: null
+  requestKind:
+    group: ""
+    kind: Pod
+    version: v1
+  resource:
+    group: ""
+    resource: Pod
+    version: v1
+  uid: a968977b-c4d7-43fc-9df9-03519d7c9dae
+  userInfo:
+    uid: e3b4800c-eed0-48d5-ac4b-959b2287bea5
+    username: test-user

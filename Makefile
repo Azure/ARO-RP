@@ -90,6 +90,9 @@ discoverycache:
 generate:
 	go generate ./...
 
+generate-guardrails:
+	cd pkg/operator/controllers/guardrails/policies && ./scripts/generate.sh > /dev/null
+
 image-aro: aro e2e.test
 	docker pull $(REGISTRY)/ubi8/ubi-minimal
 	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .

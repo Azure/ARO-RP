@@ -1,11 +1,5 @@
 package arodenylabels
-get_message(parameters, _default) = msg {
-  not parameters.message
-  msg := _default
-}
-get_message(parameters, _default) = msg {
-  msg := parameters.message
-}
+
 violation[{"msg": msg}] {
   input.review.operation == "DELETE"
   label_value := input.review.object.metadata.labels[key]
@@ -16,4 +10,13 @@ violation[{"msg": msg}] {
   re_match(deny_regex, label_value)
   def_msg := sprintf("Operation not allowed. Label <%v: %v> matches deny regex: <%v>", [key, label_value, deny_regex])
   msg := get_message(input.parameters, def_msg)
+}
+
+get_message(parameters, _default) = msg {
+  not parameters.message
+  msg := _default
+}
+
+get_message(parameters, _default) = msg {
+  msg := parameters.message
 }

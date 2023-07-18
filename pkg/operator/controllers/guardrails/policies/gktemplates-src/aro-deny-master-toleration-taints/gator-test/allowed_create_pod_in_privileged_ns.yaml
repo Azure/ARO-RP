@@ -1,0 +1,48 @@
+kind: AdmissionReview
+apiVersion: admission.k8s.io/v1
+request:
+  uid: f700ab7f-8f42-45ff-83f5-782c739806d9
+  kind:
+    group: ''
+    version: v1
+    kind: Pod
+  resource:
+    group: ''
+    version: v1
+    resource: pods
+  requestKind:
+    group: ''
+    version: v1
+    kind: Pod
+  requestResource:
+    group: ''
+    version: v1
+    resource: pods
+  name: my-pod
+  namespace: openshift-dns
+  operation: CREATE
+  userInfo:
+    username: kube-review
+    uid: 45884572-1cab-49e5-be4c-1d2eb0299773
+  object:
+    kind: Pod
+    apiVersion: v1
+    metadata:
+      name: my-pod
+      namespace: openshift-dns
+      creationTimestamp:
+    spec:
+      containers:
+      - name: my-container
+        image: nginx
+        resources: {}
+      tolerations:
+      - key: node-role.kubernetes.io/master=
+        operator: Exists
+        effect: NoSchedule
+    status: {}
+  oldObject:
+  dryRun: true
+  options:
+    kind: CreateOptions
+    apiVersion: meta.k8s.io/v1
