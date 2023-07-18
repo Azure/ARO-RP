@@ -40,15 +40,14 @@ func getAuth(key string) (*types.DockerAuthConfig, error) {
 }
 
 func mirror(ctx context.Context, log *logrus.Entry) error {
-	for _, key := range []string{
+	err := env.ValidateVars(
 		"DST_AUTH",
 		"DST_ACR_NAME",
 		"SRC_AUTH_QUAY",
-		"SRC_AUTH_REDHAT",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return fmt.Errorf("environment variable %q unset", key)
-		}
+		"SRC_AUTH_REDHAT")
+
+	if err != nil {
+		return err
 	}
 
 	env, err := env.NewCoreForCI(ctx, log)
@@ -85,8 +84,8 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		srcAcrGeneva := "linuxgeneva-microsoft" + acrDomainSuffix
 		mirrorImages := []string{
 			// https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
-			srcAcrGeneva + "/distroless/genevamdm:2.2023.505.1124-45da18-20230505t1700",
-			srcAcrGeneva + "/distroless/genevamdsd:mariner_20230517.1",
+			srcAcrGeneva + "/distroless/genevamdm:2.2023.609.2051-821f47-20230706t0953",
+			srcAcrGeneva + "/distroless/genevamdsd:mariner_20230706.2",
 		}
 		for _, ref := range mirrorImages {
 			log.Printf("mirroring %s -> %s", ref, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref))
@@ -116,8 +115,9 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"quay.io/app-sre/managed-upgrade-operator:v0.1.891-3d94c00",
 
 		// https://quay.io/repository/app-sre/hive?tab=tags
+		// Temporary image to evaluate memory leak
 		// TODO: move to official hive image once we fix memory leak
-		"quay.io/bvesel/hive:fec14dcf0-20230504",
+		"quay.io/bvesel/hive:fec14dcf0-20230623",
 	} {
 		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
 

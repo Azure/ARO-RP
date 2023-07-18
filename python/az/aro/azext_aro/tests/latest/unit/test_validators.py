@@ -460,7 +460,7 @@ test_validate_subnet_data = [
             "child_type_1": "subnets"
         },
         "subscription",
-        Mock(**{"subnets.get.side_effect": Exception}),
+        Mock(**{"side_effect": Exception}),
         Mock(cli_ctx=None),
         CLIInternalError
     ),
@@ -480,7 +480,7 @@ test_validate_subnet_data = [
             "child_name_1": None
         },
         "subscription",
-        Mock(**{"subnets.get.side_effect": ResourceNotFoundError("")}),
+        Mock(**{"side_effect": ResourceNotFoundError("")}),
         Mock(cli_ctx=None),
         InvalidArgumentValueError
     ),
@@ -500,7 +500,7 @@ test_validate_subnet_data = [
             "child_name_1": None
         },
         "subscription",
-        Mock(**{"subnets.get.return_value": None}),
+        Mock(**{"return_value": None}),
         Mock(cli_ctx=None),
         None
     )
@@ -508,27 +508,27 @@ test_validate_subnet_data = [
 
 
 @ pytest.mark.parametrize(
-    "test_description, namespace, key, is_valid_resource_id_mock_return_value, parse_resource_id_mock_return_value, get_subscription_id_mock_return_value, get_mgmt_service_client_mock_return_value, cmd, expected_exception",
+    "test_description, namespace, key, is_valid_resource_id_mock_return_value, parse_resource_id_mock_return_value, get_subscription_id_mock_return_value, get_network_vnet_subnet_show_mock_return_value, cmd, expected_exception",
     test_validate_subnet_data,
     ids=[i[0] for i in test_validate_subnet_data]
 )
-@ patch('azext_aro._validators.get_mgmt_service_client')
+@ patch('azext_aro._validators.subnet_show')
 @ patch('azext_aro._validators.get_subscription_id')
 @ patch('azext_aro._validators.parse_resource_id')
 @ patch('azext_aro._validators.is_valid_resource_id')
 def test_validate_subnet(
     # Mocked functions:
-    is_valid_resource_id_mock, parse_resource_id_mock, get_subscription_id_mock, get_mgmt_service_client_mock,
+    is_valid_resource_id_mock, parse_resource_id_mock, get_subscription_id_mock, get_network_vnet_subnet_show_mock,
 
     # Test cases parameters:
     test_description, namespace, key, is_valid_resource_id_mock_return_value,
     parse_resource_id_mock_return_value, get_subscription_id_mock_return_value,
-    get_mgmt_service_client_mock_return_value, cmd, expected_exception
+    get_network_vnet_subnet_show_mock_return_value, cmd, expected_exception
 ):
     is_valid_resource_id_mock.return_value = is_valid_resource_id_mock_return_value
     parse_resource_id_mock.return_value = parse_resource_id_mock_return_value
     get_subscription_id_mock.return_value = get_subscription_id_mock_return_value
-    get_mgmt_service_client_mock.return_value = get_mgmt_service_client_mock_return_value
+    get_network_vnet_subnet_show_mock.return_value = get_network_vnet_subnet_show_mock_return_value
 
     validate_subnet_fn = validate_subnet(key)
 

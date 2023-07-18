@@ -5,7 +5,6 @@ package cluster
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"testing"
 
@@ -14,7 +13,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
 	"github.com/Azure/ARO-RP/test/util/testliveconfig"
@@ -32,32 +30,6 @@ func TestGetOpenShiftVersionFromVersion(t *testing.T) {
 		wantErrString string
 		want          *api.OpenShiftVersion
 	}{
-		{
-			name: "no versions gets default version",
-			f:    func(f *testdatabase.Fixture) {},
-			m: manager{
-				doc: &api.OpenShiftClusterDocument{
-					Key: strings.ToLower(key),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID: key,
-						Properties: api.OpenShiftClusterProperties{
-							ClusterProfile: api.ClusterProfile{
-								Version: version.DefaultInstallStream.Version.String(),
-							},
-						},
-					},
-				},
-				openShiftClusterDocumentVersioner: new(openShiftClusterDocumentVersionerService),
-			},
-			wantErrString: "",
-			want: &api.OpenShiftVersion{
-				Properties: api.OpenShiftVersionProperties{
-					Version:           version.DefaultInstallStream.Version.String(),
-					OpenShiftPullspec: version.DefaultInstallStream.PullSpec,
-					InstallerPullspec: fmt.Sprintf("%s/aro-installer:release-%d.%d", testACRDomain, version.DefaultInstallStream.Version.V[0], version.DefaultInstallStream.Version.V[1]),
-				},
-			},
-		},
 		{
 			name: "select nonexistent version",
 			f: func(f *testdatabase.Fixture) {
@@ -103,7 +75,7 @@ func TestGetOpenShiftVersionFromVersion(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			tlc := testliveconfig.NewTestLiveConfig(false, false)
+			tlc := testliveconfig.NewTestLiveConfig(false, false, false)
 			_env := mock_env.NewMockInterface(controller)
 			_env.EXPECT().ACRDomain().AnyTimes().Return(testACRDomain)
 			_env.EXPECT().LiveConfig().AnyTimes().Return(tlc)

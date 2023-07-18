@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/go-cmp/cmp/cmpopts"
 	operatorv1 "github.com/openshift/api/operator/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -20,6 +21,7 @@ import (
 
 // AssertControllerConditions asserts that the ARO cluster resource contains the conditions expected in wantConditions.
 func AssertControllerConditions(t *testing.T, ctx context.Context, client client.Client, wantConditions []operatorv1.OperatorCondition) {
+	t.Helper()
 	if len(wantConditions) == 0 {
 		return
 	}
@@ -33,9 +35,33 @@ func AssertControllerConditions(t *testing.T, ctx context.Context, client client
 		if err != nil {
 			t.Error(err)
 		}
-		if diff := cmp.Diff(gotCondition, &wantCondition, cmpopts.EquateApproxTime(time.Second)); diff != "" {
+		if diff := cmp.Diff(&wantCondition, gotCondition, cmpopts.EquateApproxTime(time.Second)); diff != "" {
 			t.Error(diff)
 		}
+	}
+}
+
+func ControllerDefaultAvailable(name string) operatorv1.OperatorCondition {
+	return operatorv1.OperatorCondition{
+		Type:               fmt.Sprintf("%sController%s", name, operatorv1.OperatorStatusTypeAvailable),
+		Status:             operatorv1.ConditionTrue,
+		LastTransitionTime: metav1.NewTime(time.Now()),
+	}
+}
+
+func ControllerDefaultProgressing(name string) operatorv1.OperatorCondition {
+	return operatorv1.OperatorCondition{
+		Type:               fmt.Sprintf("%sController%s", name, operatorv1.OperatorStatusTypeProgressing),
+		Status:             operatorv1.ConditionFalse,
+		LastTransitionTime: metav1.NewTime(time.Now()),
+	}
+}
+
+func ControllerDefaultDegraded(name string) operatorv1.OperatorCondition {
+	return operatorv1.OperatorCondition{
+		Type:               fmt.Sprintf("%sController%s", name, operatorv1.OperatorStatusTypeDegraded),
+		Status:             operatorv1.ConditionFalse,
+		LastTransitionTime: metav1.NewTime(time.Now()),
 	}
 }
 

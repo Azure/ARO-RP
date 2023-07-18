@@ -5,19 +5,20 @@ package env
 
 import (
 	"context"
+	"fmt"
 	"os"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/jongio/azidext/go/azidext"
+	msgraph "github.com/microsoftgraph/msgraph-sdk-go"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
+	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
@@ -47,13 +48,13 @@ import (
 // In INT/PROD I believe it is invisible.
 
 type ARMHelper interface {
-	EnsureARMResourceGroupRoleAssignment(context.Context, autorest.Authorizer, string) error
+	EnsureARMResourceGroupRoleAssignment(context.Context, string) error
 }
 
 // noopARMHelper is used in INT and PROD.  It does nothing.
 type noopARMHelper struct{}
 
-func (*noopARMHelper) EnsureARMResourceGroupRoleAssignment(context.Context, autorest.Authorizer, string) error {
+func (*noopARMHelper) EnsureARMResourceGroupRoleAssignment(context.Context, string) error {
 	return nil
 }
 
@@ -63,8 +64,8 @@ type armHelper struct {
 	log *logrus.Entry
 	env Interface
 
+	fpGraphClient   *msgraph.GraphServiceClient
 	roleassignments authorization.RoleAssignmentsClient
-	applications    graphrbac.ApplicationsClient
 }
 
 func newARMHelper(ctx context.Context, log *logrus.Entry, env Interface) (ARMHelper, error) {
@@ -72,39 +73,29 @@ func newARMHelper(ctx context.Context, log *logrus.Entry, env Interface) (ARMHel
 		return &noopARMHelper{}, nil
 	}
 
-	var tokenCredential azcore.TokenCredential
 	var err error
 
-	if os.Getenv("AZURE_ARM_CLIENT_SECRET") != "" {
-		// TODO: migrate away from AZURE_ARM_CLIENT_SECRET and remove this code
-		// path
+	key, certs, err := env.ServiceKeyvault().GetCertificateSecret(ctx, RPDevARMSecretName)
+	if err != nil {
+		return nil, err
+	}
 
-		tokenCredential, err = azidentity.NewClientSecretCredential(
-			env.TenantID(),
-			os.Getenv("AZURE_ARM_CLIENT_ID"),
-			os.Getenv("AZURE_ARM_CLIENT_SECRET"),
-			env.Environment().ClientSecretCredentialOptions())
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		key, certs, err := env.ServiceKeyvault().GetCertificateSecret(ctx, RPDevARMSecretName)
-		if err != nil {
-			return nil, err
-		}
-
-		options := env.Environment().ClientCertificateCredentialOptions()
-		tokenCredential, err = azidentity.NewClientCertificateCredential(
-			env.TenantID(), os.Getenv("AZURE_ARM_CLIENT_ID"), certs, key, options)
-		if err != nil {
-			return nil, err
-		}
+	options := env.Environment().ClientCertificateCredentialOptions()
+	armHelperTokenCredential, err := azidentity.NewClientCertificateCredential(env.TenantID(), os.Getenv("AZURE_ARM_CLIENT_ID"), certs, key, options)
+	if err != nil {
+		return nil, err
 	}
 
 	scopes := []string{env.Environment().ResourceManagerScope}
-	armAuthorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
+	armHelperAuthorizer := azidext.NewTokenCredentialAdapter(armHelperTokenCredential, scopes)
 
-	fpGraphAuthorizer, err := env.FPAuthorizer(env.TenantID(), env.Environment().ActiveDirectoryGraphScope)
+	// Graph service client uses the first party service principal.
+	fpTokenCredential, err := env.FPNewClientCertificateCredential(env.TenantID())
+	if err != nil {
+		return nil, err
+	}
+
+	fpGraphClient, err := env.Environment().NewGraphServiceClient(fpTokenCredential)
 	if err != nil {
 		return nil, err
 	}
@@ -113,23 +104,26 @@ func newARMHelper(ctx context.Context, log *logrus.Entry, env Interface) (ARMHel
 		log: log,
 		env: env,
 
-		roleassignments: authorization.NewRoleAssignmentsClient(env.Environment(), env.SubscriptionID(), armAuthorizer),
-		applications:    graphrbac.NewApplicationsClient(env.Environment(), env.TenantID(), fpGraphAuthorizer),
+		fpGraphClient:   fpGraphClient,
+		roleassignments: authorization.NewRoleAssignmentsClient(env.Environment(), env.SubscriptionID(), armHelperAuthorizer),
 	}, nil
 }
 
-func (ah *armHelper) EnsureARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer autorest.Authorizer, resourceGroup string) error {
+func (ah *armHelper) EnsureARMResourceGroupRoleAssignment(ctx context.Context, resourceGroup string) error {
 	ah.log.Print("ensuring resource group role assignment")
 
-	res, err := ah.applications.GetServicePrincipalsIDByAppID(ctx, ah.env.FPClientID())
+	principalID, err := utilgraph.GetServicePrincipalIDByAppID(ctx, ah.fpGraphClient, ah.env.FPClientID())
 	if err != nil {
 		return err
+	}
+	if principalID == nil {
+		return fmt.Errorf("no service principal found for application ID '%s'", ah.env.FPClientID())
 	}
 
 	_, err = ah.roleassignments.Create(ctx, "/subscriptions/"+ah.env.SubscriptionID()+"/resourceGroups/"+resourceGroup, uuid.DefaultGenerator.Generate(), mgmtauthorization.RoleAssignmentCreateParameters{
 		RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
 			RoleDefinitionID: to.StringPtr("/subscriptions/" + ah.env.SubscriptionID() + "/providers/Microsoft.Authorization/roleDefinitions/" + rbac.RoleOwner),
-			PrincipalID:      res.Value,
+			PrincipalID:      principalID,
 		},
 	})
 	if detailedErr, ok := err.(autorest.DetailedError); ok {

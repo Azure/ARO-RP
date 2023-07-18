@@ -6,7 +6,7 @@ package azureclient
 import (
 	"testing"
 
-	azuretypes "github.com/openshift/installer/pkg/types/azure"
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -24,11 +24,11 @@ func TestEnvironmentFromName(t *testing.T) {
 		},
 		{
 			name:  "pass: public cloud az environment",
-			azEnv: azuretypes.PublicCloud.Name(),
+			azEnv: azure.PublicCloud.Name,
 		},
 		{
 			name:  "pass: US government cloud",
-			azEnv: azuretypes.USGovernmentCloud.Name(),
+			azEnv: azure.USGovernmentCloud.Name,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

@@ -5,6 +5,7 @@ package adminactions
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -34,6 +35,7 @@ type AzureActions interface {
 	VMStopAndWait(ctx context.Context, vmName string, deallocateVM bool) error
 	VMSizeList(ctx context.Context) ([]mgmtcompute.ResourceSku, error)
 	VMResize(ctx context.Context, vmName string, vmSize string) error
+	ResourceGroupHasVM(ctx context.Context, vmName string) (bool, error)
 	VMSerialConsole(ctx context.Context, w http.ResponseWriter, log *logrus.Entry, vmName string) error
 	AppLensGetDetector(ctx context.Context, detectorId string) ([]byte, error)
 	AppLensListDetectors(ctx context.Context) ([]byte, error)
@@ -130,10 +132,38 @@ func (a *azureActions) VMResize(ctx context.Context, vmName string, size string)
 	return a.virtualMachines.CreateOrUpdateAndWait(ctx, clusterRGName, vmName, vm)
 }
 
+func (a *azureActions) ResourceGroupHasVM(ctx context.Context, vmName string) (bool, error) {
+	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
+	vmList, err := a.virtualMachines.List(ctx, clusterRGName)
+	if err != nil {
+		return false, err
+	}
+
+	for _, vm := range vmList {
+		if vm.Name != nil && *vm.Name == vmName {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 func (a *azureActions) AppLensGetDetector(ctx context.Context, detectorId string) ([]byte, error) {
-	return a.appLens.GetDetector(ctx, &applens.GetDetectorOptions{ResourceID: a.oc.ID, DetectorID: detectorId})
+	detector, err := a.appLens.GetDetector(ctx, &applens.GetDetectorOptions{ResourceID: a.oc.ID, DetectorID: detectorId, Location: a.oc.Location})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(detector)
 }
 
 func (a *azureActions) AppLensListDetectors(ctx context.Context) ([]byte, error) {
-	return a.appLens.ListDetectors(ctx, &applens.ListDetectorsOptions{ResourceID: a.oc.ID})
+	detectors, err := a.appLens.ListDetectors(ctx, &applens.ListDetectorsOptions{ResourceID: a.oc.ID, Location: a.oc.Location})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(detectors)
 }

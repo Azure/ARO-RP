@@ -202,17 +202,15 @@ func validateAdminMasterVMSize(vmSize string) error {
 
 // validateInstallVersion validates the install version set in the clusterprofile.version
 // TODO convert this into static validation instead of this receiver function in the validation for frontend.
-func (f *frontend) validateInstallVersion(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
-	oc := doc.OpenShiftCluster
+func (f *frontend) validateInstallVersion(ctx context.Context, oc *api.OpenShiftCluster) error {
 	// If this request is from an older API or the user never specified
 	// the version to install we default to the DefaultInstallStream.Version
+	// TODO: We should set default version in cosmosdb instead of hardcoding it in golang code
 	if oc.Properties.ClusterProfile.Version == "" {
 		oc.Properties.ClusterProfile.Version = version.DefaultInstallStream.Version.String()
-		return nil
 	}
 
 	f.mu.RLock()
-	// we add the default installation version to the enabled ocp versions so no special case
 	_, ok := f.enabledOcpVersions[oc.Properties.ClusterProfile.Version]
 	f.mu.RUnlock()
 

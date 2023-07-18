@@ -71,3 +71,11 @@ func (p *dev) AdoptByHive(ctx context.Context) (bool, error) {
 	}
 	return false, nil
 }
+
+func (d *dev) UseCheckAccess(ctx context.Context) (bool, error) {
+	checkAccess := os.Getenv(useCheckAccess)
+	if checkAccess == "enabled" {
+		return true, nil
+	}
+	return false, nil
+}

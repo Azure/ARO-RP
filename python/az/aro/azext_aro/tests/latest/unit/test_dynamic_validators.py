@@ -15,7 +15,7 @@ test_validate_cidr_data = [
         "should return no error on address_prefix set on subnets, no additional cidrs, no overlap",
         Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
-        Mock(**{"subnets.get.side_effect": [Mock(address_prefix="172.143.5.0/24"), Mock(address_prefix="172.143.4.0/25")]}),
+        [{"addressPrefix": "172.143.5.0/24"}, {"addressPrefix": "172.143.4.0/25"}],
         {
             "subscription": "subscription",
             "namespace": "MICROSOFT.NETWORK",
@@ -32,7 +32,7 @@ test_validate_cidr_data = [
         "should return no error on address_prefix set on subnets, additional cidrs, no overlap",
         Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr="172.142.0.0/21", service_cidr="172.143.6.0/25"),
-        Mock(**{"subnets.get.side_effect": [Mock(address_prefix="172.143.4.0/24"), Mock(address_prefix="172.143.5.0/25")]}),
+        [{"addressPrefix": "172.143.4.0/24"}, {"addressPrefix": "172.143.5.0/25"}],
         {
             "subscription": "subscription",
             "namespace": "MICROSOFT.NETWORK",
@@ -49,10 +49,7 @@ test_validate_cidr_data = [
         "should return no error on multiple address_prefixes set on subnets, additional cidrs, no overlap",
         Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr="172.142.0.0/21", service_cidr="172.143.6.0/25"),
-        Mock(**{"subnets.get.side_effect": [Mock(address_prefix=None,
-                                                 address_prefixes=["172.143.4.0/24", "172.143.8.0/25"]),
-                                            Mock(address_prefix=None,
-                                                 address_prefixes=["172.143.5.0/25", "172.143.9.0/24"])]}),
+        [{"addressPrefixes": ["172.143.4.0/24", "172.143.8.0/25"]}, {"addressPrefixes": ["172.143.5.0/25", "172.143.9.0/24"]}],
         {
             "subscription": "subscription",
             "namespace": "MICROSOFT.NETWORK",
@@ -69,7 +66,7 @@ test_validate_cidr_data = [
         "should error on address_prefix set on subnets, no additional cidrs, overlap",
         Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
-        Mock(**{"subnets.get.side_effect": [Mock(address_prefix="172.143.4.0/24"), Mock(address_prefix="172.143.4.0/25")]}),
+        [{"addressPrefix": "172.143.4.0/24"}, {"addressPrefix": "172.143.4.0/25"}],
         {
             "subscription": "subscription",
             "namespace": "MICROSOFT.NETWORK",
@@ -86,7 +83,7 @@ test_validate_cidr_data = [
         "should return error on pod cidr not having enough addresses to create cluster",
         Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr="172.143.4.0/24", service_cidr=None),
-        Mock(**{"subnets.get.side_effect": [Mock(address_prefix="172.143.5.0/24"), Mock(address_prefix="172.143.4.0/25")]}),
+        [{'addressPrefix': "172.143.5.0/24"}, {'addressPrefix': "172.143.4.0/25"}],
         {
             "subscription": "subscription",
             "namespace": "MICROSOFT.NETWORK",
@@ -103,21 +100,21 @@ test_validate_cidr_data = [
 
 
 @pytest.mark.parametrize(
-    "test_description, cmd_mock, namespace_mock, client_mock, parse_resource_id_mock_return_value, expected_addresses",
+    "test_description, cmd_mock, namespace_mock, get_subnet_mock_side_effect, parse_resource_id_mock_return_value, expected_addresses",
     test_validate_cidr_data,
     ids=[i[0] for i in test_validate_cidr_data]
 )
-@ patch('azext_aro._dynamic_validators.get_mgmt_service_client')
+@ patch('azext_aro._dynamic_validators.get_subnet')
 @ patch('azext_aro._dynamic_validators.parse_resource_id')
 def test_validate_cidr(
     # Mocked functions:
-    parse_resource_id_mock, get_mgmt_service_client_mock,
+    parse_resource_id_mock, get_subnet_mock,
 
     # Test cases parameters:
-    test_description, cmd_mock, namespace_mock, client_mock, parse_resource_id_mock_return_value, expected_addresses
+    test_description, cmd_mock, namespace_mock, get_subnet_mock_side_effect, parse_resource_id_mock_return_value, expected_addresses
 ):
     parse_resource_id_mock.return_value = parse_resource_id_mock_return_value
-    get_mgmt_service_client_mock.return_value = client_mock
+    get_subnet_mock.side_effect = get_subnet_mock_side_effect
 
     validate_cidr_fn = dyn_validate_cidr_ranges()
     if expected_addresses is None:
@@ -137,7 +134,7 @@ test_validate_subnets_data = [
         "should not return missing permission when actions are permitted",
         Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
-        Mock(**{"subnets.get.return_value": Mock(network_security_group=None, route_table=Mock(id="test"))}),
+        {'routeTable': {'id': 'test'}},
         Mock(**{"permissions.list_for_resource.return_value": [Permission(actions=["Microsoft.Network/routeTables/*"], not_actions=[])]}),
         {
             "subscription": "subscription",
@@ -156,7 +153,7 @@ test_validate_subnets_data = [
         "should return missing permission when actions are not permitted",
         Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
-        Mock(**{"subnets.get.return_value": Mock(network_security_group=None, route_table=Mock(id="test"))}),
+        {'routeTable': {'id': 'test'}},
         Mock(**{"permissions.list_for_resource.return_value": [Permission(actions=[], not_actions=["Microsoft.Network/routeTables/*"])]}),
         {
             "subscription": "subscription",
@@ -175,7 +172,7 @@ test_validate_subnets_data = [
         "should return missing permission when actions are not present",
         Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
-        Mock(**{"subnets.get.return_value": Mock(network_security_group=None, route_table=Mock(id="test"))}),
+        {'routeTable': {'id': 'test'}},
         Mock(**{"permissions.list_for_resource.return_value": [Permission(actions=[], not_actions=[])]}),
         {
             "subscription": "subscription",
@@ -194,7 +191,7 @@ test_validate_subnets_data = [
         "should return message when network security group is already attached to subnet",
         Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
-        Mock(**{"subnets.get.return_value": Mock(network_security_group=Mock(id="test"), route_table=Mock(id="test"))}),
+        {'networkSecurityGroup': {'id': 'test'}, 'routeTable': {'id': 'test'}},
         Mock(**{"permissions.list_for_resource.return_value": [Permission(actions=["Microsoft.Network/routeTables/*"], not_actions=[])]}),
         {
             "subscription": "subscription",
@@ -215,23 +212,25 @@ test_validate_subnets_data = [
 
 
 @pytest.mark.parametrize(
-    "test_description, cmd_mock, namespace_mock, network_client_mock, auth_client_mock, parse_resource_id_mock_return_value, is_valid_resource_id_mock_return_value, expected_missing_perms",
+    "test_description, cmd_mock, namespace_mock, get_subnet_mock_return_value, auth_client_mock, parse_resource_id_mock_return_value, is_valid_resource_id_mock_return_value, expected_missing_perms",
     test_validate_subnets_data,
     ids=[i[0] for i in test_validate_subnets_data]
 )
+@ patch('azext_aro._dynamic_validators.get_subnet')
 @ patch('azext_aro._dynamic_validators.get_mgmt_service_client')
 @ patch('azext_aro._dynamic_validators.parse_resource_id')
 @ patch('azext_aro._dynamic_validators.is_valid_resource_id')
 def test_validate_subnets(
     # Mocked functions:
-    is_valid_resource_id_mock, parse_resource_id_mock, get_mgmt_service_client_mock,
+    is_valid_resource_id_mock, parse_resource_id_mock, get_mgmt_service_client_mock, get_subnet_mock,
 
     # Test cases parameters:
-    test_description, cmd_mock, namespace_mock, network_client_mock, auth_client_mock, parse_resource_id_mock_return_value, is_valid_resource_id_mock_return_value, expected_missing_perms
+    test_description, cmd_mock, namespace_mock, get_subnet_mock_return_value, auth_client_mock, parse_resource_id_mock_return_value, is_valid_resource_id_mock_return_value, expected_missing_perms
 ):
     is_valid_resource_id_mock.return_value = is_valid_resource_id_mock_return_value
     parse_resource_id_mock.return_value = parse_resource_id_mock_return_value
-    get_mgmt_service_client_mock.side_effect = [network_client_mock, auth_client_mock]
+    get_mgmt_service_client_mock.side_effect = [auth_client_mock]
+    get_subnet_mock.return_value = get_subnet_mock_return_value
 
     validate_subnet_fn = dyn_validate_subnet_and_route_tables('')
     if expected_missing_perms is None:
@@ -251,7 +250,7 @@ test_validate_vnets_data = [
         "should not return missing permission when actions are permitted",
         Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
-        Mock(**{"subnets.get.return_value": Mock(route_table=Mock(id="test"))}),
+        {'routeTable': {'id': 'test'}},
         Mock(**{"permissions.list_for_resource.return_value": [Permission(actions=["Microsoft.Network/virtualNetworks/*"], not_actions=[])]}),
         {
             "subscription": "subscription",
@@ -270,7 +269,7 @@ test_validate_vnets_data = [
         "should return disabled permission when actions are not permitted",
         Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
-        Mock(**{"subnets.get.return_value": Mock(route_table=Mock(id="test"))}),
+        {'routeTable': {'id': 'test'}},
         Mock(**{"permissions.list_for_resource.return_value": [Permission(actions=[], not_actions=["Microsoft.Network/virtualNetworks/*"])]}),
         {
             "subscription": "subscription",
@@ -289,7 +288,7 @@ test_validate_vnets_data = [
         "should return missing permission when actions are not present",
         Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
         Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
-        Mock(**{"subnets.get.return_value": Mock(route_table=Mock(id="test"))}),
+        {'routeTable': {'id': 'test'}},
         Mock(**{"permissions.list_for_resource.return_value": [Permission(actions=[], not_actions=[])]}),
         {
             "subscription": "subscription",
@@ -308,23 +307,25 @@ test_validate_vnets_data = [
 
 
 @pytest.mark.parametrize(
-    "test_description, cmd_mock, namespace_mock, network_client_mock, auth_client_mock, parse_resource_id_mock_return_value, is_valid_resource_id_mock_return_value, expected_missing_perms",
+    "test_description, cmd_mock, namespace_mock, get_vnet_mock_return_value, auth_client_mock, parse_resource_id_mock_return_value, is_valid_resource_id_mock_return_value, expected_missing_perms",
     test_validate_vnets_data,
     ids=[i[0] for i in test_validate_vnets_data]
 )
+@ patch('azext_aro._dynamic_validators.get_vnet')
 @ patch('azext_aro._dynamic_validators.get_mgmt_service_client')
 @ patch('azext_aro._dynamic_validators.parse_resource_id')
 @ patch('azext_aro._dynamic_validators.is_valid_resource_id')
 def test_validate_vnets(
     # Mocked functions:
-    is_valid_resource_id_mock, parse_resource_id_mock, get_mgmt_service_client_mock,
+    is_valid_resource_id_mock, parse_resource_id_mock, get_mgmt_service_client_mock, get_vnet_mock,
 
     # Test cases parameters:
-    test_description, cmd_mock, namespace_mock, network_client_mock, auth_client_mock, parse_resource_id_mock_return_value, is_valid_resource_id_mock_return_value, expected_missing_perms
+    test_description, cmd_mock, namespace_mock, get_vnet_mock_return_value, auth_client_mock, parse_resource_id_mock_return_value, is_valid_resource_id_mock_return_value, expected_missing_perms
 ):
     is_valid_resource_id_mock.return_value = is_valid_resource_id_mock_return_value
     parse_resource_id_mock.return_value = parse_resource_id_mock_return_value
-    get_mgmt_service_client_mock.side_effect = [network_client_mock, auth_client_mock]
+    get_mgmt_service_client_mock.side_effect = [auth_client_mock]
+    get_vnet_mock.return_value = get_vnet_mock_return_value
 
     validate_vnet_fn = dyn_validate_vnet("vnet")
     if expected_missing_perms is None:

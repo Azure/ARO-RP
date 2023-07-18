@@ -39,17 +39,17 @@ func (m *MockServicePrincipalValidator) EXPECT() *MockServicePrincipalValidatorM
 }
 
 // ValidateServicePrincipal mocks base method.
-func (m *MockServicePrincipalValidator) ValidateServicePrincipal(ctx context.Context, tokenCredential azcore.TokenCredential) error {
+func (m *MockServicePrincipalValidator) ValidateServicePrincipal(ctx context.Context, spTokenCredential azcore.TokenCredential) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateServicePrincipal", ctx, tokenCredential)
+	ret := m.ctrl.Call(m, "ValidateServicePrincipal", ctx, spTokenCredential)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ValidateServicePrincipal indicates an expected call of ValidateServicePrincipal.
-func (mr *MockServicePrincipalValidatorMockRecorder) ValidateServicePrincipal(ctx, tokenCredential interface{}) *gomock.Call {
+func (mr *MockServicePrincipalValidatorMockRecorder) ValidateServicePrincipal(ctx, spTokenCredential interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateServicePrincipal", reflect.TypeOf((*MockServicePrincipalValidator)(nil).ValidateServicePrincipal), ctx, tokenCredential)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateServicePrincipal", reflect.TypeOf((*MockServicePrincipalValidator)(nil).ValidateServicePrincipal), ctx, spTokenCredential)
 }
 
 // MockDynamic is a mock of Dynamic interface.
@@ -103,18 +103,32 @@ func (mr *MockDynamicMockRecorder) ValidateEncryptionAtHost(ctx, oc interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateEncryptionAtHost", reflect.TypeOf((*MockDynamic)(nil).ValidateEncryptionAtHost), ctx, oc)
 }
 
-// ValidateServicePrincipal mocks base method.
-func (m *MockDynamic) ValidateServicePrincipal(ctx context.Context, tokenCredential azcore.TokenCredential) error {
+// ValidatePreConfiguredNSGs mocks base method.
+func (m *MockDynamic) ValidatePreConfiguredNSGs(ctx context.Context, oc *api.OpenShiftCluster, subnets []dynamic.Subnet) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateServicePrincipal", ctx, tokenCredential)
+	ret := m.ctrl.Call(m, "ValidatePreConfiguredNSGs", ctx, oc, subnets)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidatePreConfiguredNSGs indicates an expected call of ValidatePreConfiguredNSGs.
+func (mr *MockDynamicMockRecorder) ValidatePreConfiguredNSGs(ctx, oc, subnets interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatePreConfiguredNSGs", reflect.TypeOf((*MockDynamic)(nil).ValidatePreConfiguredNSGs), ctx, oc, subnets)
+}
+
+// ValidateServicePrincipal mocks base method.
+func (m *MockDynamic) ValidateServicePrincipal(ctx context.Context, spTokenCredential azcore.TokenCredential) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateServicePrincipal", ctx, spTokenCredential)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ValidateServicePrincipal indicates an expected call of ValidateServicePrincipal.
-func (mr *MockDynamicMockRecorder) ValidateServicePrincipal(ctx, tokenCredential interface{}) *gomock.Call {
+func (mr *MockDynamicMockRecorder) ValidateServicePrincipal(ctx, spTokenCredential interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateServicePrincipal", reflect.TypeOf((*MockDynamic)(nil).ValidateServicePrincipal), ctx, tokenCredential)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateServicePrincipal", reflect.TypeOf((*MockDynamic)(nil).ValidateServicePrincipal), ctx, spTokenCredential)
 }
 
 // ValidateSubnets mocks base method.

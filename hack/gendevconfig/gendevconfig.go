@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	"github.com/ghodss/yaml"
@@ -17,7 +16,7 @@ import (
 )
 
 func run(ctx context.Context, log *logrus.Entry) error {
-	for _, key := range []string{
+	err := env.ValidateVars(
 		"ADMIN_OBJECT_ID",
 		"AZURE_CLIENT_ID",
 		"AZURE_DBTOKEN_CLIENT_ID",
@@ -28,11 +27,10 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		"AZURE_PORTAL_ELEVATED_GROUP_IDS",
 		"HOME",
 		"PARENT_DOMAIN_NAME",
-		"USER",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return fmt.Errorf("environment variable %q unset", key)
-		}
+		"USER")
+
+	if err != nil {
+		return err
 	}
 
 	if _, found := os.LookupEnv("SSH_PUBLIC_KEY"); !found {

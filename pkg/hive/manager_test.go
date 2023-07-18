@@ -9,17 +9,17 @@ import (
 	"testing"
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
-	hivefake "github.com/openshift/hive/pkg/client/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	kubernetesfake "k8s.io/client-go/kubernetes/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
-	"github.com/Azure/ARO-RP/pkg/util/uuid/fake"
+	uuidfake "github.com/Azure/ARO-RP/pkg/util/uuid/fake"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -148,12 +148,12 @@ func TestIsClusterDeploymentReady(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			fakeClientset := hivefake.NewSimpleClientset()
+			fakeClientBuilder := fake.NewClientBuilder()
 			if tt.cd != nil {
-				fakeClientset.Tracker().Add(tt.cd)
+				fakeClientBuilder.WithRuntimeObjects(tt.cd)
 			}
 			c := clusterManager{
-				hiveClientset: fakeClientset,
+				hiveClientset: fakeClientBuilder.Build(),
 				log:           logrus.NewEntry(logrus.StandardLogger()),
 			}
 
@@ -248,12 +248,12 @@ func TestIsClusterInstallationComplete(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			fakeClientset := hivefake.NewSimpleClientset()
+			fakeClientBuilder := fake.NewClientBuilder()
 			if tt.cd != nil {
-				fakeClientset.Tracker().Add(tt.cd)
+				fakeClientBuilder = fakeClientBuilder.WithRuntimeObjects(tt.cd)
 			}
 			c := clusterManager{
-				hiveClientset: fakeClientset,
+				hiveClientset: fakeClientBuilder.Build(),
 				log:           logrus.NewEntry(logrus.StandardLogger()),
 			}
 
@@ -308,19 +308,19 @@ func TestResetCorrelationData(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			fakeClientset := hivefake.NewSimpleClientset()
+			fakeClientBuilder := fake.NewClientBuilder()
 			if tt.cd != nil {
-				fakeClientset.Tracker().Add(tt.cd)
+				fakeClientBuilder = fakeClientBuilder.WithRuntimeObjects(tt.cd)
 			}
 			c := clusterManager{
-				hiveClientset: fakeClientset,
+				hiveClientset: fakeClientBuilder.Build(),
 			}
 
 			err := c.ResetCorrelationData(context.Background(), doc)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if err == nil {
-				cd, err := c.hiveClientset.HiveV1().ClusterDeployments(fakeNamespace).Get(context.Background(), ClusterDeploymentName, metav1.GetOptions{})
+				cd, err := c.GetClusterDeployment(context.Background(), doc)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -371,7 +371,7 @@ func TestCreateNamespace(t *testing.T) {
 			}
 
 			if tc.useFakeGenerator {
-				uuid.DefaultGenerator = fake.NewGenerator(tc.nsNames)
+				uuid.DefaultGenerator = uuidfake.NewGenerator(tc.nsNames)
 			}
 
 			ns, err := c.CreateNamespace(context.Background())
@@ -419,12 +419,12 @@ func TestGetClusterDeployment(t *testing.T) {
 		{name: "cd does not exist err returned", wantErr: `clusterdeployments.hive.openshift.io "cluster" not found`},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			fakeClientset := hivefake.NewSimpleClientset()
+			fakeClientBuilder := fake.NewClientBuilder()
 			if tt.wantErr == "" {
-				_ = fakeClientset.Tracker().Add(cd)
+				fakeClientBuilder = fakeClientBuilder.WithRuntimeObjects(cd)
 			}
 			c := clusterManager{
-				hiveClientset: fakeClientset,
+				hiveClientset: fakeClientBuilder.Build(),
 				log:           logrus.NewEntry(logrus.StandardLogger()),
 			}
 

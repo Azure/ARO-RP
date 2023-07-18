@@ -30,7 +30,7 @@ func (m *manager) fixUserAdminKubeconfig(ctx context.Context) error {
 	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.UserAdminKubeconfig = aroUserClient.File.Data
+		doc.OpenShiftCluster.Properties.UserAdminKubeconfig = aroUserClient
 		return nil
 	})
 	return err

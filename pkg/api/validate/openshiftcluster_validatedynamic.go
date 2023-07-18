@@ -57,7 +57,7 @@ type openShiftClusterDynamicValidator struct {
 	fpAuthorizer    autorest.Authorizer
 }
 
-func ensureAccessTokenClaims(ctx context.Context, tokenCredential *azidentity.ClientSecretCredential, scopes []string) error {
+func ensureAccessTokenClaims(ctx context.Context, spTokenCredential azcore.TokenCredential, scopes []string) error {
 	var err error
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
@@ -68,7 +68,7 @@ func ensureAccessTokenClaims(ctx context.Context, tokenCredential *azidentity.Cl
 	// latest error to the user in case the wait exceeds the timeout.
 	_ = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		options := policy.TokenRequestOptions{Scopes: scopes}
-		token, err := tokenCredential.GetToken(ctx, options)
+		token, err := spTokenCredential.GetToken(ctx, options)
 		if err != nil {
 			return false, err
 		}
@@ -134,12 +134,18 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	var pdpClient remotepdp.RemotePDPClient
 	spp := dv.oc.Properties.ServicePrincipalProfile
 
-	if feature.IsRegisteredForFeature(
+	useCheckAccess, err := dv.env.LiveConfig().UseCheckAccess(ctx)
+	dv.log.Info("USE_CHECKACCESS: ", useCheckAccess)
+	if err != nil {
+		return err
+	}
+
+	if useCheckAccess || feature.IsRegisteredForFeature(
 		dv.subscriptionDoc.Subscription.Properties,
 		api.FeatureFlagCheckAccessTestToggle,
 	) {
 		// TODO remove after successfully migrating to CheckAccess
-		dv.log.Info("CheckAccess Feature is set")
+		dv.log.Info("Using CheckAccess instead of ListPermissions")
 		var err error
 		fpClientCred, err = dv.env.FPNewClientCertificateCredential(dv.subscriptionDoc.Subscription.Properties.TenantID)
 		if err != nil {
@@ -177,7 +183,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		pdpClient,
 	)
 
-	err := fpDynamic.ValidateVnet(
+	err = fpDynamic.ValidateVnet(
 		ctx,
 		dv.oc.Location,
 		subnets,
@@ -193,20 +199,25 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
+	err = fpDynamic.ValidatePreConfiguredNSGs(ctx, dv.oc, subnets)
+	if err != nil {
+		return err
+	}
+
 	tenantID := dv.subscriptionDoc.Subscription.Properties.TenantID
 	options := dv.env.Environment().ClientSecretCredentialOptions()
-	tokenCredential, err := azidentity.NewClientSecretCredential(
+	spTokenCredential, err := azidentity.NewClientSecretCredential(
 		tenantID, spp.ClientID, string(spp.ClientSecret), options)
 	if err != nil {
 		return err
 	}
 
 	scopes := []string{dv.env.Environment().ResourceManagerScope}
-	err = ensureAccessTokenClaims(ctx, tokenCredential, scopes)
+	err = ensureAccessTokenClaims(ctx, spTokenCredential, scopes)
 	if err != nil {
 		return err
 	}
-	spAuthorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
+	spAuthorizer := azidext.NewTokenCredentialAdapter(spTokenCredential, scopes)
 
 	spDynamic := dynamic.NewValidator(
 		dv.log,
@@ -221,7 +232,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	)
 
 	// SP validation
-	err = spDynamic.ValidateServicePrincipal(ctx, tokenCredential)
+	err = spDynamic.ValidateServicePrincipal(ctx, spTokenCredential)
 	if err != nil {
 		return err
 	}
@@ -248,6 +259,11 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	}
 
 	err = spDynamic.ValidateEncryptionAtHost(ctx, dv.oc)
+	if err != nil {
+		return err
+	}
+
+	err = spDynamic.ValidatePreConfiguredNSGs(ctx, dv.oc, subnets)
 	if err != nil {
 		return err
 	}

@@ -11,13 +11,11 @@ import (
 	"time"
 
 	"github.com/ghodss/yaml"
-	"github.com/openshift/installer/pkg/asset"
-	"github.com/openshift/installer/pkg/asset/kubeconfig"
-	"github.com/openshift/installer/pkg/asset/tls"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
+	"github.com/Azure/ARO-RP/pkg/util/installer"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -25,14 +23,14 @@ import (
 // generateAROServiceKubeconfig generates additional admin credentials and a
 // kubeconfig for the ARO service, based on the admin kubeconfig found in the
 // graph.
-func (m *manager) generateAROServiceKubeconfig(pg graph.PersistedGraph) (*kubeconfig.AdminInternalClient, error) {
-	return generateKubeconfig(pg, "system:aro-service", []string{"system:masters"}, tls.ValidityTenYears, true)
+func (m *manager) generateAROServiceKubeconfig(pg graph.PersistedGraph) ([]byte, error) {
+	return generateKubeconfig(pg, "system:aro-service", []string{"system:masters"}, installer.TenYears, true)
 }
 
 // generateAROSREKubeconfig generates additional admin credentials and a
 // kubeconfig for ARO SREs, based on the admin kubeconfig found in the graph.
-func (m *manager) generateAROSREKubeconfig(pg graph.PersistedGraph) (*kubeconfig.AdminInternalClient, error) {
-	return generateKubeconfig(pg, "system:aro-sre", nil, tls.ValidityTenYears, true)
+func (m *manager) generateAROSREKubeconfig(pg graph.PersistedGraph) ([]byte, error) {
+	return generateKubeconfig(pg, "system:aro-sre", nil, installer.TenYears, true)
 }
 
 // checkUserAdminKubeconfigUpdated checks if the user kubeconfig is
@@ -82,8 +80,8 @@ func (m *manager) checkUserAdminKubeconfigUpdated() bool {
 
 // generateUserAdminKubeconfig generates additional admin credentials and a
 // kubeconfig for ARO User, based on the admin kubeconfig found in the graph.
-func (m *manager) generateUserAdminKubeconfig(pg graph.PersistedGraph) (*kubeconfig.AdminInternalClient, error) {
-	return generateKubeconfig(pg, "system:admin", nil, tls.ValidityOneYear, false)
+func (m *manager) generateUserAdminKubeconfig(pg graph.PersistedGraph) ([]byte, error) {
+	return generateKubeconfig(pg, "system:admin", nil, installer.OneYear, false)
 }
 
 func (m *manager) generateKubeconfigs(ctx context.Context) error {
@@ -95,12 +93,16 @@ func (m *manager) generateKubeconfigs(ctx context.Context) error {
 		return err
 	}
 
-	var adminInternalClient *kubeconfig.AdminInternalClient
-	err = pg.Get(true, &adminInternalClient)
+	var storedAdminInternalClient *installer.AdminInternalClient
+	err = pg.GetByName(false, "*kubeconfig.AdminInternalClient", &storedAdminInternalClient)
 	if err != nil {
 		return err
 	}
 
+	adminInternalClient, err := yaml.Marshal(storedAdminInternalClient.Config)
+	if err != nil {
+		return err
+	}
 	aroServiceInternalClient, err := m.generateAROServiceKubeconfig(pg)
 	if err != nil {
 		return err
@@ -115,47 +117,59 @@ func (m *manager) generateKubeconfigs(ctx context.Context) error {
 	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.AdminKubeconfig = adminInternalClient.File.Data
-		doc.OpenShiftCluster.Properties.AROServiceKubeconfig = aroServiceInternalClient.File.Data
-		doc.OpenShiftCluster.Properties.AROSREKubeconfig = aroSREInternalClient.File.Data
-		doc.OpenShiftCluster.Properties.UserAdminKubeconfig = aroUserInternalClient.File.Data
+		doc.OpenShiftCluster.Properties.AdminKubeconfig = adminInternalClient
+		doc.OpenShiftCluster.Properties.AROServiceKubeconfig = aroServiceInternalClient
+		doc.OpenShiftCluster.Properties.AROSREKubeconfig = aroSREInternalClient
+		doc.OpenShiftCluster.Properties.UserAdminKubeconfig = aroUserInternalClient
 		return nil
 	})
 	return err
 }
 
-func generateKubeconfig(pg graph.PersistedGraph, commonName string, organization []string, validity time.Duration, internal bool) (*kubeconfig.AdminInternalClient, error) {
-	var ca *tls.AdminKubeConfigSignerCertKey
-	var adminInternalClient *kubeconfig.AdminInternalClient
-	err := pg.Get(true, &ca, &adminInternalClient)
+func generateKubeconfig(pg graph.PersistedGraph, commonName string, organization []string, validity time.Duration, internal bool) ([]byte, error) {
+	var ca *installer.AdminKubeConfigSignerCertKey
+	var adminInternalClient *installer.AdminInternalClient
+	err := pg.GetByName(false, "*tls.AdminKubeConfigSignerCertKey", &ca)
+	if err != nil {
+		return nil, err
+	}
+	err = pg.GetByName(false, "*kubeconfig.AdminInternalClient", &adminInternalClient)
 	if err != nil {
 		return nil, err
 	}
 
-	cfg := &tls.CertCfg{
+	cfg := &installer.CertCfg{
 		Subject:      pkix.Name{CommonName: commonName, Organization: organization},
 		KeyUsages:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		ExtKeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 		Validity:     validity,
 	}
 
-	var clientCertKey tls.AdminKubeConfigClientCertKey
+	priv, cert, err := installer.GenerateSignedCertKey(cfg, ca)
+	if err != nil {
+		return nil, err
+	}
 
-	err = clientCertKey.SignedCertKey.Generate(cfg, ca, strings.ReplaceAll(commonName, ":", "-"), tls.DoNotAppendParent)
+	privPem, err := utilpem.Encode(priv)
+	if err != nil {
+		return nil, err
+	}
+
+	certPem, err := utilpem.Encode(cert)
 	if err != nil {
 		return nil, err
 	}
 
 	// create a Config for the new service kubeconfig based on the generated cluster admin Config
-	aroInternalClient := kubeconfig.AdminInternalClient{}
+	aroInternalClient := installer.AdminInternalClient{}
 	aroInternalClient.Config = &clientcmdv1.Config{
 		Clusters: adminInternalClient.Config.Clusters,
 		AuthInfos: []clientcmdv1.NamedAuthInfo{
 			{
 				Name: commonName,
 				AuthInfo: clientcmdv1.AuthInfo{
-					ClientCertificateData: clientCertKey.CertRaw,
-					ClientKeyData:         clientCertKey.KeyRaw,
+					ClientCertificateData: certPem,
+					ClientKeyData:         privPem,
 				},
 			},
 		},
@@ -179,15 +193,5 @@ func generateKubeconfig(pg graph.PersistedGraph, commonName string, organization
 		}
 	}
 
-	data, err := yaml.Marshal(aroInternalClient.Config)
-	if err != nil {
-		return nil, err
-	}
-
-	aroInternalClient.File = &asset.File{
-		Filename: "auth/aro/kubeconfig",
-		Data:     data,
-	}
-
-	return &aroInternalClient, nil
+	return yaml.Marshal(aroInternalClient.Config)
 }

@@ -5,6 +5,8 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -30,12 +32,38 @@ func getLatestOCPVersions(ctx context.Context, log *logrus.Entry) ([]api.OpenShi
 	dstRepo := dstAcr + acrDomainSuffix
 	ocpVersions := []api.OpenShiftVersion{}
 
+	// INSTALLER_IMAGE_DIGESTS is the mapping of a minor version to
+	// the aro-installer wrapper digest.  This allows us to utilize
+	// Azure Safe Deployment Practices (SDP) instead of pushing the
+	// version tag and deploying to all regions at once.
+	var installerImageDigests map[string]string
+	jsonData := []byte(os.Getenv("INSTALLER_IMAGE_DIGESTS"))
+
+	// For Azure DevOps pipelines, the JSON data is Base64-encoded
+	// since it's embedded in JSON-formatted build artifacts.  But
+	// let's not force that on local development mode.
+	if !env.IsLocalDevelopmentMode() {
+		jsonData, err = base64.StdEncoding.DecodeString(string(jsonData))
+		if err != nil {
+			return nil, fmt.Errorf("INSTALLER_IMAGE_DIGESTS: Failed to decode base64: %v", err)
+		}
+	}
+	if err = json.Unmarshal(jsonData, &installerImageDigests); err != nil {
+		return nil, fmt.Errorf("INSTALLER_IMAGE_DIGESTS: Failed to parse JSON: %v", err)
+	}
+
 	for _, vers := range version.HiveInstallStreams {
+		installerPullSpec := fmt.Sprintf("%s/aro-installer:%s", dstRepo, vers.Version.MinorVersion())
+		digest, ok := installerImageDigests[vers.Version.MinorVersion()]
+		if !ok {
+			return nil, fmt.Errorf("no digest found for version %s", vers.Version.String())
+		}
+
 		ocpVersions = append(ocpVersions, api.OpenShiftVersion{
 			Properties: api.OpenShiftVersionProperties{
 				Version:           vers.Version.String(),
 				OpenShiftPullspec: vers.PullSpec,
-				InstallerPullspec: fmt.Sprintf("%s/aro-installer:release-%s", dstRepo, vers.Version.MinorVersion()),
+				InstallerPullspec: installerPullSpec + "@" + digest,
 				Enabled:           true,
 			},
 		})
@@ -50,22 +78,13 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 		return nil, err
 	}
 
-	for _, key := range []string{
-		"DST_ACR_NAME",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return nil, fmt.Errorf("environment variable %q unset", key)
-		}
+	if err = env.ValidateVars("DST_ACR_NAME"); err != nil {
+		return nil, err
 	}
 
 	if !_env.IsLocalDevelopmentMode() {
-		for _, key := range []string{
-			"MDM_ACCOUNT",
-			"MDM_NAMESPACE",
-		} {
-			if _, found := os.LookupEnv(key); !found {
-				return nil, fmt.Errorf("environment variable %q unset", key)
-			}
+		if err = env.ValidateVars("MDM_ACCOUNT", "MDM_NAMESPACE"); err != nil {
+			return nil, err
 		}
 	}
 
@@ -81,11 +100,11 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 
 	m := statsd.New(ctx, log.WithField("component", "update-ocp-versions"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 
-	serviceKeyvaultURI, err := keyvault.URI(_env, env.ServiceKeyvaultSuffix)
-	if err != nil {
+	if err := env.ValidateVars(KeyVaultPrefix); err != nil {
 		return nil, err
 	}
-
+	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
+	serviceKeyvaultURI := keyvault.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
 	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
 
 	aead, err := encryption.NewMulti(ctx, serviceKeyvault, env.EncryptionSecretV2Name, env.EncryptionSecretName)
@@ -93,17 +112,26 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 		return nil, err
 	}
 
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer)
+	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+		return nil, err
+	}
+
+	dbAccountName := os.Getenv(DatabaseAccountName)
+	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer, dbAccountName)
 	if err != nil {
 		return nil, err
 	}
 
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, m, aead)
+	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, m, aead, dbAccountName)
 	if err != nil {
 		return nil, err
 	}
 
-	dbOpenShiftVersions, err := database.NewOpenShiftVersions(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	dbName, err := DBName(_env.IsLocalDevelopmentMode())
+	if err != nil {
+		return nil, err
+	}
+	dbOpenShiftVersions, err := database.NewOpenShiftVersions(ctx, dbc, dbName)
 	if err != nil {
 		return nil, err
 	}

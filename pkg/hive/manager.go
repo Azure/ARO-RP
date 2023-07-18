@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
-	hiveclient "github.com/openshift/hive/pkg/client/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -16,6 +15,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -46,7 +46,7 @@ type clusterManager struct {
 	log *logrus.Entry
 	env env.Core
 
-	hiveClientset hiveclient.Interface
+	hiveClientset client.Client
 	kubernetescli kubernetes.Interface
 
 	dh dynamichelper.Interface
@@ -81,7 +81,7 @@ func NewFromEnv(ctx context.Context, log *logrus.Entry, env env.Interface) (Clus
 // It MUST NOT take cluster or subscription document as values
 // in these structs can be change during the lifetime of the cluster manager.
 func NewFromConfig(log *logrus.Entry, _env env.Core, restConfig *rest.Config) (ClusterManager, error) {
-	hiveClientset, err := hiveclient.NewForConfig(restConfig)
+	hiveClientset, err := client.New(restConfig, client.Options{})
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +186,7 @@ func (hr *clusterManager) IsClusterDeploymentReady(ctx context.Context, doc *api
 }
 
 func (hr *clusterManager) IsClusterInstallationComplete(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error) {
-	cd, err := hr.hiveClientset.HiveV1().ClusterDeployments(doc.OpenShiftCluster.Properties.HiveProfile.Namespace).Get(ctx, ClusterDeploymentName, metav1.GetOptions{})
+	cd, err := hr.GetClusterDeployment(ctx, doc)
 	if err != nil {
 		return false, err
 	}
@@ -210,12 +210,21 @@ func (hr *clusterManager) IsClusterInstallationComplete(ctx context.Context, doc
 }
 
 func (hr *clusterManager) GetClusterDeployment(ctx context.Context, doc *api.OpenShiftClusterDocument) (*hivev1.ClusterDeployment, error) {
-	return hr.hiveClientset.HiveV1().ClusterDeployments(doc.OpenShiftCluster.Properties.HiveProfile.Namespace).Get(ctx, ClusterDeploymentName, metav1.GetOptions{})
+	cd := &hivev1.ClusterDeployment{}
+	err := hr.hiveClientset.Get(ctx, client.ObjectKey{
+		Namespace: doc.OpenShiftCluster.Properties.HiveProfile.Namespace,
+		Name:      ClusterDeploymentName,
+	}, cd)
+	if err != nil {
+		return nil, err
+	}
+
+	return cd, nil
 }
 
 func (hr *clusterManager) ResetCorrelationData(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		cd, err := hr.hiveClientset.HiveV1().ClusterDeployments(doc.OpenShiftCluster.Properties.HiveProfile.Namespace).Get(ctx, ClusterDeploymentName, metav1.GetOptions{})
+		cd, err := hr.GetClusterDeployment(ctx, doc)
 		if err != nil {
 			return err
 		}
@@ -225,7 +234,6 @@ func (hr *clusterManager) ResetCorrelationData(ctx context.Context, doc *api.Ope
 			return err
 		}
 
-		_, err = hr.hiveClientset.HiveV1().ClusterDeployments(doc.OpenShiftCluster.Properties.HiveProfile.Namespace).Update(ctx, cd, metav1.UpdateOptions{})
-		return err
+		return hr.hiveClientset.Update(ctx, cd)
 	})
 }

@@ -33,7 +33,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type statusCodeError int
@@ -164,15 +163,7 @@ func NewFrontend(ctx context.Context,
 
 		clusterEnricher: enricher,
 
-		// add default installation version so it's always supported
-		enabledOcpVersions: map[string]*api.OpenShiftVersion{
-			version.DefaultInstallStream.Version.String(): {
-				Properties: api.OpenShiftVersionProperties{
-					Version: version.DefaultInstallStream.Version.String(),
-					Enabled: true,
-				},
-			},
-		},
+		enabledOcpVersions: map[string]*api.OpenShiftVersion{},
 
 		bucketAllocator: &bucket.Random{},
 
@@ -272,6 +263,11 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 
 				r.Get("/detectors/{detectorId}", f.getAppLensDetector)
 			})
+		})
+
+		r.Route("/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/deployments/{deploymentName}/preflight", func(r chi.Router) {
+			r.Use(f.apiVersionMiddleware.ValidatePreflightAPIVersion)
+			r.Post("/", f.preflightValidation)
 		})
 
 		r.Route("/providers/{resourceProviderNamespace}", func(r chi.Router) {

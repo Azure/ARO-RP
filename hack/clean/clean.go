@@ -6,7 +6,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -59,15 +58,14 @@ type settings struct {
 }
 
 func run(ctx context.Context, log *logrus.Entry, dryRun *bool) error {
-	for _, key := range []string{
+	err := env.ValidateVars(
 		"AZURE_CLIENT_ID",
 		"AZURE_CLIENT_SECRET",
 		"AZURE_SUBSCRIPTION_ID",
-		"AZURE_TENANT_ID",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return fmt.Errorf("environment variable %q unset", key)
-		}
+		"AZURE_TENANT_ID")
+
+	if err != nil {
+		return err
 	}
 
 	env, err := env.NewCoreForCI(ctx, log)

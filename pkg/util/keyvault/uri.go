@@ -5,19 +5,10 @@ package keyvault
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 )
 
-func URI(instancemetadata instancemetadata.InstanceMetadata, suffix string) (string, error) {
-	for _, key := range []string{
-		"KEYVAULT_PREFIX",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return "", fmt.Errorf("environment variable %q unset", key)
-		}
-	}
-
-	return fmt.Sprintf("https://%s%s.%s/", os.Getenv("KEYVAULT_PREFIX"), suffix, instancemetadata.Environment().KeyVaultDNSSuffix), nil
+func URI(instancemetadata instancemetadata.InstanceMetadata, suffix, keyVaultPrefix string) string {
+	return fmt.Sprintf("https://%s%s.%s/", keyVaultPrefix, suffix, instancemetadata.Environment().KeyVaultDNSSuffix)
 }

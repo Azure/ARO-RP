@@ -19,8 +19,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/containerinstall"
 	"github.com/Azure/ARO-RP/pkg/database"
-	"github.com/Azure/ARO-RP/pkg/installer"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
@@ -46,7 +46,11 @@ func (m *manager) adminUpdate() []steps.Step {
 		steps.Action(m.initializeKubernetesClients), // must be first
 		steps.Action(m.ensureBillingRecord),         // belt and braces
 		steps.Action(m.ensureDefaults),
-		steps.Action(m.fixupClusterSPObjectID),
+
+		// TODO: this relies on an authorizer that isn't exposed in the manager
+		// struct, so we'll rebuild the fpAuthorizer and use the error catching
+		// to advance
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixupClusterSPObjectID),
 		steps.Action(m.fixInfraID), // Old clusters lacks infraID in the database. Which makes code prone to errors.
 	}
 
@@ -54,11 +58,11 @@ func (m *manager) adminUpdate() []steps.Step {
 		toRun = append(toRun,
 			steps.Action(m.ensureResourceGroup), // re-create RP RBAC if needed after tenant migration
 			steps.Action(m.createOrUpdateDenyAssignment),
-			steps.Action(m.enableServiceEndpoints),
+			steps.Action(m.ensureServiceEndpoints),
 			steps.Action(m.populateRegistryStorageAccountName), // must go before migrateStorageAccounts
 			steps.Action(m.migrateStorageAccounts),
 			steps.Action(m.fixSSH),
-			//steps.Action(m.removePrivateDNSZone), // TODO(mj): re-enable once we communicate this out
+			// steps.Action(m.removePrivateDNSZone), // TODO(mj): re-enable once we communicate this out
 		)
 	}
 
@@ -162,11 +166,15 @@ func (m *manager) clusterWasCreatedByHive() bool {
 
 func (m *manager) Update(ctx context.Context) error {
 	s := []steps.Step{
-		steps.Action(m.validateResources),
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources),
 		steps.Action(m.initializeKubernetesClients), // All init steps are first
 		steps.Action(m.initializeOperatorDeployer),  // depends on kube clients
 		steps.Action(m.initializeClusterSPClients),
-		steps.Action(m.clusterSPObjectID),
+
+		// TODO: this relies on an authorizer that isn't exposed in the manager
+		// struct, so we'll rebuild the fpAuthorizer and use the error catching
+		// to advance
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterSPObjectID),
 		// credentials rotation flow steps
 		steps.Action(m.createOrUpdateClusterServicePrincipalRBAC),
 		steps.Action(m.createOrUpdateDenyAssignment),
@@ -194,14 +202,18 @@ func (m *manager) Update(ctx context.Context) error {
 	return m.runSteps(ctx, s, "update")
 }
 
-func (m *manager) runIntegratedInstaller(ctx context.Context) error {
+func (m *manager) runPodmanInstaller(ctx context.Context) error {
 	version, err := m.openShiftVersionFromVersion(ctx)
 	if err != nil {
 		return err
 	}
 
-	i := installer.NewInstaller(m.log, m.env, m.doc.ID, m.doc.OpenShiftCluster, m.subscriptionDoc.Subscription, version, m.fpAuthorizer, m.deployments, m.graph)
-	return i.Install(ctx)
+	i, err := containerinstall.New(ctx, m.log, m.env, m.doc.ID)
+	if err != nil {
+		return err
+	}
+
+	return i.Install(ctx, m.subscriptionDoc, m.doc, version)
 }
 
 func (m *manager) runHiveInstaller(ctx context.Context) error {
@@ -232,6 +244,7 @@ func setFieldCreatedByHive(createdByHive bool) database.OpenShiftClusterDocument
 func (m *manager) bootstrap() []steps.Step {
 	s := []steps.Step{
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources),
+		steps.Action(m.ensurePreconfiguredNSG),
 		steps.Action(m.ensureACRToken),
 		steps.Action(m.ensureInfraID),
 		steps.Action(m.ensureSSHKey),
@@ -240,9 +253,13 @@ func (m *manager) bootstrap() []steps.Step {
 
 		steps.Action(m.createDNS),
 		steps.Action(m.initializeClusterSPClients), // must run before clusterSPObjectID
-		steps.Action(m.clusterSPObjectID),
+
+		// TODO: this relies on an authorizer that isn't exposed in the manager
+		// struct, so we'll rebuild the fpAuthorizer and use the error catching
+		// to advance
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterSPObjectID),
 		steps.Action(m.ensureResourceGroup),
-		steps.Action(m.enableServiceEndpoints),
+		steps.Action(m.ensureServiceEndpoints),
 		steps.Action(m.setMasterSubnetPolicies),
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.deployBaseResourceTemplate),
 		steps.Action(m.attachNSGs),
@@ -270,7 +287,7 @@ func (m *manager) bootstrap() []steps.Step {
 		)
 	} else {
 		s = append(s,
-			steps.Action(m.runIntegratedInstaller),
+			steps.Action(m.runPodmanInstaller),
 			steps.Action(m.generateKubeconfigs),
 		)
 

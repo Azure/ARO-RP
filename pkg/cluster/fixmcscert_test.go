@@ -7,12 +7,12 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"net"
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/openshift/installer/pkg/asset/tls"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -21,6 +21,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
+	"github.com/Azure/ARO-RP/pkg/util/installer"
 	mock_graph "github.com/Azure/ARO-RP/pkg/util/mocks/graph"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
@@ -53,18 +54,21 @@ func TestFixMCSCert(t *testing.T) {
 				}
 
 				pg := graph.PersistedGraph{}
-				err = pg.Set(&tls.RootCA{
-					SelfSignedCertKey: tls.SelfSignedCertKey{
-						CertKey: tls.CertKey{
+				root := &installer.RootCA{
+					SelfSignedCertKey: installer.SelfSignedCertKey{
+						CertKey: installer.CertKey{
 							CertRaw: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: validCaCerts[0].Raw}),
 							KeyRaw:  pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: b}),
 						},
 					},
-				})
+				}
+
+				data, err := json.Marshal(root)
 				if err != nil {
 					return nil, err
 				}
 
+				pg["*tls.RootCA"] = data
 				graph := mock_graph.NewMockManager(controller)
 				graph.EXPECT().LoadPersisted(ctx, "", "cluster").Return(pg, nil)
 
@@ -186,7 +190,7 @@ func TestFixMCSCert(t *testing.T) {
 				t.Error(err)
 			}
 
-			if !publicKeysEqual(cert.PublicKey.(*rsa.PublicKey), &key.PublicKey) {
+			if !cert.PublicKey.(*rsa.PublicKey).Equal(&key.PublicKey) {
 				t.Error("key mismatch")
 			}
 
@@ -199,9 +203,4 @@ func TestFixMCSCert(t *testing.T) {
 			}
 		})
 	}
-}
-
-// TODO: at Go >= 1.15, use (*rsa.PublicKey) Equal()
-func publicKeysEqual(a, b *rsa.PublicKey) bool {
-	return a.N.Cmp(b.N) == 0 && a.E == b.E
 }

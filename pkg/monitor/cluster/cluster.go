@@ -11,13 +11,13 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
-	hiveclient "github.com/openshift/hive/pkg/client/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics"
@@ -41,7 +41,7 @@ type Monitor struct {
 	m          metrics.Emitter
 	arocli     aroclient.Interface
 
-	hiveclientset hiveclient.Interface
+	hiveclientset client.Client
 
 	// access below only via the helper functions in cache.go
 	cache struct {
@@ -91,14 +91,9 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		return nil, err
 	}
 
-	var hiveclientset hiveclient.Interface
-	if hiveRestConfig != nil {
-		var err error
-		hiveclientset, err = hiveclient.NewForConfig(hiveRestConfig)
-		if err != nil {
-			// TODO(hive): Update to fail once we have Hive everywhere in prod and dev
-			log.Error(err)
-		}
+	hiveclientset, err := getHiveClientSet(hiveRestConfig)
+	if err != nil {
+		log.Error(err)
 	}
 
 	return &Monitor{
@@ -119,6 +114,18 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 	}, nil
 }
 
+func getHiveClientSet(hiveRestConfig *rest.Config) (client.Client, error) {
+	if hiveRestConfig == nil {
+		return nil, nil
+	}
+
+	hiveclientset, err := client.New(hiveRestConfig, client.Options{})
+	if err != nil {
+		return nil, err
+	}
+	return hiveclientset, nil
+}
+
 // Monitor checks the API server health of a cluster
 func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 	mon.log.Debug("monitoring")
@@ -130,15 +137,19 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		})
 	}
 
-	// If API is not returning 200, don't need to run the next checks
+	//this API server healthz check must be first, our geneva monitor relies on this metric to always be emitted.
 	statusCode, err := mon.emitAPIServerHealthzCode(ctx)
 	if err != nil {
 		errs = append(errs, err)
-		friendlyFuncName := steps.FriendlyName(mon.emitAPIServerHealthzCode)
-		mon.log.Printf("%s: %s", friendlyFuncName, err)
-		mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": friendlyFuncName})
+		mon.emitFailureToGatherMetric(steps.FriendlyName(mon.emitAPIServerHealthzCode), err)
 	}
+	// If API is not returning 200, fallback to checking ping and short circuit the rest of the checks
 	if statusCode != http.StatusOK {
+		err := mon.emitAPIServerPingCode(ctx)
+		if err != nil {
+			errs = append(errs, err)
+			mon.emitFailureToGatherMetric(steps.FriendlyName(mon.emitAPIServerPingCode), err)
+		}
 		return
 	}
 	for _, f := range []func(context.Context) error{
@@ -168,14 +179,17 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		err = f(ctx)
 		if err != nil {
 			errs = append(errs, err)
-			friendlyFuncName := steps.FriendlyName(f)
-			mon.log.Printf("%s: %s", friendlyFuncName, err)
-			mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": friendlyFuncName})
+			mon.emitFailureToGatherMetric(steps.FriendlyName(f), err)
 			// keep going
 		}
 	}
 
 	return
+}
+
+func (mon *Monitor) emitFailureToGatherMetric(friendlyFuncName string, err error) {
+	mon.log.Printf("%s: %s", friendlyFuncName, err)
+	mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": friendlyFuncName})
 }
 
 func (mon *Monitor) emitGauge(m string, value int64, dims map[string]string) {

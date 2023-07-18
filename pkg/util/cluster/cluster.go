@@ -24,6 +24,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/jongio/azidext/go/azidext"
+	msgraph "github.com/microsoftgraph/msgraph-sdk-go"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -34,7 +35,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	keyvaultclient "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/keyvault"
@@ -43,8 +43,10 @@ import (
 	redhatopenshift20210901preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2021-09-01-preview/redhatopenshift"
 	redhatopenshift20220401 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2022-04-01/redhatopenshift"
 	redhatopenshift20220904 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2022-09-04/redhatopenshift"
+	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type Cluster struct {
@@ -53,10 +55,9 @@ type Cluster struct {
 	ci           bool
 	ciParentVnet string
 
+	spGraphClient                     *msgraph.GraphServiceClient
 	deployments                       features.DeploymentsClient
 	groups                            features.ResourceGroupsClient
-	applications                      graphrbac.ApplicationsClient
-	serviceprincipals                 graphrbac.ServicePrincipalClient
 	openshiftclustersv20200430        redhatopenshift20200430.OpenShiftClustersClient
 	openshiftclustersv20210901preview redhatopenshift20210901preview.OpenShiftClustersClient
 	openshiftclustersv20220401        redhatopenshift20220401.OpenShiftClustersClient
@@ -85,40 +86,37 @@ func (errs errors) Error() string {
 
 func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 	if env.IsLocalDevelopmentMode() {
-		for _, key := range []string{
-			"AZURE_FP_CLIENT_ID",
-		} {
-			if _, found := os.LookupEnv(key); !found {
-				return nil, fmt.Errorf("environment variable %q unset", key)
-			}
+		if err := env.ValidateVars("AZURE_FP_CLIENT_ID"); err != nil {
+			return nil, err
 		}
 	}
 
 	options := environment.Environment().EnvironmentCredentialOptions()
-	tokenCredential, err := azidentity.NewEnvironmentCredential(options)
+	spTokenCredential, err := azidentity.NewEnvironmentCredential(options)
 	if err != nil {
 		return nil, err
 	}
 
-	scopes := []string{environment.Environment().GraphEndpoint + "/.default"}
-	graphAuthorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
+	spGraphClient, err := environment.Environment().NewGraphServiceClient(spTokenCredential)
+	if err != nil {
+		return nil, err
+	}
 
-	scopes = []string{environment.Environment().ResourceManagerScope}
-	authorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
+	scopes := []string{environment.Environment().ResourceManagerScope}
+	authorizer := azidext.NewTokenCredentialAdapter(spTokenCredential, scopes)
 
 	c := &Cluster{
 		log: log,
 		env: environment,
 		ci:  ci,
 
+		spGraphClient:                     spGraphClient,
 		deployments:                       features.NewDeploymentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		groups:                            features.NewResourceGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		openshiftclustersv20200430:        redhatopenshift20200430.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		openshiftclustersv20210901preview: redhatopenshift20210901preview.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		openshiftclustersv20220401:        redhatopenshift20220401.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		openshiftclustersv20220904:        redhatopenshift20220904.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		applications:                      graphrbac.NewApplicationsClient(environment.Environment(), environment.TenantID(), graphAuthorizer),
-		serviceprincipals:                 graphrbac.NewServicePrincipalClient(environment.Environment(), environment.TenantID(), graphAuthorizer),
 		securitygroups:                    network.NewSecurityGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		subnets:                           network.NewSubnetsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		routetables:                       network.NewRouteTablesClient(environment.Environment(), environment.SubscriptionID(), authorizer),
@@ -142,7 +140,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 	return c, nil
 }
 
-func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName string) error {
+func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName string, osClusterVersion string) error {
 	clusterGet, err := c.openshiftclustersv20220904.Get(ctx, vnetResourceGroup, clusterName)
 	if err == nil {
 		if clusterGet.ProvisioningState == mgmtredhatopenshift20220904.Failed {
@@ -317,7 +315,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	}
 
 	c.log.Info("creating cluster")
-	err = c.createCluster(ctx, vnetResourceGroup, clusterName, appID, appSecret, diskEncryptionSetID, visibility)
+	err = c.createCluster(ctx, vnetResourceGroup, clusterName, appID, appSecret, diskEncryptionSetID, visibility, osClusterVersion)
 
 	if err != nil {
 		return err
@@ -441,7 +439,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 // createCluster created new clusters, based on where it is running.
 // development - using preview api
 // production - using stable GA api
-func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterName, clientID, clientSecret, diskEncryptionSetID string, visibility api.Visibility) error {
+func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterName, clientID, clientSecret, diskEncryptionSetID string, visibility api.Visibility, osClusterVersion string) error {
 	// using internal representation for "singe source" of options
 	oc := api.OpenShiftCluster{
 		Properties: api.OpenShiftClusterProperties{
@@ -449,6 +447,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 				Domain:               strings.ToLower(clusterName),
 				ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.env.SubscriptionID(), "aro-"+clusterName),
 				FipsValidatedModules: api.FipsValidatedModulesEnabled,
+				Version:              osClusterVersion,
 			},
 			ServicePrincipalProfile: api.ServicePrincipalProfile{
 				ClientID:     clientID,
@@ -491,6 +490,11 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 
 	if c.env.IsLocalDevelopmentMode() {
 		err := c.registerSubscription(ctx)
+		if err != nil {
+			return err
+		}
+
+		err = c.insertDefaultVersionIntoCosmosdb(ctx)
 		if err != nil {
 			return err
 		}
@@ -553,6 +557,45 @@ func (c *Cluster) registerSubscription(ctx context.Context) error {
 	return resp.Body.Close()
 }
 
+func (c *Cluster) insertDefaultVersionIntoCosmosdb(ctx context.Context) error {
+	defaultVersion := version.DefaultInstallStream
+	b, err := json.Marshal(&api.OpenShiftVersion{
+		Properties: api.OpenShiftVersionProperties{
+			Version:           defaultVersion.Version.String(),
+			OpenShiftPullspec: defaultVersion.PullSpec,
+			// HACK: we hardcode this to arointsvc, the integrated installer does not use this and you can still
+			// override it via the LiveConfig
+			InstallerPullspec: fmt.Sprintf("arointsvc.azurecr.io/aro-installer:release-%s", version.DefaultInstallStream.Version.MinorVersion()),
+			Enabled:           true,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, "https://localhost:8443/admin/versions", bytes.NewReader(b))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	cli := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+	}
+
+	resp, err := cli.Do(req)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
 func (c *Cluster) fixupNSGs(ctx context.Context, vnetResourceGroup, clusterName string) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
@@ -589,15 +632,15 @@ func (c *Cluster) fixupNSGs(ctx context.Context, vnetResourceGroup, clusterName 
 }
 
 func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, appID string) error {
-	spObjID, err := c.getServicePrincipal(ctx, appID)
+	spObjID, err := utilgraph.GetServicePrincipalIDByAppID(ctx, c.spGraphClient, appID)
 	if err != nil {
 		return err
 	}
-	if spObjID == "" {
+	if spObjID == nil {
 		return nil
 	}
 
-	roleAssignments, err := c.roleassignments.ListForResourceGroup(ctx, vnetResourceGroup, fmt.Sprintf("principalId eq '%s'", spObjID))
+	roleAssignments, err := c.roleassignments.ListForResourceGroup(ctx, vnetResourceGroup, fmt.Sprintf("principalId eq '%s'", *spObjID))
 	if err != nil {
 		return err
 	}

@@ -41,6 +41,11 @@ func SetDefaults(doc *OpenShiftClusterDocument) {
 		if doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType == "" {
 			doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType = OutboundTypeLoadbalancer
 		}
+
+		// If there's no PreconfiguredNSG, set to disabled
+		if doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG == "" {
+			doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG = PreconfiguredNSGDisabled
+		}
 	}
 }
 

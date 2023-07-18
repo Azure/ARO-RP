@@ -42,18 +42,16 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 			return err
 		}
 	} else { // running in CI node/Public - Use SP from Env
-		for _, key := range []string{
+		err := env.ValidateVars(
 			"AZURE_CLIENT_ID",
 			"AZURE_CLIENT_SECRET",
 			"AZURE_SUBSCRIPTION_ID",
-			"AZURE_TENANT_ID",
-		} {
-			if _, found := os.LookupEnv(key); !found {
-				return fmt.Errorf("environment variable %q unset", key)
-			}
+			"AZURE_TENANT_ID")
+
+		if err != nil {
+			return err
 		}
 
-		var err error
 		_env, err = env.NewCoreForCI(ctx, log)
 		if err != nil {
 			return err

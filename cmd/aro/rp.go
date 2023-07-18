@@ -22,6 +22,7 @@ import (
 	_ "github.com/Azure/ARO-RP/pkg/api/v20220401"
 	_ "github.com/Azure/ARO-RP/pkg/api/v20220904"
 	_ "github.com/Azure/ARO-RP/pkg/api/v20230401"
+	_ "github.com/Azure/ARO-RP/pkg/api/v20230701preview"
 	"github.com/Azure/ARO-RP/pkg/backend"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -61,10 +62,9 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 			return fmt.Errorf(`environment variable "PULL_SECRET" set`)
 		}
 	}
-	for _, key := range keys {
-		if _, found := os.LookupEnv(key); !found {
-			return fmt.Errorf("environment variable %q unset", key)
-		}
+
+	if err = env.ValidateVars(keys...); err != nil {
+		return err
 	}
 
 	err = _env.InitializeAuthorizers()
@@ -97,47 +97,56 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer)
+	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+		return err
+	}
+
+	dbAccountName := os.Getenv(DatabaseAccountName)
+	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer, dbAccountName)
 	if err != nil {
 		return err
 	}
 
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, metrics, aead)
+	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, metrics, aead, dbAccountName)
 	if err != nil {
 		return err
 	}
 
-	dbAsyncOperations, err := database.NewAsyncOperations(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	dbName, err := DBName(env.IsLocalDevelopmentMode())
+	if err != nil {
+		return err
+	}
+	dbAsyncOperations, err := database.NewAsyncOperations(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
 	if err != nil {
 		return err
 	}
 
-	dbClusterManagerConfiguration, err := database.NewClusterManagerConfigurations(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	dbClusterManagerConfiguration, err := database.NewClusterManagerConfigurations(ctx, dbc, dbName)
 	if err != nil {
 		return err
 	}
 
-	dbBilling, err := database.NewBilling(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	dbBilling, err := database.NewBilling(ctx, dbc, dbName)
 	if err != nil {
 		return err
 	}
 
-	dbGateway, err := database.NewGateway(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	dbGateway, err := database.NewGateway(ctx, dbc, dbName)
 	if err != nil {
 		return err
 	}
 
-	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, dbc, dbName)
 	if err != nil {
 		return err
 	}
 
-	dbSubscriptions, err := database.NewSubscriptions(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	dbSubscriptions, err := database.NewSubscriptions(ctx, dbc, dbName)
 	if err != nil {
 		return err
 	}
 
-	dbOpenShiftVersions, err := database.NewOpenShiftVersions(ctx, _env.IsLocalDevelopmentMode(), dbc)
+	dbOpenShiftVersions, err := database.NewOpenShiftVersions(ctx, dbc, dbName)
 	if err != nil {
 		return err
 	}

@@ -6,16 +6,16 @@ package hive
 import (
 	"encoding/json"
 
-	icazure "github.com/openshift/installer/pkg/asset/installconfig/azure"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
+// See https://github.com/openshift/hive/blob/master/docs/using-hive.md#azure
+// and github.com/openshift/installer/pkg/asset/installconfig/azure
 func clusterSPToBytes(subscriptionDoc *api.SubscriptionDocument, oc *api.OpenShiftCluster) ([]byte, error) {
-	return json.Marshal(icazure.Credentials{
-		TenantID:       subscriptionDoc.Subscription.Properties.TenantID,
-		SubscriptionID: subscriptionDoc.ID,
-		ClientID:       oc.Properties.ServicePrincipalProfile.ClientID,
-		ClientSecret:   string(oc.Properties.ServicePrincipalProfile.ClientSecret),
+	return json.Marshal(map[string]string{
+		"tenantId":       subscriptionDoc.Subscription.Properties.TenantID,
+		"subscriptionId": subscriptionDoc.ID,
+		"clientId":       oc.Properties.ServicePrincipalProfile.ClientID,
+		"clientSecret":   string(oc.Properties.ServicePrincipalProfile.ClientSecret),
 	})
 }

@@ -3,6 +3,9 @@ TAG ?= $(shell git describe --exact-match 2>/dev/null)
 COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
 E2E_FLAGS ?= -test.v --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2 --ginkgo.junit-report=e2e-report.xml
+GO_FLAGS ?= -tags=aro,containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
+
+export GOFLAGS=$(GO_FLAGS)
 
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
 MARINER_VERSION = 20230321
@@ -10,7 +13,7 @@ FLUENTBIT_VERSION = 1.9.10
 FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$(MARINER_VERSION)
 AUTOREST_VERSION = 3.6.3
 AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
-GATEKEEPER_VERSION = 3.10.0
+GATEKEEPER_VERSION = v3.10.0
 GATEKEEPER_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/gatekeeper:$(GATEKEEPER_VERSION)
 
 ifneq ($(shell uname -s),Darwin)
@@ -47,13 +50,13 @@ endif
 endif
 
 build-all:
-	go build -tags aro,containers_image_openpgp ./...
+	go build ./...
 
 aro: check-release generate
-	go build -tags aro,containers_image_openpgp,codec.safe -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro
+	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro
 
 runlocal-rp:
-	go run -tags aro,containers_image_openpgp -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro rp
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro rp
 
 az: pyenv
 	. pyenv/bin/activate && \
@@ -69,12 +72,12 @@ clean:
 	find -type d -name 'gomock_reflect_[0-9]*' -exec rm -rf {} \+ 2>/dev/null
 
 client: generate
-	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01
+	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01 2023-07-01-preview
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
 deploy:
-	go run -tags aro,containers_image_openpgp -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
 
 dev-config.yaml:
 	go run ./hack/gendevconfig >dev-config.yaml
@@ -149,7 +152,7 @@ proxy:
 	CGO_ENABLED=0 go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./hack/proxy
 
 run-portal:
-	go run -tags aro,containers_image_openpgp -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro portal
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro portal
 
 build-portal:
 	cd portal/v1 && npm install && npm run build && cd ../v2 && npm install && npm run build
@@ -202,7 +205,7 @@ validate-go:
 	go test -tags e2e -run ^$$ ./test/e2e/...
 
 validate-go-action:
-	go run ./hack/licenses -validate -ignored-go vendor,pkg/client,.git -ignored-python python/client,vendor,.git
+	go run ./hack/licenses -validate -ignored-go vendor,pkg/client,.git -ignored-python python/client,python/az/aro/azext_aro/aaz,vendor,.git
 	go run ./hack/validate-imports cmd hack pkg test
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
 	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
@@ -212,10 +215,10 @@ validate-fips:
 	hack/fips/validate-fips.sh
 
 unit-test-go:
-	go run gotest.tools/gotestsum@v1.9.0 --format pkgname --junitfile report.xml -- -tags=aro,containers_image_openpgp -coverprofile=cover.out ./...
+	go run gotest.tools/gotestsum@v1.9.0 --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
 
 unit-test-go-coverpkg:
-	go run gotest.tools/gotestsum@v1.9.0 --format pkgname --junitfile report.xml -- -tags=aro,containers_image_openpgp -coverpkg=./... -coverprofile=cover_coverpkg.out ./...
+	go run gotest.tools/gotestsum@v1.9.0 --format pkgname --junitfile report.xml -- -coverpkg=./... -coverprofile=cover_coverpkg.out ./...
 
 lint-go:
 	hack/lint-go.sh

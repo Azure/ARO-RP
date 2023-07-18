@@ -126,8 +126,10 @@ type ServicePrincipalProfile struct {
 	ClientSecret string `json:"clientSecret,omitempty" mutable:"true"`
 }
 
+// The outbound routing strategy used to provide your cluster egress to the internet.
 type OutboundType string
 
+// OutboundType constants.
 const (
 	OutboundTypeUserDefinedRouting OutboundType = "UserDefinedRouting"
 	OutboundTypeLoadbalancer       OutboundType = "Loadbalancer"

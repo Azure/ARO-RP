@@ -5,6 +5,12 @@ run:
     - vendor
   skip-dirs-use-default: true
   modules-download-mode: vendor
+  build-tags:
+    - "aro"
+    - "containers_image_openpgp"
+    - "exclude_graphdriver_devicemapper"
+    - "exclude_graphdriver_btrfs"
+  go: "1.18"
 
 issues:
   exclude-rules:
@@ -60,8 +66,6 @@ linters-settings:
         alias: testdynamichelper
       - pkg: github.com/Azure/ARO-RP/test/util/log
         alias: testlog
-      - pkg: github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac
-        alias: azgraphrbac
       - pkg: github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault
         alias: azkeyvault
       - pkg: github.com/Azure/azure-sdk-for-go/storage

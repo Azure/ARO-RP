@@ -13,8 +13,8 @@ import (
 
 // AppLensClient is a minimal interface for azure AppLensClient
 type AppLensClient interface {
-	GetDetector(ctx context.Context, o *GetDetectorOptions) ([]byte, error)
-	ListDetectors(ctx context.Context, o *ListDetectorsOptions) ([]byte, error)
+	GetDetector(ctx context.Context, o *GetDetectorOptions) (*ResponseMessageEnvelope, error)
+	ListDetectors(ctx context.Context, o *ListDetectorsOptions) (*ResponseMessageCollectionEnvelope, error)
 }
 
 type appLensClient struct {

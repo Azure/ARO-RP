@@ -11,11 +11,11 @@ import (
 	"net"
 	"strings"
 
-	"github.com/openshift/installer/pkg/asset/tls"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 
+	"github.com/Azure/ARO-RP/pkg/util/installer"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -31,7 +31,7 @@ func (m *manager) fixMCSCert(ctx context.Context) error {
 		domain += "." + m.env.Domain()
 	}
 
-	var rootCA *tls.RootCA
+	var rootCA *installer.RootCA
 	var certChanged bool
 
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -61,29 +61,37 @@ func (m *manager) fixMCSCert(ctx context.Context) error {
 				return err
 			}
 
-			err = pg.Get(true, &rootCA)
+			err = pg.GetByName(false, "*tls.RootCA", &rootCA)
 			if err != nil {
 				return err
 			}
 		}
 
-		cfg := &tls.CertCfg{
+		cfg := &installer.CertCfg{
 			Subject:      pkix.Name{CommonName: "system:machine-config-server"},
 			ExtKeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-			Validity:     tls.ValidityTenYears,
+			Validity:     installer.TenYears,
 			IPAddresses:  []net.IP{intIP},
 			DNSNames:     []string{"api-int." + domain, intIP.String()},
 		}
 
-		var mcsCertKey tls.AdminKubeConfigClientCertKey
-
-		err = mcsCertKey.SignedCertKey.Generate(cfg, rootCA, "machine-config-server", tls.DoNotAppendParent)
+		priv, cert, err := installer.GenerateSignedCertKey(cfg, rootCA)
 		if err != nil {
 			return err
 		}
 
-		s.Data[corev1.TLSCertKey] = mcsCertKey.CertRaw
-		s.Data[corev1.TLSPrivateKeyKey] = mcsCertKey.KeyRaw
+		privPem, err := utilpem.Encode(priv)
+		if err != nil {
+			return err
+		}
+
+		certPem, err := utilpem.Encode(cert)
+		if err != nil {
+			return err
+		}
+
+		s.Data[corev1.TLSCertKey] = certPem
+		s.Data[corev1.TLSPrivateKeyKey] = privPem
 
 		_, err = m.kubernetescli.CoreV1().Secrets("openshift-machine-config-operator").Update(ctx, s, metav1.UpdateOptions{})
 		return err

@@ -21,6 +21,7 @@ from azext_aro._rbac import assign_role_to_resource, \
 from azext_aro._rbac import ROLE_NETWORK_CONTRIBUTOR, ROLE_READER
 from azext_aro._validators import validate_subnets
 from azext_aro._dynamic_validators import validate_cluster_create
+from azext_aro.aaz.latest.network.vnet.subnet import Show as subnet_show
 
 from knack.log import get_logger
 
@@ -434,8 +435,6 @@ def generate_random_id():
 
 
 def get_network_resources_from_subnets(cli_ctx, subnets, fail):
-    network_client = get_mgmt_service_client(cli_ctx, ResourceType.MGMT_NETWORK)
-
     subnet_resources = set()
     for sn in subnets:
         sid = parse_resource_id(sn)
@@ -446,15 +445,16 @@ def get_network_resources_from_subnets(cli_ctx, subnets, fail):
                     Please retry, if issue persists: raise azure support ticket""")
             logger.info("Failed to validate subnet '%s'", sn)
 
-        subnet = network_client.subnets.get(resource_group_name=sid['resource_group'],
-                                            virtual_network_name=sid['name'],
-                                            subnet_name=sid['resource_name'])
+        subnet = subnet_show(cli_ctx=cli_ctx)(command_args={
+            "name": sid['resource_name'],
+            "vnet_name": sid['name'],
+            "resource_group": sid['resource_group']})
 
-        if subnet.route_table is not None:
-            subnet_resources.add(subnet.route_table.id)
+        if subnet.get("routeTable", None):
+            subnet_resources.add(subnet['routeTable']['id'])
 
-        if subnet.nat_gateway is not None:
-            subnet_resources.add(subnet.nat_gateway.id)
+        if subnet.get("natGateway", None):
+            subnet_resources.add(subnet['natGateway']['id'])
 
     return subnet_resources
 

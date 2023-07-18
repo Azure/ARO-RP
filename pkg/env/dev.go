@@ -23,14 +23,6 @@ type dev struct {
 }
 
 func newDev(ctx context.Context, log *logrus.Entry) (Interface, error) {
-	for _, key := range []string{
-		"PROXY_HOSTNAME",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return nil, fmt.Errorf("environment variable %q unset", key)
-		}
-	}
-
 	d := &dev{}
 
 	var err error
@@ -85,12 +77,12 @@ func (d *dev) Listen() (net.Listener, error) {
 }
 
 func (d *dev) FPAuthorizer(tenantID string, scopes ...string) (autorest.Authorizer, error) {
-	tokenCredential, err := d.FPNewClientCertificateCredential(tenantID)
+	fpTokenCredential, err := d.FPNewClientCertificateCredential(tenantID)
 	if err != nil {
 		return nil, err
 	}
 
-	return azidext.NewTokenCredentialAdapter(tokenCredential, scopes), nil
+	return azidext.NewTokenCredentialAdapter(fpTokenCredential, scopes), nil
 }
 
 func (d *dev) FPNewClientCertificateCredential(tenantID string) (*azidentity.ClientCertificateCredential, error) {

@@ -171,6 +171,9 @@
         "subscriptionResourceGroupName": {
             "value": ""
         },
+        "useCheckAccess": {
+            "value": ""
+        },
         "vmSize": {
             "value": "Standard_D2s_v3"
         },

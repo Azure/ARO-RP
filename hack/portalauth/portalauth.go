@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -25,6 +26,7 @@ const (
 	SessionKeyExpires  = "expires"
 	SessionKeyUsername = "user_name"
 	SessionKeyGroups   = "groups"
+	KeyVaultPrefix     = "KEYVAULT_PREFIX"
 )
 
 func run(ctx context.Context, log *logrus.Entry) error {
@@ -43,11 +45,11 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	portalKeyvaultURI, err := keyvault.URI(_env, env.PortalKeyvaultSuffix)
-	if err != nil {
+	if err := env.ValidateVars(KeyVaultPrefix); err != nil {
 		return err
 	}
-
+	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
+	portalKeyvaultURI := keyvault.URI(_env, env.PortalKeyvaultSuffix, keyVaultPrefix)
 	portalKeyvault := keyvault.NewManager(msiKVAuthorizer, portalKeyvaultURI)
 
 	sessionKey, err := portalKeyvault.GetBase64Secret(ctx, env.PortalServerSessionKeySecretName, "")

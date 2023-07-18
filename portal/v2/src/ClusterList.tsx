@@ -357,7 +357,6 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
           setKey="none"
           layoutMode={DetailsListLayoutMode.fixedColumns}
           isHeaderVisible={true}
-          onItemInvoked={this._onItemInvoked}
           styles={clusterListDetailStyles}
         />
       </Stack>
@@ -394,10 +393,6 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
 
   private _onClusterInfoLinkClick(item: ICluster): void {
     this.props.setCurrentCluster(item)
-  }
-
-  private _onItemInvoked(item: any): void {
-    alert(`Item invoked: ${item.resourceId}`)
   }
 
   private _onColumnClick = (ev: React.MouseEvent<HTMLElement>, column: IColumn): void => {

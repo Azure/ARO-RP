@@ -12,7 +12,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	hivev1 "github.com/openshift/hive/apis/hive/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/hive"
@@ -44,7 +45,11 @@ var _ = Describe("Hive-managed ARO cluster", func() {
 
 	It("has been properly created/adopted by Hive", func(ctx context.Context) {
 		By("verifying that a corresponding ClusterDeployment object exists in the expected namespace in the Hive cluster")
-		cd, err := clients.Hive.HiveV1().ClusterDeployments(adminAPICluster.Properties.HiveProfile.Namespace).Get(ctx, hive.ClusterDeploymentName, metav1.GetOptions{})
+		cd := &hivev1.ClusterDeployment{}
+		err := clients.Hive.Get(ctx, client.ObjectKey{
+			Namespace: adminAPICluster.Properties.HiveProfile.Namespace,
+			Name:      hive.ClusterDeploymentName,
+		}, cd)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("verifying that the ClusterDeployment object has the expected name and labels")

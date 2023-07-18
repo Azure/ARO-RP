@@ -15,13 +15,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclaim"
 )
 
-func (dv *dynamic) ValidateServicePrincipal(ctx context.Context, tokenCredential azcore.TokenCredential) error {
+func (dv *dynamic) ValidateServicePrincipal(ctx context.Context, spTokenCredential azcore.TokenCredential) error {
 	dv.log.Print("ValidateServicePrincipal")
 
 	tokenRequestOptions := policy.TokenRequestOptions{
-		Scopes: []string{dv.azEnv.ActiveDirectoryGraphScope},
+		Scopes: []string{dv.azEnv.MicrosoftGraphScope},
 	}
-	token, err := tokenCredential.GetToken(ctx, tokenRequestOptions)
+	token, err := spTokenCredential.GetToken(ctx, tokenRequestOptions)
 	if err != nil {
 		return err
 	}
