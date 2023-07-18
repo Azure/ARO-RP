@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/coreos/ignition/v2/config/util"
+	"github.com/Azure/go-autorest/autorest/to"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -124,10 +124,13 @@ func makeConfig() mcv1.KubeletConfig {
 			Name: configName,
 		},
 		Spec: mcv1.KubeletConfigSpec{
-			AutoSizingReserved: util.BoolToPtr(true),
+			AutoSizingReserved: to.BoolPtr(true),
 			MachineConfigPoolSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"pools.operator.machineconfiguration.openshift.io/worker": "",
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "machineconfiguration.openshift.io/mco-built-in",
+						Operator: metav1.LabelSelectorOpExists,
+					},
 				},
 			},
 		},

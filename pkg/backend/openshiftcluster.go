@@ -53,6 +53,7 @@ func (ocb *openShiftClusterBackend) try(ctx context.Context) (bool, error) {
 	log = utillog.EnrichWithResourceID(log, doc.OpenShiftCluster.ID)
 	log = utillog.EnrichWithCorrelationData(log, doc.CorrelationData)
 	log = utillog.EnrichWithClusterVersion(log, doc.OpenShiftCluster.Properties.ClusterProfile.Version)
+	log = utillog.EnrichWithClusterDeploymentNamespace(log, doc.OpenShiftCluster.Properties.HiveProfile.Namespace)
 
 	if doc.Dequeues > maxDequeueCount {
 		err := fmt.Errorf("dequeued %d times, failing", doc.Dequeues)
@@ -157,6 +158,10 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		log.Printf("admin updating (type: %s)", doc.OpenShiftCluster.Properties.MaintenanceTask)
 
 		err = m.AdminUpdate(ctx)
+		if err != nil {
+			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
+		}
+		doc, err = ocb.setNoPucmPending(ctx, doc)
 		if err != nil {
 			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
 		}
@@ -358,5 +363,12 @@ func (ocb *openShiftClusterBackend) emitMetrics(doc *api.OpenShiftClusterDocumen
 	ocb.m.EmitGauge("backend.openshiftcluster.count", 1, map[string]string{
 		"oldProvisioningState": string(doc.OpenShiftCluster.Properties.ProvisioningState),
 		"newProvisioningState": string(provisioningState),
+	})
+}
+
+func (ocb *openShiftClusterBackend) setNoPucmPending(ctx context.Context, doc *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error) {
+	return ocb.dbOpenShiftClusters.Patch(ctx, doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.PucmPending = false
+		return nil
 	})
 }

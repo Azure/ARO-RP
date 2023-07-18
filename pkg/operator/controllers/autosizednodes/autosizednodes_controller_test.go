@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/coreos/ignition/v2/config/util"
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/google/go-cmp/cmp"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/sirupsen/logrus"
@@ -82,10 +82,13 @@ func TestAutosizednodesReconciler(t *testing.T) {
 						Name: configName,
 					},
 					Spec: mcv1.KubeletConfigSpec{
-						AutoSizingReserved: util.BoolToPtr(false),
+						AutoSizingReserved: to.BoolPtr(false),
 						MachineConfigPoolSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{
-								"pools.operator.machineconfiguration.openshift.io/worker": "",
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{
+									Key:      "machineconfiguration.openshift.io/mco-built-in",
+									Operator: metav1.LabelSelectorOpExists,
+								},
 							},
 						},
 					},

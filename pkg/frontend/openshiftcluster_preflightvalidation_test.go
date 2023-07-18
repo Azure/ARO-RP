@@ -9,8 +9,11 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/Azure/go-autorest/autorest/to"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
@@ -46,13 +49,14 @@ func TestPreflightValidation(t *testing.T) {
 						[]byte(`
 								{
 									"apiVersion": "2022-04-01",
+									"id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourcename/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName",
 									"name": "resourceName",
 									"type": "microsoft.redhatopenshift/openshiftclusters",
 									"location": "eastus",
 									"properties": {
 										"clusterProfile": {
 										  "domain": "example.aroapp.io",
-										  "resourceGroupId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourcename",
+										  "resourceGroupId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourcenameTest",
 										  "fipsValidatedModules": "Enabled"
 										},
 										"consoleProfile": {},
@@ -101,6 +105,49 @@ func TestPreflightValidation(t *testing.T) {
 				Status: api.ValidationStatusSucceeded,
 			},
 		},
+		{
+			name: "Failed Preflight Static",
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+				})
+			},
+			preflightRequest: func() *api.PreflightRequest {
+				return &api.PreflightRequest{
+					Resources: []json.RawMessage{
+						[]byte(`
+								{
+									"apiVersion": "2022-04-01",
+									"id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourcename/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName",
+									"name": "resourceName",
+									"type": "microsoft.redhatopenshift/openshiftclusters",
+									"location": "eastus",
+									"properties": {
+										"clusterProfile": {
+										  "domain": "example.aroapp.io",
+										  "resourceGroupId": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/resourcenameTest",
+										  "fipsValidatedModules": "Enabled"
+										}
+									  }
+								}
+						`),
+					},
+				}
+			},
+			wantStatusCode: http.StatusOK,
+			wantResponse: &api.ValidationResult{
+				Status: api.ValidationStatusFailed,
+				Error: &api.ManagementErrorWithDetails{
+					Message: to.StringPtr("400: InvalidParameter: properties.clusterProfile.resourceGroupId: The provided resource group '/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/resourcenameTest' is invalid: must be in same subscription as cluster."),
+				},
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ti := newTestInfra(t).
@@ -112,13 +159,22 @@ func TestPreflightValidation(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, nil, api.APIs, &noop.Noop{}, nil, nil, nil, nil, nil)
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, ti.openShiftVersionsDatabase, api.APIs, &noop.Noop{}, nil, nil, nil, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 			oc := tt.preflightRequest()
 
 			go f.Run(ctx, nil, nil)
+			f.mu.Lock()
+			f.enabledOcpVersions = map[string]*api.OpenShiftVersion{
+				version.DefaultInstallStream.Version.String(): {
+					Properties: api.OpenShiftVersionProperties{
+						Version: version.DefaultInstallStream.Version.String(),
+					},
+				},
+			}
+			f.mu.Unlock()
 
 			headers := http.Header{
 				"Content-Type": []string{"application/json"},

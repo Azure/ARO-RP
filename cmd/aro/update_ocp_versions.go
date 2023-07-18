@@ -5,6 +5,8 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -30,12 +32,38 @@ func getLatestOCPVersions(ctx context.Context, log *logrus.Entry) ([]api.OpenShi
 	dstRepo := dstAcr + acrDomainSuffix
 	ocpVersions := []api.OpenShiftVersion{}
 
+	// INSTALLER_IMAGE_DIGESTS is the mapping of a minor version to
+	// the aro-installer wrapper digest.  This allows us to utilize
+	// Azure Safe Deployment Practices (SDP) instead of pushing the
+	// version tag and deploying to all regions at once.
+	var installerImageDigests map[string]string
+	jsonData := []byte(os.Getenv("INSTALLER_IMAGE_DIGESTS"))
+
+	// For Azure DevOps pipelines, the JSON data is Base64-encoded
+	// since it's embedded in JSON-formatted build artifacts.  But
+	// let's not force that on local development mode.
+	if !env.IsLocalDevelopmentMode() {
+		jsonData, err = base64.StdEncoding.DecodeString(string(jsonData))
+		if err != nil {
+			return nil, fmt.Errorf("INSTALLER_IMAGE_DIGESTS: Failed to decode base64: %v", err)
+		}
+	}
+	if err = json.Unmarshal(jsonData, &installerImageDigests); err != nil {
+		return nil, fmt.Errorf("INSTALLER_IMAGE_DIGESTS: Failed to parse JSON: %v", err)
+	}
+
 	for _, vers := range version.HiveInstallStreams {
+		installerPullSpec := fmt.Sprintf("%s/aro-installer:%s", dstRepo, vers.Version.MinorVersion())
+		digest, ok := installerImageDigests[vers.Version.MinorVersion()]
+		if !ok {
+			return nil, fmt.Errorf("no digest found for version %s", vers.Version.String())
+		}
+
 		ocpVersions = append(ocpVersions, api.OpenShiftVersion{
 			Properties: api.OpenShiftVersionProperties{
 				Version:           vers.Version.String(),
 				OpenShiftPullspec: vers.PullSpec,
-				InstallerPullspec: fmt.Sprintf("%s/aro-installer:release-%s", dstRepo, vers.Version.MinorVersion()),
+				InstallerPullspec: installerPullSpec + "@" + digest,
 				Enabled:           true,
 			},
 		})

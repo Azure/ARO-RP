@@ -137,15 +137,19 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		})
 	}
 
-	// If API is not returning 200, don't need to run the next checks
+	//this API server healthz check must be first, our geneva monitor relies on this metric to always be emitted.
 	statusCode, err := mon.emitAPIServerHealthzCode(ctx)
 	if err != nil {
 		errs = append(errs, err)
-		friendlyFuncName := steps.FriendlyName(mon.emitAPIServerHealthzCode)
-		mon.log.Printf("%s: %s", friendlyFuncName, err)
-		mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": friendlyFuncName})
+		mon.emitFailureToGatherMetric(steps.FriendlyName(mon.emitAPIServerHealthzCode), err)
 	}
+	// If API is not returning 200, fallback to checking ping and short circuit the rest of the checks
 	if statusCode != http.StatusOK {
+		err := mon.emitAPIServerPingCode(ctx)
+		if err != nil {
+			errs = append(errs, err)
+			mon.emitFailureToGatherMetric(steps.FriendlyName(mon.emitAPIServerPingCode), err)
+		}
 		return
 	}
 	for _, f := range []func(context.Context) error{
@@ -170,19 +174,23 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitSummary,
 		mon.emitHiveRegistrationStatus,
 		mon.emitOperatorFlagsAndSupportBanner,
+		mon.emitPucmState,
 		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable
 	} {
 		err = f(ctx)
 		if err != nil {
 			errs = append(errs, err)
-			friendlyFuncName := steps.FriendlyName(f)
-			mon.log.Printf("%s: %s", friendlyFuncName, err)
-			mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": friendlyFuncName})
+			mon.emitFailureToGatherMetric(steps.FriendlyName(f), err)
 			// keep going
 		}
 	}
 
 	return
+}
+
+func (mon *Monitor) emitFailureToGatherMetric(friendlyFuncName string, err error) {
+	mon.log.Printf("%s: %s", friendlyFuncName, err)
+	mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": friendlyFuncName})
 }
 
 func (mon *Monitor) emitGauge(m string, value int64, dims map[string]string) {

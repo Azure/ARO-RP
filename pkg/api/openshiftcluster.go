@@ -161,6 +161,8 @@ type OpenShiftClusterProperties struct {
 	RegistryProfiles []*RegistryProfile `json:"registryProfiles,omitempty"`
 
 	HiveProfile HiveProfile `json:"hiveProfile,omitempty"`
+
+	PucmPending bool `json:"pucmPending,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state
@@ -179,9 +181,10 @@ const (
 type MaintenanceTask string
 
 const (
-	MaintenanceTaskEverything MaintenanceTask = "Everything"
-	MaintenanceTaskOperator   MaintenanceTask = "OperatorUpdate"
-	MaintenanceTaskRenewCerts MaintenanceTask = "CertificatesRenewal"
+	MaintenanceTaskEverything  MaintenanceTask = "Everything"
+	MaintenanceTaskOperator    MaintenanceTask = "OperatorUpdate"
+	MaintenanceTaskRenewCerts  MaintenanceTask = "CertificatesRenewal"
+	MaintenanceTaskPucmPending MaintenanceTask = "PucmPending"
 )
 
 // Cluster-scoped flags

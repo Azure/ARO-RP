@@ -1,0 +1,35 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: ARODenyPrivilegedNamespace
+metadata:
+  name: aro-privileged-namespace-deny
+spec:
+  enforcementAction: {{.Enforcement}}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: [
+        "Pod",
+        "Secret",
+        "Service",
+        "ServiceAccount",
+        "ReplicationController",
+        "ResourceQuota",
+        "Namespace",
+        ]
+      - apiGroups: ["apps"]
+        kinds: ["Deployment", "ReplicaSet", "StatefulSet", "DaemonSet"]
+      - apiGroups: ["batch"]
+        kinds: ["Job", "CronJob"]
+      - apiGroups: ["rbac.authorization.k8s.io"]
+        kinds: ["Role", "RoleBinding"]
+      - apiGroups: ["policy"]
+        kinds: ["PodDisruptionBudget"]
+      - apiGroups: ["machine.openshift.io"]
+        kinds: ["Machine"]
+      # non-namespaced resources
+      # - apiGroups: [""]
+      #   kinds: ["PersistentVolume", "PersistentVolumeClaim"]
+      # - apiGroups: ["rbac.authorization.k8s.io"]
+      #   kinds: ["ClusterRole", "ClusterRoleBinding"]
+      # - apiGroups: ["apiextensions"]
+      #   kinds: ["CustomResourceDefinition"]

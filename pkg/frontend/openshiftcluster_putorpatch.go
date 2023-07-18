@@ -205,14 +205,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		}
 	} else {
 		doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
-
-		// TODO: Get rid of the special case
-		if apiVersion == admin.APIVersion {
-			doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
-			doc.OpenShiftCluster.Properties.LastAdminUpdateError = ""
-		} else {
-			doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
-		}
+		setUpdateProvisioningState(doc, apiVersion)
 		doc.Dequeues = 0
 	}
 
@@ -314,4 +307,23 @@ func (f *frontend) ValidateNewCluster(ctx context.Context, subscription *api.Sub
 	}
 
 	return nil
+}
+
+// setUpdateProvisioningState Sets either the admin update or update provisioning state
+func setUpdateProvisioningState(doc *api.OpenShiftClusterDocument, apiVersion string) {
+	switch apiVersion {
+	case admin.APIVersion:
+		// For PUCM pending update, we don't want to set ProvisioningStateAdminUpdating
+		// The cluster monitoring stack uses that value to determine if PUCM is ongoing
+		if doc.OpenShiftCluster.Properties.MaintenanceTask != api.MaintenanceTaskPucmPending {
+			doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
+			doc.OpenShiftCluster.Properties.LastAdminUpdateError = ""
+		} else {
+			doc.OpenShiftCluster.Properties.PucmPending = true
+			doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
+		}
+	default:
+		// Non-admin update (ex: customer cluster update)
+		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
+	}
 }

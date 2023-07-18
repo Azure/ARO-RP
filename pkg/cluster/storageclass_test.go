@@ -31,18 +31,18 @@ func TestConfigureStorageClass(t *testing.T) {
 	}{
 		{
 			name:       "no disk encryption set provided",
-			ocpVersion: version.DefaultInstallStream.Version.String(),
+			ocpVersion: "4.10.40",
 		},
 		{
 			name:       "disk encryption set provided",
 			desID:      "fake-des-id",
-			ocpVersion: version.DefaultInstallStream.Version.String(),
+			ocpVersion: "4.10.40",
 			wantNewSC:  true,
 		},
 		{
 			name:       "error getting old default StorageClass",
 			desID:      "fake-des-id",
-			ocpVersion: version.DefaultInstallStream.Version.String(),
+			ocpVersion: "4.10.40",
 			mocks: func(kubernetescli *fake.Clientset) {
 				kubernetescli.PrependReactor("get", "storageclasses", func(action ktesting.Action) (handled bool, ret kruntime.Object, err error) {
 					if action.(ktesting.GetAction).GetName() != "managed-premium" {
@@ -56,7 +56,7 @@ func TestConfigureStorageClass(t *testing.T) {
 		{
 			name:       "error removing default annotation from old StorageClass",
 			desID:      "fake-des-id",
-			ocpVersion: version.DefaultInstallStream.Version.String(),
+			ocpVersion: "4.10.40",
 			mocks: func(kubernetescli *fake.Clientset) {
 				kubernetescli.PrependReactor("update", "storageclasses", func(action ktesting.Action) (handled bool, ret kruntime.Object, err error) {
 					obj := action.(ktesting.UpdateAction).GetObject().(*storagev1.StorageClass)
@@ -71,7 +71,7 @@ func TestConfigureStorageClass(t *testing.T) {
 		{
 			name:       "error creating the new default encrypted StorageClass",
 			desID:      "fake-des-id",
-			ocpVersion: version.DefaultInstallStream.Version.String(),
+			ocpVersion: "4.10.40",
 			mocks: func(kubernetescli *fake.Clientset) {
 				kubernetescli.PrependReactor("create", "storageclasses", func(action ktesting.Action) (handled bool, ret kruntime.Object, err error) {
 					obj := action.(ktesting.CreateAction).GetObject().(*storagev1.StorageClass)
