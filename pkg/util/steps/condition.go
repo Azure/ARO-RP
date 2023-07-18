@@ -5,6 +5,7 @@ package steps
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -54,12 +55,20 @@ func (c conditionStep) run(ctx context.Context, log *logrus.Entry) error {
 
 	// Run the condition function immediately, and then every
 	// runner.pollInterval, until the condition returns true or timeoutCtx's
-	// timeout fires. Errors from `f` are returned directly.
+	// timeout fires. Errors from `f` are returned directly unless the error
+	// is ErrWaitTimeout. Internal ErrWaitTimeout errors are wrapped to avoid
+	// confusion with wait.PollImmediateUntil's own behavior of returning
+	// ErrWaitTimeout when the condition is not met.
 	err := wait.PollImmediateUntil(pollInterval, func() (bool, error) {
 		// We use the outer context, not the timeout context, as we do not want
 		// to time out the condition function itself, only stop retrying once
 		// timeoutCtx's timeout has fired.
-		return c.f(ctx)
+		cnd, cndErr := c.f(ctx)
+		if errors.Is(cndErr, wait.ErrWaitTimeout) {
+			return cnd, fmt.Errorf("condition encountered internal timeout: %w", cndErr)
+		}
+
+		return cnd, cndErr
 	}, timeoutCtx.Done())
 
 	if err != nil && !c.fail {
