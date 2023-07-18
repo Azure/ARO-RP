@@ -40,7 +40,7 @@ func (d *deployer) gatewayWaitForReadiness(ctx context.Context, vmssName string)
 	d.log.Printf("waiting for %s instances to be healthy", vmssName)
 	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		for _, vm := range scalesetVMs {
-			if !d.isVMInstanceHealthy(ctx, vmssName, *vm.InstanceID) {
+			if !d.isVMInstanceHealthy(ctx, d.config.GatewayResourceGroupName, vmssName, *vm.InstanceID) {
 				return false, nil
 			}
 		}

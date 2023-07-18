@@ -10,6 +10,8 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"net/http"
 	"path/filepath"
 	"strings"
 	"time"
@@ -21,6 +23,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -511,7 +514,15 @@ func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string, reso
 	case strings.HasPrefix(vmssName, rpVMSSPrefix):
 		restartScript = rpRestartScript
 	default:
-		return nil
+		return &api.CloudError{
+			StatusCode: http.StatusBadRequest,
+			CloudErrorBody: &api.CloudErrorBody{
+				Code: api.CloudErrorCodeInvalidResource,
+				Message: fmt.Sprintf("provided vmss %s does not match RP or gateway prefix",
+					vmssName,
+				),
+			},
+		}
 	}
 
 	scalesetVMs, err := d.vmssvms.List(ctx, resourceGroupName, vmssName, "", "", "")
@@ -520,7 +531,7 @@ func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string, reso
 	}
 
 	for _, vm := range scalesetVMs {
-		d.log.Print("waiting for restart script to complete on older vmss %s, instance %s", vmssName, *vm.InstanceID)
+		d.log.Printf("waiting for restart script to complete on older vmss %s, instance %s", vmssName, *vm.InstanceID)
 		err = d.vmssvms.RunCommandAndWait(ctx, resourceGroupName, vmssName, *vm.InstanceID, mgmtcompute.RunCommandInput{
 			CommandID: to.StringPtr("RunShellScript"),
 			Script:    &[]string{restartScript},
@@ -534,7 +545,7 @@ func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string, reso
 		time.Sleep(30 * time.Second)
 		timeoutCtx, cancel := context.WithTimeout(ctx, time.Hour)
 		defer cancel()
-		err = d.waitForReadiness(timeoutCtx, vmssName, *vm.InstanceID)
+		err = d.waitForReadiness(timeoutCtx, resourceGroupName, vmssName, *vm.InstanceID)
 		if err != nil {
 			return err
 		}
@@ -543,17 +554,17 @@ func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string, reso
 	return nil
 }
 
-func (d *deployer) waitForReadiness(ctx context.Context, vmssName string, vmInstanceID string) error {
+func (d *deployer) waitForReadiness(ctx context.Context, resourceGroupName string, vmssName string, vmInstanceID string) error {
 	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		return d.isVMInstanceHealthy(ctx, vmssName, vmInstanceID), nil
+		return d.isVMInstanceHealthy(ctx, resourceGroupName, vmssName, vmInstanceID), nil
 	}, ctx.Done())
 }
 
-func (d *deployer) isVMInstanceHealthy(ctx context.Context, vmssName string, vmInstanceID string) bool {
-	r, err := d.vmssvms.GetInstanceView(ctx, d.config.RPResourceGroupName, vmssName, vmInstanceID)
+func (d *deployer) isVMInstanceHealthy(ctx context.Context, resourceGroupName string, vmssName string, vmInstanceID string) bool {
+	r, err := d.vmssvms.GetInstanceView(ctx, resourceGroupName, vmssName, vmInstanceID)
 	instanceUnhealthy := r.VMHealth != nil && r.VMHealth.Status != nil && r.VMHealth.Status.Code != nil && *r.VMHealth.Status.Code != "HealthState/healthy"
 	if err != nil || instanceUnhealthy {
-		d.log.Printf("instance %s status %s", vmInstanceID, *r.VMHealth.Status.Code)
+		d.log.Printf("instance %s is unhealthy", vmInstanceID)
 		return false
 	}
 	return true

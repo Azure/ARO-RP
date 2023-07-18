@@ -40,7 +40,7 @@ func (d *deployer) rpWaitForReadiness(ctx context.Context, vmssName string) erro
 	d.log.Printf("waiting for %s instances to be healthy", vmssName)
 	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		for _, vm := range scalesetVMs {
-			if !d.isVMInstanceHealthy(ctx, vmssName, *vm.InstanceID) {
+			if !d.isVMInstanceHealthy(ctx, d.config.RPResourceGroupName, vmssName, *vm.InstanceID) {
 				return false, nil
 			}
 		}
