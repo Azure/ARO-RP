@@ -197,11 +197,11 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("step [Condition github.com/Azure/ARO-RP/pkg/util/steps.internalTimeoutCondition, timeout 50ms] encountered error: condition encountered internal timeout: timed out waiting for the condition"),
+					"msg":   gomega.Equal("step [Condition github.com/Azure/ARO-RP/pkg/util/steps.internalTimeoutCondition, timeout 50ms] encountered error: timed out waiting for the condition"),
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
-			wantErr: "condition encountered internal timeout: timed out waiting for the condition",
+			wantErr: "timed out waiting for the condition",
 		},
 		{
 			name: "A Condition that does not return true in the timeout time causes a failure",
