@@ -312,7 +312,7 @@ type MasterProfile struct {
 type VMSize string
 
 // VMSize constants
-// add required resources in pkg/api/validate/dynamic/quota.go when adding a new VMSize
+// add required resources in pkg/validate/dynamic/quota.go when adding a new VMSize
 const (
 	VMSizeStandardD2sV3  VMSize = "Standard_D2s_v3"
 	VMSizeStandardD4sV3  VMSize = "Standard_D4s_v3"

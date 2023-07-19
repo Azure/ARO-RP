@@ -12,7 +12,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 
 	api "github.com/Azure/ARO-RP/pkg/api"
-	dynamic "github.com/Azure/ARO-RP/pkg/api/validate/dynamic"
+	dynamic "github.com/Azure/ARO-RP/pkg/validate/dynamic"
 )
 
 // MockServicePrincipalValidator is a mock of ServicePrincipalValidator interface.
