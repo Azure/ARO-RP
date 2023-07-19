@@ -566,17 +566,6 @@ func TestOpenShiftClusterStaticValidateLoadBalancerProfile(t *testing.T) {
 			wantErr: "400: InvalidParameter: properties.networkProfile.loadBalancerProfile: The provided loadBalancerProfile is invalid: can only use one of managedOutboundIps, outboundIps, or outboundIpPrefixes at a time.",
 		},
 		{
-			name: "LoadbalancerProfile is invalid with all fields nil",
-			current: func(oc *OpenShiftCluster) {
-				oc.Properties.NetworkProfile.LoadbalancerProfile = &LoadbalancerProfile{
-					ManagedOutboundIPs: nil,
-					OutboundIPs:        nil,
-					OutboundIPPrefixes: nil,
-				}
-			},
-			wantErr: "400: InvalidParameter: properties.networkProfile.loadBalancerProfile: The provided loadBalancerProfile is invalid: must specify one of managedOutboundIps, outboundIps, or outboundIpPrefixes.",
-		},
-		{
 			name: "LoadbalancerProfile is invalid with OutboundIPs and OutboundIPPrefixes set",
 			current: func(oc *OpenShiftCluster) {
 				oc.Properties.NetworkProfile.LoadbalancerProfile = &LoadbalancerProfile{
@@ -594,6 +583,54 @@ func TestOpenShiftClusterStaticValidateLoadBalancerProfile(t *testing.T) {
 				}
 			},
 			wantErr: "400: InvalidParameter: properties.networkProfile.loadBalancerProfile: The provided loadBalancerProfile is invalid: can only use one of managedOutboundIps, outboundIps, or outboundIpPrefixes at a time.",
+		},
+		{
+			name: "LoadbalancerProfile is invalid with ManagedOutboundIPs and OutboundIPPrefixes set",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.LoadbalancerProfile = &LoadbalancerProfile{
+					ManagedOutboundIPs: &ManagedOutboundIPs{
+						Count: 1,
+					},
+					OutboundIPPrefixes: []OutboundIPPrefix{
+						{
+							ID: "outboundIPPrefixID",
+						},
+					},
+				}
+			},
+			wantErr: "400: InvalidParameter: properties.networkProfile.loadBalancerProfile: The provided loadBalancerProfile is invalid: can only use one of managedOutboundIps, outboundIps, or outboundIpPrefixes at a time.",
+		},
+		{
+			name: "LoadbalancerProfile is invalid with ManagedOutboundIPs, OutboundIPs, and OutboundIPPrefixes set",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.LoadbalancerProfile = &LoadbalancerProfile{
+					ManagedOutboundIPs: &ManagedOutboundIPs{
+						Count: 1,
+					},
+					OutboundIPs: []OutboundIP{
+						{
+							ID: "outboundIPID",
+						},
+					},
+					OutboundIPPrefixes: []OutboundIPPrefix{
+						{
+							ID: "outboundIPPrefixID",
+						},
+					},
+				}
+			},
+			wantErr: "400: InvalidParameter: properties.networkProfile.loadBalancerProfile: The provided loadBalancerProfile is invalid: can only use one of managedOutboundIps, outboundIps, or outboundIpPrefixes at a time.",
+		},
+		{
+			name: "LoadbalancerProfile is invalid with ManagedOutboundIPs, OutboundIPs, and OutboundIPPrefixes set to nil",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.LoadbalancerProfile = &LoadbalancerProfile{
+					ManagedOutboundIPs: nil,
+					OutboundIPs:        nil,
+					OutboundIPPrefixes: nil,
+				}
+			},
+			wantErr: "400: InvalidParameter: properties.networkProfile.loadBalancerProfile: The provided loadBalancerProfile is invalid: must specify one of managedOutboundIps, outboundIps, or outboundIpPrefixes.",
 		},
 		{
 			name: "LoadbalancerProfile.ManagedOutboundIPs is valid with 20 managed IPs",
