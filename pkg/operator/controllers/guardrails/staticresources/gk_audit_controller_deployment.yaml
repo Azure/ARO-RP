@@ -100,11 +100,9 @@ spec:
             drop:
             - ALL
           readOnlyRootFilesystem: true
-          runAsGroup: 999
           runAsNonRoot: true
-          runAsUser: 1000
-          # seccompProfile:
-          #   type: RuntimeDefault
+          seccompProfile:
+            type: RuntimeDefault
         volumeMounts:
         - mountPath: /certs
           name: cert
