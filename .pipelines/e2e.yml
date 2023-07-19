@@ -30,7 +30,7 @@ jobs:
   - script: |
       set -xe
       sudo rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-      sudo dnf install -y openvpn make podman
+      sudo dnf install -y openvpn make podman jq
     displayName: Setup (Container)
     target: container
 
@@ -84,6 +84,12 @@ jobs:
       . ./hack/e2e/run-rp-and-e2e.sh
 
       hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER >admin.kubeconfig
+    displayName: Get admin kubeconfig for must-gather
+    condition: failed()
+  # must-gather collection must be run inside the container so it can access the VPN
+  - script: |
+      export CI=true
+      . ./hack/e2e/run-rp-and-e2e.sh
       export KUBECONFIG=admin.kubeconfig
 
       wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftVersion)/openshift-client-linux-$(OpenShiftVersion).tar.gz
@@ -91,6 +97,7 @@ jobs:
       ./oc adm must-gather
       tar cf must-gather.tar.gz must-gather.local.*
     displayName: Collect must-gather
+    target: container
     condition: failed()
   - publish: must-gather.tar.gz
     artifact: must-gather

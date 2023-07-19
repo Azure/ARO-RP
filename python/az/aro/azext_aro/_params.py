@@ -16,6 +16,7 @@ from azext_aro._validators import validate_worker_count
 from azext_aro._validators import validate_worker_vm_disk_size_gb
 from azext_aro._validators import validate_refresh_cluster_credentials
 from azext_aro._validators import validate_version_format
+from azext_aro._validators import validate_outbound_type
 from azure.cli.core.commands.parameters import name_type
 from azure.cli.core.commands.parameters import get_enum_type, get_three_state_flag
 from azure.cli.core.commands.parameters import resource_group_name_type
@@ -64,7 +65,9 @@ def load_arguments(self, _):
         c.argument('service_cidr',
                    help='CIDR of service network. Must be a minimum of /18 or larger.',
                    validator=validate_cidr('service_cidr'))
-
+        c.argument('outbound_type',
+                   help='Outbound type of cluster. Must be "Loadbalancer" (default) or "UserDefinedRouting".',
+                   validator=validate_outbound_type)
         c.argument('disk_encryption_set',
                    help='ResourceID of the DiskEncryptionSet to be used for master and worker VMs.',
                    validator=validate_disk_encryption_set)

@@ -21,6 +21,29 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
+func getInstallerImageDigests(envKey string) (map[string]string, error) {
+	var installerImageDigests map[string]string
+	var err error
+
+	jsonData := []byte(os.Getenv(envKey))
+
+	// For Azure DevOps pipelines, the JSON data is Base64-encoded
+	// since it's embedded in JSON-formatted build artifacts.  But
+	// let's not force that on local development mode.
+	if !env.IsLocalDevelopmentMode() {
+		jsonData, err = base64.StdEncoding.DecodeString(string(jsonData))
+		if err != nil {
+			return nil, fmt.Errorf("%s: Failed to decode base64: %v", envKey, err)
+		}
+	}
+
+	if err = json.Unmarshal(jsonData, &installerImageDigests); err != nil {
+		return nil, fmt.Errorf("%s: Failed to parse JSON: %v", envKey, err)
+	}
+
+	return installerImageDigests, nil
+}
+
 func getLatestOCPVersions(ctx context.Context, log *logrus.Entry) ([]api.OpenShiftVersion, error) {
 	env, err := env.NewCoreForCI(ctx, log)
 	if err != nil {
@@ -36,20 +59,9 @@ func getLatestOCPVersions(ctx context.Context, log *logrus.Entry) ([]api.OpenShi
 	// the aro-installer wrapper digest.  This allows us to utilize
 	// Azure Safe Deployment Practices (SDP) instead of pushing the
 	// version tag and deploying to all regions at once.
-	var installerImageDigests map[string]string
-	jsonData := []byte(os.Getenv("INSTALLER_IMAGE_DIGESTS"))
-
-	// For Azure DevOps pipelines, the JSON data is Base64-encoded
-	// since it's embedded in JSON-formatted build artifacts.  But
-	// let's not force that on local development mode.
-	if !env.IsLocalDevelopmentMode() {
-		jsonData, err = base64.StdEncoding.DecodeString(string(jsonData))
-		if err != nil {
-			return nil, fmt.Errorf("INSTALLER_IMAGE_DIGESTS: Failed to decode base64: %v", err)
-		}
-	}
-	if err = json.Unmarshal(jsonData, &installerImageDigests); err != nil {
-		return nil, fmt.Errorf("INSTALLER_IMAGE_DIGESTS: Failed to parse JSON: %v", err)
+	installerImageDigests, err := getInstallerImageDigests("INSTALLER_IMAGE_DIGESTS")
+	if err != nil {
+		return nil, err
 	}
 
 	for _, vers := range version.HiveInstallStreams {
