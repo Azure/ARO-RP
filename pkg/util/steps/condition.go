@@ -97,20 +97,20 @@ func (c conditionStep) run(ctx context.Context, log *logrus.Entry) error {
 		return nil
 	}
 	if errors.Is(err, wait.ErrWaitTimeout) {
-		return enrichConditionTimeoutError(c.f)
+		return enrichConditionTimeoutError(c.f, err)
 	}
 	return err
 }
 
 // Instead of giving Generic, timed out waiting for a condition, error
 // returns enriched error messages mentioned in timeoutConditionErrors
-func enrichConditionTimeoutError(f conditionFunction) error {
+func enrichConditionTimeoutError(f conditionFunction, originalErr error) error {
 	funcNameParts := strings.Split(FriendlyName(f), ".")
 	funcName := strings.TrimSuffix(funcNameParts[len(funcNameParts)-1], "-fm")
 
 	message, exists := timeoutConditionErrors[funcName]
 	if !exists {
-		return errors.New("timed out waiting for the condition")
+		return originalErr
 	}
 	return api.NewCloudError(
 		http.StatusInternalServerError,
