@@ -44,10 +44,6 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	}
 	clusterName := os.Getenv(Cluster)
 
-	if clusterName == "" {
-		return fmt.Errorf("your environment variable \"CLUSTER\" is empty, please pass a value")
-	}
-
 	osClusterVersion := os.Getenv("OS_CLUSTER_VERSION")
 
 	c, err := cluster.New(log, env, os.Getenv("CI") != "")

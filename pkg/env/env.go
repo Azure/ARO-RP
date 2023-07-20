@@ -124,7 +124,7 @@ func IsCI() bool {
 // Otherwise it returns nil.
 func ValidateVars(vars ...string) error {
 	for _, v := range vars {
-		if _, found := os.LookupEnv(v); !found {
+		if v, found := os.LookupEnv(v); !found || v == "" {
 			return fmt.Errorf("environment variable %q unset", v)
 		}
 	}
