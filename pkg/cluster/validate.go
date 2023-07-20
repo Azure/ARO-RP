@@ -7,7 +7,7 @@ import (
 	"context"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/validate"
+	"github.com/Azure/ARO-RP/pkg/validate"
 )
 
 func (m *manager) validateResources(ctx context.Context) error {

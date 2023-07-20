@@ -5,6 +5,7 @@ package steps
 
 import (
 	"context"
+	"errors"
 	"testing"
 )
 
@@ -23,17 +24,19 @@ func hiveClusterInstallationComplete(context.Context) (bool, error)        { ret
 
 func TestEnrichConditionTimeoutError(t *testing.T) {
 	for _, tt := range []struct {
-		desc     string
-		function conditionFunction
-		wantErr  string
+		desc        string
+		function    conditionFunction
+		originalErr string
+		wantErr     string
 	}{
 		// Verify response for func's mention in timeoutConditionErrors and
 		// Emit generic Error if an unknown func
 		{
 			// unknown function
-			desc:     "test conditionfail for func - unknownFunc",
-			function: timingOutCondition,
-			wantErr:  "timed out waiting for the condition",
+			desc:        "test conditionfail for func - unknownFunc",
+			function:    timingOutCondition,
+			originalErr: "timed out waiting for the condition",
+			wantErr:     "timed out waiting for the condition",
 		},
 		{
 			desc:     "test conditionfail for func - apiServersReady",
@@ -87,7 +90,7 @@ func TestEnrichConditionTimeoutError(t *testing.T) {
 		},
 	} {
 		t.Run(tt.desc, func(t *testing.T) {
-			if got := enrichConditionTimeoutError(tt.function); got.Error() != tt.wantErr {
+			if got := enrichConditionTimeoutError(tt.function, errors.New(tt.originalErr)); got.Error() != tt.wantErr {
 				t.Errorf("invlaid enrichConditionTimeoutError: %s, got: %s", tt.wantErr, got)
 			}
 		})
