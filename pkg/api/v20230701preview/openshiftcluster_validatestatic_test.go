@@ -536,6 +536,14 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 			},
 			wantErr: "400: InvalidParameter: properties.networkProfile.loadBalancerProfile: The provided loadBalancerProfile is invalid: cannot use a loadBalancerProfile if outboundType is UserDefinedRouting.",
 		},
+		{
+			name: "Not passing in a LoadbalancerProfile is valid.",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.OutboundType = OutboundTypeLoadbalancer
+				oc.Properties.NetworkProfile.LoadbalancerProfile = nil
+			},
+			wantErr: "",
+		},
 	}
 
 	runTests(t, testModeCreate, tests)
