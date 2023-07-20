@@ -669,6 +669,11 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							NetworkProfile: api.NetworkProfile{
 								OutboundType:     api.OutboundTypeLoadbalancer,
 								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
+								LoadbalancerProfile: &api.LoadbalancerProfile{
+									ManagedOutboundIPs: &api.ManagedOutboundIPs{
+										Count: 1,
+									},
+								},
 							},
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
@@ -694,6 +699,11 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					MaintenanceTask: admin.MaintenanceTaskPucmPending,
 					NetworkProfile: admin.NetworkProfile{
 						OutboundType: admin.OutboundTypeLoadbalancer,
+						LoadbalancerProfile: &admin.LoadbalancerProfile{
+							ManagedOutboundIPs: &admin.ManagedOutboundIPs{
+								Count: 1,
+							},
+						},
 					},
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
