@@ -31,8 +31,8 @@ var timeoutConditionErrors = map[string]string{
 	"ingressControllerReady":                 "Ingress Cluster Operator has not started successfully.",
 	"aroDeploymentReady":                     "ARO Cluster Operator has failed to initialize successfully.",
 	"ensureAROOperatorRunningDesiredVersion": "ARO Cluster Operator is not running desired version.",
-	"hiveClusterDeploymentReady":             "Timed out waiting for the condition to be ready",
-	"hiveClusterInstallationComplete":        "Timed out waiting for the condition to complete",
+	"hiveClusterDeploymentReady":             "Timed out waiting for the condition to be ready.",
+	"hiveClusterInstallationComplete":        "Timed out waiting for the condition to complete.",
 }
 
 // conditionFunction is a function that takes a context and returns whether the

@@ -81,17 +81,17 @@ func TestEnrichConditionTimeoutError(t *testing.T) {
 		{
 			desc:     "test conditionfail for func - hiveClusterDeploymentReady",
 			function: hiveClusterDeploymentReady,
-			wantErr:  "500: DeploymentFailed: : Timed out waiting for a condition, cluster Installation is unsuccessful.Please retry, if issue persists: raise azure support ticket",
+			wantErr:  "500: DeploymentFailed: : Timed out waiting for the condition to be ready.Please retry, if issue persists: raise azure support ticket",
 		},
 		{
 			desc:     "test conditionfail for func - hiveClusterInstallationComplete",
 			function: hiveClusterInstallationComplete,
-			wantErr:  "500: DeploymentFailed: : Timed out waiting for a condition, cluster Installation is unsuccessful.Please retry, if issue persists: raise azure support ticket",
+			wantErr:  "500: DeploymentFailed: : Timed out waiting for the condition to complete.Please retry, if issue persists: raise azure support ticket",
 		},
 	} {
 		t.Run(tt.desc, func(t *testing.T) {
 			if got := enrichConditionTimeoutError(tt.function, errors.New(tt.originalErr)); got.Error() != tt.wantErr {
-				t.Errorf("invlaid enrichConditionTimeoutError: %s, got: %s", tt.wantErr, got)
+				t.Errorf("invalid enrichConditionTimeoutError: %s, got: %s", tt.wantErr, got)
 			}
 		})
 	}
