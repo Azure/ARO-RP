@@ -49,10 +49,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-const (
-	devVnetName = "dev-vnet"
-)
-
 type Cluster struct {
 	log          *logrus.Entry
 	env          env.Core
@@ -200,15 +196,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		return err
 	}
 
-	var addressPrefix, masterSubnet, workerSubnet string
-	if c.ci {
-		addressPrefix, masterSubnet, workerSubnet = c.generateSubnets()
-	} else {
-		addressPrefix, masterSubnet, workerSubnet, err = c.getUnusedAddressSpaces(ctx, vnetResourceGroup)
-		if err != nil {
-			return err
-		}
-	}
+	addressPrefix, masterSubnet, workerSubnet := generateSubnets()
 
 	var kvName string
 	if len(vnetResourceGroup) > 10 {
@@ -352,47 +340,19 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	return nil
 }
 
-func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, workerSubnet string) {
+func generateSubnets() (vnetPrefix string, masterSubnet string, workerSubnet string) {
 	// pick a random 23 in range [10.3.0.0, 10.127.255.0]
 	// 10.0.0.0/16 is used by dev-vnet to host CI
 	// 10.1.0.0/24 is used by rp-vnet to host Proxy VM
 	// 10.2.0.0/24 is used by dev-vpn-vnet to host VirtualNetworkGateway
+	var x, y int
 	rand.Seed(time.Now().UnixNano())
-	x, y := rand.Intn((124))+3, 2*rand.Intn(128)
+	// Local Dev clusters are limited to /9 dev-vnet
+	x, y = rand.Intn((124))+3, 2*rand.Intn(128)
 	vnetPrefix = fmt.Sprintf("10.%d.%d.0/23", x, y)
 	masterSubnet = fmt.Sprintf("10.%d.%d.0/24", x, y)
 	workerSubnet = fmt.Sprintf("10.%d.%d.0/24", x, y+1)
 	return
-}
-
-func (c *Cluster) getUnusedAddressSpaces(ctx context.Context, vnetResourceGroup string) (string, string, string, error) {
-	addressSpaces := make([]string, 0)
-	subnetListResultPage, err := c.subnets.List(ctx, vnetResourceGroup, devVnetName)
-	if err != nil {
-		return "", "", "", err
-	}
-	mp := make(map[string]bool)
-	for _, subnet := range subnetListResultPage.Values() {
-		mp[*subnet.AddressPrefix] = true
-	}
-
-	devVnet, err := c.vnets.Get(ctx, c.env.ResourceGroup(), devVnetName, "")
-	if err != nil {
-		return "", "", "", err
-	}
-
-	for _, addressPrefix := range *devVnet.AddressSpace.AddressPrefixes {
-		if mp[addressPrefix] {
-			continue
-		}
-		addressSpaces = append(addressSpaces, addressPrefix)
-	}
-
-	if len(addressSpaces) < 2 {
-		return "", "", "", fmt.Errorf("not enough address space available in the virtual network %s", devVnetName)
-	}
-	addressPrefix := addressSpaces[0][:len(addressSpaces[0])-1] + "3"
-	return addressPrefix, addressSpaces[0], addressSpaces[1], nil
 }
 
 func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName string) error {
