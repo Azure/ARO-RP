@@ -28,36 +28,36 @@ type OpenShiftCluster struct {
 
 // OpenShiftClusterProperties represents an OpenShift cluster's properties.
 type OpenShiftClusterProperties struct {
-	ArchitectureVersion             ArchitectureVersion     `json:"architectureVersion"` // ArchitectureVersion is int so 0 is valid value to be returned
-	ProvisioningState               ProvisioningState       `json:"provisioningState,omitempty"`
-	LastProvisioningState           ProvisioningState       `json:"lastProvisioningState,omitempty"`
-	FailedProvisioningState         ProvisioningState       `json:"failedProvisioningState,omitempty"`
-	LastAdminUpdateError            string                  `json:"lastAdminUpdateError,omitempty"`
-	MaintenanceTask                 MaintenanceTask         `json:"maintenanceTask,omitempty" mutable:"true"`
-	OperatorFlags                   OperatorFlags           `json:"operatorFlags,omitempty" mutable:"true"`
-	OperatorVersion                 string                  `json:"operatorVersion,omitempty" mutable:"true"`
-	CreatedAt                       time.Time               `json:"createdAt,omitempty"`
-	CreatedBy                       string                  `json:"createdBy,omitempty"`
-	ProvisionedBy                   string                  `json:"provisionedBy,omitempty"`
-	ClusterProfile                  ClusterProfile          `json:"clusterProfile,omitempty"`
-	FeatureProfile                  FeatureProfile          `json:"featureProfile,omitempty"`
-	ConsoleProfile                  ConsoleProfile          `json:"consoleProfile,omitempty"`
-	ServicePrincipalProfile         ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
-	NetworkProfile                  NetworkProfile          `json:"networkProfile,omitempty"`
-	MasterProfile                   MasterProfile           `json:"masterProfile,omitempty"`
+	ArchitectureVersion     ArchitectureVersion     `json:"architectureVersion"` // ArchitectureVersion is int so 0 is valid value to be returned
+	ProvisioningState       ProvisioningState       `json:"provisioningState,omitempty"`
+	LastProvisioningState   ProvisioningState       `json:"lastProvisioningState,omitempty"`
+	FailedProvisioningState ProvisioningState       `json:"failedProvisioningState,omitempty"`
+	LastAdminUpdateError    string                  `json:"lastAdminUpdateError,omitempty"`
+	MaintenanceTask         MaintenanceTask         `json:"maintenanceTask,omitempty" mutable:"true"`
+	OperatorFlags           OperatorFlags           `json:"operatorFlags,omitempty" mutable:"true"`
+	OperatorVersion         string                  `json:"operatorVersion,omitempty" mutable:"true"`
+	CreatedAt               time.Time               `json:"createdAt,omitempty"`
+	CreatedBy               string                  `json:"createdBy,omitempty"`
+	ProvisionedBy           string                  `json:"provisionedBy,omitempty"`
+	ClusterProfile          ClusterProfile          `json:"clusterProfile,omitempty"`
+	FeatureProfile          FeatureProfile          `json:"featureProfile,omitempty"`
+	ConsoleProfile          ConsoleProfile          `json:"consoleProfile,omitempty"`
+	ServicePrincipalProfile ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
+	NetworkProfile          NetworkProfile          `json:"networkProfile,omitempty"`
+	MasterProfile           MasterProfile           `json:"masterProfile,omitempty"`
 	// WorkerProfiles is used to store the worker profile data that was sent in the api request
 	WorkerProfiles []WorkerProfile `json:"workerProfiles,omitempty"`
 	// WorkerProfilesStatus is used to store the enriched worker profile data
 	WorkerProfilesStatus            []WorkerProfile   `json:"workerProfilesStatus,omitempty"`
-	APIServerProfile                APIServerProfile        `json:"apiserverProfile,omitempty"`
-	IngressProfiles                 []IngressProfile        `json:"ingressProfiles,omitempty"`
-	Install                         *Install                `json:"install,omitempty"`
-	StorageSuffix                   string                  `json:"storageSuffix,omitempty"`
-	RegistryProfiles                []RegistryProfile       `json:"registryProfiles,omitempty"`
-	ImageRegistryStorageAccountName string                  `json:"imageRegistryStorageAccountName,omitempty"`
-	InfraID                         string                  `json:"infraId,omitempty"`
-	HiveProfile                     HiveProfile             `json:"hiveProfile,omitempty"`
-	PucmPending                     bool                    `json:"pucmPending,omitempty"`
+	APIServerProfile                APIServerProfile  `json:"apiserverProfile,omitempty"`
+	IngressProfiles                 []IngressProfile  `json:"ingressProfiles,omitempty"`
+	Install                         *Install          `json:"install,omitempty"`
+	StorageSuffix                   string            `json:"storageSuffix,omitempty"`
+	RegistryProfiles                []RegistryProfile `json:"registryProfiles,omitempty"`
+	ImageRegistryStorageAccountName string            `json:"imageRegistryStorageAccountName,omitempty"`
+	InfraID                         string            `json:"infraId,omitempty"`
+	HiveProfile                     HiveProfile       `json:"hiveProfile,omitempty"`
+	PucmPending                     bool              `json:"pucmPending,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state.
