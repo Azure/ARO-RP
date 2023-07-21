@@ -38,3 +38,7 @@ portal/v2/.vscode/
 /hack/hive-config/hive-deployment.yaml
 cmd/aro/__debug_bin
 megalinter-reports/
+/db
+/cluster
+/jq
+/portalauth
