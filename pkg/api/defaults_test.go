@@ -17,7 +17,7 @@ func validOpenShiftClusterDocument() *OpenShiftClusterDocument {
 					SoftwareDefinedNetwork: SoftwareDefinedNetworkOpenShiftSDN,
 					OutboundType:           OutboundTypeLoadbalancer,
 					PreconfiguredNSG:       PreconfiguredNSGDisabled,
-					LoadbalancerProfile: &LoadbalancerProfile{
+					LoadBalancerProfile: &LoadBalancerProfile{
 						ManagedOutboundIPs: &ManagedOutboundIPs{
 							Count: 1,
 						},
@@ -120,7 +120,7 @@ func TestSetDefaults(t *testing.T) {
 				return doc
 			},
 			input: func(base *OpenShiftClusterDocument) {
-				base.OpenShiftCluster.Properties.NetworkProfile.LoadbalancerProfile = nil
+				base.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile = nil
 			},
 		},
 	} {

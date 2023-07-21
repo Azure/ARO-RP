@@ -305,8 +305,8 @@ class IngressProfile(msrest.serialization.Model):
         self.ip = ip
 
 
-class LoadbalancerProfile(msrest.serialization.Model):
-    """LoadbalancerProfile represents the profile of the cluster public loadbalancer.
+class LoadBalancerProfile(msrest.serialization.Model):
+    """LoadBalancerProfile represents the profile of the cluster public loadbalancer.
 
     :ivar managed_outbound_ips: The desired managed outbound IPs for the cluster public load
      balancer.
@@ -365,7 +365,7 @@ class LoadbalancerProfile(msrest.serialization.Model):
          values are in the range of 0 to 64000 (inclusive). The default value is 1024.
         :paramtype allocated_outbound_ports: int
         """
-        super(LoadbalancerProfile, self).__init__(**kwargs)
+        super(LoadBalancerProfile, self).__init__(**kwargs)
         self.managed_outbound_ips = managed_outbound_ips
         self.effective_outbound_ips = effective_outbound_ips
         self.outbound_ips = outbound_ips
@@ -669,14 +669,14 @@ class NetworkProfile(msrest.serialization.Model):
      ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.OutboundType
     :ivar load_balancer_profile: The cluster load balancer profile.
     :vartype load_balancer_profile:
-     ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.LoadbalancerProfile
+     ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.LoadBalancerProfile
     """
 
     _attribute_map = {
         'pod_cidr': {'key': 'podCidr', 'type': 'str'},
         'service_cidr': {'key': 'serviceCidr', 'type': 'str'},
         'outbound_type': {'key': 'outboundType', 'type': 'str'},
-        'load_balancer_profile': {'key': 'loadBalancerProfile', 'type': 'LoadbalancerProfile'},
+        'load_balancer_profile': {'key': 'loadBalancerProfile', 'type': 'LoadBalancerProfile'},
     }
 
     def __init__(
@@ -685,7 +685,7 @@ class NetworkProfile(msrest.serialization.Model):
         pod_cidr: Optional[str] = None,
         service_cidr: Optional[str] = None,
         outbound_type: Optional[Union[str, "OutboundType"]] = None,
-        load_balancer_profile: Optional["LoadbalancerProfile"] = None,
+        load_balancer_profile: Optional["LoadBalancerProfile"] = None,
         **kwargs
     ):
         """
@@ -699,7 +699,7 @@ class NetworkProfile(msrest.serialization.Model):
          ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.OutboundType
         :keyword load_balancer_profile: The cluster load balancer profile.
         :paramtype load_balancer_profile:
-         ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.LoadbalancerProfile
+         ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.LoadBalancerProfile
         """
         super(NetworkProfile, self).__init__(**kwargs)
         self.pod_cidr = pod_cidr

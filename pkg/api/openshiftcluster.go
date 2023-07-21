@@ -270,8 +270,8 @@ type ResourceReference struct {
 	ID string `json:"id,omitempty"`
 }
 
-// LoadbalancerProfile represents the profile of the cluster public loadbalancer.
-type LoadbalancerProfile struct {
+// LoadBalancerProfile represents the profile of the cluster public loadbalancer.
+type LoadBalancerProfile struct {
 	// The desired managed outbound IPs for the cluster public load balancer.
 	ManagedOutboundIPs *ManagedOutboundIPs `json:"managedOutboundIps,omitempty"`
 	// The list of effective outbound IP addresses of the public load balancer.
@@ -313,7 +313,7 @@ type NetworkProfile struct {
 	GatewayPrivateEndpointIP   string               `json:"gatewayPrivateEndpointIp,omitempty"`
 	GatewayPrivateLinkID       string               `json:"gatewayPrivateLinkId,omitempty"`
 	PreconfiguredNSG           PreconfiguredNSG     `json:"preconfiguredNSG,omitempty"`
-	LoadbalancerProfile        *LoadbalancerProfile `json:"loadBalancerProfile,omitempty"`
+	LoadBalancerProfile        *LoadBalancerProfile `json:"loadBalancerProfile,omitempty"`
 }
 
 // PreconfiguredNSG represents whether customers want to use their own NSG attached to the subnets

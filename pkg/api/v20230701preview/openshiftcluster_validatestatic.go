@@ -98,7 +98,7 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *Ope
 	if err := sv.validateNetworkProfile(path+".networkProfile", &p.NetworkProfile, p.APIServerProfile.Visibility, p.IngressProfiles[0].Visibility); err != nil {
 		return err
 	}
-	if err := sv.validateLoadBalancerProfile(path+".networkProfile.loadBalancerProfile", p.NetworkProfile.LoadbalancerProfile, isCreate); err != nil {
+	if err := sv.validateLoadBalancerProfile(path+".networkProfile.loadBalancerProfile", p.NetworkProfile.LoadBalancerProfile, isCreate); err != nil {
 		return err
 	}
 	if err := sv.validateMasterProfile(path+".masterProfile", &p.MasterProfile); err != nil {
@@ -232,14 +232,14 @@ func (sv openShiftClusterStaticValidator) validateNetworkProfile(path string, np
 		}
 	}
 
-	if np.OutboundType == OutboundTypeUserDefinedRouting && np.LoadbalancerProfile != nil {
+	if np.OutboundType == OutboundTypeUserDefinedRouting && np.LoadBalancerProfile != nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".loadBalancerProfile", "The provided loadBalancerProfile is invalid: cannot use a loadBalancerProfile if outboundType is UserDefinedRouting.")
 	}
 
 	return nil
 }
 
-func (sv openShiftClusterStaticValidator) validateLoadBalancerProfile(path string, lbp *LoadbalancerProfile, isCreate bool) error {
+func (sv openShiftClusterStaticValidator) validateLoadBalancerProfile(path string, lbp *LoadBalancerProfile, isCreate bool) error {
 	if lbp == nil {
 		return nil
 	}
@@ -279,7 +279,7 @@ func (sv openShiftClusterStaticValidator) validateLoadBalancerProfile(path strin
 	return nil
 }
 
-func checkPickedExactlyOne(path string, lbp *LoadbalancerProfile) error {
+func checkPickedExactlyOne(path string, lbp *LoadBalancerProfile) error {
 	var isManagedOutboundIPCount = lbp.ManagedOutboundIPs != nil
 	var isOutboundIPs = lbp.OutboundIPs != nil
 	var isOutboundIPPrefixes = lbp.OutboundIPPrefixes != nil

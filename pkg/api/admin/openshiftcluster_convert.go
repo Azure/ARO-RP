@@ -75,41 +75,41 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 		},
 	}
 
-	if oc.Properties.NetworkProfile.LoadbalancerProfile != nil {
-		out.Properties.NetworkProfile.LoadbalancerProfile = &LoadbalancerProfile{}
+	if oc.Properties.NetworkProfile.LoadBalancerProfile != nil {
+		out.Properties.NetworkProfile.LoadBalancerProfile = &LoadBalancerProfile{}
 
-		if oc.Properties.NetworkProfile.LoadbalancerProfile.AllocatedOutboundPorts != nil {
-			out.Properties.NetworkProfile.LoadbalancerProfile.AllocatedOutboundPorts = oc.Properties.NetworkProfile.LoadbalancerProfile.AllocatedOutboundPorts
+		if oc.Properties.NetworkProfile.LoadBalancerProfile.AllocatedOutboundPorts != nil {
+			out.Properties.NetworkProfile.LoadBalancerProfile.AllocatedOutboundPorts = oc.Properties.NetworkProfile.LoadBalancerProfile.AllocatedOutboundPorts
 		}
 
-		if oc.Properties.NetworkProfile.LoadbalancerProfile.ManagedOutboundIPs != nil {
-			out.Properties.NetworkProfile.LoadbalancerProfile.ManagedOutboundIPs = &ManagedOutboundIPs{
-				Count: oc.Properties.NetworkProfile.LoadbalancerProfile.ManagedOutboundIPs.Count,
+		if oc.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs != nil {
+			out.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs = &ManagedOutboundIPs{
+				Count: oc.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs.Count,
 			}
 		}
 
-		if oc.Properties.NetworkProfile.LoadbalancerProfile.EffectiveOutboundIPs != nil {
-			out.Properties.NetworkProfile.LoadbalancerProfile.EffectiveOutboundIPs = make([]EffectiveOutboundIP, 0, len(oc.Properties.NetworkProfile.LoadbalancerProfile.EffectiveOutboundIPs))
-			for _, effectiveOutboundIP := range oc.Properties.NetworkProfile.LoadbalancerProfile.EffectiveOutboundIPs {
-				out.Properties.NetworkProfile.LoadbalancerProfile.EffectiveOutboundIPs = append(out.Properties.NetworkProfile.LoadbalancerProfile.EffectiveOutboundIPs, EffectiveOutboundIP{
+		if oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs != nil {
+			out.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = make([]EffectiveOutboundIP, 0, len(oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs))
+			for _, effectiveOutboundIP := range oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs {
+				out.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = append(out.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs, EffectiveOutboundIP{
 					ID: effectiveOutboundIP.ID,
 				})
 			}
 		}
 
-		if oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPs != nil {
-			out.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPs = make([]OutboundIP, 0, len(oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPs))
-			for _, outboundIP := range oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPs {
-				out.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPs = append(out.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPs, OutboundIP{
+		if oc.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPs != nil {
+			out.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPs = make([]OutboundIP, 0, len(oc.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPs))
+			for _, outboundIP := range oc.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPs {
+				out.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPs = append(out.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPs, OutboundIP{
 					ID: outboundIP.ID,
 				})
 			}
 		}
 
-		if oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPPrefixes != nil {
-			out.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPPrefixes = make([]OutboundIPPrefix, 0, len(oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPPrefixes))
-			for _, outboundIPPrefix := range oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPPrefixes {
-				out.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPPrefixes = append(out.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPPrefixes, OutboundIPPrefix{
+		if oc.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPPrefixes != nil {
+			out.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPPrefixes = make([]OutboundIPPrefix, 0, len(oc.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPPrefixes))
+			for _, outboundIPPrefix := range oc.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPPrefixes {
+				out.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPPrefixes = append(out.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPPrefixes, OutboundIPPrefix{
 					ID: outboundIPPrefix.ID,
 				})
 			}
@@ -234,34 +234,34 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	out.Properties.NetworkProfile.APIServerPrivateEndpointIP = oc.Properties.NetworkProfile.APIServerPrivateEndpointIP
 	out.Properties.NetworkProfile.GatewayPrivateEndpointIP = oc.Properties.NetworkProfile.GatewayPrivateEndpointIP
 	out.Properties.NetworkProfile.GatewayPrivateLinkID = oc.Properties.NetworkProfile.GatewayPrivateLinkID
-	if oc.Properties.NetworkProfile.LoadbalancerProfile != nil {
-		out.Properties.NetworkProfile.LoadbalancerProfile = &api.LoadbalancerProfile{}
+	if oc.Properties.NetworkProfile.LoadBalancerProfile != nil {
+		out.Properties.NetworkProfile.LoadBalancerProfile = &api.LoadBalancerProfile{}
 
-		if oc.Properties.NetworkProfile.LoadbalancerProfile.AllocatedOutboundPorts != nil {
-			out.Properties.NetworkProfile.LoadbalancerProfile.AllocatedOutboundPorts = oc.Properties.NetworkProfile.LoadbalancerProfile.AllocatedOutboundPorts
+		if oc.Properties.NetworkProfile.LoadBalancerProfile.AllocatedOutboundPorts != nil {
+			out.Properties.NetworkProfile.LoadBalancerProfile.AllocatedOutboundPorts = oc.Properties.NetworkProfile.LoadBalancerProfile.AllocatedOutboundPorts
 		}
 
-		if oc.Properties.NetworkProfile.LoadbalancerProfile.ManagedOutboundIPs != nil {
-			out.Properties.NetworkProfile.LoadbalancerProfile.ManagedOutboundIPs = &api.ManagedOutboundIPs{
-				Count: oc.Properties.NetworkProfile.LoadbalancerProfile.ManagedOutboundIPs.Count,
+		if oc.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs != nil {
+			out.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs = &api.ManagedOutboundIPs{
+				Count: oc.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs.Count,
 			}
 		}
-		if oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPs != nil {
-			out.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPs = make([]api.OutboundIP, len(oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPs))
-			for i := range oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPs {
-				out.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPs[i].ID = oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPs[i].ID
+		if oc.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPs != nil {
+			out.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPs = make([]api.OutboundIP, len(oc.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPs))
+			for i := range oc.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPs {
+				out.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPs[i].ID = oc.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPs[i].ID
 			}
 		}
-		if oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPPrefixes != nil {
-			out.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPPrefixes = make([]api.OutboundIPPrefix, len(oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPPrefixes))
-			for i := range oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPPrefixes {
-				out.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPPrefixes[i].ID = oc.Properties.NetworkProfile.LoadbalancerProfile.OutboundIPPrefixes[i].ID
+		if oc.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPPrefixes != nil {
+			out.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPPrefixes = make([]api.OutboundIPPrefix, len(oc.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPPrefixes))
+			for i := range oc.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPPrefixes {
+				out.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPPrefixes[i].ID = oc.Properties.NetworkProfile.LoadBalancerProfile.OutboundIPPrefixes[i].ID
 			}
 		}
-		if oc.Properties.NetworkProfile.LoadbalancerProfile.EffectiveOutboundIPs != nil {
-			out.Properties.NetworkProfile.LoadbalancerProfile.EffectiveOutboundIPs = make([]api.EffectiveOutboundIP, len(oc.Properties.NetworkProfile.LoadbalancerProfile.EffectiveOutboundIPs))
-			for i := range oc.Properties.NetworkProfile.LoadbalancerProfile.EffectiveOutboundIPs {
-				out.Properties.NetworkProfile.LoadbalancerProfile.EffectiveOutboundIPs[i].ID = oc.Properties.NetworkProfile.LoadbalancerProfile.EffectiveOutboundIPs[i].ID
+		if oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs != nil {
+			out.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = make([]api.EffectiveOutboundIP, len(oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs))
+			for i := range oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs {
+				out.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs[i].ID = oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs[i].ID
 			}
 		}
 	}

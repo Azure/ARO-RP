@@ -1898,8 +1898,8 @@
         }
       }
     },
-    "LoadbalancerProfile": {
-      "description": "LoadbalancerProfile represents the profile of the cluster public loadbalancer.",
+    "LoadBalancerProfile": {
+      "description": "LoadBalancerProfile represents the profile of the cluster public loadbalancer.",
       "type": "object",
       "properties": {
         "managedOutboundIps": {
@@ -2049,7 +2049,7 @@
           "description": "The OutboundType used for egress traffic."
         },
         "loadBalancerProfile": {
-          "$ref": "#/definitions/LoadbalancerProfile",
+          "$ref": "#/definitions/LoadBalancerProfile",
           "description": "The cluster load balancer profile."
         }
       }

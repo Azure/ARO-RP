@@ -129,8 +129,8 @@ type IngressProfile struct {
 	IP *string `json:"ip,omitempty"`
 }
 
-// LoadbalancerProfile loadbalancerProfile represents the profile of the cluster public loadbalancer.
-type LoadbalancerProfile struct {
+// LoadBalancerProfile loadBalancerProfile represents the profile of the cluster public loadbalancer.
+type LoadBalancerProfile struct {
 	// ManagedOutboundIps - The desired managed outbound IPs for the cluster public load balancer.
 	ManagedOutboundIps *ManagedOutboundIPs `json:"managedOutboundIps,omitempty"`
 	// EffectiveOutboundIps - The list of effective outbound IP addresses of the public load balancer.
@@ -469,7 +469,7 @@ type NetworkProfile struct {
 	// OutboundType - The OutboundType used for egress traffic. Possible values include: 'Loadbalancer', 'UserDefinedRouting'
 	OutboundType OutboundType `json:"outboundType,omitempty"`
 	// LoadBalancerProfile - The cluster load balancer profile.
-	LoadBalancerProfile *LoadbalancerProfile `json:"loadBalancerProfile,omitempty"`
+	LoadBalancerProfile *LoadBalancerProfile `json:"loadBalancerProfile,omitempty"`
 }
 
 // OpenShiftCluster openShiftCluster represents an Azure Red Hat OpenShift cluster.

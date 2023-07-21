@@ -22,7 +22,7 @@ try:
     from ._models_py3 import Display
     from ._models_py3 import EffectiveOutboundIP
     from ._models_py3 import IngressProfile
-    from ._models_py3 import LoadbalancerProfile
+    from ._models_py3 import LoadBalancerProfile
     from ._models_py3 import MachinePool
     from ._models_py3 import MachinePoolList
     from ._models_py3 import MachinePoolUpdate
@@ -63,7 +63,7 @@ except (SyntaxError, ImportError):
     from ._models import Display  # type: ignore
     from ._models import EffectiveOutboundIP  # type: ignore
     from ._models import IngressProfile  # type: ignore
-    from ._models import LoadbalancerProfile  # type: ignore
+    from ._models import LoadBalancerProfile  # type: ignore
     from ._models import MachinePool  # type: ignore
     from ._models import MachinePoolList  # type: ignore
     from ._models import MachinePoolUpdate  # type: ignore
@@ -114,7 +114,7 @@ __all__ = [
     'Display',
     'EffectiveOutboundIP',
     'IngressProfile',
-    'LoadbalancerProfile',
+    'LoadBalancerProfile',
     'MachinePool',
     'MachinePoolList',
     'MachinePoolUpdate',

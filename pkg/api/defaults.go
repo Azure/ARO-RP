@@ -48,8 +48,8 @@ func SetDefaults(doc *OpenShiftClusterDocument) {
 		}
 
 		// If OutboundType is Loadbalancer and there is no LoadBalancerProfile, set default one
-		if doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType == OutboundTypeLoadbalancer && doc.OpenShiftCluster.Properties.NetworkProfile.LoadbalancerProfile == nil {
-			doc.OpenShiftCluster.Properties.NetworkProfile.LoadbalancerProfile = &LoadbalancerProfile{
+		if doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType == OutboundTypeLoadbalancer && doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile == nil {
+			doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile = &LoadBalancerProfile{
 				ManagedOutboundIPs: &ManagedOutboundIPs{
 					Count: 1,
 				},

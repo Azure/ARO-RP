@@ -139,8 +139,8 @@ type ResourceReference struct {
 	ID string `json:"id,omitempty"`
 }
 
-// LoadbalancerProfile represents the profile of the cluster public loadbalancer.
-type LoadbalancerProfile struct {
+// LoadBalancerProfile represents the profile of the cluster public loadbalancer.
+type LoadBalancerProfile struct {
 	// The desired managed outbound IPs for the cluster public load balancer.
 	ManagedOutboundIPs *ManagedOutboundIPs `json:"managedOutboundIps,omitempty" mutable:"true"`
 	// The list of effective outbound IP addresses of the public load balancer.
@@ -180,7 +180,7 @@ type NetworkProfile struct {
 	OutboundType OutboundType `json:"outboundType,omitempty"`
 
 	// The cluster load balancer profile.
-	LoadbalancerProfile *LoadbalancerProfile `json:"loadBalancerProfile,omitempty"`
+	LoadBalancerProfile *LoadBalancerProfile `json:"loadBalancerProfile,omitempty"`
 }
 
 // EncryptionAtHost represents encryption at host state
