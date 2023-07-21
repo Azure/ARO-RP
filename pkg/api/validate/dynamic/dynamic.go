@@ -785,7 +785,31 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 
 func (dv *dynamic) ValidatePreConfiguredNSGs(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error {
 	dv.log.Print("ValidatePreConfiguredNSGs")
-	dv.log.Print("PreconfiguredNSG flag is: ", oc.Properties.NetworkProfile.PreconfiguredNSG)
+
+	if oc.Properties.NetworkProfile.PreconfiguredNSG != api.PreconfiguredNSGEnabled {
+		return nil // exit early
+	}
+
+	subnetByID, err := dv.createSubnetMapByID(ctx, subnets)
+	if err != nil {
+		return err
+	}
+
+	for _, s := range subnetByID {
+		nsgID := s.NetworkSecurityGroup.ID
+		if nsgID == nil || *nsgID == "" {
+			return api.NewCloudError(
+				http.StatusBadRequest,
+				api.CloudErrorCodeNotFound,
+				"",
+				errMsgNSGNotProperlyAttached,
+			)
+		}
+
+		if err := dv.validateNSGPermissions(ctx, *nsgID); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
