@@ -45,7 +45,10 @@ type OpenShiftClusterProperties struct {
 	ServicePrincipalProfile         ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
 	NetworkProfile                  NetworkProfile          `json:"networkProfile,omitempty"`
 	MasterProfile                   MasterProfile           `json:"masterProfile,omitempty"`
-	WorkerProfiles                  []WorkerProfile         `json:"workerProfiles,omitempty"`
+	// WorkerProfiles is used to store the worker profile data that was sent in the api request
+	WorkerProfiles []WorkerProfile `json:"workerProfiles,omitempty"`
+	// WorkerProfilesStatus is used to store the enriched worker profile data
+	WorkerProfilesStatus            []WorkerProfile   `json:"workerProfilesStatus,omitempty"`
 	APIServerProfile                APIServerProfile        `json:"apiserverProfile,omitempty"`
 	IngressProfiles                 []IngressProfile        `json:"ingressProfiles,omitempty"`
 	Install                         *Install                `json:"install,omitempty"`
