@@ -45,10 +45,6 @@ func TestEnsureResourceGroup(t *testing.T) {
 		"yeet": to.StringPtr("yote"),
 	}
 
-	resourceGroupManagedByMismatch := autorest.NewErrorWithError(&azure.RequestError{
-		ServiceError: &azure.ServiceError{Code: "ResourceGroupManagedByMismatch"},
-	}, "", "", nil, "")
-
 	disallowedByPolicy := autorest.NewErrorWithError(&azure.RequestError{
 		ServiceError: &azure.ServiceError{Code: "RequestDisallowedByPolicy"},
 	}, "", "", nil, "")
@@ -141,20 +137,26 @@ func TestEnsureResourceGroup(t *testing.T) {
 			wantErr: "generic error",
 		},
 		{
-			name:              "fail - CreateOrUpdate returns resourcegroupmanagedbymismatch",
+			name:              "fail - managedBy doesn't match",
 			provisioningState: api.ProvisioningStateCreating,
 			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
+				badManagedBy := group
+				badManagedBy.ManagedBy = to.StringPtr("does-not-match")
 				rg.EXPECT().
 					Get(gomock.Any(), resourceGroupName).
-					Return(group, nil)
-
+					Return(badManagedBy, nil)
+			},
+			wantErr: "400: ClusterResourceGroupAlreadyExists: : Resource group " + resourceGroup + " must not already exist.",
+		},
+		{
+			name:              "fail - location doesn't match",
+			provisioningState: api.ProvisioningStateCreating,
+			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
+				badLocation := group
+				badLocation.Location = to.StringPtr("bad-location")
 				rg.EXPECT().
-					CreateOrUpdate(gomock.Any(), resourceGroupName, group).
-					Return(group, resourceGroupManagedByMismatch)
-
-				env.EXPECT().
-					IsLocalDevelopmentMode().
-					Return(false)
+					Get(gomock.Any(), resourceGroupName).
+					Return(badLocation, nil)
 			},
 			wantErr: "400: ClusterResourceGroupAlreadyExists: : Resource group " + resourceGroup + " must not already exist.",
 		},

@@ -52,10 +52,29 @@ func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
 		if detailedErr, ok := err.(autorest.DetailedError); !ok || detailedErr.StatusCode != http.StatusNotFound {
 			return err
 		}
+
+		// set field values if the RG doesn't exist
+		group.Location = &m.doc.OpenShiftCluster.Location
+		group.ManagedBy = &m.doc.OpenShiftCluster.ID
 	}
 
-	group.Location = &m.doc.OpenShiftCluster.Location
-	group.ManagedBy = &m.doc.OpenShiftCluster.ID
+	resourceGroupAlreadyExistsError := &api.CloudError{
+		StatusCode: http.StatusBadRequest,
+		CloudErrorBody: &api.CloudErrorBody{
+			Code: api.CloudErrorCodeClusterResourceGroupAlreadyExists,
+			Message: "Resource group " + m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID +
+				" must not already exist.",
+		},
+	}
+
+	// If managedBy or location don't match, return an error that RG must not already exist
+	if group.Location == nil || !strings.EqualFold(*group.Location, m.doc.OpenShiftCluster.Location) {
+		return resourceGroupAlreadyExistsError
+	}
+
+	if group.ManagedBy == nil || !strings.EqualFold(*group.ManagedBy, m.doc.OpenShiftCluster.ID) {
+		return resourceGroupAlreadyExistsError
+	}
 
 	// HACK: set purge=true on dev clusters so our purger wipes them out since there is not deny assignment in place
 	if m.env.IsLocalDevelopmentMode() {
@@ -83,16 +102,6 @@ func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
 		serviceError = requestErr.ServiceError
 	}
 
-	if serviceError != nil && serviceError.Code == "ResourceGroupManagedByMismatch" {
-		return &api.CloudError{
-			StatusCode: http.StatusBadRequest,
-			CloudErrorBody: &api.CloudErrorBody{
-				Code: api.CloudErrorCodeClusterResourceGroupAlreadyExists,
-				Message: "Resource group " + m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID +
-					" must not already exist.",
-			},
-		}
-	}
 	if serviceError != nil && serviceError.Code == "RequestDisallowedByPolicy" {
 		// if request was disallowed by policy, inform user so they can take appropriate action
 		b, _ := json.Marshal(serviceError)
