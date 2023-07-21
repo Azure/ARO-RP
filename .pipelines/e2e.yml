@@ -85,11 +85,6 @@ jobs:
       . ./hack/e2e/run-rp-and-e2e.sh
       set -x
 
-      # set up jq
-      wget -nv https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
-      mv jq-linux64 jq
-      chmod +x jq
-
       # retrieve the kubeconfig and oc cli
       hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER >admin.kubeconfig
     displayName: Get admin kubeconfig for must-gather
@@ -99,10 +94,8 @@ jobs:
       export CI=true
       . ./hack/e2e/run-rp-and-e2e.sh
 
-      export KUBECONFIG=admin.kubeconfig
-      wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/4.10.20/openshift-client-linux-4.10.20.tar.gz
-      tar xf openshift-client-linux-4.10.20.tar.gz
-
+      wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
+      tar xf openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
       ./oc adm must-gather
       tar cf must-gather.tar.gz must-gather.local.*
     displayName: Collect must-gather
