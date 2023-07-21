@@ -89,9 +89,9 @@ jobs:
 
   - script: |
       set -xe
-      make generate
+      make client 
       [[ -z "$(git status -s)" ]]
-    displayName: ⚙️ Run Golang code generate
+    displayName: ⚙️ Run Golang code generate and make clients
     target: golang
 
   - script: |
