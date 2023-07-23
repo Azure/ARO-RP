@@ -302,6 +302,20 @@ func (m *MockPublicIPAddressesClient) EXPECT() *MockPublicIPAddressesClientMockR
 	return m.recorder
 }
 
+// CreateOrUpdateAndWait mocks base method.
+func (m *MockPublicIPAddressesClient) CreateOrUpdateAndWait(arg0 context.Context, arg1, arg2 string, arg3 network.PublicIPAddress) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateOrUpdateAndWait indicates an expected call of CreateOrUpdateAndWait.
+func (mr *MockPublicIPAddressesClientMockRecorder) CreateOrUpdateAndWait(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockPublicIPAddressesClient)(nil).CreateOrUpdateAndWait), arg0, arg1, arg2, arg3)
+}
+
 // DeleteAndWait mocks base method.
 func (m *MockPublicIPAddressesClient) DeleteAndWait(arg0 context.Context, arg1, arg2 string) error {
 	m.ctrl.T.Helper()
