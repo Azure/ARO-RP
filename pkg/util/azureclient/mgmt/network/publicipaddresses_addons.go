@@ -13,6 +13,7 @@ import (
 type PublicIPAddressesClientAddons interface {
 	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, publicIPAddressName string, parameters mgmtnetwork.PublicIPAddress) (err error)
 	DeleteAndWait(ctx context.Context, resourceGroupName string, publicIPAddressName string) (err error)
+	List(ctx context.Context, resourceGroupName string) (result []mgmtnetwork.PublicIPAddress, err error)
 }
 
 func (c *publicIPAddressesClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, publicIPAddressName string, parameters mgmtnetwork.PublicIPAddress) error {
@@ -31,4 +32,21 @@ func (c *publicIPAddressesClient) DeleteAndWait(ctx context.Context, resourceGro
 	}
 
 	return future.WaitForCompletionRef(ctx, c.Client)
+}
+
+func (c *publicIPAddressesClient) List(ctx context.Context, resourceGroupName string) (result []mgmtnetwork.PublicIPAddress, err error) {
+	page, err := c.PublicIPAddressesClient.List(ctx, resourceGroupName)
+	if err != nil {
+		return nil, err
+	}
+
+	for page.NotDone() {
+		result = append(result, page.Values()...)
+
+		err = page.NextWithContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
 }
