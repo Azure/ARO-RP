@@ -123,9 +123,9 @@ func IsCI() bool {
 // if it does not exist an environment variable with that name, it will return an error.
 // Otherwise it returns nil.
 func ValidateVars(vars ...string) error {
-	for _, v := range vars {
-		if v, found := os.LookupEnv(v); !found || v == "" {
-			return fmt.Errorf("environment variable %q unset", v)
+	for _, envName := range vars {
+		if envValue, found := os.LookupEnv(envName); !found || envValue == "" {
+			return fmt.Errorf("environment variable %q unset", envName)
 		}
 	}
 	return nil
