@@ -273,7 +273,7 @@ class IngressProfile(msrest.serialization.Model):
 
 
 class LoadBalancerProfile(msrest.serialization.Model):
-    """LoadBalancerProfile represents the profile of the cluster public loadbalancer.
+    """LoadBalancerProfile represents the profile of the cluster public load balancer.
 
     :ivar managed_outbound_ips: The desired managed outbound IPs for the cluster public load
      balancer.

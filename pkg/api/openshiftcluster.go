@@ -270,7 +270,7 @@ type ResourceReference struct {
 	ID string `json:"id,omitempty"`
 }
 
-// LoadBalancerProfile represents the profile of the cluster public loadbalancer.
+// LoadBalancerProfile represents the profile of the cluster public load balancer.
 type LoadBalancerProfile struct {
 	// The desired managed outbound IPs for the cluster public load balancer.
 	ManagedOutboundIPs *ManagedOutboundIPs `json:"managedOutboundIps,omitempty"`

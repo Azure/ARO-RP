@@ -129,7 +129,7 @@ type IngressProfile struct {
 	IP *string `json:"ip,omitempty"`
 }
 
-// LoadBalancerProfile loadBalancerProfile represents the profile of the cluster public loadbalancer.
+// LoadBalancerProfile loadBalancerProfile represents the profile of the cluster public load balancer.
 type LoadBalancerProfile struct {
 	// ManagedOutboundIps - The desired managed outbound IPs for the cluster public load balancer.
 	ManagedOutboundIps *ManagedOutboundIPs `json:"managedOutboundIps,omitempty"`

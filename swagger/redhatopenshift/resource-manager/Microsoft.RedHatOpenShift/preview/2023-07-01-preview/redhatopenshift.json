@@ -1899,7 +1899,7 @@
       }
     },
     "LoadBalancerProfile": {
-      "description": "LoadBalancerProfile represents the profile of the cluster public loadbalancer.",
+      "description": "LoadBalancerProfile represents the profile of the cluster public load balancer.",
       "type": "object",
       "properties": {
         "managedOutboundIps": {
