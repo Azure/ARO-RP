@@ -172,40 +172,6 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		)
 	}
 
-	// FP validation
-	fpDynamic := dynamic.NewValidator(
-		dv.log,
-		dv.env,
-		dv.env.Environment(),
-		dv.subscriptionDoc.ID,
-		dv.fpAuthorizer,
-		dv.env.FPClientID(),
-		dynamic.AuthorizerFirstParty,
-		fpClientCred,
-		pdpClient,
-	)
-
-	err = fpDynamic.ValidateVnet(
-		ctx,
-		dv.oc.Location,
-		subnets,
-		dv.oc.Properties.NetworkProfile.PodCIDR,
-		dv.oc.Properties.NetworkProfile.ServiceCIDR,
-	)
-	if err != nil {
-		return err
-	}
-
-	err = fpDynamic.ValidateDiskEncryptionSets(ctx, dv.oc)
-	if err != nil {
-		return err
-	}
-
-	err = fpDynamic.ValidatePreConfiguredNSGs(ctx, dv.oc, subnets)
-	if err != nil {
-		return err
-	}
-
 	tenantID := dv.subscriptionDoc.Subscription.Properties.TenantID
 	options := dv.env.Environment().ClientSecretCredentialOptions()
 	spTokenCredential, err := azidentity.NewClientSecretCredential(
@@ -271,6 +237,40 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	}
 
 	err = spDynamic.ValidatePreConfiguredNSGs(ctx, dv.oc, subnets)
+	if err != nil {
+		return err
+	}
+
+	// FP validation
+	fpDynamic := dynamic.NewValidator(
+		dv.log,
+		dv.env,
+		dv.env.Environment(),
+		dv.subscriptionDoc.ID,
+		dv.fpAuthorizer,
+		dv.env.FPClientID(),
+		dynamic.AuthorizerFirstParty,
+		fpClientCred,
+		pdpClient,
+	)
+
+	err = fpDynamic.ValidateVnet(
+		ctx,
+		dv.oc.Location,
+		subnets,
+		dv.oc.Properties.NetworkProfile.PodCIDR,
+		dv.oc.Properties.NetworkProfile.ServiceCIDR,
+	)
+	if err != nil {
+		return err
+	}
+
+	err = fpDynamic.ValidateDiskEncryptionSets(ctx, dv.oc)
+	if err != nil {
+		return err
+	}
+
+	err = fpDynamic.ValidatePreConfiguredNSGs(ctx, dv.oc, subnets)
 	if err != nil {
 		return err
 	}
