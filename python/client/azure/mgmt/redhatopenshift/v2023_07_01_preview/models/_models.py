@@ -275,6 +275,8 @@ class IngressProfile(msrest.serialization.Model):
 class LoadBalancerProfile(msrest.serialization.Model):
     """LoadBalancerProfile represents the profile of the cluster public load balancer.
 
+    Variables are only populated by the server, and will be ignored when sending a request.
+
     :ivar managed_outbound_ips: The desired managed outbound IPs for the cluster public load
      balancer.
     :vartype managed_outbound_ips:
@@ -294,6 +296,10 @@ class LoadBalancerProfile(msrest.serialization.Model):
     :vartype allocated_outbound_ports: int
     """
 
+    _validation = {
+        'effective_outbound_ips': {'readonly': True},
+    }
+
     _attribute_map = {
         'managed_outbound_ips': {'key': 'managedOutboundIps', 'type': 'ManagedOutboundIPs'},
         'effective_outbound_ips': {'key': 'effectiveOutboundIps', 'type': '[EffectiveOutboundIP]'},
@@ -311,10 +317,6 @@ class LoadBalancerProfile(msrest.serialization.Model):
          balancer.
         :paramtype managed_outbound_ips:
          ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.ManagedOutboundIPs
-        :keyword effective_outbound_ips: The list of effective outbound IP addresses of the public load
-         balancer.
-        :paramtype effective_outbound_ips:
-         list[~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.EffectiveOutboundIP]
         :keyword outbound_ips: The desired outbound IP resources for the cluster load balancer.
         :paramtype outbound_ips:
          list[~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.OutboundIP]
@@ -328,7 +330,7 @@ class LoadBalancerProfile(msrest.serialization.Model):
         """
         super(LoadBalancerProfile, self).__init__(**kwargs)
         self.managed_outbound_ips = kwargs.get('managed_outbound_ips', None)
-        self.effective_outbound_ips = kwargs.get('effective_outbound_ips', None)
+        self.effective_outbound_ips = None
         self.outbound_ips = kwargs.get('outbound_ips', None)
         self.outbound_ip_prefixes = kwargs.get('outbound_ip_prefixes', None)
         self.allocated_outbound_ports = kwargs.get('allocated_outbound_ports', None)

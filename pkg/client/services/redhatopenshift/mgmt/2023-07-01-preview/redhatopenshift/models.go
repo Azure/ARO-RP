@@ -133,7 +133,7 @@ type IngressProfile struct {
 type LoadBalancerProfile struct {
 	// ManagedOutboundIps - The desired managed outbound IPs for the cluster public load balancer.
 	ManagedOutboundIps *ManagedOutboundIPs `json:"managedOutboundIps,omitempty"`
-	// EffectiveOutboundIps - The list of effective outbound IP addresses of the public load balancer.
+	// EffectiveOutboundIps - READ-ONLY; The list of effective outbound IP addresses of the public load balancer.
 	EffectiveOutboundIps *[]EffectiveOutboundIP `json:"effectiveOutboundIps,omitempty"`
 	// OutboundIps - The desired outbound IP resources for the cluster load balancer.
 	OutboundIps *[]OutboundIP `json:"outboundIps,omitempty"`
@@ -141,6 +141,24 @@ type LoadBalancerProfile struct {
 	OutboundIPPrefixes *[]OutboundIPPrefix `json:"outboundIpPrefixes,omitempty"`
 	// AllocatedOutboundPorts - The desired number of allocated SNAT ports per VM. Allowed values are in the range of 0 to 64000 (inclusive). The default value is 1024.
 	AllocatedOutboundPorts *int32 `json:"allocatedOutboundPorts,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for LoadBalancerProfile.
+func (lbp LoadBalancerProfile) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if lbp.ManagedOutboundIps != nil {
+		objectMap["managedOutboundIps"] = lbp.ManagedOutboundIps
+	}
+	if lbp.OutboundIps != nil {
+		objectMap["outboundIps"] = lbp.OutboundIps
+	}
+	if lbp.OutboundIPPrefixes != nil {
+		objectMap["outboundIpPrefixes"] = lbp.OutboundIPPrefixes
+	}
+	if lbp.AllocatedOutboundPorts != nil {
+		objectMap["allocatedOutboundPorts"] = lbp.AllocatedOutboundPorts
+	}
+	return json.Marshal(objectMap)
 }
 
 // MachinePool machinePool represents a MachinePool
