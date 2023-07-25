@@ -15,7 +15,7 @@ func (mm MaintenanceMiddleware) EmitUnplannedMaintenanceSignal(h http.Handler) h
 		go func(ctx context.Contetxt, resourceID string) {
 			for {
 				mm.EmitGauge("frontend.maintenance.unplanned", 1, map[string]string{
-					"resource_id": resourceID,
+					"resourceID": resourceID,
 				})
 				select {
 				case <-ctx.Done():
