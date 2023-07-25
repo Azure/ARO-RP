@@ -62,6 +62,10 @@ var HiveInstallStreams = []*Stream{
 		Version:  NewVersion(4, 12, 24),
 		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:84a7b73f5393c8225c42edf214c82a8d00037a087222c5548ad1ed1b35cedb0e",
 	},
+	{
+		Version:  NewVersion(4, 12, 17),
+		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:7ca5f8aa44bbc537c5a985a523d87365eab3f6e72abc50b7be4caae741e093f4",
+        },
 }
 
 // UpgradeStreams describes list of streams we support for upgrades
