@@ -19,6 +19,7 @@ import (
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
@@ -154,8 +155,10 @@ somethingElse:
 			}
 
 			r := &Reconciler{
-				log:        log,
-				client:     clientBuilder.Build(),
+				AROController: base.AROController{
+					Log:    log,
+					Client: clientBuilder.Build(),
+				},
 				jsonHandle: new(codec.JsonHandle),
 			}
 			request := ctrl.Request{}
@@ -276,8 +279,10 @@ func TestReconcilePVC(t *testing.T) {
 			clientFake := ctrlfake.NewClientBuilder().WithObjects(instance).WithObjects(tt.pvcs...).Build()
 
 			r := &Reconciler{
-				log:        logrus.NewEntry(logrus.StandardLogger()),
-				client:     clientFake,
+				AROController: base.AROController{
+					Log:    logrus.NewEntry(logrus.StandardLogger()),
+					Client: clientFake,
+				},
 				jsonHandle: new(codec.JsonHandle),
 			}
 			request := ctrl.Request{}
