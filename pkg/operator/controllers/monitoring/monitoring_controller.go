@@ -25,10 +25,11 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 )
 
 const (
-	ControllerName = "Monitoring"
+	MonitoringControllerName = "Monitoring"
 
 	controllerEnabled = "aro.monitoring.enabled"
 )
@@ -55,7 +56,7 @@ type Config struct {
 }
 
 type Reconciler struct {
-	log *logrus.Entry
+	base.AROController
 
 	client client.Client
 
@@ -64,8 +65,11 @@ type Reconciler struct {
 
 func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
-		log:        log,
-		client:     client,
+		AROController: base.AROController{
+			Log:    log,
+			Client: client,
+			Name:   MonitoringControllerName,
+		},
 		jsonHandle: new(codec.JsonHandle),
 	}
 }
@@ -78,11 +82,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		r.log.Debug("controller is disabled")
+		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
-	r.log.Debug("running")
+	r.Log.Debug("running")
 	for _, f := range []func(context.Context) (ctrl.Result, error){
 		r.reconcileConfiguration,
 		r.reconcilePVC, // TODO(mj): This should be removed once we don't have PVC anymore
@@ -172,10 +176,10 @@ func (r *Reconciler) reconcileConfiguration(ctx context.Context) (ctrl.Result, e
 	cm.Data["config.yaml"] = string(cmYaml)
 
 	if isCreate {
-		r.log.Infof("re-creating monitoring configmap. %s", monitoringName.Name)
+		r.Log.Infof("re-creating monitoring configmap. %s", monitoringName.Name)
 		err = r.client.Create(ctx, cm)
 	} else {
-		r.log.Infof("updating monitoring configmap. %s", monitoringName.Name)
+		r.Log.Infof("updating monitoring configmap. %s", monitoringName.Name)
 		err = r.client.Update(ctx, cm)
 	}
 	return reconcile.Result{}, err
@@ -201,7 +205,7 @@ func (r *Reconciler) monitoringConfigMap(ctx context.Context) (*corev1.ConfigMap
 
 // SetupWithManager setup the manager
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.log.Info("starting cluster monitoring controller")
+	r.Log.Info("starting cluster monitoring controller")
 
 	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return o.GetName() == arov1alpha1.SingletonClusterName
@@ -220,6 +224,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(monitoringConfigMapPredicate),
 		).
-		Named(ControllerName).
+		Named(MonitoringControllerName).
 		Complete(r)
 }
