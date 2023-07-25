@@ -1,5 +1,18 @@
 package middleware
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
+import (
+	"context"
+	"net/http"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/Azure/ARO-RP/pkg/metrics"
+)
+
 type MaintenanceMiddleware struct {
 	metrics.Emitter
 }
@@ -12,7 +25,7 @@ func (mm MaintenanceMiddleware) EmitUnplannedMaintenanceSignal(h http.Handler) h
 
 		resourceID := strings.TrimPrefix(filepath.Dir(r.URL.Path), "/admin")
 
-		go func(ctx context.Contetxt, resourceID string) {
+		go func(ctx context.Context, resourceID string) {
 			for {
 				mm.EmitGauge("frontend.maintenance.unplanned", 1, map[string]string{
 					"resourceID": resourceID,
