@@ -8,7 +8,7 @@ import (
 type Fido2AuthenticationMethodConfiguration struct {
     AuthenticationMethodConfiguration
 }
-// NewFido2AuthenticationMethodConfiguration instantiates a new Fido2AuthenticationMethodConfiguration and sets the default values.
+// NewFido2AuthenticationMethodConfiguration instantiates a new fido2AuthenticationMethodConfiguration and sets the default values.
 func NewFido2AuthenticationMethodConfiguration()(*Fido2AuthenticationMethodConfiguration) {
     m := &Fido2AuthenticationMethodConfiguration{
         AuthenticationMethodConfiguration: *NewAuthenticationMethodConfiguration(),
@@ -32,7 +32,9 @@ func (m *Fido2AuthenticationMethodConfiguration) GetFieldDeserializers()(map[str
         if val != nil {
             res := make([]AuthenticationMethodTargetable, len(val))
             for i, v := range val {
-                res[i] = v.(AuthenticationMethodTargetable)
+                if v != nil {
+                    res[i] = v.(AuthenticationMethodTargetable)
+                }
             }
             m.SetIncludeTargets(res)
         }
@@ -123,7 +125,9 @@ func (m *Fido2AuthenticationMethodConfiguration) Serialize(writer i878a80d2330e8
     if m.GetIncludeTargets() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetIncludeTargets()))
         for i, v := range m.GetIncludeTargets() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("includeTargets", cast)
         if err != nil {

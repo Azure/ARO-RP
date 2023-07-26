@@ -57,7 +57,7 @@ func NewItemChatsItemMembersConversationMemberItemRequestBuilder(rawUrl string, 
 // Delete remove a conversationMember from a chat.
 // [Find more info here]
 // 
-// [Find more info here]: https://docs.microsoft.com/graph/api/chat-delete-members?view=graph-rest-1.0
+// [Find more info here]: https://learn.microsoft.com/graph/api/chat-delete-members?view=graph-rest-1.0
 func (m *ItemChatsItemMembersConversationMemberItemRequestBuilder) Delete(ctx context.Context, requestConfiguration *ItemChatsItemMembersConversationMemberItemRequestBuilderDeleteRequestConfiguration)(error) {
     requestInfo, err := m.ToDeleteRequestInformation(ctx, requestConfiguration);
     if err != nil {
@@ -76,7 +76,7 @@ func (m *ItemChatsItemMembersConversationMemberItemRequestBuilder) Delete(ctx co
 // Get retrieve a conversationMember from a chat or channel.
 // [Find more info here]
 // 
-// [Find more info here]: https://docs.microsoft.com/graph/api/conversationmember-get?view=graph-rest-1.0
+// [Find more info here]: https://learn.microsoft.com/graph/api/conversationmember-get?view=graph-rest-1.0
 func (m *ItemChatsItemMembersConversationMemberItemRequestBuilder) Get(ctx context.Context, requestConfiguration *ItemChatsItemMembersConversationMemberItemRequestBuilderGetRequestConfiguration)(iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.ConversationMemberable, error) {
     requestInfo, err := m.ToGetRequestInformation(ctx, requestConfiguration);
     if err != nil {

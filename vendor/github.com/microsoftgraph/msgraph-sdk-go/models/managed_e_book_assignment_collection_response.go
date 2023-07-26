@@ -8,7 +8,7 @@ import (
 type ManagedEBookAssignmentCollectionResponse struct {
     BaseCollectionPaginationCountResponse
 }
-// NewManagedEBookAssignmentCollectionResponse instantiates a new ManagedEBookAssignmentCollectionResponse and sets the default values.
+// NewManagedEBookAssignmentCollectionResponse instantiates a new managedEBookAssignmentCollectionResponse and sets the default values.
 func NewManagedEBookAssignmentCollectionResponse()(*ManagedEBookAssignmentCollectionResponse) {
     m := &ManagedEBookAssignmentCollectionResponse{
         BaseCollectionPaginationCountResponse: *NewBaseCollectionPaginationCountResponse(),
@@ -30,7 +30,9 @@ func (m *ManagedEBookAssignmentCollectionResponse) GetFieldDeserializers()(map[s
         if val != nil {
             res := make([]ManagedEBookAssignmentable, len(val))
             for i, v := range val {
-                res[i] = v.(ManagedEBookAssignmentable)
+                if v != nil {
+                    res[i] = v.(ManagedEBookAssignmentable)
+                }
             }
             m.SetValue(res)
         }
@@ -58,7 +60,9 @@ func (m *ManagedEBookAssignmentCollectionResponse) Serialize(writer i878a80d2330
     if m.GetValue() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetValue()))
         for i, v := range m.GetValue() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("value", cast)
         if err != nil {

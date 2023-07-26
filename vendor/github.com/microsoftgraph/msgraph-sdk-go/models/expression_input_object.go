@@ -38,7 +38,7 @@ func (m *ExpressionInputObject) GetAdditionalData()(map[string]any) {
 func (m *ExpressionInputObject) GetBackingStore()(ie8677ce2c7e1b4c22e9c3827ecd078d41185424dd9eeb92b7d971ed2d49a392e.BackingStore) {
     return m.backingStore
 }
-// GetDefinition gets the definition property value. The definition property
+// GetDefinition gets the definition property value. Definition of the test object.
 func (m *ExpressionInputObject) GetDefinition()(ObjectDefinitionable) {
     val, err := m.GetBackingStore().Get("definition")
     if err != nil {
@@ -80,7 +80,9 @@ func (m *ExpressionInputObject) GetFieldDeserializers()(map[string]func(i878a80d
         if val != nil {
             res := make([]StringKeyObjectValuePairable, len(val))
             for i, v := range val {
-                res[i] = v.(StringKeyObjectValuePairable)
+                if v != nil {
+                    res[i] = v.(StringKeyObjectValuePairable)
+                }
             }
             m.SetProperties(res)
         }
@@ -99,7 +101,7 @@ func (m *ExpressionInputObject) GetOdataType()(*string) {
     }
     return nil
 }
-// GetProperties gets the properties property value. The properties property
+// GetProperties gets the properties property value. Property values of the test object.
 func (m *ExpressionInputObject) GetProperties()([]StringKeyObjectValuePairable) {
     val, err := m.GetBackingStore().Get("properties")
     if err != nil {
@@ -127,7 +129,9 @@ func (m *ExpressionInputObject) Serialize(writer i878a80d2330e89d26896388a3f487e
     if m.GetProperties() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetProperties()))
         for i, v := range m.GetProperties() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err := writer.WriteCollectionOfObjectValues("properties", cast)
         if err != nil {
@@ -153,7 +157,7 @@ func (m *ExpressionInputObject) SetAdditionalData(value map[string]any)() {
 func (m *ExpressionInputObject) SetBackingStore(value ie8677ce2c7e1b4c22e9c3827ecd078d41185424dd9eeb92b7d971ed2d49a392e.BackingStore)() {
     m.backingStore = value
 }
-// SetDefinition sets the definition property value. The definition property
+// SetDefinition sets the definition property value. Definition of the test object.
 func (m *ExpressionInputObject) SetDefinition(value ObjectDefinitionable)() {
     err := m.GetBackingStore().Set("definition", value)
     if err != nil {
@@ -167,7 +171,7 @@ func (m *ExpressionInputObject) SetOdataType(value *string)() {
         panic(err)
     }
 }
-// SetProperties sets the properties property value. The properties property
+// SetProperties sets the properties property value. Property values of the test object.
 func (m *ExpressionInputObject) SetProperties(value []StringKeyObjectValuePairable)() {
     err := m.GetBackingStore().Set("properties", value)
     if err != nil {

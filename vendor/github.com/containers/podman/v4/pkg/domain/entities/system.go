@@ -18,9 +18,10 @@ type ServiceOptions struct {
 
 // SystemPruneOptions provides options to prune system.
 type SystemPruneOptions struct {
-	All     bool
-	Volume  bool
-	Filters map[string][]string `json:"filters" schema:"filters"`
+	All      bool
+	Volume   bool
+	Filters  map[string][]string `json:"filters" schema:"filters"`
+	External bool
 }
 
 // SystemPruneReport provides report after system prune is executed.
@@ -28,6 +29,7 @@ type SystemPruneReport struct {
 	PodPruneReport        []*PodPruneReport
 	ContainerPruneReports []*reports.PruneReport
 	ImagePruneReports     []*reports.PruneReport
+	NetworkPruneReports   []*NetworkPruneReport
 	VolumePruneReports    []*reports.PruneReport
 	ReclaimedSpace        uint64
 }
@@ -46,6 +48,7 @@ type SystemDfOptions struct {
 
 // SystemDfReport describes the response for df information
 type SystemDfReport struct {
+	ImagesSize int64
 	Images     []*SystemDfImageReport
 	Containers []*SystemDfContainerReport
 	Volumes    []*SystemDfVolumeReport
@@ -84,12 +87,6 @@ type SystemDfVolumeReport struct {
 	ReclaimableSize int64
 }
 
-// SystemResetOptions describes the options for resetting your
-// container runtime storage, etc
-type SystemResetOptions struct {
-	Force bool
-}
-
 // SystemVersionReport describes version information about the running Podman service
 type SystemVersionReport struct {
 	// Always populated
@@ -122,4 +119,11 @@ type AuthConfig struct {
 type AuthReport struct {
 	IdentityToken string
 	Status        string
+}
+
+// LocksReport describes any conflicts in Libpod's lock allocations that could
+// lead to deadlocks.
+type LocksReport struct {
+	LockConflicts map[uint32][]string
+	LocksHeld     []uint32
 }

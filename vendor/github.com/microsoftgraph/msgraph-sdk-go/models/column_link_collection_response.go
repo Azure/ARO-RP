@@ -8,7 +8,7 @@ import (
 type ColumnLinkCollectionResponse struct {
     BaseCollectionPaginationCountResponse
 }
-// NewColumnLinkCollectionResponse instantiates a new ColumnLinkCollectionResponse and sets the default values.
+// NewColumnLinkCollectionResponse instantiates a new columnLinkCollectionResponse and sets the default values.
 func NewColumnLinkCollectionResponse()(*ColumnLinkCollectionResponse) {
     m := &ColumnLinkCollectionResponse{
         BaseCollectionPaginationCountResponse: *NewBaseCollectionPaginationCountResponse(),
@@ -30,7 +30,9 @@ func (m *ColumnLinkCollectionResponse) GetFieldDeserializers()(map[string]func(i
         if val != nil {
             res := make([]ColumnLinkable, len(val))
             for i, v := range val {
-                res[i] = v.(ColumnLinkable)
+                if v != nil {
+                    res[i] = v.(ColumnLinkable)
+                }
             }
             m.SetValue(res)
         }
@@ -58,7 +60,9 @@ func (m *ColumnLinkCollectionResponse) Serialize(writer i878a80d2330e89d26896388
     if m.GetValue() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetValue()))
         for i, v := range m.GetValue() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("value", cast)
         if err != nil {

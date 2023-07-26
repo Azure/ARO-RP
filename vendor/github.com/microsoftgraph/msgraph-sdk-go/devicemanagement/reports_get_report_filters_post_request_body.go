@@ -59,7 +59,9 @@ func (m *ReportsGetReportFiltersPostRequestBody) GetFieldDeserializers()(map[str
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetGroupBy(res)
         }
@@ -83,7 +85,9 @@ func (m *ReportsGetReportFiltersPostRequestBody) GetFieldDeserializers()(map[str
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetOrderBy(res)
         }
@@ -107,9 +111,11 @@ func (m *ReportsGetReportFiltersPostRequestBody) GetFieldDeserializers()(map[str
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
-            m.SetSelect(res)
+            m.SetSelectEscaped(res)
         }
         return nil
     }
@@ -200,8 +206,8 @@ func (m *ReportsGetReportFiltersPostRequestBody) GetSearch()(*string) {
     }
     return nil
 }
-// GetSelect gets the select property value. The select property
-func (m *ReportsGetReportFiltersPostRequestBody) GetSelect()([]string) {
+// GetSelectEscaped gets the select property value. The select property
+func (m *ReportsGetReportFiltersPostRequestBody) GetSelectEscaped()([]string) {
     val, err := m.GetBackingStore().Get("selectEscaped")
     if err != nil {
         panic(err)
@@ -276,8 +282,8 @@ func (m *ReportsGetReportFiltersPostRequestBody) Serialize(writer i878a80d2330e8
             return err
         }
     }
-    if m.GetSelect() != nil {
-        err := writer.WriteCollectionOfStringValues("select", m.GetSelect())
+    if m.GetSelectEscaped() != nil {
+        err := writer.WriteCollectionOfStringValues("select", m.GetSelectEscaped())
         if err != nil {
             return err
         }
@@ -354,8 +360,8 @@ func (m *ReportsGetReportFiltersPostRequestBody) SetSearch(value *string)() {
         panic(err)
     }
 }
-// SetSelect sets the select property value. The select property
-func (m *ReportsGetReportFiltersPostRequestBody) SetSelect(value []string)() {
+// SetSelectEscaped sets the select property value. The select property
+func (m *ReportsGetReportFiltersPostRequestBody) SetSelectEscaped(value []string)() {
     err := m.GetBackingStore().Set("selectEscaped", value)
     if err != nil {
         panic(err)
@@ -393,7 +399,7 @@ type ReportsGetReportFiltersPostRequestBodyable interface {
     GetName()(*string)
     GetOrderBy()([]string)
     GetSearch()(*string)
-    GetSelect()([]string)
+    GetSelectEscaped()([]string)
     GetSessionId()(*string)
     GetSkip()(*int32)
     GetTop()(*int32)
@@ -403,7 +409,7 @@ type ReportsGetReportFiltersPostRequestBodyable interface {
     SetName(value *string)()
     SetOrderBy(value []string)()
     SetSearch(value *string)()
-    SetSelect(value []string)()
+    SetSelectEscaped(value []string)()
     SetSessionId(value *string)()
     SetSkip(value *int32)()
     SetTop(value *int32)()

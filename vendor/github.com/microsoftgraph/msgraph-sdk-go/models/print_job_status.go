@@ -81,7 +81,9 @@ func (m *PrintJobStatus) GetFieldDeserializers()(map[string]func(i878a80d2330e89
         if val != nil {
             res := make([]PrintJobStateDetail, len(val))
             for i, v := range val {
-                res[i] = *(v.(*PrintJobStateDetail))
+                if v != nil {
+                    res[i] = *(v.(*PrintJobStateDetail))
+                }
             }
             m.SetDetails(res)
         }

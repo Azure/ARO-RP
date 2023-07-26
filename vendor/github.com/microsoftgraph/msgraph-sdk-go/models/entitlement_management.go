@@ -8,7 +8,7 @@ import (
 type EntitlementManagement struct {
     Entity
 }
-// NewEntitlementManagement instantiates a new EntitlementManagement and sets the default values.
+// NewEntitlementManagement instantiates a new entitlementManagement and sets the default values.
 func NewEntitlementManagement()(*EntitlementManagement) {
     m := &EntitlementManagement{
         Entity: *NewEntity(),
@@ -107,7 +107,9 @@ func (m *EntitlementManagement) GetFieldDeserializers()(map[string]func(i878a80d
         if val != nil {
             res := make([]Approvalable, len(val))
             for i, v := range val {
-                res[i] = v.(Approvalable)
+                if v != nil {
+                    res[i] = v.(Approvalable)
+                }
             }
             m.SetAccessPackageAssignmentApprovals(res)
         }
@@ -121,7 +123,9 @@ func (m *EntitlementManagement) GetFieldDeserializers()(map[string]func(i878a80d
         if val != nil {
             res := make([]AccessPackageable, len(val))
             for i, v := range val {
-                res[i] = v.(AccessPackageable)
+                if v != nil {
+                    res[i] = v.(AccessPackageable)
+                }
             }
             m.SetAccessPackages(res)
         }
@@ -135,7 +139,9 @@ func (m *EntitlementManagement) GetFieldDeserializers()(map[string]func(i878a80d
         if val != nil {
             res := make([]AccessPackageAssignmentPolicyable, len(val))
             for i, v := range val {
-                res[i] = v.(AccessPackageAssignmentPolicyable)
+                if v != nil {
+                    res[i] = v.(AccessPackageAssignmentPolicyable)
+                }
             }
             m.SetAssignmentPolicies(res)
         }
@@ -149,7 +155,9 @@ func (m *EntitlementManagement) GetFieldDeserializers()(map[string]func(i878a80d
         if val != nil {
             res := make([]AccessPackageAssignmentRequestable, len(val))
             for i, v := range val {
-                res[i] = v.(AccessPackageAssignmentRequestable)
+                if v != nil {
+                    res[i] = v.(AccessPackageAssignmentRequestable)
+                }
             }
             m.SetAssignmentRequests(res)
         }
@@ -163,7 +171,9 @@ func (m *EntitlementManagement) GetFieldDeserializers()(map[string]func(i878a80d
         if val != nil {
             res := make([]AccessPackageAssignmentable, len(val))
             for i, v := range val {
-                res[i] = v.(AccessPackageAssignmentable)
+                if v != nil {
+                    res[i] = v.(AccessPackageAssignmentable)
+                }
             }
             m.SetAssignments(res)
         }
@@ -177,7 +187,9 @@ func (m *EntitlementManagement) GetFieldDeserializers()(map[string]func(i878a80d
         if val != nil {
             res := make([]AccessPackageCatalogable, len(val))
             for i, v := range val {
-                res[i] = v.(AccessPackageCatalogable)
+                if v != nil {
+                    res[i] = v.(AccessPackageCatalogable)
+                }
             }
             m.SetCatalogs(res)
         }
@@ -191,9 +203,75 @@ func (m *EntitlementManagement) GetFieldDeserializers()(map[string]func(i878a80d
         if val != nil {
             res := make([]ConnectedOrganizationable, len(val))
             for i, v := range val {
-                res[i] = v.(ConnectedOrganizationable)
+                if v != nil {
+                    res[i] = v.(ConnectedOrganizationable)
+                }
             }
             m.SetConnectedOrganizations(res)
+        }
+        return nil
+    }
+    res["resourceEnvironments"] = func (n i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
+        val, err := n.GetCollectionOfObjectValues(CreateAccessPackageResourceEnvironmentFromDiscriminatorValue)
+        if err != nil {
+            return err
+        }
+        if val != nil {
+            res := make([]AccessPackageResourceEnvironmentable, len(val))
+            for i, v := range val {
+                if v != nil {
+                    res[i] = v.(AccessPackageResourceEnvironmentable)
+                }
+            }
+            m.SetResourceEnvironments(res)
+        }
+        return nil
+    }
+    res["resourceRequests"] = func (n i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
+        val, err := n.GetCollectionOfObjectValues(CreateAccessPackageResourceRequestFromDiscriminatorValue)
+        if err != nil {
+            return err
+        }
+        if val != nil {
+            res := make([]AccessPackageResourceRequestable, len(val))
+            for i, v := range val {
+                if v != nil {
+                    res[i] = v.(AccessPackageResourceRequestable)
+                }
+            }
+            m.SetResourceRequests(res)
+        }
+        return nil
+    }
+    res["resourceRoleScopes"] = func (n i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
+        val, err := n.GetCollectionOfObjectValues(CreateAccessPackageResourceRoleScopeFromDiscriminatorValue)
+        if err != nil {
+            return err
+        }
+        if val != nil {
+            res := make([]AccessPackageResourceRoleScopeable, len(val))
+            for i, v := range val {
+                if v != nil {
+                    res[i] = v.(AccessPackageResourceRoleScopeable)
+                }
+            }
+            m.SetResourceRoleScopes(res)
+        }
+        return nil
+    }
+    res["resources"] = func (n i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
+        val, err := n.GetCollectionOfObjectValues(CreateAccessPackageResourceFromDiscriminatorValue)
+        if err != nil {
+            return err
+        }
+        if val != nil {
+            res := make([]AccessPackageResourceable, len(val))
+            for i, v := range val {
+                if v != nil {
+                    res[i] = v.(AccessPackageResourceable)
+                }
+            }
+            m.SetResources(res)
         }
         return nil
     }
@@ -208,6 +286,50 @@ func (m *EntitlementManagement) GetFieldDeserializers()(map[string]func(i878a80d
         return nil
     }
     return res
+}
+// GetResourceEnvironments gets the resourceEnvironments property value. A reference to the geolocation environments in which a resource is located.
+func (m *EntitlementManagement) GetResourceEnvironments()([]AccessPackageResourceEnvironmentable) {
+    val, err := m.GetBackingStore().Get("resourceEnvironments")
+    if err != nil {
+        panic(err)
+    }
+    if val != nil {
+        return val.([]AccessPackageResourceEnvironmentable)
+    }
+    return nil
+}
+// GetResourceRequests gets the resourceRequests property value. Represents a request to add or remove a resource to or from a catalog respectively.
+func (m *EntitlementManagement) GetResourceRequests()([]AccessPackageResourceRequestable) {
+    val, err := m.GetBackingStore().Get("resourceRequests")
+    if err != nil {
+        panic(err)
+    }
+    if val != nil {
+        return val.([]AccessPackageResourceRequestable)
+    }
+    return nil
+}
+// GetResourceRoleScopes gets the resourceRoleScopes property value. The resourceRoleScopes property
+func (m *EntitlementManagement) GetResourceRoleScopes()([]AccessPackageResourceRoleScopeable) {
+    val, err := m.GetBackingStore().Get("resourceRoleScopes")
+    if err != nil {
+        panic(err)
+    }
+    if val != nil {
+        return val.([]AccessPackageResourceRoleScopeable)
+    }
+    return nil
+}
+// GetResources gets the resources property value. The resources associated with the catalogs.
+func (m *EntitlementManagement) GetResources()([]AccessPackageResourceable) {
+    val, err := m.GetBackingStore().Get("resources")
+    if err != nil {
+        panic(err)
+    }
+    if val != nil {
+        return val.([]AccessPackageResourceable)
+    }
+    return nil
 }
 // GetSettings gets the settings property value. The settings that control the behavior of Azure AD entitlement management.
 func (m *EntitlementManagement) GetSettings()(EntitlementManagementSettingsable) {
@@ -229,7 +351,9 @@ func (m *EntitlementManagement) Serialize(writer i878a80d2330e89d26896388a3f487e
     if m.GetAccessPackageAssignmentApprovals() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetAccessPackageAssignmentApprovals()))
         for i, v := range m.GetAccessPackageAssignmentApprovals() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("accessPackageAssignmentApprovals", cast)
         if err != nil {
@@ -239,7 +363,9 @@ func (m *EntitlementManagement) Serialize(writer i878a80d2330e89d26896388a3f487e
     if m.GetAccessPackages() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetAccessPackages()))
         for i, v := range m.GetAccessPackages() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("accessPackages", cast)
         if err != nil {
@@ -249,7 +375,9 @@ func (m *EntitlementManagement) Serialize(writer i878a80d2330e89d26896388a3f487e
     if m.GetAssignmentPolicies() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetAssignmentPolicies()))
         for i, v := range m.GetAssignmentPolicies() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("assignmentPolicies", cast)
         if err != nil {
@@ -259,7 +387,9 @@ func (m *EntitlementManagement) Serialize(writer i878a80d2330e89d26896388a3f487e
     if m.GetAssignmentRequests() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetAssignmentRequests()))
         for i, v := range m.GetAssignmentRequests() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("assignmentRequests", cast)
         if err != nil {
@@ -269,7 +399,9 @@ func (m *EntitlementManagement) Serialize(writer i878a80d2330e89d26896388a3f487e
     if m.GetAssignments() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetAssignments()))
         for i, v := range m.GetAssignments() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("assignments", cast)
         if err != nil {
@@ -279,7 +411,9 @@ func (m *EntitlementManagement) Serialize(writer i878a80d2330e89d26896388a3f487e
     if m.GetCatalogs() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetCatalogs()))
         for i, v := range m.GetCatalogs() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("catalogs", cast)
         if err != nil {
@@ -289,9 +423,59 @@ func (m *EntitlementManagement) Serialize(writer i878a80d2330e89d26896388a3f487e
     if m.GetConnectedOrganizations() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetConnectedOrganizations()))
         for i, v := range m.GetConnectedOrganizations() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("connectedOrganizations", cast)
+        if err != nil {
+            return err
+        }
+    }
+    if m.GetResourceEnvironments() != nil {
+        cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetResourceEnvironments()))
+        for i, v := range m.GetResourceEnvironments() {
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
+        }
+        err = writer.WriteCollectionOfObjectValues("resourceEnvironments", cast)
+        if err != nil {
+            return err
+        }
+    }
+    if m.GetResourceRequests() != nil {
+        cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetResourceRequests()))
+        for i, v := range m.GetResourceRequests() {
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
+        }
+        err = writer.WriteCollectionOfObjectValues("resourceRequests", cast)
+        if err != nil {
+            return err
+        }
+    }
+    if m.GetResourceRoleScopes() != nil {
+        cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetResourceRoleScopes()))
+        for i, v := range m.GetResourceRoleScopes() {
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
+        }
+        err = writer.WriteCollectionOfObjectValues("resourceRoleScopes", cast)
+        if err != nil {
+            return err
+        }
+    }
+    if m.GetResources() != nil {
+        cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetResources()))
+        for i, v := range m.GetResources() {
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
+        }
+        err = writer.WriteCollectionOfObjectValues("resources", cast)
         if err != nil {
             return err
         }
@@ -353,6 +537,34 @@ func (m *EntitlementManagement) SetConnectedOrganizations(value []ConnectedOrgan
         panic(err)
     }
 }
+// SetResourceEnvironments sets the resourceEnvironments property value. A reference to the geolocation environments in which a resource is located.
+func (m *EntitlementManagement) SetResourceEnvironments(value []AccessPackageResourceEnvironmentable)() {
+    err := m.GetBackingStore().Set("resourceEnvironments", value)
+    if err != nil {
+        panic(err)
+    }
+}
+// SetResourceRequests sets the resourceRequests property value. Represents a request to add or remove a resource to or from a catalog respectively.
+func (m *EntitlementManagement) SetResourceRequests(value []AccessPackageResourceRequestable)() {
+    err := m.GetBackingStore().Set("resourceRequests", value)
+    if err != nil {
+        panic(err)
+    }
+}
+// SetResourceRoleScopes sets the resourceRoleScopes property value. The resourceRoleScopes property
+func (m *EntitlementManagement) SetResourceRoleScopes(value []AccessPackageResourceRoleScopeable)() {
+    err := m.GetBackingStore().Set("resourceRoleScopes", value)
+    if err != nil {
+        panic(err)
+    }
+}
+// SetResources sets the resources property value. The resources associated with the catalogs.
+func (m *EntitlementManagement) SetResources(value []AccessPackageResourceable)() {
+    err := m.GetBackingStore().Set("resources", value)
+    if err != nil {
+        panic(err)
+    }
+}
 // SetSettings sets the settings property value. The settings that control the behavior of Azure AD entitlement management.
 func (m *EntitlementManagement) SetSettings(value EntitlementManagementSettingsable)() {
     err := m.GetBackingStore().Set("settings", value)
@@ -371,6 +583,10 @@ type EntitlementManagementable interface {
     GetAssignments()([]AccessPackageAssignmentable)
     GetCatalogs()([]AccessPackageCatalogable)
     GetConnectedOrganizations()([]ConnectedOrganizationable)
+    GetResourceEnvironments()([]AccessPackageResourceEnvironmentable)
+    GetResourceRequests()([]AccessPackageResourceRequestable)
+    GetResourceRoleScopes()([]AccessPackageResourceRoleScopeable)
+    GetResources()([]AccessPackageResourceable)
     GetSettings()(EntitlementManagementSettingsable)
     SetAccessPackageAssignmentApprovals(value []Approvalable)()
     SetAccessPackages(value []AccessPackageable)()
@@ -379,5 +595,9 @@ type EntitlementManagementable interface {
     SetAssignments(value []AccessPackageAssignmentable)()
     SetCatalogs(value []AccessPackageCatalogable)()
     SetConnectedOrganizations(value []ConnectedOrganizationable)()
+    SetResourceEnvironments(value []AccessPackageResourceEnvironmentable)()
+    SetResourceRequests(value []AccessPackageResourceRequestable)()
+    SetResourceRoleScopes(value []AccessPackageResourceRoleScopeable)()
+    SetResources(value []AccessPackageResourceable)()
     SetSettings(value EntitlementManagementSettingsable)()
 }

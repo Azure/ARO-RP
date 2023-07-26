@@ -187,6 +187,17 @@ func (m *ServicePrincipal) GetCreatedObjects()([]DirectoryObjectable) {
     }
     return nil
 }
+// GetCustomSecurityAttributes gets the customSecurityAttributes property value. An open complex type that holds the value of a custom security attribute that is assigned to a directory object. Nullable. Returned only on $select. Supports $filter (eq, ne, not, startsWith). Filter value is case sensitive.
+func (m *ServicePrincipal) GetCustomSecurityAttributes()(CustomSecurityAttributeValueable) {
+    val, err := m.GetBackingStore().Get("customSecurityAttributes")
+    if err != nil {
+        panic(err)
+    }
+    if val != nil {
+        return val.(CustomSecurityAttributeValueable)
+    }
+    return nil
+}
 // GetDelegatedPermissionClassifications gets the delegatedPermissionClassifications property value. The delegatedPermissionClassifications property
 func (m *ServicePrincipal) GetDelegatedPermissionClassifications()([]DelegatedPermissionClassificationable) {
     val, err := m.GetBackingStore().Get("delegatedPermissionClassifications")
@@ -274,7 +285,9 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]AddInable, len(val))
             for i, v := range val {
-                res[i] = v.(AddInable)
+                if v != nil {
+                    res[i] = v.(AddInable)
+                }
             }
             m.SetAddIns(res)
         }
@@ -288,7 +301,9 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetAlternativeNames(res)
         }
@@ -342,7 +357,9 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]AppManagementPolicyable, len(val))
             for i, v := range val {
-                res[i] = v.(AppManagementPolicyable)
+                if v != nil {
+                    res[i] = v.(AppManagementPolicyable)
+                }
             }
             m.SetAppManagementPolicies(res)
         }
@@ -366,7 +383,9 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]AppRoleAssignmentable, len(val))
             for i, v := range val {
-                res[i] = v.(AppRoleAssignmentable)
+                if v != nil {
+                    res[i] = v.(AppRoleAssignmentable)
+                }
             }
             m.SetAppRoleAssignedTo(res)
         }
@@ -390,7 +409,9 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]AppRoleAssignmentable, len(val))
             for i, v := range val {
-                res[i] = v.(AppRoleAssignmentable)
+                if v != nil {
+                    res[i] = v.(AppRoleAssignmentable)
+                }
             }
             m.SetAppRoleAssignments(res)
         }
@@ -404,7 +425,9 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]AppRoleable, len(val))
             for i, v := range val {
-                res[i] = v.(AppRoleable)
+                if v != nil {
+                    res[i] = v.(AppRoleable)
+                }
             }
             m.SetAppRoles(res)
         }
@@ -418,7 +441,9 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]ClaimsMappingPolicyable, len(val))
             for i, v := range val {
-                res[i] = v.(ClaimsMappingPolicyable)
+                if v != nil {
+                    res[i] = v.(ClaimsMappingPolicyable)
+                }
             }
             m.SetClaimsMappingPolicies(res)
         }
@@ -432,9 +457,21 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]DirectoryObjectable, len(val))
             for i, v := range val {
-                res[i] = v.(DirectoryObjectable)
+                if v != nil {
+                    res[i] = v.(DirectoryObjectable)
+                }
             }
             m.SetCreatedObjects(res)
+        }
+        return nil
+    }
+    res["customSecurityAttributes"] = func (n i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
+        val, err := n.GetObjectValue(CreateCustomSecurityAttributeValueFromDiscriminatorValue)
+        if err != nil {
+            return err
+        }
+        if val != nil {
+            m.SetCustomSecurityAttributes(val.(CustomSecurityAttributeValueable))
         }
         return nil
     }
@@ -446,7 +483,9 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]DelegatedPermissionClassificationable, len(val))
             for i, v := range val {
-                res[i] = v.(DelegatedPermissionClassificationable)
+                if v != nil {
+                    res[i] = v.(DelegatedPermissionClassificationable)
+                }
             }
             m.SetDelegatedPermissionClassifications(res)
         }
@@ -490,7 +529,9 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]Endpointable, len(val))
             for i, v := range val {
-                res[i] = v.(Endpointable)
+                if v != nil {
+                    res[i] = v.(Endpointable)
+                }
             }
             m.SetEndpoints(res)
         }
@@ -504,7 +545,9 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]FederatedIdentityCredentialable, len(val))
             for i, v := range val {
-                res[i] = v.(FederatedIdentityCredentialable)
+                if v != nil {
+                    res[i] = v.(FederatedIdentityCredentialable)
+                }
             }
             m.SetFederatedIdentityCredentials(res)
         }
@@ -528,7 +571,9 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]HomeRealmDiscoveryPolicyable, len(val))
             for i, v := range val {
-                res[i] = v.(HomeRealmDiscoveryPolicyable)
+                if v != nil {
+                    res[i] = v.(HomeRealmDiscoveryPolicyable)
+                }
             }
             m.SetHomeRealmDiscoveryPolicies(res)
         }
@@ -552,7 +597,9 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]KeyCredentialable, len(val))
             for i, v := range val {
-                res[i] = v.(KeyCredentialable)
+                if v != nil {
+                    res[i] = v.(KeyCredentialable)
+                }
             }
             m.SetKeyCredentials(res)
         }
@@ -586,7 +633,9 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]DirectoryObjectable, len(val))
             for i, v := range val {
-                res[i] = v.(DirectoryObjectable)
+                if v != nil {
+                    res[i] = v.(DirectoryObjectable)
+                }
             }
             m.SetMemberOf(res)
         }
@@ -610,7 +659,9 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetNotificationEmailAddresses(res)
         }
@@ -624,7 +675,9 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]OAuth2PermissionGrantable, len(val))
             for i, v := range val {
-                res[i] = v.(OAuth2PermissionGrantable)
+                if v != nil {
+                    res[i] = v.(OAuth2PermissionGrantable)
+                }
             }
             m.SetOauth2PermissionGrants(res)
         }
@@ -638,7 +691,9 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]PermissionScopeable, len(val))
             for i, v := range val {
-                res[i] = v.(PermissionScopeable)
+                if v != nil {
+                    res[i] = v.(PermissionScopeable)
+                }
             }
             m.SetOauth2PermissionScopes(res)
         }
@@ -652,7 +707,9 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]DirectoryObjectable, len(val))
             for i, v := range val {
-                res[i] = v.(DirectoryObjectable)
+                if v != nil {
+                    res[i] = v.(DirectoryObjectable)
+                }
             }
             m.SetOwnedObjects(res)
         }
@@ -666,7 +723,9 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]DirectoryObjectable, len(val))
             for i, v := range val {
-                res[i] = v.(DirectoryObjectable)
+                if v != nil {
+                    res[i] = v.(DirectoryObjectable)
+                }
             }
             m.SetOwners(res)
         }
@@ -680,7 +739,9 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]PasswordCredentialable, len(val))
             for i, v := range val {
-                res[i] = v.(PasswordCredentialable)
+                if v != nil {
+                    res[i] = v.(PasswordCredentialable)
+                }
             }
             m.SetPasswordCredentials(res)
         }
@@ -714,7 +775,9 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetReplyUrls(res)
         }
@@ -728,7 +791,9 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]ResourceSpecificPermissionable, len(val))
             for i, v := range val {
-                res[i] = v.(ResourceSpecificPermissionable)
+                if v != nil {
+                    res[i] = v.(ResourceSpecificPermissionable)
+                }
             }
             m.SetResourceSpecificApplicationPermissions(res)
         }
@@ -752,7 +817,9 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetServicePrincipalNames(res)
         }
@@ -796,7 +863,9 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetTags(res)
         }
@@ -820,7 +889,9 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]TokenIssuancePolicyable, len(val))
             for i, v := range val {
-                res[i] = v.(TokenIssuancePolicyable)
+                if v != nil {
+                    res[i] = v.(TokenIssuancePolicyable)
+                }
             }
             m.SetTokenIssuancePolicies(res)
         }
@@ -834,7 +905,9 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]TokenLifetimePolicyable, len(val))
             for i, v := range val {
-                res[i] = v.(TokenLifetimePolicyable)
+                if v != nil {
+                    res[i] = v.(TokenLifetimePolicyable)
+                }
             }
             m.SetTokenLifetimePolicies(res)
         }
@@ -848,7 +921,9 @@ func (m *ServicePrincipal) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]DirectoryObjectable, len(val))
             for i, v := range val {
-                res[i] = v.(DirectoryObjectable)
+                if v != nil {
+                    res[i] = v.(DirectoryObjectable)
+                }
             }
             m.SetTransitiveMemberOf(res)
         }
@@ -987,7 +1062,7 @@ func (m *ServicePrincipal) GetOauth2PermissionScopes()([]PermissionScopeable) {
     }
     return nil
 }
-// GetOwnedObjects gets the ownedObjects property value. Directory objects that are owned by this service principal. Read-only. Nullable. Supports $expand and $filter (/$count eq 0, /$count ne 0, /$count eq 1, /$count ne 1).
+// GetOwnedObjects gets the ownedObjects property value. Directory objects that are owned by this service principal. Read-only. Nullable. Supports $expand, $select nested in $expand, and $filter (/$count eq 0, /$count ne 0, /$count eq 1, /$count ne 1).
 func (m *ServicePrincipal) GetOwnedObjects()([]DirectoryObjectable) {
     val, err := m.GetBackingStore().Get("ownedObjects")
     if err != nil {
@@ -998,7 +1073,7 @@ func (m *ServicePrincipal) GetOwnedObjects()([]DirectoryObjectable) {
     }
     return nil
 }
-// GetOwners gets the owners property value. Directory objects that are owners of this servicePrincipal. The owners are a set of non-admin users or servicePrincipals who are allowed to modify this object. Read-only. Nullable.  Supports $expand and $filter (/$count eq 0, /$count ne 0, /$count eq 1, /$count ne 1).
+// GetOwners gets the owners property value. Directory objects that are owners of this servicePrincipal. The owners are a set of non-admin users or servicePrincipals who are allowed to modify this object. Read-only. Nullable. Supports $expand, $filter (/$count eq 0, /$count ne 0, /$count eq 1, /$count ne 1), and $select nested in $expand.
 func (m *ServicePrincipal) GetOwners()([]DirectoryObjectable) {
     val, err := m.GetBackingStore().Get("owners")
     if err != nil {
@@ -1086,7 +1161,7 @@ func (m *ServicePrincipal) GetServicePrincipalNames()([]string) {
     }
     return nil
 }
-// GetServicePrincipalType gets the servicePrincipalType property value. Identifies whether the service principal represents an application, a managed identity, or a legacy application. This is set by Azure AD internally. The servicePrincipalType property can be set to three different values: __Application - A service principal that represents an application or service. The appId property identifies the associated app registration, and matches the appId of an application, possibly from a different tenant. If the associated app registration is missing, tokens are not issued for the service principal.__ManagedIdentity - A service principal that represents a managed identity. Service principals representing managed identities can be granted access and permissions, but cannot be updated or modified directly.__Legacy - A service principal that represents an app created before app registrations, or through legacy experiences. Legacy service principal can have credentials, service principal names, reply URLs, and other properties which are editable by an authorized user, but does not have an associated app registration. The appId value does not associate the service principal with an app registration. The service principal can only be used in the tenant where it was created.__SocialIdp - For internal use.
+// GetServicePrincipalType gets the servicePrincipalType property value. Identifies whether the service principal represents an application, a managed identity, or a legacy application. This is set by Azure AD internally. The servicePrincipalType property can be set to three different values: Application - A service principal that represents an application or service. The appId property identifies the associated app registration, and matches the appId of an application, possibly from a different tenant. If the associated app registration is missing, tokens are not issued for the service principal.ManagedIdentity - A service principal that represents a managed identity. Service principals representing managed identities can be granted access and permissions, but cannot be updated or modified directly.Legacy - A service principal that represents an app created before app registrations, or through legacy experiences. Legacy service principal can have credentials, service principal names, reply URLs, and other properties which are editable by an authorized user, but does not have an associated app registration. The appId value does not associate the service principal with an app registration. The service principal can only be used in the tenant where it was created.SocialIdp - For internal use.
 func (m *ServicePrincipal) GetServicePrincipalType()(*string) {
     val, err := m.GetBackingStore().Get("servicePrincipalType")
     if err != nil {
@@ -1108,7 +1183,7 @@ func (m *ServicePrincipal) GetSignInAudience()(*string) {
     }
     return nil
 }
-// GetSynchronization gets the synchronization property value. The synchronization property
+// GetSynchronization gets the synchronization property value. Represents the capability for Azure Active Directory (Azure AD) identity synchronization through the Microsoft Graph API.
 func (m *ServicePrincipal) GetSynchronization()(Synchronizationable) {
     val, err := m.GetBackingStore().Get("synchronization")
     if err != nil {
@@ -1200,7 +1275,9 @@ func (m *ServicePrincipal) Serialize(writer i878a80d2330e89d26896388a3f487eef27b
     if m.GetAddIns() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetAddIns()))
         for i, v := range m.GetAddIns() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("addIns", cast)
         if err != nil {
@@ -1240,7 +1317,9 @@ func (m *ServicePrincipal) Serialize(writer i878a80d2330e89d26896388a3f487eef27b
     if m.GetAppManagementPolicies() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetAppManagementPolicies()))
         for i, v := range m.GetAppManagementPolicies() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("appManagementPolicies", cast)
         if err != nil {
@@ -1256,7 +1335,9 @@ func (m *ServicePrincipal) Serialize(writer i878a80d2330e89d26896388a3f487eef27b
     if m.GetAppRoleAssignedTo() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetAppRoleAssignedTo()))
         for i, v := range m.GetAppRoleAssignedTo() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("appRoleAssignedTo", cast)
         if err != nil {
@@ -1272,7 +1353,9 @@ func (m *ServicePrincipal) Serialize(writer i878a80d2330e89d26896388a3f487eef27b
     if m.GetAppRoleAssignments() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetAppRoleAssignments()))
         for i, v := range m.GetAppRoleAssignments() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("appRoleAssignments", cast)
         if err != nil {
@@ -1282,7 +1365,9 @@ func (m *ServicePrincipal) Serialize(writer i878a80d2330e89d26896388a3f487eef27b
     if m.GetAppRoles() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetAppRoles()))
         for i, v := range m.GetAppRoles() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("appRoles", cast)
         if err != nil {
@@ -1292,7 +1377,9 @@ func (m *ServicePrincipal) Serialize(writer i878a80d2330e89d26896388a3f487eef27b
     if m.GetClaimsMappingPolicies() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetClaimsMappingPolicies()))
         for i, v := range m.GetClaimsMappingPolicies() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("claimsMappingPolicies", cast)
         if err != nil {
@@ -1302,9 +1389,17 @@ func (m *ServicePrincipal) Serialize(writer i878a80d2330e89d26896388a3f487eef27b
     if m.GetCreatedObjects() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetCreatedObjects()))
         for i, v := range m.GetCreatedObjects() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("createdObjects", cast)
+        if err != nil {
+            return err
+        }
+    }
+    {
+        err = writer.WriteObjectValue("customSecurityAttributes", m.GetCustomSecurityAttributes())
         if err != nil {
             return err
         }
@@ -1312,7 +1407,9 @@ func (m *ServicePrincipal) Serialize(writer i878a80d2330e89d26896388a3f487eef27b
     if m.GetDelegatedPermissionClassifications() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetDelegatedPermissionClassifications()))
         for i, v := range m.GetDelegatedPermissionClassifications() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("delegatedPermissionClassifications", cast)
         if err != nil {
@@ -1340,7 +1437,9 @@ func (m *ServicePrincipal) Serialize(writer i878a80d2330e89d26896388a3f487eef27b
     if m.GetEndpoints() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetEndpoints()))
         for i, v := range m.GetEndpoints() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("endpoints", cast)
         if err != nil {
@@ -1350,7 +1449,9 @@ func (m *ServicePrincipal) Serialize(writer i878a80d2330e89d26896388a3f487eef27b
     if m.GetFederatedIdentityCredentials() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetFederatedIdentityCredentials()))
         for i, v := range m.GetFederatedIdentityCredentials() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("federatedIdentityCredentials", cast)
         if err != nil {
@@ -1366,7 +1467,9 @@ func (m *ServicePrincipal) Serialize(writer i878a80d2330e89d26896388a3f487eef27b
     if m.GetHomeRealmDiscoveryPolicies() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetHomeRealmDiscoveryPolicies()))
         for i, v := range m.GetHomeRealmDiscoveryPolicies() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("homeRealmDiscoveryPolicies", cast)
         if err != nil {
@@ -1382,7 +1485,9 @@ func (m *ServicePrincipal) Serialize(writer i878a80d2330e89d26896388a3f487eef27b
     if m.GetKeyCredentials() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetKeyCredentials()))
         for i, v := range m.GetKeyCredentials() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("keyCredentials", cast)
         if err != nil {
@@ -1404,7 +1509,9 @@ func (m *ServicePrincipal) Serialize(writer i878a80d2330e89d26896388a3f487eef27b
     if m.GetMemberOf() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetMemberOf()))
         for i, v := range m.GetMemberOf() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("memberOf", cast)
         if err != nil {
@@ -1426,7 +1533,9 @@ func (m *ServicePrincipal) Serialize(writer i878a80d2330e89d26896388a3f487eef27b
     if m.GetOauth2PermissionGrants() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetOauth2PermissionGrants()))
         for i, v := range m.GetOauth2PermissionGrants() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("oauth2PermissionGrants", cast)
         if err != nil {
@@ -1436,7 +1545,9 @@ func (m *ServicePrincipal) Serialize(writer i878a80d2330e89d26896388a3f487eef27b
     if m.GetOauth2PermissionScopes() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetOauth2PermissionScopes()))
         for i, v := range m.GetOauth2PermissionScopes() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("oauth2PermissionScopes", cast)
         if err != nil {
@@ -1446,7 +1557,9 @@ func (m *ServicePrincipal) Serialize(writer i878a80d2330e89d26896388a3f487eef27b
     if m.GetOwnedObjects() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetOwnedObjects()))
         for i, v := range m.GetOwnedObjects() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("ownedObjects", cast)
         if err != nil {
@@ -1456,7 +1569,9 @@ func (m *ServicePrincipal) Serialize(writer i878a80d2330e89d26896388a3f487eef27b
     if m.GetOwners() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetOwners()))
         for i, v := range m.GetOwners() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("owners", cast)
         if err != nil {
@@ -1466,7 +1581,9 @@ func (m *ServicePrincipal) Serialize(writer i878a80d2330e89d26896388a3f487eef27b
     if m.GetPasswordCredentials() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetPasswordCredentials()))
         for i, v := range m.GetPasswordCredentials() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("passwordCredentials", cast)
         if err != nil {
@@ -1494,7 +1611,9 @@ func (m *ServicePrincipal) Serialize(writer i878a80d2330e89d26896388a3f487eef27b
     if m.GetResourceSpecificApplicationPermissions() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetResourceSpecificApplicationPermissions()))
         for i, v := range m.GetResourceSpecificApplicationPermissions() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("resourceSpecificApplicationPermissions", cast)
         if err != nil {
@@ -1546,7 +1665,9 @@ func (m *ServicePrincipal) Serialize(writer i878a80d2330e89d26896388a3f487eef27b
     if m.GetTokenIssuancePolicies() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetTokenIssuancePolicies()))
         for i, v := range m.GetTokenIssuancePolicies() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("tokenIssuancePolicies", cast)
         if err != nil {
@@ -1556,7 +1677,9 @@ func (m *ServicePrincipal) Serialize(writer i878a80d2330e89d26896388a3f487eef27b
     if m.GetTokenLifetimePolicies() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetTokenLifetimePolicies()))
         for i, v := range m.GetTokenLifetimePolicies() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("tokenLifetimePolicies", cast)
         if err != nil {
@@ -1566,7 +1689,9 @@ func (m *ServicePrincipal) Serialize(writer i878a80d2330e89d26896388a3f487eef27b
     if m.GetTransitiveMemberOf() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetTransitiveMemberOf()))
         for i, v := range m.GetTransitiveMemberOf() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("transitiveMemberOf", cast)
         if err != nil {
@@ -1682,6 +1807,13 @@ func (m *ServicePrincipal) SetClaimsMappingPolicies(value []ClaimsMappingPolicya
 // SetCreatedObjects sets the createdObjects property value. Directory objects created by this service principal. Read-only. Nullable.
 func (m *ServicePrincipal) SetCreatedObjects(value []DirectoryObjectable)() {
     err := m.GetBackingStore().Set("createdObjects", value)
+    if err != nil {
+        panic(err)
+    }
+}
+// SetCustomSecurityAttributes sets the customSecurityAttributes property value. An open complex type that holds the value of a custom security attribute that is assigned to a directory object. Nullable. Returned only on $select. Supports $filter (eq, ne, not, startsWith). Filter value is case sensitive.
+func (m *ServicePrincipal) SetCustomSecurityAttributes(value CustomSecurityAttributeValueable)() {
+    err := m.GetBackingStore().Set("customSecurityAttributes", value)
     if err != nil {
         panic(err)
     }
@@ -1805,14 +1937,14 @@ func (m *ServicePrincipal) SetOauth2PermissionScopes(value []PermissionScopeable
         panic(err)
     }
 }
-// SetOwnedObjects sets the ownedObjects property value. Directory objects that are owned by this service principal. Read-only. Nullable. Supports $expand and $filter (/$count eq 0, /$count ne 0, /$count eq 1, /$count ne 1).
+// SetOwnedObjects sets the ownedObjects property value. Directory objects that are owned by this service principal. Read-only. Nullable. Supports $expand, $select nested in $expand, and $filter (/$count eq 0, /$count ne 0, /$count eq 1, /$count ne 1).
 func (m *ServicePrincipal) SetOwnedObjects(value []DirectoryObjectable)() {
     err := m.GetBackingStore().Set("ownedObjects", value)
     if err != nil {
         panic(err)
     }
 }
-// SetOwners sets the owners property value. Directory objects that are owners of this servicePrincipal. The owners are a set of non-admin users or servicePrincipals who are allowed to modify this object. Read-only. Nullable.  Supports $expand and $filter (/$count eq 0, /$count ne 0, /$count eq 1, /$count ne 1).
+// SetOwners sets the owners property value. Directory objects that are owners of this servicePrincipal. The owners are a set of non-admin users or servicePrincipals who are allowed to modify this object. Read-only. Nullable. Supports $expand, $filter (/$count eq 0, /$count ne 0, /$count eq 1, /$count ne 1), and $select nested in $expand.
 func (m *ServicePrincipal) SetOwners(value []DirectoryObjectable)() {
     err := m.GetBackingStore().Set("owners", value)
     if err != nil {
@@ -1868,7 +2000,7 @@ func (m *ServicePrincipal) SetServicePrincipalNames(value []string)() {
         panic(err)
     }
 }
-// SetServicePrincipalType sets the servicePrincipalType property value. Identifies whether the service principal represents an application, a managed identity, or a legacy application. This is set by Azure AD internally. The servicePrincipalType property can be set to three different values: __Application - A service principal that represents an application or service. The appId property identifies the associated app registration, and matches the appId of an application, possibly from a different tenant. If the associated app registration is missing, tokens are not issued for the service principal.__ManagedIdentity - A service principal that represents a managed identity. Service principals representing managed identities can be granted access and permissions, but cannot be updated or modified directly.__Legacy - A service principal that represents an app created before app registrations, or through legacy experiences. Legacy service principal can have credentials, service principal names, reply URLs, and other properties which are editable by an authorized user, but does not have an associated app registration. The appId value does not associate the service principal with an app registration. The service principal can only be used in the tenant where it was created.__SocialIdp - For internal use.
+// SetServicePrincipalType sets the servicePrincipalType property value. Identifies whether the service principal represents an application, a managed identity, or a legacy application. This is set by Azure AD internally. The servicePrincipalType property can be set to three different values: Application - A service principal that represents an application or service. The appId property identifies the associated app registration, and matches the appId of an application, possibly from a different tenant. If the associated app registration is missing, tokens are not issued for the service principal.ManagedIdentity - A service principal that represents a managed identity. Service principals representing managed identities can be granted access and permissions, but cannot be updated or modified directly.Legacy - A service principal that represents an app created before app registrations, or through legacy experiences. Legacy service principal can have credentials, service principal names, reply URLs, and other properties which are editable by an authorized user, but does not have an associated app registration. The appId value does not associate the service principal with an app registration. The service principal can only be used in the tenant where it was created.SocialIdp - For internal use.
 func (m *ServicePrincipal) SetServicePrincipalType(value *string)() {
     err := m.GetBackingStore().Set("servicePrincipalType", value)
     if err != nil {
@@ -1882,7 +2014,7 @@ func (m *ServicePrincipal) SetSignInAudience(value *string)() {
         panic(err)
     }
 }
-// SetSynchronization sets the synchronization property value. The synchronization property
+// SetSynchronization sets the synchronization property value. Represents the capability for Azure Active Directory (Azure AD) identity synchronization through the Microsoft Graph API.
 func (m *ServicePrincipal) SetSynchronization(value Synchronizationable)() {
     err := m.GetBackingStore().Set("synchronization", value)
     if err != nil {
@@ -1950,6 +2082,7 @@ type ServicePrincipalable interface {
     GetAppRoles()([]AppRoleable)
     GetClaimsMappingPolicies()([]ClaimsMappingPolicyable)
     GetCreatedObjects()([]DirectoryObjectable)
+    GetCustomSecurityAttributes()(CustomSecurityAttributeValueable)
     GetDelegatedPermissionClassifications()([]DelegatedPermissionClassificationable)
     GetDescription()(*string)
     GetDisabledByMicrosoftStatus()(*string)
@@ -2000,6 +2133,7 @@ type ServicePrincipalable interface {
     SetAppRoles(value []AppRoleable)()
     SetClaimsMappingPolicies(value []ClaimsMappingPolicyable)()
     SetCreatedObjects(value []DirectoryObjectable)()
+    SetCustomSecurityAttributes(value CustomSecurityAttributeValueable)()
     SetDelegatedPermissionClassifications(value []DelegatedPermissionClassificationable)()
     SetDescription(value *string)()
     SetDisabledByMicrosoftStatus(value *string)()

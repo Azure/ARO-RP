@@ -4,11 +4,11 @@ import (
     i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91 "github.com/microsoft/kiota-abstractions-go/serialization"
 )
 
-// MacOSLobApp 
+// MacOSLobApp contains properties and inherited properties for the macOS LOB App.
 type MacOSLobApp struct {
     MobileLobApp
 }
-// NewMacOSLobApp instantiates a new MacOSLobApp and sets the default values.
+// NewMacOSLobApp instantiates a new macOSLobApp and sets the default values.
 func NewMacOSLobApp()(*MacOSLobApp) {
     m := &MacOSLobApp{
         MobileLobApp: *NewMobileLobApp(),
@@ -85,7 +85,9 @@ func (m *MacOSLobApp) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26
         if val != nil {
             res := make([]MacOSLobChildAppable, len(val))
             for i, v := range val {
-                res[i] = v.(MacOSLobChildAppable)
+                if v != nil {
+                    res[i] = v.(MacOSLobChildAppable)
+                }
             }
             m.SetChildApps(res)
         }
@@ -119,7 +121,9 @@ func (m *MacOSLobApp) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetMd5Hash(res)
         }
@@ -244,7 +248,9 @@ func (m *MacOSLobApp) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6
     if m.GetChildApps() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetChildApps()))
         for i, v := range m.GetChildApps() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("childApps", cast)
         if err != nil {

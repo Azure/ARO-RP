@@ -8,7 +8,7 @@ import (
 type WorkforceIntegrationCollectionResponse struct {
     BaseCollectionPaginationCountResponse
 }
-// NewWorkforceIntegrationCollectionResponse instantiates a new WorkforceIntegrationCollectionResponse and sets the default values.
+// NewWorkforceIntegrationCollectionResponse instantiates a new workforceIntegrationCollectionResponse and sets the default values.
 func NewWorkforceIntegrationCollectionResponse()(*WorkforceIntegrationCollectionResponse) {
     m := &WorkforceIntegrationCollectionResponse{
         BaseCollectionPaginationCountResponse: *NewBaseCollectionPaginationCountResponse(),
@@ -30,7 +30,9 @@ func (m *WorkforceIntegrationCollectionResponse) GetFieldDeserializers()(map[str
         if val != nil {
             res := make([]WorkforceIntegrationable, len(val))
             for i, v := range val {
-                res[i] = v.(WorkforceIntegrationable)
+                if v != nil {
+                    res[i] = v.(WorkforceIntegrationable)
+                }
             }
             m.SetValue(res)
         }
@@ -58,7 +60,9 @@ func (m *WorkforceIntegrationCollectionResponse) Serialize(writer i878a80d2330e8
     if m.GetValue() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetValue()))
         for i, v := range m.GetValue() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("value", cast)
         if err != nil {

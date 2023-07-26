@@ -71,7 +71,9 @@ func (m *ApiApplication) GetFieldDeserializers()(map[string]func(i878a80d2330e89
         if val != nil {
             res := make([]i561e97a8befe7661a44c8f54600992b4207a3a0cf6770e5559949bc276de2e22.UUID, len(val))
             for i, v := range val {
-                res[i] = *(v.(*i561e97a8befe7661a44c8f54600992b4207a3a0cf6770e5559949bc276de2e22.UUID))
+                if v != nil {
+                    res[i] = *(v.(*i561e97a8befe7661a44c8f54600992b4207a3a0cf6770e5559949bc276de2e22.UUID))
+                }
             }
             m.SetKnownClientApplications(res)
         }
@@ -85,7 +87,9 @@ func (m *ApiApplication) GetFieldDeserializers()(map[string]func(i878a80d2330e89
         if val != nil {
             res := make([]PermissionScopeable, len(val))
             for i, v := range val {
-                res[i] = v.(PermissionScopeable)
+                if v != nil {
+                    res[i] = v.(PermissionScopeable)
+                }
             }
             m.SetOauth2PermissionScopes(res)
         }
@@ -109,7 +113,9 @@ func (m *ApiApplication) GetFieldDeserializers()(map[string]func(i878a80d2330e89
         if val != nil {
             res := make([]PreAuthorizedApplicationable, len(val))
             for i, v := range val {
-                res[i] = v.(PreAuthorizedApplicationable)
+                if v != nil {
+                    res[i] = v.(PreAuthorizedApplicationable)
+                }
             }
             m.SetPreAuthorizedApplications(res)
         }
@@ -171,7 +177,7 @@ func (m *ApiApplication) GetPreAuthorizedApplications()([]PreAuthorizedApplicati
     }
     return nil
 }
-// GetRequestedAccessTokenVersion gets the requestedAccessTokenVersion property value. Specifies the access token version expected by this resource. This changes the version and format of the JWT produced independent of the endpoint or client used to request the access token.  The endpoint used, v1.0 or v2.0, is chosen by the client and only impacts the version of id_tokens. Resources need to explicitly configure requestedAccessTokenVersion to indicate the supported access token format.  Possible values for requestedAccessTokenVersion are 1, 2, or null. If the value is null, this defaults to 1, which corresponds to the v1.0 endpoint.  If signInAudience on the application is configured as AzureADandPersonalMicrosoftAccount, the value for this property must be 2
+// GetRequestedAccessTokenVersion gets the requestedAccessTokenVersion property value. Specifies the access token version expected by this resource. This changes the version and format of the JWT produced independent of the endpoint or client used to request the access token.  The endpoint used, v1.0 or v2.0, is chosen by the client and only impacts the version of id_tokens. Resources need to explicitly configure requestedAccessTokenVersion to indicate the supported access token format.  Possible values for requestedAccessTokenVersion are 1, 2, or null. If the value is null, this defaults to 1, which corresponds to the v1.0 endpoint.  If signInAudience on the application is configured as AzureADandPersonalMicrosoftAccount or PersonalMicrosoftAccount, the value for this property must be 2.
 func (m *ApiApplication) GetRequestedAccessTokenVersion()(*int32) {
     val, err := m.GetBackingStore().Get("requestedAccessTokenVersion")
     if err != nil {
@@ -199,7 +205,9 @@ func (m *ApiApplication) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a
     if m.GetOauth2PermissionScopes() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetOauth2PermissionScopes()))
         for i, v := range m.GetOauth2PermissionScopes() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err := writer.WriteCollectionOfObjectValues("oauth2PermissionScopes", cast)
         if err != nil {
@@ -215,7 +223,9 @@ func (m *ApiApplication) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a
     if m.GetPreAuthorizedApplications() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetPreAuthorizedApplications()))
         for i, v := range m.GetPreAuthorizedApplications() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err := writer.WriteCollectionOfObjectValues("preAuthorizedApplications", cast)
         if err != nil {
@@ -282,7 +292,7 @@ func (m *ApiApplication) SetPreAuthorizedApplications(value []PreAuthorizedAppli
         panic(err)
     }
 }
-// SetRequestedAccessTokenVersion sets the requestedAccessTokenVersion property value. Specifies the access token version expected by this resource. This changes the version and format of the JWT produced independent of the endpoint or client used to request the access token.  The endpoint used, v1.0 or v2.0, is chosen by the client and only impacts the version of id_tokens. Resources need to explicitly configure requestedAccessTokenVersion to indicate the supported access token format.  Possible values for requestedAccessTokenVersion are 1, 2, or null. If the value is null, this defaults to 1, which corresponds to the v1.0 endpoint.  If signInAudience on the application is configured as AzureADandPersonalMicrosoftAccount, the value for this property must be 2
+// SetRequestedAccessTokenVersion sets the requestedAccessTokenVersion property value. Specifies the access token version expected by this resource. This changes the version and format of the JWT produced independent of the endpoint or client used to request the access token.  The endpoint used, v1.0 or v2.0, is chosen by the client and only impacts the version of id_tokens. Resources need to explicitly configure requestedAccessTokenVersion to indicate the supported access token format.  Possible values for requestedAccessTokenVersion are 1, 2, or null. If the value is null, this defaults to 1, which corresponds to the v1.0 endpoint.  If signInAudience on the application is configured as AzureADandPersonalMicrosoftAccount or PersonalMicrosoftAccount, the value for this property must be 2.
 func (m *ApiApplication) SetRequestedAccessTokenVersion(value *int32)() {
     err := m.GetBackingStore().Set("requestedAccessTokenVersion", value)
     if err != nil {

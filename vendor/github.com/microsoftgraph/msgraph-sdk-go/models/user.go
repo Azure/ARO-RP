@@ -9,7 +9,7 @@ import (
 type User struct {
     DirectoryObject
 }
-// NewUser instantiates a new User and sets the default values.
+// NewUser instantiates a new user and sets the default values.
 func NewUser()(*User) {
     m := &User{
         DirectoryObject: *NewDirectoryObject(),
@@ -308,6 +308,17 @@ func (m *User) GetCreationType()(*string) {
     }
     return nil
 }
+// GetCustomSecurityAttributes gets the customSecurityAttributes property value. An open complex type that holds the value of a custom security attribute that is assigned to a directory object. Nullable. Returned only on $select. Supports $filter (eq, ne, not, startsWith). Filter value is case sensitive.
+func (m *User) GetCustomSecurityAttributes()(CustomSecurityAttributeValueable) {
+    val, err := m.GetBackingStore().Get("customSecurityAttributes")
+    if err != nil {
+        panic(err)
+    }
+    if val != nil {
+        return val.(CustomSecurityAttributeValueable)
+    }
+    return nil
+}
 // GetDepartment gets the department property value. The name for the department in which the user works. Maximum length is 64 characters. Returned only on $select. Supports $filter (eq, ne, not , ge, le, in, and eq on null values).
 func (m *User) GetDepartment()(*string) {
     val, err := m.GetBackingStore().Get("department")
@@ -382,6 +393,17 @@ func (m *User) GetDrives()([]Driveable) {
     }
     if val != nil {
         return val.([]Driveable)
+    }
+    return nil
+}
+// GetEmployeeExperience gets the employeeExperience property value. The employeeExperience property
+func (m *User) GetEmployeeExperience()(EmployeeExperienceUserable) {
+    val, err := m.GetBackingStore().Get("employeeExperience")
+    if err != nil {
+        panic(err)
+    }
+    if val != nil {
+        return val.(EmployeeExperienceUserable)
     }
     return nil
 }
@@ -526,7 +548,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]UserActivityable, len(val))
             for i, v := range val {
-                res[i] = v.(UserActivityable)
+                if v != nil {
+                    res[i] = v.(UserActivityable)
+                }
             }
             m.SetActivities(res)
         }
@@ -550,7 +574,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]AgreementAcceptanceable, len(val))
             for i, v := range val {
-                res[i] = v.(AgreementAcceptanceable)
+                if v != nil {
+                    res[i] = v.(AgreementAcceptanceable)
+                }
             }
             m.SetAgreementAcceptances(res)
         }
@@ -564,7 +590,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]AppRoleAssignmentable, len(val))
             for i, v := range val {
-                res[i] = v.(AppRoleAssignmentable)
+                if v != nil {
+                    res[i] = v.(AppRoleAssignmentable)
+                }
             }
             m.SetAppRoleAssignments(res)
         }
@@ -578,7 +606,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]AssignedLicenseable, len(val))
             for i, v := range val {
-                res[i] = v.(AssignedLicenseable)
+                if v != nil {
+                    res[i] = v.(AssignedLicenseable)
+                }
             }
             m.SetAssignedLicenses(res)
         }
@@ -592,7 +622,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]AssignedPlanable, len(val))
             for i, v := range val {
-                res[i] = v.(AssignedPlanable)
+                if v != nil {
+                    res[i] = v.(AssignedPlanable)
+                }
             }
             m.SetAssignedPlans(res)
         }
@@ -636,7 +668,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetBusinessPhones(res)
         }
@@ -660,7 +694,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]CalendarGroupable, len(val))
             for i, v := range val {
-                res[i] = v.(CalendarGroupable)
+                if v != nil {
+                    res[i] = v.(CalendarGroupable)
+                }
             }
             m.SetCalendarGroups(res)
         }
@@ -674,7 +710,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]Calendarable, len(val))
             for i, v := range val {
-                res[i] = v.(Calendarable)
+                if v != nil {
+                    res[i] = v.(Calendarable)
+                }
             }
             m.SetCalendars(res)
         }
@@ -688,7 +726,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]Eventable, len(val))
             for i, v := range val {
-                res[i] = v.(Eventable)
+                if v != nil {
+                    res[i] = v.(Eventable)
+                }
             }
             m.SetCalendarView(res)
         }
@@ -702,7 +742,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]Chatable, len(val))
             for i, v := range val {
-                res[i] = v.(Chatable)
+                if v != nil {
+                    res[i] = v.(Chatable)
+                }
             }
             m.SetChats(res)
         }
@@ -746,7 +788,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]ContactFolderable, len(val))
             for i, v := range val {
-                res[i] = v.(ContactFolderable)
+                if v != nil {
+                    res[i] = v.(ContactFolderable)
+                }
             }
             m.SetContactFolders(res)
         }
@@ -760,7 +804,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]Contactable, len(val))
             for i, v := range val {
-                res[i] = v.(Contactable)
+                if v != nil {
+                    res[i] = v.(Contactable)
+                }
             }
             m.SetContacts(res)
         }
@@ -794,7 +840,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]DirectoryObjectable, len(val))
             for i, v := range val {
-                res[i] = v.(DirectoryObjectable)
+                if v != nil {
+                    res[i] = v.(DirectoryObjectable)
+                }
             }
             m.SetCreatedObjects(res)
         }
@@ -807,6 +855,16 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         }
         if val != nil {
             m.SetCreationType(val)
+        }
+        return nil
+    }
+    res["customSecurityAttributes"] = func (n i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
+        val, err := n.GetObjectValue(CreateCustomSecurityAttributeValueFromDiscriminatorValue)
+        if err != nil {
+            return err
+        }
+        if val != nil {
+            m.SetCustomSecurityAttributes(val.(CustomSecurityAttributeValueable))
         }
         return nil
     }
@@ -838,7 +896,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]DeviceManagementTroubleshootingEventable, len(val))
             for i, v := range val {
-                res[i] = v.(DeviceManagementTroubleshootingEventable)
+                if v != nil {
+                    res[i] = v.(DeviceManagementTroubleshootingEventable)
+                }
             }
             m.SetDeviceManagementTroubleshootingEvents(res)
         }
@@ -852,7 +912,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]DirectoryObjectable, len(val))
             for i, v := range val {
-                res[i] = v.(DirectoryObjectable)
+                if v != nil {
+                    res[i] = v.(DirectoryObjectable)
+                }
             }
             m.SetDirectReports(res)
         }
@@ -886,9 +948,21 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]Driveable, len(val))
             for i, v := range val {
-                res[i] = v.(Driveable)
+                if v != nil {
+                    res[i] = v.(Driveable)
+                }
             }
             m.SetDrives(res)
+        }
+        return nil
+    }
+    res["employeeExperience"] = func (n i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
+        val, err := n.GetObjectValue(CreateEmployeeExperienceUserFromDiscriminatorValue)
+        if err != nil {
+            return err
+        }
+        if val != nil {
+            m.SetEmployeeExperience(val.(EmployeeExperienceUserable))
         }
         return nil
     }
@@ -950,7 +1024,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]Eventable, len(val))
             for i, v := range val {
-                res[i] = v.(Eventable)
+                if v != nil {
+                    res[i] = v.(Eventable)
+                }
             }
             m.SetEvents(res)
         }
@@ -964,7 +1040,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]Extensionable, len(val))
             for i, v := range val {
-                res[i] = v.(Extensionable)
+                if v != nil {
+                    res[i] = v.(Extensionable)
+                }
             }
             m.SetExtensions(res)
         }
@@ -1008,7 +1086,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]Siteable, len(val))
             for i, v := range val {
-                res[i] = v.(Siteable)
+                if v != nil {
+                    res[i] = v.(Siteable)
+                }
             }
             m.SetFollowedSites(res)
         }
@@ -1042,7 +1122,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]ObjectIdentityable, len(val))
             for i, v := range val {
-                res[i] = v.(ObjectIdentityable)
+                if v != nil {
+                    res[i] = v.(ObjectIdentityable)
+                }
             }
             m.SetIdentities(res)
         }
@@ -1056,7 +1138,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetImAddresses(res)
         }
@@ -1090,7 +1174,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetInterests(res)
         }
@@ -1124,7 +1210,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]Teamable, len(val))
             for i, v := range val {
-                res[i] = v.(Teamable)
+                if v != nil {
+                    res[i] = v.(Teamable)
+                }
             }
             m.SetJoinedTeams(res)
         }
@@ -1158,7 +1246,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]LicenseAssignmentStateable, len(val))
             for i, v := range val {
-                res[i] = v.(LicenseAssignmentStateable)
+                if v != nil {
+                    res[i] = v.(LicenseAssignmentStateable)
+                }
             }
             m.SetLicenseAssignmentStates(res)
         }
@@ -1172,7 +1262,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]LicenseDetailsable, len(val))
             for i, v := range val {
-                res[i] = v.(LicenseDetailsable)
+                if v != nil {
+                    res[i] = v.(LicenseDetailsable)
+                }
             }
             m.SetLicenseDetails(res)
         }
@@ -1206,7 +1298,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]MailFolderable, len(val))
             for i, v := range val {
-                res[i] = v.(MailFolderable)
+                if v != nil {
+                    res[i] = v.(MailFolderable)
+                }
             }
             m.SetMailFolders(res)
         }
@@ -1230,7 +1324,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]ManagedAppRegistrationable, len(val))
             for i, v := range val {
-                res[i] = v.(ManagedAppRegistrationable)
+                if v != nil {
+                    res[i] = v.(ManagedAppRegistrationable)
+                }
             }
             m.SetManagedAppRegistrations(res)
         }
@@ -1244,7 +1340,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]ManagedDeviceable, len(val))
             for i, v := range val {
-                res[i] = v.(ManagedDeviceable)
+                if v != nil {
+                    res[i] = v.(ManagedDeviceable)
+                }
             }
             m.SetManagedDevices(res)
         }
@@ -1268,7 +1366,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]DirectoryObjectable, len(val))
             for i, v := range val {
-                res[i] = v.(DirectoryObjectable)
+                if v != nil {
+                    res[i] = v.(DirectoryObjectable)
+                }
             }
             m.SetMemberOf(res)
         }
@@ -1282,7 +1382,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]Messageable, len(val))
             for i, v := range val {
-                res[i] = v.(Messageable)
+                if v != nil {
+                    res[i] = v.(Messageable)
+                }
             }
             m.SetMessages(res)
         }
@@ -1316,7 +1418,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]OAuth2PermissionGrantable, len(val))
             for i, v := range val {
-                res[i] = v.(OAuth2PermissionGrantable)
+                if v != nil {
+                    res[i] = v.(OAuth2PermissionGrantable)
+                }
             }
             m.SetOauth2PermissionGrants(res)
         }
@@ -1350,7 +1454,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]OnlineMeetingable, len(val))
             for i, v := range val {
-                res[i] = v.(OnlineMeetingable)
+                if v != nil {
+                    res[i] = v.(OnlineMeetingable)
+                }
             }
             m.SetOnlineMeetings(res)
         }
@@ -1414,7 +1520,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]OnPremisesProvisioningErrorable, len(val))
             for i, v := range val {
-                res[i] = v.(OnPremisesProvisioningErrorable)
+                if v != nil {
+                    res[i] = v.(OnPremisesProvisioningErrorable)
+                }
             }
             m.SetOnPremisesProvisioningErrors(res)
         }
@@ -1468,7 +1576,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetOtherMails(res)
         }
@@ -1492,7 +1602,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]DirectoryObjectable, len(val))
             for i, v := range val {
-                res[i] = v.(DirectoryObjectable)
+                if v != nil {
+                    res[i] = v.(DirectoryObjectable)
+                }
             }
             m.SetOwnedDevices(res)
         }
@@ -1506,7 +1618,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]DirectoryObjectable, len(val))
             for i, v := range val {
-                res[i] = v.(DirectoryObjectable)
+                if v != nil {
+                    res[i] = v.(DirectoryObjectable)
+                }
             }
             m.SetOwnedObjects(res)
         }
@@ -1540,7 +1654,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetPastProjects(res)
         }
@@ -1554,7 +1670,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]Personable, len(val))
             for i, v := range val {
-                res[i] = v.(Personable)
+                if v != nil {
+                    res[i] = v.(Personable)
+                }
             }
             m.SetPeople(res)
         }
@@ -1578,7 +1696,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]ProfilePhotoable, len(val))
             for i, v := range val {
-                res[i] = v.(ProfilePhotoable)
+                if v != nil {
+                    res[i] = v.(ProfilePhotoable)
+                }
             }
             m.SetPhotos(res)
         }
@@ -1644,6 +1764,16 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         }
         return nil
     }
+    res["print"] = func (n i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
+        val, err := n.GetObjectValue(CreateUserPrintFromDiscriminatorValue)
+        if err != nil {
+            return err
+        }
+        if val != nil {
+            m.SetPrint(val.(UserPrintable))
+        }
+        return nil
+    }
     res["provisionedPlans"] = func (n i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
         val, err := n.GetCollectionOfObjectValues(CreateProvisionedPlanFromDiscriminatorValue)
         if err != nil {
@@ -1652,7 +1782,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]ProvisionedPlanable, len(val))
             for i, v := range val {
-                res[i] = v.(ProvisionedPlanable)
+                if v != nil {
+                    res[i] = v.(ProvisionedPlanable)
+                }
             }
             m.SetProvisionedPlans(res)
         }
@@ -1666,7 +1798,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetProxyAddresses(res)
         }
@@ -1680,7 +1814,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]DirectoryObjectable, len(val))
             for i, v := range val {
-                res[i] = v.(DirectoryObjectable)
+                if v != nil {
+                    res[i] = v.(DirectoryObjectable)
+                }
             }
             m.SetRegisteredDevices(res)
         }
@@ -1694,7 +1830,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetResponsibilities(res)
         }
@@ -1708,7 +1846,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetSchools(res)
         }
@@ -1722,7 +1862,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]ScopedRoleMembershipable, len(val))
             for i, v := range val {
-                res[i] = v.(ScopedRoleMembershipable)
+                if v != nil {
+                    res[i] = v.(ScopedRoleMembershipable)
+                }
             }
             m.SetScopedRoleMemberOf(res)
         }
@@ -1735,6 +1877,22 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         }
         if val != nil {
             m.SetSecurityIdentifier(val)
+        }
+        return nil
+    }
+    res["serviceProvisioningErrors"] = func (n i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
+        val, err := n.GetCollectionOfObjectValues(CreateServiceProvisioningErrorFromDiscriminatorValue)
+        if err != nil {
+            return err
+        }
+        if val != nil {
+            res := make([]ServiceProvisioningErrorable, len(val))
+            for i, v := range val {
+                if v != nil {
+                    res[i] = v.(ServiceProvisioningErrorable)
+                }
+            }
+            m.SetServiceProvisioningErrors(res)
         }
         return nil
     }
@@ -1786,7 +1944,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetSkills(res)
         }
@@ -1850,7 +2010,9 @@ func (m *User) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]DirectoryObjectable, len(val))
             for i, v := range val {
-                res[i] = v.(DirectoryObjectable)
+                if v != nil {
+                    res[i] = v.(DirectoryObjectable)
+                }
             }
             m.SetTransitiveMemberOf(res)
         }
@@ -2152,7 +2314,7 @@ func (m *User) GetMessages()([]Messageable) {
     }
     return nil
 }
-// GetMobilePhone gets the mobilePhone property value. The primary cellular telephone number for the user. Read-only for users synced from on-premises directory. Maximum length is 64 characters. Returned by default. Supports $filter (eq, ne, not, ge, le, in, startsWith, and eq on null values).
+// GetMobilePhone gets the mobilePhone property value. The primary cellular telephone number for the user. Read-only for users synced from on-premises directory. Maximum length is 64 characters. Returned by default. Supports $filter (eq, ne, not, ge, le, in, startsWith, and eq on null values) and $search.
 func (m *User) GetMobilePhone()(*string) {
     val, err := m.GetBackingStore().Get("mobilePhone")
     if err != nil {
@@ -2207,7 +2369,7 @@ func (m *User) GetOnenote()(Onenoteable) {
     }
     return nil
 }
-// GetOnlineMeetings gets the onlineMeetings property value. The onlineMeetings property
+// GetOnlineMeetings gets the onlineMeetings property value. Information about a meeting, including the URL used to join a meeting, the attendees' list, and the description.
 func (m *User) GetOnlineMeetings()([]OnlineMeetingable) {
     val, err := m.GetBackingStore().Get("onlineMeetings")
     if err != nil {
@@ -2361,7 +2523,7 @@ func (m *User) GetOwnedDevices()([]DirectoryObjectable) {
     }
     return nil
 }
-// GetOwnedObjects gets the ownedObjects property value. Directory objects that are owned by the user. Read-only. Nullable. Supports $expand.
+// GetOwnedObjects gets the ownedObjects property value. Directory objects that are owned by the user. Read-only. Nullable. Supports $expand, $select nested in $expand, and $filter (/$count eq 0, /$count ne 0, /$count eq 1, /$count ne 1).
 func (m *User) GetOwnedObjects()([]DirectoryObjectable) {
     val, err := m.GetBackingStore().Get("ownedObjects")
     if err != nil {
@@ -2383,7 +2545,7 @@ func (m *User) GetPasswordPolicies()(*string) {
     }
     return nil
 }
-// GetPasswordProfile gets the passwordProfile property value. Specifies the password profile for the user. The profile contains the user’s password. This property is required when a user is created. The password in the profile must satisfy minimum requirements as specified by the passwordPolicies property. By default, a strong password is required. Returned only on $select. Supports $filter (eq, ne, not, in, and eq on null values).
+// GetPasswordProfile gets the passwordProfile property value. Specifies the password profile for the user. The profile contains the user's password. This property is required when a user is created. The password in the profile must satisfy minimum requirements as specified by the passwordPolicies property. By default, a strong password is required. Returned only on $select. Supports $filter (eq, ne, not, in, and eq on null values).
 func (m *User) GetPasswordProfile()(PasswordProfileable) {
     val, err := m.GetBackingStore().Get("passwordProfile")
     if err != nil {
@@ -2504,6 +2666,17 @@ func (m *User) GetPresence()(Presenceable) {
     }
     return nil
 }
+// GetPrint gets the print property value. The print property
+func (m *User) GetPrint()(UserPrintable) {
+    val, err := m.GetBackingStore().Get("print")
+    if err != nil {
+        panic(err)
+    }
+    if val != nil {
+        return val.(UserPrintable)
+    }
+    return nil
+}
 // GetProvisionedPlans gets the provisionedPlans property value. The plans that are provisioned for the user. Read-only. Not nullable. Returned only on $select. Supports $filter (eq, not, ge, le).
 func (m *User) GetProvisionedPlans()([]ProvisionedPlanable) {
     val, err := m.GetBackingStore().Get("provisionedPlans")
@@ -2578,6 +2751,17 @@ func (m *User) GetSecurityIdentifier()(*string) {
     }
     if val != nil {
         return val.(*string)
+    }
+    return nil
+}
+// GetServiceProvisioningErrors gets the serviceProvisioningErrors property value. The serviceProvisioningErrors property
+func (m *User) GetServiceProvisioningErrors()([]ServiceProvisioningErrorable) {
+    val, err := m.GetBackingStore().Get("serviceProvisioningErrors")
+    if err != nil {
+        panic(err)
+    }
+    if val != nil {
+        return val.([]ServiceProvisioningErrorable)
     }
     return nil
 }
@@ -2669,7 +2853,7 @@ func (m *User) GetSurname()(*string) {
     }
     return nil
 }
-// GetTeamwork gets the teamwork property value. The teamwork property
+// GetTeamwork gets the teamwork property value. A container for Microsoft Teams features available for the user. Read-only. Nullable.
 func (m *User) GetTeamwork()(UserTeamworkable) {
     val, err := m.GetBackingStore().Get("teamwork")
     if err != nil {
@@ -2756,7 +2940,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetActivities() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetActivities()))
         for i, v := range m.GetActivities() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("activities", cast)
         if err != nil {
@@ -2772,7 +2958,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetAgreementAcceptances() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetAgreementAcceptances()))
         for i, v := range m.GetAgreementAcceptances() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("agreementAcceptances", cast)
         if err != nil {
@@ -2782,7 +2970,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetAppRoleAssignments() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetAppRoleAssignments()))
         for i, v := range m.GetAppRoleAssignments() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("appRoleAssignments", cast)
         if err != nil {
@@ -2792,7 +2982,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetAssignedLicenses() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetAssignedLicenses()))
         for i, v := range m.GetAssignedLicenses() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("assignedLicenses", cast)
         if err != nil {
@@ -2802,7 +2994,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetAssignedPlans() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetAssignedPlans()))
         for i, v := range m.GetAssignedPlans() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("assignedPlans", cast)
         if err != nil {
@@ -2842,7 +3036,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetCalendarGroups() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetCalendarGroups()))
         for i, v := range m.GetCalendarGroups() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("calendarGroups", cast)
         if err != nil {
@@ -2852,7 +3048,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetCalendars() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetCalendars()))
         for i, v := range m.GetCalendars() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("calendars", cast)
         if err != nil {
@@ -2862,7 +3060,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetCalendarView() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetCalendarView()))
         for i, v := range m.GetCalendarView() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("calendarView", cast)
         if err != nil {
@@ -2872,7 +3072,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetChats() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetChats()))
         for i, v := range m.GetChats() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("chats", cast)
         if err != nil {
@@ -2900,7 +3102,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetContactFolders() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetContactFolders()))
         for i, v := range m.GetContactFolders() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("contactFolders", cast)
         if err != nil {
@@ -2910,7 +3114,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetContacts() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetContacts()))
         for i, v := range m.GetContacts() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("contacts", cast)
         if err != nil {
@@ -2932,7 +3138,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetCreatedObjects() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetCreatedObjects()))
         for i, v := range m.GetCreatedObjects() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("createdObjects", cast)
         if err != nil {
@@ -2941,6 +3149,12 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     }
     {
         err = writer.WriteStringValue("creationType", m.GetCreationType())
+        if err != nil {
+            return err
+        }
+    }
+    {
+        err = writer.WriteObjectValue("customSecurityAttributes", m.GetCustomSecurityAttributes())
         if err != nil {
             return err
         }
@@ -2960,7 +3174,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetDeviceManagementTroubleshootingEvents() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetDeviceManagementTroubleshootingEvents()))
         for i, v := range m.GetDeviceManagementTroubleshootingEvents() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("deviceManagementTroubleshootingEvents", cast)
         if err != nil {
@@ -2970,7 +3186,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetDirectReports() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetDirectReports()))
         for i, v := range m.GetDirectReports() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("directReports", cast)
         if err != nil {
@@ -2992,9 +3210,17 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetDrives() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetDrives()))
         for i, v := range m.GetDrives() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("drives", cast)
+        if err != nil {
+            return err
+        }
+    }
+    {
+        err = writer.WriteObjectValue("employeeExperience", m.GetEmployeeExperience())
         if err != nil {
             return err
         }
@@ -3032,7 +3258,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetEvents() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetEvents()))
         for i, v := range m.GetEvents() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("events", cast)
         if err != nil {
@@ -3042,7 +3270,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetExtensions() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetExtensions()))
         for i, v := range m.GetExtensions() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("extensions", cast)
         if err != nil {
@@ -3070,7 +3300,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetFollowedSites() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetFollowedSites()))
         for i, v := range m.GetFollowedSites() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("followedSites", cast)
         if err != nil {
@@ -3092,7 +3324,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetIdentities() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetIdentities()))
         for i, v := range m.GetIdentities() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("identities", cast)
         if err != nil {
@@ -3138,7 +3372,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetJoinedTeams() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetJoinedTeams()))
         for i, v := range m.GetJoinedTeams() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("joinedTeams", cast)
         if err != nil {
@@ -3160,7 +3396,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetLicenseAssignmentStates() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetLicenseAssignmentStates()))
         for i, v := range m.GetLicenseAssignmentStates() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("licenseAssignmentStates", cast)
         if err != nil {
@@ -3170,7 +3408,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetLicenseDetails() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetLicenseDetails()))
         for i, v := range m.GetLicenseDetails() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("licenseDetails", cast)
         if err != nil {
@@ -3192,7 +3432,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetMailFolders() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetMailFolders()))
         for i, v := range m.GetMailFolders() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("mailFolders", cast)
         if err != nil {
@@ -3208,7 +3450,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetManagedAppRegistrations() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetManagedAppRegistrations()))
         for i, v := range m.GetManagedAppRegistrations() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("managedAppRegistrations", cast)
         if err != nil {
@@ -3218,7 +3462,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetManagedDevices() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetManagedDevices()))
         for i, v := range m.GetManagedDevices() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("managedDevices", cast)
         if err != nil {
@@ -3234,7 +3480,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetMemberOf() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetMemberOf()))
         for i, v := range m.GetMemberOf() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("memberOf", cast)
         if err != nil {
@@ -3244,7 +3492,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetMessages() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetMessages()))
         for i, v := range m.GetMessages() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("messages", cast)
         if err != nil {
@@ -3266,7 +3516,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetOauth2PermissionGrants() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetOauth2PermissionGrants()))
         for i, v := range m.GetOauth2PermissionGrants() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("oauth2PermissionGrants", cast)
         if err != nil {
@@ -3288,7 +3540,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetOnlineMeetings() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetOnlineMeetings()))
         for i, v := range m.GetOnlineMeetings() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("onlineMeetings", cast)
         if err != nil {
@@ -3328,7 +3582,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetOnPremisesProvisioningErrors() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetOnPremisesProvisioningErrors()))
         for i, v := range m.GetOnPremisesProvisioningErrors() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("onPremisesProvisioningErrors", cast)
         if err != nil {
@@ -3374,7 +3630,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetOwnedDevices() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetOwnedDevices()))
         for i, v := range m.GetOwnedDevices() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("ownedDevices", cast)
         if err != nil {
@@ -3384,7 +3642,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetOwnedObjects() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetOwnedObjects()))
         for i, v := range m.GetOwnedObjects() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("ownedObjects", cast)
         if err != nil {
@@ -3412,7 +3672,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetPeople() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetPeople()))
         for i, v := range m.GetPeople() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("people", cast)
         if err != nil {
@@ -3428,7 +3690,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetPhotos() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetPhotos()))
         for i, v := range m.GetPhotos() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("photos", cast)
         if err != nil {
@@ -3471,10 +3735,18 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
             return err
         }
     }
+    {
+        err = writer.WriteObjectValue("print", m.GetPrint())
+        if err != nil {
+            return err
+        }
+    }
     if m.GetProvisionedPlans() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetProvisionedPlans()))
         for i, v := range m.GetProvisionedPlans() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("provisionedPlans", cast)
         if err != nil {
@@ -3490,7 +3762,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetRegisteredDevices() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetRegisteredDevices()))
         for i, v := range m.GetRegisteredDevices() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("registeredDevices", cast)
         if err != nil {
@@ -3512,7 +3786,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetScopedRoleMemberOf() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetScopedRoleMemberOf()))
         for i, v := range m.GetScopedRoleMemberOf() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("scopedRoleMemberOf", cast)
         if err != nil {
@@ -3521,6 +3797,18 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     }
     {
         err = writer.WriteStringValue("securityIdentifier", m.GetSecurityIdentifier())
+        if err != nil {
+            return err
+        }
+    }
+    if m.GetServiceProvisioningErrors() != nil {
+        cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetServiceProvisioningErrors()))
+        for i, v := range m.GetServiceProvisioningErrors() {
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
+        }
+        err = writer.WriteCollectionOfObjectValues("serviceProvisioningErrors", cast)
         if err != nil {
             return err
         }
@@ -3588,7 +3876,9 @@ func (m *User) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetTransitiveMemberOf() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetTransitiveMemberOf()))
         for i, v := range m.GetTransitiveMemberOf() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("transitiveMemberOf", cast)
         if err != nil {
@@ -3797,6 +4087,13 @@ func (m *User) SetCreationType(value *string)() {
         panic(err)
     }
 }
+// SetCustomSecurityAttributes sets the customSecurityAttributes property value. An open complex type that holds the value of a custom security attribute that is assigned to a directory object. Nullable. Returned only on $select. Supports $filter (eq, ne, not, startsWith). Filter value is case sensitive.
+func (m *User) SetCustomSecurityAttributes(value CustomSecurityAttributeValueable)() {
+    err := m.GetBackingStore().Set("customSecurityAttributes", value)
+    if err != nil {
+        panic(err)
+    }
+}
 // SetDepartment sets the department property value. The name for the department in which the user works. Maximum length is 64 characters. Returned only on $select. Supports $filter (eq, ne, not , ge, le, in, and eq on null values).
 func (m *User) SetDepartment(value *string)() {
     err := m.GetBackingStore().Set("department", value)
@@ -3842,6 +4139,13 @@ func (m *User) SetDrive(value Driveable)() {
 // SetDrives sets the drives property value. A collection of drives available for this user. Read-only.
 func (m *User) SetDrives(value []Driveable)() {
     err := m.GetBackingStore().Set("drives", value)
+    if err != nil {
+        panic(err)
+    }
+}
+// SetEmployeeExperience sets the employeeExperience property value. The employeeExperience property
+func (m *User) SetEmployeeExperience(value EmployeeExperienceUserable)() {
+    err := m.GetBackingStore().Set("employeeExperience", value)
     if err != nil {
         panic(err)
     }
@@ -4084,7 +4388,7 @@ func (m *User) SetMessages(value []Messageable)() {
         panic(err)
     }
 }
-// SetMobilePhone sets the mobilePhone property value. The primary cellular telephone number for the user. Read-only for users synced from on-premises directory. Maximum length is 64 characters. Returned by default. Supports $filter (eq, ne, not, ge, le, in, startsWith, and eq on null values).
+// SetMobilePhone sets the mobilePhone property value. The primary cellular telephone number for the user. Read-only for users synced from on-premises directory. Maximum length is 64 characters. Returned by default. Supports $filter (eq, ne, not, ge, le, in, startsWith, and eq on null values) and $search.
 func (m *User) SetMobilePhone(value *string)() {
     err := m.GetBackingStore().Set("mobilePhone", value)
     if err != nil {
@@ -4119,7 +4423,7 @@ func (m *User) SetOnenote(value Onenoteable)() {
         panic(err)
     }
 }
-// SetOnlineMeetings sets the onlineMeetings property value. The onlineMeetings property
+// SetOnlineMeetings sets the onlineMeetings property value. Information about a meeting, including the URL used to join a meeting, the attendees' list, and the description.
 func (m *User) SetOnlineMeetings(value []OnlineMeetingable)() {
     err := m.GetBackingStore().Set("onlineMeetings", value)
     if err != nil {
@@ -4217,7 +4521,7 @@ func (m *User) SetOwnedDevices(value []DirectoryObjectable)() {
         panic(err)
     }
 }
-// SetOwnedObjects sets the ownedObjects property value. Directory objects that are owned by the user. Read-only. Nullable. Supports $expand.
+// SetOwnedObjects sets the ownedObjects property value. Directory objects that are owned by the user. Read-only. Nullable. Supports $expand, $select nested in $expand, and $filter (/$count eq 0, /$count ne 0, /$count eq 1, /$count ne 1).
 func (m *User) SetOwnedObjects(value []DirectoryObjectable)() {
     err := m.GetBackingStore().Set("ownedObjects", value)
     if err != nil {
@@ -4231,7 +4535,7 @@ func (m *User) SetPasswordPolicies(value *string)() {
         panic(err)
     }
 }
-// SetPasswordProfile sets the passwordProfile property value. Specifies the password profile for the user. The profile contains the user’s password. This property is required when a user is created. The password in the profile must satisfy minimum requirements as specified by the passwordPolicies property. By default, a strong password is required. Returned only on $select. Supports $filter (eq, ne, not, in, and eq on null values).
+// SetPasswordProfile sets the passwordProfile property value. Specifies the password profile for the user. The profile contains the user's password. This property is required when a user is created. The password in the profile must satisfy minimum requirements as specified by the passwordPolicies property. By default, a strong password is required. Returned only on $select. Supports $filter (eq, ne, not, in, and eq on null values).
 func (m *User) SetPasswordProfile(value PasswordProfileable)() {
     err := m.GetBackingStore().Set("passwordProfile", value)
     if err != nil {
@@ -4308,6 +4612,13 @@ func (m *User) SetPresence(value Presenceable)() {
         panic(err)
     }
 }
+// SetPrint sets the print property value. The print property
+func (m *User) SetPrint(value UserPrintable)() {
+    err := m.GetBackingStore().Set("print", value)
+    if err != nil {
+        panic(err)
+    }
+}
 // SetProvisionedPlans sets the provisionedPlans property value. The plans that are provisioned for the user. Read-only. Not nullable. Returned only on $select. Supports $filter (eq, not, ge, le).
 func (m *User) SetProvisionedPlans(value []ProvisionedPlanable)() {
     err := m.GetBackingStore().Set("provisionedPlans", value)
@@ -4353,6 +4664,13 @@ func (m *User) SetScopedRoleMemberOf(value []ScopedRoleMembershipable)() {
 // SetSecurityIdentifier sets the securityIdentifier property value. Security identifier (SID) of the user, used in Windows scenarios. Read-only. Returned by default. Supports $select and $filter (eq, not, ge, le, startsWith).
 func (m *User) SetSecurityIdentifier(value *string)() {
     err := m.GetBackingStore().Set("securityIdentifier", value)
+    if err != nil {
+        panic(err)
+    }
+}
+// SetServiceProvisioningErrors sets the serviceProvisioningErrors property value. The serviceProvisioningErrors property
+func (m *User) SetServiceProvisioningErrors(value []ServiceProvisioningErrorable)() {
+    err := m.GetBackingStore().Set("serviceProvisioningErrors", value)
     if err != nil {
         panic(err)
     }
@@ -4413,7 +4731,7 @@ func (m *User) SetSurname(value *string)() {
         panic(err)
     }
 }
-// SetTeamwork sets the teamwork property value. The teamwork property
+// SetTeamwork sets the teamwork property value. A container for Microsoft Teams features available for the user. Read-only. Nullable.
 func (m *User) SetTeamwork(value UserTeamworkable)() {
     err := m.GetBackingStore().Set("teamwork", value)
     if err != nil {
@@ -4485,6 +4803,7 @@ type Userable interface {
     GetCreatedDateTime()(*i336074805fc853987abe6f7fe3ad97a6a6f3077a16391fec744f671a015fbd7e.Time)
     GetCreatedObjects()([]DirectoryObjectable)
     GetCreationType()(*string)
+    GetCustomSecurityAttributes()(CustomSecurityAttributeValueable)
     GetDepartment()(*string)
     GetDeviceEnrollmentLimit()(*int32)
     GetDeviceManagementTroubleshootingEvents()([]DeviceManagementTroubleshootingEventable)
@@ -4492,6 +4811,7 @@ type Userable interface {
     GetDisplayName()(*string)
     GetDrive()(Driveable)
     GetDrives()([]Driveable)
+    GetEmployeeExperience()(EmployeeExperienceUserable)
     GetEmployeeHireDate()(*i336074805fc853987abe6f7fe3ad97a6a6f3077a16391fec744f671a015fbd7e.Time)
     GetEmployeeId()(*string)
     GetEmployeeLeaveDateTime()(*i336074805fc853987abe6f7fe3ad97a6a6f3077a16391fec744f671a015fbd7e.Time)
@@ -4558,6 +4878,7 @@ type Userable interface {
     GetPreferredLanguage()(*string)
     GetPreferredName()(*string)
     GetPresence()(Presenceable)
+    GetPrint()(UserPrintable)
     GetProvisionedPlans()([]ProvisionedPlanable)
     GetProxyAddresses()([]string)
     GetRegisteredDevices()([]DirectoryObjectable)
@@ -4565,6 +4886,7 @@ type Userable interface {
     GetSchools()([]string)
     GetScopedRoleMemberOf()([]ScopedRoleMembershipable)
     GetSecurityIdentifier()(*string)
+    GetServiceProvisioningErrors()([]ServiceProvisioningErrorable)
     GetSettings()(UserSettingsable)
     GetShowInAddressList()(*bool)
     GetSignInActivity()(SignInActivityable)
@@ -4605,6 +4927,7 @@ type Userable interface {
     SetCreatedDateTime(value *i336074805fc853987abe6f7fe3ad97a6a6f3077a16391fec744f671a015fbd7e.Time)()
     SetCreatedObjects(value []DirectoryObjectable)()
     SetCreationType(value *string)()
+    SetCustomSecurityAttributes(value CustomSecurityAttributeValueable)()
     SetDepartment(value *string)()
     SetDeviceEnrollmentLimit(value *int32)()
     SetDeviceManagementTroubleshootingEvents(value []DeviceManagementTroubleshootingEventable)()
@@ -4612,6 +4935,7 @@ type Userable interface {
     SetDisplayName(value *string)()
     SetDrive(value Driveable)()
     SetDrives(value []Driveable)()
+    SetEmployeeExperience(value EmployeeExperienceUserable)()
     SetEmployeeHireDate(value *i336074805fc853987abe6f7fe3ad97a6a6f3077a16391fec744f671a015fbd7e.Time)()
     SetEmployeeId(value *string)()
     SetEmployeeLeaveDateTime(value *i336074805fc853987abe6f7fe3ad97a6a6f3077a16391fec744f671a015fbd7e.Time)()
@@ -4678,6 +5002,7 @@ type Userable interface {
     SetPreferredLanguage(value *string)()
     SetPreferredName(value *string)()
     SetPresence(value Presenceable)()
+    SetPrint(value UserPrintable)()
     SetProvisionedPlans(value []ProvisionedPlanable)()
     SetProxyAddresses(value []string)()
     SetRegisteredDevices(value []DirectoryObjectable)()
@@ -4685,6 +5010,7 @@ type Userable interface {
     SetSchools(value []string)()
     SetScopedRoleMemberOf(value []ScopedRoleMembershipable)()
     SetSecurityIdentifier(value *string)()
+    SetServiceProvisioningErrors(value []ServiceProvisioningErrorable)()
     SetSettings(value UserSettingsable)()
     SetShowInAddressList(value *bool)()
     SetSignInActivity(value SignInActivityable)()

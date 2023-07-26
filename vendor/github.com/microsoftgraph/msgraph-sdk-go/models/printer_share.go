@@ -87,7 +87,9 @@ func (m *PrinterShare) GetFieldDeserializers()(map[string]func(i878a80d2330e89d2
         if val != nil {
             res := make([]Groupable, len(val))
             for i, v := range val {
-                res[i] = v.(Groupable)
+                if v != nil {
+                    res[i] = v.(Groupable)
+                }
             }
             m.SetAllowedGroups(res)
         }
@@ -101,7 +103,9 @@ func (m *PrinterShare) GetFieldDeserializers()(map[string]func(i878a80d2330e89d2
         if val != nil {
             res := make([]Userable, len(val))
             for i, v := range val {
-                res[i] = v.(Userable)
+                if v != nil {
+                    res[i] = v.(Userable)
+                }
             }
             m.SetAllowedUsers(res)
         }
@@ -127,6 +131,16 @@ func (m *PrinterShare) GetFieldDeserializers()(map[string]func(i878a80d2330e89d2
         }
         return nil
     }
+    res["viewPoint"] = func (n i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
+        val, err := n.GetObjectValue(CreatePrinterShareViewpointFromDiscriminatorValue)
+        if err != nil {
+            return err
+        }
+        if val != nil {
+            m.SetViewPoint(val.(PrinterShareViewpointable))
+        }
+        return nil
+    }
     return res
 }
 // GetPrinter gets the printer property value. The printer that this printer share is related to.
@@ -137,6 +151,17 @@ func (m *PrinterShare) GetPrinter()(Printerable) {
     }
     if val != nil {
         return val.(Printerable)
+    }
+    return nil
+}
+// GetViewPoint gets the viewPoint property value. Additional data for a printer share as viewed by the signed-in user.
+func (m *PrinterShare) GetViewPoint()(PrinterShareViewpointable) {
+    val, err := m.GetBackingStore().Get("viewPoint")
+    if err != nil {
+        panic(err)
+    }
+    if val != nil {
+        return val.(PrinterShareViewpointable)
     }
     return nil
 }
@@ -155,7 +180,9 @@ func (m *PrinterShare) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e
     if m.GetAllowedGroups() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetAllowedGroups()))
         for i, v := range m.GetAllowedGroups() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("allowedGroups", cast)
         if err != nil {
@@ -165,7 +192,9 @@ func (m *PrinterShare) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e
     if m.GetAllowedUsers() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetAllowedUsers()))
         for i, v := range m.GetAllowedUsers() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("allowedUsers", cast)
         if err != nil {
@@ -180,6 +209,12 @@ func (m *PrinterShare) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e
     }
     {
         err = writer.WriteObjectValue("printer", m.GetPrinter())
+        if err != nil {
+            return err
+        }
+    }
+    {
+        err = writer.WriteObjectValue("viewPoint", m.GetViewPoint())
         if err != nil {
             return err
         }
@@ -221,6 +256,13 @@ func (m *PrinterShare) SetPrinter(value Printerable)() {
         panic(err)
     }
 }
+// SetViewPoint sets the viewPoint property value. Additional data for a printer share as viewed by the signed-in user.
+func (m *PrinterShare) SetViewPoint(value PrinterShareViewpointable)() {
+    err := m.GetBackingStore().Set("viewPoint", value)
+    if err != nil {
+        panic(err)
+    }
+}
 // PrinterShareable 
 type PrinterShareable interface {
     i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable
@@ -230,9 +272,11 @@ type PrinterShareable interface {
     GetAllowedUsers()([]Userable)
     GetCreatedDateTime()(*i336074805fc853987abe6f7fe3ad97a6a6f3077a16391fec744f671a015fbd7e.Time)
     GetPrinter()(Printerable)
+    GetViewPoint()(PrinterShareViewpointable)
     SetAllowAllUsers(value *bool)()
     SetAllowedGroups(value []Groupable)()
     SetAllowedUsers(value []Userable)()
     SetCreatedDateTime(value *i336074805fc853987abe6f7fe3ad97a6a6f3077a16391fec744f671a015fbd7e.Time)()
     SetPrinter(value Printerable)()
+    SetViewPoint(value PrinterShareViewpointable)()
 }

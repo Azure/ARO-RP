@@ -4,11 +4,11 @@ import (
     i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91 "github.com/microsoft/kiota-abstractions-go/serialization"
 )
 
-// AndroidManagedAppProtection 
+// AndroidManagedAppProtection policy used to configure detailed management settings targeted to specific security groups and for a specified set of apps on an Android device
 type AndroidManagedAppProtection struct {
     TargetedManagedAppProtection
 }
-// NewAndroidManagedAppProtection instantiates a new AndroidManagedAppProtection and sets the default values.
+// NewAndroidManagedAppProtection instantiates a new androidManagedAppProtection and sets the default values.
 func NewAndroidManagedAppProtection()(*AndroidManagedAppProtection) {
     m := &AndroidManagedAppProtection{
         TargetedManagedAppProtection: *NewTargetedManagedAppProtection(),
@@ -109,7 +109,9 @@ func (m *AndroidManagedAppProtection) GetFieldDeserializers()(map[string]func(i8
         if val != nil {
             res := make([]ManagedMobileAppable, len(val))
             for i, v := range val {
-                res[i] = v.(ManagedMobileAppable)
+                if v != nil {
+                    res[i] = v.(ManagedMobileAppable)
+                }
             }
             m.SetApps(res)
         }
@@ -249,7 +251,9 @@ func (m *AndroidManagedAppProtection) Serialize(writer i878a80d2330e89d26896388a
     if m.GetApps() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetApps()))
         for i, v := range m.GetApps() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("apps", cast)
         if err != nil {

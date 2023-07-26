@@ -9,7 +9,7 @@ import (
 type ExternalActivityCollectionResponse struct {
     iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.BaseCollectionPaginationCountResponse
 }
-// NewExternalActivityCollectionResponse instantiates a new ExternalActivityCollectionResponse and sets the default values.
+// NewExternalActivityCollectionResponse instantiates a new externalActivityCollectionResponse and sets the default values.
 func NewExternalActivityCollectionResponse()(*ExternalActivityCollectionResponse) {
     m := &ExternalActivityCollectionResponse{
         BaseCollectionPaginationCountResponse: *iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.NewBaseCollectionPaginationCountResponse(),
@@ -31,7 +31,9 @@ func (m *ExternalActivityCollectionResponse) GetFieldDeserializers()(map[string]
         if val != nil {
             res := make([]ExternalActivityable, len(val))
             for i, v := range val {
-                res[i] = v.(ExternalActivityable)
+                if v != nil {
+                    res[i] = v.(ExternalActivityable)
+                }
             }
             m.SetValue(res)
         }
@@ -59,7 +61,9 @@ func (m *ExternalActivityCollectionResponse) Serialize(writer i878a80d2330e89d26
     if m.GetValue() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetValue()))
         for i, v := range m.GetValue() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("value", cast)
         if err != nil {

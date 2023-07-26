@@ -8,7 +8,7 @@ import (
 type SwapShiftsChangeRequestCollectionResponse struct {
     BaseCollectionPaginationCountResponse
 }
-// NewSwapShiftsChangeRequestCollectionResponse instantiates a new SwapShiftsChangeRequestCollectionResponse and sets the default values.
+// NewSwapShiftsChangeRequestCollectionResponse instantiates a new swapShiftsChangeRequestCollectionResponse and sets the default values.
 func NewSwapShiftsChangeRequestCollectionResponse()(*SwapShiftsChangeRequestCollectionResponse) {
     m := &SwapShiftsChangeRequestCollectionResponse{
         BaseCollectionPaginationCountResponse: *NewBaseCollectionPaginationCountResponse(),
@@ -30,7 +30,9 @@ func (m *SwapShiftsChangeRequestCollectionResponse) GetFieldDeserializers()(map[
         if val != nil {
             res := make([]SwapShiftsChangeRequestable, len(val))
             for i, v := range val {
-                res[i] = v.(SwapShiftsChangeRequestable)
+                if v != nil {
+                    res[i] = v.(SwapShiftsChangeRequestable)
+                }
             }
             m.SetValue(res)
         }
@@ -58,7 +60,9 @@ func (m *SwapShiftsChangeRequestCollectionResponse) Serialize(writer i878a80d233
     if m.GetValue() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetValue()))
         for i, v := range m.GetValue() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("value", cast)
         if err != nil {

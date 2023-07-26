@@ -1,13 +1,13 @@
-//go:build !linux || !cgo
-// +build !linux !cgo
+//go:build !(linux || freebsd) || !cgo
+// +build !linux,!freebsd !cgo
 
 package rootless
 
 import (
+	"errors"
 	"os"
 
 	"github.com/containers/storage/pkg/idtools"
-	"github.com/pkg/errors"
 )
 
 // IsRootless returns whether the user is rootless
@@ -57,7 +57,7 @@ func ConfigurationMatches() (bool, error) {
 }
 
 // GetConfiguredMappings returns the additional IDs configured for the current user.
-func GetConfiguredMappings() ([]idtools.IDMap, []idtools.IDMap, error) {
+func GetConfiguredMappings(quiet bool) ([]idtools.IDMap, []idtools.IDMap, error) {
 	return nil, nil, errors.New("this function is not supported on this os")
 }
 

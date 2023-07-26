@@ -9,7 +9,7 @@ import (
 type IdentityCollectionResponse struct {
     iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.BaseCollectionPaginationCountResponse
 }
-// NewIdentityCollectionResponse instantiates a new IdentityCollectionResponse and sets the default values.
+// NewIdentityCollectionResponse instantiates a new identityCollectionResponse and sets the default values.
 func NewIdentityCollectionResponse()(*IdentityCollectionResponse) {
     m := &IdentityCollectionResponse{
         BaseCollectionPaginationCountResponse: *iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.NewBaseCollectionPaginationCountResponse(),
@@ -31,7 +31,9 @@ func (m *IdentityCollectionResponse) GetFieldDeserializers()(map[string]func(i87
         if val != nil {
             res := make([]Identityable, len(val))
             for i, v := range val {
-                res[i] = v.(Identityable)
+                if v != nil {
+                    res[i] = v.(Identityable)
+                }
             }
             m.SetValue(res)
         }
@@ -59,7 +61,9 @@ func (m *IdentityCollectionResponse) Serialize(writer i878a80d2330e89d26896388a3
     if m.GetValue() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetValue()))
         for i, v := range m.GetValue() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("value", cast)
         if err != nil {

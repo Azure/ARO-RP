@@ -2,10 +2,11 @@ package bindings
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"errors"
+	"fmt"
+	"io"
 
 	"github.com/containers/podman/v4/pkg/errorhandling"
-	"github.com/pkg/errors"
 )
 
 var (
@@ -14,7 +15,7 @@ var (
 
 func handleError(data []byte, unmarshalErrorInto interface{}) error {
 	if err := json.Unmarshal(data, unmarshalErrorInto); err != nil {
-		return err
+		return fmt.Errorf("unmarshalling error into %#v, data %q: %w", unmarshalErrorInto, string(data), err)
 	}
 	return unmarshalErrorInto.(error)
 }
@@ -28,13 +29,16 @@ func (h APIResponse) Process(unmarshalInto interface{}) error {
 // ProcessWithError drains the response body, and processes the HTTP status code
 // Note: Closing the response.Body is left to the caller
 func (h APIResponse) ProcessWithError(unmarshalInto interface{}, unmarshalErrorInto interface{}) error {
-	data, err := ioutil.ReadAll(h.Response.Body)
+	data, err := io.ReadAll(h.Response.Body)
 	if err != nil {
-		return errors.Wrap(err, "unable to process API response")
+		return fmt.Errorf("unable to process API response: %w", err)
 	}
 	if h.IsSuccess() || h.IsRedirection() {
 		if unmarshalInto != nil {
-			return json.Unmarshal(data, unmarshalInto)
+			if err := json.Unmarshal(data, unmarshalInto); err != nil {
+				return fmt.Errorf("unmarshalling into %#v, data %q: %w", unmarshalInto, string(data), err)
+			}
+			return nil
 		}
 		return nil
 	}

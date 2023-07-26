@@ -59,7 +59,9 @@ func (m *FilterOperand) GetFieldDeserializers()(map[string]func(i878a80d2330e89d
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetValues(res)
         }
@@ -78,7 +80,7 @@ func (m *FilterOperand) GetOdataType()(*string) {
     }
     return nil
 }
-// GetValues gets the values property value. The values property
+// GetValues gets the values property value. Collection of values.
 func (m *FilterOperand) GetValues()([]string) {
     val, err := m.GetBackingStore().Get("values")
     if err != nil {
@@ -129,7 +131,7 @@ func (m *FilterOperand) SetOdataType(value *string)() {
         panic(err)
     }
 }
-// SetValues sets the values property value. The values property
+// SetValues sets the values property value. Collection of values.
 func (m *FilterOperand) SetValues(value []string)() {
     err := m.GetBackingStore().Set("values", value)
     if err != nil {

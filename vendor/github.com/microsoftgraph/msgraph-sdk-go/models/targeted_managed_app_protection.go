@@ -4,11 +4,11 @@ import (
     i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91 "github.com/microsoft/kiota-abstractions-go/serialization"
 )
 
-// TargetedManagedAppProtection 
+// TargetedManagedAppProtection policy used to configure detailed management settings targeted to specific security groups
 type TargetedManagedAppProtection struct {
     ManagedAppProtection
 }
-// NewTargetedManagedAppProtection instantiates a new TargetedManagedAppProtection and sets the default values.
+// NewTargetedManagedAppProtection instantiates a new targetedManagedAppProtection and sets the default values.
 func NewTargetedManagedAppProtection()(*TargetedManagedAppProtection) {
     m := &TargetedManagedAppProtection{
         ManagedAppProtection: *NewManagedAppProtection(),
@@ -63,7 +63,9 @@ func (m *TargetedManagedAppProtection) GetFieldDeserializers()(map[string]func(i
         if val != nil {
             res := make([]TargetedManagedAppPolicyAssignmentable, len(val))
             for i, v := range val {
-                res[i] = v.(TargetedManagedAppPolicyAssignmentable)
+                if v != nil {
+                    res[i] = v.(TargetedManagedAppPolicyAssignmentable)
+                }
             }
             m.SetAssignments(res)
         }
@@ -101,7 +103,9 @@ func (m *TargetedManagedAppProtection) Serialize(writer i878a80d2330e89d26896388
     if m.GetAssignments() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetAssignments()))
         for i, v := range m.GetAssignments() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("assignments", cast)
         if err != nil {

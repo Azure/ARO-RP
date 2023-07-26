@@ -19,6 +19,21 @@ import (
 )
 
 func TestValidateEncryptionAtHost(t *testing.T) {
+	EncryptionAtHostEnabled := func(MasterVMSize api.VMSize, WorkerVMSize api.VMSize) *api.OpenShiftCluster {
+		return &api.OpenShiftCluster{
+			Properties: api.OpenShiftClusterProperties{
+				MasterProfile: api.MasterProfile{
+					EncryptionAtHost: api.EncryptionAtHostEnabled,
+					VMSize:           MasterVMSize,
+				},
+				WorkerProfiles: []api.WorkerProfile{{
+					EncryptionAtHost: api.EncryptionAtHostEnabled,
+					VMSize:           WorkerVMSize,
+				}},
+			},
+		}
+	}
+
 	for _, tt := range []struct {
 		name    string
 		oc      *api.OpenShiftCluster
@@ -30,19 +45,12 @@ func TestValidateEncryptionAtHost(t *testing.T) {
 			oc:   &api.OpenShiftCluster{},
 		},
 		{
+			name: "encryption at host disabled",
+			oc:   &api.OpenShiftCluster{},
+		},
+		{
 			name: "encryption at host enabled with valid VM SKU",
-			oc: &api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					MasterProfile: api.MasterProfile{
-						EncryptionAtHost: api.EncryptionAtHostEnabled,
-						VMSize:           api.VMSizeStandardD8sV3,
-					},
-					WorkerProfiles: []api.WorkerProfile{{
-						EncryptionAtHost: api.EncryptionAtHostEnabled,
-						VMSize:           api.VMSizeStandardD4asV4,
-					}},
-				},
-			},
+			oc:   EncryptionAtHostEnabled(api.VMSizeStandardD8sV3, api.VMSizeStandardD4asV4),
 			mocks: func(env *mock_env.MockInterface) {
 				env.EXPECT().VMSku(string(api.VMSizeStandardD8sV3)).
 					Return(&mgmtcompute.ResourceSku{
@@ -60,18 +68,7 @@ func TestValidateEncryptionAtHost(t *testing.T) {
 		},
 		{
 			name: "encryption at host enabled with unsupported master VM SKU",
-			oc: &api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					MasterProfile: api.MasterProfile{
-						EncryptionAtHost: api.EncryptionAtHostEnabled,
-						VMSize:           api.VMSizeStandardM128ms,
-					},
-					WorkerProfiles: []api.WorkerProfile{{
-						EncryptionAtHost: api.EncryptionAtHostEnabled,
-						VMSize:           api.VMSizeStandardD4asV4,
-					}},
-				},
-			},
+			oc:   EncryptionAtHostEnabled(api.VMSizeStandardM128ms, api.VMSizeStandardD4asV4),
 			mocks: func(env *mock_env.MockInterface) {
 				env.EXPECT().VMSku(string(api.VMSizeStandardM128ms)).
 					Return(&mgmtcompute.ResourceSku{
@@ -83,19 +80,8 @@ func TestValidateEncryptionAtHost(t *testing.T) {
 			wantErr: "400: InvalidParameter: properties.masterProfile.encryptionAtHost: VM SKU 'Standard_M128ms' does not support encryption at host.",
 		},
 		{
-			name: "encryption at host enabled with unsupported worker VM SKU",
-			oc: &api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					MasterProfile: api.MasterProfile{
-						EncryptionAtHost: api.EncryptionAtHostEnabled,
-						VMSize:           api.VMSizeStandardD8sV3,
-					},
-					WorkerProfiles: []api.WorkerProfile{{
-						EncryptionAtHost: api.EncryptionAtHostEnabled,
-						VMSize:           api.VMSizeStandardM128ms,
-					}},
-				},
-			},
+			name: "encryption at host enabled with unsupported worker VM SKU - feature is registered",
+			oc:   EncryptionAtHostEnabled(api.VMSizeStandardD8sV3, api.VMSizeStandardM128ms),
 			mocks: func(env *mock_env.MockInterface) {
 				env.EXPECT().VMSku(string(api.VMSizeStandardD8sV3)).
 					Return(&mgmtcompute.ResourceSku{
@@ -113,19 +99,8 @@ func TestValidateEncryptionAtHost(t *testing.T) {
 			wantErr: "400: InvalidParameter: properties.workerProfiles[0].encryptionAtHost: VM SKU 'Standard_M128ms' does not support encryption at host.",
 		},
 		{
-			name: "encryption at host enabled with unknown VM SKU",
-			oc: &api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					MasterProfile: api.MasterProfile{
-						EncryptionAtHost: api.EncryptionAtHostEnabled,
-						VMSize:           "invalid",
-					},
-					WorkerProfiles: []api.WorkerProfile{{
-						EncryptionAtHost: api.EncryptionAtHostEnabled,
-						VMSize:           api.VMSizeStandardM128ms,
-					}},
-				},
-			},
+			name: "encryption at host enabled with unknown VM SKU - feature is registered",
+			oc:   EncryptionAtHostEnabled("invalid", api.VMSizeStandardM128ms),
 			mocks: func(env *mock_env.MockInterface) {
 				env.EXPECT().VMSku("invalid").
 					Return(nil, errors.New("fake error"))

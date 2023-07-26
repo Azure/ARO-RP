@@ -9,7 +9,7 @@ import (
 type TermCollectionResponse struct {
     iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.BaseCollectionPaginationCountResponse
 }
-// NewTermCollectionResponse instantiates a new TermCollectionResponse and sets the default values.
+// NewTermCollectionResponse instantiates a new termCollectionResponse and sets the default values.
 func NewTermCollectionResponse()(*TermCollectionResponse) {
     m := &TermCollectionResponse{
         BaseCollectionPaginationCountResponse: *iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.NewBaseCollectionPaginationCountResponse(),
@@ -31,7 +31,9 @@ func (m *TermCollectionResponse) GetFieldDeserializers()(map[string]func(i878a80
         if val != nil {
             res := make([]Termable, len(val))
             for i, v := range val {
-                res[i] = v.(Termable)
+                if v != nil {
+                    res[i] = v.(Termable)
+                }
             }
             m.SetValue(res)
         }
@@ -59,7 +61,9 @@ func (m *TermCollectionResponse) Serialize(writer i878a80d2330e89d26896388a3f487
     if m.GetValue() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetValue()))
         for i, v := range m.GetValue() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("value", cast)
         if err != nil {

@@ -8,7 +8,7 @@ import (
 type MailSearchFolder struct {
     MailFolder
 }
-// NewMailSearchFolder instantiates a new MailSearchFolder and sets the default values.
+// NewMailSearchFolder instantiates a new mailSearchFolder and sets the default values.
 func NewMailSearchFolder()(*MailSearchFolder) {
     m := &MailSearchFolder{
         MailFolder: *NewMailFolder(),
@@ -62,7 +62,9 @@ func (m *MailSearchFolder) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetSourceFolderIds(res)
         }

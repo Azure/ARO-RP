@@ -8,7 +8,7 @@ import (
 type ListItemCollectionResponse struct {
     BaseCollectionPaginationCountResponse
 }
-// NewListItemCollectionResponse instantiates a new ListItemCollectionResponse and sets the default values.
+// NewListItemCollectionResponse instantiates a new listItemCollectionResponse and sets the default values.
 func NewListItemCollectionResponse()(*ListItemCollectionResponse) {
     m := &ListItemCollectionResponse{
         BaseCollectionPaginationCountResponse: *NewBaseCollectionPaginationCountResponse(),
@@ -30,7 +30,9 @@ func (m *ListItemCollectionResponse) GetFieldDeserializers()(map[string]func(i87
         if val != nil {
             res := make([]ListItemable, len(val))
             for i, v := range val {
-                res[i] = v.(ListItemable)
+                if v != nil {
+                    res[i] = v.(ListItemable)
+                }
             }
             m.SetValue(res)
         }
@@ -58,7 +60,9 @@ func (m *ListItemCollectionResponse) Serialize(writer i878a80d2330e89d26896388a3
     if m.GetValue() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetValue()))
         for i, v := range m.GetValue() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("value", cast)
         if err != nil {

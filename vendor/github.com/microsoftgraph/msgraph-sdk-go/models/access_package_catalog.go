@@ -53,6 +53,17 @@ func (m *AccessPackageCatalog) GetCreatedDateTime()(*i336074805fc853987abe6f7fe3
     }
     return nil
 }
+// GetCustomWorkflowExtensions gets the customWorkflowExtensions property value. The customWorkflowExtensions property
+func (m *AccessPackageCatalog) GetCustomWorkflowExtensions()([]CustomCalloutExtensionable) {
+    val, err := m.GetBackingStore().Get("customWorkflowExtensions")
+    if err != nil {
+        panic(err)
+    }
+    if val != nil {
+        return val.([]CustomCalloutExtensionable)
+    }
+    return nil
+}
 // GetDescription gets the description property value. The description of the access package catalog.
 func (m *AccessPackageCatalog) GetDescription()(*string) {
     val, err := m.GetBackingStore().Get("description")
@@ -86,7 +97,9 @@ func (m *AccessPackageCatalog) GetFieldDeserializers()(map[string]func(i878a80d2
         if val != nil {
             res := make([]AccessPackageable, len(val))
             for i, v := range val {
-                res[i] = v.(AccessPackageable)
+                if v != nil {
+                    res[i] = v.(AccessPackageable)
+                }
             }
             m.SetAccessPackages(res)
         }
@@ -109,6 +122,22 @@ func (m *AccessPackageCatalog) GetFieldDeserializers()(map[string]func(i878a80d2
         }
         if val != nil {
             m.SetCreatedDateTime(val)
+        }
+        return nil
+    }
+    res["customWorkflowExtensions"] = func (n i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
+        val, err := n.GetCollectionOfObjectValues(CreateCustomCalloutExtensionFromDiscriminatorValue)
+        if err != nil {
+            return err
+        }
+        if val != nil {
+            res := make([]CustomCalloutExtensionable, len(val))
+            for i, v := range val {
+                if v != nil {
+                    res[i] = v.(CustomCalloutExtensionable)
+                }
+            }
+            m.SetCustomWorkflowExtensions(res)
         }
         return nil
     }
@@ -152,6 +181,54 @@ func (m *AccessPackageCatalog) GetFieldDeserializers()(map[string]func(i878a80d2
         }
         return nil
     }
+    res["resourceRoles"] = func (n i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
+        val, err := n.GetCollectionOfObjectValues(CreateAccessPackageResourceRoleFromDiscriminatorValue)
+        if err != nil {
+            return err
+        }
+        if val != nil {
+            res := make([]AccessPackageResourceRoleable, len(val))
+            for i, v := range val {
+                if v != nil {
+                    res[i] = v.(AccessPackageResourceRoleable)
+                }
+            }
+            m.SetResourceRoles(res)
+        }
+        return nil
+    }
+    res["resources"] = func (n i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
+        val, err := n.GetCollectionOfObjectValues(CreateAccessPackageResourceFromDiscriminatorValue)
+        if err != nil {
+            return err
+        }
+        if val != nil {
+            res := make([]AccessPackageResourceable, len(val))
+            for i, v := range val {
+                if v != nil {
+                    res[i] = v.(AccessPackageResourceable)
+                }
+            }
+            m.SetResources(res)
+        }
+        return nil
+    }
+    res["resourceScopes"] = func (n i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
+        val, err := n.GetCollectionOfObjectValues(CreateAccessPackageResourceScopeFromDiscriminatorValue)
+        if err != nil {
+            return err
+        }
+        if val != nil {
+            res := make([]AccessPackageResourceScopeable, len(val))
+            for i, v := range val {
+                if v != nil {
+                    res[i] = v.(AccessPackageResourceScopeable)
+                }
+            }
+            m.SetResourceScopes(res)
+        }
+        return nil
+    }
     res["state"] = func (n i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
         val, err := n.GetEnumValue(ParseAccessPackageCatalogState)
         if err != nil {
@@ -186,6 +263,39 @@ func (m *AccessPackageCatalog) GetModifiedDateTime()(*i336074805fc853987abe6f7fe
     }
     return nil
 }
+// GetResourceRoles gets the resourceRoles property value. The resourceRoles property
+func (m *AccessPackageCatalog) GetResourceRoles()([]AccessPackageResourceRoleable) {
+    val, err := m.GetBackingStore().Get("resourceRoles")
+    if err != nil {
+        panic(err)
+    }
+    if val != nil {
+        return val.([]AccessPackageResourceRoleable)
+    }
+    return nil
+}
+// GetResources gets the resources property value. Access package resources in this catalog.
+func (m *AccessPackageCatalog) GetResources()([]AccessPackageResourceable) {
+    val, err := m.GetBackingStore().Get("resources")
+    if err != nil {
+        panic(err)
+    }
+    if val != nil {
+        return val.([]AccessPackageResourceable)
+    }
+    return nil
+}
+// GetResourceScopes gets the resourceScopes property value. The resourceScopes property
+func (m *AccessPackageCatalog) GetResourceScopes()([]AccessPackageResourceScopeable) {
+    val, err := m.GetBackingStore().Get("resourceScopes")
+    if err != nil {
+        panic(err)
+    }
+    if val != nil {
+        return val.([]AccessPackageResourceScopeable)
+    }
+    return nil
+}
 // GetState gets the state property value. Has the value published if the access packages are available for management. The possible values are: unpublished, published, unknownFutureValue.
 func (m *AccessPackageCatalog) GetState()(*AccessPackageCatalogState) {
     val, err := m.GetBackingStore().Get("state")
@@ -206,7 +316,9 @@ func (m *AccessPackageCatalog) Serialize(writer i878a80d2330e89d26896388a3f487ee
     if m.GetAccessPackages() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetAccessPackages()))
         for i, v := range m.GetAccessPackages() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("accessPackages", cast)
         if err != nil {
@@ -222,6 +334,18 @@ func (m *AccessPackageCatalog) Serialize(writer i878a80d2330e89d26896388a3f487ee
     }
     {
         err = writer.WriteTimeValue("createdDateTime", m.GetCreatedDateTime())
+        if err != nil {
+            return err
+        }
+    }
+    if m.GetCustomWorkflowExtensions() != nil {
+        cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetCustomWorkflowExtensions()))
+        for i, v := range m.GetCustomWorkflowExtensions() {
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
+        }
+        err = writer.WriteCollectionOfObjectValues("customWorkflowExtensions", cast)
         if err != nil {
             return err
         }
@@ -246,6 +370,42 @@ func (m *AccessPackageCatalog) Serialize(writer i878a80d2330e89d26896388a3f487ee
     }
     {
         err = writer.WriteTimeValue("modifiedDateTime", m.GetModifiedDateTime())
+        if err != nil {
+            return err
+        }
+    }
+    if m.GetResourceRoles() != nil {
+        cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetResourceRoles()))
+        for i, v := range m.GetResourceRoles() {
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
+        }
+        err = writer.WriteCollectionOfObjectValues("resourceRoles", cast)
+        if err != nil {
+            return err
+        }
+    }
+    if m.GetResources() != nil {
+        cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetResources()))
+        for i, v := range m.GetResources() {
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
+        }
+        err = writer.WriteCollectionOfObjectValues("resources", cast)
+        if err != nil {
+            return err
+        }
+    }
+    if m.GetResourceScopes() != nil {
+        cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetResourceScopes()))
+        for i, v := range m.GetResourceScopes() {
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
+        }
+        err = writer.WriteCollectionOfObjectValues("resourceScopes", cast)
         if err != nil {
             return err
         }
@@ -280,6 +440,13 @@ func (m *AccessPackageCatalog) SetCreatedDateTime(value *i336074805fc853987abe6f
         panic(err)
     }
 }
+// SetCustomWorkflowExtensions sets the customWorkflowExtensions property value. The customWorkflowExtensions property
+func (m *AccessPackageCatalog) SetCustomWorkflowExtensions(value []CustomCalloutExtensionable)() {
+    err := m.GetBackingStore().Set("customWorkflowExtensions", value)
+    if err != nil {
+        panic(err)
+    }
+}
 // SetDescription sets the description property value. The description of the access package catalog.
 func (m *AccessPackageCatalog) SetDescription(value *string)() {
     err := m.GetBackingStore().Set("description", value)
@@ -308,6 +475,27 @@ func (m *AccessPackageCatalog) SetModifiedDateTime(value *i336074805fc853987abe6
         panic(err)
     }
 }
+// SetResourceRoles sets the resourceRoles property value. The resourceRoles property
+func (m *AccessPackageCatalog) SetResourceRoles(value []AccessPackageResourceRoleable)() {
+    err := m.GetBackingStore().Set("resourceRoles", value)
+    if err != nil {
+        panic(err)
+    }
+}
+// SetResources sets the resources property value. Access package resources in this catalog.
+func (m *AccessPackageCatalog) SetResources(value []AccessPackageResourceable)() {
+    err := m.GetBackingStore().Set("resources", value)
+    if err != nil {
+        panic(err)
+    }
+}
+// SetResourceScopes sets the resourceScopes property value. The resourceScopes property
+func (m *AccessPackageCatalog) SetResourceScopes(value []AccessPackageResourceScopeable)() {
+    err := m.GetBackingStore().Set("resourceScopes", value)
+    if err != nil {
+        panic(err)
+    }
+}
 // SetState sets the state property value. Has the value published if the access packages are available for management. The possible values are: unpublished, published, unknownFutureValue.
 func (m *AccessPackageCatalog) SetState(value *AccessPackageCatalogState)() {
     err := m.GetBackingStore().Set("state", value)
@@ -322,17 +510,25 @@ type AccessPackageCatalogable interface {
     GetAccessPackages()([]AccessPackageable)
     GetCatalogType()(*AccessPackageCatalogType)
     GetCreatedDateTime()(*i336074805fc853987abe6f7fe3ad97a6a6f3077a16391fec744f671a015fbd7e.Time)
+    GetCustomWorkflowExtensions()([]CustomCalloutExtensionable)
     GetDescription()(*string)
     GetDisplayName()(*string)
     GetIsExternallyVisible()(*bool)
     GetModifiedDateTime()(*i336074805fc853987abe6f7fe3ad97a6a6f3077a16391fec744f671a015fbd7e.Time)
+    GetResourceRoles()([]AccessPackageResourceRoleable)
+    GetResources()([]AccessPackageResourceable)
+    GetResourceScopes()([]AccessPackageResourceScopeable)
     GetState()(*AccessPackageCatalogState)
     SetAccessPackages(value []AccessPackageable)()
     SetCatalogType(value *AccessPackageCatalogType)()
     SetCreatedDateTime(value *i336074805fc853987abe6f7fe3ad97a6a6f3077a16391fec744f671a015fbd7e.Time)()
+    SetCustomWorkflowExtensions(value []CustomCalloutExtensionable)()
     SetDescription(value *string)()
     SetDisplayName(value *string)()
     SetIsExternallyVisible(value *bool)()
     SetModifiedDateTime(value *i336074805fc853987abe6f7fe3ad97a6a6f3077a16391fec744f671a015fbd7e.Time)()
+    SetResourceRoles(value []AccessPackageResourceRoleable)()
+    SetResources(value []AccessPackageResourceable)()
+    SetResourceScopes(value []AccessPackageResourceScopeable)()
     SetState(value *AccessPackageCatalogState)()
 }

@@ -9,7 +9,7 @@ import (
 type UnifiedGroupSourceCollectionResponse struct {
     iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.BaseCollectionPaginationCountResponse
 }
-// NewUnifiedGroupSourceCollectionResponse instantiates a new UnifiedGroupSourceCollectionResponse and sets the default values.
+// NewUnifiedGroupSourceCollectionResponse instantiates a new unifiedGroupSourceCollectionResponse and sets the default values.
 func NewUnifiedGroupSourceCollectionResponse()(*UnifiedGroupSourceCollectionResponse) {
     m := &UnifiedGroupSourceCollectionResponse{
         BaseCollectionPaginationCountResponse: *iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.NewBaseCollectionPaginationCountResponse(),
@@ -31,7 +31,9 @@ func (m *UnifiedGroupSourceCollectionResponse) GetFieldDeserializers()(map[strin
         if val != nil {
             res := make([]UnifiedGroupSourceable, len(val))
             for i, v := range val {
-                res[i] = v.(UnifiedGroupSourceable)
+                if v != nil {
+                    res[i] = v.(UnifiedGroupSourceable)
+                }
             }
             m.SetValue(res)
         }
@@ -59,7 +61,9 @@ func (m *UnifiedGroupSourceCollectionResponse) Serialize(writer i878a80d2330e89d
     if m.GetValue() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetValue()))
         for i, v := range m.GetValue() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("value", cast)
         if err != nil {

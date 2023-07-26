@@ -30,7 +30,9 @@ func (m *AttributeMappingFunctionSchema) GetFieldDeserializers()(map[string]func
         if val != nil {
             res := make([]AttributeMappingParameterSchemaable, len(val))
             for i, v := range val {
-                res[i] = v.(AttributeMappingParameterSchemaable)
+                if v != nil {
+                    res[i] = v.(AttributeMappingParameterSchemaable)
+                }
             }
             m.SetParameters(res)
         }
@@ -38,7 +40,7 @@ func (m *AttributeMappingFunctionSchema) GetFieldDeserializers()(map[string]func
     }
     return res
 }
-// GetParameters gets the parameters property value. The parameters property
+// GetParameters gets the parameters property value. Collection of function parameters.
 func (m *AttributeMappingFunctionSchema) GetParameters()([]AttributeMappingParameterSchemaable) {
     val, err := m.GetBackingStore().Get("parameters")
     if err != nil {
@@ -58,7 +60,9 @@ func (m *AttributeMappingFunctionSchema) Serialize(writer i878a80d2330e89d268963
     if m.GetParameters() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetParameters()))
         for i, v := range m.GetParameters() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("parameters", cast)
         if err != nil {
@@ -67,7 +71,7 @@ func (m *AttributeMappingFunctionSchema) Serialize(writer i878a80d2330e89d268963
     }
     return nil
 }
-// SetParameters sets the parameters property value. The parameters property
+// SetParameters sets the parameters property value. Collection of function parameters.
 func (m *AttributeMappingFunctionSchema) SetParameters(value []AttributeMappingParameterSchemaable)() {
     err := m.GetBackingStore().Set("parameters", value)
     if err != nil {

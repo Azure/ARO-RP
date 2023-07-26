@@ -8,7 +8,7 @@ import (
 type ManagedDeviceMobileAppConfigurationUserStatusCollectionResponse struct {
     BaseCollectionPaginationCountResponse
 }
-// NewManagedDeviceMobileAppConfigurationUserStatusCollectionResponse instantiates a new ManagedDeviceMobileAppConfigurationUserStatusCollectionResponse and sets the default values.
+// NewManagedDeviceMobileAppConfigurationUserStatusCollectionResponse instantiates a new managedDeviceMobileAppConfigurationUserStatusCollectionResponse and sets the default values.
 func NewManagedDeviceMobileAppConfigurationUserStatusCollectionResponse()(*ManagedDeviceMobileAppConfigurationUserStatusCollectionResponse) {
     m := &ManagedDeviceMobileAppConfigurationUserStatusCollectionResponse{
         BaseCollectionPaginationCountResponse: *NewBaseCollectionPaginationCountResponse(),
@@ -30,7 +30,9 @@ func (m *ManagedDeviceMobileAppConfigurationUserStatusCollectionResponse) GetFie
         if val != nil {
             res := make([]ManagedDeviceMobileAppConfigurationUserStatusable, len(val))
             for i, v := range val {
-                res[i] = v.(ManagedDeviceMobileAppConfigurationUserStatusable)
+                if v != nil {
+                    res[i] = v.(ManagedDeviceMobileAppConfigurationUserStatusable)
+                }
             }
             m.SetValue(res)
         }
@@ -58,7 +60,9 @@ func (m *ManagedDeviceMobileAppConfigurationUserStatusCollectionResponse) Serial
     if m.GetValue() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetValue()))
         for i, v := range m.GetValue() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("value", cast)
         if err != nil {

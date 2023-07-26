@@ -17,6 +17,7 @@ package checker
 type options struct {
 	crossTypeNumericComparisons  bool
 	homogeneousAggregateLiterals bool
+	validatedDeclarations        *Scopes
 }
 
 // Option is a functional option for configuring the type-checker
@@ -31,11 +32,11 @@ func CrossTypeNumericComparisons(enabled bool) Option {
 	}
 }
 
-// HomogeneousAggregateLiterals toggles support for constructing lists and maps whose elements all
-// have the same type.
-func HomogeneousAggregateLiterals(enabled bool) Option {
+// ValidatedDeclarations provides a references to validated declarations which will be copied
+// into new checker instances.
+func ValidatedDeclarations(env *Env) Option {
 	return func(opts *options) error {
-		opts.homogeneousAggregateLiterals = enabled
+		opts.validatedDeclarations = env.validatedDeclarations()
 		return nil
 	}
 }

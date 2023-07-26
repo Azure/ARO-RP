@@ -73,14 +73,15 @@ func (r *Runtime) filterImages(ctx context.Context, images []*Image, options *Li
 
 // compileImageFilters creates `filterFunc`s for the specified filters.  The
 // required format is `key=value` with the following supported keys:
-//           after, since, before, containers, dangling, id, label, readonly, reference, intermediate
+//
+//	after, since, before, containers, dangling, id, label, readonly, reference, intermediate
 func (r *Runtime) compileImageFilters(ctx context.Context, options *ListImagesOptions) (map[string][]filterFunc, error) {
 	logrus.Tracef("Parsing image filters %s", options.Filters)
 
 	var tree *layerTree
 	getTree := func() (*layerTree, error) {
 		if tree == nil {
-			t, err := r.layerTree()
+			t, err := r.layerTree(nil)
 			if err != nil {
 				return nil, err
 			}
@@ -145,6 +146,9 @@ func (r *Runtime) compileImageFilters(ctx context.Context, options *ListImagesOp
 		case "id":
 			filter = filterID(value)
 
+		case "digest":
+			filter = filterDigest(value)
+
 		case "intermediate":
 			intermediate, err := r.bool(duplicate, key, value)
 			if err != nil {
@@ -174,7 +178,7 @@ func (r *Runtime) compileImageFilters(ctx context.Context, options *ListImagesOp
 			filter = filterManifest(ctx, manifest)
 
 		case "reference":
-			filter = filterReferences(value)
+			filter = filterReferences(r, value)
 
 		case "until":
 			until, err := r.until(value)
@@ -264,8 +268,15 @@ func filterManifest(ctx context.Context, value bool) filterFunc {
 }
 
 // filterReferences creates a reference filter for matching the specified value.
-func filterReferences(value string) filterFunc {
+func filterReferences(r *Runtime, value string) filterFunc {
+	lookedUp, _, _ := r.LookupImage(value, nil)
 	return func(img *Image) (bool, error) {
+		if lookedUp != nil {
+			if lookedUp.ID() == img.ID() {
+				return true, nil
+			}
+		}
+
 		refs, err := img.NamesReferences()
 		if err != nil {
 			return false, err
@@ -302,6 +313,7 @@ func filterReferences(value string) filterFunc {
 				}
 			}
 		}
+
 		return false, nil
 	}
 }
@@ -379,6 +391,15 @@ func filterDangling(ctx context.Context, value bool, tree *layerTree) filterFunc
 func filterID(value string) filterFunc {
 	return func(img *Image) (bool, error) {
 		return img.ID() == value, nil
+	}
+}
+
+// filterDigest creates a digest filter for matching the specified value.
+func filterDigest(value string) filterFunc {
+	// TODO: return an error if value is not a digest
+	// if _, err := digest.Parse(value); err != nil {...}
+	return func(img *Image) (bool, error) {
+		return img.hasDigest(value), nil
 	}
 }
 

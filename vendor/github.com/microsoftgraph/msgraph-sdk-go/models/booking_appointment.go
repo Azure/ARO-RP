@@ -4,11 +4,11 @@ import (
     i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91 "github.com/microsoft/kiota-abstractions-go/serialization"
 )
 
-// BookingAppointment 
+// BookingAppointment represents a booked appointment of a service by a customer in a business.
 type BookingAppointment struct {
     Entity
 }
-// NewBookingAppointment instantiates a new BookingAppointment and sets the default values.
+// NewBookingAppointment instantiates a new bookingAppointment and sets the default values.
 func NewBookingAppointment()(*BookingAppointment) {
     m := &BookingAppointment{
         Entity: *NewEntity(),
@@ -116,7 +116,9 @@ func (m *BookingAppointment) GetFieldDeserializers()(map[string]func(i878a80d233
         if val != nil {
             res := make([]BookingCustomerInformationBaseable, len(val))
             for i, v := range val {
-                res[i] = v.(BookingCustomerInformationBaseable)
+                if v != nil {
+                    res[i] = v.(BookingCustomerInformationBaseable)
+                }
             }
             m.SetCustomers(res)
         }
@@ -250,7 +252,9 @@ func (m *BookingAppointment) GetFieldDeserializers()(map[string]func(i878a80d233
         if val != nil {
             res := make([]BookingReminderable, len(val))
             for i, v := range val {
-                res[i] = v.(BookingReminderable)
+                if v != nil {
+                    res[i] = v.(BookingReminderable)
+                }
             }
             m.SetReminders(res)
         }
@@ -324,7 +328,9 @@ func (m *BookingAppointment) GetFieldDeserializers()(map[string]func(i878a80d233
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetStaffMemberIds(res)
         }
@@ -561,7 +567,9 @@ func (m *BookingAppointment) Serialize(writer i878a80d2330e89d26896388a3f487eef2
     if m.GetCustomers() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetCustomers()))
         for i, v := range m.GetCustomers() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("customers", cast)
         if err != nil {
@@ -632,7 +640,9 @@ func (m *BookingAppointment) Serialize(writer i878a80d2330e89d26896388a3f487eef2
     if m.GetReminders() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetReminders()))
         for i, v := range m.GetReminders() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("reminders", cast)
         if err != nil {

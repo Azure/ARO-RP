@@ -10,7 +10,7 @@ type External struct {
     // Stores model information.
     backingStore ie8677ce2c7e1b4c22e9c3827ecd078d41185424dd9eeb92b7d971ed2d49a392e.BackingStore
 }
-// NewExternal instantiates a new External and sets the default values.
+// NewExternal instantiates a new external and sets the default values.
 func NewExternal()(*External) {
     m := &External{
     }
@@ -60,7 +60,9 @@ func (m *External) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896
         if val != nil {
             res := make([]ExternalConnectionable, len(val))
             for i, v := range val {
-                res[i] = v.(ExternalConnectionable)
+                if v != nil {
+                    res[i] = v.(ExternalConnectionable)
+                }
             }
             m.SetConnections(res)
         }
@@ -94,7 +96,9 @@ func (m *External) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c01
     if m.GetConnections() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetConnections()))
         for i, v := range m.GetConnections() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err := writer.WriteCollectionOfObjectValues("connections", cast)
         if err != nil {

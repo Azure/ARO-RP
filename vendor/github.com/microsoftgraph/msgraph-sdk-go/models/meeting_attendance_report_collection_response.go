@@ -8,7 +8,7 @@ import (
 type MeetingAttendanceReportCollectionResponse struct {
     BaseCollectionPaginationCountResponse
 }
-// NewMeetingAttendanceReportCollectionResponse instantiates a new MeetingAttendanceReportCollectionResponse and sets the default values.
+// NewMeetingAttendanceReportCollectionResponse instantiates a new meetingAttendanceReportCollectionResponse and sets the default values.
 func NewMeetingAttendanceReportCollectionResponse()(*MeetingAttendanceReportCollectionResponse) {
     m := &MeetingAttendanceReportCollectionResponse{
         BaseCollectionPaginationCountResponse: *NewBaseCollectionPaginationCountResponse(),
@@ -30,7 +30,9 @@ func (m *MeetingAttendanceReportCollectionResponse) GetFieldDeserializers()(map[
         if val != nil {
             res := make([]MeetingAttendanceReportable, len(val))
             for i, v := range val {
-                res[i] = v.(MeetingAttendanceReportable)
+                if v != nil {
+                    res[i] = v.(MeetingAttendanceReportable)
+                }
             }
             m.SetValue(res)
         }
@@ -58,7 +60,9 @@ func (m *MeetingAttendanceReportCollectionResponse) Serialize(writer i878a80d233
     if m.GetValue() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetValue()))
         for i, v := range m.GetValue() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("value", cast)
         if err != nil {

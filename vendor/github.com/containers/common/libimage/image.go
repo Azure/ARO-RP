@@ -23,6 +23,17 @@ import (
 // Image represents an image in the containers storage and allows for further
 // operations and data manipulation.
 type Image struct {
+	// ListData that is being set by (*Runtime).ListImages().  Note that
+	// the data may be outdated.
+	ListData struct {
+		// Dangling indicates if the image is dangling.  Use
+		// `IsDangling()` to compute the latest state.
+		IsDangling *bool
+		// Parent points to the parent image.  Use `Parent()` to
+		// compute the latest state.
+		Parent *Image
+	}
+
 	// Backwards pointer to the runtime.
 	runtime *Runtime
 
@@ -46,6 +57,8 @@ type Image struct {
 		ociv1Image *ociv1.Image
 		// Names() parsed into references.
 		namesReferences []reference.Reference
+		// Calculating the Size() is expensive, so cache it.
+		size *int64
 	}
 }
 
@@ -62,6 +75,7 @@ func (i *Image) reload() error {
 	i.cached.completeInspectData = nil
 	i.cached.ociv1Image = nil
 	i.cached.namesReferences = nil
+	i.cached.size = nil
 	return nil
 }
 
@@ -130,6 +144,9 @@ func (i *Image) ID() string {
 // possibly many digests that we have stored for the image, so many
 // applications are better off using the entire list returned by Digests().
 func (i *Image) Digest() digest.Digest {
+	// TODO: we return the image digest or the one of the manifest list
+	// which can lead to issues depending on the callers' assumptions.
+	// Hence, deprecate in favor of Digest_s_.
 	return i.storageImage.Digest
 }
 
@@ -138,6 +155,18 @@ func (i *Image) Digest() digest.Digest {
 // set, its value is also in this list.
 func (i *Image) Digests() []digest.Digest {
 	return i.storageImage.Digests
+}
+
+// hasDigest returns whether the specified value matches any digest of the
+// image.
+func (i *Image) hasDigest(value string) bool {
+	// TODO: change the argument to a typed digest.Digest
+	for _, d := range i.Digests() {
+		if string(d) == value {
+			return true
+		}
+	}
+	return false
 }
 
 // IsReadOnly returns whether the image is set read only.
@@ -213,10 +242,14 @@ func (i *Image) TopLayer() string {
 
 // Parent returns the parent image or nil if there is none
 func (i *Image) Parent(ctx context.Context) (*Image, error) {
-	tree, err := i.runtime.layerTree()
+	tree, err := i.runtime.layerTree(nil)
 	if err != nil {
 		return nil, err
 	}
+	return i.parent(ctx, tree)
+}
+
+func (i *Image) parent(ctx context.Context, tree *layerTree) (*Image, error) {
 	return tree.parent(ctx, i)
 }
 
@@ -243,7 +276,7 @@ func (i *Image) Children(ctx context.Context) ([]*Image, error) {
 // created for this invocation only.
 func (i *Image) getChildren(ctx context.Context, all bool, tree *layerTree) ([]*Image, error) {
 	if tree == nil {
-		t, err := i.runtime.layerTree()
+		t, err := i.runtime.layerTree(nil)
 		if err != nil {
 			return nil, err
 		}
@@ -384,7 +417,7 @@ func (i *Image) removeRecursive(ctx context.Context, rmMap map[string]*RemoveIma
 	// have a closer look at the errors.  On top, image removal should be
 	// tolerant toward corrupted images.
 	handleError := func(err error) error {
-		if errors.Is(err, storage.ErrImageUnknown) || errors.Is(err, storage.ErrNotAnImage) || errors.Is(err, storage.ErrLayerUnknown) {
+		if ErrorIsImageUnknown(err) {
 			// The image or layers of the image may already have been removed
 			// in which case we consider the image to be removed.
 			return nil
@@ -406,14 +439,12 @@ func (i *Image) removeRecursive(ctx context.Context, rmMap map[string]*RemoveIma
 	numNames := len(i.Names())
 
 	// NOTE: the `numNames == 1` check is not only a performance
-	// optimization but also preserves exiting Podman/Docker behaviour.
+	// optimization but also preserves existing Podman/Docker behaviour.
 	// If image "foo" is used by a container and has only this tag/name,
 	// an `rmi foo` will not untag "foo" but instead attempt to remove the
 	// entire image.  If there's a container using "foo", we should get an
 	// error.
-	if referencedBy == "" || numNames == 1 {
-		// DO NOTHING, the image will be removed
-	} else {
+	if !(referencedBy == "" || numNames == 1) {
 		byID := strings.HasPrefix(i.ID(), referencedBy)
 		byDigest := strings.HasPrefix(referencedBy, "sha256:")
 		if !options.Force {
@@ -470,12 +501,26 @@ func (i *Image) removeRecursive(ctx context.Context, rmMap map[string]*RemoveIma
 	}
 
 	if _, err := i.runtime.store.DeleteImage(i.ID(), true); handleError(err) != nil {
+		if errors.Is(err, storage.ErrImageUsedByContainer) {
+			err = fmt.Errorf("%w: consider listing external containers and force-removing image", err)
+		}
 		return processedIDs, err
 	}
+
 	report.Untagged = append(report.Untagged, i.Names()...)
+	if i.runtime.eventChannel != nil {
+		for _, name := range i.Names() {
+			i.runtime.writeEvent(&Event{ID: i.ID(), Name: name, Time: time.Now(), Type: EventTypeImageUntag})
+		}
+	}
 
 	if !hasChildren {
 		report.Removed = true
+	}
+
+	// Do not delete any parents if NoPrune is true
+	if options.NoPrune {
+		return processedIDs, nil
 	}
 
 	// Check if can remove the parent image.
@@ -495,7 +540,6 @@ func (i *Image) removeRecursive(ctx context.Context, rmMap map[string]*RemoveIma
 	if !danglingParent {
 		return processedIDs, nil
 	}
-
 	// Recurse into removing the parent.
 	return parent.removeRecursive(ctx, rmMap, processedIDs, "", options)
 }
@@ -627,6 +671,8 @@ func (i *Image) NamedTaggedRepoTags() ([]reference.NamedTagged, error) {
 // NamedRepoTags returns the repotags associated with the image as a
 // slice of reference.Named.
 func (i *Image) NamedRepoTags() ([]reference.Named, error) {
+	// FIXME: the NamedRepoTags name is a bit misleading as it can return
+	// repo@digest values if that’s how an image was pulled.
 	var repoTags []reference.Named
 	for _, name := range i.Names() {
 		parsed, err := reference.Parse(name)
@@ -640,32 +686,37 @@ func (i *Image) NamedRepoTags() ([]reference.Named, error) {
 	return repoTags, nil
 }
 
-// inRepoTags looks for the specified name/tag pair in the image's repo tags.
-func (i *Image) inRepoTags(namedTagged reference.NamedTagged) (reference.Named, error) {
+// inRepoTags looks for the specified name/tag in the image's repo tags.  If
+// `ignoreTag` is set, only the repo must match and the tag is ignored.
+func (i *Image) inRepoTags(namedTagged reference.NamedTagged, ignoreTag bool) (reference.Named, error) {
 	repoTags, err := i.NamedRepoTags()
-	if err != nil {
-		return nil, err
-	}
-
-	pairs, err := ToNameTagPairs(repoTags)
 	if err != nil {
 		return nil, err
 	}
 
 	name := namedTagged.Name()
 	tag := namedTagged.Tag()
-	for _, pair := range pairs {
-		if tag != pair.Tag {
+	for _, r := range repoTags {
+		if !ignoreTag {
+			var repoTag string
+			tagged, isTagged := r.(reference.NamedTagged)
+			if isTagged {
+				repoTag = tagged.Tag()
+			}
+			if !isTagged || tag != repoTag {
+				continue
+			}
+		}
+
+		repoName := r.Name()
+		if !strings.HasSuffix(repoName, name) {
 			continue
 		}
-		if !strings.HasSuffix(pair.Name, name) {
-			continue
+		if len(repoName) == len(name) { // full match
+			return r, nil
 		}
-		if len(pair.Name) == len(name) { // full match
-			return pair.named, nil
-		}
-		if pair.Name[len(pair.Name)-len(name)-1] == '/' { // matches at repo
-			return pair.named, nil
+		if repoName[len(repoName)-len(name)-1] == '/' { // matches at repo
+			return r, nil
 		}
 	}
 
@@ -706,7 +757,7 @@ func (i *Image) RepoDigests() ([]string, error) {
 // Mount the image with the specified mount options and label, both of which
 // are directly passed down to the containers storage.  Returns the fully
 // evaluated path to the mount point.
-func (i *Image) Mount(ctx context.Context, mountOptions []string, mountLabel string) (string, error) {
+func (i *Image) Mount(_ context.Context, mountOptions []string, mountLabel string) (string, error) {
 	if i.runtime.eventChannel != nil {
 		defer i.runtime.writeEvent(&Event{ID: i.ID(), Name: "", Time: time.Now(), Type: EventTypeImageMount})
 	}
@@ -762,7 +813,13 @@ func (i *Image) Unmount(force bool) error {
 
 // Size computes the size of the image layers and associated data.
 func (i *Image) Size() (int64, error) {
-	return i.runtime.store.ImageSize(i.ID())
+	if i.cached.size != nil {
+		return *i.cached.size, nil
+	}
+
+	size, err := i.runtime.store.ImageSize(i.ID())
+	i.cached.size = &size
+	return size, err
 }
 
 // HasDifferentDigestOptions allows for customizing the check if another
@@ -771,6 +828,9 @@ type HasDifferentDigestOptions struct {
 	// containers-auth.json(5) file to use when authenticating against
 	// container registries.
 	AuthFilePath string
+	// Allow contacting registries over HTTP, or HTTPS with failed TLS
+	// verification. Note that this does not affect other TLS connections.
+	InsecureSkipTLSVerify types.OptionalBool
 }
 
 // HasDifferentDigest returns true if the image specified by `remoteRef` has a
@@ -796,8 +856,15 @@ func (i *Image) HasDifferentDigest(ctx context.Context, remoteRef types.ImageRef
 		sys.VariantChoice = inspectInfo.Variant
 	}
 
-	if options != nil && options.AuthFilePath != "" {
-		sys.AuthFilePath = options.AuthFilePath
+	if options != nil {
+		if options.AuthFilePath != "" {
+			sys.AuthFilePath = options.AuthFilePath
+		}
+		if options.InsecureSkipTLSVerify != types.OptionalBoolUndefined {
+			sys.DockerInsecureSkipTLSVerify = options.InsecureSkipTLSVerify
+			sys.OCIInsecureSkipTLSVerify = options.InsecureSkipTLSVerify == types.OptionalBoolTrue
+			sys.DockerDaemonInsecureSkipTLSVerify = options.InsecureSkipTLSVerify == types.OptionalBoolTrue
+		}
 	}
 
 	return i.hasDifferentDigestWithSystemContext(ctx, remoteRef, sys)

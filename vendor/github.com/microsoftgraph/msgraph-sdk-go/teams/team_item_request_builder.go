@@ -18,7 +18,7 @@ type TeamItemRequestBuilderDeleteRequestConfiguration struct {
     // Request options
     Options []i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestOption
 }
-// TeamItemRequestBuilderGetQueryParameters get entity from teams by key
+// TeamItemRequestBuilderGetQueryParameters retrieve the properties and relationships of the specified team.
 type TeamItemRequestBuilderGetQueryParameters struct {
     // Expand related entities
     Expand []string `uriparametername:"%24expand"`
@@ -90,10 +90,10 @@ func (m *TeamItemRequestBuilder) Delete(ctx context.Context, requestConfiguratio
     }
     return nil
 }
-// Get get entity from teams by key
+// Get retrieve the properties and relationships of the specified team.
 // [Find more info here]
 // 
-// [Find more info here]: https://docs.microsoft.com/graph/api/team-get?view=graph-rest-1.0
+// [Find more info here]: https://learn.microsoft.com/graph/api/team-get?view=graph-rest-1.0
 func (m *TeamItemRequestBuilder) Get(ctx context.Context, requestConfiguration *TeamItemRequestBuilderGetRequestConfiguration)(iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.Teamable, error) {
     requestInfo, err := m.ToGetRequestInformation(ctx, requestConfiguration);
     if err != nil {
@@ -135,7 +135,7 @@ func (m *TeamItemRequestBuilder) Operations()(*ItemOperationsRequestBuilder) {
 // Patch update the properties of the specified team.
 // [Find more info here]
 // 
-// [Find more info here]: https://docs.microsoft.com/graph/api/team-update?view=graph-rest-1.0
+// [Find more info here]: https://learn.microsoft.com/graph/api/team-update?view=graph-rest-1.0
 func (m *TeamItemRequestBuilder) Patch(ctx context.Context, body iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.Teamable, requestConfiguration *TeamItemRequestBuilderPatchRequestConfiguration)(iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.Teamable, error) {
     requestInfo, err := m.ToPatchRequestInformation(ctx, body, requestConfiguration);
     if err != nil {
@@ -153,6 +153,10 @@ func (m *TeamItemRequestBuilder) Patch(ctx context.Context, body iadcd81124412c6
         return nil, nil
     }
     return res.(iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.Teamable), nil
+}
+// PermissionGrants provides operations to manage the permissionGrants property of the microsoft.graph.team entity.
+func (m *TeamItemRequestBuilder) PermissionGrants()(*ItemPermissionGrantsRequestBuilder) {
+    return NewItemPermissionGrantsRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
 }
 // Photo provides operations to manage the photo property of the microsoft.graph.team entity.
 func (m *TeamItemRequestBuilder) Photo()(*ItemPhotoRequestBuilder) {
@@ -190,7 +194,7 @@ func (m *TeamItemRequestBuilder) ToDeleteRequestInformation(ctx context.Context,
     }
     return requestInfo, nil
 }
-// ToGetRequestInformation get entity from teams by key
+// ToGetRequestInformation retrieve the properties and relationships of the specified team.
 func (m *TeamItemRequestBuilder) ToGetRequestInformation(ctx context.Context, requestConfiguration *TeamItemRequestBuilderGetRequestConfiguration)(*i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestInformation, error) {
     requestInfo := i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.NewRequestInformation()
     requestInfo.UrlTemplate = m.BaseRequestBuilder.UrlTemplate

@@ -38,7 +38,7 @@ func (m *FilterGroup) GetAdditionalData()(map[string]any) {
 func (m *FilterGroup) GetBackingStore()(ie8677ce2c7e1b4c22e9c3827ecd078d41185424dd9eeb92b7d971ed2d49a392e.BackingStore) {
     return m.backingStore
 }
-// GetClauses gets the clauses property value. The clauses property
+// GetClauses gets the clauses property value. Filter clauses (conditions) of this group. All clauses in a group must be satisfied in order for the filter group to evaluate to true.
 func (m *FilterGroup) GetClauses()([]FilterClauseable) {
     val, err := m.GetBackingStore().Get("clauses")
     if err != nil {
@@ -60,7 +60,9 @@ func (m *FilterGroup) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26
         if val != nil {
             res := make([]FilterClauseable, len(val))
             for i, v := range val {
-                res[i] = v.(FilterClauseable)
+                if v != nil {
+                    res[i] = v.(FilterClauseable)
+                }
             }
             m.SetClauses(res)
         }
@@ -88,7 +90,7 @@ func (m *FilterGroup) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26
     }
     return res
 }
-// GetName gets the name property value. The name property
+// GetName gets the name property value. Human-readable name of the filter group.
 func (m *FilterGroup) GetName()(*string) {
     val, err := m.GetBackingStore().Get("name")
     if err != nil {
@@ -115,7 +117,9 @@ func (m *FilterGroup) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6
     if m.GetClauses() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetClauses()))
         for i, v := range m.GetClauses() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err := writer.WriteCollectionOfObjectValues("clauses", cast)
         if err != nil {
@@ -153,14 +157,14 @@ func (m *FilterGroup) SetAdditionalData(value map[string]any)() {
 func (m *FilterGroup) SetBackingStore(value ie8677ce2c7e1b4c22e9c3827ecd078d41185424dd9eeb92b7d971ed2d49a392e.BackingStore)() {
     m.backingStore = value
 }
-// SetClauses sets the clauses property value. The clauses property
+// SetClauses sets the clauses property value. Filter clauses (conditions) of this group. All clauses in a group must be satisfied in order for the filter group to evaluate to true.
 func (m *FilterGroup) SetClauses(value []FilterClauseable)() {
     err := m.GetBackingStore().Set("clauses", value)
     if err != nil {
         panic(err)
     }
 }
-// SetName sets the name property value. The name property
+// SetName sets the name property value. Human-readable name of the filter group.
 func (m *FilterGroup) SetName(value *string)() {
     err := m.GetBackingStore().Set("name", value)
     if err != nil {

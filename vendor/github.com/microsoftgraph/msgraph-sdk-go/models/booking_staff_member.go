@@ -4,11 +4,11 @@ import (
     i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91 "github.com/microsoft/kiota-abstractions-go/serialization"
 )
 
-// BookingStaffMember 
+// BookingStaffMember represents a staff member who provides services in a business.
 type BookingStaffMember struct {
     BookingStaffMemberBase
 }
-// NewBookingStaffMember instantiates a new BookingStaffMember and sets the default values.
+// NewBookingStaffMember instantiates a new bookingStaffMember and sets the default values.
 func NewBookingStaffMember()(*BookingStaffMember) {
     m := &BookingStaffMember{
         BookingStaffMemberBase: *NewBookingStaffMemberBase(),
@@ -135,7 +135,9 @@ func (m *BookingStaffMember) GetFieldDeserializers()(map[string]func(i878a80d233
         if val != nil {
             res := make([]BookingWorkHoursable, len(val))
             for i, v := range val {
-                res[i] = v.(BookingWorkHoursable)
+                if v != nil {
+                    res[i] = v.(BookingWorkHoursable)
+                }
             }
             m.SetWorkingHours(res)
         }
@@ -250,7 +252,9 @@ func (m *BookingStaffMember) Serialize(writer i878a80d2330e89d26896388a3f487eef2
     if m.GetWorkingHours() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetWorkingHours()))
         for i, v := range m.GetWorkingHours() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("workingHours", cast)
         if err != nil {

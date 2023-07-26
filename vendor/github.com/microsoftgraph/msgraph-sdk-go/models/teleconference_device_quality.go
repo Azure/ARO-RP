@@ -72,7 +72,7 @@ func (m *TeleconferenceDeviceQuality) GetCloudServiceDeploymentId()(*string) {
     }
     return nil
 }
-// GetCloudServiceInstanceName gets the cloudServiceInstanceName property value. The Azure deployed cloud service instance name, such as FrontEnd_IN_3.
+// GetCloudServiceInstanceName gets the cloudServiceInstanceName property value. The Azure deployed cloud service instance name, such as FrontEndIN3.
 func (m *TeleconferenceDeviceQuality) GetCloudServiceInstanceName()(*string) {
     val, err := m.GetBackingStore().Get("cloudServiceInstanceName")
     if err != nil {
@@ -207,7 +207,9 @@ func (m *TeleconferenceDeviceQuality) GetFieldDeserializers()(map[string]func(i8
         if val != nil {
             res := make([]TeleconferenceDeviceMediaQualityable, len(val))
             for i, v := range val {
-                res[i] = v.(TeleconferenceDeviceMediaQualityable)
+                if v != nil {
+                    res[i] = v.(TeleconferenceDeviceMediaQualityable)
+                }
             }
             m.SetMediaQualityList(res)
         }
@@ -332,7 +334,9 @@ func (m *TeleconferenceDeviceQuality) Serialize(writer i878a80d2330e89d26896388a
     if m.GetMediaQualityList() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetMediaQualityList()))
         for i, v := range m.GetMediaQualityList() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err := writer.WriteCollectionOfObjectValues("mediaQualityList", cast)
         if err != nil {
@@ -391,7 +395,7 @@ func (m *TeleconferenceDeviceQuality) SetCloudServiceDeploymentId(value *string)
         panic(err)
     }
 }
-// SetCloudServiceInstanceName sets the cloudServiceInstanceName property value. The Azure deployed cloud service instance name, such as FrontEnd_IN_3.
+// SetCloudServiceInstanceName sets the cloudServiceInstanceName property value. The Azure deployed cloud service instance name, such as FrontEndIN3.
 func (m *TeleconferenceDeviceQuality) SetCloudServiceInstanceName(value *string)() {
     err := m.GetBackingStore().Set("cloudServiceInstanceName", value)
     if err != nil {

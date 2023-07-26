@@ -1,9 +1,8 @@
 package util
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
-	"io/fs"
 	"math"
 	"os"
 	"os/user"
@@ -19,15 +18,17 @@ import (
 	"github.com/containers/common/pkg/config"
 	"github.com/containers/common/pkg/util"
 	"github.com/containers/image/v5/types"
+	"github.com/containers/podman/v4/libpod/define"
 	"github.com/containers/podman/v4/pkg/errorhandling"
 	"github.com/containers/podman/v4/pkg/namespaces"
 	"github.com/containers/podman/v4/pkg/rootless"
 	"github.com/containers/podman/v4/pkg/signal"
+	"github.com/containers/storage/pkg/directory"
+	"github.com/containers/storage/pkg/homedir"
 	"github.com/containers/storage/pkg/idtools"
 	stypes "github.com/containers/storage/types"
-	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/term"
 )
@@ -56,6 +57,77 @@ func parseCreds(creds string) (string, string) {
 	return up[0], up[1]
 }
 
+// Takes build context and validates `.containerignore` or `.dockerignore`
+// if they are symlink outside of buildcontext. Returns list of files to be
+// excluded and resolved path to the ignore files inside build context or error
+func ParseDockerignore(containerfiles []string, root string) ([]string, string, error) {
+	ignoreFile := ""
+	path, err := securejoin.SecureJoin(root, ".containerignore")
+	if err != nil {
+		return nil, ignoreFile, err
+	}
+	// set resolved ignore file so imagebuildah
+	// does not attempts to re-resolve it
+	ignoreFile = path
+	ignore, err := os.ReadFile(path)
+	if err != nil {
+		var dockerIgnoreErr error
+		path, symlinkErr := securejoin.SecureJoin(root, ".dockerignore")
+		if symlinkErr != nil {
+			return nil, ignoreFile, symlinkErr
+		}
+		// set resolved ignore file so imagebuildah
+		// does not attempts to re-resolve it
+		ignoreFile = path
+		ignore, dockerIgnoreErr = os.ReadFile(path)
+		if os.IsNotExist(dockerIgnoreErr) {
+			// In this case either ignorefile was not found
+			// or it is a symlink to unexpected file in such
+			// case manually set ignorefile to `/dev/null` so
+			// internally imagebuildah does not attempts to re-resolve
+			// this invalid symlink and instead reads a blank file.
+			ignoreFile = "/dev/null"
+		}
+		// after https://github.com/containers/buildah/pull/4239 build supports
+		// <Containerfile>.containerignore or <Containerfile>.dockerignore as ignore file
+		// so remote must support parsing that.
+		if dockerIgnoreErr != nil {
+			for _, containerfile := range containerfiles {
+				containerfile = strings.TrimPrefix(containerfile, root)
+				if _, err := os.Stat(filepath.Join(root, containerfile+".containerignore")); err == nil {
+					path, symlinkErr = securejoin.SecureJoin(root, containerfile+".containerignore")
+					if symlinkErr == nil {
+						ignoreFile = path
+						ignore, dockerIgnoreErr = os.ReadFile(path)
+					}
+				}
+				if _, err := os.Stat(filepath.Join(root, containerfile+".dockerignore")); err == nil {
+					path, symlinkErr = securejoin.SecureJoin(root, containerfile+".dockerignore")
+					if symlinkErr == nil {
+						ignoreFile = path
+						ignore, dockerIgnoreErr = os.ReadFile(path)
+					}
+				}
+				if dockerIgnoreErr == nil {
+					break
+				}
+			}
+		}
+		if dockerIgnoreErr != nil && !os.IsNotExist(dockerIgnoreErr) {
+			return nil, ignoreFile, err
+		}
+	}
+	rawexcludes := strings.Split(string(ignore), "\n")
+	excludes := make([]string, 0, len(rawexcludes))
+	for _, e := range rawexcludes {
+		if len(e) == 0 || e[0] == '#' {
+			continue
+		}
+		excludes = append(excludes, e)
+	}
+	return excludes, ignoreFile, nil
+}
+
 // ParseRegistryCreds takes a credentials string in the form USERNAME:PASSWORD
 // and returns a DockerAuthConfig
 func ParseRegistryCreds(creds string) (*types.DockerAuthConfig, error) {
@@ -68,7 +140,7 @@ func ParseRegistryCreds(creds string) (*types.DockerAuthConfig, error) {
 		fmt.Print("Password: ")
 		termPassword, err := term.ReadPassword(0)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not read password from terminal")
+			return nil, fmt.Errorf("could not read password from terminal: %w", err)
 		}
 		password = string(termPassword)
 	}
@@ -79,7 +151,7 @@ func ParseRegistryCreds(creds string) (*types.DockerAuthConfig, error) {
 	}, nil
 }
 
-// StringInSlice is depracated, use containers/common/pkg/util/StringInSlice
+// StringInSlice is deprecated, use containers/common/pkg/util/StringInSlice
 func StringInSlice(s string, sl []string) bool {
 	return util.StringInSlice(s, sl)
 }
@@ -95,236 +167,6 @@ func StringMatchRegexSlice(s string, re []string) bool {
 	return false
 }
 
-// ImageConfig is a wrapper around the OCIv1 Image Configuration struct exported
-// by containers/image, but containing additional fields that are not supported
-// by OCIv1 (but are by Docker v2) - notably OnBuild.
-type ImageConfig struct {
-	v1.ImageConfig
-	OnBuild []string
-}
-
-// GetImageConfig produces a v1.ImageConfig from the --change flag that is
-// accepted by several Podman commands. It accepts a (limited subset) of
-// Dockerfile instructions.
-func GetImageConfig(changes []string) (ImageConfig, error) {
-	// Valid changes:
-	// USER
-	// EXPOSE
-	// ENV
-	// ENTRYPOINT
-	// CMD
-	// VOLUME
-	// WORKDIR
-	// LABEL
-	// STOPSIGNAL
-	// ONBUILD
-
-	config := ImageConfig{}
-
-	for _, change := range changes {
-		// First, let's assume proper Dockerfile format - space
-		// separator between instruction and value
-		split := strings.SplitN(change, " ", 2)
-
-		if len(split) != 2 {
-			split = strings.SplitN(change, "=", 2)
-			if len(split) != 2 {
-				return ImageConfig{}, errors.Errorf("invalid change %q - must be formatted as KEY VALUE", change)
-			}
-		}
-
-		outerKey := strings.ToUpper(strings.TrimSpace(split[0]))
-		value := strings.TrimSpace(split[1])
-		switch outerKey {
-		case "USER":
-			// Assume literal contents are the user.
-			if value == "" {
-				return ImageConfig{}, errors.Errorf("invalid change %q - must provide a value to USER", change)
-			}
-			config.User = value
-		case "EXPOSE":
-			// EXPOSE is either [portnum] or
-			// [portnum]/[proto]
-			// Protocol must be "tcp" or "udp"
-			splitPort := strings.Split(value, "/")
-			if len(splitPort) > 2 {
-				return ImageConfig{}, errors.Errorf("invalid change %q - EXPOSE port must be formatted as PORT[/PROTO]", change)
-			}
-			portNum, err := strconv.Atoi(splitPort[0])
-			if err != nil {
-				return ImageConfig{}, errors.Wrapf(err, "invalid change %q - EXPOSE port must be an integer", change)
-			}
-			if portNum > 65535 || portNum <= 0 {
-				return ImageConfig{}, errors.Errorf("invalid change %q - EXPOSE port must be a valid port number", change)
-			}
-			proto := "tcp"
-			if len(splitPort) > 1 {
-				testProto := strings.ToLower(splitPort[1])
-				switch testProto {
-				case "tcp", "udp":
-					proto = testProto
-				default:
-					return ImageConfig{}, errors.Errorf("invalid change %q - EXPOSE protocol must be TCP or UDP", change)
-				}
-			}
-			if config.ExposedPorts == nil {
-				config.ExposedPorts = make(map[string]struct{})
-			}
-			config.ExposedPorts[fmt.Sprintf("%d/%s", portNum, proto)] = struct{}{}
-		case "ENV":
-			// Format is either:
-			// ENV key=value
-			// ENV key=value key=value ...
-			// ENV key value
-			// Both keys and values can be surrounded by quotes to group them.
-			// For now: we only support key=value
-			// We will attempt to strip quotation marks if present.
-
-			var (
-				key, val string
-			)
-
-			splitEnv := strings.SplitN(value, "=", 2)
-			key = splitEnv[0]
-			// We do need a key
-			if key == "" {
-				return ImageConfig{}, errors.Errorf("invalid change %q - ENV must have at least one argument", change)
-			}
-			// Perfectly valid to not have a value
-			if len(splitEnv) == 2 {
-				val = splitEnv[1]
-			}
-
-			if strings.HasPrefix(key, `"`) && strings.HasSuffix(key, `"`) {
-				key = strings.TrimPrefix(strings.TrimSuffix(key, `"`), `"`)
-			}
-			if strings.HasPrefix(val, `"`) && strings.HasSuffix(val, `"`) {
-				val = strings.TrimPrefix(strings.TrimSuffix(val, `"`), `"`)
-			}
-			config.Env = append(config.Env, fmt.Sprintf("%s=%s", key, val))
-		case "ENTRYPOINT":
-			// Two valid forms.
-			// First, JSON array.
-			// Second, not a JSON array - we interpret this as an
-			// argument to `sh -c`, unless empty, in which case we
-			// just use a blank entrypoint.
-			testUnmarshal := []string{}
-			if err := json.Unmarshal([]byte(value), &testUnmarshal); err != nil {
-				// It ain't valid JSON, so assume it's an
-				// argument to sh -c if not empty.
-				if value != "" {
-					config.Entrypoint = []string{"/bin/sh", "-c", value}
-				} else {
-					config.Entrypoint = []string{}
-				}
-			} else {
-				// Valid JSON
-				config.Entrypoint = testUnmarshal
-			}
-		case "CMD":
-			// Same valid forms as entrypoint.
-			// However, where ENTRYPOINT assumes that 'ENTRYPOINT '
-			// means no entrypoint, CMD assumes it is 'sh -c' with
-			// no third argument.
-			testUnmarshal := []string{}
-			if err := json.Unmarshal([]byte(value), &testUnmarshal); err != nil {
-				// It ain't valid JSON, so assume it's an
-				// argument to sh -c.
-				// Only include volume if it's not ""
-				config.Cmd = []string{"/bin/sh", "-c"}
-				if value != "" {
-					config.Cmd = append(config.Cmd, value)
-				}
-			} else {
-				// Valid JSON
-				config.Cmd = testUnmarshal
-			}
-		case "VOLUME":
-			// Either a JSON array or a set of space-separated
-			// paths.
-			// Acts rather similar to ENTRYPOINT and CMD, but always
-			// appends rather than replacing, and no sh -c prepend.
-			testUnmarshal := []string{}
-			if err := json.Unmarshal([]byte(value), &testUnmarshal); err != nil {
-				// Not valid JSON, so split on spaces
-				testUnmarshal = strings.Split(value, " ")
-			}
-			if len(testUnmarshal) == 0 {
-				return ImageConfig{}, errors.Errorf("invalid change %q - must provide at least one argument to VOLUME", change)
-			}
-			for _, vol := range testUnmarshal {
-				if vol == "" {
-					return ImageConfig{}, errors.Errorf("invalid change %q - VOLUME paths must not be empty", change)
-				}
-				if config.Volumes == nil {
-					config.Volumes = make(map[string]struct{})
-				}
-				config.Volumes[vol] = struct{}{}
-			}
-		case "WORKDIR":
-			// This can be passed multiple times.
-			// Each successive invocation is treated as relative to
-			// the previous one - so WORKDIR /A, WORKDIR b,
-			// WORKDIR c results in /A/b/c
-			// Just need to check it's not empty...
-			if value == "" {
-				return ImageConfig{}, errors.Errorf("invalid change %q - must provide a non-empty WORKDIR", change)
-			}
-			config.WorkingDir = filepath.Join(config.WorkingDir, value)
-		case "LABEL":
-			// Same general idea as ENV, but we no longer allow " "
-			// as a separator.
-			// We didn't do that for ENV either, so nice and easy.
-			// Potentially problematic: LABEL might theoretically
-			// allow an = in the key? If people really do this, we
-			// may need to investigate more advanced parsing.
-			var (
-				key, val string
-			)
-
-			splitLabel := strings.SplitN(value, "=", 2)
-			// Unlike ENV, LABEL must have a value
-			if len(splitLabel) != 2 {
-				return ImageConfig{}, errors.Errorf("invalid change %q - LABEL must be formatted key=value", change)
-			}
-			key = splitLabel[0]
-			val = splitLabel[1]
-
-			if strings.HasPrefix(key, `"`) && strings.HasSuffix(key, `"`) {
-				key = strings.TrimPrefix(strings.TrimSuffix(key, `"`), `"`)
-			}
-			if strings.HasPrefix(val, `"`) && strings.HasSuffix(val, `"`) {
-				val = strings.TrimPrefix(strings.TrimSuffix(val, `"`), `"`)
-			}
-			// Check key after we strip quotations
-			if key == "" {
-				return ImageConfig{}, errors.Errorf("invalid change %q - LABEL must have a non-empty key", change)
-			}
-			if config.Labels == nil {
-				config.Labels = make(map[string]string)
-			}
-			config.Labels[key] = val
-		case "STOPSIGNAL":
-			// Check the provided signal for validity.
-			killSignal, err := ParseSignal(value)
-			if err != nil {
-				return ImageConfig{}, errors.Wrapf(err, "invalid change %q - KILLSIGNAL must be given a valid signal", change)
-			}
-			config.StopSignal = fmt.Sprintf("%d", killSignal)
-		case "ONBUILD":
-			// Onbuild always appends.
-			if value == "" {
-				return ImageConfig{}, errors.Errorf("invalid change %q - ONBUILD must be given an argument", change)
-			}
-			config.OnBuild = append(config.OnBuild, value)
-		default:
-			return ImageConfig{}, errors.Errorf("invalid change %q - invalid instruction %s", change, outerKey)
-		}
-	}
-
-	return config, nil
-}
-
 // ParseSignal parses and validates a signal name or number.
 func ParseSignal(rawSignal string) (syscall.Signal, error) {
 	// Strip off leading dash, to allow -1 or -HUP
@@ -336,20 +178,41 @@ func ParseSignal(rawSignal string) (syscall.Signal, error) {
 	}
 	// 64 is SIGRTMAX; wish we could get this from a standard Go library
 	if sig < 1 || sig > 64 {
-		return -1, errors.Errorf("valid signals are 1 through 64")
+		return -1, errors.New("valid signals are 1 through 64")
 	}
 	return sig, nil
 }
 
 // GetKeepIDMapping returns the mappings and the user to use when keep-id is used
-func GetKeepIDMapping() (*stypes.IDMappingOptions, int, int, error) {
-	if !rootless.IsRootless() {
-		return nil, -1, -1, errors.New("keep-id is only supported in rootless mode")
-	}
+func GetKeepIDMapping(opts *namespaces.KeepIDUserNsOptions) (*stypes.IDMappingOptions, int, int, error) {
 	options := stypes.IDMappingOptions{
 		HostUIDMapping: false,
 		HostGIDMapping: false,
 	}
+
+	if !rootless.IsRootless() {
+		uids, err := rootless.ReadMappingsProc("/proc/self/uid_map")
+		if err != nil {
+			return nil, 0, 0, err
+		}
+		gids, err := rootless.ReadMappingsProc("/proc/self/gid_map")
+		if err != nil {
+			return nil, 0, 0, err
+		}
+		options.UIDMap = uids
+		options.GIDMap = gids
+
+		uid, gid := 0, 0
+		if opts.UID != nil {
+			uid = int(*opts.UID)
+		}
+		if opts.GID != nil {
+			gid = int(*opts.GID)
+		}
+
+		return &options, uid, gid, nil
+	}
+
 	min := func(a, b int) int {
 		if a < b {
 			return a
@@ -359,14 +222,18 @@ func GetKeepIDMapping() (*stypes.IDMappingOptions, int, int, error) {
 
 	uid := rootless.GetRootlessUID()
 	gid := rootless.GetRootlessGID()
+	if opts.UID != nil {
+		uid = int(*opts.UID)
+	}
+	if opts.GID != nil {
+		gid = int(*opts.GID)
+	}
 
-	uids, gids, err := rootless.GetConfiguredMappings()
+	uids, gids, err := rootless.GetConfiguredMappings(true)
 	if err != nil {
-		return nil, -1, -1, errors.Wrapf(err, "cannot read mappings")
+		return nil, -1, -1, fmt.Errorf("cannot read mappings: %w", err)
 	}
-	if len(uids) == 0 || len(gids) == 0 {
-		return nil, -1, -1, errors.Wrapf(err, "keep-id requires additional UIDs or GIDs defined in /etc/subuid and /etc/subgid to function correctly")
-	}
+
 	maxUID, maxGID := 0, 0
 	for _, u := range uids {
 		maxUID += u.Size
@@ -377,13 +244,17 @@ func GetKeepIDMapping() (*stypes.IDMappingOptions, int, int, error) {
 
 	options.UIDMap, options.GIDMap = nil, nil
 
-	options.UIDMap = append(options.UIDMap, idtools.IDMap{ContainerID: 0, HostID: 1, Size: min(uid, maxUID)})
+	if len(uids) > 0 {
+		options.UIDMap = append(options.UIDMap, idtools.IDMap{ContainerID: 0, HostID: 1, Size: min(uid, maxUID)})
+	}
 	options.UIDMap = append(options.UIDMap, idtools.IDMap{ContainerID: uid, HostID: 0, Size: 1})
 	if maxUID > uid {
 		options.UIDMap = append(options.UIDMap, idtools.IDMap{ContainerID: uid + 1, HostID: uid + 1, Size: maxUID - uid})
 	}
 
-	options.GIDMap = append(options.GIDMap, idtools.IDMap{ContainerID: 0, HostID: 1, Size: min(gid, maxGID)})
+	if len(gids) > 0 {
+		options.GIDMap = append(options.GIDMap, idtools.IDMap{ContainerID: 0, HostID: 1, Size: min(gid, maxGID)})
+	}
 	options.GIDMap = append(options.GIDMap, idtools.IDMap{ContainerID: gid, HostID: 0, Size: 1})
 	if maxGID > gid {
 		options.GIDMap = append(options.GIDMap, idtools.IDMap{ContainerID: gid + 1, HostID: gid + 1, Size: maxGID - gid})
@@ -401,12 +272,12 @@ func GetNoMapMapping() (*stypes.IDMappingOptions, int, int, error) {
 		HostUIDMapping: false,
 		HostGIDMapping: false,
 	}
-	uids, gids, err := rootless.GetConfiguredMappings()
+	uids, gids, err := rootless.GetConfiguredMappings(false)
 	if err != nil {
-		return nil, -1, -1, errors.Wrapf(err, "cannot read mappings")
+		return nil, -1, -1, fmt.Errorf("cannot read mappings: %w", err)
 	}
 	if len(uids) == 0 || len(gids) == 0 {
-		return nil, -1, -1, errors.Wrapf(err, "nomap requires additional UIDs or GIDs defined in /etc/subuid and /etc/subgid to function correctly")
+		return nil, -1, -1, fmt.Errorf("nomap requires additional UIDs or GIDs defined in /etc/subuid and /etc/subgid to function correctly: %w", err)
 	}
 	options.UIDMap, options.GIDMap = nil, nil
 	uid, gid := 0, 0
@@ -566,7 +437,7 @@ func ParseInputTime(inputTime string, since bool) (time.Time, error) {
 	// input might be a duration
 	duration, err := time.ParseDuration(inputTime)
 	if err != nil {
-		return time.Time{}, errors.Errorf("unable to interpret time value")
+		return time.Time{}, errors.New("unable to interpret time value")
 	}
 	if since {
 		return time.Now().Add(-duration), nil
@@ -601,17 +472,8 @@ func ExitCode(err error) int {
 	return 126
 }
 
-// HomeDir returns the home directory for the current user.
-func HomeDir() (string, error) {
-	home := os.Getenv("HOME")
-	if home == "" {
-		usr, err := user.LookupId(fmt.Sprintf("%d", rootless.GetRootlessUID()))
-		if err != nil {
-			return "", errors.Wrapf(err, "unable to resolve HOME directory")
-		}
-		home = usr.HomeDir
-	}
-	return home, nil
+func GetIdentityPath(name string) string {
+	return filepath.Join(homedir.Get(), ".ssh", name)
 }
 
 func Tmpdir() string {
@@ -645,12 +507,12 @@ func ValidateSysctls(strSlice []string) (map[string]string, error) {
 		foundMatch := false
 		arr := strings.Split(val, "=")
 		if len(arr) < 2 {
-			return nil, errors.Errorf("%s is invalid, sysctl values must be in the form of KEY=VALUE", val)
+			return nil, fmt.Errorf("%s is invalid, sysctl values must be in the form of KEY=VALUE", val)
 		}
 
 		trimmed := fmt.Sprintf("%s=%s", strings.TrimSpace(arr[0]), strings.TrimSpace(arr[1]))
 		if trimmed != val {
-			return nil, errors.Errorf("'%s' is invalid, extra spaces found", val)
+			return nil, fmt.Errorf("'%s' is invalid, extra spaces found", val)
 		}
 
 		if validSysctlMap[arr[0]] {
@@ -666,7 +528,7 @@ func ValidateSysctls(strSlice []string) (map[string]string, error) {
 			}
 		}
 		if !foundMatch {
-			return nil, errors.Errorf("sysctl '%s' is not allowed", arr[0])
+			return nil, fmt.Errorf("sysctl '%s' is not allowed", arr[0])
 		}
 	}
 	return sysctl, nil
@@ -676,18 +538,15 @@ func DefaultContainerConfig() *config.Config {
 	return containerConfig
 }
 
-func CreateCidFile(cidfile string, id string) error {
-	cidFile, err := OpenExclusiveFile(cidfile)
+func CreateIDFile(path string, id string) error {
+	idFile, err := os.Create(path)
 	if err != nil {
-		if os.IsExist(err) {
-			return errors.Errorf("container id file exists. Ensure another container is not using it or delete %s", cidfile)
-		}
-		return errors.Errorf("opening cidfile %s", cidfile)
+		return fmt.Errorf("creating idfile: %w", err)
 	}
-	if _, err = cidFile.WriteString(id); err != nil {
-		logrus.Error(err)
+	defer idFile.Close()
+	if _, err = idFile.WriteString(id); err != nil {
+		return fmt.Errorf("writing idfile: %w", err)
 	}
-	cidFile.Close()
 	return nil
 }
 
@@ -727,8 +586,21 @@ func IDtoolsToRuntimeSpec(idMaps []idtools.IDMap) (convertedIDMap []specs.LinuxI
 	return convertedIDMap
 }
 
+// RuntimeSpecToIDtoolsTo converts runtime spec to the one of the idtools ID mapping
+func RuntimeSpecToIDtools(idMaps []specs.LinuxIDMapping) (convertedIDMap []idtools.IDMap) {
+	for _, idmap := range idMaps {
+		tempIDMap := idtools.IDMap{
+			ContainerID: int(idmap.ContainerID),
+			HostID:      int(idmap.HostID),
+			Size:        int(idmap.Size),
+		}
+		convertedIDMap = append(convertedIDMap, tempIDMap)
+	}
+	return convertedIDMap
+}
+
 func LookupUser(name string) (*user.User, error) {
-	// Assume UID look up first, if it fails lookup by username
+	// Assume UID lookup first, if it fails look up by username
 	if u, err := user.LookupId(name); err == nil {
 		return u, nil
 	}
@@ -737,17 +609,42 @@ func LookupUser(name string) (*user.User, error) {
 
 // SizeOfPath determines the file usage of a given path. it was called volumeSize in v1
 // and now is made to be generic and take a path instead of a libpod volume
+// Deprecated: use github.com/containers/storage/pkg/directory.Size() instead.
 func SizeOfPath(path string) (uint64, error) {
-	var size uint64
-	err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
-		if err == nil && !d.IsDir() {
-			info, err := d.Info()
-			if err != nil {
-				return err
-			}
-			size += uint64(info.Size())
+	size, err := directory.Size(path)
+	return uint64(size), err
+}
+
+// ParseRestartPolicy parses the value given to the --restart flag and returns the policy
+// and restart retries value
+func ParseRestartPolicy(policy string) (string, uint, error) {
+	var (
+		retriesUint uint
+		policyType  string
+	)
+	splitRestart := strings.Split(policy, ":")
+	switch len(splitRestart) {
+	case 1:
+		// No retries specified
+		policyType = splitRestart[0]
+		if strings.ToLower(splitRestart[0]) == "never" {
+			policyType = define.RestartPolicyNo
 		}
-		return err
-	})
-	return size, err
+	case 2:
+		if strings.ToLower(splitRestart[0]) != "on-failure" {
+			return "", 0, errors.New("restart policy retries can only be specified with on-failure restart policy")
+		}
+		retries, err := strconv.Atoi(splitRestart[1])
+		if err != nil {
+			return "", 0, fmt.Errorf("parsing restart policy retry count: %w", err)
+		}
+		if retries < 0 {
+			return "", 0, errors.New("must specify restart policy retry count as a number greater than 0")
+		}
+		retriesUint = uint(retries)
+		policyType = splitRestart[0]
+	default:
+		return "", 0, errors.New("invalid restart policy: may specify retries at most once")
+	}
+	return policyType, retriesUint, nil
 }

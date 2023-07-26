@@ -38,7 +38,7 @@ func (m *ComplianceInformation) GetAdditionalData()(map[string]any) {
 func (m *ComplianceInformation) GetBackingStore()(ie8677ce2c7e1b4c22e9c3827ecd078d41185424dd9eeb92b7d971ed2d49a392e.BackingStore) {
     return m.backingStore
 }
-// GetCertificationControls gets the certificationControls property value. Collection of the certification controls associated with certification
+// GetCertificationControls gets the certificationControls property value. Collection of the certification controls associated with the certification.
 func (m *ComplianceInformation) GetCertificationControls()([]CertificationControlable) {
     val, err := m.GetBackingStore().Get("certificationControls")
     if err != nil {
@@ -49,7 +49,7 @@ func (m *ComplianceInformation) GetCertificationControls()([]CertificationContro
     }
     return nil
 }
-// GetCertificationName gets the certificationName property value. Compliance certification name (for example, ISO 27018:2014, GDPR, FedRAMP, NIST 800-171)
+// GetCertificationName gets the certificationName property value. The name of the compliance certification, for example, ISO 27018:2014, GDPR, FedRAMP, and NIST 800-171.
 func (m *ComplianceInformation) GetCertificationName()(*string) {
     val, err := m.GetBackingStore().Get("certificationName")
     if err != nil {
@@ -71,7 +71,9 @@ func (m *ComplianceInformation) GetFieldDeserializers()(map[string]func(i878a80d
         if val != nil {
             res := make([]CertificationControlable, len(val))
             for i, v := range val {
-                res[i] = v.(CertificationControlable)
+                if v != nil {
+                    res[i] = v.(CertificationControlable)
+                }
             }
             m.SetCertificationControls(res)
         }
@@ -115,7 +117,9 @@ func (m *ComplianceInformation) Serialize(writer i878a80d2330e89d26896388a3f487e
     if m.GetCertificationControls() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetCertificationControls()))
         for i, v := range m.GetCertificationControls() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err := writer.WriteCollectionOfObjectValues("certificationControls", cast)
         if err != nil {
@@ -153,14 +157,14 @@ func (m *ComplianceInformation) SetAdditionalData(value map[string]any)() {
 func (m *ComplianceInformation) SetBackingStore(value ie8677ce2c7e1b4c22e9c3827ecd078d41185424dd9eeb92b7d971ed2d49a392e.BackingStore)() {
     m.backingStore = value
 }
-// SetCertificationControls sets the certificationControls property value. Collection of the certification controls associated with certification
+// SetCertificationControls sets the certificationControls property value. Collection of the certification controls associated with the certification.
 func (m *ComplianceInformation) SetCertificationControls(value []CertificationControlable)() {
     err := m.GetBackingStore().Set("certificationControls", value)
     if err != nil {
         panic(err)
     }
 }
-// SetCertificationName sets the certificationName property value. Compliance certification name (for example, ISO 27018:2014, GDPR, FedRAMP, NIST 800-171)
+// SetCertificationName sets the certificationName property value. The name of the compliance certification, for example, ISO 27018:2014, GDPR, FedRAMP, and NIST 800-171.
 func (m *ComplianceInformation) SetCertificationName(value *string)() {
     err := m.GetBackingStore().Set("certificationName", value)
     if err != nil {

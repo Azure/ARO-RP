@@ -69,7 +69,9 @@ func (m *SynchronizationJobApplicationParameters) GetFieldDeserializers()(map[st
         if val != nil {
             res := make([]SynchronizationJobSubjectable, len(val))
             for i, v := range val {
-                res[i] = v.(SynchronizationJobSubjectable)
+                if v != nil {
+                    res[i] = v.(SynchronizationJobSubjectable)
+                }
             }
             m.SetSubjects(res)
         }
@@ -88,7 +90,7 @@ func (m *SynchronizationJobApplicationParameters) GetOdataType()(*string) {
     }
     return nil
 }
-// GetRuleId gets the ruleId property value. The ruleId property
+// GetRuleId gets the ruleId property value. The identifier of the synchronizationRule to be applied. This rule ID is defined in the schema for a given synchronization job or template.
 func (m *SynchronizationJobApplicationParameters) GetRuleId()(*string) {
     val, err := m.GetBackingStore().Get("ruleId")
     if err != nil {
@@ -99,7 +101,7 @@ func (m *SynchronizationJobApplicationParameters) GetRuleId()(*string) {
     }
     return nil
 }
-// GetSubjects gets the subjects property value. The subjects property
+// GetSubjects gets the subjects property value. The identifiers of one or more objects to which a synchronizationJob is to be applied.
 func (m *SynchronizationJobApplicationParameters) GetSubjects()([]SynchronizationJobSubjectable) {
     val, err := m.GetBackingStore().Get("subjects")
     if err != nil {
@@ -127,7 +129,9 @@ func (m *SynchronizationJobApplicationParameters) Serialize(writer i878a80d2330e
     if m.GetSubjects() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetSubjects()))
         for i, v := range m.GetSubjects() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err := writer.WriteCollectionOfObjectValues("subjects", cast)
         if err != nil {
@@ -160,14 +164,14 @@ func (m *SynchronizationJobApplicationParameters) SetOdataType(value *string)() 
         panic(err)
     }
 }
-// SetRuleId sets the ruleId property value. The ruleId property
+// SetRuleId sets the ruleId property value. The identifier of the synchronizationRule to be applied. This rule ID is defined in the schema for a given synchronization job or template.
 func (m *SynchronizationJobApplicationParameters) SetRuleId(value *string)() {
     err := m.GetBackingStore().Set("ruleId", value)
     if err != nil {
         panic(err)
     }
 }
-// SetSubjects sets the subjects property value. The subjects property
+// SetSubjects sets the subjects property value. The identifiers of one or more objects to which a synchronizationJob is to be applied.
 func (m *SynchronizationJobApplicationParameters) SetSubjects(value []SynchronizationJobSubjectable)() {
     err := m.GetBackingStore().Set("subjects", value)
     if err != nil {

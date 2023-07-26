@@ -8,7 +8,7 @@ import (
 type DeviceEnrollmentConfigurationCollectionResponse struct {
     BaseCollectionPaginationCountResponse
 }
-// NewDeviceEnrollmentConfigurationCollectionResponse instantiates a new DeviceEnrollmentConfigurationCollectionResponse and sets the default values.
+// NewDeviceEnrollmentConfigurationCollectionResponse instantiates a new deviceEnrollmentConfigurationCollectionResponse and sets the default values.
 func NewDeviceEnrollmentConfigurationCollectionResponse()(*DeviceEnrollmentConfigurationCollectionResponse) {
     m := &DeviceEnrollmentConfigurationCollectionResponse{
         BaseCollectionPaginationCountResponse: *NewBaseCollectionPaginationCountResponse(),
@@ -30,7 +30,9 @@ func (m *DeviceEnrollmentConfigurationCollectionResponse) GetFieldDeserializers(
         if val != nil {
             res := make([]DeviceEnrollmentConfigurationable, len(val))
             for i, v := range val {
-                res[i] = v.(DeviceEnrollmentConfigurationable)
+                if v != nil {
+                    res[i] = v.(DeviceEnrollmentConfigurationable)
+                }
             }
             m.SetValue(res)
         }
@@ -58,7 +60,9 @@ func (m *DeviceEnrollmentConfigurationCollectionResponse) Serialize(writer i878a
     if m.GetValue() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetValue()))
         for i, v := range m.GetValue() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("value", cast)
         if err != nil {

@@ -85,7 +85,7 @@ func (m *OrgContactItemRequestBuilder) DirectReports()(*ItemDirectReportsRequest
 // Get get the properties and relationships of an organizational contact.
 // [Find more info here]
 // 
-// [Find more info here]: https://docs.microsoft.com/graph/api/orgcontact-get?view=graph-rest-1.0
+// [Find more info here]: https://learn.microsoft.com/graph/api/orgcontact-get?view=graph-rest-1.0
 func (m *OrgContactItemRequestBuilder) Get(ctx context.Context, requestConfiguration *OrgContactItemRequestBuilderGetRequestConfiguration)(iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.OrgContactable, error) {
     requestInfo, err := m.ToGetRequestInformation(ctx, requestConfiguration);
     if err != nil {
@@ -142,6 +142,10 @@ func (m *OrgContactItemRequestBuilder) Patch(ctx context.Context, body iadcd8112
 // Restore provides operations to call the restore method.
 func (m *OrgContactItemRequestBuilder) Restore()(*ItemRestoreRequestBuilder) {
     return NewItemRestoreRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
+}
+// RetryServiceProvisioning provides operations to call the retryServiceProvisioning method.
+func (m *OrgContactItemRequestBuilder) RetryServiceProvisioning()(*ItemRetryServiceProvisioningRequestBuilder) {
+    return NewItemRetryServiceProvisioningRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
 }
 // ToDeleteRequestInformation delete entity from contacts
 func (m *OrgContactItemRequestBuilder) ToDeleteRequestInformation(ctx context.Context, requestConfiguration *OrgContactItemRequestBuilderDeleteRequestConfiguration)(*i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestInformation, error) {

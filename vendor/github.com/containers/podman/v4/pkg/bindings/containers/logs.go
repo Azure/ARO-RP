@@ -2,13 +2,13 @@ package containers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
 
 	"github.com/containers/podman/v4/pkg/bindings"
-	"github.com/pkg/errors"
 )
 
 // Logs obtains a container's logs given the options provided.  The logs are then sent to the
@@ -34,6 +34,11 @@ func Logs(ctx context.Context, nameOrID string, options *LogOptions, stdoutChan,
 		return err
 	}
 	defer response.Body.Close()
+
+	// if not success handle and return possible error message
+	if !(response.IsSuccess() || response.IsInformational()) {
+		return response.Process(nil)
+	}
 
 	buffer := make([]byte, 1024)
 	for {

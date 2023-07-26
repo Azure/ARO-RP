@@ -139,7 +139,9 @@ func (m *DriveItem) GetFieldDeserializers()(map[string]func(i878a80d2330e89d2689
         if val != nil {
             res := make([]DriveItemable, len(val))
             for i, v := range val {
-                res[i] = v.(DriveItemable)
+                if v != nil {
+                    res[i] = v.(DriveItemable)
+                }
             }
             m.SetChildren(res)
         }
@@ -251,7 +253,7 @@ func (m *DriveItem) GetFieldDeserializers()(map[string]func(i878a80d2330e89d2689
             return err
         }
         if val != nil {
-            m.SetPackage(val.(PackageEscapedable))
+            m.SetPackageEscaped(val.(PackageEscapedable))
         }
         return nil
     }
@@ -273,7 +275,9 @@ func (m *DriveItem) GetFieldDeserializers()(map[string]func(i878a80d2330e89d2689
         if val != nil {
             res := make([]Permissionable, len(val))
             for i, v := range val {
-                res[i] = v.(Permissionable)
+                if v != nil {
+                    res[i] = v.(Permissionable)
+                }
             }
             m.SetPermissions(res)
         }
@@ -377,7 +381,9 @@ func (m *DriveItem) GetFieldDeserializers()(map[string]func(i878a80d2330e89d2689
         if val != nil {
             res := make([]Subscriptionable, len(val))
             for i, v := range val {
-                res[i] = v.(Subscriptionable)
+                if v != nil {
+                    res[i] = v.(Subscriptionable)
+                }
             }
             m.SetSubscriptions(res)
         }
@@ -391,7 +397,9 @@ func (m *DriveItem) GetFieldDeserializers()(map[string]func(i878a80d2330e89d2689
         if val != nil {
             res := make([]ThumbnailSetable, len(val))
             for i, v := range val {
-                res[i] = v.(ThumbnailSetable)
+                if v != nil {
+                    res[i] = v.(ThumbnailSetable)
+                }
             }
             m.SetThumbnails(res)
         }
@@ -405,7 +413,9 @@ func (m *DriveItem) GetFieldDeserializers()(map[string]func(i878a80d2330e89d2689
         if val != nil {
             res := make([]DriveItemVersionable, len(val))
             for i, v := range val {
-                res[i] = v.(DriveItemVersionable)
+                if v != nil {
+                    res[i] = v.(DriveItemVersionable)
+                }
             }
             m.SetVersions(res)
         }
@@ -520,8 +530,8 @@ func (m *DriveItem) GetMalware()(Malwareable) {
     }
     return nil
 }
-// GetPackage gets the package property value. If present, indicates that this item is a package instead of a folder or file. Packages are treated like files in some contexts and folders in others. Read-only.
-func (m *DriveItem) GetPackage()(PackageEscapedable) {
+// GetPackageEscaped gets the package property value. If present, indicates that this item is a package instead of a folder or file. Packages are treated like files in some contexts and folders in others. Read-only.
+func (m *DriveItem) GetPackageEscaped()(PackageEscapedable) {
     val, err := m.GetBackingStore().Get("packageEscaped")
     if err != nil {
         panic(err)
@@ -745,7 +755,9 @@ func (m *DriveItem) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c0
     if m.GetChildren() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetChildren()))
         for i, v := range m.GetChildren() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("children", cast)
         if err != nil {
@@ -813,7 +825,7 @@ func (m *DriveItem) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c0
         }
     }
     {
-        err = writer.WriteObjectValue("package", m.GetPackage())
+        err = writer.WriteObjectValue("package", m.GetPackageEscaped())
         if err != nil {
             return err
         }
@@ -827,7 +839,9 @@ func (m *DriveItem) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c0
     if m.GetPermissions() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetPermissions()))
         for i, v := range m.GetPermissions() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("permissions", cast)
         if err != nil {
@@ -891,7 +905,9 @@ func (m *DriveItem) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c0
     if m.GetSubscriptions() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetSubscriptions()))
         for i, v := range m.GetSubscriptions() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("subscriptions", cast)
         if err != nil {
@@ -901,7 +917,9 @@ func (m *DriveItem) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c0
     if m.GetThumbnails() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetThumbnails()))
         for i, v := range m.GetThumbnails() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("thumbnails", cast)
         if err != nil {
@@ -911,7 +929,9 @@ func (m *DriveItem) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c0
     if m.GetVersions() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetVersions()))
         for i, v := range m.GetVersions() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("versions", cast)
         if err != nil {
@@ -1036,8 +1056,8 @@ func (m *DriveItem) SetMalware(value Malwareable)() {
         panic(err)
     }
 }
-// SetPackage sets the package property value. If present, indicates that this item is a package instead of a folder or file. Packages are treated like files in some contexts and folders in others. Read-only.
-func (m *DriveItem) SetPackage(value PackageEscapedable)() {
+// SetPackageEscaped sets the package property value. If present, indicates that this item is a package instead of a folder or file. Packages are treated like files in some contexts and folders in others. Read-only.
+func (m *DriveItem) SetPackageEscaped(value PackageEscapedable)() {
     err := m.GetBackingStore().Set("packageEscaped", value)
     if err != nil {
         panic(err)
@@ -1180,7 +1200,7 @@ type DriveItemable interface {
     GetListItem()(ListItemable)
     GetLocation()(GeoCoordinatesable)
     GetMalware()(Malwareable)
-    GetPackage()(PackageEscapedable)
+    GetPackageEscaped()(PackageEscapedable)
     GetPendingOperations()(PendingOperationsable)
     GetPermissions()([]Permissionable)
     GetPhoto()(Photoable)
@@ -1212,7 +1232,7 @@ type DriveItemable interface {
     SetListItem(value ListItemable)()
     SetLocation(value GeoCoordinatesable)()
     SetMalware(value Malwareable)()
-    SetPackage(value PackageEscapedable)()
+    SetPackageEscaped(value PackageEscapedable)()
     SetPendingOperations(value PendingOperationsable)()
     SetPermissions(value []Permissionable)()
     SetPhoto(value Photoable)()

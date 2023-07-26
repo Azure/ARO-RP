@@ -9,7 +9,7 @@ import (
 type SubjectRightsRequest struct {
     Entity
 }
-// NewSubjectRightsRequest instantiates a new SubjectRightsRequest and sets the default values.
+// NewSubjectRightsRequest instantiates a new subjectRightsRequest and sets the default values.
 func NewSubjectRightsRequest()(*SubjectRightsRequest) {
     m := &SubjectRightsRequest{
         Entity: *NewEntity(),
@@ -199,7 +199,9 @@ func (m *SubjectRightsRequest) GetFieldDeserializers()(map[string]func(i878a80d2
         if val != nil {
             res := make([]SubjectRightsRequestHistoryable, len(val))
             for i, v := range val {
-                res[i] = v.(SubjectRightsRequestHistoryable)
+                if v != nil {
+                    res[i] = v.(SubjectRightsRequestHistoryable)
+                }
             }
             m.SetHistory(res)
         }
@@ -253,7 +255,9 @@ func (m *SubjectRightsRequest) GetFieldDeserializers()(map[string]func(i878a80d2
         if val != nil {
             res := make([]AuthoredNoteable, len(val))
             for i, v := range val {
-                res[i] = v.(AuthoredNoteable)
+                if v != nil {
+                    res[i] = v.(AuthoredNoteable)
+                }
             }
             m.SetNotes(res)
         }
@@ -267,7 +271,9 @@ func (m *SubjectRightsRequest) GetFieldDeserializers()(map[string]func(i878a80d2
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetRegulations(res)
         }
@@ -281,7 +287,9 @@ func (m *SubjectRightsRequest) GetFieldDeserializers()(map[string]func(i878a80d2
         if val != nil {
             res := make([]SubjectRightsRequestStageDetailable, len(val))
             for i, v := range val {
-                res[i] = v.(SubjectRightsRequestStageDetailable)
+                if v != nil {
+                    res[i] = v.(SubjectRightsRequestStageDetailable)
+                }
             }
             m.SetStages(res)
         }
@@ -313,7 +321,7 @@ func (m *SubjectRightsRequest) GetFieldDeserializers()(map[string]func(i878a80d2
             return err
         }
         if val != nil {
-            m.SetType(val.(*SubjectRightsRequestType))
+            m.SetTypeEscaped(val.(*SubjectRightsRequestType))
         }
         return nil
     }
@@ -429,8 +437,8 @@ func (m *SubjectRightsRequest) GetTeam()(Teamable) {
     }
     return nil
 }
-// GetType gets the type property value. The type of the request. Possible values are: export, delete,  access, tagForAction, unknownFutureValue.
-func (m *SubjectRightsRequest) GetType()(*SubjectRightsRequestType) {
+// GetTypeEscaped gets the type property value. The type of the request. Possible values are: export, delete,  access, tagForAction, unknownFutureValue.
+func (m *SubjectRightsRequest) GetTypeEscaped()(*SubjectRightsRequestType) {
     val, err := m.GetBackingStore().Get("typeEscaped")
     if err != nil {
         panic(err)
@@ -498,7 +506,9 @@ func (m *SubjectRightsRequest) Serialize(writer i878a80d2330e89d26896388a3f487ee
     if m.GetHistory() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetHistory()))
         for i, v := range m.GetHistory() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("history", cast)
         if err != nil {
@@ -532,7 +542,9 @@ func (m *SubjectRightsRequest) Serialize(writer i878a80d2330e89d26896388a3f487ee
     if m.GetNotes() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetNotes()))
         for i, v := range m.GetNotes() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("notes", cast)
         if err != nil {
@@ -548,7 +560,9 @@ func (m *SubjectRightsRequest) Serialize(writer i878a80d2330e89d26896388a3f487ee
     if m.GetStages() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetStages()))
         for i, v := range m.GetStages() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("stages", cast)
         if err != nil {
@@ -568,8 +582,8 @@ func (m *SubjectRightsRequest) Serialize(writer i878a80d2330e89d26896388a3f487ee
             return err
         }
     }
-    if m.GetType() != nil {
-        cast := (*m.GetType()).String()
+    if m.GetTypeEscaped() != nil {
+        cast := (*m.GetTypeEscaped()).String()
         err = writer.WriteStringValue("type", &cast)
         if err != nil {
             return err
@@ -703,8 +717,8 @@ func (m *SubjectRightsRequest) SetTeam(value Teamable)() {
         panic(err)
     }
 }
-// SetType sets the type property value. The type of the request. Possible values are: export, delete,  access, tagForAction, unknownFutureValue.
-func (m *SubjectRightsRequest) SetType(value *SubjectRightsRequestType)() {
+// SetTypeEscaped sets the type property value. The type of the request. Possible values are: export, delete,  access, tagForAction, unknownFutureValue.
+func (m *SubjectRightsRequest) SetTypeEscaped(value *SubjectRightsRequestType)() {
     err := m.GetBackingStore().Set("typeEscaped", value)
     if err != nil {
         panic(err)
@@ -732,7 +746,7 @@ type SubjectRightsRequestable interface {
     GetStages()([]SubjectRightsRequestStageDetailable)
     GetStatus()(*SubjectRightsRequestStatus)
     GetTeam()(Teamable)
-    GetType()(*SubjectRightsRequestType)
+    GetTypeEscaped()(*SubjectRightsRequestType)
     SetAssignedTo(value Identityable)()
     SetClosedDateTime(value *i336074805fc853987abe6f7fe3ad97a6a6f3077a16391fec744f671a015fbd7e.Time)()
     SetCreatedBy(value IdentitySetable)()
@@ -751,5 +765,5 @@ type SubjectRightsRequestable interface {
     SetStages(value []SubjectRightsRequestStageDetailable)()
     SetStatus(value *SubjectRightsRequestStatus)()
     SetTeam(value Teamable)()
-    SetType(value *SubjectRightsRequestType)()
+    SetTypeEscaped(value *SubjectRightsRequestType)()
 }

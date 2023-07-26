@@ -9,7 +9,7 @@ import (
 type EdiscoveryReviewSetQueryCollectionResponse struct {
     iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.BaseCollectionPaginationCountResponse
 }
-// NewEdiscoveryReviewSetQueryCollectionResponse instantiates a new EdiscoveryReviewSetQueryCollectionResponse and sets the default values.
+// NewEdiscoveryReviewSetQueryCollectionResponse instantiates a new ediscoveryReviewSetQueryCollectionResponse and sets the default values.
 func NewEdiscoveryReviewSetQueryCollectionResponse()(*EdiscoveryReviewSetQueryCollectionResponse) {
     m := &EdiscoveryReviewSetQueryCollectionResponse{
         BaseCollectionPaginationCountResponse: *iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.NewBaseCollectionPaginationCountResponse(),
@@ -31,7 +31,9 @@ func (m *EdiscoveryReviewSetQueryCollectionResponse) GetFieldDeserializers()(map
         if val != nil {
             res := make([]EdiscoveryReviewSetQueryable, len(val))
             for i, v := range val {
-                res[i] = v.(EdiscoveryReviewSetQueryable)
+                if v != nil {
+                    res[i] = v.(EdiscoveryReviewSetQueryable)
+                }
             }
             m.SetValue(res)
         }
@@ -59,7 +61,9 @@ func (m *EdiscoveryReviewSetQueryCollectionResponse) Serialize(writer i878a80d23
     if m.GetValue() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetValue()))
         for i, v := range m.GetValue() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("value", cast)
         if err != nil {

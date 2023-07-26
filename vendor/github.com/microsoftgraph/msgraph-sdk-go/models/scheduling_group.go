@@ -8,7 +8,7 @@ import (
 type SchedulingGroup struct {
     ChangeTrackedEntity
 }
-// NewSchedulingGroup instantiates a new SchedulingGroup and sets the default values.
+// NewSchedulingGroup instantiates a new schedulingGroup and sets the default values.
 func NewSchedulingGroup()(*SchedulingGroup) {
     m := &SchedulingGroup{
         ChangeTrackedEntity: *NewChangeTrackedEntity(),
@@ -63,7 +63,9 @@ func (m *SchedulingGroup) GetFieldDeserializers()(map[string]func(i878a80d2330e8
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetUserIds(res)
         }

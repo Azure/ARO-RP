@@ -59,7 +59,9 @@ func (m *SynchronizationLinkedObjects) GetFieldDeserializers()(map[string]func(i
         if val != nil {
             res := make([]SynchronizationJobSubjectable, len(val))
             for i, v := range val {
-                res[i] = v.(SynchronizationJobSubjectable)
+                if v != nil {
+                    res[i] = v.(SynchronizationJobSubjectable)
+                }
             }
             m.SetMembers(res)
         }
@@ -83,7 +85,9 @@ func (m *SynchronizationLinkedObjects) GetFieldDeserializers()(map[string]func(i
         if val != nil {
             res := make([]SynchronizationJobSubjectable, len(val))
             for i, v := range val {
-                res[i] = v.(SynchronizationJobSubjectable)
+                if v != nil {
+                    res[i] = v.(SynchronizationJobSubjectable)
+                }
             }
             m.SetOwners(res)
         }
@@ -102,7 +106,7 @@ func (m *SynchronizationLinkedObjects) GetManager()(SynchronizationJobSubjectabl
     }
     return nil
 }
-// GetMembers gets the members property value. The members property
+// GetMembers gets the members property value. All group members that you would like to provision.
 func (m *SynchronizationLinkedObjects) GetMembers()([]SynchronizationJobSubjectable) {
     val, err := m.GetBackingStore().Get("members")
     if err != nil {
@@ -146,7 +150,9 @@ func (m *SynchronizationLinkedObjects) Serialize(writer i878a80d2330e89d26896388
     if m.GetMembers() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetMembers()))
         for i, v := range m.GetMembers() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err := writer.WriteCollectionOfObjectValues("members", cast)
         if err != nil {
@@ -162,7 +168,9 @@ func (m *SynchronizationLinkedObjects) Serialize(writer i878a80d2330e89d26896388
     if m.GetOwners() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetOwners()))
         for i, v := range m.GetOwners() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err := writer.WriteCollectionOfObjectValues("owners", cast)
         if err != nil {
@@ -195,7 +203,7 @@ func (m *SynchronizationLinkedObjects) SetManager(value SynchronizationJobSubjec
         panic(err)
     }
 }
-// SetMembers sets the members property value. The members property
+// SetMembers sets the members property value. All group members that you would like to provision.
 func (m *SynchronizationLinkedObjects) SetMembers(value []SynchronizationJobSubjectable)() {
     err := m.GetBackingStore().Set("members", value)
     if err != nil {

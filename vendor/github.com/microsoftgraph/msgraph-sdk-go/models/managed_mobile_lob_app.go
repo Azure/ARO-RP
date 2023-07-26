@@ -4,11 +4,11 @@ import (
     i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91 "github.com/microsoft/kiota-abstractions-go/serialization"
 )
 
-// ManagedMobileLobApp 
+// ManagedMobileLobApp an abstract base class containing properties for all managed mobile line of business apps.
 type ManagedMobileLobApp struct {
     ManagedApp
 }
-// NewManagedMobileLobApp instantiates a new ManagedMobileLobApp and sets the default values.
+// NewManagedMobileLobApp instantiates a new managedMobileLobApp and sets the default values.
 func NewManagedMobileLobApp()(*ManagedMobileLobApp) {
     m := &ManagedMobileLobApp{
         ManagedApp: *NewManagedApp(),
@@ -84,7 +84,9 @@ func (m *ManagedMobileLobApp) GetFieldDeserializers()(map[string]func(i878a80d23
         if val != nil {
             res := make([]MobileAppContentable, len(val))
             for i, v := range val {
-                res[i] = v.(MobileAppContentable)
+                if v != nil {
+                    res[i] = v.(MobileAppContentable)
+                }
             }
             m.SetContentVersions(res)
         }
@@ -149,7 +151,9 @@ func (m *ManagedMobileLobApp) Serialize(writer i878a80d2330e89d26896388a3f487eef
     if m.GetContentVersions() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetContentVersions()))
         for i, v := range m.GetContentVersions() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("contentVersions", cast)
         if err != nil {

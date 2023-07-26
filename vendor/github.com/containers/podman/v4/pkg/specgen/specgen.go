@@ -1,6 +1,7 @@
 package specgen
 
 import (
+	"errors"
 	"net"
 	"strings"
 	"syscall"
@@ -8,12 +9,13 @@ import (
 	"github.com/containers/common/libimage"
 	nettypes "github.com/containers/common/libnetwork/types"
 	"github.com/containers/image/v5/manifest"
+	"github.com/containers/podman/v4/libpod/define"
 	"github.com/containers/storage/types"
 	spec "github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/pkg/errors"
 )
 
-//  LogConfig describes the logging characteristics for a container
+// LogConfig describes the logging characteristics for a container
+// swagger:model LogConfigLibpod
 type LogConfig struct {
 	// LogDriver is the container's log driver.
 	// Optional.
@@ -103,6 +105,12 @@ type ContainerBasicConfig struct {
 	// RawImageName is the user-specified and unprocessed input referring
 	// to a local or a remote image.
 	RawImageName string `json:"raw_image_name,omitempty"`
+	// ImageOS is the user-specified image OS
+	ImageOS string `json:"image_os,omitempty"`
+	// ImageArch is the user-specified image architecture
+	ImageArch string `json:"image_arch,omitempty"`
+	// ImageVariant is the user-specified image variant
+	ImageVariant string `json:"image_variant,omitempty"`
 	// RestartPolicy is the container's restart policy - an action which
 	// will be taken when the container exits.
 	// If not given, the default policy, which does nothing, will be used.
@@ -152,7 +160,7 @@ type ContainerBasicConfig struct {
 	// Conflicts with UtsNS if UtsNS is not set to private.
 	// Optional.
 	Hostname string `json:"hostname,omitempty"`
-	// HostUses is a list of host usernames or UIDs to add to the container
+	// HostUsers is a list of host usernames or UIDs to add to the container
 	// /etc/passwd file
 	HostUsers []string `json:"hostusers,omitempty"`
 	// Sysctl sets kernel parameters for the container
@@ -197,6 +205,9 @@ type ContainerBasicConfig struct {
 	// The execution domain system allows Linux to provide limited support
 	// for binaries compiled under other UNIX-like operating systems.
 	Personality *spec.LinuxPersonality `json:"personality,omitempty"`
+	// EnvMerge takes the specified environment variables from image and preprocess them before injecting them into the
+	// container.
+	EnvMerge []string `json:"envmerge,omitempty"`
 	// UnsetEnv unsets the specified default environment variables from the image or from buildin or containers.conf
 	// Optional.
 	UnsetEnv []string `json:"unsetenv,omitempty"`
@@ -208,6 +219,8 @@ type ContainerBasicConfig struct {
 	Passwd *bool `json:"manage_password,omitempty"`
 	// PasswdEntry specifies arbitrary data to append to a file.
 	PasswdEntry string `json:"passwd_entry,omitempty"`
+	// GroupEntry specifies arbitrary data to append to a file.
+	GroupEntry string `json:"group_entry,omitempty"`
 }
 
 // ContainerStorageConfig contains information on the storage configuration of a
@@ -227,6 +240,8 @@ type ContainerStorageConfig struct {
 	Rootfs string `json:"rootfs,omitempty"`
 	// RootfsOverlay tells if rootfs is actually an overlay on top of base path
 	RootfsOverlay bool `json:"rootfs_overlay,omitempty"`
+	// RootfsMapping specifies if there are mappings to apply to the rootfs.
+	RootfsMapping *string `json:"rootfs_mapping,omitempty"`
 	// ImageVolumeMode indicates how image volumes will be created.
 	// Supported modes are "ignore" (do not create), "tmpfs" (create as
 	// tmpfs), and "anonymous" (create as anonymous volumes).
@@ -282,6 +297,10 @@ type ContainerStorageConfig struct {
 	// Conflicts with ShmSize if IpcNS is not private.
 	// Optional.
 	ShmSize *int64 `json:"shm_size,omitempty"`
+	// ShmSizeSystemd is the size of systemd-specific tmpfs mounts
+	// specifically /run, /run/lock, /var/log/journal and /tmp.
+	// Optional
+	ShmSizeSystemd *int64 `json:"shm_size_systemd,omitempty"`
 	// WorkDir is the container's working directory.
 	// If unset, the default, /, will be used.
 	// Optional.
@@ -373,6 +392,14 @@ type ContainerSecurityConfig struct {
 	// ReadOnlyFilesystem indicates that everything will be mounted
 	// as read-only
 	ReadOnlyFilesystem bool `json:"read_only_filesystem,omitempty"`
+	// ReadWriteTmpfs indicates that when running with a ReadOnlyFilesystem
+	// mount temporary file systems
+	ReadWriteTmpfs bool `json:"read_write_tmpfs,omitempty"`
+
+	// LabelNested indicates whether or not the container is allowed to
+	// run fully nested containers including labelling
+	LabelNested bool `json:"label_nested,omitempty"`
+
 	// Umask is the umask the init process of the container will be run with.
 	Umask string `json:"umask,omitempty"`
 	// ProcOpts are the options used for the proc mount.
@@ -410,7 +437,7 @@ type ContainerNetworkConfig struct {
 	// Mandatory.
 	NetNS Namespace `json:"netns,omitempty"`
 	// PortBindings is a set of ports to map into the container.
-	// Only available if NetNS is set to bridge or slirp.
+	// Only available if NetNS is set to bridge, slirp, or pasta.
 	// Optional.
 	PortMappings []nettypes.PortMapping `json:"portmappings,omitempty"`
 	// PublishExposedPorts will publish ports specified in the image to
@@ -523,7 +550,12 @@ type ContainerResourceConfig struct {
 // ContainerHealthCheckConfig describes a container healthcheck with attributes
 // like command, retries, interval, start period, and timeout.
 type ContainerHealthCheckConfig struct {
-	HealthConfig *manifest.Schema2HealthConfig `json:"healthconfig,omitempty"`
+	HealthConfig               *manifest.Schema2HealthConfig     `json:"healthconfig,omitempty"`
+	HealthCheckOnFailureAction define.HealthCheckOnFailureAction `json:"health_check_on_failure_action,omitempty"`
+	// Startup healthcheck for a container.
+	// Requires that HealthConfig be set.
+	// Optional.
+	StartupHealthConfig *define.StartupHealthCheck `json:"startupHealthConfig,omitempty"`
 }
 
 // SpecGenerator creates an OCI spec and Libpod configuration options to create
@@ -554,6 +586,10 @@ func (s *SpecGenerator) GetImage() (*libimage.Image, string) {
 	return s.image, s.resolvedImageName
 }
 
+func (s *SpecGenerator) IsInitContainer() bool {
+	return len(s.InitContainerType) != 0
+}
+
 type Secret struct {
 	Source string
 	Target string
@@ -565,10 +601,12 @@ type Secret struct {
 var (
 	// ErrNoStaticIPRootless is used when a rootless user requests to assign a static IP address
 	// to a pod or container
-	ErrNoStaticIPRootless error = errors.New("rootless containers and pods cannot be assigned static IP addresses")
+	ErrNoStaticIPRootless = errors.New("rootless containers and pods cannot be assigned static IP addresses")
 	// ErrNoStaticMACRootless is used when a rootless user requests to assign a static MAC address
 	// to a pod or container
-	ErrNoStaticMACRootless error = errors.New("rootless containers and pods cannot be assigned static MAC addresses")
+	ErrNoStaticMACRootless = errors.New("rootless containers and pods cannot be assigned static MAC addresses")
+	// Multiple volume mounts to the same destination is not allowed
+	ErrDuplicateDest = errors.New("duplicate mount destination")
 )
 
 // NewSpecGenerator returns a SpecGenerator struct given one of two mandatory inputs
@@ -578,9 +616,15 @@ func NewSpecGenerator(arg string, rootfs bool) *SpecGenerator {
 		csc.Rootfs = arg
 		// check if rootfs should use overlay
 		lastColonIndex := strings.LastIndex(csc.Rootfs, ":")
-		if lastColonIndex != -1 && lastColonIndex+1 < len(csc.Rootfs) && csc.Rootfs[lastColonIndex+1:] == "O" {
-			csc.RootfsOverlay = true
-			csc.Rootfs = csc.Rootfs[:lastColonIndex]
+		if lastColonIndex != -1 {
+			lastPart := csc.Rootfs[lastColonIndex+1:]
+			if lastPart == "O" {
+				csc.RootfsOverlay = true
+				csc.Rootfs = csc.Rootfs[:lastColonIndex]
+			} else if lastPart == "idmap" || strings.HasPrefix(lastPart, "idmap=") {
+				csc.RootfsMapping = &lastPart
+				csc.Rootfs = csc.Rootfs[:lastColonIndex]
+			}
 		}
 	} else {
 		csc.Image = arg
@@ -594,4 +638,16 @@ func NewSpecGenerator(arg string, rootfs bool) *SpecGenerator {
 func NewSpecGeneratorWithRootfs(rootfs string) *SpecGenerator {
 	csc := ContainerStorageConfig{Rootfs: rootfs}
 	return &SpecGenerator{ContainerStorageConfig: csc}
+}
+
+func StringSlicesEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+	return true
 }

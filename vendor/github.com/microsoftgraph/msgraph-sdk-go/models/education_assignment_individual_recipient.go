@@ -8,7 +8,7 @@ import (
 type EducationAssignmentIndividualRecipient struct {
     EducationAssignmentRecipient
 }
-// NewEducationAssignmentIndividualRecipient instantiates a new EducationAssignmentIndividualRecipient and sets the default values.
+// NewEducationAssignmentIndividualRecipient instantiates a new educationAssignmentIndividualRecipient and sets the default values.
 func NewEducationAssignmentIndividualRecipient()(*EducationAssignmentIndividualRecipient) {
     m := &EducationAssignmentIndividualRecipient{
         EducationAssignmentRecipient: *NewEducationAssignmentRecipient(),
@@ -32,7 +32,9 @@ func (m *EducationAssignmentIndividualRecipient) GetFieldDeserializers()(map[str
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetRecipients(res)
         }

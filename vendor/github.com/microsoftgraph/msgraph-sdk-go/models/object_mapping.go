@@ -34,7 +34,7 @@ func (m *ObjectMapping) GetAdditionalData()(map[string]any) {
     }
     return val.(map[string]any)
 }
-// GetAttributeMappings gets the attributeMappings property value. The attributeMappings property
+// GetAttributeMappings gets the attributeMappings property value. Attribute mappings define which attributes to map from the source object into the target object and how they should flow. A number of functions are available to support the transformation of the original source values.
 func (m *ObjectMapping) GetAttributeMappings()([]AttributeMappingable) {
     val, err := m.GetBackingStore().Get("attributeMappings")
     if err != nil {
@@ -49,7 +49,7 @@ func (m *ObjectMapping) GetAttributeMappings()([]AttributeMappingable) {
 func (m *ObjectMapping) GetBackingStore()(ie8677ce2c7e1b4c22e9c3827ecd078d41185424dd9eeb92b7d971ed2d49a392e.BackingStore) {
     return m.backingStore
 }
-// GetEnabled gets the enabled property value. The enabled property
+// GetEnabled gets the enabled property value. When true, this object mapping will be processed during synchronization. When false, this object mapping will be skipped.
 func (m *ObjectMapping) GetEnabled()(*bool) {
     val, err := m.GetBackingStore().Get("enabled")
     if err != nil {
@@ -71,7 +71,9 @@ func (m *ObjectMapping) GetFieldDeserializers()(map[string]func(i878a80d2330e89d
         if val != nil {
             res := make([]AttributeMappingable, len(val))
             for i, v := range val {
-                res[i] = v.(AttributeMappingable)
+                if v != nil {
+                    res[i] = v.(AttributeMappingable)
+                }
             }
             m.SetAttributeMappings(res)
         }
@@ -105,7 +107,9 @@ func (m *ObjectMapping) GetFieldDeserializers()(map[string]func(i878a80d2330e89d
         if val != nil {
             res := make([]ObjectMappingMetadataEntryable, len(val))
             for i, v := range val {
-                res[i] = v.(ObjectMappingMetadataEntryable)
+                if v != nil {
+                    res[i] = v.(ObjectMappingMetadataEntryable)
+                }
             }
             m.SetMetadata(res)
         }
@@ -174,7 +178,7 @@ func (m *ObjectMapping) GetFlowTypes()(*ObjectFlowTypes) {
     }
     return nil
 }
-// GetMetadata gets the metadata property value. The metadata property
+// GetMetadata gets the metadata property value. Additional extension properties. Unless mentioned explicitly, metadata values should not be changed.
 func (m *ObjectMapping) GetMetadata()([]ObjectMappingMetadataEntryable) {
     val, err := m.GetBackingStore().Get("metadata")
     if err != nil {
@@ -185,7 +189,7 @@ func (m *ObjectMapping) GetMetadata()([]ObjectMappingMetadataEntryable) {
     }
     return nil
 }
-// GetName gets the name property value. The name property
+// GetName gets the name property value. Human-friendly name of the object mapping.
 func (m *ObjectMapping) GetName()(*string) {
     val, err := m.GetBackingStore().Get("name")
     if err != nil {
@@ -207,7 +211,7 @@ func (m *ObjectMapping) GetOdataType()(*string) {
     }
     return nil
 }
-// GetScope gets the scope property value. The scope property
+// GetScope gets the scope property value. Defines a filter to be used when deciding whether a given object should be provisioned. For example, you might want to only provision users that are located in the US.
 func (m *ObjectMapping) GetScope()(Filterable) {
     val, err := m.GetBackingStore().Get("scope")
     if err != nil {
@@ -218,7 +222,7 @@ func (m *ObjectMapping) GetScope()(Filterable) {
     }
     return nil
 }
-// GetSourceObjectName gets the sourceObjectName property value. The sourceObjectName property
+// GetSourceObjectName gets the sourceObjectName property value. Name of the object in the source directory. Must match the object name from the source directory definition.
 func (m *ObjectMapping) GetSourceObjectName()(*string) {
     val, err := m.GetBackingStore().Get("sourceObjectName")
     if err != nil {
@@ -229,7 +233,7 @@ func (m *ObjectMapping) GetSourceObjectName()(*string) {
     }
     return nil
 }
-// GetTargetObjectName gets the targetObjectName property value. The targetObjectName property
+// GetTargetObjectName gets the targetObjectName property value. Name of the object in target directory. Must match the object name from the target directory definition.
 func (m *ObjectMapping) GetTargetObjectName()(*string) {
     val, err := m.GetBackingStore().Get("targetObjectName")
     if err != nil {
@@ -245,7 +249,9 @@ func (m *ObjectMapping) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0
     if m.GetAttributeMappings() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetAttributeMappings()))
         for i, v := range m.GetAttributeMappings() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err := writer.WriteCollectionOfObjectValues("attributeMappings", cast)
         if err != nil {
@@ -268,7 +274,9 @@ func (m *ObjectMapping) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0
     if m.GetMetadata() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetMetadata()))
         for i, v := range m.GetMetadata() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err := writer.WriteCollectionOfObjectValues("metadata", cast)
         if err != nil {
@@ -320,7 +328,7 @@ func (m *ObjectMapping) SetAdditionalData(value map[string]any)() {
         panic(err)
     }
 }
-// SetAttributeMappings sets the attributeMappings property value. The attributeMappings property
+// SetAttributeMappings sets the attributeMappings property value. Attribute mappings define which attributes to map from the source object into the target object and how they should flow. A number of functions are available to support the transformation of the original source values.
 func (m *ObjectMapping) SetAttributeMappings(value []AttributeMappingable)() {
     err := m.GetBackingStore().Set("attributeMappings", value)
     if err != nil {
@@ -331,7 +339,7 @@ func (m *ObjectMapping) SetAttributeMappings(value []AttributeMappingable)() {
 func (m *ObjectMapping) SetBackingStore(value ie8677ce2c7e1b4c22e9c3827ecd078d41185424dd9eeb92b7d971ed2d49a392e.BackingStore)() {
     m.backingStore = value
 }
-// SetEnabled sets the enabled property value. The enabled property
+// SetEnabled sets the enabled property value. When true, this object mapping will be processed during synchronization. When false, this object mapping will be skipped.
 func (m *ObjectMapping) SetEnabled(value *bool)() {
     err := m.GetBackingStore().Set("enabled", value)
     if err != nil {
@@ -345,14 +353,14 @@ func (m *ObjectMapping) SetFlowTypes(value *ObjectFlowTypes)() {
         panic(err)
     }
 }
-// SetMetadata sets the metadata property value. The metadata property
+// SetMetadata sets the metadata property value. Additional extension properties. Unless mentioned explicitly, metadata values should not be changed.
 func (m *ObjectMapping) SetMetadata(value []ObjectMappingMetadataEntryable)() {
     err := m.GetBackingStore().Set("metadata", value)
     if err != nil {
         panic(err)
     }
 }
-// SetName sets the name property value. The name property
+// SetName sets the name property value. Human-friendly name of the object mapping.
 func (m *ObjectMapping) SetName(value *string)() {
     err := m.GetBackingStore().Set("name", value)
     if err != nil {
@@ -366,21 +374,21 @@ func (m *ObjectMapping) SetOdataType(value *string)() {
         panic(err)
     }
 }
-// SetScope sets the scope property value. The scope property
+// SetScope sets the scope property value. Defines a filter to be used when deciding whether a given object should be provisioned. For example, you might want to only provision users that are located in the US.
 func (m *ObjectMapping) SetScope(value Filterable)() {
     err := m.GetBackingStore().Set("scope", value)
     if err != nil {
         panic(err)
     }
 }
-// SetSourceObjectName sets the sourceObjectName property value. The sourceObjectName property
+// SetSourceObjectName sets the sourceObjectName property value. Name of the object in the source directory. Must match the object name from the source directory definition.
 func (m *ObjectMapping) SetSourceObjectName(value *string)() {
     err := m.GetBackingStore().Set("sourceObjectName", value)
     if err != nil {
         panic(err)
     }
 }
-// SetTargetObjectName sets the targetObjectName property value. The targetObjectName property
+// SetTargetObjectName sets the targetObjectName property value. Name of the object in target directory. Must match the object name from the target directory definition.
 func (m *ObjectMapping) SetTargetObjectName(value *string)() {
     err := m.GetBackingStore().Set("targetObjectName", value)
     if err != nil {

@@ -4,11 +4,11 @@ import (
     i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91 "github.com/microsoft/kiota-abstractions-go/serialization"
 )
 
-// WindowsUniversalAppX 
+// WindowsUniversalAppX contains properties and inherited properties for Windows Universal AppX Line Of Business apps.
 type WindowsUniversalAppX struct {
     MobileLobApp
 }
-// NewWindowsUniversalAppX instantiates a new WindowsUniversalAppX and sets the default values.
+// NewWindowsUniversalAppX instantiates a new windowsUniversalAppX and sets the default values.
 func NewWindowsUniversalAppX()(*WindowsUniversalAppX) {
     m := &WindowsUniversalAppX{
         MobileLobApp: *NewMobileLobApp(),
@@ -85,7 +85,9 @@ func (m *WindowsUniversalAppX) GetFieldDeserializers()(map[string]func(i878a80d2
         if val != nil {
             res := make([]MobileContainedAppable, len(val))
             for i, v := range val {
-                res[i] = v.(MobileContainedAppable)
+                if v != nil {
+                    res[i] = v.(MobileContainedAppable)
+                }
             }
             m.SetCommittedContainedApps(res)
         }
@@ -242,7 +244,9 @@ func (m *WindowsUniversalAppX) Serialize(writer i878a80d2330e89d26896388a3f487ee
     if m.GetCommittedContainedApps() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetCommittedContainedApps()))
         for i, v := range m.GetCommittedContainedApps() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("committedContainedApps", cast)
         if err != nil {

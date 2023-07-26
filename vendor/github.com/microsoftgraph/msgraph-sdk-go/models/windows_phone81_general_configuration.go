@@ -4,11 +4,11 @@ import (
     i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91 "github.com/microsoft/kiota-abstractions-go/serialization"
 )
 
-// WindowsPhone81GeneralConfiguration 
+// WindowsPhone81GeneralConfiguration this topic provides descriptions of the declared methods, properties and relationships exposed by the windowsPhone81GeneralConfiguration resource.
 type WindowsPhone81GeneralConfiguration struct {
     DeviceConfiguration
 }
-// NewWindowsPhone81GeneralConfiguration instantiates a new WindowsPhone81GeneralConfiguration and sets the default values.
+// NewWindowsPhone81GeneralConfiguration instantiates a new windowsPhone81GeneralConfiguration and sets the default values.
 func NewWindowsPhone81GeneralConfiguration()(*WindowsPhone81GeneralConfiguration) {
     m := &WindowsPhone81GeneralConfiguration{
         DeviceConfiguration: *NewDeviceConfiguration(),
@@ -191,7 +191,9 @@ func (m *WindowsPhone81GeneralConfiguration) GetFieldDeserializers()(map[string]
         if val != nil {
             res := make([]AppListItemable, len(val))
             for i, v := range val {
-                res[i] = v.(AppListItemable)
+                if v != nil {
+                    res[i] = v.(AppListItemable)
+                }
             }
             m.SetCompliantAppsList(res)
         }
@@ -679,7 +681,9 @@ func (m *WindowsPhone81GeneralConfiguration) Serialize(writer i878a80d2330e89d26
     if m.GetCompliantAppsList() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetCompliantAppsList()))
         for i, v := range m.GetCompliantAppsList() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("compliantAppsList", cast)
         if err != nil {

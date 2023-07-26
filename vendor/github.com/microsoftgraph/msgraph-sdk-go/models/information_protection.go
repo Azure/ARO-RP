@@ -10,7 +10,7 @@ type InformationProtection struct {
     // Stores model information.
     backingStore ie8677ce2c7e1b4c22e9c3827ecd078d41185424dd9eeb92b7d971ed2d49a392e.BackingStore
 }
-// NewInformationProtection instantiates a new InformationProtection and sets the default values.
+// NewInformationProtection instantiates a new informationProtection and sets the default values.
 func NewInformationProtection()(*InformationProtection) {
     m := &InformationProtection{
     }
@@ -80,7 +80,9 @@ func (m *InformationProtection) GetFieldDeserializers()(map[string]func(i878a80d
         if val != nil {
             res := make([]ThreatAssessmentRequestable, len(val))
             for i, v := range val {
-                res[i] = v.(ThreatAssessmentRequestable)
+                if v != nil {
+                    res[i] = v.(ThreatAssessmentRequestable)
+                }
             }
             m.SetThreatAssessmentRequests(res)
         }
@@ -127,7 +129,9 @@ func (m *InformationProtection) Serialize(writer i878a80d2330e89d26896388a3f487e
     if m.GetThreatAssessmentRequests() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetThreatAssessmentRequests()))
         for i, v := range m.GetThreatAssessmentRequests() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err := writer.WriteCollectionOfObjectValues("threatAssessmentRequests", cast)
         if err != nil {

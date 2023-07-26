@@ -97,7 +97,9 @@ func (m *Team) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]Channelable, len(val))
             for i, v := range val {
-                res[i] = v.(Channelable)
+                if v != nil {
+                    res[i] = v.(Channelable)
+                }
             }
             m.SetAllChannels(res)
         }
@@ -111,7 +113,9 @@ func (m *Team) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]Channelable, len(val))
             for i, v := range val {
-                res[i] = v.(Channelable)
+                if v != nil {
+                    res[i] = v.(Channelable)
+                }
             }
             m.SetChannels(res)
         }
@@ -195,7 +199,9 @@ func (m *Team) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]Channelable, len(val))
             for i, v := range val {
-                res[i] = v.(Channelable)
+                if v != nil {
+                    res[i] = v.(Channelable)
+                }
             }
             m.SetIncomingChannels(res)
         }
@@ -209,7 +215,9 @@ func (m *Team) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]TeamsAppInstallationable, len(val))
             for i, v := range val {
-                res[i] = v.(TeamsAppInstallationable)
+                if v != nil {
+                    res[i] = v.(TeamsAppInstallationable)
+                }
             }
             m.SetInstalledApps(res)
         }
@@ -243,7 +251,9 @@ func (m *Team) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]ConversationMemberable, len(val))
             for i, v := range val {
-                res[i] = v.(ConversationMemberable)
+                if v != nil {
+                    res[i] = v.(ConversationMemberable)
+                }
             }
             m.SetMembers(res)
         }
@@ -277,9 +287,27 @@ func (m *Team) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]TeamsAsyncOperationable, len(val))
             for i, v := range val {
-                res[i] = v.(TeamsAsyncOperationable)
+                if v != nil {
+                    res[i] = v.(TeamsAsyncOperationable)
+                }
             }
             m.SetOperations(res)
+        }
+        return nil
+    }
+    res["permissionGrants"] = func (n i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
+        val, err := n.GetCollectionOfObjectValues(CreateResourceSpecificPermissionGrantFromDiscriminatorValue)
+        if err != nil {
+            return err
+        }
+        if val != nil {
+            res := make([]ResourceSpecificPermissionGrantable, len(val))
+            for i, v := range val {
+                if v != nil {
+                    res[i] = v.(ResourceSpecificPermissionGrantable)
+                }
+            }
+            m.SetPermissionGrants(res)
         }
         return nil
     }
@@ -341,7 +369,9 @@ func (m *Team) GetFieldDeserializers()(map[string]func(i878a80d2330e89d26896388a
         if val != nil {
             res := make([]TeamworkTagable, len(val))
             for i, v := range val {
-                res[i] = v.(TeamworkTagable)
+                if v != nil {
+                    res[i] = v.(TeamworkTagable)
+                }
             }
             m.SetTags(res)
         }
@@ -510,6 +540,17 @@ func (m *Team) GetOperations()([]TeamsAsyncOperationable) {
     }
     return nil
 }
+// GetPermissionGrants gets the permissionGrants property value. The permissionGrants property
+func (m *Team) GetPermissionGrants()([]ResourceSpecificPermissionGrantable) {
+    val, err := m.GetBackingStore().Get("permissionGrants")
+    if err != nil {
+        panic(err)
+    }
+    if val != nil {
+        return val.([]ResourceSpecificPermissionGrantable)
+    }
+    return nil
+}
 // GetPhoto gets the photo property value. The profile photo for the team.
 func (m *Team) GetPhoto()(ProfilePhotoable) {
     val, err := m.GetBackingStore().Get("photo")
@@ -629,7 +670,9 @@ func (m *Team) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetAllChannels() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetAllChannels()))
         for i, v := range m.GetAllChannels() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("allChannels", cast)
         if err != nil {
@@ -639,7 +682,9 @@ func (m *Team) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetChannels() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetChannels()))
         for i, v := range m.GetChannels() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("channels", cast)
         if err != nil {
@@ -691,7 +736,9 @@ func (m *Team) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetIncomingChannels() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetIncomingChannels()))
         for i, v := range m.GetIncomingChannels() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("incomingChannels", cast)
         if err != nil {
@@ -701,7 +748,9 @@ func (m *Team) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetInstalledApps() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetInstalledApps()))
         for i, v := range m.GetInstalledApps() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("installedApps", cast)
         if err != nil {
@@ -723,7 +772,9 @@ func (m *Team) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetMembers() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetMembers()))
         for i, v := range m.GetMembers() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("members", cast)
         if err != nil {
@@ -745,9 +796,23 @@ func (m *Team) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetOperations() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetOperations()))
         for i, v := range m.GetOperations() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("operations", cast)
+        if err != nil {
+            return err
+        }
+    }
+    if m.GetPermissionGrants() != nil {
+        cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetPermissionGrants()))
+        for i, v := range m.GetPermissionGrants() {
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
+        }
+        err = writer.WriteCollectionOfObjectValues("permissionGrants", cast)
         if err != nil {
             return err
         }
@@ -786,7 +851,9 @@ func (m *Team) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c49
     if m.GetTags() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetTags()))
         for i, v := range m.GetTags() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("tags", cast)
         if err != nil {
@@ -939,6 +1006,13 @@ func (m *Team) SetOperations(value []TeamsAsyncOperationable)() {
         panic(err)
     }
 }
+// SetPermissionGrants sets the permissionGrants property value. The permissionGrants property
+func (m *Team) SetPermissionGrants(value []ResourceSpecificPermissionGrantable)() {
+    err := m.GetBackingStore().Set("permissionGrants", value)
+    if err != nil {
+        panic(err)
+    }
+}
 // SetPhoto sets the photo property value. The profile photo for the team.
 func (m *Team) SetPhoto(value ProfilePhotoable)() {
     err := m.GetBackingStore().Set("photo", value)
@@ -1030,6 +1104,7 @@ type Teamable interface {
     GetMemberSettings()(TeamMemberSettingsable)
     GetMessagingSettings()(TeamMessagingSettingsable)
     GetOperations()([]TeamsAsyncOperationable)
+    GetPermissionGrants()([]ResourceSpecificPermissionGrantable)
     GetPhoto()(ProfilePhotoable)
     GetPrimaryChannel()(Channelable)
     GetSchedule()(Scheduleable)
@@ -1057,6 +1132,7 @@ type Teamable interface {
     SetMemberSettings(value TeamMemberSettingsable)()
     SetMessagingSettings(value TeamMessagingSettingsable)()
     SetOperations(value []TeamsAsyncOperationable)()
+    SetPermissionGrants(value []ResourceSpecificPermissionGrantable)()
     SetPhoto(value ProfilePhotoable)()
     SetPrimaryChannel(value Channelable)()
     SetSchedule(value Scheduleable)()

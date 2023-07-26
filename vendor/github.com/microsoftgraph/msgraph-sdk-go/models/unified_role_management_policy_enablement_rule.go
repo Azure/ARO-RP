@@ -8,7 +8,7 @@ import (
 type UnifiedRoleManagementPolicyEnablementRule struct {
     UnifiedRoleManagementPolicyRule
 }
-// NewUnifiedRoleManagementPolicyEnablementRule instantiates a new UnifiedRoleManagementPolicyEnablementRule and sets the default values.
+// NewUnifiedRoleManagementPolicyEnablementRule instantiates a new unifiedRoleManagementPolicyEnablementRule and sets the default values.
 func NewUnifiedRoleManagementPolicyEnablementRule()(*UnifiedRoleManagementPolicyEnablementRule) {
     m := &UnifiedRoleManagementPolicyEnablementRule{
         UnifiedRoleManagementPolicyRule: *NewUnifiedRoleManagementPolicyRule(),
@@ -43,7 +43,9 @@ func (m *UnifiedRoleManagementPolicyEnablementRule) GetFieldDeserializers()(map[
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetEnabledRules(res)
         }

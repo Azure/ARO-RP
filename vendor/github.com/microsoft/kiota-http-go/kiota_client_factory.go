@@ -82,5 +82,6 @@ func GetDefaultMiddlewares() []Middleware {
 		NewCompressionHandler(),
 		NewParametersNameDecodingHandler(),
 		NewUserAgentHandler(),
+		NewHeadersInspectionHandler(),
 	}
 }

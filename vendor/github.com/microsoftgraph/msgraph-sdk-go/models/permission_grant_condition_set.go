@@ -74,7 +74,9 @@ func (m *PermissionGrantConditionSet) GetFieldDeserializers()(map[string]func(i8
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetClientApplicationIds(res)
         }
@@ -88,7 +90,9 @@ func (m *PermissionGrantConditionSet) GetFieldDeserializers()(map[string]func(i8
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetClientApplicationPublisherIds(res)
         }
@@ -112,7 +116,9 @@ func (m *PermissionGrantConditionSet) GetFieldDeserializers()(map[string]func(i8
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetClientApplicationTenantIds(res)
         }
@@ -136,7 +142,9 @@ func (m *PermissionGrantConditionSet) GetFieldDeserializers()(map[string]func(i8
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetPermissions(res)
         }
@@ -175,7 +183,7 @@ func (m *PermissionGrantConditionSet) GetPermissionClassification()(*string) {
     }
     return nil
 }
-// GetPermissions gets the permissions property value. The list of id values for the specific permissions to match with, or a list with the single value all to match with any permission. The id of delegated permissions can be found in the oauth2PermissionScopes property of the API's **servicePrincipal** object. The id of application permissions can be found in the appRoles property of the API's **servicePrincipal** object. The id of resource-specific application permissions can be found in the resourceSpecificApplicationPermissions property of the API's **servicePrincipal** object. Default is the single value all.
+// GetPermissions gets the permissions property value. The list of id values for the specific permissions to match with, or a list with the single value all to match with any permission. The id of delegated permissions can be found in the oauth2PermissionScopes property of the API's servicePrincipal object. The id of application permissions can be found in the appRoles property of the API's servicePrincipal object. The id of resource-specific application permissions can be found in the resourceSpecificApplicationPermissions property of the API's servicePrincipal object. Default is the single value all.
 func (m *PermissionGrantConditionSet) GetPermissions()([]string) {
     val, err := m.GetBackingStore().Get("permissions")
     if err != nil {
@@ -300,7 +308,7 @@ func (m *PermissionGrantConditionSet) SetPermissionClassification(value *string)
         panic(err)
     }
 }
-// SetPermissions sets the permissions property value. The list of id values for the specific permissions to match with, or a list with the single value all to match with any permission. The id of delegated permissions can be found in the oauth2PermissionScopes property of the API's **servicePrincipal** object. The id of application permissions can be found in the appRoles property of the API's **servicePrincipal** object. The id of resource-specific application permissions can be found in the resourceSpecificApplicationPermissions property of the API's **servicePrincipal** object. Default is the single value all.
+// SetPermissions sets the permissions property value. The list of id values for the specific permissions to match with, or a list with the single value all to match with any permission. The id of delegated permissions can be found in the oauth2PermissionScopes property of the API's servicePrincipal object. The id of application permissions can be found in the appRoles property of the API's servicePrincipal object. The id of resource-specific application permissions can be found in the resourceSpecificApplicationPermissions property of the API's servicePrincipal object. Default is the single value all.
 func (m *PermissionGrantConditionSet) SetPermissions(value []string)() {
     err := m.GetBackingStore().Set("permissions", value)
     if err != nil {

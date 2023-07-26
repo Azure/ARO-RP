@@ -1,7 +1,8 @@
 package version
 
 import (
-	"github.com/blang/semver"
+	"github.com/blang/semver/v4"
+	"github.com/containers/podman/v4/version/rawversion"
 )
 
 type (
@@ -27,21 +28,22 @@ const (
 // NOTE: remember to bump the version at the top
 // of the top-level README.md file when this is
 // bumped.
-var Version = semver.MustParse("4.1.1")
+var Version = semver.MustParse(rawversion.RawVersion)
 
 // See https://docs.docker.com/engine/api/v1.40/
 // libpod compat handlers are expected to honor docker API versions
 
 // APIVersion provides the current and minimal API versions for compat and libpod endpoint trees
 // Note: GET|HEAD /_ping is never versioned and provides the API-Version and Libpod-API-Version headers to allow
-//       clients to shop for the Version they wish to support
+//
+//	clients to shop for the Version they wish to support
 var APIVersion = map[Tree]map[Level]semver.Version{
 	Libpod: {
 		CurrentAPI: Version,
 		MinimalAPI: semver.MustParse("4.0.0"),
 	},
 	Compat: {
-		CurrentAPI: semver.MustParse("1.40.0"),
+		CurrentAPI: semver.MustParse("1.41.0"),
 		MinimalAPI: semver.MustParse("1.24.0"),
 	},
 }

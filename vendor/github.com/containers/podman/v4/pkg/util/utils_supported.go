@@ -7,13 +7,13 @@ package util
 //  should work to take darwin from this
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"syscall"
 
 	"github.com/containers/podman/v4/pkg/rootless"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -27,6 +27,12 @@ func GetRuntimeDir() (string, error) {
 
 	rootlessRuntimeDirOnce.Do(func() {
 		runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
+
+		if runtimeDir != "" {
+			rootlessRuntimeDir, rootlessRuntimeDirError = filepath.EvalSymlinks(runtimeDir)
+			return
+		}
+
 		uid := fmt.Sprintf("%d", rootless.GetRootlessUID())
 		if runtimeDir == "" {
 			tmpDir := filepath.Join("/run", "user", uid)
@@ -51,12 +57,12 @@ func GetRuntimeDir() (string, error) {
 		if runtimeDir == "" {
 			home := os.Getenv("HOME")
 			if home == "" {
-				rootlessRuntimeDirError = fmt.Errorf("neither XDG_RUNTIME_DIR nor HOME was set non-empty")
+				rootlessRuntimeDirError = errors.New("neither XDG_RUNTIME_DIR nor HOME was set non-empty")
 				return
 			}
 			resolvedHome, err := filepath.EvalSymlinks(home)
 			if err != nil {
-				rootlessRuntimeDirError = errors.Wrapf(err, "cannot resolve %s", home)
+				rootlessRuntimeDirError = fmt.Errorf("cannot resolve %s: %w", home, err)
 				return
 			}
 			runtimeDir = filepath.Join(resolvedHome, "rundir")
@@ -80,7 +86,7 @@ func GetRootlessConfigHomeDir() (string, error) {
 			home := os.Getenv("HOME")
 			resolvedHome, err := filepath.EvalSymlinks(home)
 			if err != nil {
-				rootlessConfigHomeDirError = errors.Wrapf(err, "cannot resolve %s", home)
+				rootlessConfigHomeDirError = fmt.Errorf("cannot resolve %s: %w", home, err)
 				return
 			}
 			tmpDir := filepath.Join(resolvedHome, ".config")
@@ -101,21 +107,13 @@ func GetRootlessConfigHomeDir() (string, error) {
 
 // GetRootlessPauseProcessPidPath returns the path to the file that holds the pid for
 // the pause process.
-// DEPRECATED - switch to GetRootlessPauseProcessPidPathGivenDir
 func GetRootlessPauseProcessPidPath() (string, error) {
 	runtimeDir, err := GetRuntimeDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(runtimeDir, "libpod", "pause.pid"), nil
-}
-
-// GetRootlessPauseProcessPidPathGivenDir returns the path to the file that
-// holds the PID of the pause process, given the location of Libpod's temporary
-// files.
-func GetRootlessPauseProcessPidPathGivenDir(libpodTmpDir string) (string, error) {
-	if libpodTmpDir == "" {
-		return "", errors.Errorf("must provide non-empty temporary directory")
-	}
-	return filepath.Join(libpodTmpDir, "pause.pid"), nil
+	// Note this path must be kept in sync with pkg/rootless/rootless_linux.go
+	// We only want a single pause process per user, so we do not want to use
+	// the tmpdir which can be changed via --tmpdir.
+	return filepath.Join(runtimeDir, "libpod", "tmp", "pause.pid"), nil
 }

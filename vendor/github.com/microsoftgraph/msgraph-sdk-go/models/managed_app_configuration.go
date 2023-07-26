@@ -4,11 +4,11 @@ import (
     i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91 "github.com/microsoft/kiota-abstractions-go/serialization"
 )
 
-// ManagedAppConfiguration 
+// ManagedAppConfiguration configuration used to deliver a set of custom settings as-is to apps for users to whom the configuration is scoped
 type ManagedAppConfiguration struct {
     ManagedAppPolicy
 }
-// NewManagedAppConfiguration instantiates a new ManagedAppConfiguration and sets the default values.
+// NewManagedAppConfiguration instantiates a new managedAppConfiguration and sets the default values.
 func NewManagedAppConfiguration()(*ManagedAppConfiguration) {
     m := &ManagedAppConfiguration{
         ManagedAppPolicy: *NewManagedAppPolicy(),
@@ -61,7 +61,9 @@ func (m *ManagedAppConfiguration) GetFieldDeserializers()(map[string]func(i878a8
         if val != nil {
             res := make([]KeyValuePairable, len(val))
             for i, v := range val {
-                res[i] = v.(KeyValuePairable)
+                if v != nil {
+                    res[i] = v.(KeyValuePairable)
+                }
             }
             m.SetCustomSettings(res)
         }
@@ -78,7 +80,9 @@ func (m *ManagedAppConfiguration) Serialize(writer i878a80d2330e89d26896388a3f48
     if m.GetCustomSettings() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetCustomSettings()))
         for i, v := range m.GetCustomSettings() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("customSettings", cast)
         if err != nil {

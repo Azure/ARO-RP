@@ -8,7 +8,7 @@ import (
 type AccessReviewInstanceDecisionItemCollectionResponse struct {
     BaseCollectionPaginationCountResponse
 }
-// NewAccessReviewInstanceDecisionItemCollectionResponse instantiates a new AccessReviewInstanceDecisionItemCollectionResponse and sets the default values.
+// NewAccessReviewInstanceDecisionItemCollectionResponse instantiates a new accessReviewInstanceDecisionItemCollectionResponse and sets the default values.
 func NewAccessReviewInstanceDecisionItemCollectionResponse()(*AccessReviewInstanceDecisionItemCollectionResponse) {
     m := &AccessReviewInstanceDecisionItemCollectionResponse{
         BaseCollectionPaginationCountResponse: *NewBaseCollectionPaginationCountResponse(),
@@ -30,7 +30,9 @@ func (m *AccessReviewInstanceDecisionItemCollectionResponse) GetFieldDeserialize
         if val != nil {
             res := make([]AccessReviewInstanceDecisionItemable, len(val))
             for i, v := range val {
-                res[i] = v.(AccessReviewInstanceDecisionItemable)
+                if v != nil {
+                    res[i] = v.(AccessReviewInstanceDecisionItemable)
+                }
             }
             m.SetValue(res)
         }
@@ -58,7 +60,9 @@ func (m *AccessReviewInstanceDecisionItemCollectionResponse) Serialize(writer i8
     if m.GetValue() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetValue()))
         for i, v := range m.GetValue() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("value", cast)
         if err != nil {

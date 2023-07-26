@@ -8,7 +8,7 @@ import (
 type ClientCertificateAuthentication struct {
     ApiAuthenticationConfigurationBase
 }
-// NewClientCertificateAuthentication instantiates a new ClientCertificateAuthentication and sets the default values.
+// NewClientCertificateAuthentication instantiates a new clientCertificateAuthentication and sets the default values.
 func NewClientCertificateAuthentication()(*ClientCertificateAuthentication) {
     m := &ClientCertificateAuthentication{
         ApiAuthenticationConfigurationBase: *NewApiAuthenticationConfigurationBase(),
@@ -43,7 +43,9 @@ func (m *ClientCertificateAuthentication) GetFieldDeserializers()(map[string]fun
         if val != nil {
             res := make([]Pkcs12CertificateInformationable, len(val))
             for i, v := range val {
-                res[i] = v.(Pkcs12CertificateInformationable)
+                if v != nil {
+                    res[i] = v.(Pkcs12CertificateInformationable)
+                }
             }
             m.SetCertificateList(res)
         }
@@ -60,7 +62,9 @@ func (m *ClientCertificateAuthentication) Serialize(writer i878a80d2330e89d26896
     if m.GetCertificateList() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetCertificateList()))
         for i, v := range m.GetCertificateList() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("certificateList", cast)
         if err != nil {

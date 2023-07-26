@@ -43,6 +43,16 @@ func (m *LearningProvider) GetFieldDeserializers()(map[string]func(i878a80d2330e
         }
         return nil
     }
+    res["isCourseActivitySyncEnabled"] = func (n i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
+        val, err := n.GetBoolValue()
+        if err != nil {
+            return err
+        }
+        if val != nil {
+            m.SetIsCourseActivitySyncEnabled(val)
+        }
+        return nil
+    }
     res["learningContents"] = func (n i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
         val, err := n.GetCollectionOfObjectValues(CreateLearningContentFromDiscriminatorValue)
         if err != nil {
@@ -51,9 +61,27 @@ func (m *LearningProvider) GetFieldDeserializers()(map[string]func(i878a80d2330e
         if val != nil {
             res := make([]LearningContentable, len(val))
             for i, v := range val {
-                res[i] = v.(LearningContentable)
+                if v != nil {
+                    res[i] = v.(LearningContentable)
+                }
             }
             m.SetLearningContents(res)
+        }
+        return nil
+    }
+    res["learningCourseActivities"] = func (n i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
+        val, err := n.GetCollectionOfObjectValues(CreateLearningCourseActivityFromDiscriminatorValue)
+        if err != nil {
+            return err
+        }
+        if val != nil {
+            res := make([]LearningCourseActivityable, len(val))
+            for i, v := range val {
+                if v != nil {
+                    res[i] = v.(LearningCourseActivityable)
+                }
+            }
+            m.SetLearningCourseActivities(res)
         }
         return nil
     }
@@ -109,6 +137,17 @@ func (m *LearningProvider) GetFieldDeserializers()(map[string]func(i878a80d2330e
     }
     return res
 }
+// GetIsCourseActivitySyncEnabled gets the isCourseActivitySyncEnabled property value. Indicates whether a provider can ingest learning course activity records. The default value is false. Set to true to make learningCourseActivities available for this provider.
+func (m *LearningProvider) GetIsCourseActivitySyncEnabled()(*bool) {
+    val, err := m.GetBackingStore().Get("isCourseActivitySyncEnabled")
+    if err != nil {
+        panic(err)
+    }
+    if val != nil {
+        return val.(*bool)
+    }
+    return nil
+}
 // GetLearningContents gets the learningContents property value. Learning catalog items for the provider.
 func (m *LearningProvider) GetLearningContents()([]LearningContentable) {
     val, err := m.GetBackingStore().Get("learningContents")
@@ -117,6 +156,17 @@ func (m *LearningProvider) GetLearningContents()([]LearningContentable) {
     }
     if val != nil {
         return val.([]LearningContentable)
+    }
+    return nil
+}
+// GetLearningCourseActivities gets the learningCourseActivities property value. The learningCourseActivities property
+func (m *LearningProvider) GetLearningCourseActivities()([]LearningCourseActivityable) {
+    val, err := m.GetBackingStore().Get("learningCourseActivities")
+    if err != nil {
+        panic(err)
+    }
+    if val != nil {
+        return val.([]LearningCourseActivityable)
     }
     return nil
 }
@@ -187,12 +237,32 @@ func (m *LearningProvider) Serialize(writer i878a80d2330e89d26896388a3f487eef27b
             return err
         }
     }
+    {
+        err = writer.WriteBoolValue("isCourseActivitySyncEnabled", m.GetIsCourseActivitySyncEnabled())
+        if err != nil {
+            return err
+        }
+    }
     if m.GetLearningContents() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetLearningContents()))
         for i, v := range m.GetLearningContents() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("learningContents", cast)
+        if err != nil {
+            return err
+        }
+    }
+    if m.GetLearningCourseActivities() != nil {
+        cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetLearningCourseActivities()))
+        for i, v := range m.GetLearningCourseActivities() {
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
+        }
+        err = writer.WriteCollectionOfObjectValues("learningCourseActivities", cast)
         if err != nil {
             return err
         }
@@ -236,9 +306,23 @@ func (m *LearningProvider) SetDisplayName(value *string)() {
         panic(err)
     }
 }
+// SetIsCourseActivitySyncEnabled sets the isCourseActivitySyncEnabled property value. Indicates whether a provider can ingest learning course activity records. The default value is false. Set to true to make learningCourseActivities available for this provider.
+func (m *LearningProvider) SetIsCourseActivitySyncEnabled(value *bool)() {
+    err := m.GetBackingStore().Set("isCourseActivitySyncEnabled", value)
+    if err != nil {
+        panic(err)
+    }
+}
 // SetLearningContents sets the learningContents property value. Learning catalog items for the provider.
 func (m *LearningProvider) SetLearningContents(value []LearningContentable)() {
     err := m.GetBackingStore().Set("learningContents", value)
+    if err != nil {
+        panic(err)
+    }
+}
+// SetLearningCourseActivities sets the learningCourseActivities property value. The learningCourseActivities property
+func (m *LearningProvider) SetLearningCourseActivities(value []LearningCourseActivityable)() {
+    err := m.GetBackingStore().Set("learningCourseActivities", value)
     if err != nil {
         panic(err)
     }
@@ -283,14 +367,18 @@ type LearningProviderable interface {
     Entityable
     i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable
     GetDisplayName()(*string)
+    GetIsCourseActivitySyncEnabled()(*bool)
     GetLearningContents()([]LearningContentable)
+    GetLearningCourseActivities()([]LearningCourseActivityable)
     GetLoginWebUrl()(*string)
     GetLongLogoWebUrlForDarkTheme()(*string)
     GetLongLogoWebUrlForLightTheme()(*string)
     GetSquareLogoWebUrlForDarkTheme()(*string)
     GetSquareLogoWebUrlForLightTheme()(*string)
     SetDisplayName(value *string)()
+    SetIsCourseActivitySyncEnabled(value *bool)()
     SetLearningContents(value []LearningContentable)()
+    SetLearningCourseActivities(value []LearningCourseActivityable)()
     SetLoginWebUrl(value *string)()
     SetLongLogoWebUrlForDarkTheme(value *string)()
     SetLongLogoWebUrlForLightTheme(value *string)()

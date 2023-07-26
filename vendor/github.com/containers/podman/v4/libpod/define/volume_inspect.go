@@ -45,7 +45,7 @@ type InspectVolumeData struct {
 	// GID is the GID that the volume was created with.
 	GID int `json:"GID,omitempty"`
 	// Anonymous indicates that the volume was created as an anonymous
-	// volume for a specific container, and will be be removed when any
+	// volume for a specific container, and will be removed when any
 	// container using it is removed.
 	Anonymous bool `json:"Anonymous,omitempty"`
 	// MountCount is the number of times this volume has been mounted.
@@ -56,4 +56,17 @@ type InspectVolumeData struct {
 	// a container, the container will chown the volume to the container process
 	// UID/GID.
 	NeedsChown bool `json:"NeedsChown,omitempty"`
+	// Timeout is the specified driver timeout if given
+	Timeout uint `json:"Timeout,omitempty"`
+	// StorageID is the ID of the container backing the volume in c/storage.
+	// Only used with Image Volumes.
+	StorageID string `json:"StorageID,omitempty"`
+	// LockNumber is the number of the volume's Libpod lock.
+	LockNumber uint32
+}
+
+type VolumeReload struct {
+	Added   []string
+	Removed []string
+	Errors  []error
 }

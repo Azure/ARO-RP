@@ -4,11 +4,11 @@ import (
     i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91 "github.com/microsoft/kiota-abstractions-go/serialization"
 )
 
-// AndroidWorkProfileCustomConfiguration 
+// AndroidWorkProfileCustomConfiguration android Work Profile custom configuration
 type AndroidWorkProfileCustomConfiguration struct {
     DeviceConfiguration
 }
-// NewAndroidWorkProfileCustomConfiguration instantiates a new AndroidWorkProfileCustomConfiguration and sets the default values.
+// NewAndroidWorkProfileCustomConfiguration instantiates a new androidWorkProfileCustomConfiguration and sets the default values.
 func NewAndroidWorkProfileCustomConfiguration()(*AndroidWorkProfileCustomConfiguration) {
     m := &AndroidWorkProfileCustomConfiguration{
         DeviceConfiguration: *NewDeviceConfiguration(),
@@ -32,7 +32,9 @@ func (m *AndroidWorkProfileCustomConfiguration) GetFieldDeserializers()(map[stri
         if val != nil {
             res := make([]OmaSettingable, len(val))
             for i, v := range val {
-                res[i] = v.(OmaSettingable)
+                if v != nil {
+                    res[i] = v.(OmaSettingable)
+                }
             }
             m.SetOmaSettings(res)
         }
@@ -60,7 +62,9 @@ func (m *AndroidWorkProfileCustomConfiguration) Serialize(writer i878a80d2330e89
     if m.GetOmaSettings() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetOmaSettings()))
         for i, v := range m.GetOmaSettings() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("omaSettings", cast)
         if err != nil {

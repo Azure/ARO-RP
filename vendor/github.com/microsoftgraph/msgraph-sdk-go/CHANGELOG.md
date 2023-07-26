@@ -11,6 +11,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+## [1.16.0]- 2023-08-23
+
+### Changed
+
+- Weekly generation.
+
+## [1.15.0]- 2023-08-21
+
+### Changed
+
+- Weekly generation.
+
+## [1.14.0]- 2023-08-02
+
+### Changed
+
+- Weekly generation.
+
+## [1.13.0]- 2023-07-28
+
+### Changed
+
+- Weekly generation.
+
+## [1.12.0]- 2023-07-19
+
+### Changed
+
+- Weekly generation.
+
+## [1.11.0]- 2023-07-12
+
+### Changed
+
+- Weekly generation.
+
+## [1.10.0]- 2023-07-05
+
+### Changed
+
+- Weekly generation.
+
+## [1.9.0]- 2023-07-03
+
+### Changed
+
+- Weekly generation.
+
+## [1.8.0]- 2023-06-20
+
+### Changed
+
+- Weekly generation.
+
+## [1.7.0]- 2023-06-14
+
+### Changed
+
+- Weekly generation.
+
+## [1.6.0]- 2023-06-08
+
+### Changed
+
+- Returns deleted change notification,  lifecycle event and resource data package in core.
+
+## [1.5.0]- 2023-06-08
+
+### Changed
+
+- Weekly generation.
+
 ## [1.4.0]- 2023-05-30
 
 ### Changed

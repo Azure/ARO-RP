@@ -46,7 +46,7 @@ var _ LoadBalancerBackendAddressPoolsClient = &loadBalancerBackendAddressPoolsCl
 
 // NewLoadBalancerBackendAddressPoolsClient creates a new NewLoadBalancerBackendAddressPoolsClient
 func NewLoadBalancerBackendAddressPoolsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) LoadBalancerBackendAddressPoolsClient {
-	client := mgmtnetwork.NewLoadBalancerBackendAddressPoolsClient(subscriptionID)
+	client := mgmtnetwork.NewLoadBalancerBackendAddressPoolsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 
 	return &loadBalancerBackendAddressPoolsClient{

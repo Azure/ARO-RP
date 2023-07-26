@@ -8,7 +8,7 @@ import (
 type PrintUsageByUserCollectionResponse struct {
     BaseCollectionPaginationCountResponse
 }
-// NewPrintUsageByUserCollectionResponse instantiates a new PrintUsageByUserCollectionResponse and sets the default values.
+// NewPrintUsageByUserCollectionResponse instantiates a new printUsageByUserCollectionResponse and sets the default values.
 func NewPrintUsageByUserCollectionResponse()(*PrintUsageByUserCollectionResponse) {
     m := &PrintUsageByUserCollectionResponse{
         BaseCollectionPaginationCountResponse: *NewBaseCollectionPaginationCountResponse(),
@@ -30,7 +30,9 @@ func (m *PrintUsageByUserCollectionResponse) GetFieldDeserializers()(map[string]
         if val != nil {
             res := make([]PrintUsageByUserable, len(val))
             for i, v := range val {
-                res[i] = v.(PrintUsageByUserable)
+                if v != nil {
+                    res[i] = v.(PrintUsageByUserable)
+                }
             }
             m.SetValue(res)
         }
@@ -58,7 +60,9 @@ func (m *PrintUsageByUserCollectionResponse) Serialize(writer i878a80d2330e89d26
     if m.GetValue() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetValue()))
         for i, v := range m.GetValue() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("value", cast)
         if err != nil {

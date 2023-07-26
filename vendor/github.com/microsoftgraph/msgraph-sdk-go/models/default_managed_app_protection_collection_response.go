@@ -8,7 +8,7 @@ import (
 type DefaultManagedAppProtectionCollectionResponse struct {
     BaseCollectionPaginationCountResponse
 }
-// NewDefaultManagedAppProtectionCollectionResponse instantiates a new DefaultManagedAppProtectionCollectionResponse and sets the default values.
+// NewDefaultManagedAppProtectionCollectionResponse instantiates a new defaultManagedAppProtectionCollectionResponse and sets the default values.
 func NewDefaultManagedAppProtectionCollectionResponse()(*DefaultManagedAppProtectionCollectionResponse) {
     m := &DefaultManagedAppProtectionCollectionResponse{
         BaseCollectionPaginationCountResponse: *NewBaseCollectionPaginationCountResponse(),
@@ -30,7 +30,9 @@ func (m *DefaultManagedAppProtectionCollectionResponse) GetFieldDeserializers()(
         if val != nil {
             res := make([]DefaultManagedAppProtectionable, len(val))
             for i, v := range val {
-                res[i] = v.(DefaultManagedAppProtectionable)
+                if v != nil {
+                    res[i] = v.(DefaultManagedAppProtectionable)
+                }
             }
             m.SetValue(res)
         }
@@ -58,7 +60,9 @@ func (m *DefaultManagedAppProtectionCollectionResponse) Serialize(writer i878a80
     if m.GetValue() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetValue()))
         for i, v := range m.GetValue() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("value", cast)
         if err != nil {

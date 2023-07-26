@@ -8,7 +8,7 @@ import (
 type OAuth2PermissionGrantCollectionResponse struct {
     BaseCollectionPaginationCountResponse
 }
-// NewOAuth2PermissionGrantCollectionResponse instantiates a new OAuth2PermissionGrantCollectionResponse and sets the default values.
+// NewOAuth2PermissionGrantCollectionResponse instantiates a new oAuth2PermissionGrantCollectionResponse and sets the default values.
 func NewOAuth2PermissionGrantCollectionResponse()(*OAuth2PermissionGrantCollectionResponse) {
     m := &OAuth2PermissionGrantCollectionResponse{
         BaseCollectionPaginationCountResponse: *NewBaseCollectionPaginationCountResponse(),
@@ -30,7 +30,9 @@ func (m *OAuth2PermissionGrantCollectionResponse) GetFieldDeserializers()(map[st
         if val != nil {
             res := make([]OAuth2PermissionGrantable, len(val))
             for i, v := range val {
-                res[i] = v.(OAuth2PermissionGrantable)
+                if v != nil {
+                    res[i] = v.(OAuth2PermissionGrantable)
+                }
             }
             m.SetValue(res)
         }
@@ -58,7 +60,9 @@ func (m *OAuth2PermissionGrantCollectionResponse) Serialize(writer i878a80d2330e
     if m.GetValue() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetValue()))
         for i, v := range m.GetValue() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("value", cast)
         if err != nil {

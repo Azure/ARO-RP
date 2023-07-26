@@ -8,7 +8,7 @@ import (
 type ConditionalAccessEnumeratedExternalTenants struct {
     ConditionalAccessExternalTenants
 }
-// NewConditionalAccessEnumeratedExternalTenants instantiates a new ConditionalAccessEnumeratedExternalTenants and sets the default values.
+// NewConditionalAccessEnumeratedExternalTenants instantiates a new conditionalAccessEnumeratedExternalTenants and sets the default values.
 func NewConditionalAccessEnumeratedExternalTenants()(*ConditionalAccessEnumeratedExternalTenants) {
     m := &ConditionalAccessEnumeratedExternalTenants{
         ConditionalAccessExternalTenants: *NewConditionalAccessExternalTenants(),
@@ -32,7 +32,9 @@ func (m *ConditionalAccessEnumeratedExternalTenants) GetFieldDeserializers()(map
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetMembers(res)
         }

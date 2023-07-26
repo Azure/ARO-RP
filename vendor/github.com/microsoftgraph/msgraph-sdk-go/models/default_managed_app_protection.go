@@ -4,11 +4,11 @@ import (
     i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91 "github.com/microsoft/kiota-abstractions-go/serialization"
 )
 
-// DefaultManagedAppProtection 
+// DefaultManagedAppProtection policy used to configure detailed management settings for a specified set of apps for all users not targeted by a TargetedManagedAppProtection Policy
 type DefaultManagedAppProtection struct {
     ManagedAppProtection
 }
-// NewDefaultManagedAppProtection instantiates a new DefaultManagedAppProtection and sets the default values.
+// NewDefaultManagedAppProtection instantiates a new defaultManagedAppProtection and sets the default values.
 func NewDefaultManagedAppProtection()(*DefaultManagedAppProtection) {
     m := &DefaultManagedAppProtection{
         ManagedAppProtection: *NewManagedAppProtection(),
@@ -130,7 +130,9 @@ func (m *DefaultManagedAppProtection) GetFieldDeserializers()(map[string]func(i8
         if val != nil {
             res := make([]ManagedMobileAppable, len(val))
             for i, v := range val {
-                res[i] = v.(ManagedMobileAppable)
+                if v != nil {
+                    res[i] = v.(ManagedMobileAppable)
+                }
             }
             m.SetApps(res)
         }
@@ -144,7 +146,9 @@ func (m *DefaultManagedAppProtection) GetFieldDeserializers()(map[string]func(i8
         if val != nil {
             res := make([]KeyValuePairable, len(val))
             for i, v := range val {
-                res[i] = v.(KeyValuePairable)
+                if v != nil {
+                    res[i] = v.(KeyValuePairable)
+                }
             }
             m.SetCustomSettings(res)
         }
@@ -302,7 +306,9 @@ func (m *DefaultManagedAppProtection) Serialize(writer i878a80d2330e89d26896388a
     if m.GetApps() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetApps()))
         for i, v := range m.GetApps() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("apps", cast)
         if err != nil {
@@ -312,7 +318,9 @@ func (m *DefaultManagedAppProtection) Serialize(writer i878a80d2330e89d26896388a
     if m.GetCustomSettings() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetCustomSettings()))
         for i, v := range m.GetCustomSettings() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("customSettings", cast)
         if err != nil {

@@ -8,7 +8,7 @@ import (
 type OrganizationCollectionResponse struct {
     BaseCollectionPaginationCountResponse
 }
-// NewOrganizationCollectionResponse instantiates a new OrganizationCollectionResponse and sets the default values.
+// NewOrganizationCollectionResponse instantiates a new organizationCollectionResponse and sets the default values.
 func NewOrganizationCollectionResponse()(*OrganizationCollectionResponse) {
     m := &OrganizationCollectionResponse{
         BaseCollectionPaginationCountResponse: *NewBaseCollectionPaginationCountResponse(),
@@ -30,7 +30,9 @@ func (m *OrganizationCollectionResponse) GetFieldDeserializers()(map[string]func
         if val != nil {
             res := make([]Organizationable, len(val))
             for i, v := range val {
-                res[i] = v.(Organizationable)
+                if v != nil {
+                    res[i] = v.(Organizationable)
+                }
             }
             m.SetValue(res)
         }
@@ -58,7 +60,9 @@ func (m *OrganizationCollectionResponse) Serialize(writer i878a80d2330e89d268963
     if m.GetValue() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetValue()))
         for i, v := range m.GetValue() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("value", cast)
         if err != nil {

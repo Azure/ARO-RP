@@ -78,7 +78,7 @@ func (m *DefaultUserRolePermissions) GetAllowedToReadBitlockerKeysForOwnedDevice
     }
     return nil
 }
-// GetAllowedToReadOtherUsers gets the allowedToReadOtherUsers property value. Indicates whether the default user role can read other users.
+// GetAllowedToReadOtherUsers gets the allowedToReadOtherUsers property value. Indicates whether the default user role can read other users. DO NOT SET THIS VALUE TO false.
 func (m *DefaultUserRolePermissions) GetAllowedToReadOtherUsers()(*bool) {
     val, err := m.GetBackingStore().Get("allowedToReadOtherUsers")
     if err != nil {
@@ -164,7 +164,9 @@ func (m *DefaultUserRolePermissions) GetFieldDeserializers()(map[string]func(i87
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetPermissionGrantPoliciesAssigned(res)
         }
@@ -281,7 +283,7 @@ func (m *DefaultUserRolePermissions) SetAllowedToReadBitlockerKeysForOwnedDevice
         panic(err)
     }
 }
-// SetAllowedToReadOtherUsers sets the allowedToReadOtherUsers property value. Indicates whether the default user role can read other users.
+// SetAllowedToReadOtherUsers sets the allowedToReadOtherUsers property value. Indicates whether the default user role can read other users. DO NOT SET THIS VALUE TO false.
 func (m *DefaultUserRolePermissions) SetAllowedToReadOtherUsers(value *bool)() {
     err := m.GetBackingStore().Set("allowedToReadOtherUsers", value)
     if err != nil {

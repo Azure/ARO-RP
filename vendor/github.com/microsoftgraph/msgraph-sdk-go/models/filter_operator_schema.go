@@ -61,7 +61,9 @@ func (m *FilterOperatorSchema) GetFieldDeserializers()(map[string]func(i878a80d2
         if val != nil {
             res := make([]AttributeType, len(val))
             for i, v := range val {
-                res[i] = *(v.(*AttributeType))
+                if v != nil {
+                    res[i] = *(v.(*AttributeType))
+                }
             }
             m.SetSupportedAttributeTypes(res)
         }
@@ -80,7 +82,7 @@ func (m *FilterOperatorSchema) GetMultivaluedComparisonType()(*ScopeOperatorMult
     }
     return nil
 }
-// GetSupportedAttributeTypes gets the supportedAttributeTypes property value. The supportedAttributeTypes property
+// GetSupportedAttributeTypes gets the supportedAttributeTypes property value. Attribute types supported by the operator. Possible values are: Boolean, Binary, Reference, Integer, String.
 func (m *FilterOperatorSchema) GetSupportedAttributeTypes()([]AttributeType) {
     val, err := m.GetBackingStore().Get("supportedAttributeTypes")
     if err != nil {
@@ -133,7 +135,7 @@ func (m *FilterOperatorSchema) SetMultivaluedComparisonType(value *ScopeOperator
         panic(err)
     }
 }
-// SetSupportedAttributeTypes sets the supportedAttributeTypes property value. The supportedAttributeTypes property
+// SetSupportedAttributeTypes sets the supportedAttributeTypes property value. Attribute types supported by the operator. Possible values are: Boolean, Binary, Reference, Integer, String.
 func (m *FilterOperatorSchema) SetSupportedAttributeTypes(value []AttributeType)() {
     err := m.GetBackingStore().Set("supportedAttributeTypes", value)
     if err != nil {

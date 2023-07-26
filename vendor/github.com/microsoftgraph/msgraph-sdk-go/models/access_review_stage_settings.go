@@ -93,7 +93,9 @@ func (m *AccessReviewStageSettings) GetFieldDeserializers()(map[string]func(i878
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetDecisionsThatWillMoveToNextStage(res)
         }
@@ -107,7 +109,9 @@ func (m *AccessReviewStageSettings) GetFieldDeserializers()(map[string]func(i878
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetDependsOn(res)
         }
@@ -131,7 +135,9 @@ func (m *AccessReviewStageSettings) GetFieldDeserializers()(map[string]func(i878
         if val != nil {
             res := make([]AccessReviewReviewerScopeable, len(val))
             for i, v := range val {
-                res[i] = v.(AccessReviewReviewerScopeable)
+                if v != nil {
+                    res[i] = v.(AccessReviewReviewerScopeable)
+                }
             }
             m.SetFallbackReviewers(res)
         }
@@ -144,6 +150,22 @@ func (m *AccessReviewStageSettings) GetFieldDeserializers()(map[string]func(i878
         }
         if val != nil {
             m.SetOdataType(val)
+        }
+        return nil
+    }
+    res["recommendationInsightSettings"] = func (n i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
+        val, err := n.GetCollectionOfObjectValues(CreateAccessReviewRecommendationInsightSettingFromDiscriminatorValue)
+        if err != nil {
+            return err
+        }
+        if val != nil {
+            res := make([]AccessReviewRecommendationInsightSettingable, len(val))
+            for i, v := range val {
+                if v != nil {
+                    res[i] = v.(AccessReviewRecommendationInsightSettingable)
+                }
+            }
+            m.SetRecommendationInsightSettings(res)
         }
         return nil
     }
@@ -165,7 +187,9 @@ func (m *AccessReviewStageSettings) GetFieldDeserializers()(map[string]func(i878
         if val != nil {
             res := make([]AccessReviewReviewerScopeable, len(val))
             for i, v := range val {
-                res[i] = v.(AccessReviewReviewerScopeable)
+                if v != nil {
+                    res[i] = v.(AccessReviewReviewerScopeable)
+                }
             }
             m.SetReviewers(res)
         }
@@ -191,6 +215,17 @@ func (m *AccessReviewStageSettings) GetOdataType()(*string) {
     }
     if val != nil {
         return val.(*string)
+    }
+    return nil
+}
+// GetRecommendationInsightSettings gets the recommendationInsightSettings property value. The recommendationInsightSettings property
+func (m *AccessReviewStageSettings) GetRecommendationInsightSettings()([]AccessReviewRecommendationInsightSettingable) {
+    val, err := m.GetBackingStore().Get("recommendationInsightSettings")
+    if err != nil {
+        panic(err)
+    }
+    if val != nil {
+        return val.([]AccessReviewRecommendationInsightSettingable)
     }
     return nil
 }
@@ -250,7 +285,9 @@ func (m *AccessReviewStageSettings) Serialize(writer i878a80d2330e89d26896388a3f
     if m.GetFallbackReviewers() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetFallbackReviewers()))
         for i, v := range m.GetFallbackReviewers() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err := writer.WriteCollectionOfObjectValues("fallbackReviewers", cast)
         if err != nil {
@@ -259,6 +296,18 @@ func (m *AccessReviewStageSettings) Serialize(writer i878a80d2330e89d26896388a3f
     }
     {
         err := writer.WriteStringValue("@odata.type", m.GetOdataType())
+        if err != nil {
+            return err
+        }
+    }
+    if m.GetRecommendationInsightSettings() != nil {
+        cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetRecommendationInsightSettings()))
+        for i, v := range m.GetRecommendationInsightSettings() {
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
+        }
+        err := writer.WriteCollectionOfObjectValues("recommendationInsightSettings", cast)
         if err != nil {
             return err
         }
@@ -272,7 +321,9 @@ func (m *AccessReviewStageSettings) Serialize(writer i878a80d2330e89d26896388a3f
     if m.GetReviewers() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetReviewers()))
         for i, v := range m.GetReviewers() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err := writer.WriteCollectionOfObjectValues("reviewers", cast)
         if err != nil {
@@ -339,6 +390,13 @@ func (m *AccessReviewStageSettings) SetOdataType(value *string)() {
         panic(err)
     }
 }
+// SetRecommendationInsightSettings sets the recommendationInsightSettings property value. The recommendationInsightSettings property
+func (m *AccessReviewStageSettings) SetRecommendationInsightSettings(value []AccessReviewRecommendationInsightSettingable)() {
+    err := m.GetBackingStore().Set("recommendationInsightSettings", value)
+    if err != nil {
+        panic(err)
+    }
+}
 // SetRecommendationsEnabled sets the recommendationsEnabled property value. Indicates whether showing recommendations to reviewers is enabled. Required. NOTE: The value of this property will override override the corresponding setting on the accessReviewScheduleDefinition object.
 func (m *AccessReviewStageSettings) SetRecommendationsEnabled(value *bool)() {
     err := m.GetBackingStore().Set("recommendationsEnabled", value)
@@ -371,6 +429,7 @@ type AccessReviewStageSettingsable interface {
     GetDurationInDays()(*int32)
     GetFallbackReviewers()([]AccessReviewReviewerScopeable)
     GetOdataType()(*string)
+    GetRecommendationInsightSettings()([]AccessReviewRecommendationInsightSettingable)
     GetRecommendationsEnabled()(*bool)
     GetReviewers()([]AccessReviewReviewerScopeable)
     GetStageId()(*string)
@@ -380,6 +439,7 @@ type AccessReviewStageSettingsable interface {
     SetDurationInDays(value *int32)()
     SetFallbackReviewers(value []AccessReviewReviewerScopeable)()
     SetOdataType(value *string)()
+    SetRecommendationInsightSettings(value []AccessReviewRecommendationInsightSettingable)()
     SetRecommendationsEnabled(value *bool)()
     SetReviewers(value []AccessReviewReviewerScopeable)()
     SetStageId(value *string)()

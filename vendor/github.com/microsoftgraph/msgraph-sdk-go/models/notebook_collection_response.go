@@ -8,7 +8,7 @@ import (
 type NotebookCollectionResponse struct {
     BaseCollectionPaginationCountResponse
 }
-// NewNotebookCollectionResponse instantiates a new NotebookCollectionResponse and sets the default values.
+// NewNotebookCollectionResponse instantiates a new notebookCollectionResponse and sets the default values.
 func NewNotebookCollectionResponse()(*NotebookCollectionResponse) {
     m := &NotebookCollectionResponse{
         BaseCollectionPaginationCountResponse: *NewBaseCollectionPaginationCountResponse(),
@@ -30,7 +30,9 @@ func (m *NotebookCollectionResponse) GetFieldDeserializers()(map[string]func(i87
         if val != nil {
             res := make([]Notebookable, len(val))
             for i, v := range val {
-                res[i] = v.(Notebookable)
+                if v != nil {
+                    res[i] = v.(Notebookable)
+                }
             }
             m.SetValue(res)
         }
@@ -58,7 +60,9 @@ func (m *NotebookCollectionResponse) Serialize(writer i878a80d2330e89d26896388a3
     if m.GetValue() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetValue()))
         for i, v := range m.GetValue() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("value", cast)
         if err != nil {

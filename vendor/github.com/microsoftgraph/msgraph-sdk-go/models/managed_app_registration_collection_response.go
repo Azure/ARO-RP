@@ -8,7 +8,7 @@ import (
 type ManagedAppRegistrationCollectionResponse struct {
     BaseCollectionPaginationCountResponse
 }
-// NewManagedAppRegistrationCollectionResponse instantiates a new ManagedAppRegistrationCollectionResponse and sets the default values.
+// NewManagedAppRegistrationCollectionResponse instantiates a new managedAppRegistrationCollectionResponse and sets the default values.
 func NewManagedAppRegistrationCollectionResponse()(*ManagedAppRegistrationCollectionResponse) {
     m := &ManagedAppRegistrationCollectionResponse{
         BaseCollectionPaginationCountResponse: *NewBaseCollectionPaginationCountResponse(),
@@ -30,7 +30,9 @@ func (m *ManagedAppRegistrationCollectionResponse) GetFieldDeserializers()(map[s
         if val != nil {
             res := make([]ManagedAppRegistrationable, len(val))
             for i, v := range val {
-                res[i] = v.(ManagedAppRegistrationable)
+                if v != nil {
+                    res[i] = v.(ManagedAppRegistrationable)
+                }
             }
             m.SetValue(res)
         }
@@ -58,7 +60,9 @@ func (m *ManagedAppRegistrationCollectionResponse) Serialize(writer i878a80d2330
     if m.GetValue() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetValue()))
         for i, v := range m.GetValue() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("value", cast)
         if err != nil {

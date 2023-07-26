@@ -8,7 +8,7 @@ import (
 type Fido2CombinationConfiguration struct {
     AuthenticationCombinationConfiguration
 }
-// NewFido2CombinationConfiguration instantiates a new Fido2CombinationConfiguration and sets the default values.
+// NewFido2CombinationConfiguration instantiates a new fido2CombinationConfiguration and sets the default values.
 func NewFido2CombinationConfiguration()(*Fido2CombinationConfiguration) {
     m := &Fido2CombinationConfiguration{
         AuthenticationCombinationConfiguration: *NewAuthenticationCombinationConfiguration(),
@@ -43,7 +43,9 @@ func (m *Fido2CombinationConfiguration) GetFieldDeserializers()(map[string]func(
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetAllowedAAGUIDs(res)
         }

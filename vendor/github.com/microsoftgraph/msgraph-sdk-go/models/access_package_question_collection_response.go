@@ -8,7 +8,7 @@ import (
 type AccessPackageQuestionCollectionResponse struct {
     BaseCollectionPaginationCountResponse
 }
-// NewAccessPackageQuestionCollectionResponse instantiates a new AccessPackageQuestionCollectionResponse and sets the default values.
+// NewAccessPackageQuestionCollectionResponse instantiates a new accessPackageQuestionCollectionResponse and sets the default values.
 func NewAccessPackageQuestionCollectionResponse()(*AccessPackageQuestionCollectionResponse) {
     m := &AccessPackageQuestionCollectionResponse{
         BaseCollectionPaginationCountResponse: *NewBaseCollectionPaginationCountResponse(),
@@ -30,7 +30,9 @@ func (m *AccessPackageQuestionCollectionResponse) GetFieldDeserializers()(map[st
         if val != nil {
             res := make([]AccessPackageQuestionable, len(val))
             for i, v := range val {
-                res[i] = v.(AccessPackageQuestionable)
+                if v != nil {
+                    res[i] = v.(AccessPackageQuestionable)
+                }
             }
             m.SetValue(res)
         }
@@ -58,7 +60,9 @@ func (m *AccessPackageQuestionCollectionResponse) Serialize(writer i878a80d2330e
     if m.GetValue() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetValue()))
         for i, v := range m.GetValue() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("value", cast)
         if err != nil {

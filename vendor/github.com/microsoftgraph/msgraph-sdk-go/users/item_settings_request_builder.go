@@ -18,7 +18,7 @@ type ItemSettingsRequestBuilderDeleteRequestConfiguration struct {
     // Request options
     Options []i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestOption
 }
-// ItemSettingsRequestBuilderGetQueryParameters get settings from users
+// ItemSettingsRequestBuilderGetQueryParameters read the user and organization userSettings object.To learn how to update the properties of the userSettings object, see update user settings.
 type ItemSettingsRequestBuilderGetQueryParameters struct {
     // Expand related entities
     Expand []string `uriparametername:"%24expand"`
@@ -70,7 +70,10 @@ func (m *ItemSettingsRequestBuilder) Delete(ctx context.Context, requestConfigur
     }
     return nil
 }
-// Get get settings from users
+// Get read the user and organization userSettings object.To learn how to update the properties of the userSettings object, see update user settings.
+// [Find more info here]
+// 
+// [Find more info here]: https://learn.microsoft.com/graph/api/usersettings-get?view=graph-rest-1.0
 func (m *ItemSettingsRequestBuilder) Get(ctx context.Context, requestConfiguration *ItemSettingsRequestBuilderGetRequestConfiguration)(iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.UserSettingsable, error) {
     requestInfo, err := m.ToGetRequestInformation(ctx, requestConfiguration);
     if err != nil {
@@ -89,7 +92,10 @@ func (m *ItemSettingsRequestBuilder) Get(ctx context.Context, requestConfigurati
     }
     return res.(iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.UserSettingsable), nil
 }
-// Patch update the navigation property settings in users
+// Patch update the properties of the userSettings object. Users in the same organization can have different settings based on their preference or on the organization policies. To get the user current settings, see current user settings. 
+// [Find more info here]
+// 
+// [Find more info here]: https://learn.microsoft.com/graph/api/usersettings-update?view=graph-rest-1.0
 func (m *ItemSettingsRequestBuilder) Patch(ctx context.Context, body iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.UserSettingsable, requestConfiguration *ItemSettingsRequestBuilderPatchRequestConfiguration)(iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.UserSettingsable, error) {
     requestInfo, err := m.ToPatchRequestInformation(ctx, body, requestConfiguration);
     if err != nil {
@@ -124,7 +130,7 @@ func (m *ItemSettingsRequestBuilder) ToDeleteRequestInformation(ctx context.Cont
     }
     return requestInfo, nil
 }
-// ToGetRequestInformation get settings from users
+// ToGetRequestInformation read the user and organization userSettings object.To learn how to update the properties of the userSettings object, see update user settings.
 func (m *ItemSettingsRequestBuilder) ToGetRequestInformation(ctx context.Context, requestConfiguration *ItemSettingsRequestBuilderGetRequestConfiguration)(*i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestInformation, error) {
     requestInfo := i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.NewRequestInformation()
     requestInfo.UrlTemplate = m.BaseRequestBuilder.UrlTemplate
@@ -140,7 +146,7 @@ func (m *ItemSettingsRequestBuilder) ToGetRequestInformation(ctx context.Context
     }
     return requestInfo, nil
 }
-// ToPatchRequestInformation update the navigation property settings in users
+// ToPatchRequestInformation update the properties of the userSettings object. Users in the same organization can have different settings based on their preference or on the organization policies. To get the user current settings, see current user settings. 
 func (m *ItemSettingsRequestBuilder) ToPatchRequestInformation(ctx context.Context, body iadcd81124412c61e647227ecfc4449d8bba17de0380ddda76f641a29edf2b242.UserSettingsable, requestConfiguration *ItemSettingsRequestBuilderPatchRequestConfiguration)(*i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.RequestInformation, error) {
     requestInfo := i2ae4187f7daee263371cb1c977df639813ab50ffa529013b7437480d1ec0158f.NewRequestInformation()
     requestInfo.UrlTemplate = m.BaseRequestBuilder.UrlTemplate

@@ -8,7 +8,7 @@ import (
 type Domain struct {
     Entity
 }
-// NewDomain instantiates a new Domain and sets the default values.
+// NewDomain instantiates a new domain and sets the default values.
 func NewDomain()(*Domain) {
     m := &Domain{
         Entity: *NewEntity(),
@@ -19,7 +19,7 @@ func NewDomain()(*Domain) {
 func CreateDomainFromDiscriminatorValue(parseNode i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode)(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, error) {
     return NewDomain(), nil
 }
-// GetAuthenticationType gets the authenticationType property value. Indicates the configured authentication type for the domain. The value is either Managed or Federated. Managed indicates a cloud managed domain where Azure AD performs user authentication. Federated indicates authentication is federated with an identity provider such as the tenant's on-premises Active Directory via Active Directory Federation Services. This property is read-only and is not nullable.
+// GetAuthenticationType gets the authenticationType property value. Indicates the configured authentication type for the domain. The value is either Managed or Federated. Managed indicates a cloud managed domain where Azure AD performs user authentication. Federated indicates authentication is federated with an identity provider such as the tenant's on-premises Active Directory via Active Directory Federation Services. Not nullable.
 func (m *Domain) GetAuthenticationType()(*string) {
     val, err := m.GetBackingStore().Get("authenticationType")
     if err != nil {
@@ -94,7 +94,9 @@ func (m *Domain) GetFieldDeserializers()(map[string]func(i878a80d2330e89d2689638
         if val != nil {
             res := make([]DirectoryObjectable, len(val))
             for i, v := range val {
-                res[i] = v.(DirectoryObjectable)
+                if v != nil {
+                    res[i] = v.(DirectoryObjectable)
+                }
             }
             m.SetDomainNameReferences(res)
         }
@@ -108,7 +110,9 @@ func (m *Domain) GetFieldDeserializers()(map[string]func(i878a80d2330e89d2689638
         if val != nil {
             res := make([]InternalDomainFederationable, len(val))
             for i, v := range val {
-                res[i] = v.(InternalDomainFederationable)
+                if v != nil {
+                    res[i] = v.(InternalDomainFederationable)
+                }
             }
             m.SetFederationConfiguration(res)
         }
@@ -212,7 +216,9 @@ func (m *Domain) GetFieldDeserializers()(map[string]func(i878a80d2330e89d2689638
         if val != nil {
             res := make([]DomainDnsRecordable, len(val))
             for i, v := range val {
-                res[i] = v.(DomainDnsRecordable)
+                if v != nil {
+                    res[i] = v.(DomainDnsRecordable)
+                }
             }
             m.SetServiceConfigurationRecords(res)
         }
@@ -236,7 +242,9 @@ func (m *Domain) GetFieldDeserializers()(map[string]func(i878a80d2330e89d2689638
         if val != nil {
             res := make([]string, len(val))
             for i, v := range val {
-                res[i] = *(v.(*string))
+                if v != nil {
+                    res[i] = *(v.(*string))
+                }
             }
             m.SetSupportedServices(res)
         }
@@ -250,7 +258,9 @@ func (m *Domain) GetFieldDeserializers()(map[string]func(i878a80d2330e89d2689638
         if val != nil {
             res := make([]DomainDnsRecordable, len(val))
             for i, v := range val {
-                res[i] = v.(DomainDnsRecordable)
+                if v != nil {
+                    res[i] = v.(DomainDnsRecordable)
+                }
             }
             m.SetVerificationDnsRecords(res)
         }
@@ -422,7 +432,9 @@ func (m *Domain) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c
     if m.GetDomainNameReferences() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetDomainNameReferences()))
         for i, v := range m.GetDomainNameReferences() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("domainNameReferences", cast)
         if err != nil {
@@ -432,7 +444,9 @@ func (m *Domain) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c
     if m.GetFederationConfiguration() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetFederationConfiguration()))
         for i, v := range m.GetFederationConfiguration() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("federationConfiguration", cast)
         if err != nil {
@@ -496,7 +510,9 @@ func (m *Domain) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c
     if m.GetServiceConfigurationRecords() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetServiceConfigurationRecords()))
         for i, v := range m.GetServiceConfigurationRecords() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("serviceConfigurationRecords", cast)
         if err != nil {
@@ -518,7 +534,9 @@ func (m *Domain) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c
     if m.GetVerificationDnsRecords() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetVerificationDnsRecords()))
         for i, v := range m.GetVerificationDnsRecords() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("verificationDnsRecords", cast)
         if err != nil {
@@ -527,7 +545,7 @@ func (m *Domain) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0e6c010c
     }
     return nil
 }
-// SetAuthenticationType sets the authenticationType property value. Indicates the configured authentication type for the domain. The value is either Managed or Federated. Managed indicates a cloud managed domain where Azure AD performs user authentication. Federated indicates authentication is federated with an identity provider such as the tenant's on-premises Active Directory via Active Directory Federation Services. This property is read-only and is not nullable.
+// SetAuthenticationType sets the authenticationType property value. Indicates the configured authentication type for the domain. The value is either Managed or Federated. Managed indicates a cloud managed domain where Azure AD performs user authentication. Federated indicates authentication is federated with an identity provider such as the tenant's on-premises Active Directory via Active Directory Federation Services. Not nullable.
 func (m *Domain) SetAuthenticationType(value *string)() {
     err := m.GetBackingStore().Set("authenticationType", value)
     if err != nil {

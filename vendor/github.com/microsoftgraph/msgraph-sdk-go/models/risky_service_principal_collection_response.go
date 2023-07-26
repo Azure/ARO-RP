@@ -8,7 +8,7 @@ import (
 type RiskyServicePrincipalCollectionResponse struct {
     BaseCollectionPaginationCountResponse
 }
-// NewRiskyServicePrincipalCollectionResponse instantiates a new RiskyServicePrincipalCollectionResponse and sets the default values.
+// NewRiskyServicePrincipalCollectionResponse instantiates a new riskyServicePrincipalCollectionResponse and sets the default values.
 func NewRiskyServicePrincipalCollectionResponse()(*RiskyServicePrincipalCollectionResponse) {
     m := &RiskyServicePrincipalCollectionResponse{
         BaseCollectionPaginationCountResponse: *NewBaseCollectionPaginationCountResponse(),
@@ -30,7 +30,9 @@ func (m *RiskyServicePrincipalCollectionResponse) GetFieldDeserializers()(map[st
         if val != nil {
             res := make([]RiskyServicePrincipalable, len(val))
             for i, v := range val {
-                res[i] = v.(RiskyServicePrincipalable)
+                if v != nil {
+                    res[i] = v.(RiskyServicePrincipalable)
+                }
             }
             m.SetValue(res)
         }
@@ -58,7 +60,9 @@ func (m *RiskyServicePrincipalCollectionResponse) Serialize(writer i878a80d2330e
     if m.GetValue() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetValue()))
         for i, v := range m.GetValue() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("value", cast)
         if err != nil {

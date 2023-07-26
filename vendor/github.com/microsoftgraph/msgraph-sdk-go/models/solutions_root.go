@@ -10,7 +10,7 @@ type SolutionsRoot struct {
     // Stores model information.
     backingStore ie8677ce2c7e1b4c22e9c3827ecd078d41185424dd9eeb92b7d971ed2d49a392e.BackingStore
 }
-// NewSolutionsRoot instantiates a new SolutionsRoot and sets the default values.
+// NewSolutionsRoot instantiates a new solutionsRoot and sets the default values.
 func NewSolutionsRoot()(*SolutionsRoot) {
     m := &SolutionsRoot{
     }
@@ -71,7 +71,9 @@ func (m *SolutionsRoot) GetFieldDeserializers()(map[string]func(i878a80d2330e89d
         if val != nil {
             res := make([]BookingBusinessable, len(val))
             for i, v := range val {
-                res[i] = v.(BookingBusinessable)
+                if v != nil {
+                    res[i] = v.(BookingBusinessable)
+                }
             }
             m.SetBookingBusinesses(res)
         }
@@ -85,7 +87,9 @@ func (m *SolutionsRoot) GetFieldDeserializers()(map[string]func(i878a80d2330e89d
         if val != nil {
             res := make([]BookingCurrencyable, len(val))
             for i, v := range val {
-                res[i] = v.(BookingCurrencyable)
+                if v != nil {
+                    res[i] = v.(BookingCurrencyable)
+                }
             }
             m.SetBookingCurrencies(res)
         }
@@ -119,7 +123,9 @@ func (m *SolutionsRoot) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0
     if m.GetBookingBusinesses() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetBookingBusinesses()))
         for i, v := range m.GetBookingBusinesses() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err := writer.WriteCollectionOfObjectValues("bookingBusinesses", cast)
         if err != nil {
@@ -129,7 +135,9 @@ func (m *SolutionsRoot) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0
     if m.GetBookingCurrencies() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetBookingCurrencies()))
         for i, v := range m.GetBookingCurrencies() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err := writer.WriteCollectionOfObjectValues("bookingCurrencies", cast)
         if err != nil {

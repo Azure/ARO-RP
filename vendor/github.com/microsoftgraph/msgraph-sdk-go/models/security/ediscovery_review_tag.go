@@ -8,7 +8,7 @@ import (
 type EdiscoveryReviewTag struct {
     Tag
 }
-// NewEdiscoveryReviewTag instantiates a new EdiscoveryReviewTag and sets the default values.
+// NewEdiscoveryReviewTag instantiates a new ediscoveryReviewTag and sets the default values.
 func NewEdiscoveryReviewTag()(*EdiscoveryReviewTag) {
     m := &EdiscoveryReviewTag{
         Tag: *NewTag(),
@@ -64,7 +64,9 @@ func (m *EdiscoveryReviewTag) GetFieldDeserializers()(map[string]func(i878a80d23
         if val != nil {
             res := make([]EdiscoveryReviewTagable, len(val))
             for i, v := range val {
-                res[i] = v.(EdiscoveryReviewTagable)
+                if v != nil {
+                    res[i] = v.(EdiscoveryReviewTagable)
+                }
             }
             m.SetChildTags(res)
         }
@@ -109,7 +111,9 @@ func (m *EdiscoveryReviewTag) Serialize(writer i878a80d2330e89d26896388a3f487eef
     if m.GetChildTags() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetChildTags()))
         for i, v := range m.GetChildTags() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("childTags", cast)
         if err != nil {

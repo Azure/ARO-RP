@@ -64,6 +64,17 @@ func (m *OnlineMeeting) GetAllowMeetingChat()(*MeetingChatMode) {
     }
     return nil
 }
+// GetAllowParticipantsToChangeName gets the allowParticipantsToChangeName property value. Specifies if participants are allowed to rename themselves in an instance of the meeting.
+func (m *OnlineMeeting) GetAllowParticipantsToChangeName()(*bool) {
+    val, err := m.GetBackingStore().Get("allowParticipantsToChangeName")
+    if err != nil {
+        panic(err)
+    }
+    if val != nil {
+        return val.(*bool)
+    }
+    return nil
+}
 // GetAllowTeamworkReactions gets the allowTeamworkReactions property value. Indicates whether Teams reactions are enabled for the meeting.
 func (m *OnlineMeeting) GetAllowTeamworkReactions()(*bool) {
     val, err := m.GetBackingStore().Get("allowTeamworkReactions")
@@ -206,6 +217,16 @@ func (m *OnlineMeeting) GetFieldDeserializers()(map[string]func(i878a80d2330e89d
         }
         return nil
     }
+    res["allowParticipantsToChangeName"] = func (n i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
+        val, err := n.GetBoolValue()
+        if err != nil {
+            return err
+        }
+        if val != nil {
+            m.SetAllowParticipantsToChangeName(val)
+        }
+        return nil
+    }
     res["allowTeamworkReactions"] = func (n i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
         val, err := n.GetBoolValue()
         if err != nil {
@@ -224,7 +245,9 @@ func (m *OnlineMeeting) GetFieldDeserializers()(map[string]func(i878a80d2330e89d
         if val != nil {
             res := make([]MeetingAttendanceReportable, len(val))
             for i, v := range val {
-                res[i] = v.(MeetingAttendanceReportable)
+                if v != nil {
+                    res[i] = v.(MeetingAttendanceReportable)
+                }
             }
             m.SetAttendanceReports(res)
         }
@@ -380,6 +403,16 @@ func (m *OnlineMeeting) GetFieldDeserializers()(map[string]func(i878a80d2330e89d
         }
         return nil
     }
+    res["shareMeetingChatHistoryDefault"] = func (n i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
+        val, err := n.GetEnumValue(ParseMeetingChatHistoryDefaultMode)
+        if err != nil {
+            return err
+        }
+        if val != nil {
+            m.SetShareMeetingChatHistoryDefault(val.(*MeetingChatHistoryDefaultMode))
+        }
+        return nil
+    }
     res["startDateTime"] = func (n i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
         val, err := n.GetTimeValue()
         if err != nil {
@@ -510,6 +543,17 @@ func (m *OnlineMeeting) GetRecordAutomatically()(*bool) {
     }
     return nil
 }
+// GetShareMeetingChatHistoryDefault gets the shareMeetingChatHistoryDefault property value. Specifies whether meeting chat history is shared with participants. Possible values are: all, none, unknownFutureValue.
+func (m *OnlineMeeting) GetShareMeetingChatHistoryDefault()(*MeetingChatHistoryDefaultMode) {
+    val, err := m.GetBackingStore().Get("shareMeetingChatHistoryDefault")
+    if err != nil {
+        panic(err)
+    }
+    if val != nil {
+        return val.(*MeetingChatHistoryDefaultMode)
+    }
+    return nil
+}
 // GetStartDateTime gets the startDateTime property value. The meeting start time in UTC.
 func (m *OnlineMeeting) GetStartDateTime()(*i336074805fc853987abe6f7fe3ad97a6a6f3077a16391fec744f671a015fbd7e.Time) {
     val, err := m.GetBackingStore().Get("startDateTime")
@@ -587,6 +631,12 @@ func (m *OnlineMeeting) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0
         }
     }
     {
+        err = writer.WriteBoolValue("allowParticipantsToChangeName", m.GetAllowParticipantsToChangeName())
+        if err != nil {
+            return err
+        }
+    }
+    {
         err = writer.WriteBoolValue("allowTeamworkReactions", m.GetAllowTeamworkReactions())
         if err != nil {
             return err
@@ -595,7 +645,9 @@ func (m *OnlineMeeting) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0
     if m.GetAttendanceReports() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetAttendanceReports()))
         for i, v := range m.GetAttendanceReports() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("attendanceReports", cast)
         if err != nil {
@@ -692,6 +744,13 @@ func (m *OnlineMeeting) Serialize(writer i878a80d2330e89d26896388a3f487eef27b0a0
             return err
         }
     }
+    if m.GetShareMeetingChatHistoryDefault() != nil {
+        cast := (*m.GetShareMeetingChatHistoryDefault()).String()
+        err = writer.WriteStringValue("shareMeetingChatHistoryDefault", &cast)
+        if err != nil {
+            return err
+        }
+    }
     {
         err = writer.WriteTimeValue("startDateTime", m.GetStartDateTime())
         if err != nil {
@@ -742,6 +801,13 @@ func (m *OnlineMeeting) SetAllowedPresenters(value *OnlineMeetingPresenters)() {
 // SetAllowMeetingChat sets the allowMeetingChat property value. Specifies the mode of meeting chat.
 func (m *OnlineMeeting) SetAllowMeetingChat(value *MeetingChatMode)() {
     err := m.GetBackingStore().Set("allowMeetingChat", value)
+    if err != nil {
+        panic(err)
+    }
+}
+// SetAllowParticipantsToChangeName sets the allowParticipantsToChangeName property value. Specifies if participants are allowed to rename themselves in an instance of the meeting.
+func (m *OnlineMeeting) SetAllowParticipantsToChangeName(value *bool)() {
+    err := m.GetBackingStore().Set("allowParticipantsToChangeName", value)
     if err != nil {
         panic(err)
     }
@@ -865,6 +931,13 @@ func (m *OnlineMeeting) SetRecordAutomatically(value *bool)() {
         panic(err)
     }
 }
+// SetShareMeetingChatHistoryDefault sets the shareMeetingChatHistoryDefault property value. Specifies whether meeting chat history is shared with participants. Possible values are: all, none, unknownFutureValue.
+func (m *OnlineMeeting) SetShareMeetingChatHistoryDefault(value *MeetingChatHistoryDefaultMode)() {
+    err := m.GetBackingStore().Set("shareMeetingChatHistoryDefault", value)
+    if err != nil {
+        panic(err)
+    }
+}
 // SetStartDateTime sets the startDateTime property value. The meeting start time in UTC.
 func (m *OnlineMeeting) SetStartDateTime(value *i336074805fc853987abe6f7fe3ad97a6a6f3077a16391fec744f671a015fbd7e.Time)() {
     err := m.GetBackingStore().Set("startDateTime", value)
@@ -901,6 +974,7 @@ type OnlineMeetingable interface {
     GetAllowAttendeeToEnableMic()(*bool)
     GetAllowedPresenters()(*OnlineMeetingPresenters)
     GetAllowMeetingChat()(*MeetingChatMode)
+    GetAllowParticipantsToChangeName()(*bool)
     GetAllowTeamworkReactions()(*bool)
     GetAttendanceReports()([]MeetingAttendanceReportable)
     GetAttendeeReport()([]byte)
@@ -918,6 +992,7 @@ type OnlineMeetingable interface {
     GetLobbyBypassSettings()(LobbyBypassSettingsable)
     GetParticipants()(MeetingParticipantsable)
     GetRecordAutomatically()(*bool)
+    GetShareMeetingChatHistoryDefault()(*MeetingChatHistoryDefaultMode)
     GetStartDateTime()(*i336074805fc853987abe6f7fe3ad97a6a6f3077a16391fec744f671a015fbd7e.Time)
     GetSubject()(*string)
     GetVideoTeleconferenceId()(*string)
@@ -926,6 +1001,7 @@ type OnlineMeetingable interface {
     SetAllowAttendeeToEnableMic(value *bool)()
     SetAllowedPresenters(value *OnlineMeetingPresenters)()
     SetAllowMeetingChat(value *MeetingChatMode)()
+    SetAllowParticipantsToChangeName(value *bool)()
     SetAllowTeamworkReactions(value *bool)()
     SetAttendanceReports(value []MeetingAttendanceReportable)()
     SetAttendeeReport(value []byte)()
@@ -943,6 +1019,7 @@ type OnlineMeetingable interface {
     SetLobbyBypassSettings(value LobbyBypassSettingsable)()
     SetParticipants(value MeetingParticipantsable)()
     SetRecordAutomatically(value *bool)()
+    SetShareMeetingChatHistoryDefault(value *MeetingChatHistoryDefaultMode)()
     SetStartDateTime(value *i336074805fc853987abe6f7fe3ad97a6a6f3077a16391fec744f671a015fbd7e.Time)()
     SetSubject(value *string)()
     SetVideoTeleconferenceId(value *string)()

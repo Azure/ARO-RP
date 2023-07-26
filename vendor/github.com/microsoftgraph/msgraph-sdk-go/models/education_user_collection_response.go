@@ -8,7 +8,7 @@ import (
 type EducationUserCollectionResponse struct {
     BaseCollectionPaginationCountResponse
 }
-// NewEducationUserCollectionResponse instantiates a new EducationUserCollectionResponse and sets the default values.
+// NewEducationUserCollectionResponse instantiates a new educationUserCollectionResponse and sets the default values.
 func NewEducationUserCollectionResponse()(*EducationUserCollectionResponse) {
     m := &EducationUserCollectionResponse{
         BaseCollectionPaginationCountResponse: *NewBaseCollectionPaginationCountResponse(),
@@ -30,7 +30,9 @@ func (m *EducationUserCollectionResponse) GetFieldDeserializers()(map[string]fun
         if val != nil {
             res := make([]EducationUserable, len(val))
             for i, v := range val {
-                res[i] = v.(EducationUserable)
+                if v != nil {
+                    res[i] = v.(EducationUserable)
+                }
             }
             m.SetValue(res)
         }
@@ -58,7 +60,9 @@ func (m *EducationUserCollectionResponse) Serialize(writer i878a80d2330e89d26896
     if m.GetValue() != nil {
         cast := make([]i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, len(m.GetValue()))
         for i, v := range m.GetValue() {
-            cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            if v != nil {
+                cast[i] = v.(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable)
+            }
         }
         err = writer.WriteCollectionOfObjectValues("value", cast)
         if err != nil {
