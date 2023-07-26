@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -39,8 +40,12 @@ func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error
 	}
 
 	if dns.IsManagedDomain(mon.oc.Properties.ClusterProfile.Domain) {
-		infraID := mon.oc.Properties.InfraID
-		for _, secretName := range []string{infraID + "-ingress", infraID + "-apiserver"} {
+		ingressController, err := mon.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Get(ctx, "default", metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		ingressSecretName := ingressController.Spec.DefaultCertificate.Name
+		for _, secretName := range []string{ingressSecretName, strings.Replace(ingressSecretName, "-ingress", "-apiserver", 1)} {
 			certificate, err := mon.getCertificate(ctx, secretName, operator.Namespace, corev1.TLSCertKey)
 			if kerrors.IsNotFound(err) {
 				mon.emitGauge(secretMissingMetricName, int64(1), map[string]string{

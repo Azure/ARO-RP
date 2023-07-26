@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	operatorv1 "github.com/openshift/api/operator/v1"
+	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -16,6 +18,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -33,6 +36,8 @@ const (
 func TestEmitCertificateExpirationStatuses(t *testing.T) {
 	expiration := time.Now().Add(time.Hour * 24 * 5)
 	expirationString := expiration.UTC().Format(time.RFC3339)
+	clusterID := uuid.DefaultGenerator.Generate()
+
 	for _, tt := range []struct {
 		name            string
 		domain          string
@@ -57,8 +62,8 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			domain: managedDomainName,
 			certsPresent: []certInfo{
 				{"cluster", "geneva.certificate"},
-				{"foo12-ingress", managedDomainName},
-				{"foo12-apiserver", "api." + managedDomainName},
+				{clusterID + "-ingress", managedDomainName},
+				{clusterID + "-apiserver", "api." + managedDomainName},
 			},
 			wantExpirations: []map[string]string{
 				{
@@ -89,7 +94,7 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			domain: managedDomainName,
 			certsPresent: []certInfo{
 				{"cluster", "geneva.certificate"},
-				{"foo12-ingress", managedDomainName},
+				{clusterID + "-ingress", managedDomainName},
 			},
 			wantExpirations: []map[string]string{
 				{
@@ -97,13 +102,13 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 					"expirationDate": expirationString,
 				},
 				{
-					"subject": "contoso.aroapp.io",
+					"subject":        "contoso.aroapp.io",
 					"expirationDate": expirationString,
 				},
 			},
 			wantWarning: []map[string]string{
 				{
-					"secretMissing": "foo12-apiserver",
+					"secretMissing": clusterID + "-apiserver",
 				},
 			},
 		},
@@ -126,7 +131,7 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 				m.EXPECT().EmitGauge(certificateExpirationMetricName, int64(1), g)
 			}
 
-			mon := buildMonitor(m, tt.domain, secrets...)
+			mon := buildMonitor(m, tt.domain, clusterID, secrets...)
 
 			err = mon.emitCertificateExpirationStatuses(ctx)
 
@@ -142,7 +147,7 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 
 		ctx := context.Background()
 		m := mock_metrics.NewMockEmitter(gomock.NewController(t))
-		mon := buildMonitor(m, managedDomainName, secrets...)
+		mon := buildMonitor(m, managedDomainName, clusterID, secrets...)
 
 		wantErr := `certificate "gcscert.pem" not found on secret "cluster"`
 		err := mon.emitCertificateExpirationStatuses(ctx)
@@ -190,7 +195,18 @@ func buildSecret(secretName string, data map[string][]byte) *corev1.Secret {
 	return s
 }
 
-func buildMonitor(m *mock_metrics.MockEmitter, domain string, secrets ...runtime.Object) *Monitor {
+func buildMonitor(m *mock_metrics.MockEmitter, domain, id string, secrets ...runtime.Object) *Monitor {
+	ingressController := &operatorv1.IngressController{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "default",
+			Namespace: "openshift-ingress-operator",
+		},
+		Spec: operatorv1.IngressControllerSpec{
+			DefaultCertificate: &corev1.LocalObjectReference{
+				Name: id + "-ingress",
+			},
+		},
+	}
 	mon := &Monitor{
 		cli: fake.NewSimpleClientset(secrets...),
 		m:   m,
@@ -199,9 +215,9 @@ func buildMonitor(m *mock_metrics.MockEmitter, domain string, secrets ...runtime
 				ClusterProfile: api.ClusterProfile{
 					Domain: domain,
 				},
-				InfraID: "foo12",
 			},
 		},
+		operatorcli: operatorfake.NewSimpleClientset(ingressController),
 	}
 	return mon
 }
