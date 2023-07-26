@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 	corev1 "k8s.io/api/core/v1"
@@ -22,6 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 )
 
 var (
@@ -29,17 +31,23 @@ var (
 )
 
 func TestReconcileMonitoringConfig(t *testing.T) {
+	defaultAvailable := utilconditions.ControllerDefaultAvailable(ControllerName)
+	defaultProgressing := utilconditions.ControllerDefaultProgressing(ControllerName)
+	defaultDegraded := utilconditions.ControllerDefaultDegraded(ControllerName)
+	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
 	log := logrus.NewEntry(logrus.StandardLogger())
 	type test struct {
-		name       string
-		configMap  *corev1.ConfigMap
-		wantConfig string
+		name           string
+		configMap      *corev1.ConfigMap
+		wantConfig     string
+		wantConditions []operatorv1.OperatorCondition
 	}
 
 	for _, tt := range []*test{
 		{
-			name:       "ConfigMap does not exist - enable",
-			wantConfig: `{}`,
+			name:           "ConfigMap does not exist - enable",
+			wantConfig:     `{}`,
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "empty config.yaml",
@@ -49,7 +57,8 @@ func TestReconcileMonitoringConfig(t *testing.T) {
 					"config.yaml": ``,
 				},
 			},
-			wantConfig: ``,
+			wantConfig:     ``,
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "settings restored to default and extra fields are preserved",
@@ -89,6 +98,7 @@ alertmanagerMain:
 prometheusK8s:
   extraField: prometheus
 `,
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "empty volumeClaimTemplate struct is cleared out",
@@ -111,6 +121,7 @@ alertmanagerMain:
 prometheusK8s:
   bugs: not-here
 `,
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "other monitoring components are configured",
@@ -133,6 +144,7 @@ alertmanagerMain:
 somethingElse:
   configured: true
 `,
+			wantConditions: defaultConditions,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -154,7 +166,7 @@ somethingElse:
 				clientBuilder.WithObjects(tt.configMap)
 			}
 
-			r := &Reconciler{
+			r := &MonitoringReconciler{
 				AROController: base.AROController{
 					Log:    log,
 					Client: clientBuilder.Build(),
@@ -171,7 +183,7 @@ somethingElse:
 			}
 
 			cm := &corev1.ConfigMap{}
-			err = r.client.Get(ctx, types.NamespacedName{Namespace: "openshift-monitoring", Name: "cluster-monitoring-config"}, cm)
+			err = r.Client.Get(ctx, types.NamespacedName{Namespace: "openshift-monitoring", Name: "cluster-monitoring-config"}, cm)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -184,11 +196,16 @@ somethingElse:
 }
 
 func TestReconcilePVC(t *testing.T) {
+	defaultAvailable := utilconditions.ControllerDefaultAvailable(ControllerName)
+	defaultProgressing := utilconditions.ControllerDefaultProgressing(ControllerName)
+	defaultDegraded := utilconditions.ControllerDefaultDegraded(ControllerName)
+	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
 	volumeMode := corev1.PersistentVolumeFilesystem
 	tests := []struct {
-		name string
-		pvcs []client.Object
-		want []corev1.PersistentVolumeClaim
+		name           string
+		pvcs           []client.Object
+		want           []corev1.PersistentVolumeClaim
+		wantConditions []operatorv1.OperatorCondition
 	}{
 		{
 			name: "Should delete the prometheus PVCs",
@@ -214,7 +231,8 @@ func TestReconcilePVC(t *testing.T) {
 					},
 				},
 			},
-			want: []corev1.PersistentVolumeClaim{},
+			want:           []corev1.PersistentVolumeClaim{},
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "Should preserve 1 pvc",
@@ -258,6 +276,7 @@ func TestReconcilePVC(t *testing.T) {
 					},
 				},
 			},
+			wantConditions: defaultConditions,
 		},
 	}
 
@@ -278,7 +297,7 @@ func TestReconcilePVC(t *testing.T) {
 
 			clientFake := ctrlfake.NewClientBuilder().WithObjects(instance).WithObjects(tt.pvcs...).Build()
 
-			r := &Reconciler{
+			r := &MonitoringReconciler{
 				AROController: base.AROController{
 					Log:    logrus.NewEntry(logrus.StandardLogger()),
 					Client: clientFake,
@@ -295,7 +314,7 @@ func TestReconcilePVC(t *testing.T) {
 			}
 
 			pvcList := &corev1.PersistentVolumeClaimList{}
-			err = r.client.List(ctx, pvcList, &client.ListOptions{
+			err = r.Client.List(ctx, pvcList, &client.ListOptions{
 				Namespace: monitoringName.Namespace,
 			})
 			if err != nil {
