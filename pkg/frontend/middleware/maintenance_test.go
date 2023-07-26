@@ -37,9 +37,7 @@ func TestEmitUnplannedMaintenanceSignal(t *testing.T) {
 				"resourceID": tt.resourceID,
 			})
 
-			handlerFunc := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				return
-			})
+			handlerFunc := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
 			handler := maintenanceMiddleware.EmitUnplannedMaintenanceSignal(handlerFunc)
 
 			path := "/admin" + tt.resourceID + tt.adminOperation
