@@ -25,16 +25,20 @@ func (mm MaintenanceMiddleware) EmitUnplannedMaintenanceSignal(h http.Handler) h
 
 		resourceID := strings.TrimPrefix(filepath.Dir(r.URL.Path), "/admin")
 
+		// Use a do-while loop to ensure we emit the metric at least once
+		mm.EmitGauge("frontend.maintenance.unplanned", 1, map[string]string{
+			"resourceID": resourceID,
+		})
 		go func(ctx context.Context, resourceID string) {
 			for {
-				mm.EmitGauge("frontend.maintenance.unplanned", 1, map[string]string{
-					"resourceID": resourceID,
-				})
 				select {
 				case <-ctx.Done():
 					return
 				default:
 					time.Sleep(1 * time.Minute)
+					mm.EmitGauge("frontend.maintenance.unplanned", 1, map[string]string{
+						"resourceID": resourceID,
+					})
 				}
 			}
 		}(ctx, resourceID)
