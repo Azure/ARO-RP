@@ -81,11 +81,10 @@ jobs:
 
   - script: |
       export CI=true
-      # . secrets/env
       . ./hack/e2e/run-rp-and-e2e.sh
       set -x
 
-      # retrieve the kubeconfig and oc cli
+      # retrieve the kubeconfig
       hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER >admin.kubeconfig
     displayName: Get admin kubeconfig for must-gather
     condition: failed()
@@ -94,6 +93,9 @@ jobs:
       export CI=true
       . ./hack/e2e/run-rp-and-e2e.sh
 
+      export KUBECONFIG=admin.kubeconfig
+
+      # retrieve the oc cli
       wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
       tar xf openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
       ./oc adm must-gather
