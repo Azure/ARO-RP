@@ -31,14 +31,62 @@ import (
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
+var (
+	instanceID                 = "testID"
+	rgName                     = "testRG"
+	location                   = "testLocation"
+	globalRGName               = "testRG-global"
+	subscriptionRGName         = "testRG-subscription"
+	notExistingFileName        = "testFile"
+	existingFileName           = generator.FileGatewayProductionPredeploy
+	existingFileDeploymentName = strings.TrimSuffix(existingFileName, ".json")
+	secretExists               = "secretExists"
+	noSecretExists             = "noSecretExists"
+
+	errGeneric            = errors.New("generic error")
+	deploymentFailedError = &azure.ServiceError{
+		Code:    "DeploymentFailed",
+		Details: []map[string]interface{}{{}},
+	}
+	deploymentNotFoundError = autorest.DetailedError{
+		Original: &azure.RequestError{
+			ServiceError: &azure.ServiceError{
+				Code:    "DeploymentNotFound",
+				Details: []map[string]interface{}{{}},
+			},
+		},
+	}
+
+	healthyVMSS = mgmtcompute.VirtualMachineScaleSetVMInstanceView{
+		VMHealth: &mgmtcompute.VirtualMachineHealthStatus{
+			Status: &mgmtcompute.InstanceViewStatus{Code: to.StringPtr("HealthState/healthy")},
+		},
+	}
+	unhealthyVMSS = mgmtcompute.VirtualMachineScaleSetVMInstanceView{
+		VMHealth: &mgmtcompute.VirtualMachineHealthStatus{
+			Status: &mgmtcompute.InstanceViewStatus{
+				Code: to.StringPtr("HealthState/unhealthy"),
+			},
+		},
+	}
+
+	nowUnixTime     = date.NewUnixTimeFromSeconds(float64(time.Now().Unix()))
+	newSecretBundle = azkeyvault.SecretBundle{
+		Attributes: &azkeyvault.SecretAttributes{Created: &nowUnixTime},
+	}
+
+	secretItems = []azkeyvault.SecretItem{{ID: to.StringPtr("secretExists")}}
+
+	vms = []mgmtcompute.VirtualMachineScaleSetVM{{InstanceID: to.StringPtr(instanceID)}}
+)
+
 func TestPreDeploy(t *testing.T) {
 	ctx := context.Background()
-	location := "testLocation"
-	subscriptionRgName := "testRG-subscription"
-	globalRgName := "testRG-global"
 	rpRgName := "testRG-aro-rp"
 	gatewayRgName := "testRG-gwy"
 	overrideLocation := "overrideTestLocation"
+	vmssName := rpVMSSPrefix + "test"
+
 	group := mgmtfeatures.ResourceGroup{
 		Location: &location,
 	}
@@ -47,46 +95,15 @@ func TestPreDeploy(t *testing.T) {
 		UserAssignedIdentityProperties: &mgmtmsi.UserAssignedIdentityProperties{PrincipalID: &fakeMSIObjectId},
 	}
 	deployment := mgmtfeatures.DeploymentExtended{}
-	vmssName := rpVMSSPrefix + "test"
-	nowUnixTime := date.NewUnixTimeFromSeconds(float64(time.Now().Unix()))
-	newSecretBundle := azkeyvault.SecretBundle{
-		Attributes: &azkeyvault.SecretAttributes{Created: &nowUnixTime},
-	}
 	vmsss := []mgmtcompute.VirtualMachineScaleSet{{Name: &vmssName}}
 	oneMissingSecrets := []string{env.FrontendEncryptionSecretV2Name, env.PortalServerSessionKeySecretName, env.EncryptionSecretName, env.FrontendEncryptionSecretName, env.PortalServerSSHKeySecretName}
 	oneMissingSecretItems := []azkeyvault.SecretItem{}
 	for _, secret := range oneMissingSecrets {
 		oneMissingSecretItems = append(oneMissingSecretItems, azkeyvault.SecretItem{ID: to.StringPtr(secret)})
 	}
-	instanceID := "testID"
-	vms := []mgmtcompute.VirtualMachineScaleSetVM{{InstanceID: to.StringPtr(instanceID)}}
-	healthyVMSS := mgmtcompute.VirtualMachineScaleSetVMInstanceView{
-		VMHealth: &mgmtcompute.VirtualMachineHealthStatus{
-			Status: &mgmtcompute.InstanceViewStatus{
-				Code: to.StringPtr("HealthState/healthy"),
-			},
-		},
-	}
-	deploymentNotFoundError := autorest.DetailedError{
-		Original: &azure.RequestError{
-			ServiceError: &azure.ServiceError{
-				Code: "DeploymentNotFound",
-				Details: []map[string]interface{}{
-					{},
-				},
-			},
-		},
-	}
-	deploymentFailedError := &azure.ServiceError{
-		Code: "DeploymentFailed",
-		Details: []map[string]interface{}{
-			{},
-		},
-	}
-	genericError := errors.New("generic error")
 
 	type resourceGroups struct {
-		subscriptionRgName       string
+		subscriptionRGName       string
 		globalResourceGroup      string
 		rpResourceGroupName      string
 		gatewayResourceGroupName string
@@ -166,7 +183,7 @@ func TestPreDeploy(t *testing.T) {
 				location: location,
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(genericError),
+				createOrUpdateAtSubscriptionScopeAndWaitMock(errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -175,11 +192,11 @@ func TestPreDeploy(t *testing.T) {
 			testParams: testParams{
 				location: location,
 				resourceGroups: resourceGroups{
-					subscriptionRgName: subscriptionRgName,
+					subscriptionRGName: subscriptionRGName,
 				},
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRgName, group, genericError),
+				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -188,12 +205,12 @@ func TestPreDeploy(t *testing.T) {
 			testParams: testParams{
 				location: location,
 				resourceGroups: resourceGroups{
-					subscriptionRgName:  subscriptionRgName,
-					globalResourceGroup: globalRgName,
+					subscriptionRGName:  subscriptionRGName,
+					globalResourceGroup: globalRGName,
 				},
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRgName, group, nil), createOrUpdateMock(globalRgName, group, genericError),
+				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -202,13 +219,13 @@ func TestPreDeploy(t *testing.T) {
 			testParams: testParams{
 				location: location,
 				resourceGroups: resourceGroups{
-					subscriptionRgName:  subscriptionRgName,
-					globalResourceGroup: globalRgName,
+					subscriptionRGName:  subscriptionRGName,
+					globalResourceGroup: globalRGName,
 					rpResourceGroupName: rpRgName,
 				},
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRgName, group, nil), createOrUpdateMock(globalRgName, group, nil), createOrUpdateMock(rpRgName, group, genericError),
+				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -217,14 +234,14 @@ func TestPreDeploy(t *testing.T) {
 			testParams: testParams{
 				location: location,
 				resourceGroups: resourceGroups{
-					subscriptionRgName:       subscriptionRgName,
-					globalResourceGroup:      globalRgName,
+					subscriptionRGName:       subscriptionRGName,
+					globalResourceGroup:      globalRGName,
 					rpResourceGroupName:      rpRgName,
 					gatewayResourceGroupName: gatewayRgName,
 				},
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRgName, group, nil), createOrUpdateMock(globalRgName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, genericError),
+				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -233,14 +250,14 @@ func TestPreDeploy(t *testing.T) {
 			testParams: testParams{
 				location: location,
 				resourceGroups: resourceGroups{
-					subscriptionRgName:       subscriptionRgName,
-					globalResourceGroup:      globalRgName,
+					subscriptionRGName:       subscriptionRGName,
+					globalResourceGroup:      globalRGName,
 					rpResourceGroupName:      rpRgName,
 					gatewayResourceGroupName: gatewayRgName,
 				},
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRgName, group, nil), createOrUpdateMock(globalRgName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRgName, genericError),
+				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -249,14 +266,14 @@ func TestPreDeploy(t *testing.T) {
 			testParams: testParams{
 				location: location,
 				resourceGroups: resourceGroups{
-					subscriptionRgName:       subscriptionRgName,
-					globalResourceGroup:      globalRgName,
+					subscriptionRGName:       subscriptionRGName,
+					globalResourceGroup:      globalRGName,
 					rpResourceGroupName:      rpRgName,
 					gatewayResourceGroupName: gatewayRgName,
 				},
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRgName, group, nil), createOrUpdateMock(globalRgName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRgName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, genericError),
+				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -265,14 +282,14 @@ func TestPreDeploy(t *testing.T) {
 			testParams: testParams{
 				location: location,
 				resourceGroups: resourceGroups{
-					subscriptionRgName:       subscriptionRgName,
-					globalResourceGroup:      globalRgName,
+					subscriptionRGName:       subscriptionRGName,
+					globalResourceGroup:      globalRGName,
 					rpResourceGroupName:      rpRgName,
 					gatewayResourceGroupName: gatewayRgName,
 				},
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRgName, group, nil), createOrUpdateMock(globalRgName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRgName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, genericError),
+				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -281,14 +298,14 @@ func TestPreDeploy(t *testing.T) {
 			testParams: testParams{
 				location: location,
 				resourceGroups: resourceGroups{
-					subscriptionRgName:       subscriptionRgName,
-					globalResourceGroup:      globalRgName,
+					subscriptionRGName:       subscriptionRGName,
+					globalResourceGroup:      globalRGName,
 					rpResourceGroupName:      rpRgName,
 					gatewayResourceGroupName: gatewayRgName,
 				},
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRgName, group, nil), createOrUpdateMock(globalRgName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRgName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), createOrUpdateAndWaitMock(globalRgName, genericError),
+				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), createOrUpdateAndWaitMock(globalRGName, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -297,14 +314,14 @@ func TestPreDeploy(t *testing.T) {
 			testParams: testParams{
 				location: location,
 				resourceGroups: resourceGroups{
-					subscriptionRgName:       subscriptionRgName,
-					globalResourceGroup:      globalRgName,
+					subscriptionRGName:       subscriptionRGName,
+					globalResourceGroup:      globalRGName,
 					rpResourceGroupName:      rpRgName,
 					gatewayResourceGroupName: gatewayRgName,
 				},
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRgName, group, nil), createOrUpdateMock(globalRgName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRgName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), createOrUpdateAndWaitMock(globalRgName, deploymentFailedError), createOrUpdateAndWaitMock(globalRgName, deploymentFailedError),
+				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), createOrUpdateAndWaitMock(globalRGName, deploymentFailedError), createOrUpdateAndWaitMock(globalRGName, deploymentFailedError),
 			},
 			wantErr: `Code="DeploymentFailed" Message="" Details=[{}]`,
 		},
@@ -313,15 +330,15 @@ func TestPreDeploy(t *testing.T) {
 			testParams: testParams{
 				location: location,
 				resourceGroups: resourceGroups{
-					subscriptionRgName:       subscriptionRgName,
-					globalResourceGroup:      globalRgName,
+					subscriptionRGName:       subscriptionRGName,
+					globalResourceGroup:      globalRGName,
 					rpResourceGroupName:      rpRgName,
 					gatewayResourceGroupName: gatewayRgName,
 				},
 				overrideLocation: overrideLocation,
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRgName, group, nil), createOrUpdateMock(globalRgName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRgName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), createOrUpdateAndWaitMock(globalRgName, nil), createOrUpdateAndWaitMock(globalRgName, genericError),
+				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), createOrUpdateAndWaitMock(globalRGName, nil), createOrUpdateAndWaitMock(globalRGName, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -330,14 +347,14 @@ func TestPreDeploy(t *testing.T) {
 			testParams: testParams{
 				location: location,
 				resourceGroups: resourceGroups{
-					subscriptionRgName:       subscriptionRgName,
-					globalResourceGroup:      globalRgName,
+					subscriptionRGName:       subscriptionRGName,
+					globalResourceGroup:      globalRGName,
 					rpResourceGroupName:      rpRgName,
 					gatewayResourceGroupName: gatewayRgName,
 				},
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRgName, group, nil), createOrUpdateMock(globalRgName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRgName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), createOrUpdateAndWaitMock(globalRgName, nil), getDeploymentMock(gatewayRgName, deploymentNotFoundError), createOrUpdateAndWaitMock(gatewayRgName, genericError),
+				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), createOrUpdateAndWaitMock(globalRGName, nil), getDeploymentMock(gatewayRgName, deploymentNotFoundError), createOrUpdateAndWaitMock(gatewayRgName, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -346,15 +363,15 @@ func TestPreDeploy(t *testing.T) {
 			testParams: testParams{
 				location: location,
 				resourceGroups: resourceGroups{
-					subscriptionRgName:       subscriptionRgName,
-					globalResourceGroup:      globalRgName,
+					subscriptionRGName:       subscriptionRGName,
+					globalResourceGroup:      globalRGName,
 					rpResourceGroupName:      rpRgName,
 					gatewayResourceGroupName: gatewayRgName,
 				},
 				overrideLocation: location,
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRgName, group, nil), createOrUpdateMock(globalRgName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRgName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), createOrUpdateAndWaitMock(globalRgName, nil), getDeploymentMock(gatewayRgName, deploymentNotFoundError), createOrUpdateAndWaitMock(gatewayRgName, genericError),
+				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), createOrUpdateAndWaitMock(globalRGName, nil), getDeploymentMock(gatewayRgName, deploymentNotFoundError), createOrUpdateAndWaitMock(gatewayRgName, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -363,8 +380,8 @@ func TestPreDeploy(t *testing.T) {
 			testParams: testParams{
 				location: location,
 				resourceGroups: resourceGroups{
-					subscriptionRgName:       subscriptionRgName,
-					globalResourceGroup:      globalRgName,
+					subscriptionRGName:       subscriptionRGName,
+					globalResourceGroup:      globalRGName,
 					rpResourceGroupName:      rpRgName,
 					gatewayResourceGroupName: gatewayRgName,
 				},
@@ -372,7 +389,7 @@ func TestPreDeploy(t *testing.T) {
 				acrReplicaDisabled: true,
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRgName, group, nil), createOrUpdateMock(globalRgName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRgName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), createOrUpdateAndWaitMock(globalRgName, nil), getDeploymentMock(gatewayRgName, deploymentNotFoundError), createOrUpdateAndWaitMock(gatewayRgName, genericError),
+				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), createOrUpdateAndWaitMock(globalRGName, nil), getDeploymentMock(gatewayRgName, deploymentNotFoundError), createOrUpdateAndWaitMock(gatewayRgName, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -381,8 +398,8 @@ func TestPreDeploy(t *testing.T) {
 			testParams: testParams{
 				location: location,
 				resourceGroups: resourceGroups{
-					subscriptionRgName:       subscriptionRgName,
-					globalResourceGroup:      globalRgName,
+					subscriptionRGName:       subscriptionRGName,
+					globalResourceGroup:      globalRGName,
 					rpResourceGroupName:      rpRgName,
 					gatewayResourceGroupName: gatewayRgName,
 				},
@@ -390,7 +407,7 @@ func TestPreDeploy(t *testing.T) {
 				acrReplicaDisabled: true,
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRgName, group, nil), createOrUpdateMock(globalRgName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRgName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), createOrUpdateAndWaitMock(globalRgName, nil), getDeploymentMock(gatewayRgName, deploymentNotFoundError), createOrUpdateAndWaitMock(gatewayRgName, nil), createOrUpdateAndWaitMock(rpRgName, genericError),
+				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), createOrUpdateAndWaitMock(globalRGName, nil), getDeploymentMock(gatewayRgName, deploymentNotFoundError), createOrUpdateAndWaitMock(gatewayRgName, nil), createOrUpdateAndWaitMock(rpRgName, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -399,8 +416,8 @@ func TestPreDeploy(t *testing.T) {
 			testParams: testParams{
 				location: location,
 				resourceGroups: resourceGroups{
-					subscriptionRgName:       subscriptionRgName,
-					globalResourceGroup:      globalRgName,
+					subscriptionRGName:       subscriptionRGName,
+					globalResourceGroup:      globalRGName,
 					rpResourceGroupName:      rpRgName,
 					gatewayResourceGroupName: gatewayRgName,
 				},
@@ -408,7 +425,7 @@ func TestPreDeploy(t *testing.T) {
 				acrReplicaDisabled: true,
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRgName, group, nil), createOrUpdateMock(globalRgName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRgName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), createOrUpdateAndWaitMock(globalRgName, nil), getDeploymentMock(gatewayRgName, deploymentNotFoundError), createOrUpdateAndWaitMock(gatewayRgName, nil), createOrUpdateAndWaitMock(rpRgName, nil), getSecretsMock(oneMissingSecretItems, genericError),
+				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), createOrUpdateAndWaitMock(globalRGName, nil), getDeploymentMock(gatewayRgName, deploymentNotFoundError), createOrUpdateAndWaitMock(gatewayRgName, nil), createOrUpdateAndWaitMock(rpRgName, nil), getSecretsMock(oneMissingSecretItems, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -417,8 +434,8 @@ func TestPreDeploy(t *testing.T) {
 			testParams: testParams{
 				location: location,
 				resourceGroups: resourceGroups{
-					subscriptionRgName:       subscriptionRgName,
-					globalResourceGroup:      globalRgName,
+					subscriptionRGName:       subscriptionRGName,
+					globalResourceGroup:      globalRGName,
 					rpResourceGroupName:      rpRgName,
 					gatewayResourceGroupName: gatewayRgName,
 				},
@@ -429,7 +446,7 @@ func TestPreDeploy(t *testing.T) {
 				restartScript:      rpRestartScript,
 			},
 			mocks: []mock{
-				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRgName, group, nil), createOrUpdateMock(globalRgName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRgName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), createOrUpdateAndWaitMock(globalRgName, nil), getDeploymentMock(gatewayRgName, deploymentNotFoundError), createOrUpdateAndWaitMock(gatewayRgName, nil), createOrUpdateAndWaitMock(rpRgName, nil), getSecretsMock(oneMissingSecretItems, nil), setSecretMock, getSecretsMock(oneMissingSecretItems, nil), getSecretMock, getSecretsMock(oneMissingSecretItems, nil), getSecretMock, getSecretsMock(oneMissingSecretItems, nil), getSecretsMock(oneMissingSecretItems, nil), getSecretsMock(oneMissingSecretItems, nil), vmssListMock, vmssVMsListMock, vmRestartMock, instanceViewMock, vmssListMock, vmssVMsListMock, vmRestartMock, instanceViewMock,
+				createOrUpdateAtSubscriptionScopeAndWaitMock(nil), createOrUpdateMock(subscriptionRGName, group, nil), createOrUpdateMock(globalRGName, group, nil), createOrUpdateMock(rpRgName, group, nil), createOrUpdateMock(gatewayRgName, group, nil), createOrUpdateAndWaitMock(subscriptionRGName, nil), createOrUpdateAndWaitMock(rpRgName, nil), msiGetMock(rpRgName, nil), createOrUpdateAndWaitMock(gatewayRgName, nil), msiGetMock(gatewayRgName, nil), createOrUpdateAndWaitMock(globalRGName, nil), getDeploymentMock(gatewayRgName, deploymentNotFoundError), createOrUpdateAndWaitMock(gatewayRgName, nil), createOrUpdateAndWaitMock(rpRgName, nil), getSecretsMock(oneMissingSecretItems, nil), setSecretMock, getSecretsMock(oneMissingSecretItems, nil), getSecretMock, getSecretsMock(oneMissingSecretItems, nil), getSecretMock, getSecretsMock(oneMissingSecretItems, nil), getSecretsMock(oneMissingSecretItems, nil), getSecretsMock(oneMissingSecretItems, nil), vmssListMock, vmssVMsListMock, vmRestartMock, instanceViewMock, vmssListMock, vmssVMsListMock, vmRestartMock, instanceViewMock,
 			},
 		},
 	} {
@@ -455,7 +472,7 @@ func TestPreDeploy(t *testing.T) {
 					Configuration: &Configuration{
 						GlobalResourceGroupLocation:       &tt.testParams.location,
 						SubscriptionResourceGroupLocation: &tt.testParams.location,
-						SubscriptionResourceGroupName:     &tt.testParams.resourceGroups.subscriptionRgName,
+						SubscriptionResourceGroupName:     &tt.testParams.resourceGroups.subscriptionRGName,
 						GlobalResourceGroupName:           &tt.testParams.resourceGroups.globalResourceGroup,
 						ACRLocationOverride:               &tt.testParams.overrideLocation,
 						ACRReplicaDisabled:                &tt.testParams.acrReplicaDisabled,
@@ -482,14 +499,6 @@ func TestPreDeploy(t *testing.T) {
 
 func TestDeployRPGlobalSubscription(t *testing.T) {
 	ctx := context.Background()
-	location := "locationTest"
-	deploymentFailedError := &azure.ServiceError{
-		Code: "DeploymentFailed",
-		Details: []map[string]interface{}{
-			{},
-		},
-	}
-	genericError := errors.New("generic error")
 
 	type testParams struct {
 		location string
@@ -510,7 +519,7 @@ func TestDeployRPGlobalSubscription(t *testing.T) {
 		{
 			name:       "Don't continue if deployment fails with error other than DeploymentFailed",
 			testParams: testParams{location: location},
-			mocks:      []mock{createOrUpdateAtSubscriptionScopeAndWaitMock(genericError)},
+			mocks:      []mock{createOrUpdateAtSubscriptionScopeAndWaitMock(errGeneric)},
 			wantErr:    "generic error",
 		},
 		{
@@ -554,9 +563,6 @@ func TestDeployRPGlobalSubscription(t *testing.T) {
 
 func TestDeployRPSubscription(t *testing.T) {
 	ctx := context.Background()
-	location := "locationTest"
-	subscriptionRGName := "rgTest"
-	genericError := errors.New("generic error")
 
 	type testParams struct {
 		resourceGroup string
@@ -581,7 +587,7 @@ func TestDeployRPSubscription(t *testing.T) {
 				location:      location,
 				resourceGroup: subscriptionRGName,
 			},
-			mocks:   []mock{CreateOrUpdateAndWaitMock(genericError)},
+			mocks:   []mock{CreateOrUpdateAndWaitMock(errGeneric)},
 			wantErr: "generic error",
 		},
 		{
@@ -622,11 +628,6 @@ func TestDeployRPSubscription(t *testing.T) {
 
 func TestDeployManagedIdentity(t *testing.T) {
 	ctx := context.Background()
-	rgName := "rgTest"
-	existingFileName := generator.FileGatewayProductionPredeploy
-	deploymentName := strings.TrimSuffix(existingFileName, ".json")
-	notExistingFileName := "testFile"
-	genericError := errors.New("generic error")
 
 	type testParams struct {
 		resourceGroup      string
@@ -657,17 +658,17 @@ func TestDeployManagedIdentity(t *testing.T) {
 			name: "Don't continue if deployment fails",
 			testParams: testParams{
 				deploymentFileName: existingFileName,
-				deploymentName:     deploymentName,
+				deploymentName:     existingFileDeploymentName,
 				resourceGroup:      rgName,
 			},
-			mocks:   []mock{CreateOrUpdateAndWaitMock(genericError)},
+			mocks:   []mock{CreateOrUpdateAndWaitMock(errGeneric)},
 			wantErr: "generic error",
 		},
 		{
 			name: "Pass successfully when deployment is successful",
 			testParams: testParams{
 				deploymentFileName: existingFileName,
-				deploymentName:     deploymentName,
+				deploymentName:     existingFileDeploymentName,
 				resourceGroup:      rgName,
 			},
 			mocks: []mock{CreateOrUpdateAndWaitMock(nil)},
@@ -699,17 +700,8 @@ func TestDeployManagedIdentity(t *testing.T) {
 
 func TestDeployRPGlobal(t *testing.T) {
 	ctx := context.Background()
-	location := "locationTest"
-	globalRGName := "globalRGTest"
 	rpSPID := "rpSPIDTest"
 	gwySPID := "gwySPIDTest"
-	deploymentFailedError := &azure.ServiceError{
-		Code: "DeploymentFailed",
-		Details: []map[string]interface{}{
-			{},
-		},
-	}
-	genericError := errors.New("generic error")
 
 	type testParams struct {
 		resourceGroup string
@@ -738,7 +730,7 @@ func TestDeployRPGlobal(t *testing.T) {
 				rpSPID:        rpSPID,
 				gwySPID:       gwySPID,
 			},
-			mocks:   []mock{CreateOrUpdateAndWaitMock(genericError)},
+			mocks:   []mock{CreateOrUpdateAndWaitMock(errGeneric)},
 			wantErr: "generic error",
 		},
 		{
@@ -792,9 +784,6 @@ func TestDeployRPGlobal(t *testing.T) {
 
 func TestDeployRPGlobalACRReplication(t *testing.T) {
 	ctx := context.Background()
-	globalRGName := "globalRGTest"
-	location := "testLocation"
-	genericError := errors.New("generic error")
 
 	type testParams struct {
 		resourceGroup string
@@ -819,7 +808,7 @@ func TestDeployRPGlobalACRReplication(t *testing.T) {
 				location:      location,
 				resourceGroup: globalRGName,
 			},
-			mocks:   []mock{CreateOrUpdateAndWaitMock(genericError)},
+			mocks:   []mock{CreateOrUpdateAndWaitMock(errGeneric)},
 			wantErr: "generic error",
 		},
 		{
@@ -860,13 +849,8 @@ func TestDeployRPGlobalACRReplication(t *testing.T) {
 
 func TestDeployPreDeploy(t *testing.T) {
 	ctx := context.Background()
-	rgName := "testRG"
-	existingFileName := generator.FileGatewayProductionPredeploy
-	deploymentName := strings.TrimSuffix(existingFileName, ".json")
-	notExistingFileName := "testFile"
 	spIDName := "testSPIDName"
 	spID := "testSPID"
-	genericError := errors.New("generic error")
 
 	type testParams struct {
 		resourceGroup      string
@@ -904,11 +888,11 @@ func TestDeployPreDeploy(t *testing.T) {
 			testParams: testParams{
 				resourceGroup:      rgName,
 				deploymentFileName: existingFileName,
-				deploymentName:     deploymentName,
+				deploymentName:     existingFileDeploymentName,
 				spIDName:           spIDName,
 				spID:               spID,
 			},
-			mocks:   []mock{CreateOrUpdateAndWaitMock(genericError)},
+			mocks:   []mock{CreateOrUpdateAndWaitMock(errGeneric)},
 			wantErr: "generic error",
 		},
 		{
@@ -916,7 +900,7 @@ func TestDeployPreDeploy(t *testing.T) {
 			testParams: testParams{
 				resourceGroup:      rgName,
 				deploymentFileName: existingFileName,
-				deploymentName:     deploymentName,
+				deploymentName:     existingFileDeploymentName,
 				spIDName:           spIDName,
 				spID:               spID,
 			},
@@ -951,11 +935,6 @@ func TestDeployPreDeploy(t *testing.T) {
 func TestConfigureServiceSecrets(t *testing.T) {
 	ctx := context.Background()
 	vmssName := rpVMSSPrefix + "test"
-	rgName := "rgTest"
-	nowUnixTime := date.NewUnixTimeFromSeconds(float64(time.Now().Unix()))
-	newSecretBundle := azkeyvault.SecretBundle{
-		Attributes: &azkeyvault.SecretAttributes{Created: &nowUnixTime},
-	}
 	vmsss := []mgmtcompute.VirtualMachineScaleSet{{Name: to.StringPtr(vmssName)}}
 	oneMissingSecrets := []string{env.FrontendEncryptionSecretV2Name, env.PortalServerSessionKeySecretName, env.EncryptionSecretName, env.FrontendEncryptionSecretName, env.PortalServerSSHKeySecretName}
 	oneMissingSecretItems := []azkeyvault.SecretItem{}
@@ -967,14 +946,6 @@ func TestConfigureServiceSecrets(t *testing.T) {
 	for _, secret := range allSecrets {
 		allSecretItems = append(allSecretItems, azkeyvault.SecretItem{ID: to.StringPtr(secret)})
 	}
-	instanceID := "testID"
-	vms := []mgmtcompute.VirtualMachineScaleSetVM{{InstanceID: to.StringPtr(instanceID)}}
-	healthyVMSS := mgmtcompute.VirtualMachineScaleSetVMInstanceView{
-		VMHealth: &mgmtcompute.VirtualMachineHealthStatus{
-			Status: &mgmtcompute.InstanceViewStatus{Code: to.StringPtr("HealthState/healthy")},
-		},
-	}
-	genericError := errors.New("generic error")
 
 	type testParams struct {
 		vmssName      string
@@ -1022,28 +993,28 @@ func TestConfigureServiceSecrets(t *testing.T) {
 		{
 			name: "return error if ensureAndRotateSecret fails",
 			mocks: []mock{
-				getSecretsMock(allSecretItems, genericError),
+				getSecretsMock(allSecretItems, errGeneric),
 			},
 			wantErr: "generic error",
 		},
 		{
 			name: "return error if ensureAndRotateSecret passes without rotating any secret but ensureSecret fails",
 			mocks: []mock{
-				getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, genericError),
+				getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, errGeneric),
 			},
 			wantErr: "generic error",
 		},
 		{
 			name: "return error if ensureAndRotateSecret passes with rotating a missing secret but ensureSecret fails",
 			mocks: []mock{
-				getSecretsMock(oneMissingSecretItems, nil), setSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, genericError),
+				getSecretsMock(oneMissingSecretItems, nil), setSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, errGeneric),
 			},
 			wantErr: "generic error",
 		},
 		{
 			name: "return error if ensureAndRotateSecret, ensureSecret passes without rotating a secret but ensureSecretKey fails",
 			mocks: []mock{
-				getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, genericError),
+				getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -1061,7 +1032,7 @@ func TestConfigureServiceSecrets(t *testing.T) {
 				resourceGroup: rgName,
 			},
 			mocks: []mock{
-				getSecretsMock(oneMissingSecretItems, nil), setSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), vmssListMock(genericError),
+				getSecretsMock(oneMissingSecretItems, nil), setSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretMock, getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), getSecretsMock(allSecretItems, nil), vmssListMock(errGeneric),
 			},
 			wantErr: "generic error",
 		},
@@ -1110,18 +1081,10 @@ func TestConfigureServiceSecrets(t *testing.T) {
 
 func TestEnsureAndRotateSecret(t *testing.T) {
 	ctx := context.Background()
-	secretExists := "secretExists"
-	noSecretExists := "noSecretExists"
-	secretItems := []azkeyvault.SecretItem{{ID: &secretExists}}
-	nowUnixTime := date.NewUnixTimeFromSeconds(float64(time.Now().Unix()))
 	oldUnixTime := date.NewUnixTimeFromSeconds(float64(time.Now().Add(-rotateSecretAfter).Unix()))
-	newSecretBundle := azkeyvault.SecretBundle{
-		Attributes: &azkeyvault.SecretAttributes{Created: &nowUnixTime},
-	}
 	oldSecretBundle := azkeyvault.SecretBundle{
 		Attributes: &azkeyvault.SecretAttributes{Created: &oldUnixTime},
 	}
-	genericError := errors.New("generic error")
 
 	type testParams struct {
 		secretToFind string
@@ -1153,14 +1116,14 @@ func TestEnsureAndRotateSecret(t *testing.T) {
 		{
 			name:       "return false and error if GetSecrets fails",
 			testParams: testParams{secretToFind: secretExists},
-			mocks:      []mock{getSecretsMock(genericError)},
+			mocks:      []mock{getSecretsMock(errGeneric)},
 			wantBool:   false,
 			wantErr:    "generic error",
 		},
 		{
 			name:       "return false and error if GetSecrets passes but GetSecret fails for the found secret",
 			testParams: testParams{secretToFind: secretExists},
-			mocks:      []mock{getSecretsMock(nil), getSecretMock(newSecretBundle, genericError)},
+			mocks:      []mock{getSecretsMock(nil), getSecretMock(newSecretBundle, errGeneric)},
 			wantBool:   false,
 			wantErr:    "generic error",
 		},
@@ -1173,7 +1136,7 @@ func TestEnsureAndRotateSecret(t *testing.T) {
 		{
 			name:       "return true and error if GetSecrets & GetSecret passes and the secret is old but new secret creation fails",
 			testParams: testParams{secretToFind: secretExists},
-			mocks:      []mock{getSecretsMock(nil), getSecretMock(oldSecretBundle, nil), setSecretMock(genericError)},
+			mocks:      []mock{getSecretsMock(nil), getSecretMock(oldSecretBundle, nil), setSecretMock(errGeneric)},
 			wantBool:   true,
 			wantErr:    "generic error",
 		},
@@ -1215,10 +1178,6 @@ func TestEnsureAndRotateSecret(t *testing.T) {
 
 func TestEnsureSecret(t *testing.T) {
 	ctx := context.Background()
-	secretExists := "secretExists"
-	noSecretExists := "noSecretExists"
-	secretItems := []azkeyvault.SecretItem{{ID: &secretExists}}
-	genericError := errors.New("generic error")
 
 	type testParams struct {
 		secretToFind string
@@ -1245,7 +1204,7 @@ func TestEnsureSecret(t *testing.T) {
 		{
 			name:       "return false and error if GetSecrets fails",
 			testParams: testParams{secretToFind: secretExists},
-			mocks:      []mock{getSecretsMock(genericError)},
+			mocks:      []mock{getSecretsMock(errGeneric)},
 			wantBool:   false,
 			wantErr:    "generic error",
 		},
@@ -1258,7 +1217,7 @@ func TestEnsureSecret(t *testing.T) {
 		{
 			name:       "return true and error if GetSecrets passes but secret is not found and new secret creation fails",
 			testParams: testParams{secretToFind: noSecretExists},
-			mocks:      []mock{getSecretsMock(nil), setSecretMock(genericError)},
+			mocks:      []mock{getSecretsMock(nil), setSecretMock(errGeneric)},
 			wantBool:   true,
 			wantErr:    "generic error",
 		},
@@ -1294,8 +1253,6 @@ func TestEnsureSecret(t *testing.T) {
 
 func TestCreateSecret(t *testing.T) {
 	ctx := context.Background()
-	noSecretExists := "noSecretExists"
-	genericError := errors.New("generic error")
 
 	type testParams struct {
 		secretToCreate string
@@ -1318,7 +1275,7 @@ func TestCreateSecret(t *testing.T) {
 			testParams: testParams{
 				secretToCreate: noSecretExists,
 			},
-			mocks:   []mock{setSecretMock(genericError)},
+			mocks:   []mock{setSecretMock(errGeneric)},
 			wantErr: "generic error",
 		},
 		{
@@ -1351,10 +1308,6 @@ func TestCreateSecret(t *testing.T) {
 
 func TestEnsureSecretKey(t *testing.T) {
 	ctx := context.Background()
-	secretExists := "secretExists"
-	noSecretExists := "noSecretExists"
-	secretItems := []azkeyvault.SecretItem{{ID: &secretExists}}
-	genericError := errors.New("generic error")
 
 	type testParams struct {
 		secretToFind string
@@ -1381,7 +1334,7 @@ func TestEnsureSecretKey(t *testing.T) {
 		{
 			name:       "return false and error if GetSecrets fails",
 			testParams: testParams{secretToFind: secretExists},
-			mocks:      []mock{getSecretsMock(genericError)},
+			mocks:      []mock{getSecretsMock(errGeneric)},
 			wantBool:   false,
 			wantErr:    "generic error",
 		},
@@ -1394,7 +1347,7 @@ func TestEnsureSecretKey(t *testing.T) {
 		{
 			name:       "return true and error if GetSecrets passes but secret is not found and new secret creation fails",
 			testParams: testParams{secretToFind: noSecretExists},
-			mocks:      []mock{getSecretsMock(nil), setSecretMock(genericError)},
+			mocks:      []mock{getSecretsMock(nil), setSecretMock(errGeneric)},
 			wantBool:   true,
 			wantErr:    "generic error",
 		},
@@ -1430,21 +1383,10 @@ func TestEnsureSecretKey(t *testing.T) {
 
 func TestRestartOldScalesets(t *testing.T) {
 	ctx := context.Background()
-	rgName := "testRG"
 	rpVMSSName := rpVMSSPrefix + "test"
 	invalidVMSSName := "other-vmss"
 	invalidVMSSs := []mgmtcompute.VirtualMachineScaleSet{{Name: &invalidVMSSName}}
 	vmsss := []mgmtcompute.VirtualMachineScaleSet{{Name: &rpVMSSName}}
-	instanceID := "testID"
-	vms := []mgmtcompute.VirtualMachineScaleSetVM{{InstanceID: &instanceID}}
-	healthyVMSS := mgmtcompute.VirtualMachineScaleSetVMInstanceView{
-		VMHealth: &mgmtcompute.VirtualMachineHealthStatus{
-			Status: &mgmtcompute.InstanceViewStatus{
-				Code: to.StringPtr("HealthState/healthy"),
-			},
-		},
-	}
-	genericError := errors.New("generic error")
 
 	type testParams struct {
 		resourceGroup string
@@ -1482,7 +1424,7 @@ func TestRestartOldScalesets(t *testing.T) {
 		{
 			name:       "Don't continue if vmss list fails",
 			testParams: testParams{resourceGroup: rgName},
-			mocks:      []mock{listVMSSMock(vmsss, genericError)},
+			mocks:      []mock{listVMSSMock(vmsss, errGeneric)},
 			wantErr:    "generic error",
 		},
 		{
@@ -1497,7 +1439,7 @@ func TestRestartOldScalesets(t *testing.T) {
 				resourceGroup: rgName,
 				vmssName:      rpVMSSName,
 			},
-			mocks:   []mock{listVMSSMock(vmsss, nil), listVMSSVMMock(genericError)},
+			mocks:   []mock{listVMSSMock(vmsss, nil), listVMSSVMMock(errGeneric)},
 			wantErr: "generic error",
 		},
 		{
@@ -1537,19 +1479,8 @@ func TestRestartOldScalesets(t *testing.T) {
 func TestRestartOldScaleset(t *testing.T) {
 	ctx := context.Background()
 	otherVMSSName := "other-vmss"
-	rg := "testRG"
 	gwyVMSSName := gatewayVMSSPrefix + "test"
 	rpVMSSName := rpVMSSPrefix + "test"
-	vmInstanceID := "testID"
-	vms := []mgmtcompute.VirtualMachineScaleSetVM{{InstanceID: &vmInstanceID}}
-	healthyVMSS := mgmtcompute.VirtualMachineScaleSetVMInstanceView{
-		VMHealth: &mgmtcompute.VirtualMachineHealthStatus{
-			Status: &mgmtcompute.InstanceViewStatus{
-				Code: to.StringPtr("HealthState/healthy"),
-			},
-		},
-	}
-	genericError := errors.New("generic error")
 
 	type testParams struct {
 		resourceGroup string
@@ -1589,41 +1520,41 @@ func TestRestartOldScaleset(t *testing.T) {
 		{
 			name: "list VMSS failed",
 			testParams: testParams{
-				resourceGroup: rg,
+				resourceGroup: rgName,
 				vmssName:      gwyVMSSName,
-				instanceID:    vmInstanceID,
+				instanceID:    instanceID,
 			},
-			mocks:   []mock{listVMSSVMMock(genericError)},
+			mocks:   []mock{listVMSSVMMock(errGeneric)},
 			wantErr: "generic error",
 		},
 		{
 			name: "gateway restart script failed",
 			testParams: testParams{
-				resourceGroup: rg,
+				resourceGroup: rgName,
 				vmssName:      gwyVMSSName,
-				instanceID:    vmInstanceID,
+				instanceID:    instanceID,
 				restartScript: gatewayRestartScript,
 			},
-			mocks:   []mock{listVMSSVMMock(nil), vmRestartMock(genericError)},
+			mocks:   []mock{listVMSSVMMock(nil), vmRestartMock(errGeneric)},
 			wantErr: "generic error",
 		},
 		{
 			name: "rp restart script failed",
 			testParams: testParams{
-				resourceGroup: rg,
+				resourceGroup: rgName,
 				vmssName:      rpVMSSName,
-				instanceID:    vmInstanceID,
+				instanceID:    instanceID,
 				restartScript: rpRestartScript,
 			},
-			mocks:   []mock{listVMSSVMMock(nil), vmRestartMock(genericError)},
+			mocks:   []mock{listVMSSVMMock(nil), vmRestartMock(errGeneric)},
 			wantErr: "generic error",
 		},
 		{
 			name: "restart script passes and wait for readiness is successful",
 			testParams: testParams{
-				resourceGroup: rg,
+				resourceGroup: rgName,
 				vmssName:      rpVMSSName,
-				instanceID:    vmInstanceID,
+				instanceID:    instanceID,
 				restartScript: rpRestartScript,
 			},
 			mocks: []mock{listVMSSVMMock(nil), vmRestartMock(nil), getInstanceViewMock},
@@ -1653,22 +1584,6 @@ func TestRestartOldScaleset(t *testing.T) {
 func TestWaitForReadiness(t *testing.T) {
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 11*time.Second)
 	vmssName := "testVMSS"
-	vmInstanceID := "testVMInstanceID"
-	testRG := "testRG"
-	unhealthyVMSS := mgmtcompute.VirtualMachineScaleSetVMInstanceView{
-		VMHealth: &mgmtcompute.VirtualMachineHealthStatus{
-			Status: &mgmtcompute.InstanceViewStatus{
-				Code: to.StringPtr("HealthState/unhealthy"),
-			},
-		},
-	}
-	healthyVMSS := mgmtcompute.VirtualMachineScaleSetVMInstanceView{
-		VMHealth: &mgmtcompute.VirtualMachineHealthStatus{
-			Status: &mgmtcompute.InstanceViewStatus{
-				Code: to.StringPtr("HealthState/healthy"),
-			},
-		},
-	}
 
 	type testParams struct {
 		resourceGroup string
@@ -1693,9 +1608,9 @@ func TestWaitForReadiness(t *testing.T) {
 		{
 			name: "fail after context times out",
 			testParams: testParams{
-				resourceGroup: testRG,
+				resourceGroup: rgName,
 				vmssName:      vmssName,
-				vmInstanceID:  vmInstanceID,
+				vmInstanceID:  instanceID,
 				ctx:           ctxTimeout,
 			},
 			mocks:   []mock{getInstanceViewMock(unhealthyVMSS)},
@@ -1704,9 +1619,9 @@ func TestWaitForReadiness(t *testing.T) {
 		{
 			name: "run successfully after confirming healthy status",
 			testParams: testParams{
-				resourceGroup: testRG,
+				resourceGroup: rgName,
 				vmssName:      vmssName,
-				vmInstanceID:  vmInstanceID,
+				vmInstanceID:  instanceID,
 				ctx:           ctxTimeout,
 				cancel:        cancel,
 			},
@@ -1741,21 +1656,6 @@ func TestIsVMInstanceHealthy(t *testing.T) {
 	vmInstanceID := "testVMInstanceID"
 	rpRGName := "testRPRG"
 	gatewayRGName := "testGatewayRG"
-	unhealthyVMSS := mgmtcompute.VirtualMachineScaleSetVMInstanceView{
-		VMHealth: &mgmtcompute.VirtualMachineHealthStatus{
-			Status: &mgmtcompute.InstanceViewStatus{
-				Code: to.StringPtr("HealthState/unhealthy"),
-			},
-		},
-	}
-	healthyVMSS := mgmtcompute.VirtualMachineScaleSetVMInstanceView{
-		VMHealth: &mgmtcompute.VirtualMachineHealthStatus{
-			Status: &mgmtcompute.InstanceViewStatus{
-				Code: to.StringPtr("HealthState/healthy"),
-			},
-		},
-	}
-	genericError := errors.New("generic error")
 
 	type testParams struct {
 		resourceGroup string
@@ -1782,7 +1682,7 @@ func TestIsVMInstanceHealthy(t *testing.T) {
 				vmssName:      vmssName,
 				instanceID:    vmInstanceID,
 			},
-			mocks:    []mock{getInstanceViewMock(healthyVMSS, genericError)},
+			mocks:    []mock{getInstanceViewMock(healthyVMSS, errGeneric)},
 			wantBool: false,
 		},
 		{
@@ -1792,7 +1692,7 @@ func TestIsVMInstanceHealthy(t *testing.T) {
 				vmssName:      vmssName,
 				instanceID:    vmInstanceID,
 			},
-			mocks:    []mock{getInstanceViewMock(healthyVMSS, genericError)},
+			mocks:    []mock{getInstanceViewMock(healthyVMSS, errGeneric)},
 			wantBool: false,
 		},
 		{
