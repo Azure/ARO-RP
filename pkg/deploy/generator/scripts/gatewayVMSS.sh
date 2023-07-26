@@ -295,7 +295,7 @@ ExecStart=/usr/bin/docker run \
   -p 443:8443 \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
-  -v /ctr.log:${gateway_logdir}:z \
+  -v ${gateway_logdir}:/ctr.log:z \
   \$RPIMAGE \
   gateway
 ExecStop=/usr/bin/docker stop -t 3600 %N
