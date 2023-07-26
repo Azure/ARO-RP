@@ -15,12 +15,14 @@ import (
 
 func TestEmitUnplannedMaintenanceSignal(t *testing.T) {
 	for _, tt := range []struct {
-		name       string
-		resourceID string
+		name           string
+		resourceID     string
+		adminOperation string
 	}{
 		{
-			name:       "emit unplanned maintenance signal",
-			resourceID: "/subscriptions/123/resourcegroups/456/providers/Microsoft.RedHatOpenShift/openShiftClusters/789",
+			name:           "emit unplanned maintenance signal",
+			resourceID:     "/subscriptions/123/resourcegroups/456/providers/Microsoft.RedHatOpenShift/openShiftClusters/789",
+			adminOperation: "startvm",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -40,7 +42,7 @@ func TestEmitUnplannedMaintenanceSignal(t *testing.T) {
 			})
 			handler := maintenanceMiddleware.EmitUnplannedMaintenanceSignal(handlerFunc)
 
-			path := "/admin" + tt.resourceID + "/startvm"
+			path := "/admin" + tt.resourceID + tt.adminOperation
 			r, err := http.NewRequest(http.MethodPost, path, nil)
 			if err != nil {
 				t.Fatal(err)
