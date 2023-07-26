@@ -36,9 +36,10 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 				ClientSecret: string(oc.Properties.ServicePrincipalProfile.ClientSecret),
 			},
 			NetworkProfile: NetworkProfile{
-				PodCIDR:      oc.Properties.NetworkProfile.PodCIDR,
-				ServiceCIDR:  oc.Properties.NetworkProfile.ServiceCIDR,
-				OutboundType: OutboundType(oc.Properties.NetworkProfile.OutboundType),
+				PodCIDR:          oc.Properties.NetworkProfile.PodCIDR,
+				ServiceCIDR:      oc.Properties.NetworkProfile.ServiceCIDR,
+				OutboundType:     OutboundType(oc.Properties.NetworkProfile.OutboundType),
+				PreconfiguredNSG: PreconfiguredNSG(oc.Properties.NetworkProfile.PreconfiguredNSG),
 			},
 			MasterProfile: MasterProfile{
 				VMSize:              VMSize(oc.Properties.MasterProfile.VMSize),

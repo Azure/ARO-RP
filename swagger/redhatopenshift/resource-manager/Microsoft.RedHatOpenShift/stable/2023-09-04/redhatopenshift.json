@@ -1989,6 +1989,10 @@
         "outboundType": {
           "$ref": "#/definitions/OutboundType",
           "description": "The OutboundType used for egress traffic."
+        },
+        "preconfiguredNSG": {
+          "$ref": "#/definitions/PreconfiguredNSG",
+          "description": "Specifies whether subnets are pre-attached with an NSG"
         }
       }
     },
@@ -2221,6 +2225,18 @@
       "type": "string",
       "x-ms-enum": {
         "name": "OutboundType",
+        "modelAsString": true
+      }
+    },
+    "PreconfiguredNSG": {
+      "description": "PreconfiguredNSG represents whether customers want to use their own NSG attached to the subnets",
+      "enum": [
+        "Disabled",
+        "Enabled"
+      ],
+      "type": "string",
+      "x-ms-enum": {
+        "name": "PreconfiguredNSG",
         "modelAsString": true
       }
     },

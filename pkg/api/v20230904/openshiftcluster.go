@@ -145,7 +145,19 @@ type NetworkProfile struct {
 
 	// The OutboundType used for egress traffic.
 	OutboundType OutboundType `json:"outboundType,omitempty"`
+
+	// Specifies whether subnets are pre-attached with an NSG
+	PreconfiguredNSG PreconfiguredNSG `json:"preconfiguredNSG,omitempty"`
 }
+
+// PreconfiguredNSG represents whether customers want to use their own NSG attached to the subnets
+type PreconfiguredNSG string
+
+// PreconfiguredNSG constants
+const (
+	PreconfiguredNSGEnabled  PreconfiguredNSG = "Enabled"
+	PreconfiguredNSGDisabled PreconfiguredNSG = "Disabled"
+)
 
 // EncryptionAtHost represents encryption at host state
 type EncryptionAtHost string
