@@ -26,7 +26,7 @@ const (
 var GitCommit = "unknown"
 
 // DefaultMinorVersion describes the minor OpenShift version to default to
-var DefaultMinorVersion = 11
+var DefaultMinorVersion = 12
 
 // DefaultInstallStreams describes the latest version of our supported streams
 var DefaultInstallStreams = map[int]*Stream{
@@ -37,6 +37,10 @@ var DefaultInstallStreams = map[int]*Stream{
 	11: {
 		Version:  NewVersion(4, 11, 44),
 		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:52cbfbbeb9cc03b49c2788ac7333e63d3dae14673e01a9d8e59270f3a8390ed3",
+	},
+	12: {
+		Version:  NewVersion(4, 12, 17),
+		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:7ca5f8aa44bbc537c5a985a523d87365eab3f6e72abc50b7be4caae741e093f4",
 	},
 }
 
@@ -58,14 +62,11 @@ var HiveInstallStreams = []*Stream{
 		Version:  NewVersion(4, 11, 26),
 		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:1c3913a65b0a10b4a0650f54e545fe928360a94767acea64c0bd10faa52c945a",
 	},
+	DefaultInstallStreams[12],
 	{
 		Version:  NewVersion(4, 12, 24),
 		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:84a7b73f5393c8225c42edf214c82a8d00037a087222c5548ad1ed1b35cedb0e",
 	},
-	{
-		Version:  NewVersion(4, 12, 17),
-		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:7ca5f8aa44bbc537c5a985a523d87365eab3f6e72abc50b7be4caae741e093f4",
-        },
 }
 
 // UpgradeStreams describes list of streams we support for upgrades
