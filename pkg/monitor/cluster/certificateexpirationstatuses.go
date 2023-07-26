@@ -8,6 +8,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
@@ -17,30 +18,44 @@ import (
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
+const (
+	certificateExpirationMetricName = "certificate.expirationdate"
+	secretMissingMetricName         = "certificate.secretnotfound"
+)
 
 func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error {
 	// report NotAfter dates for Geneva (always), Ingress, and API (on managed domain) certificates
 	var certs []*x509.Certificate
 
 	mdsdCert, err := mon.getCertificate(ctx, operator.SecretName, operator.Namespace, genevalogging.GenevaCertName)
-	if err != nil {
+	if kerrors.IsNotFound(err) {
+		mon.emitGauge(secretMissingMetricName, int64(1), map[string]string{
+			"secretMissing": operator.SecretName,
+		})
+	} else if err != nil {
 		return err
+	} else {
+		certs = append(certs, mdsdCert)
 	}
-	certs = append(certs, mdsdCert)
 
 	if dns.IsManagedDomain(mon.oc.Properties.ClusterProfile.Domain) {
 		infraID := mon.oc.Properties.InfraID
 		for _, secretName := range []string{infraID + "-ingress", infraID + "-apiserver"} {
 			certificate, err := mon.getCertificate(ctx, secretName, operator.Namespace, corev1.TLSCertKey)
-			if err != nil {
+			if kerrors.IsNotFound(err) {
+				mon.emitGauge(secretMissingMetricName, int64(1), map[string]string{
+					"secretMissing": secretName,
+				})
+			} else if err != nil {
 				return err
+			} else {
+				certs = append(certs, certificate)
 			}
-			certs = append(certs, certificate)
 		}
 	}
 
 	for _, cert := range certs {
-		mon.emitGauge("certificate.expirationdate", 1, map[string]string{
+		mon.emitGauge(certificateExpirationMetricName, 1, map[string]string{
 			"subject":        cert.Subject.CommonName,
 			"expirationDate": cert.NotAfter.UTC().Format(time.RFC3339),
 		})

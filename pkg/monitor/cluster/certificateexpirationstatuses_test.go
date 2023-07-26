@@ -38,6 +38,7 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 		domain          string
 		certsPresent    []certInfo
 		wantExpirations []map[string]string
+		wantWarning     []map[string]string
 		wantErr         string
 	}{
 		{
@@ -75,18 +76,36 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			},
 		},
 		{
-			name:    "returns error when cluster secret has been deleted",
-			domain:  unmanagedDomainName,
-			wantErr: `secrets "cluster" not found`,
+			name:   "emits warning metric when cluster secret has been deleted",
+			domain: unmanagedDomainName,
+			wantWarning: []map[string]string{
+				{
+					"secretMissing": "cluster",
+				},
+			},
 		},
 		{
-			name:   "returns error when managed domain secret has been deleted",
+			name:   "emits warning metric when managed domain secret has been deleted",
 			domain: managedDomainName,
 			certsPresent: []certInfo{
 				{"cluster", "geneva.certificate"},
 				{"foo12-ingress", managedDomainName},
 			},
-			wantErr: `secrets "foo12-apiserver" not found`,
+			wantExpirations: []map[string]string{
+				{
+					"subject":        "geneva.certificate",
+					"expirationDate": expirationString,
+				},
+				{
+					"subject": "contoso.aroapp.io",
+					"expirationDate": expirationString,
+				},
+			},
+			wantWarning: []map[string]string{
+				{
+					"secretMissing": "foo12-apiserver",
+				},
+			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -100,8 +119,11 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			secrets = append(secrets, secretsFromCertInfo...)
 
 			m := mock_metrics.NewMockEmitter(gomock.NewController(t))
-			for _, gauge := range tt.wantExpirations {
-				m.EXPECT().EmitGauge("certificate.expirationdate", int64(1), gauge)
+			for _, w := range tt.wantWarning {
+				m.EXPECT().EmitGauge("certificate.secretnotfound", int64(1), w)
+			}
+			for _, g := range tt.wantExpirations {
+				m.EXPECT().EmitGauge(certificateExpirationMetricName, int64(1), g)
 			}
 
 			mon := buildMonitor(m, tt.domain, secrets...)
