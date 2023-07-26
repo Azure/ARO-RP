@@ -45,7 +45,7 @@ func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error
 			return err
 		}
 		ingressSecretName := ingressController.Spec.DefaultCertificate.Name
-		for _, secretName := range []string{ingressSecretName, strings.Replace(ingressSecretName, "-ingress", "-apiserver", 1)} {
+		for _, secretName := range []string{ingressSecretName, strings.Replace(ingressSecretName, "-ingress", "-apiserver", 1)} { // certificate name is uuid + "-ingress" or "-apiserver"
 			certificate, err := mon.getCertificate(ctx, secretName, operator.Namespace, corev1.TLSCertKey)
 			if kerrors.IsNotFound(err) {
 				mon.emitGauge(secretMissingMetricName, int64(1), map[string]string{
