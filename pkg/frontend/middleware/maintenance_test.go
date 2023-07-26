@@ -13,7 +13,7 @@ import (
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 )
 
-func TestEmitUnplannedMaintenanceSignal(t *testing.T) {
+func TestUnplannedMaintenanceSignal(t *testing.T) {
 	for _, tt := range []struct {
 		name           string
 		resourceID     string
@@ -22,7 +22,7 @@ func TestEmitUnplannedMaintenanceSignal(t *testing.T) {
 		{
 			name:           "emit unplanned maintenance signal",
 			resourceID:     "/subscriptions/123/resourcegroups/456/providers/Microsoft.RedHatOpenShift/openShiftClusters/789",
-			adminOperation: "startvm",
+			adminOperation: "/startvm",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -38,7 +38,7 @@ func TestEmitUnplannedMaintenanceSignal(t *testing.T) {
 			})
 
 			handlerFunc := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-			handler := maintenanceMiddleware.EmitUnplannedMaintenanceSignal(handlerFunc)
+			handler := maintenanceMiddleware.UnplannedMaintenanceSignal(handlerFunc)
 
 			path := "/admin" + tt.resourceID + tt.adminOperation
 			r, err := http.NewRequest(http.MethodPost, path, nil)

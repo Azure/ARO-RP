@@ -299,14 +299,14 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 		r.Route("/subscriptions/{subscriptionId}", func(r chi.Router) {
 			r.Route("/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}", func(r chi.Router) {
 				// Etcd recovery
-				r.With(f.maintenanceMiddleware.EmitUnplannedMaintenanceSignal).Post("/etcdrecovery", f.postAdminOpenShiftClusterEtcdRecovery)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/etcdrecovery", f.postAdminOpenShiftClusterEtcdRecovery)
 
 				// Kubernetes objects
 				r.Get("/kubernetesobjects", f.getAdminKubernetesObjects)
-				r.With(f.maintenanceMiddleware.EmitUnplannedMaintenanceSignal).Post("/kubernetesobjects", f.postAdminKubernetesObjects)
-				r.With(f.maintenanceMiddleware.EmitUnplannedMaintenanceSignal).Delete("/kubernetesobjects", f.deleteAdminKubernetesObjects)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/kubernetesobjects", f.postAdminKubernetesObjects)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Delete("/kubernetesobjects", f.deleteAdminKubernetesObjects)
 
-				r.With(f.maintenanceMiddleware.EmitUnplannedMaintenanceSignal).Post("/approvecsr", f.postAdminOpenShiftClusterApproveCSR)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/approvecsr", f.postAdminOpenShiftClusterApproveCSR)
 
 				// Pod logs
 				r.Get("/kubernetespodlogs", f.getAdminKubernetesPodLogs)
@@ -317,23 +317,23 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 
 				r.Get("/clusterdeployment", f.getAdminHiveClusterDeployment)
 
-				r.With(f.maintenanceMiddleware.EmitUnplannedMaintenanceSignal).Post("/redeployvm", f.postAdminOpenShiftClusterRedeployVM)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/redeployvm", f.postAdminOpenShiftClusterRedeployVM)
 
-				r.With(f.maintenanceMiddleware.EmitUnplannedMaintenanceSignal).Post("/stopvm", f.postAdminOpenShiftClusterStopVM)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/stopvm", f.postAdminOpenShiftClusterStopVM)
 
-				r.With(f.maintenanceMiddleware.EmitUnplannedMaintenanceSignal).Post("/startvm", f.postAdminOpenShiftClusterStartVM)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/startvm", f.postAdminOpenShiftClusterStartVM)
 
-				r.With(f.maintenanceMiddleware.EmitUnplannedMaintenanceSignal).Post("/upgrade", f.postAdminOpenShiftUpgrade)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/upgrade", f.postAdminOpenShiftUpgrade)
 
 				r.Get("/skus", f.getAdminOpenShiftClusterVMResizeOptions)
 
-				r.With(f.maintenanceMiddleware.EmitUnplannedMaintenanceSignal).Post("/resize", f.postAdminOpenShiftClusterVMResize)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/resize", f.postAdminOpenShiftClusterVMResize)
 
-				r.With(f.maintenanceMiddleware.EmitUnplannedMaintenanceSignal).Post("/reconcilefailednic", f.postAdminReconcileFailedNIC)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/reconcilefailednic", f.postAdminReconcileFailedNIC)
 
-				r.With(f.maintenanceMiddleware.EmitUnplannedMaintenanceSignal).Post("/cordonnode", f.postAdminOpenShiftClusterCordonNode)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/cordonnode", f.postAdminOpenShiftClusterCordonNode)
 
-				r.With(f.maintenanceMiddleware.EmitUnplannedMaintenanceSignal).Post("/drainnode", f.postAdminOpenShiftClusterDrainNode)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/drainnode", f.postAdminOpenShiftClusterDrainNode)
 			})
 		})
 
