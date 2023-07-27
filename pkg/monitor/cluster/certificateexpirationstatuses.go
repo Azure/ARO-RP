@@ -71,7 +71,7 @@ func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error
 func (mon *Monitor) getCertificate(ctx context.Context, secretName, secretNamespace, secretKey string) (*x509.Certificate, error) {
 	secret, err := mon.cli.CoreV1().Secrets(secretNamespace).Get(ctx, secretName, metav1.GetOptions{})
 	if err != nil {
-		return &x509.Certificate{}, err
+		return nil, err
 	}
 
 	certBlock, _ := pem.Decode(secret.Data[secretKey])
