@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/containers/podman/v4/libpod/define"
 	"github.com/containers/podman/v4/pkg/bindings/containers"
 	"github.com/containers/podman/v4/pkg/bindings/images"
 	"github.com/containers/podman/v4/pkg/specgen"
@@ -26,15 +27,18 @@ const TEST_PULLSPEC = "registry.access.redhat.com/ubi8/go-toolset:1.18.4"
 
 var _ = Describe("Podman", Ordered, func() {
 	var err error
+	var cancel context.CancelFunc
 	var conn context.Context
 	var hook *test.Hook
 	var log *logrus.Entry
 	var containerName string
 	var containerID string
 
-	BeforeAll(func(ctx context.Context) {
+	BeforeAll(func() {
 		var err error
-		conn, err = getConnection(ctx)
+		var outerconn context.Context
+		outerconn, cancel = context.WithCancel(context.Background())
+		conn, err = getConnection(outerconn)
 		if err != nil {
 			Skip("unable to access podman: %v")
 		}
@@ -58,12 +62,13 @@ var _ = Describe("Podman", Ordered, func() {
 	})
 
 	It("can wait for completion", func() {
-		exit, err := containers.Wait(conn, containerID, nil)
+		exit, err := containers.Wait(conn, containerID, (&containers.WaitOptions{}).WithCondition([]define.ContainerStatus{define.ContainerStateExited}))
 		Expect(err).To(BeNil())
-		Expect(exit).To(Equal(0), "exit code was %d, not 0", exit)
+		Expect(exit).To(BeEquivalentTo(0), "exit code was %d, not 0", exit)
 	})
 
 	It("can fetch container logs", func() {
+		//time.Sleep(3 * time.Second)
 		err = getContainerLogs(conn, log, containerID)
 		Expect(err).To(BeNil())
 
@@ -90,6 +95,10 @@ var _ = Describe("Podman", Ordered, func() {
 		if containerID != "" {
 			_, err = containers.Remove(conn, containerID, &containers.RemoveOptions{Force: to.BoolPtr(true)})
 			Expect(err).To(BeNil())
+		}
+
+		if cancel != nil {
+			cancel()
 		}
 	})
 })
