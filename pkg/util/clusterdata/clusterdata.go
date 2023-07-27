@@ -112,6 +112,7 @@ func (p ParallelEnricher) enrichOne(ctx context.Context, log *logrus.Entry, oc *
 		go func() {
 			t := time.Now()
 
+			e.SetDefaults(oc)
 			errors <- e.Enrich(ctx, log, oc, clients.k8s, clients.config, clients.machine, clients.operator)
 
 			//only used in testing
