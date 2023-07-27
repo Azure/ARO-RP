@@ -28,15 +28,14 @@ func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error
 	// report NotAfter dates for Ingress and API (on managed domains), and Geneva (always)
 	var certs []*x509.Certificate
 
-	mdsdCert, err := mon.getCertificate(ctx, operator.SecretName, operator.Namespace, genevalogging.GenevaCertName)
+	mdsdCert, err := mon.getCertificate(ctx, operator.Namespace, operator.SecretName, genevalogging.GenevaCertName)
 	if err != nil {
-            if !kerrors.IsNotFound(err) {
-		return err
-	    }
-	    mon.emitGauge(secretMissingMetricName, int64(1), map[string]string{
+		if !kerrors.IsNotFound(err) {
+			return err
+		}
+		mon.emitGauge(secretMissingMetricName, int64(1), map[string]string{
 			"secretMissing": operator.SecretName,
-	    })
-	} 
+		})
 	} else {
 		certs = append(certs, mdsdCert)
 	}
@@ -48,7 +47,7 @@ func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error
 		}
 		ingressSecretName := ingressController.Spec.DefaultCertificate.Name
 		for _, secretName := range []string{ingressSecretName, strings.Replace(ingressSecretName, "-ingress", "-apiserver", 1)} { // certificate name is uuid + "-ingress" or "-apiserver"
-			certificate, err := mon.getCertificate(ctx, secretName, operator.Namespace, corev1.TLSCertKey)
+			certificate, err := mon.getCertificate(ctx, operator.Namespace, secretName, corev1.TLSCertKey)
 			if kerrors.IsNotFound(err) {
 				mon.emitGauge(secretMissingMetricName, int64(1), map[string]string{
 					"secretMissing": secretName,
@@ -70,7 +69,7 @@ func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error
 	return nil
 }
 
-func (mon *Monitor) getCertificate(ctx context.Context, secretName, secretNamespace, secretKey string) (*x509.Certificate, error) {
+func (mon *Monitor) getCertificate(ctx context.Context, secretNamespace, secretName, secretKey string) (*x509.Certificate, error) {
 	secret, err := mon.cli.CoreV1().Secrets(secretNamespace).Get(ctx, secretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
