@@ -70,13 +70,9 @@ func (m *manager) Install(ctx context.Context, sub *api.SubscriptionDocument, do
 }
 
 func (m *manager) putSecret(secretName string) specgen.Secret {
-	uid := uint32(os.Getuid())
-	gid := uint32(os.Getgid())
 	return specgen.Secret{
 		Source: m.clusterUUID + "-" + secretName,
 		Target: "/.azure/" + secretName,
-		UID:    uid,
-		GID:    gid,
 		Mode:   0o644,
 	}
 }
@@ -84,7 +80,6 @@ func (m *manager) putSecret(secretName string) specgen.Secret {
 func (m *manager) startContainer(ctx context.Context, version *api.OpenShiftVersion) error {
 	s := specgen.NewSpecGenerator(version.Properties.InstallerPullspec, false)
 	s.Name = "installer-" + m.clusterUUID
-	s.User = fmt.Sprintf("%d", os.Getuid())
 
 	s.Secrets = []specgen.Secret{
 		m.putSecret("99_aro.json"),
