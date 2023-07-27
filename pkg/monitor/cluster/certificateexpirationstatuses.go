@@ -29,12 +29,14 @@ func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error
 	var certs []*x509.Certificate
 
 	mdsdCert, err := mon.getCertificate(ctx, operator.SecretName, operator.Namespace, genevalogging.GenevaCertName)
-	if kerrors.IsNotFound(err) {
-		mon.emitGauge(secretMissingMetricName, int64(1), map[string]string{
-			"secretMissing": operator.SecretName,
-		})
-	} else if err != nil {
+	if err != nil {
+            if !kerrors.IsNotFound(err) {
 		return err
+	    }
+	    mon.emitGauge(secretMissingMetricName, int64(1), map[string]string{
+			"secretMissing": operator.SecretName,
+	    })
+	} 
 	} else {
 		certs = append(certs, mdsdCert)
 	}
