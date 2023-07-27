@@ -99,5 +99,6 @@ func DefaultOperatorFlags() OperatorFlags {
 		"rh.srep.muo.managed":                      flagTrue,
 		"aro.guardrails.enabled":                   flagFalse,
 		"aro.guardrails.deploy.managed":            flagFalse,
+		"aro.cloudproviderconfig.enabled":          flagTrue,
 	}
 }
