@@ -25,7 +25,7 @@ const (
 )
 
 func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error {
-	// report NotAfter dates for Geneva (always), Ingress, and API (on managed domain) certificates
+	// report NotAfter dates for Ingress and API (on managed domains), and Geneva (always)
 	var certs []*x509.Certificate
 
 	mdsdCert, err := mon.getCertificate(ctx, operator.SecretName, operator.Namespace, genevalogging.GenevaCertName)
