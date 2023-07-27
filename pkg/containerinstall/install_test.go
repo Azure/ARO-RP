@@ -4,6 +4,7 @@ package containerinstall
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
 	"testing"
 	"time"
@@ -14,8 +15,11 @@ import (
 	"github.com/containers/podman/v4/libpod/define"
 	"github.com/containers/podman/v4/pkg/bindings/containers"
 	"github.com/containers/podman/v4/pkg/bindings/images"
+	"github.com/containers/podman/v4/pkg/bindings/secrets"
+	"github.com/containers/podman/v4/pkg/domain/entities"
 	"github.com/containers/podman/v4/pkg/specgen"
 	"github.com/onsi/gomega/types"
+	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 
@@ -33,6 +37,7 @@ var _ = Describe("Podman", Ordered, func() {
 	var log *logrus.Entry
 	var containerName string
 	var containerID string
+	var secret *entities.SecretCreateReport
 
 	BeforeAll(func() {
 		var err error
@@ -52,10 +57,32 @@ var _ = Describe("Podman", Ordered, func() {
 		Expect(err).To(BeNil())
 	})
 
+	It("can create a secret", func() {
+
+		secret, err = secrets.Create(
+			conn, bytes.NewBufferString("hello\n"),
+			(&secrets.CreateOptions{}).WithName(containerName))
+		Expect(err).To(BeNil())
+
+	})
+
 	It("can start a container", func() {
 		s := specgen.NewSpecGenerator(TEST_PULLSPEC, false)
 		s.Name = containerName
-		s.Entrypoint = []string{"/bin/bash", "-c", "echo 'hello'"}
+		s.Secrets = []specgen.Secret{
+			{
+				Source: containerName,
+				Target: "/.azure/testfile",
+				Mode:   0o644,
+			},
+		}
+		s.Mounts = append(s.Mounts, specs.Mount{
+			Destination: "/.azure",
+			Type:        "tmpfs",
+			Source:      "",
+		})
+		s.WorkDir = "/.azure"
+		s.Entrypoint = []string{"/bin/bash", "-c", "cat testfile"}
 
 		containerID, err = runContainer(conn, log, s)
 		Expect(err).To(BeNil())
@@ -88,6 +115,11 @@ var _ = Describe("Podman", Ordered, func() {
 	AfterAll(func() {
 		if containerID != "" {
 			_, err = containers.Remove(conn, containerID, (&containers.RemoveOptions{}).WithForce(true))
+			Expect(err).To(BeNil())
+		}
+
+		if secret != nil {
+			err = secrets.Remove(conn, secret.ID)
 			Expect(err).To(BeNil())
 		}
 
