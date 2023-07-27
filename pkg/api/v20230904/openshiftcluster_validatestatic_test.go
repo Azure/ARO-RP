@@ -243,6 +243,22 @@ func TestOpenShiftClusterStaticValidateProperties(t *testing.T) {
 			},
 			wantErr: "400: InvalidParameter: properties.provisioningState: The provided provisioning state 'invalid' is invalid.",
 		},
+		{
+			name: "workerProfileStatus nonNil",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.WorkerProfilesStatus = []WorkerProfile{
+					{
+						Name:             "worker",
+						VMSize:           "Standard_D4s_v3",
+						EncryptionAtHost: EncryptionAtHostDisabled,
+						DiskSizeGB:       128,
+						SubnetID:         fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID),
+						Count:            3,
+					},
+				}
+			},
+			wantErr: "400: InvalidParameter: properties.workerProfilesStatus: Worker Profile Status must be set to nil.",
+		},
 	}
 	createTests := []*validateTest{
 		{
