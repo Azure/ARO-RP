@@ -107,6 +107,5 @@ func (ce machineClientEnricher) Enrich(
 }
 
 func (ce machineClientEnricher) SetDefaults(oc *api.OpenShiftCluster) {
-	oc.Properties.WorkerProfiles = nil
 	oc.Properties.WorkerProfilesStatus = nil
 }
