@@ -8,9 +8,10 @@ import (
 	"strings"
 	"time"
 
+	operatorv1 "github.com/openshift/api/operator/v1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
@@ -41,12 +42,18 @@ func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error
 	}
 
 	if dns.IsManagedDomain(mon.oc.Properties.ClusterProfile.Domain) {
-		ingressController, err := mon.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Get(ctx, "default", metav1.GetOptions{})
+		ic := &operatorv1.IngressController{}
+		err := mon.clientset.Get(ctx, client.ObjectKey{
+			Namespace: "openshift-ingress-operator",
+			Name:      "default",
+		}, ic)
 		if err != nil {
 			return err
 		}
-		ingressSecretName := ingressController.Spec.DefaultCertificate.Name
-		for _, secretName := range []string{ingressSecretName, strings.Replace(ingressSecretName, "-ingress", "-apiserver", 1)} { // certificate name is uuid + "-ingress" or "-apiserver"
+		ingressSecretName := ic.Spec.DefaultCertificate.Name
+
+		// secret with managed certificates is uuid + "-ingress" or "-apiserver"
+		for _, secretName := range []string{ingressSecretName, strings.Replace(ingressSecretName, "-ingress", "-apiserver", 1)} {
 			certificate, err := mon.getCertificate(ctx, operator.Namespace, secretName, corev1.TLSCertKey)
 			if kerrors.IsNotFound(err) {
 				mon.emitGauge(secretMissingMetricName, int64(1), map[string]string{
@@ -70,7 +77,11 @@ func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error
 }
 
 func (mon *Monitor) getCertificate(ctx context.Context, secretNamespace, secretName, secretKey string) (*x509.Certificate, error) {
-	secret, err := mon.cli.CoreV1().Secrets(secretNamespace).Get(ctx, secretName, metav1.GetOptions{})
+	secret := &corev1.Secret{}
+	err := mon.clientset.Get(ctx, client.ObjectKey{
+		Namespace: secretNamespace,
+		Name:      secretName,
+	}, secret)
 	if err != nil {
 		return nil, err
 	}

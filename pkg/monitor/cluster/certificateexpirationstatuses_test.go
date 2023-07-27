@@ -9,11 +9,10 @@ import (
 
 	"github.com/golang/mock/gomock"
 	operatorv1 "github.com/openshift/api/operator/v1"
-	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
@@ -116,7 +115,7 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 
-			var secrets []runtime.Object
+			var secrets []client.Object
 			secretsFromCertInfo, err := generateTestSecrets(tt.certsPresent, tweakTemplateFn(expiration))
 			if err != nil {
 				t.Fatal(err)
@@ -140,7 +139,7 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 	}
 
 	t.Run("returns error when secret is present but certificate data has been deleted", func(t *testing.T) {
-		var secrets []runtime.Object
+		var secrets []client.Object
 		data := map[string][]byte{}
 		s := buildSecret("cluster", data)
 		secrets = append(secrets, s)
@@ -161,8 +160,8 @@ func tweakTemplateFn(expiration time.Time) func(*x509.Certificate) {
 	}
 }
 
-func generateTestSecrets(certsInfo []certInfo, tweakTemplateFn func(*x509.Certificate)) ([]runtime.Object, error) {
-	var secrets []runtime.Object
+func generateTestSecrets(certsInfo []certInfo, tweakTemplateFn func(*x509.Certificate)) ([]client.Object, error) {
+	var secrets []client.Object
 	for _, sec := range certsInfo {
 		_, cert, err := utiltls.GenerateTestKeyAndCertificate(sec.certSubject, nil, nil, false, false, tweakTemplateFn)
 		if err != nil {
@@ -195,7 +194,7 @@ func buildSecret(secretName string, data map[string][]byte) *corev1.Secret {
 	return s
 }
 
-func buildMonitor(m *mock_metrics.MockEmitter, domain, id string, secrets ...runtime.Object) *Monitor {
+func buildMonitor(m *mock_metrics.MockEmitter, domain, id string, secrets ...client.Object) *Monitor {
 	ingressController := &operatorv1.IngressController{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "default",
@@ -207,9 +206,15 @@ func buildMonitor(m *mock_metrics.MockEmitter, domain, id string, secrets ...run
 			},
 		},
 	}
+
+	clientset := fake.
+		NewClientBuilder().
+		WithObjects(ingressController).
+		WithObjects(secrets...).
+		Build()
 	mon := &Monitor{
-		cli: fake.NewSimpleClientset(secrets...),
-		m:   m,
+		clientset: clientset,
+		m:         m,
 		oc: &api.OpenShiftCluster{
 			Properties: api.OpenShiftClusterProperties{
 				ClusterProfile: api.ClusterProfile{
@@ -217,7 +222,6 @@ func buildMonitor(m *mock_metrics.MockEmitter, domain, id string, secrets ...run
 				},
 			},
 		},
-		operatorcli: operatorfake.NewSimpleClientset(ingressController),
 	}
 	return mon
 }

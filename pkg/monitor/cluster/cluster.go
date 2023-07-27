@@ -11,7 +11,6 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
-	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
@@ -34,15 +33,15 @@ type Monitor struct {
 	oc   *api.OpenShiftCluster
 	dims map[string]string
 
-	restconfig  *rest.Config
-	cli         kubernetes.Interface
-	configcli   configclient.Interface
-	maocli      machineclient.Interface
-	mcocli      mcoclient.Interface
-	m           metrics.Emitter
-	arocli      aroclient.Interface
-	operatorcli operatorclient.Interface
+	restconfig *rest.Config
+	cli        kubernetes.Interface
+	configcli  configclient.Interface
+	maocli     machineclient.Interface
+	mcocli     mcoclient.Interface
+	m          metrics.Emitter
+	arocli     aroclient.Interface
 
+	clientset     client.Client
 	hiveclientset client.Client
 
 	// access below only via the helper functions in cache.go
@@ -93,6 +92,11 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		return nil, err
 	}
 
+	clientset, err := client.New(restConfig, client.Options{})
+	if err != nil {
+		return nil, err
+	}
+
 	hiveclientset, err := getHiveClientSet(hiveRestConfig)
 	if err != nil {
 		log.Error(err)
@@ -112,6 +116,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		mcocli:        mcocli,
 		arocli:        arocli,
 		m:             m,
+		clientset:     clientset,
 		hiveclientset: hiveclientset,
 	}, nil
 }
