@@ -13,7 +13,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/containers/podman/v4/pkg/bindings/containers"
 	"github.com/containers/podman/v4/pkg/bindings/images"
 	"github.com/containers/podman/v4/pkg/bindings/secrets"
@@ -43,12 +42,11 @@ var (
 func (m *manager) Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion) error {
 	s := []steps.Step{
 		steps.Action(func(context.Context) error {
-			options := &images.PullOptions{
-				Quiet:    to.BoolPtr(true),
-				Policy:   to.StringPtr("always"),
-				Username: to.StringPtr(m.pullSecret.Username),
-				Password: to.StringPtr(m.pullSecret.Password),
-			}
+			options := (&images.PullOptions{}).
+				WithQuiet(true).
+				WithPolicy("always").
+				WithUsername(m.pullSecret.Username).
+				WithPassword(m.pullSecret.Password)
 
 			_, err := images.Pull(m.conn, version.Properties.InstallerPullspec, options)
 			return err
@@ -135,7 +133,9 @@ func (m *manager) createSecrets(ctx context.Context, doc *api.OpenShiftClusterDo
 	if err != nil {
 		return err
 	}
-	_, err = secrets.Create(m.conn, bytes.NewBuffer(encCluster), &secrets.CreateOptions{Name: to.StringPtr(m.clusterUUID + "-99_aro.json")})
+	_, err = secrets.Create(
+		m.conn, bytes.NewBuffer(encCluster),
+		(&secrets.CreateOptions{}).WithName(m.clusterUUID+"-99_aro.json"))
 	if err != nil {
 		return err
 	}
@@ -144,7 +144,9 @@ func (m *manager) createSecrets(ctx context.Context, doc *api.OpenShiftClusterDo
 	if err != nil {
 		return err
 	}
-	_, err = secrets.Create(m.conn, bytes.NewBuffer(encSub), &secrets.CreateOptions{Name: to.StringPtr(m.clusterUUID + "-99_sub.json")})
+	_, err = secrets.Create(
+		m.conn, bytes.NewBuffer(encSub),
+		(&secrets.CreateOptions{}).WithName(m.clusterUUID+"-99_sub.json"))
 	if err != nil {
 		return err
 	}
@@ -184,7 +186,9 @@ func (m *manager) secretFromFile(from, name string) error {
 		return err
 	}
 
-	_, err = secrets.Create(m.conn, f, &secrets.CreateOptions{Name: to.StringPtr(m.clusterUUID + "-" + name)})
+	_, err = secrets.Create(
+		m.conn, f,
+		(&secrets.CreateOptions{}).WithName(m.clusterUUID+"-"+name))
 	return err
 }
 
@@ -196,7 +200,9 @@ func (m *manager) cleanupContainers(ctx context.Context) error {
 		getContainerLogs(m.conn, m.log, containerName)
 	}
 
-	_, err := containers.Remove(m.conn, containerName, &containers.RemoveOptions{Force: to.BoolPtr(true), Ignore: to.BoolPtr(true)})
+	_, err := containers.Remove(
+		m.conn, containerName,
+		(&containers.RemoveOptions{}).WithForce(true).WithIgnore(true))
 	if err != nil {
 		m.log.Errorf("unable to remove container: %v", err)
 	}

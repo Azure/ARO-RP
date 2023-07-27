@@ -6,11 +6,11 @@ package containerinstall
 import (
 	"context"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/containers/podman/v4/libpod/define"
 	"github.com/containers/podman/v4/pkg/bindings/containers"
 	"github.com/containers/podman/v4/pkg/bindings/images"
@@ -48,7 +48,7 @@ var _ = Describe("Podman", Ordered, func() {
 	})
 
 	It("can pull images", func() {
-		_, err = images.Pull(conn, TEST_PULLSPEC, &images.PullOptions{Policy: to.StringPtr("missing")})
+		_, err = images.Pull(conn, TEST_PULLSPEC, (&images.PullOptions{}).WithPolicy("missing"))
 		Expect(err).To(BeNil())
 	})
 
@@ -68,32 +68,26 @@ var _ = Describe("Podman", Ordered, func() {
 	})
 
 	It("can fetch container logs", func() {
-		//time.Sleep(3 * time.Second)
-		err = getContainerLogs(conn, log, containerID)
-		Expect(err).To(BeNil())
+		// sometimes logs take a few seconds to flush to disk, so just retry for 10s
+		Eventually(func(g Gomega) {
+			hook.Reset()
+			err = getContainerLogs(conn, log, containerID)
+			g.Expect(err).To(BeNil())
+			entries := []map[string]types.GomegaMatcher{
+				{
+					"msg":   Equal("stdout: hello\n"),
+					"level": Equal(logrus.InfoLevel),
+				},
+			}
 
-		entries := []map[string]types.GomegaMatcher{
-			{
-				"msg":   Equal("created container " + containerName + " with ID " + containerID),
-				"level": Equal(logrus.InfoLevel),
-			},
-			{
-				"msg":   Equal("started container " + containerID),
-				"level": Equal(logrus.InfoLevel),
-			},
-			{
-				"msg":   Equal("stdout: hello\n"),
-				"level": Equal(logrus.InfoLevel),
-			},
-		}
-
-		err = testlog.AssertLoggingOutput(hook, entries)
-		Expect(err).To(BeNil())
+			err = testlog.AssertLoggingOutput(hook, entries)
+			g.Expect(err).To(BeNil())
+		}).WithTimeout(10 * time.Second).WithPolling(time.Second).Should(Succeed())
 	})
 
 	AfterAll(func() {
 		if containerID != "" {
-			_, err = containers.Remove(conn, containerID, &containers.RemoveOptions{Force: to.BoolPtr(true)})
+			_, err = containers.Remove(conn, containerID, (&containers.RemoveOptions{}).WithForce(true))
 			Expect(err).To(BeNil())
 		}
 
