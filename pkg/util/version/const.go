@@ -39,8 +39,8 @@ var DefaultInstallStreams = map[int]*Stream{
 		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:52cbfbbeb9cc03b49c2788ac7333e63d3dae14673e01a9d8e59270f3a8390ed3",
 	},
 	12: {
-		Version:  NewVersion(4, 12, 17),
-		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:7ca5f8aa44bbc537c5a985a523d87365eab3f6e72abc50b7be4caae741e093f4",
+		Version:  NewVersion(4, 12, 25),
+		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:5a4fb052cda1d14d1e306ce87e6b0ded84edddaa76f1cf401bcded99cef2ad84",
 	},
 }
 
@@ -63,10 +63,6 @@ var HiveInstallStreams = []*Stream{
 		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:1c3913a65b0a10b4a0650f54e545fe928360a94767acea64c0bd10faa52c945a",
 	},
 	DefaultInstallStreams[12],
-	{
-		Version:  NewVersion(4, 12, 24),
-		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:84a7b73f5393c8225c42edf214c82a8d00037a087222c5548ad1ed1b35cedb0e",
-	},
 }
 
 // UpgradeStreams describes list of streams we support for upgrades
