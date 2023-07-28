@@ -2243,11 +2243,7 @@
         "Disabled",
         "Enabled"
       ],
-      "type": "string",
-      "x-ms-enum": {
-        "name": "PreconfiguredNSG",
-        "modelAsString": true
-      }
+      "type": "string"
     },
     "ProvisioningState": {
       "description": "ProvisioningState represents a provisioning state.",
