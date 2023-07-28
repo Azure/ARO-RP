@@ -401,11 +401,7 @@ func (d *deployer) configureServiceSecrets(ctx context.Context) error {
 	}
 
 	if isRotated {
-		err = d.restartOldScalesets(ctx, d.config.GatewayResourceGroupName)
-		if err != nil {
-			return err
-		}
-		err = d.restartOldScalesets(ctx, d.config.RPResourceGroupName)
+		err = d.restartOldRPScalesets(ctx)
 		if err != nil {
 			return err
 		}
@@ -490,14 +486,14 @@ func (d *deployer) ensureSecretKey(ctx context.Context, kv keyvault.Manager, sec
 	})
 }
 
-func (d *deployer) restartOldScalesets(ctx context.Context, resourceGroupName string) error {
-	scalesets, err := d.vmss.List(ctx, resourceGroupName)
+func (d *deployer) restartOldRPScalesets(ctx context.Context) error {
+	scalesets, err := d.vmss.List(ctx, d.config.RPResourceGroupName)
 	if err != nil {
 		return err
 	}
 
 	for _, vmss := range scalesets {
-		err = d.restartOldScaleset(ctx, *vmss.Name, resourceGroupName)
+		err = d.restartOldRPScaleset(ctx, *vmss.Name)
 		if err != nil {
 			return err
 		}
@@ -506,35 +502,29 @@ func (d *deployer) restartOldScalesets(ctx context.Context, resourceGroupName st
 	return nil
 }
 
-func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string, resourceGroupName string) error {
-	var restartScript string
-	switch {
-	case strings.HasPrefix(vmssName, gatewayVMSSPrefix):
-		restartScript = gatewayRestartScript
-	case strings.HasPrefix(vmssName, rpVMSSPrefix):
-		restartScript = rpRestartScript
-	default:
+func (d *deployer) restartOldRPScaleset(ctx context.Context, vmssName string) error {
+	if !strings.HasPrefix(vmssName, rpVMSSPrefix) {
 		return &api.CloudError{
 			StatusCode: http.StatusBadRequest,
 			CloudErrorBody: &api.CloudErrorBody{
 				Code: api.CloudErrorCodeInvalidResource,
-				Message: fmt.Sprintf("provided vmss %s does not match RP or gateway prefix",
+				Message: fmt.Sprintf("provided vmss %s does not match RP prefix",
 					vmssName,
 				),
 			},
 		}
 	}
 
-	scalesetVMs, err := d.vmssvms.List(ctx, resourceGroupName, vmssName, "", "", "")
+	scalesetVMs, err := d.vmssvms.List(ctx, d.config.RPResourceGroupName, vmssName, "", "", "")
 	if err != nil {
 		return err
 	}
 
 	for _, vm := range scalesetVMs {
-		d.log.Printf("waiting for restart script to complete on older vmss %s, instance %s", vmssName, *vm.InstanceID)
-		err = d.vmssvms.RunCommandAndWait(ctx, resourceGroupName, vmssName, *vm.InstanceID, mgmtcompute.RunCommandInput{
+		d.log.Printf("waiting for restart script to complete on older rp vmss %s, instance %s", vmssName, *vm.InstanceID)
+		err = d.vmssvms.RunCommandAndWait(ctx, d.config.RPResourceGroupName, vmssName, *vm.InstanceID, mgmtcompute.RunCommandInput{
 			CommandID: to.StringPtr("RunShellScript"),
-			Script:    &[]string{restartScript},
+			Script:    &[]string{rpRestartScript},
 		})
 
 		if err != nil {
@@ -545,7 +535,7 @@ func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string, reso
 		time.Sleep(30 * time.Second)
 		timeoutCtx, cancel := context.WithTimeout(ctx, time.Hour)
 		defer cancel()
-		err = d.waitForReadiness(timeoutCtx, resourceGroupName, vmssName, *vm.InstanceID)
+		err = d.waitForRPVMReadiness(timeoutCtx, vmssName, *vm.InstanceID)
 		if err != nil {
 			return err
 		}
@@ -554,9 +544,9 @@ func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string, reso
 	return nil
 }
 
-func (d *deployer) waitForReadiness(ctx context.Context, resourceGroupName string, vmssName string, vmInstanceID string) error {
+func (d *deployer) waitForRPVMReadiness(ctx context.Context, vmssName string, vmInstanceID string) error {
 	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		return d.isVMInstanceHealthy(ctx, resourceGroupName, vmssName, vmInstanceID), nil
+		return d.isVMInstanceHealthy(ctx, d.config.RPResourceGroupName, vmssName, vmInstanceID), nil
 	}, ctx.Done())
 }
 
