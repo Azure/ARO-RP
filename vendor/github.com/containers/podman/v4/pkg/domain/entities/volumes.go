@@ -19,6 +19,8 @@ type VolumeCreateOptions struct {
 	Labels map[string]string `schema:"labels"`
 	// Mapping of driver options and values.
 	Options map[string]string `schema:"opts"`
+	// Ignore existing volumes
+	IgnoreIfExists bool `schema:"ignoreIfExist"`
 }
 
 type VolumeConfigResponse struct {
@@ -33,7 +35,7 @@ type VolumeRmOptions struct {
 
 type VolumeRmReport struct {
 	Err error
-	Id  string // nolint
+	Id  string //nolint:revive,stylecheck
 }
 
 type VolumeInspectReport struct {
@@ -54,6 +56,11 @@ type VolumeListReport struct {
 	VolumeConfigResponse
 }
 
+// VolumeReloadReport describes the response from reload volume plugins
+type VolumeReloadReport struct {
+	define.VolumeReload
+}
+
 /*
  * Docker API compatibility types
  */
@@ -61,7 +68,7 @@ type VolumeListReport struct {
 // VolumeMountReport describes the response from volume mount
 type VolumeMountReport struct {
 	Err  error
-	Id   string // nolint
+	Id   string //nolint:revive,stylecheck
 	Name string
 	Path string
 }
@@ -69,5 +76,5 @@ type VolumeMountReport struct {
 // VolumeUnmountReport describes the response from umounting a volume
 type VolumeUnmountReport struct {
 	Err error
-	Id  string // nolint
+	Id  string //nolint:revive,stylecheck
 }

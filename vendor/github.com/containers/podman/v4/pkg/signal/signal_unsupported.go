@@ -5,7 +5,6 @@
 package signal
 
 import (
-	"os"
 	"syscall"
 )
 
@@ -16,12 +15,12 @@ const (
 	SIGWINCH = syscall.Signal(0xff)
 )
 
-// signalMap is a map of Linux signals.
+// SignalMap is a map of Linux signals.
 // These constants are sourced from the Linux version of golang.org/x/sys/unix
 // (I don't see much risk of this changing).
 // This should work as long as Podman only runs containers on Linux, which seems
 // a safe assumption for now.
-var signalMap = map[string]syscall.Signal{
+var SignalMap = map[string]syscall.Signal{
 	"ABRT":     syscall.Signal(0x6),
 	"ALRM":     syscall.Signal(0xe),
 	"BUS":      syscall.Signal(0x7),
@@ -89,12 +88,8 @@ var signalMap = map[string]syscall.Signal{
 	"RTMAX":    sigrtmax,
 }
 
-// CatchAll catches all signals and relays them to the specified channel.
-func CatchAll(sigc chan os.Signal) {
-	panic("Unsupported on non-linux platforms")
-}
-
-// StopCatch stops catching the signals and closes the specified channel.
-func StopCatch(sigc chan os.Signal) {
-	panic("Unsupported on non-linux platforms")
+// IsSignalIgnoredBySigProxy determines whether to sig-proxy should ignore syscall signal
+// keep the container running or not. In unsupported OS this should not ignore any syscall signal.
+func IsSignalIgnoredBySigProxy(s syscall.Signal) bool {
+	return false
 }
