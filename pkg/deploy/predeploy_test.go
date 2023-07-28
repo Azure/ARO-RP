@@ -1382,7 +1382,7 @@ func TestEnsureSecretKey(t *testing.T) {
 	}
 }
 
-func TestRestartOldRPScalesets(t *testing.T) {
+func TestRestartOldScalesets(t *testing.T) {
 	ctx := context.Background()
 
 	type testParams struct {
@@ -1470,13 +1470,13 @@ func TestRestartOldRPScalesets(t *testing.T) {
 				m(mockVMSS, mockVMSSVM, tt.testParams)
 			}
 
-			err := d.restartOldRPScalesets(ctx)
+			err := d.restartOldScalesets(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
 
-func TestRestartOldRPScaleset(t *testing.T) {
+func TestRestartOldScaleset(t *testing.T) {
 	ctx := context.Background()
 
 	type testParams struct {
@@ -1564,13 +1564,13 @@ func TestRestartOldRPScaleset(t *testing.T) {
 				m(mockVMSS, tt.testParams)
 			}
 
-			err := d.restartOldRPScaleset(ctx, tt.testParams.vmssName)
+			err := d.restartOldScaleset(ctx, tt.testParams.vmssName)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }
 
-func TestWaitForRPVMReadiness(t *testing.T) {
+func TestWaitForReadiness(t *testing.T) {
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 11*time.Second)
 
 	type testParams struct {
@@ -1635,7 +1635,7 @@ func TestWaitForRPVMReadiness(t *testing.T) {
 			}
 
 			defer cancel()
-			err := d.waitForRPVMReadiness(tt.testParams.ctx, tt.testParams.vmssName, tt.testParams.vmInstanceID)
+			err := d.waitForReadiness(tt.testParams.ctx, tt.testParams.vmssName, tt.testParams.vmInstanceID)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}

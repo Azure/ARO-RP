@@ -34,9 +34,8 @@ import (
 const (
 	// Rotate the secret on every deploy of the RP if the most recent
 	// secret is greater than 7 days old
-	rotateSecretAfter    = time.Hour * 24 * 7
-	rpRestartScript      = "systemctl restart aro-rp"
-	gatewayRestartScript = "systemctl restart aro-gateway"
+	rotateSecretAfter = time.Hour * 24 * 7
+	rpRestartScript   = "systemctl restart aro-rp"
 )
 
 // PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
@@ -401,7 +400,7 @@ func (d *deployer) configureServiceSecrets(ctx context.Context) error {
 	}
 
 	if isRotated {
-		err = d.restartOldRPScalesets(ctx)
+		err = d.restartOldScalesets(ctx)
 		if err != nil {
 			return err
 		}
@@ -486,14 +485,14 @@ func (d *deployer) ensureSecretKey(ctx context.Context, kv keyvault.Manager, sec
 	})
 }
 
-func (d *deployer) restartOldRPScalesets(ctx context.Context) error {
+func (d *deployer) restartOldScalesets(ctx context.Context) error {
 	scalesets, err := d.vmss.List(ctx, d.config.RPResourceGroupName)
 	if err != nil {
 		return err
 	}
 
 	for _, vmss := range scalesets {
-		err = d.restartOldRPScaleset(ctx, *vmss.Name)
+		err = d.restartOldScaleset(ctx, *vmss.Name)
 		if err != nil {
 			return err
 		}
@@ -502,7 +501,7 @@ func (d *deployer) restartOldRPScalesets(ctx context.Context) error {
 	return nil
 }
 
-func (d *deployer) restartOldRPScaleset(ctx context.Context, vmssName string) error {
+func (d *deployer) restartOldScaleset(ctx context.Context, vmssName string) error {
 	if !strings.HasPrefix(vmssName, rpVMSSPrefix) {
 		return &api.CloudError{
 			StatusCode: http.StatusBadRequest,
@@ -535,7 +534,7 @@ func (d *deployer) restartOldRPScaleset(ctx context.Context, vmssName string) er
 		time.Sleep(30 * time.Second)
 		timeoutCtx, cancel := context.WithTimeout(ctx, time.Hour)
 		defer cancel()
-		err = d.waitForRPVMReadiness(timeoutCtx, vmssName, *vm.InstanceID)
+		err = d.waitForReadiness(timeoutCtx, vmssName, *vm.InstanceID)
 		if err != nil {
 			return err
 		}
@@ -544,7 +543,7 @@ func (d *deployer) restartOldRPScaleset(ctx context.Context, vmssName string) er
 	return nil
 }
 
-func (d *deployer) waitForRPVMReadiness(ctx context.Context, vmssName string, vmInstanceID string) error {
+func (d *deployer) waitForReadiness(ctx context.Context, vmssName string, vmInstanceID string) error {
 	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		return d.isVMInstanceHealthy(ctx, d.config.RPResourceGroupName, vmssName, vmInstanceID), nil
 	}, ctx.Done())
