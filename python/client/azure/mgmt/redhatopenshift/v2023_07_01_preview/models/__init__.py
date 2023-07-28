@@ -20,10 +20,13 @@ try:
     from ._models_py3 import ClusterProfile
     from ._models_py3 import ConsoleProfile
     from ._models_py3 import Display
+    from ._models_py3 import EffectiveOutboundIP
     from ._models_py3 import IngressProfile
+    from ._models_py3 import LoadBalancerProfile
     from ._models_py3 import MachinePool
     from ._models_py3 import MachinePoolList
     from ._models_py3 import MachinePoolUpdate
+    from ._models_py3 import ManagedOutboundIPs
     from ._models_py3 import MasterProfile
     from ._models_py3 import NetworkProfile
     from ._models_py3 import OpenShiftCluster
@@ -35,6 +38,8 @@ try:
     from ._models_py3 import OpenShiftVersionList
     from ._models_py3 import Operation
     from ._models_py3 import OperationList
+    from ._models_py3 import OutboundIP
+    from ._models_py3 import OutboundIPPrefix
     from ._models_py3 import ProxyResource
     from ._models_py3 import Resource
     from ._models_py3 import Secret
@@ -56,10 +61,13 @@ except (SyntaxError, ImportError):
     from ._models import ClusterProfile  # type: ignore
     from ._models import ConsoleProfile  # type: ignore
     from ._models import Display  # type: ignore
+    from ._models import EffectiveOutboundIP  # type: ignore
     from ._models import IngressProfile  # type: ignore
+    from ._models import LoadBalancerProfile  # type: ignore
     from ._models import MachinePool  # type: ignore
     from ._models import MachinePoolList  # type: ignore
     from ._models import MachinePoolUpdate  # type: ignore
+    from ._models import ManagedOutboundIPs  # type: ignore
     from ._models import MasterProfile  # type: ignore
     from ._models import NetworkProfile  # type: ignore
     from ._models import OpenShiftCluster  # type: ignore
@@ -71,6 +79,8 @@ except (SyntaxError, ImportError):
     from ._models import OpenShiftVersionList  # type: ignore
     from ._models import Operation  # type: ignore
     from ._models import OperationList  # type: ignore
+    from ._models import OutboundIP  # type: ignore
+    from ._models import OutboundIPPrefix  # type: ignore
     from ._models import ProxyResource  # type: ignore
     from ._models import Resource  # type: ignore
     from ._models import Secret  # type: ignore
@@ -102,10 +112,13 @@ __all__ = [
     'ClusterProfile',
     'ConsoleProfile',
     'Display',
+    'EffectiveOutboundIP',
     'IngressProfile',
+    'LoadBalancerProfile',
     'MachinePool',
     'MachinePoolList',
     'MachinePoolUpdate',
+    'ManagedOutboundIPs',
     'MasterProfile',
     'NetworkProfile',
     'OpenShiftCluster',
@@ -117,6 +130,8 @@ __all__ = [
     'OpenShiftVersionList',
     'Operation',
     'OperationList',
+    'OutboundIP',
+    'OutboundIPPrefix',
     'ProxyResource',
     'Resource',
     'Secret',

@@ -37,6 +37,11 @@ func ExampleOpenShiftClusterPutParameter() interface{} {
 	oc.Properties.APIServerProfile.IP = ""
 	oc.Properties.IngressProfiles[0].IP = ""
 	oc.Properties.MasterProfile.EncryptionAtHost = EncryptionAtHostEnabled
+	oc.Properties.NetworkProfile.LoadBalancerProfile = &LoadBalancerProfile{
+		ManagedOutboundIPs: &ManagedOutboundIPs{
+			Count: 1,
+		},
+	}
 	oc.SystemData = nil
 
 	return oc
@@ -48,6 +53,16 @@ func ExampleOpenShiftClusterResponse() interface{} {
 	oc := exampleOpenShiftCluster()
 	oc.Properties.ClusterProfile.PullSecret = ""
 	oc.Properties.ServicePrincipalProfile.ClientSecret = ""
+	oc.Properties.NetworkProfile.LoadBalancerProfile = &LoadBalancerProfile{
+		EffectiveOutboundIPs: []EffectiveOutboundIP{
+			{
+				ID: "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/publicIPAddresses/publicIPAddressName",
+			},
+		},
+		ManagedOutboundIPs: &ManagedOutboundIPs{
+			Count: 1,
+		},
+	}
 
 	return oc
 }
