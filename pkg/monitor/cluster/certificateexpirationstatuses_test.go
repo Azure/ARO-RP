@@ -84,7 +84,8 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			domain: unmanagedDomainName,
 			wantWarning: []map[string]string{
 				{
-					"secretMissing": "cluster",
+					"namespace": "openshift-azure-operator",
+					"name":      "cluster",
 				},
 			},
 		},
@@ -107,7 +108,8 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			},
 			wantWarning: []map[string]string{
 				{
-					"secretMissing": clusterID + "-apiserver",
+					"namespace": "openshift-azure-operator",
+					"name":      clusterID + "-apiserver",
 				},
 			},
 		},
@@ -124,7 +126,7 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 
 			m := mock_metrics.NewMockEmitter(gomock.NewController(t))
 			for _, w := range tt.wantWarning {
-				m.EXPECT().EmitGauge("certificate.secretnotfound", int64(1), w)
+				m.EXPECT().EmitGauge(secretMissingMetricName, int64(1), w)
 			}
 			for _, g := range tt.wantExpirations {
 				m.EXPECT().EmitGauge(certificateExpirationMetricName, int64(1), g)

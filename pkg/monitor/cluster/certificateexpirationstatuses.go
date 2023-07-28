@@ -31,9 +31,7 @@ func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error
 
 	mdsdCert, err := mon.getCertificate(ctx, operator.Namespace, operator.SecretName, genevalogging.GenevaCertName)
 	if kerrors.IsNotFound(err) {
-		mon.emitGauge(secretMissingMetricName, int64(1), map[string]string{
-			"secretMissing": operator.SecretName,
-		})
+		mon.emitGauge(secretMissingMetricName, int64(1), secretMissingMetric(operator.Namespace, operator.SecretName))
 	} else if err != nil {
 		return err
 	} else {
@@ -55,9 +53,7 @@ func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error
 		for _, secretName := range []string{ingressSecretName, strings.Replace(ingressSecretName, "-ingress", "-apiserver", 1)} {
 			certificate, err := mon.getCertificate(ctx, operator.Namespace, secretName, corev1.TLSCertKey)
 			if kerrors.IsNotFound(err) {
-				mon.emitGauge(secretMissingMetricName, int64(1), map[string]string{
-					"secretMissing": secretName,
-				})
+				mon.emitGauge(secretMissingMetricName, int64(1), secretMissingMetric(operator.Namespace, secretName))
 			} else if err != nil {
 				return err
 			} else {
@@ -91,4 +87,11 @@ func (mon *Monitor) getCertificate(ctx context.Context, secretNamespace, secretN
 	}
 	// we only care about the first certificate in the block
 	return x509.ParseCertificate(certBlock.Bytes)
+}
+
+func secretMissingMetric(namespace, name string) map[string]string {
+	return map[string]string{
+		"namespace": namespace,
+		"name":      name,
+	}
 }
