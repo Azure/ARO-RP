@@ -2,6 +2,7 @@ package bindings
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -12,13 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/blang/semver"
-	"github.com/containers/podman/v4/pkg/terminal"
+	"github.com/blang/semver/v4"
+	"github.com/containers/common/pkg/ssh"
 	"github.com/containers/podman/v4/version"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/agent"
+	"golang.org/x/net/proxy"
 )
 
 type APIResponse struct {
@@ -43,7 +42,7 @@ func GetClient(ctx context.Context) (*Connection, error) {
 	if c, ok := ctx.Value(clientKey).(*Connection); ok {
 		return c, nil
 	}
-	return nil, errors.Errorf("%s not set in context", clientKey)
+	return nil, fmt.Errorf("%s not set in context", clientKey)
 }
 
 // ServiceVersion from context build by NewConnection()
@@ -61,7 +60,7 @@ func JoinURL(elements ...string) string {
 
 // NewConnection creates a new service connection without an identity
 func NewConnection(ctx context.Context, uri string) (context.Context, error) {
-	return NewConnectionWithIdentity(ctx, uri, "")
+	return NewConnectionWithIdentity(ctx, uri, "", false)
 }
 
 // NewConnectionWithIdentity takes a URI as a string and returns a context with the
@@ -72,10 +71,9 @@ func NewConnection(ctx context.Context, uri string) (context.Context, error) {
 // For example tcp://localhost:<port>
 // or unix:///run/podman/podman.sock
 // or ssh://<user>@<host>[:port]/run/podman/podman.sock?secure=True
-func NewConnectionWithIdentity(ctx context.Context, uri string, identity string) (context.Context, error) {
+func NewConnectionWithIdentity(ctx context.Context, uri string, identity string, machine bool) (context.Context, error) {
 	var (
-		err    error
-		secure bool
+		err error
 	)
 	if v, found := os.LookupEnv("CONTAINER_HOST"); found && uri == "" {
 		uri = v
@@ -85,25 +83,39 @@ func NewConnectionWithIdentity(ctx context.Context, uri string, identity string)
 		identity = v
 	}
 
-	passPhrase := ""
-	if v, found := os.LookupEnv("CONTAINER_PASSPHRASE"); found {
-		passPhrase = v
-	}
-
 	_url, err := url.Parse(uri)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Value of CONTAINER_HOST is not a valid url: %s", uri)
+		return nil, fmt.Errorf("value of CONTAINER_HOST is not a valid url: %s: %w", uri, err)
 	}
 
-	// Now we setup the http Client to use the connection above
+	// Now we set up the http Client to use the connection above
 	var connection Connection
 	switch _url.Scheme {
 	case "ssh":
-		secure, err = strconv.ParseBool(_url.Query().Get("secure"))
-		if err != nil {
-			secure = false
+		port := 22
+		if _url.Port() != "" {
+			port, err = strconv.Atoi(_url.Port())
+			if err != nil {
+				return nil, err
+			}
 		}
-		connection, err = sshClient(_url, secure, passPhrase, identity)
+		conn, err := ssh.Dial(&ssh.ConnectionDialOptions{
+			Host:                        uri,
+			Identity:                    identity,
+			User:                        _url.User,
+			Port:                        port,
+			InsecureIsMachineConnection: machine,
+		}, "golang")
+		if err != nil {
+			return nil, err
+		}
+		connection = Connection{URI: _url}
+		connection.Client = &http.Client{
+			Transport: &http.Transport{
+				DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+					return ssh.DialNet(conn, "unix", _url)
+				},
+			}}
 	case "unix":
 		if !strings.HasPrefix(uri, "unix:///") {
 			// autofix unix://path_element vs unix:///path_element
@@ -115,36 +127,66 @@ func NewConnectionWithIdentity(ctx context.Context, uri string, identity string)
 		if !strings.HasPrefix(uri, "tcp://") {
 			return nil, errors.New("tcp URIs should begin with tcp://")
 		}
-		connection = tcpClient(_url)
+		conn, err := tcpClient(_url)
+		if err != nil {
+			return nil, err
+		}
+		connection = conn
 	default:
-		return nil, errors.Errorf("unable to create connection. %q is not a supported schema", _url.Scheme)
+		return nil, fmt.Errorf("unable to create connection. %q is not a supported schema", _url.Scheme)
 	}
 	if err != nil {
-		return nil, errors.Wrapf(err, "unable to connect to Podman. failed to create %sClient", _url.Scheme)
+		return nil, fmt.Errorf("unable to connect to Podman. failed to create %sClient: %w", _url.Scheme, err)
 	}
 
 	ctx = context.WithValue(ctx, clientKey, &connection)
 	serviceVersion, err := pingNewConnection(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to connect to Podman socket")
+		return nil, fmt.Errorf("unable to connect to Podman socket: %w", err)
 	}
 	ctx = context.WithValue(ctx, versionKey, serviceVersion)
 	return ctx, nil
 }
 
-func tcpClient(_url *url.URL) Connection {
+func tcpClient(_url *url.URL) (Connection, error) {
 	connection := Connection{
 		URI: _url,
 	}
+	dialContext := func(ctx context.Context, _, _ string) (net.Conn, error) {
+		return net.Dial("tcp", _url.Host)
+	}
+	// use proxy if env `CONTAINER_PROXY` set
+	if proxyURI, found := os.LookupEnv("CONTAINER_PROXY"); found {
+		proxyURL, err := url.Parse(proxyURI)
+		if err != nil {
+			return connection, fmt.Errorf("value of CONTAINER_PROXY is not a valid url: %s: %w", proxyURI, err)
+		}
+		proxyDialer, err := proxy.FromURL(proxyURL, proxy.Direct)
+		if err != nil {
+			return connection, fmt.Errorf("unable to dial to proxy %s, %w", proxyURI, err)
+		}
+		dialContext = func(ctx context.Context, _, _ string) (net.Conn, error) {
+			logrus.Debugf("use proxy %s, but proxy dialer does not support dial timeout", proxyURI)
+			return proxyDialer.Dial("tcp", _url.Host)
+		}
+		if f, ok := proxyDialer.(proxy.ContextDialer); ok {
+			dialContext = func(ctx context.Context, _, _ string) (net.Conn, error) {
+				// the default tcp dial timeout seems to be 75s, podman-remote will retry 3 times before exit.
+				// here we change proxy dial timeout to 3s
+				logrus.Debugf("use proxy %s with dial timeout 3s", proxyURI)
+				ctx, cancel := context.WithTimeout(ctx, time.Second*3)
+				defer cancel() // It's safe to cancel, `f.DialContext` only use ctx for returning the Conn, not the lifetime of the Conn.
+				return f.DialContext(ctx, "tcp", _url.Host)
+			}
+		}
+	}
 	connection.Client = &http.Client{
 		Transport: &http.Transport{
-			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-				return net.Dial("tcp", _url.Host)
-			},
+			DialContext:        dialContext,
 			DisableCompression: true,
 		},
 	}
-	return connection
+	return connection, nil
 }
 
 // pingNewConnection pings to make sure the RESTFUL service is up
@@ -164,7 +206,7 @@ func pingNewConnection(ctx context.Context) (*semver.Version, error) {
 	if response.StatusCode == http.StatusOK {
 		versionHdr := response.Header.Get("Libpod-API-Version")
 		if versionHdr == "" {
-			logrus.Info("Service did not provide Libpod-API-Version Header")
+			logrus.Warn("Service did not provide Libpod-API-Version Header")
 			return new(semver.Version), nil
 		}
 		versionSrv, err := semver.ParseTolerant(versionHdr)
@@ -177,129 +219,11 @@ func pingNewConnection(ctx context.Context) (*semver.Version, error) {
 			// Server's job when Client version is equal or older
 			return &versionSrv, nil
 		case 1:
-			return nil, errors.Errorf("server API version is too old. Client %q server %q",
+			return nil, fmt.Errorf("server API version is too old. Client %q server %q",
 				version.APIVersion[version.Libpod][version.MinimalAPI].String(), versionSrv.String())
 		}
 	}
-	return nil, errors.Errorf("ping response was %d", response.StatusCode)
-}
-
-func sshClient(_url *url.URL, secure bool, passPhrase string, identity string) (Connection, error) {
-	// if you modify the authmethods or their conditionals, you will also need to make similar
-	// changes in the client (currently cmd/podman/system/connection/add getUDS).
-
-	var signers []ssh.Signer // order Signers are appended to this list determines which key is presented to server
-
-	if len(identity) > 0 {
-		s, err := terminal.PublicKey(identity, []byte(passPhrase))
-		if err != nil {
-			return Connection{}, errors.Wrapf(err, "failed to parse identity %q", identity)
-		}
-
-		signers = append(signers, s)
-		logrus.Debugf("SSH Ident Key %q %s %s", identity, ssh.FingerprintSHA256(s.PublicKey()), s.PublicKey().Type())
-	}
-
-	if sock, found := os.LookupEnv("SSH_AUTH_SOCK"); found {
-		logrus.Debugf("Found SSH_AUTH_SOCK %q, ssh-agent signer(s) enabled", sock)
-
-		c, err := net.Dial("unix", sock)
-		if err != nil {
-			return Connection{}, err
-		}
-
-		agentSigners, err := agent.NewClient(c).Signers()
-		if err != nil {
-			return Connection{}, err
-		}
-		signers = append(signers, agentSigners...)
-
-		if logrus.IsLevelEnabled(logrus.DebugLevel) {
-			for _, s := range agentSigners {
-				logrus.Debugf("SSH Agent Key %s %s", ssh.FingerprintSHA256(s.PublicKey()), s.PublicKey().Type())
-			}
-		}
-	}
-
-	var authMethods []ssh.AuthMethod
-	if len(signers) > 0 {
-		var dedup = make(map[string]ssh.Signer)
-		// Dedup signers based on fingerprint, ssh-agent keys override CONTAINER_SSHKEY
-		for _, s := range signers {
-			fp := ssh.FingerprintSHA256(s.PublicKey())
-			if _, found := dedup[fp]; found {
-				logrus.Debugf("Dedup SSH Key %s %s", ssh.FingerprintSHA256(s.PublicKey()), s.PublicKey().Type())
-			}
-			dedup[fp] = s
-		}
-
-		var uniq []ssh.Signer
-		for _, s := range dedup {
-			uniq = append(uniq, s)
-		}
-		authMethods = append(authMethods, ssh.PublicKeysCallback(func() ([]ssh.Signer, error) {
-			return uniq, nil
-		}))
-	}
-
-	if pw, found := _url.User.Password(); found {
-		authMethods = append(authMethods, ssh.Password(pw))
-	}
-
-	if len(authMethods) == 0 {
-		callback := func() (string, error) {
-			pass, err := terminal.ReadPassword("Login password:")
-			return string(pass), err
-		}
-		authMethods = append(authMethods, ssh.PasswordCallback(callback))
-	}
-
-	port := _url.Port()
-	if port == "" {
-		port = "22"
-	}
-
-	callback := ssh.InsecureIgnoreHostKey()
-	if secure {
-		host := _url.Hostname()
-		if port != "22" {
-			host = fmt.Sprintf("[%s]:%s", host, port)
-		}
-		key := terminal.HostKey(host)
-		if key != nil {
-			callback = ssh.FixedHostKey(key)
-		}
-	}
-
-	bastion, err := ssh.Dial("tcp",
-		net.JoinHostPort(_url.Hostname(), port),
-		&ssh.ClientConfig{
-			User:            _url.User.Username(),
-			Auth:            authMethods,
-			HostKeyCallback: callback,
-			HostKeyAlgorithms: []string{
-				ssh.KeyAlgoRSA,
-				ssh.KeyAlgoDSA,
-				ssh.KeyAlgoECDSA256,
-				ssh.KeyAlgoECDSA384,
-				ssh.KeyAlgoECDSA521,
-				ssh.KeyAlgoED25519,
-			},
-			Timeout: 5 * time.Second,
-		},
-	)
-	if err != nil {
-		return Connection{}, errors.Wrapf(err, "connection to bastion host (%s) failed", _url.String())
-	}
-
-	connection := Connection{URI: _url}
-	connection.Client = &http.Client{
-		Transport: &http.Transport{
-			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-				return bastion.Dial("unix", _url.Path)
-			},
-		}}
-	return connection, nil
+	return nil, fmt.Errorf("ping response was %d", response.StatusCode)
 }
 
 func unixClient(_url *url.URL) Connection {
@@ -315,7 +239,8 @@ func unixClient(_url *url.URL) Connection {
 	return connection
 }
 
-// DoRequest assembles the http request and returns the response
+// DoRequest assembles the http request and returns the response.
+// The caller must close the response body.
 func (c *Connection) DoRequest(ctx context.Context, httpBody io.Reader, httpMethod, endpoint string, queryParams url.Values, headers http.Header, pathValues ...string) (*APIResponse, error) {
 	var (
 		err      error
@@ -361,7 +286,7 @@ func (c *Connection) DoRequest(ctx context.Context, httpBody io.Reader, httpMeth
 
 	// Give the Do three chances in the case of a comm/service hiccup
 	for i := 1; i <= 3; i++ {
-		response, err = c.Client.Do(req) // nolint
+		response, err = c.Client.Do(req) //nolint:bodyclose // The caller has to close the body.
 		if err == nil {
 			break
 		}
@@ -378,7 +303,7 @@ func (c *Connection) GetDialer(ctx context.Context) (net.Conn, error) {
 		return transport.DialContext(ctx, c.URI.Scheme, c.URI.String())
 	}
 
-	return nil, errors.New("Unable to get dial context")
+	return nil, errors.New("unable to get dial context")
 }
 
 // IsInformational returns true if the response code is 1xx

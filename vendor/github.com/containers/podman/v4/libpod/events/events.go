@@ -2,16 +2,16 @@ package events
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/containers/storage/pkg/stringid"
-	"github.com/pkg/errors"
 )
 
 // ErrNoJournaldLogging indicates that there is no journald logging
 // supported (requires libsystemd)
-var ErrNoJournaldLogging = errors.New("No support for journald logging")
+var ErrNoJournaldLogging = errors.New("no support for journald logging")
 
 // String returns a string representation of EventerType
 func (et EventerType) String() string {
@@ -77,6 +77,12 @@ func (e *Event) ToHumanReadable(truncate bool) string {
 	switch e.Type {
 	case Container, Pod:
 		humanFormat = fmt.Sprintf("%s %s %s %s (image=%s, name=%s", e.Time, e.Type, e.Status, id, e.Image, e.Name)
+		if e.PodID != "" {
+			humanFormat += fmt.Sprintf(", pod_id=%s", e.PodID)
+		}
+		if e.HealthStatus != "" {
+			humanFormat += fmt.Sprintf(", health_status=%s", e.HealthStatus)
+		}
 		// check if the container has labels and add it to the output
 		if len(e.Attributes) > 0 {
 			for k, v := range e.Attributes {
@@ -140,12 +146,10 @@ func StringToType(name string) (Type, error) {
 	case "":
 		return "", ErrEventTypeBlank
 	}
-	return "", errors.Errorf("unknown event type %q", name)
+	return "", fmt.Errorf("unknown event type %q", name)
 }
 
 // StringToStatus converts a string to an Event Status
-// TODO if we add more events, we might consider a go-generator to
-// create the switch statement
 func StringToStatus(name string) (Status, error) {
 	switch name {
 	case Attach.String():
@@ -170,6 +174,8 @@ func StringToStatus(name string) (Status, error) {
 		return Exited, nil
 	case Export.String():
 		return Export, nil
+	case HealthStatus.String():
+		return HealthStatus, nil
 	case History.String():
 		return History, nil
 	case Import.String():
@@ -225,5 +231,5 @@ func StringToStatus(name string) (Status, error) {
 	case Untag.String():
 		return Untag, nil
 	}
-	return "", errors.Errorf("unknown event status %q", name)
+	return "", fmt.Errorf("unknown event status %q", name)
 }

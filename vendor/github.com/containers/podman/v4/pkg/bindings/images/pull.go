@@ -3,9 +3,9 @@ package images
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
@@ -15,7 +15,6 @@ import (
 	"github.com/containers/podman/v4/pkg/bindings"
 	"github.com/containers/podman/v4/pkg/domain/entities"
 	"github.com/containers/podman/v4/pkg/errorhandling"
-	"github.com/pkg/errors"
 )
 
 // Pull is the binding for libpod's v2 endpoints for pulling images.  Note that
@@ -36,13 +35,12 @@ func Pull(ctx context.Context, rawImage string, options *PullOptions) ([]string,
 	}
 	params.Set("reference", rawImage)
 
+	// SkipTLSVerify is special.  It's not being serialized by ToParams()
+	// because we need to flip the boolean.
 	if options.SkipTLSVerify != nil {
-		params.Del("SkipTLSVerify")
-		// Note: we have to verify if skipped is false.
 		params.Set("tlsVerify", strconv.FormatBool(!options.GetSkipTLSVerify()))
 	}
 
-	// TODO: have a global system context we can pass around (1st argument)
 	header, err := auth.MakeXRegistryAuthHeader(&types.SystemContext{AuthFilePath: options.GetAuthfile()}, options.GetUsername(), options.GetPassword())
 	if err != nil {
 		return nil, err
@@ -58,15 +56,20 @@ func Pull(ctx context.Context, rawImage string, options *PullOptions) ([]string,
 		return nil, response.Process(err)
 	}
 
-	// Historically pull writes status to stderr
-	stderr := io.Writer(os.Stderr)
+	var writer io.Writer
 	if options.GetQuiet() {
-		stderr = ioutil.Discard
+		writer = io.Discard
+	} else if progressWriter := options.GetProgressWriter(); progressWriter != nil {
+		writer = progressWriter
+	} else {
+		// Historically push writes status to stderr
+		writer = os.Stderr
 	}
 
 	dec := json.NewDecoder(response.Body)
 	var images []string
 	var pullErrors []error
+LOOP:
 	for {
 		var report entities.ImagePullReport
 		if err := dec.Decode(&report); err != nil {
@@ -78,21 +81,21 @@ func Pull(ctx context.Context, rawImage string, options *PullOptions) ([]string,
 
 		select {
 		case <-response.Request.Context().Done():
-			break
+			break LOOP
 		default:
 			// non-blocking select
 		}
 
 		switch {
 		case report.Stream != "":
-			fmt.Fprint(stderr, report.Stream)
+			fmt.Fprint(writer, report.Stream)
 		case report.Error != "":
 			pullErrors = append(pullErrors, errors.New(report.Error))
 		case len(report.Images) > 0:
 			images = report.Images
 		case report.ID != "":
 		default:
-			return images, errors.Errorf("failed to parse pull results stream, unexpected input: %v", report)
+			return images, fmt.Errorf("failed to parse pull results stream, unexpected input: %v", report)
 		}
 	}
 	return images, errorhandling.JoinErrors(pullErrors)

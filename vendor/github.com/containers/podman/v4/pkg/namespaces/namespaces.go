@@ -19,7 +19,16 @@ const (
 	privateType   = "private"
 	shareableType = "shareable"
 	slirpType     = "slirp4netns"
+	pastaType     = "pasta"
 )
+
+// KeepIDUserNsOptions defines how to keepIDmatically create a user namespace.
+type KeepIDUserNsOptions struct {
+	// UID is the target uid in the user namespace.
+	UID *uint32
+	// GID is the target uid in the user namespace.
+	GID *uint32
+}
 
 // CgroupMode represents cgroup mode in the container.
 type CgroupMode string
@@ -93,7 +102,8 @@ func (n UsernsMode) IsHost() bool {
 
 // IsKeepID indicates whether container uses a mapping where the (uid, gid) on the host is kept inside of the namespace.
 func (n UsernsMode) IsKeepID() bool {
-	return n == "keep-id"
+	parts := strings.Split(string(n), ":")
+	return parts[0] == "keep-id"
 }
 
 // IsNoMap indicates whether container uses a mapping where the (uid, gid) on the host is not present in the namespace.
@@ -112,7 +122,7 @@ func (n UsernsMode) IsDefaultValue() bool {
 	return n == "" || n == defaultType
 }
 
-// GetAutoOptions returns a AutoUserNsOptions with the settings to setup automatically
+// GetAutoOptions returns a AutoUserNsOptions with the settings to automatically set up
 // a user namespace.
 func (n UsernsMode) GetAutoOptions() (*types.AutoUserNsOptions, error) {
 	parts := strings.SplitN(string(n), ":", 2)
@@ -147,6 +157,44 @@ func (n UsernsMode) GetAutoOptions() (*types.AutoUserNsOptions, error) {
 				return nil, err
 			}
 			options.AdditionalGIDMappings = append(options.AdditionalGIDMappings, mapping.GIDMap...)
+		default:
+			return nil, fmt.Errorf("unknown option specified: %q", v[0])
+		}
+	}
+	return &options, nil
+}
+
+// GetKeepIDOptions returns a KeepIDUserNsOptions with the settings to keepIDmatically set up
+// a user namespace.
+func (n UsernsMode) GetKeepIDOptions() (*KeepIDUserNsOptions, error) {
+	parts := strings.SplitN(string(n), ":", 2)
+	if parts[0] != "keep-id" {
+		return nil, fmt.Errorf("wrong user namespace mode")
+	}
+	options := KeepIDUserNsOptions{}
+	if len(parts) == 1 {
+		return &options, nil
+	}
+	for _, o := range strings.Split(parts[1], ",") {
+		v := strings.SplitN(o, "=", 2)
+		if len(v) != 2 {
+			return nil, fmt.Errorf("invalid option specified: %q", o)
+		}
+		switch v[0] {
+		case "uid":
+			s, err := strconv.ParseUint(v[1], 10, 32)
+			if err != nil {
+				return nil, err
+			}
+			v := uint32(s)
+			options.UID = &v
+		case "gid":
+			s, err := strconv.ParseUint(v[1], 10, 32)
+			if err != nil {
+				return nil, err
+			}
+			v := uint32(s)
+			options.GID = &v
 		default:
 			return nil, fmt.Errorf("unknown option specified: %q", v[0])
 		}
@@ -393,6 +441,11 @@ func (n NetworkMode) IsSlirp4netns() bool {
 	return n == slirpType || strings.HasPrefix(string(n), slirpType+":")
 }
 
+// IsPasta indicates if we are running a rootless network stack using pasta
+func (n NetworkMode) IsPasta() bool {
+	return n == pastaType || strings.HasPrefix(string(n), pastaType+":")
+}
+
 // IsNS indicates a network namespace passed in by path (ns:<path>)
 func (n NetworkMode) IsNS() bool {
 	return strings.HasPrefix(string(n), nsType)
@@ -414,5 +467,5 @@ func (n NetworkMode) IsPod() bool {
 
 // IsUserDefined indicates user-created network
 func (n NetworkMode) IsUserDefined() bool {
-	return !n.IsDefault() && !n.IsBridge() && !n.IsHost() && !n.IsNone() && !n.IsContainer() && !n.IsSlirp4netns() && !n.IsNS()
+	return !n.IsDefault() && !n.IsBridge() && !n.IsHost() && !n.IsNone() && !n.IsContainer() && !n.IsSlirp4netns() && !n.IsPasta() && !n.IsNS()
 }
