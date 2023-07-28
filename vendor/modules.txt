@@ -644,6 +644,13 @@ github.com/imdario/mergo
 # github.com/inconshreveable/mousetrap v1.0.0
 ## explicit
 github.com/inconshreveable/mousetrap
+# github.com/itchyny/gojq v0.12.13
+## explicit; go 1.18
+github.com/itchyny/gojq
+github.com/itchyny/gojq/cli
+# github.com/itchyny/timefmt-go v0.1.5
+## explicit; go 1.17
+github.com/itchyny/timefmt-go
 # github.com/jewzaam/go-cosmosdb v0.0.0-20220315232836-282b67c5b234
 ## explicit; go 1.14
 github.com/jewzaam/go-cosmosdb/cmd/gencosmosdb
@@ -706,10 +713,10 @@ github.com/manifoldco/promptui/screenbuf
 # github.com/mattn/go-colorable v0.1.13
 ## explicit; go 1.15
 github.com/mattn/go-colorable
-# github.com/mattn/go-isatty v0.0.17
+# github.com/mattn/go-isatty v0.0.19
 ## explicit; go 1.15
 github.com/mattn/go-isatty
-# github.com/mattn/go-runewidth v0.0.13
+# github.com/mattn/go-runewidth v0.0.14
 ## explicit; go 1.9
 github.com/mattn/go-runewidth
 # github.com/mattn/go-shellwords v1.0.12
@@ -1142,8 +1149,8 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
-# github.com/rivo/uniseg v0.2.0
-## explicit; go 1.12
+# github.com/rivo/uniseg v0.4.4
+## explicit; go 1.18
 github.com/rivo/uniseg
 # github.com/robfig/cron v1.2.0
 ## explicit
