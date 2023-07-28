@@ -56,7 +56,7 @@ func ExampleOpenShiftClusterResponse() interface{} {
 	oc.Properties.NetworkProfile.LoadBalancerProfile = &LoadBalancerProfile{
 		EffectiveOutboundIPs: []EffectiveOutboundIP{
 			{
-				ID: "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup/provides/Microsoft.Network/publicIPAddresses/publicIPAddressName",
+				ID: "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/publicIPAddresses/publicIPAddressName",
 			},
 		},
 		ManagedOutboundIPs: &ManagedOutboundIPs{
