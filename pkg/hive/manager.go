@@ -282,6 +282,37 @@ func (hr *clusterManager) handleProvisionFailed(ctx context.Context, cd *hivev1.
 		}
 
 		return cloudErr
+
+	case ProvisionFailedReasonEncryptionAtHostIsNotValid:
+		latestProvision, err := hr.latestProvisionForDeployment(ctx, cd)
+		if err != nil {
+			return err
+		}
+		installLog := *latestProvision.Spec.InstallLog
+		installLog = strings.TrimSpace(installLog)
+		installLogLines := strings.Split(installLog, "\n")
+		lastLine := installLogLines[len(installLogLines)-1]
+
+		//regex := regexp.MustCompile(`"The property 'securityProfile.encryptionAtHost' is not valid"`)
+		//match := regex.FindString(installLog)
+		regex := regexp.MustCompile(`(\{.*\})`)
+		responseJson := regex.FindStringSubmatch(lastLine)[1]
+
+		response := &mgmtfeatures.ErrorResponse{}
+		if err := json.Unmarshal([]byte(responseJson), response); err != nil {
+			return err
+		}
+
+		cloudErr := &api.CloudError{
+			StatusCode: http.StatusBadRequest,
+			CloudErrorBody: &api.CloudErrorBody{
+				Code:    api.CloudErrorCodeInvalidParameter,
+				Message: "Microsoft.Compute/EncryptionAtHost feature is not enabled for this subscription.",
+			},
+		}
+
+		return cloudErr
+
 	default:
 		return &api.CloudError{
 			StatusCode: http.StatusInternalServerError,

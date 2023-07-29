@@ -344,6 +344,33 @@ func TestIsClusterInstallationComplete(t *testing.T) {
 			},
 			wantResult: false,
 		},
+		{
+			name: "has failed provisioning - EncryptionAtHostIsNotValid",
+			cd: makeClusterDeployment(
+				false,
+				hivev1.ClusterDeploymentCondition{
+					Type:   hivev1.ProvisionFailedCondition,
+					Status: corev1.ConditionTrue,
+					Reason: ProvisionFailedReasonEncryptionAtHostIsNotValid,
+				},
+			),
+			cp: makeClusterProvision(`level=info msg=running in local development mode
+			level=info msg=creating development InstanceMetadata
+			level=info msg=InstanceMetadata: running on AzurePublicCloud
+			level=info msg=running step [AuthorizationRetryingAction github.com/openshift/ARO-Installer/pkg/installer.(*manager).deployResourceTemplate-fm]
+			level=info msg=load persisted graph
+			level=info msg=deploying resources template
+			level=error msg=step [AuthorizationRetryingAction github.com/openshift/ARO-Installer/pkg/installer.(*manager).deployResourceTemplate-fm] encountered error: 400: DeploymentFailed: : Deployment failed. Details: : : {"code":"DeploymentFailed","message":"At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/arm-deployment-operations for usage details.","target":null,"details":[{"code":"BadRequest","message":"{\r\n  \"error\": {\r\n    \"code\": \"InvalidParameter\",\r\n    \"message\": \"The property 'securityProfile.encryptionAtHost' is not valid because the 'Microsoft.Compute/EncryptionAtHost' feature is not enabled for this subscription.\",\r\n    \"target\": \"securityProfile.encryptionAtHost\"\r\n  }\r\n}"},{"code":"BadRequest","message":"{\r\n  \"error\": {\r\n    \"code\": \"InvalidParameter\",\r\n    \"message\": \"The property 'securityProfile.encryptionAtHost' is not valid because the 'Microsoft.Compute/EncryptionAtHost' feature is not enabled for this subscription.\",\r\n    \"target\": \"securityProfile.encryptionAtHost\"\r\n  }\r\n}"},{"code":"BadRequest","message":"{\r\n  \"error\": {\r\n    \"code\": \"InvalidParameter\",\r\n    \"message\": \"The property 'securityProfile.encryptionAtHost' is not valid because the 'Microsoft.Compute/EncryptionAtHost' feature is not enabled for this subscription.\",\r\n    \"target\": \"securityProfile.encryptionAtHost\"\r\n  }\r\n}"},{"code":"BadRequest","message":"{\r\n  \"error\": {\r\n    \"code\": \"InvalidParameter\",\r\n    \"message\": \"The property 'securityProfile.encryptionAtHost' is not valid because the 'Microsoft.Compute/EncryptionAtHost' feature is not enabled for this subscription.\",\r\n    \"target\": \"securityProfile.encryptionAtHost\"\r\n  }\r\n}"}],"innererror":null,"additionalInfo":null}
+			level=error msg=400: DeploymentFailed: : Deployment failed. Details: : : {"code":"DeploymentFailed","message":"At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/arm-deployment-operations for usage details.","target":null,"details":[{"code":"BadRequest","message":"{\r\n  \"error\": {\r\n    \"code\": \"InvalidParameter\",\r\n    \"message\": \"The property 'securityProfile.encryptionAtHost' is not valid because the 'Microsoft.Compute/EncryptionAtHost' feature is not enabled for this subscription.\",\r\n    \"target\": \"securityProfile.encryptionAtHost\"\r\n  }\r\n}"},{"code":"BadRequest","message":"{\r\n  \"error\": {\r\n    \"code\": \"InvalidParameter\",\r\n    \"message\": \"The property 'securityProfile.encryptionAtHost' is not valid because the 'Microsoft.Compute/EncryptionAtHost' feature is not enabled for this subscription.\",\r\n    \"target\": \"securityProfile.encryptionAtHost\"\r\n  }\r\n}"},{"code":"BadRequest","message":"{\r\n  \"error\": {\r\n    \"code\": \"InvalidParameter\",\r\n    \"message\": \"The property 'securityProfile.encryptionAtHost' is not valid because the 'Microsoft.Compute/EncryptionAtHost' feature is not enabled for this subscription.\",\r\n    \"target\": \"securityProfile.encryptionAtHost\"\r\n  }\r\n}"},{"code":"BadRequest","message":"{\r\n  \"error\": {\r\n    \"code\": \"InvalidParameter\",\r\n    \"message\": \"The property 'securityProfile.encryptionAtHost' is not valid because the 'Microsoft.Compute/EncryptionAtHost' feature is not enabled for this subscription.\",\r\n    \"target\": \"securityProfile.encryptionAtHost\"\r\n  }\r\n}"}],"innererror":null,"additionalInfo":null}`),
+			wantErr: &api.CloudError{
+				StatusCode: http.StatusBadRequest,
+				CloudErrorBody: &api.CloudErrorBody{
+					Code:    api.CloudErrorCodeInvalidParameter,
+					Message: "Microsoft.Compute/EncryptionAtHost feature is not enabled for this subscription.",
+				},
+			},
+			wantResult: false,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			fakeClientBuilder := fake.NewClientBuilder()
