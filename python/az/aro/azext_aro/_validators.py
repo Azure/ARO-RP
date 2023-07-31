@@ -271,3 +271,9 @@ def validate_refresh_cluster_credentials(namespace):
 def validate_version_format(namespace):
     if namespace.version is not None and not re.match(r'^[4-9]{1}\.[0-9]{1,2}\.[0-9]{1,2}$', namespace.version):
         raise InvalidArgumentValueError('--version is invalid')
+
+
+def validate_load_balancer_managed_outbound_ip_count(namespace):
+    if namespace.load_balancer_managed_outbound_ip_count is not None:
+        if namespace.load_balancer_managed_outbound_ip_count < 1 or namespace.load_balancer_managed_outbound_ip_count > 20:  # pylint: disable=line-too-long
+            raise InvalidArgumentValueError('--load-balancer-managed-outbound-ip-count must be between 1 and 20')  # pylint: disable=line-too-long

@@ -17,6 +17,7 @@ from azext_aro._validators import validate_worker_vm_disk_size_gb
 from azext_aro._validators import validate_refresh_cluster_credentials
 from azext_aro._validators import validate_version_format
 from azext_aro._validators import validate_outbound_type
+from azext_aro._validators import validate_load_balancer_managed_outbound_ip_count
 from azure.cli.core.commands.parameters import name_type
 from azure.cli.core.commands.parameters import get_enum_type, get_three_state_flag
 from azure.cli.core.commands.parameters import resource_group_name_type
@@ -122,6 +123,11 @@ def load_arguments(self, _):
                    help='Refresh cluster application credentials.',
                    options_list=['--refresh-credentials'],
                    validator=validate_refresh_cluster_credentials)
+        c.argument('load_balancer_managed_outbound_ip_count',
+                   type=int,
+                   help='Count of ARO-managed public IP addresses to attach to the public load balancer',
+                   validator=validate_load_balancer_managed_outbound_ip_count,
+                   options_list=['--load-balancer-managed-outbound-ip-count', '--lb-ip-count'])
     with self.argument_context('aro get-admin-kubeconfig') as c:
         c.argument('file',
                    help='Path to the file where kubeconfig should be saved. Default: kubeconfig in local directory',
