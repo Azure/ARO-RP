@@ -277,4 +277,4 @@ def validate_version_format(namespace):
 def validate_load_balancer_managed_outbound_ip_count(namespace):
     if namespace.load_balancer_managed_outbound_ip_count is not None:
         if namespace.load_balancer_managed_outbound_ip_count < 1 or namespace.load_balancer_managed_outbound_ip_count > 20:  # pylint: disable=line-too-long
-            raise InvalidArgumentValueError('--load-balancer-managed-outbound-ip-count must be between 1 and 20')  # pylint: disable=line-too-long
+            raise InvalidArgumentValueError('--load-balancer-managed-outbound-ip-count must be between 1 and 20 (inclusive).')  # pylint: disable=line-too-long

@@ -128,7 +128,7 @@ def load_arguments(self, _):
                    validator=validate_refresh_cluster_credentials)
         c.argument('load_balancer_managed_outbound_ip_count',
                    type=int,
-                   help='Count of ARO-managed public IP addresses to attach to the public load balancer',
+                   help='The desired number of IPv4 outbound IPs created and managed by Azure for the cluster public load balancer.',  # pylint: disable=line-too-long
                    validator=validate_load_balancer_managed_outbound_ip_count,
                    options_list=['--load-balancer-managed-outbound-ip-count', '--lb-ip-count'])
     with self.argument_context('aro get-admin-kubeconfig') as c:
