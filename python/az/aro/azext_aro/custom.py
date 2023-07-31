@@ -401,6 +401,7 @@ def aro_update(cmd,
                refresh_cluster_credentials=False,
                client_id=None,
                client_secret=None,
+               load_balancer_managed_outbound_ip_count=None,
                no_wait=False):
     # if we can't read cluster spec, we will not be able to do much. Fail.
     oc = client.open_shift_clusters.get(resource_group_name, resource_name)
@@ -418,6 +419,12 @@ def aro_update(cmd,
 
         if client_id is not None:
             ocUpdate.service_principal_profile.client_id = client_id
+
+    if load_balancer_managed_outbound_ip_count is not None:
+        ocUpdate.network_profile = openshiftcluster.NetworkProfile()
+        ocUpdate.network_profile.load_balancer_profile = openshiftcluster.LoadBalancerProfile()
+        ocUpdate.network_profile.load_balancer_profile.managed_outbound_ips = openshiftcluster.ManagedOutboundIPs()
+        ocUpdate.network_profile.load_balancer_profile.managed_outbound_ips.count = load_balancer_managed_outbound_ip_count  # pylint: disable=line-too-long
 
     return sdk_no_wait(no_wait, client.open_shift_clusters.begin_update,
                        resource_group_name=resource_group_name,
