@@ -328,7 +328,8 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 
 				r.Get("/skus", f.getAdminOpenShiftClusterVMResizeOptions)
 
-				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/resize", f.postAdminOpenShiftClusterVMResize)
+				// We don't emit unplanned maintenance signal for resize since it is only used for planned maintenance
+				r.Post("/resize", f.postAdminOpenShiftClusterVMResize)
 
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/reconcilefailednic", f.postAdminReconcileFailedNIC)
 
