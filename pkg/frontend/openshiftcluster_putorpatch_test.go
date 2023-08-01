@@ -655,7 +655,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, nil, apis, &noop.Noop{}, nil, nil, nil, nil, ti.enricher)
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, nil, apis, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, ti.enricher)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1697,7 +1697,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, ti.openShiftVersionsDatabase, apis, &noop.Noop{}, nil, nil, nil, nil, ti.enricher)
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, ti.openShiftVersionsDatabase, apis, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, ti.enricher)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -2020,7 +2020,7 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, ti.openShiftVersionsDatabase, api.APIs, &noop.Noop{}, nil, nil, nil, nil, ti.enricher)
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, ti.openShiftVersionsDatabase, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, ti.enricher)
 			if err != nil {
 				t.Fatal(err)
 			}
