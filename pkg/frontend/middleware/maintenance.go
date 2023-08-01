@@ -1,5 +1,15 @@
 package middleware
 
+import (
+	"context"
+	"net/http"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/Azure/ARO-RP/pkg/metrics"
+)
+
 type MaintenanceMiddleware struct {
 	metrics.Emitter
 }
