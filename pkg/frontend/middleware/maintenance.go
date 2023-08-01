@@ -32,8 +32,7 @@ func (mm MaintenanceMiddleware) UnplannedMaintenanceSignal(h http.Handler) http.
 				select {
 				case <-ctx.Done():
 					return
-				default:
-					time.Sleep(1 * time.Minute)
+				case <-time.After(time.Minute):
 					mm.emitMaintenanceSignal("unplanned", resourceID)
 				}
 			}
