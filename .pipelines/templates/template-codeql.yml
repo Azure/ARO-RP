@@ -19,6 +19,8 @@ parameters:
   default: host
 - name: github_token
   type: string
+- name: codeqlcommand
+  type: string
 
 # Based on "Use CodeQL in CI system" documentation:
 # https://docs.github.com/en/code-security/code-scanning/using-codeql-code-scanning-with-your-existing-ci-system/about-codeql-code-scanning-in-your-ci-system
@@ -27,7 +29,7 @@ steps:
     set -xe
     sarif_file=codeql-results-${{ parameters.language }}.sarif
     wget --quiet --output-document=- https://github.com/github/codeql-action/releases/latest/download/codeql-bundle-linux64.tar.gz | tar --extract --gunzip
-    ./codeql/codeql database create ./codeql-db --language=${{ parameters.language }} --command=${{ parameters.command }}
+    ./codeql/codeql database create ./codeql-db --language=${{ parameters.language }} --command=${{ parameters.codeqlcommand }}
     ./codeql/codeql database analyze ./codeql-db --format=sarif-latest --sarif-category=no --output=${sarif_file} --threads=0
     ./codeql/codeql github upload-results --sarif=${sarif_file} --ref=$(Build.SourceBranch)
   env:
