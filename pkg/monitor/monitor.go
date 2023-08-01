@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	msgraph "github.com/microsoftgraph/msgraph-sdk-go"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/rest"
 
@@ -48,13 +49,14 @@ type monitor struct {
 	liveConfig       liveconfig.Manager
 	hiveShardConfigs map[int]*rest.Config
 	shardMutex       sync.RWMutex
+	spGraphClient    *msgraph.GraphServiceClient
 }
 
 type Runnable interface {
 	Run(context.Context) error
 }
 
-func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Monitors, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, m, clusterm metrics.Emitter, liveConfig liveconfig.Manager) Runnable {
+func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Monitors, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, m, clusterm metrics.Emitter, liveConfig liveconfig.Manager, spGraphClient *msgraph.GraphServiceClient) Runnable {
 	return &monitor{
 		baseLog: log,
 		dialer:  dialer,
@@ -76,6 +78,7 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Moni
 		liveConfig: liveConfig,
 
 		hiveShardConfigs: map[int]*rest.Config{},
+		spGraphClient:    spGraphClient,
 	}
 }
 

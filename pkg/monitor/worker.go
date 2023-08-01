@@ -246,7 +246,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 		log.Warnf("no hiveShardConfigs set for shard %d", shard)
 	}
 
-	c, err := cluster.NewMonitor(log, restConfig, doc.OpenShiftCluster, mon.clusterm, hiveRestConfig, hourlyRun)
+	c, err := cluster.NewMonitor(log, restConfig, doc.OpenShiftCluster, mon.clusterm, hiveRestConfig, hourlyRun, mon.spGraphClient)
 	if err != nil {
 		log.Error(err)
 		return

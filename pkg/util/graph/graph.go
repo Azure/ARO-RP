@@ -6,8 +6,11 @@ package graph
 import (
 	"context"
 	"fmt"
+	"time"
 
 	msgraph "github.com/microsoftgraph/msgraph-sdk-go"
+	msgraph_aps "github.com/microsoftgraph/msgraph-sdk-go/applications"
+	"github.com/microsoftgraph/msgraph-sdk-go/models"
 	msgraph_sps "github.com/microsoftgraph/msgraph-sdk-go/serviceprincipals"
 )
 
@@ -36,5 +39,39 @@ func GetServicePrincipalIDByAppID(ctx context.Context, graph *msgraph.GraphServi
 	// per application.  This is just to gracefully handle the impossible happening.
 	default:
 		return nil, fmt.Errorf("%d service principals have appId '%s'", len(matches), appId)
+	}
+}
+
+// GetServicePrincipalExpiryByAppID returns a service principal's expiry date from
+// an application (client) ID.
+func GetServicePrincipalExpiryByAppID(ctx context.Context, graph *msgraph.GraphServiceClient, appId string) (*time.Time, error) {
+	filter := fmt.Sprintf("appId eq '%s'", appId)
+	requestConfiguration := &msgraph_aps.ApplicationsRequestBuilderGetRequestConfiguration{
+		QueryParameters: &msgraph_aps.ApplicationsRequestBuilderGetQueryParameters{
+			Filter: &filter,
+			Select: []string{"passwordCredentials"},
+		},
+	}
+
+	result, err := graph.Applications().Get(ctx, requestConfiguration)
+	if err != nil {
+		return nil, err
+	}
+
+	var endDateTime *time.Time
+	matches := result.GetValue()
+
+	for _, element := range matches[0].GetPasswordCredentials() {
+		e := element.(*models.PasswordCredential)
+		endDateTime = e.GetEndDateTime()
+	}
+
+	switch len(matches) {
+	case 0:
+		return nil, nil
+	case 1:
+		return endDateTime, nil
+	default:
+		return nil, fmt.Errorf("%d SP expiry dates for appId '%s'", len(matches), appId)
 	}
 }

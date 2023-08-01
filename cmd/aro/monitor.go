@@ -7,6 +7,7 @@ import (
 	"context"
 	"os"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/tracing"
 	"github.com/sirupsen/logrus"
 	kmetrics "k8s.io/client-go/tools/metrics"
@@ -126,7 +127,18 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), dialer, dbMonitors, dbOpenShiftClusters, dbSubscriptions, m, clusterm, liveConfig)
+	options := _env.Environment().EnvironmentCredentialOptions()
+	spTokenCredential, err := azidentity.NewEnvironmentCredential(options)
+	if err != nil {
+		return err
+	}
+
+	spGraphClient, err := _env.Environment().NewGraphServiceClient(spTokenCredential)
+
+	if err != nil {
+		return err
+	}
+	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), dialer, dbMonitors, dbOpenShiftClusters, dbSubscriptions, m, clusterm, liveConfig, spGraphClient)
 
 	return mon.Run(ctx)
 }

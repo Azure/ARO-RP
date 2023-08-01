@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	msgraph "github.com/microsoftgraph/msgraph-sdk-go"
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
@@ -42,6 +43,7 @@ type Monitor struct {
 	arocli     aroclient.Interface
 
 	hiveclientset client.Client
+	spGraphClient *msgraph.GraphServiceClient
 
 	// access below only via the helper functions in cache.go
 	cache struct {
@@ -53,7 +55,7 @@ type Monitor struct {
 	}
 }
 
-func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, m metrics.Emitter, hiveRestConfig *rest.Config, hourlyRun bool) (*Monitor, error) {
+func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, m metrics.Emitter, hiveRestConfig *rest.Config, hourlyRun bool, spGraphClient *msgraph.GraphServiceClient) (*Monitor, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err
@@ -111,6 +113,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		arocli:        arocli,
 		m:             m,
 		hiveclientset: hiveclientset,
+		spGraphClient: spGraphClient,
 	}, nil
 }
 
@@ -175,6 +178,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitHiveRegistrationStatus,
 		mon.emitOperatorFlagsAndSupportBanner,
 		mon.emitPucmState,
+		mon.emitSpExpiration,
 		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable
 	} {
 		err = f(ctx)
