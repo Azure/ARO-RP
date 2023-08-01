@@ -51,8 +51,9 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			certsPresent: []certInfo{{"cluster", "geneva.certificate"}},
 			wantExpirations: []map[string]string{
 				{
-					"subject":        "geneva.certificate",
-					"expirationDate": expirationString,
+					"subject":             "geneva.certificate",
+					"expirationDate":      expirationString,
+					"daysUntilExpiration": "5",
 				},
 			},
 		},
@@ -66,16 +67,19 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			},
 			wantExpirations: []map[string]string{
 				{
-					"subject":        "geneva.certificate",
-					"expirationDate": expirationString,
+					"subject":             "geneva.certificate",
+					"expirationDate":      expirationString,
+					"daysUntilExpiration": "5",
 				},
 				{
-					"subject":        "contoso.aroapp.io",
-					"expirationDate": expirationString,
+					"subject":             "contoso.aroapp.io",
+					"expirationDate":      expirationString,
+					"daysUntilExpiration": "5",
 				},
 				{
-					"subject":        "api.contoso.aroapp.io",
-					"expirationDate": expirationString,
+					"subject":             "api.contoso.aroapp.io",
+					"expirationDate":      expirationString,
+					"daysUntilExpiration": "5",
 				},
 			},
 		},
@@ -98,12 +102,14 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			},
 			wantExpirations: []map[string]string{
 				{
-					"subject":        "geneva.certificate",
-					"expirationDate": expirationString,
+					"subject":             "geneva.certificate",
+					"expirationDate":      expirationString,
+					"daysUntilExpiration": "5",
 				},
 				{
-					"subject":        "contoso.aroapp.io",
-					"expirationDate": expirationString,
+					"subject":             "contoso.aroapp.io",
+					"expirationDate":      expirationString,
+					"daysUntilExpiration": "5",
 				},
 			},
 			wantWarning: []map[string]string{
