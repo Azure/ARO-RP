@@ -56,6 +56,7 @@ jobs:
         language: go
         target: golang
         github_token: $(github_codeql_upload_token)
+        command: "go build ./cmd/aro"
   timeoutInMinutes: 120
 
 - job: Python_Unit_Tests
