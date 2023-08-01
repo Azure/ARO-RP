@@ -8,7 +8,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/util/subnet"
+	api_subnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
@@ -16,7 +16,7 @@ import (
 func (m *manager) clusterNSG(infraID, location string) *arm.Resource {
 	nsg := &mgmtnetwork.SecurityGroup{
 		SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{},
-		Name:                          to.StringPtr(infraID + subnet.NSGSuffixV2),
+		Name:                          to.StringPtr(infraID + api_subnet.NSGSuffixV2),
 		Type:                          to.StringPtr("Microsoft.Network/networkSecurityGroups"),
 		Location:                      &location,
 	}
