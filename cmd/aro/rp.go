@@ -55,6 +55,8 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		keys = []string{
 			"ACR_RESOURCE_ID",
 			"ADMIN_API_CLIENT_CERT_COMMON_NAME",
+			"CLUSTER_MDM_ACCOUNT",
+			"CLUSTER_MDM_NAMESPACE",
 			"MDM_ACCOUNT",
 			"MDM_NAMESPACE",
 		}
