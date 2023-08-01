@@ -13,7 +13,7 @@ import (
 	"github.com/apparentlymart/go-cidr/cidr"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	api_subnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
+	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 )
@@ -49,7 +49,7 @@ func (m *manager) Get(ctx context.Context, subnetID string) (*mgmtnetwork.Subnet
 }
 
 func (m *manager) get(ctx context.Context, subnetID, expand string) (*mgmtnetwork.Subnet, error) {
-	vnetID, subnetName, err := api_subnet.Split(subnetID)
+	vnetID, subnetName, err := apisubnet.Split(subnetID)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (m *manager) GetHighestFreeIP(ctx context.Context, subnetID string) (string
 
 // CreateOrUpdate updates the linked subnet
 func (m *manager) CreateOrUpdate(ctx context.Context, subnetID string, subnet *mgmtnetwork.Subnet) error {
-	vnetID, subnetName, err := api_subnet.Split(subnetID)
+	vnetID, subnetName, err := apisubnet.Split(subnetID)
 	if err != nil {
 		return err
 	}

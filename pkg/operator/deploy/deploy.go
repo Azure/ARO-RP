@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	api_subnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
+	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/env"
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -187,7 +187,7 @@ func (o *operator) resources() ([]kruntime.Object, error) {
 		return nil, err
 	}
 
-	vnetID, _, err := api_subnet.Split(o.oc.Properties.MasterProfile.SubnetID)
+	vnetID, _, err := apisubnet.Split(o.oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return nil, err
 	}

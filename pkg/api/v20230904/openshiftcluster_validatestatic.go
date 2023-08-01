@@ -13,7 +13,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	api_subnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
+	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/util/immutable"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
@@ -284,11 +284,11 @@ func (sv openShiftClusterStaticValidator) validateWorkerProfile(path string, wp 
 	default:
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".encryptionAtHost", "The provided value '%s' is invalid.", wp.EncryptionAtHost)
 	}
-	workerVnetID, _, err := api_subnet.Split(wp.SubnetID)
+	workerVnetID, _, err := apisubnet.Split(wp.SubnetID)
 	if err != nil {
 		return err
 	}
-	masterVnetID, _, err := api_subnet.Split(mp.SubnetID)
+	masterVnetID, _, err := apisubnet.Split(mp.SubnetID)
 	if err != nil {
 		return err
 	}

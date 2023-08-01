@@ -27,7 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 
-	api_subnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
+	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	imageController "github.com/Azure/ARO-RP/pkg/operator/controllers/imageconfig"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
@@ -308,9 +308,9 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		location = *oc.Location
 
-		vnet, masterSubnet, err := api_subnet.Split(*oc.OpenShiftClusterProperties.MasterProfile.SubnetID)
+		vnet, masterSubnet, err := apisubnet.Split(*oc.OpenShiftClusterProperties.MasterProfile.SubnetID)
 		Expect(err).NotTo(HaveOccurred())
-		_, workerSubnet, err := api_subnet.Split((*(*oc.OpenShiftClusterProperties.WorkerProfiles)[0].SubnetID))
+		_, workerSubnet, err := apisubnet.Split((*(*oc.OpenShiftClusterProperties.WorkerProfiles)[0].SubnetID))
 		Expect(err).NotTo(HaveOccurred())
 
 		subnetsToReconcile = map[string]*string{

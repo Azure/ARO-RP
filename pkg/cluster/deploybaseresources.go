@@ -19,7 +19,7 @@ import (
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	api_subnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
+	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -195,7 +195,7 @@ func (m *manager) attachNSGs(ctx context.Context) error {
 			s.SubnetPropertiesFormat = &mgmtnetwork.SubnetPropertiesFormat{}
 		}
 
-		nsgID, err := api_subnet.NetworkSecurityGroupID(m.doc.OpenShiftCluster, subnetID)
+		nsgID, err := apisubnet.NetworkSecurityGroupID(m.doc.OpenShiftCluster, subnetID)
 		if err != nil {
 			return err
 		}
