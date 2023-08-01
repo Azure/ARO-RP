@@ -68,9 +68,10 @@ func validOpenShiftCluster(name, location string) *OpenShiftCluster {
 		Properties: OpenShiftClusterProperties{
 			ProvisioningState: ProvisioningStateSucceeded,
 			ClusterProfile: ClusterProfile{
-				PullSecret: `{"auths":{"registry.connect.redhat.com":{"auth":""},"registry.redhat.io":{"auth":""}}}`,
-				Domain:     "cluster.location.aroapp.io",
-				Version:    "4.99.99", ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", subscriptionID),
+				PullSecret:           `{"auths":{"registry.connect.redhat.com":{"auth":""},"registry.redhat.io":{"auth":""}}}`,
+				Domain:               "cluster.location.aroapp.io",
+				Version:              "4.99.99",
+				ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", subscriptionID),
 				FipsValidatedModules: FipsValidatedModulesDisabled,
 			},
 			ConsoleProfile: ConsoleProfile{
