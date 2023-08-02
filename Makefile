@@ -88,7 +88,7 @@ discoverycache:
 	$(MAKE) generate
 
 generate:
-	go generate ./...
+	hack/ci-utils/go_generate.sh
 
 generate-guardrails:
 	cd pkg/operator/controllers/guardrails/policies && ./scripts/generate.sh > /dev/null
