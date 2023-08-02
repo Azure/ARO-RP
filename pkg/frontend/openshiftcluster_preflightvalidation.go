@@ -55,6 +55,7 @@ func (f *frontend) preflightValidation(w http.ResponseWriter, r *http.Request) {
 			res := f._preflightValidation(ctx, log, raw, typeMeta.APIVersion, typeMeta.Id)
 			if res.Status == api.ValidationStatusFailed {
 				log.Warningf("preflight validation failed")
+				log.Warningf(to.String(res.Error.Message))
 				b = marshalValidationResult(res)
 				reply(log, w, header, b, statusCodeError(http.StatusOK))
 				return
