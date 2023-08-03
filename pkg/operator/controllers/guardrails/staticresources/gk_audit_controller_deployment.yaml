@@ -100,8 +100,8 @@ spec:
             - ALL
           readOnlyRootFilesystem: true
           runAsNonRoot: true
-          seccompProfile:
-            type: RuntimeDefault
+          # seccompProfile:
+          #   type: RuntimeDefault
         volumeMounts:
         - mountPath: /certs
           name: cert
