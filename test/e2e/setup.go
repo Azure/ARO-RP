@@ -193,7 +193,7 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 	}
 
 	if err := wd.Get(host + "/healthz/ready"); err != nil {
-		log.Infof("Could not get to %s. With error : %s", host, err.Error())
+		log.Infof("Could not get to %s. With sessionID : %s. With error : %s", host, wd.SessionID(), err.Error())
 	}
 
 	var portalAuthCmd string
