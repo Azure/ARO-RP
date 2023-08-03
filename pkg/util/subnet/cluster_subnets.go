@@ -15,6 +15,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	machineSetsNamespace = "openshift-machine-api"
+)
+
 // KubeManager interface interact with kubernetes layer to extract required information
 type KubeManager interface {
 	List(ctx context.Context) ([]Subnet, error)
