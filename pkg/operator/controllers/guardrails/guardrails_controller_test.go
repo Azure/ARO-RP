@@ -68,6 +68,7 @@ func TestGuardRailsReconciler(t *testing.T) {
 					ValidatingWebhookFailurePolicy: "Ignore",
 					MutatingWebhookTimeout:         "1",
 					MutatingWebhookFailurePolicy:   "Ignore",
+					RoleSCCResourceName:            "restricted-v2",
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
 				md.EXPECT().IsReady(gomock.Any(), "gatekeeper-system", "gatekeeper-audit").Return(true, nil)
@@ -97,6 +98,7 @@ func TestGuardRailsReconciler(t *testing.T) {
 					ValidatingWebhookFailurePolicy: "Ignore",
 					MutatingWebhookTimeout:         "1",
 					MutatingWebhookFailurePolicy:   "Ignore",
+					RoleSCCResourceName:            "restricted-v2",
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
 				md.EXPECT().IsReady(gomock.Any(), "gatekeeper-system", "gatekeeper-audit").Return(true, nil)
@@ -127,6 +129,7 @@ func TestGuardRailsReconciler(t *testing.T) {
 					ValidatingWebhookFailurePolicy: "Ignore",
 					MutatingWebhookTimeout:         "1",
 					MutatingWebhookFailurePolicy:   "Ignore",
+					RoleSCCResourceName:            "restricted-v2",
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
 				md.EXPECT().IsReady(gomock.Any(), "gatekeeper-system", "gatekeeper-audit").Return(true, nil)
