@@ -18,7 +18,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	checkercommon "github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/common"
@@ -133,12 +132,12 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	builder := ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
 		Watches(
-			&source.Kind{Type: &operatorv1.IngressController{}},
+			&operatorv1.IngressController{},
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(defaultIngressControllerPredicate),
 		).
 		Watches(
-			&source.Kind{Type: &configv1.ClusterVersion{}},
+			&configv1.ClusterVersion{},
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(clusterVersionPredicate),
 		)
