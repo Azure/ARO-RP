@@ -145,6 +145,8 @@ linters-settings:
         alias: gofrsuuid
       - pkg: github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/common
         alias: checkercommon
+      - pkg: github.com/Azure/ARO-RP/pkg/api/util/subnet
+        alias: apisubnet
 
       - pkg: "^github\\.com/Azure/ARO-RP/pkg/api/(v[^/]*[0-9])$"
         alias: $1
