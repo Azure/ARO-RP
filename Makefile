@@ -60,7 +60,9 @@ runlocal-rp:
 
 az: pyenv
 	. pyenv/bin/activate && \
-	cd python/az/aro && \
+	cd pyenv/bin && \
+	pip install wheel && \
+	cd ../../python/az/aro && \
 	python3 ./setup.py bdist_egg && \
 	python3 ./setup.py bdist_wheel || true && \
 	rm -f ~/.azure/commandIndex.json # https://github.com/Azure/azure-cli/issues/14997
