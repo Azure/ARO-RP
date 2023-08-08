@@ -6,7 +6,6 @@ package mock_deployer
 
 import (
 	context "context"
-	fs "io/fs"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -97,16 +96,16 @@ func (mr *MockDeployerMockRecorder) Remove(arg0, arg1 interface{}) *gomock.Call 
 }
 
 // Template mocks base method.
-func (m *MockDeployer) Template(arg0 interface{}, arg1 fs.FS) ([]runtime.Object, error) {
+func (m *MockDeployer) Template(arg0 interface{}) ([]runtime.Object, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Template", arg0, arg1)
+	ret := m.ctrl.Call(m, "Template", arg0)
 	ret0, _ := ret[0].([]runtime.Object)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Template indicates an expected call of Template.
-func (mr *MockDeployerMockRecorder) Template(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockDeployerMockRecorder) Template(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*MockDeployer)(nil).Template), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*MockDeployer)(nil).Template), arg0)
 }

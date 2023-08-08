@@ -12,7 +12,6 @@ import (
 	"io"
 	"io/fs"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"text/template"
 
@@ -21,7 +20,6 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
@@ -32,29 +30,26 @@ type Deployer interface {
 	CreateOrUpdate(context.Context, *arov1alpha1.Cluster, interface{}) error
 	Remove(context.Context, interface{}) error
 	IsReady(context.Context, string, string) (bool, error)
-	Template(interface{}, fs.FS) ([]kruntime.Object, error)
-	IsConstraintTemplateReady(context.Context, interface{}) (bool, error)
+	Template(interface{}) ([]kruntime.Object, error)
 }
 
 type deployer struct {
-	client    client.Client
 	dh        dynamichelper.Interface
 	fs        fs.FS
 	directory string
 }
 
-func NewDeployer(client client.Client, dh dynamichelper.Interface, fs fs.FS, directory string) Deployer {
+func NewDeployer(dh dynamichelper.Interface, fs fs.FS, directory string) Deployer {
 	return &deployer{
-		client:    client,
 		dh:        dh,
 		fs:        fs,
 		directory: directory,
 	}
 }
 
-func (depl *deployer) Template(data interface{}, fsys fs.FS) ([]kruntime.Object, error) {
+func (depl *deployer) Template(data interface{}) ([]kruntime.Object, error) {
 	results := make([]kruntime.Object, 0)
-	template, err := template.ParseFS(fsys, filepath.Join(depl.directory, "*"))
+	template, err := template.ParseFS(depl.fs, filepath.Join(depl.directory, "*"))
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +77,7 @@ func (depl *deployer) Template(data interface{}, fsys fs.FS) ([]kruntime.Object,
 }
 
 func (depl *deployer) CreateOrUpdate(ctx context.Context, cluster *arov1alpha1.Cluster, config interface{}) error {
-	resources, err := depl.Template(config, depl.fs)
+	resources, err := depl.Template(config)
 	if err != nil {
 		return err
 	}
@@ -101,28 +96,18 @@ func (depl *deployer) CreateOrUpdate(ctx context.Context, cluster *arov1alpha1.C
 }
 
 func (depl *deployer) Remove(ctx context.Context, data interface{}) error {
-	resources, err := depl.Template(data, depl.fs)
+	resources, err := depl.Template(data)
 	if err != nil {
 		return err
 	}
 
 	var errs []error
-	namespaceName := ""
 	for _, obj := range resources {
-		nsName, err := depl.removeOne(ctx, obj)
+		err := depl.dh.EnsureObjectDeleted(ctx, obj)
+
 		if err != nil {
 			errs = append(errs, err)
 			continue
-		}
-		if nsName != "" {
-			namespaceName = nsName
-		}
-	}
-	if namespaceName != "" {
-		// remove the namespace
-		err := depl.dh.EnsureDeleted(ctx, "Namespace", "", namespaceName)
-		if err != nil {
-			errs = append(errs, err)
 		}
 	}
 
@@ -137,50 +122,9 @@ func (depl *deployer) Remove(ctx context.Context, data interface{}) error {
 	return nil
 }
 
-func (depl *deployer) removeOne(ctx context.Context, obj kruntime.Object) (string, error) {
-	// remove everything we created that has name and ns
-	nameValue, err := getField(obj, "Name")
-	if err != nil {
-		return "", err
-	}
-	nsValue, err := getField(obj, "Namespace")
-	if err != nil {
-		return "", err
-	}
-	name := nameValue.String()
-	ns := nsValue.String()
-	if obj.GetObjectKind().GroupVersionKind().GroupKind().String() == "Namespace" {
-		// don't delete the namespace for now
-		return name, nil
-	}
-	errDelete := depl.dh.EnsureDeletedGVR(ctx, obj.GetObjectKind().GroupVersionKind().GroupKind().String(), ns, name, "")
-	if errDelete != nil {
-		return "", errDelete
-	}
-	return "", nil
-}
-
-func getField(obj interface{}, fieldName string) (reflect.Value, error) {
-	if fieldName == "" {
-		return reflect.Value{}, errors.New("empty field name")
-	}
-	if reflect.TypeOf(obj).Kind() != reflect.Ptr {
-		return reflect.Value{}, errors.New("obj not ptr")
-	}
-	elem := reflect.ValueOf(obj).Elem()
-	if elem.Kind() != reflect.Struct {
-		return reflect.Value{}, errors.New("obj not pointing to struct")
-	}
-	field := elem.FieldByName(fieldName)
-	if !field.IsValid() {
-		return reflect.Value{}, errors.New("not found field: " + fieldName)
-	}
-	return field, nil
-}
-
 func (depl *deployer) IsReady(ctx context.Context, namespace, deploymentName string) (bool, error) {
 	d := &appsv1.Deployment{}
-	err := depl.client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: deploymentName}, d)
+	err := depl.dh.GetOne(ctx, types.NamespacedName{Namespace: namespace, Name: deploymentName}, d)
 	switch {
 	case kerrors.IsNotFound(err):
 		return false, nil
@@ -189,24 +133,4 @@ func (depl *deployer) IsReady(ctx context.Context, namespace, deploymentName str
 	}
 
 	return ready.DeploymentIsReady(d), nil
-}
-
-func (depl *deployer) IsConstraintTemplateReady(ctx context.Context, config interface{}) (bool, error) {
-	resources, err := depl.Template(config, depl.fs)
-	if err != nil {
-		return false, err
-	}
-	for _, resource := range resources {
-		if reflect.TypeOf(resource).String() == "*v1.ConstraintTemplate" {
-			name, err := getField(resource, "Name")
-			if err != nil {
-				return false, err
-			}
-			ready, err := depl.dh.IsConstraintTemplateReady(ctx, name.String())
-			if !ready || err != nil {
-				return ready, err
-			}
-		}
-	}
-	return true, nil
 }
