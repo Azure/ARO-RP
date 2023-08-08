@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
+	"github.com/go-test/deep"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/sirupsen/logrus"
@@ -19,9 +19,11 @@ import (
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
+	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	"github.com/Azure/ARO-RP/test/util/kubetest"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestMachineConfigReconciler(t *testing.T) {
@@ -30,24 +32,25 @@ func TestMachineConfigReconciler(t *testing.T) {
 	defaultProgressing := utilconditions.ControllerDefaultProgressing(MachineConfigControllerName)
 	defaultDegraded := utilconditions.ControllerDefaultDegraded(MachineConfigControllerName)
 	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
-	fakeDh := func(controller *gomock.Controller) *mock_dynamichelper.MockInterface {
-		return mock_dynamichelper.NewMockInterface(controller)
-	}
 
 	tests := []struct {
 		name           string
 		objects        []client.Object
-		mocks          func(mdh *mock_dynamichelper.MockInterface)
 		request        ctrl.Request
 		wantErrMsg     string
 		wantConditions []operatorv1.OperatorCondition
+		wantCreated    map[string]int
+		wantUpdated    map[string]int
+		wantDeleted    map[string]int
 	}{
 		{
-			name:       "no cluster",
-			objects:    []client.Object{},
-			mocks:      func(mdh *mock_dynamichelper.MockInterface) {},
-			request:    ctrl.Request{},
-			wantErrMsg: "clusters.aro.openshift.io \"cluster\" not found",
+			name:        "no cluster",
+			objects:     []client.Object{},
+			request:     ctrl.Request{},
+			wantErrMsg:  "clusters.aro.openshift.io \"cluster\" not found",
+			wantCreated: map[string]int{},
+			wantUpdated: map[string]int{},
+			wantDeleted: map[string]int{},
 		},
 		{
 			name: "controller disabled",
@@ -64,10 +67,12 @@ func TestMachineConfigReconciler(t *testing.T) {
 					},
 				},
 			},
-			mocks:          func(mdh *mock_dynamichelper.MockInterface) {},
 			request:        ctrl.Request{},
 			wantErrMsg:     "",
 			wantConditions: defaultConditions,
+			wantCreated:    map[string]int{},
+			wantUpdated:    map[string]int{},
+			wantDeleted:    map[string]int{},
 		},
 		{
 			name: "no MachineConfigPool for MachineConfig does nothing",
@@ -92,7 +97,6 @@ func TestMachineConfigReconciler(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {},
 			request: ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: "",
@@ -101,6 +105,9 @@ func TestMachineConfigReconciler(t *testing.T) {
 			},
 			wantErrMsg:     "",
 			wantConditions: defaultConditions,
+			wantCreated:    map[string]int{},
+			wantUpdated:    map[string]int{},
+			wantDeleted:    map[string]int{},
 		},
 		{
 			name: "valid MachineConfigPool for MachineConfig reconciles MachineConfig",
@@ -122,9 +129,6 @@ func TestMachineConfigReconciler(t *testing.T) {
 					Spec:       mcv1.MachineConfigPoolSpec{},
 				},
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.AssignableToTypeOf(&mcv1.MachineConfig{})).Times(1)
-			},
 			request: ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: "",
@@ -133,30 +137,51 @@ func TestMachineConfigReconciler(t *testing.T) {
 			},
 			wantErrMsg:     "",
 			wantConditions: defaultConditions,
+			wantCreated: map[string]int{
+				"MachineConfig//99-custom-aro-dns": 1,
+			},
+			wantUpdated: map[string]int{},
+			wantDeleted: map[string]int{},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
+			_, log := testlog.New()
 
-			client := ctrlfake.NewClientBuilder().
+			clientFake := ctrlfake.NewClientBuilder().
 				WithObjects(tt.objects...).
 				Build()
-			dh := fakeDh(controller)
-			tt.mocks(dh)
+
+			deployedObjects := make(map[string]int)
+			deletedObjects := map[string]int{}
+			updatedObjects := map[string]int{}
+			wrappedClient := kubetest.NewRedirectingClient(clientFake).
+				WithCreateHook(kubetest.TallyCountsAndKey(deployedObjects)).
+				WithDeleteHook(kubetest.TallyCounts(deletedObjects)).
+				WithUpdateHook(kubetest.TallyCounts(updatedObjects))
+
+			dh := dynamichelper.NewWithClient(log, wrappedClient)
 
 			r := NewMachineConfigReconciler(
 				logrus.NewEntry(logrus.StandardLogger()),
-				client,
+				clientFake,
 				dh,
 			)
 			ctx := context.Background()
 			_, err := r.Reconcile(ctx, tt.request)
 
+			for _, v := range deep.Equal(deployedObjects, tt.wantCreated) {
+				t.Errorf("created does not match: %s", v)
+			}
+			for _, v := range deep.Equal(deletedObjects, tt.wantDeleted) {
+				t.Errorf("deleted does not match: %s", v)
+			}
+			for _, v := range deep.Equal(updatedObjects, tt.wantUpdated) {
+				t.Errorf("updated does not match: %s", v)
+			}
 			utilerror.AssertErrorMessage(t, err, tt.wantErrMsg)
-			utilconditions.AssertControllerConditions(t, ctx, client, tt.wantConditions)
+			utilconditions.AssertControllerConditions(t, ctx, clientFake, tt.wantConditions)
 		})
 	}
 }

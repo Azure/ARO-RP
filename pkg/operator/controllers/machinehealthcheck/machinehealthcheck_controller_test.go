@@ -5,21 +5,24 @@ package machinehealthcheck
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"strconv"
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
+	"github.com/go-test/deep"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
+	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	"github.com/Azure/ARO-RP/test/util/kubetest"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 // Test reconcile function
@@ -27,16 +30,19 @@ func TestReconciler(t *testing.T) {
 	type test struct {
 		name             string
 		instance         *arov1alpha1.Cluster
-		mocks            func(mdh *mock_dynamichelper.MockInterface)
+		causeFailureOn   []string
 		wantErr          string
 		wantRequeueAfter time.Duration
+		wantCreated      map[string]int
+		wantDeleted      map[string]int
 	}
 
 	for _, tt := range []*test{
 		{
-			name:    "Failure to get instance",
-			mocks:   func(mdh *mock_dynamichelper.MockInterface) {},
-			wantErr: `clusters.aro.openshift.io "cluster" not found`,
+			name:        "Failure to get instance",
+			wantErr:     `clusters.aro.openshift.io "cluster" not found`,
+			wantCreated: map[string]int{},
+			wantDeleted: map[string]int{},
 		},
 		{
 			name: "Enabled Feature Flag is false",
@@ -50,11 +56,9 @@ func TestReconciler(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Times(0)
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
-			},
-			wantErr: "",
+			wantErr:     "",
+			wantCreated: map[string]int{},
+			wantDeleted: map[string]int{},
 		},
 		{
 			name: "Managed Feature Flag is false: ensure mhc and its alert are deleted",
@@ -69,11 +73,12 @@ func TestReconciler(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Times(1)
-				mdh.EXPECT().EnsureDeleted(gomock.Any(), "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert").Times(1)
+			wantErr:     "",
+			wantCreated: map[string]int{},
+			wantDeleted: map[string]int{
+				"MachineHealthCheck/openshift-machine-api/aro-machinehealthcheck": 1,
+				"PrometheusRule/openshift-machine-api/mhc-remediation-alert":      1,
 			},
-			wantErr: "",
 		},
 		{
 			name: "Managed Feature Flag is false: mhc fails to delete, an error is returned",
@@ -88,11 +93,15 @@ func TestReconciler(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Return(errors.New("Could not delete mhc"))
+			causeFailureOn: []string{
+				"MachineHealthCheck/openshift-machine-api/aro-machinehealthcheck",
 			},
-			wantErr:          "Could not delete mhc",
+			wantErr:          "triggered failure deleting MachineHealthCheck/openshift-machine-api/aro-machinehealthcheck",
 			wantRequeueAfter: time.Hour,
+			wantCreated:      map[string]int{},
+			wantDeleted: map[string]int{
+				"PrometheusRule/openshift-machine-api/mhc-remediation-alert": 1,
+			},
 		},
 		{
 			name: "Managed Feature Flag is false: mhc deletes but mhc alert fails to delete, an error is returned",
@@ -107,12 +116,15 @@ func TestReconciler(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Times(1)
-				mdh.EXPECT().EnsureDeleted(gomock.Any(), "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert").Return(errors.New("Could not delete mhc alert"))
+			causeFailureOn: []string{
+				"PrometheusRule/openshift-machine-api/mhc-remediation-alert",
 			},
-			wantErr:          "Could not delete mhc alert",
+			wantErr:          "triggered failure deleting PrometheusRule/openshift-machine-api/mhc-remediation-alert",
 			wantRequeueAfter: time.Hour,
+			wantCreated:      map[string]int{},
+			wantDeleted: map[string]int{
+				"MachineHealthCheck/openshift-machine-api/aro-machinehealthcheck": 1,
+			},
 		},
 		{
 			name: "Managed Feature Flag is true: dynamic helper ensures resources",
@@ -127,10 +139,12 @@ func TestReconciler(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(1)
-			},
 			wantErr: "",
+			wantCreated: map[string]int{
+				"MachineHealthCheck/openshift-machine-api/aro-machinehealthcheck": 1,
+				"PrometheusRule/openshift-machine-api/mhc-remediation-alert":      1,
+			},
+			wantDeleted: map[string]int{},
 		},
 		{
 			name: "When ensuring resources fails, an error is returned",
@@ -145,29 +159,49 @@ func TestReconciler(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(errors.New("failed to ensure"))
+			causeFailureOn: []string{
+				"MachineHealthCheck/openshift-machine-api/aro-machinehealthcheck",
 			},
-			wantErr: "failed to ensure",
+			wantErr:     "triggered failure creating MachineHealthCheck/openshift-machine-api/aro-machinehealthcheck",
+			wantCreated: map[string]int{},
+			wantDeleted: map[string]int{},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			mdh := mock_dynamichelper.NewMockInterface(controller)
-
-			tt.mocks(mdh)
-
+			_, log := testlog.New()
 			clientBuilder := ctrlfake.NewClientBuilder()
 			if tt.instance != nil {
 				clientBuilder = clientBuilder.WithObjects(tt.instance)
 			}
 
+			deployedObjects := map[string]int{}
+			deletedObjects := map[string]int{}
+			wrappedClient := kubetest.NewRedirectingClient(clientBuilder.Build()).
+				WithDeleteHook(func(obj client.Object) error {
+					for _, v := range tt.causeFailureOn {
+						if obj.GetObjectKind().GroupVersionKind().Kind+"/"+obj.GetNamespace()+"/"+obj.GetName() == v {
+							return fmt.Errorf("triggered failure deleting %s", v)
+						}
+					}
+					kubetest.TallyCountsAndKey(deletedObjects)(obj)
+					return nil
+				}).
+				WithCreateHook(func(obj client.Object) error {
+					for _, v := range tt.causeFailureOn {
+						if obj.GetObjectKind().GroupVersionKind().Kind+"/"+obj.GetNamespace()+"/"+obj.GetName() == v {
+							return fmt.Errorf("triggered failure creating %s", v)
+						}
+					}
+					kubetest.TallyCountsAndKey(deployedObjects)(obj)
+					return nil
+				})
+
+			dh := dynamichelper.NewWithClient(log, wrappedClient)
+
 			ctx := context.Background()
 			r := &Reconciler{
 				log:    logrus.NewEntry(logrus.StandardLogger()),
-				dh:     mdh,
+				dh:     dh,
 				client: clientBuilder.Build(),
 			}
 			request := ctrl.Request{}
@@ -177,6 +211,13 @@ func TestReconciler(t *testing.T) {
 
 			if tt.wantRequeueAfter != result.RequeueAfter {
 				t.Errorf("Wanted to requeue after %v but was set to %v", tt.wantRequeueAfter, result.RequeueAfter)
+			}
+
+			for _, v := range deep.Equal(deployedObjects, tt.wantCreated) {
+				t.Errorf("created does not match: %s", v)
+			}
+			for _, v := range deep.Equal(deletedObjects, tt.wantDeleted) {
+				t.Errorf("deleted does not match: %s", v)
 			}
 
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)

@@ -9,22 +9,19 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
-	"github.com/golang/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kruntime "k8s.io/apimachinery/pkg/runtime"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
 	"github.com/Azure/ARO-RP/pkg/util/deployer"
-	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
+	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
+	"github.com/Azure/ARO-RP/test/util/kubetest"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
-	controller := gomock.NewController(t)
-	defer controller.Finish()
+	_, log := testlog.New()
 
 	setPullSpec := "MyGuardRailsPullSpec"
 	cluster := &arov1alpha1.Cluster{
@@ -33,31 +30,16 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 		},
 	}
 
-	clientFake := ctrlfake.NewClientBuilder().Build()
-	dh := mock_dynamichelper.NewMockInterface(controller)
+	deployConfig := getDefaultDeployConfig(context.Background(), cluster)
+	deployConfig.Pullspec = setPullSpec
 
-	// When the DynamicHelper is called, count the number of objects it creates
-	// and capture any deployments so that we can check the pullspec
-	var deployments []*appsv1.Deployment
-	deployedObjects := make(map[string]int)
-	check := func(ctx context.Context, objs ...kruntime.Object) error {
-		m := meta.NewAccessor()
-		for _, i := range objs {
-			kind, err := m.Kind(i)
-			if err != nil {
-				return err
-			}
-			if d, ok := i.(*appsv1.Deployment); ok {
-				deployments = append(deployments, d)
-			}
-			deployedObjects[kind] = deployedObjects[kind] + 1
-		}
-		return nil
-	}
-	dh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Do(check).Return(nil)
+	deployedObjects := map[string]int{}
+	wrappedClient := kubetest.NewRedirectingClient(ctrlfake.NewClientBuilder().Build()).
+		WithCreateHook(kubetest.TallyCounts(deployedObjects))
 
-	deployer := deployer.NewDeployer(clientFake, dh, staticFiles, "staticresources")
-	err := deployer.CreateOrUpdate(context.Background(), cluster, &config.GuardRailsDeploymentConfig{Pullspec: setPullSpec})
+	dh := dynamichelper.NewWithClient(log, wrappedClient)
+	deployer := deployer.NewDeployer(dh, staticFiles, "staticresources")
+	err := deployer.CreateOrUpdate(context.Background(), cluster, deployConfig)
 	if err != nil {
 		t.Error(err)
 	}
@@ -79,13 +61,19 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 		"ResourceQuota":                  1,
 		"ValidatingWebhookConfiguration": 1,
 	}
-	errs := deep.Equal(deployedObjects, expectedKinds)
-	for _, e := range errs {
-		t.Error(e)
+
+	for _, v := range deep.Equal(deployedObjects, expectedKinds) {
+		t.Errorf("created does not match: %s", v)
+	}
+
+	deployments := &appsv1.DeploymentList{}
+	err = wrappedClient.List(context.Background(), deployments)
+	if err != nil {
+		t.Error(err)
 	}
 
 	// Ensure we have set the pullspec set on the containers
-	for _, d := range deployments {
+	for _, d := range deployments.Items {
 		for _, c := range d.Spec.Template.Spec.Containers {
 			if c.Image != setPullSpec {
 				t.Errorf("expected %s, got %s for pullspec", setPullSpec, c.Image)

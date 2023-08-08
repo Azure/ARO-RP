@@ -12,12 +12,13 @@ import (
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/sirupsen/logrus"
-	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -66,20 +67,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	r.log.Debug("running")
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(managed) {
-		err := r.dh.EnsureDeleted(ctx, "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck")
-		if err != nil {
-			return reconcile.Result{RequeueAfter: time.Hour}, err
-		}
 
-		err = r.dh.EnsureDeleted(ctx, "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert")
-		if err != nil {
-			return reconcile.Result{RequeueAfter: time.Hour}, err
-		}
-		return reconcile.Result{}, nil
-	}
-
-	var resources []kruntime.Object
+	var resources []runtime.Object
 
 	for _, asset := range [][]byte{machinehealthcheckYaml, mhcremediationalertYaml} {
 		resource, _, err := scheme.Codecs.UniversalDeserializer().Decode(asset, nil, nil)
@@ -88,6 +77,31 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 
 		resources = append(resources, resource)
+	}
+
+	// FIXME: This is wrong and should handle true/absent/false as present/do nothing/remove!
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(managed) {
+		errs := make([]error, 0)
+
+		for _, res := range resources {
+			gvk, err := apiutil.GVKForObject(res, scheme.Scheme)
+			if err != nil {
+				errs = append(errs, err)
+				break
+			}
+
+			err = r.dh.EnsureDeleted(ctx, gvk, client.ObjectKeyFromObject(res.(client.Object)))
+			if err != nil {
+				errs = append(errs, err)
+			}
+		}
+		if len(errs) > 0 {
+			// just return the first error for now
+			return reconcile.Result{RequeueAfter: time.Hour}, errs[0]
+
+		}
+
+		return reconcile.Result{}, nil
 	}
 
 	// helps with garbage collection of the resources we are dealing with
