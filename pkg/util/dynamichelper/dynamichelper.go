@@ -5,6 +5,7 @@ package dynamichelper
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -22,93 +23,97 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
+type MergeFunction func(old, new client.Object) (out client.Object, changed bool, diff string, err error)
+type MergeHook func(new client.Object) (MergeFunction, bool, error)
+
 type Interface interface {
-	Refresh() error
-	EnsureDeleted(ctx context.Context, groupKind, namespace, name string) error
-	EnsureDeletedGVR(ctx context.Context, groupKind, namespace, name, optionalVersion string) error
+	EnsureObjectDeleted(ctx context.Context, obj kruntime.Object) error
+	EnsureDeleted(ctx context.Context, gvk schema.GroupVersionKind, key types.NamespacedName) error
 	Ensure(ctx context.Context, objs ...kruntime.Object) error
-	IsConstraintTemplateReady(ctx context.Context, name string) (bool, error)
+	GetOne(ctx context.Context, key types.NamespacedName, obj kruntime.Object) error
+	WithMergeHook(MergeHook) Interface
 }
 
 type dynamicHelper struct {
-	GVRResolver
+	log *logrus.Entry
 
-	log           *logrus.Entry
-	restcli       rest.Interface
-	dynamicClient dynamic.Interface
+	client    client.Client
+	mergeHook MergeHook
 }
 
 func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {
-	dh := &dynamicHelper{
-		log: log,
-	}
-
-	var err error
-	dh.GVRResolver, err = NewGVRResolver(log, restconfig)
+	client, err := client.New(restconfig, client.Options{})
 	if err != nil {
 		return nil, err
 	}
-
-	dh.dynamicClient, err = dynamic.NewForConfig(restconfig)
-	if err != nil {
-		return nil, err
-	}
-
-	restconfig = rest.CopyConfig(restconfig)
-	restconfig.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
-	restconfig.GroupVersion = &schema.GroupVersion{}
-
-	dh.restcli, err = rest.RESTClientFor(restconfig)
-	if err != nil {
-		return nil, err
-	}
-
-	return dh, nil
+	return NewWithClient(log, client), nil
 }
 
-func (dh *dynamicHelper) EnsureDeleted(ctx context.Context, groupKind, namespace, name string) error {
-	return dh.EnsureDeletedGVR(ctx, groupKind, namespace, name, "")
+func NewWithClient(log *logrus.Entry, client client.Client) Interface {
+	return &dynamicHelper{
+		log:    log,
+		client: client,
+	}
 }
-func (dh *dynamicHelper) EnsureDeletedGVR(ctx context.Context, groupKind, namespace, name, optionalVersion string) error {
-	gvr, err := dh.Resolve(groupKind, optionalVersion)
-	if err != nil {
-		return err
-	}
 
-	// gatekeeper policies are unstructured and should be deleted differently
-	if isKindUnstructured(groupKind) {
-		dh.log.Infof("Delete unstructured obj kind %s ns %s name %s version %s", groupKind, namespace, name, optionalVersion)
-		return dh.deleteUnstructuredObj(ctx, groupKind, namespace, name)
-	}
-	dh.log.Infof("Delete kind %s ns %s name %s", groupKind, namespace, name)
-	err = dh.restcli.Delete().AbsPath(makeURLSegments(gvr, namespace, name)...).Do(ctx).Error()
+func (dh *dynamicHelper) WithMergeHook(hook MergeHook) Interface {
+	dh.mergeHook = hook
+	return dh
+}
+
+func (dh *dynamicHelper) EnsureDeleted(ctx context.Context, gvk schema.GroupVersionKind, key types.NamespacedName) error {
+
+	a := meta.AsPartialObjectMetadata(&metav1.ObjectMeta{
+		Name:      key.Name,
+		Namespace: key.Namespace,
+	})
+	a.SetGroupVersionKind(gvk)
+
+	dh.log.Infof("Delete kind %s ns %s name %s", gvk.Kind, key.Namespace, key.Name)
+	err := dh.client.Delete(ctx, a)
 	if kerrors.IsNotFound(err) {
-		err = nil
+		return nil
 	}
 	return err
+}
+
+func (dh *dynamicHelper) EnsureObjectDeleted(ctx context.Context, obj kruntime.Object) error {
+	newObj, ok := obj.(client.Object)
+	if !ok {
+		return fmt.Errorf("object of kind %s can't be made a client.Object", obj.GetObjectKind().GroupVersionKind().String())
+	}
+	err := dh.client.Delete(ctx, newObj)
+	if kerrors.IsNotFound(err) {
+		return nil
+	}
+	return err
+}
+
+func (dh *dynamicHelper) GetOne(ctx context.Context, key types.NamespacedName, obj kruntime.Object) error {
+	newObj, ok := obj.(client.Object)
+	if !ok {
+		return errors.New("can't convert object")
+	}
+
+	return dh.client.Get(ctx, key, newObj)
 }
 
 // Ensure that one or more objects match their desired state.  Only update
 // objects that need to be updated.
 func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...kruntime.Object) error {
 	for _, o := range objs {
-		if un, ok := o.(*unstructured.Unstructured); ok {
-			err := dh.ensureUnstructuredObj(ctx, un)
-			if err != nil {
-				return err
-			}
-			continue
-		}
 		err := dh.ensureOne(ctx, o)
 		if err != nil {
 			return err
@@ -119,56 +124,57 @@ func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...kruntime.Object) er
 }
 
 func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) error {
-	gvks, _, err := scheme.Scheme.ObjectKinds(new)
+	gvk, err := apiutil.GVKForObject(new, scheme.Scheme)
 	if err != nil {
 		return err
 	}
 
-	gvk := gvks[0]
-
-	gvr, err := dh.Resolve(gvk.GroupKind().String(), gvk.Version)
-	if err != nil {
-		return err
-	}
-
-	acc, err := meta.Accessor(new)
-	if err != nil {
-		return err
+	newObj, ok := new.(client.Object)
+	if !ok {
+		return fmt.Errorf("object of kind %s can't be made a client.Object", gvk.String())
 	}
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		old, err := dh.restcli.Get().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), acc.GetName())...).Do(ctx).Get()
+		old := &unstructured.Unstructured{}
+		old.SetGroupVersionKind(new.GetObjectKind().GroupVersionKind())
+
+		err := dh.client.Get(ctx, client.ObjectKey{Namespace: newObj.GetNamespace(), Name: newObj.GetName()}, old)
 		if kerrors.IsNotFound(err) {
-			dh.log.Infof("Create %s", keyFunc(gvk.GroupKind(), acc.GetNamespace(), acc.GetName()))
-			return dh.restcli.Post().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), "")...).Body(new).Do(ctx).Error()
+			dh.log.Infof("Create %s", keyFunc(gvk.GroupKind(), newObj.GetNamespace(), newObj.GetName()))
+			return dh.client.Create(ctx, newObj)
 		}
 		if err != nil {
 			return err
 		}
-		candidate, changed, diff, err := dh.mergeWithLogic(acc.GetName(), gvk.GroupKind().String(), old, new)
+		candidate, changed, diff, err := dh.mergeWithLogic(old, newObj)
 		if err != nil || !changed {
 			return err
 		}
-		dh.log.Infof("Update %s: %s", keyFunc(gvk.GroupKind(), acc.GetNamespace(), acc.GetName()), diff)
-		return dh.restcli.Put().AbsPath(makeURLSegments(gvr, acc.GetNamespace(), acc.GetName())...).Body(candidate).Do(ctx).Error()
+		dh.log.Infof("Update %s: %s", keyFunc(gvk.GroupKind(), candidate.GetNamespace(), candidate.GetName()), diff)
+		return dh.client.Update(ctx, candidate)
 	})
 }
 
-func (dh *dynamicHelper) mergeWithLogic(name, groupKind string, old, new kruntime.Object) (kruntime.Object, bool, string, error) {
-	if strings.HasPrefix(name, "gatekeeper") {
-		dh.log.Debugf("Skip updating %s: %s", name, groupKind)
-		return nil, false, "", nil
+func (dh *dynamicHelper) mergeWithLogic(old, new client.Object) (client.Object, bool, string, error) {
+	// If a merge hook has been registered, use that preferentially. If the hook
+	// is not interested in the object, merge as per usual.
+	if dh.mergeHook != nil {
+		hook, use, err := dh.mergeHook(new)
+		if err != nil {
+			return nil, false, "", err
+		}
+		if use {
+			return hook(old, new)
+		}
 	}
-	if strings.HasPrefix(groupKind, "ConstraintTemplate.templates.gatekeeper") {
-		return mergeGK(old, new)
-	}
+
 	return merge(old, new)
 }
 
 // merge takes the existing (old) and desired (new) objects.  It compares them
 // to see if an update is necessary, fixes up the new object if needed, and
 // returns the difference for debugging purposes.
-func merge(old, new kruntime.Object) (kruntime.Object, bool, string, error) {
+func merge(old, new client.Object) (client.Object, bool, string, error) {
 	if reflect.TypeOf(old) != reflect.TypeOf(new) {
 		return nil, false, "", fmt.Errorf("types differ: %T %T", old, new)
 	}
@@ -180,24 +186,14 @@ func merge(old, new kruntime.Object) (kruntime.Object, bool, string, error) {
 	oldtypemeta := old.GetObjectKind()
 	newtypemeta := new.GetObjectKind()
 
-	oldobjectmeta, err := meta.Accessor(old)
-	if err != nil {
-		return nil, false, "", err
-	}
-
-	newobjectmeta, err := meta.Accessor(new)
-	if err != nil {
-		return nil, false, "", err
-	}
-
 	newtypemeta.SetGroupVersionKind(oldtypemeta.GroupVersionKind())
 
-	newobjectmeta.SetSelfLink(oldobjectmeta.GetSelfLink())
-	newobjectmeta.SetUID(oldobjectmeta.GetUID())
-	newobjectmeta.SetResourceVersion(oldobjectmeta.GetResourceVersion())
-	newobjectmeta.SetGeneration(oldobjectmeta.GetGeneration())
-	newobjectmeta.SetCreationTimestamp(oldobjectmeta.GetCreationTimestamp())
-	newobjectmeta.SetManagedFields(oldobjectmeta.GetManagedFields())
+	new.SetSelfLink(old.GetSelfLink())
+	new.SetUID(old.GetUID())
+	new.SetResourceVersion(old.GetResourceVersion())
+	new.SetGeneration(old.GetGeneration())
+	new.SetCreationTimestamp(old.GetCreationTimestamp())
+	new.SetManagedFields(old.GetManagedFields())
 
 	// 3. Do fix-ups on a per-Kind basis.
 	switch old.(type) {
@@ -301,26 +297,4 @@ func copyLabel(dst, src *metav1.ObjectMeta, name string) {
 		}
 		dst.Labels[name] = src.Labels[name]
 	}
-}
-
-func makeURLSegments(gvr *schema.GroupVersionResource, namespace, name string) (url []string) {
-	if gvr.Group == "" {
-		url = append(url, "api")
-	} else {
-		url = append(url, "apis", gvr.Group)
-	}
-
-	url = append(url, gvr.Version)
-
-	if namespace != "" {
-		url = append(url, "namespaces", namespace)
-	}
-
-	url = append(url, gvr.Resource)
-
-	if len(name) > 0 {
-		url = append(url, name)
-	}
-
-	return url
 }
