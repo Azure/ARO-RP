@@ -69,7 +69,7 @@ func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Int
 	return &Reconciler{
 		log: log,
 
-		deployer: deployer.NewDeployer(client, dh, staticFiles, "staticresources"),
+		deployer: deployer.NewDeployer(dh, staticFiles, "staticresources"),
 
 		client: client,
 
@@ -182,7 +182,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 			builder.WithPredicates(pullSecretPredicate),
 		)
 
-	resources, err := r.deployer.Template(&config.MUODeploymentConfig{}, staticFiles)
+	resources, err := r.deployer.Template(&config.MUODeploymentConfig{})
 	if err != nil {
 		return err
 	}

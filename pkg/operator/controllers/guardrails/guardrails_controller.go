@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	v1 "github.com/openshift/api/config/v1"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -22,6 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
 	"github.com/Azure/ARO-RP/pkg/util/deployer"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type Reconciler struct {
@@ -42,8 +44,8 @@ func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Int
 	return &Reconciler{
 		log: log,
 
-		deployer:         deployer.NewDeployer(client, dh, staticFiles, gkDeploymentPath),
-		gkPolicyTemplate: deployer.NewDeployer(client, dh, gkPolicyTemplates, gkTemplatePath),
+		deployer:         deployer.NewDeployer(dh, staticFiles, gkDeploymentPath),
+		gkPolicyTemplate: deployer.NewDeployer(dh, gkPolicyTemplates, gkTemplatePath),
 		dh:               dh,
 
 		client: client,
@@ -68,7 +70,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	r.log.Debug("running")
 
+	cv := &v1.ClusterVersion{}
+
+	err = r.client.Get(ctx, types.NamespacedName{Name: "version"}, cv)
+	if err == nil {
+		r.log.Errorf("error getting the OpenShift version: %v", err)
+		return reconcile.Result{}, err
+	}
+
+	clusterVersion, err := version.GetClusterVersion(cv)
+	if err != nil {
+		r.log.Errorf("error getting the OpenShift version: %v", err)
+		return reconcile.Result{}, err
+	}
+
 	managed := instance.Spec.OperatorFlags.GetWithDefault(controllerManaged, "")
+	deployConfig := getDefaultDeployConfig(ctx, instance, clusterVersion)
 
 	// If enabled and managed=true, install GuardRails
 	// If enabled and managed=false, remove the GuardRails deployment
@@ -81,7 +98,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 
 		// Deploy the GateKeeper manifests and config
-		deployConfig := r.getDefaultDeployConfig(ctx, instance)
 		err = r.deployer.CreateOrUpdate(ctx, instance, deployConfig)
 		if err != nil {
 			return reconcile.Result{}, err
@@ -106,7 +122,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			}
 
 			err := wait.PollImmediateUntil(r.readinessPollTime, func() (bool, error) {
-				return r.gkPolicyTemplate.IsConstraintTemplateReady(ctx, policyConfig)
+				return r.IsConstraintTemplateReady(ctx, policyConfig)
 			}, timeoutCtx.Done())
 			if err != nil {
 				return reconcile.Result{}, fmt.Errorf("GateKeeper ConstraintTemplates timed out on creation: %w", err)
@@ -136,7 +152,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 				return reconcile.Result{}, err
 			}
 		}
-		err = r.deployer.Remove(ctx, config.GuardRailsDeploymentConfig{Namespace: r.namespace})
+		err = r.deployer.Remove(ctx, deployConfig)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -154,7 +170,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	grBuilder := ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate))
 
-	resources, err := r.deployer.Template(&config.GuardRailsDeploymentConfig{}, staticFiles)
+	resources, err := r.deployer.Template(&config.GuardRailsDeploymentConfig{})
 	if err != nil {
 		return err
 	}

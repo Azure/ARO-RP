@@ -317,11 +317,6 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 				return err
 			}
 
-			err = o.dh.Refresh()
-			if err != nil {
-				return err
-			}
-
 		case "Cluster.aro.openshift.io":
 			// add an owner reference onto our configuration secret.  This is
 			// can only be done once we've got the cluster UID.  It is needed to

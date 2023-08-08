@@ -8,9 +8,6 @@ import (
 	"embed"
 	"strings"
 
-	configv1 "github.com/openshift/api/config/v1"
-	"k8s.io/apimachinery/pkg/types"
-
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -77,7 +74,7 @@ var gkPolicyTemplates embed.FS
 //go:embed policies/gkconstraints
 var gkPolicyConstraints embed.FS
 
-func (r *Reconciler) getDefaultDeployConfig(ctx context.Context, instance *arov1alpha1.Cluster) *config.GuardRailsDeploymentConfig {
+func getDefaultDeployConfig(ctx context.Context, instance *arov1alpha1.Cluster, clusterVersion *version.Version) *config.GuardRailsDeploymentConfig {
 	// apply the default value if the flag is empty or missing
 	deployConfig := &config.GuardRailsDeploymentConfig{
 		Pullspec:  instance.Spec.OperatorFlags.GetWithDefault(controllerPullSpec, version.GateKeeperImage(instance.Spec.ACRDomain)),
@@ -119,10 +116,10 @@ func (r *Reconciler) getDefaultDeployConfig(ctx context.Context, instance *arov1
 
 	deployConfig.RoleSCCResourceName = instance.Spec.OperatorFlags.GetWithDefault(RoleSCCResourceName, defaultRoleSCCResourceName411)
 	// for version 4.10 and below choose defaultRoleSCCResourceName410 scc
-	if lt411, err := r.VersionLT411(ctx); err == nil && lt411 {
+	if clusterVersion != nil && clusterVersion.Lt(&version.Version{V: [3]uint32{4, 11, 0}}) {
 		deployConfig.RoleSCCResourceName = instance.Spec.OperatorFlags.GetWithDefault(RoleSCCResourceName, defaultRoleSCCResourceName410)
 	}
-	r.namespace = deployConfig.Namespace
+
 	return deployConfig
 }
 
@@ -131,19 +128,4 @@ func (r *Reconciler) gatekeeperDeploymentIsReady(ctx context.Context, deployConf
 		return ready, err
 	}
 	return r.deployer.IsReady(ctx, deployConfig.Namespace, "gatekeeper-controller-manager")
-}
-
-func (r *Reconciler) VersionLT411(ctx context.Context) (bool, error) {
-	cv := &configv1.ClusterVersion{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: "version"}, cv)
-	if err != nil {
-		return false, err
-	}
-	clusterVersion, err := version.GetClusterVersion(cv)
-	if err != nil {
-		r.log.Errorf("error getting the OpenShift version: %v", err)
-		return false, err
-	}
-	ver411, _ := version.ParseVersion("4.11.0")
-	return clusterVersion.Lt(ver411), nil
 }
