@@ -185,8 +185,8 @@
     done
     ```
 
-<!-- TODO: this is almost duplicated elsewhere.  Would be nice to move to common area -->
 1. Update the certificates in keyvault
+    <!-- TODO: this is almost duplicated elsewhere.  Would be nice to move to common area -->
     > __NOTE:__ If you reuse an old name, you might run into soft-delete of the keyvaults. Run `az keyvault recover --name` to fix this.
 
     > __NOTE:__ Check to ensure that the $KEYVAULT_PREFIX environment variable set on workstation matches the prefix deployed into the resource group.
@@ -254,6 +254,8 @@
     source ./hack/devtools/deploy-shared-env.sh
     deploy_oic_for_dedicated_rp
     ```
+
+1. If you are going to use multiversion, you can now update the OpenShiftVersions DB as per [OpenShift Version insttructions](./deploy-development-rp.md#openshift-version)
 
 ## SSH to RP VMSS Instance
 
