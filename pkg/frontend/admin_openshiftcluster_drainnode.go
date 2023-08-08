@@ -31,7 +31,7 @@ func (f *frontend) _postAdminOpenShiftClusterDrainNode(ctx context.Context, r *h
 	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 
 	vmName := r.URL.Query().Get("vmName")
-	err := validateAdminKubernetesObjects(r.Method, &nodeResource, "", vmName)
+	err := validateAdminKubernetesObjects(r.Method, nodeResource, "", vmName)
 	if err != nil {
 		return err
 	}

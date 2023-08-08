@@ -38,7 +38,7 @@ func (f *frontend) _postAdminOpenShiftClusterCordonNode(ctx context.Context, r *
 
 	vmName := r.URL.Query().Get("vmName")
 	shouldCordon := strings.EqualFold(r.URL.Query().Get("shouldCordon"), "true")
-	err := validateAdminKubernetesObjects(r.Method, &nodeResource, "", vmName)
+	err := validateAdminKubernetesObjects(r.Method, nodeResource, "", vmName)
 	if err != nil {
 		return err
 	}
