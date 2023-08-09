@@ -80,6 +80,9 @@ func main() {
 	case "update-versions":
 		checkArgs(1)
 		err = updateOCPVersions(ctx, log)
+	case "poc":
+		checkArgs(1)
+		err = poc(log)
 	default:
 		usage()
 		os.Exit(2)
