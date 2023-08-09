@@ -31,6 +31,7 @@ func usage() {
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s rp\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s operator {master,worker}\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s update-versions\n", os.Args[0])
+	fmt.Fprintln(flag.CommandLine.Output(), "  %s poc\n", os.Args[0])
 	flag.PrintDefaults()
 }
 
