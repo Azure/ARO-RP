@@ -22,8 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-func getInstallerImageDigests(envKey string) (map[string]string, error) {
-	var installerImageDigests map[string]string
+func getEnvironmentData(envKey string, envData any) error {
 	var err error
 
 	jsonData := []byte(os.Getenv(envKey))
@@ -34,12 +33,27 @@ func getInstallerImageDigests(envKey string) (map[string]string, error) {
 	if !env.IsLocalDevelopmentMode() {
 		jsonData, err = base64.StdEncoding.DecodeString(string(jsonData))
 		if err != nil {
-			return nil, fmt.Errorf("%s: Failed to decode base64: %v", envKey, err)
+			return fmt.Errorf("%s: Failed to decode base64: %w", envKey, err)
 		}
 	}
 
-	if err = json.Unmarshal(jsonData, &installerImageDigests); err != nil {
-		return nil, fmt.Errorf("%s: Failed to parse JSON: %v", envKey, err)
+	if err = json.Unmarshal(jsonData, envData); err != nil {
+		return fmt.Errorf("%s: Failed to parse JSON: %w", envKey, err)
+	}
+
+	return nil
+}
+
+func getInstallerImageDigests() (map[string]string, error) {
+	// INSTALLER_IMAGE_DIGESTS is the mapping of a minor version to
+	// the aro-installer wrapper digest.  This allows us to utilize
+	// Azure Safe Deployment Practices (SDP) instead of pushing the
+	// version tag and deploying to all regions at once.
+	const envKey = "INSTALLER_IMAGE_DIGESTS"
+	var installerImageDigests map[string]string
+
+	if err := getEnvironmentData(envKey, &installerImageDigests); err != nil {
+		return nil, err
 	}
 
 	return installerImageDigests, nil
@@ -56,11 +70,7 @@ func getLatestOCPVersions(ctx context.Context, log *logrus.Entry) ([]api.OpenShi
 	dstRepo := dstAcr + acrDomainSuffix
 	ocpVersions := []api.OpenShiftVersion{}
 
-	// INSTALLER_IMAGE_DIGESTS is the mapping of a minor version to
-	// the aro-installer wrapper digest.  This allows us to utilize
-	// Azure Safe Deployment Practices (SDP) instead of pushing the
-	// version tag and deploying to all regions at once.
-	installerImageDigests, err := getInstallerImageDigests("INSTALLER_IMAGE_DIGESTS")
+	installerImageDigests, err := getInstallerImageDigests()
 	if err != nil {
 		return nil, err
 	}
