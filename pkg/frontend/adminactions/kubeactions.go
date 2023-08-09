@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	"github.com/Azure/go-autorest/autorest/to"
-	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -37,7 +36,6 @@ type KubeActions interface {
 	DrainNode(ctx context.Context, nodeName string) error
 	ApproveCsr(ctx context.Context, csrName string) error
 	ApproveAllCsrs(ctx context.Context) error
-	Upgrade(ctx context.Context, upgradeY bool) error
 	KubeGetPodLogs(ctx context.Context, namespace, name, containerName string) ([]byte, error)
 	// kubeWatch returns a watch object for the provided label selector key
 	KubeWatch(ctx context.Context, o *unstructured.Unstructured, label string) (watch.Interface, error)
@@ -49,9 +47,8 @@ type kubeActions struct {
 
 	mapper meta.RESTMapper
 
-	dyn       dynamic.Interface
-	configcli configclient.Interface
-	kubecli   kubernetes.Interface
+	dyn     dynamic.Interface
+	kubecli kubernetes.Interface
 }
 
 // NewKubeActions returns a kubeActions
@@ -71,11 +68,6 @@ func NewKubeActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClust
 		return nil, err
 	}
 
-	configcli, err := configclient.NewForConfig(restConfig)
-	if err != nil {
-		return nil, err
-	}
-
 	kubecli, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
 		return nil, err
@@ -87,9 +79,8 @@ func NewKubeActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClust
 
 		mapper: mapper,
 
-		dyn:       dyn,
-		configcli: configcli,
-		kubecli:   kubecli,
+		dyn:     dyn,
+		kubecli: kubecli,
 	}, nil
 }
 
