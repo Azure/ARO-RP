@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/immutable"
+	"github.com/Azure/ARO-RP/pkg/api/util/immutable"
 )
 
 type openShiftVersionStaticValidator struct{}
