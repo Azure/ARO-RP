@@ -25,6 +25,11 @@ const (
 
 var GitCommit = "unknown"
 
+type Stream struct {
+	Version  *Version `json:"version"`
+	PullSpec string   `json:"-"`
+}
+
 // DefaultMinorVersion describes the minor OpenShift version to default to
 var DefaultMinorVersion = 11
 
