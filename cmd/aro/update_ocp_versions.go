@@ -22,6 +22,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
+// Corresponds to configuration.openShiftVersions in RP-Config
+type OpenShiftVersions struct {
+	DefaultStream  map[string]string
+	InstallStreams map[string]string
+}
+
 func getEnvironmentData(envKey string, envData any) error {
 	var err error
 
@@ -44,6 +50,23 @@ func getEnvironmentData(envKey string, envData any) error {
 	return nil
 }
 
+func getOpenShiftVersions() (*OpenShiftVersions, error) {
+	const envKey = "OPENSHIFT_VERSIONS"
+	var openShiftVersions OpenShiftVersions
+
+	if err := getEnvironmentData(envKey, &openShiftVersions); err != nil {
+		return nil, err
+	}
+
+	// The DefaultStream map must have exactly one entry.
+	numDefaultStreams := len(openShiftVersions.DefaultStream)
+	if numDefaultStreams != 1 {
+		return nil, fmt.Errorf("%s: DefaultStream must have exactly 1 entry, found %d", envKey, numDefaultStreams)
+	}
+
+	return &openShiftVersions, nil
+}
+
 func getInstallerImageDigests() (map[string]string, error) {
 	// INSTALLER_IMAGE_DIGESTS is the mapping of a minor version to
 	// the aro-installer wrapper digest.  This allows us to utilize
@@ -59,6 +82,34 @@ func getInstallerImageDigests() (map[string]string, error) {
 	return installerImageDigests, nil
 }
 
+func appendOpenShiftVersions(ocpVersions []api.OpenShiftVersion, installStreams map[string]string, installerImageName string, installerImageDigests map[string]string, isDefault bool) ([]api.OpenShiftVersion, error) {
+	for fullVersion, openShiftPullspec := range installStreams {
+		openShiftVersion, err := version.ParseVersion(fullVersion)
+		if err != nil {
+			return nil, err
+		}
+		fullVersion = openShiftVersion.String() // trimmed of whitespace
+		minorVersion := openShiftVersion.MinorVersion()
+		installerDigest, ok := installerImageDigests[minorVersion]
+		if !ok {
+			return nil, fmt.Errorf("no installer digest for version %s", minorVersion)
+		}
+		installerPullspec := fmt.Sprintf("%s:%s@%s", installerImageName, minorVersion, installerDigest)
+
+		ocpVersions = append(ocpVersions, api.OpenShiftVersion{
+			Properties: api.OpenShiftVersionProperties{
+				Version:           fullVersion,
+				OpenShiftPullspec: openShiftPullspec,
+				InstallerPullspec: installerPullspec,
+				Enabled:           true,
+				Default:           isDefault,
+			},
+		})
+	}
+
+	return ocpVersions, nil
+}
+
 func getLatestOCPVersions(ctx context.Context, log *logrus.Entry) ([]api.OpenShiftVersion, error) {
 	env, err := env.NewCoreForCI(ctx, log)
 	if err != nil {
@@ -66,30 +117,28 @@ func getLatestOCPVersions(ctx context.Context, log *logrus.Entry) ([]api.OpenShi
 	}
 	dstAcr := os.Getenv("DST_ACR_NAME")
 	acrDomainSuffix := "." + env.Environment().ContainerRegistryDNSSuffix
+	installerImageName := dstAcr + acrDomainSuffix + "/aro-installer"
 
-	dstRepo := dstAcr + acrDomainSuffix
-	ocpVersions := []api.OpenShiftVersion{}
+	openShiftVersions, err := getOpenShiftVersions()
+	if err != nil {
+		return nil, err
+	}
 
 	installerImageDigests, err := getInstallerImageDigests()
 	if err != nil {
 		return nil, err
 	}
 
-	for _, vers := range version.AvailableInstallStreams {
-		installerPullSpec := fmt.Sprintf("%s/aro-installer:%s", dstRepo, vers.Version.MinorVersion())
-		digest, ok := installerImageDigests[vers.Version.MinorVersion()]
-		if !ok {
-			return nil, fmt.Errorf("no digest found for version %s", vers.Version.String())
-		}
+	ocpVersions := make([]api.OpenShiftVersion, 0, len(openShiftVersions.DefaultStream)+len(openShiftVersions.InstallStreams))
 
-		ocpVersions = append(ocpVersions, api.OpenShiftVersion{
-			Properties: api.OpenShiftVersionProperties{
-				Version:           vers.Version.String(),
-				OpenShiftPullspec: vers.PullSpec,
-				InstallerPullspec: installerPullSpec + "@" + digest,
-				Enabled:           true,
-			},
-		})
+	ocpVersions, err = appendOpenShiftVersions(ocpVersions, openShiftVersions.DefaultStream, installerImageName, installerImageDigests, true)
+	if err != nil {
+		return nil, err
+	}
+
+	ocpVersions, err = appendOpenShiftVersions(ocpVersions, openShiftVersions.InstallStreams, installerImageName, installerImageDigests, false)
+	if err != nil {
+		return nil, err
 	}
 
 	return ocpVersions, nil
