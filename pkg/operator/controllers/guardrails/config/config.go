@@ -3,6 +3,11 @@ package config
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
+const (
+	controllerPolicyManagedTemplate     = "aro.guardrails.policies.%s.managed"
+	controllerPolicyEnforcementTemplate = "aro.guardrails.policies.%s.enforcement"
+)
+
 type GuardRailsDeploymentConfig struct {
 	Pullspec           string
 	Namespace          string
@@ -23,5 +28,10 @@ type GuardRailsDeploymentConfig struct {
 }
 
 type GuardRailsPolicyConfig struct {
+	Managed     string
 	Enforcement string
+}
+
+type GuardRailsPolicyConfigs struct {
+	Policies map[string]GuardRailsPolicyConfig
 }

@@ -30,13 +30,16 @@ type Deployer interface {
 	CreateOrUpdate(context.Context, *arov1alpha1.Cluster, interface{}) error
 	Remove(context.Context, interface{}) error
 	IsReady(context.Context, string, string) (bool, error)
-	Template(interface{}) ([]kruntime.Object, error)
+	Templates() ([]*template.Template, error)
+	Render(interface{}) ([]kruntime.Object, error)
 }
 
 type deployer struct {
 	dh        dynamichelper.Interface
 	fs        fs.FS
 	directory string
+
+	decoder kruntime.Decoder
 }
 
 func NewDeployer(dh dynamichelper.Interface, fs fs.FS, directory string) Deployer {
@@ -44,18 +47,28 @@ func NewDeployer(dh dynamichelper.Interface, fs fs.FS, directory string) Deploye
 		dh:        dh,
 		fs:        fs,
 		directory: directory,
+
+		decoder: scheme.Codecs.UniversalDeserializer(),
 	}
 }
 
-func (depl *deployer) Template(data interface{}) ([]kruntime.Object, error) {
-	results := make([]kruntime.Object, 0)
+func (depl *deployer) Templates() ([]*template.Template, error) {
 	template, err := template.ParseFS(depl.fs, filepath.Join(depl.directory, "*"))
+	if err != nil {
+		return nil, err
+	}
+	return template.Templates(), nil
+}
+
+func (depl *deployer) Render(data interface{}) ([]kruntime.Object, error) {
+	results := make([]kruntime.Object, 0)
+	templates, err := depl.Templates()
 	if err != nil {
 		return nil, err
 	}
 
 	buffer := new(bytes.Buffer)
-	for _, templ := range template.Templates() {
+	for _, templ := range templates {
 		err := templ.Execute(buffer, data)
 		if err != nil {
 			return nil, err
@@ -65,7 +78,7 @@ func (depl *deployer) Template(data interface{}) ([]kruntime.Object, error) {
 			return nil, err
 		}
 
-		obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(bytes, nil, nil)
+		obj, _, err := depl.decoder.Decode(bytes, nil, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -77,7 +90,7 @@ func (depl *deployer) Template(data interface{}) ([]kruntime.Object, error) {
 }
 
 func (depl *deployer) CreateOrUpdate(ctx context.Context, cluster *arov1alpha1.Cluster, config interface{}) error {
-	resources, err := depl.Template(config)
+	resources, err := depl.Render(config)
 	if err != nil {
 		return err
 	}
@@ -96,7 +109,7 @@ func (depl *deployer) CreateOrUpdate(ctx context.Context, cluster *arov1alpha1.C
 }
 
 func (depl *deployer) Remove(ctx context.Context, data interface{}) error {
-	resources, err := depl.Template(data)
+	resources, err := depl.Render(data)
 	if err != nil {
 		return err
 	}

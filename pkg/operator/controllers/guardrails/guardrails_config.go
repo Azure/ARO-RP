@@ -33,9 +33,7 @@ const (
 	controllerMutatingWebhookFailurePolicy   = "aro.guardrails.mutatingwebhook.managed"
 	controllerMutatingWebhookTimeout         = "aro.guardrails.mutatingwebhook.timeoutSeconds"
 
-	controllerReconciliationMinutes     = "aro.guardrails.reconciliationMinutes"
-	controllerPolicyManagedTemplate     = "aro.guardrails.policies.%s.managed"
-	controllerPolicyEnforcementTemplate = "aro.guardrails.policies.%s.enforcement"
+	controllerReconciliationMinutes = "aro.guardrails.reconciliationMinutes"
 
 	RoleSCCResourceName = "aro.guardrails.role.scc.resourcename"
 

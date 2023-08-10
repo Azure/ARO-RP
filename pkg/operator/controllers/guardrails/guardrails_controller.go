@@ -128,7 +128,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			}
 
 			// Deploy the GateKeeper Constraint
-			err = r.ensurePolicy(ctx, gkPolicyConstraints, gkConstraintsPath)
+			err = r.ensurePolicies(ctx, instance)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
