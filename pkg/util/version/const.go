@@ -38,6 +38,10 @@ var DefaultInstallStreams = map[int]*Stream{
 		Version:  NewVersion(4, 11, 44),
 		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:52cbfbbeb9cc03b49c2788ac7333e63d3dae14673e01a9d8e59270f3a8390ed3",
 	},
+	12: {
+		Version:  NewVersion(4, 12, 25),
+		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:5a4fb052cda1d14d1e306ce87e6b0ded84edddaa76f1cf401bcded99cef2ad84",
+	},
 }
 
 // DefaultInstallStream describes stream we are defaulting to for all new clusters
@@ -58,6 +62,7 @@ var HiveInstallStreams = []*Stream{
 		Version:  NewVersion(4, 11, 26),
 		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:1c3913a65b0a10b4a0650f54e545fe928360a94767acea64c0bd10faa52c945a",
 	},
+	DefaultInstallStreams[12],
 }
 
 // UpgradeStreams describes list of streams we support for upgrades
