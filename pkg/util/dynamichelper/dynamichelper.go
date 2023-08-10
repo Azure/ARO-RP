@@ -74,7 +74,6 @@ func (dh *dynamicHelper) WithMergeHook(hook MergeHook) Interface {
 }
 
 func (dh *dynamicHelper) EnsureDeleted(ctx context.Context, gvk schema.GroupVersionKind, key types.NamespacedName) error {
-
 	a := meta.AsPartialObjectMetadata(&metav1.ObjectMeta{
 		Name:      key.Name,
 		Namespace: key.Namespace,

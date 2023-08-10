@@ -98,7 +98,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		if len(errs) > 0 {
 			// just return the first error for now
 			return reconcile.Result{RequeueAfter: time.Hour}, errs[0]
-
 		}
 
 		return reconcile.Result{}, nil

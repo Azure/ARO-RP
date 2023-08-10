@@ -35,7 +35,6 @@ type Reconciler struct {
 	readinessPollTime     time.Duration
 	readinessTimeout      time.Duration
 	dh                    dynamichelper.Interface
-	namespace             string
 	policyTickerDone      chan bool
 	reconciliationMinutes int
 }

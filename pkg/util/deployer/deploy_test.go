@@ -11,6 +11,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/go-test/deep"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -23,7 +24,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/Azure/ARO-RP/test/util/kubetest"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
-	"github.com/Azure/go-autorest/autorest/to"
 )
 
 //go:embed staticresources
