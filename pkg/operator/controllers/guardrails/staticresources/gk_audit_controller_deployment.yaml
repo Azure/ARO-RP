@@ -47,9 +47,9 @@ spec:
         - --disable-cert-rotation
         - --constraint-violations-limit=100
         - --audit-interval=600
-        - --operation=audit
-        - --operation=status
         - --emit-audit-events=true # flag is in alpha stage and set to false by default
+        - --audit-match-kind-only=true
+        - --audit-from-cache=true
         command:
         - /manager
         env:
