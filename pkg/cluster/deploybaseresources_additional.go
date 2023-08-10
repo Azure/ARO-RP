@@ -92,13 +92,16 @@ func (m *manager) storageAccount(name, region string, encrypted bool) *arm.Resou
 	// Virtual network rules to allow the cluster subnets to directly reach the storage accounts
 	// are only needed when egress lockdown is not enabled.
 	if !m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled {
+
+		workerProfiles, _ := api.GetEnrichedWorkerProfiles(m.doc.OpenShiftCluster.Properties)
+		workerSubnetId := workerProfiles[0].SubnetID
 		virtualNetworkRules = append(virtualNetworkRules, []mgmtstorage.VirtualNetworkRule{
 			{
 				VirtualNetworkResourceID: &m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
 				Action:                   mgmtstorage.Allow,
 			},
 			{
-				VirtualNetworkResourceID: &m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID,
+				VirtualNetworkResourceID: &workerSubnetId,
 				Action:                   mgmtstorage.Allow,
 			},
 		}...)

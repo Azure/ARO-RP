@@ -52,9 +52,15 @@ func validateVMSku(ctx context.Context, oc *api.OpenShiftCluster, resourceSkusCl
 		return err
 	}
 
+	workerProfiles, _ := api.GetEnrichedWorkerProfiles(oc.Properties)
+	// Use enriched worker profile data when available
+	if oc.Properties.WorkerProfilesStatus != nil {
+		workerProfiles = oc.Properties.WorkerProfilesStatus
+	}
+
 	// In case there are multiple WorkerProfiles listed in the cluster document (such as post-install),
 	// compare VMSize in each WorkerProfile to the resourceSkusClient call above to ensure that the sku is available in region.
-	for i, workerprofile := range oc.Properties.WorkerProfiles {
+	for i, workerprofile := range workerProfiles {
 		workerProfileSku := string(workerprofile.VMSize)
 
 		err = checkSKUAvailability(filteredSkus, location, fmt.Sprintf("properties.workerProfiles[%d].VMSize", i), workerProfileSku)

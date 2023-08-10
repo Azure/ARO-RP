@@ -11,6 +11,7 @@ import (
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -134,7 +135,9 @@ func (a *azureActions) appendAzureNetworkResources(ctx context.Context, armResou
 		for _, snet := range *vnet.Subnets {
 			//we already have the VNet resource, filtering subnets instead of fetching them individually with a SubnetClient
 			interestingSubnet := (*snet.ID == a.oc.Properties.MasterProfile.SubnetID)
-			for _, wProfile := range a.oc.Properties.WorkerProfiles {
+			workerProfiles, _ := api.GetEnrichedWorkerProfiles(a.oc.Properties)
+
+			for _, wProfile := range workerProfiles {
 				interestingSubnet = interestingSubnet || (*snet.ID == wProfile.SubnetID)
 			}
 			if !interestingSubnet {

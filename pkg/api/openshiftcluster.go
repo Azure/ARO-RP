@@ -636,6 +636,15 @@ type WorkerProfile struct {
 	DiskEncryptionSetID string           `json:"diskEncryptionSetId,omitempty"`
 }
 
+// GetEnrichedWorkerProfiles returns WorkerProfilesStatus if not nil, otherwise WorkerProfiles
+// with their respective json property name
+func GetEnrichedWorkerProfiles(ocp OpenShiftClusterProperties) ([]WorkerProfile, string) {
+	if ocp.WorkerProfilesStatus != nil {
+		return ocp.WorkerProfilesStatus, "workerProfilesStatus"
+	}
+	return ocp.WorkerProfiles, "workerProfiles"
+}
+
 // APIServerProfile represents an API server profile
 type APIServerProfile struct {
 	MissingFields

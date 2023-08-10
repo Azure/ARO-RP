@@ -18,7 +18,9 @@ import (
 // The encryption flag is set to false/disabled for legacy storage accounts.
 func (m *manager) migrateStorageAccounts(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	if len(m.doc.OpenShiftCluster.Properties.WorkerProfiles) == 0 {
+	workerProfiles, _ := api.GetEnrichedWorkerProfiles(m.doc.OpenShiftCluster.Properties)
+
+	if len(workerProfiles) == 0 {
 		m.log.Error("skipping migrateStorageAccounts due to missing WorkerProfiles.")
 		return nil
 	}
