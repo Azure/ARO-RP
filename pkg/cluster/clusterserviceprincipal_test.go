@@ -301,9 +301,13 @@ func getFakeOpenShiftSecret() corev1.Secret {
 	name := "azure-credentials"
 	namespace := "kube-system"
 	data := map[string][]byte{
-		"azure_client_id":     []byte("azure_client_id_value"),
-		"azure_client_secret": []byte("azure_client_secret_value"),
-		"azure_tenant_id":     []byte("azure_tenant_id_value"),
+		"azure_subscription_id": {},
+		"azure_resource_prefix": {},
+		"azure_resourcegroup":   {},
+		"azure_region":          {},
+		"azure_client_id":       []byte("azure_client_id_value"),
+		"azure_client_secret":   []byte("azure_client_secret_value"),
+		"azure_tenant_id":       []byte("azure_tenant_id_value"),
 	}
 	return corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -412,20 +416,14 @@ func TestUpdateOpenShiftSecret(t *testing.T) {
 				return cliWithApply()
 			},
 			doc: api.OpenShiftCluster{
-				Location: "azure_region_value",
 				Properties: api.OpenShiftClusterProperties{
 					ServicePrincipalProfile: api.ServicePrincipalProfile{
 						ClientID:     "azure_client_id_value",
 						ClientSecret: "azure_client_secret_value",
 					},
-					InfraID: "azure_resource_prefix_value",
-					ClusterProfile: api.ClusterProfile{
-						ResourceGroupID: "fake/azure/paths/azure_resourcegroup_value",
-					},
 				},
 			},
 			subscriptionDoc: api.SubscriptionDocument{
-				ID: "azure_subscription_id_value",
 				Subscription: &api.Subscription{
 					Properties: &api.SubscriptionProperties{
 						TenantID: "azure_tenant_id_value",
@@ -433,12 +431,7 @@ func TestUpdateOpenShiftSecret(t *testing.T) {
 				},
 			},
 			expect: func() corev1.Secret {
-				secret := getFakeOpenShiftSecret()
-				secret.Data["azure_region"] = []byte("azure_region_value")
-				secret.Data["azure_resource_prefix"] = []byte("azure_resource_prefix_value")
-				secret.Data["azure_resourcegroup"] = []byte("azure_resourcegroup_value")
-				secret.Data["azure_subscription_id"] = []byte("azure_subscription_id_value")
-				return secret
+				return getFakeOpenShiftSecret()
 			},
 		},
 	} {

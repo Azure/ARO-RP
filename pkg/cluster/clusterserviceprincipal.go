@@ -4,6 +4,7 @@ package cluster
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
 	"strings"
 	"time"
@@ -176,51 +177,48 @@ func (m *manager) updateAROSecret(ctx context.Context) error {
 }
 
 func (m *manager) updateOpenShiftSecret(ctx context.Context) error {
-	var changed bool
-	spp := m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
-	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		//data:
-		// azure_client_id: secret_id
-		// azure_client_secret: secret_value
-		// azure_tenant_id: tenant_id
-		secret, err := m.kubernetescli.CoreV1().Secrets(clusterauthorizer.AzureCredentialSecretNameSpace).Get(ctx, clusterauthorizer.AzureCredentialSecretName, metav1.GetOptions{})
-		if kerrors.IsNotFound(err) {
-			secret = m.newAzureCredentialSecret()
-		} else if err != nil {
-			return err
+	//data:
+	// azure_client_id: secret_id
+	// azure_client_secret: secret_value
+	// azure_tenant_id: tenant_id
+	secret, err := m.kubernetescli.CoreV1().Secrets(clusterauthorizer.AzureCredentialSecretNameSpace).Get(ctx, clusterauthorizer.AzureCredentialSecretName, metav1.GetOptions{})
+	if kerrors.IsNotFound(err) {
+		secret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      clusterauthorizer.AzureCredentialSecretName,
+				Namespace: clusterauthorizer.AzureCredentialSecretNameSpace,
+			},
+			Data: map[string][]byte{},
 		}
-
-		if string(secret.Data["azure_client_id"]) != spp.ClientID {
-			secret.Data["azure_client_id"] = []byte(spp.ClientID)
-			changed = true
-		}
-
-		if string(secret.Data["azure_client_secret"]) != string(spp.ClientSecret) {
-			secret.Data["azure_client_secret"] = []byte(spp.ClientSecret)
-			changed = true
-		}
-
-		if string(secret.Data["azure_tenant_id"]) != m.subscriptionDoc.Subscription.Properties.TenantID {
-			secret.Data["azure_tenant_id"] = []byte(m.subscriptionDoc.Subscription.Properties.TenantID)
-			changed = true
-		}
-
-		if changed {
-			secretApplyConfig := applyv1.Secret(secret.Name, secret.Namespace).WithData(secret.Data)
-			_, err = m.kubernetescli.CoreV1().Secrets(clusterauthorizer.AzureCredentialSecretNameSpace).Apply(ctx, secretApplyConfig, metav1.ApplyOptions{FieldManager: "aro-rp"})
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	if err != nil {
+	} else if err != nil {
 		return err
 	}
 
+	resourceGroupID := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID
+	spp := m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
+	desiredData := map[string][]byte{
+		"azure_subscription_id": []byte(m.subscriptionDoc.ID),
+		"azure_resource_prefix": []byte(m.doc.OpenShiftCluster.Properties.InfraID),
+		"azure_resourcegroup":   []byte(resourceGroupID[strings.LastIndex(resourceGroupID, "/")+1:]),
+		"azure_region":          []byte(m.doc.OpenShiftCluster.Location),
+		"azure_client_id":       []byte(spp.ClientID),
+		"azure_client_secret":   []byte(spp.ClientSecret),
+		"azure_tenant_id":       []byte(m.subscriptionDoc.Subscription.Properties.TenantID),
+	}
+
 	// return early if not changed
+	var changed bool
+	for key, val := range desiredData {
+		changed = !bytes.Equal(val, secret.Data[key]) || changed
+	}
 	if !changed {
 		return nil
+	}
+
+	secretApplyConfig := applyv1.Secret(secret.Name, secret.Namespace).WithData(desiredData)
+	_, err = m.kubernetescli.CoreV1().Secrets(clusterauthorizer.AzureCredentialSecretNameSpace).Apply(ctx, secretApplyConfig, metav1.ApplyOptions{FieldManager: "aro-rp", Force: true})
+	if err != nil {
+		return err
 	}
 
 	// restart cloud credentials operator to trigger rotation
@@ -234,25 +232,4 @@ func (m *manager) updateOpenShiftSecret(ctx context.Context) error {
 		m.log.Error(err)
 	}
 	return nil
-}
-
-func (m *manager) newAzureCredentialSecret() *corev1.Secret {
-	resourceGroupID := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID
-	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      clusterauthorizer.AzureCredentialSecretName,
-			Namespace: clusterauthorizer.AzureCredentialSecretNameSpace,
-		},
-		Type: corev1.SecretTypeOpaque,
-		Data: map[string][]byte{
-
-			"azure_subscription_id": []byte(m.subscriptionDoc.ID),
-			"azure_resource_prefix": []byte(m.doc.OpenShiftCluster.Properties.InfraID),
-			"azure_resourcegroup":   []byte(resourceGroupID[strings.LastIndex(resourceGroupID, "/")+1:]),
-			"azure_region":          []byte(m.doc.OpenShiftCluster.Location),
-			"azure_client_id":       []byte(""),
-			"azure_client_secret":   []byte(""),
-			"azure_tenant_id":       []byte(""),
-		},
-	}
 }
