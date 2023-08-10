@@ -59,12 +59,10 @@ linters-settings:
         alias: arofake
       - pkg: github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/keyvault
         alias: keyvaultclient
-      - pkg: github.com/Azure/ARO-RP/pkg/util/dynamichelper/discovery
-        alias: utildiscovery
       - pkg: github.com/Azure/ARO-RP/test/database
         alias: testdatabase
       - pkg: github.com/Azure/ARO-RP/test/util/dynamichelper
-        alias: testdynamichelper
+        alias: testdh
       - pkg: github.com/Azure/ARO-RP/test/util/log
         alias: testlog
       - pkg: github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault

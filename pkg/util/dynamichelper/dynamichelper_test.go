@@ -27,7 +27,7 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
-	"github.com/Azure/ARO-RP/test/util/kubetest"
+	testdh "github.com/Azure/ARO-RP/test/util/dynamichelper"
 )
 
 func TestEnsureDeleted(t *testing.T) {
@@ -40,7 +40,7 @@ func TestEnsureDeleted(t *testing.T) {
 		},
 	})
 
-	client := kubetest.NewRedirectingClient(builder.Build()).
+	client := testdh.NewRedirectingClient(builder.Build()).
 		WithDeleteHook(func(obj client.Object) error {
 			if obj.GetName() == "test-name-2" {
 				return fmt.Errorf("error on %s", obj.GetName())

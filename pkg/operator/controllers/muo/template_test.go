@@ -19,7 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
 	"github.com/Azure/ARO-RP/pkg/util/deployer"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
-	"github.com/Azure/ARO-RP/test/util/kubetest"
+	testdh "github.com/Azure/ARO-RP/test/util/dynamichelper"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -40,8 +40,8 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 	}
 
 	deployedObjects := map[string]int{}
-	wrappedClient := kubetest.NewRedirectingClient(ctrlfake.NewClientBuilder().Build()).
-		WithCreateHook(kubetest.TallyCounts(deployedObjects))
+	wrappedClient := testdh.NewRedirectingClient(ctrlfake.NewClientBuilder().Build()).
+		WithCreateHook(testdh.TallyCounts(deployedObjects))
 	dh := dynamichelper.NewWithClient(log, wrappedClient)
 
 	deployer := deployer.NewDeployer(dh, staticFiles, "staticresources")
@@ -109,7 +109,7 @@ func TestDeployConfig(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		wrappedClient := kubetest.NewRedirectingClient(ctrlfake.NewClientBuilder().Build())
+		wrappedClient := testdh.NewRedirectingClient(ctrlfake.NewClientBuilder().Build())
 		dh := dynamichelper.NewWithClient(log, wrappedClient)
 
 		deployer := deployer.NewDeployer(dh, staticFiles, "staticresources")

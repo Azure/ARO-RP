@@ -22,7 +22,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
-	"github.com/Azure/ARO-RP/test/util/kubetest"
+	testdh "github.com/Azure/ARO-RP/test/util/dynamichelper"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -39,7 +39,7 @@ func TestDeployCreateOrUpdateSetsOwnerReferences(t *testing.T) {
 		},
 	}
 	deployedObjects := map[string]int{}
-	wrappedClient := kubetest.NewRedirectingClient(ctrlfake.NewClientBuilder().Build()).
+	wrappedClient := testdh.NewRedirectingClient(ctrlfake.NewClientBuilder().Build()).
 		WithCreateHook(
 			func(obj client.Object) error {
 				m := meta.NewAccessor()
@@ -105,7 +105,7 @@ func TestDeployDelete(t *testing.T) {
 
 func TestDeployDeleteFailure(t *testing.T) {
 	_, log := testlog.New()
-	wrappedClient := kubetest.NewRedirectingClient(ctrlfake.NewClientBuilder().Build()).
+	wrappedClient := testdh.NewRedirectingClient(ctrlfake.NewClientBuilder().Build()).
 		WithDeleteHook(
 			func(obj client.Object) error {
 				return errors.New("fail")

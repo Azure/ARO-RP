@@ -20,8 +20,8 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	testdh "github.com/Azure/ARO-RP/test/util/dynamichelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
-	"github.com/Azure/ARO-RP/test/util/kubetest"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -176,14 +176,14 @@ func TestReconciler(t *testing.T) {
 
 			deployedObjects := map[string]int{}
 			deletedObjects := map[string]int{}
-			wrappedClient := kubetest.NewRedirectingClient(clientBuilder.Build()).
+			wrappedClient := testdh.NewRedirectingClient(clientBuilder.Build()).
 				WithDeleteHook(func(obj client.Object) error {
 					for _, v := range tt.causeFailureOn {
 						if obj.GetObjectKind().GroupVersionKind().Kind+"/"+obj.GetNamespace()+"/"+obj.GetName() == v {
 							return fmt.Errorf("triggered failure deleting %s", v)
 						}
 					}
-					kubetest.TallyCountsAndKey(deletedObjects)(obj)
+					testdh.TallyCountsAndKey(deletedObjects)(obj)
 					return nil
 				}).
 				WithCreateHook(func(obj client.Object) error {
@@ -192,7 +192,7 @@ func TestReconciler(t *testing.T) {
 							return fmt.Errorf("triggered failure creating %s", v)
 						}
 					}
-					kubetest.TallyCountsAndKey(deployedObjects)(obj)
+					testdh.TallyCountsAndKey(deployedObjects)(obj)
 					return nil
 				})
 

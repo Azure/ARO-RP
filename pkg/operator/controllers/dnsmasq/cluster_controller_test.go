@@ -20,8 +20,8 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
+	testdh "github.com/Azure/ARO-RP/test/util/dynamichelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
-	"github.com/Azure/ARO-RP/test/util/kubetest"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -145,10 +145,10 @@ func TestClusterReconciler(t *testing.T) {
 			deployedObjects := map[string]int{}
 			deletedObjects := map[string]int{}
 			updatedObjects := map[string]int{}
-			wrappedClient := kubetest.NewRedirectingClient(clientFake).
-				WithCreateHook(kubetest.TallyCountsAndKey(deployedObjects)).
-				WithDeleteHook(kubetest.TallyCounts(deletedObjects)).
-				WithUpdateHook(kubetest.TallyCounts(updatedObjects))
+			wrappedClient := testdh.NewRedirectingClient(clientFake).
+				WithCreateHook(testdh.TallyCountsAndKey(deployedObjects)).
+				WithDeleteHook(testdh.TallyCounts(deletedObjects)).
+				WithUpdateHook(testdh.TallyCounts(updatedObjects))
 			dh := dynamichelper.NewWithClient(log, wrappedClient)
 
 			r := NewClusterReconciler(
