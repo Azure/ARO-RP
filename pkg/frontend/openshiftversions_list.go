@@ -13,7 +13,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func (f *frontend) listInstallVersions(w http.ResponseWriter, r *http.Request) {
@@ -41,14 +40,6 @@ func (f *frontend) getEnabledInstallVersions(ctx context.Context) []*api.OpenShi
 		versions = append(versions, v)
 	}
 	f.mu.RUnlock()
-
-	if len(versions) == 0 {
-		versions = append(versions, &api.OpenShiftVersion{
-			Properties: api.OpenShiftVersionProperties{
-				Version: version.DefaultInstallStream.Version.String(),
-			},
-		})
-	}
 
 	return versions
 }
