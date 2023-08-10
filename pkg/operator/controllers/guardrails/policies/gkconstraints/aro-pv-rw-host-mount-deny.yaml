@@ -1,0 +1,10 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: ARODenyPVHostMount
+metadata:
+  name: aro-pv-rw-host-mount-deny
+spec:
+  enforcementAction: {{.Enforcement}}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["PersistentVolume"]
