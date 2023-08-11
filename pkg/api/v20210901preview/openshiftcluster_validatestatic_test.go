@@ -14,7 +14,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/Azure/ARO-RP/test/validate"
 )
 
@@ -65,7 +64,7 @@ func validOpenShiftCluster() *OpenShiftCluster {
 			ClusterProfile: ClusterProfile{
 				PullSecret:      `{"auths":{"registry.connect.redhat.com":{"auth":""},"registry.redhat.io":{"auth":""}}}`,
 				Domain:          "cluster.location.aroapp.io",
-				Version:         version.DefaultInstallStream.Version.String(),
+				Version:         "4.10.0",
 				ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", subscriptionID),
 			},
 			ConsoleProfile: ConsoleProfile{
