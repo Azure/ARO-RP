@@ -23,4 +23,5 @@ type OpenShiftVersionProperties struct {
 	OpenShiftPullspec string `json:"openShiftPullspec,omitempty"`
 	InstallerPullspec string `json:"installerPullspec,omitempty"`
 	Enabled           bool   `json:"enabled,omitempty"`
+	Default           bool   `json:"default,omitempty"`
 }
