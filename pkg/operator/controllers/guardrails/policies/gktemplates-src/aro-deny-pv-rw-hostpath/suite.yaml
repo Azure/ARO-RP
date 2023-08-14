@@ -1,0 +1,25 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: aro-deny-pv-rw-hostpath
+tests:
+- name: pv-tests
+  template: ../../gktemplates/aro-deny-pv-rw-hostpath.yaml
+  constraint: ../../gkconstraints-test/aro-pv-rw-hostpath-deny.yaml
+  cases:
+  - name: allowed-pv
+    object: gator-test/allowed_pv.yaml
+    assertions:
+    - violations: no
+  - name: disallowed-readwriteonce-pv
+    object: gator-test/disallowed_readwriteonce_pv.yaml
+    assertions:
+    - violations: yes
+  - name: disallowed-readwritemany-pv
+    object: gator-test/disallowed_readwritemany_pv.yaml
+    assertions:
+    - violations: yes
+  - name: disallowed-readwriteoncepod-pv
+    object: gator-test/disallowed_readwriteoncepod_pv.yaml
+    assertions:
+    - violations: yes

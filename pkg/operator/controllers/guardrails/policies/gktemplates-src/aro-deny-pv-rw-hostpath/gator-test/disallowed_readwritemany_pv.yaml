@@ -1,0 +1,39 @@
+apiVersion: admission.k8s.io/v1
+kind: AdmissionReview
+request:
+  dryRun: true
+  kind:
+    group: ""
+    kind: PersistentVolume
+    version: v1
+  object:
+    apiVersion: v1
+    kind: PersistentVolume
+    metadata:
+      labels:
+        type: local
+      name: task-pv-volume
+    spec:
+      accessModes:
+      - ReadWriteMany
+      capacity:
+        storage: 5Gi
+      hostPath:
+        path: /mnt/data
+      persistentVolumeReclaimPolicy: Retain
+      storageClassName: manual
+  oldObject: null
+  operation: CREATE
+  options: null
+  requestKind:
+    group: ""
+    kind: PersistentVolume
+    version: v1
+  resource:
+    group: ""
+    resource: PersistentVolume
+    version: v1
+  uid: 843bbc87-6e4f-44e1-90ed-b17888c45104
+  userInfo:
+    uid: 39f0b2e7-c65a-4b10-8368-26499f1a1fcf
+    username: fake-k8s-admin-review

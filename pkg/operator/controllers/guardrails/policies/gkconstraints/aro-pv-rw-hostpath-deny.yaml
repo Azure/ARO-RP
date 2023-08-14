@@ -1,7 +1,7 @@
 apiVersion: constraints.gatekeeper.sh/v1beta1
-kind: ARODenyPVHostMount
+kind: ARODenyPVRWHostPath
 metadata:
-  name: aro-pv-rw-host-mount-deny
+  name: aro-pv-rw-hostpath-deny
 spec:
   enforcementAction: {{.Enforcement}}
   match:
