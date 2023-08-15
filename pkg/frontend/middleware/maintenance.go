@@ -45,6 +45,6 @@ func (mm MaintenanceMiddleware) UnplannedMaintenanceSignal(h http.Handler) http.
 func (mm MaintenanceMiddleware) emitMaintenanceSignal(maintenanceType, resourceID string) {
 	maintenanceMetric := "frontend.maintenance." + maintenanceType
 	mm.EmitGauge(maintenanceMetric, 1, map[string]string{
-		"resourceID": resourceID,
+		"resourceId": resourceID,
 	})
 }
