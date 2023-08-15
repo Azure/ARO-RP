@@ -199,11 +199,6 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
-	err = fpDynamic.ValidatePreConfiguredNSGs(ctx, dv.oc, subnets)
-	if err != nil {
-		return err
-	}
-
 	tenantID := dv.subscriptionDoc.Subscription.Properties.TenantID
 	options := dv.env.Environment().ClientSecretCredentialOptions()
 	spTokenCredential, err := azidentity.NewClientSecretCredential(
@@ -259,11 +254,6 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	}
 
 	err = spDynamic.ValidateEncryptionAtHost(ctx, dv.oc)
-	if err != nil {
-		return err
-	}
-
-	err = spDynamic.ValidatePreConfiguredNSGs(ctx, dv.oc, subnets)
 	if err != nil {
 		return err
 	}

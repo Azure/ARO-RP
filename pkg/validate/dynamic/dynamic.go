@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
@@ -29,7 +30,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/permissions"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
-	"github.com/Azure/ARO-RP/pkg/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/token"
 )
 
@@ -38,7 +38,6 @@ var (
 	errMsgOriginalNSGNotAttached            = "The provided subnet '%s' is invalid: must have network security group '%s' attached."
 	errMsgNSGNotAttached                    = "The provided subnet '%s' is invalid: must have a network security group attached."
 	errMsgNSGNotProperlyAttached            = "When the enable-preconfigured-nsg option is specified, both the master and worker subnets should have network security groups (NSG) attached to them before starting the cluster installation."
-	errMsgSPHasNoRequiredPermissionsOnNSG   = "The %s service principal (Application ID: %s) does not have Network Contributor role on network security group '%s'. This is required when the enable-preconfigured-nsg option is specified."
 	errMsgSubnetNotFound                    = "The provided subnet '%s' could not be found."
 	errMsgSubnetNotInSucceededState         = "The provided subnet '%s' is not in a Succeeded state"
 	errMsgSubnetInvalidSize                 = "The provided subnet '%s' is invalid: must be /27 or larger."
@@ -72,7 +71,6 @@ type Dynamic interface {
 	ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error
 	ValidateDiskEncryptionSets(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidateEncryptionAtHost(ctx context.Context, oc *api.OpenShiftCluster) error
-	ValidatePreConfiguredNSGs(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error
 }
 
 type dynamic struct {
@@ -162,7 +160,7 @@ func (dv *dynamic) ValidateVnet(
 	// get unique vnets from subnets
 	vnets := make(map[string]azure.Resource)
 	for _, s := range subnets {
-		vnetID, _, err := subnet.Split(s.ID)
+		vnetID, _, err := apisubnet.Split(s.ID)
 		if err != nil {
 			return err
 		}
@@ -262,7 +260,7 @@ func (dv *dynamic) validateVnetPermissions(ctx context.Context, vnet azure.Resou
 func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) error {
 	dv.log.Printf("validateRouteTablePermissions")
 
-	vnetID, _, err := subnet.Split(s.ID)
+	vnetID, _, err := apisubnet.Split(s.ID)
 	if err != nil {
 		return err
 	}
@@ -324,7 +322,7 @@ func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, s Subnet) 
 func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) error {
 	dv.log.Printf("validateNatGatewayPermissions")
 
-	vnetID, _, err := subnet.Split(s.ID)
+	vnetID, _, err := apisubnet.Split(s.ID)
 	if err != nil {
 		return err
 	}
@@ -532,7 +530,7 @@ func (dv *dynamic) validateCIDRRanges(ctx context.Context, subnets []Subnet, add
 
 	// unique names of subnets from all node pools
 	for _, s := range subnets {
-		vnetID, _, err := subnet.Split(s.ID)
+		vnetID, _, err := apisubnet.Split(s.ID)
 		if err != nil {
 			return err
 		}
@@ -621,7 +619,7 @@ func (dv *dynamic) createSubnetMapByID(ctx context.Context, subnets []Subnet) (m
 	subnetByID := make(map[string]*mgmtnetwork.Subnet)
 
 	for _, s := range subnets {
-		vnetID, _, err := subnet.Split(s.ID)
+		vnetID, _, err := apisubnet.Split(s.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -711,7 +709,7 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 
 		if oc.Properties.ProvisioningState == api.ProvisioningStateCreating {
 			if subnetHasNSGAttached(ss) && oc.Properties.NetworkProfile.PreconfiguredNSG != api.PreconfiguredNSGEnabled {
-				expectedNsgID, err := subnet.NetworkSecurityGroupID(oc, s.ID)
+				expectedNsgID, err := apisubnet.NetworkSecurityGroupID(oc, s.ID)
 				if err != nil {
 					return err
 				}
@@ -723,7 +721,7 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 				}
 			}
 		} else {
-			nsgID, err := subnet.NetworkSecurityGroupID(oc, *ss.ID)
+			nsgID, err := apisubnet.NetworkSecurityGroupID(oc, *ss.ID)
 			if err != nil {
 				return err
 			}
@@ -781,65 +779,6 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 	}
 
 	return nil
-}
-
-func (dv *dynamic) ValidatePreConfiguredNSGs(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error {
-	dv.log.Print("ValidatePreConfiguredNSGs")
-
-	if oc.Properties.NetworkProfile.PreconfiguredNSG != api.PreconfiguredNSGEnabled {
-		return nil // exit early
-	}
-
-	subnetByID, err := dv.createSubnetMapByID(ctx, subnets)
-	if err != nil {
-		return err
-	}
-
-	for _, s := range subnetByID {
-		nsgID := s.NetworkSecurityGroup.ID
-		if nsgID == nil || *nsgID == "" {
-			return api.NewCloudError(
-				http.StatusBadRequest,
-				api.CloudErrorCodeNotFound,
-				"",
-				errMsgNSGNotProperlyAttached,
-			)
-		}
-
-		if err := dv.validateNSGPermissions(ctx, *nsgID); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (dv *dynamic) validateNSGPermissions(ctx context.Context, nsgID string) error {
-	nsg, err := azure.ParseResourceID(nsgID)
-	if err != nil {
-		return err
-	}
-
-	err = dv.validateActions(ctx, &nsg, []string{
-		"Microsoft.Network/networkSecurityGroups/join/action",
-	})
-
-	if err == wait.ErrWaitTimeout {
-		errCode := api.CloudErrorCodeInvalidResourceProviderPermissions
-		if dv.authorizerType == AuthorizerClusterServicePrincipal {
-			errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
-		}
-		return api.NewCloudError(
-			http.StatusBadRequest,
-			errCode,
-			"",
-			errMsgSPHasNoRequiredPermissionsOnNSG,
-			dv.authorizerType,
-			dv.appID,
-			nsgID,
-		)
-	}
-
-	return err
 }
 
 func isTheSameNSG(found, inDB string) bool {

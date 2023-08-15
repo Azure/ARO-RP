@@ -8,6 +8,4 @@ const (
 	NSGControlPlaneSuffixV1 = "-controlplane-nsg"
 	NSGNodeSuffixV1         = "-node-nsg"
 	NSGSuffixV2             = "-nsg"
-
-	machineSetsNamespace = "openshift-machine-api"
 )

@@ -81,6 +81,21 @@ func PossibleOutboundTypeValues() []OutboundType {
 	return []OutboundType{Loadbalancer, UserDefinedRouting}
 }
 
+// PreconfiguredNSG enumerates the values for preconfigured nsg.
+type PreconfiguredNSG string
+
+const (
+	// PreconfiguredNSGDisabled ...
+	PreconfiguredNSGDisabled PreconfiguredNSG = "Disabled"
+	// PreconfiguredNSGEnabled ...
+	PreconfiguredNSGEnabled PreconfiguredNSG = "Enabled"
+)
+
+// PossiblePreconfiguredNSGValues returns an array of possible values for the PreconfiguredNSG const type.
+func PossiblePreconfiguredNSGValues() []PreconfiguredNSG {
+	return []PreconfiguredNSG{PreconfiguredNSGDisabled, PreconfiguredNSGEnabled}
+}
+
 // ProvisioningState enumerates the values for provisioning state.
 type ProvisioningState string
 

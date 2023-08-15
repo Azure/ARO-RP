@@ -133,6 +133,41 @@ const (
 	OutboundTypeLoadbalancer       OutboundType = "Loadbalancer"
 )
 
+// ResourceReference represents a reference to an Azure resource.
+type ResourceReference struct {
+	// The fully qualified Azure resource id.
+	ID string `json:"id,omitempty"`
+}
+
+// LoadBalancerProfile represents the profile of the cluster public load balancer.
+type LoadBalancerProfile struct {
+	// The desired managed outbound IPs for the cluster public load balancer.
+	ManagedOutboundIPs *ManagedOutboundIPs `json:"managedOutboundIps,omitempty" mutable:"true"`
+	// The list of effective outbound IP addresses of the public load balancer.
+	EffectiveOutboundIPs []EffectiveOutboundIP `json:"effectiveOutboundIps,omitempty"`
+	// The desired outbound IP resources for the cluster load balancer.
+	OutboundIPs []OutboundIP `json:"outboundIps,omitempty" mutable:"true"`
+	// The desired outbound IP Prefix resources for the cluster load balancer.
+	OutboundIPPrefixes []OutboundIPPrefix `json:"outboundIpPrefixes,omitempty" mutable:"true"`
+	// The desired number of allocated SNAT ports per VM. Allowed values are in the range of 0 to 64000 (inclusive). The default value is 1024.
+	AllocatedOutboundPorts *int `json:"allocatedOutboundPorts,omitempty" mutable:"true"`
+}
+
+// EffectiveOutboundIP represents an effective outbound IP resource of the cluster public load balancer.
+type EffectiveOutboundIP ResourceReference
+
+// ManagedOutboundIPs represents the desired managed outbound IPs for the cluster public load balancer.
+type ManagedOutboundIPs struct {
+	// Count represents the desired number of IPv4 outbound IPs created and managed by Azure for the cluster public load balancer.  Allowed values are in the range of 1 - 20.  The default value is 1.
+	Count int `json:"count,omitempty"`
+}
+
+// OutboundIP represents a desired outbound IP resource for the cluster load balancer.
+type OutboundIP ResourceReference
+
+// OutboundIPPrefix represents a desired outbound IP Prefix resource for the cluster load balancer.
+type OutboundIPPrefix ResourceReference
+
 // NetworkProfile represents a network profile.
 type NetworkProfile struct {
 	// The CIDR used for OpenShift/Kubernetes Pods.
@@ -143,6 +178,9 @@ type NetworkProfile struct {
 
 	// The OutboundType used for egress traffic.
 	OutboundType OutboundType `json:"outboundType,omitempty"`
+
+	// The cluster load balancer profile.
+	LoadBalancerProfile *LoadBalancerProfile `json:"loadBalancerProfile,omitempty"`
 }
 
 // EncryptionAtHost represents encryption at host state
