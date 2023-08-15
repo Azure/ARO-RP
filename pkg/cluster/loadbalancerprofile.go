@@ -40,6 +40,13 @@ func (m *manager) reconcileLoadBalancerProfile(ctx context.Context) error {
 // Reconcile the outbound rule "outbound-rule-v4" frontend IP Config.
 func (m *manager) reconcileOBRuleV4OBIPs(ctx context.Context, lb mgmtnetwork.LoadBalancer) error {
 	m.log.Info("reconciling outbound-rule-v4")
+	defer func() {
+		err := m.deleteUnusedManagedIPs(ctx)
+		if err != nil {
+			m.log.Error("failed to cleanup unused managed IPs, error: %w", err)
+		}
+	}()
+
 	resourceGroupName := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 	originalOutboundIPs := getOutboundIPsFromLB(lb)
@@ -71,11 +78,6 @@ func (m *manager) reconcileOBRuleV4OBIPs(ctx context.Context, lb mgmtnetwork.Loa
 
 	// update database with new effective outbound IPs
 	err = m.patchEffectiveOutboundIPs(ctx, desiredOutboundIPs)
-	if err != nil {
-		return err
-	}
-
-	err = m.deleteUnusedManagedIPs(ctx)
 	if err != nil {
 		return err
 	}
