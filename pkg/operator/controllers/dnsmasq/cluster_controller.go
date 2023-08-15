@@ -9,6 +9,7 @@ import (
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/sirupsen/logrus"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -16,7 +17,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
@@ -27,51 +27,49 @@ const (
 )
 
 type ClusterReconciler struct {
-	base.AROController
+	log *logrus.Entry
+
 	dh dynamichelper.Interface
+
+	client client.Client
 }
 
 func NewClusterReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *ClusterReconciler {
 	return &ClusterReconciler{
-		AROController: base.AROController{
-			Log:    log,
-			Client: client,
-			Name:   ClusterControllerName,
-		},
-		dh: dh,
+		log:    log,
+		dh:     dh,
+		client: client,
 	}
 }
 
 // Reconcile watches the ARO object, and if it changes, reconciles all the
 // 99-%s-aro-dns machineconfigs
 func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.GetCluster(ctx)
+	instance := &arov1alpha1.Cluster{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		r.Log.Debug("controller is disabled")
+		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
-	r.Log.Debug("running")
+	r.log.Debug("running")
 	mcps := &mcv1.MachineConfigPoolList{}
-	err = r.Client.List(ctx, mcps)
+	err = r.client.List(ctx, mcps)
 	if err != nil {
-		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
+		r.log.Error(err)
 		return reconcile.Result{}, err
 	}
 
 	err = reconcileMachineConfigs(ctx, instance, r.dh, mcps.Items...)
 	if err != nil {
-		r.Log.Error(err)
-		r.SetDegraded(ctx, err)
+		r.log.Error(err)
 		return reconcile.Result{}, err
 	}
 
-	r.ClearConditions(ctx)
 	return reconcile.Result{}, nil
 }
 

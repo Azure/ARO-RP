@@ -6,10 +6,8 @@ package dnsmasq
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/golang/mock/gomock"
-	operatorv1 "github.com/openshift/api/operator/v1"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,28 +18,20 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
-	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestMachineConfigPoolReconciler(t *testing.T) {
-	transitionTime := metav1.Time{Time: time.Now()}
-	defaultAvailable := utilconditions.ControllerDefaultAvailable(MachineConfigPoolControllerName)
-	defaultProgressing := utilconditions.ControllerDefaultProgressing(MachineConfigPoolControllerName)
-	defaultDegraded := utilconditions.ControllerDefaultDegraded(MachineConfigPoolControllerName)
-	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
-
 	fakeDh := func(controller *gomock.Controller) *mock_dynamichelper.MockInterface {
 		return mock_dynamichelper.NewMockInterface(controller)
 	}
 
 	tests := []struct {
-		name           string
-		objects        []client.Object
-		mocks          func(mdh *mock_dynamichelper.MockInterface)
-		request        ctrl.Request
-		wantErrMsg     string
-		wantConditions []operatorv1.OperatorCondition
+		name       string
+		objects    []client.Object
+		mocks      func(mdh *mock_dynamichelper.MockInterface)
+		request    ctrl.Request
+		wantErrMsg string
 	}{
 		{
 			name:       "no cluster",
@@ -55,9 +45,7 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 			objects: []client.Object{
 				&arov1alpha1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-					Status: arov1alpha1.ClusterStatus{
-						Conditions: defaultConditions,
-					},
+					Status:     arov1alpha1.ClusterStatus{},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							controllerEnabled: "false",
@@ -74,17 +62,7 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 			objects: []client.Object{
 				&arov1alpha1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-					Status: arov1alpha1.ClusterStatus{
-						Conditions: []operatorv1.OperatorCondition{
-							defaultAvailable,
-							defaultProgressing,
-							{
-								Type:               MachineConfigPoolControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
-								Status:             operatorv1.ConditionTrue,
-								LastTransitionTime: transitionTime,
-							},
-						},
-					},
+					Status:     arov1alpha1.ClusterStatus{},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							controllerEnabled: "true",
@@ -99,17 +77,14 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 					Name:      "custom",
 				},
 			},
-			wantErrMsg:     "",
-			wantConditions: defaultConditions,
+			wantErrMsg: "",
 		},
 		{
 			name: "MachineConfigPool reconciles ARO DNS MachineConfig",
 			objects: []client.Object{
 				&arov1alpha1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-					Status: arov1alpha1.ClusterStatus{
-						Conditions: defaultConditions,
-					},
+					Status:     arov1alpha1.ClusterStatus{},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							controllerEnabled: "true",
@@ -134,8 +109,7 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 					Name:      "custom",
 				},
 			},
-			wantErrMsg:     "",
-			wantConditions: defaultConditions,
+			wantErrMsg: "",
 		},
 	}
 
@@ -155,11 +129,10 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 				client,
 				dh,
 			)
-			ctx := context.Background()
-			_, err := r.Reconcile(ctx, tt.request)
+
+			_, err := r.Reconcile(context.Background(), tt.request)
 
 			utilerror.AssertErrorMessage(t, err, tt.wantErrMsg)
-			utilconditions.AssertControllerConditions(t, ctx, client, tt.wantConditions)
 		})
 	}
 }

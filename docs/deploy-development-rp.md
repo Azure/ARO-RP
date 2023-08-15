@@ -21,12 +21,6 @@
    EOF
    ```
 
-   > Alternatively, if you do not want to configure the Azure CLI to utilize
-   > this extension globally, you can set the `AZURE_EXTENSION_DEV_SOURCES`
-   > environment variable to the `./python/` subfolder of this repository, e.g.
-   > in your ./env environment file, when you want to use the extension, and
-   > unset it when you do not.
-
 1. Verify the ARO extension is registered:
 
    ```bash

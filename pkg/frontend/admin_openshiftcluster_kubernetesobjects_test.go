@@ -107,7 +107,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			objName:      "config",
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
 				k.EXPECT().
-					KubeDelete(gomock.Any(), tt.objKind, tt.objNamespace, tt.objName, false, nil).
+					KubeDelete(gomock.Any(), tt.objKind, tt.objNamespace, tt.objName, false).
 					Return(nil)
 				k.EXPECT().ResolveGVR(tt.objKind).Return(&schema.GroupVersionResource{Resource: "configmaps"}, nil)
 			},
@@ -123,7 +123,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			force:        "true",
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
 				k.EXPECT().
-					KubeDelete(gomock.Any(), tt.objKind, tt.objNamespace, tt.objName, true, nil).
+					KubeDelete(gomock.Any(), tt.objKind, tt.objNamespace, tt.objName, true).
 					Return(nil)
 				k.EXPECT().ResolveGVR(tt.objKind).Return(&schema.GroupVersionResource{Resource: "pods"}, nil)
 			},

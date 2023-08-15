@@ -90,6 +90,7 @@ spec:
             port: 9090
         resources:
           limits:
+            cpu: {{.AuditLimitCPU}}
             memory: {{.AuditLimitMem}}
           requests:
             cpu: {{.AuditRequestsCPU}}
@@ -100,9 +101,11 @@ spec:
             drop:
             - ALL
           readOnlyRootFilesystem: true
+          runAsGroup: 999
           runAsNonRoot: true
-          seccompProfile:
-            type: RuntimeDefault
+          runAsUser: 1000
+          # seccompProfile:
+          #   type: RuntimeDefault
         volumeMounts:
         - mountPath: /certs
           name: cert

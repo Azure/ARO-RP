@@ -15,10 +15,10 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/api/validate/dynamic"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
 	mock_dynamic "github.com/Azure/ARO-RP/pkg/util/mocks/dynamic"
-	"github.com/Azure/ARO-RP/pkg/validate/dynamic"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 

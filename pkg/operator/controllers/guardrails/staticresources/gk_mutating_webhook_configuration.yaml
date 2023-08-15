@@ -20,10 +20,6 @@ webhooks:
     matchExpressions:
     - key: admission.gatekeeper.sh/ignore
       operator: DoesNotExist
-    - key: kubernetes.io/metadata.name
-      operator: NotIn
-      values:
-      - {{.Namespace}}
   rules:
   - apiGroups:
     - '*'

@@ -10,9 +10,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/Azure/ARO-RP/pkg/api/validate/dynamic"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
-	"github.com/Azure/ARO-RP/pkg/validate/dynamic"
 )
 
 type servicePrincipalChecker interface {

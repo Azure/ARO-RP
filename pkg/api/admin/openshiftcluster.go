@@ -54,7 +54,6 @@ type OpenShiftClusterProperties struct {
 	ImageRegistryStorageAccountName string                  `json:"imageRegistryStorageAccountName,omitempty"`
 	InfraID                         string                  `json:"infraId,omitempty"`
 	HiveProfile                     HiveProfile             `json:"hiveProfile,omitempty"`
-	PucmPending                     bool                    `json:"pucmPending,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state.
@@ -82,10 +81,9 @@ const (
 type MaintenanceTask string
 
 const (
-	MaintenanceTaskEverything  MaintenanceTask = "Everything"
-	MaintenanceTaskOperator    MaintenanceTask = "OperatorUpdate"
-	MaintenanceTaskRenewCerts  MaintenanceTask = "CertificatesRenewal"
-	MaintenanceTaskPucmPending MaintenanceTask = "PucmPending"
+	MaintenanceTaskEverything MaintenanceTask = "Everything"
+	MaintenanceTaskOperator   MaintenanceTask = "OperatorUpdate"
+	MaintenanceTaskRenewCerts MaintenanceTask = "CertificatesRenewal"
 )
 
 // Operator feature flags

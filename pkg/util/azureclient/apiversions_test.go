@@ -29,10 +29,6 @@ func TestAPIVersion(t *testing.T) {
 			want: apiVersions["microsoft.containerregistry"],
 		},
 		{
-			typ:  "Microsoft.Compute/galleries",
-			want: apiVersions["microsoft.compute/galleries"],
-		},
-		{
 			typ: "Microsoft.Random/resources",
 		},
 	}

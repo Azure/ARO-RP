@@ -157,8 +157,6 @@ type OpenShiftClusterProperties struct {
 	RegistryProfiles []*RegistryProfile `json:"registryProfiles,omitempty"`
 
 	HiveProfile HiveProfile `json:"hiveProfile,omitempty"`
-
-	PucmPending bool `json:"pucmPending,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state
@@ -177,10 +175,9 @@ const (
 type MaintenanceTask string
 
 const (
-	MaintenanceTaskEverything  MaintenanceTask = "Everything"
-	MaintenanceTaskOperator    MaintenanceTask = "OperatorUpdate"
-	MaintenanceTaskRenewCerts  MaintenanceTask = "CertificatesRenewal"
-	MaintenanceTaskPucmPending MaintenanceTask = "PucmPending"
+	MaintenanceTaskEverything MaintenanceTask = "Everything"
+	MaintenanceTaskOperator   MaintenanceTask = "OperatorUpdate"
+	MaintenanceTaskRenewCerts MaintenanceTask = "CertificatesRenewal"
 )
 
 // Cluster-scoped flags
@@ -312,7 +309,7 @@ type MasterProfile struct {
 type VMSize string
 
 // VMSize constants
-// add required resources in pkg/validate/dynamic/quota.go when adding a new VMSize
+// add required resources in pkg/api/validate/dynamic/quota.go when adding a new VMSize
 const (
 	VMSizeStandardD2sV3  VMSize = "Standard_D2s_v3"
 	VMSizeStandardD4sV3  VMSize = "Standard_D4s_v3"

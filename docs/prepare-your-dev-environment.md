@@ -10,32 +10,18 @@ This document goes through the development dependencies one requires in order to
 
 1. Configure `GOPATH` as an OS environment variable in your shell (a requirement of some dependencies for `make generate`). If you want to keep the default path, you can add something like `GOPATH=$(go env GOPATH)` to your shell's profile/RC file.
 
-1. Install [Python 3.6-3.10](https://www.python.org/downloads), if you haven't already.  You will also need `python-setuptools` installed, if you don't have it installed already. Python versions earlier than 3.6 or later than 3.10 are not supported as of now.
+1. Append `export GO111MODULE=auto` to your shell's profile file.
+    1. Read [New module changes in Go 1.16](https://go.dev/blog/go116-module-changes) for more information.
+
+1. Install [Python 3.6+](https://www.python.org/downloads), if you haven't already.  You will also need `python-setuptools` installed, if you don't have it installed already.
 
 1. Install the [az client](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli), if you haven't already.
-
-    > Depending on the default version of Python available on your system, it may be convenient to set up the above within a virtual env. You can do so by running the `make pyenv` Makefile target within this repository.
-    > Ensure that your `python3` command points to a valid version of Python in the above range, e.g. 3.10, when running the command. 
-    > You can then install the Azure CLI via Pip: `pip install azure-cli`.
 
 1. Install [OpenVPN](https://openvpn.net/community-downloads) if it is not already installed
 
 1. Install the relevant packages required for your OS defined below.
 
-1. Install [Podman](https://podman.io/getting-started/installation) and [podman-docker](https://developers.redhat.com/blog/2019/02/21/podman-and-buildah-for-docker-users#) if you haven't already. Podman is used for building container images and running the installer.
-    1. Podman needs to be running in daemon mode when running the RP locally.
-        
-        On Linux, you can set this up to automatically start via socket activation with::
-            
-            ```bash
-            systemctl --user enable podman.socket
-            ```
-        
-        If you're using podman-machine, you will need to export the socket, for example::
-
-            ```bash
-            export ARO_PODMAN_SOCKET=unix:///$HOME/.local/share/containers/podman/machine/qemu/podman.sock
-            ```
+1. Install [Podman](https://podman.io/getting-started/installation) and [podman-docker](https://developers.redhat.com/blog/2019/02/21/podman-and-buildah-for-docker-users#) if you haven't already, used for building container images.
 
 1. Run for `az acr login` compatability
 
@@ -48,9 +34,11 @@ This document goes through the development dependencies one requires in order to
 ### Fedora / RHEL Packages
 
 1. Install the `gpgme-devel`, `libassuan-devel`, and `openssl` packages.
-    > `sudo dnf install -y gpgme-devel libassuan-devel openssl podman`
+    > `sudo dnf install -y gpgme-devel libassuan-devel openssl`
 
 > __NOTE:__: If using RHEL, register the system with `subscription-manager register`, and then enable the [CodeReady Linux Builder](https://access.redhat.com/articles/4348511) repository to install *-devel packages. For other packages not in the base repositories, such as OpenVPN, you can [enable the EPEL repository](https://docs.fedoraproject.org/en-US/epel/#_quickstart) to install them.
+
+1. Optionally install [Docker 17.05+](https://docs.docker.com/engine/install/fedora/) or later as an alternative to podman.
 
 ### Debian Packages
 

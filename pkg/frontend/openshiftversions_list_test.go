@@ -37,15 +37,15 @@ func TestListInstallVersions(t *testing.T) {
 		{
 			name: "return multiple versions",
 			changeFeed: map[string]*api.OpenShiftVersion{
-				version.DefaultInstallStreams[11].Version.String(): {
+				version.DefaultInstallStream.Version.String(): {
 					Properties: api.OpenShiftVersionProperties{
-						Version: version.DefaultInstallStreams[11].Version.String(),
+						Version: version.DefaultInstallStream.Version.String(),
 						Enabled: true,
 					},
 				},
-				version.DefaultInstallStreams[10].Version.String(): {
+				"4.10.67": {
 					Properties: api.OpenShiftVersionProperties{
-						Version: version.DefaultInstallStreams[10].Version.String(),
+						Version: "4.10.67",
 						Enabled: true,
 					},
 				},
@@ -62,17 +62,17 @@ func TestListInstallVersions(t *testing.T) {
 				OpenShiftVersions: []*v20220904.OpenShiftVersion{
 					{
 						Properties: v20220904.OpenShiftVersionProperties{
-							Version: version.DefaultInstallStreams[10].Version.String(),
+							Version: version.DefaultInstallStream.Version.String(),
+						},
+					},
+					{
+						Properties: v20220904.OpenShiftVersionProperties{
+							Version: "4.10.67",
 						},
 					},
 					{
 						Properties: v20220904.OpenShiftVersionProperties{
 							Version: "4.11.5",
-						},
-					},
-					{
-						Properties: v20220904.OpenShiftVersionProperties{
-							Version: version.DefaultInstallStreams[11].Version.String(),
 						},
 					},
 				},

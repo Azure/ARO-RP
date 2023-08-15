@@ -677,19 +677,6 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			},
 		},
 		{
-			name: "maintenanceTask change to PucmPending allowed",
-			oc: func() *OpenShiftCluster {
-				return &OpenShiftCluster{
-					Properties: OpenShiftClusterProperties{
-						MaintenanceTask: MaintenanceTaskPucmPending,
-					},
-				}
-			},
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.MaintenanceTask = ""
-			},
-		},
-		{
 			name: "maintenanceTask change to other values is disallowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{

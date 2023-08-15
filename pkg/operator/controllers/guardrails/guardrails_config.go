@@ -41,11 +41,11 @@ const (
 
 	defaultManagerRequestsCPU = "100m"
 	defaultManagerLimitCPU    = "1000m"
-	defaultManagerRequestsMem = "512Mi"
+	defaultManagerRequestsMem = "256Mi"
 	defaultManagerLimitMem    = "512Mi"
 	defaultAuditRequestsCPU   = "100m"
 	defaultAuditLimitCPU      = "1000m"
-	defaultAuditRequestsMem   = "512Mi"
+	defaultAuditRequestsMem   = "256Mi"
 	defaultAuditLimitMem      = "512Mi"
 
 	defaultReconciliationMinutes = "60"

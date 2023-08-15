@@ -13,7 +13,6 @@ import (
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -26,9 +25,6 @@ func alwaysTrueCondition(context.Context) (bool, error)  { return true, nil }
 func timingOutCondition(ctx context.Context) (bool, error) {
 	time.Sleep(60 * time.Millisecond)
 	return false, nil
-}
-func internalTimeoutCondition(ctx context.Context) (bool, error) {
-	return false, wait.ErrWaitTimeout
 }
 
 func currentTimeFunc() time.Time {
@@ -172,36 +168,6 @@ func TestStepRunner(t *testing.T) {
 				},
 			},
 			wantErr: "timed out waiting for the condition",
-		},
-		{
-			name: "A Condition that returns a timeout error causes a different failure from a timed out Condition",
-			steps: func(controller *gomock.Controller) []Step {
-				return []Step{
-					Action(successfulFunc),
-					&conditionStep{
-						f:            internalTimeoutCondition,
-						fail:         true,
-						pollInterval: 20 * time.Millisecond,
-						timeout:      50 * time.Millisecond,
-					},
-					Action(successfulFunc),
-				}
-			},
-			wantEntries: []map[string]types.GomegaMatcher{
-				{
-					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]"),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
-				{
-					"msg":   gomega.Equal("running step [Condition github.com/Azure/ARO-RP/pkg/util/steps.internalTimeoutCondition, timeout 50ms]"),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
-				{
-					"msg":   gomega.Equal("step [Condition github.com/Azure/ARO-RP/pkg/util/steps.internalTimeoutCondition, timeout 50ms] encountered error: condition encountered internal timeout: timed out waiting for the condition"),
-					"level": gomega.Equal(logrus.ErrorLevel),
-				},
-			},
-			wantErr: "condition encountered internal timeout: timed out waiting for the condition",
 		},
 		{
 			name: "A Condition that does not return true in the timeout time causes a failure",
