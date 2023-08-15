@@ -1,0 +1,14 @@
+apiVersion: v1
+data:
+  regexes: |
+    - installFailingMessage: The template deployment failed. Please see details for more
+        information.
+      installFailingReason: AzureInvalidTemplateDeployment
+      name: AzureInvalidTemplateDeployment
+      searchRegexStrings:
+      - '"code":\w?"InvalidTemplateDeployment"'
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: additional-install-log-regexes
+  namespace: hive
