@@ -16,7 +16,7 @@ spec:
       gatekeeper.sh/system: "yes"
   template:
     metadata:
-      # annotations:
+      # annotations: #intended deviation from upstream
       #   container.seccomp.security.alpha.kubernetes.io/manager: runtime/default
       labels:
         control-plane: controller-manager
@@ -112,7 +112,7 @@ spec:
             - ALL
           readOnlyRootFilesystem: true
           runAsNonRoot: true
-          # seccompProfile:
+          # seccompProfile: #intended deviation from upstream
           #   type: RuntimeDefault
         volumeMounts:
         - mountPath: /certs
