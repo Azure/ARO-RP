@@ -18,6 +18,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 const (
@@ -45,6 +46,12 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	clusterName := os.Getenv(Cluster)
 
 	osClusterVersion := os.Getenv("OS_CLUSTER_VERSION")
+	if osClusterVersion == "" {
+		osClusterVersion = version.DefaultInstallStream.Version.String()
+		log.Infof("using default cluster version %s", osClusterVersion)
+	} else {
+		log.Infof("using specified cluster version %s", osClusterVersion)
+	}
 
 	c, err := cluster.New(log, env, os.Getenv("CI") != "")
 	if err != nil {

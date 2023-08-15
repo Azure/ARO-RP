@@ -6,8 +6,10 @@ package dnsmasq
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
+	operatorv1 "github.com/openshift/api/operator/v1"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,20 +20,27 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
+	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func TestMachineConfigReconciler(t *testing.T) {
+	transitionTime := metav1.Time{Time: time.Now()}
+	defaultAvailable := utilconditions.ControllerDefaultAvailable(MachineConfigControllerName)
+	defaultProgressing := utilconditions.ControllerDefaultProgressing(MachineConfigControllerName)
+	defaultDegraded := utilconditions.ControllerDefaultDegraded(MachineConfigControllerName)
+	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
 	fakeDh := func(controller *gomock.Controller) *mock_dynamichelper.MockInterface {
 		return mock_dynamichelper.NewMockInterface(controller)
 	}
 
 	tests := []struct {
-		name       string
-		objects    []client.Object
-		mocks      func(mdh *mock_dynamichelper.MockInterface)
-		request    ctrl.Request
-		wantErrMsg string
+		name           string
+		objects        []client.Object
+		mocks          func(mdh *mock_dynamichelper.MockInterface)
+		request        ctrl.Request
+		wantErrMsg     string
+		wantConditions []operatorv1.OperatorCondition
 	}{
 		{
 			name:       "no cluster",
@@ -45,7 +54,9 @@ func TestMachineConfigReconciler(t *testing.T) {
 			objects: []client.Object{
 				&arov1alpha1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-					Status:     arov1alpha1.ClusterStatus{},
+					Status: arov1alpha1.ClusterStatus{
+						Conditions: defaultConditions,
+					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							controllerEnabled: "false",
@@ -53,16 +64,27 @@ func TestMachineConfigReconciler(t *testing.T) {
 					},
 				},
 			},
-			mocks:      func(mdh *mock_dynamichelper.MockInterface) {},
-			request:    ctrl.Request{},
-			wantErrMsg: "",
+			mocks:          func(mdh *mock_dynamichelper.MockInterface) {},
+			request:        ctrl.Request{},
+			wantErrMsg:     "",
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "no MachineConfigPool for MachineConfig does nothing",
 			objects: []client.Object{
 				&arov1alpha1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-					Status:     arov1alpha1.ClusterStatus{},
+					Status: arov1alpha1.ClusterStatus{
+						Conditions: []operatorv1.OperatorCondition{
+							defaultAvailable,
+							defaultProgressing,
+							{
+								Type:               MachineConfigControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+								Status:             operatorv1.ConditionTrue,
+								LastTransitionTime: transitionTime,
+							},
+						},
+					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							controllerEnabled: "true",
@@ -77,14 +99,17 @@ func TestMachineConfigReconciler(t *testing.T) {
 					Name:      "99-custom-aro-dns",
 				},
 			},
-			wantErrMsg: "",
+			wantErrMsg:     "",
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "valid MachineConfigPool for MachineConfig reconciles MachineConfig",
 			objects: []client.Object{
 				&arov1alpha1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-					Status:     arov1alpha1.ClusterStatus{},
+					Status: arov1alpha1.ClusterStatus{
+						Conditions: defaultConditions,
+					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							controllerEnabled: "true",
@@ -106,7 +131,8 @@ func TestMachineConfigReconciler(t *testing.T) {
 					Name:      "99-custom-aro-dns",
 				},
 			},
-			wantErrMsg: "",
+			wantErrMsg:     "",
+			wantConditions: defaultConditions,
 		},
 	}
 
@@ -126,10 +152,11 @@ func TestMachineConfigReconciler(t *testing.T) {
 				client,
 				dh,
 			)
-
-			_, err := r.Reconcile(context.Background(), tt.request)
+			ctx := context.Background()
+			_, err := r.Reconcile(ctx, tt.request)
 
 			utilerror.AssertErrorMessage(t, err, tt.wantErrMsg)
+			utilconditions.AssertControllerConditions(t, ctx, client, tt.wantConditions)
 		})
 	}
 }

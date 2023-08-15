@@ -14,8 +14,10 @@ import (
 	features "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	gomock "github.com/golang/mock/gomock"
 	logrus "github.com/sirupsen/logrus"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
+	watch "k8s.io/apimachinery/pkg/watch"
 )
 
 // MockKubeActions is a mock of KubeActions interface.
@@ -112,17 +114,17 @@ func (mr *MockKubeActionsMockRecorder) KubeCreateOrUpdate(arg0, arg1 interface{}
 }
 
 // KubeDelete mocks base method.
-func (m *MockKubeActions) KubeDelete(arg0 context.Context, arg1, arg2, arg3 string, arg4 bool) error {
+func (m *MockKubeActions) KubeDelete(arg0 context.Context, arg1, arg2, arg3 string, arg4 bool, arg5 *v1.DeletionPropagation) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "KubeDelete", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "KubeDelete", arg0, arg1, arg2, arg3, arg4, arg5)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // KubeDelete indicates an expected call of KubeDelete.
-func (mr *MockKubeActionsMockRecorder) KubeDelete(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+func (mr *MockKubeActionsMockRecorder) KubeDelete(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KubeDelete", reflect.TypeOf((*MockKubeActions)(nil).KubeDelete), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KubeDelete", reflect.TypeOf((*MockKubeActions)(nil).KubeDelete), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
 // KubeGet mocks base method.
@@ -168,6 +170,21 @@ func (m *MockKubeActions) KubeList(arg0 context.Context, arg1, arg2 string) ([]b
 func (mr *MockKubeActionsMockRecorder) KubeList(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KubeList", reflect.TypeOf((*MockKubeActions)(nil).KubeList), arg0, arg1, arg2)
+}
+
+// KubeWatch mocks base method.
+func (m *MockKubeActions) KubeWatch(arg0 context.Context, arg1 *unstructured.Unstructured, arg2 string) (watch.Interface, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "KubeWatch", arg0, arg1, arg2)
+	ret0, _ := ret[0].(watch.Interface)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// KubeWatch indicates an expected call of KubeWatch.
+func (mr *MockKubeActionsMockRecorder) KubeWatch(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KubeWatch", reflect.TypeOf((*MockKubeActions)(nil).KubeWatch), arg0, arg1, arg2)
 }
 
 // ResolveGVR mocks base method.

@@ -30,7 +30,7 @@ jobs:
   - script: |
       set -xe
       sudo rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-      sudo dnf install -y openvpn make podman
+      sudo dnf install -y openvpn make podman jq
     displayName: Setup (Container)
     target: container
 
@@ -81,16 +81,32 @@ jobs:
 
   - script: |
       export CI=true
+      # . secrets/env
+      . ./hack/e2e/run-rp-and-e2e.sh
+      set -x
+
+      # set up jq
+      wget -nv https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
+      mv jq-linux64 jq
+      chmod +x jq
+
+      # retrieve the kubeconfig and oc cli
+      hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER >admin.kubeconfig
+    displayName: Get admin kubeconfig for must-gather
+    condition: failed()
+  # must-gather collection must be run inside the container so it can access the VPN
+  - script: |
+      export CI=true
       . ./hack/e2e/run-rp-and-e2e.sh
 
-      hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER >admin.kubeconfig
       export KUBECONFIG=admin.kubeconfig
+      wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/4.10.20/openshift-client-linux-4.10.20.tar.gz
+      tar xf openshift-client-linux-4.10.20.tar.gz
 
-      wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftVersion)/openshift-client-linux-$(OpenShiftVersion).tar.gz
-      tar xf openshift-client-linux-$(OpenShiftVersion).tar.gz
       ./oc adm must-gather
       tar cf must-gather.tar.gz must-gather.local.*
     displayName: Collect must-gather
+    target: container
     condition: failed()
   - publish: must-gather.tar.gz
     artifact: must-gather

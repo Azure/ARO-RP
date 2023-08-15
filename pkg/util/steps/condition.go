@@ -5,12 +5,34 @@ package steps
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
+
+	"github.com/Azure/ARO-RP/pkg/api"
 )
+
+// Functions that run as condition-steps return Error
+// instead of InternalServerError
+// Efforts are being made  to not have generic Hive errors but specific, actionable failure cases.
+// Instead of providing Hive-specific error messages to customers, the below will send a timeout error message.
+var timeoutConditionErrors = map[string]string{
+	"apiServersReady":                        "Kube API has not initialised successfully and is unavailable.",
+	"minimumWorkerNodesReady":                "Minimum number of worker nodes have not been successfully created.",
+	"operatorConsoleExists":                  "Console Cluster Operator has failed to initialize successfully.",
+	"operatorConsoleReady":                   "Console Cluster Operator has not started successfully.",
+	"clusterVersionReady":                    "Cluster Verion is not reporting status as ready.",
+	"ingressControllerReady":                 "Ingress Cluster Operator has not started successfully.",
+	"aroDeploymentReady":                     "ARO Cluster Operator has failed to initialize successfully.",
+	"ensureAROOperatorRunningDesiredVersion": "ARO Cluster Operator is not running desired version.",
+	"hiveClusterDeploymentReady":             "Timed out waiting for a condition, cluster Installation is unsuccessful.",
+	"hiveClusterInstallationComplete":        "Timed out waiting for a condition, cluster Installation is unsuccessful.",
+}
 
 // conditionFunction is a function that takes a context and returns whether the
 // condition has been met and an error.
@@ -54,19 +76,47 @@ func (c conditionStep) run(ctx context.Context, log *logrus.Entry) error {
 
 	// Run the condition function immediately, and then every
 	// runner.pollInterval, until the condition returns true or timeoutCtx's
-	// timeout fires. Errors from `f` are returned directly.
+	// timeout fires. Errors from `f` are returned directly unless the error
+	// is ErrWaitTimeout. Internal ErrWaitTimeout errors are wrapped to avoid
+	// confusion with wait.PollImmediateUntil's own behavior of returning
+	// ErrWaitTimeout when the condition is not met.
 	err := wait.PollImmediateUntil(pollInterval, func() (bool, error) {
 		// We use the outer context, not the timeout context, as we do not want
 		// to time out the condition function itself, only stop retrying once
 		// timeoutCtx's timeout has fired.
-		return c.f(ctx)
+		cnd, cndErr := c.f(ctx)
+		if errors.Is(cndErr, wait.ErrWaitTimeout) {
+			return cnd, fmt.Errorf("condition encountered internal timeout: %w", cndErr)
+		}
+
+		return cnd, cndErr
 	}, timeoutCtx.Done())
 
 	if err != nil && !c.fail {
 		log.Warnf("step %s failed but has configured 'fail=%t'. Continuing. Error: %s", c, c.fail, err.Error())
 		return nil
 	}
+	if errors.Is(err, wait.ErrWaitTimeout) {
+		return enrichConditionTimeoutError(c.f, err)
+	}
 	return err
+}
+
+// Instead of giving Generic, timed out waiting for a condition, error
+// returns enriched error messages mentioned in timeoutConditionErrors
+func enrichConditionTimeoutError(f conditionFunction, originalErr error) error {
+	funcNameParts := strings.Split(FriendlyName(f), ".")
+	funcName := strings.TrimSuffix(funcNameParts[len(funcNameParts)-1], "-fm")
+
+	message, exists := timeoutConditionErrors[funcName]
+	if !exists {
+		return originalErr
+	}
+	return api.NewCloudError(
+		http.StatusInternalServerError,
+		api.CloudErrorCodeDeploymentFailed,
+		"", message+"Please retry, if issue persists: raise azure support ticket",
+	)
 }
 
 func (c conditionStep) String() string {
