@@ -34,7 +34,7 @@ func TestUnplannedMaintenanceSignal(t *testing.T) {
 			maintenanceMiddleware := MaintenanceMiddleware{m}
 
 			m.EXPECT().EmitGauge("frontend.maintenance.unplanned", int64(1), map[string]string{
-				"resourceID": tt.resourceID,
+				"resourceId": tt.resourceID,
 			})
 
 			handlerFunc := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
