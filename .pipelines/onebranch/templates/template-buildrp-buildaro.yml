@@ -1,4 +1,6 @@
 steps:
+  - task: CodeQL3000Init@0
+    displayName: 'Initialize CodeQL'
   - task: Bash@3
     displayName: ⚙️ Make ARO
     inputs:
@@ -37,3 +39,5 @@ steps:
         export GOPATH=$(Agent.TempDirectory)
         make validate-fips
       workingDirectory: $(Agent.TempDirectory)/src/github.com/Azure/ARO-RP
+  - task: CodeQL3000Finalize@0
+    displayName: 'Finalize CodeQL'
