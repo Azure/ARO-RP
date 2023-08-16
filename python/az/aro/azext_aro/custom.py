@@ -68,6 +68,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                worker_count=None,
                apiserver_visibility=None,
                ingress_visibility=None,
+               load_balancer_managed_outbound_ip_count=None,
                tags=None,
                version=None,
                no_wait=False):
@@ -126,6 +127,12 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
     if ingress_visibility is not None:
         ingress_visibility = ingress_visibility.capitalize()
 
+    load_balancer_profile = None
+    if load_balancer_managed_outbound_ip_count is not None:
+        load_balancer_profile = openshiftcluster.LoadBalancerProfile()
+        load_balancer_profile.managed_outbound_ips = openshiftcluster.ManagedOutboundIPs()
+        load_balancer_profile.managed_outbound_ips.count = load_balancer_managed_outbound_ip_count  # pylint: disable=line-too-long
+
     oc = openshiftcluster.OpenShiftCluster(
         location=location,
         tags=tags,
@@ -145,6 +152,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
             pod_cidr=pod_cidr or '10.128.0.0/14',
             service_cidr=service_cidr or '172.30.0.0/16',
             outbound_type=outbound_type or '',
+            load_balancer_profile=load_balancer_profile
         ),
         master_profile=openshiftcluster.MasterProfile(
             vm_size=master_vm_size or 'Standard_D8s_v3',

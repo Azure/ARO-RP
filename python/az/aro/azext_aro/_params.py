@@ -114,6 +114,12 @@ def load_arguments(self, _):
         c.argument('worker_subnet',
                    help='Name or ID of worker vnet subnet.  If name is supplied, `--vnet` must be supplied.',
                    validator=validate_subnet('worker_subnet'))
+        c.argument('load_balancer_managed_outbound_ip_count',
+                   type=int,
+                   help='The desired number of IPv4 outbound IPs created and managed by Azure for the cluster public load balancer.',  # pylint: disable=line-too-long
+                   validator=validate_load_balancer_managed_outbound_ip_count,
+                   options_list=['--load-balancer-managed-outbound-ip-count', '--lb-ip-count'])
+
     with self.argument_context('aro update') as c:
         c.argument('client_secret',
                    help='Client secret of cluster service principal.',
@@ -123,11 +129,7 @@ def load_arguments(self, _):
                    help='Refresh cluster application credentials.',
                    options_list=['--refresh-credentials'],
                    validator=validate_refresh_cluster_credentials)
-        c.argument('load_balancer_managed_outbound_ip_count',
-                   type=int,
-                   help='The desired number of IPv4 outbound IPs created and managed by Azure for the cluster public load balancer.',  # pylint: disable=line-too-long
-                   validator=validate_load_balancer_managed_outbound_ip_count,
-                   options_list=['--load-balancer-managed-outbound-ip-count', '--lb-ip-count'])
+
     with self.argument_context('aro get-admin-kubeconfig') as c:
         c.argument('file',
                    help='Path to the file where kubeconfig should be saved. Default: kubeconfig in local directory',
