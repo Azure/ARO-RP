@@ -23,7 +23,7 @@ on:
 jobs:
   analyze:
     name: Analyze
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       actions: read
       contents: read
@@ -32,7 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: ['javascript', 'python']
+        language: ['go', 'javascript', 'python']
         # CodeQL supports [ 'cpp', 'csharp', 'go', 'java', 'javascript', 'python' ]
         # Learn more:
         # https://docs.github.com/en/free-pro-team@latest/github/finding-security-vulnerabilities-and-errors-in-your-code/configuring-code-scanning#changing-the-languages-that-are-analyzed
@@ -51,10 +51,28 @@ jobs:
         # Prefix the list here with "+" to use these queries and those in the config file.
         # queries: ./path/to/local/query, your-org/your-repo/queries@main
 
+    - name: Set up node
+      if: matrix.language == 'javascript'
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18
+
     # Autobuild attempts to build any compiled languages  (C/C++, C#, or Java).
     # If this step fails, then you should remove it and run the build manually (see below)
     - name: Autobuild
+      if: matrix.language != 'go'
       uses: github/codeql-action/autobuild@v2
+
+    - name: Set up Go
+      if: matrix.language == 'go'
+      uses: actions/setup-go@v4
+      with:
+        go-version: 1.18
+
+    - name: Build Go
+      if: matrix.language == 'go'
+      run: |
+        go build ./cmd/aro
 
     # ℹ️ Command-line programs to run using the OS shell.
     # 📚 https://git.io/JvXDl

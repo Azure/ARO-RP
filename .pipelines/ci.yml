@@ -44,20 +44,6 @@ variables:
   - template: vars.yml
 
 jobs:
-  - job: Golang_CodeQL
-    pool:
-      name: 1es-aro-ci-pool
-    variables:
-      HOME: $(Agent.BuildDirectory)
-    steps:
-      - template: ./templates/template-checkout.yml
-      - template: ./templates/template-codeql.yml
-        parameters:
-          language: go
-          target: golang
-          github_token: $(github_codeql_upload_token)
-    timeoutInMinutes: 120
-
   - job: Python_Unit_Tests
     pool:
       name: 1es-aro-ci-pool
