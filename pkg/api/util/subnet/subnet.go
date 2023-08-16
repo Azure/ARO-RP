@@ -35,11 +35,6 @@ func NetworkSecurityGroupID(oc *api.OpenShiftCluster, subnetID string) (string, 
 	isWorkerSubnet := false
 	workerProfiles, _ := api.GetEnrichedWorkerProfiles(oc.Properties)
 
-	// Use enriched worker profile data when available
-	if oc.Properties.WorkerProfilesStatus != nil {
-		workerProfiles = oc.Properties.WorkerProfilesStatus
-	}
-
 	for _, s := range workerProfiles {
 		if strings.EqualFold(subnetID, s.SubnetID) {
 			isWorkerSubnet = true
