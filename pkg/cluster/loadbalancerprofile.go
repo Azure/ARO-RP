@@ -92,7 +92,9 @@ func removeOutboundIPsFromLB(lb mgmtnetwork.LoadBalancer) {
 	for _, obRule := range *lb.LoadBalancerPropertiesFormat.OutboundRules {
 		if *obRule.Name == "outbound-rule-v4" {
 			for i := 0; i < len(*obRule.OutboundRulePropertiesFormat.FrontendIPConfigurations); i++ {
-				obRuleV4FIPConfigMap[*(*obRule.OutboundRulePropertiesFormat.FrontendIPConfigurations)[i].ID] = (*obRule.OutboundRulePropertiesFormat.FrontendIPConfigurations)[i]
+				fipConfigID := *(*obRule.OutboundRulePropertiesFormat.FrontendIPConfigurations)[i].ID
+				fipConfig := (*obRule.OutboundRulePropertiesFormat.FrontendIPConfigurations)[i]
+				obRuleV4FIPConfigMap[fipConfigID] = fipConfig
 			}
 			// clear outbound-rule-v4 frontend ip config
 			*obRule.FrontendIPConfigurations = []mgmtnetwork.SubResource{}
@@ -103,10 +105,13 @@ func removeOutboundIPsFromLB(lb mgmtnetwork.LoadBalancer) {
 	// the public api server frontend ip config if the api server is public
 	var savedFIPConfig = make([]mgmtnetwork.FrontendIPConfiguration, 0, len(*lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations))
 	for i := 0; i < len(*lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations); i++ {
-		if _, ok := obRuleV4FIPConfigMap[*(*lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations)[i].ID]; ok && (*lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations)[i].LoadBalancingRules == nil {
+		fipConfigID := *(*lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations)[i].ID
+		fipConfig := (*lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations)[i]
+		fipLBRules := (*lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations)[i].LoadBalancingRules
+		if _, ok := obRuleV4FIPConfigMap[fipConfigID]; ok && fipLBRules == nil {
 			continue
 		}
-		savedFIPConfig = append(savedFIPConfig, (*lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations)[i])
+		savedFIPConfig = append(savedFIPConfig, fipConfig)
 	}
 	lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations = &savedFIPConfig
 }
@@ -115,8 +120,10 @@ func removeOutboundIPsFromLB(lb mgmtnetwork.LoadBalancer) {
 func addOutboundIPsToLB(resourceGroupID string, lb mgmtnetwork.LoadBalancer, obIPsOrIPPrefixes []api.ResourceReference) {
 	// map out frontendConfig to ID of public IP addresses for quick lookup
 	var frontendIPConfigMap = make(map[string]mgmtnetwork.FrontendIPConfiguration, len(*lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations))
-	for _, frontendIPConfig := range *lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations {
-		frontendIPConfigMap[*frontendIPConfig.FrontendIPConfigurationPropertiesFormat.PublicIPAddress.ID] = frontendIPConfig
+	for i := 0; i < len(*lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations); i++ {
+		fipConfigIPID := *(*lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations)[i].FrontendIPConfigurationPropertiesFormat.PublicIPAddress.ID
+		fipConfig := (*lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations)[i]
+		frontendIPConfigMap[fipConfigIPID] = fipConfig
 	}
 
 	obRuleV4FrontendIPConfig := []mgmtnetwork.SubResource{}
@@ -260,9 +267,13 @@ func (m *manager) getClusterManagedIPs(ctx context.Context) (map[string]mgmtnetw
 	return ipAddresses, err
 }
 
+func genManagedOutboundIPName() string {
+	return uuid.DefaultGenerator.Generate() + "-outbound-pip-v4"
+}
+
 // Create a managed outbound IP Address.
 func (m *manager) createPublicIPAddress(ctx context.Context) (mgmtnetwork.PublicIPAddress, error) {
-	name := uuid.DefaultGenerator.Generate() + "-outbound-pip-v4"
+	name := genManagedOutboundIPName()
 	resourceGroupName := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	resourceID := fmt.Sprintf("%s/providers/Microsoft.Network/publicIPAddresses/%s", m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, name)
 	m.log.Infof("creating public IP Address: %s", name)
@@ -292,7 +303,9 @@ func getOutboundIPsFromLB(lb mgmtnetwork.LoadBalancer) []api.ResourceReference {
 	fipConfigMap := make(map[string]mgmtnetwork.FrontendIPConfiguration, len(*lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations))
 
 	for i := 0; i < len(*lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations); i++ {
-		fipConfigMap[*(*lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations)[i].ID] = (*lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations)[i]
+		fipConfigID := *(*lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations)[i].ID
+		fipConfig := (*lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations)[i]
+		fipConfigMap[fipConfigID] = fipConfig
 	}
 
 	for _, obRule := range *lb.LoadBalancerPropertiesFormat.OutboundRules {
