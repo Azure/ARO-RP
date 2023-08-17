@@ -30,32 +30,12 @@ type Stream struct {
 	PullSpec string   `json:"-"`
 }
 
-// DefaultMinorVersion describes the minor OpenShift version to default to
-var DefaultMinorVersion = 12
-
-// DefaultInstallStreams describes the latest version of our supported streams
-var DefaultInstallStreams = map[int]*Stream{
-	11: {
-		Version:  NewVersion(4, 11, 44),
-		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:52cbfbbeb9cc03b49c2788ac7333e63d3dae14673e01a9d8e59270f3a8390ed3",
-	},
-	12: {
-		Version:  NewVersion(4, 12, 25),
-		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:5a4fb052cda1d14d1e306ce87e6b0ded84edddaa76f1cf401bcded99cef2ad84",
-	},
-	13: {
-		Version:  NewVersion(4, 13, 23),
-		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:ca556d3494d08765c90481f15dd965995371168ea7ee7a551000bed4481931c8",
-	},
-}
-
-// DefaultInstallStream describes stream we are defaulting to for all new clusters
-var DefaultInstallStream = DefaultInstallStreams[DefaultMinorVersion]
-
-var AvailableInstallStreams = []*Stream{
-	DefaultInstallStreams[11],
-	DefaultInstallStreams[12],
-	DefaultInstallStreams[13],
+// Install stream data for production and INT has moved to RP-Config.
+// This default is left here ONLY for use by local development mode,
+// until we can come up with a better solution.
+var DefaultInstallStream = Stream{
+	Version:  NewVersion(4, 12, 25),
+	PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:5a4fb052cda1d14d1e306ce87e6b0ded84edddaa76f1cf401bcded99cef2ad84",
 }
 
 // FluentbitImage contains the location of the Fluentbit container image
