@@ -20,7 +20,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -38,7 +37,7 @@ func TestVersion(t *testing.T) {
 
 	assetsVersion := strings.TrimSuffix(string(b), "\n")
 	// NOTE: This is checking for the version of the oldest supported minor stream.
-	if assetsVersion != version.DefaultInstallStreams[11].Version.String() {
+	if assetsVersion != "4.11.44" {
 		t.Error("discovery cache is out of date: run make discoverycache")
 	}
 }
