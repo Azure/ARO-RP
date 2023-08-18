@@ -4,3 +4,4 @@ metadata:
   name: {{ .Values.istio.namespace }}
   labels:
     istio.io/rev: asm-1-17
+    istio-injection: enabled
