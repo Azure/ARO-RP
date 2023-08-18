@@ -80,3 +80,16 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+# Use for Istio service mesh 
+istio:
+  name: aks-istio-ingressgateway-internal
+  gateway:
+    name: rpGatewayPoc
+    #TODO jonachang: need to specify the host once we have the domain name
+    host: "*"
+  virtualService:
+    name: rpVirtualServicePoc
+    port: 80
+     #TODO jonachang: need to specify the host once we have the domain name
+    host: "*"

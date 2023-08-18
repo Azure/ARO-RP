@@ -1,0 +1,18 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: {{ .Values.istio.gateway.name }}
+spec:
+  selector:
+    istio: {{ .Values.name }}
+  servers:
+  - port:
+      number: 443
+      name: http
+      protocol: HTTPS
+    # TODO jonachang: need to create credential  
+    # tls:
+    #   mode: SIMPLE
+    #   credentialName: 
+    hosts:
+    - {{ .Values.istio.gateway.host }}
