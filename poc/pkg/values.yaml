@@ -84,6 +84,7 @@ affinity: {}
 # Use for Istio service mesh 
 istio:
   name: aks-istio-ingressgateway-internal
+  namespace: rp-poc
   gateway:
     name: rpGatewayPoc
     #TODO jonachang: need to specify the host once we have the domain name
