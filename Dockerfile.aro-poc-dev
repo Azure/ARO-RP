@@ -1,0 +1,19 @@
+ARG REGISTRY
+
+# Build ARO binary
+FROM golang:1.19-alpine
+ADD . /ARO-RP
+WORKDIR /ARO-RP
+RUN go mod tidy
+RUN go mod vendor
+RUN apk update && apk add --no-cache gnupg && apk add --no-cache gcompat
+RUN GOOS=linux GOARCH=amd64 go build -o aro ./cmd/aro
+
+# Package binary into container image
+FROM ${REGISTRY}/ubi8/ubi-minimal
+RUN microdnf update && microdnf clean all
+RUN curl -o /etc/pki/ca-trust/source/anchors/AMEROOT_ameroot.crt http://crl.microsoft.com/pkiinfra/certs/AMEROOT_ameroot.crt && update-ca-trust
+COPY --from=0 /ARO-RP/aro /usr/local/bin/
+ENTRYPOINT ["aro", "poc"]
+EXPOSE 2222/tcp 8080/tcp 8443/tcp 8444/tcp 8445/tcp
+USER 1000

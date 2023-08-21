@@ -255,3 +255,6 @@ vendor:
 
 poc-pkg:
 	helm package poc/pkg
+
+poc-build-deploy:
+	poc/hack/build-deploy.sh $(alias)
