@@ -6,7 +6,7 @@ ADD . /ARO-RP
 WORKDIR /ARO-RP
 RUN go mod tidy
 RUN go mod vendor
-RUN apk update && apk add --no-cache gnupg && apk add --no-cache gcompat
+RUN apk update && apk add --no-cache gpgme-dev build-base pkgconf linux-headers btrfs-progs-dev lvm2-dev
 RUN GOOS=linux GOARCH=amd64 go build -o aro ./cmd/aro
 
 # Package binary into container image
