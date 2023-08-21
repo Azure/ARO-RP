@@ -40,7 +40,7 @@ func main() {
 	flag.Usage = usage
 	flag.Parse()
 
-	// sctx := context.Background()
+	// ctx := context.Background()
 	// audit := utillog.GetAuditEntry()
 	log := utillog.GetLogger()
 
