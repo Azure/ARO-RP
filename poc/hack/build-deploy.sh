@@ -2,7 +2,7 @@
 
 ACR_NAME="aropocsvc.azurecr.io"
 CLUSTER_NAME="aro-rp-aks-poc"
-DOCKERFILE="Dockerfile.aro-poc-dev"
+DOCKERFILE="Dockerfile.aro-poc"
 REGISTRY="REGISTRY=registry.access.redhat.com"
 RESOURCE_GROUP="rp-aks-poc"
 SUB="0cc1cafa-578f-4fa5-8d6b-ddfd8d82e6ea"
@@ -16,6 +16,7 @@ azure_login() {
 }
 
 build_container() {
+    env GOOS=linux GOARCH=amd64 go build -o aro ./cmd/aro
     docker build --file "$DOCKERFILE" --tag "$DOCKERTAG" --build-arg="$REGISTRY" .
 }
 
