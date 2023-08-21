@@ -2,7 +2,14 @@ import { useState, useEffect, useRef } from "react"
 import { AxiosResponse } from 'axios';
 import { fetchNodes } from '../Request';
 import { NodesListComponent } from './NodesList';
-import { IMessageBarStyles, MessageBar, MessageBarType, Stack } from '@fluentui/react';
+import {
+  IMessageBarStyles,
+  MessageBar,
+  MessageBarType,
+  Stack,
+  CommandBar,
+  ICommandBarItemProps
+ } from '@fluentui/react';
 import { nodesKey } from "../ClusterDetail";
 import { WrapperProps } from "../ClusterDetailList";
 
@@ -44,6 +51,13 @@ export interface INodeOverviewDetails {
   createdTime: string
 }
 
+const controlStyles = {
+  root: {
+    paddingLeft: 0,
+    float: "right",
+  },
+}
+
 export function NodesWrapper(props: WrapperProps) {
   const [data, setData] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
@@ -73,7 +87,7 @@ export function NodesWrapper(props: WrapperProps) {
     setData(newData)
     const nodeList: INode[] = []
     if (state && state.current) {
-      newData.nodes.forEach(
+      newData.nodes?.forEach(
         (element: {
           name: any
           createdTime: any
@@ -117,6 +131,17 @@ export function NodesWrapper(props: WrapperProps) {
       state.current.setState({ nodes: nodeList })
     }
   }
+  const _items: ICommandBarItemProps[] = [
+    {
+      key: "refresh",
+      text: "Refresh",
+      iconProps: { iconName: "Refresh" },
+      onClick: () => {
+        updateData([])
+        setFetching("")
+      },
+    },
+  ]
 
   useEffect(() => {
     const onData = (result: AxiosResponse | null) => {
@@ -145,6 +170,11 @@ export function NodesWrapper(props: WrapperProps) {
     <Stack>
       <Stack.Item grow>{error && errorBar()}</Stack.Item>
       <Stack>
+        <CommandBar
+          items={_items}
+          ariaLabel="Refresh"
+          styles={controlStyles}
+        />
         <NodesListComponent
           nodes={data!}
           ref={state}

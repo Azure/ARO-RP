@@ -9,7 +9,14 @@ import {
   ingressStatisticsKey,
   kcmStatisticsKey,
 } from "../../ClusterDetail"
-import { IMessageBarStyles, MessageBar, MessageBarType, Stack } from "@fluentui/react"
+import {
+  IMessageBarStyles,
+  MessageBar,
+  MessageBarType,
+  Stack,
+  CommandBar,
+  ICommandBarItemProps
+} from "@fluentui/react"
 
 export interface IMetricValue {
   timestamp: Date
@@ -72,6 +79,25 @@ export function StatisticsWrapper(props: {
     setMetrics(metrics)
   }
 
+  const controlStyles = {
+    root: {
+      paddingLeft: 0,
+      float: "right",
+    },
+  }
+
+  const _items: ICommandBarItemProps[] = [
+    {
+      key: "refresh",
+      text: "Refresh",
+      iconProps: { iconName: "Refresh" },
+      onClick: () => {
+        updateData([])
+        setFetching("")
+      },
+    },
+  ]
+
   useEffect(() => {
     const onData = (result: AxiosResponse | null) => {
       if (result?.status === 200) {
@@ -106,6 +132,11 @@ export function StatisticsWrapper(props: {
     <Stack>
       <Stack.Item grow>{error && errorBar()}</Stack.Item>
       <Stack>
+        <CommandBar
+          items={_items}
+          ariaLabel="Refresh"
+          styles={controlStyles}
+        />
         <StatisticsComponent
           metrics={metrics}
           fetchStatus={fetching}
