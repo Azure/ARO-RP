@@ -1,7 +1,7 @@
 # Scripts for ARO-RP on AKS POC
 
 ## build-deploy.sh
-- Used to build and deploy ARO-RP from local environment
+- Used to build and deploy ARO-RP from local environment to the test AKS cluster
 - Run this via the Makefile. 
 - In the root ARO-RP directory, run `make alias=*your_alias* poc-build-deploy`
 - This will upload your local RP image to the ACR as `dev/*your_alias*:latest`
