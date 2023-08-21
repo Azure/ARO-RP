@@ -60,7 +60,7 @@ func main() {
 		// err = deploy(ctx, log)
 	case "gateway":
 		checkArgs(1)
-		// serr = gateway(ctx, log)
+		// err = gateway(ctx, log)
 	case "mirror":
 		checkMinArgs(1)
 		// err = mirror(ctx, log)
