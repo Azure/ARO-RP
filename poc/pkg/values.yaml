@@ -92,6 +92,7 @@ istio:
   virtualService:
     name: rp-poc-virtualservice
     port: 80
+    #TODO jonachang: need to update to the sample app name once created
     service: aro-rp-poc-pkg
   credential:
     name: rp-poc-secret
