@@ -4,7 +4,6 @@ package main
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"math/rand"
@@ -41,8 +40,8 @@ func main() {
 	flag.Usage = usage
 	flag.Parse()
 
-	ctx := context.Background()
-	audit := utillog.GetAuditEntry()
+	// ctx := context.Background()
+	// audit := utillog.GetAuditEntry()
 	log := utillog.GetLogger()
 
 	go func() {
@@ -55,31 +54,31 @@ func main() {
 	switch strings.ToLower(flag.Arg(0)) {
 	case "dbtoken":
 		checkArgs(1)
-		err = dbtoken(ctx, log)
+		// err = dbtoken(ctx, log)
 	case "deploy":
 		checkArgs(3)
-		err = deploy(ctx, log)
+		// err = deploy(ctx, log)
 	case "gateway":
 		checkArgs(1)
-		err = gateway(ctx, log)
+		// err = gateway(ctx, log)
 	case "mirror":
 		checkMinArgs(1)
-		err = mirror(ctx, log)
+		// err = mirror(ctx, log)
 	case "monitor":
 		checkArgs(1)
-		err = monitor(ctx, log)
+		// err = monitor(ctx, log)
 	case "rp":
 		checkArgs(1)
-		err = rp(ctx, log, audit)
+		// err = rp(ctx, log, audit)
 	case "portal":
 		checkArgs(1)
-		err = portal(ctx, log, audit)
+		// err = portal(ctx, log, audit)
 	case "operator":
 		checkArgs(2)
-		err = operator(ctx, log)
+		// err = operator(ctx, log)
 	case "update-versions":
 		checkArgs(1)
-		err = updateOCPVersions(ctx, log)
+		// err = updateOCPVersions(ctx, log)
 	case "poc":
 		checkArgs(1)
 		err = poc(log)
