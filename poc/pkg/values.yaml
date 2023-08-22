@@ -95,4 +95,5 @@ istio:
     #TODO jonachang: need to update to the sample app name once created
     service: aro-rp-poc-pkg
   credential:
+    #TODO jonachang: need to add a secret in other PR
     name: rp-poc-secret
