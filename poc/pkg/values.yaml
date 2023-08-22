@@ -94,4 +94,4 @@ istio:
     port: 80
     service: aro-rp-poc-pkg
   credential:
-    name: rpCredentialPoc
+    name: rp-poc-secret
