@@ -1,19 +1,19 @@
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
 metadata:
-  name: rpVirtualServicePoc
-  namespace: aro-rp-poc
+  name: {{ .Values.istio.virtualService.name }}
+  namespace: {{ .Values.istio.namespace }}
 spec:
   hosts:
-  - "*"
+  - {{ .Values.istio.gateway.host }}
   gateways:
-  - rpGatewayPoc
+  - {{ .Values.istio.gateway.name }}
   http:
   - match:
     - uri:
         prefix: /
     route:
     - destination:
-        host: "*"
+        host: {{ .Values.istio.virtualService.service }}
         port:
-          number: 80
+          number: {{ .Values.istio.virtualService.port }}

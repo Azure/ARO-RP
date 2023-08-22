@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: aro-rp-poc
+  name: {{ .Values.istio.namespace }}
   labels:
     istio.io/rev: asm-1-17
     istio-injection: enabled

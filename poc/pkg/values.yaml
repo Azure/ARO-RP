@@ -88,11 +88,10 @@ istio:
   gateway:
     name: rpGatewayPoc
     #TODO jonachang: need to specify the host once we have the domain name
-    host: "*"
+    host: "aro-istio-poc.westus3.cloudapp.azure.com"
   virtualService:
     name: rpVirtualServicePoc
     port: 80
-     #TODO jonachang: need to specify the host once we have the domain name
-    host: "*"
+    service: aro-rp-poc-pkg
   credential:
     name: rpCredentialPoc

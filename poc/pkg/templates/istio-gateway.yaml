@@ -1,11 +1,11 @@
 apiVersion: networking.istio.io/v1alpha3
 kind: Gateway
 metadata:
-   name: rpGatewayPoc
-   namespace: aro-rp-poc
+   name: {{ .Values.istio.gateway.name }}
+   namespace: {{ .Values.istio.namespace }}
 spec:
   selector:
-    istio: aks-istio-ingressgateway-internal
+    istio: {{ .Values.istio.name }}
   servers:
   - port:
       number: 443
@@ -13,6 +13,6 @@ spec:
       protocol: HTTPS
     tls:
       mode: SIMPLE
-      credentialName:rpCredentialPoc
+      credentialName: {{ .Values.istio.credential.name }}
     hosts:
-    - "*"
+    - {{ .Values.istio.gateway.host }}
