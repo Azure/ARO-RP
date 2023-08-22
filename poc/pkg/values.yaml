@@ -86,11 +86,11 @@ istio:
   name: aks-istio-ingressgateway-internal
   namespace: aro-rp-poc
   gateway:
-    name: rpGatewayPoc
+    name: rp-poc-gateway
     #TODO jonachang: need to specify the host once we have the domain name
     host: "aro-istio-poc.westus3.cloudapp.azure.com"
   virtualService:
-    name: rpVirtualServicePoc
+    name: rp-poc-virtualservice
     port: 80
     service: aro-rp-poc-pkg
   credential:
