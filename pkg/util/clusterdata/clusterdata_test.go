@@ -84,6 +84,7 @@ func TestEnrichOne(t *testing.T) {
 			enricherMock := mock_clusterdata.NewMockClusterEnricher(controller)
 			enricherMock.EXPECT().Enrich(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 				Return(tt.enricherReturnValue).Times(tt.enricherCallCount)
+			enricherMock.EXPECT().SetDefaults(gomock.Any()).Times(tt.enricherCallCount)
 
 			e := ParallelEnricher{
 				emitter: metricsMock,

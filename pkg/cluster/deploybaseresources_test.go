@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -44,13 +45,13 @@ func TestEnsureResourceGroup(t *testing.T) {
 		"yeet": to.StringPtr("yote"),
 	}
 
-	resourceGroupManagedByMismatch := autorest.NewErrorWithError(&azure.RequestError{
-		ServiceError: &azure.ServiceError{Code: "ResourceGroupManagedByMismatch"},
-	}, "", "", nil, "")
-
 	disallowedByPolicy := autorest.NewErrorWithError(&azure.RequestError{
 		ServiceError: &azure.ServiceError{Code: "RequestDisallowedByPolicy"},
 	}, "", "", nil, "")
+
+	resourceGroupNotFound := autorest.NewErrorWithError(&azure.RequestError{
+		ServiceError: &azure.ServiceError{Code: "ResourceGroupNotFound"},
+	}, "", "", &http.Response{StatusCode: http.StatusNotFound}, "")
 
 	for _, tt := range []struct {
 		name              string
@@ -62,6 +63,10 @@ func TestEnsureResourceGroup(t *testing.T) {
 			name:              "success - rg doesn't exist",
 			provisioningState: api.ProvisioningStateCreating,
 			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
+				rg.EXPECT().
+					Get(gomock.Any(), resourceGroupName).
+					Return(mgmtfeatures.ResourceGroup{}, resourceGroupNotFound)
+
 				rg.EXPECT().
 					CreateOrUpdate(gomock.Any(), resourceGroupName, group).
 					Return(group, nil)
@@ -83,6 +88,10 @@ func TestEnsureResourceGroup(t *testing.T) {
 				groupWithLocalDevTags.Tags = map[string]*string{
 					"purge": to.StringPtr("true"),
 				}
+				rg.EXPECT().
+					Get(gomock.Any(), resourceGroupName).
+					Return(mgmtfeatures.ResourceGroup{}, resourceGroupNotFound)
+
 				rg.EXPECT().
 					CreateOrUpdate(gomock.Any(), resourceGroupName, groupWithLocalDevTags).
 					Return(groupWithLocalDevTags, nil)
@@ -128,16 +137,26 @@ func TestEnsureResourceGroup(t *testing.T) {
 			wantErr: "generic error",
 		},
 		{
-			name:              "fail - CreateOrUpdate returns resourcegroupmanagedbymismatch",
+			name:              "fail - managedBy doesn't match",
 			provisioningState: api.ProvisioningStateCreating,
 			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
+				badManagedBy := group
+				badManagedBy.ManagedBy = to.StringPtr("does-not-match")
 				rg.EXPECT().
-					CreateOrUpdate(gomock.Any(), resourceGroupName, group).
-					Return(group, resourceGroupManagedByMismatch)
-
-				env.EXPECT().
-					IsLocalDevelopmentMode().
-					Return(false)
+					Get(gomock.Any(), resourceGroupName).
+					Return(badManagedBy, nil)
+			},
+			wantErr: "400: ClusterResourceGroupAlreadyExists: : Resource group " + resourceGroup + " must not already exist.",
+		},
+		{
+			name:              "fail - location doesn't match",
+			provisioningState: api.ProvisioningStateCreating,
+			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
+				badLocation := group
+				badLocation.Location = to.StringPtr("bad-location")
+				rg.EXPECT().
+					Get(gomock.Any(), resourceGroupName).
+					Return(badLocation, nil)
 			},
 			wantErr: "400: ClusterResourceGroupAlreadyExists: : Resource group " + resourceGroup + " must not already exist.",
 		},
@@ -145,6 +164,10 @@ func TestEnsureResourceGroup(t *testing.T) {
 			name:              "fail - CreateOrUpdate returns requestdisallowedbypolicy",
 			provisioningState: api.ProvisioningStateCreating,
 			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
+				rg.EXPECT().
+					Get(gomock.Any(), resourceGroupName).
+					Return(group, nil)
+
 				rg.EXPECT().
 					CreateOrUpdate(gomock.Any(), resourceGroupName, group).
 					Return(group, disallowedByPolicy)
@@ -159,6 +182,10 @@ func TestEnsureResourceGroup(t *testing.T) {
 			name:              "fail - CreateOrUpdate returns generic error",
 			provisioningState: api.ProvisioningStateCreating,
 			mocks: func(rg *mock_features.MockResourceGroupsClient, env *mock_env.MockInterface) {
+				rg.EXPECT().
+					Get(gomock.Any(), resourceGroupName).
+					Return(group, nil)
+
 				rg.EXPECT().
 					CreateOrUpdate(gomock.Any(), resourceGroupName, group).
 					Return(group, errors.New("generic error"))

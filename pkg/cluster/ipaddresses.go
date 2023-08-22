@@ -269,7 +269,7 @@ func (m *manager) ensureGatewayCreate(ctx context.Context) error {
 		if !strings.EqualFold(gwyDoc.ID, m.doc.OpenShiftCluster.ID) ||
 			!strings.EqualFold(gwyDoc.Gateway.ImageRegistryStorageAccountName, m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName) ||
 			!strings.EqualFold(gwyDoc.Gateway.StorageSuffix, m.doc.OpenShiftCluster.Properties.StorageSuffix) {
-			return errors.New("gateway record already exists for a different cluster")
+			return fmt.Errorf("gateway record '%s' already exists for a different cluster '%s'", linkIdentifier, gwyDoc.ID)
 		}
 	}
 

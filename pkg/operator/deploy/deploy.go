@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/env"
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -40,7 +41,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
-	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 //go:embed staticresources
@@ -187,7 +187,7 @@ func (o *operator) resources() ([]kruntime.Object, error) {
 		return nil, err
 	}
 
-	vnetID, _, err := subnet.Split(o.oc.Properties.MasterProfile.SubnetID)
+	vnetID, _, err := apisubnet.Split(o.oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return nil, err
 	}

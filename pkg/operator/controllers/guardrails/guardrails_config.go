@@ -8,6 +8,9 @@ import (
 	"embed"
 	"strings"
 
+	configv1 "github.com/openshift/api/config/v1"
+	"k8s.io/apimachinery/pkg/types"
+
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -37,15 +40,17 @@ const (
 	controllerPolicyManagedTemplate     = "aro.guardrails.policies.%s.managed"
 	controllerPolicyEnforcementTemplate = "aro.guardrails.policies.%s.enforcement"
 
+	RoleSCCResourceName = "aro.guardrails.role.scc.resourcename"
+
 	defaultNamespace = "openshift-azure-guardrails"
 
 	defaultManagerRequestsCPU = "100m"
 	defaultManagerLimitCPU    = "1000m"
-	defaultManagerRequestsMem = "256Mi"
+	defaultManagerRequestsMem = "512Mi"
 	defaultManagerLimitMem    = "512Mi"
 	defaultAuditRequestsCPU   = "100m"
 	defaultAuditLimitCPU      = "1000m"
-	defaultAuditRequestsMem   = "256Mi"
+	defaultAuditRequestsMem   = "512Mi"
 	defaultAuditLimitMem      = "512Mi"
 
 	defaultReconciliationMinutes = "60"
@@ -54,6 +59,9 @@ const (
 	defaultValidatingWebhookTimeout       = "3"
 	defaultMutatingWebhookFailurePolicy   = "Ignore"
 	defaultMutatingWebhookTimeout         = "1"
+
+	defaultRoleSCCResourceName411 = "restricted-v2"
+	defaultRoleSCCResourceName410 = "restricted"
 
 	gkDeploymentPath  = "staticresources"
 	gkTemplatePath    = "policies/gktemplates"
@@ -112,6 +120,12 @@ func (r *Reconciler) getDefaultDeployConfig(ctx context.Context, instance *arov1
 	case strings.EqualFold(mutatingManaged, "false"):
 		deployConfig.MutatingWebhookFailurePolicy = "Ignore"
 	}
+
+	deployConfig.RoleSCCResourceName = instance.Spec.OperatorFlags.GetWithDefault(RoleSCCResourceName, defaultRoleSCCResourceName411)
+	// for version 4.10 and below choose defaultRoleSCCResourceName410 scc
+	if lt411, err := r.VersionLT411(ctx); err == nil && lt411 {
+		deployConfig.RoleSCCResourceName = instance.Spec.OperatorFlags.GetWithDefault(RoleSCCResourceName, defaultRoleSCCResourceName410)
+	}
 	r.namespace = deployConfig.Namespace
 	return deployConfig
 }
@@ -121,4 +135,19 @@ func (r *Reconciler) gatekeeperDeploymentIsReady(ctx context.Context, deployConf
 		return ready, err
 	}
 	return r.deployer.IsReady(ctx, deployConfig.Namespace, "gatekeeper-controller-manager")
+}
+
+func (r *Reconciler) VersionLT411(ctx context.Context) (bool, error) {
+	cv := &configv1.ClusterVersion{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: "version"}, cv)
+	if err != nil {
+		return false, err
+	}
+	clusterVersion, err := version.GetClusterVersion(cv)
+	if err != nil {
+		r.log.Errorf("error getting the OpenShift version: %v", err)
+		return false, err
+	}
+	ver411, _ := version.ParseVersion("4.11.0")
+	return clusterVersion.Lt(ver411), nil
 }

@@ -1,146 +1,121 @@
 # Azure DevOps Pipeline running CI
-#
-# Note: This pipeline uses a secret variable "github_codeql_upload_token".
-#       This is a GitHub Personal Access Token (Classic) owned by mbarnes.
-#       It has no expiration and only has the "security_events" scope for
-#       the purpose of uploading CodeQL results.
-#
-#       However, for this secret to be available to pull requests from
-#       forked ARO-RP repositories, the pipeline option "Make secrets
-#       available to builds of forks" is enabled.
-#
-#       More information:
-#       https://learn.microsoft.com/en-us/azure/devops/pipelines/repos/github#contributions-from-forks
-#
+
 trigger:
   branches:
     include:
-    - master
+      - master
   paths:
     exclude:
-    - docs/*
+      - docs/*
   tags:
     include:
-    - v2*
+      - v2*
 
 pr:
   branches:
     include:
-    - master
+      - master
   paths:
     exclude:
-    - docs/*
+      - docs/*
 
 resources:
   containers:
-  - container: golang
-    image: registry.access.redhat.com/ubi8/go-toolset:1.18
-    options: --user=0
-  - container: python
-    image: registry.access.redhat.com/ubi8/python-39:latest
-    options: --user=0
+    - container: golang
+      image: registry.access.redhat.com/ubi8/go-toolset:1.18
+      options: --user=0
+    - container: python
+      image: registry.access.redhat.com/ubi8/python-39:latest
+      options: --user=0
 
 variables:
-- template: vars.yml
+  - template: vars.yml
 
 jobs:
-- job: Golang_CodeQL
-  pool:
-    name: 1es-aro-ci-pool
-  variables:
-    HOME: $(Agent.BuildDirectory)
-  steps:
-    - template: ./templates/template-checkout.yml
-    - template: ./templates/template-codeql.yml
-      parameters:
-        language: go
+
+  - job: Python_Unit_Tests
+    pool:
+      name: 1es-aro-ci-pool
+    variables:
+      HOME: $(Agent.BuildDirectory)
+    steps:
+      - template: ./templates/template-checkout.yml
+      - script: |
+          set -xe
+          make test-python
+          [[ -z "$(git status -s)" ]]
+        displayName: 🧪Run Python Unit Tests
+        target: python
+
+  - job: Golang_Unit_Tests
+    pool:
+      name: 1es-aro-ci-pool
+    variables:
+      GOCACHE: /tmp/gocache
+    steps:
+      - template: ./templates/template-checkout.yml
+
+      - script: |
+          set -xe
+          go version
+          go env
+        displayName: Print Go version & env
         target: golang
-        github_token: $(github_codeql_upload_token)
-  timeoutInMinutes: 120
 
-- job: Python_Unit_Tests
-  pool:
-    name: 1es-aro-ci-pool
-  variables:
-    HOME: $(Agent.BuildDirectory)
-  steps:
-  - template: ./templates/template-checkout.yml
-  - script: |
-      set -xe
-      make test-python
-      [[ -z "$(git status -s)" ]]
-    displayName: 🧪Run Python Unit Tests
-    target: python
+      - script: |
+          set -xe
+          make generate
+          [[ -z "$(git status -s)" ]]
+        displayName: ⚙️ Run Golang code generate
+        target: golang
 
-- job: Golang_Unit_Tests
-  pool:
-    name: 1es-aro-ci-pool
-  variables:
-    GOCACHE: /tmp/gocache
-  steps:
-  - template: ./templates/template-checkout.yml
+      - script: |
+          set -xe
+          make build-all
+          [[ -z "$(git status -s)" ]]
+        displayName: 🕵️ Build Golang code
+        target: golang
 
-  - script: |
-      set -xe
-      go version
-      go env
-    displayName: Print Go version & env
-    target: golang
+      - script: |
+          set -xe
+          make unit-test-go
+        displayName: 🧪 Run Golang unit tests
+        target: golang
 
-  - script: |
-      set -xe
-      make generate
-      [[ -z "$(git status -s)" ]]
-    displayName: ⚙️ Run Golang code generate
-    target: golang
+      - script: |
+          set -xe
+          make validate-fips
+        displayName: 🕵️ Validate FIPS
+        target: golang
 
-  - script: |
-      set -xe
-      make build-all
-      [[ -z "$(git status -s)" ]]
-    displayName: 🕵️ Build Golang code
-    target: golang
+      - task: PublishTestResults@2
+        displayName: 📊 Publish tests results
+        inputs:
+          testResultsFiles: $(System.DefaultWorkingDirectory)/**/report.xml
+        condition: succeededOrFailed()
 
-  - script: |
-      set -xe
-      make unit-test-go
-    displayName: 🧪 Run Golang unit tests
-    target: golang
+      - script: |
+          set -xe
+          go run github.com/axw/gocov/gocov@v1.1.0 convert cover.out | go run github.com/AlekSi/gocov-xml@v1.1.0 > coverage.xml
+        displayName: ⚙️ Process Reports
+        condition: succeededOrFailed()
+        target: golang
 
-  - script: |
-      set -xe
-      make validate-fips
-    displayName: 🕵️ Validate FIPS
-    target: golang
+      - task: PublishCodeCoverageResults@1
+        displayName: 📈 Publish code coverage
+        inputs:
+          codeCoverageTool: Cobertura
+          summaryFileLocation: $(System.DefaultWorkingDirectory)/**/coverage.xml
+          failIfCoverageEmpty: false
+        condition: succeededOrFailed()
+        target: golang
 
-  - task: PublishTestResults@2
-    displayName: 📊 Publish tests results
-    inputs:
-      testResultsFiles: $(System.DefaultWorkingDirectory)/**/report.xml
-    condition: succeededOrFailed()
-
-  - script: |
-      set -xe
-      go run github.com/axw/gocov/gocov@v1.1.0 convert cover.out | go run github.com/AlekSi/gocov-xml@v1.1.0 > coverage.xml
-    displayName: ⚙️ Process Reports
-    condition: succeededOrFailed()
-    target: golang
-
-  - task: PublishCodeCoverageResults@1
-    displayName: 📈 Publish code coverage
-    inputs:
-      codeCoverageTool: Cobertura
-      summaryFileLocation: $(System.DefaultWorkingDirectory)/**/coverage.xml
-      failIfCoverageEmpty: false
-    condition: succeededOrFailed()
-    target: golang
-
-- job: Lint_Admin_Portal
-  pool:
-    name: 1es-aro-ci-pool
-  steps:
-  - template: ./templates/template-checkout.yml
-  - script: |
-      set -xe
-      make lint-admin-portal
-    displayName: 🧹 Lint Admin Portal
+  - job: Lint_Admin_Portal
+    pool:
+      name: 1es-aro-ci-pool
+    steps:
+      - template: ./templates/template-checkout.yml
+      - script: |
+          set -xe
+          make lint-admin-portal
+        displayName: 🧹 Lint Admin Portal

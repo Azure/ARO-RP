@@ -67,10 +67,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	r.log.Debug("running")
 
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
 	checkErr := r.checker.Check(ctx)
 	condition := r.condition(checkErr)
 

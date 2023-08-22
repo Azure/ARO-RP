@@ -19,10 +19,10 @@ import (
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
-	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 func (m *manager) createDNS(ctx context.Context) error {
@@ -46,20 +46,35 @@ func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	group := mgmtfeatures.ResourceGroup{}
 
-	// The FPSP's role definition does not have read on a resource group
-	// if the resource group does not exist.
 	// Retain the existing resource group configuration (such as tags) if it exists
-	if m.doc.OpenShiftCluster.Properties.ProvisioningState != api.ProvisioningStateCreating {
-		group, err = m.resourceGroups.Get(ctx, resourceGroup)
-		if err != nil {
-			if detailedErr, ok := err.(autorest.DetailedError); !ok || detailedErr.StatusCode != http.StatusNotFound {
-				return err
-			}
+	group, err = m.resourceGroups.Get(ctx, resourceGroup)
+	if err != nil {
+		if detailedErr, ok := err.(autorest.DetailedError); !ok || detailedErr.StatusCode != http.StatusNotFound {
+			return err
 		}
+
+		// set field values if the RG doesn't exist
+		group.Location = &m.doc.OpenShiftCluster.Location
+		group.ManagedBy = &m.doc.OpenShiftCluster.ID
 	}
 
-	group.Location = &m.doc.OpenShiftCluster.Location
-	group.ManagedBy = &m.doc.OpenShiftCluster.ID
+	resourceGroupAlreadyExistsError := &api.CloudError{
+		StatusCode: http.StatusBadRequest,
+		CloudErrorBody: &api.CloudErrorBody{
+			Code: api.CloudErrorCodeClusterResourceGroupAlreadyExists,
+			Message: "Resource group " + m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID +
+				" must not already exist.",
+		},
+	}
+
+	// If managedBy or location don't match, return an error that RG must not already exist
+	if group.Location == nil || !strings.EqualFold(*group.Location, m.doc.OpenShiftCluster.Location) {
+		return resourceGroupAlreadyExistsError
+	}
+
+	if group.ManagedBy == nil || !strings.EqualFold(*group.ManagedBy, m.doc.OpenShiftCluster.ID) {
+		return resourceGroupAlreadyExistsError
+	}
 
 	// HACK: set purge=true on dev clusters so our purger wipes them out since there is not deny assignment in place
 	if m.env.IsLocalDevelopmentMode() {
@@ -87,16 +102,6 @@ func (m *manager) ensureResourceGroup(ctx context.Context) (err error) {
 		serviceError = requestErr.ServiceError
 	}
 
-	if serviceError != nil && serviceError.Code == "ResourceGroupManagedByMismatch" {
-		return &api.CloudError{
-			StatusCode: http.StatusBadRequest,
-			CloudErrorBody: &api.CloudErrorBody{
-				Code: api.CloudErrorCodeClusterResourceGroupAlreadyExists,
-				Message: "Resource group " + m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID +
-					" must not already exist.",
-			},
-		}
-	}
 	if serviceError != nil && serviceError.Code == "RequestDisallowedByPolicy" {
 		// if request was disallowed by policy, inform user so they can take appropriate action
 		b, _ := json.Marshal(serviceError)
@@ -195,7 +200,7 @@ func (m *manager) attachNSGs(ctx context.Context) error {
 			s.SubnetPropertiesFormat = &mgmtnetwork.SubnetPropertiesFormat{}
 		}
 
-		nsgID, err := subnet.NetworkSecurityGroupID(m.doc.OpenShiftCluster, subnetID)
+		nsgID, err := apisubnet.NetworkSecurityGroupID(m.doc.OpenShiftCluster, subnetID)
 		if err != nil {
 			return err
 		}

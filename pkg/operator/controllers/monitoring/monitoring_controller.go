@@ -25,6 +25,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 )
 
 const (
@@ -54,41 +55,43 @@ type Config struct {
 	} `json:"alertmanagerMain,omitempty"`
 }
 
-type Reconciler struct {
-	log *logrus.Entry
-
-	client client.Client
+type MonitoringReconciler struct {
+	base.AROController
 
 	jsonHandle *codec.JsonHandle
 }
 
-func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
-	return &Reconciler{
-		log:        log,
-		client:     client,
+func NewReconciler(log *logrus.Entry, client client.Client) *MonitoringReconciler {
+	return &MonitoringReconciler{
+		AROController: base.AROController{
+			Log:    log,
+			Client: client,
+			Name:   ControllerName,
+		},
 		jsonHandle: new(codec.JsonHandle),
 	}
 }
 
-func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance := &arov1alpha1.Cluster{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+func (r *MonitoringReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	instance, err := r.GetCluster(ctx)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		r.log.Debug("controller is disabled")
+		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
-	r.log.Debug("running")
+	r.Log.Debug("running")
 	for _, f := range []func(context.Context) (ctrl.Result, error){
 		r.reconcileConfiguration,
 		r.reconcilePVC, // TODO(mj): This should be removed once we don't have PVC anymore
 	} {
 		result, err := f(ctx)
 		if err != nil {
+			r.Log.Error(err)
+			r.SetDegraded(ctx, err)
 			return result, err
 		}
 	}
@@ -96,10 +99,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	return reconcile.Result{}, nil
 }
 
-func (r *Reconciler) reconcilePVC(ctx context.Context) (ctrl.Result, error) {
+func (r *MonitoringReconciler) reconcilePVC(ctx context.Context) (ctrl.Result, error) {
 	pvcList := &corev1.PersistentVolumeClaimList{}
 	selector, _ := labels.Parse(prometheusLabels)
-	err := r.client.List(ctx, pvcList, &client.ListOptions{
+	err := r.Client.List(ctx, pvcList, &client.ListOptions{
 		Namespace:     monitoringName.Namespace,
 		LabelSelector: selector,
 	})
@@ -108,7 +111,7 @@ func (r *Reconciler) reconcilePVC(ctx context.Context) (ctrl.Result, error) {
 	}
 
 	for _, pvc := range pvcList.Items {
-		err = r.client.Delete(ctx, &pvc)
+		err = r.Client.Delete(ctx, &pvc)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -116,7 +119,7 @@ func (r *Reconciler) reconcilePVC(ctx context.Context) (ctrl.Result, error) {
 	return reconcile.Result{}, nil
 }
 
-func (r *Reconciler) reconcileConfiguration(ctx context.Context) (ctrl.Result, error) {
+func (r *MonitoringReconciler) reconcileConfiguration(ctx context.Context) (ctrl.Result, error) {
 	cm, isCreate, err := r.monitoringConfigMap(ctx)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -172,18 +175,18 @@ func (r *Reconciler) reconcileConfiguration(ctx context.Context) (ctrl.Result, e
 	cm.Data["config.yaml"] = string(cmYaml)
 
 	if isCreate {
-		r.log.Infof("re-creating monitoring configmap. %s", monitoringName.Name)
-		err = r.client.Create(ctx, cm)
+		r.Log.Infof("re-creating monitoring configmap. %s", monitoringName.Name)
+		err = r.Client.Create(ctx, cm)
 	} else {
-		r.log.Infof("updating monitoring configmap. %s", monitoringName.Name)
-		err = r.client.Update(ctx, cm)
+		r.Log.Infof("updating monitoring configmap. %s", monitoringName.Name)
+		err = r.Client.Update(ctx, cm)
 	}
 	return reconcile.Result{}, err
 }
 
-func (r *Reconciler) monitoringConfigMap(ctx context.Context) (*corev1.ConfigMap, bool, error) {
+func (r *MonitoringReconciler) monitoringConfigMap(ctx context.Context) (*corev1.ConfigMap, bool, error) {
 	cm := &corev1.ConfigMap{}
-	err := r.client.Get(ctx, monitoringName, cm)
+	err := r.Client.Get(ctx, monitoringName, cm)
 	if kerrors.IsNotFound(err) {
 		return &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
@@ -200,8 +203,8 @@ func (r *Reconciler) monitoringConfigMap(ctx context.Context) (*corev1.ConfigMap
 }
 
 // SetupWithManager setup the manager
-func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.log.Info("starting cluster monitoring controller")
+func (r *MonitoringReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.Log.Info("starting cluster monitoring controller")
 
 	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return o.GetName() == arov1alpha1.SingletonClusterName

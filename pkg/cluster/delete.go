@@ -156,11 +156,17 @@ func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string
 // parallel and waiting for completion before we proceed.  Any type not in the
 // map is considered to be at level 0.  Keys must be lower case.
 var deleteOrder = map[string]int{
-	"microsoft.compute/virtualmachines":     -2, // first, and before microsoft.compute/disks, microsoft.network/networkinterfaces
-	"microsoft.network/privatelinkservices": -2, // before microsoft.network/loadbalancers
-	"microsoft.network/privateendpoints":    -2, // before microsoft.network/networkinterfaces
-	"microsoft.network/networkinterfaces":   -1, // before microsoft.network/loadbalancers
-	"microsoft.network/privatednszones":     1,  // after everything else: get other deletions underway first
+	"microsoft.compute/virtualmachines":                 -3, // first, and before microsoft.compute/disks, microsoft.network/networkinterfaces
+	"microsoft.network/privatelinkservices":             -3, // before microsoft.network/loadbalancers
+	"microsoft.network/privateendpoints":                -3, // before microsoft.network/networkinterfaces
+	"microsoft.compute/galleries/applications/versions": -2, // before microsoft.compute/galleries/applications
+	"microsoft.compute/galleries/images/versions":       -2, // before microsoft.compute/galleries/images
+	"microsoft.compute/galleries/applications":          -1, // before microsoft.compute/galleries
+	"microsoft.compute/galleries/images":                -1, // before microsoft.compute/galleries
+	"microsoft.compute/galleries/serviceArtifacts":      -1, // before microsoft.compute/galleries
+	"microsoft.network/networkinterfaces":               -1, // before microsoft.network/loadbalancers
+	"microsoft.network/privatednszones":                 1,  // after everything else: get other deletions underway first
+	"microsoft.compute/galleries":                       1,  // after everything else in case there are nested microsoft.compute/galleries resources
 }
 
 func (m *manager) deleteResources(ctx context.Context) error {

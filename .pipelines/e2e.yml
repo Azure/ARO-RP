@@ -3,134 +3,145 @@ pr: none
 
 resources:
   pipelines:
-  - pipeline: e2e
-    source: CI
-    trigger: true
+    - pipeline: e2e
+      source: CI
+      trigger: true
   containers:
-  - container: container
-    image: registry.access.redhat.com/ubi8/toolbox:8.8
-    options: --user=0 --privileged -v /dev/shm:/dev/shm --device /dev/net/tun --name vpn
+    - container: container
+      image: registry.access.redhat.com/ubi8/toolbox:8.8
+      options: --user=0 --privileged -v /dev/shm:/dev/shm --device /dev/net/tun --name vpn
 
 # Azure DevOps Pipeline running e2e tests
 variables:
-- template: vars.yml
+  - template: vars.yml
 
 # Run the test suite and collect must-gather
 jobs:
-- job: E2E
-  timeoutInMinutes: 180
-  variables:
-    ARO_PODMAN_SOCKET: "tcp://localhost:8888"
-    ARO_SELENIUM_HOSTNAME: "localhost"
-  pool:
-    name: 1es-aro-ci-pool
-  steps:
-  - template: ./templates/template-checkout.yml
+  - job: E2E
+    timeoutInMinutes: 180
+    variables:
+      ARO_PODMAN_SOCKET: "tcp://localhost:8888"
+      ARO_SELENIUM_HOSTNAME: "localhost"
+    pool:
+      name: 1es-aro-ci-pool
+    steps:
+      - template: ./templates/template-checkout.yml
 
-  - script: |
-      set -xe
-      sudo rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-      sudo dnf install -y openvpn make podman
-    displayName: Setup (Container)
-    target: container
+      - script: |
+          set -xe
+          sudo rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+          sudo dnf install -y openvpn make podman jq
+        displayName: Setup (Container)
+        target: container
 
-  - template: ./templates/template-az-cli-login.yml
-    parameters:
-      azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
-  - template: ./templates/template-push-images-to-acr.yml
-    parameters:
-      rpImageACR: $(RP_IMAGE_ACR)
-  - script: |
-      make extract-aro-docker
-    displayName: Extract ARO binaries from build
+      - template: ./templates/template-az-cli-login.yml
+        parameters:
+          azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
+      - template: ./templates/template-push-images-to-acr.yml
+        parameters:
+          rpImageACR: $(RP_IMAGE_ACR)
+      - script: |
+          make extract-aro-docker
+        displayName: Extract ARO binaries from build
 
-  - script: |
-      az account set -s $AZURE_SUBSCRIPTION_ID
-      SECRET_SA_ACCOUNT_NAME=e2earosecrets make secrets
-      . secrets/env
+      - script: |
+          az account set -s $AZURE_SUBSCRIPTION_ID
+          SECRET_SA_ACCOUNT_NAME=e2earosecrets make secrets
+          . secrets/env
 
-      export CI=true
-      . ./hack/e2e/run-rp-and-e2e.sh
-      deploy_e2e_db
-    displayName: Setup (Azure)
+          export CI=true
+          . ./hack/e2e/run-rp-and-e2e.sh
+          deploy_e2e_db
+        displayName: Setup (Azure)
 
-  - script: |
-      export CI=true
-      . secrets/env
-      . ./hack/e2e/run-rp-and-e2e.sh
+      - script: |
+          export CI=true
+          . secrets/env
+          . ./hack/e2e/run-rp-and-e2e.sh
 
-      run_vpn
+          run_vpn
 
-      run_podman
-      validate_podman_running
+          run_podman
+          validate_podman_running
 
-      run_portal
-      validate_portal_running
+          run_portal
+          validate_portal_running
 
-      run_selenium
-      validate_selenium_running
+          run_selenium
+          validate_selenium_running
 
-      run_rp
-      validate_rp_running
+          run_rp
+          validate_rp_running
 
-      register_sub
+          register_sub
 
-      make test-e2e -o e2e.test
-    displayName: Execute Tests
-    target: container
+          make test-e2e -o e2e.test
+        displayName: Execute Tests
+        target: container
 
-  - script: |
-      export CI=true
-      . ./hack/e2e/run-rp-and-e2e.sh
+      - script: |
+          export CI=true
+          . ./hack/e2e/run-rp-and-e2e.sh
+          set -x
 
-      hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER >admin.kubeconfig
-      export KUBECONFIG=admin.kubeconfig
+          # retrieve the kubeconfig
+          hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER >admin.kubeconfig
+        displayName: Get admin kubeconfig for must-gather
+        condition: failed()
+      # must-gather collection must be run inside the container so it can access the VPN
+      - script: |
+          export CI=true
+          . ./hack/e2e/run-rp-and-e2e.sh
 
-      wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftVersion)/openshift-client-linux-$(OpenShiftVersion).tar.gz
-      tar xf openshift-client-linux-$(OpenShiftVersion).tar.gz
-      ./oc adm must-gather
-      tar cf must-gather.tar.gz must-gather.local.*
-    displayName: Collect must-gather
-    condition: failed()
-  - publish: must-gather.tar.gz
-    artifact: must-gather
-    displayName: Append must-gather to Pipeline
-    condition: failed()
+          export KUBECONFIG=admin.kubeconfig
 
-  - script: |
-      export CI=true
-      . ./hack/e2e/run-rp-and-e2e.sh
+          # retrieve the oc cli
+          wget -nv https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp/$(OpenShiftCLIVersion)/openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
+          tar xf openshift-client-linux-$(OpenShiftCLIVersion).tar.gz
+          ./oc adm must-gather
+          tar cf must-gather.tar.gz must-gather.local.*
+        displayName: Collect must-gather
+        target: container
+        condition: failed()
+      - publish: must-gather.tar.gz
+        artifact: must-gather
+        displayName: Append must-gather to Pipeline
+        condition: failed()
 
-      delete_e2e_cluster
-      kill_rp
-      kill_selenium
-      kill_podman
-      kill_vpn
-    displayName: Cleanup
-    condition: always()
-    target: container
-  - script: |
-      export CI=true
-      . ./hack/e2e/run-rp-and-e2e.sh
-      clean_e2e_db
-    displayName: Cleanup (Azure)
-    condition: always()
-  - template: ./templates/template-az-cli-logout.yml
+      - script: |
+          export CI=true
+          . ./hack/e2e/run-rp-and-e2e.sh
 
-  - task: PublishTestResults@2
-    displayName: 📊 Publish tests results
-    inputs:
-      testResultsFiles: $(System.DefaultWorkingDirectory)/**/e2e-report.xml
-    condition: succeededOrFailed()
+          delete_e2e_cluster
+          kill_rp
+          kill_selenium
+          kill_podman
+          kill_vpn
+        displayName: Cleanup
+        condition: always()
+        target: container
+      - script: |
+          export CI=true
+          . ./hack/e2e/run-rp-and-e2e.sh
+          clean_e2e_db
+        displayName: Cleanup (Azure)
+        condition: always()
+      - template: ./templates/template-az-cli-logout.yml
 
-  - task: CopyFiles@2
-    condition: succeededOrFailed()
-    inputs:
-      contents: $(Build.SourcesDirectory)/*.png
-      targetFolder: $(Build.ArtifactStagingDirectory)
+      - task: PublishTestResults@2
+        displayName: 📊 Publish tests results
+        inputs:
+          testResultsFiles: $(System.DefaultWorkingDirectory)/**/e2e-report.xml
+        condition: succeededOrFailed()
 
-  - task: PublishBuildArtifacts@1
-    condition: succeededOrFailed()
-    inputs:
-      pathToPublish: $(Build.ArtifactStagingDirectory)
-      artifactName: Screenshots
+      - task: CopyFiles@2
+        condition: succeededOrFailed()
+        inputs:
+          contents: $(Build.SourcesDirectory)/*.png
+          targetFolder: $(Build.ArtifactStagingDirectory)
+
+      - task: PublishBuildArtifacts@1
+        condition: succeededOrFailed()
+        inputs:
+          pathToPublish: $(Build.ArtifactStagingDirectory)
+          artifactName: Screenshots

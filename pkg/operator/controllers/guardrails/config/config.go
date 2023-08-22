@@ -19,6 +19,7 @@ type GuardRailsDeploymentConfig struct {
 	ValidatingWebhookFailurePolicy string
 	MutatingWebhookTimeout         string
 	MutatingWebhookFailurePolicy   string
+	RoleSCCResourceName            string
 }
 
 type GuardRailsPolicyConfig struct {

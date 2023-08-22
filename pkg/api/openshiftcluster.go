@@ -157,6 +157,8 @@ type OpenShiftClusterProperties struct {
 	RegistryProfiles []*RegistryProfile `json:"registryProfiles,omitempty"`
 
 	HiveProfile HiveProfile `json:"hiveProfile,omitempty"`
+
+	PucmPending bool `json:"pucmPending,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state
@@ -175,9 +177,10 @@ const (
 type MaintenanceTask string
 
 const (
-	MaintenanceTaskEverything MaintenanceTask = "Everything"
-	MaintenanceTaskOperator   MaintenanceTask = "OperatorUpdate"
-	MaintenanceTaskRenewCerts MaintenanceTask = "CertificatesRenewal"
+	MaintenanceTaskEverything  MaintenanceTask = "Everything"
+	MaintenanceTaskOperator    MaintenanceTask = "OperatorUpdate"
+	MaintenanceTaskRenewCerts  MaintenanceTask = "CertificatesRenewal"
+	MaintenanceTaskPucmPending MaintenanceTask = "PucmPending"
 )
 
 // Cluster-scoped flags
@@ -261,6 +264,41 @@ const (
 	OutboundTypeLoadbalancer       OutboundType = "Loadbalancer"
 )
 
+// ResourceReference represents a reference to an Azure resource.
+type ResourceReference struct {
+	// The fully qualified Azure resource id.
+	ID string `json:"id,omitempty"`
+}
+
+// LoadBalancerProfile represents the profile of the cluster public load balancer.
+type LoadBalancerProfile struct {
+	// The desired managed outbound IPs for the cluster public load balancer.
+	ManagedOutboundIPs *ManagedOutboundIPs `json:"managedOutboundIps,omitempty"`
+	// The list of effective outbound IP addresses of the public load balancer.
+	EffectiveOutboundIPs []EffectiveOutboundIP `json:"effectiveOutboundIps,omitempty"`
+	// The desired outbound IP resources for the cluster load balancer.
+	OutboundIPs []OutboundIP `json:"outboundIps,omitempty"`
+	// The desired outbound IP Prefix resources for the cluster load balancer.
+	OutboundIPPrefixes []OutboundIPPrefix `json:"outboundIpPrefixes,omitempty"`
+	// The desired number of allocated SNAT ports per VM. Allowed values are in the range of 0 to 64000 (inclusive). The default value is 1024.
+	AllocatedOutboundPorts *int `json:"allocatedOutboundPorts,omitempty"`
+}
+
+// EffectiveOutboundIP represents an effective outbound IP resource of the cluster public load balancer.
+type EffectiveOutboundIP ResourceReference
+
+// ManagedOutboundIPs represents the desired managed outbound IPs for the cluster public load balancer.
+type ManagedOutboundIPs struct {
+	// Count represents the desired number of IPv4 outbound IPs created and managed by Azure for the cluster public load balancer.  Allowed values are in the range of 1 - 20.  The default value is 1.
+	Count int `json:"count,omitempty"`
+}
+
+// OutboundIP represents a desired outbound IP resource for the cluster load balancer.
+type OutboundIP ResourceReference
+
+// OutboundIPPrefix represents a desired outbound IP Prefix resource for the cluster load balancer.
+type OutboundIPPrefix ResourceReference
+
 // NetworkProfile represents a network profile
 type NetworkProfile struct {
 	MissingFields
@@ -271,10 +309,11 @@ type NetworkProfile struct {
 	MTUSize                MTUSize                `json:"mtuSize,omitempty"`
 	OutboundType           OutboundType           `json:"outboundType,omitempty"`
 
-	APIServerPrivateEndpointIP string           `json:"privateEndpointIp,omitempty"`
-	GatewayPrivateEndpointIP   string           `json:"gatewayPrivateEndpointIp,omitempty"`
-	GatewayPrivateLinkID       string           `json:"gatewayPrivateLinkId,omitempty"`
-	PreconfiguredNSG           PreconfiguredNSG `json:"preconfiguredNSG,omitempty"`
+	APIServerPrivateEndpointIP string               `json:"privateEndpointIp,omitempty"`
+	GatewayPrivateEndpointIP   string               `json:"gatewayPrivateEndpointIp,omitempty"`
+	GatewayPrivateLinkID       string               `json:"gatewayPrivateLinkId,omitempty"`
+	PreconfiguredNSG           PreconfiguredNSG     `json:"preconfiguredNSG,omitempty"`
+	LoadBalancerProfile        *LoadBalancerProfile `json:"loadBalancerProfile,omitempty"`
 }
 
 // PreconfiguredNSG represents whether customers want to use their own NSG attached to the subnets
@@ -309,7 +348,7 @@ type MasterProfile struct {
 type VMSize string
 
 // VMSize constants
-// add required resources in pkg/api/validate/dynamic/quota.go when adding a new VMSize
+// add required resources in pkg/validate/dynamic/quota.go when adding a new VMSize
 const (
 	VMSizeStandardD2sV3  VMSize = "Standard_D2s_v3"
 	VMSizeStandardD4sV3  VMSize = "Standard_D4s_v3"
