@@ -66,13 +66,24 @@ Make sure KUBECONFIG is set:
 make admin.kubeconfig
 export KUBECONFIG=$(pwd)/admin.kubeconfig
 ```
+
+Alternatively you can set the KUBECONFIG by logging into your test cluster using `oc`:
+
+```sh
+oc login ${cluster-api-url} -u kubeadmin -p ${kubeadmin-password}
+```
+
 If you are using a private cluster, you need to connect to the respective VPN of your region. For example for eastus:
 ```sh
 sudo openvpn --config secrets/vpn-eastus.ovpn
 ```
-Then do:
+Scale the operator:
 ```sh
 oc scale -n openshift-azure-operator deployment/aro-operator-master --replicas=0
+```
+
+Build the operator binary and run it locally (as if it was running a master node)
+```sh
 make generate
 go run ./cmd/aro operator master
 ```
