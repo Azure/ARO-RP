@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euxo pipefail
+
 ACR_NAME="aropocsvc.azurecr.io"
 CLUSTER_NAME="aro-rp-aks-poc"
 DOCKERFILE="Dockerfile.aro-poc"
