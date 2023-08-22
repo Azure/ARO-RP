@@ -246,11 +246,11 @@ func TestDeleteUnusedManagedIPs(t *testing.T) {
 							},
 							OutboundRules: &[]mgmtnetwork.OutboundRule{
 								{
-									Name: to.StringPtr("outbound-rule-v4"),
+									Name: to.StringPtr(outboundRuleV4),
 									OutboundRulePropertiesFormat: &mgmtnetwork.OutboundRulePropertiesFormat{
 										FrontendIPConfigurations: &[]mgmtnetwork.SubResource{
 											{
-												ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/customerRG/providers/Microsoft.Network/publicIPAddresses/customer-ip"),
+												ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/customerRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/customer-ip"),
 											},
 										},
 									},
@@ -368,7 +368,7 @@ func TestRemoveOutboundIPsFromLB(t *testing.T) {
 									},
 								},
 								OutboundRules: &[]mgmtnetwork.SubResource{{
-									ID: to.StringPtr("outbound-rule-v4"),
+									ID: to.StringPtr(outboundRuleV4),
 								}},
 								PublicIPAddress: &mgmtnetwork.PublicIPAddress{
 									ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-pip-v4"),
@@ -378,7 +378,7 @@ func TestRemoveOutboundIPsFromLB(t *testing.T) {
 					},
 					OutboundRules: &[]mgmtnetwork.OutboundRule{
 						{
-							Name: to.StringPtr("outbound-rule-v4"),
+							Name: to.StringPtr(outboundRuleV4),
 							OutboundRulePropertiesFormat: &mgmtnetwork.OutboundRulePropertiesFormat{
 								FrontendIPConfigurations: &[]mgmtnetwork.SubResource{},
 							},
@@ -414,7 +414,7 @@ func TestRemoveOutboundIPsFromLB(t *testing.T) {
 					},
 					OutboundRules: &[]mgmtnetwork.OutboundRule{
 						{
-							Name: to.StringPtr("outbound-rule-v4"),
+							Name: to.StringPtr(outboundRuleV4),
 							OutboundRulePropertiesFormat: &mgmtnetwork.OutboundRulePropertiesFormat{
 								FrontendIPConfigurations: &[]mgmtnetwork.SubResource{},
 							},
@@ -800,7 +800,7 @@ func fakeLoadBalancersGet(additionalIPCount int, apiServerVisibility api.Visibil
 		ID:   to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/public-lb-ip-v4"),
 		FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
 			OutboundRules: &[]mgmtnetwork.SubResource{{
-				ID: to.StringPtr("outbound-rule-v4"),
+				ID: to.StringPtr(outboundRuleV4),
 			}},
 			PublicIPAddress: &mgmtnetwork.PublicIPAddress{
 				ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-pip-v4"),
@@ -839,7 +839,7 @@ func fakeLoadBalancersGet(additionalIPCount int, apiServerVisibility api.Visibil
 			},
 			OutboundRules: &[]mgmtnetwork.OutboundRule{
 				{
-					Name: to.StringPtr("outbound-rule-v4"),
+					Name: to.StringPtr(outboundRuleV4),
 					OutboundRulePropertiesFormat: &mgmtnetwork.OutboundRulePropertiesFormat{
 						FrontendIPConfigurations: &[]mgmtnetwork.SubResource{
 							{
@@ -860,7 +860,7 @@ func fakeLoadBalancersGet(additionalIPCount int, apiServerVisibility api.Visibil
 			ID:   &fipID,
 			FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
 				OutboundRules: &[]mgmtnetwork.SubResource{{
-					ID: to.StringPtr("outbound-rule-v4"),
+					ID: to.StringPtr(outboundRuleV4),
 				}},
 				PublicIPAddress: &mgmtnetwork.PublicIPAddress{
 					ID: &ipID,
