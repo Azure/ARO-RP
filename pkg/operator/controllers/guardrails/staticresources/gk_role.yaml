@@ -26,3 +26,11 @@ rules:
   - patch
   - update
   - watch
+- apiGroups: # https://open-policy-agent.github.io/gatekeeper/website/docs/vendor-specific/#running-on-openshift-4x
+  - security.openshift.io
+  resourceNames:
+  - {{.RoleSCCResourceName}}
+  resources:
+  - securitycontextconstraints
+  verbs:
+  - use
