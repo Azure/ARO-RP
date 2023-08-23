@@ -42,6 +42,7 @@ func (m *manager) reconcileLoadBalancerProfile(ctx context.Context) error {
 
 func (m *manager) reconcileOutboundRuleV4IPs(ctx context.Context, lb mgmtnetwork.LoadBalancer) error {
 	m.log.Info("reconciling outbound-rule-v4")
+	var err error
 	// if reconcileOutboundRuleV4IP fails at any point attempt to cleanup any managed IPs that are not attached to the load balancer
 	defer func() {
 		err := m.deleteUnusedManagedIPs(ctx)
@@ -123,15 +124,15 @@ func removeOutboundIPsFromLB(lb mgmtnetwork.LoadBalancer) {
 // return a map of Frontend IP Configs where the key is the ID of the Frontend IP Config
 func getFrontendIPConfigs(lb mgmtnetwork.LoadBalancer) map[string]mgmtnetwork.FrontendIPConfiguration {
 	// map out frontendConfig to ID of public IP addresses for quick lookup
-	var frontendIPConfigsMap = make(map[string]mgmtnetwork.FrontendIPConfiguration, len(*lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations))
+	var frontendIPConfigs = make(map[string]mgmtnetwork.FrontendIPConfiguration, len(*lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations))
 
 	for i := 0; i < len(*lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations); i++ {
 		fipConfigIPID := *(*lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations)[i].FrontendIPConfigurationPropertiesFormat.PublicIPAddress.ID
 		fipConfig := (*lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations)[i]
-		frontendIPConfigsMap[fipConfigIPID] = fipConfig
+		frontendIPConfigs[fipConfigIPID] = fipConfig
 	}
 
-	return frontendIPConfigsMap
+	return frontendIPConfigs
 }
 
 // Adds IPs or IPPrefixes to the load balancer outbound rule "outbound-rule-v4".
