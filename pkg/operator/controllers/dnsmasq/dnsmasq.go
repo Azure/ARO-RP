@@ -25,7 +25,7 @@ const (
 )
 
 func config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains []string, gatewayPrivateEndpointIP string) ([]byte, error) {
-	t := template.Must(template.New(configFileName).Parse(preScriptFile))
+	t := template.Must(template.New(configFileName).Parse(configFile))
 	buf := &bytes.Buffer{}
 
 	err := t.ExecuteTemplate(buf, configFileName, &struct {
