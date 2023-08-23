@@ -51,7 +51,7 @@ func getEnvironmentData(envKey string, envData any) error {
 }
 
 func getOpenShiftVersions() (*OpenShiftVersions, error) {
-	const envKey = "OPENSHIFT_VERSIONS"
+	const envKey = envOpenShiftVersions
 	var openShiftVersions OpenShiftVersions
 
 	if err := getEnvironmentData(envKey, &openShiftVersions); err != nil {
@@ -72,7 +72,7 @@ func getInstallerImageDigests() (map[string]string, error) {
 	// the aro-installer wrapper digest.  This allows us to utilize
 	// Azure Safe Deployment Practices (SDP) instead of pushing the
 	// version tag and deploying to all regions at once.
-	const envKey = "INSTALLER_IMAGE_DIGESTS"
+	const envKey = envInstallerImageDigests
 	var installerImageDigests map[string]string
 
 	if err := getEnvironmentData(envKey, &installerImageDigests); err != nil {
