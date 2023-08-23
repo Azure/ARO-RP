@@ -41,15 +41,21 @@ func (m *manager) reconcileLoadBalancerProfile(ctx context.Context) error {
 }
 
 func (m *manager) reconcileOutboundRuleV4IPs(ctx context.Context, lb mgmtnetwork.LoadBalancer) error {
-	m.log.Info("reconciling outbound-rule-v4")
-	var err error
-	// if reconcileOutboundRuleV4IP fails at any point attempt to cleanup any managed IPs that are not attached to the load balancer
-	defer func() {
-		err := m.deleteUnusedManagedIPs(ctx)
-		if err != nil {
-			m.log.Error("failed to cleanup unused managed IPs, error: %w", err)
+	err := m.reconcileOutboundRuleV4IPsInner(ctx, lb)
+
+	cleanupError := m.deleteUnusedManagedIPs(ctx)
+	if cleanupError != nil {
+		if err == nil {
+			return cleanupError
 		}
-	}()
+		return fmt.Errorf("multiple errors occurred\n%v\n%v", err, cleanupError)
+	}
+
+	return err
+}
+
+func (m *manager) reconcileOutboundRuleV4IPsInner(ctx context.Context, lb mgmtnetwork.LoadBalancer) error {
+	m.log.Info("reconciling outbound-rule-v4")
 
 	resourceGroupName := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
@@ -185,7 +191,7 @@ func (m *manager) deleteUnusedManagedIPs(ctx context.Context) error {
 	for i := 0; i < len(outboundIPs); i++ {
 		outboundIPMap[strings.ToLower(outboundIPs[i].ID)] = outboundIPs[i]
 	}
-
+	var cleanupErrors []string
 	for _, ip := range managedIPs {
 		// don't delete api server ip
 		if *ip.Name == infraID+"-pip-v4" && m.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
@@ -196,9 +202,12 @@ func (m *manager) deleteUnusedManagedIPs(ctx context.Context) error {
 			m.log.Infof("deleting managed public IP Address: %s", ipName)
 			err := m.publicIPAddresses.DeleteAndWait(ctx, resourceGroupName, ipName)
 			if err != nil {
-				return err
+				cleanupErrors = append(cleanupErrors, fmt.Sprintf("deletion of unused managed ip %s failed with error: %v", ipName, err))
 			}
 		}
+	}
+	if cleanupErrors != nil {
+		return fmt.Errorf("failed to cleanup unused managed ips\n%s", strings.Join(cleanupErrors, "\n"))
 	}
 
 	return nil
@@ -232,10 +241,10 @@ func (m *manager) reconcileDesiredManagedIPs(ctx context.Context) ([]api.Resourc
 	numToCreate := managedOBIPCount - len(ipAddresses)
 	for i := 0; i < numToCreate; i++ {
 		ipAddress, err := m.createPublicIPAddress(ctx)
-		ipAddresses[*ipAddress.Name] = ipAddress
 		if err != nil {
 			return nil, err
 		}
+		ipAddresses[*ipAddress.Name] = ipAddress
 	}
 
 	// ensure that when scaling managed ips down the default outbound IP is reused incase the api server visibility is public
