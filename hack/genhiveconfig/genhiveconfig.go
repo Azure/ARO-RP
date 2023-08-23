@@ -18,7 +18,6 @@ import (
 const (
 	hiveNamespaceName  = "hive"
 	configMapName      = "additional-install-log-regexes"
-	configMapPath      = "hack/hive-config/hive-additional-install-log-regexes.yaml"
 	regexDataEntryName = "regexes"
 )
 
@@ -29,7 +28,7 @@ type installLogRegex struct {
 	InstallFailingMessage string   `json:"installFailingMessage"`
 }
 
-func run(ctx context.Context) error {
+func run(ctx context.Context, path string) error {
 	ilrs := []installLogRegex{}
 
 	for _, reason := range failure.Reasons {
@@ -59,7 +58,13 @@ func run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(configMapPath, configmapRaw, 0666)
+
+	if path != "" {
+		return os.WriteFile(path, configmapRaw, 0666)
+	} else {
+		print(string(configmapRaw))
+		return nil
+	}
 }
 
 func failureReasonToInstallLogRegex(reason failure.InstallFailingReason) installLogRegex {
@@ -78,7 +83,12 @@ func failureReasonToInstallLogRegex(reason failure.InstallFailingReason) install
 func main() {
 	log := utillog.GetLogger()
 
-	if err := run(context.Background()); err != nil {
+	path := ""
+	if len(os.Args) > 1 {
+		path = os.Args[1]
+	}
+
+	if err := run(context.Background(), path); err != nil {
 		log.Fatal(err)
 	}
 }

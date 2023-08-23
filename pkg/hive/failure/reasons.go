@@ -22,7 +22,7 @@ var Reasons = []InstallFailingReason{
 var AzureRequestDisallowedByPolicy = InstallFailingReason{
 	Name:    "AzureRequestDisallowedByPolicy",
 	Reason:  "AzureRequestDisallowedByPolicy",
-	Message: "Cluster Deployment was disallowed by policy.  Please see install log for more information.",
+	Message: "Deployment failed due to RequestDisallowedByPolicy. Please see details for more information.",
 	SearchRegexes: []*regexp.Regexp{
 		regexp.MustCompile(`"code":\w?"InvalidTemplateDeployment".*"code":\w?"RequestDisallowedByPolicy"`),
 	},
@@ -31,7 +31,7 @@ var AzureRequestDisallowedByPolicy = InstallFailingReason{
 var AzureInvalidTemplateDeployment = InstallFailingReason{
 	Name:    "AzureInvalidTemplateDeployment",
 	Reason:  "AzureInvalidTemplateDeployment",
-	Message: "The template deployment failed. Please see install log for more information.",
+	Message: "Deployment failed. Please see details for more information.",
 	SearchRegexes: []*regexp.Regexp{
 		regexp.MustCompile(`"code":\w?"InvalidTemplateDeployment"`),
 	},
