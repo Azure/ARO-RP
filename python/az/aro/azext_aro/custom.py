@@ -74,6 +74,14 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
         if provider.registration_state != 'Registered':
             raise UnauthorizedError('Microsoft.RedHatOpenShift provider is not registered.',
                                     'Run `az provider register -n Microsoft.RedHatOpenShift --wait`.')
+        if enable_preconfigured_nsg:
+            feature_client = get_mgmt_service_client(
+                cmd.cli_ctx, ResourceType.MGMT_RESOURCE_FEATURES)
+            feature = feature_client.features.get('Microsoft.RedHatOpenShift', 'PreconfiguredNSG')
+            if feature.properties.state != 'Registered':
+                raise ValidationError('PreconfiguredNSG feature is not registered. \
+                                      Run `az feature register --namespace Microsoft.RedHatOpenShift \
+                                      -n PreconfiguredNSG`.')
 
     validate_subnets(master_subnet, worker_subnet)
 
@@ -84,6 +92,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
              master_subnet,
              worker_subnet,
              vnet=vnet,
+             enable_preconfigured_nsg=enable_preconfigured_nsg,
              cluster_resource_group=cluster_resource_group,
              client_id=client_id,
              client_secret=client_secret,
@@ -188,6 +197,7 @@ def validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
              master_subnet,
              worker_subnet,
              vnet=None,
+             enable_preconfigured_nsg=None,
              cluster_resource_group=None,  # pylint: disable=unused-argument
              client_id=None,
              client_secret=None,  # pylint: disable=unused-argument
@@ -200,7 +210,10 @@ def validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
              warnings_as_text=False):
 
     class mockoc:  # pylint: disable=too-few-public-methods
-        def __init__(self, disk_encryption_id, master_subnet_id, worker_subnet_id):
+        def __init__(self, disk_encryption_id, master_subnet_id, worker_subnet_id, preconfigured_nsg):
+            self.network_profile = openshiftcluster.NetworkProfile(
+                preconfigured_nsg='Enabled' if preconfigured_nsg else 'Disabled'
+            )
             self.master_profile = openshiftcluster.MasterProfile(
                 subnet_id=master_subnet_id,
                 disk_encryption_set_id=disk_encryption_id
@@ -220,7 +233,7 @@ def validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
     if client_id is not None:
         sp_obj_ids.append(aad.get_service_principal_id(client_id))
 
-    cluster = mockoc(disk_encryption_set, master_subnet, worker_subnet)
+    cluster = mockoc(disk_encryption_set, master_subnet, worker_subnet, enable_preconfigured_nsg)
     try:
         # Get cluster resources we need to assign permissions on, sort to ensure the same order of operations
         resources = {ROLE_NETWORK_CONTRIBUTOR: sorted(get_cluster_network_resources(cmd.cli_ctx, cluster, True)),
@@ -438,8 +451,9 @@ def generate_random_id():
     return random_id
 
 
-def get_network_resources_from_subnets(cli_ctx, subnets, fail):
+def get_network_resources_from_subnets(cli_ctx, subnets, fail, oc):
     subnet_resources = set()
+    subnet_with_nsg_preattached = 0
     for sn in subnets:
         sid = parse_resource_id(sn)
 
@@ -459,6 +473,19 @@ def get_network_resources_from_subnets(cli_ctx, subnets, fail):
 
         if subnet.get("natGateway", None):
             subnet_resources.add(subnet['natGateway']['id'])
+
+        if oc.network_profile.preconfigured_nsg == 'Enabled':
+            if subnet.get("networkSecurityGroup", None):
+                subnet_resources.add(subnet['networkSecurityGroup']['id'])
+                subnet_with_nsg_preattached = subnet_with_nsg_preattached + 1
+
+    # when preconfiguredNSG feature is Enabled we either have all subnets NSG attached or none.
+    if oc.network_profile.preconfigured_nsg == 'Enabled' and \
+        subnet_with_nsg_preattached != 0 and \
+            subnet_with_nsg_preattached != len(subnets):
+        raise ValidationError("""(ValidationError) preconfiguredNSG feature is enabled but NSG not attached for subnets.
+                                  Please makesure all the subnets have network security group attached and retry.
+                                  If issue persists: raise azure support ticket""")
 
     return subnet_resources
 
@@ -481,11 +508,11 @@ def get_cluster_network_resources(cli_ctx, oc, fail):
         name=master_parts['name'],
     )
 
-    return get_network_resources(cli_ctx, worker_subnets | {master_subnet}, vnet, fail)
+    return get_network_resources(cli_ctx, worker_subnets | {master_subnet}, vnet, fail, oc)
 
 
-def get_network_resources(cli_ctx, subnets, vnet, fail):
-    subnet_resources = get_network_resources_from_subnets(cli_ctx, subnets, fail)
+def get_network_resources(cli_ctx, subnets, vnet, fail, oc):
+    subnet_resources = get_network_resources_from_subnets(cli_ctx, subnets, fail, oc)
 
     resources = set()
     resources.add(vnet)

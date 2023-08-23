@@ -190,7 +190,7 @@ test_validate_subnets_data = [
     (
         "should return message when network security group is already attached to subnet",
         Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
-        Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None),
+        Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None, enable_preconfigured_nsg=None),
         {'networkSecurityGroup': {'id': 'test'}, 'routeTable': {'id': 'test'}},
         Mock(**{"permissions.list_for_resource.return_value": [Permission(actions=["Microsoft.Network/routeTables/*"], not_actions=[])]}),
         {
@@ -207,6 +207,25 @@ test_validate_subnets_data = [
         "A Network Security Group \"test\" is already assigned to this subnet. "
         "Ensure there are no Network Security Groups assigned to cluster "
         "subnets before cluster creation"
+    ),
+    (
+        "should not return message when Preconfigured NSG is enabled and network security group is attached to subnet",
+        Mock(cli_ctx=Mock(get_progress_controller=Mock(add=Mock(), end=Mock()))),
+        Mock(vnet='', key="192.168.0.1/32", master_subnet='', worker_subnet='', pod_cidr=None, service_cidr=None, enable_preconfigured_nsg=True),
+        {'networkSecurityGroup': {'id': 'test'}, 'routeTable': {'id': 'test'}},
+        Mock(**{"permissions.list_for_resource.return_value": [Permission(actions=["Microsoft.Network/routeTables/*"], not_actions=[])]}),
+        {
+            "subscription": "subscription",
+            "namespace": "MICROSOFT.NETWORK",
+            "type": "virtualnetworks",
+            "last_child_num": 1,
+            "child_type_1": "subnets",
+            "resource_group": None,
+            "name": None,
+            "child_name_1": None
+        },
+        Mock(),
+        None
     )
 ]
 
