@@ -61,7 +61,7 @@ func service() (string, error) {
 }
 
 func startpre() ([]byte, error) {
-	t := template.Must(template.New(prescriptFileName).Parse(configFile))
+	t := template.Must(template.New(prescriptFileName).Parse(preScriptFile))
 	buf := &bytes.Buffer{}
 
 	err := t.ExecuteTemplate(buf, prescriptFileName, nil)
