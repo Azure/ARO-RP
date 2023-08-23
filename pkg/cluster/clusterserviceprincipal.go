@@ -4,14 +4,12 @@ package cluster
 // Licensed under the Apache License 2.0.
 
 import (
-	"bytes"
 	"context"
 	"strings"
 	"time"
 
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	"github.com/ghodss/yaml"
-	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	applyv1 "k8s.io/client-go/applyconfigurations/core/v1"
@@ -177,25 +175,12 @@ func (m *manager) updateAROSecret(ctx context.Context) error {
 }
 
 func (m *manager) updateOpenShiftSecret(ctx context.Context) error {
+	resourceGroupID := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID
+	spp := m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
 	//data:
 	// azure_client_id: secret_id
 	// azure_client_secret: secret_value
 	// azure_tenant_id: tenant_id
-	secret, err := m.kubernetescli.CoreV1().Secrets(clusterauthorizer.AzureCredentialSecretNameSpace).Get(ctx, clusterauthorizer.AzureCredentialSecretName, metav1.GetOptions{})
-	if kerrors.IsNotFound(err) {
-		secret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      clusterauthorizer.AzureCredentialSecretName,
-				Namespace: clusterauthorizer.AzureCredentialSecretNameSpace,
-			},
-			Data: map[string][]byte{},
-		}
-	} else if err != nil {
-		return err
-	}
-
-	resourceGroupID := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID
-	spp := m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
 	desiredData := map[string][]byte{
 		"azure_subscription_id": []byte(m.subscriptionDoc.ID),
 		"azure_resource_prefix": []byte(m.doc.OpenShiftCluster.Properties.InfraID),
@@ -206,17 +191,8 @@ func (m *manager) updateOpenShiftSecret(ctx context.Context) error {
 		"azure_tenant_id":       []byte(m.subscriptionDoc.Subscription.Properties.TenantID),
 	}
 
-	// return early if not changed
-	var changed bool
-	for key, val := range desiredData {
-		changed = !bytes.Equal(val, secret.Data[key]) || changed
-	}
-	if !changed {
-		return nil
-	}
-
-	secretApplyConfig := applyv1.Secret(secret.Name, secret.Namespace).WithData(desiredData)
-	_, err = m.kubernetescli.CoreV1().Secrets(clusterauthorizer.AzureCredentialSecretNameSpace).Apply(ctx, secretApplyConfig, metav1.ApplyOptions{FieldManager: "aro-rp", Force: true})
+	secretApplyConfig := applyv1.Secret(clusterauthorizer.AzureCredentialSecretName, clusterauthorizer.AzureCredentialSecretNameSpace).WithData(desiredData)
+	_, err := m.kubernetescli.CoreV1().Secrets(clusterauthorizer.AzureCredentialSecretNameSpace).Apply(ctx, secretApplyConfig, metav1.ApplyOptions{FieldManager: "aro-rp", Force: true})
 	if err != nil {
 		return err
 	}
