@@ -82,13 +82,14 @@ tolerations: []
 affinity: {}
 
 # Use for Istio service mesh 
+#TODO jonachang: need to add a secret in other PR
 istio:
   name: aks-istio-ingressgateway-external
   namespace: aro-rp-poc
   gateway:
     name: rp-poc-gateway
     #TODO jonachang: need to specify the host once we have the domain name
-    host: "*"
+    host: "aro-istio-poc.westus3.cloudapp.azure.com"
     #TODO jonachang: change back to 443 when we have TLS
     port: 80
   virtualService:
@@ -96,6 +97,4 @@ istio:
     port: 80
     #TODO jonachang: need to update to the sample app name once created
     service: aro-rp-poc-pkg
-  credential:
-    #TODO jonachang: need to add a secret in other PR
-    # name: rp-poc-secret
+    

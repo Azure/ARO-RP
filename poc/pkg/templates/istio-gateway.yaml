@@ -11,9 +11,5 @@ spec:
       number: {{ .Values.istio.gateway.port }}
       name: http
       protocol: HTTPS
-    # TODO jonathan: Add TLS cert when we have one
-    # tls:
-    #   mode: SIMPLE
-    #   credentialName: {{ .Values.istio.credential.name }}
     hosts:
     - {{ .Values.istio.gateway.host }}
