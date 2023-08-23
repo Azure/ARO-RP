@@ -48,7 +48,7 @@ func (m *manager) reconcileOutboundRuleV4IPs(ctx context.Context, lb mgmtnetwork
 		if err == nil {
 			return cleanupError
 		}
-		return fmt.Errorf("multiple errors occurred\n%v\n%v", err, cleanupError)
+		return fmt.Errorf("multiple errors occurred while updating outbound-rule-v4\n%v\n%v", err, cleanupError)
 	}
 
 	return err
