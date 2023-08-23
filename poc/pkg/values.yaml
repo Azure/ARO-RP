@@ -83,12 +83,14 @@ affinity: {}
 
 # Use for Istio service mesh 
 istio:
-  name: aks-istio-ingressgateway-internal
+  name: aks-istio-ingressgateway-external
   namespace: aro-rp-poc
   gateway:
     name: rp-poc-gateway
     #TODO jonachang: need to specify the host once we have the domain name
-    host: "aro-istio-poc.westus3.cloudapp.azure.com"
+    host: "*"
+    #TODO jonachang: change back to 443 when we have TLS
+    port: 80
   virtualService:
     name: rp-poc-virtualservice
     port: 80

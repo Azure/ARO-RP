@@ -8,12 +8,12 @@ spec:
     istio: {{ .Values.istio.name }}
   servers:
   - port:
-      number: 443
+      number: {{ .Values.istio.gateway.port }}
       name: http
       protocol: HTTPS
-    tls:
-      mode: SIMPLE
-    # TODO jonathan: Add TLS cert when we have one  
+    # TODO jonathan: Add TLS cert when we have one
+    # tls:
+    #   mode: SIMPLE
     #   credentialName: {{ .Values.istio.credential.name }}
     hosts:
     - {{ .Values.istio.gateway.host }}
