@@ -516,6 +516,73 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 			expectedErr: nil,
 		},
 		{
+			name:  "effectiveOutboundIPs is patched when effectiveOutboundIPs does not match load balancer",
+			uuids: []string{},
+			m: manager{
+				doc: &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(key),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       key,
+						Location: location,
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateUpdating,
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: clusterRGID,
+							},
+							InfraID: infraID,
+							APIServerProfile: api.APIServerProfile{
+								Visibility: api.VisibilityPublic,
+							},
+							NetworkProfile: api.NetworkProfile{
+								OutboundType: api.OutboundTypeLoadbalancer,
+								LoadBalancerProfile: &api.LoadBalancerProfile{
+									ManagedOutboundIPs: &api.ManagedOutboundIPs{
+										Count: 2,
+									},
+									EffectiveOutboundIPs: []api.EffectiveOutboundIP{
+										{
+											ID: defaultOutboundIPID,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			mocks: func(
+				loadBalancersClient *mock_network.MockLoadBalancersClient,
+				publicIPAddressClient *mock_network.MockPublicIPAddressesClient,
+				ctx context.Context) {
+				publicIPAddressClient.EXPECT().
+					List(gomock.Any(), clusterRGName).
+					Return(getFakePublicIPList(1), nil)
+				loadBalancersClient.EXPECT().
+					Get(gomock.Any(), clusterRGName, infraID, "").
+					Return(fakeLoadBalancersGet(1, api.VisibilityPublic), nil)
+				publicIPAddressClient.EXPECT().
+					List(gomock.Any(), clusterRGName).
+					Return(getFakePublicIPList(1), nil)
+				loadBalancersClient.EXPECT().
+					Get(gomock.Any(), clusterRGName, infraID, "").
+					Return(fakeLoadBalancersGet(1, api.VisibilityPublic), nil)
+			},
+			expectedLoadBalancerProfile: api.LoadBalancerProfile{
+				ManagedOutboundIPs: &api.ManagedOutboundIPs{
+					Count: 2,
+				},
+				EffectiveOutboundIPs: []api.EffectiveOutboundIP{
+					{
+						ID: defaultOutboundIPID,
+					},
+					{
+						ID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/uuid1-outbound-pip-v4",
+					},
+				},
+			},
+			expectedErr: nil,
+		},
+		{
 			name:  "add one IP to the default public load balancer",
 			uuids: []string{"uuid1"},
 			m: manager{

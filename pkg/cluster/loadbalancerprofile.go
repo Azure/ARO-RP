@@ -6,6 +6,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 
@@ -39,9 +40,9 @@ func (m *manager) reconcileLoadBalancerProfile(ctx context.Context) error {
 	return nil
 }
 
-// Reconcile the outbound rule "outbound-rule-v4" frontend IP Config.
 func (m *manager) reconcileOutboundRuleV4IPs(ctx context.Context, lb mgmtnetwork.LoadBalancer) error {
 	m.log.Info("reconciling outbound-rule-v4")
+	// if reconcileOutboundRuleV4IP fails at any point attempt to cleanup any managed IPs that are not attached to the load balancer
 	defer func() {
 		err := m.deleteUnusedManagedIPs(ctx)
 		if err != nil {
@@ -52,8 +53,8 @@ func (m *manager) reconcileOutboundRuleV4IPs(ctx context.Context, lb mgmtnetwork
 	resourceGroupName := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 	originalOutboundIPs := getOutboundIPsFromLB(lb)
-	// ensure effectiveOutboundIPs is patched the first time running against a cluster
-	if m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs == nil {
+
+	if needsEffectiveOutboundIPsPatched(m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs, originalOutboundIPs) {
 		err := m.patchEffectiveOutboundIPs(ctx, originalOutboundIPs)
 		if err != nil {
 			return err
@@ -368,6 +369,17 @@ func newOutboundRuleFrontendIPConfig(id string) mgmtnetwork.SubResource {
 	}
 }
 
+func needsEffectiveOutboundIPsPatched(cosmosEffectiveOutboundIPs []api.EffectiveOutboundIP, lbEffectiveIPs []api.ResourceReference) bool {
+	if cosmosEffectiveOutboundIPs == nil {
+		return true
+	}
+	effectiveIPResources := make([]api.ResourceReference, 0, len(cosmosEffectiveOutboundIPs))
+	for _, ip := range cosmosEffectiveOutboundIPs {
+		effectiveIPResources = append(effectiveIPResources, api.ResourceReference(ip))
+	}
+	return !areResourceRefsEqual(effectiveIPResources, lbEffectiveIPs)
+}
+
 // Reports if two []api.ResourceReference are equal.
 func areResourceRefsEqual(a, b []api.ResourceReference) bool {
 	if len(a) != len(b) {
@@ -376,21 +388,15 @@ func areResourceRefsEqual(a, b []api.ResourceReference) bool {
 
 	refsA := make([]string, 0, len(a))
 	for _, ip := range a {
-		refsA = append(refsA, ip.ID)
+		refsA = append(refsA, strings.ToLower(ip.ID))
 	}
 	refsB := make([]string, 0, len(b))
 	for _, ip := range b {
-		refsB = append(refsB, ip.ID)
+		refsB = append(refsB, strings.ToLower(ip.ID))
 	}
 
 	sort.Strings(refsA)
 	sort.Strings(refsB)
 
-	for i := 0; i < len(refsA); i++ {
-		if !strings.EqualFold(refsA[i], refsB[i]) {
-			return false
-		}
-	}
-
-	return true
+	return reflect.DeepEqual(refsA, refsB)
 }
