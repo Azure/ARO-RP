@@ -103,11 +103,11 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+	if err := env.ValidateVars(envDatabaseAccountName); err != nil {
 		return err
 	}
 
-	dbAccountName := os.Getenv(DatabaseAccountName)
+	dbAccountName := os.Getenv(envDatabaseAccountName)
 	clientOptions := &policy.ClientOptions{
 		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
 	}

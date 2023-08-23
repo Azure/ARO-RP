@@ -172,10 +172,10 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 
 	m := statsd.New(ctx, log.WithField("component", "update-ocp-versions"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 
-	if err := env.ValidateVars(KeyVaultPrefix); err != nil {
+	if err := env.ValidateVars(envKeyVaultPrefix); err != nil {
 		return nil, err
 	}
-	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
+	keyVaultPrefix := os.Getenv(envKeyVaultPrefix)
 	serviceKeyvaultURI := keyvault.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
 	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
 
@@ -184,11 +184,11 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 		return nil, err
 	}
 
-	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+	if err := env.ValidateVars(envDatabaseAccountName); err != nil {
 		return nil, err
 	}
 
-	dbAccountName := os.Getenv(DatabaseAccountName)
+	dbAccountName := os.Getenv(envDatabaseAccountName)
 	clientOptions := &policy.ClientOptions{
 		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
 	}
