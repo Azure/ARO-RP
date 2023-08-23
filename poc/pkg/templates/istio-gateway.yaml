@@ -13,6 +13,7 @@ spec:
       protocol: HTTPS
     tls:
       mode: SIMPLE
-      credentialName: {{ .Values.istio.credential.name }}
+    # TODO jonathan: Add TLS cert when we have one  
+    #   credentialName: {{ .Values.istio.credential.name }}
     hosts:
     - {{ .Values.istio.gateway.host }}

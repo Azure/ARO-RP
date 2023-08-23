@@ -96,4 +96,4 @@ istio:
     service: aro-rp-poc-pkg
   credential:
     #TODO jonachang: need to add a secret in other PR
-    name: rp-poc-secret
+    # name: rp-poc-secret
