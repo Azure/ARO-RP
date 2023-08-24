@@ -85,7 +85,6 @@ affinity: {}
 #TODO jonachang: need to add a secret in other PR
 istio:
   name: aks-istio-ingressgateway-external
-  namespace: aro-rp-poc
   gateway:
     name: rp-poc-gateway
     #TODO jonachang: need to specify the host once we have the domain name
