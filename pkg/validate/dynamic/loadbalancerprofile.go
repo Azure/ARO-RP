@@ -11,6 +11,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
+const snatPortsPerIP = 63992
+
 func (dv *dynamic) ValidateLoadBalancerProfile(ctx context.Context, oc *api.OpenShiftCluster) error {
 	dv.log.Print("ValidateLoadBalancerProfile")
 
@@ -86,7 +88,7 @@ func (dv *dynamic) validateOBRuleV4FrontendPorts(ctx context.Context, oc *api.Op
 	if oc.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs != nil {
 		desiredNumIPs = oc.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs.Count
 	}
-	totalSNATPorts := desiredNumIPs * 63992
+	totalSNATPorts := desiredNumIPs * snatPortsPerIP
 	maxBackendInstances := totalSNATPorts / allocatedOutboundPorts
 
 	if totalBackendInstances > maxBackendInstances {
