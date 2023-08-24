@@ -53,7 +53,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 				k.EXPECT().
 					KubeGet(gomock.Any(), tt.objKind, tt.objNamespace, tt.objName).
 					Return([]byte(`{"Kind": "test"}`), nil)
-				k.EXPECT().ResolveGVR(tt.objKind).Return(&schema.GroupVersionResource{Resource: "configmaps"}, nil)
+				k.EXPECT().ResolveGVR(tt.objKind, "").Return(schema.GroupVersionResource{Resource: "configmaps"}, nil)
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse:   []byte(`{"Kind": "test"}` + "\n"),
@@ -68,7 +68,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 				k.EXPECT().
 					KubeList(gomock.Any(), tt.objKind, tt.objNamespace).
 					Return([]byte(`{"Kind": "test"}`), nil)
-				k.EXPECT().ResolveGVR(tt.objKind).Return(&schema.GroupVersionResource{Resource: "configmaps"}, nil)
+				k.EXPECT().ResolveGVR(tt.objKind, "").Return(schema.GroupVersionResource{Resource: "configmaps"}, nil)
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse:   []byte(`{"Kind": "test"}` + "\n"),
@@ -80,7 +80,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			objNamespace: "openshift",
 			objName:      "config",
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().ResolveGVR(tt.objKind)
+				k.EXPECT().ResolveGVR(tt.objKind, "")
 			},
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      "400: InvalidParameter: : The provided resource is invalid.",
@@ -93,7 +93,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			objNamespace: "openshift",
 			objName:      "config",
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().ResolveGVR(tt.objKind).Return(&schema.GroupVersionResource{Resource: "secrets"}, nil)
+				k.EXPECT().ResolveGVR(tt.objKind, "").Return(schema.GroupVersionResource{Resource: "secrets"}, nil)
 			},
 			wantStatusCode: http.StatusForbidden,
 			wantError:      "403: Forbidden: : Access to secrets is forbidden.",
@@ -109,7 +109,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 				k.EXPECT().
 					KubeDelete(gomock.Any(), tt.objKind, tt.objNamespace, tt.objName, false, nil).
 					Return(nil)
-				k.EXPECT().ResolveGVR(tt.objKind).Return(&schema.GroupVersionResource{Resource: "configmaps"}, nil)
+				k.EXPECT().ResolveGVR(tt.objKind, "").Return(schema.GroupVersionResource{Resource: "configmaps"}, nil)
 			},
 			wantStatusCode: http.StatusOK,
 		},
@@ -125,7 +125,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 				k.EXPECT().
 					KubeDelete(gomock.Any(), tt.objKind, tt.objNamespace, tt.objName, true, nil).
 					Return(nil)
-				k.EXPECT().ResolveGVR(tt.objKind).Return(&schema.GroupVersionResource{Resource: "pods"}, nil)
+				k.EXPECT().ResolveGVR(tt.objKind, "").Return(schema.GroupVersionResource{Resource: "pods"}, nil)
 			},
 			wantStatusCode: http.StatusOK,
 		},
@@ -149,7 +149,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			objNamespace: "openshift",
 			objName:      "config",
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().ResolveGVR(tt.objKind)
+				k.EXPECT().ResolveGVR(tt.objKind, "")
 			},
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      "400: InvalidParameter: : The provided resource is invalid.",
@@ -161,7 +161,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			objKind:      "this",
 			objNamespace: "openshift",
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().ResolveGVR(tt.objKind)
+				k.EXPECT().ResolveGVR(tt.objKind, "")
 			},
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      "400: InvalidParameter: : The provided resource is invalid.",
@@ -174,7 +174,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			objNamespace: "openshift",
 			objName:      "config",
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().ResolveGVR(tt.objKind).Return(&schema.GroupVersionResource{Resource: "secrets"}, nil)
+				k.EXPECT().ResolveGVR(tt.objKind, "").Return(schema.GroupVersionResource{Resource: "secrets"}, nil)
 			},
 			wantStatusCode: http.StatusForbidden,
 			wantError:      "403: Forbidden: : Access to secrets is forbidden.",
@@ -270,7 +270,7 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
 				k.EXPECT().KubeCreateOrUpdate(gomock.Any(), tt.objInBody).
 					Return(nil)
-				k.EXPECT().ResolveGVR(tt.objInBody.GetKind()).Return(&schema.GroupVersionResource{Resource: "configmaps"}, nil)
+				k.EXPECT().ResolveGVR(tt.objInBody.GetKind(), "").Return(schema.GroupVersionResource{Resource: "configmaps"}, nil)
 			},
 			wantStatusCode: http.StatusOK,
 		},
@@ -287,7 +287,7 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 				},
 			},
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
-				k.EXPECT().ResolveGVR(tt.objInBody.GetKind()).Return(&schema.GroupVersionResource{Resource: "secrets"}, nil)
+				k.EXPECT().ResolveGVR(tt.objInBody.GetKind(), "").Return(schema.GroupVersionResource{Resource: "secrets"}, nil)
 			},
 			wantStatusCode: http.StatusForbidden,
 			wantError:      "403: Forbidden: : Access to secrets is forbidden.",

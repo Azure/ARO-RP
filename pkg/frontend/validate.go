@@ -79,7 +79,7 @@ func (f *frontend) validateOpenShiftUniqueKey(ctx context.Context, doc *api.Open
 // prevent mischief
 var rxKubernetesString = regexp.MustCompile(`(?i)^[-a-z0-9.]{0,255}$`)
 
-func validatePermittedClusterwideObjects(gvr *schema.GroupVersionResource) bool {
+func validatePermittedClusterwideObjects(gvr schema.GroupVersionResource) bool {
 	permittedGroups := map[string]bool{
 		"apiserver.openshift.io":              true,
 		"aro.openshift.io":                    true,
@@ -100,8 +100,8 @@ func validatePermittedClusterwideObjects(gvr *schema.GroupVersionResource) bool 
 	return permittedGroups[gvr.Group] || (groupHasException && allowedResources[gvr.Resource])
 }
 
-func validateAdminKubernetesObjectsNonCustomer(method string, gvr *schema.GroupVersionResource, namespace, name string) error {
-	if gvr == nil {
+func validateAdminKubernetesObjectsNonCustomer(method string, gvr schema.GroupVersionResource, namespace, name string) error {
+	if gvr.Empty() {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided resource is invalid.")
 	}
 
@@ -116,8 +116,8 @@ func validateAdminKubernetesObjectsNonCustomer(method string, gvr *schema.GroupV
 	return validateAdminKubernetesObjects(method, gvr, namespace, name)
 }
 
-func validateAdminKubernetesObjects(method string, gvr *schema.GroupVersionResource, namespace, name string) error {
-	if gvr == nil {
+func validateAdminKubernetesObjects(method string, gvr schema.GroupVersionResource, namespace, name string) error {
+	if gvr.Empty() {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided resource is invalid.")
 	}
 

@@ -101,76 +101,76 @@ func TestValidateAdminKubernetesObjectsNonCustomer(t *testing.T) {
 	for _, tt := range []struct {
 		test      string
 		method    string
-		gvr       *schema.GroupVersionResource
+		gvr       schema.GroupVersionResource
 		namespace string
 		name      string
 		wantErr   string
 	}{
 		{
 			test:      "valid openshift namespace",
-			gvr:       &schema.GroupVersionResource{Group: "openshift.io", Resource: "validkind"},
+			gvr:       schema.GroupVersionResource{Group: "openshift.io", Resource: "validkind"},
 			namespace: "openshift",
 			name:      "Valid-NAME-01",
 		},
 		{
 			test:      "invalid customer namespace",
-			gvr:       &schema.GroupVersionResource{Group: "openshift.io", Resource: "validkind"},
+			gvr:       schema.GroupVersionResource{Group: "openshift.io", Resource: "validkind"},
 			namespace: "customer",
 			name:      "Valid-NAME-01",
 			wantErr:   "403: Forbidden: : Access to the provided namespace 'customer' is forbidden.",
 		},
 		{
 			test:      "forbidden groupKind",
-			gvr:       &schema.GroupVersionResource{Resource: "secrets"},
+			gvr:       schema.GroupVersionResource{Resource: "secrets"},
 			namespace: "openshift",
 			name:      "Valid-NAME-01",
 			wantErr:   "403: Forbidden: : Access to secrets is forbidden.",
 		},
 		{
 			test:      "forbidden groupKind",
-			gvr:       &schema.GroupVersionResource{Group: "oauth.openshift.io", Resource: "anything"},
+			gvr:       schema.GroupVersionResource{Group: "oauth.openshift.io", Resource: "anything"},
 			namespace: "openshift",
 			name:      "Valid-NAME-01",
 			wantErr:   "403: Forbidden: : Access to secrets is forbidden.",
 		},
 		{
 			test: "allowed groupKind on read",
-			gvr:  &schema.GroupVersionResource{Group: "rbac.authorization.k8s.io", Resource: "clusterroles"},
+			gvr:  schema.GroupVersionResource{Group: "rbac.authorization.k8s.io", Resource: "clusterroles"},
 			name: "Valid-NAME-01",
 		},
 		{
 			test: "allowed groupKind on read 2",
-			gvr:  &schema.GroupVersionResource{Group: "authorization.openshift.io", Resource: "clusterroles"},
+			gvr:  schema.GroupVersionResource{Group: "authorization.openshift.io", Resource: "clusterroles"},
 			name: "Valid-NAME-01",
 		},
 		{
 			test: "allowed groupKind on read 3",
-			gvr:  &schema.GroupVersionResource{Resource: "nodes"},
+			gvr:  schema.GroupVersionResource{Resource: "nodes"},
 			name: "Valid-NAME-01",
 		},
 		{
 			test:    "forbidden clusterwide groupKind on read",
-			gvr:     &schema.GroupVersionResource{Resource: "namespaces"},
+			gvr:     schema.GroupVersionResource{Resource: "namespaces"},
 			name:    "Valid-NAME-01",
 			wantErr: "403: Forbidden: : Access to cluster-scoped object '/, Resource=namespaces' is forbidden.",
 		},
 		{
 			test:    "forbidden clusterwide groupKind on read 2",
-			gvr:     &schema.GroupVersionResource{Group: "user.openshift.io", Resource: "users"},
+			gvr:     schema.GroupVersionResource{Group: "user.openshift.io", Resource: "users"},
 			name:    "Valid-NAME-01",
 			wantErr: "403: Forbidden: : Access to cluster-scoped object 'user.openshift.io/, Resource=users' is forbidden.",
 		},
 		{
 			test:    "forbidden groupKind on write",
 			method:  http.MethodPost,
-			gvr:     &schema.GroupVersionResource{Group: "rbac.authorization.k8s.io", Resource: "clusterroles"},
+			gvr:     schema.GroupVersionResource{Group: "rbac.authorization.k8s.io", Resource: "clusterroles"},
 			name:    "Valid-NAME-01",
 			wantErr: "403: Forbidden: : Write access to RBAC is forbidden.",
 		},
 		{
 			test:    "forbidden groupKind on write 2",
 			method:  http.MethodPost,
-			gvr:     &schema.GroupVersionResource{Group: "authorization.openshift.io", Resource: "clusterroles"},
+			gvr:     schema.GroupVersionResource{Group: "authorization.openshift.io", Resource: "clusterroles"},
 			name:    "Valid-NAME-01",
 			wantErr: "403: Forbidden: : Write access to RBAC is forbidden.",
 		},
@@ -182,14 +182,14 @@ func TestValidateAdminKubernetesObjectsNonCustomer(t *testing.T) {
 		},
 		{
 			test:      "invalid namespace",
-			gvr:       &schema.GroupVersionResource{Group: "openshift.io", Resource: "validkind"},
+			gvr:       schema.GroupVersionResource{Group: "openshift.io", Resource: "validkind"},
 			namespace: "openshift-/",
 			name:      "Valid-NAME-01",
 			wantErr:   "403: Forbidden: : Access to the provided namespace 'openshift-/' is forbidden.",
 		},
 		{
 			test:      "invalid name",
-			gvr:       &schema.GroupVersionResource{Group: "openshift.io", Resource: "validkind"},
+			gvr:       schema.GroupVersionResource{Group: "openshift.io", Resource: "validkind"},
 			namespace: "openshift",
 			name:      longName,
 			wantErr:   "400: InvalidParameter: : The provided name '" + longName + "' is invalid.",
@@ -197,14 +197,14 @@ func TestValidateAdminKubernetesObjectsNonCustomer(t *testing.T) {
 		{
 			test:      "post: empty name",
 			method:    http.MethodPost,
-			gvr:       &schema.GroupVersionResource{Group: "openshift.io", Resource: "validkind"},
+			gvr:       schema.GroupVersionResource{Group: "openshift.io", Resource: "validkind"},
 			namespace: "openshift",
 			wantErr:   "400: InvalidParameter: : The provided name '' is invalid.",
 		},
 		{
 			test:      "delete: empty name",
 			method:    http.MethodDelete,
-			gvr:       &schema.GroupVersionResource{Group: "openshift.io", Resource: "validkind"},
+			gvr:       schema.GroupVersionResource{Group: "openshift.io", Resource: "validkind"},
 			namespace: "openshift",
 			wantErr:   "400: InvalidParameter: : The provided name '' is invalid.",
 		},

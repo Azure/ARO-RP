@@ -59,7 +59,7 @@ func (f *frontend) _getAdminKubernetesObjects(ctx context.Context, r *http.Reque
 		return nil, err
 	}
 
-	gvr, err := k.ResolveGVR(groupKind)
+	gvr, err := k.ResolveGVR(groupKind, "")
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func (f *frontend) _deleteAdminKubernetesObjects(ctx context.Context, r *http.Re
 		return err
 	}
 
-	gvr, err := k.ResolveGVR(groupKind)
+	gvr, err := k.ResolveGVR(groupKind, "")
 	if err != nil {
 		return err
 	}
@@ -173,7 +173,7 @@ func (f *frontend) _postAdminKubernetesObjects(ctx context.Context, r *http.Requ
 		return err
 	}
 
-	gvr, err := k.ResolveGVR(obj.GetKind())
+	gvr, err := k.ResolveGVR(obj.GetKind(), "")
 	if err != nil {
 		return err
 	}
