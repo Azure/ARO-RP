@@ -50,7 +50,7 @@ func (f *frontend) _postAdminOpenShiftClusterEtcdRecovery(ctx context.Context, r
 		return []byte{}, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
 
-	gvr, err := kubeActions.ResolveGVR("Etcd")
+	gvr, err := kubeActions.ResolveGVR("Etcd", "")
 	if err != nil {
 		return []byte{}, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
 	}
