@@ -4,6 +4,7 @@ package main
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"math/rand"
@@ -30,7 +31,7 @@ func usage() {
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s rp\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s operator {master,worker}\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s update-versions\n", os.Args[0])
-	fmt.Fprintf(flag.CommandLine.Output(), "  %s poc\n", os.Args[0])
+	fmt.Fprintf(flag.CommandLine.Output(), "  %s poc port\n", os.Args[0])
 	flag.PrintDefaults()
 }
 
@@ -40,7 +41,7 @@ func main() {
 	flag.Usage = usage
 	flag.Parse()
 
-	// ctx := context.Background()
+	ctx := context.Background()
 	// audit := utillog.GetAuditEntry()
 	log := utillog.GetLogger()
 
@@ -80,8 +81,8 @@ func main() {
 		checkArgs(1)
 		// err = updateOCPVersions(ctx, log)
 	case "poc":
-		checkArgs(1)
-		err = poc(log)
+		checkArgs(2)
+		err = rpPoc(ctx, log)
 	default:
 		usage()
 		os.Exit(2)
