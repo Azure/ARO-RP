@@ -24,7 +24,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/jongio/azidext/go/azidext"
-	msgraph "github.com/microsoftgraph/msgraph-sdk-go"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -55,7 +54,7 @@ type Cluster struct {
 	ci           bool
 	ciParentVnet string
 
-	spGraphClient                     *msgraph.GraphServiceClient
+	spGraphClient                     *utilgraph.GraphServiceClient
 	deployments                       features.DeploymentsClient
 	groups                            features.ResourceGroupsClient
 	openshiftclustersv20200430        redhatopenshift20200430.OpenShiftClustersClient

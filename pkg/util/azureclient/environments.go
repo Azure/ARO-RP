@@ -11,7 +11,8 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest/azure"
-	msgraph "github.com/microsoftgraph/msgraph-sdk-go"
+
+	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
 )
 
 // AROEnvironment contains additional, cloud-specific information needed by ARO.
@@ -131,9 +132,9 @@ func (e *AROEnvironment) ManagedIdentityCredentialOptions() *azidentity.ManagedI
 	}
 }
 
-func (e *AROEnvironment) NewGraphServiceClient(tokenCredential azcore.TokenCredential) (*msgraph.GraphServiceClient, error) {
+func (e *AROEnvironment) NewGraphServiceClient(tokenCredential azcore.TokenCredential) (*utilgraph.GraphServiceClient, error) {
 	scopes := []string{e.MicrosoftGraphScope}
-	client, err := msgraph.NewGraphServiceClientWithCredentials(tokenCredential, scopes)
+	client, err := utilgraph.NewGraphServiceClientWithCredentials(tokenCredential, scopes)
 	if err != nil {
 		return nil, err
 	}
