@@ -30,6 +30,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
@@ -43,17 +44,18 @@ const (
 var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
 var rhKeys = []string{"registry.redhat.io", "cloud.openshift.com", "registry.connect.redhat.com"}
 
-// Reconciler reconciles a Cluster object
-type Reconciler struct {
-	log *logrus.Entry
-
-	client client.Client
+// PullSecretReconciler reconciles pull secrets in a Cluster object
+type PullSecretReconciler struct {
+	base.AROController
 }
 
-func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
-	return &Reconciler{
-		log:    log,
-		client: client,
+func NewReconciler(log *logrus.Entry, client client.Client) *PullSecretReconciler {
+	return &PullSecretReconciler{
+		AROController: base.AROController{
+			Log:    log,
+			Client: client,
+			Name:   ControllerName,
+		},
 	}
 }
 
@@ -66,21 +68,21 @@ func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 //     requested).
 //   - If the pull Secret object (which is not owned by the Cluster object)
 //     changes, we'll see the pull Secret object requested.
-func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *PullSecretReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance := &arov1alpha1.Cluster{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+	err := r.Client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		r.log.Debug("controller is disabled")
+		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
-	r.log.Debug("running")
+	r.Log.Debug("running")
 	userSecret := &corev1.Secret{}
-	err = r.client.Get(ctx, pullSecretName, userSecret)
+	err = r.Client.Get(ctx, pullSecretName, userSecret)
 	if err != nil && !kerrors.IsNotFound(err) {
 		return reconcile.Result{}, err
 	}
@@ -89,7 +91,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// detects if the global pull secret is broken and fixes it by using backup managed by ARO operator
 	if instance.Spec.OperatorFlags.GetSimpleBoolean(controllerManaged) {
 		operatorSecret := &corev1.Secret{}
-		err = r.client.Get(ctx, types.NamespacedName{Namespace: operator.Namespace, Name: operator.SecretName}, operatorSecret)
+		err = r.Client.Get(ctx, types.NamespacedName{Namespace: operator.Namespace, Name: operator.SecretName}, operatorSecret)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -109,19 +111,21 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	err = r.client.Update(ctx, instance)
+	err = r.Client.Update(ctx, instance)
 	return reconcile.Result{}, err
 }
 
 // SetupWithManager setup our manager
-func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
-	pullSecretPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
-		return (o.GetName() == pullSecretName.Name && o.GetNamespace() == pullSecretName.Namespace) ||
-			(o.GetName() == operator.SecretName && o.GetNamespace() == operator.Namespace)
-	})
+func (r *PullSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.Log.Info("starting pull secret controller")
 
 	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return o.GetName() == arov1alpha1.SingletonClusterName
+	})
+
+	pullSecretPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return (o.GetName() == pullSecretName.Name && o.GetNamespace() == pullSecretName.Namespace) ||
+			(o.GetName() == operator.SecretName && o.GetNamespace() == operator.Namespace)
 	})
 
 	return ctrl.NewControllerManagedBy(mgr).
@@ -140,7 +144,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 // ensureGlobalPullSecret checks the state of the pull secrets, in case of missing or broken ARO pull secret
 // it replaces it with working one from controller Secret
 // it takes care only for ARO pull secret, it does not touch the customer keys
-func (r *Reconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret, userSecret *corev1.Secret) (secret *corev1.Secret, err error) {
+func (r *PullSecretReconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret, userSecret *corev1.Secret) (secret *corev1.Secret, err error) {
 	if operatorSecret == nil {
 		return nil, errors.New("nil operator secret, cannot verify userData integrity")
 	}
@@ -186,16 +190,16 @@ func (r *Reconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret,
 		// delete possible existing userSecret, calling deletion every time and ignoring when secret not found
 		// allows for simpler logic flow, when delete and create are not handled separately
 		// this call happens only when there is a need to change, it has no significant impact on performance
-		err := r.client.Delete(ctx, secret)
+		err := r.Client.Delete(ctx, secret)
 		if err != nil && !kerrors.IsNotFound(err) {
 			return nil, err
 		}
 
-		err = r.client.Create(ctx, secret)
+		err = r.Client.Create(ctx, secret)
 		return secret, err
 	}
 
-	err = r.client.Update(ctx, secret)
+	err = r.Client.Update(ctx, secret)
 	return secret, err
 }
 
@@ -205,11 +209,11 @@ func (r *Reconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret,
 //   - registry.connect.redhat.com
 //
 // if present, return error when the parsing fail, which means broken secret
-func (r *Reconciler) parseRedHatKeys(secret *corev1.Secret) (foundKeys []string, err error) {
+func (r *PullSecretReconciler) parseRedHatKeys(secret *corev1.Secret) (foundKeys []string, err error) {
 	// parse keys and validate JSON
 	parsedKeys, err := pullsecret.UnmarshalSecretData(secret)
 	if err != nil {
-		r.log.Info("pull secret is not valid json - recreating")
+		r.Log.Info("pull secret is not valid json - recreating")
 		return foundKeys, err
 	}
 

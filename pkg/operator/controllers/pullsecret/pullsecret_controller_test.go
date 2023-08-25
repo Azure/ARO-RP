@@ -6,6 +6,7 @@ package pullsecret
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"reflect"
 	"testing"
 
@@ -19,6 +20,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
@@ -285,10 +287,19 @@ func TestPullSecretReconciler(t *testing.T) {
 			ctx := context.Background()
 
 			clientFake := ctrlfake.NewClientBuilder().WithObjects(tt.instance).WithObjects(tt.secrets...).Build()
+			logger := &logrus.Logger{
+				Out:       io.Discard,
+				Formatter: new(logrus.TextFormatter),
+				Hooks:     make(logrus.LevelHooks),
+				Level:     logrus.TraceLevel,
+			}
 
-			r := &Reconciler{
-				log:    logrus.NewEntry(logrus.StandardLogger()),
-				client: clientFake,
+			r := &PullSecretReconciler{
+				AROController: base.AROController{
+					Log:    logrus.NewEntry(logger),
+					Client: clientFake,
+					Name:   ControllerName,
+				},
 			}
 			if tt.request.Name == "" {
 				tt.request.NamespacedName = pullSecretName
@@ -301,7 +312,7 @@ func TestPullSecretReconciler(t *testing.T) {
 			}
 
 			s := &corev1.Secret{}
-			err = r.client.Get(ctx, types.NamespacedName{Namespace: "openshift-config", Name: "pull-secret"}, s)
+			err = r.Client.Get(ctx, types.NamespacedName{Namespace: "openshift-config", Name: "pull-secret"}, s)
 			if err != nil {
 				t.Error(err)
 			}
@@ -363,8 +374,33 @@ func TestParseRedHatKeys(t *testing.T) {
 
 	for _, tt := range test {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &Reconciler{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+
+			instance := &arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
+				},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						controllerEnabled: "true",
+					},
+				},
+			}
+
+			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(instance)
+
+			logger := &logrus.Logger{
+				Out:       io.Discard,
+				Formatter: new(logrus.TextFormatter),
+				Hooks:     make(logrus.LevelHooks),
+				Level:     logrus.TraceLevel,
+			}
+
+			r := &PullSecretReconciler{
+				AROController: base.AROController{
+					Log:    logrus.NewEntry(logger),
+					Client: clientBuilder.Build(),
+					Name:   ControllerName,
+				},
 			}
 
 			out, err := r.parseRedHatKeys(tt.ps)
@@ -761,13 +797,36 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 
-			clientBuilder := ctrlfake.NewClientBuilder()
+			instance := &arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
+				},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						controllerEnabled: "true",
+					},
+				},
+			}
+
+			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(instance)
+
 			if tt.initialSecret != nil {
 				clientBuilder = clientBuilder.WithObjects(tt.initialSecret)
 			}
 
-			r := &Reconciler{
-				client: clientBuilder.Build(),
+			logger := &logrus.Logger{
+				Out:       io.Discard,
+				Formatter: new(logrus.TextFormatter),
+				Hooks:     make(logrus.LevelHooks),
+				Level:     logrus.TraceLevel,
+			}
+
+			r := &PullSecretReconciler{
+				AROController: base.AROController{
+					Log:    logrus.NewEntry(logger),
+					Client: clientBuilder.Build(),
+					Name:   ControllerName,
+				},
 			}
 
 			s, err := r.ensureGlobalPullSecret(ctx, tt.operatorPullSecret, tt.pullSecret)
