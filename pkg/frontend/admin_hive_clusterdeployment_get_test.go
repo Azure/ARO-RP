@@ -36,16 +36,35 @@ func Test_getAdminHiveClusterDeployment(t *testing.T) {
 		wantStatusCode                        int
 		wantResponse                          []byte
 		wantError                             string
+		clusterDeploymentNamespace            string
 	}
 
 	for _, tt := range []*test{
 		{
-			name:                                  "cluster has hive profile with namespace",
+			name:                                  "cluster has hive profile with namespace, only resourceID as input",
 			resourceID:                            fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/hive", fakeUUID),
 			properties:                            api.OpenShiftClusterProperties{HiveProfile: api.HiveProfile{Namespace: fmt.Sprintf("aro-%s", fakeUUID)}},
 			hiveEnabled:                           true,
 			expectedGetClusterDeploymentCallCount: 1,
 			wantResponse:                          []byte(`{"spec":{"clusterName":"abc123","baseDomain":"","platform":{},"installed":false}}`),
+			clusterDeploymentNamespace:            "",
+		},
+		{
+			name:                                  "cluster has hive profile with namespace, only clusterDeploymentNamespace as input",
+			resourceID:                            "",
+			hiveEnabled:                           true,
+			expectedGetClusterDeploymentCallCount: 1,
+			wantResponse:                          []byte(`{"spec":{"clusterName":"abc123","baseDomain":"","platform":{},"installed":false}}`),
+			clusterDeploymentNamespace:            fmt.Sprintf("aro-%s", fakeUUID),
+		},
+		{
+			name:                                  "cluster has hive profile with namespace, with resourceID and clusterDeploymentNamespace as input",
+			resourceID:                            fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/hive", fakeUUID),
+			properties:                            api.OpenShiftClusterProperties{HiveProfile: api.HiveProfile{Namespace: fmt.Sprintf("aro-%s", fakeUUID)}},
+			hiveEnabled:                           true,
+			expectedGetClusterDeploymentCallCount: 1,
+			wantResponse:                          []byte(`{"spec":{"clusterName":"abc123","baseDomain":"","platform":{},"installed":false}}`),
+			clusterDeploymentNamespace:            fmt.Sprintf("aro-%s", fakeUUID),
 		},
 		{
 			name:                                  "cluster does not have hive profile with namespace",
@@ -53,7 +72,8 @@ func Test_getAdminHiveClusterDeployment(t *testing.T) {
 			hiveEnabled:                           true,
 			expectedGetClusterDeploymentCallCount: 0,
 			wantStatusCode:                        http.StatusNoContent,
-			wantError:                             "204: ResourceNotFound: : cluster is not managed by hive",
+			wantError:                             "204: ResourceNotFound: : cluster '/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/nonhive' is not managed by hive",
+			clusterDeploymentNamespace:            "",
 		},
 		{
 			name:                                  "hive is not enabled",
@@ -62,6 +82,15 @@ func Test_getAdminHiveClusterDeployment(t *testing.T) {
 			expectedGetClusterDeploymentCallCount: 0,
 			wantStatusCode:                        http.StatusInternalServerError,
 			wantError:                             "500: InternalServerError: : hive is not enabled",
+			clusterDeploymentNamespace:            "",
+		},
+		{
+			name:                                  "both clusterDeploymentNamespace and resourceID are empty",
+			resourceID:                            "",
+			hiveEnabled:                           true,
+			expectedGetClusterDeploymentCallCount: 0,
+			wantStatusCode:                        http.StatusBadRequest,
+			wantError:                             "400: InvalidParameter: : Parameters resourceID '' clusterDeploymentNamespace '' are both empty, atleast one should have a valid value.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -69,20 +98,23 @@ func Test_getAdminHiveClusterDeployment(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer ti.done()
 			defer controller.Finish()
+			var err error
 
-			ti.fixture.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-				Key: strings.ToLower(tt.resourceID),
-				OpenShiftCluster: &api.OpenShiftCluster{
-					ID:         tt.resourceID,
-					Name:       "hive",
-					Type:       "Microsoft.RedHatOpenShift/openshiftClusters",
-					Properties: tt.properties,
-				},
-			})
+			if tt.resourceID != "" {
+				ti.fixture.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(tt.resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:         tt.resourceID,
+						Name:       "hive",
+						Type:       "Microsoft.RedHatOpenShift/openshiftClusters",
+						Properties: tt.properties,
+					},
+				})
 
-			err := ti.buildFixtures(nil)
-			if err != nil {
-				t.Fatal(err)
+				err = ti.buildFixtures(nil)
+				if err != nil {
+					t.Fatal(err)
+				}
 			}
 			_env := ti.env.(*mock_env.MockInterface)
 			var f *frontend
@@ -99,7 +131,7 @@ func Test_getAdminHiveClusterDeployment(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			hiveClusterDeployment, err := f._getAdminHiveClusterDeployment(ctx, strings.ToLower(tt.resourceID))
+			hiveClusterDeployment, err := f._getAdminHiveClusterDeployment(ctx, strings.ToLower(tt.resourceID), strings.ToLower(tt.clusterDeploymentNamespace))
 			cloudErr, isCloudErr := err.(*api.CloudError)
 			if tt.wantError != "" && isCloudErr && cloudErr != nil {
 				if tt.wantError != cloudErr.Error() {
