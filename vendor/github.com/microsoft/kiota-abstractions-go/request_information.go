@@ -211,6 +211,10 @@ func (request *RequestInformation) SetContentFromParsable(ctx context.Context, r
 		return err
 	}
 	defer writer.Close()
+	if multipartBody, ok := item.(MultipartBody); ok {
+		contentType += "; boundary=" + multipartBody.GetBoundary()
+		multipartBody.SetRequestAdapter(requestAdapter)
+	}
 	request.setRequestType(item, span)
 	err = writer.WriteObjectValue("", item)
 	if err != nil {
