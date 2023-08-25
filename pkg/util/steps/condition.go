@@ -21,6 +21,7 @@ import (
 // instead of InternalServerError
 // Efforts are being made  to not have generic Hive errors but specific, actionable failure cases.
 // Instead of providing Hive-specific error messages to customers, the below will send a timeout error message.
+// The below functions are run during Install, Update, AdminUpdate.
 var timeoutConditionErrors = map[string]string{
 	"apiServersReady":                        "Kube API has not initialised successfully and is unavailable.",
 	"minimumWorkerNodesReady":                "Minimum number of worker nodes have not been successfully created.",
@@ -30,8 +31,8 @@ var timeoutConditionErrors = map[string]string{
 	"ingressControllerReady":                 "Ingress Cluster Operator has not started successfully.",
 	"aroDeploymentReady":                     "ARO Cluster Operator has failed to initialize successfully.",
 	"ensureAROOperatorRunningDesiredVersion": "ARO Cluster Operator is not running desired version.",
-	"hiveClusterDeploymentReady":             "Timed out waiting for a condition, cluster Installation is unsuccessful.",
-	"hiveClusterInstallationComplete":        "Timed out waiting for a condition, cluster Installation is unsuccessful.",
+	"hiveClusterDeploymentReady":             "Timed out waiting for the condition to be ready.",
+	"hiveClusterInstallationComplete":        "Timed out waiting for the condition to complete.",
 }
 
 // conditionFunction is a function that takes a context and returns whether the
