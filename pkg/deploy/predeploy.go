@@ -35,7 +35,7 @@ const (
 	// Rotate the secret on every deploy of the RP if the most recent
 	// secret is greater than 7 days old
 	rotateSecretAfter = time.Hour * 24 * 7
-	rpRestartScript   = "systemctl restart aro-rp"
+	rpRestartScript   = "systemctl restart aro-monitor; systemctl restart aro-portal; systemctl restart aro-rp"
 )
 
 // PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
