@@ -50,11 +50,12 @@ type frontend struct {
 	baseLog  *logrus.Entry
 	env      env.Interface
 
-	logMiddleware        middleware.LogMiddleware
-	validateMiddleware   middleware.ValidateMiddleware
-	m                    middleware.MetricsMiddleware
-	authMiddleware       middleware.AuthMiddleware
-	apiVersionMiddleware middleware.ApiVersionValidator
+	logMiddleware         middleware.LogMiddleware
+	validateMiddleware    middleware.ValidateMiddleware
+	m                     middleware.MetricsMiddleware
+	authMiddleware        middleware.AuthMiddleware
+	apiVersionMiddleware  middleware.ApiVersionValidator
+	maintenanceMiddleware middleware.MaintenanceMiddleware
 
 	dbAsyncOperations             database.AsyncOperations
 	dbClusterManagerConfiguration database.ClusterManagerConfigurations
@@ -117,6 +118,7 @@ func NewFrontend(ctx context.Context,
 	dbOpenShiftVersions database.OpenShiftVersions,
 	apis map[string]*api.Version,
 	m metrics.Emitter,
+	clusterm metrics.Emitter,
 	aead encryption.AEAD,
 	hiveClusterManager hive.ClusterManager,
 	kubeActionsFactory kubeActionsFactory,
@@ -152,6 +154,7 @@ func NewFrontend(ctx context.Context,
 		dbOpenShiftVersions:           dbOpenShiftVersions,
 		apis:                          apis,
 		m:                             middleware.MetricsMiddleware{Emitter: m},
+		maintenanceMiddleware:         middleware.MaintenanceMiddleware{Emitter: clusterm},
 		aead:                          aead,
 		hiveClusterManager:            hiveClusterManager,
 		kubeActionsFactory:            kubeActionsFactory,
@@ -294,22 +297,17 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 		})
 		r.Get("/supportedvmsizes", f.supportedvmsizes)
 
-		r.Route("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/etcdrecovery",
-			func(r chi.Router) {
-				r.Post("/", f.postAdminOpenShiftClusterEtcdRecovery)
-			})
-
-		r.Route("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/kubernetesobjects",
-			func(r chi.Router) {
-				r.Get("/", f.getAdminKubernetesObjects)
-				r.Post("/", f.postAdminKubernetesObjects)
-				r.Delete("/", f.deleteAdminKubernetesObjects)
-			},
-		)
-
 		r.Route("/subscriptions/{subscriptionId}", func(r chi.Router) {
 			r.Route("/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}", func(r chi.Router) {
-				r.Post("/approvecsr", f.postAdminOpenShiftClusterApproveCSR)
+				// Etcd recovery
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/etcdrecovery", f.postAdminOpenShiftClusterEtcdRecovery)
+
+				// Kubernetes objects
+				r.Get("/kubernetesobjects", f.getAdminKubernetesObjects)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/kubernetesobjects", f.postAdminKubernetesObjects)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Delete("/kubernetesobjects", f.deleteAdminKubernetesObjects)
+
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/approvecsr", f.postAdminOpenShiftClusterApproveCSR)
 
 				// Pod logs
 				r.Get("/kubernetespodlogs", f.getAdminKubernetesPodLogs)
@@ -320,23 +318,24 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 
 				r.Get("/clusterdeployment", f.getAdminHiveClusterDeployment)
 
-				r.Post("/redeployvm", f.postAdminOpenShiftClusterRedeployVM)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/redeployvm", f.postAdminOpenShiftClusterRedeployVM)
 
-				r.Post("/stopvm", f.postAdminOpenShiftClusterStopVM)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/stopvm", f.postAdminOpenShiftClusterStopVM)
 
-				r.Post("/startvm", f.postAdminOpenShiftClusterStartVM)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/startvm", f.postAdminOpenShiftClusterStartVM)
 
-				r.Post("/upgrade", f.postAdminOpenShiftUpgrade)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/upgrade", f.postAdminOpenShiftUpgrade)
 
 				r.Get("/skus", f.getAdminOpenShiftClusterVMResizeOptions)
 
+				// We don't emit unplanned maintenance signal for resize since it is only used for planned maintenance
 				r.Post("/resize", f.postAdminOpenShiftClusterVMResize)
 
-				r.Post("/reconcilefailednic", f.postAdminReconcileFailedNIC)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/reconcilefailednic", f.postAdminReconcileFailedNIC)
 
-				r.Post("/cordonnode", f.postAdminOpenShiftClusterCordonNode)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/cordonnode", f.postAdminOpenShiftClusterCordonNode)
 
-				r.Post("/drainnode", f.postAdminOpenShiftClusterDrainNode)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/drainnode", f.postAdminOpenShiftClusterDrainNode)
 			})
 		})
 

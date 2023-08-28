@@ -69,15 +69,15 @@ require (
 	golang.org/x/sync v0.1.0
 	golang.org/x/text v0.9.0
 	golang.org/x/tools v0.6.0
-	k8s.io/api v0.25.0
+	k8s.io/api v0.26.2
 	k8s.io/apiextensions-apiserver v0.25.0
-	k8s.io/apimachinery v0.25.0
+	k8s.io/apimachinery v0.26.2
 	k8s.io/cli-runtime v0.24.1
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/code-generator v0.24.1
 	k8s.io/kubectl v0.24.1
 	k8s.io/kubernetes v1.23.5
-	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed
+	k8s.io/utils v0.0.0-20230313181309-38a27ef9d749
 	sigs.k8s.io/cluster-api-provider-azure v1.2.1
 	sigs.k8s.io/controller-runtime v0.13.1
 	sigs.k8s.io/controller-tools v0.9.0
@@ -194,6 +194,7 @@ require (
 	github.com/opencontainers/runc v1.1.5 // indirect
 	github.com/opencontainers/runtime-tools v0.9.1-0.20220714195903-17b3287fafb7 // indirect
 	github.com/opencontainers/selinux v1.10.1 // indirect
+	github.com/openshift/custom-resource-status v1.1.3-0.20220503160415-f2fdb4999d87 // indirect
 	github.com/ostreedev/ostree-go v0.0.0-20210805093236-719684c64e4f // indirect
 	github.com/pascaldekloe/name v0.0.0-20180628100202-0fd16699aae1 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
@@ -247,10 +248,10 @@ require (
 	k8s.io/apiserver v0.24.7 // indirect
 	k8s.io/component-base v0.25.0 // indirect
 	k8s.io/gengo v0.0.0-20211129171323-c02415ce4185 // indirect
-	k8s.io/klog/v2 v2.70.1 // indirect
+	k8s.io/klog/v2 v2.90.1 // indirect
 	k8s.io/kube-aggregator v0.24.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20220803162953-67bda5d908f1 // indirect
-	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
+	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/kube-storage-version-migrator v0.0.4 // indirect
 	sigs.k8s.io/kustomize/api v0.11.4 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.13.6 // indirect
@@ -807,7 +808,4 @@ replace (
 	vbom.ml/util => github.com/fvbommel/util v0.0.3
 )
 
-replace (
-	github.com/openshift/hive => github.com/openshift/hive v1.1.17-0.20220719141355-c63c9b0281d8
-	github.com/openshift/hive/apis => github.com/openshift/hive/apis v0.0.0-20220719141355-c63c9b0281d8
-)
+replace github.com/openshift/hive/apis => github.com/openshift/hive/apis v0.0.0-20230811220652-70b666ec89b0
