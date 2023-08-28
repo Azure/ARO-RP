@@ -74,14 +74,6 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
         if provider.registration_state != 'Registered':
             raise UnauthorizedError('Microsoft.RedHatOpenShift provider is not registered.',
                                     'Run `az provider register -n Microsoft.RedHatOpenShift --wait`.')
-        if enable_preconfigured_nsg:
-            feature_client = get_mgmt_service_client(
-                cmd.cli_ctx, ResourceType.MGMT_RESOURCE_FEATURES)
-            feature = feature_client.features.get('Microsoft.RedHatOpenShift', 'PreconfiguredNSG')
-            if feature.properties.state != 'Registered':
-                raise ValidationError('PreconfiguredNSG feature is not registered. \
-                                      Run `az feature register --namespace Microsoft.RedHatOpenShift \
-                                      -n PreconfiguredNSG`.')
 
     validate_subnets(master_subnet, worker_subnet)
 
@@ -453,7 +445,7 @@ def generate_random_id():
 
 def get_network_resources_from_subnets(cli_ctx, subnets, fail, oc):
     subnet_resources = set()
-    subnet_with_nsg_preattached = 0
+    subnets_with_no_nsg_attached = set()
     for sn in subnets:
         sid = parse_resource_id(sn)
 
@@ -477,15 +469,16 @@ def get_network_resources_from_subnets(cli_ctx, subnets, fail, oc):
         if oc.network_profile.preconfigured_nsg == 'Enabled':
             if subnet.get("networkSecurityGroup", None):
                 subnet_resources.add(subnet['networkSecurityGroup']['id'])
-                subnet_with_nsg_preattached = subnet_with_nsg_preattached + 1
+            else:
+                subnets_with_no_nsg_attached.add(sn)
 
     # when preconfiguredNSG feature is Enabled we either have all subnets NSG attached or none.
     if oc.network_profile.preconfigured_nsg == 'Enabled' and \
-        subnet_with_nsg_preattached != 0 and \
-            subnet_with_nsg_preattached != len(subnets):
-        raise ValidationError("""(ValidationError) preconfiguredNSG feature is enabled but NSG not attached for subnets.
-                                  Please makesure all the subnets have network security group attached and retry.
-                                  If issue persists: raise azure support ticket""")
+        len(subnets_with_no_nsg_attached) != 0 and \
+            len(subnets_with_no_nsg_attached) != len(subnets):
+        raise ValidationError(f"(ValidationError) preconfiguredNSG feature is enabled but NSG not attached for subnets.\
+                                  Please make sure all the following subnets have network security group attached and retry.\
+                              {subnets_with_no_nsg_attached}")
 
     return subnet_resources
 
