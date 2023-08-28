@@ -808,7 +808,4 @@ replace (
 	vbom.ml/util => github.com/fvbommel/util v0.0.3
 )
 
-replace (
-	github.com/openshift/hive => github.com/openshift/hive v1.1.17-0.20230811220652-70b666ec89b0
-	github.com/openshift/hive/apis => github.com/openshift/hive/apis v0.0.0-20230811220652-70b666ec89b0
-)
+replace github.com/openshift/hive/apis => github.com/openshift/hive/apis v0.0.0-20230811220652-70b666ec89b0
