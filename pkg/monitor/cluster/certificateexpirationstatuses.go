@@ -4,18 +4,22 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
+	utilcert "github.com/Azure/ARO-RP/pkg/util/cert"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/pem"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 // Copyright (c) Microsoft Corporation.
@@ -93,4 +97,56 @@ func secretMissingMetric(namespace, name string) map[string]string {
 		"namespace": namespace,
 		"name":      name,
 	}
+}
+
+func (mon *Monitor) emitEtcdCertificateExpiry(ctx context.Context) error {
+	cv, err := mon.getClusterVersion(ctx)
+	if err != nil {
+		return err
+	}
+	v, err := version.ParseVersion(actualVersion(cv))
+	if err != nil {
+		return err
+	}
+	// ETCD ceritificates are autorotated by the operator when close to expiry for cluster running 4.9+
+	if !v.Lt(version.NewVersion(4, 9)) {
+		return nil
+	}
+
+	secretList, err := mon.cli.CoreV1().Secrets("openshift-etcd").List(ctx, metav1.ListOptions{FieldSelector: fmt.Sprintf("type=%s", corev1.SecretTypeTLS)})
+	if err != nil {
+		return err
+	}
+
+	certNearExpiry := false
+	minDaysUntilExpiration := math.MaxInt
+	for _, secret := range secretList.Items {
+		if strings.Contains(secret.ObjectMeta.Name, "etcd-peer") || strings.Contains(secret.ObjectMeta.Name, "etcd-serving") {
+			_, certs, err := pem.Parse(secret.Data[corev1.TLSCertKey])
+			if err != nil {
+				return err
+			}
+			if utilcert.IsLessThanMinimumDuration(certs[0], utilcert.DefaultMinDurationPercent) {
+				certNearExpiry = true
+				minDaysUntilExpiration = min(utilcert.DaysUntilExpiration(certs[0]), minDaysUntilExpiration)
+			}
+		}
+	}
+
+	if certNearExpiry {
+		mon.emitGauge("certificate.expirationdate", 1, map[string]string{
+			"daysUntilExpiration": fmt.Sprintf("%d", minDaysUntilExpiration),
+			"namespace":           "openshift-etcd",
+			"name":                "openshift-etcd-certificate",
+		})
+	}
+
+	return nil
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
