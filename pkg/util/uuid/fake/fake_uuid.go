@@ -22,7 +22,7 @@ func (f *fakeGenerator) movePos() {
 	f.currentPos++
 }
 
-func (f fakeGenerator) Generate() string {
+func (f *fakeGenerator) Generate() string {
 	defer f.movePos()
 	if len(f.words) < f.currentPos {
 		return ""
