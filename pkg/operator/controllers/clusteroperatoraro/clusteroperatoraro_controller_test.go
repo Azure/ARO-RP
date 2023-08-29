@@ -263,8 +263,8 @@ func TestConditions(t *testing.T) {
 				APIVersion:         arov1alpha1.GroupVersion.Identifier(),
 				Kind:               "Cluster",
 				Name:               arov1alpha1.SingletonClusterName,
-				Controller:         pointer.BoolPtr(true),
-				BlockOwnerDeletion: pointer.BoolPtr(true),
+				Controller:         pointer.Bool(true),
+				BlockOwnerDeletion: pointer.Bool(true),
 			}}
 			if diff := cmp.Diff(wantOwnerReference, operator.ObjectMeta.OwnerReferences); diff != "" {
 				t.Error(diff)

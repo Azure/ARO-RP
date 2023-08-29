@@ -103,6 +103,20 @@ func (mr *MockDynamicMockRecorder) ValidateEncryptionAtHost(ctx, oc interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateEncryptionAtHost", reflect.TypeOf((*MockDynamic)(nil).ValidateEncryptionAtHost), ctx, oc)
 }
 
+// ValidateLoadBalancerProfile mocks base method.
+func (m *MockDynamic) ValidateLoadBalancerProfile(ctx context.Context, oc *api.OpenShiftCluster) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateLoadBalancerProfile", ctx, oc)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateLoadBalancerProfile indicates an expected call of ValidateLoadBalancerProfile.
+func (mr *MockDynamicMockRecorder) ValidateLoadBalancerProfile(ctx, oc interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateLoadBalancerProfile", reflect.TypeOf((*MockDynamic)(nil).ValidateLoadBalancerProfile), ctx, oc)
+}
+
 // ValidateServicePrincipal mocks base method.
 func (m *MockDynamic) ValidateServicePrincipal(ctx context.Context, spTokenCredential azcore.TokenCredential) error {
 	m.ctrl.T.Helper()

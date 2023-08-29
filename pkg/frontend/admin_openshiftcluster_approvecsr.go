@@ -38,7 +38,7 @@ func (f *frontend) _postAdminOpenShiftClusterApproveCSR(ctx context.Context, r *
 
 	csrName := r.URL.Query().Get("csrName")
 	if csrName != "" {
-		err := validateAdminKubernetesObjects(r.Method, &csrResource, "", csrName)
+		err := validateAdminKubernetesObjects(r.Method, csrResource, "", csrName)
 		if err != nil {
 			return err
 		}

@@ -16,7 +16,7 @@ import (
 
 const (
 	// MachinePoolImageIDOverrideAnnotation can be applied to MachinePools to control the precise image ID to be used
-	// for the MachineSets we reconcile for this pool. This feature is presently only implemented for AWS, and
+	// for the MachineSets we reconcile for this pool. This feature is presently only implemented for AWS and GCP, and
 	// is intended for very limited use cases we do not recommend pursuing regularly. As such it is not currently
 	// part of our official API.
 	MachinePoolImageIDOverrideAnnotation = "hive.openshift.io/image-id-override"
@@ -155,6 +155,16 @@ type MachinePoolCondition struct {
 
 // MachinePoolConditionType is a valid value for MachinePoolCondition.Type
 type MachinePoolConditionType string
+
+// ConditionType satisfies the conditions.Condition interface
+func (c MachinePoolCondition) ConditionType() ConditionType {
+	return c.Type
+}
+
+// String satisfies the conditions.ConditionType interface
+func (t MachinePoolConditionType) String() string {
+	return string(t)
+}
 
 const (
 	// NotEnoughReplicasMachinePoolCondition is true when the minReplicas field

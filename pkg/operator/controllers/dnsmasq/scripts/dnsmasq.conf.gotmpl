@@ -1,0 +1,14 @@
+{{ define "dnsmasq.conf" }}
+resolv-file=/etc/resolv.conf.dnsmasq
+strict-order
+address=/api.{{ .ClusterDomain }}/{{ .APIIntIP }}
+address=/api-int.{{ .ClusterDomain }}/{{ .APIIntIP }}
+address=/.apps.{{ .ClusterDomain }}/{{ .IngressIP }}
+{{- range $GatewayDomain := .GatewayDomains }}
+address=/{{ $GatewayDomain }}/{{ $.GatewayPrivateEndpointIP }}
+{{- end }}
+user=dnsmasq
+group=dnsmasq
+no-hosts
+cache-size=0
+{{ end }}

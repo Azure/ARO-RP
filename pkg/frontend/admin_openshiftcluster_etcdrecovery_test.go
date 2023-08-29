@@ -66,7 +66,7 @@ func TestAdminEtcdRecovery(t *testing.T) {
 	ctx := context.Background()
 
 	resourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s", mockSubID, resourceName)
-	gvk := &kschema.GroupVersionResource{
+	gvk := kschema.GroupVersionResource{
 		Group:    "",
 		Version:  "v1",
 		Resource: "Etcd",
@@ -89,7 +89,7 @@ func TestAdminEtcdRecovery(t *testing.T) {
 			wantError:               "500: InternalServerError: : failed to parse resource",
 			doc:                     fakeRecoveryDoc(true, resourceID, resourceName),
 			mocks: func(ctx context.Context, ti *testInfra, k *mock_adminactions.MockKubeActions, log *logrus.Entry, env env.Interface, doc *api.OpenShiftClusterDocument, pods *corev1.PodList, etcdcli operatorv1client.EtcdInterface) {
-				k.EXPECT().ResolveGVR("Etcd").Times(1).Return(gvk, errors.New("failed to parse resource"))
+				k.EXPECT().ResolveGVR("Etcd", "").Times(1).Return(gvk, errors.New("failed to parse resource"))
 			},
 		},
 		{
@@ -99,7 +99,7 @@ func TestAdminEtcdRecovery(t *testing.T) {
 			wantError:               "400: InvalidParameter: : The provided resource is invalid.",
 			doc:                     fakeRecoveryDoc(true, resourceID, resourceName),
 			mocks: func(ctx context.Context, ti *testInfra, k *mock_adminactions.MockKubeActions, log *logrus.Entry, env env.Interface, doc *api.OpenShiftClusterDocument, pods *corev1.PodList, etcdcli operatorv1client.EtcdInterface) {
-				k.EXPECT().ResolveGVR("Etcd").Times(1).Return(nil, nil)
+				k.EXPECT().ResolveGVR("Etcd", "").Times(1).Return(kschema.GroupVersionResource{}, nil)
 			},
 		},
 		{
@@ -109,7 +109,7 @@ func TestAdminEtcdRecovery(t *testing.T) {
 			wantError:               "500: InternalServerError: : privateEndpointIP is empty",
 			doc:                     fakeRecoveryDoc(false, resourceID, resourceName),
 			mocks: func(ctx context.Context, ti *testInfra, k *mock_adminactions.MockKubeActions, log *logrus.Entry, env env.Interface, doc *api.OpenShiftClusterDocument, pods *corev1.PodList, etcdcli operatorv1client.EtcdInterface) {
-				k.EXPECT().ResolveGVR("Etcd").Times(1).Return(gvk, nil)
+				k.EXPECT().ResolveGVR("Etcd", "").Times(1).Return(gvk, nil)
 			},
 		},
 		{
@@ -168,6 +168,7 @@ func TestAdminEtcdRecovery(t *testing.T) {
 				ti.subscriptionsDatabase,
 				nil,
 				api.APIs,
+				&noop.Noop{},
 				&noop.Noop{},
 				nil,
 				nil,

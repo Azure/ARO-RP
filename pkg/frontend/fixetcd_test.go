@@ -525,6 +525,7 @@ func TestFixEtcd(t *testing.T) {
 				nil,
 				api.APIs,
 				&noop.Noop{},
+				&noop.Noop{},
 				nil,
 				nil,
 				nil,

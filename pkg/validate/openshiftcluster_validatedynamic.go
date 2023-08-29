@@ -258,5 +258,10 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
+	err = spDynamic.ValidateLoadBalancerProfile(ctx, dv.oc)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
