@@ -37,6 +37,10 @@ logger = get_logger(__name__)
 FP_CLIENT_ID = 'f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875'
 
 
+def rp_mode_development():
+    return os.environ.get('RP_MODE', '').lower() == 'development'
+
+
 def aro_create(cmd,  # pylint: disable=too-many-locals
                client,
                resource_group_name,
@@ -421,14 +425,6 @@ def aro_update(cmd,
                        parameters=ocUpdate)
 
 
-def rp_mode_development():
-    return os.environ.get('RP_MODE', '').lower() == 'development'
-
-
-def rp_mode_production():
-    return os.environ.get('RP_MODE', '') == ''
-
-
 def generate_random_id():
     random_id = (random.choice('abcdefghijklmnopqrstuvwxyz') +
                  ''.join(random.choice('abcdefghijklmnopqrstuvwxyz1234567890')
@@ -576,10 +572,10 @@ def cluster_application_update(cli_ctx,
 
 
 def resolve_rp_client_id():
-    if rp_mode_production():
-        return FP_CLIENT_ID
+    if rp_mode_development():
+        return os.environ.get('AZURE_FP_CLIENT_ID', FP_CLIENT_ID)
 
-    return os.environ.get('AZURE_FP_CLIENT_ID', FP_CLIENT_ID)
+    return FP_CLIENT_ID
 
 
 def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
