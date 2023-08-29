@@ -200,7 +200,7 @@ func (hr *clusterManager) IsClusterInstallationComplete(ctx context.Context, doc
 
 	for _, cond := range cd.Status.Conditions {
 		if cond.Type == hivev1.ProvisionFailedCondition && cond.Status == corev1.ConditionTrue {
-			log, err := hr.installLogsForDeployment(ctx, cd)
+			log, err := hr.installLogsForLatestDeployment(ctx, cd)
 			if err != nil {
 				return false, err
 			}
@@ -241,7 +241,7 @@ func (hr *clusterManager) ResetCorrelationData(ctx context.Context, doc *api.Ope
 	})
 }
 
-func (hr *clusterManager) installLogsForDeployment(ctx context.Context, cd *hivev1.ClusterDeployment) (*string, error) {
+func (hr *clusterManager) installLogsForLatestDeployment(ctx context.Context, cd *hivev1.ClusterDeployment) (*string, error) {
 	provisionList := &hivev1.ClusterProvisionList{}
 	if err := hr.hiveClientset.List(
 		ctx,
