@@ -14,7 +14,8 @@ from azure.cli.core.commands.client_factory import get_mgmt_service_client
 from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.profiles import ResourceType
 from azure.cli.core.util import sdk_no_wait
-from azure.cli.core.azclierror import FileOperationError, ResourceNotFoundError, UnauthorizedError, ValidationError
+from azure.cli.core.azclierror import FileOperationError, ResourceNotFoundError, \
+    UnauthorizedError, ValidationError
 from azext_aro._aad import AADManager
 from azext_aro._rbac import assign_role_to_resource, \
     has_role_assignment_on_resource
@@ -131,7 +132,6 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                                f"/resourceGroups/{cluster_resource_group or 'aro-' + random_id}"),
             fips_validated_modules='Enabled' if fips_validated_modules else 'Disabled',
             version=version or '',
-
         ),
         service_principal_profile=openshiftcluster.ServicePrincipalProfile(
             client_id=client_id,
@@ -450,7 +450,8 @@ def get_network_resources_from_subnets(cli_ctx, subnets, fail):
         subnet = subnet_show(cli_ctx=cli_ctx)(command_args={
             "name": sid['resource_name'],
             "vnet_name": sid['name'],
-            "resource_group": sid['resource_group']})
+            "resource_group": sid['resource_group']}
+        )
 
         if subnet.get("routeTable", None):
             subnet_resources.add(subnet['routeTable']['id'])

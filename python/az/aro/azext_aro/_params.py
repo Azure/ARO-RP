@@ -3,12 +3,12 @@
 
 from azext_aro._validators import validate_cidr
 from azext_aro._validators import validate_client_id
+from azext_aro._validators import validate_client_secret
 from azext_aro._validators import validate_cluster_resource_group
 from azext_aro._validators import validate_disk_encryption_set
 from azext_aro._validators import validate_domain
 from azext_aro._validators import validate_pull_secret
 from azext_aro._validators import validate_subnet
-from azext_aro._validators import validate_client_secret
 from azext_aro._validators import validate_visibility
 from azext_aro._validators import validate_vnet
 from azext_aro._validators import validate_vnet_resource_group_name
