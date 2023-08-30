@@ -574,6 +574,36 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 		expectedErr []error
 	}{
 		{
+			name:  "reconcile is skipped when outboundType is UserDefinedRouting",
+			uuids: []string{},
+			m: manager{
+				doc: &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(key),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       key,
+						Location: location,
+						Properties: api.OpenShiftClusterProperties{
+							ArchitectureVersion: api.ArchitectureVersionV2,
+							ProvisioningState:   api.ProvisioningStateUpdating,
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: clusterRGID,
+							},
+							InfraID: infraID,
+							APIServerProfile: api.APIServerProfile{
+								Visibility: api.VisibilityPublic,
+							},
+							NetworkProfile: api.NetworkProfile{
+								OutboundType:        api.OutboundTypeUserDefinedRouting,
+								LoadBalancerProfile: nil,
+							},
+						},
+					},
+				},
+			},
+			expectedLoadBalancerProfile: nil,
+			expectedErr:                 nil,
+		},
+		{
 			name:  "reconcile is skipped when architecture version is V1",
 			uuids: []string{},
 			m: manager{
