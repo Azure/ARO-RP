@@ -955,8 +955,6 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 				loadBalancersClient.EXPECT().
 					Get(gomock.Any(), clusterRGName, infraID, "").
 					Return(fakeLoadBalancersGet(0, api.VisibilityPublic), nil)
-				// loadBalancersClient.EXPECT().
-				// 	CreateOrUpdateAndWait(ctx, clusterRGName, infraID, fakeUpdatedLoadBalancer(0)).Return(nil)
 				publicIPAddressClient.EXPECT().
 					List(gomock.Any(), clusterRGName).
 					Return(getFakePublicIPList(1), nil)
