@@ -5,7 +5,6 @@ package pullsecret
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 	"reflect"
 	"testing"
@@ -26,25 +25,44 @@ import (
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
-func TestPullSecretReconciler(t *testing.T) {
-	baseCluster := &arov1alpha1.Cluster{
-		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-		Status:     arov1alpha1.ClusterStatus{},
-		Spec: arov1alpha1.ClusterSpec{
-			OperatorFlags: arov1alpha1.OperatorFlags{
-				controllerEnabled: "true",
-				controllerManaged: "true",
+type TestHelperObject struct {
+	ClusterWithControllerEnabledManaged    *arov1alpha1.Cluster
+	ClusterWithControllerEnabledNotManaged *arov1alpha1.Cluster
+}
+
+func NewTestHelperObject() *TestHelperObject {
+	return &TestHelperObject{
+		ClusterWithControllerEnabledManaged: &arov1alpha1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+			Status:     arov1alpha1.ClusterStatus{},
+			Spec: arov1alpha1.ClusterSpec{
+				OperatorFlags: arov1alpha1.OperatorFlags{
+					controllerEnabled: "true",
+					controllerManaged: "true",
+				},
+			},
+		},
+		ClusterWithControllerEnabledNotManaged: &arov1alpha1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+			Status:     arov1alpha1.ClusterStatus{},
+			Spec: arov1alpha1.ClusterSpec{
+				OperatorFlags: arov1alpha1.OperatorFlags{
+					controllerEnabled: "true",
+					controllerManaged: "false",
+				},
 			},
 		},
 	}
+}
+
+func TestPullSecretReconciler(t *testing.T) {
+	helper := NewTestHelperObject()
 
 	tests := []struct {
 		name     string
-		request  ctrl.Request
 		secrets  []client.Object
 		instance *arov1alpha1.Cluster
 		wantKeys []string
-		wantErr  bool
 		want     string
 	}{
 		{
@@ -59,7 +77,7 @@ func TestPullSecretReconciler(t *testing.T) {
 					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`)},
 				},
 			},
-			instance: baseCluster,
+			instance: helper.ClusterWithControllerEnabledManaged,
 			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantKeys: nil,
 		},
@@ -82,7 +100,7 @@ func TestPullSecretReconciler(t *testing.T) {
 					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`)},
 				},
 			},
-			instance: baseCluster,
+			instance: helper.ClusterWithControllerEnabledManaged,
 			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantKeys: nil,
 		},
@@ -108,7 +126,7 @@ func TestPullSecretReconciler(t *testing.T) {
 					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`)},
 				},
 			},
-			instance: baseCluster,
+			instance: helper.ClusterWithControllerEnabledManaged,
 			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantKeys: nil,
 		},
@@ -132,7 +150,7 @@ func TestPullSecretReconciler(t *testing.T) {
 					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`)},
 				},
 			},
-			instance: baseCluster,
+			instance: helper.ClusterWithControllerEnabledManaged,
 			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantKeys: nil,
 		},
@@ -155,7 +173,7 @@ func TestPullSecretReconciler(t *testing.T) {
 					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`)},
 				},
 			},
-			instance: baseCluster,
+			instance: helper.ClusterWithControllerEnabledManaged,
 			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantKeys: nil,
 		},
@@ -179,7 +197,7 @@ func TestPullSecretReconciler(t *testing.T) {
 					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`)},
 				},
 			},
-			instance: baseCluster,
+			instance: helper.ClusterWithControllerEnabledManaged,
 			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantKeys: nil,
 		},
@@ -207,7 +225,7 @@ func TestPullSecretReconciler(t *testing.T) {
 					},
 				},
 			},
-			instance: baseCluster,
+			instance: helper.ClusterWithControllerEnabledManaged,
 			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"cloud.openshift.com":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantKeys: []string{"registry.redhat.io", "cloud.openshift.com"},
 		},
@@ -235,16 +253,7 @@ func TestPullSecretReconciler(t *testing.T) {
 					},
 				},
 			},
-			instance: &arov1alpha1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-				Status:     arov1alpha1.ClusterStatus{},
-				Spec: arov1alpha1.ClusterSpec{
-					OperatorFlags: arov1alpha1.OperatorFlags{
-						controllerEnabled: "true",
-						controllerManaged: "false",
-					},
-				},
-			},
+			instance: helper.ClusterWithControllerEnabledNotManaged,
 			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantKeys: []string{"registry.redhat.io"},
 		},
@@ -268,16 +277,7 @@ func TestPullSecretReconciler(t *testing.T) {
 					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`)},
 				},
 			},
-			instance: &arov1alpha1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-				Status:     arov1alpha1.ClusterStatus{},
-				Spec: arov1alpha1.ClusterSpec{
-					OperatorFlags: arov1alpha1.OperatorFlags{
-						controllerEnabled: "true",
-						controllerManaged: "false",
-					},
-				},
-			},
+			instance: helper.ClusterWithControllerEnabledNotManaged,
 			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantKeys: nil,
 		},
@@ -301,14 +301,14 @@ func TestPullSecretReconciler(t *testing.T) {
 					Name:   ControllerName,
 				},
 			}
-			if tt.request.Name == "" {
-				tt.request.NamespacedName = pullSecretName
-			}
 
-			_, err := r.Reconcile(ctx, tt.request)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("PullsecretReconciler.Reconcile() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			request := ctrl.Request{}
+			request.Name = pullSecretName.Name
+			request.Namespace = pullSecretName.Namespace
+
+			_, err := r.Reconcile(ctx, request)
+			if err != nil {
+				t.Error(err)
 			}
 
 			s := &corev1.Secret{}
@@ -331,19 +331,8 @@ func TestPullSecretReconciler(t *testing.T) {
 				t.Fatal("Error found")
 			}
 
-			statusBytes, err := json.Marshal(&cluster.Status)
-			if err != nil {
-				t.Fatal("Unmarshal expects valid data")
-			}
-
-			status := arov1alpha1.ClusterStatus{}
-			err = json.Unmarshal(statusBytes, &status)
-			if err != nil {
-				t.Fatal("Expected to parse status")
-			}
-
-			if !reflect.DeepEqual(status.RedHatKeysPresent, tt.wantKeys) {
-				t.Fatalf("Unexpected status found\nwant: %v\ngot: %v", tt.wantKeys, status.RedHatKeysPresent)
+			if !reflect.DeepEqual(cluster.Status.RedHatKeysPresent, tt.wantKeys) {
+				t.Fatalf("Unexpected status found\nwant: %v\ngot: %v", tt.wantKeys, cluster.Status.RedHatKeysPresent)
 			}
 		})
 	}
@@ -351,11 +340,9 @@ func TestPullSecretReconciler(t *testing.T) {
 
 func TestParseRedHatKeys(t *testing.T) {
 	test := []struct {
-		name        string
-		ps          *corev1.Secret
-		wantKeys    []string
-		wantMissing string
-		wantErr     string
+		name     string
+		ps       *corev1.Secret
+		wantKeys []string
 	}{
 		{
 			name: "without rh key",
@@ -371,22 +358,10 @@ func TestParseRedHatKeys(t *testing.T) {
 			wantKeys: []string{"registry.redhat.io", "cloud.openshift.com", "registry.connect.redhat.com"},
 		},
 	}
-
 	for _, tt := range test {
 		t.Run(tt.name, func(t *testing.T) {
-
-			instance := &arov1alpha1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: arov1alpha1.SingletonClusterName,
-				},
-				Spec: arov1alpha1.ClusterSpec{
-					OperatorFlags: arov1alpha1.OperatorFlags{
-						controllerEnabled: "true",
-					},
-				},
-			}
-
-			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(instance)
+			helper := NewTestHelperObject()
+			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(helper.ClusterWithControllerEnabledManaged)
 
 			logger := &logrus.Logger{
 				Out:       io.Discard,
@@ -404,7 +379,9 @@ func TestParseRedHatKeys(t *testing.T) {
 			}
 
 			out, err := r.parseRedHatKeys(tt.ps)
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			if err != nil {
+				t.Error(err)
+			}
 
 			if !reflect.DeepEqual(out, tt.wantKeys) {
 				t.Fatalf("Enexpected keys found:\nwant: %v\ngot: %v", tt.wantKeys, out)
@@ -796,19 +773,8 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 	for _, tt := range test {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-
-			instance := &arov1alpha1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: arov1alpha1.SingletonClusterName,
-				},
-				Spec: arov1alpha1.ClusterSpec{
-					OperatorFlags: arov1alpha1.OperatorFlags{
-						controllerEnabled: "true",
-					},
-				},
-			}
-
-			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(instance)
+			helper := NewTestHelperObject()
+			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(helper.ClusterWithControllerEnabledManaged)
 
 			if tt.initialSecret != nil {
 				clientBuilder = clientBuilder.WithObjects(tt.initialSecret)
