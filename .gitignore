@@ -6,7 +6,7 @@ gomock_reflect_*
 /.vscode
 /*.crt
 /*.key
-/*.kubeconfig
+/*kubeconfig
 /*.pem
 /*.tar
 /aro
