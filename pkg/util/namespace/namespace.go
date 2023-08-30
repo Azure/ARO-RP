@@ -15,6 +15,7 @@ func IsOpenShiftNamespace(ns string) bool {
 		"openshift-azure-logging":            {},
 		"openshift-azure-operator":           {},
 		"openshift-managed-upgrade-operator": {},
+		"openshift-azure-guardrails":         {},
 
 		// OCP namespaces
 		"openshift":                                        {},
