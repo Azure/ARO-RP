@@ -1,8 +1,9 @@
 package reports
 
 type RmReport struct {
-	Id  string `json:"Id"` //nolint
-	Err error  `json:"Err,omitempty"`
+	Id       string `json:"Id"` //nolint:revive,stylecheck
+	Err      error  `json:"Err,omitempty"`
+	RawInput string `json:"-"`
 }
 
 func RmReportsIds(r []*RmReport) []string {
