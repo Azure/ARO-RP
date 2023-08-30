@@ -20,7 +20,7 @@ import (
 const outboundRuleV4 = "outbound-rule-v4"
 
 func (m *manager) reconcileLoadBalancerProfile(ctx context.Context) error {
-	if m.doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType != api.OutboundTypeLoadbalancer {
+	if m.doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType != api.OutboundTypeLoadbalancer || m.doc.OpenShiftCluster.Properties.ArchitectureVersion == api.ArchitectureVersionV1 {
 		return nil
 	}
 
