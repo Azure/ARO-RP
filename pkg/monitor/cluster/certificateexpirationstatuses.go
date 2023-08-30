@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"math"
 	"strings"
 	"time"
 
@@ -64,7 +63,7 @@ func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error
 	}
 
 	for _, cert := range certs {
-		daysUntilExpiration := int(math.Round(cert.NotAfter.UTC().Sub(time.Now().UTC()).Hours() / 24))
+		daysUntilExpiration := time.Until(cert.NotAfter) / (24 * time.Hour)
 		mon.emitGauge(certificateExpirationMetricName, 1, map[string]string{
 			"subject":             cert.Subject.CommonName,
 			"expirationDate":      cert.NotAfter.UTC().Format(time.RFC3339),

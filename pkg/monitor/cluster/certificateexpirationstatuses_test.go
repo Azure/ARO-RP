@@ -53,7 +53,7 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 				{
 					"subject":             "geneva.certificate",
 					"expirationDate":      expirationString,
-					"daysUntilExpiration": "5",
+					"daysUntilExpiration": "4",
 				},
 			},
 		},
@@ -69,17 +69,17 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 				{
 					"subject":             "geneva.certificate",
 					"expirationDate":      expirationString,
-					"daysUntilExpiration": "5",
+					"daysUntilExpiration": "4",
 				},
 				{
 					"subject":             "contoso.aroapp.io",
 					"expirationDate":      expirationString,
-					"daysUntilExpiration": "5",
+					"daysUntilExpiration": "4",
 				},
 				{
 					"subject":             "api.contoso.aroapp.io",
 					"expirationDate":      expirationString,
-					"daysUntilExpiration": "5",
+					"daysUntilExpiration": "4",
 				},
 			},
 		},
@@ -104,12 +104,12 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 				{
 					"subject":             "geneva.certificate",
 					"expirationDate":      expirationString,
-					"daysUntilExpiration": "5",
+					"daysUntilExpiration": "4",
 				},
 				{
 					"subject":             "contoso.aroapp.io",
 					"expirationDate":      expirationString,
-					"daysUntilExpiration": "5",
+					"daysUntilExpiration": "4",
 				},
 			},
 			wantWarning: []map[string]string{
