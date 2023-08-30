@@ -75,9 +75,10 @@ type frontend struct {
 	kubeActionsFactory  kubeActionsFactory
 	azureActionsFactory azureActionsFactory
 
-	skuValidator       SkuValidator
-	quotaValidator     QuotaValidator
-	providersValidator ProvidersValidator
+	skuValidator              SkuValidator
+	quotaValidator            QuotaValidator
+	providersValidator        ProvidersValidator
+	encryptionathostValidator EncryptionAtHostValidator
 
 	clusterEnricher clusterdata.BestEffortEnricher
 
@@ -160,9 +161,10 @@ func NewFrontend(ctx context.Context,
 		kubeActionsFactory:            kubeActionsFactory,
 		azureActionsFactory:           azureActionsFactory,
 
-		quotaValidator:     quotaValidator{},
-		skuValidator:       skuValidator{},
-		providersValidator: providersValidator{},
+		quotaValidator:            quotaValidator{},
+		skuValidator:              skuValidator{},
+		providersValidator:        providersValidator{},
+		encryptionathostValidator: encryptionAtHostValidator{},
 
 		clusterEnricher: enricher,
 
