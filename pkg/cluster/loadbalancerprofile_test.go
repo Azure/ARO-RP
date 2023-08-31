@@ -454,7 +454,7 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 			loadBalancersClient *mock_network.MockLoadBalancersClient,
 			publicIPAddressClient *mock_network.MockPublicIPAddressesClient,
 			ctx context.Context)
-		expectedErr error
+		expectedErr []error
 	}{
 		{
 			name:  "default managed ips",
@@ -792,7 +792,7 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: fmt.Errorf("lb update failed"),
+			expectedErr: []error{fmt.Errorf("lb update failed")},
 		},
 		{
 			name:  "managed ip cleanup errors are propagated when cleanup fails",
@@ -866,7 +866,7 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: fmt.Errorf("failed to cleanup unused managed ips\ndeletion of unused managed ip uuid1-outbound-pip-v4 failed with error: error\ndeletion of unused managed ip uuid2-outbound-pip-v4 failed with error: error"),
+			expectedErr: []error{fmt.Errorf("failed to cleanup unused managed ips\ndeletion of unused managed ip uuid1-outbound-pip-v4 failed with error: error\ndeletion of unused managed ip uuid2-outbound-pip-v4 failed with error: error"), fmt.Errorf("failed to cleanup unused managed ips\ndeletion of unused managed ip uuid2-outbound-pip-v4 failed with error: error\ndeletion of unused managed ip uuid1-outbound-pip-v4 failed with error: error")},
 		},
 		{
 			name:  "all errors propagated",
@@ -937,7 +937,7 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: fmt.Errorf("multiple errors occurred while updating outbound-rule-v4\nfailed to create ip\nfailed to cleanup unused managed ips\ndeletion of unused managed ip uuid1-outbound-pip-v4 failed with error: error"),
+			expectedErr: []error{fmt.Errorf("multiple errors occurred while updating outbound-rule-v4\nfailed to create ip\nfailed to cleanup unused managed ips\ndeletion of unused managed ip uuid1-outbound-pip-v4 failed with error: error")},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -966,7 +966,12 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 
 			// Run reconcileLoadBalancerProfile and assert the correct results
 			err = tt.m.reconcileLoadBalancerProfile(ctx)
-			assert.Equal(t, tt.expectedErr, err, "Unexpected error exception")
+			// Expect error to be in the array of errors provided or to be nil
+			if tt.expectedErr != nil {
+				assert.Contains(t, tt.expectedErr, err, "Unexpected error exception")
+			} else {
+				assert.Equal(t, nil, err, "Unexpected error exception")
+			}
 			assert.Equal(t, &tt.expectedLoadBalancerProfile, tt.m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile)
 		})
 	}
