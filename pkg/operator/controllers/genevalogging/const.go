@@ -29,6 +29,11 @@ const (
 	Regex ^(?<TIMESTAMP>[^ ]+) [^ ]+ [^ ]+ (?<MESSAGE>.*)$
 	Time_Key TIMESTAMP
 	Time_Format %Y-%m-%dT%H:%M:%S.%L
+
+[PARSER]
+	Name klog_parse
+	Format regex
+	Regex ^\s*(\w)(\d{2}\d{2}\s\d{2}:\d{2}:\d{2}\.\d{6})\s(\d+)\s(?<CODE_FILE>.+):(?<CODE_LINE>\d+)\]\s(?<MESSAGE>.*?)\s*$
 `
 
 	fluentConf = `
@@ -57,11 +62,34 @@ const (
 	Parser audit
 
 [FILTER]
+	Name parser
+	Match journald
+	Key_Name MESSAGE
+	Parser klog_parse
+	Reserve_Data On
+
+[FILTER]
 	Name modify
 	Match journald
 	Remove_wildcard _
+	Remove_wildcard JOB_
+	Remove_wildcard NM_
+	Remove_wildcard COREDUMP_
 	Remove TIMESTAMP
+	Remove TIMESTAMP_MONOTONIC
 	Remove SYSLOG_FACILITY
+	Remove SYSLOG_TIMESTAMP
+	Remove SYSLOG_PID
+	Remove MESSAGE_ID
+	Remove INVOCATION_ID
+	Remove CPU_USAGE_NSEC
+	Remove BOOT_ID
+	Remove PENDING
+
+[FILTER]
+	Name grep
+	Match journald
+	Exclude CODE_FILE ^(httplog\.go)$
 
 [FILTER]
 	Name parser
