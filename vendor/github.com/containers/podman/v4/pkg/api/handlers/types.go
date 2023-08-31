@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/containers/common/libimage"
@@ -10,7 +11,7 @@ import (
 	dockerContainer "github.com/docker/docker/api/types/container"
 	dockerNetwork "github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
-	"github.com/pkg/errors"
+	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
 type AuthConfig struct {
@@ -62,6 +63,12 @@ type LibpodContainersRmReport struct {
 	// x-omitempty: true
 	// x-nullable: true
 	RmError string `json:"Err,omitempty"`
+}
+
+// UpdateEntities used to wrap the oci resource spec in a swagger model
+// swagger:model
+type UpdateEntities struct {
+	Resources *specs.LinuxResources
 }
 
 type Info struct {
@@ -127,6 +134,7 @@ type CreateContainerConfig struct {
 	dockerContainer.Config                                // desired container configuration
 	HostConfig             dockerContainer.HostConfig     // host dependent configuration for container
 	NetworkingConfig       dockerNetwork.NetworkingConfig // network configuration for container
+	EnvMerge               []string                       // preprocess env variables from image before injecting into containers
 	UnsetEnv               []string                       // unset specified default environment variables
 	UnsetEnvAll            bool                           // unset all default environment variables
 }
@@ -162,7 +170,7 @@ type ExecStartConfig struct {
 
 func ImageDataToImageInspect(ctx context.Context, l *libimage.Image) (*ImageInspect, error) {
 	options := &libimage.InspectOptions{WithParent: true, WithSize: true}
-	info, err := l.Inspect(context.Background(), options)
+	info, err := l.Inspect(ctx, options)
 	if err != nil {
 		return nil, err
 	}
@@ -237,17 +245,17 @@ func portsToPortSet(input map[string]struct{}) (nat.PortSet, error) {
 		case "tcp", "":
 			p, err := nat.NewPort("tcp", port)
 			if err != nil {
-				return nil, errors.Wrapf(err, "unable to create tcp port from %s", k)
+				return nil, fmt.Errorf("unable to create tcp port from %s: %w", k, err)
 			}
 			ports[p] = struct{}{}
 		case "udp":
 			p, err := nat.NewPort("udp", port)
 			if err != nil {
-				return nil, errors.Wrapf(err, "unable to create tcp port from %s", k)
+				return nil, fmt.Errorf("unable to create tcp port from %s: %w", k, err)
 			}
 			ports[p] = struct{}{}
 		default:
-			return nil, errors.Errorf("invalid port proto %q in %q", proto, k)
+			return nil, fmt.Errorf("invalid port proto %q in %q", proto, k)
 		}
 	}
 	return ports, nil

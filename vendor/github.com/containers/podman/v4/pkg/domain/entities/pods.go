@@ -20,15 +20,15 @@ type PodKillOptions struct {
 
 type PodKillReport struct {
 	Errs []error
-	Id   string // nolint
+	Id   string //nolint:revive,stylecheck
 }
 
 type ListPodsReport struct {
 	Cgroup     string
 	Containers []*ListPodContainer
 	Created    time.Time
-	Id         string // nolint
-	InfraId    string // nolint
+	Id         string //nolint:revive,stylecheck
+	InfraId    string //nolint:revive,stylecheck
 	Name       string
 	Namespace  string
 	// Network names connected to infra container
@@ -38,7 +38,7 @@ type ListPodsReport struct {
 }
 
 type ListPodContainer struct {
-	Id     string // nolint
+	Id     string //nolint:revive,stylecheck
 	Names  string
 	Status string
 }
@@ -50,7 +50,7 @@ type PodPauseOptions struct {
 
 type PodPauseReport struct {
 	Errs []error
-	Id   string // nolint
+	Id   string //nolint:revive,stylecheck
 }
 
 type PodunpauseOptions struct {
@@ -60,7 +60,7 @@ type PodunpauseOptions struct {
 
 type PodUnpauseReport struct {
 	Errs []error
-	Id   string // nolint
+	Id   string //nolint:revive,stylecheck
 }
 
 type PodStopOptions struct {
@@ -72,7 +72,7 @@ type PodStopOptions struct {
 
 type PodStopReport struct {
 	Errs []error
-	Id   string // nolint
+	Id   string //nolint:revive,stylecheck
 }
 
 type PodRestartOptions struct {
@@ -82,7 +82,7 @@ type PodRestartOptions struct {
 
 type PodRestartReport struct {
 	Errs []error
-	Id   string // nolint
+	Id   string //nolint:revive,stylecheck
 }
 
 type PodStartOptions struct {
@@ -92,7 +92,7 @@ type PodStartOptions struct {
 
 type PodStartReport struct {
 	Errs []error
-	Id   string // nolint
+	Id   string //nolint:revive,stylecheck
 }
 
 type PodRmOptions struct {
@@ -105,7 +105,7 @@ type PodRmOptions struct {
 
 type PodRmReport struct {
 	Err error
-	Id  string // nolint
+	Id  string //nolint:revive,stylecheck
 }
 
 // PddSpec is an abstracted version of PodSpecGen designed to eventually accept options
@@ -122,6 +122,7 @@ type PodCreateOptions struct {
 	CreateCommand      []string          `json:"create_command,omitempty"`
 	Devices            []string          `json:"devices,omitempty"`
 	DeviceReadBPs      []string          `json:"device_read_bps,omitempty"`
+	ExitPolicy         string            `json:"exit_policy,omitempty"`
 	Hostname           string            `json:"hostname,omitempty"`
 	Infra              bool              `json:"infra,omitempty"`
 	InfraImage         string            `json:"infra_image,omitempty"`
@@ -153,123 +154,149 @@ type PodLogsOptions struct {
 	Color bool
 }
 
-type ContainerCreateOptions struct {
-	Annotation        []string
-	Attach            []string
-	Authfile          string
-	BlkIOWeight       string
-	BlkIOWeightDevice []string
-	CapAdd            []string
-	CapDrop           []string
-	CgroupNS          string
-	CgroupsMode       string
-	CgroupParent      string `json:"cgroup_parent,omitempty"`
-	CIDFile           string
-	ConmonPIDFile     string `json:"container_conmon_pidfile,omitempty"`
-	CPUPeriod         uint64
-	CPUQuota          int64
-	CPURTPeriod       uint64
-	CPURTRuntime      int64
-	CPUShares         uint64
-	CPUS              float64 `json:"cpus,omitempty"`
-	CPUSetCPUs        string  `json:"cpuset_cpus,omitempty"`
-	CPUSetMems        string
-	Devices           []string `json:"devices,omitempty"`
-	DeviceCgroupRule  []string
-	DeviceReadBPs     []string `json:"device_read_bps,omitempty"`
-	DeviceReadIOPs    []string
-	DeviceWriteBPs    []string
-	DeviceWriteIOPs   []string
-	Entrypoint        *string `json:"container_command,omitempty"`
-	Env               []string
-	EnvHost           bool
-	EnvFile           []string
-	Expose            []string
-	GIDMap            []string
-	GroupAdd          []string
-	HealthCmd         string
-	HealthInterval    string
-	HealthRetries     uint
-	HealthStartPeriod string
-	HealthTimeout     string
-	Hostname          string `json:"hostname,omitempty"`
-	HTTPProxy         bool
-	HostUsers         []string
-	ImageVolume       string
-	Init              bool
-	InitContainerType string
-	InitPath          string
-	Interactive       bool
-	IPC               string
-	Label             []string
-	LabelFile         []string
-	LogDriver         string
-	LogOptions        []string
-	Memory            string
-	MemoryReservation string
-	MemorySwap        string
-	MemorySwappiness  int64
-	Name              string `json:"container_name"`
-	NoHealthCheck     bool
-	OOMKillDisable    bool
-	OOMScoreAdj       *int
-	Arch              string
-	OS                string
-	Variant           string
-	PID               string `json:"pid,omitempty"`
-	PIDsLimit         *int64
-	Platform          string
-	Pod               string
-	PodIDFile         string
-	Personality       string
-	PreserveFDs       uint
-	Privileged        bool
-	PublishAll        bool
-	Pull              string
-	Quiet             bool
-	ReadOnly          bool
-	ReadOnlyTmpFS     bool
-	Restart           string
-	Replace           bool
-	Requires          []string
-	Rm                bool
-	RootFS            bool
-	Secrets           []string
-	SecurityOpt       []string `json:"security_opt,omitempty"`
-	SdNotifyMode      string
-	ShmSize           string
-	SignaturePolicy   string
-	StopSignal        string
-	StopTimeout       uint
-	StorageOpts       []string
-	SubUIDName        string
-	SubGIDName        string
-	Sysctl            []string `json:"sysctl,omitempty"`
-	Systemd           string
-	Timeout           uint
-	TLSVerify         commonFlag.OptionalBool
-	TmpFS             []string
-	TTY               bool
-	Timezone          string
-	Umask             string
-	UnsetEnv          []string
-	UnsetEnvAll       bool
-	UIDMap            []string
-	Ulimit            []string
-	User              string
-	UserNS            string `json:"-"`
-	UTS               string
-	Mount             []string
-	Volume            []string `json:"volume,omitempty"`
-	VolumesFrom       []string `json:"volumes_from,omitempty"`
-	Workdir           string
-	SeccompPolicy     string
-	PidFile           string
-	ChrootDirs        []string
-	IsInfra           bool
-	IsClone           bool
+// PodCloneOptions contains options for cloning an existing pod
+type PodCloneOptions struct {
+	ID                  string
+	Destroy             bool
+	CreateOpts          PodCreateOptions
+	InfraOptions        ContainerCreateOptions
+	PerContainerOptions ContainerCreateOptions
+	Start               bool
+}
 
-	Net *NetOptions `json:"net,omitempty"`
+type ContainerMode string
+
+const (
+	InfraMode  = ContainerMode("infra")
+	CloneMode  = ContainerMode("clone")
+	UpdateMode = ContainerMode("update")
+	CreateMode = ContainerMode("create")
+)
+
+type ContainerCreateOptions struct {
+	Annotation         []string
+	Attach             []string
+	Authfile           string
+	BlkIOWeight        string
+	BlkIOWeightDevice  []string
+	CapAdd             []string
+	CapDrop            []string
+	CgroupNS           string
+	CgroupsMode        string
+	CgroupParent       string `json:"cgroup_parent,omitempty"`
+	CIDFile            string
+	ConmonPIDFile      string `json:"container_conmon_pidfile,omitempty"`
+	CPUPeriod          uint64
+	CPUQuota           int64
+	CPURTPeriod        uint64
+	CPURTRuntime       int64
+	CPUShares          uint64
+	CPUS               float64 `json:"cpus,omitempty"`
+	CPUSetCPUs         string  `json:"cpuset_cpus,omitempty"`
+	CPUSetMems         string
+	Devices            []string `json:"devices,omitempty"`
+	DeviceCgroupRule   []string
+	DeviceReadBPs      []string `json:"device_read_bps,omitempty"`
+	DeviceReadIOPs     []string
+	DeviceWriteBPs     []string
+	DeviceWriteIOPs    []string
+	Entrypoint         *string `json:"container_command,omitempty"`
+	Env                []string
+	EnvHost            bool
+	EnvFile            []string
+	Expose             []string
+	GIDMap             []string
+	GroupAdd           []string
+	HealthCmd          string
+	HealthInterval     string
+	HealthRetries      uint
+	HealthStartPeriod  string
+	HealthTimeout      string
+	HealthOnFailure    string
+	Hostname           string `json:"hostname,omitempty"`
+	HTTPProxy          bool
+	HostUsers          []string
+	ImageVolume        string
+	Init               bool
+	InitContainerType  string
+	InitPath           string
+	Interactive        bool
+	IPC                string
+	Label              []string
+	LabelFile          []string
+	LogDriver          string
+	LogOptions         []string
+	Memory             string
+	MemoryReservation  string
+	MemorySwap         string
+	MemorySwappiness   int64
+	Name               string `json:"container_name"`
+	NoHealthCheck      bool
+	OOMKillDisable     bool
+	OOMScoreAdj        *int
+	Arch               string
+	OS                 string
+	Variant            string
+	PID                string `json:"pid,omitempty"`
+	PIDsLimit          *int64
+	Platform           string
+	Pod                string
+	PodIDFile          string
+	Personality        string
+	PreserveFDs        uint
+	Privileged         bool
+	PublishAll         bool
+	Pull               string
+	Quiet              bool
+	ReadOnly           bool
+	ReadWriteTmpFS     bool
+	Restart            string
+	Replace            bool
+	Requires           []string
+	Rm                 bool
+	RootFS             bool
+	Secrets            []string
+	SecurityOpt        []string `json:"security_opt,omitempty"`
+	SdNotifyMode       string
+	ShmSize            string
+	SignaturePolicy    string
+	StartupHCCmd       string
+	StartupHCInterval  string
+	StartupHCRetries   uint
+	StartupHCSuccesses uint
+	StartupHCTimeout   string
+	StopSignal         string
+	StopTimeout        uint
+	StorageOpts        []string
+	SubUIDName         string
+	SubGIDName         string
+	Sysctl             []string `json:"sysctl,omitempty"`
+	Systemd            string
+	Timeout            uint
+	TLSVerify          commonFlag.OptionalBool
+	TmpFS              []string
+	TTY                bool
+	Timezone           string
+	Umask              string
+	EnvMerge           []string
+	UnsetEnv           []string
+	UnsetEnvAll        bool
+	UIDMap             []string
+	Ulimit             []string
+	User               string
+	UserNS             string `json:"-"`
+	UTS                string
+	Mount              []string
+	Volume             []string `json:"volume,omitempty"`
+	VolumesFrom        []string `json:"volumes_from,omitempty"`
+	Workdir            string
+	SeccompPolicy      string
+	PidFile            string
+	ChrootDirs         []string
+	IsInfra            bool
+	IsClone            bool
+	DecryptionKeys     []string
+	Net                *NetOptions `json:"net,omitempty"`
 
 	CgroupConf []string
 
@@ -286,7 +313,11 @@ func NewInfraContainerCreateOptions() ContainerCreateOptions {
 }
 
 type PodCreateReport struct {
-	Id string // nolint
+	Id string //nolint:revive,stylecheck
+}
+
+type PodCloneReport struct {
+	Id string //nolint:revive,stylecheck
 }
 
 func (p *PodCreateOptions) CPULimits() *specs.LinuxCPU {
@@ -319,6 +350,7 @@ func ToPodSpecGen(s specgen.PodSpecGenerator, p *PodCreateOptions) (*specgen.Pod
 	}
 	s.Pid = out
 	s.Hostname = p.Hostname
+	s.ExitPolicy = p.ExitPolicy
 	s.Labels = p.Labels
 	s.Devices = p.Devices
 	s.SecurityOpt = p.SecurityOpt
@@ -387,7 +419,7 @@ type PodPruneOptions struct {
 
 type PodPruneReport struct {
 	Err error
-	Id  string // nolint
+	Id  string //nolint:revive,stylecheck
 }
 
 type PodTopOptions struct {
@@ -410,15 +442,6 @@ type PodPSOptions struct {
 	Namespace bool
 	Quiet     bool
 	Sort      string
-}
-
-type PodInspectOptions struct {
-	Latest bool
-
-	// Options for the API.
-	NameOrID string
-
-	Format string
 }
 
 type PodInspectReport struct {

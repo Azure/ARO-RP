@@ -2,21 +2,20 @@ package util
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/containers/podman/v4/pkg/timetype"
-	"github.com/pkg/errors"
 )
 
 // ComputeUntilTimestamp extracts until timestamp from filters
 func ComputeUntilTimestamp(filterValues []string) (time.Time, error) {
 	invalid := time.Time{}
 	if len(filterValues) != 1 {
-		return invalid, errors.Errorf("specify exactly one timestamp for until")
+		return invalid, errors.New("specify exactly one timestamp for until")
 	}
 	ts, err := timetype.GetTimestamp(filterValues[0], time.Now())
 	if err != nil {
@@ -93,36 +92,4 @@ func PrepareFilters(r *http.Request) (*map[string][]string, error) {
 		}
 	}
 	return &filterMap, nil
-}
-
-func matchPattern(pattern string, value string) bool {
-	if strings.Contains(pattern, "*") {
-		filter := fmt.Sprintf("*%s*", pattern)
-		filter = strings.ReplaceAll(filter, string(filepath.Separator), "|")
-		newName := strings.ReplaceAll(value, string(filepath.Separator), "|")
-		match, _ := filepath.Match(filter, newName)
-		return match
-	}
-	return false
-}
-
-// MatchLabelFilters matches labels and returns true if they are valid
-func MatchLabelFilters(filterValues []string, labels map[string]string) bool {
-outer:
-	for _, filterValue := range filterValues {
-		filterArray := strings.SplitN(filterValue, "=", 2)
-		filterKey := filterArray[0]
-		if len(filterArray) > 1 {
-			filterValue = filterArray[1]
-		} else {
-			filterValue = ""
-		}
-		for labelKey, labelValue := range labels {
-			if ((labelKey == filterKey) || matchPattern(filterKey, labelKey)) && (filterValue == "" || labelValue == filterValue) {
-				continue outer
-			}
-		}
-		return false
-	}
-	return true
 }
