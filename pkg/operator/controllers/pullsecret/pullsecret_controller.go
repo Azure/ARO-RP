@@ -31,7 +31,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
-	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
+	psutil "github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
 const (
@@ -124,18 +124,20 @@ func (r *PullSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	})
 
 	pullSecretPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
-		return (o.GetName() == pullSecretName.Name && o.GetNamespace() == pullSecretName.Namespace) ||
-			(o.GetName() == operator.SecretName && o.GetNamespace() == operator.Namespace)
+		return o.GetName() == pullSecretName.Name && o.GetNamespace() == pullSecretName.Namespace
+
+	})
+
+	operatorSecretPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return (o.GetName() == operator.SecretName && o.GetNamespace() == operator.Namespace)
 	})
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
-		// https://github.com/kubernetes-sigs/controller-runtime/issues/1173
-		// equivalent to For(&v1.Secret{})., but can't call For multiple times on one builder
 		Watches(
 			&source.Kind{Type: &corev1.Secret{}},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(pullSecretPredicate),
+			builder.WithPredicates(pullSecretPredicate, operatorSecretPredicate),
 		).
 		Named(ControllerName).
 		Complete(r)
@@ -174,7 +176,7 @@ func (r *PullSecretReconciler) ensureGlobalPullSecret(ctx context.Context, opera
 		}
 	}
 
-	fixedData, update, err := pullsecret.Merge(string(secret.Data[corev1.DockerConfigJsonKey]), string(operatorSecret.Data[corev1.DockerConfigJsonKey]))
+	fixedData, update, err := psutil.Merge(string(secret.Data[corev1.DockerConfigJsonKey]), string(operatorSecret.Data[corev1.DockerConfigJsonKey]))
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +213,7 @@ func (r *PullSecretReconciler) ensureGlobalPullSecret(ctx context.Context, opera
 // if present, return error when the parsing fail, which means broken secret
 func (r *PullSecretReconciler) parseRedHatKeys(secret *corev1.Secret) (foundKeys []string, err error) {
 	// parse keys and validate JSON
-	parsedKeys, err := pullsecret.UnmarshalSecretData(secret)
+	parsedKeys, err := psutil.UnmarshalSecretData(secret)
 	if err != nil {
 		r.Log.Info("pull secret is not valid json - recreating")
 		return foundKeys, err

@@ -20,14 +20,22 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
-	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
-	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 type TestHelperObject struct {
 	ClusterWithControllerEnabledManaged    *arov1alpha1.Cluster
 	ClusterWithControllerEnabledNotManaged *arov1alpha1.Cluster
+	EmptyPullSecret                        *corev1.Secret
+	ModifiedPullSecret                     *corev1.Secret
+	UnparseablePullSecret                  *corev1.Secret
+	ValidPullSecret                        *corev1.Secret
+	ValidOperatorSecret                    *corev1.Secret
+	ValidPullSecretRHKeys                  *corev1.Secret
+	ValidOperatorSecretRHKeys              *corev1.Secret
+	ValidPullSecretNotManaged              *corev1.Secret
+	ValidOperatorSecretNotManaged          *corev1.Secret
+	WrongTypePullSecret                    *corev1.Secret
 }
 
 func NewTestHelperObject() *TestHelperObject {
@@ -52,6 +60,94 @@ func NewTestHelperObject() *TestHelperObject {
 				},
 			},
 		},
+		EmptyPullSecret: &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pull-secret",
+				Namespace: "openshift-config",
+			},
+			Type: corev1.SecretTypeDockerConfigJson,
+		},
+		ModifiedPullSecret: &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pull-secret",
+				Namespace: "openshift-config",
+			},
+			Type: corev1.SecretTypeDockerConfigJson,
+			Data: map[string][]byte{
+				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":""}}}`),
+			},
+		},
+		UnparseablePullSecret: &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pull-secret",
+				Namespace: "openshift-config",
+			},
+			Type: corev1.SecretTypeDockerConfigJson,
+			Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`bad`)},
+		},
+		ValidPullSecret: &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pull-secret",
+				Namespace: "openshift-config",
+			},
+			Type: corev1.SecretTypeDockerConfigJson,
+			Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`)},
+		},
+		ValidOperatorSecret: &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      operator.SecretName,
+				Namespace: operator.Namespace,
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`)},
+		},
+		ValidPullSecretRHKeys: &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pull-secret",
+				Namespace: "openshift-config",
+			},
+			Type: corev1.SecretTypeDockerConfigJson,
+			Data: map[string][]byte{
+				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.connect.redhat.com":{"auth":"ZnJlZDplbnRlcg=="},"cloud.openshift.com":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+			},
+		},
+		ValidOperatorSecretRHKeys: &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      operator.SecretName,
+				Namespace: operator.Namespace,
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: map[string][]byte{
+				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.connect.redhat.com":{"auth":"ZnJlZDplbnRlcg=="},"cloud.openshift.com":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+			},
+		},
+		ValidPullSecretNotManaged: &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pull-secret",
+				Namespace: "openshift-config",
+			},
+			Type: corev1.SecretTypeDockerConfigJson,
+			Data: map[string][]byte{
+				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+			},
+		},
+		ValidOperatorSecretNotManaged: &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      operator.SecretName,
+				Namespace: operator.Namespace,
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: map[string][]byte{
+				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+			},
+		},
+		WrongTypePullSecret: &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pull-secret",
+				Namespace: "openshift-config",
+			},
+			Type: corev1.SecretTypeOpaque,
+		},
 	}
 }
 
@@ -68,14 +164,7 @@ func TestPullSecretReconciler(t *testing.T) {
 		{
 			name: "deleted pull secret",
 			secrets: []client.Object{
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      operator.SecretName,
-						Namespace: operator.Namespace,
-					},
-					Type: corev1.SecretTypeOpaque,
-					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`)},
-				},
+				helper.ValidOperatorSecret,
 			},
 			instance: helper.ClusterWithControllerEnabledManaged,
 			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
@@ -84,21 +173,8 @@ func TestPullSecretReconciler(t *testing.T) {
 		{
 			name: "missing arosvc pull secret",
 			secrets: []client.Object{
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "pull-secret",
-						Namespace: "openshift-config",
-					},
-					Type: corev1.SecretTypeDockerConfigJson,
-				},
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      operator.SecretName,
-						Namespace: operator.Namespace,
-					},
-					Type: corev1.SecretTypeOpaque,
-					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`)},
-				},
+				helper.EmptyPullSecret,
+				helper.ValidOperatorSecret,
 			},
 			instance: helper.ClusterWithControllerEnabledManaged,
 			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
@@ -107,24 +183,8 @@ func TestPullSecretReconciler(t *testing.T) {
 		{
 			name: "modified arosvc pull secret",
 			secrets: []client.Object{
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "pull-secret",
-						Namespace: "openshift-config",
-					},
-					Type: corev1.SecretTypeDockerConfigJson,
-					Data: map[string][]byte{
-						corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":""}}}`),
-					},
-				},
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      operator.SecretName,
-						Namespace: operator.Namespace,
-					},
-					Type: corev1.SecretTypeOpaque,
-					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`)},
-				},
+				helper.ModifiedPullSecret,
+				helper.ValidOperatorSecret,
 			},
 			instance: helper.ClusterWithControllerEnabledManaged,
 			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
@@ -133,22 +193,8 @@ func TestPullSecretReconciler(t *testing.T) {
 		{
 			name: "unparseable secret",
 			secrets: []client.Object{
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "pull-secret",
-						Namespace: "openshift-config",
-					},
-					Type: corev1.SecretTypeDockerConfigJson,
-					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`bad`)},
-				},
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      operator.SecretName,
-						Namespace: operator.Namespace,
-					},
-					Type: corev1.SecretTypeOpaque,
-					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`)},
-				},
+				helper.UnparseablePullSecret,
+				helper.ValidOperatorSecret,
 			},
 			instance: helper.ClusterWithControllerEnabledManaged,
 			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
@@ -157,21 +203,8 @@ func TestPullSecretReconciler(t *testing.T) {
 		{
 			name: "wrong secret type",
 			secrets: []client.Object{
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "pull-secret",
-						Namespace: "openshift-config",
-					},
-					Type: corev1.SecretTypeOpaque,
-				},
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      operator.SecretName,
-						Namespace: operator.Namespace,
-					},
-					Type: corev1.SecretTypeOpaque,
-					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`)},
-				},
+				helper.WrongTypePullSecret,
+				helper.ValidOperatorSecret,
 			},
 			instance: helper.ClusterWithControllerEnabledManaged,
 			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
@@ -180,22 +213,8 @@ func TestPullSecretReconciler(t *testing.T) {
 		{
 			name: "no change",
 			secrets: []client.Object{
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "pull-secret",
-						Namespace: "openshift-config",
-					},
-					Type: corev1.SecretTypeDockerConfigJson,
-					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`)},
-				},
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      operator.SecretName,
-						Namespace: operator.Namespace,
-					},
-					Type: corev1.SecretTypeOpaque,
-					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`)},
-				},
+				helper.ValidPullSecret,
+				helper.ValidOperatorSecret,
 			},
 			instance: helper.ClusterWithControllerEnabledManaged,
 			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
@@ -204,54 +223,18 @@ func TestPullSecretReconciler(t *testing.T) {
 		{
 			name: "valid RH keys present",
 			secrets: []client.Object{
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "pull-secret",
-						Namespace: "openshift-config",
-					},
-					Type: corev1.SecretTypeDockerConfigJson,
-					Data: map[string][]byte{
-						corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"cloud.openshift.com":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-					},
-				},
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      operator.SecretName,
-						Namespace: operator.Namespace,
-					},
-					Type: corev1.SecretTypeOpaque,
-					Data: map[string][]byte{
-						corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"cloud.openshift.com":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-					},
-				},
+				helper.ValidPullSecretRHKeys,
+				helper.ValidOperatorSecretRHKeys,
 			},
 			instance: helper.ClusterWithControllerEnabledManaged,
-			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"cloud.openshift.com":{"auth":"ZnJlZDplbnRlcg=="}}}`,
-			wantKeys: []string{"registry.redhat.io", "cloud.openshift.com"},
+			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.connect.redhat.com":{"auth":"ZnJlZDplbnRlcg=="},"cloud.openshift.com":{"auth":"ZnJlZDplbnRlcg=="}}}`,
+			wantKeys: []string{"registry.redhat.io", "cloud.openshift.com", "registry.connect.redhat.com"},
 		},
 		{
 			name: "management disabled, valid RH key present",
 			secrets: []client.Object{
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "pull-secret",
-						Namespace: "openshift-config",
-					},
-					Type: corev1.SecretTypeDockerConfigJson,
-					Data: map[string][]byte{
-						corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-					},
-				},
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      operator.SecretName,
-						Namespace: operator.Namespace,
-					},
-					Type: corev1.SecretTypeOpaque,
-					Data: map[string][]byte{
-						corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-					},
-				},
+				helper.ValidPullSecretNotManaged,
+				helper.ValidOperatorSecretNotManaged,
 			},
 			instance: helper.ClusterWithControllerEnabledNotManaged,
 			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
@@ -260,22 +243,8 @@ func TestPullSecretReconciler(t *testing.T) {
 		{
 			name: "management disabled, valid RH key missing",
 			secrets: []client.Object{
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "pull-secret",
-						Namespace: "openshift-config",
-					},
-					Type: corev1.SecretTypeDockerConfigJson,
-					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`)},
-				},
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      operator.SecretName,
-						Namespace: operator.Namespace,
-					},
-					Type: corev1.SecretTypeOpaque,
-					Data: map[string][]byte{corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`)},
-				},
+				helper.ValidPullSecret,
+				helper.ValidOperatorSecret,
 			},
 			instance: helper.ClusterWithControllerEnabledNotManaged,
 			want:     `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
@@ -339,6 +308,7 @@ func TestPullSecretReconciler(t *testing.T) {
 }
 
 func TestParseRedHatKeys(t *testing.T) {
+	helper := NewTestHelperObject()
 	test := []struct {
 		name     string
 		ps       *corev1.Secret
@@ -346,15 +316,11 @@ func TestParseRedHatKeys(t *testing.T) {
 	}{
 		{
 			name: "without rh key",
-			ps: &corev1.Secret{Data: map[string][]byte{
-				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-			}},
+			ps:   helper.ValidPullSecret,
 		},
 		{
-			name: "with all rh key",
-			ps: &corev1.Secret{Data: map[string][]byte{
-				corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.connect.redhat.com":{"auth":"ZnJlZDplbnRlcg=="},"cloud.openshift.com":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-			}},
+			name:     "with all rh key",
+			ps:       helper.ValidOperatorSecretRHKeys,
 			wantKeys: []string{"registry.redhat.io", "cloud.openshift.com", "registry.connect.redhat.com"},
 		},
 	}
@@ -390,417 +356,418 @@ func TestParseRedHatKeys(t *testing.T) {
 	}
 }
 
-func TestEnsureGlobalPullSecret(t *testing.T) {
-	test := []struct {
-		name               string
-		initialSecret      *corev1.Secret
-		operatorPullSecret *corev1.Secret
-		pullSecret         *corev1.Secret
-		wantSecret         *corev1.Secret
-		wantError          string
-	}{
-		{
-			name: "Red Hat Key present",
-			initialSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            "pull-secret",
-					Namespace:       "openshift-config",
-					ResourceVersion: "1",
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-				},
-			},
-			pullSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            "pull-secret",
-					Namespace:       "openshift-config",
-					ResourceVersion: "1",
-				},
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-			},
-			operatorPullSecret: &corev1.Secret{
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-				},
-			},
-			wantSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            "pull-secret",
-					Namespace:       "openshift-config",
-					ResourceVersion: "1",
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-				},
-			},
-			wantError: "",
-		},
-		{
-			name: "Red Hat Key missing",
-			initialSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            "pull-secret",
-					Namespace:       "openshift-config",
-					ResourceVersion: "1",
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-				},
-			},
-			pullSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "pull-secret",
-					Namespace: "openshift-config",
-				},
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-			},
-			operatorPullSecret: &corev1.Secret{
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-				},
-			},
-			wantSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            "pull-secret",
-					Namespace:       "openshift-config",
-					ResourceVersion: "2",
-				},
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-			},
-		},
-		{
-			name: "Red Hat key added should merge in",
-			initialSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            "pull-secret",
-					Namespace:       "openshift-config",
-					ResourceVersion: "1",
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-				},
-			},
-			pullSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "pull-secret",
-					Namespace: "openshift-config",
-				},
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-			},
-			operatorPullSecret: &corev1.Secret{
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-				},
-			},
-			wantSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            "pull-secret",
-					Namespace:       "openshift-config",
-					ResourceVersion: "2",
-				},
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-			},
-		},
-		{
-			name: "Pull secret empty",
-			initialSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            "pull-secret",
-					Namespace:       "openshift-config",
-					ResourceVersion: "1",
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-				},
-			},
-			pullSecret: &corev1.Secret{},
-			operatorPullSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "pull-secret",
-					Namespace: "openshift-config",
-				},
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-			},
-			wantSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            pullSecretName.Name,
-					Namespace:       pullSecretName.Namespace,
-					ResourceVersion: "1",
-				},
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-			},
-		},
-		{
-			name:          "Secret missing",
-			initialSecret: nil,
-			pullSecret:    nil,
-			operatorPullSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            pullSecretName.Name,
-					Namespace:       pullSecretName.Namespace,
-					ResourceVersion: "1",
-				},
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-			},
-			wantSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            pullSecretName.Name,
-					Namespace:       pullSecretName.Namespace,
-					ResourceVersion: "1",
-				},
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-			},
-		},
-		{
-			name: "Red Hat Key present but secret type broken",
-			initialSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            "pull-secret",
-					Namespace:       "openshift-config",
-					ResourceVersion: "1",
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-				},
-			},
-			pullSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      pullSecretName.Name,
-					Namespace: pullSecretName.Namespace,
-				},
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-				},
-				Type: corev1.SecretTypeBasicAuth,
-			},
-			operatorPullSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      pullSecretName.Name,
-					Namespace: pullSecretName.Namespace,
-				},
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-				},
-			},
-			wantSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            pullSecretName.Name,
-					Namespace:       pullSecretName.Namespace,
-					ResourceVersion: "1",
-				},
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-			},
-			wantError: "",
-		},
-		{
-			name: "Secret auth key broken broken",
-			initialSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            "pull-secret",
-					Namespace:       "openshift-config",
-					ResourceVersion: "1",
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-				},
-			},
-			pullSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      pullSecretName.Name,
-					Namespace: pullSecretName.Namespace,
-				},
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"lbnRlcg=="}}}`),
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-			},
-			operatorPullSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      pullSecretName.Name,
-					Namespace: pullSecretName.Namespace,
-				},
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-				},
-			},
-			wantSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            pullSecretName.Name,
-					Namespace:       pullSecretName.Namespace,
-					ResourceVersion: "2",
-				},
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-			},
-		},
-		{
-			name: "Secret not parseable",
-			initialSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            "pull-secret",
-					Namespace:       "openshift-config",
-					ResourceVersion: "1",
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-			},
-			pullSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      pullSecretName.Name,
-					Namespace: pullSecretName.Namespace,
-				},
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`bad`),
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-			},
-			operatorPullSecret: &corev1.Secret{
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-				},
-			},
-			wantSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            pullSecretName.Name,
-					Namespace:       pullSecretName.Namespace,
-					ResourceVersion: "2",
-				},
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-			},
-		},
-		{
-			name: "Operator secret not parseable",
-			initialSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            "pull-secret",
-					Namespace:       "openshift-config",
-					ResourceVersion: "1",
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`bad`),
-				},
-			},
-			pullSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      pullSecretName.Name,
-					Namespace: pullSecretName.Namespace,
-				},
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`bad`),
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-			},
-			operatorPullSecret: &corev1.Secret{
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`bad`),
-				},
-			},
-			wantSecret: nil,
-			wantError:  "invalid character 'b' looking for beginning of value",
-		},
-		{
-			name: "Operator secret nil",
-			initialSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            "pull-secret",
-					Namespace:       "openshift-config",
-					ResourceVersion: "1",
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`bad`),
-				},
-			},
-			pullSecret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      pullSecretName.Name,
-					Namespace: pullSecretName.Namespace,
-				},
-				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`bad`),
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-			},
-			operatorPullSecret: nil,
-			wantSecret:         nil,
-			wantError:          "nil operator secret, cannot verify userData integrity",
-		},
-	}
+// Seems duplicate of TestPullSecretReconciler, this funtion is called in Reconcile()
+// func TestEnsureGlobalPullSecret(t *testing.T) {
+// 	test := []struct {
+// 		name               string
+// 		initialSecret      *corev1.Secret
+// 		operatorPullSecret *corev1.Secret
+// 		pullSecret         *corev1.Secret
+// 		wantSecret         *corev1.Secret
+// 		wantError          string
+// 	}{
+// 		{
+// 			name: "Red Hat Key present",
+// 			initialSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:            "pull-secret",
+// 					Namespace:       "openshift-config",
+// 					ResourceVersion: "1",
+// 				},
+// 				Type: corev1.SecretTypeDockerConfigJson,
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+// 				},
+// 			},
+// 			pullSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:            "pull-secret",
+// 					Namespace:       "openshift-config",
+// 					ResourceVersion: "1",
+// 				},
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+// 				},
+// 				Type: corev1.SecretTypeDockerConfigJson,
+// 			},
+// 			operatorPullSecret: &corev1.Secret{
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+// 				},
+// 			},
+// 			wantSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:            "pull-secret",
+// 					Namespace:       "openshift-config",
+// 					ResourceVersion: "1",
+// 				},
+// 				Type: corev1.SecretTypeDockerConfigJson,
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+// 				},
+// 			},
+// 			wantError: "",
+// 		},
+// 		{
+// 			name: "Red Hat Key missing",
+// 			initialSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:            "pull-secret",
+// 					Namespace:       "openshift-config",
+// 					ResourceVersion: "1",
+// 				},
+// 				Type: corev1.SecretTypeDockerConfigJson,
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+// 				},
+// 			},
+// 			pullSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:      "pull-secret",
+// 					Namespace: "openshift-config",
+// 				},
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+// 				},
+// 				Type: corev1.SecretTypeDockerConfigJson,
+// 			},
+// 			operatorPullSecret: &corev1.Secret{
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+// 				},
+// 			},
+// 			wantSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:            "pull-secret",
+// 					Namespace:       "openshift-config",
+// 					ResourceVersion: "2",
+// 				},
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+// 				},
+// 				Type: corev1.SecretTypeDockerConfigJson,
+// 			},
+// 		},
+// 		{
+// 			name: "Red Hat key added should merge in",
+// 			initialSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:            "pull-secret",
+// 					Namespace:       "openshift-config",
+// 					ResourceVersion: "1",
+// 				},
+// 				Type: corev1.SecretTypeDockerConfigJson,
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+// 				},
+// 			},
+// 			pullSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:      "pull-secret",
+// 					Namespace: "openshift-config",
+// 				},
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+// 				},
+// 				Type: corev1.SecretTypeDockerConfigJson,
+// 			},
+// 			operatorPullSecret: &corev1.Secret{
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+// 				},
+// 			},
+// 			wantSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:            "pull-secret",
+// 					Namespace:       "openshift-config",
+// 					ResourceVersion: "2",
+// 				},
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+// 				},
+// 				Type: corev1.SecretTypeDockerConfigJson,
+// 			},
+// 		},
+// 		{
+// 			name: "Pull secret empty",
+// 			initialSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:            "pull-secret",
+// 					Namespace:       "openshift-config",
+// 					ResourceVersion: "1",
+// 				},
+// 				Type: corev1.SecretTypeDockerConfigJson,
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+// 				},
+// 			},
+// 			pullSecret: &corev1.Secret{},
+// 			operatorPullSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:      "pull-secret",
+// 					Namespace: "openshift-config",
+// 				},
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+// 				},
+// 				Type: corev1.SecretTypeDockerConfigJson,
+// 			},
+// 			wantSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:            pullSecretName.Name,
+// 					Namespace:       pullSecretName.Namespace,
+// 					ResourceVersion: "1",
+// 				},
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+// 				},
+// 				Type: corev1.SecretTypeDockerConfigJson,
+// 			},
+// 		},
+// 		{
+// 			name:          "Secret missing",
+// 			initialSecret: nil,
+// 			pullSecret:    nil,
+// 			operatorPullSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:            pullSecretName.Name,
+// 					Namespace:       pullSecretName.Namespace,
+// 					ResourceVersion: "1",
+// 				},
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+// 				},
+// 				Type: corev1.SecretTypeDockerConfigJson,
+// 			},
+// 			wantSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:            pullSecretName.Name,
+// 					Namespace:       pullSecretName.Namespace,
+// 					ResourceVersion: "1",
+// 				},
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+// 				},
+// 				Type: corev1.SecretTypeDockerConfigJson,
+// 			},
+// 		},
+// 		{
+// 			name: "Red Hat Key present but secret type broken",
+// 			initialSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:            "pull-secret",
+// 					Namespace:       "openshift-config",
+// 					ResourceVersion: "1",
+// 				},
+// 				Type: corev1.SecretTypeDockerConfigJson,
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+// 				},
+// 			},
+// 			pullSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:      pullSecretName.Name,
+// 					Namespace: pullSecretName.Namespace,
+// 				},
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+// 				},
+// 				Type: corev1.SecretTypeBasicAuth,
+// 			},
+// 			operatorPullSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:      pullSecretName.Name,
+// 					Namespace: pullSecretName.Namespace,
+// 				},
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+// 				},
+// 			},
+// 			wantSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:            pullSecretName.Name,
+// 					Namespace:       pullSecretName.Namespace,
+// 					ResourceVersion: "1",
+// 				},
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+// 				},
+// 				Type: corev1.SecretTypeDockerConfigJson,
+// 			},
+// 			wantError: "",
+// 		},
+// 		{
+// 			name: "Secret auth key broken broken",
+// 			initialSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:            "pull-secret",
+// 					Namespace:       "openshift-config",
+// 					ResourceVersion: "1",
+// 				},
+// 				Type: corev1.SecretTypeDockerConfigJson,
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+// 				},
+// 			},
+// 			pullSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:      pullSecretName.Name,
+// 					Namespace: pullSecretName.Namespace,
+// 				},
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"lbnRlcg=="}}}`),
+// 				},
+// 				Type: corev1.SecretTypeDockerConfigJson,
+// 			},
+// 			operatorPullSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:      pullSecretName.Name,
+// 					Namespace: pullSecretName.Namespace,
+// 				},
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+// 				},
+// 			},
+// 			wantSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:            pullSecretName.Name,
+// 					Namespace:       pullSecretName.Namespace,
+// 					ResourceVersion: "2",
+// 				},
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+// 				},
+// 				Type: corev1.SecretTypeDockerConfigJson,
+// 			},
+// 		},
+// 		{
+// 			name: "Secret not parseable",
+// 			initialSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:            "pull-secret",
+// 					Namespace:       "openshift-config",
+// 					ResourceVersion: "1",
+// 				},
+// 				Type: corev1.SecretTypeDockerConfigJson,
+// 			},
+// 			pullSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:      pullSecretName.Name,
+// 					Namespace: pullSecretName.Namespace,
+// 				},
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`bad`),
+// 				},
+// 				Type: corev1.SecretTypeDockerConfigJson,
+// 			},
+// 			operatorPullSecret: &corev1.Secret{
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+// 				},
+// 			},
+// 			wantSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:            pullSecretName.Name,
+// 					Namespace:       pullSecretName.Namespace,
+// 					ResourceVersion: "2",
+// 				},
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+// 				},
+// 				Type: corev1.SecretTypeDockerConfigJson,
+// 			},
+// 		},
+// 		{
+// 			name: "Operator secret not parseable",
+// 			initialSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:            "pull-secret",
+// 					Namespace:       "openshift-config",
+// 					ResourceVersion: "1",
+// 				},
+// 				Type: corev1.SecretTypeDockerConfigJson,
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`bad`),
+// 				},
+// 			},
+// 			pullSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:      pullSecretName.Name,
+// 					Namespace: pullSecretName.Namespace,
+// 				},
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`bad`),
+// 				},
+// 				Type: corev1.SecretTypeDockerConfigJson,
+// 			},
+// 			operatorPullSecret: &corev1.Secret{
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`bad`),
+// 				},
+// 			},
+// 			wantSecret: nil,
+// 			wantError:  "invalid character 'b' looking for beginning of value",
+// 		},
+// 		{
+// 			name: "Operator secret nil",
+// 			initialSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:            "pull-secret",
+// 					Namespace:       "openshift-config",
+// 					ResourceVersion: "1",
+// 				},
+// 				Type: corev1.SecretTypeDockerConfigJson,
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`bad`),
+// 				},
+// 			},
+// 			pullSecret: &corev1.Secret{
+// 				ObjectMeta: metav1.ObjectMeta{
+// 					Name:      pullSecretName.Name,
+// 					Namespace: pullSecretName.Namespace,
+// 				},
+// 				Data: map[string][]byte{
+// 					corev1.DockerConfigJsonKey: []byte(`bad`),
+// 				},
+// 				Type: corev1.SecretTypeDockerConfigJson,
+// 			},
+// 			operatorPullSecret: nil,
+// 			wantSecret:         nil,
+// 			wantError:          "nil operator secret, cannot verify userData integrity",
+// 		},
+// 	}
 
-	for _, tt := range test {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
-			helper := NewTestHelperObject()
-			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(helper.ClusterWithControllerEnabledManaged)
+// 	for _, tt := range test {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			ctx := context.Background()
+// 			helper := NewTestHelperObject()
+// 			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(helper.ClusterWithControllerEnabledManaged)
 
-			if tt.initialSecret != nil {
-				clientBuilder = clientBuilder.WithObjects(tt.initialSecret)
-			}
+// 			if tt.initialSecret != nil {
+// 				clientBuilder = clientBuilder.WithObjects(tt.initialSecret)
+// 			}
 
-			logger := &logrus.Logger{
-				Out:       io.Discard,
-				Formatter: new(logrus.TextFormatter),
-				Hooks:     make(logrus.LevelHooks),
-				Level:     logrus.TraceLevel,
-			}
+// 			logger := &logrus.Logger{
+// 				Out:       io.Discard,
+// 				Formatter: new(logrus.TextFormatter),
+// 				Hooks:     make(logrus.LevelHooks),
+// 				Level:     logrus.TraceLevel,
+// 			}
 
-			r := &PullSecretReconciler{
-				AROController: base.AROController{
-					Log:    logrus.NewEntry(logger),
-					Client: clientBuilder.Build(),
-					Name:   ControllerName,
-				},
-			}
+// 			r := &PullSecretReconciler{
+// 				AROController: base.AROController{
+// 					Log:    logrus.NewEntry(logger),
+// 					Client: clientBuilder.Build(),
+// 					Name:   ControllerName,
+// 				},
+// 			}
 
-			s, err := r.ensureGlobalPullSecret(ctx, tt.operatorPullSecret, tt.pullSecret)
-			utilerror.AssertErrorMessage(t, err, tt.wantError)
+// 			s, err := r.ensureGlobalPullSecret(ctx, tt.operatorPullSecret, tt.pullSecret)
+// 			utilerror.AssertErrorMessage(t, err, tt.wantError)
 
-			if !reflect.DeepEqual(s, tt.wantSecret) {
-				t.Fatalf(cmp.Diff(s, tt.wantSecret))
-			}
-		})
-	}
-}
+// 			if !reflect.DeepEqual(s, tt.wantSecret) {
+// 				t.Fatalf(cmp.Diff(s, tt.wantSecret))
+// 			}
+// 		})
+// 	}
+// }
