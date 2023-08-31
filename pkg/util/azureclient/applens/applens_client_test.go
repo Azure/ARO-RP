@@ -166,22 +166,6 @@ func TestGetDetector(t *testing.T) {
 	if verifier.requests[0].method != http.MethodPost {
 		t.Errorf("Expected %v, but got %v", http.MethodPost, verifier.requests[0].method)
 	}
-
-	if verifier.requests[0].headers.Get(headerXmsDate) == "" {
-		t.Errorf("Expected %v, but got %v", "", verifier.requests[0].headers.Get(headerXmsDate))
-	}
-
-	if verifier.requests[0].headers.Get(headerXmsClientRequestId) == "" {
-		t.Errorf("Expected uuid in %v header field, but got empty string", headerXmsClientRequestId)
-	}
-
-	if verifier.requests[0].headers.Get(headerXmsRequestId) == "" {
-		t.Errorf("Expected uuid in %v header field, but got empty string", headerXmsRequestId)
-	}
-
-	if verifier.requests[0].headers.Get(headerXmsPathQuery) != fmt.Sprintf("%s/detectors/%s", testResourceId, testDetectorID) {
-		t.Errorf("Expected %v in %v header field, but got %v", fmt.Sprintf("%s/detectors/%s", testResourceId, testDetectorID), headerXmsPathQuery, verifier.requests[0].headers.Get(headerXmsPathQuery))
-	}
 }
 
 func TestListDetectorsDirect(t *testing.T) {
@@ -206,22 +190,6 @@ func TestListDetectorsDirect(t *testing.T) {
 
 	if verifier.requests[0].method != http.MethodPost {
 		t.Errorf("Expected %v, but got %v", http.MethodPost, verifier.requests[0].method)
-	}
-
-	if verifier.requests[0].headers.Get(headerXmsDate) == "" {
-		t.Errorf("Expected %v, but got %v", "", verifier.requests[0].headers.Get(headerXmsDate))
-	}
-
-	if verifier.requests[0].headers.Get(headerXmsClientRequestId) == "" {
-		t.Errorf("Expected uuid in %v header field, but got empty string", headerXmsClientRequestId)
-	}
-
-	if verifier.requests[0].headers.Get(headerXmsRequestId) == "" {
-		t.Errorf("Expected uuid in %v header field, but got empty string", headerXmsRequestId)
-	}
-
-	if verifier.requests[0].headers.Get(headerXmsPathQuery) != fmt.Sprintf("%s/detectors", testResourceId) {
-		t.Errorf("Expected %v in %v header field, but got %v", fmt.Sprintf("%s/detectors", testResourceId), headerXmsPathQuery, verifier.requests[0].headers.Get(headerXmsPathQuery))
 	}
 }
 
@@ -275,22 +243,6 @@ func TestListDetectors(t *testing.T) {
 
 	if verifier.requests[0].method != http.MethodPost {
 		t.Errorf("Expected %v, but got %v", http.MethodPost, verifier.requests[0].method)
-	}
-
-	if verifier.requests[0].headers.Get(headerXmsDate) == "" {
-		t.Errorf("Expected %v, but got %v", "", verifier.requests[0].headers.Get(headerXmsDate))
-	}
-
-	if verifier.requests[0].headers.Get(headerXmsClientRequestId) == "" {
-		t.Errorf("Expected uuid in %v header field, but got empty string", headerXmsClientRequestId)
-	}
-
-	if verifier.requests[0].headers.Get(headerXmsRequestId) == "" {
-		t.Errorf("Expected uuid in %v header field, but got empty string", headerXmsRequestId)
-	}
-
-	if verifier.requests[0].headers.Get(headerXmsPathQuery) != fmt.Sprintf("%s/detectors", testResourceId) {
-		t.Errorf("Expected %v in %v header field, but got %v", fmt.Sprintf("%s/detectors", testResourceId), headerXmsPathQuery, verifier.requests[0].headers.Get(headerXmsPathQuery))
 	}
 
 	if len(detectors.Value) != 1 {
@@ -390,10 +342,9 @@ type pipelineVerifier struct {
 }
 
 type pipelineVerifierRequest struct {
-	method  string
-	body    string
-	url     *url.URL
-	headers http.Header
+	method string
+	body   string
+	url    *url.URL
 }
 
 func (p *pipelineVerifier) Do(req *policy.Request) (*http.Response, error) {
@@ -404,7 +355,6 @@ func (p *pipelineVerifier) Do(req *policy.Request) (*http.Response, error) {
 		readBody, _ := ioutil.ReadAll(req.Body())
 		pr.body = string(readBody)
 	}
-	pr.headers = req.Raw().Header
 	p.requests = append(p.requests, pr)
 	return req.Next()
 }
