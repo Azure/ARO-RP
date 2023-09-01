@@ -142,7 +142,6 @@ func patchEtcd(ctx context.Context, log *logrus.Entry, etcdcli operatorv1client.
 		Time: time.Now(),
 	}
 	e.ResourceVersion = ""
-	e.SelfLink = ""
 	e.UID = ""
 
 	buf := &bytes.Buffer{}
