@@ -658,10 +658,6 @@ github.com/google/shlex
 github.com/google/uuid
 # github.com/googleapis/gnostic v0.6.8 => github.com/google/gnostic v0.5.5
 ## explicit; go 1.12
-github.com/googleapis/gnostic/compiler
-github.com/googleapis/gnostic/extensions
-github.com/googleapis/gnostic/jsonschema
-github.com/googleapis/gnostic/openapiv2
 # github.com/gorilla/csrf v1.7.1
 ## explicit; go 1.13
 github.com/gorilla/csrf
@@ -1001,7 +997,7 @@ github.com/opencontainers/selinux/go-selinux
 github.com/opencontainers/selinux/go-selinux/label
 github.com/opencontainers/selinux/pkg/pwalk
 github.com/opencontainers/selinux/pkg/pwalkdir
-# github.com/openshift/api v3.9.1-0.20191111211345-a27ff30ebf09+incompatible => github.com/openshift/api v0.0.0-20220124143425-d74727069f6f
+# github.com/openshift/api v3.9.1-0.20191111211345-a27ff30ebf09+incompatible => github.com/openshift/api v0.0.0-20230426102702-398424d53f74
 ## explicit; go 1.16
 github.com/openshift/api
 github.com/openshift/api/apiserver
@@ -1030,7 +1026,10 @@ github.com/openshift/api/kubecontrolplane
 github.com/openshift/api/kubecontrolplane/v1
 github.com/openshift/api/legacyconfig/v1
 github.com/openshift/api/machine
+github.com/openshift/api/machine/v1
 github.com/openshift/api/machine/v1beta1
+github.com/openshift/api/monitoring
+github.com/openshift/api/monitoring/v1alpha1
 github.com/openshift/api/network
 github.com/openshift/api/network/v1
 github.com/openshift/api/networkoperator
@@ -1065,7 +1064,7 @@ github.com/openshift/api/template
 github.com/openshift/api/template/v1
 github.com/openshift/api/user
 github.com/openshift/api/user/v1
-# github.com/openshift/client-go v0.0.0-20220525160904-9e1acff93e4a => github.com/openshift/client-go v0.0.0-20211209144617-7385dd6338e3
+# github.com/openshift/client-go v0.0.0-20220525160904-9e1acff93e4a => github.com/openshift/client-go v0.0.0-20220603133046-984ee5ebedcf
 ## explicit; go 1.16
 github.com/openshift/client-go/config/clientset/versioned
 github.com/openshift/client-go/config/clientset/versioned/fake
@@ -1088,6 +1087,8 @@ github.com/openshift/client-go/imageregistry/clientset/versioned/typed/imageregi
 github.com/openshift/client-go/machine/clientset/versioned
 github.com/openshift/client-go/machine/clientset/versioned/fake
 github.com/openshift/client-go/machine/clientset/versioned/scheme
+github.com/openshift/client-go/machine/clientset/versioned/typed/machine/v1
+github.com/openshift/client-go/machine/clientset/versioned/typed/machine/v1/fake
 github.com/openshift/client-go/machine/clientset/versioned/typed/machine/v1beta1
 github.com/openshift/client-go/machine/clientset/versioned/typed/machine/v1beta1/fake
 github.com/openshift/client-go/operator/clientset/versioned
@@ -1128,7 +1129,7 @@ github.com/openshift/hive/apis/hive/v1/openstack
 github.com/openshift/hive/apis/hive/v1/ovirt
 github.com/openshift/hive/apis/hive/v1/vsphere
 github.com/openshift/hive/apis/scheme
-# github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc => github.com/openshift/library-go v0.0.0-20220303081124-fb4e7a2872f0
+# github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc => github.com/openshift/library-go v0.0.0-20230222114049-eac44a078a6e
 ## explicit; go 1.17
 github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers
 github.com/openshift/library-go/pkg/controller/factory
@@ -2357,8 +2358,8 @@ sigs.k8s.io/yaml
 # github.com/metal3-io/baremetal-operator/pkg/hardwareutils => github.com/openshift/baremetal-operator/pkg/hardwareutils v0.0.0-20211201170610-92ffa60c683d
 # github.com/metal3-io/cluster-api-provider-baremetal => github.com/openshift/cluster-api-provider-baremetal v0.0.0-20190821174549-a2a477909c1d
 # github.com/mholt/certmagic => github.com/caddyserver/certmagic v0.15.0
-# github.com/openshift/api => github.com/openshift/api v0.0.0-20220124143425-d74727069f6f
-# github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20211209144617-7385dd6338e3
+# github.com/openshift/api => github.com/openshift/api v0.0.0-20230426102702-398424d53f74
+# github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20220603133046-984ee5ebedcf
 # github.com/openshift/cloud-credential-operator => github.com/openshift/cloud-credential-operator v0.0.0-20200316201045-d10080b52c9e
 # github.com/openshift/cluster-api-provider-gcp => github.com/openshift/cluster-api-provider-gcp v0.0.1-0.20211123160814-0d569513f9fa
 # github.com/openshift/cluster-api-provider-ibmcloud => github.com/openshift/cluster-api-provider-ibmcloud v0.0.0-20211008100740-4d7907adbd6b
@@ -2367,7 +2368,7 @@ sigs.k8s.io/yaml
 # github.com/openshift/cluster-api-provider-ovirt => github.com/openshift/cluster-api-provider-ovirt v0.1.1-0.20211215231458-35ce9aafee1f
 # github.com/openshift/console-operator => github.com/openshift/console-operator v0.0.0-20220318130441-e44516b9c315
 # github.com/openshift/installer => github.com/jewzaam/installer-aro v0.9.0-master.0.20220524230743-7e2aa7a0cc1a
-# github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20220303081124-fb4e7a2872f0
+# github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20230222114049-eac44a078a6e
 # github.com/openshift/machine-api-operator => github.com/openshift/machine-api-operator v0.2.1-0.20220124104622-668c5b52b104
 # github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20220319215057-e6ba00b88555
 # github.com/oras-project/oras-go => oras.land/oras-go v0.4.0

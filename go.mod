@@ -31,8 +31,8 @@ require (
 	github.com/gofrs/uuid v4.2.0+incompatible
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/golang/mock v1.6.0
+	github.com/google/gnostic v0.5.7-v3refs
 	github.com/google/go-cmp v0.5.9
-	github.com/googleapis/gnostic v0.6.8
 	github.com/gorilla/csrf v1.7.1
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/securecookie v1.1.1
@@ -152,13 +152,13 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/btree v1.0.1 // indirect
 	github.com/google/cel-go v0.10.4 // indirect
-	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/google/go-containerregistry v0.14.0 // indirect
 	github.com/google/go-intervals v0.0.2 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/google/uuid v1.3.0 // indirect
+	github.com/googleapis/gnostic v0.6.8 // indirect
 	github.com/gorilla/schema v1.2.0 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -787,8 +787,8 @@ replace (
 	github.com/metal3-io/baremetal-operator/pkg/hardwareutils => github.com/openshift/baremetal-operator/pkg/hardwareutils v0.0.0-20211201170610-92ffa60c683d // Use OpenShift fork
 	github.com/metal3-io/cluster-api-provider-baremetal => github.com/openshift/cluster-api-provider-baremetal v0.0.0-20190821174549-a2a477909c1d // Pin OpenShift fork
 	github.com/mholt/certmagic => github.com/caddyserver/certmagic v0.15.0
-	github.com/openshift/api => github.com/openshift/api v0.0.0-20220124143425-d74727069f6f
-	github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20211209144617-7385dd6338e3
+	github.com/openshift/api => github.com/openshift/api v0.0.0-20230426102702-398424d53f74
+	github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20220603133046-984ee5ebedcf
 	github.com/openshift/cloud-credential-operator => github.com/openshift/cloud-credential-operator v0.0.0-20200316201045-d10080b52c9e
 	github.com/openshift/cluster-api-provider-gcp => github.com/openshift/cluster-api-provider-gcp v0.0.1-0.20211123160814-0d569513f9fa
 	github.com/openshift/cluster-api-provider-ibmcloud => github.com/openshift/cluster-api-provider-ibmcloud v0.0.0-20211008100740-4d7907adbd6b
@@ -797,7 +797,7 @@ replace (
 	github.com/openshift/cluster-api-provider-ovirt => github.com/openshift/cluster-api-provider-ovirt v0.1.1-0.20211215231458-35ce9aafee1f
 	github.com/openshift/console-operator => github.com/openshift/console-operator v0.0.0-20220318130441-e44516b9c315
 	github.com/openshift/installer => github.com/jewzaam/installer-aro v0.9.0-master.0.20220524230743-7e2aa7a0cc1a
-	github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20220303081124-fb4e7a2872f0
+	github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20230222114049-eac44a078a6e
 	github.com/openshift/machine-api-operator => github.com/openshift/machine-api-operator v0.2.1-0.20220124104622-668c5b52b104
 	github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20220319215057-e6ba00b88555
 	github.com/oras-project/oras-go => oras.land/oras-go v0.4.0
