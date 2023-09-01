@@ -273,7 +273,6 @@ func newJobFixPeers(cluster, peerPods, deNode string) *unstructured.Unstructured
 	jobFixPeers.SetAPIVersion("batch/v1")
 	jobFixPeers.SetName(jobNameFixPeers)
 	jobFixPeers.SetNamespace(namespaceEtcds)
-	jobFixPeers.SetClusterName(cluster)
 
 	return jobFixPeers
 }
@@ -330,7 +329,6 @@ func newServiceAccount(name, cluster string) *unstructured.Unstructured {
 	serviceAcc.SetKind("ServiceAccount")
 	serviceAcc.SetName(name)
 	serviceAcc.SetNamespace(namespaceEtcds)
-	serviceAcc.SetClusterName(cluster)
 
 	return serviceAcc
 }
@@ -351,7 +349,6 @@ func newClusterRole(usersAccount, cluster string) *unstructured.Unstructured {
 	clusterRole.SetAPIVersion("rbac.authorization.k8s.io/v1")
 	clusterRole.SetKind("ClusterRole")
 	clusterRole.SetName(usersAccount)
-	clusterRole.SetClusterName(cluster)
 
 	return clusterRole
 }
@@ -376,7 +373,6 @@ func newClusterRoleBinding(name, cluster string) *unstructured.Unstructured {
 	crb.SetAPIVersion("rbac.authorization.k8s.io/v1")
 	crb.SetKind("ClusterRoleBinding")
 	crb.SetName(name)
-	crb.SetClusterName(cluster)
 
 	return crb
 }
@@ -400,7 +396,6 @@ func newSecurityContextConstraint(name, cluster, usersAccount string) *unstructu
 	scc.SetAPIVersion("security.openshift.io/v1")
 	scc.SetKind("SecurityContextConstraints")
 	scc.SetName(name)
-	scc.SetClusterName(cluster)
 
 	return scc
 }
