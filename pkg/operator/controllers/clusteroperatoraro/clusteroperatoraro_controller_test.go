@@ -14,7 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -263,8 +263,8 @@ func TestConditions(t *testing.T) {
 				APIVersion:         arov1alpha1.GroupVersion.Identifier(),
 				Kind:               "Cluster",
 				Name:               arov1alpha1.SingletonClusterName,
-				Controller:         pointer.Bool(true),
-				BlockOwnerDeletion: pointer.Bool(true),
+				Controller:         ptr.To(true),
+				BlockOwnerDeletion: ptr.To(true),
 			}}
 			if diff := cmp.Diff(wantOwnerReference, operator.ObjectMeta.OwnerReferences); diff != "" {
 				t.Error(diff)

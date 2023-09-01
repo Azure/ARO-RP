@@ -11,7 +11,7 @@ import (
 	operatorv1 "github.com/openshift/api/operator/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/clock"
+	clockTesting "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -26,7 +26,7 @@ func TestSetCondition(t *testing.T) {
 	objectName := "cluster"
 	version := "unknown"
 
-	kubeclock = clock.NewFakeClock(time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC))
+	kubeclock = clockTesting.NewFakeClock(time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC))
 	var transitionTime = metav1.Time{Time: kubeclock.Now()}
 
 	for _, tt := range []struct {
