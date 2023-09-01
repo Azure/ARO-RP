@@ -77,7 +77,7 @@ require (
 	k8s.io/code-generator v0.24.1
 	k8s.io/kubectl v0.24.1
 	k8s.io/kubernetes v1.23.5
-	k8s.io/utils v0.0.0-20230313181309-38a27ef9d749
+	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
 	sigs.k8s.io/cluster-api-provider-azure v1.2.1
 	sigs.k8s.io/controller-runtime v0.13.1
 	sigs.k8s.io/controller-tools v0.9.0
