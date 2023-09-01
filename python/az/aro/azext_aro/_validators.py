@@ -7,17 +7,14 @@ import re
 import uuid
 from os.path import exists
 
-from azure.cli.core.commands.client_factory import get_mgmt_service_client
-from azure.cli.core.commands.client_factory import get_subscription_id
+from azure.cli.core.commands.client_factory import get_mgmt_service_client, get_subscription_id
 from azure.cli.core.profiles import ResourceType
 from azure.cli.core.azclierror import CLIInternalError, InvalidArgumentValueError, \
     RequiredArgumentMissingError
 from azure.core.exceptions import ResourceNotFoundError
 from knack.log import get_logger
 from msrestazure.azure_exceptions import CloudError
-from msrestazure.tools import is_valid_resource_id
-from msrestazure.tools import parse_resource_id
-from msrestazure.tools import resource_id
+from msrestazure.tools import is_valid_resource_id, parse_resource_id, resource_id
 from azext_aro.aaz.latest.network.vnet.subnet import Show as subnet_show
 
 logger = get_logger(__name__)
