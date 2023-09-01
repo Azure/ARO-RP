@@ -34,19 +34,18 @@ func (e encryptionAtHostValidator) ValidateEncryptionAtHost(ctx context.Context,
 }
 
 func validateEncryptionAtHost(ctx context.Context, subFeatureRegistrationsClient features.SubscriptionFeatureRegistrationsClient, oc *api.OpenShiftCluster) error {
-	encryptionSettings := make(map[api.EncryptionAtHost]bool)
-
-	encryptionSettings[oc.Properties.MasterProfile.EncryptionAtHost] = true
-
-	for _, wp := range oc.Properties.WorkerProfiles {
-		encryptionSettings[wp.EncryptionAtHost] = true
+	var hasEncryptionAtHostEnabled bool
+	profilesToCheck := append([]api.WorkerProfile{{EncryptionAtHost: oc.Properties.MasterProfile.EncryptionAtHost}}, oc.Properties.WorkerProfiles...)
+	for _, profile := range profilesToCheck {
+		if profile.EncryptionAtHost == api.EncryptionAtHostEnabled {
+			hasEncryptionAtHostEnabled = true
+			break
+		}
 	}
-
-	for setting := range encryptionSettings {
-		if setting == api.EncryptionAtHostEnabled {
-			if err := IsRegisteredForEncryptionAtHostFeature(ctx, subFeatureRegistrationsClient); err != nil {
-				return err
-			}
+	if hasEncryptionAtHostEnabled {
+		err := IsRegisteredForEncryptionAtHostFeature(ctx, subFeatureRegistrationsClient)
+		if err != nil {
+			return err
 		}
 	}
 
