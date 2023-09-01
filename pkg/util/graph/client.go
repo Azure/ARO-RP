@@ -18,6 +18,9 @@ type GraphServiceClient struct {
 	graphsdk.GraphBaseServiceClient
 }
 
+// Create a GraphServiceClient for use.
+//
+// NOTE: If you want to update the underlying SDK, see docs/updating-graphsdk.md for instructions.
 func NewGraphServiceClient(adapter abstractions.RequestAdapter) *GraphServiceClient {
 	client := graphsdk.NewGraphBaseServiceClient(adapter, store.BackingStoreFactoryInstance)
 	return &GraphServiceClient{
