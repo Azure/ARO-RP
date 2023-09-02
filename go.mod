@@ -31,8 +31,8 @@ require (
 	github.com/gofrs/uuid v4.2.0+incompatible
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/golang/mock v1.6.0
+	github.com/google/gnostic v0.5.7-v3refs
 	github.com/google/go-cmp v0.5.9
-	github.com/googleapis/gnostic v0.6.8
 	github.com/gorilla/csrf v1.7.1
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/securecookie v1.1.1
@@ -72,9 +72,9 @@ require (
 	k8s.io/api v0.26.2
 	k8s.io/apiextensions-apiserver v0.25.0
 	k8s.io/apimachinery v0.26.2
-	k8s.io/cli-runtime v0.24.1
+	k8s.io/cli-runtime v0.24.17
 	k8s.io/client-go v12.0.0+incompatible
-	k8s.io/code-generator v0.24.1
+	k8s.io/code-generator v0.24.17
 	k8s.io/kubectl v0.24.1
 	k8s.io/kubernetes v1.23.5
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
@@ -125,6 +125,7 @@ require (
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/docker/go-connections v0.4.1-0.20210727194412-58542c764a11 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
+	github.com/emicklei/go-restful/v3 v3.8.0 // indirect
 	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20210407135951-1de76d718b3f // indirect
 	github.com/fatih/color v1.14.1 // indirect
@@ -150,13 +151,14 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/btree v1.0.1 // indirect
-	github.com/google/cel-go v0.10.2 // indirect
+	github.com/google/cel-go v0.10.4 // indirect
 	github.com/google/go-containerregistry v0.14.0 // indirect
 	github.com/google/go-intervals v0.0.2 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/google/uuid v1.3.0 // indirect
+	github.com/googleapis/gnostic v0.6.8 // indirect
 	github.com/gorilla/schema v1.2.0 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -197,11 +199,12 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect
+	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc2 // indirect
-	github.com/opencontainers/runc v1.1.5 // indirect
+	github.com/opencontainers/runc v1.1.6 // indirect
 	github.com/opencontainers/runtime-tools v0.9.1-0.20221014010322-58c91d646d86 // indirect
 	github.com/opencontainers/selinux v1.10.2 // indirect
 	github.com/openshift/custom-resource-status v1.1.3-0.20220503160415-f2fdb4999d87 // indirect
@@ -260,7 +263,7 @@ require (
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiserver v0.24.7 // indirect
+	k8s.io/apiserver v0.24.17 // indirect
 	k8s.io/component-base v0.25.0 // indirect
 	k8s.io/gengo v0.0.0-20211129171323-c02415ce4185 // indirect
 	k8s.io/klog/v2 v2.100.1 // indirect
@@ -723,32 +726,32 @@ replace (
 	github.com/terraform-providers/terraform-provider-aws => github.com/openshift/terraform-provider-aws v1.60.1-0.20200630224953-76d1fb4e5699
 	github.com/terraform-providers/terraform-provider-azurerm => github.com/openshift/terraform-provider-azurerm v1.40.1-0.20200707062554-97ea089cc12a
 	github.com/terraform-providers/terraform-provider-ignition/v2 => github.com/community-terraform-providers/terraform-provider-ignition/v2 v2.1.0
-	k8s.io/api => k8s.io/api v0.23.0
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.23.0
-	k8s.io/apimachinery => k8s.io/apimachinery v0.23.0
-	k8s.io/apiserver => k8s.io/apiserver v0.23.0
-	k8s.io/cli-runtime => k8s.io/cli-runtime v0.23.0
-	k8s.io/client-go => k8s.io/client-go v0.23.0
-	k8s.io/cloud-provider => k8s.io/cloud-provider v0.23.0
-	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.23.0
-	k8s.io/code-generator => k8s.io/code-generator v0.23.0
-	k8s.io/component-base => k8s.io/component-base v0.23.0
-	k8s.io/component-helpers => k8s.io/component-helpers v0.23.0
-	k8s.io/controller-manager => k8s.io/controller-manager v0.23.0
-	k8s.io/cri-api => k8s.io/cri-api v0.23.0
-	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.23.0
-	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.23.0
-	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.23.0
-	k8s.io/kube-proxy => k8s.io/kube-proxy v0.23.0
-	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.23.0
-	k8s.io/kubectl => k8s.io/kubectl v0.23.0
-	k8s.io/kubelet => k8s.io/kubelet v0.23.0
-	k8s.io/kubernetes => k8s.io/kubernetes v1.23.0
-	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.23.0
-	k8s.io/metrics => k8s.io/metrics v0.23.0
-	k8s.io/mount-utils => k8s.io/mount-utils v0.23.0
-	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.23.0
-	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.23.0
+	k8s.io/api => k8s.io/api v0.24.17
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.24.17
+	k8s.io/apimachinery => k8s.io/apimachinery v0.24.17
+	k8s.io/apiserver => k8s.io/apiserver v0.24.17
+	k8s.io/cli-runtime => k8s.io/cli-runtime v0.24.17
+	k8s.io/client-go => k8s.io/client-go v0.24.17
+	k8s.io/cloud-provider => k8s.io/cloud-provider v0.24.17
+	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.24.17
+	k8s.io/code-generator => k8s.io/code-generator v0.24.17
+	k8s.io/component-base => k8s.io/component-base v0.24.17
+	k8s.io/component-helpers => k8s.io/component-helpers v0.24.17
+	k8s.io/controller-manager => k8s.io/controller-manager v0.24.17
+	k8s.io/cri-api => k8s.io/cri-api v0.24.17
+	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.24.17
+	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.24.17
+	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.24.17
+	k8s.io/kube-proxy => k8s.io/kube-proxy v0.24.17
+	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.24.17
+	k8s.io/kubectl => k8s.io/kubectl v0.24.17
+	k8s.io/kubelet => k8s.io/kubelet v0.24.17
+	k8s.io/kubernetes => k8s.io/kubernetes v1.24.17
+	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.24.17
+	k8s.io/metrics => k8s.io/metrics v0.24.17
+	k8s.io/mount-utils => k8s.io/mount-utils v0.24.17
+	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.24.17
+	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.24.17
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.11.2
 	sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.5.0
 )
@@ -784,8 +787,8 @@ replace (
 	github.com/metal3-io/baremetal-operator/pkg/hardwareutils => github.com/openshift/baremetal-operator/pkg/hardwareutils v0.0.0-20211201170610-92ffa60c683d // Use OpenShift fork
 	github.com/metal3-io/cluster-api-provider-baremetal => github.com/openshift/cluster-api-provider-baremetal v0.0.0-20190821174549-a2a477909c1d // Pin OpenShift fork
 	github.com/mholt/certmagic => github.com/caddyserver/certmagic v0.15.0
-	github.com/openshift/api => github.com/openshift/api v0.0.0-20220124143425-d74727069f6f
-	github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20211209144617-7385dd6338e3
+	github.com/openshift/api => github.com/openshift/api v0.0.0-20230426102702-398424d53f74
+	github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20220603133046-984ee5ebedcf
 	github.com/openshift/cloud-credential-operator => github.com/openshift/cloud-credential-operator v0.0.0-20200316201045-d10080b52c9e
 	github.com/openshift/cluster-api-provider-gcp => github.com/openshift/cluster-api-provider-gcp v0.0.1-0.20211123160814-0d569513f9fa
 	github.com/openshift/cluster-api-provider-ibmcloud => github.com/openshift/cluster-api-provider-ibmcloud v0.0.0-20211008100740-4d7907adbd6b
@@ -794,7 +797,7 @@ replace (
 	github.com/openshift/cluster-api-provider-ovirt => github.com/openshift/cluster-api-provider-ovirt v0.1.1-0.20211215231458-35ce9aafee1f
 	github.com/openshift/console-operator => github.com/openshift/console-operator v0.0.0-20220318130441-e44516b9c315
 	github.com/openshift/installer => github.com/jewzaam/installer-aro v0.9.0-master.0.20220524230743-7e2aa7a0cc1a
-	github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20220303081124-fb4e7a2872f0
+	github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20230222114049-eac44a078a6e
 	github.com/openshift/machine-api-operator => github.com/openshift/machine-api-operator v0.2.1-0.20220124104622-668c5b52b104
 	github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20220319215057-e6ba00b88555
 	github.com/oras-project/oras-go => oras.land/oras-go v0.4.0
@@ -808,7 +811,6 @@ replace (
 	go.mongodb.org/mongo-driver => go.mongodb.org/mongo-driver v1.9.4
 	google.golang.org/cloud => cloud.google.com/go v0.97.0
 	google.golang.org/grpc => google.golang.org/grpc v1.40.0
-	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20211115234752-e816edb12b65
 	k8s.io/kube-state-metrics => k8s.io/kube-state-metrics v1.9.7
 	mvdan.cc/unparam => mvdan.cc/unparam v0.0.0-20211002133954-f839ab2b2b11
 	sigs.k8s.io/cluster-api-provider-aws => github.com/openshift/cluster-api-provider-aws v0.2.1-0.20210121023454-5ffc5f422a80
