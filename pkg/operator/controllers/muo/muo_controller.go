@@ -182,7 +182,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 			builder.WithPredicates(pullSecretPredicate),
 		)
 
-	resources, err := r.deployer.Template(&config.MUODeploymentConfig{})
+	resources, err := r.deployer.Render(&config.MUODeploymentConfig{})
 	if err != nil {
 		return err
 	}
