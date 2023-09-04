@@ -96,7 +96,7 @@ func fakeOpenshiftClustersMatchQuery(client cosmosdb.OpenShiftClusterDocumentCli
 			results = append(results, r)
 		}
 	}
-	return cosmosdb.NewFakeOpenShiftClusterDocumentIterator(results, int(startingIndex))
+	return cosmosdb.NewFakeOpenShiftClusterDocumentIterator(results, startingIndex)
 }
 
 func fakeOpenShiftClustersGetAllDocuments(client cosmosdb.OpenShiftClusterDocumentClient) ([]*api.OpenShiftClusterDocument, error) {
@@ -109,9 +109,9 @@ func fakeOpenShiftClustersGetAllDocuments(client cosmosdb.OpenShiftClusterDocume
 	return docs, nil
 }
 
-func fakeOpenShiftClustersGetContinuation(options *cosmosdb.Options) (startingIndex int64, err error) {
+func fakeOpenShiftClustersGetContinuation(options *cosmosdb.Options) (startingIndex int, err error) {
 	if options != nil && options.Continuation != "" {
-		startingIndex, err = strconv.ParseInt(options.Continuation, 10, 64)
+		startingIndex, err = strconv.Atoi(options.Continuation)
 	}
 	return
 }
@@ -132,7 +132,8 @@ func fakeOpenshiftClustersPrefixQuery(client cosmosdb.OpenShiftClusterDocumentCl
 			results = append(results, r)
 		}
 	}
-	return cosmosdb.NewFakeOpenShiftClusterDocumentIterator(results, int(startingIndex))
+
+	return cosmosdb.NewFakeOpenShiftClusterDocumentIterator(results, startingIndex)
 }
 
 func fakeOpenShiftClustersRenewLeaseTrigger(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
