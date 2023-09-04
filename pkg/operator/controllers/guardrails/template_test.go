@@ -16,6 +16,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/deployer"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdh "github.com/Azure/ARO-RP/test/util/dynamichelper"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -29,8 +30,11 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 			Name: arov1alpha1.SingletonClusterName,
 		},
 	}
-
-	deployConfig := getDefaultDeployConfig(context.Background(), cluster)
+	ver, err := version.ParseVersion("4.11.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployConfig := getDefaultDeployConfig(context.Background(), cluster, ver)
 	deployConfig.Pullspec = setPullSpec
 
 	deployedObjects := map[string]int{}
@@ -39,7 +43,7 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 
 	dh := dynamichelper.NewWithClient(log, wrappedClient)
 	deployer := deployer.NewDeployer(dh, staticFiles, "staticresources")
-	err := deployer.CreateOrUpdate(context.Background(), cluster, deployConfig)
+	err = deployer.CreateOrUpdate(context.Background(), cluster, deployConfig)
 	if err != nil {
 		t.Error(err)
 	}

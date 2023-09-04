@@ -6,6 +6,7 @@ package guardrails
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -32,11 +33,9 @@ type Reconciler struct {
 	gkPolicyTemplate deployer.Deployer
 	client           client.Client
 
-	readinessPollTime     time.Duration
-	readinessTimeout      time.Duration
-	dh                    dynamichelper.Interface
-	policyTickerDone      chan bool
-	reconciliationMinutes int
+	readinessPollTime time.Duration
+	readinessTimeout  time.Duration
+	dh                dynamichelper.Interface
 }
 
 func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *Reconciler {
@@ -68,11 +67,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	r.log.Debug("running")
-
 	cv := &v1.ClusterVersion{}
 
-	err = r.client.Get(ctx, types.NamespacedName{Name: "version"}, cv)
-	if err == nil {
+	err = r.dh.GetOne(ctx, types.NamespacedName{Name: "version"}, cv)
+	if err != nil {
 		r.log.Errorf("error getting the OpenShift version: %v", err)
 		return reconcile.Result{}, err
 	}
@@ -84,6 +82,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	managed := instance.Spec.OperatorFlags.GetWithDefault(controllerManaged, "")
+	reconcilationMinutes, err := strconv.Atoi(instance.Spec.OperatorFlags.GetWithDefault(controllerReconciliationMinutes, strconv.Itoa(defaultReconciliationMinutes)))
+	if err != nil {
+		reconcilationMinutes = defaultReconciliationMinutes
+	}
 	deployConfig := getDefaultDeployConfig(ctx, instance, clusterVersion)
 
 	// If enabled and managed=true, install GuardRails
@@ -127,21 +129,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 				return reconcile.Result{}, fmt.Errorf("GateKeeper ConstraintTemplates timed out on creation: %w", err)
 			}
 
-			// Deploy the GateKeeper Constraint
+			// Deploy the GateKeeper Constraint and templates
 			err = r.ensurePolicies(ctx, instance)
-			if err != nil {
-				return reconcile.Result{}, err
-			}
+			// Requeue for our reconciliation timer
+			return reconcile.Result{RequeueAfter: time.Minute * time.Duration(reconcilationMinutes)}, err
 		}
-
-		// start a ticker to re-enforce gatekeeper policies periodically
-		r.startTicker(ctx, instance)
 	} else if strings.EqualFold(managed, "false") {
 		if r.gkPolicyTemplate != nil {
-			// stop the gatekeeper policies re-enforce ticker
-			r.stopTicker()
-
-			err = r.removePolicy(ctx, gkPolicyConstraints, gkConstraintsPath)
+			err = r.ensurePolicies(ctx, instance)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
@@ -169,7 +164,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	grBuilder := ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate))
 
-	resources, err := r.deployer.Template(&config.GuardRailsDeploymentConfig{})
+	resources, err := r.deployer.Render(&config.GuardRailsDeploymentConfig{})
 	if err != nil {
 		return err
 	}

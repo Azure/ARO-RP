@@ -10,14 +10,17 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/sirupsen/logrus"
+	v1 "github.com/openshift/api/config/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
+	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	mock_deployer "github.com/Azure/ARO-RP/pkg/util/mocks/deployer"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestGuardRailsReconciler(t *testing.T) {
@@ -186,6 +189,7 @@ func TestGuardRailsReconciler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
+			_, log := testlog.New()
 
 			cluster := &arov1alpha1.Cluster{
 				TypeMeta: metav1.TypeMeta{
@@ -200,28 +204,40 @@ func TestGuardRailsReconciler(t *testing.T) {
 					ACRDomain:     "acrtest.example.com",
 				},
 			}
+
+			cv := &v1.ClusterVersion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "version",
+				},
+				Status: v1.ClusterVersionStatus{History: []v1.UpdateHistory{
+					{
+						State:   v1.CompletedUpdate,
+						Version: "4.11.0",
+					},
+				}},
+			}
+
+			clientFake := ctrlfake.NewClientBuilder().
+				WithObjects(cluster, cv).
+				Build()
+
+			dh := dynamichelper.NewWithClient(log, clientFake)
 			deployer := mock_deployer.NewMockDeployer(controller)
-			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(cluster)
 
 			if tt.mocks != nil {
 				tt.mocks(deployer, cluster)
 			}
 
 			r := &Reconciler{
-				log:               logrus.NewEntry(logrus.StandardLogger()),
+				log:               log,
 				deployer:          deployer,
-				client:            clientBuilder.Build(),
+				dh:                dh,
+				client:            clientFake,
 				readinessTimeout:  0 * time.Second,
 				readinessPollTime: 1 * time.Second,
 			}
 			_, err := r.Reconcile(context.Background(), reconcile.Request{})
-			if err != nil && err.Error() != tt.wantErr {
-				t.Errorf("got error '%v', wanted error '%v'", err, tt.wantErr)
-			}
-
-			if err == nil && tt.wantErr != "" {
-				t.Errorf("did not get an error, but wanted error '%v'", tt.wantErr)
-			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

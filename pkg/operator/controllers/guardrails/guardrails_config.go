@@ -48,7 +48,7 @@ const (
 	defaultAuditRequestsMem   = "512Mi"
 	defaultAuditLimitMem      = "512Mi"
 
-	defaultReconciliationMinutes = "60"
+	defaultReconciliationMinutes = 60
 
 	defaultValidatingWebhookFailurePolicy = "Ignore"
 	defaultValidatingWebhookTimeout       = "3"
@@ -114,7 +114,7 @@ func getDefaultDeployConfig(ctx context.Context, instance *arov1alpha1.Cluster, 
 
 	deployConfig.RoleSCCResourceName = instance.Spec.OperatorFlags.GetWithDefault(RoleSCCResourceName, defaultRoleSCCResourceName411)
 	// for version 4.10 and below choose defaultRoleSCCResourceName410 scc
-	if clusterVersion != nil && clusterVersion.Lt(&version.Version{V: [3]uint32{4, 11, 0}}) {
+	if clusterVersion.Lt(&version.Version{V: [3]uint32{4, 11, 0}}) {
 		deployConfig.RoleSCCResourceName = instance.Spec.OperatorFlags.GetWithDefault(RoleSCCResourceName, defaultRoleSCCResourceName410)
 	}
 
