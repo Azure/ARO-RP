@@ -2,11 +2,9 @@ name: "CodeQL"
 
 on:
   push:
-    tags:
-      - v*
-    branches:
-      - master
+    branches: [master]
   pull_request:
+    branches: [master]
   schedule:
     - cron: '20 0 * * 6'
 
@@ -51,11 +49,23 @@ jobs:
       uses: github/codeql-action/init@v2
       with:
         languages: ${{ matrix.language }}
+        packs: "codeql/${{ matrix.language }}-queries:AlertSuppression.ql"
 
     - name: Autobuild
       uses: github/codeql-action/autobuild@v2
 
     - name: Perform CodeQL Analysis
+      id: analyze
       uses: github/codeql-action/analyze@v2
       with:
         category: "/language:${{matrix.language}}"
+        output: sarif-results
+
+    - name: Dismiss alerts
+      if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+      uses: advanced-security/dismiss-alerts@v1
+      with:
+        sarif-id: ${{ steps.analyze.outputs.sarif-id }}
+        sarif-file: sarif-results/${{ matrix.language }}.sarif
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
