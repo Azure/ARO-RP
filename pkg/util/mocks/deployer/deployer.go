@@ -7,6 +7,7 @@ package mock_deployer
 import (
 	context "context"
 	reflect "reflect"
+	template "text/template"
 
 	gomock "github.com/golang/mock/gomock"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -80,32 +81,32 @@ func (mr *MockDeployerMockRecorder) Remove(arg0, arg1 interface{}) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Remove", reflect.TypeOf((*MockDeployer)(nil).Remove), arg0, arg1)
 }
 
-// Template mocks base method.
-func (m *MockDeployer) Template(arg0 interface{}) ([]runtime.Object, error) {
+// Render mocks base method.
+func (m *MockDeployer) Render(arg0 interface{}) ([]runtime.Object, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Template", arg0)
+	ret := m.ctrl.Call(m, "Render", arg0)
 	ret0, _ := ret[0].([]runtime.Object)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Template indicates an expected call of Template.
-func (mr *MockDeployerMockRecorder) Template(arg0 interface{}) *gomock.Call {
+// Render indicates an expected call of Render.
+func (mr *MockDeployerMockRecorder) Render(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*MockDeployer)(nil).Template), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Render", reflect.TypeOf((*MockDeployer)(nil).Render), arg0)
 }
 
-// TemplateNames mocks base method.
-func (m *MockDeployer) TemplateNames() ([]string, error) {
+// Templates mocks base method.
+func (m *MockDeployer) Templates() ([]*template.Template, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TemplateNames")
-	ret0, _ := ret[0].([]string)
+	ret := m.ctrl.Call(m, "Templates")
+	ret0, _ := ret[0].([]*template.Template)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// TemplateNames indicates an expected call of TemplateNames.
-func (mr *MockDeployerMockRecorder) TemplateNames() *gomock.Call {
+// Templates indicates an expected call of Templates.
+func (mr *MockDeployerMockRecorder) Templates() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TemplateNames", reflect.TypeOf((*MockDeployer)(nil).TemplateNames))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Templates", reflect.TypeOf((*MockDeployer)(nil).Templates))
 }
