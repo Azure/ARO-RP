@@ -1,0 +1,25 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: arodenymachineconfig
+  annotations:
+    description: >-
+      Do not allow modification of cluster's machine config objects
+      machine config regex match: ^.+(-master|-worker|-master-.+|-worker-.+|-kubelet|-container-runtime|-aro-.+|-ssh|-generated-.+)$
+spec:
+  crd:
+    spec:
+      names:
+        kind: ARODenyMachineConfig
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package arodenymachineconfig
+        import future.keywords.in
+
+        violation[{"msg": msg}] {
+            input.review.operation in ["CREATE", "UPDATE", "DELETE"]
+            name := input.review.object.metadata.name
+            regex.match("^.+(-master|-worker|-master-.+|-worker-.+|-kubelet|-container-runtime|-aro-.+|-ssh|-generated-.+)$", name)
+            msg := "Modify cluster machine config is not allowed"
+        }
