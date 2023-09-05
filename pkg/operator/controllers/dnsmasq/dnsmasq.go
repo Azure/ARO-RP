@@ -11,6 +11,7 @@ import (
 	"text/template"
 
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/coreos/go-semver/semver"
 	ign3types "github.com/coreos/ignition/v2/config/v3_2/types"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/vincent-petithory/dataurl"
@@ -90,7 +91,13 @@ func ignition3Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains [
 
 	ign := &ign3types.Config{
 		Ignition: ign3types.Ignition{
-			Version: ign3types.MaxVersion.String(),
+			// This Ignition Config version should be kept up to date with the default
+			// rendered Ignition Config version from the Machine Config Operator version
+			// on the lowest OCP version we support (4.7).
+			Version: semver.Version{
+				Major: 3,
+				Minor: 2,
+			}.String(),
 		},
 		Storage: ign3types.Storage{
 			Files: []ign3types.File{
