@@ -7,8 +7,9 @@ import (
 	"fmt"
 	"strings"
 
-	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/sirupsen/logrus"
+
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 )
 
 func GetPolicyConfig(log *logrus.Entry, instance *arov1alpha1.Cluster, filename string) (*GuardRailsPolicyConfig, error) {

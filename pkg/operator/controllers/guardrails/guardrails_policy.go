@@ -8,15 +8,15 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ghodss/yaml"
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/yaml"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
-	"github.com/sirupsen/logrus"
 )
 
 func (r *Reconciler) ensurePolicies(ctx context.Context, log *logrus.Entry, instance *arov1alpha1.Cluster) error {
