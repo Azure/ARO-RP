@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	v1 "github.com/openshift/api/config/v1"
+	configv1 "github.com/openshift/api/config/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -205,13 +205,13 @@ func TestGuardRailsReconciler(t *testing.T) {
 				},
 			}
 
-			cv := &v1.ClusterVersion{
+			cv := &configv1.ClusterVersion{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "version",
 				},
-				Status: v1.ClusterVersionStatus{History: []v1.UpdateHistory{
+				Status: configv1.ClusterVersionStatus{History: []configv1.UpdateHistory{
 					{
-						State:   v1.CompletedUpdate,
+						State:   configv1.CompletedUpdate,
 						Version: "4.11.0",
 					},
 				}},
@@ -232,7 +232,6 @@ func TestGuardRailsReconciler(t *testing.T) {
 				log:               log,
 				deployer:          deployer,
 				dh:                dh,
-				client:            clientFake,
 				readinessTimeout:  0 * time.Second,
 				readinessPollTime: 1 * time.Second,
 			}

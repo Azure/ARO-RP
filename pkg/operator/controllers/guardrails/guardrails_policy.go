@@ -16,10 +16,11 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
+	"github.com/sirupsen/logrus"
 )
 
-func (r *Reconciler) ensurePolicies(ctx context.Context, instance *arov1alpha1.Cluster) error {
-	templates, err := r.gkPolicyTemplate.Templates()
+func (r *Reconciler) ensurePolicies(ctx context.Context, log *logrus.Entry, instance *arov1alpha1.Cluster) error {
+	templates, err := r.gkPolicyConstraints.Templates()
 	if err != nil {
 		return err
 	}
@@ -29,7 +30,7 @@ func (r *Reconciler) ensurePolicies(ctx context.Context, instance *arov1alpha1.C
 	creates := make([]kruntime.Object, 0)
 	deletes := make([]kruntime.Object, 0)
 	for _, templ := range templates {
-		policyConfig, err := config.GetPolicyConfig(instance, templ.Name())
+		policyConfig, err := config.GetPolicyConfig(log, instance, templ.Name())
 		if err != nil {
 			return err
 		}
@@ -50,7 +51,7 @@ func (r *Reconciler) ensurePolicies(ctx context.Context, instance *arov1alpha1.C
 			return err
 		}
 
-		if policyConfig.Managed == "true" || managed == "false" {
+		if policyConfig.Managed == "true" && managed == "true" {
 			creates = append(creates, uns)
 		} else {
 			deletes = append(deletes, uns)
@@ -77,34 +78,46 @@ func (r *Reconciler) ensurePolicies(ctx context.Context, instance *arov1alpha1.C
 	return nil
 }
 
-func (r *Reconciler) IsConstraintTemplateReady(ctx context.Context, config interface{}) (bool, error) {
-	resources, err := r.gkPolicyTemplate.Render(config)
+func (r *Reconciler) AreConstraintTemplatesReady(ctx context.Context) (bool, error) {
+	resources, err := r.gkPolicyTemplate.Render(config.GuardRailsPolicyConfig{})
 	if err != nil {
 		return false, err
 	}
+
+	// list the templates we are waiting to be accepted for
+	waitingOn := []string{}
 	for _, resource := range resources {
 		gvk := resource.GetObjectKind().GroupVersionKind()
-		if gvk.Group == "templates.gatekeeper.sh" && gvk.Kind == "ConstraintTemplate" {
-			rname, ok := resource.(metav1.Object)
-			if !ok {
-				return false, fmt.Errorf("can't ")
-			}
+		if !(gvk.Group == "templates.gatekeeper.sh" && gvk.Kind == "ConstraintTemplate") {
+			continue
+		}
 
-			// for the fetched object
-			ct := &unstructured.Unstructured{}
-			ct.SetGroupVersionKind(gvk)
+		rname, ok := resource.(metav1.Object)
+		if !ok {
+			return false, fmt.Errorf("can't ")
+		}
 
-			err := r.dh.GetOne(ctx, types.NamespacedName{Name: rname.GetName()}, ct)
-			if err != nil {
-				return false, err
-			}
+		// for the fetched object
+		ct := &unstructured.Unstructured{}
+		ct.SetGroupVersionKind(gvk)
 
-			ready, ok, err := unstructured.NestedBool(ct.UnstructuredContent(), "Status", "Created")
-			if !ok || err != nil {
-				return false, err
-			}
-			return ready, nil
+		err := r.dh.GetOne(ctx, types.NamespacedName{Name: rname.GetName()}, ct)
+		if err != nil {
+			return false, err
+		}
+
+		ready, ok, err := unstructured.NestedBool(ct.UnstructuredContent(), "Status", "Created")
+		if err != nil {
+			return false, err
+		}
+		if !ok || !ready {
+			waitingOn = append(waitingOn, rname.GetName())
 		}
 	}
+
+	if len(waitingOn) > 0 {
+		return false, fmt.Errorf("waiting on %s", waitingOn)
+	}
+
 	return true, nil
 }

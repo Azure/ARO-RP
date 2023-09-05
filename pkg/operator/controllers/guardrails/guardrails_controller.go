@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	v1 "github.com/openshift/api/config/v1"
+	configv1 "github.com/openshift/api/config/v1"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -28,25 +28,24 @@ import (
 )
 
 type Reconciler struct {
-	log              *logrus.Entry
-	deployer         deployer.Deployer
-	gkPolicyTemplate deployer.Deployer
-	client           client.Client
+	log                 *logrus.Entry
+	deployer            deployer.Deployer
+	gkPolicyTemplate    deployer.Deployer
+	gkPolicyConstraints deployer.Deployer
 
 	readinessPollTime time.Duration
 	readinessTimeout  time.Duration
 	dh                dynamichelper.Interface
 }
 
-func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, dh dynamichelper.Interface) *Reconciler {
 	return &Reconciler{
 		log: log,
 
-		deployer:         deployer.NewDeployer(dh, staticFiles, gkDeploymentPath),
-		gkPolicyTemplate: deployer.NewDeployer(dh, gkPolicyTemplates, gkTemplatePath),
-		dh:               dh,
-
-		client: client,
+		deployer:            deployer.NewDeployer(dh, staticFiles, gkDeploymentPath),
+		gkPolicyTemplate:    deployer.NewDeployer(dh, gkPolicyTemplates, gkTemplatePath),
+		gkPolicyConstraints: deployer.NewDeployer(dh, gkPolicyConstraints, gkConstraintsPath),
+		dh:                  dh,
 
 		readinessPollTime: 10 * time.Second,
 		readinessTimeout:  5 * time.Minute,
@@ -55,7 +54,7 @@ func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Int
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance := &arov1alpha1.Cluster{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+	err := r.dh.GetOne(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -67,7 +66,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	r.log.Debug("running")
-	cv := &v1.ClusterVersion{}
+	cv := &configv1.ClusterVersion{}
 
 	err = r.dh.GetOne(ctx, types.NamespacedName{Name: "version"}, cv)
 	if err != nil {
@@ -123,20 +122,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			}
 
 			err := wait.PollImmediateUntil(r.readinessPollTime, func() (bool, error) {
-				return r.IsConstraintTemplateReady(ctx, policyConfig)
+				return r.AreConstraintTemplatesReady(ctx)
 			}, timeoutCtx.Done())
 			if err != nil {
 				return reconcile.Result{}, fmt.Errorf("GateKeeper ConstraintTemplates timed out on creation: %w", err)
 			}
 
 			// Deploy the GateKeeper Constraint and templates
-			err = r.ensurePolicies(ctx, instance)
+			err = r.ensurePolicies(ctx, r.log, instance)
 			// Requeue for our reconciliation timer
 			return reconcile.Result{RequeueAfter: time.Minute * time.Duration(reconcilationMinutes)}, err
 		}
 	} else if strings.EqualFold(managed, "false") {
 		if r.gkPolicyTemplate != nil {
-			err = r.ensurePolicies(ctx, instance)
+			err = r.ensurePolicies(ctx, r.log, instance)
 			if err != nil {
 				return reconcile.Result{}, err
 			}

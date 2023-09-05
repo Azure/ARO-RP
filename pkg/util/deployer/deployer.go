@@ -17,6 +17,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -79,6 +80,10 @@ func (depl *deployer) Render(data interface{}) ([]kruntime.Object, error) {
 		}
 
 		obj, _, err := depl.decoder.Decode(bytes, nil, nil)
+		if err != nil && kruntime.IsNotRegisteredError(err) {
+			// If it's not registered, load it as an unstructured
+			obj, _, err = scheme.Codecs.UniversalDecoder().Decode(bytes, nil, &unstructured.Unstructured{})
+		}
 		if err != nil {
 			return nil, err
 		}

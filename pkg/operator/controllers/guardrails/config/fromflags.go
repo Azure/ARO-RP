@@ -8,9 +8,10 @@ import (
 	"strings"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/sirupsen/logrus"
 )
 
-func GetPolicyConfig(instance *arov1alpha1.Cluster, filename string) (*GuardRailsPolicyConfig, error) {
+func GetPolicyConfig(log *logrus.Entry, instance *arov1alpha1.Cluster, filename string) (*GuardRailsPolicyConfig, error) {
 	name, _, found := strings.Cut(filename, ".")
 	if !found {
 		return nil, fmt.Errorf("malformed name: '%s'", name)
@@ -21,6 +22,11 @@ func GetPolicyConfig(instance *arov1alpha1.Cluster, filename string) (*GuardRail
 
 	enforcementPath := fmt.Sprintf(controllerPolicyEnforcementTemplate, name)
 	enforcement := instance.Spec.OperatorFlags.GetWithDefault(enforcementPath, "dryrun")
+
+	if !(enforcement == "dryrun" || enforcement == "warn" || enforcement == "deny") {
+		log.Errorf("enforcement option for %s is invalid, setting to 'dryrun': %s", name, enforcement)
+		enforcement = "dryrun"
+	}
 
 	return &GuardRailsPolicyConfig{
 		Managed:     managed,

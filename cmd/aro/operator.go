@@ -218,7 +218,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (guardrails.NewReconciler(
 			log.WithField("controller", guardrails.ControllerName),
-			client, dh)).SetupWithManager(mgr); err != nil {
+			dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", guardrails.ControllerName, err)
 		}
 		if err = (cloudproviderconfig.NewReconciler(
