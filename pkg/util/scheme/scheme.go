@@ -4,7 +4,6 @@ package scheme
 // Licensed under the Apache License 2.0.
 
 import (
-	templatesv1 "github.com/open-policy-agent/frameworks/constraint/pkg/apis/templates/v1"
 	configv1 "github.com/openshift/api/config/v1"
 	consolev1 "github.com/openshift/api/console/v1"
 	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
@@ -56,5 +55,4 @@ func init() {
 	scheme.Scheme.AddKnownTypes(azureproviderv1beta1.SchemeGroupVersion, &machinev1beta1.AzureMachineProviderSpec{})
 	utilruntime.Must(hivev1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(imageregistryv1.AddToScheme(scheme.Scheme))
-	utilruntime.Must(templatesv1.AddToScheme(scheme.Scheme))
 }
