@@ -12,9 +12,11 @@ import (
 	"github.com/ghodss/yaml"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	applyv1 "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -173,48 +175,26 @@ func (m *manager) updateAROSecret(ctx context.Context) error {
 }
 
 func (m *manager) updateOpenShiftSecret(ctx context.Context) error {
-	var changed bool
+	resourceGroupID := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID
 	spp := m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
-	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		//data:
-		// azure_client_id: secret_id
-		// azure_client_secret: secret_value
-		// azure_tenant_id: tenant_id
-		secret, err := m.kubernetescli.CoreV1().Secrets("kube-system").Get(ctx, "azure-credentials", metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-
-		if string(secret.Data["azure_client_id"]) != spp.ClientID {
-			secret.Data["azure_client_id"] = []byte(spp.ClientID)
-			changed = true
-		}
-
-		if string(secret.Data["azure_client_secret"]) != string(spp.ClientSecret) {
-			secret.Data["azure_client_secret"] = []byte(spp.ClientSecret)
-			changed = true
-		}
-
-		if string(secret.Data["azure_tenant_id"]) != m.subscriptionDoc.Subscription.Properties.TenantID {
-			secret.Data["azure_tenant_id"] = []byte(m.subscriptionDoc.Subscription.Properties.TenantID)
-			changed = true
-		}
-
-		if changed {
-			_, err = m.kubernetescli.CoreV1().Secrets("kube-system").Update(ctx, secret, metav1.UpdateOptions{})
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return err
+	//data:
+	// azure_client_id: secret_id
+	// azure_client_secret: secret_value
+	// azure_tenant_id: tenant_id
+	desiredData := map[string][]byte{
+		"azure_subscription_id": []byte(m.subscriptionDoc.ID),
+		"azure_resource_prefix": []byte(m.doc.OpenShiftCluster.Properties.InfraID),
+		"azure_resourcegroup":   []byte(resourceGroupID[strings.LastIndex(resourceGroupID, "/")+1:]),
+		"azure_region":          []byte(m.doc.OpenShiftCluster.Location),
+		"azure_client_id":       []byte(spp.ClientID),
+		"azure_client_secret":   []byte(spp.ClientSecret),
+		"azure_tenant_id":       []byte(m.subscriptionDoc.Subscription.Properties.TenantID),
 	}
 
-	// return early if not changed
-	if !changed {
-		return nil
+	secretApplyConfig := applyv1.Secret(clusterauthorizer.AzureCredentialSecretName, clusterauthorizer.AzureCredentialSecretNameSpace).WithData(desiredData)
+	_, err := m.kubernetescli.CoreV1().Secrets(clusterauthorizer.AzureCredentialSecretNameSpace).Apply(ctx, secretApplyConfig, metav1.ApplyOptions{FieldManager: "aro-rp", Force: true})
+	if err != nil {
+		return err
 	}
 
 	// restart cloud credentials operator to trigger rotation

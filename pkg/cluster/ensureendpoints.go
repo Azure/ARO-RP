@@ -6,6 +6,8 @@ package cluster
 import (
 	"context"
 	"fmt"
+
+	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 // ensureServiceEndpoints should enable service endpoints on
@@ -24,8 +26,9 @@ func (m *manager) getSubnetIds() ([]string, error) {
 	subnets := []string{
 		m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
 	}
+	workerProfiles, _ := api.GetEnrichedWorkerProfiles(m.doc.OpenShiftCluster.Properties)
 
-	for _, wp := range m.doc.OpenShiftCluster.Properties.WorkerProfiles {
+	for _, wp := range workerProfiles {
 		if len(wp.SubnetID) == 0 {
 			return nil, fmt.Errorf("WorkerProfile '%s' has no SubnetID; check that the corresponding MachineSet is valid", wp.Name)
 		}

@@ -25,6 +25,11 @@ const (
 
 var GitCommit = "unknown"
 
+type Stream struct {
+	Version  *Version `json:"version"`
+	PullSpec string   `json:"-"`
+}
+
 // DefaultMinorVersion describes the minor OpenShift version to default to
 var DefaultMinorVersion = 11
 
@@ -47,7 +52,7 @@ var DefaultInstallStreams = map[int]*Stream{
 // DefaultInstallStream describes stream we are defaulting to for all new clusters
 var DefaultInstallStream = DefaultInstallStreams[DefaultMinorVersion]
 
-var HiveInstallStreams = []*Stream{
+var AvailableInstallStreams = []*Stream{
 	DefaultInstallStreams[10],
 	{
 		Version:  NewVersion(4, 10, 54),
@@ -65,52 +70,21 @@ var HiveInstallStreams = []*Stream{
 	DefaultInstallStreams[12],
 }
 
-// UpgradeStreams describes list of streams we support for upgrades
-var (
-	UpgradeStreams = []*Stream{
-		DefaultInstallStream,
-		{
-			Version:  NewVersion(4, 9, 28),
-			PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:4084d94969b186e20189649b5affba7da59f7d1943e4e5bc7ef78b981eafb7a8",
-		},
-		{
-			Version:  NewVersion(4, 8, 18),
-			PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:321aae3d3748c589bc2011062cee9fd14e106f258807dc2d84ced3f7461160ea",
-		},
-		{
-			Version:  NewVersion(4, 7, 30),
-			PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:aba54b293dc151f5c0fd96d4353ced6ced3e7da6620c1c10714ab32d0577486f",
-		},
-		{
-			Version:  NewVersion(4, 6, 44),
-			PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:d042aa235b538721a39989b13d7d9d3537af9b57e9fd10f485dd04461932ec85",
-		},
-		{
-			Version:  NewVersion(4, 5, 39),
-			PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:c4b9eb565c64df97afe7841bbcc0469daec7973e46ae588739cc30ea9062172b",
-		},
-		{
-			Version:  NewVersion(4, 4, 33),
-			PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:a035dddd8a5e5c99484138951ef4aba021799b77eb9046f683a5466c23717738",
-		},
-	}
-)
-
 // FluentbitImage contains the location of the Fluentbit container image
 func FluentbitImage(acrDomain string) string {
-	return acrDomain + "/fluentbit:1.9.10-cm20230621"
+	return acrDomain + "/fluentbit:1.9.10-cm20230805"
 }
 
 // MdmImage contains the location of the MDM container image
 // https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
 func MdmImage(acrDomain string) string {
-	return acrDomain + "/genevamdm:2.2023.609.2051-821f47-20230706t0953"
+	return acrDomain + "/genevamdm:2.2023.721.1630-e50918-20230721t1737"
 }
 
 // MdsdImage contains the location of the MDSD container image
 // https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
 func MdsdImage(acrDomain string) string {
-	return acrDomain + "/genevamdsd:mariner_20230706.2"
+	return acrDomain + "/genevamdsd:mariner_20230727.1"
 }
 
 // MUOImage contains the location of the Managed Upgrade Operator container image

@@ -23,7 +23,8 @@ import (
 const (
 	ClusterControllerName = "DnsmasqCluster"
 
-	controllerEnabled = "aro.dnsmasq.enabled"
+	controllerEnabled     = "aro.dnsmasq.enabled"
+	restartDnsmasqEnabled = "aro.restartdnsmasq.enabled"
 )
 
 type ClusterReconciler struct {
@@ -55,6 +56,11 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		return reconcile.Result{}, nil
 	}
 
+	restartDnsmasq := instance.Spec.OperatorFlags.GetSimpleBoolean(restartDnsmasqEnabled)
+	if restartDnsmasq {
+		r.Log.Debug("restartDnsmasq is enabled")
+	}
+
 	r.Log.Debug("running")
 	mcps := &mcv1.MachineConfigPoolList{}
 	err = r.Client.List(ctx, mcps)
@@ -64,7 +70,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		return reconcile.Result{}, err
 	}
 
-	err = reconcileMachineConfigs(ctx, instance, r.dh, mcps.Items...)
+	err = reconcileMachineConfigs(ctx, instance, r.dh, restartDnsmasq, mcps.Items...)
 	if err != nil {
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)
@@ -87,10 +93,10 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, dh dynamichelper.Interface, mcps ...mcv1.MachineConfigPool) error {
+func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, dh dynamichelper.Interface, restartDnsmasq bool, mcps ...mcv1.MachineConfigPool) error {
 	var resources []kruntime.Object
 	for _, mcp := range mcps {
-		resource, err := dnsmasqMachineConfig(instance.Spec.Domain, instance.Spec.APIIntIP, instance.Spec.IngressIP, mcp.Name, instance.Spec.GatewayDomains, instance.Spec.GatewayPrivateEndpointIP)
+		resource, err := dnsmasqMachineConfig(instance.Spec.Domain, instance.Spec.APIIntIP, instance.Spec.IngressIP, mcp.Name, instance.Spec.GatewayDomains, instance.Spec.GatewayPrivateEndpointIP, restartDnsmasq)
 		if err != nil {
 			return err
 		}

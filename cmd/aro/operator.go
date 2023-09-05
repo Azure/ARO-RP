@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/ingresscertificatechecker"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/internetchecker"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/serviceprincipalchecker"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/cloudproviderconfig"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/clusteroperatoraro"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/dnsmasq"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
@@ -219,6 +220,11 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			log.WithField("controller", guardrails.ControllerName),
 			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", guardrails.ControllerName, err)
+		}
+		if err = (cloudproviderconfig.NewReconciler(
+			log.WithField("controller", cloudproviderconfig.ControllerName),
+			client)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", cloudproviderconfig.ControllerName, err)
 		}
 	}
 

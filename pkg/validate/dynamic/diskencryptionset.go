@@ -31,7 +31,9 @@ func (dv *dynamic) ValidateDiskEncryptionSets(ctx context.Context, oc *api.OpenS
 		ids = append(ids, oc.Properties.MasterProfile.DiskEncryptionSetID)
 		paths = append(paths, "properties.masterProfile.diskEncryptionSetId")
 	}
-	for i, wp := range oc.Properties.WorkerProfiles {
+
+	workerProfiles, propertyName := api.GetEnrichedWorkerProfiles(oc.Properties)
+	for i, wp := range workerProfiles {
 		if wp.DiskEncryptionSetID != "" {
 			lowercasedId := strings.ToLower(wp.DiskEncryptionSetID)
 			if _, ok := uniqueIds[lowercasedId]; ok {
@@ -40,7 +42,7 @@ func (dv *dynamic) ValidateDiskEncryptionSets(ctx context.Context, oc *api.OpenS
 
 			uniqueIds[lowercasedId] = struct{}{}
 			ids = append(ids, wp.DiskEncryptionSetID)
-			paths = append(paths, fmt.Sprintf("properties.workerProfiles[%d].diskEncryptionSetId", i))
+			paths = append(paths, fmt.Sprintf("properties.%s[%d].diskEncryptionSetId", propertyName, i))
 		}
 	}
 

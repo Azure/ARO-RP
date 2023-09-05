@@ -15,10 +15,10 @@ spec:
       operator: Exists
   unhealthyConditions:
   - type: "Ready"
-    timeout: "300s"
+    timeout: "15m"
     status: "False"
   - type: "Ready"
-    timeout: "300s"
+    timeout: "15m"
     status: "Unknown"
   maxUnhealthy: "1"
-  nodeStartupTimeout: "20m"
+  nodeStartupTimeout: "25m"

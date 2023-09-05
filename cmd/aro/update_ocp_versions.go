@@ -64,7 +64,7 @@ func getLatestOCPVersions(ctx context.Context, log *logrus.Entry) ([]api.OpenShi
 		return nil, err
 	}
 
-	for _, vers := range version.HiveInstallStreams {
+	for _, vers := range version.AvailableInstallStreams {
 		installerPullSpec := fmt.Sprintf("%s/aro-installer:%s", dstRepo, vers.Version.MinorVersion())
 		digest, ok := installerImageDigests[vers.Version.MinorVersion()]
 		if !ok {

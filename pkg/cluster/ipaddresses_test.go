@@ -274,6 +274,52 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 					Return(nil)
 			},
 		},
+		{
+			name: "private - use enriched worker profile",
+			fixtureChecker: func(fixture *testdatabase.Fixture, checker *testdatabase.Checker, dbClient *cosmosdb.FakeOpenShiftClusterDocumentClient) {
+				doc := &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(key),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: key,
+						Properties: api.OpenShiftClusterProperties{
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: resourceGroupID,
+							},
+							WorkerProfiles: []api.WorkerProfile{
+								{
+									SubnetID: "subnetid",
+								},
+							},
+							WorkerProfilesStatus: []api.WorkerProfile{
+								{
+									SubnetID: "enricheWPsubnetid",
+								},
+							},
+							IngressProfiles: []api.IngressProfile{
+								{
+									Visibility: api.VisibilityPrivate,
+								},
+							},
+							ProvisioningState: api.ProvisioningStateCreating,
+							InfraID:           "infra",
+						},
+					},
+				}
+				fixture.AddOpenShiftClusterDocuments(doc)
+
+				doc.Dequeues = 1
+				doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = "1.2.3.4"
+				checker.AddOpenShiftClusterDocuments(doc)
+			},
+			mocks: func(publicIPAddresses *mock_network.MockPublicIPAddressesClient, dns *mock_dns.MockManager, subnet *mock_subnet.MockManager) {
+				subnet.EXPECT().
+					GetHighestFreeIP(gomock.Any(), "enricheWPsubnetid").
+					Return("1.2.3.4", nil)
+				dns.EXPECT().
+					CreateOrUpdateRouter(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)

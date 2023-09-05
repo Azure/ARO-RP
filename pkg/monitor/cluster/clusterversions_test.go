@@ -42,7 +42,6 @@ func TestEmitClusterVersion(t *testing.T) {
 		wantActualVersion                        string
 		wantDesiredVersion                       string
 		wantProvisionedByResourceProviderVersion string
-		wantAvailableVersion                     string
 		wantAvailableRP                          string
 		wantActualMinorVersion                   string
 	}{
@@ -78,7 +77,6 @@ func TestEmitClusterVersion(t *testing.T) {
 			wantActualVersion:                        "4.5.1",
 			wantDesiredVersion:                       "4.5.3",
 			wantProvisionedByResourceProviderVersion: "",
-			wantAvailableVersion:                     "4.5.39",
 			wantAvailableRP:                          "unknown",
 			wantActualMinorVersion:                   "4.5",
 		},
@@ -159,7 +157,6 @@ func TestEmitClusterVersion(t *testing.T) {
 				"provisionedByResourceProviderVersion": tt.wantProvisionedByResourceProviderVersion,
 				"operatorVersion":                      "test",
 				"resourceProviderVersion":              "unknown",
-				"availableVersion":                     tt.wantAvailableVersion,
 				"availableRP":                          tt.wantAvailableRP,
 				"latestGaMinorVersion":                 version.DefaultInstallStream.Version.MinorVersion(),
 				"actualMinorVersion":                   tt.wantActualMinorVersion,
@@ -170,83 +167,5 @@ func TestEmitClusterVersion(t *testing.T) {
 				t.Fatal(err)
 			}
 		})
-	}
-}
-
-func TestBaselineVersion(t *testing.T) {
-	streams := []*version.Stream{
-		{
-			Version: version.NewVersion(4, 4, 38),
-		},
-		{
-			Version: version.NewVersion(4, 5, 2),
-		},
-		{
-			Version: version.NewVersion(4, 6, 17),
-		},
-	}
-
-	for _, tt := range []struct {
-		cv      configv1.ClusterVersion
-		want    string
-		upgrade bool
-	}{
-		{
-			cv: configv1.ClusterVersion{
-				Status: configv1.ClusterVersionStatus{
-					History: []configv1.UpdateHistory{
-						{
-							State:   configv1.CompletedUpdate,
-							Version: "4.4.2",
-						},
-					},
-				},
-			},
-			want: "4.4.38",
-		},
-		{
-			cv: configv1.ClusterVersion{
-				Status: configv1.ClusterVersionStatus{
-					History: []configv1.UpdateHistory{
-						{
-							State:   configv1.CompletedUpdate,
-							Version: "4.4.40",
-						},
-					},
-				},
-			},
-			want: "",
-		},
-		{
-			cv: configv1.ClusterVersion{
-				Status: configv1.ClusterVersionStatus{
-					History: []configv1.UpdateHistory{
-						{
-							State:   configv1.CompletedUpdate,
-							Version: "4.5.1",
-						},
-					},
-				},
-			},
-			want: "4.5.2",
-		},
-		{
-			cv: configv1.ClusterVersion{
-				Status: configv1.ClusterVersionStatus{
-					History: []configv1.UpdateHistory{
-						{
-							State:   configv1.CompletedUpdate,
-							Version: "4.5.2",
-						},
-					},
-				},
-			},
-			want: "",
-		},
-	} {
-		bVersion := availableVersion(&tt.cv, streams)
-		if bVersion != tt.want {
-			t.Fatalf("Upgrade version does not match. want==%s, got==%s\n", tt.want, bVersion)
-		}
 	}
 }

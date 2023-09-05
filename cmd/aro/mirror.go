@@ -84,8 +84,8 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		srcAcrGeneva := "linuxgeneva-microsoft" + acrDomainSuffix
 		mirrorImages := []string{
 			// https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
-			srcAcrGeneva + "/distroless/genevamdm:2.2023.609.2051-821f47-20230706t0953",
-			srcAcrGeneva + "/distroless/genevamdsd:mariner_20230706.2",
+			srcAcrGeneva + "/distroless/genevamdm:2.2023.721.1630-e50918-20230721t1737",
+			srcAcrGeneva + "/distroless/genevamdsd:mariner_20230727.1",
 		}
 		for _, ref := range mirrorImages {
 			log.Printf("mirroring %s -> %s", ref, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref))
@@ -115,9 +115,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"quay.io/app-sre/managed-upgrade-operator:v0.1.891-3d94c00",
 
 		// https://quay.io/repository/app-sre/hive?tab=tags
-		// Temporary image to evaluate memory leak
-		// TODO: move to official hive image once we fix memory leak
-		"quay.io/bvesel/hive:fec14dcf0-20230623",
+		"quay.io/app-sre/hive:70b666ec89",
 	} {
 		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
 

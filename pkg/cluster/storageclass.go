@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -28,7 +29,10 @@ const (
 // configureDefaultStorageClass replaces default storage class provided by OCP with
 // a new one which uses disk encryption set (if one supplied by a customer).
 func (m *manager) configureDefaultStorageClass(ctx context.Context) error {
-	if m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].DiskEncryptionSetID == "" {
+	workerProfiles, _ := api.GetEnrichedWorkerProfiles(m.doc.OpenShiftCluster.Properties)
+	workerDiskEncryptionSetID := workerProfiles[0].DiskEncryptionSetID
+
+	if workerDiskEncryptionSetID == "" {
 		return nil
 	}
 
@@ -63,7 +67,7 @@ func (m *manager) configureDefaultStorageClass(ctx context.Context) error {
 			return err
 		}
 
-		encryptedSC := newEncryptedStorageClass(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].DiskEncryptionSetID, encryptedStorageClassName, provisioner)
+		encryptedSC := newEncryptedStorageClass(workerDiskEncryptionSetID, encryptedStorageClassName, provisioner)
 		_, err = m.kubernetescli.StorageV1().StorageClasses().Create(ctx, encryptedSC, metav1.CreateOptions{})
 		if err != nil && !kerrors.IsAlreadyExists(err) {
 			return err

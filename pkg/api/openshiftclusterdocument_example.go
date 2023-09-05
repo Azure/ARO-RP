@@ -67,6 +67,29 @@ func ExampleOpenShiftClusterDocument() *OpenShiftClusterDocument {
 						Count:      3,
 					},
 				},
+				WorkerProfilesStatus: []WorkerProfile{
+					{
+						Name:       "worker1",
+						VMSize:     VMSizeStandardD2sV3,
+						DiskSizeGB: 128,
+						SubnetID:   "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker",
+						Count:      1,
+					},
+					{
+						Name:       "worker2",
+						VMSize:     VMSizeStandardD2sV3,
+						DiskSizeGB: 128,
+						SubnetID:   "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker",
+						Count:      1,
+					},
+					{
+						Name:       "worker3",
+						VMSize:     VMSizeStandardD2sV3,
+						DiskSizeGB: 128,
+						SubnetID:   "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker",
+						Count:      1,
+					},
+				},
 				APIServerProfile: APIServerProfile{
 					Visibility: VisibilityPublic,
 					URL:        "https://api.cluster.location.aroapp.io:6443/",

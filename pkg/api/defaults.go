@@ -21,6 +21,12 @@ func SetDefaults(doc *OpenShiftClusterDocument) {
 			}
 		}
 
+		for i, wp := range doc.OpenShiftCluster.Properties.WorkerProfilesStatus {
+			if wp.EncryptionAtHost == "" {
+				doc.OpenShiftCluster.Properties.WorkerProfilesStatus[i].EncryptionAtHost = EncryptionAtHostDisabled
+			}
+		}
+
 		if doc.OpenShiftCluster.Properties.ClusterProfile.FipsValidatedModules == "" {
 			doc.OpenShiftCluster.Properties.ClusterProfile.FipsValidatedModules = FipsValidatedModulesDisabled
 		}
@@ -79,6 +85,7 @@ func DefaultOperatorFlags() OperatorFlags {
 		"aro.banner.enabled":                       flagFalse,
 		"aro.checker.enabled":                      flagTrue,
 		"aro.dnsmasq.enabled":                      flagTrue,
+		"aro.restartdnsmasq.enabled":               flagTrue,
 		"aro.genevalogging.enabled":                flagTrue,
 		"aro.imageconfig.enabled":                  flagTrue,
 		"aro.ingress.enabled":                      flagTrue,
@@ -99,5 +106,6 @@ func DefaultOperatorFlags() OperatorFlags {
 		"rh.srep.muo.managed":                      flagTrue,
 		"aro.guardrails.enabled":                   flagFalse,
 		"aro.guardrails.deploy.managed":            flagFalse,
+		"aro.cloudproviderconfig.enabled":          flagTrue,
 	}
 }

@@ -13,7 +13,7 @@ const (
 	// InspectResponseFalse) it will be used in the output of Inspect().
 	InspectAnnotationAutoremove = "io.podman.annotations.autoremove"
 	// InspectAnnotationVolumesFrom is used by Inspect to identify
-	// containers whose volumes are are being used by this container.
+	// containers whose volumes are being used by this container.
 	// It is expected to be a comma-separated list of container names and/or
 	// IDs.
 	// If an annotation with this key is found in the OCI spec, it will be
@@ -135,6 +135,11 @@ const (
 	// creating a checkpoint image to specify the name of host distribution on
 	// which the checkpoint was created.
 	CheckpointAnnotationDistributionName = "io.podman.annotations.checkpoint.distribution.name"
+
+	// InitContainerType is used by play kube when playing a kube yaml to specify the type
+	// of the init container.
+	InitContainerType = "io.podman.annotations.init.container.type"
+
 	// MaxKubeAnnotation is the max length of annotations allowed by Kubernetes.
 	MaxKubeAnnotation = 63
 )

@@ -31,6 +31,11 @@ func validOpenShiftClusterDocument() *OpenShiftClusterDocument {
 						EncryptionAtHost: EncryptionAtHostDisabled,
 					},
 				},
+				WorkerProfilesStatus: []WorkerProfile{
+					{
+						EncryptionAtHost: EncryptionAtHostDisabled,
+					},
+				},
 				ClusterProfile: ClusterProfile{
 					FipsValidatedModules: FipsValidatedModulesDisabled,
 				},

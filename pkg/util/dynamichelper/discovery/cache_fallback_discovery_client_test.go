@@ -11,10 +11,11 @@ import (
 	"strings"
 	"testing"
 
-	openapi_v2 "github.com/googleapis/gnostic/openapiv2"
+	openapi_v2 "github.com/google/gnostic/openapiv2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kversion "k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/openapi"
 	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
@@ -208,4 +209,9 @@ func (c *fakeDiscoveryClient) ServerVersion() (*kversion.Info, error) {
 
 func (c *fakeDiscoveryClient) OpenAPISchema() (*openapi_v2.Document, error) {
 	return &openapi_v2.Document{}, nil
+}
+
+// https://github.com/kubernetes/client-go/blob/master/discovery/fake/discovery.go#L163C2-L164C1
+func (c *fakeDiscoveryClient) OpenAPIV3() openapi.Client {
+	panic("unimplemented")
 }

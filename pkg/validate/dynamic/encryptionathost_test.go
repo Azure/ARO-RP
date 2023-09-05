@@ -59,6 +59,35 @@ func TestValidateEncryptionAtHost(t *testing.T) {
 			},
 		},
 		{
+			name: "encryption at host enabled with valid VM SKU and enriched worker profile available",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					MasterProfile: api.MasterProfile{
+						EncryptionAtHost: api.EncryptionAtHostEnabled,
+						VMSize:           api.VMSizeStandardD8sV3,
+					},
+					WorkerProfilesStatus: []api.WorkerProfile{{
+						EncryptionAtHost: api.EncryptionAtHostEnabled,
+						VMSize:           api.VMSizeStandardD4asV4,
+					}},
+				},
+			},
+			mocks: func(env *mock_env.MockInterface) {
+				env.EXPECT().VMSku(string(api.VMSizeStandardD8sV3)).
+					Return(&mgmtcompute.ResourceSku{
+						Capabilities: &([]mgmtcompute.ResourceSkuCapabilities{
+							{Name: to.StringPtr("EncryptionAtHostSupported"), Value: to.StringPtr("True")},
+						}),
+					}, nil)
+				env.EXPECT().VMSku(string(api.VMSizeStandardD4asV4)).
+					Return(&mgmtcompute.ResourceSku{
+						Capabilities: &([]mgmtcompute.ResourceSkuCapabilities{
+							{Name: to.StringPtr("EncryptionAtHostSupported"), Value: to.StringPtr("True")},
+						}),
+					}, nil)
+			},
+		},
+		{
 			name: "encryption at host enabled with unsupported master VM SKU",
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{

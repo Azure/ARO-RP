@@ -8,20 +8,20 @@ import (
 	"net/http"
 
 	"github.com/Azure/go-autorest/autorest/to"
-	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
@@ -31,12 +31,11 @@ type KubeActions interface {
 	KubeList(ctx context.Context, groupKind, namespace string) ([]byte, error)
 	KubeCreateOrUpdate(ctx context.Context, obj *unstructured.Unstructured) error
 	KubeDelete(ctx context.Context, groupKind, namespace, name string, force bool, propagationPolicy *metav1.DeletionPropagation) error
-	ResolveGVR(groupKind string) (*schema.GroupVersionResource, error)
+	ResolveGVR(groupKind string, optionalVersion string) (schema.GroupVersionResource, error)
 	CordonNode(ctx context.Context, nodeName string, unschedulable bool) error
 	DrainNode(ctx context.Context, nodeName string) error
 	ApproveCsr(ctx context.Context, csrName string) error
 	ApproveAllCsrs(ctx context.Context) error
-	Upgrade(ctx context.Context, upgradeY bool) error
 	KubeGetPodLogs(ctx context.Context, namespace, name, containerName string) ([]byte, error)
 	// kubeWatch returns a watch object for the provided label selector key
 	KubeWatch(ctx context.Context, o *unstructured.Unstructured, label string) (watch.Interface, error)
@@ -46,11 +45,10 @@ type kubeActions struct {
 	log *logrus.Entry
 	oc  *api.OpenShiftCluster
 
-	gvrResolver dynamichelper.GVRResolver
+	mapper meta.RESTMapper
 
-	dyn       dynamic.Interface
-	configcli configclient.Interface
-	kubecli   kubernetes.Interface
+	dyn     dynamic.Interface
+	kubecli kubernetes.Interface
 }
 
 // NewKubeActions returns a kubeActions
@@ -60,17 +58,12 @@ func NewKubeActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClust
 		return nil, err
 	}
 
-	gvrResolver, err := dynamichelper.NewGVRResolver(log, restConfig)
+	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, apiutil.WithLazyDiscovery)
 	if err != nil {
 		return nil, err
 	}
 
 	dyn, err := dynamic.NewForConfig(restConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	configcli, err := configclient.NewForConfig(restConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -84,11 +77,10 @@ func NewKubeActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClust
 		log: log,
 		oc:  oc,
 
-		gvrResolver: gvrResolver,
+		mapper: mapper,
 
-		dyn:       dyn,
-		configcli: configcli,
-		kubecli:   kubecli,
+		dyn:     dyn,
+		kubecli: kubecli,
 	}, nil
 }
 
@@ -98,17 +90,17 @@ func (k *kubeActions) KubeGetPodLogs(ctx context.Context, namespace, podName, co
 	return k.kubecli.CoreV1().Pods(namespace).GetLogs(podName, &opts).Do(ctx).Raw()
 }
 
-func (k *kubeActions) ResolveGVR(groupKind string) (*schema.GroupVersionResource, error) {
-	return k.gvrResolver.Resolve(groupKind, "")
+func (k *kubeActions) ResolveGVR(groupKind string, optionalVersion string) (schema.GroupVersionResource, error) {
+	return k.mapper.ResourceFor(schema.ParseGroupResource(groupKind).WithVersion(optionalVersion))
 }
 
 func (k *kubeActions) KubeGet(ctx context.Context, groupKind, namespace, name string) ([]byte, error) {
-	gvr, err := k.gvrResolver.Resolve(groupKind, "")
+	gvr, err := k.ResolveGVR(groupKind, "")
 	if err != nil {
 		return nil, err
 	}
 
-	un, err := k.dyn.Resource(*gvr).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	un, err := k.dyn.Resource(gvr).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -117,13 +109,13 @@ func (k *kubeActions) KubeGet(ctx context.Context, groupKind, namespace, name st
 }
 
 func (k *kubeActions) KubeList(ctx context.Context, groupKind, namespace string) ([]byte, error) {
-	gvr, err := k.gvrResolver.Resolve(groupKind, "")
+	gvr, err := k.ResolveGVR(groupKind, "")
 	if err != nil {
 		return nil, err
 	}
 
 	// protect RP memory by not reading in more than 1000 items
-	ul, err := k.dyn.Resource(*gvr).Namespace(namespace).List(ctx, metav1.ListOptions{Limit: 1000})
+	ul, err := k.dyn.Resource(gvr).Namespace(namespace).List(ctx, metav1.ListOptions{Limit: 1000})
 	if err != nil {
 		return nil, err
 	}
@@ -138,22 +130,22 @@ func (k *kubeActions) KubeList(ctx context.Context, groupKind, namespace string)
 }
 
 func (k *kubeActions) KubeCreateOrUpdate(ctx context.Context, o *unstructured.Unstructured) error {
-	gvr, err := k.gvrResolver.Resolve(o.GroupVersionKind().GroupKind().String(), o.GroupVersionKind().Version)
+	gvr, err := k.ResolveGVR(o.GroupVersionKind().GroupKind().String(), o.GroupVersionKind().Version)
 	if err != nil {
 		return err
 	}
 
-	_, err = k.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Update(ctx, o, metav1.UpdateOptions{})
+	_, err = k.dyn.Resource(gvr).Namespace(o.GetNamespace()).Update(ctx, o, metav1.UpdateOptions{})
 	if !kerrors.IsNotFound(err) {
 		return err
 	}
 
-	_, err = k.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Create(ctx, o, metav1.CreateOptions{})
+	_, err = k.dyn.Resource(gvr).Namespace(o.GetNamespace()).Create(ctx, o, metav1.CreateOptions{})
 	return err
 }
 
 func (k *kubeActions) KubeWatch(ctx context.Context, o *unstructured.Unstructured, labelKey string) (watch.Interface, error) {
-	gvr, err := k.gvrResolver.Resolve(o.GroupVersionKind().GroupKind().String(), o.GroupVersionKind().Version)
+	gvr, err := k.ResolveGVR(o.GroupVersionKind().GroupKind().String(), o.GroupVersionKind().Version)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +155,7 @@ func (k *kubeActions) KubeWatch(ctx context.Context, o *unstructured.Unstructure
 		LabelSelector: o.GetLabels()[labelKey],
 	}
 
-	w, err := k.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Watch(ctx, listOpts)
+	w, err := k.dyn.Resource(gvr).Namespace(o.GetNamespace()).Watch(ctx, listOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +164,7 @@ func (k *kubeActions) KubeWatch(ctx context.Context, o *unstructured.Unstructure
 }
 
 func (k *kubeActions) KubeDelete(ctx context.Context, groupKind, namespace, name string, force bool, propagationPolicy *metav1.DeletionPropagation) error {
-	gvr, err := k.gvrResolver.Resolve(groupKind, "")
+	gvr, err := k.ResolveGVR(groupKind, "")
 	if err != nil {
 		return err
 	}
@@ -186,5 +178,5 @@ func (k *kubeActions) KubeDelete(ctx context.Context, groupKind, namespace, name
 		resourceDeleteOptions.PropagationPolicy = propagationPolicy
 	}
 
-	return k.dyn.Resource(*gvr).Namespace(namespace).Delete(ctx, name, resourceDeleteOptions)
+	return k.dyn.Resource(gvr).Namespace(namespace).Delete(ctx, name, resourceDeleteOptions)
 }
