@@ -107,7 +107,10 @@ func (m *manager) createOrUpdateRouterIPEarly(ctx context.Context) error {
 		// with this.
 		// https://docs.microsoft.com/en-us/azure/virtual-network/private-ip-addresses#allocation-method
 		var err error
-		ipAddress, err = m.subnet.GetHighestFreeIP(ctx, m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID)
+
+		workerProfiles, _ := api.GetEnrichedWorkerProfiles(m.doc.OpenShiftCluster.Properties)
+		workerSubnetId := workerProfiles[0].SubnetID
+		ipAddress, err = m.subnet.GetHighestFreeIP(ctx, workerSubnetId)
 		if err != nil {
 			return err
 		}

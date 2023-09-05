@@ -633,6 +633,9 @@ class OpenShiftCluster(TrackedResource):
     :vartype master_profile: ~azure.mgmt.redhatopenshift.v2023_09_04.models.MasterProfile
     :ivar worker_profiles: The cluster worker profiles.
     :vartype worker_profiles: list[~azure.mgmt.redhatopenshift.v2023_09_04.models.WorkerProfile]
+    :ivar worker_profiles_status: The cluster worker profiles status.
+    :vartype worker_profiles_status:
+     list[~azure.mgmt.redhatopenshift.v2023_09_04.models.WorkerProfile]
     :ivar apiserver_profile: The cluster API server profile.
     :vartype apiserver_profile: ~azure.mgmt.redhatopenshift.v2023_09_04.models.APIServerProfile
     :ivar ingress_profiles: The cluster ingress profiles.
@@ -645,6 +648,7 @@ class OpenShiftCluster(TrackedResource):
         'type': {'readonly': True},
         'system_data': {'readonly': True},
         'location': {'required': True},
+        'worker_profiles_status': {'readonly': True},
     }
 
     _attribute_map = {
@@ -661,6 +665,7 @@ class OpenShiftCluster(TrackedResource):
         'network_profile': {'key': 'properties.networkProfile', 'type': 'NetworkProfile'},
         'master_profile': {'key': 'properties.masterProfile', 'type': 'MasterProfile'},
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
+        'worker_profiles_status': {'key': 'properties.workerProfilesStatus', 'type': '[WorkerProfile]'},
         'apiserver_profile': {'key': 'properties.apiserverProfile', 'type': 'APIServerProfile'},
         'ingress_profiles': {'key': 'properties.ingressProfiles', 'type': '[IngressProfile]'},
     }
@@ -705,6 +710,7 @@ class OpenShiftCluster(TrackedResource):
         self.network_profile = kwargs.get('network_profile', None)
         self.master_profile = kwargs.get('master_profile', None)
         self.worker_profiles = kwargs.get('worker_profiles', None)
+        self.worker_profiles_status = None
         self.apiserver_profile = kwargs.get('apiserver_profile', None)
         self.ingress_profiles = kwargs.get('ingress_profiles', None)
 
@@ -816,6 +822,9 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
     :vartype master_profile: ~azure.mgmt.redhatopenshift.v2023_09_04.models.MasterProfile
     :ivar worker_profiles: The cluster worker profiles.
     :vartype worker_profiles: list[~azure.mgmt.redhatopenshift.v2023_09_04.models.WorkerProfile]
+    :ivar worker_profiles_status: The cluster worker profiles status.
+    :vartype worker_profiles_status:
+     list[~azure.mgmt.redhatopenshift.v2023_09_04.models.WorkerProfile]
     :ivar apiserver_profile: The cluster API server profile.
     :vartype apiserver_profile: ~azure.mgmt.redhatopenshift.v2023_09_04.models.APIServerProfile
     :ivar ingress_profiles: The cluster ingress profiles.
@@ -824,6 +833,7 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
 
     _validation = {
         'system_data': {'readonly': True},
+        'worker_profiles_status': {'readonly': True},
     }
 
     _attribute_map = {
@@ -836,6 +846,7 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         'network_profile': {'key': 'properties.networkProfile', 'type': 'NetworkProfile'},
         'master_profile': {'key': 'properties.masterProfile', 'type': 'MasterProfile'},
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
+        'worker_profiles_status': {'key': 'properties.workerProfilesStatus', 'type': '[WorkerProfile]'},
         'apiserver_profile': {'key': 'properties.apiserverProfile', 'type': 'APIServerProfile'},
         'ingress_profiles': {'key': 'properties.ingressProfiles', 'type': '[IngressProfile]'},
     }
@@ -880,6 +891,7 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         self.network_profile = kwargs.get('network_profile', None)
         self.master_profile = kwargs.get('master_profile', None)
         self.worker_profiles = kwargs.get('worker_profiles', None)
+        self.worker_profiles_status = None
         self.apiserver_profile = kwargs.get('apiserver_profile', None)
         self.ingress_profiles = kwargs.get('ingress_profiles', None)
 

@@ -31,6 +31,7 @@ func TestValidateVMSku(t *testing.T) {
 		availableSku2         string
 		restrictedSku         string
 		resourceSkusClientErr error
+		wpStatus              bool
 		wantErr               string
 	}{
 		{
@@ -39,6 +40,14 @@ func TestValidateVMSku(t *testing.T) {
 			workerProfile2Sku: "Standard_D4s_v2",
 			masterProfileSku:  "Standard_D4s_v2",
 			availableSku:      "Standard_D4s_v2",
+		},
+		{
+			name:              "worker profile is enriched and skus are valid",
+			workerProfile1Sku: "Standard_D4s_v2",
+			workerProfile2Sku: "Standard_D4s_v2",
+			masterProfileSku:  "Standard_D4s_v2",
+			availableSku:      "Standard_D4s_v2",
+			wpStatus:          true,
 		},
 		{
 			name:              "worker and master skus are distinct, both valid",
@@ -201,6 +210,18 @@ func TestValidateVMSku(t *testing.T) {
 					Capabilities: &[]mgmtcompute.ResourceSkuCapabilities{},
 					ResourceType: to.StringPtr("virtualMachines"),
 				},
+			}
+
+			if tt.wpStatus {
+				oc.Properties.WorkerProfiles = nil
+				oc.Properties.WorkerProfilesStatus = []api.WorkerProfile{
+					{
+						VMSize: api.VMSize(tt.workerProfile1Sku),
+					},
+					{
+						VMSize: api.VMSize(tt.workerProfile2Sku),
+					},
+				}
 			}
 
 			resourceSkusClient := mock_compute.NewMockResourceSkusClient(controller)
