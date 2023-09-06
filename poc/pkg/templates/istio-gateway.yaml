@@ -9,6 +9,6 @@ spec:
   - port:
       number: {{ .Values.istio.gateway.port }}
       name: http
-      protocol: HTTPS
+      protocol: HTTP
     hosts:
     - {{ .Values.istio.gateway.host }}
