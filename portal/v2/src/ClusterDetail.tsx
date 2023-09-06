@@ -11,13 +11,12 @@ import {
   Icon,
   IconButton,
   IIconStyles,
-  TooltipHost,
 } from "@fluentui/react"
 import { AxiosResponse } from "axios"
 import { fetchClusterInfo } from "./Request"
 import { ICluster, headerStyles } from "./App"
 import { Nav, INavLink, INavStyles } from "@fluentui/react/lib/Nav"
-import { KubeconfigButton } from "./Kubeconfig"
+import { ToolIcons } from "./ToolIcons"
 import { ClusterDetailComponent, MemoisedClusterDetailListComponent } from "./ClusterDetailList"
 import React from "react"
 
@@ -99,8 +98,6 @@ export function ClusterDetailPanel(props: {
       justifyContent: "flex-start",
     },
   })
-
-  const _sshModal = props.sshBox
 
   const errorBar = (): any => {
     return (
@@ -188,7 +185,8 @@ export function ClusterDetailPanel(props: {
 
   const _dismissPanel = () => {
     dismissPanel()
-    props.onClose() // useEffect?
+    props.sshBox.current.hidePopup()
+    props.onClose()
     setData([])
     setFetching("")
     setDataLoaded(false)
@@ -266,21 +264,7 @@ export function ClusterDetailPanel(props: {
       },
     })
   }
-
-  const _onCopyResourceID = (item: any) => {
-    navigator.clipboard.writeText(item.resourceId)
-  }
-
-  const _onSSHClick = (item: any) => {
-    _dismissPanel()
-    const modal = _sshModal
-    if (modal && modal.current) {
-      modal.current.LoadSSH(item.resourceId)
-    }
-  }
-
-  const version = Number(props.currentCluster?.version) !== undefined ? Number(props.currentCluster?.version) : 0
-
+ 
   const onRenderHeader = (): ReactElement => {
     return (
       <>
@@ -299,31 +283,8 @@ export function ClusterDetailPanel(props: {
           </Stack.Item>
           <Stack.Item>
             <div className={headerStyles.titleText}>{props.currentCluster?.name}</div>
-            <div className={headerStyles.subtitleText}>Cluster</div>
-            <TooltipHost content={`Copy Resource ID`}>
-              <IconButton
-                iconProps={{ iconName: "Copy" }}
-                aria-label="Copy Resource ID"
-                onClick={_onCopyResourceID.bind({},props.currentCluster)}
-              />
-            </TooltipHost>
-            <TooltipHost content={`Prometheus`}>
-              <IconButton
-                iconProps={{ iconName: "BIDashboard" }}
-                aria-label="Prometheus"
-                href={
-                  props.currentCluster?.resourceId + (+(version) >= 4.11 ? `/prometheus` : `/prometheus/graph`)
-                }
-              />
-            </TooltipHost>
-            <TooltipHost content={`SSH`}>
-              <IconButton
-                iconProps={{ iconName: "CommandPrompt" }}
-                aria-label="SSH"
-                onClick={() => _onSSHClick(props.currentCluster)}
-              />
-            </TooltipHost>
-            <KubeconfigButton resourceId={props.currentCluster? props.currentCluster?.resourceId:""} csrfToken={props.csrfToken} />
+            <div className={headerStyles.subtitleText}>Cluster</div>                        
+            <ToolIcons resourceId={props.currentCluster? props.currentCluster?.resourceId:""} version={Number(props.currentCluster?.version) !== undefined ? Number(props.currentCluster?.version) : 0} csrfToken={props.csrfToken} sshBox={props.sshBox}/>
           </Stack.Item>
         </Stack>
       </>
