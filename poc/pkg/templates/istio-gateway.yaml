@@ -11,4 +11,4 @@ spec:
       name: http
       protocol: HTTP
     hosts:
-    - {{ .Values.istio.gateway.host }}
+    - {{ .Values.service.name }}

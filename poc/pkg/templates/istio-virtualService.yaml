@@ -4,7 +4,7 @@ metadata:
   name: {{ .Values.istio.virtualService.name }}
 spec:
   hosts:
-  - {{ .Values.istio.gateway.host }}
+  - {{ .Values.service.name }}
   gateways:
   - {{ .Values.istio.gateway.name }}
   http:
@@ -13,6 +13,6 @@ spec:
         prefix: /
     route:
     - destination:
-        host: {{ .Values.istio.virtualService.service }}
+        host: {{ .Values.service.name }}
         port:
-          number: {{ .Values.istio.virtualService.port }}
+          number: {{ .Values.service.port }}
