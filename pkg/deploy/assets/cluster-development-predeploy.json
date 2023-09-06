@@ -58,7 +58,9 @@
         },
         {
             "properties": {
-                "addressPrefix": "[parameters('masterAddressPrefix')]",
+                "addressPrefixes": [
+                    "[parameters('masterAddressPrefix')]"
+                ],
                 "routeTable": {
                     "id": "[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]",
                     "tags": null
