@@ -247,11 +247,15 @@ func (n *JsonParseNode) GetCollectionOfObjectValues(ctor absser.ParsableFactory)
 	}
 	result := make([]absser.Parsable, len(nodes))
 	for i, v := range nodes {
-		val, err := (*v).GetObjectValue(ctor)
-		if err != nil {
-			return nil, err
+		if v != nil {
+			val, err := (*v).GetObjectValue(ctor)
+			if err != nil {
+				return nil, err
+			}
+			result[i] = val
+		} else {
+			result[i] = nil
 		}
-		result[i] = val
 	}
 	return result, nil
 }
@@ -270,11 +274,15 @@ func (n *JsonParseNode) GetCollectionOfPrimitiveValues(targetType string) ([]int
 	}
 	result := make([]interface{}, len(nodes))
 	for i, v := range nodes {
-		val, err := v.getPrimitiveValue(targetType)
-		if err != nil {
-			return nil, err
+		if v != nil {
+			val, err := v.getPrimitiveValue(targetType)
+			if err != nil {
+				return nil, err
+			}
+			result[i] = val
+		} else {
+			result[i] = nil
 		}
-		result[i] = val
 	}
 	return result, nil
 }
@@ -327,11 +335,15 @@ func (n *JsonParseNode) GetCollectionOfEnumValues(parser absser.EnumFactory) ([]
 	}
 	result := make([]interface{}, len(nodes))
 	for i, v := range nodes {
-		val, err := v.GetEnumValue(parser)
-		if err != nil {
-			return nil, err
+		if v != nil {
+			val, err := v.GetEnumValue(parser)
+			if err != nil {
+				return nil, err
+			}
+			result[i] = val
+		} else {
+			result[i] = nil
 		}
-		result[i] = val
 	}
 	return result, nil
 }
@@ -428,6 +440,11 @@ func (n *JsonParseNode) GetTimeValue() (*time.Time, error) {
 	}
 	if v == nil {
 		return nil, nil
+	}
+
+	// if string does not have timezone information, add local timezone
+	if len(*v) == 19 {
+		*v = *v + time.Now().Format("-07:00")
 	}
 	parsed, err := time.Parse(time.RFC3339, *v)
 	return &parsed, err

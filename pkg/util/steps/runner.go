@@ -11,8 +11,9 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	msgraph_errors "github.com/microsoftgraph/msgraph-sdk-go/models/odataerrors"
 	"github.com/sirupsen/logrus"
+
+	msgraph_errors "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
 )
 
 // FriendlyName returns a "friendly" stringified name of the given func.
@@ -54,7 +55,7 @@ func Run(ctx context.Context, log *logrus.Entry, pollInterval time.Duration, ste
 		if err != nil {
 			log.Errorf("step %s encountered error: %s", step, err.Error())
 			if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
-				spew.Fdump(log.Writer(), oDataError.GetError())
+				spew.Fdump(log.Writer(), oDataError.GetErrorEscaped())
 			}
 			return nil, err
 		}

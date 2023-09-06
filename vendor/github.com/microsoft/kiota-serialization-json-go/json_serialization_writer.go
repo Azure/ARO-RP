@@ -264,7 +264,10 @@ func (w *JsonSerializationWriter) WriteObjectValue(key string, item absser.Parsa
 			w.writePropertyName(key)
 		}
 		abstractions.InvokeParsableAction(w.GetOnBeforeSerialization(), item)
-		w.writeObjectStart()
+		_, isComposedTypeWrapper := item.(absser.ComposedTypeWrapper)
+		if !isComposedTypeWrapper {
+			w.writeObjectStart()
+		}
 		if item != nil {
 			err := abstractions.InvokeParsableWriter(w.GetOnStartObjectSerialization(), item, w)
 			if err != nil {
@@ -291,7 +294,9 @@ func (w *JsonSerializationWriter) WriteObjectValue(key string, item absser.Parsa
 			abstractions.InvokeParsableAction(w.GetOnAfterObjectSerialization(), additionalValue)
 		}
 
-		w.writeObjectEnd()
+		if !isComposedTypeWrapper {
+			w.writeObjectEnd()
+		}
 		if key != "" {
 			w.writePropertySeparator()
 		}

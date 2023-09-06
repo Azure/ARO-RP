@@ -42,3 +42,4 @@ megalinter-reports/
 /cluster
 /jq
 /portalauth
+.kiota.log
