@@ -100,19 +100,38 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	for _, ref := range []string{
+
+		// https://mcr.microsoft.com/en-us/product/cbl-mariner/base/azure-cli/about
+		"mcr.microsoft.com/cbl-mariner/base/azure-cli:2",
+
+		// https://catalog.redhat.com/software/containers/rhel8/support-tools/5ba3eaf9bed8bd6ee819b78b
+		// https://catalog.redhat.com/software/containers/rhel9/support-tools/615be213075b022acc111bf9
 		"registry.redhat.io/rhel8/support-tools:latest",
+		"registry.redhat.io/rhel9/support-tools:latest",
+
+		// https://catalog.redhat.com/software/containers/openshift4/ose-tools-rhel8/5f748d3399cc5b9e7c1a8747
+		"registry.redhat.io/openshift4/ose-tools-rhel8:v4.10",
+		"registry.redhat.io/openshift4/ose-tools-rhel8:v4.11",
+		"registry.redhat.io/openshift4/ose-tools-rhel8:v4.12",
+		"registry.redhat.io/openshift4/ose-tools-rhel8:v4.13",
 		"registry.redhat.io/openshift4/ose-tools-rhel8:latest",
+
+		// https://catalog.redhat.com/software/containers/ubi8/ubi-minimal/5c359a62bed8bd75a2c3fba8
+		// https://catalog.redhat.com/software/containers/ubi9/ubi-minimal/615bd9b4075b022acc111bf5
 		"registry.access.redhat.com/ubi8/ubi-minimal:latest",
-		"mcr.microsoft.com/azure-cli:latest",
+		"registry.access.redhat.com/ubi9/ubi-minimal:latest",
 
 		// https://catalog.redhat.com/software/containers/ubi8/nodejs-18/6278e5c078709f5277f26998
 		"registry.access.redhat.com/ubi8/nodejs-18:latest",
 
 		// https://catalog.redhat.com/software/containers/ubi8/go-toolset/5ce8713aac3db925c03774d1
+		// https://catalog.redhat.com/software/containers/ubi9/go-toolset/61e5c00b4ec9945c18787690
 		"registry.access.redhat.com/ubi8/go-toolset:1.18.10",
+		"registry.access.redhat.com/ubi8/go-toolset:1.19.10",
 
 		// https://quay.io/repository/app-sre/managed-upgrade-operator?tab=tags
-		"quay.io/app-sre/managed-upgrade-operator:v0.1.891-3d94c00",
+		// https://gitlab.cee.redhat.com/service/app-interface/-/blob/master/data/services/osd-operators/cicd/saas/saas-managed-upgrade-operator.yaml?ref_type=heads
+		"quay.io/app-sre/managed-upgrade-operator:v0.1.952-44b631a",
 
 		// https://quay.io/repository/app-sre/hive?tab=tags
 		"quay.io/app-sre/hive:70b666ec89",
