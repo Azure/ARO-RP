@@ -154,7 +154,16 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 					case "#/definitions/SecretList":
 						body = g.exampleSecretListResponse()
 					case "#/definitions/OpenShiftCluster":
-						body = g.exampleOpenShiftClusterResponse()
+						if g.workerProfilesStatus {
+							switch op {
+							case pi.Get:
+								body = g.exampleOpenShiftClusterGetResponse()
+							case pi.Put, pi.Patch:
+								body = g.exampleOpenShiftClusterPutOrPatchResponse()
+							}
+						} else {
+							body = g.exampleOpenShiftClusterResponse()
+						}
 					case "#/definitions/OpenShiftClusterCredentials":
 						body = g.exampleOpenShiftClusterCredentialsResponse()
 					case "#/definitions/OpenShiftClusterAdminKubeconfig":

@@ -1,7 +1,14 @@
 import { useState, useEffect, useRef } from "react"
 import { AxiosResponse } from "axios"
 import { fetchMachineSets } from "../Request"
-import { IMessageBarStyles, MessageBar, MessageBarType, Stack } from "@fluentui/react"
+import {
+  IMessageBarStyles,
+  MessageBar,
+  MessageBarType,
+  Stack,
+  CommandBar,
+  ICommandBarItemProps
+} from "@fluentui/react"
 import { machineSetsKey } from "../ClusterDetail"
 import { MachineSetsListComponent } from "./MachineSetsList"
 import { WrapperProps } from "../ClusterDetailList"
@@ -60,7 +67,7 @@ export function MachineSetsWrapper(props: WrapperProps) {
     setData(newData)
     const machineSetList: IMachineSet[] = []
     if (state && state.current) {
-      newData.machines.forEach(
+      newData.machines?.forEach(
         (element: {
           name: string
           type: string
@@ -95,6 +102,25 @@ export function MachineSetsWrapper(props: WrapperProps) {
     }
   }
 
+  const controlStyles = {
+    root: {
+      paddingLeft: 0,
+      float: "right",
+    },
+  }
+  
+  const _items: ICommandBarItemProps[] = [
+    {
+      key: "refresh",
+      text: "Refresh",
+      iconProps: { iconName: "Refresh" },
+      onClick: () => {
+        updateData([])
+        setFetching("")
+      },
+    },
+  ]
+
   useEffect(() => {
     const onData = (result: AxiosResponse | null) => {
       if (result?.status === 200) {
@@ -120,6 +146,11 @@ export function MachineSetsWrapper(props: WrapperProps) {
     <Stack>
       <Stack.Item grow>{error && errorBar()}</Stack.Item>
       <Stack>
+        <CommandBar
+          items={_items}
+          ariaLabel="Refresh"
+          styles={controlStyles}
+        />
         <MachineSetsListComponent
           machineSets={data!}
           ref={state}

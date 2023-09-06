@@ -1,0 +1,31 @@
+{
+  "descriptionHash": "375409869FC06AED23DD1BF5BE90B682DD45E3215C6CC1AFBE7C3DC9EFC844B9300C2CB898E5A7FA5A753E429769E52BC078C62DDAE536C9C1AD7954FE8308D2",
+  "descriptionLocation": "/home/hawkowl/code/ARO-RP/hack/graphsdk/openapi.yaml",
+  "lockFileVersion": "1.0.0",
+  "kiotaVersion": "1.5.1",
+  "clientClassName": "GraphBaseServiceClient",
+  "clientNamespaceName": "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk",
+  "language": "Go",
+  "usesBackingStore": true,
+  "includeAdditionalData": false,
+  "serializers": [
+    "Microsoft.Kiota.Serialization.Json.JsonSerializationWriterFactory",
+    "Microsoft.Kiota.Serialization.Text.TextSerializationWriterFactory",
+    "Microsoft.Kiota.Serialization.Form.FormSerializationWriterFactory",
+    "Microsoft.Kiota.Serialization.Multipart.MultipartSerializationWriterFactory"
+  ],
+  "deserializers": [
+    "Microsoft.Kiota.Serialization.Json.JsonParseNodeFactory",
+    "Microsoft.Kiota.Serialization.Text.TextParseNodeFactory",
+    "Microsoft.Kiota.Serialization.Form.FormParseNodeFactory"
+  ],
+  "structuredMimeTypes": [
+    "application/json",
+    "text/plain",
+    "application/x-www-form-urlencoded",
+    "multipart/form-data"
+  ],
+  "includePatterns": [],
+  "excludePatterns": [],
+  "disabledValidationRules": []
+}

@@ -58,8 +58,10 @@ func validateQuota(ctx context.Context, oc *api.OpenShiftCluster, spNetworkUsage
 	if err != nil {
 		return err
 	}
+
+	workerProfiles, _ := api.GetEnrichedWorkerProfiles(oc.Properties)
 	//worker node resource calculation
-	for _, w := range oc.Properties.WorkerProfiles {
+	for _, w := range workerProfiles {
 		err := addRequiredResources(requiredResources, w.VMSize, w.Count)
 		if err != nil {
 			return err

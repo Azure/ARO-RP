@@ -122,10 +122,12 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		ID:   dv.oc.Properties.MasterProfile.SubnetID,
 		Path: "properties.masterProfile.subnetId",
 	}}
-	for i, wp := range dv.oc.Properties.WorkerProfiles {
+
+	workerProfiles, propertyName := api.GetEnrichedWorkerProfiles(dv.oc.Properties)
+	for i, wp := range workerProfiles {
 		subnets = append(subnets, dynamic.Subnet{
 			ID:   wp.SubnetID,
-			Path: fmt.Sprintf("properties.workerProfiles[%d].subnetId", i),
+			Path: fmt.Sprintf("properties.%s[%d].subnetId", propertyName, i),
 		})
 	}
 
@@ -254,6 +256,11 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	}
 
 	err = spDynamic.ValidateEncryptionAtHost(ctx, dv.oc)
+	if err != nil {
+		return err
+	}
+
+	err = spDynamic.ValidateLoadBalancerProfile(ctx, dv.oc)
 	if err != nil {
 		return err
 	}

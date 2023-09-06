@@ -104,6 +104,9 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *Ope
 	if err := sv.validateAPIServerProfile(path+".apiserverProfile", &p.APIServerProfile); err != nil {
 		return err
 	}
+	if len(p.WorkerProfilesStatus) != 0 {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".workerProfilesStatus", "Worker Profile Status must be set to nil.")
+	}
 
 	if isCreate {
 		if len(p.WorkerProfiles) != 1 {

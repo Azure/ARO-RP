@@ -2097,6 +2097,15 @@
           },
           "x-ms-identifiers": []
         },
+        "workerProfilesStatus": {
+          "description": "The cluster worker profiles status.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WorkerProfile"
+          },
+          "readOnly": true,
+          "x-ms-identifiers": []
+        },
         "apiserverProfile": {
           "$ref": "#/definitions/APIServerProfile",
           "description": "The cluster API server profile."
@@ -2234,11 +2243,7 @@
         "Disabled",
         "Enabled"
       ],
-      "type": "string",
-      "x-ms-enum": {
-        "name": "PreconfiguredNSG",
-        "modelAsString": true
-      }
+      "type": "string"
     },
     "ProvisioningState": {
       "description": "ProvisioningState represents a provisioning state.",

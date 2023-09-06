@@ -202,20 +202,6 @@ func (mr *MockKubeActionsMockRecorder) ResolveGVR(arg0, arg1 interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveGVR", reflect.TypeOf((*MockKubeActions)(nil).ResolveGVR), arg0, arg1)
 }
 
-// Upgrade mocks base method.
-func (m *MockKubeActions) Upgrade(arg0 context.Context, arg1 bool) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Upgrade", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Upgrade indicates an expected call of Upgrade.
-func (mr *MockKubeActionsMockRecorder) Upgrade(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upgrade", reflect.TypeOf((*MockKubeActions)(nil).Upgrade), arg0, arg1)
-}
-
 // MockAzureActions is a mock of AzureActions interface.
 type MockAzureActions struct {
 	ctrl     *gomock.Controller

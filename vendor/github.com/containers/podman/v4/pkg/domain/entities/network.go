@@ -22,7 +22,7 @@ type NetworkReloadOptions struct {
 
 // NetworkReloadReport describes the results of reloading a container network.
 type NetworkReloadReport struct {
-	// nolint:stylecheck,revive
+	//nolint:stylecheck,revive
 	Id  string
 	Err error
 }
@@ -41,17 +41,26 @@ type NetworkRmReport struct {
 
 // NetworkCreateOptions describes options to create a network
 type NetworkCreateOptions struct {
-	DisableDNS bool
-	Driver     string
-	Gateways   []net.IP
-	Internal   bool
-	Labels     map[string]string
-	MacVLAN    string
-	Ranges     []string
-	Subnets    []string
-	IPv6       bool
+	DisableDNS        bool
+	Driver            string
+	Gateways          []net.IP
+	Internal          bool
+	Labels            map[string]string
+	MacVLAN           string
+	NetworkDNSServers []string
+	Ranges            []string
+	Subnets           []string
+	IPv6              bool
 	// Mapping of driver options and values.
 	Options map[string]string
+	// IgnoreIfExists if true, do not fail if the network already exists
+	IgnoreIfExists bool
+}
+
+// NetworkUpdateOptions describes options to update a network
+type NetworkUpdateOptions struct {
+	AddDNSServers    []string `json:"adddnsservers"`
+	RemoveDNSServers []string `json:"removednsservers"`
 }
 
 // NetworkCreateReport describes a created network for the cli
@@ -81,8 +90,7 @@ type NetworkPruneReport struct {
 	Error error
 }
 
-// NetworkPruneOptions describes options for pruning
-// unused cni networks
+// NetworkPruneOptions describes options for pruning unused networks
 type NetworkPruneOptions struct {
 	Filters map[string][]string
 }

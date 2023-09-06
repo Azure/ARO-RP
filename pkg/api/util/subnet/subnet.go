@@ -33,7 +33,9 @@ func NetworkSecurityGroupID(oc *api.OpenShiftCluster, subnetID string) (string, 
 		infraID = "aro"
 	}
 	isWorkerSubnet := false
-	for _, s := range oc.Properties.WorkerProfiles {
+	workerProfiles, _ := api.GetEnrichedWorkerProfiles(oc.Properties)
+
+	for _, s := range workerProfiles {
 		if strings.EqualFold(subnetID, s.SubnetID) {
 			isWorkerSubnet = true
 			break

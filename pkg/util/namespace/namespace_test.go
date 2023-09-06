@@ -64,6 +64,10 @@ func TestIsOpenShiftNamespace(t *testing.T) {
 			namespace: "openshift-cluster-version",
 			want:      true,
 		},
+		{
+			namespace: "openshift-azure-guardrails",
+			want:      true,
+		},
 	} {
 		t.Run(tt.namespace, func(t *testing.T) {
 			got := IsOpenShiftNamespace(tt.namespace)

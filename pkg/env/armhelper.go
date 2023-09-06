@@ -14,7 +14,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/jongio/azidext/go/azidext"
-	msgraph "github.com/microsoftgraph/msgraph-sdk-go"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
@@ -64,7 +63,7 @@ type armHelper struct {
 	log *logrus.Entry
 	env Interface
 
-	fpGraphClient   *msgraph.GraphServiceClient
+	fpGraphClient   *utilgraph.GraphServiceClient
 	roleassignments authorization.RoleAssignmentsClient
 }
 

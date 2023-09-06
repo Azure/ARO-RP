@@ -4,7 +4,18 @@ import "github.com/containers/image/v5/types"
 
 // ManifestCreateOptions provides model for creating manifest
 type ManifestCreateOptions struct {
+	// True when adding lists to include all images
 	All bool `schema:"all"`
+	// Amend an extant list if there's already one with the desired name
+	Amend bool `schema:"amend"`
+	// Should TLS registry certificate be verified?
+	SkipTLSVerify types.OptionalBool `json:"-" schema:"-"`
+}
+
+// ManifestInspectOptions provides model for inspecting manifest
+type ManifestInspectOptions struct {
+	// Should TLS registry certificate be verified?
+	SkipTLSVerify types.OptionalBool `json:"-" schema:"-"`
 }
 
 // ManifestAddOptions provides model for adding digests to manifest list
@@ -32,6 +43,8 @@ type ManifestAddOptions struct {
 type ManifestAnnotateOptions struct {
 	// Annotation to add to manifest list
 	Annotation []string `json:"annotation" schema:"annotation"`
+	// Annotations to add to manifest list by a map which is prefferred over Annotation
+	Annotations map[string]string `json:"annotations" schema:"annotations"`
 	// Arch overrides the architecture for the image
 	Arch string `json:"arch" schema:"arch"`
 	// Feature list for the image
@@ -61,10 +74,37 @@ type ManifestModifyOptions struct {
 	ManifestRemoveOptions
 }
 
+// ManifestPushReport provides the model for the pushed manifest
+//
+// swagger:model
+type ManifestPushReport struct {
+	// ID of the pushed manifest
+	ID string `json:"Id"`
+	// Stream used to provide push progress
+	Stream string `json:"stream,omitempty"`
+	// Error contains text of errors from pushing
+	Error string `json:"error,omitempty"`
+}
+
 // ManifestRemoveOptions provides the model for removing digests from a manifest
 //
 // swagger:model
 type ManifestRemoveOptions struct {
+}
+
+// ManifestRemoveReport provides the model for the removed manifest
+//
+// swagger:model
+type ManifestRemoveReport struct {
+	// Deleted manifest list.
+	Deleted []string `json:",omitempty"`
+	// Untagged images. Can be longer than Deleted.
+	Untagged []string `json:",omitempty"`
+	// Errors associated with operation
+	Errors []string `json:",omitempty"`
+	// ExitCode describes the exit codes as described in the `podman rmi`
+	// man page.
+	ExitCode int
 }
 
 // ManifestModifyReport provides the model for removed digests and changed manifest

@@ -126,7 +126,11 @@ type OpenShiftClusterProperties struct {
 
 	MasterProfile MasterProfile `json:"masterProfile,omitempty"`
 
+	// WorkerProfiles is used to store the worker profile data that was sent in the api request
 	WorkerProfiles []WorkerProfile `json:"workerProfiles,omitempty"`
+
+	// WorkerProfilesStatus is used to store the enriched worker profile data
+	WorkerProfilesStatus []WorkerProfile `json:"workerProfilesStatus,omitempty"`
 
 	APIServerProfile APIServerProfile `json:"apiserverProfile,omitempty"`
 
@@ -630,6 +634,15 @@ type WorkerProfile struct {
 	Count               int              `json:"count,omitempty"`
 	EncryptionAtHost    EncryptionAtHost `json:"encryptionAtHost,omitempty"`
 	DiskEncryptionSetID string           `json:"diskEncryptionSetId,omitempty"`
+}
+
+// GetEnrichedWorkerProfiles returns WorkerProfilesStatus if not nil, otherwise WorkerProfiles
+// with their respective json property name
+func GetEnrichedWorkerProfiles(ocp OpenShiftClusterProperties) ([]WorkerProfile, string) {
+	if ocp.WorkerProfilesStatus != nil {
+		return ocp.WorkerProfilesStatus, "workerProfilesStatus"
+	}
+	return ocp.WorkerProfiles, "workerProfiles"
 }
 
 // APIServerProfile represents an API server profile

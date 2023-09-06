@@ -6,15 +6,12 @@ package deploy
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"net/url"
 	"time"
 
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/Azure/go-autorest/autorest/date"
-
-	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 // SaveVersion for current location in shared storage account for environment
@@ -45,17 +42,5 @@ func (d *deployer) SaveVersion(ctx context.Context) error {
 	// save version of RP which is deployed in this location
 	containerRef := blobClient.GetContainerReference("rpversion")
 	blobRef := containerRef.GetBlobReference(d.config.Location)
-	err = blobRef.CreateBlockBlobFromReader(bytes.NewReader([]byte(d.version)), nil)
-	if err != nil {
-		return err
-	}
-
-	// save OCP upgrade streams which are used by RP in this location
-	containerRef = blobClient.GetContainerReference("ocpversions")
-	blobRef = containerRef.GetBlobReference(d.config.Location)
-	streams, err := json.Marshal(version.UpgradeStreams)
-	if err != nil {
-		return err
-	}
-	return blobRef.CreateBlockBlobFromReader(bytes.NewReader(streams), nil)
+	return blobRef.CreateBlockBlobFromReader(bytes.NewReader([]byte(d.version)), nil)
 }

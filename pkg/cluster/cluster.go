@@ -9,7 +9,6 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	msgraph "github.com/microsoftgraph/msgraph-sdk-go"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
@@ -37,6 +36,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
+	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/storage"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -64,7 +64,7 @@ type manager struct {
 	localFpAuthorizer autorest.Authorizer
 	metricsEmitter    metrics.Emitter
 
-	spGraphClient         *msgraph.GraphServiceClient
+	spGraphClient         *utilgraph.GraphServiceClient
 	disks                 compute.DisksClient
 	virtualMachines       compute.VirtualMachinesClient
 	interfaces            network.InterfacesClient

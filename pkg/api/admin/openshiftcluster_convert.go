@@ -131,6 +131,21 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 		}
 	}
 
+	if oc.Properties.WorkerProfilesStatus != nil {
+		out.Properties.WorkerProfilesStatus = make([]WorkerProfile, 0, len(oc.Properties.WorkerProfilesStatus))
+		for _, p := range oc.Properties.WorkerProfilesStatus {
+			out.Properties.WorkerProfilesStatus = append(out.Properties.WorkerProfilesStatus, WorkerProfile{
+				Name:                p.Name,
+				VMSize:              VMSize(p.VMSize),
+				DiskSizeGB:          p.DiskSizeGB,
+				SubnetID:            p.SubnetID,
+				Count:               p.Count,
+				EncryptionAtHost:    EncryptionAtHost(p.EncryptionAtHost),
+				DiskEncryptionSetID: p.DiskEncryptionSetID,
+			})
+		}
+	}
+
 	if oc.Properties.IngressProfiles != nil {
 		out.Properties.IngressProfiles = make([]IngressProfile, 0, len(oc.Properties.IngressProfiles))
 		for _, p := range oc.Properties.IngressProfiles {
@@ -283,6 +298,20 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 			out.Properties.WorkerProfiles[i].Count = oc.Properties.WorkerProfiles[i].Count
 			out.Properties.WorkerProfiles[i].EncryptionAtHost = api.EncryptionAtHost(oc.Properties.WorkerProfiles[i].EncryptionAtHost)
 			out.Properties.WorkerProfiles[i].DiskEncryptionSetID = oc.Properties.WorkerProfiles[i].DiskEncryptionSetID
+		}
+	}
+	if oc.Properties.WorkerProfilesStatus != nil {
+		out.Properties.WorkerProfilesStatus = make([]api.WorkerProfile, len(oc.Properties.WorkerProfilesStatus))
+		for _, p := range oc.Properties.WorkerProfilesStatus {
+			out.Properties.WorkerProfilesStatus = append(out.Properties.WorkerProfilesStatus, api.WorkerProfile{
+				Name:                p.Name,
+				VMSize:              api.VMSize(p.VMSize),
+				DiskSizeGB:          p.DiskSizeGB,
+				SubnetID:            p.SubnetID,
+				Count:               p.Count,
+				EncryptionAtHost:    api.EncryptionAtHost(p.EncryptionAtHost),
+				DiskEncryptionSetID: p.DiskEncryptionSetID,
+			})
 		}
 	}
 	out.Properties.APIServerProfile.Visibility = api.Visibility(oc.Properties.APIServerProfile.Visibility)

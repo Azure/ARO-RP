@@ -79,6 +79,31 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 					},
 				},
 				{
+					name: "valid disk encryption set by enriched worker profile",
+					oc: &api.OpenShiftCluster{
+						Location: "eastus",
+						Properties: api.OpenShiftClusterProperties{
+							MasterProfile: api.MasterProfile{
+								DiskEncryptionSetID: fakeDesID1,
+							},
+							WorkerProfilesStatus: []api.WorkerProfile{{
+								DiskEncryptionSetID: fakeDesID1,
+							}},
+						},
+					},
+					mocks: func(permissions *mock_authorization.MockPermissionsClient, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, cancel context.CancelFunc) {
+						permissions.EXPECT().
+							ListForResource(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.Provider, "", fakeDesR1.ResourceType, fakeDesR1.ResourceName).
+							Return([]mgmtauthorization.Permission{{
+								Actions:    &[]string{"Microsoft.Compute/diskEncryptionSets/read"},
+								NotActions: &[]string{},
+							}}, nil)
+						diskEncryptionSets.EXPECT().
+							Get(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.ResourceName).
+							Return(mgmtcompute.DiskEncryptionSet{Location: to.StringPtr("eastus")}, nil)
+					},
+				},
+				{
 					name: "valid permissions multiple disk encryption sets",
 					oc: &api.OpenShiftCluster{
 						Location: "eastus",

@@ -6,7 +6,7 @@ gomock_reflect_*
 /.vscode
 /*.crt
 /*.key
-/*.kubeconfig
+/*kubeconfig
 /*.pem
 /*.tar
 /aro
@@ -42,3 +42,4 @@ megalinter-reports/
 /cluster
 /jq
 /portalauth
+.kiota.log

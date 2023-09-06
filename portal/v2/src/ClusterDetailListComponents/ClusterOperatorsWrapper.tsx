@@ -1,7 +1,14 @@
 import { useState, useEffect, useRef } from "react"
 import { AxiosResponse } from 'axios';
 import { fetchClusterOperators } from '../Request';
-import { IMessageBarStyles, MessageBar, MessageBarType, Stack } from '@fluentui/react';
+import {
+  IMessageBarStyles,
+  MessageBar,
+  MessageBarType,
+  Stack,
+  CommandBar,
+  ICommandBarItemProps
+} from '@fluentui/react';
 import { clusterOperatorsKey } from "../ClusterDetail";
 import { ClusterOperatorListComponent } from "./ClusterOperatorList";
 import { WrapperProps } from "../ClusterDetailList";
@@ -51,7 +58,7 @@ export function ClusterOperatorsWrapper(props: WrapperProps) {
     setOperators(newData)
     const clusterOperatorList: IClusterOperator[] = []
     if (state && state.current) {
-      newData.operators.forEach((element: { name: any;
+      newData.operators?.forEach((element: { name: any;
                                         available: any;
                                         progressing: any;
                                         degraded: any;
@@ -71,6 +78,25 @@ export function ClusterOperatorsWrapper(props: WrapperProps) {
       state.current.setState({ clusterOperators: clusterOperatorList })
     }
   }
+
+  const controlStyles = {
+    root: {
+      paddingLeft: 0,
+      float: "right",
+    },
+  }
+
+  const _items: ICommandBarItemProps[] = [
+    {
+      key: "refresh",
+      text: "Refresh",
+      iconProps: { iconName: "Refresh" },
+      onClick: () => {
+        updateData([])
+        setFetching("")
+      },
+    },
+  ]
 
   useEffect(() => {
     const onData = (result: AxiosResponse | null) => {
@@ -97,6 +123,11 @@ export function ClusterOperatorsWrapper(props: WrapperProps) {
     <Stack>
       <Stack.Item grow>{error && errorBar()}</Stack.Item>
       <Stack>
+        <CommandBar
+          items={_items}
+          ariaLabel="Refresh"
+          styles={controlStyles}
+        />
         <ClusterOperatorListComponent clusterOperators={operators} ref={state} clusterName={props.currentCluster != null ? props.currentCluster.name : ""} />
       </Stack>
     </Stack>   

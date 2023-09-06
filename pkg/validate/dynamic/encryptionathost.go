@@ -22,9 +22,10 @@ func (dv *dynamic) ValidateEncryptionAtHost(ctx context.Context, oc *api.OpenShi
 		}
 	}
 
-	for i, wp := range oc.Properties.WorkerProfiles {
+	workerProfiles, propertyName := api.GetEnrichedWorkerProfiles(oc.Properties)
+	for i, wp := range workerProfiles {
 		if wp.EncryptionAtHost == api.EncryptionAtHostEnabled {
-			err := dv.validateEncryptionAtHostSupport(wp.VMSize, fmt.Sprintf("properties.workerProfiles[%d].encryptionAtHost", i))
+			err := dv.validateEncryptionAtHostSupport(wp.VMSize, fmt.Sprintf("properties.%s[%d].encryptionAtHost", propertyName, i))
 			if err != nil {
 				return err
 			}

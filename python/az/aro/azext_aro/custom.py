@@ -14,7 +14,8 @@ from azure.cli.core.commands.client_factory import get_mgmt_service_client
 from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.profiles import ResourceType
 from azure.cli.core.util import sdk_no_wait
-from azure.cli.core.azclierror import FileOperationError, ResourceNotFoundError, UnauthorizedError, ValidationError
+from azure.cli.core.azclierror import FileOperationError, ResourceNotFoundError, \
+    UnauthorizedError, ValidationError
 from azext_aro._aad import AADManager
 from azext_aro._rbac import assign_role_to_resource, \
     has_role_assignment_on_resource
@@ -34,6 +35,10 @@ from tabulate import tabulate
 logger = get_logger(__name__)
 
 FP_CLIENT_ID = 'f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875'
+
+
+def rp_mode_development():
+    return os.environ.get('RP_MODE', '').lower() == 'development'
 
 
 def aro_create(cmd,  # pylint: disable=too-many-locals
@@ -133,7 +138,6 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                                f"/resourceGroups/{cluster_resource_group or 'aro-' + random_id}"),
             fips_validated_modules='Enabled' if fips_validated_modules else 'Disabled',
             version=version or '',
-
         ),
         service_principal_profile=openshiftcluster.ServicePrincipalProfile(
             client_id=client_id,
@@ -428,14 +432,6 @@ def aro_update(cmd,
                        parameters=ocUpdate)
 
 
-def rp_mode_development():
-    return os.environ.get('RP_MODE', '').lower() == 'development'
-
-
-def rp_mode_production():
-    return os.environ.get('RP_MODE', '') == ''
-
-
 def generate_random_id():
     random_id = (random.choice('abcdefghijklmnopqrstuvwxyz') +
                  ''.join(random.choice('abcdefghijklmnopqrstuvwxyz1234567890')
@@ -458,7 +454,8 @@ def get_network_resources_from_subnets(cli_ctx, subnets, fail, oc):
         subnet = subnet_show(cli_ctx=cli_ctx)(command_args={
             "name": sid['resource_name'],
             "vnet_name": sid['name'],
-            "resource_group": sid['resource_group']})
+            "resource_group": sid['resource_group']}
+        )
 
         if subnet.get("routeTable", None):
             subnet_resources.add(subnet['routeTable']['id'])
@@ -597,10 +594,10 @@ def cluster_application_update(cli_ctx,
 
 
 def resolve_rp_client_id():
-    if rp_mode_production():
-        return FP_CLIENT_ID
+    if rp_mode_development():
+        return os.environ.get('AZURE_FP_CLIENT_ID', FP_CLIENT_ID)
 
-    return os.environ.get('AZURE_FP_CLIENT_ID', FP_CLIENT_ID)
+    return FP_CLIENT_ID
 
 
 def ensure_resource_permissions(cli_ctx, oc, fail, sp_obj_ids):
