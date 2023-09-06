@@ -217,6 +217,7 @@ def validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
             self.worker_profiles = [openshiftcluster.WorkerProfile(
                 subnet_id=worker_subnet_id
             )]
+            self.worker_profiles_status = None
 
     aad = AADManager(cmd.cli_ctx)
 
