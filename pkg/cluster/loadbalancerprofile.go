@@ -179,6 +179,11 @@ func setOutboundRuleV4(lb mgmtnetwork.LoadBalancer, outboundRuleV4FrontendIPConf
 	}
 }
 
+type deleteResult struct {
+	name string
+	err  error
+}
+
 // Delete all managed outbound IPs that are not in use by the load balancer.
 // The default outbound ip is saved if the api server is public.
 func (m *manager) deleteUnusedManagedIPs(ctx context.Context) error {
@@ -188,20 +193,37 @@ func (m *manager) deleteUnusedManagedIPs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	ch := make(chan deleteResult)
+	defer close(ch)
 	var cleanupErrors []string
+
 	for _, id := range ipsToDelete {
 		ipName := stringutils.LastTokenByte(id, '/')
-		m.log.Infof("deleting managed public IP Address: %s", ipName)
-		err := m.publicIPAddresses.DeleteAndWait(ctx, resourceGroupName, ipName)
-		if err != nil {
-			cleanupErrors = append(cleanupErrors, fmt.Sprintf("deletion of unused managed ip %s failed with error: %v", ipName, err))
+		go m.deleteIPAddress(ctx, resourceGroupName, ipName, ch)
+	}
+
+	for range ipsToDelete {
+		result := <-ch
+		if result.err != nil {
+			cleanupErrors = append(cleanupErrors, fmt.Sprintf("deletion of unused managed ip %s failed with error: %v", result.name, result.err))
 		}
 	}
+
 	if cleanupErrors != nil {
 		return fmt.Errorf("failed to cleanup unused managed ips\n%s", strings.Join(cleanupErrors, "\n"))
 	}
 
 	return nil
+}
+
+func (m *manager) deleteIPAddress(ctx context.Context, resourceGroupName string, ipName string, ch chan<- deleteResult) {
+	m.log.Infof("deleting managed public IP Address: %s", ipName)
+	err := m.publicIPAddresses.DeleteAndWait(ctx, resourceGroupName, ipName)
+	ch <- deleteResult{
+		name: ipName,
+		err:  err,
+	}
 }
 
 func (m *manager) getManagedIPsToDelete(ctx context.Context) ([]string, error) {
