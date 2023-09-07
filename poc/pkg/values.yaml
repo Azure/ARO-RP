@@ -74,6 +74,6 @@ istio:
   gateway:
     name: rp-poc-gateway
     #TODO jonachang: change back to 443 when we have TLS
-    port: 8080
+    port: 80
   virtualService:
-    name: rp-poc-virtualservice    
+    name: rp-poc-virtualservice   

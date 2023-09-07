@@ -41,11 +41,16 @@ deploy_pkg() {
         helm uninstall $release --namespace $namespace
     fi
 
+    kubectl delete namespace $namespace > /dev/null 2>&1
+    kubectl create namespace $namespace
+    
+    # Enable automatic sidecar injection
+    kubectl label namespace $namespace istio.io/rev=asm-1-17
+
     helm install $release ./pkg-0.1.0.tgz \
                 --set image.repository=$DOCKERTAG \
                 --set image.tag=latest \
-                --namespace $namespace \
-                --create-namespace
+                --namespace $namespace
 }
 
 get_kubeconfig() {
