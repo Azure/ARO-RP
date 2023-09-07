@@ -65,7 +65,7 @@ func TestMUOReconciler(t *testing.T) {
 			},
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.MUODeploymentConfig{
-					Pullspec:        "acrtest.example.com/managed-upgrade-operator:v0.1.952-44b631a",
+					Pullspec:        "acrtest.example.com/app-sre/managed-upgrade-operator:v0.1.952-44b631a",
 					EnableConnected: false,
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)

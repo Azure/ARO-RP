@@ -89,7 +89,7 @@ func MdsdImage(acrDomain string) string {
 
 // MUOImage contains the location of the Managed Upgrade Operator container image
 func MUOImage(acrDomain string) string {
-	return acrDomain + "/managed-upgrade-operator:v0.1.952-44b631a"
+	return acrDomain + "/app-sre/managed-upgrade-operator:v0.1.952-44b631a"
 }
 
 // GateKeeperImage contains the location of the GateKeeper container image
