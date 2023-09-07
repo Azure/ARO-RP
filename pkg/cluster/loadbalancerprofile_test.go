@@ -23,7 +23,7 @@ import (
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
-func TestGetDesiredOutboundIPs(t *testing.T) {
+func TestReconcileOutboundIPs(t *testing.T) {
 	ctx := context.Background()
 	infraID := "infraID"
 	clusterRGID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG"
@@ -121,8 +121,8 @@ func TestGetDesiredOutboundIPs(t *testing.T) {
 			}
 			tt.m.publicIPAddresses = publicIPAddressClient
 
-			// Run getDesiredOutboundIPs and assert the correct results
-			outboundIPs, err := tt.m.getDesiredOutboundIPs(ctx)
+			// Run reconcileOutboundIPs and assert the correct results
+			outboundIPs, err := tt.m.reconcileOutboundIPs(ctx)
 			assert.Equal(t, tt.expectedErr, err, "Unexpected error exception")
 			// results are not deterministic when scaling down so just check desired length
 			assert.Len(t, outboundIPs, tt.m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs.Count)
@@ -1089,7 +1089,7 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: []error{fmt.Errorf("multiple errors occurred while updating outbound-rule-v4\nfailed to create ip\nfailed to cleanup unused managed ips\ndeletion of unused managed ip uuid1-outbound-pip-v4 failed with error: error")},
+			expectedErr: []error{fmt.Errorf("multiple errors occurred while updating outbound-rule-v4\nfailed to create required IPs\ncreation of ip address uuid2-outbound-pip-v4 failed with error: failed to create ip\nfailed to cleanup unused managed ips\ndeletion of unused managed ip uuid1-outbound-pip-v4 failed with error: error")},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

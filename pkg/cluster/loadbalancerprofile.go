@@ -68,7 +68,7 @@ func (m *manager) reconcileOutboundRuleV4IPsInner(ctx context.Context, lb mgmtne
 		}
 	}
 
-	desiredOutboundIPs, err := m.getDesiredOutboundIPs(ctx)
+	desiredOutboundIPs, err := m.reconcileOutboundIPs(ctx)
 	if err != nil {
 		return err
 	}
@@ -260,7 +260,7 @@ func (m *manager) getManagedIPsToDelete(ctx context.Context) ([]string, error) {
 
 // Returns the desired RP managed outbound publicIPAddresses.  Additional Managed Outbound IPs
 // will be created as required to satisfy ManagedOutboundIP.Count.
-func (m *manager) getDesiredOutboundIPs(ctx context.Context) ([]api.ResourceReference, error) {
+func (m *manager) reconcileOutboundIPs(ctx context.Context) ([]api.ResourceReference, error) {
 	// Determine source of outbound IPs
 	// TODO: add customer provided ip and ip prefixes
 	if m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs != nil {
@@ -269,29 +269,38 @@ func (m *manager) getDesiredOutboundIPs(ctx context.Context) ([]api.ResourceRefe
 	return nil, nil
 }
 
+type createIPResult struct {
+	ip  mgmtnetwork.PublicIPAddress
+	err error
+}
+
 // Returns RP managed outbound ips to be added to the outbound rule.
 // If the default outbound IP is present it will be added to ensure reuse of the ip when the
 // api server is public.  If additional IPs are required they will be created.
 func (m *manager) reconcileDesiredManagedIPs(ctx context.Context) ([]api.ResourceReference, error) {
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 	managedOBIPCount := m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs.Count
-	desiredIPAddresses := make([]api.ResourceReference, 0, managedOBIPCount)
 
 	ipAddresses, err := m.getClusterManagedIPs(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// create additional IPs if needed
 	numToCreate := managedOBIPCount - len(ipAddresses)
-	for i := 0; i < numToCreate; i++ {
-		ipAddress, err := m.createPublicIPAddress(ctx)
+
+	if numToCreate > 0 {
+		err = m.createPublicIPAddresses(ctx, ipAddresses, numToCreate)
 		if err != nil {
 			return nil, err
 		}
-		ipAddresses[*ipAddress.Name] = ipAddress
 	}
 
+	desiredIPAddresses := getDesiredOutboundIPs(managedOBIPCount, ipAddresses, infraID)
+	return desiredIPAddresses, nil
+}
+
+func getDesiredOutboundIPs(managedOBIPCount int, ipAddresses map[string]mgmtnetwork.PublicIPAddress, infraID string) []api.ResourceReference {
+	desiredIPAddresses := make([]api.ResourceReference, 0, managedOBIPCount)
 	// ensure that when scaling managed ips down the default outbound IP is reused incase the api server visibility is public
 	desiredCount := 0
 	if defaultIP, ok := ipAddresses[infraID+"-pip-v4"]; ok {
@@ -308,8 +317,31 @@ func (m *manager) reconcileDesiredManagedIPs(ctx context.Context) ([]api.Resourc
 			break
 		}
 	}
+	return desiredIPAddresses
+}
 
-	return desiredIPAddresses, nil
+func (m *manager) createPublicIPAddresses(ctx context.Context, ipAddresses map[string]mgmtnetwork.PublicIPAddress, numToCreate int) error {
+	ch := make(chan createIPResult)
+	defer close(ch)
+	var errResults []string
+	// create additional IPs if needed
+	for i := 0; i < numToCreate; i++ {
+		go m.createPublicIPAddress(ctx, ch)
+	}
+
+	for i := 0; i < numToCreate; i++ {
+		result := <-ch
+		if result.err != nil {
+			errResults = append(errResults, fmt.Sprintf("creation of ip address %s failed with error: %s", *result.ip.Name, result.err.Error()))
+		} else {
+			ipAddresses[*result.ip.Name] = result.ip
+		}
+	}
+
+	if len(errResults) > 0 {
+		return fmt.Errorf("failed to create required IPs\n%s", strings.Join(errResults, "\n"))
+	}
+	return nil
 }
 
 // Get all current managed IP Addresses in cluster resource group based on naming convention.
@@ -338,30 +370,18 @@ func genManagedOutboundIPName() string {
 }
 
 // Create a managed outbound IP Address.
-func (m *manager) createPublicIPAddress(ctx context.Context) (mgmtnetwork.PublicIPAddress, error) {
+func (m *manager) createPublicIPAddress(ctx context.Context, ch chan<- createIPResult) {
 	name := genManagedOutboundIPName()
 	resourceGroupName := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	resourceID := fmt.Sprintf("%s/providers/Microsoft.Network/publicIPAddresses/%s", m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, name)
 	m.log.Infof("creating public IP Address: %s", name)
-	publicIPAddress := mgmtnetwork.PublicIPAddress{
-		Name:     &name,
-		ID:       &resourceID,
-		Location: &m.doc.OpenShiftCluster.Location,
-		PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
-			PublicIPAllocationMethod: mgmtnetwork.Static,
-			PublicIPAddressVersion:   mgmtnetwork.IPv4,
-		},
-		Sku: &mgmtnetwork.PublicIPAddressSku{
-			Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
-		},
-	}
+	publicIPAddress := newPublicIPAddress(name, resourceID, m.doc.OpenShiftCluster.Location)
 
 	err := m.publicIPAddresses.CreateOrUpdateAndWait(ctx, resourceGroupName, name, publicIPAddress)
-	if err != nil {
-		return mgmtnetwork.PublicIPAddress{}, err
+	ch <- createIPResult{
+		ip:  publicIPAddress,
+		err: err,
 	}
-
-	return publicIPAddress, nil
 }
 
 func getOutboundIPsFromLB(lb mgmtnetwork.LoadBalancer) []api.ResourceReference {
@@ -397,6 +417,21 @@ func (m *manager) patchEffectiveOutboundIPs(ctx context.Context, outboundIPs []a
 		return err
 	}
 	return nil
+}
+
+func newPublicIPAddress(name, resourceID, location string) mgmtnetwork.PublicIPAddress {
+	return mgmtnetwork.PublicIPAddress{
+		Name:     &name,
+		ID:       &resourceID,
+		Location: &location,
+		PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
+			PublicIPAllocationMethod: mgmtnetwork.Static,
+			PublicIPAddressVersion:   mgmtnetwork.IPv4,
+		},
+		Sku: &mgmtnetwork.PublicIPAddressSku{
+			Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
+		},
+	}
 }
 
 func newFrontendIPConfig(name string, id string, publicIPorIPPrefixID string) mgmtnetwork.FrontendIPConfiguration {
