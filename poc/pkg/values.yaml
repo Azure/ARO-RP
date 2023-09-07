@@ -40,7 +40,7 @@ securityContext: {}
 service:
   name: rp-poc-svc
   type: ClusterIP
-  port: 80
+  port: 8080
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
@@ -74,6 +74,6 @@ istio:
   gateway:
     name: rp-poc-gateway
     #TODO jonachang: change back to 443 when we have TLS
-    port: 80
+    port: 8080
   virtualService:
     name: rp-poc-virtualservice    
