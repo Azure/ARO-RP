@@ -16,6 +16,7 @@ spec:
       {{- with .Values.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
+        sidecar.istio.io/inject: "true"
       {{- end }}
       labels:
         {{- include "pkg.selectorLabels" . | nindent 8 }}
