@@ -41,10 +41,10 @@ deploy_pkg() {
         helm uninstall $release --namespace $namespace
     fi
 
-    kubectl delete namespace $namespace > /dev/null 2>&1
-    kubectl create namespace $namespace
+    kubectl create namespace $namespace --dry-run=client -o yaml | kubectl apply -f -
     
     # Enable automatic sidecar injection
+    # https://learn.microsoft.com/en-us/azure/aks/istio-deploy-addon
     kubectl label namespace $namespace istio.io/rev=asm-1-17
 
     helm install $release ./pkg-0.1.0.tgz \
