@@ -5,9 +5,8 @@
 replicaCount: 1
 
 image:
-  repository: nginx
   pullPolicy: Always
-  probePort: 8080
+  containerPort: 8080
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
 

@@ -57,7 +57,7 @@ func (f *frontend) getRouter() chi.Router {
 		f.logger.Infof("Received request: %s", time.Now().String())
 		w.Write([]byte("****** ARO-RP on AKS PoC ******"))
 	})
-	r.Get("/healthz/ready", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		w.Write([]byte("ok"))
 	})
