@@ -1,0 +1,45 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: deny-generated-crd-modification
+tests:
+- name: deny-generated-crd-modification-tests
+  template: ../../gktemplates/aro-deny-crd.yaml
+  constraint: ../../gkconstraints-test/aro-crd-deny.yaml
+  cases:
+  - name: not-allow-create-generated-crd-by-regular-user
+    object: gator-test/not-allowed-create-crd.yaml
+    assertions:
+    - violations: yes
+  - name: not-allow-update-generated-crd-by-regular-user
+    object: gator-test/not-allowed-update-crd.yaml
+    assertions:
+    - violations: yes
+  - name: not-allow-delete-generated-crd-by-regular-user
+    object: gator-test/not-allowed-delete-crd.yaml
+    assertions:
+    - violations: yes
+  - name: allow-create-generated-crd-by-priv-user
+    object: gator-test/allowed-create-crd.yaml
+    assertions:
+    - violations: no
+  - name: allow-update-generated-crd-by-priv-user
+    object: gator-test/allowed-update-crd.yaml
+    assertions:
+    - violations: no
+  - name: allow-delete-generated-crd-by-priv-user
+    object: gator-test/allowed-delete-crd.yaml
+    assertions:
+    - violations: no
+  - name: allow-create-custom-crd-by-regular-user
+    object: gator-test/allowed-create-custom-crd.yaml
+    assertions:
+    - violations: no
+  - name: allow-update-custom-crd-by-regular-user
+    object: gator-test/allowed-update-custom-crd.yaml
+    assertions:
+    - violations: no
+  - name: allow-delete-custom-crd-by-regular-user
+    object: gator-test/allowed-delete-custom-crd.yaml
+    assertions:
+    - violations: no

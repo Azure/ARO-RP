@@ -1,0 +1,10 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: ARODenyCRD
+metadata:
+  name: aro-crd-deny
+spec:
+  enforcementAction: {{.Enforcement}}
+  match:
+    kinds:
+      - apiGroups: ["apiextensions.k8s.io"]
+        kinds: ["CustomResourceDefinition"]
