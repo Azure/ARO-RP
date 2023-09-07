@@ -41,6 +41,7 @@ deploy_pkg() {
         helm uninstall $release --namespace $namespace
     fi
 
+    # Create namespace if it doesn't exist
     kubectl create namespace $namespace --dry-run=client -o yaml | kubectl apply -f -
     
     # Enable automatic sidecar injection
