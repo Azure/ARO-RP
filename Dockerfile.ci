@@ -1,8 +1,8 @@
-FROM registry.access.redhat.com/ubi8/go-toolset:1.18.4 
+FROM registry.access.redhat.com/ubi8/go-toolset:1.18.10
 
 USER root
-RUN mkdir -p /root/go/src/github.com/Azure/ARO-RP 
-WORKDIR /root/go/src/github.com/Azure/ARO-RP 
+RUN mkdir -p /root/go/src/github.com/Azure/ARO-RP
+WORKDIR /root/go/src/github.com/Azure/ARO-RP
 ENV GOPATH=/root/go
 
 #we have multiple steps for copy so we can make use of caching
