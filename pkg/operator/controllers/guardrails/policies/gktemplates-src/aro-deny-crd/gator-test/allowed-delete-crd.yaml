@@ -18,7 +18,7 @@ request:
         include.release.ovn.org/single-node-developer: "true"
       creationTimestamp: "2023-09-06T10:39:50Z"
       generation: 1
-      name: nodes.config.ovn.org
+      name: egressfirewalls.k8s.ovn.org
       ownerReferences:
       - apiVersion: config.ovn.org/v1
         kind: ClusterVersion

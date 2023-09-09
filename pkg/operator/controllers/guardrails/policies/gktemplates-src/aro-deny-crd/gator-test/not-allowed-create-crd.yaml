@@ -11,15 +11,15 @@ request:
     kind: CustomResourceDefinition
     metadata:
       annotations:
-        api-approved.coreos.com: https://github.com/openshift/api/pull/1107
-        include.release.coreos.com/ibm-cloud-managed: "true"
-        include.release.coreos.com/self-managed-high-availability: "true"
-        include.release.coreos.com/single-node-developer: "true"
+        api-approved.ovn.org: https://github.com/openshift/api/pull/1107
+        include.release.ovn.org/ibm-cloud-managed: "true"
+        include.release.ovn.org/self-managed-high-availability: "true"
+        include.release.ovn.org/single-node-developer: "true"
       creationTimestamp: "2023-09-06T10:39:50Z"
       generation: 1
-      name: nodes.config.coreos.com
+      name: egressips.k8s.ovn.org
       ownerReferences:
-      - apiVersion: config.coreos.com/v1
+      - apiVersion: config.ovn.org/v1
         kind: ClusterVersion
         name: version
         uid: daaf443b-12f8-48a4-9794-b00882e0a54b
@@ -28,7 +28,7 @@ request:
     spec:
       conversion:
         strategy: None
-      group: config.coreos.com
+      group: config.ovn.org
       names:
         kind: Node
         listKind: NodeList

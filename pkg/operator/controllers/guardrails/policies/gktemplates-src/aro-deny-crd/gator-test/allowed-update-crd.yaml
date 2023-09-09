@@ -17,7 +17,7 @@ request:
         include.release.cncf.io/single-node-developer: "true"
       creationTimestamp: "2023-09-06T10:39:50Z"
       generation: 1
-      name: nodes.config.cncf.io
+      name: network-attachment-definitions.k8s.cni.cncf.io
       ownerReferences:
       - apiVersion: config.cncf.io/v1
         kind: ClusterVersion
@@ -59,15 +59,15 @@ request:
     kind: CustomResourceDefinition
     metadata:
       annotations:
-        api-approved.openshift.io: https://github.com/openshift/api/pull/1107
-        include.release.openshift.io/ibm-cloud-managed: "true"
-        include.release.openshift.io/self-managed-high-availability: "true"
-        include.release.openshift.io/single-node-developer: "true"
+        api-approved.cncf.io: https://github.com/openshift/api/pull/1107
+        include.release.cncf.io/ibm-cloud-managed: "true"
+        include.release.cncf.io/self-managed-high-availability: "true"
+        include.release.cncf.io/single-node-developer: "true"
       creationTimestamp: "2023-09-06T10:39:50Z"
       generation: 1
-      name: nodes.config.openshift.io-old
+      name: network-attachment-definitions.k8s.cni.cncf.io-old
       ownerReferences:
-      - apiVersion: config.openshift.io/v1
+      - apiVersion: config.cncf.io/v1
         kind: ClusterVersion
         name: version
         uid: daaf443b-12f8-48a4-9794-b00882e0a54b

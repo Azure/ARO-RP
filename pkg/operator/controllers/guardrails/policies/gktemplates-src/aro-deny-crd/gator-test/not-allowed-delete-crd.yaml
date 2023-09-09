@@ -12,15 +12,15 @@ request:
     kind: CustomResourceDefinition
     metadata:
       annotations:
-        api-approved.gatekeeper.sh: https://github.com/openshift/api/pull/1107
-        include.release.gatekeeper.sh/ibm-cloud-managed: "true"
-        include.release.gatekeeper.sh/self-managed-high-availability: "true"
-        include.release.gatekeeper.sh/single-node-developer: "true"
+        api-approved.coreos.com: https://github.com/openshift/api/pull/1107
+        include.release.coreos.com/ibm-cloud-managed: "true"
+        include.release.coreos.com/self-managed-high-availability: "true"
+        include.release.coreos.com/single-node-developer: "true"
       creationTimestamp: "2023-09-06T10:39:50Z"
       generation: 1
-      name: nodes.config.gatekeeper.sh
+      name: alertmanagerconfigs.monitoring.coreos.com
       ownerReferences:
-      - apiVersion: config.gatekeeper.sh/v1
+      - apiVersion: config.coreos.com/v1
         kind: ClusterVersion
         name: version
         uid: daaf443b-12f8-48a4-9794-b00882e0a54b
@@ -29,7 +29,7 @@ request:
     spec:
       conversion:
         strategy: None
-      group: config.gatekeeper.sh
+      group: config.coreos.com
       names:
         kind: Node
         listKind: NodeList
