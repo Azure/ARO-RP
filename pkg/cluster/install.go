@@ -168,8 +168,7 @@ func (m *manager) shouldUpdateOperator() bool {
 	}
 
 	cutoffVersion := semver.New(operatorCutoffVersion)
-
-	return cutoffVersion.LessThan(*runningVersion)
+	return cutoffVersion.Compare(*runningVersion) <= 0
 }
 
 func (m *manager) clusterWasCreatedByHive() bool {

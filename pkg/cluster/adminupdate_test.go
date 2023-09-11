@@ -79,6 +79,29 @@ func TestAdminUpdateSteps(t *testing.T) {
 			},
 		},
 		{
+			name: "ARO Operator Update on 4.7.0 cluster does update operator",
+			fixture: func() (*api.OpenShiftClusterDocument, bool) {
+				doc := baseClusterDoc()
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
+				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskOperator
+				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.7.0"
+				return doc, true
+			},
+			shouldRunSteps: []string{
+				"[Action initializeKubernetesClients-fm]",
+				"[Action ensureBillingRecord-fm]",
+				"[Action ensureDefaults-fm]",
+				"[AuthorizationRetryingAction fixupClusterSPObjectID-fm]",
+				"[Action fixInfraID-fm]",
+				"[Action startVMs-fm]",
+				"[Condition apiServersReady-fm, timeout 30m0s]",
+				"[Action initializeOperatorDeployer-fm]",
+				"[Action ensureAROOperator-fm]",
+				"[Condition aroDeploymentReady-fm, timeout 20m0s]",
+				"[Condition ensureAROOperatorRunningDesiredVersion-fm, timeout 5m0s]",
+			},
+		},
+		{
 			name: "Everything update",
 			fixture: func() (*api.OpenShiftClusterDocument, bool) {
 				doc := baseClusterDoc()
