@@ -16,6 +16,7 @@ import { AxiosResponse } from "axios"
 import { fetchClusterInfo } from "./Request"
 import { ICluster, headerStyles } from "./App"
 import { Nav, INavLink, INavStyles } from "@fluentui/react/lib/Nav"
+import { ToolIcons } from "./ToolIcons"
 import { ClusterDetailComponent, MemoisedClusterDetailListComponent } from "./ClusterDetailList"
 import React from "react"
 
@@ -79,6 +80,7 @@ const errorBarStyles: Partial<IMessageBarStyles> = { root: { marginBottom: 15 } 
 export function ClusterDetailPanel(props: {
   csrfToken: MutableRefObject<string>
   currentCluster: ICluster | null
+  sshBox: any
   onClose: any
   loaded: string
 }) {
@@ -183,7 +185,8 @@ export function ClusterDetailPanel(props: {
 
   const _dismissPanel = () => {
     dismissPanel()
-    props.onClose() // useEffect?
+    props.sshBox.current.hidePopup()
+    props.onClose()
     setData([])
     setFetching("")
     setDataLoaded(false)
@@ -261,7 +264,7 @@ export function ClusterDetailPanel(props: {
       },
     })
   }
-
+ 
   const onRenderHeader = (): ReactElement => {
     return (
       <>
@@ -280,7 +283,8 @@ export function ClusterDetailPanel(props: {
           </Stack.Item>
           <Stack.Item>
             <div className={headerStyles.titleText}>{props.currentCluster?.name}</div>
-            <div className={headerStyles.subtitleText}>Cluster</div>
+            <div className={headerStyles.subtitleText}>Cluster</div>                        
+            <ToolIcons resourceId={props.currentCluster? props.currentCluster?.resourceId:""} version={Number(props.currentCluster?.version) !== undefined ? Number(props.currentCluster?.version) : 0} csrfToken={props.csrfToken} sshBox={props.sshBox}/>
           </Stack.Item>
         </Stack>
       </>

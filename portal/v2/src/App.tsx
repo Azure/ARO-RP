@@ -158,7 +158,7 @@ registerIcons({
         version="1.1"
         xmlns="http://www.w3.org/2000/svg"
         width="22"
-        height="22"
+        height="16"
         style={{ overflow: "visible" }}>
         <g id="svgg" transform="translate(0.000000,18.000000) scale(0.05000000,-0.05000000)">
           <path
@@ -331,6 +331,7 @@ function App(props: { params: any }) {
           <Stack.Item grow>
             <ClusterDetailPanel
               csrfToken={csrfRef}
+              sshBox={sshRef}
               loaded={fetching}
               currentCluster={currentCluster}
               onClose={_onCloseDetailPanel}
