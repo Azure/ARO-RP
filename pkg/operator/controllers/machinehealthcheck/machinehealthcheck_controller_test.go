@@ -13,6 +13,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -30,6 +32,18 @@ func TestReconciler(t *testing.T) {
 		mocks            func(mdh *mock_dynamichelper.MockInterface)
 		wantErr          string
 		wantRequeueAfter time.Duration
+	}
+
+	mhcKind := schema.GroupVersionKind{
+		Group:   "machine.openshift.io",
+		Kind:    "MachineHealthCheck",
+		Version: "v1beta1",
+	}
+
+	prometheusKind := schema.GroupVersionKind{
+		Group:   "monitoring.coreos.com",
+		Kind:    "PrometheusRule",
+		Version: "v1",
 	}
 
 	for _, tt := range []*test{
@@ -51,7 +65,7 @@ func TestReconciler(t *testing.T) {
 				},
 			},
 			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Times(0)
+				mdh.EXPECT().EnsureDeleted(gomock.Any(), mhcKind, types.NamespacedName{Namespace: "openshift-machine-api", Name: "aro-machinehealthcheck"}).Times(0)
 				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
 			},
 			wantErr: "",
@@ -70,8 +84,8 @@ func TestReconciler(t *testing.T) {
 				},
 			},
 			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Times(1)
-				mdh.EXPECT().EnsureDeleted(gomock.Any(), "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert").Times(1)
+				mdh.EXPECT().EnsureDeleted(gomock.Any(), mhcKind, types.NamespacedName{Namespace: "openshift-machine-api", Name: "aro-machinehealthcheck"}).Times(1)
+				mdh.EXPECT().EnsureDeleted(gomock.Any(), prometheusKind, types.NamespacedName{Namespace: "openshift-machine-api", Name: "mhc-remediation-alert"}).Times(1)
 			},
 			wantErr: "",
 		},
@@ -89,7 +103,7 @@ func TestReconciler(t *testing.T) {
 				},
 			},
 			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Return(errors.New("Could not delete mhc"))
+				mdh.EXPECT().EnsureDeleted(gomock.Any(), mhcKind, types.NamespacedName{Namespace: "openshift-machine-api", Name: "aro-machinehealthcheck"}).Return(errors.New("Could not delete mhc"))
 			},
 			wantErr:          "Could not delete mhc",
 			wantRequeueAfter: time.Hour,
@@ -108,8 +122,8 @@ func TestReconciler(t *testing.T) {
 				},
 			},
 			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Times(1)
-				mdh.EXPECT().EnsureDeleted(gomock.Any(), "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert").Return(errors.New("Could not delete mhc alert"))
+				mdh.EXPECT().EnsureDeleted(gomock.Any(), mhcKind, types.NamespacedName{Namespace: "openshift-machine-api", Name: "aro-machinehealthcheck"}).Times(1)
+				mdh.EXPECT().EnsureDeleted(gomock.Any(), prometheusKind, types.NamespacedName{Namespace: "openshift-machine-api", Name: "mhc-remediation-alert"}).Return(errors.New("Could not delete mhc alert"))
 			},
 			wantErr:          "Could not delete mhc alert",
 			wantRequeueAfter: time.Hour,

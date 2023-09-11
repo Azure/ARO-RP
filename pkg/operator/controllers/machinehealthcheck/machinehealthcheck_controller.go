@@ -13,6 +13,7 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/sirupsen/logrus"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -67,12 +68,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	r.log.Debug("running")
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(managed) {
-		err := r.dh.EnsureDeleted(ctx, "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck")
+		mhcGVK := schema.GroupVersionKind{
+			Group:   "machine.openshift.io",
+			Kind:    "MachineHealthCheck",
+			Version: "v1beta1",
+		}
+		err := r.dh.EnsureDeleted(ctx, mhcGVK, types.NamespacedName{Namespace: "openshift-machine-api", Name: "aro-machinehealthcheck"})
 		if err != nil {
 			return reconcile.Result{RequeueAfter: time.Hour}, err
 		}
 
-		err = r.dh.EnsureDeleted(ctx, "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert")
+		promRuleGVK := schema.GroupVersionKind{
+			Group:   "monitoring.coreos.com",
+			Kind:    "PrometheusRule",
+			Version: "v1",
+		}
+		err = r.dh.EnsureDeleted(ctx, promRuleGVK, types.NamespacedName{Namespace: "openshift-machine-api", Name: "mhc-remediation-alert"})
 		if err != nil {
 			return reconcile.Result{RequeueAfter: time.Hour}, err
 		}

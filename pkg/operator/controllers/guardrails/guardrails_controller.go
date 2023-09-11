@@ -106,7 +106,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			}
 
 			err := wait.PollImmediateUntil(r.readinessPollTime, func() (bool, error) {
-				return r.gkPolicyTemplate.IsConstraintTemplateReady(ctx, policyConfig)
+				return r.AreConstraintTemplatesReady(ctx)
 			}, timeoutCtx.Done())
 			if err != nil {
 				return reconcile.Result{}, fmt.Errorf("GateKeeper ConstraintTemplates timed out on creation: %w", err)

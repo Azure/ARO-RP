@@ -10,6 +10,10 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	runtime "k8s.io/apimachinery/pkg/runtime"
+	schema "k8s.io/apimachinery/pkg/runtime/schema"
+	types "k8s.io/apimachinery/pkg/types"
+
+	dynamichelper "github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
 // MockInterface is a mock of Interface interface.
@@ -55,58 +59,57 @@ func (mr *MockInterfaceMockRecorder) Ensure(arg0 interface{}, arg1 ...interface{
 }
 
 // EnsureDeleted mocks base method.
-func (m *MockInterface) EnsureDeleted(arg0 context.Context, arg1, arg2, arg3 string) error {
+func (m *MockInterface) EnsureDeleted(arg0 context.Context, arg1 schema.GroupVersionKind, arg2 types.NamespacedName) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureDeleted", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "EnsureDeleted", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EnsureDeleted indicates an expected call of EnsureDeleted.
-func (mr *MockInterfaceMockRecorder) EnsureDeleted(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) EnsureDeleted(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureDeleted", reflect.TypeOf((*MockInterface)(nil).EnsureDeleted), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureDeleted", reflect.TypeOf((*MockInterface)(nil).EnsureDeleted), arg0, arg1, arg2)
 }
 
-// EnsureDeletedGVR mocks base method.
-func (m *MockInterface) EnsureDeletedGVR(arg0 context.Context, arg1, arg2, arg3, arg4 string) error {
+// EnsureObjectDeleted mocks base method.
+func (m *MockInterface) EnsureObjectDeleted(arg0 context.Context, arg1 runtime.Object) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureDeletedGVR", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "EnsureObjectDeleted", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// EnsureDeletedGVR indicates an expected call of EnsureDeletedGVR.
-func (mr *MockInterfaceMockRecorder) EnsureDeletedGVR(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+// EnsureObjectDeleted indicates an expected call of EnsureObjectDeleted.
+func (mr *MockInterfaceMockRecorder) EnsureObjectDeleted(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureDeletedGVR", reflect.TypeOf((*MockInterface)(nil).EnsureDeletedGVR), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureObjectDeleted", reflect.TypeOf((*MockInterface)(nil).EnsureObjectDeleted), arg0, arg1)
 }
 
-// IsConstraintTemplateReady mocks base method.
-func (m *MockInterface) IsConstraintTemplateReady(arg0 context.Context, arg1 string) (bool, error) {
+// GetOne mocks base method.
+func (m *MockInterface) GetOne(arg0 context.Context, arg1 types.NamespacedName, arg2 runtime.Object) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsConstraintTemplateReady", arg0, arg1)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// IsConstraintTemplateReady indicates an expected call of IsConstraintTemplateReady.
-func (mr *MockInterfaceMockRecorder) IsConstraintTemplateReady(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsConstraintTemplateReady", reflect.TypeOf((*MockInterface)(nil).IsConstraintTemplateReady), arg0, arg1)
-}
-
-// Refresh mocks base method.
-func (m *MockInterface) Refresh() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Refresh")
+	ret := m.ctrl.Call(m, "GetOne", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Refresh indicates an expected call of Refresh.
-func (mr *MockInterfaceMockRecorder) Refresh() *gomock.Call {
+// GetOne indicates an expected call of GetOne.
+func (mr *MockInterfaceMockRecorder) GetOne(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Refresh", reflect.TypeOf((*MockInterface)(nil).Refresh))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOne", reflect.TypeOf((*MockInterface)(nil).GetOne), arg0, arg1, arg2)
+}
+
+// WithMergeHook mocks base method.
+func (m *MockInterface) WithMergeHook(arg0 dynamichelper.MergeHook) dynamichelper.Interface {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WithMergeHook", arg0)
+	ret0, _ := ret[0].(dynamichelper.Interface)
+	return ret0
+}
+
+// WithMergeHook indicates an expected call of WithMergeHook.
+func (mr *MockInterfaceMockRecorder) WithMergeHook(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WithMergeHook", reflect.TypeOf((*MockInterface)(nil).WithMergeHook), arg0)
 }

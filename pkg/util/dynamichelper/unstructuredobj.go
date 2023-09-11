@@ -4,8 +4,6 @@ package dynamichelper
 // Licensed under the Apache License 2.0.
 
 import (
-	"strings"
-
 	"github.com/ghodss/yaml"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -31,8 +29,4 @@ func DecodeUnstructured(data []byte) (*unstructured.Unstructured, error) {
 	}
 	err = obj.UnmarshalJSON(json)
 	return obj, err
-}
-
-func isKindUnstructured(groupKind string) bool {
-	return strings.HasSuffix(groupKind, ".constraints.gatekeeper.sh")
 }

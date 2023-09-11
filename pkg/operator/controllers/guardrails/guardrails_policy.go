@@ -16,6 +16,8 @@ import (
 	"time"
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -74,7 +76,7 @@ func (r *Reconciler) ensurePolicy(ctx context.Context, fs embed.FS, path string)
 		}
 
 		if managed != "true" {
-			err := r.dh.EnsureDeletedGVR(ctx, uns.GroupVersionKind().GroupKind().String(), uns.GetNamespace(), uns.GetName(), uns.GroupVersionKind().Version)
+			err := r.dh.EnsureObjectDeleted(ctx, uns)
 			if err != nil && !kerrors.IsNotFound(err) && !strings.Contains(strings.ToLower(err.Error()), "notfound") {
 				return err
 			}
@@ -106,7 +108,7 @@ func (r *Reconciler) removePolicy(ctx context.Context, fs embed.FS, path string)
 		if err != nil {
 			return err
 		}
-		err = r.dh.EnsureDeletedGVR(ctx, uns.GroupVersionKind().GroupKind().String(), uns.GetNamespace(), uns.GetName(), uns.GroupVersionKind().Version)
+		err = r.dh.EnsureObjectDeleted(ctx, uns)
 		if err != nil && !kerrors.IsNotFound(err) && !strings.Contains(strings.ToLower(err.Error()), "notfound") {
 			return err
 		}
@@ -168,4 +170,48 @@ func (r *Reconciler) stopTicker() {
 		r.policyTickerDone <- true
 		close(r.policyTickerDone)
 	}
+}
+
+func (r *Reconciler) AreConstraintTemplatesReady(ctx context.Context) (bool, error) {
+	resources, err := r.gkPolicyTemplate.Template(config.GuardRailsPolicyConfig{}, gkPolicyTemplates)
+	if err != nil {
+		return false, err
+	}
+
+	// list the templates we are waiting to be accepted for
+	waitingOn := []string{}
+	for _, resource := range resources {
+		gvk := resource.GetObjectKind().GroupVersionKind()
+		if !(gvk.Group == "templates.gatekeeper.sh" && gvk.Kind == "ConstraintTemplate") {
+			continue
+		}
+
+		rname, ok := resource.(metav1.Object)
+		if !ok {
+			return false, fmt.Errorf("can't get obj")
+		}
+
+		// for the fetched object
+		ct := &unstructured.Unstructured{}
+		ct.SetGroupVersionKind(gvk)
+
+		err := r.dh.GetOne(ctx, types.NamespacedName{Name: rname.GetName()}, ct)
+		if err != nil {
+			return false, err
+		}
+
+		ready, ok, err := unstructured.NestedBool(ct.UnstructuredContent(), "Status", "Created")
+		if err != nil {
+			return false, err
+		}
+		if !ok || !ready {
+			waitingOn = append(waitingOn, rname.GetName())
+		}
+	}
+
+	if len(waitingOn) > 0 {
+		return false, fmt.Errorf("waiting on %s", waitingOn)
+	}
+
+	return true, nil
 }

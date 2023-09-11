@@ -22,6 +22,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
+	"github.com/Azure/ARO-RP/test/util/kubetest"
 )
 
 //go:embed staticresources
@@ -88,7 +89,16 @@ func TestDeployDelete(t *testing.T) {
 
 	clientFake := ctrlfake.NewClientBuilder().Build()
 	dh := mock_dynamichelper.NewMockInterface(controller)
-	dh.EXPECT().EnsureDeletedGVR(gomock.Any(), "Deployment.apps", "openshift-managed-upgrade-operator", "managed-upgrade-operator", gomock.Any()).Return(nil)
+	dh.EXPECT().EnsureObjectDeleted(gomock.Any(), kubetest.IsKubeObject(&metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Deployment",
+			APIVersion: "apps/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "managed-upgrade-operator",
+			Namespace: "openshift-managed-upgrade-operator",
+		},
+	})).Return(nil)
 
 	deployer := NewDeployer(clientFake, dh, staticFiles, "staticresources")
 	err := deployer.Remove(context.Background(), config.MUODeploymentConfig{})
@@ -103,7 +113,16 @@ func TestDeployDeleteFailure(t *testing.T) {
 
 	clientFake := ctrlfake.NewClientBuilder().Build()
 	dh := mock_dynamichelper.NewMockInterface(controller)
-	dh.EXPECT().EnsureDeletedGVR(gomock.Any(), "Deployment.apps", "openshift-managed-upgrade-operator", "managed-upgrade-operator", gomock.Any()).Return(errors.New("fail"))
+	dh.EXPECT().EnsureObjectDeleted(gomock.Any(), kubetest.IsKubeObject(&metav1.PartialObjectMetadata{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Deployment",
+			APIVersion: "apps/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "managed-upgrade-operator",
+			Namespace: "openshift-managed-upgrade-operator",
+		},
+	})).Return(errors.New("fail"))
 
 	deployer := NewDeployer(clientFake, dh, staticFiles, "staticresources")
 	err := deployer.Remove(context.Background(), config.MUODeploymentConfig{})
