@@ -108,7 +108,7 @@ func mockPod(containerName, podName, namespace, fakeLog string) *corev1.Pod {
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{{
 				Name:    containerName,
-				Image:   "quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:103505c93bf45c4a29301f282f1ff046e35b63bceaf4df1cca2e631039289da2",
+				Image:   "registry.access.redhat.com/ubi9@sha256:351ed8b24d440c348486efd99587046e88bb966890a9207a5851d3a34a4dd346",
 				Command: []string{"/bin/bash", "-c", fmt.Sprintf("echo %q", fakeLog)},
 			}},
 			RestartPolicy: "Never",
