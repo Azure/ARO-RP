@@ -25,7 +25,7 @@ import (
 )
 
 func monitor(ctx context.Context, log *logrus.Entry) error {
-	_env, err := env.NewCore(ctx, log)
+	_env, err := env.NewEnv(ctx, log)
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), dialer, dbMonitors, dbOpenShiftClusters, dbSubscriptions, m, clusterm, liveConfig)
+	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), dialer, dbMonitors, dbOpenShiftClusters, dbSubscriptions, m, clusterm, liveConfig, _env)
 
 	return mon.Run(ctx)
 }

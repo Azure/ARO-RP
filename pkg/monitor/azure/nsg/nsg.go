@@ -38,6 +38,7 @@ type NSGMonitor struct {
 
 	subnetClient *armnetwork.SubnetsClient
 	done         chan error
+	dims         map[string]string
 }
 
 func (n *NSGMonitor) Done() <-chan error {
@@ -52,6 +53,11 @@ func NewNSGMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, subscriptionID s
 
 		subnetClient: subnetClient,
 		done:         make(chan error),
+
+		dims: map[string]string{
+			dimension.ResourceID:     oc.ID,
+			dimension.SubscriptionID: subscriptionID,
+		},
 	}
 }
 
