@@ -22,6 +22,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/monitor/dimension"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
@@ -62,10 +63,10 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 	}
 
 	dims := map[string]string{
-		"resourceId":     oc.ID,
-		"subscriptionId": r.SubscriptionID,
-		"resourceGroup":  r.ResourceGroup,
-		"resourceName":   r.ResourceName,
+		dimension.ResourceID:     oc.ID,
+		dimension.SubscriptionID: r.SubscriptionID,
+		dimension.ResourceGroup:  r.ResourceGroup,
+		dimension.ResourceName:   r.ResourceName,
 	}
 
 	cli, err := kubernetes.NewForConfig(restConfig)
