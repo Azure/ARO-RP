@@ -7,11 +7,11 @@ import { MachineSetsWrapper } from "./ClusterDetailListComponents/MachineSetsWra
 import { Statistics } from "./ClusterDetailListComponents/Statistics/Statistics"
 import { ClusterOperatorsWrapper } from "./ClusterDetailListComponents/ClusterOperatorsWrapper";
 
-import { ICluster } from "./App"
+import { IClusterCoordinates } from "./App"
 
 interface ClusterDetailComponentProps {
   item: IClusterDetails
-  cluster: ICluster | null
+  cluster: IClusterCoordinates | null
   isDataLoaded: boolean
   detailPanelVisible: string
 }
@@ -38,7 +38,7 @@ export interface IClusterDetails {
 }
 
 export interface WrapperProps {
-  currentCluster: ICluster | null
+  currentCluster: IClusterCoordinates | null
   detailPanelSelected: string
   loaded: boolean
 }

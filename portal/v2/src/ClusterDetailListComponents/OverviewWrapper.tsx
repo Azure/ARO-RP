@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 import { AxiosResponse } from "axios"
 import { fetchClusterInfo } from "../Request"
-import { ICluster } from "../App"
+import { IClusterCoordinates } from "../App"
 import { ClusterDetailComponent } from "../ClusterDetailList"
 import { OverviewComponent } from "./Overview"
 import {
@@ -18,7 +18,7 @@ const errorBarStyles: Partial<IMessageBarStyles> = { root: { marginBottom: 15 } 
 
 export function OverviewWrapper(props: {
   clusterName: string
-  currentCluster: ICluster
+  currentCluster: IClusterCoordinates
   detailPanelSelected: string
   loaded: boolean
 }) {
