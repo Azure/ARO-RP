@@ -22,6 +22,11 @@ func TestAdminUpdateSteps(t *testing.T) {
 			Key: strings.ToLower(key),
 			OpenShiftCluster: &api.OpenShiftCluster{
 				ID: key,
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						Version: "4.10.0",
+					},
+				},
 			},
 		}
 	}
@@ -37,6 +42,49 @@ func TestAdminUpdateSteps(t *testing.T) {
 				doc := baseClusterDoc()
 				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
 				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskOperator
+				return doc, true
+			},
+			shouldRunSteps: []string{
+				"[Action initializeKubernetesClients-fm]",
+				"[Action ensureBillingRecord-fm]",
+				"[Action ensureDefaults-fm]",
+				"[AuthorizationRetryingAction fixupClusterSPObjectID-fm]",
+				"[Action fixInfraID-fm]",
+				"[Action startVMs-fm]",
+				"[Condition apiServersReady-fm, timeout 30m0s]",
+				"[Action initializeOperatorDeployer-fm]",
+				"[Action ensureAROOperator-fm]",
+				"[Condition aroDeploymentReady-fm, timeout 20m0s]",
+				"[Condition ensureAROOperatorRunningDesiredVersion-fm, timeout 5m0s]",
+			},
+		},
+		{
+			name: "ARO Operator Update on <= 4.6 cluster does not update operator",
+			fixture: func() (*api.OpenShiftClusterDocument, bool) {
+				doc := baseClusterDoc()
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
+				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskOperator
+				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.6.62"
+				return doc, true
+			},
+			shouldRunSteps: []string{
+				"[Action initializeKubernetesClients-fm]",
+				"[Action ensureBillingRecord-fm]",
+				"[Action ensureDefaults-fm]",
+				"[AuthorizationRetryingAction fixupClusterSPObjectID-fm]",
+				"[Action fixInfraID-fm]",
+				"[Action startVMs-fm]",
+				"[Condition apiServersReady-fm, timeout 30m0s]",
+				"[Action initializeOperatorDeployer-fm]",
+			},
+		},
+		{
+			name: "ARO Operator Update on 4.7.0 cluster does update operator",
+			fixture: func() (*api.OpenShiftClusterDocument, bool) {
+				doc := baseClusterDoc()
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
+				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskOperator
+				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.7.0"
 				return doc, true
 			},
 			shouldRunSteps: []string{
@@ -91,6 +139,49 @@ func TestAdminUpdateSteps(t *testing.T) {
 				"[Action ensureAROOperator-fm]",
 				"[Condition aroDeploymentReady-fm, timeout 20m0s]",
 				"[Condition ensureAROOperatorRunningDesiredVersion-fm, timeout 5m0s]",
+				"[Action hiveCreateNamespace-fm]",
+				"[Action hiveEnsureResources-fm]",
+				"[Condition hiveClusterDeploymentReady-fm, timeout 5m0s]",
+				"[Action hiveResetCorrelationData-fm]",
+				"[Action updateProvisionedBy-fm]",
+			},
+		},
+		{
+			name: "Everything update on <= 4.6 cluster does not update operator",
+			fixture: func() (*api.OpenShiftClusterDocument, bool) {
+				doc := baseClusterDoc()
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
+				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskEverything
+				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.6.62"
+				return doc, true
+			},
+			shouldRunSteps: []string{
+				"[Action initializeKubernetesClients-fm]",
+				"[Action ensureBillingRecord-fm]",
+				"[Action ensureDefaults-fm]",
+				"[AuthorizationRetryingAction fixupClusterSPObjectID-fm]",
+				"[Action fixInfraID-fm]",
+				"[Action ensureResourceGroup-fm]",
+				"[Action createOrUpdateDenyAssignment-fm]",
+				"[Action ensureServiceEndpoints-fm]",
+				"[Action populateRegistryStorageAccountName-fm]",
+				"[Action migrateStorageAccounts-fm]",
+				"[Action fixSSH-fm]",
+				"[Action populateDatabaseIntIP-fm]",
+				"[Action startVMs-fm]",
+				"[Condition apiServersReady-fm, timeout 30m0s]",
+				"[Action fixSREKubeconfig-fm]",
+				"[Action fixUserAdminKubeconfig-fm]",
+				"[Action createOrUpdateRouterIPFromCluster-fm]",
+				"[Action fixMCSCert-fm]",
+				"[Action fixMCSUserData-fm]",
+				"[Action ensureGatewayUpgrade-fm]",
+				"[Action rotateACRTokenPassword-fm]",
+				"[Action configureAPIServerCertificate-fm]",
+				"[Action configureIngressCertificate-fm]",
+				"[Action populateRegistryStorageAccountName-fm]",
+				"[Action ensureMTUSize-fm]",
+				"[Action initializeOperatorDeployer-fm]",
 				"[Action hiveCreateNamespace-fm]",
 				"[Action hiveEnsureResources-fm]",
 				"[Condition hiveClusterDeploymentReady-fm, timeout 5m0s]",

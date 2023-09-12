@@ -8,7 +8,7 @@ import (
 	"text/template"
 
 	"github.com/Azure/go-autorest/autorest/to"
-	ign2types "github.com/coreos/ignition/config/v2_2/types"
+	ign3types "github.com/coreos/ignition/v2/config/v3_2/types"
 	"github.com/vincent-petithory/dataurl"
 )
 
@@ -26,19 +26,18 @@ func nmDispatcherRestartDnsmasq() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func restartScriptIgnFile(data []byte) ign2types.File {
-	return ign2types.File{
-		Node: ign2types.Node{
-			Filesystem: "root",
-			Overwrite:  to.BoolPtr(true),
-			Path:       "/etc/NetworkManager/dispatcher.d/" + restartScriptFileName,
-			User: &ign2types.NodeUser{
-				Name: "root",
+func restartScriptIgnFile(data []byte) ign3types.File {
+	return ign3types.File{
+		Node: ign3types.Node{
+			Overwrite: to.BoolPtr(true),
+			Path:      "/etc/NetworkManager/dispatcher.d/" + restartScriptFileName,
+			User: ign3types.NodeUser{
+				Name: to.StringPtr("root"),
 			},
 		},
-		FileEmbedded1: ign2types.FileEmbedded1{
-			Contents: ign2types.FileContents{
-				Source: dataurl.EncodeBytes(data),
+		FileEmbedded1: ign3types.FileEmbedded1{
+			Contents: ign3types.Resource{
+				Source: to.StringPtr(dataurl.EncodeBytes(data)),
 			},
 			Mode: to.IntPtr(0744),
 		},
