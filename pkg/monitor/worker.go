@@ -9,12 +9,15 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/monitor/azure/nsg"
 	"github.com/Azure/ARO-RP/pkg/monitor/cluster"
+	"github.com/Azure/ARO-RP/pkg/monitor/dimension"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
@@ -212,7 +215,7 @@ out:
 		// cached metrics in the remaining minutes
 
 		if sub != nil && sub.Subscription != nil && sub.Subscription.State != api.SubscriptionStateSuspended && sub.Subscription.State != api.SubscriptionStateWarned {
-			mon.workOne(context.Background(), log, v.doc, newh != h)
+			mon.workOne(context.Background(), log, v.doc, sub, newh != h)
 		}
 
 		select {
@@ -228,7 +231,7 @@ out:
 }
 
 // workOne checks the API server health of a cluster
-func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument, hourlyRun bool) {
+func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument, hourlyRun bool) {
 	ctx, cancel := context.WithTimeout(ctx, 50*time.Second)
 	defer cancel()
 
@@ -246,6 +249,30 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 		log.Warnf("no hiveShardConfigs set for shard %d", shard)
 	}
 
+	var nsgMon *nsg.NSGMonitor
+	if doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG == api.PreconfiguredNSGEnabled && hourlyRun {
+		token, err := mon.env.FPNewClientCertificateCredential(sub.Subscription.Properties.TenantID)
+		if err != nil {
+			// Not stopping here just because we can't monitor NSG
+			log.Error("Unable to create FP Authorizer for NSG monitoring.", err)
+			mon.m.EmitGauge(nsg.MetricUnsuccessfulFPCreation, int64(1), map[string]string{
+				dimension.ClusterResourceID: doc.OpenShiftCluster.ID,
+				dimension.Location:          doc.OpenShiftCluster.Location,
+				dimension.SubscriptionID:    sub.ID,
+			})
+		} else {
+			client, err := armnetwork.NewSubnetsClient(sub.ID, token, nil)
+			if err != nil {
+				log.Error("Unable to create the subnet client for NSG monitoring", err)
+			} else {
+				nsgMon = nsg.NewNSGMonitor(log, doc.OpenShiftCluster, sub.ID, client, mon.clusterm)
+			}
+		}
+		if nsgMon != nil {
+			go nsgMon.Monitor(ctx)
+		}
+	}
+
 	c, err := cluster.NewMonitor(log, restConfig, doc.OpenShiftCluster, mon.clusterm, hiveRestConfig, hourlyRun)
 	if err != nil {
 		log.Error(err)
@@ -256,4 +283,21 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	}
 
 	c.Monitor(ctx)
+
+	// if doing nsg monitoring, wait until timed out
+	if nsgMon != nil {
+		select {
+		case err := <-nsgMon.Done():
+			if err != nil {
+				log.Error("Error occurred during NSG monitoring", err)
+			}
+		case <-ctx.Done():
+			log.Infof("NSG Monitoring processing for cluster %s has timed out", doc.OpenShiftCluster.ID)
+			mon.m.EmitGauge(nsg.MetricNSGMonitoringTimedOut, int64(1), map[string]string{
+				dimension.ClusterResourceID: doc.OpenShiftCluster.ID,
+				dimension.Location:          doc.OpenShiftCluster.Location,
+				dimension.SubscriptionID:    sub.ID,
+			})
+		}
+	}
 }
