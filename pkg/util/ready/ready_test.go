@@ -14,8 +14,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/fake"
 	ktesting "k8s.io/client-go/testing"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	clientfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
+	testdynamichelper "github.com/Azure/ARO-RP/test/util/dynamichelper"
 )
 
 func TestNodeIsReady(t *testing.T) {
@@ -523,15 +529,12 @@ func TestCheckDeploymentIsReady(t *testing.T) {
 			Namespace: "default",
 		},
 	}
-	clientset := fake.NewSimpleClientset()
-	_, err := clientset.AppsV1().Deployments("default").Create(ctx, deployment, metav1.CreateOptions{})
-	if err != nil {
-		t.Fatalf("error creating deployment: %v", err)
-	}
-	_, err = CheckDeploymentIsReady(ctx, clientset.AppsV1().Deployments("default"), deployment.ObjectMeta.Name)()
+	clientFake := clientfake.NewClientBuilder().WithObjects(deployment).Build()
+	dh := dynamichelper.NewWithClient(nil, clientFake)
+	_, err := CheckDeploymentIsReady(ctx, dh, client.ObjectKeyFromObject(deployment))()
 
 	if err != nil {
-		t.Fatalf("check deployement is not ready: %v", err)
+		t.Fatalf("check deployment is not ready: %v", err)
 	}
 }
 
@@ -543,9 +546,12 @@ func TestCheckDeploymentIsReadyNotFound(t *testing.T) {
 			Namespace: "default",
 		},
 	}
-	clientset := fake.NewSimpleClientset()
-	ok, _ := CheckDeploymentIsReady(ctx, clientset.AppsV1().Deployments("default"), deployment.ObjectMeta.Name)()
-
+	clientFake := clientfake.NewClientBuilder().Build()
+	dh := dynamichelper.NewWithClient(nil, clientFake)
+	ok, err := CheckDeploymentIsReady(ctx, dh, client.ObjectKeyFromObject(deployment))()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if ok {
 		t.Fatalf("check deployment is found")
 	}
@@ -554,11 +560,12 @@ func TestCheckDeploymentIsReadyNotFound(t *testing.T) {
 func TestCheckDeploymentIsReadyError(t *testing.T) {
 	ctx := context.Background()
 
-	clientset := fake.NewSimpleClientset()
-	clientset.Fake.PrependReactor("get", "deployments", func(action ktesting.Action) (bool, kruntime.Object, error) {
-		return true, &appsv1.Deployment{}, errors.New("error getting deployment")
-	})
-	_, err := CheckDeploymentIsReady(ctx, clientset.AppsV1().Deployments("default"), "")()
+	clientFake := testdynamichelper.NewRedirectingClient(clientfake.NewClientBuilder().Build()).
+		WithGetHook(func(key types.NamespacedName, obj client.Object) error {
+			return errors.New("error getting deployment")
+		})
+	dh := dynamichelper.NewWithClient(nil, clientFake)
+	_, err := CheckDeploymentIsReady(ctx, dh, types.NamespacedName{Namespace: "default", Name: "something"})()
 
 	if err == nil {
 		t.Fatalf("check deployment error is: %v", err)

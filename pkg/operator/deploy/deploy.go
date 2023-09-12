@@ -27,6 +27,7 @@ import (
 	appsv1client "k8s.io/client-go/kubernetes/typed/apps/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -58,8 +59,8 @@ type operator struct {
 	env env.Interface
 	oc  *api.OpenShiftCluster
 
-	arocli        aroclient.Interface
-	extensionscli extensionsclient.Interface
+	pollTimeout time.Duration
+
 	kubernetescli kubernetes.Interface
 	dh            dynamichelper.Interface
 }
@@ -79,8 +80,8 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli 
 		env: env,
 		oc:  oc,
 
-		arocli:        arocli,
-		extensionscli: extensionscli,
+		pollTimeout: time.Minute,
+
 		kubernetescli: kubernetescli,
 		dh:            dh,
 	}, nil
@@ -282,7 +283,11 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 		return err
 	}
 
-	err = dynamichelper.Prepare(resources)
+	return o.createOrUpdateInner(ctx, resources)
+}
+
+func (o *operator) createOrUpdateInner(ctx context.Context, resources []kruntime.Object) error {
+	err := dynamichelper.Prepare(resources)
 	if err != nil {
 		return err
 	}
@@ -293,20 +298,20 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 			return err
 		}
 
-		gvks, _, err := scheme.Scheme.ObjectKinds(resource)
-		if err != nil {
-			return err
-		}
-
-		switch gvks[0].GroupKind().String() {
-		case "CustomResourceDefinition.apiextensions.k8s.io":
+		c, ok := resource.(client.Object)
+		if !ok {
 			acc, err := meta.Accessor(resource)
 			if err != nil {
 				return err
 			}
+			return fmt.Errorf("unable to handle %s: %s %s", resource.GetObjectKind().GroupVersionKind().String(), acc.GetName(), acc.GetNamespace())
+		}
 
-			err = wait.PollImmediate(time.Second, time.Minute, func() (bool, error) {
-				crd, err := o.extensionscli.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, acc.GetName(), metav1.GetOptions{})
+		switch c.GetObjectKind().GroupVersionKind().GroupKind().String() {
+		case "CustomResourceDefinition.apiextensions.k8s.io":
+			err = wait.PollImmediate(time.Second, o.pollTimeout, func() (bool, error) {
+				crd := &extensionsv1.CustomResourceDefinition{}
+				err := o.dh.GetOne(ctx, client.ObjectKeyFromObject(c), crd)
 				if err != nil {
 					return false, err
 				}
@@ -314,7 +319,7 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 				return isCRDEstablished(crd), nil
 			})
 			if err != nil {
-				return err
+				return fmt.Errorf("CRDs did not establish: %v", err)
 			}
 		case "Cluster.aro.openshift.io":
 			// add an owner reference onto our configuration secret.  This is
@@ -333,12 +338,14 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 				// "aro.openshift.io/v1alpha1"
 				return kerrors.IsForbidden(err) || kerrors.IsConflict(err)
 			}, func() error {
-				cluster, err := o.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+				cluster := &arov1alpha1.Cluster{}
+				err := o.dh.GetOne(ctx, arov1alpha1.SingletonKey, cluster)
 				if err != nil {
 					return err
 				}
 
-				s, err := o.kubernetescli.CoreV1().Secrets(pkgoperator.Namespace).Get(ctx, pkgoperator.SecretName, metav1.GetOptions{})
+				s := &corev1.Secret{}
+				err = o.dh.GetOne(ctx, pkgoperator.SecretKey, s)
 				if err != nil {
 					return err
 				}
@@ -348,11 +355,11 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 					return err
 				}
 
-				_, err = o.kubernetescli.CoreV1().Secrets(pkgoperator.Namespace).Update(ctx, s, metav1.UpdateOptions{})
+				err = o.dh.Ensure(ctx, s)
 				return err
 			})
 			if err != nil {
-				return err
+				return fmt.Errorf("unable to add owner to configuration secret: %v", err)
 			}
 		}
 	}
@@ -370,28 +377,25 @@ func (o *operator) RenewMDSDCertificate(ctx context.Context) error {
 		return err
 	}
 
-	s, err := o.kubernetescli.CoreV1().Secrets(pkgoperator.Namespace).Get(ctx, pkgoperator.SecretName, metav1.GetOptions{})
+	s := &corev1.Secret{}
+	err = o.dh.GetOne(ctx, pkgoperator.SecretKey, s)
 	if err != nil {
 		return err
 	}
 	s.Data["gcscert.pem"] = gcsCertBytes
 	s.Data["gcskey.pem"] = gcsKeyBytes
 
-	_, err = o.kubernetescli.CoreV1().Secrets(pkgoperator.Namespace).Update(ctx, s, metav1.UpdateOptions{})
-	if err != nil {
-		return err
-	}
-	return nil
+	return o.dh.Ensure(ctx, s)
 }
 
 func (o *operator) IsReady(ctx context.Context) (bool, error) {
-	ok, err := ready.CheckDeploymentIsReady(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-master")()
-	o.log.Infof("deployment %q ok status is: %v, err is: %v", "aro-operator-master", ok, err)
+	ok, err := ready.CheckDeploymentIsReady(ctx, o.dh, pkgoperator.ControlPlaneDeployment)()
+	o.log.Infof("deployment %q ok status is: %v, err is: %v", pkgoperator.ControlPlaneDeployment.Name, ok, err)
 	if !ok || err != nil {
 		return ok, err
 	}
-	ok, err = ready.CheckDeploymentIsReady(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-worker")()
-	o.log.Infof("deployment %q ok status is: %v, err is: %v", "aro-operator-worker", ok, err)
+	ok, err = ready.CheckDeploymentIsReady(ctx, o.dh, pkgoperator.WorkerDeployment)()
+	o.log.Infof("deployment %q ok status is: %v, err is: %v", pkgoperator.WorkerDeployment.Name, ok, err)
 	if !ok || err != nil {
 		return ok, err
 	}

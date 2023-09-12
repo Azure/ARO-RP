@@ -7,17 +7,25 @@ import (
 	"context"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	extensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	clientfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	testdynamichelper "github.com/Azure/ARO-RP/test/util/dynamichelper"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestCheckIngressIP(t *testing.T) {
@@ -397,5 +405,67 @@ func TestCheckPodImageVersion(t *testing.T) {
 				t.Fatalf("error with CheckPodImageVersion test %s: got %v wanted %v", tt.name, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestDeploy(t *testing.T) {
+	_, log := testlog.New()
+
+	builder := clientfake.NewClientBuilder().WithRuntimeObjects(&arov1alpha1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: arov1alpha1.SingletonKey.Name,
+		},
+		Spec: arov1alpha1.ClusterSpec{},
+	})
+
+	client := testdynamichelper.NewRedirectingClient(builder.Build()).
+		WithCreateHook(func(obj client.Object) error {
+			if obj.GetObjectKind().GroupVersionKind().String() == "apiextensions.k8s.io/v1, Kind=CustomResourceDefinition" {
+				o := obj.(*extensionsv1.CustomResourceDefinition)
+				o.Status.Conditions = append(o.Status.Conditions,
+					extensionsv1.CustomResourceDefinitionCondition{
+						Type:   extensionsv1.Established,
+						Status: extensionsv1.ConditionTrue,
+					},
+					extensionsv1.CustomResourceDefinitionCondition{
+						Type:   extensionsv1.NamesAccepted,
+						Status: extensionsv1.ConditionTrue,
+					})
+			}
+			return nil
+		})
+
+	dh := dynamichelper.NewWithClient(log, client)
+
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	_env := mock_env.NewMockInterface(controller)
+	_env.EXPECT().ACRDomain().AnyTimes().Return("intsvcdomain")
+	_env.EXPECT().AROOperatorImage().AnyTimes().Return("defaultaroimagefromenv")
+	_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
+
+	oc := &api.OpenShiftCluster{
+		Properties: api.OpenShiftClusterProperties{},
+	}
+
+	d := &operator{
+		log: log,
+		env: _env,
+		oc:  oc,
+
+		pollTimeout: time.Second,
+
+		dh: dh,
+	}
+
+	objs, err := d.createObjects()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = d.createOrUpdateInner(context.Background(), objs)
+	if err != nil {
+		t.Fatal(err)
 	}
 }
