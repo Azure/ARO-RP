@@ -399,9 +399,9 @@ var _ = Describe("ARO Operator - MUO Deployment", func() {
 			b, err := clients.Kubernetes.CoreV1().Pods(managedUpgradeOperatorNamespace).GetLogs(pods.Items[0].Name, &corev1.PodLogOptions{}).DoRaw(ctx)
 			g.Expect(err).NotTo(HaveOccurred())
 
-			g.Expect(string(b)).To(ContainSubstring(`msg="FIPS crypto mandated: true"`))
+			g.Expect(string(b)).To(ContainSubstring(`X:boringcrypto,strictfipsruntime`))
 		}).WithContext(ctx).Should(Succeed())
-	})
+	}, SpecTimeout(2*time.Minute))
 
 	It("must be restored if deleted", func(ctx context.Context) {
 		deleteMUODeployment := func(ctx context.Context) error {
@@ -428,7 +428,7 @@ var _ = Describe("ARO Operator - MUO Deployment", func() {
 
 		By("waiting for the MUO deployment to be reconciled")
 		Eventually(muoDeploymentExists).WithContext(ctx).Should(Succeed())
-	})
+	}, SpecTimeout(2*time.Minute))
 })
 
 var _ = Describe("ARO Operator - ImageConfig Reconciler", func() {
