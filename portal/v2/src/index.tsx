@@ -15,28 +15,11 @@ mergeStyles({
   },
 })
 
-const searchParams = window.location.search
-
-const getURLParams = () : any => {
-  let urlParams = {}
-  const paramStringFromURL = searchParams.split('?')[1];
-  const paramsArr = paramStringFromURL.split('&');
-
-  for (let i = 0; i < paramsArr.length; i++) {
-      let pair = paramsArr[i].split('=');
-      urlParams = {[pair[0]]: pair[1]}
-  }
-
-  return urlParams
-}
-
 const router = createBrowserRouter([
   {
     path: "/",
-    element: (
-      <App params={ searchParams ? getURLParams(): undefined} />
-    )
+    element: (<App/>)
   }
 ])
 
-createRoot(document.getElementById("root")!).render(<RouterProvider router={router} />, )
+createRoot(document.getElementById("root")!).render(<RouterProvider router={router} />)

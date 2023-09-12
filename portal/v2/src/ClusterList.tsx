@@ -28,6 +28,7 @@ import { fetchClusters } from "./Request"
 import { ToolIcons } from "./ToolIcons"
 import { AxiosResponse } from "axios"
 import { ICluster, headerStyles } from "./App"
+import { useSearchParams } from "react-router-dom"
 
 const errorBarStyles: Partial<IMessageBarStyles> = { root: { marginBottom: 15 } }
 
@@ -370,13 +371,13 @@ export function ClusterList(props: {
   sshBox: MutableRefObject<any>
   setCurrentCluster: any
   csrfTokenAvailable: string
-  params: any
 }) {
   const [data, setData] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
   const [isPopupVisible, { setTrue: showPopup, setFalse: hidePopup }] = useBoolean(false)
   const state = useRef<ClusterListComponent>(null)
   const [fetching, setFetching] = useState("")
+  const [searchParams] = useSearchParams()
 
   const errorBar = (): any => {
     return (
@@ -415,8 +416,8 @@ export function ClusterList(props: {
       fetchClusters().then(onData)
     }
 
-    if (props.params) {
-      const resourceID: string = props.params["resourceid"]
+    if (searchParams.has("resourceid")) {
+      const resourceID: string = searchParams.get("resourceid")!
       const clusterList = data as ICluster[]
       const currentCluster = clusterList.find(
         (item): item is ICluster => resourceID === item.resourceId
