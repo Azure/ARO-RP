@@ -448,7 +448,7 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 		name                        string
 		m                           manager
 		lb                          mgmtnetwork.LoadBalancer
-		expectedLoadBalancerProfile api.LoadBalancerProfile
+		expectedLoadBalancerProfile *api.LoadBalancerProfile
 		uuids                       []string
 		mocks                       func(
 			loadBalancersClient *mock_network.MockLoadBalancersClient,
@@ -456,6 +456,36 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 			ctx context.Context)
 		expectedErr []error
 	}{
+		{
+			name:  "reconcile is skipped when architecture version is V1",
+			uuids: []string{},
+			m: manager{
+				doc: &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(key),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       key,
+						Location: location,
+						Properties: api.OpenShiftClusterProperties{
+							ArchitectureVersion: api.ArchitectureVersionV1,
+							ProvisioningState:   api.ProvisioningStateUpdating,
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: clusterRGID,
+							},
+							InfraID: infraID,
+							APIServerProfile: api.APIServerProfile{
+								Visibility: api.VisibilityPublic,
+							},
+							NetworkProfile: api.NetworkProfile{
+								OutboundType:        api.OutboundTypeLoadbalancer,
+								LoadBalancerProfile: nil,
+							},
+						},
+					},
+				},
+			},
+			expectedLoadBalancerProfile: nil,
+			expectedErr:                 nil,
+		},
 		{
 			name:  "default managed ips",
 			uuids: []string{},
@@ -466,7 +496,8 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 						ID:       key,
 						Location: location,
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState: api.ProvisioningStateUpdating,
+							ArchitectureVersion: api.ArchitectureVersionV2,
+							ProvisioningState:   api.ProvisioningStateUpdating,
 							ClusterProfile: api.ClusterProfile{
 								ResourceGroupID: clusterRGID,
 							},
@@ -503,7 +534,7 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 					Get(gomock.Any(), clusterRGName, infraID, "").
 					Return(fakeLoadBalancersGet(0, api.VisibilityPublic), nil)
 			},
-			expectedLoadBalancerProfile: api.LoadBalancerProfile{
+			expectedLoadBalancerProfile: &api.LoadBalancerProfile{
 				ManagedOutboundIPs: &api.ManagedOutboundIPs{
 					Count: 1,
 				},
@@ -525,7 +556,8 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 						ID:       key,
 						Location: location,
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState: api.ProvisioningStateUpdating,
+							ProvisioningState:   api.ProvisioningStateUpdating,
+							ArchitectureVersion: api.ArchitectureVersionV2,
 							ClusterProfile: api.ClusterProfile{
 								ResourceGroupID: clusterRGID,
 							},
@@ -567,7 +599,7 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 					Get(gomock.Any(), clusterRGName, infraID, "").
 					Return(fakeLoadBalancersGet(1, api.VisibilityPublic), nil)
 			},
-			expectedLoadBalancerProfile: api.LoadBalancerProfile{
+			expectedLoadBalancerProfile: &api.LoadBalancerProfile{
 				ManagedOutboundIPs: &api.ManagedOutboundIPs{
 					Count: 2,
 				},
@@ -592,7 +624,8 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 						ID:       key,
 						Location: location,
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState: api.ProvisioningStateUpdating,
+							ArchitectureVersion: api.ArchitectureVersionV2,
+							ProvisioningState:   api.ProvisioningStateUpdating,
 							ClusterProfile: api.ClusterProfile{
 								ResourceGroupID: clusterRGID,
 							},
@@ -638,7 +671,7 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 					Get(gomock.Any(), clusterRGName, infraID, "").
 					Return(fakeLoadBalancersGet(1, api.VisibilityPublic), nil)
 			},
-			expectedLoadBalancerProfile: api.LoadBalancerProfile{
+			expectedLoadBalancerProfile: &api.LoadBalancerProfile{
 				ManagedOutboundIPs: &api.ManagedOutboundIPs{
 					Count: 2,
 				},
@@ -664,7 +697,8 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 						ID:       key,
 						Location: location,
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState: api.ProvisioningStateUpdating,
+							ProvisioningState:   api.ProvisioningStateUpdating,
+							ArchitectureVersion: api.ArchitectureVersionV2,
 							ClusterProfile: api.ClusterProfile{
 								ResourceGroupID: clusterRGID,
 							},
@@ -713,7 +747,7 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 				publicIPAddressClient.EXPECT().DeleteAndWait(gomock.Any(), "clusterRG", "uuid1-outbound-pip-v4")
 			},
 
-			expectedLoadBalancerProfile: api.LoadBalancerProfile{
+			expectedLoadBalancerProfile: &api.LoadBalancerProfile{
 				ManagedOutboundIPs: &api.ManagedOutboundIPs{
 					Count: 1,
 				},
@@ -735,7 +769,8 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 						ID:       key,
 						Location: location,
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState: api.ProvisioningStateUpdating,
+							ProvisioningState:   api.ProvisioningStateUpdating,
+							ArchitectureVersion: api.ArchitectureVersionV2,
 							ClusterProfile: api.ClusterProfile{
 								ResourceGroupID: clusterRGID,
 							},
@@ -782,7 +817,7 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 					Return(fakeLoadBalancersGet(0, api.VisibilityPublic), nil)
 				publicIPAddressClient.EXPECT().DeleteAndWait(gomock.Any(), "clusterRG", "uuid1-outbound-pip-v4")
 			},
-			expectedLoadBalancerProfile: api.LoadBalancerProfile{
+			expectedLoadBalancerProfile: &api.LoadBalancerProfile{
 				ManagedOutboundIPs: &api.ManagedOutboundIPs{
 					Count: 2,
 				},
@@ -804,7 +839,8 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 						ID:       key,
 						Location: location,
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState: api.ProvisioningStateUpdating,
+							ProvisioningState:   api.ProvisioningStateUpdating,
+							ArchitectureVersion: api.ArchitectureVersionV2,
 							ClusterProfile: api.ClusterProfile{
 								ResourceGroupID: clusterRGID,
 							},
@@ -856,7 +892,7 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 				publicIPAddressClient.EXPECT().DeleteAndWait(gomock.Any(), "clusterRG", "uuid1-outbound-pip-v4").Return(fmt.Errorf("error"))
 				publicIPAddressClient.EXPECT().DeleteAndWait(gomock.Any(), "clusterRG", "uuid2-outbound-pip-v4").Return(fmt.Errorf("error"))
 			},
-			expectedLoadBalancerProfile: api.LoadBalancerProfile{
+			expectedLoadBalancerProfile: &api.LoadBalancerProfile{
 				ManagedOutboundIPs: &api.ManagedOutboundIPs{
 					Count: 1,
 				},
@@ -878,7 +914,8 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 						ID:       key,
 						Location: location,
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState: api.ProvisioningStateUpdating,
+							ProvisioningState:   api.ProvisioningStateUpdating,
+							ArchitectureVersion: api.ArchitectureVersionV2,
 							ClusterProfile: api.ClusterProfile{
 								ResourceGroupID: clusterRGID,
 							},
@@ -927,7 +964,7 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 					Return(fakeLoadBalancersGet(0, api.VisibilityPublic), nil)
 				publicIPAddressClient.EXPECT().DeleteAndWait(gomock.Any(), "clusterRG", "uuid1-outbound-pip-v4").Return(fmt.Errorf("error"))
 			},
-			expectedLoadBalancerProfile: api.LoadBalancerProfile{
+			expectedLoadBalancerProfile: &api.LoadBalancerProfile{
 				ManagedOutboundIPs: &api.ManagedOutboundIPs{
 					Count: 3,
 				},
@@ -972,7 +1009,7 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 			} else {
 				assert.Equal(t, nil, err, "Unexpected error exception")
 			}
-			assert.Equal(t, &tt.expectedLoadBalancerProfile, tt.m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile)
+			assert.Equal(t, &tt.expectedLoadBalancerProfile, &tt.m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile)
 		})
 	}
 }
