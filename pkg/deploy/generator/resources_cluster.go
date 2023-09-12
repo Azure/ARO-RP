@@ -44,7 +44,9 @@ func (g *generator) clusterMasterSubnet() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.Subnet{
 			SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-				AddressPrefix: to.StringPtr("[parameters('masterAddressPrefix')]"),
+				AddressPrefixes: &[]string{
+					*to.StringPtr("[parameters('masterAddressPrefix')]"),
+				},
 				RouteTable: &mgmtnetwork.RouteTable{
 					ID: to.StringPtr("[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]"),
 				},

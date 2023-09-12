@@ -52,6 +52,8 @@ var (
 	errMsgInvalidVNetLocation               = "The vnet location '%s' must match the cluster location '%s'."
 )
 
+const minimumSubnetMaskSize int = 27
+
 type Subnet struct {
 	// ID is a resource id of the subnet
 	ID string
@@ -766,23 +768,41 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 			)
 		}
 
-		_, net, err := net.ParseCIDR(*ss.AddressPrefix)
-		if err != nil {
-			return err
-		}
-
-		ones, _ := net.Mask.Size()
-		if ones > 27 {
-			return api.NewCloudError(
-				http.StatusBadRequest,
-				api.CloudErrorCodeInvalidLinkedVNet,
-				s.Path,
-				errMsgSubnetInvalidSize,
-				s.ID,
-			)
+		// Handle both addressPrefix & addressPrefixes
+		if ss.AddressPrefix == nil {
+			for _, address := range *ss.AddressPrefixes {
+				if err = validateSubnetSize(s, address); err != nil {
+					return err
+				}
+			}
+		} else {
+			if err = validateSubnetSize(s, *ss.AddressPrefix); err != nil {
+				return err
+			}
 		}
 	}
 
+	return nil
+}
+
+// validateSubnetSize checks if the subnet mask is >27, and returns
+// an error if so as it is too small for OCP
+func validateSubnetSize(s Subnet, address string) error {
+	_, net, err := net.ParseCIDR(address)
+	if err != nil {
+		return err
+	}
+
+	ones, _ := net.Mask.Size()
+	if ones > minimumSubnetMaskSize {
+		return api.NewCloudError(
+			http.StatusBadRequest,
+			api.CloudErrorCodeInvalidLinkedVNet,
+			s.Path,
+			errMsgSubnetInvalidSize,
+			s.ID,
+		)
+	}
 	return nil
 }
 

@@ -443,4 +443,39 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 			SaveScreenshotAndExit(wd, err)
 		}
 	})
+
+	It("Should display the action icons on cluster detail page", func() {
+		wd.Get(host + "/" + "?resourceid=" + resourceIDFromEnv())
+		wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByID, "ClusterDetailPanel"), time.Second*3)
+
+		detailPanel, err := wd.FindElement(selenium.ByID, "ClusterDetailPanel")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		Expect(detailPanel.IsDisplayed()).To(BeTrue())
+
+		resourceButton, err := wd.FindElement(selenium.ByCSSSelector, "button[aria-label='Copy Resource ID']")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		Expect(resourceButton.IsDisplayed()).To(BeTrue())
+
+		prometheusButton, err := wd.FindElement(selenium.ByCSSSelector, "a[aria-label='Prometheus']")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		Expect(prometheusButton.IsDisplayed()).To(BeTrue())
+
+		sshbutton, err := wd.FindElement(selenium.ByCSSSelector, "button[aria-label='SSH']")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		Expect(sshbutton.IsDisplayed()).To(BeTrue())
+
+		kubeconfigButton, err := wd.FindElement(selenium.ByCSSSelector, "button[aria-label='Download Kubeconfig']")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		Expect(kubeconfigButton.IsDisplayed()).To(BeTrue())
+	})
 })
