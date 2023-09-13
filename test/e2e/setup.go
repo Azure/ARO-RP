@@ -103,7 +103,7 @@ func skipIfNotHiveManagedCluster(adminAPICluster *admin.OpenShiftCluster) {
 	}
 }
 
-func SaveScreenshotAndExit(wd selenium.WebDriver, e error) {
+func SaveScreenshot(wd selenium.WebDriver, e error) {
 	log.Infof("Error : %s", e.Error())
 	log.Info("Taking Screenshot and saving page source")
 	imageBytes, err := wd.Screenshot()
@@ -148,8 +148,6 @@ func SaveScreenshotAndExit(wd selenium.WebDriver, e error) {
 
 	log.Infof("Screenshot saved to %s", imageAbsPath)
 	log.Infof("Page Source saved to %s", sourceAbsPath)
-
-	panic(e)
 }
 
 func adminPortalSessionSetup() (string, *selenium.WebDriver) {
