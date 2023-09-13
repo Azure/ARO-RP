@@ -1,5 +1,6 @@
-import { Component } from "react"
 import React from "react"
+import { Navigate, Route, Routes } from "react-router-dom"
+
 import { OverviewWrapper } from "./ClusterDetailListComponents/OverviewWrapper"
 import { NodesWrapper } from "./ClusterDetailListComponents/NodesWrapper"
 import { MachinesWrapper } from "./ClusterDetailListComponents/MachinesWrapper"
@@ -8,12 +9,12 @@ import { Statistics } from "./ClusterDetailListComponents/Statistics/Statistics"
 import { ClusterOperatorsWrapper } from "./ClusterDetailListComponents/ClusterOperatorsWrapper";
 
 import { IClusterCoordinates } from "./App"
+import { apiStatisticsKey, clusterOperatorsKey, dnsStatisticsKey, ingressStatisticsKey, kcmStatisticsKey, machineSetsKey, machinesKey, nodesKey, overviewKey } from "./ClusterDetail"
 
 interface ClusterDetailComponentProps {
   item: IClusterDetails
   cluster: IClusterCoordinates | null
   isDataLoaded: boolean
-  detailPanelVisible: string
 }
 
 export interface IClusterDetails {
@@ -43,51 +44,21 @@ export interface WrapperProps {
   loaded: boolean
 }
 
-interface IClusterDetailComponentState {
-  item: IClusterDetails // why both state and props?
-  detailPanelSelected: string
-}
-
-const detailComponents: Map<string, any> = new Map<string, any>([
-    ["nodes", NodesWrapper],
-    ["machines", MachinesWrapper],
-    ["machinesets", MachineSetsWrapper],
-    ["clusteroperators", ClusterOperatorsWrapper],
-    ["statistics", Statistics]
-])
-
-export class ClusterDetailComponent extends Component<ClusterDetailComponentProps, IClusterDetailComponentState> {
-
-  constructor(props: ClusterDetailComponentProps | Readonly<ClusterDetailComponentProps>) {
-    super(props)
-  }
-
-  public render() {
-    if (this.props.cluster != undefined && this.props.detailPanelVisible != undefined) {
-      const panel = this.props.detailPanelVisible.toLowerCase()
-      if (panel == "overview") {
-        return (
-          <OverviewWrapper
-            clusterName={this.props.cluster.name}
-            currentCluster={this.props.cluster!}
-            detailPanelSelected={panel}
-            loaded={this.props.isDataLoaded}
-          />
-        )
-      } else if (panel.includes("statistics")) {
-        const StatisticsView = detailComponents.get("statistics")
-        const type = panel.substring(0,panel.indexOf("statistics"))
-        return (
-          <StatisticsView currentCluster={this.props.cluster!} detailPanelSelected={panel} loaded = {this.props.isDataLoaded} statisticsType = {type}/>
-        )
-      } else {
-        const DetailView = detailComponents.get(panel)
-        return (
-          <DetailView currentCluster={this.props.cluster!} detailPanelSelected={panel} loaded={this.props.isDataLoaded}/>
-        )
-      }
-    }
-  }
+export function ClusterDetailComponent(props: ClusterDetailComponentProps) {
+  return (
+    <Routes>
+      <Route path="" element={<Navigate to="overview" />} />
+      <Route path="overview" element={<OverviewWrapper clusterName={props.cluster?.name!} currentCluster={props.cluster!} detailPanelSelected={overviewKey} loaded={props.isDataLoaded} />} />
+      <Route path="nodes" element={<NodesWrapper currentCluster={props.cluster!} detailPanelSelected={nodesKey} loaded={props.isDataLoaded} />} />
+      <Route path="machines" element={<MachinesWrapper currentCluster={props.cluster!} detailPanelSelected={machinesKey} loaded={props.isDataLoaded} />} />
+      <Route path="machinesets" element={<MachineSetsWrapper currentCluster={props.cluster!} detailPanelSelected={machineSetsKey} loaded={props.isDataLoaded} />} />
+      <Route path="apistatistics" element={<Statistics currentCluster={props.cluster!} detailPanelSelected={apiStatisticsKey} loaded={props.isDataLoaded} statisticsType="api" />} />
+      <Route path="kcmstatistics" element={<Statistics currentCluster={props.cluster!} detailPanelSelected={kcmStatisticsKey} loaded={props.isDataLoaded} statisticsType="kcm" />} />
+      <Route path="dnsstatistics" element={<Statistics currentCluster={props.cluster!} detailPanelSelected={dnsStatisticsKey} loaded={props.isDataLoaded} statisticsType="dns" />} />
+      <Route path="ingressstatistics" element={<Statistics currentCluster={props.cluster!} detailPanelSelected={ingressStatisticsKey} loaded={props.isDataLoaded} statisticsType="ingress" />} />
+      <Route path="clusteroperators" element={<ClusterOperatorsWrapper currentCluster={props.cluster!} detailPanelSelected={clusterOperatorsKey} loaded={props.isDataLoaded} />} />
+    </Routes>
+  )
 }
 
 export const MemoisedClusterDetailListComponent = React.memo(ClusterDetailComponent)

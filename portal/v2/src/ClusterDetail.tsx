@@ -17,9 +17,9 @@ import { fetchClusterInfo } from "./Request"
 import { IClusterCoordinates, headerStyles } from "./App"
 import { Nav, INavLink, INavStyles } from "@fluentui/react/lib/Nav"
 import { ToolIcons } from "./ToolIcons"
-import { ClusterDetailComponent, MemoisedClusterDetailListComponent } from "./ClusterDetailList"
+import { MemoisedClusterDetailListComponent } from "./ClusterDetailList"
 import React from "react"
-import { useLinkClickHandler, useParams } from "react-router-dom"
+import { useLinkClickHandler, useNavigate, useParams } from "react-router-dom"
 
 const navStyles: Partial<INavStyles> = {
   root: {
@@ -86,11 +86,9 @@ export function ClusterDetailPanel(props: {
 }) {
   const [data, setData] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
-  const state = useRef<ClusterDetailComponent>(null)
   const [fetching, setFetching] = useState("")
   const [isOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false) // panel controls
   const [dataLoaded, setDataLoaded] = useState<boolean>(false)
-  const [detailPanelVisible, setdetailPanelVisible] = useState<string>("Overview")
   const [customPanelStyle, setcustomPanelStyle] = useState<Partial<IPanelStyles>>({
     root: { top: "40px", left: "225px" },
     content: { paddingLeft: 30, paddingRight: 5 },
@@ -99,6 +97,7 @@ export function ClusterDetailPanel(props: {
     },
   })
   const onDismiss = useLinkClickHandler("/")
+  const navigate = useNavigate();
 
   const params = useParams()
   const currentCluster = useMemo<IClusterCoordinates | null>(() => {
@@ -132,55 +131,55 @@ export function ClusterDetailPanel(props: {
         {
           name: "Overview",
           key: overviewKey,
-          url: '#overview',
+          url: overviewKey,
           icon: 'Info',
         },
         {
           name: "Nodes",
           key: nodesKey,
-          url: '#nodes',
+          url: nodesKey,
           icon: 'BranchCommit',
         },
         {
           name: "Machines",
           key: machinesKey,
-          url: '#machines',
+          url: machinesKey,
           icon: 'ConnectVirtualMachine',
         },
         {
           name: "MachineSets",
           key: machineSetsKey,
-          url: "#machinesets",
+          url: machineSetsKey,
           icon: "BuildQueue",
         },
         {
           name: "APIStatistics",
           key: apiStatisticsKey,
-          url: "#apistatistics",
+          url: apiStatisticsKey,
           icon: "BIDashboard",
         },
         {
           name: "KCMStatistics",
           key: kcmStatisticsKey,
-          url: "#kcmstatistics",
+          url: kcmStatisticsKey,
           icon: "BIDashboard",
         },
         {
           name: "DNSStatistics",
           key: dnsStatisticsKey,
-          url: "#dnsstatistics",
+          url: dnsStatisticsKey,
           icon: "BIDashboard",
         },
         {
           name: "IngressStatistics",
           key: ingressStatisticsKey,
-          url: "#ingressstatistics",
+          url: ingressStatisticsKey,
           icon: "BIDashboard",
         },
         {
           name: 'ClusterOperators',
           key: clusterOperatorsKey,
-          url: '#clusteroperators',
+          url: clusterOperatorsKey,
           icon: 'Shapes',
         },
       ],
@@ -192,9 +191,6 @@ export function ClusterDetailPanel(props: {
   // api/clusterdetail returns a single item.
   const updateData = (newData: any) => {
     setData(newData)
-    if (state && state.current) {
-      state.current.setState({ item: newData })
-    }
   }
 
   const _dismissPanel = (ev: any) => {
@@ -253,7 +249,8 @@ export function ClusterDetailPanel(props: {
 
   function _onLinkClick(ev?: React.MouseEvent<HTMLElement>, item?: INavLink) {
     if (item && item.name !== "") {
-      setdetailPanelVisible(item.name)
+      event?.preventDefault()
+      navigate(item.url)
     }
   }
 
@@ -305,7 +302,7 @@ export function ClusterDetailPanel(props: {
       </>
     )
   }
-
+  
   return (
     <Panel
       id="ClusterDetailPanel"
@@ -324,6 +321,7 @@ export function ClusterDetailPanel(props: {
               onLinkClick={_onLinkClick}
               ariaLabel="Select a tab to view"
               styles={navStyles}
+              selectedKey={params["*"]}
               groups={navLinkGroups}
             />
           </Stack.Item>
@@ -333,7 +331,6 @@ export function ClusterDetailPanel(props: {
               item={data}
               cluster={currentCluster}
               isDataLoaded={dataLoaded}
-              detailPanelVisible={detailPanelVisible}
             />
           </Stack.Item>
         </Stack>

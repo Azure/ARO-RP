@@ -1,5 +1,5 @@
 import axios, { AxiosResponse } from "axios"
-import { ICluster, IClusterCoordinates } from "./App"
+import { IClusterCoordinates } from "./App"
 import { convertTimeToHours } from "./ClusterDetailListComponents/Statistics/GraphOptionsComponent"
 
 const OnError = (err: AxiosResponse): AxiosResponse | null => {
@@ -143,7 +143,7 @@ export const RequestKubeconfig = async (
 }
 
 export const fetchStatistics = async (
-  cluster: ICluster,
+  cluster: IClusterCoordinates,
   statisticsName: string,
   duration: string,
   endDate: Date
