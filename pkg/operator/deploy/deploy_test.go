@@ -411,12 +411,7 @@ func TestCheckPodImageVersion(t *testing.T) {
 func TestDeploy(t *testing.T) {
 	_, log := testlog.New()
 
-	builder := clientfake.NewClientBuilder().WithRuntimeObjects(&arov1alpha1.Cluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: arov1alpha1.SingletonKey.Name,
-		},
-		Spec: arov1alpha1.ClusterSpec{},
-	})
+	builder := clientfake.NewClientBuilder()
 
 	client := testdynamichelper.NewRedirectingClient(builder.Build()).
 		WithCreateHook(func(obj client.Object) error {
@@ -463,6 +458,7 @@ func TestDeploy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	objs = append(objs, &arov1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: "cluster"}})
 
 	err = d.createOrUpdateInner(context.Background(), objs)
 	if err != nil {

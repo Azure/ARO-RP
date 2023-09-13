@@ -20,7 +20,6 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -54,7 +53,12 @@ type dynamicHelper struct {
 }
 
 func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {
-	client, err := client.New(restconfig, client.Options{})
+	mapper, err := apiutil.NewDynamicRESTMapper(restconfig, apiutil.WithLazyDiscovery)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := client.New(restconfig, client.Options{Mapper: mapper})
 	if err != nil {
 		return nil, err
 	}
@@ -134,10 +138,17 @@ func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) err
 	}
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		old := &unstructured.Unstructured{}
-		old.SetGroupVersionKind(new.GetObjectKind().GroupVersionKind())
+		old, err := scheme.Scheme.New(gvk)
+		if err != nil {
+			return err
+		}
 
-		err := dh.client.Get(ctx, client.ObjectKey{Namespace: newObj.GetNamespace(), Name: newObj.GetName()}, old)
+		oldObj, ok := old.(client.Object)
+		if !ok {
+			return fmt.Errorf("object of kind %s can't be made a client.Object", gvk.String())
+		}
+
+		err = dh.client.Get(ctx, client.ObjectKey{Namespace: newObj.GetNamespace(), Name: newObj.GetName()}, oldObj)
 		if kerrors.IsNotFound(err) {
 			dh.log.Infof("Create %s", keyFunc(gvk.GroupKind(), newObj.GetNamespace(), newObj.GetName()))
 			return dh.client.Create(ctx, newObj)
@@ -145,7 +156,7 @@ func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) err
 		if err != nil {
 			return err
 		}
-		candidate, changed, diff, err := dh.mergeWithLogic(old, newObj)
+		candidate, changed, diff, err := dh.mergeWithLogic(oldObj, newObj)
 		if err != nil || !changed {
 			return err
 		}
