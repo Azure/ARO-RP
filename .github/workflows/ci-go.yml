@@ -25,6 +25,7 @@ jobs:
         tags: ${{ github.sha }}
         context: .
         containerfiles: ./Dockerfile.ci
+        build-args: REGISTRY=registry.access.redhat.com
 
   vendor-check:
     runs-on: ubuntu-latest
