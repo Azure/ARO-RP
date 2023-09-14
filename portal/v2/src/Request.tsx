@@ -4,7 +4,11 @@ import { convertTimeToHours } from "./ClusterDetailListComponents/Statistics/Gra
 
 const OnError = (err: AxiosResponse): AxiosResponse | null => {
   if (err.status === 403) {
-    document.location.href = "/api/login"
+    var href = "/api/login"
+    if (document.location.pathname !== "/") {
+      href += "?redirect_uri=" + document.location.pathname
+    }
+    document.location.href = href
     return null
   } else {
     return err
