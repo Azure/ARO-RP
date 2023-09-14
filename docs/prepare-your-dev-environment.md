@@ -54,7 +54,9 @@ This document goes through the development dependencies one requires in order to
 
 ### Debian Packages
 
-Install the `libgpgme-dev` package.
+Install the `libgpgme-dev`, `libbtrfs-dev` and `libdevmapper-dev` packages.
+
+Make sure that `PKG_CONFIG_PATH` contains the pkgconfig files of the above packages.  E.g. `export PKG_CONFIG_PATH:/usr/lib/x86_64-linux-gnu/pkgconfig` (your actual pkgconfig path may vary, so adjust accordingly).
 
 ### MacOS Packages
 
