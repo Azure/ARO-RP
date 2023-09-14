@@ -274,4 +274,208 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		}
 		Expect(elem.Text()).To(Equal(clusterName))
 	})
+
+	It("Should display refresh button to get latest details for each tab in cluster detail page", func() {
+		wd.Get(host + "/" + "?resourceid=" + resourceIDFromEnv())
+		wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByID, "ClusterDetailPanel"), time.Second*3)
+
+		detailPanel, err := wd.FindElement(selenium.ByID, "ClusterDetailPanel")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		Expect(detailPanel.IsDisplayed()).To(BeTrue())
+
+		wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[aria-label='Refresh']"))
+
+		// Check refresh button clicked event for Overview Tab
+		button, err := wd.FindElement(selenium.ByCSSSelector, "div[aria-label='Refresh']")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		if err = button.Click(); err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		if err = wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByID, "ClusterDetailCell"), 2*time.Minute); err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		// Check refresh button clicked event for Nodes Tab
+		wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[name='Nodes']"))
+		nodesButton, err := wd.FindElement(selenium.ByCSSSelector, "div[name='Nodes']")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		nodesButton.Click()
+
+		if button, err = wd.FindElement(selenium.ByCSSSelector, "div[aria-label='Refresh']"); err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		if err = button.Click(); err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		if err = wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[role='presentation']"), 2*time.Minute); err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		// Check refresh button clicked event for Machines Tab
+		wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[name='Machines']"))
+		machinesButton, err := wd.FindElement(selenium.ByCSSSelector, "div[name='Machines']")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		machinesButton.Click()
+
+		if button, err = wd.FindElement(selenium.ByCSSSelector, "div[aria-label='Refresh']"); err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		if err = button.Click(); err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		if err = wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[role='presentation']"), 2*time.Minute); err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		// Check refresh button clicked event for Machine Sets Tab
+		wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[name='MachineSets']"))
+		machineSetsButton, err := wd.FindElement(selenium.ByCSSSelector, "div[name='MachineSets']")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		machineSetsButton.Click()
+
+		if button, err = wd.FindElement(selenium.ByCSSSelector, "div[aria-label='Refresh']"); err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		if err = button.Click(); err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		if err = wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[role='presentation']"), 2*time.Minute); err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		// Check refresh button clicked event for API Statistics Tab
+		wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[name='APIStatistics']"))
+		apiStatisticsButton, err := wd.FindElement(selenium.ByCSSSelector, "div[name='APIStatistics']")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		apiStatisticsButton.Click()
+
+		if button, err = wd.FindElement(selenium.ByCSSSelector, "div[aria-label='Refresh']"); err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		if err = button.Click(); err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		if err = wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[role='presentation']"), 2*time.Minute); err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		// Check refresh button clicked event for KCM Statistics Tab
+		wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[name='KCMStatistics']"))
+		kcmStatisticsButton, err := wd.FindElement(selenium.ByCSSSelector, "div[name='KCMStatistics']")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		kcmStatisticsButton.Click()
+
+		if button, err = wd.FindElement(selenium.ByCSSSelector, "div[aria-label='Refresh']"); err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		if err = button.Click(); err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		if err = wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[role='presentation']"), 2*time.Minute); err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		// Check refresh button clicked event for DNS Statistics Tab
+		wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[name='DNSStatistics']"))
+		dnsStatisticsButton, err := wd.FindElement(selenium.ByCSSSelector, "div[name='DNSStatistics']")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		dnsStatisticsButton.Click()
+
+		if button, err = wd.FindElement(selenium.ByCSSSelector, "div[aria-label='Refresh']"); err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		if err = button.Click(); err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		if err = wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[role='presentation']"), 2*time.Minute); err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		// Check refresh button clicked event for Ingress Statistics Tab
+		wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[name='IngressStatistics']"))
+		ingressStatisticsButton, err := wd.FindElement(selenium.ByCSSSelector, "div[name='IngressStatistics']")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		ingressStatisticsButton.Click()
+
+		if button, err = wd.FindElement(selenium.ByCSSSelector, "div[aria-label='Refresh']"); err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		if err = button.Click(); err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		if err = wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[role='presentation']"), 2*time.Minute); err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+
+		// Check refresh button clicked event for Cluster Operators Tab
+		wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[name='ClusterOperators']"))
+		clusterOperatorsButton, err := wd.FindElement(selenium.ByCSSSelector, "div[name='ClusterOperators']")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		clusterOperatorsButton.Click()
+
+		if button, err = wd.FindElement(selenium.ByCSSSelector, "div[aria-label='Refresh']"); err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		if err = button.Click(); err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		if err = wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[role='presentation']"), 2*time.Minute); err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+	})
+
+	It("Should display the action icons on cluster detail page", func() {
+		wd.Get(host + "/" + "?resourceid=" + resourceIDFromEnv())
+		wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByID, "ClusterDetailPanel"), time.Second*3)
+
+		detailPanel, err := wd.FindElement(selenium.ByID, "ClusterDetailPanel")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		Expect(detailPanel.IsDisplayed()).To(BeTrue())
+
+		resourceButton, err := wd.FindElement(selenium.ByCSSSelector, "button[aria-label='Copy Resource ID']")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		Expect(resourceButton.IsDisplayed()).To(BeTrue())
+
+		prometheusButton, err := wd.FindElement(selenium.ByCSSSelector, "a[aria-label='Prometheus']")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		Expect(prometheusButton.IsDisplayed()).To(BeTrue())
+
+		sshbutton, err := wd.FindElement(selenium.ByCSSSelector, "button[aria-label='SSH']")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		Expect(sshbutton.IsDisplayed()).To(BeTrue())
+
+		kubeconfigButton, err := wd.FindElement(selenium.ByCSSSelector, "button[aria-label='Download Kubeconfig']")
+		if err != nil {
+			SaveScreenshotAndExit(wd, err)
+		}
+		Expect(kubeconfigButton.IsDisplayed()).To(BeTrue())
+	})
 })

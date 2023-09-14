@@ -29,6 +29,7 @@ import (
 
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	cpcController "github.com/Azure/ARO-RP/pkg/operator/controllers/cloudproviderconfig"
 	imageController "github.com/Azure/ARO-RP/pkg/operator/controllers/imageconfig"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
 	subnetController "github.com/Azure/ARO-RP/pkg/operator/controllers/subnets"
@@ -398,9 +399,9 @@ var _ = Describe("ARO Operator - MUO Deployment", func() {
 			b, err := clients.Kubernetes.CoreV1().Pods(managedUpgradeOperatorNamespace).GetLogs(pods.Items[0].Name, &corev1.PodLogOptions{}).DoRaw(ctx)
 			g.Expect(err).NotTo(HaveOccurred())
 
-			g.Expect(string(b)).To(ContainSubstring(`msg="FIPS crypto mandated: true"`))
+			g.Expect(string(b)).To(ContainSubstring(`X:boringcrypto,strictfipsruntime`))
 		}).WithContext(ctx).Should(Succeed())
-	})
+	}, SpecTimeout(2*time.Minute))
 
 	It("must be restored if deleted", func(ctx context.Context) {
 		deleteMUODeployment := func(ctx context.Context) error {
@@ -427,7 +428,7 @@ var _ = Describe("ARO Operator - MUO Deployment", func() {
 
 		By("waiting for the MUO deployment to be reconciled")
 		Eventually(muoDeploymentExists).WithContext(ctx).Should(Succeed())
-	})
+	}, SpecTimeout(2*time.Minute))
 })
 
 var _ = Describe("ARO Operator - ImageConfig Reconciler", func() {
@@ -666,5 +667,37 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 
 		By("waiting for the gatekeeper Audit deployment to be reconciled")
 		Eventually(auditDeploymentExists).WithContext(ctx).Should(Succeed())
+	})
+
+})
+
+var _ = Describe("ARO Operator - Cloud Provder Config ConfigMap", func() {
+	const (
+		cpcControllerEnabled = "aro.cloudproviderconfig.enabled"
+	)
+
+	It("must have disableOutboundSNAT set to true", func(ctx context.Context) {
+		By("checking whether CloudProviderConfig reconciliation is enabled in ARO operator config")
+		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		if !instance.Spec.OperatorFlags.GetSimpleBoolean(cpcControllerEnabled) {
+			Skip("CloudProviderConfig Controller is not enabled, skipping test")
+		}
+
+		var cm *corev1.ConfigMap
+		By("waiting for the ConfigMap to make sure it exists")
+		Eventually(func(g Gomega, ctx context.Context) {
+			var err error
+			cm, err = clients.Kubernetes.CoreV1().ConfigMaps("openshift-config").Get(ctx, "cloud-provider-config", metav1.GetOptions{})
+			g.Expect(err).ToNot(HaveOccurred())
+		}).WithContext(ctx).Should(Succeed())
+
+		By("waiting for disableOutboundSNAT to be true")
+		Eventually(func(g Gomega, ctx context.Context) {
+			disableOutboundSNAT, err := cpcController.GetDisableOutboundSNAT(cm.Data["config"])
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(disableOutboundSNAT).To(BeTrue())
+		}).WithContext(ctx).Should(Succeed())
 	})
 })

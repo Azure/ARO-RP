@@ -10,8 +10,6 @@ package signal
 // NOTE: this package has originally been copied from github.com/docker/docker.
 
 import (
-	"os"
-	"os/signal"
 	"syscall"
 
 	"golang.org/x/sys/unix"
@@ -24,8 +22,8 @@ const (
 	SIGWINCH = syscall.SIGWINCH
 )
 
-// signalMap is a map of Linux signals.
-var signalMap = map[string]syscall.Signal{
+// SignalMap is a map of Linux signals.
+var SignalMap = map[string]syscall.Signal{
 	"ABRT":     unix.SIGABRT,
 	"ALRM":     unix.SIGALRM,
 	"BUS":      unix.SIGBUS,
@@ -93,17 +91,10 @@ var signalMap = map[string]syscall.Signal{
 	"RTMAX":    sigrtmax,
 }
 
-// CatchAll catches all signals and relays them to the specified channel.
-func CatchAll(sigc chan os.Signal) {
-	handledSigs := make([]os.Signal, 0, len(signalMap))
-	for _, s := range signalMap {
-		handledSigs = append(handledSigs, s)
-	}
-	signal.Notify(sigc, handledSigs...)
-}
-
-// StopCatch stops catching the signals and closes the specified channel.
-func StopCatch(sigc chan os.Signal) {
-	signal.Stop(sigc)
-	close(sigc)
+// IsSignalIgnoredBySigProxy determines whether sig-proxy should ignore syscall signal
+func IsSignalIgnoredBySigProxy(s syscall.Signal) bool {
+	// Ignore SIGCHLD and SIGPIPE - these are most likely intended for the podman command itself.
+	// SIGURG was added because of golang 1.14 and its preemptive changes causing more signals to "show up".
+	// https://github.com/containers/podman/issues/5483
+	return s == syscall.SIGCHLD || s == syscall.SIGPIPE || s == syscall.SIGURG
 }

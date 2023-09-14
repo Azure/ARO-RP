@@ -6,6 +6,7 @@ package dynamic
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -1724,6 +1725,34 @@ func TestCheckBYONsg(t *testing.T) {
 			if preconfiguredNSG != tt.preconfiguredNSG {
 				t.Errorf("preconfiguredNSG got %s, want %s", preconfiguredNSG, tt.preconfiguredNSG)
 			}
+		})
+	}
+}
+
+func TestValidateSubnetSize(t *testing.T) {
+	subnetId := "id"
+	subnetPath := "path"
+	for _, tt := range []struct {
+		name    string
+		address string
+		subnet  Subnet
+		wantErr string
+	}{
+		{
+			name:    "subnet size is too small",
+			address: "10.0.0.0/32",
+			subnet:  Subnet{ID: subnetId, Path: subnetPath},
+			wantErr: fmt.Sprintf("400: InvalidLinkedVNet: %s: The provided subnet '%s' is invalid: must be /27 or larger.", subnetPath, subnetId),
+		},
+		{
+			name:    "subnet size is gucci gang",
+			address: "10.0.0.0/27",
+			subnet:  Subnet{ID: subnetId, Path: subnetPath},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateSubnetSize(tt.subnet, tt.address)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

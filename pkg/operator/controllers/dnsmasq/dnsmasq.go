@@ -5,117 +5,31 @@ package dnsmasq
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"text/template"
 
 	"github.com/Azure/go-autorest/autorest/to"
-	ign2types "github.com/coreos/ignition/config/v2_2/types"
+	"github.com/coreos/go-semver/semver"
+	ign3types "github.com/coreos/ignition/v2/config/v3_2/types"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/vincent-petithory/dataurl"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-var t = template.Must(template.New("").Parse(`
-
-{{ define "dnsmasq.conf" }}
-resolv-file=/etc/resolv.conf.dnsmasq
-strict-order
-address=/api.{{ .ClusterDomain }}/{{ .APIIntIP }}
-address=/api-int.{{ .ClusterDomain }}/{{ .APIIntIP }}
-address=/.apps.{{ .ClusterDomain }}/{{ .IngressIP }}
-{{- range $GatewayDomain := .GatewayDomains }}
-address=/{{ $GatewayDomain }}/{{ $.GatewayPrivateEndpointIP }}
-{{- end }}
-user=dnsmasq
-group=dnsmasq
-no-hosts
-cache-size=0
-{{ end }}
-
-{{ define "dnsmasq.service" }}
-[Unit]
-Description=DNS caching server.
-After=network-online.target
-Before=bootkube.service
-
-[Service]
-# ExecStartPre will create a copy of the customer current resolv.conf file and make it upstream DNS.
-# This file is a product of user DNS settings on the VNET. We will replace this file to point to
-# dnsmasq instance on the node. dnsmasq will inject certain dns records we need and forward rest of the queries to
-# resolv.conf.dnsmasq upstream customer dns.
-ExecStartPre=/bin/bash /usr/local/bin/aro-dnsmasq-pre.sh
-ExecStart=/usr/sbin/dnsmasq -k
-ExecStopPost=/bin/bash -c '/bin/mv /etc/resolv.conf.dnsmasq /etc/resolv.conf; /usr/sbin/restorecon /etc/resolv.conf'
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-{{ end }}
-
-{{ define "aro-dnsmasq-pre.sh" }}
-#!/bin/bash
-set -euo pipefail
-
-# This bash script is a part of the ARO DnsMasq configuration
-# It's deployed as part of the 99-aro-dns-* machine config
-# See https://github.com/Azure/ARO-RP
-
-# This file can be rerun and the effect is idempotent, output might change if the DHCP configuration changes
-
-TMPSELFRESOLV=$(mktemp)
-TMPNETRESOLV=$(mktemp)
-
-echo "# Generated for dnsmasq.service - should point to self" > $TMPSELFRESOLV
-echo "# Generated for dnsmasq.service - should contain DHCP configured DNS" > $TMPNETRESOLV
-
-if nmcli device show br-ex; then
-    echo "OVN mode - br-ex device exists"
-    #getting DNS search strings
-    SEARCH_RAW=$(nmcli --get IP4.DOMAIN device show br-ex)
-    #getting DNS servers
-    NAMESERVER_RAW=$(nmcli --get IP4.DNS device show br-ex | tr -s " | " "\n")
-    LOCAL_IPS_RAW=$(nmcli --get IP4.ADDRESS device show br-ex)
-else
-    NETDEV=$(nmcli --get device connection show --active | head -n 1) #there should be only one active device
-    echo "OVS SDN mode - br-ex not found, using device $NETDEV"
-    SEARCH_RAW=$(nmcli --get IP4.DOMAIN device show $NETDEV)
-    NAMESERVER_RAW=$(nmcli --get IP4.DNS device show $NETDEV | tr -s " | " "\n")
-    LOCAL_IPS_RAW=$(nmcli --get IP4.ADDRESS device show $NETDEV)
-fi
-
-#search line
-echo "search $SEARCH_RAW" | tr '\n' ' ' >> $TMPNETRESOLV
-echo "" >> $TMPNETRESOLV
-echo "search $SEARCH_RAW" | tr '\n' ' ' >> $TMPSELFRESOLV
-echo "" >> $TMPSELFRESOLV
-
-#nameservers as separate lines
-echo "$NAMESERVER_RAW" | while read -r line
-do
-    echo "nameserver $line" >> $TMPNETRESOLV
-done
-# device IPs are returned in address/mask format
-echo "$LOCAL_IPS_RAW" | while read -r line
-do
-    echo "nameserver $line" | cut -d'/' -f 1 >> $TMPSELFRESOLV
-done
-
-# done, copying files to destination locations and cleaning up
-/bin/cp $TMPNETRESOLV /etc/resolv.conf.dnsmasq
-chmod 0744 /etc/resolv.conf.dnsmasq
-/bin/cp $TMPSELFRESOLV /etc/resolv.conf
-/usr/sbin/restorecon /etc/resolv.conf
-/bin/rm $TMPNETRESOLV
-/bin/rm $TMPSELFRESOLV
-{{ end }}
-`))
+const (
+	configFileName    = "dnsmasq.conf"
+	unitFileName      = "dnsmasq.service"
+	prescriptFileName = "aro-dnsmasq-pre.sh"
+)
 
 func config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains []string, gatewayPrivateEndpointIP string) ([]byte, error) {
+	t := template.Must(template.New(configFileName).Parse(configFile))
 	buf := &bytes.Buffer{}
 
-	err := t.ExecuteTemplate(buf, "dnsmasq.conf", &struct {
+	err := t.ExecuteTemplate(buf, configFileName, &struct {
 		ClusterDomain            string
 		APIIntIP                 string
 		IngressIP                string
@@ -136,9 +50,10 @@ func config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains []string, 
 }
 
 func service() (string, error) {
+	t := template.Must(template.New(unitFileName).Parse(unitFile))
 	buf := &bytes.Buffer{}
 
-	err := t.ExecuteTemplate(buf, "dnsmasq.service", nil)
+	err := t.ExecuteTemplate(buf, unitFileName, nil)
 	if err != nil {
 		return "", err
 	}
@@ -147,9 +62,10 @@ func service() (string, error) {
 }
 
 func startpre() ([]byte, error) {
+	t := template.Must(template.New(prescriptFileName).Parse(preScriptFile))
 	buf := &bytes.Buffer{}
 
-	err := t.ExecuteTemplate(buf, "aro-dnsmasq-pre.sh", nil)
+	err := t.ExecuteTemplate(buf, prescriptFileName, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +73,7 @@ func startpre() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func ignition2Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains []string, gatewayPrivateEndpointIP string) (*ign2types.Config, error) {
+func ignition3Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains []string, gatewayPrivateEndpointIP string, restartDnsmasq bool) (*ign3types.Config, error) {
 	service, err := service()
 	if err != nil {
 		return nil, err
@@ -173,60 +89,75 @@ func ignition2Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains [
 		return nil, err
 	}
 
-	return &ign2types.Config{
-		Ignition: ign2types.Ignition{
-			Version: ign2types.MaxVersion.String(),
+	ign := &ign3types.Config{
+		Ignition: ign3types.Ignition{
+			// This Ignition Config version should be kept up to date with the default
+			// rendered Ignition Config version from the Machine Config Operator version
+			// on the lowest OCP version we support (4.7).
+			Version: semver.Version{
+				Major: 3,
+				Minor: 2,
+			}.String(),
 		},
-		Storage: ign2types.Storage{
-			Files: []ign2types.File{
+		Storage: ign3types.Storage{
+			Files: []ign3types.File{
 				{
-					Node: ign2types.Node{
-						Filesystem: "root",
-						Overwrite:  to.BoolPtr(true),
-						Path:       "/etc/dnsmasq.conf",
-						User: &ign2types.NodeUser{
-							Name: "root",
+					Node: ign3types.Node{
+						Overwrite: to.BoolPtr(true),
+						Path:      "/etc/" + configFileName,
+						User: ign3types.NodeUser{
+							Name: to.StringPtr("root"),
 						},
 					},
-					FileEmbedded1: ign2types.FileEmbedded1{
-						Contents: ign2types.FileContents{
-							Source: dataurl.EncodeBytes(config),
+					FileEmbedded1: ign3types.FileEmbedded1{
+						Contents: ign3types.Resource{
+							Source: to.StringPtr(dataurl.EncodeBytes(config)),
 						},
 						Mode: to.IntPtr(0644),
 					},
 				},
 				{
-					Node: ign2types.Node{
-						Filesystem: "root",
-						Overwrite:  to.BoolPtr(true),
-						Path:       "/usr/local/bin/aro-dnsmasq-pre.sh",
-						User: &ign2types.NodeUser{
-							Name: "root",
+					Node: ign3types.Node{
+						Overwrite: to.BoolPtr(true),
+						Path:      "/usr/local/bin/" + prescriptFileName,
+						User: ign3types.NodeUser{
+							Name: to.StringPtr("root"),
 						},
 					},
-					FileEmbedded1: ign2types.FileEmbedded1{
-						Contents: ign2types.FileContents{
-							Source: dataurl.EncodeBytes(startpre),
+					FileEmbedded1: ign3types.FileEmbedded1{
+						Contents: ign3types.Resource{
+							Source: to.StringPtr(dataurl.EncodeBytes(startpre)),
 						},
 						Mode: to.IntPtr(0744),
 					},
 				},
 			},
 		},
-		Systemd: ign2types.Systemd{
-			Units: []ign2types.Unit{
+		Systemd: ign3types.Systemd{
+			Units: []ign3types.Unit{
 				{
-					Contents: service,
+					Contents: &service,
 					Enabled:  to.BoolPtr(true),
-					Name:     "dnsmasq.service",
+					Name:     unitFileName,
 				},
 			},
 		},
-	}, nil
+	}
+
+	if restartDnsmasq {
+		restartDnsmasqScript, err := nmDispatcherRestartDnsmasq()
+		if err != nil {
+			return nil, err
+		}
+
+		ign.Storage.Files = append(ign.Storage.Files, restartScriptIgnFile(restartDnsmasqScript))
+	}
+
+	return ign, nil
 }
 
-func dnsmasqMachineConfig(clusterDomain, apiIntIP, ingressIP, role string, gatewayDomains []string, gatewayPrivateEndpointIP string) (*mcv1.MachineConfig, error) {
-	ignConfig, err := ignition2Config(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP)
+func dnsmasqMachineConfig(clusterDomain, apiIntIP, ingressIP, role string, gatewayDomains []string, gatewayPrivateEndpointIP string, restartDnsmasq bool) (*mcv1.MachineConfig, error) {
+	ignConfig, err := ignition3Config(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP, restartDnsmasq)
 	if err != nil {
 		return nil, err
 	}

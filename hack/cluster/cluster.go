@@ -12,11 +12,11 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	msgraph_errors "github.com/microsoftgraph/msgraph-sdk-go/models/odataerrors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
+	msgraph_errors "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -75,7 +75,7 @@ func main() {
 
 	if err := run(context.Background(), log); err != nil {
 		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
-			spew.Dump(oDataError.GetError())
+			spew.Dump(oDataError.GetErrorEscaped())
 		}
 		log.Fatal(err)
 	}

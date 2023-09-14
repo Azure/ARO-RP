@@ -16,7 +16,6 @@ logger = get_logger(__name__)
 class AADManager:
     def __init__(self, cli_ctx):
         self.client = graph_client_factory(cli_ctx)
-        self.cli_ctx = cli_ctx
 
     def create_application(self, display_name):
         request_body = {"displayName": display_name}

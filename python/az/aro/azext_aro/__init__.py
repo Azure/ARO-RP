@@ -15,8 +15,9 @@ except ImportError:
 
 class AroCommandsLoader(AzCommandsLoader):
     def __init__(self, cli_ctx=None):
-        aro_custom = CliCommandType(operations_tmpl='azext_aro.custom#{}',
-                                    client_factory=cf_aro)
+        aro_custom = CliCommandType(
+            operations_tmpl='azext_aro.custom#{}',
+            client_factory=cf_aro)
         suppress = ModExtensionSuppress(__name__, 'aro', '1.0.0',
                                         reason='Its functionality is included in the core az CLI.',
                                         recommend_remove=True)

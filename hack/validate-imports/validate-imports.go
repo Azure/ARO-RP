@@ -38,6 +38,7 @@ func validateImports(path string, fset *token.FileSet, f *ast.File) []error {
 		"pkg/operator/apis",
 		"pkg/operator/clientset",
 		"pkg/operator/mocks/",
+		"pkg/util/graph/graphsdk/",
 		"pkg/util/mocks/",
 	} {
 		if strings.HasPrefix(path, prefix) {

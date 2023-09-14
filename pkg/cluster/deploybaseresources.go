@@ -182,10 +182,12 @@ func (m *manager) attachNSGs(ctx context.Context) error {
 	if m.doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG == api.PreconfiguredNSGEnabled {
 		return nil
 	}
+	workerProfiles, _ := api.GetEnrichedWorkerProfiles(m.doc.OpenShiftCluster.Properties)
+	workerSubnetId := workerProfiles[0].SubnetID
 
 	for _, subnetID := range []string{
 		m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
-		m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID,
+		workerSubnetId,
 	} {
 		m.log.Printf("attaching network security group to subnet %s", subnetID)
 

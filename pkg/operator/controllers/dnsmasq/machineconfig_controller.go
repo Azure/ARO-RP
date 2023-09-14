@@ -55,6 +55,10 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		return reconcile.Result{}, nil
 	}
 
+	if instance.Spec.OperatorFlags.GetSimpleBoolean(restartDnsmasqEnabled) {
+		r.Log.Debug("restart dnsmasq machineconfig enabled")
+	}
+
 	r.Log.Debug("running")
 	m := rxARODNS.FindStringSubmatch(request.Name)
 	if m == nil {
@@ -77,7 +81,7 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		return reconcile.Result{}, nil
 	}
 
-	err = reconcileMachineConfigs(ctx, instance, r.dh, *mcp)
+	err = reconcileMachineConfigs(ctx, instance, r.dh, instance.Spec.OperatorFlags.GetSimpleBoolean(restartDnsmasqEnabled), *mcp)
 	if err != nil {
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)

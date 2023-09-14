@@ -33,3 +33,23 @@ func NewLoadBalancersClient(environment *azureclient.AROEnvironment, subscriptio
 		LoadBalancersClient: client,
 	}
 }
+
+type LoadBalancerBackendAddressPoolsClient interface {
+	Get(ctx context.Context, resourceGroupName string, loadBalancerName string, backendAddressPoolName string) (result mgmtnetwork.BackendAddressPool, err error)
+}
+
+type loadBalancerBackendAddressPoolsClient struct {
+	mgmtnetwork.LoadBalancerBackendAddressPoolsClient
+}
+
+var _ LoadBalancerBackendAddressPoolsClient = &loadBalancerBackendAddressPoolsClient{}
+
+// NewLoadBalancerBackendAddressPoolsClient creates a new NewLoadBalancerBackendAddressPoolsClient
+func NewLoadBalancerBackendAddressPoolsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) LoadBalancerBackendAddressPoolsClient {
+	client := mgmtnetwork.NewLoadBalancerBackendAddressPoolsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
+	client.Authorizer = authorizer
+
+	return &loadBalancerBackendAddressPoolsClient{
+		LoadBalancerBackendAddressPoolsClient: client,
+	}
+}

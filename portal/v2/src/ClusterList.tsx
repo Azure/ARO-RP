@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, MutableRefObject, Component } from "react"
 import {
-  Stack,
-  IconButton,
+  Stack,  
   MessageBarType,
   MessageBar,
   CommandBar,
@@ -9,8 +8,7 @@ import {
   Separator,
   Text,
   IMessageBarStyles,
-  mergeStyleSets,
-  TooltipHost,
+  mergeStyleSets,  
   TextField,
   Link,
   Layer,
@@ -27,7 +25,7 @@ import {
 } from "@fluentui/react/lib/DetailsList"
 import { useBoolean } from "@fluentui/react-hooks"
 import { fetchClusters } from "./Request"
-import { KubeconfigButton } from "./Kubeconfig"
+import { ToolIcons } from "./ToolIcons"
 import { AxiosResponse } from "axios"
 import { ICluster, headerStyles } from "./App"
 
@@ -287,45 +285,8 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
         data: "string",
         isPadded: true,
         onRender: (item: ICluster) => (
-          <Stack horizontal verticalAlign="center" className={classNames.iconContainer}>
-            <TooltipHost content={`Copy Resource ID`}>
-              <IconButton
-                iconProps={{ iconName: "Copy" }}
-                aria-label="Copy Resource ID"
-                onClick={() => this._onCopyResourceID(item)}
-              />
-            </TooltipHost>
-            <TooltipHost content={`Prometheus`}>
-              <IconButton
-                iconProps={{ iconName: "BIDashboard" }}
-                aria-label="Prometheus"
-                href={
-                  item.resourceId + (+item.version >= 4.11 ? `/prometheus` : `/prometheus/graph`)
-                }
-              />
-            </TooltipHost>
-            <TooltipHost content={`SSH`}>
-              <IconButton
-                iconProps={{ iconName: "CommandPrompt" }}
-                aria-label="SSH"
-                onClick={() => this._onSSHClick(item)}
-              />
-            </TooltipHost>
-            <KubeconfigButton resourceId={item.resourceId} csrfToken={props.csrfToken} />
-            {/* <TooltipHost content={`Geneva`}>
-              <IconButton
-                iconProps={{iconName: "Health"}}
-                aria-label="Geneva"
-                href={item.resourceId + `/geneva`}
-              />
-            </TooltipHost>
-            <TooltipHost content={`Feature Flags`}>
-              <IconButton
-                iconProps={{iconName: "IconSetsFlag"}}
-                aria-label="featureFlags"
-                href={item.resourceId + `/feature-flags`}
-              />
-            </TooltipHost> */}
+          <Stack horizontal verticalAlign="center" className={classNames.iconContainer}>           
+            <ToolIcons resourceId={item.resourceId} csrfToken={props.csrfToken} version={Number(item.version)} sshBox={props.sshModalRef}/>            
           </Stack>
         ),
       },
@@ -378,17 +339,6 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
           )
         : this.props.items,
     })
-  }
-
-  private _onSSHClick(item: any): void {
-    const modal = this._sshModal
-    if (modal && modal.current) {
-      modal.current.LoadSSH(item.resourceId)
-    }
-  }
-
-  private _onCopyResourceID(item: any): void {
-    navigator.clipboard.writeText(item.resourceId)
   }
 
   private _onClusterInfoLinkClick(item: ICluster): void {

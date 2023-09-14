@@ -5,15 +5,14 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -25,10 +24,10 @@ import (
 	"github.com/containers/podman/v4/pkg/domain/entities"
 	"github.com/containers/storage/pkg/fileutils"
 	"github.com/containers/storage/pkg/ioutils"
+	"github.com/containers/storage/pkg/regexp"
 	"github.com/docker/go-units"
 	"github.com/hashicorp/go-multierror"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -37,9 +36,7 @@ type devino struct {
 	Ino uint64
 }
 
-var (
-	iidRegex = regexp.MustCompile(`^[0-9a-f]{12}`)
-)
+var iidRegex = regexp.Delayed(`^[0-9a-f]{12}`)
 
 // Build creates an image using a containerfile reference
 func Build(ctx context.Context, containerFiles []string, options entities.BuildOptions) (*entities.BuildReport, error) {
@@ -65,6 +62,14 @@ func Build(ctx context.Context, containerFiles []string, options entities.BuildO
 		params.Set("annotations", l)
 	}
 
+	if cppflags := options.CPPFlags; len(cppflags) > 0 {
+		l, err := jsoniter.MarshalToString(cppflags)
+		if err != nil {
+			return nil, err
+		}
+		params.Set("cppflags", l)
+	}
+
 	if options.AllPlatforms {
 		params.Add("allplatforms", "1")
 	}
@@ -72,6 +77,20 @@ func Build(ctx context.Context, containerFiles []string, options entities.BuildO
 	params.Add("t", options.Output)
 	for _, tag := range options.AdditionalTags {
 		params.Add("t", tag)
+	}
+	if additionalBuildContexts := options.AdditionalBuildContexts; len(additionalBuildContexts) > 0 {
+		additionalBuildContextMap, err := jsoniter.Marshal(additionalBuildContexts)
+		if err != nil {
+			return nil, err
+		}
+		params.Set("additionalbuildcontexts", string(additionalBuildContextMap))
+	}
+	if options.IDMappingOptions != nil {
+		idmappingsOptions, err := jsoniter.Marshal(options.IDMappingOptions)
+		if err != nil {
+			return nil, err
+		}
+		params.Set("idmappingoptions", string(idmappingsOptions))
 	}
 	if buildArgs := options.Args; len(buildArgs) > 0 {
 		bArgs, err := jsoniter.MarshalToString(buildArgs)
@@ -155,6 +174,11 @@ func Build(ctx context.Context, containerFiles []string, options entities.BuildO
 	} else {
 		params.Set("rm", "0")
 	}
+	if options.CommonBuildOpts.OmitHistory {
+		params.Set("omithistory", "1")
+	} else {
+		params.Set("omithistory", "0")
+	}
 	if len(options.From) > 0 {
 		params.Set("from", options.From)
 	}
@@ -204,6 +228,39 @@ func Build(ctx context.Context, containerFiles []string, options entities.BuildO
 	if len(options.Manifest) > 0 {
 		params.Set("manifest", options.Manifest)
 	}
+	if options.CacheFrom != nil {
+		cacheFrom := []string{}
+		for _, cacheSrc := range options.CacheFrom {
+			cacheFrom = append(cacheFrom, cacheSrc.String())
+		}
+		cacheFromJSON, err := jsoniter.MarshalToString(cacheFrom)
+		if err != nil {
+			return nil, err
+		}
+		params.Set("cachefrom", cacheFromJSON)
+	}
+
+	switch options.SkipUnusedStages {
+	case types.OptionalBoolTrue:
+		params.Set("skipunusedstages", "1")
+	case types.OptionalBoolFalse:
+		params.Set("skipunusedstages", "0")
+	}
+
+	if options.CacheTo != nil {
+		cacheTo := []string{}
+		for _, cacheSrc := range options.CacheTo {
+			cacheTo = append(cacheTo, cacheSrc.String())
+		}
+		cacheToJSON, err := jsoniter.MarshalToString(cacheTo)
+		if err != nil {
+			return nil, err
+		}
+		params.Set("cacheto", cacheToJSON)
+	}
+	if int64(options.CacheTTL) != 0 {
+		params.Set("cachettl", options.CacheTTL.String())
+	}
 	if memSwap := options.CommonBuildOpts.MemorySwap; memSwap > 0 {
 		params.Set("memswap", strconv.Itoa(int(memSwap)))
 	}
@@ -247,6 +304,15 @@ func Build(ctx context.Context, containerFiles []string, options entities.BuildO
 			params.Add("platform", platform)
 		}
 	}
+
+	for _, volume := range options.CommonBuildOpts.Volumes {
+		params.Add("volume", volume)
+	}
+
+	for _, group := range options.GroupAdd {
+		params.Add("groupadd", group)
+	}
+
 	var err error
 	var contextDir string
 	if contextDir, err = filepath.EvalSymlinks(options.ContextDirectory); err == nil {
@@ -359,11 +425,11 @@ func Build(ctx context.Context, containerFiles []string, options entities.BuildO
 	dontexcludes := []string{"!Dockerfile", "!Containerfile", "!.dockerignore", "!.containerignore"}
 	for _, c := range containerFiles {
 		if c == "/dev/stdin" {
-			content, err := ioutil.ReadAll(os.Stdin)
+			content, err := io.ReadAll(os.Stdin)
 			if err != nil {
 				return nil, err
 			}
-			tmpFile, err := ioutil.TempFile("", "build")
+			tmpFile, err := os.CreateTemp("", "build")
 			if err != nil {
 				return nil, err
 			}
@@ -429,7 +495,7 @@ func Build(ctx context.Context, containerFiles []string, options entities.BuildO
 						if arr[0] == "src" {
 							// read specified secret into a tmp file
 							// move tmp file to tar and change secret source to relative tmp file
-							tmpSecretFile, err := ioutil.TempFile(options.ContextDirectory, "podman-build-secret")
+							tmpSecretFile, err := os.CreateTemp(options.ContextDirectory, "podman-build-secret")
 							if err != nil {
 								return nil, err
 							}
@@ -495,7 +561,7 @@ func Build(ctx context.Context, containerFiles []string, options entities.BuildO
 	if logrus.IsLevelEnabled(logrus.DebugLevel) {
 		if v, found := os.LookupEnv("PODMAN_RETAIN_BUILD_ARTIFACT"); found {
 			if keep, _ := strconv.ParseBool(v); keep {
-				t, _ := ioutil.TempFile("", "build_*_client")
+				t, _ := os.CreateTemp("", "build_*_client")
 				defer t.Close()
 				body = io.TeeReader(response.Body, t)
 			}
@@ -523,14 +589,14 @@ func Build(ctx context.Context, containerFiles []string, options entities.BuildO
 
 		if err := dec.Decode(&s); err != nil {
 			if errors.Is(err, io.ErrUnexpectedEOF) {
-				return nil, errors.Wrap(err, "server probably quit")
+				return nil, fmt.Errorf("server probably quit: %w", err)
 			}
 			// EOF means the stream is over in which case we need
 			// to have read the id.
 			if errors.Is(err, io.EOF) && id != "" {
 				break
 			}
-			return &entities.BuildReport{ID: id}, errors.Wrap(err, "decoding stream")
+			return &entities.BuildReport{ID: id}, fmt.Errorf("decoding stream: %w", err)
 		}
 
 		switch {
@@ -554,11 +620,11 @@ func Build(ctx context.Context, containerFiles []string, options entities.BuildO
 func nTar(excludes []string, sources ...string) (io.ReadCloser, error) {
 	pm, err := fileutils.NewPatternMatcher(excludes)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error processing excludes list %v", excludes)
+		return nil, fmt.Errorf("processing excludes list %v: %w", excludes, err)
 	}
 
 	if len(sources) == 0 {
-		return nil, errors.New("No source(s) provided for build")
+		return nil, errors.New("no source(s) provided for build")
 	}
 
 	pr, pw := io.Pipe()
@@ -583,27 +649,31 @@ func nTar(excludes []string, sources ...string) (io.ReadCloser, error) {
 					return err
 				}
 
+				separator := string(filepath.Separator)
 				// check if what we are given is an empty dir, if so then continue w/ it. Else return.
 				// if we are given a file or a symlink, we do not want to exclude it.
-				if d.IsDir() && s == path {
-					var p *os.File
-					p, err = os.Open(path)
-					if err != nil {
-						return err
-					}
-					defer p.Close()
-					_, err = p.Readdir(1)
-					if err != io.EOF {
-						return nil // non empty root dir, need to return
-					} else if err != nil {
-						logrus.Errorf("While reading directory %v: %v", path, err)
+				if s == path {
+					separator = ""
+					if d.IsDir() {
+						var p *os.File
+						p, err = os.Open(path)
+						if err != nil {
+							return err
+						}
+						defer p.Close()
+						_, err = p.Readdir(1)
+						if err != io.EOF {
+							return nil // non empty root dir, need to return
+						} else if err != nil {
+							logrus.Errorf("While reading directory %v: %v", path, err)
+						}
 					}
 				}
-				name := filepath.ToSlash(strings.TrimPrefix(path, s+string(filepath.Separator)))
+				name := filepath.ToSlash(strings.TrimPrefix(path, s+separator))
 
-				excluded, err := pm.Matches(name) // nolint:staticcheck
+				excluded, err := pm.Matches(name) //nolint:staticcheck
 				if err != nil {
-					return errors.Wrapf(err, "error checking if %q is excluded", name)
+					return fmt.Errorf("checking if %q is excluded: %w", name, err)
 				}
 				if excluded {
 					// Note: filepath.SkipDir is not possible to use given .dockerignore semantics.
@@ -701,12 +771,12 @@ func nTar(excludes []string, sources ...string) (io.ReadCloser, error) {
 }
 
 func parseDockerignore(root string) ([]string, error) {
-	ignore, err := ioutil.ReadFile(filepath.Join(root, ".containerignore"))
+	ignore, err := os.ReadFile(filepath.Join(root, ".containerignore"))
 	if err != nil {
 		var dockerIgnoreErr error
-		ignore, dockerIgnoreErr = ioutil.ReadFile(filepath.Join(root, ".dockerignore"))
+		ignore, dockerIgnoreErr = os.ReadFile(filepath.Join(root, ".dockerignore"))
 		if dockerIgnoreErr != nil && !os.IsNotExist(dockerIgnoreErr) {
-			return nil, errors.Wrapf(err, "error reading .containerignore: '%s'", root)
+			return nil, err
 		}
 	}
 	rawexcludes := strings.Split(string(ignore), "\n")

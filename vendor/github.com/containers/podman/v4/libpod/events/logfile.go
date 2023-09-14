@@ -1,22 +1,22 @@
-//go:build linux
-// +build linux
+//go:build linux || freebsd
+// +build linux freebsd
 
 package events
 
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/containers/podman/v4/pkg/util"
 	"github.com/containers/storage/pkg/lockfile"
 	"github.com/nxadm/tail"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
@@ -27,10 +27,25 @@ type EventLogFile struct {
 	options EventerOptions
 }
 
+// newLogFileEventer creates a new EventLogFile eventer
+func newLogFileEventer(options EventerOptions) (*EventLogFile, error) {
+	// Create events log dir
+	if err := os.MkdirAll(filepath.Dir(options.LogFilePath), 0700); err != nil {
+		return nil, fmt.Errorf("creating events dirs: %w", err)
+	}
+	// We have to make sure the file is created otherwise reading events will hang.
+	// https://github.com/containers/podman/issues/15688
+	fd, err := os.OpenFile(options.LogFilePath, os.O_RDONLY|os.O_CREATE, 0700)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create event log file: %w", err)
+	}
+	return &EventLogFile{options: options}, fd.Close()
+}
+
 // Writes to the log file
 func (e EventLogFile) Write(ee Event) error {
 	// We need to lock events file
-	lock, err := lockfile.GetLockfile(e.options.LogFilePath + ".lock")
+	lock, err := lockfile.GetLockFile(e.options.LogFilePath + ".lock")
 	if err != nil {
 		return err
 	}
@@ -90,7 +105,7 @@ func (e EventLogFile) Read(ctx context.Context, options ReadOptions) error {
 	defer close(options.EventChannel)
 	filterMap, err := generateEventFilters(options.Filters, options.Since, options.Until)
 	if err != nil {
-		return errors.Wrapf(err, "failed to parse event filters")
+		return fmt.Errorf("failed to parse event filters: %w", err)
 	}
 	t, err := e.getTail(options)
 	if err != nil {
@@ -108,23 +123,21 @@ func (e EventLogFile) Read(ctx context.Context, options ReadOptions) error {
 			}
 		}()
 	}
-	funcDone := make(chan bool)
-	copy := true
-	go func() {
-		select {
-		case <-funcDone:
-			// Do nothing
-		case <-ctx.Done():
-			copy = false
-			t.Kill(errors.New("hangup by client"))
-		}
-	}()
-	for line := range t.Lines {
+	logrus.Debugf("Reading events from file %q", e.options.LogFilePath)
+
+	var line *tail.Line
+	var ok bool
+	for {
 		select {
 		case <-ctx.Done():
 			// the consumer has cancelled
+			t.Kill(errors.New("hangup by client"))
 			return nil
-		default:
+		case line, ok = <-t.Lines:
+			if !ok {
+				// channel was closed
+				return nil
+			}
 			// fallthrough
 		}
 
@@ -136,14 +149,12 @@ func (e EventLogFile) Read(ctx context.Context, options ReadOptions) error {
 		case Image, Volume, Pod, System, Container, Network:
 		//	no-op
 		default:
-			return errors.Errorf("event type %s is not valid in %s", event.Type.String(), e.options.LogFilePath)
+			return fmt.Errorf("event type %s is not valid in %s", event.Type.String(), e.options.LogFilePath)
 		}
-		if copy && applyFilters(event, filterMap) {
+		if applyFilters(event, filterMap) {
 			options.EventChannel <- event
 		}
 	}
-	funcDone <- true
-	return nil
 }
 
 // String returns a string representation of the logger
@@ -192,11 +203,11 @@ func truncate(filePath string) error {
 	size := origFinfo.Size()
 	threshold := size / 2
 
-	tmp, err := ioutil.TempFile(path.Dir(filePath), "")
+	tmp, err := os.CreateTemp(path.Dir(filePath), "")
 	if err != nil {
 		// Retry in /tmp in case creating a tmp file in the same
 		// directory has failed.
-		tmp, err = ioutil.TempFile("", "")
+		tmp, err = os.CreateTemp("", "")
 		if err != nil {
 			return err
 		}

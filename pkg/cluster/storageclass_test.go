@@ -25,6 +25,7 @@ func TestConfigureStorageClass(t *testing.T) {
 		name       string
 		mocks      func(kubernetescli *fake.Clientset)
 		desID      string
+		wpStatus   bool
 		ocpVersion string
 		wantErr    string
 		wantNewSC  bool
@@ -36,6 +37,13 @@ func TestConfigureStorageClass(t *testing.T) {
 		{
 			name:       "disk encryption set provided",
 			desID:      "fake-des-id",
+			ocpVersion: "4.10.40",
+			wantNewSC:  true,
+		},
+		{
+			name:       "Use disk encryption set provided in enriched worker profile",
+			desID:      "fake-des-id",
+			wpStatus:   true,
 			ocpVersion: "4.10.40",
 			wantNewSC:  true,
 		},
@@ -146,6 +154,15 @@ func TestConfigureStorageClass(t *testing.T) {
 						},
 					},
 				},
+			}
+
+			if tt.wpStatus {
+				m.doc.OpenShiftCluster.Properties.WorkerProfiles = nil
+				m.doc.OpenShiftCluster.Properties.WorkerProfilesStatus = []api.WorkerProfile{
+					{
+						DiskEncryptionSetID: tt.desID,
+					},
+				}
 			}
 
 			err = m.configureDefaultStorageClass(ctx)
