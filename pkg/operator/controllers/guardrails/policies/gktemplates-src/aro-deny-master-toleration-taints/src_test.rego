@@ -64,7 +64,9 @@ fake_input_review(namespace, operation, taint_key_one, taint_key_two) = review {
                     }
                 ]
             }
-        }
-        
+        },
+        "userInfo":{
+            "username":"testuser"
+        }  
     }
 }
