@@ -52,6 +52,9 @@ fake_machine_config_input_review(name, operation) = review {
             "metadata": {
                 "name": name
             }
+        },
+        "userInfo":{
+            "username":"testuser"
         }
     }
 }
