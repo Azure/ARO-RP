@@ -107,6 +107,12 @@ func TestValidateAdminKubernetesObjectsNonCustomer(t *testing.T) {
 		wantErr   string
 	}{
 		{
+			test:      "metrics for top nodes passes",
+			gvr:       schema.GroupVersionResource{Group: "metrics.k8s.io", Version: "v1beta1", Resource: "pods"},
+			namespace: "",
+			name:      "",
+		},
+		{
 			test:      "valid openshift namespace",
 			gvr:       schema.GroupVersionResource{Group: "openshift.io", Resource: "validkind"},
 			namespace: "openshift",
