@@ -41,7 +41,7 @@ type Monitor struct {
 	m          metrics.Emitter
 	arocli     aroclient.Interface
 
-	clientset     client.Client
+	ocpclientset  client.Client
 	hiveclientset client.Client
 
 	// access below only via the helper functions in cache.go
@@ -92,7 +92,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		return nil, err
 	}
 
-	clientset, err := client.New(restConfig, client.Options{})
+	ocpclientset, err := client.New(restConfig, client.Options{})
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		mcocli:        mcocli,
 		arocli:        arocli,
 		m:             m,
-		clientset:     clientset,
+		ocpclientset:  ocpclientset,
 		hiveclientset: hiveclientset,
 	}, nil
 }

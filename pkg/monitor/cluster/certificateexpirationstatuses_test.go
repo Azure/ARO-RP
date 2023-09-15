@@ -215,14 +215,14 @@ func buildMonitor(m *mock_metrics.MockEmitter, domain, id string, secrets ...cli
 		},
 	}
 
-	clientset := fake.
+	ocpclientset := fake.
 		NewClientBuilder().
 		WithObjects(ingressController).
 		WithObjects(secrets...).
 		Build()
 	mon := &Monitor{
-		clientset: clientset,
-		m:         m,
+		ocpclientset: ocpclientset,
+		m:            m,
 		oc: &api.OpenShiftCluster{
 			Properties: api.OpenShiftClusterProperties{
 				ClusterProfile: api.ClusterProfile{

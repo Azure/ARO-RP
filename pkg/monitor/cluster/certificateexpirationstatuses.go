@@ -42,7 +42,7 @@ func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error
 
 	if dns.IsManagedDomain(mon.oc.Properties.ClusterProfile.Domain) {
 		ic := &operatorv1.IngressController{}
-		err := mon.clientset.Get(ctx, client.ObjectKey{
+		err := mon.ocpclientset.Get(ctx, client.ObjectKey{
 			Namespace: ingressNamespace,
 			Name:      ingressName,
 		}, ic)
@@ -77,7 +77,7 @@ func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error
 
 func (mon *Monitor) getCertificate(ctx context.Context, secretNamespace, secretName, secretKey string) (*x509.Certificate, error) {
 	secret := &corev1.Secret{}
-	err := mon.clientset.Get(ctx, client.ObjectKey{
+	err := mon.ocpclientset.Get(ctx, client.ObjectKey{
 		Namespace: secretNamespace,
 		Name:      secretName,
 	}, secret)
