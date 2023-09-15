@@ -41,6 +41,7 @@ type Monitor struct {
 	m          metrics.Emitter
 	arocli     aroclient.Interface
 
+	ocpclientset  client.Client
 	hiveclientset client.Client
 
 	// access below only via the helper functions in cache.go
@@ -91,6 +92,11 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		return nil, err
 	}
 
+	ocpclientset, err := client.New(restConfig, client.Options{})
+	if err != nil {
+		return nil, err
+	}
+
 	hiveclientset, err := getHiveClientSet(hiveRestConfig)
 	if err != nil {
 		log.Error(err)
@@ -110,6 +116,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		mcocli:        mcocli,
 		arocli:        arocli,
 		m:             m,
+		ocpclientset:  ocpclientset,
 		hiveclientset: hiveclientset,
 	}, nil
 }
@@ -175,6 +182,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitHiveRegistrationStatus,
 		mon.emitOperatorFlagsAndSupportBanner,
 		mon.emitPucmState,
+		mon.emitCertificateExpirationStatuses,
 		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable
 	} {
 		err = f(ctx)
