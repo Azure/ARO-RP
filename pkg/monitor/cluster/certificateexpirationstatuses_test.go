@@ -192,14 +192,13 @@ func generateTestSecrets(certsInfo []certInfo, tweakTemplateFn func(*x509.Certif
 }
 
 func buildSecret(secretName string, data map[string][]byte) *corev1.Secret {
-	s := &corev1.Secret{
+	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
 			Namespace: "openshift-azure-operator",
 		},
 		Data: data,
 	}
-	return s
 }
 
 func buildMonitor(m *mock_metrics.MockEmitter, domain, id string, secrets ...client.Object) *Monitor {
@@ -220,7 +219,7 @@ func buildMonitor(m *mock_metrics.MockEmitter, domain, id string, secrets ...cli
 		WithObjects(ingressController).
 		WithObjects(secrets...).
 		Build()
-	mon := &Monitor{
+	return &Monitor{
 		ocpclientset: ocpclientset,
 		m:            m,
 		oc: &api.OpenShiftCluster{
@@ -231,5 +230,4 @@ func buildMonitor(m *mock_metrics.MockEmitter, domain, id string, secrets ...cli
 			},
 		},
 	}
-	return mon
 }
