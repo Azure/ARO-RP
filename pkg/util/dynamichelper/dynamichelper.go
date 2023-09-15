@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/go-test/deep"
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/sirupsen/logrus"
@@ -29,26 +30,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
-
-type MergeFunction func(old, new client.Object) (out client.Object, changed bool, diff string, err error)
-type MergeHook func(new client.Object) (MergeFunction, bool, error)
 
 type Interface interface {
 	EnsureObjectDeleted(ctx context.Context, obj kruntime.Object) error
 	EnsureDeleted(ctx context.Context, gvk schema.GroupVersionKind, key types.NamespacedName) error
 	Ensure(ctx context.Context, objs ...kruntime.Object) error
 	GetOne(ctx context.Context, key types.NamespacedName, obj kruntime.Object) error
-	WithMergeHook(MergeHook) Interface
 }
 
 type dynamicHelper struct {
 	log *logrus.Entry
 
-	client    client.Client
-	mergeHook MergeHook
+	client client.Client
 }
 
 func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {
@@ -69,11 +64,6 @@ func NewWithClient(log *logrus.Entry, client client.Client) Interface {
 		log:    log,
 		client: client,
 	}
-}
-
-func (dh *dynamicHelper) WithMergeHook(hook MergeHook) Interface {
-	dh.mergeHook = hook
-	return dh
 }
 
 func (dh *dynamicHelper) EnsureDeleted(ctx context.Context, gvk schema.GroupVersionKind, key types.NamespacedName) error {
@@ -155,29 +145,13 @@ func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) err
 		if err != nil {
 			return err
 		}
-		candidate, changed, diff, err := dh.mergeWithLogic(oldObj, newObj)
+		candidate, changed, diff, err := merge(oldObj, newObj)
 		if err != nil || !changed {
 			return err
 		}
 		dh.log.Infof("Update %s: %s", keyFunc(gvk.GroupKind(), candidate.GetNamespace(), candidate.GetName()), diff)
 		return dh.client.Update(ctx, candidate)
 	})
-}
-
-func (dh *dynamicHelper) mergeWithLogic(old, new client.Object) (client.Object, bool, string, error) {
-	// If a merge hook has been registered, use that preferentially. If the hook
-	// is not interested in the object, merge as per usual.
-	if dh.mergeHook != nil {
-		hook, use, err := dh.mergeHook(new)
-		if err != nil {
-			return nil, false, "", err
-		}
-		if use {
-			return hook(old, new)
-		}
-	}
-
-	return merge(old, new)
 }
 
 // merge takes the existing (old) and desired (new) objects.  It compares them
@@ -253,10 +227,6 @@ func merge(old, new client.Object) (client.Object, bool, string, error) {
 		old, new := old.(*mcv1.KubeletConfig), new.(*mcv1.KubeletConfig)
 		new.Status = old.Status
 
-	case *extensionsv1beta1.CustomResourceDefinition:
-		old, new := old.(*extensionsv1beta1.CustomResourceDefinition), new.(*extensionsv1beta1.CustomResourceDefinition)
-		new.Status = old.Status
-
 	case *extensionsv1.CustomResourceDefinition:
 		old, new := old.(*extensionsv1.CustomResourceDefinition), new.(*extensionsv1.CustomResourceDefinition)
 		new.Status = old.Status
@@ -284,7 +254,9 @@ func merge(old, new client.Object) (client.Object, bool, string, error) {
 
 	var diff string
 	if _, ok := old.(*corev1.Secret); !ok { // Don't show a diff if kind is Secret
-		diff = cmp.Diff(old, new)
+		diff = strings.Join(deep.Equal(old, new), "\n")
+	} else {
+		diff = "<scrubbed>"
 	}
 
 	return new, !reflect.DeepEqual(old, new), diff, nil
