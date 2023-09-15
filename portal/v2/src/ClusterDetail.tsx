@@ -294,7 +294,7 @@ export function ClusterDetailPanel(props: {
             <Icon styles={headerIconStyles} iconName="openshift-svg"></Icon>
           </Stack.Item>
           <Stack.Item>
-            <div className={headerStyles.titleText}>{currentCluster?.name}</div>
+            <div id="ClusterDetailName" className={headerStyles.titleText}>{currentCluster?.name}</div>
             <div className={headerStyles.subtitleText}>Cluster</div>                        
             <ToolIcons resourceId={currentCluster ? currentCluster?.resourceId : ""} version={Number(data?.version) !== undefined ? Number(data?.version) : 0} csrfToken={props.csrfToken} sshBox={props.sshBox}/>
           </Stack.Item>

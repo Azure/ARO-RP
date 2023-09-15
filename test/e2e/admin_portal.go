@@ -5,7 +5,9 @@ package e2e
 
 import (
 	"errors"
+	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -25,6 +27,8 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 	var wdPoint *selenium.WebDriver
 	var wd selenium.WebDriver
 	var host string
+
+	var clusterDetailTabs = []string{"Overview", "Nodes", "Machines", "MachineSets", "APIStatistics", "KCMStatistics", "DNSStatistics", "IngressStatistics", "ClusterOperators"}
 
 	JustBeforeEach(func() {
 		host, wdPoint = adminPortalSessionSetup()
@@ -197,30 +201,40 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		}
 	})
 
-	It("Should open an error modal for an invalid resource ID parameter in the URL", func() {
-		wd.Get(host + "/" + "?resourceid=" + "invalidResourceId")
-
-		wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[role='document']"), time.Second*3)
-		errorModal, err := wd.FindElement(selenium.ByCSSSelector, "div[role='document']")
-		Expect(err).ToNot(HaveOccurred())
-		Expect(errorModal.IsDisplayed()).To(BeTrue())
-	})
-
 	It("Should display the correct cluster detail view for the resource ID parameter in the URL", func() {
-		wd.Get(host + "/" + "?resourceid=" + resourceIDFromEnv())
+		wd.Get(host + resourceIDFromEnv())
 		wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByID, "ClusterDetailPanel"), time.Second*3)
 
 		detailPanel, err := wd.FindElement(selenium.ByID, "ClusterDetailPanel")
 		Expect(err).ToNot(HaveOccurred())
 		Expect(detailPanel.IsDisplayed()).To(BeTrue())
 
-		elem, err := wd.FindElement(selenium.ByCSSSelector, "div[class='titleText-112']")
+		elem, err := wd.FindElement(selenium.ByID, "ClusterDetailName")
 		Expect(err).ToNot(HaveOccurred())
 		Expect(elem.Text()).To(Equal(clusterName))
 	})
 
+	It("Should update URL for each tab in cluster detail page", func() {
+		wd.Get(host + resourceIDFromEnv())
+		wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByID, "ClusterDetailPanel"), time.Second*3)
+
+		detailPanel, err := wd.FindElement(selenium.ByID, "ClusterDetailPanel")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(detailPanel.IsDisplayed()).To(BeTrue())
+
+		for _, tab := range clusterDetailTabs {
+			button, err := wd.FindElement(selenium.ByCSSSelector, fmt.Sprintf("div[name='%s']", tab))
+			Expect(err).ToNot(HaveOccurred())
+			button.Click()
+
+			currentUrl, err := wd.CurrentURL()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(currentUrl).To(HaveSuffix("%s%s/%s", host, resourceIDFromEnv(), strings.ToLower(tab)))
+		}
+	})
+
 	It("Should display refresh button to get latest details for each tab in cluster detail page", func() {
-		wd.Get(host + "/" + "?resourceid=" + resourceIDFromEnv())
+		wd.Get(host + resourceIDFromEnv())
 		wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByID, "ClusterDetailPanel"), time.Second*3)
 
 		detailPanel, err := wd.FindElement(selenium.ByID, "ClusterDetailPanel")
@@ -343,7 +357,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 	})
 
 	It("Should display the action icons on cluster detail page", func() {
-		wd.Get(host + "/" + "?resourceid=" + resourceIDFromEnv())
+		wd.Get(host + resourceIDFromEnv())
 		wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByID, "ClusterDetailPanel"), time.Second*3)
 
 		detailPanel, err := wd.FindElement(selenium.ByID, "ClusterDetailPanel")
