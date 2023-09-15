@@ -200,15 +200,15 @@ func (m *MockEncryptionAtHostValidator) EXPECT() *MockEncryptionAtHostValidatorM
 }
 
 // ValidateEncryptionAtHost mocks base method.
-func (m *MockEncryptionAtHostValidator) ValidateEncryptionAtHost(arg0 context.Context, arg1 string, arg2 *api.OpenShiftCluster) error {
+func (m *MockEncryptionAtHostValidator) ValidateEncryptionAtHost(arg0 context.Context, arg1 env.Interface, arg2, arg3 string, arg4 *api.OpenShiftCluster) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateEncryptionAtHost", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "ValidateEncryptionAtHost", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ValidateEncryptionAtHost indicates an expected call of ValidateEncryptionAtHost.
-func (mr *MockEncryptionAtHostValidatorMockRecorder) ValidateEncryptionAtHost(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockEncryptionAtHostValidatorMockRecorder) ValidateEncryptionAtHost(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateEncryptionAtHost", reflect.TypeOf((*MockEncryptionAtHostValidator)(nil).ValidateEncryptionAtHost), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateEncryptionAtHost", reflect.TypeOf((*MockEncryptionAtHostValidator)(nil).ValidateEncryptionAtHost), arg0, arg1, arg2, arg3, arg4)
 }

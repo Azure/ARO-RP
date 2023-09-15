@@ -7,26 +7,26 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armfeatures"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 )
 
 type EncryptionAtHostValidator interface {
-	ValidateEncryptionAtHost(ctx context.Context, subscriptionID string, oc *api.OpenShiftCluster) error
+	ValidateEncryptionAtHost(ctx context.Context, environment env.Interface, subscriptionID, tenantID string, oc *api.OpenShiftCluster) error
 }
 
 type encryptionAtHostValidator struct{}
 
-func (e encryptionAtHostValidator) ValidateEncryptionAtHost(ctx context.Context, subscriptionID string, oc *api.OpenShiftCluster) error {
-	credential, err := azidentity.NewDefaultAzureCredential(nil)
+func (e encryptionAtHostValidator) ValidateEncryptionAtHost(ctx context.Context, environment env.Interface, subscriptionID, tenantID string, oc *api.OpenShiftCluster) error {
+	credential, err := environment.FPNewClientCertificateCredential(tenantID)
 	if err != nil {
 		return err
 	}
 
-	subFeatureRegistrationsClient, err := armfeatures.NewSubscriptionFeatureRegistrationsClient(subscriptionID, credential, nil)
+	subFeatureRegistrationsClient, err := features.NewSubscriptionFeatureRegistrationsClient(subscriptionID, credential, nil)
 	if err != nil {
 		return err
 	}
@@ -57,15 +57,15 @@ func IsRegisteredForEncryptionAtHostFeature(ctx context.Context, subFeatureRegis
 	if err != nil {
 		return err
 	}
-	if *response.Properties.State == armfeatures.SubscriptionFeatureRegistrationStateRegistered {
-		return nil
+	if *response.Properties.State != armfeatures.SubscriptionFeatureRegistrationStateRegistered {
+		return &api.CloudError{
+			StatusCode: http.StatusBadRequest,
+			CloudErrorBody: &api.CloudErrorBody{
+				Code:    api.CloudErrorCodeInvalidParameter,
+				Message: "Microsoft.Compute/EncryptionAtHost feature is not enabled for this subscription. Register the feature using 'az feature register --namespace Microsoft.Compute --name EncryptionAtHost'",
+				Target:  "armfeatures.SubscriptionFeatureRegistrationProperties",
+			},
+		}
 	}
-	return &api.CloudError{
-		StatusCode: http.StatusBadRequest,
-		CloudErrorBody: &api.CloudErrorBody{
-			Code:    api.CloudErrorCodeInvalidParameter,
-			Message: "Microsoft.Compute/EncryptionAtHost feature is not enabled for this subscription. Register the feature using 'az feature register --namespace Microsoft.Compute --name EncryptionAtHost'",
-			Target:  "armfeatures.SubscriptionFeatureRegistrationProperties",
-		},
-	}
+	return nil
 }

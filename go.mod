@@ -4,8 +4,8 @@ go 1.18
 
 require (
 	github.com/Azure/azure-sdk-for-go v63.1.0+incompatible
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.6.1
-	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.3.0
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.7.1
+	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.3.1
 	github.com/Azure/go-autorest/autorest v0.11.29
 	github.com/Azure/go-autorest/autorest/adal v0.9.23
 	github.com/Azure/go-autorest/autorest/date v0.3.0
