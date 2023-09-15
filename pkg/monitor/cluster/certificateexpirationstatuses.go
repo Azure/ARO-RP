@@ -23,6 +23,8 @@ import (
 const (
 	certificateExpirationMetricName = "certificate.expirationdate"
 	secretMissingMetricName         = "certificate.secretnotfound"
+	ingressNamespace                = "openshift-ingress-operator"
+	ingressName                     = "default"
 )
 
 func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error {
@@ -41,8 +43,8 @@ func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error
 	if dns.IsManagedDomain(mon.oc.Properties.ClusterProfile.Domain) {
 		ic := &operatorv1.IngressController{}
 		err := mon.clientset.Get(ctx, client.ObjectKey{
-			Namespace: "openshift-ingress-operator",
-			Name:      "default",
+			Namespace: ingressNamespace,
+			Name:      ingressName,
 		}, ic)
 		if err != nil {
 			return err
