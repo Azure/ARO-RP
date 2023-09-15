@@ -474,8 +474,9 @@ def get_network_resources_from_subnets(cli_ctx, subnets, fail, oc):
     if oc.network_profile.preconfigured_nsg == 'Enabled' and \
         len(subnets_with_no_nsg_attached) != 0 and \
             len(subnets_with_no_nsg_attached) != len(subnets):
-        raise ValidationError(f"(ValidationError) preconfiguredNSG feature is enabled but NSG not attached for subnets.\
-                                  Please make sure all the following subnets have network security group attached and retry.\
+        raise ValidationError(f"(ValidationError) preconfiguredNSG feature is enabled but an NSG is\
+                               not attached for all required subnets. Please make sure all the following\
+                               subnets have a network security groups attached and retry.\
                               {subnets_with_no_nsg_attached}")
 
     return subnet_resources
