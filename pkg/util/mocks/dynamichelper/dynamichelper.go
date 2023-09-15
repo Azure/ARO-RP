@@ -12,8 +12,6 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
-
-	dynamichelper "github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
 // MockInterface is a mock of Interface interface.
@@ -98,18 +96,4 @@ func (m *MockInterface) GetOne(arg0 context.Context, arg1 types.NamespacedName, 
 func (mr *MockInterfaceMockRecorder) GetOne(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOne", reflect.TypeOf((*MockInterface)(nil).GetOne), arg0, arg1, arg2)
-}
-
-// WithMergeHook mocks base method.
-func (m *MockInterface) WithMergeHook(arg0 dynamichelper.MergeHook) dynamichelper.Interface {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WithMergeHook", arg0)
-	ret0, _ := ret[0].(dynamichelper.Interface)
-	return ret0
-}
-
-// WithMergeHook indicates an expected call of WithMergeHook.
-func (mr *MockInterfaceMockRecorder) WithMergeHook(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WithMergeHook", reflect.TypeOf((*MockInterface)(nil).WithMergeHook), arg0)
 }
