@@ -156,7 +156,7 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 		m := mock_metrics.NewMockEmitter(gomock.NewController(t))
 		mon := buildMonitor(m, managedDomainName, clusterID, secrets...)
 
-		wantErr := `certificate "gcscert.pem" not found on secret "cluster"`
+		wantErr := "unable to find certificate"
 		err := mon.emitCertificateExpirationStatuses(ctx)
 		utilerror.AssertErrorMessage(t, err, wantErr)
 	})

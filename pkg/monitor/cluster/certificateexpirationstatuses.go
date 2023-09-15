@@ -3,7 +3,6 @@ package cluster
 import (
 	"context"
 	"crypto/x509"
-	"encoding/pem"
 	"fmt"
 	"strings"
 	"time"
@@ -16,6 +15,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
+	"github.com/Azure/ARO-RP/pkg/util/pem"
 )
 
 // Copyright (c) Microsoft Corporation.
@@ -85,12 +85,7 @@ func (mon *Monitor) getCertificate(ctx context.Context, secretNamespace, secretN
 		return nil, err
 	}
 
-	certBlock, _ := pem.Decode(secret.Data[secretKey])
-	if certBlock == nil {
-		return nil, fmt.Errorf(`certificate "%s" not found on secret "%s"`, secretKey, secretName)
-	}
-	// we only care about the first certificate in the block
-	return x509.ParseCertificate(certBlock.Bytes)
+	return pem.ParseFirstCertificate(secret.Data[secretKey])
 }
 
 func secretMissingMetric(namespace, name string) map[string]string {
