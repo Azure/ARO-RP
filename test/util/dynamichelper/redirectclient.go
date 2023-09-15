@@ -20,6 +20,7 @@ type redirectingClient struct {
 	deleteHook func(obj client.Object) error
 	createHook func(obj client.Object) error
 	updateHook func(obj client.Object) error
+	patchHook  func(obj client.Object) error
 }
 
 var _ client.Client = &redirectingClient{}
@@ -46,6 +47,10 @@ func (c *redirectingClient) WithCreateHook(f func(obj client.Object) error) *red
 }
 func (c *redirectingClient) WithUpdateHook(f func(obj client.Object) error) *redirectingClient {
 	c.updateHook = f
+	return c
+}
+func (c *redirectingClient) WithPatchHook(f func(obj client.Object) error) *redirectingClient {
+	c.patchHook = f
 	return c
 }
 
@@ -113,6 +118,12 @@ func (c *redirectingClient) Update(ctx context.Context, obj client.Object, opts 
 	return c.f.Update(ctx, obj, opts...)
 }
 func (c *redirectingClient) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+	if c.patchHook != nil {
+		err := c.patchHook(obj)
+		if err != nil {
+			return err
+		}
+	}
 	return c.f.Patch(ctx, obj, patch, opts...)
 }
 
