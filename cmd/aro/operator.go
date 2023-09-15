@@ -191,10 +191,10 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", autosizednodes.ControllerName, err)
 		}
-		if err = (machinehealthcheck.NewReconciler(
-			log.WithField("controller", machinehealthcheck.ControllerName),
+		if err = (machinehealthcheck.NewMachineHealthCheckReconciler(
+			log.WithField("controller", machinehealthcheck.MHCControllerName),
 			client, dh)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller %s: %v", machinehealthcheck.ControllerName, err)
+			return fmt.Errorf("unable to create controller %s: %v", machinehealthcheck.MHCControllerName, err)
 		}
 		if err = (ingress.NewReconciler(
 			log.WithField("controller", ingress.ControllerName),

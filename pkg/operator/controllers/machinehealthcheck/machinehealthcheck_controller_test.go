@@ -23,7 +23,7 @@ import (
 )
 
 // Test reconcile function
-func TestReconciler(t *testing.T) {
+func TestMachineHealthCheckReconciler(t *testing.T) {
 	type test struct {
 		name             string
 		instance         *arov1alpha1.Cluster
@@ -46,7 +46,7 @@ func TestReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(false),
+						MHCEnabled: strconv.FormatBool(false),
 					},
 				},
 			},
@@ -64,8 +64,8 @@ func TestReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(true),
-						managed: strconv.FormatBool(false),
+						MHCEnabled: strconv.FormatBool(true),
+						MHCManaged: strconv.FormatBool(false),
 					},
 				},
 			},
@@ -83,8 +83,8 @@ func TestReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(true),
-						managed: strconv.FormatBool(false),
+						MHCEnabled: strconv.FormatBool(true),
+						MHCManaged: strconv.FormatBool(false),
 					},
 				},
 			},
@@ -102,8 +102,8 @@ func TestReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(true),
-						managed: strconv.FormatBool(false),
+						MHCEnabled: strconv.FormatBool(true),
+						MHCManaged: strconv.FormatBool(false),
 					},
 				},
 			},
@@ -122,8 +122,8 @@ func TestReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(true),
-						managed: strconv.FormatBool(true),
+						MHCEnabled: strconv.FormatBool(true),
+						MHCManaged: strconv.FormatBool(true),
 					},
 				},
 			},
@@ -140,8 +140,8 @@ func TestReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(true),
-						managed: strconv.FormatBool(true),
+						MHCEnabled: strconv.FormatBool(true),
+						MHCManaged: strconv.FormatBool(true),
 					},
 				},
 			},
@@ -165,11 +165,13 @@ func TestReconciler(t *testing.T) {
 			}
 
 			ctx := context.Background()
-			r := &Reconciler{
-				log:    logrus.NewEntry(logrus.StandardLogger()),
-				dh:     mdh,
-				client: clientBuilder.Build(),
-			}
+
+			r := NewMachineHealthCheckReconciler(
+				logrus.NewEntry(logrus.StandardLogger()),
+				clientBuilder.Build(),
+				mdh,
+			)
+
 			request := ctrl.Request{}
 			request.Name = "cluster"
 
