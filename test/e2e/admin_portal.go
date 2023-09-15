@@ -88,32 +88,33 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		err = wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByID, "ClusterDetailCell"), 2*time.Minute)
 		Expect(err).ToNot(HaveOccurred())
 
-		panelSpans, err := wd.FindElements(selenium.ByID, "ClusterDetailCell")
-		Expect(err).ToNot(HaveOccurred())
+		Eventually(func(g Gomega) {
+			panelSpans, err := wd.FindElements(selenium.ByID, "ClusterDetailCell")
+			g.Expect(err).ToNot(HaveOccurred())
+			g.Expect(len(panelSpans)).To(Equal(CLUSTER_INFO_HEADINGS * 3))
 
-		Expect(len(panelSpans)).To(Equal(CLUSTER_INFO_HEADINGS * 3))
+			panelFields := panelSpans[0 : CLUSTER_INFO_HEADINGS-1]
+			panelColons := panelSpans[CLUSTER_INFO_HEADINGS : CLUSTER_INFO_HEADINGS*2-1]
+			panelValues := panelSpans[CLUSTER_INFO_HEADINGS*2 : len(panelSpans)-1]
 
-		panelFields := panelSpans[0 : CLUSTER_INFO_HEADINGS-1]
-		panelColons := panelSpans[CLUSTER_INFO_HEADINGS : CLUSTER_INFO_HEADINGS*2-1]
-		panelValues := panelSpans[CLUSTER_INFO_HEADINGS*2 : len(panelSpans)-1]
+			for _, panelField := range panelFields {
+				panelText, err := panelField.Text()
+				g.Expect(err).ToNot(HaveOccurred())
+				g.Expect(panelText).To(Not(Equal("")))
+			}
 
-		for _, panelField := range panelFields {
-			panelText, err := panelField.Text()
-			Expect(err).ToNot(HaveOccurred())
-			Expect(panelText).To(Not(Equal("")))
-		}
+			for _, panelField := range panelColons {
+				panelText, err := panelField.Text()
+				g.Expect(err).ToNot(HaveOccurred())
+				g.Expect(panelText).To(Equal(":"))
+			}
 
-		for _, panelField := range panelColons {
-			panelText, err := panelField.Text()
-			Expect(err).ToNot(HaveOccurred())
-			Expect(panelText).To(Equal(":"))
-		}
-
-		for _, panelField := range panelValues {
-			panelText, err := panelField.Text()
-			Expect(err).ToNot(HaveOccurred())
-			Expect(panelText).To(Not(Equal("")))
-		}
+			for _, panelField := range panelValues {
+				panelText, err := panelField.Text()
+				g.Expect(err).ToNot(HaveOccurred())
+				g.Expect(panelText).To(Not(Equal("")))
+			}
+		}).WithTimeout(time.Minute).WithPolling(time.Second).Should(Succeed())
 	})
 
 	It("Should be able to copy cluster resource id", func() {
