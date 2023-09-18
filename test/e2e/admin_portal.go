@@ -74,7 +74,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 	})
 
 	It("Should be able to populate cluster info panel correctly", func() {
-		const CLUSTER_INFO_HEADINGS = 11
+		const CLUSTER_INFO_HEADINGS = 10
 
 		err := wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[data-automation-key='name']"))
 		Expect(err).ToNot(HaveOccurred())
