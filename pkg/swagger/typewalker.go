@@ -92,6 +92,7 @@ func (tw *typeWalker) schemaFromType(t types.Type, deps map[*types.Named]struct{
 			s.Type = "boolean"
 		case types.Int:
 			s.Type = "integer"
+			s.Format = "int32"
 		case types.String:
 			s.Type = "string"
 		default:

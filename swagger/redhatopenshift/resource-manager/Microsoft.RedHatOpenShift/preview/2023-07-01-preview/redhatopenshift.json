@@ -1851,7 +1851,7 @@
       "type": "object",
       "properties": {
         "id": {
-          "description": "The fully qualified Azure resource id.",
+          "description": "The fully qualified Azure resource id of an IP address resource.",
           "type": "string"
         }
       }
@@ -1932,6 +1932,7 @@
           "x-ms-identifiers": []
         },
         "allocatedOutboundPorts": {
+          "format": "int32",
           "description": "The desired number of allocated SNAT ports per VM. Allowed values are in the range of 0 to 64000 (inclusive). The default value is 1024.",
           "type": "integer"
         }
@@ -2006,6 +2007,7 @@
       "type": "object",
       "properties": {
         "count": {
+          "format": "int32",
           "description": "Count represents the desired number of IPv4 outbound IPs created and managed by Azure for the cluster public load balancer.  Allowed values are in the range of 1 - 20.  The default value is 1.",
           "type": "integer"
         }
@@ -2280,7 +2282,7 @@
       "type": "object",
       "properties": {
         "id": {
-          "description": "The fully qualified Azure resource id.",
+          "description": "The fully qualified Azure resource id of an IP address resource.",
           "type": "string"
         }
       }
@@ -2290,22 +2292,28 @@
       "type": "object",
       "properties": {
         "id": {
-          "description": "The fully qualified Azure resource id.",
+          "description": "The fully qualified Azure resource id of an IP address resource.",
           "type": "string"
         }
       }
     },
     "OutboundType": {
+      "description": "The outbound routing strategy used to provide your cluster egress to the internet.",
       "enum": [
         "Loadbalancer",
         "UserDefinedRouting"
       ],
-      "type": "string"
+      "type": "string",
+      "x-ms-enum": {
+        "name": "OutboundType",
+        "modelAsString": true
+      }
     },
     "ProvisioningState": {
       "description": "ProvisioningState represents a provisioning state.",
       "enum": [
         "AdminUpdating",
+        "Cancelled",
         "Creating",
         "Deleting",
         "Failed",
@@ -2559,6 +2567,7 @@
           "description": "The size of the worker VMs."
         },
         "diskSizeGB": {
+          "format": "int32",
           "description": "The disk size of the worker VMs.",
           "type": "integer"
         },
@@ -2567,6 +2576,7 @@
           "type": "string"
         },
         "count": {
+          "format": "int32",
           "description": "The number of worker VMs.",
           "type": "integer"
         },
