@@ -118,11 +118,13 @@ func (mon *Monitor) emitEtcdCertificateExpiry(ctx context.Context) error {
 	}
 
 	for _, secret := range secretList.Items {
+		// Parse secrets with name containing "etcd-peer", "etcd-serving", "etcd-serving-metrics"
 		if strings.Contains(secret.ObjectMeta.Name, "etcd-peer") || strings.Contains(secret.ObjectMeta.Name, "etcd-serving") {
 			_, certs, err := pem.Parse(secret.Data[corev1.TLSCertKey])
 			if err != nil {
 				return err
 			}
+			// Emit metric only the certificate is close to expiry, if remaning duration is >20% of total duration
 			if utilcert.IsLessThanMinimumDuration(certs[0], utilcert.DefaultMinDurationPercent) {
 				mon.emitGauge(certificateExpirationMetricName, int64(utilcert.DaysUntilExpiration(certs[0])), map[string]string{
 					"namespace": "openshift-etcd",
