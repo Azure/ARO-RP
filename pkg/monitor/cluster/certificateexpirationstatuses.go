@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
-	"math"
 	"strings"
 	"time"
 
@@ -31,17 +30,20 @@ const (
 	ingressName                     = "default"
 )
 
+// report NotAfter dates for Ingress and API (on managed domains), and Geneva (always)
 func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error {
-	// report NotAfter dates for Ingress and API (on managed domains), and Geneva (always)
-	var certs []*x509.Certificate
-
 	mdsdCert, err := mon.getCertificate(ctx, operator.Namespace, operator.SecretName, genevalogging.GenevaCertName)
 	if kerrors.IsNotFound(err) {
 		mon.emitGauge(secretMissingMetricName, int64(1), secretMissingMetric(operator.Namespace, operator.SecretName))
 	} else if err != nil {
 		return err
 	} else {
-		certs = append(certs, mdsdCert)
+		daysUntilExpiration := time.Until(mdsdCert.NotAfter) / (24 * time.Hour)
+		mon.emitGauge(certificateExpirationMetricName, int64(daysUntilExpiration), map[string]string{
+			"subject":   mdsdCert.Subject.CommonName,
+			"name":      operator.SecretName,
+			"namespace": operator.Namespace,
+		})
 	}
 
 	if dns.IsManagedDomain(mon.oc.Properties.ClusterProfile.Domain) {
@@ -63,19 +65,16 @@ func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error
 			} else if err != nil {
 				return err
 			} else {
-				certs = append(certs, certificate)
+				daysUntilExpiration := time.Until(certificate.NotAfter) / (24 * time.Hour)
+				mon.emitGauge(certificateExpirationMetricName, int64(daysUntilExpiration), map[string]string{
+					"subject":   certificate.Subject.CommonName,
+					"name":      secretName,
+					"namespace": operator.Namespace,
+				})
 			}
 		}
 	}
 
-	for _, cert := range certs {
-		daysUntilExpiration := time.Until(cert.NotAfter) / (24 * time.Hour)
-		mon.emitGauge(certificateExpirationMetricName, 1, map[string]string{
-			"subject":             cert.Subject.CommonName,
-			"expirationDate":      cert.NotAfter.UTC().Format(time.RFC3339),
-			"daysUntilExpiration": fmt.Sprintf("%d", daysUntilExpiration),
-		})
-	}
 	return nil
 }
 
@@ -118,8 +117,6 @@ func (mon *Monitor) emitEtcdCertificateExpiry(ctx context.Context) error {
 		return err
 	}
 
-	certNearExpiry := false
-	minDaysUntilExpiration := math.MaxInt
 	for _, secret := range secretList.Items {
 		if strings.Contains(secret.ObjectMeta.Name, "etcd-peer") || strings.Contains(secret.ObjectMeta.Name, "etcd-serving") {
 			_, certs, err := pem.Parse(secret.Data[corev1.TLSCertKey])
@@ -127,26 +124,14 @@ func (mon *Monitor) emitEtcdCertificateExpiry(ctx context.Context) error {
 				return err
 			}
 			if utilcert.IsLessThanMinimumDuration(certs[0], utilcert.DefaultMinDurationPercent) {
-				certNearExpiry = true
-				minDaysUntilExpiration = min(utilcert.DaysUntilExpiration(certs[0]), minDaysUntilExpiration)
+				mon.emitGauge(certificateExpirationMetricName, int64(utilcert.DaysUntilExpiration(certs[0])), map[string]string{
+					"namespace": "openshift-etcd",
+					"name":      secret.GetObjectMeta().GetName(),
+					"subject":   certs[0].Subject.CommonName,
+				})
 			}
 		}
 	}
 
-	if certNearExpiry {
-		mon.emitGauge("certificate.expirationdate", 1, map[string]string{
-			"daysUntilExpiration": fmt.Sprintf("%d", minDaysUntilExpiration),
-			"namespace":           "openshift-etcd",
-			"name":                "openshift-etcd-certificate",
-		})
-	}
-
 	return nil
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

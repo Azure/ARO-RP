@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/pem"
-	"fmt"
 	"testing"
 	"time"
 
@@ -21,7 +20,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -38,8 +36,9 @@ const (
 
 func TestEmitCertificateExpirationStatuses(t *testing.T) {
 	expiration := time.Now().Add(time.Hour * 24 * 5)
-	expirationString := expiration.UTC().Format(time.RFC3339)
-	clusterID := uuid.DefaultGenerator.Generate()
+	daysUntilExpiration := 4
+	//expirationString := expiration.UTC().Format(time.RFC3339)
+	clusterID := "00000000-0000-0000-0000-000000000000"
 
 	for _, tt := range []struct {
 		name            string
@@ -55,9 +54,9 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			certsPresent: []certInfo{{"cluster", "geneva.certificate"}},
 			wantExpirations: []map[string]string{
 				{
-					"subject":             "geneva.certificate",
-					"expirationDate":      expirationString,
-					"daysUntilExpiration": "4",
+					"subject":   "geneva.certificate",
+					"name":      "cluster",
+					"namespace": "openshift-azure-operator",
 				},
 			},
 		},
@@ -71,19 +70,19 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			},
 			wantExpirations: []map[string]string{
 				{
-					"subject":             "geneva.certificate",
-					"expirationDate":      expirationString,
-					"daysUntilExpiration": "4",
+					"subject":   "geneva.certificate",
+					"name":      "cluster",
+					"namespace": "openshift-azure-operator",
 				},
 				{
-					"subject":             "contoso.aroapp.io",
-					"expirationDate":      expirationString,
-					"daysUntilExpiration": "4",
+					"subject":   "contoso.aroapp.io",
+					"name":      clusterID + "-ingress",
+					"namespace": "openshift-azure-operator",
 				},
 				{
-					"subject":             "api.contoso.aroapp.io",
-					"expirationDate":      expirationString,
-					"daysUntilExpiration": "4",
+					"subject":   "api.contoso.aroapp.io",
+					"name":      clusterID + "-apiserver",
+					"namespace": "openshift-azure-operator",
 				},
 			},
 		},
@@ -106,14 +105,14 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			},
 			wantExpirations: []map[string]string{
 				{
-					"subject":             "geneva.certificate",
-					"expirationDate":      expirationString,
-					"daysUntilExpiration": "4",
+					"subject":   "geneva.certificate",
+					"name":      "cluster",
+					"namespace": "openshift-azure-operator",
 				},
 				{
-					"subject":             "contoso.aroapp.io",
-					"expirationDate":      expirationString,
-					"daysUntilExpiration": "4",
+					"subject":   "contoso.aroapp.io",
+					"name":      clusterID + "-ingress",
+					"namespace": "openshift-azure-operator",
 				},
 			},
 			wantWarning: []map[string]string{
@@ -139,7 +138,7 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 				m.EXPECT().EmitGauge(secretMissingMetricName, int64(1), w)
 			}
 			for _, g := range tt.wantExpirations {
-				m.EXPECT().EmitGauge(certificateExpirationMetricName, int64(1), g)
+				m.EXPECT().EmitGauge(certificateExpirationMetricName, int64(daysUntilExpiration), g)
 			}
 
 			mon := buildMonitor(m, tt.domain, clusterID, secrets...)
@@ -293,12 +292,11 @@ func TestEtcdCertificateExpiry(t *testing.T) {
 				m:         m,
 			}
 
-			m.EXPECT().EmitGauge("certificate.expirationdate", int64(1), map[string]string{
-				"daysUntilExpiration": fmt.Sprintf("%d", tt.minDaysUntilExpiration),
-				"namespace":           "openshift-etcd",
-				"name":                "openshift-etcd-certificate",
+			m.EXPECT().EmitGauge(certificateExpirationMetricName, int64(tt.minDaysUntilExpiration), map[string]string{
+				"namespace": "openshift-etcd",
+				"name":      "etcd-peer-master-0",
+				"subject":   "etcd-cert",
 			})
-
 			err = mon.emitEtcdCertificateExpiry(ctx)
 			if err != nil {
 				t.Fatal(err)
