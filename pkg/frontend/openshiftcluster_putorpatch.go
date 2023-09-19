@@ -195,8 +195,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		if err != nil {
 			return nil, err
 		}
-		// TODO: Remove this once 23-04-01 API release is complete.
-		determineOutboundType(ctx, doc, subscription)
 
 		// TODO remove this when introducing the BYONSG CLI option
 		if feature.IsRegisteredForFeature(subscription.Subscription.Properties, api.FeatureFlagPreconfiguredNSG) {
