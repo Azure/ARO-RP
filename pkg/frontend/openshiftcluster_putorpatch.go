@@ -58,6 +58,8 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		return nil, err
 	}
 
+	println("PATH")
+	println(path)
 	doc, err := f.dbOpenShiftClusters.Get(ctx, path)
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, err
