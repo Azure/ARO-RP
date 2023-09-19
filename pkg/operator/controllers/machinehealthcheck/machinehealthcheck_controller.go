@@ -56,7 +56,6 @@ func NewMachineHealthCheckReconciler(log *logrus.Entry, client client.Client, dh
 
 // Reconcile watches MachineHealthCheck objects, and if any changes,
 // reconciles the associated ARO MachineHealthCheck object
-
 func (r *MachineHealthCheckReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.GetCluster(ctx)
 
@@ -89,6 +88,7 @@ func (r *MachineHealthCheckReconciler) Reconcile(ctx context.Context, request ct
 			return reconcile.Result{RequeueAfter: time.Hour}, err
 		}
 
+		r.ClearConditions(ctx)
 		return reconcile.Result{}, nil
 	}
 
