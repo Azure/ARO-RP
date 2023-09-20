@@ -1219,7 +1219,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 					},
 				}
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.loadBalancerProfile.effectiveOutboundIps[0].id: Changing property 'properties.networkProfile.loadBalancerProfile.effectiveOutboundIps[0].id' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.loadBalancerProfile.effectiveOutboundIps: Changing property 'properties.networkProfile.loadBalancerProfile.effectiveOutboundIps' is not allowed.",
 		},
 	}
 

@@ -153,6 +153,14 @@ func validate(path string, v, w reflect.Value, ignoreCase bool) error {
 			}
 			subpath += name
 
+			// Read-only properties should be omitted from PUT/POST requests.
+			if strings.EqualFold(structField.Tag.Get("swagger"), "readOnly") {
+				if !v.FieldByIndex([]int{i}).IsZero() {
+					return newValidationError(subpath)
+				}
+				continue
+			}
+
 			ic := ignoreCase || strings.EqualFold(structField.Tag.Get("mutable"), "case")
 
 			err := validate(subpath, v.Field(i), w.Field(i), ic)
