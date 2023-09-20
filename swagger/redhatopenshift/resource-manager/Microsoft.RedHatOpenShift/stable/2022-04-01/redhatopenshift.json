@@ -870,6 +870,7 @@
           "description": "The size of the worker VMs."
         },
         "diskSizeGB": {
+          "format": "int32",
           "description": "The disk size of the worker VMs.",
           "type": "integer"
         },
@@ -878,6 +879,7 @@
           "type": "string"
         },
         "count": {
+          "format": "int32",
           "description": "The number of worker VMs.",
           "type": "integer"
         },
