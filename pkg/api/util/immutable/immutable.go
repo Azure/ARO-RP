@@ -136,13 +136,15 @@ func validate(path string, v, w reflect.Value, ignoreCase bool) error {
 
 	case reflect.Struct:
 		for i := 0; i < v.NumField(); i++ {
-			if strings.EqualFold(v.Type().Field(i).Tag.Get("mutable"), "true") {
+			structField := v.Type().Field(i)
+
+			if strings.EqualFold(structField.Tag.Get("mutable"), "true") {
 				continue
 			}
 
-			name := strings.SplitN(v.Type().Field(i).Tag.Get("json"), ",", 2)[0]
+			name := strings.SplitN(structField.Tag.Get("json"), ",", 2)[0]
 			if name == "" {
-				name = v.Type().Field(i).Name
+				name = structField.Name
 			}
 
 			subpath := path
@@ -151,7 +153,7 @@ func validate(path string, v, w reflect.Value, ignoreCase bool) error {
 			}
 			subpath += name
 
-			ic := ignoreCase || strings.EqualFold(v.Type().Field(i).Tag.Get("mutable"), "case")
+			ic := ignoreCase || strings.EqualFold(structField.Tag.Get("mutable"), "case")
 
 			err := validate(subpath, v.Field(i), w.Field(i), ic)
 			if err != nil {
