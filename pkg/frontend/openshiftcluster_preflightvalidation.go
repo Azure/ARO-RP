@@ -92,7 +92,7 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 	converter := f.apis[apiVersion].OpenShiftClusterConverter
 	staticValidator := f.apis[apiVersion].OpenShiftClusterStaticValidator
 	ext := converter.ToExternal(oc)
-	if err := json.Unmarshal(raw, &ext); err != nil {
+	if err = json.Unmarshal(raw, &ext); err != nil {
 		return api.ValidationResult{
 			Status: api.ValidationStatusFailed,
 			Error: &api.ManagementErrorWithDetails{
@@ -103,7 +103,7 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 
 	if isCreate {
 		log.Print("preflight static create validation")
-		if err := staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sV3Workers), resourceID); err != nil {
+		if err = staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sV3Workers), resourceID); err != nil {
 			return api.ValidationResult{
 				Status: api.ValidationStatusFailed,
 				Error: &api.ManagementErrorWithDetails{
@@ -111,7 +111,7 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 				},
 			}
 		}
-		if err := f.validateInstallVersion(ctx, oc); err != nil {
+		if err = f.validateInstallVersion(ctx, oc); err != nil {
 			return api.ValidationResult{
 				Status: api.ValidationStatusFailed,
 				Error: &api.ManagementErrorWithDetails{
