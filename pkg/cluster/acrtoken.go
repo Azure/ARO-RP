@@ -5,11 +5,14 @@ package cluster
 
 import (
 	"context"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/operator"
@@ -139,16 +142,32 @@ func (m *manager) rotateOpenShiftConfigSecret(ctx context.Context, encodedDocker
 			Type: corev1.SecretTypeDockerConfigJson,
 			Data: map[string][]byte{corev1.DockerConfigJsonKey: encodedDockerConfigJson},
 		}
-		err = m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Delete(ctx, pullSecretName.Name, metav1.DeleteOptions{})
+
+		err := retryOperation(func() error {
+			return m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Delete(ctx, pullSecretName.Name, metav1.DeleteOptions{})
+		})
 		if err != nil && !kerrors.IsNotFound(err) {
 			return err
 		}
-		_, err = m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Create(ctx, recreatedSecret, metav1.CreateOptions{})
-		return err
+		return retryOperation(func() error {
+			_, err = m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Create(ctx, recreatedSecret, metav1.CreateOptions{})
+			return err
+		})
 	}
 
 	openshiftConfigSecret.Data[corev1.DockerConfigJsonKey] = encodedDockerConfigJson
-	_, err = m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Update(ctx, openshiftConfigSecret, metav1.UpdateOptions{})
 
-	return err
+	return retryOperation(func() error {
+		_, err = m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Update(ctx, openshiftConfigSecret, metav1.UpdateOptions{})
+		return err
+	})
+}
+
+func retryOperation(retryable func() error) error {
+	return retry.OnError(wait.Backoff{
+		Steps:    10,
+		Duration: 2 * time.Second,
+	}, func(err error) bool {
+		return kerrors.IsBadRequest(err) || kerrors.IsInternalError(err) || kerrors.IsServerTimeout(err)
+	}, retryable)
 }
