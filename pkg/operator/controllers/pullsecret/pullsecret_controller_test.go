@@ -221,7 +221,7 @@ func TestPullSecretReconciler(t *testing.T) {
 			wantKeys: nil,
 		},
 		{
-			name: "valid RH keys present",
+			name: "management enabled, valid RH key present",
 			secrets: []client.Object{
 				helper.ValidPullSecretRHKeys,
 				helper.ValidOperatorSecretRHKeys,

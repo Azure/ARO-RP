@@ -14,6 +14,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"reflect"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -35,18 +37,43 @@ import (
 )
 
 const (
-	ControllerName = "PullSecret"
-
-	controllerEnabled = "aro.pullsecret.enabled"
-	controllerManaged = "aro.pullsecret.managed"
+	ControllerName                    = "PullSecret"
+	controllerEnabled                 = "aro.pullsecret.enabled"
+	controllerManaged                 = "aro.pullsecret.managed"
+	SecretValidationNilSecret         = "nil secret"
+	SecretValidationWrongSecretType   = "wrong secret type"
+	SecretValidationDockerJsonMissing = "docker json missing"
+	SecretValidationDockerJsonInvalid = "docker json invalid"
+	SecretValidationRHKeysMissing     = "redhat keys missing"
 )
 
 var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
+var operatorSecretName = types.NamespacedName{Name: operator.SecretName, Namespace: operator.Namespace}
 var rhKeys = []string{"registry.redhat.io", "cloud.openshift.com", "registry.connect.redhat.com"}
 
 // PullSecretReconciler reconciles pull secrets in a Cluster object
 type PullSecretReconciler struct {
 	base.AROController
+}
+
+type SecretValidationError struct {
+	Type string
+	Err  error
+}
+
+func NewSecretValidationError(t string, err error) *SecretValidationError {
+	return &SecretValidationError{
+		Type: t,
+		Err:  err,
+	}
+}
+
+func (sve *SecretValidationError) Error() string {
+	return fmt.Sprintf("secret validation error: %s: %s", sve.Type, sve.Err)
+}
+
+func (sve *SecretValidationError) Unwrap() error {
+	return sve.Err
 }
 
 func NewReconciler(log *logrus.Entry, client client.Client) *PullSecretReconciler {
@@ -81,38 +108,89 @@ func (r *PullSecretReconciler) Reconcile(ctx context.Context, request ctrl.Reque
 	}
 
 	r.Log.Debug("running")
-	userSecret := &corev1.Secret{}
-	err = r.Client.Get(ctx, pullSecretName, userSecret)
-	if err != nil && !kerrors.IsNotFound(err) {
-		return reconcile.Result{}, err
-	}
 
-	// reconcile global pull secret
-	// detects if the global pull secret is broken and fixes it by using backup managed by ARO operator
+	// If customer's pull secret is managed
 	if instance.Spec.OperatorFlags.GetSimpleBoolean(controllerManaged) {
+
+		// Get the backup operator secret
 		operatorSecret := &corev1.Secret{}
-		err = r.Client.Get(ctx, types.NamespacedName{Namespace: operator.Namespace, Name: operator.SecretName}, operatorSecret)
+		err = r.Client.Get(ctx, operatorSecretName, operatorSecret)
+		// If the backup operator secret is missing - we can't do anything
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		// If the backup operator secret is bad - we can't do anything
+		err = validateSecret(operatorSecret)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		// If we can't parse the backup operator secret - we can't do anything
+		operatorSecretKeys, err := filterRedHatKeys(operatorSecret)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
 
-		// fix pull secret if its broken to have at least the ARO pull secret
-		userSecret, err = r.ensureGlobalPullSecret(ctx, operatorSecret, userSecret)
-		if err != nil {
+		// Get the customers pull secret
+		pullSecret := &corev1.Secret{}
+		err = r.Client.Get(ctx, pullSecretName, pullSecret)
+		if err != nil && !kerrors.IsNotFound(err) {
 			return reconcile.Result{}, err
+			// Customer is missing pull secret, create it from the backup copy
+		} else if kerrors.IsNotFound(err) {
+			return reconcile.Result{}, r.createPullSecretFromOperatorBackup(ctx, operatorSecret)
 		}
+
+		// Validate customer's pull secret, if there is a problem with the pull secret update with backup copy
+		err = validateSecret(pullSecret)
+		if err != nil {
+			return reconcile.Result{}, r.updatePullSecretWithOperatorBackup(ctx, operatorSecret, pullSecret, err)
+		}
+
+		// Unable to parse customers pull secret, update with backup copy
+		pullSecretKeys, err := filterRedHatKeys(pullSecret)
+		if err != nil {
+			return reconcile.Result{}, r.updatePullSecretWithOperatorBackup(ctx, operatorSecret, pullSecret, err)
+		}
+
+		// Pull secret is missing RH keys, update with backup copy
+		if !reflect.DeepEqual(operatorSecretKeys, pullSecretKeys) {
+			return reconcile.Result{}, r.updatePullSecretWithOperatorBackup(ctx, operatorSecret, pullSecret, err)
+		}
+
 	}
 
-	// reconcile cluster status
-	// update the following information:
-	// - list of Red Hat pull-secret keys in status.
-	instance.Status.RedHatKeysPresent, err = r.parseRedHatKeys(userSecret)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
+	// // reconcile global pull secret
+	// // detects if the global pull secret is broken and fixes it by using backup managed by ARO operator
+	// if instance.Spec.OperatorFlags.GetSimpleBoolean(controllerManaged) {
 
-	err = r.Client.Update(ctx, instance)
-	return reconcile.Result{}, err
+	// 	operatorSecret := &corev1.Secret{}
+	// 	err = r.Client.Get(ctx, operatorSecretName, operatorSecret)
+	// 	if err != nil {
+	// 		return reconcile.Result{}, err
+	// 	}
+
+	// 	err = validateSecret(operatorSecret)
+	// 	if err != nil {
+	// 		return reconcile.Result{}, err
+	// 	}
+
+	// 	// fix pull secret if its broken to have at least the ARO pull secret
+	// 	pullSecret, err = r.ensureGlobalPullSecret(ctx, operatorSecret, pullSecret)
+	// 	if err != nil {
+	// 		return reconcile.Result{}, err
+	// 	}
+	// }
+
+	// // reconcile cluster status
+	// // update the following information:
+	// // - list of Red Hat pull-secret keys in status.
+	// instance.Status.RedHatKeysPresent, err = filterRedHatKeys(pullSecret)
+	// if err != nil {
+	// 	return reconcile.Result{}, err
+	// }
+
+	// err = r.Client.Update(ctx, instance)
+	return reconcile.Result{}, nil
 }
 
 // SetupWithManager setup our manager
@@ -143,67 +221,111 @@ func (r *PullSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
+func (r PullSecretReconciler) createPullSecretFromOperatorBackup(ctx context.Context, operatorSecret *corev1.Secret) error {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pullSecretName.Name,
+			Namespace: pullSecretName.Namespace,
+		},
+		Type: corev1.SecretTypeDockerConfigJson,
+		Data: operatorSecret.Data,
+	}
+
+	return r.Client.Create(ctx, secret)
+}
+
+func (r PullSecretReconciler) updatePullSecretWithOperatorBackup(ctx context.Context, operatorSecret *corev1.Secret, userSecret *corev1.Secret, err error) error {
+
+	return nil
+}
+
+func validateSecret(secret *corev1.Secret) error {
+	if secret == nil {
+		return NewSecretValidationError(SecretValidationNilSecret, errors.New("the secret is nil"))
+	}
+
+	if secret.Type != corev1.SecretTypeDockerConfigJson {
+		return NewSecretValidationError(SecretValidationWrongSecretType, fmt.Errorf("secret is the wrong secret type got %s expected %s", secret.Type, corev1.SecretTypeDockerConfigJson))
+	}
+
+	_, ok := secret.Data[corev1.DockerConfigJsonKey]
+	if !ok {
+		return NewSecretValidationError(SecretValidationDockerJsonMissing, fmt.Errorf("secret is missing the %s key", corev1.DockerConfigJsonKey))
+	}
+
+	if !json.Valid(secret.Data[corev1.DockerConfigJsonKey]) {
+		return NewSecretValidationError(SecretValidationDockerJsonInvalid, fmt.Errorf("secret's %s key is invalid json", corev1.DockerConfigJsonKey))
+	}
+
+	_, err := filterRedHatKeys(secret)
+	if err != nil {
+		return NewSecretValidationError(SecretValidationRHKeysMissing, errors.New("unable to parse keys from the secret"))
+	}
+
+	return nil
+}
+
 // ensureGlobalPullSecret checks the state of the pull secrets, in case of missing or broken ARO pull secret
 // it replaces it with working one from controller Secret
 // it takes care only for ARO pull secret, it does not touch the customer keys
-func (r *PullSecretReconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret, userSecret *corev1.Secret) (secret *corev1.Secret, err error) {
-	if operatorSecret == nil {
-		return nil, errors.New("nil operator secret, cannot verify userData integrity")
-	}
+// func (r *PullSecretReconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret, userSecret *corev1.Secret) (secret *corev1.Secret, err error) {
+// 	if operatorSecret == nil {
+// 		return nil, errors.New("nil operator secret, cannot verify userData integrity")
+// 	}
 
-	recreate := false
+// 	recreate := false
 
-	// if there is no userSecret, create new, or when
-	// userSecret have broken type, recreates it with proper type
-	// unfortunately the type field is immutable, therefore the whole secret have to be deleted and create once more
-	if userSecret == nil || (userSecret.Type != corev1.SecretTypeDockerConfigJson || userSecret.Data == nil) {
-		recreate = true
-	}
+// 	// if there is no userSecret, create new, or when
+// 	// userSecret have broken type, recreates it with proper type
+// 	// unfortunately the type field is immutable, therefore the whole secret have to be deleted and create once more
+// 	if userSecret == nil || (userSecret.Type != corev1.SecretTypeDockerConfigJson || userSecret.Data == nil) {
+// 		recreate = true
+// 	}
 
-	if recreate {
-		secret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      pullSecretName.Name,
-				Namespace: pullSecretName.Namespace,
-			},
-			Type: corev1.SecretTypeDockerConfigJson,
-			Data: make(map[string][]byte),
-		}
-	} else {
-		secret = userSecret.DeepCopy()
-		if !json.Valid(secret.Data[corev1.DockerConfigJsonKey]) {
-			delete(secret.Data, corev1.DockerConfigJsonKey)
-		}
-	}
+// 	if recreate {
+// 		secret = &corev1.Secret{
+// 			ObjectMeta: metav1.ObjectMeta{
+// 				Name:      pullSecretName.Name,
+// 				Namespace: pullSecretName.Namespace,
+// 			},
+// 			Type: corev1.SecretTypeDockerConfigJson,
+// 			Data: make(map[string][]byte),
+// 		}
+// 	} else {
+// 		secret = userSecret.DeepCopy()
+// 		if !json.Valid(secret.Data[corev1.DockerConfigJsonKey]) {
+// 			delete(secret.Data, corev1.DockerConfigJsonKey)
+// 		}
+// 	}
 
-	fixedData, update, err := psutil.Merge(string(secret.Data[corev1.DockerConfigJsonKey]), string(operatorSecret.Data[corev1.DockerConfigJsonKey]))
-	if err != nil {
-		return nil, err
-	}
+// 	fixedData, update, err := psutil.Merge(string(secret.Data[corev1.DockerConfigJsonKey]), string(operatorSecret.Data[corev1.DockerConfigJsonKey]))
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	// update is true for any case when ARO keys are fixed, meaning no need to double check for recreation
-	if !update {
-		return userSecret, nil
-	}
+// 	// update is true for any case when ARO keys are fixed, meaning no need to double check for recreation
+// 	if !update {
+// 		return userSecret, nil
+// 	}
 
-	secret.Data[corev1.DockerConfigJsonKey] = []byte(fixedData)
+// 	secret.Data[corev1.DockerConfigJsonKey] = []byte(fixedData)
 
-	if recreate {
-		// delete possible existing userSecret, calling deletion every time and ignoring when secret not found
-		// allows for simpler logic flow, when delete and create are not handled separately
-		// this call happens only when there is a need to change, it has no significant impact on performance
-		err := r.Client.Delete(ctx, secret)
-		if err != nil && !kerrors.IsNotFound(err) {
-			return nil, err
-		}
+// 	if recreate {
+// 		// delete possible existing userSecret, calling deletion every time and ignoring when secret not found
+// 		// allows for simpler logic flow, when delete and create are not handled separately
+// 		// this call happens only when there is a need to change, it has no significant impact on performance
+// 		err := r.Client.Delete(ctx, secret)
+// 		if err != nil && !kerrors.IsNotFound(err) {
+// 			return nil, err
+// 		}
 
-		err = r.Client.Create(ctx, secret)
-		return secret, err
-	}
+// 		err = r.Client.Create(ctx, secret)
+// 		return secret, err
+// 	}
 
-	err = r.Client.Update(ctx, secret)
-	return secret, err
-}
+// 	err = r.Client.Update(ctx, secret)
+// 	return secret, err
+// }
 
 // parseRedHatKeys unmarshal and extract following RH keys from pull-secret:
 //   - redhat.registry.io
@@ -211,11 +333,10 @@ func (r *PullSecretReconciler) ensureGlobalPullSecret(ctx context.Context, opera
 //   - registry.connect.redhat.com
 //
 // if present, return error when the parsing fail, which means broken secret
-func (r *PullSecretReconciler) parseRedHatKeys(secret *corev1.Secret) (foundKeys []string, err error) {
+func filterRedHatKeys(secret *corev1.Secret) (foundKeys []string, err error) {
 	// parse keys and validate JSON
 	parsedKeys, err := psutil.UnmarshalSecretData(secret)
 	if err != nil {
-		r.Log.Info("pull secret is not valid json - recreating")
 		return foundKeys, err
 	}
 
