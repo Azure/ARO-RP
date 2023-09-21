@@ -83,12 +83,12 @@ linters-settings:
         alias: rhcospkg
       - pkg: github.com/openshift/installer/pkg/types/azure
         alias: azuretypes
-      - pkg: github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1
-        alias: machinev1beta1
-      - pkg: github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned
-        alias: maoclient
-      - pkg: github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake
-        alias: maofake
+      # - pkg: github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1
+      #   alias: machinev1beta1
+      # - pkg: github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned
+      #   alias: maoclient
+      # - pkg: github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake
+      #   alias: maofake
       - pkg: github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1
         alias: mcv1
       - pkg: github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned
