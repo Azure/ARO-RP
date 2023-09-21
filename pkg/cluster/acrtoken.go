@@ -155,7 +155,8 @@ func (m *manager) rotateOpenShiftConfigSecret(ctx context.Context, encodedDocker
 		})
 	}
 
-	openshiftConfigSecret.Data[corev1.DockerConfigJsonKey] = encodedDockerConfigJson
+	mergedPullSecretData, _, err := pullsecret.Merge(string(openshiftConfigSecret.Data[corev1.DockerConfigJsonKey]), string(encodedDockerConfigJson))
+	openshiftConfigSecret.Data[corev1.DockerConfigJsonKey] = []byte(mergedPullSecretData)
 
 	return retryOperation(func() error {
 		_, err = m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Update(ctx, openshiftConfigSecret, metav1.UpdateOptions{})
