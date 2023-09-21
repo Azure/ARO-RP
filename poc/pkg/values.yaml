@@ -75,4 +75,13 @@ istio:
     #TODO jonachang: change back to 443 when we have TLS
     port: 80
   virtualService:
-    name: rp-poc-virtualservice   
+    name: rp-poc-virtualservice
+
+AKSCluster:
+  tlsSecretName: tls-secret
+  userAssignedIdentityId: 43bf6984-5163-4565-bb2f-04f5a5d68d78
+  tenantId: 72f988bf-86f1-41af-91ab-2d7cd011db47
+
+keyVault:
+  name: aro-rp-aks-kv
+  tlsCertificateName: aks-rp-certificate
