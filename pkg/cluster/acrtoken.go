@@ -5,6 +5,8 @@ package cluster
 
 import (
 	"context"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,6 +16,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
+
+var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
 
 func (m *manager) ensureACRToken(ctx context.Context) error {
 	if m.env.IsLocalDevelopmentMode() {
@@ -108,6 +112,49 @@ func (m *manager) rotateACRTokenPassword(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	err = m.rotateOpenShiftConfigSecret(ctx, pullSecret.Data[corev1.DockerConfigJsonKey])
+	if err != nil {
+		return err
+	}
 
 	return nil
+}
+
+func (m *manager) rotateOpenShiftConfigSecret(ctx context.Context, encodedDockerConfigJson []byte) error {
+	openshiftConfigSecret, err := m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Get(ctx, pullSecretName.Name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	updatedSecret := corev1.Secret{}
+
+	recreate := openshiftConfigSecret == nil ||
+		(openshiftConfigSecret.Type != corev1.SecretTypeDockerConfigJson || openshiftConfigSecret.Data == nil) ||
+		(openshiftConfigSecret.Immutable != nil && *openshiftConfigSecret.Immutable)
+
+	if recreate {
+		updatedSecret = corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      pullSecretName.Name,
+				Namespace: pullSecretName.Namespace,
+			},
+			Type: corev1.SecretTypeDockerConfigJson,
+			Data: make(map[string][]byte),
+		}
+	} else {
+		updatedSecret = *openshiftConfigSecret.DeepCopy()
+	}
+
+	updatedSecret.Data[corev1.DockerConfigJsonKey] = encodedDockerConfigJson
+
+	if recreate {
+		err = m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Delete(ctx, pullSecretName.Name, metav1.DeleteOptions{})
+		if err != nil && !kerrors.IsNotFound(err) {
+			return err
+		}
+		_, err = m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Create(ctx, &updatedSecret, metav1.CreateOptions{})
+	} else {
+		_, err = m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Update(ctx, &updatedSecret, metav1.UpdateOptions{})
+	}
+
+	return err
 }
