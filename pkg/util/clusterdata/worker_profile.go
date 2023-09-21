@@ -103,7 +103,6 @@ func (ce machineClientEnricher) Enrich(
 	defer oc.Lock.Unlock()
 
 	oc.Properties.WorkerProfilesStatus = workerProfiles
-
 	return nil
 }
 

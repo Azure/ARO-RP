@@ -149,12 +149,26 @@ func (m *manager) rotateOpenShiftConfigSecret(ctx context.Context, encodedDocker
 		if err != nil && !kerrors.IsNotFound(err) {
 			return err
 		}
+
+		// attempt to merge if we can, defaults to the created pull secret
+		if openshiftConfigSecret != nil && openshiftConfigSecret.Data != nil {
+			previousConfigData, previousConfigDataExists := openshiftConfigSecret.Data[corev1.DockerConfigJsonKey]
+			if previousConfigDataExists {
+				mergedPullSecretData, _, err := pullsecret.Merge(string(previousConfigData), string(encodedDockerConfigJson))
+				if err == nil {
+					recreatedSecret.Data[corev1.DockerConfigJsonKey] = []byte(mergedPullSecretData)
+				} else {
+					m.log.Error("Could not merge openshift config pull secret, overriding with new acr token", err)
+				}
+			}
+		}
 		return retryOperation(func() error {
 			_, err = m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Create(ctx, recreatedSecret, metav1.CreateOptions{})
 			return err
 		})
 	}
 
+	// update flow
 	mergedPullSecretData, _, err := pullsecret.Merge(string(openshiftConfigSecret.Data[corev1.DockerConfigJsonKey]), string(encodedDockerConfigJson))
 	openshiftConfigSecret.Data[corev1.DockerConfigJsonKey] = []byte(mergedPullSecretData)
 
