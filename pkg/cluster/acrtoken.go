@@ -125,7 +125,7 @@ func (m *manager) rotateACRTokenPassword(ctx context.Context) error {
 
 func (m *manager) rotateOpenShiftConfigSecret(ctx context.Context, encodedDockerConfigJson []byte) error {
 	openshiftConfigSecret, err := m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Get(ctx, pullSecretName.Name, metav1.GetOptions{})
-	if err != nil {
+	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}
 
