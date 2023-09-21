@@ -32,8 +32,9 @@ var _ = Describe("[Admin API] Cluster admin update action", func() {
 		By("waiting for the update to complete")
 		Eventually(func(g Gomega, ctx context.Context) {
 			oc = adminGetCluster(g, ctx, clusterResourceID)
-
 			g.Expect(oc.Properties.ProvisioningState).To(Equal(admin.ProvisioningStateSucceeded))
 		}).WithContext(ctx).Should(Succeed())
+
+		Expect(oc.Properties.LastAdminUpdateError).To(Equal(""))
 	})
 })
