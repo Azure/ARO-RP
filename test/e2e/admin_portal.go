@@ -78,8 +78,6 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 	})
 
 	It("Should be able to populate cluster info panel correctly", func() {
-		const CLUSTER_INFO_HEADINGS = 10
-
 		err := wd.Wait(conditions.ElementIsLocated(selenium.ByCSSSelector, "div[data-automation-key='name']"))
 		Expect(err).ToNot(HaveOccurred())
 
@@ -89,34 +87,48 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		err = cluster.Click()
 		Expect(err).ToNot(HaveOccurred())
 
-		err = wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByID, "ClusterDetailCell"), 2*time.Minute)
+		err = wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByCSSSelector, ".clusterOverviewList"), 2*time.Minute)
 		Expect(err).ToNot(HaveOccurred())
 
+		err = wd.WaitWithTimeout(noContentIsLoading, 2*time.Minute)
+		Expect(err).ToNot(HaveOccurred())
+
+		list, err := wd.FindElement(selenium.ByCSSSelector, ".clusterOverviewList")
+		Expect(err).ToNot(HaveOccurred())
+
+		expectedProperties := []string{
+			"ApiServer Visibility",
+			"ApiServer URL",
+			"Architecture Version",
+			"Console Link",
+			"Created At",
+			"Created By",
+			"Failed Provisioning State",
+			"Infra Id",
+			"Last Admin Update Error",
+			"Last Modified At",
+			"Last Modified By",
+			"Last Provisioning State",
+			"Location",
+			"Name",
+			"Provisioning State",
+			"Resource Id",
+			"Version",
+			"Installation Status",
+		}
+
 		Eventually(func(g Gomega) {
-			panelSpans, err := wd.FindElements(selenium.ByID, "ClusterDetailCell")
-			g.Expect(err).ToNot(HaveOccurred())
-			g.Expect(len(panelSpans)).To(Equal(CLUSTER_INFO_HEADINGS * 3))
+			for i, wantName := range expectedProperties {
+				cell, err := list.FindElement(selenium.ByCSSSelector, fmt.Sprintf("div[data-automationid='ListCell'][data-list-index='%d']", i))
+				Expect(err).ToNot(HaveOccurred())
 
-			panelFields := panelSpans[0 : CLUSTER_INFO_HEADINGS-1]
-			panelColons := panelSpans[CLUSTER_INFO_HEADINGS : CLUSTER_INFO_HEADINGS*2-1]
-			panelValues := panelSpans[CLUSTER_INFO_HEADINGS*2 : len(panelSpans)-1]
+				name, err := cell.FindElement(selenium.ByCSSSelector, "div[data-automationid='DetailsRowCell'][data-automation-key='name']")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(name.Text()).To(Equal(wantName))
 
-			for _, panelField := range panelFields {
-				panelText, err := panelField.Text()
-				g.Expect(err).ToNot(HaveOccurred())
-				g.Expect(panelText).To(Not(Equal("")))
-			}
-
-			for _, panelField := range panelColons {
-				panelText, err := panelField.Text()
-				g.Expect(err).ToNot(HaveOccurred())
-				g.Expect(panelText).To(Equal(":"))
-			}
-
-			for _, panelField := range panelValues {
-				panelText, err := panelField.Text()
-				g.Expect(err).ToNot(HaveOccurred())
-				g.Expect(panelText).To(Not(Equal("")))
+				value, err := cell.FindElement(selenium.ByCSSSelector, "div[data-automationid='DetailsRowCell'][data-automation-key='value']")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(value.Text()).To(Not(Equal("")))
 			}
 		}).WithTimeout(time.Minute).WithPolling(time.Second).Should(Succeed())
 	})
@@ -248,7 +260,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		Expect(err).ToNot(HaveOccurred())
 		err = button.Click()
 		Expect(err).ToNot(HaveOccurred())
-		err = wd.WaitWithTimeout(conditions.ElementIsLocated(selenium.ByID, "ClusterDetailCell"), 2*time.Minute)
+		err = wd.WaitWithTimeout(noContentIsLoading, 2*time.Minute)
 		Expect(err).ToNot(HaveOccurred())
 
 		// Check refresh button clicked event for Nodes Tab
@@ -381,3 +393,8 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		Expect(kubeconfigButton.IsDisplayed()).To(BeTrue())
 	})
 })
+
+func noContentIsLoading(wd selenium.WebDriver) (bool, error) {
+	shimmerElements, err := wd.FindElements(selenium.ByCSSSelector, ".ms-Shimmer-container")
+	return len(shimmerElements) == 0, err
+}
