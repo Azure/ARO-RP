@@ -125,36 +125,30 @@ func (m *manager) rotateOpenShiftConfigSecret(ctx context.Context, encodedDocker
 	if err != nil {
 		return err
 	}
-	updatedSecret := corev1.Secret{}
 
-	recreate := openshiftConfigSecret == nil ||
+	recreationOfSecretRequired := openshiftConfigSecret == nil ||
 		(openshiftConfigSecret.Type != corev1.SecretTypeDockerConfigJson || openshiftConfigSecret.Data == nil) ||
 		(openshiftConfigSecret.Immutable != nil && *openshiftConfigSecret.Immutable)
 
-	if recreate {
-		updatedSecret = corev1.Secret{
+	if recreationOfSecretRequired {
+		recreatedSecret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      pullSecretName.Name,
 				Namespace: pullSecretName.Namespace,
 			},
 			Type: corev1.SecretTypeDockerConfigJson,
-			Data: make(map[string][]byte),
+			Data: map[string][]byte{corev1.DockerConfigJsonKey: encodedDockerConfigJson},
 		}
-	} else {
-		updatedSecret = *openshiftConfigSecret.DeepCopy()
-	}
-
-	updatedSecret.Data[corev1.DockerConfigJsonKey] = encodedDockerConfigJson
-
-	if recreate {
 		err = m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Delete(ctx, pullSecretName.Name, metav1.DeleteOptions{})
 		if err != nil && !kerrors.IsNotFound(err) {
 			return err
 		}
-		_, err = m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Create(ctx, &updatedSecret, metav1.CreateOptions{})
-	} else {
-		_, err = m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Update(ctx, &updatedSecret, metav1.UpdateOptions{})
+		_, err = m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Create(ctx, recreatedSecret, metav1.CreateOptions{})
+		return err
 	}
+
+	openshiftConfigSecret.Data[corev1.DockerConfigJsonKey] = encodedDockerConfigJson
+	_, err = m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Update(ctx, openshiftConfigSecret, metav1.UpdateOptions{})
 
 	return err
 }
