@@ -5,15 +5,22 @@ package cluster
 
 import (
 	"context"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
+
+var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
 
 func (m *manager) ensureACRToken(ctx context.Context) error {
 	if m.env.IsLocalDevelopmentMode() {
@@ -108,6 +115,78 @@ func (m *manager) rotateACRTokenPassword(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	err = m.rotateOpenShiftConfigSecret(ctx, pullSecret.Data[corev1.DockerConfigJsonKey])
+	if err != nil {
+		return err
+	}
 
 	return nil
+}
+
+func (m *manager) rotateOpenShiftConfigSecret(ctx context.Context, encodedDockerConfigJson []byte) error {
+	openshiftConfigSecret, err := m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Get(ctx, pullSecretName.Name, metav1.GetOptions{})
+	if err != nil && !kerrors.IsNotFound(err) {
+		return err
+	}
+
+	recreationOfSecretRequired := openshiftConfigSecret == nil ||
+		(openshiftConfigSecret.Type != corev1.SecretTypeDockerConfigJson || openshiftConfigSecret.Data == nil) ||
+		(openshiftConfigSecret.Immutable != nil && *openshiftConfigSecret.Immutable)
+
+	if recreationOfSecretRequired {
+		recreatedSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      pullSecretName.Name,
+				Namespace: pullSecretName.Namespace,
+			},
+			Type: corev1.SecretTypeDockerConfigJson,
+			Data: map[string][]byte{corev1.DockerConfigJsonKey: encodedDockerConfigJson},
+		}
+
+		err := retryOperation(func() error {
+			return m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Delete(ctx, pullSecretName.Name, metav1.DeleteOptions{})
+		})
+		if err != nil && !kerrors.IsNotFound(err) {
+			return err
+		}
+
+		// attempt to merge if we can, defaults to the created pull secret
+		if openshiftConfigSecret != nil && openshiftConfigSecret.Data != nil {
+			previousConfigData, previousConfigDataExists := openshiftConfigSecret.Data[corev1.DockerConfigJsonKey]
+			if previousConfigDataExists {
+				mergedPullSecretData, _, err := pullsecret.Merge(string(previousConfigData), string(encodedDockerConfigJson))
+				if err == nil {
+					recreatedSecret.Data[corev1.DockerConfigJsonKey] = []byte(mergedPullSecretData)
+				} else {
+					m.log.Error("Could not merge openshift config pull secret, overriding with new acr token", err)
+				}
+			}
+		}
+		return retryOperation(func() error {
+			_, err = m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Create(ctx, recreatedSecret, metav1.CreateOptions{})
+			return err
+		})
+	}
+
+	// update flow
+	mergedPullSecretData, _, err := pullsecret.Merge(string(openshiftConfigSecret.Data[corev1.DockerConfigJsonKey]), string(encodedDockerConfigJson))
+	if err == nil {
+		openshiftConfigSecret.Data[corev1.DockerConfigJsonKey] = []byte(mergedPullSecretData)
+	} else {
+		openshiftConfigSecret.Data[corev1.DockerConfigJsonKey] = encodedDockerConfigJson
+	}
+
+	return retryOperation(func() error {
+		_, err = m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Update(ctx, openshiftConfigSecret, metav1.UpdateOptions{})
+		return err
+	})
+}
+
+func retryOperation(retryable func() error) error {
+	return retry.OnError(wait.Backoff{
+		Steps:    10,
+		Duration: 2 * time.Second,
+	}, func(err error) bool {
+		return kerrors.IsBadRequest(err) || kerrors.IsInternalError(err) || kerrors.IsServerTimeout(err)
+	}, retryable)
 }
