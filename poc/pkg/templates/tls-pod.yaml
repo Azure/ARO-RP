@@ -4,7 +4,7 @@ metadata:
   name: {{ .Values.AKSCluster.tlsPod }}
 spec:
   containers:
-  - name: {{ .Values.AKSCluster.tlsPod }}
+  - name: tlspod
     image: mcr.microsoft.com/azuredocs/aks-helloworld:v1
     command:
       - "/bin/sleep"
