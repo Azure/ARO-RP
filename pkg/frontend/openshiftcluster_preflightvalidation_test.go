@@ -30,24 +30,24 @@ func TestPreflightValidation(t *testing.T) {
 		"location": "eastus",
 		"properties": {
 			"clusterProfile": {
-			"domain": "default",
-			"resourceGroupId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroupTest",
-			"fipsValidatedModules": "Enabled"
+				"domain": "default",
+				"resourceGroupId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroupTest",
+				"fipsValidatedModules": "Enabled"
 			},
 			"consoleProfile": {},
 			"servicePrincipalProfile": {
-			"clientId": "00000000-0000-0000-1111-000000000000",
-			"clientSecret": "00000000-0000-0000-0000-000000000000"
+				"clientId": "00000000-0000-0000-1111-000000000000",
+				"clientSecret": "00000000-0000-0000-0000-000000000000"
 			},
 			"networkProfile": {
-			"podCidr": "10.128.0.0/14",
-			"serviceCidr": "172.30.0.0/16"
+				"podCidr": "10.128.0.0/14",
+				"serviceCidr": "172.30.0.0/16"
 			},
 			"masterProfile": {
-			"vmSize": "Standard_D32s_v3",
-			"subnetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/ms-eastus/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/CARO2-master",
-			"encryptionAtHost": "Enabled",
-			"diskEncryptionSetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/ms-eastus/providers/Microsoft.Compute/diskEncryptionSets/ms-eastus-disk-encryption-set"
+				"vmSize": "Standard_D32s_v3",
+				"subnetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/ms-eastus/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/CARO2-master",
+				"encryptionAtHost": "Enabled",
+				"diskEncryptionSetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/ms-eastus/providers/Microsoft.Compute/diskEncryptionSets/ms-eastus-disk-encryption-set"
 			},
 			"workerProfiles": [
 			{
@@ -61,7 +61,7 @@ func TestPreflightValidation(t *testing.T) {
 			}
 			],
 			"apiserverProfile": {
-			"visibility": "Public"
+				"visibility": "Public"
 			},
 			"ingressProfiles": [
 			{
@@ -71,7 +71,7 @@ func TestPreflightValidation(t *testing.T) {
 			}
 			]
 		}
-		}
+	}
 	`)
 
 	type test struct {
