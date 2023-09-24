@@ -39,7 +39,7 @@ require (
 	github.com/gorilla/securecookie v1.1.1
 	github.com/gorilla/sessions v1.2.1
 	github.com/itchyny/gojq v0.12.13
-	github.com/jewzaam/go-cosmosdb v0.0.0-20220315232836-282b67c5b234
+	github.com/jewzaam/go-cosmosdb v0.0.0-20230924011506-8f8942a01991
 	github.com/jongio/azidext/go/azidext v0.5.0
 	github.com/microsoft/kiota-abstractions-go v1.2.0
 	github.com/microsoft/kiota-serialization-form-go v1.0.0

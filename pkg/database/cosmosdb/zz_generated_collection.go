@@ -181,6 +181,7 @@ type PartitionKeyRange struct {
 	ThroughputFraction float64                 `json:"throughputFraction,omitempty"`
 	Status             PartitionKeyRangeStatus `json:"status,omitempty"`
 	Parents            []string                `json:"parents,omitempty"`
+	LSN                int                     `json:"lsn,omitempty"`
 }
 
 // PartitionKeyRangeStatus represents a partition key range status
