@@ -668,7 +668,7 @@ class OpenShiftCluster(TrackedResource):
     :ivar location: Required. The geo-location where the resource lives.
     :vartype location: str
     :ivar provisioning_state: The cluster provisioning state. Possible values include:
-     "AdminUpdating", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
+     "AdminUpdating", "Cancelled", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
     :vartype provisioning_state: str or
      ~azure.mgmt.redhatopenshift.v2023_09_04.models.ProvisioningState
     :ivar cluster_profile: The cluster profile.
@@ -684,8 +684,8 @@ class OpenShiftCluster(TrackedResource):
     :vartype master_profile: ~azure.mgmt.redhatopenshift.v2023_09_04.models.MasterProfile
     :ivar worker_profiles: The cluster worker profiles.
     :vartype worker_profiles: list[~azure.mgmt.redhatopenshift.v2023_09_04.models.WorkerProfile]
-    :ivar worker_profiles_status: The cluster worker profiles status.
-    :vartype worker_profiles_status:
+    :ivar active_worker_profiles: The cluster active worker profiles.
+    :vartype active_worker_profiles:
      list[~azure.mgmt.redhatopenshift.v2023_09_04.models.WorkerProfile]
     :ivar apiserver_profile: The cluster API server profile.
     :vartype apiserver_profile: ~azure.mgmt.redhatopenshift.v2023_09_04.models.APIServerProfile
@@ -699,7 +699,7 @@ class OpenShiftCluster(TrackedResource):
         'type': {'readonly': True},
         'system_data': {'readonly': True},
         'location': {'required': True},
-        'worker_profiles_status': {'readonly': True},
+        'active_worker_profiles': {'readonly': True},
     }
 
     _attribute_map = {
@@ -716,7 +716,7 @@ class OpenShiftCluster(TrackedResource):
         'network_profile': {'key': 'properties.networkProfile', 'type': 'NetworkProfile'},
         'master_profile': {'key': 'properties.masterProfile', 'type': 'MasterProfile'},
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
-        'worker_profiles_status': {'key': 'properties.workerProfilesStatus', 'type': '[WorkerProfile]'},
+        'active_worker_profiles': {'key': 'properties.activeWorkerProfiles', 'type': '[WorkerProfile]'},
         'apiserver_profile': {'key': 'properties.apiserverProfile', 'type': 'APIServerProfile'},
         'ingress_profiles': {'key': 'properties.ingressProfiles', 'type': '[IngressProfile]'},
     }
@@ -743,7 +743,7 @@ class OpenShiftCluster(TrackedResource):
         :keyword location: Required. The geo-location where the resource lives.
         :paramtype location: str
         :keyword provisioning_state: The cluster provisioning state. Possible values include:
-         "AdminUpdating", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
+         "AdminUpdating", "Cancelled", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
         :paramtype provisioning_state: str or
          ~azure.mgmt.redhatopenshift.v2023_09_04.models.ProvisioningState
         :keyword cluster_profile: The cluster profile.
@@ -773,7 +773,7 @@ class OpenShiftCluster(TrackedResource):
         self.network_profile = network_profile
         self.master_profile = master_profile
         self.worker_profiles = worker_profiles
-        self.worker_profiles_status = None
+        self.active_worker_profiles = None
         self.apiserver_profile = apiserver_profile
         self.ingress_profiles = ingress_profiles
 
@@ -877,7 +877,7 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
     :ivar system_data: The system meta data relating to this resource.
     :vartype system_data: ~azure.mgmt.redhatopenshift.v2023_09_04.models.SystemData
     :ivar provisioning_state: The cluster provisioning state. Possible values include:
-     "AdminUpdating", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
+     "AdminUpdating", "Cancelled", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
     :vartype provisioning_state: str or
      ~azure.mgmt.redhatopenshift.v2023_09_04.models.ProvisioningState
     :ivar cluster_profile: The cluster profile.
@@ -893,8 +893,8 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
     :vartype master_profile: ~azure.mgmt.redhatopenshift.v2023_09_04.models.MasterProfile
     :ivar worker_profiles: The cluster worker profiles.
     :vartype worker_profiles: list[~azure.mgmt.redhatopenshift.v2023_09_04.models.WorkerProfile]
-    :ivar worker_profiles_status: The cluster worker profiles status.
-    :vartype worker_profiles_status:
+    :ivar active_worker_profiles: The cluster active worker profiles.
+    :vartype active_worker_profiles:
      list[~azure.mgmt.redhatopenshift.v2023_09_04.models.WorkerProfile]
     :ivar apiserver_profile: The cluster API server profile.
     :vartype apiserver_profile: ~azure.mgmt.redhatopenshift.v2023_09_04.models.APIServerProfile
@@ -904,7 +904,7 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
 
     _validation = {
         'system_data': {'readonly': True},
-        'worker_profiles_status': {'readonly': True},
+        'active_worker_profiles': {'readonly': True},
     }
 
     _attribute_map = {
@@ -917,7 +917,7 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         'network_profile': {'key': 'properties.networkProfile', 'type': 'NetworkProfile'},
         'master_profile': {'key': 'properties.masterProfile', 'type': 'MasterProfile'},
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
-        'worker_profiles_status': {'key': 'properties.workerProfilesStatus', 'type': '[WorkerProfile]'},
+        'active_worker_profiles': {'key': 'properties.activeWorkerProfiles', 'type': '[WorkerProfile]'},
         'apiserver_profile': {'key': 'properties.apiserverProfile', 'type': 'APIServerProfile'},
         'ingress_profiles': {'key': 'properties.ingressProfiles', 'type': '[IngressProfile]'},
     }
@@ -941,7 +941,7 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         :keyword tags: A set of tags. The resource tags.
         :paramtype tags: dict[str, str]
         :keyword provisioning_state: The cluster provisioning state. Possible values include:
-         "AdminUpdating", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
+         "AdminUpdating", "Cancelled", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
         :paramtype provisioning_state: str or
          ~azure.mgmt.redhatopenshift.v2023_09_04.models.ProvisioningState
         :keyword cluster_profile: The cluster profile.
@@ -973,7 +973,7 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         self.network_profile = network_profile
         self.master_profile = master_profile
         self.worker_profiles = worker_profiles
-        self.worker_profiles_status = None
+        self.active_worker_profiles = None
         self.apiserver_profile = apiserver_profile
         self.ingress_profiles = ingress_profiles
 

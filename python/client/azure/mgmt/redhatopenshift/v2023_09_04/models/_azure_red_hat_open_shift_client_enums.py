@@ -61,6 +61,7 @@ class ProvisioningState(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
     """
 
     ADMIN_UPDATING = "AdminUpdating"
+    CANCELLED = "Cancelled"
     CREATING = "Creating"
     DELETING = "Deleting"
     FAILED = "Failed"
