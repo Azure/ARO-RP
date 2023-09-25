@@ -217,7 +217,7 @@ def validate(cmd,  # pylint: disable=too-many-locals,too-many-statements
             self.worker_profiles = [openshiftcluster.WorkerProfile(
                 subnet_id=worker_subnet_id
             )]
-            self.worker_profiles_status = None
+            self.active_worker_profiles = None
 
     aad = AADManager(cmd.cli_ctx)
 
@@ -491,10 +491,10 @@ def get_cluster_network_resources(cli_ctx, oc, fail):
     if oc.worker_profiles is not None:
         worker_subnets = {w.subnet_id for w in oc.worker_profiles}
 
-    # Ensure that worker_profiles_status exists
+    # Ensure that active_worker_profiles exists
     # it will not be returned if the cluster resources do not exist
-    if oc.worker_profiles_status is not None:
-        worker_subnets |= {w.subnet_id for w in oc.worker_profiles_status}
+    if oc.active_worker_profiles is not None:
+        worker_subnets |= {w.subnet_id for w in oc.active_worker_profiles}
 
     master_parts = parse_resource_id(master_subnet)
     vnet = resource_id(
