@@ -2097,8 +2097,8 @@
           },
           "x-ms-identifiers": []
         },
-        "workerProfilesStatus": {
-          "description": "The cluster worker profiles status.",
+        "activeWorkerProfiles": {
+          "description": "The cluster active worker profiles.",
           "type": "array",
           "items": {
             "$ref": "#/definitions/WorkerProfile"
@@ -2249,6 +2249,7 @@
       "description": "ProvisioningState represents a provisioning state.",
       "enum": [
         "AdminUpdating",
+        "Cancelled",
         "Creating",
         "Deleting",
         "Failed",
