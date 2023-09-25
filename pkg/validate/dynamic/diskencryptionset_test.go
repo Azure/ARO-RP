@@ -86,7 +86,7 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							MasterProfile: api.MasterProfile{
 								DiskEncryptionSetID: fakeDesID1,
 							},
-							WorkerProfilesStatus: []api.WorkerProfile{{
+							ActiveWorkerProfiles: []api.WorkerProfile{{
 								DiskEncryptionSetID: fakeDesID1,
 							}},
 						},

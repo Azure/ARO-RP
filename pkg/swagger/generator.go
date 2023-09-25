@@ -56,7 +56,7 @@ type generator struct {
 	kubeConfig           bool
 	installVersionList   bool
 	clusterManager       bool
-	workerProfilesStatus bool
+	activeWorkerProfiles bool
 	xmsEnum              []string
 	xmsSecretList        []string
 	xmsIdentifiers       []string
@@ -246,7 +246,7 @@ var apis = map[string]*generator{
 		clusterManager:       true,
 		installVersionList:   true,
 		kubeConfig:           true,
-		workerProfilesStatus: true,
+		activeWorkerProfiles: true,
 	},
 }
 

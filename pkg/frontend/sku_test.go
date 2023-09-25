@@ -214,7 +214,7 @@ func TestValidateVMSku(t *testing.T) {
 
 			if tt.wpStatus {
 				oc.Properties.WorkerProfiles = nil
-				oc.Properties.WorkerProfilesStatus = []api.WorkerProfile{
+				oc.Properties.ActiveWorkerProfiles = []api.WorkerProfile{
 					{
 						VMSize: api.VMSize(tt.workerProfile1Sku),
 					},

@@ -18,7 +18,7 @@ func ExampleOpenShiftClusterPatchParameter() interface{} {
 	oc := ExampleOpenShiftClusterPutParameter().(*OpenShiftCluster)
 	oc.Location = ""
 	oc.SystemData = nil
-	oc.Properties.WorkerProfilesStatus = nil
+	oc.Properties.ActiveWorkerProfiles = nil
 	return oc
 }
 
@@ -37,7 +37,7 @@ func ExampleOpenShiftClusterPutParameter() interface{} {
 	oc.Properties.APIServerProfile.IP = ""
 	oc.Properties.IngressProfiles[0].IP = ""
 	oc.Properties.MasterProfile.EncryptionAtHost = EncryptionAtHostEnabled
-	oc.Properties.WorkerProfilesStatus = nil
+	oc.Properties.ActiveWorkerProfiles = nil
 	oc.SystemData = nil
 
 	return oc
@@ -59,7 +59,7 @@ func ExampleOpenShiftClusterPutOrPatchResponse() interface{} {
 	oc := exampleOpenShiftCluster()
 	oc.Properties.ClusterProfile.PullSecret = ""
 	oc.Properties.ServicePrincipalProfile.ClientSecret = ""
-	oc.Properties.WorkerProfilesStatus = nil
+	oc.Properties.ActiveWorkerProfiles = nil
 
 	return oc
 }

@@ -9,7 +9,7 @@ import (
 
 func exampleOpenShiftCluster() *OpenShiftCluster {
 	doc := api.ExampleOpenShiftClusterDocument()
-	doc.OpenShiftCluster.Properties.WorkerProfilesStatus = nil
+	doc.OpenShiftCluster.Properties.ActiveWorkerProfiles = nil
 	return (&openShiftClusterConverter{}).ToExternal(doc.OpenShiftCluster).(*OpenShiftCluster)
 }
 

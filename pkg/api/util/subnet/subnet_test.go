@@ -79,7 +79,7 @@ func TestNetworkSecurityGroupID(t *testing.T) {
 			oc.Properties.ArchitectureVersion = tt.archVersion
 
 			if tt.wpStatus {
-				oc.Properties.WorkerProfilesStatus = []api.WorkerProfile{
+				oc.Properties.ActiveWorkerProfiles = []api.WorkerProfile{
 					{
 						SubnetID: "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/Enrichedworker",
 					},

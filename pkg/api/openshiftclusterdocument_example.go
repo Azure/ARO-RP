@@ -67,7 +67,7 @@ func ExampleOpenShiftClusterDocument() *OpenShiftClusterDocument {
 						Count:      3,
 					},
 				},
-				WorkerProfilesStatus: []WorkerProfile{
+				ActiveWorkerProfiles: []WorkerProfile{
 					{
 						Name:       "worker1",
 						VMSize:     VMSizeStandardD2sV3,

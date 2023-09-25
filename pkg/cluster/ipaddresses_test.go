@@ -290,7 +290,7 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 									SubnetID: "subnetid",
 								},
 							},
-							WorkerProfilesStatus: []api.WorkerProfile{
+							ActiveWorkerProfiles: []api.WorkerProfile{
 								{
 									SubnetID: "enricheWPsubnetid",
 								},

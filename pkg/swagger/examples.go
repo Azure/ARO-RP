@@ -154,7 +154,7 @@ func (g *generator) generateExamples(outputDir string, s *Swagger) error {
 					case "#/definitions/SecretList":
 						body = g.exampleSecretListResponse()
 					case "#/definitions/OpenShiftCluster":
-						if g.workerProfilesStatus {
+						if g.activeWorkerProfiles {
 							switch op {
 							case pi.Get:
 								body = g.exampleOpenShiftClusterGetResponse()

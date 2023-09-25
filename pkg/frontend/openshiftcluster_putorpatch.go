@@ -244,7 +244,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 
 	// We don't return enriched worker profile data on PUT/PATCH operations
-	doc.OpenShiftCluster.Properties.WorkerProfilesStatus = nil
+	doc.OpenShiftCluster.Properties.ActiveWorkerProfiles = nil
 
 	b, err := json.MarshalIndent(converter.ToExternal(doc.OpenShiftCluster), "", "    ")
 	if err != nil {

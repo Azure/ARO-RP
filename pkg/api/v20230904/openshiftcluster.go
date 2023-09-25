@@ -64,8 +64,8 @@ type OpenShiftClusterProperties struct {
 	// The cluster worker profiles.
 	WorkerProfiles []WorkerProfile `json:"workerProfiles,omitempty"`
 
-	// The cluster worker profiles status.
-	WorkerProfilesStatus []WorkerProfile `json:"workerProfilesStatus,omitempty"`
+	// The cluster active worker profiles.
+	ActiveWorkerProfiles []WorkerProfile `json:"activeWorkerProfiles,omitempty"`
 
 	// The cluster API server profile.
 	APIServerProfile APIServerProfile `json:"apiserverProfile,omitempty"`

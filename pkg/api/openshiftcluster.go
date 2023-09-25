@@ -129,8 +129,8 @@ type OpenShiftClusterProperties struct {
 	// WorkerProfiles is used to store the worker profile data that was sent in the api request
 	WorkerProfiles []WorkerProfile `json:"workerProfiles,omitempty"`
 
-	// WorkerProfilesStatus is used to store the enriched worker profile data
-	WorkerProfilesStatus []WorkerProfile `json:"workerProfilesStatus,omitempty"`
+	// ActiveWorkerProfiles is used to store the enriched worker profile data
+	ActiveWorkerProfiles []WorkerProfile `json:"activeWorkerProfiles,omitempty"`
 
 	APIServerProfile APIServerProfile `json:"apiserverProfile,omitempty"`
 
@@ -638,11 +638,11 @@ type WorkerProfile struct {
 	DiskEncryptionSetID string           `json:"diskEncryptionSetId,omitempty"`
 }
 
-// GetEnrichedWorkerProfiles returns WorkerProfilesStatus if not nil, otherwise WorkerProfiles
+// GetEnrichedWorkerProfiles returns activeWorkerProfiles if not nil, otherwise WorkerProfiles
 // with their respective json property name
 func GetEnrichedWorkerProfiles(ocp OpenShiftClusterProperties) ([]WorkerProfile, string) {
-	if ocp.WorkerProfilesStatus != nil {
-		return ocp.WorkerProfilesStatus, "workerProfilesStatus"
+	if ocp.ActiveWorkerProfiles != nil {
+		return ocp.ActiveWorkerProfiles, "activeWorkerProfiles"
 	}
 	return ocp.WorkerProfiles, "workerProfiles"
 }

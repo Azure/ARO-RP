@@ -58,8 +58,8 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 		workerProfiles := oc.Properties.WorkerProfiles
 
 		// Use enriched worker profile data when available
-		if oc.Properties.WorkerProfilesStatus != nil {
-			workerProfiles = oc.Properties.WorkerProfilesStatus
+		if oc.Properties.ActiveWorkerProfiles != nil {
+			workerProfiles = oc.Properties.ActiveWorkerProfiles
 		}
 
 		out.Properties.WorkerProfiles = make([]WorkerProfile, 0, len(workerProfiles))

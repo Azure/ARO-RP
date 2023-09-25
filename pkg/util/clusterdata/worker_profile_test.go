@@ -192,7 +192,7 @@ func getWantOc(clusID string, workerprofile []api.WorkerProfile) *api.OpenShiftC
 	return &api.OpenShiftCluster{
 		ID: clusID,
 		Properties: api.OpenShiftClusterProperties{
-			WorkerProfilesStatus: workerprofile,
+			ActiveWorkerProfiles: workerprofile,
 		},
 	}
 }

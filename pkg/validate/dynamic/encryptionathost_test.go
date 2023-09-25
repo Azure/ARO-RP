@@ -66,7 +66,7 @@ func TestValidateEncryptionAtHost(t *testing.T) {
 						EncryptionAtHost: api.EncryptionAtHostEnabled,
 						VMSize:           api.VMSizeStandardD8sV3,
 					},
-					WorkerProfilesStatus: []api.WorkerProfile{{
+					ActiveWorkerProfiles: []api.WorkerProfile{{
 						EncryptionAtHost: api.EncryptionAtHostEnabled,
 						VMSize:           api.VMSizeStandardD4asV4,
 					}},

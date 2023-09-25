@@ -31,7 +31,7 @@ func validOpenShiftClusterDocument() *OpenShiftClusterDocument {
 						EncryptionAtHost: EncryptionAtHostDisabled,
 					},
 				},
-				WorkerProfilesStatus: []WorkerProfile{
+				ActiveWorkerProfiles: []WorkerProfile{
 					{
 						EncryptionAtHost: EncryptionAtHostDisabled,
 					},

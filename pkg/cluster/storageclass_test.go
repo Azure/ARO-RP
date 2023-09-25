@@ -158,7 +158,7 @@ func TestConfigureStorageClass(t *testing.T) {
 
 			if tt.wpStatus {
 				m.doc.OpenShiftCluster.Properties.WorkerProfiles = nil
-				m.doc.OpenShiftCluster.Properties.WorkerProfilesStatus = []api.WorkerProfile{
+				m.doc.OpenShiftCluster.Properties.ActiveWorkerProfiles = []api.WorkerProfile{
 					{
 						DiskEncryptionSetID: tt.desID,
 					},

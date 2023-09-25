@@ -21,9 +21,9 @@ func SetDefaults(doc *OpenShiftClusterDocument) {
 			}
 		}
 
-		for i, wp := range doc.OpenShiftCluster.Properties.WorkerProfilesStatus {
+		for i, wp := range doc.OpenShiftCluster.Properties.ActiveWorkerProfiles {
 			if wp.EncryptionAtHost == "" {
-				doc.OpenShiftCluster.Properties.WorkerProfilesStatus[i].EncryptionAtHost = EncryptionAtHostDisabled
+				doc.OpenShiftCluster.Properties.ActiveWorkerProfiles[i].EncryptionAtHost = EncryptionAtHostDisabled
 			}
 		}
 

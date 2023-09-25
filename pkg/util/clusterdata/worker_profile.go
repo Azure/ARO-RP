@@ -102,10 +102,10 @@ func (ce machineClientEnricher) Enrich(
 	oc.Lock.Lock()
 	defer oc.Lock.Unlock()
 
-	oc.Properties.WorkerProfilesStatus = workerProfiles
+	oc.Properties.ActiveWorkerProfiles = workerProfiles
 	return nil
 }
 
 func (ce machineClientEnricher) SetDefaults(oc *api.OpenShiftCluster) {
-	oc.Properties.WorkerProfilesStatus = nil
+	oc.Properties.ActiveWorkerProfiles = nil
 }
