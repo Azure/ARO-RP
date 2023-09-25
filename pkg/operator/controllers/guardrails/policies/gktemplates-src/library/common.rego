@@ -97,7 +97,7 @@ privileged_ns = {
   "openshift-cluster-samples-operator",
   "openshift-cluster-storage-operator",
   "openshift-cluster-version",
-  "openshift-config",
+  # "openshift-config",
   "openshift-config-managed",
   "openshift-config-operator",
   "openshift-console",

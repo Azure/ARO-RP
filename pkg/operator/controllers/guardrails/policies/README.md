@@ -103,7 +103,7 @@ input_ns(ns) = output {
 
 input_allowed_ns = "mytest"
 
-input_disallowed_ns1 = "openshift-config"
+input_disallowed_ns1 = "openshift-etcd"
 ```
 
 * Create [Constraint](https://open-policy-agent.github.io/gatekeeper/website/docs/howto/#constraints) for the policy, example:

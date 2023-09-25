@@ -2,6 +2,7 @@ apiVersion: admission.k8s.io/v1
 kind: AdmissionReview
 request:
   dryRun: true
+  name: demo
   kind:
     group: ""
     kind: Pod

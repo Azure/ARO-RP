@@ -65,7 +65,7 @@ input_pod(ns, account, username, priv, ro_host_mount) = output {
   }
 }
 
-input_priv_ns = "openshift-config"
+input_priv_ns = "openshift-dns"
 
 input_non_priv_ns1 = "mytest"
 
