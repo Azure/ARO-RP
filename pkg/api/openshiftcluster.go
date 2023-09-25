@@ -129,6 +129,10 @@ type OpenShiftClusterProperties struct {
 	// WorkerProfiles is used to store the worker profile data that was sent in the api request
 	WorkerProfiles []WorkerProfile `json:"workerProfiles,omitempty"`
 
+	// WorkerProfilesStatus is not referenced anywhere and is just a placeholder.
+	// This is to avoid MissingFields field from writing WorkerProfilesStatus into cluster docs.
+	WorkerProfilesStatus []WorkerProfile `json:"workerProfilesStatus,omitempty"`
+
 	// ActiveWorkerProfiles is used to store the enriched worker profile data
 	ActiveWorkerProfiles []WorkerProfile `json:"activeWorkerProfiles,omitempty"`
 
