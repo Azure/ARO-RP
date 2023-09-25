@@ -257,7 +257,7 @@ func TestOpenShiftClusterStaticValidateProperties(t *testing.T) {
 					},
 				}
 			},
-			wantErr: "400: InvalidParameter: properties.activeWorkerProfiles: Active Worker Profile Status must be set to nil.",
+			wantErr: "400: InvalidParameter: properties.activeWorkerProfiles: Active Worker Profile must be set to nil.",
 		},
 	}
 	createTests := []*validateTest{
