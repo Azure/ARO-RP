@@ -637,8 +637,9 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
 						Tags: map[string]string{"tag": "will-be-kept"},
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState: api.ProvisioningStateSucceeded,
-							MaintenanceTask:   "",
+							ProvisioningState:     api.ProvisioningStateSucceeded,
+							LastProvisioningState: api.ProvisioningStateSucceeded,
+							MaintenanceTask:       "",
 						},
 					},
 				})
@@ -691,8 +692,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
 				Tags: map[string]string{"tag": "will-be-kept"},
 				Properties: admin.OpenShiftClusterProperties{
-					ProvisioningState:     admin.ProvisioningStateSucceeded,
-					LastProvisioningState: admin.ProvisioningStateSucceeded,
+					ProvisioningState: admin.ProvisioningStateSucceeded,
 					ClusterProfile: admin.ClusterProfile{
 						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
 					},
