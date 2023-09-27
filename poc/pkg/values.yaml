@@ -79,7 +79,6 @@ istio:
 
 AKSCluster:
   tlsSecretName: tls-secret
-  volumeName: secrets-store-inline
   userAssignedIdentityId: 5dca7b9c-5304-4ea5-8b66-4f75d14ed09b
   tenantId: 72f988bf-86f1-41af-91ab-2d7cd011db47
 
