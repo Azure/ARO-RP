@@ -91,7 +91,7 @@ privileged_ns = {
   "openshift-cloud-controller-manager",
   "openshift-cloud-controller-manager-operator",
   "openshift-cloud-credential-operator",
-  "openshift-cluster-csi-drivers",
+  # "openshift-cluster-csi-drivers",
   "openshift-cluster-machine-approver",
   "openshift-cluster-node-tuning-operator",
   "openshift-cluster-samples-operator",
