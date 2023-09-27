@@ -47,6 +47,17 @@ spec:
               port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+        volumeMounts:
+          - name:  {{ .Values.AKSCluster.volumeName }}
+            mountPath: "/mnt/secrets-store"
+            readOnly: true
+      volumes:
+        - name:  {{ .Values.keyVault.volumeName }}
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+            secretProviderClass: {{ .Values.keyVault.name }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
