@@ -131,57 +131,36 @@ func (m *manager) rotateOpenShiftConfigSecret(ctx context.Context, encodedDocker
 	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}
+	// by default, we create a patch with only the rotated acr token
+	applyConfiguration := v1.Secret(pullSecretName.Name, pullSecretName.Namespace).
+		WithData(map[string][]byte{corev1.DockerConfigJsonKey: encodedDockerConfigJson}).
+		WithType(corev1.SecretTypeDockerConfigJson)
 
 	recreationOfSecretRequired := openshiftConfigSecret == nil ||
 		(openshiftConfigSecret.Type != corev1.SecretTypeDockerConfigJson || openshiftConfigSecret.Data == nil) ||
 		(openshiftConfigSecret.Immutable != nil && *openshiftConfigSecret.Immutable)
 
 	if recreationOfSecretRequired {
-		recreatedSecret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      pullSecretName.Name,
-				Namespace: pullSecretName.Namespace,
-			},
-			Type: corev1.SecretTypeDockerConfigJson,
-			Data: map[string][]byte{corev1.DockerConfigJsonKey: encodedDockerConfigJson},
-		}
-
 		err := retryOperation(func() error {
 			return m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Delete(ctx, pullSecretName.Name, metav1.DeleteOptions{})
 		})
 		if err != nil && !kerrors.IsNotFound(err) {
 			return err
 		}
+	}
 
-		// attempt to merge if we can, defaults to the created pull secret
-		if openshiftConfigSecret != nil && openshiftConfigSecret.Data != nil {
-			previousConfigData, previousConfigDataExists := openshiftConfigSecret.Data[corev1.DockerConfigJsonKey]
-			if previousConfigDataExists {
-				mergedPullSecretData, _, err := pullsecret.Merge(string(previousConfigData), string(encodedDockerConfigJson))
-				if err == nil {
-					recreatedSecret.Data[corev1.DockerConfigJsonKey] = []byte(mergedPullSecretData)
-				} else {
-					m.log.Error("Could not merge openshift config pull secret, overriding with new acr token", err)
-				}
+	// attempt to merge the data
+	if openshiftConfigSecret != nil && openshiftConfigSecret.Data != nil {
+		previousConfigData, previousConfigDataExists := openshiftConfigSecret.Data[corev1.DockerConfigJsonKey]
+		if previousConfigDataExists {
+			mergedPullSecretData, _, err := pullsecret.Merge(string(previousConfigData), string(encodedDockerConfigJson))
+			if err == nil {
+				applyConfiguration.Data[corev1.DockerConfigJsonKey] = []byte(mergedPullSecretData)
+			} else {
+				m.log.Error("Could not merge openshift config pull secret, overriding with new acr token", err)
 			}
 		}
-		return retryOperation(func() error {
-			_, err = m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Create(ctx, recreatedSecret, metav1.CreateOptions{})
-			return err
-		})
 	}
-
-	// update flow
-	mergedPullSecretData, _, err := pullsecret.Merge(string(openshiftConfigSecret.Data[corev1.DockerConfigJsonKey]), string(encodedDockerConfigJson))
-	if err == nil {
-		openshiftConfigSecret.Data[corev1.DockerConfigJsonKey] = []byte(mergedPullSecretData)
-	} else {
-		openshiftConfigSecret.Data[corev1.DockerConfigJsonKey] = encodedDockerConfigJson
-	}
-
-	applyConfiguration := v1.Secret(openshiftConfigSecret.Name, openshiftConfigSecret.Namespace).
-		WithData(openshiftConfigSecret.Data).
-		WithType(corev1.SecretTypeDockerConfigJson)
 
 	return retryOperation(func() error {
 		_, err = m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Apply(ctx, applyConfiguration, metav1.ApplyOptions{FieldManager: "aro-rp", Force: true})
