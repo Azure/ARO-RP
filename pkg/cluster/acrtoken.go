@@ -115,7 +115,9 @@ func (m *manager) rotateACRTokenPassword(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	err = m.rotateOpenShiftConfigSecret(ctx, pullSecret.Data[corev1.DockerConfigJsonKey])
+	err = retryOperation(func() error {
+		return m.rotateOpenShiftConfigSecret(ctx, pullSecret.Data[corev1.DockerConfigJsonKey])
+	})
 	if err != nil {
 		return err
 	}
