@@ -184,7 +184,7 @@ func (m *manager) rotateOpenShiftConfigSecret(ctx context.Context, encodedDocker
 		WithType(corev1.SecretTypeDockerConfigJson)
 
 	return retryOperation(func() error {
-		_, err = m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Apply(ctx, applyConfiguration, metav1.ApplyOptions{})
+		_, err = m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Apply(ctx, applyConfiguration, metav1.ApplyOptions{FieldManager: "aro-rp", Force: true})
 		return err
 	})
 }
