@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	v1 "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -178,8 +179,12 @@ func (m *manager) rotateOpenShiftConfigSecret(ctx context.Context, encodedDocker
 		openshiftConfigSecret.Data[corev1.DockerConfigJsonKey] = encodedDockerConfigJson
 	}
 
+	applyConfiguration := v1.Secret(openshiftConfigSecret.Name, openshiftConfigSecret.Namespace).
+		WithData(openshiftConfigSecret.Data).
+		WithType(corev1.SecretTypeDockerConfigJson)
+
 	return retryOperation(func() error {
-		_, err = m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Update(ctx, openshiftConfigSecret, metav1.UpdateOptions{})
+		_, err = m.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Apply(ctx, applyConfiguration, metav1.ApplyOptions{})
 		return err
 	})
 }
