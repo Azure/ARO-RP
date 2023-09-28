@@ -19,9 +19,9 @@ test_input_disallowed_ns2 {
 }
 
 test_input_disallowed_ns3 {
-  input := { "review": get_input_with_ns_userinfo(input_disallowed_ns, nonpriv_username_nonpriv_group_userinfo) }
+  input := { "review": get_input_with_ns_userinfo(input_disallowed_ns, nonpriv_username_priv_group_userinfo) }
   results := violation with input as input
-  count(results) == 1
+  count(results) == 0
 }
 
 test_input_allowed_ns4 {
@@ -50,6 +50,8 @@ test_input_allowed_ns7 {
 
 get_input_with_ns_userinfo(ns, userinfo) = output {
   output = {
+    "operation": "CREATE",
+    "name": "test-pod",
     "object": {
       "apiVersion": "v1",
       "kind": "Pod",
@@ -148,7 +150,7 @@ delete_pullsecret_with_userinfo(userinfo) = output {
           "version":"v1"
         },
         "name":"pull-secret",
-        "namespace":"openshift-config",
+        "namespace":"openshift-etcd",
         "object":{
           "apiVersion":"v1",
           "data":{
@@ -157,7 +159,7 @@ delete_pullsecret_with_userinfo(userinfo) = output {
           "kind":"Secret",
           "metadata":{
               "name":"pull-secret",
-              "namespace":"openshift-config",
+              "namespace":"openshift-etcd",
               "resourceVersion":"1944",
               "uid":"84a0214c-1ee7-4ed7-bd7f-e7ed69dc6374"
           },
@@ -192,7 +194,7 @@ delete_pullsecret_with_userinfo(userinfo) = output {
 
 input_allowed_ns = "mytest"
 
-input_disallowed_ns = "openshift-config"
+input_disallowed_ns = "openshift-apiserver"
 
 priv_user = "system:admin"
 non_priv_user = "testuser"
