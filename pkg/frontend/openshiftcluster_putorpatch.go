@@ -202,9 +202,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 			doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
 		}
 	} else {
-		doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
 		setUpdateProvisioningState(doc, apiVersion)
-		doc.Dequeues = 0
 	}
 
 	// SetDefaults will set defaults on cluster document
@@ -314,14 +312,18 @@ func setUpdateProvisioningState(doc *api.OpenShiftClusterDocument, apiVersion st
 		// For PUCM pending update, we don't want to set ProvisioningStateAdminUpdating
 		// The cluster monitoring stack uses that value to determine if PUCM is ongoing
 		if doc.OpenShiftCluster.Properties.MaintenanceTask != api.MaintenanceTaskPucmPending {
+			doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
 			doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
 			doc.OpenShiftCluster.Properties.LastAdminUpdateError = ""
+			doc.Dequeues = 0
 		} else {
+			// No update to provisioning state needed
 			doc.OpenShiftCluster.Properties.PucmPending = true
-			doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
 		}
 	default:
 		// Non-admin update (ex: customer cluster update)
+		doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
 		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
+		doc.Dequeues = 0
 	}
 }

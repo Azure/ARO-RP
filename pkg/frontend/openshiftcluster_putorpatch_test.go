@@ -637,8 +637,9 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
 						Tags: map[string]string{"tag": "will-be-kept"},
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState: api.ProvisioningStateSucceeded,
-							MaintenanceTask:   "",
+							ProvisioningState:     api.ProvisioningStateSucceeded,
+							LastProvisioningState: api.ProvisioningStateSucceeded,
+							MaintenanceTask:       "",
 						},
 					},
 				})
@@ -649,8 +650,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
 					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					AsyncOperation: &api.AsyncOperation{
-						InitialProvisioningState: api.ProvisioningStateUpdating,
-						ProvisioningState:        api.ProvisioningStateUpdating,
+						InitialProvisioningState: api.ProvisioningStateSucceeded,
+						ProvisioningState:        api.ProvisioningStateSucceeded,
 					},
 				})
 				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
@@ -660,7 +661,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
 						Tags: map[string]string{"tag": "will-be-kept"},
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState:     api.ProvisioningStateUpdating,
+							ProvisioningState:     api.ProvisioningStateSucceeded,
 							LastProvisioningState: api.ProvisioningStateSucceeded,
 							ClusterProfile: api.ClusterProfile{
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
@@ -691,7 +692,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
 				Tags: map[string]string{"tag": "will-be-kept"},
 				Properties: admin.OpenShiftClusterProperties{
-					ProvisioningState:     admin.ProvisioningStateUpdating,
+					ProvisioningState:     admin.ProvisioningStateSucceeded,
 					LastProvisioningState: admin.ProvisioningStateSucceeded,
 					ClusterProfile: admin.ClusterProfile{
 						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
