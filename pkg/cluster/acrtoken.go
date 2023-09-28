@@ -187,6 +187,6 @@ func retryOperation(retryable func() error) error {
 		Steps:    10,
 		Duration: 2 * time.Second,
 	}, func(err error) bool {
-		return kerrors.IsBadRequest(err) || kerrors.IsInternalError(err) || kerrors.IsServerTimeout(err)
+		return kerrors.IsBadRequest(err) || kerrors.IsInternalError(err) || kerrors.IsServerTimeout(err) || kerrors.IsConflict(err)
 	}, retryable)
 }
