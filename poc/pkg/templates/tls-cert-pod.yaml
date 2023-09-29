@@ -1,0 +1,23 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: {{ .Values.AKSCluster.certSyncPod}}
+  namespace: {{ .Values.AKSCluster.istoSystemNamespace }}
+spec:
+  containers:
+  - name: {{ .Values.AKSCluster.certSyncContainer }}
+    image: {{ .Values.AKSCluster.certSyncPodImage }}
+    command:
+      - "/bin/sleep"
+      - "10000"
+    volumeMounts:
+    - name: secrets-store-inline
+      mountPath: "/mnt/secrets-store"
+      readOnly: true
+  volumes:
+    - name: secrets-store-inline
+      csi:
+        driver: secrets-store.csi.k8s.io
+        readOnly: true
+        volumeAttributes:
+          secretProviderClass: {{ .Values.keyVault.name }}

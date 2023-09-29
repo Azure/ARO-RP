@@ -10,5 +10,8 @@ spec:
       number: {{ .Values.istio.gateway.port }}
       name: http
       protocol: HTTP
+    tls:
+      mode: SIMPLE
+      credentialName: {{ .Values.keyVault.tlsCertificateName }}
     hosts:
     - "*"
