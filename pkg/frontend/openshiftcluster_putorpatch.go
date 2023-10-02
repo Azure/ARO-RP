@@ -318,7 +318,7 @@ func setUpdateProvisioningState(doc *api.OpenShiftClusterDocument, apiVersion st
 			doc.Dequeues = 0
 		} else {
 			// No update to provisioning state needed
-			// Set the maintenace task to "" so future admin update actions succeed
+			// Set the maintenace task to "" so future admin update actions with body `{}` succeed
 			doc.OpenShiftCluster.Properties.PucmPending = true
 			doc.OpenShiftCluster.Properties.MaintenanceTask = ""
 		}
