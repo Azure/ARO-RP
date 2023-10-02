@@ -50,8 +50,7 @@ deploy_pkg() {
 
     helm install $release ./pkg-0.1.0.tgz \
                 --set image.repository=$DOCKERTAG \
-                --set image.tag=latest \
-                --namespace $namespace
+                --set image.tag=latest
 }
 
 get_kubeconfig() {
