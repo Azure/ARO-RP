@@ -76,12 +76,13 @@ istio:
     tlsMode: SIMPLE
   virtualService:
     name: rp-poc-virtualservice
+  tlsDeployment:
+    name: tls-sync-deployment
+    image: mcr.microsoft.com/azuredocs/aks-helloworld:v1
+    container: tls-sync-container
+    port: 80
 
 AKSCluster:
-  tlsSecretName: tls-secret
-  certSyncPod: tls-sync-pod
-  certSyncPodImage: mcr.microsoft.com/azuredocs/aks-helloworld:v1
-  certSyncContainer: tls-sync-container
   istoSystemNamespace: aks-istio-system
   userAssignedIdentityId: 5dca7b9c-5304-4ea5-8b66-4f75d14ed09b
   tenantId: 72f988bf-86f1-41af-91ab-2d7cd011db47

@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.istio.tlsDeployment.name}}
+  namespace: {{ .Values.AKSCluster.istoSystemNamespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.istio.tlsDeployment.name}}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.istio.tlsDeployment.name}}
+    spec:
+      containers:
+      - name: {{ .Values.istio.tlsDeployment.container}}
+        image: {{ .Values.istio.tlsDeployment.image }}
+        ports:
+        - containerPort: {{ .Values.istio.tlsDeployment.port }}
+        volumeMounts:
+        - name: secrets-store-inline
+          mountPath: "/mnt/secrets-store"
+          readOnly: true
+      volumes:
+      - name: secrets-store-inline
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: {{ .Values.keyVault.name }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.istio.tlsDeployment.name}}
+  namespace: {{ .Values.AKSCluster.istoSystemNamespace }}
+spec:
+  type: ClusterIP
+  ports:
+ - port: {{ .Values.istio.tlsDeployment.port }}
+  selector:
+    app: {{ .Values.istio.tlsDeployment.name}}
