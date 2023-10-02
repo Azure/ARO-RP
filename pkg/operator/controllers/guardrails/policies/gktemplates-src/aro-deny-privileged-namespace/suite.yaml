@@ -15,12 +15,12 @@ tests:
     object: gator-test/ns_disallowed_pod.yaml
     assertions:
     - violations: yes
-      message: user test-user not allowed to operate in namespace openshift-config
+      message: user test-user not allowed to CREATE demo in namespace openshift-etcd
   - name: ns-disallowed-deploy
     object: gator-test/ns_disallowed_deploy.yaml
     assertions:
     - violations: yes
-      message: user testuser not allowed to operate in namespace openshift-azure-guardrails
+      message: user testuser not allowed to CREATE demo in namespace openshift-azure-guardrails
   - name: ns-allowed-deploy
     object: gator-test/ns_allowed_deploy.yaml
     assertions:
