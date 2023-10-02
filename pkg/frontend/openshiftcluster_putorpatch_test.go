@@ -666,7 +666,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							ClusterProfile: api.ClusterProfile{
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
-							MaintenanceTask: api.MaintenanceTaskPucmPending,
+							MaintenanceTask: "",
 							NetworkProfile: api.NetworkProfile{
 								OutboundType:     api.OutboundTypeLoadbalancer,
 								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
