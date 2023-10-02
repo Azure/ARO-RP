@@ -208,12 +208,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	// SetDefaults will set defaults on cluster document
 	api.SetDefaults(doc)
 
-	// For PUCM pending, set the maintenace task to ""
-	// This enables future admin update actions with body `{}` to succeed
-	if doc.OpenShiftCluster.Properties.MaintenanceTask == api.MaintenanceTaskPucmPending {
-		doc.OpenShiftCluster.Properties.MaintenanceTask = ""
-	}
-
 	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, subId, resourceProviderNamespace, doc)
 	if err != nil {
 		return nil, err
@@ -325,6 +319,9 @@ func setUpdateProvisioningState(doc *api.OpenShiftClusterDocument, apiVersion st
 		} else {
 			// No update to provisioning state needed
 			doc.OpenShiftCluster.Properties.PucmPending = true
+
+			// This enables future admin update actions with body `{}` to succeed
+			doc.OpenShiftCluster.Properties.MaintenanceTask = ""
 		}
 	default:
 		// Non-admin update (ex: customer cluster update)
