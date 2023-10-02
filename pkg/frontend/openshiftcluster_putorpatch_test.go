@@ -706,6 +706,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							},
 						},
 					},
+					PucmPending: true,
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
 					},
