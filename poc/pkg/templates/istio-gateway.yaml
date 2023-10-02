@@ -11,7 +11,7 @@ spec:
       name: http
       protocol: HTTP
     tls:
-      mode: SIMPLE
+      mode: {{ .Values.istio.gateway.tlsMode }}
       credentialName: {{ .Values.keyVault.tlsCertificateName }}
     hosts:
     - "*"
