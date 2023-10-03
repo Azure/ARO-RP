@@ -1,7 +1,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Values.istio.tlsDeployment.name }}  
+  name: {{ .Values.istio.tlsDeployment.name }}
+  namespace: {{ .Values.AKSCluster.istoSystemNamespace }}
 spec:
   replicas: 1
   selector:
@@ -35,10 +36,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Values.istio.tlsDeployment.name }}  
+  name: {{ .Values.istio.tlsDeployment.name }}
+  namespace: {{ .Values.AKSCluster.istoSystemNamespace }}
 spec:
   type: ClusterIP
   ports:
- - port: 80
+  - port: 80
   selector:
     app: {{ .Values.istio.tlsDeployment.name }}
