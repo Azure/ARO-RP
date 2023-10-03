@@ -189,10 +189,22 @@ func (r *Reconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret,
 		}
 
 		err = r.client.Create(ctx, secret)
+		if err != nil {
+			return secret, err
+		}
+
+		rc := pullsecret.NewRegistryClient()
+		err = rc.ValidatePullSecret(ctx, secret)
 		return secret, err
 	}
 
 	err = r.client.Update(ctx, secret)
+	if err != nil {
+		return secret, err
+	}
+
+	rc := pullsecret.NewRegistryClient()
+	err = rc.ValidatePullSecret(ctx, secret)
 	return secret, err
 }
 

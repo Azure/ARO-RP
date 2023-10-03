@@ -176,3 +176,12 @@ func retryOperation(retryable func() error) error {
 		return kerrors.IsBadRequest(err) || kerrors.IsInternalError(err) || kerrors.IsServerTimeout(err) || kerrors.IsConflict(err)
 	}, retryable)
 }
+
+func (m *manager) validateACRToken(ctx context.Context) error {
+	pullSecret, err := m.kubernetescli.CoreV1().Secrets(operator.Namespace).Get(ctx, operator.SecretName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	rc := pullsecret.NewRegistryClient()
+	return rc.ValidatePullSecret(ctx, pullSecret)
+}
