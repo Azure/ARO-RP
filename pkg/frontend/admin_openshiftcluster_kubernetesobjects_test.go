@@ -99,6 +99,32 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			wantError:      "403: Forbidden: : Access to secrets is forbidden.",
 		},
 		{
+			method:       http.MethodGet,
+			name:         "customer namespace requested",
+			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			objKind:      "ConfigMap",
+			objNamespace: "customer",
+			objName:      "config",
+			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().ResolveGVR(tt.objKind, "").Return(schema.GroupVersionResource{Resource: "configmaps"}, nil)
+			},
+			wantStatusCode: http.StatusForbidden,
+			wantError:      "403: Forbidden: : Access to the provided namespace 'customer' is forbidden.",
+		},
+		{
+			method:       http.MethodGet,
+			name:         "customer cluster-wide object requested",
+			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			objKind:      "User.user.openshift.io",
+			objNamespace: "",
+			objName:      "username",
+			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().ResolveGVR(tt.objKind, "").Return(schema.GroupVersionResource{Group: "user.openshift.io", Resource: "users"}, nil)
+			},
+			wantStatusCode: http.StatusForbidden,
+			wantError:      "403: Forbidden: : Access to cluster-scoped object 'user.openshift.io/, Resource=users' is forbidden.",
+		},
+		{
 			method:       http.MethodDelete,
 			name:         "cluster exist in db",
 			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
@@ -178,6 +204,32 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			},
 			wantStatusCode: http.StatusForbidden,
 			wantError:      "403: Forbidden: : Access to secrets is forbidden.",
+		},
+		{
+			method:       http.MethodDelete,
+			name:         "customer namespace requested",
+			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			objKind:      "ConfigMap",
+			objNamespace: "customer",
+			objName:      "config",
+			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().ResolveGVR(tt.objKind, "").Return(schema.GroupVersionResource{Resource: "configmaps"}, nil)
+			},
+			wantStatusCode: http.StatusForbidden,
+			wantError:      "403: Forbidden: : Access to the provided namespace 'customer' is forbidden.",
+		},
+		{
+			method:       http.MethodDelete,
+			name:         "customer cluster-wide object requested",
+			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			objKind:      "User.user.openshift.io",
+			objNamespace: "",
+			objName:      "username",
+			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().ResolveGVR(tt.objKind, "").Return(schema.GroupVersionResource{Group: "user.openshift.io", Resource: "users"}, nil)
+			},
+			wantStatusCode: http.StatusForbidden,
+			wantError:      "403: Forbidden: : Access to cluster-scoped object 'user.openshift.io/, Resource=users' is forbidden.",
 		},
 	} {
 		t.Run(fmt.Sprintf("%s: %s", tt.method, tt.name), func(t *testing.T) {
@@ -291,6 +343,42 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 			},
 			wantStatusCode: http.StatusForbidden,
 			wantError:      "403: Forbidden: : Access to secrets is forbidden.",
+		},
+		{
+			name:       "customer namespace requested",
+			resourceID: resourceID,
+			objInBody: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": "ConfigMap",
+					"metadata": map[string]interface{}{
+						"namespace": "customer",
+						"name":      "config",
+					},
+				},
+			},
+			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().ResolveGVR(tt.objInBody.GetKind(), "").Return(schema.GroupVersionResource{Resource: "configmaps"}, nil)
+			},
+			wantStatusCode: http.StatusForbidden,
+			wantError:      "403: Forbidden: : Access to the provided namespace 'customer' is forbidden.",
+		},
+		{
+			name:       "customer cluster-wide object requested",
+			resourceID: resourceID,
+			objInBody: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind":       "User",
+					"apiVersion": "user.openshift.io/v1",
+					"metadata": map[string]interface{}{
+						"name": "username",
+					},
+				},
+			},
+			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().ResolveGVR(tt.objInBody.GetKind(), "").Return(schema.GroupVersionResource{Group: "user.openshift.io", Resource: "users"}, nil)
+			},
+			wantStatusCode: http.StatusForbidden,
+			wantError:      "403: Forbidden: : Access to cluster-scoped object 'user.openshift.io/, Resource=users' is forbidden.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
