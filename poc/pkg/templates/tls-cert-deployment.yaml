@@ -1,26 +1,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Values.istio.tlsDeployment.name }}
-  namespace: {{ .Values.AKSCluster.istoSystemNamespace }}
+  name: {{ .Values.istio.tlsDeployment.name }}  
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: {{ .Values.istio.tlsDeployment.name  }}
+      app: {{ .Values.istio.tlsDeployment.name }}
   template:
     metadata:
       labels:
-        app: {{ .Values.istio.tlsDeployment.name    }}
+        app: {{ .Values.istio.tlsDeployment.name }}
     spec:
       containers:
-      - name: {{ .Values.istio.tlsDeployment.container  }}
+      - name: {{ .Values.istio.tlsDeployment.name }}
         image: {{ .Values.istio.tlsDeployment.image }}
         ports:
-        - containerPort: {{ .Values.istio.tlsDeployment.port }}
+        - containerPort: 80
         env:
         - name: TITLE
-          value: "Hello world for TLS cert deployment"
+          value: "Welcome TLS certificate sync deployment"
         volumeMounts:
         - name: secrets-store-inline
           mountPath: "/mnt/secrets-store"
@@ -36,11 +35,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Values.istio.tlsDeployment.name }}
-  namespace: {{ .Values.AKSCluster.istoSystemNamespace }}
+  name: {{ .Values.istio.tlsDeployment.name }}  
 spec:
   type: ClusterIP
   ports:
- - port: {{ .Values.istio.tlsDeployment.port }}
+ - port: 80
   selector:
-    app: {{ .Values.istio.tlsDeployment.name    }}
+    app: {{ .Values.istio.tlsDeployment.name }}
