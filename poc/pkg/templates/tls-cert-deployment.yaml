@@ -32,15 +32,3 @@ spec:
           readOnly: true
           volumeAttributes:
             secretProviderClass: {{ .Values.keyVault.name }}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ .Values.istio.tlsDeployment.name }}
-  namespace: {{ .Values.AKSCluster.istoSystemNamespace }}
-spec:
-  type: ClusterIP
-  ports:
-  - port: {{ .Values.istio.tlsDeployment.port }}
-  selector:
-    app: {{ .Values.istio.tlsDeployment.name }}
