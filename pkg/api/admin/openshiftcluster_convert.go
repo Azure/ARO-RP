@@ -252,7 +252,16 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	out.Properties.NetworkProfile.GatewayPrivateEndpointIP = oc.Properties.NetworkProfile.GatewayPrivateEndpointIP
 	out.Properties.NetworkProfile.GatewayPrivateLinkID = oc.Properties.NetworkProfile.GatewayPrivateLinkID
 	if oc.Properties.NetworkProfile.LoadBalancerProfile != nil {
-		out.Properties.NetworkProfile.LoadBalancerProfile = &api.LoadBalancerProfile{}
+		loadBalancerProfile := api.LoadBalancerProfile{}
+
+		// EffectiveOutboundIPs is a read-only field, so it will never be present in requests.
+		// Preserve the slice from the pre-existing internal object.
+		if out.Properties.NetworkProfile.LoadBalancerProfile != nil {
+			loadBalancerProfile.EffectiveOutboundIPs = make([]api.EffectiveOutboundIP, len(out.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs))
+			copy(loadBalancerProfile.EffectiveOutboundIPs, out.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs)
+		}
+
+		out.Properties.NetworkProfile.LoadBalancerProfile = &loadBalancerProfile
 
 		if oc.Properties.NetworkProfile.LoadBalancerProfile.AllocatedOutboundPorts != nil {
 			out.Properties.NetworkProfile.LoadBalancerProfile.AllocatedOutboundPorts = oc.Properties.NetworkProfile.LoadBalancerProfile.AllocatedOutboundPorts
