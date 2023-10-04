@@ -69,36 +69,43 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 
 	cli, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
+		log.Info("***** kubernetes.NewForConfig")
 		return nil, err
 	}
 
 	configcli, err := configclient.NewForConfig(restConfig)
 	if err != nil {
+		log.Info("***** configclient.NewForConfig")
 		return nil, err
 	}
 
 	maocli, err := machineclient.NewForConfig(restConfig)
 	if err != nil {
+		log.Info("***** machineclient.NewForConfig")
 		return nil, err
 	}
 
 	mcocli, err := mcoclient.NewForConfig(restConfig)
 	if err != nil {
+		log.Info("***** mcoclient.NewForConfig")
 		return nil, err
 	}
 
 	arocli, err := aroclient.NewForConfig(restConfig)
 	if err != nil {
+		log.Info("***** aroclient.NewForConfig")
 		return nil, err
 	}
 
 	ocpclientset, err := client.New(restConfig, client.Options{})
 	if err != nil {
+		log.Info("***** ocpclientset")
 		return nil, err
 	}
 
 	hiveclientset, err := getHiveClientSet(hiveRestConfig)
 	if err != nil {
+		log.Info("***** hiveclientset")
 		log.Error(err)
 	}
 

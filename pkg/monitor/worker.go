@@ -234,6 +234,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 
 	restConfig, err := restconfig.RestConfig(mon.dialer, doc.OpenShiftCluster)
 	if err != nil {
+		log.Info("******* rest config error")
 		log.Error(err)
 		return
 	}
