@@ -70,12 +70,13 @@ func (r *MachineHealthCheckReconciler) Reconcile(ctx context.Context, request ct
 
 	r.Log.Debug("running")
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(MHCManaged) {
-		r.SetProgressing(ctx, "We are disabling the MHCHealthCheck because this cluster at current moment is NOT MHC Managed.")
+		r.SetProgressing(ctx, "MHC and it's alerts are disabled because this cluster is not MHC managed.")
 
 		err := r.dh.EnsureDeleted(ctx, "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck")
 		if err != nil {
 			r.Log.Error(err)
 			r.SetDegraded(ctx, err)
+			r.ClearProgressing(ctx)
 
 			return reconcile.Result{RequeueAfter: time.Hour}, err
 		}
@@ -84,6 +85,7 @@ func (r *MachineHealthCheckReconciler) Reconcile(ctx context.Context, request ct
 		if err != nil {
 			r.Log.Error(err)
 			r.SetDegraded(ctx, err)
+			r.ClearProgressing(ctx)
 
 			return reconcile.Result{RequeueAfter: time.Hour}, err
 		}
