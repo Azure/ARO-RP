@@ -8,7 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 
+	machnet "k8s.io/apimachinery/pkg/util/net"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -41,6 +43,10 @@ func RestConfig(dialer proxy.Dialer, oc *api.OpenShiftCluster) (*rest.Config, er
 	}
 
 	restconfig.Dial = DialContext(dialer, oc)
+
+	// https://github.com/kubernetes/kubernetes/issues/118703#issuecomment-1595072383
+	// TODO: Revert or adapt when upstream fix is available
+	restconfig.Proxy = machnet.NewProxierWithNoProxyCIDR(http.ProxyFromEnvironment)
 
 	return restconfig, nil
 }
