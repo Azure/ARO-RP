@@ -26,7 +26,6 @@ import (
 
 // Test reconcile function
 func TestMachineHealthCheckReconciler(t *testing.T) {
-
 	transitionTime := metav1.Time{Time: time.Now()}
 	defaultAvailable := utilconditions.ControllerDefaultAvailable(MHCControllerName)
 	defaultProgressing := utilconditions.ControllerDefaultProgressing(MHCControllerName)
