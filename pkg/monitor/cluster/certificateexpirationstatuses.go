@@ -47,6 +47,9 @@ func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error
 	}
 
 	if dns.IsManagedDomain(mon.oc.Properties.ClusterProfile.Domain) {
+		if mon.ocpclientset == nil {
+			return fmt.Errorf("mon.ocpclientset is nil")
+		}
 		ic := &operatorv1.IngressController{}
 		err := mon.ocpclientset.Get(ctx, client.ObjectKey{
 			Namespace: ingressNamespace,
@@ -79,6 +82,9 @@ func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error
 }
 
 func (mon *Monitor) getCertificate(ctx context.Context, secretNamespace, secretName, secretKey string) (*x509.Certificate, error) {
+	if mon.ocpclientset == nil {
+		return nil, fmt.Errorf("mon.ocpclientset is nil")
+	}
 	secret := &corev1.Secret{}
 	err := mon.ocpclientset.Get(ctx, client.ObjectKey{
 		Namespace: secretNamespace,

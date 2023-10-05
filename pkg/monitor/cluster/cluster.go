@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -92,12 +93,12 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		return nil, err
 	}
 
-	ocpclientset, err := client.New(restConfig, client.Options{})
+	ocpclientset, err := getClient(restConfig, client.Options{})
 	if err != nil {
-		return nil, err
+		log.Error(err)
 	}
 
-	hiveclientset, err := getHiveClientSet(hiveRestConfig)
+	hiveclientset, err := getClient(hiveRestConfig, client.Options{})
 	if err != nil {
 		log.Error(err)
 	}
@@ -121,16 +122,15 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 	}, nil
 }
 
-func getHiveClientSet(hiveRestConfig *rest.Config) (client.Client, error) {
-	if hiveRestConfig == nil {
-		return nil, nil
+func getClient(restConfig *rest.Config, clientOptions client.Options) (client.Client, error) {
+	if restConfig == nil {
+		return nil, fmt.Errorf("must provide non-nil rest.Config to client.New")
 	}
-
-	hiveclientset, err := client.New(hiveRestConfig, client.Options{})
+	client, err := client.New(restConfig, clientOptions)
 	if err != nil {
 		return nil, err
 	}
-	return hiveclientset, nil
+	return client, nil
 }
 
 // Monitor checks the API server health of a cluster
