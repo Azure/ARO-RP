@@ -249,6 +249,9 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	c, err := cluster.NewMonitor(log, restConfig, doc.OpenShiftCluster, mon.clusterm, hiveRestConfig, hourlyRun)
 	if err != nil {
 		log.Error(err)
+		mon.m.EmitGauge("monitor.cluster.failedworker", 1, map[string]string{
+			"resourceId": doc.OpenShiftCluster.ID,
+		})
 		return
 	}
 

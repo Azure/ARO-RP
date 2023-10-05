@@ -112,37 +112,18 @@ func TestEmitHiveRegistrationDoesNotPanicWhenWeAssignLiteralNil(t *testing.T) {
 	_ = mon.emitHiveRegistrationStatus(context.Background())
 }
 
-// TestEmitHiveRegistrationDoesNotPanicWhenWeAssignLiteralNilUsingAuxFunction shows the exact same
-// behavior as TestEmitHiveRegistrationDoesNotPanicWhenWeAssignLiteralNil but encapsulating the
-// initialisation of hiveclientset in a function. The conclusion is the same, assign literal nil
-// to the interface when we get an error: the difference is that in this test this assignment is
-// coming from a function the prod code uses (so it is a good think) while the previous tests was done inline in the test.
-func TestEmitHiveRegistrationDoesNotPanicWhenWeAssignLiteralNilUsingAuxFunction(t *testing.T) {
-	hiveclientset, err := getHiveClientSet(&rest.Config{})
-	if err == nil {
-		t.Fatalf("we want to make sure err is not nil for this test")
+// TestGetHiveClientSetNeverReturnsError will test that the creation
+// of the non-typed kubernetes client will not return an error as it's
+// now leveraging a lazy fetch mechanism where it will only discover
+// the preexisting schema and apiversions during explicit CRUD operations
+// against the apiserver
+func TestGetHiveClientSetNeverReturnsError(t *testing.T) {
+	hiveClientSet, err := getHiveClientSet(&rest.Config{})
+	if err != nil {
+		t.Fatalf("error should not be nil")
 	}
 
-	mon := &Monitor{
-		hiveclientset: hiveclientset,
-		oc: &api.OpenShiftCluster{
-			Properties: api.OpenShiftClusterProperties{
-				HiveProfile: api.HiveProfile{
-					Namespace: "something",
-				},
-				NetworkProfile: api.NetworkProfile{
-					APIServerPrivateEndpointIP: "something",
-				},
-			},
-		},
-		log: utillog.GetLogger(),
+	if hiveClientSet == nil {
+		t.Fatalf("hive client set should not be nil")
 	}
-
-	fmt.Printf("mon.hiveclientset: interface type is %T, interface value is: %v\n", mon.hiveclientset, mon.hiveclientset)
-	if mon.hiveclientset != nil {
-		t.Fatalf("mon.hiveclientset should be nil")
-	}
-
-	// no panic
-	_ = mon.emitHiveRegistrationStatus(context.Background())
 }
