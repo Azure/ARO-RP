@@ -32,9 +32,9 @@ var machinehealthcheckYaml []byte
 var mhcremediationalertYaml []byte
 
 const (
-	MHCControllerName string = "MachineHealthCheck"
-	MHCManaged        string = "aro.machinehealthcheck.managed"
-	MHCEnabled        string = "aro.machinehealthcheck.enabled"
+	ControllerName string = "MachineHealthCheck"
+	managed        string = "aro.machinehealthcheck.managed"
+	enabled        string = "aro.machinehealthcheck.enabled"
 )
 
 type MachineHealthCheckReconciler struct {
@@ -48,7 +48,7 @@ func NewMachineHealthCheckReconciler(log *logrus.Entry, client client.Client, dh
 		AROController: base.AROController{
 			Log:    log,
 			Client: client,
-			Name:   MHCControllerName,
+			Name:   ControllerName,
 		},
 		dh: dh,
 	}
@@ -63,13 +63,13 @@ func (r *MachineHealthCheckReconciler) Reconcile(ctx context.Context, request ct
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(MHCEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(enabled) {
 		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
 	r.Log.Debug("running")
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(MHCManaged) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(managed) {
 		r.SetProgressing(ctx, "MHC and it's alerts are disabled because this cluster is not MHC managed.")
 
 		err := r.dh.EnsureDeleted(ctx, "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck")
@@ -141,7 +141,7 @@ func (r *MachineHealthCheckReconciler) SetupWithManager(mgr ctrl.Manager) error 
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
-		Named(MHCControllerName).
+		Named(ControllerName).
 		Owns(&machinev1beta1.MachineHealthCheck{}).
 		Owns(&monitoringv1.PrometheusRule{}).
 		Complete(r)
