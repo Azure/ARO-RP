@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,9 +34,31 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 
 	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
 
+	clusterversionDefault := &configv1.ClusterVersion{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "version",
+		},
+		Status: configv1.ClusterVersionStatus{
+			Conditions: []configv1.ClusterOperatorStatusCondition{
+				{
+					Type:   configv1.OperatorProgressing,
+					Status: configv1.ConditionFalse,
+				},
+			},
+		},
+	}
+	clusterversionUpgrading := clusterversionDefault.DeepCopy()
+	clusterversionUpgrading.Status.Conditions = []configv1.ClusterOperatorStatusCondition{
+		{
+			Type:   configv1.OperatorProgressing,
+			Status: configv1.ConditionTrue,
+		},
+	}
+
 	type test struct {
 		name             string
 		instance         *arov1alpha1.Cluster
+		clusterversion   *configv1.ClusterVersion
 		mocks            func(mdh *mock_dynamichelper.MockInterface)
 		wantConditions   []operatorv1.OperatorCondition
 		wantErr          string
@@ -179,6 +202,46 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 			wantErr:        "",
 		},
 		{
+			name: "Managed Feature Flag is true and cluster is upgrading: sets paused annotation on MHC and requeues",
+			instance: &arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
+				},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						enabled: strconv.FormatBool(true),
+						managed: strconv.FormatBool(true),
+					},
+				},
+			},
+			clusterversion: clusterversionUpgrading,
+			mocks: func(mdh *mock_dynamichelper.MockInterface) {
+				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			wantRequeueAfter: time.Hour,
+			wantErr:          "",
+		},
+		{
+			name: "Managed Feature Flag is true and cluster is upgrading: sets paused annotation on MHC and requeues",
+			instance: &arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: arov1alpha1.SingletonClusterName,
+				},
+				Spec: arov1alpha1.ClusterSpec{
+					OperatorFlags: arov1alpha1.OperatorFlags{
+						enabled: strconv.FormatBool(true),
+						managed: strconv.FormatBool(true),
+					},
+				},
+			},
+			clusterversion: clusterversionUpgrading,
+			mocks: func(mdh *mock_dynamichelper.MockInterface) {
+				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			wantRequeueAfter: time.Hour,
+			wantErr:          "",
+		},
+		{
 			name: "When ensuring resources fails, an error is returned",
 			instance: &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
@@ -221,6 +284,11 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 			clientBuilder := ctrlfake.NewClientBuilder()
 			if tt.instance != nil {
 				clientBuilder = clientBuilder.WithObjects(tt.instance)
+			}
+			if tt.clusterversion == nil {
+				clientBuilder = clientBuilder.WithObjects(clusterversionDefault)
+			} else {
+				clientBuilder = clientBuilder.WithObjects(tt.clusterversion)
 			}
 
 			ctx := context.Background()
