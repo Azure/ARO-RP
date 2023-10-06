@@ -50,16 +50,19 @@ var _ = Describe("Update clusters", func() {
 })
 
 var _ = Describe("Update cluster Managed Outbound IPs", func() {
+	var lbName string
+	var rgName string
+
 	var _ = BeforeEach(func(ctx context.Context) {
 		By("making sure clusters start with one IP")
 		oc, err := clients.OpenshiftClustersPreview.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("ensuring outbound-rule-4 has one IP")
-		lbName, err := getPublicLoadBalancerName(ctx)
+		lbName, err = getPublicLoadBalancerName(ctx)
 		Expect(err).NotTo(HaveOccurred())
 
-		rgName := stringutils.LastTokenByte(*oc.ClusterProfile.ResourceGroupID, '/')
+		rgName = stringutils.LastTokenByte(*oc.ClusterProfile.ResourceGroupID, '/')
 		lb, err := clients.LoadBalancers.Get(ctx, rgName, lbName, "")
 		Expect(err).NotTo(HaveOccurred())
 
@@ -85,10 +88,6 @@ var _ = Describe("Update cluster Managed Outbound IPs", func() {
 		Expect(len(*oc.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIps)).To(Equal(5))
 
 		By("checking outbound-rule-4 has required number IPs")
-		lbName, err := getPublicLoadBalancerName(ctx)
-		Expect(err).NotTo(HaveOccurred())
-
-		rgName := stringutils.LastTokenByte(*oc.ClusterProfile.ResourceGroupID, '/')
 		lb, err := clients.LoadBalancers.Get(ctx, rgName, lbName, "")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(getOutboundIPsCount(lb)).To(Equal(5))
