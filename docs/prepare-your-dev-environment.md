@@ -37,21 +37,29 @@ This document goes through the development dependencies one requires in order to
             export ARO_PODMAN_SOCKET=unix:///$HOME/.local/share/containers/podman/machine/qemu/podman.sock
             ```
 
+> __NOTE:__ If using Fedora 37+ podman and podman-docker should already be installed and enabled.
+
 1. Run for `az acr login` compatability
 
-    ```bash
-    sudo touch /etc/containers/nodocker
-    ```
+```sh
+sudo touch /etc/containers/nodocker
+```
 
 1. Install [golangci-lint](https://golangci-lint.run/) and [yamllint](https://yamllint.readthedocs.io/en/stable/quickstart.html#installing-yamllint) (optional but your code is required to comply to pass the CI)
 
 ### Fedora / RHEL Packages
 
 1. Install the `gpgme-devel`, `libassuan-devel`, and `openssl` packages.
-    > `sudo dnf install -y gpgme-devel libassuan-devel openssl podman`
+```sh
+sudo dnf install -y gpgme-devel libassuan-devel openssl podman
+```
 
-> __NOTE:__: If using RHEL, register the system with `subscription-manager register`, and then enable the [CodeReady Linux Builder](https://access.redhat.com/articles/4348511) repository to install *-devel packages. For other packages not in the base repositories, such as OpenVPN, you can [enable the EPEL repository](https://docs.fedoraproject.org/en-US/epel/#_quickstart) to install them.
+> __NOTE:__ If using RHEL, register the system with `subscription-manager register`, and then enable the [CodeReady Linux Builder](https://access.redhat.com/articles/4348511) repository to install *-devel packages. For other packages not in the base repositories, such as OpenVPN, you can [enable the EPEL repository](https://docs.fedoraproject.org/en-US/epel/#_quickstart) to install them.
 
+1. For Fedora 37+ you will also need to install the packages: `lvm2`, `lvm2-devel` and `golang-github-containerd-btrfs-devel`
+```sh
+sudo dnf install -y lvm2 lvm2-devel golang-github-containerd-btrfs-devel
+```
 ### Debian Packages
 
 Install the `libgpgme-dev`, `libbtrfs-dev` and `libdevmapper-dev` packages.
