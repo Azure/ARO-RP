@@ -66,17 +66,15 @@ var _ = Describe("Update cluster Managed Outbound IPs", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		if getOutboundIPsCount(lb) != 1 {
-			ocPatch := newManagedOutboundIPUpdateBody(1)
 			By("sending the PATCH request to set ManagedOutboundIPs.Count to 1")
-			err = clients.OpenshiftClustersPreview.UpdateAndWait(ctx, vnetResourceGroup, clusterName, ocPatch)
+			err = clients.OpenshiftClustersPreview.UpdateAndWait(ctx, vnetResourceGroup, clusterName, newManagedOutboundIPUpdateBody(1))
 			Expect(err).NotTo(HaveOccurred())
 		}
 	})
 
 	It("must be possible to increase and decrease IP Addresses on the public loadbalancer", func(ctx context.Context) {
 		By("sending the PATCH request to increase Managed Outbound IPs")
-		ocPatch := newManagedOutboundIPUpdateBody(5)
-		err := clients.OpenshiftClustersPreview.UpdateAndWait(ctx, vnetResourceGroup, clusterName, ocPatch)
+		err := clients.OpenshiftClustersPreview.UpdateAndWait(ctx, vnetResourceGroup, clusterName, newManagedOutboundIPUpdateBody(5))
 		Expect(err).NotTo(HaveOccurred())
 
 		By("getting the cluster resource")
@@ -92,8 +90,7 @@ var _ = Describe("Update cluster Managed Outbound IPs", func() {
 		Expect(getOutboundIPsCount(lb)).To(Equal(5))
 
 		By("sending the PATCH request to decrease Managed Outbound IPs")
-		ocPatch.NetworkProfile.LoadBalancerProfile.ManagedOutboundIps.Count = to.Int32Ptr(1)
-		err = clients.OpenshiftClustersPreview.UpdateAndWait(ctx, vnetResourceGroup, clusterName, ocPatch)
+		err = clients.OpenshiftClustersPreview.UpdateAndWait(ctx, vnetResourceGroup, clusterName, newManagedOutboundIPUpdateBody(1))
 		Expect(err).NotTo(HaveOccurred())
 
 		By("getting the cluster resource")
