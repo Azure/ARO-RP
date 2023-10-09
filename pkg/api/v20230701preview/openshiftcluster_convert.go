@@ -272,3 +272,11 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 		LastModifiedByType: api.CreatedByType(oc.SystemData.CreatedByType),
 	}
 }
+
+// ExternalNoReadOnly removes all read-only fields from the external representation.
+func (c openShiftClusterConverter) ExternalNoReadOnly(_oc interface{}) {
+	oc := _oc.(*OpenShiftCluster)
+	if oc.Properties.NetworkProfile.LoadBalancerProfile != nil {
+		oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = nil
+	}
+}

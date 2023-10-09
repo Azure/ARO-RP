@@ -351,3 +351,12 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	// with filling the out.Properties.RegistryProfiles[i].Password as default is "" which erases the original value.
 	// Workaround would be filling the password when receiving request, but it is array and the logic would be to complex.
 }
+
+// ExternalNoReadOnly removes all read-only fields from the external representation.
+func (c openShiftClusterConverter) ExternalNoReadOnly(_oc interface{}) {
+	oc := _oc.(*OpenShiftCluster)
+	oc.Properties.WorkerProfilesStatus = nil
+	if oc.Properties.NetworkProfile.LoadBalancerProfile != nil {
+		oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = nil
+	}
+}

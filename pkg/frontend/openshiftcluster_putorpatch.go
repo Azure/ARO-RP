@@ -149,6 +149,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	// Patch should be used for updating individual fields of the document.
 	case http.MethodPatch:
 		ext = converter.ToExternal(doc.OpenShiftCluster)
+		converter.ExternalNoReadOnly(ext)
 	}
 
 	err = json.Unmarshal(body, &ext)
