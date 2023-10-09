@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/to"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/sirupsen/logrus"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -93,6 +94,54 @@ func TestEsureDeleted(t *testing.T) {
 
 func TestMerge(t *testing.T) {
 	serviceInternalTrafficPolicy := corev1.ServiceInternalTrafficPolicyCluster
+
+	mhc := &machinev1beta1.MachineHealthCheck{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "aro-machinehealthcheck",
+			Namespace: "openshift-machine-api",
+		},
+		Spec: machinev1beta1.MachineHealthCheckSpec{
+			Selector: metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "machine.openshift.io/cluster-api-machineset",
+						Operator: metav1.LabelSelectorOpExists,
+					},
+				},
+			},
+			UnhealthyConditions: []machinev1beta1.UnhealthyCondition{
+				{
+					Type:    corev1.NodeReady,
+					Timeout: metav1.Duration{Duration: 15 * time.Minute},
+					Status:  corev1.ConditionFalse,
+				},
+			},
+			NodeStartupTimeout: &metav1.Duration{Duration: 25 * time.Minute},
+		},
+	}
+
+	mhcWithStatus := mhc.DeepCopy()
+	mhcWithStatus.Status = machinev1beta1.MachineHealthCheckStatus{
+		Conditions: machinev1beta1.Conditions{
+			{
+				Type:               machinev1beta1.RemediationAllowedCondition,
+				Status:             corev1.ConditionTrue,
+				LastTransitionTime: metav1.Time{Time: time.Now()},
+			},
+		},
+		CurrentHealthy:      to.IntPtr(3),
+		ExpectedMachines:    to.IntPtr(3),
+		RemediationsAllowed: 1,
+	}
+
+	mhcWithAnnotation := mhc.DeepCopy()
+	mhcWithAnnotation.ObjectMeta.Annotations = map[string]string{
+		"cluster.x-k8s.io/paused": "",
+	}
+
+	mhcWithStatusAndAnnotation := mhc.DeepCopy()
+	mhcWithStatusAndAnnotation.Status = *mhcWithStatus.Status.DeepCopy()
+	mhcWithStatusAndAnnotation.ObjectMeta.Annotations = mhcWithAnnotation.ObjectMeta.Annotations
 
 	for _, tt := range []struct {
 		name          string
@@ -557,6 +606,21 @@ func TestMerge(t *testing.T) {
 			},
 			wantChanged:   true,
 			wantEmptyDiff: true,
+		},
+		{
+			name:          "MachineHealthCheck no changes",
+			old:           mhcWithStatus,
+			new:           mhc,
+			want:          mhcWithStatus,
+			wantChanged:   false,
+			wantEmptyDiff: true,
+		},
+		{
+			name:        "MachineHealthCheck changes",
+			old:         mhcWithStatus,
+			new:         mhcWithAnnotation,
+			want:        mhcWithStatusAndAnnotation,
+			wantChanged: true,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
