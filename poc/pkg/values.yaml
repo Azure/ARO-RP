@@ -80,7 +80,6 @@ istio:
     name: tls-sync-deployment
     image: mcr.microsoft.com/azuredocs/aks-helloworld:v1
     container: tls-sync-container
-    port: 80
 
 AKSCluster:
   istoSystemNamespace: aks-istio-system

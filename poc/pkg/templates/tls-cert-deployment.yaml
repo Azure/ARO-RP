@@ -16,8 +16,6 @@ spec:
       containers:
       - name: {{ .Values.istio.tlsDeployment.name }}
         image: {{ .Values.istio.tlsDeployment.image }}
-        ports:
-        - containerPort: {{ .Values.istio.tlsDeployment.port }}
         env:
         - name: TITLE
           value: "Welcome TLS certificate sync deployment"
