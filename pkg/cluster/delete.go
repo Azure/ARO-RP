@@ -403,10 +403,10 @@ func (m *manager) deleteResourcesAndResourceGroup(ctx context.Context) error {
 	m.log.Printf("deleting resource group %s", resourceGroup)
 	err = m.resourceGroups.DeleteAndWait(ctx, resourceGroup)
 	detailedErr, ok := err.(autorest.DetailedError)
-	if ok && (detailedErr.StatusCode == http.StatusForbidden || detailedErr.StatusCode == http.StatusNotFound) {
+	if ok && (detailedErr.StatusCode == http.StatusNotFound) {
 		err = nil
 	}
-	if azureerrors.HasAuthorizationFailedError(err) || azureerrors.ResourceGroupNotFound(err) {
+	if azureerrors.ResourceGroupNotFound(err) {
 		err = nil
 	}
 	return err
