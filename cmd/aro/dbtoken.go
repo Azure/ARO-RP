@@ -10,7 +10,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	pkgdbtoken "github.com/Azure/ARO-RP/pkg/dbtoken"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -61,18 +60,12 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 
 	go g.Run()
 
-	dbAccountName := os.Getenv(service.DatabaseAccountName)
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer, dbAccountName)
-	if err != nil {
-		return err
-	}
-
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, m, nil, dbAccountName)
-	if err != nil {
-		return err
-	}
-
 	dbName, err := service.DBName(_env.IsLocalDevelopmentMode())
+	if err != nil {
+		return err
+	}
+
+	dbc, err := service.NewDatabaseClientUsingMasterKey(ctx, _env, log, m, msiAuthorizer, nil)
 	if err != nil {
 		return err
 	}

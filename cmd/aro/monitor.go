@@ -87,13 +87,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbAccountName := os.Getenv(service.DatabaseAccountName)
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer, dbAccountName)
-	if err != nil {
-		return err
-	}
-
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, &noop.Noop{}, aead, dbAccountName)
+	dbc, err := service.NewDatabaseClientUsingMasterKey(ctx, _env, log, &noop.Noop{}, msiAuthorizer, aead)
 	if err != nil {
 		return err
 	}

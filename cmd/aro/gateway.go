@@ -9,12 +9,10 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/database"
-	pkgdbtoken "github.com/Azure/ARO-RP/pkg/dbtoken"
 	"github.com/Azure/ARO-RP/pkg/env"
 	pkggateway "github.com/Azure/ARO-RP/pkg/gateway"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
@@ -45,11 +43,6 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 
 	go g.Run()
 
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, nil, m, nil, os.Getenv(service.DatabaseAccountName))
-	if err != nil {
-		return err
-	}
-
 	// Access token GET request needs to be:
 	// http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=$AZURE_DBTOKEN_CLIENT_ID
 	//
@@ -70,13 +63,21 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	url, err := service.GetDBTokenURL(_env.IsLocalDevelopmentMode())
+	dbName, err := service.DBName(_env.IsLocalDevelopmentMode())
 	if err != nil {
 		return err
 	}
-	dbRefresher := pkgdbtoken.NewRefresher(log, _env, msiRefresherAuthorizer, insecureSkipVerify, dbc, "gateway", m, "gateway", url)
 
-	dbName, err := service.DBName(_env.IsLocalDevelopmentMode())
+	dbc, err := service.NewDatabaseClientUsingToken(
+		ctx,
+		_env,
+		log,
+		m,
+		msiRefresherAuthorizer,
+		nil,
+		insecureSkipVerify,
+		"gateway",
+	)
 	if err != nil {
 		return err
 	}
@@ -84,15 +85,6 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 	dbGateway, err := database.NewGateway(ctx, dbc, dbName)
 	if err != nil {
 		return err
-	}
-
-	go func() {
-		_ = dbRefresher.Run(ctx)
-	}()
-
-	log.Print("waiting for database token")
-	for !dbRefresher.HasSyncedOnce() {
-		time.Sleep(time.Second)
 	}
 
 	httpl, err := utilnet.Listen("tcp", ":8080", pkggateway.SocketSize)
