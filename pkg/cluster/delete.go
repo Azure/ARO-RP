@@ -376,22 +376,10 @@ func (m *manager) deleteGateway(ctx context.Context) error {
 
 func (m *manager) deleteResourcesAndResourceGroup(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	// In edge case of CRG not being managedBy ARO, we have a different delete path
-	// we will assume normal case and set rgManagedByARO to true CRG is managedBy ARO
-	rgManagedByARO := true
-	rg, err := m.resourceGroups.Get(ctx, resourceGroup)
-	if err != nil {
-		m.log.Warnf("failed to get resourceGroup %s", err)
-	} else if !m.env.IsLocalDevelopmentMode() {
-		if rg.ManagedBy == nil || *rg.ManagedBy == "" || !strings.EqualFold(*rg.ManagedBy, m.doc.OpenShiftCluster.ID) {
-			rgManagedByARO = false
-			m.log.Infof("cluster resource group not managed by aro %s", *rg.Name)
-		}
-	}
 
-	// Do not delete the resource group if it is not managed by ARO
-	if !rgManagedByARO {
-		return nil
+	shouldDelete, err := m.shouldDeleteResourceGroup(ctx, resourceGroup)
+	if err != nil || !shouldDelete {
+		return err
 	}
 
 	m.log.Printf("deleting resources")
@@ -401,13 +389,35 @@ func (m *manager) deleteResourcesAndResourceGroup(ctx context.Context) error {
 	}
 
 	m.log.Printf("deleting resource group %s", resourceGroup)
-	err = m.resourceGroups.DeleteAndWait(ctx, resourceGroup)
-	detailedErr, ok := err.(autorest.DetailedError)
-	if ok && (detailedErr.StatusCode == http.StatusForbidden || detailedErr.StatusCode == http.StatusNotFound) {
-		err = nil
+	return m.deleteResourceGroup(ctx, resourceGroup)
+}
+
+func (m *manager) shouldDeleteResourceGroup(ctx context.Context, name string) (bool, error) {
+	resourceGroup, err := m.resourceGroups.Get(ctx, name)
+	if err != nil {
+		detailedErr, isDetailedErr := err.(autorest.DetailedError)
+		if azureerrors.ResourceGroupNotFound(err) || (isDetailedErr && detailedErr.StatusCode == http.StatusNotFound) {
+			m.log.Infof("managed resource group %s not found, skipping deletion", name)
+			err = nil
+		}
+		return false, err
 	}
-	if azureerrors.HasAuthorizationFailedError(err) || azureerrors.ResourceGroupNotFound(err) {
-		err = nil
+
+	rgManagedByCluster := resourceGroup.ManagedBy != nil && strings.EqualFold(*resourceGroup.ManagedBy, m.doc.OpenShiftCluster.ID)
+	if !rgManagedByCluster {
+		m.log.Infof("managed resource group %s not managed by cluster, skipping deletion", *resourceGroup.Name)
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func (m *manager) deleteResourceGroup(ctx context.Context, name string) error {
+	err := m.resourceGroups.DeleteAndWait(ctx, name)
+
+	detailedErr, isDetailedErr := err.(autorest.DetailedError)
+	if azureerrors.ResourceGroupNotFound(err) || (isDetailedErr && (detailedErr.StatusCode == http.StatusNotFound)) {
+		return nil
 	}
 	return err
 }
