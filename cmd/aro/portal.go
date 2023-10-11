@@ -21,6 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
+	"github.com/Azure/ARO-RP/pkg/util/service"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
@@ -44,7 +45,10 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 	err = env.ValidateVars(
 		"AZURE_PORTAL_CLIENT_ID",
 		"AZURE_PORTAL_ACCESS_GROUP_IDS",
-		"AZURE_PORTAL_ELEVATED_GROUP_IDS")
+		"AZURE_PORTAL_ELEVATED_GROUP_IDS",
+		service.KeyVaultPrefix,
+		service.DatabaseAccountName,
+	)
 
 	if err != nil {
 		return err
@@ -70,7 +74,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	m := statsd.New(ctx, log.WithField("component", "portal"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	m := statsd.NewFromEnv(ctx, log.WithField("component", "portal"), _env)
 
 	g, err := golang.NewMetrics(log.WithField("component", "portal"), m)
 	if err != nil {
@@ -79,10 +83,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 
 	go g.Run()
 
-	if err := env.ValidateVars(KeyVaultPrefix); err != nil {
-		return err
-	}
-	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
+	keyVaultPrefix := os.Getenv(service.KeyVaultPrefix)
 	// TODO: should not be using the service keyvault here
 	serviceKeyvaultURI := keyvault.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
 	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
@@ -92,11 +93,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	if err := env.ValidateVars(DatabaseAccountName); err != nil {
-		return err
-	}
-
-	dbAccountName := os.Getenv(DatabaseAccountName)
+	dbAccountName := os.Getenv(service.DatabaseAccountName)
 	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer, dbAccountName)
 	if err != nil {
 		return err
@@ -107,7 +104,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	dbName, err := DBName(_env.IsLocalDevelopmentMode())
+	dbName, err := service.DBName(_env.IsLocalDevelopmentMode())
 	if err != nil {
 		return err
 	}

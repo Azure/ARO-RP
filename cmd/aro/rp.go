@@ -32,10 +32,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/hive"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
-	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
+	"github.com/Azure/ARO-RP/pkg/util/service"
 )
 
 func rp(ctx context.Context, log, audit *logrus.Entry) error {
@@ -50,6 +50,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 	if _env.IsLocalDevelopmentMode() {
 		keys = []string{
 			"PULL_SECRET",
+			service.DatabaseAccountName,
 		}
 	} else {
 		keys = []string{
@@ -59,6 +60,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 			"CLUSTER_MDM_NAMESPACE",
 			"MDM_ACCOUNT",
 			"MDM_NAMESPACE",
+			service.DatabaseAccountName,
 		}
 
 		if _, found := os.LookupEnv("PULL_SECRET"); found {
@@ -75,14 +77,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	metrics := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
-
-	g, err := golang.NewMetrics(log.WithField("component", "metrics"), metrics)
-	if err != nil {
-		return err
-	}
-
-	go g.Run()
+	metrics := statsd.NewFromEnv(ctx, log.WithField("component", "metrics"), _env)
 
 	tracing.Register(azure.New(metrics))
 	kmetrics.Register(kmetrics.RegisterOpts{
@@ -90,7 +85,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		RequestLatency: k8s.NewLatency(metrics),
 	})
 
-	clusterm := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("CLUSTER_MDM_ACCOUNT"), os.Getenv("CLUSTER_MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	clusterm := statsd.NewFromEnv(ctx, log.WithField("component", "metrics"), _env, "CLUSTER")
 
 	msiAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceManagerScope)
 	if err != nil {
@@ -102,11 +97,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	if err := env.ValidateVars(DatabaseAccountName); err != nil {
-		return err
-	}
-
-	dbAccountName := os.Getenv(DatabaseAccountName)
+	dbAccountName := os.Getenv(service.DatabaseAccountName)
 	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer, dbAccountName)
 	if err != nil {
 		return err
@@ -117,7 +108,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	dbName, err := DBName(env.IsLocalDevelopmentMode())
+	dbName, err := service.DBName(env.IsLocalDevelopmentMode())
 	if err != nil {
 		return err
 	}

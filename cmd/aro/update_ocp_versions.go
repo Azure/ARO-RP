@@ -18,6 +18,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
+	"github.com/Azure/ARO-RP/pkg/util/service"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -90,7 +91,11 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 		return nil, err
 	}
 
-	if err = env.ValidateVars("DST_ACR_NAME"); err != nil {
+	if err := env.ValidateVars(
+		"DST_ACR_NAME",
+		service.KeyVaultPrefix,
+		service.DatabaseAccountName,
+	); err != nil {
 		return nil, err
 	}
 
@@ -110,12 +115,9 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 		return nil, fmt.Errorf("MSI KeyVault Authorizer failed with: %s", err.Error())
 	}
 
-	m := statsd.New(ctx, log.WithField("component", "update-ocp-versions"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	m := statsd.NewFromEnv(ctx, log.WithField("component", "update-ocp-versions"), _env)
 
-	if err := env.ValidateVars(KeyVaultPrefix); err != nil {
-		return nil, err
-	}
-	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
+	keyVaultPrefix := os.Getenv(service.KeyVaultPrefix)
 	serviceKeyvaultURI := keyvault.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
 	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
 
@@ -124,11 +126,7 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 		return nil, err
 	}
 
-	if err := env.ValidateVars(DatabaseAccountName); err != nil {
-		return nil, err
-	}
-
-	dbAccountName := os.Getenv(DatabaseAccountName)
+	dbAccountName := os.Getenv(service.DatabaseAccountName)
 	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer, dbAccountName)
 	if err != nil {
 		return nil, err
@@ -139,7 +137,7 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 		return nil, err
 	}
 
-	dbName, err := DBName(_env.IsLocalDevelopmentMode())
+	dbName, err := service.DBName(_env.IsLocalDevelopmentMode())
 	if err != nil {
 		return nil, err
 	}

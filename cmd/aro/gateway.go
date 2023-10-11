@@ -20,6 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
 	utilnet "github.com/Azure/ARO-RP/pkg/util/net"
+	"github.com/Azure/ARO-RP/pkg/util/service"
 )
 
 func gateway(ctx context.Context, log *logrus.Entry) error {
@@ -28,11 +29,14 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	if err = env.ValidateVars("AZURE_DBTOKEN_CLIENT_ID"); err != nil {
+	if err = env.ValidateVars(
+		"AZURE_DBTOKEN_CLIENT_ID",
+		service.DatabaseAccountName,
+	); err != nil {
 		return err
 	}
 
-	m := statsd.New(ctx, log.WithField("component", "gateway"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	m := statsd.NewFromEnv(ctx, log.WithField("component", "gateway"), _env)
 
 	g, err := golang.NewMetrics(log.WithField("component", "gateway"), m)
 	if err != nil {
@@ -41,10 +45,7 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 
 	go g.Run()
 
-	if err := env.ValidateVars(DatabaseAccountName); err != nil {
-		return err
-	}
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, nil, m, nil, os.Getenv(DatabaseAccountName))
+	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, nil, m, nil, os.Getenv(service.DatabaseAccountName))
 	if err != nil {
 		return err
 	}
@@ -69,13 +70,13 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	url, err := getURL(_env.IsLocalDevelopmentMode())
+	url, err := service.GetDBTokenURL(_env.IsLocalDevelopmentMode())
 	if err != nil {
 		return err
 	}
 	dbRefresher := pkgdbtoken.NewRefresher(log, _env, msiRefresherAuthorizer, insecureSkipVerify, dbc, "gateway", m, "gateway", url)
 
-	dbName, err := DBName(_env.IsLocalDevelopmentMode())
+	dbName, err := service.DBName(_env.IsLocalDevelopmentMode())
 	if err != nil {
 		return err
 	}
@@ -129,16 +130,4 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 	<-done
 
 	return nil
-}
-
-func getURL(isLocalDevelopmentMode bool) (string, error) {
-	if isLocalDevelopmentMode {
-		return "https://localhost:8445", nil
-	}
-
-	if err := env.ValidateVars(DBTokenUrl); err != nil {
-		return "", err
-	}
-
-	return os.Getenv(DBTokenUrl), nil
 }
