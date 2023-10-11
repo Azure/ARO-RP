@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Values.istio.tlsDeployment.name }}
-  namespace: {{ .Values.AKSCluster.istoSystemNamespace }}
+  namespace: {{ .Values.AKSCluster.istoIngressNamespace }}
 spec:
   replicas: 1
   selector:
