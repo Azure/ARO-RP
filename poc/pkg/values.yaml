@@ -67,19 +67,24 @@ tolerations: []
 affinity: {}
 
 # Use for Istio service mesh 
-#TODO jonachang: need to add a secret in other PR
 istio:
   name: aks-istio-ingressgateway-external
   gateway:
     name: rp-poc-gateway
-    #TODO jonachang: change back to 443 when we have TLS
-    port: 80
+    port: 443
+    # TLS Mode: https://istio.io/latest/docs/reference/config/networking/gateway/#ServerTLSSettings-TLSmode
+    tlsMode: SIMPLE
   virtualService:
     name: rp-poc-virtualservice
+  tlsDeployment:
+    name: tls-sync-deployment
+    image: mcr.microsoft.com/azuredocs/aks-helloworld:v1
+    container: tls-sync-container
 
 AKSCluster:
-  tlsSecretName: tls-secret
-  userAssignedIdentityId: 43bf6984-5163-4565-bb2f-04f5a5d68d78
+  # AKS Istio addon requires the TLS cert secret to be in this namespace
+  istoIngressNamespace: aks-istio-ingress
+  userAssignedIdentityId: ""
   tenantId: 72f988bf-86f1-41af-91ab-2d7cd011db47
 
 keyVault:
