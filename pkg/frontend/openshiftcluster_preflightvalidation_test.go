@@ -6,6 +6,7 @@ package frontend
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -20,59 +21,81 @@ import (
 
 func TestPreflightValidation(t *testing.T) {
 	ctx := context.Background()
-	mockSubID := "00000000-0000-0000-0000-000000000000"
-	preflightPayload := []byte(`
+	apiVersion := "2022-04-01"
+	clusterId := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName"
+	location := "eastus"
+	clusterProfileVersion := "4.11.44"
+	defaultProfile := "default"
+	resourceGroup := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroupTest"
+	netProfile := "10.128.0.0/14"
+	encryptionSet := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/ms-eastus/providers/Microsoft.Compute/diskEncryptionSets/ms-eastus-disk-encryption-set"
+	masterSub := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/master"
+	workerSub := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker"
+
+	preflightPayload := []byte(fmt.Sprintf(`
 	{
-		"apiVersion": "2022-04-01",
-		"id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName",
-		"name": "resourceName",
-		"type": "microsoft.redhatopenshift/openshiftclusters",
-		"location": "eastus",
+		"apiVersion": "%s",
+		"id": "%s",
+		"name": "%s",
+		"type": "%s",
+		"location": "%s",
 		"properties": {
 			"clusterProfile": {
-				"domain": "default",
-				"resourceGroupId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroupTest",
-				"fipsValidatedModules": "Enabled"
+				"domain": "%s",
+				"resourceGroupId": "%s",
+				"fipsValidatedModules": "%s",
+				"version": "%s"
 			},
 			"consoleProfile": {},
 			"servicePrincipalProfile": {
-				"clientId": "00000000-0000-0000-1111-000000000000",
-				"clientSecret": "00000000-0000-0000-0000-000000000000"
+				"clientId": "%s",
+				"clientSecret": "%s"
 			},
 			"networkProfile": {
-				"podCidr": "10.128.0.0/14",
-				"serviceCidr": "172.30.0.0/16"
+				"podCidr": "%s",
+				"serviceCidr": "%s"
 			},
 			"masterProfile": {
-				"vmSize": "Standard_D32s_v3",
-				"subnetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/ms-eastus/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/CARO2-master",
-				"encryptionAtHost": "Enabled",
-				"diskEncryptionSetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/ms-eastus/providers/Microsoft.Compute/diskEncryptionSets/ms-eastus-disk-encryption-set"
+				"vmSize": "%s",
+				"subnetId": "%s",
+				"encryptionAtHost": "%s",
+				"diskEncryptionSetId": "%s"
 			},
 			"workerProfiles": [
 			{
-				"name": "worker",
-				"vmSize": "Standard_D32s_v3",
-				"diskSizeGB": 128,
-				"encryptionAtHost": "Enabled",
-				"subnetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/ms-eastus/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/CARO2-worker",
-				"count": 3,
-				"diskEncryptionSetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/ms-eastus/providers/Microsoft.Compute/diskEncryptionSets/ms-eastus-disk-encryption-set"
+				"name": "%s",
+				"vmSize": "%s",
+				"diskSizeGB": %v,
+				"encryptionAtHost": "%s",
+				"subnetId": "%s",
+				"count": %v,
+				"diskEncryptionSetId": "%s"
 			}
 			],
 			"apiserverProfile": {
-				"visibility": "Public"
+				"visibility": "%s"
 			},
 			"ingressProfiles": [
 			{
-				"name": "default",
-				"visibility": "Public",
-				"IP": "1.2.3.4"
+				"name": "%s",
+				"visibility": "%s",
+				"IP": "%s"
 			}
 			]
 		}
 	}
-	`)
+	`, apiVersion, clusterId, api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
+		api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Type,
+		location, defaultProfile, resourceGroup, api.EncryptionAtHostEnabled, clusterProfileVersion,
+		api.ExampleOpenShiftClusterDocument().ID, api.ExampleOpenShiftClusterDocument().ID,
+		netProfile, netProfile, api.VMSizeStandardD32sV3, masterSub,
+		api.EncryptionAtHostEnabled, encryptionSet,
+		api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].Name, api.VMSizeStandardD32sV3,
+		api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].DiskSizeGB,
+		api.EncryptionAtHostEnabled, workerSub,
+		api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].Count,
+		encryptionSet, api.VisibilityPublic, defaultProfile, api.VisibilityPublic,
+		api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.IngressProfiles[0].IP))
 
 	type test struct {
 		name             string
@@ -87,11 +110,11 @@ func TestPreflightValidation(t *testing.T) {
 			name: "Successful Preflight Create",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
-					ID: mockSubID,
+					ID: api.ExampleOpenShiftClusterDocument().ID,
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateRegistered,
 						Properties: &api.SubscriptionProperties{
-							TenantID: "11111111-1111-1111-1111-111111111111",
+							TenantID: api.ExampleOpenShiftClusterDocument().ClientIDKey,
 						},
 					},
 				})
@@ -112,11 +135,11 @@ func TestPreflightValidation(t *testing.T) {
 			name: "Failed Preflight Static",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
-					ID: mockSubID,
+					ID: api.ExampleOpenShiftClusterDocument().ID,
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateRegistered,
 						Properties: &api.SubscriptionProperties{
-							TenantID: "11111111-1111-1111-1111-111111111111",
+							TenantID: api.ExampleOpenShiftClusterDocument().ClientIDKey,
 						},
 					},
 				})
@@ -124,22 +147,25 @@ func TestPreflightValidation(t *testing.T) {
 			preflightRequest: func() *api.PreflightRequest {
 				return &api.PreflightRequest{
 					Resources: []json.RawMessage{
-						[]byte(`
-								{
-									"apiVersion": "2022-04-01",
-									"id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourcename/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName",
-									"name": "resourceName",
-									"type": "microsoft.redhatopenshift/openshiftclusters",
-									"location": "eastus",
-									"properties": {
-										"clusterProfile": {
-										  "domain": "example.aroapp.io",
-										  "resourceGroupId": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/resourcenameTest",
-										  "fipsValidatedModules": "Enabled"
-										}
-									  }
+						[]byte(fmt.Sprintf(`
+							{
+								"apiVersion": "%s",
+								"id": "%s",
+								"name": "%s",
+								"type": "%s",
+								"location": "%s",
+								"properties": {
+									"clusterProfile": {
+										"domain": "%s",
+										"resourceGroupId": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/resourcenameTest",
+										"fipsValidatedModules": "%s"
+									}
 								}
-						`),
+							}
+							`, apiVersion, clusterId,
+							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
+							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Type,
+							location, defaultProfile, api.FipsValidatedModulesEnabled)),
 					},
 				}
 			},
@@ -152,55 +178,148 @@ func TestPreflightValidation(t *testing.T) {
 			},
 		},
 		{
-			name: "Successful Preflight Update",
+			name: "Failed Preflight Install Version",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
-					ID: mockSubID,
+					ID: api.ExampleOpenShiftClusterDocument().ID,
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateRegistered,
 						Properties: &api.SubscriptionProperties{
-							TenantID: "11111111-1111-1111-1111-111111111111",
+							TenantID: api.ExampleOpenShiftClusterDocument().ClientIDKey,
+						},
+					},
+				})
+			},
+			preflightRequest: func() *api.PreflightRequest {
+				return &api.PreflightRequest{
+					Resources: []json.RawMessage{
+						[]byte(fmt.Sprintf(`
+							{
+								"apiVersion": "%s",
+								"id": "%s",
+								"name": "%s",
+								"type": "%s",
+								"location": "%s",
+								"properties": {
+									"clusterProfile": {
+										"domain": "%s",
+										"resourceGroupId": "%s",
+										"fipsValidatedModules": "%s",
+										"version": "4.11.43"
+									},
+									"consoleProfile": {},
+									"servicePrincipalProfile": {
+										"clientId": "%s",
+										"clientSecret": "%s"
+									},
+									"networkProfile": {
+										"podCidr": "%s",
+										"serviceCidr": "%s"
+									},
+									"masterProfile": {
+										"vmSize": "%s",
+										"subnetId": "%s",
+										"encryptionAtHost": "%s",
+										"diskEncryptionSetId": "%s"
+									},
+									"workerProfiles": [
+									{
+										"name": "%s",
+										"vmSize": "%s",
+										"diskSizeGB": %v,
+										"encryptionAtHost": "%s",
+										"subnetId": "%s",
+										"count": %v,
+										"diskEncryptionSetId": "%s"
+									}
+									],
+									"apiserverProfile": {
+										"visibility": "%s"
+									},
+									"ingressProfiles": [
+									{
+										"name": "%s",
+										"visibility": "%s",
+										"IP": "%s"
+									}
+									]
+								}
+							}
+							`, apiVersion, clusterId, api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
+							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Type,
+							location, defaultProfile, resourceGroup, api.EncryptionAtHostEnabled,
+							api.ExampleOpenShiftClusterDocument().ID, api.ExampleOpenShiftClusterDocument().ID,
+							netProfile, netProfile, api.VMSizeStandardD32sV3, masterSub,
+							api.EncryptionAtHostEnabled, encryptionSet,
+							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].Name, api.VMSizeStandardD32sV3,
+							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].DiskSizeGB,
+							api.EncryptionAtHostEnabled, workerSub,
+							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].Count,
+							encryptionSet, api.VisibilityPublic, defaultProfile, api.VisibilityPublic,
+							api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.IngressProfiles[0].IP)),
+					},
+				}
+			},
+			wantStatusCode: http.StatusOK,
+			wantResponse: &api.ValidationResult{
+				Status: api.ValidationStatusFailed,
+				Error: &api.ManagementErrorWithDetails{
+					Code:    to.StringPtr("InvalidParameter"),
+					Message: to.StringPtr("400: InvalidParameter: properties.clusterProfile.version: The requested OpenShift version '4.11.43' is invalid."),
+				},
+			},
+		},
+		{
+			name: "Successful Preflight Update",
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: api.ExampleOpenShiftClusterDocument().ID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: api.ExampleOpenShiftClusterDocument().ClientIDKey,
 						},
 					},
 				})
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					Key: strings.ToLower(testdatabase.GetResourcePath(api.ExampleOpenShiftClusterDocument().ID, api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name)),
 					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:       testdatabase.GetResourcePath(mockSubID, "resourceName"),
-						Name:     "resourceName",
-						Type:     "Microsoft.RedHatOpenShift/openShiftClusters",
+						ID:       testdatabase.GetResourcePath(api.ExampleOpenShiftClusterDocument().ID, api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name),
+						Name:     api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
+						Type:     api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Type,
 						Tags:     map[string]string{"tag": "will-be-kept"},
-						Location: "eastus",
+						Location: location,
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateSucceeded,
 							ClusterProfile: api.ClusterProfile{
-								Domain:               "default",
-								FipsValidatedModules: "Enabled",
-								ResourceGroupID:      "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroupTest",
+								Domain:               defaultProfile,
+								FipsValidatedModules: api.FipsValidatedModulesEnabled,
+								ResourceGroupID:      resourceGroup,
+								Version:              clusterProfileVersion,
 							},
 							NetworkProfile: api.NetworkProfile{
-								PodCIDR:     "10.128.0.0/14",
-								ServiceCIDR: "172.30.0.0/16",
+								PodCIDR:     netProfile,
+								ServiceCIDR: netProfile,
 							},
 							MasterProfile: api.MasterProfile{
-								VMSize:              "Standard_D32s_v3",
-								SubnetID:            "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/ms-eastus/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/CARO2-master",
-								DiskEncryptionSetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/ms-eastus/providers/Microsoft.Compute/diskEncryptionSets/ms-eastus-disk-encryption-set",
-								EncryptionAtHost:    "Enabled",
+								VMSize:              api.VMSizeStandardD32sV3,
+								SubnetID:            masterSub,
+								DiskEncryptionSetID: encryptionSet,
+								EncryptionAtHost:    api.EncryptionAtHostEnabled,
 							},
 							WorkerProfiles: []api.WorkerProfile{
 								{
-									Name:                "worker",
-									VMSize:              "Standard_D32s_v3",
-									DiskSizeGB:          128,
-									EncryptionAtHost:    "Enabled",
-									SubnetID:            "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/ms-eastus/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/CARO2-worker",
-									Count:               3,
-									DiskEncryptionSetID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/ms-eastus/providers/Microsoft.Compute/diskEncryptionSets/ms-eastus-disk-encryption-set",
+									Name:                api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].Name,
+									VMSize:              api.VMSizeStandardD32sV3,
+									DiskSizeGB:          api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].DiskSizeGB,
+									EncryptionAtHost:    api.EncryptionAtHostEnabled,
+									SubnetID:            workerSub,
+									Count:               api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.WorkerProfiles[0].Count,
+									DiskEncryptionSetID: encryptionSet,
 								},
 							},
 							APIServerProfile: api.APIServerProfile{
-								Visibility: "Public",
+								Visibility: api.VisibilityPublic,
 							},
 							IngressProfiles: api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.IngressProfiles,
 						},
@@ -223,18 +342,18 @@ func TestPreflightValidation(t *testing.T) {
 			name: "Failed Preflight Update",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
-					ID: mockSubID,
+					ID: api.ExampleOpenShiftClusterDocument().ID,
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateRegistered,
 						Properties: &api.SubscriptionProperties{
-							TenantID: "11111111-1111-1111-1111-111111111111",
+							TenantID: api.ExampleOpenShiftClusterDocument().ClientIDKey,
 						},
 					},
 				})
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					Key: strings.ToLower(testdatabase.GetResourcePath(api.ExampleOpenShiftClusterDocument().ID, "resourceName")),
 					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:       testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						ID:       testdatabase.GetResourcePath(api.ExampleOpenShiftClusterDocument().ID, "resourceName"),
 						Name:     "resourceName",
 						Type:     "Microsoft.RedHatOpenShift/openShiftClusters",
 						Tags:     map[string]string{"tag": "will-be-kept"},
@@ -297,7 +416,7 @@ func TestPreflightValidation(t *testing.T) {
 			}
 
 			resp, b, err := ti.request(http.MethodPost,
-				"https://server"+testdatabase.GetPreflightPath(mockSubID, "deploymentName")+"?api-version=2020-04-30",
+				"https://server"+testdatabase.GetPreflightPath(api.ExampleOpenShiftClusterDocument().ID, "deploymentName")+"?api-version=2020-04-30",
 				headers, oc)
 			if err != nil {
 				t.Error(err)

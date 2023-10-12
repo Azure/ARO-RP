@@ -70,7 +70,9 @@ func (f *frontend) preflightValidation(w http.ResponseWriter, r *http.Request) {
 }
 
 func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, raw json.RawMessage, apiVersion string, resourceID string) api.ValidationResult {
+	log.Infof("running preflight validation on resource: %s", resourceID)
 	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
+	isCreate := cosmosdb.IsErrorStatusCode(err, http.StatusNotFound)
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return api.ValidationResult{
 			Status: api.ValidationStatusFailed,
@@ -79,7 +81,6 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 			},
 		}
 	}
-	isCreate := doc == nil
 
 	// unmarshal raw to OpenShiftCluster type
 	oc := &api.OpenShiftCluster{}
@@ -101,8 +102,8 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 		}
 	}
 
-	if isCreate {
-		log.Print("preflight static create validation")
+	switch {
+	case isCreate:
 		if err = staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sV3Workers), resourceID); err != nil {
 			return api.ValidationResult{
 				Status: api.ValidationStatusFailed,
@@ -111,6 +112,7 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 				},
 			}
 		}
+		converter.ToInternal(ext, oc)
 		if err = f.validateInstallVersion(ctx, oc); err != nil {
 			return api.ValidationResult{
 				Status: api.ValidationStatusFailed,
@@ -120,8 +122,7 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 				},
 			}
 		}
-	} else {
-		log.Print("preflight static update validation")
+	default:
 		if err := staticValidator.Static(ext, doc.OpenShiftCluster, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sV3Workers), resourceID); err != nil {
 			return api.ValidationResult{
 				Status: api.ValidationStatusFailed,
@@ -131,7 +132,6 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 			}
 		}
 	}
-
 	return validationSuccess
 }
 
