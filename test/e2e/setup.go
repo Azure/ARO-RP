@@ -41,6 +41,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	redhatopenshift20220904 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2022-09-04/redhatopenshift"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
@@ -60,6 +61,7 @@ type clientSet struct {
 	Disks                 compute.DisksClient
 	NetworkSecurityGroups network.SecurityGroupsClient
 	Subnet                network.SubnetsClient
+	Storage               storage.AccountsClient
 
 	RestConfig         *rest.Config
 	HiveRestConfig     *rest.Config
@@ -341,6 +343,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		DiskEncryptionSets:    compute.NewDiskEncryptionSetsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Subnet:                network.NewSubnetsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		NetworkSecurityGroups: network.NewSecurityGroupsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Storage:               storage.NewAccountsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 
 		RestConfig:         restconfig,
 		HiveRestConfig:     hiveRestConfig,
