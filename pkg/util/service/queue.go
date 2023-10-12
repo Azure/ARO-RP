@@ -31,10 +31,12 @@ type workerQueue struct {
 	task WorkTask
 
 	disableReadinessDelay bool
-	mu                    sync.Mutex
-	cond                  *sync.Cond
-	workers               *atomic.Int64
-	stopping              *atomic.Bool
+	tickerTime            time.Duration
+
+	mu       sync.Mutex
+	cond     *sync.Cond
+	workers  *atomic.Int64
+	stopping *atomic.Bool
 }
 
 func NewWorkerQueue(ctx context.Context, log *logrus.Entry, _env env.Interface, task WorkTask) Runnable {
@@ -44,8 +46,8 @@ func NewWorkerQueue(ctx context.Context, log *logrus.Entry, _env env.Interface, 
 	}
 
 	q := &workerQueue{
-		baseLog: log,
-
+		baseLog:               log,
+		tickerTime:            10 * time.Second,
 		workers:               &atomic.Int64{},
 		stopping:              &atomic.Bool{},
 		task:                  task,
@@ -59,7 +61,8 @@ func NewWorkerQueue(ctx context.Context, log *logrus.Entry, _env env.Interface, 
 func (b *workerQueue) Run(ctx context.Context, stop <-chan struct{}, done chan<- struct{}) {
 	defer recover.Panic(b.baseLog)
 
-	t := time.NewTicker(10 * time.Second)
+	b.baseLog.Printf("starting, ticker=%v, max workers=%d", b.tickerTime, maxWorkers)
+	t := time.NewTicker(b.tickerTime)
 	defer t.Stop()
 
 	if stop != nil {
