@@ -22,21 +22,39 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 
 	serviceSubnets := r.instance.Spec.ServiceSubnets
 
-	// Only include the master and worker subnets in the storage accounts' virtual
-	// network rules if egress lockdown is not enabled.
-	if !operator.GatewayEnabled(r.instance) {
-		subnets, err := r.kubeSubnets.List(ctx)
+	subnets, err := r.kubeSubnets.List(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	// Include the master and worker subnets in the storage accounts' virtual
+	// network rules if either of the following is true:
+	// 1) The Microsoft.Storage service endpoint is still present on the subnet(s)
+	// 2) Egress lockdown is not enabled
+	for _, subnet := range subnets {
+		hasStorageEndpoint := false
+		mgmtSubnet, err := r.mgmtSubnets.Get(ctx, subnet.ResourceID)
+
 		if err != nil {
 			return err
 		}
 
-		for _, subnet := range subnets {
+		if mgmtSubnet.SubnetPropertiesFormat != nil && mgmtSubnet.SubnetPropertiesFormat.ServiceEndpoints != nil {
+			for _, serviceEndpoint := range *mgmtSubnet.SubnetPropertiesFormat.ServiceEndpoints {
+				if serviceEndpoint.Service != nil && *serviceEndpoint.Service == "Microsoft.Storage" {
+					hasStorageEndpoint = true
+				}
+			}
+		}
+
+		if hasStorageEndpoint || !operator.GatewayEnabled(r.instance) {
 			serviceSubnets = append(serviceSubnets, subnet.ResourceID)
 		}
 	}
 
 	rc := &imageregistryv1.Config{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: "cluster"}, rc)
+	err = r.client.Get(ctx, types.NamespacedName{Name: "cluster"}, rc)
 	if err != nil {
 		return err
 	}
