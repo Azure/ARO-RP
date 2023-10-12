@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"sync/atomic"
+	"sync"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -24,18 +24,22 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
+	"github.com/Azure/ARO-RP/pkg/util/service"
 )
 
 type openShiftClusterBackend struct {
 	*backend
 
-	newManager func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, database.Gateway, database.OpenShiftVersions, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument, hive.ClusterManager, metrics.Emitter) (cluster.Interface, error)
+	sleepAfterDelete time.Duration
+	q                service.Runnable
+	newManager       func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, database.Gateway, database.OpenShiftVersions, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument, hive.ClusterManager, metrics.Emitter) (cluster.Interface, error)
 }
 
 func newOpenShiftClusterBackend(b *backend) *openShiftClusterBackend {
 	return &openShiftClusterBackend{
-		backend:    b,
-		newManager: cluster.New,
+		backend:          b,
+		newManager:       cluster.New,
+		sleepAfterDelete: 20 * time.Second,
 	}
 }
 
@@ -43,7 +47,7 @@ func newOpenShiftClusterBackend(b *backend) *openShiftClusterBackend {
 // new goroutine.  It returns a boolean to the caller indicating whether it
 // succeeded in dequeuing anything - if this is false, the caller should sleep
 // before calling again
-func (ocb *openShiftClusterBackend) try(ctx context.Context) (bool, error) {
+func (ocb *openShiftClusterBackend) try(ctx context.Context, cond *sync.Cond) (bool, error) {
 	doc, err := ocb.dbOpenShiftClusters.Dequeue(ctx)
 	if err != nil || doc == nil {
 		return false, err
@@ -61,8 +65,8 @@ func (ocb *openShiftClusterBackend) try(ctx context.Context) (bool, error) {
 	}
 
 	log.Print("dequeued")
-	atomic.AddInt32(&ocb.workers, 1)
-	ocb.m.EmitGauge("backend.openshiftcluster.workers.count", int64(atomic.LoadInt32(&ocb.workers)), nil)
+	ocb.q.Workers().Add(1)
+	ocb.m.EmitGauge("backend.openshiftcluster.workers.count", ocb.q.Workers().Load(), nil)
 
 	go func() {
 		defer recover.Panic(log)
@@ -70,9 +74,9 @@ func (ocb *openShiftClusterBackend) try(ctx context.Context) (bool, error) {
 		t := time.Now()
 
 		defer func() {
-			atomic.AddInt32(&ocb.workers, -1)
-			ocb.m.EmitGauge("backend.openshiftcluster.workers.count", int64(atomic.LoadInt32(&ocb.workers)), nil)
-			ocb.cond.Signal()
+			ocb.q.Workers().Add(-1)
+			ocb.m.EmitGauge("backend.openshiftcluster.workers.count", ocb.q.Workers().Load(), nil)
+			cond.Signal()
 
 			log.WithField("duration", time.Since(t).Seconds()).Print("done")
 		}()
@@ -196,7 +200,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		// to capture the deletion (by reading from the changefeed)
 		// and stop monitoring the cluster.
 		// TODO: Provide better communication between RP and Monitor
-		time.Sleep(time.Until(t.Add(time.Second * 20)))
+		time.Sleep(time.Until(t.Add(ocb.sleepAfterDelete)))
 		return ocb.dbOpenShiftClusters.Delete(ctx, doc)
 	}
 

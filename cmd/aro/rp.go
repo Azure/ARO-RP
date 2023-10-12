@@ -151,7 +151,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	b, err := backend.NewBackend(ctx, log.WithField("component", "backend"), _env, dbAsyncOperations, dbBilling, dbGateway, dbOpenShiftClusters, dbSubscriptions, dbOpenShiftVersions, aead, metrics)
+	ocb, sb, err := backend.NewBackend(ctx, log.WithField("component", "backend"), _env, dbAsyncOperations, dbBilling, dbGateway, dbOpenShiftClusters, dbSubscriptions, dbOpenShiftVersions, aead, metrics)
 	if err != nil {
 		return err
 	}
@@ -163,17 +163,20 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 	// will go dark and external observer will know that shutdown sequence is finished
 	sigterm := make(chan os.Signal, 1)
 	doneF := make(chan struct{})
-	doneB := make(chan struct{})
+	doneOCB := make(chan struct{})
+	doneSB := make(chan struct{})
 	signal.Notify(sigterm, syscall.SIGTERM)
 
 	log.Print("listening")
-	go b.Run(ctx, stop, doneB)
+	go ocb.Run(ctx, stop, doneOCB)
+	go sb.Run(ctx, stop, doneSB)
 	go f.Run(ctx, stop, doneF)
 
 	<-sigterm
 	log.Print("received SIGTERM")
 	close(stop)
-	<-doneB
+	<-doneOCB
+	<-doneSB
 	<-doneF
 
 	return nil
