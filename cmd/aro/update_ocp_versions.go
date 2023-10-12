@@ -16,8 +16,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
-	"github.com/Azure/ARO-RP/pkg/util/encryption"
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/service"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -86,7 +84,7 @@ func getLatestOCPVersions(ctx context.Context, log *logrus.Entry) ([]api.OpenShi
 }
 
 func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenShiftVersions, error) {
-	_env, err := env.NewCore(ctx, log)
+	_env, err := env.NewCore(ctx, log, env.COMPONENT_UPDATE_OCP_VERSIONS)
 	if err != nil {
 		return nil, err
 	}
@@ -105,34 +103,9 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 		}
 	}
 
-	msiAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceManagerScope)
-	if err != nil {
-		return nil, fmt.Errorf("MSI Authorizer failed with: %s", err.Error())
-	}
+	m := statsd.NewFromEnv(ctx, _env.Logger(), _env)
 
-	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().KeyVaultScope)
-	if err != nil {
-		return nil, fmt.Errorf("MSI KeyVault Authorizer failed with: %s", err.Error())
-	}
-
-	m := statsd.NewFromEnv(ctx, log.WithField("component", "update-ocp-versions"), _env)
-
-	keyVaultPrefix := os.Getenv(service.KeyVaultPrefix)
-	serviceKeyvaultURI := keyvault.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
-	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
-
-	aead, err := encryption.NewMulti(ctx, serviceKeyvault, env.EncryptionSecretV2Name, env.EncryptionSecretName)
-	if err != nil {
-		return nil, err
-	}
-
-	dbAccountName := os.Getenv(service.DatabaseAccountName)
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer, dbAccountName)
-	if err != nil {
-		return nil, err
-	}
-
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, m, aead, dbAccountName)
+	dbc, err := service.NewDatabase(ctx, _env, log, m, service.DB_ALWAYS_MASTERKEY, true)
 	if err != nil {
 		return nil, err
 	}

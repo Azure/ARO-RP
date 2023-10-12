@@ -34,7 +34,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	env, err := env.NewCore(ctx, log)
+	env, err := env.NewCore(ctx, log, env.COMPONENT_RP)
 	if err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		log.Infof("using specified cluster version %s", osClusterVersion)
 	}
 
-	c, err := cluster.New(log, env, os.Getenv("CI") != "")
+	c, err := cluster.New(log, env, env.IsCI())
 	if err != nil {
 		return err
 	}

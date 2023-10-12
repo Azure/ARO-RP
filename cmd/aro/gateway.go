@@ -7,7 +7,6 @@ import (
 	"context"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/sirupsen/logrus"
@@ -22,7 +21,7 @@ import (
 )
 
 func gateway(ctx context.Context, log *logrus.Entry) error {
-	_env, err := env.NewCore(ctx, log)
+	_env, err := env.NewCore(ctx, log, env.COMPONENT_GATEWAY)
 	if err != nil {
 		return err
 	}
@@ -43,41 +42,12 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 
 	go g.Run()
 
-	// Access token GET request needs to be:
-	// http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=$AZURE_DBTOKEN_CLIENT_ID
-	//
-	// In this context, the "resource" parameter is passed to azidentity as a
-	// "scope" argument even though a scope normally consists of an endpoint URL.
-	scope := os.Getenv("AZURE_DBTOKEN_CLIENT_ID")
-	msiRefresherAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextGateway, scope)
+	dbc, err := service.NewDatabase(ctx, _env, log, m, service.DB_ALWAYS_DBTOKEN, false)
 	if err != nil {
 		return err
-	}
-
-	// TODO: refactor this poor man's feature flag
-	insecureSkipVerify := _env.IsLocalDevelopmentMode()
-	for _, feature := range strings.Split(os.Getenv("GATEWAY_FEATURES"), ",") {
-		if feature == "InsecureSkipVerifyDBTokenCertificate" {
-			insecureSkipVerify = true
-			break
-		}
 	}
 
 	dbName, err := service.DBName(_env.IsLocalDevelopmentMode())
-	if err != nil {
-		return err
-	}
-
-	dbc, err := service.NewDatabaseClientUsingToken(
-		ctx,
-		_env,
-		log,
-		m,
-		msiRefresherAuthorizer,
-		nil,
-		insecureSkipVerify,
-		"gateway",
-	)
 	if err != nil {
 		return err
 	}

@@ -21,7 +21,7 @@ import (
 )
 
 func dbtoken(ctx context.Context, log *logrus.Entry) error {
-	_env, err := env.NewCore(ctx, log)
+	_env, err := env.NewCore(ctx, log, env.COMPONENT_DBTOKEN)
 	if err != nil {
 		return err
 	}
@@ -41,31 +41,26 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	msiAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceManagerScope)
+	msiKVAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().KeyVaultScope)
 	if err != nil {
 		return err
 	}
 
-	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().KeyVaultScope)
-	if err != nil {
-		return err
-	}
+	m := statsd.NewFromEnv(ctx, _env.Logger(), _env)
 
-	m := statsd.NewFromEnv(ctx, log.WithField("component", "dbtoken"), _env)
-
-	g, err := golang.NewMetrics(log.WithField("component", "dbtoken"), m)
+	g, err := golang.NewMetrics(_env.Logger(), m)
 	if err != nil {
 		return err
 	}
 
 	go g.Run()
 
-	dbName, err := service.DBName(_env.IsLocalDevelopmentMode())
+	dbc, err := service.NewDatabase(ctx, _env, log, m, service.DB_ALWAYS_MASTERKEY, false)
 	if err != nil {
 		return err
 	}
 
-	dbc, err := service.NewDatabaseClientUsingMasterKey(ctx, _env, log, m, msiAuthorizer, nil)
+	dbName, err := service.DBName(_env.IsLocalDevelopmentMode())
 	if err != nil {
 		return err
 	}
@@ -107,7 +102,7 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 
 	log.Print("listening")
 
-	server, err := pkgdbtoken.NewServer(ctx, _env, log.WithField("component", "dbtoken"), log.WithField("component", "dbtoken-access"), l, servingKey, servingCerts, verifier, userc, m)
+	server, err := pkgdbtoken.NewServer(ctx, _env, _env.Logger(), log.WithField("component", "dbtoken-access"), l, servingKey, servingCerts, verifier, userc, m)
 	if err != nil {
 		return err
 	}

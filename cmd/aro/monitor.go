@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"os"
 
 	"github.com/Azure/go-autorest/tracing"
 	"github.com/sirupsen/logrus"
@@ -20,13 +19,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
 	pkgmonitor "github.com/Azure/ARO-RP/pkg/monitor"
 	"github.com/Azure/ARO-RP/pkg/proxy"
-	"github.com/Azure/ARO-RP/pkg/util/encryption"
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/service"
 )
 
 func monitor(ctx context.Context, log *logrus.Entry) error {
-	_env, err := env.NewEnv(ctx, log)
+	_env, err := env.NewEnv(ctx, log, env.COMPONENT_MONITOR)
 	if err != nil {
 		return err
 	}
@@ -67,27 +64,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 
 	clusterm := statsd.NewFromEnv(ctx, log.WithField("component", "metrics"), _env, "CLUSTER")
 
-	msiAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceManagerScope)
-	if err != nil {
-		return err
-	}
-
-	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().KeyVaultScope)
-	if err != nil {
-		return err
-	}
-
-	keyVaultPrefix := os.Getenv(service.KeyVaultPrefix)
-	// TODO: should not be using the service keyvault here
-	serviceKeyvaultURI := keyvault.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
-	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
-
-	aead, err := encryption.NewMulti(ctx, serviceKeyvault, env.EncryptionSecretV2Name, env.EncryptionSecretName)
-	if err != nil {
-		return err
-	}
-
-	dbc, err := service.NewDatabaseClientUsingMasterKey(ctx, _env, log, &noop.Noop{}, msiAuthorizer, aead)
+	dbc, err := service.NewDatabase(ctx, _env, log, &noop.Noop{}, service.DB_ALWAYS_MASTERKEY, true)
 	if err != nil {
 		return err
 	}
@@ -121,7 +98,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), dialer, dbMonitors, dbOpenShiftClusters, dbSubscriptions, m, clusterm, liveConfig, _env)
+	mon := pkgmonitor.NewMonitor(_env.Logger(), dialer, dbMonitors, dbOpenShiftClusters, dbSubscriptions, m, clusterm, liveConfig, _env)
 
 	return mon.Run(ctx)
 }

@@ -41,7 +41,7 @@ import (
 func rp(ctx context.Context, log, audit *logrus.Entry) error {
 	stop := make(chan struct{})
 
-	_env, err := env.NewEnv(ctx, log)
+	_env, err := env.NewEnv(ctx, log, env.COMPONENT_RP)
 	if err != nil {
 		return err
 	}
@@ -87,23 +87,12 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 
 	clusterm := statsd.NewFromEnv(ctx, log.WithField("component", "metrics"), _env, "CLUSTER")
 
-	msiAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceManagerScope)
-	if err != nil {
-		return err
-	}
-
 	aead, err := encryption.NewMulti(ctx, _env.ServiceKeyvault(), env.EncryptionSecretV2Name, env.EncryptionSecretName)
 	if err != nil {
 		return err
 	}
 
-	dbAccountName := os.Getenv(service.DatabaseAccountName)
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer, dbAccountName)
-	if err != nil {
-		return err
-	}
-
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, metrics, aead, dbAccountName)
+	dbc, err := service.NewDatabase(ctx, _env, log, metrics, service.DB_ALWAYS_MASTERKEY, true)
 	if err != nil {
 		return err
 	}
