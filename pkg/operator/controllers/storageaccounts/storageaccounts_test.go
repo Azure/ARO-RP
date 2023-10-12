@@ -163,64 +163,8 @@ func TestReconcileManager(t *testing.T) {
 			},
 		},
 		{
-			name:         "Operator Flag enabled - all rules to all accounts because egress lockdown not enabled",
+			name:         "Operator Flag enabled - all rules to all accounts",
 			operatorFlag: true,
-			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_subnet.MockManager) {
-				// Azure subnets
-				masterSubnet := getValidSubnet(resourceIdMaster)
-				workerSubnet := getValidSubnet(resourceIdWorker)
-
-				// Service endpoints should be there if egress lockdown hasn't yet been enabled, but let's
-				// pessimistically assume they have somehow been removed so we have the opportunity to
-				// test a messy edge case.
-				masterSubnet.ServiceEndpoints = nil
-				workerSubnet.ServiceEndpoints = nil
-
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdMaster).Return(masterSubnet, nil)
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdWorker).Return(workerSubnet, nil)
-
-				// cluster subnets
-				kubeSubnet.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
-					{
-						ResourceID: resourceIdMaster,
-						IsMaster:   true,
-					},
-					{
-						ResourceID: resourceIdWorker,
-						IsMaster:   false,
-					},
-				}, nil)
-
-				// storage objects in azure
-				result := getValidAccount([]string{})
-				updated := mgmtstorage.AccountUpdateParameters{
-					AccountPropertiesUpdateParameters: &mgmtstorage.AccountPropertiesUpdateParameters{
-						NetworkRuleSet: getValidAccount([]string{resourceIdMaster, resourceIdWorker}).NetworkRuleSet,
-					},
-				}
-
-				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, gomock.Any()).Return(*result, nil)
-				storage.EXPECT().Update(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, updated)
-
-				// we can't reuse these from above due to fact how gomock handles objects.
-				// they are modified by the functions so they are not the same anymore
-				result = getValidAccount([]string{})
-				updated = mgmtstorage.AccountUpdateParameters{
-					AccountPropertiesUpdateParameters: &mgmtstorage.AccountPropertiesUpdateParameters{
-						NetworkRuleSet: getValidAccount([]string{resourceIdMaster, resourceIdWorker}).NetworkRuleSet,
-					},
-				}
-
-				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, gomock.Any()).Return(*result, nil)
-				storage.EXPECT().Update(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, updated)
-			},
-		},
-		{
-			name:         "Operator flag and egress lockdown enabled - all rules to all accounts because storage service endpoint on subnets",
-			operatorFlag: true,
-			instance: func(cluster *arov1alpha1.Cluster) {
-				cluster.Spec.GatewayDomains = []string{"somegatewaydomain.com"}
-			},
 			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_subnet.MockManager) {
 				// Azure subnets
 				masterSubnet := getValidSubnet(resourceIdMaster)
@@ -266,11 +210,8 @@ func TestReconcileManager(t *testing.T) {
 			},
 		},
 		{
-			name:         "Operator flag and egress lockdown enabled - worker subnet rule to all accounts because storage service endpoint on worker subnet",
+			name:         "Operator flag enabled - worker subnet rule to all accounts because storage service endpoint on worker subnet",
 			operatorFlag: true,
-			instance: func(cluster *arov1alpha1.Cluster) {
-				cluster.Spec.GatewayDomains = []string{"somegatewaydomain.com"}
-			},
 			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_subnet.MockManager) {
 				// Azure subnets
 				masterSubnet := getValidSubnet(resourceIdMaster)
@@ -318,11 +259,8 @@ func TestReconcileManager(t *testing.T) {
 			},
 		},
 		{
-			name:         "Operator Flag and egress lockdown enabled - nothing to do because there are no service endpoints",
+			name:         "Operator flag enabled - nothing to do because no service endpoints",
 			operatorFlag: true,
-			instance: func(cluster *arov1alpha1.Cluster) {
-				cluster.Spec.GatewayDomains = []string{"somegatewaydomain.com"}
-			},
 			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_subnet.MockManager) {
 				// Azure subnets
 				masterSubnet := getValidSubnet(resourceIdMaster)
@@ -348,7 +286,6 @@ func TestReconcileManager(t *testing.T) {
 
 				// storage objects in azure
 				result := getValidAccount([]string{})
-
 				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, gomock.Any()).Return(*result, nil)
 				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, gomock.Any()).Return(*result, nil)
 			},

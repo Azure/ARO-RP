@@ -13,7 +13,6 @@ import (
 	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -28,10 +27,8 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 		return err
 	}
 
-	// Include the master and worker subnets in the storage accounts' virtual
-	// network rules if either of the following is true:
-	// 1) The Microsoft.Storage service endpoint is still present on the subnet(s)
-	// 2) Egress lockdown is not enabled
+	// Check each of the cluster subnets for the Microsoft.Storage service endpoint. If the subnet has
+	// the service endpoint, it needs to be included in the storage account vnet rules.
 	for _, subnet := range subnets {
 		hasStorageEndpoint := false
 		mgmtSubnet, err := r.mgmtSubnets.Get(ctx, subnet.ResourceID)
@@ -48,7 +45,7 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 			}
 		}
 
-		if hasStorageEndpoint || !operator.GatewayEnabled(r.instance) {
+		if hasStorageEndpoint {
 			serviceSubnets = append(serviceSubnets, subnet.ResourceID)
 		}
 	}
