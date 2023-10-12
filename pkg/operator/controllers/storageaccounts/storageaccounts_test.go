@@ -27,6 +27,7 @@ import (
 )
 
 var (
+	location                 = "eastus"
 	subscriptionId           = "0000000-0000-0000-0000-000000000000"
 	clusterResourceGroupName = "aro-iljrzb5a"
 	clusterResourceGroupId   = "/subscriptions/" + subscriptionId + "/resourcegroups/" + clusterResourceGroupName
@@ -49,6 +50,7 @@ func getValidClusterInstance(operatorFlag bool) *arov1alpha1.Cluster {
 	return &arov1alpha1.Cluster{
 		Spec: arov1alpha1.ClusterSpec{
 			ClusterResourceGroupID: clusterResourceGroupId,
+			Location:               location,
 			StorageSuffix:          storageSuffix,
 			OperatorFlags: arov1alpha1.OperatorFlags{
 				controllerEnabled: strconv.FormatBool(operatorFlag),
@@ -88,6 +90,7 @@ func getValidSubnet(resourceId string) *mgmtnetwork.Subnet {
 	for _, endpoint := range api.SubnetsEndpoints {
 		*s.SubnetPropertiesFormat.ServiceEndpoints = append(*s.SubnetPropertiesFormat.ServiceEndpoints, mgmtnetwork.ServiceEndpointPropertiesFormat{
 			Service:           to.StringPtr(endpoint),
+			Locations:         &[]string{location},
 			ProvisioningState: mgmtnetwork.Succeeded,
 		})
 	}
@@ -290,6 +293,53 @@ func TestReconcileManager(t *testing.T) {
 				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, gomock.Any()).Return(*result, nil)
 			},
 		},
+		{
+			name:         "Operator flag enabled - nothing to do because the storage endpoint is there but the location does not match the cluster",
+			operatorFlag: true,
+			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_subnet.MockManager) {
+				// Azure subnets
+				masterSubnet := getValidSubnet(resourceIdMaster)
+				workerSubnet := getValidSubnet(resourceIdWorker)
+
+				newMasterServiceEndpoints := []mgmtnetwork.ServiceEndpointPropertiesFormat{}
+
+				for _, se := range *masterSubnet.ServiceEndpoints {
+					se.Locations = &[]string{"not_a_real_place"}
+					newMasterServiceEndpoints = append(newMasterServiceEndpoints, se)
+				}
+
+				masterSubnet.ServiceEndpoints = &newMasterServiceEndpoints
+
+				newWorkerServiceEndpoints := []mgmtnetwork.ServiceEndpointPropertiesFormat{}
+
+				for _, se := range *workerSubnet.ServiceEndpoints {
+					se.Locations = &[]string{"not_a_real_place"}
+					newWorkerServiceEndpoints = append(newWorkerServiceEndpoints, se)
+				}
+
+				workerSubnet.ServiceEndpoints = &newWorkerServiceEndpoints
+
+				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdMaster).Return(masterSubnet, nil)
+				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdWorker).Return(workerSubnet, nil)
+
+				// cluster subnets
+				kubeSubnet.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
+					{
+						ResourceID: resourceIdMaster,
+						IsMaster:   true,
+					},
+					{
+						ResourceID: resourceIdWorker,
+						IsMaster:   false,
+					},
+				}, nil)
+
+				// storage objects in azure
+				result := getValidAccount([]string{})
+				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, gomock.Any()).Return(*result, nil)
+				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, gomock.Any()).Return(*result, nil)
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
@@ -297,10 +347,10 @@ func TestReconcileManager(t *testing.T) {
 
 			storage := mock_storage.NewMockAccountsClient(controller)
 			kubeSubnet := mock_subnet.NewMockKubeManager(controller)
-			mgmtSubnet := mock_subnet.NewMockManager(controller)
+			subnet := mock_subnet.NewMockManager(controller)
 
 			if tt.mocks != nil {
-				tt.mocks(storage, kubeSubnet, mgmtSubnet)
+				tt.mocks(storage, kubeSubnet, subnet)
 			}
 
 			instance := getValidClusterInstance(tt.operatorFlag)
@@ -327,7 +377,7 @@ func TestReconcileManager(t *testing.T) {
 				instance:       instance,
 				subscriptionID: subscriptionId,
 				storage:        storage,
-				mgmtSubnets:    mgmtSubnet,
+				subnets:        subnet,
 				kubeSubnets:    kubeSubnet,
 				client:         clientFake,
 			}

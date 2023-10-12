@@ -17,12 +17,12 @@ import (
 )
 
 func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
+	location := r.instance.Spec.Location
 	resourceGroup := stringutils.LastTokenByte(r.instance.Spec.ClusterResourceGroupID, '/')
 
 	serviceSubnets := r.instance.Spec.ServiceSubnets
 
 	subnets, err := r.kubeSubnets.List(ctx)
-
 	if err != nil {
 		return err
 	}
@@ -30,23 +30,30 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 	// Check each of the cluster subnets for the Microsoft.Storage service endpoint. If the subnet has
 	// the service endpoint, it needs to be included in the storage account vnet rules.
 	for _, subnet := range subnets {
-		hasStorageEndpoint := false
-		mgmtSubnet, err := r.mgmtSubnets.Get(ctx, subnet.ResourceID)
-
+		mgmtSubnet, err := r.subnets.Get(ctx, subnet.ResourceID)
 		if err != nil {
 			return err
 		}
 
 		if mgmtSubnet.SubnetPropertiesFormat != nil && mgmtSubnet.SubnetPropertiesFormat.ServiceEndpoints != nil {
 			for _, serviceEndpoint := range *mgmtSubnet.SubnetPropertiesFormat.ServiceEndpoints {
-				if serviceEndpoint.Service != nil && *serviceEndpoint.Service == "Microsoft.Storage" {
-					hasStorageEndpoint = true
+				isStorageEndpoint := (serviceEndpoint.Service != nil) && (*serviceEndpoint.Service == "Microsoft.Storage")
+				matchesClusterLocation := false
+
+				if serviceEndpoint.Locations != nil {
+					for _, l := range *serviceEndpoint.Locations {
+						if l == "*" || l == location {
+							matchesClusterLocation = true
+							break
+						}
+					}
+				}
+
+				if isStorageEndpoint && matchesClusterLocation {
+					serviceSubnets = append(serviceSubnets, subnet.ResourceID)
+					break
 				}
 			}
-		}
-
-		if hasStorageEndpoint {
-			serviceSubnets = append(serviceSubnets, subnet.ResourceID)
 		}
 	}
 

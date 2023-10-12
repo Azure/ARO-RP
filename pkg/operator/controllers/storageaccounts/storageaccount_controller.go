@@ -48,7 +48,7 @@ type reconcileManager struct {
 
 	client      client.Client
 	kubeSubnets subnet.KubeManager
-	mgmtSubnets subnet.Manager
+	subnets     subnet.Manager
 	storage     storage.AccountsClient
 }
 
@@ -104,7 +104,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 		client:      r.client,
 		kubeSubnets: subnet.NewKubeManager(r.client, resource.SubscriptionID),
-		mgmtSubnets: subnet.NewManager(&azEnv, resource.SubscriptionID, authorizer),
+		subnets:     subnet.NewManager(&azEnv, resource.SubscriptionID, authorizer),
 		storage:     storage.NewAccountsClient(&azEnv, resource.SubscriptionID, authorizer),
 	}
 
