@@ -556,9 +556,15 @@ func (m *manager) networkPublicLoadBalancer(azureRegion string, outboundIPs []ap
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn:  []string{},
 	}
+
+	if m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs == nil && m.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
+		armResource.DependsOn = append(armResource.DependsOn, "Microsoft.Network/publicIPAddresses/"+m.doc.OpenShiftCluster.Properties.InfraID+"-pip-v4")
+	}
+
 	for _, ip := range outboundIPs {
 		ipName := stringutils.LastTokenByte(ip.ID, '/')
 		armResource.DependsOn = append(armResource.DependsOn, "Microsoft.Network/publicIPAddresses/"+ipName)
 	}
+
 	return armResource
 }
