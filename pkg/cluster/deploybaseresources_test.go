@@ -405,10 +405,11 @@ func TestEnsureInfraID(t *testing.T) {
 
 func TestSubnetsWithServiceEndpoints(t *testing.T) {
 	ctx := context.Background()
-	masterSubnet := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/master-subnet"
-	workerSubnetFormatString := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/%s"
+	masterSubnet := strings.ToLower("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/master-subnet")
+	workerSubnetFormatString := strings.ToLower("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/%s")
 	resourceID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName"
 	serviceEndpoint := "Microsoft.Storage"
+	location := "eastus"
 
 	for _, tt := range []struct {
 		name          string
@@ -425,13 +426,38 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 			wantSubnets: []string{},
 		},
 		{
-			name: "master subnet has service endpoint",
+			name: "master subnet has service endpoint, but incorrect location",
 			mocks: func(subnet *mock_subnet.MockManager) {
 				subnet.EXPECT().Get(ctx, masterSubnet).Return(&mgmtnetwork.Subnet{
 					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 						ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
 							{
 								Service: &serviceEndpoint,
+								Locations: &[]string{
+									"bad-location",
+								},
+							},
+						},
+					},
+				}, nil)
+				subnet.EXPECT().Get(ctx, fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001")).Return(&mgmtnetwork.Subnet{}, nil)
+			},
+			workerSubnets: []string{
+				fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001"),
+			},
+			wantSubnets: []string{},
+		},
+		{
+			name: "master subnet has service endpoint with correct location",
+			mocks: func(subnet *mock_subnet.MockManager) {
+				subnet.EXPECT().Get(ctx, masterSubnet).Return(&mgmtnetwork.Subnet{
+					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+						ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
+							{
+								Service: &serviceEndpoint,
+								Locations: &[]string{
+									location,
+								},
 							},
 						},
 					},
@@ -444,13 +470,38 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 			wantSubnets: []string{masterSubnet},
 		},
 		{
-			name: "all subnets have service endpoint",
+			name: "master subnet has service endpoint with all location",
+			mocks: func(subnet *mock_subnet.MockManager) {
+				subnet.EXPECT().Get(ctx, masterSubnet).Return(&mgmtnetwork.Subnet{
+					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+						ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
+							{
+								Service: &serviceEndpoint,
+								Locations: &[]string{
+									"*",
+								},
+							},
+						},
+					},
+				}, nil)
+				subnet.EXPECT().Get(ctx, fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001")).Return(&mgmtnetwork.Subnet{}, nil)
+			},
+			workerSubnets: []string{
+				fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001"),
+			},
+			wantSubnets: []string{masterSubnet},
+		},
+		{
+			name: "all subnets have service endpoint with correct locations",
 			mocks: func(subnet *mock_subnet.MockManager) {
 				subnetWithServiceEndpoint := &mgmtnetwork.Subnet{
 					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 						ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
 							{
 								Service: &serviceEndpoint,
+								Locations: &[]string{
+									"*",
+								},
 							},
 						},
 					},
@@ -475,6 +526,9 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 						ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
 							{
 								Service: &serviceEndpoint,
+								Locations: &[]string{
+									location,
+								},
 							},
 						},
 					},
@@ -524,8 +578,9 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 					Key: strings.ToLower(resourceID),
 
 					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   resourceID,
-						Name: "FoobarCluster",
+						ID:       resourceID,
+						Name:     "FoobarCluster",
+						Location: location,
 
 						Properties: api.OpenShiftClusterProperties{
 							MasterProfile: api.MasterProfile{
