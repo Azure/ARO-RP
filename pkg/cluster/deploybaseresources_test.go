@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -396,6 +398,155 @@ func TestEnsureInfraID(t *testing.T) {
 
 			if checkDoc.OpenShiftCluster.Properties.InfraID != tt.wantedInfraID {
 				t.Fatalf("%s != %s (wanted)", checkDoc.OpenShiftCluster.Properties.InfraID, tt.wantedInfraID)
+			}
+		})
+	}
+}
+
+func TestSubnetsWithServiceEndpoints(t *testing.T) {
+	ctx := context.Background()
+	masterSubnet := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/master-subnet"
+	workerSubnetFormatString := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/%s"
+	resourceID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName"
+	serviceEndpoint := "Microsoft.Storage"
+
+	for _, tt := range []struct {
+		name          string
+		mocks         func(subnet *mock_subnet.MockManager)
+		workerSubnets []string
+		wantSubnets   []string
+		wantErr       string
+	}{
+		{
+			name: "no service endpoints set returns empty string slice",
+			mocks: func(subnet *mock_subnet.MockManager) {
+				subnet.EXPECT().Get(ctx, masterSubnet).Return(&mgmtnetwork.Subnet{}, nil)
+			},
+			wantSubnets: []string{},
+		},
+		{
+			name: "master subnet has service endpoint",
+			mocks: func(subnet *mock_subnet.MockManager) {
+				subnet.EXPECT().Get(ctx, masterSubnet).Return(&mgmtnetwork.Subnet{
+					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+						ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
+							{
+								Service: &serviceEndpoint,
+							},
+						},
+					},
+				}, nil)
+				subnet.EXPECT().Get(ctx, fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001")).Return(&mgmtnetwork.Subnet{}, nil)
+			},
+			workerSubnets: []string{
+				fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001"),
+			},
+			wantSubnets: []string{masterSubnet},
+		},
+		{
+			name: "all subnets have service endpoint",
+			mocks: func(subnet *mock_subnet.MockManager) {
+				subnetWithServiceEndpoint := &mgmtnetwork.Subnet{
+					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+						ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
+							{
+								Service: &serviceEndpoint,
+							},
+						},
+					},
+				}
+
+				subnet.EXPECT().Get(ctx, masterSubnet).Return(subnetWithServiceEndpoint, nil)
+				subnet.EXPECT().Get(ctx, fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001")).Return(subnetWithServiceEndpoint, nil)
+			},
+			workerSubnets: []string{
+				fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001"),
+			},
+			wantSubnets: []string{
+				masterSubnet,
+				fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001"),
+			},
+		},
+		{
+			name: "mixed subnets with service endpoint",
+			mocks: func(subnet *mock_subnet.MockManager) {
+				subnetWithServiceEndpoint := &mgmtnetwork.Subnet{
+					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+						ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
+							{
+								Service: &serviceEndpoint,
+							},
+						},
+					},
+				}
+
+				subnet.EXPECT().Get(ctx, masterSubnet).Return(subnetWithServiceEndpoint, nil)
+				subnet.EXPECT().Get(ctx, fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001")).Return(subnetWithServiceEndpoint, nil)
+				subnet.EXPECT().Get(ctx, fmt.Sprintf(workerSubnetFormatString, "worker-subnet-002")).Return(&mgmtnetwork.Subnet{}, nil)
+			},
+			workerSubnets: []string{
+				fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001"),
+				fmt.Sprintf(workerSubnetFormatString, "worker-subnet-002"),
+				"",
+			},
+			wantSubnets: []string{
+				masterSubnet,
+				fmt.Sprintf(workerSubnetFormatString, "worker-subnet-001"),
+			},
+		},
+		{
+			name: "Get subnet returns error",
+			mocks: func(subnet *mock_subnet.MockManager) {
+				subnet.EXPECT().Get(ctx, masterSubnet).Return(nil, errors.New("generic error"))
+			},
+			workerSubnets: []string{},
+			wantErr:       "generic error",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			subnet := mock_subnet.NewMockManager(controller)
+			tt.mocks(subnet)
+
+			workerProfiles := []api.WorkerProfile{}
+			if tt.workerSubnets != nil {
+				for _, subnet := range tt.workerSubnets {
+					workerProfiles = append(workerProfiles, api.WorkerProfile{
+						SubnetID: subnet,
+					})
+				}
+			}
+
+			m := &manager{
+				doc: &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(resourceID),
+
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   resourceID,
+						Name: "FoobarCluster",
+
+						Properties: api.OpenShiftClusterProperties{
+							MasterProfile: api.MasterProfile{
+								SubnetID: masterSubnet,
+							},
+							WorkerProfiles: workerProfiles,
+						},
+					},
+				},
+				subnet: subnet,
+			}
+
+			subnets, err := m.subnetsWithServiceEndpoint(ctx, serviceEndpoint)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+
+			// sort slices for ordering
+			sort.Strings(subnets)
+			sort.Strings(tt.wantSubnets)
+
+			if !reflect.DeepEqual(subnets, tt.wantSubnets) {
+				t.Errorf("got: %v, wanted %v", subnets, tt.wantSubnets)
 			}
 		})
 	}
