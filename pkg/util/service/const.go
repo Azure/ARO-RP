@@ -9,3 +9,12 @@ const (
 	KeyVaultPrefix      = "KEYVAULT_PREFIX"
 	DBTokenUrl          = "DBTOKEN_URL"
 )
+
+type DB_TYPE int
+
+const (
+	_ DB_TYPE = iota
+	DB_ALWAYS_MASTERKEY
+	DB_ALWAYS_DBTOKEN
+	DB_DBTOKEN_PROD_MASTERKEY_DEV
+)

@@ -17,13 +17,15 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
+	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
-func NewDatabaseClientUsingToken(ctx context.Context, _env env.Core, log *logrus.Entry, m metrics.Emitter, authorizer autorest.Authorizer, aead encryption.AEAD, insecureSkipVerify bool, component string) (cosmosdb.DatabaseClient, error) {
+func NewDatabaseClientUsingToken(ctx context.Context, _env env.Core, log *logrus.Entry, m metrics.Emitter, authorizer autorest.Authorizer, aead encryption.AEAD) (cosmosdb.DatabaseClient, error) {
 	accountName := os.Getenv(DatabaseAccountName)
+	insecureSkipVerify := _env.IsLocalDevelopmentMode()
 
 	dbc, err := database.NewDatabaseClient(
-		log.WithField("component", component),
+		log.WithField("component", "database"),
 		_env,
 		nil,
 		m,
@@ -44,9 +46,7 @@ func NewDatabaseClientUsingToken(ctx context.Context, _env env.Core, log *logrus
 		authorizer,
 		insecureSkipVerify,
 		dbc,
-		component,
 		m,
-		component,
 		dbTokenURL,
 	)
 
@@ -81,4 +81,47 @@ func NewDatabaseClientUsingMasterKey(ctx context.Context, _env env.Core, log *lo
 		return nil, err
 	}
 	return dbc, nil
+}
+
+func NewDatabase(ctx context.Context, _env env.Core, log *logrus.Entry, m metrics.Emitter, dbPreference DB_TYPE, withAEAD bool) (cosmosdb.DatabaseClient, error) {
+	var aead encryption.AEAD
+
+	if withAEAD {
+		msiKVAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().KeyVaultScope)
+		if err != nil {
+			return nil, err
+		}
+
+		keyVaultPrefix := os.Getenv(KeyVaultPrefix)
+		// TODO: should not be using the service keyvault here
+		serviceKeyvaultURI := keyvault.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
+		serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
+
+		aead, err = encryption.NewMulti(ctx, serviceKeyvault, env.EncryptionSecretV2Name, env.EncryptionSecretName)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if dbPreference == DB_ALWAYS_DBTOKEN || (dbPreference == DB_DBTOKEN_PROD_MASTERKEY_DEV && _env.IsLocalDevelopmentMode()) {
+		msiAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().ResourceManagerScope)
+		if err != nil {
+			return nil, err
+		}
+
+		return NewDatabaseClientUsingMasterKey(ctx, _env, log, m, msiAuthorizer, aead)
+	}
+
+	// Access token GET request needs to be:
+	// http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=$AZURE_DBTOKEN_CLIENT_ID
+	//
+	// In this context, the "resource" parameter is passed to azidentity as a
+	// "scope" argument even though a scope normally consists of an endpoint URL.
+	scope := os.Getenv("AZURE_" + _env.Component() + "_CLIENT_ID")
+	msiRefresherAuthorizer, err := _env.NewMSIAuthorizer(scope)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewDatabaseClientUsingToken(ctx, _env, log, m, msiRefresherAuthorizer, aead)
 }
