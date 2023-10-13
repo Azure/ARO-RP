@@ -107,15 +107,28 @@ var _ = Describe("Cluster", func() {
 				mgmtSubnet.SubnetPropertiesFormat.ServiceEndpoints = &[]mgmtnetwork.ServiceEndpointPropertiesFormat{}
 			}
 
-			serviceEndpoint := mgmtnetwork.ServiceEndpointPropertiesFormat{
-				Service:   to.StringPtr("Microsoft.Storage"),
-				Locations: &[]string{"*"},
+			// Check whether service endpoint is already there before trying to add
+			// it; trying to add a duplicate results in an error
+			subnetHasStorageEndpoint := false
+
+			for _, se := range *mgmtSubnet.ServiceEndpoints {
+				if se.Service != nil && *se.Service == "Microsoft.Storage" {
+					subnetHasStorageEndpoint = true
+					break
+				}
 			}
 
-			*mgmtSubnet.ServiceEndpoints = append(*mgmtSubnet.ServiceEndpoints, serviceEndpoint)
+			if !subnetHasStorageEndpoint {
+				storageEndpoint := mgmtnetwork.ServiceEndpointPropertiesFormat{
+					Service:   to.StringPtr("Microsoft.Storage"),
+					Locations: &[]string{"*"},
+				}
 
-			err = clients.Subnet.CreateOrUpdateAndWait(ctx, vnetResourceGroup, vnetR.ResourceName, subnetName, mgmtSubnet)
-			Expect(err).NotTo(HaveOccurred())
+				*mgmtSubnet.ServiceEndpoints = append(*mgmtSubnet.ServiceEndpoints, storageEndpoint)
+
+				err = clients.Subnet.CreateOrUpdateAndWait(ctx, vnetResourceGroup, vnetR.ResourceName, subnetName, mgmtSubnet)
+				Expect(err).NotTo(HaveOccurred())
+			}
 		}
 
 		// PUCM would be more reliable to check against,
@@ -250,13 +263,14 @@ func clusterSubnets(oc redhatopenshift.OpenShiftCluster) []string {
 
 	// TODO: change to workerProfileStatuses when we bump the API to 20230904 stable
 	for _, p := range *oc.OpenShiftClusterProperties.WorkerProfiles {
-		subnetMap[*p.SubnetID] = struct{}{}
+		s := strings.ToLower(*p.SubnetID)
+		subnetMap[s] = struct{}{}
 	}
 
 	subnets := []string{}
 
 	for subnet := range subnetMap {
-		subnets = append(subnets, strings.ToLower(subnet))
+		subnets = append(subnets, subnet)
 	}
 
 	return subnets
