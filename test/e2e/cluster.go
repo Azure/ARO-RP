@@ -43,18 +43,30 @@ var _ = Describe("Cluster", Serial, func() {
 		By("verifying the namespace is ready")
 		Eventually(func(ctx context.Context) error {
 			return p.Verify(ctx)
+<<<<<<< HEAD
 		}).WithContext(ctx).WithTimeout(5 * time.Minute).Should(BeNil())
+=======
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(BeNil())
+	})
+>>>>>>> ea9833fbd (Add eventually timeout when we use contexts)
 
 		DeferCleanup(func(ctx context.Context) {
 			By("deleting a test namespace")
 			err := p.Delete(ctx)
 			Expect(err).NotTo(HaveOccurred(), "Failed to delete test namespace")
 
+<<<<<<< HEAD
 			By("verifying the namespace is deleted")
 			Eventually(func(ctx context.Context) error {
 				return p.VerifyProjectIsDeleted(ctx)
 			}).WithContext(ctx).WithTimeout(5 * time.Minute).Should(BeNil())
 		})
+=======
+		By("verifying the namespace is deleted")
+		Eventually(func(ctx context.Context) error {
+			return p.VerifyProjectIsDeleted(ctx)
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(BeNil())
+>>>>>>> ea9833fbd (Add eventually timeout when we use contexts)
 	})
 
 	It("can run a stateful set which is using Azure Disk storage", func(ctx context.Context) {
@@ -77,6 +89,7 @@ var _ = Describe("Cluster", Serial, func() {
 			g.Expect(err).NotTo(HaveOccurred())
 
 			g.Expect(ready.StatefulSetIsReady(s)).To(BeTrue(), "expect stateful to be ready")
+<<<<<<< HEAD
 		}).WithContext(ctx).WithTimeout(5 * time.Minute).Should(Succeed())
 	})
 
@@ -202,6 +215,9 @@ var _ = Describe("Cluster", Serial, func() {
 			err = clients.Subnet.CreateOrUpdateAndWait(ctx, vnetResourceGroup, vnetR.ResourceName, subnetName, mgmtSubnet)
 			Expect(err).NotTo(HaveOccurred())
 		}
+=======
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+>>>>>>> ea9833fbd (Add eventually timeout when we use contexts)
 	})
 
 	It("can create load balancer services", func(ctx context.Context) {
@@ -222,7 +238,7 @@ var _ = Describe("Cluster", Serial, func() {
 				return false
 			}
 			return ready.ServiceIsReady(svc)
-		}).WithContext(ctx).Should(BeTrue())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(BeTrue())
 
 		By("verifying the internal load balancer service is ready")
 		Eventually(func(ctx context.Context) bool {
@@ -231,7 +247,7 @@ var _ = Describe("Cluster", Serial, func() {
 				return false
 			}
 			return ready.ServiceIsReady(svc)
-		}).WithContext(ctx).Should(BeTrue())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(BeTrue())
 	})
 
 	// mainly we want to test the gateway/egress functionality - this request for the image will travel from
@@ -249,7 +265,7 @@ var _ = Describe("Cluster", Serial, func() {
 			g.Expect(err).NotTo(HaveOccurred())
 
 			g.Expect(ready.DeploymentIsReady(s)).To(BeTrue(), "expect stateful to be ready")
-		}).WithContext(ctx).Should(Succeed())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
 })
 
