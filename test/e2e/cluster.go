@@ -287,11 +287,11 @@ func createStatefulSet(ctx context.Context, cli kubernetes.Interface, storageCla
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"app": "busybox"},
+				MatchLabels: map[string]string{"app": fmt.Sprintf("busybox-%s", storageClass)},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{"app": "busybox"},
+					Labels: map[string]string{"app": fmt.Sprintf("busybox-%s", storageClass)},
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -305,7 +305,7 @@ func createStatefulSet(ctx context.Context, cli kubernetes.Interface, storageCla
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "busybox",
+									Name:      fmt.Sprintf("busybox-%s", storageClass),
 									MountPath: "/data",
 									ReadOnly:  false,
 								},
@@ -317,7 +317,7 @@ func createStatefulSet(ctx context.Context, cli kubernetes.Interface, storageCla
 			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "busybox",
+						Name: fmt.Sprintf("busybox-%s", storageClass),
 					},
 					Spec: corev1.PersistentVolumeClaimSpec{
 						AccessModes: []corev1.PersistentVolumeAccessMode{
