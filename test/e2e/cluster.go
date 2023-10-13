@@ -79,7 +79,7 @@ var _ = Describe("Cluster", func() {
 			g.Expect(err).NotTo(HaveOccurred())
 
 			g.Expect(ready.StatefulSetIsReady(s)).To(BeTrue(), "expect stateful to be ready")
-		}).WithContext(ctx).Should(Succeed())
+		}).Should(Succeed())
 	})
 
 	It("can run a stateful set which is using the default Azure File storage class backed by the cluster storage account", func(ctx context.Context) {
@@ -169,7 +169,7 @@ var _ = Describe("Cluster", func() {
 				g.Expect(nAclSubnets).To(ContainElement(strings.ToLower(subnet)))
 			}
 
-		}).WithContext(ctx).Should(Succeed())
+		}).Should(Succeed())
 
 		By("creating stateful set")
 		storageClass := "azurefile-csi"
@@ -182,7 +182,7 @@ var _ = Describe("Cluster", func() {
 			g.Expect(err).NotTo(HaveOccurred())
 
 			g.Expect(ready.StatefulSetIsReady(s)).To(BeTrue(), "expect stateful to be ready")
-		}).WithContext(ctx).Should(Succeed())
+		}).Should(Succeed())
 
 		By("cleaning up the cluster subnets (removing service endpoints)")
 		for _, s := range ocpSubnets {
