@@ -225,7 +225,7 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 
 			ctx := context.Background()
 
-			r := NewMachineHealthCheckReconciler(
+			r := NewReconciler(
 				logrus.NewEntry(logrus.StandardLogger()),
 				clientBuilder.Build(),
 				mdh,

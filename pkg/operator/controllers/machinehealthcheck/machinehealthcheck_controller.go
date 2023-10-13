@@ -37,14 +37,14 @@ const (
 	enabled        string = "aro.machinehealthcheck.enabled"
 )
 
-type MachineHealthCheckReconciler struct {
+type Reconciler struct {
 	base.AROController
 
 	dh dynamichelper.Interface
 }
 
-func NewMachineHealthCheckReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *MachineHealthCheckReconciler {
-	return &MachineHealthCheckReconciler{
+func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *Reconciler {
+	return &Reconciler{
 		AROController: base.AROController{
 			Log:    log,
 			Client: client,
@@ -56,7 +56,7 @@ func NewMachineHealthCheckReconciler(log *logrus.Entry, client client.Client, dh
 
 // Reconcile watches MachineHealthCheck objects, and if any changes,
 // reconciles the associated ARO MachineHealthCheck object
-func (r *MachineHealthCheckReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.GetCluster(ctx)
 
 	if err != nil {
@@ -70,7 +70,7 @@ func (r *MachineHealthCheckReconciler) Reconcile(ctx context.Context, request ct
 
 	r.Log.Debug("running")
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(managed) {
-		r.SetProgressing(ctx, "MHC and it's alerts are disabled because this cluster is not MHC managed.")
+		r.SetProgressing(ctx, "Not MHC Managed for cluster maintenance purpose.")
 
 		err := r.dh.EnsureDeleted(ctx, "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck")
 		if err != nil {
@@ -134,7 +134,7 @@ func (r *MachineHealthCheckReconciler) Reconcile(ctx context.Context, request ct
 }
 
 // SetupWithManager will manage only our MHC resource with our specific controller name
-func (r *MachineHealthCheckReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return strings.EqualFold(arov1alpha1.SingletonClusterName, o.GetName())
 	})
