@@ -23,8 +23,8 @@ import (
 
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2022-09-04/redhatopenshift"
-	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/Azure/ARO-RP/test/util/project"
 )
@@ -147,12 +147,11 @@ var _ = Describe("Cluster", func() {
 		cluster, err = clients.AROClusters.AroV1alpha1().Clusters().Update(ctx, cluster, metav1.UpdateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
-		rg, err := arm.ParseArmResourceId(cluster.Spec.ClusterResourceGroupID)
-		Expect(err).NotTo(HaveOccurred())
+		rgName := stringutils.LastTokenByte(cluster.Spec.ClusterResourceGroupID, '/')
 
 		// only checking the cluster storage account
 		Eventually(func(g Gomega, ctx context.Context) {
-			account, err := clients.Storage.GetProperties(ctx, rg.ResourceName, "cluster"+cluster.Spec.StorageSuffix, "")
+			account, err := clients.Storage.GetProperties(ctx, rgName, "cluster"+cluster.Spec.StorageSuffix, "")
 			g.Expect(err).NotTo(HaveOccurred())
 
 			nAclSubnets := []string{}
