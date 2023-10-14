@@ -71,12 +71,12 @@ var _ = Describe("Cluster", func() {
 			storageClass = "managed-premium"
 		}
 
-		err := createStatefulSet(ctx, clients.Kubernetes, storageClass)
+		ssName, err := createStatefulSet(ctx, clients.Kubernetes, storageClass)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("verifying the stateful set is ready")
 		Eventually(func(g Gomega, ctx context.Context) {
-			s, err := clients.Kubernetes.AppsV1().StatefulSets(testNamespace).Get(ctx, fmt.Sprintf("busybox-%s", storageClass), metav1.GetOptions{})
+			s, err := clients.Kubernetes.AppsV1().StatefulSets(testNamespace).Get(ctx, ssName, metav1.GetOptions{})
 			g.Expect(err).NotTo(HaveOccurred())
 
 			g.Expect(ready.StatefulSetIsReady(s)).To(BeTrue(), "expect stateful to be ready")
@@ -174,12 +174,12 @@ var _ = Describe("Cluster", func() {
 
 		By("creating stateful set")
 		storageClass := "azurefile-csi"
-		err = createStatefulSet(ctx, clients.Kubernetes, storageClass)
+		ssName, err := createStatefulSet(ctx, clients.Kubernetes, storageClass)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("verifying the stateful set is ready")
 		Eventually(func(g Gomega, ctx context.Context) {
-			s, err := clients.Kubernetes.AppsV1().StatefulSets(testNamespace).Get(ctx, fmt.Sprintf("busybox-%s", storageClass), metav1.GetOptions{})
+			s, err := clients.Kubernetes.AppsV1().StatefulSets(testNamespace).Get(ctx, ssName, metav1.GetOptions{})
 			g.Expect(err).NotTo(HaveOccurred())
 
 			g.Expect(ready.StatefulSetIsReady(s)).To(BeTrue(), "expect stateful to be ready")
@@ -276,23 +276,24 @@ func clusterSubnets(oc redhatopenshift.OpenShiftCluster) []string {
 	return subnets
 }
 
-func createStatefulSet(ctx context.Context, cli kubernetes.Interface, storageClass string) error {
+func createStatefulSet(ctx context.Context, cli kubernetes.Interface, storageClass string) (string, error) {
 	pvcStorage, err := resource.ParseQuantity("2Gi")
 	if err != nil {
-		return err
+		return "", err
 	}
+	ssName := fmt.Sprintf("busybox-%s-%d", storageClass, GinkgoParallelProcess())
 
 	_, err = cli.AppsV1().StatefulSets(testNamespace).Create(ctx, &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("busybox-%s", storageClass),
+			Name: ssName,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"app": fmt.Sprintf("busybox-%s", storageClass)},
+				MatchLabels: map[string]string{"app": ssName},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{"app": fmt.Sprintf("busybox-%s", storageClass)},
+					Labels: map[string]string{"app": ssName},
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -306,7 +307,7 @@ func createStatefulSet(ctx context.Context, cli kubernetes.Interface, storageCla
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      fmt.Sprintf("busybox-%s", storageClass),
+									Name:      ssName,
 									MountPath: "/data",
 									ReadOnly:  false,
 								},
@@ -318,7 +319,7 @@ func createStatefulSet(ctx context.Context, cli kubernetes.Interface, storageCla
 			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: fmt.Sprintf("busybox-%s", storageClass),
+						Name: ssName,
 					},
 					Spec: corev1.PersistentVolumeClaimSpec{
 						AccessModes: []corev1.PersistentVolumeAccessMode{
@@ -335,7 +336,7 @@ func createStatefulSet(ctx context.Context, cli kubernetes.Interface, storageCla
 			},
 		},
 	}, metav1.CreateOptions{})
-	return err
+	return ssName, err
 }
 
 func createLoadBalancerService(ctx context.Context, cli kubernetes.Interface, name string, annotations map[string]string) error {
