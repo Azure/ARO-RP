@@ -30,10 +30,10 @@ import (
 	"github.com/Azure/ARO-RP/test/util/project"
 )
 
-var _ = Describe("Cluster", func() {
+var _ = Describe("Cluster", Serial, func() {
 	var p project.Project
 
-	var _ = BeforeEach(func(ctx context.Context) {
+	BeforeEach(func(ctx context.Context) {
 		By("creating a test namespace")
 		testNamespace := fmt.Sprintf("test-e2e-%d", GinkgoParallelProcess())
 		p = project.NewProject(clients.Kubernetes, clients.Project, testNamespace)
@@ -43,18 +43,18 @@ var _ = Describe("Cluster", func() {
 		By("verifying the namespace is ready")
 		Eventually(func(ctx context.Context) error {
 			return p.Verify(ctx)
-		}).WithContext(ctx).Should(BeNil())
-	})
+		}).WithContext(ctx).WithTimeout(5 * time.Minute).Should(BeNil())
 
-	var _ = AfterEach(func(ctx context.Context) {
-		By("deleting a test namespace")
-		err := p.Delete(ctx)
-		Expect(err).NotTo(HaveOccurred(), "Failed to delete test namespace")
+		DeferCleanup(func(ctx context.Context) {
+			By("deleting a test namespace")
+			err := p.Delete(ctx)
+			Expect(err).NotTo(HaveOccurred(), "Failed to delete test namespace")
 
-		By("verifying the namespace is deleted")
-		Eventually(func(ctx context.Context) error {
-			return p.VerifyProjectIsDeleted(ctx)
-		}).WithContext(ctx).Should(BeNil())
+			By("verifying the namespace is deleted")
+			Eventually(func(ctx context.Context) error {
+				return p.VerifyProjectIsDeleted(ctx)
+			}).WithContext(ctx).WithTimeout(5 * time.Minute).Should(BeNil())
+		})
 	})
 
 	It("can run a stateful set which is using Azure Disk storage", func(ctx context.Context) {
