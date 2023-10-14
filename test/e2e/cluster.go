@@ -5,10 +5,16 @@ package e2e
 
 import (
 	"context"
+	"fmt"
+	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -16,20 +22,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2022-09-04/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/Azure/ARO-RP/test/util/project"
 )
 
-const (
-	testNamespace = "test-e2e"
-)
-
-var _ = Describe("Cluster", func() {
+var _ = Describe("Cluster", Serial, func() {
 	var p project.Project
 
-	var _ = BeforeEach(func(ctx context.Context) {
+	BeforeEach(func(ctx context.Context) {
 		By("creating a test namespace")
+		testNamespace := fmt.Sprintf("test-e2e-%d", GinkgoParallelProcess())
 		p = project.NewProject(clients.Kubernetes, clients.Project, testNamespace)
 		err := p.Create(ctx)
 		Expect(err).NotTo(HaveOccurred(), "Failed to create test namespace")
@@ -37,49 +43,189 @@ var _ = Describe("Cluster", func() {
 		By("verifying the namespace is ready")
 		Eventually(func(ctx context.Context) error {
 			return p.Verify(ctx)
-		}).WithContext(ctx).Should(BeNil())
+		}).WithContext(ctx).WithTimeout(5 * time.Minute).Should(BeNil())
+
+		DeferCleanup(func(ctx context.Context) {
+			By("deleting a test namespace")
+			err := p.Delete(ctx)
+			Expect(err).NotTo(HaveOccurred(), "Failed to delete test namespace")
+
+			By("verifying the namespace is deleted")
+			Eventually(func(ctx context.Context) error {
+				return p.VerifyProjectIsDeleted(ctx)
+			}).WithContext(ctx).WithTimeout(5 * time.Minute).Should(BeNil())
+		})
 	})
 
-	var _ = AfterEach(func(ctx context.Context) {
-		By("deleting a test namespace")
-		err := p.Delete(ctx)
-		Expect(err).NotTo(HaveOccurred(), "Failed to delete test namespace")
+	Context("can run a stateful set", func() {
+		It("which is using Azure Disk storage", func(ctx context.Context) {
+			By("creating stateful set")
+			oc, _ := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+			installVersion, _ := version.ParseVersion(*oc.ClusterProfile.Version)
 
-		By("verifying the namespace is deleted")
-		Eventually(func(ctx context.Context) error {
-			return p.VerifyProjectIsDeleted(ctx)
-		}).WithContext(ctx).Should(BeNil())
-	})
+			storageClass := "managed-csi"
 
-	It("can run a stateful set which is using Azure Disk storage", func(ctx context.Context) {
+			if installVersion.Lt(version.NewVersion(4, 11)) {
+				storageClass = "managed-premium"
+			}
 
-		By("creating stateful set")
-		err := createStatefulSet(ctx, clients.Kubernetes)
-		Expect(err).NotTo(HaveOccurred())
+			ssName, err := createStatefulSet(ctx, clients.Kubernetes, p.Name, storageClass)
+			Expect(err).NotTo(HaveOccurred())
 
-		By("verifying the stateful set is ready")
-		Eventually(func(g Gomega, ctx context.Context) {
-			s, err := clients.Kubernetes.AppsV1().StatefulSets(testNamespace).Get(ctx, "busybox", metav1.GetOptions{})
-			g.Expect(err).NotTo(HaveOccurred())
+			By("verifying the stateful set is ready")
+			Eventually(func(g Gomega, ctx context.Context) {
+				s, err := clients.Kubernetes.AppsV1().StatefulSets(p.Name).Get(ctx, ssName, metav1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(ready.StatefulSetIsReady(s)).To(BeTrue(), "expect stateful to be ready")
+				GinkgoWriter.Println(s)
+			}).WithContext(ctx).WithTimeout(5 * time.Minute).Should(Succeed())
+		})
 
-			g.Expect(ready.StatefulSetIsReady(s)).To(BeTrue(), "expect stateful to be ready")
-		}).WithContext(ctx).Should(Succeed())
+		// TODO: this test is marked as pending as it isn't working as expected
+		It("which is using the default Azure File storage class backed by the cluster storage account", Pending, func(ctx context.Context) {
+			By("adding the Microsoft.Storage service endpoint to each cluster subnet")
+
+			oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
+			Expect(err).NotTo(HaveOccurred())
+			ocpSubnets := clusterSubnets(oc)
+
+			for _, s := range ocpSubnets {
+				vnetID, subnetName, err := apisubnet.Split(s)
+				Expect(err).NotTo(HaveOccurred())
+
+				vnetR, err := azure.ParseResourceID(vnetID)
+				Expect(err).NotTo(HaveOccurred())
+
+				mgmtSubnet, err := clients.Subnet.Get(ctx, vnetResourceGroup, vnetR.ResourceName, subnetName, "")
+				Expect(err).NotTo(HaveOccurred())
+
+				if mgmtSubnet.SubnetPropertiesFormat == nil {
+					mgmtSubnet.SubnetPropertiesFormat = &mgmtnetwork.SubnetPropertiesFormat{}
+				}
+
+				if mgmtSubnet.SubnetPropertiesFormat.ServiceEndpoints == nil {
+					mgmtSubnet.SubnetPropertiesFormat.ServiceEndpoints = &[]mgmtnetwork.ServiceEndpointPropertiesFormat{}
+				}
+
+				// Check whether service endpoint is already there before trying to add
+				// it; trying to add a duplicate results in an error
+				subnetHasStorageEndpoint := false
+
+				for _, se := range *mgmtSubnet.ServiceEndpoints {
+					if se.Service != nil && *se.Service == "Microsoft.Storage" {
+						subnetHasStorageEndpoint = true
+						break
+					}
+				}
+
+				if !subnetHasStorageEndpoint {
+					storageEndpoint := mgmtnetwork.ServiceEndpointPropertiesFormat{
+						Service:   to.StringPtr("Microsoft.Storage"),
+						Locations: &[]string{"*"},
+					}
+
+					*mgmtSubnet.ServiceEndpoints = append(*mgmtSubnet.ServiceEndpoints, storageEndpoint)
+
+					err = clients.Subnet.CreateOrUpdateAndWait(ctx, vnetResourceGroup, vnetR.ResourceName, subnetName, mgmtSubnet)
+					Expect(err).NotTo(HaveOccurred())
+				}
+			}
+
+			// PUCM would be more reliable to check against,
+			// but we cannot PUCM in prod, and dev clusters have ACLs set to allow
+			By("checking the storage account vnet rules to verify that they include the cluster subnets")
+
+			cluster, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Poke the ARO storageaccount controller to reconcile
+			cluster.Spec.OperatorFlags["aro.storageaccounts.enabled"] = "false"
+			cluster, err = clients.AROClusters.AroV1alpha1().Clusters().Update(ctx, cluster, metav1.UpdateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			cluster.Spec.OperatorFlags["aro.storageaccounts.enabled"] = "true"
+			cluster, err = clients.AROClusters.AroV1alpha1().Clusters().Update(ctx, cluster, metav1.UpdateOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			rgName := stringutils.LastTokenByte(cluster.Spec.ClusterResourceGroupID, '/')
+
+			// only checking the cluster storage account
+			Eventually(func(g Gomega, ctx context.Context) {
+				account, err := clients.Storage.GetProperties(ctx, rgName, "cluster"+cluster.Spec.StorageSuffix, "")
+				g.Expect(err).NotTo(HaveOccurred())
+
+				nAclSubnets := []string{}
+				g.Expect(account.AccountProperties).NotTo(BeNil())
+				g.Expect(account.NetworkRuleSet).NotTo(BeNil())
+				g.Expect(account.NetworkRuleSet.VirtualNetworkRules).NotTo(BeNil())
+
+				for _, rule := range *account.NetworkRuleSet.VirtualNetworkRules {
+					if rule.Action == storage.Allow && rule.VirtualNetworkResourceID != nil {
+						nAclSubnets = append(nAclSubnets, strings.ToLower(*rule.VirtualNetworkResourceID))
+					}
+				}
+
+				for _, subnet := range ocpSubnets {
+					g.Expect(nAclSubnets).To(ContainElement(strings.ToLower(subnet)))
+				}
+
+			}).WithContext(ctx).WithTimeout(5 * time.Minute).Should(Succeed())
+
+			By("creating stateful set")
+			storageClass := "azurefile-csi"
+			ssName, err := createStatefulSet(ctx, clients.Kubernetes, p.Name, storageClass)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("verifying the stateful set is ready")
+			Eventually(func(g Gomega, ctx context.Context) {
+				s, err := clients.Kubernetes.AppsV1().StatefulSets(p.Name).Get(ctx, ssName, metav1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(ready.StatefulSetIsReady(s)).To(BeTrue(), "expect stateful to be ready")
+				GinkgoWriter.Println(s)
+
+				pvc, err := clients.Kubernetes.CoreV1().PersistentVolumeClaims(p.Name).Get(ctx, ssName, metav1.GetOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+				GinkgoWriter.Println(pvc)
+			}).WithContext(ctx).WithTimeout(5 * time.Minute).Should(Succeed())
+
+			By("cleaning up the cluster subnets (removing service endpoints)")
+			for _, s := range ocpSubnets {
+				vnetID, subnetName, err := apisubnet.Split(s)
+				Expect(err).NotTo(HaveOccurred())
+
+				vnetR, err := azure.ParseResourceID(vnetID)
+				Expect(err).NotTo(HaveOccurred())
+
+				mgmtSubnet, err := clients.Subnet.Get(ctx, vnetResourceGroup, vnetR.ResourceName, subnetName, "")
+				Expect(err).NotTo(HaveOccurred())
+
+				if mgmtSubnet.SubnetPropertiesFormat == nil {
+					mgmtSubnet.SubnetPropertiesFormat = &mgmtnetwork.SubnetPropertiesFormat{}
+				}
+
+				mgmtSubnet.SubnetPropertiesFormat.ServiceEndpoints = &[]mgmtnetwork.ServiceEndpointPropertiesFormat{}
+
+				err = clients.Subnet.CreateOrUpdateAndWait(ctx, vnetResourceGroup, vnetR.ResourceName, subnetName, mgmtSubnet)
+				Expect(err).NotTo(HaveOccurred())
+			}
+		})
+
 	})
 
 	It("can create load balancer services", func(ctx context.Context) {
 		By("creating an external load balancer service")
-		err := createLoadBalancerService(ctx, clients.Kubernetes, "elb", map[string]string{})
+		err := createLoadBalancerService(ctx, clients.Kubernetes, "elb", p.Name, map[string]string{})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("creating an internal load balancer service")
-		err = createLoadBalancerService(ctx, clients.Kubernetes, "ilb", map[string]string{
+		err = createLoadBalancerService(ctx, clients.Kubernetes, "ilb", p.Name, map[string]string{
 			"service.beta.kubernetes.io/azure-load-balancer-internal": "true",
 		})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("verifying the external load balancer service is ready")
 		Eventually(func(ctx context.Context) bool {
-			svc, err := clients.Kubernetes.CoreV1().Services(testNamespace).Get(ctx, "elb", metav1.GetOptions{})
+			svc, err := clients.Kubernetes.CoreV1().Services(p.Name).Get(ctx, "elb", metav1.GetOptions{})
 			if err != nil {
 				return false
 			}
@@ -88,7 +234,7 @@ var _ = Describe("Cluster", func() {
 
 		By("verifying the internal load balancer service is ready")
 		Eventually(func(ctx context.Context) bool {
-			svc, err := clients.Kubernetes.CoreV1().Services(testNamespace).Get(ctx, "ilb", metav1.GetOptions{})
+			svc, err := clients.Kubernetes.CoreV1().Services(p.Name).Get(ctx, "ilb", metav1.GetOptions{})
 			if err != nil {
 				return false
 			}
@@ -102,12 +248,12 @@ var _ = Describe("Cluster", func() {
 		deployName := "internal-registry-deploy"
 
 		By("creating a test deployment from an internal container registry")
-		err := createContainerFromInternalContainerRegistryImage(ctx, clients.Kubernetes, deployName)
+		err := createContainerFromInternalContainerRegistryImage(ctx, clients.Kubernetes, deployName, p.Name)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("verifying the deployment is ready")
 		Eventually(func(g Gomega, ctx context.Context) {
-			s, err := clients.Kubernetes.AppsV1().Deployments(testNamespace).Get(ctx, deployName, metav1.GetOptions{})
+			s, err := clients.Kubernetes.AppsV1().Deployments(p.Name).Get(ctx, deployName, metav1.GetOptions{})
 			g.Expect(err).NotTo(HaveOccurred())
 
 			g.Expect(ready.DeploymentIsReady(s)).To(BeTrue(), "expect stateful to be ready")
@@ -115,30 +261,44 @@ var _ = Describe("Cluster", func() {
 	})
 })
 
-func createStatefulSet(ctx context.Context, cli kubernetes.Interface) error {
-	oc, _ := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
-	installVersion, _ := version.ParseVersion(*oc.ClusterProfile.Version)
+// clusterSubnets returns a slice containing all of the cluster subnets' resource IDs
+func clusterSubnets(oc redhatopenshift.OpenShiftCluster) []string {
+	subnetMap := map[string]struct{}{}
+	subnetMap[*oc.OpenShiftClusterProperties.MasterProfile.SubnetID] = struct{}{}
 
-	defaultStorageClass := "managed-csi"
-	if installVersion.Lt(version.NewVersion(4, 11)) {
-		defaultStorageClass = "managed-premium"
+	// TODO: change to workerProfileStatuses when we bump the API to 20230904 stable
+	for _, p := range *oc.OpenShiftClusterProperties.WorkerProfiles {
+		s := strings.ToLower(*p.SubnetID)
+		subnetMap[s] = struct{}{}
 	}
+
+	subnets := []string{}
+
+	for subnet := range subnetMap {
+		subnets = append(subnets, subnet)
+	}
+
+	return subnets
+}
+
+func createStatefulSet(ctx context.Context, cli kubernetes.Interface, namespace, storageClass string) (string, error) {
 	pvcStorage, err := resource.ParseQuantity("2Gi")
 	if err != nil {
-		return err
+		return "", err
 	}
+	ssName := fmt.Sprintf("busybox-%s-%d", storageClass, GinkgoParallelProcess())
 
-	_, err = cli.AppsV1().StatefulSets(testNamespace).Create(ctx, &appsv1.StatefulSet{
+	_, err = cli.AppsV1().StatefulSets(namespace).Create(ctx, &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "busybox",
+			Name: ssName,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"app": "busybox"},
+				MatchLabels: map[string]string{"app": ssName},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{"app": "busybox"},
+					Labels: map[string]string{"app": ssName},
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -152,7 +312,7 @@ func createStatefulSet(ctx context.Context, cli kubernetes.Interface) error {
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "busybox",
+									Name:      ssName,
 									MountPath: "/data",
 									ReadOnly:  false,
 								},
@@ -164,13 +324,13 @@ func createStatefulSet(ctx context.Context, cli kubernetes.Interface) error {
 			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "busybox",
+						Name: ssName,
 					},
 					Spec: corev1.PersistentVolumeClaimSpec{
 						AccessModes: []corev1.PersistentVolumeAccessMode{
 							corev1.ReadWriteOnce,
 						},
-						StorageClassName: to.StringPtr(defaultStorageClass),
+						StorageClassName: to.StringPtr(storageClass),
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceStorage: pvcStorage,
@@ -181,14 +341,14 @@ func createStatefulSet(ctx context.Context, cli kubernetes.Interface) error {
 			},
 		},
 	}, metav1.CreateOptions{})
-	return err
+	return ssName, err
 }
 
-func createLoadBalancerService(ctx context.Context, cli kubernetes.Interface, name string, annotations map[string]string) error {
+func createLoadBalancerService(ctx context.Context, cli kubernetes.Interface, name, namespace string, annotations map[string]string) error {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
-			Namespace:   testNamespace,
+			Namespace:   namespace,
 			Annotations: annotations,
 		},
 		Spec: corev1.ServiceSpec{
@@ -201,15 +361,15 @@ func createLoadBalancerService(ctx context.Context, cli kubernetes.Interface, na
 			Type: corev1.ServiceTypeLoadBalancer,
 		},
 	}
-	_, err := cli.CoreV1().Services(testNamespace).Create(ctx, svc, metav1.CreateOptions{})
+	_, err := cli.CoreV1().Services(namespace).Create(ctx, svc, metav1.CreateOptions{})
 	return err
 }
 
-func createContainerFromInternalContainerRegistryImage(ctx context.Context, cli kubernetes.Interface, name string) error {
+func createContainerFromInternalContainerRegistryImage(ctx context.Context, cli kubernetes.Interface, name, namespace string) error {
 	deploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: testNamespace,
+			Namespace: namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: to.Int32Ptr(1),
@@ -238,6 +398,6 @@ func createContainerFromInternalContainerRegistryImage(ctx context.Context, cli 
 			},
 		},
 	}
-	_, err := cli.AppsV1().Deployments(testNamespace).Create(ctx, deploy, metav1.CreateOptions{})
+	_, err := cli.AppsV1().Deployments(namespace).Create(ctx, deploy, metav1.CreateOptions{})
 	return err
 }
