@@ -48,7 +48,10 @@ import (
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
 
-var disallowedInFilenameRegex = regexp.MustCompile(`[<>:"/\\|?*\x00-\x1F]`)
+var (
+	disallowedInFilenameRegex = regexp.MustCompile(`[<>:"/\\|?*\x00-\x1F]`)
+	DefaultEventuallyTimeout  = 5 * time.Minute
+)
 
 type clientSet struct {
 	Operations        redhatopenshift20220904.OperationsClient
@@ -428,7 +431,7 @@ func done(ctx context.Context) error {
 var _ = BeforeSuite(func() {
 	log.Info("BeforeSuite")
 
-	SetDefaultEventuallyTimeout(5 * time.Minute)
+	SetDefaultEventuallyTimeout(DefaultEventuallyTimeout)
 	SetDefaultEventuallyPollingInterval(10 * time.Second)
 
 	if err := setup(context.Background()); err != nil {
