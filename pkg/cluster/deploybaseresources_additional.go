@@ -77,7 +77,7 @@ func (m *manager) clusterServicePrincipalRBAC() *arm.Resource {
 // storageAccount will return storage account resource.
 // Legacy storage accounts (public) are not encrypted and cannot be retrofitted.
 // The flag controls this behavior in update/create.
-func (m *manager) storageAccount(name, region string, encrypted bool) *arm.Resource {
+func (m *manager) storageAccount(name, region string, ocpSubnets []string, encrypted bool) *arm.Resource {
 	virtualNetworkRules := []mgmtstorage.VirtualNetworkRule{
 		{
 			VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
@@ -89,21 +89,12 @@ func (m *manager) storageAccount(name, region string, encrypted bool) *arm.Resou
 		},
 	}
 
-	// Virtual network rules to allow the cluster subnets to directly reach the storage accounts
-	// are only needed when egress lockdown is not enabled.
-	if !m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled {
-		workerProfiles, _ := api.GetEnrichedWorkerProfiles(m.doc.OpenShiftCluster.Properties)
-		workerSubnetId := workerProfiles[0].SubnetID
-		virtualNetworkRules = append(virtualNetworkRules, []mgmtstorage.VirtualNetworkRule{
-			{
-				VirtualNetworkResourceID: &m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
-				Action:                   mgmtstorage.Allow,
-			},
-			{
-				VirtualNetworkResourceID: &workerSubnetId,
-				Action:                   mgmtstorage.Allow,
-			},
-		}...)
+	// add OCP subnets which have Microsoft.Storage service endpoint enabled
+	for _, subnet := range ocpSubnets {
+		virtualNetworkRules = append(virtualNetworkRules, mgmtstorage.VirtualNetworkRule{
+			VirtualNetworkResourceID: to.StringPtr(subnet),
+			Action:                   mgmtstorage.Allow,
+		})
 	}
 
 	// when installing via Hive we need to allow Hive to persist the installConfig graph in the cluster's storage account
