@@ -51,7 +51,7 @@ spec:
           image: aropocsvc.azurecr.io/mise:dev
           env:
           - name: MISE_APPSETTINGS_LOCATION
-          value: "/etc/mise/appsettings.json"
+            value: "/etc/mise/appsettings.json"
           ports:
           - containerPort: 5000
             name: http

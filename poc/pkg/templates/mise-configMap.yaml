@@ -8,13 +8,15 @@ data:
         "ClientId": "704c7dfd-4ed1-4732-95c0-04a44b0895a0",
         "TenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
         "InboundPolicies": 
-        [{
+        [
+          {
             "Label": "jonachang-policy",
             "AuthenticationSchemes": [ "Bearer"],
             "ValidAudiences" : [ 
                 "https://management.azure.com/"
             ] 
-        }],
+          }
+        ],
       },
       "AllowedHosts": "*",
       "Kestrel": {
