@@ -63,9 +63,8 @@ func ensureAccessTokenClaims(ctx context.Context, spTokenCredential azcore.Token
 	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
-	// NOTE: Do not override err with the error returned by
-	// wait.PollImmediateUntil. Doing this will not propagate the
-	// latest error to the user in case the wait exceeds the timeout.
+	// Propagate the latest authorization error to the user,
+	// rather than timeout error from PollImmediateUntil.
 	_ = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		options := policy.TokenRequestOptions{Scopes: scopes}
 		token, err := spTokenCredential.GetToken(ctx, options)
