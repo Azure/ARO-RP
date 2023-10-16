@@ -9,7 +9,7 @@ data:
         "TenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
         "InboundPolicies": [
         {
-            "Label": "my-inbound-policy",
+            "Label": "jonachang-policy",
             "AuthenticationSchemes": [ "Bearer"],
             "ValidAudiences" : [ 
                 "https://management.azure.com/"
