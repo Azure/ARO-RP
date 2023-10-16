@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mise-auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mise-auth
+  template:
+    metadata:
+      labels:
+        app: mise-auth
+    spec:
+      containers:
+      - name: mise
+        image: aropocsvc.azurecr.io/mise-sidecar:dev
+        env:
+        - name: MISE_APPSETTINGS_LOCATION
+          value: "/app/etc/appsettings.json"
+        ports:
+        - containerPort: 5000
+          name: http-auth
+        volumeMounts:
+        - name: config
+          mountPath: /app/etc
+          readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: miseconfig
+            items:
+            - key: appsettings.json
+              path: appsettings.json
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mise-auth 
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: http-auth
+      name: http-auth
+  selector:
+    app: mise-auth

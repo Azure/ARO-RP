@@ -2,53 +2,28 @@ apiVersion: v1
 data:
   appsettings.json: |
     {
-        "Version": "1",
-        "HeartbeatIntervalMs": 5000,
-        "AzureAd": {
-            "Instance": "https://login.microsoftonline.com/",
-            "ClientId": "704c7dfd-4ed1-4732-95c0-04a44b0895a0",
-            "TenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
-            "InboundPolicies": [
-                {
-                    "Label": "nont-policy",
-                    "Authority": "https://login.microsoftonline.com/704c7dfd-4ed1-4732-95c0-04a44b0895a0/v2.0",
-                    "AuthenticationSchemes": [
-                        "Bearer"
-                    ],
-                    "ValidAudiences": [
-                        "https://management.azure.com/"
-                    ],
-                    "ValidApplicationIds": [
-                        "704c7dfd-4ed1-4732-95c0-04a44b0895a0"
-                    ]
-                }
-            ],
-            "MinimumDataClassificationCategory": "SystemMetadata",
-            "Logging": {
-                "LogLevel": "Information"
-            },
-            "Modules": {
-                "TrV2": {
-                    "ModuleType": "TrV2Module",
-                    "Enabled": true
-                }
-            }
-        },
-        "AllowedHosts": "*",
-        "Kestrel": {
-            "Endpoints": {
-                "Http": {
-                    "Url": "http://0.0.0.0:5000"
-                }
-            }
-        },
-        "Logging": {
-            "LogLevel": {
-                "Default": "Information",
-                "Microsoft": "Information",
-                "Microsoft.Hosting.Lifetime": "Information"
+      "Version": "1",
+      "AzureAd": {
+        "Instance": "https://login.microsoftonline.com",
+        "ClientId": "704c7dfd-4ed1-4732-95c0-04a44b0895a0",
+        "TenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+        "InboundPolicies": [
+        {
+            "Label": "my-inbound-policy",
+            "AuthenticationSchemes": [ "Bearer"],
+            "ValidAudiences" : [ 
+                "https://management.azure.com/"
+            ] 
+        }],
+      },
+      "AllowedHosts": "*",
+      "Kestrel": {
+        "Endpoints": {
+            "Http": {
+                "Url": "http://0.0.0.0:5000"
             }
         }
+      }
     }
 kind: ConfigMap
 metadata:

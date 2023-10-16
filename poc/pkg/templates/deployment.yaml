@@ -47,25 +47,6 @@ spec:
               port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-        - name: mise
-          image: aropocsvc.azurecr.io/mise-sidecar:dev
-          env:
-          - name: MISE_APPSETTINGS_LOCATION
-          value: "/etc/mise/appsettings.json"
-          ports:
-          - containerPort: 5000
-            name: http
-          volumeMounts:
-          - name: config
-            mountPath: /etc/mise
-            readOnly: true
-      volumes:
-        - name: config
-          configMap:
-            name: miseconfig
-            items:
-            - key: appsettings.json
-              path: appsettings.json
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
