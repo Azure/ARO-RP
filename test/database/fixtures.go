@@ -20,6 +20,7 @@ type Fixture struct {
 	gatewayDocuments                     []*api.GatewayDocument
 	openShiftVersionDocuments            []*api.OpenShiftVersionDocument
 	clusterManagerConfigurationDocuments []*api.ClusterManagerConfigurationDocument
+	maintenanceManifestDocuments         []*api.MaintenanceManifestDocument
 
 	openShiftClustersDatabase            database.OpenShiftClusters
 	billingDatabase                      database.Billing
@@ -29,6 +30,7 @@ type Fixture struct {
 	gatewayDatabase                      database.Gateway
 	openShiftVersionsDatabase            database.OpenShiftVersions
 	clusterManagerConfigurationsDatabase database.ClusterManagerConfigurations
+	maintenanceManifestsDatabase         database.MaintenanceManifests
 
 	openShiftVersionsUUID uuid.Generator
 }
@@ -75,6 +77,11 @@ func (f *Fixture) WithGateway(db database.Gateway) *Fixture {
 func (f *Fixture) WithOpenShiftVersions(db database.OpenShiftVersions, uuid uuid.Generator) *Fixture {
 	f.openShiftVersionsDatabase = db
 	f.openShiftVersionsUUID = uuid
+	return f
+}
+
+func (f *Fixture) WithMaintenanceManifests(db database.MaintenanceManifests) *Fixture {
+	f.maintenanceManifestsDatabase = db
 	return f
 }
 
@@ -166,6 +173,17 @@ func (f *Fixture) AddClusterManagerConfigurationDocuments(docs ...*api.ClusterMa
 	}
 }
 
+func (f *Fixture) AddMaintenanceManifestDocuments(docs ...*api.MaintenanceManifestDocument) {
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.maintenanceManifestDocuments = append(f.maintenanceManifestDocuments, docCopy.(*api.MaintenanceManifestDocument))
+	}
+}
+
 func (f *Fixture) Create() error {
 	ctx := context.Background()
 
@@ -229,6 +247,16 @@ func (f *Fixture) Create() error {
 			i.ID = f.clusterManagerConfigurationsDatabase.NewUUID()
 		}
 		_, err := f.clusterManagerConfigurationsDatabase.Create(ctx, i)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, i := range f.maintenanceManifestDocuments {
+		if i.ID == "" {
+			i.ID = f.maintenanceManifestsDatabase.NewUUID()
+		}
+		_, err := f.maintenanceManifestsDatabase.Create(ctx, i)
 		if err != nil {
 			return err
 		}

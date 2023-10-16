@@ -80,3 +80,12 @@ func NewFakeClusterManager() (db database.ClusterManagerConfigurations, client *
 	db = database.NewClusterManagerConfigurationsWithProvidedClient(client, coll, "", uuid)
 	return db, client
 }
+
+func NewFakeMaintenanceManifests() (db database.MaintenanceManifests, client *cosmosdb.FakeMaintenanceManifestDocumentClient) {
+	uuid := deterministicuuid.NewTestUUIDGenerator(deterministicuuid.MAINTENANCE_MANIFESTS)
+	coll := &fakeCollectionClient{}
+	client = cosmosdb.NewFakeMaintenanceManifestDocumentClient(jsonHandle)
+	injectMaintenanceManifests(client)
+	db = database.NewMaintenanceManifestsWithProvidedClient(client, coll, "", uuid)
+	return db, client
+}
