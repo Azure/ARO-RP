@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -43,7 +42,7 @@ var _ = Describe("Cluster", Serial, func() {
 		By("verifying the namespace is ready")
 		Eventually(func(ctx context.Context) error {
 			return p.Verify(ctx)
-		}).WithContext(ctx).WithTimeout(5 * time.Minute).Should(BeNil())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(BeNil())
 
 		DeferCleanup(func(ctx context.Context) {
 			By("deleting a test namespace")
@@ -53,7 +52,7 @@ var _ = Describe("Cluster", Serial, func() {
 			By("verifying the namespace is deleted")
 			Eventually(func(ctx context.Context) error {
 				return p.VerifyProjectIsDeleted(ctx)
-			}).WithContext(ctx).WithTimeout(5 * time.Minute).Should(BeNil())
+			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(BeNil())
 		})
 	})
 
@@ -78,7 +77,7 @@ var _ = Describe("Cluster", Serial, func() {
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(ready.StatefulSetIsReady(s)).To(BeTrue(), "expect stateful to be ready")
 				GinkgoWriter.Println(s)
-			}).WithContext(ctx).WithTimeout(5 * time.Minute).Should(Succeed())
+			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 		})
 
 		// TODO: this test is marked as pending as it isn't working as expected
@@ -169,7 +168,7 @@ var _ = Describe("Cluster", Serial, func() {
 					g.Expect(nAclSubnets).To(ContainElement(strings.ToLower(subnet)))
 				}
 
-			}).WithContext(ctx).WithTimeout(5 * time.Minute).Should(Succeed())
+			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 			By("creating stateful set")
 			storageClass := "azurefile-csi"
@@ -186,7 +185,7 @@ var _ = Describe("Cluster", Serial, func() {
 				pvc, err := clients.Kubernetes.CoreV1().PersistentVolumeClaims(p.Name).Get(ctx, ssName, metav1.GetOptions{})
 				g.Expect(err).NotTo(HaveOccurred())
 				GinkgoWriter.Println(pvc)
-			}).WithContext(ctx).WithTimeout(5 * time.Minute).Should(Succeed())
+			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 			By("cleaning up the cluster subnets (removing service endpoints)")
 			for _, s := range ocpSubnets {
@@ -230,7 +229,7 @@ var _ = Describe("Cluster", Serial, func() {
 				return false
 			}
 			return ready.ServiceIsReady(svc)
-		}).WithContext(ctx).Should(BeTrue())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(BeTrue())
 
 		By("verifying the internal load balancer service is ready")
 		Eventually(func(ctx context.Context) bool {
@@ -239,7 +238,7 @@ var _ = Describe("Cluster", Serial, func() {
 				return false
 			}
 			return ready.ServiceIsReady(svc)
-		}).WithContext(ctx).Should(BeTrue())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(BeTrue())
 	})
 
 	// mainly we want to test the gateway/egress functionality - this request for the image will travel from
@@ -257,7 +256,7 @@ var _ = Describe("Cluster", Serial, func() {
 			g.Expect(err).NotTo(HaveOccurred())
 
 			g.Expect(ready.DeploymentIsReady(s)).To(BeTrue(), "expect stateful to be ready")
-		}).WithContext(ctx).Should(Succeed())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
 })
 
