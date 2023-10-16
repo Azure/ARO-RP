@@ -153,15 +153,19 @@ func (m *manager) storageAccount(name, region string, ocpSubnets []string, encry
 			Services: &mgmtstorage.EncryptionServices{
 				Blob: &mgmtstorage.EncryptionService{
 					KeyType: mgmtstorage.KeyTypeAccount,
+					Enabled: to.BoolPtr(true),
 				},
 				File: &mgmtstorage.EncryptionService{
 					KeyType: mgmtstorage.KeyTypeAccount,
+					Enabled: to.BoolPtr(true),
 				},
 				Table: &mgmtstorage.EncryptionService{
 					KeyType: mgmtstorage.KeyTypeAccount,
+					Enabled: to.BoolPtr(true),
 				},
 				Queue: &mgmtstorage.EncryptionService{
 					KeyType: mgmtstorage.KeyTypeAccount,
+					Enabled: to.BoolPtr(true),
 				},
 			},
 			KeySource: mgmtstorage.KeySourceMicrosoftStorage,
