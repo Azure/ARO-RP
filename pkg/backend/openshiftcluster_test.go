@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
@@ -25,7 +24,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	mock_cluster "github.com/Azure/ARO-RP/pkg/util/mocks/cluster"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	"github.com/Azure/ARO-RP/pkg/util/service"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
 	"github.com/Azure/ARO-RP/test/util/testliveconfig"
@@ -290,7 +288,6 @@ func TestBackendTry(t *testing.T) {
 			manager := mock_cluster.NewMockInterface(controller)
 			_env := mock_env.NewMockInterface(controller)
 			_env.EXPECT().LiveConfig().AnyTimes().Return(tlc)
-			_env.EXPECT().FeatureIsSet(env.FeatureDisableReadinessDelay).Return(false)
 
 			dbOpenShiftClusters, clientOpenShiftClusters := testdatabase.NewFakeOpenShiftClusters()
 			dbSubscriptions, _ := testdatabase.NewFakeSubscriptions()
@@ -315,13 +312,11 @@ func TestBackendTry(t *testing.T) {
 			}
 
 			b.ocb = &openShiftClusterBackend{
-				backend:          b,
-				newManager:       createManager,
-				sleepAfterDelete: 0 * time.Second,
-				q:                service.NewWorkerQueue(ctx, log, _env, nil),
+				backend:    b,
+				newManager: createManager,
 			}
 
-			worked, err := b.ocb.try(ctx, b.ocb.q.Cond())
+			worked, err := b.ocb.try(ctx)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -330,7 +325,7 @@ func TestBackendTry(t *testing.T) {
 			}
 
 			// wait on the workers to finish their tasks
-			b.ocb.q.Wait()
+			b.waitForWorkerCompletion()
 
 			c := testdatabase.NewChecker()
 			tt.checker(c)

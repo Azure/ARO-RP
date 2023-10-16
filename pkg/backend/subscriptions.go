@@ -6,20 +6,17 @@ package backend
 import (
 	"context"
 	"fmt"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
-	"github.com/Azure/ARO-RP/pkg/util/service"
 )
 
 type subscriptionBackend struct {
 	*backend
-
-	q service.Runnable
 }
 
 func newSubscriptionBackend(b *backend) *subscriptionBackend {
@@ -30,7 +27,7 @@ func newSubscriptionBackend(b *backend) *subscriptionBackend {
 // goroutine.  It returns a boolean to the caller indicating whether it
 // succeeded in dequeuing anything - if this is false, the caller should sleep
 // before calling again
-func (sb *subscriptionBackend) try(ctx context.Context, cond *sync.Cond) (bool, error) {
+func (sb *subscriptionBackend) try(ctx context.Context) (bool, error) {
 	doc, err := sb.dbSubscriptions.Dequeue(ctx)
 	if err != nil || doc == nil {
 		return false, err
@@ -43,8 +40,8 @@ func (sb *subscriptionBackend) try(ctx context.Context, cond *sync.Cond) (bool, 
 	}
 
 	log.Print("dequeued")
-	sb.q.Workers().Add(1)
-	sb.m.EmitGauge("backend.subscriptions.workers.count", sb.q.Workers().Load(), nil)
+	atomic.AddInt32(&sb.workers, 1)
+	sb.m.EmitGauge("backend.subscriptions.workers.count", int64(atomic.LoadInt32(&sb.workers)), nil)
 
 	go func() {
 		defer recover.Panic(log)
@@ -52,9 +49,9 @@ func (sb *subscriptionBackend) try(ctx context.Context, cond *sync.Cond) (bool, 
 		t := time.Now()
 
 		defer func() {
-			sb.q.Workers().Add(-1)
-			sb.m.EmitGauge("backend.subscriptions.workers.count", sb.q.Workers().Load(), nil)
-			cond.Signal()
+			atomic.AddInt32(&sb.workers, -1)
+			sb.m.EmitGauge("backend.subscriptions.workers.count", int64(atomic.LoadInt32(&sb.workers)), nil)
+			sb.cond.Signal()
 
 			sb.m.EmitGauge("backend.subscriptions.duration", time.Since(t).Milliseconds(), map[string]string{
 				"state": string(doc.Subscription.State),
