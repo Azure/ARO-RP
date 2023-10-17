@@ -113,7 +113,7 @@
             "location": "[resourceGroup().location]",
             "name": "[substring(parameters('gatewayStorageAccountDomain'), 0, indexOf(parameters('gatewayStorageAccountDomain'), '.'))]",
             "type": "Microsoft.Storage/storageAccounts",
-            "apiVersion": "2019-04-01"
+            "apiVersion": "2019-06-01"
         },
         {
             "sku": {
