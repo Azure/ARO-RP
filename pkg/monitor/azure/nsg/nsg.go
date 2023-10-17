@@ -18,6 +18,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/monitor/dimension"
+	"github.com/Azure/ARO-RP/pkg/monitor/emitter"
 )
 
 const (
@@ -57,6 +58,7 @@ func NewNSGMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, subscriptionID s
 		dims: map[string]string{
 			dimension.ResourceID:     oc.ID,
 			dimension.SubscriptionID: subscriptionID,
+			dimension.Location:       oc.Location,
 		},
 	}
 }
@@ -75,19 +77,16 @@ func (n *NSGMonitor) toSubnetConfig(ctx context.Context, subnetID string) (subne
 	}
 
 	dims := map[string]string{
-		dimension.ResourceID:     n.oc.ID,
-		dimension.Location:       n.oc.Location,
-		dimension.Subnet:         r.Name,
-		dimension.Vnet:           r.Parent.Name,
-		dimension.ResourceGroup:  r.ResourceGroupName,
-		dimension.SubscriptionID: r.SubscriptionID,
+		dimension.Subnet:           r.Name,
+		dimension.Vnet:             r.Parent.Name,
+		dimension.NSGResourceGroup: r.ResourceGroupName,
 	}
 
 	subnet, err := n.subnetClient.Get(ctx, r.ResourceGroupName, r.Parent.Name, r.Name, &armnetwork.SubnetsClientGetOptions{Expand: &expandNSG})
 	if err != nil {
 		var respErr *azcore.ResponseError
 		if errors.As(err, &respErr); respErr.StatusCode == http.StatusForbidden {
-			n.emitter.EmitGauge(MetricSubnetAccessForbidden, int64(1), dims)
+			emitter.EmitGauge(n.emitter, MetricSubnetAccessForbidden, int64(1), n.dims, dims)
 		}
 		n.log.Errorf("error while getting subnet %s. %s", subnetID, err)
 		return subnetNSGConfig{}, err
@@ -96,6 +95,7 @@ func (n *NSGMonitor) toSubnetConfig(ctx context.Context, subnetID string) (subne
 	var cidrs []string
 	if subnet.Properties.AddressPrefix != nil {
 		cidrs = append(cidrs, *subnet.Properties.AddressPrefix)
+
 	}
 	for _, sn := range subnet.Properties.AddressPrefixes {
 		cidrs = append(cidrs, *sn)
@@ -165,10 +165,7 @@ func (n *NSGMonitor) Monitor(ctx context.Context) {
 
 			if r.isInvalidDenyRule() {
 				dims := map[string]string{
-					dimension.ResourceID:          n.oc.ID,
-					dimension.Location:            n.oc.Location,
-					dimension.SubscriptionID:      nsgResource.SubscriptionID,
-					dimension.ResourceGroup:       nsgResource.ResourceGroupName,
+					dimension.NSGResourceGroup:    nsgResource.ResourceGroupName,
 					dimension.ResourceName:        nsgResource.Name,
 					dimension.NSGRuleName:         *rule.Name,
 					dimension.NSGRuleSources:      strings.Join(r.sourceStrings, ","),
@@ -176,7 +173,7 @@ func (n *NSGMonitor) Monitor(ctx context.Context) {
 					dimension.NSGRuleDirection:    string(*rule.Properties.Direction),
 					dimension.NSGRulePriority:     string(*rule.Properties.Priority),
 				}
-				n.emitter.EmitGauge(MetricInvalidDenyRule, int64(1), dims)
+				emitter.EmitGauge(n.emitter, MetricInvalidDenyRule, int64(1), n.dims, dims)
 			}
 		}
 	}

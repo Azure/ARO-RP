@@ -23,6 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/monitor/dimension"
+	"github.com/Azure/ARO-RP/pkg/monitor/emitter"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
@@ -63,10 +64,10 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 	}
 
 	dims := map[string]string{
-		dimension.ResourceID:     oc.ID,
-		dimension.SubscriptionID: r.SubscriptionID,
-		dimension.ResourceGroup:  r.ResourceGroup,
-		dimension.ResourceName:   r.ResourceName,
+		dimension.ResourceID:           oc.ID,
+		dimension.SubscriptionID:       r.SubscriptionID,
+		dimension.ClusterResourceGroup: r.ResourceGroup,
+		dimension.ResourceName:         r.ResourceName,
 	}
 
 	cli, err := kubernetes.NewForConfig(restConfig)
@@ -221,11 +222,5 @@ func (mon *Monitor) emitFailureToGatherMetric(friendlyFuncName string, err error
 }
 
 func (mon *Monitor) emitGauge(m string, value int64, dims map[string]string) {
-	if dims == nil {
-		dims = map[string]string{}
-	}
-	for k, v := range mon.dims {
-		dims[k] = v
-	}
-	mon.m.EmitGauge(m, value, dims)
+	emitter.EmitGauge(mon.m, m, value, mon.dims, dims)
 }

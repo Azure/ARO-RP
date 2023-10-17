@@ -60,30 +60,30 @@ var (
 	workerSubnet2ID   = fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/%s/subnets/%s", subscriptionID, resourcegroupName, vNetName, workerSubnet2Name)
 
 	masterSubnetMetricDimensions = map[string]string{
-		dimension.ResourceID:     ocID,
-		dimension.Location:       ocLocation,
-		dimension.Subnet:         masterSubnetName,
-		dimension.Vnet:           vNetName,
-		dimension.ResourceGroup:  resourcegroupName,
-		dimension.SubscriptionID: subscriptionID,
+		dimension.ResourceID:       ocID,
+		dimension.Location:         ocLocation,
+		dimension.Subnet:           masterSubnetName,
+		dimension.Vnet:             vNetName,
+		dimension.NSGResourceGroup: resourcegroupName,
+		dimension.SubscriptionID:   subscriptionID,
 	}
 
 	workerSubnet1MetricDimensions = map[string]string{
-		dimension.ResourceID:     ocID,
-		dimension.Location:       ocLocation,
-		dimension.Subnet:         workerSubnet1Name,
-		dimension.Vnet:           vNetName,
-		dimension.ResourceGroup:  resourcegroupName,
-		dimension.SubscriptionID: subscriptionID,
+		dimension.ResourceID:       ocID,
+		dimension.Location:         ocLocation,
+		dimension.Subnet:           workerSubnet1Name,
+		dimension.Vnet:             vNetName,
+		dimension.NSGResourceGroup: resourcegroupName,
+		dimension.SubscriptionID:   subscriptionID,
 	}
 
 	workerSubnet2MetricDimensions = map[string]string{
-		dimension.ResourceID:     ocID,
-		dimension.Location:       ocLocation,
-		dimension.Subnet:         workerSubnet2Name,
-		dimension.Vnet:           vNetName,
-		dimension.ResourceGroup:  resourcegroupName,
-		dimension.SubscriptionID: subscriptionID,
+		dimension.ResourceID:       ocID,
+		dimension.Location:         ocLocation,
+		dimension.Subnet:           workerSubnet2Name,
+		dimension.Vnet:             vNetName,
+		dimension.NSGResourceGroup: resourcegroupName,
+		dimension.SubscriptionID:   subscriptionID,
 	}
 
 	ocClusterName = "testing"
