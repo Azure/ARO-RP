@@ -61,7 +61,7 @@ func testGetPodLogsOK(ctx context.Context, containerName, podName, namespace str
 		g.Expect(err).NotTo(HaveOccurred())
 
 		g.Expect(pod.Status.Phase).To(Equal(corev1.PodSucceeded))
-	}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+	}).WithContext(ctx).Should(Succeed())
 
 	By("requesting logs via RP admin API")
 	params := url.Values{
