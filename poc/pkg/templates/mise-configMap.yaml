@@ -4,17 +4,15 @@ data:
     {
       "Version": "1",
       "AzureAd": {
-        "Instance": {{ .Values.MISE.configMap.Instance }},
-        "ClientId": {{ .Values.MISE.configMap.ClientId }},
-        "TenantId": {{ .Values.MISE.configMap.TenantId }},
         "InboundPolicies": 
         [
           {
             "Label": {{ .Values.MISE.configMap.InboundPolicies.Label }},
+            "Instance": {{ .Values.MISE.configMap.Instance }},
+            "ClientId": {{ .Values.MISE.configMap.ClientId }},
+            "TenantId": {{ .Values.MISE.configMap.TenantId }},
+            "Authority": "{Instance}/{TenantId}/v2.0",
             "AuthenticationSchemes": {{ .Values.MISE.configMap.InboundPolicies.AuthenticationSchemes }},
-            "ValidAudiences" : [ 
-                {{ .Values.MISE.configMap.ClientId }}
-            ] 
           }
         ],
       },
