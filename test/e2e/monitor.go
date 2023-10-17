@@ -5,6 +5,7 @@ package e2e
 
 import (
 	"context"
+	"sync"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -20,7 +21,7 @@ var _ = Describe("Monitor", func() {
 		By("creating a new monitor instance for the test cluster")
 		mon, err := cluster.NewMonitor(log, clients.RestConfig, &api.OpenShiftCluster{
 			ID: resourceIDFromEnv(),
-		}, &noop.Noop{}, nil, true)
+		}, &noop.Noop{}, nil, true, new(sync.WaitGroup))
 		Expect(err).NotTo(HaveOccurred())
 
 		By("running the monitor once")
