@@ -1,5 +1,10 @@
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: {{ .Values.MISE.container.volumes.configMap.name }}
 data:
+  log_level:  {{ .Values.MISE.container.volumes.configMap.log_level }}
   appsettings.json: |
     {
       "Version": "1",
@@ -11,7 +16,7 @@ data:
             "Instance": {{ .Values.MISE.configMap.Instance }},
             "ClientId": {{ .Values.MISE.configMap.ClientId }},
             "TenantId": {{ .Values.MISE.configMap.TenantId }},
-            "Authority": "{Instance}/{TenantId}/v2.0",
+            "Authority": {{ .Values.MISE.configMap.InboundPolicies.Authority }},
             "AuthenticationSchemes": {{ .Values.MISE.configMap.InboundPolicies.AuthenticationSchemes }},
           }
         ],
@@ -20,14 +25,8 @@ data:
       "Kestrel": {
         "Endpoints": {
             "Http": {
-                "Url": {{ .Values.MISE.configMap.AllowedHosts }}
+                "Url": {{ .Values.MISE.configMap.Kestrel.Endpoints.Url }}
             }
         }
       }
     }
-kind: ConfigMap
-metadata:
-  creationTimestamp: null
-  name: {{ .Values.MISE.container.volumes.configMap.name }}
-  data:
-  log_level:  {{ .Values.MISE.container.volumes.configMap.log_level }}
