@@ -90,3 +90,34 @@ AKSCluster:
 keyVault:
   name: aro-rp-aks-kv
   tlsCertificateName: aks-rp-certificate
+
+MISE:
+  container:
+    name: mise
+    image: aropocsvc.azurecr.io/mise-sidecar:dev
+    env:
+      name: MISE_APPSETTINGS_LOCATION
+      value: "/etc/mise/appsettings.json"
+    ports:
+      containerPort: 5000
+    volumes:
+      name: config
+      mountPath: /etc/mise
+      configMap:
+        name: miseconfig
+        items:
+          key: appsettings.json
+          path: appsettings.json
+  configMap:
+    Instance: "https://login.microsoftonline.com"
+    ClientId: "704c7dfd-4ed1-4732-95c0-04a44b0895a0"
+    TenantId: "72f988bf-86f1-41af-91ab-2d7cd011db47"
+    InboundPolicies:
+      Label: "aro-rp-policy"
+      AuthenticationSchemes: [ "Bearer"]
+    AllowedHosts: "*"
+    Kestrel:
+      Endpoints:
+        Url: "http://0.0.0.0:5000"
+    metatata:
+      name: miseconfig

@@ -1,28 +1,30 @@
 apiVersion: v1
 data:
+  # Configuration detail can be found here.
+  # https://identitydivision.visualstudio.com/DevEx/_git/Microsoft-IdentityModel-S2S?path=/docs/JsonConfigurations.md&_a=preview
   appsettings.json: |
     {
       "Version": "1",
       "AzureAd": {
-        "Instance": "https://login.microsoftonline.com",
-        "ClientId": "704c7dfd-4ed1-4732-95c0-04a44b0895a0",
-        "TenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+        "Instance": {{ .Values.MISE.configMap.Instance }},
+        "ClientId": {{ .Values.MISE.configMap.ClientId }},
+        "TenantId": {{ .Values.MISE.configMap.TenantId }},
         "InboundPolicies": 
         [
           {
-            "Label": "jonachang-policy",
-            "AuthenticationSchemes": [ "Bearer"],
+            "Label": {{ .Values.MISE.configMap.InboundPolicies.Label }},
+            "AuthenticationSchemes": {{ .Values.MISE.configMap.InboundPolicies.AuthenticationSchemes }},
             "ValidAudiences" : [ 
-                "https://management.azure.com/"
+                {{ .Values.MISE.configMap.ClientId }}
             ] 
           }
         ],
       },
-      "AllowedHosts": "*",
+      "AllowedHosts": {{ .Values.MISE.configMap.AllowedHosts }},
       "Kestrel": {
         "Endpoints": {
             "Http": {
-                "Url": "http://0.0.0.0:5000"
+                "Url": {{ .Values.MISE.configMap.AllowedHosts }}
             }
         }
       }
@@ -30,4 +32,4 @@ data:
 kind: ConfigMap
 metadata:
   creationTimestamp: null
-  name: miseconfig
+  name: {{ .Values.MISE.container.volumes.configMap.name }}
