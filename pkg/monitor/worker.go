@@ -249,17 +249,19 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 		log.Warnf("no hiveShardConfigs set for shard %d", shard)
 	}
 
+	dims := map[string]string{
+		dimension.ClusterResourceID: doc.OpenShiftCluster.ID,
+		dimension.Location:          doc.OpenShiftCluster.Location,
+		dimension.SubscriptionID:    sub.ID,
+	}
+
 	var nsgMon *nsg.NSGMonitor
 	if doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG == api.PreconfiguredNSGEnabled && hourlyRun {
 		token, err := mon.env.FPNewClientCertificateCredential(sub.Subscription.Properties.TenantID)
 		if err != nil {
 			// Not stopping here just because we can't monitor NSG
 			log.Error("Unable to create FP Authorizer for NSG monitoring.", err)
-			mon.m.EmitGauge(nsg.MetricUnsuccessfulFPCreation, int64(1), map[string]string{
-				dimension.ClusterResourceID: doc.OpenShiftCluster.ID,
-				dimension.Location:          doc.OpenShiftCluster.Location,
-				dimension.SubscriptionID:    sub.ID,
-			})
+			mon.m.EmitGauge(nsg.MetricUnsuccessfulFPCreation, int64(1), dims)
 		} else {
 			client, err := armnetwork.NewSubnetsClient(sub.ID, token, nil)
 			if err != nil {
@@ -293,11 +295,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 			}
 		case <-ctx.Done():
 			log.Infof("NSG Monitoring processing for cluster %s has timed out", doc.OpenShiftCluster.ID)
-			mon.m.EmitGauge(nsg.MetricNSGMonitoringTimedOut, int64(1), map[string]string{
-				dimension.ClusterResourceID: doc.OpenShiftCluster.ID,
-				dimension.Location:          doc.OpenShiftCluster.Location,
-				dimension.SubscriptionID:    sub.ID,
-			})
+			mon.m.EmitGauge(nsg.MetricNSGMonitoringTimedOut, int64(1), dims)
 		}
 	}
 }
