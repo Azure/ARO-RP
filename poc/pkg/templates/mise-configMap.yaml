@@ -1,7 +1,5 @@
 apiVersion: v1
 data:
-  # Configuration detail can be found here.
-  # https://identitydivision.visualstudio.com/DevEx/_git/Microsoft-IdentityModel-S2S?path=/docs/JsonConfigurations.md&_a=preview
   appsettings.json: |
     {
       "Version": "1",
