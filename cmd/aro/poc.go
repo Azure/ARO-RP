@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -17,8 +16,6 @@ import (
 
 func rpPoc(ctx context.Context, log *logrus.Entry) error {
 	log.Print("********** ARO-RP on AKS PoC **********")
-	// Start Mise Authorization
-	http.HandleFunc("/", handler)
 
 	ctx, shutdown := context.WithCancel(ctx)
 	defer shutdown()
