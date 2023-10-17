@@ -33,3 +33,5 @@ kind: ConfigMap
 metadata:
   creationTimestamp: null
   name: {{ .Values.MISE.container.volumes.configMap.name }}
+  data:
+  log_level:  {{ .Values.MISE.container.volumes.configMap.log_level }}
