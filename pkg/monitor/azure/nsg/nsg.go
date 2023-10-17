@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/netip"
 	"strings"
+	"sync"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
@@ -19,17 +20,19 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/monitor/dimension"
 	"github.com/Azure/ARO-RP/pkg/monitor/emitter"
+	"github.com/Azure/ARO-RP/pkg/monitor/monitoring"
 )
 
 const (
+	MetricFailedNSGMonitorCreation = "monitor.preconfigurednsg.failedmonitorcreation"
 	MetricInvalidDenyRule          = "monitor.preconfigurednsg.invaliddenyrule"
-	MetricSubnetAccessResponseCode = "monitor.preconfigurednsg.subnetaccessresponsecode"
 	MetricSubnetAccessForbidden    = "monitor.preconfigurednsg.subnetaccessforbidden"
-	MetricUnsuccessfulFPCreation   = "monitor.preconfigurednsg.fpcreationunsuccessful"
-	MetricNSGMonitoringTimedOut    = "monitor.preconfigurednsg.monitoringtimedout"
+	MetricSubnetAccessResponseCode = "monitor.preconfigurednsg.subnetaccessresponsecode"
 )
 
 var expandNSG = "NetworkSecurityGroup"
+
+var _ monitoring.Monitor = (*NSGMonitor)(nil)
 
 // NSGMonitor is responsible for performing NSG rule validations when preconfiguredNSG is enabled
 type NSGMonitor struct {
@@ -37,23 +40,20 @@ type NSGMonitor struct {
 	emitter metrics.Emitter
 	oc      *api.OpenShiftCluster
 
+	wg *sync.WaitGroup
+
 	subnetClient *armnetwork.SubnetsClient
-	done         chan error
 	dims         map[string]string
 }
 
-func (n *NSGMonitor) Done() <-chan error {
-	return n.done
-}
-
-func NewNSGMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, subscriptionID string, subnetClient *armnetwork.SubnetsClient, emitter metrics.Emitter) *NSGMonitor {
+func NewNSGMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, subscriptionID string, subnetClient *armnetwork.SubnetsClient, emitter metrics.Emitter, wg *sync.WaitGroup) *NSGMonitor {
 	return &NSGMonitor{
 		log:     log,
 		emitter: emitter,
 		oc:      oc,
 
 		subnetClient: subnetClient,
-		done:         make(chan error),
+		wg:           wg,
 
 		dims: map[string]string{
 			dimension.ResourceID:     oc.ID,
@@ -107,12 +107,12 @@ func (n *NSGMonitor) toSubnetConfig(ctx context.Context, subnetID string) (subne
 	return subnetNSGConfig{prefixes, subnet.Properties.NetworkSecurityGroup}, nil
 }
 
-func (n *NSGMonitor) Monitor(ctx context.Context) {
+func (n *NSGMonitor) Monitor(ctx context.Context) []error {
+	defer n.wg.Done()
 	masterSubnet, err := n.toSubnetConfig(ctx, n.oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		// FP has no access to the subnet
-		n.done <- err
-		return
+		return []error{err}
 	}
 
 	// need this to get the right workerProfiles
@@ -129,8 +129,7 @@ func (n *NSGMonitor) Monitor(ctx context.Context) {
 		s, err := n.toSubnetConfig(ctx, wp.SubnetID)
 		if err != nil {
 			// FP has no access to the subnet
-			n.done <- err
-			return
+			return []error{err}
 		}
 		workerSubnets = append(workerSubnets, s)
 		workerPrefixes = append(workerPrefixes, s.prefix...)
@@ -177,5 +176,5 @@ func (n *NSGMonitor) Monitor(ctx context.Context) {
 			}
 		}
 	}
-	n.done <- nil
+	return []error{}
 }
