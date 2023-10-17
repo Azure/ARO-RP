@@ -70,13 +70,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	r.Log.Debug("running")
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(managed) {
-		r.SetProgressing(ctx, "Not MHC Managed for cluster maintenance purpose.")
-
 		err := r.dh.EnsureDeleted(ctx, "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck")
 		if err != nil {
 			r.Log.Error(err)
 			r.SetDegraded(ctx, err)
-			r.ClearProgressing(ctx)
 
 			return reconcile.Result{RequeueAfter: time.Hour}, err
 		}
@@ -85,7 +82,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		if err != nil {
 			r.Log.Error(err)
 			r.SetDegraded(ctx, err)
-			r.ClearProgressing(ctx)
 
 			return reconcile.Result{RequeueAfter: time.Hour}, err
 		}
