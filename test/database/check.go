@@ -33,6 +33,18 @@ func NewChecker() *Checker {
 	return &Checker{}
 }
 
+func (f *Checker) Clear() {
+	f.openshiftClusterDocuments = []*api.OpenShiftClusterDocument{}
+	f.subscriptionDocuments = []*api.SubscriptionDocument{}
+	f.billingDocuments = []*api.BillingDocument{}
+	f.asyncOperationDocuments = []*api.AsyncOperationDocument{}
+	f.portalDocuments = []*api.PortalDocument{}
+	f.gatewayDocuments = []*api.GatewayDocument{}
+	f.openShiftVersionDocuments = []*api.OpenShiftVersionDocument{}
+	f.maintenanceManifestDocuments = []*api.MaintenanceManifestDocument{}
+	f.validationResult = []*api.ValidationResult{}
+}
+
 func (f *Checker) AddOpenShiftClusterDocuments(docs ...*api.OpenShiftClusterDocument) {
 	for _, doc := range docs {
 		docCopy, err := deepCopy(doc)

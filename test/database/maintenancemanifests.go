@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -14,30 +15,32 @@ func injectMaintenanceManifests(c *cosmosdb.FakeMaintenanceManifestDocumentClien
 	c.SetQueryHandler(database.MaintenanceManifestQueryForCluster, fakeMaintenanceManifestsQueryCluster)
 
 	c.SetTriggerHandler("renewLease", fakeMaintenanceManifestsRenewLeaseTrigger)
-	c.SetTriggerHandler("retryLater", fakeMaintenanceManifestsRetryLaterTrigger)
 }
 
-func getQueuedMaintenanceManifestDocuments(client cosmosdb.MaintenanceManifestDocumentClient, clusterID string) (results []*api.MaintenanceManifestDocument) {
+func fakeMaintenanceManifestsQueryCluster(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.MaintenanceManifestDocumentRawIterator {
+	startingIndex, err := fakeMaintenanceManifestsGetContinuation(options)
+	if err != nil {
+		return cosmosdb.NewFakeMaintenanceManifestDocumentErroringRawIterator(err)
+	}
+
 	input, err := client.ListAll(context.Background(), nil)
 	if err != nil {
 		// TODO: should this never happen?
 		panic(err)
 	}
 
-	fmt.Println(input)
+	clusterID := query.Parameters[0].Value
+
+	fmt.Print(clusterID, startingIndex)
+
+	var results []*api.MaintenanceManifestDocument
 	for _, r := range input.MaintenanceManifestDocuments {
-		fmt.Println(r)
 		if r.ClusterID == clusterID && (r.MaintenanceManifest.State == api.MaintenanceManifestStatePending ||
 			r.MaintenanceManifest.State == api.MaintenanceManifestStateInProgress) {
 			results = append(results, r)
 		}
 	}
-	return
-}
-
-func fakeMaintenanceManifestsQueryCluster(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.MaintenanceManifestDocumentRawIterator {
-	docs := getQueuedMaintenanceManifestDocuments(client, query.Parameters[0].Value)
-	return cosmosdb.NewFakeMaintenanceManifestDocumentIterator(docs, 0)
+	return cosmosdb.NewFakeMaintenanceManifestDocumentIterator(results, startingIndex)
 }
 
 func fakeMaintenanceManifestsRenewLeaseTrigger(ctx context.Context, doc *api.MaintenanceManifestDocument) error {
@@ -48,4 +51,11 @@ func fakeMaintenanceManifestsRenewLeaseTrigger(ctx context.Context, doc *api.Mai
 func fakeMaintenanceManifestsRetryLaterTrigger(ctx context.Context, doc *api.MaintenanceManifestDocument) error {
 	doc.LeaseExpires = int(time.Now().Unix()) + 600
 	return nil
+}
+
+func fakeMaintenanceManifestsGetContinuation(options *cosmosdb.Options) (startingIndex int, err error) {
+	if options != nil && options.Continuation != "" {
+		startingIndex, err = strconv.Atoi(options.Continuation)
+	}
+	return
 }

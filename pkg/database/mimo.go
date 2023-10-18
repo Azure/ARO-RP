@@ -30,7 +30,7 @@ type maintenanceManifests struct {
 
 type MaintenanceManifests interface {
 	Create(context.Context, *api.MaintenanceManifestDocument) (*api.MaintenanceManifestDocument, error)
-	GetByClusterID(context.Context, string, string) (cosmosdb.MaintenanceManifestDocumentRawIterator, error)
+	GetByClusterID(context.Context, string, string) (cosmosdb.MaintenanceManifestDocumentIterator, error)
 	Patch(context.Context, string, string, MaintenanceManifestDocumentMutator) (*api.MaintenanceManifestDocument, error)
 	PatchWithLease(context.Context, string, string, MaintenanceManifestDocumentMutator) (*api.MaintenanceManifestDocument, error)
 	Lease(context.Context, string, string) (*api.MaintenanceManifestDocument, error)
@@ -149,7 +149,7 @@ func (c *maintenanceManifests) Patch(ctx context.Context, clusterID string, id s
 			return
 		}
 
-		doc, err = c.c.Replace(ctx, doc.MaintenanceManifest.ClusterID, doc, nil)
+		doc, err = c.c.Replace(ctx, doc.ClusterID, doc, nil)
 		return
 	})
 
@@ -196,19 +196,19 @@ func (c *maintenanceManifests) update(ctx context.Context, doc *api.MaintenanceM
 		return nil, fmt.Errorf("id %q is not lower case", doc.ID)
 	}
 
-	return c.c.Replace(ctx, doc.MaintenanceManifest.ClusterID, doc, options)
+	return c.c.Replace(ctx, doc.ClusterID, doc, options)
 }
 
 func (c *maintenanceManifests) ChangeFeed() cosmosdb.MaintenanceManifestDocumentIterator {
 	return c.c.ChangeFeed(nil)
 }
 
-func (c *maintenanceManifests) GetByClusterID(ctx context.Context, clusterID string, continuation string) (cosmosdb.MaintenanceManifestDocumentRawIterator, error) {
+func (c *maintenanceManifests) GetByClusterID(ctx context.Context, clusterID string, continuation string) (cosmosdb.MaintenanceManifestDocumentIterator, error) {
 	if clusterID != strings.ToLower(clusterID) {
-		return nil, fmt.Errorf("clusterID %q is not lower case")
+		return nil, fmt.Errorf("clusterID %q is not lower case", clusterID)
 	}
 
-	return c.c.Query(clusterID, &cosmosdb.Query{
+	return c.c.Query("", &cosmosdb.Query{
 		Query: MaintenanceManifestQueryForCluster,
 		Parameters: []cosmosdb.Parameter{
 			{

@@ -39,6 +39,18 @@ func NewFixture() *Fixture {
 	return &Fixture{}
 }
 
+func (f *Fixture) Clear() {
+	f.openshiftClusterDocuments = []*api.OpenShiftClusterDocument{}
+	f.subscriptionDocuments = []*api.SubscriptionDocument{}
+	f.billingDocuments = []*api.BillingDocument{}
+	f.asyncOperationDocuments = []*api.AsyncOperationDocument{}
+	f.portalDocuments = []*api.PortalDocument{}
+	f.gatewayDocuments = []*api.GatewayDocument{}
+	f.openShiftVersionDocuments = []*api.OpenShiftVersionDocument{}
+	f.clusterManagerConfigurationDocuments = []*api.ClusterManagerConfigurationDocument{}
+	f.maintenanceManifestDocuments = []*api.MaintenanceManifestDocument{}
+}
+
 func (f *Fixture) WithClusterManagerConfigurations(db database.ClusterManagerConfigurations) *Fixture {
 	f.clusterManagerConfigurationsDatabase = db
 	return f
