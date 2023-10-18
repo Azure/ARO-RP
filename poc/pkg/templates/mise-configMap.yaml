@@ -12,7 +12,7 @@ data:
           {
             "Label": "{{ .Values.MISE.configMap.InboundPolicies.Label }}",
             "Authority": "{{ .Values.MISE.configMap.InboundPolicies.Authority }}",
-            "AuthenticationSchemes": {{ .Values.MISE.configMap.InboundPolicies.AuthenticationSchemes }},
+            "AuthenticationSchemes": ["{{ .Values.MISE.configMap.InboundPolicies.AuthenticationSchemes }"],
           }
         ],
       },
