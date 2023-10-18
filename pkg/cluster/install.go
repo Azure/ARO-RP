@@ -343,6 +343,7 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.initializeOperatorDeployer), // depends on kube clients
 			steps.Action(m.removeBootstrap),
 			steps.Action(m.removeBootstrapIgnition),
+			steps.Condition(m.apiServersReady, 30*time.Minute, true),
 			steps.Action(m.configureAPIServerCertificate),
 			steps.Condition(m.apiServersReady, 30*time.Minute, true),
 			steps.Condition(m.minimumWorkerNodesReady, 30*time.Minute, true),
