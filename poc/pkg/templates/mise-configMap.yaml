@@ -8,23 +8,23 @@ data:
     {
       "Version": "1",
       "AzureAd": {
+        "Instance": "{{ .Values.MISE.configMap.Instance }}",
+        "ClientId": "{{ .Values.MISE.configMap.ClientId }}",
+        "TenantId": "{{ .Values.MISE.configMap.TenantId }}",
         "InboundPolicies": 
         [
           {
-            "Label": {{ .Values.MISE.configMap.InboundPolicies.Label }},
-            "Instance": {{ .Values.MISE.configMap.Instance }},
-            "ClientId": {{ .Values.MISE.configMap.ClientId }},
-            "TenantId": {{ .Values.MISE.configMap.TenantId }},
-            "Authority": {{ .Values.MISE.configMap.InboundPolicies.Authority }},
-            "AuthenticationSchemes": {{ .Values.MISE.configMap.InboundPolicies.AuthenticationSchemes }},
+            "Label": "{{ .Values.MISE.configMap.InboundPolicies.Label }}",
+            "Authority": "{{ .Values.MISE.configMap.InboundPolicies.Authority }}",
+            "AuthenticationSchemes": "{{ .Values.MISE.configMap.InboundPolicies.AuthenticationSchemes }}",
           }
         ],
       },
-      "AllowedHosts": {{ .Values.MISE.configMap.AllowedHosts }},
+      "AllowedHosts": "{{ .Values.MISE.configMap.AllowedHosts }}",
       "Kestrel": {
         "Endpoints": {
             "Http": {
-                "Url": {{ .Values.MISE.configMap.Kestrel.Endpoints.Url }}
+                "Url": "{{ .Values.MISE.configMap.Kestrel.Endpoints.Url }}"
             }
         }
       }

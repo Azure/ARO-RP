@@ -122,5 +122,3 @@ MISE:
         Url: "http://0.0.0.0:5000"
     metatata:
       name: miseconfig
-    date:
-      log_level: log_level
