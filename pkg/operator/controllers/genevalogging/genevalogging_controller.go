@@ -102,9 +102,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	err = r.ensureResources(ctx, instance)
 	if err != nil {
 		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
 		return reconcile.Result{}, err
 	}
 
+	r.ClearConditions(ctx)
 	return reconcile.Result{}, nil
 }
 
