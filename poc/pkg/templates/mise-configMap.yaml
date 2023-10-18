@@ -4,7 +4,7 @@ metadata:
   creationTimestamp: null
   name: {{ .Values.MISE.container.volumes.configMap.name }}
 data:
-  log_level:  {{ .Values.MISE.container.volumes.configMap.metatata.log_level }}
+  log_level: debug
   appsettings.json: |
     {
       "Version": "1",
