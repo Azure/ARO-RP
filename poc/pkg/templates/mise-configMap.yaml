@@ -1,5 +1,6 @@
 apiVersion: v1
 data:
+  log_level: {{ .Values.MISE.configMap.date.log_level }}
   appsettings.json: |
     {
       "Version": "1",
@@ -12,7 +13,7 @@ data:
           {
             "Label": "{{ .Values.MISE.configMap.InboundPolicies.Label }}",
             "Authority": "{{ .Values.MISE.configMap.InboundPolicies.Authority }}",
-            "AuthenticationSchemes": ["{{ .Values.MISE.configMap.InboundPolicies.AuthenticationSchemes }"],
+            "AuthenticationSchemes": ["{{ .Values.MISE.configMap.InboundPolicies.AuthenticationSchemes }}"],
           }
         ],
       },
