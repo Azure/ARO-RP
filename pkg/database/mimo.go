@@ -228,16 +228,15 @@ func (c *maintenanceManifests) Lease(ctx context.Context, clusterID string, id s
 func (c *maintenanceManifests) EndLease(ctx context.Context, clusterID string, id string, provisioningState api.MaintenanceManifestState, statusString *string) (*api.MaintenanceManifestDocument, error) {
 	return c.patchWithLease(ctx, clusterID, id, func(doc *api.MaintenanceManifestDocument) error {
 		doc.MaintenanceManifest.State = provisioningState
+		if statusString != nil {
+			doc.MaintenanceManifest.StatusText = *statusString
+		}
 
 		doc.LeaseOwner = ""
 		doc.LeaseExpires = 0
 
 		if provisioningState != api.MaintenanceManifestStateFailed {
 			doc.Dequeues = 0
-		} else {
-			if statusString != nil {
-				doc.MaintenanceManifest.StatusText = *statusString
-			}
 		}
 		return nil
 	}, nil)
