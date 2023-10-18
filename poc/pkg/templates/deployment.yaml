@@ -52,6 +52,10 @@ spec:
           env:
           - name: {{ .Values.MISE.container.env.name }}
             value: {{ .Values.MISE.container.env.value }}
+            valueFrom:
+              configMapKeyRef:
+                name: {{ .Values.MISE.container.volumes.configMap.name }}
+                key: {{ .Values.MISE.configMap.volumes.date.log_level }}
           ports:
           - containerPort: {{ .Values.MISE.container.ports.containerPort }}
             name: http
