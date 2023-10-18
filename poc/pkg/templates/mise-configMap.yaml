@@ -1,8 +1,4 @@
 apiVersion: v1
-kind: ConfigMap
-metadata:
-  creationTimestamp: null
-  name: {{ .Values.MISE.container.volumes.configMap.name }}
 data:
   appsettings.json: |
     {
@@ -16,7 +12,7 @@ data:
           {
             "Label": "{{ .Values.MISE.configMap.InboundPolicies.Label }}",
             "Authority": "{{ .Values.MISE.configMap.InboundPolicies.Authority }}",
-            "AuthenticationSchemes": "{{ .Values.MISE.configMap.InboundPolicies.AuthenticationSchemes }}",
+            "AuthenticationSchemes": {{ .Values.MISE.configMap.InboundPolicies.AuthenticationSchemes }},
           }
         ],
       },
@@ -29,3 +25,7 @@ data:
         }
       }
     }
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: {{ .Values.MISE.container.volumes.configMap.name }}
