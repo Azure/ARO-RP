@@ -278,23 +278,6 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router, prom *prometheus.Promethe
 		p.log.Fatal(err)
 	}
 
-	for _, name := range names {
-		regexp, _ := regexp.Compile(`v[1,2]/build/.*\..*`)
-		name := regexp.FindString(name)
-		switch name {
-		case "v2/build/index.html":
-			r.Methods(http.MethodGet).Path("/").HandlerFunc(p.indexV2)
-		case "v1/build/index.html":
-			r.Methods(http.MethodGet).Path("/v1").HandlerFunc(p.index)
-		case "":
-		default:
-			fmtName := strings.TrimPrefix(name, "v1/build/")
-			fmtName = strings.TrimPrefix(fmtName, "v2/build/")
-
-			r.Methods(http.MethodGet).Path("/" + fmtName).HandlerFunc(p.serve(name))
-		}
-	}
-
 	r.Methods(http.MethodGet).Path("/api/clusters").HandlerFunc(p.clusters)
 	r.Methods(http.MethodGet).Path("/api/info").HandlerFunc(p.info)
 	r.Methods(http.MethodGet).Path("/api/regions").HandlerFunc(p.regions)
@@ -325,6 +308,24 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router, prom *prometheus.Promethe
 
 	// ssh
 	r.Methods(http.MethodPost).Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/ssh/new").HandlerFunc(sshStruct.New)
+
+	for _, name := range names {
+		regexp, _ := regexp.Compile(`v[1,2]/build/.*\..*`)
+		name := regexp.FindString(name)
+		switch name {
+		case "v2/build/index.html":
+			r.Methods(http.MethodGet).Path("/").HandlerFunc(p.indexV2)
+			r.Methods(http.MethodGet).PathPrefix("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}").HandlerFunc(p.indexV2)
+		case "v1/build/index.html":
+			r.Methods(http.MethodGet).Path("/v1").HandlerFunc(p.index)
+		case "":
+		default:
+			fmtName := strings.TrimPrefix(name, "v1/build/")
+			fmtName = strings.TrimPrefix(fmtName, "v2/build/")
+
+			r.Methods(http.MethodGet).Path("/" + fmtName).HandlerFunc(p.serve(name))
+		}
+	}
 }
 
 func (p *portal) index(w http.ResponseWriter, r *http.Request) {

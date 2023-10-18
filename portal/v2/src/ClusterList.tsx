@@ -11,10 +11,6 @@ import {
   mergeStyleSets,  
   TextField,
   Link,
-  Layer,
-  Popup,
-  DefaultButton,
-  FocusTrapZone,
 } from "@fluentui/react"
 import {
   DetailsList,
@@ -23,11 +19,11 @@ import {
   IColumn,
   IDetailsListStyles,
 } from "@fluentui/react/lib/DetailsList"
-import { useBoolean } from "@fluentui/react-hooks"
 import { fetchClusters } from "./Request"
 import { ToolIcons } from "./ToolIcons"
 import { AxiosResponse } from "axios"
 import { ICluster, headerStyles } from "./App"
+import { useHref, useLinkClickHandler } from "react-router-dom"
 
 const errorBarStyles: Partial<IMessageBarStyles> = { root: { marginBottom: 15 } }
 
@@ -74,56 +70,6 @@ const separatorStyle = {
   },
 }
 
-const popupStyles = mergeStyleSets({
-  root: {
-    background: "rgba(0, 0, 0, 0.2)",
-    bottom: "0",
-    left: "0",
-    position: "fixed",
-    right: "0",
-    top: "0",
-  },
-  content: {
-    background: "white",
-    left: "50%",
-    maxWidth: "400px",
-    padding: "0 2em 2em",
-    position: "absolute",
-    top: "50%",
-    transform: "translate(-50%, -50%)",
-  },
-})
-
-const PopupModal = (props: { title: string; text: string; hidePopup: any }) => {
-  return (
-    <>
-      <Layer>
-        <Popup
-          className={popupStyles.root}
-          role="dialog"
-          aria-modal="true"
-          onDismiss={props.hidePopup}
-          enableAriaHiddenSiblings={true}>
-          <FocusTrapZone>
-            <div role="document" className={popupStyles.content}>
-              <h2>{props.title}</h2>
-              <p>{props.text}</p>
-              <DefaultButton
-                onClick={() => {
-                  // this is to change the URL in the address bar
-                  window.history.replaceState({}, "", "/v2")
-                  props.hidePopup()
-                }}>
-                Close
-              </DefaultButton>
-            </div>
-          </FocusTrapZone>
-        </Popup>
-      </Layer>
-    </>
-  )
-}
-
 interface IClusterListState {
   columns: IColumn[]
   items: ICluster[]
@@ -141,7 +87,6 @@ const clusterListDetailStyles: Partial<IDetailsListStyles> = {
 interface ClusterListComponentProps {
   items: ICluster[]
   sshModalRef: MutableRefObject<any>
-  setCurrentCluster: (item: ICluster) => void
   csrfToken: MutableRefObject<string>
 }
 
@@ -184,9 +129,12 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
         sortDescendingAriaLabel: "Sorted Z to A",
         onColumnClick: this._onColumnClick,
         data: "string",
-        onRender: (item: ICluster) => (
-          <Link onClick={() => this._onClusterInfoLinkClick(item)}>{item.name}</Link>
-        ),
+        onRender: (item: ICluster) => {
+          const href = useHref(item.resourceId)
+          const onClick = useLinkClickHandler(item.resourceId)
+          // @ts-ignore
+          return (<Link href={href} onClick={(ev) => onClick(ev)}>{item.name}</Link>)
+        },
         isPadded: true,
       },
       {
@@ -341,10 +289,6 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
     })
   }
 
-  private _onClusterInfoLinkClick(item: ICluster): void {
-    this.props.setCurrentCluster(item)
-  }
-
   private _onColumnClick = (ev: React.MouseEvent<HTMLElement>, column: IColumn): void => {
     const { columns, items } = this.state
     const newColumns: IColumn[] = columns.slice()
@@ -368,13 +312,10 @@ class ClusterListComponent extends Component<ClusterListComponentProps, ICluster
 export function ClusterList(props: {
   csrfToken: MutableRefObject<string>
   sshBox: MutableRefObject<any>
-  setCurrentCluster: any
   csrfTokenAvailable: string
-  params: any
 }) {
   const [data, setData] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
-  const [isPopupVisible, { setTrue: showPopup, setFalse: hidePopup }] = useBoolean(false)
   const state = useRef<ClusterListComponent>(null)
   const [fetching, setFetching] = useState("")
 
@@ -414,21 +355,6 @@ export function ClusterList(props: {
       setFetching("FETCHING")
       fetchClusters().then(onData)
     }
-
-    if (props.params) {
-      const resourceID: string = props.params["resourceid"]
-      const clusterList = data as ICluster[]
-      const currentCluster = clusterList.find(
-        (item): item is ICluster => resourceID === item.resourceId
-      )
-
-      if (fetching === "DONE" && !currentCluster) {
-        showPopup()
-        return
-      }
-
-      props.setCurrentCluster(currentCluster)
-    }
   }, [data, fetching, setFetching, props.csrfTokenAvailable])
 
   const _items: ICommandBarItemProps[] = [
@@ -457,18 +383,10 @@ export function ClusterList(props: {
 
       {error && errorBar()}
 
-      {isPopupVisible &&
-        PopupModal({
-          title: "Resource Not Found",
-          text: "No resource found due to Invalid/Non-existent resource ID in the URL.",
-          hidePopup: hidePopup,
-        })}
-
       <ClusterListComponent
         items={data}
         ref={state} // why do we need ref here?
         sshModalRef={props.sshBox}
-        setCurrentCluster={props.setCurrentCluster}
         csrfToken={props.csrfToken}
       />
     </Stack>

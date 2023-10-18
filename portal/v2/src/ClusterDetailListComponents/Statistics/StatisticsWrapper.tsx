@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { AxiosResponse } from "axios"
-import { ICluster } from "../../App"
+import { IClusterCoordinates } from "../../App"
 import { StatisticsComponent } from "./StatisticsComponent"
 import { fetchStatistics } from "../../Request"
 import {
@@ -29,7 +29,7 @@ export interface IMetrics {
 }
 
 export function StatisticsWrapper(props: {
-  currentCluster: ICluster
+  currentCluster: IClusterCoordinates
   detailPanelSelected: string
   loaded: boolean
   statisticsName: string
