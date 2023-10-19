@@ -52,11 +52,6 @@ spec:
           env:
           - name: {{ .Values.MISE.container.env.MISE_APPSETTINGS_LOCATION.name }}
             value: {{ .Values.MISE.container.env.MISE_APPSETTINGS_LOCATION.value }}
-          - name: {{ .Values.MISE.container.env.LOG_LEVEL.name }}
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ .Values.MISE.container.volumes.configMap.name }}
-                  key: {{ .Values.MISE.container.env.LOG_LEVEL.key }}
           ports:
           - containerPort: {{ .Values.MISE.container.ports.containerPort }}
             name: http
@@ -71,6 +66,8 @@ spec:
             items:
             - key: {{ .Values.MISE.container.volumes.configMap.items.key }}
               path:  {{ .Values.MISE.container.volumes.configMap.items.path }}
+            - key: {{ .Values.MISE.container.volumes.configMap.items.log_key }}
+              path: {{ .Values.MISE.container.volumes.configMap.items.log_path }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

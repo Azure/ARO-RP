@@ -99,9 +99,6 @@ MISE:
       MISE_APPSETTINGS_LOCATION:
         name: MISE_APPSETTINGS_LOCATION
         value: "/etc/mise/appsettings.json"
-      LOG_LEVEL: 
-        name: LOG_LEVEL
-        key: log_level
     ports:
       containerPort: 5000
     volumes:
@@ -112,6 +109,8 @@ MISE:
         items:
           key: appsettings.json
           path: appsettings.json
+          log_key: log_level
+          log_path: log_level
   configMap:
     Instance: https://login.microsoftonline.com
     ClientId: 704c7dfd-4ed1-4732-95c0-04a44b0895a0
