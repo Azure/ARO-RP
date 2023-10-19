@@ -112,6 +112,7 @@ MISE:
   configMap:
     AzureAd:
       Instance: https://login.microsoftonline.com
+      # TODO(jonachang) use helm command to dynamically get the client id
       ClientId: 704c7dfd-4ed1-4732-95c0-04a44b0895a0
       TenantId: 72f988bf-86f1-41af-91ab-2d7cd011db47
       Audience: https://management.azure.com 
@@ -122,6 +123,7 @@ MISE:
         AuthenticationSchemes: Bearer
         TokenTypes: AppToken
         Authority: https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47/v2.0
+        # TODO(jonachang) use helm command to dynamically get the client id
         ValidApplicationIds: 704c7dfd-4ed1-4732-95c0-04a44b0895a0
     AllowedHosts: "*"
     Kestrel:
