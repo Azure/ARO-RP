@@ -35,7 +35,7 @@ var _ = Describe("ARO Cluster", func() {
 		var mcs, err
 		Eventually(func(g Gomega, ctx context.Context) {
 			mcs, err = clients.MachineConfig.MachineconfigurationV1().MachineConfigs().List(ctx, metav1.ListOptions{})
-			Expect(err).NotTo(HaveOccurred())
+			g.Expect(err).NotTo(HaveOccurred())
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 		actualMachineConfigNames := []string{}
 		for _, mc := range mcs.Items {
@@ -55,7 +55,7 @@ var _ = Describe("ARO Cluster", func() {
 		var co
 		Eventually(func(g Gomega, ctx context.Context) {
 			co, err = clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
-			Expect(err).NotTo(HaveOccurred())
+			g.Expect(err).NotTo(HaveOccurred())
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("verifying AcrDomain exists and is a value we expect")
