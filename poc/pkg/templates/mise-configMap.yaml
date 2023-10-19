@@ -1,0 +1,45 @@
+apiVersion: v1
+data:
+  # Follow the instructuions here to create appsettings.json.
+  # https://identitydivision.visualstudio.com/DevEx/_git/Microsoft-IdentityModel-S2S?path=/docs/JsonConfigurations.md&_a=preview
+  appsettings.json: |
+    {
+      "AzureAd": {
+        "Instance": "{{ .Values.MISE.configMap.AzureAd.Instance }}",
+        "ClientId": "{{ .Values.MISE.configMap.AzureAd.ClientId }}",
+        "TenantId": "{{ .Values.MISE.configMap.AzureAd.TenantId }}",
+        "Audience": "{{ .Values.MISE.configMap.AzureAd.Audience }}",
+        "Logging": {
+          "LogLevel": "{{ .Values.MISE.configMap.AzureAd.LogLevel }}"
+        },
+        "InboundPolicies": 
+        [
+          {
+            "Label": "{{ .Values.MISE.configMap.AzureAd.InboundPolicies.Label }}",
+            "AuthenticationSchemes": ["{{ .Values.MISE.configMap.AzureAd.InboundPolicies.AuthenticationSchemes }}"],
+            "TokenTypes": ["{{ .Values.MISE.configMap.AzureAd.InboundPolicies.TokenTypes }}"],
+            "Authority": "{{ .Values.MISE.configMap.AzureAd.InboundPolicies.Authority }}",
+            "ValidApplicationIds": ["{{ .Values.MISE.configMap.AzureAd.InboundPolicies.ValidApplicationIds }}"],
+          }
+        ],
+      },
+      "AllowedHosts": "{{ .Values.MISE.configMap.AllowedHosts }}",
+      "Kestrel": {
+        "Endpoints": {
+            "Http": {
+                "Url": "{{ .Values.MISE.configMap.Kestrel.Endpoints.Url }}"
+            }
+        }
+      },
+      "Logging": {
+        "LogLevel": {
+            "Default": "{{ .Values.MISE.configMap.Logging.LogLevel.Default }}",
+            "Microsoft": "{{ .Values.MISE.configMap.Logging.LogLevel.Microsoft }}",
+            "Microsoft.Hosting.Lifetime": "{{ .Values.MISE.configMap.Logging.LogLevel.Microsoft_Hosting_Lifetime }}",
+        }
+      }
+    }
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: {{ .Values.MISE.container.volumes.configMap.name }}
