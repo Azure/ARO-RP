@@ -5,21 +5,21 @@ data:
   appsettings.json: |
     {
       "AzureAd": {
-        "Instance": "{{ .Values.MISE.configMap.Instance }}",
-        "ClientId": "{{ .Values.MISE.configMap.ClientId }}",
-        "TenantId": "{{ .Values.MISE.configMap.TenantId }}",
-        "Audience": "{{ .Values.MISE.configMap.Audience }}",
+        "Instance": "{{ .Values.MISE.configMap.AzureAd.Instance }}",
+        "ClientId": "{{ .Values.MISE.configMap.AzureAd.ClientId }}",
+        "TenantId": "{{ .Values.MISE.configMap.AzureAd.TenantId }}",
+        "Audience": "{{ .Values.MISE.configMap.AzureAd.Audience }}",
         "Logging": {
-          "LogLevel": "{{ .Values.MISE.configMap.LogLevel }}"
+          "LogLevel": "{{ .Values.MISE.configMap.AzureAd.LogLevel }}"
         },
         "InboundPolicies": 
         [
           {
-            "Label": "{{ .Values.MISE.configMap.InboundPolicies.Label }}",
-            "AuthenticationSchemes": ["{{ .Values.MISE.configMap.InboundPolicies.AuthenticationSchemes }}"],
-            "TokenTypes": ["{{ .Values.MISE.configMap.InboundPolicies.TokenTypes }}"],
-            "Authority": "{{ .Values.MISE.configMap.InboundPolicies.Authority }}",
-            "ValidApplicationIds": ["{{ .Values.MISE.configMap.InboundPolicies.ValidApplicationIds }}"],
+            "Label": "{{ .Values.MISE.configMap.AzureAd.InboundPolicies.Label }}",
+            "AuthenticationSchemes": ["{{ .Values.MISE.configMap.AzureAd.InboundPolicies.AuthenticationSchemes }}"],
+            "TokenTypes": ["{{ .Values.MISE.configMap.AzureAd.InboundPolicies.TokenTypes }}"],
+            "Authority": "{{ .Values.MISE.configMap.AzureAd.InboundPolicies.Authority }}",
+            "ValidApplicationIds": ["{{ .Values.MISE.configMap.AzureAd.InboundPolicies.ValidApplicationIds }}"],
           }
         ],
       },
