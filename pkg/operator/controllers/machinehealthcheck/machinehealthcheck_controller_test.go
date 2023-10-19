@@ -12,9 +12,11 @@ import (
 
 	"github.com/golang/mock/gomock"
 	configv1 "github.com/openshift/api/config/v1"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -196,13 +198,13 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 			},
 			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				mdh.EXPECT().Ensure(gomock.Any(), mhcIsPaused(false)).Return(nil).Times(1)
 			},
 			wantConditions: defaultConditions,
 			wantErr:        "",
 		},
 		{
-			name: "Managed Feature Flag is true and cluster is upgrading: sets paused annotation on MHC and requeues",
+			name: "Managed Feature Flag is true and cluster is upgrading: sets paused annotation on MHC",
 			instance: &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: arov1alpha1.SingletonClusterName,
@@ -216,30 +218,9 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 			},
 			clusterversion: clusterversionUpgrading,
 			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				mdh.EXPECT().Ensure(gomock.Any(), mhcIsPaused(true)).Return(nil).Times(1)
 			},
-			wantRequeueAfter: time.Hour,
-			wantErr:          "",
-		},
-		{
-			name: "Managed Feature Flag is true and cluster is upgrading: sets paused annotation on MHC and requeues",
-			instance: &arov1alpha1.Cluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: arov1alpha1.SingletonClusterName,
-				},
-				Spec: arov1alpha1.ClusterSpec{
-					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(true),
-						managed: strconv.FormatBool(true),
-					},
-				},
-			},
-			clusterversion: clusterversionUpgrading,
-			mocks: func(mdh *mock_dynamichelper.MockInterface) {
-				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(1)
-			},
-			wantRequeueAfter: time.Hour,
-			wantErr:          "",
+			wantErr: "",
 		},
 		{
 			name: "When ensuring resources fails, an error is returned",
@@ -315,4 +296,35 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
+}
+
+type mhcIsPausedMatcher struct {
+	paused bool
+}
+
+func (m mhcIsPausedMatcher) Matches(x interface{}) bool {
+	if objs, ok := x.([]kruntime.Object); !ok {
+		return false
+	} else {
+		for _, obj := range objs {
+			if mhc, ok := obj.(*machinev1beta1.MachineHealthCheck); ok {
+				if _, ok := mhc.ObjectMeta.Annotations[MHCPausedAnnotation]; ok != m.paused {
+					return false
+				}
+			}
+		}
+	}
+	return true
+}
+
+func (m mhcIsPausedMatcher) String() string {
+	if m.paused {
+		return "has mhc with paused annotation"
+	} else {
+		return "has mhc with no paused annotation"
+	}
+}
+
+func mhcIsPaused(paused bool) gomock.Matcher {
+	return mhcIsPausedMatcher{paused: paused}
 }

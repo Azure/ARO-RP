@@ -95,10 +95,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, nil
 	}
 
-	// if cluster is undergoing an upgrade, we will pause the MHC and requeue this controller
-	// to check again
-	shouldRequeue := false
-
 	var resources []kruntime.Object
 
 	for _, asset := range [][]byte{machinehealthcheckYaml, mhcremediationalertYaml} {
@@ -123,7 +119,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 				mhc.ObjectMeta.Annotations = map[string]string{
 					MHCPausedAnnotation: "",
 				}
-				shouldRequeue = true
 			}
 		}
 
@@ -151,13 +146,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	var requeueAfter time.Duration = 0
-	if shouldRequeue {
-		requeueAfter = time.Hour
-	}
-
 	r.ClearConditions(ctx)
-	return reconcile.Result{RequeueAfter: requeueAfter}, nil
+	return reconcile.Result{}, nil
 }
 
 func (r *Reconciler) isClusterUpgrading(ctx context.Context) (bool, error) {
