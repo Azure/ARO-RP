@@ -5,17 +5,22 @@ data:
   # https://identitydivision.visualstudio.com/DevEx/_git/Microsoft-IdentityModel-S2S?path=/docs/JsonConfigurations.md&_a=preview
   appsettings.json: |
     {
-      "Version": "1",
       "AzureAd": {
         "Instance": "{{ .Values.MISE.configMap.Instance }}",
         "ClientId": "{{ .Values.MISE.configMap.ClientId }}",
         "TenantId": "{{ .Values.MISE.configMap.TenantId }}",
+        "Audience": "{{ .Values.MISE.configMap.Audience }}",
+        "Logging": {
+          "LogLevel": "{{ .Values.MISE.configMap.LogLevel }}"
+        },
         "InboundPolicies": 
         [
           {
             "Label": "{{ .Values.MISE.configMap.InboundPolicies.Label }}",
-            "Authority": "{{ .Values.MISE.configMap.InboundPolicies.Authority }}",
             "AuthenticationSchemes": ["{{ .Values.MISE.configMap.InboundPolicies.AuthenticationSchemes }}"],
+            "TokenTypes": ["{{ .Values.MISE.configMap.InboundPolicies.TokenTypes }}"],
+            "Authority": "{{ .Values.MISE.configMap.InboundPolicies.Authority }}",
+            "ValidApplicationIds": ["{{ .Values.MISE.configMap.InboundPolicies.ValidApplicationIds }}"],
           }
         ],
       },
@@ -25,6 +30,13 @@ data:
             "Http": {
                 "Url": "{{ .Values.MISE.configMap.Kestrel.Endpoints.Url }}"
             }
+        }
+      },
+      "Logging": {
+        "LogLevel": {
+            "Default": "{{ .Values.MISE.configMap.Logging.LogLevel.Default }}",
+            "Microsoft": "{{ .Values.MISE.configMap.Logging.LogLevel.Microsoft }}",
+            "Microsoft.Hosting.Lifetime": "{{ .Values.MISE.configMap.Logging.LogLevel.Microsoft_Hosting_Lifetime }}",
         }
       }
     }
