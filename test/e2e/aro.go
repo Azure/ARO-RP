@@ -32,8 +32,11 @@ var _ = Describe("ARO Cluster", func() {
 		}
 
 		By("listing machine configs")
-		mcs, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigs().List(ctx, metav1.ListOptions{})
-		Expect(err).NotTo(HaveOccurred())
+		var mcs, err
+		Eventually(func(g Gomega, ctx context.Context) {
+			mcs, err = clients.MachineConfig.MachineconfigurationV1().MachineConfigs().List(ctx, metav1.ListOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 		actualMachineConfigNames := []string{}
 		for _, mc := range mcs.Items {
 			actualMachineConfigNames = append(actualMachineConfigNames, mc.Name)
@@ -49,8 +52,11 @@ var _ = Describe("ARO Cluster", func() {
 		azEnvironmentList := []string{azureclient.PublicCloud.Environment.Name, azureclient.USGovernmentCloud.Environment.Name}
 
 		By("getting an ARO operator cluster resource")
-		co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred())
+		var co
+		Eventually(func(g Gomega, ctx context.Context) {
+			co, err = clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("verifying AcrDomain exists and is a value we expect")
 		Expect(co.Spec.ACRDomain).NotTo(BeNil())
