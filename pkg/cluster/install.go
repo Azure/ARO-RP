@@ -345,7 +345,7 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.removeBootstrapIgnition),
 			// Occasionally, the apiserver experiences disruptions, causing the certificate configuration step to fail.
 			// This issue is currently under investigation.
-			steps.Condition(m.apiServersReady, 30*time.Minute, true),
+			// steps.Condition(m.apiServersReady, 30*time.Minute, true),
 			steps.Action(m.configureAPIServerCertificate),
 			steps.Condition(m.apiServersReady, 30*time.Minute, true),
 			steps.Condition(m.minimumWorkerNodesReady, 30*time.Minute, true),
