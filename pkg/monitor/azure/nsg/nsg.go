@@ -21,6 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/monitor/dimension"
 	"github.com/Azure/ARO-RP/pkg/monitor/emitter"
 	"github.com/Azure/ARO-RP/pkg/monitor/monitoring"
+	sdknetwork "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 )
 
 const (
@@ -42,11 +43,11 @@ type NSGMonitor struct {
 
 	wg *sync.WaitGroup
 
-	subnetClient *armnetwork.SubnetsClient
+	subnetClient sdknetwork.SubnetsClient
 	dims         map[string]string
 }
 
-func NewNSGMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, subscriptionID string, subnetClient *armnetwork.SubnetsClient, emitter metrics.Emitter, wg *sync.WaitGroup) *NSGMonitor {
+func NewNSGMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, subscriptionID string, subnetClient sdknetwork.SubnetsClient, emitter metrics.Emitter, wg *sync.WaitGroup) *NSGMonitor {
 	return &NSGMonitor{
 		log:     log,
 		emitter: emitter,
@@ -95,7 +96,6 @@ func (n *NSGMonitor) toSubnetConfig(ctx context.Context, subnetID string) (subne
 	var cidrs []string
 	if subnet.Properties.AddressPrefix != nil {
 		cidrs = append(cidrs, *subnet.Properties.AddressPrefix)
-
 	}
 	for _, sn := range subnet.Properties.AddressPrefixes {
 		cidrs = append(cidrs, *sn)
@@ -139,7 +139,6 @@ func (n *NSGMonitor) Monitor(ctx context.Context) []error {
 	nsgSet := map[string]*armnetwork.SecurityGroup{}
 	if masterSubnet.nsg != nil && masterSubnet.nsg.ID != nil {
 		nsgSet[*masterSubnet.nsg.ID] = masterSubnet.nsg
-
 	}
 	for _, w := range workerSubnets {
 		if w.nsg != nil && w.nsg.ID != nil {
