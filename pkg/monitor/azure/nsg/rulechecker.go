@@ -172,7 +172,7 @@ func toPrefixes(log *logrus.Entry, addresses []string) []netip.Prefix {
 			//  1. The strings always come directly from Azure, which has been validated.
 			//  2. Even if the value is wrong, it won't be neither master or worker.
 			//  3. We should also skip other service tags (VirtualNetwork, Internet, Any etc)
-			log.Errorf("Error while parsing %s. Full error %s.", address, err)
+			log.Debugf("Error while parsing %s. Full error %s.", address, err)
 			continue
 		}
 		prefixes = append(prefixes, prefix)

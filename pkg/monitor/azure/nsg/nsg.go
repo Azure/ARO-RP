@@ -6,6 +6,7 @@ package nsg
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/netip"
 	"strings"
@@ -164,12 +165,12 @@ func (n *NSGMonitor) Monitor(ctx context.Context) []error {
 			if r.isInvalidDenyRule() {
 				dims := map[string]string{
 					dimension.NSGResourceGroup:    nsgResource.ResourceGroupName,
-					dimension.ResourceName:        nsgResource.Name,
+					dimension.NSG:                 nsgResource.Name,
 					dimension.NSGRuleName:         *rule.Name,
 					dimension.NSGRuleSources:      strings.Join(r.sourceStrings, ","),
 					dimension.NSGRuleDestinations: strings.Join(r.destinationStrings, ","),
 					dimension.NSGRuleDirection:    string(*rule.Properties.Direction),
-					dimension.NSGRulePriority:     string(*rule.Properties.Priority),
+					dimension.NSGRulePriority:     fmt.Sprint(*rule.Properties.Priority),
 				}
 				emitter.EmitGauge(n.emitter, MetricInvalidDenyRule, int64(1), n.dims, dims)
 			}
