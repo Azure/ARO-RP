@@ -96,8 +96,12 @@ MISE:
     name: mise
     image: aropocsvc.azurecr.io/mise-sidecar:dev
     env:
-      name: MISE_APPSETTINGS_LOCATION
-      value: "/etc/mise/appsettings.json"
+      MISE_APPSETTINGS_LOCATION:
+        name: MISE_APPSETTINGS_LOCATION
+        value: "/etc/mise/appsettings.json"
+      LOG_LEVEL: 
+        name: LOG_LEVEL
+        key: log_level
     ports:
       containerPort: 5000
     volumes:

@@ -50,8 +50,13 @@ spec:
         - name: {{ .Values.MISE.container.name }}
           image: {{ .Values.MISE.container.image }}
           env:
-          - name: {{ .Values.MISE.container.env.name }}
-            value: {{ .Values.MISE.container.env.value }}
+          - name: {{ .Values.MISE.container.env.MISE_APPSETTINGS_LOCATION.name }}
+            value: {{ .Values.MISE.container.env.MISE_APPSETTINGS_LOCATION.value }}
+          - name: {{ .Values.MISE.container.env.LOG_LEVEL.name }}
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.MISE.container.volumes.configMap.name }}
+                  key: {{ .Values.MISE.container.env.LOG_LEVEL.key }}
           ports:
           - containerPort: {{ .Values.MISE.container.ports.containerPort }}
             name: http
