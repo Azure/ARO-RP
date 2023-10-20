@@ -1,9 +1,15 @@
-trigger: none
-pr: none
+schedules:
+- cron: '* */2 * * *'
+  displayName: Scheduled Run For 4.12
+  branches:
+    include: 
+    - main
+    - 4.12.25-issue-reproduce
+  always: true
 
 resources:
   pipelines:
-    - pipeline: e2e
+    - pipeline: e2e-4.12
       source: CI
       trigger: true
   containers:

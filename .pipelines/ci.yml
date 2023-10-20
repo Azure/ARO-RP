@@ -3,6 +3,7 @@
 trigger:
   branches:
     include:
+      - master
       - 4.12.25-issue-reproduce
   paths:
     exclude:
@@ -14,6 +15,7 @@ trigger:
 pr:
   branches:
     include:
+      - master
       - 4.12.25-issue-reproduce
   paths:
     exclude:
