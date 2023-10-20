@@ -29,6 +29,10 @@ import (
 	"github.com/Azure/ARO-RP/test/util/project"
 )
 
+const (
+	testPVCName = "e2e-test-claim"
+)
+
 var _ = Describe("Cluster", Serial, func() {
 	var p project.Project
 
@@ -81,12 +85,13 @@ var _ = Describe("Cluster", Serial, func() {
 		})
 
 		// TODO: this test is marked as pending as it isn't working as expected
-		It("which is using the default Azure File storage class backed by the cluster storage account", Pending, func(ctx context.Context) {
-			By("adding the Microsoft.Storage service endpoint to each cluster subnet")
+		It("which is using the default Azure File storage class backed by the cluster storage account", func(ctx context.Context) {
+			By("adding the Microsoft.Storage service endpoint to each cluster subnet (if needed)")
 
 			oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 			Expect(err).NotTo(HaveOccurred())
 			ocpSubnets := clusterSubnets(oc)
+			subnetAlreadyHasStorageEndpoint := false
 
 			for _, s := range ocpSubnets {
 				vnetID, subnetName, err := apisubnet.Split(s)
@@ -108,16 +113,14 @@ var _ = Describe("Cluster", Serial, func() {
 
 				// Check whether service endpoint is already there before trying to add
 				// it; trying to add a duplicate results in an error
-				subnetHasStorageEndpoint := false
-
 				for _, se := range *mgmtSubnet.ServiceEndpoints {
 					if se.Service != nil && *se.Service == "Microsoft.Storage" {
-						subnetHasStorageEndpoint = true
+						subnetAlreadyHasStorageEndpoint = true
 						break
 					}
 				}
 
-				if !subnetHasStorageEndpoint {
+				if !subnetAlreadyHasStorageEndpoint {
 					storageEndpoint := mgmtnetwork.ServiceEndpointPropertiesFormat{
 						Service:   to.StringPtr("Microsoft.Storage"),
 						Locations: &[]string{"*"},
@@ -182,30 +185,34 @@ var _ = Describe("Cluster", Serial, func() {
 				g.Expect(ready.StatefulSetIsReady(s)).To(BeTrue(), "expect stateful to be ready")
 				GinkgoWriter.Println(s)
 
-				pvc, err := clients.Kubernetes.CoreV1().PersistentVolumeClaims(p.Name).Get(ctx, ssName, metav1.GetOptions{})
+				pvcName := statefulSetPVCName(ssName, testPVCName, 0)
+				pvc, err := clients.Kubernetes.CoreV1().PersistentVolumeClaims(p.Name).Get(ctx, pvcName, metav1.GetOptions{})
 				g.Expect(err).NotTo(HaveOccurred())
 				GinkgoWriter.Println(pvc)
 			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
-			By("cleaning up the cluster subnets (removing service endpoints)")
-			for _, s := range ocpSubnets {
-				vnetID, subnetName, err := apisubnet.Split(s)
-				Expect(err).NotTo(HaveOccurred())
+			// The cluster subnets should always have endpoints in CI since CI doesn't have the gateway, but being safe
+			By("cleaning up the cluster subnets (i.e. removing service endpoints if appropriate)")
+			if !subnetAlreadyHasStorageEndpoint {
+				for _, s := range ocpSubnets {
+					vnetID, subnetName, err := apisubnet.Split(s)
+					Expect(err).NotTo(HaveOccurred())
 
-				vnetR, err := azure.ParseResourceID(vnetID)
-				Expect(err).NotTo(HaveOccurred())
+					vnetR, err := azure.ParseResourceID(vnetID)
+					Expect(err).NotTo(HaveOccurred())
 
-				mgmtSubnet, err := clients.Subnet.Get(ctx, vnetResourceGroup, vnetR.ResourceName, subnetName, "")
-				Expect(err).NotTo(HaveOccurred())
+					mgmtSubnet, err := clients.Subnet.Get(ctx, vnetResourceGroup, vnetR.ResourceName, subnetName, "")
+					Expect(err).NotTo(HaveOccurred())
 
-				if mgmtSubnet.SubnetPropertiesFormat == nil {
-					mgmtSubnet.SubnetPropertiesFormat = &mgmtnetwork.SubnetPropertiesFormat{}
+					if mgmtSubnet.SubnetPropertiesFormat == nil {
+						mgmtSubnet.SubnetPropertiesFormat = &mgmtnetwork.SubnetPropertiesFormat{}
+					}
+
+					mgmtSubnet.SubnetPropertiesFormat.ServiceEndpoints = &[]mgmtnetwork.ServiceEndpointPropertiesFormat{}
+
+					err = clients.Subnet.CreateOrUpdateAndWait(ctx, vnetResourceGroup, vnetR.ResourceName, subnetName, mgmtSubnet)
+					Expect(err).NotTo(HaveOccurred())
 				}
-
-				mgmtSubnet.SubnetPropertiesFormat.ServiceEndpoints = &[]mgmtnetwork.ServiceEndpointPropertiesFormat{}
-
-				err = clients.Subnet.CreateOrUpdateAndWait(ctx, vnetResourceGroup, vnetR.ResourceName, subnetName, mgmtSubnet)
-				Expect(err).NotTo(HaveOccurred())
 			}
 		})
 
@@ -311,7 +318,7 @@ func createStatefulSet(ctx context.Context, cli kubernetes.Interface, namespace,
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      ssName,
+									Name:      testPVCName,
 									MountPath: "/data",
 									ReadOnly:  false,
 								},
@@ -323,7 +330,7 @@ func createStatefulSet(ctx context.Context, cli kubernetes.Interface, namespace,
 			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: ssName,
+						Name: testPVCName,
 					},
 					Spec: corev1.PersistentVolumeClaimSpec{
 						AccessModes: []corev1.PersistentVolumeAccessMode{
@@ -341,6 +348,10 @@ func createStatefulSet(ctx context.Context, cli kubernetes.Interface, namespace,
 		},
 	}, metav1.CreateOptions{})
 	return ssName, err
+}
+
+func statefulSetPVCName(ssName string, claimName string, ordinal int) string {
+	return fmt.Sprintf("%s-%s-%d", claimName, ssName, ordinal)
 }
 
 func createLoadBalancerService(ctx context.Context, cli kubernetes.Interface, name, namespace string, annotations map[string]string) error {
