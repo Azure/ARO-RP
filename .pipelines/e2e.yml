@@ -1,3 +1,6 @@
+trigger: none
+pr: none
+
 resources:
   pipelines:
     - pipeline: e2e
