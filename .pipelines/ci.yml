@@ -3,7 +3,7 @@ schedules:
 - cron: '* */2 * * *'
   displayName: Scheduled Run For 4.12
   branches:
-    include: 
+    include:
       - main
       - 4.12.25-issue-reproduce
   always: true
