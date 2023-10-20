@@ -27,12 +27,29 @@ log_dns_files() {
     log "$(echo -n "/etc/resolv.conf.dnsmasq file metadata: ") $(ls -lZ /etc/resolv.conf.dnsmasq)"
 }
 
+sanity_check() {
+    if [[ ! -f /etc/resolv.conf ]]; then
+        log "/etc/resolv.conf is missing. Sanity check failed."
+        exit 1
+    elif [[ ! -f /etc/resolv.conf.dnsmasq ]]; then
+        log "/etc/resolv.conf.dnsmasq is missing. Sanity check failed."
+        exit 1
+    fi
+}
+
 if [[ $interface == eth* && $action == "up" ]] || [[ $interface == eth* && $action == "down" ]] || [[ $interface == enP* && $action == "up" ]] || [[ $interface == enP* && $action == "down" ]]; then
+    sanity_check
     log "$action happened on $interface, connection state is now $CONNECTIVITY_STATE"
     log "Pre dnsmasq restart file information"
     log_dns_files
     log "restarting dnsmasq now"
-    if systemctl try-restart dnsmasq --wait; then
+    
+    if systemctl is-active dnsmasq --quiet; then
+        log "dnsmasq is inactive, refusing to restart"
+        exit 1
+    fi
+
+    if systemctl restart dnsmasq --wait; then
         log "dnsmasq successfully restarted"
         log "Post dnsmasq restart file information"
         log_dns_files
