@@ -311,7 +311,7 @@ func setUpdateProvisioningState(doc *api.OpenShiftClusterDocument, apiVersion st
 	case admin.APIVersion:
 		// For PUCM pending update, we don't want to set ProvisioningStateAdminUpdating
 		// The cluster monitoring stack uses that value to determine if PUCM is ongoing
-		if doc.OpenShiftCluster.Properties.MaintenanceTask != api.MaintenanceTaskPucmPending {
+		if api.IsPUCM(doc.OpenShiftCluster.Properties.MaintenanceTask) {
 			doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
 			doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
 			doc.OpenShiftCluster.Properties.LastAdminUpdateError = ""

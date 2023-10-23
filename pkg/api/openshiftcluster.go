@@ -202,6 +202,14 @@ const (
 	MaintenanceTaskPucmPending MaintenanceTask = "PucmPending"
 )
 
+// IsPUCM returns true if the maintenance task is for PUCM
+func (t MaintenanceTask) IsPUCM() bool {
+	isPucm := (t == MaintenanceTaskEverything) ||
+		(t == MaintenanceTaskOperator) ||
+		(t == MaintenanceTaskRenewCerts)
+	return isPucm
+}
+
 // Cluster-scoped flags
 type OperatorFlags map[string]string
 
