@@ -182,6 +182,17 @@ const (
 	ProvisioningStateFailed        ProvisioningState = "Failed"
 )
 
+// MaintenanceState represents the maintenance state of a cluster.
+// This is used by cluster monitornig stack to emit maintenance signals to customers.
+type MaintenanceState string
+
+const (
+	MaintenanceStateNone      MaintenanceState = "None"
+	MaintenanceStatePending   MaintenanceState = "Pending"
+	MaintenanceStatePlanned   MaintenanceState = "Planned"
+	MaintenanceStateUnplanned MaintenanceState = "Unplanned"
+)
+
 type MaintenanceTask string
 
 const (
