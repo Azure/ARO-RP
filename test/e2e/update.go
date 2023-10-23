@@ -10,6 +10,13 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	"github.com/Azure/go-autorest/autorest/to"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	mgmtredhatopenshift20230701preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2023-07-01-preview/redhatopenshift"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
 var _ = Describe("Update clusters", func() {
@@ -41,3 +48,93 @@ var _ = Describe("Update clusters", func() {
 		Expect(oc.Tags).To(HaveKeyWithValue("key", &value))
 	})
 })
+
+var _ = Describe("Update cluster Managed Outbound IPs", func() {
+	var lbName string
+	var rgName string
+
+	var _ = BeforeEach(func(ctx context.Context) {
+		By("ensuring the public loadbalancer starts with one outbound IP")
+		oc, err := clients.OpenshiftClustersPreview.Get(ctx, vnetResourceGroup, clusterName)
+		Expect(err).NotTo(HaveOccurred())
+
+		lbName, err = getPublicLoadBalancerName(ctx)
+		Expect(err).NotTo(HaveOccurred())
+
+		rgName = stringutils.LastTokenByte(*oc.ClusterProfile.ResourceGroupID, '/')
+		lb, err := clients.LoadBalancers.Get(ctx, rgName, lbName, "")
+		Expect(err).NotTo(HaveOccurred())
+
+		if getOutboundIPsCount(lb) != 1 {
+			By("sending the PATCH request to set ManagedOutboundIPs.Count to 1")
+			err = clients.OpenshiftClustersPreview.UpdateAndWait(ctx, vnetResourceGroup, clusterName, newManagedOutboundIPUpdateBody(1))
+			Expect(err).NotTo(HaveOccurred())
+		}
+	})
+
+	It("must be possible to increase and decrease IP Addresses on the public loadbalancer", func(ctx context.Context) {
+		By("sending the PATCH request to increase Managed Outbound IPs")
+		err := clients.OpenshiftClustersPreview.UpdateAndWait(ctx, vnetResourceGroup, clusterName, newManagedOutboundIPUpdateBody(5))
+		Expect(err).NotTo(HaveOccurred())
+
+		By("getting the cluster resource")
+		oc, err := clients.OpenshiftClustersPreview.Get(ctx, vnetResourceGroup, clusterName)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("checking effectiveOutboundIPs has been updated")
+		Expect(len(*oc.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIps)).To(Equal(5))
+
+		By("checking outbound-rule-4 has required number IPs")
+		lb, err := clients.LoadBalancers.Get(ctx, rgName, lbName, "")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(getOutboundIPsCount(lb)).To(Equal(5))
+
+		By("sending the PATCH request to decrease Managed Outbound IPs")
+		err = clients.OpenshiftClustersPreview.UpdateAndWait(ctx, vnetResourceGroup, clusterName, newManagedOutboundIPUpdateBody(1))
+		Expect(err).NotTo(HaveOccurred())
+
+		By("getting the cluster resource")
+		oc, err = clients.OpenshiftClustersPreview.Get(ctx, vnetResourceGroup, clusterName)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("checking effectiveOutboundIPs has been updated")
+		Expect(len(*oc.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIps)).To(Equal(1))
+
+		By("checking outbound-rule-4 has required number of IPs")
+		lb, err = clients.LoadBalancers.Get(ctx, rgName, lbName, "")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(getOutboundIPsCount(lb)).To(Equal(1))
+	})
+})
+
+func getPublicLoadBalancerName(ctx context.Context) (string, error) {
+	co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+	return co.Spec.InfraID, err
+}
+
+func newManagedOutboundIPUpdateBody(managedOutboundIPCount int32) mgmtredhatopenshift20230701preview.OpenShiftClusterUpdate {
+	return mgmtredhatopenshift20230701preview.OpenShiftClusterUpdate{
+		OpenShiftClusterProperties: &mgmtredhatopenshift20230701preview.OpenShiftClusterProperties{
+			NetworkProfile: &mgmtredhatopenshift20230701preview.NetworkProfile{
+				LoadBalancerProfile: &mgmtredhatopenshift20230701preview.LoadBalancerProfile{
+					ManagedOutboundIps: &mgmtredhatopenshift20230701preview.ManagedOutboundIPs{
+						Count: to.Int32Ptr(managedOutboundIPCount),
+					},
+				},
+			},
+		},
+	}
+}
+
+func getOutboundIPsCount(lb mgmtnetwork.LoadBalancer) int {
+	numOfIPs := 0
+	for _, obRule := range *lb.LoadBalancerPropertiesFormat.OutboundRules {
+		if *obRule.Name == "outbound-rule-v4" {
+			numOfIPs = len(*obRule.FrontendIPConfigurations)
+		}
+	}
+	return numOfIPs
+}

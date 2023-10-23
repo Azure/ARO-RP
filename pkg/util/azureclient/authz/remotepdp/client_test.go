@@ -13,7 +13,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 
-	testhttp "github.com/Azure/ARO-RP/test/util/http"
+	testhttp "github.com/Azure/ARO-RP/test/util/http/server"
 )
 
 func TestClientCreate(t *testing.T) {

@@ -169,10 +169,12 @@ type OpenShiftClusterProperties struct {
 type ProvisioningState string
 
 // ProvisioningState constants
+// TODO: ProvisioningStateCancelled is included to pass upstream CI. It is currently unused in ARO.
 const (
 	ProvisioningStateCreating      ProvisioningState = "Creating"
 	ProvisioningStateUpdating      ProvisioningState = "Updating"
 	ProvisioningStateAdminUpdating ProvisioningState = "AdminUpdating"
+	ProvisioningStateCancelled     ProvisioningState = "Cancelled"
 	ProvisioningStateDeleting      ProvisioningState = "Deleting"
 	ProvisioningStateSucceeded     ProvisioningState = "Succeeded"
 	ProvisioningStateFailed        ProvisioningState = "Failed"
@@ -259,7 +261,7 @@ const (
 	MTU3900 MTUSize = 3900
 )
 
-// OutboundType represents the type of routing a cluster is using
+// The outbound routing strategy used to provide your cluster egress to the internet.
 type OutboundType string
 
 // OutboundType constants
@@ -270,7 +272,7 @@ const (
 
 // ResourceReference represents a reference to an Azure resource.
 type ResourceReference struct {
-	// The fully qualified Azure resource id.
+	// The fully qualified Azure resource id of an IP address resource.
 	ID string `json:"id,omitempty"`
 }
 

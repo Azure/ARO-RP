@@ -25,6 +25,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
+const storageServiceEndpoint = "Microsoft.Storage"
+
 func (m *manager) createDNS(ctx context.Context) error {
 	return m.dns.Create(ctx, m.doc.OpenShiftCluster)
 }
@@ -132,11 +134,16 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 	clusterStorageAccountName := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
 	azureRegion := strings.ToLower(m.doc.OpenShiftCluster.Location) // Used in k8s object names, so must pass DNS-1123 validation
 
+	ocpSubnets, err := m.subnetsWithServiceEndpoint(ctx, storageServiceEndpoint)
+	if err != nil {
+		return err
+	}
+
 	resources := []*arm.Resource{
-		m.storageAccount(clusterStorageAccountName, azureRegion, true),
+		m.storageAccount(clusterStorageAccountName, azureRegion, ocpSubnets, true),
 		m.storageAccountBlobContainer(clusterStorageAccountName, "ignition"),
 		m.storageAccountBlobContainer(clusterStorageAccountName, "aro"),
-		m.storageAccount(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, azureRegion, true),
+		m.storageAccount(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, azureRegion, ocpSubnets, true),
 		m.storageAccountBlobContainer(m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName, "image-registry"),
 		m.clusterNSG(infraID, azureRegion),
 		m.clusterServicePrincipalRBAC(),
@@ -176,6 +183,49 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 	}
 
 	return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil)
+}
+
+// subnetsWithServiceEndpoint returns a unique slice of subnet resource IDs that have the corresponding
+// service endpoint
+func (m *manager) subnetsWithServiceEndpoint(ctx context.Context, serviceEndpoint string) ([]string, error) {
+	subnetsMap := map[string]struct{}{}
+
+	subnetsMap[m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID] = struct{}{}
+	workerProfiles, _ := api.GetEnrichedWorkerProfiles(m.doc.OpenShiftCluster.Properties)
+	for _, v := range workerProfiles {
+		// don't fail empty worker profiles/subnet IDs as they're not valid
+		if v.SubnetID == "" {
+			continue
+		}
+
+		subnetsMap[strings.ToLower(v.SubnetID)] = struct{}{}
+	}
+
+	subnets := []string{}
+	for subnetId := range subnetsMap {
+		// We purposefully fail if we can't fetch the subnet as the FPSP most likely
+		// lost read permission over the subnet.
+		subnet, err := m.subnet.Get(ctx, subnetId)
+		if err != nil {
+			return nil, err
+		}
+
+		if subnet.SubnetPropertiesFormat == nil || subnet.ServiceEndpoints == nil {
+			continue
+		}
+
+		for _, endpoint := range *subnet.ServiceEndpoints {
+			if endpoint.Service != nil && strings.EqualFold(*endpoint.Service, serviceEndpoint) && endpoint.Locations != nil {
+				for _, loc := range *endpoint.Locations {
+					if loc == "*" || strings.EqualFold(loc, m.doc.OpenShiftCluster.Location) {
+						subnets = append(subnets, subnetId)
+					}
+				}
+			}
+		}
+	}
+
+	return subnets, nil
 }
 
 func (m *manager) attachNSGs(ctx context.Context) error {

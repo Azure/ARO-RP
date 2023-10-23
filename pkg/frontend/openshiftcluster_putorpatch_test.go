@@ -637,8 +637,9 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
 						Tags: map[string]string{"tag": "will-be-kept"},
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState: api.ProvisioningStateSucceeded,
-							MaintenanceTask:   "",
+							ProvisioningState:     api.ProvisioningStateSucceeded,
+							LastProvisioningState: api.ProvisioningStateSucceeded,
+							MaintenanceTask:       "",
 						},
 					},
 				})
@@ -649,8 +650,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
 					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					AsyncOperation: &api.AsyncOperation{
-						InitialProvisioningState: api.ProvisioningStateUpdating,
-						ProvisioningState:        api.ProvisioningStateUpdating,
+						InitialProvisioningState: api.ProvisioningStateSucceeded,
+						ProvisioningState:        api.ProvisioningStateSucceeded,
 					},
 				})
 				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
@@ -660,12 +661,12 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
 						Tags: map[string]string{"tag": "will-be-kept"},
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState:     api.ProvisioningStateUpdating,
+							ProvisioningState:     api.ProvisioningStateSucceeded,
 							LastProvisioningState: api.ProvisioningStateSucceeded,
 							ClusterProfile: api.ClusterProfile{
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
-							MaintenanceTask: api.MaintenanceTaskPucmPending,
+							MaintenanceTask: "",
 							NetworkProfile: api.NetworkProfile{
 								OutboundType:     api.OutboundTypeLoadbalancer,
 								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
@@ -691,12 +692,12 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
 				Tags: map[string]string{"tag": "will-be-kept"},
 				Properties: admin.OpenShiftClusterProperties{
-					ProvisioningState:     admin.ProvisioningStateUpdating,
+					ProvisioningState:     admin.ProvisioningStateSucceeded,
 					LastProvisioningState: admin.ProvisioningStateSucceeded,
 					ClusterProfile: admin.ClusterProfile{
 						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
 					},
-					MaintenanceTask: admin.MaintenanceTaskPucmPending,
+					MaintenanceTask: "",
 					NetworkProfile: admin.NetworkProfile{
 						OutboundType: admin.OutboundTypeLoadbalancer,
 						LoadBalancerProfile: &admin.LoadBalancerProfile{
@@ -705,6 +706,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							},
 						},
 					},
+					PucmPending: true,
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
 					},

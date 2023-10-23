@@ -39,7 +39,7 @@ jobs:
         sudo apt-get install libbtrfs-dev libgpgme-dev libdevmapper-dev
 
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up Go
       if: matrix.language == 'go'

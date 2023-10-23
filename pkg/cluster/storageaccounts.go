@@ -18,12 +18,11 @@ import (
 // The encryption flag is set to false/disabled for legacy storage accounts.
 func (m *manager) migrateStorageAccounts(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	workerProfiles, _ := api.GetEnrichedWorkerProfiles(m.doc.OpenShiftCluster.Properties)
-
-	if len(workerProfiles) == 0 {
-		m.log.Error("skipping migrateStorageAccounts due to missing WorkerProfiles.")
-		return nil
+	ocpSubnets, err := m.subnetsWithServiceEndpoint(ctx, storageServiceEndpoint)
+	if err != nil {
+		return err
 	}
+
 	clusterStorageAccountName := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
 	registryStorageAccountName := m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName
 
@@ -31,8 +30,8 @@ func (m *manager) migrateStorageAccounts(ctx context.Context) error {
 		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 		ContentVersion: "1.0.0.0",
 		Resources: []*arm.Resource{
-			m.storageAccount(clusterStorageAccountName, m.doc.OpenShiftCluster.Location, false),
-			m.storageAccount(registryStorageAccountName, m.doc.OpenShiftCluster.Location, false),
+			m.storageAccount(clusterStorageAccountName, m.doc.OpenShiftCluster.Location, ocpSubnets, false),
+			m.storageAccount(registryStorageAccountName, m.doc.OpenShiftCluster.Location, ocpSubnets, false),
 		},
 	}
 

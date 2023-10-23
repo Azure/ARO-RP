@@ -13,7 +13,6 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/sirupsen/logrus"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -22,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
@@ -38,44 +38,55 @@ const (
 )
 
 type Reconciler struct {
-	log *logrus.Entry
+	base.AROController
 
 	dh dynamichelper.Interface
-
-	client client.Client
 }
 
 func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *Reconciler {
 	return &Reconciler{
-		log:    log,
-		dh:     dh,
-		client: client,
+		AROController: base.AROController{
+			Log:    log,
+			Client: client,
+			Name:   ControllerName,
+		},
+		dh: dh,
 	}
 }
 
+// Reconcile watches MachineHealthCheck objects, and if any changes,
+// reconciles the associated ARO MachineHealthCheck object
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance := &arov1alpha1.Cluster{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+	instance, err := r.GetCluster(ctx)
+
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(enabled) {
-		r.log.Debug("controller is disabled")
+		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
-	r.log.Debug("running")
+	r.Log.Debug("running")
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(managed) {
 		err := r.dh.EnsureDeleted(ctx, "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck")
 		if err != nil {
+			r.Log.Error(err)
+			r.SetDegraded(ctx, err)
+
 			return reconcile.Result{RequeueAfter: time.Hour}, err
 		}
 
 		err = r.dh.EnsureDeleted(ctx, "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert")
 		if err != nil {
+			r.Log.Error(err)
+			r.SetDegraded(ctx, err)
+
 			return reconcile.Result{RequeueAfter: time.Hour}, err
 		}
+
+		r.ClearConditions(ctx)
 		return reconcile.Result{}, nil
 	}
 
@@ -84,6 +95,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	for _, asset := range [][]byte{machinehealthcheckYaml, mhcremediationalertYaml} {
 		resource, _, err := scheme.Codecs.UniversalDeserializer().Decode(asset, nil, nil)
 		if err != nil {
+			r.Log.Error(err)
+			r.SetDegraded(ctx, err)
+
 			return reconcile.Result{}, err
 		}
 
@@ -105,9 +119,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// create/update the MHC CR
 	err = r.dh.Ensure(ctx, resources...)
 	if err != nil {
+		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
+
 		return reconcile.Result{}, err
 	}
 
+	r.ClearConditions(ctx)
 	return reconcile.Result{}, nil
 }
 

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/coreos/go-semver/semver"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	imageregistryclient "github.com/openshift/client-go/imageregistry/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
@@ -26,6 +27,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/version"
+)
+
+const (
+	operatorCutoffVersion = "4.7.0" // OCP versions older than this will not receive ARO operator updates
 )
 
 // AdminUpdate performs an admin update of an ARO cluster
@@ -127,7 +132,7 @@ func (m *manager) adminUpdate() []steps.Step {
 	}
 
 	// Update the ARO Operator
-	if isEverything || isOperator {
+	if (isEverything || isOperator) && m.shouldUpdateOperator() {
 		toRun = append(toRun,
 			steps.Action(m.ensureAROOperator),
 			steps.Condition(m.aroDeploymentReady, 20*time.Minute, true),
@@ -154,6 +159,16 @@ func (m *manager) adminUpdate() []steps.Step {
 	}
 
 	return toRun
+}
+
+func (m *manager) shouldUpdateOperator() bool {
+	runningVersion, err := semver.NewVersion(m.doc.OpenShiftCluster.Properties.ClusterProfile.Version)
+	if err != nil {
+		return false
+	}
+
+	cutoffVersion := semver.New(operatorCutoffVersion)
+	return cutoffVersion.Compare(*runningVersion) <= 0
 }
 
 func (m *manager) clusterWasCreatedByHive() bool {
@@ -328,6 +343,9 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.initializeOperatorDeployer), // depends on kube clients
 			steps.Action(m.removeBootstrap),
 			steps.Action(m.removeBootstrapIgnition),
+			// Occasionally, the apiserver experiences disruptions, causing the certificate configuration step to fail.
+			// This issue is currently under investigation.
+			steps.Condition(m.apiServersReady, 30*time.Minute, true),
 			steps.Action(m.configureAPIServerCertificate),
 			steps.Condition(m.apiServersReady, 30*time.Minute, true),
 			steps.Condition(m.minimumWorkerNodesReady, 30*time.Minute, true),

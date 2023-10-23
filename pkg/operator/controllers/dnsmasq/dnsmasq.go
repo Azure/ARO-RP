@@ -11,7 +11,8 @@ import (
 	"text/template"
 
 	"github.com/Azure/go-autorest/autorest/to"
-	ign2types "github.com/coreos/ignition/config/v2_2/types"
+	"github.com/coreos/go-semver/semver"
+	ign3types "github.com/coreos/ignition/v2/config/v3_2/types"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/vincent-petithory/dataurl"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -72,7 +73,7 @@ func startpre() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func ignition2Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains []string, gatewayPrivateEndpointIP string, restartDnsmasq bool) (*ign2types.Config, error) {
+func ignition3Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains []string, gatewayPrivateEndpointIP string, restartDnsmasq bool) (*ign3types.Config, error) {
 	service, err := service()
 	if err != nil {
 		return nil, err
@@ -88,50 +89,54 @@ func ignition2Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains [
 		return nil, err
 	}
 
-	ign := &ign2types.Config{
-		Ignition: ign2types.Ignition{
-			Version: ign2types.MaxVersion.String(),
+	ign := &ign3types.Config{
+		Ignition: ign3types.Ignition{
+			// This Ignition Config version should be kept up to date with the default
+			// rendered Ignition Config version from the Machine Config Operator version
+			// on the lowest OCP version we support (4.7).
+			Version: semver.Version{
+				Major: 3,
+				Minor: 2,
+			}.String(),
 		},
-		Storage: ign2types.Storage{
-			Files: []ign2types.File{
+		Storage: ign3types.Storage{
+			Files: []ign3types.File{
 				{
-					Node: ign2types.Node{
-						Filesystem: "root",
-						Overwrite:  to.BoolPtr(true),
-						Path:       "/etc/" + configFileName,
-						User: &ign2types.NodeUser{
-							Name: "root",
+					Node: ign3types.Node{
+						Overwrite: to.BoolPtr(true),
+						Path:      "/etc/" + configFileName,
+						User: ign3types.NodeUser{
+							Name: to.StringPtr("root"),
 						},
 					},
-					FileEmbedded1: ign2types.FileEmbedded1{
-						Contents: ign2types.FileContents{
-							Source: dataurl.EncodeBytes(config),
+					FileEmbedded1: ign3types.FileEmbedded1{
+						Contents: ign3types.Resource{
+							Source: to.StringPtr(dataurl.EncodeBytes(config)),
 						},
 						Mode: to.IntPtr(0644),
 					},
 				},
 				{
-					Node: ign2types.Node{
-						Filesystem: "root",
-						Overwrite:  to.BoolPtr(true),
-						Path:       "/usr/local/bin/" + prescriptFileName,
-						User: &ign2types.NodeUser{
-							Name: "root",
+					Node: ign3types.Node{
+						Overwrite: to.BoolPtr(true),
+						Path:      "/usr/local/bin/" + prescriptFileName,
+						User: ign3types.NodeUser{
+							Name: to.StringPtr("root"),
 						},
 					},
-					FileEmbedded1: ign2types.FileEmbedded1{
-						Contents: ign2types.FileContents{
-							Source: dataurl.EncodeBytes(startpre),
+					FileEmbedded1: ign3types.FileEmbedded1{
+						Contents: ign3types.Resource{
+							Source: to.StringPtr(dataurl.EncodeBytes(startpre)),
 						},
 						Mode: to.IntPtr(0744),
 					},
 				},
 			},
 		},
-		Systemd: ign2types.Systemd{
-			Units: []ign2types.Unit{
+		Systemd: ign3types.Systemd{
+			Units: []ign3types.Unit{
 				{
-					Contents: service,
+					Contents: &service,
 					Enabled:  to.BoolPtr(true),
 					Name:     unitFileName,
 				},
@@ -152,7 +157,7 @@ func ignition2Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains [
 }
 
 func dnsmasqMachineConfig(clusterDomain, apiIntIP, ingressIP, role string, gatewayDomains []string, gatewayPrivateEndpointIP string, restartDnsmasq bool) (*mcv1.MachineConfig, error) {
-	ignConfig, err := ignition2Config(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP, restartDnsmasq)
+	ignConfig, err := ignition3Config(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP, restartDnsmasq)
 	if err != nil {
 		return nil, err
 	}

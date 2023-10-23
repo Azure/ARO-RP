@@ -87,6 +87,8 @@ type ProvisioningState string
 const (
 	// AdminUpdating ...
 	AdminUpdating ProvisioningState = "AdminUpdating"
+	// Cancelled ...
+	Cancelled ProvisioningState = "Cancelled"
 	// Creating ...
 	Creating ProvisioningState = "Creating"
 	// Deleting ...
@@ -101,7 +103,7 @@ const (
 
 // PossibleProvisioningStateValues returns an array of possible values for the ProvisioningState const type.
 func PossibleProvisioningStateValues() []ProvisioningState {
-	return []ProvisioningState{AdminUpdating, Creating, Deleting, Failed, Succeeded, Updating}
+	return []ProvisioningState{AdminUpdating, Cancelled, Creating, Deleting, Failed, Succeeded, Updating}
 }
 
 // Visibility enumerates the values for visibility.

@@ -8,10 +8,11 @@ import (
 	"fmt"
 	"time"
 
-	msgraph_apps "github.com/microsoftgraph/msgraph-sdk-go/applications"
-	msgraph_models "github.com/microsoftgraph/msgraph-sdk-go/models"
-	msgraph_errors "github.com/microsoftgraph/msgraph-sdk-go/models/odataerrors"
 	"k8s.io/apimachinery/pkg/util/wait"
+
+	msgraph_apps "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/applications"
+	msgraph_models "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models"
+	msgraph_errors "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
 )
 
 func (c *Cluster) createApplication(ctx context.Context, displayName string) (string, string, error) {
@@ -58,7 +59,7 @@ func (c *Cluster) createServicePrincipal(ctx context.Context, appID string) (str
 		result, err = c.spGraphClient.ServicePrincipals().Post(ctx, requestBody, nil)
 
 		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok &&
-			*oDataError.GetError().GetCode() == "accessDenied" {
+			*oDataError.GetErrorEscaped().GetCode() == "accessDenied" {
 			// goal is to retry the following error:
 			// graphrbac.ServicePrincipalsClient#Create: Failure responding to
 			// request: StatusCode=403 -- Original Error: autorest/azure:

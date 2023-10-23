@@ -18,6 +18,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics"
@@ -41,6 +42,7 @@ type Monitor struct {
 	m          metrics.Emitter
 	arocli     aroclient.Interface
 
+	ocpclientset  client.Client
 	hiveclientset client.Client
 
 	// access below only via the helper functions in cache.go
@@ -91,6 +93,19 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		return nil, err
 	}
 
+	// lazy discovery will not attempt to reach out to the apiserver immediately
+	mapper, err := apiutil.NewDynamicRESTMapper(restConfig, apiutil.WithLazyDiscovery)
+	if err != nil {
+		return nil, err
+	}
+
+	ocpclientset, err := client.New(restConfig, client.Options{
+		Mapper: mapper,
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	hiveclientset, err := getHiveClientSet(hiveRestConfig)
 	if err != nil {
 		log.Error(err)
@@ -110,6 +125,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		mcocli:        mcocli,
 		arocli:        arocli,
 		m:             m,
+		ocpclientset:  ocpclientset,
 		hiveclientset: hiveclientset,
 	}, nil
 }
@@ -119,7 +135,15 @@ func getHiveClientSet(hiveRestConfig *rest.Config) (client.Client, error) {
 		return nil, nil
 	}
 
-	hiveclientset, err := client.New(hiveRestConfig, client.Options{})
+	// lazy discovery will not attempt to reach out to the apiserver immediately
+	mapper, err := apiutil.NewDynamicRESTMapper(hiveRestConfig, apiutil.WithLazyDiscovery)
+	if err != nil {
+		return nil, err
+	}
+
+	hiveclientset, err := client.New(hiveRestConfig, client.Options{
+		Mapper: mapper,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -175,6 +199,8 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitHiveRegistrationStatus,
 		mon.emitOperatorFlagsAndSupportBanner,
 		mon.emitPucmState,
+		mon.emitCertificateExpirationStatuses,
+		mon.emitEtcdCertificateExpiry,
 		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable
 	} {
 		err = f(ctx)

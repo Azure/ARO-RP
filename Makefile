@@ -93,6 +93,14 @@ generate:
 generate-guardrails:
 	cd pkg/operator/controllers/guardrails/policies && ./scripts/generate.sh > /dev/null
 
+generate-kiota:
+	kiota generate --clean-output -l go -o ./pkg/util/graph/graphsdk -n "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk" -d hack/graphsdk/openapi.yaml -c GraphBaseServiceClient --additional-data=False --backing-store=True
+	find ./pkg/util/graph/graphsdk -type f -name "*.go"  -exec sed -i'' -e 's\github.com/azure/aro-rp\github.com/Azure/ARO-RP\g' {} +
+	gofmt -s -w pkg/util/graph/graphsdk
+	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP pkg/util/graph/graphsdk
+	go run ./hack/validate-imports pkg/util/graph/graphsdk
+	go run ./hack/licenses -dirs ./pkg/util/graph/graphsdk
+
 image-aro: aro e2e.test
 	docker pull $(REGISTRY)/ubi8/ubi-minimal
 	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .

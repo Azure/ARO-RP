@@ -269,10 +269,11 @@ func (m *manager) ensureGatewayCreate(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		if !strings.EqualFold(gwyDoc.ID, m.doc.OpenShiftCluster.ID) ||
+		if !strings.EqualFold(gwyDoc.Gateway.ID, m.doc.OpenShiftCluster.ID) ||
+			!strings.EqualFold(gwyDoc.ID, m.doc.OpenShiftCluster.Properties.NetworkProfile.GatewayPrivateLinkID) ||
 			!strings.EqualFold(gwyDoc.Gateway.ImageRegistryStorageAccountName, m.doc.OpenShiftCluster.Properties.ImageRegistryStorageAccountName) ||
 			!strings.EqualFold(gwyDoc.Gateway.StorageSuffix, m.doc.OpenShiftCluster.Properties.StorageSuffix) {
-			return fmt.Errorf("gateway record '%s' already exists for a different cluster '%s'", linkIdentifier, gwyDoc.ID)
+			return fmt.Errorf("gateway record '%s' already exists for a different cluster '%s'", linkIdentifier, gwyDoc.Gateway.ID)
 		}
 	}
 

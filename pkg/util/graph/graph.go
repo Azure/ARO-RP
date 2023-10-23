@@ -7,13 +7,12 @@ import (
 	"context"
 	"fmt"
 
-	msgraph "github.com/microsoftgraph/msgraph-sdk-go"
-	msgraph_sps "github.com/microsoftgraph/msgraph-sdk-go/serviceprincipals"
+	msgraph_sps "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/serviceprincipals"
 )
 
 // GetServicePrincipalIDByAppID returns a service principal's object ID from
 // an application (client) ID.
-func GetServicePrincipalIDByAppID(ctx context.Context, graph *msgraph.GraphServiceClient, appId string) (*string, error) {
+func GetServicePrincipalIDByAppID(ctx context.Context, graph *GraphServiceClient, appId string) (*string, error) {
 	filter := fmt.Sprintf("appId eq '%s'", appId)
 	requestConfiguration := &msgraph_sps.ServicePrincipalsRequestBuilderGetRequestConfiguration{
 		QueryParameters: &msgraph_sps.ServicePrincipalsRequestBuilderGetQueryParameters{

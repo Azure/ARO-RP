@@ -31,6 +31,7 @@ import { ClusterDetailPanel } from "./ClusterDetail"
 import { ClusterList } from "./ClusterList"
 import { fetchInfo, fetchRegions, ProcessLogOut } from "./Request"
 import { RegionComponent } from "./RegionList"
+import { Routes, Route } from "react-router"
 
 const containerStackTokens: IStackTokens = {}
 const appStackTokens: IStackTokens = { childrenGap: 10 }
@@ -50,6 +51,13 @@ export interface ICluster {
   failedProvisioningState: string
   resourceId: string
   consoleLink: string
+}
+
+export interface IClusterCoordinates {
+  subscription: string
+  resourceGroup: string,
+  name: string,
+  resourceId: string,
 }
 
 const stackStyles: IStackStyles = {
@@ -158,7 +166,7 @@ registerIcons({
         version="1.1"
         xmlns="http://www.w3.org/2000/svg"
         width="22"
-        height="22"
+        height="16"
         style={{ overflow: "visible" }}>
         <g id="svgg" transform="translate(0.000000,18.000000) scale(0.05000000,-0.05000000)">
           <path
@@ -184,13 +192,12 @@ export interface IClusterDetail {
   clusterName: string
 }
 
-function App(props: { params: any }) {
+function App() {
   const [data, updateData] = useState({ location: "", csrf: "", elevated: false, username: "" })
   const [regions, setRegions] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
   const [isOpen, { setTrue: openPanel, setFalse: dismissPanel }] = useBoolean(false)
   const [fetching, setFetching] = useState("")
-  const [currentCluster, setCurrentCluster] = useState<ICluster | null>(null)
 
   const [contentStackStyles, setContentStackStyles] =
     useState<IStackStyles>(contentStackStylesNormal)
@@ -198,7 +205,6 @@ function App(props: { params: any }) {
   const csrfRef = useRef<string>("")
 
   const _onCloseDetailPanel = () => {
-    setCurrentCluster(null)
     setContentStackStyles(contentStackStylesNormal)
   }
 
@@ -323,18 +329,23 @@ function App(props: { params: any }) {
             <ClusterList
               csrfToken={csrfRef}
               sshBox={sshRef}
-              setCurrentCluster={setCurrentCluster}
               csrfTokenAvailable={fetching}
-              params={props.params}
             />
           </Stack.Item>
           <Stack.Item grow>
-            <ClusterDetailPanel
-              csrfToken={csrfRef}
-              loaded={fetching}
-              currentCluster={currentCluster}
-              onClose={_onCloseDetailPanel}
-            />
+            <Routes>
+              <Route
+                path="/subscriptions/:subscriptionId/resourcegroups/:resourceGroupName/providers/microsoft.redhatopenshift/openshiftclusters/:resourceName/*?"
+                element={(
+                  <ClusterDetailPanel
+                    csrfToken={csrfRef}
+                    sshBox={sshRef}
+                    loaded={fetching}
+                    onClose={_onCloseDetailPanel}
+                  />
+                )}
+              />
+            </Routes>
           </Stack.Item>
         </Stack>
         <SSHModal csrfToken={csrfRef} ref={sshRef} />

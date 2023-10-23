@@ -24,12 +24,3 @@ spec:
         kinds: ["Role", "RoleBinding"]
       - apiGroups: ["policy"]
         kinds: ["PodDisruptionBudget"]
-      - apiGroups: ["machine.openshift.io"]
-        kinds: ["Machine"]
-      # non-namespaced resources
-      # - apiGroups: [""]
-      #   kinds: ["PersistentVolume", "PersistentVolumeClaim"]
-      # - apiGroups: ["rbac.authorization.k8s.io"]
-      #   kinds: ["ClusterRole", "ClusterRoleBinding"]
-      # - apiGroups: ["apiextensions"]
-      #   kinds: ["CustomResourceDefinition"]

@@ -15,7 +15,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 
-	testhttp "github.com/Azure/ARO-RP/test/util/http"
+	testhttp "github.com/Azure/ARO-RP/test/util/http/server"
 )
 
 func TestAppLensErrorOnEmptyResponse(t *testing.T) {

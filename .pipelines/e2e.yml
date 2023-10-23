@@ -137,7 +137,9 @@ jobs:
       - task: CopyFiles@2
         condition: succeededOrFailed()
         inputs:
-          contents: $(Build.SourcesDirectory)/*.png
+          contents: |
+            $(Build.SourcesDirectory)/*.png
+            $(Build.SourcesDirectory)/*.html
           targetFolder: $(Build.ArtifactStagingDirectory)
 
       - task: PublishBuildArtifacts@1

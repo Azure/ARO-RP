@@ -31,6 +31,7 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 			CreatedAt:               oc.Properties.CreatedAt,
 			CreatedBy:               oc.Properties.CreatedBy,
 			ProvisionedBy:           oc.Properties.ProvisionedBy,
+			PucmPending:             oc.Properties.PucmPending,
 			ClusterProfile: ClusterProfile{
 				Domain:               oc.Properties.ClusterProfile.Domain,
 				Version:              oc.Properties.ClusterProfile.Version,
@@ -233,6 +234,7 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	out.Properties.OperatorVersion = oc.Properties.OperatorVersion
 	out.Properties.CreatedBy = oc.Properties.CreatedBy
 	out.Properties.ProvisionedBy = oc.Properties.ProvisionedBy
+	out.Properties.PucmPending = oc.Properties.PucmPending
 	out.Properties.ClusterProfile.Domain = oc.Properties.ClusterProfile.Domain
 	out.Properties.ClusterProfile.FipsValidatedModules = api.FipsValidatedModules(oc.Properties.ClusterProfile.FipsValidatedModules)
 	out.Properties.ClusterProfile.Version = oc.Properties.ClusterProfile.Version
@@ -300,18 +302,17 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 			out.Properties.WorkerProfiles[i].DiskEncryptionSetID = oc.Properties.WorkerProfiles[i].DiskEncryptionSetID
 		}
 	}
+	out.Properties.WorkerProfilesStatus = nil
 	if oc.Properties.WorkerProfilesStatus != nil {
 		out.Properties.WorkerProfilesStatus = make([]api.WorkerProfile, len(oc.Properties.WorkerProfilesStatus))
-		for _, p := range oc.Properties.WorkerProfilesStatus {
-			out.Properties.WorkerProfilesStatus = append(out.Properties.WorkerProfilesStatus, api.WorkerProfile{
-				Name:                p.Name,
-				VMSize:              api.VMSize(p.VMSize),
-				DiskSizeGB:          p.DiskSizeGB,
-				SubnetID:            p.SubnetID,
-				Count:               p.Count,
-				EncryptionAtHost:    api.EncryptionAtHost(p.EncryptionAtHost),
-				DiskEncryptionSetID: p.DiskEncryptionSetID,
-			})
+		for i := range oc.Properties.WorkerProfilesStatus {
+			out.Properties.WorkerProfilesStatus[i].Name = oc.Properties.WorkerProfilesStatus[i].Name
+			out.Properties.WorkerProfilesStatus[i].VMSize = api.VMSize(oc.Properties.WorkerProfilesStatus[i].VMSize)
+			out.Properties.WorkerProfilesStatus[i].DiskSizeGB = oc.Properties.WorkerProfilesStatus[i].DiskSizeGB
+			out.Properties.WorkerProfilesStatus[i].SubnetID = oc.Properties.WorkerProfilesStatus[i].SubnetID
+			out.Properties.WorkerProfilesStatus[i].Count = oc.Properties.WorkerProfilesStatus[i].Count
+			out.Properties.WorkerProfilesStatus[i].EncryptionAtHost = api.EncryptionAtHost(oc.Properties.WorkerProfilesStatus[i].EncryptionAtHost)
+			out.Properties.WorkerProfilesStatus[i].DiskEncryptionSetID = oc.Properties.WorkerProfilesStatus[i].DiskEncryptionSetID
 		}
 	}
 	out.Properties.APIServerProfile.Visibility = api.Visibility(oc.Properties.APIServerProfile.Visibility)

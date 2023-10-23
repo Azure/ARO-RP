@@ -6,6 +6,7 @@ package dynamic
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -38,6 +39,7 @@ var (
 	masterSubnet      = vnetID + "/subnet/masterSubnet"
 	workerSubnet      = vnetID + "/subnet/workerSubnet"
 	masterSubnetPath  = "properties.masterProfile.subnetId"
+	workerSubnetPath  = "properties.workerProfile.subnetId"
 	masterRtID        = resourceGroupID + "/providers/Microsoft.Network/routeTables/masterRt"
 	workerRtID        = resourceGroupID + "/providers/Microsoft.Network/routeTables/workerRt"
 	masterNgID        = resourceGroupID + "/providers/Microsoft.Network/natGateways/masterNg"
@@ -1125,6 +1127,7 @@ var (
 func mockTokenCredential(tokenCred *mock_azcore.MockTokenCredential) {
 	tokenCred.EXPECT().
 		GetToken(gomock.Any(), gomock.Any()).
+		AnyTimes().
 		Return(mockAccessToken, nil)
 }
 
@@ -1724,6 +1727,201 @@ func TestCheckBYONsg(t *testing.T) {
 			if preconfiguredNSG != tt.preconfiguredNSG {
 				t.Errorf("preconfiguredNSG got %s, want %s", preconfiguredNSG, tt.preconfiguredNSG)
 			}
+		})
+	}
+}
+
+var (
+	canJoinNSG = remotepdp.AuthorizationDecisionResponse{
+		Value: []remotepdp.AuthorizationDecision{
+			{
+				ActionId:       "Microsoft.Network/networkSecurityGroups/join/action",
+				AccessDecision: remotepdp.Allowed},
+		},
+	}
+
+	cannotJoinNSG = remotepdp.AuthorizationDecisionResponse{
+		Value: []remotepdp.AuthorizationDecision{
+			{
+				ActionId:       "Microsoft.Network/networkSecurityGroups/join/action",
+				AccessDecision: remotepdp.NotAllowed},
+		},
+	}
+)
+
+func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
+	ctx := context.Background()
+	for _, tt := range []struct {
+		name             string
+		modifyOC         func(*api.OpenShiftCluster)
+		checkAccessMocks func(context.CancelFunc, *mock_remotepdp.MockRemotePDPClient, *mock_azcore.MockTokenCredential)
+		vnetMocks        func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
+		wantErr          string
+	}{
+		{
+			name: "pass: skip when preconfiguredNSG is not enabled",
+			modifyOC: func(oc *api.OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGDisabled
+			},
+		},
+		{
+			name: "fail: sp doesn't have the permission on all NSGs",
+			modifyOC: func(oc *api.OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
+			},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					AnyTimes().
+					Return(vnet, nil)
+			},
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
+				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().CheckAccess(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, authReq remotepdp.AuthorizationRequest) (*remotepdp.AuthorizationDecisionResponse, error) {
+						cancel() // wait.PollImmediateUntil will always be invoked at least once
+						switch authReq.Resource.Id {
+						case masterNSGv1:
+							return &canJoinNSG, nil
+						case workerNSGv1:
+							return &cannotJoinNSG, nil
+						}
+						return &cannotJoinNSG, nil
+					},
+					).AnyTimes()
+			},
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on network security group '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg'. This is required when the enable-preconfigured-nsg option is specified.",
+		},
+		{
+			name: "pass: sp has the required permission on the NSG",
+			modifyOC: func(oc *api.OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
+			},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					AnyTimes().
+					Return(vnet, nil)
+			},
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
+				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().CheckAccess(gomock.Any(), gomock.Any()).
+					Do(func(_, _ interface{}) {
+						cancel()
+					}).
+					Return(&canJoinNSG, nil).
+					AnyTimes()
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+
+			oc := &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: resourceGroupID,
+					},
+				},
+			}
+			vnet := mgmtnetwork.VirtualNetwork{
+				ID: &vnetID,
+				VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
+					Subnets: &[]mgmtnetwork.Subnet{
+						{
+							ID: &masterSubnet,
+							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+								AddressPrefix: to.StringPtr("10.0.0.0/24"),
+								NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+									ID: &masterNSGv1,
+								},
+								ProvisioningState: mgmtnetwork.Succeeded,
+							},
+						},
+						{
+							ID: &workerSubnet,
+							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+								AddressPrefix: to.StringPtr("10.0.1.0/24"),
+								NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+									ID: &workerNSGv1,
+								},
+								ProvisioningState: mgmtnetwork.Succeeded,
+							},
+						},
+					},
+				},
+			}
+
+			if tt.modifyOC != nil {
+				tt.modifyOC(oc)
+			}
+
+			vnetClient := mock_network.NewMockVirtualNetworksClient(controller)
+
+			if tt.vnetMocks != nil {
+				tt.vnetMocks(vnetClient, vnet)
+			}
+
+			tokenCred := mock_azcore.NewMockTokenCredential(controller)
+			pdpClient := mock_remotepdp.NewMockRemotePDPClient(controller)
+
+			if tt.checkAccessMocks != nil {
+				tt.checkAccessMocks(cancel, pdpClient, tokenCred)
+			}
+
+			dv := &dynamic{
+				azEnv:                      &azureclient.PublicCloud,
+				appID:                      "fff51942-b1f9-4119-9453-aaa922259eb7",
+				authorizerType:             AuthorizerClusterServicePrincipal,
+				virtualNetworks:            vnetClient,
+				pdpClient:                  pdpClient,
+				checkAccessSubjectInfoCred: tokenCred,
+				log:                        logrus.NewEntry(logrus.StandardLogger()),
+			}
+
+			subnets := []Subnet{
+				{ID: masterSubnet,
+					Path: masterSubnetPath},
+				{
+					ID:   workerSubnet,
+					Path: workerSubnetPath,
+				},
+			}
+
+			err := dv.ValidatePreConfiguredNSGs(ctx, oc, subnets)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestValidateSubnetSize(t *testing.T) {
+	subnetId := "id"
+	subnetPath := "path"
+	for _, tt := range []struct {
+		name    string
+		address string
+		subnet  Subnet
+		wantErr string
+	}{
+		{
+			name:    "subnet size is too small",
+			address: "10.0.0.0/32",
+			subnet:  Subnet{ID: subnetId, Path: subnetPath},
+			wantErr: fmt.Sprintf("400: InvalidLinkedVNet: %s: The provided subnet '%s' is invalid: must be /27 or larger.", subnetPath, subnetId),
+		},
+		{
+			name:    "subnet size is gucci gang",
+			address: "10.0.0.0/27",
+			subnet:  Subnet{ID: subnetId, Path: subnetPath},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateSubnetSize(tt.subnet, tt.address)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

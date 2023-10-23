@@ -100,6 +100,8 @@ github.com/AzureAD/microsoft-authentication-library-for-go/apps/public
 # github.com/BurntSushi/toml v1.2.1 => github.com/BurntSushi/toml v0.3.1
 ## explicit
 github.com/BurntSushi/toml
+# github.com/BurntSushi/xgb v0.0.0-20210121224620-deaf085860bc
+## explicit
 # github.com/MakeNowJust/heredoc v1.0.0
 ## explicit; go 1.12
 github.com/MakeNowJust/heredoc
@@ -408,27 +410,30 @@ github.com/coreos/go-oidc
 # github.com/coreos/go-semver v0.3.0
 ## explicit
 github.com/coreos/go-semver/semver
-# github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
-## explicit
-github.com/coreos/go-systemd/unit
 # github.com/coreos/go-systemd/v22 v22.5.0
 ## explicit; go 1.12
 github.com/coreos/go-systemd/v22/dbus
 github.com/coreos/go-systemd/v22/internal/dlopen
 github.com/coreos/go-systemd/v22/journal
 github.com/coreos/go-systemd/v22/sdjournal
-# github.com/coreos/ignition v0.35.0
-## explicit
-github.com/coreos/ignition/config/shared/errors
-github.com/coreos/ignition/config/shared/validations
-github.com/coreos/ignition/config/v2_2/types
-github.com/coreos/ignition/config/validate/report
+github.com/coreos/go-systemd/v22/unit
+# github.com/coreos/ignition/v2 v2.14.0
+## explicit; go 1.15
+github.com/coreos/ignition/v2/config/shared/errors
+github.com/coreos/ignition/v2/config/shared/validations
+github.com/coreos/ignition/v2/config/util
+github.com/coreos/ignition/v2/config/v3_2/types
+# github.com/coreos/vcontext v0.0.0-20211021162308-f1dbbca7bef4
+## explicit; go 1.15
+github.com/coreos/vcontext/path
+github.com/coreos/vcontext/report
+github.com/coreos/vcontext/tree
 # github.com/creack/pty v1.1.17
 ## explicit; go 1.13
 # github.com/cyberphone/json-canonicalization v0.0.0-20220623050100-57a0ce2678a7
 ## explicit
 github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer
-# github.com/cyphar/filepath-securejoin v0.2.3
+# github.com/cyphar/filepath-securejoin v0.2.4
 ## explicit; go 1.13
 github.com/cyphar/filepath-securejoin
 # github.com/davecgh/go-spew v1.1.1
@@ -696,7 +701,7 @@ github.com/itchyny/gojq/cli
 # github.com/itchyny/timefmt-go v0.1.5
 ## explicit; go 1.17
 github.com/itchyny/timefmt-go
-# github.com/jewzaam/go-cosmosdb v0.0.0-20220315232836-282b67c5b234
+# github.com/jewzaam/go-cosmosdb v0.0.0-20230924011506-8f8942a01991
 ## explicit; go 1.14
 github.com/jewzaam/go-cosmosdb/cmd/gencosmosdb
 github.com/jewzaam/go-cosmosdb/pkg/gencosmosdb
@@ -771,7 +776,7 @@ github.com/mattn/go-shellwords
 # github.com/matttproud/golang_protobuf_extensions v1.0.4
 ## explicit; go 1.9
 github.com/matttproud/golang_protobuf_extensions/pbutil
-# github.com/microsoft/kiota-abstractions-go v1.0.0
+# github.com/microsoft/kiota-abstractions-go v1.2.0
 ## explicit; go 1.18
 github.com/microsoft/kiota-abstractions-go
 github.com/microsoft/kiota-abstractions-go/authentication
@@ -786,90 +791,15 @@ github.com/microsoft/kiota-http-go
 # github.com/microsoft/kiota-serialization-form-go v1.0.0
 ## explicit; go 1.19
 github.com/microsoft/kiota-serialization-form-go
-# github.com/microsoft/kiota-serialization-json-go v1.0.1
+# github.com/microsoft/kiota-serialization-json-go v1.0.4
 ## explicit; go 1.18
 github.com/microsoft/kiota-serialization-json-go
+# github.com/microsoft/kiota-serialization-multipart-go v1.0.0
+## explicit; go 1.19
+github.com/microsoft/kiota-serialization-multipart-go
 # github.com/microsoft/kiota-serialization-text-go v1.0.0
 ## explicit; go 1.18
 github.com/microsoft/kiota-serialization-text-go
-# github.com/microsoftgraph/msgraph-sdk-go v1.4.0
-## explicit; go 1.18
-github.com/microsoftgraph/msgraph-sdk-go
-github.com/microsoftgraph/msgraph-sdk-go/admin
-github.com/microsoftgraph/msgraph-sdk-go/agreementacceptances
-github.com/microsoftgraph/msgraph-sdk-go/agreements
-github.com/microsoftgraph/msgraph-sdk-go/appcatalogs
-github.com/microsoftgraph/msgraph-sdk-go/applications
-github.com/microsoftgraph/msgraph-sdk-go/applicationtemplates
-github.com/microsoftgraph/msgraph-sdk-go/auditlogs
-github.com/microsoftgraph/msgraph-sdk-go/authenticationmethodconfigurations
-github.com/microsoftgraph/msgraph-sdk-go/authenticationmethodspolicy
-github.com/microsoftgraph/msgraph-sdk-go/branding
-github.com/microsoftgraph/msgraph-sdk-go/certificatebasedauthconfiguration
-github.com/microsoftgraph/msgraph-sdk-go/chats
-github.com/microsoftgraph/msgraph-sdk-go/communications
-github.com/microsoftgraph/msgraph-sdk-go/compliance
-github.com/microsoftgraph/msgraph-sdk-go/connections
-github.com/microsoftgraph/msgraph-sdk-go/contacts
-github.com/microsoftgraph/msgraph-sdk-go/contracts
-github.com/microsoftgraph/msgraph-sdk-go/datapolicyoperations
-github.com/microsoftgraph/msgraph-sdk-go/deviceappmanagement
-github.com/microsoftgraph/msgraph-sdk-go/devicemanagement
-github.com/microsoftgraph/msgraph-sdk-go/devices
-github.com/microsoftgraph/msgraph-sdk-go/directory
-github.com/microsoftgraph/msgraph-sdk-go/directoryobjects
-github.com/microsoftgraph/msgraph-sdk-go/directoryroles
-github.com/microsoftgraph/msgraph-sdk-go/directoryroletemplates
-github.com/microsoftgraph/msgraph-sdk-go/domaindnsrecords
-github.com/microsoftgraph/msgraph-sdk-go/domains
-github.com/microsoftgraph/msgraph-sdk-go/drives
-github.com/microsoftgraph/msgraph-sdk-go/education
-github.com/microsoftgraph/msgraph-sdk-go/employeeexperience
-github.com/microsoftgraph/msgraph-sdk-go/external
-github.com/microsoftgraph/msgraph-sdk-go/filteroperators
-github.com/microsoftgraph/msgraph-sdk-go/functions
-github.com/microsoftgraph/msgraph-sdk-go/grouplifecyclepolicies
-github.com/microsoftgraph/msgraph-sdk-go/groups
-github.com/microsoftgraph/msgraph-sdk-go/groupsettings
-github.com/microsoftgraph/msgraph-sdk-go/groupsettingtemplates
-github.com/microsoftgraph/msgraph-sdk-go/identity
-github.com/microsoftgraph/msgraph-sdk-go/identitygovernance
-github.com/microsoftgraph/msgraph-sdk-go/identityprotection
-github.com/microsoftgraph/msgraph-sdk-go/identityproviders
-github.com/microsoftgraph/msgraph-sdk-go/informationprotection
-github.com/microsoftgraph/msgraph-sdk-go/invitations
-github.com/microsoftgraph/msgraph-sdk-go/localizations
-github.com/microsoftgraph/msgraph-sdk-go/models
-github.com/microsoftgraph/msgraph-sdk-go/models/callrecords
-github.com/microsoftgraph/msgraph-sdk-go/models/externalconnectors
-github.com/microsoftgraph/msgraph-sdk-go/models/odataerrors
-github.com/microsoftgraph/msgraph-sdk-go/models/security
-github.com/microsoftgraph/msgraph-sdk-go/models/termstore
-github.com/microsoftgraph/msgraph-sdk-go/oauth2permissiongrants
-github.com/microsoftgraph/msgraph-sdk-go/organization
-github.com/microsoftgraph/msgraph-sdk-go/permissiongrants
-github.com/microsoftgraph/msgraph-sdk-go/places
-github.com/microsoftgraph/msgraph-sdk-go/planner
-github.com/microsoftgraph/msgraph-sdk-go/policies
-github.com/microsoftgraph/msgraph-sdk-go/print
-github.com/microsoftgraph/msgraph-sdk-go/privacy
-github.com/microsoftgraph/msgraph-sdk-go/reports
-github.com/microsoftgraph/msgraph-sdk-go/rolemanagement
-github.com/microsoftgraph/msgraph-sdk-go/schemaextensions
-github.com/microsoftgraph/msgraph-sdk-go/scopedrolememberships
-github.com/microsoftgraph/msgraph-sdk-go/search
-github.com/microsoftgraph/msgraph-sdk-go/security
-github.com/microsoftgraph/msgraph-sdk-go/serviceprincipals
-github.com/microsoftgraph/msgraph-sdk-go/shares
-github.com/microsoftgraph/msgraph-sdk-go/sites
-github.com/microsoftgraph/msgraph-sdk-go/solutions
-github.com/microsoftgraph/msgraph-sdk-go/subscribedskus
-github.com/microsoftgraph/msgraph-sdk-go/subscriptions
-github.com/microsoftgraph/msgraph-sdk-go/teams
-github.com/microsoftgraph/msgraph-sdk-go/teamstemplates
-github.com/microsoftgraph/msgraph-sdk-go/teamwork
-github.com/microsoftgraph/msgraph-sdk-go/tenantrelationships
-github.com/microsoftgraph/msgraph-sdk-go/users
 # github.com/microsoftgraph/msgraph-sdk-go-core v1.0.0
 ## explicit; go 1.18
 github.com/microsoftgraph/msgraph-sdk-go-core
@@ -1255,7 +1185,7 @@ github.com/stefanberger/go-pkcs11uri
 # github.com/stoewer/go-strcase v1.2.0
 ## explicit; go 1.11
 github.com/stoewer/go-strcase
-# github.com/stretchr/testify v1.8.3
+# github.com/stretchr/testify v1.8.4
 ## explicit; go 1.20
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
@@ -1341,7 +1271,7 @@ go.opencensus.io/internal
 go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/tracestate
-# go.opentelemetry.io/otel v1.15.1
+# go.opentelemetry.io/otel v1.16.0
 ## explicit; go 1.19
 go.opentelemetry.io/otel
 go.opentelemetry.io/otel/attribute
@@ -1352,7 +1282,11 @@ go.opentelemetry.io/otel/internal/attribute
 go.opentelemetry.io/otel/internal/baggage
 go.opentelemetry.io/otel/internal/global
 go.opentelemetry.io/otel/propagation
-# go.opentelemetry.io/otel/trace v1.15.1
+# go.opentelemetry.io/otel/metric v1.16.0
+## explicit; go 1.19
+go.opentelemetry.io/otel/metric
+go.opentelemetry.io/otel/metric/embedded
+# go.opentelemetry.io/otel/trace v1.16.0
 ## explicit; go 1.19
 go.opentelemetry.io/otel/trace
 # go.starlark.net v0.0.0-20220328144851-d1966c6b9fcd
@@ -1363,7 +1297,7 @@ go.starlark.net/resolve
 go.starlark.net/starlark
 go.starlark.net/starlarkstruct
 go.starlark.net/syntax
-# golang.org/x/crypto v0.12.0
+# golang.org/x/crypto v0.14.0
 ## explicit; go 1.17
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
@@ -1398,7 +1332,7 @@ golang.org/x/mod/internal/lazyregexp
 golang.org/x/mod/modfile
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.14.0
+# golang.org/x/net v0.17.0
 ## explicit; go 1.17
 golang.org/x/net/context
 golang.org/x/net/html
@@ -1420,18 +1354,17 @@ golang.org/x/oauth2/internal
 ## explicit
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.11.0
+# golang.org/x/sys v0.13.0
 ## explicit; go 1.17
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
-golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/term v0.11.0
+# golang.org/x/term v0.13.0
 ## explicit; go 1.17
 golang.org/x/term
-# golang.org/x/text v0.12.0
+# golang.org/x/text v0.13.0
 ## explicit; go 1.17
 golang.org/x/text/cases
 golang.org/x/text/encoding
@@ -1729,7 +1662,7 @@ k8s.io/apimachinery/third_party/forked/golang/reflect
 ## explicit; go 1.19
 k8s.io/apiserver/pkg/features
 k8s.io/apiserver/pkg/util/feature
-# k8s.io/cli-runtime v0.24.17 => k8s.io/cli-runtime v0.24.17
+# k8s.io/cli-runtime v0.24.17
 ## explicit; go 1.19
 k8s.io/cli-runtime/pkg/genericclioptions
 k8s.io/cli-runtime/pkg/printers
@@ -2287,109 +2220,41 @@ sigs.k8s.io/structured-merge-diff/v4/value
 ## explicit; go 1.12
 sigs.k8s.io/yaml
 # bitbucket.org/ww/goautoneg => github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d
-# github.com/Unknwon/com => github.com/unknwon/com v1.0.1
-# github.com/clarketm/json => github.com/clarketm/json v1.15.7
-# github.com/cockroachdb/sentry-go => github.com/getsentry/sentry-go v0.11.0
-# github.com/docker/spdystream => github.com/docker/spdystream v0.1.0
 # github.com/gogo/protobuf => github.com/gogo/protobuf v1.3.2
-# github.com/mrnold/go-libnbd => github.com/mrnold/go-libnbd v1.4.1-cdi
-# github.com/operator-framework/operator-sdk => github.com/operator-framework/operator-sdk v1.21.0
 # github.com/satori/go.uuid => github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
-# github.com/satori/uuid => github.com/satori/uuid v1.2.1-0.20181028125025-b2ce2384e17b
 # github.com/spf13/pflag => github.com/spf13/pflag v1.0.6-0.20210604193023-d5e0c0615ace
-# github.com/spf13/viper => github.com/spf13/viper v1.7.1
-# github.com/terraform-providers/terraform-provider-aws => github.com/openshift/terraform-provider-aws v1.60.1-0.20200630224953-76d1fb4e5699
-# github.com/terraform-providers/terraform-provider-azurerm => github.com/openshift/terraform-provider-azurerm v1.40.1-0.20200707062554-97ea089cc12a
-# github.com/terraform-providers/terraform-provider-ignition/v2 => github.com/community-terraform-providers/terraform-provider-ignition/v2 v2.1.0
 # k8s.io/api => k8s.io/api v0.24.17
 # k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.24.17
 # k8s.io/apimachinery => k8s.io/apimachinery v0.24.17
 # k8s.io/apiserver => k8s.io/apiserver v0.24.17
-# k8s.io/cli-runtime => k8s.io/cli-runtime v0.24.17
 # k8s.io/client-go => k8s.io/client-go v0.24.17
-# k8s.io/cloud-provider => k8s.io/cloud-provider v0.24.17
-# k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.24.17
 # k8s.io/code-generator => k8s.io/code-generator v0.24.17
 # k8s.io/component-base => k8s.io/component-base v0.24.17
-# k8s.io/component-helpers => k8s.io/component-helpers v0.24.17
-# k8s.io/controller-manager => k8s.io/controller-manager v0.24.17
-# k8s.io/cri-api => k8s.io/cri-api v0.24.17
-# k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.24.17
 # k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.24.17
 # k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.24.17
 # k8s.io/kube-proxy => k8s.io/kube-proxy v0.24.17
 # k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.24.17
 # k8s.io/kubectl => k8s.io/kubectl v0.24.17
-# k8s.io/kubelet => k8s.io/kubelet v0.24.17
 # k8s.io/kubernetes => k8s.io/kubernetes v1.24.17
-# k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.24.17
-# k8s.io/metrics => k8s.io/metrics v0.24.17
-# k8s.io/mount-utils => k8s.io/mount-utils v0.24.17
-# k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.24.17
-# k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.24.17
 # sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.11.2
 # sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.5.0
-# git.apache.org/thrift.git => github.com/apache/thrift v0.15.0
 # github.com/BurntSushi/toml => github.com/BurntSushi/toml v0.3.1
-# github.com/IBM-Cloud/terraform-provider-ibm => github.com/openshift/terraform-provider-ibm v1.26.2-openshift-2
-# github.com/c-bata/go-prompt => github.com/c-bata/go-prompt v0.2.5
-# github.com/circonus-labs/circonusllhist => github.com/openhistogram/circonusllhist v0.3.0
-# github.com/codahale/hdrhistogram => github.com/HdrHistogram/hdrhistogram-go v1.1.2
-# github.com/containernetworking/plugins => github.com/containernetworking/plugins v1.0.0
 # github.com/containers/image => github.com/containers/image v3.0.2+incompatible
 # github.com/coreos/bbolt => go.etcd.io/bbolt v1.3.6
-# github.com/coreos/fcct => github.com/coreos/butane v0.13.1
 # github.com/coreos/prometheus-operator => github.com/prometheus-operator/prometheus-operator v0.48.1
-# github.com/coreos/stream-metadata-go => github.com/coreos/stream-metadata-go v0.1.3
-# github.com/cortexproject/cortex => github.com/cortexproject/cortex v1.10.0
-# github.com/deislabs/oras => github.com/oras-project/oras v0.12.0
-# github.com/etcd-io/bbolt => go.etcd.io/bbolt v1.3.6
-# github.com/go-check/check => gopkg.in/check.v1 v0.0.0-20201130134442-10cb98267c6c
 # github.com/golang/lint => golang.org/x/lint v0.0.0-20210508222113-6edffad5e616
-# github.com/google/tcpproxy => inet.af/tcpproxy v0.0.0-20210824174053-2e577fef49e2
 # github.com/googleapis/gnostic => github.com/google/gnostic v0.5.5
-# github.com/h2non/filetype => github.com/h2non/filetype v1.1.1
-# github.com/hashicorp/vault => github.com/hasicorp/vault v1.8.7
-# github.com/influxdata/flux => github.com/influxdata/flux v0.132.0
-# github.com/knq/sysutil => github.com/chromedp/sysutil v1.0.0
-# github.com/kshvakov/clickhouse => github.com/ClickHouse/clickhouse-go v1.4.9
-# github.com/metal3-io/baremetal-operator => github.com/openshift/baremetal-operator v0.0.0-20211201170610-92ffa60c683d
-# github.com/metal3-io/baremetal-operator/apis => github.com/openshift/baremetal-operator/apis v0.0.0-20211201170610-92ffa60c683d
-# github.com/metal3-io/baremetal-operator/pkg/hardwareutils => github.com/openshift/baremetal-operator/pkg/hardwareutils v0.0.0-20211201170610-92ffa60c683d
-# github.com/metal3-io/cluster-api-provider-baremetal => github.com/openshift/cluster-api-provider-baremetal v0.0.0-20190821174549-a2a477909c1d
-# github.com/mholt/certmagic => github.com/caddyserver/certmagic v0.15.0
 # github.com/openshift/api => github.com/openshift/api v0.0.0-20230426102702-398424d53f74
 # github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20220603133046-984ee5ebedcf
 # github.com/openshift/cloud-credential-operator => github.com/openshift/cloud-credential-operator v0.0.0-20200316201045-d10080b52c9e
-# github.com/openshift/cluster-api-provider-gcp => github.com/openshift/cluster-api-provider-gcp v0.0.1-0.20211123160814-0d569513f9fa
-# github.com/openshift/cluster-api-provider-ibmcloud => github.com/openshift/cluster-api-provider-ibmcloud v0.0.0-20211008100740-4d7907adbd6b
-# github.com/openshift/cluster-api-provider-kubevirt => github.com/openshift/cluster-api-provider-kubevirt v0.0.0-20210719100556-9b8bc3666720
-# github.com/openshift/cluster-api-provider-libvirt => github.com/openshift/cluster-api-provider-libvirt v0.2.1-0.20191219173431-2336783d4603
-# github.com/openshift/cluster-api-provider-ovirt => github.com/openshift/cluster-api-provider-ovirt v0.1.1-0.20211215231458-35ce9aafee1f
 # github.com/openshift/console-operator => github.com/openshift/console-operator v0.0.0-20220318130441-e44516b9c315
-# github.com/openshift/installer => github.com/jewzaam/installer-aro v0.9.0-master.0.20220524230743-7e2aa7a0cc1a
 # github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20230222114049-eac44a078a6e
 # github.com/openshift/machine-api-operator => github.com/openshift/machine-api-operator v0.2.1-0.20220124104622-668c5b52b104
 # github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20220319215057-e6ba00b88555
-# github.com/oras-project/oras-go => oras.land/oras-go v0.4.0
-# github.com/ovirt/go-ovirt => github.com/ovirt/go-ovirt v0.0.0-20210112072624-e4d3b104de71
-# github.com/prometheus/prometheus => github.com/prometheus/prometheus v1.8.2-0.20210421143221-52df5ef7a3be
-# github.com/terraform-providers/terraform-provider-azuread => github.com/hashicorp/terraform-provider-azuread v1.6.0
-# github.com/thanos-io/thanos => github.com/thanos-io/thanos v0.23.0
-# github.com/uber-go/atomic => go.uber.org/atomic v1.9.0
-# github.com/uber/athenadriver => github.com/uber/athenadriver v1.1.10
-# github.com/willf/bitset => github.com/bits-and-blooms/bitset v1.2.1
 # go.mongodb.org/mongo-driver => go.mongodb.org/mongo-driver v1.9.4
-# google.golang.org/cloud => cloud.google.com/go v0.97.0
 # google.golang.org/grpc => google.golang.org/grpc v1.40.0
-# k8s.io/kube-state-metrics => k8s.io/kube-state-metrics v1.9.7
-# mvdan.cc/unparam => mvdan.cc/unparam v0.0.0-20211002133954-f839ab2b2b11
-# sigs.k8s.io/cluster-api-provider-aws => github.com/openshift/cluster-api-provider-aws v0.2.1-0.20210121023454-5ffc5f422a80
 # sigs.k8s.io/cluster-api-provider-azure => github.com/openshift/cluster-api-provider-azure v0.1.0-alpha.3.0.20210626224711-5d94c794092f
-# sigs.k8s.io/cluster-api-provider-openstack => github.com/openshift/cluster-api-provider-openstack v0.0.0-20211111204942-611d320170af
 # sigs.k8s.io/kustomize/api => sigs.k8s.io/kustomize/api v0.11.2
 # sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.13.3
 # sigs.k8s.io/structured-merge-diff => sigs.k8s.io/structured-merge-diff v1.0.1-0.20191108220359-b1b620dd3f06
-# sourcegraph.com/sourcegraph/go-diff => github.com/sourcegraph/go-diff v0.5.1
-# vbom.ml/util => github.com/fvbommel/util v0.0.3
 # github.com/openshift/hive/apis => github.com/openshift/hive/apis v0.0.0-20230811220652-70b666ec89b0
