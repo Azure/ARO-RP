@@ -309,24 +309,32 @@ func (f *frontend) ValidateNewCluster(ctx context.Context, subscription *api.Sub
 func setUpdateProvisioningState(doc *api.OpenShiftClusterDocument, apiVersion string) {
 	switch apiVersion {
 	case admin.APIVersion:
-		// For PUCM pending update, we don't want to set ProvisioningStateAdminUpdating
-		// The cluster monitoring stack uses that value to determine if PUCM is ongoing
-		if api.IsPUCM(doc.OpenShiftCluster.Properties.MaintenanceTask) {
-			doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
-			doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
-			doc.OpenShiftCluster.Properties.LastAdminUpdateError = ""
-			doc.Dequeues = 0
-		} else {
-			// No update to provisioning state needed
-			doc.OpenShiftCluster.Properties.PucmPending = true
-
-			// This enables future admin update actions with body `{}` to succeed
-			doc.OpenShiftCluster.Properties.MaintenanceTask = ""
-		}
+		setAdminUpdateProvisioningState(doc)
 	default:
-		// Non-admin update (ex: customer cluster update)
+		setUpdateProvisioningState(doc)
+	}
+}
+
+func setUpdateProvisioningState(doc *api.OpenShiftClusterDocument) {
+	// Non-admin update (ex: customer cluster update)
+	doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
+	doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
+	doc.Dequeues = 0
+}
+
+func setAdminUpdateProvisioningState(doc *api.OpenShiftClusterDocument) {
+	// For PUCM pending update, we don't want to set ProvisioningStateAdminUpdating
+	// The cluster monitoring stack uses that value to determine if PUCM is ongoing
+	if api.IsPUCM(doc.OpenShiftCluster.Properties.MaintenanceTask) {
 		doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
-		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
+		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
+		doc.OpenShiftCluster.Properties.LastAdminUpdateError = ""
 		doc.Dequeues = 0
+	} else {
+		// No update to provisioning state needed
+		doc.OpenShiftCluster.Properties.PucmPending = true
+
+		// This enables future admin update actions with body `{}` to succeed
+		doc.OpenShiftCluster.Properties.MaintenanceTask = ""
 	}
 }
