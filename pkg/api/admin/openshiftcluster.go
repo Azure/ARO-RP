@@ -58,6 +58,7 @@ type OpenShiftClusterProperties struct {
 	InfraID                         string            `json:"infraId,omitempty"`
 	HiveProfile                     HiveProfile       `json:"hiveProfile,omitempty"`
 	PucmPending                     bool              `json:"pucmPending,omitempty"`
+	MaintenanceState                MaintenanceState  `json:"maintenanceState,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state.
