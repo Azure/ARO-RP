@@ -7,12 +7,43 @@
 interface=$1
 action=$2
 
+main() {
+    if [[ $interface == eth* && $action == "up" ]] || [[ $interface == eth* && $action == "down" ]] || [[ $interface == enP* && $action == "up" ]] || [[ $interface == enP* && $action == "down" ]]; then
+        log "$action happened on $interface, connection state is now $CONNECTIVITY_STATE"
+        check_resolv_files
+
+        restart_dnsmasq
+    fi
+}
+
+restart_dnsmasq() {
+    log "Pre dnsmasq restart file information"
+    log_dns_files
+    log "restarting dnsmasq now"
+    if systemctl restart dnsmasq --wait; then
+        log "dnsmasq successfully restarted"
+        log "Post dnsmasq restart file information"
+        log_dns_files
+    else
+        abort "failed to restart dnsmasq"
+    fi
+
+    log "completed"
+    exit 0
+}
+
 log() {
     logger -i "$0" -t '99-DNSMASQ-RESTART SCRIPT' "$@"
 }
 
+abort() {
+    log "$@"
+    exit 1
+}
+
 # log dns configuration information relevant to SRE while troubleshooting
 # The line break used here is important for formatting
+# errors will be printed in the messages if file(s) don't exist
 log_dns_files() {
     log "/etc/resolv.conf contents
 
@@ -27,36 +58,36 @@ log_dns_files() {
     log "$(echo -n "/etc/resolv.conf.dnsmasq file metadata: ") $(ls -lZ /etc/resolv.conf.dnsmasq)"
 }
 
-sanity_check() {
-    if [[ ! -f /etc/resolv.conf ]]; then
-        log "/etc/resolv.conf is missing. Sanity check failed."
-        exit 1
-    elif [[ ! -f /etc/resolv.conf.dnsmasq ]]; then
-        log "/etc/resolv.conf.dnsmasq is missing. Sanity check failed."
-        exit 1
+# /etc/resolv.conf.dnsmasq should only be missing under the following conditions
+# - Node is the bootstrapper
+# - dnsmasq hasn't been started yet
+# A node boot will cause eth0 to come up before dnsmasq has been started, causing the lack of /etc/resolv.conf.dnsmasq
+#
+# We restart dnsmasq if /etc/resolv.conf.dnsmasq is missing but dnsmasq is active to restore /etc/resolv.conf.dnsmasq
+#
+# If dnsmasq isn't running, this script won't start dnsmasq. This is due to eth0 coming up/down during the boot process before dnsmasq has been started
+# Preventing an out of order boot sequence or failed boot
+check_resolv_files() {
+    systemctl is-active dnsmasq --quiet
+    dnsmasq_state=$?
+
+    # dnsmasq won't be running during initial boot, which will trigger this script
+    if [[ ! $dnsmasq_state -eq 0 ]]; then
+        abort "dnsmasq is inactive, refusing to restart"
+    fi
+
+    resolv="/etc/resolv.conf"
+    dnsmasq_resolv="/etc/resolv.conf.dnsmasq"
+    # renvewing the dhcp lease maybe a corrective action to take if /etc/resolv.conf is missing
+    if [[ ! -f $resolv ]]; then
+        abort "$resolv is missing. Sanity check failed."
+    # If this condition is met, dnsmasq will be restarted in main
+    elif [[ ! -f $dnsmasq_resolv ]] && [[ $dnsmasq_state -eq 0 ]]; then
+        log "$dnsmasq_resolv is missing and dnsmasq is active. Something has removed $dnsmasq_resolv. Sanity check failed.
+        Restarting dnsmasq to restore $dnsmasq_resolv"
     fi
 }
 
-if [[ $interface == eth* && $action == "up" ]] || [[ $interface == eth* && $action == "down" ]] || [[ $interface == enP* && $action == "up" ]] || [[ $interface == enP* && $action == "down" ]]; then
-    sanity_check
-    log "$action happened on $interface, connection state is now $CONNECTIVITY_STATE"
-    log "Pre dnsmasq restart file information"
-    log_dns_files
-    log "restarting dnsmasq now"
-    
-    if systemctl is-active dnsmasq --quiet; then
-        log "dnsmasq is inactive, refusing to restart"
-        exit 1
-    fi
+main
 
-    if systemctl restart dnsmasq --wait; then
-        log "dnsmasq successfully restarted"
-        log "Post dnsmasq restart file information"
-        log_dns_files
-    else
-        log "failed to restart dnsmasq"
-    fi
-fi
-
-exit 0
 {{ end }}
