@@ -37,8 +37,11 @@ type authorizationRefreshingActionStep struct {
 }
 
 func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus.Entry) error {
-	var pollInterval time.Duration
-	var retryTimeout time.Duration
+	var (
+		err          error
+		pollInterval time.Duration
+		retryTimeout time.Duration
+	)
 
 	// ARM role caching can be 5 minutes
 	if s.retryTimeout == time.Duration(0) {
@@ -57,12 +60,9 @@ func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus
 	timeoutCtx, cancel := context.WithTimeout(ctx, retryTimeout)
 	defer cancel()
 
-	// Run the step immediately. If an Azure authorization error is returned and
-	// we have not hit the retry timeout, the authorizer is refreshed and the
-	// step is called again after runner.pollInterval. If we have timed out or
-	// any other error is returned, the error from the step is returned
-	// directly.
-	return wait.PollImmediateUntil(pollInterval, func() (bool, error) {
+	// Propagate the latest authorization error to the user,
+	// rather than timeout error from PollImmediateUntil.
+	_ = wait.PollImmediateUntil(pollInterval, func() (bool, error) {
 		// We use the outer context, not the timeout context, as we do not want
 		// to time out the condition function itself, only stop retrying once
 		// timeoutCtx's timeout has fired.
@@ -83,6 +83,8 @@ func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus
 		}
 		return true, err
 	}, timeoutCtx.Done())
+
+	return err
 }
 
 func (s *authorizationRefreshingActionStep) String() string {
