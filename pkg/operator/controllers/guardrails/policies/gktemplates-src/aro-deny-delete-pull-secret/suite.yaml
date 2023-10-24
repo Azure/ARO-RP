@@ -1,0 +1,21 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: deny-pull-secret-delete
+tests:
+- name: deny-pull-secret-delete-tests
+  template: ../../gktemplates/aro-deny-delete-pull-secret.yaml
+  constraint: ../../gkconstraints-test/aro-pull-secret-deny.yaml
+  cases:
+  - name: allow-create-pull-secret
+    object: gator-test/allow_create_pull_secret.yaml
+    assertions:
+    - violations: no
+  - name: allow-update-pull-secret
+    object: gator-test/allow_update_pull_secret.yaml
+    assertions:
+    - violations: no
+  - name: not-allow-delete-pull-secret
+    object: gator-test/not_allow_delete_pull_secret.yaml
+    assertions:
+    - violations: yes
