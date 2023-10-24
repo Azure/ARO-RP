@@ -59,7 +59,7 @@ func getPucmState(clusterProperties api.OpenShiftClusterProperties) pucmState {
 	case api.MaintenanceStatePlanned:
 		return pucmPlanned
 	case api.MaintenanceStateUnplanned:
-		return pucmPlanned
+		return pucmUnplanned
 	case api.MaintenanceStateNone:
 		fallthrough
 	// For new clusters, no maintenance state has been set yet
