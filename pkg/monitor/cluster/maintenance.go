@@ -52,7 +52,6 @@ func (mon *Monitor) emitPucmState(ctx context.Context) error {
 }
 
 func getPucmState(clusterProperties api.OpenShiftClusterProperties) pucmState {
-	// No default needed because maintenance state is an enum
 	switch clusterProperties.MaintenanceState {
 	case api.MaintenanceStatePending:
 		return pucmPending
