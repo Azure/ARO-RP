@@ -14,31 +14,19 @@ import (
 
 	(1) PUCM pending
 		- We will do PUCM, so emit a maintenance pending signal
-		- Conditions:
-			* Field pucmPending is true
-			* Don't meet below conditions for in progress maintenance
 
 	(2) Planned PUCM in progress
 		- Emit a planned maintenance in progress signal.
-		- If first PUCM attempt fails, leave cluster in this state
-		  because we will need to retry PUCM in at a later time.
-		- Conditions:
-			* Field pucmPending is true
-			* One of: (a) provisoning state AdminUpdate or (2) AdminUpdate err is not nil
+		- If first PUCM attempt fails, leave cluster in this state because
+		  we will need to either retry PUCM or have an SRE update the state to now.
 
 	(3) Unplanned PUCM in progress
 		- Emit an unplanned maintenance in progress signal.
-		- If first PUCM attempt fails, leave cluster in this state
-		  because we will need to retry PUCM in at a later time.
-		- Conditions:
-			* Field pucmPending is false
-			* One of: (a) provisoning state AdminUpdate or (2) AdminUpdate err is not nil
+		- If first PUCM attempt fails, leave cluster in this state because
+		  we will need to either retry PUCM or have an SRE update the state to now.
 
 	(4) No ongoinig or scheduled PUCM
-		- Don't emit a signal
-		- Conditions:
-			* Field pucmPending is false
-			* Provisioning state is not AdminUpdate and AdminUpdate err is not nil
+		- Emit the none signal.
 **************************************************************/
 
 type pucmState string
