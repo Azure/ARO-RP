@@ -121,7 +121,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
 							},
-							OperatorFlags: api.OperatorFlags{"testFlag": "true"},
+							OperatorFlags:    api.OperatorFlags{"testFlag": "true"},
+							MaintenanceState: api.MaintenanceStateUnplanned,
 						},
 					},
 				})
@@ -150,7 +151,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
 					},
-					OperatorFlags: admin.OperatorFlags{"testFlag": "true"},
+					OperatorFlags:    admin.OperatorFlags{"testFlag": "true"},
+					MaintenanceState: admin.MaintenanceStateUnplanned,
 				},
 			},
 		},
@@ -220,7 +222,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
 							},
-							OperatorFlags: api.OperatorFlags{"exploding-flag": "true", "overwrittenFlag": "true", "testFlag": "true"},
+							OperatorFlags:    api.OperatorFlags{"exploding-flag": "true", "overwrittenFlag": "true", "testFlag": "true"},
+							MaintenanceState: api.MaintenanceStateUnplanned,
 						},
 					},
 				})
@@ -249,7 +252,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
 					},
-					OperatorFlags: admin.OperatorFlags{"exploding-flag": "true", "overwrittenFlag": "true", "testFlag": "true"},
+					OperatorFlags:    admin.OperatorFlags{"exploding-flag": "true", "overwrittenFlag": "true", "testFlag": "true"},
+					MaintenanceState: admin.MaintenanceStateUnplanned,
 				},
 			},
 		},
@@ -315,7 +319,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
 							},
-							OperatorFlags: api.DefaultOperatorFlags(),
+							OperatorFlags:    api.DefaultOperatorFlags(),
+							MaintenanceState: api.MaintenanceStateUnplanned,
 						},
 					},
 				})
@@ -344,7 +349,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					ClusterProfile: admin.ClusterProfile{
 						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
 					},
-					OperatorFlags: admin.OperatorFlags(api.DefaultOperatorFlags()),
+					OperatorFlags:    admin.OperatorFlags(api.DefaultOperatorFlags()),
+					MaintenanceState: admin.MaintenanceStateUnplanned,
 				},
 			},
 		},
@@ -408,7 +414,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
 							},
-							OperatorFlags: api.DefaultOperatorFlags(),
+							OperatorFlags:    api.DefaultOperatorFlags(),
+							MaintenanceState: api.MaintenanceStateUnplanned,
 						},
 					},
 				})
@@ -437,7 +444,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
 					},
-					OperatorFlags: admin.OperatorFlags(api.DefaultOperatorFlags()),
+					OperatorFlags:    admin.OperatorFlags(api.DefaultOperatorFlags()),
+					MaintenanceState: admin.MaintenanceStateUnplanned,
 				},
 			},
 		},
@@ -464,6 +472,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							ProvisioningState: api.ProvisioningStateSucceeded,
 							MaintenanceTask:   api.MaintenanceTaskEverything,
 							OperatorFlags:     api.OperatorFlags{"testFlag": "true"},
+							MaintenanceState:  api.MaintenanceStateNone,
 						},
 					},
 				})
@@ -503,7 +512,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
 							},
-							OperatorFlags: api.OperatorFlags{"testFlag": "true"},
+							OperatorFlags:    api.OperatorFlags{"testFlag": "true"},
+							MaintenanceState: api.MaintenanceStateUnplanned,
 						},
 					},
 				})
@@ -532,7 +542,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
 					},
-					OperatorFlags: admin.OperatorFlags{"testFlag": "true"},
+					OperatorFlags:    admin.OperatorFlags{"testFlag": "true"},
+					MaintenanceState: admin.MaintenanceStateUnplanned,
 				},
 			},
 		},
