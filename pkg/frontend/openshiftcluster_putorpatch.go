@@ -331,8 +331,13 @@ func setAdminUpdateProvisioningState(doc *api.OpenShiftClusterDocument) {
 		doc.OpenShiftCluster.Properties.LastAdminUpdateError = ""
 		doc.Dequeues = 0
 	} else {
-		// No update to provisioning state needed
-		doc.OpenShiftCluster.Properties.PucmPending = true
+		// No default needed since we're using an enum
+		switch doc.OpenShiftCluster.Properties.MaintenanceTask {
+		case api.MaintenanceTaskPucmPending:
+			doc.OpenShiftCluster.Properties.MaintenanceState = api.MaintenanceStatePending
+		case api.MaintenanceTaskPucmNone:
+			doc.OpenShiftCluster.Properties.MaintenanceState = api.MaintenanceStateNone
+		}
 
 		// This enables future admin update actions with body `{}` to succeed
 		doc.OpenShiftCluster.Properties.MaintenanceTask = ""

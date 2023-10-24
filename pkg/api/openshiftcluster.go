@@ -200,6 +200,7 @@ const (
 	MaintenanceTaskOperator    MaintenanceTask = "OperatorUpdate"
 	MaintenanceTaskRenewCerts  MaintenanceTask = "CertificatesRenewal"
 	MaintenanceTaskPucmPending MaintenanceTask = "PucmPending"
+	MaintenanceTaskPucmNone    MaintenanceTask = "PucmNone"
 )
 
 // IsPUCM returns true if the maintenance task is for PUCM
