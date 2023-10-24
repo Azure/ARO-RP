@@ -323,13 +323,18 @@ func setUpdateProvisioningState(doc *api.OpenShiftClusterDocument) {
 }
 
 func setAdminUpdateProvisioningState(doc *api.OpenShiftClusterDocument) {
-	// For PUCM pending update, we don't want to set ProvisioningStateAdminUpdating
-	// The cluster monitoring stack uses that value to determine if PUCM is ongoing
 	if api.IsPUCM(doc.OpenShiftCluster.Properties.MaintenanceTask) {
 		doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
 		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
 		doc.OpenShiftCluster.Properties.LastAdminUpdateError = ""
 		doc.Dequeues = 0
+
+		// Set the maintenance to ongoing so we emit the appropriate signal to customerss
+		if doc.OpenShiftCluster.Properties.MaintenanceState == api.MaintenanceStatePending {
+			doc.OpenShiftCluster.Properties.MaintenanceState = api.MaintenanceStatePlanned
+		} else {
+			doc.OpenShiftCluster.Properties.MaintenanceState = api.MaintenanceStateUnplanned
+		}
 	} else {
 		// No default needed since we're using an enum
 		switch doc.OpenShiftCluster.Properties.MaintenanceTask {
