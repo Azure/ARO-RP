@@ -64,21 +64,18 @@ func (mon *Monitor) emitPucmState(ctx context.Context) error {
 }
 
 func getPucmState(clusterProperties api.OpenShiftClusterProperties) pucmState {
-	if pucmOngoing(clusterProperties) {
-		if clusterProperties.PucmPending {
-			return pucmPlanned
-		}
-		return pucmUnplanned
-	}
-
-	if clusterProperties.PucmPending {
+	// No default needed because maintenance state is an enum
+	switch clusterProperties.MaintenanceState {
+	case api.MaintenanceStatePending:
 		return pucmPending
+	case api.MaintenanceStatePlanned:
+		return pucmPlanned
+	case api.MaintenanceStateUnplanned:
+		return pucmPlanned
+	case api.MaintenanceStateNone:
+		fallthrough
+	// For new clusters, no maintenance state has been set yet
+	default:
+		return pucmNone
 	}
-
-	return pucmNone
-}
-
-func pucmOngoing(clusterProperties api.OpenShiftClusterProperties) bool {
-	return clusterProperties.ProvisioningState == api.ProvisioningStateAdminUpdating ||
-		clusterProperties.LastAdminUpdateError != ""
 }
