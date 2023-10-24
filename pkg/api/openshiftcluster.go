@@ -209,7 +209,8 @@ const (
 func (t MaintenanceTask) IsPUCM() bool {
 	isPucm := (t == MaintenanceTaskEverything) ||
 		(t == MaintenanceTaskOperator) ||
-		(t == MaintenanceTaskRenewCerts)
+		(t == MaintenanceTaskRenewCerts) ||
+		(t == "")
 	return isPucm
 }
 
