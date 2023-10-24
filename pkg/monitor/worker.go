@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
@@ -240,7 +242,10 @@ func (mon *monitor) newNSGMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, s
 		mon.clusterm.EmitGauge(nsg.MetricFailedNSGMonitorCreation, int64(1), dims)
 		return &monitoring.NoOpMonitor{Wg: wg}
 	}
-	client, err := armnetwork.NewSubnetsClient(subscriptionID, token, nil)
+	options := arm.ClientOptions{
+		ClientOptions: azcore.ClientOptions{Cloud: mon.env.Environment().Cloud},
+	}
+	client, err := armnetwork.NewSubnetsClient(subscriptionID, token, &options)
 	if err != nil {
 		log.Error("Unable to create the subnet client for NSG monitoring", err)
 		mon.clusterm.EmitGauge(nsg.MetricFailedNSGMonitorCreation, int64(1), dims)
