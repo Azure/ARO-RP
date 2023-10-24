@@ -101,6 +101,7 @@ const (
 	MaintenanceTaskOperator    MaintenanceTask = "OperatorUpdate"
 	MaintenanceTaskRenewCerts  MaintenanceTask = "CertificatesRenewal"
 	MaintenanceTaskPucmPending MaintenanceTask = "PucmPending"
+	MaintenanceTaskPucmNone    MaintenanceTask = "PucmNone"
 )
 
 // Operator feature flags
