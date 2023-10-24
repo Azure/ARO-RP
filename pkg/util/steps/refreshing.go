@@ -7,11 +7,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
@@ -84,7 +86,23 @@ func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus
 		return true, err
 	}, timeoutCtx.Done())
 
-	return err
+	// After timeout, return any actionable errors to the user
+	switch err != nil {
+	case azureerrors.IsUnauthorizedClientError(err):
+		return s.servicePrincipalCloudError(
+			"The provided service principal application ID was not found in the tenant. Please ensure that the provided clientID and client secret are correct.",
+		)
+	case azureerrors.HasAuthorizationFailedError(err):
+		return s.servicePrincipalCloudError(
+			"Authorization using provided credentials failed. Please ensure that the provided clientID and client secret are correct.",
+		)
+	case azureerrors.IsInvalidSecretError(err):
+		return s.servicePrincipalCloudError(
+			"Invalid client secret provided. Please ensure that the provided clientID and client secret are correct.",
+		)
+	}
+
+	return nil
 }
 
 func (s *authorizationRefreshingActionStep) String() string {
@@ -93,4 +111,12 @@ func (s *authorizationRefreshingActionStep) String() string {
 
 func (s *authorizationRefreshingActionStep) metricsName() string {
 	return fmt.Sprintf("authorizationretryingaction.%s", shortName(FriendlyName(s.f)))
+}
+
+func (s *authorizationRefreshingActionStep) servicePrincipalCloudError(message string) error {
+	return api.NewCloudError(
+		http.StatusBadRequest,
+		api.CloudErrorCodeInvalidServicePrincipalCredentials,
+		"properties.servicePrincipalProfile",
+		message)
 }
