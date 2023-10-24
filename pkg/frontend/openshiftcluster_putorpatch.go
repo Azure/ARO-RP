@@ -324,7 +324,7 @@ func updateProvisioningState(doc *api.OpenShiftClusterDocument) {
 
 // Admin update (ex: PUCM)
 func adminUpdateProvisioningState(doc *api.OpenShiftClusterDocument) {
-	if api.IsPUCM(doc.OpenShiftCluster.Properties.MaintenanceTask) {
+	if doc.OpenShiftCluster.Properties.MaintenanceTask.IsPUCM() {
 		doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
 		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
 		doc.OpenShiftCluster.Properties.LastAdminUpdateError = ""
