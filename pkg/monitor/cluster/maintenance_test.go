@@ -17,43 +17,37 @@ func TestEmitPucmState(t *testing.T) {
 	for _, tt := range []struct {
 		name              string
 		provisioningState api.ProvisioningState
-		pucmPending       bool
+		maintenanceState  api.MaintenanceState
 		adminUpdateErr    string
 		expectedPucmState pucmState
 	}{
 		{
-			name:              "state none",
+			name:              "state none - empty maintenance state",
 			provisioningState: api.ProvisioningStateSucceeded,
+			expectedPucmState: pucmNone,
+		},
+		{
+			name:              "state none - no maintenance state set",
+			provisioningState: api.ProvisioningStateSucceeded,
+			maintenanceState:  api.MaintenanceStateNone,
 			expectedPucmState: pucmNone,
 		},
 		{
 			name:              "state pending",
 			provisioningState: api.ProvisioningStateSucceeded,
-			pucmPending:       true,
+			maintenanceState:  api.MaintenanceStatePending,
 			expectedPucmState: pucmPending,
 		},
 		{
-			name:              "state unplanned - admin updating in flight and no admin update error",
+			name:              "state unplanned",
 			provisioningState: api.ProvisioningStateAdminUpdating,
+			maintenanceState:  api.MaintenanceStateUnplanned,
 			expectedPucmState: pucmUnplanned,
 		},
 		{
-			name:              "state planned - admin updating in flight and no admin update error",
+			name:              "state planned",
 			provisioningState: api.ProvisioningStateAdminUpdating,
-			pucmPending:       true,
-			expectedPucmState: pucmPlanned,
-		},
-		{
-			name:              "state unplanned - not admin updating but admin update error",
-			provisioningState: api.ProvisioningStateFailed,
-			adminUpdateErr:    "PUCM failed",
-			expectedPucmState: pucmUnplanned,
-		},
-		{
-			name:              "state planned - not admin updating but admin update error",
-			provisioningState: api.ProvisioningStateFailed,
-			pucmPending:       true,
-			adminUpdateErr:    "PUCM failed",
+			maintenanceState:  api.MaintenanceStatePlanned,
 			expectedPucmState: pucmPlanned,
 		},
 	} {
@@ -67,7 +61,7 @@ func TestEmitPucmState(t *testing.T) {
 			oc := &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					ProvisioningState:    tt.provisioningState,
-					PucmPending:          tt.pucmPending,
+					MaintenanceState:     tt.maintenanceState,
 					LastAdminUpdateError: tt.adminUpdateErr,
 				},
 			}
