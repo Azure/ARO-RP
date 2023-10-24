@@ -315,13 +315,14 @@ func setUpdateProvisioningState(doc *api.OpenShiftClusterDocument, apiVersion st
 	}
 }
 
+// Non-admin update (ex: customer cluster update)
 func setUpdateProvisioningState(doc *api.OpenShiftClusterDocument) {
-	// Non-admin update (ex: customer cluster update)
 	doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
 	doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
 	doc.Dequeues = 0
 }
 
+// Admin update (ex: PUCM)
 func setAdminUpdateProvisioningState(doc *api.OpenShiftClusterDocument) {
 	if api.IsPUCM(doc.OpenShiftCluster.Properties.MaintenanceTask) {
 		doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
