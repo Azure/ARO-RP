@@ -309,21 +309,21 @@ func (f *frontend) ValidateNewCluster(ctx context.Context, subscription *api.Sub
 func setUpdateProvisioningState(doc *api.OpenShiftClusterDocument, apiVersion string) {
 	switch apiVersion {
 	case admin.APIVersion:
-		setAdminUpdateProvisioningState(doc)
+		adminUpdateProvisioningState(doc)
 	default:
-		setUpdateProvisioningState(doc)
+		updateProvisioningState(doc)
 	}
 }
 
 // Non-admin update (ex: customer cluster update)
-func setUpdateProvisioningState(doc *api.OpenShiftClusterDocument) {
+func updateProvisioningState(doc *api.OpenShiftClusterDocument) {
 	doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
 	doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
 	doc.Dequeues = 0
 }
 
 // Admin update (ex: PUCM)
-func setAdminUpdateProvisioningState(doc *api.OpenShiftClusterDocument) {
+func adminUpdateProvisioningState(doc *api.OpenShiftClusterDocument) {
 	if api.IsPUCM(doc.OpenShiftCluster.Properties.MaintenanceTask) {
 		doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
 		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
