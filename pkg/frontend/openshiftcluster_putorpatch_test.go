@@ -679,8 +679,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
 							},
-							PucmPending:   true,
-							OperatorFlags: api.DefaultOperatorFlags(),
+							MaintenanceState: api.MaintenanceStatePending,
+							OperatorFlags:    api.DefaultOperatorFlags(),
 						},
 					},
 				})
@@ -706,7 +706,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							},
 						},
 					},
-					PucmPending: true,
+					MaintenanceState: admin.MaintenanceStatePending,
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
 					},
