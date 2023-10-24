@@ -89,8 +89,9 @@ var _ = Describe("Update cluster Managed Outbound IPs", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(getOutboundIPsCount(lb)).To(Equal(5))
 
-		By("sending the PATCH request to decrease Managed Outbound IPs")
-		err = clients.OpenshiftClustersPreview.UpdateAndWait(ctx, vnetResourceGroup, clusterName, newManagedOutboundIPUpdateBody(1))
+		By("sending the PUT request to decrease Managed Outbound IPs")
+		oc.OpenShiftClusterProperties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIps.Count = to.Int32Ptr(1)
+		err = clients.OpenshiftClustersPreview.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, oc)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("getting the cluster resource")

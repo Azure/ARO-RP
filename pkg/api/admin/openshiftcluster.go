@@ -48,7 +48,7 @@ type OpenShiftClusterProperties struct {
 	// WorkerProfiles is used to store the worker profile data that was sent in the api request
 	WorkerProfiles []WorkerProfile `json:"workerProfiles,omitempty"`
 	// WorkerProfilesStatus is used to store the enriched worker profile data
-	WorkerProfilesStatus            []WorkerProfile   `json:"workerProfilesStatus,omitempty"`
+	WorkerProfilesStatus            []WorkerProfile   `json:"workerProfilesStatus,omitempty" swagger:"readOnly"`
 	APIServerProfile                APIServerProfile  `json:"apiserverProfile,omitempty"`
 	IngressProfiles                 []IngressProfile  `json:"ingressProfiles,omitempty"`
 	Install                         *Install          `json:"install,omitempty"`
@@ -155,7 +155,7 @@ type LoadBalancerProfile struct {
 	// The desired managed outbound IPs for the cluster public load balancer.
 	ManagedOutboundIPs *ManagedOutboundIPs `json:"managedOutboundIps,omitempty"`
 	// The list of effective outbound IP addresses of the public load balancer.
-	EffectiveOutboundIPs []EffectiveOutboundIP `json:"effectiveOutboundIps,omitempty"`
+	EffectiveOutboundIPs []EffectiveOutboundIP `json:"effectiveOutboundIps,omitempty" swagger:"readOnly"`
 	// The desired outbound IP resources for the cluster load balancer.
 	OutboundIPs []OutboundIP `json:"outboundIps,omitempty"`
 	// The desired outbound IP Prefix resources for the cluster load balancer.

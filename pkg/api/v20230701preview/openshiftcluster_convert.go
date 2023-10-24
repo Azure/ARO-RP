@@ -193,7 +193,16 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	out.Properties.NetworkProfile.ServiceCIDR = oc.Properties.NetworkProfile.ServiceCIDR
 	out.Properties.NetworkProfile.OutboundType = api.OutboundType(oc.Properties.NetworkProfile.OutboundType)
 	if oc.Properties.NetworkProfile.LoadBalancerProfile != nil {
-		out.Properties.NetworkProfile.LoadBalancerProfile = &api.LoadBalancerProfile{}
+		loadBalancerProfile := api.LoadBalancerProfile{}
+
+		// EffectiveOutboundIPs is a read-only field, so it will never be present in requests.
+		// Preserve the slice from the pre-existing internal object.
+		if out.Properties.NetworkProfile.LoadBalancerProfile != nil {
+			loadBalancerProfile.EffectiveOutboundIPs = make([]api.EffectiveOutboundIP, len(out.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs))
+			copy(loadBalancerProfile.EffectiveOutboundIPs, out.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs)
+		}
+
+		out.Properties.NetworkProfile.LoadBalancerProfile = &loadBalancerProfile
 
 		if oc.Properties.NetworkProfile.LoadBalancerProfile.AllocatedOutboundPorts != nil {
 			out.Properties.NetworkProfile.LoadBalancerProfile.AllocatedOutboundPorts = oc.Properties.NetworkProfile.LoadBalancerProfile.AllocatedOutboundPorts
@@ -261,5 +270,13 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 		LastModifiedBy:     oc.SystemData.LastModifiedBy,
 		LastModifiedAt:     oc.SystemData.LastModifiedAt,
 		LastModifiedByType: api.CreatedByType(oc.SystemData.CreatedByType),
+	}
+}
+
+// ExternalNoReadOnly removes all read-only fields from the external representation.
+func (c openShiftClusterConverter) ExternalNoReadOnly(_oc interface{}) {
+	oc := _oc.(*OpenShiftCluster)
+	if oc.Properties.NetworkProfile.LoadBalancerProfile != nil {
+		oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = nil
 	}
 }
