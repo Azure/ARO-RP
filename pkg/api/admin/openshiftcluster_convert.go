@@ -31,7 +31,6 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 			CreatedAt:               oc.Properties.CreatedAt,
 			CreatedBy:               oc.Properties.CreatedBy,
 			ProvisionedBy:           oc.Properties.ProvisionedBy,
-			PucmPending:             oc.Properties.PucmPending,
 			MaintenanceState:        oc.Properties.MaintenanceState,
 			ClusterProfile: ClusterProfile{
 				Domain:               oc.Properties.ClusterProfile.Domain,
@@ -235,7 +234,6 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	out.Properties.OperatorVersion = oc.Properties.OperatorVersion
 	out.Properties.CreatedBy = oc.Properties.CreatedBy
 	out.Properties.ProvisionedBy = oc.Properties.ProvisionedBy
-	out.Properties.PucmPending = oc.Properties.PucmPending
 	out.Properties.MaintenanceState = oc.Properties.MaintenanceState
 	out.Properties.ClusterProfile.Domain = oc.Properties.ClusterProfile.Domain
 	out.Properties.ClusterProfile.FipsValidatedModules = api.FipsValidatedModules(oc.Properties.ClusterProfile.FipsValidatedModules)

@@ -57,7 +57,6 @@ type OpenShiftClusterProperties struct {
 	ImageRegistryStorageAccountName string            `json:"imageRegistryStorageAccountName,omitempty"`
 	InfraID                         string            `json:"infraId,omitempty"`
 	HiveProfile                     HiveProfile       `json:"hiveProfile,omitempty"`
-	PucmPending                     bool              `json:"pucmPending,omitempty"`
 	MaintenanceState                MaintenanceState  `json:"maintenanceState,omitempty"`
 }
 
