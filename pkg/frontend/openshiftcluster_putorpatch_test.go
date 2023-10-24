@@ -726,6 +726,103 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			},
 		},
 		{
+			name: "patch a cluster with planned maintenance",
+			request: func(oc *admin.OpenShiftCluster) {
+				oc.Properties.MaintenanceTask = admin.MaintenanceTaskEverything
+			},
+			isPatch: true,
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+					},
+				})
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+						Tags: map[string]string{"tag": "will-be-kept"},
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState:     api.ProvisioningStateSucceeded,
+							LastProvisioningState: api.ProvisioningStateSucceeded,
+							MaintenanceState:      api.MaintenanceStatePending,
+						},
+					},
+				})
+			},
+			wantSystemDataEnriched: true,
+			wantEnriched:           []string{testdatabase.GetResourcePath(mockSubID, "resourceName")},
+			wantDocuments: func(c *testdatabase.Checker) {
+				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
+					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					AsyncOperation: &api.AsyncOperation{
+						InitialProvisioningState: api.ProvisioningStateAdminUpdating,
+						ProvisioningState:        api.ProvisioningStateAdminUpdating,
+					},
+				})
+				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+						Tags: map[string]string{"tag": "will-be-kept"},
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState:     api.ProvisioningStateAdminUpdating,
+							LastProvisioningState: api.ProvisioningStateSucceeded,
+							ClusterProfile: api.ClusterProfile{
+								FipsValidatedModules: api.FipsValidatedModulesDisabled,
+							},
+							MaintenanceTask: api.MaintenanceTaskEverything,
+							NetworkProfile: api.NetworkProfile{
+								OutboundType:     api.OutboundTypeLoadbalancer,
+								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
+								LoadBalancerProfile: &api.LoadBalancerProfile{
+									ManagedOutboundIPs: &api.ManagedOutboundIPs{
+										Count: 1,
+									},
+								},
+							},
+							MasterProfile: api.MasterProfile{
+								EncryptionAtHost: api.EncryptionAtHostDisabled,
+							},
+							OperatorFlags:    api.DefaultOperatorFlags(),
+							MaintenanceState: api.MaintenanceStatePlanned,
+						},
+					},
+				})
+			},
+			wantAsync:      true,
+			wantStatusCode: http.StatusOK,
+			wantResponse: &admin.OpenShiftCluster{
+				ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+				Tags: map[string]string{"tag": "will-be-kept"},
+				Properties: admin.OpenShiftClusterProperties{
+					ProvisioningState:     admin.ProvisioningStateAdminUpdating,
+					LastProvisioningState: admin.ProvisioningStateSucceeded,
+					ClusterProfile: admin.ClusterProfile{
+						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
+					},
+					MaintenanceTask: admin.MaintenanceTaskEverything,
+					NetworkProfile: admin.NetworkProfile{
+						OutboundType: admin.OutboundTypeLoadbalancer,
+						LoadBalancerProfile: &admin.LoadBalancerProfile{
+							ManagedOutboundIPs: &admin.ManagedOutboundIPs{
+								Count: 1,
+							},
+						},
+					},
+					MasterProfile: admin.MasterProfile{
+						EncryptionAtHost: admin.EncryptionAtHostDisabled,
+					},
+					OperatorFlags:    admin.OperatorFlags(api.DefaultOperatorFlags()),
+					MaintenanceState: admin.MaintenanceStatePlanned,
+				},
+			},
+		},
+		{
 			name: "patch a cluster with pucm none request",
 			request: func(oc *admin.OpenShiftCluster) {
 				oc.Properties.MaintenanceTask = admin.MaintenanceTaskPucmNone
