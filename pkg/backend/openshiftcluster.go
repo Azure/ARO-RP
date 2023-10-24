@@ -370,7 +370,7 @@ func (ocb *openShiftClusterBackend) emitMetrics(doc *api.OpenShiftClusterDocumen
 
 func (ocb *openShiftClusterBackend) setNoMaintenanceState(ctx context.Context, doc *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error) {
 	return ocb.dbOpenShiftClusters.Patch(ctx, doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.MaintenanceState = MaintenanceStateNone
+		doc.OpenShiftCluster.Properties.MaintenanceState = api.MaintenanceStateNone
 		return nil
 	})
 }
