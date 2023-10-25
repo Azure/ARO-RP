@@ -81,6 +81,7 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 		"Role":                     4,
 		"RoleBinding":              4,
 		"ServiceAccount":           1,
+		"PrometheusRule":           1,
 	}
 	errs := deep.Equal(deployedObjects, expectedKinds)
 	for _, e := range errs {
