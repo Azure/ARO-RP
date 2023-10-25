@@ -87,19 +87,23 @@ func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus
 	}, timeoutCtx.Done())
 
 	// After timeout, return any actionable errors to the user
-	switch err != nil {
-	case azureerrors.IsUnauthorizedClientError(err):
-		return s.servicePrincipalCloudError(
-			"The provided service principal application (client) ID was not found in the directory (tenant). Please ensure that the provided application (client) id and client secret value are correct.",
-		)
-	case azureerrors.HasAuthorizationFailedError(err) || azureerrors.IsInvalidSecretError(err):
-		return s.servicePrincipalCloudError(
-			"Authorization using provided credentials failed. Please ensure that the provided application (client) id and client secret value are correct.",
-		)
+	if err != nil {
+		switch {
+		case azureerrors.IsUnauthorizedClientError(err):
+			return s.servicePrincipalCloudError(
+				"The provided service principal application (client) ID was not found in the directory (tenant). Please ensure that the provided application (client) id and client secret value are correct.",
+			)
+		case azureerrors.HasAuthorizationFailedError(err) || azureerrors.IsInvalidSecretError(err):
+			return s.servicePrincipalCloudError(
+				"Authorization using provided credentials failed. Please ensure that the provided application (client) id and client secret value are correct.",
+			)
+		default:
+			// If not actionable, still log err in RP logs
+			return err
+		}
 	}
 
-	// If not actionable, still log err in RP logs
-	return err
+	return nil
 }
 
 func (s *authorizationRefreshingActionStep) String() string {
