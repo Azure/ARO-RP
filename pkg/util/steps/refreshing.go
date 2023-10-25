@@ -90,15 +90,11 @@ func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus
 	switch err != nil {
 	case azureerrors.IsUnauthorizedClientError(err):
 		return s.servicePrincipalCloudError(
-			"The provided service principal application ID was not found in the tenant. Please ensure that the provided clientID and client secret are correct.",
+			"The provided service principal application (client) ID was not found in the directory (tenant). Please ensure that the provided application (client) id and client secret value are correct.",
 		)
-	case azureerrors.HasAuthorizationFailedError(err):
+	case azureerrors.HasAuthorizationFailedError(err) || azureerrors.IsInvalidSecretError(err):
 		return s.servicePrincipalCloudError(
-			"Authorization using provided credentials failed. Please ensure that the provided clientID and client secret are correct.",
-		)
-	case azureerrors.IsInvalidSecretError(err):
-		return s.servicePrincipalCloudError(
-			"Invalid client secret provided. Please ensure that the provided clientID and client secret are correct.",
+			"Authorization using provided credentials failed. Please ensure that the provided application (client) id and client secret value are correct.",
 		)
 	}
 
