@@ -1,5 +1,5 @@
 {{ define "99-dnsmasq-restart" }}
-#!/bin/sh
+#!/bin/bash
 # This is a NetworkManager dispatcher script to restart dnsmasq
 # in the event of a network interface change (e. g. host servicing event https://learn.microsoft.com/en-us/azure/developer/intro/hosting-apps-on-azure)
 # this will restart dnsmasq, reapplying our /etc/resolv.conf file and overwriting any modifications made by NetworkManager
@@ -32,11 +32,15 @@ restart_dnsmasq() {
     exit 0
 }
 
+# log logs all provided input to journald
+# stack_level can be set to change the function name used as the syslog identifier postfix
+# The default stack_level is the function calling log
 log() {
-    logger -i "$0" -t '99-DNSMASQ-RESTART SCRIPT' "$@"
+    logger -i "$0" -t "99-DNSMASQ-RESTART ${FUNCNAME[${stack_level:-1}]}" "$@"
 }
 
 abort() {
+    stack_level=2
     log "$@"
     exit 1
 }
@@ -73,17 +77,17 @@ check_resolv_files() {
 
     # dnsmasq won't be running during initial boot, which will trigger this script
     if [[ ! $dnsmasq_state -eq 0 ]]; then
-        abort "dnsmasq is inactive, refusing to restart"
+        abort "dnsmasq is inactive, refusing to restart. System has been up for: $(uptime)"
     fi
 
     resolv="/etc/resolv.conf"
     dnsmasq_resolv="/etc/resolv.conf.dnsmasq"
     # renvewing the dhcp lease maybe a corrective action to take if /etc/resolv.conf is missing
     if [[ ! -f $resolv ]]; then
-        abort "$resolv is missing. Sanity check failed."
+        abort "$resolv is missing. ${FUNCNAME[0]} failed."
     # If this condition is met, dnsmasq will be restarted in main
     elif [[ ! -f $dnsmasq_resolv ]] && [[ $dnsmasq_state -eq 0 ]]; then
-        log "$dnsmasq_resolv is missing and dnsmasq is active. Something has removed $dnsmasq_resolv. Sanity check failed.
+        log "$dnsmasq_resolv is missing and dnsmasq is active. Something has removed $dnsmasq_resolv. ${FUNCNAME[0]} failed.
         Restarting dnsmasq to restore $dnsmasq_resolv"
     fi
 }
