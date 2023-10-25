@@ -174,6 +174,7 @@ const (
 	ProvisioningStateCreating      ProvisioningState = "Creating"
 	ProvisioningStateUpdating      ProvisioningState = "Updating"
 	ProvisioningStateAdminUpdating ProvisioningState = "AdminUpdating"
+	ProvisioningStateMaintenance   ProvisioningState = "Maintenance"
 	ProvisioningStateCancelled     ProvisioningState = "Cancelled"
 	ProvisioningStateDeleting      ProvisioningState = "Deleting"
 	ProvisioningStateSucceeded     ProvisioningState = "Succeeded"
