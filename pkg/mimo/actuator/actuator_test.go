@@ -10,9 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -57,7 +58,6 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 	})
 
 	BeforeAll(func() {
-
 		controller = gomock.NewController(nil)
 		_env = mock_env.NewMockInterface(controller)
 
@@ -133,7 +133,6 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 
 			errs := checker.CheckMaintenanceManifests(manifestsClient)
 			Expect(errs).To(BeNil(), fmt.Sprintf("%v", errs))
-
 		})
 	})
 
