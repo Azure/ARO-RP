@@ -94,6 +94,42 @@
         {
             "properties": {
                 "resource": {
+                    "id": "BucketServices",
+                    "partitionKey": {
+                        "paths": [
+                            "/serviceName"
+                        ],
+                        "kind": "Hash"
+                    },
+                    "defaultTtl": -1,
+                    "uniqueKeyPolicy": {
+                        "uniqueKeys": [
+                            {
+                                "paths": [
+                                    "/serviceName"
+                                ]
+                            },
+                            {
+                                "paths": [
+                                    "/serviceRole"
+                                ]
+                            }
+                        ]
+                    }
+                },
+                "options": {}
+            },
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/BucketServices')]",
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2021-01-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
+            ]
+        },
+        {
+            "properties": {
+                "resource": {
                     "id": "Billing",
                     "partitionKey": {
                         "paths": [
