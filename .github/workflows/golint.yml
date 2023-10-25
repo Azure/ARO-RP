@@ -16,11 +16,6 @@ jobs:
     name: golangci-lint
     runs-on: ubuntu-latest
     steps:
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install libbtrfs-dev libgpgme-dev libdevmapper-dev
-
     - name: Checkout repository
       uses: actions/checkout@v4
 
@@ -39,11 +34,6 @@ jobs:
     name: validate-go
     runs-on: ubuntu-latest
     steps:
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install libbtrfs-dev libgpgme-dev libdevmapper-dev
-
     - name: Checkout repository
       uses: actions/checkout@v4
 
