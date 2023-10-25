@@ -284,6 +284,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	var wg sync.WaitGroup
 
 	if doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG == api.PreconfiguredNSGEnabled && hourlyRun {
+		mon.clusterm.EmitGauge(nsg.MetricPreconfiguredNSGEnabled, int64(1), dims)
 		nsgMon := mon.newNSGMonitor(log, doc.OpenShiftCluster, sub.ID, sub.Subscription.Properties.TenantID, mon.clusterm, dims, &wg)
 		monitors = append(monitors, nsgMon)
 	}

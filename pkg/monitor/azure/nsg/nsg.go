@@ -26,6 +26,7 @@ import (
 )
 
 const (
+	MetricPreconfiguredNSGEnabled  = "monitor.preconfigurednsg.enabled"
 	MetricFailedNSGMonitorCreation = "monitor.preconfigurednsg.failedmonitorcreation"
 	MetricInvalidDenyRule          = "monitor.preconfigurednsg.invaliddenyrule"
 	MetricSubnetAccessForbidden    = "monitor.preconfigurednsg.subnetaccessforbidden"
