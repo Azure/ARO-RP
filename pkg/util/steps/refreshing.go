@@ -98,7 +98,8 @@ func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus
 		)
 	}
 
-	return nil
+	// If not actionable, still log err in RP logs
+	return err
 }
 
 func (s *authorizationRefreshingActionStep) String() string {
