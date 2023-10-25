@@ -41,7 +41,6 @@ type etcdrenew struct {
 	k             adminactions.KubeActions
 	doc           *api.OpenShiftClusterDocument
 	secretNames   []string
-	mode          string
 	backupSecrets map[string][]byte
 	lastRevision  int32
 	timeout       time.Duration
@@ -52,8 +51,9 @@ var etcdOperatorControllerConditionsExpected = map[string]operatorv1.ConditionSt
 }
 
 var etcdOperatorConditionsExpected = map[configv1.ClusterStatusConditionType]configv1.ConditionStatus{
-	configv1.OperatorAvailable: configv1.ConditionTrue,
-	configv1.OperatorDegraded:  configv1.ConditionFalse,
+	configv1.OperatorAvailable:   configv1.ConditionTrue,
+	configv1.OperatorProgressing: configv1.ConditionFalse,
+	configv1.OperatorDegraded:    configv1.ConditionFalse,
 }
 
 func (f *frontend) postAdminOpenShiftClusterEtcdCertificateRenew(w http.ResponseWriter, r *http.Request) {
@@ -150,8 +150,13 @@ func (e *etcdrenew) run(ctx context.Context) error {
 	}
 
 	e.log.Infoln("Etcd certificates are renewed and new revision is applied, verifying.")
-	e.mode = "renewed"
-	return e.validateEtcdAndBackupDeleteSecretOnFlagSet(ctx, false)
+	err = e.validateEtcdAndBackupDeleteSecretOnFlagSet(ctx, false)
+	if err != nil {
+		return err
+	}
+
+	// validates if the etcd certificates are renewed
+	return e.validateEtcdCertsRenewed(ctx)
 }
 
 func (f *frontend) _postAdminOpenShiftClusterEtcdCertificateRenew(ctx context.Context, resourceID string, log *logrus.Entry, timeout time.Duration) error {
@@ -177,7 +182,6 @@ func (f *frontend) _postAdminOpenShiftClusterEtcdCertificateRenew(ctx context.Co
 		k:             k,
 		doc:           doc,
 		secretNames:   nil,
-		mode:          "",
 		backupSecrets: make(map[string][]byte),
 		lastRevision:  0,
 		timeout:       timeout,
@@ -258,6 +262,9 @@ func (e *etcdrenew) validateEtcdOperatorState(ctx context.Context) error {
 		if etcdOperatorConditionsExpected[c.Type] != c.Status {
 			return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Etcd Operator is not in expected state, quiting.")
 		}
+		if c.Type == configv1.OperatorAvailable && c.Reason != "AsExpected" {
+			return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Etcd Operator Available state is not AsExpected, quiting.")
+		}
 	}
 	e.log.Infoln("Etcd operator state validated.")
 
@@ -287,15 +294,53 @@ func (e *etcdrenew) validateEtcdCertsExistsAndExpiry(ctx context.Context) error 
 		if err != nil {
 			return err
 		}
-		if !utilcert.IsLessThanMinimumDuration(certData[0], utilcert.DefaultMinDurationPercent) && e.mode != "renewed" {
-			return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "secret %s is not near expiry, quitting.", secretname)
-		}
 		if utilcert.IsCertExpired(certData[0]) {
 			return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "secret %s is already expired, quitting.", secretname)
 		}
 	}
 	e.log.Infoln("Etcd certs exits, are not expired")
 
+	return nil
+}
+
+func (e *etcdrenew) validateEtcdCertsRenewed(ctx context.Context) error {
+	e.log.Infoln("validating if etcd certs are renewed")
+	isError := false
+
+	for _, secretname := range e.secretNames {
+		e.log.Infof("validating secret %s", secretname)
+		cert, err := e.k.KubeGet(ctx, "Secret", namespaceEtcds, secretname)
+		if err != nil {
+			return err
+		}
+
+		var u unstructured.Unstructured
+		var secret corev1.Secret
+		if err = json.Unmarshal(cert, &u); err != nil {
+			return err
+		}
+		err = kruntime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &secret)
+		if err != nil {
+			return err
+		}
+		_, certData, err := utilpem.Parse(secret.Data[corev1.TLSCertKey])
+		if err != nil {
+			return err
+		}
+
+		// etcd operator renews certificates for another 3 years, 1000+ days (3*365)
+		e.log.Infof("certificate '%s' expiration date is '%s'", secretname, certData[0].NotAfter)
+		if utilcert.DaysUntilExpiration(certData[0]) < 1000 {
+			isError = true
+			e.log.Errorf("certificate %s is not renewed successfully.", secretname)
+		}
+	}
+
+	if isError {
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "etcd certificates renewal not successful, as atleast one or all certificates are not renewed")
+	}
+
+	e.log.Infoln("etcd certificates are successfully renewed")
 	return nil
 }
 
