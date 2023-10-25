@@ -17,6 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
 	"github.com/Azure/ARO-RP/pkg/mimo/actuator"
+	"github.com/Azure/ARO-RP/pkg/proxy"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/service"
 )
@@ -130,26 +131,38 @@ func main() {
 						return err
 					}
 
+					buckets, err := database.NewBucketServices(ctx.Context, dbc, dbName)
+					if err != nil {
+						return err
+					}
+
 					clusters, err := database.NewOpenShiftClusters(ctx.Context, dbc, dbName)
 					if err != nil {
 						return err
 					}
 
-					a, err := actuator.NewActuator(ctx.Context, _env, _env.Logger(), clusters)
+					manifests, err := database.NewMaintenanceManifests(ctx.Context, dbc, dbName)
 					if err != nil {
 						return err
 					}
 
+					dialer, err := proxy.NewDialer(_env.IsLocalDevelopmentMode())
+					if err != nil {
+						return err
+					}
+
+					a := actuator.NewService(_env.Logger(), dialer, buckets, clusters, manifests, m)
+
 					sigterm := make(chan os.Signal, 1)
+					done := make(chan struct{})
 					signal.Notify(sigterm, syscall.SIGTERM)
 
-					done := make(chan struct{})
 					go a.Run(ctx.Context, stop, done)
 
 					<-sigterm
 					log.Print("received SIGTERM")
 					close(stop)
-					<-done
+					//<-done
 
 					return nil
 				},
