@@ -1,13 +1,17 @@
 package buckets
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"reflect"
 	"sync"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
-	"github.com/sirupsen/logrus"
 )
 
 type WorkerFunc func(<-chan struct{}, time.Duration, string)
@@ -46,7 +50,6 @@ func NewBucketWorker(log *logrus.Entry, worker WorkerFunc, mu *sync.RWMutex) *mo
 
 		mu: mu,
 	}
-
 }
 
 // LoadBuckets is called with the bucket allocation from the controller
