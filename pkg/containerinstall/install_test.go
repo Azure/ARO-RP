@@ -54,16 +54,14 @@ var _ = Describe("Podman", Ordered, func() {
 
 	It("can pull images", func() {
 		_, err = images.Pull(conn, TEST_PULLSPEC, (&images.PullOptions{}).WithPolicy("missing"))
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 	})
 
 	It("can create a secret", func() {
-
 		secret, err = secrets.Create(
 			conn, bytes.NewBufferString("hello\n"),
 			(&secrets.CreateOptions{}).WithName(containerName))
-		Expect(err).To(BeNil())
-
+		Expect(err).ToNot(HaveOccurred())
 	})
 
 	It("can start a container", func() {
@@ -85,12 +83,12 @@ var _ = Describe("Podman", Ordered, func() {
 		s.Entrypoint = []string{"/bin/bash", "-c", "cat testfile"}
 
 		containerID, err = runContainer(conn, log, s)
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 	})
 
 	It("can wait for completion", func() {
 		exit, err := containers.Wait(conn, containerID, (&containers.WaitOptions{}).WithCondition([]define.ContainerStatus{define.ContainerStateExited}))
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 		Expect(exit).To(BeEquivalentTo(0), "exit code was %d, not 0", exit)
 	})
 
@@ -99,7 +97,7 @@ var _ = Describe("Podman", Ordered, func() {
 		Eventually(func(g Gomega) {
 			hook.Reset()
 			err = getContainerLogs(conn, log, containerID)
-			g.Expect(err).To(BeNil())
+			g.Expect(err).ToNot(HaveOccurred())
 			entries := []map[string]types.GomegaMatcher{
 				{
 					"msg":   Equal("stdout: hello\n"),
@@ -108,19 +106,19 @@ var _ = Describe("Podman", Ordered, func() {
 			}
 
 			err = testlog.AssertLoggingOutput(hook, entries)
-			g.Expect(err).To(BeNil())
+			g.Expect(err).ToNot(HaveOccurred())
 		}).WithTimeout(10 * time.Second).WithPolling(time.Second).Should(Succeed())
 	})
 
 	AfterAll(func() {
 		if containerID != "" {
 			_, err = containers.Remove(conn, containerID, (&containers.RemoveOptions{}).WithForce(true))
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 		}
 
 		if secret != nil {
 			err = secrets.Remove(conn, secret.ID)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 		}
 
 		if cancel != nil {

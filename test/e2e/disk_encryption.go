@@ -55,13 +55,13 @@ var _ = Describe("Encryption at host", func() {
 		By("listing all VMs for the test cluster")
 		vms, err := clients.VirtualMachines.List(ctx, clusterResourceGroup)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(vms).NotTo(HaveLen(0))
+		Expect(vms).NotTo(BeEmpty())
 
 		By("checking the encryption property on each VM")
 		for _, vm := range vms {
 			Expect(vm.SecurityProfile).To(Not(BeNil()))
 			Expect(vm.SecurityProfile.EncryptionAtHost).To(Not(BeNil()))
-			Expect(*vm.SecurityProfile.EncryptionAtHost).To(Equal(true))
+			Expect(*vm.SecurityProfile.EncryptionAtHost).To(BeTrue())
 		}
 	})
 })
@@ -98,7 +98,7 @@ var _ = Describe("Disk encryption at rest", func() {
 		By("listing all VMs")
 		vms, err := clients.VirtualMachines.List(ctx, clusterResourceGroup)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(vms).NotTo(HaveLen(0))
+		Expect(vms).NotTo(BeEmpty())
 
 		// We have to get the disks by VM, because when getting all disks by resource group,
 		// we do not get recently created disks, see https://github.com/Azure/azure-cli/issues/17123
@@ -117,7 +117,7 @@ var _ = Describe("Disk encryption at rest", func() {
 		Expect(sc.Annotations["storageclass.kubernetes.io/is-default-class"]).To(Equal("true"))
 
 		By("making sure the encrypted storage class uses worker disk encryption set")
-		expectedDiskEncryptionSetID := ((*oc.OpenShiftClusterProperties.WorkerProfiles)[0].DiskEncryptionSetID)
+		expectedDiskEncryptionSetID := *((*oc.OpenShiftClusterProperties.WorkerProfiles)[0].DiskEncryptionSetID)
 		Expect(sc.Parameters).NotTo(BeNil())
 		Expect(sc.Parameters["diskEncryptionSetID"]).NotTo(Equal(expectedDiskEncryptionSetID))
 	})

@@ -26,7 +26,7 @@ var _ = Describe("[Admin API] Cordon and Drain node actions", func() {
 			LabelSelector: "node-role.kubernetes.io/worker",
 		})
 		Expect(err).NotTo(HaveOccurred())
-		Expect(len(nodes.Items)).Should(BeNumerically(">", 0))
+		Expect(nodes.Items).ShouldNot(BeEmpty())
 		node := nodes.Items[0]
 		nodeName := node.Name
 
