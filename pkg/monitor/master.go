@@ -12,7 +12,6 @@ import (
 // master updates the monitor document with the list of buckets balanced between
 // registered monitors
 func (mon *monitor) master(ctx context.Context) error {
-	var doc *api.MonitorDocument
 	var err error
 
 	// if we know we're not the master, attempt to gain the lease on the monitor
@@ -48,7 +47,7 @@ func (mon *monitor) master(ctx context.Context) error {
 			}
 		}
 
-		mon.b.Balance(monitors, doc)
+		doc.Monitor.Buckets = mon.b.Balance(monitors, doc.Monitor.Buckets)
 
 		return nil
 	})

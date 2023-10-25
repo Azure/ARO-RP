@@ -26,7 +26,7 @@ type monitor struct {
 
 type BucketWorker interface {
 	LoadBuckets([]int)
-	Balance([]string, *api.BucketServiceDocument)
+	Balance([]string, []string) []string
 	Stop()
 
 	Doc(string) *api.OpenShiftClusterDocument
@@ -76,19 +76,19 @@ func (mon *monitor) Doc(id string) *api.OpenShiftClusterDocument {
 }
 
 // balance shares out buckets over a slice of registered monitors
-func (mon *monitor) Balance(monitors []string, doc *api.BucketServiceDocument) {
-	// initialise doc.Buckets
-	if doc.Buckets == nil {
-		doc.Buckets = make([]string, 0)
+func (mon *monitor) Balance(monitors []string, bucketOut []string) []string {
+	// initialise bucketOut
+	if bucketOut == nil {
+		bucketOut = make([]string, 0)
 	}
 
-	// ensure len(doc.Buckets) == mon.bucketCount: this should only do
+	// ensure len(bucketOut) == mon.bucketCount: this should only do
 	// anything on the very first run
-	if len(doc.Buckets) < mon.bucketCount {
-		doc.Buckets = append(doc.Buckets, make([]string, mon.bucketCount-len(doc.Buckets))...)
+	if len(bucketOut) < mon.bucketCount {
+		bucketOut = append(bucketOut, make([]string, mon.bucketCount-len(bucketOut))...)
 	}
-	if len(doc.Buckets) > mon.bucketCount { // should never happen
-		doc.Buckets = doc.Buckets[:mon.bucketCount]
+	if len(bucketOut) > mon.bucketCount { // should never happen
+		bucketOut = bucketOut[:mon.bucketCount]
 	}
 
 	var unallocated []int
@@ -106,7 +106,7 @@ func (mon *monitor) Balance(monitors []string, doc *api.BucketServiceDocument) {
 	}
 
 	// load the current bucket allocations into the map
-	for i, monitor := range doc.Buckets {
+	for i, monitor := range bucketOut {
 		if buckets, found := m[monitor]; found && len(buckets) < target {
 			// if the current bucket is allocated to a known monitor and doesn't
 			// take its number of buckets above the target, keep it there...
@@ -134,11 +134,12 @@ func (mon *monitor) Balance(monitors []string, doc *api.BucketServiceDocument) {
 
 	// write the updated bucket allocations back to the document
 	for _, i := range unallocated {
-		doc.Buckets[i] = "" // should only happen if there are no known monitors
+		bucketOut[i] = "" // should only happen if there are no known monitors
 	}
 	for monitor, buckets := range m {
 		for _, i := range buckets {
-			doc.Buckets[i] = monitor
+			bucketOut[i] = monitor
 		}
 	}
+	return bucketOut
 }

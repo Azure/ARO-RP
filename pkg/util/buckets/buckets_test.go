@@ -165,8 +165,7 @@ func TestBalance(t *testing.T) {
 			}
 
 			doc := tt.doc()
-
-			mon.Balance(tt.monitors, doc)
+			doc.Buckets = mon.Balance(tt.monitors, doc.Buckets)
 
 			if doc.Buckets == nil {
 				t.Fatal(doc.Buckets)
