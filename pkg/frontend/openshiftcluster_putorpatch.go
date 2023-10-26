@@ -341,7 +341,7 @@ func adminUpdateProvisioningState(doc *api.OpenShiftClusterDocument) {
 		switch doc.OpenShiftCluster.Properties.MaintenanceTask {
 		case api.MaintenanceTaskPucmPending:
 			doc.OpenShiftCluster.Properties.MaintenanceState = api.MaintenanceStatePending
-		case api.MaintenanceTaskPucmNone:
+		case api.MaintenanceTaskNone:
 			doc.OpenShiftCluster.Properties.MaintenanceState = api.MaintenanceStateNone
 		}
 

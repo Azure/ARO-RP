@@ -825,7 +825,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 		{
 			name: "patch a cluster with pucm none request",
 			request: func(oc *admin.OpenShiftCluster) {
-				oc.Properties.MaintenanceTask = admin.MaintenanceTaskPucmNone
+				oc.Properties.MaintenanceTask = admin.MaintenanceTaskNone
 			},
 			isPatch: true,
 			fixture: func(f *testdatabase.Fixture) {

@@ -38,7 +38,7 @@ func validateMaintenanceTask(task MaintenanceTask) error {
 		task == MaintenanceTaskOperator ||
 		task == MaintenanceTaskRenewCerts ||
 		task == MaintenanceTaskPucmPending ||
-		task == MaintenanceTaskPucmNone) {
+		task == MaintenanceTaskNone) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.maintenanceTask", "Invalid enum parameter.")
 	}
 

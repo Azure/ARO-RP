@@ -104,7 +104,7 @@ const (
 	// None signal should only be used when (1) PUCM fails and (2) SRE fixes the failed PUCM without running another PUCM
 	// PUCM success should automatically set the cluster into None state
 	MaintenanceTaskPucmPending MaintenanceTask = "PucmPending"
-	MaintenanceTaskPucmNone    MaintenanceTask = "PucmNone"
+	MaintenanceTaskNone        MaintenanceTask = "PucmNone"
 )
 
 // Operator feature flags

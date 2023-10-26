@@ -690,11 +690,11 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			},
 		},
 		{
-			name: "maintenanceTask change to PucmNone allowed",
+			name: "maintenanceTask change to None allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
 					Properties: OpenShiftClusterProperties{
-						MaintenanceTask: MaintenanceTaskPucmNone,
+						MaintenanceTask: MaintenanceTaskNone,
 					},
 				}
 			},
