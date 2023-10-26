@@ -629,7 +629,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			wantError:              `400: PropertyChangeNotAllowed: properties.registryProfiles: Changing property 'properties.registryProfiles' is not allowed.`,
 		},
 		{
-			name: "patch a cluster with pucm pending request",
+			name: "patch a cluster with maintenance pending request",
 			request: func(oc *admin.OpenShiftCluster) {
 				oc.Properties.MaintenanceTask = admin.MaintenanceTaskPucmPending
 			},
@@ -823,7 +823,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			},
 		},
 		{
-			name: "patch a cluster with pucm none request",
+			name: "patch a cluster with maintenance none request",
 			request: func(oc *admin.OpenShiftCluster) {
 				oc.Properties.MaintenanceTask = admin.MaintenanceTaskNone
 			},
