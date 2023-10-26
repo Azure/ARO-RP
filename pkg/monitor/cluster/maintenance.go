@@ -29,17 +29,17 @@ import (
 		- Emit the none signal.
 **************************************************************/
 
-type pucmState string
+type maintenanceState string
 
-func (p pucmState) String() string {
-	return string(p)
+func (m maintenanceState) String() string {
+	return string(m)
 }
 
 const (
-	pucmNone      pucmState = "none"
-	pucmPending   pucmState = "pending"
-	pucmPlanned   pucmState = "planned"
-	pucmUnplanned pucmState = "unplanned"
+	none      maintenanceState = "none"
+	pending   maintenanceState = "pending"
+	planned   maintenanceState = "planned"
+	unplanned maintenanceState = "unplanned"
 )
 
 func (mon *Monitor) emitMaintenanceState(ctx context.Context) error {
@@ -51,18 +51,18 @@ func (mon *Monitor) emitMaintenanceState(ctx context.Context) error {
 	return nil
 }
 
-func getMaintenanceState(clusterProperties api.OpenShiftClusterProperties) pucmState {
+func getMaintenanceState(clusterProperties api.OpenShiftClusterProperties) maintenanceState {
 	switch clusterProperties.MaintenanceState {
 	case api.MaintenanceStatePending:
-		return pucmPending
+		return pending
 	case api.MaintenanceStatePlanned:
-		return pucmPlanned
+		return planned
 	case api.MaintenanceStateUnplanned:
-		return pucmUnplanned
+		return unplanned
 	case api.MaintenanceStateNone:
 		fallthrough
 	// For new clusters, no maintenance state has been set yet
 	default:
-		return pucmNone
+		return none
 	}
 }

@@ -19,36 +19,36 @@ func TestemitMaintenanceState(t *testing.T) {
 		provisioningState api.ProvisioningState
 		maintenanceState  api.MaintenanceState
 		adminUpdateErr    string
-		expectedPucmState pucmState
+		expectedPucmState maintenanceState
 	}{
 		{
 			name:              "state none - empty maintenance state",
 			provisioningState: api.ProvisioningStateSucceeded,
-			expectedPucmState: pucmNone,
+			expectedPucmState: none,
 		},
 		{
 			name:              "state none - no maintenance state set",
 			provisioningState: api.ProvisioningStateSucceeded,
 			maintenanceState:  api.MaintenanceStateNone,
-			expectedPucmState: pucmNone,
+			expectedPucmState: none,
 		},
 		{
 			name:              "state pending",
 			provisioningState: api.ProvisioningStateSucceeded,
 			maintenanceState:  api.MaintenanceStatePending,
-			expectedPucmState: pucmPending,
+			expectedPucmState: pending,
 		},
 		{
 			name:              "state unplanned",
 			provisioningState: api.ProvisioningStateAdminUpdating,
 			maintenanceState:  api.MaintenanceStateUnplanned,
-			expectedPucmState: pucmUnplanned,
+			expectedPucmState: unplanned,
 		},
 		{
 			name:              "state planned",
 			provisioningState: api.ProvisioningStateAdminUpdating,
 			maintenanceState:  api.MaintenanceStatePlanned,
-			expectedPucmState: pucmPlanned,
+			expectedPucmState: planned,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
