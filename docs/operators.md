@@ -127,6 +127,7 @@ go run ./cmd/aro operator master
     * Setup mirroring environment variables
       ```bash
       export DST_QUAY=<quay-user-name>/<repository-name>
+      export ARO_IMAGE=quay.io/${DST_QUAY}
       ```
 
     * Login to the Quay Registry
