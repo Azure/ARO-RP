@@ -65,7 +65,6 @@ func (f *frontend) getRouter() chi.Router {
 	r := chi.NewRouter()
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		f.logger.Infof("Received request: %s", time.Now().String())
-		f.logger.Infof("Received request Header: %s", r.Header)
 		handleMISE(w, r)
 		w.Write([]byte("****** ARO-RP on AKS PoC frontend******"))
 	})
@@ -111,7 +110,9 @@ func handleMISE(w http.ResponseWriter, r *http.Request) {
 
 func extractToken(h http.Header) string {
 	auth := h.Get("Authorization")
+	log.Default().Println("Authorization header is: ", auth)
 	token := strings.TrimPrefix(auth, "Bearer ")
+	log.Default().Println("token value is: ", token)
 	return strings.TrimSpace(token)
 }
 
