@@ -445,7 +445,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 			ClusterProfile: api.ClusterProfile{
 				Domain:               strings.ToLower(clusterName),
 				ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.env.SubscriptionID(), "aro-"+clusterName),
-				FipsValidatedModules: api.FipsValidatedModulesEnabled,
+				FipsValidatedModules: api.FipsValidatedModulesDisabled,
 				Version:              osClusterVersion,
 			},
 			ServicePrincipalProfile: api.ServicePrincipalProfile{

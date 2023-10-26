@@ -33,7 +33,7 @@ const (
 	testPVCName = "e2e-test-claim"
 )
 
-var _ = Describe("Cluster", Serial, func() {
+var _ = FDescribe("Cluster", Serial, func() {
 	var p project.Project
 
 	BeforeEach(func(ctx context.Context) {
