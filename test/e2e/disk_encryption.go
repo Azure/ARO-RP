@@ -119,6 +119,6 @@ var _ = Describe("Disk encryption at rest", func() {
 		By("making sure the encrypted storage class uses worker disk encryption set")
 		expectedDiskEncryptionSetID := *((*oc.OpenShiftClusterProperties.WorkerProfiles)[0].DiskEncryptionSetID)
 		Expect(sc.Parameters).NotTo(BeNil())
-		Expect(sc.Parameters["diskEncryptionSetID"]).NotTo(Equal(expectedDiskEncryptionSetID))
+		Expect(sc.Parameters["diskEncryptionSetID"]).To(Equal(expectedDiskEncryptionSetID))
 	})
 })
