@@ -19,6 +19,7 @@ import (
 
 var ignoredAlerts = map[string]struct{}{
 	"ImagePruningDisabled": {},
+	"InsightsDisabled":     {},
 }
 
 func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
@@ -107,7 +108,11 @@ func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
 }
 
 func alertIsIgnored(alertName string) bool {
+	// Customers using deprecated/removed APIs is not useful for us to scrape
 	if strings.HasPrefix(alertName, "UsingDeprecatedAPI") {
+		return true
+	}
+	if strings.HasPrefix(alertName, "APIRemovedInNext") {
 		return true
 	}
 
