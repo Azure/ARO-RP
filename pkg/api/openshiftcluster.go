@@ -205,13 +205,13 @@ const (
 	MaintenanceTaskNone        MaintenanceTask = "None"
 )
 
-// IsPUCM returns true if the maintenance task is for PUCM
-func (t MaintenanceTask) IsPUCM() bool {
-	isPucm := (t == MaintenanceTaskEverything) ||
+// IsMaintenanceOngoingTask returns true if the maintenance task should change state to maintenance ongoing (planned/unplanned)
+func (t MaintenanceTask) IsMaintenanceOngoingTask() bool {
+	result := (t == MaintenanceTaskEverything) ||
 		(t == MaintenanceTaskOperator) ||
 		(t == MaintenanceTaskRenewCerts) ||
 		(t == "")
-	return isPucm
+	return result
 }
 
 // Cluster-scoped flags
