@@ -13,42 +13,42 @@ import (
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 )
 
-func TestemitMaintenanceState(t *testing.T) {
+func TestEmitMaintenanceState(t *testing.T) {
 	for _, tt := range []struct {
 		name              string
 		provisioningState api.ProvisioningState
 		maintenanceState  api.MaintenanceState
 		adminUpdateErr    string
-		expectedPucmState maintenanceState
+		expectedState     maintenanceState
 	}{
 		{
 			name:              "state none - empty maintenance state",
 			provisioningState: api.ProvisioningStateSucceeded,
-			expectedPucmState: none,
+			expectedState:     none,
 		},
 		{
 			name:              "state none - no maintenance state set",
 			provisioningState: api.ProvisioningStateSucceeded,
 			maintenanceState:  api.MaintenanceStateNone,
-			expectedPucmState: none,
+			expectedState:     none,
 		},
 		{
 			name:              "state pending",
 			provisioningState: api.ProvisioningStateSucceeded,
 			maintenanceState:  api.MaintenanceStatePending,
-			expectedPucmState: pending,
+			expectedState:     pending,
 		},
 		{
 			name:              "state unplanned",
 			provisioningState: api.ProvisioningStateAdminUpdating,
 			maintenanceState:  api.MaintenanceStateUnplanned,
-			expectedPucmState: unplanned,
+			expectedState:     unplanned,
 		},
 		{
 			name:              "state planned",
 			provisioningState: api.ProvisioningStateAdminUpdating,
 			maintenanceState:  api.MaintenanceStatePlanned,
-			expectedPucmState: planned,
+			expectedState:     planned,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -71,7 +71,7 @@ func TestemitMaintenanceState(t *testing.T) {
 			}
 
 			m.EXPECT().EmitGauge("cluster.maintenance.pucm", int64(1), map[string]string{
-				"state": tt.expectedPucmState.String(),
+				"state": tt.expectedState.String(),
 			})
 
 			err := mon.emitMaintenanceState(ctx)
