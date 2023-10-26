@@ -1,9 +1,12 @@
 package poc
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -16,6 +19,13 @@ import (
 type frontend struct {
 	logger *logrus.Entry
 	port   string
+}
+
+type MiseRequestData struct {
+	MiseURL        string
+	OriginalURI    string
+	OriginalMethod string
+	Token          string
 }
 
 func NewFrontend(logger *logrus.Entry, port string) frontend {
@@ -55,11 +65,64 @@ func (f *frontend) getRouter() chi.Router {
 	r := chi.NewRouter()
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		f.logger.Infof("Received request: %s", time.Now().String())
-		w.Write([]byte("****** ARO-RP on AKS PoC jonachang frontend******"))
+		f.logger.Infof("Received request Header: %s", r.Header)
+		handleMISE(w, r)
+		w.Write([]byte("****** ARO-RP on AKS PoC frontend******"))
 	})
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		w.Write([]byte("ok"))
 	})
 	return r
+}
+
+func handleMISE(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+	t := extractToken(r.Header)
+	m := MiseRequestData{
+		MiseURL:        "http://localhost:5000/ValidateRequest",
+		OriginalURI:    "https://server/endpoint",
+		OriginalMethod: r.Method,
+		Token:          t,
+	}
+	req, err := createMiseHTTPRequest(ctx, m)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	log.Default().Println("Response status: ", resp.Status)
+
+	w.WriteHeader(resp.StatusCode)
+	switch resp.StatusCode {
+	case http.StatusOK:
+		fmt.Fprintln(w, "Authorized")
+	default:
+		fmt.Fprintln(w, "Unauthorized")
+	}
+
+}
+
+func extractToken(h http.Header) string {
+	auth := h.Get("Authorization")
+	token := strings.TrimPrefix(auth, "Bearer ")
+	return strings.TrimSpace(token)
+}
+
+func createMiseHTTPRequest(ctx context.Context, data MiseRequestData) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, data.MiseURL, bytes.NewBuffer(nil))
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+	req.Header.Set("Original-URI", data.OriginalURI)
+	req.Header.Set("Original-Method", data.OriginalMethod)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", data.Token))
+	return req, nil
 }
