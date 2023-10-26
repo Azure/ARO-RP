@@ -43,7 +43,7 @@ const (
 )
 
 func (mon *Monitor) emitMaintenanceState(ctx context.Context) error {
-	state := getPucmState(mon.oc.Properties)
+	state := getMaintenanceState(mon.oc.Properties)
 	mon.emitGauge("cluster.maintenance.pucm", 1, map[string]string{
 		"state": state.String(),
 	})
@@ -51,7 +51,7 @@ func (mon *Monitor) emitMaintenanceState(ctx context.Context) error {
 	return nil
 }
 
-func getPucmState(clusterProperties api.OpenShiftClusterProperties) pucmState {
+func getMaintenanceState(clusterProperties api.OpenShiftClusterProperties) pucmState {
 	switch clusterProperties.MaintenanceState {
 	case api.MaintenanceStatePending:
 		return pucmPending
