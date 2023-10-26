@@ -1,7 +1,7 @@
 {
     "kind": "APIResourceList",
     "apiVersion": "v1",
-    "groupVersion": "monitoring.coreos.com/v1alpha1",
+    "groupVersion": "monitoring.coreos.com/v1beta1",
     "resources": [
         {
             "name": "alertmanagerconfigs",
