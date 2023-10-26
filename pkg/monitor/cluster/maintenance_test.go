@@ -13,7 +13,7 @@ import (
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 )
 
-func TestEmitPucmState(t *testing.T) {
+func TestemitMaintenanceState(t *testing.T) {
 	for _, tt := range []struct {
 		name              string
 		provisioningState api.ProvisioningState
@@ -74,7 +74,7 @@ func TestEmitPucmState(t *testing.T) {
 				"state": tt.expectedPucmState.String(),
 			})
 
-			err := mon.emitPucmState(ctx)
+			err := mon.emitMaintenanceState(ctx)
 			if err != nil {
 				t.Fatal(err)
 			}

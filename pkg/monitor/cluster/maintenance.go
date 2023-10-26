@@ -42,7 +42,7 @@ const (
 	pucmUnplanned pucmState = "unplanned"
 )
 
-func (mon *Monitor) emitPucmState(ctx context.Context) error {
+func (mon *Monitor) emitMaintenanceState(ctx context.Context) error {
 	state := getPucmState(mon.oc.Properties)
 	mon.emitGauge("cluster.maintenance.pucm", 1, map[string]string{
 		"state": state.String(),

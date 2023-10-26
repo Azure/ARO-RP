@@ -198,7 +198,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitSummary,
 		mon.emitHiveRegistrationStatus,
 		mon.emitOperatorFlagsAndSupportBanner,
-		mon.emitPucmState,
+		mon.emitMaintenanceState,
 		mon.emitCertificateExpirationStatuses,
 		mon.emitEtcdCertificateExpiry,
 		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable
