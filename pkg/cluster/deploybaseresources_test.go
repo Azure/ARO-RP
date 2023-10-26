@@ -20,12 +20,17 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
+	uuidfake "github.com/Azure/ARO-RP/pkg/util/uuid/fake"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -603,6 +608,572 @@ func TestSubnetsWithServiceEndpoints(t *testing.T) {
 			if !reflect.DeepEqual(subnets, tt.wantSubnets) {
 				t.Errorf("got: %v, wanted %v", subnets, tt.wantSubnets)
 			}
+		})
+	}
+}
+
+func TestNewPublicLoadBalancer(t *testing.T) {
+	ctx := context.Background()
+	infraID := "infraID"
+	location := "eastus"
+	clusterRGID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG"
+	// Define the DB instance we will use to run the PatchWithLease function
+	key := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName"
+
+	// Run tests
+	for _, tt := range []struct {
+		name                 string
+		m                    manager
+		expectedARMResources []*arm.Resource
+		uuids                []string
+	}{
+		{
+			name:  "api server visibility public with 1 managed IP",
+			uuids: []string{},
+			m: manager{
+				doc: &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(key),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       key,
+						Location: location,
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateUpdating,
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: clusterRGID,
+							},
+							InfraID: infraID,
+							APIServerProfile: api.APIServerProfile{
+								Visibility: api.VisibilityPublic,
+							},
+							IngressProfiles: []api.IngressProfile{
+								{
+									Visibility: api.VisibilityPrivate,
+								},
+							},
+							NetworkProfile: api.NetworkProfile{
+								OutboundType: api.OutboundTypeLoadbalancer,
+								LoadBalancerProfile: &api.LoadBalancerProfile{
+									ManagedOutboundIPs: &api.ManagedOutboundIPs{
+										Count: 1,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedARMResources: []*arm.Resource{
+				{
+					Resource: &mgmtnetwork.PublicIPAddress{
+						Sku: &mgmtnetwork.PublicIPAddressSku{
+							Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
+						},
+						PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
+							PublicIPAllocationMethod: mgmtnetwork.Static,
+						},
+						Name:     to.StringPtr(infraID + "-pip-v4"),
+						Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
+						Location: &location,
+					},
+					APIVersion: azureclient.APIVersion("Microsoft.Network"),
+				},
+				{
+					Resource: &mgmtnetwork.LoadBalancer{
+						Sku: &mgmtnetwork.LoadBalancerSku{
+							Name: mgmtnetwork.LoadBalancerSkuNameStandard,
+						},
+						LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
+							FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
+								{
+									FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
+										PublicIPAddress: &mgmtnetwork.PublicIPAddress{
+											ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', '" + infraID + "-pip-v4')]"),
+										},
+									},
+									Name: to.StringPtr("public-lb-ip-v4"),
+								},
+							},
+							BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
+								{
+									Name: to.StringPtr(infraID),
+								},
+							},
+							LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{
+								{
+									LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
+										FrontendIPConfiguration: &mgmtnetwork.SubResource{
+											ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s', 'public-lb-ip-v4')]", infraID)),
+										},
+										BackendAddressPool: &mgmtnetwork.SubResource{
+											ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", infraID)),
+										},
+										Probe: &mgmtnetwork.SubResource{
+											ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s', 'api-internal-probe')]", infraID)),
+										},
+										Protocol:             mgmtnetwork.TransportProtocolTCP,
+										LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
+										FrontendPort:         to.Int32Ptr(6443),
+										BackendPort:          to.Int32Ptr(6443),
+										IdleTimeoutInMinutes: to.Int32Ptr(30),
+										DisableOutboundSnat:  to.BoolPtr(true),
+									},
+									Name: to.StringPtr("api-internal-v4"),
+								},
+							},
+							Probes: &[]mgmtnetwork.Probe{
+								{
+									ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
+										Protocol:          mgmtnetwork.ProbeProtocolHTTPS,
+										Port:              to.Int32Ptr(6443),
+										IntervalInSeconds: to.Int32Ptr(5),
+										NumberOfProbes:    to.Int32Ptr(2),
+										RequestPath:       to.StringPtr("/readyz"),
+									},
+									Name: to.StringPtr("api-internal-probe"),
+								},
+							},
+							OutboundRules: &[]mgmtnetwork.OutboundRule{
+								{
+									OutboundRulePropertiesFormat: &mgmtnetwork.OutboundRulePropertiesFormat{
+										FrontendIPConfigurations: &[]mgmtnetwork.SubResource{
+											{
+												ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/public-lb-ip-v4"),
+											},
+										},
+										BackendAddressPool: &mgmtnetwork.SubResource{
+											ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", infraID)),
+										},
+										Protocol:             mgmtnetwork.LoadBalancerOutboundRuleProtocolAll,
+										IdleTimeoutInMinutes: to.Int32Ptr(30),
+									},
+									Name: to.StringPtr("outbound-rule-v4"),
+								},
+							},
+						},
+						Name:     to.StringPtr(infraID),
+						Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
+						Location: to.StringPtr(location),
+					},
+					APIVersion: azureclient.APIVersion("Microsoft.Network"),
+					DependsOn: []string{
+						"Microsoft.Network/publicIPAddresses/" + infraID + "-pip-v4",
+					},
+				},
+			},
+		},
+		{
+			name:  "api server visibility public with 2 managed IPs",
+			uuids: []string{"uuid1"},
+			m: manager{
+				doc: &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(key),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       key,
+						Location: location,
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateUpdating,
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: clusterRGID,
+							},
+							InfraID: infraID,
+							APIServerProfile: api.APIServerProfile{
+								Visibility: api.VisibilityPublic,
+							},
+							IngressProfiles: []api.IngressProfile{
+								{
+									Visibility: api.VisibilityPrivate,
+								},
+							},
+							NetworkProfile: api.NetworkProfile{
+								OutboundType: api.OutboundTypeLoadbalancer,
+								LoadBalancerProfile: &api.LoadBalancerProfile{
+									ManagedOutboundIPs: &api.ManagedOutboundIPs{
+										Count: 2,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedARMResources: []*arm.Resource{
+				{
+					Resource: &mgmtnetwork.PublicIPAddress{
+						Sku: &mgmtnetwork.PublicIPAddressSku{
+							Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
+						},
+						PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
+							PublicIPAllocationMethod: mgmtnetwork.Static,
+						},
+						Name:     to.StringPtr(infraID + "-pip-v4"),
+						Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
+						Location: &location,
+					},
+					APIVersion: azureclient.APIVersion("Microsoft.Network"),
+				},
+				{
+					Resource: &mgmtnetwork.PublicIPAddress{
+						Sku: &mgmtnetwork.PublicIPAddressSku{
+							Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
+						},
+						PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
+							PublicIPAllocationMethod: mgmtnetwork.Static,
+						},
+						Name:     to.StringPtr("uuid1-outbound-pip-v4"),
+						Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
+						Location: &location,
+					},
+					APIVersion: azureclient.APIVersion("Microsoft.Network"),
+				},
+				{
+					Resource: &mgmtnetwork.LoadBalancer{
+						Sku: &mgmtnetwork.LoadBalancerSku{
+							Name: mgmtnetwork.LoadBalancerSkuNameStandard,
+						},
+						LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
+							FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
+								{
+									FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
+										PublicIPAddress: &mgmtnetwork.PublicIPAddress{
+											ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', '" + infraID + "-pip-v4')]"),
+										},
+									},
+									Name: to.StringPtr("public-lb-ip-v4"),
+								},
+								{
+									ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/uuid1-outbound-pip-v4"),
+									FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
+										PublicIPAddress: &mgmtnetwork.PublicIPAddress{
+											ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/uuid1-outbound-pip-v4"),
+										},
+									},
+									Name: to.StringPtr("uuid1-outbound-pip-v4"),
+								},
+							},
+							BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
+								{
+									Name: to.StringPtr(infraID),
+								},
+							},
+							LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{
+								{
+									LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
+										FrontendIPConfiguration: &mgmtnetwork.SubResource{
+											ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s', 'public-lb-ip-v4')]", infraID)),
+										},
+										BackendAddressPool: &mgmtnetwork.SubResource{
+											ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", infraID)),
+										},
+										Probe: &mgmtnetwork.SubResource{
+											ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s', 'api-internal-probe')]", infraID)),
+										},
+										Protocol:             mgmtnetwork.TransportProtocolTCP,
+										LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
+										FrontendPort:         to.Int32Ptr(6443),
+										BackendPort:          to.Int32Ptr(6443),
+										IdleTimeoutInMinutes: to.Int32Ptr(30),
+										DisableOutboundSnat:  to.BoolPtr(true),
+									},
+									Name: to.StringPtr("api-internal-v4"),
+								},
+							},
+							Probes: &[]mgmtnetwork.Probe{
+								{
+									ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
+										Protocol:          mgmtnetwork.ProbeProtocolHTTPS,
+										Port:              to.Int32Ptr(6443),
+										IntervalInSeconds: to.Int32Ptr(5),
+										NumberOfProbes:    to.Int32Ptr(2),
+										RequestPath:       to.StringPtr("/readyz"),
+									},
+									Name: to.StringPtr("api-internal-probe"),
+								},
+							},
+							OutboundRules: &[]mgmtnetwork.OutboundRule{
+								{
+									OutboundRulePropertiesFormat: &mgmtnetwork.OutboundRulePropertiesFormat{
+										FrontendIPConfigurations: &[]mgmtnetwork.SubResource{
+											{
+												ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/public-lb-ip-v4"),
+											},
+											{
+												ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/uuid1-outbound-pip-v4"),
+											},
+										},
+										BackendAddressPool: &mgmtnetwork.SubResource{
+											ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", infraID)),
+										},
+										Protocol:             mgmtnetwork.LoadBalancerOutboundRuleProtocolAll,
+										IdleTimeoutInMinutes: to.Int32Ptr(30),
+									},
+									Name: to.StringPtr("outbound-rule-v4"),
+								},
+							},
+						},
+						Name:     to.StringPtr(infraID),
+						Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
+						Location: to.StringPtr(location),
+					},
+					APIVersion: azureclient.APIVersion("Microsoft.Network"),
+					DependsOn: []string{
+						"Microsoft.Network/publicIPAddresses/" + infraID + "-pip-v4",
+						"Microsoft.Network/publicIPAddresses/uuid1-outbound-pip-v4",
+					},
+				},
+			},
+		},
+		{
+			name:  "api server visibility private with 1 managed IP",
+			uuids: []string{"uuid1"},
+			m: manager{
+				doc: &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(key),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       key,
+						Location: location,
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateUpdating,
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: clusterRGID,
+							},
+							InfraID: infraID,
+							APIServerProfile: api.APIServerProfile{
+								Visibility: api.VisibilityPrivate,
+							},
+							IngressProfiles: []api.IngressProfile{
+								{
+									Visibility: api.VisibilityPrivate,
+								},
+							},
+							NetworkProfile: api.NetworkProfile{
+								OutboundType: api.OutboundTypeLoadbalancer,
+								LoadBalancerProfile: &api.LoadBalancerProfile{
+									ManagedOutboundIPs: &api.ManagedOutboundIPs{
+										Count: 1,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedARMResources: []*arm.Resource{
+				{
+					Resource: &mgmtnetwork.PublicIPAddress{
+						Sku: &mgmtnetwork.PublicIPAddressSku{
+							Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
+						},
+						PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
+							PublicIPAllocationMethod: mgmtnetwork.Static,
+						},
+						Name:     to.StringPtr("uuid1-outbound-pip-v4"),
+						Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
+						Location: &location,
+					},
+					APIVersion: azureclient.APIVersion("Microsoft.Network"),
+				},
+				{
+					Resource: &mgmtnetwork.LoadBalancer{
+						Sku: &mgmtnetwork.LoadBalancerSku{
+							Name: mgmtnetwork.LoadBalancerSkuNameStandard,
+						},
+						LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
+							FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
+								{
+									ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/uuid1-outbound-pip-v4"),
+									FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
+										PublicIPAddress: &mgmtnetwork.PublicIPAddress{
+											ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/uuid1-outbound-pip-v4"),
+										},
+									},
+									Name: to.StringPtr("uuid1-outbound-pip-v4"),
+								},
+							},
+							BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
+								{
+									Name: to.StringPtr(infraID),
+								},
+							},
+							LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{},
+							Probes:             &[]mgmtnetwork.Probe{},
+							OutboundRules: &[]mgmtnetwork.OutboundRule{
+								{
+									OutboundRulePropertiesFormat: &mgmtnetwork.OutboundRulePropertiesFormat{
+										FrontendIPConfigurations: &[]mgmtnetwork.SubResource{
+											{
+												ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/uuid1-outbound-pip-v4"),
+											},
+										},
+										BackendAddressPool: &mgmtnetwork.SubResource{
+											ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", infraID)),
+										},
+										Protocol:             mgmtnetwork.LoadBalancerOutboundRuleProtocolAll,
+										IdleTimeoutInMinutes: to.Int32Ptr(30),
+									},
+									Name: to.StringPtr("outbound-rule-v4"),
+								},
+							},
+						},
+						Name:     to.StringPtr(infraID),
+						Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
+						Location: to.StringPtr(location),
+					},
+					APIVersion: azureclient.APIVersion("Microsoft.Network"),
+					DependsOn: []string{
+						"Microsoft.Network/publicIPAddresses/uuid1-outbound-pip-v4",
+					},
+				},
+			},
+		},
+		{
+			name:  "api server visibility private with 2 managed IPs",
+			uuids: []string{"uuid1", "uuid2"},
+			m: manager{
+				doc: &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(key),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       key,
+						Location: location,
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateUpdating,
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: clusterRGID,
+							},
+							InfraID: infraID,
+							APIServerProfile: api.APIServerProfile{
+								Visibility: api.VisibilityPrivate,
+							},
+							IngressProfiles: []api.IngressProfile{
+								{
+									Visibility: api.VisibilityPrivate,
+								},
+							},
+							NetworkProfile: api.NetworkProfile{
+								OutboundType: api.OutboundTypeLoadbalancer,
+								LoadBalancerProfile: &api.LoadBalancerProfile{
+									ManagedOutboundIPs: &api.ManagedOutboundIPs{
+										Count: 2,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedARMResources: []*arm.Resource{
+				{
+					Resource: &mgmtnetwork.PublicIPAddress{
+						Sku: &mgmtnetwork.PublicIPAddressSku{
+							Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
+						},
+						PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
+							PublicIPAllocationMethod: mgmtnetwork.Static,
+						},
+						Name:     to.StringPtr("uuid1-outbound-pip-v4"),
+						Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
+						Location: &location,
+					},
+					APIVersion: azureclient.APIVersion("Microsoft.Network"),
+				},
+				{
+					Resource: &mgmtnetwork.PublicIPAddress{
+						Sku: &mgmtnetwork.PublicIPAddressSku{
+							Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
+						},
+						PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
+							PublicIPAllocationMethod: mgmtnetwork.Static,
+						},
+						Name:     to.StringPtr("uuid2-outbound-pip-v4"),
+						Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
+						Location: &location,
+					},
+					APIVersion: azureclient.APIVersion("Microsoft.Network"),
+				},
+				{
+					Resource: &mgmtnetwork.LoadBalancer{
+						Sku: &mgmtnetwork.LoadBalancerSku{
+							Name: mgmtnetwork.LoadBalancerSkuNameStandard,
+						},
+						LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
+							FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
+								{
+									ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/uuid1-outbound-pip-v4"),
+									FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
+										PublicIPAddress: &mgmtnetwork.PublicIPAddress{
+											ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/uuid1-outbound-pip-v4"),
+										},
+									},
+									Name: to.StringPtr("uuid1-outbound-pip-v4"),
+								},
+								{
+									ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/uuid2-outbound-pip-v4"),
+									FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
+										PublicIPAddress: &mgmtnetwork.PublicIPAddress{
+											ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/uuid2-outbound-pip-v4"),
+										},
+									},
+									Name: to.StringPtr("uuid2-outbound-pip-v4"),
+								},
+							},
+							BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
+								{
+									Name: to.StringPtr(infraID),
+								},
+							},
+							LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{},
+							Probes:             &[]mgmtnetwork.Probe{},
+							OutboundRules: &[]mgmtnetwork.OutboundRule{
+								{
+									OutboundRulePropertiesFormat: &mgmtnetwork.OutboundRulePropertiesFormat{
+										FrontendIPConfigurations: &[]mgmtnetwork.SubResource{
+											{
+												ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/uuid1-outbound-pip-v4"),
+											},
+											{
+												ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/uuid2-outbound-pip-v4"),
+											},
+										},
+										BackendAddressPool: &mgmtnetwork.SubResource{
+											ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", infraID)),
+										},
+										Protocol:             mgmtnetwork.LoadBalancerOutboundRuleProtocolAll,
+										IdleTimeoutInMinutes: to.Int32Ptr(30),
+									},
+									Name: to.StringPtr("outbound-rule-v4"),
+								},
+							},
+						},
+						Name:     to.StringPtr(infraID),
+						Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
+						Location: to.StringPtr(location),
+					},
+					APIVersion: azureclient.APIVersion("Microsoft.Network"),
+					DependsOn: []string{
+						"Microsoft.Network/publicIPAddresses/uuid1-outbound-pip-v4",
+						"Microsoft.Network/publicIPAddresses/uuid2-outbound-pip-v4",
+					},
+				},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create the DB to test the cluster
+			openShiftClustersDatabase, _ := testdatabase.NewFakeOpenShiftClusters()
+			fixture := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClustersDatabase)
+			fixture.AddOpenShiftClusterDocuments(tt.m.doc)
+			err := fixture.Create()
+			if err != nil {
+				t.Fatal(err)
+			}
+			tt.m.db = openShiftClustersDatabase
+			tt.m.log = logrus.NewEntry(logrus.StandardLogger())
+
+			uuid.DefaultGenerator = uuidfake.NewGenerator(tt.uuids)
+
+			resources := []*arm.Resource{}
+			tt.m.newPublicLoadBalancer(ctx, &resources)
+
+			assert.Equal(t, tt.expectedARMResources, resources)
 		})
 	}
 }
