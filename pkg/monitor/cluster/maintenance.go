@@ -10,22 +10,22 @@ import (
 )
 
 /**************************************************************
-	Possible PUCM states:
+	Possible maintenance states:
 
-	(1) PUCM pending
-		- We will do PUCM, so emit a maintenance pending signal
+	(1) Maintenance pending
+		- We will do maintenance, so emit a maintenance pending signal
 
-	(2) Planned PUCM in progress
+	(2) Planned maintenance in progress
 		- Emit a planned maintenance in progress signal.
-		- If first PUCM attempt fails, leave cluster in this state because
-		  we will need to either retry PUCM or have an SRE update the state to now.
+		- If first attempt fails, leave cluster in this state because
+		  we will need to either retry or have an SRE update the state to none.
 
-	(3) Unplanned PUCM in progress
+	(3) Unplanned maintenance in progress
 		- Emit an unplanned maintenance in progress signal.
-		- If first PUCM attempt fails, leave cluster in this state because
-		  we will need to either retry PUCM or have an SRE update the state to now.
+		- If first attempt fails, leave cluster in this state because
+		  we will need to either retry or have an SRE update the state to none.
 
-	(4) No ongoinig or scheduled PUCM
+	(4) No ongoinig or scheduled maintenance
 		- Emit the none signal.
 **************************************************************/
 
