@@ -322,7 +322,7 @@ func updateProvisioningState(doc *api.OpenShiftClusterDocument) {
 	doc.Dequeues = 0
 }
 
-// Admin update (ex: PUCM)
+// Admin update (ex: cluster maintenance)
 func adminUpdateProvisioningState(doc *api.OpenShiftClusterDocument) {
 	if doc.OpenShiftCluster.Properties.MaintenanceTask.IsMaintenanceOngoingTask() {
 		doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
