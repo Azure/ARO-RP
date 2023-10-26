@@ -339,7 +339,7 @@ func adminUpdateProvisioningState(doc *api.OpenShiftClusterDocument) {
 	} else {
 		// No default needed since we're using an enum
 		switch doc.OpenShiftCluster.Properties.MaintenanceTask {
-		case api.MaintenanceTaskPucmPending:
+		case api.MaintenanceTaskPending:
 			doc.OpenShiftCluster.Properties.MaintenanceState = api.MaintenanceStatePending
 		case api.MaintenanceTaskNone:
 			doc.OpenShiftCluster.Properties.MaintenanceState = api.MaintenanceStateNone

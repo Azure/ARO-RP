@@ -681,7 +681,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
 					Properties: OpenShiftClusterProperties{
-						MaintenanceTask: MaintenanceTaskPucmPending,
+						MaintenanceTask: MaintenanceTaskPending,
 					},
 				}
 			},

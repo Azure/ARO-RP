@@ -201,8 +201,8 @@ const (
 	// Maintenance tasks for updating customer maintenance signals
 	// None signal should only be used when (1) admin update fails and (2) SRE fixes the failed admin update without running another admin updates
 	// Admin update success should automatically set the cluster into None state
-	MaintenanceTaskPucmPending MaintenanceTask = "PucmPending"
-	MaintenanceTaskNone        MaintenanceTask = "None"
+	MaintenanceTaskPending MaintenanceTask = "PucmPending"
+	MaintenanceTaskNone    MaintenanceTask = "None"
 )
 
 // IsMaintenanceOngoingTask returns true if the maintenance task should change state to maintenance ongoing (planned/unplanned)

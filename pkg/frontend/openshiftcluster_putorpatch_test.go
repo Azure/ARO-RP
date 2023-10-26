@@ -631,7 +631,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 		{
 			name: "patch a cluster with maintenance pending request",
 			request: func(oc *admin.OpenShiftCluster) {
-				oc.Properties.MaintenanceTask = admin.MaintenanceTaskPucmPending
+				oc.Properties.MaintenanceTask = admin.MaintenanceTaskPending
 			},
 			isPatch: true,
 			fixture: func(f *testdatabase.Fixture) {
