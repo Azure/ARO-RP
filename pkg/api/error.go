@@ -14,6 +14,9 @@ type CloudError struct {
 	// The status code.
 	StatusCode int `json:"-"`
 
+	// The status string of succeeded or failed
+	Status ValidationStatus `json:"status,omitempty"`
+
 	// An error response from the service.
 	*CloudErrorBody `json:"error,omitempty"`
 }
@@ -42,6 +45,15 @@ type CloudErrorBody struct {
 	//A list of additional details about the error.
 	Details []CloudErrorBody `json:"details,omitempty"`
 }
+
+type ValidationStatus string
+
+const (
+	// ValidationStatusSucceeded means validation passed
+	ValidationStatusSucceeded ValidationStatus = "Succeeded"
+	// ValidationStatusFailed means validation failed
+	ValidationStatusFailed ValidationStatus = "Failed"
+)
 
 func (b *CloudErrorBody) String() string {
 	var details string

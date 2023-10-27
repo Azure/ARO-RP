@@ -11,8 +11,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Azure/go-autorest/autorest/to"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -103,7 +101,7 @@ func TestPreflightValidation(t *testing.T) {
 		fixture          func(*testdatabase.Fixture)
 		wantStatusCode   int
 		wantError        string
-		wantResponse     *api.ValidationResult
+		wantResponse     *api.CloudError
 	}
 	for _, tt := range []*test{
 		{
@@ -127,7 +125,7 @@ func TestPreflightValidation(t *testing.T) {
 				}
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse: &api.ValidationResult{
+			wantResponse: &api.CloudError{
 				Status: api.ValidationStatusSucceeded,
 			},
 		},
@@ -170,10 +168,10 @@ func TestPreflightValidation(t *testing.T) {
 				}
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse: &api.ValidationResult{
+			wantResponse: &api.CloudError{
 				Status: api.ValidationStatusFailed,
-				Error: &api.ManagementErrorWithDetails{
-					Message: to.StringPtr("400: InvalidParameter: properties.clusterProfile.resourceGroupId: The provided resource group '/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/resourcenameTest' is invalid: must be in same subscription as cluster."),
+				CloudErrorBody: &api.CloudErrorBody{
+					Message: "400: InvalidParameter: properties.clusterProfile.resourceGroupId: The provided resource group '/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/resourcenameTest' is invalid: must be in same subscription as cluster.",
 				},
 			},
 		},
@@ -261,11 +259,11 @@ func TestPreflightValidation(t *testing.T) {
 				}
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse: &api.ValidationResult{
+			wantResponse: &api.CloudError{
 				Status: api.ValidationStatusFailed,
-				Error: &api.ManagementErrorWithDetails{
-					Code:    to.StringPtr("InvalidParameter"),
-					Message: to.StringPtr("400: InvalidParameter: properties.clusterProfile.version: The requested OpenShift version '4.11.43' is invalid."),
+				CloudErrorBody: &api.CloudErrorBody{
+					Code:    "InvalidParameter",
+					Message: "400: InvalidParameter: properties.clusterProfile.version: The requested OpenShift version '4.11.43' is invalid.",
 				},
 			},
 		},
@@ -334,7 +332,7 @@ func TestPreflightValidation(t *testing.T) {
 				}
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse: &api.ValidationResult{
+			wantResponse: &api.CloudError{
 				Status: api.ValidationStatusSucceeded,
 			},
 		},
@@ -375,10 +373,10 @@ func TestPreflightValidation(t *testing.T) {
 				}
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse: &api.ValidationResult{
+			wantResponse: &api.CloudError{
 				Status: api.ValidationStatusFailed,
-				Error: &api.ManagementErrorWithDetails{
-					Message: to.StringPtr("400: PropertyChangeNotAllowed: properties.clusterProfile.domain: Changing property 'properties.clusterProfile.domain' is not allowed."),
+				CloudErrorBody: &api.CloudErrorBody{
+					Message: "400: PropertyChangeNotAllowed: properties.clusterProfile.domain: Changing property 'properties.clusterProfile.domain' is not allowed.",
 				},
 			},
 		},
