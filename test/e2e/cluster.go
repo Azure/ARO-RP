@@ -33,7 +33,7 @@ const (
 	testPVCName = "e2e-test-claim"
 )
 
-var _ = FDescribe("Cluster", Serial, func() {
+var _ = Describe("Cluster", Serial, func() {
 	var p project.Project
 
 	BeforeEach(func(ctx context.Context) {
@@ -84,8 +84,11 @@ var _ = FDescribe("Cluster", Serial, func() {
 			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 		})
 
-		// TODO: this test is marked as pending as it isn't working as expected
-		It("which is using the default Azure File storage class backed by the cluster storage account", func(ctx context.Context) {
+		// TODO: This test is marked as Pending because CI clusters are FIPS-enabled, and Azure File storage
+		// doesn't work with FIPS-enabled clusters: https://learn.microsoft.com/en-us/azure/openshift/howto-enable-fips-openshift#support-for-fips-cryptography
+		//
+		// We should enable this test when/if FIPS becomes toggleable post-install in the future.
+		It("which is using the default Azure File storage class backed by the cluster storage account", Pending, func(ctx context.Context) {
 			By("adding the Microsoft.Storage service endpoint to each cluster subnet (if needed)")
 
 			oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
@@ -183,7 +186,6 @@ var _ = FDescribe("Cluster", Serial, func() {
 				s, err := clients.Kubernetes.AppsV1().StatefulSets(p.Name).Get(ctx, ssName, metav1.GetOptions{})
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(ready.StatefulSetIsReady(s)).To(BeTrue(), "expect stateful to be ready")
-				GinkgoWriter.Println(s)
 
 				pvcName := statefulSetPVCName(ssName, testPVCName, 0)
 				pvc, err := clients.Kubernetes.CoreV1().PersistentVolumeClaims(p.Name).Get(ctx, pvcName, metav1.GetOptions{})
