@@ -61,7 +61,6 @@ func (f *frontend) getRouter() chi.Router {
 		} else {
 			w.Write([]byte("****** Welcome to ARO-RP on AKS PoC ******"))
 		}
-		w.Write([]byte("****** Blocked by MISE authorization ******"))
 	})
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
