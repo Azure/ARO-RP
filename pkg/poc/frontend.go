@@ -65,8 +65,12 @@ func (f *frontend) getRouter() chi.Router {
 	r := chi.NewRouter()
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		f.logger.Infof("Received request: %s", time.Now().String())
-		handleMISE(w, r)
-		w.Write([]byte("****** ARO-RP on AKS PoC frontend******"))
+		miseError := handleMISE(w, r)
+		if miseError != nil {
+			w.Write([]byte("****** Blocked by MISE authorization ******"))
+		} else {
+			w.Write([]byte("****** Welcome to ARO-RP on AKS PoC ******"))
+		}
 	})
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
@@ -75,7 +79,7 @@ func (f *frontend) getRouter() chi.Router {
 	return r
 }
 
-func handleMISE(w http.ResponseWriter, r *http.Request) {
+func handleMISE(w http.ResponseWriter, r *http.Request) error {
 	ctx := context.Background()
 	t := extractToken(r.Header)
 	m := MiseRequestData{
@@ -95,24 +99,23 @@ func handleMISE(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 	defer resp.Body.Close()
-	log.Default().Println("full response is : ", resp)
 	log.Default().Println("Response status: ", resp.Status)
 
 	w.WriteHeader(resp.StatusCode)
+
 	switch resp.StatusCode {
 	case http.StatusOK:
 		fmt.Fprintln(w, "Authorized")
+		return nil
 	default:
 		fmt.Fprintln(w, "Unauthorized")
+		return fmt.Errorf("Unauthorized")
 	}
-
 }
 
 func extractToken(h http.Header) string {
 	auth := h.Get("Authorization")
-	log.Default().Println("Authorization header is: ", auth)
 	token := strings.TrimPrefix(auth, "Bearer ")
-	log.Default().Println("token value is: ", token)
 	return strings.TrimSpace(token)
 }
 
@@ -125,6 +128,5 @@ func createMiseHTTPRequest(ctx context.Context, data MiseRequestData) (*http.Req
 	req.Header.Set("Original-URI", data.OriginalURI)
 	req.Header.Set("Original-Method", data.OriginalMethod)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", data.Token))
-	log.Default().Println("full request is : ", req)
 	return req, nil
 }

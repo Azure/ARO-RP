@@ -15,7 +15,7 @@ import (
 // Licensed under the Apache License 2.0.
 
 func rpPoc(ctx context.Context, log *logrus.Entry) error {
-	log.Print("********** ARO-RP on AKS PoC poc.go **********")
+	log.Print("********** ARO-RP on AKS PoC **********")
 
 	ctx, shutdown := context.WithCancel(ctx)
 	defer shutdown()
