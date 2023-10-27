@@ -1,30 +1,30 @@
 {
     "kind": "APIResourceList",
     "apiVersion": "v1",
-    "groupVersion": "networking.k8s.io/v1",
+    "groupVersion": "k8s.ovn.org/v1",
     "resources": [
         {
-            "name": "ingressclasses",
-            "singularName": "",
+            "name": "egressfirewalls",
+            "singularName": "egressfirewall",
+            "namespaced": true,
+            "kind": "EgressFirewall",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "AElnPxlhG7g="
+        },
+        {
+            "name": "egressips",
+            "singularName": "egressip",
             "namespaced": false,
-            "kind": "IngressClass",
-            "verbs": [
-                "create",
-                "delete",
-                "deletecollection",
-                "get",
-                "list",
-                "patch",
-                "update",
-                "watch"
-            ],
-            "storageVersionHash": "l/iqIbDgFyQ="
-        },
-        {
-            "name": "ingresses",
-            "singularName": "",
-            "namespaced": true,
-            "kind": "Ingress",
+            "kind": "EgressIP",
             "verbs": [
                 "create",
                 "delete",
@@ -36,26 +36,15 @@
                 "watch"
             ],
             "shortNames": [
-                "ing"
+                "eip"
             ],
-            "storageVersionHash": "39NQlfNR+bo="
+            "storageVersionHash": "3ItexM2Q0e8="
         },
         {
-            "name": "ingresses/status",
-            "singularName": "",
+            "name": "egressqoses",
+            "singularName": "egressqos",
             "namespaced": true,
-            "kind": "Ingress",
-            "verbs": [
-                "get",
-                "patch",
-                "update"
-            ]
-        },
-        {
-            "name": "networkpolicies",
-            "singularName": "",
-            "namespaced": true,
-            "kind": "NetworkPolicy",
+            "kind": "EgressQoS",
             "verbs": [
                 "create",
                 "delete",
@@ -66,16 +55,13 @@
                 "update",
                 "watch"
             ],
-            "shortNames": [
-                "netpol"
-            ],
-            "storageVersionHash": "YpfwF18m1G8="
+            "storageVersionHash": "De2N4yHJLWg="
         },
         {
-            "name": "networkpolicies/status",
+            "name": "egressqoses/status",
             "singularName": "",
             "namespaced": true,
-            "kind": "NetworkPolicy",
+            "kind": "EgressQoS",
             "verbs": [
                 "get",
                 "patch",
