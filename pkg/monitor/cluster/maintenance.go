@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/sirupsen/logrus"
 )
 
 /**************************************************************
@@ -47,6 +48,11 @@ func (mon *Monitor) emitMaintenanceState(ctx context.Context) error {
 	mon.emitGauge("cluster.maintenance.pucm", 1, map[string]string{
 		"state": state.String(),
 	})
+
+	mon.log.WithFields(logrus.Fields{
+		"metric": "cluster.maintenance.pucm",
+		"state":  state.String(),
+	}).Print()
 
 	return nil
 }
