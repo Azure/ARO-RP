@@ -79,7 +79,7 @@ func handleMISE(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	t := extractToken(r.Header)
 	m := MiseRequestData{
-		MiseURL:        "http://0.0.0.0:5000/ValidateRequest",
+		MiseURL:        "http://localhost:5000/ValidateRequest",
 		OriginalURI:    "https://server/endpoint",
 		OriginalMethod: r.Method,
 		Token:          t,
@@ -95,7 +95,7 @@ func handleMISE(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 	defer resp.Body.Close()
-
+	log.Default().Println("full response is : ", resp)
 	log.Default().Println("Response status: ", resp.Status)
 
 	w.WriteHeader(resp.StatusCode)
@@ -109,7 +109,6 @@ func handleMISE(w http.ResponseWriter, r *http.Request) {
 }
 
 func extractToken(h http.Header) string {
-	log.Default().Println("header is: ", h)
 	auth := h.Get("Authorization")
 	log.Default().Println("Authorization header is: ", auth)
 	token := strings.TrimPrefix(auth, "Bearer ")
@@ -126,5 +125,6 @@ func createMiseHTTPRequest(ctx context.Context, data MiseRequestData) (*http.Req
 	req.Header.Set("Original-URI", data.OriginalURI)
 	req.Header.Set("Original-Method", data.OriginalMethod)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", data.Token))
+	log.Default().Println("full request is : ", req)
 	return req, nil
 }

@@ -128,7 +128,7 @@ MISE:
     AllowedHosts: "*"
     Kestrel:
       Endpoints:
-        Url: http://0.0.0.0:5000
+        Url: http://localhost:5000
     metatata:
       name: miseconfig
     Logging:
