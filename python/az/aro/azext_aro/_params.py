@@ -71,7 +71,7 @@ def load_arguments(self, _):
         c.argument('enable_preconfigured_nsg', arg_type=get_three_state_flag(),
                    help='Use Preconfigured NSGs. Allowed values: false, true. [Default: false]')
         c.argument('disk_encryption_set',
-                   help='ResourceID of the DiskEncryptionSet to be used for master and worker VMs. [Default: false]',
+                   help='ResourceID of the DiskEncryptionSet to be used for master and worker VMs.',
                    validator=validate_disk_encryption_set)
         c.argument('master_encryption_at_host', arg_type=get_three_state_flag(),
                    options_list=['--master-encryption-at-host', '--master-enc-host'],
