@@ -229,11 +229,12 @@ func (hr *clusterManager) ResetCorrelationData(ctx context.Context, doc *api.Ope
 			return err
 		}
 
-		err = utillog.ResetHiveCorrelationData(cd)
+		modified := cd.DeepCopy()
+		err = utillog.ResetHiveCorrelationData(modified)
 		if err != nil {
 			return err
 		}
 
-		return hr.hiveClientset.Update(ctx, cd)
+		return hr.hiveClientset.Patch(ctx, modified, client.MergeFrom(cd))
 	})
 }
