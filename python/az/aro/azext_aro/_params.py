@@ -66,7 +66,8 @@ def load_arguments(self, _):
                    help='CIDR of service network. Must be a minimum of /18 or larger. [Default: 172.30.0.0/16]',
                    validator=validate_cidr('service_cidr'))
         c.argument('outbound_type',
-                   help='Outbound type of cluster. Must be "Loadbalancer" or "UserDefinedRouting". [Default: Loadbalancer]',
+                   help='Outbound type of cluster. Must be "Loadbalancer" or "UserDefinedRouting". \
+                   [Default: Loadbalancer]',
                    validator=validate_outbound_type)
         c.argument('enable_preconfigured_nsg', arg_type=get_three_state_flag(),
                    help='Use Preconfigured NSGs. Allowed values: false, true. [Default: false]')
