@@ -193,6 +193,10 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 			Annotations: map[string]string{
 				"hive.openshift.io/try-install-once":                "true",
 				"hive.openshift.io/cli-domain-from-installer-image": "true",
+
+				// https://github.com/openshift/hive/pull/2157
+				// Will not pull ocp-release and oc-cli images
+				"hive.openshift.io/minimal-install-mode": "true",
 			},
 		},
 		Spec: hivev1.ClusterDeploymentSpec{
