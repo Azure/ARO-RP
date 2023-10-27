@@ -1,12 +1,9 @@
 package poc
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -19,13 +16,6 @@ import (
 type frontend struct {
 	logger *logrus.Entry
 	port   string
-}
-
-type MiseRequestData struct {
-	MiseURL        string
-	OriginalURI    string
-	OriginalMethod string
-	Token          string
 }
 
 func NewFrontend(logger *logrus.Entry, port string) frontend {
@@ -65,68 +55,17 @@ func (f *frontend) getRouter() chi.Router {
 	r := chi.NewRouter()
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		f.logger.Infof("Received request: %s", time.Now().String())
-		miseError := handleMISE(w, r)
+		miseError := AuthenticateWithMISE(w, r)
 		if miseError != nil {
 			w.Write([]byte("****** Blocked by MISE authorization ******"))
 		} else {
 			w.Write([]byte("****** Welcome to ARO-RP on AKS PoC ******"))
 		}
+		w.Write([]byte("****** Blocked by MISE authorization ******"))
 	})
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		w.Write([]byte("ok"))
 	})
 	return r
-}
-
-func handleMISE(w http.ResponseWriter, r *http.Request) error {
-	ctx := context.Background()
-	t := extractToken(r.Header)
-	m := MiseRequestData{
-		MiseURL:        "http://localhost:5000/ValidateRequest",
-		OriginalURI:    "https://server/endpoint",
-		OriginalMethod: r.Method,
-		Token:          t,
-	}
-	req, err := createMiseHTTPRequest(ctx, m)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-	log.Default().Println("Response status: ", resp.Status)
-
-	w.WriteHeader(resp.StatusCode)
-
-	switch resp.StatusCode {
-	case http.StatusOK:
-		fmt.Fprintln(w, "Authorized")
-		return nil
-	default:
-		fmt.Fprintln(w, "Unauthorized")
-		return fmt.Errorf("Unauthorized")
-	}
-}
-
-func extractToken(h http.Header) string {
-	auth := h.Get("Authorization")
-	token := strings.TrimPrefix(auth, "Bearer ")
-	return strings.TrimSpace(token)
-}
-
-func createMiseHTTPRequest(ctx context.Context, data MiseRequestData) (*http.Request, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, data.MiseURL, bytes.NewBuffer(nil))
-	if err != nil {
-		log.Fatal(err)
-		return nil, err
-	}
-	req.Header.Set("Original-URI", data.OriginalURI)
-	req.Header.Set("Original-Method", data.OriginalMethod)
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", data.Token))
-	return req, nil
 }
