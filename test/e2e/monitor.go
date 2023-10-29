@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/monitor/cluster"
+	"github.com/Azure/ARO-RP/pkg/validate/dynamic"
 )
 
 var _ = Describe("Monitor", func() {
@@ -21,9 +22,10 @@ var _ = Describe("Monitor", func() {
 		By("creating a new monitor instance for the test cluster")
 		var wg sync.WaitGroup
 		wg.Add(1)
+		var validator dynamic.Dynamic
 		mon, err := cluster.NewMonitor(log, clients.RestConfig, &api.OpenShiftCluster{
 			ID: resourceIDFromEnv(),
-		}, &noop.Noop{}, nil, true, &wg)
+		}, &noop.Noop{}, nil, true, &wg, validator)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("running the monitor once")
