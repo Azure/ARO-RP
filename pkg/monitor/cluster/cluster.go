@@ -25,6 +25,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
+	"github.com/Azure/ARO-RP/pkg/validate/dynamic"
 )
 
 type Monitor struct {
@@ -44,6 +45,7 @@ type Monitor struct {
 
 	ocpclientset  client.Client
 	hiveclientset client.Client
+	validator     dynamic.Dynamic
 
 	// access below only via the helper functions in cache.go
 	cache struct {
@@ -55,7 +57,7 @@ type Monitor struct {
 	}
 }
 
-func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, m metrics.Emitter, hiveRestConfig *rest.Config, hourlyRun bool) (*Monitor, error) {
+func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, m metrics.Emitter, hiveRestConfig *rest.Config, hourlyRun bool, validator dynamic.Dynamic) (*Monitor, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err
@@ -127,6 +129,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		m:             m,
 		ocpclientset:  ocpclientset,
 		hiveclientset: hiveclientset,
+		validator:     validator,
 	}, nil
 }
 
@@ -199,6 +202,7 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 		mon.emitHiveRegistrationStatus,
 		mon.emitOperatorFlagsAndSupportBanner,
 		mon.emitPucmState,
+		mon.emitValidatePermissions,
 		mon.emitCertificateExpirationStatuses,
 		mon.emitEtcdCertificateExpiry,
 		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable

@@ -9,15 +9,21 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/monitor/cluster"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcore"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
+	"github.com/Azure/ARO-RP/pkg/validate/dynamic"
 )
 
 // This function will continue to run until such time as it has a config to add to the global Hive shard map
@@ -246,7 +252,48 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 		log.Warnf("no hiveShardConfigs set for shard %d", shard)
 	}
 
-	c, err := cluster.NewMonitor(log, restConfig, doc.OpenShiftCluster, mon.clusterm, hiveRestConfig, hourlyRun)
+	var spClientCred azcore.TokenCredential
+	var pdpClient remotepdp.RemotePDPClient
+	spp := doc.OpenShiftCluster.Properties.ServicePrincipalProfile
+	_env, err := env.NewEnv(ctx, log)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	sub := mon.subs[r.SubscriptionID]
+	tenantID := sub.Subscription.Properties.TenantID
+	options := _env.Environment().ClientSecretCredentialOptions()
+	spTokenCredential, err := azidentity.NewClientSecretCredential(
+		tenantID, spp.ClientID, string(spp.ClientSecret), options)
+
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	scopes := []string{_env.Environment().ResourceManagerScope}
+	spAuthorizer := azidext.NewTokenCredentialAdapter(spTokenCredential, scopes)
+
+	spDynamic := dynamic.NewValidator(
+		log,
+		_env,
+		_env.Environment(),
+		sub.ID,
+		spAuthorizer,
+		spp.ClientID,
+		dynamic.AuthorizerClusterServicePrincipal,
+		spClientCred,
+		pdpClient,
+	)
+
+	c, err := cluster.NewMonitor(log, restConfig, doc.OpenShiftCluster, mon.clusterm, hiveRestConfig, hourlyRun, spDynamic)
 	if err != nil {
 		log.Error(err)
 		mon.m.EmitGauge("monitor.cluster.failedworker", 1, map[string]string{
