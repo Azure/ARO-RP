@@ -126,8 +126,7 @@ MISE:
         AuthenticationSchemes: Bearer
         TokenTypes: AppToken
         Authority: https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47/v2.0
-        # TODO(jonachang) use helm command to dynamically get the allowed client id
-        ValidApplicationIds: 704c7dfd-4ed1-4732-95c0-04a44b0895a0
+        ValidApplicationIds: ""
     AllowedHosts: "*"
     Kestrel:
       Endpoints:
