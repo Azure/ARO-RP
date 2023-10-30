@@ -108,8 +108,8 @@ func (m *manager) adminUpdate() []steps.Step {
 
 	if isEverything || isRenewCerts {
 		toRun = append(toRun,
-			steps.Action(m.configureAPIServerCertificate),
-			steps.Action(m.configureIngressCertificate),
+			steps.NetworkErrorRetryingAction(m.configureAPIServerCertificate),
+			steps.NetworkErrorRetryingAction(m.configureIngressCertificate),
 		)
 	}
 
@@ -196,8 +196,8 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Action(m.startVMs),
 		steps.Condition(m.apiServersReady, 30*time.Minute, true),
 		steps.Action(m.rotateACRTokenPassword),
-		steps.Action(m.configureAPIServerCertificate),
-		steps.Action(m.configureIngressCertificate),
+		steps.NetworkErrorRetryingAction(m.configureAPIServerCertificate),
+		steps.NetworkErrorRetryingAction(m.configureIngressCertificate),
 		steps.Action(m.renewMDSDCertificate),
 		steps.Action(m.updateOpenShiftSecret),
 		steps.Action(m.updateAROSecret),
@@ -343,10 +343,11 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.initializeOperatorDeployer), // depends on kube clients
 			steps.Action(m.removeBootstrap),
 			steps.Action(m.removeBootstrapIgnition),
+			// Wait for the MachineConfigPools to all go ready
+			steps.Condition(m.nodeConfigPoolsReady, 30*time.Minute, true),
 			// Occasionally, the apiserver experiences disruptions, causing the certificate configuration step to fail.
 			// This issue is currently under investigation.
-			steps.Condition(m.apiServersReady, 30*time.Minute, true),
-			steps.Action(m.configureAPIServerCertificate),
+			steps.NetworkErrorRetryingAction(m.configureAPIServerCertificate),
 			steps.Condition(m.apiServersReady, 30*time.Minute, true),
 			steps.Condition(m.minimumWorkerNodesReady, 30*time.Minute, true),
 			steps.Condition(m.operatorConsoleExists, 30*time.Minute, true),
@@ -358,7 +359,7 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Condition(m.clusterVersionReady, 30*time.Minute, true),
 			steps.Condition(m.aroDeploymentReady, 20*time.Minute, true),
 			steps.Action(m.updateClusterData),
-			steps.Action(m.configureIngressCertificate),
+			steps.NetworkErrorRetryingAction(m.configureIngressCertificate),
 			steps.Condition(m.ingressControllerReady, 30*time.Minute, true),
 			steps.Action(m.configureDefaultStorageClass),
 			steps.Action(m.finishInstallation),

@@ -8,6 +8,7 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	consoleapi "github.com/openshift/console-operator/pkg/api"
+	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -92,4 +93,29 @@ func isOperatorAvailable(operator *configv1.ClusterOperator) bool {
 		m[cond.Type] = cond.Status
 	}
 	return m[configv1.OperatorAvailable] == configv1.ConditionTrue && m[configv1.OperatorProgressing] == configv1.ConditionFalse
+}
+
+func (m *manager) nodeConfigPoolsReady(ctx context.Context) (bool, error) {
+	mcps, err := m.mcocli.MachineconfigurationV1().MachineConfigPools().List(ctx, metav1.ListOptions{})
+	if err == nil {
+		notReady := make([]string, 0)
+		for _, mcp := range mcps.Items {
+			mc := make(map[mcv1.MachineConfigPoolConditionType]corev1.ConditionStatus, len(mcp.Status.Conditions))
+
+			for _, cond := range mcp.Status.Conditions {
+				mc[cond.Type] = cond.Status
+			}
+
+			if mc[mcv1.MachineConfigPoolDegraded] == corev1.ConditionTrue {
+				notReady = append(notReady, mcp.Name)
+			}
+		}
+
+		if len(notReady) > 0 {
+			m.log.Printf("nodeConfigPoolsReady pools not ready: %v", notReady)
+			return false, nil
+		}
+		return true, nil
+	}
+	return false, nil
 }

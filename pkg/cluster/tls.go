@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 
+	azkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
 	configv1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -19,6 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
+	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
 
 func (m *manager) createCertificates(ctx context.Context) error {
@@ -69,12 +71,7 @@ func (m *manager) createCertificates(ctx context.Context) error {
 	return nil
 }
 
-func (m *manager) ensureSecret(ctx context.Context, secrets corev1client.SecretInterface, certificateName string) error {
-	bundle, err := m.env.ClusterKeyvault().GetSecret(ctx, certificateName)
-	if err != nil {
-		return err
-	}
-
+func (m *manager) ensureSecret(ctx context.Context, secrets corev1client.SecretInterface, certificateName string, bundle azkeyvault.SecretBundle) error {
 	key, certs, err := utilpem.Parse([]byte(*bundle.Value))
 	if err != nil {
 		return err
@@ -120,7 +117,7 @@ func (m *manager) ensureSecret(ctx context.Context, secrets corev1client.SecretI
 	return err
 }
 
-func (m *manager) configureAPIServerCertificate(ctx context.Context) error {
+func (m *manager) configureAPIServerCertificate(ctx context.Context, runCritical steps.CriticalRunner) error {
 	if m.env.FeatureIsSet(env.FeatureDisableSignedCertificates) {
 		return nil
 	}
@@ -134,36 +131,46 @@ func (m *manager) configureAPIServerCertificate(ctx context.Context) error {
 		return nil
 	}
 
-	for _, namespace := range []string{"openshift-config", "openshift-azure-operator"} {
-		err = m.ensureSecret(ctx, m.kubernetescli.CoreV1().Secrets(namespace), m.doc.ID+"-apiserver")
-		if err != nil {
-			return err
-		}
+	certificateName := m.doc.ID + "-apiserver"
+
+	// fetch the certificate from keyvault outside of the critical section
+	bundle, err := m.env.ClusterKeyvault().GetSecret(ctx, certificateName)
+	if err != nil {
+		return err
 	}
 
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		apiserver, err := m.configcli.ConfigV1().APIServers().Get(ctx, "cluster", metav1.GetOptions{})
-		if err != nil {
+	return runCritical(func() error {
+		for _, namespace := range []string{"openshift-config", "openshift-azure-operator"} {
+			err = m.ensureSecret(ctx, m.kubernetescli.CoreV1().Secrets(namespace), m.doc.ID+"-apiserver", bundle)
+			if err != nil {
+				return err
+			}
+		}
+
+		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			apiserver, err := m.configcli.ConfigV1().APIServers().Get(ctx, "cluster", metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+
+			apiserver.Spec.ServingCerts.NamedCertificates = []configv1.APIServerNamedServingCert{
+				{
+					Names: []string{
+						"api." + managedDomain,
+					},
+					ServingCertificate: configv1.SecretNameReference{
+						Name: certificateName,
+					},
+				},
+			}
+
+			_, err = m.configcli.ConfigV1().APIServers().Update(ctx, apiserver, metav1.UpdateOptions{})
 			return err
-		}
-
-		apiserver.Spec.ServingCerts.NamedCertificates = []configv1.APIServerNamedServingCert{
-			{
-				Names: []string{
-					"api." + managedDomain,
-				},
-				ServingCertificate: configv1.SecretNameReference{
-					Name: m.doc.ID + "-apiserver",
-				},
-			},
-		}
-
-		_, err = m.configcli.ConfigV1().APIServers().Update(ctx, apiserver, metav1.UpdateOptions{})
-		return err
+		})
 	})
 }
 
-func (m *manager) configureIngressCertificate(ctx context.Context) error {
+func (m *manager) configureIngressCertificate(ctx context.Context, runCritical steps.CriticalRunner) error {
 	if m.env.FeatureIsSet(env.FeatureDisableSignedCertificates) {
 		return nil
 	}
@@ -177,24 +184,34 @@ func (m *manager) configureIngressCertificate(ctx context.Context) error {
 		return nil
 	}
 
-	for _, namespace := range []string{"openshift-ingress", "openshift-azure-operator"} {
-		err = m.ensureSecret(ctx, m.kubernetescli.CoreV1().Secrets(namespace), m.doc.ID+"-ingress")
-		if err != nil {
-			return err
-		}
+	certificateName := m.doc.ID + "-ingress"
+
+	// fetch the certificate from keyvault outside of the critical section
+	bundle, err := m.env.ClusterKeyvault().GetSecret(ctx, certificateName)
+	if err != nil {
+		return err
 	}
 
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		ic, err := m.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Get(ctx, "default", metav1.GetOptions{})
-		if err != nil {
+	return runCritical(func() error {
+		for _, namespace := range []string{"openshift-ingress", "openshift-azure-operator"} {
+			err = m.ensureSecret(ctx, m.kubernetescli.CoreV1().Secrets(namespace), certificateName, bundle)
+			if err != nil {
+				return err
+			}
+		}
+
+		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			ic, err := m.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Get(ctx, "default", metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+
+			ic.Spec.DefaultCertificate = &corev1.LocalObjectReference{
+				Name: certificateName,
+			}
+
+			_, err = m.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Update(ctx, ic, metav1.UpdateOptions{})
 			return err
-		}
-
-		ic.Spec.DefaultCertificate = &corev1.LocalObjectReference{
-			Name: m.doc.ID + "-ingress",
-		}
-
-		_, err = m.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Update(ctx, ic, metav1.UpdateOptions{})
-		return err
+		})
 	})
 }
