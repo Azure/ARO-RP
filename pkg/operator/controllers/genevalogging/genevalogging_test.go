@@ -18,6 +18,7 @@ import (
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -154,8 +155,10 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 			}
 
 			r := &Reconciler{
-				log:    logrus.NewEntry(logrus.StandardLogger()),
-				client: ctrlfake.NewClientBuilder().WithObjects(instance).Build(),
+				AROController: base.AROController{
+					Log:    logrus.NewEntry(logrus.StandardLogger()),
+					Client: ctrlfake.NewClientBuilder().WithObjects(instance).Build(),
+				},
 			}
 
 			daemonset, err := r.daemonset(instance)

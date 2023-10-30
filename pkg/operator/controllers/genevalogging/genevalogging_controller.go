@@ -19,6 +19,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
@@ -34,62 +35,63 @@ const (
 
 // Reconciler reconciles a Cluster object
 type Reconciler struct {
-	log *logrus.Entry
+	base.AROController
 
-	dh     dynamichelper.Interface
-	client client.Client
+	dh dynamichelper.Interface
 }
 
 func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *Reconciler {
 	return &Reconciler{
-		log: log,
-
-		dh:     dh,
-		client: client,
+		AROController: base.AROController{
+			Log:    log,
+			Client: client,
+			Name:   ControllerName,
+		},
+		dh: dh,
 	}
 }
 
 // Reconcile the genevalogging deployment.
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance := &arov1alpha1.Cluster{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+	instance, err := r.GetCluster(ctx)
 	if err != nil {
+		r.Log.Error(err)
 		return reconcile.Result{}, err
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		r.log.Debug("controller is disabled")
+		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
-	r.log.Debug("running")
+	r.Log.Debug("running")
 	operatorSecret := &corev1.Secret{}
-	err = r.client.Get(ctx, types.NamespacedName{Namespace: operator.Namespace, Name: operator.SecretName}, operatorSecret)
+	err = r.Client.Get(ctx, types.NamespacedName{Namespace: operator.Namespace, Name: operator.SecretName}, operatorSecret)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	resources, err := r.resources(ctx, instance, operatorSecret.Data[GenevaCertName], operatorSecret.Data[GenevaKeyName])
 	if err != nil {
-		r.log.Error(err)
+		r.Log.Error(err)
 		return reconcile.Result{}, err
 	}
 
 	err = dynamichelper.SetControllerReferences(resources, instance)
 	if err != nil {
-		r.log.Error(err)
+		r.Log.Error(err)
 		return reconcile.Result{}, err
 	}
 
 	err = dynamichelper.Prepare(resources)
 	if err != nil {
-		r.log.Error(err)
+		r.Log.Error(err)
 		return reconcile.Result{}, err
 	}
 
 	err = r.dh.Ensure(ctx, resources...)
 	if err != nil {
-		r.log.Error(err)
+		r.Log.Error(err)
 		return reconcile.Result{}, err
 	}
 
