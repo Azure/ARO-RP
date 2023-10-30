@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/Azure/go-autorest/autorest/to"
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	hivev1azure "github.com/openshift/hive/apis/hive/v1/azure"
 	corev1 "k8s.io/api/core/v1"
@@ -191,8 +192,9 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 				createdByHiveLabelKey:                "true",
 			},
 			Annotations: map[string]string{
-				"hive.openshift.io/try-install-once":                "true",
-				"hive.openshift.io/cli-domain-from-installer-image": "true",
+				// https://github.com/openshift/hive/pull/2157
+				// Will not pull ocp-release and oc-cli images
+				"hive.openshift.io/minimal-install-mode": "true",
 			},
 		},
 		Spec: hivev1.ClusterDeploymentSpec{
@@ -211,6 +213,7 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 				APIServerIPOverride: doc.OpenShiftCluster.Properties.NetworkProfile.APIServerPrivateEndpointIP,
 				APIURLOverride:      fmt.Sprintf("api-int.%s:6443", clusterDomain),
 			},
+			InstallAttemptsLimit: to.Int32Ptr(1),
 			PullSecretRef: &corev1.LocalObjectReference{
 				Name: pullsecretSecretName,
 			},
