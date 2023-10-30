@@ -17,6 +17,7 @@ data:
           {
             "Label": "{{ .Values.MISE.configMap.AzureAd.InboundPolicies.Label }}",
             "AuthenticationSchemes": ["{{ .Values.MISE.configMap.AzureAd.InboundPolicies.AuthenticationSchemes }}"],
+            "TokenTypes": ["{{ .Values.MISE.configMap.AzureAd.InboundPolicies.TokenTypes }}"],
             "Authority": "{{ .Values.MISE.configMap.AzureAd.InboundPolicies.Authority }}",
             "ValidApplicationIds": ["{{ .Values.MISE.configMap.AzureAd.InboundPolicies.ValidApplicationIds }}"],
           }
