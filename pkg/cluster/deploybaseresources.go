@@ -154,6 +154,13 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 	// Create a public load balancer routing if needed
 	if m.doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType == api.OutboundTypeLoadbalancer {
 		m.newPublicLoadBalancer(ctx, &resources)
+
+		// If the cluster is public we still want the default public IP address
+		if m.doc.OpenShiftCluster.Properties.IngressProfiles[0].Visibility == api.VisibilityPublic {
+			resources = append(resources,
+				m.networkPublicIPAddress(azureRegion, infraID+"-default-v4"),
+			)
+		}
 	}
 
 	if m.doc.OpenShiftCluster.Properties.FeatureProfile.GatewayEnabled {
@@ -200,12 +207,6 @@ func (m *manager) newPublicLoadBalancer(ctx context.Context, resources *[]*arm.R
 	*resources = append(*resources,
 		m.networkPublicLoadBalancer(azureRegion, outboundIPs),
 	)
-	// If the cluster is public we still want the default public IP address
-	if m.doc.OpenShiftCluster.Properties.IngressProfiles[0].Visibility == api.VisibilityPublic {
-		*resources = append(*resources,
-			m.networkPublicIPAddress(azureRegion, infraID+"-default-v4"),
-		)
-	}
 }
 
 // subnetsWithServiceEndpoint returns a unique slice of subnet resource IDs that have the corresponding
