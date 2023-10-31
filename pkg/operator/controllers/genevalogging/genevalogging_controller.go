@@ -51,6 +51,40 @@ func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Int
 	}
 }
 
+func (r *Reconciler) ensureResources(ctx context.Context, instance *arov1alpha1.Cluster) error {
+	operatorSecret := &corev1.Secret{}
+	operatorSecretName := types.NamespacedName{
+		Namespace: operator.Namespace,
+		Name:      operator.SecretName,
+	}
+	err := r.Client.Get(ctx, operatorSecretName, operatorSecret)
+	if err != nil {
+		return err
+	}
+
+	resources, err := r.resources(ctx, instance, operatorSecret.Data[GenevaCertName], operatorSecret.Data[GenevaKeyName])
+	if err != nil {
+		return err
+	}
+
+	err = dynamichelper.SetControllerReferences(resources, instance)
+	if err != nil {
+		return err
+	}
+
+	err = dynamichelper.Prepare(resources)
+	if err != nil {
+		return err
+	}
+
+	err = r.dh.Ensure(ctx, resources...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Reconcile the genevalogging deployment.
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.GetCluster(ctx)
@@ -65,31 +99,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	r.Log.Debug("running")
-	operatorSecret := &corev1.Secret{}
-	err = r.Client.Get(ctx, types.NamespacedName{Namespace: operator.Namespace, Name: operator.SecretName}, operatorSecret)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	resources, err := r.resources(ctx, instance, operatorSecret.Data[GenevaCertName], operatorSecret.Data[GenevaKeyName])
-	if err != nil {
-		r.Log.Error(err)
-		return reconcile.Result{}, err
-	}
-
-	err = dynamichelper.SetControllerReferences(resources, instance)
-	if err != nil {
-		r.Log.Error(err)
-		return reconcile.Result{}, err
-	}
-
-	err = dynamichelper.Prepare(resources)
-	if err != nil {
-		r.Log.Error(err)
-		return reconcile.Result{}, err
-	}
-
-	err = r.dh.Ensure(ctx, resources...)
+	err = r.ensureResources(ctx, instance)
 	if err != nil {
 		r.Log.Error(err)
 		return reconcile.Result{}, err
