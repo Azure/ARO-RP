@@ -92,6 +92,7 @@ keyVault:
   tlsCertificateName: aks-rp-certificate
 
 MISE:
+  MISE_AUTH_ENABLED: true
   container:
     name: mise
     image: aropocsvc.azurecr.io/mise-sidecar:dev
@@ -112,8 +113,10 @@ MISE:
   configMap:
     AzureAd:
       Instance: https://login.microsoftonline.com
-      # TODO(jonachang) use helm command to dynamically get the client id
-      ClientId: 704c7dfd-4ed1-4732-95c0-04a44b0895a0
+      # Use for telemetry headed to AAD on OpenID configuration requests.
+      # https://identitydivision.visualstudio.com/DevEx/_wiki/wikis/DevEx.wiki/56/ServiceAuthLibrary-SAL-
+      # TODO(jonachang) use ARO-RP first party principal when going to production
+      ClientId: a4c2469b-cf84-4145-8f5f-cb7bacf814bc
       TenantId: 72f988bf-86f1-41af-91ab-2d7cd011db47
       Audience: https://management.azure.com 
       # Possible log levels: Trace, Debug, Information, Warning, Error, Critical, None 
@@ -123,7 +126,7 @@ MISE:
         AuthenticationSchemes: Bearer
         TokenTypes: AppToken
         Authority: https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47/v2.0
-        # TODO(jonachang) use helm command to dynamically get the client id
+        # TODO(jonachang) use helm command to dynamically get the allowed client id
         ValidApplicationIds: 704c7dfd-4ed1-4732-95c0-04a44b0895a0
     AllowedHosts: "*"
     Kestrel:

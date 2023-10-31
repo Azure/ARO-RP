@@ -21,7 +21,7 @@ const (
 	originURI = "https://server/endpoint"
 )
 
-func AuthenticateWithMISE(w http.ResponseWriter, r *http.Request) error {
+func authenticateWithMISE(w http.ResponseWriter, r *http.Request) error {
 	ctx := context.Background()
 	token := extractToken(r.Header)
 
@@ -37,6 +37,7 @@ func AuthenticateWithMISE(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
+	// TODO(jonachang): need to cache the client when do this in production.
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {

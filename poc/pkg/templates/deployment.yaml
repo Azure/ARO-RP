@@ -47,6 +47,7 @@ spec:
               port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+        {{- if .Values.MISE.MISE_AUTH_ENABLED }}
         - name: {{ .Values.MISE.container.name }}
           image: {{ .Values.MISE.container.image }}
           env:
@@ -59,6 +60,7 @@ spec:
           - name: {{ .Values.MISE.container.volumes.name }}
             mountPath: {{ .Values.MISE.container.volumes.mountPath }}
             readOnly: true
+        {{- end }}
       volumes:
         - name: {{ .Values.MISE.container.volumes.name }}
           configMap:

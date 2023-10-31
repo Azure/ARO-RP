@@ -12,6 +12,10 @@ import (
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
+const (
+	// TODO(jonachang): remove this when go production.
+	enableMISE = true
+)
 
 type frontend struct {
 	logger *logrus.Entry
@@ -55,9 +59,14 @@ func (f *frontend) getRouter() chi.Router {
 	r := chi.NewRouter()
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		f.logger.Infof("Received request: %s", time.Now().String())
-		miseError := AuthenticateWithMISE(w, r)
-		if miseError != nil {
-			w.Write([]byte("****** Blocked by MISE authorization ******"))
+		// TODO(jonachang): remove this when go production.
+		if enableMISE {
+			miseError := authenticateWithMISE(w, r)
+			if miseError != nil {
+				w.Write([]byte("****** Blocked by MISE authorization ******"))
+			} else {
+				w.Write([]byte("****** Welcome to ARO-RP on AKS PoC ******"))
+			}
 		} else {
 			w.Write([]byte("****** Welcome to ARO-RP on AKS PoC ******"))
 		}
