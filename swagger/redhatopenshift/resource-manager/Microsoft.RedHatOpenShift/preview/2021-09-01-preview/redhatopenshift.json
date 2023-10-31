@@ -469,6 +469,10 @@
       "description": "CloudError represents a cloud error.",
       "type": "object",
       "properties": {
+        "status": {
+          "$ref": "#/definitions/ValidationStatus",
+          "description": "The status string of succeeded or failed"
+        },
         "error": {
           "$ref": "#/definitions/CloudErrorBody",
           "description": "An error response from the service."
@@ -868,6 +872,13 @@
         "name": "VMSize",
         "modelAsString": true
       }
+    },
+    "ValidationStatus": {
+      "enum": [
+        "Failed",
+        "Succeeded"
+      ],
+      "type": "string"
     },
     "Visibility": {
       "description": "Visibility represents visibility.",

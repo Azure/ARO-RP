@@ -1756,6 +1756,10 @@
       "description": "CloudError represents a cloud error.",
       "type": "object",
       "properties": {
+        "status": {
+          "$ref": "#/definitions/ValidationStatus",
+          "description": "The status string of succeeded or failed"
+        },
         "error": {
           "$ref": "#/definitions/CloudErrorBody",
           "description": "An error response from the service."
@@ -2454,6 +2458,13 @@
     },
     "VMSize": {
       "description": "VM size availability varies by region.\nIf a node contains insufficient compute resources (memory, cpu, etc.), pods might fail to run correctly.\nFor more details on restricted VM sizes, see: https://docs.microsoft.com/en-us/azure/openshift/support-policies-v4#supported-virtual-machine-sizes",
+      "type": "string"
+    },
+    "ValidationStatus": {
+      "enum": [
+        "Failed",
+        "Succeeded"
+      ],
       "type": "string"
     },
     "Visibility": {
