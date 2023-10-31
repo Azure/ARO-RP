@@ -196,7 +196,7 @@ func (m *manager) newPublicLoadBalancer(ctx context.Context, resources *[]*arm.R
 		}
 	}
 	m.patchEffectiveOutboundIPs(ctx, outboundIPs)
-	// Normal private clusters still need a public load balancer
+
 	*resources = append(*resources,
 		m.networkPublicLoadBalancer(azureRegion, outboundIPs),
 	)
