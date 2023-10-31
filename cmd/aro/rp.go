@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/policy"
 	"github.com/Azure/go-autorest/tracing"
 	"github.com/sirupsen/logrus"
 	kmetrics "k8s.io/client-go/tools/metrics"
@@ -92,7 +93,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 
 	clusterm := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("CLUSTER_MDM_ACCOUNT"), os.Getenv("CLUSTER_MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 
-	msiAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceManagerScope)
+	msiToken, err := _env.NewMSITokenCredential(env.MSIContextRP, _env.Environment().ResourceManagerScope)
 	if err != nil {
 		return err
 	}
@@ -107,7 +108,10 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 	}
 
 	dbAccountName := os.Getenv(DatabaseAccountName)
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer, dbAccountName)
+	clientOptions := &policy.ClientOptions{
+		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
+	}
+	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, msiToken, clientOptions, _env.SubscriptionID(), _env.ResourceGroup(), dbAccountName)
 	if err != nil {
 		return err
 	}

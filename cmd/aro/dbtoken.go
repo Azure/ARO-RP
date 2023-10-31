@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/policy"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -36,7 +37,7 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	msiAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceManagerScope)
+	msiToken, err := _env.NewMSITokenCredential(env.MSIContextRP, _env.Environment().ResourceManagerScope)
 	if err != nil {
 		return err
 	}
@@ -61,7 +62,10 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 
 	dbAccountName := os.Getenv(DatabaseAccountName)
 
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer, dbAccountName)
+	clientOptions := &policy.ClientOptions{
+		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
+	}
+	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, msiToken, clientOptions, _env.SubscriptionID(), _env.ResourceGroup(), dbAccountName)
 	if err != nil {
 		return err
 	}

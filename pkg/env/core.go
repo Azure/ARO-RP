@@ -9,6 +9,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcore"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerservice"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
@@ -20,6 +21,7 @@ import (
 type Core interface {
 	IsLocalDevelopmentMode() bool
 	IsCI() bool
+	NewMSITokenCredential(MSIContext, ...string) (azcore.TokenCredential, error)
 	NewMSIAuthorizer(MSIContext, ...string) (autorest.Authorizer, error)
 	NewLiveConfigManager(context.Context) (liveconfig.Manager, error)
 	instancemetadata.InstanceMetadata
