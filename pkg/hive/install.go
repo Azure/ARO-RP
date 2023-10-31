@@ -195,6 +195,9 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 				// https://github.com/openshift/hive/pull/2157
 				// Will not pull ocp-release and oc-cli images
 				"hive.openshift.io/minimal-install-mode": "true",
+
+				// TODO: remove until we use a version of hive at minimal install
+				"hive.openshift.io/cli-domain-from-installer-image": "true",
 			},
 		},
 		Spec: hivev1.ClusterDeploymentSpec{
