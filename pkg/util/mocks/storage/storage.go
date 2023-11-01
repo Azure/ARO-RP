@@ -50,3 +50,18 @@ func (mr *MockManagerMockRecorder) BlobService(arg0, arg1, arg2, arg3, arg4 inte
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlobService", reflect.TypeOf((*MockManager)(nil).BlobService), arg0, arg1, arg2, arg3, arg4)
 }
+
+// UpdateAccount mocks base method.
+func (m *MockManager) UpdateAccount(arg0 context.Context, arg1, arg2 string, arg3 storage.AccountUpdateParameters) (storage.Account, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateAccount", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(storage.Account)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateAccount indicates an expected call of UpdateAccount.
+func (mr *MockManagerMockRecorder) UpdateAccount(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAccount", reflect.TypeOf((*MockManager)(nil).UpdateAccount), arg0, arg1, arg2, arg3)
+}

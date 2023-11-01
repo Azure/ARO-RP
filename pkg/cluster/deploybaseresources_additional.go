@@ -76,9 +76,57 @@ func (m *manager) clusterServicePrincipalRBAC() *arm.Resource {
 }
 
 // storageAccount will return storage account resource.
-// Legacy storage accounts (public) are not encrypted and cannot be retrofitted.
-// The flag controls this behavior in update/create.
-func (m *manager) storageAccount(name, region string, ocpSubnets []string, encrypted bool) *arm.Resource {
+func (m *manager) storageAccount(name, region string, ocpSubnets []string) *arm.Resource {
+	// shared properties across creation and update
+	properties := m.storageAccountProperties(name, ocpSubnets)
+
+	sa := &mgmtstorage.Account{
+		Kind: mgmtstorage.StorageV2,
+		Sku: &mgmtstorage.Sku{
+			Name: "Standard_LRS",
+		},
+		AccountProperties: &mgmtstorage.AccountProperties{
+			AllowBlobPublicAccess:  properties.AllowBlobPublicAccess,
+			EnableHTTPSTrafficOnly: properties.EnableHTTPSTrafficOnly,
+			MinimumTLSVersion:      properties.MinimumTLSVersion,
+			NetworkRuleSet:         properties.NetworkRuleSet,
+			Encryption: &mgmtstorage.Encryption{
+				RequireInfrastructureEncryption: to.BoolPtr(true),
+				Services: &mgmtstorage.EncryptionServices{
+					Blob: &mgmtstorage.EncryptionService{
+						KeyType: mgmtstorage.KeyTypeAccount,
+						Enabled: to.BoolPtr(true),
+					},
+					File: &mgmtstorage.EncryptionService{
+						KeyType: mgmtstorage.KeyTypeAccount,
+						Enabled: to.BoolPtr(true),
+					},
+					Table: &mgmtstorage.EncryptionService{
+						KeyType: mgmtstorage.KeyTypeAccount,
+						Enabled: to.BoolPtr(true),
+					},
+					Queue: &mgmtstorage.EncryptionService{
+						KeyType: mgmtstorage.KeyTypeAccount,
+						Enabled: to.BoolPtr(true),
+					},
+				},
+				KeySource: mgmtstorage.KeySourceMicrosoftStorage,
+			},
+		},
+		Name:     &name,
+		Location: &region,
+		Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
+	}
+
+	return &arm.Resource{
+		Resource:   sa,
+		APIVersion: azureclient.APIVersion("Microsoft.Storage"),
+	}
+}
+
+// reconcileStorageAccount will provide all properties we want to enforce on the storage account
+// It is used for both resource creation as well as reconciliation during adminUpdate.
+func (m *manager) storageAccountProperties(storageAccountName string, ocpSubnets []string) *mgmtstorage.AccountPropertiesUpdateParameters {
 	virtualNetworkRules := []mgmtstorage.VirtualNetworkRule{
 		{
 			VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
@@ -101,7 +149,7 @@ func (m *manager) storageAccount(name, region string, ocpSubnets []string, encry
 	// when installing via Hive we need to allow Hive to persist the installConfig graph in the cluster's storage account
 	// TODO: add AKS shard support
 	hiveShard := 1
-	if m.installViaHive && strings.Index(name, "cluster") == 0 {
+	if m.installViaHive && strings.HasPrefix(storageAccountName, "cluster") {
 		virtualNetworkRules = append(virtualNetworkRules, mgmtstorage.VirtualNetworkRule{
 			VirtualNetworkResourceID: to.StringPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/aks-net/subnets/PodSubnet-%03d", m.env.SubscriptionID(), m.env.ResourceGroup(), hiveShard)),
 			Action:                   mgmtstorage.Allow,
@@ -118,65 +166,24 @@ func (m *manager) storageAccount(name, region string, ocpSubnets []string, encry
 		})
 	}
 
-	sa := &mgmtstorage.Account{
-		Kind: mgmtstorage.StorageV2,
-		Sku: &mgmtstorage.Sku{
-			Name: "Standard_LRS",
-		},
-		AccountProperties: &mgmtstorage.AccountProperties{
-			AllowBlobPublicAccess:  to.BoolPtr(false),
-			EnableHTTPSTrafficOnly: to.BoolPtr(true),
-			MinimumTLSVersion:      mgmtstorage.TLS12,
-			NetworkRuleSet: &mgmtstorage.NetworkRuleSet{
-				Bypass:              mgmtstorage.AzureServices,
-				VirtualNetworkRules: &virtualNetworkRules,
-				DefaultAction:       "Deny",
-			},
-		},
-		Name:     &name,
-		Location: &region,
-		Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
+	properties := &mgmtstorage.AccountPropertiesUpdateParameters{}
+
+	properties.AllowBlobPublicAccess = to.BoolPtr(false)
+	properties.EnableHTTPSTrafficOnly = to.BoolPtr(true)
+	properties.MinimumTLSVersion = mgmtstorage.TLS12
+	properties.NetworkRuleSet = &mgmtstorage.NetworkRuleSet{
+		Bypass:              mgmtstorage.AzureServices,
+		VirtualNetworkRules: &virtualNetworkRules,
+		DefaultAction:       mgmtstorage.DefaultActionDeny,
 	}
 
 	// In development API calls originates from user laptop so we allow all.
 	// TODO: Move to development on VPN so we can make this IPRule.  Will be done as part of Simply secure v2 work
 	if m.env.IsLocalDevelopmentMode() {
-		sa.NetworkRuleSet.DefaultAction = mgmtstorage.DefaultActionAllow
-	}
-	// When migrating storage accounts for old clusters we are not able to change
-	// encryption which is why we have this encryption flag. We will not add this
-	// retrospectively to old clusters
-	// If a storage account already has encryption enabled and the encrypted
-	// bool is set to false, it will still maintain the encryption on the storage account.
-	if encrypted {
-		sa.AccountProperties.Encryption = &mgmtstorage.Encryption{
-			RequireInfrastructureEncryption: to.BoolPtr(true),
-			Services: &mgmtstorage.EncryptionServices{
-				Blob: &mgmtstorage.EncryptionService{
-					KeyType: mgmtstorage.KeyTypeAccount,
-					Enabled: to.BoolPtr(true),
-				},
-				File: &mgmtstorage.EncryptionService{
-					KeyType: mgmtstorage.KeyTypeAccount,
-					Enabled: to.BoolPtr(true),
-				},
-				Table: &mgmtstorage.EncryptionService{
-					KeyType: mgmtstorage.KeyTypeAccount,
-					Enabled: to.BoolPtr(true),
-				},
-				Queue: &mgmtstorage.EncryptionService{
-					KeyType: mgmtstorage.KeyTypeAccount,
-					Enabled: to.BoolPtr(true),
-				},
-			},
-			KeySource: mgmtstorage.KeySourceMicrosoftStorage,
-		}
+		properties.NetworkRuleSet.DefaultAction = mgmtstorage.DefaultActionAllow
 	}
 
-	return &arm.Resource{
-		Resource:   sa,
-		APIVersion: azureclient.APIVersion("Microsoft.Storage"),
-	}
+	return properties
 }
 
 func (m *manager) storageAccountBlobContainer(storageAccountName, name string) *arm.Resource {

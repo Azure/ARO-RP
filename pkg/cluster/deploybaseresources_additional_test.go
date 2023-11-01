@@ -261,7 +261,7 @@ func TestStorageAccount(t *testing.T) {
 				env:            env,
 			}
 
-			got := m.storageAccount(tt.storageAccountName, location, tt.ocpSubnets, true)
+			got := m.storageAccount(tt.storageAccountName, location, tt.ocpSubnets)
 
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Error(cmp.Diff(got, tt.want))

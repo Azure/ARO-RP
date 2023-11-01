@@ -19,6 +19,7 @@ import (
 
 type Manager interface {
 	BlobService(ctx context.Context, resourceGroup, account string, p mgmtstorage.Permissions, r mgmtstorage.SignedResourceTypes) (*azstorage.BlobStorageClient, error)
+	UpdateAccount(ctx context.Context, resourceGroup, accountName string, parameters mgmtstorage.AccountUpdateParameters) (mgmtstorage.Account, error)
 }
 
 type manager struct {
@@ -55,4 +56,8 @@ func (m *manager) BlobService(ctx context.Context, resourceGroup, account string
 	blobcli := azstorage.NewAccountSASClient(account, v, (*m.env.Environment()).Environment).GetBlobService()
 
 	return &blobcli, nil
+}
+
+func (m *manager) UpdateAccount(ctx context.Context, resourceGroup, accountName string, parameters mgmtstorage.AccountUpdateParameters) (mgmtstorage.Account, error) {
+	return m.storageAccounts.Update(ctx, resourceGroup, accountName, parameters)
 }
