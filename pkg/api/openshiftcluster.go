@@ -472,6 +472,12 @@ const (
 	VMSizeStandardNC12sV3  VMSize = "Standard_NC12s_v3"
 	VMSizeStandardNC24sV3  VMSize = "Standard_NC24s_v3"
 	VMSizeStandardNC24rsV3 VMSize = "Standard_NC24rs_v3"
+
+	VMSizeStandardNC24adsA100V4 VMSize = "Standard_NC24ads_A100_v4"
+	VMSizeStandardNC48adsA100V4 VMSize = "Standard_NC48ads_A100_v4"
+	VMSizeStandardNC96adsA100V4 VMSize = "Standard_NC96ads_A100_v4"
+
+	VMSizeStandardND96asrV4 VMSize = "Standard_ND96asr_v4"
 )
 
 type VMSizeStruct struct {
@@ -598,31 +604,39 @@ var (
 	VMSizeStandardNC12sV3Struct  = VMSizeStruct{CoreCount: 12, Family: standardNCSv3}
 	VMSizeStandardNC24sV3Struct  = VMSizeStruct{CoreCount: 24, Family: standardNCSv3}
 	VMSizeStandardNC24rsV3Struct = VMSizeStruct{CoreCount: 24, Family: standardNCSv3}
+
+	VMSizeStandardNC24adsA100V4Struct = VMSizeStruct{CoreCount: 24, Family: standardNCADSA100v4}
+	VMSizeStandardNC48adsA100V4Struct = VMSizeStruct{CoreCount: 48, Family: standardNCADSA100v4}
+	VMSizeStandardNC96adsA100V4Struct = VMSizeStruct{CoreCount: 96, Family: standardNCADSA100v4}
+
+	VMSizeStandardND96asrV4Struct = VMSizeStruct{CoreCount: 96, Family: standardNDASA100v4}
 )
 
 const (
-	standardDSv3   = "standardDSv3Family"
-	standardDSv4   = "standardDSv4Family"
-	standardDSv5   = "standardDSv5Family"
-	standardDASv4  = "standardDASv4Family"
-	standardDASv5  = "standardDASv5Family"
-	standardESv3   = "standardESv3Family"
-	standardESv4   = "standardESv4Family"
-	standardESv5   = "standardESv5Family"
-	standardEASv4  = "standardEASv4Family"
-	standardEASv5  = "standardEASv5Family"
-	standardEISv4  = "standardEISv4Family"
-	standardEIDSv4 = "standardEIDSv4Family"
-	standardEISv5  = "standardEISv5Family"
-	standardEDSv5  = "standardEDSv5Family"
-	standardEIDSv5 = "standardEIDSv5Family"
-	standardEIDv5  = "standardEIDv5Family"
-	standardFSv2   = "standardFSv2Family"
-	standardMS     = "standardMSFamily"
-	standardLSv2   = "standardLsv2Family"
-	standardLSv3   = "standardLsv3Family"
-	standardNCAS   = "Standard NCASv3_T4 Family"
-	standardNCSv3  = "Standard NCSv3 Family"
+	standardDSv3        = "standardDSv3Family"
+	standardDSv4        = "standardDSv4Family"
+	standardDSv5        = "standardDSv5Family"
+	standardDASv4       = "standardDASv4Family"
+	standardDASv5       = "standardDASv5Family"
+	standardESv3        = "standardESv3Family"
+	standardESv4        = "standardESv4Family"
+	standardESv5        = "standardESv5Family"
+	standardEASv4       = "standardEASv4Family"
+	standardEASv5       = "standardEASv5Family"
+	standardEISv4       = "standardEISv4Family"
+	standardEIDSv4      = "standardEIDSv4Family"
+	standardEISv5       = "standardEISv5Family"
+	standardEDSv5       = "standardEDSv5Family"
+	standardEIDSv5      = "standardEIDSv5Family"
+	standardEIDv5       = "standardEIDv5Family"
+	standardFSv2        = "standardFSv2Family"
+	standardMS          = "standardMSFamily"
+	standardLSv2        = "standardLsv2Family"
+	standardLSv3        = "standardLsv3Family"
+	standardNCAS        = "Standard NCASv3_T4 Family"
+	standardNCSv3       = "Standard NCSv3 Family"
+	standardNCADSA100v4 = "StandardNCADSA100v4Family"
+	standardNDASA100v4  = "Standard NDASv4_A100 Family"
 )
 
 // WorkerProfile represents a worker profile
