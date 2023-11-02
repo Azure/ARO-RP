@@ -5,7 +5,6 @@ metadata:
 spec:
   logLevel: debug
   targetNamespace: HIVE_OPERATOR_NS
-  deleteProtection: enabled
   disabledControllers:
   - remoteingress
   failedProvisionConfig:
