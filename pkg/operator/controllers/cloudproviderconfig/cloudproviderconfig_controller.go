@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	ControllerName    = "CloudProviderConfig"
+	controllerName    = "CloudProviderConfig"
 	controllerEnabled = "aro.cloudproviderconfig.enabled"
 )
 
@@ -135,9 +135,9 @@ type CloudProviderConfigReconciler struct {
 func NewReconciler(log *logrus.Entry, client client.Client) *CloudProviderConfigReconciler {
 	return &CloudProviderConfigReconciler{
 		AROController: base.AROController{
-			Log:    log.WithField("controller", ControllerName),
+			Log:    log.WithField("controller", controllerName),
 			Client: client,
-			Name:   ControllerName,
+			Name:   controllerName,
 		},
 	}
 }

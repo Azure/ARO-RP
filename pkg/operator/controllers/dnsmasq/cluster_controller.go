@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	ClusterControllerName = "DnsmasqCluster"
+	clusterControllerName = "DnsmasqCluster"
 
 	controllerEnabled     = "aro.dnsmasq.enabled"
 	restartDnsmasqEnabled = "aro.restartdnsmasq.enabled"
@@ -35,9 +35,9 @@ type ClusterReconciler struct {
 func NewClusterReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *ClusterReconciler {
 	return &ClusterReconciler{
 		AROController: base.AROController{
-			Log:    log.WithField("controller", ClusterControllerName),
+			Log:    log.WithField("controller", clusterControllerName),
 			Client: client,
-			Name:   ClusterControllerName,
+			Name:   clusterControllerName,
 		},
 		dh: dh,
 	}

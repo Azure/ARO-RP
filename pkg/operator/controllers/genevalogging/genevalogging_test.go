@@ -55,9 +55,9 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 	}
 
 	defaultConditions := []operatorv1.OperatorCondition{
-		utilconditions.ControllerDefaultAvailable(ControllerName),
-		utilconditions.ControllerDefaultProgressing(ControllerName),
-		utilconditions.ControllerDefaultDegraded(ControllerName),
+		utilconditions.ControllerDefaultAvailable(controllerName),
+		utilconditions.ControllerDefaultProgressing(controllerName),
+		utilconditions.ControllerDefaultDegraded(controllerName),
 	}
 
 	tests := []struct {
@@ -178,9 +178,9 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 			mocks:      nominalMocks,
 			wantErrMsg: "",
 			wantConditions: []operatorv1.OperatorCondition{
-				utilconditions.ControllerDefaultAvailable(ControllerName),
-				utilconditions.ControllerDefaultProgressing(ControllerName),
-				utilconditions.ControllerDefaultDegraded(ControllerName),
+				utilconditions.ControllerDefaultAvailable(controllerName),
+				utilconditions.ControllerDefaultProgressing(controllerName),
+				utilconditions.ControllerDefaultDegraded(controllerName),
 			},
 		},
 	}
@@ -224,7 +224,7 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 				AROController: base.AROController{
 					Log:    logrus.NewEntry(logrus.StandardLogger()),
 					Client: ctrlfake.NewClientBuilder().WithObjects(resources...).Build(),
-					Name:   ControllerName,
+					Name:   controllerName,
 				},
 				dh: mockDh,
 			}

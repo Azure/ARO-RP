@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	ControllerName = "Monitoring"
+	controllerName = "Monitoring"
 
 	controllerEnabled = "aro.monitoring.enabled"
 )
@@ -64,9 +64,9 @@ type MonitoringReconciler struct {
 func NewReconciler(log *logrus.Entry, client client.Client) *MonitoringReconciler {
 	return &MonitoringReconciler{
 		AROController: base.AROController{
-			Log:    log.WithField("controller", ControllerName),
+			Log:    log.WithField("controller", controllerName),
 			Client: client,
-			Name:   ControllerName,
+			Name:   controllerName,
 		},
 		jsonHandle: new(codec.JsonHandle),
 	}

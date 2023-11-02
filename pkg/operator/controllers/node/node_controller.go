@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	ControllerName = "Node"
+	controllerName = "Node"
 
 	controllerEnabled = "aro.nodedrainer.enabled"
 )
@@ -40,9 +40,9 @@ type Reconciler struct {
 func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface) *Reconciler {
 	return &Reconciler{
 		AROController: base.AROController{
-			Log:    log.WithField("controller", ControllerName),
+			Log:    log.WithField("controller", controllerName),
 			Client: client,
-			Name:   ControllerName,
+			Name:   controllerName,
 		},
 
 		kubernetescli: kubernetescli,

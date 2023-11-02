@@ -119,7 +119,7 @@ func TestReconcileCloudProviderConfig(t *testing.T) {
 			AROController: base.AROController{
 				Log:    logrus.NewEntry(logger),
 				Client: clientBuilder.Build(),
-				Name:   ControllerName,
+				Name:   controllerName,
 			},
 		}
 		request := ctrl.Request{}

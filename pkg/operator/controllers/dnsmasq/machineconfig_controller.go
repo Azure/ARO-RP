@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	MachineConfigControllerName = "DnsmasqMachineConfig"
+	machineConfigControllerName = "DnsmasqMachineConfig"
 )
 
 type MachineConfigReconciler struct {
@@ -34,9 +34,9 @@ var rxARODNS = regexp.MustCompile("^99-(.*)-aro-dns$")
 func NewMachineConfigReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *MachineConfigReconciler {
 	return &MachineConfigReconciler{
 		AROController: base.AROController{
-			Log:    log.WithField("controller", MachineConfigControllerName),
+			Log:    log.WithField("controller", machineConfigControllerName),
 			Client: client,
-			Name:   MachineConfigControllerName,
+			Name:   machineConfigControllerName,
 		},
 		dh: dh,
 	}

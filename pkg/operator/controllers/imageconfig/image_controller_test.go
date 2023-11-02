@@ -29,9 +29,9 @@ import (
 // Test reconcile function
 func TestImageConfigReconciler(t *testing.T) {
 	transitionTime := metav1.Time{Time: time.Now()}
-	defaultAvailable := utilconditions.ControllerDefaultAvailable(ControllerName)
-	defaultProgressing := utilconditions.ControllerDefaultProgressing(ControllerName)
-	defaultDegraded := utilconditions.ControllerDefaultDegraded(ControllerName)
+	defaultAvailable := utilconditions.ControllerDefaultAvailable(controllerName)
+	defaultProgressing := utilconditions.ControllerDefaultProgressing(controllerName)
+	defaultDegraded := utilconditions.ControllerDefaultDegraded(controllerName)
 	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
 
 	type test struct {
@@ -196,7 +196,7 @@ func TestImageConfigReconciler(t *testing.T) {
 				defaultAvailable,
 				defaultProgressing,
 				{
-					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+					Type:               controllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
 					Status:             operatorv1.ConditionTrue,
 					LastTransitionTime: transitionTime,
 					Message:            `both AllowedRegistries and BlockedRegistries are present`,

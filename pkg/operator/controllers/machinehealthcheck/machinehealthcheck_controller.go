@@ -36,7 +36,7 @@ var machinehealthcheckYaml []byte
 var mhcremediationalertYaml []byte
 
 const (
-	ControllerName      string = "MachineHealthCheck"
+	controllerName      string = "MachineHealthCheck"
 	managed             string = "aro.machinehealthcheck.managed"
 	enabled             string = "aro.machinehealthcheck.enabled"
 	MHCPausedAnnotation string = "cluster.x-k8s.io/paused"
@@ -51,9 +51,9 @@ type Reconciler struct {
 func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *Reconciler {
 	return &Reconciler{
 		AROController: base.AROController{
-			Log:    log.WithField("controller", ControllerName),
+			Log:    log.WithField("controller", controllerName),
 			Client: client,
-			Name:   ControllerName,
+			Name:   controllerName,
 		},
 		dh: dh,
 	}

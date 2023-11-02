@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	ControllerName = "IngressControllerARO"
+	controllerName = "IngressControllerARO"
 
 	controllerEnabled                   = "aro.ingress.enabled"
 	openshiftIngressControllerNamespace = "openshift-ingress-operator"
@@ -38,9 +38,9 @@ type Reconciler struct {
 func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
 		AROController: base.AROController{
-			Log:    log.WithField("controller", ControllerName),
+			Log:    log.WithField("controller", controllerName),
 			Client: client,
-			Name:   ControllerName,
+			Name:   controllerName,
 		},
 	}
 }

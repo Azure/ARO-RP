@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	MachineConfigPoolControllerName = "DnsmasqMachineConfigPool"
+	machineConfigPoolControllerName = "DnsmasqMachineConfigPool"
 )
 
 type MachineConfigPoolReconciler struct {
@@ -31,9 +31,9 @@ type MachineConfigPoolReconciler struct {
 func NewMachineConfigPoolReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *MachineConfigPoolReconciler {
 	return &MachineConfigPoolReconciler{
 		AROController: base.AROController{
-			Log:    log.WithField("controller", MachineConfigPoolControllerName),
+			Log:    log.WithField("controller", machineConfigPoolControllerName),
 			Client: client,
-			Name:   MachineConfigPoolControllerName,
+			Name:   machineConfigPoolControllerName,
 		},
 		dh: dh,
 	}
