@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
@@ -29,7 +30,7 @@ type MachineConfigPoolReconciler struct {
 }
 
 func NewMachineConfigPoolReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *MachineConfigPoolReconciler {
-	return &MachineConfigPoolReconciler{
+	r := &MachineConfigPoolReconciler{
 		AROController: base.AROController{
 			Log:         log.WithField("controller", machineConfigPoolControllerName),
 			Client:      client,
@@ -38,27 +39,20 @@ func NewMachineConfigPoolReconciler(log *logrus.Entry, client client.Client, dh 
 		},
 		dh: dh,
 	}
+	r.Reconciler = r
+	return r
 }
 
 // Reconcile watches MachineConfigPool objects, and if any changes,
 // reconciles the associated ARO DNS MachineConfig object
-func (r *MachineConfigPoolReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.GetCluster(ctx)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(r.EnabledFlag) {
-		r.Log.Debug("controller is disabled")
-		return reconcile.Result{}, nil
-	}
+func (r *MachineConfigPoolReconciler) ReconcileEnabled(ctx context.Context, request ctrl.Request, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
+	var err error
 
 	restartDnsmasq := instance.Spec.OperatorFlags.GetSimpleBoolean(restartDnsmasqEnabled)
 	if restartDnsmasq {
 		r.Log.Debug("restart dnsmasq machineconfig enabled")
 	}
 
-	r.Log.Debug("running")
 	mcp := &mcv1.MachineConfigPool{}
 	err = r.Client.Get(ctx, types.NamespacedName{Name: request.Name}, mcp)
 	if kerrors.IsNotFound(err) {

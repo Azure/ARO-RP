@@ -33,7 +33,7 @@ type ClusterReconciler struct {
 }
 
 func NewClusterReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *ClusterReconciler {
-	return &ClusterReconciler{
+	r := &ClusterReconciler{
 		AROController: base.AROController{
 			Log:         log.WithField("controller", clusterControllerName),
 			Client:      client,
@@ -42,27 +42,20 @@ func NewClusterReconciler(log *logrus.Entry, client client.Client, dh dynamichel
 		},
 		dh: dh,
 	}
+	r.Reconciler = r
+	return r
 }
 
 // Reconcile watches the ARO object, and if it changes, reconciles all the
 // 99-%s-aro-dns machineconfigs
-func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.GetCluster(ctx)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(r.EnabledFlag) {
-		r.Log.Debug("controller is disabled")
-		return reconcile.Result{}, nil
-	}
+func (r *ClusterReconciler) ReconcileEnabled(ctx context.Context, request ctrl.Request, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
+	var err error
 
 	restartDnsmasq := instance.Spec.OperatorFlags.GetSimpleBoolean(restartDnsmasqEnabled)
 	if restartDnsmasq {
 		r.Log.Debug("restartDnsmasq is enabled")
 	}
 
-	r.Log.Debug("running")
 	mcps := &mcv1.MachineConfigPoolList{}
 	err = r.Client.List(ctx, mcps)
 	if err != nil {

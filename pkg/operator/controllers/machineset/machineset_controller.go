@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 )
 
@@ -32,7 +33,7 @@ type Reconciler struct {
 
 // MachineSet reconciler watches MachineSet objects for changes, evaluates total worker replica count, and reverts changes if needed.
 func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
-	return &Reconciler{
+	r := &Reconciler{
 		AROController: base.AROController{
 			Log:         log.WithField("controller", controllerName),
 			Client:      client,
@@ -40,20 +41,12 @@ func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 			EnabledFlag: controllerEnabled,
 		},
 	}
+	r.Reconciler = r
+	return r
 }
 
-func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.GetCluster(ctx)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(r.EnabledFlag) {
-		r.Log.Debug("controller is disabled")
-		return reconcile.Result{}, nil
-	}
-
-	r.Log.Debug("running")
+func (r *Reconciler) ReconcileEnabled(ctx context.Context, request ctrl.Request, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
+	var err error
 
 	modifiedMachineset := &machinev1beta1.MachineSet{}
 	err = r.Client.Get(ctx, types.NamespacedName{Name: request.Name, Namespace: machineSetsNamespace}, modifiedMachineset)

@@ -61,7 +61,7 @@ type MonitoringReconciler struct {
 }
 
 func NewReconciler(log *logrus.Entry, client client.Client) *MonitoringReconciler {
-	return &MonitoringReconciler{
+	r := &MonitoringReconciler{
 		AROController: base.AROController{
 			Log:         log.WithField("controller", controllerName),
 			Client:      client,
@@ -70,20 +70,11 @@ func NewReconciler(log *logrus.Entry, client client.Client) *MonitoringReconcile
 		},
 		jsonHandle: new(codec.JsonHandle),
 	}
+	r.Reconciler = r
+	return r
 }
 
-func (r *MonitoringReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.GetCluster(ctx)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(r.EnabledFlag) {
-		r.Log.Debug("controller is disabled")
-		return reconcile.Result{}, nil
-	}
-
-	r.Log.Debug("running")
+func (r *MonitoringReconciler) ReconcileEnabled(ctx context.Context, request ctrl.Request, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
 	for _, f := range []func(context.Context) (ctrl.Result, error){
 		r.reconcileConfiguration,
 		r.reconcilePVC, // TODO(mj): This should be removed once we don't have PVC anymore

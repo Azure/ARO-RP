@@ -49,7 +49,7 @@ type Reconciler struct {
 }
 
 func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *Reconciler {
-	return &Reconciler{
+	r := &Reconciler{
 		AROController: base.AROController{
 			Log:         log.WithField("controller", controllerName),
 			Client:      client,
@@ -58,25 +58,17 @@ func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Int
 		},
 		dh: dh,
 	}
+	r.Reconciler = r
+	return r
 }
 
 // Reconcile watches MachineHealthCheck objects, and if any changes,
 // reconciles the associated ARO MachineHealthCheck object
-func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.GetCluster(ctx)
+func (r *Reconciler) ReconcileEnabled(ctx context.Context, request ctrl.Request, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
+	var err error
 
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(r.EnabledFlag) {
-		r.Log.Debug("controller is disabled")
-		return reconcile.Result{}, nil
-	}
-
-	r.Log.Debug("running")
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerManaged) {
-		err := r.dh.EnsureDeleted(ctx, "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck")
+		err = r.dh.EnsureDeleted(ctx, "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck")
 		if err != nil {
 			r.Log.Error(err)
 			r.SetDegraded(ctx, err)

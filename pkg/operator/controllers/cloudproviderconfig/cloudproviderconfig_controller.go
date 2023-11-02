@@ -133,7 +133,7 @@ type CloudProviderConfigReconciler struct {
 }
 
 func NewReconciler(log *logrus.Entry, client client.Client) *CloudProviderConfigReconciler {
-	return &CloudProviderConfigReconciler{
+	r := &CloudProviderConfigReconciler{
 		AROController: base.AROController{
 			Log:         log.WithField("controller", controllerName),
 			Client:      client,
@@ -141,23 +141,14 @@ func NewReconciler(log *logrus.Entry, client client.Client) *CloudProviderConfig
 			EnabledFlag: controllerEnabled,
 		},
 	}
+	r.Reconciler = r
+	return r
 }
 
 // Reconcile makes sure that the cloud-provider-config is healthy
-func (r *CloudProviderConfigReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *CloudProviderConfigReconciler) ReconcileEnabled(ctx context.Context, request ctrl.Request, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
 	r.Log.Debug("reconcile ConfigMap openshift-config/cloud-provider-config")
 
-	instance, err := r.GetCluster(ctx)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(r.EnabledFlag) {
-		r.Log.Debug("controller is disabled")
-		return reconcile.Result{}, nil
-	}
-
-	r.Log.Debug("running")
 	return reconcile.Result{}, r.updateCloudProviderConfig(ctx)
 }
 
