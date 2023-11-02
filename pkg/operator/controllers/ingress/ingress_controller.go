@@ -88,5 +88,5 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	builder := ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate))
 
-	return builder.Named(ControllerName).Complete(r)
+	return builder.Named(r.GetName()).Complete(r)
 }

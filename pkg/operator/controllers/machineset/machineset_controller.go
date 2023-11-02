@@ -116,6 +116,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&machinev1beta1.MachineSet{}, builder.WithPredicates(machineSetPredicate)).
-		Named(ControllerName).
+		Named(r.GetName()).
 		Complete(r)
 }

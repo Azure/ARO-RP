@@ -85,6 +85,6 @@ func (r *MachineConfigPoolReconciler) Reconcile(ctx context.Context, request ctr
 func (r *MachineConfigPoolReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&mcv1.MachineConfigPool{}).
-		Named(MachineConfigPoolControllerName).
+		Named(r.GetName()).
 		Complete(r)
 }

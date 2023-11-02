@@ -124,6 +124,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.ServiceAccount{}).
 		Owns(&securityv1.SecurityContextConstraints{}).
-		Named(ControllerName).
+		Named(r.GetName()).
 		Complete(r)
 }

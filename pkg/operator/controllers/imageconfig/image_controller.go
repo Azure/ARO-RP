@@ -129,7 +129,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&configv1.Image{}, builder.WithPredicates(imagePredicate)).
-		Named(ControllerName).
+		Named(r.GetName()).
 		Complete(r)
 }
 

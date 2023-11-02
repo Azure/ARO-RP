@@ -179,7 +179,7 @@ func (r *CloudProviderConfigReconciler) SetupWithManager(mgr ctrl.Manager) error
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(cloudProviderConfigPredicate),
 		).
-		Named(ControllerName).
+		Named(r.GetName()).
 		Complete(r)
 }
 

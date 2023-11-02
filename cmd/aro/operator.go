@@ -18,6 +18,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/alertwebhook"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/autosizednodes"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/banner"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/clusterdnschecker"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/ingresscertificatechecker"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/internetchecker"
@@ -86,10 +87,24 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
+	var AROReconcilers []base.AROReconciler
+
 	if role == pkgoperator.RoleMaster {
-		if err = (genevalogging.NewReconciler(log, client, dh)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller %s: %v", genevalogging.ControllerName, err)
-		}
+		AROReconcilers = append(AROReconcilers,
+			cloudproviderconfig.NewReconciler(log, client),
+			dnsmasq.NewClusterReconciler(log, client, dh),
+			dnsmasq.NewMachineConfigPoolReconciler(log, client, dh),
+			dnsmasq.NewMachineConfigReconciler(log, client, dh),
+			genevalogging.NewReconciler(log, client, dh),
+			imageconfig.NewReconciler(log, client),
+			ingress.NewReconciler(log, client),
+			machinehealthcheck.NewReconciler(log, client, dh),
+			machineset.NewReconciler(log, client),
+			monitoring.NewReconciler(log, client),
+			node.NewReconciler(log, client, kubernetescli),
+		)
+
+		// FIXME Add controllers to the slice above as they're converted to AROController.
 		if err = (clusteroperatoraro.NewReconciler(
 			log.WithField("controller", clusteroperatoraro.ControllerName),
 			client)).SetupWithManager(mgr); err != nil {
@@ -115,27 +130,10 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", routefix.ControllerName, err)
 		}
-		if err = (monitoring.NewReconciler(log, client)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller %s: %v", monitoring.ControllerName, err)
-		}
 		if err = (rbac.NewReconciler(
 			log.WithField("controller", rbac.ControllerName),
 			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", rbac.ControllerName, err)
-		}
-		if err = (dnsmasq.NewClusterReconciler(log, client, dh)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller %s: %v", dnsmasq.ClusterControllerName, err)
-		}
-		if err = (dnsmasq.NewMachineConfigReconciler(log, client, dh)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller %s: %v", dnsmasq.MachineConfigControllerName, err)
-		}
-		if err = (dnsmasq.NewMachineConfigPoolReconciler(log, client, dh)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller %s: %v", dnsmasq.MachineConfigPoolControllerName, err)
-		}
-		if err = (node.NewReconciler(
-			log.WithField("controller", node.ControllerName),
-			client, kubernetescli)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller %s: %v", node.ControllerName, err)
 		}
 		if err = (subnets.NewReconciler(
 			log.WithField("controller", subnets.ControllerName),
@@ -151,12 +149,6 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			log.WithField("controller", banner.ControllerName),
 			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", banner.ControllerName, err)
-		}
-		if err = (machineset.NewReconciler(log, client)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller %s: %v", machineset.ControllerName, err)
-		}
-		if err = (imageconfig.NewReconciler(log, client)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller %s: %v", imageconfig.ControllerName, err)
 		}
 		if err = (previewfeature.NewReconciler(
 			log.WithField("controller", previewfeature.ControllerName),
@@ -178,12 +170,6 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", autosizednodes.ControllerName, err)
 		}
-		if err = (machinehealthcheck.NewReconciler(log, client, dh)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller %s: %v", machinehealthcheck.ControllerName, err)
-		}
-		if err = (ingress.NewReconciler(log, client)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller %s: %v", ingress.ControllerName, err)
-		}
 		if err = (serviceprincipalchecker.NewReconciler(
 			log.WithField("controller", serviceprincipalchecker.ControllerName),
 			client, role)).SetupWithManager(mgr); err != nil {
@@ -204,15 +190,18 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", guardrails.ControllerName, err)
 		}
-		if err = (cloudproviderconfig.NewReconciler(log, client)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller %s: %v", cloudproviderconfig.ControllerName, err)
-		}
 	}
 
 	if err = (internetchecker.NewReconciler(
 		log.WithField("controller", internetchecker.ControllerName),
 		client, role)).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller %s: %v", internetchecker.ControllerName, err)
+	}
+
+	for _, reconciler := range AROReconcilers {
+		if err = reconciler.SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", reconciler.GetName(), err)
+		}
 	}
 
 	// +kubebuilder:scaffold:builder

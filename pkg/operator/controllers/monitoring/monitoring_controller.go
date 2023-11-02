@@ -223,6 +223,6 @@ func (r *MonitoringReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(monitoringConfigMapPredicate),
 		).
-		Named(ControllerName).
+		Named(r.GetName()).
 		Complete(r)
 }
