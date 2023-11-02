@@ -35,9 +35,10 @@ type ClusterReconciler struct {
 func NewClusterReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *ClusterReconciler {
 	return &ClusterReconciler{
 		AROController: base.AROController{
-			Log:    log.WithField("controller", clusterControllerName),
-			Client: client,
-			Name:   clusterControllerName,
+			Log:         log.WithField("controller", clusterControllerName),
+			Client:      client,
+			Name:        clusterControllerName,
+			EnabledFlag: controllerEnabled,
 		},
 		dh: dh,
 	}
@@ -51,7 +52,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(r.EnabledFlag) {
 		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}

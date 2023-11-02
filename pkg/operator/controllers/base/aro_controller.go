@@ -23,9 +23,10 @@ type AROReconciler interface {
 }
 
 type AROController struct {
-	Log    *logrus.Entry
-	Client client.Client
-	Name   string
+	Log         *logrus.Entry
+	Client      client.Client
+	Name        string
+	EnabledFlag string
 }
 
 func (c *AROController) GetName() string {

@@ -34,9 +34,10 @@ var rxARODNS = regexp.MustCompile("^99-(.*)-aro-dns$")
 func NewMachineConfigReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *MachineConfigReconciler {
 	return &MachineConfigReconciler{
 		AROController: base.AROController{
-			Log:    log.WithField("controller", machineConfigControllerName),
-			Client: client,
-			Name:   machineConfigControllerName,
+			Log:         log.WithField("controller", machineConfigControllerName),
+			Client:      client,
+			Name:        machineConfigControllerName,
+			EnabledFlag: controllerEnabled,
 		},
 		dh: dh,
 	}
@@ -50,7 +51,7 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(r.EnabledFlag) {
 		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}

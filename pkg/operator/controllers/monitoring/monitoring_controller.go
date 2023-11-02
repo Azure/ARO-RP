@@ -63,9 +63,10 @@ type MonitoringReconciler struct {
 func NewReconciler(log *logrus.Entry, client client.Client) *MonitoringReconciler {
 	return &MonitoringReconciler{
 		AROController: base.AROController{
-			Log:    log.WithField("controller", controllerName),
-			Client: client,
-			Name:   controllerName,
+			Log:         log.WithField("controller", controllerName),
+			Client:      client,
+			Name:        controllerName,
+			EnabledFlag: controllerEnabled,
 		},
 		jsonHandle: new(codec.JsonHandle),
 	}
@@ -77,7 +78,7 @@ func (r *MonitoringReconciler) Reconcile(ctx context.Context, request ctrl.Reque
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(r.EnabledFlag) {
 		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}

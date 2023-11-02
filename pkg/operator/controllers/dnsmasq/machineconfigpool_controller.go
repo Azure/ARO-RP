@@ -31,9 +31,10 @@ type MachineConfigPoolReconciler struct {
 func NewMachineConfigPoolReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *MachineConfigPoolReconciler {
 	return &MachineConfigPoolReconciler{
 		AROController: base.AROController{
-			Log:    log.WithField("controller", machineConfigPoolControllerName),
-			Client: client,
-			Name:   machineConfigPoolControllerName,
+			Log:         log.WithField("controller", machineConfigPoolControllerName),
+			Client:      client,
+			Name:        machineConfigPoolControllerName,
+			EnabledFlag: controllerEnabled,
 		},
 		dh: dh,
 	}
@@ -47,7 +48,7 @@ func (r *MachineConfigPoolReconciler) Reconcile(ctx context.Context, request ctr
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(r.EnabledFlag) {
 		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
