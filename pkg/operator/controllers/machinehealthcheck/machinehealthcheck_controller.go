@@ -37,8 +37,8 @@ var mhcremediationalertYaml []byte
 
 const (
 	controllerName      string = "MachineHealthCheck"
-	managed             string = "aro.machinehealthcheck.managed"
-	enabled             string = "aro.machinehealthcheck.enabled"
+	controllerEnabled   string = "aro.machinehealthcheck.enabled"
+	controllerManaged   string = "aro.machinehealthcheck.managed"
 	MHCPausedAnnotation string = "cluster.x-k8s.io/paused"
 )
 
@@ -68,13 +68,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(enabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
 		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
 	r.Log.Debug("running")
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(managed) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerManaged) {
 		err := r.dh.EnsureDeleted(ctx, "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck")
 		if err != nil {
 			r.Log.Error(err)

@@ -22,9 +22,8 @@ import (
 )
 
 const (
-	controllerName = "MachineSet"
-
-	ControllerEnabled = "aro.machineset.enabled"
+	controllerName    = "MachineSet"
+	controllerEnabled = "aro.machineset.enabled"
 )
 
 type Reconciler struct {
@@ -48,7 +47,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ControllerEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
 		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}

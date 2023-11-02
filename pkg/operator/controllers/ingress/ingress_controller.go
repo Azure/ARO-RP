@@ -21,8 +21,7 @@ import (
 )
 
 const (
-	controllerName = "IngressControllerARO"
-
+	controllerName                      = "IngressControllerARO"
 	controllerEnabled                   = "aro.ingress.enabled"
 	openshiftIngressControllerNamespace = "openshift-ingress-operator"
 	openshiftIngressControllerName      = "default"

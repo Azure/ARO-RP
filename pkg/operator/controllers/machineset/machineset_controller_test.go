@@ -202,7 +202,7 @@ func TestReconciler(t *testing.T) {
 				Spec: arov1alpha1.ClusterSpec{
 					InfraID: "aro-fake",
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						ControllerEnabled: strconv.FormatBool(tt.featureFlag),
+						controllerEnabled: strconv.FormatBool(tt.featureFlag),
 					},
 				},
 				Status: arov1alpha1.ClusterStatus{

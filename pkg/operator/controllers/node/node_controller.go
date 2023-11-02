@@ -24,8 +24,7 @@ import (
 )
 
 const (
-	controllerName = "Node"
-
+	controllerName    = "Node"
 	controllerEnabled = "aro.nodedrainer.enabled"
 )
 

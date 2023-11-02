@@ -82,7 +82,7 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(false),
+						controllerEnabled: strconv.FormatBool(false),
 					},
 				},
 				Status: arov1alpha1.ClusterStatus{
@@ -104,8 +104,8 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(true),
-						managed: strconv.FormatBool(false),
+						controllerEnabled: strconv.FormatBool(true),
+						controllerManaged: strconv.FormatBool(false),
 					},
 				},
 				Status: arov1alpha1.ClusterStatus{
@@ -127,8 +127,8 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(true),
-						managed: strconv.FormatBool(false),
+						controllerEnabled: strconv.FormatBool(true),
+						controllerManaged: strconv.FormatBool(false),
 					},
 				},
 				Status: arov1alpha1.ClusterStatus{
@@ -159,8 +159,8 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(true),
-						managed: strconv.FormatBool(false),
+						controllerEnabled: strconv.FormatBool(true),
+						controllerManaged: strconv.FormatBool(false),
 					},
 				},
 				Status: arov1alpha1.ClusterStatus{
@@ -192,8 +192,8 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(true),
-						managed: strconv.FormatBool(true),
+						controllerEnabled: strconv.FormatBool(true),
+						controllerManaged: strconv.FormatBool(true),
 					},
 				},
 			},
@@ -211,8 +211,8 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(true),
-						managed: strconv.FormatBool(true),
+						controllerEnabled: strconv.FormatBool(true),
+						controllerManaged: strconv.FormatBool(true),
 					},
 				},
 			},
@@ -230,8 +230,8 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(true),
-						managed: strconv.FormatBool(true),
+						controllerEnabled: strconv.FormatBool(true),
+						controllerManaged: strconv.FormatBool(true),
 					},
 				},
 				Status: arov1alpha1.ClusterStatus{

@@ -23,7 +23,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -218,16 +217,11 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 				},
 			}
 
+			log := logrus.NewEntry(logrus.StandardLogger())
+			client := ctrlfake.NewClientBuilder().WithObjects(resources...).Build()
 			mockDh := mock_dynamichelper.NewMockInterface(controller)
 
-			r := &Reconciler{
-				AROController: base.AROController{
-					Log:    logrus.NewEntry(logrus.StandardLogger()),
-					Client: ctrlfake.NewClientBuilder().WithObjects(resources...).Build(),
-					Name:   controllerName,
-				},
-				dh: mockDh,
-			}
+			r := NewReconciler(log, client, mockDh)
 
 			daemonset, err := r.daemonset(instance)
 			if err != nil {

@@ -25,8 +25,7 @@ import (
 )
 
 const (
-	controllerName = "ImageConfig"
-
+	controllerName    = "ImageConfig"
 	controllerEnabled = "aro.imageconfig.enabled"
 
 	// Kubernetes object name
@@ -52,8 +51,7 @@ func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 // - If AllowedRegistries is not nil, makes sure required registries are added
 // - Fails fast if both are not nil, unsupported
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance := &arov1alpha1.Cluster{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+	instance, err := r.GetCluster(ctx)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

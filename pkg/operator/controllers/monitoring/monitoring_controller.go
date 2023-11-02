@@ -29,8 +29,7 @@ import (
 )
 
 const (
-	controllerName = "Monitoring"
-
+	controllerName    = "Monitoring"
 	controllerEnabled = "aro.monitoring.enabled"
 )
 
