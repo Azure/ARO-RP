@@ -34,7 +34,7 @@ var rxARODNS = regexp.MustCompile("^99-(.*)-aro-dns$")
 func NewMachineConfigReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *MachineConfigReconciler {
 	return &MachineConfigReconciler{
 		AROController: base.AROController{
-			Log:    log,
+			Log:    log.WithField("controller", MachineConfigControllerName),
 			Client: client,
 			Name:   MachineConfigControllerName,
 		},

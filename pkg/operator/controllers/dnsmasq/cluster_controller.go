@@ -35,7 +35,7 @@ type ClusterReconciler struct {
 func NewClusterReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *ClusterReconciler {
 	return &ClusterReconciler{
 		AROController: base.AROController{
-			Log:    log,
+			Log:    log.WithField("controller", ClusterControllerName),
 			Client: client,
 			Name:   ClusterControllerName,
 		},

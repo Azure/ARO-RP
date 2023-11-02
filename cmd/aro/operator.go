@@ -87,9 +87,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	if role == pkgoperator.RoleMaster {
-		if err = (genevalogging.NewReconciler(
-			log.WithField("controller", genevalogging.ControllerName),
-			client, dh)).SetupWithManager(mgr); err != nil {
+		if err = (genevalogging.NewReconciler(log, client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", genevalogging.ControllerName, err)
 		}
 		if err = (clusteroperatoraro.NewReconciler(
@@ -117,9 +115,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", routefix.ControllerName, err)
 		}
-		if err = (monitoring.NewReconciler(
-			log.WithField("controller", monitoring.ControllerName),
-			client)).SetupWithManager(mgr); err != nil {
+		if err = (monitoring.NewReconciler(log, client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", monitoring.ControllerName, err)
 		}
 		if err = (rbac.NewReconciler(
@@ -127,19 +123,13 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", rbac.ControllerName, err)
 		}
-		if err = (dnsmasq.NewClusterReconciler(
-			log.WithField("controller", dnsmasq.ClusterControllerName),
-			client, dh)).SetupWithManager(mgr); err != nil {
+		if err = (dnsmasq.NewClusterReconciler(log, client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", dnsmasq.ClusterControllerName, err)
 		}
-		if err = (dnsmasq.NewMachineConfigReconciler(
-			log.WithField("controller", dnsmasq.MachineConfigControllerName),
-			client, dh)).SetupWithManager(mgr); err != nil {
+		if err = (dnsmasq.NewMachineConfigReconciler(log, client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", dnsmasq.MachineConfigControllerName, err)
 		}
-		if err = (dnsmasq.NewMachineConfigPoolReconciler(
-			log.WithField("controller", dnsmasq.MachineConfigPoolControllerName),
-			client, dh)).SetupWithManager(mgr); err != nil {
+		if err = (dnsmasq.NewMachineConfigPoolReconciler(log, client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", dnsmasq.MachineConfigPoolControllerName, err)
 		}
 		if err = (node.NewReconciler(
@@ -162,13 +152,10 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", banner.ControllerName, err)
 		}
-		if err = (machineset.NewReconciler(
-			log.WithField("controller", machineset.ControllerName), client)).SetupWithManager(mgr); err != nil {
+		if err = (machineset.NewReconciler(log, client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", machineset.ControllerName, err)
 		}
-		if err = (imageconfig.NewReconciler(
-			log.WithField("controller", imageconfig.ControllerName),
-			client)).SetupWithManager(mgr); err != nil {
+		if err = (imageconfig.NewReconciler(log, client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", imageconfig.ControllerName, err)
 		}
 		if err = (previewfeature.NewReconciler(
@@ -191,14 +178,10 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", autosizednodes.ControllerName, err)
 		}
-		if err = (machinehealthcheck.NewReconciler(
-			log.WithField("controller", machinehealthcheck.ControllerName),
-			client, dh)).SetupWithManager(mgr); err != nil {
+		if err = (machinehealthcheck.NewReconciler(log, client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", machinehealthcheck.ControllerName, err)
 		}
-		if err = (ingress.NewReconciler(
-			log.WithField("controller", ingress.ControllerName),
-			client)).SetupWithManager(mgr); err != nil {
+		if err = (ingress.NewReconciler(log, client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", ingress.ControllerName, err)
 		}
 		if err = (serviceprincipalchecker.NewReconciler(
@@ -221,9 +204,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", guardrails.ControllerName, err)
 		}
-		if err = (cloudproviderconfig.NewReconciler(
-			log.WithField("controller", cloudproviderconfig.ControllerName),
-			client)).SetupWithManager(mgr); err != nil {
+		if err = (cloudproviderconfig.NewReconciler(log, client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", cloudproviderconfig.ControllerName, err)
 		}
 	}

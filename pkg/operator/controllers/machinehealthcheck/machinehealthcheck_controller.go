@@ -51,7 +51,7 @@ type Reconciler struct {
 func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *Reconciler {
 	return &Reconciler{
 		AROController: base.AROController{
-			Log:    log,
+			Log:    log.WithField("controller", ControllerName),
 			Client: client,
 			Name:   ControllerName,
 		},

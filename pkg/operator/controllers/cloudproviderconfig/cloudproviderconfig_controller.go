@@ -132,10 +132,10 @@ type CloudProviderConfigReconciler struct {
 	base.AROController
 }
 
-func NewReconciler(Log *logrus.Entry, client client.Client) *CloudProviderConfigReconciler {
+func NewReconciler(log *logrus.Entry, client client.Client) *CloudProviderConfigReconciler {
 	return &CloudProviderConfigReconciler{
 		AROController: base.AROController{
-			Log:    Log,
+			Log:    log.WithField("controller", ControllerName),
 			Client: client,
 			Name:   ControllerName,
 		},

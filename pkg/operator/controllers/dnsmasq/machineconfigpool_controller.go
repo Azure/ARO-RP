@@ -31,7 +31,7 @@ type MachineConfigPoolReconciler struct {
 func NewMachineConfigPoolReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *MachineConfigPoolReconciler {
 	return &MachineConfigPoolReconciler{
 		AROController: base.AROController{
-			Log:    log,
+			Log:    log.WithField("controller", MachineConfigPoolControllerName),
 			Client: client,
 			Name:   MachineConfigPoolControllerName,
 		},

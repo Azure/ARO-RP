@@ -64,7 +64,7 @@ type MonitoringReconciler struct {
 func NewReconciler(log *logrus.Entry, client client.Client) *MonitoringReconciler {
 	return &MonitoringReconciler{
 		AROController: base.AROController{
-			Log:    log,
+			Log:    log.WithField("controller", ControllerName),
 			Client: client,
 			Name:   ControllerName,
 		},
