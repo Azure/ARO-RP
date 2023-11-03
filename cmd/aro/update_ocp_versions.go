@@ -184,7 +184,13 @@ func updateOpenShiftVersions(ctx context.Context, dbOpenShiftVersions database.O
 		}
 
 		log.Printf("Version %q not found, deleting", doc.OpenShiftVersion.Properties.Version)
-		err := dbOpenShiftVersions.Delete(ctx, doc)
+		// Delete via changefeed
+		_, err := dbOpenShiftVersions.Patch(ctx, doc.ID,
+			func(d *api.OpenShiftVersionDocument) error {
+				d.OpenShiftVersion.Deleting = true
+				d.TTL = 60
+				return nil
+			})
 		if err != nil {
 			return err
 		}
