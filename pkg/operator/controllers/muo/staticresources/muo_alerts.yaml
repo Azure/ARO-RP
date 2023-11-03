@@ -63,3 +63,13 @@ spec:
       annotations:
         summary: "UpgradeConfig has not successfully synced in 4 hours."
         description: "This clusters UpgradeConfig has not been synced in 4 hours and may be out of date"
+    - alert: UpgradeClusterCheckFailedSRE
+      # Alert if the cluster has set its pre/post-upgrade health check failure metric for a ten-minute average window
+      expr: avg_over_time(upgradeoperator_cluster_check_failed[10m]) == 1
+      for: 10m
+      labels:
+        severity: critical
+        namespace: openshift-monitoring
+      annotations:
+        summary: "cluster check failed"
+        description: "basic cluster checks failed on either before the upgrade or after the upgrade"
