@@ -264,6 +264,11 @@ After that, when you [create](https://github.com/Azure/ARO-RP/blob/master/docs/d
   curl -X GET -k "https://localhost:8443/admin/supportedvmsizes?vmRole=$VMROLE"
   ```
 
+* Perform Etcd Recovery Operation on a cluster
+  ```bash
+  curl -X PATCH -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/etcdrecovery" 
+  ```
+
 ## OpenShift Version
 
 * We have a cosmos container which contains supported installable OCP versions, more information on the definition in `pkg/api/openshiftversion.go`.
