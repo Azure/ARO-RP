@@ -633,10 +633,10 @@ const (
 	standardMS          = "standardMSFamily"
 	standardLSv2        = "standardLsv2Family"
 	standardLSv3        = "standardLsv3Family"
-	standardNCAS        = "Standard NCASv3_T4 Family"
-	standardNCSv3       = "Standard NCSv3 Family"
-	standardNCADSA100v4 = "StandardNCADSA100v4Family"
-	standardNDASA100v4  = "Standard NDASv4_A100 Family"
+	standardNCAS        = "standardNCAsv3_T4Family"
+	standardNCSv3       = "standardNCsv3Family"
+	standardNCADSA100v4 = "standardNCADsA100v4Family"
+	standardNDASA100v4  = "standardNDAsA100v4Family"
 )
 
 // WorkerProfile represents a worker profile
