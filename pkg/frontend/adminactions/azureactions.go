@@ -9,16 +9,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/applens"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -58,6 +55,7 @@ type azureActions struct {
 	routeTables        network.RouteTablesClient
 	storageAccounts    storage.AccountsClient
 	networkInterfaces  network.InterfacesClient
+	loadBalancers      network.LoadBalancersClient
 	appLens            applens.AppLensClient
 }
 
@@ -93,6 +91,7 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		routeTables:        network.NewRouteTablesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		storageAccounts:    storage.NewAccountsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		networkInterfaces:  network.NewInterfacesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		loadBalancers:      network.NewLoadBalancersClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		appLens:            appLensClient,
 	}, nil
 }
@@ -170,26 +169,4 @@ func (a *azureActions) AppLensListDetectors(ctx context.Context) ([]byte, error)
 	}
 
 	return json.Marshal(detectors)
-}
-
-func (a *azureActions) ResourceDeleteAndWait(ctx context.Context, resourceID string) error {
-	resource, err := azure.ParseResourceID(resourceID)
-	if err != nil {
-		return err
-	}
-
-	s := resource.Provider + "/" + resource.ResourceType
-
-	apiVersion := azureclient.APIVersion(strings.ToLower(s))
-
-	future, err := a.resources.DeleteByID(ctx, resourceID, apiVersion)
-	if err != nil {
-		return err
-	}
-
-	err = future.WaitForCompletionRef(ctx, a.resources.Client())
-	if err != nil {
-		return err
-	}
-	return nil
 }
