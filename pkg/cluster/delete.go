@@ -12,7 +12,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	policy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	runtime "github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	"github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -28,6 +33,106 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
+
+const (
+	moduleName    = "github.com/Azure/ARO-RP/pkg/cluster/delete.go"
+	moduleVersion = "0.0.1"
+)
+
+type DenyAssignmentsClient struct {
+	internal       *arm.Client
+	subscriptionID string
+}
+
+// New deny assignment client similar to other clients in https://github.com/Azure/azure-sdk-for-go/blob/main/sdk/resourcemanager/authorization/armauthorization/denyassignments_client.go
+func NewDenyAssignmentsClient(subscriptionID string, credential azcore.TokenCredential, options *arm.ClientOptions) (*DenyAssignmentsClient, error) {
+	cl, err := arm.NewClient(moduleName, moduleVersion, credential, options)
+	if err != nil {
+		return nil, err
+	}
+	client := &DenyAssignmentsClient{
+		subscriptionID: subscriptionID,
+		internal:       cl,
+	}
+	return client, nil
+}
+
+// getCreateRequest creates the deny assignment get request.
+func (m *manager) getDenyAssignmentRequest(ctx context.Context, client DenyAssignmentsClient) (*policy.Request, error) {
+	urlPath := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/microsoft.authorization/denyassignments", m.subscriptionDoc.ID, m.doc.ClusterResourceGroupIDKey)
+
+	req, err := runtime.NewRequest(ctx, http.MethodGet, runtime.JoinPaths(client.internal.Endpoint(), urlPath))
+	if err != nil {
+		return nil, err
+	}
+	reqQP := req.Raw().URL.Query()
+	reqQP.Set("api-version", "2022-04-01")
+	req.Raw().URL.RawQuery = reqQP.Encode()
+	req.Raw().Header["Accept"] = []string{"application/json"}
+	return req, nil
+}
+
+// getCreateRequest creates the deny assignment delete request.
+func (m *manager) deleteDenyAssignmentRequest(ctx context.Context, client DenyAssignmentsClient, denyAssignmentID string) (*policy.Request, error) {
+	urlPath := denyAssignmentID
+
+	req, err := runtime.NewRequest(ctx, http.MethodGet, runtime.JoinPaths(client.internal.Endpoint(), urlPath))
+	if err != nil {
+		return nil, err
+	}
+	reqQP := req.Raw().URL.Query()
+	reqQP.Set("api-version", "2022-04-01")
+	req.Raw().URL.RawQuery = reqQP.Encode()
+	req.Raw().Header["Accept"] = []string{"application/json"}
+	return req, nil
+}
+
+func (m *manager) deleteDenyAssignment(ctx context.Context) error {
+	if m.env.IsLocalDevelopmentMode() {
+		return nil
+	}
+
+	fpTokenCredential, err := m.env.FPNewClientCertificateCredential(m.subscriptionDoc.Subscription.Properties.TenantID)
+	if err != nil {
+		return err
+	}
+
+	client, err := NewDenyAssignmentsClient(m.subscriptionDoc.ID, fpTokenCredential, nil)
+	if err != nil {
+		return err
+	}
+
+	// Get the deny assignment
+	var denyAssignment authorization.DenyAssignment
+	get, err := m.getDenyAssignmentRequest(ctx, *client)
+	if err != nil {
+		return err
+	}
+	httpResp, err := client.internal.Pipeline().Do(get)
+	if err != nil {
+		return err
+	}
+	defer httpResp.Body.Close()
+
+	// Marshall response into type authorization.DenyAssignment
+	err = json.NewDecoder(httpResp.Body).Decode(&denyAssignment)
+	if err != nil {
+		return err
+	}
+
+	// Delete the deny assignment by ID
+	delete, err := m.deleteDenyAssignmentRequest(ctx, *client, *denyAssignment.ID)
+	if err != nil {
+		return err
+	}
+	d, err := client.internal.Pipeline().Do(delete)
+	if err != nil {
+		return err
+	}
+	defer d.Body.Close()
+
+	return nil
+}
 
 // deleteNic deletes the network interface resource by first fetching the resource using the interface
 // client, checking the provisioning state to ensure it is 'succeeded', and then deletes it
@@ -156,7 +261,7 @@ func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string
 // parallel and waiting for completion before we proceed.  Any type not in the
 // map is considered to be at level 0.  Keys must be lower case.
 var deleteOrder = map[string]int{
-	"microsoft.compute/virtualmachines":                 -3, // first, and before microsoft.compute/disks, microsoft.network/networkinterfaces
+	"microsoft.compute/virtualmachines":                 -3, // before microsoft.compute/disks and microsoft.network/networkinterfaces
 	"microsoft.network/privatelinkservices":             -3, // before microsoft.network/loadbalancers
 	"microsoft.network/privateendpoints":                -3, // before microsoft.network/networkinterfaces
 	"microsoft.compute/galleries/applications/versions": -2, // before microsoft.compute/galleries/applications
@@ -171,6 +276,12 @@ var deleteOrder = map[string]int{
 
 func (m *manager) deleteResources(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+
+	// Delete deny assignment first. In case deletion fails, resources can be cleaned up manually.
+	err := m.deleteDenyAssignment(ctx)
+	if err != nil {
+		return err
+	}
 
 	resources, err := m.resources.ListByResourceGroup(ctx, resourceGroup, "", "", nil)
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
