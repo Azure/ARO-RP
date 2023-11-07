@@ -43,6 +43,7 @@ require (
 	github.com/jewzaam/go-cosmosdb v0.0.0-20230924011506-8f8942a01991
 	github.com/jongio/azidext/go/azidext v0.5.0
 	github.com/microsoft/kiota-abstractions-go v1.2.0
+	github.com/microsoft/kiota-http-go v1.0.0
 	github.com/microsoft/kiota-serialization-form-go v1.0.0
 	github.com/microsoft/kiota-serialization-json-go v1.0.4
 	github.com/microsoft/kiota-serialization-multipart-go v1.0.0
@@ -190,7 +191,6 @@ require (
 	github.com/mattn/go-shellwords v1.0.12 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/microsoft/kiota-authentication-azure-go v1.0.0 // indirect
-	github.com/microsoft/kiota-http-go v1.0.0 // indirect
 	github.com/miekg/pkcs11 v1.1.1 // indirect
 	github.com/mistifyio/go-zfs/v3 v3.0.0 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
