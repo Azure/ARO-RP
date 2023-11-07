@@ -268,7 +268,7 @@ func (a *NetHttpRequestAdapter) getRequestFromRequestInformation(ctx context.Con
 		spanForAttributes.SetAttributes(attribute.String("http.uri", uri.String()))
 	}
 
-	request, err := nethttp.NewRequestWithContext(ctx, requestInfo.Method.String(), uri.String(), nil)
+	request, err := nethttp.NewRequestWithContext(ctx, requestInfo.Method.String(), uri.String()+"?whatin", nil)
 
 	if err != nil {
 		spanForAttributes.RecordError(err)
