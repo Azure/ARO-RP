@@ -13,7 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	s "github.com/microsoft/kiota-abstractions-go/serialization"
-	t "github.com/yosida95/uritemplate/v3"
+	stduritemplate "github.com/std-uritemplate/std-uritemplate/go"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -72,38 +72,19 @@ func (request *RequestInformation) GetUri() (*u.URL, error) {
 			return nil, errors.New("pathParameters must contain a value for \"baseurl\" for the url to be built")
 		}
 
-		uriTemplate, err := t.New(request.UrlTemplate)
-		if err != nil {
-			return nil, err
-		}
-		values := t.Values{}
-		varNames := uriTemplate.Varnames()
-		normalizedNames := make(map[string]string)
-		for _, varName := range varNames {
-			normalizedNames[strings.ToLower(varName)] = varName
-		}
+		substitutions := make(map[string]any)
 		for key, value := range request.PathParameters {
-			addParameterWithOriginalName(key, value, normalizedNames, values)
+			substitutions[key] = value
 		}
 		for key, value := range request.QueryParameters {
-			addParameterWithOriginalName(key, value, normalizedNames, values)
+			substitutions[key] = value
 		}
-		url, err := uriTemplate.Expand(values)
+		url, err := stduritemplate.Expand(request.UrlTemplate, substitutions)
 		if err != nil {
 			return nil, err
 		}
 		uri, err := u.Parse(url)
 		return uri, err
-	}
-}
-
-// addParameterWithOriginalName adds the URI template parameter to the template using the right casing, because of go conventions, casing might have changed for the generated property
-func addParameterWithOriginalName(key string, value string, normalizedNames map[string]string, values t.Values) {
-	lowercaseKey := strings.ToLower(key)
-	if paramName, ok := normalizedNames[lowercaseKey]; ok {
-		values.Set(paramName, t.String(value))
-	} else {
-		values.Set(key, t.String(value))
 	}
 }
 
@@ -149,10 +130,16 @@ const contentTypeHeader = "Content-Type"
 const binaryContentType = "application/octet-steam"
 
 // SetStreamContent sets the request body to a binary stream.
+// Deprecated: Use SetStreamContentAndContentType instead.
 func (request *RequestInformation) SetStreamContent(content []byte) {
+	request.SetStreamContentAndContentType(content, binaryContentType)
+}
+
+// SetStreamContentAndContentType sets the request body to a binary stream with the specified content type.
+func (request *RequestInformation) SetStreamContentAndContentType(content []byte, contentType string) {
 	request.Content = content
 	if request.Headers != nil {
-		request.Headers.Add(contentTypeHeader, binaryContentType)
+		request.Headers.Add(contentTypeHeader, contentType)
 	}
 }
 
@@ -165,7 +152,7 @@ func (request *RequestInformation) setContentAndContentType(writer s.Serializati
 	}
 	request.Content = content
 	if request.Headers != nil {
-		request.Headers.Add(contentTypeHeader, contentType)
+		request.Headers.TryAdd(contentTypeHeader, contentType)
 	}
 	return nil
 }

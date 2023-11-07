@@ -11,6 +11,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+## [1.3.0] - 2023-10-12
+
+### Added
+
+- Added an overload method to set binary content with their content type.
+
+## [1.2.3] - 2023-10-05
+
+### Added
+
+- A tryAdd method to RequestHeaders
+
+## [1.2.2] - 2023-09-21
+
+### Changed
+
+- Switched the RFC 6570 implementation to std-uritemplate
+
+## [1.2.1] - 2023-09-06
+
+### Changed
+
+- Fixed a bug where serialization registries would always replace existing values. [#95](https://github.com/microsoft/kiota-abstractions-go/issues/95)
+
 ## [1.2.0] - 2023-07-26
 
 ### Added

@@ -18,6 +18,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/jongio/azidext/go/azidext"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
@@ -44,6 +45,7 @@ import (
 	redhatopenshift20230701preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2023-07-01-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
+	msgraph_errors "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
@@ -440,6 +442,9 @@ var _ = BeforeSuite(func() {
 	SetDefaultEventuallyPollingInterval(10 * time.Second)
 
 	if err := setup(context.Background()); err != nil {
+		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
+			spew.Dump(oDataError.GetErrorEscaped())
+		}
 		panic(err)
 	}
 })
@@ -448,6 +453,9 @@ var _ = AfterSuite(func() {
 	log.Info("AfterSuite")
 
 	if err := done(context.Background()); err != nil {
+		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
+			spew.Dump(oDataError.GetErrorEscaped())
+		}
 		panic(err)
 	}
 })

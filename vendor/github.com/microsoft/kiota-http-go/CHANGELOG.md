@@ -11,6 +11,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+## [1.1.0] - 2023-08-11
+
+### Added
+
+- Added headers inspection middleware and option.
+
+## [1.0.1] - 2023-07-19
+
+### Changed
+
+- Bug Fix: Update Host for Redirect URL in go client.
+
 ## [1.0.0] - 2023-05-04
 
 ### Changed
