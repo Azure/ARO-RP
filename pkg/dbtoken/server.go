@@ -97,7 +97,7 @@ func NewServer(
 }
 
 func healthCheck(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusOK)
 }
 
 func (s *server) Run(ctx context.Context) error {

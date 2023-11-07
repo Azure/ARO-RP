@@ -15,6 +15,9 @@ permissions:
   contents: read
   security-events: write
 
+env:
+  GOFLAGS: -tags=aro,containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
+
 jobs:
   analyze:
     name: Analyze
@@ -32,12 +35,6 @@ jobs:
             runs-on: ['ubuntu-latest']
 
     steps:
-    - name: Install dependencies
-      if: matrix.language == 'go'
-      run: |
-        sudo apt-get update
-        sudo apt-get install libbtrfs-dev libgpgme-dev libdevmapper-dev
-
     - name: Checkout repository
       uses: actions/checkout@v4
 

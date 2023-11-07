@@ -51,7 +51,7 @@ func TestEsureDeleted(t *testing.T) {
 		NegotiatedSerializer: resource.UnstructuredPlusDefaultContentConfig().NegotiatedSerializer,
 		Client: fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
 			switch req.Method {
-			case "DELETE":
+			case http.MethodDelete:
 				switch req.URL.Path {
 				case "/apis/metal3.io/v1alpha1/namespaces/test-ns-1/configmap/test-name-1":
 					return &http.Response{StatusCode: http.StatusNotFound}, nil

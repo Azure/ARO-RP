@@ -279,9 +279,9 @@ var _ = Describe("ARO Operator - Conditions", func() {
 			co, err := clients.ConfigClient.ConfigV1().ClusterOperators().Get(ctx, "aro", metav1.GetOptions{})
 			g.Expect(err).NotTo(HaveOccurred())
 
-			g.Expect(cov1Helpers.IsStatusConditionTrue(co.Status.Conditions, configv1.OperatorAvailable))
-			g.Expect(cov1Helpers.IsStatusConditionFalse(co.Status.Conditions, configv1.OperatorProgressing))
-			g.Expect(cov1Helpers.IsStatusConditionFalse(co.Status.Conditions, configv1.OperatorDegraded))
+			g.Expect(cov1Helpers.IsStatusConditionTrue(co.Status.Conditions, configv1.OperatorAvailable)).To(BeTrue())
+			g.Expect(cov1Helpers.IsStatusConditionFalse(co.Status.Conditions, configv1.OperatorProgressing)).To(BeTrue())
+			g.Expect(cov1Helpers.IsStatusConditionFalse(co.Status.Conditions, configv1.OperatorDegraded)).To(BeTrue())
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).WithTimeout(timeout).Should(Succeed())
 	})
 })

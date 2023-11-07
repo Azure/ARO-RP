@@ -25,7 +25,7 @@ var _ = Describe("List clusters", func() {
 				break
 			}
 		}
-		Expect(found).To(Equal(true))
+		Expect(found).To(BeTrue())
 	})
 
 	// listByResourceGroup test marked Pending (X), don't reenable until ARM caching issue is fixed, see https://github.com/Azure/ARO-RP/pull/1995
@@ -42,6 +42,6 @@ var _ = Describe("List clusters", func() {
 				break
 			}
 		}
-		Expect(found).To(Equal(true))
+		Expect(found).To(BeTrue())
 	})
 })

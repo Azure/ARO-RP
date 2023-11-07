@@ -28,6 +28,6 @@ var _ = Describe("Monitor", func() {
 
 		By("running the monitor once")
 		errs := mon.Monitor(ctx)
-		Expect(errs).To(HaveLen(0))
+		Expect(errs).To(BeEmpty())
 	})
 })

@@ -82,7 +82,7 @@ var _ = Describe("Update cluster Managed Outbound IPs", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking effectiveOutboundIPs has been updated")
-		Expect(len(*oc.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIps)).To(Equal(5))
+		Expect(*oc.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIps).To(HaveLen(5))
 
 		By("checking outbound-rule-4 has required number IPs")
 		lb, err := clients.LoadBalancers.Get(ctx, rgName, lbName, "")
@@ -99,7 +99,7 @@ var _ = Describe("Update cluster Managed Outbound IPs", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking effectiveOutboundIPs has been updated")
-		Expect(len(*oc.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIps)).To(Equal(1))
+		Expect(*oc.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIps).To(HaveLen(1))
 
 		By("checking outbound-rule-4 has required number of IPs")
 		lb, err = clients.LoadBalancers.Get(ctx, rgName, lbName, "")

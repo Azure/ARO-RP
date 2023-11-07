@@ -60,7 +60,7 @@ func getTokenURLFromConsoleURL(consoleURL string) (*url.URL, error) {
 }
 
 func getAuthorizedToken(ctx context.Context, tokenURL *url.URL, username, password string) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", tokenURL.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, tokenURL.String(), nil)
 	if err != nil {
 		return "", err
 	}
