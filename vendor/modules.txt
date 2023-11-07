@@ -843,6 +843,12 @@ github.com/modern-go/reflect2
 # github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00
 ## explicit
 github.com/monochromegane/go-gitignore
+# github.com/motemen/go-loghttp v0.0.0-20231107055348-29ae44b293f4
+## explicit; go 1.20
+github.com/motemen/go-loghttp
+# github.com/motemen/go-nuts v0.0.0-20220604134737-2658d0104f31
+## explicit; go 1.16
+github.com/motemen/go-nuts/roundtime
 # github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
 ## explicit
 github.com/munnerz/goautoneg

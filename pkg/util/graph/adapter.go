@@ -4,8 +4,14 @@ package graph
 // Licensed under the Apache License 2.0.
 
 import (
+	"log"
+	"net/http"
+	"net/http/httputil"
+
 	absauth "github.com/microsoft/kiota-abstractions-go/authentication"
+	kiotahttp "github.com/microsoft/kiota-http-go"
 	core "github.com/microsoftgraph/msgraph-sdk-go-core"
+	"github.com/motemen/go-loghttp"
 )
 
 var clientOptions = core.GraphClientOptions{
@@ -24,7 +30,19 @@ type GraphRequestAdapter struct {
 // Returns:
 // a new GraphRequestAdapter
 func NewGraphRequestAdapter(authenticationProvider absauth.AuthenticationProvider) (*GraphRequestAdapter, error) {
-	baseAdapter, err := core.NewGraphRequestAdapterBaseWithParseNodeFactoryAndSerializationWriterFactoryAndHttpClient(authenticationProvider, clientOptions, nil, nil, nil)
+	httpClient := kiotahttp.GetDefaultClient()
+	httpClient.Transport = &loghttp.Transport{
+		Transport: httpClient.Transport,
+		LogRequest: func(req *http.Request) {
+			data, _ := httputil.DumpRequestOut(req, true)
+			log.Writer().Write(data)
+		},
+		LogResponse: func(resp *http.Response) {
+			data, _ := httputil.DumpResponse(resp, true)
+			log.Writer().Write(data)
+		},
+	}
+	baseAdapter, err := core.NewGraphRequestAdapterBaseWithParseNodeFactoryAndSerializationWriterFactoryAndHttpClient(authenticationProvider, clientOptions, nil, nil, httpClient)
 	if err != nil {
 		return nil, err
 	}
