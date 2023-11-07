@@ -13,13 +13,17 @@ import (
 	msgraph_apps "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/applications"
 	msgraph_models "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models"
 	msgraph_errors "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
+	"github.com/davecgh/go-spew/spew"
 )
 
 func (c *Cluster) createApplication(ctx context.Context, displayName string) (string, string, error) {
 	appBody := msgraph_models.NewApplication()
 	appBody.SetDisplayName(&displayName)
+	spew.Print(appBody)
+	fmt.Printf("posting application")
 	appResult, err := c.spGraphClient.Applications().Post(ctx, appBody, nil)
 	if err != nil {
+		fmt.Printf("failed to fetch the from post applications")
 		return "", "", err
 	}
 
@@ -35,8 +39,10 @@ func (c *Cluster) createApplication(ctx context.Context, displayName string) (st
 	// ByApplicationId is confusingly named, but it refers to
 	// the application's Object ID, not to the Application ID.
 	// https://learn.microsoft.com/en-us/graph/api/application-addpassword?view=graph-rest-1.0&tabs=http#http-request
+	fmt.Printf("adding password on application")
 	pwResult, err := c.spGraphClient.Applications().ByApplicationId(id).AddPassword().Post(ctx, pwCredentialRequestBody, nil)
 	if err != nil {
+		fmt.Printf("failed to add password to application")
 		return "", "", err
 	}
 
