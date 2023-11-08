@@ -44,13 +44,15 @@ var rhKeys = []string{"registry.redhat.io", "cloud.openshift.com", "registry.con
 type Reconciler struct {
 	log *logrus.Entry
 
-	client client.Client
+	client         client.Client
+	registryClient pullsecret.RegistryClient
 }
 
 func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
-		log:    log,
-		client: client,
+		log:            log,
+		client:         client,
+		registryClient: pullsecret.NewRegistryClient(),
 	}
 }
 
@@ -193,8 +195,7 @@ func (r *Reconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret,
 			return secret, err
 		}
 
-		rc := pullsecret.NewRegistryClient()
-		err = rc.ValidatePullSecret(ctx, secret)
+		err = r.registryClient.ValidatePullSecret(ctx, secret)
 		return secret, err
 	}
 
@@ -203,8 +204,7 @@ func (r *Reconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret,
 		return secret, err
 	}
 
-	rc := pullsecret.NewRegistryClient()
-	err = rc.ValidatePullSecret(ctx, secret)
+	err = r.registryClient.ValidatePullSecret(ctx, secret)
 	return secret, err
 }
 

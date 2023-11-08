@@ -170,18 +170,18 @@ func Build(oc *api.OpenShiftCluster, ps string) (string, error) {
 	return pullSecret, nil
 }
 
-type registryClient struct {
-	checkAuth func(context.Context, *types.SystemContext, string, string, string) error
+type RegistryClient struct {
+	CheckAuth func(context.Context, *types.SystemContext, string, string, string) error
 }
 
-func NewRegistryClient() registryClient {
-	return registryClient{
-		checkAuth: dockerregistry.CheckAuth,
+func NewRegistryClient() RegistryClient {
+	return RegistryClient{
+		CheckAuth: dockerregistry.CheckAuth,
 	}
 }
 
 // ValidatePullSecret validates a passed in pull secret by attempting to log in to the registry
-func (r *registryClient) ValidatePullSecret(ctx context.Context, secret *corev1.Secret) error {
+func (r *RegistryClient) ValidatePullSecret(ctx context.Context, secret *corev1.Secret) error {
 	dockerConfig, err := UnmarshalSecretData(secret)
 	if err != nil {
 		return err
@@ -200,7 +200,7 @@ func (r *registryClient) ValidatePullSecret(ctx context.Context, secret *corev1.
 		if err != nil {
 			return err
 		}
-		err = r.checkAuth(ctx, nil, auth[0], auth[1], registry)
+		err = r.CheckAuth(ctx, nil, auth[0], auth[1], registry)
 		if err != nil {
 			return fmt.Errorf("failed to authenticate to registry %s: %w", registry, err)
 		}

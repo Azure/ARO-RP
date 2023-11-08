@@ -103,9 +103,7 @@ func (m *manager) adminUpdate() []steps.Step {
 	if isEverything {
 		toRun = append(toRun,
 			steps.Action(m.ensureGatewayUpgrade),
-			steps.Condition(m.aroDeploymentReady, 5*time.Minute, true),
-			steps.Action(m.rotateACRTokenPassword),
-			steps.Action(m.validateACRToken),
+			steps.Condition(m.rotateAndValidateACRTokenPassword, 5*time.Minute, true),
 		)
 	}
 
@@ -198,9 +196,7 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Action(m.createOrUpdateDenyAssignment),
 		steps.Action(m.startVMs),
 		steps.Condition(m.apiServersReady, 30*time.Minute, true),
-		steps.Condition(m.aroDeploymentReady, 5*time.Minute, true),
-		steps.Action(m.rotateACRTokenPassword),
-		steps.Action(m.validateACRToken),
+		steps.Condition(m.rotateAndValidateACRTokenPassword, 5*time.Minute, true),
 		steps.Action(m.configureAPIServerCertificate),
 		steps.Action(m.configureIngressCertificate),
 		steps.Action(m.renewMDSDCertificate),

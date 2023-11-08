@@ -379,13 +379,13 @@ func TestUnmarshalSecretData(t *testing.T) {
 
 func TestValidatePullSecret(t *testing.T) {
 	azurecrError := "unable to retrieve auth token: invalid username/password: unauthorized: authentication required, visit https://aka.ms/acr/authorization for more information."
-	erroringRegistry := registryClient{
-		checkAuth: func(ctx context.Context, sc *types.SystemContext, s1, s2, s3 string) error {
+	erroringRegistry := RegistryClient{
+		CheckAuth: func(ctx context.Context, sc *types.SystemContext, s1, s2, s3 string) error {
 			return fmt.Errorf(azurecrError)
 		},
 	}
-	succeedingRegistry := registryClient{
-		checkAuth: func(ctx context.Context, sc *types.SystemContext, s1, s2, s3 string) error {
+	succeedingRegistry := RegistryClient{
+		CheckAuth: func(ctx context.Context, sc *types.SystemContext, s1, s2, s3 string) error {
 			return nil
 		},
 	}
@@ -394,7 +394,7 @@ func TestValidatePullSecret(t *testing.T) {
 		ps       *corev1.Secret
 		wantAuth map[string]string
 		wantErr  string
-		client   registryClient
+		client   RegistryClient
 	}{
 		{
 			name: "ok secret",

@@ -70,21 +70,21 @@ func (m *manager) ensureACRToken(ctx context.Context) error {
 	return nil
 }
 
-func (m *manager) rotateACRTokenPassword(ctx context.Context) error {
+func (m *manager) rotateAndValidateACRTokenPassword(ctx context.Context) (bool, error) {
 	// we do not want to rotate tokens in local development
 	if m.env.IsLocalDevelopmentMode() || m.env.IsCI() {
-		return nil
+		return true, nil
 	}
 
 	token, err := acrtoken.NewManager(m.env, m.localFpAuthorizer)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	registryProfile := token.GetRegistryProfile(m.doc.OpenShiftCluster)
 	err = token.RotateTokenPassword(ctx, registryProfile)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
@@ -92,14 +92,14 @@ func (m *manager) rotateACRTokenPassword(ctx context.Context) error {
 		return nil
 	})
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// update cluster pull secret in openshift-azure-operator namespace
 	// secret is stored as a .dockerconfigjson string in the .dockerconfigjson key
 	encodedDockerConfigJson, _, err := pullsecret.SetRegistryProfiles("", registryProfile)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// wait for response from operator that reconciliation is completed successfully
@@ -114,16 +114,20 @@ func (m *manager) rotateACRTokenPassword(ctx context.Context) error {
 
 	_, err = m.kubernetescli.CoreV1().Secrets(operator.Namespace).Update(ctx, pullSecret, metav1.UpdateOptions{})
 	if err != nil {
-		return err
+		return false, err
 	}
 	err = retryOperation(func() error {
-		return m.rotateOpenShiftConfigSecret(ctx, pullSecret.Data[corev1.DockerConfigJsonKey])
+		e := m.rotateOpenShiftConfigSecret(ctx, pullSecret.Data[corev1.DockerConfigJsonKey])
+		if e != nil {
+			return e
+		}
+		return m.validateACRToken(ctx)
 	})
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	return nil
+	return true, nil
 }
 
 func (m *manager) rotateOpenShiftConfigSecret(ctx context.Context, encodedDockerConfigJson []byte) error {
