@@ -22,6 +22,7 @@ jobs:
     variables:
       ARO_PODMAN_SOCKET: "tcp://localhost:8888"
       ARO_SELENIUM_HOSTNAME: "localhost"
+      ARO_MSGRAPH_TRACE: "1"
     pool:
       name: 1es-aro-ci-pool
     steps:

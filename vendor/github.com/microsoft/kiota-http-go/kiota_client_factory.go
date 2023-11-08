@@ -79,7 +79,7 @@ func GetDefaultMiddlewares() []Middleware {
 	return []Middleware{
 		NewRetryHandler(),
 		NewRedirectHandler(),
-		NewCompressionHandler(),
+		//NewCompressionHandler(),
 		NewParametersNameDecodingHandler(),
 		NewUserAgentHandler(),
 	}
