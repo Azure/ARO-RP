@@ -56,6 +56,7 @@ require (
 	github.com/opencontainers/runtime-spec v1.0.3-0.20220825212826-86290f6a00fb
 	github.com/openshift/api v3.9.1-0.20191111211345-a27ff30ebf09+incompatible
 	github.com/openshift/client-go v0.0.0-20220525160904-9e1acff93e4a
+	github.com/openshift/cloud-credential-operator v0.0.0-00010101000000-000000000000
 	github.com/openshift/console-operator v0.0.0-20220407014945-45d37e70e0c2
 	github.com/openshift/hive/apis v0.0.0
 	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
