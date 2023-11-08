@@ -4,23 +4,32 @@ package genevalogging
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/golang/mock/gomock"
 	operatorv1 "github.com/openshift/api/operator/v1"
+	securityv1 "github.com/openshift/api/security/v1"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
+	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
+	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 func getContainer(d *appsv1.DaemonSet, containerName string) (corev1.Container, error) {
@@ -33,11 +42,32 @@ func getContainer(d *appsv1.DaemonSet, containerName string) (corev1.Container, 
 }
 
 func TestGenevaLoggingDaemonset(t *testing.T) {
+	nominalMocks := func(mockDh *mock_dynamichelper.MockInterface) {
+		mockDh.EXPECT().Ensure(
+			gomock.Any(),
+			gomock.AssignableToTypeOf(&securityv1.SecurityContextConstraints{}),
+			gomock.AssignableToTypeOf(&corev1.Namespace{}),
+			gomock.AssignableToTypeOf(&corev1.ConfigMap{}),
+			gomock.AssignableToTypeOf(&corev1.Secret{}),
+			gomock.AssignableToTypeOf(&corev1.ServiceAccount{}),
+			gomock.AssignableToTypeOf(&appsv1.DaemonSet{}),
+		).Times(1)
+	}
+
+	defaultConditions := []operatorv1.OperatorCondition{
+		utilconditions.ControllerDefaultAvailable(ControllerName),
+		utilconditions.ControllerDefaultProgressing(ControllerName),
+		utilconditions.ControllerDefaultDegraded(ControllerName),
+	}
+
 	tests := []struct {
 		name              string
 		request           ctrl.Request
 		operatorFlags     arov1alpha1.OperatorFlags
 		validateDaemonset func(*appsv1.DaemonSet) []error
+		mocks             func(mockDh *mock_dynamichelper.MockInterface)
+		wantErrMsg        string
+		wantConditions    []operatorv1.OperatorCondition
 	}{
 		{
 			name: "no flags given",
@@ -71,6 +101,9 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 
 				return
 			},
+			mocks:          nominalMocks,
+			wantErrMsg:     "",
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "fluentbit changed",
@@ -105,6 +138,9 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 
 				return
 			},
+			mocks:          nominalMocks,
+			wantErrMsg:     "",
+			wantConditions: defaultConditions,
 		},
 		{
 			name: "mdsd changed",
@@ -139,13 +175,23 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 
 				return
 			},
+			mocks:      nominalMocks,
+			wantErrMsg: "",
+			wantConditions: []operatorv1.OperatorCondition{
+				utilconditions.ControllerDefaultAvailable(ControllerName),
+				utilconditions.ControllerDefaultProgressing(ControllerName),
+				utilconditions.ControllerDefaultDegraded(ControllerName),
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
 			instance := &arov1alpha1.Cluster{
 				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-				Status:     arov1alpha1.ClusterStatus{Conditions: []operatorv1.OperatorCondition{}},
+				Status:     arov1alpha1.ClusterStatus{Conditions: defaultConditions},
 				Spec: arov1alpha1.ClusterSpec{
 					ResourceID:    testdatabase.GetResourcePath("00000000-0000-0000-0000-000000000000", "testcluster"),
 					OperatorFlags: tt.operatorFlags,
@@ -153,9 +199,34 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 				},
 			}
 
+			resources := []client.Object{
+				instance,
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: operator.Namespace,
+						Name:      operator.SecretName,
+					},
+					Data: map[string][]byte{
+						GenevaCertName: {},
+						GenevaKeyName:  {},
+					},
+				},
+				&securityv1.SecurityContextConstraints{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "privileged",
+					},
+				},
+			}
+
+			mockDh := mock_dynamichelper.NewMockInterface(controller)
+
 			r := &Reconciler{
-				log:    logrus.NewEntry(logrus.StandardLogger()),
-				client: ctrlfake.NewClientBuilder().WithObjects(instance).Build(),
+				AROController: base.AROController{
+					Log:    logrus.NewEntry(logrus.StandardLogger()),
+					Client: ctrlfake.NewClientBuilder().WithObjects(resources...).Build(),
+					Name:   ControllerName,
+				},
+				dh: mockDh,
 			}
 
 			daemonset, err := r.daemonset(instance)
@@ -167,6 +238,13 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 			for _, err := range errs {
 				t.Error(err)
 			}
+
+			tt.mocks(mockDh)
+			ctx := context.Background()
+			_, err = r.Reconcile(ctx, tt.request)
+
+			utilerror.AssertErrorMessage(t, err, tt.wantErrMsg)
+			utilconditions.AssertControllerConditions(t, ctx, r.Client, tt.wantConditions)
 		})
 	}
 }
