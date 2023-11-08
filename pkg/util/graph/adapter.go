@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"net/http/httputil"
-	"os"
 
 	absauth "github.com/microsoft/kiota-abstractions-go/authentication"
 	kiotahttp "github.com/microsoft/kiota-http-go"
@@ -54,9 +53,12 @@ func (t *DebugTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 // a new GraphRequestAdapter
 func NewGraphRequestAdapter(authenticationProvider absauth.AuthenticationProvider) (*GraphRequestAdapter, error) {
 	httpClient := kiotahttp.GetDefaultClient()
-	if _, doTrace := os.LookupEnv(ENV_DEBUG_TRACE); doTrace {
-		httpClient.Transport = &DebugTransport{Transport: httpClient.Transport}
+	httpClient.Transport = &http.Transport{
+		DisableCompression: true,
 	}
+
+	httpClient.Transport = &DebugTransport{Transport: httpClient.Transport}
+
 	baseAdapter, err := core.NewGraphRequestAdapterBaseWithParseNodeFactoryAndSerializationWriterFactoryAndHttpClient(authenticationProvider, clientOptions, nil, nil, httpClient)
 	if err != nil {
 		return nil, err
