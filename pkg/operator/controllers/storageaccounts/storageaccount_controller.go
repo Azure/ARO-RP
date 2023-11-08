@@ -6,6 +6,8 @@ package storageaccounts
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -88,6 +90,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	subnets, err := r.getSubnetsToReconcile(ctx, instance, subscriptionId, manager)
 	if err != nil {
+		if retryAfter, ok := errIsRateLimited(err); ok {
+			return reconcile.Result{RequeueAfter: retryAfter}, nil
+		}
 		return reconcile.Result{}, err
 	}
 
@@ -98,6 +103,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	err = manager.reconcileAccounts(ctx, subnets, storageAccounts)
 	if err != nil {
+		if retryAfter, ok := errIsRateLimited(err); ok {
+			return reconcile.Result{RequeueAfter: retryAfter}, nil
+		}
 		return reconcile.Result{}, err
 	}
 
@@ -171,6 +179,21 @@ func (r *Reconciler) getStorageAccountNames(ctx context.Context, instance *arov1
 		"cluster" + instance.Spec.StorageSuffix, // this is our creation, so name is deterministic
 		rc.Spec.Storage.Azure.AccountName,
 	}, nil
+}
+
+func errIsRateLimited(err error) (time.Duration, bool) {
+	if detailedErr, ok := err.(autorest.DetailedError); ok {
+		if detailedErr.StatusCode == http.StatusTooManyRequests {
+			retryAfter, err := time.ParseDuration(detailedErr.Response.Header.Get("Retry-After") + "s")
+			if err != nil {
+				return 0, false
+			}
+
+			return retryAfter, true
+		}
+	}
+
+	return 0, false
 }
 
 // SetupWithManager creates the controller

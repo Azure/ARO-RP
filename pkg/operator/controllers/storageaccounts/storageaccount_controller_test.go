@@ -6,6 +6,7 @@ package storageaccounts
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strconv"
 	"testing"
 	"time"
@@ -63,6 +64,14 @@ func TestReconcile(t *testing.T) {
 	log := logrus.NewEntry(logrus.StandardLogger())
 
 	errUnknown := fmt.Errorf("unknown err")
+	errTooManyRequests := autorest.DetailedError{
+		StatusCode: http.StatusTooManyRequests,
+		Response: &http.Response{
+			Header: http.Header{
+				"Retry-After": []string{"3600"},
+			},
+		},
+	}
 
 	for _, tt := range []struct {
 		name                               string
@@ -110,6 +119,22 @@ func TestReconcile(t *testing.T) {
 				return errUnknown
 			},
 			wantErr: errUnknown.Error(),
+		},
+		{
+			name:         "too many requests error during subnet checks - requeues",
+			operatorFlag: true,
+			fakeCheckClusterSubnetsToReconcile: func(ctx context.Context, subnets []string) ([]string, error) {
+				return nil, errTooManyRequests
+			},
+			wantRequeueAfter: 3600 * time.Second,
+		},
+		{
+			name:         "error during account reconciliation - returns direct error",
+			operatorFlag: true,
+			fakeReconcileAccounts: func(ctx context.Context, subnets []string, storageAccounts []string) error {
+				return errTooManyRequests
+			},
+			wantRequeueAfter: 3600 * time.Second,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
