@@ -37,6 +37,7 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
+	kubeutil "github.com/Azure/ARO-RP/pkg/util/kubernetes"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
@@ -49,6 +50,7 @@ var embeddedFiles embed.FS
 type Operator interface {
 	CreateOrUpdate(context.Context) error
 	IsReady(context.Context) (bool, error)
+	Restart(context.Context, []string) error
 	IsRunningDesiredVersion(context.Context) (bool, error)
 	RenewMDSDCertificate(context.Context) error
 }
@@ -403,6 +405,18 @@ func (o *operator) IsReady(ctx context.Context) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func (o *operator) Restart(ctx context.Context, deploymentNames []string) error {
+	for _, dn := range deploymentNames {
+		err := kubeutil.Restart(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), dn)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func checkOperatorDeploymentVersion(ctx context.Context, cli appsv1client.DeploymentInterface, name string, desiredVersion string) (bool, error) {

@@ -201,6 +201,8 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Action(m.renewMDSDCertificate),
 		steps.Action(m.updateOpenShiftSecret),
 		steps.Action(m.updateAROSecret),
+		steps.Action(m.restartAROOperatorMaster), // depends on m.updateOpenShiftSecret; the point of restarting is to pick up any changes made to the secret
+		steps.Condition(m.aroDeploymentReady, 20*time.Minute, true),
 		steps.Action(m.reconcileLoadBalancerProfile),
 	}
 
