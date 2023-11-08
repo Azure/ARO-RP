@@ -61,6 +61,7 @@ func NewGraphRequestAdapter(authenticationProvider absauth.AuthenticationProvide
 		kiotahttp.NewRedirectHandler(),
 		kiotahttp.NewParametersNameDecodingHandler(),
 		kiotahttp.NewUserAgentHandler(),
+		kiotahttp.NewCompressionHandler(),
 	}
 
 	httpClient := kiotahttp.GetDefaultClient(middlewares...)
