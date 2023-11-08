@@ -37,7 +37,7 @@ func authenticateWithMISE(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	// TODO(jonachang): need to cache the client when do this in production.
+	// TODO(jonachang): need to cache the client when in production.
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
