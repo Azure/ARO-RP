@@ -6,7 +6,6 @@ package storageaccounts
 import (
 	"context"
 	"net/http"
-	"strconv"
 	"testing"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
@@ -14,52 +13,20 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
-	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
-	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	mock_storage "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/storage"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
-	"github.com/Azure/ARO-RP/pkg/util/subnet"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 var (
-	location                 = "eastus"
-	subscriptionId           = "0000000-0000-0000-0000-000000000000"
-	clusterResourceGroupName = "aro-iljrzb5a"
-	clusterResourceGroupId   = "/subscriptions/" + subscriptionId + "/resourcegroups/" + clusterResourceGroupName
-	infraId                  = "abcd"
-	vnetResourceGroup        = "vnet-rg"
-	vnetName                 = "vnet"
-	subnetNameWorker         = "worker"
-	subnetNameMaster         = "master"
-	nsgv1MasterResourceId    = clusterResourceGroupId + "/providers/Microsoft.Network/networkSecurityGroups/" + infraId + apisubnet.NSGControlPlaneSuffixV1
-
-	storageSuffix              = "random-suffix"
-	clusterStorageAccountName  = "cluster" + storageSuffix
-	registryStorageAccountName = "image-registry-account"
-
-	resourceIdMaster = "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameMaster
-	resourceIdWorker = "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/" + subnetNameWorker
+	nsgv1MasterResourceId = managedResourceGroupId + "/providers/Microsoft.Network/networkSecurityGroups/" + infraId + apisubnet.NSGControlPlaneSuffixV1
 )
-
-func getValidClusterInstance(operatorFlag bool) *arov1alpha1.Cluster {
-	return &arov1alpha1.Cluster{
-		Spec: arov1alpha1.ClusterSpec{
-			ClusterResourceGroupID: clusterResourceGroupId,
-			Location:               location,
-			StorageSuffix:          storageSuffix,
-			OperatorFlags: arov1alpha1.OperatorFlags{
-				controllerEnabled: strconv.FormatBool(operatorFlag),
-			},
-		},
-	}
-}
 
 func getValidAccount(virtualNetworkResourceIDs []string) *mgmtstorage.Account {
 	account := &mgmtstorage.Account{
@@ -99,259 +66,87 @@ func getValidSubnet(resourceId string) *mgmtnetwork.Subnet {
 	return s
 }
 
-func TestReconcileManager(t *testing.T) {
+func TestCheckClusterSubnetsToReconcile(t *testing.T) {
 	log := logrus.NewEntry(logrus.StandardLogger())
+	additionalWorkerSubnetId := "/subscriptions/" + subscriptionId + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/virtualNetworks/" + vnetName + "/subnets/workerAdditional"
 
 	for _, tt := range []struct {
-		name         string
-		mocks        func(*mock_storage.MockAccountsClient, *mock_subnet.MockKubeManager, *mock_subnet.MockManager)
-		instance     func(*arov1alpha1.Cluster)
-		operatorFlag bool
-		wantErr      error
+		name           string
+		mocks          func(*mock_subnet.MockManager)
+		clusterSubnets []string
+		wantSubnets    []string
+		wantErr        string
 	}{
 		{
-			name:         "Operator Flag enabled - nothing to do",
-			operatorFlag: true,
-			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_subnet.MockManager) {
+			name: "no subnets have service endpoints - returns nothing",
+			mocks: func(mgmtSubnet *mock_subnet.MockManager) {
 				// Azure subnets
-				masterSubnet := getValidSubnet(resourceIdMaster)
-				workerSubnet := getValidSubnet(resourceIdWorker)
-
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdMaster).Return(masterSubnet, nil)
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdWorker).Return(workerSubnet, nil)
-
-				// cluster subnets
-				kubeSubnet.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
-					{
-						ResourceID: resourceIdMaster,
-						IsMaster:   true,
-					},
-					{
-						ResourceID: resourceIdWorker,
-						IsMaster:   false,
-					},
-				}, nil)
-
-				// storage objects in azure
-				result := getValidAccount([]string{resourceIdMaster, resourceIdWorker})
-				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, gomock.Any()).Return(*result, nil)
-				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, gomock.Any()).Return(*result, nil)
-			},
-		},
-		{
-			name:         "Operator Flag disabled - nothing to do",
-			operatorFlag: false,
-			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_subnet.MockManager) {
-				// Azure subnets
-				masterSubnet := getValidSubnet(resourceIdMaster)
-				workerSubnet := getValidSubnet(resourceIdWorker)
-
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdMaster).Return(masterSubnet, nil)
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdWorker).Return(workerSubnet, nil)
-
-				// cluster subnets
-				kubeSubnet.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
-					{
-						ResourceID: resourceIdMaster,
-						IsMaster:   true,
-					},
-					{
-						ResourceID: resourceIdWorker,
-						IsMaster:   false,
-					},
-				}, nil)
-
-				// storage objects in azure
-				result := getValidAccount([]string{resourceIdMaster, resourceIdWorker})
-				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, gomock.Any()).Return(*result, nil)
-				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, gomock.Any()).Return(*result, nil)
-			},
-		},
-		{
-			name:         "Operator Flag enabled - all rules to all accounts",
-			operatorFlag: true,
-			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_subnet.MockManager) {
-				// Azure subnets
-				masterSubnet := getValidSubnet(resourceIdMaster)
-				workerSubnet := getValidSubnet(resourceIdWorker)
-
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdMaster).Return(masterSubnet, nil)
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdWorker).Return(workerSubnet, nil)
-
-				// cluster subnets
-				kubeSubnet.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
-					{
-						ResourceID: resourceIdMaster,
-						IsMaster:   true,
-					},
-					{
-						ResourceID: resourceIdWorker,
-						IsMaster:   false,
-					},
-				}, nil)
-
-				// storage objects in azure
-				result := getValidAccount([]string{})
-				updated := mgmtstorage.AccountUpdateParameters{
-					AccountPropertiesUpdateParameters: &mgmtstorage.AccountPropertiesUpdateParameters{
-						NetworkRuleSet: getValidAccount([]string{resourceIdMaster, resourceIdWorker}).NetworkRuleSet,
-					},
-				}
-
-				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, gomock.Any()).Return(*result, nil)
-				storage.EXPECT().Update(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, updated)
-
-				// we can't reuse these from above due to fact how gomock handles objects.
-				// they are modified by the functions so they are not the same anymore
-				result = getValidAccount([]string{})
-				updated = mgmtstorage.AccountUpdateParameters{
-					AccountPropertiesUpdateParameters: &mgmtstorage.AccountPropertiesUpdateParameters{
-						NetworkRuleSet: getValidAccount([]string{resourceIdMaster, resourceIdWorker}).NetworkRuleSet,
-					},
-				}
-
-				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, gomock.Any()).Return(*result, nil)
-				storage.EXPECT().Update(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, updated)
-			},
-		},
-		{
-			name:         "Operator Flag enabled - not found error on getting worker subnet skips subnet",
-			operatorFlag: true,
-			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_subnet.MockManager) {
-				// Azure subnets
-				masterSubnet := getValidSubnet(resourceIdMaster)
-
-				notFoundErr := autorest.DetailedError{
-					StatusCode: http.StatusNotFound,
-				}
-
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdMaster).Return(masterSubnet, nil)
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdWorker).Return(nil, notFoundErr)
-
-				// cluster subnets
-				kubeSubnet.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
-					{
-						ResourceID: resourceIdMaster,
-						IsMaster:   true,
-					},
-					{
-						ResourceID: resourceIdWorker,
-						IsMaster:   false,
-					},
-				}, nil)
-
-				// storage objects in azure
-				result := getValidAccount([]string{})
-				updated := mgmtstorage.AccountUpdateParameters{
-					AccountPropertiesUpdateParameters: &mgmtstorage.AccountPropertiesUpdateParameters{
-						NetworkRuleSet: getValidAccount([]string{resourceIdMaster}).NetworkRuleSet,
-					},
-				}
-
-				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, gomock.Any()).Return(*result, nil)
-				storage.EXPECT().Update(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, updated)
-
-				// we can't reuse these from above due to fact how gomock handles objects.
-				// they are modified by the functions so they are not the same anymore
-				result = getValidAccount([]string{})
-				updated = mgmtstorage.AccountUpdateParameters{
-					AccountPropertiesUpdateParameters: &mgmtstorage.AccountPropertiesUpdateParameters{
-						NetworkRuleSet: getValidAccount([]string{resourceIdMaster}).NetworkRuleSet,
-					},
-				}
-
-				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, gomock.Any()).Return(*result, nil)
-				storage.EXPECT().Update(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, updated)
-			},
-		},
-		{
-			name:         "Operator flag enabled - worker subnet rule to all accounts because storage service endpoint on worker subnet",
-			operatorFlag: true,
-			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_subnet.MockManager) {
-				// Azure subnets
-				masterSubnet := getValidSubnet(resourceIdMaster)
-				workerSubnet := getValidSubnet(resourceIdWorker)
-
-				masterSubnet.ServiceEndpoints = nil
-
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdMaster).Return(masterSubnet, nil)
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdWorker).Return(workerSubnet, nil)
-
-				// cluster subnets
-				kubeSubnet.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
-					{
-						ResourceID: resourceIdMaster,
-						IsMaster:   true,
-					},
-					{
-						ResourceID: resourceIdWorker,
-						IsMaster:   false,
-					},
-				}, nil)
-
-				// storage objects in azure
-				result := getValidAccount([]string{})
-				updated := mgmtstorage.AccountUpdateParameters{
-					AccountPropertiesUpdateParameters: &mgmtstorage.AccountPropertiesUpdateParameters{
-						NetworkRuleSet: getValidAccount([]string{resourceIdWorker}).NetworkRuleSet,
-					},
-				}
-
-				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, gomock.Any()).Return(*result, nil)
-				storage.EXPECT().Update(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, updated)
-
-				// we can't reuse these from above due to fact how gomock handles objects.
-				// they are modified by the functions so they are not the same anymore
-				result = getValidAccount([]string{})
-				updated = mgmtstorage.AccountUpdateParameters{
-					AccountPropertiesUpdateParameters: &mgmtstorage.AccountPropertiesUpdateParameters{
-						NetworkRuleSet: getValidAccount([]string{resourceIdWorker}).NetworkRuleSet,
-					},
-				}
-
-				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, gomock.Any()).Return(*result, nil)
-				storage.EXPECT().Update(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, updated)
-			},
-		},
-		{
-			name:         "Operator flag enabled - nothing to do because no service endpoints",
-			operatorFlag: true,
-			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_subnet.MockManager) {
-				// Azure subnets
-				masterSubnet := getValidSubnet(resourceIdMaster)
-				workerSubnet := getValidSubnet(resourceIdWorker)
+				masterSubnet := getValidSubnet(masterSubnetId)
+				workerSubnet := getValidSubnet(workerSubnetId)
 
 				masterSubnet.ServiceEndpoints = nil
 				workerSubnet.ServiceEndpoints = nil
 
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdMaster).Return(masterSubnet, nil)
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdWorker).Return(workerSubnet, nil)
-
-				// cluster subnets
-				kubeSubnet.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
-					{
-						ResourceID: resourceIdMaster,
-						IsMaster:   true,
-					},
-					{
-						ResourceID: resourceIdWorker,
-						IsMaster:   false,
-					},
-				}, nil)
-
-				// storage objects in azure
-				result := getValidAccount([]string{})
-				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, gomock.Any()).Return(*result, nil)
-				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, gomock.Any()).Return(*result, nil)
+				mgmtSubnet.EXPECT().Get(gomock.Any(), masterSubnetId).Return(masterSubnet, nil)
+				mgmtSubnet.EXPECT().Get(gomock.Any(), workerSubnetId).Return(workerSubnet, nil)
 			},
+			clusterSubnets: []string{masterSubnetId, workerSubnetId},
+			wantSubnets:    []string{},
 		},
 		{
-			name:         "Operator flag enabled - nothing to do because the storage endpoint is there but the location does not match the cluster",
-			operatorFlag: true,
-			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_subnet.MockManager) {
+			name: "all subnets have service endpoints - returns all",
+			mocks: func(mgmtSubnet *mock_subnet.MockManager) {
 				// Azure subnets
-				masterSubnet := getValidSubnet(resourceIdMaster)
-				workerSubnet := getValidSubnet(resourceIdWorker)
+				masterSubnet := getValidSubnet(masterSubnetId)
+				workerSubnet := getValidSubnet(workerSubnetId)
+
+				mgmtSubnet.EXPECT().Get(gomock.Any(), masterSubnetId).Return(masterSubnet, nil)
+				mgmtSubnet.EXPECT().Get(gomock.Any(), workerSubnetId).Return(workerSubnet, nil)
+			},
+			clusterSubnets: []string{masterSubnetId, workerSubnetId},
+			wantSubnets:    []string{masterSubnetId, workerSubnetId},
+		},
+		{
+			name: "only worker subnet has service endpoint - returns only worker",
+			mocks: func(mgmtSubnet *mock_subnet.MockManager) {
+				// Azure subnets
+				masterSubnet := getValidSubnet(masterSubnetId)
+				workerSubnet := getValidSubnet(workerSubnetId)
+
+				masterSubnet.ServiceEndpoints = nil
+
+				mgmtSubnet.EXPECT().Get(gomock.Any(), masterSubnetId).Return(masterSubnet, nil)
+				mgmtSubnet.EXPECT().Get(gomock.Any(), workerSubnetId).Return(workerSubnet, nil)
+			},
+			clusterSubnets: []string{masterSubnetId, workerSubnetId},
+			wantSubnets:    []string{workerSubnetId},
+		},
+		{
+			name: "additional worker subnet not found, do not return",
+			mocks: func(mgmtSubnet *mock_subnet.MockManager) {
+				// Azure subnets
+				masterSubnet := getValidSubnet(masterSubnetId)
+				workerSubnet := getValidSubnet(workerSubnetId)
+
+				masterSubnet.ServiceEndpoints = nil
+
+				mgmtSubnet.EXPECT().Get(gomock.Any(), masterSubnetId).Return(masterSubnet, nil)
+				mgmtSubnet.EXPECT().Get(gomock.Any(), workerSubnetId).Return(workerSubnet, nil)
+
+				notFoundErr := autorest.DetailedError{
+					StatusCode: http.StatusNotFound,
+				}
+				mgmtSubnet.EXPECT().Get(gomock.Any(), additionalWorkerSubnetId).Return(nil, notFoundErr)
+			},
+			clusterSubnets: []string{masterSubnetId, workerSubnetId, additionalWorkerSubnetId},
+			wantSubnets:    []string{workerSubnetId},
+		},
+		{
+			name: "service endpoints exist but location does not match cluster",
+			mocks: func(mgmtSubnet *mock_subnet.MockManager) {
+				// Azure subnets
+				masterSubnet := getValidSubnet(masterSubnetId)
+				workerSubnet := getValidSubnet(workerSubnetId)
 
 				newMasterServiceEndpoints := []mgmtnetwork.ServiceEndpointPropertiesFormat{}
 
@@ -371,78 +166,153 @@ func TestReconcileManager(t *testing.T) {
 
 				workerSubnet.ServiceEndpoints = &newWorkerServiceEndpoints
 
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdMaster).Return(masterSubnet, nil)
-				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdWorker).Return(workerSubnet, nil)
-
-				// cluster subnets
-				kubeSubnet.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
-					{
-						ResourceID: resourceIdMaster,
-						IsMaster:   true,
-					},
-					{
-						ResourceID: resourceIdWorker,
-						IsMaster:   false,
-					},
-				}, nil)
-
-				// storage objects in azure
-				result := getValidAccount([]string{})
-				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, gomock.Any()).Return(*result, nil)
-				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, gomock.Any()).Return(*result, nil)
+				mgmtSubnet.EXPECT().Get(gomock.Any(), masterSubnetId).Return(masterSubnet, nil)
+				mgmtSubnet.EXPECT().Get(gomock.Any(), workerSubnetId).Return(workerSubnet, nil)
 			},
+			clusterSubnets: []string{masterSubnetId, workerSubnetId},
+			wantSubnets:    []string{},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			storage := mock_storage.NewMockAccountsClient(controller)
-			kubeSubnet := mock_subnet.NewMockKubeManager(controller)
-			subnet := mock_subnet.NewMockManager(controller)
+			mockSubnet := mock_subnet.NewMockManager(controller)
 
 			if tt.mocks != nil {
-				tt.mocks(storage, kubeSubnet, subnet)
+				tt.mocks(mockSubnet)
 			}
-
-			instance := getValidClusterInstance(tt.operatorFlag)
-			if tt.instance != nil {
-				tt.instance(instance)
-			}
-
-			rc := &imageregistryv1.Config{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "cluster",
-				},
-				Spec: imageregistryv1.ImageRegistrySpec{
-					Storage: imageregistryv1.ImageRegistryConfigStorage{
-						Azure: &imageregistryv1.ImageRegistryConfigStorageAzure{
-							AccountName: registryStorageAccountName,
-						},
-					},
-				},
-			}
-			clientFake := fake.NewClientBuilder().WithObjects(rc).Build()
 
 			r := reconcileManager{
-				log:            log,
-				instance:       instance,
-				subscriptionID: subscriptionId,
-				storage:        storage,
-				subnets:        subnet,
-				kubeSubnets:    kubeSubnet,
-				client:         clientFake,
+				log: log,
+
+				location:      location,
+				resourceGroup: managedResourceGroupName,
+
+				subnet: mockSubnet,
 			}
 
-			err := r.reconcileAccounts(context.Background())
-			if err != nil {
-				if tt.wantErr == nil {
-					t.Fatal(err)
-				}
-				if err.Error() != tt.wantErr.Error() || err == nil && tt.wantErr != nil {
-					t.Errorf("Expected Error %s, got %s when processing %s testcase", tt.wantErr.Error(), err.Error(), tt.name)
-				}
+			gotSubnets, err := r.checkClusterSubnetsToReconcile(context.Background(), tt.clusterSubnets)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			if diff := cmp.Diff(tt.wantSubnets, gotSubnets, cmpoptsSortStringSlices); diff != "" {
+				t.Errorf("wanted subnets %v but got %v, diff: %s", tt.wantSubnets, gotSubnets, diff)
 			}
+		})
+	}
+}
+
+func TestReconcileAccounts(t *testing.T) {
+	log := logrus.NewEntry(logrus.StandardLogger())
+
+	for _, tt := range []struct {
+		name            string
+		mocks           func(*mock_storage.MockAccountsClient)
+		subnets         []string
+		storageAccounts []string
+		wantErr         string
+	}{
+		{
+			name: "nothing to do",
+			mocks: func(storage *mock_storage.MockAccountsClient) {
+				// storage objects in azure
+				result := getValidAccount([]string{rpPeSubnetId, rpSubnetId, gwySubnetId, masterSubnetId, workerSubnetId})
+				storage.EXPECT().GetProperties(gomock.Any(), managedResourceGroupName, clusterStorageAccountName, gomock.Any()).Return(*result, nil)
+				storage.EXPECT().GetProperties(gomock.Any(), managedResourceGroupName, registryStorageAccountName, gomock.Any()).Return(*result, nil)
+			},
+			subnets:         []string{rpPeSubnetId, rpSubnetId, gwySubnetId, masterSubnetId, workerSubnetId},
+			storageAccounts: []string{clusterStorageAccountName, registryStorageAccountName},
+		},
+		{
+			name: "all rules to all accounts",
+			mocks: func(storage *mock_storage.MockAccountsClient) {
+				// storage objects in azure
+				result := getValidAccount([]string{})
+				updated := mgmtstorage.AccountUpdateParameters{
+					AccountPropertiesUpdateParameters: &mgmtstorage.AccountPropertiesUpdateParameters{
+						NetworkRuleSet: getValidAccount([]string{rpPeSubnetId, rpSubnetId, gwySubnetId, masterSubnetId, workerSubnetId}).NetworkRuleSet,
+					},
+				}
+
+				storage.EXPECT().GetProperties(gomock.Any(), managedResourceGroupName, clusterStorageAccountName, gomock.Any()).Return(*result, nil)
+				storage.EXPECT().Update(gomock.Any(), managedResourceGroupName, clusterStorageAccountName, updated)
+
+				// we can't reuse these from above due to fact how gomock handles objects.
+				// they are modified by the functions so they are not the same anymore
+				result = getValidAccount([]string{})
+				updated = mgmtstorage.AccountUpdateParameters{
+					AccountPropertiesUpdateParameters: &mgmtstorage.AccountPropertiesUpdateParameters{
+						NetworkRuleSet: getValidAccount([]string{rpPeSubnetId, rpSubnetId, gwySubnetId, masterSubnetId, workerSubnetId}).NetworkRuleSet,
+					},
+				}
+
+				storage.EXPECT().GetProperties(gomock.Any(), managedResourceGroupName, registryStorageAccountName, gomock.Any()).Return(*result, nil)
+				storage.EXPECT().Update(gomock.Any(), managedResourceGroupName, registryStorageAccountName, updated)
+			},
+			subnets:         []string{rpPeSubnetId, rpSubnetId, gwySubnetId, masterSubnetId, workerSubnetId},
+			storageAccounts: []string{clusterStorageAccountName, registryStorageAccountName},
+		},
+		{
+			name: "worker subnet rule to all accounts because storage service endpoint on worker subnet",
+			mocks: func(storage *mock_storage.MockAccountsClient) {
+				// storage objects in azure
+				result := getValidAccount([]string{})
+				updated := mgmtstorage.AccountUpdateParameters{
+					AccountPropertiesUpdateParameters: &mgmtstorage.AccountPropertiesUpdateParameters{
+						NetworkRuleSet: getValidAccount([]string{rpPeSubnetId, rpSubnetId, gwySubnetId, workerSubnetId}).NetworkRuleSet,
+					},
+				}
+
+				storage.EXPECT().GetProperties(gomock.Any(), managedResourceGroupName, clusterStorageAccountName, gomock.Any()).Return(*result, nil)
+				storage.EXPECT().Update(gomock.Any(), managedResourceGroupName, clusterStorageAccountName, updated)
+
+				// we can't reuse these from above due to fact how gomock handles objects.
+				// they are modified by the functions so they are not the same anymore
+				result = getValidAccount([]string{rpPeSubnetId, rpSubnetId, gwySubnetId})
+				updated = mgmtstorage.AccountUpdateParameters{
+					AccountPropertiesUpdateParameters: &mgmtstorage.AccountPropertiesUpdateParameters{
+						NetworkRuleSet: getValidAccount([]string{rpPeSubnetId, rpSubnetId, gwySubnetId, workerSubnetId}).NetworkRuleSet,
+					},
+				}
+
+				storage.EXPECT().GetProperties(gomock.Any(), managedResourceGroupName, registryStorageAccountName, gomock.Any()).Return(*result, nil)
+				storage.EXPECT().Update(gomock.Any(), managedResourceGroupName, registryStorageAccountName, updated)
+			},
+			subnets:         []string{rpPeSubnetId, rpSubnetId, gwySubnetId, workerSubnetId},
+			storageAccounts: []string{clusterStorageAccountName, registryStorageAccountName},
+		},
+		{
+			name: "nothing to do because no service endpoints",
+			mocks: func(storage *mock_storage.MockAccountsClient) {
+				// storage objects in azure
+				result := getValidAccount([]string{rpPeSubnetId, rpSubnetId, gwySubnetId})
+				storage.EXPECT().GetProperties(gomock.Any(), managedResourceGroupName, clusterStorageAccountName, gomock.Any()).Return(*result, nil)
+				storage.EXPECT().GetProperties(gomock.Any(), managedResourceGroupName, registryStorageAccountName, gomock.Any()).Return(*result, nil)
+			},
+			subnets:         []string{rpPeSubnetId, rpSubnetId, gwySubnetId},
+			storageAccounts: []string{clusterStorageAccountName, registryStorageAccountName},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			mockStorage := mock_storage.NewMockAccountsClient(controller)
+
+			if tt.mocks != nil {
+				tt.mocks(mockStorage)
+			}
+
+			r := reconcileManager{
+				log: log,
+
+				location:      location,
+				resourceGroup: managedResourceGroupName,
+
+				storage: mockStorage,
+			}
+
+			err := r.reconcileAccounts(context.Background(), tt.subnets, tt.storageAccounts)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

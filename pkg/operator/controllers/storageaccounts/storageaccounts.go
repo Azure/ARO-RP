@@ -5,39 +5,72 @@ package storageaccounts
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/to"
-	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
-	"k8s.io/apimachinery/pkg/types"
+	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
-	"github.com/Azure/ARO-RP/pkg/util/stringutils"
+	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
-func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
-	location := r.instance.Spec.Location
-	resourceGroup := stringutils.LastTokenByte(r.instance.Spec.ClusterResourceGroupID, '/')
+type manager interface {
+	checkClusterSubnetsToReconcile(ctx context.Context, clusterSubnets []string) ([]string, error)
+	reconcileAccounts(ctx context.Context, subnets []string, storageAccounts []string) error
+}
 
-	serviceSubnets := r.instance.Spec.ServiceSubnets
+type newManager func(
+	log *logrus.Entry,
+	location, subscriptionID, resourceGroup string,
+	azenv azureclient.AROEnvironment, authorizer autorest.Authorizer,
+) manager
 
-	subnets, err := r.kubeSubnets.List(ctx)
-	if err != nil {
-		return err
+// reconcileManager is instance of manager instantiated per request
+type reconcileManager struct {
+	log *logrus.Entry
+
+	location, resourceGroup string
+
+	subnet  subnet.Manager
+	storage storage.AccountsClient
+}
+
+func newReconcileManager(
+	log *logrus.Entry,
+
+	location, subscriptionID, resourceGroup string,
+
+	azenv azureclient.AROEnvironment,
+	authorizer autorest.Authorizer,
+) manager {
+	return &reconcileManager{
+		log: log,
+
+		location:      location,
+		resourceGroup: resourceGroup,
+
+		subnet:  subnet.NewManager(&azenv, subscriptionID, authorizer),
+		storage: storage.NewAccountsClient(&azenv, subscriptionID, authorizer),
 	}
+}
 
-	// Check each of the cluster subnets for the Microsoft.Storage service endpoint. If the subnet has
-	// the service endpoint, it needs to be included in the storage account vnet rules.
-	for _, subnet := range subnets {
-		mgmtSubnet, err := r.subnets.Get(ctx, subnet.ResourceID)
+// checkClusterSubnetsToReconcile will check cluster subnets for the Microsoft.Storage service endpoint.
+// If the subnet has the service endpoint, it needs to be included in the storage account vnet rules.
+func (r *reconcileManager) checkClusterSubnetsToReconcile(ctx context.Context, clusterSubnets []string) ([]string, error) {
+	subnetsToReconcile := []string{}
+
+	for _, subnet := range clusterSubnets {
+		mgmtSubnet, err := r.subnet.Get(ctx, subnet)
 		if err != nil {
 			if azureerrors.IsNotFoundError(err) {
-				r.log.Infof("Subnet %s not found, skipping", subnet.ResourceID)
+				r.log.Infof("Subnet %s not found, skipping", subnet)
 				break
 			}
-			return err
+			return nil, err
 		}
 
 		if mgmtSubnet.SubnetPropertiesFormat != nil && mgmtSubnet.SubnetPropertiesFormat.ServiceEndpoints != nil {
@@ -47,7 +80,7 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 
 				if serviceEndpoint.Locations != nil {
 					for _, l := range *serviceEndpoint.Locations {
-						if l == "*" || l == location {
+						if l == "*" || l == r.location {
 							matchesClusterLocation = true
 							break
 						}
@@ -55,37 +88,26 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 				}
 
 				if isStorageEndpoint && matchesClusterLocation {
-					serviceSubnets = append(serviceSubnets, subnet.ResourceID)
+					subnetsToReconcile = append(subnetsToReconcile, subnet)
 					break
 				}
 			}
 		}
 	}
 
-	rc := &imageregistryv1.Config{}
-	err = r.client.Get(ctx, types.NamespacedName{Name: "cluster"}, rc)
-	if err != nil {
-		return err
-	}
+	return subnetsToReconcile, nil
+}
 
-	if rc.Spec.Storage.Azure == nil {
-		return fmt.Errorf("azure storage field is nil in image registry config")
-	}
-
-	storageAccounts := []string{
-		"cluster" + r.instance.Spec.StorageSuffix, // this is our creation, so name is deterministic
-		rc.Spec.Storage.Azure.AccountName,
-	}
-
+func (r *reconcileManager) reconcileAccounts(ctx context.Context, subnets, storageAccounts []string) error {
 	for _, accountName := range storageAccounts {
 		var changed bool
 
-		account, err := r.storage.GetProperties(ctx, resourceGroup, accountName, "")
+		account, err := r.storage.GetProperties(ctx, r.resourceGroup, accountName, "")
 		if err != nil {
 			return err
 		}
 
-		for _, subnet := range serviceSubnets {
+		for _, subnet := range subnets {
 			// if subnet ResourceID was found and we need to append
 			found := false
 
@@ -115,7 +137,7 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 				},
 			}
 
-			_, err = r.storage.Update(ctx, resourceGroup, accountName, sa)
+			_, err = r.storage.Update(ctx, r.resourceGroup, accountName, sa)
 			if err != nil {
 				return err
 			}

@@ -5,8 +5,11 @@ package storageaccounts
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/types"
@@ -20,8 +23,8 @@ import (
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -36,26 +39,16 @@ type Reconciler struct {
 	log *logrus.Entry
 
 	client client.Client
-}
 
-// reconcileManager is instance of manager instantiated per request
-type reconcileManager struct {
-	log *logrus.Entry
-
-	instance       *arov1alpha1.Cluster
-	subscriptionID string
-
-	client      client.Client
-	kubeSubnets subnet.KubeManager
-	subnets     subnet.Manager
-	storage     storage.AccountsClient
+	newManager newManager
 }
 
 // NewReconciler creates a new Reconciler
 func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
-		log:    log,
-		client: client,
+		log:        log,
+		client:     client,
+		newManager: newReconcileManager,
 	}
 }
 
@@ -74,40 +67,110 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	r.log.Debug("running")
 
-	// Get endpoints from operator
-	azEnv, err := azureclient.EnvironmentFromName(instance.Spec.AZEnvironment)
+	location := instance.Spec.Location
+	resource, err := azure.ParseResourceID(instance.Spec.ResourceID)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	subscriptionId := resource.SubscriptionID
+	managedResourceGroupName := stringutils.LastTokenByte(instance.Spec.ClusterResourceGroupID, '/')
+
+	azEnv, authorizer, err := r.getAzureAuthorizer(ctx, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	resource, err := azure.ParseResourceID(instance.Spec.ResourceID)
+	manager := r.newManager(
+		r.log,
+		location, subscriptionId, managedResourceGroupName,
+		azEnv, authorizer,
+	)
+
+	subnets, err := r.getSubnetsToReconcile(ctx, instance, subscriptionId, manager)
 	if err != nil {
 		return reconcile.Result{}, err
+	}
+
+	storageAccounts, err := r.getStorageAccountNames(ctx, instance)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	err = manager.reconcileAccounts(ctx, subnets, storageAccounts)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	return reconcile.Result{}, nil
+}
+
+func (r *Reconciler) getAzureAuthorizer(ctx context.Context, instance *arov1alpha1.Cluster) (azureclient.AROEnvironment, autorest.Authorizer, error) {
+	// Get endpoints from operator
+	azEnv, err := azureclient.EnvironmentFromName(instance.Spec.AZEnvironment)
+	if err != nil {
+		return azureclient.AROEnvironment{}, nil, err
 	}
 
 	// create refreshable authorizer from token
 	azRefreshAuthorizer, err := clusterauthorizer.NewAzRefreshableAuthorizer(r.log, &azEnv, r.client)
 	if err != nil {
-		return reconcile.Result{}, err
+		return azureclient.AROEnvironment{}, nil, err
 	}
 
 	authorizer, err := azRefreshAuthorizer.NewRefreshableAuthorizerToken(ctx)
 	if err != nil {
-		return reconcile.Result{}, err
+		return azureclient.AROEnvironment{}, nil, err
 	}
 
-	manager := reconcileManager{
-		log:            r.log,
-		instance:       instance,
-		subscriptionID: resource.SubscriptionID,
+	return azEnv, authorizer, nil
+}
 
-		client:      r.client,
-		kubeSubnets: subnet.NewKubeManager(r.client, resource.SubscriptionID),
-		subnets:     subnet.NewManager(&azEnv, resource.SubscriptionID, authorizer),
-		storage:     storage.NewAccountsClient(&azEnv, resource.SubscriptionID, authorizer),
+func (r *Reconciler) getSubnetsToReconcile(ctx context.Context, instance *arov1alpha1.Cluster, subscriptionId string, m manager) ([]string, error) {
+	subnets := []string{}
+	subnets = append(subnets, instance.Spec.ServiceSubnets...)
+
+	clusterSubnets, err := r.getClusterSubnets(ctx, subscriptionId)
+	if err != nil {
+		return nil, err
+	}
+	clusterSubnetsToReconcile, err := m.checkClusterSubnetsToReconcile(ctx, clusterSubnets)
+	if err != nil {
+		return nil, err
+	}
+	subnets = append(subnets, clusterSubnetsToReconcile...)
+
+	return subnets, nil
+}
+
+func (r *Reconciler) getClusterSubnets(ctx context.Context, subscriptionId string) ([]string, error) {
+	kubeManager := subnet.NewKubeManager(r.client, subscriptionId)
+
+	subnets := []string{}
+
+	clusterSubnets, err := kubeManager.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, subnet := range clusterSubnets {
+		subnets = append(subnets, subnet.ResourceID)
+	}
+	return subnets, nil
+}
+
+func (r *Reconciler) getStorageAccountNames(ctx context.Context, instance *arov1alpha1.Cluster) ([]string, error) {
+	rc := &imageregistryv1.Config{}
+	err := r.client.Get(ctx, types.NamespacedName{Name: "cluster"}, rc)
+	if err != nil {
+		return nil, err
+	}
+	if rc.Spec.Storage.Azure == nil {
+		return nil, fmt.Errorf("azure storage field is nil in image registry config")
 	}
 
-	return reconcile.Result{}, manager.reconcileAccounts(ctx)
+	return []string{
+		"cluster" + instance.Spec.StorageSuffix, // this is our creation, so name is deterministic
+		rc.Spec.Storage.Azure.AccountName,
+	}, nil
 }
 
 // SetupWithManager creates the controller
