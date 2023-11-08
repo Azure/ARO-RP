@@ -19,10 +19,9 @@ import (
 
 func TestPreflightValidation(t *testing.T) {
 	ctx := context.Background()
-	apiVersion := "2022-04-01"
+	apiVersion := "2020-04-30"
 	clusterId := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName"
 	location := "eastus"
-	clusterProfileVersion := "4.11.44"
 	defaultProfile := "default"
 	resourceGroup := "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroupTest"
 	netProfile := "10.128.0.0/14"
@@ -84,7 +83,7 @@ func TestPreflightValidation(t *testing.T) {
 	}
 	`, apiVersion, clusterId, api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Name,
 		api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Type,
-		location, defaultProfile, resourceGroup, api.EncryptionAtHostEnabled, clusterProfileVersion,
+		location, defaultProfile, resourceGroup, api.EncryptionAtHostEnabled, version.DefaultInstallStream.Version.String(),
 		api.ExampleOpenShiftClusterDocument().ID, api.ExampleOpenShiftClusterDocument().ID,
 		netProfile, netProfile, api.VMSizeStandardD32sV3, masterSub,
 		api.EncryptionAtHostEnabled, encryptionSet,
@@ -95,10 +94,20 @@ func TestPreflightValidation(t *testing.T) {
 		encryptionSet, api.VisibilityPublic, defaultProfile, api.VisibilityPublic,
 		api.ExampleOpenShiftClusterDocument().OpenShiftCluster.Properties.IngressProfiles[0].IP))
 
+	defaultVersionChangeFeed := map[string]*api.OpenShiftVersion{
+		version.DefaultInstallStream.Version.String(): {
+			Properties: api.OpenShiftVersionProperties{
+				Version: version.DefaultInstallStream.Version.String(),
+				Enabled: true,
+			},
+		},
+	}
+
 	type test struct {
 		name             string
 		preflightRequest func() *api.PreflightRequest
 		fixture          func(*testdatabase.Fixture)
+		changeFeed       map[string]*api.OpenShiftVersion
 		wantStatusCode   int
 		wantError        string
 		wantResponse     *api.CloudError
@@ -117,6 +126,7 @@ func TestPreflightValidation(t *testing.T) {
 					},
 				})
 			},
+			changeFeed: defaultVersionChangeFeed,
 			preflightRequest: func() *api.PreflightRequest {
 				return &api.PreflightRequest{
 					Resources: []json.RawMessage{
@@ -188,6 +198,7 @@ func TestPreflightValidation(t *testing.T) {
 					},
 				})
 			},
+			changeFeed: defaultVersionChangeFeed,
 			preflightRequest: func() *api.PreflightRequest {
 				return &api.PreflightRequest{
 					Resources: []json.RawMessage{
@@ -293,7 +304,7 @@ func TestPreflightValidation(t *testing.T) {
 								Domain:               defaultProfile,
 								FipsValidatedModules: api.FipsValidatedModulesEnabled,
 								ResourceGroupID:      resourceGroup,
-								Version:              clusterProfileVersion,
+								Version:              version.DefaultInstallStream.Version.String(),
 							},
 							NetworkProfile: api.NetworkProfile{
 								PodCIDR:     netProfile,
@@ -400,13 +411,7 @@ func TestPreflightValidation(t *testing.T) {
 
 			go f.Run(ctx, nil, nil)
 			f.mu.Lock()
-			f.enabledOcpVersions = map[string]*api.OpenShiftVersion{
-				version.DefaultInstallStream.Version.String(): {
-					Properties: api.OpenShiftVersionProperties{
-						Version: version.DefaultInstallStream.Version.String(),
-					},
-				},
-			}
+			f.enabledOcpVersions = tt.changeFeed
 			f.mu.Unlock()
 
 			headers := http.Header{
