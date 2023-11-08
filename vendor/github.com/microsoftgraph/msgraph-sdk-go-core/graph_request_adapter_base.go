@@ -36,6 +36,9 @@ func NewGraphRequestAdapterBaseWithParseNodeFactoryAndSerializationWriterFactory
 	}
 	if httpClient == nil {
 		httpClient = GetDefaultClient(&clientOptions)
+		httpClient.Transport = &nethttp.Transport{
+			DisableCompression: true,
+		}
 	}
 	if serializationWriterFactory == nil {
 		serializationWriterFactory = absser.DefaultSerializationWriterFactoryInstance

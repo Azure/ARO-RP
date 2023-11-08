@@ -13,12 +13,17 @@ import (
 	msgraph_apps "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/applications"
 	msgraph_models "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models"
 	msgraph_errors "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
+	abstractions "github.com/microsoft/kiota-abstractions-go"
 )
 
 func (c *Cluster) createApplication(ctx context.Context, displayName string) (string, string, error) {
 	appBody := msgraph_models.NewApplication()
 	appBody.SetDisplayName(&displayName)
-	appResult, err := c.spGraphClient.Applications().Post(ctx, appBody, nil)
+	requestConfig := &msgraph_apps.ApplicationsRequestBuilderPostRequestConfiguration{
+		Headers: abstractions.NewRequestHeaders(),
+	}
+	requestConfig.Headers.Add("Accept-Encoding", "Identity")
+	appResult, err := c.spGraphClient.Applications().Post(ctx, appBody, requestConfig)
 	if err != nil {
 		return "", "", err
 	}
