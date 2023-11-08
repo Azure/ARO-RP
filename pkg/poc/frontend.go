@@ -14,7 +14,7 @@ import (
 // Licensed under the Apache License 2.0.
 
 // TODO(jonachang): remove this when go production.
-const enableMISE = false
+const enableMISE = true
 
 type frontend struct {
 	logger *logrus.Entry

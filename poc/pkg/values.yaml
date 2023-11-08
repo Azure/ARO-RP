@@ -92,7 +92,7 @@ keyVault:
   tlsCertificateName: aks-rp-certificate
 
 MISE:
-  MISE_AUTH_ENABLED: false
+  MISE_AUTH_ENABLED: true
   container:
     name: mise
     image: aropocsvc.azurecr.io/mise-sidecar:dev
