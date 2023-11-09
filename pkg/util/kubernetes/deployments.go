@@ -27,9 +27,5 @@ func Restart(ctx context.Context, cli appsv1client.DeploymentInterface, deployme
 
 	_, err = cli.Update(ctx, d, metav1.UpdateOptions{})
 
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }

@@ -13,9 +13,8 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -65,32 +64,24 @@ func (a *azRefreshableAuthorizer) NewRefreshableAuthorizerToken(ctx context.Cont
 }
 
 func GetTokenCredential(environment *azureclient.AROEnvironment) (azcore.TokenCredential, error) {
-	credential, err := azidentity.NewDefaultAzureCredential(environment.DefaultAzureCredentialOptions())
+	return azidentity.NewDefaultAzureCredential(environment.DefaultAzureCredentialOptions())
+}
 
+// AzCredentials gets Cluster Service Principal credentials from the Kubernetes secrets
+func AzCredentials(ctx context.Context, client client.Client) (*Credentials, error) {
+	clusterSPSecret := &corev1.Secret{}
+	err := client.Get(ctx, types.NamespacedName{Namespace: AzureCredentialSecretNameSpace, Name: AzureCredentialSecretName}, clusterSPSecret)
 	if err != nil {
 		return nil, err
 	}
 
-	return credential, nil
-}
-
-// AzCredentials gets Cluster Service Principal credentials from the Kubernetes Secret. It returns nil if the Secret is not found.
-func AzCredentials(ctx context.Context, kubernetescli kubernetes.Interface) (Credentials, error) {
-	clusterSPSecret, err := kubernetescli.CoreV1().Secrets(AzureCredentialSecretNameSpace).Get(ctx, AzureCredentialSecretName, metav1.GetOptions{})
-
-	if kerrors.IsNotFound(err) {
-		return Credentials{}, nil
-	} else if err != nil {
-		return Credentials{}, err
-	}
-
 	for _, key := range []string{"azure_client_id", "azure_client_secret", "azure_tenant_id"} {
 		if _, ok := clusterSPSecret.Data[key]; !ok {
-			return Credentials{}, fmt.Errorf("%s does not exist in the secret", key)
+			return nil, fmt.Errorf("%s does not exist in the secret", key)
 		}
 	}
 
-	return Credentials{
+	return &Credentials{
 		ClientID:     clusterSPSecret.Data["azure_client_id"],
 		ClientSecret: clusterSPSecret.Data["azure_client_secret"],
 		TenantID:     clusterSPSecret.Data["azure_tenant_id"],

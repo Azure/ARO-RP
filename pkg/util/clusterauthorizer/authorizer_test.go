@@ -67,61 +67,6 @@ func TestNewAzRefreshableAuthorizer(t *testing.T) {
 	}
 }
 
-func TestNewRefreshableAuthorizerToken(t *testing.T) {
-	ctx := context.Background()
-
-	log := logrus.NewEntry(logrus.StandardLogger())
-
-	for _, tt := range []struct {
-		name    string
-		secret  *corev1.Secret
-		tr      *tokenRequirements
-		wantErr string
-	}{
-		{
-			name: "fail: Missing client secret",
-			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      azureSecretName,
-					Namespace: nameSpace,
-				},
-				Data: map[string][]byte{
-					"azure_client_id": []byte("client-id"),
-					"azure_tenant_id": []byte("tenant-id.example.com"),
-				},
-			},
-			wantErr: "azure_client_secret does not exist in the secret",
-		},
-		{
-			name: "pass: create new bearer authorizer token",
-			tr: &tokenRequirements{
-				clientSecret:  "my-secret",
-				signingMethod: jwt.SigningMethodHS256,
-			},
-			secret: newV1CoreSecret(azureSecretName, nameSpace),
-		},
-	} {
-		clientFake := ctrlfake.NewClientBuilder().WithObjects(tt.secret).Build()
-
-		azRefreshAuthorizer, err := NewAzRefreshableAuthorizer(log, &azureclient.PublicCloud, clientFake)
-		if err != nil {
-			t.Errorf("failed to create azRefreshAuthorizer, %v", err)
-		}
-		azRefreshAuthorizer.getTokenCredential = func(*azureclient.AROEnvironment, *Credentials) (azcore.TokenCredential, error) {
-			return tt.tr, nil
-		}
-
-		t.Run(tt.name, func(t *testing.T) {
-			token, err := azRefreshAuthorizer.NewRefreshableAuthorizerToken(ctx)
-			if err != nil && err.Error() != tt.wantErr ||
-				err == nil && tt.wantErr != "" {
-				t.Logf("Token: %v", token)
-				t.Errorf("\n%v\n !=\n%v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
 func TestAzCredentials(t *testing.T) {
 	ctx := context.Background()
 

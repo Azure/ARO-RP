@@ -37,7 +37,7 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
-	kubeutil "github.com/Azure/ARO-RP/pkg/util/kubernetes"
+	utilkubernetes "github.com/Azure/ARO-RP/pkg/util/kubernetes"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
@@ -409,7 +409,7 @@ func (o *operator) IsReady(ctx context.Context) (bool, error) {
 
 func (o *operator) Restart(ctx context.Context, deploymentNames []string) error {
 	for _, dn := range deploymentNames {
-		err := kubeutil.Restart(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), dn)
+		err := utilkubernetes.Restart(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), dn)
 
 		if err != nil {
 			return err
