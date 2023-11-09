@@ -6,18 +6,158 @@ package base
 import (
 	"context"
 	"errors"
+	"strconv"
 	"testing"
 	"time"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
+
+const controllerName = "Test"
+const controllerEnabled = "aro.test.enabled"
+
+type TestReconciler struct {
+	AROController
+	reconciled bool
+}
+
+func newTestReconciler(log *logrus.Entry, client client.Client) *TestReconciler {
+	r := &TestReconciler{
+		AROController: AROController{
+			Log:         log.WithField("controller", controllerName),
+			Client:      client,
+			Name:        controllerName,
+			EnabledFlag: controllerEnabled,
+		},
+	}
+	r.Reconciler = r
+	return r
+}
+
+func (c *TestReconciler) SetupWithManager(ctrl.Manager) error {
+	return nil
+}
+
+func (c *TestReconciler) ReconcileEnabled(ctx context.Context, req ctrl.Request, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
+	c.reconciled = true
+	c.SetProgressing(ctx, "")
+	return ctrl.Result{}, nil
+}
+
+func condition(conditionType string, status operatorv1.ConditionStatus) operatorv1.OperatorCondition {
+	return operatorv1.OperatorCondition{
+		Type:               controllerName + "Controller" + conditionType,
+		Status:             status,
+		LastTransitionTime: metav1.NewTime(time.Now()),
+	}
+}
+
+func TestReconcile(t *testing.T) {
+	for _, tt := range []struct {
+		name              string
+		controllerEnabled bool
+		startConditions   []operatorv1.OperatorCondition
+		wantConditions    []operatorv1.OperatorCondition
+	}{
+		{
+			name:              "enabled controller calls ReconcileEnabled",
+			controllerEnabled: true,
+			startConditions: []operatorv1.OperatorCondition{
+				condition(
+					operatorv1.OperatorStatusTypeAvailable,
+					operatorv1.ConditionTrue),
+				condition(
+					operatorv1.OperatorStatusTypeProgressing,
+					operatorv1.ConditionFalse),
+				condition(
+					operatorv1.OperatorStatusTypeDegraded,
+					operatorv1.ConditionFalse),
+			},
+			wantConditions: []operatorv1.OperatorCondition{
+				condition(
+					operatorv1.OperatorStatusTypeAvailable,
+					operatorv1.ConditionTrue),
+				condition(
+					operatorv1.OperatorStatusTypeProgressing,
+					operatorv1.ConditionTrue),
+				condition(
+					operatorv1.OperatorStatusTypeDegraded,
+					operatorv1.ConditionFalse),
+			},
+		},
+		{
+			name:              "disabled controller calls ReconcileDisabled",
+			controllerEnabled: false,
+			startConditions: []operatorv1.OperatorCondition{
+				condition(
+					operatorv1.OperatorStatusTypeAvailable,
+					operatorv1.ConditionFalse),
+				condition(
+					operatorv1.OperatorStatusTypeProgressing,
+					operatorv1.ConditionTrue),
+				condition(
+					operatorv1.OperatorStatusTypeDegraded,
+					operatorv1.ConditionFalse),
+			},
+			wantConditions: []operatorv1.OperatorCondition{
+				condition(
+					operatorv1.OperatorStatusTypeAvailable,
+					operatorv1.ConditionTrue),
+				condition(
+					operatorv1.OperatorStatusTypeProgressing,
+					operatorv1.ConditionFalse),
+				condition(
+					operatorv1.OperatorStatusTypeDegraded,
+					operatorv1.ConditionFalse),
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			log := logrus.NewEntry(logrus.StandardLogger())
+
+			client := ctrlfake.NewClientBuilder().
+				WithObjects(
+					&arov1alpha1.Cluster{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: arov1alpha1.SingletonClusterName,
+						},
+						Spec: arov1alpha1.ClusterSpec{
+							OperatorFlags: arov1alpha1.OperatorFlags{
+								controllerEnabled: strconv.FormatBool(tt.controllerEnabled),
+							},
+						},
+						Status: arov1alpha1.ClusterStatus{
+							Conditions: tt.startConditions,
+						},
+					},
+				).Build()
+
+			ctx := context.Background()
+			r := newTestReconciler(log, client)
+			_, err := r.Reconcile(ctx, ctrl.Request{})
+
+			utilerror.AssertErrorMessage(t, err, "")
+			utilconditions.AssertControllerConditions(t, ctx, r.Client, tt.wantConditions)
+			if r.reconciled != tt.controllerEnabled {
+				if tt.controllerEnabled {
+					t.Errorf("enabled controller did not reconcile")
+				} else {
+					t.Errorf("disabled controller reconciled anyway")
+				}
+			}
+		})
+	}
+}
 
 func TestConditions(t *testing.T) {
 	ctx := context.Background()
