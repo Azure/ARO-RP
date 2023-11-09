@@ -5,6 +5,8 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	sdkkeyvault "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
 )
 
@@ -18,8 +20,13 @@ type vaultsClient struct {
 
 var _ VaultsClient = &vaultsClient{}
 
-func NewVaultsClient(subscriptionID string, credential azcore.TokenCredential, options *arm.ClientOptions) (VaultsClient, error) {
-	client, err := sdkkeyvault.NewVaultsClient(subscriptionID, credential, options)
+func NewVaultsClient(subscriptionID string, credential azcore.TokenCredential, options *azidentity.EnvironmentCredentialOptions) (VaultsClient, error) {
+	clientOption := &arm.ClientOptions{
+		ClientOptions: policy.ClientOptions{
+			Cloud: options.Cloud,
+		},
+	}
+	client, err := sdkkeyvault.NewVaultsClient(subscriptionID, credential, clientOption)
 	return vaultsClient{
 		VaultsClient: client,
 	}, err

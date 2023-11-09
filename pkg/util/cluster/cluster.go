@@ -15,7 +15,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
@@ -34,7 +33,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	keyvaultclient "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armkeyvault"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armkeyvault"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
@@ -46,7 +45,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/version"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/policy"
 	sdkkeyvault "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
 )
 
@@ -69,7 +67,7 @@ type Cluster struct {
 	roleassignments                   authorization.RoleAssignmentsClient
 	peerings                          network.VirtualNetworkPeeringsClient
 	ciParentVnetPeerings              network.VirtualNetworkPeeringsClient
-	vaultsClient                      keyvaultclient.VaultsClient
+	vaultsClient                      armkeyvault.VaultsClient
 }
 
 type errors []error
@@ -106,11 +104,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 	scopes := []string{environment.Environment().ResourceManagerScope}
 	authorizer := azidext.NewTokenCredentialAdapter(spTokenCredential, scopes)
 
-	valutClient, err := keyvaultclient.NewVaultsClient(environment.SubscriptionID(), spTokenCredential, &policy.ClientOptions{
-		ClientOptions: azcore.ClientOptions{
-			Cloud: environment.Environment().Cloud,
-		},
-	})
+	valutClient, err := armkeyvault.NewVaultsClient(environment.SubscriptionID(), spTokenCredential, options)
 
 	if err != nil {
 		return nil, err
