@@ -6,11 +6,7 @@ package clusterauthorizer
 import (
 	"context"
 	"testing"
-	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,12 +15,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
-
-type tokenRequirements struct {
-	clientSecret  string
-	claims        jwt.MapClaims
-	signingMethod jwt.SigningMethod
-}
 
 var (
 	azureSecretName = "azure-credentials"
@@ -158,19 +148,6 @@ func TestAzCredentials(t *testing.T) {
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
-}
-
-// GetToken allows tokenRequirements to be used as an azcore.TokenCredential.
-func (tr *tokenRequirements) GetToken(ctx context.Context, options policy.TokenRequestOptions) (azcore.AccessToken, error) {
-	token, err := jwt.NewWithClaims(tr.signingMethod, tr.claims).SignedString([]byte(tr.clientSecret))
-	if err != nil {
-		return azcore.AccessToken{}, err
-	}
-
-	return azcore.AccessToken{
-		Token:     token,
-		ExpiresOn: time.Now().Add(10 * time.Minute),
-	}, nil
 }
 
 func newV1CoreSecret(azSecretName, ns string) *corev1.Secret {
