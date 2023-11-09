@@ -130,6 +130,14 @@ type ClusterStatus struct {
 	OperatorVersion   string                         `json:"operatorVersion,omitempty"`
 	Conditions        []operatorv1.OperatorCondition `json:"conditions,omitempty"`
 	RedHatKeysPresent []string                       `json:"redHatKeysPresent,omitempty"`
+	StorageAccounts   StorageAccountsStatus          `json:"storageAccounts,omitempty"`
+}
+
+// StorageAccountsStatus contains the parameters of the last successful storage account reconciliation
+type StorageAccountsStatus struct {
+	LastCompletionTime metav1.Time `json:"lastCompletionTime,omitempty"`
+	Subnets            []string    `json:"subnets,omitempty"`
+	StorageAccounts    []string    `json:"storageAccounts,omitempty"`
 }
 
 // Cluster is the Schema for the clusters API

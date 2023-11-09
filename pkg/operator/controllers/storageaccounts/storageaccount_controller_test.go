@@ -19,12 +19,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -44,6 +46,8 @@ var (
 	vnetName                 = "vnet"
 	subnetNameWorker         = "worker"
 	subnetNameMaster         = "master"
+
+	numWorkers int32 = 3
 
 	storageSuffix              = "random-suffix"
 	clusterStorageAccountName  = "cluster" + storageSuffix
@@ -81,6 +85,7 @@ func TestReconcile(t *testing.T) {
 		fakeReconcileAccounts              func(ctx context.Context, subnets, storageAccounts []string) error
 		wantRequeueAfter                   time.Duration
 		wantErr                            string
+		wantStorageAccountsStatus          *arov1alpha1.StorageAccountsStatus
 	}{
 		{
 			name: "no cluster object - returns error",
@@ -99,10 +104,6 @@ func TestReconcile(t *testing.T) {
 				c.Spec.ResourceID = "invalid resource id"
 			},
 			wantErr: "parsing failed for invalid resource id. Invalid resource Id format",
-		},
-		{
-			name:         "correct prerequisites - works as expected",
-			operatorFlag: true,
 		},
 		{
 			name:         "error during subnet checks - returns direct error",
@@ -136,8 +137,65 @@ func TestReconcile(t *testing.T) {
 			},
 			wantRequeueAfter: 3600 * time.Second,
 		},
+		{
+			name:         "correct prerequisites - works as expected",
+			operatorFlag: true,
+			wantStorageAccountsStatus: &arov1alpha1.StorageAccountsStatus{
+				LastCompletionTime: metav1.Now(),
+				Subnets: []string{
+					masterSubnetId,
+					workerSubnetId,
+					rpPeSubnetId,
+					rpSubnetId,
+					gwySubnetId,
+				},
+				StorageAccounts: []string{
+					clusterStorageAccountName,
+					registryStorageAccountName,
+				},
+			},
+		},
+		{
+			name:         "correct prerequisites but last reconcile was less than one hour ago - does nothing",
+			operatorFlag: true,
+			instance: func(c *arov1alpha1.Cluster) {
+				c.Status.StorageAccounts = arov1alpha1.StorageAccountsStatus{
+					LastCompletionTime: metav1.NewTime(metav1.Now().Add(-30 * time.Minute)),
+				}
+			},
+			fakeCheckClusterSubnetsToReconcile: func(ctx context.Context, clusterSubnets []string) ([]string, error) {
+				return nil, fmt.Errorf("should not check subnets")
+			},
+			fakeReconcileAccounts: func(ctx context.Context, subnets, storageAccounts []string) error {
+				return fmt.Errorf("should not reconcile accounts")
+			},
+			wantRequeueAfter: time.Duration(30 * time.Minute),
+		},
+		{
+			name:         "correct prerequisites but subnets to reconcile match last reconcile - does nothing",
+			operatorFlag: true,
+			instance: func(c *arov1alpha1.Cluster) {
+				c.Status.StorageAccounts = arov1alpha1.StorageAccountsStatus{
+					Subnets: []string{
+						masterSubnetId,
+						workerSubnetId,
+						rpPeSubnetId,
+						rpSubnetId,
+						gwySubnetId,
+					},
+					StorageAccounts: []string{
+						clusterStorageAccountName,
+						registryStorageAccountName,
+					},
+				}
+			},
+			fakeReconcileAccounts: func(ctx context.Context, subnets, storageAccounts []string) error {
+				return fmt.Errorf("should not reconcile accounts")
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
 			instance := getValidClusterInstance(tt.operatorFlag)
 			if tt.instance != nil {
 				tt.instance(instance)
@@ -172,7 +230,8 @@ func TestReconcile(t *testing.T) {
 				WithObjects(instance).
 				WithObjects(rc).
 				WithObjects(azCredSecret).
-				WithLists(getValidMachines()).
+				WithLists(getMasterMachines()).
+				WithObjects(getWorkerMachineSet()).
 				Build()
 
 			fakeNewManager := func(
@@ -204,11 +263,23 @@ func TestReconcile(t *testing.T) {
 				newManager: fakeNewManager,
 			}
 
-			result, err := r.Reconcile(context.Background(), reconcile.Request{})
+			result, err := r.Reconcile(ctx, reconcile.Request{})
 
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-			if result.RequeueAfter != tt.wantRequeueAfter {
-				t.Errorf("wanted requeue after %v but got %v", tt.wantRequeueAfter, result.RequeueAfter)
+			if ok, diff := durationIsCloseTo(tt.wantRequeueAfter, result.RequeueAfter, time.Second); !ok {
+				t.Errorf("wanted requeue after %v but got %v, diff %s", tt.wantRequeueAfter, result.RequeueAfter, diff)
+			}
+			if tt.wantStorageAccountsStatus != nil {
+				gotInstance := &arov1alpha1.Cluster{}
+				if err := clientFake.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, gotInstance); err != nil {
+					t.Fatal(err)
+				}
+
+				gotStorageAccountsStatus := gotInstance.Status.StorageAccounts
+
+				if diff := cmp.Diff(*tt.wantStorageAccountsStatus, gotStorageAccountsStatus, cmpoptsSortStringSlices, cmpopts.EquateApproxTime(time.Second)); diff != "" {
+					t.Errorf("wanted storageAccountsStatus %v but got %v, diff: %s", tt.wantStorageAccountsStatus, gotStorageAccountsStatus, diff)
+				}
 			}
 		})
 	}
@@ -233,7 +304,7 @@ func getValidClusterInstance(operatorFlag bool) *arov1alpha1.Cluster {
 	}
 }
 
-func getValidMachines() *machinev1beta1.MachineList {
+func getMasterMachines() *machinev1beta1.MachineList {
 	list := &machinev1beta1.MachineList{
 		Items: []machinev1beta1.Machine{},
 	}
@@ -284,6 +355,38 @@ func getValidMachines() *machinev1beta1.MachineList {
 	return list
 }
 
+func getWorkerMachineSet() *machinev1beta1.MachineSet {
+	return &machinev1beta1.MachineSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "worker",
+			Namespace: "openshift-machine-api",
+			Labels: map[string]string{
+				"machine.openshift.io/cluster-api-machine-role": "worker",
+			},
+		},
+		Spec: machinev1beta1.MachineSetSpec{
+			Replicas: &numWorkers,
+			Template: machinev1beta1.MachineTemplateSpec{
+				ObjectMeta: machinev1beta1.ObjectMeta{
+					Labels: map[string]string{
+						"machine.openshift.io/cluster-api-machine-role": "worker",
+					},
+				},
+				Spec: machinev1beta1.MachineSpec{
+					ProviderSpec: machinev1beta1.ProviderSpec{
+						Value: &kruntime.RawExtension{
+							Raw: []byte(fmt.Sprintf(
+								`{"resourceGroup":"%s","networkResourceGroup":"%s","vnet":"%s","subnet":"%s"}`,
+								managedResourceGroupName, vnetResourceGroup, vnetName, subnetNameWorker,
+							)),
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 type fakeManager struct {
 	fakeCheckClusterSubnetsToReconcile func(ctx context.Context, clusterSubnets []string) ([]string, error)
 	fakeReconcileAccounts              func(ctx context.Context, subnets, storageAccounts []string) error
@@ -301,4 +404,12 @@ func (f *fakeManager) reconcileAccounts(ctx context.Context, subnets, storageAcc
 		return nil
 	}
 	return f.fakeReconcileAccounts(ctx, subnets, storageAccounts)
+}
+
+func durationIsCloseTo(a, b, margin time.Duration) (bool, time.Duration) {
+	diff := a - b
+	if diff < 0 {
+		diff = -diff
+	}
+	return diff <= margin, diff
 }

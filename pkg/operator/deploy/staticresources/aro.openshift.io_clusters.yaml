@@ -140,6 +140,22 @@ spec:
                 items:
                   type: string
                 type: array
+              storageAccounts:
+                description: StorageAccountsStatus contains the parameters of the
+                  last successful storage account reconciliation
+                properties:
+                  lastCompletionTime:
+                    format: date-time
+                    type: string
+                  storageAccounts:
+                    items:
+                      type: string
+                    type: array
+                  subnets:
+                    items:
+                      type: string
+                    type: array
+                type: object
             type: object
         type: object
     served: true

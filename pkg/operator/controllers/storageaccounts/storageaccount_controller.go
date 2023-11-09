@@ -7,6 +7,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"reflect"
+	"sort"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest"
@@ -14,6 +16,7 @@ import (
 	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	"github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -34,6 +37,9 @@ const (
 	ControllerName = "StorageAccounts"
 
 	controllerEnabled = "aro.storageaccounts.enabled"
+
+	// we should not attempt to perform reconciliations against the Azure API more than once within this time period
+	reconcileTimeout = time.Hour
 )
 
 // Reconciler is the controller struct
@@ -69,6 +75,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	r.log.Debug("running")
 
+	// ensure we only reconcile after the last completed reconcile + timeout duration
+	reconcileTimeCutoff := instance.Status.StorageAccounts.LastCompletionTime.Add(reconcileTimeout)
+	if diff := reconcileTimeCutoff.Sub(time.Now()); diff > 0 {
+		return reconcile.Result{RequeueAfter: diff}, nil
+	}
+
 	location := instance.Spec.Location
 	resource, err := azure.ParseResourceID(instance.Spec.ResourceID)
 	if err != nil {
@@ -101,11 +113,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
+	if r.parametersMatchLastReconcile(ctx, instance, subnets, storageAccounts) {
+		return reconcile.Result{}, nil
+	}
+
 	err = manager.reconcileAccounts(ctx, subnets, storageAccounts)
 	if err != nil {
 		if retryAfter, ok := errIsRateLimited(err); ok {
 			return reconcile.Result{RequeueAfter: retryAfter}, nil
 		}
+		return reconcile.Result{}, err
+	}
+
+	err = r.updateCompletionStatus(ctx, instance, subnets, storageAccounts)
+	if err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -146,6 +167,7 @@ func (r *Reconciler) getSubnetsToReconcile(ctx context.Context, instance *arov1a
 		return nil, err
 	}
 	subnets = append(subnets, clusterSubnetsToReconcile...)
+	sort.Strings(subnets)
 
 	return subnets, nil
 }
@@ -175,10 +197,28 @@ func (r *Reconciler) getStorageAccountNames(ctx context.Context, instance *arov1
 		return nil, fmt.Errorf("azure storage field is nil in image registry config")
 	}
 
-	return []string{
+	storageAccounts := []string{
 		"cluster" + instance.Spec.StorageSuffix, // this is our creation, so name is deterministic
 		rc.Spec.Storage.Azure.AccountName,
-	}, nil
+	}
+	sort.Strings(storageAccounts)
+	return storageAccounts, nil
+}
+
+func (r *Reconciler) parametersMatchLastReconcile(ctx context.Context, instance *arov1alpha1.Cluster, subnets, storageAccounts []string) bool {
+	sa := instance.Status.StorageAccounts
+	return reflect.DeepEqual(sa.Subnets, subnets) && reflect.DeepEqual(sa.StorageAccounts, storageAccounts)
+}
+
+func (r *Reconciler) updateCompletionStatus(ctx context.Context, instance *arov1alpha1.Cluster, subnets, storageAccounts []string) error {
+	updatedInstance := instance.DeepCopy()
+	updatedInstance.Status.StorageAccounts = arov1alpha1.StorageAccountsStatus{
+		LastCompletionTime: metav1.Now(),
+		Subnets:            subnets,
+		StorageAccounts:    storageAccounts,
+	}
+
+	return r.client.Status().Patch(ctx, updatedInstance, client.MergeFrom(instance))
 }
 
 func errIsRateLimited(err error) (time.Duration, bool) {
