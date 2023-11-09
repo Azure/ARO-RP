@@ -63,6 +63,7 @@ from ._azure_red_hat_open_shift_client_enums import (
     ProvisioningState,
     SoftwareDefinedNetwork,
     VMSize,
+    ValidationStatus,
     Visibility,
 )
 
@@ -92,5 +93,6 @@ __all__ = [
     'ProvisioningState',
     'SoftwareDefinedNetwork',
     'VMSize',
+    'ValidationStatus',
     'Visibility',
 ]

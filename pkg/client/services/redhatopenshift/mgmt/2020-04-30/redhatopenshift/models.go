@@ -61,6 +61,8 @@ func (aer AzureEntityResource) MarshalJSON() ([]byte, error) {
 
 // CloudError cloudError represents a cloud error.
 type CloudError struct {
+	// Status - The status string of succeeded or failed. Possible values include: 'StatusFailed', 'StatusSucceeded'
+	Status Status `json:"status,omitempty"`
 	// Error - An error response from the service.
 	Error *CloudErrorBody `json:"error,omitempty"`
 }

@@ -106,6 +106,21 @@ func PossibleProvisioningStateValues() []ProvisioningState {
 	return []ProvisioningState{AdminUpdating, Cancelled, Creating, Deleting, Failed, Succeeded, Updating}
 }
 
+// Status enumerates the values for status.
+type Status string
+
+const (
+	// StatusFailed ...
+	StatusFailed Status = "Failed"
+	// StatusSucceeded ...
+	StatusSucceeded Status = "Succeeded"
+)
+
+// PossibleStatusValues returns an array of possible values for the Status const type.
+func PossibleStatusValues() []Status {
+	return []Status{StatusFailed, StatusSucceeded}
+}
+
 // Visibility enumerates the values for visibility.
 type Visibility string
 

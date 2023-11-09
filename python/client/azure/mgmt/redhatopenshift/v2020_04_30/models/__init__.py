@@ -56,6 +56,7 @@ except (SyntaxError, ImportError):
 from ._azure_red_hat_open_shift_client_enums import (
     ProvisioningState,
     VMSize,
+    ValidationStatus,
     Visibility,
 )
 
@@ -80,5 +81,6 @@ __all__ = [
     'WorkerProfile',
     'ProvisioningState',
     'VMSize',
+    'ValidationStatus',
     'Visibility',
 ]

@@ -103,6 +103,7 @@ from ._azure_red_hat_open_shift_client_enums import (
     FipsValidatedModules,
     OutboundType,
     ProvisioningState,
+    ValidationStatus,
     Visibility,
 )
 
@@ -152,5 +153,6 @@ __all__ = [
     'FipsValidatedModules',
     'OutboundType',
     'ProvisioningState',
+    'ValidationStatus',
     'Visibility',
 ]

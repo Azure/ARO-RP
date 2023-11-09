@@ -53,6 +53,11 @@ class SoftwareDefinedNetwork(with_metaclass(CaseInsensitiveEnumMeta, str, Enum))
     OVN_KUBERNETES = "OVNKubernetes"
     OPEN_SHIFT_SDN = "OpenShiftSDN"
 
+class ValidationStatus(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
+
+    FAILED = "Failed"
+    SUCCEEDED = "Succeeded"
+
 class Visibility(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
     """Visibility represents visibility.
     """
