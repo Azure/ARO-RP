@@ -308,8 +308,11 @@ func TestGenevaConfigMapResources(t *testing.T) {
 			}
 
 			r := &Reconciler{
-				log:    logrus.NewEntry(logrus.StandardLogger()),
-				client: ctrlfake.NewClientBuilder().WithObjects(instance, scc).Build(),
+				AROController: base.AROController{
+					Log:    logrus.NewEntry(logrus.StandardLogger()),
+					Client: ctrlfake.NewClientBuilder().WithObjects(instance, scc).Build(),
+					Name:   ControllerName,
+				},
 			}
 
 			out, err := r.resources(context.Background(), instance, []byte{}, []byte{})
