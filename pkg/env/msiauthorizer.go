@@ -7,11 +7,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/jongio/azidext/go/azidext"
-
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcore"
 )
 
 type MSIContext string
@@ -21,7 +20,7 @@ const (
 	MSIContextGateway MSIContext = "GATEWAY"
 )
 
-func (c *core) NewMSITokenCredential(msiContext MSIContext, scopes ...string) (azcore.TokenCredential, error) {
+func (c *core) NewMSITokenCredential(msiContext MSIContext) (azcore.TokenCredential, error) {
 	if !c.IsLocalDevelopmentMode() {
 		options := c.Environment().ManagedIdentityCredentialOptions()
 		return azidentity.NewManagedIdentityCredential(options)
@@ -44,7 +43,7 @@ func (c *core) NewMSITokenCredential(msiContext MSIContext, scopes ...string) (a
 }
 
 func (c *core) NewMSIAuthorizer(msiContext MSIContext, scopes ...string) (autorest.Authorizer, error) {
-	token, err := c.NewMSITokenCredential(msiContext, scopes...)
+	token, err := c.NewMSITokenCredential(msiContext)
 	if err != nil {
 		return nil, err
 	}

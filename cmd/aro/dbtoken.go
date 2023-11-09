@@ -37,7 +37,7 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	msiToken, err := _env.NewMSITokenCredential(env.MSIContextRP, _env.Environment().ResourceManagerScope)
+	msiToken, err := _env.NewMSITokenCredential(env.MSIContextRP)
 	if err != nil {
 		return err
 	}

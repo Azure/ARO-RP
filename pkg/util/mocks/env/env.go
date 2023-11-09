@@ -11,17 +11,16 @@ import (
 	net "net"
 	reflect "reflect"
 
+	env "github.com/Azure/ARO-RP/pkg/env"
+	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
+	clientauthorizer "github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
+	keyvault "github.com/Azure/ARO-RP/pkg/util/keyvault"
+	liveconfig "github.com/Azure/ARO-RP/pkg/util/liveconfig"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	azidentity "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	compute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	autorest "github.com/Azure/go-autorest/autorest"
 	gomock "github.com/golang/mock/gomock"
-
-	env "github.com/Azure/ARO-RP/pkg/env"
-	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
-	azcore "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcore"
-	clientauthorizer "github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
-	keyvault "github.com/Azure/ARO-RP/pkg/util/keyvault"
-	liveconfig "github.com/Azure/ARO-RP/pkg/util/liveconfig"
 )
 
 // MockCore is a mock of Core interface.
@@ -153,23 +152,18 @@ func (mr *MockCoreMockRecorder) NewMSIAuthorizer(arg0 interface{}, arg1 ...inter
 }
 
 // NewMSITokenCredential mocks base method.
-func (m *MockCore) NewMSITokenCredential(arg0 env.MSIContext, arg1 ...string) (azcore.TokenCredential, error) {
+func (m *MockCore) NewMSITokenCredential(arg0 env.MSIContext) (azcore.TokenCredential, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0}
-	for _, a := range arg1 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "NewMSITokenCredential", varargs...)
+	ret := m.ctrl.Call(m, "NewMSITokenCredential", arg0)
 	ret0, _ := ret[0].(azcore.TokenCredential)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // NewMSITokenCredential indicates an expected call of NewMSITokenCredential.
-func (mr *MockCoreMockRecorder) NewMSITokenCredential(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
+func (mr *MockCoreMockRecorder) NewMSITokenCredential(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0}, arg1...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMSITokenCredential", reflect.TypeOf((*MockCore)(nil).NewMSITokenCredential), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMSITokenCredential", reflect.TypeOf((*MockCore)(nil).NewMSITokenCredential), arg0)
 }
 
 // ResourceGroup mocks base method.
@@ -675,23 +669,18 @@ func (mr *MockInterfaceMockRecorder) NewMSIAuthorizer(arg0 interface{}, arg1 ...
 }
 
 // NewMSITokenCredential mocks base method.
-func (m *MockInterface) NewMSITokenCredential(arg0 env.MSIContext, arg1 ...string) (azcore.TokenCredential, error) {
+func (m *MockInterface) NewMSITokenCredential(arg0 env.MSIContext) (azcore.TokenCredential, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0}
-	for _, a := range arg1 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "NewMSITokenCredential", varargs...)
+	ret := m.ctrl.Call(m, "NewMSITokenCredential", arg0)
 	ret0, _ := ret[0].(azcore.TokenCredential)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // NewMSITokenCredential indicates an expected call of NewMSITokenCredential.
-func (mr *MockInterfaceMockRecorder) NewMSITokenCredential(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) NewMSITokenCredential(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0}, arg1...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMSITokenCredential", reflect.TypeOf((*MockInterface)(nil).NewMSITokenCredential), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMSITokenCredential", reflect.TypeOf((*MockInterface)(nil).NewMSITokenCredential), arg0)
 }
 
 // ResourceGroup mocks base method.

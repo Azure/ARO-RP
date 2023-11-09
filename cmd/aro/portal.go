@@ -61,7 +61,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	msiToken, err := _env.NewMSITokenCredential(env.MSIContextRP, _env.Environment().ResourceManagerScope)
+	msiToken, err := _env.NewMSITokenCredential(env.MSIContextRP)
 	if err != nil {
 		return err
 	}
