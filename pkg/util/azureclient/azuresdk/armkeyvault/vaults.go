@@ -6,12 +6,12 @@ package armkeyvault
 import (
 	"context"
 
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcore"
-
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcore"
 )
 
 type VaultsClient interface {
