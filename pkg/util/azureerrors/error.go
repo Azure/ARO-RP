@@ -5,6 +5,7 @@ package azureerrors
 
 import (
 	"encoding/json"
+	"net/http"
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest"
@@ -69,6 +70,12 @@ func IsDeploymentActiveError(err error) bool {
 		}
 	}
 	return false
+}
+
+func IsNotFoundError(err error) bool {
+	detailedErr, ok := err.(autorest.DetailedError)
+
+	return ok && detailedErr.StatusCode == http.StatusNotFound
 }
 
 // IsInvalidSecretError returns if errors is InvalidCredentials error

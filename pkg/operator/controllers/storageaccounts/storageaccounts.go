@@ -13,6 +13,7 @@ import (
 	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -32,6 +33,10 @@ func (r *reconcileManager) reconcileAccounts(ctx context.Context) error {
 	for _, subnet := range subnets {
 		mgmtSubnet, err := r.subnets.Get(ctx, subnet.ResourceID)
 		if err != nil {
+			if azureerrors.IsNotFoundError(err) {
+				r.log.Infof("Subnet %s not found, skipping", subnet.ResourceID)
+				break
+			}
 			return err
 		}
 
