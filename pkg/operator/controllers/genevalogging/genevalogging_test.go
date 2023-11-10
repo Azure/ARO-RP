@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -17,6 +18,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -245,6 +247,83 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 
 			utilerror.AssertErrorMessage(t, err, tt.wantErrMsg)
 			utilconditions.AssertControllerConditions(t, ctx, r.Client, tt.wantConditions)
+		})
+	}
+}
+
+func TestGenevaConfigMapResources(t *testing.T) {
+	tests := []struct {
+		name          string
+		request       ctrl.Request
+		operatorFlags arov1alpha1.OperatorFlags
+		validate      func([]runtime.Object) []error
+	}{
+		{
+			name: "enabled",
+			operatorFlags: arov1alpha1.OperatorFlags{
+				controllerEnabled: "true",
+			},
+			validate: func(r []runtime.Object) (errs []error) {
+				maps := make(map[string]*corev1.ConfigMap)
+				for _, i := range r {
+					if d, ok := i.(*corev1.ConfigMap); ok {
+						maps[d.Name] = d
+					}
+				}
+
+				c, ok := maps["fluent-config"]
+				if !ok {
+					errs = append(errs, errors.New("missing fluent-config"))
+				} else {
+					fConf := c.Data["fluent.conf"]
+					pConf := c.Data["parsers.conf"]
+
+					if !strings.Contains(fConf, "[INPUT]") {
+						errs = append(errs, errors.New("incorrect fluent-config fluent.conf"))
+					}
+
+					if !strings.Contains(pConf, "[PARSER]") {
+						errs = append(errs, errors.New("incorrect fluent-config parser.conf"))
+					}
+				}
+
+				return
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			instance := &arov1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+				Status:     arov1alpha1.ClusterStatus{Conditions: []operatorv1.OperatorCondition{}},
+				Spec: arov1alpha1.ClusterSpec{
+					ResourceID:    testdatabase.GetResourcePath("00000000-0000-0000-0000-000000000000", "testcluster"),
+					OperatorFlags: tt.operatorFlags,
+					ACRDomain:     "acrDomain",
+				},
+			}
+
+			scc := &securityv1.SecurityContextConstraints{
+				ObjectMeta: metav1.ObjectMeta{Name: "privileged"},
+			}
+
+			r := &Reconciler{
+				AROController: base.AROController{
+					Log:    logrus.NewEntry(logrus.StandardLogger()),
+					Client: ctrlfake.NewClientBuilder().WithObjects(instance, scc).Build(),
+					Name:   ControllerName,
+				},
+			}
+
+			out, err := r.resources(context.Background(), instance, []byte{}, []byte{})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			errs := tt.validate(out)
+			for _, err := range errs {
+				t.Error(err)
+			}
 		})
 	}
 }
