@@ -5,5 +5,6 @@ RUN microdnf update && microdnf clean all
 RUN curl -o /etc/pki/ca-trust/source/anchors/AMEROOT_ameroot.crt http://crl.microsoft.com/pkiinfra/certs/AMEROOT_ameroot.crt && update-ca-trust
 COPY ./aro /usr/local/bin/
 ENTRYPOINT ["aro"]
+# Endpoint used for healthz. We may also use this endpoint for HTTP handler (configurable)
 EXPOSE 8080/tcp
 USER 1000
