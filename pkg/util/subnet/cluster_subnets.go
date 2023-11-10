@@ -45,8 +45,8 @@ func (m *kubeManager) List(ctx context.Context) ([]Subnet, error) {
 
 	// select all workers by the  machine.openshift.io/cluster-api-machine-role: not equal to master Label
 	selector, _ := labels.Parse("machine.openshift.io/cluster-api-machine-role!=master")
-	machines := &machinev1beta1.MachineList{}
-	err := m.client.List(ctx, machines, &client.ListOptions{
+	machineSets := &machinev1beta1.MachineSetList{}
+	err := m.client.List(ctx, machineSets, &client.ListOptions{
 		Namespace:     machineSetsNamespace,
 		LabelSelector: selector,
 	})
@@ -54,8 +54,8 @@ func (m *kubeManager) List(ctx context.Context) ([]Subnet, error) {
 		return nil, err
 	}
 
-	for _, machine := range machines.Items {
-		subnetDesc, err := m.getDescriptorFromProviderSpec(machine.Spec.ProviderSpec.Value)
+	for _, machineSet := range machineSets.Items {
+		subnetDesc, err := m.getDescriptorFromProviderSpec(machineSet.Spec.Template.Spec.ProviderSpec.Value)
 		if err != nil {
 			return nil, err
 		}
@@ -63,7 +63,7 @@ func (m *kubeManager) List(ctx context.Context) ([]Subnet, error) {
 	}
 
 	selector, _ = labels.Parse("machine.openshift.io/cluster-api-machine-role=master")
-	machines = &machinev1beta1.MachineList{}
+	machines := &machinev1beta1.MachineList{}
 	err = m.client.List(ctx, machines, &client.ListOptions{
 		Namespace:     machineSetsNamespace,
 		LabelSelector: selector,
