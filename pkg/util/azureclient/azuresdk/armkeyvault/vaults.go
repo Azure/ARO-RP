@@ -10,16 +10,15 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-
-	sdkkeyvault "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
 )
 
 type VaultsClient interface {
-	CheckNameAvailability(ctx context.Context, vaultName sdkkeyvault.VaultCheckNameAvailabilityParameters, options *sdkkeyvault.VaultsClientCheckNameAvailabilityOptions) (sdkkeyvault.VaultsClientCheckNameAvailabilityResponse, error)
+	CheckNameAvailability(ctx context.Context, vaultName armkeyvault.VaultCheckNameAvailabilityParameters, options *armkeyvault.VaultsClientCheckNameAvailabilityOptions) (armkeyvault.VaultsClientCheckNameAvailabilityResponse, error)
 }
 
 type vaultsClient struct {
-	*sdkkeyvault.VaultsClient
+	*armkeyvault.VaultsClient
 }
 
 var _ VaultsClient = &vaultsClient{}
@@ -30,7 +29,7 @@ func NewVaultsClient(subscriptionID string, credential azcore.TokenCredential, o
 			Cloud: options.Cloud,
 		},
 	}
-	client, err := sdkkeyvault.NewVaultsClient(subscriptionID, credential, clientOption)
+	client, err := armkeyvault.NewVaultsClient(subscriptionID, credential, clientOption)
 	return vaultsClient{
 		VaultsClient: client,
 	}, err
