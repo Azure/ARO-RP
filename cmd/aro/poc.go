@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"os"
 	"os/signal"
 	"syscall"
@@ -14,14 +13,13 @@ import (
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-func rpPoc(ctx context.Context, log *logrus.Entry) error {
+func rpPoc(ctx context.Context, log *logrus.Entry, port string) error {
 	log.Print("********** ARO-RP on AKS PoC **********")
 
 	ctx, shutdown := context.WithCancel(ctx)
 	defer shutdown()
 	go handleSigterm(log, shutdown)
 
-	port := flag.Arg(1)
 	frontEnd := poc.NewFrontend(log, port)
 
 	return frontEnd.Run(ctx)
