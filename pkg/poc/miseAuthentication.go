@@ -21,15 +21,12 @@ const (
 	originURI = "https://server/endpoint"
 )
 
-func authenticateWithMISE(w http.ResponseWriter, r *http.Request) error {
-	ctx := context.Background()
-	token := extractToken(r.Header)
+func authenticateWithMISE(ctx context.Context, token string) error {
 
 	requestData := MiseRequestData{
-		MiseURL:        miseURL,
-		OriginalURI:    originURI,
-		OriginalMethod: r.Method,
-		Token:          token,
+		MiseURL:     miseURL,
+		OriginalURI: originURI,
+		Token:       token,
 	}
 
 	req, err := createMiseHTTPRequest(ctx, requestData)
@@ -45,9 +42,6 @@ func authenticateWithMISE(w http.ResponseWriter, r *http.Request) error {
 	}
 	defer resp.Body.Close()
 	log.Default().Println("Response status: ", resp.Status)
-
-	w.WriteHeader(resp.StatusCode)
-
 	switch resp.StatusCode {
 	case http.StatusOK:
 		return nil

@@ -2,8 +2,10 @@ package poc
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -13,23 +15,23 @@ import (
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-// TODO(jonachang): remove this when go production.
-const enableMISE = true
-
 type frontend struct {
 	logger *logrus.Entry
 	port   string
+	// TODO(jonachang) delete this in production
+	enableMISE bool
 }
 
-func NewFrontend(logger *logrus.Entry, port string) frontend {
+func NewFrontend(logger *logrus.Entry, port string, enableMISE bool) frontend {
 	return frontend{
-		logger: logger,
-		port:   port,
+		logger:     logger,
+		port:       port,
+		enableMISE: enableMISE,
 	}
 }
 
 func (f *frontend) Run(ctx context.Context) error {
-	router := f.getRouter()
+	router := f.getRouter(ctx)
 	server := &http.Server{
 		Addr:     ":" + f.port,
 		Handler:  router,
@@ -54,15 +56,17 @@ func (f *frontend) Run(ctx context.Context) error {
 	return err
 }
 
-func (f *frontend) getRouter() chi.Router {
+func (f *frontend) getRouter(ctx context.Context) chi.Router {
 	r := chi.NewRouter()
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		f.logger.Infof("Received request: %s", time.Now().String())
 		// TODO(jonachang): remove this when go production.
-		if enableMISE == true {
-			miseError := authenticateWithMISE(w, r)
+		if f.enableMISE == true {
+			miseToken := extractMISEToken(r.Header)
+			miseError := authenticateWithMISE(ctx, miseToken)
 			if miseError != nil {
-				f.logger.Errorf("MISE error: %s", miseError)
+				message := fmt.Sprintf("MISE error: %s", miseError)
+				f.logger.Info(message)
 				w.Write([]byte("****** Blocked by MISE authorization ******"))
 			} else {
 				w.Write([]byte("****** Welcome to ARO-RP on AKS PoC ******"))
@@ -76,4 +80,10 @@ func (f *frontend) getRouter() chi.Router {
 		w.Write([]byte("ok"))
 	})
 	return r
+}
+
+func extractMISEToken(h http.Header) string {
+	auth := h.Get("Authorization")
+	token := strings.TrimPrefix(auth, "Bearer ")
+	return strings.TrimSpace(token)
 }

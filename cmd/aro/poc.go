@@ -5,6 +5,7 @@ import (
 	"flag"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/Azure/ARO-RP/pkg/poc"
@@ -14,9 +15,9 @@ import (
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-func rpPoc(ctx context.Context, log *logrus.Entry) error {
+func rpPoc(ctx context.Context, log *logrus.Entry, enableMISE string) error {
 	log.Print("********** ARO-RP on AKS PoC **********")
-
+	var mise = strings.ToLower(enableMISE) == "true"
 	ctx, shutdown := context.WithCancel(ctx)
 	defer shutdown()
 	go handleSigterm(log, shutdown)
