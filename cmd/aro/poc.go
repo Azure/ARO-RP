@@ -18,6 +18,8 @@ import (
 func rpPoc(ctx context.Context, log *logrus.Entry, enableMISE string) error {
 	log.Print("********** ARO-RP on AKS PoC **********")
 	var mise = strings.ToLower(enableMISE) == "true"
+	log.Print("enableMISE is %s", enableMISE)
+	log.Print("mise is %s", mise)
 	ctx, shutdown := context.WithCancel(ctx)
 	defer shutdown()
 	go handleSigterm(log, shutdown)

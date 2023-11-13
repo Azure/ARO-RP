@@ -82,7 +82,7 @@ func main() {
 		// err = updateOCPVersions(ctx, log)
 	case "poc":
 		checkArgs(3)
-		err = rpPoc(ctx, log, os.Args[2])
+		err = rpPoc(ctx, log, os.Args[3])
 	default:
 		usage()
 		os.Exit(2)
