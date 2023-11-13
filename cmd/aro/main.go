@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	_ "net/http/pprof"
 	"os"
@@ -25,7 +24,7 @@ func init() {
 }
 
 func main() {
-	flag.Parse()
+	pflag.Parse()
 
 	log := utillog.GetLogger()
 
