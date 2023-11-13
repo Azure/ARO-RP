@@ -13,8 +13,6 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -65,25 +63,4 @@ func (a *azRefreshableAuthorizer) NewRefreshableAuthorizerToken(ctx context.Cont
 
 func GetTokenCredential(environment *azureclient.AROEnvironment) (azcore.TokenCredential, error) {
 	return azidentity.NewDefaultAzureCredential(environment.DefaultAzureCredentialOptions())
-}
-
-// AzCredentials gets Cluster Service Principal credentials from the Kubernetes secrets
-func AzCredentials(ctx context.Context, client client.Client) (*Credentials, error) {
-	clusterSPSecret := &corev1.Secret{}
-	err := client.Get(ctx, types.NamespacedName{Namespace: AzureCredentialSecretNameSpace, Name: AzureCredentialSecretName}, clusterSPSecret)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, key := range []string{"azure_client_id", "azure_client_secret", "azure_tenant_id"} {
-		if _, ok := clusterSPSecret.Data[key]; !ok {
-			return nil, fmt.Errorf("%s does not exist in the secret", key)
-		}
-	}
-
-	return &Credentials{
-		ClientID:     clusterSPSecret.Data["azure_client_id"],
-		ClientSecret: clusterSPSecret.Data["azure_client_secret"],
-		TenantID:     clusterSPSecret.Data["azure_tenant_id"],
-	}, nil
 }

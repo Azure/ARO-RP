@@ -4,7 +4,6 @@ package clusterauthorizer
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -52,99 +51,6 @@ func TestNewAzRefreshableAuthorizer(t *testing.T) {
 			clientFake := ctrlfake.NewClientBuilder().WithObjects(tt.secret).Build()
 
 			_, err := NewAzRefreshableAuthorizer(tt.log, tt.azCloudEnv, clientFake)
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-		})
-	}
-}
-
-func TestAzCredentials(t *testing.T) {
-	ctx := context.Background()
-
-	var (
-		azureSecretName = "azure-credentials"
-		nameSpace       = "kube-system"
-	)
-	for _, tt := range []struct {
-		name    string
-		secret  *corev1.Secret
-		wantErr string
-	}{
-		{
-			name: "fail: Missing clientID",
-			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      azureSecretName,
-					Namespace: nameSpace,
-				},
-				Data: map[string][]byte{
-					"azure_client_secret": []byte("client-secret"),
-					"azure_tenant_id":     []byte("tenant-id.example.com"),
-				},
-			},
-			wantErr: "azure_client_id does not exist in the secret",
-		},
-		{
-			name: "fail: missing tenantID",
-			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      azureSecretName,
-					Namespace: nameSpace,
-				},
-				Data: map[string][]byte{
-					"azure_client_secret": []byte("client-secret"),
-					"azure_client_id":     []byte("client-id"),
-				},
-			},
-			wantErr: "azure_tenant_id does not exist in the secret",
-		},
-		{
-			name: "fail: missing secret",
-			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      azureSecretName,
-					Namespace: nameSpace,
-				},
-				Data: map[string][]byte{
-					"azure_client_id": []byte("client-id"),
-					"azure_tenant_id": []byte("tenant-id.example.com"),
-				},
-			},
-			wantErr: "azure_client_secret does not exist in the secret",
-		},
-		{
-			name: "fail: wrong namespace",
-			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      azureSecretName,
-					Namespace: "default",
-				},
-				Data: map[string][]byte{
-					"azure_client_secret": []byte("client-secret"),
-					"azure_client_id":     []byte("client-id"),
-					"azure_tenant_id":     []byte("tenant-id.example.com"),
-				},
-			},
-			wantErr: "secrets \"azure-credentials\" not found",
-		},
-		{
-			name: "pass: all credential properties",
-			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      azureSecretName,
-					Namespace: nameSpace,
-				},
-				Data: map[string][]byte{
-					"azure_client_secret": []byte("client-secret"),
-					"azure_client_id":     []byte("client-id"),
-					"azure_tenant_id":     []byte("tenant-id.example.com"),
-				},
-			},
-		},
-	} {
-		clientFake := ctrlfake.NewClientBuilder().WithObjects(tt.secret).Build()
-
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := AzCredentials(ctx, clientFake)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
