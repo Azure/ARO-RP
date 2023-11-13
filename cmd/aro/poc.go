@@ -23,7 +23,7 @@ func rpPoc(ctx context.Context, log *logrus.Entry, enableMISE string) error {
 	go handleSigterm(log, shutdown)
 
 	port := flag.Arg(1)
-	frontEnd := poc.NewFrontend(log, port)
+	frontEnd := poc.NewFrontend(log, port, mise)
 
 	return frontEnd.Run(ctx)
 }
