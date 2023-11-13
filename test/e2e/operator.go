@@ -309,13 +309,10 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		location = *oc.Location
 
-		vnet, masterSubnet, err := apisubnet.Split(*oc.OpenShiftClusterProperties.MasterProfile.SubnetID)
-		Expect(err).NotTo(HaveOccurred())
-		_, workerSubnet, err := apisubnet.Split((*(*oc.OpenShiftClusterProperties.WorkerProfiles)[0].SubnetID))
+		vnet, workerSubnet, err := apisubnet.Split((*(*oc.OpenShiftClusterProperties.WorkerProfiles)[0].SubnetID))
 		Expect(err).NotTo(HaveOccurred())
 
 		subnetsToReconcile = map[string]*string{
-			masterSubnet: to.StringPtr(""),
 			workerSubnet: to.StringPtr(""),
 		}
 
@@ -323,6 +320,32 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		resourceGroup = r.ResourceGroup
 		vnetName = r.ResourceName
+
+		// Store the existing NSGs for the cluster before the test runs, in order to ensure we clean up
+		// after the test finishes, success or failure.
+		// This is expensive but will prevent flakes.
+		By("gathering existing subnet NSGs")
+		for subnet := range subnetsToReconcile {
+			subnetObject, err := clients.Subnet.Get(ctx, resourceGroup, vnetName, subnet, "")
+			Expect(err).NotTo(HaveOccurred())
+
+			subnetsToReconcile[subnet] = subnetObject.NetworkSecurityGroup.ID
+		}
+	}
+
+	cleanUpSubnetNSGs := func(ctx context.Context) {
+		By("cleaning up subnet NSGs")
+		for subnet := range subnetsToReconcile {
+			subnetObject, err := clients.Subnet.Get(ctx, resourceGroup, vnetName, subnet, "")
+			Expect(err).NotTo(HaveOccurred())
+
+			if subnetObject.NetworkSecurityGroup.ID != subnetsToReconcile[subnet] {
+				subnetObject.NetworkSecurityGroup.ID = subnetsToReconcile[subnet]
+
+				err = clients.Subnet.CreateOrUpdateAndWait(ctx, resourceGroup, vnetName, subnet, subnetObject)
+				Expect(err).NotTo(HaveOccurred())
+			}
+		}
 	}
 
 	createE2ENSG := func(ctx context.Context) {
@@ -355,6 +378,8 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		createE2ENSG(ctx)
 	})
 	AfterEach(func(ctx context.Context) {
+		cleanUpSubnetNSGs(ctx)
+
 		By("deleting test NSG")
 		err := clients.NetworkSecurityGroups.DeleteAndWait(ctx, resourceGroup, nsg)
 		if err != nil {
@@ -367,12 +392,26 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 			// Gets current subnet NSG and then updates it to testnsg.
 			subnetObject, err := clients.Subnet.Get(ctx, resourceGroup, vnetName, subnet, "")
 			Expect(err).NotTo(HaveOccurred())
-			// Updates the value to the original NSG in our subnetsToReconcile map
-			subnetsToReconcile[subnet] = subnetObject.NetworkSecurityGroup.ID
+
 			subnetObject.NetworkSecurityGroup = &testnsg
+
 			err = clients.Subnet.CreateOrUpdateAndWait(ctx, resourceGroup, vnetName, subnet, subnetObject)
 			Expect(err).NotTo(HaveOccurred())
 		}
+
+		By("updating the ARO cluster resource to ensure a reconcile")
+		Eventually(func(g Gomega, ctx context.Context) {
+			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+
+			if co.ObjectMeta.Annotations == nil {
+				co.ObjectMeta.Annotations = map[string]string{}
+			}
+			co.ObjectMeta.Annotations["aro.openshift.io/test-e2e-force-reconcile"] = time.Now().Format(time.RFC3339)
+
+			_, err = clients.AROClusters.AroV1alpha1().Clusters().Update(ctx, co, metav1.UpdateOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		for subnet, correctNSG := range subnetsToReconcile {
 			By(fmt.Sprintf("waiting for the subnet %q to be reconciled so it includes the original cluster NSG", subnet))
