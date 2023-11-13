@@ -69,10 +69,10 @@ func (f *frontend) getRouter(ctx context.Context) chi.Router {
 				f.logger.Info(message)
 				w.Write([]byte("****** Blocked by MISE authorization ******"))
 			} else {
-				w.Write([]byte("****** Welcome to ARO-RP on AKS PoC ******"))
+				w.Write([]byte("****** Welcome to ARO-RP on AKS PoC mise ******"))
 			}
 		} else {
-			w.Write([]byte("****** Welcome to ARO-RP on AKS PoC ******"))
+			w.Write([]byte("****** Welcome to ARO-RP on AKS PoC no mise ******"))
 		}
 	})
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
