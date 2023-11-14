@@ -37,6 +37,7 @@ spec:
             - aro
           args:
             - "--server-port={{ .Values.image.containerPort }}"
+            - "--enable-mise={{ .Values.MISE.MISE_AUTH_ENABLED }}"
           ports:
             - name: http
               containerPort: {{ .Values.image.containerPort }}
