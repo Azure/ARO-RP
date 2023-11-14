@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/ghodss/yaml"
 	configv1 "github.com/openshift/api/config/v1"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	cov1Helpers "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/ugorji/go/codec"
@@ -302,6 +303,7 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 	var testnsg mgmtnetwork.SecurityGroup
 
 	const nsg = "e2e-nsg"
+	const emptyMachineSet = "e2e-test-machineset"
 
 	gatherNetworkInfo := func(ctx context.Context) {
 		By("gathering vnet name, resource group, location, and adds master/worker subnets to list to reconcile")
@@ -385,6 +387,13 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		if err != nil {
 			log.Warn(err)
 		}
+
+		By("deleting test machineset if it still exists")
+		err = clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").Delete(ctx, emptyMachineSet, metav1.DeleteOptions{})
+		Expect(err).To(SatisfyAny(
+			Not(HaveOccurred()),
+			MatchError(kerrors.IsNotFound),
+		))
 	})
 	It("must reconcile list of subnets when NSG is changed", func(ctx context.Context) {
 		for subnet := range subnetsToReconcile {
@@ -399,17 +408,24 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 
-		By("updating the ARO cluster resource to ensure a reconcile")
+		By("creating an empty MachineSet to force a reconcile")
 		Eventually(func(g Gomega, ctx context.Context) {
-			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+			machinesets, err := clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").List(ctx, metav1.ListOptions{})
 			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(machinesets.Items).To(Not(BeEmpty()))
 
-			if co.ObjectMeta.Annotations == nil {
-				co.ObjectMeta.Annotations = map[string]string{}
+			newMachineSet := machinesets.Items[0].DeepCopy()
+			newMachineSet.Status = machinev1beta1.MachineSetStatus{}
+			newMachineSet.ObjectMeta = metav1.ObjectMeta{
+				Name:        emptyMachineSet,
+				Namespace:   "openshift-machine-api",
+				Annotations: newMachineSet.ObjectMeta.Annotations,
+				Labels:      newMachineSet.ObjectMeta.Labels,
 			}
-			co.ObjectMeta.Annotations["aro.openshift.io/test-e2e-force-reconcile"] = time.Now().Format(time.RFC3339)
+			newMachineSet.Name = emptyMachineSet
+			newMachineSet.Spec.Replicas = to.Int32Ptr(0)
 
-			_, err = clients.AROClusters.AroV1alpha1().Clusters().Update(ctx, co, metav1.UpdateOptions{})
+			_, err = clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").Create(ctx, newMachineSet, metav1.CreateOptions{})
 			g.Expect(err).NotTo(HaveOccurred())
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
