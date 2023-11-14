@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 )
 
 type MiseRequestData struct {
@@ -48,12 +47,6 @@ func authenticateWithMISE(ctx context.Context, token string) error {
 	default:
 		return fmt.Errorf("Unauthorized")
 	}
-}
-
-func extractToken(h http.Header) string {
-	auth := h.Get("Authorization")
-	token := strings.TrimPrefix(auth, "Bearer ")
-	return strings.TrimSpace(token)
 }
 
 func createMiseHTTPRequest(ctx context.Context, data MiseRequestData) (*http.Request, error) {

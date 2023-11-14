@@ -2,7 +2,6 @@ package poc
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -62,11 +61,10 @@ func (f *frontend) getRouter(ctx context.Context) chi.Router {
 		f.logger.Infof("Received request: %s", time.Now().String())
 		// TODO(jonachang): remove this when go production.
 		if f.enableMISE == true {
-			miseToken := extractMISEToken(r.Header)
+			miseToken := extractAuthBearerToken(r.Header)
 			miseError := authenticateWithMISE(ctx, miseToken)
 			if miseError != nil {
-				message := fmt.Sprintf("MISE error: %s", miseError)
-				f.logger.Info(message)
+				f.logger.Infof("MISE error: %s", miseError)
 				w.Write([]byte("****** Blocked by MISE authorization ******"))
 			} else {
 				w.Write([]byte("****** Welcome to ARO-RP on AKS PoC mise ******"))
@@ -82,7 +80,7 @@ func (f *frontend) getRouter(ctx context.Context) chi.Router {
 	return r
 }
 
-func extractMISEToken(h http.Header) string {
+func extractAuthBearerToken(h http.Header) string {
 	auth := h.Get("Authorization")
 	token := strings.TrimPrefix(auth, "Bearer ")
 	return strings.TrimSpace(token)
