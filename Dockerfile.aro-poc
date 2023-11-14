@@ -4,6 +4,6 @@ FROM ${REGISTRY}/ubi8/ubi-minimal
 RUN microdnf update && microdnf clean all
 RUN curl -o /etc/pki/ca-trust/source/anchors/AMEROOT_ameroot.crt http://crl.microsoft.com/pkiinfra/certs/AMEROOT_ameroot.crt && update-ca-trust
 COPY ./aro /usr/local/bin/
-ENTRYPOINT ["aro", "poc", "8080"]
+ENTRYPOINT ["aro", "poc", "8080", "true"]
 EXPOSE 8080/tcp
 USER 1000
