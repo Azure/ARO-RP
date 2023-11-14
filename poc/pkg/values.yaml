@@ -122,11 +122,17 @@ MISE:
       # Possible log levels: Trace, Debug, Information, Warning, Error, Critical, None 
       LogLevel: Debug
       InboundPolicies:
-        Label: aro-rp-policy
+        Label: aro-rp-arm-policy
         AuthenticationSchemes: Bearer
         TokenTypes: AppToken
         Authority: https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47/v2.0
         ValidApplicationIds: ""
+        Internal:
+          Label: aro-rp-internal-policy
+          AuthenticationSchemes: Bearer
+          TokenTypes: AppToken
+          Authority: https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47/v2.0
+          ValidApplicationIds: ""
     AllowedHosts: "*"
     Kestrel:
       Endpoints:
