@@ -30,7 +30,7 @@ func NewFrontend(logger *logrus.Entry, port string, enableMISE bool) frontend {
 }
 
 func (f *frontend) Run(ctx context.Context) error {
-	router := f.getRouter(ctx)
+	router := f.getRouter()
 	server := &http.Server{
 		Addr:     ":" + f.port,
 		Handler:  router,
@@ -55,14 +55,14 @@ func (f *frontend) Run(ctx context.Context) error {
 	return err
 }
 
-func (f *frontend) getRouter(ctx context.Context) chi.Router {
+func (f *frontend) getRouter() chi.Router {
 	r := chi.NewRouter()
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		f.logger.Infof("Received request: %s", time.Now().String())
 		// TODO(jonachang): remove this when go production.
 		if f.enableMISE == true {
 			miseToken := extractAuthBearerToken(r.Header)
-			miseError := authenticateWithMISE(ctx, miseToken)
+			miseError := authenticateWithMISE(r.Context(), miseToken)
 			if miseError != nil {
 				f.logger.Infof("MISE error: %s", miseError)
 				w.Write([]byte("****** Blocked by MISE authorization ******"))
