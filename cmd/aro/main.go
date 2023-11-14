@@ -17,10 +17,12 @@ import (
 
 var (
 	serverPort string
+	enableMISE bool
 )
 
 func init() {
 	pflag.StringVar(&serverPort, "server-port", "8080", "port to service http requests")
+	pflag.BoolVar(&enableMISE, "enable-mise", false, "enable MISE authentication for http requests")
 }
 
 func main() {
@@ -29,7 +31,7 @@ func main() {
 	log := utillog.GetLogger()
 
 	ctx := context.Background()
-	if err := rpPoc(ctx, log, serverPort); err != nil {
+	if err := rpPoc(ctx, log); err != nil {
 		log.Fatal(err)
 	}
 }

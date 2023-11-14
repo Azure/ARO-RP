@@ -2,35 +2,48 @@ package poc
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/sirupsen/logrus"
 )
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
+type FrontendConfig struct {
+	Port string
+	// TODO(jonachang) delete this in production
+	EnableMISE bool
+}
+
 type frontend struct {
 	logger *logrus.Entry
 	port   string
-	// TODO(jonachang) delete this in production
-	enableMISE bool
+	router chi.Router
 }
 
-func NewFrontend(logger *logrus.Entry, port string, enableMISE bool) frontend {
+func NewFrontend(logger *logrus.Entry, config FrontendConfig) frontend {
+	var router chi.Router
+	if config.EnableMISE {
+		router = getMiseRouter()
+	} else {
+		router = getNonMiseRouter()
+	}
+
 	return frontend{
-		logger:     logger,
-		port:       port,
-		enableMISE: enableMISE,
+		logger: logger,
+		port:   config.Port,
+		router: router,
 	}
 }
 
 func (f *frontend) Run(ctx context.Context) error {
-	router := f.getRouter()
+	router := f.router
 	server := &http.Server{
 		Addr:     ":" + f.port,
 		Handler:  router,
@@ -55,28 +68,42 @@ func (f *frontend) Run(ctx context.Context) error {
 	return err
 }
 
-func (f *frontend) getRouter() chi.Router {
+func getBaseRouter() chi.Router {
 	r := chi.NewRouter()
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		f.logger.Infof("Received request: %s", time.Now().String())
-		// TODO(jonachang): remove this when go production.
-		if f.enableMISE == true {
-			miseToken := extractAuthBearerToken(r.Header)
-			miseError := authenticateWithMISE(r.Context(), miseToken)
-			if miseError != nil {
-				f.logger.Infof("MISE error: %s", miseError)
-				w.Write([]byte("****** Blocked by MISE authorization ******"))
-			} else {
-				w.Write([]byte("****** Welcome to ARO-RP on AKS PoC mise ******"))
-			}
-		} else {
-			w.Write([]byte("****** Welcome to ARO-RP on AKS PoC no mise ******"))
-		}
-	})
+	r.Use(middleware.Logger)
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		w.Write([]byte("ok"))
 	})
+	return r
+}
+
+func getMiseRouter() chi.Router {
+	r := getBaseRouter()
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		miseToken := extractAuthBearerToken(r.Header)
+		miseResp, err := authenticateWithMISE(r.Context(), miseToken)
+		if err != nil {
+			err = fmt.Errorf("unable to authenticate with MISE: %s", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if miseResp != http.StatusOK {
+			err = fmt.Errorf("MISE authentication failed: %d", miseResp)
+			http.Error(w, err.Error(), miseResp)
+			return
+		}
+		w.Write([]byte("****** Welcome to ARO-RP on AKS PoC mise ******"))
+	})
+	return r
+}
+
+func getNonMiseRouter() chi.Router {
+	r := getBaseRouter()
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("****** Welcome to ARO-RP on AKS PoC no mise ******"))
+	})
+
 	return r
 }
 
