@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -16,12 +17,15 @@ import (
 type frontend struct {
 	logger *logrus.Entry
 	port   string
+	// TODO(jonachang) delete this in production
+	enableMISE bool
 }
 
-func NewFrontend(logger *logrus.Entry, port string) frontend {
+func NewFrontend(logger *logrus.Entry, port string, enableMISE bool) frontend {
 	return frontend{
-		logger: logger,
-		port:   port,
+		logger:     logger,
+		port:       port,
+		enableMISE: enableMISE,
 	}
 }
 
@@ -55,11 +59,29 @@ func (f *frontend) getRouter() chi.Router {
 	r := chi.NewRouter()
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		f.logger.Infof("Received request: %s", time.Now().String())
-		w.Write([]byte("****** ARO-RP on AKS PoC ******"))
+		// TODO(jonachang): remove this when go production.
+		if f.enableMISE == true {
+			miseToken := extractAuthBearerToken(r.Header)
+			miseError := authenticateWithMISE(r.Context(), miseToken)
+			if miseError != nil {
+				f.logger.Infof("MISE error: %s", miseError)
+				w.Write([]byte("****** Blocked by MISE authorization ******"))
+			} else {
+				w.Write([]byte("****** Welcome to ARO-RP on AKS PoC mise ******"))
+			}
+		} else {
+			w.Write([]byte("****** Welcome to ARO-RP on AKS PoC no mise ******"))
+		}
 	})
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		w.Write([]byte("ok"))
 	})
 	return r
+}
+
+func extractAuthBearerToken(h http.Header) string {
+	auth := h.Get("Authorization")
+	token := strings.TrimPrefix(auth, "Bearer ")
+	return strings.TrimSpace(token)
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/Azure/ARO-RP/pkg/poc"
@@ -15,12 +16,12 @@ import (
 
 func rpPoc(ctx context.Context, log *logrus.Entry, port string) error {
 	log.Print("********** ARO-RP on AKS PoC **********")
-
+	var mise = strings.ToLower(enableMISE) == "true"
 	ctx, shutdown := context.WithCancel(ctx)
 	defer shutdown()
 	go handleSigterm(log, shutdown)
 
-	frontEnd := poc.NewFrontend(log, port)
+	frontEnd := poc.NewFrontend(log, port, mise)
 
 	return frontEnd.Run(ctx)
 }
