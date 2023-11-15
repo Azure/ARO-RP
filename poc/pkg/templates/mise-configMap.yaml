@@ -19,9 +19,15 @@ data:
             "AuthenticationSchemes": ["{{ .Values.MISE.configMap.AzureAd.InboundPolicies.AuthenticationSchemes }}"],
             "TokenTypes": ["{{ .Values.MISE.configMap.AzureAd.InboundPolicies.TokenTypes }}"],
             "Authority": "{{ .Values.MISE.configMap.AzureAd.InboundPolicies.Authority }}",
-            "ValidApplicationIds": "[\"{{ .Values.MISE.configMap.AzureAd.InboundPolicies.ValidApplicationIds }}\",\"{{ .Values.MISE.configMap.AzureAd.InboundPolicies.Internal.ValidApplicationIds }}\"]"
+            "ValidApplicationIds": ["{{ .Values.MISE.configMap.AzureAd.InboundPolicies.ValidApplicationIds }}"],
+          },
+          {
+            "Label": "{{ .Values.MISE.configMap.AzureAd.InboundPolicies.Internal.Label }}",
+            "AuthenticationSchemes": ["{{ .Values.MISE.configMap.AzureAd.InboundPolicies.Internal.AuthenticationSchemes }}"],
+            "Authority": "{{ .Values.MISE.configMap.AzureAd.InboundPolicies.Internal.Authority }}",
+            "ValidApplicationIds": ["{{ .Values.MISE.configMap.AzureAd.InboundPolicies.Internal.ValidApplicationIds }}"],
           }
-        ],
+        ]
       },
       "AllowedHosts": "{{ .Values.MISE.configMap.AllowedHosts }}",
       "Kestrel": {
