@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/sirupsen/logrus"
 )
 
@@ -70,7 +69,6 @@ func (f *frontend) Run(ctx context.Context) error {
 
 func getBaseRouter() chi.Router {
 	r := chi.NewRouter()
-	r.Use(middleware.Logger)
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		w.Write([]byte("ok"))
