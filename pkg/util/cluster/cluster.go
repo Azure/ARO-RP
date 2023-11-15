@@ -104,7 +104,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 	scopes := []string{environment.Environment().ResourceManagerScope}
 	authorizer := azidext.NewTokenCredentialAdapter(spTokenCredential, scopes)
 
-	valutClient, err := armkeyvault.NewVaultsClient(environment.SubscriptionID(), spTokenCredential, options)
+	vaultClient, err := armkeyvault.NewVaultsClient(environment.SubscriptionID(), spTokenCredential, options)
 
 	if err != nil {
 		return nil, err
@@ -126,7 +126,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		routetables:                       network.NewRouteTablesClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		roleassignments:                   authorization.NewRoleAssignmentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		peerings:                          network.NewVirtualNetworkPeeringsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		vaultsClient:                      valutClient,
+		vaultsClient:                      vaultClient,
 	}
 
 	if ci && env.IsLocalDevelopmentMode() {
