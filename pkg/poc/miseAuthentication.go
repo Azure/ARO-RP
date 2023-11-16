@@ -20,15 +20,9 @@ const (
 	originURI = "https://server/endpoint"
 )
 
-<<<<<<< HEAD
 func authenticateWithMISE(ctx context.Context, token, requestMethod string) (int, string, error) {
 
 	requestData := miseRequestData{
-=======
-func authenticateWithMISE(ctx context.Context, requestMethod string, token string) error {
-
-	requestData := MiseRequestData{
->>>>>>> 6b3ff8572 (add method back)
 		MiseURL:        miseURL,
 		OriginalURI:    originURI,
 		OriginalMethod: requestMethod,
