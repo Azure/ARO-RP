@@ -6,7 +6,6 @@ package autosizednodes
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/Azure/go-autorest/autorest/to"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
@@ -17,10 +16,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/predicates"
 )
 
 type Reconciler struct {
@@ -101,19 +100,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 // SetupWithManager prepares the controller with info who to watch
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
-	clusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
-		name := o.GetName()
-		return strings.EqualFold(arov1alpha1.SingletonClusterName, name)
-	})
-
-	b := ctrl.NewControllerManagedBy(mgr).
-		For(&arov1alpha1.Cluster{}, builder.WithPredicates(clusterPredicate))
-
-		// Controller adds ControllerManagedBy to KubeletConfit created by this controller.
-		// Any changes will trigger reconcile, but only for that config.
-	return b.
-		Named(ControllerName).
+	// Controller adds ControllerManagedBy to KubeletConfit created by this controller.
+	// Any changes will trigger reconcile, but only for that config.
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicates.AROCluster)).
 		Owns(&mcv1.KubeletConfig{}).
+		Named(ControllerName).
 		Complete(r)
 }
 

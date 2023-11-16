@@ -23,6 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
+	"github.com/Azure/ARO-RP/pkg/operator/predicates"
 )
 
 const (
@@ -164,16 +165,12 @@ func (r *CloudProviderConfigReconciler) Reconcile(ctx context.Context, request c
 func (r *CloudProviderConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.Log.Info("starting cloud-provider-config controller")
 
-	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
-		return o.GetName() == arov1alpha1.SingletonClusterName
-	})
-
 	cloudProviderConfigPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return o.GetName() == cloudProviderConfigName.Name && o.GetNamespace() == cloudProviderConfigName.Namespace
 	})
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
+		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicates.AROCluster)).
 		Watches(
 			&source.Kind{Type: &corev1.ConfigMap{}},
 			&handler.EnqueueRequestForObject{},

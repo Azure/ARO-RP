@@ -13,11 +13,11 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/predicates"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
 )
 
@@ -122,12 +122,8 @@ func (r *Reconciler) conditionType() string {
 
 // SetupWithManager setup our manager
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
-	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
-		return o.GetName() == arov1alpha1.SingletonClusterName
-	})
-
 	builder := ctrl.NewControllerManagedBy(mgr).
-		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate))
+		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicates.AROCluster))
 
 	return builder.Named(ControllerName).Complete(r)
 }

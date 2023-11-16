@@ -27,6 +27,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
+	"github.com/Azure/ARO-RP/pkg/operator/predicates"
 )
 
 const (
@@ -205,16 +206,12 @@ func (r *MonitoringReconciler) monitoringConfigMap(ctx context.Context) (*corev1
 func (r *MonitoringReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.Log.Info("starting cluster monitoring controller")
 
-	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
-		return o.GetName() == arov1alpha1.SingletonClusterName
-	})
-
 	monitoringConfigMapPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return o.GetName() == monitoringName.Name && o.GetNamespace() == monitoringName.Namespace
 	})
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
+		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicates.AROCluster)).
 		// https://github.com/kubernetes-sigs/controller-runtime/issues/1173
 		// equivalent to For(&v1.ConfigMap{}, ...)., but can't call For multiple times on one builder
 		Watches(
