@@ -4,7 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+<<<<<<< HEAD
 	"io"
+=======
+	"io/ioutil"
+	"log"
+>>>>>>> 4fa870fb7 (add more log)
 	"net/http"
 )
 
