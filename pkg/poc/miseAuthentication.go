@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 )
 
@@ -19,27 +20,34 @@ const (
 	originURI = "https://server/endpoint"
 )
 
-func authenticateWithMISE(ctx context.Context, token string) (int, error) {
+func authenticateWithMISE(ctx context.Context, token, requestMethod string) (int, string, error) {
 
 	requestData := miseRequestData{
-		MiseURL:     miseURL,
-		OriginalURI: originURI,
-		Token:       token,
+		MiseURL:        miseURL,
+		OriginalURI:    originURI,
+		OriginalMethod: requestMethod,
+		Token:          token,
 	}
 
 	req, err := createMiseHTTPRequest(ctx, requestData)
 	if err != nil {
-		return 0, err
+		return 0, "", err
 	}
 
 	// TODO(jonachang): need to cache the client when in production.
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return 0, err
+		return 0, "", err
 	}
 	defer resp.Body.Close()
-	return resp.StatusCode, nil
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return 0, "", fmt.Errorf("error reading response body: %w", err)
+	}
+
+	return resp.StatusCode, string(bodyBytes), nil
 }
 
 func createMiseHTTPRequest(ctx context.Context, data miseRequestData) (*http.Request, error) {

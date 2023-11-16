@@ -82,15 +82,15 @@ func getMiseRouter() chi.Router {
 	r := getBaseRouter()
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		miseToken := extractAuthBearerToken(r.Header)
-		miseResp, err := authenticateWithMISE(r.Context(), miseToken)
+		miseRespCode, miseRespBody, err := authenticateWithMISE(r.Context(), miseToken, r.Method)
 		if err != nil {
 			err = fmt.Errorf("unable to authenticate with MISE: %s", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if miseResp != http.StatusOK {
-			err = fmt.Errorf("MISE authentication failed: %d", miseResp)
-			http.Error(w, err.Error(), miseResp)
+		if miseRespCode != http.StatusOK {
+			err = fmt.Errorf("MISE authentication failed with code %d and body %s", miseRespCode, miseRespBody)
+			http.Error(w, err.Error(), miseRespCode)
 			return
 		}
 		w.Write([]byte("****** Welcome to ARO-RP on AKS PoC mise ******"))
