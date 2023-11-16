@@ -30,6 +30,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
@@ -42,16 +43,17 @@ var rhKeys = []string{"registry.redhat.io", "cloud.openshift.com", "registry.con
 
 // Reconciler reconciles a Cluster object
 type Reconciler struct {
-	log *logrus.Entry
-
-	client         client.Client
+	base.AROController
 	registryClient pullsecret.RegistryClient
 }
 
 func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 	return &Reconciler{
-		log:            log,
-		client:         client,
+		AROController: base.AROController{
+			Log:    log,
+			Client: client,
+			Name:   ControllerName,
+		},
 		registryClient: pullsecret.NewRegistryClient(),
 	}
 }
@@ -67,19 +69,19 @@ func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 //     changes, we'll see the pull Secret object requested.
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance := &arov1alpha1.Cluster{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+	err := r.Client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.PullSecretEnabled) {
-		r.log.Debug("controller is disabled")
+		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
-	r.log.Debug("running")
+	r.Log.Debug("running")
 	userSecret := &corev1.Secret{}
-	err = r.client.Get(ctx, pullSecretName, userSecret)
+	err = r.Client.Get(ctx, pullSecretName, userSecret)
 	if err != nil && !kerrors.IsNotFound(err) {
 		return reconcile.Result{}, err
 	}
@@ -88,7 +90,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// detects if the global pull secret is broken and fixes it by using backup managed by ARO operator
 	if instance.Spec.OperatorFlags.GetSimpleBoolean(operator.PullSecretManaged) {
 		operatorSecret := &corev1.Secret{}
-		err = r.client.Get(ctx, types.NamespacedName{Namespace: operator.Namespace, Name: operator.SecretName}, operatorSecret)
+		err = r.Client.Get(ctx, types.NamespacedName{Namespace: operator.Namespace, Name: operator.SecretName}, operatorSecret)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -108,7 +110,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	err = r.client.Update(ctx, instance)
+	err = r.Client.Update(ctx, instance)
 	return reconcile.Result{}, err
 }
 
@@ -185,26 +187,34 @@ func (r *Reconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret,
 		// delete possible existing userSecret, calling deletion every time and ignoring when secret not found
 		// allows for simpler logic flow, when delete and create are not handled separately
 		// this call happens only when there is a need to change, it has no significant impact on performance
-		err := r.client.Delete(ctx, secret)
+		err := r.Client.Delete(ctx, secret)
 		if err != nil && !kerrors.IsNotFound(err) {
 			return nil, err
 		}
 
-		err = r.client.Create(ctx, secret)
+		err = r.Client.Create(ctx, secret)
 		if err != nil {
 			return secret, err
 		}
 
 		err = r.registryClient.ValidatePullSecret(ctx, secret)
+		if err != nil {
+			r.Log.Error(err)
+			r.SetDegraded(ctx, err)
+		}
 		return secret, err
 	}
 
-	err = r.client.Update(ctx, secret)
+	err = r.Client.Update(ctx, secret)
 	if err != nil {
 		return secret, err
 	}
 
 	err = r.registryClient.ValidatePullSecret(ctx, secret)
+	if err != nil {
+		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
+	}
 	return secret, err
 }
 
@@ -218,7 +228,7 @@ func (r *Reconciler) parseRedHatKeys(secret *corev1.Secret) (foundKeys []string,
 	// parse keys and validate JSON
 	parsedKeys, err := pullsecret.UnmarshalSecretData(secret)
 	if err != nil {
-		r.log.Info("pull secret is not valid json - recreating")
+		r.Log.Info("pull secret is not valid json - recreating")
 		return foundKeys, err
 	}
 

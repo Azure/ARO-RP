@@ -378,7 +378,7 @@ func TestUnmarshalSecretData(t *testing.T) {
 }
 
 func TestValidatePullSecret(t *testing.T) {
-	azurecrError := "unable to retrieve auth token: invalid username/password: unauthorized: authentication required, visit https://aka.ms/acr/authorization for more information."
+	azurecrError := "unable to retrieve auth token: invalid username/password: unauthorized: authentication required, visit https://aka.ms/acr/authorization for more information. This error has been customized to ensure it doesn't leak to Azure."
 	erroringRegistry := RegistryClient{
 		CheckAuth: func(ctx context.Context, sc *types.SystemContext, s1, s2, s3 string) error {
 			return fmt.Errorf(azurecrError)
@@ -413,7 +413,7 @@ func TestValidatePullSecret(t *testing.T) {
 			name: "authentication failure",
 			ps: &corev1.Secret{
 				Data: map[string][]byte{
-					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}, "registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 				},
 			},
 			wantErr: fmt.Sprintf("failed to authenticate to registry arosvc.azurecr.io: %s", azurecrError),
@@ -446,7 +446,7 @@ func TestValidatePullSecret(t *testing.T) {
 			err := tt.client.ValidatePullSecret(context.TODO(), tt.ps)
 			if err != nil {
 				if err.Error() != tt.wantErr {
-					t.Fatal(err.Error())
+					t.Fatalf("%v\ndoes not match:\n%s\n", err.Error(), tt.wantErr)
 				}
 			}
 		})
