@@ -1,12 +1,16 @@
 package adminactions
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"context"
 	"strings"
 
+	"github.com/Azure/go-autorest/autorest/azure"
+
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/loadbalancer"
-	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 func (a *azureActions) ResourceDeleteAndWait(ctx context.Context, resourceID string) error {

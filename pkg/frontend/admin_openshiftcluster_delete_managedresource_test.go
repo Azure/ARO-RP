@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 
@@ -19,7 +20,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
-	"github.com/Azure/go-autorest/autorest"
 )
 
 func TestAdminDeleteManagedResource(t *testing.T) {
