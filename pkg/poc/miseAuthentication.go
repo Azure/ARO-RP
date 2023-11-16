@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-type MiseRequestData struct {
+type miseRequestData struct {
 	MiseURL        string
 	OriginalURI    string
 	OriginalMethod string
@@ -21,7 +21,7 @@ const (
 
 func authenticateWithMISE(ctx context.Context, token string) (int, error) {
 
-	requestData := MiseRequestData{
+	requestData := miseRequestData{
 		MiseURL:     miseURL,
 		OriginalURI: originURI,
 		Token:       token,
@@ -42,7 +42,7 @@ func authenticateWithMISE(ctx context.Context, token string) (int, error) {
 	return resp.StatusCode, nil
 }
 
-func createMiseHTTPRequest(ctx context.Context, data MiseRequestData) (*http.Request, error) {
+func createMiseHTTPRequest(ctx context.Context, data miseRequestData) (*http.Request, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, data.MiseURL, bytes.NewBuffer(nil))
 	if err != nil {
 		return nil, err
