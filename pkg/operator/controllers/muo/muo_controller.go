@@ -166,7 +166,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 // SetupWithManager setup our manager
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	muoBuilder := ctrl.NewControllerManagedBy(mgr).
-		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicates.AROCluster)).
+		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{}))).
 		Watches(
 			&source.Kind{Type: &corev1.Secret{}},
 			&handler.EnqueueRequestForObject{},

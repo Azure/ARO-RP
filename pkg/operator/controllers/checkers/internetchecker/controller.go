@@ -13,6 +13,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
@@ -122,8 +123,8 @@ func (r *Reconciler) conditionType() string {
 
 // SetupWithManager setup our manager
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
-	builder := ctrl.NewControllerManagedBy(mgr).
-		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicates.AROCluster))
-
-	return builder.Named(ControllerName).Complete(r)
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{}))).
+		Named(ControllerName).
+		Complete(r)
 }

@@ -114,7 +114,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 // SetupWithManager setup our manager
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicates.AROCluster)).
+		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{}))).
 		// https://github.com/kubernetes-sigs/controller-runtime/issues/1173
 		// equivalent to For(&v1.Secret{})., but can't call For multiple times on one builder
 		Watches(

@@ -164,6 +164,7 @@ func (r *Reconciler) defaultOperator() *configv1.ClusterOperator {
 // SetupWithManager setup our manager
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
+		// we want to reconcile on status changes on the ARO Cluster resource here, unlike most other reconcilers
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicates.AROCluster)).
 		Owns(&configv1.ClusterOperator{}).
 		Named(ControllerName).

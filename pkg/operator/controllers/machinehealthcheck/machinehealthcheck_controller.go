@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -166,7 +167,7 @@ func (r *Reconciler) isClusterUpgrading(ctx context.Context) (bool, error) {
 // SetupWithManager will manage only our MHC resource with our specific controller name
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicates.AROCluster)).
+		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{}))).
 		Named(ControllerName).
 		Owns(&machinev1beta1.MachineHealthCheck{}).
 		Owns(&monitoringv1.PrometheusRule{}).

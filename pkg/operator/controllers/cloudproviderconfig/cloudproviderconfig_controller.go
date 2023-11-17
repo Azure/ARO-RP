@@ -170,7 +170,7 @@ func (r *CloudProviderConfigReconciler) SetupWithManager(mgr ctrl.Manager) error
 	})
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicates.AROCluster)).
+		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{}))).
 		Watches(
 			&source.Kind{Type: &corev1.ConfigMap{}},
 			&handler.EnqueueRequestForObject{},

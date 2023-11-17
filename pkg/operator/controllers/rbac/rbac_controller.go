@@ -19,6 +19,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/predicates"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
@@ -95,12 +96,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 // SetupWithManager setup our mananger
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
-	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
-		return o.GetName() == arov1alpha1.SingletonClusterName
-	})
-
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
+		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{}))).
 		Owns(&rbacv1.ClusterRole{}).
 		Owns(&rbacv1.ClusterRoleBinding{}).
 		Named(ControllerName).
