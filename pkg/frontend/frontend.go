@@ -199,13 +199,7 @@ func NewFrontend(ctx context.Context,
 				PrivateKey: key,
 			},
 		},
-		NextProtos:             []string{"h2", "http/1.1"},
-		ClientAuth:             tls.RequestClientCert,
-		SessionTicketsDisabled: true,
-		CurvePreferences: []tls.CurveID{
-			tls.CurveP256,
-			tls.X25519,
-		},
+		ClientAuth: tls.RequestClientCert,
 	}
 
 	for _, cert := range certs {
