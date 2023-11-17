@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"os"
 
 	"github.com/Azure/go-autorest/tracing"
 	"github.com/sirupsen/logrus"
@@ -20,12 +19,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
 	pkgmonitor "github.com/Azure/ARO-RP/pkg/monitor"
 	"github.com/Azure/ARO-RP/pkg/proxy"
-	"github.com/Azure/ARO-RP/pkg/util/encryption"
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
+	"github.com/Azure/ARO-RP/pkg/util/service"
 )
 
 func monitor(ctx context.Context, log *logrus.Entry) error {
-	_env, err := env.NewEnv(ctx, log)
+	_env, err := env.NewEnv(ctx, log, env.COMPONENT_MONITOR)
 	if err != nil {
 		return err
 	}
@@ -42,7 +40,14 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	m := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	if err := env.ValidateVars(
+		service.KeyVaultPrefix,
+		service.DatabaseAccountName,
+	); err != nil {
+		return err
+	}
+
+	m := statsd.NewFromEnv(ctx, log.WithField("component", "metrics"), _env)
 
 	g, err := golang.NewMetrics(log.WithField("component", "metrics"), m)
 	if err != nil {
@@ -57,47 +62,14 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		RequestLatency: k8s.NewLatency(m),
 	})
 
-	clusterm := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("CLUSTER_MDM_ACCOUNT"), os.Getenv("CLUSTER_MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	clusterm := statsd.NewFromEnv(ctx, log.WithField("component", "metrics"), _env, "CLUSTER")
 
-	msiAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceManagerScope)
+	dbc, err := service.NewDatabase(ctx, _env, log, &noop.Noop{}, service.DB_ALWAYS_MASTERKEY, true)
 	if err != nil {
 		return err
 	}
 
-	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().KeyVaultScope)
-	if err != nil {
-		return err
-	}
-
-	if err := env.ValidateVars(KeyVaultPrefix); err != nil {
-		return err
-	}
-	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
-	// TODO: should not be using the service keyvault here
-	serviceKeyvaultURI := keyvault.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
-	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
-
-	aead, err := encryption.NewMulti(ctx, serviceKeyvault, env.EncryptionSecretV2Name, env.EncryptionSecretName)
-	if err != nil {
-		return err
-	}
-
-	if err := env.ValidateVars(DatabaseAccountName); err != nil {
-		return err
-	}
-
-	dbAccountName := os.Getenv(DatabaseAccountName)
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer, dbAccountName)
-	if err != nil {
-		return err
-	}
-
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, &noop.Noop{}, aead, dbAccountName)
-	if err != nil {
-		return err
-	}
-
-	dbName, err := DBName(_env.IsLocalDevelopmentMode())
+	dbName, err := service.DBName(_env.IsLocalDevelopmentMode())
 	if err != nil {
 		return err
 	}
@@ -126,7 +98,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), dialer, dbMonitors, dbOpenShiftClusters, dbSubscriptions, m, clusterm, liveConfig, _env)
+	mon := pkgmonitor.NewMonitor(_env.Logger(), dialer, dbMonitors, dbOpenShiftClusters, dbSubscriptions, m, clusterm, liveConfig, _env)
 
 	return mon.Run(ctx)
 }

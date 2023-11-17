@@ -67,7 +67,7 @@ type prod struct {
 	features map[Feature]bool
 }
 
-func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
+func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent) (*prod, error) {
 	if err := ValidateVars("AZURE_FP_CLIENT_ID", "DOMAIN_NAME"); err != nil {
 		return nil, err
 	}
@@ -86,7 +86,7 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		}
 	}
 
-	core, err := NewCore(ctx, log)
+	core, err := NewCore(ctx, log, component)
 	if err != nil {
 		return nil, err
 	}
@@ -124,12 +124,12 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		}
 	}
 
-	msiAuthorizer, err := p.NewMSIAuthorizer(MSIContextRP, p.Environment().ResourceManagerScope)
+	msiAuthorizer, err := p.NewMSIAuthorizer(p.Environment().ResourceManagerScope)
 	if err != nil {
 		return nil, err
 	}
 
-	msiKVAuthorizer, err := p.NewMSIAuthorizer(MSIContextRP, p.Environment().KeyVaultScope)
+	msiKVAuthorizer, err := p.NewMSIAuthorizer(p.Environment().KeyVaultScope)
 	if err != nil {
 		return nil, err
 	}

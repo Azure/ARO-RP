@@ -32,7 +32,7 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 	var tokenCredential azcore.TokenCredential
 	if os.Getenv("AZURE_EV2") != "" { // running in EV2 - use MSI
 		var err error
-		_env, err = env.NewCore(ctx, log)
+		_env, err = env.NewCore(ctx, log, env.COMPONENT_DEPLOY)
 		if err != nil {
 			return err
 		}

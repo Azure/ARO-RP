@@ -22,11 +22,11 @@ type dev struct {
 	*prod
 }
 
-func newDev(ctx context.Context, log *logrus.Entry) (Interface, error) {
+func newDev(ctx context.Context, log *logrus.Entry, component ServiceComponent) (Interface, error) {
 	d := &dev{}
 
 	var err error
-	d.prod, err = newProd(ctx, log)
+	d.prod, err = newProd(ctx, log, component)
 	if err != nil {
 		return nil, err
 	}

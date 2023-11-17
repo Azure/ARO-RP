@@ -19,7 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/proxy"
-	"github.com/Azure/ARO-RP/pkg/util/bucket"
+	"github.com/Azure/ARO-RP/pkg/util/buckets"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 )
@@ -35,14 +35,12 @@ type monitor struct {
 	m        metrics.Emitter
 	clusterm metrics.Emitter
 	mu       sync.RWMutex
-	docs     map[string]*cacheDoc
 	subs     map[string]*api.SubscriptionDocument
 	env      env.Interface
 
-	isMaster    bool
-	bucketCount int
-	buckets     map[int]struct{}
+	isMaster bool
 
+	b              buckets.BucketWorker
 	lastBucketlist atomic.Value //time.Time
 	lastChangefeed atomic.Value //time.Time
 	startTime      time.Time
@@ -67,12 +65,8 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Moni
 
 		m:        m,
 		clusterm: clusterm,
-		docs:     map[string]*cacheDoc{},
 		subs:     map[string]*api.SubscriptionDocument{},
 		env:      e,
-
-		bucketCount: bucket.Buckets,
-		buckets:     map[int]struct{}{},
 
 		startTime: time.Now(),
 
@@ -80,6 +74,9 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Moni
 
 		hiveShardConfigs: map[int]*rest.Config{},
 	}
+
+	mon.b = buckets.NewBucketWorker(log, mon.worker, &mon.mu)
+	return mon
 }
 
 func (mon *monitor) Run(ctx context.Context) error {
@@ -112,7 +109,8 @@ func (mon *monitor) Run(ctx context.Context) error {
 		}
 
 		// read our bucket allocation from the master
-		err = mon.listBuckets(ctx)
+		buckets, err := mon.dbMonitors.ListBuckets(ctx)
+		mon.b.LoadBuckets(buckets)
 		if err != nil {
 			mon.baseLog.Error(err)
 		} else {

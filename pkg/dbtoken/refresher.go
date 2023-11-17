@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"runtime/debug"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -39,16 +40,18 @@ type refresher struct {
 	tokenRefreshed bool
 }
 
-func NewRefresher(log *logrus.Entry, env env.Core, authorizer autorest.Authorizer, insecureSkipVerify bool, dbc cosmosdb.DatabaseClient, permission string, m metrics.Emitter, metricPrefix string, url string) Refresher {
+func NewRefresher(log *logrus.Entry, env env.Core, authorizer autorest.Authorizer, insecureSkipVerify bool, dbc cosmosdb.DatabaseClient, m metrics.Emitter, url string) Refresher {
+	component := strings.ToLower(env.Component())
+
 	return &refresher{
 		log: log,
 		c:   NewClient(env, authorizer, insecureSkipVerify, url),
 
 		dbc:        dbc,
-		permission: permission,
+		permission: component,
 
 		m:            m,
-		metricPrefix: metricPrefix,
+		metricPrefix: component,
 	}
 }
 

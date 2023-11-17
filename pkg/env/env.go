@@ -100,15 +100,15 @@ type Interface interface {
 	VMSku(vmSize string) (*mgmtcompute.ResourceSku, error)
 }
 
-func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
+func NewEnv(ctx context.Context, log *logrus.Entry, component ServiceComponent) (Interface, error) {
 	if IsLocalDevelopmentMode() {
 		if err := ValidateVars(ProxyHostName); err != nil {
 			return nil, err
 		}
-		return newDev(ctx, log)
+		return newDev(ctx, log, component)
 	}
 
-	return newProd(ctx, log)
+	return newProd(ctx, log, component)
 }
 
 func IsLocalDevelopmentMode() bool {

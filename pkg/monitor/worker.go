@@ -6,7 +6,6 @@ package monitor
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"sync"
 	"time"
 
@@ -52,28 +51,6 @@ func (mon *monitor) populateHiveShardRestConfig(ctx context.Context, shard int) 
 	}
 }
 
-// listBuckets reads our bucket allocation from the master
-func (mon *monitor) listBuckets(ctx context.Context) error {
-	buckets, err := mon.dbMonitors.ListBuckets(ctx)
-
-	mon.mu.Lock()
-	defer mon.mu.Unlock()
-
-	oldBuckets := mon.buckets
-	mon.buckets = make(map[int]struct{}, len(buckets))
-
-	for _, i := range buckets {
-		mon.buckets[i] = struct{}{}
-	}
-
-	if !reflect.DeepEqual(mon.buckets, oldBuckets) {
-		mon.baseLog.Printf("servicing %d buckets", len(mon.buckets))
-		mon.fixDocs()
-	}
-
-	return err
-}
-
 // changefeed tracks the OpenShiftClusters change feed and keeps mon.docs
 // up-to-date.  We don't monitor clusters in Creating state, hence we don't add
 // them to mon.docs.  We also don't monitor clusters in Deleting state; when
@@ -114,7 +91,7 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 					ps == api.ProvisioningStateFailed &&
 						(fps == api.ProvisioningStateCreating ||
 							fps == api.ProvisioningStateDeleting):
-					mon.deleteDoc(doc)
+					mon.b.DeleteDoc(doc)
 				default:
 					// in the future we will have the shard index set on the api.OpenShiftClusterDocument
 					// but for now we simply select Hive (AKS) shard 1
@@ -129,7 +106,7 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 					}
 
 					// TODO: improve memory usage by storing a subset of doc in mon.docs
-					mon.upsertDoc(doc)
+					mon.b.UpsertDoc(doc)
 				}
 			}
 
@@ -179,17 +156,17 @@ func (mon *monitor) worker(stop <-chan struct{}, delay time.Duration, id string)
 	log := mon.baseLog
 	{
 		mon.mu.RLock()
-		v := mon.docs[id]
+		v := mon.b.Doc(id)
 		mon.mu.RUnlock()
 
 		if v == nil {
 			return
 		}
 
-		log = utillog.EnrichWithResourceID(log, v.doc.OpenShiftCluster.ID)
+		log = utillog.EnrichWithResourceID(log, v.OpenShiftCluster.ID)
 
 		var err error
-		r, err = azure.ParseResourceID(v.doc.OpenShiftCluster.ID)
+		r, err = azure.ParseResourceID(v.OpenShiftCluster.ID)
 		if err != nil {
 			log.Error(err)
 			return
@@ -206,7 +183,7 @@ func (mon *monitor) worker(stop <-chan struct{}, delay time.Duration, id string)
 out:
 	for {
 		mon.mu.RLock()
-		v := mon.docs[id]
+		v := mon.b.Doc(id)
 		sub := mon.subs[r.SubscriptionID]
 		mon.mu.RUnlock()
 
@@ -220,7 +197,7 @@ out:
 		// cached metrics in the remaining minutes
 
 		if sub != nil && sub.Subscription != nil && sub.Subscription.State != api.SubscriptionStateSuspended && sub.Subscription.State != api.SubscriptionStateWarned {
-			mon.workOne(context.Background(), log, v.doc, sub, newh != h)
+			mon.workOne(context.Background(), log, v, sub, newh != h)
 		}
 
 		select {

@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"strings"
 	"time"
 
@@ -58,6 +59,22 @@ func New(ctx context.Context, log *logrus.Entry, env env.Core, account, namespac
 	go s.run()
 
 	return s
+}
+
+func NewFromEnv(ctx context.Context, log *logrus.Entry, env env.Core, namespace ...string) metrics.Emitter {
+	_ns := ""
+	if len(namespace) > 0 {
+		_ns = namespace[0] + "_"
+	}
+
+	return New(
+		ctx,
+		log,
+		env,
+		os.Getenv(_ns+"MDM_ACCOUNT"),
+		os.Getenv(_ns+"MDM_NAMESPACE"),
+		os.Getenv("MDM_STATSD_SOCKET"),
+	)
 }
 
 // EmitFloat records float information

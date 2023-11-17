@@ -19,7 +19,7 @@ const (
 	MSIContextGateway MSIContext = "GATEWAY"
 )
 
-func (c *core) NewMSIAuthorizer(msiContext MSIContext, scopes ...string) (autorest.Authorizer, error) {
+func (c *core) NewMSIAuthorizer(scopes ...string) (autorest.Authorizer, error) {
 	if !c.IsLocalDevelopmentMode() {
 		options := c.Environment().ManagedIdentityCredentialOptions()
 		msiTokenCredential, err := azidentity.NewManagedIdentityCredential(options)
@@ -30,9 +30,16 @@ func (c *core) NewMSIAuthorizer(msiContext MSIContext, scopes ...string) (autore
 		return azidext.NewTokenCredentialAdapter(msiTokenCredential, scopes), nil
 	}
 
+	var msiContext string
+	if c.component == COMPONENT_GATEWAY {
+		msiContext = string(MSIContextGateway)
+	} else {
+		msiContext = string(MSIContextRP)
+	}
+
 	tenantIdKey := "AZURE_TENANT_ID"
-	azureClientIdKey := "AZURE_" + string(msiContext) + "_CLIENT_ID"
-	azureClientSecretKey := "AZURE_" + string(msiContext) + "_CLIENT_SECRET"
+	azureClientIdKey := "AZURE_" + msiContext + "_CLIENT_ID"
+	azureClientSecretKey := "AZURE_" + msiContext + "_CLIENT_SECRET"
 
 	if err := ValidateVars(azureClientIdKey, azureClientSecretKey, tenantIdKey); err != nil {
 		return nil, fmt.Errorf("%v (development mode)", err.Error())
