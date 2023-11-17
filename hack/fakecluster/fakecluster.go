@@ -60,12 +60,6 @@ func run(ctx context.Context, l *logrus.Entry) error {
 				PrivateKey: key,
 			},
 		},
-		NextProtos:             []string{"h2", "http/1.1"},
-		SessionTicketsDisabled: true,
-		CurvePreferences: []tls.CurveID{
-			tls.CurveP256,
-			tls.X25519,
-		},
 	}
 
 	r := mux.NewRouter()
