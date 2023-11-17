@@ -311,10 +311,14 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		location = *oc.Location
 
-		vnet, workerSubnet, err := apisubnet.Split((*(*oc.OpenShiftClusterProperties.WorkerProfiles)[0].SubnetID))
+		vnet, masterSubnet, err := apisubnet.Split((*oc.OpenShiftClusterProperties.MasterProfile.SubnetID))
+		Expect(err).NotTo(HaveOccurred())
+
+		_, workerSubnet, err := apisubnet.Split((*(*oc.OpenShiftClusterProperties.WorkerProfiles)[0].SubnetID))
 		Expect(err).NotTo(HaveOccurred())
 
 		subnetsToReconcile = map[string]*string{
+			masterSubnet: to.StringPtr(""),
 			workerSubnet: to.StringPtr(""),
 		}
 
