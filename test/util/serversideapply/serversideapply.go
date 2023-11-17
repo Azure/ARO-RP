@@ -88,7 +88,6 @@ func CliWithApply(objectTypes []string, object ...runtime.Object) *fake.Clientse
 			return false, nil, nil
 		},
 		)
-
 	}
 	return fc
 }

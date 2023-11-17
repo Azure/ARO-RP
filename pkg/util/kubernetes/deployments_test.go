@@ -69,7 +69,7 @@ func TestRestart(t *testing.T) {
 			if err == nil {
 				foundRestartAnnotation := false
 				if d.Spec.Template.Annotations != nil {
-					for a, _ := range d.Spec.Template.Annotations {
+					for a := range d.Spec.Template.Annotations {
 						if a == "kubectl.kubernetes.io/restartedAt" {
 							foundRestartAnnotation = true
 							break
