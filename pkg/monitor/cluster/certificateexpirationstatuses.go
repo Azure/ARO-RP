@@ -46,7 +46,7 @@ func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error
 		})
 	}
 
-	if dns.IsManagedDomain(mon.oc.Properties.ClusterProfile.Domain) {
+	if dns.IsManagedDomain(strings.Split(mon.oc.Properties.APIServerProfile.URL, ":")[1]) {
 		ic := &operatorv1.IngressController{}
 		err := mon.ocpclientset.Get(ctx, client.ObjectKey{
 			Namespace: ingressNamespace,
