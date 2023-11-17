@@ -13,6 +13,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -408,15 +409,15 @@ func (o *operator) IsReady(ctx context.Context) (bool, error) {
 }
 
 func (o *operator) Restart(ctx context.Context, deploymentNames []string) error {
+	var result error
 	for _, dn := range deploymentNames {
-		err := utilkubernetes.Restart(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), dn)
-
+		err := utilkubernetes.Restart(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), pkgoperator.Namespace, dn)
 		if err != nil {
-			return err
+			result = multierror.Append(result, err)
 		}
 	}
 
-	return nil
+	return result
 }
 
 func checkOperatorDeploymentVersion(ctx context.Context, cli appsv1client.DeploymentInterface, name string, desiredVersion string) (bool, error) {
