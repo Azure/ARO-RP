@@ -84,7 +84,7 @@ func getMiseRouter() chi.Router {
 		miseToken := extractAuthBearerToken(r.Header)
 		miseRespCode, miseRespBody, err := authenticateWithMISE(r.Context(), miseToken, r.Method)
 		if err != nil {
-			err = fmt.Errorf("unable to authenticate with MISE: %s", err)
+			err = fmt.Errorf("unable to perform authentication with MISE: %s", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
