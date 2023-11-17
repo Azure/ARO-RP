@@ -5,105 +5,34 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
-	"math/rand"
-	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"strings"
-	"time"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
-	"github.com/Azure/ARO-RP/pkg/util/version"
+	"github.com/spf13/pflag"
 )
 
-func usage() {
-	fmt.Fprint(flag.CommandLine.Output(), "usage:\n")
-	fmt.Fprintf(flag.CommandLine.Output(), "  %s dbtoken\n", os.Args[0])
-	fmt.Fprintf(flag.CommandLine.Output(), "  %s deploy config.yaml location\n", os.Args[0])
-	fmt.Fprintf(flag.CommandLine.Output(), "  %s gateway\n", os.Args[0])
-	fmt.Fprintf(flag.CommandLine.Output(), "  %s mirror [release_image...]\n", os.Args[0])
-	fmt.Fprintf(flag.CommandLine.Output(), "  %s monitor\n", os.Args[0])
-	fmt.Fprintf(flag.CommandLine.Output(), "  %s portal\n", os.Args[0])
-	fmt.Fprintf(flag.CommandLine.Output(), "  %s rp\n", os.Args[0])
-	fmt.Fprintf(flag.CommandLine.Output(), "  %s operator {master,worker}\n", os.Args[0])
-	fmt.Fprintf(flag.CommandLine.Output(), "  %s update-versions\n", os.Args[0])
-	fmt.Fprintf(flag.CommandLine.Output(), "  %s poc port\n", os.Args[0])
-	flag.PrintDefaults()
+var (
+	serverPort string
+	enableMISE bool
+)
+
+func init() {
+	pflag.StringVar(&serverPort, "server-port", "8080", "port to service http requests")
+	pflag.BoolVar(&enableMISE, "enable-mise", false, "enable MISE authentication for http requests")
 }
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
+	pflag.Parse()
 
-	flag.Usage = usage
-	flag.Parse()
-
-	ctx := context.Background()
-	// audit := utillog.GetAuditEntry()
 	log := utillog.GetLogger()
 
-	go func() {
-		log.Warn(http.ListenAndServe("localhost:6060", nil))
-	}()
-
-	log.Printf("starting, git commit %s", version.GitCommit)
-
-	var err error
-	switch strings.ToLower(flag.Arg(0)) {
-	case "dbtoken":
-		checkArgs(1)
-		// err = dbtoken(ctx, log)
-	case "deploy":
-		checkArgs(3)
-		// err = deploy(ctx, log)
-	case "gateway":
-		checkArgs(1)
-		// err = gateway(ctx, log)
-	case "mirror":
-		checkMinArgs(1)
-		// err = mirror(ctx, log)
-	case "monitor":
-		checkArgs(1)
-		// err = monitor(ctx, log)
-	case "rp":
-		checkArgs(1)
-		// err = rp(ctx, log, audit)
-	case "portal":
-		checkArgs(1)
-		// err = portal(ctx, log, audit)
-	case "operator":
-		checkArgs(2)
-		// err = operator(ctx, log)
-	case "update-versions":
-		checkArgs(1)
-		// err = updateOCPVersions(ctx, log)
-	case "poc":
-		checkArgs(3)
-		err = rpPoc(ctx, log, os.Args[3])
-	default:
-		usage()
-		os.Exit(2)
-	}
-
-	if err != nil {
+	ctx := context.Background()
+	if err := rpPoc(ctx, log); err != nil {
 		log.Fatal(err)
-	}
-}
-
-func checkArgs(required int) {
-	if len(flag.Args()) != required {
-		usage()
-		os.Exit(2)
-	}
-}
-
-func checkMinArgs(required int) {
-	if len(flag.Args()) < required {
-		usage()
-		os.Exit(2)
 	}
 }
 

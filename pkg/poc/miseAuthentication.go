@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"log"
+	"io"
 	"net/http"
 )
 
-type MiseRequestData struct {
+type miseRequestData struct {
 	MiseURL        string
 	OriginalURI    string
 	OriginalMethod string
@@ -20,36 +20,37 @@ const (
 	originURI = "https://server/endpoint"
 )
 
-func authenticateWithMISE(ctx context.Context, token string) error {
+func authenticateWithMISE(ctx context.Context, token, requestMethod string) (int, string, error) {
 
-	requestData := MiseRequestData{
-		MiseURL:     miseURL,
-		OriginalURI: originURI,
-		Token:       token,
+	requestData := miseRequestData{
+		MiseURL:        miseURL,
+		OriginalURI:    originURI,
+		OriginalMethod: requestMethod,
+		Token:          token,
 	}
 
 	req, err := createMiseHTTPRequest(ctx, requestData)
 	if err != nil {
-		return err
+		return 0, "", err
 	}
 
 	// TODO(jonachang): need to cache the client when in production.
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		return 0, "", err
 	}
 	defer resp.Body.Close()
-	log.Default().Println("Response status: ", resp.Status)
-	switch resp.StatusCode {
-	case http.StatusOK:
-		return nil
-	default:
-		return fmt.Errorf("Unauthorized")
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return 0, "", fmt.Errorf("error reading response body: %w", err)
 	}
+
+	return resp.StatusCode, string(bodyBytes), nil
 }
 
-func createMiseHTTPRequest(ctx context.Context, data MiseRequestData) (*http.Request, error) {
+func createMiseHTTPRequest(ctx context.Context, data miseRequestData) (*http.Request, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, data.MiseURL, bytes.NewBuffer(nil))
 	if err != nil {
 		return nil, err
