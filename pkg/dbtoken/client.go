@@ -37,6 +37,8 @@ func NewClient(_env env.Core, authorizer autorest.Authorizer, insecureSkipVerify
 				TLSClientConfig: &tls.Config{
 					InsecureSkipVerify: insecureSkipVerify,
 				},
+				// disable HTTP/2 for now: https://github.com/golang/go/issues/36026
+				TLSNextProto: map[string]func(string, *tls.Conn) http.RoundTripper{},
 			},
 		},
 		authorizer: authorizer,
