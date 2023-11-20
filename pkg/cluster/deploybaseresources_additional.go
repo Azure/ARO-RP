@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/loadbalancer"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -531,7 +532,7 @@ func (m *manager) networkPublicLoadBalancer(azureRegion string, outboundIPs []ap
 			resourceGroupID := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID
 			frontendIPConfigName := stringutils.LastTokenByte(outboundIPs[i].ID, '/')
 			frontendConfigID := fmt.Sprintf("%s/providers/Microsoft.Network/loadBalancers/%s/frontendIPConfigurations/%s", resourceGroupID, *lb.Name, frontendIPConfigName)
-			*lb.FrontendIPConfigurations = append(*lb.FrontendIPConfigurations, newFrontendIPConfig(frontendIPConfigName, frontendConfigID, outboundIPs[i].ID))
+			*lb.FrontendIPConfigurations = append(*lb.FrontendIPConfigurations, loadbalancer.NewFrontendIPConfig(frontendIPConfigName, frontendConfigID, outboundIPs[i].ID))
 		}
 
 		for i := 0; i < m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs.Count; i++ {
@@ -539,12 +540,12 @@ func (m *manager) networkPublicLoadBalancer(azureRegion string, outboundIPs []ap
 			if i == 0 && m.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
 				frontendIPConfigName := "public-lb-ip-v4"
 				frontendConfigID := fmt.Sprintf("%s/providers/Microsoft.Network/loadBalancers/%s/frontendIPConfigurations/%s", resourceGroupID, *lb.Name, frontendIPConfigName)
-				*(*lb.OutboundRules)[0].FrontendIPConfigurations = append(*(*lb.OutboundRules)[0].FrontendIPConfigurations, newOutboundRuleFrontendIPConfig(frontendConfigID))
+				*(*lb.OutboundRules)[0].FrontendIPConfigurations = append(*(*lb.OutboundRules)[0].FrontendIPConfigurations, loadbalancer.NewOutboundRuleFrontendIPConfig(frontendConfigID))
 				continue
 			}
 			frontendIPConfigName := stringutils.LastTokenByte(outboundIPs[i].ID, '/')
 			frontendConfigID := fmt.Sprintf("%s/providers/Microsoft.Network/loadBalancers/%s/frontendIPConfigurations/%s", resourceGroupID, *lb.Name, frontendIPConfigName)
-			*(*lb.OutboundRules)[0].FrontendIPConfigurations = append(*(*lb.OutboundRules)[0].FrontendIPConfigurations, newOutboundRuleFrontendIPConfig(frontendConfigID))
+			*(*lb.OutboundRules)[0].FrontendIPConfigurations = append(*(*lb.OutboundRules)[0].FrontendIPConfigurations, loadbalancer.NewOutboundRuleFrontendIPConfig(frontendConfigID))
 		}
 	}
 
