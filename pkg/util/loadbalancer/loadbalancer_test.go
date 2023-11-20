@@ -10,12 +10,12 @@ import (
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/stretchr/testify/assert"
+
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 var infraID = "infraID"
 var location = "eastus"
-var subscription = "00000000-0000-0000-0000-000000000000"
-var clusterRG = "clusterRG"
 var publicIngressFIPConfigID = to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/ae3506385907e44eba9ef9bf76eac973")
 var originalLB = mgmtnetwork.LoadBalancer{
 	Sku: &mgmtnetwork.LoadBalancerSku{
@@ -72,7 +72,7 @@ func TestRemoveLoadBalancerFrontendIPConfiguration(t *testing.T) {
 		fipResourceID string
 		currentLB     mgmtnetwork.LoadBalancer
 		expectedLB    mgmtnetwork.LoadBalancer
-		expectedErr   error
+		expectedErr   string
 	}{
 		{
 			name:          "remove frontend ip config",
@@ -122,18 +122,13 @@ func TestRemoveLoadBalancerFrontendIPConfiguration(t *testing.T) {
 			fipResourceID: *publicIngressFIPConfigID,
 			currentLB:     originalLB,
 			expectedLB:    originalLB,
-			expectedErr:   fmt.Errorf("frontend IP Configuration %s has external references, remove the external references prior to removing the frontend IP configuration", *publicIngressFIPConfigID),
+			expectedErr:   fmt.Sprintf("frontend IP Configuration %s has external references, remove the external references prior to removing the frontend IP configuration", *publicIngressFIPConfigID),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			// Run addOutboundIPsToLB and assert the correct results
 			err := RemoveFrontendIPConfiguration(&tt.currentLB, tt.fipResourceID)
-			if tt.expectedErr != nil {
-				assert.Equal(t, tt.expectedErr, err, "Unexpected error exception")
-			} else {
-				assert.Equal(t, nil, err, "Unexpected error exception")
-			}
 			assert.Equal(t, tt.expectedLB, tt.currentLB)
+			utilerror.AssertErrorMessage(t, err, tt.expectedErr)
 		})
 	}
 }

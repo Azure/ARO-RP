@@ -64,7 +64,7 @@ var _ = Describe("[Admin API] Delete managed resource action", func() {
 		Eventually(func(g Gomega, ctx context.Context) {
 			service, err = clients.Kubernetes.CoreV1().Services("default").Get(ctx, "test", metav1.GetOptions{})
 			g.Expect(err).NotTo(HaveOccurred())
-			g.Expect(len(service.Status.LoadBalancer.Ingress)).To(Equal(1))
+			g.Expect(service.Status.LoadBalancer.Ingress).To(HaveLen(1))
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("getting the newly created k8s service frontend IP configuration")
@@ -73,8 +73,11 @@ var _ = Describe("[Admin API] Delete managed resource action", func() {
 
 		rgName := stringutils.LastTokenByte(*oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, '/')
 		lbName, err := getPublicLoadBalancerName(ctx)
+		Expect(err).NotTo(HaveOccurred())
 
 		lb, err := clients.LoadBalancers.Get(ctx, rgName, lbName, "")
+		Expect(err).NotTo(HaveOccurred())
+
 		for _, fipConfig := range *lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations {
 			if !strings.Contains(*fipConfig.PublicIPAddress.ID, "default-v4") && !strings.Contains(*fipConfig.PublicIPAddress.ID, "pip-v4") {
 				lbRuleID = *(*fipConfig.LoadBalancingRules)[0].ID
@@ -99,6 +102,7 @@ var _ = Describe("[Admin API] Delete managed resource action", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/deletemanagedresource", url.Values{"resourceid": []string{*oc.OpenShiftClusterProperties.MasterProfile.SubnetID}}, true, nil, nil)
+		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 	})
 })

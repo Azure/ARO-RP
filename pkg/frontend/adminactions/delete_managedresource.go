@@ -14,7 +14,6 @@ import (
 )
 
 func (a *azureActions) ResourceDeleteAndWait(ctx context.Context, resourceID string) error {
-
 	idParts, err := azure.ParseResourceID(resourceID)
 	if err != nil {
 		return err

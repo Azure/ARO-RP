@@ -13,12 +13,12 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 var infraID = "infraID"
@@ -79,14 +79,14 @@ func TestDeleteManagedResource(t *testing.T) {
 		name        string
 		resourceID  string
 		currentLB   mgmtnetwork.LoadBalancer
-		expectedErr error
+		expectedErr string
 		mocks       func(*mock_features.MockResourcesClient, *mock_network.MockLoadBalancersClient)
 	}{
 		{
 			name:        "remove frontend ip config",
 			resourceID:  "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/adce98f85c7dd47c5a21263a5e39c083",
 			currentLB:   originalLB,
-			expectedErr: nil,
+			expectedErr: "",
 			mocks: func(resources *mock_features.MockResourcesClient, loadBalancers *mock_network.MockLoadBalancersClient) {
 				resources.EXPECT().GetByID(gomock.Any(), "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/adce98f85c7dd47c5a21263a5e39c083", "2020-08-01").Return(mgmtfeatures.GenericResource{}, nil)
 				loadBalancers.EXPECT().Get(gomock.Any(), "clusterRG", "infraID", "").Return(originalLB, nil)
@@ -133,7 +133,7 @@ func TestDeleteManagedResource(t *testing.T) {
 		{
 			name:        "delete public IP Address",
 			resourceID:  "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/adce98f85c7dd47c5a21263a5e39c083",
-			expectedErr: nil,
+			expectedErr: "",
 			mocks: func(resources *mock_features.MockResourcesClient, loadBalancers *mock_network.MockLoadBalancersClient) {
 				resources.EXPECT().GetByID(gomock.Any(), "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/adce98f85c7dd47c5a21263a5e39c083", "2020-08-01").Return(mgmtfeatures.GenericResource{}, nil)
 				resources.EXPECT().DeleteByIDAndWait(gomock.Any(), "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/adce98f85c7dd47c5a21263a5e39c083", "2020-08-01").Return(nil)
@@ -168,11 +168,7 @@ func TestDeleteManagedResource(t *testing.T) {
 			ctx := context.Background()
 
 			err := a.ResourceDeleteAndWait(ctx, tt.resourceID)
-			if tt.expectedErr != nil {
-				assert.Equal(t, tt.expectedErr, err, "Unexpected error exception")
-			} else {
-				assert.Equal(t, nil, err, "Unexpected error exception")
-			}
+			utilerror.AssertErrorMessage(t, err, tt.expectedErr)
 		})
 	}
 }
