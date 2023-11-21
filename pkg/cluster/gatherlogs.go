@@ -117,6 +117,10 @@ type vminfo struct {
 }
 
 func (m *manager) logAzureInformation(ctx context.Context) (interface{}, error) {
+	if m.virtualMachines == nil {
+		return nil, nil
+	}
+
 	items := make([]interface{}, 0)
 	resourceGroupName := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	vms, err := m.virtualMachines.List(ctx, resourceGroupName)
