@@ -123,6 +123,10 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.MatchRegexp(`(?s)github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logIngressControllers\-fm:.*"name": "ingress-controller"`),
 				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`github.com/Azure/ARO-RP/pkg/cluster.(*manager).logAzureInformation-fm: null`),
+				},
 			},
 			kubernetescli: fake.NewSimpleClientset(node),
 			configcli:     configfake.NewSimpleClientset(clusterVersion, clusterOperator),
@@ -158,6 +162,10 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal(`github.com/Azure/ARO-RP/pkg/cluster.(*manager).logIngressControllers-fm: null`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`github.com/Azure/ARO-RP/pkg/cluster.(*manager).logAzureInformation-fm: null`),
 				},
 			},
 			kubernetescli: fake.NewSimpleClientset(),
