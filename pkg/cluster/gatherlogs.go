@@ -132,14 +132,8 @@ func (m *manager) logAzureInformation(ctx context.Context) (interface{}, error) 
 	consoleURIs := make([][]string, 0)
 
 	for _, v := range vms {
-		items = append(items, vminfo{
-			VMID:     *v.VMID,
-			Name:     *v.Name,
-			State:    *v.ProvisioningState,
-			Statuses: *v.InstanceView.Statuses,
-			SKU:      string(v.HardwareProfile.VMSize),
-		})
-		if v.InstanceView.BootDiagnostics.SerialConsoleLogBlobURI != nil {
+		items = append(items, v)
+		if v.InstanceView != nil && v.InstanceView.BootDiagnostics != nil && v.InstanceView.BootDiagnostics.SerialConsoleLogBlobURI != nil {
 			consoleURIs = append(consoleURIs, []string{*v.Name, *v.InstanceView.BootDiagnostics.SerialConsoleLogBlobURI})
 		}
 	}
