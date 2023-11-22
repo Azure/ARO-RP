@@ -5,6 +5,17 @@ package cluster
 
 import (
 	"context"
+
+	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+)
+
+var (
+	CredentialsRequestGroupVersionResource = schema.GroupVersionResource{
+		Group:    cloudcredentialv1.SchemeGroupVersion.Group,
+		Version:  cloudcredentialv1.SchemeGroupVersion.Version,
+		Resource: "credentialsrequests",
+	}
 )
 
 func (m *manager) isIngressProfileAvailable() bool {

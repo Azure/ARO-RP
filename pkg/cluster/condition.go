@@ -5,6 +5,8 @@ package cluster
 
 import (
 	"context"
+	"errors"
+	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
 	consoleapi "github.com/openshift/console-operator/pkg/api"
@@ -92,4 +94,48 @@ func isOperatorAvailable(operator *configv1.ClusterOperator) bool {
 		m[cond.Type] = cond.Status
 	}
 	return m[configv1.OperatorAvailable] == configv1.ConditionTrue && m[configv1.OperatorProgressing] == configv1.ConditionFalse
+}
+
+// aroCredentialsRequestReconciled evaluates whether the openshift-azure-operator CredentialsRequest has recently been reconciled and returns true
+// if it has been (or does not need to be under the circumstances) and false otherwise or if an error occurs, where "has recently been reconciled"\
+// is true if the CredentialsRequest has been reconciled within the past 5 minutes.
+// Checking for a change to the lastSyncCloudCredsSecretResourceVersion attribute of the CredentialRequest's status would be a neater way of checking
+// whether it was reconciled, but we would would have to save the value prior to updating the kube-system/azure-credentials Secret so that we'd have
+// and old value to compare to.
+func (m *manager) aroCredentialsRequestReconciled(ctx context.Context) (bool, error) {
+	// If the CSP hasn't been updated, the CredentialsRequest does not need to be reconciled.
+	spChanged, _, err := m.servicePrincipalUpdated(ctx)
+	if err != nil {
+		return false, err
+	} else if !spChanged {
+		return true, nil
+	}
+
+	u, err := m.dynamiccli.Resource(CredentialsRequestGroupVersionResource).Namespace("openshift-cloud-credential-operator").Get(ctx, "openshift-azure-operator", metav1.GetOptions{})
+	if err != nil {
+		return false, err
+	}
+
+	cr := u.UnstructuredContent()
+	var status map[string]interface{}
+	if s, ok := cr["status"]; ok {
+		status = s.(map[string]interface{})
+	} else {
+		return false, errors.New("Unable to access status of openshift-azure-operator CredentialsRequest")
+	}
+
+	var lastSyncTimestamp string
+	if lst, ok := status["lastSyncTimestamp"]; ok {
+		lastSyncTimestamp = lst.(string)
+	} else {
+		return false, errors.New("Unable to access status.lastSyncTimestamp of openshift-azure-operator CredentialsRequest")
+	}
+
+	timestamp, err := time.Parse(time.RFC3339, lastSyncTimestamp)
+	if err != nil {
+		return false, err
+	}
+
+	timeSinceLastSync := time.Now().Sub(timestamp)
+	return timeSinceLastSync.Minutes() < 5, nil
 }
