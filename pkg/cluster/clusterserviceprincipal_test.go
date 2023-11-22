@@ -189,6 +189,74 @@ func getFakeAROSecret(clientID, secret string) corev1.Secret {
 	}
 }
 
+func TestCloudConfigSecretFromChanges(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		secretIn   func() *corev1.Secret
+		cf         map[string]interface{}
+		wantSecret func() *corev1.Secret
+		wantErrMsg string
+	}{
+		{
+			name: "New CSP (client ID and client secret both changed)",
+			secretIn: func() *corev1.Secret {
+				secret := getFakeAROSecret("aadClientId", "aadClientSecret")
+				return &secret
+			},
+			cf: map[string]interface{}{
+				"aadClientId":     "aadClientIdNew",
+				"aadClientSecret": "aadClientSecretNew",
+			},
+			wantSecret: func() *corev1.Secret {
+				secret := getFakeAROSecret("aadClientIdNew", "aadClientSecretNew")
+				return &secret
+			},
+		},
+		{
+			name: "Updated secret (client ID stayed the same, client secret changed)",
+			secretIn: func() *corev1.Secret {
+				secret := getFakeAROSecret("aadClientId", "aadClientSecret")
+				return &secret
+			},
+			cf: map[string]interface{}{
+				"aadClientId":     "aadClientId",
+				"aadClientSecret": "aadClientSecretNew",
+			},
+			wantSecret: func() *corev1.Secret {
+				secret := getFakeAROSecret("aadClientId", "aadClientSecretNew")
+				return &secret
+			},
+		},
+		{
+			name: "No errors, nothing changed",
+			secretIn: func() *corev1.Secret {
+				secret := getFakeAROSecret("aadClientId", "aadClientSecret")
+				return &secret
+			},
+			cf: map[string]interface{}{
+				"aadClientId":     "aadClientId",
+				"aadClientSecret": "aadClientSecret",
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			secret, err := cloudConfigSecretFromChanges(tt.secretIn(), tt.cf)
+			if tt.wantSecret != nil {
+				wantSecret := tt.wantSecret()
+				if secret == nil {
+					t.Errorf("Did not return a Secret, but expected the following Secret data: %v", string(wantSecret.Data["cloud-config"]))
+				}
+				if !reflect.DeepEqual(secret, wantSecret) {
+					t.Errorf("\n%+v \n!= \n%+v", string(secret.Data["cloud-config"]), string(wantSecret.Data["cloud-config"]))
+				}
+			} else if tt.wantSecret == nil && secret != nil {
+				t.Errorf("Should not have returned a Secret")
+			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErrMsg)
+		})
+	}
+}
+
 func TestServicePrincipalUpdated(t *testing.T) {
 	ctx := context.Background()
 
@@ -196,7 +264,6 @@ func TestServicePrincipalUpdated(t *testing.T) {
 		name          string
 		kubernetescli func() *fake.Clientset
 		spp           api.ServicePrincipalProfile
-		wantResult    bool
 		wantSecret    func() *corev1.Secret
 		wantErrMsg    string
 	}{
@@ -209,7 +276,6 @@ func TestServicePrincipalUpdated(t *testing.T) {
 				ClientID:     "aadClientId",
 				ClientSecret: "aadClientSecretNew",
 			},
-			wantResult: false,
 			wantErrMsg: "",
 		},
 		{
@@ -225,7 +291,6 @@ func TestServicePrincipalUpdated(t *testing.T) {
 				ClientID:     "aadClientId",
 				ClientSecret: "aadClientSecretNew",
 			},
-			wantResult: false,
 			wantErrMsg: "Error getting Secret",
 		},
 		{
@@ -239,7 +304,6 @@ func TestServicePrincipalUpdated(t *testing.T) {
 				ClientID:     "aadClientId",
 				ClientSecret: "aadClientSecretNew",
 			},
-			wantResult: false,
 			wantErrMsg: "error unmarshaling JSON: while decoding JSON: json: cannot unmarshal string into Go value of type map[string]interface {}",
 		},
 		{
@@ -252,7 +316,6 @@ func TestServicePrincipalUpdated(t *testing.T) {
 				ClientID:     "aadClientIdNew",
 				ClientSecret: "aadClientSecretNew",
 			},
-			wantResult: true,
 			wantSecret: func() *corev1.Secret {
 				secret := getFakeAROSecret("aadClientIdNew", "aadClientSecretNew")
 				return &secret
@@ -268,7 +331,6 @@ func TestServicePrincipalUpdated(t *testing.T) {
 				ClientID:     "aadClientId",
 				ClientSecret: "aadClientSecretNew",
 			},
-			wantResult: true,
 			wantSecret: func() *corev1.Secret {
 				secret := getFakeAROSecret("aadClientId", "aadClientSecretNew")
 				return &secret
@@ -284,7 +346,6 @@ func TestServicePrincipalUpdated(t *testing.T) {
 				ClientID:     "aadClientId",
 				ClientSecret: "aadClientSecret",
 			},
-			wantResult: false,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -299,12 +360,12 @@ func TestServicePrincipalUpdated(t *testing.T) {
 				},
 			}
 
-			result, secret, err := m.servicePrincipalUpdated(ctx)
-			if result != tt.wantResult {
-				t.Errorf("Result was %v, wanted %v", result, tt.wantResult)
-			}
+			secret, err := m.servicePrincipalUpdated(ctx)
 			if tt.wantSecret != nil {
 				wantSecret := tt.wantSecret()
+				if secret == nil {
+					t.Errorf("Did not return a Secret, but expected the following Secret data: %v", string(wantSecret.Data["cloud-config"]))
+				}
 				if !reflect.DeepEqual(secret, wantSecret) {
 					t.Errorf("\n%+v \n!= \n%+v", string(secret.Data["cloud-config"]), string(wantSecret.Data["cloud-config"]))
 				}

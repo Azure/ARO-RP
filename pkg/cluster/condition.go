@@ -104,10 +104,10 @@ func isOperatorAvailable(operator *configv1.ClusterOperator) bool {
 // and old value to compare to.
 func (m *manager) aroCredentialsRequestReconciled(ctx context.Context) (bool, error) {
 	// If the CSP hasn't been updated, the CredentialsRequest does not need to be reconciled.
-	spChanged, _, err := m.servicePrincipalUpdated(ctx)
+	secret, err := m.servicePrincipalUpdated(ctx)
 	if err != nil {
 		return false, err
-	} else if !spChanged {
+	} else if secret == nil {
 		return true, nil
 	}
 
