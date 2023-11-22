@@ -121,14 +121,14 @@ func (m *manager) aroCredentialsRequestReconciled(ctx context.Context) (bool, er
 	if s, ok := cr["status"]; ok {
 		status = s.(map[string]interface{})
 	} else {
-		return false, errors.New("Unable to access status of openshift-azure-operator CredentialsRequest")
+		return false, errors.New("unable to access status of openshift-azure-operator CredentialsRequest")
 	}
 
 	var lastSyncTimestamp string
 	if lst, ok := status["lastSyncTimestamp"]; ok {
 		lastSyncTimestamp = lst.(string)
 	} else {
-		return false, errors.New("Unable to access status.lastSyncTimestamp of openshift-azure-operator CredentialsRequest")
+		return false, errors.New("unable to access status.lastSyncTimestamp of openshift-azure-operator CredentialsRequest")
 	}
 
 	timestamp, err := time.Parse(time.RFC3339, lastSyncTimestamp)
@@ -136,6 +136,6 @@ func (m *manager) aroCredentialsRequestReconciled(ctx context.Context) (bool, er
 		return false, err
 	}
 
-	timeSinceLastSync := time.Now().Sub(timestamp)
+	timeSinceLastSync := time.Since(timestamp)
 	return timeSinceLastSync.Minutes() < 5, nil
 }

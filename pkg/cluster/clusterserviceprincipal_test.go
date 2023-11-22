@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
-	clientgotesting "k8s.io/client-go/testing"
+	ktesting "k8s.io/client-go/testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
@@ -195,7 +195,7 @@ func TestServicePrincipalUpdated(t *testing.T) {
 	for _, tt := range []struct {
 		name          string
 		kubernetescli func() *fake.Clientset
-		doc           api.OpenShiftCluster
+		spp           api.ServicePrincipalProfile
 		wantResult    bool
 		wantSecret    func() *corev1.Secret
 		wantErrMsg    string
@@ -205,13 +205,9 @@ func TestServicePrincipalUpdated(t *testing.T) {
 			kubernetescli: func() *fake.Clientset {
 				return fake.NewSimpleClientset()
 			},
-			doc: api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: api.ServicePrincipalProfile{
-						ClientID:     "aadClientId",
-						ClientSecret: "aadClientSecretNew",
-					},
-				},
+			spp: api.ServicePrincipalProfile{
+				ClientID:     "aadClientId",
+				ClientSecret: "aadClientSecretNew",
 			},
 			wantResult: false,
 			wantErrMsg: "",
@@ -220,18 +216,14 @@ func TestServicePrincipalUpdated(t *testing.T) {
 			name: "Encounter other error getting Secret",
 			kubernetescli: func() *fake.Clientset {
 				cli := fake.NewSimpleClientset()
-				cli.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("get", "secrets", func(action clientgotesting.Action) (handled bool, ret runtime.Object, err error) {
+				cli.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("get", "secrets", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
 					return true, &corev1.Secret{}, errors.New("Error getting Secret")
 				})
 				return cli
 			},
-			doc: api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: api.ServicePrincipalProfile{
-						ClientID:     "aadClientId",
-						ClientSecret: "aadClientSecretNew",
-					},
-				},
+			spp: api.ServicePrincipalProfile{
+				ClientID:     "aadClientId",
+				ClientSecret: "aadClientSecretNew",
 			},
 			wantResult: false,
 			wantErrMsg: "Error getting Secret",
@@ -243,13 +235,9 @@ func TestServicePrincipalUpdated(t *testing.T) {
 				secret.Data["cloud-config"] = []byte("This is some random data that is not going to unmarshal properly!")
 				return fake.NewSimpleClientset(&secret)
 			},
-			doc: api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: api.ServicePrincipalProfile{
-						ClientID:     "aadClientId",
-						ClientSecret: "aadClientSecretNew",
-					},
-				},
+			spp: api.ServicePrincipalProfile{
+				ClientID:     "aadClientId",
+				ClientSecret: "aadClientSecretNew",
 			},
 			wantResult: false,
 			wantErrMsg: "error unmarshaling JSON: while decoding JSON: json: cannot unmarshal string into Go value of type map[string]interface {}",
@@ -260,13 +248,9 @@ func TestServicePrincipalUpdated(t *testing.T) {
 				secret := getFakeAROSecret("aadClientId", "aadClientSecret")
 				return fake.NewSimpleClientset(&secret)
 			},
-			doc: api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: api.ServicePrincipalProfile{
-						ClientID:     "aadClientIdNew",
-						ClientSecret: "aadClientSecretNew",
-					},
-				},
+			spp: api.ServicePrincipalProfile{
+				ClientID:     "aadClientIdNew",
+				ClientSecret: "aadClientSecretNew",
 			},
 			wantResult: true,
 			wantSecret: func() *corev1.Secret {
@@ -280,13 +264,9 @@ func TestServicePrincipalUpdated(t *testing.T) {
 				secret := getFakeAROSecret("aadClientId", "aadClientSecret")
 				return fake.NewSimpleClientset(&secret)
 			},
-			doc: api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: api.ServicePrincipalProfile{
-						ClientID:     "aadClientId",
-						ClientSecret: "aadClientSecretNew",
-					},
-				},
+			spp: api.ServicePrincipalProfile{
+				ClientID:     "aadClientId",
+				ClientSecret: "aadClientSecretNew",
 			},
 			wantResult: true,
 			wantSecret: func() *corev1.Secret {
@@ -300,13 +280,9 @@ func TestServicePrincipalUpdated(t *testing.T) {
 				secret := getFakeAROSecret("aadClientId", "aadClientSecret")
 				return fake.NewSimpleClientset(&secret)
 			},
-			doc: api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: api.ServicePrincipalProfile{
-						ClientID:     "aadClientId",
-						ClientSecret: "aadClientSecret",
-					},
-				},
+			spp: api.ServicePrincipalProfile{
+				ClientID:     "aadClientId",
+				ClientSecret: "aadClientSecret",
 			},
 			wantResult: false,
 		},
@@ -315,7 +291,11 @@ func TestServicePrincipalUpdated(t *testing.T) {
 			m := &manager{
 				kubernetescli: tt.kubernetescli(),
 				doc: &api.OpenShiftClusterDocument{
-					OpenShiftCluster: &tt.doc,
+					OpenShiftCluster: &api.OpenShiftCluster{
+						Properties: api.OpenShiftClusterProperties{
+							ServicePrincipalProfile: tt.spp,
+						},
+					},
 				},
 			}
 

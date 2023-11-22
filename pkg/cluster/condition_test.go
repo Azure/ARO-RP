@@ -321,7 +321,7 @@ func TestAroCredentialsRequestReconciled(t *testing.T) {
 		name          string
 		kubernetescli func() *fake.Clientset
 		dynamiccli    func() *dynamicfake.FakeDynamicClient
-		doc           api.OpenShiftCluster
+		spp           api.ServicePrincipalProfile
 		want          bool
 		wantErrMsg    string
 	}{
@@ -334,13 +334,9 @@ func TestAroCredentialsRequestReconciled(t *testing.T) {
 			dynamiccli: func() *dynamicfake.FakeDynamicClient {
 				return dynamicfake.NewSimpleDynamicClient(scheme.Scheme)
 			},
-			doc: api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: api.ServicePrincipalProfile{
-						ClientID:     "aadClientId",
-						ClientSecret: "aadClientSecret",
-					},
-				},
+			spp: api.ServicePrincipalProfile{
+				ClientID:     "aadClientId",
+				ClientSecret: "aadClientSecret",
 			},
 			want: true,
 		},
@@ -353,13 +349,9 @@ func TestAroCredentialsRequestReconciled(t *testing.T) {
 			dynamiccli: func() *dynamicfake.FakeDynamicClient {
 				return dynamicfake.NewSimpleDynamicClient(scheme.Scheme)
 			},
-			doc: api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: api.ServicePrincipalProfile{
-						ClientID:     "aadClientId",
-						ClientSecret: "aadClientSecretNew",
-					},
-				},
+			spp: api.ServicePrincipalProfile{
+				ClientID:     "aadClientId",
+				ClientSecret: "aadClientSecretNew",
 			},
 			want:       false,
 			wantErrMsg: `credentialsrequests.cloudcredential.openshift.io "openshift-azure-operator" not found`,
@@ -379,16 +371,12 @@ func TestAroCredentialsRequestReconciled(t *testing.T) {
 				}
 				return dynamicfake.NewSimpleDynamicClient(scheme.Scheme, &cr)
 			},
-			doc: api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: api.ServicePrincipalProfile{
-						ClientID:     "aadClientId",
-						ClientSecret: "aadClientSecretNew",
-					},
-				},
+			spp: api.ServicePrincipalProfile{
+				ClientID:     "aadClientId",
+				ClientSecret: "aadClientSecretNew",
 			},
 			want:       false,
-			wantErrMsg: "Unable to access status.lastSyncTimestamp of openshift-azure-operator CredentialsRequest",
+			wantErrMsg: "unable to access status.lastSyncTimestamp of openshift-azure-operator CredentialsRequest",
 		},
 		{
 			name: "CredentialsRequest was last synced 10 minutes ago (too long)",
@@ -409,13 +397,9 @@ func TestAroCredentialsRequestReconciled(t *testing.T) {
 				}
 				return dynamicfake.NewSimpleDynamicClient(scheme.Scheme, &cr)
 			},
-			doc: api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: api.ServicePrincipalProfile{
-						ClientID:     "aadClientId",
-						ClientSecret: "aadClientSecretNew",
-					},
-				},
+			spp: api.ServicePrincipalProfile{
+				ClientID:     "aadClientId",
+				ClientSecret: "aadClientSecretNew",
 			},
 			want: false,
 		},
@@ -438,13 +422,9 @@ func TestAroCredentialsRequestReconciled(t *testing.T) {
 				}
 				return dynamicfake.NewSimpleDynamicClient(scheme.Scheme, &cr)
 			},
-			doc: api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: api.ServicePrincipalProfile{
-						ClientID:     "aadClientId",
-						ClientSecret: "aadClientSecretNew",
-					},
-				},
+			spp: api.ServicePrincipalProfile{
+				ClientID:     "aadClientId",
+				ClientSecret: "aadClientSecretNew",
 			},
 			want: true,
 		},
@@ -455,7 +435,11 @@ func TestAroCredentialsRequestReconciled(t *testing.T) {
 				kubernetescli: tt.kubernetescli(),
 				dynamiccli:    tt.dynamiccli(),
 				doc: &api.OpenShiftClusterDocument{
-					OpenShiftCluster: &tt.doc,
+					OpenShiftCluster: &api.OpenShiftCluster{
+						Properties: api.OpenShiftClusterProperties{
+							ServicePrincipalProfile: tt.spp,
+						},
+					},
 				},
 			}
 
