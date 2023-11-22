@@ -17,6 +17,7 @@ import (
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -446,6 +447,11 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 	}
 
 	m.kubernetescli, err = kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
+
+	m.dynamiccli, err = dynamic.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}
