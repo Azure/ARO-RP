@@ -436,7 +436,7 @@ func done(ctx context.Context) error {
 }
 
 var _ = BeforeSuite(func() {
-	log.Info("BeforeSuite")
+	log.Info("BeforeSuite chiac")
 
 	SetDefaultEventuallyTimeout(DefaultEventuallyTimeout)
 	SetDefaultEventuallyPollingInterval(10 * time.Second)
@@ -450,12 +450,12 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	log.Info("AfterSuite")
+	log.Info("AfterSuite chiac")
 
-	if err := done(context.Background()); err != nil {
-		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
-			spew.Dump(oDataError.GetErrorEscaped())
-		}
-		panic(err)
-	}
+	// if err := done(context.Background()); err != nil {
+	// 	if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
+	// 		spew.Dump(oDataError.GetErrorEscaped())
+	// 	}
+	// 	panic(err)
+	// }
 })
