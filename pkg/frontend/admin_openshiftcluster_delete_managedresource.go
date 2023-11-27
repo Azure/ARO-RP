@@ -29,7 +29,7 @@ func (f *frontend) postAdminOpenShiftDeleteManagedResource(w http.ResponseWriter
 
 func (f *frontend) _postAdminOpenShiftClusterDeleteManagedResource(ctx context.Context, r *http.Request, log *logrus.Entry) error {
 	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
-	managedResourceID := r.URL.Query().Get("resourceid")
+	managedResourceID := r.URL.Query().Get("managedresourceid")
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
 	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)

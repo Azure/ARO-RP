@@ -101,14 +101,14 @@ var _ = Describe("[Admin API] Delete managed resource action", func() {
 		oc, err := clients.OpenshiftClustersPreview.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 
-		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/deletemanagedresource", url.Values{"resourceid": []string{*oc.OpenShiftClusterProperties.MasterProfile.SubnetID}}, true, nil, nil)
+		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/deletemanagedresource", url.Values{"managedresourceid": []string{*oc.OpenShiftClusterProperties.MasterProfile.SubnetID}}, true, nil, nil)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 	})
 })
 
 func testDeleteManagedResourceOK(ctx context.Context, resourceID string) {
-	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/deletemanagedresource", url.Values{"resourceid": []string{resourceID}}, true, nil, nil)
+	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/deletemanagedresource", url.Values{"managedresourceid": []string{resourceID}}, true, nil, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 }
