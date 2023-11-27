@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/sirupsen/logrus"
@@ -275,6 +276,10 @@ func merge(old, new kruntime.Object) (kruntime.Object, bool, string, error) {
 				new.Data["ca-bundle.crt"] = caBundle
 			}
 		}
+
+	case *machinev1beta1.MachineHealthCheck:
+		old, new := old.(*machinev1beta1.MachineHealthCheck), new.(*machinev1beta1.MachineHealthCheck)
+		new.Status = old.Status
 	}
 
 	var diff string

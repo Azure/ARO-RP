@@ -233,7 +233,7 @@ func TestSecurity(t *testing.T) {
 			checkResponse: func(t *testing.T, authenticated, elevated bool, resp *http.Response) {
 				if authenticated && !elevated {
 					var e struct {
-						Error string
+						Error string `json:"error,omitempty"`
 					}
 					err := json.NewDecoder(resp.Body).Decode(&e)
 					if err != nil {

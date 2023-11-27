@@ -7,14 +7,22 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sync"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/monitor/azure/nsg"
 	"github.com/Azure/ARO-RP/pkg/monitor/cluster"
+	"github.com/Azure/ARO-RP/pkg/monitor/dimension"
+	"github.com/Azure/ARO-RP/pkg/monitor/monitoring"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
@@ -212,7 +220,7 @@ out:
 		// cached metrics in the remaining minutes
 
 		if sub != nil && sub.Subscription != nil && sub.Subscription.State != api.SubscriptionStateSuspended && sub.Subscription.State != api.SubscriptionStateWarned {
-			mon.workOne(context.Background(), log, v.doc, newh != h)
+			mon.workOne(context.Background(), log, v.doc, sub, newh != h)
 		}
 
 		select {
@@ -227,8 +235,28 @@ out:
 	log.Debug("stopping monitoring")
 }
 
+func (mon *monitor) newNSGMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, subscriptionID, tenantID string, e metrics.Emitter, dims map[string]string, wg *sync.WaitGroup) monitoring.Monitor {
+	token, err := mon.env.FPNewClientCertificateCredential(tenantID)
+	if err != nil {
+		log.Error("Unable to create FP Authorizer for NSG monitoring.", err)
+		mon.clusterm.EmitGauge(nsg.MetricFailedNSGMonitorCreation, int64(1), dims)
+		return &monitoring.NoOpMonitor{Wg: wg}
+	}
+	options := arm.ClientOptions{
+		ClientOptions: azcore.ClientOptions{Cloud: mon.env.Environment().Cloud},
+	}
+	client, err := armnetwork.NewSubnetsClient(subscriptionID, token, &options)
+	if err != nil {
+		log.Error("Unable to create the subnet client for NSG monitoring", err)
+		mon.clusterm.EmitGauge(nsg.MetricFailedNSGMonitorCreation, int64(1), dims)
+		return &monitoring.NoOpMonitor{Wg: wg}
+	}
+
+	return nsg.NewNSGMonitor(log, oc, subscriptionID, client, e, wg)
+}
+
 // workOne checks the API server health of a cluster
-func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument, hourlyRun bool) {
+func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument, hourlyRun bool) {
 	ctx, cancel := context.WithTimeout(ctx, 50*time.Second)
 	defer cancel()
 
@@ -246,7 +274,22 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 		log.Warnf("no hiveShardConfigs set for shard %d", shard)
 	}
 
-	c, err := cluster.NewMonitor(log, restConfig, doc.OpenShiftCluster, mon.clusterm, hiveRestConfig, hourlyRun)
+	dims := map[string]string{
+		dimension.ClusterResourceID: doc.OpenShiftCluster.ID,
+		dimension.Location:          doc.OpenShiftCluster.Location,
+		dimension.SubscriptionID:    sub.ID,
+	}
+
+	var monitors []monitoring.Monitor
+	var wg sync.WaitGroup
+
+	if doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG == api.PreconfiguredNSGEnabled && hourlyRun {
+		mon.clusterm.EmitGauge(nsg.MetricPreconfiguredNSGEnabled, int64(1), dims)
+		nsgMon := mon.newNSGMonitor(log, doc.OpenShiftCluster, sub.ID, sub.Subscription.Properties.TenantID, mon.clusterm, dims, &wg)
+		monitors = append(monitors, nsgMon)
+	}
+
+	c, err := cluster.NewMonitor(log, restConfig, doc.OpenShiftCluster, mon.clusterm, hiveRestConfig, hourlyRun, &wg)
 	if err != nil {
 		log.Error(err)
 		mon.m.EmitGauge("monitor.cluster.failedworker", 1, map[string]string{
@@ -255,5 +298,23 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 		return
 	}
 
-	c.Monitor(ctx)
+	monitors = append(monitors, c)
+	allJobsDone := make(chan bool)
+	go execute(ctx, allJobsDone, &wg, monitors)
+
+	select {
+	case <-allJobsDone:
+	case <-ctx.Done():
+		log.Infof("The monitoring process for cluster %s has timed out.", doc.OpenShiftCluster.ID)
+		mon.m.EmitGauge("monitor.main.timedout", int64(1), dims)
+	}
+}
+
+func execute(ctx context.Context, done chan<- bool, wg *sync.WaitGroup, monitors []monitoring.Monitor) {
+	for _, monitor := range monitors {
+		wg.Add(1)
+		go monitor.Monitor(ctx)
+	}
+	wg.Wait()
+	done <- true
 }

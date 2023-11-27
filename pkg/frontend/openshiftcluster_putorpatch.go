@@ -143,12 +143,13 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 			SystemData: doc.OpenShiftCluster.SystemData,
 		})
 
-		// In case of PATCH we take current cluster document, which is enriched
-		// from the cluster and use it as base for unmarshal. So customer can
-		// provide single field json to be updated in the database.
-		// Patch should be used for updating individual fields of the document.
+	// In case of PATCH we take current cluster document, which is enriched
+	// from the cluster and use it as base for unmarshal. So customer can
+	// provide single field json to be updated in the database.
+	// Patch should be used for updating individual fields of the document.
 	case http.MethodPatch:
 		ext = converter.ToExternal(doc.OpenShiftCluster)
+		converter.ExternalNoReadOnly(ext)
 	}
 
 	err = json.Unmarshal(body, &ext)

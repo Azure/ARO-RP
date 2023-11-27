@@ -59,11 +59,7 @@ func ensureAccessTokenClaims(ctx context.Context, spTokenCredential azcore.Token
 	options := policy.TokenRequestOptions{Scopes: scopes}
 	token, err := spTokenCredential.GetToken(ctx, options)
 	if err != nil {
-		return api.NewCloudError(
-			http.StatusBadRequest,
-			api.CloudErrorCodeInvalidServicePrincipalToken,
-			"properties.servicePrincipalProfile",
-			"The provided service principal was unable to request a valid access token. Please confirm your service principal credentials, and try again.")
+		return err
 	}
 
 	var claims jwt.MapClaims

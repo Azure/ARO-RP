@@ -5,6 +5,7 @@ package e2e
 
 import (
 	"context"
+	"sync"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -18,13 +19,15 @@ var _ = Describe("Monitor", func() {
 	// This is more of an integration test rather than E2E.
 	It("must run and must not return any errors", func(ctx context.Context) {
 		By("creating a new monitor instance for the test cluster")
+		var wg sync.WaitGroup
+		wg.Add(1)
 		mon, err := cluster.NewMonitor(log, clients.RestConfig, &api.OpenShiftCluster{
 			ID: resourceIDFromEnv(),
-		}, &noop.Noop{}, nil, true)
+		}, &noop.Noop{}, nil, true, &wg)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("running the monitor once")
 		errs := mon.Monitor(ctx)
-		Expect(errs).To(HaveLen(0))
+		Expect(errs).To(BeEmpty())
 	})
 })

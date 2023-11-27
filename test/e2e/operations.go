@@ -14,6 +14,6 @@ var _ = Describe("List operations", func() {
 	It("must return the correct static operations", func(ctx context.Context) {
 		opList, err := clients.Operations.List(ctx)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(len(opList) > 0).To(BeTrue())
+		Expect(opList).ToNot(BeEmpty())
 	})
 })

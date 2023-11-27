@@ -93,6 +93,6 @@ type Attributes map[string]interface{}
 // RemotePDPErrorPayload represents the body content when the server returns
 // a non-successful error
 type CheckAccessErrorResponse struct {
-	StatusCode string `json:"statusCode,omitempty"`
+	StatusCode int    `json:"statusCode,omitempty"`
 	Message    string `json:"message,omitempty"`
 }

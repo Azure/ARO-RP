@@ -39,7 +39,7 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 		By("picking the first VM to redeploy")
 		vms, err := clients.VirtualMachines.List(ctx, clusterResourceGroup)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(vms).NotTo(HaveLen(0))
+		Expect(vms).NotTo(BeEmpty())
 		vm := vms[0]
 		log.Infof("selected vm: %s", *vm.Name)
 

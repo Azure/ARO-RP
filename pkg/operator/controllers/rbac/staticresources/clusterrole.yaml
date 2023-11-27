@@ -226,6 +226,7 @@ rules:
   - infrastructures
   - ingresses
   - networks
+  - nodes
   - oauths
   - operatorhubs
   - projects
@@ -348,6 +349,16 @@ rules:
   - list
   - watch
 - apiGroups:
+  - k8s.ovn.org
+  resources:
+  - egressfirewalls
+  - egressips
+  - egressqoses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - machine.openshift.io
   resources:
   - machinehealthchecks
@@ -365,19 +376,6 @@ rules:
   - kubeletconfigs
   - machineconfigpools
   - machineconfigs
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - metal3.io
-  resources:
-  - baremetalhosts
-  - bmceventsubscriptions
-  - firmwareschemas
-  - hostfirmwaresettings
-  - preprovisioningimages
-  - provisionings
   verbs:
   - get
   - list
@@ -410,17 +408,6 @@ rules:
   - prometheusrules
   - servicemonitors
   - thanosrulers
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - network.openshift.io
-  resources:
-  - clusternetworks
-  - egressnetworkpolicies
-  - hostsubnets
-  - netnamespaces
   verbs:
   - get
   - list
@@ -500,6 +487,14 @@ rules:
   verbs:
   - get
   - list
+- apiGroups:
+  - performance.openshift.io
+  resources:
+  - performanceprofiles
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - policy
   resources:

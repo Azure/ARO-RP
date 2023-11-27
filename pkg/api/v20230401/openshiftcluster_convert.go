@@ -190,3 +190,8 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 		LastModifiedByType: api.CreatedByType(oc.SystemData.CreatedByType),
 	}
 }
+
+// ExternalNoReadOnly removes all read-only fields from the external representation.
+func (c openShiftClusterConverter) ExternalNoReadOnly(_oc interface{}) {
+	// This version of the API has no read-only fields.
+}

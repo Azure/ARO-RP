@@ -75,7 +75,14 @@ func (m *manager) GetHighestFreeIP(ctx context.Context, subnetID string) (string
 		return "", err
 	}
 
-	_, subnetCIDR, err := net.ParseCIDR(*subnet.AddressPrefix)
+	// grab the first addresPrefix in the subnet
+	var subnetCIDR *net.IPNet
+	if subnet.AddressPrefix == nil {
+		_, subnetCIDR, err = net.ParseCIDR((*subnet.AddressPrefixes)[0])
+	} else {
+		_, subnetCIDR, err = net.ParseCIDR(*subnet.AddressPrefix)
+	}
+
 	if err != nil {
 		return "", err
 	}

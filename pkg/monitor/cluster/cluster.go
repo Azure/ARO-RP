@@ -6,6 +6,7 @@ package cluster
 import (
 	"context"
 	"net/http"
+	"sync"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	configv1 "github.com/openshift/api/config/v1"
@@ -22,10 +23,15 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/monitor/dimension"
+	"github.com/Azure/ARO-RP/pkg/monitor/emitter"
+	"github.com/Azure/ARO-RP/pkg/monitor/monitoring"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
+
+var _ monitoring.Monitor = (*Monitor)(nil)
 
 type Monitor struct {
 	log       *logrus.Entry
@@ -53,19 +59,21 @@ type Monitor struct {
 		ns    *corev1.NodeList
 		arodl *appsv1.DeploymentList
 	}
+
+	wg *sync.WaitGroup
 }
 
-func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, m metrics.Emitter, hiveRestConfig *rest.Config, hourlyRun bool) (*Monitor, error) {
+func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, m metrics.Emitter, hiveRestConfig *rest.Config, hourlyRun bool, wg *sync.WaitGroup) (*Monitor, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err
 	}
 
 	dims := map[string]string{
-		"resourceId":     oc.ID,
-		"subscriptionId": r.SubscriptionID,
-		"resourceGroup":  r.ResourceGroup,
-		"resourceName":   r.ResourceName,
+		dimension.ResourceID:           oc.ID,
+		dimension.SubscriptionID:       r.SubscriptionID,
+		dimension.ClusterResourceGroup: r.ResourceGroup,
+		dimension.ResourceName:         r.ResourceName,
 	}
 
 	cli, err := kubernetes.NewForConfig(restConfig)
@@ -127,6 +135,7 @@ func NewMonitor(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftClu
 		m:             m,
 		ocpclientset:  ocpclientset,
 		hiveclientset: hiveclientset,
+		wg:            wg,
 	}, nil
 }
 
@@ -152,6 +161,8 @@ func getHiveClientSet(hiveRestConfig *rest.Config) (client.Client, error) {
 
 // Monitor checks the API server health of a cluster
 func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
+	defer mon.wg.Done()
+
 	mon.log.Debug("monitoring")
 
 	if mon.hourlyRun {
@@ -220,11 +231,5 @@ func (mon *Monitor) emitFailureToGatherMetric(friendlyFuncName string, err error
 }
 
 func (mon *Monitor) emitGauge(m string, value int64, dims map[string]string) {
-	if dims == nil {
-		dims = map[string]string{}
-	}
-	for k, v := range mon.dims {
-		dims[k] = v
-	}
-	mon.m.EmitGauge(m, value, dims)
+	emitter.EmitGauge(mon.m, m, value, mon.dims, dims)
 }

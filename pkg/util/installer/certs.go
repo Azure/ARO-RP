@@ -22,8 +22,8 @@ type CertKeyInterface interface {
 // CertKey contains the private key and the cert.
 // See openshift/installer/pkg/asset/tls/certkey.go
 type CertKey struct {
-	CertRaw []byte
-	KeyRaw  []byte
+	CertRaw []byte `json:"CertRaw"`
+	KeyRaw  []byte `json:"KeyRaw"`
 }
 
 // Cert returns the certificate.

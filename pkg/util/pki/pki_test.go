@@ -8,10 +8,14 @@ import (
 	"crypto/x509"
 	"fmt"
 	"net/http"
+	"os"
 	"testing"
 )
 
 func TestGetTlsConfig(t *testing.T) {
+	if os.Getenv("ARO_RUN_PKI_TESTS") != "" {
+		t.Skip("")
+	}
 	kpiUrl := "https://issuer.pki.azure.com/dsms/issuercertificates?getissuersv3&caName=%s"
 	testUrl := "https://diag-runtimehost-prod.trafficmanager.net"
 

@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/ghodss/yaml"
 	configv1 "github.com/openshift/api/config/v1"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	cov1Helpers "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/ugorji/go/codec"
@@ -279,9 +280,9 @@ var _ = Describe("ARO Operator - Conditions", func() {
 			co, err := clients.ConfigClient.ConfigV1().ClusterOperators().Get(ctx, "aro", metav1.GetOptions{})
 			g.Expect(err).NotTo(HaveOccurred())
 
-			g.Expect(cov1Helpers.IsStatusConditionTrue(co.Status.Conditions, configv1.OperatorAvailable))
-			g.Expect(cov1Helpers.IsStatusConditionFalse(co.Status.Conditions, configv1.OperatorProgressing))
-			g.Expect(cov1Helpers.IsStatusConditionFalse(co.Status.Conditions, configv1.OperatorDegraded))
+			g.Expect(cov1Helpers.IsStatusConditionTrue(co.Status.Conditions, configv1.OperatorAvailable)).To(BeTrue())
+			g.Expect(cov1Helpers.IsStatusConditionFalse(co.Status.Conditions, configv1.OperatorProgressing)).To(BeTrue())
+			g.Expect(cov1Helpers.IsStatusConditionFalse(co.Status.Conditions, configv1.OperatorDegraded)).To(BeTrue())
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).WithTimeout(timeout).Should(Succeed())
 	})
 })
@@ -302,6 +303,7 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 	var testnsg mgmtnetwork.SecurityGroup
 
 	const nsg = "e2e-nsg"
+	const emptyMachineSet = "e2e-test-machineset"
 
 	gatherNetworkInfo := func(ctx context.Context) {
 		By("gathering vnet name, resource group, location, and adds master/worker subnets to list to reconcile")
@@ -309,8 +311,9 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		location = *oc.Location
 
-		vnet, masterSubnet, err := apisubnet.Split(*oc.OpenShiftClusterProperties.MasterProfile.SubnetID)
+		vnet, masterSubnet, err := apisubnet.Split((*oc.OpenShiftClusterProperties.MasterProfile.SubnetID))
 		Expect(err).NotTo(HaveOccurred())
+
 		_, workerSubnet, err := apisubnet.Split((*(*oc.OpenShiftClusterProperties.WorkerProfiles)[0].SubnetID))
 		Expect(err).NotTo(HaveOccurred())
 
@@ -323,6 +326,32 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		resourceGroup = r.ResourceGroup
 		vnetName = r.ResourceName
+
+		// Store the existing NSGs for the cluster before the test runs, in order to ensure we clean up
+		// after the test finishes, success or failure.
+		// This is expensive but will prevent flakes.
+		By("gathering existing subnet NSGs")
+		for subnet := range subnetsToReconcile {
+			subnetObject, err := clients.Subnet.Get(ctx, resourceGroup, vnetName, subnet, "")
+			Expect(err).NotTo(HaveOccurred())
+
+			subnetsToReconcile[subnet] = subnetObject.NetworkSecurityGroup.ID
+		}
+	}
+
+	cleanUpSubnetNSGs := func(ctx context.Context) {
+		By("cleaning up subnet NSGs")
+		for subnet := range subnetsToReconcile {
+			subnetObject, err := clients.Subnet.Get(ctx, resourceGroup, vnetName, subnet, "")
+			Expect(err).NotTo(HaveOccurred())
+
+			if subnetObject.NetworkSecurityGroup.ID != subnetsToReconcile[subnet] {
+				subnetObject.NetworkSecurityGroup.ID = subnetsToReconcile[subnet]
+
+				err = clients.Subnet.CreateOrUpdateAndWait(ctx, resourceGroup, vnetName, subnet, subnetObject)
+				Expect(err).NotTo(HaveOccurred())
+			}
+		}
 	}
 
 	createE2ENSG := func(ctx context.Context) {
@@ -355,11 +384,20 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		createE2ENSG(ctx)
 	})
 	AfterEach(func(ctx context.Context) {
+		cleanUpSubnetNSGs(ctx)
+
 		By("deleting test NSG")
 		err := clients.NetworkSecurityGroups.DeleteAndWait(ctx, resourceGroup, nsg)
 		if err != nil {
 			log.Warn(err)
 		}
+
+		By("deleting test machineset if it still exists")
+		err = clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").Delete(ctx, emptyMachineSet, metav1.DeleteOptions{})
+		Expect(err).To(SatisfyAny(
+			Not(HaveOccurred()),
+			MatchError(kerrors.IsNotFound),
+		))
 	})
 	It("must reconcile list of subnets when NSG is changed", func(ctx context.Context) {
 		for subnet := range subnetsToReconcile {
@@ -367,12 +405,33 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 			// Gets current subnet NSG and then updates it to testnsg.
 			subnetObject, err := clients.Subnet.Get(ctx, resourceGroup, vnetName, subnet, "")
 			Expect(err).NotTo(HaveOccurred())
-			// Updates the value to the original NSG in our subnetsToReconcile map
-			subnetsToReconcile[subnet] = subnetObject.NetworkSecurityGroup.ID
+
 			subnetObject.NetworkSecurityGroup = &testnsg
+
 			err = clients.Subnet.CreateOrUpdateAndWait(ctx, resourceGroup, vnetName, subnet, subnetObject)
 			Expect(err).NotTo(HaveOccurred())
 		}
+
+		By("creating an empty MachineSet to force a reconcile")
+		Eventually(func(g Gomega, ctx context.Context) {
+			machinesets, err := clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").List(ctx, metav1.ListOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(machinesets.Items).To(Not(BeEmpty()))
+
+			newMachineSet := machinesets.Items[0].DeepCopy()
+			newMachineSet.Status = machinev1beta1.MachineSetStatus{}
+			newMachineSet.ObjectMeta = metav1.ObjectMeta{
+				Name:        emptyMachineSet,
+				Namespace:   "openshift-machine-api",
+				Annotations: newMachineSet.ObjectMeta.Annotations,
+				Labels:      newMachineSet.ObjectMeta.Labels,
+			}
+			newMachineSet.Name = emptyMachineSet
+			newMachineSet.Spec.Replicas = to.Int32Ptr(0)
+
+			_, err = clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").Create(ctx, newMachineSet, metav1.CreateOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		for subnet, correctNSG := range subnetsToReconcile {
 			By(fmt.Sprintf("waiting for the subnet %q to be reconciled so it includes the original cluster NSG", subnet))

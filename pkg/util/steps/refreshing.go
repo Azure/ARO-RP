@@ -7,11 +7,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
@@ -66,7 +68,7 @@ func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus
 		// We use the outer context, not the timeout context, as we do not want
 		// to time out the condition function itself, only stop retrying once
 		// timeoutCtx's timeout has fired.
-		err := s.f(ctx)
+		err = s.f(ctx)
 
 		// If we haven't timed out and there is an error that is either an
 		// unauthorized client (AADSTS700016) or "AuthorizationFailed" (likely
@@ -81,10 +83,28 @@ func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus
 			err = s.auth.Rebuild()
 			return false, err // retry step
 		}
+		log.Printf("non-auth error, giving up: %v", err)
 		return true, err
 	}, timeoutCtx.Done())
 
-	return err
+	// After timeout, return any actionable errors to the user
+	if err != nil {
+		switch {
+		case azureerrors.IsUnauthorizedClientError(err):
+			return s.servicePrincipalCloudError(
+				"The provided service principal application (client) ID was not found in the directory (tenant). Please ensure that the provided application (client) id and client secret value are correct.",
+			)
+		case azureerrors.HasAuthorizationFailedError(err) || azureerrors.IsInvalidSecretError(err):
+			return s.servicePrincipalCloudError(
+				"Authorization using provided credentials failed. Please ensure that the provided application (client) id and client secret value are correct.",
+			)
+		default:
+			// If not actionable, still log err in RP logs
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s *authorizationRefreshingActionStep) String() string {
@@ -93,4 +113,12 @@ func (s *authorizationRefreshingActionStep) String() string {
 
 func (s *authorizationRefreshingActionStep) metricsName() string {
 	return fmt.Sprintf("authorizationretryingaction.%s", shortName(FriendlyName(s.f)))
+}
+
+func (s *authorizationRefreshingActionStep) servicePrincipalCloudError(message string) error {
+	return api.NewCloudError(
+		http.StatusBadRequest,
+		api.CloudErrorCodeInvalidServicePrincipalCredentials,
+		"properties.servicePrincipalProfile",
+		message)
 }

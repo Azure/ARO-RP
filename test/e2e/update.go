@@ -82,15 +82,16 @@ var _ = Describe("Update cluster Managed Outbound IPs", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking effectiveOutboundIPs has been updated")
-		Expect(len(*oc.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIps)).To(Equal(5))
+		Expect(*oc.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIps).To(HaveLen(5))
 
 		By("checking outbound-rule-4 has required number IPs")
 		lb, err := clients.LoadBalancers.Get(ctx, rgName, lbName, "")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(getOutboundIPsCount(lb)).To(Equal(5))
 
-		By("sending the PATCH request to decrease Managed Outbound IPs")
-		err = clients.OpenshiftClustersPreview.UpdateAndWait(ctx, vnetResourceGroup, clusterName, newManagedOutboundIPUpdateBody(1))
+		By("sending the PUT request to decrease Managed Outbound IPs")
+		oc.OpenShiftClusterProperties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIps.Count = to.Int32Ptr(1)
+		err = clients.OpenshiftClustersPreview.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, oc)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("getting the cluster resource")
@@ -98,7 +99,7 @@ var _ = Describe("Update cluster Managed Outbound IPs", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking effectiveOutboundIPs has been updated")
-		Expect(len(*oc.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIps)).To(Equal(1))
+		Expect(*oc.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIps).To(HaveLen(1))
 
 		By("checking outbound-rule-4 has required number of IPs")
 		lb, err = clients.LoadBalancers.Get(ctx, rgName, lbName, "")

@@ -13,6 +13,7 @@ run:
   go: "1.18"
 
 issues:
+  max-same-issues: 0
   exclude-rules:
     - linters:
         - staticcheck
@@ -185,3 +186,8 @@ linters:
     - stylecheck
     - unconvert
     - importas
+    - tenv
+    - musttag
+    - ginkgolinter
+    - testifylint
+    - usestdlibvars

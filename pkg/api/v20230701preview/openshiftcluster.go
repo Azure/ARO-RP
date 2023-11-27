@@ -147,7 +147,7 @@ type LoadBalancerProfile struct {
 	// The desired managed outbound IPs for the cluster public load balancer.
 	ManagedOutboundIPs *ManagedOutboundIPs `json:"managedOutboundIps,omitempty" mutable:"true"`
 	// The list of effective outbound IP addresses of the public load balancer.
-	EffectiveOutboundIPs []EffectiveOutboundIP `json:"effectiveOutboundIps,omitempty"`
+	EffectiveOutboundIPs []EffectiveOutboundIP `json:"effectiveOutboundIps,omitempty" swagger:"readOnly"`
 	// The desired outbound IP resources for the cluster load balancer.
 	OutboundIPs []OutboundIP `json:"outboundIps,omitempty" mutable:"true"`
 	// The desired outbound IP Prefix resources for the cluster load balancer.

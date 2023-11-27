@@ -13,6 +13,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -25,6 +26,10 @@ func (r *reconcileManager) ensureSubnetNSG(ctx context.Context, s subnet.Subnet)
 
 	subnetObject, err := r.subnets.Get(ctx, s.ResourceID)
 	if err != nil {
+		if azureerrors.IsNotFoundError(err) {
+			r.log.Infof("Subnet %s not found, skipping", s.ResourceID)
+			return nil
+		}
 		return err
 	}
 	if subnetObject.SubnetPropertiesFormat == nil {

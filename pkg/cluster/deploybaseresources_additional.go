@@ -16,6 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
 func (m *manager) denyAssignment() *arm.Resource {
@@ -449,22 +450,13 @@ func (m *manager) networkInternalLoadBalancer(azureRegion string) *arm.Resource 
 	}
 }
 
-func (m *manager) networkPublicLoadBalancer(azureRegion string) *arm.Resource {
+func (m *manager) networkPublicLoadBalancer(azureRegion string, outboundIPs []api.ResourceReference) *arm.Resource {
 	lb := &mgmtnetwork.LoadBalancer{
 		Sku: &mgmtnetwork.LoadBalancerSku{
 			Name: mgmtnetwork.LoadBalancerSkuNameStandard,
 		},
 		LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
-			FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
-				{
-					FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
-						PublicIPAddress: &mgmtnetwork.PublicIPAddress{
-							ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', '" + m.doc.OpenShiftCluster.Properties.InfraID + "-pip-v4')]"),
-						},
-					},
-					Name: to.StringPtr("public-lb-ip-v4"),
-				},
-			},
+			FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{},
 			BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 				{
 					Name: to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID),
@@ -475,11 +467,7 @@ func (m *manager) networkPublicLoadBalancer(azureRegion string) *arm.Resource {
 			OutboundRules: &[]mgmtnetwork.OutboundRule{
 				{
 					OutboundRulePropertiesFormat: &mgmtnetwork.OutboundRulePropertiesFormat{
-						FrontendIPConfigurations: &[]mgmtnetwork.SubResource{
-							{
-								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '" + m.doc.OpenShiftCluster.Properties.InfraID + "', 'public-lb-ip-v4')]"),
-							},
-						},
+						FrontendIPConfigurations: &[]mgmtnetwork.SubResource{},
 						BackendAddressPool: &mgmtnetwork.SubResource{
 							ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 						},
@@ -496,6 +484,15 @@ func (m *manager) networkPublicLoadBalancer(azureRegion string) *arm.Resource {
 	}
 
 	if m.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
+		*lb.FrontendIPConfigurations = append(*lb.FrontendIPConfigurations, mgmtnetwork.FrontendIPConfiguration{
+			FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
+				PublicIPAddress: &mgmtnetwork.PublicIPAddress{
+					ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', '" + m.doc.OpenShiftCluster.Properties.InfraID + "-pip-v4')]"),
+				},
+			},
+			Name: to.StringPtr("public-lb-ip-v4"),
+		})
+
 		*lb.LoadBalancingRules = append(*lb.LoadBalancingRules, mgmtnetwork.LoadBalancingRule{
 			LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 				FrontendIPConfiguration: &mgmtnetwork.SubResource{
@@ -529,11 +526,42 @@ func (m *manager) networkPublicLoadBalancer(azureRegion string) *arm.Resource {
 		})
 	}
 
-	return &arm.Resource{
+	if m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs != nil {
+		for i := len(*lb.FrontendIPConfigurations); i < m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs.Count; i++ {
+			resourceGroupID := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID
+			frontendIPConfigName := stringutils.LastTokenByte(outboundIPs[i].ID, '/')
+			frontendConfigID := fmt.Sprintf("%s/providers/Microsoft.Network/loadBalancers/%s/frontendIPConfigurations/%s", resourceGroupID, *lb.Name, frontendIPConfigName)
+			*lb.FrontendIPConfigurations = append(*lb.FrontendIPConfigurations, newFrontendIPConfig(frontendIPConfigName, frontendConfigID, outboundIPs[i].ID))
+		}
+
+		for i := 0; i < m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs.Count; i++ {
+			resourceGroupID := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID
+			if i == 0 && m.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
+				frontendIPConfigName := "public-lb-ip-v4"
+				frontendConfigID := fmt.Sprintf("%s/providers/Microsoft.Network/loadBalancers/%s/frontendIPConfigurations/%s", resourceGroupID, *lb.Name, frontendIPConfigName)
+				*(*lb.OutboundRules)[0].FrontendIPConfigurations = append(*(*lb.OutboundRules)[0].FrontendIPConfigurations, newOutboundRuleFrontendIPConfig(frontendConfigID))
+				continue
+			}
+			frontendIPConfigName := stringutils.LastTokenByte(outboundIPs[i].ID, '/')
+			frontendConfigID := fmt.Sprintf("%s/providers/Microsoft.Network/loadBalancers/%s/frontendIPConfigurations/%s", resourceGroupID, *lb.Name, frontendIPConfigName)
+			*(*lb.OutboundRules)[0].FrontendIPConfigurations = append(*(*lb.OutboundRules)[0].FrontendIPConfigurations, newOutboundRuleFrontendIPConfig(frontendConfigID))
+		}
+	}
+
+	armResource := &arm.Resource{
 		Resource:   lb,
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
-		DependsOn: []string{
-			"Microsoft.Network/publicIPAddresses/" + m.doc.OpenShiftCluster.Properties.InfraID + "-pip-v4",
-		},
+		DependsOn:  []string{},
 	}
+
+	if m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs == nil && m.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
+		armResource.DependsOn = append(armResource.DependsOn, "Microsoft.Network/publicIPAddresses/"+m.doc.OpenShiftCluster.Properties.InfraID+"-pip-v4")
+	}
+
+	for _, ip := range outboundIPs {
+		ipName := stringutils.LastTokenByte(ip.ID, '/')
+		armResource.DependsOn = append(armResource.DependsOn, "Microsoft.Network/publicIPAddresses/"+ipName)
+	}
+
+	return armResource
 }

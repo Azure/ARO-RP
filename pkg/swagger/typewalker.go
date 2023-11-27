@@ -142,12 +142,14 @@ func (tw *typeWalker) schemaFromType(t types.Type, deps map[*types.Named]struct{
 
 				properties := tw.schemaFromType(field.Type(), deps)
 				properties.Description = strings.Trim(node.Doc.Text(), "\n")
-				if field.Name() == "WorkerProfilesStatus" {
-					properties.ReadOnly = true
-				}
 
-				if field.Name() == "EffectiveOutboundIPs" {
-					properties.ReadOnly = true
+				if swaggerTag, ok := reflect.StructTag(tag).Lookup("swagger"); ok {
+					// XXX In theory this would be a comma-delimited
+					//     list, but "readonly" is the only value we
+					//     currently recognize.
+					if strings.EqualFold(swaggerTag, "readOnly") {
+						properties.ReadOnly = true
+					}
 				}
 
 				ns := NameSchema{

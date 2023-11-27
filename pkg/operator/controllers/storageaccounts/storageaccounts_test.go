@@ -5,11 +5,13 @@ package storageaccounts
 
 import (
 	"context"
+	"net/http"
 	"strconv"
 	"testing"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
@@ -205,6 +207,56 @@ func TestReconcileManager(t *testing.T) {
 				updated = mgmtstorage.AccountUpdateParameters{
 					AccountPropertiesUpdateParameters: &mgmtstorage.AccountPropertiesUpdateParameters{
 						NetworkRuleSet: getValidAccount([]string{resourceIdMaster, resourceIdWorker}).NetworkRuleSet,
+					},
+				}
+
+				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, gomock.Any()).Return(*result, nil)
+				storage.EXPECT().Update(gomock.Any(), clusterResourceGroupName, registryStorageAccountName, updated)
+			},
+		},
+		{
+			name:         "Operator Flag enabled - not found error on getting worker subnet skips subnet",
+			operatorFlag: true,
+			mocks: func(storage *mock_storage.MockAccountsClient, kubeSubnet *mock_subnet.MockKubeManager, mgmtSubnet *mock_subnet.MockManager) {
+				// Azure subnets
+				masterSubnet := getValidSubnet(resourceIdMaster)
+
+				notFoundErr := autorest.DetailedError{
+					StatusCode: http.StatusNotFound,
+				}
+
+				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdMaster).Return(masterSubnet, nil)
+				mgmtSubnet.EXPECT().Get(gomock.Any(), resourceIdWorker).Return(nil, notFoundErr)
+
+				// cluster subnets
+				kubeSubnet.EXPECT().List(gomock.Any()).Return([]subnet.Subnet{
+					{
+						ResourceID: resourceIdMaster,
+						IsMaster:   true,
+					},
+					{
+						ResourceID: resourceIdWorker,
+						IsMaster:   false,
+					},
+				}, nil)
+
+				// storage objects in azure
+				result := getValidAccount([]string{})
+				updated := mgmtstorage.AccountUpdateParameters{
+					AccountPropertiesUpdateParameters: &mgmtstorage.AccountPropertiesUpdateParameters{
+						NetworkRuleSet: getValidAccount([]string{resourceIdMaster}).NetworkRuleSet,
+					},
+				}
+
+				storage.EXPECT().GetProperties(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, gomock.Any()).Return(*result, nil)
+				storage.EXPECT().Update(gomock.Any(), clusterResourceGroupName, clusterStorageAccountName, updated)
+
+				// we can't reuse these from above due to fact how gomock handles objects.
+				// they are modified by the functions so they are not the same anymore
+				result = getValidAccount([]string{})
+				updated = mgmtstorage.AccountUpdateParameters{
+					AccountPropertiesUpdateParameters: &mgmtstorage.AccountPropertiesUpdateParameters{
+						NetworkRuleSet: getValidAccount([]string{resourceIdMaster}).NetworkRuleSet,
 					},
 				}
 

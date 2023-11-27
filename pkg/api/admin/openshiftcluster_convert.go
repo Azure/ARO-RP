@@ -252,7 +252,16 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	out.Properties.NetworkProfile.GatewayPrivateEndpointIP = oc.Properties.NetworkProfile.GatewayPrivateEndpointIP
 	out.Properties.NetworkProfile.GatewayPrivateLinkID = oc.Properties.NetworkProfile.GatewayPrivateLinkID
 	if oc.Properties.NetworkProfile.LoadBalancerProfile != nil {
-		out.Properties.NetworkProfile.LoadBalancerProfile = &api.LoadBalancerProfile{}
+		loadBalancerProfile := api.LoadBalancerProfile{}
+
+		// EffectiveOutboundIPs is a read-only field, so it will never be present in requests.
+		// Preserve the slice from the pre-existing internal object.
+		if out.Properties.NetworkProfile.LoadBalancerProfile != nil {
+			loadBalancerProfile.EffectiveOutboundIPs = make([]api.EffectiveOutboundIP, len(out.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs))
+			copy(loadBalancerProfile.EffectiveOutboundIPs, out.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs)
+		}
+
+		out.Properties.NetworkProfile.LoadBalancerProfile = &loadBalancerProfile
 
 		if oc.Properties.NetworkProfile.LoadBalancerProfile.AllocatedOutboundPorts != nil {
 			out.Properties.NetworkProfile.LoadBalancerProfile.AllocatedOutboundPorts = oc.Properties.NetworkProfile.LoadBalancerProfile.AllocatedOutboundPorts
@@ -341,4 +350,13 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	// Other fields are converted and this breaks the pattern, however this converting this field creates an issue
 	// with filling the out.Properties.RegistryProfiles[i].Password as default is "" which erases the original value.
 	// Workaround would be filling the password when receiving request, but it is array and the logic would be to complex.
+}
+
+// ExternalNoReadOnly removes all read-only fields from the external representation.
+func (c openShiftClusterConverter) ExternalNoReadOnly(_oc interface{}) {
+	oc := _oc.(*OpenShiftCluster)
+	oc.Properties.WorkerProfilesStatus = nil
+	if oc.Properties.NetworkProfile.LoadBalancerProfile != nil {
+		oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = nil
+	}
 }

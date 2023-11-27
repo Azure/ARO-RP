@@ -204,7 +204,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 
 		regions, err := regionList.FindElements(selenium.ByTagName, "li")
 		Expect(err).ToNot(HaveOccurred())
-		Expect(len(regions)).To(Equal(NUMBER_OF_REGIONS))
+		Expect(regions).To(HaveLen(NUMBER_OF_REGIONS))
 
 		for _, region := range regions {
 			link, err := region.FindElement(selenium.ByTagName, "a")

@@ -153,11 +153,8 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 
 	// Create a public load balancer routing if needed
 	if m.doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType == api.OutboundTypeLoadbalancer {
-		// Normal private clusters still need a public load balancer
-		resources = append(resources,
-			m.networkPublicIPAddress(azureRegion, infraID+"-pip-v4"),
-			m.networkPublicLoadBalancer(azureRegion),
-		)
+		m.newPublicLoadBalancer(ctx, &resources)
+
 		// If the cluster is public we still want the default public IP address
 		if m.doc.OpenShiftCluster.Properties.IngressProfiles[0].Visibility == api.VisibilityPublic {
 			resources = append(resources,
@@ -183,6 +180,33 @@ func (m *manager) deployBaseResourceTemplate(ctx context.Context) error {
 	}
 
 	return arm.DeployTemplate(ctx, m.log, m.deployments, resourceGroup, "storage", t, nil)
+}
+
+func (m *manager) newPublicLoadBalancer(ctx context.Context, resources *[]*arm.Resource) {
+	infraID := m.doc.OpenShiftCluster.Properties.InfraID
+	azureRegion := strings.ToLower(m.doc.OpenShiftCluster.Location) // Used in k8s object names, so must pass DNS-1123 validation
+
+	var outboundIPs []api.ResourceReference
+	if m.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
+		*resources = append(*resources,
+			m.networkPublicIPAddress(azureRegion, infraID+"-pip-v4"),
+		)
+		if m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs != nil {
+			outboundIPs = append(outboundIPs, api.ResourceReference{ID: m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/publicIPAddresses/" + infraID + "-pip-v4"})
+		}
+	}
+	if m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs != nil {
+		for i := len(outboundIPs); i < m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs.Count; i++ {
+			ipName := genManagedOutboundIPName()
+			*resources = append(*resources, m.networkPublicIPAddress(azureRegion, ipName))
+			outboundIPs = append(outboundIPs, api.ResourceReference{ID: m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/publicIPAddresses/" + ipName})
+		}
+	}
+	m.patchEffectiveOutboundIPs(ctx, outboundIPs)
+
+	*resources = append(*resources,
+		m.networkPublicLoadBalancer(azureRegion, outboundIPs),
+	)
 }
 
 // subnetsWithServiceEndpoint returns a unique slice of subnet resource IDs that have the corresponding

@@ -29,7 +29,7 @@ type TemplateParameter struct {
 
 // Resource represents an ARM template resource
 type Resource struct {
-	Resource interface{}
+	Resource interface{} `json:"-"`
 
 	Name       string                 `json:"name,omitempty"`
 	Type       string                 `json:"type,omitempty"`

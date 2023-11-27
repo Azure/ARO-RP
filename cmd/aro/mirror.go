@@ -84,8 +84,8 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		srcAcrGeneva := "linuxgeneva-microsoft" + acrDomainSuffix
 		mirrorImages := []string{
 			// https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
-			srcAcrGeneva + "/distroless/genevamdm:2.2023.721.1630-e50918-20230721t1737",
-			srcAcrGeneva + "/distroless/genevamdsd:mariner_20230727.1",
+			srcAcrGeneva + "/distroless/genevamdm:2.2023.928.2134-0de476-20230928t2244",
+			srcAcrGeneva + "/distroless/genevamdsd:mariner_20231024.2",
 		}
 		for _, ref := range mirrorImages {
 			log.Printf("mirroring %s -> %s", ref, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref))
@@ -134,7 +134,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"quay.io/app-sre/managed-upgrade-operator:v0.1.952-44b631a",
 
 		// https://quay.io/repository/app-sre/hive?tab=tags
-		"quay.io/app-sre/hive:70b666ec89",
+		"quay.io/app-sre/hive:f1bc6ceaf3",
 	} {
 		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
 
@@ -154,7 +154,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	var releases []pkgmirror.Node
 	if len(flag.Args()) == 1 {
 		log.Print("reading release graph")
-		releases, err = pkgmirror.AddFromGraph(version.NewVersion(4, 10))
+		releases, err = pkgmirror.AddFromGraph(version.NewVersion(4, 11))
 		if err != nil {
 			return err
 		}
