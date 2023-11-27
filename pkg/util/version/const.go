@@ -50,10 +50,6 @@ var DefaultInstallStream = DefaultInstallStreams[DefaultMinorVersion]
 
 var AvailableInstallStreams = []*Stream{
 	DefaultInstallStreams[11],
-	{
-		Version:  NewVersion(4, 11, 26),
-		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:1c3913a65b0a10b4a0650f54e545fe928360a94767acea64c0bd10faa52c945a",
-	},
 	DefaultInstallStreams[12],
 }
 
