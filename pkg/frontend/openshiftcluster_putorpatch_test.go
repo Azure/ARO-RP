@@ -1119,7 +1119,6 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 		{
 			name: "patch a none maintenance state cluster with maintenance unplanned request",
 			request: func(oc *admin.OpenShiftCluster) {
-				oc.Properties.MaintenanceTask = admin.MaintenanceTaskEverything
 			},
 			isPatch: true,
 			fixture: func(f *testdatabase.Fixture) {
@@ -1136,10 +1135,9 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
 						Tags: map[string]string{"tag": "will-be-kept"},
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState:     api.ProvisioningStateSucceeded,
-							LastProvisioningState: api.ProvisioningStateSucceeded,
-							MaintenanceTask:       "",
-							MaintenanceState:      api.MaintenanceStateNone,
+							ProvisioningState: api.ProvisioningStateSucceeded,
+							OperatorFlags:     api.OperatorFlags{"testFlag": "true"},
+							MaintenanceState:  api.MaintenanceStateNone,
 						},
 					},
 				})
@@ -1150,8 +1148,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
 					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					AsyncOperation: &api.AsyncOperation{
-						InitialProvisioningState: api.ProvisioningStateSucceeded,
-						ProvisioningState:        api.ProvisioningStateSucceeded,
+						InitialProvisioningState: api.ProvisioningStateAdminUpdating,
+						ProvisioningState:        api.ProvisioningStateAdminUpdating,
 					},
 				})
 				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
@@ -1161,12 +1159,12 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
 						Tags: map[string]string{"tag": "will-be-kept"},
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState:     api.ProvisioningStateSucceeded,
+							ProvisioningState:     api.ProvisioningStateAdminUpdating,
 							LastProvisioningState: api.ProvisioningStateSucceeded,
 							ClusterProfile: api.ClusterProfile{
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
-							MaintenanceTask: "",
+							MaintenanceTask: api.MaintenanceTaskEverything,
 							NetworkProfile: api.NetworkProfile{
 								OutboundType:     api.OutboundTypeLoadbalancer,
 								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
@@ -1179,8 +1177,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
 							},
+							OperatorFlags:    api.OperatorFlags{"testFlag": "true"},
 							MaintenanceState: api.MaintenanceStateUnplanned,
-							OperatorFlags:    api.DefaultOperatorFlags(),
 						},
 					},
 				})
@@ -1192,12 +1190,12 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 				Type: "Microsoft.RedHatOpenShift/openShiftClusters",
 				Tags: map[string]string{"tag": "will-be-kept"},
 				Properties: admin.OpenShiftClusterProperties{
-					ProvisioningState:     admin.ProvisioningStateSucceeded,
+					ProvisioningState:     admin.ProvisioningStateAdminUpdating,
 					LastProvisioningState: admin.ProvisioningStateSucceeded,
 					ClusterProfile: admin.ClusterProfile{
 						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
 					},
-					MaintenanceTask: "",
+					MaintenanceTask: admin.MaintenanceTaskEverything,
 					NetworkProfile: admin.NetworkProfile{
 						OutboundType: admin.OutboundTypeLoadbalancer,
 						LoadBalancerProfile: &admin.LoadBalancerProfile{
@@ -1206,11 +1204,11 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							},
 						},
 					},
-					MaintenanceState: admin.MaintenanceStateUnplanned,
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
 					},
-					OperatorFlags: admin.OperatorFlags(api.DefaultOperatorFlags()),
+					OperatorFlags:    admin.OperatorFlags{"testFlag": "true"},
+					MaintenanceState: admin.MaintenanceStateUnplanned,
 				},
 			},
 		},
