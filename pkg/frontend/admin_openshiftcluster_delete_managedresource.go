@@ -51,7 +51,7 @@ func (f *frontend) _postAdminOpenShiftClusterDeleteManagedResource(ctx context.C
 
 	a, err := f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
 	if err != nil {
-		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return err
 	}
 
 	err = a.ResourceDeleteAndWait(ctx, managedResourceID)
@@ -60,7 +60,7 @@ func (f *frontend) _postAdminOpenShiftClusterDeleteManagedResource(ctx context.C
 			detailedErr.StatusCode == http.StatusNotFound {
 			return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The resource '%s' could not be found.", managedResourceID)
 		}
-		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return err
 	}
 
 	return nil
