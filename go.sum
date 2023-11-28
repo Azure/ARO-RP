@@ -675,6 +675,8 @@ github.com/openshift/build-machinery-go v0.0.0-20210115170933-e575b44a7a94/go.mo
 github.com/openshift/build-machinery-go v0.0.0-20211213093930-7e33a7eb4ce3/go.mod h1:b1BuldmJlbA/xYtdZvKi+7j5YGB44qJUJDZ9zwiNCfE=
 github.com/openshift/client-go v0.0.0-20220603133046-984ee5ebedcf h1:gAYYPWVduONFJ6yuczLleApk0nEH3W0GgxDX2+O+B9E=
 github.com/openshift/client-go v0.0.0-20220603133046-984ee5ebedcf/go.mod h1:eDO5QeVi2IiXmDwB0e2z1DpAznWroZKe978pzZwFBzg=
+github.com/openshift/cloud-credential-operator v0.0.0-20200316201045-d10080b52c9e h1:2gyl9UVyjHSWzdS56KUXxQwIhENbq2x2olqoMQSA/C8=
+github.com/openshift/cloud-credential-operator v0.0.0-20200316201045-d10080b52c9e/go.mod h1:iPn+uhIe7nkP5BMHe2QnbLtg5m/AIQ1xvz9s3cig5ss=
 github.com/openshift/cluster-api-provider-azure v0.1.0-alpha.3.0.20210626224711-5d94c794092f h1:rQwvVLPZfM5o0USkVY6mrAyJwzMUkhjn9Wz2D5vX81k=
 github.com/openshift/cluster-api-provider-azure v0.1.0-alpha.3.0.20210626224711-5d94c794092f/go.mod h1:GR+ocB8I+Z7JTSBdO+DMu/diBfH66lRlRpnc1KWysUM=
 github.com/openshift/console-operator v0.0.0-20220318130441-e44516b9c315 h1:zmwv8TgbOgZ5QoaPhLdOivqg706Z+VyuPs703jNMdrE=
