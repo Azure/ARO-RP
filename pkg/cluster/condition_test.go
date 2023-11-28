@@ -6,20 +6,26 @@ package cluster
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
 	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
+	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 	consoleapi "github.com/openshift/console-operator/pkg/api"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	dynamicfake "k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/kubernetes/scheme"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 const errMustBeNilMsg = "err must be nil; condition is retried until timeout"
@@ -305,5 +311,144 @@ func TestClusterVersionReady(t *testing.T) {
 		if ready != tt.want {
 			t.Error(ready)
 		}
+	}
+}
+
+func TestAroCredentialsRequestReconciled(t *testing.T) {
+	ctx := context.Background()
+
+	for _, tt := range []struct {
+		name          string
+		kubernetescli func() *fake.Clientset
+		dynamiccli    func() *dynamicfake.FakeDynamicClient
+		spp           api.ServicePrincipalProfile
+		want          bool
+		wantErrMsg    string
+	}{
+		{
+			name: "Cluster service principal has not changed",
+			kubernetescli: func() *fake.Clientset {
+				secret := getFakeAROSecret("aadClientId", "aadClientSecret")
+				return fake.NewSimpleClientset(&secret)
+			},
+			dynamiccli: func() *dynamicfake.FakeDynamicClient {
+				return dynamicfake.NewSimpleDynamicClient(scheme.Scheme)
+			},
+			spp: api.ServicePrincipalProfile{
+				ClientID:     "aadClientId",
+				ClientSecret: "aadClientSecret",
+			},
+			want: true,
+		},
+		{
+			name: "Encounter error getting CredentialsRequest",
+			kubernetescli: func() *fake.Clientset {
+				secret := getFakeAROSecret("aadClientId", "aadClientSecret")
+				return fake.NewSimpleClientset(&secret)
+			},
+			dynamiccli: func() *dynamicfake.FakeDynamicClient {
+				return dynamicfake.NewSimpleDynamicClient(scheme.Scheme)
+			},
+			spp: api.ServicePrincipalProfile{
+				ClientID:     "aadClientId",
+				ClientSecret: "aadClientSecretNew",
+			},
+			want:       false,
+			wantErrMsg: `credentialsrequests.cloudcredential.openshift.io "openshift-azure-operator" not found`,
+		},
+		{
+			name: "CredentialsRequest is missing status.lastSyncTimestamp",
+			kubernetescli: func() *fake.Clientset {
+				secret := getFakeAROSecret("aadClientId", "aadClientSecret")
+				return fake.NewSimpleClientset(&secret)
+			},
+			dynamiccli: func() *dynamicfake.FakeDynamicClient {
+				cr := cloudcredentialv1.CredentialsRequest{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "openshift-azure-operator",
+						Namespace: "openshift-cloud-credential-operator",
+					},
+				}
+				return dynamicfake.NewSimpleDynamicClient(scheme.Scheme, &cr)
+			},
+			spp: api.ServicePrincipalProfile{
+				ClientID:     "aadClientId",
+				ClientSecret: "aadClientSecretNew",
+			},
+			want:       false,
+			wantErrMsg: "unable to access status.lastSyncTimestamp of openshift-azure-operator CredentialsRequest",
+		},
+		{
+			name: "CredentialsRequest was last synced 10 minutes ago (too long)",
+			kubernetescli: func() *fake.Clientset {
+				secret := getFakeAROSecret("aadClientId", "aadClientSecret")
+				return fake.NewSimpleClientset(&secret)
+			},
+			dynamiccli: func() *dynamicfake.FakeDynamicClient {
+				timestamp := metav1.NewTime(time.Now().Add(-10 * time.Minute))
+				cr := cloudcredentialv1.CredentialsRequest{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "openshift-azure-operator",
+						Namespace: "openshift-cloud-credential-operator",
+					},
+					Status: cloudcredentialv1.CredentialsRequestStatus{
+						LastSyncTimestamp: &timestamp,
+					},
+				}
+				return dynamicfake.NewSimpleDynamicClient(scheme.Scheme, &cr)
+			},
+			spp: api.ServicePrincipalProfile{
+				ClientID:     "aadClientId",
+				ClientSecret: "aadClientSecretNew",
+			},
+			want: false,
+		},
+		{
+			name: "CredentialsRequest was last synced 10 seconds ago",
+			kubernetescli: func() *fake.Clientset {
+				secret := getFakeAROSecret("aadClientId", "aadClientSecret")
+				return fake.NewSimpleClientset(&secret)
+			},
+			dynamiccli: func() *dynamicfake.FakeDynamicClient {
+				timestamp := metav1.NewTime(time.Now().Add(-10 * time.Second))
+				cr := cloudcredentialv1.CredentialsRequest{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "openshift-azure-operator",
+						Namespace: "openshift-cloud-credential-operator",
+					},
+					Status: cloudcredentialv1.CredentialsRequestStatus{
+						LastSyncTimestamp: &timestamp,
+					},
+				}
+				return dynamicfake.NewSimpleDynamicClient(scheme.Scheme, &cr)
+			},
+			spp: api.ServicePrincipalProfile{
+				ClientID:     "aadClientId",
+				ClientSecret: "aadClientSecretNew",
+			},
+			want: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &manager{
+				log:           logrus.NewEntry(logrus.StandardLogger()),
+				kubernetescli: tt.kubernetescli(),
+				dynamiccli:    tt.dynamiccli(),
+				doc: &api.OpenShiftClusterDocument{
+					OpenShiftCluster: &api.OpenShiftCluster{
+						Properties: api.OpenShiftClusterProperties{
+							ServicePrincipalProfile: tt.spp,
+						},
+					},
+				},
+			}
+
+			result, err := m.aroCredentialsRequestReconciled(ctx)
+			if result != tt.want {
+				t.Errorf("Result was %v, wanted %v", result, tt.want)
+			}
+
+			utilerror.AssertErrorMessage(t, err, tt.wantErrMsg)
+		})
 	}
 }

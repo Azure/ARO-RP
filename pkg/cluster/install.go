@@ -17,6 +17,7 @@ import (
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -200,7 +201,10 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Action(m.configureIngressCertificate),
 		steps.Action(m.renewMDSDCertificate),
 		steps.Action(m.updateOpenShiftSecret),
+		steps.Condition(m.aroCredentialsRequestReconciled, 3*time.Minute, true),
 		steps.Action(m.updateAROSecret),
+		steps.Action(m.restartAROOperatorMaster), // depends on m.updateOpenShiftSecret; the point of restarting is to pick up any changes made to the secret
+		steps.Condition(m.aroDeploymentReady, 5*time.Minute, true),
 		steps.Action(m.reconcileLoadBalancerProfile),
 	}
 
@@ -444,6 +448,11 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 	}
 
 	m.kubernetescli, err = kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
+
+	m.dynamiccli, err = dynamic.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}
