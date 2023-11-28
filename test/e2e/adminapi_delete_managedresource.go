@@ -35,7 +35,7 @@ var loadBalancerService = corev1.Service{
 	},
 }
 
-var _ = Describe("[Admin API] Delete managed resource action", func() {
+var _ = FDescribe("[Admin API] Delete managed resource action", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
 	It("should be possible to delete managed cluster resources", func(ctx context.Context) {
@@ -108,7 +108,7 @@ var _ = Describe("[Admin API] Delete managed resource action", func() {
 })
 
 func testDeleteManagedResourceOK(ctx context.Context, resourceID string) {
-	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/deletemanagedresource", url.Values{"managedresourceid": []string{resourceID}}, true, nil, nil)
+	resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/deletemanagedresource", url.Values{"managedResourceID": []string{resourceID}}, true, nil, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 }
