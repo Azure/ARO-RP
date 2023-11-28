@@ -35,7 +35,7 @@ var loadBalancerService = corev1.Service{
 	},
 }
 
-var _ = FDescribe("[Admin API] Delete managed resource action", func() {
+var _ = Describe("[Admin API] Delete managed resource action", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
 	It("should be possible to delete managed cluster resources", func(ctx context.Context) {
