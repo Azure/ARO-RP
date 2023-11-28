@@ -29,7 +29,7 @@ func (f *frontend) postAdminOpenShiftDeleteManagedResource(w http.ResponseWriter
 
 func (f *frontend) _postAdminOpenShiftClusterDeleteManagedResource(ctx context.Context, r *http.Request, log *logrus.Entry) error {
 	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
-	managedResourceID := r.URL.Query().Get("managedresourceid")
+	managedResourceID := r.URL.Query().Get("managedResourceID")
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
 	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
@@ -40,7 +40,7 @@ func (f *frontend) _postAdminOpenShiftClusterDeleteManagedResource(ctx context.C
 		return err
 	}
 
-	if !strings.Contains(strings.ToLower(managedResourceID), strings.ToLower(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)) {
+	if !strings.HasPrefix(strings.ToLower(managedResourceID), strings.ToLower(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The resource %s is not within the cluster's managed resource group %s.", managedResourceID, doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
 	}
 

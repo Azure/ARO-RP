@@ -110,7 +110,7 @@ func TestAdminDeleteManagedResource(t *testing.T) {
 
 			go f.Run(ctx, nil, nil)
 			resp, b, err := ti.request(http.MethodPost,
-				fmt.Sprintf("https://server/admin%s/deletemanagedresource?managedresourceid=%s", tt.resourceID, tt.managedResourceID),
+				fmt.Sprintf("https://server/admin%s/deletemanagedresource?managedResourceID=%s", tt.resourceID, tt.managedResourceID),
 				nil, nil)
 			if err != nil {
 				t.Error(err)

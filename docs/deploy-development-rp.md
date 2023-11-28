@@ -272,7 +272,7 @@ After that, when you [create](https://github.com/Azure/ARO-RP/blob/master/docs/d
 * Delete a managed resource
   ```bash
   MANAGED_RESOURCEID=<id of managed resource to delete>
-  curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/deletemanagedresource?managedresourceid=$MANAGED_RESOURCEID"
+  curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/deletemanagedresource?managedResourceID=$MANAGED_RESOURCEID"
   ```
 
 ## OpenShift Version
