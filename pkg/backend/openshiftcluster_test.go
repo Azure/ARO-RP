@@ -172,7 +172,7 @@ func TestBackendTry(t *testing.T) {
 			},
 		},
 		{
-			name: "StateAdminUpdating success sets the last ProvisioningState and clears LastAdminUpdateError and MaintenanceTask",
+			name: "StateAdminUpdating success sets the last ProvisioningState, clears LastAdminUpdateError and MaintenanceTask, and has maintenance state none",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(resourceID),
@@ -186,6 +186,7 @@ func TestBackendTry(t *testing.T) {
 							LastProvisioningState: api.ProvisioningStateSucceeded,
 							LastAdminUpdateError:  "oh no",
 							MaintenanceTask:       api.MaintenanceTaskEverything,
+							MaintenanceState:      api.MaintenanceStateUnplanned,
 						},
 					},
 				})
@@ -203,6 +204,7 @@ func TestBackendTry(t *testing.T) {
 						Location: "location",
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateSucceeded,
+							MaintenanceState:  api.MaintenanceStateNone,
 						},
 					},
 				})
@@ -212,7 +214,7 @@ func TestBackendTry(t *testing.T) {
 			},
 		},
 		{
-			name: "StateAdminUpdating run failure populates LastAdminUpdateError and restores previous provisioning state + failed provisioning state",
+			name: "StateAdminUpdating run failure populates LastAdminUpdateError, restores previous provisioning state + failed provisioning state, and sets maintenance state to ongoing",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(resourceID),
@@ -226,6 +228,7 @@ func TestBackendTry(t *testing.T) {
 							LastProvisioningState:   api.ProvisioningStateSucceeded,
 							FailedProvisioningState: api.ProvisioningStateUpdating,
 							MaintenanceTask:         api.MaintenanceTaskEverything,
+							MaintenanceState:        api.MaintenanceStateUnplanned,
 						},
 					},
 				})
@@ -245,6 +248,7 @@ func TestBackendTry(t *testing.T) {
 							ProvisioningState:       api.ProvisioningStateSucceeded,
 							FailedProvisioningState: api.ProvisioningStateUpdating,
 							LastAdminUpdateError:    "oh no!",
+							MaintenanceState:        api.MaintenanceStateUnplanned,
 						},
 					},
 				})
