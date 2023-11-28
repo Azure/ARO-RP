@@ -5,6 +5,7 @@ package adminactions
 
 import (
 	"context"
+	"regexp"
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -12,6 +13,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/loadbalancer"
 )
+
+var frontendIPConfigurationPattern = `(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Network/loadBalancers/(.+)/frontendIPConfigurations/([^/]+)$`
 
 func (a *azureActions) ResourceDeleteAndWait(ctx context.Context, resourceID string) error {
 	idParts, err := azure.ParseResourceID(resourceID)
@@ -26,8 +29,9 @@ func (a *azureActions) ResourceDeleteAndWait(ctx context.Context, resourceID str
 		return err
 	}
 
+	re := regexp.MustCompile(frontendIPConfigurationPattern)
 	// FrontendIPConfiguration cannot be deleted with DeleteByIDAndWait (DELETE method is invalid on frontendIPConfiguration resourceID)
-	if strings.Contains(strings.ToLower(resourceID), "frontendipconfigurations") {
+	if re.MatchString(resourceID) {
 		return a.deleteFrontendIPConfiguration(ctx, resourceID)
 	}
 
