@@ -396,17 +396,17 @@ func setup(ctx context.Context) error {
 
 	osClusterVersion = os.Getenv("OS_CLUSTER_VERSION")
 
-	// if os.Getenv("CI") != "" { // always create cluster in CI
-	// 	cluster, err := cluster.New(log, _env, os.Getenv("CI") != "")
-	// 	if err != nil {
-	// 		return err
-	// 	}
+	if os.Getenv("CI") != "" { // always create cluster in CI
+		cluster, err := cluster.New(log, _env, os.Getenv("CI") != "")
+		if err != nil {
+			return err
+		}
 
-	// 	err = cluster.Create(ctx, vnetResourceGroup, clusterName, osClusterVersion)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
+		err = cluster.Create(ctx, vnetResourceGroup, clusterName, osClusterVersion)
+		if err != nil {
+			return err
+		}
+	}
 
 	clusterResourceID = resourceIDFromEnv()
 
