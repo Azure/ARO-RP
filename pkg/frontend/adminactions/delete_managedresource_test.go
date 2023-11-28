@@ -21,10 +21,13 @@ import (
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
-var infraID = "infraID"
-var location = "eastus"
-var subscription = "00000000-0000-0000-0000-000000000000"
-var clusterRG = "clusterRG"
+var (
+	infraID      = "infraID"
+	location     = "eastus"
+	subscription = "00000000-0000-0000-0000-000000000000"
+	clusterRG    = "clusterRG"
+)
+
 var originalLB = mgmtnetwork.LoadBalancer{
 	Sku: &mgmtnetwork.LoadBalancerSku{
 		Name: mgmtnetwork.LoadBalancerSkuNameStandard,
