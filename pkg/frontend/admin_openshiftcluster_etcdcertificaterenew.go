@@ -337,7 +337,7 @@ func (e *etcdrenew) validateEtcdCertsRenewed(ctx context.Context) error {
 	}
 
 	if isError {
-		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "etcd certificates renewal not successful, as atleast one or all certificates are not renewed")
+		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "etcd certificates renewal not successful, as at least one or all certificates are not renewed")
 	}
 
 	e.log.Infoln("etcd certificates are successfully renewed")
