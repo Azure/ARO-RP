@@ -28,7 +28,7 @@ require (
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-chi/chi/v5 v5.0.8
-	github.com/go-logr/logr v1.2.4
+	github.com/go-logr/logr v1.3.0
 	github.com/go-test/deep v1.1.0
 	github.com/gofrs/uuid v4.2.0+incompatible
 	github.com/golang-jwt/jwt/v4 v4.5.0
@@ -59,7 +59,7 @@ require (
 	github.com/openshift/client-go v0.0.0-20220525160904-9e1acff93e4a
 	github.com/openshift/cloud-credential-operator v0.0.0-00010101000000-000000000000
 	github.com/openshift/console-operator v0.0.0-20220407014945-45d37e70e0c2
-	github.com/openshift/hive/apis v0.0.0
+	github.com/openshift/hive/apis v0.0.0-20231116161336-9dd47f8bfa1f
 	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
 	github.com/openshift/machine-config-operator v0.0.1-0.20230519222939-1abc13efbb0d
 	github.com/pires/go-proxyproto v0.6.2
@@ -80,9 +80,9 @@ require (
 	golang.org/x/sync v0.2.0
 	golang.org/x/text v0.13.0
 	golang.org/x/tools v0.7.0
-	k8s.io/api v0.26.2
+	k8s.io/api v0.28.3
 	k8s.io/apiextensions-apiserver v0.24.17
-	k8s.io/apimachinery v0.26.2
+	k8s.io/apimachinery v0.28.3
 	k8s.io/cli-runtime v0.24.17
 	k8s.io/client-go v0.24.17
 	k8s.io/code-generator v0.24.17
@@ -760,4 +760,4 @@ replace (
 	sigs.k8s.io/structured-merge-diff => sigs.k8s.io/structured-merge-diff v1.0.1-0.20191108220359-b1b620dd3f06
 )
 
-replace github.com/openshift/hive/apis => github.com/openshift/hive/apis v0.0.0-20230811220652-70b666ec89b0
+replace github.com/openshift/hive/apis => github.com/openshift/hive/apis v0.0.0-20231116161336-9dd47f8bfa1f

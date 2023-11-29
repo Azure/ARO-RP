@@ -307,9 +307,17 @@ type ClusterMetadata struct {
 }
 
 type ClusterPlatformMetadata struct {
+	// AWS holds AWS-specific cluster metadata
+	// +optional
+	AWS *aws.Metadata `json:"aws,omitempty"`
+
 	// Azure holds azure-specific cluster metadata
 	// +optional
 	Azure *azure.Metadata `json:"azure,omitempty"`
+
+	// GCP holds GCP-specific cluster metadata
+	// +optional
+	GCP *gcp.Metadata `json:"gcp,omitempty"`
 }
 
 // ClusterDeploymentStatus defines the observed state of ClusterDeployment
