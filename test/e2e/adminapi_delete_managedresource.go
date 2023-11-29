@@ -112,10 +112,8 @@ var _ = Describe("[Admin API] Delete managed resource action", func() {
 		oc, err := clients.OpenshiftClustersPreview.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 
-		plsName, err := getInfraID(ctx)
-		Expect(err).NotTo(HaveOccurred())
-
-		plsResourceID := fmt.Sprintf("%s/providers/Microsoft.Network/PrivateLinkServices/%s", *oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, plsName+"-pls")
+		// Fake name prevents accidently deleting the PLS but still validates gaurdrail logic works.
+		plsResourceID := fmt.Sprintf("%s/providers/Microsoft.Network/PrivateLinkServices/%s", *oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, "fake-pls")
 
 		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/deletemanagedresource", url.Values{"managedResourceID": []string{plsResourceID}}, true, nil, nil)
 		Expect(err).NotTo(HaveOccurred())
