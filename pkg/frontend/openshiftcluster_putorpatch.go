@@ -343,10 +343,6 @@ func adminUpdateProvisioningState(doc *api.OpenShiftClusterDocument) {
 		case api.MaintenanceTaskPending:
 			doc.OpenShiftCluster.Properties.MaintenanceState = api.MaintenanceStatePending
 		case api.MaintenanceTaskNone:
-			// If customer took action to fix failed maintenance, we can reset the last admin update error
-			if doc.OpenShiftCluster.Properties.MaintenanceState == api.MaintenanceStateCustomerActionNeeded {
-				doc.OpenShiftCluster.Properties.LastAdminUpdateError = ""
-			}
 			doc.OpenShiftCluster.Properties.MaintenanceState = api.MaintenanceStateNone
 		case api.MaintenanceTaskCustomerActionNeeded:
 			doc.OpenShiftCluster.Properties.MaintenanceState = api.MaintenanceStateCustomerActionNeeded

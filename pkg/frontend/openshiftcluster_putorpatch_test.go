@@ -1563,7 +1563,8 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							ClusterProfile: api.ClusterProfile{
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
-							MaintenanceTask: "",
+							LastAdminUpdateError: "error",
+							MaintenanceTask:      "",
 							NetworkProfile: api.NetworkProfile{
 								OutboundType:     api.OutboundTypeLoadbalancer,
 								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
@@ -1605,8 +1606,9 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
 					},
-					OperatorFlags:    admin.OperatorFlags{"testFlag": "true"},
-					MaintenanceState: admin.MaintenanceStateNone,
+					OperatorFlags:        admin.OperatorFlags{"testFlag": "true"},
+					MaintenanceState:     admin.MaintenanceStateNone,
+					LastAdminUpdateError: "error",
 				},
 			},
 		},
