@@ -1,7 +1,7 @@
 SHELL = /bin/bash
 TAG ?= $(shell git describe --exact-match 2>/dev/null)
 COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
-ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
+ARO_IMAGE_BASE = $(RP_IMAGE_ACR).azurecr.io/aro
 E2E_FLAGS ?= -test.v --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2 --ginkgo.junit-report=e2e-report.xml
 GO_FLAGS ?= -tags=aro,containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
 
@@ -31,10 +31,8 @@ ifeq ($(RP_IMAGE_ACR),arointsvc)
 	REGISTRY = arointsvc.azurecr.io
 else ifeq ($(RP_IMAGE_ACR),arosvc)
 	REGISTRY = arosvc.azurecr.io
-else ifeq ($(RP_IMAGE_ACR),)
-	REGISTRY = registry.access.redhat.com
 else
-	REGISTRY = $(RP_IMAGE_ACR)
+	REGISTRY = registry.access.redhat.com
 endif
 
 ARO_IMAGE ?= $(ARO_IMAGE_BASE):$(VERSION)
