@@ -344,6 +344,8 @@ func adminUpdateProvisioningState(doc *api.OpenShiftClusterDocument) {
 			doc.OpenShiftCluster.Properties.MaintenanceState = api.MaintenanceStatePending
 		case api.MaintenanceTaskNone:
 			doc.OpenShiftCluster.Properties.MaintenanceState = api.MaintenanceStateNone
+		case api.MaintenanceTaskCustomerActionNeeded:
+			doc.OpenShiftCluster.Properties.MaintenanceState = api.MaintenanceStateCustomerActionNeeded
 		}
 
 		// This enables future admin update actions with body `{}` to succeed
