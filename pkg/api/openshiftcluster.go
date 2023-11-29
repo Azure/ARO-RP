@@ -185,10 +185,11 @@ const (
 type MaintenanceState string
 
 const (
-	MaintenanceStateNone      MaintenanceState = "None"
-	MaintenanceStatePending   MaintenanceState = "Pending"
-	MaintenanceStatePlanned   MaintenanceState = "Planned"
-	MaintenanceStateUnplanned MaintenanceState = "Unplanned"
+	MaintenanceStateNone                 MaintenanceState = "None"
+	MaintenanceStatePending              MaintenanceState = "Pending"
+	MaintenanceStatePlanned              MaintenanceState = "Planned"
+	MaintenanceStateUnplanned            MaintenanceState = "Unplanned"
+	MaintenanceStateCustomerActionNeeded MaintenanceState = "CustomerActionNeeded"
 )
 
 type MaintenanceTask string
