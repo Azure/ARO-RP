@@ -36,10 +36,11 @@ func (m maintenanceState) String() string {
 }
 
 const (
-	none      maintenanceState = "none"
-	pending   maintenanceState = "pending"
-	planned   maintenanceState = "planned"
-	unplanned maintenanceState = "unplanned"
+	none                 maintenanceState = "none"
+	pending              maintenanceState = "pending"
+	planned              maintenanceState = "planned"
+	unplanned            maintenanceState = "unplanned"
+	customerActionNeeded maintenanceState = "customerActionNeeded"
 )
 
 func (mon *Monitor) emitMaintenanceState(ctx context.Context) error {
@@ -59,6 +60,8 @@ func getMaintenanceState(clusterProperties api.OpenShiftClusterProperties) maint
 		return planned
 	case api.MaintenanceStateUnplanned:
 		return unplanned
+	case api.MaintenanceStateCustomerActionNeeded:
+		return customerActionNeeded
 	case api.MaintenanceStateNone:
 		fallthrough
 	// For new clusters, no maintenance state has been set yet
