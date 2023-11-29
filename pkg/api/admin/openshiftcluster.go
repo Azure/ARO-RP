@@ -116,6 +116,7 @@ const (
 	MaintenanceTaskNone MaintenanceTask = "None"
 
 	// Customer action needed signal should only be used when (1) admin update fails and (2) customer needs to take action to resolve the failure
+	// To remove the signal after customer takes action, use maintenance task None
 	MaintenanceTaskCustomerActionNeeded MaintenanceTask = "CustomerActionNeeded"
 )
 
