@@ -1291,11 +1291,10 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 				Tags: map[string]string{"tag": "will-be-kept"},
 				Properties: admin.OpenShiftClusterProperties{
 					ProvisioningState:     admin.ProvisioningStateSucceeded,
-					LastProvisioningState: admin.ProvisioningStateFailed,
+					LastProvisioningState: admin.ProvisioningStateSucceeded,
 					ClusterProfile: admin.ClusterProfile{
 						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
 					},
-					MaintenanceTask: admin.MaintenanceTaskEverything,
 					NetworkProfile: admin.NetworkProfile{
 						OutboundType: admin.OutboundTypeLoadbalancer,
 						LoadBalancerProfile: &admin.LoadBalancerProfile{
