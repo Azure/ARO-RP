@@ -20,6 +20,7 @@ var (
 	frontendIPConfigurationPattern = `(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Network/loadBalancers/(.+)/frontendIPConfigurations/([^/]+)$`
 	denyList                       = []string{
 		`(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Network/privateLinkServices/([^/]+)$`,
+		`(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Network/privateEndpoints/([^/]+)$`,
 		`(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Storage/(.+)$`,
 	}
 )

@@ -151,6 +151,13 @@ func TestDeleteManagedResource(t *testing.T) {
 			},
 		},
 		{
+			name:        "deletion of private endpoints are forbidden",
+			resourceID:  "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/privateEndpoints/infraID-pe",
+			expectedErr: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "deletion of resource /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/privateEndpoints/infraID-pe is forbidden").Error(),
+			mocks: func(resources *mock_features.MockResourcesClient, loadBalancers *mock_network.MockLoadBalancersClient) {
+			},
+		},
+		{
 			name:        "deletion of Microsoft.Storage resources is forbidden",
 			resourceID:  "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Storage/someStorageType/infraID",
 			expectedErr: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "deletion of resource /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Storage/someStorageType/infraID is forbidden").Error(),
