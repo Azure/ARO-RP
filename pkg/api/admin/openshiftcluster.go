@@ -97,15 +97,26 @@ const (
 type MaintenanceTask string
 
 const (
+	//
+	// Maintenance tasks that perform work on the cluster
+	//
+
 	MaintenanceTaskEverything MaintenanceTask = "Everything"
 	MaintenanceTaskOperator   MaintenanceTask = "OperatorUpdate"
 	MaintenanceTaskRenewCerts MaintenanceTask = "CertificatesRenewal"
 
+	//
 	// Maintenance tasks for updating customer maintenance signals
+	//
+
+	MaintenanceTaskPending MaintenanceTask = "Pending"
+
 	// None signal should only be used when (1) admin update fails and (2) SRE fixes the failed admin update without running another admin updates
 	// Admin update success should automatically set the cluster into None state
-	MaintenanceTaskPending MaintenanceTask = "Pending"
-	MaintenanceTaskNone    MaintenanceTask = "None"
+	MaintenanceTaskNone MaintenanceTask = "None"
+
+	// Customer action needed signal should only be used when (1) admin update fails and (2) customer needs to take action to resolve the failure
+	MaintenanceTaskCustomerActionNeeded MaintenanceTask = "CustomerActionNeeded"
 )
 
 // Operator feature flags
