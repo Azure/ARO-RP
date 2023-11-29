@@ -9,13 +9,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	"github.com/Azure/go-autorest/autorest"
 )
 
 func (f *frontend) postAdminOpenShiftDeleteManagedResource(w http.ResponseWriter, r *http.Request) {

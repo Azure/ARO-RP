@@ -67,6 +67,20 @@ func TestAdminDeleteManagedResource(t *testing.T) {
 			wantStatusCode: http.StatusNotFound,
 			wantError:      fmt.Sprintf("404: NotFound: : The resource '%s' could not be found.", fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster/providers/Microsoft.Network/publicIPAddresses/infraID-adce98f85c7dd47c5a21263a5e39c083", mockSubID)),
 		},
+		{
+			name:              "cannot delete resources in the deny list",
+			resourceID:        testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			managedResourceID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster/providers/Microsoft.Network/publicIPAddresses/infraID", mockSubID),
+			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
+				a.EXPECT().ResourceDeleteAndWait(gomock.Any(), tt.managedResourceID).Return(api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "",
+					fmt.Sprintf("deletion of resource /subscriptions/%s/resourcegroups/clusterRG/providers/Microsoft.Network/privateLinkServices/infraID is forbidden", mockSubID)),
+				)
+			},
+			wantStatusCode: http.StatusBadRequest,
+
+			wantError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "",
+				fmt.Sprintf("deletion of resource /subscriptions/%s/resourcegroups/clusterRG/providers/Microsoft.Network/privateLinkServices/infraID is forbidden", mockSubID)).Error(),
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()

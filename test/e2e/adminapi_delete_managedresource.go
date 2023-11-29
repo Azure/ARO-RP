@@ -5,6 +5,7 @@ package e2e
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -72,7 +73,7 @@ var _ = Describe("[Admin API] Delete managed resource action", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		rgName := stringutils.LastTokenByte(*oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, '/')
-		lbName, err := getPublicLoadBalancerName(ctx)
+		lbName, err := getInfraID(ctx)
 		Expect(err).NotTo(HaveOccurred())
 
 		lb, err := clients.LoadBalancers.Get(ctx, rgName, lbName, "")
@@ -102,6 +103,21 @@ var _ = Describe("[Admin API] Delete managed resource action", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/deletemanagedresource", url.Values{"managedResourceID": []string{*oc.OpenShiftClusterProperties.MasterProfile.SubnetID}}, true, nil, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
+	})
+
+	It("should NOT be possible to delete the private link service in the cluster's managed resource group", func(ctx context.Context) {
+		By("trying to delete the private link service")
+		oc, err := clients.OpenshiftClustersPreview.Get(ctx, vnetResourceGroup, clusterName)
+		Expect(err).NotTo(HaveOccurred())
+
+		plsName, err := getInfraID(ctx)
+		Expect(err).NotTo(HaveOccurred())
+
+		plsResourceID := fmt.Sprintf("%s/providers/Microsoft.Network/PrivateLinkServices/%s", *oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, plsName+"-pls")
+
+		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/deletemanagedresource", url.Values{"managedResourceID": []string{plsResourceID}}, true, nil, nil)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusBadRequest))
 	})

@@ -5,21 +5,36 @@ package adminactions
 
 import (
 	"context"
+	"net/http"
 	"regexp"
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/loadbalancer"
 )
 
-var frontendIPConfigurationPattern = `(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Network/loadBalancers/(.+)/frontendIPConfigurations/([^/]+)$`
+var (
+	frontendIPConfigurationPattern = `(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Network/loadBalancers/(.+)/frontendIPConfigurations/([^/]+)$`
+	denyList                       = []string{
+		`(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Network/privateLinkServices/([^/]+)$`,
+		`(?i)^/subscriptions/(.+)/resourceGroups/(.+)/providers/Microsoft\.Storage/(.+)$`,
+	}
+)
 
 func (a *azureActions) ResourceDeleteAndWait(ctx context.Context, resourceID string) error {
 	idParts, err := azure.ParseResourceID(resourceID)
 	if err != nil {
 		return err
+	}
+
+	for _, regex := range denyList {
+		re := regexp.MustCompile(regex)
+		if re.MatchString(resourceID) {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "deletion of resource %s is forbidden", resourceID)
+		}
 	}
 
 	apiVersion := azureclient.APIVersion(strings.ToLower(idParts.Provider + "/" + idParts.ResourceType))
