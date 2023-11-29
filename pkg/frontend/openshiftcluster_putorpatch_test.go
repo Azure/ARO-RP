@@ -1232,11 +1232,11 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
 						Tags: map[string]string{"tag": "will-be-kept"},
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState:       api.ProvisioningStateSucceeded,
-							FailedProvisioningState: api.ProvisioningStateFailed,
-							OperatorFlags:           api.OperatorFlags{"testFlag": "true"},
-							LastAdminUpdateError:    "error",
-							MaintenanceState:        api.MaintenanceStatePlanned,
+							ProvisioningState:     api.ProvisioningStateSucceeded,
+							LastProvisioningState: api.ProvisioningStateSucceeded,
+							OperatorFlags:         api.OperatorFlags{"testFlag": "true"},
+							LastAdminUpdateError:  "error",
+							MaintenanceState:      api.MaintenanceStatePlanned,
 						},
 					},
 				})
@@ -1276,8 +1276,9 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
 							},
-							OperatorFlags:    api.OperatorFlags{"testFlag": "true"},
-							MaintenanceState: api.MaintenanceStateCustomerActionNeeded,
+							OperatorFlags:        api.OperatorFlags{"testFlag": "true"},
+							MaintenanceState:     api.MaintenanceStateCustomerActionNeeded,
+							LastAdminUpdateError: "error",
 						},
 					},
 				})
@@ -1306,8 +1307,9 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
 					},
-					OperatorFlags:    admin.OperatorFlags{"testFlag": "true"},
-					MaintenanceState: admin.MaintenanceStateCustomerActionNeeded,
+					OperatorFlags:        admin.OperatorFlags{"testFlag": "true"},
+					MaintenanceState:     admin.MaintenanceStateCustomerActionNeeded,
+					LastAdminUpdateError: "error",
 				},
 			},
 		},
