@@ -70,16 +70,15 @@ func TestAdminDeleteManagedResource(t *testing.T) {
 		{
 			name:              "cannot delete resources in the deny list",
 			resourceID:        testdatabase.GetResourcePath(mockSubID, "resourceName"),
-			managedResourceID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster/providers/Microsoft.Network/publicIPAddresses/infraID", mockSubID),
+			managedResourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/test-cluster/providers/Microsoft.Network/privateLinkServices/infraID", mockSubID),
 			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().ResourceDeleteAndWait(gomock.Any(), tt.managedResourceID).Return(api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "",
-					fmt.Sprintf("deletion of resource /subscriptions/%s/resourcegroups/clusterRG/providers/Microsoft.Network/privateLinkServices/infraID is forbidden", mockSubID)),
+					fmt.Sprintf("deletion of resource /subscriptions/%s/resourcegroups/test-cluster/providers/Microsoft.Network/privateLinkServices/infraID is forbidden", mockSubID)),
 				)
 			},
 			wantStatusCode: http.StatusBadRequest,
-
 			wantError: api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "",
-				fmt.Sprintf("deletion of resource /subscriptions/%s/resourcegroups/clusterRG/providers/Microsoft.Network/privateLinkServices/infraID is forbidden", mockSubID)).Error(),
+				fmt.Sprintf("deletion of resource /subscriptions/%s/resourcegroups/test-cluster/providers/Microsoft.Network/privateLinkServices/infraID is forbidden", mockSubID)).Error(),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
