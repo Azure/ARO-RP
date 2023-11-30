@@ -327,6 +327,7 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/drainnode", f.postAdminOpenShiftClusterDrainNode)
 
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/etcdcertificaterenew", f.postAdminOpenShiftClusterEtcdCertificateRenew)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/deletemanagedresource", f.postAdminOpenShiftDeleteManagedResource)
 			})
 		})
 

@@ -86,7 +86,7 @@ var _ = Describe("Update cluster Managed Outbound IPs", func() {
 		oc, err := clients.OpenshiftClustersPreview.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 
-		lbName, err = getPublicLoadBalancerName(ctx)
+		lbName, err = getInfraID(ctx)
 		Expect(err).NotTo(HaveOccurred())
 
 		rgName = stringutils.LastTokenByte(*oc.ClusterProfile.ResourceGroupID, '/')
@@ -136,7 +136,7 @@ var _ = Describe("Update cluster Managed Outbound IPs", func() {
 	})
 })
 
-func getPublicLoadBalancerName(ctx context.Context) (string, error) {
+func getInfraID(ctx context.Context) (string, error) {
 	co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 	if err != nil {
 		return "", err
