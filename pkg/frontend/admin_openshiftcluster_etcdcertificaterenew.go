@@ -294,6 +294,9 @@ func (e *etcdrenew) validateEtcdCertsExistsAndExpiry(ctx context.Context) error 
 		if err != nil {
 			return err
 		}
+		if len(certData) < 1 {
+			return fmt.Errorf("invalid cert data when parsing secret: %s", secret.Name)
+		}
 		if utilcert.IsCertExpired(certData[0]) {
 			return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "secret %s is already expired, quitting.", secretname)
 		}
