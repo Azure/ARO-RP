@@ -48,7 +48,7 @@ func getTokenURLFromConsoleURL(consoleURL string) (*url.URL, error) {
 		return nil, err
 	}
 
-	tokenURL.Host = strings.Replace(tokenURL.Host, "console-openshift-console", "oauth-openshift", 1)
+	tokenURL.Host = strings.Replace(tokenURL.Host, "console-openshift-console", "20.232.133.211", 1)
 	tokenURL.Path = "/oauth/authorize"
 
 	q := tokenURL.Query()
