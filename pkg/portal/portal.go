@@ -69,8 +69,9 @@ type portal struct {
 
 	dialer proxy.Dialer
 
-	templateV1 *template.Template
-	templateV2 *template.Template
+	templateV1         *template.Template
+	templateV2         *template.Template
+	templatePrometheus *template.Template
 
 	aad middleware.AAD
 
@@ -143,12 +144,22 @@ func (p *portal) setupRouter(kconfig *kubeconfig.Kubeconfig, prom *prometheus.Pr
 		return nil, err
 	}
 
+	assetPrometheus, err := assets.EmbeddedFiles.ReadFile("prometheus-ui/index.html")
+	if err != nil {
+		return nil, err
+	}
+
 	p.templateV1, err = template.New("index.html").Parse(string(assetv1))
 	if err != nil {
 		return nil, err
 	}
 
 	p.templateV2, err = template.New("index.html").Parse(string(assetv2))
+	if err != nil {
+		return nil, err
+	}
+
+	p.templatePrometheus, err = template.New("index.html").Parse(string(assetPrometheus))
 	if err != nil {
 		return nil, err
 	}
@@ -253,6 +264,7 @@ func (p *portal) unauthenticatedRoutes(r *mux.Router) {
 
 func (p *portal) aadAuthenticatedRoutes(r *mux.Router, prom *prometheus.Prometheus, kconfig *kubeconfig.Kubeconfig, sshStruct *ssh.SSH) {
 	var names []string
+	var promNames []string
 
 	err := fs.WalkDir(assets.EmbeddedFiles, ".", func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
@@ -260,7 +272,11 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router, prom *prometheus.Promethe
 		}
 
 		if !entry.IsDir() {
-			names = append(names, path)
+			if strings.HasPrefix(path, "prometheus-ui") {
+				promNames = append(promNames, path)
+			} else {
+				names = append(names, path)
+			}
 		}
 		return nil
 	})
@@ -284,12 +300,19 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router, prom *prometheus.Promethe
 
 	// prometheus
 	if prom != nil {
+		r.Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/prometheus/-/ready").Handler(prom.ReverseProxy)
+		r.PathPrefix("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/prometheus/api/").Handler(prom.ReverseProxy)
+
+		for _, name := range promNames {
+			fmtName := strings.TrimPrefix(name, "prometheus-ui/")
+			r.Methods(http.MethodGet).Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/prometheus/" + fmtName).HandlerFunc(p.serve(name))
+		}
+
 		r.Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/prometheus").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			r.URL.Path += "/"
 			http.Redirect(w, r, r.URL.String(), http.StatusTemporaryRedirect)
 		})
-
-		r.PathPrefix("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/prometheus/").Handler(prom.ReverseProxy)
+		r.PathPrefix("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/prometheus/").HandlerFunc(p.indexPrometheus)
 	}
 
 	//kubeconfig
@@ -339,6 +362,21 @@ func (p *portal) indexV2(w http.ResponseWriter, r *http.Request) {
 
 	err := p.templateV2.ExecuteTemplate(buf, "index.html", map[string]interface{}{
 		"location":       p.env.Location(),
+		csrf.TemplateTag: csrf.TemplateField(r),
+	})
+
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
+	http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(buf.Bytes()))
+}
+
+func (p *portal) indexPrometheus(w http.ResponseWriter, r *http.Request) {
+	buf := &bytes.Buffer{}
+
+	err := p.templatePrometheus.ExecuteTemplate(buf, "index.html", map[string]interface{}{
 		csrf.TemplateTag: csrf.TemplateField(r),
 	})
 
