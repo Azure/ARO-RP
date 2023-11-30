@@ -78,12 +78,6 @@ linters-settings:
         alias: openapi_v2
       - pkg: github.com/openshift/console-operator/pkg/api
         alias: consoleapi
-      - pkg: github.com/openshift/installer/pkg/asset/installconfig/azure
-        alias: icazure
-      - pkg: github.com/openshift/installer/pkg/rhcos
-        alias: rhcospkg
-      - pkg: github.com/openshift/installer/pkg/types/azure
-        alias: azuretypes
       - pkg: github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1
         alias: machinev1beta1
       - pkg: github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned
