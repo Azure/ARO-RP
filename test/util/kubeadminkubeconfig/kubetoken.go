@@ -47,7 +47,7 @@ func getTokenURLFromConsoleURL(consoleURL string) (*url.URL, error) {
 		return nil, err
 	}
 
-	tokenURL.Host = "20.232.133.211"
+	tokenURL.Host = "20.168.212.108"
 	tokenURL.Path = "/oauth/authorize"
 
 	q := tokenURL.Query()
