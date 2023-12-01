@@ -68,7 +68,7 @@ func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus
 		// We use the outer context, not the timeout context, as we do not want
 		// to time out the condition function itself, only stop retrying once
 		// timeoutCtx's timeout has fired.
-		err := s.f(ctx)
+		err = s.f(ctx)
 
 		// If we haven't timed out and there is an error that is either an
 		// unauthorized client (AADSTS700016) or "AuthorizationFailed" (likely
@@ -83,6 +83,7 @@ func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus
 			err = s.auth.Rebuild()
 			return false, err // retry step
 		}
+		log.Printf("non-auth error, giving up: %v", err)
 		return true, err
 	}, timeoutCtx.Done())
 

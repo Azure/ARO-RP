@@ -162,7 +162,7 @@ type OpenShiftClusterProperties struct {
 
 	HiveProfile HiveProfile `json:"hiveProfile,omitempty"`
 
-	PucmPending bool `json:"pucmPending,omitempty"`
+	MaintenanceState MaintenanceState `json:"maintenanceState,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state
@@ -180,14 +180,39 @@ const (
 	ProvisioningStateFailed        ProvisioningState = "Failed"
 )
 
+// MaintenanceState represents the maintenance state of a cluster.
+// This is used by cluster monitornig stack to emit maintenance signals to customers.
+type MaintenanceState string
+
+const (
+	MaintenanceStateNone      MaintenanceState = "None"
+	MaintenanceStatePending   MaintenanceState = "Pending"
+	MaintenanceStatePlanned   MaintenanceState = "Planned"
+	MaintenanceStateUnplanned MaintenanceState = "Unplanned"
+)
+
 type MaintenanceTask string
 
 const (
-	MaintenanceTaskEverything  MaintenanceTask = "Everything"
-	MaintenanceTaskOperator    MaintenanceTask = "OperatorUpdate"
-	MaintenanceTaskRenewCerts  MaintenanceTask = "CertificatesRenewal"
-	MaintenanceTaskPucmPending MaintenanceTask = "PucmPending"
+	MaintenanceTaskEverything MaintenanceTask = "Everything"
+	MaintenanceTaskOperator   MaintenanceTask = "OperatorUpdate"
+	MaintenanceTaskRenewCerts MaintenanceTask = "CertificatesRenewal"
+
+	// Maintenance tasks for updating customer maintenance signals
+	// None signal should only be used when (1) admin update fails and (2) SRE fixes the failed admin update without running another admin updates
+	// Admin update success should automatically set the cluster into None state
+	MaintenanceTaskPending MaintenanceTask = "Pending"
+	MaintenanceTaskNone    MaintenanceTask = "None"
 )
+
+// IsMaintenanceOngoingTask returns true if the maintenance task should change state to maintenance ongoing (planned/unplanned)
+func (t MaintenanceTask) IsMaintenanceOngoingTask() bool {
+	result := (t == MaintenanceTaskEverything) ||
+		(t == MaintenanceTaskOperator) ||
+		(t == MaintenanceTaskRenewCerts) ||
+		(t == "")
+	return result
+}
 
 // Cluster-scoped flags
 type OperatorFlags map[string]string

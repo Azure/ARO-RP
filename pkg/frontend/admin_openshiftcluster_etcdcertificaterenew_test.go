@@ -46,6 +46,8 @@ func TestAdminEtcdCertificateRenew(t *testing.T) {
 		etcdCO               *configv1.ClusterOperator
 		notBefore            time.Time
 		notAfter             time.Time
+		renewedNotBefore     time.Time
+		renewedNotAfter      time.Time
 		mocks                func(*test, *mock_adminactions.MockKubeActions)
 		wantStatusCode       int
 		wantResponse         []byte
@@ -164,7 +166,7 @@ func TestAdminEtcdCertificateRenew(t *testing.T) {
 			wantError:      "500: InternalServerError: : Etcd Operator is not in expected state, quiting.",
 		},
 		{
-			name:       "validate if etcd certificates are not near expiry",
+			name:       "validate etcd cluster operator Available state",
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			version: &configv1.ClusterVersion{
 				Status: configv1.ClusterVersionStatus{
@@ -194,30 +196,26 @@ func TestAdminEtcdCertificateRenew(t *testing.T) {
 				Status: configv1.ClusterOperatorStatus{
 					Conditions: []configv1.ClusterOperatorStatusCondition{
 						{
-							Type:   configv1.OperatorDegraded,
-							Status: configv1.ConditionFalse,
+							Type:   configv1.OperatorAvailable,
+							Status: configv1.ConditionTrue,
+							Reason: "UnExpected",
 						},
 					},
 				},
 			},
-			notBefore: time.Now(),
-			notAfter:  time.Now().AddDate(3, 0, 0),
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
 				k.EXPECT().
 					KubeGet(gomock.Any(), "ClusterVersion.config.openshift.io", "", "version").MaxTimes(1).
 					Return(encodeClusterVersion(t, tt.version), nil)
 				k.EXPECT().
-					KubeGet(gomock.Any(), "etcd.operator.openshift.io", "", "cluster").MinTimes(1).
+					KubeGet(gomock.Any(), "etcd.operator.openshift.io", "", "cluster").MaxTimes(1).
 					Return(encodeEtcdOperatorController(t, tt.etcdoperator), nil)
 				k.EXPECT().
-					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").MinTimes(1).
+					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").
 					Return(encodeEtcdOperator(t, tt.etcdCO), nil)
-				k.EXPECT().
-					KubeGet(gomock.Any(), "Secret", namespaceEtcds, gomock.Any()).MinTimes(1).
-					Return(createCertSecret(t, tt.notBefore, tt.notAfter), nil)
 			},
 			wantStatusCode: http.StatusInternalServerError,
-			wantError:      "500: InternalServerError: : secret etcd-peer-cluster-aro-master-0 is not near expiry, quitting.",
+			wantError:      "500: InternalServerError: : Etcd Operator Available state is not AsExpected, quiting.",
 		},
 		{
 			name:       "validate if etcd certificates are expired",
@@ -276,7 +274,7 @@ func TestAdminEtcdCertificateRenew(t *testing.T) {
 			wantError:      "500: InternalServerError: : secret etcd-peer-cluster-aro-master-0 is already expired, quitting.",
 		},
 		{
-			name:       "delete etcd secrets",
+			name:       "etcd certificates delete and successful renewal",
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			version: &configv1.ClusterVersion{
 				Status: configv1.ClusterVersionStatus{
@@ -340,8 +338,10 @@ func TestAdminEtcdCertificateRenew(t *testing.T) {
 					},
 				},
 			},
-			notBefore: time.Now().AddDate(-2, -8, 0),
-			notAfter:  time.Now().Add((1 * time.Hour)),
+			notBefore:        time.Now().AddDate(-2, -8, 0),
+			notAfter:         time.Now().Add((1 * time.Hour)),
+			renewedNotBefore: time.Now(),
+			renewedNotAfter:  time.Now().AddDate(3, 0, 0),
 			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
 				k.EXPECT().
 					KubeGet(gomock.Any(), "ClusterVersion.config.openshift.io", "", "version").MaxTimes(1).
@@ -353,17 +353,171 @@ func TestAdminEtcdCertificateRenew(t *testing.T) {
 					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").MinTimes(1).
 					Return(encodeEtcdOperator(t, tt.etcdCO), nil)
 				k.EXPECT().
-					KubeGet(gomock.Any(), "Secret", namespaceEtcds, gomock.Any()).MinTimes(9).
+					KubeGet(gomock.Any(), "Secret", namespaceEtcds, gomock.Any()).MaxTimes(18).
 					Return(createCertSecret(t, tt.notBefore, tt.notAfter), nil)
 				d := k.EXPECT().
 					KubeDelete(gomock.Any(), "Secret", namespaceEtcds, gomock.Any(), false, nil).MinTimes(9).
 					Return(nil)
+				k.EXPECT().
+					KubeGet(gomock.Any(), "Secret", namespaceEtcds, gomock.Any()).After(d).MinTimes(1).
+					Return(createCertSecret(t, tt.renewedNotBefore, tt.renewedNotAfter), nil)
 				k.EXPECT().
 					KubeGet(gomock.Any(), "etcd.operator.openshift.io", "", "cluster").MinTimes(1).After(d).
 					Return(encodeEtcdOperatorController(t, tt.etcdoperatorRevisied), nil)
 			},
 			wantStatusCode: http.StatusOK,
 			wantError:      "",
+		},
+		{
+			name:       "validate if etcd certificates are expired",
+			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			version: &configv1.ClusterVersion{
+				Status: configv1.ClusterVersionStatus{
+					History: []configv1.UpdateHistory{
+						{
+							State:   configv1.CompletedUpdate,
+							Version: "4.8.11",
+						},
+					},
+				},
+			},
+			etcdoperator: &operatorv1.Etcd{
+				Status: operatorv1.EtcdStatus{
+					StaticPodOperatorStatus: operatorv1.StaticPodOperatorStatus{
+						OperatorStatus: operatorv1.OperatorStatus{
+							Conditions: []operatorv1.OperatorCondition{
+								{
+									Type:   "EtcdCertSignerControllerDegraded",
+									Status: operatorv1.ConditionFalse,
+								},
+							},
+						},
+					},
+				},
+			},
+			etcdCO: &configv1.ClusterOperator{
+				Status: configv1.ClusterOperatorStatus{
+					Conditions: []configv1.ClusterOperatorStatusCondition{
+						{
+							Type:   configv1.OperatorDegraded,
+							Status: configv1.ConditionFalse,
+						},
+					},
+				},
+			},
+			notBefore: time.Now(),
+			notAfter:  time.Now().Add(-10 * time.Minute),
+			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ClusterVersion.config.openshift.io", "", "version").MaxTimes(1).
+					Return(encodeClusterVersion(t, tt.version), nil)
+				k.EXPECT().
+					KubeGet(gomock.Any(), "etcd.operator.openshift.io", "", "cluster").MinTimes(1).
+					Return(encodeEtcdOperatorController(t, tt.etcdoperator), nil)
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").MinTimes(1).
+					Return(encodeEtcdOperator(t, tt.etcdCO), nil)
+				k.EXPECT().
+					KubeGet(gomock.Any(), "Secret", namespaceEtcds, gomock.Any()).MinTimes(1).
+					Return(createCertSecret(t, tt.notBefore, tt.notAfter), nil)
+			},
+			wantStatusCode: http.StatusInternalServerError,
+			wantError:      "500: InternalServerError: : secret etcd-peer-cluster-aro-master-0 is already expired, quitting.",
+		},
+		{
+			name:       "etcd certificates deleted but not renewed",
+			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			version: &configv1.ClusterVersion{
+				Status: configv1.ClusterVersionStatus{
+					History: []configv1.UpdateHistory{
+						{
+							State:   configv1.CompletedUpdate,
+							Version: "4.8.11",
+						},
+					},
+				},
+			},
+			etcdoperator: &operatorv1.Etcd{
+				Status: operatorv1.EtcdStatus{
+					StaticPodOperatorStatus: operatorv1.StaticPodOperatorStatus{
+						OperatorStatus: operatorv1.OperatorStatus{
+							Conditions: []operatorv1.OperatorCondition{
+								{
+									Type:   "EtcdCertSignerControllerDegraded",
+									Status: operatorv1.ConditionFalse,
+								},
+							},
+						},
+						LatestAvailableRevision: 1,
+						NodeStatuses: []operatorv1.NodeStatus{
+							{
+								NodeName:        "master-0",
+								CurrentRevision: 1,
+							},
+						},
+					},
+				},
+			},
+			etcdoperatorRevisied: &operatorv1.Etcd{
+				Status: operatorv1.EtcdStatus{
+					StaticPodOperatorStatus: operatorv1.StaticPodOperatorStatus{
+						OperatorStatus: operatorv1.OperatorStatus{
+							Conditions: []operatorv1.OperatorCondition{
+								{
+									Type:   "EtcdCertSignerControllerDegraded",
+									Status: operatorv1.ConditionFalse,
+								},
+							},
+						},
+						LatestAvailableRevision: 2,
+						NodeStatuses: []operatorv1.NodeStatus{
+							{
+								NodeName:        "master-0",
+								CurrentRevision: 2,
+							},
+						},
+					},
+				},
+			},
+			etcdCO: &configv1.ClusterOperator{
+				Status: configv1.ClusterOperatorStatus{
+					Conditions: []configv1.ClusterOperatorStatusCondition{
+						{
+							Type:   configv1.OperatorDegraded,
+							Status: configv1.ConditionFalse,
+						},
+					},
+				},
+			},
+			notBefore:        time.Now().AddDate(-2, -8, 0),
+			notAfter:         time.Now().Add((1 * time.Hour)),
+			renewedNotBefore: time.Now(),
+			renewedNotAfter:  time.Now().AddDate(0, 0, 1),
+			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ClusterVersion.config.openshift.io", "", "version").MaxTimes(1).
+					Return(encodeClusterVersion(t, tt.version), nil)
+				k.EXPECT().
+					KubeGet(gomock.Any(), "etcd.operator.openshift.io", "", "cluster").MaxTimes(2).
+					Return(encodeEtcdOperatorController(t, tt.etcdoperator), nil)
+				k.EXPECT().
+					KubeGet(gomock.Any(), "ClusterOperator.config.openshift.io", "", "etcd").MinTimes(1).
+					Return(encodeEtcdOperator(t, tt.etcdCO), nil)
+				k.EXPECT().
+					KubeGet(gomock.Any(), "Secret", namespaceEtcds, gomock.Any()).MaxTimes(18).
+					Return(createCertSecret(t, tt.notBefore, tt.notAfter), nil)
+				d := k.EXPECT().
+					KubeDelete(gomock.Any(), "Secret", namespaceEtcds, gomock.Any(), false, nil).MinTimes(9).
+					Return(nil)
+				k.EXPECT().
+					KubeGet(gomock.Any(), "Secret", namespaceEtcds, gomock.Any()).After(d).MinTimes(1).
+					Return(createCertSecret(t, tt.renewedNotBefore, tt.renewedNotAfter), nil)
+				k.EXPECT().
+					KubeGet(gomock.Any(), "etcd.operator.openshift.io", "", "cluster").MinTimes(1).After(d).
+					Return(encodeEtcdOperatorController(t, tt.etcdoperatorRevisied), nil)
+			},
+			wantStatusCode: http.StatusInternalServerError,
+			wantError:      "500: InternalServerError: : etcd certificates renewal not successful, as at least one or all certificates are not renewed",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -579,7 +733,7 @@ func TestAdminEtcdCertificateRecovery(t *testing.T) {
 					KubeGet(gomock.Any(), "etcd.operator.openshift.io", "", "cluster").MinTimes(1).After(r).
 					Return(encodeEtcdOperatorController(t, tt.etcdoperatorRecovered), nil)
 			},
-			wantStatusCode: http.StatusOK,
+			wantStatusCode: http.StatusInternalServerError,
 			wantError:      "500: InternalServerError: : etcd renewal failed, recovery performed to revert the changes.",
 		},
 	} {

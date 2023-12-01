@@ -124,14 +124,11 @@ func (mon *Monitor) emitEtcdCertificateExpiry(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-			// Emit metric only the certificate is close to expiry, if remaning duration is >20% of total duration
-			if utilcert.IsLessThanMinimumDuration(certs[0], utilcert.DefaultMinDurationPercent) {
-				mon.emitGauge(certificateExpirationMetricName, int64(utilcert.DaysUntilExpiration(certs[0])), map[string]string{
-					"namespace": "openshift-etcd",
-					"name":      secret.GetObjectMeta().GetName(),
-					"subject":   certs[0].Subject.CommonName,
-				})
-			}
+			mon.emitGauge(certificateExpirationMetricName, int64(utilcert.DaysUntilExpiration(certs[0])), map[string]string{
+				"namespace": "openshift-etcd",
+				"name":      secret.GetObjectMeta().GetName(),
+				"subject":   certs[0].Subject.CommonName,
+			})
 		}
 	}
 

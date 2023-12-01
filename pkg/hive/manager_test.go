@@ -5,6 +5,7 @@ package hive
 
 import (
 	"context"
+	"net/http"
 	"reflect"
 	"testing"
 
@@ -17,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/hive/failure"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	uuidfake "github.com/Azure/ARO-RP/pkg/util/uuid/fake"
@@ -179,48 +181,164 @@ func TestIsClusterInstallationComplete(t *testing.T) {
 		},
 	}
 
+	genericErr := &api.CloudError{
+		StatusCode: http.StatusInternalServerError,
+		CloudErrorBody: &api.CloudErrorBody{
+			Code:    api.CloudErrorCodeInternalServerError,
+			Message: "Deployment failed.",
+		},
+	}
+
+	makeClusterDeployment := func(installed bool, provisionFailedCond hivev1.ClusterDeploymentCondition) *hivev1.ClusterDeployment {
+		return &hivev1.ClusterDeployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      ClusterDeploymentName,
+				Namespace: fakeNamespace,
+			},
+			Spec: hivev1.ClusterDeploymentSpec{
+				Installed: installed,
+			},
+			Status: hivev1.ClusterDeploymentStatus{
+				Conditions: []hivev1.ClusterDeploymentCondition{provisionFailedCond},
+			},
+		}
+	}
+	makeClusterProvision := func(installLog string) *hivev1.ClusterProvision {
+		return &hivev1.ClusterProvision{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      ClusterDeploymentName + "-0-bbbbb",
+				Namespace: fakeNamespace,
+				Labels: map[string]string{
+					"hive.openshift.io/cluster-deployment-name": ClusterDeploymentName,
+				},
+			},
+			Spec: hivev1.ClusterProvisionSpec{
+				InstallLog: &installLog,
+			},
+		}
+	}
+
 	for _, tt := range []struct {
 		name       string
-		cd         kruntime.Object
+		cd         *hivev1.ClusterDeployment
+		cp         *hivev1.ClusterProvision
 		wantResult bool
-		wantErr    string
+		wantErr    error
 	}{
 		{
 			name: "is installed",
-			cd: &hivev1.ClusterDeployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      ClusterDeploymentName,
-					Namespace: fakeNamespace,
+			cd: makeClusterDeployment(
+				true,
+				hivev1.ClusterDeploymentCondition{
+					Type:   hivev1.ProvisionFailedCondition,
+					Status: corev1.ConditionFalse,
 				},
-				Spec: hivev1.ClusterDeploymentSpec{
-					Installed: true,
-				},
-				Status: hivev1.ClusterDeploymentStatus{
-					Conditions: []hivev1.ClusterDeploymentCondition{
-						{
-							Type:   hivev1.ProvisionFailedCondition,
-							Status: corev1.ConditionFalse,
-						},
-					},
-				},
-			},
+			),
 			wantResult: true,
 		},
 		{
 			name: "is not installed yet",
-			cd: &hivev1.ClusterDeployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      ClusterDeploymentName,
-					Namespace: fakeNamespace,
+			cd: makeClusterDeployment(
+				false,
+				hivev1.ClusterDeploymentCondition{
+					Type:   hivev1.ProvisionFailedCondition,
+					Status: corev1.ConditionFalse,
 				},
-				Spec: hivev1.ClusterDeploymentSpec{
-					Installed: false,
+			),
+			wantResult: false,
+		},
+		{
+			name: "has failed provisioning - no Reason",
+			cd: makeClusterDeployment(
+				false,
+				hivev1.ClusterDeploymentCondition{
+					Type:   hivev1.ProvisionFailedCondition,
+					Status: corev1.ConditionTrue,
 				},
-				Status: hivev1.ClusterDeploymentStatus{
-					Conditions: []hivev1.ClusterDeploymentCondition{
+			),
+			wantErr:    genericErr,
+			wantResult: false,
+		},
+		{
+			name: "has failed provisioning - Known Reason not relevant to ARO",
+			cd: makeClusterDeployment(
+				false,
+				hivev1.ClusterDeploymentCondition{
+					Type:   hivev1.ProvisionFailedCondition,
+					Status: corev1.ConditionTrue,
+					Reason: "AWSInsufficientCapacity",
+				},
+			),
+			wantErr:    genericErr,
+			wantResult: false,
+		},
+		{
+			name: "has failed provisioning - UnknownError",
+			cd: makeClusterDeployment(
+				false,
+				hivev1.ClusterDeploymentCondition{
+					Type:   hivev1.ProvisionFailedCondition,
+					Status: corev1.ConditionTrue,
+					Reason: "UnknownError",
+				},
+			),
+			wantErr:    genericErr,
+			wantResult: false,
+		},
+		{
+			name: "has failed provisioning - RequestDisallowedByPolicy",
+			cd: makeClusterDeployment(
+				false,
+				hivev1.ClusterDeploymentCondition{
+					Type:   hivev1.ProvisionFailedCondition,
+					Status: corev1.ConditionTrue,
+					Reason: failure.AzureRequestDisallowedByPolicy.Reason,
+				},
+			),
+			cp: makeClusterProvision(`level=info msg=running in local development mode
+			level=info msg=creating development InstanceMetadata
+			level=info msg=InstanceMetadata: running on AzurePublicCloud
+			level=info msg=running step [Action github.com/Azure/ARO-RP/pkg/installer.(*manager).Manifests.func1]
+			level=info msg=running step [Action github.com/Azure/ARO-RP/pkg/installer.(*manager).Manifests.func2]
+			level=info msg=resolving graph
+			level=info msg=running step [Action github.com/Azure/ARO-RP/pkg/installer.(*manager).Manifests.func3]
+			level=info msg=checking if graph exists
+			level=info msg=save graph
+			Generates the Ignition Config asset
+			
+			level=info msg=running in local development mode
+			level=info msg=creating development InstanceMetadata
+			level=info msg=InstanceMetadata: running on AzurePublicCloud
+			level=info msg=running step [AuthorizationRefreshingAction [Action github.com/Azure/ARO-RP/pkg/installer.(*manager).deployResourceTemplate-fm]]
+			level=info msg=load persisted graph
+			level=info msg=deploying resources template
+			level=error msg=step [AuthorizationRefreshingAction [Action github.com/Azure/ARO-RP/pkg/installer.(*manager).deployResourceTemplate-fm]] encountered error: 400: DeploymentFailed: : Deployment failed. Details: : : {"code": "InvalidTemplateDeployment","message": "The template deployment failed with multiple errors. Please see details for more information.","target": null,"details": [{"code": "RequestDisallowedByPolicy","message": "Resource 'aro-test-aaaaa-bootstrap' was disallowed by policy.","target": "aro-test-aaaaa-bootstrap"},{"code": "RequestDisallowedByPolicy","message": "Resource 'aro-test-aaaaa-master-0' was disallowed by policy.","target": "aro-test-aaaaa-master-0"},{"code": "RequestDisallowedByPolicy","message": "Resource 'aro-test-aaaaa-master-1' was disallowed by policy.","target": "aro-test-aaaaa-master-1"},{"code": "RequestDisallowedByPolicy","message": "Resource 'aro-test-aaaaa-master-2' was disallowed by policy.","target": "aro-test-aaaaa-master-2"}]}
+			level=error msg=400: DeploymentFailed: : Deployment failed. Details: : : {"code": "InvalidTemplateDeployment","message": "The template deployment failed with multiple errors. Please see details for more information.","target": null,"details": [{"code": "RequestDisallowedByPolicy","message": "Resource 'aro-test-aaaaa-bootstrap' was disallowed by policy.","target": "aro-test-aaaaa-bootstrap"},{"code": "RequestDisallowedByPolicy","message": "Resource 'aro-test-aaaaa-master-0' was disallowed by policy.","target": "aro-test-aaaaa-master-0"},{"code": "RequestDisallowedByPolicy","message": "Resource 'aro-test-aaaaa-master-1' was disallowed by policy.","target": "aro-test-aaaaa-master-1"},{"code": "RequestDisallowedByPolicy","message": "Resource 'aro-test-aaaaa-master-2' was disallowed by policy.","target": "aro-test-aaaaa-master-2"}]}`),
+			wantErr: &api.CloudError{
+				StatusCode: http.StatusBadRequest,
+				CloudErrorBody: &api.CloudErrorBody{
+					Code:    api.CloudErrorCodeDeploymentFailed,
+					Message: "Deployment failed due to RequestDisallowedByPolicy. Please see details for more information.",
+					Details: []api.CloudErrorBody{
 						{
-							Type:   hivev1.ProvisionFailedCondition,
-							Status: corev1.ConditionFalse,
+							Code:    api.CloudErrorCodeRequestDisallowedByPolicy,
+							Message: "Resource 'aro-test-aaaaa-bootstrap' was disallowed by policy.",
+							Target:  "aro-test-aaaaa-bootstrap",
+						},
+						{
+							Code:    api.CloudErrorCodeRequestDisallowedByPolicy,
+							Message: "Resource 'aro-test-aaaaa-master-0' was disallowed by policy.",
+							Target:  "aro-test-aaaaa-master-0",
+						},
+						{
+							Code:    api.CloudErrorCodeRequestDisallowedByPolicy,
+							Message: "Resource 'aro-test-aaaaa-master-1' was disallowed by policy.",
+							Target:  "aro-test-aaaaa-master-1",
+						},
+						{
+							Code:    api.CloudErrorCodeRequestDisallowedByPolicy,
+							Message: "Resource 'aro-test-aaaaa-master-2' was disallowed by policy.",
+							Target:  "aro-test-aaaaa-master-2",
 						},
 					},
 				},
@@ -228,22 +346,42 @@ func TestIsClusterInstallationComplete(t *testing.T) {
 			wantResult: false,
 		},
 		{
-			name: "has failed provisioning",
-			cd: &hivev1.ClusterDeployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      ClusterDeploymentName,
-					Namespace: fakeNamespace,
+			name: "has failed provisioning - InvalidTemplateDeployment",
+			cd: makeClusterDeployment(
+				false,
+				hivev1.ClusterDeploymentCondition{
+					Type:   hivev1.ProvisionFailedCondition,
+					Status: corev1.ConditionTrue,
+					Reason: failure.AzureInvalidTemplateDeployment.Reason,
 				},
-				Status: hivev1.ClusterDeploymentStatus{
-					Conditions: []hivev1.ClusterDeploymentCondition{
-						{
-							Type:   hivev1.ProvisionFailedCondition,
-							Status: corev1.ConditionTrue,
-						},
-					},
+			),
+			cp: makeClusterProvision(`level=info msg=running in local development mode
+			level=info msg=creating development InstanceMetadata
+			level=info msg=InstanceMetadata: running on AzurePublicCloud
+			level=info msg=running step [Action github.com/Azure/ARO-RP/pkg/installer.(*manager).Manifests.func1]
+			level=info msg=running step [Action github.com/Azure/ARO-RP/pkg/installer.(*manager).Manifests.func2]
+			level=info msg=resolving graph
+			level=info msg=running step [Action github.com/Azure/ARO-RP/pkg/installer.(*manager).Manifests.func3]
+			level=info msg=checking if graph exists
+			level=info msg=save graph
+			Generates the Ignition Config asset
+			
+			level=info msg=running in local development mode
+			level=info msg=creating development InstanceMetadata
+			level=info msg=InstanceMetadata: running on AzurePublicCloud
+			level=info msg=running step [AuthorizationRefreshingAction [Action github.com/Azure/ARO-RP/pkg/installer.(*manager).deployResourceTemplate-fm]]
+			level=info msg=load persisted graph
+			level=info msg=deploying resources template
+			level=error msg=step [AuthorizationRefreshingAction [Action github.com/Azure/ARO-RP/pkg/installer.(*manager).deployResourceTemplate-fm]] encountered error: 400: DeploymentFailed: : Deployment failed. Details: : : {"code": "InvalidTemplateDeployment","message": "The template deployment failed with multiple errors. Please see details for more information.","target": null,"details": []}
+			level=error msg=400: DeploymentFailed: : Deployment failed. Details: : : {"code": "InvalidTemplateDeployment","message": "The template deployment failed with multiple errors. Please see details for more information.","target": null,"details": []}`),
+			wantErr: &api.CloudError{
+				StatusCode: http.StatusBadRequest,
+				CloudErrorBody: &api.CloudErrorBody{
+					Code:    api.CloudErrorCodeDeploymentFailed,
+					Message: "Deployment failed. Please see details for more information.",
+					Details: []api.CloudErrorBody{},
 				},
 			},
-			wantErr:    "clusterdeployment has failed: ProvisionFailed == True",
 			wantResult: false,
 		},
 	} {
@@ -252,13 +390,20 @@ func TestIsClusterInstallationComplete(t *testing.T) {
 			if tt.cd != nil {
 				fakeClientBuilder = fakeClientBuilder.WithRuntimeObjects(tt.cd)
 			}
+			if tt.cp != nil {
+				fakeClientBuilder = fakeClientBuilder.WithRuntimeObjects(tt.cp)
+			} else {
+				fakeClientBuilder = fakeClientBuilder.WithRuntimeObjects(makeClusterProvision(""))
+			}
 			c := clusterManager{
 				hiveClientset: fakeClientBuilder.Build(),
 				log:           logrus.NewEntry(logrus.StandardLogger()),
 			}
 
 			result, err := c.IsClusterInstallationComplete(context.Background(), doc)
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			if diff := cmp.Diff(tt.wantErr, err); diff != "" {
+				t.Error(diff)
+			}
 
 			if tt.wantResult != result {
 				t.Error(result)

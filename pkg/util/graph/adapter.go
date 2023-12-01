@@ -53,17 +53,7 @@ func (t *DebugTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 // Returns:
 // a new GraphRequestAdapter
 func NewGraphRequestAdapter(authenticationProvider absauth.AuthenticationProvider) (*GraphRequestAdapter, error) {
-	// XXX Temporary workaround for IcM Incident 439391116:
-	//     The Graph service is not handling gzipped requests properly but Kiota's HTTP client gzips by default.
-	//     This middleware list is equivalent to kiotahttp.GetDefaultMiddlewares, minus the CompressionHandler.
-	middlewares := []kiotahttp.Middleware{
-		kiotahttp.NewRetryHandler(),
-		kiotahttp.NewRedirectHandler(),
-		kiotahttp.NewParametersNameDecodingHandler(),
-		kiotahttp.NewUserAgentHandler(),
-	}
-
-	httpClient := kiotahttp.GetDefaultClient(middlewares...)
+	httpClient := kiotahttp.GetDefaultClient()
 	if _, doTrace := os.LookupEnv(ENV_DEBUG_TRACE); doTrace {
 		httpClient.Transport = &DebugTransport{Transport: httpClient.Transport}
 	}

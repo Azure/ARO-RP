@@ -16,7 +16,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
 	mock_dynamic "github.com/Azure/ARO-RP/pkg/util/mocks/dynamic"
 	"github.com/Azure/ARO-RP/pkg/validate/dynamic"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
@@ -36,11 +35,6 @@ func (c fakeTokenCredential) GetToken(ctx context.Context, options policy.TokenR
 func TestCheck(t *testing.T) {
 	ctx := context.Background()
 	log := logrus.NewEntry(logrus.StandardLogger())
-	mockCredentials := &clusterauthorizer.Credentials{
-		ClientID:     []byte("fake-client-id"),
-		ClientSecret: []byte("fake-client-secret"),
-		TenantID:     []byte("fake-tenant-id"),
-	}
 
 	for _, tt := range []struct {
 		name             string
@@ -68,10 +62,6 @@ func TestCheck(t *testing.T) {
 			},
 			wantErr: "fake validation error",
 		},
-		{
-			name:    "could not get service principal credentials",
-			wantErr: "fake credentials get error",
-		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
@@ -84,13 +74,7 @@ func TestCheck(t *testing.T) {
 
 			sp := &checker{
 				log: log,
-				credentials: func(ctx context.Context) (*clusterauthorizer.Credentials, error) {
-					if tt.credentialsExist {
-						return mockCredentials, nil
-					}
-					return nil, errors.New("fake credentials get error")
-				},
-				getTokenCredential: func(*azureclient.AROEnvironment, *clusterauthorizer.Credentials) (azcore.TokenCredential, error) {
+				getTokenCredential: func(*azureclient.AROEnvironment) (azcore.TokenCredential, error) {
 					return &fakeTokenCredential{}, nil
 				},
 				newSPValidator: func(azEnv *azureclient.AROEnvironment) dynamic.ServicePrincipalValidator {

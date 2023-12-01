@@ -13,6 +13,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/operator"
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -22,6 +23,10 @@ func (r *reconcileManager) ensureSubnetServiceEndpoints(ctx context.Context, s s
 
 		subnetObject, err := r.subnets.Get(ctx, s.ResourceID)
 		if err != nil {
+			if azureerrors.IsNotFoundError(err) {
+				r.log.Infof("Subnet %s not found, skipping. err: %v", s.ResourceID, err)
+				return nil
+			}
 			return err
 		}
 

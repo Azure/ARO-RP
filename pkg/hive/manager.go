@@ -5,7 +5,9 @@ package hive
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"sort"
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	"github.com/sirupsen/logrus"
@@ -19,6 +21,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/hive/failure"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
@@ -195,14 +198,13 @@ func (hr *clusterManager) IsClusterInstallationComplete(ctx context.Context, doc
 		return true, nil
 	}
 
-	checkFailureConditions := map[hivev1.ClusterDeploymentConditionType]corev1.ConditionStatus{
-		hivev1.ProvisionFailedCondition: corev1.ConditionTrue,
-	}
-
 	for _, cond := range cd.Status.Conditions {
-		conditionStatus, found := checkFailureConditions[cond.Type]
-		if found && conditionStatus == cond.Status {
-			return false, fmt.Errorf("clusterdeployment has failed: %s == %s", cond.Type, cond.Status)
+		if cond.Type == hivev1.ProvisionFailedCondition && cond.Status == corev1.ConditionTrue {
+			log, err := hr.installLogsForLatestDeployment(ctx, cd)
+			if err != nil {
+				return false, err
+			}
+			return false, failure.HandleProvisionFailed(ctx, cd, cond, log)
 		}
 	}
 
@@ -237,4 +239,28 @@ func (hr *clusterManager) ResetCorrelationData(ctx context.Context, doc *api.Ope
 
 		return hr.hiveClientset.Patch(ctx, modified, client.MergeFrom(cd))
 	})
+}
+
+func (hr *clusterManager) installLogsForLatestDeployment(ctx context.Context, cd *hivev1.ClusterDeployment) (*string, error) {
+	provisionList := &hivev1.ClusterProvisionList{}
+	if err := hr.hiveClientset.List(
+		ctx,
+		provisionList,
+		client.InNamespace(cd.Namespace),
+		client.MatchingLabels(map[string]string{"hive.openshift.io/cluster-deployment-name": cd.Name}),
+	); err != nil {
+		hr.log.WithError(err).Warn("could not list provisions for clusterdeployment")
+		return nil, err
+	}
+	if len(provisionList.Items) == 0 {
+		return nil, errors.New("no provisions for deployment")
+	}
+	provisions := make([]*hivev1.ClusterProvision, len(provisionList.Items))
+	for i := range provisionList.Items {
+		provisions[i] = &provisionList.Items[i]
+	}
+	sort.Slice(provisions, func(i, j int) bool { return provisions[i].Spec.Attempt > provisions[j].Spec.Attempt })
+	latestProvision := provisions[0]
+
+	return latestProvision.Spec.InstallLog, nil
 }

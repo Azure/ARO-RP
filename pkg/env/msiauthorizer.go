@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/jongio/azidext/go/azidext"
@@ -19,17 +20,11 @@ const (
 	MSIContextGateway MSIContext = "GATEWAY"
 )
 
-func (c *core) NewMSIAuthorizer(msiContext MSIContext, scopes ...string) (autorest.Authorizer, error) {
+func (c *core) NewMSITokenCredential(msiContext MSIContext) (azcore.TokenCredential, error) {
 	if !c.IsLocalDevelopmentMode() {
 		options := c.Environment().ManagedIdentityCredentialOptions()
-		msiTokenCredential, err := azidentity.NewManagedIdentityCredential(options)
-		if err != nil {
-			return nil, err
-		}
-
-		return azidext.NewTokenCredentialAdapter(msiTokenCredential, scopes), nil
+		return azidentity.NewManagedIdentityCredential(options)
 	}
-
 	tenantIdKey := "AZURE_TENANT_ID"
 	azureClientIdKey := "AZURE_" + string(msiContext) + "_CLIENT_ID"
 	azureClientSecretKey := "AZURE_" + string(msiContext) + "_CLIENT_SECRET"
@@ -44,10 +39,13 @@ func (c *core) NewMSIAuthorizer(msiContext MSIContext, scopes ...string) (autore
 
 	options := c.Environment().ClientSecretCredentialOptions()
 
-	clientSecretCredential, err := azidentity.NewClientSecretCredential(tenantId, azureClientId, azureClientSecret, options)
+	return azidentity.NewClientSecretCredential(tenantId, azureClientId, azureClientSecret, options)
+}
+
+func (c *core) NewMSIAuthorizer(msiContext MSIContext, scopes ...string) (autorest.Authorizer, error) {
+	token, err := c.NewMSITokenCredential(msiContext)
 	if err != nil {
 		return nil, err
 	}
-
-	return azidext.NewTokenCredentialAdapter(clientSecretCredential, scopes), nil
+	return azidext.NewTokenCredentialAdapter(token, scopes), nil
 }

@@ -310,24 +310,43 @@ func (f *frontend) ValidateNewCluster(ctx context.Context, subscription *api.Sub
 func setUpdateProvisioningState(doc *api.OpenShiftClusterDocument, apiVersion string) {
 	switch apiVersion {
 	case admin.APIVersion:
-		// For PUCM pending update, we don't want to set ProvisioningStateAdminUpdating
-		// The cluster monitoring stack uses that value to determine if PUCM is ongoing
-		if doc.OpenShiftCluster.Properties.MaintenanceTask != api.MaintenanceTaskPucmPending {
-			doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
-			doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
-			doc.OpenShiftCluster.Properties.LastAdminUpdateError = ""
-			doc.Dequeues = 0
-		} else {
-			// No update to provisioning state needed
-			doc.OpenShiftCluster.Properties.PucmPending = true
-
-			// This enables future admin update actions with body `{}` to succeed
-			doc.OpenShiftCluster.Properties.MaintenanceTask = ""
-		}
+		adminUpdateProvisioningState(doc)
 	default:
-		// Non-admin update (ex: customer cluster update)
+		updateProvisioningState(doc)
+	}
+}
+
+// Non-admin update (ex: customer cluster update)
+func updateProvisioningState(doc *api.OpenShiftClusterDocument) {
+	doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
+	doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
+	doc.Dequeues = 0
+}
+
+// Admin update (ex: cluster maintenance)
+func adminUpdateProvisioningState(doc *api.OpenShiftClusterDocument) {
+	if doc.OpenShiftCluster.Properties.MaintenanceTask.IsMaintenanceOngoingTask() {
 		doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
-		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
+		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
+		doc.OpenShiftCluster.Properties.LastAdminUpdateError = ""
 		doc.Dequeues = 0
+
+		// Set the maintenance to ongoing so we emit the appropriate signal to customerss
+		if doc.OpenShiftCluster.Properties.MaintenanceState == api.MaintenanceStatePending {
+			doc.OpenShiftCluster.Properties.MaintenanceState = api.MaintenanceStatePlanned
+		} else {
+			doc.OpenShiftCluster.Properties.MaintenanceState = api.MaintenanceStateUnplanned
+		}
+	} else {
+		// No default needed since we're using an enum
+		switch doc.OpenShiftCluster.Properties.MaintenanceTask {
+		case api.MaintenanceTaskPending:
+			doc.OpenShiftCluster.Properties.MaintenanceState = api.MaintenanceStatePending
+		case api.MaintenanceTaskNone:
+			doc.OpenShiftCluster.Properties.MaintenanceState = api.MaintenanceStateNone
+		}
+
+		// This enables future admin update actions with body `{}` to succeed
+		doc.OpenShiftCluster.Properties.MaintenanceTask = ""
 	}
 }

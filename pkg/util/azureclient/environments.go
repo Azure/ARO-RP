@@ -116,6 +116,14 @@ func (e *AROEnvironment) ClientSecretCredentialOptions() *azidentity.ClientSecre
 	}
 }
 
+func (e *AROEnvironment) DefaultAzureCredentialOptions() *azidentity.DefaultAzureCredentialOptions {
+	return &azidentity.DefaultAzureCredentialOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: e.Cloud,
+		},
+	}
+}
+
 func (e *AROEnvironment) EnvironmentCredentialOptions() *azidentity.EnvironmentCredentialOptions {
 	return &azidentity.EnvironmentCredentialOptions{
 		ClientOptions: azcore.ClientOptions{
