@@ -61,13 +61,13 @@ func FluentbitImage(acrDomain string) string {
 // MdmImage contains the location of the MDM container image
 // https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
 func MdmImage(acrDomain string) string {
-	return acrDomain + "/genevamdm:2.2023.928.2134-0de476-20230928t2244"
+	return acrDomain + "/genevamdm:2.2023.1118.1225-d7e0d6-20231118t1338"
 }
 
 // MdsdImage contains the location of the MDSD container image
 // https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
 func MdsdImage(acrDomain string) string {
-	return acrDomain + "/genevamdsd:mariner_20231024.2"
+	return acrDomain + "/genevamdsd:mariner_20231129.1"
 }
 
 // MUOImage contains the location of the Managed Upgrade Operator container image
