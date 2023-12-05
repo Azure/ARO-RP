@@ -8,8 +8,11 @@ import (
 	context "context"
 	reflect "reflect"
 
+	exported "github.com/Azure/azure-sdk-for-go/sdk/azcore/internal/exported"
 	authorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	gomock "github.com/golang/mock/gomock"
+
+	api "github.com/Azure/ARO-RP/pkg/api"
 )
 
 // MockPermissionsClient is a mock of PermissionsClient interface.
@@ -169,6 +172,20 @@ func NewMockDenyAssignmentClient(ctrl *gomock.Controller) *MockDenyAssignmentCli
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockDenyAssignmentClient) EXPECT() *MockDenyAssignmentClientMockRecorder {
 	return m.recorder
+}
+
+// DeleteDenyAssignment mocks base method.
+func (m *MockDenyAssignmentClient) DeleteDenyAssignment(arg0 context.Context, arg1 exported.TokenCredential, arg2 *api.SubscriptionDocument, arg3 *api.OpenShiftClusterDocument) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteDenyAssignment", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteDenyAssignment indicates an expected call of DeleteDenyAssignment.
+func (mr *MockDenyAssignmentClientMockRecorder) DeleteDenyAssignment(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteDenyAssignment", reflect.TypeOf((*MockDenyAssignmentClient)(nil).DeleteDenyAssignment), arg0, arg1, arg2, arg3)
 }
 
 // ListForResourceGroup mocks base method.
