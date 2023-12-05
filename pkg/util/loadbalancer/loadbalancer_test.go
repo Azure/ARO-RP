@@ -125,6 +125,17 @@ func TestRemoveLoadBalancerFrontendIPConfiguration(t *testing.T) {
 			expectedLB:    originalLB,
 			expectedErr:   fmt.Sprintf("frontend IP Configuration %s has external references, remove the external references prior to removing the frontend IP configuration", *publicIngressFIPConfigID),
 		},
+		{
+			name:          "removal of frontend ip config fails when frontend ip config doesn't exist",
+			fipResourceID: *publicIngressFIPConfigID,
+			currentLB: mgmtnetwork.LoadBalancer{
+				LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{},
+			},
+			expectedLB: mgmtnetwork.LoadBalancer{
+				LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{},
+			},
+			expectedErr: "FrontendIPConfigurations in nil",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			err := RemoveFrontendIPConfiguration(&tt.currentLB, tt.fipResourceID)
