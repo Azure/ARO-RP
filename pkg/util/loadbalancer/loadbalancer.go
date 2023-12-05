@@ -15,6 +15,10 @@ import (
 )
 
 func RemoveFrontendIPConfiguration(lb *mgmtnetwork.LoadBalancer, resourceID string) error {
+	if lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations == nil {
+		return fmt.Errorf("FrontendIPConfigurations in nil")
+	}
+
 	newFrontendIPConfig := make([]mgmtnetwork.FrontendIPConfiguration, 0, len(*lb.FrontendIPConfigurations))
 	for _, fipConfig := range *lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations {
 		if strings.EqualFold(*fipConfig.ID, resourceID) {
