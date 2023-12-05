@@ -43,6 +43,10 @@ var DefaultInstallStreams = map[int]*Stream{
 		Version:  NewVersion(4, 12, 25),
 		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:5a4fb052cda1d14d1e306ce87e6b0ded84edddaa76f1cf401bcded99cef2ad84",
 	},
+	13: {
+		Version:  NewVersion(4, 13, 16),
+		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:f0fbac5877e6d0671177fa0f523deb195e8742a5d49bc377b18704ba252a14d0",
+	},
 }
 
 // DefaultInstallStream describes stream we are defaulting to for all new clusters
@@ -51,6 +55,7 @@ var DefaultInstallStream = DefaultInstallStreams[DefaultMinorVersion]
 var AvailableInstallStreams = []*Stream{
 	DefaultInstallStreams[11],
 	DefaultInstallStreams[12],
+	DefaultInstallStreams[13],
 }
 
 // FluentbitImage contains the location of the Fluentbit container image
