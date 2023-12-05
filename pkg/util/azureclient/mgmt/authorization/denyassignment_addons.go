@@ -9,9 +9,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	policy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	runtime "github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -20,7 +20,7 @@ import (
 // DenyAssignmentClientAddons contains addons for DenyAssignmentClient
 type DenyAssignmentClientAddons interface {
 	ListForResourceGroup(ctx context.Context, resourceGroupName string, filter string) (result []authorization.DenyAssignment, err error)
-	DeleteDenyAssignment(ctx context.Context, fpTokenCredential azcore.TokenCredential, subscriptionDoc *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument) error
+	DeleteDenyAssignment(ctx context.Context, fpTokenCredential *azidentity.ClientCertificateCredential, subscriptionDoc *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument) error
 }
 
 func (c *denyAssignmentClient) ListForResourceGroup(ctx context.Context, resourceGroupName string, filter string) (result []authorization.DenyAssignment, err error) {
@@ -70,7 +70,7 @@ func (c *denyAssignmentClient) deleteDenyAssignmentRequest(ctx context.Context, 
 	return req, nil
 }
 
-func (c *denyAssignmentClient) DeleteDenyAssignment(ctx context.Context, fpTokenCredential azcore.TokenCredential, subscriptionDoc *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument) error {
+func (c *denyAssignmentClient) DeleteDenyAssignment(ctx context.Context, fpTokenCredential *azidentity.ClientCertificateCredential, subscriptionDoc *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument) error {
 	client, err := NewDenyAssignmentsARMClient(subscriptionDoc.ID, fpTokenCredential, nil)
 	if err != nil {
 		return err

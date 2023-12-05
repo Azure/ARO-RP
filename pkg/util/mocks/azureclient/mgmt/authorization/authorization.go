@@ -8,7 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	exported "github.com/Azure/azure-sdk-for-go/sdk/azcore/internal/exported"
+	azidentity "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	authorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	gomock "github.com/golang/mock/gomock"
 
@@ -175,7 +175,7 @@ func (m *MockDenyAssignmentClient) EXPECT() *MockDenyAssignmentClientMockRecorde
 }
 
 // DeleteDenyAssignment mocks base method.
-func (m *MockDenyAssignmentClient) DeleteDenyAssignment(arg0 context.Context, arg1 exported.TokenCredential, arg2 *api.SubscriptionDocument, arg3 *api.OpenShiftClusterDocument) error {
+func (m *MockDenyAssignmentClient) DeleteDenyAssignment(arg0 context.Context, arg1 *azidentity.ClientCertificateCredential, arg2 *api.SubscriptionDocument, arg3 *api.OpenShiftClusterDocument) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteDenyAssignment", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
