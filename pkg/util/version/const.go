@@ -44,8 +44,8 @@ var DefaultInstallStreams = map[int]*Stream{
 		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:5a4fb052cda1d14d1e306ce87e6b0ded84edddaa76f1cf401bcded99cef2ad84",
 	},
 	13: {
-		Version:  NewVersion(4, 13, 16),
-		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:f0fbac5877e6d0671177fa0f523deb195e8742a5d49bc377b18704ba252a14d0",
+		Version:  NewVersion(4, 13, 23),
+		PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:ca556d3494d08765c90481f15dd965995371168ea7ee7a551000bed4481931c8",
 	},
 }
 
