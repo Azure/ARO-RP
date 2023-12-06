@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -46,7 +47,12 @@ func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error
 		})
 	}
 
-	if dns.IsManagedDomain(strings.Split(mon.oc.Properties.APIServerProfile.URL, ":")[1]) {
+	host, err := getHostFromAPIURL(mon.oc.Properties.APIServerProfile.URL)
+	if err != nil {
+		return err
+	}
+
+	if dns.IsManagedDomain(host) {
 		ic := &operatorv1.IngressController{}
 		err := mon.ocpclientset.Get(ctx, client.ObjectKey{
 			Namespace: ingressNamespace,
@@ -96,6 +102,14 @@ func secretMissingMetric(namespace, name string) map[string]string {
 		"namespace": namespace,
 		"name":      name,
 	}
+}
+
+func getHostFromAPIURL(apiURL string) (string, error) {
+	domain, err := url.Parse(apiURL)
+	if err != nil {
+		return "", err
+	}
+	return domain.Hostname(), nil
 }
 
 func (mon *Monitor) emitEtcdCertificateExpiry(ctx context.Context) error {
