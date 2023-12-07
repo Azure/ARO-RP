@@ -121,17 +121,17 @@ func contains(s []string, e string) bool {
 }
 
 func (s settings) shouldDelete(resourceGroup mgmtfeatures.ResourceGroup, log *logrus.Entry) bool {
-	//assume its a prod cluster, dev clusters will have purge tag
-	devCluster := false
-	if resourceGroup.Tags != nil {
-		_, devCluster = resourceGroup.Tags["purge"]
-	}
-
 	// don't mess with clusters in RGs managed by a production RP. Although
 	// the production deny assignment will prevent us from breaking most
 	// things, that does not include us potentially detaching the cluster's
 	// NSG from the vnet, thus breaking inbound access to the cluster.
-	if !devCluster && resourceGroup.ManagedBy != nil && *resourceGroup.ManagedBy != "" {
+	// We use purge=true to distinguish between dev and prod clusters:
+	// https://github.com/Azure/ARO-RP/blob/master/pkg/cluster/deploybaseresources.go#L81-L87
+	devCluster := false
+	if resourceGroup.Tags != nil {
+		_, devCluster = resourceGroup.Tags["purge"]
+	}
+	if !devCluster {
 		return false
 	}
 
