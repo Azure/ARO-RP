@@ -153,24 +153,24 @@ func (s settings) shouldDelete(resourceGroup mgmtfeatures.ResourceGroup, log *lo
 
 	for t := range resourceGroup.Tags {
 		if strings.ToLower(t) == defaultKeepTag {
-			log.Debugf("Group %s is to persist. SKIP.", *resourceGroup.Name)
+			log.Infof("Group %s is to persist. SKIP.", *resourceGroup.Name)
 			return false
 		}
 	}
 
 	// azure tags is not consistent with lower/upper cases.
 	if _, ok := resourceGroup.Tags[s.createdTag]; !ok {
-		log.Debugf("Group %s does not have createdAt tag. SKIP.", *resourceGroup.Name)
+		log.Infof("Group %s does not have createdAt tag. SKIP.", *resourceGroup.Name)
 		return false
 	}
 
 	createdAt, err := time.Parse(time.RFC3339Nano, *resourceGroup.Tags[s.createdTag])
 	if err != nil {
-		log.Errorf("%s: %s", *resourceGroup.Name, err)
+		log.Infof("%s: %s", *resourceGroup.Name, err)
 		return false
 	}
 	if time.Since(createdAt) < s.ttl {
-		log.Debugf("Group %s is still less than TTL. SKIP.", *resourceGroup.Name)
+		log.Infof("Group %s is still less than TTL. SKIP.", *resourceGroup.Name)
 		return false
 	}
 
