@@ -66,6 +66,7 @@ To bring new OCP release branch into ARO installer fork:
 1. If not done already, fetch our fork and upstream repos:
     ```sh
     # clone our forked installer
+    # Alternatively, fork openshift/installer-aro and clone your fork
     git clone https://github.com/openshift/installer-aro.git
     cd installer-aro
     
@@ -159,6 +160,8 @@ exec ./hack/go-test.sh
 ```
 
 When you are finished, you can write/close the file editor to perform the rebase on the upstream differences while verifying that every patch still works along the way.
+
+Get a repo admin to create `release-X.Y-azure` in [openshift/installer-aro](https://github.com/openshift/installer-aro). You can now push your local branch `release-X.Y-azure` to your own fork of [openshift/installer-aro](https://github.com/openshift/installer-aro) and send a PR.
 
 # Update ARO Installer Wrapper and ARO-RP
 
