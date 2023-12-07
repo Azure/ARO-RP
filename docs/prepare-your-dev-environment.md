@@ -45,6 +45,15 @@ This document goes through the development dependencies one requires in order to
 sudo touch /etc/containers/nodocker
 ```
 
+If using a MAC, the following steps may be applicable where you symlink docker to podman location. 
+
+```sh
+ls -la $(whereis -q docker)
+lrwxr-xr-x@ 1 domfinn  staff  24  7 Dec 14:10 /Users/domfinn/.local/bin/docker -> /opt/homebrew/bin/podman
+az acr login -n domfinnaro
+Login Succeeded!
+```
+
 1. Install [golangci-lint](https://golangci-lint.run/) and [yamllint](https://yamllint.readthedocs.io/en/stable/quickstart.html#installing-yamllint) (optional but your code is required to comply to pass the CI)
 
 ### Fedora / RHEL Packages
