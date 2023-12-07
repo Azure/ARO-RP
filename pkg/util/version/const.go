@@ -60,7 +60,7 @@ var AvailableInstallStreams = []*Stream{
 
 // FluentbitImage contains the location of the Fluentbit container image
 func FluentbitImage(acrDomain string) string {
-	return acrDomain + "/fluentbit:1.9.10-cm20231004"
+	return acrDomain + "/fluentbit:1.9.10-cm20231115@sha256:9226a7c6a15714581e4c64f40009b205d0acd0e51342365a0cc95ff6b7105315"
 }
 
 // MdmImage contains the location of the MDM container image
