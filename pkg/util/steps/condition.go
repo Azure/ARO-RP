@@ -117,7 +117,7 @@ func enrichConditionTimeoutError(f conditionFunction, originalErr error) error {
 	return api.NewCloudError(
 		http.StatusInternalServerError,
 		api.CloudErrorCodeDeploymentFailed,
-		"", message+"Please retry, if issue persists: raise azure support ticket",
+		"", message+"Please retry, if issue persists: raise Azure support ticket",
 	)
 }
 
