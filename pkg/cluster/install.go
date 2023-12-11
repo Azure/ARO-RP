@@ -283,7 +283,7 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.ensureServiceEndpoints),
 		steps.Action(m.setMasterSubnetPolicies),
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.deployBaseResourceTemplate),
-		steps.Action(m.attachNSGs),
+		steps.Condition(m.attachNSGs, 3*time.Minute, true),
 		steps.Action(m.updateAPIIPEarly),
 		steps.Action(m.createOrUpdateRouterIPEarly),
 		steps.Action(m.ensureGatewayCreate),

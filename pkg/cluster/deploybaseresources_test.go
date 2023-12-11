@@ -238,6 +238,232 @@ func TestEnsureResourceGroup(t *testing.T) {
 	}
 }
 
+func TestAttachNSGs(t *testing.T) {
+	ctx := context.Background()
+
+	for _, tt := range []struct {
+		name       string
+		oc         *api.OpenShiftClusterDocument
+		mocks      func(*mock_subnet.MockManager)
+		wantResult bool
+		wantErr    string
+	}{
+		{
+			name: "Success - NSG attached to both subnets",
+			oc: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ArchitectureVersion: api.ArchitectureVersionV2,
+						InfraID:             "infra",
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678",
+						},
+						MasterProfile: api.MasterProfile{
+							SubnetID: "masterSubnetID",
+						},
+						WorkerProfiles: []api.WorkerProfile{
+							{
+								SubnetID: "workerSubnetID",
+							},
+						},
+					},
+				},
+			},
+			mocks: func(subnet *mock_subnet.MockManager) {
+				subnet.EXPECT().Get(ctx, "masterSubnetID").Return(&mgmtnetwork.Subnet{}, nil)
+				subnet.EXPECT().CreateOrUpdate(ctx, "masterSubnetID", &mgmtnetwork.Subnet{
+					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+							ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678/providers/Microsoft.Network/networkSecurityGroups/infra-nsg"),
+						},
+					},
+				}).Return(nil)
+				subnet.EXPECT().Get(ctx, "workerSubnetID").Return(&mgmtnetwork.Subnet{}, nil)
+				subnet.EXPECT().CreateOrUpdate(ctx, "workerSubnetID", &mgmtnetwork.Subnet{
+					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+							ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678/providers/Microsoft.Network/networkSecurityGroups/infra-nsg"),
+						},
+					},
+				}).Return(nil)
+			},
+			wantResult: true,
+		},
+		{
+			name: "Success - preconfigured NSG enabled",
+			oc: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ArchitectureVersion: api.ArchitectureVersionV2,
+						InfraID:             "infra",
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678",
+						},
+						MasterProfile: api.MasterProfile{
+							SubnetID: "masterSubnetID",
+						},
+						WorkerProfiles: []api.WorkerProfile{
+							{
+								SubnetID: "workerSubnetID",
+							},
+						},
+						NetworkProfile: api.NetworkProfile{
+							PreconfiguredNSG: api.PreconfiguredNSGEnabled,
+						},
+					},
+				},
+			},
+			mocks:      func(subnet *mock_subnet.MockManager) {},
+			wantResult: true,
+		},
+		{
+			name: "Failure - unable to get a subnet",
+			oc: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ArchitectureVersion: api.ArchitectureVersionV2,
+						InfraID:             "infra",
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678",
+						},
+						MasterProfile: api.MasterProfile{
+							SubnetID: "masterSubnetID",
+						},
+						WorkerProfiles: []api.WorkerProfile{
+							{
+								SubnetID: "workerSubnetID",
+							},
+						},
+					},
+				},
+			},
+			mocks: func(subnet *mock_subnet.MockManager) {
+				subnet.EXPECT().Get(ctx, "masterSubnetID").Return(&mgmtnetwork.Subnet{}, fmt.Errorf("subnet not found"))
+			},
+			wantResult: false,
+			wantErr:    "subnet not found",
+		},
+		{
+			name: "Failure - NSG already attached to a subnet",
+			oc: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ArchitectureVersion: api.ArchitectureVersionV2,
+						InfraID:             "infra",
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678",
+						},
+						MasterProfile: api.MasterProfile{
+							SubnetID: "masterSubnetID",
+						},
+						WorkerProfiles: []api.WorkerProfile{
+							{
+								SubnetID: "workerSubnetID",
+							},
+						},
+					},
+				},
+			},
+			mocks: func(subnet *mock_subnet.MockManager) {
+				subnet.EXPECT().Get(ctx, "masterSubnetID").Return(&mgmtnetwork.Subnet{
+					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+							ID: to.StringPtr("I shouldn't be here!"),
+						},
+					},
+				}, nil)
+			},
+			wantResult: false,
+			wantErr:    "400: InvalidLinkedVNet: : The provided subnet 'masterSubnetID' is invalid: must not have a network security group attached.",
+		},
+		{
+			name: "Failure - failed to CreateOrUpdate subnet because NSG not yet ready for use",
+			oc: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ArchitectureVersion: api.ArchitectureVersionV2,
+						InfraID:             "infra",
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678",
+						},
+						MasterProfile: api.MasterProfile{
+							SubnetID: "masterSubnetID",
+						},
+						WorkerProfiles: []api.WorkerProfile{
+							{
+								SubnetID: "workerSubnetID",
+							},
+						},
+					},
+				},
+			},
+			mocks: func(subnet *mock_subnet.MockManager) {
+				subnet.EXPECT().Get(ctx, "masterSubnetID").Return(&mgmtnetwork.Subnet{}, nil)
+				subnet.EXPECT().CreateOrUpdate(ctx, "masterSubnetID", &mgmtnetwork.Subnet{
+					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+							ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678/providers/Microsoft.Network/networkSecurityGroups/infra-nsg"),
+						},
+					},
+				}).Return(fmt.Errorf("Some random stuff followed by the important part that we're trying to match: Resource /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678/providers/Microsoft.Network/networkSecurityGroups/infra-nsg referenced by resource masterSubnetID was not found. and here's some more stuff that's at the end past the important part"))
+			},
+			wantResult: false,
+		},
+		{
+			name: "Failure - failed to CreateOrUpdate subnet with arbitrary error",
+			oc: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ArchitectureVersion: api.ArchitectureVersionV2,
+						InfraID:             "infra",
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678",
+						},
+						MasterProfile: api.MasterProfile{
+							SubnetID: "masterSubnetID",
+						},
+						WorkerProfiles: []api.WorkerProfile{
+							{
+								SubnetID: "workerSubnetID",
+							},
+						},
+					},
+				},
+			},
+			mocks: func(subnet *mock_subnet.MockManager) {
+				subnet.EXPECT().Get(ctx, "masterSubnetID").Return(&mgmtnetwork.Subnet{}, nil)
+				subnet.EXPECT().CreateOrUpdate(ctx, "masterSubnetID", &mgmtnetwork.Subnet{
+					SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+						NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+							ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678/providers/Microsoft.Network/networkSecurityGroups/infra-nsg"),
+						},
+					},
+				}).Return(fmt.Errorf("I'm an arbitrary error here to make life harder"))
+			},
+			wantResult: false,
+			wantErr:    "I'm an arbitrary error here to make life harder",
+		},
+	} {
+		controller := gomock.NewController(t)
+		defer controller.Finish()
+
+		subnet := mock_subnet.NewMockManager(controller)
+		tt.mocks(subnet)
+
+		m := &manager{
+			log:    logrus.NewEntry(logrus.StandardLogger()),
+			doc:    tt.oc,
+			subnet: subnet,
+		}
+
+		result, err := m.attachNSGs(ctx)
+		if result != tt.wantResult {
+			t.Errorf("Got %v, wanted %v", result, tt.wantResult)
+		}
+		utilerror.AssertErrorMessage(t, err, tt.wantErr)
+	}
+}
+
 func TestSetMasterSubnetPolicies(t *testing.T) {
 	ctx := context.Background()
 

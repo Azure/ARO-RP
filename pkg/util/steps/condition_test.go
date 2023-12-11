@@ -11,6 +11,7 @@ import (
 
 // functionnames that will be used in the conditionFunction below
 // All the keys of map timeoutConditionErrors
+func attachNSGs(context.Context) (bool, error)                             { return false, nil }
 func apiServersReady(context.Context) (bool, error)                        { return false, nil }
 func minimumWorkerNodesReady(context.Context) (bool, error)                { return false, nil }
 func operatorConsoleExists(context.Context) (bool, error)                  { return false, nil }
@@ -37,6 +38,11 @@ func TestEnrichConditionTimeoutError(t *testing.T) {
 			function:    timingOutCondition,
 			originalErr: "timed out waiting for the condition",
 			wantErr:     "timed out waiting for the condition",
+		},
+		{
+			desc:     "test conditionfail for func - attachNSGs",
+			function: attachNSGs,
+			wantErr:  "500: DeploymentFailed: : Failed to attach the ARO NSG to the cluster subnets.Please retry, if issue persists: raise azure support ticket",
 		},
 		{
 			desc:     "test conditionfail for func - apiServersReady",

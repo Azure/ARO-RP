@@ -23,6 +23,7 @@ import (
 // Instead of providing Hive-specific error messages to customers, the below will send a timeout error message.
 // The below functions are run during Install, Update, AdminUpdate.
 var timeoutConditionErrors = map[string]string{
+	"attachNSGs":                             "Failed to attach the ARO NSG to the cluster subnets.",
 	"apiServersReady":                        "Kube API has not initialised successfully and is unavailable.",
 	"minimumWorkerNodesReady":                "Minimum number of worker nodes have not been successfully created.",
 	"operatorConsoleExists":                  "Console Cluster Operator has failed to initialize successfully.",
