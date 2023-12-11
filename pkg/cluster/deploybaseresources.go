@@ -25,6 +25,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
+var nsgNotReadyErrorRegex = regexp.MustCompile("Resource.*networkSecurityGroups.*referenced by resource.*not found")
+
 const storageServiceEndpoint = "Microsoft.Storage"
 
 func (m *manager) createDNS(ctx context.Context) error {
@@ -252,9 +254,9 @@ func (m *manager) subnetsWithServiceEndpoint(ctx context.Context, serviceEndpoin
 	return subnets, nil
 }
 
-func (m *manager) attachNSGs(ctx context.Context) error {
+func (m *manager) attachNSGs(ctx context.Context) (bool, error) {
 	if m.doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG == api.PreconfiguredNSGEnabled {
-		return nil
+		return true, nil
 	}
 	workerProfiles, _ := api.GetEnrichedWorkerProfiles(m.doc.OpenShiftCluster.Properties)
 	workerSubnetId := workerProfiles[0].SubnetID
@@ -269,7 +271,7 @@ func (m *manager) attachNSGs(ctx context.Context) error {
 
 		s, err := m.subnet.Get(ctx, subnetID)
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		if s.SubnetPropertiesFormat == nil {
@@ -278,7 +280,7 @@ func (m *manager) attachNSGs(ctx context.Context) error {
 
 		nsgID, err := apisubnet.NetworkSecurityGroupID(m.doc.OpenShiftCluster, subnetID)
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		// Sometimes we get into the race condition between external services modifying
@@ -290,20 +292,27 @@ func (m *manager) attachNSGs(ctx context.Context) error {
 				continue
 			}
 
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided subnet '%s' is invalid: must not have a network security group attached.", subnetID)
+			return false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided subnet '%s' is invalid: must not have a network security group attached.", subnetID)
 		}
 
 		s.SubnetPropertiesFormat.NetworkSecurityGroup = &mgmtnetwork.SecurityGroup{
 			ID: to.StringPtr(nsgID),
 		}
 
+		// Because we attempt to attach the NSG immediately after the base resource deployment
+		// finishes, the NSG is sometimes not yet ready to be referenced and used, causing
+		// an error to occur here. So if this particular error occurs, return nil to retry.
+		// But if some other type of error occurs, just return that error.
 		err = m.subnet.CreateOrUpdate(ctx, subnetID, s)
 		if err != nil {
-			return err
+			if nsgNotReadyErrorRegex.MatchString(err.Error()) {
+				return false, nil
+			}
+			return false, err
 		}
 	}
 
-	return nil
+	return true, nil
 }
 
 func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
