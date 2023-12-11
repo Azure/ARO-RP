@@ -75,7 +75,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// If enabled and managed is missing, do nothing
 	if strings.EqualFold(managed, "true") {
 		// Check if standard GateKeeper is already running
-		if running, err := r.deployer.IsReady(ctx, "gatekeeper-system", "gatekeeper-audit"); err != nil && running {
+		if running, err := r.deployer.IsReady(ctx, "gatekeeper-system", "gatekeeper-audit"); err == nil && running {
 			r.log.Warn("standard GateKeeper is running, skipping Guardrails deployment")
 			return reconcile.Result{}, nil
 		}
@@ -128,12 +128,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 			err = r.removePolicy(ctx, gkPolicyConstraints, gkConstraintsPath)
 			if err != nil {
-				return reconcile.Result{}, err
+				r.log.Warnf("failed to remove Constraints with error %s", err.Error())
 			}
 
 			err = r.gkPolicyTemplate.Remove(ctx, config.GuardRailsPolicyConfig{})
 			if err != nil {
-				return reconcile.Result{}, err
+				r.log.Warnf("failed to remove ConstraintTemplates with error %s", err.Error())
 			}
 		}
 		err = r.deployer.Remove(ctx, config.GuardRailsDeploymentConfig{Namespace: r.namespace})
