@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,6 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	"github.com/Azure/ARO-RP/test/util/serversideapply"
 )
 
 func TestPullSecretReconciler(t *testing.T) {
@@ -287,13 +289,15 @@ func TestPullSecretReconciler(t *testing.T) {
 
 			clientFake := ctrlfake.NewClientBuilder().WithObjects(tt.instance).WithObjects(tt.secrets...).Build()
 
-			r := &Reconciler{
-				AROController: base.AROController{
-					Log:    logrus.NewEntry(logrus.StandardLogger()),
-					Client: clientFake,
-					Name:   ControllerName,
-				},
+			objects := []runtime.Object{}
+			for _, s := range tt.secrets {
+				objects = append(objects, s)
 			}
+
+			kubernetesFake := serversideapply.CliWithApply([]string{"secrets"}, objects...)
+
+			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientFake, kubernetesFake)
+
 			if tt.request.Name == "" {
 				tt.request.NamespacedName = pullSecretName
 			}
@@ -305,7 +309,7 @@ func TestPullSecretReconciler(t *testing.T) {
 			}
 
 			s := &corev1.Secret{}
-			err = r.AROController.Client.Get(ctx, types.NamespacedName{Namespace: "openshift-config", Name: "pull-secret"}, s)
+			s, err = r.secretsClient.Get(ctx, "pull-secret", metav1.GetOptions{})
 			if err != nil {
 				t.Error(err)
 			}
