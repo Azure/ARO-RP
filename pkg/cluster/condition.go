@@ -6,6 +6,7 @@ package cluster
 import (
 	"context"
 	"errors"
+	"regexp"
 	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -13,6 +14,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+var credentialsRequestNotFoundErrorRegex = regexp.MustCompile(`credentialsrequests[.]cloudcredential[.]openshift[.]io.*not found`)
 
 const minimumWorkerNodes = 2
 
@@ -113,6 +116,11 @@ func (m *manager) aroCredentialsRequestReconciled(ctx context.Context) (bool, er
 
 	u, err := m.dynamiccli.Resource(CredentialsRequestGroupVersionResource).Namespace("openshift-cloud-credential-operator").Get(ctx, "openshift-azure-operator", metav1.GetOptions{})
 	if err != nil {
+		// If the CredentialsRequest is not found, it may have just recently been reconciled.
+		// Return nil to retry until we hit the condition timeout.
+		if credentialsRequestNotFoundErrorRegex.MatchString(err.Error()) {
+			return false, nil
+		}
 		return false, err
 	}
 
