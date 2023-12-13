@@ -17,10 +17,25 @@ import (
 
 	mgmtredhatopenshift20220904 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2022-09-04/redhatopenshift"
 	mgmtredhatopenshift20230701preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2023-07-01-preview/redhatopenshift"
+	"github.com/Azure/ARO-RP/pkg/cluster"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
 var _ = Describe("Update clusters", func() {
+	It("must replace the ARO operator's CredentialsRequest if it has been deleted", func(ctx context.Context) {
+		By("deleting the CredentialsRequest")
+		err := clients.DynamicKubernetes.Resource(cluster.CredentialsRequestGroupVersionResource).Namespace("openshift-cloud-credential-operator").Delete(ctx, "openshift-azure-operator", metav1.DeleteOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		By("sending the PATCH request to update the cluster")
+		err = clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, mgmtredhatopenshift20220904.OpenShiftClusterUpdate{})
+		Expect(err).NotTo(HaveOccurred())
+
+		By("checking that the CredentialsRequest has been recreated")
+		_, err = clients.DynamicKubernetes.Resource(cluster.CredentialsRequestGroupVersionResource).Namespace("openshift-cloud-credential-operator").Get(ctx, "openshift-azure-operator", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+	})
+
 	It("must restart the aro-operator-master Deployment", func(ctx context.Context) {
 		By("saving the current revision of the aro-operator-master Deployment")
 		d, err := clients.Kubernetes.AppsV1().Deployments("openshift-azure-operator").Get(ctx, "aro-operator-master", metav1.GetOptions{})
