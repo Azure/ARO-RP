@@ -104,7 +104,7 @@ func isOperatorAvailable(operator *configv1.ClusterOperator) bool {
 // is true if the CredentialsRequest has been reconciled within the past 5 minutes.
 // Checking for a change to the lastSyncCloudCredsSecretResourceVersion attribute of the CredentialRequest's status would be a neater way of checking
 // whether it was reconciled, but we would would have to save the value prior to updating the kube-system/azure-credentials Secret so that we'd have
-// and old value to compare to.
+// an old value to compare to.
 func (m *manager) aroCredentialsRequestReconciled(ctx context.Context) (bool, error) {
 	// If the CSP hasn't been updated, the CredentialsRequest does not need to be reconciled.
 	secret, err := m.servicePrincipalUpdated(ctx)
