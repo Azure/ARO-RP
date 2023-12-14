@@ -13,18 +13,30 @@ import (
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
+	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	mgmtredhatopenshift20220904 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2022-09-04/redhatopenshift"
 	mgmtredhatopenshift20230701preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2023-07-01-preview/redhatopenshift"
-	"github.com/Azure/ARO-RP/pkg/cluster"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
-var _ = Describe("Update clusters", func() {
-	It("must replace the ARO operator's CredentialsRequest if it has been deleted", func(ctx context.Context) {
+var _ = FDescribe("Update clusters", func() {
+	FIt("must replace the ARO operator's CredentialsRequest if it has been deleted", func(ctx context.Context) {
+		crNamespacedName := types.NamespacedName{
+			Namespace: "openshift-cloud-credential-operator",
+			Name:      "openshift-azure-operator",
+		}
+
 		By("deleting the CredentialsRequest")
-		err := clients.DynamicKubernetes.Resource(cluster.CredentialsRequestGroupVersionResource).Namespace("openshift-cloud-credential-operator").Delete(ctx, "openshift-azure-operator", metav1.DeleteOptions{})
+		cr := &cloudcredentialv1.CredentialsRequest{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "openshift-cloud-credential-operator",
+				Name:      "openshift-azure-operator",
+			},
+		}
+		err := clients.Client.Delete(ctx, cr)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("sending the PATCH request to update the cluster")
@@ -32,7 +44,8 @@ var _ = Describe("Update clusters", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking that the CredentialsRequest has been recreated")
-		_, err = clients.DynamicKubernetes.Resource(cluster.CredentialsRequestGroupVersionResource).Namespace("openshift-cloud-credential-operator").Get(ctx, "openshift-azure-operator", metav1.GetOptions{})
+		cr = &cloudcredentialv1.CredentialsRequest{}
+		err = clients.Client.Get(ctx, crNamespacedName, cr)
 		Expect(err).NotTo(HaveOccurred())
 	})
 

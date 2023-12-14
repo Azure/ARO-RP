@@ -27,7 +27,6 @@ import (
 	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	"github.com/sirupsen/logrus"
 	"github.com/tebeka/selenium"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -76,7 +75,7 @@ type clientSet struct {
 	HiveRestConfig     *rest.Config
 	Monitoring         monitoringclient.Interface
 	Kubernetes         kubernetes.Interface
-	DynamicKubernetes  dynamic.Interface
+	Client             client.Client
 	MachineAPI         machineclient.Interface
 	MachineConfig      mcoclient.Interface
 	AROClusters        aroclient.Interface
@@ -279,7 +278,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
-	dynamiccli, err := dynamic.NewForConfig(restconfig)
+	controllerRuntimeClient, err := client.New(restconfig, client.Options{})
 	if err != nil {
 		return nil, err
 	}
@@ -365,7 +364,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		RestConfig:         restconfig,
 		HiveRestConfig:     hiveRestConfig,
 		Kubernetes:         cli,
-		DynamicKubernetes:  dynamiccli,
+		Client:             controllerRuntimeClient,
 		Monitoring:         monitoring,
 		MachineAPI:         machineapicli,
 		MachineConfig:      mcocli,
