@@ -6,16 +6,14 @@ package cluster
 import (
 	"context"
 	"errors"
-	"regexp"
 	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
 	consoleapi "github.com/openshift/console-operator/pkg/api"
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-var credentialsRequestNotFoundErrorRegex = regexp.MustCompile(`credentialsrequests[.]cloudcredential[.]openshift[.]io.*not found`)
 
 const minimumWorkerNodes = 2
 
@@ -118,7 +116,7 @@ func (m *manager) aroCredentialsRequestReconciled(ctx context.Context) (bool, er
 	if err != nil {
 		// If the CredentialsRequest is not found, it may have just recently been reconciled.
 		// Return nil to retry until we hit the condition timeout.
-		if credentialsRequestNotFoundErrorRegex.MatchString(err.Error()) {
+		if kerrors.IsNotFound(err) {
 			return false, nil
 		}
 		return false, err
