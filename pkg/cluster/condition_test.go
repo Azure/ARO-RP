@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -18,9 +19,11 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
+	ktesting "k8s.io/client-go/testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -341,7 +344,7 @@ func TestAroCredentialsRequestReconciled(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "Encounter error getting CredentialsRequest",
+			name: "CredentialsRequest not found",
 			kubernetescli: func() *fake.Clientset {
 				secret := getFakeAROSecret("aadClientId", "aadClientSecret")
 				return fake.NewSimpleClientset(&secret)
@@ -353,8 +356,27 @@ func TestAroCredentialsRequestReconciled(t *testing.T) {
 				ClientID:     "aadClientId",
 				ClientSecret: "aadClientSecretNew",
 			},
+			want: false,
+		},
+		{
+			name: "Encounter some other error getting the CredentialsRequest",
+			kubernetescli: func() *fake.Clientset {
+				secret := getFakeAROSecret("aadClientId", "aadClientSecret")
+				return fake.NewSimpleClientset(&secret)
+			},
+			dynamiccli: func() *dynamicfake.FakeDynamicClient {
+				dynamiccli := dynamicfake.NewSimpleDynamicClient(scheme.Scheme)
+				dynamiccli.PrependReactor("get", "*", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+					return true, &cloudcredentialv1.CredentialsRequest{}, errors.New("Couldn't get CredentialsRequest for arbitrary reason")
+				})
+				return dynamiccli
+			},
+			spp: api.ServicePrincipalProfile{
+				ClientID:     "aadClientId",
+				ClientSecret: "aadClientSecretNew",
+			},
 			want:       false,
-			wantErrMsg: `credentialsrequests.cloudcredential.openshift.io "openshift-azure-operator" not found`,
+			wantErrMsg: "Couldn't get CredentialsRequest for arbitrary reason",
 		},
 		{
 			name: "CredentialsRequest is missing status.lastSyncTimestamp",

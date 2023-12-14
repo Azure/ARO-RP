@@ -50,6 +50,7 @@ var embeddedFiles embed.FS
 
 type Operator interface {
 	CreateOrUpdate(context.Context) error
+	CreateOrUpdateCredentialsRequest(context.Context) error
 	IsReady(context.Context) (bool, error)
 	Restart(context.Context, []string) error
 	IsRunningDesiredVersion(context.Context) (bool, error)
@@ -366,6 +367,28 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// CreateOrUpdateCredentialsRequest just creates/updates the ARO operator's CredentialsRequest
+// rather than doing all of the operator's associated Kubernetes resources.
+func (o *operator) CreateOrUpdateCredentialsRequest(ctx context.Context) error {
+	templ, err := template.ParseFS(embeddedFiles, "staticresources/credentialsrequest.yaml")
+	if err != nil {
+		return err
+	}
+
+	buff := &bytes.Buffer{}
+	err = templ.Execute(buff, nil)
+	if err != nil {
+		return err
+	}
+
+	crUnstructured, err := dynamichelper.DecodeUnstructured(buff.Bytes())
+	if err != nil {
+		return err
+	}
+
+	return o.dh.Ensure(ctx, crUnstructured)
 }
 
 func (o *operator) RenewMDSDCertificate(ctx context.Context) error {

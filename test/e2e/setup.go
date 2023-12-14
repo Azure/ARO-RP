@@ -75,6 +75,7 @@ type clientSet struct {
 	HiveRestConfig     *rest.Config
 	Monitoring         monitoringclient.Interface
 	Kubernetes         kubernetes.Interface
+	Client             client.Client
 	MachineAPI         machineclient.Interface
 	MachineConfig      mcoclient.Interface
 	AROClusters        aroclient.Interface
@@ -277,6 +278,11 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
+	controllerRuntimeClient, err := client.New(restconfig, client.Options{})
+	if err != nil {
+		return nil, err
+	}
+
 	monitoring, err := monitoringclient.NewForConfig(restconfig)
 	if err != nil {
 		return nil, err
@@ -358,6 +364,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		RestConfig:         restconfig,
 		HiveRestConfig:     hiveRestConfig,
 		Kubernetes:         cli,
+		Client:             controllerRuntimeClient,
 		Monitoring:         monitoring,
 		MachineAPI:         machineapicli,
 		MachineConfig:      mcocli,

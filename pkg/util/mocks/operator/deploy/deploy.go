@@ -48,6 +48,20 @@ func (mr *MockOperatorMockRecorder) CreateOrUpdate(arg0 interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockOperator)(nil).CreateOrUpdate), arg0)
 }
 
+// CreateOrUpdateCredentialsRequest mocks base method.
+func (m *MockOperator) CreateOrUpdateCredentialsRequest(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateOrUpdateCredentialsRequest", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateOrUpdateCredentialsRequest indicates an expected call of CreateOrUpdateCredentialsRequest.
+func (mr *MockOperatorMockRecorder) CreateOrUpdateCredentialsRequest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateCredentialsRequest", reflect.TypeOf((*MockOperator)(nil).CreateOrUpdateCredentialsRequest), arg0)
+}
+
 // IsReady mocks base method.
 func (m *MockOperator) IsReady(arg0 context.Context) (bool, error) {
 	m.ctrl.T.Helper()
