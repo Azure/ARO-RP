@@ -22,8 +22,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
-var _ = FDescribe("Update clusters", func() {
-	FIt("must replace the ARO operator's CredentialsRequest if it has been deleted", func(ctx context.Context) {
+var _ = Describe("Update clusters", func() {
+	It("must replace the ARO operator's CredentialsRequest if it has been deleted", func(ctx context.Context) {
 		crNamespacedName := types.NamespacedName{
 			Namespace: "openshift-cloud-credential-operator",
 			Name:      "openshift-azure-operator",
