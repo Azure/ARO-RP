@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/operator"
 )
 
 // ensureDefaults will ensure cluster documents has all default values
@@ -31,7 +32,7 @@ func (m *manager) ensurePreconfiguredNSG(ctx context.Context) error {
 		var err error
 		m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 			flags := doc.OpenShiftCluster.Properties.OperatorFlags
-			flags["aro.azuresubnets.nsg.managed"] = "false"
+			flags[operator.AzureSubnetsNsgManaged] = operator.FlagFalse
 			return nil
 		})
 		if err != nil {

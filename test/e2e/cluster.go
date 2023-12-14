@@ -23,6 +23,7 @@ import (
 
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2022-09-04/redhatopenshift"
+	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -144,11 +145,11 @@ var _ = Describe("Cluster", Serial, func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// Poke the ARO storageaccount controller to reconcile
-			cluster.Spec.OperatorFlags["aro.storageaccounts.enabled"] = "false"
+			cluster.Spec.OperatorFlags[operator.StorageAccountsEnabled] = "false"
 			cluster, err = clients.AROClusters.AroV1alpha1().Clusters().Update(ctx, cluster, metav1.UpdateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
-			cluster.Spec.OperatorFlags["aro.storageaccounts.enabled"] = "true"
+			cluster.Spec.OperatorFlags[operator.StorageAccountsEnabled] = "true"
 			cluster, err = clients.AROClusters.AroV1alpha1().Clusters().Update(ctx, cluster, metav1.UpdateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 

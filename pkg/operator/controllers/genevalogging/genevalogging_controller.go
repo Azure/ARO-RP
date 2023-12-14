@@ -26,7 +26,7 @@ import (
 const (
 	ControllerName = "GenevaLogging"
 
-	controllerEnabled = "aro.genevalogging.enabled"
+	controllerEnabled = operator.GenevaLoggingEnabled
 	// full pullspec of fluentbit image
 	controllerFluentbitPullSpec = "aro.genevalogging.fluentbit.pullSpec"
 	// full pullspec of mdsd image

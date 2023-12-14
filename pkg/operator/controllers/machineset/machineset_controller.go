@@ -18,13 +18,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 )
 
 const (
 	ControllerName = "MachineSet"
 
-	ControllerEnabled = "aro.machineset.enabled"
+	ControllerEnabled = operator.MachineSetEnabled
 )
 
 type Reconciler struct {

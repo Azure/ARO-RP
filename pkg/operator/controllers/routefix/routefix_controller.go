@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -29,7 +30,7 @@ import (
 const (
 	ControllerName = "RouteFix"
 
-	controllerEnabled = "aro.routefix.enabled"
+	controllerEnabled = operator.RouteFixEnabled
 )
 
 // Reconciler is the controller struct

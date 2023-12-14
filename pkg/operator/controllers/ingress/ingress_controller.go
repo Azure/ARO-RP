@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 )
@@ -23,7 +24,7 @@ import (
 const (
 	ControllerName = "IngressControllerARO"
 
-	controllerEnabled                   = "aro.ingress.enabled"
+	controllerEnabled                   = operator.IngressEnabled
 	openshiftIngressControllerNamespace = "openshift-ingress-operator"
 	openshiftIngressControllerName      = "default"
 	minimumReplicas                     = 2

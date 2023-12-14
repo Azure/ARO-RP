@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
@@ -37,8 +38,8 @@ var mhcremediationalertYaml []byte
 
 const (
 	ControllerName      string = "MachineHealthCheck"
-	managed             string = "aro.machinehealthcheck.managed"
-	enabled             string = "aro.machinehealthcheck.enabled"
+	managed             string = operator.MachineHealthCheckManaged
+	enabled             string = operator.MachineHealthCheckEnabled
 	MHCPausedAnnotation string = "cluster.x-k8s.io/paused"
 )
 

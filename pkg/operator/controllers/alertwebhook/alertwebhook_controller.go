@@ -17,13 +17,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 )
 
 const (
 	ControllerName = "Alertwebhook"
 
-	controllerEnabled = "aro.alertwebhook.enabled"
+	controllerEnabled = operator.AlertWebhookEnabled
 )
 
 var alertManagerName = types.NamespacedName{Name: "alertmanager-main", Namespace: "openshift-monitoring"}

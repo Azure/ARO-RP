@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
 )
@@ -22,7 +23,7 @@ import (
 const (
 	ControllerName = "Machine"
 
-	controllerEnabled = "aro.machine.enabled"
+	controllerEnabled = operator.MachineEnabled
 )
 
 type Reconciler struct {

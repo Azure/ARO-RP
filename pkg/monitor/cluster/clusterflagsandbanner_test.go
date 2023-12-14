@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 )
@@ -117,32 +118,32 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 		},
 		{
 			name:          "cluster with non-standard operator flags",
-			operatorFlags: generateNonStandardFlags([]string{"aro.imageconfig.enabled", "aro.dnsmasq.enabled", "aro.genevalogging.enabled", "aro.autosizednodes.enabled"}),
+			operatorFlags: generateNonStandardFlags([]string{operator.ImageConfigEnabled, operator.DnsMasqEnabled, operator.GenevaLoggingEnabled, operator.AutosizedNodesEnabled}),
 			clusterBanner: arov1alpha1.Banner{
 				Content: "",
 			},
 			expectFlagsMetricsValue: 1,
 			expectFlagsMetricsDims: map[string]string{
-				"aro.imageconfig.enabled":    "false",
-				"aro.dnsmasq.enabled":        "false",
-				"aro.genevalogging.enabled":  "false",
-				"aro.autosizednodes.enabled": "false",
+				operator.ImageConfigEnabled:    "false",
+				operator.DnsMasqEnabled:        "false",
+				operator.GenevaLoggingEnabled:  "false",
+				operator.AutosizedNodesEnabled: "false",
 			},
 			expectBannerMetricsValue: 0,
 			expectBannerMetricsDims:  nil,
 		},
 		{
 			name:          "cluster with missing operator flags",
-			operatorFlags: generateFlagsWithMissingEntries([]string{"aro.imageconfig.enabled", "aro.dnsmasq.enabled", "aro.genevalogging.enabled", "aro.autosizednodes.enabled"}),
+			operatorFlags: generateFlagsWithMissingEntries([]string{operator.ImageConfigEnabled, operator.DnsMasqEnabled, operator.GenevaLoggingEnabled, operator.AutosizedNodesEnabled}),
 			clusterBanner: arov1alpha1.Banner{
 				Content: "",
 			},
 			expectFlagsMetricsValue: 1,
 			expectFlagsMetricsDims: map[string]string{
-				"aro.imageconfig.enabled":    "DNE",
-				"aro.dnsmasq.enabled":        "DNE",
-				"aro.genevalogging.enabled":  "DNE",
-				"aro.autosizednodes.enabled": "DNE",
+				operator.ImageConfigEnabled:    "DNE",
+				operator.DnsMasqEnabled:        "DNE",
+				operator.GenevaLoggingEnabled:  "DNE",
+				operator.AutosizedNodesEnabled: "DNE",
 			},
 			expectBannerMetricsValue: 0,
 			expectBannerMetricsDims:  nil,
@@ -160,16 +161,16 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 		},
 		{
 			name:          "cluster with non-standard operator flags and activated support banner",
-			operatorFlags: generateNonStandardFlags([]string{"aro.imageconfig.enabled", "aro.dnsmasq.enabled", "aro.genevalogging.enabled", "aro.autosizednodes.enabled"}),
+			operatorFlags: generateNonStandardFlags([]string{operator.ImageConfigEnabled, operator.DnsMasqEnabled, operator.GenevaLoggingEnabled, operator.AutosizedNodesEnabled}),
 			clusterBanner: arov1alpha1.Banner{
 				Content: arov1alpha1.BannerContactSupport,
 			},
 			expectFlagsMetricsValue: 1,
 			expectFlagsMetricsDims: map[string]string{
-				"aro.imageconfig.enabled":    "false",
-				"aro.dnsmasq.enabled":        "false",
-				"aro.genevalogging.enabled":  "false",
-				"aro.autosizednodes.enabled": "false",
+				operator.ImageConfigEnabled:    operator.FlagFalse,
+				operator.DnsMasqEnabled:        operator.FlagFalse,
+				operator.GenevaLoggingEnabled:  operator.FlagFalse,
+				operator.AutosizedNodesEnabled: operator.FlagFalse,
 			},
 			expectBannerMetricsValue: 1,
 			expectBannerMetricsDims:  map[string]string{"msg": "contact support"},

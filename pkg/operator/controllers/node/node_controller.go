@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 )
@@ -26,7 +27,7 @@ import (
 const (
 	ControllerName = "Node"
 
-	controllerEnabled = "aro.nodedrainer.enabled"
+	controllerEnabled = operator.NodeDrainerEnabled
 )
 
 // Reconciler spots nodes that look like they're stuck upgrading.  When this

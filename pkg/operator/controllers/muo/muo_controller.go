@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
 	"github.com/Azure/ARO-RP/pkg/util/deployer"
@@ -33,8 +34,8 @@ import (
 const (
 	ControllerName = "ManagedUpgradeOperator"
 
-	controllerEnabled                = "rh.srep.muo.enabled"
-	controllerManaged                = "rh.srep.muo.managed"
+	controllerEnabled                = operator.MuoEnabled
+	controllerManaged                = operator.MuoManaged
 	controllerPullSpec               = "rh.srep.muo.deploy.pullspec"
 	controllerForceLocalOnly         = "rh.srep.muo.deploy.forceLocalOnly"
 	controllerOcmBaseURL             = "rh.srep.muo.deploy.ocmBaseUrl"

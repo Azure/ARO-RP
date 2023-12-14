@@ -11,6 +11,7 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -18,9 +19,9 @@ import (
 
 const (
 	ControllerName               = "GuardRails"
-	controllerEnabled            = "aro.guardrails.enabled"
+	controllerEnabled            = operator.GuardrailsEnabled
 	controllerNamespace          = "aro.guardrails.namespace"
-	controllerManaged            = "aro.guardrails.deploy.managed"
+	controllerManaged            = operator.GuardrailsDeployManaged
 	controllerPullSpec           = "aro.guardrails.deploy.pullspec"
 	controllerManagerRequestsCPU = "aro.guardrails.deploy.manager.requests.cpu"
 	controllerManagerRequestsMem = "aro.guardrails.deploy.manager.requests.mem"

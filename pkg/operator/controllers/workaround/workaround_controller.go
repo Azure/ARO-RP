@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -21,7 +22,7 @@ import (
 const (
 	ControllerName = "Workaround"
 
-	controllerEnabled = "aro.workaround.enabled"
+	controllerEnabled = operator.WorkaroundEnabled
 )
 
 // Reconciler the point of the workaround controller is to apply

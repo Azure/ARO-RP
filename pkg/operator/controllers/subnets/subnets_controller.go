@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
@@ -29,9 +30,9 @@ import (
 const (
 	ControllerName = "AzureSubnets"
 
-	controllerEnabled                = "aro.azuresubnets.enabled"
-	controllerNSGManaged             = "aro.azuresubnets.nsg.managed"
-	controllerServiceEndpointManaged = "aro.azuresubnets.serviceendpoint.managed"
+	controllerEnabled                = operator.AzureSubnetsEnabled
+	controllerNSGManaged             = operator.AzureSubnetsNsgManaged
+	controllerServiceEndpointManaged = operator.AzureSubnetsServiceEndpointManaged
 )
 
 // Reconciler is the controller struct

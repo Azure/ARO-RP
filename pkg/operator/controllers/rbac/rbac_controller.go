@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
@@ -24,7 +25,7 @@ import (
 const (
 	ControllerName = "RBAC"
 
-	controllerEnabled = "aro.rbac.enabled"
+	controllerEnabled = operator.RbacEnabled
 )
 
 type Reconciler struct {

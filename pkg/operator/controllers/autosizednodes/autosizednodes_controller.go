@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 )
 
@@ -31,7 +32,7 @@ type Reconciler struct {
 const (
 	ControllerName = "AutoSizedNodes"
 
-	ControllerEnabled = "aro.autosizednodes.enabled"
+	ControllerEnabled = operator.AutosizedNodesEnabled
 	configName        = "dynamic-node"
 )
 

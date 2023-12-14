@@ -36,8 +36,8 @@ import (
 const (
 	ControllerName = "PullSecret"
 
-	controllerEnabled = "aro.pullsecret.enabled"
-	controllerManaged = "aro.pullsecret.managed"
+	controllerEnabled = operator.PullSecretEnabled
+	controllerManaged = operator.PullSecretManaged
 )
 
 var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
