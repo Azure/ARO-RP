@@ -1,5 +1,7 @@
 package api
 
+import "github.com/Azure/ARO-RP/pkg/operator"
+
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
@@ -72,34 +74,34 @@ const flagFalse string = "false"
 // and ones that have not been AdminUpdated.
 func DefaultOperatorFlags() OperatorFlags {
 	return OperatorFlags{
-		"aro.alertwebhook.enabled":                 flagTrue,
-		"aro.azuresubnets.enabled":                 flagTrue,
-		"aro.azuresubnets.nsg.managed":             flagTrue,
-		"aro.azuresubnets.serviceendpoint.managed": flagTrue,
-		"aro.banner.enabled":                       flagFalse,
-		"aro.checker.enabled":                      flagTrue,
-		"aro.dnsmasq.enabled":                      flagTrue,
-		"aro.restartdnsmasq.enabled":               flagTrue,
-		"aro.genevalogging.enabled":                flagTrue,
-		"aro.imageconfig.enabled":                  flagTrue,
-		"aro.ingress.enabled":                      flagTrue,
-		"aro.machine.enabled":                      flagTrue,
-		"aro.machineset.enabled":                   flagTrue,
-		"aro.machinehealthcheck.enabled":           flagTrue,
-		"aro.machinehealthcheck.managed":           flagTrue,
-		"aro.monitoring.enabled":                   flagTrue,
-		"aro.nodedrainer.enabled":                  flagTrue,
-		"aro.pullsecret.enabled":                   flagTrue,
-		"aro.pullsecret.managed":                   flagTrue,
-		"aro.rbac.enabled":                         flagTrue,
-		"aro.routefix.enabled":                     flagTrue,
-		"aro.storageaccounts.enabled":              flagTrue,
-		"aro.workaround.enabled":                   flagTrue,
-		"aro.autosizednodes.enabled":               flagTrue,
-		"rh.srep.muo.enabled":                      flagTrue,
-		"rh.srep.muo.managed":                      flagTrue,
-		"aro.guardrails.enabled":                   flagFalse,
-		"aro.guardrails.deploy.managed":            flagFalse,
-		"aro.cloudproviderconfig.enabled":          flagTrue,
+		operator.AlertWebhookEnabled:                operator.FlagTrue,
+		operator.AzureSubnetsEnabled:                operator.FlagTrue,
+		operator.AzureSubnetsNsgManaged:             operator.FlagTrue,
+		operator.AzureSubnetsServiceEndpointManaged: operator.FlagTrue,
+		operator.BannerEnabled:                      operator.FlagFalse,
+		operator.CheckerEnabled:                     operator.FlagTrue,
+		operator.DnsMasqEnabled:                     operator.FlagTrue,
+		operator.RestartDnsMasqEnabled:              operator.FlagTrue,
+		operator.GenevaLoggingEnabled:               operator.FlagTrue,
+		operator.ImageConfigEnabled:                 operator.FlagTrue,
+		operator.IngressEnabled:                     operator.FlagTrue,
+		operator.MachineEnabled:                     operator.FlagTrue,
+		operator.MachineSetEnabled:                  operator.FlagTrue,
+		operator.MachineHealthCheckEnabled:          operator.FlagTrue,
+		operator.MachineHealthCheckManaged:          operator.FlagTrue,
+		operator.MonitoringEnabled:                  operator.FlagTrue,
+		operator.NodeDrainerEnabled:                 operator.FlagTrue,
+		operator.PullSecretEnabled:                  operator.FlagTrue,
+		operator.PullSecretManaged:                  operator.FlagTrue,
+		operator.RbacEnabled:                        operator.FlagTrue,
+		operator.RouteFixEnabled:                    operator.FlagTrue,
+		operator.StorageAccountsEnabled:             operator.FlagTrue,
+		operator.WorkaroundEnabled:                  operator.FlagTrue,
+		operator.AutosizedNodesEnabled:              operator.FlagTrue,
+		operator.MuoEnabled:                         operator.FlagTrue,
+		operator.MuoManaged:                         operator.FlagTrue,
+		operator.GuardrailsEnabled:                  operator.FlagFalse,
+		operator.GuardrailsDeployManaged:            operator.FlagFalse,
+		operator.CloudProviderConfigEnabled:         operator.FlagTrue,
 	}
 }
