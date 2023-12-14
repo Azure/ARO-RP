@@ -71,12 +71,6 @@ const flagFalse string = "false"
 // DefaultOperatorFlags returns flags for new clusters
 // and ones that have not been AdminUpdated.
 func DefaultOperatorFlags() OperatorFlags {
-	// TODO: Get rid of magic strings.
-	// We already have constants for all of the below strings.
-	// For example `controllerEnabled` in `github.com/Azure/ARO-RP/pkg/operator/controllers/machine`.
-	// But if we import packages with constants here we will have a cyclic import issue because controllers
-	// import this package. We should probably move this somewhere else.
-	// Maybe into a subpackage like `github.com/Azure/ARO-RP/pkg/api/defaults`?
 	return OperatorFlags{
 		"aro.alertwebhook.enabled":                 flagTrue,
 		"aro.azuresubnets.enabled":                 flagTrue,
