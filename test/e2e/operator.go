@@ -376,7 +376,7 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		By("checking if preconfiguredNSG is enabled")
 		co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
-		if co.Spec.OperatorFlags[operator.AzureSubnetsNsgManaged] == "false" {
+		if co.Spec.OperatorFlags[operator.AzureSubnetsNsgManaged] == operator.FlagFalse {
 			Skip("preconfiguredNSG is enabled, skipping test")
 		}
 		By("preconfiguredNSG is disabled")
