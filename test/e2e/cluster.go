@@ -145,11 +145,11 @@ var _ = Describe("Cluster", Serial, func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// Poke the ARO storageaccount controller to reconcile
-			cluster.Spec.OperatorFlags[operator.StorageAccountsEnabled] = "false"
+			cluster.Spec.OperatorFlags[operator.StorageAccountsEnabled] = operator.FlagFalse
 			cluster, err = clients.AROClusters.AroV1alpha1().Clusters().Update(ctx, cluster, metav1.UpdateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
-			cluster.Spec.OperatorFlags[operator.StorageAccountsEnabled] = "true"
+			cluster.Spec.OperatorFlags[operator.StorageAccountsEnabled] = operator.FlagTrue
 			cluster, err = clients.AROClusters.AroV1alpha1().Clusters().Update(ctx, cluster, metav1.UpdateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
