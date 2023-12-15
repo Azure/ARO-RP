@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/fake"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -308,8 +309,7 @@ func TestPullSecretReconciler(t *testing.T) {
 				return
 			}
 
-			s := &corev1.Secret{}
-			s, err = r.secretsClient.Get(ctx, "pull-secret", metav1.GetOptions{})
+			s, err := r.secretsClient.Get(ctx, "pull-secret", metav1.GetOptions{})
 			if err != nil {
 				t.Error(err)
 			}
@@ -400,9 +400,8 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 			name: "Red Hat Key present",
 			initialSecret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            "pull-secret",
-					Namespace:       "openshift-config",
-					ResourceVersion: "1",
+					Name:      "pull-secret",
+					Namespace: "openshift-config",
 				},
 				Type: corev1.SecretTypeDockerConfigJson,
 				Data: map[string][]byte{
@@ -411,9 +410,8 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 			},
 			pullSecret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            "pull-secret",
-					Namespace:       "openshift-config",
-					ResourceVersion: "1",
+					Name:      "pull-secret",
+					Namespace: "openshift-config",
 				},
 				Data: map[string][]byte{
 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
@@ -427,9 +425,8 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 			},
 			wantSecret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            "pull-secret",
-					Namespace:       "openshift-config",
-					ResourceVersion: "1",
+					Name:      "pull-secret",
+					Namespace: "openshift-config",
 				},
 				Type: corev1.SecretTypeDockerConfigJson,
 				Data: map[string][]byte{
@@ -442,9 +439,8 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 			name: "Red Hat Key missing",
 			initialSecret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            "pull-secret",
-					Namespace:       "openshift-config",
-					ResourceVersion: "1",
+					Name:      "pull-secret",
+					Namespace: "openshift-config",
 				},
 				Type: corev1.SecretTypeDockerConfigJson,
 				Data: map[string][]byte{
@@ -467,10 +463,13 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 				},
 			},
 			wantSecret: &corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            "pull-secret",
-					Namespace:       "openshift-config",
-					ResourceVersion: "2",
+					Name:      "pull-secret",
+					Namespace: "openshift-config",
 				},
 				Data: map[string][]byte{
 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
@@ -482,9 +481,8 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 			name: "Red Hat key added should merge in",
 			initialSecret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            "pull-secret",
-					Namespace:       "openshift-config",
-					ResourceVersion: "1",
+					Name:      "pull-secret",
+					Namespace: "openshift-config",
 				},
 				Type: corev1.SecretTypeDockerConfigJson,
 				Data: map[string][]byte{
@@ -507,10 +505,13 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 				},
 			},
 			wantSecret: &corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            "pull-secret",
-					Namespace:       "openshift-config",
-					ResourceVersion: "2",
+					Name:      "pull-secret",
+					Namespace: "openshift-config",
 				},
 				Data: map[string][]byte{
 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
@@ -522,9 +523,8 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 			name: "Pull secret empty",
 			initialSecret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            "pull-secret",
-					Namespace:       "openshift-config",
-					ResourceVersion: "1",
+					Name:      "pull-secret",
+					Namespace: "openshift-config",
 				},
 				Type: corev1.SecretTypeDockerConfigJson,
 				Data: map[string][]byte{
@@ -543,10 +543,13 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 				Type: corev1.SecretTypeDockerConfigJson,
 			},
 			wantSecret: &corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            pullSecretName.Name,
-					Namespace:       pullSecretName.Namespace,
-					ResourceVersion: "1",
+					Name:      pullSecretName.Name,
+					Namespace: pullSecretName.Namespace,
 				},
 				Data: map[string][]byte{
 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
@@ -560,9 +563,8 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 			pullSecret:    nil,
 			operatorPullSecret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            pullSecretName.Name,
-					Namespace:       pullSecretName.Namespace,
-					ResourceVersion: "1",
+					Name:      pullSecretName.Name,
+					Namespace: pullSecretName.Namespace,
 				},
 				Data: map[string][]byte{
 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
@@ -570,10 +572,13 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 				Type: corev1.SecretTypeDockerConfigJson,
 			},
 			wantSecret: &corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            pullSecretName.Name,
-					Namespace:       pullSecretName.Namespace,
-					ResourceVersion: "1",
+					Name:      pullSecretName.Name,
+					Namespace: pullSecretName.Namespace,
 				},
 				Data: map[string][]byte{
 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
@@ -585,9 +590,8 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 			name: "Red Hat Key present but secret type broken",
 			initialSecret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            "pull-secret",
-					Namespace:       "openshift-config",
-					ResourceVersion: "1",
+					Name:      "pull-secret",
+					Namespace: "openshift-config",
 				},
 				Type: corev1.SecretTypeDockerConfigJson,
 				Data: map[string][]byte{
@@ -614,10 +618,13 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 				},
 			},
 			wantSecret: &corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            pullSecretName.Name,
-					Namespace:       pullSecretName.Namespace,
-					ResourceVersion: "1",
+					Name:      pullSecretName.Name,
+					Namespace: pullSecretName.Namespace,
 				},
 				Data: map[string][]byte{
 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
@@ -630,9 +637,8 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 			name: "Secret auth key broken broken",
 			initialSecret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            "pull-secret",
-					Namespace:       "openshift-config",
-					ResourceVersion: "1",
+					Name:      "pull-secret",
+					Namespace: "openshift-config",
 				},
 				Type: corev1.SecretTypeDockerConfigJson,
 				Data: map[string][]byte{
@@ -659,10 +665,13 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 				},
 			},
 			wantSecret: &corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            pullSecretName.Name,
-					Namespace:       pullSecretName.Namespace,
-					ResourceVersion: "2",
+					Name:      pullSecretName.Name,
+					Namespace: pullSecretName.Namespace,
 				},
 				Data: map[string][]byte{
 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
@@ -674,9 +683,8 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 			name: "Secret not parseable",
 			initialSecret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            "pull-secret",
-					Namespace:       "openshift-config",
-					ResourceVersion: "1",
+					Name:      "pull-secret",
+					Namespace: "openshift-config",
 				},
 				Type: corev1.SecretTypeDockerConfigJson,
 			},
@@ -696,10 +704,13 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 				},
 			},
 			wantSecret: &corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            pullSecretName.Name,
-					Namespace:       pullSecretName.Namespace,
-					ResourceVersion: "2",
+					Name:      pullSecretName.Name,
+					Namespace: pullSecretName.Namespace,
 				},
 				Data: map[string][]byte{
 					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
@@ -711,9 +722,8 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 			name: "Operator secret not parseable",
 			initialSecret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            "pull-secret",
-					Namespace:       "openshift-config",
-					ResourceVersion: "1",
+					Name:      "pull-secret",
+					Namespace: "openshift-config",
 				},
 				Type: corev1.SecretTypeDockerConfigJson,
 				Data: map[string][]byte{
@@ -742,9 +752,8 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 			name: "Operator secret nil",
 			initialSecret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            "pull-secret",
-					Namespace:       "openshift-config",
-					ResourceVersion: "1",
+					Name:      "pull-secret",
+					Namespace: "openshift-config",
 				},
 				Type: corev1.SecretTypeDockerConfigJson,
 				Data: map[string][]byte{
@@ -771,15 +780,20 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 
+			var kubernetesFake *fake.Clientset
 			clientBuilder := ctrlfake.NewClientBuilder()
 			if tt.initialSecret != nil {
 				clientBuilder = clientBuilder.WithObjects(tt.initialSecret)
+				kubernetesFake = serversideapply.CliWithApply([]string{"secrets"}, tt.initialSecret)
+			} else {
+				kubernetesFake = serversideapply.CliWithApply([]string{"secrets"})
 			}
 
 			r := &Reconciler{
 				AROController: base.AROController{
 					Client: clientBuilder.Build(),
 				},
+				secretsClient: kubernetesFake.CoreV1().Secrets(pullSecretName.Namespace),
 			}
 
 			s, err := r.ensureGlobalPullSecret(ctx, tt.operatorPullSecret, tt.pullSecret)

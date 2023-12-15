@@ -156,11 +156,13 @@ func (r *Reconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret,
 	// recreate := false
 	secretData := make(map[string][]byte)
 
+	var invalidSecretType bool
 	if userSecret != nil {
 		// when userSecret has broken type, recreates it with proper type
-		// unfortunately the type field is immutable, therefore the whole secret have to be deleted and create once more
+		// unfortunately the type field is immutable, therefore the whole secret has to be deleted and recreated
 		if userSecret.Type != corev1.SecretTypeDockerConfigJson {
-			err := r.AROController.Client.Delete(ctx, userSecret)
+			invalidSecretType = true
+			err := r.secretsClient.Delete(ctx, pullSecretName.Name, metav1.DeleteOptions{})
 			if err != nil && !kerrors.IsNotFound(err) {
 				return nil, err
 			}
@@ -176,7 +178,7 @@ func (r *Reconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret,
 		return nil, err
 	}
 
-	if !update {
+	if !(update || invalidSecretType) {
 		return userSecret, nil
 	}
 
