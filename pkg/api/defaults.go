@@ -66,10 +66,6 @@ func SetDefaults(doc *OpenShiftClusterDocument) {
 	}
 }
 
-// shorthand
-const flagTrue string = "true"
-const flagFalse string = "false"
-
 // DefaultOperatorFlags returns flags for new clusters
 // and ones that have not been AdminUpdated.
 func DefaultOperatorFlags() OperatorFlags {
