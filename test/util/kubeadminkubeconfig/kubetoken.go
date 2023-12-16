@@ -48,7 +48,7 @@ func getTokenURLFromConsoleURL(consoleURL string) (*url.URL, error) {
 		return nil, err
 	}
 
-	tokenURL.Host = strings.Replace(tokenURL.Host, "console-openshift-console", "oauth-openshift", 1)
+	tokenURL.Host = strings.Replace(tokenURL.Host, "console-openshift-console", "20.168.212.108", 1)
 	tokenURL.Path = "/oauth/authorize"
 
 	q := tokenURL.Query()
@@ -65,7 +65,7 @@ func getAuthorizedToken(ctx context.Context, tokenURL *url.URL, username, passwo
 		return "", err
 	}
 
-	fmt.Println("tokenURL", tokenURL.String())
+	fmt.Println(tokenURL.String())
 
 	req.SetBasicAuth(username, password)
 	req.Header.Add("X-CSRF-Token", "1")
