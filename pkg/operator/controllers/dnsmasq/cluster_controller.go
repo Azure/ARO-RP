@@ -23,9 +23,6 @@ import (
 
 const (
 	ClusterControllerName = "DnsmasqCluster"
-
-	controllerEnabled     = operator.DnsMasqEnabled
-	restartDnsmasqEnabled = operator.RestartDnsMasqEnabled
 )
 
 type ClusterReconciler struct {
@@ -52,12 +49,12 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.DnsMasqEnabled) {
 		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
-	restartDnsmasq := instance.Spec.OperatorFlags.GetSimpleBoolean(restartDnsmasqEnabled)
+	restartDnsmasq := instance.Spec.OperatorFlags.GetSimpleBoolean(operator.RestartDnsMasqEnabled)
 	if restartDnsmasq {
 		r.Log.Debug("restartDnsmasq is enabled")
 	}
