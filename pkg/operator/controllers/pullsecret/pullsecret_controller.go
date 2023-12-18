@@ -35,9 +35,6 @@ import (
 
 const (
 	ControllerName = "PullSecret"
-
-	controllerEnabled = operator.PullSecretEnabled
-	controllerManaged = operator.PullSecretManaged
 )
 
 var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
@@ -73,7 +70,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.PullSecretEnabled) {
 		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
@@ -87,7 +84,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	// reconcile global pull secret
 	// detects if the global pull secret is broken and fixes it by using backup managed by ARO operator
-	if instance.Spec.OperatorFlags.GetSimpleBoolean(controllerManaged) {
+	if instance.Spec.OperatorFlags.GetSimpleBoolean(operator.PullSecretManaged) {
 		operatorSecret := &corev1.Secret{}
 		err = r.client.Get(ctx, types.NamespacedName{Namespace: operator.Namespace, Name: operator.SecretName}, operatorSecret)
 		if err != nil {
