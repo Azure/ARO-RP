@@ -23,8 +23,6 @@ import (
 
 const (
 	ControllerName = "Alertwebhook"
-
-	controllerEnabled = operator.AlertWebhookEnabled
 )
 
 var alertManagerName = types.NamespacedName{Name: "alertmanager-main", Namespace: "openshift-monitoring"}
@@ -51,7 +49,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.AlertWebhookEnabled) {
 		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
