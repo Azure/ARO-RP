@@ -74,7 +74,7 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 		{
 			name: "no flags given",
 			operatorFlags: arov1alpha1.OperatorFlags{
-				controllerEnabled: "true",
+				operator.GenevaLoggingEnabled: operator.FlagTrue,
 			},
 			validateDaemonset: func(d *appsv1.DaemonSet) (errs []error) {
 				if len(d.Spec.Template.Spec.Containers) != 2 {
@@ -110,8 +110,8 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 		{
 			name: "fluentbit changed",
 			operatorFlags: arov1alpha1.OperatorFlags{
-				controllerEnabled:           "true",
-				controllerFluentbitPullSpec: "otherurl/fluentbit",
+				operator.GenevaLoggingEnabled: operator.FlagTrue,
+				controllerFluentbitPullSpec:   "otherurl/fluentbit",
 			},
 			validateDaemonset: func(d *appsv1.DaemonSet) (errs []error) {
 				if len(d.Spec.Template.Spec.Containers) != 2 {
@@ -147,8 +147,8 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 		{
 			name: "mdsd changed",
 			operatorFlags: arov1alpha1.OperatorFlags{
-				controllerEnabled:      "true",
-				controllerMDSDPullSpec: "otherurl/mdsd",
+				operator.GenevaLoggingEnabled: operator.FlagTrue,
+				controllerMDSDPullSpec:        "otherurl/mdsd",
 			},
 			validateDaemonset: func(d *appsv1.DaemonSet) (errs []error) {
 				if len(d.Spec.Template.Spec.Containers) != 2 {
@@ -261,7 +261,7 @@ func TestGenevaConfigMapResources(t *testing.T) {
 		{
 			name: "enabled",
 			operatorFlags: arov1alpha1.OperatorFlags{
-				controllerEnabled: "true",
+				operator.GenevaLoggingEnabled: operator.FlagTrue,
 			},
 			validate: func(r []runtime.Object) (errs []error) {
 				maps := make(map[string]*corev1.ConfigMap)
