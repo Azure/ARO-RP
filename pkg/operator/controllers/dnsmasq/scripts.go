@@ -6,6 +6,9 @@ package dnsmasq
 import _ "embed"
 
 //go:embed scripts/dnsmasq.conf.gotmpl
+var configFilePre413 string
+
+//go:embed scripts/00-aro-dns.conf.gotmpl
 var configFile string
 
 //go:embed scripts/dnsmasq.service.gotmpl

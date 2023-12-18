@@ -58,6 +58,7 @@ func (r *MachineConfigPoolReconciler) Reconcile(ctx context.Context, request ctr
 	}
 
 	r.Log.Debug("running")
+
 	mcp := &mcv1.MachineConfigPool{}
 	err = r.Client.Get(ctx, types.NamespacedName{Name: request.Name}, mcp)
 	if kerrors.IsNotFound(err) {
@@ -70,7 +71,14 @@ func (r *MachineConfigPoolReconciler) Reconcile(ctx context.Context, request ctr
 		return reconcile.Result{}, err
 	}
 
-	err = reconcileMachineConfigs(ctx, instance, r.dh, restartDnsmasq, *mcp)
+	desiredClusterVersion, err := r.GetDesiredVersion(ctx)
+	if err != nil {
+		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
+		return reconcile.Result{}, err
+	}
+
+	err = reconcileMachineConfigs(ctx, instance, desiredClusterVersion, r.dh, restartDnsmasq, *mcp)
 	if err != nil {
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)

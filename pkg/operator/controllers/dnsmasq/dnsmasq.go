@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"text/template"
 
+	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/coreos/go-semver/semver"
 	ign3types "github.com/coreos/ignition/v2/config/v3_2/types"
@@ -20,9 +21,10 @@ import (
 )
 
 const (
-	configFileName    = "dnsmasq.conf"
-	unitFileName      = "dnsmasq.service"
-	prescriptFileName = "aro-dnsmasq-pre.sh"
+	configFileNamePre413 = "dnsmasq.conf"
+	configFileName       = "00-aro-dns.conf"
+	unitFileName         = "aro-dnsmasq.service"
+	prescriptFileName    = "aro-dnsmasq-pre.sh"
 )
 
 func config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains []string, gatewayPrivateEndpointIP string) ([]byte, error) {
@@ -30,6 +32,30 @@ func config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains []string, 
 	buf := &bytes.Buffer{}
 
 	err := t.ExecuteTemplate(buf, configFileName, &struct {
+		ClusterDomain            string
+		APIIntIP                 string
+		IngressIP                string
+		GatewayDomains           []string
+		GatewayPrivateEndpointIP string
+	}{
+		ClusterDomain:            clusterDomain,
+		APIIntIP:                 apiIntIP,
+		IngressIP:                ingressIP,
+		GatewayDomains:           gatewayDomains,
+		GatewayPrivateEndpointIP: gatewayPrivateEndpointIP,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
+func configPre413(clusterDomain, apiIntIP, ingressIP string, gatewayDomains []string, gatewayPrivateEndpointIP string) ([]byte, error) {
+	t := template.Must(template.New(configFileNamePre413).Parse(configFilePre413))
+	buf := &bytes.Buffer{}
+
+	err := t.ExecuteTemplate(buf, configFileNamePre413, &struct {
 		ClusterDomain            string
 		APIIntIP                 string
 		IngressIP                string
@@ -73,13 +99,68 @@ func startpre() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func ignition3Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains []string, gatewayPrivateEndpointIP string, restartDnsmasq bool) (*ign3types.Config, error) {
+func ignition3Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains []string, gatewayPrivateEndpointIP string) (*ign3types.Config, error) {
+	config, err := config(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP)
+	if err != nil {
+		return nil, err
+	}
+
+	ign := &ign3types.Config{
+		Ignition: ign3types.Ignition{
+			// This Ignition Config version should be kept up to date with the default
+			// rendered Ignition Config version from the Machine Config Operator version
+			// on the lowest OCP version we support (4.7).
+			Version: semver.Version{
+				Major: 3,
+				Minor: 2,
+			}.String(),
+		},
+		Storage: ign3types.Storage{
+			Files: []ign3types.File{
+				{
+					Node: ign3types.Node{
+						Overwrite: to.BoolPtr(true),
+						Path:      "/etc/NetworkManager/conf.d/00-use-dnsmasq-aro.conf",
+						User: ign3types.NodeUser{
+							Name: to.StringPtr("root"),
+						},
+					},
+					FileEmbedded1: ign3types.FileEmbedded1{
+						Contents: ign3types.Resource{
+							Source: to.StringPtr(dataurl.EncodeBytes([]byte("[main]\ndns=dnsmasq"))),
+						},
+						Mode: to.IntPtr(0644),
+					},
+				},
+				{
+					Node: ign3types.Node{
+						Overwrite: to.BoolPtr(true),
+						Path:      "/etc/NetworkManager/dnsmasq.d/00-aro-dns.conf",
+						User: ign3types.NodeUser{
+							Name: to.StringPtr("root"),
+						},
+					},
+					FileEmbedded1: ign3types.FileEmbedded1{
+						Contents: ign3types.Resource{
+							Source: to.StringPtr(dataurl.EncodeBytes(config)),
+						},
+						Mode: to.IntPtr(0644),
+					},
+				},
+			},
+		},
+	}
+
+	return ign, nil
+}
+
+func ignition3ConfigPre413(clusterDomain, apiIntIP, ingressIP string, gatewayDomains []string, gatewayPrivateEndpointIP string, restartDnsmasq bool) (*ign3types.Config, error) {
 	service, err := service()
 	if err != nil {
 		return nil, err
 	}
 
-	config, err := config(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP)
+	config, err := configPre413(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP)
 	if err != nil {
 		return nil, err
 	}
@@ -156,10 +237,20 @@ func ignition3Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains [
 	return ign, nil
 }
 
-func dnsmasqMachineConfig(clusterDomain, apiIntIP, ingressIP, role string, gatewayDomains []string, gatewayPrivateEndpointIP string, restartDnsmasq bool) (*mcv1.MachineConfig, error) {
-	ignConfig, err := ignition3Config(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP, restartDnsmasq)
-	if err != nil {
-		return nil, err
+func dnsmasqMachineConfig(clusterDomain, apiIntIP, ingressIP, role string, gatewayDomains []string, gatewayPrivateEndpointIP string, restartDnsmasq bool, desiredClusterVersion *version.Version) (*mcv1.MachineConfig, error) {
+	var ignConfig *ign3types.Config
+	var err error
+
+	if desiredClusterVersion.Lt(version.NewVersion(4, 13, 0)) {
+		ignConfig, err = ignition3ConfigPre413(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP, restartDnsmasq)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		ignConfig, err = ignition3Config(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	b, err := json.Marshal(ignConfig)

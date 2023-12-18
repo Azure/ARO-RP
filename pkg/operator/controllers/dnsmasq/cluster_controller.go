@@ -18,6 +18,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 const (
@@ -70,7 +71,14 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		return reconcile.Result{}, err
 	}
 
-	err = reconcileMachineConfigs(ctx, instance, r.dh, restartDnsmasq, mcps.Items...)
+	desiredClusterVersion, err := r.GetDesiredVersion(ctx)
+	if err != nil {
+		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
+		return reconcile.Result{}, err
+	}
+
+	err = reconcileMachineConfigs(ctx, instance, desiredClusterVersion, r.dh, restartDnsmasq, mcps.Items...)
 	if err != nil {
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)
@@ -93,10 +101,10 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, dh dynamichelper.Interface, restartDnsmasq bool, mcps ...mcv1.MachineConfigPool) error {
+func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, desiredClusterVersion *version.Version, dh dynamichelper.Interface, restartDnsmasq bool, mcps ...mcv1.MachineConfigPool) error {
 	var resources []kruntime.Object
 	for _, mcp := range mcps {
-		resource, err := dnsmasqMachineConfig(instance.Spec.Domain, instance.Spec.APIIntIP, instance.Spec.IngressIP, mcp.Name, instance.Spec.GatewayDomains, instance.Spec.GatewayPrivateEndpointIP, restartDnsmasq)
+		resource, err := dnsmasqMachineConfig(instance.Spec.Domain, instance.Spec.APIIntIP, instance.Spec.IngressIP, mcp.Name, instance.Spec.GatewayDomains, instance.Spec.GatewayPrivateEndpointIP, restartDnsmasq, desiredClusterVersion)
 		if err != nil {
 			return err
 		}
