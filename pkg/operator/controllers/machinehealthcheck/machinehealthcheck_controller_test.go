@@ -6,7 +6,6 @@ package machinehealthcheck
 import (
 	"context"
 	"errors"
-	"strconv"
 	"testing"
 	"time"
 
@@ -20,6 +19,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
@@ -82,7 +82,7 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(false),
+						operator.MachineHealthCheckEnabled: operator.FlagFalse,
 					},
 				},
 				Status: arov1alpha1.ClusterStatus{
@@ -104,8 +104,8 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(true),
-						managed: strconv.FormatBool(false),
+						operator.MachineHealthCheckEnabled: operator.FlagTrue,
+						operator.MachineHealthCheckManaged: operator.FlagFalse,
 					},
 				},
 				Status: arov1alpha1.ClusterStatus{
@@ -127,8 +127,8 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(true),
-						managed: strconv.FormatBool(false),
+						operator.MachineHealthCheckEnabled: operator.FlagTrue,
+						operator.MachineHealthCheckManaged: operator.FlagFalse,
 					},
 				},
 				Status: arov1alpha1.ClusterStatus{
@@ -159,8 +159,8 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(true),
-						managed: strconv.FormatBool(false),
+						operator.MachineHealthCheckEnabled: operator.FlagTrue,
+						operator.MachineHealthCheckManaged: operator.FlagFalse,
 					},
 				},
 				Status: arov1alpha1.ClusterStatus{
@@ -192,8 +192,8 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(true),
-						managed: strconv.FormatBool(true),
+						operator.MachineHealthCheckEnabled: operator.FlagTrue,
+						operator.MachineHealthCheckManaged: operator.FlagTrue,
 					},
 				},
 			},
@@ -211,8 +211,8 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(true),
-						managed: strconv.FormatBool(true),
+						operator.MachineHealthCheckEnabled: operator.FlagTrue,
+						operator.MachineHealthCheckManaged: operator.FlagTrue,
 					},
 				},
 			},
@@ -230,8 +230,8 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(true),
-						managed: strconv.FormatBool(true),
+						operator.MachineHealthCheckEnabled: operator.FlagTrue,
+						operator.MachineHealthCheckManaged: operator.FlagTrue,
 					},
 				},
 				Status: arov1alpha1.ClusterStatus{
