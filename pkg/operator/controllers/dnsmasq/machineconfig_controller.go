@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
@@ -50,12 +51,12 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.DnsMasqEnabled) {
 		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
-	if instance.Spec.OperatorFlags.GetSimpleBoolean(restartDnsmasqEnabled) {
+	if instance.Spec.OperatorFlags.GetSimpleBoolean(operator.RestartDnsMasqEnabled) {
 		r.Log.Debug("restart dnsmasq machineconfig enabled")
 	}
 
@@ -81,7 +82,7 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		return reconcile.Result{}, nil
 	}
 
-	err = reconcileMachineConfigs(ctx, instance, r.dh, instance.Spec.OperatorFlags.GetSimpleBoolean(restartDnsmasqEnabled), *mcp)
+	err = reconcileMachineConfigs(ctx, instance, r.dh, instance.Spec.OperatorFlags.GetSimpleBoolean(operator.RestartDnsMasqEnabled), *mcp)
 	if err != nil {
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)

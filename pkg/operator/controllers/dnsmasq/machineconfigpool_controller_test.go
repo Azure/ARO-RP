@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
@@ -60,7 +61,7 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							controllerEnabled: "false",
+							operator.DnsMasqEnabled: operator.FlagFalse,
 						},
 					},
 				},
@@ -87,7 +88,7 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							controllerEnabled: "true",
+							operator.DnsMasqEnabled: operator.FlagTrue,
 						},
 					},
 				},
@@ -112,7 +113,7 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							controllerEnabled: "true",
+							operator.DnsMasqEnabled: operator.FlagTrue,
 						},
 					},
 				},
