@@ -22,9 +22,7 @@ import (
 )
 
 const (
-	ControllerName = "IngressControllerARO"
-
-	controllerEnabled                   = operator.IngressEnabled
+	ControllerName                      = "IngressControllerARO"
 	openshiftIngressControllerNamespace = "openshift-ingress-operator"
 	openshiftIngressControllerName      = "default"
 	minimumReplicas                     = 2
@@ -52,7 +50,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.IngressEnabled) {
 		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
