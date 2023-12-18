@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
@@ -202,7 +203,7 @@ func TestReconciler(t *testing.T) {
 				Spec: arov1alpha1.ClusterSpec{
 					InfraID: "aro-fake",
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						ControllerEnabled: strconv.FormatBool(tt.featureFlag),
+						operator.MachineSetEnabled: strconv.FormatBool(tt.featureFlag),
 					},
 				},
 				Status: arov1alpha1.ClusterStatus{

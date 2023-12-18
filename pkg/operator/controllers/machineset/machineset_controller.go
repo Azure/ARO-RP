@@ -24,8 +24,6 @@ import (
 
 const (
 	ControllerName = "MachineSet"
-
-	ControllerEnabled = operator.MachineSetEnabled
 )
 
 type Reconciler struct {
@@ -49,7 +47,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ControllerEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.MachineSetEnabled) {
 		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
