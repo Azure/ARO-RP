@@ -31,9 +31,7 @@ type Reconciler struct {
 
 const (
 	ControllerName = "AutoSizedNodes"
-
-	ControllerEnabled = operator.AutosizedNodesEnabled
-	configName        = "dynamic-node"
+	configName     = "dynamic-node"
 )
 
 func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
@@ -54,14 +52,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	r.log.Infof("Config changed, autoSize: %t\n", aro.Spec.OperatorFlags.GetSimpleBoolean(ControllerEnabled))
+	r.log.Infof("Config changed, autoSize: %t\n", aro.Spec.OperatorFlags.GetSimpleBoolean(operator.AutosizedNodesEnabled))
 
 	// key is used to locate the object in the etcd
 	key := types.NamespacedName{
 		Name: configName,
 	}
 
-	if !aro.Spec.OperatorFlags.GetSimpleBoolean(ControllerEnabled) {
+	if !aro.Spec.OperatorFlags.GetSimpleBoolean(operator.AutosizedNodesEnabled) {
 		// defaults to deleting the config
 		config := mcv1.KubeletConfig{
 			ObjectMeta: metav1.ObjectMeta{
