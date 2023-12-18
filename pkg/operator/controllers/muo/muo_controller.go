@@ -32,10 +32,7 @@ import (
 )
 
 const (
-	ControllerName = "ManagedUpgradeOperator"
-
-	controllerEnabled                = operator.MuoEnabled
-	controllerManaged                = operator.MuoManaged
+	ControllerName                   = "ManagedUpgradeOperator"
 	controllerPullSpec               = "rh.srep.muo.deploy.pullspec"
 	controllerForceLocalOnly         = "rh.srep.muo.deploy.forceLocalOnly"
 	controllerOcmBaseURL             = "rh.srep.muo.deploy.ocmBaseUrl"
@@ -86,14 +83,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.MuoEnabled) {
 		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
 	r.log.Debug("running")
 
-	managed := instance.Spec.OperatorFlags.GetWithDefault(controllerManaged, "")
+	managed := instance.Spec.OperatorFlags.GetWithDefault(operator.MuoManaged, "")
 
 	// If enabled and managed=true, install MUO
 	// If enabled and managed=false, remove the MUO deployment
