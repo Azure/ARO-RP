@@ -16,6 +16,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
@@ -143,7 +144,7 @@ func TestBannerReconcile(t *testing.T) {
 						Content: arov1alpha1.BannerContent(tt.bannerSetting),
 					},
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						controllerEnabled: strconv.FormatBool(tt.featureFlag),
+						operator.BannerEnabled: strconv.FormatBool(tt.featureFlag),
 					},
 				},
 			}
