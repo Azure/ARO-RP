@@ -26,8 +26,6 @@ import (
 
 const (
 	ControllerName = "Node"
-
-	controllerEnabled = operator.NodeDrainerEnabled
 )
 
 // Reconciler spots nodes that look like they're stuck upgrading.  When this
@@ -56,7 +54,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.NodeDrainerEnabled) {
 		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
