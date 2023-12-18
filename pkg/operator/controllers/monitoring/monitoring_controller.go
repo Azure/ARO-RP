@@ -31,8 +31,6 @@ import (
 
 const (
 	ControllerName = "Monitoring"
-
-	controllerEnabled = operator.MonitoringEnabled
 )
 
 var (
@@ -79,7 +77,7 @@ func (r *MonitoringReconciler) Reconcile(ctx context.Context, request ctrl.Reque
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.MonitoringEnabled) {
 		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
