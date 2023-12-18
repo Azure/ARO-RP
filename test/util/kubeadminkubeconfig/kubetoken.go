@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -47,8 +48,11 @@ func getTokenURLFromConsoleURL(consoleURL string) (*url.URL, error) {
 		return nil, err
 	}
 
-	tokenURL.Host = "20.168.212.108"
+	tokenURL.Host = strings.Replace(tokenURL.Host, "console-openshift-console", "oauth-openshift", 1)
+	// tokenURL.Host = "20.168.212.108"
 	tokenURL.Path = "/oauth/authorize"
+
+	fmt.Println(tokenURL.Host)
 
 	q := tokenURL.Query()
 	q.Set("response_type", "token")
