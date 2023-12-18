@@ -26,8 +26,7 @@ import (
 )
 
 const (
-	ControllerName    = "CloudProviderConfig"
-	controllerEnabled = operator.CloudProviderConfigEnabled
+	ControllerName = "CloudProviderConfig"
 )
 
 var cloudProviderConfigName = types.NamespacedName{Name: "cloud-provider-config", Namespace: "openshift-config"}
@@ -152,7 +151,7 @@ func (r *CloudProviderConfigReconciler) Reconcile(ctx context.Context, request c
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.CloudProviderConfigEnabled) {
 		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}

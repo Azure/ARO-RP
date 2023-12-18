@@ -17,6 +17,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
@@ -105,7 +106,7 @@ func TestReconcileCloudProviderConfig(t *testing.T) {
 			},
 			Spec: arov1alpha1.ClusterSpec{
 				OperatorFlags: arov1alpha1.OperatorFlags{
-					controllerEnabled: "true",
+					operator.CloudProviderConfigEnabled: operator.FlagTrue,
 				},
 			},
 		}
