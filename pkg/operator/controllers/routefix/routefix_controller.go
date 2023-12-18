@@ -29,8 +29,6 @@ import (
 
 const (
 	ControllerName = "RouteFix"
-
-	controllerEnabled = operator.RouteFixEnabled
 )
 
 // Reconciler is the controller struct
@@ -70,7 +68,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.RouteFixEnabled) {
 		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
