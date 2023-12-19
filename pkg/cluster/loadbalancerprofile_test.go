@@ -19,24 +19,60 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/loadbalancer"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	uuidfake "github.com/Azure/ARO-RP/pkg/util/uuid/fake"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
+var (
+	clusterRGID = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG"
+	// Define the DB instance we will use to run the PatchWithLease function
+	key      = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName"
+	location = "eastus"
+)
+
+func newFakeManager() manager {
+	return manager{
+		doc: &api.OpenShiftClusterDocument{
+			Key: strings.ToLower(key),
+			OpenShiftCluster: &api.OpenShiftCluster{
+				ID:       key,
+				Location: location,
+				Properties: api.OpenShiftClusterProperties{
+					ArchitectureVersion: api.ArchitectureVersionV2,
+					ProvisioningState:   api.ProvisioningStateUpdating,
+					ClusterProfile: api.ClusterProfile{
+						ResourceGroupID: clusterRGID,
+					},
+					InfraID: "infraID",
+					APIServerProfile: api.APIServerProfile{
+						Visibility: api.VisibilityPublic,
+					},
+					NetworkProfile: api.NetworkProfile{
+						OutboundType: api.OutboundTypeLoadbalancer,
+						LoadBalancerProfile: &api.LoadBalancerProfile{
+							ManagedOutboundIPs: &api.ManagedOutboundIPs{
+								Count: 1,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 func TestReconcileOutboundIPs(t *testing.T) {
 	ctx := context.Background()
-	infraID := "infraID"
-	clusterRGID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG"
-	clusterRGName := "clusterRG"
-	location := "eastus"
+	clusterRGName := stringutils.LastTokenByte(clusterRGID, '/')
 
 	// Run tests
 	for _, tt := range []struct {
-		name  string
-		m     manager
-		uuids []string
-		mocks func(
+		name    string
+		manager func() manager
+		uuids   []string
+		mocks   func(
 			publicIPAddressClient *mock_network.MockPublicIPAddressesClient,
 			ctx context.Context)
 		expectedOutboundIPS []api.ResourceReference
@@ -44,25 +80,14 @@ func TestReconcileOutboundIPs(t *testing.T) {
 	}{
 		{
 			name: "create 1 additional managed ip",
-			m: manager{
-				doc: &api.OpenShiftClusterDocument{
-					OpenShiftCluster: &api.OpenShiftCluster{
-						Location: location,
-						Properties: api.OpenShiftClusterProperties{
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: clusterRGID,
-							},
-							InfraID: infraID,
-							NetworkProfile: api.NetworkProfile{
-								LoadBalancerProfile: &api.LoadBalancerProfile{
-									ManagedOutboundIPs: &api.ManagedOutboundIPs{
-										Count: 3,
-									},
-								},
-							},
-						},
+			manager: func() manager {
+				manager := newFakeManager()
+				manager.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile = &api.LoadBalancerProfile{
+					ManagedOutboundIPs: &api.ManagedOutboundIPs{
+						Count: 3,
 					},
-				},
+				}
+				return manager
 			},
 			uuids: []string{"uuid2"},
 			mocks: func(
@@ -79,25 +104,14 @@ func TestReconcileOutboundIPs(t *testing.T) {
 		},
 		{
 			name: "no additional managed ip needed",
-			m: manager{
-				doc: &api.OpenShiftClusterDocument{
-					OpenShiftCluster: &api.OpenShiftCluster{
-						Location: location,
-						Properties: api.OpenShiftClusterProperties{
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: clusterRGID,
-							},
-							InfraID: infraID,
-							NetworkProfile: api.NetworkProfile{
-								LoadBalancerProfile: &api.LoadBalancerProfile{
-									ManagedOutboundIPs: &api.ManagedOutboundIPs{
-										Count: 2,
-									},
-								},
-							},
-						},
+			manager: func() manager {
+				manager := newFakeManager()
+				manager.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile = &api.LoadBalancerProfile{
+					ManagedOutboundIPs: &api.ManagedOutboundIPs{
+						Count: 2,
 					},
-				},
+				}
+				return manager
 			},
 			uuids: []string{},
 			mocks: func(
@@ -111,7 +125,8 @@ func TestReconcileOutboundIPs(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.m.log = logrus.NewEntry(logrus.StandardLogger())
+			m := tt.manager()
+			m.log = logrus.NewEntry(logrus.StandardLogger())
 			uuid.DefaultGenerator = uuidfake.NewGenerator(tt.uuids)
 			controller := gomock.NewController(t)
 			defer controller.Finish()
@@ -120,13 +135,13 @@ func TestReconcileOutboundIPs(t *testing.T) {
 			if tt.mocks != nil {
 				tt.mocks(publicIPAddressClient, ctx)
 			}
-			tt.m.publicIPAddresses = publicIPAddressClient
+			m.publicIPAddresses = publicIPAddressClient
 
 			// Run reconcileOutboundIPs and assert the correct results
-			outboundIPs, err := tt.m.reconcileOutboundIPs(ctx)
+			outboundIPs, err := m.reconcileOutboundIPs(ctx)
 			assert.Equal(t, tt.expectedErr, err, "Unexpected error exception")
 			// results are not deterministic when scaling down so just check desired length
-			assert.Len(t, outboundIPs, tt.m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs.Count)
+			assert.Len(t, outboundIPs, m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs.Count)
 		})
 	}
 }
@@ -134,14 +149,13 @@ func TestReconcileOutboundIPs(t *testing.T) {
 func TestDeleteUnusedManagedIPs(t *testing.T) {
 	ctx := context.Background()
 	infraID := "infraID"
-	clusterRGID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG"
-	clusterRGName := "clusterRG"
+	clusterRGName := stringutils.LastTokenByte(clusterRGID, '/')
 
 	// Run tests
 	for _, tt := range []struct {
-		name  string
-		m     manager
-		mocks func(
+		name    string
+		manager func() manager
+		mocks   func(
 			publicIPAddressClient *mock_network.MockPublicIPAddressesClient,
 			loadBalancersClient *mock_network.MockLoadBalancersClient,
 			ctx context.Context)
@@ -150,29 +164,16 @@ func TestDeleteUnusedManagedIPs(t *testing.T) {
 	}{
 		{
 			name: "delete unused managed IPs except api server ip",
-			m: manager{
-				doc: &api.OpenShiftClusterDocument{
-					OpenShiftCluster: &api.OpenShiftCluster{
-						Properties: api.OpenShiftClusterProperties{
-							APIServerProfile: api.APIServerProfile{
-								Visibility: api.VisibilityPublic,
-							},
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: clusterRGID,
-							},
-							InfraID: infraID,
-							NetworkProfile: api.NetworkProfile{
-								LoadBalancerProfile: &api.LoadBalancerProfile{
-									EffectiveOutboundIPs: []api.EffectiveOutboundIP{
-										{
-											ID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-pip-v4",
-										},
-									},
-								},
-							},
+			manager: func() manager {
+				manager := newFakeManager()
+				manager.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile = &api.LoadBalancerProfile{
+					EffectiveOutboundIPs: []api.EffectiveOutboundIP{
+						{
+							ID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-pip-v4",
 						},
 					},
-				},
+				}
+				return manager
 			},
 			mocks: func(
 				publicIPAddressClient *mock_network.MockPublicIPAddressesClient,
@@ -190,29 +191,17 @@ func TestDeleteUnusedManagedIPs(t *testing.T) {
 		},
 		{
 			name: "delete unused managed IPs",
-			m: manager{
-				doc: &api.OpenShiftClusterDocument{
-					OpenShiftCluster: &api.OpenShiftCluster{
-						Properties: api.OpenShiftClusterProperties{
-							APIServerProfile: api.APIServerProfile{
-								Visibility: api.VisibilityPrivate,
-							},
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: clusterRGID,
-							},
-							InfraID: infraID,
-							NetworkProfile: api.NetworkProfile{
-								LoadBalancerProfile: &api.LoadBalancerProfile{
-									EffectiveOutboundIPs: []api.EffectiveOutboundIP{
-										{
-											ID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/customerRG/providers/Microsoft.Network/publicIPAddress/ip",
-										},
-									},
-								},
-							},
+			manager: func() manager {
+				manager := newFakeManager()
+				manager.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility = api.VisibilityPrivate
+				manager.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile = &api.LoadBalancerProfile{
+					EffectiveOutboundIPs: []api.EffectiveOutboundIP{
+						{
+							ID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/customerRG/providers/Microsoft.Network/publicIPAddress/ip",
 						},
 					},
-				},
+				}
+				return manager
 			},
 			mocks: func(
 				publicIPAddressClient *mock_network.MockPublicIPAddressesClient,
@@ -267,7 +256,8 @@ func TestDeleteUnusedManagedIPs(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.m.log = logrus.NewEntry(logrus.StandardLogger())
+			m := tt.manager()
+			m.log = logrus.NewEntry(logrus.StandardLogger())
 
 			controller := gomock.NewController(t)
 			defer controller.Finish()
@@ -277,11 +267,11 @@ func TestDeleteUnusedManagedIPs(t *testing.T) {
 			if tt.mocks != nil {
 				tt.mocks(publicIPAddressClient, loadBalancersClient, ctx)
 			}
-			tt.m.publicIPAddresses = publicIPAddressClient
-			tt.m.loadBalancers = loadBalancersClient
+			m.publicIPAddresses = publicIPAddressClient
+			m.loadBalancers = loadBalancersClient
 
 			// Run deleteUnusedManagedIPs and assert the correct results
-			err := tt.m.deleteUnusedManagedIPs(ctx)
+			err := m.deleteUnusedManagedIPs(ctx)
 			assert.Equal(t, tt.expectedErr, err, "Unexpected error exception")
 		})
 	}
@@ -290,18 +280,14 @@ func TestDeleteUnusedManagedIPs(t *testing.T) {
 func TestReconcileLoadBalancerProfile(t *testing.T) {
 	ctx := context.Background()
 	infraID := "infraID"
-	location := "eastus"
-	clusterRGID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG"
-	clusterRGName := "clusterRG"
+	clusterRGName := stringutils.LastTokenByte(clusterRGID, '/')
 	defaultOutboundIPName := infraID + "-pip-v4"
 	defaultOutboundIPID := clusterRGID + "/providers/Microsoft.Network/publicIPAddresses/" + defaultOutboundIPName
-	// Define the DB instance we will use to run the PatchWithLease function
-	key := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName"
 
 	// Run tests
 	for _, tt := range []struct {
 		name                        string
-		m                           manager
+		manager                     func() manager
 		lb                          mgmtnetwork.LoadBalancer
 		expectedLoadBalancerProfile *api.LoadBalancerProfile
 		uuids                       []string
@@ -314,29 +300,13 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 		{
 			name:  "reconcile is skipped when outboundType is UserDefinedRouting",
 			uuids: []string{},
-			m: manager{
-				doc: &api.OpenShiftClusterDocument{
-					Key: strings.ToLower(key),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:       key,
-						Location: location,
-						Properties: api.OpenShiftClusterProperties{
-							ArchitectureVersion: api.ArchitectureVersionV2,
-							ProvisioningState:   api.ProvisioningStateUpdating,
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: clusterRGID,
-							},
-							InfraID: infraID,
-							APIServerProfile: api.APIServerProfile{
-								Visibility: api.VisibilityPublic,
-							},
-							NetworkProfile: api.NetworkProfile{
-								OutboundType:        api.OutboundTypeUserDefinedRouting,
-								LoadBalancerProfile: nil,
-							},
-						},
-					},
-				},
+			manager: func() manager {
+				manager := newFakeManager()
+				manager.doc.OpenShiftCluster.Properties.NetworkProfile = api.NetworkProfile{
+					OutboundType:        api.OutboundTypeUserDefinedRouting,
+					LoadBalancerProfile: nil,
+				}
+				return manager
 			},
 			expectedLoadBalancerProfile: nil,
 			expectedErr:                 nil,
@@ -344,63 +314,24 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 		{
 			name:  "reconcile is skipped when architecture version is V1",
 			uuids: []string{},
-			m: manager{
-				doc: &api.OpenShiftClusterDocument{
-					Key: strings.ToLower(key),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:       key,
-						Location: location,
-						Properties: api.OpenShiftClusterProperties{
-							ArchitectureVersion: api.ArchitectureVersionV1,
-							ProvisioningState:   api.ProvisioningStateUpdating,
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: clusterRGID,
-							},
-							InfraID: infraID,
-							APIServerProfile: api.APIServerProfile{
-								Visibility: api.VisibilityPublic,
-							},
-							NetworkProfile: api.NetworkProfile{
-								OutboundType:        api.OutboundTypeLoadbalancer,
-								LoadBalancerProfile: nil,
-							},
-						},
-					},
+			manager: func() manager {
+				manager := newFakeManager()
+				manager.doc.OpenShiftCluster.Properties.ArchitectureVersion = api.ArchitectureVersionV1
+				return manager
+			},
+			expectedLoadBalancerProfile: &api.LoadBalancerProfile{
+				ManagedOutboundIPs: &api.ManagedOutboundIPs{
+					Count: 1,
 				},
 			},
-			expectedLoadBalancerProfile: nil,
-			expectedErr:                 nil,
+			expectedErr: nil,
 		},
 		{
 			name:  "default managed ips",
 			uuids: []string{},
-			m: manager{
-				doc: &api.OpenShiftClusterDocument{
-					Key: strings.ToLower(key),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:       key,
-						Location: location,
-						Properties: api.OpenShiftClusterProperties{
-							ArchitectureVersion: api.ArchitectureVersionV2,
-							ProvisioningState:   api.ProvisioningStateUpdating,
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: clusterRGID,
-							},
-							InfraID: infraID,
-							APIServerProfile: api.APIServerProfile{
-								Visibility: api.VisibilityPublic,
-							},
-							NetworkProfile: api.NetworkProfile{
-								OutboundType: api.OutboundTypeLoadbalancer,
-								LoadBalancerProfile: &api.LoadBalancerProfile{
-									ManagedOutboundIPs: &api.ManagedOutboundIPs{
-										Count: 1,
-									},
-								},
-							},
-						},
-					},
-				},
+			manager: func() manager {
+				manager := newFakeManager()
+				return manager
 			},
 			mocks: func(
 				loadBalancersClient *mock_network.MockLoadBalancersClient,
@@ -434,38 +365,19 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 		{
 			name:  "effectiveOutboundIPs is patched when effectiveOutboundIPs does not match load balancer",
 			uuids: []string{},
-			m: manager{
-				doc: &api.OpenShiftClusterDocument{
-					Key: strings.ToLower(key),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:       key,
-						Location: location,
-						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState:   api.ProvisioningStateUpdating,
-							ArchitectureVersion: api.ArchitectureVersionV2,
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: clusterRGID,
-							},
-							InfraID: infraID,
-							APIServerProfile: api.APIServerProfile{
-								Visibility: api.VisibilityPublic,
-							},
-							NetworkProfile: api.NetworkProfile{
-								OutboundType: api.OutboundTypeLoadbalancer,
-								LoadBalancerProfile: &api.LoadBalancerProfile{
-									ManagedOutboundIPs: &api.ManagedOutboundIPs{
-										Count: 2,
-									},
-									EffectiveOutboundIPs: []api.EffectiveOutboundIP{
-										{
-											ID: defaultOutboundIPID,
-										},
-									},
-								},
-							},
+			manager: func() manager {
+				manager := newFakeManager()
+				manager.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile = &api.LoadBalancerProfile{
+					ManagedOutboundIPs: &api.ManagedOutboundIPs{
+						Count: 2,
+					},
+					EffectiveOutboundIPs: []api.EffectiveOutboundIP{
+						{
+							ID: defaultOutboundIPID,
 						},
 					},
-				},
+				}
+				return manager
 			},
 			mocks: func(
 				loadBalancersClient *mock_network.MockLoadBalancersClient,
@@ -502,38 +414,19 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 		{
 			name:  "add one IP to the default public load balancer",
 			uuids: []string{"uuid1"},
-			m: manager{
-				doc: &api.OpenShiftClusterDocument{
-					Key: strings.ToLower(key),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:       key,
-						Location: location,
-						Properties: api.OpenShiftClusterProperties{
-							ArchitectureVersion: api.ArchitectureVersionV2,
-							ProvisioningState:   api.ProvisioningStateUpdating,
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: clusterRGID,
-							},
-							InfraID: infraID,
-							APIServerProfile: api.APIServerProfile{
-								Visibility: api.VisibilityPublic,
-							},
-							NetworkProfile: api.NetworkProfile{
-								OutboundType: api.OutboundTypeLoadbalancer,
-								LoadBalancerProfile: &api.LoadBalancerProfile{
-									ManagedOutboundIPs: &api.ManagedOutboundIPs{
-										Count: 2,
-									},
-									EffectiveOutboundIPs: []api.EffectiveOutboundIP{
-										{
-											ID: defaultOutboundIPID,
-										},
-									},
-								},
-							},
+			manager: func() manager {
+				manager := newFakeManager()
+				manager.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile = &api.LoadBalancerProfile{
+					ManagedOutboundIPs: &api.ManagedOutboundIPs{
+						Count: 2,
+					},
+					EffectiveOutboundIPs: []api.EffectiveOutboundIP{
+						{
+							ID: defaultOutboundIPID,
 						},
 					},
-				},
+				}
+				return manager
 			},
 			mocks: func(
 				loadBalancersClient *mock_network.MockLoadBalancersClient,
@@ -575,41 +468,22 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 		{
 			name:  "remove one IP from the default public load balancer",
 			uuids: []string{},
-			m: manager{
-				doc: &api.OpenShiftClusterDocument{
-					Key: strings.ToLower(key),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:       key,
-						Location: location,
-						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState:   api.ProvisioningStateUpdating,
-							ArchitectureVersion: api.ArchitectureVersionV2,
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: clusterRGID,
-							},
-							InfraID: infraID,
-							APIServerProfile: api.APIServerProfile{
-								Visibility: api.VisibilityPublic,
-							},
-							NetworkProfile: api.NetworkProfile{
-								OutboundType: api.OutboundTypeLoadbalancer,
-								LoadBalancerProfile: &api.LoadBalancerProfile{
-									ManagedOutboundIPs: &api.ManagedOutboundIPs{
-										Count: 1,
-									},
-									EffectiveOutboundIPs: []api.EffectiveOutboundIP{
-										{
-											ID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-pip-v4",
-										},
-										{
-											ID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/uuid1-outbound-pip-v4",
-										},
-									},
-								},
-							},
+			manager: func() manager {
+				manager := newFakeManager()
+				manager.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile = &api.LoadBalancerProfile{
+					ManagedOutboundIPs: &api.ManagedOutboundIPs{
+						Count: 1,
+					},
+					EffectiveOutboundIPs: []api.EffectiveOutboundIP{
+						{
+							ID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-pip-v4",
+						},
+						{
+							ID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/uuid1-outbound-pip-v4",
 						},
 					},
-				},
+				}
+				return manager
 			},
 			mocks: func(
 				loadBalancersClient *mock_network.MockLoadBalancersClient,
@@ -647,38 +521,19 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 		{
 			name:  "created IPs cleaned up when update fails",
 			uuids: []string{"uuid1"},
-			m: manager{
-				doc: &api.OpenShiftClusterDocument{
-					Key: strings.ToLower(key),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:       key,
-						Location: location,
-						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState:   api.ProvisioningStateUpdating,
-							ArchitectureVersion: api.ArchitectureVersionV2,
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: clusterRGID,
-							},
-							InfraID: infraID,
-							APIServerProfile: api.APIServerProfile{
-								Visibility: api.VisibilityPublic,
-							},
-							NetworkProfile: api.NetworkProfile{
-								OutboundType: api.OutboundTypeLoadbalancer,
-								LoadBalancerProfile: &api.LoadBalancerProfile{
-									ManagedOutboundIPs: &api.ManagedOutboundIPs{
-										Count: 2,
-									},
-									EffectiveOutboundIPs: []api.EffectiveOutboundIP{
-										{
-											ID: defaultOutboundIPID,
-										},
-									},
-								},
-							},
+			manager: func() manager {
+				manager := newFakeManager()
+				manager.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile = &api.LoadBalancerProfile{
+					ManagedOutboundIPs: &api.ManagedOutboundIPs{
+						Count: 2,
+					},
+					EffectiveOutboundIPs: []api.EffectiveOutboundIP{
+						{
+							ID: defaultOutboundIPID,
 						},
 					},
-				},
+				}
+				return manager
 			},
 			mocks: func(
 				loadBalancersClient *mock_network.MockLoadBalancersClient,
@@ -717,44 +572,25 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 		{
 			name:  "managed ip cleanup errors are propagated when cleanup fails",
 			uuids: []string{"uuid1"},
-			m: manager{
-				doc: &api.OpenShiftClusterDocument{
-					Key: strings.ToLower(key),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:       key,
-						Location: location,
-						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState:   api.ProvisioningStateUpdating,
-							ArchitectureVersion: api.ArchitectureVersionV2,
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: clusterRGID,
-							},
-							InfraID: infraID,
-							APIServerProfile: api.APIServerProfile{
-								Visibility: api.VisibilityPublic,
-							},
-							NetworkProfile: api.NetworkProfile{
-								OutboundType: api.OutboundTypeLoadbalancer,
-								LoadBalancerProfile: &api.LoadBalancerProfile{
-									ManagedOutboundIPs: &api.ManagedOutboundIPs{
-										Count: 1,
-									},
-									EffectiveOutboundIPs: []api.EffectiveOutboundIP{
-										{
-											ID: defaultOutboundIPID,
-										},
-										{
-											ID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/uuid1-outbound-pip-v4",
-										},
-										{
-											ID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/uuid2-outbound-pip-v4",
-										},
-									},
-								},
-							},
+			manager: func() manager {
+				manager := newFakeManager()
+				manager.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile = &api.LoadBalancerProfile{
+					ManagedOutboundIPs: &api.ManagedOutboundIPs{
+						Count: 1,
+					},
+					EffectiveOutboundIPs: []api.EffectiveOutboundIP{
+						{
+							ID: defaultOutboundIPID,
+						},
+						{
+							ID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/uuid1-outbound-pip-v4",
+						},
+						{
+							ID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/uuid2-outbound-pip-v4",
 						},
 					},
-				},
+				}
+				return manager
 			},
 			mocks: func(
 				loadBalancersClient *mock_network.MockLoadBalancersClient,
@@ -792,38 +628,19 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 		{
 			name:  "all errors propagated",
 			uuids: []string{"uuid1", "uuid2"},
-			m: manager{
-				doc: &api.OpenShiftClusterDocument{
-					Key: strings.ToLower(key),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:       key,
-						Location: location,
-						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState:   api.ProvisioningStateUpdating,
-							ArchitectureVersion: api.ArchitectureVersionV2,
-							ClusterProfile: api.ClusterProfile{
-								ResourceGroupID: clusterRGID,
-							},
-							InfraID: infraID,
-							APIServerProfile: api.APIServerProfile{
-								Visibility: api.VisibilityPublic,
-							},
-							NetworkProfile: api.NetworkProfile{
-								OutboundType: api.OutboundTypeLoadbalancer,
-								LoadBalancerProfile: &api.LoadBalancerProfile{
-									ManagedOutboundIPs: &api.ManagedOutboundIPs{
-										Count: 3,
-									},
-									EffectiveOutboundIPs: []api.EffectiveOutboundIP{
-										{
-											ID: defaultOutboundIPID,
-										},
-									},
-								},
-							},
+			manager: func() manager {
+				manager := newFakeManager()
+				manager.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile = &api.LoadBalancerProfile{
+					ManagedOutboundIPs: &api.ManagedOutboundIPs{
+						Count: 3,
+					},
+					EffectiveOutboundIPs: []api.EffectiveOutboundIP{
+						{
+							ID: defaultOutboundIPID,
 						},
 					},
-				},
+				}
+				return manager
 			},
 			mocks: func(
 				loadBalancersClient *mock_network.MockLoadBalancersClient,
@@ -864,13 +681,14 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 			// Create the DB to test the cluster
 			openShiftClustersDatabase, _ := testdatabase.NewFakeOpenShiftClusters()
 			fixture := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClustersDatabase)
-			fixture.AddOpenShiftClusterDocuments(tt.m.doc)
+			m := tt.manager()
+			fixture.AddOpenShiftClusterDocuments(m.doc)
 			err := fixture.Create()
 			if err != nil {
 				t.Fatal(err)
 			}
-			tt.m.db = openShiftClustersDatabase
-			tt.m.log = logrus.NewEntry(logrus.StandardLogger())
+			m.db = openShiftClustersDatabase
+			m.log = logrus.NewEntry(logrus.StandardLogger())
 
 			uuid.DefaultGenerator = uuidfake.NewGenerator(tt.uuids)
 			controller := gomock.NewController(t)
@@ -881,18 +699,18 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 			if tt.mocks != nil {
 				tt.mocks(loadBalancersClient, publicIPAddressClient, ctx)
 			}
-			tt.m.loadBalancers = loadBalancersClient
-			tt.m.publicIPAddresses = publicIPAddressClient
+			m.loadBalancers = loadBalancersClient
+			m.publicIPAddresses = publicIPAddressClient
 
 			// Run reconcileLoadBalancerProfile and assert the correct results
-			err = tt.m.reconcileLoadBalancerProfile(ctx)
+			err = m.reconcileLoadBalancerProfile(ctx)
 			// Expect error to be in the array of errors provided or to be nil
 			if tt.expectedErr != nil {
 				assert.Contains(t, tt.expectedErr, err, "Unexpected error exception")
 			} else {
 				require.NoError(t, err, "Unexpected error exception")
 			}
-			assert.Equal(t, &tt.expectedLoadBalancerProfile, &tt.m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile)
+			assert.Equal(t, &tt.expectedLoadBalancerProfile, &m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile)
 		})
 	}
 }
