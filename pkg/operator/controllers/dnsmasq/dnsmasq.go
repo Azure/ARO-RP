@@ -17,6 +17,8 @@ import (
 	"github.com/vincent-petithory/dataurl"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 const (
@@ -73,7 +75,7 @@ func startpre() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func ignition3Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains []string, gatewayPrivateEndpointIP string, restartDnsmasq bool) (*ign3types.Config, error) {
+func ignition3Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains []string, gatewayPrivateEndpointIP string) (*ign3types.Config, error) {
 	service, err := service()
 	if err != nil {
 		return nil, err
@@ -144,15 +146,6 @@ func ignition3Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains [
 		},
 	}
 
-	if restartDnsmasq {
-		restartDnsmasqScript, err := nmDispatcherRestartDnsmasq()
-		if err != nil {
-			return nil, err
-		}
-
-		ign.Storage.Files = append(ign.Storage.Files, restartScriptIgnFile(restartDnsmasqScript))
-	}
-
 	return ign, nil
 }
 
@@ -160,16 +153,9 @@ func dnsmasqMachineConfig(clusterDomain, apiIntIP, ingressIP, role string, gatew
 	var ignConfig *ign3types.Config
 	var err error
 
-	if desiredClusterVersion.Lt(version.NewVersion(4, 13, 0)) {
-		ignConfig, err = ignition3ConfigPre413(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP, restartDnsmasq)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		ignConfig, err = ignition3Config(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP)
-		if err != nil {
-			return nil, err
-		}
+	ignConfig, err = ignition3Config(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP)
+	if err != nil {
+		return nil, err
 	}
 
 	b, err := json.Marshal(ignConfig)

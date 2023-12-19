@@ -49,7 +49,9 @@ done
 # done, copying files to destination locations and cleaning up
 /bin/cp $TMPNETRESOLV /etc/resolv.conf.dnsmasq
 chmod 0744 /etc/resolv.conf.dnsmasq
-/bin/cp $TMPSELFRESOLV /etc/resolv.conf
+/bin/cp $TMPSELFRESOLV /etc/resolv.conf.host
+/bin/ln -sf /etc/resolv.conf.host /etc/resolv.conf
+/usr/sbin/restorecon /etc/resolv.conf.host
 /usr/sbin/restorecon /etc/resolv.conf
 /bin/rm $TMPNETRESOLV
 /bin/rm $TMPSELFRESOLV
