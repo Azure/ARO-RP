@@ -81,7 +81,14 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		return reconcile.Result{}, nil
 	}
 
-	err = reconcileMachineConfigs(ctx, instance, r.dh, instance.Spec.OperatorFlags.GetSimpleBoolean(restartDnsmasqEnabled), *mcp)
+	desiredClusterVersion, err := r.GetDesiredVersion(ctx)
+	if err != nil {
+		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
+		return reconcile.Result{}, err
+	}
+
+	err = reconcileMachineConfigs(ctx, instance, desiredClusterVersion, r.dh, instance.Spec.OperatorFlags.GetSimpleBoolean(restartDnsmasqEnabled), *mcp)
 	if err != nil {
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)

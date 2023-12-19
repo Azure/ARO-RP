@@ -156,10 +156,20 @@ func ignition3Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains [
 	return ign, nil
 }
 
-func dnsmasqMachineConfig(clusterDomain, apiIntIP, ingressIP, role string, gatewayDomains []string, gatewayPrivateEndpointIP string, restartDnsmasq bool) (*mcv1.MachineConfig, error) {
-	ignConfig, err := ignition3Config(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP, restartDnsmasq)
-	if err != nil {
-		return nil, err
+func dnsmasqMachineConfig(clusterDomain, apiIntIP, ingressIP, role string, gatewayDomains []string, gatewayPrivateEndpointIP string, restartDnsmasq bool, desiredClusterVersion *version.Version) (*mcv1.MachineConfig, error) {
+	var ignConfig *ign3types.Config
+	var err error
+
+	if desiredClusterVersion.Lt(version.NewVersion(4, 13, 0)) {
+		ignConfig, err = ignition3ConfigPre413(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP, restartDnsmasq)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		ignConfig, err = ignition3Config(clusterDomain, apiIntIP, ingressIP, gatewayDomains, gatewayPrivateEndpointIP)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	b, err := json.Marshal(ignConfig)
