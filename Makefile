@@ -246,6 +246,12 @@ test-python: pyenv az
 shared-cluster-login:
 	@oc login ${SHARED_CLUSTER_API} -u kubeadmin -p ${SHARED_CLUSTER_KUBEADMIN_PASSWORD}
 
+shared-cluster-create:
+	./hack/shared-cluster.sh crerate
+
+shared-cluster-delete:
+	./hack/shared-cluster.sh delete
+
 unit-test-python:
 	hack/unit-test-python.sh
 
