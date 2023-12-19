@@ -64,6 +64,7 @@ elif [[ $1 == create ]]; then
       --worker-subnet worker-subnet
 
 elif [[ $1 == "delete" ]]; then
+  echo "Deleting cluster..."
   az aro delete --name $SHARED_CLUSTER_CLUSTER_NAME -g $SHARED_CLUSTER_RESOURCE_GROUP_NAME --yes
   az network vnet delete --name aro-vnet -g $SHARED_CLUSTER_RESOURCE_GROUP_NAME
   az group delete --resource-group $SHARED_CLUSTER_RESOURCE_GROUP_NAME --yes
