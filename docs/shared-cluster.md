@@ -37,32 +37,24 @@ export KUBECONFIG=$PWD/secrets/shared-cluster.kubeconfig
 
 ## Creating / Deleting the Shared Cluster
 
-The shared cluster has the following attributes:
-
-* Tenant: AME
-
-* Subscription: ARO CI/E2E
-
-* Region: Westcentralus
-
-* Name: shared-cluster
-
-* Resource group name: shared-cluster
-
-* Cluster resource group name: aro-shared-cluster
+The shared cluster is for general use and experimentation. Note that there is no guarantee that it is in a "good state".
 
 
 ### Create / Delete
 To create/ delete/ administer the cluster from az cli you must have proper permissions (JIT in the case of AME).
 
+The following commands assume the same secrets as above.
+
 * Create:
 
 ```bash
-./hack/shared-cluster.sh create
+
+make shared-cluster-create
+
 ```
 
 * Delete:
 
 ```bash
-./hack/shared-cluster.sh delete
+make shared-cluster-delete
 ```
