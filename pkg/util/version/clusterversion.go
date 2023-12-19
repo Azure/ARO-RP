@@ -18,3 +18,18 @@ func GetClusterVersion(cv *configv1.ClusterVersion) (*Version, error) {
 
 	return nil, errors.New("unknown cluster version")
 }
+
+// GetDesiredVersion retrieves the version that a cluster is upgrading to, or if
+// it is not upgrading, the existing cluster version.
+func GetDesiredVersion(cv *configv1.ClusterVersion) (*Version, error) {
+	if cv.Spec.DesiredUpdate != nil &&
+		cv.Spec.DesiredUpdate.Version != "" {
+		return ParseVersion(cv.Spec.DesiredUpdate.Version)
+	}
+
+	if cv.Status.Desired.Version != "" {
+		return ParseVersion(cv.Status.Desired.Version)
+	}
+
+	return GetClusterVersion(cv)
+}
