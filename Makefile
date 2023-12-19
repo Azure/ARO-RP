@@ -247,7 +247,7 @@ shared-cluster-login:
 	@oc login ${SHARED_CLUSTER_API} -u kubeadmin -p ${SHARED_CLUSTER_KUBEADMIN_PASSWORD}
 
 shared-cluster-create:
-	./hack/shared-cluster.sh crerate
+	./hack/shared-cluster.sh create
 
 shared-cluster-delete:
 	./hack/shared-cluster.sh delete
