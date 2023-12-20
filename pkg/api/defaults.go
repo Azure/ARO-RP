@@ -76,7 +76,7 @@ func DefaultOperatorFlags() OperatorFlags {
 		operator.AzureSubnetsServiceEndpointManaged: operator.FlagTrue,
 		operator.BannerEnabled:                      operator.FlagFalse,
 		operator.CheckerEnabled:                     operator.FlagTrue,
-		operator.DnsMasqEnabled:                     operator.FlagTrue,
+		operator.DnsmasqEnabled:                     operator.FlagTrue,
 		operator.RestartDnsMasqEnabled:              operator.FlagTrue,
 		operator.GenevaLoggingEnabled:               operator.FlagTrue,
 		operator.ImageConfigEnabled:                 operator.FlagTrue,

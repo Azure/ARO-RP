@@ -60,7 +60,7 @@ func TestClusterReconciler(t *testing.T) {
 					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							operator.DnsMasqEnabled: operator.FlagFalse,
+							operator.DnsmasqEnabled: operator.FlagFalse,
 						},
 					},
 				},
@@ -88,7 +88,7 @@ func TestClusterReconciler(t *testing.T) {
 					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							operator.DnsMasqEnabled: operator.FlagTrue,
+							operator.DnsmasqEnabled: operator.FlagTrue,
 						},
 					},
 				},
@@ -110,7 +110,7 @@ func TestClusterReconciler(t *testing.T) {
 					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							operator.DnsMasqEnabled: operator.FlagTrue,
+							operator.DnsmasqEnabled: operator.FlagTrue,
 						},
 					},
 				},

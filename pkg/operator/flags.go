@@ -10,7 +10,7 @@ const (
 	AzureSubnetsServiceEndpointManaged = "aro.azuresubnets.serviceendpoint.managed"
 	BannerEnabled                      = "aro.banner.enabled"
 	CheckerEnabled                     = "aro.checker.enabled"
-	DnsMasqEnabled                     = "aro.dnsmasq.enabled"
+	DnsmasqEnabled                     = "aro.dnsmasq.enabled"
 	RestartDnsMasqEnabled              = "aro.restartdnsmasq.enabled"
 	GenevaLoggingEnabled               = "aro.genevalogging.enabled"
 	ImageConfigEnabled                 = "aro.imageconfig.enabled"
