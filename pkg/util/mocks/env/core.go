@@ -8,12 +8,12 @@ import (
 	context "context"
 	reflect "reflect"
 
-	env "github.com/Azure/ARO-RP/pkg/env"
 	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
 	liveconfig "github.com/Azure/ARO-RP/pkg/util/liveconfig"
 	azcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	autorest "github.com/Azure/go-autorest/autorest"
 	gomock "github.com/golang/mock/gomock"
+	logrus "github.com/sirupsen/logrus"
 )
 
 // MockCore is a mock of Core interface.
@@ -37,6 +37,20 @@ func NewMockCore(ctrl *gomock.Controller) *MockCore {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockCore) EXPECT() *MockCoreMockRecorder {
 	return m.recorder
+}
+
+// Component mocks base method.
+func (m *MockCore) Component() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Component")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Component indicates an expected call of Component.
+func (mr *MockCoreMockRecorder) Component() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Component", reflect.TypeOf((*MockCore)(nil).Component))
 }
 
 // Environment mocks base method.
@@ -109,6 +123,20 @@ func (mr *MockCoreMockRecorder) Location() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Location", reflect.TypeOf((*MockCore)(nil).Location))
 }
 
+// Logger mocks base method.
+func (m *MockCore) Logger() *logrus.Entry {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Logger")
+	ret0, _ := ret[0].(*logrus.Entry)
+	return ret0
+}
+
+// Logger indicates an expected call of Logger.
+func (mr *MockCoreMockRecorder) Logger() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logger", reflect.TypeOf((*MockCore)(nil).Logger))
+}
+
 // NewLiveConfigManager mocks base method.
 func (m *MockCore) NewLiveConfigManager(arg0 context.Context) (liveconfig.Manager, error) {
 	m.ctrl.T.Helper()
@@ -125,10 +153,10 @@ func (mr *MockCoreMockRecorder) NewLiveConfigManager(arg0 interface{}) *gomock.C
 }
 
 // NewMSIAuthorizer mocks base method.
-func (m *MockCore) NewMSIAuthorizer(arg0 env.MSIContext, arg1 ...string) (autorest.Authorizer, error) {
+func (m *MockCore) NewMSIAuthorizer(arg0 ...string) (autorest.Authorizer, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0}
-	for _, a := range arg1 {
+	varargs := []interface{}{}
+	for _, a := range arg0 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "NewMSIAuthorizer", varargs...)
@@ -138,25 +166,24 @@ func (m *MockCore) NewMSIAuthorizer(arg0 env.MSIContext, arg1 ...string) (autore
 }
 
 // NewMSIAuthorizer indicates an expected call of NewMSIAuthorizer.
-func (mr *MockCoreMockRecorder) NewMSIAuthorizer(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
+func (mr *MockCoreMockRecorder) NewMSIAuthorizer(arg0 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0}, arg1...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMSIAuthorizer", reflect.TypeOf((*MockCore)(nil).NewMSIAuthorizer), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMSIAuthorizer", reflect.TypeOf((*MockCore)(nil).NewMSIAuthorizer), arg0...)
 }
 
 // NewMSITokenCredential mocks base method.
-func (m *MockCore) NewMSITokenCredential(arg0 env.MSIContext) (azcore.TokenCredential, error) {
+func (m *MockCore) NewMSITokenCredential() (azcore.TokenCredential, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewMSITokenCredential", arg0)
+	ret := m.ctrl.Call(m, "NewMSITokenCredential")
 	ret0, _ := ret[0].(azcore.TokenCredential)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // NewMSITokenCredential indicates an expected call of NewMSITokenCredential.
-func (mr *MockCoreMockRecorder) NewMSITokenCredential(arg0 interface{}) *gomock.Call {
+func (mr *MockCoreMockRecorder) NewMSITokenCredential() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMSITokenCredential", reflect.TypeOf((*MockCore)(nil).NewMSITokenCredential), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMSITokenCredential", reflect.TypeOf((*MockCore)(nil).NewMSITokenCredential))
 }
 
 // ResourceGroup mocks base method.

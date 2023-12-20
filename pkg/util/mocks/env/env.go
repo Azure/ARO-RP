@@ -16,6 +16,7 @@ import (
 	compute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	autorest "github.com/Azure/go-autorest/autorest"
 	gomock "github.com/golang/mock/gomock"
+	logrus "github.com/sirupsen/logrus"
 
 	env "github.com/Azure/ARO-RP/pkg/env"
 	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -200,6 +201,20 @@ func (m *MockInterface) ClusterKeyvault() keyvault.Manager {
 func (mr *MockInterfaceMockRecorder) ClusterKeyvault() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterKeyvault", reflect.TypeOf((*MockInterface)(nil).ClusterKeyvault))
+}
+
+// Component mocks base method.
+func (m *MockInterface) Component() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Component")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Component indicates an expected call of Component.
+func (mr *MockInterfaceMockRecorder) Component() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Component", reflect.TypeOf((*MockInterface)(nil).Component))
 }
 
 // DialContext mocks base method.
@@ -449,6 +464,20 @@ func (mr *MockInterfaceMockRecorder) Location() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Location", reflect.TypeOf((*MockInterface)(nil).Location))
 }
 
+// Logger mocks base method.
+func (m *MockInterface) Logger() *logrus.Entry {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Logger")
+	ret0, _ := ret[0].(*logrus.Entry)
+	return ret0
+}
+
+// Logger indicates an expected call of Logger.
+func (mr *MockInterfaceMockRecorder) Logger() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logger", reflect.TypeOf((*MockInterface)(nil).Logger))
+}
+
 // NewLiveConfigManager mocks base method.
 func (m *MockInterface) NewLiveConfigManager(arg0 context.Context) (liveconfig.Manager, error) {
 	m.ctrl.T.Helper()
@@ -465,10 +494,10 @@ func (mr *MockInterfaceMockRecorder) NewLiveConfigManager(arg0 interface{}) *gom
 }
 
 // NewMSIAuthorizer mocks base method.
-func (m *MockInterface) NewMSIAuthorizer(arg0 env.MSIContext, arg1 ...string) (autorest.Authorizer, error) {
+func (m *MockInterface) NewMSIAuthorizer(arg0 ...string) (autorest.Authorizer, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0}
-	for _, a := range arg1 {
+	varargs := []interface{}{}
+	for _, a := range arg0 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "NewMSIAuthorizer", varargs...)
@@ -478,25 +507,24 @@ func (m *MockInterface) NewMSIAuthorizer(arg0 env.MSIContext, arg1 ...string) (a
 }
 
 // NewMSIAuthorizer indicates an expected call of NewMSIAuthorizer.
-func (mr *MockInterfaceMockRecorder) NewMSIAuthorizer(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) NewMSIAuthorizer(arg0 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0}, arg1...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMSIAuthorizer", reflect.TypeOf((*MockInterface)(nil).NewMSIAuthorizer), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMSIAuthorizer", reflect.TypeOf((*MockInterface)(nil).NewMSIAuthorizer), arg0...)
 }
 
 // NewMSITokenCredential mocks base method.
-func (m *MockInterface) NewMSITokenCredential(arg0 env.MSIContext) (azcore.TokenCredential, error) {
+func (m *MockInterface) NewMSITokenCredential() (azcore.TokenCredential, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewMSITokenCredential", arg0)
+	ret := m.ctrl.Call(m, "NewMSITokenCredential")
 	ret0, _ := ret[0].(azcore.TokenCredential)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // NewMSITokenCredential indicates an expected call of NewMSITokenCredential.
-func (mr *MockInterfaceMockRecorder) NewMSITokenCredential(arg0 interface{}) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) NewMSITokenCredential() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMSITokenCredential", reflect.TypeOf((*MockInterface)(nil).NewMSITokenCredential), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMSITokenCredential", reflect.TypeOf((*MockInterface)(nil).NewMSITokenCredential))
 }
 
 // ResourceGroup mocks base method.
