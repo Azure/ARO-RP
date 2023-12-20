@@ -5,7 +5,6 @@ package e2e
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"regexp"
@@ -18,7 +17,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
@@ -74,7 +72,7 @@ var _ = Describe("ARO cluster DNS", func() {
 				workerNodes[name] = ""
 			}
 		}
-		Expect(len(workerNodes)).To(Equal(3))
+		Expect(workerNodes).To(HaveLen(3))
 
 		By("getting each worker node's private IP address")
 		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
@@ -87,7 +85,7 @@ var _ = Describe("ARO cluster DNS", func() {
 
 			Expect(nic.InterfacePropertiesFormat).NotTo(BeNil())
 			Expect(nic.IPConfigurations).NotTo(BeNil())
-			Expect(len(*nic.IPConfigurations)).To(Equal(1))
+			Expect(*nic.IPConfigurations).To(HaveLen(1))
 			Expect((*nic.IPConfigurations)[0].InterfaceIPConfigurationPropertiesFormat).NotTo(BeNil())
 			Expect((*nic.IPConfigurations)[0].PrivateIPAddress).NotTo(BeNil())
 			workerNodes[wn] = *(*nic.IPConfigurations)[0].PrivateIPAddress
@@ -262,8 +260,8 @@ func createResolvConfJob(ctx context.Context, cli kubernetes.Interface, nodeName
 			Name: resolvConfJobName(nodeName),
 		},
 		Spec: batchv1.JobSpec{
-			Template: v1.PodTemplateSpec{
-				Spec: v1.PodSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
 					NodeName: nodeName,
 					Containers: []corev1.Container{
 						{
@@ -319,7 +317,7 @@ func verifyResolvConf(ctx context.Context, cli kubernetes.Interface, nodeName st
 		return err
 	}
 	if len(podList.Items) != 1 {
-		return errors.New(fmt.Sprintf("Found %v Pods associated with the Job, but there should be exactly 1", len(podList.Items)))
+		return fmt.Errorf("found %v Pods associated with the Job, but there should be exactly 1", len(podList.Items))
 	}
 
 	podName := podList.Items[0].ObjectMeta.Name
@@ -354,17 +352,17 @@ func verifyResolvConf(ctx context.Context, cli kubernetes.Interface, nodeName st
 
 	log := strings.Join(logs, "\n")
 	if log == "" {
-		return errors.New("Pod didn't have any logs")
+		return fmt.Errorf("pod didn't have any logs")
 	}
 
 	nameserverLine := nameserverRegex.FindString(log)
 	if nameserverLine == "" {
-		return errors.New("Didn't find nameserver in resolv.conf")
+		return fmt.Errorf("didn't find nameserver in resolv.conf")
 	}
 
 	_, nameserverIp, _ := strings.Cut(nameserverLine, " ")
 	if nameserverIp != nodeIp {
-		return errors.New("Nameserver specified in resolv.conf does not match node's IP address")
+		return fmt.Errorf("nameserver specified in resolv.conf does not match node's IP address")
 	}
 
 	return nil
@@ -395,10 +393,10 @@ func nodesReady(ctx context.Context, cli kubernetes.Interface) error {
 			}
 		}
 		if (readyCondition == corev1.NodeCondition{}) {
-			return errors.New("Unable to check if a node is ready")
+			return fmt.Errorf("unable to check if a node is ready")
 		}
 		if readyCondition.Status != corev1.ConditionTrue {
-			return errors.New("A node is not yet ready")
+			return fmt.Errorf("a node is not yet ready")
 		}
 	}
 
