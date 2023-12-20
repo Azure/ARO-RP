@@ -14,7 +14,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
@@ -64,7 +64,7 @@ var _ = Describe("ARO Cluster", func() {
 		Expect(co.Spec.GenevaLogging).NotTo(BeNil())
 
 		By("verifying OperatorFlags are set and equivalent to latest defaults")
-		Expect(co.Spec.OperatorFlags).To(BeEquivalentTo(api.DefaultOperatorFlags()))
+		Expect(co.Spec.OperatorFlags).To(BeEquivalentTo(operator.DefaultOperatorFlags()))
 
 		By("verifying InternetChecker exists")
 		Expect(co.Spec.InternetChecker).NotTo(BeNil())
