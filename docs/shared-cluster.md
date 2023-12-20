@@ -37,7 +37,8 @@ export KUBECONFIG=$PWD/secrets/shared-cluster.kubeconfig
 
 ## Creating / Deleting the Shared Cluster
 
-The shared cluster is for general use and experimentation. Note that there is no guarantee that it is in a "good state".
+The shared cluster is for general use and experimentation.
+Note that there is no guarantee that it is in a "good state".
 
 
 ### Create / Delete
