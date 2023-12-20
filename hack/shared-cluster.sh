@@ -26,7 +26,10 @@ if [ "$#" -ne 1 ]; then
 
 elif [[ $1 == create ]]; then
     echo "creating resource group and network"
-    az group create --name $SHARED_CLUSTER_RESOURCE_GROUP_NAME --location $SHARED_CLUSTER_LOCATION
+    az group create \
+    --name $SHARED_CLUSTER_RESOURCE_GROUP_NAME \
+    --location $SHARED_CLUSTER_LOCATION \
+    --tags persist:true  # This tag stops the RG being cleaned up
 
     az network vnet create \
       --resource-group $SHARED_CLUSTER_RESOURCE_GROUP_NAME \
@@ -62,6 +65,16 @@ elif [[ $1 == create ]]; then
       --vnet aro-vnet \
       --master-subnet master-subnet \
       --worker-subnet worker-subnet
+
+    CLUSTER_RESOURCE_GROUP_ID=az aro show \
+      --name $SHARED_CLUSTER_CLUSTER_NAME \
+      --resource-group $SHARED_CLUSTER_RESOURCE_GROUP_NAME \
+      | jq .clusterProfile.resourceGroupId
+
+    # This tag stops the RG being cleaned up
+    az tag create \
+      --resource-id "$CLUSTER_RESOURCE_GROUP_ID" \
+      --tags persist=true
 
 elif [[ $1 == "delete" ]]; then
   echo "Deleting cluster..."
