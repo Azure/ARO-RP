@@ -34,6 +34,7 @@ var (
 )
 
 const (
+	maxObjNameLen           = 63
 	resolvConfContainerName = "read-resolv-conf"
 )
 
@@ -250,7 +251,11 @@ func nicName(nodeName string) string {
 }
 
 func resolvConfJobName(nodeName string) string {
-	return fmt.Sprintf("read-resolv-conf-%s", nodeName)
+	jobName := fmt.Sprintf("read-resolv-conf-%s", nodeName)
+	if len(jobName) > maxObjNameLen {
+		jobName = jobName[:maxObjNameLen]
+	}
+	return jobName
 }
 
 func createResolvConfJob(ctx context.Context, cli kubernetes.Interface, nodeName string, namespace string) error {
