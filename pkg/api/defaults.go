@@ -77,7 +77,7 @@ func DefaultOperatorFlags() OperatorFlags {
 		operator.BannerEnabled:                      operator.FlagFalse,
 		operator.CheckerEnabled:                     operator.FlagTrue,
 		operator.DnsmasqEnabled:                     operator.FlagTrue,
-		operator.RestartDnsMasqEnabled:              operator.FlagTrue,
+		operator.RestartDnsmasqEnabled:              operator.FlagTrue,
 		operator.GenevaLoggingEnabled:               operator.FlagTrue,
 		operator.ImageConfigEnabled:                 operator.FlagTrue,
 		operator.IngressEnabled:                     operator.FlagTrue,

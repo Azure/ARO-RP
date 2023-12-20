@@ -54,7 +54,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		return reconcile.Result{}, nil
 	}
 
-	restartDnsmasq := instance.Spec.OperatorFlags.GetSimpleBoolean(operator.RestartDnsMasqEnabled)
+	restartDnsmasq := instance.Spec.OperatorFlags.GetSimpleBoolean(operator.RestartDnsmasqEnabled)
 	if restartDnsmasq {
 		r.Log.Debug("restartDnsmasq is enabled")
 	}

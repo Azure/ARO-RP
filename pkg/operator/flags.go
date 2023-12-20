@@ -11,7 +11,7 @@ const (
 	BannerEnabled                      = "aro.banner.enabled"
 	CheckerEnabled                     = "aro.checker.enabled"
 	DnsmasqEnabled                     = "aro.dnsmasq.enabled"
-	RestartDnsMasqEnabled              = "aro.restartdnsmasq.enabled"
+	RestartDnsmasqEnabled              = "aro.restartdnsmasq.enabled"
 	GenevaLoggingEnabled               = "aro.genevalogging.enabled"
 	ImageConfigEnabled                 = "aro.imageconfig.enabled"
 	IngressEnabled                     = "aro.ingress.enabled"
