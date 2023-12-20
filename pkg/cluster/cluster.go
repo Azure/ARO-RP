@@ -131,7 +131,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	msiAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceManagerScope)
+	msiAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().ResourceManagerScope)
 	if err != nil {
 		return nil, err
 	}

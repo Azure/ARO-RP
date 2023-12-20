@@ -22,7 +22,7 @@ import (
 )
 
 func dbtoken(ctx context.Context, log *logrus.Entry) error {
-	_env, err := env.NewCore(ctx, log)
+	_env, err := env.NewCore(ctx, log, env.COMPONENT_DBTOKEN)
 	if err != nil {
 		return err
 	}
@@ -37,12 +37,12 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	msiToken, err := _env.NewMSITokenCredential(env.MSIContextRP)
+	msiToken, err := _env.NewMSITokenCredential()
 	if err != nil {
 		return err
 	}
 
-	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().KeyVaultScope)
+	msiKVAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().KeyVaultScope)
 	if err != nil {
 		return err
 	}

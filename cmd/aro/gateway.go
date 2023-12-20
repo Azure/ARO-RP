@@ -23,7 +23,7 @@ import (
 )
 
 func gateway(ctx context.Context, log *logrus.Entry) error {
-	_env, err := env.NewCore(ctx, log)
+	_env, err := env.NewCore(ctx, log, env.COMPONENT_GATEWAY)
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 	// In this context, the "resource" parameter is passed to azidentity as a
 	// "scope" argument even though a scope normally consists of an endpoint URL.
 	scope := os.Getenv("AZURE_DBTOKEN_CLIENT_ID")
-	msiRefresherAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextGateway, scope)
+	msiRefresherAuthorizer, err := _env.NewMSIAuthorizer(scope)
 	if err != nil {
 		return err
 	}
