@@ -31,7 +31,6 @@ var denylist = []string{
 	"images",
 	"secrets",
 	"dns",
-	"shared-cluster",
 }
 
 const (
