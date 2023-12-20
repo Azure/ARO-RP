@@ -23,6 +23,7 @@ import (
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	projectclient "github.com/openshift/client-go/project/clientset/versioned"
+	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	"github.com/sirupsen/logrus"
@@ -69,6 +70,7 @@ type clientSet struct {
 	Disks                 compute.DisksClient
 	NetworkSecurityGroups network.SecurityGroupsClient
 	Subnet                network.SubnetsClient
+	Interfaces            network.InterfacesClient
 	Storage               storage.AccountsClient
 	LoadBalancers         network.LoadBalancersClient
 
@@ -81,6 +83,7 @@ type clientSet struct {
 	MachineConfig      mcoclient.Interface
 	AROClusters        aroclient.Interface
 	ConfigClient       configclient.Interface
+	SecurityClient     securityclient.Interface
 	Project            projectclient.Interface
 	Hive               client.Client
 	HiveAKS            kubernetes.Interface
@@ -314,6 +317,11 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
+	securitycli, err := securityclient.NewForConfig(restconfig)
+	if err != nil {
+		return nil, err
+	}
+
 	var hiveRestConfig *rest.Config
 	var hiveClientSet client.Client
 	var hiveAKS *kubernetes.Clientset
@@ -358,6 +366,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		Disks:                 compute.NewDisksClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		DiskEncryptionSets:    compute.NewDiskEncryptionSetsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Subnet:                network.NewSubnetsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Interfaces:            network.NewInterfacesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		NetworkSecurityGroups: network.NewSecurityGroupsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Storage:               storage.NewAccountsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		LoadBalancers:         network.NewLoadBalancersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
@@ -372,6 +381,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		AROClusters:        arocli,
 		Project:            projectcli,
 		ConfigClient:       configcli,
+		SecurityClient:     securitycli,
 		Hive:               hiveClientSet,
 		HiveAKS:            hiveAKS,
 		HiveClusterManager: hiveCM,
