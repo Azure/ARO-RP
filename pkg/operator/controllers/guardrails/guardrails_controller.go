@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,9 +37,11 @@ type Reconciler struct {
 	namespace             string
 	policyTickerDone      chan bool
 	reconciliationMinutes int
+	cleanupNeeded         bool
+	kubernetescli         kubernetes.Interface
 }
 
-func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface, k8scli kubernetes.Interface) *Reconciler {
 	return &Reconciler{
 		log: log,
 
@@ -50,6 +53,8 @@ func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Int
 
 		readinessPollTime: 10 * time.Second,
 		readinessTimeout:  5 * time.Minute,
+		cleanupNeeded:     false,
+		kubernetescli:     k8scli,
 	}
 }
 
@@ -74,9 +79,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// If enabled and managed=false, remove the GuardRails deployment
 	// If enabled and managed is missing, do nothing
 	if strings.EqualFold(managed, "true") {
-		// Check if standard GateKeeper is already running
-		if running, err := r.deployer.IsReady(ctx, "gatekeeper-system", "gatekeeper-audit"); err == nil && running {
-			r.log.Warn("standard GateKeeper is running, skipping Guardrails deployment")
+		if ns, err := r.getGatekeeperDeployedNs(ctx, instance); err == nil && ns != "" {
+			r.log.Warnf("Found another GateKeeper deployed in ns %s, aborting Guardrails", ns)
 			return reconcile.Result{}, nil
 		}
 
@@ -97,6 +101,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("GateKeeper deployment timed out on Ready: %w", err)
 		}
+		r.cleanupNeeded = true
 		policyConfig := &config.GuardRailsPolicyConfig{}
 		if r.gkPolicyTemplate != nil {
 			// Deploy the GateKeeper ConstraintTemplate
@@ -122,6 +127,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		// start a ticker to re-enforce gatekeeper policies periodically
 		r.startTicker(ctx, instance)
 	} else if strings.EqualFold(managed, "false") {
+		if !r.cleanupNeeded {
+			if ns, err := r.getGatekeeperDeployedNs(ctx, instance); err == nil && ns != "" {
+				// resources were *not* created by guardrails, plus another gatekeeper deployed
+				//
+				// guardrails didn't get deployed most likely due to another gatekeeper is deployed by customer
+				// this is to avoid the accidental deletion of gatekeeper CRDs that were deployed by customer
+				// the unnamespaced gatekeeper CRDs were possibly created by a customised gatekeeper, hence cannot ramdomly delete them.
+				r.log.Warn("Skipping cleanup as it is not safe and may destroy customer's gatekeeper resources")
+				return reconcile.Result{}, nil
+			}
+		}
+
 		if r.gkPolicyTemplate != nil {
 			// stop the gatekeeper policies re-enforce ticker
 			r.stopTicker()
@@ -138,8 +155,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		}
 		err = r.deployer.Remove(ctx, config.GuardRailsDeploymentConfig{Namespace: r.namespace})
 		if err != nil {
+			r.log.Warnf("failed to remove deployer with error %s", err.Error())
 			return reconcile.Result{}, err
 		}
+		r.cleanupNeeded = false
 	}
 
 	return reconcile.Result{}, nil
