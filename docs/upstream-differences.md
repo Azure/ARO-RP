@@ -5,7 +5,24 @@ upstream OCP.
 
 ## Installer carry patches
 
-See https://github.com/openshift/installer/compare/release-4.10...jewzaam:release-4.10-azure.
+1. Clone ARO and upstream repos:
+    ```sh
+    # clone our forked installer
+    git clone https://github.com/openshift/installer-aro.git
+    cd installer-aro
+
+    # add the upstream as a remote source
+    git remote add upstream https://github.com/openshift/installer.git
+    git fetch upstream -a
+    ```
+1. See carry patches from previous release:
+    ```sh
+    # list patches
+    git log upstream/release-X.Y-1..origin/release-X.Y-1-azure
+
+    # see diff of patches
+    git show upstream/release-X.Y-1..origin/release-X.Y-1-azure
+    ```
 
 ## Installation differences
 
@@ -40,22 +57,25 @@ See https://github.com/openshift/installer/compare/release-4.10...jewzaam:releas
 
 # Introducing new OCP release into ARO RP
 
-To support a new version of OpenShift on ARO, you will need to reconcile [upstream changes](https://github.com/openshift/installer) with our [forked installer](https://github.com/jewzaam/installer-aro). This will not be a merge, but a cherry-pick of patches we've implemented.
+To support a new version of OpenShift on ARO, you will need to reconcile [upstream changes](https://github.com/openshift/installer) with our [forked installer](https://github.com/openshift/installer-aro). This will not be a merge, but a cherry-pick of patches we've implemented.
 
 ## Update installer fork
 
 To bring new OCP release branch into ARO installer fork:
 
-1. Assess and document differences in X.Y and X.Y-1 in upstream
+1. If not done already, fetch our fork and upstream repos:
     ```sh
     # clone our forked installer
-    git clone https://github.com/jewzaam/installer-aro.git
+    # Alternatively, fork openshift/installer-aro and clone your fork
+    git clone https://github.com/openshift/installer-aro.git
     cd installer-aro
     
     # add the upstream as a remote source
     git remote add upstream https://github.com/openshift/installer.git
     git fetch upstream -a
-    
+    ```
+1. Assess and document differences in X.Y and X.Y-1 in upstream
+    ```sh
     # diff the upstream X.Y with X.Y-1 and search for architecture changes
     git diff upstream/release-X.Y-1 upstream/release-X.Y
     
@@ -141,14 +161,16 @@ exec ./hack/go-test.sh
 
 When you are finished, you can write/close the file editor to perform the rebase on the upstream differences while verifying that every patch still works along the way.
 
-# Update ARO-RP
+Get a repo admin to create `release-X.Y-azure` in [openshift/installer-aro](https://github.com/openshift/installer-aro). You can now push your local branch `release-X.Y-azure` to your own fork of [openshift/installer-aro](https://github.com/openshift/installer-aro) and send a PR.
 
-Once installer fork is ready:
+# Update ARO Installer Wrapper and ARO-RP
+
+Once installer fork is ready, perform the following changes in the [ARO Installer Wrapper](https://github.com/openshift/installer-aro-wrapper):
 
 1. Update `go mod edit -replace` calls in `hack/update-go-module-dependencies.sh` to use a new release-X.Y branch.
     * Make sure to read comments in the script.
 1. `make vendor`.
-    * You most likely will have to make changes to the RP codebase at this point to adjust it to new versions of dependencies.
+    * You most likely will have to make changes to the codebase at this point to adjust it to new versions of dependencies.
     * Also you likely will have to repeat this step several time until you resolve all conflicting dependencies.
       Follow `go mod` failures, which will tell you what module requires what other module.
       You will probably need to look at the `go.mod` files of these modules and see whether they set own replace directives,
@@ -163,13 +185,20 @@ Once installer fork is ready:
       In the example above you need to:
         * Checkout `github.com/openshift/cluster-api-provider-kubevirt` at commit `e5aed9c73f1f`.
         * In go.mod find a replace directive for `kubevirt.io/client-go`.
-        * Add/update relevant replace directive in ARO-RP `go.mod`.
+        * Add/update relevant replace directive in `go.mod`.
 1. `make generate`.
+1. A local image can be built for testing purposes and pushed to a dev ACR repo. The process for [publishing the final image uses ADO](https://msazure.visualstudio.com/AzureRedHatOpenShift/_wiki/wikis/ARO.wiki/452838/ARO-Installer-Image-Deployment-Process)
+
+In the ARO-RP codebase:
+
 1. Update `pkg/util/version/const.go` to point to the new release.
     * You should be able to find latest published release and image hash [on quay.io](https://quay.io/repository/openshift-release-dev/ocp-release?tab=tags).
-1. Publish RHCOS image. See [this document](./publish-rhcos-image.md).
-1. After this point, you should be able to create a dev cluster using the RP and it should use the new release.
-1. `make discoverycache`.
+1. (Optional) `make discoverycache`.
     * This command requires a running cluster with the new version.
 1. The list of the hard-coded namespaces in `pkg/util/namespace/namespace.go` needs to be updated regularly as every
    minor version of upstream OCP introduces a new namespace or two.
+
+
+Publish RHCOS image to the Azure Cloud Partner Portal:
+1. Publish RHCOS image. See [this document](https://github.com/openshift/installer-aro-wrapper/blob/main/docs/publish-rhcos-image.md).
+1. After this point, you should be able to create a dev cluster using the RP and it should use the new release.
