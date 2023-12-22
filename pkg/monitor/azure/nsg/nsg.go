@@ -127,7 +127,9 @@ func (n *NSGMonitor) Monitor(ctx context.Context) []error {
 	for _, wp := range workerProfiles {
 		// Customer can configure a machineset with an invalid subnet.
 		// In such case, the subnetID will be empty.
-		if len(wp.SubnetID) == 0 {
+		//
+		// We do not need to consider profiles with 0 machines.
+		if len(wp.SubnetID) == 0 || wp.Count == 0 {
 			continue
 		}
 
