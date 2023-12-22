@@ -55,6 +55,17 @@ type openShiftClusterDynamicValidator struct {
 	fpAuthorizer    autorest.Authorizer
 }
 
+// ensureAccessTokenClaims can detect an error when the service principal (fp, cluster sp) has accidentally deleted from
+// the tenant. Using the token with ARM will result in the error as follows
+//
+//	Lack of an altsecid, puid or oid claim in the token. Continuing would
+//	subsequently cause the ARM error `Code="InvalidAuthenticationToken"
+//	Message="The received access token is not valid: at least one of the
+//	claims 'puid' or 'altsecid' or 'oid' should be present. If you are
+//	accessing as an application please make sure service principal is
+//	properly created in the tenant."`.  I think this can be returned when
+//	the service principal associated with the application hasn't yet
+//	caught up with the application itself.
 func ensureAccessTokenClaims(ctx context.Context, spTokenCredential azcore.TokenCredential, scopes []string) error {
 	options := policy.TokenRequestOptions{Scopes: scopes}
 	token, err := spTokenCredential.GetToken(ctx, options)
@@ -73,19 +84,6 @@ func ensureAccessTokenClaims(ctx context.Context, spTokenCredential azcore.Token
 			"The provided service principal generated an invalid token.")
 	}
 
-	// XXX Unclear if this check is still required, as it was originally
-	//     implemented for ADAL authentication with the comment:
-	//
-	//     Lack of an altsecid, puid or oid claim in the token. Continuing would
-	//     subsequently cause the ARM error `Code="InvalidAuthenticationToken"
-	//     Message="The received access token is not valid: at least one of the
-	//     claims 'puid' or 'altsecid' or 'oid' should be present. If you are
-	//     accessing as an application please make sure service principal is
-	//     properly created in the tenant."`.  I think this can be returned when
-	//     the service principal associated with the application hasn't yet
-	//     caught up with the application itself.
-	//
-	//     (source: commit id 52dff30f31bad63cc4e46bbf701437756a6da83a)
 	for _, claim := range []string{"altsecid", "oid", "puid"} {
 		if _, found := claims[claim]; found {
 			return nil
