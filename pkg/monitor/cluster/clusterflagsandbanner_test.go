@@ -10,7 +10,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
@@ -46,7 +45,7 @@ func (e *fakeMetricsEmitter) EmitFloat(topic string, value float64, dims map[str
 
 func generateDefaultFlags() arov1alpha1.OperatorFlags {
 	df := make(arov1alpha1.OperatorFlags)
-	for k, v := range api.DefaultOperatorFlags() {
+	for k, v := range operator.DefaultOperatorFlags() {
 		df[k] = v
 	}
 	return df
@@ -54,7 +53,7 @@ func generateDefaultFlags() arov1alpha1.OperatorFlags {
 
 func generateNonStandardFlags(nonDefualtFlagNames []string) arov1alpha1.OperatorFlags {
 	nsf := make(arov1alpha1.OperatorFlags)
-	for k, v := range api.DefaultOperatorFlags() {
+	for k, v := range operator.DefaultOperatorFlags() {
 		nsf[k] = v
 	}
 	for _, n := range nonDefualtFlagNames {
@@ -69,7 +68,7 @@ func generateNonStandardFlags(nonDefualtFlagNames []string) arov1alpha1.Operator
 
 func generateFlagsWithMissingEntries(missingFlagNames []string) arov1alpha1.OperatorFlags {
 	mf := make(arov1alpha1.OperatorFlags)
-	for k, v := range api.DefaultOperatorFlags() {
+	for k, v := range operator.DefaultOperatorFlags() {
 		mf[k] = v
 	}
 	for _, n := range missingFlagNames {

@@ -39,7 +39,7 @@ func validOpenShiftClusterDocument() *OpenShiftClusterDocument {
 				ClusterProfile: ClusterProfile{
 					FipsValidatedModules: FipsValidatedModulesDisabled,
 				},
-				OperatorFlags: DefaultOperatorFlags(),
+				OperatorFlags: OperatorFlags{"testflag": "testval"},
 			},
 		},
 	}
@@ -136,7 +136,7 @@ func TestSetDefaults(t *testing.T) {
 				tt.input(doc)
 			}
 
-			SetDefaults(doc)
+			SetDefaults(doc, func() map[string]string { return map[string]string{"testflag": "testvalue"} })
 
 			if !reflect.DeepEqual(&doc, &want) {
 				t.Error(fmt.Errorf("\n%+v\n !=\n%+v", doc, want)) // can't use cmp due to cycle imports
