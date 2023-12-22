@@ -39,7 +39,7 @@ func validOpenShiftClusterDocument() *OpenShiftClusterDocument {
 				ClusterProfile: ClusterProfile{
 					FipsValidatedModules: FipsValidatedModulesDisabled,
 				},
-				OperatorFlags: OperatorFlags{"testflag": "testval"},
+				OperatorFlags: OperatorFlags{"testflag": "testvalue"},
 			},
 		},
 	}
