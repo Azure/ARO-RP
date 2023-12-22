@@ -36,3 +36,39 @@ const (
 	FlagTrue                           = "true"
 	FlagFalse                          = "false"
 )
+
+// DefaultOperatorFlags returns flags for new clusters
+// and ones that have not been AdminUpdated.
+func DefaultOperatorFlags() map[string]string {
+	return map[string]string{
+		AlertWebhookEnabled:                FlagTrue,
+		AzureSubnetsEnabled:                FlagTrue,
+		AzureSubnetsNsgManaged:             FlagTrue,
+		AzureSubnetsServiceEndpointManaged: FlagTrue,
+		BannerEnabled:                      FlagFalse,
+		CheckerEnabled:                     FlagTrue,
+		DnsmasqEnabled:                     FlagTrue,
+		RestartDnsmasqEnabled:              FlagTrue,
+		GenevaLoggingEnabled:               FlagTrue,
+		ImageConfigEnabled:                 FlagTrue,
+		IngressEnabled:                     FlagTrue,
+		MachineEnabled:                     FlagTrue,
+		MachineSetEnabled:                  FlagTrue,
+		MachineHealthCheckEnabled:          FlagTrue,
+		MachineHealthCheckManaged:          FlagTrue,
+		MonitoringEnabled:                  FlagTrue,
+		NodeDrainerEnabled:                 FlagTrue,
+		PullSecretEnabled:                  FlagTrue,
+		PullSecretManaged:                  FlagTrue,
+		RbacEnabled:                        FlagTrue,
+		RouteFixEnabled:                    FlagTrue,
+		StorageAccountsEnabled:             FlagTrue,
+		WorkaroundEnabled:                  FlagTrue,
+		AutosizedNodesEnabled:              FlagTrue,
+		MuoEnabled:                         FlagTrue,
+		MuoManaged:                         FlagTrue,
+		GuardrailsEnabled:                  FlagFalse,
+		GuardrailsDeployManaged:            FlagFalse,
+		CloudProviderConfigEnabled:         FlagTrue,
+	}
+}

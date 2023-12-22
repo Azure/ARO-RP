@@ -1,7 +1,5 @@
 package api
 
-import "github.com/Azure/ARO-RP/pkg/operator"
-
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
@@ -9,7 +7,7 @@ import "github.com/Azure/ARO-RP/pkg/operator"
 // when interacting with newer api versions. This together with
 // database migration will make sure we have right values in the cluster documents
 // when moving between old and new versions
-func SetDefaults(doc *OpenShiftClusterDocument) {
+func SetDefaults(doc *OpenShiftClusterDocument, defaultOperatorFlags func() map[string]string) {
 	if doc.OpenShiftCluster != nil {
 		// EncryptionAtHost was introduced in 2021-09-01-preview.
 		// It can't be changed post cluster creation
@@ -42,7 +40,7 @@ func SetDefaults(doc *OpenShiftClusterDocument) {
 
 		// If there's no operator flags, set the default ones
 		if doc.OpenShiftCluster.Properties.OperatorFlags == nil {
-			doc.OpenShiftCluster.Properties.OperatorFlags = DefaultOperatorFlags()
+			doc.OpenShiftCluster.Properties.OperatorFlags = OperatorFlags(defaultOperatorFlags())
 		}
 
 		// If there's no OutboundType, set default one
@@ -63,41 +61,5 @@ func SetDefaults(doc *OpenShiftClusterDocument) {
 				},
 			}
 		}
-	}
-}
-
-// DefaultOperatorFlags returns flags for new clusters
-// and ones that have not been AdminUpdated.
-func DefaultOperatorFlags() OperatorFlags {
-	return OperatorFlags{
-		operator.AlertWebhookEnabled:                operator.FlagTrue,
-		operator.AzureSubnetsEnabled:                operator.FlagTrue,
-		operator.AzureSubnetsNsgManaged:             operator.FlagTrue,
-		operator.AzureSubnetsServiceEndpointManaged: operator.FlagTrue,
-		operator.BannerEnabled:                      operator.FlagFalse,
-		operator.CheckerEnabled:                     operator.FlagTrue,
-		operator.DnsmasqEnabled:                     operator.FlagTrue,
-		operator.RestartDnsmasqEnabled:              operator.FlagTrue,
-		operator.GenevaLoggingEnabled:               operator.FlagTrue,
-		operator.ImageConfigEnabled:                 operator.FlagTrue,
-		operator.IngressEnabled:                     operator.FlagTrue,
-		operator.MachineEnabled:                     operator.FlagTrue,
-		operator.MachineSetEnabled:                  operator.FlagTrue,
-		operator.MachineHealthCheckEnabled:          operator.FlagTrue,
-		operator.MachineHealthCheckManaged:          operator.FlagTrue,
-		operator.MonitoringEnabled:                  operator.FlagTrue,
-		operator.NodeDrainerEnabled:                 operator.FlagTrue,
-		operator.PullSecretEnabled:                  operator.FlagTrue,
-		operator.PullSecretManaged:                  operator.FlagTrue,
-		operator.RbacEnabled:                        operator.FlagTrue,
-		operator.RouteFixEnabled:                    operator.FlagTrue,
-		operator.StorageAccountsEnabled:             operator.FlagTrue,
-		operator.WorkaroundEnabled:                  operator.FlagTrue,
-		operator.AutosizedNodesEnabled:              operator.FlagTrue,
-		operator.MuoEnabled:                         operator.FlagTrue,
-		operator.MuoManaged:                         operator.FlagTrue,
-		operator.GuardrailsEnabled:                  operator.FlagFalse,
-		operator.GuardrailsDeployManaged:            operator.FlagFalse,
-		operator.CloudProviderConfigEnabled:         operator.FlagTrue,
 	}
 }
