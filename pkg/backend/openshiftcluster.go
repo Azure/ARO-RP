@@ -6,6 +6,7 @@ package backend
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -337,6 +338,11 @@ func (ocb *openShiftClusterBackend) asyncOperationResultLog(log *logrus.Entry, i
 	if backendErr == nil {
 		log.Info("long running operation succeeded")
 		return
+	}
+
+	if strings.Contains(backendErr.Error(), "one of the claims 'puid' or 'altsecid' or 'oid' should be present") {
+		backendErr = api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalClaims,
+			"properties.servicePrincipleProfile", "The provided service principal does not give an access token with at least one of the claims 'altsecid', 'oid' or 'puid'. Please make sure service principal is properly created in the tenant.")
 	}
 
 	_, ok := backendErr.(*api.CloudError)
