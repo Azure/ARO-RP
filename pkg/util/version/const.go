@@ -31,7 +31,7 @@ type Stream struct {
 }
 
 // DefaultMinorVersion describes the minor OpenShift version to default to
-var DefaultMinorVersion = 12
+var DefaultMinorVersion = 13
 
 // DefaultInstallStreams describes the latest version of our supported streams
 var DefaultInstallStreams = map[int]*Stream{

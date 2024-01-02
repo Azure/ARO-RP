@@ -149,6 +149,8 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		return nil
 	}
 
+	_ = c.insertDefaultVersionIntoCosmosdb(ctx)
+
 	fpSPID := os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")
 
 	if fpSPID == "" {
