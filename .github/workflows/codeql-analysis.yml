@@ -16,7 +16,7 @@ permissions:
   security-events: write
 
 env:
-  GOFLAGS: -tags=aro,containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
+  GOFLAGS: -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
 
 jobs:
   analyze:
