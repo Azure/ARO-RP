@@ -340,9 +340,9 @@ func (ocb *openShiftClusterBackend) asyncOperationResultLog(log *logrus.Entry, i
 		return
 	}
 
-	if strings.Contains(backendErr.Error(), "one of the claims 'puid' or 'altsecid' or 'oid' should be present") {
+	if strings.Contains(strings.ToLower(backendErr.Error()), "one of the claims 'puid' or 'altsecid' or 'oid' should be present") {
 		backendErr = api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalClaims,
-			"properties.servicePrincipleProfile", "The provided service principal does not give an access token with at least one of the claims 'altsecid', 'oid' or 'puid'. Please make sure service principal is properly created in the tenant.")
+			"properties.servicePrincipleProfile", "The Azure Red Hat Openshift resource provider service principal has been removed from your tenant. To restore, please unregister and then re-register the Azure Red Hat OpenShift resource provider.")
 	}
 
 	_, ok := backendErr.(*api.CloudError)

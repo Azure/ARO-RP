@@ -96,7 +96,7 @@ func ensureAccessTokenClaims(ctx context.Context, spTokenCredential azcore.Token
 		http.StatusBadRequest,
 		api.CloudErrorCodeInvalidServicePrincipalClaims,
 		"properties.servicePrincipleProfile",
-		"The provided service principal does not give an access token with at least one of the claims 'altsecid', 'oid' or 'puid'. Please make sure service principal is properly created in the tenant.")
+		"The Azure Red Hat Openshift resource provider service principal has been removed from your tenant. To restore, please unregister and then re-register the Azure Red Hat OpenShift resource provider.")
 }
 
 // Dynamic validates an OpenShift cluster
