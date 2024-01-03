@@ -20,6 +20,9 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	applyv1 "k8s.io/client-go/applyconfigurations/core/v1"
+	"k8s.io/client-go/kubernetes"
+	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,6 +33,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
@@ -45,15 +49,20 @@ var rhKeys = []string{"registry.redhat.io", "cloud.openshift.com", "registry.con
 
 // Reconciler reconciles a Cluster object
 type Reconciler struct {
-	log *logrus.Entry
+	base.AROController
 
-	client client.Client
+	secretsClient corev1client.SecretInterface
 }
 
-func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface) *Reconciler {
 	return &Reconciler{
-		log:    log,
-		client: client,
+		AROController: base.AROController{
+			Log:    log,
+			Client: client,
+			Name:   ControllerName,
+		},
+
+		secretsClient: kubernetescli.CoreV1().Secrets(pullSecretName.Namespace),
 	}
 }
 
@@ -68,19 +77,18 @@ func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
 //     changes, we'll see the pull Secret object requested.
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance := &arov1alpha1.Cluster{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+	err := r.AROController.Client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		r.log.Debug("controller is disabled")
+		r.AROController.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
-	r.log.Debug("running")
-	userSecret := &corev1.Secret{}
-	err = r.client.Get(ctx, pullSecretName, userSecret)
+	r.AROController.Log.Debug("running")
+	userSecret, err := r.secretsClient.Get(ctx, pullSecretName.Name, metav1.GetOptions{})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return reconcile.Result{}, err
 	}
@@ -89,7 +97,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// detects if the global pull secret is broken and fixes it by using backup managed by ARO operator
 	if instance.Spec.OperatorFlags.GetSimpleBoolean(controllerManaged) {
 		operatorSecret := &corev1.Secret{}
-		err = r.client.Get(ctx, types.NamespacedName{Namespace: operator.Namespace, Name: operator.SecretName}, operatorSecret)
+		err = r.AROController.Client.Get(ctx, types.NamespacedName{Namespace: operator.Namespace, Name: operator.SecretName}, operatorSecret)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -109,7 +117,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	err = r.client.Update(ctx, instance)
+	err = r.AROController.Client.Update(ctx, instance)
 	return reconcile.Result{}, err
 }
 
@@ -145,58 +153,42 @@ func (r *Reconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret,
 		return nil, errors.New("nil operator secret, cannot verify userData integrity")
 	}
 
-	recreate := false
+	// recreate := false
+	secretData := make(map[string][]byte)
 
-	// if there is no userSecret, create new, or when
-	// userSecret have broken type, recreates it with proper type
-	// unfortunately the type field is immutable, therefore the whole secret have to be deleted and create once more
-	if userSecret == nil || (userSecret.Type != corev1.SecretTypeDockerConfigJson || userSecret.Data == nil) {
-		recreate = true
-	}
-
-	if recreate {
-		secret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      pullSecretName.Name,
-				Namespace: pullSecretName.Namespace,
-			},
-			Type: corev1.SecretTypeDockerConfigJson,
-			Data: make(map[string][]byte),
+	var invalidSecretType bool
+	if userSecret != nil {
+		// when userSecret has broken type, recreates it with proper type
+		// unfortunately the type field is immutable, therefore the whole secret has to be deleted and recreated
+		if userSecret.Type != corev1.SecretTypeDockerConfigJson {
+			invalidSecretType = true
+			err := r.secretsClient.Delete(ctx, pullSecretName.Name, metav1.DeleteOptions{})
+			if err != nil && !kerrors.IsNotFound(err) {
+				return nil, err
+			}
 		}
-	} else {
-		secret = userSecret.DeepCopy()
-		if !json.Valid(secret.Data[corev1.DockerConfigJsonKey]) {
-			delete(secret.Data, corev1.DockerConfigJsonKey)
+
+		if json.Valid(userSecret.Data[corev1.DockerConfigJsonKey]) {
+			secretData = userSecret.Data
 		}
 	}
 
-	fixedData, update, err := pullsecret.Merge(string(secret.Data[corev1.DockerConfigJsonKey]), string(operatorSecret.Data[corev1.DockerConfigJsonKey]))
+	fixedData, update, err := pullsecret.Merge(string(secretData[corev1.DockerConfigJsonKey]), string(operatorSecret.Data[corev1.DockerConfigJsonKey]))
 	if err != nil {
 		return nil, err
 	}
 
-	// update is true for any case when ARO keys are fixed, meaning no need to double check for recreation
-	if !update {
+	if !(update || invalidSecretType) {
 		return userSecret, nil
 	}
 
-	secret.Data[corev1.DockerConfigJsonKey] = []byte(fixedData)
+	secretData[corev1.DockerConfigJsonKey] = []byte(fixedData)
 
-	if recreate {
-		// delete possible existing userSecret, calling deletion every time and ignoring when secret not found
-		// allows for simpler logic flow, when delete and create are not handled separately
-		// this call happens only when there is a need to change, it has no significant impact on performance
-		err := r.client.Delete(ctx, secret)
-		if err != nil && !kerrors.IsNotFound(err) {
-			return nil, err
-		}
-
-		err = r.client.Create(ctx, secret)
-		return secret, err
-	}
-
-	err = r.client.Update(ctx, secret)
-	return secret, err
+	secretApplyConfig := applyv1.Secret(pullSecretName.Name, pullSecretName.Namespace).
+		WithType(corev1.SecretTypeDockerConfigJson).
+		WithData(secretData)
+	applyOptions := metav1.ApplyOptions{FieldManager: ControllerName, Force: true}
+	return r.secretsClient.Apply(ctx, secretApplyConfig, applyOptions)
 }
 
 // parseRedHatKeys unmarshal and extract following RH keys from pull-secret:
@@ -209,7 +201,7 @@ func (r *Reconciler) parseRedHatKeys(secret *corev1.Secret) (foundKeys []string,
 	// parse keys and validate JSON
 	parsedKeys, err := pullsecret.UnmarshalSecretData(secret)
 	if err != nil {
-		r.log.Info("pull secret is not valid json - recreating")
+		r.AROController.Log.Info("pull secret is not valid json - recreating")
 		return foundKeys, err
 	}
 

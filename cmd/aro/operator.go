@@ -99,7 +99,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (pullsecret.NewReconciler(
 			log.WithField("controller", pullsecret.ControllerName),
-			client)).SetupWithManager(mgr); err != nil {
+			client, kubernetescli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", pullsecret.ControllerName, err)
 		}
 		if err = (alertwebhook.NewReconciler(
