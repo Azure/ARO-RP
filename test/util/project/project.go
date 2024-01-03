@@ -18,28 +18,28 @@ import (
 type Project struct {
 	projectClient projectclient.Interface
 	cli           kubernetes.Interface
-	name          string
+	Name          string
 }
 
 func NewProject(cli kubernetes.Interface, projectClient projectclient.Interface, name string) Project {
 	return Project{
 		projectClient: projectClient,
 		cli:           cli,
-		name:          name,
+		Name:          name,
 	}
 }
 
 func (p Project) Create(ctx context.Context) error {
 	_, err := p.projectClient.ProjectV1().Projects().Create(ctx, &projectv1.Project{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: p.name,
+			Name: p.Name,
 		},
 	}, metav1.CreateOptions{})
 	return err
 }
 
 func (p Project) Delete(ctx context.Context) error {
-	return p.projectClient.ProjectV1().Projects().Delete(ctx, p.name, metav1.DeleteOptions{})
+	return p.projectClient.ProjectV1().Projects().Delete(ctx, p.Name, metav1.DeleteOptions{})
 }
 
 // VerifyProjectIsReady verifies that the project and relevant resources have been created correctly and returns error otherwise
@@ -48,7 +48,7 @@ func (p Project) Verify(ctx context.Context) error {
 		&authorizationv1.SelfSubjectAccessReview{
 			Spec: authorizationv1.SelfSubjectAccessReviewSpec{
 				ResourceAttributes: &authorizationv1.ResourceAttributes{
-					Namespace: p.name,
+					Namespace: p.Name,
 					Verb:      "create",
 					Resource:  "pods",
 				},
@@ -58,7 +58,7 @@ func (p Project) Verify(ctx context.Context) error {
 		return err
 	}
 
-	sa, err := p.cli.CoreV1().ServiceAccounts(p.name).Get(ctx, "default", metav1.GetOptions{})
+	sa, err := p.cli.CoreV1().ServiceAccounts(p.Name).Get(ctx, "default", metav1.GetOptions{})
 	if err != nil || kerrors.IsNotFound(err) {
 		return fmt.Errorf("error retrieving default ServiceAccount")
 	}
@@ -67,7 +67,7 @@ func (p Project) Verify(ctx context.Context) error {
 		return fmt.Errorf("default ServiceAccount does not have secrets")
 	}
 
-	proj, err := p.projectClient.ProjectV1().Projects().Get(ctx, p.name, metav1.GetOptions{})
+	proj, err := p.projectClient.ProjectV1().Projects().Get(ctx, p.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (p Project) Verify(ctx context.Context) error {
 // VerifyProjectIsDeleted verifies that the project does not exist and returns error if a project exists
 // or if it encounters an error other than NotFound
 func (p Project) VerifyProjectIsDeleted(ctx context.Context) error {
-	_, err := p.projectClient.ProjectV1().Projects().Get(ctx, p.name, metav1.GetOptions{})
+	_, err := p.projectClient.ProjectV1().Projects().Get(ctx, p.Name, metav1.GetOptions{})
 	if kerrors.IsNotFound(err) {
 		return nil
 	}

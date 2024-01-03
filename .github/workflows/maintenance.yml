@@ -18,5 +18,6 @@ jobs:
         uses: eps1lon/actions-label-merge-conflict@releases/2.x
         with:
           dirtyLabel: needs-rebase
+          removeOnDirtyLabel: ready-for-review
           repoToken: "${{ secrets.GITHUB_TOKEN }}"
           commentOnDirty: "Please rebase pull request."

@@ -6,6 +6,7 @@ package remotepdp
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -87,6 +88,6 @@ func newCheckAccessError(r *http.Response) error {
 	return &azcore.ResponseError{
 		StatusCode:  r.StatusCode,
 		RawResponse: r,
-		ErrorCode:   checkAccessError.Message,
+		ErrorCode:   fmt.Sprint(checkAccessError.StatusCode),
 	}
 }

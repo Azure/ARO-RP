@@ -29,10 +29,11 @@ import (
 const (
 	SessionName = "session"
 	// Expiration time in unix format
-	SessionKeyExpires  = "expires"
-	sessionKeyState    = "state"
-	SessionKeyUsername = "user_name"
-	SessionKeyGroups   = "groups"
+	SessionKeyExpires     = "expires"
+	sessionKeyState       = "state"
+	sessionKeyRedirectUri = "redirect_uri"
+	SessionKeyUsername    = "user_name"
+	SessionKeyGroups      = "groups"
 )
 
 // AAD is responsible for ensuring that we have a valid login session with AAD.
@@ -175,7 +176,11 @@ func (a *aad) CheckAuthentication(h http.Handler) http.Handler {
 		ctx := r.Context()
 		if ctx.Value(ContextKeyUsername) == nil {
 			if r.URL != nil {
-				http.Redirect(w, r, "/api/login", http.StatusTemporaryRedirect)
+				redirect := "/api/login"
+				if r.URL.Path != "" {
+					redirect += "?" + sessionKeyRedirectUri + "=" + r.URL.Path
+				}
+				http.Redirect(w, r, redirect, http.StatusTemporaryRedirect)
 				return
 			}
 			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
@@ -221,6 +226,10 @@ func (a *aad) redirect(w http.ResponseWriter, r *http.Request) {
 
 	session.Values = map[interface{}]interface{}{
 		sessionKeyState: state,
+	}
+
+	if r.URL.Query().Has(sessionKeyRedirectUri) {
+		session.Values[sessionKeyRedirectUri] = r.URL.Query().Get(sessionKeyRedirectUri)
 	}
 
 	err = session.Save(r, w)
@@ -308,13 +317,19 @@ func (a *aad) callback(w http.ResponseWriter, r *http.Request) {
 	session.Values[SessionKeyGroups] = groupsIntersect
 	session.Values[SessionKeyExpires] = a.now().Add(a.sessionTimeout).Unix()
 
+	redirectUri := "/"
+	if v, ok := session.Values[sessionKeyRedirectUri]; ok {
+		redirectUri = v.(string)
+		delete(session.Values, sessionKeyRedirectUri)
+	}
+
 	err = session.Save(r, w)
 	if err != nil {
 		a.internalServerError(w, err)
 		return
 	}
 
-	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+	http.Redirect(w, r, redirectUri, http.StatusTemporaryRedirect)
 }
 
 // clientAssertion adds a JWT client assertion according to

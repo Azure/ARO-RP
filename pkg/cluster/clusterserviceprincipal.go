@@ -4,12 +4,14 @@ package cluster
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
 	"strings"
 	"time"
 
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	"github.com/ghodss/yaml"
+	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	applyv1 "k8s.io/client-go/applyconfigurations/core/v1"
@@ -77,47 +79,70 @@ func (m *manager) createOrUpdateClusterServicePrincipalRBAC(ctx context.Context)
 	return nil
 }
 
+// cloudConfigSecretFromChanges takes in the kube-system/azure-cloud-provider Secret and a map
+// containing cloud-config data. If the cloud-config data in cf is different from what's currently
+// in the Secret, cloudConfigSecretFromChanges updates and returns the Secret. Otherwise, it returns nil.
+func cloudConfigSecretFromChanges(secret *corev1.Secret, cf map[string]interface{}) (*corev1.Secret, error) {
+	data, err := yaml.Marshal(cf)
+	if err != nil {
+		return nil, err
+	}
+
+	if !bytes.Equal(secret.Data["cloud-config"], data) {
+		secret.Data["cloud-config"] = data
+		return secret, nil
+	}
+
+	return nil, nil
+}
+
+// servicePrincipalUpdated checks whether the CSP has been updated by comparing the cluster doc's
+// ServicePrincipalProfile to the contents of the kube-system/azure-cloud-provider Secret. If the CSP
+// has changed, it returns a new corev1.Secret to use to update the Secret to match
+// what's in the cluster doc.
+func (m *manager) servicePrincipalUpdated(ctx context.Context) (*corev1.Secret, error) {
+	spp := m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
+	//data:
+	// cloud-config: <base64 map[string]string with keys 'aadClientId' and 'aadClientSecret'>
+	secret, err := m.kubernetescli.CoreV1().Secrets("kube-system").Get(ctx, "azure-cloud-provider", metav1.GetOptions{})
+	if err != nil {
+		if kerrors.IsNotFound(err) { // we are not in control if secret is not present
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	var cf map[string]interface{}
+	if secret != nil && secret.Data != nil {
+		err = yaml.Unmarshal(secret.Data["cloud-config"], &cf)
+		if err != nil {
+			return nil, err
+		}
+		if val, ok := cf["aadClientId"].(string); ok {
+			if val != spp.ClientID {
+				cf["aadClientId"] = spp.ClientID
+			}
+		}
+		if val, ok := cf["aadClientSecret"].(string); ok {
+			if val != string(spp.ClientSecret) {
+				cf["aadClientSecret"] = spp.ClientSecret
+			}
+		}
+	}
+
+	return cloudConfigSecretFromChanges(secret, cf)
+}
+
 func (m *manager) updateAROSecret(ctx context.Context) error {
 	var changed bool
-	spp := m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		//data:
-		// cloud-config: <base64 map[string]string with keys 'aadClientId' and 'aadClientSecret'>
-		secret, err := m.kubernetescli.CoreV1().Secrets("kube-system").Get(ctx, "azure-cloud-provider", metav1.GetOptions{})
+		secret, err := m.servicePrincipalUpdated(ctx)
+		changed = secret != nil
 		if err != nil {
-			if kerrors.IsNotFound(err) { // we are not in control if secret is not present
-				return nil
-			}
 			return err
 		}
 
-		var cf map[string]interface{}
-		if secret != nil && secret.Data != nil {
-			err = yaml.Unmarshal(secret.Data["cloud-config"], &cf)
-			if err != nil {
-				return err
-			}
-			if val, ok := cf["aadClientId"].(string); ok {
-				if val != spp.ClientID {
-					cf["aadClientId"] = spp.ClientID
-					changed = true
-				}
-			}
-			if val, ok := cf["aadClientSecret"].(string); ok {
-				if val != string(spp.ClientSecret) {
-					cf["aadClientSecret"] = spp.ClientSecret
-					changed = true
-				}
-			}
-		}
-
 		if changed {
-			data, err := yaml.Marshal(cf)
-			if err != nil {
-				return err
-			}
-			secret.Data["cloud-config"] = data
-
 			_, err = m.kubernetescli.CoreV1().Secrets("kube-system").Update(ctx, secret, metav1.UpdateOptions{})
 			if err != nil {
 				return err

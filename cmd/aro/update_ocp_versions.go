@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/policy"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -100,7 +101,7 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 		}
 	}
 
-	msiAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceManagerScope)
+	msiToken, err := _env.NewMSITokenCredential(env.MSIContextRP)
 	if err != nil {
 		return nil, fmt.Errorf("MSI Authorizer failed with: %s", err.Error())
 	}
@@ -129,7 +130,10 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 	}
 
 	dbAccountName := os.Getenv(DatabaseAccountName)
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer, dbAccountName)
+	clientOptions := &policy.ClientOptions{
+		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
+	}
+	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, msiToken, clientOptions, _env.SubscriptionID(), _env.ResourceGroup(), dbAccountName)
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +188,13 @@ func updateOpenShiftVersions(ctx context.Context, dbOpenShiftVersions database.O
 		}
 
 		log.Printf("Version %q not found, deleting", doc.OpenShiftVersion.Properties.Version)
-		err := dbOpenShiftVersions.Delete(ctx, doc)
+		// Delete via changefeed
+		_, err := dbOpenShiftVersions.Patch(ctx, doc.ID,
+			func(d *api.OpenShiftVersionDocument) error {
+				d.OpenShiftVersion.Deleting = true
+				d.TTL = 60
+				return nil
+			})
 		if err != nil {
 			return err
 		}

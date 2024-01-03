@@ -92,6 +92,7 @@ func validatePermittedClusterwideObjects(gvr schema.GroupVersionResource) bool {
 		"machineconfiguration.openshift.io":   true,
 		"operator.openshift.io":               true,
 		"rbac.authorization.k8s.io":           true,
+		"metrics.k8s.io":                      true,
 	}
 	permittedObjects := map[string]map[string]bool{
 		"": {"nodes": true},

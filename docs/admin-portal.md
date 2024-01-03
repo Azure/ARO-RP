@@ -12,6 +12,7 @@ The portal front end lives in the top level directory of the ARO-RP repo within 
 
 The front end code is compiled into go code using the bindata golang module. This front end code is then served through the RP.
 
+The admin portal also serves a static Prometheus web frontend. The contents are taken from a Prometheus release's web-ui artifact (e.g. [2.48](https://github.com/prometheus/prometheus/releases/download/v2.48.0/prometheus-web-ui-2.48.0.tar.gz)), and the static/react subdirectory is mirrored to this repository's pkg/portal/assets/prometheus-ui directory.
 
 ## Developing
 

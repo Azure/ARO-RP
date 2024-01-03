@@ -16,6 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
@@ -36,6 +37,7 @@ type monitor struct {
 	mu       sync.RWMutex
 	docs     map[string]*cacheDoc
 	subs     map[string]*api.SubscriptionDocument
+	env      env.Interface
 
 	isMaster    bool
 	bucketCount int
@@ -54,7 +56,7 @@ type Runnable interface {
 	Run(context.Context) error
 }
 
-func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Monitors, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, m, clusterm metrics.Emitter, liveConfig liveconfig.Manager) Runnable {
+func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Monitors, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, m, clusterm metrics.Emitter, liveConfig liveconfig.Manager, e env.Interface) Runnable {
 	return &monitor{
 		baseLog: log,
 		dialer:  dialer,
@@ -67,6 +69,7 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Moni
 		clusterm: clusterm,
 		docs:     map[string]*cacheDoc{},
 		subs:     map[string]*api.SubscriptionDocument{},
+		env:      e,
 
 		bucketCount: bucket.Buckets,
 		buckets:     map[int]struct{}{},

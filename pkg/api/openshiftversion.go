@@ -18,9 +18,12 @@ type OpenShiftVersion struct {
 
 // OpenShiftVersionProperties represents the properties of an OpenShiftVersion.
 type OpenShiftVersionProperties struct {
+	MissingFields
+
 	// Version represents the version to create the cluster at.
 	Version           string `json:"version,omitempty"`
 	OpenShiftPullspec string `json:"openShiftPullspec,omitempty"`
 	InstallerPullspec string `json:"installerPullspec,omitempty"`
 	Enabled           bool   `json:"enabled,omitempty"`
+	Default           bool   `json:"default,omitempty"`
 }

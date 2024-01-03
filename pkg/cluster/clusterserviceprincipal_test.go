@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"testing"
@@ -18,11 +19,10 @@ import (
 	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/fake"
+	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
 	ktesting "k8s.io/client-go/testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -31,6 +31,7 @@ import (
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	"github.com/Azure/ARO-RP/test/util/serversideapply"
 )
 
 const fakeClusterSPObjectId = "00000000-0000-0000-0000-000000000000"
@@ -188,6 +189,194 @@ func getFakeAROSecret(clientID, secret string) corev1.Secret {
 	}
 }
 
+func TestCloudConfigSecretFromChanges(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		secretIn   func() *corev1.Secret
+		cf         map[string]interface{}
+		wantSecret func() *corev1.Secret
+		wantErrMsg string
+	}{
+		{
+			name: "New CSP (client ID and client secret both changed)",
+			secretIn: func() *corev1.Secret {
+				secret := getFakeAROSecret("aadClientId", "aadClientSecret")
+				return &secret
+			},
+			cf: map[string]interface{}{
+				"aadClientId":     "aadClientIdNew",
+				"aadClientSecret": "aadClientSecretNew",
+			},
+			wantSecret: func() *corev1.Secret {
+				secret := getFakeAROSecret("aadClientIdNew", "aadClientSecretNew")
+				return &secret
+			},
+		},
+		{
+			name: "Updated secret (client ID stayed the same, client secret changed)",
+			secretIn: func() *corev1.Secret {
+				secret := getFakeAROSecret("aadClientId", "aadClientSecret")
+				return &secret
+			},
+			cf: map[string]interface{}{
+				"aadClientId":     "aadClientId",
+				"aadClientSecret": "aadClientSecretNew",
+			},
+			wantSecret: func() *corev1.Secret {
+				secret := getFakeAROSecret("aadClientId", "aadClientSecretNew")
+				return &secret
+			},
+		},
+		{
+			name: "No errors, nothing changed",
+			secretIn: func() *corev1.Secret {
+				secret := getFakeAROSecret("aadClientId", "aadClientSecret")
+				return &secret
+			},
+			cf: map[string]interface{}{
+				"aadClientId":     "aadClientId",
+				"aadClientSecret": "aadClientSecret",
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			secret, err := cloudConfigSecretFromChanges(tt.secretIn(), tt.cf)
+			if tt.wantSecret != nil {
+				wantSecret := tt.wantSecret()
+				if secret == nil {
+					t.Errorf("Did not return a Secret, but expected the following Secret data: %v", string(wantSecret.Data["cloud-config"]))
+				}
+				if !reflect.DeepEqual(secret, wantSecret) {
+					t.Errorf("\n%+v \n!= \n%+v", string(secret.Data["cloud-config"]), string(wantSecret.Data["cloud-config"]))
+				}
+			} else if tt.wantSecret == nil && secret != nil {
+				t.Errorf("Should not have returned a Secret")
+			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErrMsg)
+		})
+	}
+}
+
+func TestServicePrincipalUpdated(t *testing.T) {
+	ctx := context.Background()
+
+	for _, tt := range []struct {
+		name          string
+		kubernetescli func() *fake.Clientset
+		spp           api.ServicePrincipalProfile
+		wantSecret    func() *corev1.Secret
+		wantErrMsg    string
+	}{
+		{
+			name: "Secret not found",
+			kubernetescli: func() *fake.Clientset {
+				return fake.NewSimpleClientset()
+			},
+			spp: api.ServicePrincipalProfile{
+				ClientID:     "aadClientId",
+				ClientSecret: "aadClientSecretNew",
+			},
+			wantErrMsg: "",
+		},
+		{
+			name: "Encounter other error getting Secret",
+			kubernetescli: func() *fake.Clientset {
+				cli := fake.NewSimpleClientset()
+				cli.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("get", "secrets", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+					return true, &corev1.Secret{}, errors.New("Error getting Secret")
+				})
+				return cli
+			},
+			spp: api.ServicePrincipalProfile{
+				ClientID:     "aadClientId",
+				ClientSecret: "aadClientSecretNew",
+			},
+			wantErrMsg: "Error getting Secret",
+		},
+		{
+			name: "Unable to unmarshal cloud-config data",
+			kubernetescli: func() *fake.Clientset {
+				secret := getFakeAROSecret("aadClientId", "aadClientSecret")
+				secret.Data["cloud-config"] = []byte("This is some random data that is not going to unmarshal properly!")
+				return fake.NewSimpleClientset(&secret)
+			},
+			spp: api.ServicePrincipalProfile{
+				ClientID:     "aadClientId",
+				ClientSecret: "aadClientSecretNew",
+			},
+			wantErrMsg: "error unmarshaling JSON: while decoding JSON: json: cannot unmarshal string into Go value of type map[string]interface {}",
+		},
+		{
+			name: "New CSP (client ID and client secret both changed)",
+			kubernetescli: func() *fake.Clientset {
+				secret := getFakeAROSecret("aadClientId", "aadClientSecret")
+				return fake.NewSimpleClientset(&secret)
+			},
+			spp: api.ServicePrincipalProfile{
+				ClientID:     "aadClientIdNew",
+				ClientSecret: "aadClientSecretNew",
+			},
+			wantSecret: func() *corev1.Secret {
+				secret := getFakeAROSecret("aadClientIdNew", "aadClientSecretNew")
+				return &secret
+			},
+		},
+		{
+			name: "Updated secret (client ID stayed the same, client secret changed)",
+			kubernetescli: func() *fake.Clientset {
+				secret := getFakeAROSecret("aadClientId", "aadClientSecret")
+				return fake.NewSimpleClientset(&secret)
+			},
+			spp: api.ServicePrincipalProfile{
+				ClientID:     "aadClientId",
+				ClientSecret: "aadClientSecretNew",
+			},
+			wantSecret: func() *corev1.Secret {
+				secret := getFakeAROSecret("aadClientId", "aadClientSecretNew")
+				return &secret
+			},
+		},
+		{
+			name: "No errors, nothing changed",
+			kubernetescli: func() *fake.Clientset {
+				secret := getFakeAROSecret("aadClientId", "aadClientSecret")
+				return fake.NewSimpleClientset(&secret)
+			},
+			spp: api.ServicePrincipalProfile{
+				ClientID:     "aadClientId",
+				ClientSecret: "aadClientSecret",
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &manager{
+				kubernetescli: tt.kubernetescli(),
+				doc: &api.OpenShiftClusterDocument{
+					OpenShiftCluster: &api.OpenShiftCluster{
+						Properties: api.OpenShiftClusterProperties{
+							ServicePrincipalProfile: tt.spp,
+						},
+					},
+				},
+			}
+
+			secret, err := m.servicePrincipalUpdated(ctx)
+			if tt.wantSecret != nil {
+				wantSecret := tt.wantSecret()
+				if secret == nil {
+					t.Errorf("Did not return a Secret, but expected the following Secret data: %v", string(wantSecret.Data["cloud-config"]))
+				}
+				if !reflect.DeepEqual(secret, wantSecret) {
+					t.Errorf("\n%+v \n!= \n%+v", string(secret.Data["cloud-config"]), string(wantSecret.Data["cloud-config"]))
+				}
+			} else if tt.wantSecret == nil && secret != nil {
+				t.Errorf("Should not have returned a Secret")
+			}
+			utilerror.AssertErrorMessage(t, err, tt.wantErrMsg)
+		})
+	}
+}
+
 func TestUpdateAROSecret(t *testing.T) {
 	ctx := context.Background()
 
@@ -335,7 +524,7 @@ func TestUpdateOpenShiftSecret(t *testing.T) {
 			name: "noop",
 			kubernetescli: func() *fake.Clientset {
 				secret := getFakeOpenShiftSecret()
-				return cliWithApply(&secret)
+				return serversideapply.CliWithApply([]string{"secrets"}, &secret)
 			},
 			doc: api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
@@ -360,7 +549,7 @@ func TestUpdateOpenShiftSecret(t *testing.T) {
 			name: "update secret",
 			kubernetescli: func() *fake.Clientset {
 				secret := getFakeOpenShiftSecret()
-				return cliWithApply(&secret)
+				return serversideapply.CliWithApply([]string{"secrets"}, &secret)
 			},
 			doc: api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
@@ -387,7 +576,7 @@ func TestUpdateOpenShiftSecret(t *testing.T) {
 			name: "update tenant",
 			kubernetescli: func() *fake.Clientset {
 				secret := getFakeOpenShiftSecret()
-				return cliWithApply(&secret)
+				return serversideapply.CliWithApply([]string{"secrets"}, &secret)
 			},
 			doc: api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
@@ -413,7 +602,7 @@ func TestUpdateOpenShiftSecret(t *testing.T) {
 		{
 			name: "recreate secret when not found",
 			kubernetescli: func() *fake.Clientset {
-				return cliWithApply()
+				return serversideapply.CliWithApply([]string{"secrets"})
 			},
 			doc: api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
@@ -457,45 +646,4 @@ func TestUpdateOpenShiftSecret(t *testing.T) {
 			}
 		})
 	}
-}
-
-// The current kubernetes testing client does not propery handle Apply actions so we reimplement it here.
-// See https://github.com/kubernetes/client-go/issues/1184 for more details.
-func cliWithApply(object ...runtime.Object) *fake.Clientset {
-	fc := fake.NewSimpleClientset(object...)
-	fc.PrependReactor("patch", "secrets", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
-		pa := action.(ktesting.PatchAction)
-		if pa.GetPatchType() == types.ApplyPatchType {
-			// Apply patches are supposed to upsert, but fake client fails if the object doesn't exist,
-			// if an apply patch occurs for a secret that doesn't yet exist, create it.
-			// However, we already hold the fakeclient lock, so we can't use the front door.
-			rfunc := ktesting.ObjectReaction(fc.Tracker())
-			_, obj, err := rfunc(
-				ktesting.NewGetAction(pa.GetResource(), pa.GetNamespace(), pa.GetName()),
-			)
-			if kerrors.IsNotFound(err) || obj == nil {
-				_, _, _ = rfunc(
-					ktesting.NewCreateAction(
-						pa.GetResource(),
-						pa.GetNamespace(),
-						&corev1.Secret{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      pa.GetName(),
-								Namespace: pa.GetNamespace(),
-							},
-						},
-					),
-				)
-			}
-			return rfunc(ktesting.NewPatchAction(
-				pa.GetResource(),
-				pa.GetNamespace(),
-				pa.GetName(),
-				types.StrategicMergePatchType,
-				pa.GetPatch()))
-		}
-		return false, nil, nil
-	},
-	)
-	return fc
 }

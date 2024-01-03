@@ -18,6 +18,7 @@ import (
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -89,6 +90,7 @@ type manager struct {
 	graph   graph.Manager
 
 	kubernetescli    kubernetes.Interface
+	dynamiccli       dynamic.Interface
 	extensionscli    extensionsclient.Interface
 	maocli           machineclient.Interface
 	mcocli           mcoclient.Interface

@@ -1,8 +1,7 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { AxiosResponse } from "axios"
 import { fetchClusterInfo } from "../Request"
-import { ICluster } from "../App"
-import { ClusterDetailComponent } from "../ClusterDetailList"
+import { IClusterCoordinates } from "../App"
 import { OverviewComponent } from "./Overview"
 import {
   IMessageBarStyles,
@@ -18,13 +17,12 @@ const errorBarStyles: Partial<IMessageBarStyles> = { root: { marginBottom: 15 } 
 
 export function OverviewWrapper(props: {
   clusterName: string
-  currentCluster: ICluster
+  currentCluster: IClusterCoordinates
   detailPanelSelected: string
   loaded: boolean
 }) {
   const [data, setData] = useState<any>([])
   const [error, setError] = useState<AxiosResponse | null>(null)
-  const state = useRef<ClusterDetailComponent>(null)
   const [fetching, setFetching] = useState("")
 
   const errorBar = (): any => {
@@ -45,9 +43,6 @@ export function OverviewWrapper(props: {
   // api/clusterdetail returns a single item.
   const updateData = (newData: any) => {
     setData(newData)
-    if (state && state.current) {
-      state.current.setState({ item: newData, detailPanelSelected: props.detailPanelSelected })
-    }
   }
 
   const controlStyles = {

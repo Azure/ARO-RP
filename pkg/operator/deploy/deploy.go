@@ -13,6 +13,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -37,6 +38,7 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
+	utilkubernetes "github.com/Azure/ARO-RP/pkg/util/kubernetes"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
@@ -48,7 +50,9 @@ var embeddedFiles embed.FS
 
 type Operator interface {
 	CreateOrUpdate(context.Context) error
+	CreateOrUpdateCredentialsRequest(context.Context) error
 	IsReady(context.Context) (bool, error)
+	Restart(context.Context, []string) error
 	IsRunningDesiredVersion(context.Context) (bool, error)
 	RenewMDSDCertificate(context.Context) error
 }
@@ -365,6 +369,28 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 	return nil
 }
 
+// CreateOrUpdateCredentialsRequest just creates/updates the ARO operator's CredentialsRequest
+// rather than doing all of the operator's associated Kubernetes resources.
+func (o *operator) CreateOrUpdateCredentialsRequest(ctx context.Context) error {
+	templ, err := template.ParseFS(embeddedFiles, "staticresources/credentialsrequest.yaml")
+	if err != nil {
+		return err
+	}
+
+	buff := &bytes.Buffer{}
+	err = templ.Execute(buff, nil)
+	if err != nil {
+		return err
+	}
+
+	crUnstructured, err := dynamichelper.DecodeUnstructured(buff.Bytes())
+	if err != nil {
+		return err
+	}
+
+	return o.dh.Ensure(ctx, crUnstructured)
+}
+
 func (o *operator) RenewMDSDCertificate(ctx context.Context) error {
 	key, cert := o.env.ClusterGenevaLoggingSecret()
 	gcsKeyBytes, err := utilpem.Encode(key)
@@ -403,6 +429,18 @@ func (o *operator) IsReady(ctx context.Context) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func (o *operator) Restart(ctx context.Context, deploymentNames []string) error {
+	var result error
+	for _, dn := range deploymentNames {
+		err := utilkubernetes.Restart(ctx, o.kubernetescli.AppsV1().Deployments(pkgoperator.Namespace), pkgoperator.Namespace, dn)
+		if err != nil {
+			result = multierror.Append(result, err)
+		}
+	}
+
+	return result
 }
 
 func checkOperatorDeploymentVersion(ctx context.Context, cli appsv1client.DeploymentInterface, name string, desiredVersion string) (bool, error) {

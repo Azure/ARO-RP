@@ -31,6 +31,7 @@ var denylist = []string{
 	"images",
 	"secrets",
 	"dns",
+	"shared-cluster",
 }
 
 const (
@@ -120,17 +121,17 @@ func contains(s []string, e string) bool {
 }
 
 func (s settings) shouldDelete(resourceGroup mgmtfeatures.ResourceGroup, log *logrus.Entry) bool {
-	//assume its a prod cluster, dev clusters will have purge tag
-	devCluster := false
-	if resourceGroup.Tags != nil {
-		_, devCluster = resourceGroup.Tags["purge"]
-	}
-
 	// don't mess with clusters in RGs managed by a production RP. Although
 	// the production deny assignment will prevent us from breaking most
 	// things, that does not include us potentially detaching the cluster's
 	// NSG from the vnet, thus breaking inbound access to the cluster.
-	if !devCluster && resourceGroup.ManagedBy != nil && *resourceGroup.ManagedBy != "" {
+	// We use purge=true to distinguish between dev and prod clusters:
+	// https://github.com/Azure/ARO-RP/blob/master/pkg/cluster/deploybaseresources.go#L81-L87
+	devCluster := false
+	if resourceGroup.Tags != nil {
+		_, devCluster = resourceGroup.Tags["purge"]
+	}
+	if !devCluster {
 		return false
 	}
 
@@ -152,24 +153,24 @@ func (s settings) shouldDelete(resourceGroup mgmtfeatures.ResourceGroup, log *lo
 
 	for t := range resourceGroup.Tags {
 		if strings.ToLower(t) == defaultKeepTag {
-			log.Debugf("Group %s is to persist. SKIP.", *resourceGroup.Name)
+			log.Infof("Group %s is to persist. SKIP.", *resourceGroup.Name)
 			return false
 		}
 	}
 
 	// azure tags is not consistent with lower/upper cases.
 	if _, ok := resourceGroup.Tags[s.createdTag]; !ok {
-		log.Debugf("Group %s does not have createdAt tag. SKIP.", *resourceGroup.Name)
+		log.Infof("Group %s does not have createdAt tag. SKIP.", *resourceGroup.Name)
 		return false
 	}
 
 	createdAt, err := time.Parse(time.RFC3339Nano, *resourceGroup.Tags[s.createdTag])
 	if err != nil {
-		log.Errorf("%s: %s", *resourceGroup.Name, err)
+		log.Infof("%s: %s", *resourceGroup.Name, err)
 		return false
 	}
 	if time.Since(createdAt) < s.ttl {
-		log.Debugf("Group %s is still less than TTL. SKIP.", *resourceGroup.Name)
+		log.Infof("Group %s is still less than TTL. SKIP.", *resourceGroup.Name)
 		return false
 	}
 

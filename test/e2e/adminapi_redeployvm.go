@@ -39,7 +39,7 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 		By("picking the first VM to redeploy")
 		vms, err := clients.VirtualMachines.List(ctx, clusterResourceGroup)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(vms).NotTo(HaveLen(0))
+		Expect(vms).NotTo(BeEmpty())
 		vm := vms[0]
 		log.Infof("selected vm: %s", *vm.Name)
 
@@ -123,7 +123,7 @@ func getNodeUptime(g Gomega, ctx context.Context, node string) (time.Time, error
 		g.Expect(err).NotTo(HaveOccurred())
 
 		g.Expect(p.Status.Phase).To(Equal(corev1.PodSucceeded))
-	}).WithContext(ctx).Should(Succeed())
+	}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 	By("getting logs")
 	req := clients.Kubernetes.CoreV1().Pods(namespace).GetLogs(name, &corev1.PodLogOptions{})

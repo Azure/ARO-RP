@@ -159,9 +159,11 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 
 		err = m.AdminUpdate(ctx)
 		if err != nil {
+			// Customer will continue to see the cluster in an ongoing maintenance state
 			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
 		}
-		doc, err = ocb.setNoPucmPending(ctx, doc)
+		// Maintenance task is complete, so we can clear the maintenance state
+		doc, err = ocb.setNoMaintenanceState(ctx, doc)
 		if err != nil {
 			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
 		}
@@ -366,9 +368,9 @@ func (ocb *openShiftClusterBackend) emitMetrics(doc *api.OpenShiftClusterDocumen
 	})
 }
 
-func (ocb *openShiftClusterBackend) setNoPucmPending(ctx context.Context, doc *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error) {
+func (ocb *openShiftClusterBackend) setNoMaintenanceState(ctx context.Context, doc *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error) {
 	return ocb.dbOpenShiftClusters.Patch(ctx, doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.PucmPending = false
+		doc.OpenShiftCluster.Properties.MaintenanceState = api.MaintenanceStateNone
 		return nil
 	})
 }

@@ -516,6 +516,20 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 			},
 			wantErr: "",
 		},
+		{
+			name: "podCidr invalid network",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PodCIDR = "10.254.0.0/14"
+			},
+			wantErr: "400: InvalidNetworkAddress: properties.networkProfile.podCidr: The provided pod CIDR '10.254.0.0/14' is invalid, expecting: '10.252.0.0/14'.",
+		},
+		{
+			name: "serviceCidr invalid network",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.ServiceCIDR = "10.0.150.0/16"
+			},
+			wantErr: "400: InvalidNetworkAddress: properties.networkProfile.serviceCidr: The provided service CIDR '10.0.150.0/16' is invalid, expecting: '10.0.0.0/16'.",
+		},
 	}
 
 	runTests(t, testModeCreate, tests)

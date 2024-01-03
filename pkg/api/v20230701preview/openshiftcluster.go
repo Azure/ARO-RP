@@ -75,9 +75,11 @@ type OpenShiftClusterProperties struct {
 type ProvisioningState string
 
 // ProvisioningState constants.
+// TODO: ProvisioningStateCancelled is included to pass upstream CI. It is currently unused in ARO.
 const (
 	ProvisioningStateCreating      ProvisioningState = "Creating"
 	ProvisioningStateUpdating      ProvisioningState = "Updating"
+	ProvisioningStateCancelled     ProvisioningState = "Cancelled"
 	ProvisioningStateAdminUpdating ProvisioningState = "AdminUpdating"
 	ProvisioningStateDeleting      ProvisioningState = "Deleting"
 	ProvisioningStateSucceeded     ProvisioningState = "Succeeded"
@@ -126,6 +128,7 @@ type ServicePrincipalProfile struct {
 	ClientSecret string `json:"clientSecret,omitempty" mutable:"true"`
 }
 
+// The outbound routing strategy used to provide your cluster egress to the internet.
 type OutboundType string
 
 const (
@@ -135,7 +138,7 @@ const (
 
 // ResourceReference represents a reference to an Azure resource.
 type ResourceReference struct {
-	// The fully qualified Azure resource id.
+	// The fully qualified Azure resource id of an IP address resource.
 	ID string `json:"id,omitempty"`
 }
 
@@ -144,7 +147,7 @@ type LoadBalancerProfile struct {
 	// The desired managed outbound IPs for the cluster public load balancer.
 	ManagedOutboundIPs *ManagedOutboundIPs `json:"managedOutboundIps,omitempty" mutable:"true"`
 	// The list of effective outbound IP addresses of the public load balancer.
-	EffectiveOutboundIPs []EffectiveOutboundIP `json:"effectiveOutboundIps,omitempty"`
+	EffectiveOutboundIPs []EffectiveOutboundIP `json:"effectiveOutboundIps,omitempty" swagger:"readOnly"`
 	// The desired outbound IP resources for the cluster load balancer.
 	OutboundIPs []OutboundIP `json:"outboundIps,omitempty" mutable:"true"`
 	// The desired outbound IP Prefix resources for the cluster load balancer.

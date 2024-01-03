@@ -48,7 +48,7 @@ type OpenShiftClusterProperties struct {
 	// WorkerProfiles is used to store the worker profile data that was sent in the api request
 	WorkerProfiles []WorkerProfile `json:"workerProfiles,omitempty"`
 	// WorkerProfilesStatus is used to store the enriched worker profile data
-	WorkerProfilesStatus            []WorkerProfile   `json:"workerProfilesStatus,omitempty"`
+	WorkerProfilesStatus            []WorkerProfile   `json:"workerProfilesStatus,omitempty" swagger:"readOnly"`
 	APIServerProfile                APIServerProfile  `json:"apiserverProfile,omitempty"`
 	IngressProfiles                 []IngressProfile  `json:"ingressProfiles,omitempty"`
 	Install                         *Install          `json:"install,omitempty"`
@@ -57,7 +57,7 @@ type OpenShiftClusterProperties struct {
 	ImageRegistryStorageAccountName string            `json:"imageRegistryStorageAccountName,omitempty"`
 	InfraID                         string            `json:"infraId,omitempty"`
 	HiveProfile                     HiveProfile       `json:"hiveProfile,omitempty"`
-	PucmPending                     bool              `json:"pucmPending,omitempty"`
+	MaintenanceState                MaintenanceState  `json:"maintenanceState,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state.
@@ -82,13 +82,29 @@ const (
 	FipsValidatedModulesDisabled FipsValidatedModules = "Disabled"
 )
 
+// MaintenanceState represents the maintenance state of a cluster.
+// This is used by cluster monitornig stack to emit maintenance signals to customers.
+type MaintenanceState string
+
+const (
+	MaintenanceStateNone      MaintenanceState = "None"
+	MaintenanceStatePending   MaintenanceState = "Pending"
+	MaintenanceStatePlanned   MaintenanceState = "Planned"
+	MaintenanceStateUnplanned MaintenanceState = "Unplanned"
+)
+
 type MaintenanceTask string
 
 const (
-	MaintenanceTaskEverything  MaintenanceTask = "Everything"
-	MaintenanceTaskOperator    MaintenanceTask = "OperatorUpdate"
-	MaintenanceTaskRenewCerts  MaintenanceTask = "CertificatesRenewal"
-	MaintenanceTaskPucmPending MaintenanceTask = "PucmPending"
+	MaintenanceTaskEverything MaintenanceTask = "Everything"
+	MaintenanceTaskOperator   MaintenanceTask = "OperatorUpdate"
+	MaintenanceTaskRenewCerts MaintenanceTask = "CertificatesRenewal"
+
+	// Maintenance tasks for updating customer maintenance signals
+	// None signal should only be used when (1) admin update fails and (2) SRE fixes the failed admin update without running another admin updates
+	// Admin update success should automatically set the cluster into None state
+	MaintenanceTaskPending MaintenanceTask = "Pending"
+	MaintenanceTaskNone    MaintenanceTask = "None"
 )
 
 // Operator feature flags
@@ -155,7 +171,7 @@ type LoadBalancerProfile struct {
 	// The desired managed outbound IPs for the cluster public load balancer.
 	ManagedOutboundIPs *ManagedOutboundIPs `json:"managedOutboundIps,omitempty"`
 	// The list of effective outbound IP addresses of the public load balancer.
-	EffectiveOutboundIPs []EffectiveOutboundIP `json:"effectiveOutboundIps,omitempty"`
+	EffectiveOutboundIPs []EffectiveOutboundIP `json:"effectiveOutboundIps,omitempty" swagger:"readOnly"`
 	// The desired outbound IP resources for the cluster load balancer.
 	OutboundIPs []OutboundIP `json:"outboundIps,omitempty"`
 	// The desired outbound IP Prefix resources for the cluster load balancer.

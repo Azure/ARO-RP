@@ -17,6 +17,7 @@ import (
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -199,8 +200,12 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Action(m.configureAPIServerCertificate),
 		steps.Action(m.configureIngressCertificate),
 		steps.Action(m.renewMDSDCertificate),
+		steps.Action(m.ensureCredentialsRequest),
 		steps.Action(m.updateOpenShiftSecret),
+		steps.Condition(m.aroCredentialsRequestReconciled, 3*time.Minute, true),
 		steps.Action(m.updateAROSecret),
+		steps.Action(m.restartAROOperatorMaster), // depends on m.updateOpenShiftSecret; the point of restarting is to pick up any changes made to the secret
+		steps.Condition(m.aroDeploymentReady, 5*time.Minute, true),
 		steps.Action(m.reconcileLoadBalancerProfile),
 	}
 
@@ -278,7 +283,7 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.ensureServiceEndpoints),
 		steps.Action(m.setMasterSubnetPolicies),
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.deployBaseResourceTemplate),
-		steps.Action(m.attachNSGs),
+		steps.Condition(m.attachNSGs, 3*time.Minute, true),
 		steps.Action(m.updateAPIIPEarly),
 		steps.Action(m.createOrUpdateRouterIPEarly),
 		steps.Action(m.ensureGatewayCreate),
@@ -343,6 +348,9 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.initializeOperatorDeployer), // depends on kube clients
 			steps.Action(m.removeBootstrap),
 			steps.Action(m.removeBootstrapIgnition),
+			// Occasionally, the apiserver experiences disruptions, causing the certificate configuration step to fail.
+			// This issue is currently under investigation.
+			steps.Condition(m.apiServersReady, 30*time.Minute, true),
 			steps.Action(m.configureAPIServerCertificate),
 			steps.Condition(m.apiServersReady, 30*time.Minute, true),
 			steps.Condition(m.minimumWorkerNodesReady, 30*time.Minute, true),
@@ -441,6 +449,11 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 	}
 
 	m.kubernetescli, err = kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
+
+	m.dynamiccli, err = dynamic.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}

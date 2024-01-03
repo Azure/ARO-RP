@@ -360,6 +360,34 @@
             "storageVersionHash": "gAEoywwmFz4="
         },
         {
+            "name": "nodes",
+            "singularName": "node",
+            "namespaced": false,
+            "kind": "Node",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "QOl4Ml/XMag="
+        },
+        {
+            "name": "nodes/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "Node",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
             "name": "oauths",
             "singularName": "oauth",
             "namespaced": false,

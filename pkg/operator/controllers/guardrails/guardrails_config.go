@@ -7,8 +7,10 @@ import (
 	"context"
 	"embed"
 	"strings"
+	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -150,4 +152,43 @@ func (r *Reconciler) VersionLT411(ctx context.Context) (bool, error) {
 	}
 	ver411, _ := version.ParseVersion("4.11.0")
 	return clusterVersion.Lt(ver411), nil
+}
+
+func (r *Reconciler) getGatekeeperDeployedNs(ctx context.Context, instance *arov1alpha1.Cluster) (string, error) {
+	name := ""
+	if r.kubernetescli == nil {
+		r.log.Debug("nil kubernetescli object")
+		return "", nil
+	}
+	start := time.Now()
+	namespaces, err := r.kubernetescli.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		r.log.Warnf("Error retrieving namespaces: %v", err)
+		return "", err
+	}
+	guardrails_namespace := instance.Spec.OperatorFlags.GetWithDefault(controllerNamespace, defaultNamespace)
+	for _, ns := range namespaces.Items {
+		if ns.Name == guardrails_namespace {
+			// skip guardrails ns
+			continue
+		}
+		deployments, err := r.kubernetescli.AppsV1().Deployments(ns.Name).List(ctx, metav1.ListOptions{
+			LabelSelector: "gatekeeper.sh/system=yes",
+		})
+		if err != nil {
+			r.log.Warnf("Error retrieving deployments in namespace %s: %v", ns.Name, err)
+			continue
+		}
+		if len(deployments.Items) > 0 {
+			name = ns.Name
+			break
+		}
+	}
+	dura := time.Since(start)
+	msg := "Gatekeeper not found"
+	if name != "" {
+		msg = "Found another gatekeeper deployed in namespace " + name
+	}
+	r.log.Infof("%s, search took %s.", msg, dura.String())
+	return name, nil
 }

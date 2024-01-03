@@ -115,7 +115,7 @@ type Display struct {
 // EffectiveOutboundIP effectiveOutboundIP represents an effective outbound IP resource of the cluster
 // public load balancer.
 type EffectiveOutboundIP struct {
-	// ID - The fully qualified Azure resource id.
+	// ID - The fully qualified Azure resource id of an IP address resource.
 	ID *string `json:"id,omitempty"`
 }
 
@@ -780,7 +780,7 @@ func NewOpenShiftClusterListPage(cur OpenShiftClusterList, getNextPage func(cont
 
 // OpenShiftClusterProperties openShiftClusterProperties represents an OpenShift cluster's properties.
 type OpenShiftClusterProperties struct {
-	// ProvisioningState - The cluster provisioning state. Possible values include: 'AdminUpdating', 'Creating', 'Deleting', 'Failed', 'Succeeded', 'Updating'
+	// ProvisioningState - The cluster provisioning state. Possible values include: 'AdminUpdating', 'Cancelled', 'Creating', 'Deleting', 'Failed', 'Succeeded', 'Updating'
 	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
 	// ClusterProfile - The cluster profile.
 	ClusterProfile *ClusterProfile `json:"clusterProfile,omitempty"`
@@ -1406,14 +1406,14 @@ func NewOperationListPage(cur OperationList, getNextPage func(context.Context, O
 
 // OutboundIP outboundIP represents a desired outbound IP resource for the cluster load balancer.
 type OutboundIP struct {
-	// ID - The fully qualified Azure resource id.
+	// ID - The fully qualified Azure resource id of an IP address resource.
 	ID *string `json:"id,omitempty"`
 }
 
 // OutboundIPPrefix outboundIPPrefix represents a desired outbound IP Prefix resource for the cluster load
 // balancer.
 type OutboundIPPrefix struct {
-	// ID - The fully qualified Azure resource id.
+	// ID - The fully qualified Azure resource id of an IP address resource.
 	ID *string `json:"id,omitempty"`
 }
 

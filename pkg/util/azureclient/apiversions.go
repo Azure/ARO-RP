@@ -27,7 +27,7 @@ var apiVersions = map[string]string{
 	"microsoft.network":                        "2020-08-01",
 	"microsoft.network/dnszones":               "2018-05-01",
 	"microsoft.network/privatednszones":        "2018-09-01",
-	"microsoft.storage":                        "2019-04-01",
+	"microsoft.storage":                        "2019-06-01",
 }
 
 // APIVersion gets the APIVersion from a full resource type

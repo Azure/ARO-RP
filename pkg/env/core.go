@@ -6,6 +6,7 @@ package env
 import (
 	"context"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/sirupsen/logrus"
 
@@ -20,6 +21,7 @@ import (
 type Core interface {
 	IsLocalDevelopmentMode() bool
 	IsCI() bool
+	NewMSITokenCredential(MSIContext) (azcore.TokenCredential, error)
 	NewMSIAuthorizer(MSIContext, ...string) (autorest.Authorizer, error)
 	NewLiveConfigManager(context.Context) (liveconfig.Manager, error)
 	instancemetadata.InstanceMetadata

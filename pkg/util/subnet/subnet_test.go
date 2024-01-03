@@ -110,6 +110,19 @@ func TestGetGetHighestFreeIP(t *testing.T) {
 			wantIP: "10.0.0.6",
 		},
 		{
+			name: "valid, use addressPrefixes",
+			mocks: func(tt *test, subnets *mock_network.MockSubnetsClient) {
+				subnets.EXPECT().
+					Get(ctx, "vnetResourceGroup", "vnet", "subnet", "ipConfigurations").
+					Return(mgmtnetwork.Subnet{
+						SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+							AddressPrefixes: to.StringSlicePtr([]string{"10.0.0.0/29"}),
+						},
+					}, nil)
+			},
+			wantIP: "10.0.0.6",
+		},
+		{
 			name: "valid, top address used",
 			mocks: func(tt *test, subnets *mock_network.MockSubnetsClient) {
 				subnets.EXPECT().

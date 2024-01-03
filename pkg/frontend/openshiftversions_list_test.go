@@ -43,12 +43,6 @@ func TestListInstallVersions(t *testing.T) {
 						Enabled: true,
 					},
 				},
-				version.DefaultInstallStreams[10].Version.String(): {
-					Properties: api.OpenShiftVersionProperties{
-						Version: version.DefaultInstallStreams[10].Version.String(),
-						Enabled: true,
-					},
-				},
 				"4.11.5": {
 					Properties: api.OpenShiftVersionProperties{
 						Version: "4.11.5",
@@ -60,11 +54,6 @@ func TestListInstallVersions(t *testing.T) {
 			wantStatusCode: http.StatusOK,
 			wantResponse: v20220904.OpenShiftVersionList{
 				OpenShiftVersions: []*v20220904.OpenShiftVersion{
-					{
-						Properties: v20220904.OpenShiftVersionProperties{
-							Version: version.DefaultInstallStreams[10].Version.String(),
-						},
-					},
 					{
 						Properties: v20220904.OpenShiftVersionProperties{
 							Version: "4.11.5",
