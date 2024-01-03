@@ -11,15 +11,52 @@ import (
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 )
 
+type AROReconciler interface {
+	reconcile.Reconciler
+	GetName() string
+	SetupWithManager(ctrl.Manager) error
+	ReconcileEnabled(context.Context, ctrl.Request, *arov1alpha1.Cluster) (ctrl.Result, error)
+	ReconcileDisabled(context.Context, ctrl.Request, *arov1alpha1.Cluster) (ctrl.Result, error)
+}
+
 type AROController struct {
-	Log    *logrus.Entry
-	Client client.Client
-	Name   string
+	Reconciler  AROReconciler // virtual method table
+	Log         *logrus.Entry
+	Client      client.Client
+	Name        string
+	EnabledFlag string
+}
+
+func (c *AROController) GetName() string {
+	return c.Name
+}
+
+func (c *AROController) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	cluster, err := c.GetCluster(ctx)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Controller can be disabled if it defines an "enabled" operator flag.
+	if c.EnabledFlag != "" && !cluster.Spec.OperatorFlags.GetSimpleBoolean(c.EnabledFlag) {
+		c.Log.Debug("controller is disabled")
+		return c.Reconciler.ReconcileDisabled(ctx, request, cluster)
+	}
+
+	c.Log.Debug("running")
+	return c.Reconciler.ReconcileEnabled(ctx, request, cluster)
+}
+
+func (c *AROController) ReconcileDisabled(ctx context.Context, request ctrl.Request, cluster *arov1alpha1.Cluster) (ctrl.Result, error) {
+	c.ClearConditions(ctx)
+	return reconcile.Result{}, nil
 }
 
 func (c *AROController) SetConditions(ctx context.Context, cnds ...*operatorv1.OperatorCondition) {

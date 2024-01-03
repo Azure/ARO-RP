@@ -36,9 +36,9 @@ var machinehealthcheckYaml []byte
 var mhcremediationalertYaml []byte
 
 const (
-	ControllerName      string = "MachineHealthCheck"
-	managed             string = "aro.machinehealthcheck.managed"
-	enabled             string = "aro.machinehealthcheck.enabled"
+	controllerName      string = "MachineHealthCheck"
+	controllerEnabled   string = "aro.machinehealthcheck.enabled"
+	controllerManaged   string = "aro.machinehealthcheck.managed"
 	MHCPausedAnnotation string = "cluster.x-k8s.io/paused"
 )
 
@@ -49,33 +49,26 @@ type Reconciler struct {
 }
 
 func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *Reconciler {
-	return &Reconciler{
+	r := &Reconciler{
 		AROController: base.AROController{
-			Log:    log,
-			Client: client,
-			Name:   ControllerName,
+			Log:         log.WithField("controller", controllerName),
+			Client:      client,
+			Name:        controllerName,
+			EnabledFlag: controllerEnabled,
 		},
 		dh: dh,
 	}
+	r.Reconciler = r
+	return r
 }
 
 // Reconcile watches MachineHealthCheck objects, and if any changes,
 // reconciles the associated ARO MachineHealthCheck object
-func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.GetCluster(ctx)
+func (r *Reconciler) ReconcileEnabled(ctx context.Context, request ctrl.Request, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
+	var err error
 
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(enabled) {
-		r.Log.Debug("controller is disabled")
-		return reconcile.Result{}, nil
-	}
-
-	r.Log.Debug("running")
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(managed) {
-		err := r.dh.EnsureDeleted(ctx, "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck")
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerManaged) {
+		err = r.dh.EnsureDeleted(ctx, "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck")
 		if err != nil {
 			r.Log.Error(err)
 			r.SetDegraded(ctx, err)
@@ -176,7 +169,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
-		Named(ControllerName).
+		Named(r.GetName()).
 		Owns(&machinev1beta1.MachineHealthCheck{}).
 		Owns(&monitoringv1.PrometheusRule{}).
 		Watches(

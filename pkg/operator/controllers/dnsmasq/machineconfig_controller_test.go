@@ -26,9 +26,9 @@ import (
 
 func TestMachineConfigReconciler(t *testing.T) {
 	transitionTime := metav1.Time{Time: time.Now()}
-	defaultAvailable := utilconditions.ControllerDefaultAvailable(MachineConfigControllerName)
-	defaultProgressing := utilconditions.ControllerDefaultProgressing(MachineConfigControllerName)
-	defaultDegraded := utilconditions.ControllerDefaultDegraded(MachineConfigControllerName)
+	defaultAvailable := utilconditions.ControllerDefaultAvailable(machineConfigControllerName)
+	defaultProgressing := utilconditions.ControllerDefaultProgressing(machineConfigControllerName)
+	defaultDegraded := utilconditions.ControllerDefaultDegraded(machineConfigControllerName)
 	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
 	fakeDh := func(controller *gomock.Controller) *mock_dynamichelper.MockInterface {
 		return mock_dynamichelper.NewMockInterface(controller)
@@ -79,7 +79,7 @@ func TestMachineConfigReconciler(t *testing.T) {
 							defaultAvailable,
 							defaultProgressing,
 							{
-								Type:               MachineConfigControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+								Type:               machineConfigControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
 								Status:             operatorv1.ConditionTrue,
 								LastTransitionTime: transitionTime,
 							},

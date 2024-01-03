@@ -30,9 +30,9 @@ import (
 // Test reconcile function
 func TestMachineHealthCheckReconciler(t *testing.T) {
 	transitionTime := metav1.Time{Time: time.Now()}
-	defaultAvailable := utilconditions.ControllerDefaultAvailable(ControllerName)
-	defaultProgressing := utilconditions.ControllerDefaultProgressing(ControllerName)
-	defaultDegraded := utilconditions.ControllerDefaultDegraded(ControllerName)
+	defaultAvailable := utilconditions.ControllerDefaultAvailable(controllerName)
+	defaultProgressing := utilconditions.ControllerDefaultProgressing(controllerName)
+	defaultDegraded := utilconditions.ControllerDefaultDegraded(controllerName)
 
 	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
 
@@ -82,7 +82,7 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(false),
+						controllerEnabled: strconv.FormatBool(false),
 					},
 				},
 				Status: arov1alpha1.ClusterStatus{
@@ -104,8 +104,8 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(true),
-						managed: strconv.FormatBool(false),
+						controllerEnabled: strconv.FormatBool(true),
+						controllerManaged: strconv.FormatBool(false),
 					},
 				},
 				Status: arov1alpha1.ClusterStatus{
@@ -127,8 +127,8 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(true),
-						managed: strconv.FormatBool(false),
+						controllerEnabled: strconv.FormatBool(true),
+						controllerManaged: strconv.FormatBool(false),
 					},
 				},
 				Status: arov1alpha1.ClusterStatus{
@@ -143,7 +143,7 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				defaultAvailable,
 				defaultProgressing,
 				{
-					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+					Type:               controllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
 					Status:             operatorv1.ConditionTrue,
 					LastTransitionTime: transitionTime,
 					Message:            "Could not delete mhc",
@@ -159,8 +159,8 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(true),
-						managed: strconv.FormatBool(false),
+						controllerEnabled: strconv.FormatBool(true),
+						controllerManaged: strconv.FormatBool(false),
 					},
 				},
 				Status: arov1alpha1.ClusterStatus{
@@ -176,7 +176,7 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				defaultAvailable,
 				defaultProgressing,
 				{
-					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+					Type:               controllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
 					Status:             operatorv1.ConditionTrue,
 					LastTransitionTime: transitionTime,
 					Message:            "Could not delete mhc alert",
@@ -192,8 +192,8 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(true),
-						managed: strconv.FormatBool(true),
+						controllerEnabled: strconv.FormatBool(true),
+						controllerManaged: strconv.FormatBool(true),
 					},
 				},
 			},
@@ -211,8 +211,8 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(true),
-						managed: strconv.FormatBool(true),
+						controllerEnabled: strconv.FormatBool(true),
+						controllerManaged: strconv.FormatBool(true),
 					},
 				},
 			},
@@ -230,8 +230,8 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						enabled: strconv.FormatBool(true),
-						managed: strconv.FormatBool(true),
+						controllerEnabled: strconv.FormatBool(true),
+						controllerManaged: strconv.FormatBool(true),
 					},
 				},
 				Status: arov1alpha1.ClusterStatus{
@@ -246,7 +246,7 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				defaultAvailable,
 				defaultProgressing,
 				{
-					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+					Type:               controllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
 					Status:             operatorv1.ConditionTrue,
 					LastTransitionTime: transitionTime,
 					Message:            "failed to ensure",

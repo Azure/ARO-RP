@@ -26,9 +26,9 @@ import (
 
 func TestMachineConfigPoolReconciler(t *testing.T) {
 	transitionTime := metav1.Time{Time: time.Now()}
-	defaultAvailable := utilconditions.ControllerDefaultAvailable(MachineConfigPoolControllerName)
-	defaultProgressing := utilconditions.ControllerDefaultProgressing(MachineConfigPoolControllerName)
-	defaultDegraded := utilconditions.ControllerDefaultDegraded(MachineConfigPoolControllerName)
+	defaultAvailable := utilconditions.ControllerDefaultAvailable(machineConfigPoolControllerName)
+	defaultProgressing := utilconditions.ControllerDefaultProgressing(machineConfigPoolControllerName)
+	defaultDegraded := utilconditions.ControllerDefaultDegraded(machineConfigPoolControllerName)
 	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
 
 	fakeDh := func(controller *gomock.Controller) *mock_dynamichelper.MockInterface {
@@ -79,7 +79,7 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 							defaultAvailable,
 							defaultProgressing,
 							{
-								Type:               MachineConfigPoolControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+								Type:               machineConfigPoolControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
 								Status:             operatorv1.ConditionTrue,
 								LastTransitionTime: transitionTime,
 							},
@@ -119,7 +119,7 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 				&mcv1.MachineConfigPool{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "custom",
-						Finalizers: []string{MachineConfigPoolControllerName},
+						Finalizers: []string{machineConfigPoolControllerName},
 					},
 					Status: mcv1.MachineConfigPoolStatus{},
 					Spec:   mcv1.MachineConfigPoolSpec{},

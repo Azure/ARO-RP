@@ -25,8 +25,7 @@ import (
 )
 
 const (
-	ControllerName = "ImageConfig"
-
+	controllerName    = "ImageConfig"
 	controllerEnabled = "aro.imageconfig.enabled"
 
 	// Kubernetes object name
@@ -38,32 +37,25 @@ type Reconciler struct {
 }
 
 func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
-	return &Reconciler{
+	r := &Reconciler{
 		AROController: base.AROController{
-			Log:    log,
-			Client: client,
-			Name:   ControllerName,
+			Log:         log.WithField("controller", controllerName),
+			Client:      client,
+			Name:        controllerName,
+			EnabledFlag: controllerEnabled,
 		},
 	}
+	r.Reconciler = r
+	return r
 }
 
 // watches the ARO object for changes and reconciles image.config.openshift.io/cluster object.
 // - If blockedRegistries is not nil, makes sure required registries are not added
 // - If AllowedRegistries is not nil, makes sure required registries are added
 // - Fails fast if both are not nil, unsupported
-func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance := &arov1alpha1.Cluster{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
+func (r *Reconciler) ReconcileEnabled(ctx context.Context, request ctrl.Request, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
+	var err error
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		r.Log.Debug("controller is disabled")
-		return reconcile.Result{}, nil
-	}
-
-	r.Log.Debug("running")
 	requiredRegistries, err := GetCloudAwareRegistries(instance)
 	if err != nil {
 		// Not returning error as it will requeue again
@@ -129,7 +121,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&configv1.Image{}, builder.WithPredicates(imagePredicate)).
-		Named(ControllerName).
+		Named(r.GetName()).
 		Complete(r)
 }
 

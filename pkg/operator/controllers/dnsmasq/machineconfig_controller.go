@@ -15,12 +15,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
 const (
-	MachineConfigControllerName = "DnsmasqMachineConfig"
+	machineConfigControllerName = "DnsmasqMachineConfig"
 )
 
 type MachineConfigReconciler struct {
@@ -32,34 +33,28 @@ type MachineConfigReconciler struct {
 var rxARODNS = regexp.MustCompile("^99-(.*)-aro-dns$")
 
 func NewMachineConfigReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *MachineConfigReconciler {
-	return &MachineConfigReconciler{
+	r := &MachineConfigReconciler{
 		AROController: base.AROController{
-			Log:    log,
-			Client: client,
-			Name:   MachineConfigControllerName,
+			Log:         log.WithField("controller", machineConfigControllerName),
+			Client:      client,
+			Name:        machineConfigControllerName,
+			EnabledFlag: controllerEnabled,
 		},
 		dh: dh,
 	}
+	r.Reconciler = r
+	return r
 }
 
 // Reconcile watches ARO DNS MachineConfig objects, and if any changes,
 // reconciles it
-func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.GetCluster(ctx)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
-		r.Log.Debug("controller is disabled")
-		return reconcile.Result{}, nil
-	}
+func (r *MachineConfigReconciler) ReconcileEnabled(ctx context.Context, request ctrl.Request, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
+	var err error
 
 	if instance.Spec.OperatorFlags.GetSimpleBoolean(restartDnsmasqEnabled) {
 		r.Log.Debug("restart dnsmasq machineconfig enabled")
 	}
 
-	r.Log.Debug("running")
 	m := rxARODNS.FindStringSubmatch(request.Name)
 	if m == nil {
 		return reconcile.Result{}, nil
@@ -96,6 +91,6 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 func (r *MachineConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&mcv1.MachineConfig{}).
-		Named(MachineConfigControllerName).
+		Named(r.GetName()).
 		Complete(r)
 }

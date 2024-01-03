@@ -24,9 +24,9 @@ import (
 
 func TestReconciler(t *testing.T) {
 	transitionTime := metav1.Time{Time: time.Now()}
-	defaultAvailable := utilconditions.ControllerDefaultAvailable(ControllerName)
-	defaultProgressing := utilconditions.ControllerDefaultProgressing(ControllerName)
-	defaultDegraded := utilconditions.ControllerDefaultDegraded(ControllerName)
+	defaultAvailable := utilconditions.ControllerDefaultAvailable(controllerName)
+	defaultProgressing := utilconditions.ControllerDefaultProgressing(controllerName)
+	defaultDegraded := utilconditions.ControllerDefaultDegraded(controllerName)
 	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
 
 	fakeCluster := func(controllerEnabledFlag string) *arov1alpha1.Cluster {
@@ -66,7 +66,7 @@ func TestReconciler(t *testing.T) {
 				defaultAvailable,
 				defaultProgressing,
 				{
-					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+					Type:               controllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
 					Status:             operatorv1.ConditionTrue,
 					LastTransitionTime: transitionTime,
 					Message:            `ingresscontrollers.operator.openshift.io "default" not found`,
@@ -122,7 +122,7 @@ func TestReconciler(t *testing.T) {
 				defaultAvailable,
 				defaultProgressing,
 				{
-					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+					Type:               controllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
 					Status:             operatorv1.ConditionTrue,
 					LastTransitionTime: transitionTime,
 					Message:            `ingresscontrollers.operator.openshift.io has 1 replica`,
@@ -147,7 +147,7 @@ func TestReconciler(t *testing.T) {
 				defaultAvailable,
 				defaultProgressing,
 				{
-					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+					Type:               controllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
 					Status:             operatorv1.ConditionTrue,
 					LastTransitionTime: transitionTime,
 					Message:            `ingresscontrollers.operator.openshift.io has 0 replica`,
