@@ -5,9 +5,8 @@ package authorization
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"net/http"
+	"strings"
 
 	policy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	runtime "github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
@@ -40,19 +39,36 @@ func (c *denyAssignmentClient) ListForResourceGroup(ctx context.Context, resourc
 	return result, nil
 }
 
-// getCreateRequest creates the deny assignment get request.
-func (c *denyAssignmentClient) getDenyAssignmentRequest(ctx context.Context, client DenyAssignmentsARMClient, subscriptionDoc *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument) (*policy.Request, error) {
-	urlPath := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/microsoft.authorization/denyassignments", subscriptionDoc.ID, doc.ClusterResourceGroupIDKey)
-
-	req, err := runtime.NewRequest(ctx, http.MethodGet, runtime.JoinPaths(client.internal.Endpoint(), urlPath))
+func (c *denyAssignmentClient) DeleteDenyAssignment(ctx context.Context, fpTokenCredential *azidentity.ClientCertificateCredential, subscriptionDoc *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument) error {
+	deleteClient, err := NewDenyAssignmentsARMClient(subscriptionDoc.ID, fpTokenCredential, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	reqQP := req.Raw().URL.Query()
-	reqQP.Set("api-version", "2022-04-01")
-	req.Raw().URL.RawQuery = reqQP.Encode()
-	req.Raw().Header["Accept"] = []string{"application/json"}
-	return req, nil
+
+	managedResourceGroupName := strings.Split(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, "/")[3]
+	denyAssignmentList, err := c.ListForResourceGroup(ctx, managedResourceGroupName, "")
+	if err != nil {
+		return err
+	}
+
+	// There should never be more than one deny assignment, but in case there is, don't proceed
+	if len(denyAssignmentList) > 1 {
+		return nil
+	}
+	denyAssignmentID := denyAssignmentList[0].ID
+
+	// Delete the deny assignment by ID
+	delete, err := c.deleteDenyAssignmentRequest(ctx, *deleteClient, *denyAssignmentID)
+	if err != nil {
+		return err
+	}
+	d, err := deleteClient.internal.Pipeline().Do(delete)
+	if err != nil {
+		return err
+	}
+	defer d.Body.Close()
+
+	return nil
 }
 
 // getCreateRequest creates the deny assignment delete request.
@@ -68,42 +84,4 @@ func (c *denyAssignmentClient) deleteDenyAssignmentRequest(ctx context.Context, 
 	req.Raw().URL.RawQuery = reqQP.Encode()
 	req.Raw().Header["Accept"] = []string{"application/json"}
 	return req, nil
-}
-
-func (c *denyAssignmentClient) DeleteDenyAssignment(ctx context.Context, fpTokenCredential *azidentity.ClientCertificateCredential, subscriptionDoc *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument) error {
-	client, err := NewDenyAssignmentsARMClient(subscriptionDoc.ID, fpTokenCredential, nil)
-	if err != nil {
-		return err
-	}
-
-	// Get the deny assignment
-	var denyAssignment mgmtauthorization.DenyAssignment
-	get, err := c.getDenyAssignmentRequest(ctx, *client, subscriptionDoc, doc)
-	if err != nil {
-		return err
-	}
-	httpResp, err := client.internal.Pipeline().Do(get)
-	if err != nil {
-		return err
-	}
-	defer httpResp.Body.Close()
-
-	// Marshal response into type authorization.DenyAssignment
-	err = json.NewDecoder(httpResp.Body).Decode(&denyAssignment)
-	if err != nil {
-		return err
-	}
-
-	// Delete the deny assignment by ID
-	delete, err := c.deleteDenyAssignmentRequest(ctx, *client, *denyAssignment.ID)
-	if err != nil {
-		return err
-	}
-	d, err := client.internal.Pipeline().Do(delete)
-	if err != nil {
-		return err
-	}
-	defer d.Body.Close()
-
-	return nil
 }
