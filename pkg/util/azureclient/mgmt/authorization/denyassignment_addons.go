@@ -12,18 +12,18 @@ import (
 	policy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	runtime "github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 // DenyAssignmentClientAddons contains addons for DenyAssignmentClient
 type DenyAssignmentClientAddons interface {
-	ListForResourceGroup(ctx context.Context, resourceGroupName string, filter string) (result []authorization.DenyAssignment, err error)
+	ListForResourceGroup(ctx context.Context, resourceGroupName string, filter string) (result []mgmtauthorization.DenyAssignment, err error)
 	DeleteDenyAssignment(ctx context.Context, fpTokenCredential *azidentity.ClientCertificateCredential, subscriptionDoc *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument) error
 }
 
-func (c *denyAssignmentClient) ListForResourceGroup(ctx context.Context, resourceGroupName string, filter string) (result []authorization.DenyAssignment, err error) {
+func (c *denyAssignmentClient) ListForResourceGroup(ctx context.Context, resourceGroupName string, filter string) (result []mgmtauthorization.DenyAssignment, err error) {
 	page, err := c.DenyAssignmentsClient.ListForResourceGroup(ctx, resourceGroupName, filter)
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func (c *denyAssignmentClient) DeleteDenyAssignment(ctx context.Context, fpToken
 	}
 
 	// Get the deny assignment
-	var denyAssignment authorization.DenyAssignment
+	var denyAssignment mgmtauthorization.DenyAssignment
 	get, err := c.getDenyAssignmentRequest(ctx, *client, subscriptionDoc, doc)
 	if err != nil {
 		return err
@@ -88,7 +88,7 @@ func (c *denyAssignmentClient) DeleteDenyAssignment(ctx context.Context, fpToken
 	}
 	defer httpResp.Body.Close()
 
-	// Marshall response into type authorization.DenyAssignment
+	// Marshal response into type authorization.DenyAssignment
 	err = json.NewDecoder(httpResp.Body).Decode(&denyAssignment)
 	if err != nil {
 		return err
