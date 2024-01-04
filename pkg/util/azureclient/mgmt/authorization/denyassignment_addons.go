@@ -45,7 +45,7 @@ func (c *denyAssignmentClient) DeleteDenyAssignment(ctx context.Context, fpToken
 		return err
 	}
 
-	managedResourceGroupName := strings.Split(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, "/")[3]
+	managedResourceGroupName := strings.Split(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, "/")[4]
 	denyAssignmentList, err := c.ListForResourceGroup(ctx, managedResourceGroupName, "")
 	if err != nil {
 		return err
