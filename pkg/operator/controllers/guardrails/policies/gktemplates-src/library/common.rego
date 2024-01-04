@@ -58,6 +58,7 @@ is_priv_namespace(ns) = true {
 
 exempted_user = {
   "system:kube-controller-manager",
+  "system:kube-scheduler",
   "system:admin" # comment out temporarily for testing in console
 }
 

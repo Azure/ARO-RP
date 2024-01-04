@@ -48,7 +48,7 @@ func DefaultOperatorFlags() map[string]string {
 		BannerEnabled:                      FlagFalse,
 		CheckerEnabled:                     FlagTrue,
 		DnsmasqEnabled:                     FlagTrue,
-		RestartDnsmasqEnabled:              FlagTrue,
+		RestartDnsmasqEnabled:              FlagFalse,
 		GenevaLoggingEnabled:               FlagTrue,
 		ImageConfigEnabled:                 FlagTrue,
 		IngressEnabled:                     FlagTrue,

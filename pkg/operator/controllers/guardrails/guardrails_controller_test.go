@@ -23,9 +23,10 @@ import (
 
 func TestGuardRailsReconciler(t *testing.T) {
 	tests := []struct {
-		name  string
-		mocks func(*mock_deployer.MockDeployer, *arov1alpha1.Cluster)
-		flags arov1alpha1.OperatorFlags
+		name          string
+		mocks         func(*mock_deployer.MockDeployer, *arov1alpha1.Cluster)
+		flags         arov1alpha1.OperatorFlags
+		cleanupNeeded bool
 		// errors
 		wantErr string
 	}{
@@ -72,7 +73,6 @@ func TestGuardRailsReconciler(t *testing.T) {
 					RoleSCCResourceName:            "restricted-v2",
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
-				md.EXPECT().IsReady(gomock.Any(), "gatekeeper-system", "gatekeeper-audit").Return(true, nil)
 				md.EXPECT().IsReady(gomock.Any(), "wonderful-namespace", "gatekeeper-audit").Return(true, nil)
 				md.EXPECT().IsReady(gomock.Any(), "wonderful-namespace", "gatekeeper-controller-manager").Return(true, nil)
 			},
@@ -102,7 +102,6 @@ func TestGuardRailsReconciler(t *testing.T) {
 					RoleSCCResourceName:            "restricted-v2",
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
-				md.EXPECT().IsReady(gomock.Any(), "gatekeeper-system", "gatekeeper-audit").Return(true, nil)
 				md.EXPECT().IsReady(gomock.Any(), "openshift-azure-guardrails", "gatekeeper-audit").Return(true, nil)
 				md.EXPECT().IsReady(gomock.Any(), "openshift-azure-guardrails", "gatekeeper-controller-manager").Return(true, nil)
 			},
@@ -133,7 +132,6 @@ func TestGuardRailsReconciler(t *testing.T) {
 					RoleSCCResourceName:            "restricted-v2",
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
-				md.EXPECT().IsReady(gomock.Any(), "gatekeeper-system", "gatekeeper-audit").Return(true, nil)
 				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
 			},
 			wantErr: "GateKeeper deployment timed out on Ready: timed out waiting for the condition",
@@ -146,7 +144,6 @@ func TestGuardRailsReconciler(t *testing.T) {
 				controllerPullSpec:               "wonderfulPullspec",
 			},
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
-				md.EXPECT().IsReady(gomock.Any(), "gatekeeper-system", "gatekeeper-audit").Return(true, nil)
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, gomock.AssignableToTypeOf(&config.GuardRailsDeploymentConfig{})).Return(errors.New("failed ensure"))
 			},
 			wantErr: "failed ensure",
@@ -158,6 +155,7 @@ func TestGuardRailsReconciler(t *testing.T) {
 				operator.GuardrailsDeployManaged: operator.FlagFalse,
 				controllerPullSpec:               "wonderfulPullspec",
 			},
+			cleanupNeeded: true,
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				md.EXPECT().Remove(gomock.Any(), gomock.Any()).Return(nil)
 			},
@@ -169,6 +167,7 @@ func TestGuardRailsReconciler(t *testing.T) {
 				operator.GuardrailsDeployManaged: operator.FlagFalse,
 				controllerPullSpec:               "wonderfulPullspec",
 			},
+			cleanupNeeded: true,
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				md.EXPECT().Remove(gomock.Any(), gomock.Any()).Return(errors.New("failed delete"))
 			},
@@ -214,6 +213,7 @@ func TestGuardRailsReconciler(t *testing.T) {
 				client:            clientBuilder.Build(),
 				readinessTimeout:  0 * time.Second,
 				readinessPollTime: 1 * time.Second,
+				cleanupNeeded:     tt.cleanupNeeded,
 			}
 			_, err := r.Reconcile(context.Background(), reconcile.Request{})
 			if err != nil && err.Error() != tt.wantErr {
