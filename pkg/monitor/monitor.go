@@ -24,6 +24,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 )
 
+var NSGMonitorFrequency = 10 * time.Minute
+
 type monitor struct {
 	baseLog *logrus.Entry
 	dialer  proxy.Dialer
@@ -50,6 +52,8 @@ type monitor struct {
 	liveConfig       liveconfig.Manager
 	hiveShardConfigs map[int]*rest.Config
 	shardMutex       sync.RWMutex
+
+	nsgMonTrigger *time.Ticker
 }
 
 type Runnable interface {
@@ -79,6 +83,8 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Moni
 		liveConfig: liveConfig,
 
 		hiveShardConfigs: map[int]*rest.Config{},
+
+		nsgMonTrigger: time.NewTicker(NSGMonitorFrequency),
 	}
 }
 

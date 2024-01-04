@@ -5,6 +5,7 @@ package nsg
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,13 +16,17 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/monitor/dimension"
+	"github.com/Azure/ARO-RP/pkg/monitor/monitoring"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -52,6 +57,7 @@ var (
 	overlappingWorkerPrefix2  = "10.0.1.2"
 	overlappingWorkerPrefixes = []*string{&overlappingWorkerPrefix1, &overlappingWorkerPrefix2}
 
+	tenantID          = "1111-1111-1111-1111"
 	subscriptionID    = "0000-0000-0000-0000"
 	resourcegroupName = "myRG"
 	vNetName          = "myVnet"
@@ -91,6 +97,29 @@ var (
 	nsgInbound  = armnetwork.SecurityRuleDirectionInbound
 	nsgOutbound = armnetwork.SecurityRuleDirectionOutbound
 )
+
+func createOC() api.OpenShiftCluster {
+	return api.OpenShiftCluster{
+		ID:       ocID,
+		Location: ocLocation,
+		Properties: api.OpenShiftClusterProperties{
+			MasterProfile: api.MasterProfile{
+				SubnetID: masterSubnetID,
+			},
+			WorkerProfiles: []api.WorkerProfile{
+				{
+					SubnetID: workerSubnet1ID,
+				},
+				{
+					SubnetID: "", // This should still work. Customers can create a faulty MachineSet.
+				},
+				{
+					SubnetID: workerSubnet2ID,
+				},
+			},
+		},
+	}
+}
 
 func ocFactory() api.OpenShiftCluster {
 	return api.OpenShiftCluster{
@@ -522,8 +551,23 @@ func TestMonitor(t *testing.T) {
 				tt.modOC(&oc)
 			}
 
+			openshiftCluster := createOC()
+
 			var wg sync.WaitGroup
-			n := NewNSGMonitor(logrus.NewEntry(logrus.New()), &oc, subscriptionID, subnetClient, emitter, &wg)
+			n := &NSGMonitor{
+				log:     logrus.NewEntry(logrus.New()),
+				emitter: emitter,
+				oc:      &openshiftCluster,
+
+				subnetClient: subnetClient,
+				wg:           &wg,
+
+				dims: map[string]string{
+					dimension.ResourceID:     openshiftCluster.ID,
+					dimension.SubscriptionID: subscriptionID,
+					dimension.Location:       openshiftCluster.Location,
+				},
+			}
 
 			wg.Add(1)
 			err := n.Monitor(ctx)
@@ -546,4 +590,100 @@ func TestMonitor(t *testing.T) {
 func wait(wg *sync.WaitGroup, done chan<- any) {
 	wg.Wait()
 	done <- nil
+}
+
+func isOfType[T any](mon monitoring.Monitor) bool {
+	_, ok := mon.(T)
+	return ok
+}
+
+func TestNewMonitor(t *testing.T) {
+	dims := map[string]string{
+		dimension.ResourceID:     ocID,
+		dimension.SubscriptionID: subscriptionID,
+		dimension.Location:       ocLocation,
+	}
+	var wg sync.WaitGroup
+	log := logrus.NewEntry(logrus.New())
+
+	for _, tt := range []struct {
+		name          string
+		modOC         func(*api.OpenShiftCluster)
+		mockInterface func(*mock_env.MockInterface)
+		mockEmitter   func(*mock_metrics.MockEmitter)
+		tick          bool
+		valid         func(monitoring.Monitor) bool
+	}{
+		{
+			name:  "Not a preconfiguredNSG cluster: returning NoOpMonitor",
+			valid: isOfType[*monitoring.NoOpMonitor],
+		},
+		{
+			name: "A preconfiguredNSG cluster but not ticked: returning NoOpMonitor",
+			modOC: func(oc *api.OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
+			},
+			mockEmitter: func(emitter *mock_metrics.MockEmitter) {
+				emitter.EXPECT().EmitGauge(MetricPreconfiguredNSGEnabled, int64(1), dims)
+			},
+			valid: isOfType[*monitoring.NoOpMonitor],
+		},
+		{
+			name: "A preconfiguredNSG cluster, ticked with an error while creating FP client: returning NoOpMonitor",
+			modOC: func(oc *api.OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
+			},
+			mockEmitter: func(emitter *mock_metrics.MockEmitter) {
+				emitter.EXPECT().EmitGauge(MetricPreconfiguredNSGEnabled, int64(1), dims)
+				emitter.EXPECT().EmitGauge(MetricFailedNSGMonitorCreation, int64(1), dims)
+			},
+			mockInterface: func(mi *mock_env.MockInterface) {
+				mi.EXPECT().FPNewClientCertificateCredential(gomock.Any()).Return(nil, errors.New("Unknown Error"))
+			},
+			tick:  true,
+			valid: isOfType[*monitoring.NoOpMonitor],
+		},
+		{
+			name: "A preconfiguredNSG cluster, ticked with an error while creating a subnet client: returning NoOpMonitor",
+			modOC: func(oc *api.OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
+			},
+			mockEmitter: func(emitter *mock_metrics.MockEmitter) {
+				emitter.EXPECT().EmitGauge(MetricPreconfiguredNSGEnabled, int64(1), dims)
+			},
+			mockInterface: func(mi *mock_env.MockInterface) {
+				mi.EXPECT().FPNewClientCertificateCredential(gomock.Any()).Return(&azidentity.ClientCertificateCredential{}, nil)
+				mi.EXPECT().Environment().Return(&azureclient.AROEnvironment{})
+			},
+			tick:  true,
+			valid: isOfType[*NSGMonitor],
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			e := mock_env.NewMockInterface(ctrl)
+			emitter := mock_metrics.NewMockEmitter(ctrl)
+
+			oc := createOC()
+			if tt.modOC != nil {
+				tt.modOC(&oc)
+			}
+			if tt.mockInterface != nil {
+				tt.mockInterface(e)
+			}
+			if tt.mockEmitter != nil {
+				tt.mockEmitter(emitter)
+			}
+			ticking := make(chan time.Time, 1) // buffered
+			if tt.tick {
+				ticking <- time.Now()
+			}
+
+			mon := NewMonitor(log, &oc, e, subscriptionID, tenantID, emitter, dims, &wg, ticking)
+			if !tt.valid(mon) {
+				t.Error("Invalid monitoring object returned")
+			}
+		})
+	}
 }

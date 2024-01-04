@@ -11,6 +11,7 @@ import (
 	"net/netip"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
@@ -18,6 +19,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/monitor/dimension"
 	"github.com/Azure/ARO-RP/pkg/monitor/emitter"
@@ -49,20 +51,45 @@ type NSGMonitor struct {
 	dims         map[string]string
 }
 
-func NewNSGMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, subscriptionID string, subnetClient sdknetwork.SubnetsClient, emitter metrics.Emitter, wg *sync.WaitGroup) *NSGMonitor {
+func NewMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, e env.Interface, subscriptionID string, tenantID string, emitter metrics.Emitter, dims map[string]string, wg *sync.WaitGroup, trigger <-chan time.Time) monitoring.Monitor {
+	if oc.Properties.NetworkProfile.PreconfiguredNSG != api.PreconfiguredNSGEnabled {
+		return &monitoring.NoOpMonitor{Wg: wg}
+	}
+
+	emitter.EmitGauge(MetricPreconfiguredNSGEnabled, int64(1), dims)
+
+	select {
+	case <-trigger:
+	default:
+		return &monitoring.NoOpMonitor{Wg: wg}
+	}
+
+	token, err := e.FPNewClientCertificateCredential(tenantID)
+	if err != nil {
+		log.Error("Unable to create FP Authorizer for NSG monitoring.", err)
+		emitter.EmitGauge(MetricFailedNSGMonitorCreation, int64(1), dims)
+		return &monitoring.NoOpMonitor{Wg: wg}
+	}
+
+	options := arm.ClientOptions{
+		ClientOptions: e.Environment().ClientCertificateCredentialOptions().ClientOptions,
+	}
+	client, err := armnetwork.NewSubnetsClient(subscriptionID, token, &options)
+	if err != nil {
+		log.Error("Unable to create the subnet client for NSG monitoring", err)
+		emitter.EmitGauge(MetricFailedNSGMonitorCreation, int64(1), dims)
+		return &monitoring.NoOpMonitor{Wg: wg}
+	}
+
 	return &NSGMonitor{
 		log:     log,
 		emitter: emitter,
 		oc:      oc,
 
-		subnetClient: subnetClient,
+		subnetClient: client,
 		wg:           wg,
 
-		dims: map[string]string{
-			dimension.ResourceID:     oc.ID,
-			dimension.SubscriptionID: subscriptionID,
-			dimension.Location:       oc.Location,
-		},
+		dims: dims,
 	}
 }
 
