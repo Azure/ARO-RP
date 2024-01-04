@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/sirupsen/logrus"
@@ -64,6 +65,19 @@ func TestClusterReconciler(t *testing.T) {
 						},
 					},
 				},
+				&configv1.ClusterVersion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "version",
+					},
+					Status: configv1.ClusterVersionStatus{
+						History: []configv1.UpdateHistory{
+							{
+								State:   configv1.CompletedUpdate,
+								Version: "4.10.11",
+							},
+						},
+					},
+				},
 			},
 			mocks:          func(mdh *mock_dynamichelper.MockInterface) {},
 			request:        ctrl.Request{},
@@ -89,6 +103,19 @@ func TestClusterReconciler(t *testing.T) {
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
 							operator.DnsmasqEnabled: operator.FlagTrue,
+						},
+					},
+				},
+				&configv1.ClusterVersion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "version",
+					},
+					Status: configv1.ClusterVersionStatus{
+						History: []configv1.UpdateHistory{
+							{
+								State:   configv1.CompletedUpdate,
+								Version: "4.10.11",
+							},
 						},
 					},
 				},
@@ -119,6 +146,19 @@ func TestClusterReconciler(t *testing.T) {
 					Status:     mcv1.MachineConfigPoolStatus{},
 					Spec:       mcv1.MachineConfigPoolSpec{},
 				},
+				&configv1.ClusterVersion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "version",
+					},
+					Status: configv1.ClusterVersionStatus{
+						History: []configv1.UpdateHistory{
+							{
+								State:   configv1.CompletedUpdate,
+								Version: "4.10.11",
+							},
+						},
+					},
+				},
 			},
 			mocks: func(mdh *mock_dynamichelper.MockInterface) {
 				mdh.EXPECT().Ensure(gomock.Any(), gomock.AssignableToTypeOf(&mcv1.MachineConfig{})).Times(1)
@@ -126,6 +166,38 @@ func TestClusterReconciler(t *testing.T) {
 			request:        ctrl.Request{},
 			wantErrMsg:     "",
 			wantConditions: defaultConditions,
+		},
+		{
+			name: "missing a clusterversion fails",
+			objects: []client.Object{
+				&arov1alpha1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+					Status: arov1alpha1.ClusterStatus{
+						Conditions: defaultConditions,
+					},
+					Spec: arov1alpha1.ClusterSpec{
+						OperatorFlags: arov1alpha1.OperatorFlags{
+							controllerEnabled: "true",
+						},
+					},
+				},
+				&mcv1.MachineConfigPool{
+					ObjectMeta: metav1.ObjectMeta{Name: "master"},
+					Status:     mcv1.MachineConfigPoolStatus{},
+					Spec:       mcv1.MachineConfigPoolSpec{},
+				},
+			},
+			mocks:      func(mdh *mock_dynamichelper.MockInterface) {},
+			request:    ctrl.Request{},
+			wantErrMsg: `clusterversions.config.openshift.io "version" not found`,
+			wantConditions: []operatorv1.OperatorCondition{
+				defaultAvailable, defaultProgressing, {
+					Type:               "DnsmasqClusterControllerDegraded",
+					Status:             "True",
+					Message:            `clusterversions.config.openshift.io "version" not found`,
+					LastTransitionTime: transitionTime,
+				},
+			},
 		},
 	}
 
