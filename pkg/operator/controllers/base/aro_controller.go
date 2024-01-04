@@ -6,6 +6,7 @@ package base
 import (
 	"context"
 
+	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 	"github.com/sirupsen/logrus"
@@ -14,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type AROController struct {
@@ -102,4 +104,15 @@ func (c *AROController) defaultDegraded() *operatorv1.OperatorCondition {
 
 func (c *AROController) conditionName(conditionType string) string {
 	return c.Name + "Controller" + conditionType
+}
+
+func (c *AROController) IsClusterUpgrading(ctx context.Context) (bool, error) {
+	cv := &configv1.ClusterVersion{}
+	err := c.Client.Get(ctx, types.NamespacedName{Name: "version"}, cv)
+	if err != nil {
+		c.Log.Errorf("error getting the ClusterVersion: %v", err)
+		return false, err
+	}
+
+	return version.IsClusterUpgrading(cv), nil
 }
