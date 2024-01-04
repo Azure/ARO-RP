@@ -16,6 +16,7 @@ import (
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
 	mock_deployer "github.com/Azure/ARO-RP/pkg/util/mocks/deployer"
@@ -36,17 +37,17 @@ func TestMUOReconciler(t *testing.T) {
 		{
 			name: "disabled",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled:  "false",
-				controllerManaged:  "false",
-				controllerPullSpec: "wonderfulPullspec",
+				operator.MuoEnabled: operator.FlagFalse,
+				operator.MuoManaged: operator.FlagFalse,
+				controllerPullSpec:  "wonderfulPullspec",
 			},
 		},
 		{
 			name: "managed",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled:  "true",
-				controllerManaged:  "true",
-				controllerPullSpec: "wonderfulPullspec",
+				operator.MuoEnabled: operator.FlagTrue,
+				operator.MuoManaged: operator.FlagTrue,
+				controllerPullSpec:  "wonderfulPullspec",
 			},
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.MUODeploymentConfig{
@@ -60,8 +61,8 @@ func TestMUOReconciler(t *testing.T) {
 		{
 			name: "managed, no pullspec (uses default)",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled: "true",
-				controllerManaged: "true",
+				operator.MuoEnabled: operator.FlagTrue,
+				operator.MuoManaged: operator.FlagTrue,
 			},
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.MUODeploymentConfig{
@@ -75,8 +76,8 @@ func TestMUOReconciler(t *testing.T) {
 		{
 			name: "managed, OCM allowed but pull secret entirely missing",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled:        "true",
-				controllerManaged:        "true",
+				operator.MuoEnabled:      operator.FlagTrue,
+				operator.MuoManaged:      operator.FlagTrue,
 				controllerForceLocalOnly: "false",
 				controllerPullSpec:       "wonderfulPullspec",
 			},
@@ -92,8 +93,8 @@ func TestMUOReconciler(t *testing.T) {
 		{
 			name: "managed, OCM allowed but empty pullsecret",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled:        "true",
-				controllerManaged:        "true",
+				operator.MuoEnabled:      operator.FlagTrue,
+				operator.MuoManaged:      operator.FlagTrue,
 				controllerForceLocalOnly: "false",
 				controllerPullSpec:       "wonderfulPullspec",
 			},
@@ -110,8 +111,8 @@ func TestMUOReconciler(t *testing.T) {
 		{
 			name: "managed, OCM allowed but mangled pullsecret",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled:        "true",
-				controllerManaged:        "true",
+				operator.MuoEnabled:      operator.FlagTrue,
+				operator.MuoManaged:      operator.FlagTrue,
 				controllerForceLocalOnly: "false",
 				controllerPullSpec:       "wonderfulPullspec",
 			},
@@ -128,8 +129,8 @@ func TestMUOReconciler(t *testing.T) {
 		{
 			name: "managed, OCM connected mode",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled:        "true",
-				controllerManaged:        "true",
+				operator.MuoEnabled:      operator.FlagTrue,
+				operator.MuoManaged:      operator.FlagTrue,
 				controllerForceLocalOnly: "false",
 				controllerPullSpec:       "wonderfulPullspec",
 			},
@@ -147,8 +148,8 @@ func TestMUOReconciler(t *testing.T) {
 		{
 			name: "managed, OCM connected mode, custom OCM URL",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled:        "true",
-				controllerManaged:        "true",
+				operator.MuoEnabled:      operator.FlagTrue,
+				operator.MuoManaged:      operator.FlagTrue,
 				controllerForceLocalOnly: "false",
 				controllerOcmBaseURL:     "https://example.com",
 				controllerPullSpec:       "wonderfulPullspec",
@@ -167,8 +168,8 @@ func TestMUOReconciler(t *testing.T) {
 		{
 			name: "managed, pull secret exists, OCM disabled",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled:        "true",
-				controllerManaged:        "true",
+				operator.MuoEnabled:      operator.FlagTrue,
+				operator.MuoManaged:      operator.FlagTrue,
 				controllerForceLocalOnly: "true",
 				controllerPullSpec:       "wonderfulPullspec",
 			},
@@ -185,9 +186,9 @@ func TestMUOReconciler(t *testing.T) {
 		{
 			name: "managed, MUO does not become ready",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled:  "true",
-				controllerManaged:  "true",
-				controllerPullSpec: "wonderfulPullspec",
+				operator.MuoEnabled: operator.FlagTrue,
+				operator.MuoManaged: operator.FlagTrue,
+				controllerPullSpec:  "wonderfulPullspec",
 			},
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.MUODeploymentConfig{
@@ -202,9 +203,9 @@ func TestMUOReconciler(t *testing.T) {
 		{
 			name: "managed, CreateOrUpdate() fails",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled:  "true",
-				controllerManaged:  "true",
-				controllerPullSpec: "wonderfulPullspec",
+				operator.MuoEnabled: operator.FlagTrue,
+				operator.MuoManaged: operator.FlagTrue,
+				controllerPullSpec:  "wonderfulPullspec",
 			},
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, gomock.AssignableToTypeOf(&config.MUODeploymentConfig{})).Return(errors.New("failed ensure"))
@@ -214,9 +215,9 @@ func TestMUOReconciler(t *testing.T) {
 		{
 			name: "managed=false (removal)",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled:  "true",
-				controllerManaged:  "false",
-				controllerPullSpec: "wonderfulPullspec",
+				operator.MuoEnabled: operator.FlagTrue,
+				operator.MuoManaged: operator.FlagFalse,
+				controllerPullSpec:  "wonderfulPullspec",
 			},
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				md.EXPECT().Remove(gomock.Any(), gomock.Any()).Return(nil)
@@ -225,9 +226,9 @@ func TestMUOReconciler(t *testing.T) {
 		{
 			name: "managed=false (removal), Remove() fails",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled:  "true",
-				controllerManaged:  "false",
-				controllerPullSpec: "wonderfulPullspec",
+				operator.MuoEnabled: operator.FlagTrue,
+				operator.MuoManaged: operator.FlagFalse,
+				controllerPullSpec:  "wonderfulPullspec",
 			},
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				md.EXPECT().Remove(gomock.Any(), gomock.Any()).Return(errors.New("failed delete"))
@@ -237,9 +238,9 @@ func TestMUOReconciler(t *testing.T) {
 		{
 			name: "managed=blank (no action)",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled:  "true",
-				controllerManaged:  "",
-				controllerPullSpec: "wonderfulPullspec",
+				operator.MuoEnabled: operator.FlagTrue,
+				operator.MuoManaged: "",
+				controllerPullSpec:  "wonderfulPullspec",
 			},
 		},
 	}

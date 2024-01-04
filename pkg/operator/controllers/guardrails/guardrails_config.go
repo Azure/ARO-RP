@@ -20,9 +20,7 @@ import (
 
 const (
 	ControllerName               = "GuardRails"
-	controllerEnabled            = "aro.guardrails.enabled"
 	controllerNamespace          = "aro.guardrails.namespace"
-	controllerManaged            = "aro.guardrails.deploy.managed"
 	controllerPullSpec           = "aro.guardrails.deploy.pullspec"
 	controllerManagerRequestsCPU = "aro.guardrails.deploy.manager.requests.cpu"
 	controllerManagerRequestsMem = "aro.guardrails.deploy.manager.requests.mem"

@@ -7,7 +7,7 @@ package api
 // when interacting with newer api versions. This together with
 // database migration will make sure we have right values in the cluster documents
 // when moving between old and new versions
-func SetDefaults(doc *OpenShiftClusterDocument) {
+func SetDefaults(doc *OpenShiftClusterDocument, defaultOperatorFlags func() map[string]string) {
 	if doc.OpenShiftCluster != nil {
 		// EncryptionAtHost was introduced in 2021-09-01-preview.
 		// It can't be changed post cluster creation
@@ -40,7 +40,7 @@ func SetDefaults(doc *OpenShiftClusterDocument) {
 
 		// If there's no operator flags, set the default ones
 		if doc.OpenShiftCluster.Properties.OperatorFlags == nil {
-			doc.OpenShiftCluster.Properties.OperatorFlags = DefaultOperatorFlags()
+			doc.OpenShiftCluster.Properties.OperatorFlags = OperatorFlags(defaultOperatorFlags())
 		}
 
 		// If there's no OutboundType, set default one
@@ -61,51 +61,5 @@ func SetDefaults(doc *OpenShiftClusterDocument) {
 				},
 			}
 		}
-	}
-}
-
-// shorthand
-const flagTrue string = "true"
-const flagFalse string = "false"
-
-// DefaultOperatorFlags returns flags for new clusters
-// and ones that have not been AdminUpdated.
-func DefaultOperatorFlags() OperatorFlags {
-	// TODO: Get rid of magic strings.
-	// We already have constants for all of the below strings.
-	// For example `controllerEnabled` in `github.com/Azure/ARO-RP/pkg/operator/controllers/machine`.
-	// But if we import packages with constants here we will have a cyclic import issue because controllers
-	// import this package. We should probably move this somewhere else.
-	// Maybe into a subpackage like `github.com/Azure/ARO-RP/pkg/api/defaults`?
-	return OperatorFlags{
-		"aro.alertwebhook.enabled":                 flagTrue,
-		"aro.azuresubnets.enabled":                 flagTrue,
-		"aro.azuresubnets.nsg.managed":             flagTrue,
-		"aro.azuresubnets.serviceendpoint.managed": flagTrue,
-		"aro.banner.enabled":                       flagFalse,
-		"aro.checker.enabled":                      flagTrue,
-		"aro.dnsmasq.enabled":                      flagTrue,
-		"aro.restartdnsmasq.enabled":               flagFalse,
-		"aro.genevalogging.enabled":                flagTrue,
-		"aro.imageconfig.enabled":                  flagTrue,
-		"aro.ingress.enabled":                      flagTrue,
-		"aro.machine.enabled":                      flagTrue,
-		"aro.machineset.enabled":                   flagTrue,
-		"aro.machinehealthcheck.enabled":           flagTrue,
-		"aro.machinehealthcheck.managed":           flagTrue,
-		"aro.monitoring.enabled":                   flagTrue,
-		"aro.nodedrainer.enabled":                  flagTrue,
-		"aro.pullsecret.enabled":                   flagTrue,
-		"aro.pullsecret.managed":                   flagTrue,
-		"aro.rbac.enabled":                         flagTrue,
-		"aro.routefix.enabled":                     flagTrue,
-		"aro.storageaccounts.enabled":              flagTrue,
-		"aro.workaround.enabled":                   flagTrue,
-		"aro.autosizednodes.enabled":               flagTrue,
-		"rh.srep.muo.enabled":                      flagTrue,
-		"rh.srep.muo.managed":                      flagTrue,
-		"aro.guardrails.enabled":                   flagFalse,
-		"aro.guardrails.deploy.managed":            flagFalse,
-		"aro.cloudproviderconfig.enabled":          flagTrue,
 	}
 }

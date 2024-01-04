@@ -26,7 +26,6 @@ import (
 const (
 	ControllerName = "GenevaLogging"
 
-	controllerEnabled = "aro.genevalogging.enabled"
 	// full pullspec of fluentbit image
 	controllerFluentbitPullSpec = "aro.genevalogging.fluentbit.pullSpec"
 	// full pullspec of mdsd image
@@ -93,7 +92,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.GenevaLoggingEnabled) {
 		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}

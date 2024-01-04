@@ -22,6 +22,7 @@ import (
 
 	// This "_" import is counterintuitive but is required to initialize the scheme
 	// ARO unfortunately relies on implicit import and its side effect for this
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
@@ -36,7 +37,7 @@ func TestAutosizednodesReconciler(t *testing.T) {
 			},
 			Spec: arov1alpha1.ClusterSpec{
 				OperatorFlags: arov1alpha1.OperatorFlags{
-					ControllerEnabled: strconv.FormatBool(autoSizeEnabled),
+					operator.AutosizedNodesEnabled: strconv.FormatBool(autoSizeEnabled),
 				},
 			},
 		}

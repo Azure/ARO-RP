@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
@@ -154,7 +155,7 @@ func TestMachineReconciler(t *testing.T) {
 				Status:     arov1alpha1.ClusterStatus{Conditions: []operatorv1.OperatorCondition{}},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						controllerEnabled: "true",
+						operator.MachineEnabled: operator.FlagTrue,
 					},
 				},
 			}

@@ -6,7 +6,6 @@ package imageconfig
 import (
 	"context"
 	"reflect"
-	"strconv"
 	"testing"
 	"time"
 
@@ -18,6 +17,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
@@ -53,7 +53,7 @@ func TestImageConfigReconciler(t *testing.T) {
 					ACRDomain:     "arointsvc.azurecr.io",
 					AZEnvironment: azureclient.PublicCloud.Environment.Name,
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						controllerEnabled: strconv.FormatBool(false),
+						operator.ImageConfigEnabled: operator.FlagFalse,
 					},
 					Location: "eastus",
 				},
@@ -140,7 +140,7 @@ func TestImageConfigReconciler(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						controllerEnabled: strconv.FormatBool(true),
+						operator.ImageConfigEnabled: operator.FlagTrue,
 					},
 				},
 				Status: arov1alpha1.ClusterStatus{
@@ -211,7 +211,7 @@ func TestImageConfigReconciler(t *testing.T) {
 					ACRDomain:     "fakesvc.azurecr.io",
 					AZEnvironment: azureclient.PublicCloud.Environment.Name,
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						controllerEnabled: strconv.FormatBool(true),
+						operator.ImageConfigEnabled: operator.FlagTrue,
 					},
 					Location: "anyplace",
 				},
@@ -242,7 +242,7 @@ func TestImageConfigReconciler(t *testing.T) {
 					ACRDomain:     "fakesvc.azurecr.us",
 					AZEnvironment: azureclient.USGovernmentCloud.Environment.Name,
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						controllerEnabled: strconv.FormatBool(true),
+						operator.ImageConfigEnabled: operator.FlagTrue,
 					},
 					Location: "anyplace",
 				},
@@ -275,7 +275,7 @@ func TestImageConfigReconciler(t *testing.T) {
 					ACRDomain:     "arointsvc.azurecr.io",
 					AZEnvironment: azureclient.PublicCloud.Environment.Name,
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						controllerEnabled: strconv.FormatBool(true),
+						operator.ImageConfigEnabled: operator.FlagTrue,
 					},
 					Location: "eastus",
 				},

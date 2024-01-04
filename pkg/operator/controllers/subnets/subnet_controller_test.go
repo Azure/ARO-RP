@@ -20,6 +20,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
@@ -54,8 +55,8 @@ func getValidClusterInstance(operatorFlagEnabled bool, operatorFlagNSG bool, ope
 			ClusterResourceGroupID: clusterResourceGroupId,
 			InfraID:                infraId,
 			OperatorFlags: arov1alpha1.OperatorFlags{
-				controllerEnabled:                strconv.FormatBool(operatorFlagEnabled),
-				controllerNSGManaged:             strconv.FormatBool(operatorFlagNSG),
+				operator.AzureSubnetsEnabled:     strconv.FormatBool(operatorFlagEnabled),
+				operator.AzureSubnetsNsgManaged:  strconv.FormatBool(operatorFlagNSG),
 				controllerServiceEndpointManaged: strconv.FormatBool(operatorFlagServiceEndpoint),
 			},
 		},

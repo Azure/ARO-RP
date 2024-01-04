@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
@@ -27,11 +28,8 @@ import (
 )
 
 const (
-	ControllerName = "AzureSubnets"
-
-	controllerEnabled                = "aro.azuresubnets.enabled"
-	controllerNSGManaged             = "aro.azuresubnets.nsg.managed"
-	controllerServiceEndpointManaged = "aro.azuresubnets.serviceendpoint.managed"
+	ControllerName                   = "AzureSubnets"
+	controllerServiceEndpointManaged = operator.AzureSubnetsServiceEndpointManaged
 )
 
 // Reconciler is the controller struct
@@ -70,14 +68,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.AzureSubnetsEnabled) {
 		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
 	r.log.Debug("running")
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerNSGManaged) && !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerServiceEndpointManaged) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.AzureSubnetsNsgManaged) && !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerServiceEndpointManaged) {
 		// controller is disabled
 		return reconcile.Result{}, nil
 	}
@@ -127,7 +125,7 @@ func (r *reconcileManager) reconcileSubnets(ctx context.Context) error {
 	// This potentially calls an update twice for the same loop, but this is the price
 	// to pay for keeping logic split, separate, and simple
 	for _, s := range subnets {
-		if r.instance.Spec.OperatorFlags.GetSimpleBoolean(controllerNSGManaged) {
+		if r.instance.Spec.OperatorFlags.GetSimpleBoolean(operator.AzureSubnetsNsgManaged) {
 			err = r.ensureSubnetNSG(ctx, s)
 			if err != nil {
 				combinedErrors = append(combinedErrors, err.Error())

@@ -8,7 +8,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 )
 
@@ -27,7 +27,7 @@ func (mon *Monitor) emitOperatorFlagsAndSupportBanner(ctx context.Context) error
 
 		for _, cluster := range clusters.Items {
 			if cluster.Spec.OperatorFlags != nil {
-				defaultFlags := api.DefaultOperatorFlags()
+				defaultFlags := operator.DefaultOperatorFlags()
 				nonStandardOperatorFlagDims := make(map[string]string, len(defaultFlags))
 
 				//check if the current set flags matches the default ones

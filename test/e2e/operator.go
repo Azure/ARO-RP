@@ -29,6 +29,7 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	cpcController "github.com/Azure/ARO-RP/pkg/operator/controllers/cloudproviderconfig"
 	imageController "github.com/Azure/ARO-RP/pkg/operator/controllers/imageconfig"
@@ -375,7 +376,7 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		By("checking if preconfiguredNSG is enabled")
 		co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
-		if co.Spec.OperatorFlags["aro.azuresubnets.nsg.managed"] == "false" {
+		if co.Spec.OperatorFlags[operator.AzureSubnetsNsgManaged] == operator.FlagFalse {
 			Skip("preconfiguredNSG is enabled, skipping test")
 		}
 		By("preconfiguredNSG is disabled")
@@ -501,7 +502,7 @@ var _ = Describe("ARO Operator - MUO Deployment", func() {
 
 var _ = Describe("ARO Operator - ImageConfig Reconciler", func() {
 	const (
-		imageconfigFlag  = "aro.imageconfig.enabled"
+		imageconfigFlag  = operator.ImageConfigEnabled
 		optionalRegistry = "quay.io"
 		timeout          = 5 * time.Minute
 	)
@@ -660,8 +661,8 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 
 var _ = Describe("ARO Operator - Guardrails", func() {
 	const (
-		guardrailsEnabledFlag         = "aro.guardrails.enabled"
-		guardrailsDeployManagedFlag   = "aro.guardrails.deploy.managed"
+		guardrailsEnabledFlag         = operator.GuardrailsEnabled
+		guardrailsDeployManagedFlag   = operator.GuardrailsDeployManaged
 		guardrailsNamespace           = "openshift-azure-guardrails"
 		gkControllerManagerDeployment = "gatekeeper-controller-manager"
 		gkAuditDeployment             = "gatekeeper-audit"
@@ -741,7 +742,7 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 
 var _ = Describe("ARO Operator - Cloud Provder Config ConfigMap", func() {
 	const (
-		cpcControllerEnabled = "aro.cloudproviderconfig.enabled"
+		cpcControllerEnabled = operator.CloudProviderConfigEnabled
 	)
 
 	It("must have disableOutboundSNAT set to true", func(ctx context.Context) {

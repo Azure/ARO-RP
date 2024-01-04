@@ -20,6 +20,7 @@ import (
 	v20200430 "github.com/Azure/ARO-RP/pkg/api/v20200430"
 	v20220401 "github.com/Azure/ARO-RP/pkg/api/v20220401"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	mock_frontend "github.com/Azure/ARO-RP/pkg/util/mocks/frontend"
@@ -319,7 +320,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
 							},
-							OperatorFlags:    api.DefaultOperatorFlags(),
+							OperatorFlags:    operator.DefaultOperatorFlags(),
 							MaintenanceState: api.MaintenanceStateUnplanned,
 						},
 					},
@@ -349,7 +350,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					ClusterProfile: admin.ClusterProfile{
 						FipsValidatedModules: admin.FipsValidatedModulesDisabled,
 					},
-					OperatorFlags:    admin.OperatorFlags(api.DefaultOperatorFlags()),
+					OperatorFlags:    admin.OperatorFlags(operator.DefaultOperatorFlags()),
 					MaintenanceState: admin.MaintenanceStateUnplanned,
 				},
 			},
@@ -414,7 +415,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
 							},
-							OperatorFlags:    api.DefaultOperatorFlags(),
+							OperatorFlags:    operator.DefaultOperatorFlags(),
 							MaintenanceState: api.MaintenanceStateUnplanned,
 						},
 					},
@@ -444,7 +445,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
 					},
-					OperatorFlags:    admin.OperatorFlags(api.DefaultOperatorFlags()),
+					OperatorFlags:    admin.OperatorFlags(operator.DefaultOperatorFlags()),
 					MaintenanceState: admin.MaintenanceStateUnplanned,
 				},
 			},
@@ -691,7 +692,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
 							},
 							MaintenanceState: api.MaintenanceStatePending,
-							OperatorFlags:    api.DefaultOperatorFlags(),
+							OperatorFlags:    operator.DefaultOperatorFlags(),
 						},
 					},
 				})
@@ -721,7 +722,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
 					},
-					OperatorFlags: admin.OperatorFlags(api.DefaultOperatorFlags()),
+					OperatorFlags: admin.OperatorFlags(operator.DefaultOperatorFlags()),
 				},
 			},
 		},
@@ -789,7 +790,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
 							},
 							MaintenanceState: api.MaintenanceStatePending,
-							OperatorFlags:    api.DefaultOperatorFlags(),
+							OperatorFlags:    operator.DefaultOperatorFlags(),
 						},
 					},
 				})
@@ -819,7 +820,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
 					},
-					OperatorFlags: admin.OperatorFlags(api.DefaultOperatorFlags()),
+					OperatorFlags: admin.OperatorFlags(operator.DefaultOperatorFlags()),
 				},
 			},
 		},
@@ -885,7 +886,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 							MasterProfile: api.MasterProfile{
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
 							},
-							OperatorFlags:    api.DefaultOperatorFlags(),
+							OperatorFlags:    operator.DefaultOperatorFlags(),
 							MaintenanceState: api.MaintenanceStatePlanned,
 						},
 					},
@@ -915,7 +916,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
 					},
-					OperatorFlags:    admin.OperatorFlags(api.DefaultOperatorFlags()),
+					OperatorFlags:    admin.OperatorFlags(operator.DefaultOperatorFlags()),
 					MaintenanceState: admin.MaintenanceStatePlanned,
 				},
 			},
@@ -984,7 +985,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
 							},
 							MaintenanceState: api.MaintenanceStateNone,
-							OperatorFlags:    api.DefaultOperatorFlags(),
+							OperatorFlags:    operator.DefaultOperatorFlags(),
 						},
 					},
 				})
@@ -1014,7 +1015,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
 					},
-					OperatorFlags: admin.OperatorFlags(api.DefaultOperatorFlags()),
+					OperatorFlags: admin.OperatorFlags(operator.DefaultOperatorFlags()),
 				},
 			},
 		},
@@ -1082,7 +1083,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 								EncryptionAtHost: api.EncryptionAtHostDisabled,
 							},
 							MaintenanceState: api.MaintenanceStateNone,
-							OperatorFlags:    api.DefaultOperatorFlags(),
+							OperatorFlags:    operator.DefaultOperatorFlags(),
 						},
 					},
 				})
@@ -1112,7 +1113,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					MasterProfile: admin.MasterProfile{
 						EncryptionAtHost: admin.EncryptionAtHostDisabled,
 					},
-					OperatorFlags: admin.OperatorFlags(api.DefaultOperatorFlags()),
+					OperatorFlags: admin.OperatorFlags(operator.DefaultOperatorFlags()),
 				},
 			},
 		},
@@ -1393,7 +1394,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							FeatureProfile: api.FeatureProfile{
 								GatewayEnabled: true,
 							},
-							OperatorFlags: api.DefaultOperatorFlags(),
+							OperatorFlags: operator.DefaultOperatorFlags(),
 						},
 					},
 				})

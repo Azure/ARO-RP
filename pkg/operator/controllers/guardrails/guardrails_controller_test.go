@@ -15,6 +15,7 @@ import (
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails/config"
 	mock_deployer "github.com/Azure/ARO-RP/pkg/util/mocks/deployer"
@@ -32,26 +33,26 @@ func TestGuardRailsReconciler(t *testing.T) {
 		{
 			name: "disabled",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled:  "false",
-				controllerManaged:  "false",
-				controllerPullSpec: "wonderfulPullspec",
+				operator.GuardrailsEnabled:       operator.FlagFalse,
+				operator.GuardrailsDeployManaged: operator.FlagFalse,
+				controllerPullSpec:               "wonderfulPullspec",
 			},
 		},
 		{
 			name: "managed",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled:            "true",
-				controllerManaged:            "true",
-				controllerPullSpec:           "wonderfulPullspec",
-				controllerNamespace:          "wonderful-namespace",
-				controllerManagerRequestsCPU: "10m",
-				controllerManagerLimitCPU:    "100m",
-				controllerManagerRequestsMem: "512Mi",
-				controllerManagerLimitMem:    "512Mi",
-				controllerAuditRequestsCPU:   "10m",
-				controllerAuditLimitCPU:      "100m",
-				controllerAuditRequestsMem:   "512Mi",
-				controllerAuditLimitMem:      "512Mi",
+				operator.GuardrailsEnabled:       operator.FlagTrue,
+				operator.GuardrailsDeployManaged: operator.FlagTrue,
+				controllerPullSpec:               "wonderfulPullspec",
+				controllerNamespace:              "wonderful-namespace",
+				controllerManagerRequestsCPU:     "10m",
+				controllerManagerLimitCPU:        "100m",
+				controllerManagerRequestsMem:     "512Mi",
+				controllerManagerLimitMem:        "512Mi",
+				controllerAuditRequestsCPU:       "10m",
+				controllerAuditLimitCPU:          "100m",
+				controllerAuditRequestsMem:       "512Mi",
+				controllerAuditLimitMem:          "512Mi",
 			},
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.GuardRailsDeploymentConfig{
@@ -79,8 +80,8 @@ func TestGuardRailsReconciler(t *testing.T) {
 		{
 			name: "managed, no pullspec & namespace (uses default)",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled: "true",
-				controllerManaged: "true",
+				operator.GuardrailsEnabled:       operator.FlagTrue,
+				operator.GuardrailsDeployManaged: operator.FlagTrue,
 			},
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.GuardRailsDeploymentConfig{
@@ -108,9 +109,9 @@ func TestGuardRailsReconciler(t *testing.T) {
 		{
 			name: "managed, GuardRails does not become ready",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled:  "true",
-				controllerManaged:  "true",
-				controllerPullSpec: "wonderfulPullspec",
+				operator.GuardrailsEnabled:       operator.FlagTrue,
+				operator.GuardrailsDeployManaged: operator.FlagTrue,
+				controllerPullSpec:               "wonderfulPullspec",
 			},
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.GuardRailsDeploymentConfig{
@@ -138,9 +139,9 @@ func TestGuardRailsReconciler(t *testing.T) {
 		{
 			name: "managed, CreateOrUpdate() fails",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled:  "true",
-				controllerManaged:  "true",
-				controllerPullSpec: "wonderfulPullspec",
+				operator.GuardrailsEnabled:       operator.FlagTrue,
+				operator.GuardrailsDeployManaged: operator.FlagTrue,
+				controllerPullSpec:               "wonderfulPullspec",
 			},
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, gomock.AssignableToTypeOf(&config.GuardRailsDeploymentConfig{})).Return(errors.New("failed ensure"))
@@ -150,9 +151,9 @@ func TestGuardRailsReconciler(t *testing.T) {
 		{
 			name: "managed=false (removal)",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled:  "true",
-				controllerManaged:  "false",
-				controllerPullSpec: "wonderfulPullspec",
+				operator.GuardrailsEnabled:       operator.FlagTrue,
+				operator.GuardrailsDeployManaged: operator.FlagFalse,
+				controllerPullSpec:               "wonderfulPullspec",
 			},
 			cleanupNeeded: true,
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
@@ -162,9 +163,9 @@ func TestGuardRailsReconciler(t *testing.T) {
 		{
 			name: "managed=false (removal), Remove() fails",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled:  "true",
-				controllerManaged:  "false",
-				controllerPullSpec: "wonderfulPullspec",
+				operator.GuardrailsEnabled:       operator.FlagTrue,
+				operator.GuardrailsDeployManaged: operator.FlagFalse,
+				controllerPullSpec:               "wonderfulPullspec",
 			},
 			cleanupNeeded: true,
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
@@ -175,9 +176,9 @@ func TestGuardRailsReconciler(t *testing.T) {
 		{
 			name: "managed=blank (no action)",
 			flags: arov1alpha1.OperatorFlags{
-				controllerEnabled:  "true",
-				controllerManaged:  "",
-				controllerPullSpec: "wonderfulPullspec",
+				operator.GuardrailsEnabled:       operator.FlagTrue,
+				operator.GuardrailsDeployManaged: "",
+				controllerPullSpec:               "wonderfulPullspec",
 			},
 		},
 	}

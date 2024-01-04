@@ -21,6 +21,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	mock_storage "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/storage"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
@@ -55,7 +56,7 @@ func getValidClusterInstance(operatorFlag bool) *arov1alpha1.Cluster {
 			Location:               location,
 			StorageSuffix:          storageSuffix,
 			OperatorFlags: arov1alpha1.OperatorFlags{
-				controllerEnabled: strconv.FormatBool(operatorFlag),
+				operator.StorageAccountsEnabled: strconv.FormatBool(operatorFlag),
 			},
 		},
 	}
