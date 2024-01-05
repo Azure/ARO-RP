@@ -33,6 +33,7 @@ const (
 	GuardrailsEnabled                  = "aro.guardrails.enabled"
 	GuardrailsDeployManaged            = "aro.guardrails.deploy.managed"
 	CloudProviderConfigEnabled         = "aro.cloudproviderconfig.enabled"
+	ForceReconciliation                = "aro.forcereconciliation"
 	FlagTrue                           = "true"
 	FlagFalse                          = "false"
 )

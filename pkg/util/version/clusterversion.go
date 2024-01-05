@@ -36,8 +36,5 @@ func GetClusterVersion(cv *configv1.ClusterVersion) (*Version, error) {
 }
 
 func IsClusterUpgrading(cv *configv1.ClusterVersion) bool {
-	if cv.Spec.DesiredUpdate != nil {
-		return true
-	}
-	return false
+	return cv.Spec.DesiredUpdate != nil
 }
