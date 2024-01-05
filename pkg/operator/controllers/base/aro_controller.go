@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -115,4 +116,20 @@ func (c *AROController) IsClusterUpgrading(ctx context.Context) (bool, error) {
 	}
 
 	return version.IsClusterUpgrading(cv), nil
+}
+
+func (c *AROController) AllowRebootCausingReconciliation(ctx context.Context, instance *arov1alpha1.Cluster) (bool, error) {
+	// If reconciliation is forced, perform it
+	if instance.Spec.OperatorFlags.GetSimpleBoolean(operator.ForceReconciliation) {
+		c.Log.Debugf("allowing reconciliation of %s because reconciliation forced", c.Name)
+		return true, nil
+	}
+
+	// Allow the reconciliation if the cluster is upgrading
+	isClusterUpgrading, err := c.IsClusterUpgrading(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	return isClusterUpgrading, nil
 }
