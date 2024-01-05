@@ -53,8 +53,5 @@ func ClusterVersionIsLessThan4_4(ctx context.Context, configcli configclient.Int
 }
 
 func IsClusterUpgrading(cv *configv1.ClusterVersion) bool {
-	if cv.Spec.DesiredUpdate != nil {
-		return true
-	}
-	return false
+	return cv.Spec.DesiredUpdate != nil
 }
