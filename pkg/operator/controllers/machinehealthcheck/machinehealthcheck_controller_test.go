@@ -299,7 +299,6 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				deleteTally = map[string]int{}
 				client = client.WithCreateHook(testclienthelper.TallyCountsAndKey(createTally)).
 					WithDeleteHook(testclienthelper.TallyCountsAndKey(deleteTally))
-
 			} else {
 				tt.clientHook(client)
 			}
@@ -343,7 +342,7 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 					t.Fatal(err)
 				}
 				annotations := map[string]string{}
-				annotations = maps.Copy(annotations, m.ObjectMeta.Annotations)
+				maps.Copy(annotations, m.ObjectMeta.Annotations)
 				for _, e := range deep.Equal(tt.expectAnnotations, annotations) {
 					t.Error(e)
 				}

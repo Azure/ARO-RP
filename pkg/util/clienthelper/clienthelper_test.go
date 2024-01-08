@@ -44,7 +44,7 @@ func TestEnsureDeleted(t *testing.T) {
 		},
 	})
 
-	client := testclienthelper.NewRedirectingClient(builder.Build()).
+	client := testclienthelper.NewHookingClient(builder.Build()).
 		WithDeleteHook(func(obj client.Object) error {
 			if obj.GetName() == "test-name-2" {
 				return fmt.Errorf("error on %s", obj.GetName())
@@ -1362,7 +1362,7 @@ func TestMergeApply(t *testing.T) {
 			beenChanged := false
 			builder := fake.NewClientBuilder().WithRuntimeObjects(tt.old)
 
-			clientFake := testclienthelper.NewRedirectingClient(builder.Build()).
+			clientFake := testclienthelper.NewHookingClient(builder.Build()).
 				WithUpdateHook(func(obj client.Object) error {
 					beenChanged = true
 					return nil
