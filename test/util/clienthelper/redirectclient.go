@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type redirectingClient struct {
+type HookingClient struct {
 	f client.WithWatch
 
 	getHook    func(key client.ObjectKey, obj client.Object) error
@@ -23,38 +23,38 @@ type redirectingClient struct {
 	patchHook  func(obj client.Object) error
 }
 
-var _ client.Client = &redirectingClient{}
+var _ client.Client = &HookingClient{}
 
-func NewRedirectingClient(c client.WithWatch) *redirectingClient {
-	return &redirectingClient{
+func NewHookingClient(c client.WithWatch) *HookingClient {
+	return &HookingClient{
 		f: c,
 	}
 }
 
-func (c *redirectingClient) WithGetHook(f func(key client.ObjectKey, obj client.Object) error) *redirectingClient {
+func (c *HookingClient) WithGetHook(f func(key client.ObjectKey, obj client.Object) error) *HookingClient {
 	c.getHook = f
 	return c
 }
 
-func (c *redirectingClient) WithDeleteHook(f func(obj client.Object) error) *redirectingClient {
+func (c *HookingClient) WithDeleteHook(f func(obj client.Object) error) *HookingClient {
 	c.deleteHook = f
 	return c
 }
 
-func (c *redirectingClient) WithCreateHook(f func(obj client.Object) error) *redirectingClient {
+func (c *HookingClient) WithCreateHook(f func(obj client.Object) error) *HookingClient {
 	c.createHook = f
 	return c
 }
-func (c *redirectingClient) WithUpdateHook(f func(obj client.Object) error) *redirectingClient {
+func (c *HookingClient) WithUpdateHook(f func(obj client.Object) error) *HookingClient {
 	c.updateHook = f
 	return c
 }
-func (c *redirectingClient) WithPatchHook(f func(obj client.Object) error) *redirectingClient {
+func (c *HookingClient) WithPatchHook(f func(obj client.Object) error) *HookingClient {
 	c.patchHook = f
 	return c
 }
 
-func (c *redirectingClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+func (c *HookingClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 	if c.getHook != nil {
 		err := c.getHook(key, obj)
 		if err != nil {
@@ -65,27 +65,27 @@ func (c *redirectingClient) Get(ctx context.Context, key client.ObjectKey, obj c
 	return c.f.Get(ctx, key, obj)
 }
 
-func (c *redirectingClient) Watch(ctx context.Context, list client.ObjectList, opts ...client.ListOption) (watch.Interface, error) {
+func (c *HookingClient) Watch(ctx context.Context, list client.ObjectList, opts ...client.ListOption) (watch.Interface, error) {
 	return c.f.Watch(ctx, list, opts...)
 }
 
-func (c *redirectingClient) List(ctx context.Context, obj client.ObjectList, opts ...client.ListOption) error {
+func (c *HookingClient) List(ctx context.Context, obj client.ObjectList, opts ...client.ListOption) error {
 	return c.f.List(ctx, obj, opts...)
 }
 
-func (c *redirectingClient) Scheme() *runtime.Scheme {
+func (c *HookingClient) Scheme() *runtime.Scheme {
 	return c.f.Scheme()
 }
 
-func (c *redirectingClient) RESTMapper() meta.RESTMapper {
+func (c *HookingClient) RESTMapper() meta.RESTMapper {
 	return c.f.RESTMapper()
 }
 
-func (c *redirectingClient) Status() client.StatusWriter {
+func (c *HookingClient) Status() client.StatusWriter {
 	return c.f.Status()
 }
 
-func (c *redirectingClient) Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
+func (c *HookingClient) Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
 	if c.createHook != nil {
 		err := c.createHook(obj)
 		if err != nil {
@@ -95,7 +95,7 @@ func (c *redirectingClient) Create(ctx context.Context, obj client.Object, opts 
 	return c.f.Create(ctx, obj, opts...)
 }
 
-func (c *redirectingClient) Delete(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
+func (c *HookingClient) Delete(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
 	if c.deleteHook != nil {
 		err := c.deleteHook(obj)
 		if err != nil {
@@ -104,11 +104,11 @@ func (c *redirectingClient) Delete(ctx context.Context, obj client.Object, opts 
 	}
 	return c.f.Delete(ctx, obj, opts...)
 }
-func (c *redirectingClient) DeleteAllOf(ctx context.Context, obj client.Object, opts ...client.DeleteAllOfOption) error {
+func (c *HookingClient) DeleteAllOf(ctx context.Context, obj client.Object, opts ...client.DeleteAllOfOption) error {
 	return c.f.DeleteAllOf(ctx, obj, opts...)
 }
 
-func (c *redirectingClient) Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+func (c *HookingClient) Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 	if c.updateHook != nil {
 		err := c.updateHook(obj)
 		if err != nil {
@@ -117,7 +117,7 @@ func (c *redirectingClient) Update(ctx context.Context, obj client.Object, opts 
 	}
 	return c.f.Update(ctx, obj, opts...)
 }
-func (c *redirectingClient) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+func (c *HookingClient) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
 	if c.patchHook != nil {
 		err := c.patchHook(obj)
 		if err != nil {

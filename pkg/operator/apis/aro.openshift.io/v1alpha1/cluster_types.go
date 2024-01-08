@@ -8,6 +8,7 @@ import (
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 type BannerContent string
@@ -30,6 +31,8 @@ const (
 	DefaultClusterDNS         = "DefaultClusterDNS"
 	GuardRailsStatus          = "GuardRailsStatus"
 )
+
+var SingletonKey = types.NamespacedName{Name: SingletonClusterName}
 
 // AllConditionTypes is a operator conditions currently in use, any condition not in this list is not
 // added to the operator.status.conditions list

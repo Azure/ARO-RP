@@ -13,8 +13,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	appsv1client "k8s.io/client-go/kubernetes/typed/apps/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+
+	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
 // NodeIsReady returns true if a Node is considered ready
@@ -86,9 +89,10 @@ func DeploymentIsReady(d *appsv1.Deployment) bool {
 
 // CheckDeploymentIsReady returns a function which polls a Deployment and
 // returns its readiness
-func CheckDeploymentIsReady(ctx context.Context, cli appsv1client.DeploymentInterface, name string) func() (bool, error) {
+func CheckDeploymentIsReady(ctx context.Context, ch clienthelper.Interface, key types.NamespacedName) func() (bool, error) {
 	return func() (bool, error) {
-		d, err := cli.Get(ctx, name, metav1.GetOptions{})
+		d := &appsv1.Deployment{}
+		err := ch.GetOne(ctx, key, d)
 		switch {
 		case kerrors.IsNotFound(err):
 			return false, nil
