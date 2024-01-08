@@ -35,7 +35,6 @@ import (
 )
 
 type Interface interface {
-	EnsureObjectDeleted(ctx context.Context, obj kruntime.Object) error
 	EnsureDeleted(ctx context.Context, gvk schema.GroupVersionKind, key types.NamespacedName) error
 	Ensure(ctx context.Context, objs ...kruntime.Object) error
 	GetOne(ctx context.Context, key types.NamespacedName, obj kruntime.Object) error
@@ -76,18 +75,6 @@ func (dh *dynamicHelper) EnsureDeleted(ctx context.Context, gvk schema.GroupVers
 
 	dh.log.Infof("Delete kind %s ns %s name %s", gvk.Kind, key.Namespace, key.Name)
 	err := dh.client.Delete(ctx, a)
-	if kerrors.IsNotFound(err) {
-		return nil
-	}
-	return err
-}
-
-func (dh *dynamicHelper) EnsureObjectDeleted(ctx context.Context, obj kruntime.Object) error {
-	newObj, ok := obj.(client.Object)
-	if !ok {
-		return fmt.Errorf("object of kind %s can't be made a client.Object", obj.GetObjectKind().GroupVersionKind().String())
-	}
-	err := dh.client.Delete(ctx, newObj)
 	if kerrors.IsNotFound(err) {
 		return nil
 	}

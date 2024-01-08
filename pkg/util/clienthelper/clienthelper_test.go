@@ -19,7 +19,9 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -1397,6 +1399,103 @@ func TestMergeApply(t *testing.T) {
 			}
 			if beenChanged != tt.wantChanged {
 				t.Errorf("changed: %t, want: %t", beenChanged, tt.wantChanged)
+			}
+		})
+	}
+}
+
+func TestGetOne(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		query    types.NamespacedName
+		existing []runtime.Object
+		want     client.Object
+		wantErr  error
+	}{
+		{
+			name:  "fetch success",
+			query: types.NamespacedName{Name: "funobj", Namespace: "somewhere"},
+			existing: []runtime.Object{
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            "funobj",
+						Namespace:       "somewhere",
+						ResourceVersion: "1",
+					},
+					StringData: map[string]string{
+						"secret": "squirrels",
+					},
+					Type: corev1.SecretTypeOpaque,
+				},
+			},
+			want: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "funobj",
+					Namespace:       "somewhere",
+					ResourceVersion: "1",
+				},
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "v1",
+				},
+				StringData: map[string]string{
+					"secret": "squirrels",
+				},
+				Type: corev1.SecretTypeOpaque,
+			},
+		},
+		{
+			name:     "fetch failure",
+			query:    types.NamespacedName{Name: "funobj", Namespace: "somewhere"},
+			existing: []runtime.Object{},
+			want: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "funobj",
+					Namespace:       "somewhere",
+					ResourceVersion: "1",
+				},
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Secret",
+					APIVersion: "v1",
+				},
+				StringData: map[string]string{
+					"secret": "squirrels",
+				},
+				Type: corev1.SecretTypeOpaque,
+			},
+			wantErr: &errors.StatusError{ErrStatus: metav1.Status{Message: `secrets "funobj" not found`}},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+
+			clientFake := fake.NewClientBuilder().WithRuntimeObjects(tt.existing...).Build()
+			dh := NewWithClient(logrus.NewEntry(logrus.StandardLogger()), clientFake)
+
+			gvks, _, err := scheme.Scheme.ObjectKinds(tt.want)
+			if err != nil {
+				t.Error(err)
+			}
+
+			c, err := scheme.Scheme.New(gvks[0])
+			if err != nil {
+				t.Error(err)
+			}
+
+			err = dh.GetOne(ctx, tt.query, c)
+			if tt.wantErr == nil && err != nil {
+				t.Fatal(err)
+			} else if tt.wantErr != nil {
+				for _, r := range deep.Equal(tt.wantErr, err) {
+					t.Error(r)
+				}
+				return
+			}
+
+			if !reflect.DeepEqual(c, tt.want) {
+				for _, r := range deep.Equal(c, tt.want) {
+					t.Error(r)
+				}
 			}
 		})
 	}
