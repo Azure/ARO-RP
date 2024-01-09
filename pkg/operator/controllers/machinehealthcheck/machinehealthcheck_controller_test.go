@@ -9,22 +9,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
+	"github.com/golang/mock/gomock"
 	configv1 "github.com/openshift/api/config/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/exp/maps"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
+	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
-	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -60,25 +58,21 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 	}
 
 	type test struct {
-		name              string
-		instance          *arov1alpha1.Cluster
-		clusterversion    *configv1.ClusterVersion
-		expectAnnotations map[string]string
-		wantCreates       map[string]int
-		wantDeletes       map[string]int
-		clientHook        func(*testclienthelper.HookingClient)
-		wantConditions    []operatorv1.OperatorCondition
-		wantErr           string
-		wantRequeueAfter  time.Duration
+		name             string
+		instance         *arov1alpha1.Cluster
+		clusterversion   *configv1.ClusterVersion
+		mocks            func(mdh *mock_dynamichelper.MockInterface)
+		wantConditions   []operatorv1.OperatorCondition
+		wantErr          string
+		wantRequeueAfter time.Duration
 	}
 
 	for _, tt := range []*test{
 		{
 			name:           "Failure to get instance",
+			mocks:          func(mdh *mock_dynamichelper.MockInterface) {},
 			wantConditions: defaultConditions,
 			wantErr:        `clusters.aro.openshift.io "cluster" not found`,
-			wantCreates:    map[string]int{},
-			wantDeletes:    map[string]int{},
 		},
 		{
 			name: "Enabled Feature Flag is false",
@@ -95,8 +89,10 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 					Conditions: defaultConditions,
 				},
 			},
-			wantCreates:    map[string]int{},
-			wantDeletes:    map[string]int{},
+			mocks: func(mdh *mock_dynamichelper.MockInterface) {
+				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Times(0)
+				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil).Times(0)
+			},
 			wantConditions: defaultConditions,
 			wantErr:        "",
 		},
@@ -116,10 +112,9 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 					Conditions: defaultConditions,
 				},
 			},
-			wantCreates: map[string]int{},
-			wantDeletes: map[string]int{
-				"MachineHealthCheck/openshift-machine-api/aro-machinehealthcheck": 1,
-				"PrometheusRule/openshift-machine-api/mhc-remediation-alert":      1,
+			mocks: func(mdh *mock_dynamichelper.MockInterface) {
+				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Times(1)
+				mdh.EXPECT().EnsureDeleted(gomock.Any(), "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert").Times(1)
 			},
 			wantConditions: defaultConditions,
 			wantErr:        "",
@@ -140,13 +135,8 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 					Conditions: defaultConditions,
 				},
 			},
-			clientHook: func(t *testclienthelper.HookingClient) {
-				t.WithDeleteHook(func(obj client.Object) error {
-					if client.ObjectKeyFromObject(obj).String() == mhcNamespacedName.String() {
-						return errors.New("Could not delete mhc")
-					}
-					return nil
-				})
+			mocks: func(mdh *mock_dynamichelper.MockInterface) {
+				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Return(errors.New("Could not delete mhc"))
 			},
 			wantErr: "Could not delete mhc",
 			wantConditions: []operatorv1.OperatorCondition{
@@ -177,13 +167,9 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 					Conditions: defaultConditions,
 				},
 			},
-			clientHook: func(t *testclienthelper.HookingClient) {
-				t.WithDeleteHook(func(obj client.Object) error {
-					if client.ObjectKeyFromObject(obj).String() == prometheusAlertNamespacedName.String() {
-						return errors.New("Could not delete mhc alert")
-					}
-					return nil
-				})
+			mocks: func(mdh *mock_dynamichelper.MockInterface) {
+				mdh.EXPECT().EnsureDeleted(gomock.Any(), "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck").Times(1)
+				mdh.EXPECT().EnsureDeleted(gomock.Any(), "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert").Return(errors.New("Could not delete mhc alert"))
 			},
 			wantErr: "Could not delete mhc alert",
 			wantConditions: []operatorv1.OperatorCondition{
@@ -211,14 +197,11 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 					},
 				},
 			},
-			wantCreates: map[string]int{
-				"MachineHealthCheck/openshift-machine-api/aro-machinehealthcheck": 1,
-				"PrometheusRule/openshift-machine-api/mhc-remediation-alert":      1,
+			mocks: func(mdh *mock_dynamichelper.MockInterface) {
+				mdh.EXPECT().Ensure(gomock.Any(), mhcIsPaused(false)).Return(nil).Times(1)
 			},
-			wantDeletes:       map[string]int{},
-			expectAnnotations: map[string]string{},
-			wantConditions:    defaultConditions,
-			wantErr:           "",
+			wantConditions: defaultConditions,
+			wantErr:        "",
 		},
 		{
 			name: "Managed Feature Flag is true and cluster is upgrading: sets paused annotation on MHC",
@@ -234,13 +217,8 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				},
 			},
 			clusterversion: clusterversionUpgrading,
-			wantCreates: map[string]int{
-				"MachineHealthCheck/openshift-machine-api/aro-machinehealthcheck": 1,
-				"PrometheusRule/openshift-machine-api/mhc-remediation-alert":      1,
-			},
-			wantDeletes: map[string]int{},
-			expectAnnotations: map[string]string{
-				MHCPausedAnnotation: "",
+			mocks: func(mdh *mock_dynamichelper.MockInterface) {
+				mdh.EXPECT().Ensure(gomock.Any(), mhcIsPaused(true)).Return(nil).Times(1)
 			},
 			wantErr: "",
 		},
@@ -260,10 +238,8 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 					Conditions: defaultConditions,
 				},
 			},
-			clientHook: func(t *testclienthelper.HookingClient) {
-				t.WithCreateHook(func(obj client.Object) error {
-					return errors.New("failed to ensure")
-				})
+			mocks: func(mdh *mock_dynamichelper.MockInterface) {
+				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(errors.New("failed to ensure"))
 			},
 			wantErr: "failed to ensure",
 			wantConditions: []operatorv1.OperatorCondition{
@@ -279,6 +255,13 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			mdh := mock_dynamichelper.NewMockInterface(controller)
+
+			tt.mocks(mdh)
+
 			clientBuilder := ctrlfake.NewClientBuilder()
 			if tt.instance != nil {
 				clientBuilder = clientBuilder.WithObjects(tt.instance)
@@ -289,28 +272,12 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 				clientBuilder = clientBuilder.WithObjects(tt.clusterversion)
 			}
 
-			var createTally map[string]int
-			var deleteTally map[string]int
-
-			client := testclienthelper.NewHookingClient(clientBuilder.Build())
-
-			if tt.clientHook == nil {
-				createTally = map[string]int{}
-				deleteTally = map[string]int{}
-				client = client.WithCreateHook(testclienthelper.TallyCountsAndKey(createTally)).
-					WithDeleteHook(testclienthelper.TallyCountsAndKey(deleteTally))
-			} else {
-				tt.clientHook(client)
-			}
-			log := logrus.NewEntry(logrus.StandardLogger())
-			ch := clienthelper.NewWithClient(log, client)
-
 			ctx := context.Background()
 
 			r := NewReconciler(
-				log,
-				client,
-				ch,
+				logrus.NewEntry(logrus.StandardLogger()),
+				clientBuilder.Build(),
+				mdh,
 			)
 
 			request := ctrl.Request{}
@@ -327,26 +294,37 @@ func TestMachineHealthCheckReconciler(t *testing.T) {
 			}
 
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-
-			for _, e := range deep.Equal(tt.wantCreates, createTally) {
-				t.Error(e)
-			}
-			for _, e := range deep.Equal(tt.wantDeletes, deleteTally) {
-				t.Error(e)
-			}
-
-			if tt.expectAnnotations != nil {
-				m := &machinev1beta1.MachineHealthCheck{}
-				err = ch.GetOne(ctx, mhcNamespacedName, m)
-				if err != nil {
-					t.Fatal(err)
-				}
-				annotations := map[string]string{}
-				maps.Copy(annotations, m.ObjectMeta.Annotations)
-				for _, e := range deep.Equal(tt.expectAnnotations, annotations) {
-					t.Error(e)
-				}
-			}
 		})
 	}
+}
+
+type mhcIsPausedMatcher struct {
+	paused bool
+}
+
+func (m mhcIsPausedMatcher) Matches(x interface{}) bool {
+	if objs, ok := x.([]kruntime.Object); !ok {
+		return false
+	} else {
+		for _, obj := range objs {
+			if mhc, ok := obj.(*machinev1beta1.MachineHealthCheck); ok {
+				if _, ok := mhc.ObjectMeta.Annotations[MHCPausedAnnotation]; ok != m.paused {
+					return false
+				}
+			}
+		}
+	}
+	return true
+}
+
+func (m mhcIsPausedMatcher) String() string {
+	if m.paused {
+		return "has mhc with paused annotation"
+	} else {
+		return "has mhc with no paused annotation"
+	}
+}
+
+func mhcIsPaused(paused bool) gomock.Matcher {
+	return mhcIsPausedMatcher{paused: paused}
 }

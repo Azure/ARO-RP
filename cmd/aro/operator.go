@@ -42,7 +42,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/storageaccounts"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/subnets"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/workaround"
-	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	// +kubebuilder:scaffold:imports
@@ -83,11 +82,6 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 	dh, err := dynamichelper.New(log, restConfig)
-	if err != nil {
-		return err
-	}
-
-	ch, err := clienthelper.New(log, restConfig)
 	if err != nil {
 		return err
 	}
@@ -199,7 +193,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (machinehealthcheck.NewReconciler(
 			log.WithField("controller", machinehealthcheck.ControllerName),
-			client, ch)).SetupWithManager(mgr); err != nil {
+			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", machinehealthcheck.ControllerName, err)
 		}
 		if err = (ingress.NewReconciler(

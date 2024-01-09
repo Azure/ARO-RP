@@ -14,7 +14,6 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/sirupsen/logrus"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -28,7 +27,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
-	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
@@ -43,25 +41,20 @@ const (
 	MHCPausedAnnotation string = "cluster.x-k8s.io/paused"
 )
 
-var (
-	mhcNamespacedName             = types.NamespacedName{Namespace: "openshift-machine-api", Name: "aro-machinehealthcheck"}
-	prometheusAlertNamespacedName = types.NamespacedName{Namespace: "openshift-machine-api", Name: "mhc-remediation-alert"}
-)
-
 type Reconciler struct {
 	base.AROController
 
-	ch clienthelper.Interface
+	dh dynamichelper.Interface
 }
 
-func NewReconciler(log *logrus.Entry, client client.Client, ch clienthelper.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *Reconciler {
 	return &Reconciler{
 		AROController: base.AROController{
 			Log:    log,
 			Client: client,
 			Name:   ControllerName,
 		},
-		ch: ch,
+		dh: dh,
 	}
 }
 
@@ -81,12 +74,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 	r.Log.Debug("running")
 	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.MachineHealthCheckManaged) {
-		mhcGVK := schema.GroupVersionKind{
-			Group:   "machine.openshift.io",
-			Kind:    "MachineHealthCheck",
-			Version: "v1beta1",
-		}
-		err := r.ch.EnsureDeleted(ctx, mhcGVK, mhcNamespacedName)
+		err := r.dh.EnsureDeleted(ctx, "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck")
 		if err != nil {
 			r.Log.Error(err)
 			r.SetDegraded(ctx, err)
@@ -94,12 +82,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			return reconcile.Result{RequeueAfter: time.Hour}, err
 		}
 
-		promRuleGVK := schema.GroupVersionKind{
-			Group:   "monitoring.coreos.com",
-			Kind:    "PrometheusRule",
-			Version: "v1",
-		}
-		err = r.ch.EnsureDeleted(ctx, promRuleGVK, prometheusAlertNamespacedName)
+		err = r.dh.EnsureDeleted(ctx, "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert")
 		if err != nil {
 			r.Log.Error(err)
 			r.SetDegraded(ctx, err)
@@ -154,7 +137,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	// create/update the MHC CR
-	err = r.ch.Ensure(ctx, resources...)
+	err = r.dh.Ensure(ctx, resources...)
 	if err != nil {
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)
