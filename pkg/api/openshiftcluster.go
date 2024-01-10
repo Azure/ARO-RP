@@ -185,24 +185,37 @@ const (
 type MaintenanceState string
 
 const (
-	MaintenanceStateNone      MaintenanceState = "None"
-	MaintenanceStatePending   MaintenanceState = "Pending"
-	MaintenanceStatePlanned   MaintenanceState = "Planned"
-	MaintenanceStateUnplanned MaintenanceState = "Unplanned"
+	MaintenanceStateNone                 MaintenanceState = "None"
+	MaintenanceStatePending              MaintenanceState = "Pending"
+	MaintenanceStatePlanned              MaintenanceState = "Planned"
+	MaintenanceStateUnplanned            MaintenanceState = "Unplanned"
+	MaintenanceStateCustomerActionNeeded MaintenanceState = "CustomerActionNeeded"
 )
 
 type MaintenanceTask string
 
 const (
+	//
+	// Maintenance tasks that perform work on the cluster
+	//
+
 	MaintenanceTaskEverything MaintenanceTask = "Everything"
 	MaintenanceTaskOperator   MaintenanceTask = "OperatorUpdate"
 	MaintenanceTaskRenewCerts MaintenanceTask = "CertificatesRenewal"
 
+	//
 	// Maintenance tasks for updating customer maintenance signals
+	//
+
+	MaintenanceTaskPending MaintenanceTask = "Pending"
+
 	// None signal should only be used when (1) admin update fails and (2) SRE fixes the failed admin update without running another admin updates
 	// Admin update success should automatically set the cluster into None state
-	MaintenanceTaskPending MaintenanceTask = "Pending"
-	MaintenanceTaskNone    MaintenanceTask = "None"
+	MaintenanceTaskNone MaintenanceTask = "None"
+
+	// Customer action needed signal should only be used when (1) admin update fails and (2) customer needs to take action to resolve the failure
+	// To remove the signal after customer takes action, use maintenance task None
+	MaintenanceTaskCustomerActionNeeded MaintenanceTask = "CustomerActionNeeded"
 )
 
 // IsMaintenanceOngoingTask returns true if the maintenance task should change state to maintenance ongoing (planned/unplanned)

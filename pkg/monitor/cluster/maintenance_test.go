@@ -50,6 +50,13 @@ func TestEmitMaintenanceState(t *testing.T) {
 			maintenanceState:  api.MaintenanceStatePlanned,
 			expectedState:     planned,
 		},
+		{
+			name:              "state customer action needed",
+			provisioningState: api.ProvisioningStateSucceeded,
+			adminUpdateErr:    "error",
+			maintenanceState:  api.MaintenanceStateCustomerActionNeeded,
+			expectedState:     customerActionNeeded,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
