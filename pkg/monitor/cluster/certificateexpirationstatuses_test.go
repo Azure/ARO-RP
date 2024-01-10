@@ -30,8 +30,10 @@ type certInfo struct {
 }
 
 const (
-	managedDomainName   = "contoso.aroapp.io"
-	unmanagedDomainName = "aro.contoso.com"
+	managedDomainName     = "contoso.aroapp.io"
+	unmanagedDomainName   = "aro.contoso.com"
+	managedDomainApiURL   = "https://api.contoso.aroapp.io:6443"
+	unmanagedDomainApiURL = "https://api.aro.contoso.com:6443"
 )
 
 func TestEmitCertificateExpirationStatuses(t *testing.T) {
@@ -42,7 +44,7 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 
 	for _, tt := range []struct {
 		name            string
-		domain          string
+		url             string
 		certsPresent    []certInfo
 		wantExpirations []map[string]string
 		wantWarning     []map[string]string
@@ -50,7 +52,7 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 	}{
 		{
 			name:         "only emits MDSD status for unmanaged domain",
-			domain:       unmanagedDomainName,
+			url:          unmanagedDomainApiURL,
 			certsPresent: []certInfo{{"cluster", "geneva.certificate"}},
 			wantExpirations: []map[string]string{
 				{
@@ -61,8 +63,8 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			},
 		},
 		{
-			name:   "includes ingress and API status for managed domain",
-			domain: managedDomainName,
+			name: "includes ingress and API status for managed domain",
+			url:  managedDomainApiURL,
 			certsPresent: []certInfo{
 				{"cluster", "geneva.certificate"},
 				{clusterID + "-ingress", managedDomainName},
@@ -87,8 +89,8 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			},
 		},
 		{
-			name:   "emits warning metric when cluster secret has been deleted",
-			domain: unmanagedDomainName,
+			name: "emits warning metric when cluster secret has been deleted",
+			url:  unmanagedDomainApiURL,
 			wantWarning: []map[string]string{
 				{
 					"namespace": "openshift-azure-operator",
@@ -97,8 +99,8 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			},
 		},
 		{
-			name:   "emits warning metric when managed domain secret has been deleted",
-			domain: managedDomainName,
+			name: "emits warning metric when managed domain secret has been deleted",
+			url:  managedDomainApiURL,
 			certsPresent: []certInfo{
 				{"cluster", "geneva.certificate"},
 				{clusterID + "-ingress", managedDomainName},
@@ -141,7 +143,7 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 				m.EXPECT().EmitGauge(certificateExpirationMetricName, int64(daysUntilExpiration), g)
 			}
 
-			mon := buildMonitor(m, tt.domain, clusterID, secrets...)
+			mon := buildMonitor(m, tt.url, clusterID, secrets...)
 
 			err = mon.emitCertificateExpirationStatuses(ctx)
 
@@ -157,7 +159,7 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 
 		ctx := context.Background()
 		m := mock_metrics.NewMockEmitter(gomock.NewController(t))
-		mon := buildMonitor(m, managedDomainName, clusterID, secrets...)
+		mon := buildMonitor(m, managedDomainApiURL, clusterID, secrets...)
 
 		wantErr := "unable to find certificate"
 		err := mon.emitCertificateExpirationStatuses(ctx)
@@ -204,7 +206,7 @@ func buildSecret(secretName string, data map[string][]byte) *corev1.Secret {
 	}
 }
 
-func buildMonitor(m *mock_metrics.MockEmitter, domain, id string, secrets ...client.Object) *Monitor {
+func buildMonitor(m *mock_metrics.MockEmitter, url, id string, secrets ...client.Object) *Monitor {
 	ingressController := &operatorv1.IngressController{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "default",
@@ -227,8 +229,8 @@ func buildMonitor(m *mock_metrics.MockEmitter, domain, id string, secrets ...cli
 		m:            m,
 		oc: &api.OpenShiftCluster{
 			Properties: api.OpenShiftClusterProperties{
-				ClusterProfile: api.ClusterProfile{
-					Domain: domain,
+				APIServerProfile: api.APIServerProfile{
+					URL: url,
 				},
 			},
 		},
