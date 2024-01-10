@@ -135,12 +135,6 @@ type LoadBalancerProfile struct {
 	ManagedOutboundIps *ManagedOutboundIPs `json:"managedOutboundIps,omitempty"`
 	// EffectiveOutboundIps - READ-ONLY; The list of effective outbound IP addresses of the public load balancer.
 	EffectiveOutboundIps *[]EffectiveOutboundIP `json:"effectiveOutboundIps,omitempty"`
-	// OutboundIps - The desired outbound IP resources for the cluster load balancer.
-	OutboundIps *[]OutboundIP `json:"outboundIps,omitempty"`
-	// OutboundIPPrefixes - The desired outbound IP Prefix resources for the cluster load balancer.
-	OutboundIPPrefixes *[]OutboundIPPrefix `json:"outboundIpPrefixes,omitempty"`
-	// AllocatedOutboundPorts - The desired number of allocated SNAT ports per VM. Allowed values are in the range of 0 to 64000 (inclusive). The default value is 1024.
-	AllocatedOutboundPorts *int32 `json:"allocatedOutboundPorts,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for LoadBalancerProfile.
@@ -148,15 +142,6 @@ func (lbp LoadBalancerProfile) MarshalJSON() ([]byte, error) {
 	objectMap := make(map[string]interface{})
 	if lbp.ManagedOutboundIps != nil {
 		objectMap["managedOutboundIps"] = lbp.ManagedOutboundIps
-	}
-	if lbp.OutboundIps != nil {
-		objectMap["outboundIps"] = lbp.OutboundIps
-	}
-	if lbp.OutboundIPPrefixes != nil {
-		objectMap["outboundIpPrefixes"] = lbp.OutboundIPPrefixes
-	}
-	if lbp.AllocatedOutboundPorts != nil {
-		objectMap["allocatedOutboundPorts"] = lbp.AllocatedOutboundPorts
 	}
 	return json.Marshal(objectMap)
 }
@@ -1439,19 +1424,6 @@ func NewOperationListPage(cur OperationList, getNextPage func(context.Context, O
 		fn: getNextPage,
 		ol: cur,
 	}
-}
-
-// OutboundIP outboundIP represents a desired outbound IP resource for the cluster load balancer.
-type OutboundIP struct {
-	// ID - The fully qualified Azure resource id of an IP address resource.
-	ID *string `json:"id,omitempty"`
-}
-
-// OutboundIPPrefix outboundIPPrefix represents a desired outbound IP Prefix resource for the cluster load
-// balancer.
-type OutboundIPPrefix struct {
-	// ID - The fully qualified Azure resource id of an IP address resource.
-	ID *string `json:"id,omitempty"`
 }
 
 // ProxyResource the resource model definition for a Azure Resource Manager proxy resource. It will not

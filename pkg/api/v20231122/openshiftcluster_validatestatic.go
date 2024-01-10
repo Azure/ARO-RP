@@ -98,6 +98,9 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *Ope
 	if err := sv.validateNetworkProfile(path+".networkProfile", &p.NetworkProfile, p.APIServerProfile.Visibility, p.IngressProfiles[0].Visibility); err != nil {
 		return err
 	}
+	if err := sv.validateLoadBalancerProfile(path+".networkProfile.loadBalancerProfile", p.NetworkProfile.LoadBalancerProfile, isCreate); err != nil {
+		return err
+	}
 	if err := sv.validateMasterProfile(path+".masterProfile", &p.MasterProfile); err != nil {
 		return err
 	}
@@ -245,52 +248,17 @@ func (sv openShiftClusterStaticValidator) validateLoadBalancerProfile(path strin
 		return nil
 	}
 
-	err := checkPickedExactlyOne(path, lbp)
-	if err != nil {
-		return err
-	}
-
 	switch {
 	case lbp.ManagedOutboundIPs != nil:
 		err := validateManagedOutboundIPs(path, *lbp.ManagedOutboundIPs)
 		if err != nil {
 			return err
 		}
-	case lbp.OutboundIPs != nil:
-		err := validateOutboundIPs(path, lbp.OutboundIPs)
-		if err != nil {
-			return err
-		}
-	case lbp.OutboundIPPrefixes != nil:
-		err := validateOutboundIPPrefixes(path, lbp.OutboundIPPrefixes)
-		if err != nil {
-			return err
-		}
 	}
-
-	if lbp.AllocatedOutboundPorts != nil {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".allocatedOutboundPorts", "The field allocatedOutboundPorts is not implemented at this time, please check back later.")
-	}
-
 	// Prevents EffectiveOutboundIPs from being set during create,
 	// during update validateDelta will prevent the field from being changed.
 	if lbp.EffectiveOutboundIPs != nil && isCreate {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".effectiveOutboundIps", "The field effectiveOutboundIps is read only.")
-	}
-	return nil
-}
-
-func checkPickedExactlyOne(path string, lbp *LoadBalancerProfile) error {
-	var isManagedOutboundIPCount = lbp.ManagedOutboundIPs != nil
-	var isOutboundIPs = lbp.OutboundIPs != nil
-	var isOutboundIPPrefixes = lbp.OutboundIPPrefixes != nil
-
-	if !isManagedOutboundIPCount && !isOutboundIPPrefixes && !isOutboundIPs {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, "The provided loadBalancerProfile is invalid: must specify one of managedOutboundIps, outboundIps, or outboundIpPrefixes.")
-	} else if !((isManagedOutboundIPCount && !isOutboundIPs && !isOutboundIPPrefixes) ||
-		(!isManagedOutboundIPCount && isOutboundIPs && !isOutboundIPPrefixes) ||
-		(!isManagedOutboundIPCount && !isOutboundIPs && isOutboundIPPrefixes)) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, "The provided loadBalancerProfile is invalid: can only use one of managedOutboundIps, outboundIps, or outboundIpPrefixes at a time.")
 	}
 	return nil
 }
@@ -300,14 +268,6 @@ func validateManagedOutboundIPs(path string, managedOutboundIPs ManagedOutboundI
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".managedOutboundIps.count", "The provided managedOutboundIps.count %d is invalid: managedOutboundIps.count must be in the range of 1 to 20 (inclusive).", managedOutboundIPs.Count)
 	}
 	return nil
-}
-
-func validateOutboundIPs(path string, outboundIPs []OutboundIP) error {
-	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".outboundIps", "The field outboundIps is not implemented at this time, please check back later.")
-}
-
-func validateOutboundIPPrefixes(path string, outboundIPPrefixes []OutboundIPPrefix) error {
-	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".outboundIpPrefixes", "The field outboundIpPrefixes is not implemented at this time, please check back later.")
 }
 
 func (sv openShiftClusterStaticValidator) validateMasterProfile(path string, mp *MasterProfile) error {

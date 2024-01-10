@@ -285,15 +285,6 @@ class LoadBalancerProfile(msrest.serialization.Model):
      balancer.
     :vartype effective_outbound_ips:
      list[~azure.mgmt.redhatopenshift.v2023_11_22.models.EffectiveOutboundIP]
-    :ivar outbound_ips: The desired outbound IP resources for the cluster load balancer.
-    :vartype outbound_ips: list[~azure.mgmt.redhatopenshift.v2023_11_22.models.OutboundIP]
-    :ivar outbound_ip_prefixes: The desired outbound IP Prefix resources for the cluster load
-     balancer.
-    :vartype outbound_ip_prefixes:
-     list[~azure.mgmt.redhatopenshift.v2023_11_22.models.OutboundIPPrefix]
-    :ivar allocated_outbound_ports: The desired number of allocated SNAT ports per VM. Allowed
-     values are in the range of 0 to 64000 (inclusive). The default value is 1024.
-    :vartype allocated_outbound_ports: int
     """
 
     _validation = {
@@ -303,9 +294,6 @@ class LoadBalancerProfile(msrest.serialization.Model):
     _attribute_map = {
         'managed_outbound_ips': {'key': 'managedOutboundIps', 'type': 'ManagedOutboundIPs'},
         'effective_outbound_ips': {'key': 'effectiveOutboundIps', 'type': '[EffectiveOutboundIP]'},
-        'outbound_ips': {'key': 'outboundIps', 'type': '[OutboundIP]'},
-        'outbound_ip_prefixes': {'key': 'outboundIpPrefixes', 'type': '[OutboundIPPrefix]'},
-        'allocated_outbound_ports': {'key': 'allocatedOutboundPorts', 'type': 'int'},
     }
 
     def __init__(
@@ -317,22 +305,10 @@ class LoadBalancerProfile(msrest.serialization.Model):
          balancer.
         :paramtype managed_outbound_ips:
          ~azure.mgmt.redhatopenshift.v2023_11_22.models.ManagedOutboundIPs
-        :keyword outbound_ips: The desired outbound IP resources for the cluster load balancer.
-        :paramtype outbound_ips: list[~azure.mgmt.redhatopenshift.v2023_11_22.models.OutboundIP]
-        :keyword outbound_ip_prefixes: The desired outbound IP Prefix resources for the cluster load
-         balancer.
-        :paramtype outbound_ip_prefixes:
-         list[~azure.mgmt.redhatopenshift.v2023_11_22.models.OutboundIPPrefix]
-        :keyword allocated_outbound_ports: The desired number of allocated SNAT ports per VM. Allowed
-         values are in the range of 0 to 64000 (inclusive). The default value is 1024.
-        :paramtype allocated_outbound_ports: int
         """
         super(LoadBalancerProfile, self).__init__(**kwargs)
         self.managed_outbound_ips = kwargs.get('managed_outbound_ips', None)
         self.effective_outbound_ips = None
-        self.outbound_ips = kwargs.get('outbound_ips', None)
-        self.outbound_ip_prefixes = kwargs.get('outbound_ip_prefixes', None)
-        self.allocated_outbound_ports = kwargs.get('allocated_outbound_ports', None)
 
 
 class Resource(msrest.serialization.Model):
@@ -1157,52 +1133,6 @@ class OperationList(msrest.serialization.Model):
         super(OperationList, self).__init__(**kwargs)
         self.value = kwargs.get('value', None)
         self.next_link = kwargs.get('next_link', None)
-
-
-class OutboundIP(msrest.serialization.Model):
-    """OutboundIP represents a desired outbound IP resource for the cluster load balancer.
-
-    :ivar id: The fully qualified Azure resource id of an IP address resource.
-    :vartype id: str
-    """
-
-    _attribute_map = {
-        'id': {'key': 'id', 'type': 'str'},
-    }
-
-    def __init__(
-        self,
-        **kwargs
-    ):
-        """
-        :keyword id: The fully qualified Azure resource id of an IP address resource.
-        :paramtype id: str
-        """
-        super(OutboundIP, self).__init__(**kwargs)
-        self.id = kwargs.get('id', None)
-
-
-class OutboundIPPrefix(msrest.serialization.Model):
-    """OutboundIPPrefix represents a desired outbound IP Prefix resource for the cluster load balancer.
-
-    :ivar id: The fully qualified Azure resource id of an IP address resource.
-    :vartype id: str
-    """
-
-    _attribute_map = {
-        'id': {'key': 'id', 'type': 'str'},
-    }
-
-    def __init__(
-        self,
-        **kwargs
-    ):
-        """
-        :keyword id: The fully qualified Azure resource id of an IP address resource.
-        :paramtype id: str
-        """
-        super(OutboundIPPrefix, self).__init__(**kwargs)
-        self.id = kwargs.get('id', None)
 
 
 class Secret(ProxyResource):
