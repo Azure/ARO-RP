@@ -109,8 +109,10 @@ func (n *NSGMonitor) toSubnetConfig(ctx context.Context, subnetID string) (subne
 	return subnetNSGConfig{prefixes, subnet.Properties.NetworkSecurityGroup}, nil
 }
 
+// Monitor checks the custom NSGs customers attach to their ARO subnets
 func (n *NSGMonitor) Monitor(ctx context.Context) []error {
 	defer n.wg.Done()
+
 	masterSubnet, err := n.toSubnetConfig(ctx, n.oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		// FP has no access to the subnet
@@ -121,12 +123,21 @@ func (n *NSGMonitor) Monitor(ctx context.Context) []error {
 	workerProfiles, _ := api.GetEnrichedWorkerProfiles(n.oc.Properties)
 	workerSubnets := make([]subnetNSGConfig, 0, len(workerProfiles))
 	workerPrefixes := make([]netip.Prefix, 0, len(workerProfiles))
+	subnetSet := map[string]struct{}{}
 	for _, wp := range workerProfiles {
 		// Customer can configure a machineset with an invalid subnet.
 		// In such case, the subnetID will be empty.
-		if len(wp.SubnetID) == 0 {
+		//
+		// We do not need to consider profiles with 0 machines.
+		if len(wp.SubnetID) == 0 || wp.Count == 0 {
 			continue
 		}
+
+		// Many profiles can have the same subnet ID.  To minimize the possibility of throttling, we only get it once.
+		if _, ok := subnetSet[wp.SubnetID]; ok {
+			continue
+		}
+		subnetSet[wp.SubnetID] = struct{}{}
 
 		s, err := n.toSubnetConfig(ctx, wp.SubnetID)
 		if err != nil {

@@ -80,26 +80,6 @@ var (
 	ocClusterName = "testing"
 	ocID          = fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/%s", subscriptionID, resourcegroupName, ocClusterName)
 	ocLocation    = "eastus"
-	oc            = api.OpenShiftCluster{
-		ID:       ocID,
-		Location: ocLocation,
-		Properties: api.OpenShiftClusterProperties{
-			MasterProfile: api.MasterProfile{
-				SubnetID: masterSubnetID,
-			},
-			WorkerProfiles: []api.WorkerProfile{
-				{
-					SubnetID: workerSubnet1ID,
-				},
-				{
-					SubnetID: "", // This should still work. Customers can create a faulty MachineSet.
-				},
-				{
-					SubnetID: workerSubnet2ID,
-				},
-			},
-		},
-	}
 
 	nsg1Name = "NSG-1"
 	nsg1ID   = fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/networkSecurityGroups/%s", subscriptionID, resourcegroupName, nsg1Name)
@@ -111,6 +91,32 @@ var (
 	nsgInbound  = armnetwork.SecurityRuleDirectionInbound
 	nsgOutbound = armnetwork.SecurityRuleDirectionOutbound
 )
+
+func ocFactory() api.OpenShiftCluster {
+	return api.OpenShiftCluster{
+		ID:       ocID,
+		Location: ocLocation,
+		Properties: api.OpenShiftClusterProperties{
+			MasterProfile: api.MasterProfile{
+				SubnetID: masterSubnetID,
+			},
+			WorkerProfiles: []api.WorkerProfile{
+				{
+					SubnetID: workerSubnet1ID,
+					Count:    1,
+				},
+				{
+					SubnetID: "", // This should still work. Customers can create a faulty MachineSet.
+					Count:    1,
+				},
+				{
+					SubnetID: workerSubnet2ID,
+					Count:    1,
+				},
+			},
+		},
+	}
+}
 
 func createBaseSubnets() (armnetwork.SubnetsClientGetResponse, armnetwork.SubnetsClientGetResponse, armnetwork.SubnetsClientGetResponse) {
 	resp := make([]armnetwork.SubnetsClientGetResponse, 0, 3)
@@ -173,6 +179,7 @@ func TestMonitor(t *testing.T) {
 		name        string
 		mockSubnet  func(*mock_armnetwork.MockSubnetsClient)
 		mockEmitter func(*mock_metrics.MockEmitter)
+		modOC       func(*api.OpenShiftCluster)
 		wantErr     string
 	}{
 		{
@@ -239,6 +246,79 @@ func TestMonitor(t *testing.T) {
 					Return(workerSubnet2, nil)
 
 				gomock.InOrder(_1, _2, _3)
+			},
+		},
+		{
+			name: "pass - no rules, 3 workerprofiles have the same subnetID, subnet should be retrieved once",
+			mockSubnet: func(mock *mock_armnetwork.MockSubnetsClient) {
+				masterSubnet, workerSubnet, _ := createBaseSubnets()
+				nsg := armnetwork.SecurityGroup{
+					ID: &nsg1ID,
+					Properties: &armnetwork.SecurityGroupPropertiesFormat{
+						SecurityRules: []*armnetwork.SecurityRule{},
+					},
+				}
+				masterSubnet.Properties.NetworkSecurityGroup = &nsg
+				workerSubnet.Properties.NetworkSecurityGroup = &nsg
+
+				_1 := mock.EXPECT().
+					Get(ctx, resourcegroupName, vNetName, masterSubnetName, options).
+					Return(masterSubnet, nil)
+
+				_2 := mock.EXPECT().
+					Get(ctx, resourcegroupName, vNetName, workerSubnet1Name, options).
+					Return(workerSubnet, nil)
+				gomock.InOrder(_1, _2)
+			},
+			modOC: func(oc *api.OpenShiftCluster) {
+				oc.Properties.WorkerProfiles = []api.WorkerProfile{
+					{
+						SubnetID: workerSubnet1ID,
+						Count:    1,
+					},
+					{
+						SubnetID: workerSubnet1ID,
+						Count:    1,
+					},
+					{
+						SubnetID: workerSubnet1ID,
+						Count:    1,
+					},
+				}
+			},
+		}, {
+			name: "pass - no rules, 0 count profiles are not checked",
+			mockSubnet: func(mock *mock_armnetwork.MockSubnetsClient) {
+				masterSubnet, workerSubnet, _ := createBaseSubnets()
+				nsg := armnetwork.SecurityGroup{
+					ID: &nsg1ID,
+					Properties: &armnetwork.SecurityGroupPropertiesFormat{
+						SecurityRules: []*armnetwork.SecurityRule{},
+					},
+				}
+				masterSubnet.Properties.NetworkSecurityGroup = &nsg
+				workerSubnet.Properties.NetworkSecurityGroup = &nsg
+
+				_1 := mock.EXPECT().
+					Get(ctx, resourcegroupName, vNetName, masterSubnetName, options).
+					Return(masterSubnet, nil)
+
+				_2 := mock.EXPECT().
+					Get(ctx, resourcegroupName, vNetName, workerSubnet1Name, options).
+					Return(workerSubnet, nil)
+				gomock.InOrder(_1, _2)
+			},
+			modOC: func(oc *api.OpenShiftCluster) {
+				oc.Properties.WorkerProfiles = []api.WorkerProfile{
+					{
+						SubnetID: workerSubnet1ID,
+						Count:    1,
+					},
+					{
+						SubnetID: "NOT BEING CHECKED",
+						Count:    0,
+					},
+				}
 			},
 		},
 		{
@@ -448,6 +528,10 @@ func TestMonitor(t *testing.T) {
 			}
 			if tt.mockEmitter != nil {
 				tt.mockEmitter(emitter)
+			}
+			oc := ocFactory()
+			if tt.modOC != nil {
+				tt.modOC(&oc)
 			}
 
 			var wg sync.WaitGroup
