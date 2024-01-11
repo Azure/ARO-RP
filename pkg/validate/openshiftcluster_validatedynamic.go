@@ -95,7 +95,7 @@ func ensureAccessTokenClaims(ctx context.Context, spTokenCredential azcore.Token
 	return api.NewCloudError(
 		http.StatusBadRequest,
 		api.CloudErrorCodeInvalidServicePrincipalClaims,
-		"properties.servicePrincipleProfile",
+		"properties.servicePrincipalProfile",
 		"The Azure Red Hat Openshift resource provider service principal has been removed from your tenant. To restore, please unregister and then re-register the Azure Red Hat OpenShift resource provider.")
 }
 

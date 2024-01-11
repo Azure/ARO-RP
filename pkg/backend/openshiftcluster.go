@@ -342,7 +342,7 @@ func (ocb *openShiftClusterBackend) asyncOperationResultLog(log *logrus.Entry, i
 
 	if strings.Contains(strings.ToLower(backendErr.Error()), "one of the claims 'puid' or 'altsecid' or 'oid' should be present") {
 		backendErr = api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalClaims,
-			"properties.servicePrincipleProfile", "The Azure Red Hat Openshift resource provider service principal has been removed from your tenant. To restore, please unregister and then re-register the Azure Red Hat OpenShift resource provider.")
+			"properties.servicePrincipalProfile", "The Azure Red Hat Openshift resource provider service principal has been removed from your tenant. To restore, please unregister and then re-register the Azure Red Hat OpenShift resource provider.")
 	}
 
 	_, ok := backendErr.(*api.CloudError)
