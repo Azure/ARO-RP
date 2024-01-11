@@ -110,10 +110,10 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"registry.redhat.io/rhel9/support-tools:latest",
 
 		// https://catalog.redhat.com/software/containers/openshift4/ose-tools-rhel8/5f748d3399cc5b9e7c1a8747
-		"registry.redhat.io/openshift4/ose-tools-rhel8:v4.10",
 		"registry.redhat.io/openshift4/ose-tools-rhel8:v4.11",
 		"registry.redhat.io/openshift4/ose-tools-rhel8:v4.12",
 		"registry.redhat.io/openshift4/ose-tools-rhel8:v4.13",
+		"registry.redhat.io/openshift4/ose-tools-rhel8:v4.14",
 		"registry.redhat.io/openshift4/ose-tools-rhel8:latest",
 
 		// https://catalog.redhat.com/software/containers/ubi8/ubi-minimal/5c359a62bed8bd75a2c3fba8
@@ -126,8 +126,8 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 
 		// https://catalog.redhat.com/software/containers/ubi8/go-toolset/5ce8713aac3db925c03774d1
 		// https://catalog.redhat.com/software/containers/ubi9/go-toolset/61e5c00b4ec9945c18787690
-		"registry.access.redhat.com/ubi8/go-toolset:1.18.10",
-		"registry.access.redhat.com/ubi8/go-toolset:1.19.10",
+		"registry.access.redhat.com/ubi8/go-toolset:1.20.10",
+		"registry.access.redhat.com/ubi9/go-toolset:1.20.10",
 
 		// https://quay.io/repository/app-sre/managed-upgrade-operator?tab=tags
 		// https://gitlab.cee.redhat.com/service/app-interface/-/blob/master/data/services/osd-operators/cicd/saas/saas-managed-upgrade-operator.yaml?ref_type=heads
