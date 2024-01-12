@@ -7,11 +7,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
 	"github.com/golang/mock/gomock"
+	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	securityv1 "github.com/openshift/api/security/v1"
 	"github.com/sirupsen/logrus"
@@ -41,6 +43,77 @@ func getContainer(d *appsv1.DaemonSet, containerName string) (corev1.Container, 
 		}
 	}
 	return corev1.Container{}, errors.New("not found")
+}
+
+func clusterVersion(version string) configv1.ClusterVersion {
+	return configv1.ClusterVersion{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "version",
+		},
+		Spec: configv1.ClusterVersionSpec{},
+		Status: configv1.ClusterVersionStatus{
+			History: []configv1.UpdateHistory{
+				{
+					State:   configv1.CompletedUpdate,
+					Version: version,
+				},
+			},
+		},
+	}
+}
+
+func TestGenevaLoggingNamespaceLabels(t *testing.T) {
+	tests := []struct {
+		name       string
+		cv         configv1.ClusterVersion
+		wantLabels map[string]string
+		wantErr    string
+	}{
+		{
+			name:       "cluster < 4.11, no labels",
+			cv:         clusterVersion("4.10.99"),
+			wantLabels: map[string]string{},
+		},
+		{
+			name:       "cluster >= 4.11, use pod security labels",
+			cv:         clusterVersion("4.11.0"),
+			wantLabels: privilegedNamespaceLabels,
+		},
+		{
+			name:    "cluster version doesn't exist",
+			cv:      configv1.ClusterVersion{},
+			wantErr: `clusterversions.config.openshift.io "version" not found`,
+		},
+		{
+			name:    "invalid version",
+			cv:      clusterVersion("abcd"),
+			wantErr: `could not parse version "abcd"`,
+		},
+	}
+	for _, tt := range tests {
+		ctx := context.Background()
+
+		controller := gomock.NewController(t)
+		defer controller.Finish()
+
+		mockDh := mock_dynamichelper.NewMockInterface(controller)
+
+		r := &Reconciler{
+			AROController: base.AROController{
+				Log:    logrus.NewEntry(logrus.StandardLogger()),
+				Client: ctrlfake.NewClientBuilder().WithObjects(&tt.cv).Build(),
+				Name:   ControllerName,
+			},
+			dh: mockDh,
+		}
+
+		labels, err := r.namespaceLabels(ctx)
+		utilerror.AssertErrorMessage(t, err, tt.wantErr)
+
+		if !reflect.DeepEqual(labels, tt.wantLabels) {
+			t.Errorf("got: %v\nwanted:%v\n", labels, tt.wantLabels)
+		}
+	}
 }
 
 func TestGenevaLoggingDaemonset(t *testing.T) {
@@ -201,6 +274,7 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 				},
 			}
 
+			cv := clusterVersion("4.11.0")
 			resources := []client.Object{
 				instance,
 				&corev1.Secret{
@@ -218,6 +292,7 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 						Name: "privileged",
 					},
 				},
+				&cv,
 			}
 
 			mockDh := mock_dynamichelper.NewMockInterface(controller)
@@ -307,10 +382,11 @@ func TestGenevaConfigMapResources(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Name: "privileged"},
 			}
 
+			cv := clusterVersion("4.11.0")
 			r := &Reconciler{
 				AROController: base.AROController{
 					Log:    logrus.NewEntry(logrus.StandardLogger()),
-					Client: ctrlfake.NewClientBuilder().WithObjects(instance, scc).Build(),
+					Client: ctrlfake.NewClientBuilder().WithObjects(instance, scc, &cv).Build(),
 					Name:   ControllerName,
 				},
 			}

@@ -102,8 +102,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			pullSpec = version.MUOImage(instance.Spec.ACRDomain)
 		}
 
+		usePodSecurityAdmission, err := operator.ShouldUsePodSecurityStandard(ctx, r.client)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
 		config := &config.MUODeploymentConfig{
-			Pullspec: pullSpec,
+			SupportsPodSecurityAdmission: usePodSecurityAdmission,
+			Pullspec:                     pullSpec,
 		}
 
 		disableOCM := instance.Spec.OperatorFlags.GetSimpleBoolean(controllerForceLocalOnly)
@@ -146,7 +152,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		timeoutCtx, cancel := context.WithTimeout(ctx, r.readinessTimeout)
 		defer cancel()
 
-		err := wait.PollImmediateUntil(r.readinessPollTime, func() (bool, error) {
+		err = wait.PollImmediateUntil(r.readinessPollTime, func() (bool, error) {
 			return r.deployer.IsReady(ctx, "openshift-managed-upgrade-operator", "managed-upgrade-operator")
 		}, timeoutCtx.Done())
 		if err != nil {
