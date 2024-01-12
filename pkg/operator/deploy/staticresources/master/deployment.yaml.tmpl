@@ -55,8 +55,18 @@ spec:
           httpGet:
             path: /healthz/ready
             port: 8080
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true  
       nodeSelector:
         node-role.kubernetes.io/master: ""
+      securityContext:
+        runAsNonRoot: true        
+        seccompProfile: 
+          type: RuntimeDefault
       serviceAccountName: aro-operator-master
       serviceAccount: aro-operator-master
       priorityClassName: system-cluster-critical
