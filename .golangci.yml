@@ -10,7 +10,7 @@ run:
     - "containers_image_openpgp"
     - "exclude_graphdriver_devicemapper"
     - "exclude_graphdriver_btrfs"
-  go: "1.18"
+  go: "1.20"
 
 issues:
   max-same-issues: 0
