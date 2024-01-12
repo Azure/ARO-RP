@@ -147,7 +147,8 @@ func TestCreateDeploymentData(t *testing.T) {
 			},
 			expected: deploymentData{
 				Image:   operatorImageWithTag,
-				Version: operatorImageTag},
+				Version: operatorImageTag,
+			},
 		},
 		{
 			name: "no image tag, use latest version",
@@ -158,7 +159,8 @@ func TestCreateDeploymentData(t *testing.T) {
 			},
 			expected: deploymentData{
 				Image:   operatorImageUntagged,
-				Version: "latest"},
+				Version: "latest",
+			},
 		},
 		{
 			name: "OperatorVersion override set",
@@ -174,7 +176,8 @@ func TestCreateDeploymentData(t *testing.T) {
 			},
 			expected: deploymentData{
 				Image:   "docker.io/aro:override",
-				Version: "override"},
+				Version: "override",
+			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
