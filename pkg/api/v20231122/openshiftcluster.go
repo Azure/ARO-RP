@@ -163,12 +163,6 @@ type ManagedOutboundIPs struct {
 	Count int `json:"count,omitempty"`
 }
 
-// OutboundIP represents a desired outbound IP resource for the cluster load balancer.
-type OutboundIP ResourceReference
-
-// OutboundIPPrefix represents a desired outbound IP Prefix resource for the cluster load balancer.
-type OutboundIPPrefix ResourceReference
-
 // NetworkProfile represents a network profile.
 type NetworkProfile struct {
 	// The CIDR used for OpenShift/Kubernetes Pods.
