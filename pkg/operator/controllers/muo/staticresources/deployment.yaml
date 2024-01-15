@@ -36,6 +36,10 @@ spec:
               path: tls-ca-bundle.pem
           name: trusted-ca-bundle
         name: trusted-ca-bundle
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: managed-upgrade-operator
           # Replace this with the built image name
@@ -70,3 +74,9 @@ spec:
           - mountPath: /etc/pki/ca-trust/extracted/pem
             name: trusted-ca-bundle
             readOnly: true
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            runAsNonRoot: true
