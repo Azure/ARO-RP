@@ -87,6 +87,10 @@ func (sr *systemreserved) Ensure(ctx context.Context) error {
 			kc.Labels = make(map[string]string)
 		}
 		kc.Labels[labelName] = labelValue
+		if kc.Annotations == nil {
+			kc.Annotations = make(map[string]string)
+		}
+		kc.Annotations[mcAnnotationName] = mcAnnotationValue
 
 		b, err := json.Marshal(map[string]interface{}{
 			"systemReserved": map[string]interface{}{

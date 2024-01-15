@@ -80,7 +80,8 @@ func TestAutosizednodesReconciler(t *testing.T) {
 				aro(true),
 				&mcv1.KubeletConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: configName,
+						Name:        configName,
+						Annotations: map[string]string{"machineconfiguration.openshift.io/mc-name-suffix": "2"},
 					},
 					Spec: mcv1.KubeletConfigSpec{
 						AutoSizingReserved: to.BoolPtr(false),
@@ -120,6 +121,9 @@ func TestAutosizednodesReconciler(t *testing.T) {
 
 			if !reflect.DeepEqual(test.wantConfig.Spec, c.Spec) {
 				t.Error(cmp.Diff(test.wantConfig.Spec, c.Spec))
+			}
+			if !reflect.DeepEqual(test.wantConfig.Annotations, c.Annotations) {
+				t.Error(cmp.Diff(test.wantConfig.Annotations, c.Annotations))
 			}
 
 			if result != (ctrl.Result{}) {

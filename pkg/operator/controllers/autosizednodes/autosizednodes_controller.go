@@ -32,6 +32,10 @@ type Reconciler struct {
 const (
 	ControllerName = "AutoSizedNodes"
 	configName     = "dynamic-node"
+
+	// machineconfiguration annotation added on the kubelet CRD - dynamic-node
+	mcAnnotationName  = "machineconfiguration.openshift.io/mc-name-suffix"
+	mcAnnotationValue = ""
 )
 
 func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
@@ -90,7 +94,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return ctrl.Result{}, fmt.Errorf("could not fetch KubeletConfig: %w", err)
 	}
 
-	// If already exists, update the spec
+	// If already exists, update the spec and annotations
+	if config.Annotations == nil {
+		config.Annotations = defaultConfig.Annotations
+	}
+	if val, ok := config.Annotations[mcAnnotationName]; !ok || val != mcAnnotationValue {
+		config.Annotations[mcAnnotationName] = mcAnnotationValue
+	}
+
 	config.Spec = defaultConfig.Spec
 	err = r.client.Update(ctx, &config)
 	if err != nil {
@@ -120,7 +131,8 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 func makeConfig() mcv1.KubeletConfig {
 	return mcv1.KubeletConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: configName,
+			Name:        configName,
+			Annotations: map[string]string{mcAnnotationName: mcAnnotationValue},
 		},
 		Spec: mcv1.KubeletConfigSpec{
 			AutoSizingReserved: to.BoolPtr(true),

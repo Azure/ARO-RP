@@ -16,6 +16,10 @@ const (
 	workerMachineConfigPoolName = "worker"
 	memReserved                 = "2000Mi"
 
+	// 	machineconfiguration annotation added on the kubelet CRD - aro-limits
+	mcAnnotationName  = "machineconfiguration.openshift.io/mc-name-suffix"
+	mcAnnotationValue = ""
+
 	// ifreload workaround
 	kubeNamespace = "openshift-azure-ifreload"
 )
