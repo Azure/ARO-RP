@@ -54,6 +54,7 @@ func ExampleOpenShiftClusterGetResponse() interface{} {
 	oc := exampleOpenShiftCluster()
 	oc.Properties.ClusterProfile.PullSecret = ""
 	oc.Properties.ServicePrincipalProfile.ClientSecret = ""
+	oc.Properties.WorkerProfilesStatus = nil
 	oc.Properties.NetworkProfile.LoadBalancerProfile = &LoadBalancerProfile{
 		EffectiveOutboundIPs: []EffectiveOutboundIP{
 			{

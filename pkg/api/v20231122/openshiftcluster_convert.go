@@ -263,6 +263,7 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 // ExternalNoReadOnly removes all read-only fields from the external representation.
 func (c openShiftClusterConverter) ExternalNoReadOnly(_oc interface{}) {
 	oc := _oc.(*OpenShiftCluster)
+	oc.Properties.WorkerProfilesStatus = nil
 	if oc.Properties.NetworkProfile.LoadBalancerProfile != nil {
 		oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = nil
 	}
