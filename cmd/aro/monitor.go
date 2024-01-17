@@ -26,7 +26,7 @@ import (
 )
 
 func monitor(ctx context.Context, log *logrus.Entry) error {
-	_env, err := env.NewEnv(ctx, log)
+	_env, err := env.NewEnv(ctx, log, env.COMPONENT_MONITOR)
 	if err != nil {
 		return err
 	}
@@ -60,12 +60,12 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 
 	clusterm := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("CLUSTER_MDM_ACCOUNT"), os.Getenv("CLUSTER_MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 
-	msiToken, err := _env.NewMSITokenCredential(env.MSIContextRP)
+	msiToken, err := _env.NewMSITokenCredential()
 	if err != nil {
 		return err
 	}
 
-	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().KeyVaultScope)
+	msiKVAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().KeyVaultScope)
 	if err != nil {
 		return err
 	}

@@ -33,7 +33,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return fmt.Errorf("usage: %s resourceid", os.Args[0])
 	}
 
-	_env, err := env.NewCore(ctx, log)
+	_env, err := env.NewCore(ctx, log, env.COMPONENT_TOOLING)
 	if err != nil {
 		return err
 	}
@@ -43,7 +43,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().KeyVaultScope)
+	msiKVAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().KeyVaultScope)
 	if err != nil {
 		return err
 	}

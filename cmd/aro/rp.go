@@ -42,7 +42,7 @@ import (
 func rp(ctx context.Context, log, audit *logrus.Entry) error {
 	stop := make(chan struct{})
 
-	_env, err := env.NewEnv(ctx, log)
+	_env, err := env.NewEnv(ctx, log, env.COMPONENT_RP)
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 
 	clusterm := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("CLUSTER_MDM_ACCOUNT"), os.Getenv("CLUSTER_MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 
-	msiToken, err := _env.NewMSITokenCredential(env.MSIContextRP)
+	msiToken, err := _env.NewMSITokenCredential()
 	if err != nil {
 		return err
 	}

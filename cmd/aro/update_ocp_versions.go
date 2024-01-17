@@ -86,7 +86,7 @@ func getLatestOCPVersions(ctx context.Context, log *logrus.Entry) ([]api.OpenShi
 }
 
 func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenShiftVersions, error) {
-	_env, err := env.NewCore(ctx, log)
+	_env, err := env.NewCore(ctx, log, env.COMPONENT_UPDATE_OCP_VERSIONS)
 	if err != nil {
 		return nil, err
 	}
@@ -101,12 +101,12 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 		}
 	}
 
-	msiToken, err := _env.NewMSITokenCredential(env.MSIContextRP)
+	msiToken, err := _env.NewMSITokenCredential()
 	if err != nil {
 		return nil, fmt.Errorf("MSI Authorizer failed with: %s", err.Error())
 	}
 
-	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().KeyVaultScope)
+	msiKVAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().KeyVaultScope)
 	if err != nil {
 		return nil, fmt.Errorf("MSI KeyVault Authorizer failed with: %s", err.Error())
 	}
