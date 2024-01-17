@@ -927,6 +927,7 @@ exclude (
 	google.golang.org/genproto v0.0.0-20200527145253-8367513e4ece
 	google.golang.org/genproto v0.0.0-20200610104632-a5b850bcf112
 	google.golang.org/genproto v0.0.0-20201019141844-1ed22bb0c154
+	google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c
 	// trim dependency tree from old grpcs
 	google.golang.org/grpc v1.17.0
 	google.golang.org/grpc v1.19.0
@@ -943,6 +944,14 @@ exclude (
 	google.golang.org/grpc v1.27.1
 	google.golang.org/grpc v1.28.0
 	google.golang.org/grpc v1.29.1
+	google.golang.org/grpc v1.33.1
+	google.golang.org/grpc v1.33.2
+	google.golang.org/grpc v1.36.0
+	google.golang.org/grpc v1.37.0
+	google.golang.org/grpc v1.38.0
+	google.golang.org/grpc v1.40.0
+	google.golang.org/grpc v1.46.0
+	google.golang.org/grpc v1.47.0
 	// trim dependency tree from old protobufs
 	google.golang.org/protobuf v0.0.0-20200109180630-ec00e32a8dfd
 	google.golang.org/protobuf v0.0.0-20200221191635-4d8936d0db64
@@ -1025,6 +1034,7 @@ exclude (
 	github.com/containerd/stargz-snapshotter/estargz v0.12.0
 	github.com/containerd/stargz-snapshotter/estargz v0.4.1
 	github.com/containers/storage v1.43.0
+	github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d
 	// remove ancient dockers
 	github.com/docker/distribution v0.0.0-20180920194744-16128bbac47f
 	github.com/docker/distribution v0.0.0-20191216044856-a8371794149d
@@ -1047,9 +1057,28 @@ exclude (
 	github.com/gogo/protobuf v1.3.0
 	github.com/gogo/protobuf v1.3.1
 	github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d
+	// trim old ginkgos
+	github.com/onsi/ginkgo v1.11.0
+	github.com/onsi/ginkgo v1.12.1
+	github.com/onsi/ginkgo v1.14.1
+	github.com/onsi/ginkgo v1.15.0
+	github.com/onsi/ginkgo v1.16.4
+	github.com/onsi/ginkgo/v2 v2.0.0
+	github.com/onsi/ginkgo/v2 v2.1.3
+	github.com/onsi/ginkgo/v2 v2.1.4
+	github.com/onsi/ginkgo/v2 v2.1.6
+	github.com/onsi/gomega v1.10.1
+	github.com/onsi/gomega v1.10.2
+	github.com/onsi/gomega v1.10.5
+	github.com/onsi/gomega v1.17.0
+	github.com/onsi/gomega v1.18.1
+	github.com/onsi/gomega v1.19.0
+	github.com/onsi/gomega v1.20.1
 	// remove old runc
 	github.com/opencontainers/runc v1.0.2
 	github.com/opencontainers/runc v1.1.4
+	github.com/opencontainers/runtime-spec v1.0.2
+	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417
 	// exclude old openshift library-go
 	github.com/openshift/library-go v0.0.0-20211220195323-eca2c467c492
 	github.com/openshift/library-go v0.0.0-20220121154930-b7889002d63e
@@ -1075,13 +1104,17 @@ exclude (
 	github.com/prometheus/procfs v0.0.2
 	github.com/prometheus/procfs v0.6.0
 	github.com/prometheus/procfs v0.7.3
+	github.com/rivo/uniseg v0.2.0
 	github.com/russross/blackfriday v1.5.2
+	github.com/sergi/go-diff v1.0.0
+	github.com/sergi/go-diff v1.1.0
 	github.com/sirupsen/logrus v1.4.1
+	github.com/sirupsen/logrus v1.4.2
 	github.com/sirupsen/logrus v1.6.0
 	github.com/sirupsen/logrus v1.7.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/sirupsen/logrus v1.9.0
-	// trip dependency tree from old cobra
+	// strip dependency tree from old cobra
 	github.com/spf13/cobra v0.0.2-0.20171109065643-2da4a54c5cee
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/cobra v0.0.5
@@ -1089,6 +1122,7 @@ exclude (
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/cobra v1.2.1
+	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.3
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/objx v0.1.0
@@ -1105,7 +1139,11 @@ exclude (
 	github.com/stretchr/testify v1.8.0
 	github.com/stretchr/testify v1.8.1
 	github.com/stretchr/testify v1.8.2
+	github.com/ugorji/go v1.2.0
+	github.com/ugorji/go/codec v1.2.0
+	github.com/urfave/cli v1.19.1
 	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f
+	github.com/xlab/treeprint v0.0.0-20181112141820-a009c3971eca
 	go.etcd.io/bbolt v1.3.2
 	go.etcd.io/bbolt v1.3.3
 	go.etcd.io/bbolt v1.3.5
@@ -1147,9 +1185,11 @@ exclude (
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f
+	gopkg.in/square/go-jose.v2 v2.2.2
 	gopkg.in/square/go-jose.v2 v2.5.1
 	gopkg.in/yaml.v2 v2.2.1
 	gopkg.in/yaml.v2 v2.2.2
+	gopkg.in/yaml.v2 v2.2.3
 	gopkg.in/yaml.v2 v2.2.4
 	gopkg.in/yaml.v2 v2.2.8
 	gopkg.in/yaml.v2 v2.3.0
@@ -1162,6 +1202,7 @@ exclude (
 
 // trim old golang.org/x/ and github.com/golang/ items
 exclude (
+	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e
 	github.com/golang/mock v1.4.4
 	// exclude github.com/golang/protobuf < 1.3.2 https://nvd.nist.gov/vuln/detail/CVE-2021-3121
