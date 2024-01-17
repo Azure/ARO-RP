@@ -22,7 +22,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/operator"
-	"github.com/Azure/ARO-RP/pkg/util/feature"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -196,12 +195,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		doc.Bucket, err = f.bucketAllocator.Allocate()
 		if err != nil {
 			return nil, err
-		}
-
-		// TODO remove this when introducing the BYONSG CLI option
-		if feature.IsRegisteredForFeature(subscription.Subscription.Properties, api.FeatureFlagPreconfiguredNSG) {
-			log.Logger.Info("PreconfiguredNSG feature flag is on")
-			doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
 		}
 	} else {
 		setUpdateProvisioningState(doc, apiVersion)
