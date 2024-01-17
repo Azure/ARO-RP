@@ -1639,5 +1639,6 @@ replace (
 	github.com/openshift/machine-api-operator => github.com/openshift/machine-api-operator v0.2.1-0.20220124104622-668c5b52b104
 	github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20220319215057-e6ba00b88555
 	go.mongodb.org/mongo-driver => go.mongodb.org/mongo-driver v1.9.4
+	google.golang.org/grpc => google.golang.org/grpc v1.56.3
 	sigs.k8s.io/cluster-api-provider-azure => github.com/openshift/cluster-api-provider-azure v0.1.0-alpha.3.0.20210626224711-5d94c794092f
 )
