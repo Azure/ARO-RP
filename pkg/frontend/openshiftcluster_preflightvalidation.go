@@ -9,15 +9,15 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
 
-var validationSuccess = api.ValidationResult{
+var validationSuccess = api.CloudError{
 	Status: api.ValidationStatusSucceeded,
 }
 
@@ -34,10 +34,10 @@ func (f *frontend) preflightValidation(w http.ResponseWriter, r *http.Request) {
 
 	resources, err := unmarshalRequest(body)
 	if err != nil {
-		b = marshalValidationResult(api.ValidationResult{
+		b = marshalValidationResult(api.CloudError{
 			Status: api.ValidationStatusFailed,
-			Error: &api.ManagementErrorWithDetails{
-				Message: to.StringPtr(err.Error()),
+			CloudErrorBody: &api.CloudErrorBody{
+				Message: err.Error(),
 			},
 		})
 		reply(log, w, header, b, statusCodeError(http.StatusOK))
@@ -52,9 +52,9 @@ func (f *frontend) preflightValidation(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		if strings.EqualFold(typeMeta.Type, "Microsoft.RedHatOpenShift/openShiftClusters") {
-			res := f._preflightValidation(ctx, log, raw, typeMeta.APIVersion, typeMeta.Id)
+			res := f._preflightValidation(ctx, log, raw, typeMeta.APIVersion, strings.ToLower(typeMeta.Id))
 			if res.Status == api.ValidationStatusFailed {
-				log.Warningf("preflight validation failed")
+				log.Warningf("preflight validation failed with err: '%s'", res.CloudErrorBody.Message)
 				b = marshalValidationResult(res)
 				reply(log, w, header, b, statusCodeError(http.StatusOK))
 				return
@@ -67,7 +67,19 @@ func (f *frontend) preflightValidation(w http.ResponseWriter, r *http.Request) {
 	reply(log, w, header, b, statusCodeError(http.StatusOK))
 }
 
-func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, raw json.RawMessage, apiVersion string, resourceID string) api.ValidationResult {
+func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, raw json.RawMessage, apiVersion string, resourceID string) api.CloudError {
+	log.Infof("running preflight validation on resource: %s", resourceID)
+	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
+	isCreate := cosmosdb.IsErrorStatusCode(err, http.StatusNotFound)
+	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
+		return api.CloudError{
+			Status: api.ValidationStatusFailed,
+			CloudErrorBody: &api.CloudErrorBody{
+				Message: err.Error(),
+			},
+		}
+	}
+
 	// unmarshal raw to OpenShiftCluster type
 	oc := &api.OpenShiftCluster{}
 	oc.Properties.ProvisioningState = api.ProvisioningStateSucceeded
@@ -79,35 +91,45 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 	converter := f.apis[apiVersion].OpenShiftClusterConverter
 	staticValidator := f.apis[apiVersion].OpenShiftClusterStaticValidator
 	ext := converter.ToExternal(oc)
-	if err := json.Unmarshal(raw, &ext); err != nil {
-		return api.ValidationResult{
+	if err = json.Unmarshal(raw, &ext); err != nil {
+		return api.CloudError{
 			Status: api.ValidationStatusFailed,
-			Error: &api.ManagementErrorWithDetails{
-				Message: to.StringPtr(err.Error()),
+			CloudErrorBody: &api.CloudErrorBody{
+				Message: err.Error(),
 			},
 		}
 	}
 
-	converter.ToInternal(ext, oc)
-	if err := staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sV3Workers), resourceID); err != nil {
-		return api.ValidationResult{
-			Status: api.ValidationStatusFailed,
-			Error: &api.ManagementErrorWithDetails{
-				Message: to.StringPtr(err.Error()),
-			},
+	switch {
+	case isCreate:
+		converter.ToInternal(ext, oc)
+		if err = staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sV3Workers), resourceID); err != nil {
+			return api.CloudError{
+				Status: api.ValidationStatusFailed,
+				CloudErrorBody: &api.CloudErrorBody{
+					Message: err.Error(),
+				},
+			}
+		}
+		if err = f.validateInstallVersion(ctx, oc); err != nil {
+			return api.CloudError{
+				Status: api.ValidationStatusFailed,
+				CloudErrorBody: &api.CloudErrorBody{
+					Code:    api.CloudErrorCodeInvalidParameter,
+					Message: err.Error(),
+				},
+			}
+		}
+	default:
+		if err := staticValidator.Static(ext, doc.OpenShiftCluster, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sV3Workers), resourceID); err != nil {
+			return api.CloudError{
+				Status: api.ValidationStatusFailed,
+				CloudErrorBody: &api.CloudErrorBody{
+					Message: err.Error(),
+				},
+			}
 		}
 	}
-
-	if err := f.validateInstallVersion(ctx, oc); err != nil {
-		return api.ValidationResult{
-			Status: api.ValidationStatusFailed,
-			Error: &api.ManagementErrorWithDetails{
-				Code:    to.StringPtr(api.CloudErrorCodeInvalidParameter),
-				Message: to.StringPtr(err.Error()),
-			},
-		}
-	}
-
 	return validationSuccess
 }
 
@@ -119,7 +141,7 @@ func unmarshalRequest(body []byte) (*api.PreflightRequest, error) {
 	return preflightRequest, nil
 }
 
-func marshalValidationResult(results api.ValidationResult) []byte {
+func marshalValidationResult(results api.CloudError) []byte {
 	body, err := json.Marshal(results)
 	if err != nil {
 		return nil

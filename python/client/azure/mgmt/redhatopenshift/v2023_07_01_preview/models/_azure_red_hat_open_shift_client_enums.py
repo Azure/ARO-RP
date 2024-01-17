@@ -61,6 +61,11 @@ class ProvisioningState(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
     SUCCEEDED = "Succeeded"
     UPDATING = "Updating"
 
+class ValidationStatus(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
+
+    FAILED = "Failed"
+    SUCCEEDED = "Succeeded"
+
 class Visibility(with_metaclass(CaseInsensitiveEnumMeta, str, Enum)):
     """Visibility represents visibility.
     """
