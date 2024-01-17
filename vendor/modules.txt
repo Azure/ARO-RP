@@ -110,9 +110,10 @@ github.com/AzureAD/microsoft-authentication-library-for-go/apps/internal/options
 github.com/AzureAD/microsoft-authentication-library-for-go/apps/internal/shared
 github.com/AzureAD/microsoft-authentication-library-for-go/apps/internal/version
 github.com/AzureAD/microsoft-authentication-library-for-go/apps/public
-# github.com/BurntSushi/toml v1.2.1 => github.com/BurntSushi/toml v0.3.1
-## explicit
+# github.com/BurntSushi/toml v1.2.1
+## explicit; go 1.16
 github.com/BurntSushi/toml
+github.com/BurntSushi/toml/internal
 # github.com/BurntSushi/xgb v0.0.0-20210121224620-deaf085860bc
 ## explicit
 # github.com/MakeNowJust/heredoc v1.0.0
@@ -593,7 +594,7 @@ github.com/godbus/dbus/v5
 # github.com/gofrs/uuid v4.2.0+incompatible
 ## explicit
 github.com/gofrs/uuid
-# github.com/gogo/protobuf v1.3.2 => github.com/gogo/protobuf v1.3.2
+# github.com/gogo/protobuf v1.3.2
 ## explicit; go 1.15
 github.com/gogo/protobuf/gogoproto
 github.com/gogo/protobuf/proto
@@ -1168,6 +1169,8 @@ github.com/rivo/uniseg
 # github.com/robfig/cron v1.2.0
 ## explicit
 github.com/robfig/cron
+# github.com/rogpeppe/go-internal v1.12.0
+## explicit; go 1.20
 # github.com/russross/blackfriday v1.6.0
 ## explicit; go 1.13
 github.com/russross/blackfriday
@@ -1193,7 +1196,7 @@ github.com/sirupsen/logrus/hooks/test
 # github.com/spf13/cobra v1.7.0
 ## explicit; go 1.15
 github.com/spf13/cobra
-# github.com/spf13/pflag v1.0.6-0.20210604193023-d5e0c0615ace => github.com/spf13/pflag v1.0.6-0.20210604193023-d5e0c0615ace
+# github.com/spf13/pflag v1.0.6-0.20210604193023-d5e0c0615ace
 ## explicit; go 1.12
 github.com/spf13/pflag
 # github.com/stefanberger/go-pkcs11uri v0.0.0-20201008174630-78d3cae3a980
@@ -1314,7 +1317,7 @@ go.starlark.net/resolve
 go.starlark.net/starlark
 go.starlark.net/starlarkstruct
 go.starlark.net/syntax
-# golang.org/x/crypto v0.17.0
+# golang.org/x/crypto v0.18.0
 ## explicit; go 1.18
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
@@ -1349,7 +1352,7 @@ golang.org/x/mod/internal/lazyregexp
 golang.org/x/mod/modfile
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.19.0
+# golang.org/x/net v0.20.0
 ## explicit; go 1.18
 golang.org/x/net/context
 golang.org/x/net/html
@@ -1371,14 +1374,14 @@ golang.org/x/oauth2/internal
 ## explicit; go 1.17
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.15.0
+# golang.org/x/sys v0.16.0
 ## explicit; go 1.18
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/term v0.15.0
+# golang.org/x/term v0.16.0
 ## explicit; go 1.18
 golang.org/x/term
 # golang.org/x/text v0.14.0
@@ -1608,7 +1611,7 @@ k8s.io/api/scheduling/v1beta1
 k8s.io/api/storage/v1
 k8s.io/api/storage/v1alpha1
 k8s.io/api/storage/v1beta1
-# k8s.io/apiextensions-apiserver v0.24.17 => k8s.io/apiextensions-apiserver v0.25.16
+# k8s.io/apiextensions-apiserver v0.25.0 => k8s.io/apiextensions-apiserver v0.25.16
 ## explicit; go 1.19
 k8s.io/apiextensions-apiserver/pkg/apis/apiextensions
 k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1
@@ -2251,10 +2254,6 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.3.0
 ## explicit; go 1.12
 sigs.k8s.io/yaml
-# bitbucket.org/ww/goautoneg => github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d
-# github.com/gogo/protobuf => github.com/gogo/protobuf v1.3.2
-# github.com/satori/go.uuid => github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
-# github.com/spf13/pflag => github.com/spf13/pflag v1.0.6-0.20210604193023-d5e0c0615ace
 # k8s.io/api => k8s.io/api v0.25.16
 # k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.25.16
 # k8s.io/apimachinery => k8s.io/apimachinery v0.25.16
@@ -2270,23 +2269,18 @@ sigs.k8s.io/yaml
 # k8s.io/kubernetes => k8s.io/kubernetes v1.25.16
 # sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.11.2
 # sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.5.0
-# github.com/BurntSushi/toml => github.com/BurntSushi/toml v0.3.1
-# github.com/containers/image => github.com/containers/image v3.0.2+incompatible
-# github.com/coreos/bbolt => go.etcd.io/bbolt v1.3.6
-# github.com/coreos/prometheus-operator => github.com/prometheus-operator/prometheus-operator v0.48.1
-# github.com/golang/lint => golang.org/x/lint v0.0.0-20210508222113-6edffad5e616
+# sigs.k8s.io/kustomize/api => sigs.k8s.io/kustomize/api v0.11.2
+# sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.13.3
+# sigs.k8s.io/structured-merge-diff => sigs.k8s.io/structured-merge-diff v1.0.1-0.20191108220359-b1b620dd3f06
 # github.com/googleapis/gnostic => github.com/google/gnostic v0.5.5
 # github.com/openshift/api => github.com/openshift/api v0.0.0-20230426102702-398424d53f74
 # github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20220603133046-984ee5ebedcf
 # github.com/openshift/cloud-credential-operator => github.com/openshift/cloud-credential-operator v0.0.0-20200316201045-d10080b52c9e
 # github.com/openshift/console-operator => github.com/openshift/console-operator v0.0.0-20220318130441-e44516b9c315
+# github.com/openshift/hive/apis => github.com/openshift/hive/apis v0.0.0-20231116161336-9dd47f8bfa1f
 # github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20230222114049-eac44a078a6e
 # github.com/openshift/machine-api-operator => github.com/openshift/machine-api-operator v0.2.1-0.20220124104622-668c5b52b104
 # github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20220319215057-e6ba00b88555
 # go.mongodb.org/mongo-driver => go.mongodb.org/mongo-driver v1.9.4
 # google.golang.org/grpc => google.golang.org/grpc v1.56.3
 # sigs.k8s.io/cluster-api-provider-azure => github.com/openshift/cluster-api-provider-azure v0.1.0-alpha.3.0.20210626224711-5d94c794092f
-# sigs.k8s.io/kustomize/api => sigs.k8s.io/kustomize/api v0.11.2
-# sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.13.3
-# sigs.k8s.io/structured-merge-diff => sigs.k8s.io/structured-merge-diff v1.0.1-0.20191108220359-b1b620dd3f06
-# github.com/openshift/hive/apis => github.com/openshift/hive/apis v0.0.0-20231116161336-9dd47f8bfa1f
