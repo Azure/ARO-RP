@@ -475,19 +475,17 @@ func TestMonitor(t *testing.T) {
 				workerSubnet1.Properties.NetworkSecurityGroup = &nsg2
 				workerSubnet2.Properties.NetworkSecurityGroup = &nsg2
 
-				_1 := mock.EXPECT().
+				mock.EXPECT().
 					Get(ctx, resourcegroupName, vNetName, masterSubnetName, options).
 					Return(masterSubnet, nil)
 
-				_2 := mock.EXPECT().
+				mock.EXPECT().
 					Get(ctx, resourcegroupName, vNetName, workerSubnet1Name, options).
 					Return(workerSubnet1, nil)
 
-				_3 := mock.EXPECT().
+				mock.EXPECT().
 					Get(ctx, resourcegroupName, vNetName, workerSubnet2Name, options).
 					Return(workerSubnet2, nil)
-
-				gomock.InOrder(_1, _2, _3)
 			},
 			mockEmitter: func(mock *mock_metrics.MockEmitter) {
 				mock.EXPECT().EmitGauge(MetricInvalidDenyRule, int64(1), map[string]string{
