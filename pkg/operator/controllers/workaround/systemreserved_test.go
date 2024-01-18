@@ -33,9 +33,6 @@ func TestSystemreservedEnsure(t *testing.T) {
 				Labels: map[string]string{
 					"aro.openshift.io/limits": "",
 				},
-				Annotations: map[string]string{
-					"machineconfiguration.openshift.io/mc-name-suffix": "",
-				},
 				ResourceVersion: resourceVersion,
 			},
 			Spec: mcv1.KubeletConfigSpec{
