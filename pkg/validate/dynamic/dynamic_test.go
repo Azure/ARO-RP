@@ -1673,7 +1673,7 @@ func TestValidateNatGatewaysPermissionsWithCheckAccess(t *testing.T) {
 	}
 }
 
-func TestCheckBYONsg(t *testing.T) {
+func TestCheckPreconfiguredNSG(t *testing.T) {
 	subnetWithNSG := &mgmtnetwork.Subnet{
 		SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 			NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
@@ -1691,14 +1691,14 @@ func TestCheckBYONsg(t *testing.T) {
 		wantErr    string
 	}{
 		{
-			name: "pass: all subnets are attached (BYONSG)",
+			name: "pass: all subnets are attached",
 			subnetByID: map[string]*mgmtnetwork.Subnet{
 				"A": subnetWithNSG,
 				"B": subnetWithNSG,
 			},
 		},
 		{
-			name: "fail: no subnets are attached (no longer BYONSG)",
+			name: "fail: no subnets are attached",
 			subnetByID: map[string]*mgmtnetwork.Subnet{
 				"A": subnetWithoutNSG,
 				"B": subnetWithoutNSG,
