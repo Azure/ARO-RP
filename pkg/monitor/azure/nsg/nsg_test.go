@@ -551,21 +551,19 @@ func TestMonitor(t *testing.T) {
 				tt.modOC(&oc)
 			}
 
-			openshiftCluster := createOC()
-
 			var wg sync.WaitGroup
 			n := &NSGMonitor{
 				log:     logrus.NewEntry(logrus.New()),
 				emitter: emitter,
-				oc:      &openshiftCluster,
+				oc:      &oc,
 
 				subnetClient: subnetClient,
 				wg:           &wg,
 
 				dims: map[string]string{
-					dimension.ResourceID:     openshiftCluster.ID,
+					dimension.ResourceID:     oc.ID,
 					dimension.SubscriptionID: subscriptionID,
-					dimension.Location:       openshiftCluster.Location,
+					dimension.Location:       oc.Location,
 				},
 			}
 
