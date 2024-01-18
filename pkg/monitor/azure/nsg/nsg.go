@@ -123,19 +123,19 @@ func (n *NSGMonitor) Monitor(ctx context.Context) []error {
 	workerProfiles, _ := api.GetEnrichedWorkerProfiles(n.oc.Properties)
 	workerSubnets := make([]subnetNSGConfig, 0, len(workerProfiles))
 	workerPrefixes := make([]netip.Prefix, 0, len(workerProfiles))
-	subnetToMonitor := map[string]struct{}{}
+	// To minimize the possibility of NRP throttling, we only retrieve a subnet's info only once.
+	subnetsToMonitor := map[string]struct{}{}
 
 	for _, wp := range workerProfiles {
 		// Customer can configure a machineset with an invalid subnet.
 		// In such case, the subnetID will be empty.
-		// We do not need to monitor any profiles with 0 machines either.
-		// To minimize the possibility of throttling, we only get it once.
+		// Also 0 machine means no worker nodes are there, so no point to monitor the profile.
 		if len(wp.SubnetID) != 0 && wp.Count != 0 {
-			subnetToMonitor[wp.SubnetID] = struct{}{}
+			subnetsToMonitor[wp.SubnetID] = struct{}{}
 		}
 	}
 
-	for subnetID := range subnetToMonitor {
+	for subnetID := range subnetsToMonitor {
 		s, err := n.toSubnetConfig(ctx, subnetID)
 		if err != nil {
 			// FP has no access to the subnet

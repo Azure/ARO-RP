@@ -335,19 +335,17 @@ func TestMonitor(t *testing.T) {
 				workerSubnet1.Properties.NetworkSecurityGroup = &nsg
 				workerSubnet2.Properties.NetworkSecurityGroup = &nsg
 
-				_1 := mock.EXPECT().
+				mock.EXPECT().
 					Get(ctx, resourcegroupName, vNetName, masterSubnetName, options).
 					Return(masterSubnet, nil)
 
-				_2 := mock.EXPECT().
+				mock.EXPECT().
 					Get(ctx, resourcegroupName, vNetName, workerSubnet1Name, options).
 					Return(workerSubnet1, nil)
 
-				_3 := mock.EXPECT().
+				mock.EXPECT().
 					Get(ctx, resourcegroupName, vNetName, workerSubnet2Name, options).
 					Return(workerSubnet2, nil)
-
-				gomock.InOrder(_1, _2, _3)
 			},
 		},
 		{
