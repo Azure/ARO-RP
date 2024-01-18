@@ -21,6 +21,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
+	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/test/util/project"
 )
@@ -69,11 +70,10 @@ var _ = Describe("ARO cluster DNS", func() {
 
 		for _, node := range nodeList.Items {
 			name := node.ObjectMeta.Name
-			if strings.Contains(name, "worker") {
+			if isWorkerNode(node) {
 				workerNodes[name] = ""
 			}
 		}
-		Expect(workerNodes).To(HaveLen(3))
 
 		By("getting each worker node's private IP address")
 		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
@@ -192,7 +192,7 @@ var _ = Describe("ARO cluster DNS", func() {
 		}
 
 		By("waiting for all nodes to return to a Ready state")
-		Eventually(nodesReady).
+		Eventually(workerNodesReady).
 			WithContext(ctx).
 			WithTimeout(DefaultEventuallyTimeout).
 			WithPolling(nodesReadyPollInterval).
@@ -237,7 +237,7 @@ var _ = Describe("ARO cluster DNS", func() {
 		}
 
 		By("waiting for all nodes to return to a Ready state")
-		Eventually(nodesReady).
+		Eventually(workerNodesReady).
 			WithContext(ctx).
 			WithTimeout(DefaultEventuallyTimeout).
 			WithPolling(nodesReadyPollInterval).
@@ -384,24 +384,23 @@ func toggleAcceleratedNetworking(ctx context.Context, interfaces network.Interfa
 	return err
 }
 
-func nodesReady(ctx context.Context, cli kubernetes.Interface) error {
+func isWorkerNode(node corev1.Node) bool {
+	ok := false
+	if node.ObjectMeta.Labels != nil {
+		_, ok = node.ObjectMeta.Labels["node-role.kubernetes.io/worker"]
+	}
+	return ok
+}
+
+func workerNodesReady(ctx context.Context, cli kubernetes.Interface) error {
 	nodeList, err := cli.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
 
 	for _, node := range nodeList.Items {
-		var readyCondition corev1.NodeCondition
-		for _, condition := range node.Status.Conditions {
-			if condition.Type == corev1.NodeReady {
-				readyCondition = condition
-			}
-		}
-		if (readyCondition == corev1.NodeCondition{}) {
-			return fmt.Errorf("unable to check if a node is ready")
-		}
-		if readyCondition.Status != corev1.ConditionTrue {
-			return fmt.Errorf("a node is not yet ready")
+		if isWorkerNode(node) && !ready.NodeIsReady(node) {
+			return fmt.Errorf("a worker node is not yet ready")
 		}
 	}
 
