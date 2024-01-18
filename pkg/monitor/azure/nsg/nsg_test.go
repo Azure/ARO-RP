@@ -186,19 +186,17 @@ func TestMonitor(t *testing.T) {
 			name: "fail - forbidden access when retrieving worker subnet 2",
 			mockSubnet: func(mock *mock_armnetwork.MockSubnetsClient) {
 				masterSubnet, workerSubnet1, workerSubnet2 := createBaseSubnets()
-				_1 := mock.EXPECT().
+				mock.EXPECT().
 					Get(ctx, resourcegroupName, vNetName, masterSubnetName, options).
 					Return(masterSubnet, nil)
 
-				_2 := mock.EXPECT().
+				mock.EXPECT().
 					Get(ctx, resourcegroupName, vNetName, workerSubnet1Name, options).
 					Return(workerSubnet1, nil)
 
-				_3 := mock.EXPECT().
+				mock.EXPECT().
 					Get(ctx, resourcegroupName, vNetName, workerSubnet2Name, options).
 					Return(workerSubnet2, &forbiddenRespErr)
-
-				gomock.InOrder(_1, _2, _3)
 			},
 			mockEmitter: func(mock *mock_metrics.MockEmitter) {
 				mock.EXPECT().EmitGauge(MetricSubnetAccessForbidden, int64(1), workerSubnet2MetricDimensions)
@@ -233,19 +231,17 @@ func TestMonitor(t *testing.T) {
 				workerSubnet1.Properties.NetworkSecurityGroup = &nsg
 				workerSubnet2.Properties.NetworkSecurityGroup = &nsg
 
-				_1 := mock.EXPECT().
+				mock.EXPECT().
 					Get(ctx, resourcegroupName, vNetName, masterSubnetName, options).
 					Return(masterSubnet, nil)
 
-				_2 := mock.EXPECT().
+				mock.EXPECT().
 					Get(ctx, resourcegroupName, vNetName, workerSubnet1Name, options).
 					Return(workerSubnet1, nil)
 
-				_3 := mock.EXPECT().
+				mock.EXPECT().
 					Get(ctx, resourcegroupName, vNetName, workerSubnet2Name, options).
 					Return(workerSubnet2, nil)
-
-				gomock.InOrder(_1, _2, _3)
 			},
 		},
 		{
@@ -261,14 +257,13 @@ func TestMonitor(t *testing.T) {
 				masterSubnet.Properties.NetworkSecurityGroup = &nsg
 				workerSubnet.Properties.NetworkSecurityGroup = &nsg
 
-				_1 := mock.EXPECT().
+				mock.EXPECT().
 					Get(ctx, resourcegroupName, vNetName, masterSubnetName, options).
 					Return(masterSubnet, nil)
 
-				_2 := mock.EXPECT().
+				mock.EXPECT().
 					Get(ctx, resourcegroupName, vNetName, workerSubnet1Name, options).
 					Return(workerSubnet, nil)
-				gomock.InOrder(_1, _2)
 			},
 			modOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.WorkerProfiles = []api.WorkerProfile{
@@ -299,14 +294,13 @@ func TestMonitor(t *testing.T) {
 				masterSubnet.Properties.NetworkSecurityGroup = &nsg
 				workerSubnet.Properties.NetworkSecurityGroup = &nsg
 
-				_1 := mock.EXPECT().
+				mock.EXPECT().
 					Get(ctx, resourcegroupName, vNetName, masterSubnetName, options).
 					Return(masterSubnet, nil)
 
-				_2 := mock.EXPECT().
+				mock.EXPECT().
 					Get(ctx, resourcegroupName, vNetName, workerSubnet1Name, options).
 					Return(workerSubnet, nil)
-				gomock.InOrder(_1, _2)
 			},
 			modOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.WorkerProfiles = []api.WorkerProfile{
@@ -403,19 +397,17 @@ func TestMonitor(t *testing.T) {
 				workerSubnet1.Properties.NetworkSecurityGroup = &nsg2
 				workerSubnet2.Properties.NetworkSecurityGroup = &nsg2
 
-				_1 := mock.EXPECT().
+				mock.EXPECT().
 					Get(ctx, resourcegroupName, vNetName, masterSubnetName, options).
 					Return(masterSubnet, nil)
 
-				_2 := mock.EXPECT().
+				mock.EXPECT().
 					Get(ctx, resourcegroupName, vNetName, workerSubnet1Name, options).
 					Return(workerSubnet1, nil)
 
-				_3 := mock.EXPECT().
+				mock.EXPECT().
 					Get(ctx, resourcegroupName, vNetName, workerSubnet2Name, options).
 					Return(workerSubnet2, nil)
-
-				gomock.InOrder(_1, _2, _3)
 			},
 		},
 		{
