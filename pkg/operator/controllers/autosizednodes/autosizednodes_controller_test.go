@@ -46,6 +46,27 @@ func TestAutosizednodesReconciler(t *testing.T) {
 	emptyConfig := mcv1.KubeletConfig{}
 	config := makeConfig()
 
+	configWithOtherAnnotations := makeConfig()
+	configWithOtherAnnotations.Annotations = map[string]string{
+		"some-other-annotation": "value",
+	}
+
+	configWithOtherAnnotationsAndMCO := makeConfig()
+	configWithOtherAnnotationsAndMCO.Annotations = map[string]string{
+		"some-other-annotation":                            "value",
+		"machineconfiguration.openshift.io/mc-name-suffix": "",
+	}
+
+	configWithAnnotation := makeConfig()
+	configWithAnnotation.Annotations = map[string]string{
+		"machineconfiguration.openshift.io/mc-name-suffix": "",
+	}
+
+	configWithHighAnnotation := makeConfig()
+	configWithHighAnnotation.Annotations = map[string]string{
+		"machineconfiguration.openshift.io/mc-name-suffix": "3",
+	}
+
 	tests := []struct {
 		name       string
 		wantErrMsg string
@@ -59,14 +80,15 @@ func TestAutosizednodesReconciler(t *testing.T) {
 			wantErrMsg: kerrors.NewNotFound(mcv1.Resource("kubeletconfigs"), "dynamic-node").Error(),
 		},
 		{
-			name:       "is needed and not present already",
-			client:     fake.NewClientBuilder().WithRuntimeObjects(aro(true)).Build(),
+			name:   "is needed and not present already",
+			client: fake.NewClientBuilder().WithRuntimeObjects(aro(true)).Build(),
+			// We don't create the KubeletConfig with the annotation because it gets updated by MCO, and we
 			wantConfig: &config,
 		},
 		{
 			name:       "is needed and present already",
-			client:     fake.NewClientBuilder().WithRuntimeObjects(aro(true), &config).Build(),
-			wantConfig: &config,
+			client:     fake.NewClientBuilder().WithRuntimeObjects(aro(true), &configWithAnnotation).Build(),
+			wantConfig: &configWithAnnotation,
 		},
 		{
 			name:       "is not needed and is present",
@@ -80,8 +102,10 @@ func TestAutosizednodesReconciler(t *testing.T) {
 				aro(true),
 				&mcv1.KubeletConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:        configName,
-						Annotations: map[string]string{"machineconfiguration.openshift.io/mc-name-suffix": "2"},
+						Name: configName,
+						Annotations: map[string]string{
+							"machineconfiguration.openshift.io/mc-name-suffix": "",
+						},
 					},
 					Spec: mcv1.KubeletConfigSpec{
 						AutoSizingReserved: to.BoolPtr(false),
@@ -94,6 +118,63 @@ func TestAutosizednodesReconciler(t *testing.T) {
 							},
 						},
 					},
+				}).Build(),
+			wantConfig: &configWithAnnotation,
+		},
+		{
+			name:       "is needed and present already, only kubelet config, gets MCO annotation set",
+			client:     fake.NewClientBuilder().WithRuntimeObjects(aro(true), &config).Build(),
+			wantConfig: &configWithAnnotation,
+		},
+		{
+			name:       "is needed and present already, non-nil annotations, only kubelet config, gets MCO annotation set",
+			client:     fake.NewClientBuilder().WithRuntimeObjects(aro(true), &configWithOtherAnnotations).Build(),
+			wantConfig: &configWithOtherAnnotationsAndMCO,
+		},
+		{
+			name:       "is needed and present already, only kubelet config, has MCO annotation already, annotation remains",
+			client:     fake.NewClientBuilder().WithRuntimeObjects(aro(true), &configWithHighAnnotation).Build(),
+			wantConfig: &configWithHighAnnotation,
+		},
+		{
+			name: "is needed and present already, several kubelet configs without MCO annotations, gets MCO annotation set",
+			client: fake.NewClientBuilder().WithRuntimeObjects(
+				aro(true),
+				&config,
+				&mcv1.KubeletConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "some-other-config",
+					},
+					Spec: mcv1.KubeletConfigSpec{},
+				}).Build(),
+			wantConfig: &configWithAnnotation,
+		},
+		{
+			name: "is needed and present already, annotations present, several kubelet configs without MCO annotations, gets MCO annotation set",
+			client: fake.NewClientBuilder().WithRuntimeObjects(
+				aro(true),
+				&configWithOtherAnnotations,
+				&mcv1.KubeletConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "some-other-config",
+					},
+					Spec: mcv1.KubeletConfigSpec{},
+				}).Build(),
+			wantConfig: &configWithOtherAnnotationsAndMCO,
+		},
+		{
+			name: "is needed and present already, several kubelet configs, annotations exist, MCO annotation not set",
+			client: fake.NewClientBuilder().WithRuntimeObjects(
+				aro(true),
+				&config,
+				&mcv1.KubeletConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "some-other-config",
+						Annotations: map[string]string{
+							"machineconfiguration.openshift.io/mc-name-suffix": "",
+						},
+					},
+					Spec: mcv1.KubeletConfigSpec{},
 				}).Build(),
 			wantConfig: &config,
 		},

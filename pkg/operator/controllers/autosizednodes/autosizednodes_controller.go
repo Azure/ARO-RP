@@ -34,8 +34,7 @@ const (
 	configName     = "dynamic-node"
 
 	// machineconfiguration annotation added on the kubelet CRD - dynamic-node
-	mcAnnotationName  = "machineconfiguration.openshift.io/mc-name-suffix"
-	mcAnnotationValue = ""
+	mcAnnotationName = "machineconfiguration.openshift.io/mc-name-suffix"
 )
 
 func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
@@ -94,12 +93,53 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return ctrl.Result{}, fmt.Errorf("could not fetch KubeletConfig: %w", err)
 	}
 
-	// If already exists, update the spec and annotations
-	if config.Annotations == nil {
-		config.Annotations = defaultConfig.Annotations
+	// Fetch the existing KubeletConfigs
+	var kubeletConfigs mcv1.KubeletConfigList
+	err = r.client.List(ctx, &kubeletConfigs)
+	if err != nil {
+		// If error, return it (controller-runtime will requeue for a retry)
+		return ctrl.Result{}, fmt.Errorf("could not fetch KubeletConfig list: %w", err)
 	}
-	if val, ok := config.Annotations[mcAnnotationName]; !ok || val != mcAnnotationValue {
-		config.Annotations[mcAnnotationName] = mcAnnotationValue
+
+	// If we have a single KubeletConfig (ours), verify that the mc-name-suffix
+	// annotation is present. This will automatically be set on newer (4.11+?)
+	// OpenShift versions. If we are on an older version then we should set our
+	// KubeletConfig with the empty string so that it is equivalent to suffix 0,
+	// so upgrades will put customer KubeletConfigs at higher indexes.
+	if len(kubeletConfigs.Items) == 1 {
+		if len(config.Annotations) == 0 {
+			// no annotations, set it to empty string (equiv to suffix 0)
+			config.Annotations = map[string]string{
+				mcAnnotationName: "",
+			}
+		} else {
+			if _, ok := config.Annotations[mcAnnotationName]; !ok {
+				// if the annotation is not present, set it to the empty string (equiv to suffix 0)
+				config.Annotations[mcAnnotationName] = ""
+			}
+		}
+	} else {
+		// Check if any of the KubeletConfigs have the mc-name-suffix annotation set
+		var annotationsPresent bool
+		for _, i := range kubeletConfigs.Items {
+			if i.ObjectMeta.Name != configName {
+				if _, ok := i.Annotations[mcAnnotationName]; ok {
+					annotationsPresent = true
+				}
+			}
+		}
+
+		// If no KubeletConfigs have the annotation set, it is before OpenShift
+		// utilises it, and it is safe to mark our one with the empty string
+		if !annotationsPresent {
+			if config.Annotations == nil {
+				config.Annotations = map[string]string{
+					mcAnnotationName: "",
+				}
+			} else {
+				config.Annotations[mcAnnotationName] = ""
+			}
+		}
 	}
 
 	config.Spec = defaultConfig.Spec
@@ -131,8 +171,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 func makeConfig() mcv1.KubeletConfig {
 	return mcv1.KubeletConfig{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        configName,
-			Annotations: map[string]string{mcAnnotationName: mcAnnotationValue},
+			Name: configName,
 		},
 		Spec: mcv1.KubeletConfigSpec{
 			AutoSizingReserved: to.BoolPtr(true),
