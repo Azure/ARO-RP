@@ -108,9 +108,9 @@ func DBName(isLocalDevelopmentMode bool) (string, error) {
 		return "ARO", nil
 	}
 
-	if err := env.ValidateVars(DatabaseName); err != nil {
+	if err := env.ValidateVars(envDatabaseName); err != nil {
 		return "", fmt.Errorf("%v (development mode)", err.Error())
 	}
 
-	return os.Getenv(DatabaseName), nil
+	return os.Getenv(envDatabaseName), nil
 }

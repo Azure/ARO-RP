@@ -1796,7 +1796,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 	ctx := context.Background()
 
-	defaultVersion := version.DefaultInstallStream.Version.String()
+	defaultVersion := "4.10.0"
 
 	apis := map[string]*api.Version{
 		"2020-04-30": {
@@ -1807,10 +1807,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 	}
 
 	defaultVersionChangeFeed := map[string]*api.OpenShiftVersion{
-		version.DefaultInstallStream.Version.String(): {
+		defaultVersion: {
 			Properties: api.OpenShiftVersionProperties{
-				Version: version.DefaultInstallStream.Version.String(),
+				Version: defaultVersion,
 				Enabled: true,
+				Default: true,
 			},
 		},
 	}
@@ -2813,6 +2814,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			go f.Run(ctx, nil, nil)
 			f.mu.Lock()
 			f.enabledOcpVersions = tt.changeFeed
+			for key, doc := range tt.changeFeed {
+				if doc.Properties.Default {
+					f.defaultOcpVersion = key
+				}
+			}
 			f.mu.Unlock()
 
 			oc := &v20200430.OpenShiftCluster{}
