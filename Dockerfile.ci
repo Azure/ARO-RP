@@ -22,7 +22,7 @@ COPY pkg/ pkg
 
 #COPY all files with an extension (directories not copied)
 COPY ?*.* .
-COPY Makefile LICENSE .
+COPY Makefile LICENSE ./
 
 COPY .git .git
 COPY .gitignore .gitignore
