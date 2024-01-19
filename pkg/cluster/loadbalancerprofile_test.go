@@ -28,8 +28,19 @@ import (
 var (
 	clusterRGID = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG"
 	// Define the DB instance we will use to run the PatchWithLease function
-	key      = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName"
-	location = "eastus"
+	key                   = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName"
+	location              = "eastus"
+	defaultOutboundIPName = "infraID-pip-v4"
+	defaultClusterIPs     = []mgmtnetwork.PublicIPAddress{
+		{
+			ID:   to.StringPtr(clusterRGID + "/providers/Microsoft.Network/publicIPAddresses/" + defaultOutboundIPName),
+			Name: &defaultOutboundIPName,
+		},
+		{
+			ID:   to.StringPtr(clusterRGID + "/providers/Microsoft.Network/publicIPAddresses/infraID-default-v4"),
+			Name: to.StringPtr("infraID-default-v4"),
+		},
+	}
 )
 
 func newFakeManager() manager {
@@ -97,7 +108,10 @@ func TestReconcileOutboundIPs(t *testing.T) {
 					List(gomock.Any(), clusterRGName).
 					Return(getFakePublicIPList(1), nil)
 				publicIPAddressClient.EXPECT().
-					CreateOrUpdateAndWait(ctx, clusterRGName, "uuid2-outbound-pip-v4", getFakePublicIPAddress("uuid2-outbound-pip-v4", location)).
+					CreateOrUpdateAndWait(ctx, clusterRGName, "uuid2-outbound-pip-v4", newPublicIPAddress(
+						"uuid2-outbound-pip-v4",
+						fmt.Sprintf("%s/providers/Microsoft.Network/publicIPAddresses/%s", clusterRGID, "uuid2-outbound-pip-v4"),
+						location)).
 					Return(nil)
 			},
 			expectedErr: nil,
@@ -436,7 +450,10 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 					List(gomock.Any(), clusterRGName).
 					Return(getFakePublicIPList(0), nil)
 				publicIPAddressClient.EXPECT().
-					CreateOrUpdateAndWait(ctx, clusterRGName, "uuid1-outbound-pip-v4", getFakePublicIPAddress("uuid1-outbound-pip-v4", location)).Return(nil)
+					CreateOrUpdateAndWait(ctx, clusterRGName, "uuid1-outbound-pip-v4", newPublicIPAddress(
+						"uuid1-outbound-pip-v4",
+						fmt.Sprintf("%s/providers/Microsoft.Network/publicIPAddresses/%s", clusterRGID, "uuid1-outbound-pip-v4"),
+						location)).Return(nil)
 				loadBalancersClient.EXPECT().
 					Get(gomock.Any(), clusterRGName, infraID, "").
 					Return(loadbalancer.FakeLoadBalancersGet(0, api.VisibilityPublic), nil)
@@ -543,7 +560,10 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 					List(gomock.Any(), clusterRGName).
 					Return(getFakePublicIPList(0), nil)
 				publicIPAddressClient.EXPECT().
-					CreateOrUpdateAndWait(ctx, clusterRGName, "uuid1-outbound-pip-v4", getFakePublicIPAddress("uuid1-outbound-pip-v4", location)).Return(nil)
+					CreateOrUpdateAndWait(ctx, clusterRGName, "uuid1-outbound-pip-v4", newPublicIPAddress(
+						"uuid1-outbound-pip-v4",
+						fmt.Sprintf("%s/providers/Microsoft.Network/publicIPAddresses/%s", clusterRGID, "uuid1-outbound-pip-v4"),
+						location)).Return(nil)
 				loadBalancersClient.EXPECT().
 					Get(gomock.Any(), clusterRGName, infraID, "").
 					Return(loadbalancer.FakeLoadBalancersGet(0, api.VisibilityPublic), nil)
@@ -650,9 +670,15 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 					List(gomock.Any(), clusterRGName).
 					Return(getFakePublicIPList(0), nil)
 				publicIPAddressClient.EXPECT().
-					CreateOrUpdateAndWait(ctx, clusterRGName, "uuid1-outbound-pip-v4", getFakePublicIPAddress("uuid1-outbound-pip-v4", location)).Return(nil)
+					CreateOrUpdateAndWait(ctx, clusterRGName, "uuid1-outbound-pip-v4", newPublicIPAddress(
+						"uuid1-outbound-pip-v4",
+						fmt.Sprintf("%s/providers/Microsoft.Network/publicIPAddresses/%s", clusterRGID, "uuid1-outbound-pip-v4"),
+						location)).Return(nil)
 				publicIPAddressClient.EXPECT().
-					CreateOrUpdateAndWait(ctx, clusterRGName, "uuid2-outbound-pip-v4", getFakePublicIPAddress("uuid2-outbound-pip-v4", location)).Return(fmt.Errorf("failed to create ip"))
+					CreateOrUpdateAndWait(ctx, clusterRGName, "uuid2-outbound-pip-v4", newPublicIPAddress(
+						"uuid2-outbound-pip-v4",
+						fmt.Sprintf("%s/providers/Microsoft.Network/publicIPAddresses/%s", clusterRGID, "uuid2-outbound-pip-v4"),
+						location)).Return(fmt.Errorf("failed to create ip"))
 				loadBalancersClient.EXPECT().
 					Get(gomock.Any(), clusterRGName, infraID, "").
 					Return(loadbalancer.FakeLoadBalancersGet(0, api.VisibilityPublic), nil)
@@ -715,30 +741,12 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 	}
 }
 
-func getFakePublicIPAddress(name, location string) mgmtnetwork.PublicIPAddress {
-	id := fmt.Sprintf("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/%s", name)
-	return mgmtnetwork.PublicIPAddress{
-		Name:     &name,
-		ID:       &id,
-		Location: to.StringPtr(location),
-		PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
-			PublicIPAllocationMethod: mgmtnetwork.Static,
-			PublicIPAddressVersion:   mgmtnetwork.IPv4,
-		},
-		Sku: &mgmtnetwork.PublicIPAddressSku{
-			Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
-		},
-	}
-}
-
 func getFakePublicIPList(managedCount int) []mgmtnetwork.PublicIPAddress {
-	infraID := "infraID"
-	clusterRGID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG"
-	defaultOutboundIPName := infraID + "-pip-v4"
-	defaultOutboundIPID := clusterRGID + "/providers/Microsoft.Network/publicIPAddresses/" + defaultOutboundIPName
+	// defaultOutboundIPID := clusterRGID + "/providers/Microsoft.Network/publicIPAddresses/" + defaultOutboundIPName
 	ips := []mgmtnetwork.PublicIPAddress{
 		{
-			ID:   &defaultOutboundIPID,
+			// ID:   &defaultOutboundIPID,
+			ID:   to.StringPtr(clusterRGID + "/providers/Microsoft.Network/publicIPAddresses/" + defaultOutboundIPName),
 			Name: &defaultOutboundIPName,
 		},
 		{
@@ -748,7 +756,10 @@ func getFakePublicIPList(managedCount int) []mgmtnetwork.PublicIPAddress {
 	}
 	for i := 0; i < managedCount; i++ {
 		ipName := fmt.Sprintf("uuid%d-outbound-pip-v4", i+1)
-		ips = append(ips, getFakePublicIPAddress(ipName, "eastus"))
+		ips = append(ips, newPublicIPAddress(
+			ipName,
+			fmt.Sprintf("%s/providers/Microsoft.Network/publicIPAddresses/%s", clusterRGID, ipName),
+			location))
 	}
 	return ips
 }
