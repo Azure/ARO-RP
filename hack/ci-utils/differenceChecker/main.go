@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-var ignoredDirectories map[string]bool = map[string]bool{"vendor": true, "pyenv": true, ".git": true}
+var ignoredDirectories map[string]bool = map[string]bool{"vendor": true, "pyenv": true, ".git": true, ".cache": true}
 
 func main() {
 	if len(os.Args) < 2 {

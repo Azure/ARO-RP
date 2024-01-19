@@ -2,9 +2,9 @@ ARG REGISTRY
 FROM ${REGISTRY}/ubi8/go-toolset:1.20.10
 
 USER root
-RUN mkdir -p /root/go/src/github.com/Azure/ARO-RP
-WORKDIR /root/go/src/github.com/Azure/ARO-RP
 ENV GOPATH=/root/go
+RUN mkdir -p /app
+WORKDIR /app
 
 #we have multiple steps for copy so we can make use of caching
 COPY vendor/ vendor
