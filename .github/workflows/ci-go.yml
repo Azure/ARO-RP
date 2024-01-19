@@ -17,18 +17,14 @@ env:
 jobs:
   ci-from-docker:
     runs-on: ubuntu-latest
+    container:
+      image: registry.access.redhat.com/ubi8/go-toolset:1.20.10
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Build from buildah
-      uses: redhat-actions/buildah-build@v2
-      with:
-        image: test-image
-        tags: ${{ github.sha }}
-        context: .
-        containerfiles: ./Dockerfile.ci
-        build-args: REGISTRY=registry.access.redhat.com
+    - run: |
+        hack/ci-utils/build.sh
 
   vendor-check:
     runs-on: ubuntu-latest
