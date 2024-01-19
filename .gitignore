@@ -43,3 +43,4 @@ megalinter-reports/
 /jq
 /portalauth
 .kiota.log
+/.cache
