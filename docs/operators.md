@@ -148,7 +148,7 @@ export ARO_IMAGE=quay.io/asalkeld/aos-init:latest #(change to yours)
 ```
 
 ```sh
-make publish-image-aro
+make publish-image-aro-multistage
 
 #Then run an update
 curl -X PATCH -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER?api-version=admin" --header "Content-Type: application/json" -d "{}"
