@@ -11,7 +11,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
@@ -224,8 +223,9 @@ func TestOpenShiftVersionPut(t *testing.T) {
 					&api.OpenShiftVersionDocument{
 						OpenShiftVersion: &api.OpenShiftVersion{
 							Properties: api.OpenShiftVersionProperties{
-								Version:           version.DefaultInstallStream.Version.String(),
+								Version:           "4.10.0",
 								Enabled:           true,
+								Default:           true,
 								OpenShiftPullspec: "a:a/b",
 							},
 						},
@@ -234,7 +234,7 @@ func TestOpenShiftVersionPut(t *testing.T) {
 			},
 			body: &admin.OpenShiftVersion{
 				Properties: admin.OpenShiftVersionProperties{
-					Version:           version.DefaultInstallStream.Version.String(),
+					Version:           "4.10.0",
 					Enabled:           false,
 					OpenShiftPullspec: "c:c/d",
 					InstallerPullspec: "d:d/e",
@@ -247,8 +247,9 @@ func TestOpenShiftVersionPut(t *testing.T) {
 					ID: "07070707-0707-0707-0707-070707070001",
 					OpenShiftVersion: &api.OpenShiftVersion{
 						Properties: api.OpenShiftVersionProperties{
-							Version:           version.DefaultInstallStream.Version.String(),
+							Version:           "4.10.0",
 							Enabled:           true,
+							Default:           true,
 							OpenShiftPullspec: "a:a/b",
 						},
 					},

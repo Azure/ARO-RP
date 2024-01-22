@@ -4,8 +4,10 @@ package main
 // Licensed under the Apache License 2.0.
 
 const (
-	DatabaseName        = "DATABASE_NAME"
-	DatabaseAccountName = "DATABASE_ACCOUNT_NAME"
-	KeyVaultPrefix      = "KEYVAULT_PREFIX"
-	DBTokenUrl          = "DBTOKEN_URL"
+	envDatabaseName          = "DATABASE_NAME"
+	envDatabaseAccountName   = "DATABASE_ACCOUNT_NAME"
+	envKeyVaultPrefix        = "KEYVAULT_PREFIX"
+	envDBTokenUrl            = "DBTOKEN_URL"
+	envOpenShiftVersions     = "OPENSHIFT_VERSIONS"
+	envInstallerImageDigests = "INSTALLER_IMAGE_DIGESTS"
 )

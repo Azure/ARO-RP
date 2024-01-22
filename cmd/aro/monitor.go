@@ -70,10 +70,10 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	if err := env.ValidateVars(KeyVaultPrefix); err != nil {
+	if err := env.ValidateVars(envKeyVaultPrefix); err != nil {
 		return err
 	}
-	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
+	keyVaultPrefix := os.Getenv(envKeyVaultPrefix)
 	// TODO: should not be using the service keyvault here
 	serviceKeyvaultURI := keyvault.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
 	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
@@ -83,11 +83,11 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+	if err := env.ValidateVars(envDatabaseAccountName); err != nil {
 		return err
 	}
 
-	dbAccountName := os.Getenv(DatabaseAccountName)
+	dbAccountName := os.Getenv(envDatabaseAccountName)
 	clientOptions := &policy.ClientOptions{
 		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
 	}

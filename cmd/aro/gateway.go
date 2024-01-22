@@ -41,10 +41,10 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 
 	go g.Run()
 
-	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+	if err := env.ValidateVars(envDatabaseAccountName); err != nil {
 		return err
 	}
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, nil, m, nil, os.Getenv(DatabaseAccountName))
+	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, nil, m, nil, os.Getenv(envDatabaseAccountName))
 	if err != nil {
 		return err
 	}
@@ -136,9 +136,9 @@ func getURL(isLocalDevelopmentMode bool) (string, error) {
 		return "https://localhost:8445", nil
 	}
 
-	if err := env.ValidateVars(DBTokenUrl); err != nil {
+	if err := env.ValidateVars(envDBTokenUrl); err != nil {
 		return "", err
 	}
 
-	return os.Getenv(DBTokenUrl), nil
+	return os.Getenv(envDBTokenUrl), nil
 }

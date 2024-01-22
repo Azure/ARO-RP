@@ -13,7 +13,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func (f *frontend) putAdminOpenShiftVersion(w http.ResponseWriter, r *http.Request) {
@@ -37,12 +36,6 @@ func (f *frontend) putAdminOpenShiftVersion(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// prevent disabling of the default installation version
-	if ext.Properties.Version == version.DefaultInstallStream.Version.String() && !ext.Properties.Enabled {
-		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.enabled", "You cannot disable the default installation version.")
-		return
-	}
-
 	docs, err := f.dbOpenShiftVersions.ListAll(ctx)
 	if err != nil {
 		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
@@ -53,6 +46,11 @@ func (f *frontend) putAdminOpenShiftVersion(w http.ResponseWriter, r *http.Reque
 	if docs != nil {
 		for _, doc := range docs.OpenShiftVersionDocuments {
 			if doc.OpenShiftVersion.Properties.Version == ext.Properties.Version {
+				// prevent disabling of the default installation version
+				if doc.OpenShiftVersion.Properties.Default && !ext.Properties.Enabled {
+					api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.enabled", "You cannot disable the default installation version.")
+					return
+				}
 				versionDoc = doc
 				break
 			}

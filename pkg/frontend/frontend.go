@@ -63,6 +63,7 @@ type frontend struct {
 	dbSubscriptions               database.Subscriptions
 	dbOpenShiftVersions           database.OpenShiftVersions
 
+	defaultOcpVersion  string // always enabled
 	enabledOcpVersions map[string]*api.OpenShiftVersion
 	apis               map[string]*api.Version
 

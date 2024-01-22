@@ -56,11 +56,11 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 
 	go g.Run()
 
-	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+	if err := env.ValidateVars(envDatabaseAccountName); err != nil {
 		return err
 	}
 
-	dbAccountName := os.Getenv(DatabaseAccountName)
+	dbAccountName := os.Getenv(envDatabaseAccountName)
 
 	clientOptions := &policy.ClientOptions{
 		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
@@ -87,10 +87,10 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	if err := env.ValidateVars(KeyVaultPrefix); err != nil {
+	if err := env.ValidateVars(envKeyVaultPrefix); err != nil {
 		return err
 	}
-	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
+	keyVaultPrefix := os.Getenv(envKeyVaultPrefix)
 	dbtokenKeyvaultURI := keyvault.URI(_env, env.DBTokenKeyvaultSuffix, keyVaultPrefix)
 	dbtokenKeyvault := keyvault.NewManager(msiKVAuthorizer, dbtokenKeyvaultURI)
 

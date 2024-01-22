@@ -16,7 +16,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	v20220904 "github.com/Azure/ARO-RP/pkg/api/v20220904"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func TestListInstallVersions(t *testing.T) {
@@ -37,9 +36,9 @@ func TestListInstallVersions(t *testing.T) {
 		{
 			name: "return multiple versions",
 			changeFeed: map[string]*api.OpenShiftVersion{
-				version.DefaultInstallStreams[11].Version.String(): {
+				"4.11.0": {
 					Properties: api.OpenShiftVersionProperties{
-						Version: version.DefaultInstallStreams[11].Version.String(),
+						Version: "4.11.0",
 						Enabled: true,
 					},
 				},
@@ -47,6 +46,7 @@ func TestListInstallVersions(t *testing.T) {
 					Properties: api.OpenShiftVersionProperties{
 						Version: "4.11.5",
 						Enabled: true,
+						Default: true,
 					},
 				},
 			},
@@ -56,12 +56,12 @@ func TestListInstallVersions(t *testing.T) {
 				OpenShiftVersions: []*v20220904.OpenShiftVersion{
 					{
 						Properties: v20220904.OpenShiftVersionProperties{
-							Version: "4.11.5",
+							Version: "4.11.0",
 						},
 					},
 					{
 						Properties: v20220904.OpenShiftVersionProperties{
-							Version: version.DefaultInstallStreams[11].Version.String(),
+							Version: "4.11.5",
 						},
 					},
 				},
@@ -87,6 +87,11 @@ func TestListInstallVersions(t *testing.T) {
 
 			frontend.mu.Lock()
 			frontend.enabledOcpVersions = tt.changeFeed
+			for key, doc := range tt.changeFeed {
+				if doc.Properties.Enabled {
+					frontend.defaultOcpVersion = key
+				}
+			}
 			frontend.mu.Unlock()
 
 			resp, b, err := ti.request(method,

@@ -69,6 +69,9 @@ func (f *frontend) updateOcpVersions(docs []*api.OpenShiftVersionDocument) {
 			delete(f.enabledOcpVersions, doc.OpenShiftVersion.Properties.Version)
 		} else {
 			f.enabledOcpVersions[doc.OpenShiftVersion.Properties.Version] = doc.OpenShiftVersion
+			if doc.OpenShiftVersion.Properties.Default {
+				f.defaultOcpVersion = doc.OpenShiftVersion.Properties.Version
+			}
 		}
 	}
 }

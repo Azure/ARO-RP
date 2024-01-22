@@ -48,6 +48,7 @@ import (
 	msgraph_errors "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
 
@@ -407,6 +408,10 @@ func setup(ctx context.Context) error {
 		cluster, err := cluster.New(log, _env, os.Getenv("CI") != "")
 		if err != nil {
 			return err
+		}
+
+		if osClusterVersion == "" {
+			osClusterVersion = version.DefaultInstallStream.Version.String()
 		}
 
 		err = cluster.Create(ctx, vnetResourceGroup, clusterName, osClusterVersion)
