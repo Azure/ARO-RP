@@ -3,14 +3,6 @@ package e2e
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-// GetObject takes a get function like clientset.CoreV1().Pods(ns).Get
-// and the parameters for it and returns a function that executes that get
-// operation in a [gomega.Eventually] or [gomega.Consistently].
-//
-// Delays and retries are handled by [HandleRetry]. A "not found" error is
-// a fatal error that causes polling to stop immediately. If that is not
-// desired, then wrap the result with [IgnoreNotFound].
-
 import (
 	"context"
 	"time"
@@ -28,6 +20,10 @@ var (
 
 type K8sGetFunc[T any] func(ctx context.Context, name string, getOptions metav1.GetOptions) (T, error)
 
+// This function takes a get function like clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Get
+// and the parameters for it and returns the result after asserting there were no errors.
+//
+// By default the call is retried for 5s with a 250ms interval.
 func GetK8sObjectWithRetry[T any](ctx context.Context, get K8sGetFunc[T], name string, getOptions metav1.GetOptions) T {
 	var object T
 	Eventually(func(g Gomega, ctx context.Context) {
