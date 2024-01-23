@@ -6,6 +6,9 @@ name: mega-linter-yaml
 on:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: mega-linter-yaml
