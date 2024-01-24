@@ -140,7 +140,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 			dv.subscriptionDoc.Subscription.Properties.TenantID,
 			spp.ClientID,
 			string(spp.ClientSecret),
-			nil,
+			dv.env.Environment().ClientSecretCredentialOptions(),
 		)
 		if err != nil {
 			return err
