@@ -8,6 +8,24 @@ import (
 
 const OutboundRuleV4 = "outbound-rule-v4"
 
+var FakeDefaultIngressFrontendIPConfig = mgmtnetwork.FrontendIPConfiguration{
+	Name: to.StringPtr("ae3506385907e44eba9ef9bf76eac973"),
+	ID:   to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/ae3506385907e44eba9ef9bf76eac973"),
+	FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
+		LoadBalancingRules: &[]mgmtnetwork.SubResource{
+			{
+				ID: to.StringPtr("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
+			},
+			{
+				ID: to.StringPtr("ae3506385907e44eba9ef9bf76eac973-TCP-443"),
+			},
+		},
+		PublicIPAddress: &mgmtnetwork.PublicIPAddress{
+			ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-default-v4"),
+		},
+	},
+}
+
 // returns a default public loadbalancer
 func NewFakePublicLoadBalancer(apiServerVisibility api.Visibility) mgmtnetwork.LoadBalancer {
 	defaultOutboundFIPConfig := mgmtnetwork.FrontendIPConfiguration{
@@ -33,23 +51,7 @@ func NewFakePublicLoadBalancer(apiServerVisibility api.Visibility) mgmtnetwork.L
 		Name: to.StringPtr("infraID"),
 		LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
 			FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
-				{
-					Name: to.StringPtr("ae3506385907e44eba9ef9bf76eac973"),
-					ID:   to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/ae3506385907e44eba9ef9bf76eac973"),
-					FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
-						LoadBalancingRules: &[]mgmtnetwork.SubResource{
-							{
-								ID: to.StringPtr("ae3506385907e44eba9ef9bf76eac973-TCP-80"),
-							},
-							{
-								ID: to.StringPtr("ae3506385907e44eba9ef9bf76eac973-TCP-443"),
-							},
-						},
-						PublicIPAddress: &mgmtnetwork.PublicIPAddress{
-							ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/publicIPAddresses/infraID-default-v4"),
-						},
-					},
-				},
+				FakeDefaultIngressFrontendIPConfig,
 				defaultOutboundFIPConfig,
 			},
 			OutboundRules: &[]mgmtnetwork.OutboundRule{
