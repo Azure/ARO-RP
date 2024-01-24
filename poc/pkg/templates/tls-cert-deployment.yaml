@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.istio.tlsDeployment.name }}
+  namespace: {{ .Values.AKSCluster.istoIngressNamespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.istio.tlsDeployment.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.istio.tlsDeployment.name }}
+    spec:
+      containers:
+      - name: {{ .Values.istio.tlsDeployment.name }}
+        image: {{ .Values.istio.tlsDeployment.image }}
+        env:
+        - name: TITLE
+          value: "Welcome TLS certificate sync deployment"
+        volumeMounts:
+        - name: secrets-store-inline
+          mountPath: "/mnt/secrets-store"
+          readOnly: true
+      volumes:
+      - name: secrets-store-inline
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+          volumeAttributes:
+            secretProviderClass: {{ .Values.keyVault.name }}

@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "pkg.fullname" . }}
+  labels:
+    {{- include "pkg.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "pkg.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "pkg.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "pkg.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - aro
+          args:
+            - "--server-port={{ .Values.image.containerPort }}"
+            - "--enable-mise={{ .Values.MISE.MISE_AUTH_ENABLED }}"
+          ports:
+            - name: http
+              containerPort: {{ .Values.image.containerPort }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+        {{- if .Values.MISE.MISE_AUTH_ENABLED }}
+        - name: {{ .Values.MISE.container.name }}
+          image: {{ .Values.MISE.container.image }}
+          env:
+          - name: {{ .Values.MISE.container.env.MISE_APPSETTINGS_LOCATION.name }}
+            value: {{ .Values.MISE.container.env.MISE_APPSETTINGS_LOCATION.value }}
+          ports:
+          - containerPort: {{ .Values.MISE.container.ports.containerPort }}
+            name: http
+          volumeMounts:
+          - name: {{ .Values.MISE.container.volumes.name }}
+            mountPath: {{ .Values.MISE.container.volumes.mountPath }}
+            readOnly: true
+        {{- end }}
+      volumes:
+        - name: {{ .Values.MISE.container.volumes.name }}
+          configMap:
+            name: {{ .Values.MISE.container.volumes.configMap.name }}
+            items:
+            - key: {{ .Values.MISE.container.volumes.configMap.items.key }}
+              path:  {{ .Values.MISE.container.volumes.configMap.items.path }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

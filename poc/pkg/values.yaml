@@ -1,0 +1,146 @@
+# Default values for pkg.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  pullPolicy: Always
+  containerPort: 8080
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  name: rp-poc-svc
+  type: ClusterIP
+  port: 8080
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Use for Istio service mesh 
+istio:
+  name: aks-istio-ingressgateway-external
+  gateway:
+    name: rp-poc-gateway
+    port: 443
+    # TLS Mode: https://istio.io/latest/docs/reference/config/networking/gateway/#ServerTLSSettings-TLSmode
+    tlsMode: SIMPLE
+  virtualService:
+    name: rp-poc-virtualservice
+  tlsDeployment:
+    name: tls-sync-deployment
+    image: mcr.microsoft.com/azuredocs/aks-helloworld:v1
+    container: tls-sync-container
+
+AKSCluster:
+  # AKS Istio addon requires the TLS cert secret to be in this namespace
+  istoIngressNamespace: aks-istio-ingress
+  userAssignedIdentityId: ""
+  tenantId: 72f988bf-86f1-41af-91ab-2d7cd011db47
+
+keyVault:
+  name: aro-rp-aks-kv
+  tlsCertificateName: aks-rp-certificate
+
+MISE:
+  MISE_AUTH_ENABLED: true
+  container:
+    name: mise
+    image: aropocsvc.azurecr.io/mise-sidecar:dev
+    env:
+      MISE_APPSETTINGS_LOCATION:
+        name: MISE_APPSETTINGS_LOCATION
+        value: "/etc/mise/appsettings.json"
+    ports:
+      containerPort: 5000
+    volumes:
+      name: config
+      mountPath: /etc/mise
+      configMap:
+        name: miseconfig
+        items:
+          key: appsettings.json
+          path: appsettings.json
+  configMap:
+    AzureAd:
+      Instance: https://login.microsoftonline.com
+      # Use for telemetry headed to AAD on OpenID configuration requests.
+      # https://identitydivision.visualstudio.com/DevEx/_wiki/wikis/DevEx.wiki/56/ServiceAuthLibrary-SAL-
+      # TODO(jonachang) use ARO-RP first party principal when going to production
+      ClientId: ""
+      TenantId: 72f988bf-86f1-41af-91ab-2d7cd011db47
+      Audience: https://management.azure.com 
+      # Possible log levels: Trace, Debug, Information, Warning, Error, Critical, None 
+      LogLevel: Debug
+      InboundPolicies:
+        Label: aro-rp-arm-policy
+        AuthenticationSchemes: Bearer
+        TokenTypes: AppToken
+        Authority: https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47/v2.0
+        ValidApplicationIds: ""
+        Internal:
+          Label: aro-rp-internal-policy
+          AuthenticationSchemes: Bearer
+          TokenTypes: AppToken
+          Authority: https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47/v2.0
+          ValidApplicationIds: ""
+    AllowedHosts: "*"
+    Kestrel:
+      Endpoints:
+        Url: http://localhost:5000
+    metatata:
+      name: miseconfig
+    Logging:
+      LogLevel:
+        Default: Debug
+        Microsoft: Debug
+        Microsoft_Hosting_Lifetime: Debug

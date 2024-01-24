@@ -1,0 +1,17 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+   name: {{ .Values.istio.gateway.name }}
+spec:
+  selector:
+    istio: {{ .Values.istio.name }}
+  servers:
+  - port:
+      number: {{ .Values.istio.gateway.port }}
+      name: https
+      protocol: HTTPS
+    tls:
+      mode: {{ .Values.istio.gateway.tlsMode }}
+      credentialName: {{ .Values.keyVault.tlsCertificateName }}
+    hosts:
+    - "*"
