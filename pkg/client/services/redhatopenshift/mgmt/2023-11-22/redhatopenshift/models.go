@@ -36,10 +36,22 @@ const fqdn = "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2
 type APIServerProfile struct {
 	// Visibility - API server visibility. Possible values include: 'Private', 'Public'
 	Visibility Visibility `json:"visibility,omitempty"`
-	// URL - The URL to access the cluster API server.
+	// URL - READ-ONLY; The URL to access the cluster API server.
 	URL *string `json:"url,omitempty"`
 	// IP - The IP of the cluster API server.
 	IP *string `json:"ip,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for APIServerProfile.
+func (asp APIServerProfile) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if asp.Visibility != "" {
+		objectMap["visibility"] = asp.Visibility
+	}
+	if asp.IP != nil {
+		objectMap["ip"] = asp.IP
+	}
+	return json.Marshal(objectMap)
 }
 
 // AzureEntityResource the resource model definition for an Azure Resource Manager resource with an etag.
@@ -96,8 +108,14 @@ type ClusterProfile struct {
 
 // ConsoleProfile consoleProfile represents a console profile.
 type ConsoleProfile struct {
-	// URL - The URL to access the cluster console.
+	// URL - READ-ONLY; The URL to access the cluster console.
 	URL *string `json:"url,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ConsoleProfile.
+func (cp ConsoleProfile) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	return json.Marshal(objectMap)
 }
 
 // Display display represents the display details of an operation.

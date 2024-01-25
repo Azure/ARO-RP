@@ -119,7 +119,7 @@ type ClusterProfile struct {
 // ConsoleProfile represents a console profile.
 type ConsoleProfile struct {
 	// The URL to access the cluster console.
-	URL string `json:"url,omitempty"`
+	URL string `json:"url,omitempty" swagger:"readOnly"`
 }
 
 // ServicePrincipalProfile represents a service principal profile.
@@ -249,7 +249,7 @@ type APIServerProfile struct {
 	Visibility Visibility `json:"visibility,omitempty"`
 
 	// The URL to access the cluster API server.
-	URL string `json:"url,omitempty"`
+	URL string `json:"url,omitempty" swagger:"readOnly"`
 
 	// The IP of the cluster API server.
 	IP string `json:"ip,omitempty"`
@@ -289,11 +289,11 @@ const (
 // SystemData metadata pertaining to creation and last modification of the resource.
 type SystemData struct {
 	// The identity that created the resource.
-	CreatedBy string `json:"createdBy,omitempty"`
+	CreatedBy string `json:"createdBy,omitempty" swagger:"readOnly"`
 	// The type of identity that created the resource. Possible values include: 'User', 'Application', 'ManagedIdentity', 'Key'
-	CreatedByType CreatedByType `json:"createdByType,omitempty"`
+	CreatedByType CreatedByType `json:"createdByType,omitempty" swagger:"readOnly"`
 	// The timestamp of resource creation (UTC).
-	CreatedAt *time.Time `json:"createdAt,omitempty"`
+	CreatedAt *time.Time `json:"createdAt,omitempty" swagger:"readOnly"`
 	// The identity that last modified the resource.
 	LastModifiedBy string `json:"lastModifiedBy,omitempty"`
 	// The type of identity that last modified the resource. Possible values include: 'User', 'Application', 'ManagedIdentity', 'Key'

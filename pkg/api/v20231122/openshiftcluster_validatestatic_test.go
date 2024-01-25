@@ -125,6 +125,70 @@ func validOpenShiftCluster(name, location string) *OpenShiftCluster {
 	return oc
 }
 
+func validOpenShiftClusterForUpdate(name, location string) *OpenShiftCluster {
+	oc := &OpenShiftCluster{
+		ID:       getResourceID(name),
+		Name:     name,
+		Type:     "Microsoft.RedHatOpenShift/OpenShiftClusters",
+		Location: location,
+		Tags: Tags{
+			"key": "value",
+		},
+		Properties: OpenShiftClusterProperties{
+			ProvisioningState: ProvisioningStateSucceeded,
+			ClusterProfile: ClusterProfile{
+				PullSecret:           `{"auths":{"registry.connect.redhat.com":{"auth":""},"registry.redhat.io":{"auth":""}}}`,
+				Domain:               "cluster.location.aroapp.io",
+				Version:              version.DefaultInstallStream.Version.String(),
+				ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", subscriptionID),
+				FipsValidatedModules: FipsValidatedModulesDisabled,
+			},
+			ServicePrincipalProfile: ServicePrincipalProfile{
+				ClientSecret: "clientSecret",
+				ClientID:     "11111111-1111-1111-1111-111111111111",
+			},
+			NetworkProfile: NetworkProfile{
+				PodCIDR:      "10.128.0.0/14",
+				ServiceCIDR:  "172.30.0.0/16",
+				OutboundType: OutboundTypeLoadbalancer,
+				LoadBalancerProfile: &LoadBalancerProfile{
+					ManagedOutboundIPs: &ManagedOutboundIPs{
+						Count: 1,
+					},
+				},
+			},
+			MasterProfile: MasterProfile{
+				VMSize:           "Standard_D8s_v3",
+				EncryptionAtHost: EncryptionAtHostDisabled,
+				SubnetID:         fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", subscriptionID),
+			},
+			WorkerProfiles: []WorkerProfile{
+				{
+					Name:             "worker",
+					VMSize:           "Standard_D4s_v3",
+					EncryptionAtHost: EncryptionAtHostDisabled,
+					DiskSizeGB:       128,
+					SubnetID:         fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID),
+					Count:            3,
+				},
+			},
+			APIServerProfile: APIServerProfile{
+				Visibility: VisibilityPublic,
+				IP:         "1.2.3.4",
+			},
+			IngressProfiles: []IngressProfile{
+				{
+					Name:       "default",
+					Visibility: VisibilityPublic,
+					IP:         "1.2.3.4",
+				},
+			},
+		},
+	}
+
+	return oc
+}
+
 func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 	t.Run(string(mode), func(t *testing.T) {
 		for _, tt := range tests {
@@ -153,7 +217,13 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 				}
 
 				validOCForTest := func() *OpenShiftCluster {
-					oc := validOpenShiftCluster(*tt.clusterName, *tt.location)
+					var oc *OpenShiftCluster
+					if mode == testModeUpdate {
+						oc = validOpenShiftClusterForUpdate(*tt.clusterName, *tt.location)
+					} else {
+						oc = validOpenShiftCluster(*tt.clusterName, *tt.location)
+					}
+
 					if tt.current != nil {
 						tt.current(oc)
 					}

@@ -1744,7 +1744,8 @@
         },
         "url": {
           "description": "The URL to access the cluster API server.",
-          "type": "string"
+          "type": "string",
+          "readOnly": true
         },
         "ip": {
           "description": "The IP of the cluster API server.",
@@ -1820,7 +1821,8 @@
       "properties": {
         "url": {
           "description": "The URL to access the cluster console.",
-          "type": "string"
+          "type": "string",
+          "readOnly": true
         }
       }
     },

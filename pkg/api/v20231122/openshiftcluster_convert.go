@@ -174,7 +174,9 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	out.Properties.ClusterProfile.Domain = oc.Properties.ClusterProfile.Domain
 	out.Properties.ClusterProfile.Version = oc.Properties.ClusterProfile.Version
 	out.Properties.ClusterProfile.ResourceGroupID = oc.Properties.ClusterProfile.ResourceGroupID
-	out.Properties.ConsoleProfile.URL = oc.Properties.ConsoleProfile.URL
+	if oc.Properties.ConsoleProfile.URL != "" {
+		out.Properties.ConsoleProfile.URL = oc.Properties.ConsoleProfile.URL
+	}
 	out.Properties.ClusterProfile.FipsValidatedModules = api.FipsValidatedModules(oc.Properties.ClusterProfile.FipsValidatedModules)
 	out.Properties.ServicePrincipalProfile.ClientID = oc.Properties.ServicePrincipalProfile.ClientID
 	out.Properties.ServicePrincipalProfile.ClientSecret = api.SecureString(oc.Properties.ServicePrincipalProfile.ClientSecret)
@@ -238,7 +240,9 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 		}
 	}
 	out.Properties.APIServerProfile.Visibility = api.Visibility(oc.Properties.APIServerProfile.Visibility)
-	out.Properties.APIServerProfile.URL = oc.Properties.APIServerProfile.URL
+	if oc.Properties.APIServerProfile.URL != "" {
+		out.Properties.APIServerProfile.URL = oc.Properties.APIServerProfile.URL
+	}
 	out.Properties.APIServerProfile.IP = oc.Properties.APIServerProfile.IP
 	out.Properties.IngressProfiles = nil
 	if oc.Properties.IngressProfiles != nil {
@@ -250,21 +254,25 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 		}
 	}
 
-	out.SystemData = api.SystemData{
-		CreatedBy:          oc.SystemData.CreatedBy,
-		CreatedAt:          oc.SystemData.CreatedAt,
-		CreatedByType:      api.CreatedByType(oc.SystemData.CreatedByType),
-		LastModifiedBy:     oc.SystemData.LastModifiedBy,
-		LastModifiedAt:     oc.SystemData.LastModifiedAt,
-		LastModifiedByType: api.CreatedByType(oc.SystemData.CreatedByType),
+	if oc.SystemData != nil {
+		out.SystemData = api.SystemData{
+			CreatedBy:          oc.SystemData.CreatedBy,
+			CreatedAt:          oc.SystemData.CreatedAt,
+			CreatedByType:      api.CreatedByType(oc.SystemData.CreatedByType),
+			LastModifiedBy:     oc.SystemData.LastModifiedBy,
+			LastModifiedAt:     oc.SystemData.LastModifiedAt,
+			LastModifiedByType: api.CreatedByType(oc.SystemData.CreatedByType),
+		}
 	}
 }
 
 // ExternalNoReadOnly removes all read-only fields from the external representation.
 func (c openShiftClusterConverter) ExternalNoReadOnly(_oc interface{}) {
 	oc := _oc.(*OpenShiftCluster)
+	// Remove ReadOnly Fields from the OpenShiftClusterProperties
 	oc.Properties.WorkerProfilesStatus = nil
 	if oc.Properties.NetworkProfile.LoadBalancerProfile != nil {
 		oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = nil
 	}
+
 }
