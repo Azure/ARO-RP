@@ -18,4 +18,5 @@ if [[ $lib == "false" ]]; then
 	exit 1
 fi
 
-go tool nm $1 | grep FIPS
+tool=$(go tool nm ${1} | grep FIPS)
+echo $tool
