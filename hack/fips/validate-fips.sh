@@ -17,3 +17,5 @@ if [[ $lib == "false" ]]; then
 	echo "lib is not FIPS compatible"
 	exit 1
 fi
+
+go tool nm $1 | grep FIPS
