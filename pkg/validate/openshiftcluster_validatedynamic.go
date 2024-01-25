@@ -117,6 +117,8 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	var spClientCred azcore.TokenCredential
 	var pdpClient remotepdp.RemotePDPClient
 	spp := dv.oc.Properties.ServicePrincipalProfile
+	tenantID := dv.subscriptionDoc.Subscription.Properties.TenantID
+	options := dv.env.Environment().ClientSecretCredentialOptions()
 
 	useCheckAccess, err := dv.env.LiveConfig().UseCheckAccess(ctx)
 	dv.log.Info("USE_CHECKACCESS: ", useCheckAccess)
@@ -131,16 +133,16 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		// TODO remove after successfully migrating to CheckAccess
 		dv.log.Info("Using CheckAccess instead of ListPermissions")
 		var err error
-		fpClientCred, err = dv.env.FPNewClientCertificateCredential(dv.subscriptionDoc.Subscription.Properties.TenantID)
+		fpClientCred, err = dv.env.FPNewClientCertificateCredential(tenantID)
 		if err != nil {
 			return err
 		}
 
 		spClientCred, err = azidentity.NewClientSecretCredential(
-			dv.subscriptionDoc.Subscription.Properties.TenantID,
+			tenantID,
 			spp.ClientID,
 			string(spp.ClientSecret),
-			dv.env.Environment().ClientSecretCredentialOptions(),
+			options,
 		)
 		if err != nil {
 			return err
@@ -154,8 +156,6 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		)
 	}
 
-	tenantID := dv.subscriptionDoc.Subscription.Properties.TenantID
-	options := dv.env.Environment().ClientSecretCredentialOptions()
 	spTokenCredential, err := azidentity.NewClientSecretCredential(
 		tenantID, spp.ClientID, string(spp.ClientSecret), options)
 	if err != nil {
