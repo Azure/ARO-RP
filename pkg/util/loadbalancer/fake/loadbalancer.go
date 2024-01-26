@@ -1,9 +1,13 @@
 package fake
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
-	"github.com/Azure/ARO-RP/pkg/api"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
+
+	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 const OutboundRuleV4 = "outbound-rule-v4"

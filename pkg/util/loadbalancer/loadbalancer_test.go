@@ -18,7 +18,6 @@ import (
 
 var (
 	infraID                  = "infraID"
-	location                 = "eastus"
 	publicIngressFIPConfigID = to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/clusterRG/providers/Microsoft.Network/loadBalancers/infraID/frontendIPConfigurations/ae3506385907e44eba9ef9bf76eac973")
 )
 
