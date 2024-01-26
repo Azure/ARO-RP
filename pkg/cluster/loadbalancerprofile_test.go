@@ -544,7 +544,6 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 				loadBalancersClient *mock_network.MockLoadBalancersClient,
 				publicIPAddressClient *mock_network.MockPublicIPAddressesClient,
 				ctx context.Context) {
-
 				clusterManagedIPs := newDefaultClusterIPs()
 				clusterManagedIPs = append(clusterManagedIPs, newPublicIPAddress("uuid1-outbound-pip-v4",
 					fmt.Sprintf("%s/providers/Microsoft.Network/publicIPAddresses/%s", clusterRGID, "uuid1-outbound-pip-v4"),
