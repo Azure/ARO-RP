@@ -113,15 +113,23 @@ func (n *NSGMonitor) toSubnetConfig(ctx context.Context, subnetID string) (subne
 func (n *NSGMonitor) Monitor(ctx context.Context) []error {
 	defer n.wg.Done()
 
+	errors := []error{}
+
+	// to make sure each NSG is processed only once
+	nsgSet := map[string]*armnetwork.SecurityGroup{}
+
 	masterSubnet, err := n.toSubnetConfig(ctx, n.oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		// FP has no access to the subnet
-		return []error{err}
+		errors = append(errors, err)
+	} else {
+		if masterSubnet.nsg != nil && masterSubnet.nsg.ID != nil {
+			nsgSet[*masterSubnet.nsg.ID] = masterSubnet.nsg
+		}
 	}
 
 	// need this to get the right workerProfiles
 	workerProfiles, _ := api.GetEnrichedWorkerProfiles(n.oc.Properties)
-	workerSubnets := make([]subnetNSGConfig, 0, len(workerProfiles))
 	workerPrefixes := make([]netip.Prefix, 0, len(workerProfiles))
 	// To minimize the possibility of NRP throttling, we only retrieve a subnet's info only once.
 	subnetsToMonitor := map[string]struct{}{}
@@ -139,20 +147,12 @@ func (n *NSGMonitor) Monitor(ctx context.Context) []error {
 		s, err := n.toSubnetConfig(ctx, subnetID)
 		if err != nil {
 			// FP has no access to the subnet
-			return []error{err}
-		}
-		workerSubnets = append(workerSubnets, s)
-		workerPrefixes = append(workerPrefixes, s.prefix...)
-	}
-
-	// to make sure each NSG is processed only once
-	nsgSet := map[string]*armnetwork.SecurityGroup{}
-	if masterSubnet.nsg != nil && masterSubnet.nsg.ID != nil {
-		nsgSet[*masterSubnet.nsg.ID] = masterSubnet.nsg
-	}
-	for _, w := range workerSubnets {
-		if w.nsg != nil && w.nsg.ID != nil {
-			nsgSet[*w.nsg.ID] = w.nsg
+			errors = append(errors, err)
+		} else {
+			workerPrefixes = append(workerPrefixes, s.prefix...)
+			if s.nsg != nil && s.nsg.ID != nil {
+				nsgSet[*s.nsg.ID] = s.nsg
+			}
 		}
 	}
 
@@ -166,6 +166,7 @@ func (n *NSGMonitor) Monitor(ctx context.Context) []error {
 			nsgResource, err := arm.ParseResourceID(nsgID)
 			if err != nil {
 				n.log.Errorf("Unable to parse NSG resource ID: %s. %s", nsgID, err)
+				errors = append(errors, err)
 				continue
 			}
 
@@ -185,5 +186,5 @@ func (n *NSGMonitor) Monitor(ctx context.Context) []error {
 			}
 		}
 	}
-	return []error{}
+	return errors
 }
