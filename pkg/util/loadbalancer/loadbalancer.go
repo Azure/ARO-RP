@@ -13,9 +13,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
+const OutboundRuleV4 = "outbound-rule-v4"
+
 func RemoveFrontendIPConfiguration(lb *mgmtnetwork.LoadBalancer, resourceID string) error {
 	if lb.LoadBalancerPropertiesFormat.FrontendIPConfigurations == nil {
-		return fmt.Errorf("FrontendIPConfigurations in nil")
+		return fmt.Errorf("FrontendIPConfigurations are nil")
 	}
 
 	newFrontendIPConfig := make([]mgmtnetwork.FrontendIPConfiguration, 0, len(*lb.FrontendIPConfigurations))
@@ -35,8 +37,6 @@ func RemoveFrontendIPConfiguration(lb *mgmtnetwork.LoadBalancer, resourceID stri
 func isFrontendIPConfigReferenced(fipConfig mgmtnetwork.FrontendIPConfiguration) bool {
 	return fipConfig.LoadBalancingRules != nil || fipConfig.InboundNatPools != nil || fipConfig.InboundNatRules != nil || fipConfig.OutboundRules != nil
 }
-
-const OutboundRuleV4 = "outbound-rule-v4"
 
 // Remove outbound-rule-v4 IPs and corresponding frontendIPConfig from load balancer
 func RemoveOutboundIPsFromLB(lb mgmtnetwork.LoadBalancer) {

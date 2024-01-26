@@ -69,7 +69,7 @@ func TestRemoveLoadBalancerFrontendIPConfiguration(t *testing.T) {
 					LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{},
 				}
 			},
-			expectedErr: "FrontendIPConfigurations in nil",
+			expectedErr: "FrontendIPConfigurations are nil",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
