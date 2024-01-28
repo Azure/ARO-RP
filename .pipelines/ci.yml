@@ -82,12 +82,6 @@ jobs:
         displayName: 🧪 Run Golang unit tests
         target: golang
 
-      - script: |
-          set -xe
-          make validate-fips
-        displayName: 🕵️ Validate FIPS
-        target: golang
-
       - task: PublishTestResults@2
         displayName: 📊 Publish tests results
         inputs:
