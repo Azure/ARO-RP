@@ -399,7 +399,7 @@ func workerNodesReady(ctx context.Context, cli kubernetes.Interface) error {
 	}
 
 	for _, node := range nodeList.Items {
-		if isWorkerNode(node) && !ready.NodeIsReady(node) {
+		if isWorkerNode(node) && !ready.NodeIsReady(&node) {
 			return fmt.Errorf("a worker node is not yet ready")
 		}
 	}
