@@ -9,7 +9,7 @@ RUN mkdir -p /app
 WORKDIR /app
 
 COPY . /app
-RUN make aro RELEASE=${IS_OFFICIAL_RELEASE} -o generate && make e2e.test e2etools
+RUN make aro RELEASE=${IS_OFFICIAL_RELEASE} -o generate && make validate-fips && make e2e.test e2etools
 
 FROM ${REGISTRY}/ubi8/ubi-minimal
 RUN microdnf update && microdnf clean all
