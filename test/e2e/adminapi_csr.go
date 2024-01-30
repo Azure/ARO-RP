@@ -38,14 +38,16 @@ var _ = Describe("[Admin API] CertificateSigningRequest action", func() {
 		for i := 0; i < csrCount; i++ {
 			csr := mockCSR(prefix+strconv.Itoa(i), namespace, csrData)
 
-			CreateK8sObjectWithRetry(ctx, clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Create, csr, metav1.CreateOptions{})
+			createFunction := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Create
+			CreateK8sObjectWithRetry(ctx, createFunction, csr, metav1.CreateOptions{})
 		}
 	})
 
 	AfterEach(func(ctx context.Context) {
 		By("deleting the mock CSRs via Kubernetes API")
 		for i := 0; i < csrCount; i++ {
-			DeleteK8sObjectWithRetry(ctx, clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Delete, prefix+strconv.Itoa(i), metav1.DeleteOptions{})
+			deleteFunction := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Delete
+			DeleteK8sObjectWithRetry(ctx, deleteFunction, prefix+strconv.Itoa(i), metav1.DeleteOptions{})
 		}
 	})
 
@@ -69,9 +71,8 @@ func testCSRApproveOK(ctx context.Context, objName, namespace string) {
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 	By("checking that the CSR was approved via Kubernetes API")
-	testcsr := GetK8sObjectWithRetry(
-		ctx, clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Get, objName, metav1.GetOptions{},
-	)
+	getCall := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Get
+	testcsr := GetK8sObjectWithRetry(ctx, getCall, objName, metav1.GetOptions{})
 
 	approved := false
 	for _, condition := range testcsr.Status.Conditions {
@@ -93,9 +94,8 @@ func testCSRMassApproveOK(ctx context.Context, namePrefix, namespace string, csr
 
 	By("checking that all CSRs were approved via Kubernetes API")
 	for i := 1; i < csrCount; i++ {
-		testcsr := GetK8sObjectWithRetry(
-			ctx, clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Get, namePrefix+strconv.Itoa(i), metav1.GetOptions{},
-		)
+		getCall := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Get
+		testcsr := GetK8sObjectWithRetry(ctx, getCall, namePrefix+strconv.Itoa(i), metav1.GetOptions{})
 
 		approved := false
 		for _, condition := range testcsr.Status.Conditions {

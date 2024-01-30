@@ -46,16 +46,22 @@ func testGetPodLogsOK(ctx context.Context, containerName, podName, namespace str
 
 	By("creating a test pod in openshift-azure-operator namespace with some known logs")
 	podDefinition := mockPod(containerName, podName, namespace, expectedLog)
-	pod := CreateK8sObjectWithRetry(ctx, clients.Kubernetes.CoreV1().Pods(namespace).Create, podDefinition, metav1.CreateOptions{})
+	pod := CreateK8sObjectWithRetry(
+		ctx, clients.Kubernetes.CoreV1().Pods(namespace).Create, podDefinition, metav1.CreateOptions{},
+	)
 
 	defer func() {
 		By("deleting the test pod")
-		DeleteK8sObjectWithRetry(ctx, clients.Kubernetes.CoreV1().Pods(namespace).Delete, pod.Name, metav1.DeleteOptions{})
+		DeleteK8sObjectWithRetry(
+			ctx, clients.Kubernetes.CoreV1().Pods(namespace).Delete, pod.Name, metav1.DeleteOptions{},
+		)
 	}()
 
 	By("waiting for the pod to successfully terminate")
 	Eventually(func(g Gomega, ctx context.Context) {
-		pod = GetK8sObjectWithRetry(ctx, clients.Kubernetes.CoreV1().Pods(namespace).Get, pod.Name, metav1.GetOptions{})
+		pod = GetK8sObjectWithRetry(
+			ctx, clients.Kubernetes.CoreV1().Pods(namespace).Get, pod.Name, metav1.GetOptions{},
+		)
 		g.Expect(pod.Status.Phase).To(Equal(corev1.PodSucceeded))
 	}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
