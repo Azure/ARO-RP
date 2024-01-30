@@ -19,6 +19,7 @@ var (
 )
 
 type K8sGetFunc[T kruntime.Object] func(ctx context.Context, name string, options metav1.GetOptions) (T, error)
+type K8sListFunc[T kruntime.Object] func(ctx context.Context, options metav1.ListOptions) (T, error)
 type K8sCreateFunc[T kruntime.Object] func(ctx context.Context, object T, options metav1.CreateOptions) (T, error)
 type K8sDeleteFunc func(ctx context.Context, name string, options metav1.DeleteOptions) error
 
@@ -33,6 +34,23 @@ func GetK8sObjectWithRetry[T kruntime.Object](
 	var object T
 	Eventually(func(g Gomega, ctx context.Context) {
 		result, err := get(ctx, name, options)
+		g.Expect(err).NotTo(HaveOccurred())
+		object = result
+	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
+	return object
+}
+
+// This function takes a list function like clients.Kubernetes.CoreV1().Nodes().List and the
+// parameters for it. It then makes the call with some retry logic and returns the result after
+// asserting there were no errors.
+//
+// By default the call is retried for 5s with a 250ms interval.
+func ListK8sObjectWithRetry[T kruntime.Object](
+	ctx context.Context, list K8sListFunc[T], options metav1.ListOptions,
+) T {
+	var object T
+	Eventually(func(g Gomega, ctx context.Context) {
+		result, err := list(ctx, options)
 		g.Expect(err).NotTo(HaveOccurred())
 		object = result
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
