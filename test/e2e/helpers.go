@@ -17,18 +17,20 @@ var (
 	PollingInterval = 250 * time.Millisecond
 )
 
-type K8sGetFunc[T any] func(ctx context.Context, name string, getOptions metav1.GetOptions) (T, error)
+type allowedK8sOptions interface {
+	metav1.CreateOptions | metav1.DeleteOptions | metav1.GetOptions
+}
 
-// This function takes a get function like clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Get
+type K8sFunc[T any, U allowedK8sOptions] func(ctx context.Context, name string, options U) (T, error)
+
+// This function takes a k8s function like clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Get
 // and the parameters for it and returns the result after asserting there were no errors.
 //
 // By default the call is retried for 5s with a 250ms interval.
-func GetK8sObjectWithRetry[T any](ctx context.Context, get K8sGetFunc[T], name string, getOptions metav1.GetOptions) T {
-	var object T
+func PerformK8sCallWithRetry[T any, U allowedK8sOptions](ctx context.Context, k8sFunction K8sFunc[T, U], name string, options U) (result T, err error) {
 	Eventually(func(g Gomega, ctx context.Context) {
-		result, err := get(ctx, name, metav1.GetOptions{})
+		result, err = k8sFunction(ctx, name, options)
 		g.Expect(err).NotTo(HaveOccurred())
-		object = result
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
-	return object
+	return
 }
