@@ -22,10 +22,13 @@ var _ = Describe("[Admin API] Cordon and Drain node actions", func() {
 
 	It("should be able to cordon, drain, and uncordon nodes", func(ctx context.Context) {
 		By("selecting a worker node in the cluster")
-		nodes, err := clients.Kubernetes.CoreV1().Nodes().List(ctx, metav1.ListOptions{
-			LabelSelector: "node-role.kubernetes.io/worker",
-		})
-		Expect(err).NotTo(HaveOccurred())
+		nodes := ListK8sObjectWithRetry(
+			ctx,
+			clients.Kubernetes.CoreV1().Nodes().List,
+			metav1.ListOptions{
+				LabelSelector: "node-role.kubernetes.io/worker",
+			})
+
 		Expect(nodes.Items).ShouldNot(BeEmpty())
 		node := nodes.Items[0]
 		nodeName := node.Name
@@ -48,7 +51,7 @@ var _ = Describe("[Admin API] Cordon and Drain node actions", func() {
 
 		defer func() {
 			By("uncordoning the node via Kubernetes API")
-			err = drain.RunCordonOrUncordon(drainer, &node, false)
+			err := drain.RunCordonOrUncordon(drainer, &node, false)
 			Expect(err).NotTo(HaveOccurred())
 		}()
 
@@ -69,8 +72,8 @@ func testCordonNodeOK(ctx context.Context, nodeName string) {
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 	By("checking that node was cordoned via Kubernetes API")
-	node, err := clients.Kubernetes.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
-	Expect(err).NotTo(HaveOccurred())
+	node := GetK8sObjectWithRetry(ctx, clients.Kubernetes.CoreV1().Nodes().Get, nodeName, metav1.GetOptions{})
+
 	Expect(node.Name).To(Equal(nodeName))
 	Expect(node.Spec.Unschedulable).Should(BeTrue())
 }
@@ -86,8 +89,7 @@ func testUncordonNodeOK(ctx context.Context, nodeName string) {
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 	By("checking that node was uncordoned via Kubernetes API")
-	node, err := clients.Kubernetes.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
-	Expect(err).NotTo(HaveOccurred())
+	node := GetK8sObjectWithRetry(ctx, clients.Kubernetes.CoreV1().Nodes().Get, nodeName, metav1.GetOptions{})
 	Expect(node.Name).To(Equal(nodeName))
 	Expect(node.Spec.Unschedulable).Should(BeFalse())
 }
