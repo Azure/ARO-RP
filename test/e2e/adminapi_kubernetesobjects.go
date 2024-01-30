@@ -227,7 +227,7 @@ func testConfigMapGetOK(ctx context.Context, objName, namespace string, unrestri
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-	By("comparing it to the actual object retrived via Kubernetes API")
+	By("comparing it to the actual object retrieved via Kubernetes API")
 	getCall := clients.Kubernetes.CoreV1().ConfigMaps(namespace).Get
 
 	cm := GetK8sObjectWithRetry(ctx, getCall, objName, metav1.GetOptions{})
@@ -250,7 +250,7 @@ func testConfigMapListOK(ctx context.Context, objName, namespace string, unrestr
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-	By("comparing names from the list action response with names retrived via Kubernetes API")
+	By("comparing names from the list action response with names retrieved via Kubernetes API")
 	var names []string
 	for _, o := range obj.Items {
 		names = append(names, o.Name)
