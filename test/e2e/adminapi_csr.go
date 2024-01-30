@@ -37,16 +37,15 @@ var _ = Describe("[Admin API] CertificateSigningRequest action", func() {
 		By("creating mock CSRs via Kubernetes API")
 		for i := 0; i < csrCount; i++ {
 			csr := mockCSR(prefix+strconv.Itoa(i), namespace, csrData)
-			_, err := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Create(ctx, csr, metav1.CreateOptions{})
-			Expect(err).NotTo(HaveOccurred())
+
+			CreateK8sObjectWithRetry(ctx, clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Create, csr, metav1.CreateOptions{})
 		}
 	})
 
 	AfterEach(func(ctx context.Context) {
 		By("deleting the mock CSRs via Kubernetes API")
 		for i := 0; i < csrCount; i++ {
-			err := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Delete(ctx, prefix+strconv.Itoa(i), metav1.DeleteOptions{})
-			Expect(err).NotTo(HaveOccurred())
+			DeleteK8sObjectWithRetry(ctx, clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Delete, prefix+strconv.Itoa(i), metav1.DeleteOptions{})
 		}
 	})
 
@@ -70,11 +69,8 @@ func testCSRApproveOK(ctx context.Context, objName, namespace string) {
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 	By("checking that the CSR was approved via Kubernetes API")
-	testcsr, _ := PerformK8sCallWithRetry(
-		ctx,
-		clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Get,
-		objName,
-		metav1.GetOptions{},
+	testcsr := GetK8sObjectWithRetry(
+		ctx, clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Get, objName, metav1.GetOptions{},
 	)
 
 	approved := false
@@ -97,7 +93,7 @@ func testCSRMassApproveOK(ctx context.Context, namePrefix, namespace string, csr
 
 	By("checking that all CSRs were approved via Kubernetes API")
 	for i := 1; i < csrCount; i++ {
-		testcsr, _ := PerformK8sCallWithRetry(
+		testcsr := GetK8sObjectWithRetry(
 			ctx, clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Get, namePrefix+strconv.Itoa(i), metav1.GetOptions{},
 		)
 
