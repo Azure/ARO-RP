@@ -67,15 +67,15 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 
 			It("should not be able to create, get, list, update, or delete objects", func(ctx context.Context) {
 				By("creating a test customer namespace via Kubernetes API")
-				_, err := clients.Kubernetes.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{Name: namespace},
-				}, metav1.CreateOptions{})
-				Expect(err).NotTo(HaveOccurred())
+				createNamespaceCall := clients.Kubernetes.CoreV1().Namespaces().Create
+				namespaceToCreate := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
+
+				CreateK8sObjectWithRetry(ctx, createNamespaceCall, namespaceToCreate, metav1.CreateOptions{})
 
 				defer func() {
 					By("deleting the test customer namespace via Kubernetes API")
-					err := clients.Kubernetes.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})
-					Expect(err).NotTo(HaveOccurred())
+					deleteCall := clients.Kubernetes.CoreV1().Namespaces().Delete
+					DeleteK8sObjectWithRetry(ctx, deleteCall, namespace, metav1.DeleteOptions{})
 
 					// To avoid flakes, we need it to be completely deleted before we can use it again
 					// in a separate run or in a separate It block
@@ -89,10 +89,10 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 				testConfigMapCreateOrUpdateForbidden(ctx, "creating", objName, namespace)
 
 				By("creating an object via Kubernetes API")
-				_, err = clients.Kubernetes.CoreV1().ConfigMaps(namespace).Create(ctx, &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{Name: objName},
-				}, metav1.CreateOptions{})
-				Expect(err).NotTo(HaveOccurred())
+				createCMCall := clients.Kubernetes.CoreV1().ConfigMaps(namespace).Create
+				configMapToCreate := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: objName}}
+
+				CreateK8sObjectWithRetry(ctx, createCMCall, configMapToCreate, metav1.CreateOptions{})
 
 				testConfigMapGetForbidden(ctx, objName, namespace)
 				testConfigMapListForbidden(ctx, objName, namespace)
@@ -105,15 +105,15 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 
 			It("should be able to list or get objects", func(ctx context.Context) {
 				By("creating a test customer namespace via Kubernetes API")
-				_, err := clients.Kubernetes.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{Name: namespace},
-				}, metav1.CreateOptions{})
-				Expect(err).NotTo(HaveOccurred())
+				createNamespaceCall := clients.Kubernetes.CoreV1().Namespaces().Create
+				namespaceToCreate := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
+
+				CreateK8sObjectWithRetry(ctx, createNamespaceCall, namespaceToCreate, metav1.CreateOptions{})
 
 				defer func() {
 					By("deleting the test customer namespace via Kubernetes API")
-					err := clients.Kubernetes.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})
-					Expect(err).NotTo(HaveOccurred())
+					deleteCall := clients.Kubernetes.CoreV1().Namespaces().Delete
+					DeleteK8sObjectWithRetry(ctx, deleteCall, namespace, metav1.DeleteOptions{})
 
 					// To avoid flakes, we need it to be completely deleted before we can use it again
 					// in a separate run or in a separate It block
@@ -125,10 +125,10 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 				}()
 
 				By("creating an object via Kubernetes API")
-				_, err = clients.Kubernetes.CoreV1().ConfigMaps(namespace).Create(ctx, &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{Name: objName},
-				}, metav1.CreateOptions{})
-				Expect(err).NotTo(HaveOccurred())
+				createCMCall := clients.Kubernetes.CoreV1().ConfigMaps(namespace).Create
+				configMapToCreate := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: objName}}
+
+				CreateK8sObjectWithRetry(ctx, createCMCall, configMapToCreate, metav1.CreateOptions{})
 
 				testConfigMapGetOK(ctx, objName, namespace, true)
 				testConfigMapListOK(ctx, objName, namespace, true)
@@ -204,8 +204,10 @@ func testConfigMapCreateOK(ctx context.Context, objName, namespace string) {
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 	By("checking that the object was created via Kubernetes API")
-	cm, err := clients.Kubernetes.CoreV1().ConfigMaps(namespace).Get(ctx, objName, metav1.GetOptions{})
-	Expect(err).NotTo(HaveOccurred())
+	getCall := clients.Kubernetes.CoreV1().ConfigMaps(namespace).Get
+
+	cm := GetK8sObjectWithRetry(ctx, getCall, objName, metav1.GetOptions{})
+
 	Expect(obj.Namespace).To(Equal(cm.Namespace))
 	Expect(obj.Name).To(Equal(cm.Name))
 	Expect(obj.Data).To(Equal(cm.Data))
@@ -226,8 +228,10 @@ func testConfigMapGetOK(ctx context.Context, objName, namespace string, unrestri
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 	By("comparing it to the actual object retrived via Kubernetes API")
-	cm, err := clients.Kubernetes.CoreV1().ConfigMaps(namespace).Get(ctx, objName, metav1.GetOptions{})
-	Expect(err).NotTo(HaveOccurred())
+	getCall := clients.Kubernetes.CoreV1().ConfigMaps(namespace).Get
+
+	cm := GetK8sObjectWithRetry(ctx, getCall, objName, metav1.GetOptions{})
+
 	Expect(obj.Namespace).To(Equal(cm.Namespace))
 	Expect(obj.Name).To(Equal(cm.Name))
 	Expect(obj.Data).To(Equal(cm.Data))
@@ -264,8 +268,10 @@ func testConfigMapUpdateOK(ctx context.Context, objName, namespace string) {
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 	By("checking that the object changed via Kubernetes API")
-	cm, err := clients.Kubernetes.CoreV1().ConfigMaps(namespace).Get(ctx, objName, metav1.GetOptions{})
-	Expect(err).NotTo(HaveOccurred())
+	getCall := clients.Kubernetes.CoreV1().ConfigMaps(namespace).Get
+
+	cm := GetK8sObjectWithRetry(ctx, getCall, objName, metav1.GetOptions{})
+
 	Expect(cm.Namespace).To(Equal(namespace))
 	Expect(cm.Name).To(Equal(objName))
 	Expect(cm.Data).To(Equal(map[string]string{"key": "new_value"}))
@@ -367,8 +373,10 @@ func testPodCreateOK(ctx context.Context, containerName, objName, namespace stri
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 	By("checking that the pod was created via Kubernetes API")
-	pod, err := clients.Kubernetes.CoreV1().Pods(namespace).Get(ctx, objName, metav1.GetOptions{})
-	Expect(err).NotTo(HaveOccurred())
+	getCall := clients.Kubernetes.CoreV1().Pods(namespace).Get
+
+	pod := GetK8sObjectWithRetry(ctx, getCall, objName, metav1.GetOptions{})
+
 	Expect(obj.Namespace).To(Equal(pod.Namespace))
 	Expect(obj.Name).To(Equal(pod.Name))
 	Expect(obj.Spec.Containers[0].Name).To(Equal(pod.Spec.Containers[0].Name))
