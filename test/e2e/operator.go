@@ -47,13 +47,12 @@ func updatedObjects(ctx context.Context, nsFilter string) ([]string, error) {
 	if len(pods.Items) != 1 {
 		return nil, fmt.Errorf("%d aro-operator-master pods found", len(pods.Items))
 	}
-	b, err := clients.Kubernetes.CoreV1().Pods("openshift-azure-operator").GetLogs(pods.Items[0].Name, &corev1.PodLogOptions{}).DoRaw(ctx)
-	if err != nil {
-		return nil, err
-	}
+	body := GetK8sPodLogsWithRetry(
+		ctx, "openshift-azure-operator", pods.Items[0].Name, corev1.PodLogOptions{},
+	)
 
 	rx := regexp.MustCompile(`msg="(Update|Create) ([-a-zA-Z/.]+)`)
-	changes := rx.FindAllStringSubmatch(string(b), -1)
+	changes := rx.FindAllStringSubmatch(body, -1)
 	result := make([]string, 0, len(changes))
 	for _, change := range changes {
 		if nsFilter == "" || strings.Contains(change[2], "/"+nsFilter+"/") {
@@ -454,10 +453,11 @@ var _ = Describe("ARO Operator - MUO Deployment", func() {
 
 		By("verifying that MUO has FIPS crypto mandated by reading logs")
 		Eventually(func(g Gomega, ctx context.Context) {
-			b, err := clients.Kubernetes.CoreV1().Pods(managedUpgradeOperatorNamespace).GetLogs(pods.Items[0].Name, &corev1.PodLogOptions{}).DoRaw(ctx)
-			g.Expect(err).NotTo(HaveOccurred())
+			body := GetK8sPodLogsWithRetry(
+				ctx, managedUpgradeOperatorNamespace, pods.Items[0].Name, corev1.PodLogOptions{},
+			)
 
-			g.Expect(string(b)).To(ContainSubstring(`X:boringcrypto,strictfipsruntime`))
+			g.Expect(body).To(ContainSubstring(`X:boringcrypto,strictfipsruntime`))
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	}, SpecTimeout(2*time.Minute))
 

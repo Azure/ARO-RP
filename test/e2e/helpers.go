@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/gomega"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -38,6 +39,21 @@ func GetK8sObjectWithRetry[T kruntime.Object](
 		object = result
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
 	return object
+}
+
+// This function gets the logs for the specified pod in the named namespace. It gets them with some
+// retry logic and returns the raw string-ified body after asserting there were no errors.
+//
+// By default the call is retried for 5s with a 250ms interval.
+func GetK8sPodLogsWithRetry(
+	ctx context.Context, namespace string, name string, options corev1.PodLogOptions,
+) (rawBody string) {
+	Eventually(func(g Gomega, ctx context.Context) {
+		body, err := clients.Kubernetes.CoreV1().Pods(namespace).GetLogs(name, &options).DoRaw(ctx)
+		g.Expect(err).NotTo(HaveOccurred())
+		rawBody = string(body)
+	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
+	return
 }
 
 // This function takes a list function like clients.Kubernetes.CoreV1().Nodes().List and the
