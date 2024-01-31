@@ -61,6 +61,11 @@ func (mon *Monitor) emitCertificateExpirationStatuses(ctx context.Context) error
 		if err != nil {
 			return err
 		}
+
+		if ic.Spec.DefaultCertificate == nil {
+			return fmt.Errorf("ingresscontroller spec invalid, unable to get default certificate name")
+		}
+
 		ingressSecretName := ic.Spec.DefaultCertificate.Name
 
 		// secret with managed certificates is uuid + "-ingress" or "-apiserver"
