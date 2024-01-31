@@ -42,18 +42,32 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 	//expirationString := expiration.UTC().Format(time.RFC3339)
 	clusterID := "00000000-0000-0000-0000-000000000000"
 
+	defaultIngressController := &operatorv1.IngressController{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "default",
+			Namespace: "openshift-ingress-operator",
+		},
+		Spec: operatorv1.IngressControllerSpec{
+			DefaultCertificate: &corev1.LocalObjectReference{
+				Name: clusterID + "-ingress",
+			},
+		},
+	}
+
 	for _, tt := range []struct {
-		name            string
-		url             string
-		certsPresent    []certInfo
-		wantExpirations []map[string]string
-		wantWarning     []map[string]string
-		wantErr         string
+		name              string
+		url               string
+		ingressController *operatorv1.IngressController
+		certsPresent      []certInfo
+		wantExpirations   []map[string]string
+		wantWarning       []map[string]string
+		wantErr           string
 	}{
 		{
-			name:         "only emits MDSD status for unmanaged domain",
-			url:          unmanagedDomainApiURL,
-			certsPresent: []certInfo{{"cluster", "geneva.certificate"}},
+			name:              "only emits MDSD status for unmanaged domain",
+			url:               unmanagedDomainApiURL,
+			ingressController: defaultIngressController,
+			certsPresent:      []certInfo{{"cluster", "geneva.certificate"}},
 			wantExpirations: []map[string]string{
 				{
 					"subject":   "geneva.certificate",
@@ -63,8 +77,9 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			},
 		},
 		{
-			name: "includes ingress and API status for managed domain",
-			url:  managedDomainApiURL,
+			name:              "includes ingress and API status for managed domain",
+			url:               managedDomainApiURL,
+			ingressController: defaultIngressController,
 			certsPresent: []certInfo{
 				{"cluster", "geneva.certificate"},
 				{clusterID + "-ingress", managedDomainName},
@@ -89,8 +104,9 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			},
 		},
 		{
-			name: "emits warning metric when cluster secret has been deleted",
-			url:  unmanagedDomainApiURL,
+			name:              "emits warning metric when cluster secret has been deleted",
+			url:               unmanagedDomainApiURL,
+			ingressController: defaultIngressController,
 			wantWarning: []map[string]string{
 				{
 					"namespace": "openshift-azure-operator",
@@ -99,8 +115,9 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 			},
 		},
 		{
-			name: "emits warning metric when managed domain secret has been deleted",
-			url:  managedDomainApiURL,
+			name:              "emits warning metric when managed domain secret has been deleted",
+			url:               managedDomainApiURL,
+			ingressController: defaultIngressController,
 			certsPresent: []certInfo{
 				{"cluster", "geneva.certificate"},
 				{clusterID + "-ingress", managedDomainName},
@@ -124,6 +141,28 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "returns error and does not panic when managed domain cluster has invalid ingresscontroller resource",
+			url:  managedDomainApiURL,
+			ingressController: &operatorv1.IngressController{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "default",
+					Namespace: "openshift-ingress-operator",
+				},
+				Spec: operatorv1.IngressControllerSpec{},
+			},
+			certsPresent: []certInfo{
+				{"cluster", "geneva.certificate"},
+			},
+			wantExpirations: []map[string]string{
+				{
+					"subject":   "geneva.certificate",
+					"name":      "cluster",
+					"namespace": "openshift-azure-operator",
+				},
+			},
+			wantErr: "ingresscontroller spec invalid, unable to get default certificate name",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
@@ -143,7 +182,7 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 				m.EXPECT().EmitGauge(certificateExpirationMetricName, int64(daysUntilExpiration), g)
 			}
 
-			mon := buildMonitor(m, tt.url, clusterID, secrets...)
+			mon := buildMonitor(m, tt.url, clusterID, tt.ingressController, secrets...)
 
 			err = mon.emitCertificateExpirationStatuses(ctx)
 
@@ -159,7 +198,7 @@ func TestEmitCertificateExpirationStatuses(t *testing.T) {
 
 		ctx := context.Background()
 		m := mock_metrics.NewMockEmitter(gomock.NewController(t))
-		mon := buildMonitor(m, managedDomainApiURL, clusterID, secrets...)
+		mon := buildMonitor(m, managedDomainApiURL, clusterID, defaultIngressController, secrets...)
 
 		wantErr := "unable to find certificate"
 		err := mon.emitCertificateExpirationStatuses(ctx)
@@ -206,19 +245,7 @@ func buildSecret(secretName string, data map[string][]byte) *corev1.Secret {
 	}
 }
 
-func buildMonitor(m *mock_metrics.MockEmitter, url, id string, secrets ...client.Object) *Monitor {
-	ingressController := &operatorv1.IngressController{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "default",
-			Namespace: "openshift-ingress-operator",
-		},
-		Spec: operatorv1.IngressControllerSpec{
-			DefaultCertificate: &corev1.LocalObjectReference{
-				Name: id + "-ingress",
-			},
-		},
-	}
-
+func buildMonitor(m *mock_metrics.MockEmitter, url, id string, ingressController *operatorv1.IngressController, secrets ...client.Object) *Monitor {
 	ocpclientset := fake.
 		NewClientBuilder().
 		WithObjects(ingressController).
