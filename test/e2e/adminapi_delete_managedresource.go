@@ -51,13 +51,16 @@ var _ = Describe("[Admin API] Delete managed resource action", func() {
 
 		defer func() {
 			By("cleaning up the k8s loadbalancer service")
-			err := clients.Kubernetes.CoreV1().Services("default").Delete(ctx, "test", metav1.DeleteOptions{})
-			Expect(err).NotTo(HaveOccurred())
-
 			// wait for deletion to prevent flakes on retries
 			Eventually(func(g Gomega, ctx context.Context) {
-				_, err = clients.Kubernetes.CoreV1().Services("default").Get(ctx, "test", metav1.GetOptions{})
-				g.Expect(kerrors.IsNotFound(err)).To(BeTrue(), "expect Service to be deleted")
+				err := clients.Kubernetes.CoreV1().Services("default").Delete(ctx, "test", metav1.DeleteOptions{})
+				g.Expect((err == nil || kerrors.IsNotFound(err))).To(BeTrue(), "expect Service to be deleted")
+			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+
+			By("confirming that the k8s loadbalancer service is gone")
+			Eventually(func(g Gomega, ctx context.Context) {
+				_, err := clients.Kubernetes.CoreV1().Services("default").Get(ctx, "test", metav1.GetOptions{})
+				g.Expect(kerrors.IsNotFound(err)).To(BeTrue())
 			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 		}()
 
