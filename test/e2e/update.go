@@ -51,12 +51,12 @@ var _ = Describe("Update clusters", func() {
 
 	It("must restart the aro-operator-master Deployment", func(ctx context.Context) {
 		By("saving the current revision of the aro-operator-master Deployment")
-		d, err := clients.Kubernetes.AppsV1().Deployments("openshift-azure-operator").Get(ctx, "aro-operator-master", metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred())
+		getCall := clients.Kubernetes.AppsV1().Deployments("openshift-azure-operator").Get
+		deployment := GetK8sObjectWithRetry(ctx, getCall, "aro-operator-master", metav1.GetOptions{})
 
-		Expect(d.ObjectMeta.Annotations).To(HaveKey("deployment.kubernetes.io/revision"))
+		Expect(deployment.ObjectMeta.Annotations).To(HaveKey("deployment.kubernetes.io/revision"))
 
-		oldRevision, err := strconv.Atoi(d.ObjectMeta.Annotations["deployment.kubernetes.io/revision"])
+		oldRevision, err := strconv.Atoi(deployment.ObjectMeta.Annotations["deployment.kubernetes.io/revision"])
 		Expect(err).NotTo(HaveOccurred())
 
 		By("sending the PATCH request to update the cluster")
@@ -64,14 +64,12 @@ var _ = Describe("Update clusters", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking that the aro-operator-master Deployment was restarted")
-		d, err = clients.Kubernetes.AppsV1().Deployments("openshift-azure-operator").Get(ctx, "aro-operator-master", metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred())
+		deployment = GetK8sObjectWithRetry(ctx, getCall, "aro-operator-master", metav1.GetOptions{})
 
-		Expect(d.Spec.Template.Annotations).To(HaveKey("kubectl.kubernetes.io/restartedAt"))
+		Expect(deployment.Spec.Template.Annotations).To(HaveKey("kubectl.kubernetes.io/restartedAt"))
+		Expect(deployment.ObjectMeta.Annotations).To(HaveKey("deployment.kubernetes.io/revision"))
 
-		Expect(d.ObjectMeta.Annotations).To(HaveKey("deployment.kubernetes.io/revision"))
-
-		newRevision, err := strconv.Atoi(d.ObjectMeta.Annotations["deployment.kubernetes.io/revision"])
+		newRevision, err := strconv.Atoi(deployment.ObjectMeta.Annotations["deployment.kubernetes.io/revision"])
 		Expect(err).NotTo(HaveOccurred())
 		Expect(newRevision).To(Equal(oldRevision + 1))
 	})

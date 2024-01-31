@@ -60,13 +60,15 @@ func NewProject(
 	return p
 }
 
-func (p Project) Delete(ctx context.Context) error {
-	return p.projectClient.ProjectV1().Projects().Delete(ctx, p.Name, metav1.DeleteOptions{})
+func (p Project) Delete(ctx context.Context) {
+	deleteCall := p.projectClient.ProjectV1().Projects().Delete
+	DeleteK8sObjectWithRetry(ctx, deleteCall, p.Name, metav1.DeleteOptions{})
 }
 
 // VerifyProjectIsReady verifies that the project and relevant resources have been created correctly and returns error otherwise
 func (p Project) Verify(ctx context.Context) error {
-	_, err := p.cli.AuthorizationV1().SelfSubjectAccessReviews().Create(ctx,
+	By("creating a SelfSubjectAccessReviews")
+	CreateK8sObjectWithRetry(ctx, p.cli.AuthorizationV1().SelfSubjectAccessReviews().Create,
 		&authorizationv1.SelfSubjectAccessReview{
 			Spec: authorizationv1.SelfSubjectAccessReviewSpec{
 				ResourceAttributes: &authorizationv1.ResourceAttributes{
@@ -76,24 +78,20 @@ func (p Project) Verify(ctx context.Context) error {
 				},
 			},
 		}, metav1.CreateOptions{})
-	if err != nil {
-		return err
-	}
 
-	sa, err := p.cli.CoreV1().ServiceAccounts(p.Name).Get(ctx, "default", metav1.GetOptions{})
-	if err != nil || kerrors.IsNotFound(err) {
-		return fmt.Errorf("error retrieving default ServiceAccount")
-	}
+	By("getting the relevant SA")
+	sa := GetK8sObjectWithRetry(
+		ctx, p.cli.CoreV1().ServiceAccounts(p.Name).Get, "default", metav1.GetOptions{},
+	)
 
 	if len(sa.Secrets) == 0 {
 		return fmt.Errorf("default ServiceAccount does not have secrets")
 	}
 
-	proj, err := p.projectClient.ProjectV1().Projects().Get(ctx, p.Name, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	_, found := proj.Annotations["openshift.io/sa.scc.uid-range"]
+	project := GetK8sObjectWithRetry(
+		ctx, p.projectClient.ProjectV1().Projects().Get, p.Name, metav1.GetOptions{},
+	)
+	_, found := project.Annotations["openshift.io/sa.scc.uid-range"]
 	if !found {
 		return fmt.Errorf("SCC annotation does not exist")
 	}
@@ -126,9 +124,7 @@ var _ = Describe("Cluster", Serial, func() {
 
 		DeferCleanup(func(ctx context.Context) {
 			By("deleting a test namespace")
-			err := project.Delete(ctx)
-			Expect(err).NotTo(HaveOccurred(), "Failed to delete test namespace")
-
+			project.Delete(ctx)
 			By("verifying the namespace is deleted")
 			Eventually(func(ctx context.Context) error {
 				return project.VerifyProjectIsDeleted(ctx)
@@ -148,8 +144,7 @@ var _ = Describe("Cluster", Serial, func() {
 				storageClass = "managed-premium"
 			}
 
-			ssName, err := createStatefulSet(ctx, clients.Kubernetes, project.Name, storageClass)
-			Expect(err).NotTo(HaveOccurred())
+			ssName := createStatefulSet(ctx, clients.Kubernetes, project.Name, storageClass)
 
 			By("verifying the stateful set is ready")
 			Eventually(func(g Gomega, ctx context.Context) {
@@ -254,8 +249,7 @@ var _ = Describe("Cluster", Serial, func() {
 
 			By("creating stateful set")
 			storageClass := "azurefile-csi"
-			ssName, err := createStatefulSet(ctx, clients.Kubernetes, project.Name, storageClass)
-			Expect(err).NotTo(HaveOccurred())
+			ssName := createStatefulSet(ctx, clients.Kubernetes, project.Name, storageClass)
 
 			By("verifying the stateful set is ready")
 			Eventually(func(g Gomega, ctx context.Context) {
@@ -298,14 +292,12 @@ var _ = Describe("Cluster", Serial, func() {
 
 	It("can create load balancer services", func(ctx context.Context) {
 		By("creating an external load balancer service")
-		err := createLoadBalancerService(ctx, clients.Kubernetes, "elb", project.Name, map[string]string{})
-		Expect(err).NotTo(HaveOccurred())
+		createLoadBalancerService(ctx, clients.Kubernetes, "elb", project.Name, map[string]string{})
 
 		By("creating an internal load balancer service")
-		err = createLoadBalancerService(ctx, clients.Kubernetes, "ilb", project.Name, map[string]string{
+		createLoadBalancerService(ctx, clients.Kubernetes, "ilb", project.Name, map[string]string{
 			"service.beta.kubernetes.io/azure-load-balancer-internal": "true",
 		})
-		Expect(err).NotTo(HaveOccurred())
 
 		By("verifying the external load balancer service is ready")
 		Eventually(func(ctx context.Context) bool {
@@ -332,8 +324,7 @@ var _ = Describe("Cluster", Serial, func() {
 		deployName := "internal-registry-deploy"
 
 		By("creating a test deployment from an internal container registry")
-		err := createContainerFromInternalContainerRegistryImage(ctx, clients.Kubernetes, deployName, project.Name)
-		Expect(err).NotTo(HaveOccurred())
+		createContainerFromInternalContainerRegistryImage(ctx, clients.Kubernetes, deployName, project.Name)
 
 		By("verifying the deployment is ready")
 		Eventually(func(g Gomega, ctx context.Context) {
@@ -365,14 +356,14 @@ func clusterSubnets(oc redhatopenshift.OpenShiftCluster) []string {
 	return subnets
 }
 
-func createStatefulSet(ctx context.Context, cli kubernetes.Interface, namespace, storageClass string) (string, error) {
+func createStatefulSet(ctx context.Context, cli kubernetes.Interface, namespace, storageClass string) string {
 	pvcStorage, err := resource.ParseQuantity("2Gi")
 	if err != nil {
-		return "", err
+		Fail("Could not parse '2Gi' when creating a stateful set.")
 	}
 	ssName := fmt.Sprintf("busybox-%s-%d", storageClass, GinkgoParallelProcess())
 
-	_, err = cli.AppsV1().StatefulSets(namespace).Create(ctx, &appsv1.StatefulSet{
+	ss := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: ssName,
 		},
@@ -424,15 +415,17 @@ func createStatefulSet(ctx context.Context, cli kubernetes.Interface, namespace,
 				},
 			},
 		},
-	}, metav1.CreateOptions{})
-	return ssName, err
+	}
+
+	_ = CreateK8sObjectWithRetry(ctx, cli.AppsV1().StatefulSets(namespace).Create, ss, metav1.CreateOptions{})
+	return ssName
 }
 
 func statefulSetPVCName(ssName string, claimName string, ordinal int) string {
 	return fmt.Sprintf("%s-%s-%d", claimName, ssName, ordinal)
 }
 
-func createLoadBalancerService(ctx context.Context, cli kubernetes.Interface, name, namespace string, annotations map[string]string) error {
+func createLoadBalancerService(ctx context.Context, cli kubernetes.Interface, name, namespace string, annotations map[string]string) {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
@@ -449,11 +442,10 @@ func createLoadBalancerService(ctx context.Context, cli kubernetes.Interface, na
 			Type: corev1.ServiceTypeLoadBalancer,
 		},
 	}
-	_, err := cli.CoreV1().Services(namespace).Create(ctx, svc, metav1.CreateOptions{})
-	return err
+	CreateK8sObjectWithRetry(ctx, cli.CoreV1().Services(namespace).Create, svc, metav1.CreateOptions{})
 }
 
-func createContainerFromInternalContainerRegistryImage(ctx context.Context, cli kubernetes.Interface, name, namespace string) error {
+func createContainerFromInternalContainerRegistryImage(ctx context.Context, cli kubernetes.Interface, name, namespace string) {
 	deploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -486,6 +478,5 @@ func createContainerFromInternalContainerRegistryImage(ctx context.Context, cli 
 			},
 		},
 	}
-	_, err := cli.AppsV1().Deployments(namespace).Create(ctx, deploy, metav1.CreateOptions{})
-	return err
+	CreateK8sObjectWithRetry(ctx, cli.AppsV1().Deployments(namespace).Create, deploy, metav1.CreateOptions{})
 }
