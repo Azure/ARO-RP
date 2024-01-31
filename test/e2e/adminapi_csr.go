@@ -38,16 +38,16 @@ var _ = Describe("[Admin API] CertificateSigningRequest action", func() {
 		for i := 0; i < csrCount; i++ {
 			csr := mockCSR(prefix+strconv.Itoa(i), namespace, csrData)
 
-			createFunction := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Create
-			CreateK8sObjectWithRetry(ctx, createFunction, csr, metav1.CreateOptions{})
+			createCall := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Create
+			CreateK8sObjectWithRetry(ctx, createCall, csr, metav1.CreateOptions{})
 		}
 	})
 
 	AfterEach(func(ctx context.Context) {
 		By("deleting the mock CSRs via Kubernetes API")
 		for i := 0; i < csrCount; i++ {
-			deleteFunction := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Delete
-			DeleteK8sObjectWithRetry(ctx, deleteFunction, prefix+strconv.Itoa(i), metav1.DeleteOptions{})
+			deleteCall := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Delete
+			DeleteK8sObjectWithRetry(ctx, deleteCall, prefix+strconv.Itoa(i), metav1.DeleteOptions{})
 		}
 	})
 
