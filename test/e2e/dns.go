@@ -23,7 +23,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
-	"github.com/Azure/ARO-RP/test/util/project"
 )
 
 var (
@@ -43,9 +42,7 @@ var _ = Describe("ARO cluster DNS", func() {
 	It("must not be adversely affected by Azure host servicing", func(ctx context.Context) {
 		By("creating a test namespace")
 		testNamespace := fmt.Sprintf("test-e2e-%d", GinkgoParallelProcess())
-		p := project.NewProject(clients.Kubernetes, clients.Project, testNamespace)
-		err := p.Create(ctx)
-		Expect(err).NotTo(HaveOccurred(), "Failed to create test namespace")
+		p := NewProject(ctx, clients.Kubernetes, clients.Project, testNamespace)
 
 		By("verifying the namespace is ready")
 		Eventually(func(ctx context.Context) error {
@@ -54,19 +51,14 @@ var _ = Describe("ARO cluster DNS", func() {
 
 		DeferCleanup(func(ctx context.Context) {
 			By("deleting the test namespace")
-			err := p.Delete(ctx)
-			Expect(err).NotTo(HaveOccurred(), "Failed to delete test namespace")
-
-			By("verifying the namespace is deleted")
-			Eventually(func(ctx context.Context) error {
-				return p.VerifyProjectIsDeleted(ctx)
-			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(BeNil())
+			p.CleanUp(ctx)
 		})
 
 		By("listing all cluster nodes to retrieve the names of the worker nodes")
 		workerNodes := map[string]string{}
-		nodeList, err := clients.Kubernetes.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
-		Expect(err).NotTo(HaveOccurred())
+		nodeList := ListK8sObjectWithRetry(
+			ctx, clients.Kubernetes.CoreV1().Nodes().List, metav1.ListOptions{},
+		)
 
 		for _, node := range nodeList.Items {
 			name := node.ObjectMeta.Name
@@ -154,8 +146,7 @@ var _ = Describe("ARO cluster DNS", func() {
 
 		By("verifying each worker node's resolv.conf via a one-shot Job per node")
 		for wn, ip := range workerNodes {
-			err = createResolvConfJob(ctx, clients.Kubernetes, wn, testNamespace)
-			Expect(err).NotTo(HaveOccurred())
+			createResolvConfJob(ctx, clients.Kubernetes, wn, testNamespace)
 
 			Eventually(verifyResolvConf).
 				WithContext(ctx).
@@ -164,8 +155,7 @@ var _ = Describe("ARO cluster DNS", func() {
 				WithArguments(clients.Kubernetes, wn, testNamespace, ip).
 				Should(Succeed())
 
-			err = deleteResolvConfJob(ctx, clients.Kubernetes, wn, testNamespace)
-			Expect(err).NotTo(HaveOccurred())
+			deleteResolvConfJob(ctx, clients.Kubernetes, wn, testNamespace)
 		}
 
 		By("stopping all three worker VMs")
@@ -202,8 +192,7 @@ var _ = Describe("ARO cluster DNS", func() {
 		By("verifying each worker node's resolv.conf is still correct after simulating host servicing, again via a one-shot Job per node")
 
 		for wn, ip := range workerNodes {
-			err = createResolvConfJob(ctx, clients.Kubernetes, wn, testNamespace)
-			Expect(err).NotTo(HaveOccurred())
+			createResolvConfJob(ctx, clients.Kubernetes, wn, testNamespace)
 
 			Eventually(verifyResolvConf).
 				WithContext(ctx).
@@ -212,8 +201,7 @@ var _ = Describe("ARO cluster DNS", func() {
 				WithArguments(clients.Kubernetes, wn, testNamespace, ip).
 				Should(Succeed())
 
-			err = deleteResolvConfJob(ctx, clients.Kubernetes, wn, testNamespace)
-			Expect(err).NotTo(HaveOccurred())
+			deleteResolvConfJob(ctx, clients.Kubernetes, wn, testNamespace)
 		}
 
 		By("stopping all three worker VMs")
@@ -258,7 +246,7 @@ func resolvConfJobName(nodeName string) string {
 	return jobName
 }
 
-func createResolvConfJob(ctx context.Context, cli kubernetes.Interface, nodeName string, namespace string) error {
+func createResolvConfJob(ctx context.Context, cli kubernetes.Interface, nodeName string, namespace string) {
 	hpt := corev1.HostPathFile
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -302,25 +290,24 @@ func createResolvConfJob(ctx context.Context, cli kubernetes.Interface, nodeName
 			},
 		},
 	}
-	_, err := cli.BatchV1().Jobs(namespace).Create(ctx, job, metav1.CreateOptions{})
-	return err
+	CreateK8sObjectWithRetry(ctx, cli.BatchV1().Jobs(namespace).Create, job, metav1.CreateOptions{})
 }
 
-func deleteResolvConfJob(ctx context.Context, cli kubernetes.Interface, nodeName string, namespace string) error {
+func deleteResolvConfJob(ctx context.Context, cli kubernetes.Interface, nodeName string, namespace string) {
 	dpb := metav1.DeletePropagationBackground
-	return cli.BatchV1().Jobs(namespace).Delete(ctx, resolvConfJobName(nodeName), metav1.DeleteOptions{
+	deleteCall := cli.BatchV1().Jobs(namespace).Delete
+	DeleteK8sObjectWithRetry(ctx, deleteCall, resolvConfJobName(nodeName), metav1.DeleteOptions{
 		PropagationPolicy: &dpb,
 	})
 }
 
-func verifyResolvConf(ctx context.Context, cli kubernetes.Interface, nodeName string, namespace string, nodeIp string) error {
+func verifyResolvConf(
+	ctx context.Context, cli kubernetes.Interface, nodeName string, namespace string, nodeIp string,
+) error {
 	jobName := resolvConfJobName(nodeName)
-	podList, err := cli.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+	podList := ListK8sObjectWithRetry(ctx, cli.CoreV1().Pods(namespace).List, metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("job-name=%s", jobName),
 	})
-	if err != nil {
-		return err
-	}
 	if len(podList.Items) != 1 {
 		return fmt.Errorf("found %v Pods associated with the Job, but there should be exactly 1", len(podList.Items))
 	}
