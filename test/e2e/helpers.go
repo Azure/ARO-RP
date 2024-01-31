@@ -5,13 +5,20 @@ package e2e
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	projectv1 "github.com/openshift/api/project/v1"
+	projectclient "github.com/openshift/client-go/project/clientset/versioned"
 
+	authorizationv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
 )
 
 var (
@@ -101,4 +108,81 @@ func DeleteK8sObjectWithRetry(
 		err := delete(ctx, name, options)
 		g.Expect(err).NotTo(HaveOccurred())
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
+}
+
+type Project struct {
+	projectClient projectclient.Interface
+	cli           kubernetes.Interface
+	Name          string
+}
+
+func NewProject(
+	ctx context.Context, cli kubernetes.Interface, projectClient projectclient.Interface, name string,
+) Project {
+	p := Project{
+		projectClient: projectClient,
+		cli:           cli,
+		Name:          name,
+	}
+	createCall := p.projectClient.ProjectV1().Projects().Create
+	CreateK8sObjectWithRetry(ctx, createCall, &projectv1.Project{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: p.Name,
+		},
+	}, metav1.CreateOptions{})
+	return p
+}
+
+func (p Project) CleanUp(ctx context.Context) {
+	p.Delete(ctx)
+	p.VerifyProjectIsDeleted(ctx)
+}
+
+func (p Project) Delete(ctx context.Context) {
+	deleteCall := p.projectClient.ProjectV1().Projects().Delete
+	DeleteK8sObjectWithRetry(ctx, deleteCall, p.Name, metav1.DeleteOptions{})
+}
+
+// VerifyProjectIsReady verifies that the project and relevant resources have been created correctly and returns error otherwise
+func (p Project) Verify(ctx context.Context) error {
+	By("creating a SelfSubjectAccessReviews")
+	CreateK8sObjectWithRetry(ctx, p.cli.AuthorizationV1().SelfSubjectAccessReviews().Create,
+		&authorizationv1.SelfSubjectAccessReview{
+			Spec: authorizationv1.SelfSubjectAccessReviewSpec{
+				ResourceAttributes: &authorizationv1.ResourceAttributes{
+					Namespace: p.Name,
+					Verb:      "create",
+					Resource:  "pods",
+				},
+			},
+		}, metav1.CreateOptions{})
+
+	By("getting the relevant SA")
+	sa := GetK8sObjectWithRetry(
+		ctx, p.cli.CoreV1().ServiceAccounts(p.Name).Get, "default", metav1.GetOptions{},
+	)
+
+	if len(sa.Secrets) == 0 {
+		return fmt.Errorf("default ServiceAccount does not have secrets")
+	}
+
+	project := GetK8sObjectWithRetry(
+		ctx, p.projectClient.ProjectV1().Projects().Get, p.Name, metav1.GetOptions{},
+	)
+	_, found := project.Annotations["openshift.io/sa.scc.uid-range"]
+	if !found {
+		return fmt.Errorf("SCC annotation does not exist")
+	}
+	return nil
+}
+
+// VerifyProjectIsDeleted verifies that the project does not exist and returns error if a project exists
+// or if it encounters an error other than NotFound
+func (p Project) VerifyProjectIsDeleted(ctx context.Context) error {
+	_, err := p.projectClient.ProjectV1().Projects().Get(ctx, p.Name, metav1.GetOptions{})
+	if kerrors.IsNotFound(err) {
+		return nil
+	}
+
+	return fmt.Errorf("Project exists")
 }
