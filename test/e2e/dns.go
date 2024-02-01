@@ -27,7 +27,7 @@ import (
 
 var (
 	nameserverRegex              = regexp.MustCompile("nameserver [0-9.]*")
-	verifyResolvConfTimeout      = 30 * time.Second
+	verifyResolvConfTimeout      = 5 * time.Minute
 	verifyResolvConfPollInterval = 1 * time.Second
 	nodesReadyPollInterval       = 2 * time.Second
 	nicUpdateWaitTime            = 5 * time.Second
