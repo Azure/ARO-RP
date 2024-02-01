@@ -51,19 +51,9 @@ func testGetPodLogsOK(ctx context.Context, containerName, podName, namespace str
 	)
 
 	defer func() {
-		By("deleting the test pod")
-		DeleteK8sObjectWithRetry(
-			ctx, clients.Kubernetes.CoreV1().Pods(namespace).Delete, pod.Name, metav1.DeleteOptions{},
-		)
+		By("cleaning up the test pod")
+		CleanupK8sResource[*corev1.Pod](ctx, clients.Kubernetes.CoreV1().Pods(namespace), podName)
 	}()
-
-	By("waiting for the pod to successfully terminate")
-	Eventually(func(g Gomega, ctx context.Context) {
-		pod = GetK8sObjectWithRetry(
-			ctx, clients.Kubernetes.CoreV1().Pods(namespace).Get, pod.Name, metav1.GetOptions{},
-		)
-		g.Expect(pod.Status.Phase).To(Equal(corev1.PodSucceeded))
-	}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 	By("requesting logs via RP admin API")
 	params := url.Values{
