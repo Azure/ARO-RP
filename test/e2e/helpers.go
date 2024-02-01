@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	DefaultTimeout  = 10 * time.Minute
+	DefaultTimeout  = 5 * time.Minute
 	PollingInterval = 250 * time.Millisecond
 )
 
@@ -34,16 +34,15 @@ type K8sDeleteFunc func(ctx context.Context, name string, options metav1.DeleteO
 // GetK8sObjectWithRetry takes a get function like clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Get
 // and the parameters for it. It then makes the call with some retry logic and returns the result after
 // asserting there were no errors.
+//
+// By default the call is retried for 5mins with a 250ms interval.
 func GetK8sObjectWithRetry[T kruntime.Object](
 	ctx context.Context, getFunc K8sGetFunc[T], name string, options metav1.GetOptions,
-) T {
-	var object T
+) (result T, err error) {
 	Eventually(func(g Gomega, ctx context.Context) {
-		result, err := getFunc(ctx, name, options)
 		g.Expect(err).NotTo(HaveOccurred())
-		object = result
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
-	return object
+	return result, err
 }
 
 // GetK8sPodLogsWithRetry gets the logs for the specified pod in the named namespace. It gets them with some
@@ -93,11 +92,42 @@ func CreateK8sObjectWithRetry[T kruntime.Object](
 // and the parameters for it. It then makes the call with some retry logic.
 func DeleteK8sObjectWithRetry(
 	ctx context.Context, deleteFunc K8sDeleteFunc, name string, options metav1.DeleteOptions,
-) {
+) (err error) {
 	Eventually(func(g Gomega, ctx context.Context) {
 		err := deleteFunc(ctx, name, options)
 		g.Expect(err).NotTo(HaveOccurred())
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
+	return
+}
+
+type AllowedCleanUpAPIInterface[T kruntime.Object] interface {
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (T, error)
+	Delete(ctx context.Context, name string, options metav1.DeleteOptions) error
+}
+
+// This function takes a client that knows how to issue a GET and DELETE call for a given resource.
+// It then issues a delete request then and polls the API to until the resource is no longer found.
+//
+// Note: If the DELETE request receives a 404 we assume the resource has been cleaned up successfully.
+//
+// By default the call is retried for 10mins with a 1s interval.
+func CleanupK8sResource[T kruntime.Object](
+	ctx context.Context, client AllowedCleanUpAPIInterface[T], name string,
+) {
+	DefaultEventuallyTimeout = 10 * time.Minute
+	PollingInterval = 1 * time.Second
+	err := DeleteK8sObjectWithRetry(
+		ctx, client.Delete, name, metav1.DeleteOptions{},
+	)
+
+	if err != nil && kerrors.IsNotFound(err) {
+		return
+	}
+
+	Eventually(func(g Gomega, ctx context.Context) {
+		_, err := GetK8sObjectWithRetry(ctx, client.Get, name, metav1.GetOptions{})
+		g.Expect(kerrors.IsNotFound(err)).To(BeTrue())
+	}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 }
 
 type Project struct {
@@ -149,7 +179,7 @@ func (p Project) VerifyProjectIsReady(ctx context.Context) error {
 		}, metav1.CreateOptions{})
 
 	By("getting the relevant SA")
-	sa := GetK8sObjectWithRetry(
+	sa, _ := GetK8sObjectWithRetry(
 		ctx, p.cli.CoreV1().ServiceAccounts(p.Name).Get, "default", metav1.GetOptions{},
 	)
 
@@ -157,7 +187,7 @@ func (p Project) VerifyProjectIsReady(ctx context.Context) error {
 		return fmt.Errorf("default ServiceAccount does not have secrets")
 	}
 
-	project := GetK8sObjectWithRetry(
+	project, _ := GetK8sObjectWithRetry(
 		ctx, p.projectClient.ProjectV1().Projects().Get, p.Name, metav1.GetOptions{},
 	)
 	_, found := project.Annotations["openshift.io/sa.scc.uid-range"]
