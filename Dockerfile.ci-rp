@@ -1,0 +1,22 @@
+ARG REGISTRY
+FROM ${REGISTRY}/ubi8/go-toolset:1.20.10 as builder
+
+USER root
+ENV GOPATH=/root/go
+WORKDIR /app
+RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /usr/local/bin v1.55.2
+COPY . /app
+RUN make aro RELEASE=${IS_OFFICIAL_RELEASE} -o generate && make e2e.test &&\
+  go mod tidy -compat=1.20 && \
+  go mod vendor && \
+  hack/ci-utils/isClean.sh && \
+  make lint-go && \
+  ARO_RUN_PKI_TESTS=nope make unit-test-go && \
+  make validate-fips
+FROM ${REGISTRY}/ubi8/ubi-minimal
+RUN microdnf update && microdnf clean all
+COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/
+ENTRYPOINT ["aro"]
+EXPOSE 2222/tcp 8080/tcp 8443/tcp 8444/tcp 8445/tcp
+USER 1000
+
