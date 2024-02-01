@@ -80,10 +80,10 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 func getNodeUptime(g Gomega, ctx context.Context, node string) (time.Time, error) {
 	// container kernel = node kernel = `uptime` in a Pod reflects the Node as well
 	namespace := "default"
-	name := fmt.Sprintf("%s-uptime-%d", node, GinkgoParallelProcess())
+	podName := fmt.Sprintf("%s-uptime-%d", node, GinkgoParallelProcess())
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      podName,
 			Namespace: namespace,
 		},
 		Spec: corev1.PodSpec{
@@ -112,27 +112,27 @@ func getNodeUptime(g Gomega, ctx context.Context, node string) (time.Time, error
 	defer func() {
 		By("deleting the uptime pod via Kubernetes API")
 		deleteCall := clients.Kubernetes.CoreV1().Pods(namespace).Delete
-		DeleteK8sObjectWithRetry(ctx, deleteCall, name, metav1.DeleteOptions{})
+		DeleteK8sObjectWithRetry(ctx, deleteCall, podName, metav1.DeleteOptions{})
 
 		// To avoid flakes, we need it to be completely deleted before we can use it again
 		// in a separate run or in a separate It block
 		By("waiting for uptime pod to be deleted")
 		Eventually(func(g Gomega, ctx context.Context) {
-			_, err := clients.Kubernetes.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
-			g.Expect(kerrors.IsNotFound(err)).To(BeTrue(), "expect Namespace to be deleted")
+			_, err := clients.Kubernetes.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
+			g.Expect(kerrors.IsNotFound(err)).To(BeTrue(), "expect uptime pod to be deleted")
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	}()
 
 	By("waiting for uptime pod to move into the Succeeded phase")
 	g.Eventually(func(g Gomega, ctx context.Context) {
 		getCall := clients.Kubernetes.CoreV1().Pods(namespace).Get
-		pod := GetK8sObjectWithRetry(ctx, getCall, name, metav1.GetOptions{})
+		pod := GetK8sObjectWithRetry(ctx, getCall, podName, metav1.GetOptions{})
 
 		g.Expect(pod.Status.Phase).To(Equal(corev1.PodSucceeded))
 	}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 	By("getting logs")
-	req := clients.Kubernetes.CoreV1().Pods(namespace).GetLogs(name, &corev1.PodLogOptions{})
+	req := clients.Kubernetes.CoreV1().Pods(namespace).GetLogs(podName, &corev1.PodLogOptions{})
 	stream, err := req.Stream(ctx)
 	if err != nil {
 		return time.Time{}, err
