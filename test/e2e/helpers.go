@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	DefaultTimeout  = 5 * time.Second
+	DefaultTimeout  = 10 * time.Minute
 	PollingInterval = 250 * time.Millisecond
 )
 
