@@ -118,7 +118,7 @@ func getNodeUptime(g Gomega, ctx context.Context, node string) (time.Time, error
 		// in a separate run or in a separate It block
 		By("waiting for uptime pod to be deleted")
 		Eventually(func(g Gomega, ctx context.Context) {
-			_, err := clients.Kubernetes.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
+			_, err := clients.Kubernetes.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
 			g.Expect(kerrors.IsNotFound(err)).To(BeTrue(), "expect Namespace to be deleted")
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	}()
