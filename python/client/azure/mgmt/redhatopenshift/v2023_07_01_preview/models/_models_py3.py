@@ -244,7 +244,7 @@ class Display(msrest.serialization.Model):
 class EffectiveOutboundIP(msrest.serialization.Model):
     """EffectiveOutboundIP represents an effective outbound IP resource of the cluster public load balancer.
 
-    :ivar id: The fully qualified Azure resource id.
+    :ivar id: The fully qualified Azure resource id of an IP address resource.
     :vartype id: str
     """
 
@@ -259,7 +259,7 @@ class EffectiveOutboundIP(msrest.serialization.Model):
         **kwargs
     ):
         """
-        :keyword id: The fully qualified Azure resource id.
+        :keyword id: The fully qualified Azure resource id of an IP address resource.
         :paramtype id: str
         """
         super(EffectiveOutboundIP, self).__init__(**kwargs)
@@ -791,7 +791,7 @@ class OpenShiftCluster(TrackedResource):
     :ivar location: Required. The geo-location where the resource lives.
     :vartype location: str
     :ivar provisioning_state: The cluster provisioning state. Possible values include:
-     "AdminUpdating", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
+     "AdminUpdating", "Cancelled", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
     :vartype provisioning_state: str or
      ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.ProvisioningState
     :ivar cluster_profile: The cluster profile.
@@ -864,7 +864,7 @@ class OpenShiftCluster(TrackedResource):
         :keyword location: Required. The geo-location where the resource lives.
         :paramtype location: str
         :keyword provisioning_state: The cluster provisioning state. Possible values include:
-         "AdminUpdating", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
+         "AdminUpdating", "Cancelled", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
         :paramtype provisioning_state: str or
          ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.ProvisioningState
         :keyword cluster_profile: The cluster profile.
@@ -1002,7 +1002,7 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
     :ivar system_data: The system meta data relating to this resource.
     :vartype system_data: ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.SystemData
     :ivar provisioning_state: The cluster provisioning state. Possible values include:
-     "AdminUpdating", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
+     "AdminUpdating", "Cancelled", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
     :vartype provisioning_state: str or
      ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.ProvisioningState
     :ivar cluster_profile: The cluster profile.
@@ -1064,7 +1064,7 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         :keyword tags: A set of tags. The resource tags.
         :paramtype tags: dict[str, str]
         :keyword provisioning_state: The cluster provisioning state. Possible values include:
-         "AdminUpdating", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
+         "AdminUpdating", "Cancelled", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
         :paramtype provisioning_state: str or
          ~azure.mgmt.redhatopenshift.v2023_07_01_preview.models.ProvisioningState
         :keyword cluster_profile: The cluster profile.
@@ -1262,7 +1262,7 @@ class OperationList(msrest.serialization.Model):
 class OutboundIP(msrest.serialization.Model):
     """OutboundIP represents a desired outbound IP resource for the cluster load balancer.
 
-    :ivar id: The fully qualified Azure resource id.
+    :ivar id: The fully qualified Azure resource id of an IP address resource.
     :vartype id: str
     """
 
@@ -1277,7 +1277,7 @@ class OutboundIP(msrest.serialization.Model):
         **kwargs
     ):
         """
-        :keyword id: The fully qualified Azure resource id.
+        :keyword id: The fully qualified Azure resource id of an IP address resource.
         :paramtype id: str
         """
         super(OutboundIP, self).__init__(**kwargs)
@@ -1287,7 +1287,7 @@ class OutboundIP(msrest.serialization.Model):
 class OutboundIPPrefix(msrest.serialization.Model):
     """OutboundIPPrefix represents a desired outbound IP Prefix resource for the cluster load balancer.
 
-    :ivar id: The fully qualified Azure resource id.
+    :ivar id: The fully qualified Azure resource id of an IP address resource.
     :vartype id: str
     """
 
@@ -1302,7 +1302,7 @@ class OutboundIPPrefix(msrest.serialization.Model):
         **kwargs
     ):
         """
-        :keyword id: The fully qualified Azure resource id.
+        :keyword id: The fully qualified Azure resource id of an IP address resource.
         :paramtype id: str
         """
         super(OutboundIPPrefix, self).__init__(**kwargs)

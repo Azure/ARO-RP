@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { ICluster } from "../../App"
+import { IClusterCoordinates } from "../../App"
 import {
   Modal,
   Stack,
@@ -34,7 +34,7 @@ export const iconButtonStyles = mergeStyleSets({
 
 const global = new Date()
 export function Statistics(props: {
-  currentCluster: ICluster
+  currentCluster: IClusterCoordinates
   detailPanelSelected: string
   loaded: boolean
   statisticsType: string

@@ -3,7 +3,7 @@ package arodenymastertolerationtaints
 
 test_input_allowed_in_privileged_ns_with_master_taint {
     input := { 
-        "review": fake_input_review("openshift-config", "CREATE", "node-role.kubernetes.io/worker", "node-role.kubernetes.io/master=")
+        "review": fake_input_review("openshift-etcd", "CREATE", "node-role.kubernetes.io/worker", "node-role.kubernetes.io/master=")
     }
     results := violation with input as input
     count(results) == 0
@@ -64,7 +64,9 @@ fake_input_review(namespace, operation, taint_key_one, taint_key_two) = review {
                     }
                 ]
             }
-        }
-        
+        },
+        "userInfo":{
+            "username":"testuser"
+        }  
     }
 }

@@ -9,7 +9,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -19,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
@@ -28,8 +28,6 @@ import (
 
 const (
 	ControllerName = "StorageAccounts"
-
-	controllerEnabled = "aro.storageaccounts.enabled"
 )
 
 // Reconciler is the controller struct
@@ -48,6 +46,7 @@ type reconcileManager struct {
 
 	client      client.Client
 	kubeSubnets subnet.KubeManager
+	subnets     subnet.Manager
 	storage     storage.AccountsClient
 }
 
@@ -67,7 +66,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.StorageAccountsEnabled) {
 		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
@@ -103,6 +102,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 		client:      r.client,
 		kubeSubnets: subnet.NewKubeManager(r.client, resource.SubscriptionID),
+		subnets:     subnet.NewManager(&azEnv, resource.SubscriptionID, authorizer),
 		storage:     storage.NewAccountsClient(&azEnv, resource.SubscriptionID, authorizer),
 	}
 
@@ -114,11 +114,15 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return o.GetName() == arov1alpha1.SingletonClusterName
 	})
+	masterMachinePredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
+		role, ok := o.GetLabels()["machine.openshift.io/cluster-api-machine-role"]
+		return ok && role == "master"
+	})
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
-		Watches(&source.Kind{Type: &machinev1beta1.Machine{}}, &handler.EnqueueRequestForObject{}). // to reconcile on machine replacement
-		Watches(&source.Kind{Type: &corev1.Node{}}, &handler.EnqueueRequestForObject{}).            // to reconcile on node status change
+		Watches(&source.Kind{Type: &machinev1beta1.Machine{}}, &handler.EnqueueRequestForObject{}, builder.WithPredicates(masterMachinePredicate)). // to reconcile on master machine replacement
+		Watches(&source.Kind{Type: &machinev1beta1.MachineSet{}}, &handler.EnqueueRequestForObject{}).                                              // to reconcile on worker machinesets
 		Named(ControllerName).
 		Complete(r)
 }

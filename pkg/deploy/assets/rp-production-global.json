@@ -107,7 +107,7 @@
             "location": "[resourceGroup().location]",
             "name": "[parameters('rpVersionStorageAccountName')]",
             "type": "Microsoft.Storage/storageAccounts",
-            "apiVersion": "2019-04-01"
+            "apiVersion": "2019-06-01"
         },
         {
             "properties": {
@@ -116,7 +116,7 @@
             },
             "name": "[concat(parameters('rpVersionStorageAccountName'), '/default/rpversion')]",
             "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
-            "apiVersion": "2019-04-01",
+            "apiVersion": "2019-06-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName'))]"
             ]
@@ -128,7 +128,7 @@
             },
             "name": "[concat(parameters('rpVersionStorageAccountName'), '/default/ocpversions')]",
             "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
-            "apiVersion": "2019-04-01",
+            "apiVersion": "2019-06-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName'))]"
             ]

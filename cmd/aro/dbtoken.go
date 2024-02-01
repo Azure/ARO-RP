@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/policy"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -21,7 +22,7 @@ import (
 )
 
 func dbtoken(ctx context.Context, log *logrus.Entry) error {
-	_env, err := env.NewCore(ctx, log)
+	_env, err := env.NewCore(ctx, log, env.COMPONENT_DBTOKEN)
 	if err != nil {
 		return err
 	}
@@ -36,12 +37,12 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	msiAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceManagerScope)
+	msiToken, err := _env.NewMSITokenCredential()
 	if err != nil {
 		return err
 	}
 
-	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().KeyVaultScope)
+	msiKVAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().KeyVaultScope)
 	if err != nil {
 		return err
 	}
@@ -55,13 +56,16 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 
 	go g.Run()
 
-	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+	if err := env.ValidateVars(envDatabaseAccountName); err != nil {
 		return err
 	}
 
-	dbAccountName := os.Getenv(DatabaseAccountName)
+	dbAccountName := os.Getenv(envDatabaseAccountName)
 
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer, dbAccountName)
+	clientOptions := &policy.ClientOptions{
+		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
+	}
+	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, msiToken, clientOptions, _env.SubscriptionID(), _env.ResourceGroup(), dbAccountName)
 	if err != nil {
 		return err
 	}
@@ -83,10 +87,10 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	if err := env.ValidateVars(KeyVaultPrefix); err != nil {
+	if err := env.ValidateVars(envKeyVaultPrefix); err != nil {
 		return err
 	}
-	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
+	keyVaultPrefix := os.Getenv(envKeyVaultPrefix)
 	dbtokenKeyvaultURI := keyvault.URI(_env, env.DBTokenKeyvaultSuffix, keyVaultPrefix)
 	dbtokenKeyvault := keyvault.NewManager(msiKVAuthorizer, dbtokenKeyvaultURI)
 

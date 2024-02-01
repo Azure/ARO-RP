@@ -23,7 +23,7 @@ import (
 )
 
 func gateway(ctx context.Context, log *logrus.Entry) error {
-	_env, err := env.NewCore(ctx, log)
+	_env, err := env.NewCore(ctx, log, env.COMPONENT_GATEWAY)
 	if err != nil {
 		return err
 	}
@@ -41,10 +41,10 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 
 	go g.Run()
 
-	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+	if err := env.ValidateVars(envDatabaseAccountName); err != nil {
 		return err
 	}
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, nil, m, nil, os.Getenv(DatabaseAccountName))
+	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, nil, m, nil, os.Getenv(envDatabaseAccountName))
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 	// In this context, the "resource" parameter is passed to azidentity as a
 	// "scope" argument even though a scope normally consists of an endpoint URL.
 	scope := os.Getenv("AZURE_DBTOKEN_CLIENT_ID")
-	msiRefresherAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextGateway, scope)
+	msiRefresherAuthorizer, err := _env.NewMSIAuthorizer(scope)
 	if err != nil {
 		return err
 	}
@@ -136,9 +136,9 @@ func getURL(isLocalDevelopmentMode bool) (string, error) {
 		return "https://localhost:8445", nil
 	}
 
-	if err := env.ValidateVars(DBTokenUrl); err != nil {
+	if err := env.ValidateVars(envDBTokenUrl); err != nil {
 		return "", err
 	}
 
-	return os.Getenv(DBTokenUrl), nil
+	return os.Getenv(envDBTokenUrl), nil
 }

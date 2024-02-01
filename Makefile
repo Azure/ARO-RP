@@ -3,7 +3,7 @@ TAG ?= $(shell git describe --exact-match 2>/dev/null)
 COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
 E2E_FLAGS ?= -test.v --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2 --ginkgo.junit-report=e2e-report.xml
-GO_FLAGS ?= -tags=aro,containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
+GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
 
 export GOFLAGS=$(GO_FLAGS)
 
@@ -72,7 +72,7 @@ clean:
 	find -type d -name 'gomock_reflect_[0-9]*' -exec rm -rf {} \+ 2>/dev/null
 
 client: generate
-	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01 2023-07-01-preview 2023-09-04
+	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01 2023-07-01-preview 2023-09-04 2023-11-22
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
@@ -101,10 +101,6 @@ generate-kiota:
 	go run ./hack/validate-imports pkg/util/graph/graphsdk
 	go run ./hack/licenses -dirs ./pkg/util/graph/graphsdk
 
-image-aro: aro e2e.test
-	docker pull $(REGISTRY)/ubi8/ubi-minimal
-	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
-
 image-aro-multistage:
 	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
 
@@ -120,13 +116,6 @@ image-proxy:
 
 image-gatekeeper:
 	docker build --platform=linux/amd64 --network=host --build-arg GATEKEEPER_VERSION=$(GATEKEEPER_VERSION) --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.gatekeeper -t $(GATEKEEPER_IMAGE) .
-
-publish-image-aro: image-aro
-	docker push $(ARO_IMAGE)
-ifeq ("${RP_IMAGE_ACR}-$(BRANCH)","arointsvc-master")
-		docker tag $(ARO_IMAGE) arointsvc.azurecr.io/aro:latest
-		docker push arointsvc.azurecr.io/aro:latest
-endif
 
 publish-image-aro-multistage: image-aro-multistage
 	docker push $(ARO_IMAGE)
@@ -246,6 +235,12 @@ test-python: pyenv az
 shared-cluster-login:
 	@oc login ${SHARED_CLUSTER_API} -u kubeadmin -p ${SHARED_CLUSTER_KUBEADMIN_PASSWORD}
 
+shared-cluster-create:
+	./hack/shared-cluster.sh create
+
+shared-cluster-delete:
+	./hack/shared-cluster.sh delete
+
 unit-test-python:
 	hack/unit-test-python.sh
 
@@ -259,4 +254,4 @@ vendor:
 	# See comments in the script for background on why we need it
 	hack/update-go-module-dependencies.sh
 
-.PHONY: admin.kubeconfig aks.kubeconfig aro az clean client deploy dev-config.yaml discoverycache generate image-aro image-aro-multistage image-fluentbit image-proxy lint-go runlocal-rp proxy publish-image-aro publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor build-all validate-go  unit-test-go coverage-go validate-fips
+.PHONY: admin.kubeconfig aks.kubeconfig aro az clean client deploy dev-config.yaml discoverycache generate image-aro-multistage image-fluentbit image-proxy lint-go runlocal-rp proxy publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor build-all validate-go unit-test-go coverage-go validate-fips

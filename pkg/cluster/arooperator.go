@@ -5,6 +5,17 @@ package cluster
 
 import (
 	"context"
+
+	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+)
+
+var (
+	CredentialsRequestGroupVersionResource = schema.GroupVersionResource{
+		Group:    cloudcredentialv1.SchemeGroupVersion.Group,
+		Version:  cloudcredentialv1.SchemeGroupVersion.Version,
+		Resource: "credentialsrequests",
+	}
 )
 
 func (m *manager) isIngressProfileAvailable() bool {
@@ -50,6 +61,14 @@ func (m *manager) ensureAROOperatorRunningDesiredVersion(ctx context.Context) (b
 	return true, nil
 }
 
+func (m *manager) ensureCredentialsRequest(ctx context.Context) error {
+	return m.aroOperatorDeployer.CreateOrUpdateCredentialsRequest(ctx)
+}
+
 func (m *manager) renewMDSDCertificate(ctx context.Context) error {
 	return m.aroOperatorDeployer.RenewMDSDCertificate(ctx)
+}
+
+func (m *manager) restartAROOperatorMaster(ctx context.Context) error {
+	return m.aroOperatorDeployer.Restart(ctx, []string{"aro-operator-master"})
 }

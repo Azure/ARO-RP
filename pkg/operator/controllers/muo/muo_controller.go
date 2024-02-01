@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"
 	"github.com/Azure/ARO-RP/pkg/util/deployer"
@@ -31,10 +32,7 @@ import (
 )
 
 const (
-	ControllerName = "ManagedUpgradeOperator"
-
-	controllerEnabled                = "rh.srep.muo.enabled"
-	controllerManaged                = "rh.srep.muo.managed"
+	ControllerName                   = "ManagedUpgradeOperator"
 	controllerPullSpec               = "rh.srep.muo.deploy.pullspec"
 	controllerForceLocalOnly         = "rh.srep.muo.deploy.forceLocalOnly"
 	controllerOcmBaseURL             = "rh.srep.muo.deploy.ocmBaseUrl"
@@ -85,14 +83,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(controllerEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.MuoEnabled) {
 		r.log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
 	r.log.Debug("running")
 
-	managed := instance.Spec.OperatorFlags.GetWithDefault(controllerManaged, "")
+	managed := instance.Spec.OperatorFlags.GetWithDefault(operator.MuoManaged, "")
 
 	// If enabled and managed=true, install MUO
 	// If enabled and managed=false, remove the MUO deployment

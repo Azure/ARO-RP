@@ -11,12 +11,15 @@ on:
 permissions:
   contents: read
 
+env:
+  GOFLAGS: -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
+
 jobs:
   ci-from-docker:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Build from buildah
       uses: redhat-actions/buildah-build@v2
@@ -25,20 +28,16 @@ jobs:
         tags: ${{ github.sha }}
         context: .
         containerfiles: ./Dockerfile.ci
+        build-args: REGISTRY=registry.access.redhat.com
 
   vendor-check:
     runs-on: ubuntu-latest
     steps:
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install libbtrfs-dev libgpgme-dev libdevmapper-dev
-
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up Go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version-file: go.mod
 

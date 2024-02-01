@@ -13,7 +13,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
@@ -167,10 +166,11 @@ func TestPreflightValidation(t *testing.T) {
 
 			go f.Run(ctx, nil, nil)
 			f.mu.Lock()
+			f.defaultOcpVersion = "4.10.0"
 			f.enabledOcpVersions = map[string]*api.OpenShiftVersion{
-				version.DefaultInstallStream.Version.String(): {
+				f.defaultOcpVersion: {
 					Properties: api.OpenShiftVersionProperties{
-						Version: version.DefaultInstallStream.Version.String(),
+						Version: f.defaultOcpVersion,
 					},
 				},
 			}

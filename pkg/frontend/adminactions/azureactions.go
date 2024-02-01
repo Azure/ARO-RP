@@ -39,6 +39,7 @@ type AzureActions interface {
 	VMSerialConsole(ctx context.Context, w http.ResponseWriter, log *logrus.Entry, vmName string) error
 	AppLensGetDetector(ctx context.Context, detectorId string) ([]byte, error)
 	AppLensListDetectors(ctx context.Context) ([]byte, error)
+	ResourceDeleteAndWait(ctx context.Context, resourceID string) error
 }
 
 type azureActions struct {
@@ -54,6 +55,7 @@ type azureActions struct {
 	routeTables        network.RouteTablesClient
 	storageAccounts    storage.AccountsClient
 	networkInterfaces  network.InterfacesClient
+	loadBalancers      network.LoadBalancersClient
 	appLens            applens.AppLensClient
 }
 
@@ -89,6 +91,7 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		routeTables:        network.NewRouteTablesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		storageAccounts:    storage.NewAccountsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		networkInterfaces:  network.NewInterfacesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		loadBalancers:      network.NewLoadBalancersClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		appLens:            appLensClient,
 	}, nil
 }

@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/policy"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -25,7 +26,7 @@ import (
 )
 
 func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
-	_env, err := env.NewCore(ctx, log)
+	_env, err := env.NewCore(ctx, log, env.COMPONENT_PORTAL)
 	if err != nil {
 		return err
 	}
@@ -60,12 +61,12 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	msiAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceManagerScope)
+	msiToken, err := _env.NewMSITokenCredential()
 	if err != nil {
 		return err
 	}
 
-	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().KeyVaultScope)
+	msiKVAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().KeyVaultScope)
 	if err != nil {
 		return err
 	}
@@ -79,10 +80,10 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 
 	go g.Run()
 
-	if err := env.ValidateVars(KeyVaultPrefix); err != nil {
+	if err := env.ValidateVars(envKeyVaultPrefix); err != nil {
 		return err
 	}
-	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
+	keyVaultPrefix := os.Getenv(envKeyVaultPrefix)
 	// TODO: should not be using the service keyvault here
 	serviceKeyvaultURI := keyvault.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
 	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
@@ -92,12 +93,15 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+	if err := env.ValidateVars(envDatabaseAccountName); err != nil {
 		return err
 	}
 
-	dbAccountName := os.Getenv(DatabaseAccountName)
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer, dbAccountName)
+	dbAccountName := os.Getenv(envDatabaseAccountName)
+	clientOptions := &policy.ClientOptions{
+		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
+	}
+	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, msiToken, clientOptions, _env.SubscriptionID(), _env.ResourceGroup(), dbAccountName)
 	if err != nil {
 		return err
 	}

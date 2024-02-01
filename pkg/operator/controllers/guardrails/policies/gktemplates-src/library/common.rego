@@ -58,6 +58,7 @@ is_priv_namespace(ns) = true {
 
 exempted_user = {
   "system:kube-controller-manager",
+  "system:kube-scheduler",
   "system:admin" # comment out temporarily for testing in console
 }
 
@@ -91,13 +92,13 @@ privileged_ns = {
   "openshift-cloud-controller-manager",
   "openshift-cloud-controller-manager-operator",
   "openshift-cloud-credential-operator",
-  "openshift-cluster-csi-drivers",
+  # "openshift-cluster-csi-drivers",
   "openshift-cluster-machine-approver",
   "openshift-cluster-node-tuning-operator",
   "openshift-cluster-samples-operator",
   "openshift-cluster-storage-operator",
   "openshift-cluster-version",
-  "openshift-config",
+  # "openshift-config",
   "openshift-config-managed",
   "openshift-config-operator",
   "openshift-console",

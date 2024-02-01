@@ -30,7 +30,7 @@ func TestListFromCluster(t *testing.T) {
 		name         string
 		machinelabel string
 		expect       []Subnet
-		modify       func(*machinev1beta1.Machine, *machinev1beta1.Machine)
+		modify       func(*machinev1beta1.MachineSet, *machinev1beta1.Machine)
 		wantErr      string
 	}{
 		{
@@ -48,7 +48,7 @@ func TestListFromCluster(t *testing.T) {
 		{
 			name:   "master missing providerSpec",
 			expect: nil,
-			modify: func(worker *machinev1beta1.Machine, master *machinev1beta1.Machine) {
+			modify: func(worker *machinev1beta1.MachineSet, master *machinev1beta1.Machine) {
 				master.Spec.ProviderSpec.Value.Raw = []byte("")
 			},
 			wantErr: "json: error calling MarshalJSON for type *runtime.RawExtension: unexpected end of JSON input",
@@ -56,8 +56,8 @@ func TestListFromCluster(t *testing.T) {
 		{
 			name:   "worker missing providerSpec",
 			expect: nil,
-			modify: func(worker *machinev1beta1.Machine, master *machinev1beta1.Machine) {
-				worker.Spec.ProviderSpec.Value.Raw = []byte("")
+			modify: func(worker *machinev1beta1.MachineSet, master *machinev1beta1.Machine) {
+				worker.Spec.Template.Spec.ProviderSpec.Value.Raw = []byte("")
 			},
 			wantErr: "json: error calling MarshalJSON for type *runtime.RawExtension: unexpected end of JSON input",
 		},
@@ -77,26 +77,34 @@ func TestListFromCluster(t *testing.T) {
 					},
 				},
 			}
-			workerMachine := machinev1beta1.Machine{
+			workerMachineSet := machinev1beta1.MachineSet{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "worker-0",
+					Name:      "worker",
 					Namespace: "openshift-machine-api",
 					Labels:    map[string]string{"machine.openshift.io/cluster-api-machine-role": "worker"},
 				},
-				Spec: machinev1beta1.MachineSpec{
-					ProviderSpec: machinev1beta1.ProviderSpec{
-						Value: &kruntime.RawExtension{
-							Raw: []byte("{\"resourceGroup\":\"workerRG\",\"publicIP\":false,\"osDisk\":{\"diskSizeGB\": 1024,\"managedDisk\":{\"storageAccountType\": \"Premium_LRS\"},\"osType\":\"Linux\"},\"image\":{\"offer\": \"aro4\",\"publisher\": \"azureopenshift\", \"resourceID\": \"\", \"sku\": \"aro_43\", \"version\": \"43.81.20200311\"},\"networkResourceGroup\":\"vnet-rg\",\"vnet\":\"vnet\",\"subnet\":\"workerSubnet\"}"),
+				Spec: machinev1beta1.MachineSetSpec{
+					Template: machinev1beta1.MachineTemplateSpec{
+						ObjectMeta: machinev1beta1.ObjectMeta{
+							Labels: map[string]string{"machine.openshift.io/cluster-api-machine-role": "worker"},
+						},
+						Spec: machinev1beta1.MachineSpec{
+							ProviderSpec: machinev1beta1.ProviderSpec{
+								Value: &kruntime.RawExtension{
+									Raw: []byte("{\"resourceGroup\":\"workerRG\",\"publicIP\":false,\"osDisk\":{\"diskSizeGB\": 1024,\"managedDisk\":{\"storageAccountType\": \"Premium_LRS\"},\"osType\":\"Linux\"},\"image\":{\"offer\": \"aro4\",\"publisher\": \"azureopenshift\", \"resourceID\": \"\", \"sku\": \"aro_43\", \"version\": \"43.81.20200311\"},\"networkResourceGroup\":\"vnet-rg\",\"vnet\":\"vnet\",\"subnet\":\"workerSubnet\"}"),
+								},
+							},
 						},
 					},
 				},
 			}
+
 			if tt.modify != nil {
-				tt.modify(&workerMachine, &masterMachine)
+				tt.modify(&workerMachineSet, &masterMachine)
 			}
 
 			m := kubeManager{
-				client:         fake.NewClientBuilder().WithObjects(&workerMachine, &masterMachine).Build(),
+				client:         fake.NewClientBuilder().WithObjects(&workerMachineSet, &masterMachine).Build(),
 				subscriptionID: subscriptionId,
 			}
 

@@ -63,6 +63,7 @@ type frontend struct {
 	dbSubscriptions               database.Subscriptions
 	dbOpenShiftVersions           database.OpenShiftVersions
 
+	defaultOcpVersion  string // always enabled
 	enabledOcpVersions map[string]*api.OpenShiftVersion
 	apis               map[string]*api.Version
 
@@ -201,18 +202,9 @@ func NewFrontend(ctx context.Context,
 				PrivateKey: key,
 			},
 		},
-		NextProtos: []string{"h2", "http/1.1"},
-		ClientAuth: tls.RequestClientCert,
-		CipherSuites: []uint16{
-			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
-			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
-			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-		},
+		NextProtos:             []string{"h2", "http/1.1"},
+		ClientAuth:             tls.RequestClientCert,
 		SessionTicketsDisabled: true,
-		MinVersion:             tls.VersionTLS12,
 		CurvePreferences: []tls.CurveID{
 			tls.CurveP256,
 			tls.X25519,
@@ -336,6 +328,9 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/cordonnode", f.postAdminOpenShiftClusterCordonNode)
 
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/drainnode", f.postAdminOpenShiftClusterDrainNode)
+
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/etcdcertificaterenew", f.postAdminOpenShiftClusterEtcdCertificateRenew)
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/deletemanagedresource", f.postAdminOpenShiftDeleteManagedResource)
 			})
 		})
 

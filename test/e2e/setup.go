@@ -18,10 +18,12 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/jongio/azidext/go/azidext"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	machineclient "github.com/openshift/client-go/machine/clientset/versioned"
 	projectclient "github.com/openshift/client-go/project/clientset/versioned"
+	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	"github.com/sirupsen/logrus"
@@ -41,17 +43,25 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	redhatopenshift20220904 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2022-09-04/redhatopenshift"
+	redhatopenshift20230701preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2023-07-01-preview/redhatopenshift"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
+	msgraph_errors "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
 
-var disallowedInFilenameRegex = regexp.MustCompile(`[<>:"/\\|?*\x00-\x1F]`)
+var (
+	disallowedInFilenameRegex = regexp.MustCompile(`[<>:"/\\|?*\x00-\x1F]`)
+	DefaultEventuallyTimeout  = 5 * time.Minute
+)
 
 type clientSet struct {
-	Operations        redhatopenshift20220904.OperationsClient
-	OpenshiftClusters redhatopenshift20220904.OpenShiftClustersClient
+	Operations               redhatopenshift20220904.OperationsClient
+	OpenshiftClusters        redhatopenshift20220904.OpenShiftClustersClient
+	OpenshiftClustersPreview redhatopenshift20230701preview.OpenShiftClustersClient
 
 	VirtualMachines       compute.VirtualMachinesClient
 	Resources             features.ResourcesClient
@@ -60,15 +70,20 @@ type clientSet struct {
 	Disks                 compute.DisksClient
 	NetworkSecurityGroups network.SecurityGroupsClient
 	Subnet                network.SubnetsClient
+	Interfaces            network.InterfacesClient
+	Storage               storage.AccountsClient
+	LoadBalancers         network.LoadBalancersClient
 
 	RestConfig         *rest.Config
 	HiveRestConfig     *rest.Config
 	Monitoring         monitoringclient.Interface
 	Kubernetes         kubernetes.Interface
+	Client             client.Client
 	MachineAPI         machineclient.Interface
 	MachineConfig      mcoclient.Interface
 	AROClusters        aroclient.Interface
 	ConfigClient       configclient.Interface
+	SecurityClient     securityclient.Interface
 	Project            projectclient.Interface
 	Hive               client.Client
 	HiveAKS            kubernetes.Interface
@@ -103,7 +118,7 @@ func skipIfNotHiveManagedCluster(adminAPICluster *admin.OpenShiftCluster) {
 	}
 }
 
-func SaveScreenshotAndExit(wd selenium.WebDriver, e error) {
+func SaveScreenshot(wd selenium.WebDriver, e error) {
 	log.Infof("Error : %s", e.Error())
 	log.Info("Taking Screenshot and saving page source")
 	imageBytes, err := wd.Screenshot()
@@ -148,8 +163,6 @@ func SaveScreenshotAndExit(wd selenium.WebDriver, e error) {
 
 	log.Infof("Screenshot saved to %s", imageAbsPath)
 	log.Infof("Page Source saved to %s", sourceAbsPath)
-
-	panic(e)
 }
 
 func adminPortalSessionSetup() (string, *selenium.WebDriver) {
@@ -269,6 +282,11 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
+	controllerRuntimeClient, err := client.New(restconfig, client.Options{})
+	if err != nil {
+		return nil, err
+	}
+
 	monitoring, err := monitoringclient.NewForConfig(restconfig)
 	if err != nil {
 		return nil, err
@@ -295,6 +313,11 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	}
 
 	configcli, err := configclient.NewForConfig(restconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	securitycli, err := securityclient.NewForConfig(restconfig)
 	if err != nil {
 		return nil, err
 	}
@@ -333,8 +356,9 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	}
 
 	return &clientSet{
-		Operations:        redhatopenshift20220904.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		OpenshiftClusters: redhatopenshift20220904.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Operations:               redhatopenshift20220904.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		OpenshiftClusters:        redhatopenshift20220904.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		OpenshiftClustersPreview: redhatopenshift20230701preview.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 
 		VirtualMachines:       compute.NewVirtualMachinesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Resources:             features.NewResourcesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
@@ -342,17 +366,22 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		Disks:                 compute.NewDisksClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		DiskEncryptionSets:    compute.NewDiskEncryptionSetsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		Subnet:                network.NewSubnetsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Interfaces:            network.NewInterfacesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 		NetworkSecurityGroups: network.NewSecurityGroupsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Storage:               storage.NewAccountsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		LoadBalancers:         network.NewLoadBalancersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 
 		RestConfig:         restconfig,
 		HiveRestConfig:     hiveRestConfig,
 		Kubernetes:         cli,
+		Client:             controllerRuntimeClient,
 		Monitoring:         monitoring,
 		MachineAPI:         machineapicli,
 		MachineConfig:      mcocli,
 		AROClusters:        arocli,
 		Project:            projectcli,
 		ConfigClient:       configcli,
+		SecurityClient:     securitycli,
 		Hive:               hiveClientSet,
 		HiveAKS:            hiveAKS,
 		HiveClusterManager: hiveCM,
@@ -391,6 +420,10 @@ func setup(ctx context.Context) error {
 			return err
 		}
 
+		if osClusterVersion == "" {
+			osClusterVersion = version.DefaultInstallStream.Version.String()
+		}
+
 		err = cluster.Create(ctx, vnetResourceGroup, clusterName, osClusterVersion)
 		if err != nil {
 			return err
@@ -427,10 +460,13 @@ func done(ctx context.Context) error {
 var _ = BeforeSuite(func() {
 	log.Info("BeforeSuite")
 
-	SetDefaultEventuallyTimeout(5 * time.Minute)
+	SetDefaultEventuallyTimeout(DefaultEventuallyTimeout)
 	SetDefaultEventuallyPollingInterval(10 * time.Second)
 
 	if err := setup(context.Background()); err != nil {
+		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
+			spew.Dump(oDataError.GetErrorEscaped())
+		}
 		panic(err)
 	}
 })
@@ -439,6 +475,9 @@ var _ = AfterSuite(func() {
 	log.Info("AfterSuite")
 
 	if err := done(context.Background()); err != nil {
+		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
+			spew.Dump(oDataError.GetErrorEscaped())
+		}
 		panic(err)
 	}
 })

@@ -43,9 +43,7 @@ func NewClientOptions(certPool *x509.CertPool) *ClientOptions {
 				Transport: &http.Transport{
 					TLSNextProto: make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
 					TLSClientConfig: &tls.Config{
-						RootCAs:       certPool,
-						Renegotiation: tls.RenegotiateFreelyAsClient,
-						MinVersion:    tls.VersionTLS12,
+						RootCAs: certPool,
 					},
 				},
 			},

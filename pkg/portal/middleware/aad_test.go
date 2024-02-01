@@ -201,6 +201,7 @@ func TestCheckAuthentication(t *testing.T) {
 		name              string
 		request           func(*aad) (*http.Request, error)
 		wantStatusCode    int
+		wantRedirectTo    string
 		wantAuthenticated bool
 	}{
 		{
@@ -220,6 +221,7 @@ func TestCheckAuthentication(t *testing.T) {
 				return http.NewRequestWithContext(ctx, http.MethodGet, "/api/info", nil)
 			},
 			wantStatusCode: http.StatusTemporaryRedirect,
+			wantRedirectTo: "/api/login?redirect_uri=/api/info",
 		},
 		{
 			name: "not authenticated",
@@ -228,6 +230,7 @@ func TestCheckAuthentication(t *testing.T) {
 				return http.NewRequestWithContext(ctx, http.MethodGet, "/callback", nil)
 			},
 			wantStatusCode: http.StatusTemporaryRedirect,
+			wantRedirectTo: "/api/login?redirect_uri=/callback",
 		},
 		{
 			name: "invalid cookie",
@@ -273,6 +276,14 @@ func TestCheckAuthentication(t *testing.T) {
 
 			if w.Code != tt.wantStatusCode {
 				t.Error(w.Code, tt.wantStatusCode)
+			}
+
+			if tt.wantRedirectTo != "" {
+				redirectLocation := w.Result().Header["Location"]
+
+				if redirectLocation == nil || len(redirectLocation) != 1 || redirectLocation[0] != tt.wantRedirectTo {
+					t.Error(redirectLocation, tt.wantRedirectTo)
+				}
 			}
 
 			if authenticated != tt.wantAuthenticated {

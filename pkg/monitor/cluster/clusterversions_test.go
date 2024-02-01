@@ -17,7 +17,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func TestEmitClusterVersion(t *testing.T) {
@@ -158,7 +157,6 @@ func TestEmitClusterVersion(t *testing.T) {
 				"operatorVersion":                      "test",
 				"resourceProviderVersion":              "unknown",
 				"availableRP":                          tt.wantAvailableRP,
-				"latestGaMinorVersion":                 version.DefaultInstallStream.Version.MinorVersion(),
 				"actualMinorVersion":                   tt.wantActualMinorVersion,
 			})
 

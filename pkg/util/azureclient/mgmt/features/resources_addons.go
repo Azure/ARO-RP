@@ -14,6 +14,7 @@ import (
 type ResourcesClientAddons interface {
 	Client() autorest.Client
 	ListByResourceGroup(ctx context.Context, resourceGroupName string, filter string, expand string, top *int32) ([]mgmtfeatures.GenericResourceExpanded, error)
+	DeleteByIDAndWait(ctx context.Context, resourceID string, apiVersion string) error
 }
 
 func (c *resourcesClient) Client() autorest.Client {
@@ -35,4 +36,13 @@ func (c *resourcesClient) ListByResourceGroup(ctx context.Context, resourceGroup
 	}
 
 	return resources, nil
+}
+
+func (c *resourcesClient) DeleteByIDAndWait(ctx context.Context, resourceID string, apiVersion string) error {
+	future, err := c.DeleteByID(ctx, resourceID, apiVersion)
+	if err != nil {
+		return err
+	}
+
+	return future.WaitForCompletionRef(ctx, c.Client())
 }

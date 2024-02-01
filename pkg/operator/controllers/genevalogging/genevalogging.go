@@ -24,7 +24,7 @@ import (
 
 func (r *Reconciler) securityContextConstraints(ctx context.Context, name, serviceAccountName string) (*securityv1.SecurityContextConstraints, error) {
 	scc := &securityv1.SecurityContextConstraints{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: "privileged"}, scc)
+	err := r.Client.Get(ctx, types.NamespacedName{Name: "privileged"}, scc)
 	if err != nil {
 		return nil, err
 	}

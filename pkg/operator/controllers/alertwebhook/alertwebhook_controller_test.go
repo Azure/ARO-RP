@@ -15,6 +15,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
@@ -180,13 +181,13 @@ func TestSetAlertManagerWebhook(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						controllerEnabled: "false",
+						operator.AlertWebhookEnabled: operator.FlagFalse,
 					},
 				},
 			}
 
 			if tt.controllerEnabled {
-				instance.Spec.OperatorFlags[controllerEnabled] = "true"
+				instance.Spec.OperatorFlags[operator.AlertWebhookEnabled] = operator.FlagTrue
 			}
 
 			secret := &corev1.Secret{

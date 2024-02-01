@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	configv1 "github.com/openshift/api/config/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/sirupsen/logrus"
@@ -18,10 +19,14 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
@@ -32,50 +37,60 @@ var machinehealthcheckYaml []byte
 var mhcremediationalertYaml []byte
 
 const (
-	ControllerName string = "MachineHealthCheck"
-	managed        string = "aro.machinehealthcheck.managed"
-	enabled        string = "aro.machinehealthcheck.enabled"
+	ControllerName      string = "MachineHealthCheck"
+	MHCPausedAnnotation string = "cluster.x-k8s.io/paused"
 )
 
 type Reconciler struct {
-	log *logrus.Entry
+	base.AROController
 
 	dh dynamichelper.Interface
-
-	client client.Client
 }
 
 func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *Reconciler {
 	return &Reconciler{
-		log:    log,
-		dh:     dh,
-		client: client,
+		AROController: base.AROController{
+			Log:    log,
+			Client: client,
+			Name:   ControllerName,
+		},
+		dh: dh,
 	}
 }
 
+// Reconcile watches MachineHealthCheck objects, and if any changes,
+// reconciles the associated ARO MachineHealthCheck object
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance := &arov1alpha1.Cluster{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: arov1alpha1.SingletonClusterName}, instance)
+	instance, err := r.GetCluster(ctx)
+
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(enabled) {
-		r.log.Debug("controller is disabled")
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.MachineHealthCheckEnabled) {
+		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}
 
-	r.log.Debug("running")
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(managed) {
+	r.Log.Debug("running")
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.MachineHealthCheckManaged) {
 		err := r.dh.EnsureDeleted(ctx, "MachineHealthCheck", "openshift-machine-api", "aro-machinehealthcheck")
 		if err != nil {
+			r.Log.Error(err)
+			r.SetDegraded(ctx, err)
+
 			return reconcile.Result{RequeueAfter: time.Hour}, err
 		}
 
 		err = r.dh.EnsureDeleted(ctx, "PrometheusRule", "openshift-machine-api", "mhc-remediation-alert")
 		if err != nil {
+			r.Log.Error(err)
+			r.SetDegraded(ctx, err)
+
 			return reconcile.Result{RequeueAfter: time.Hour}, err
 		}
+
+		r.ClearConditions(ctx)
 		return reconcile.Result{}, nil
 	}
 
@@ -84,7 +99,26 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	for _, asset := range [][]byte{machinehealthcheckYaml, mhcremediationalertYaml} {
 		resource, _, err := scheme.Codecs.UniversalDeserializer().Decode(asset, nil, nil)
 		if err != nil {
+			r.Log.Error(err)
+			r.SetDegraded(ctx, err)
+
 			return reconcile.Result{}, err
+		}
+
+		if mhc, ok := resource.(*machinev1beta1.MachineHealthCheck); ok {
+			isUpgrading, err := r.isClusterUpgrading(ctx)
+			if err != nil {
+				r.Log.Error(err)
+				r.SetDegraded(ctx, err)
+
+				return reconcile.Result{}, err
+			}
+
+			if isUpgrading {
+				mhc.ObjectMeta.Annotations = map[string]string{
+					MHCPausedAnnotation: "",
+				}
+			}
 		}
 
 		resources = append(resources, resource)
@@ -105,10 +139,29 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	// create/update the MHC CR
 	err = r.dh.Ensure(ctx, resources...)
 	if err != nil {
+		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
+
 		return reconcile.Result{}, err
 	}
 
+	r.ClearConditions(ctx)
 	return reconcile.Result{}, nil
+}
+
+func (r *Reconciler) isClusterUpgrading(ctx context.Context) (bool, error) {
+	clusterVersion := &configv1.ClusterVersion{}
+	if err := r.Client.Get(ctx, types.NamespacedName{Name: "version"}, clusterVersion); err != nil {
+		return false, err
+	}
+
+	for _, cnd := range clusterVersion.Status.Conditions {
+		if cnd.Type == configv1.OperatorProgressing {
+			return cnd.Status == configv1.ConditionTrue, nil
+		}
+	}
+
+	return false, nil
 }
 
 // SetupWithManager will manage only our MHC resource with our specific controller name
@@ -116,11 +169,19 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return strings.EqualFold(arov1alpha1.SingletonClusterName, o.GetName())
 	})
+	clusterVersionPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return o.GetName() == "version"
+	})
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
 		Named(ControllerName).
 		Owns(&machinev1beta1.MachineHealthCheck{}).
 		Owns(&monitoringv1.PrometheusRule{}).
+		Watches(
+			&source.Kind{Type: &configv1.ClusterVersion{}},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(clusterVersionPredicate),
+		).
 		Complete(r)
 }

@@ -83,7 +83,7 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 					Eventually(func(g Gomega, ctx context.Context) {
 						_, err := clients.Kubernetes.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
 						g.Expect(kerrors.IsNotFound(err)).To(BeTrue(), "expect Namespace to be deleted")
-					}).WithContext(ctx).Should(Succeed())
+					}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 				}()
 
 				testConfigMapCreateOrUpdateForbidden(ctx, "creating", objName, namespace)
@@ -121,7 +121,7 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 					Eventually(func(g Gomega, ctx context.Context) {
 						_, err := clients.Kubernetes.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
 						g.Expect(kerrors.IsNotFound(err)).To(BeTrue(), "expect Namespace to be deleted")
-					}).WithContext(ctx).Should(Succeed())
+					}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 				}()
 
 				By("creating an object via Kubernetes API")
@@ -304,7 +304,7 @@ func testConfigMapDeleteOK(ctx context.Context, objName, namespace string) {
 	Eventually(func(g Gomega, ctx context.Context) {
 		_, err = clients.Kubernetes.CoreV1().ConfigMaps(namespace).Get(ctx, objName, metav1.GetOptions{})
 		g.Expect(kerrors.IsNotFound(err)).To(BeTrue(), "expect ConfigMap to be deleted")
-	}).WithContext(ctx).Should(Succeed())
+	}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 }
 
 func testConfigMapCreateOrUpdateForbidden(ctx context.Context, operation, objName, namespace string) {
@@ -392,7 +392,7 @@ func testPodForceDeleteOK(ctx context.Context, objName, namespace string) {
 	Eventually(func(g Gomega, ctx context.Context) {
 		_, err = clients.Kubernetes.CoreV1().Pods(namespace).Get(ctx, objName, metav1.GetOptions{})
 		g.Expect(kerrors.IsNotFound(err)).To(BeTrue(), "expect Pod to be deleted")
-	}).WithContext(ctx).Should(Succeed())
+	}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 }
 
 func mockSecret(name, namespace string) corev1.Secret {

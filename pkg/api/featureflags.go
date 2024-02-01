@@ -15,15 +15,7 @@ const (
 	// Otherwise cluster nodes will use the DHCP-provided MTU of 1500 bytes.
 	FeatureFlagMTU3900 = "Microsoft.RedHatOpenShift/MTU3900"
 
-	// FeatureFlagUserDefinedRouting is the feature in the subscription that is used to indicate we need to
-	// provision a private cluster without an IP address
-	FeatureFlagUserDefinedRouting = "Microsoft.RedHatOpenShift/UserDefinedRouting"
-
 	// FeatureFlagCheckAccessTestToggle is used for safely testing the new check access
 	// API in production. The toggle will be removed once the testing has been completed.
 	FeatureFlagCheckAccessTestToggle = "Microsoft.RedHatOpenShift/CheckAccessTestToggle"
-
-	// FeatureFlagPreconfiguredNSG is used for indicating whether a customer subscription
-	// is registered for customer bringing their own NSG
-	FeatureFlagPreconfiguredNSG = "Microsoft.RedHatOpenShift/PreconfiguredNSG"
 )

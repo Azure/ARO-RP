@@ -1,6 +1,7 @@
-import ReactDOM from "react-dom"
+import {createRoot} from "react-dom/client"
 import App from "./App"
 import { mergeStyles } from "@fluentui/react"
+import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 
 import { initializeIcons } from "@fluentui/font-icons-mdl2"
 initializeIcons()
@@ -14,19 +15,11 @@ mergeStyles({
   },
 })
 
-const searchParams = window.location.search
-
-const getURLParams = () : any => {
-  let urlParams = {}
-  const paramStringFromURL = searchParams.split('?')[1];
-  const paramsArr = paramStringFromURL.split('&');
-
-  for (let i = 0; i < paramsArr.length; i++) {
-      let pair = paramsArr[i].split('=');
-      urlParams = {[pair[0]]: pair[1]}
+const router = createBrowserRouter([
+  {
+    path: "/*",
+    element: (<App/>)
   }
+])
 
-  return urlParams
-}
-
-ReactDOM.render(<App params={ searchParams ? getURLParams(): undefined} />, document.getElementById("root"))
+createRoot(document.getElementById("root")!).render(<RouterProvider router={router} />)

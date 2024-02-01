@@ -10,8 +10,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -33,7 +33,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return fmt.Errorf("usage: %s resourceid", os.Args[0])
 	}
 
-	_env, err := env.NewCore(ctx, log)
+	_env, err := env.NewCore(ctx, log, env.COMPONENT_TOOLING)
 	if err != nil {
 		return err
 	}
@@ -43,10 +43,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	scopes := []string{_env.Environment().ResourceManagerScope}
-	authorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
-
-	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().KeyVaultScope)
+	msiKVAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().KeyVaultScope)
 	if err != nil {
 		return err
 	}
@@ -68,7 +65,10 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	dbAccountName := os.Getenv(DatabaseAccountName)
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, authorizer, dbAccountName)
+	clientOptions := &policy.ClientOptions{
+		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
+	}
+	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, tokenCredential, clientOptions, _env.SubscriptionID(), _env.ResourceGroup(), dbAccountName)
 	if err != nil {
 		return err
 	}

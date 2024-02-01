@@ -3,6 +3,7 @@ package arodenymastertolerationtaints
 import future.keywords.in
 import future.keywords.contains
 import data.lib.common.is_priv_namespace
+import data.lib.common.is_exempted_account
 
 violation[{"msg": msg}] {
     # Check if the input namespace is a non-privileged namespace
@@ -11,6 +12,9 @@ violation[{"msg": msg}] {
 
     # Check if the input operation is CREATE or UPDATE
     input.review.operation in ["CREATE", "UPDATE"]
+
+    # Check if it is a regular user
+    not is_exempted_account(input.review)
 
     # Check if pod object has master toleration taints
     tolerations := input.review.object.spec.tolerations

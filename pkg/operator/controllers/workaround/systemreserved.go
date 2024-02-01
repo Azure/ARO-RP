@@ -16,8 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers/autosizednodes"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -47,7 +47,7 @@ func (sr *systemreserved) Name() string {
 }
 
 func (sr *systemreserved) IsRequired(clusterVersion *version.Version, cluster *arov1alpha1.Cluster) bool {
-	if cluster.Spec.OperatorFlags.GetSimpleBoolean(autosizednodes.ControllerEnabled) {
+	if cluster.Spec.OperatorFlags.GetSimpleBoolean(operator.AutosizedNodesEnabled) {
 		return false
 	}
 	return clusterVersion.Lt(sr.versionFixed)

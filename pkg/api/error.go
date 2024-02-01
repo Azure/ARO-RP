@@ -102,6 +102,7 @@ const (
 	CloudErrorCodeInUseSubnetCannotBeDeleted         = "InUseSubnetCannotBeDeleted"
 	CloudErrorCodeScopeLocked                        = "ScopeLocked"
 	CloudErrorCodeRequestDisallowedByPolicy          = "RequestDisallowedByPolicy"
+	CloudErrorCodeInvalidNetworkAddress              = "InvalidNetworkAddress"
 )
 
 // NewCloudError returns a new CloudError

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/jongio/azidext/go/azidext"
@@ -19,20 +20,22 @@ const (
 	MSIContextGateway MSIContext = "GATEWAY"
 )
 
-func (c *core) NewMSIAuthorizer(msiContext MSIContext, scopes ...string) (autorest.Authorizer, error) {
+func (c *core) NewMSITokenCredential() (azcore.TokenCredential, error) {
 	if !c.IsLocalDevelopmentMode() {
 		options := c.Environment().ManagedIdentityCredentialOptions()
-		msiTokenCredential, err := azidentity.NewManagedIdentityCredential(options)
-		if err != nil {
-			return nil, err
-		}
+		return azidentity.NewManagedIdentityCredential(options)
+	}
 
-		return azidext.NewTokenCredentialAdapter(msiTokenCredential, scopes), nil
+	var msiContext string
+	if c.component == COMPONENT_GATEWAY {
+		msiContext = string(MSIContextGateway)
+	} else {
+		msiContext = string(MSIContextRP)
 	}
 
 	tenantIdKey := "AZURE_TENANT_ID"
-	azureClientIdKey := "AZURE_" + string(msiContext) + "_CLIENT_ID"
-	azureClientSecretKey := "AZURE_" + string(msiContext) + "_CLIENT_SECRET"
+	azureClientIdKey := "AZURE_" + msiContext + "_CLIENT_ID"
+	azureClientSecretKey := "AZURE_" + msiContext + "_CLIENT_SECRET"
 
 	if err := ValidateVars(azureClientIdKey, azureClientSecretKey, tenantIdKey); err != nil {
 		return nil, fmt.Errorf("%v (development mode)", err.Error())
@@ -44,10 +47,13 @@ func (c *core) NewMSIAuthorizer(msiContext MSIContext, scopes ...string) (autore
 
 	options := c.Environment().ClientSecretCredentialOptions()
 
-	clientSecretCredential, err := azidentity.NewClientSecretCredential(tenantId, azureClientId, azureClientSecret, options)
+	return azidentity.NewClientSecretCredential(tenantId, azureClientId, azureClientSecret, options)
+}
+
+func (c *core) NewMSIAuthorizer(scopes ...string) (autorest.Authorizer, error) {
+	token, err := c.NewMSITokenCredential()
 	if err != nil {
 		return nil, err
 	}
-
-	return azidext.NewTokenCredentialAdapter(clientSecretCredential, scopes), nil
+	return azidext.NewTokenCredentialAdapter(token, scopes), nil
 }

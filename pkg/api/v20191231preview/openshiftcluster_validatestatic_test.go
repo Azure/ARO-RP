@@ -13,7 +13,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/Azure/ARO-RP/test/validate"
 )
 
@@ -51,7 +50,7 @@ func validOpenShiftCluster() *OpenShiftCluster {
 			ClusterProfile: ClusterProfile{
 				PullSecret:      `{"auths":{"registry.connect.redhat.com":{"auth":""},"registry.redhat.io":{"auth":""}}}`,
 				Domain:          "cluster.location.aroapp.io",
-				Version:         version.DefaultInstallStream.Version.String(),
+				Version:         "4.10.0",
 				ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", subscriptionID),
 			},
 			ConsoleProfile: ConsoleProfile{
@@ -440,6 +439,20 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 				oc.Properties.NetworkProfile.ServiceCIDR = "10.0.0.0/23"
 			},
 			wantErr: "400: InvalidParameter: properties.networkProfile.serviceCidr: The provided vnet CIDR '10.0.0.0/23' is invalid: must be /22 or larger.",
+		},
+		{
+			name: "podCidr invalid network",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PodCIDR = "10.254.0.0/14"
+			},
+			wantErr: "400: InvalidNetworkAddress: properties.networkProfile.podCidr: The provided pod CIDR '10.254.0.0/14' is invalid, expecting: '10.252.0.0/14'.",
+		},
+		{
+			name: "serviceCidr invalid network",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.ServiceCIDR = "10.0.150.0/16"
+			},
+			wantErr: "400: InvalidNetworkAddress: properties.networkProfile.serviceCidr: The provided service CIDR '10.0.150.0/16' is invalid, expecting: '10.0.0.0/16'.",
 		},
 	}
 

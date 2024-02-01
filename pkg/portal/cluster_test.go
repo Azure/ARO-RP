@@ -70,7 +70,7 @@ func TestClusterList(t *testing.T) {
 		dbOpenShiftClusters: dbOpenShiftClusters,
 	}
 
-	req, err := http.NewRequest("GET", "/api/clusters", nil)
+	req, err := http.NewRequest(http.MethodGet, "/api/clusters", nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -191,7 +191,7 @@ func TestClusterDetail(t *testing.T) {
 		dbOpenShiftClusters: dbOpenShiftClusters,
 	}
 
-	req, err := http.NewRequest("GET", "/api/00000000-0000-0000-0000-000000000000/resourcegroupname/succeeded", nil)
+	req, err := http.NewRequest(http.MethodGet, "/api/00000000-0000-0000-0000-000000000000/resourcegroupname/succeeded", nil)
 	if err != nil {
 		t.Error(err)
 	}

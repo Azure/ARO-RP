@@ -292,7 +292,7 @@ func TestEmitPodContainerRestartCounter(t *testing.T) {
 	mon._emitPodContainerRestartCounter(ps)
 
 	// Matches the number of emitted messages
-	assert.Equal(t, 3, len(hook.Entries))
+	assert.Len(t, hook.Entries, 3)
 
 	// the order of the log entries does not seem to be stable, so testing one entry only
 	// and no test for specific values, except for the metric

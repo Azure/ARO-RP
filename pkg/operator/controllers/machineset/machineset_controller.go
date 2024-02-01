@@ -18,13 +18,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 )
 
 const (
 	ControllerName = "MachineSet"
-
-	ControllerEnabled = "aro.machineset.enabled"
 )
 
 type Reconciler struct {
@@ -48,7 +47,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(ControllerEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.MachineSetEnabled) {
 		r.Log.Debug("controller is disabled")
 		return reconcile.Result{}, nil
 	}

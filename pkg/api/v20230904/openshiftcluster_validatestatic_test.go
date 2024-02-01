@@ -15,7 +15,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/Azure/ARO-RP/test/validate"
 )
 
@@ -71,7 +70,7 @@ func validOpenShiftCluster(name, location string) *OpenShiftCluster {
 			ClusterProfile: ClusterProfile{
 				PullSecret:           `{"auths":{"registry.connect.redhat.com":{"auth":""},"registry.redhat.io":{"auth":""}}}`,
 				Domain:               "cluster.location.aroapp.io",
-				Version:              version.DefaultInstallStream.Version.String(),
+				Version:              "4.10.0",
 				ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", subscriptionID),
 				FipsValidatedModules: FipsValidatedModulesDisabled,
 			},
@@ -243,22 +242,6 @@ func TestOpenShiftClusterStaticValidateProperties(t *testing.T) {
 			},
 			wantErr: "400: InvalidParameter: properties.provisioningState: The provided provisioning state 'invalid' is invalid.",
 		},
-		{
-			name: "workerProfileStatus nonNil",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfilesStatus = []WorkerProfile{
-					{
-						Name:             "worker",
-						VMSize:           "Standard_D4s_v3",
-						EncryptionAtHost: EncryptionAtHostDisabled,
-						DiskSizeGB:       128,
-						SubnetID:         fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID),
-						Count:            3,
-					},
-				}
-			},
-			wantErr: "400: InvalidParameter: properties.workerProfilesStatus: Worker Profile Status must be set to nil.",
-		},
 	}
 	createTests := []*validateTest{
 		{
@@ -274,6 +257,22 @@ func TestOpenShiftClusterStaticValidateProperties(t *testing.T) {
 				oc.Properties.WorkerProfiles = []WorkerProfile{{}, {}}
 			},
 			wantErr: "400: InvalidParameter: properties.workerProfiles: There should be exactly one worker profile.",
+		},
+		{
+			name: "workerProfileStatus nonNil",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.WorkerProfilesStatus = []WorkerProfile{
+					{
+						Name:             "worker",
+						VMSize:           "Standard_D4s_v3",
+						EncryptionAtHost: EncryptionAtHostDisabled,
+						DiskSizeGB:       128,
+						SubnetID:         fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID),
+						Count:            3,
+					},
+				}
+			},
+			wantErr: "400: InvalidParameter: properties.workerProfilesStatus: Worker Profile Status must be set to nil.",
 		},
 	}
 
@@ -532,6 +531,20 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 			},
 			wantErr: "",
+		},
+		{
+			name: "podCidr invalid network",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PodCIDR = "10.254.0.0/14"
+			},
+			wantErr: "400: InvalidNetworkAddress: properties.networkProfile.podCidr: The provided pod CIDR '10.254.0.0/14' is invalid, expecting: '10.252.0.0/14'.",
+		},
+		{
+			name: "serviceCidr invalid network",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.ServiceCIDR = "10.0.150.0/16"
+			},
+			wantErr: "400: InvalidNetworkAddress: properties.networkProfile.serviceCidr: The provided service CIDR '10.0.150.0/16' is invalid, expecting: '10.0.0.0/16'.",
 		},
 	}
 

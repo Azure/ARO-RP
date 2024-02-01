@@ -25,11 +25,11 @@ type metric struct {
 // MarshalJSON marshals a metric into JSON format.
 func (m *metric) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		Metric    string
-		Account   string `json:"Account,omitempty"`
-		Namespace string `json:"Namespace,omitempty"`
-		Dims      map[string]string
-		TS        string
+		Metric    string            `json:"Metric"`
+		Account   string            `json:"Account,omitempty"`
+		Namespace string            `json:"Namespace,omitempty"`
+		Dims      map[string]string `json:"Dims"`
+		TS        string            `json:"TS"`
 	}{
 		Metric:    m.name,
 		Account:   m.account,

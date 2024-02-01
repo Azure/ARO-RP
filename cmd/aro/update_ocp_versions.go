@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/policy"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -21,8 +22,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-func getInstallerImageDigests(envKey string) (map[string]string, error) {
-	var installerImageDigests map[string]string
+// Corresponds to configuration.openShiftVersions in RP-Config
+type OpenShiftVersions struct {
+	DefaultStream  map[string]string
+	InstallStreams map[string]string
+}
+
+func getEnvironmentData(envKey string, envData any) error {
 	var err error
 
 	jsonData := []byte(os.Getenv(envKey))
@@ -33,15 +39,75 @@ func getInstallerImageDigests(envKey string) (map[string]string, error) {
 	if !env.IsLocalDevelopmentMode() {
 		jsonData, err = base64.StdEncoding.DecodeString(string(jsonData))
 		if err != nil {
-			return nil, fmt.Errorf("%s: Failed to decode base64: %v", envKey, err)
+			return fmt.Errorf("%s: Failed to decode base64: %w", envKey, err)
 		}
 	}
 
-	if err = json.Unmarshal(jsonData, &installerImageDigests); err != nil {
-		return nil, fmt.Errorf("%s: Failed to parse JSON: %v", envKey, err)
+	if err = json.Unmarshal(jsonData, envData); err != nil {
+		return fmt.Errorf("%s: Failed to parse JSON: %w", envKey, err)
+	}
+
+	return nil
+}
+
+func getOpenShiftVersions() (*OpenShiftVersions, error) {
+	const envKey = envOpenShiftVersions
+	var openShiftVersions OpenShiftVersions
+
+	if err := getEnvironmentData(envKey, &openShiftVersions); err != nil {
+		return nil, err
+	}
+
+	// The DefaultStream map must have exactly one entry.
+	numDefaultStreams := len(openShiftVersions.DefaultStream)
+	if numDefaultStreams != 1 {
+		return nil, fmt.Errorf("%s: DefaultStream must have exactly 1 entry, found %d", envKey, numDefaultStreams)
+	}
+
+	return &openShiftVersions, nil
+}
+
+func getInstallerImageDigests() (map[string]string, error) {
+	// INSTALLER_IMAGE_DIGESTS is the mapping of a minor version to
+	// the aro-installer wrapper digest.  This allows us to utilize
+	// Azure Safe Deployment Practices (SDP) instead of pushing the
+	// version tag and deploying to all regions at once.
+	const envKey = envInstallerImageDigests
+	var installerImageDigests map[string]string
+
+	if err := getEnvironmentData(envKey, &installerImageDigests); err != nil {
+		return nil, err
 	}
 
 	return installerImageDigests, nil
+}
+
+func appendOpenShiftVersions(ocpVersions []api.OpenShiftVersion, installStreams map[string]string, installerImageName string, installerImageDigests map[string]string, isDefault bool) ([]api.OpenShiftVersion, error) {
+	for fullVersion, openShiftPullspec := range installStreams {
+		openShiftVersion, err := version.ParseVersion(fullVersion)
+		if err != nil {
+			return nil, err
+		}
+		fullVersion = openShiftVersion.String() // trimmed of whitespace
+		minorVersion := openShiftVersion.MinorVersion()
+		installerDigest, ok := installerImageDigests[minorVersion]
+		if !ok {
+			return nil, fmt.Errorf("no installer digest for version %s", minorVersion)
+		}
+		installerPullspec := fmt.Sprintf("%s:%s@%s", installerImageName, minorVersion, installerDigest)
+
+		ocpVersions = append(ocpVersions, api.OpenShiftVersion{
+			Properties: api.OpenShiftVersionProperties{
+				Version:           fullVersion,
+				OpenShiftPullspec: openShiftPullspec,
+				InstallerPullspec: installerPullspec,
+				Enabled:           true,
+				Default:           isDefault,
+			},
+		})
+	}
+
+	return ocpVersions, nil
 }
 
 func getLatestOCPVersions(ctx context.Context, log *logrus.Entry) ([]api.OpenShiftVersion, error) {
@@ -51,41 +117,35 @@ func getLatestOCPVersions(ctx context.Context, log *logrus.Entry) ([]api.OpenShi
 	}
 	dstAcr := os.Getenv("DST_ACR_NAME")
 	acrDomainSuffix := "." + env.Environment().ContainerRegistryDNSSuffix
+	installerImageName := dstAcr + acrDomainSuffix + "/aro-installer"
 
-	dstRepo := dstAcr + acrDomainSuffix
-	ocpVersions := []api.OpenShiftVersion{}
-
-	// INSTALLER_IMAGE_DIGESTS is the mapping of a minor version to
-	// the aro-installer wrapper digest.  This allows us to utilize
-	// Azure Safe Deployment Practices (SDP) instead of pushing the
-	// version tag and deploying to all regions at once.
-	installerImageDigests, err := getInstallerImageDigests("INSTALLER_IMAGE_DIGESTS")
+	openShiftVersions, err := getOpenShiftVersions()
 	if err != nil {
 		return nil, err
 	}
 
-	for _, vers := range version.AvailableInstallStreams {
-		installerPullSpec := fmt.Sprintf("%s/aro-installer:%s", dstRepo, vers.Version.MinorVersion())
-		digest, ok := installerImageDigests[vers.Version.MinorVersion()]
-		if !ok {
-			return nil, fmt.Errorf("no digest found for version %s", vers.Version.String())
-		}
+	installerImageDigests, err := getInstallerImageDigests()
+	if err != nil {
+		return nil, err
+	}
 
-		ocpVersions = append(ocpVersions, api.OpenShiftVersion{
-			Properties: api.OpenShiftVersionProperties{
-				Version:           vers.Version.String(),
-				OpenShiftPullspec: vers.PullSpec,
-				InstallerPullspec: installerPullSpec + "@" + digest,
-				Enabled:           true,
-			},
-		})
+	ocpVersions := make([]api.OpenShiftVersion, 0, len(openShiftVersions.DefaultStream)+len(openShiftVersions.InstallStreams))
+
+	ocpVersions, err = appendOpenShiftVersions(ocpVersions, openShiftVersions.DefaultStream, installerImageName, installerImageDigests, true)
+	if err != nil {
+		return nil, err
+	}
+
+	ocpVersions, err = appendOpenShiftVersions(ocpVersions, openShiftVersions.InstallStreams, installerImageName, installerImageDigests, false)
+	if err != nil {
+		return nil, err
 	}
 
 	return ocpVersions, nil
 }
 
 func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenShiftVersions, error) {
-	_env, err := env.NewCore(ctx, log)
+	_env, err := env.NewCore(ctx, log, env.COMPONENT_UPDATE_OCP_VERSIONS)
 	if err != nil {
 		return nil, err
 	}
@@ -100,22 +160,22 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 		}
 	}
 
-	msiAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().ResourceManagerScope)
+	msiToken, err := _env.NewMSITokenCredential()
 	if err != nil {
 		return nil, fmt.Errorf("MSI Authorizer failed with: %s", err.Error())
 	}
 
-	msiKVAuthorizer, err := _env.NewMSIAuthorizer(env.MSIContextRP, _env.Environment().KeyVaultScope)
+	msiKVAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().KeyVaultScope)
 	if err != nil {
 		return nil, fmt.Errorf("MSI KeyVault Authorizer failed with: %s", err.Error())
 	}
 
 	m := statsd.New(ctx, log.WithField("component", "update-ocp-versions"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 
-	if err := env.ValidateVars(KeyVaultPrefix); err != nil {
+	if err := env.ValidateVars(envKeyVaultPrefix); err != nil {
 		return nil, err
 	}
-	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
+	keyVaultPrefix := os.Getenv(envKeyVaultPrefix)
 	serviceKeyvaultURI := keyvault.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
 	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
 
@@ -124,12 +184,15 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 		return nil, err
 	}
 
-	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+	if err := env.ValidateVars(envDatabaseAccountName); err != nil {
 		return nil, err
 	}
 
-	dbAccountName := os.Getenv(DatabaseAccountName)
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, _env, msiAuthorizer, dbAccountName)
+	dbAccountName := os.Getenv(envDatabaseAccountName)
+	clientOptions := &policy.ClientOptions{
+		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
+	}
+	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, msiToken, clientOptions, _env.SubscriptionID(), _env.ResourceGroup(), dbAccountName)
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +247,13 @@ func updateOpenShiftVersions(ctx context.Context, dbOpenShiftVersions database.O
 		}
 
 		log.Printf("Version %q not found, deleting", doc.OpenShiftVersion.Properties.Version)
-		err := dbOpenShiftVersions.Delete(ctx, doc)
+		// Delete via changefeed
+		_, err := dbOpenShiftVersions.Patch(ctx, doc.ID,
+			func(d *api.OpenShiftVersionDocument) error {
+				d.OpenShiftVersion.Deleting = true
+				d.TTL = 60
+				return nil
+			})
 		if err != nil {
 			return err
 		}

@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/ghodss/yaml"
 	configv1 "github.com/openshift/api/config/v1"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	cov1Helpers "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/ugorji/go/codec"
@@ -28,6 +29,7 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	cpcController "github.com/Azure/ARO-RP/pkg/operator/controllers/cloudproviderconfig"
 	imageController "github.com/Azure/ARO-RP/pkg/operator/controllers/imageconfig"
@@ -96,7 +98,7 @@ var _ = Describe("ARO Operator - Internet checking", func() {
 
 			g.Expect(conditions.IsTrue(co.Status.Conditions, arov1alpha1.InternetReachableFromMaster)).To(BeTrue())
 			g.Expect(conditions.IsTrue(co.Status.Conditions, arov1alpha1.InternetReachableFromWorker)).To(BeTrue())
-		}).WithContext(ctx).Should(Succeed())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
 
 	It("sets InternetReachableFromMaster and InternetReachableFromWorker to false when URL is not reachable", func(ctx context.Context) {
@@ -119,7 +121,7 @@ var _ = Describe("ARO Operator - Internet checking", func() {
 
 			g.Expect(conditions.IsFalse(co.Status.Conditions, arov1alpha1.InternetReachableFromMaster)).To(BeTrue())
 			g.Expect(conditions.IsFalse(co.Status.Conditions, arov1alpha1.InternetReachableFromWorker)).To(BeTrue())
-		}).WithContext(ctx).Should(Succeed())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
 })
 
@@ -133,7 +135,7 @@ var _ = Describe("ARO Operator - Geneva Logging", func() {
 		}
 
 		By("checking that mdsd DaemonSet is ready before the test")
-		Eventually(mdsdIsReady).WithContext(ctx).Should(Succeed())
+		Eventually(mdsdIsReady).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		initial, err := updatedObjects(ctx, "openshift-azure-logging")
 		Expect(err).NotTo(HaveOccurred())
@@ -143,7 +145,7 @@ var _ = Describe("ARO Operator - Geneva Logging", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking that mdsd DaemonSet is ready")
-		Eventually(mdsdIsReady).WithContext(ctx).Should(Succeed())
+		Eventually(mdsdIsReady).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("confirming that only one object was updated")
 		final, err := updatedObjects(ctx, "openshift-azure-logging")
@@ -166,7 +168,7 @@ var _ = Describe("ARO Operator - Cluster Monitoring ConfigMap", func() {
 		}
 
 		By("waiting for the ConfigMap to make sure it exists")
-		Eventually(configMapExists).WithContext(ctx).Should(Succeed())
+		Eventually(configMapExists).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("unmarshalling the config from the ConfigMap data")
 		var configData monitoring.Config
@@ -191,14 +193,14 @@ var _ = Describe("ARO Operator - Cluster Monitoring ConfigMap", func() {
 		}
 
 		By("waiting for the ConfigMap to make sure it exists")
-		Eventually(configMapExists).WithContext(ctx).Should(Succeed())
+		Eventually(configMapExists).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("deleting for the ConfigMap")
 		err := clients.Kubernetes.CoreV1().ConfigMaps("openshift-monitoring").Delete(ctx, "cluster-monitoring-config", metav1.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("waiting for the ConfigMap to make sure it was restored")
-		Eventually(configMapExists).WithContext(ctx).Should(Succeed())
+		Eventually(configMapExists).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
 })
 
@@ -210,14 +212,14 @@ var _ = Describe("ARO Operator - RBAC", func() {
 		}
 
 		By("waiting for the ClusterRole to make sure it exists")
-		Eventually(clusterRoleExists).WithContext(ctx).Should(Succeed())
+		Eventually(clusterRoleExists).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("deleting for the ClusterRole")
 		err := clients.Kubernetes.RbacV1().ClusterRoles().Delete(ctx, "system:aro-sre", metav1.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("waiting for the ClusterRole to make sure it was restored")
-		Eventually(clusterRoleExists).WithContext(ctx).Should(Succeed())
+		Eventually(clusterRoleExists).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
 })
 
@@ -244,7 +246,7 @@ var _ = Describe("ARO Operator - MachineHealthCheck", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("waiting for the machine health check to be restored")
-		Eventually(getMachineHealthCheck).WithContext(ctx).Should(Succeed())
+		Eventually(getMachineHealthCheck).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
 
 	It("the alerting rule must recreated if deleted", func(ctx context.Context) {
@@ -253,7 +255,7 @@ var _ = Describe("ARO Operator - MachineHealthCheck", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("waiting for the machine health check remediation alert to be restored")
-		Eventually(getMachineHealthCheckRemediationAlertName).WithContext(ctx).Should(Succeed())
+		Eventually(getMachineHealthCheckRemediationAlertName).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
 
 })
@@ -271,7 +273,7 @@ var _ = Describe("ARO Operator - Conditions", func() {
 			for _, condition := range arov1alpha1.ClusterChecksTypes() {
 				g.Expect(conditions.IsTrue(co.Status.Conditions, condition)).To(BeTrue(), "Condition %s", condition)
 			}
-		}).WithContext(ctx).Should(Succeed())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
 
 	It("must have all the conditions on the cluster operator set to the expected values", func(ctx context.Context) {
@@ -279,10 +281,10 @@ var _ = Describe("ARO Operator - Conditions", func() {
 			co, err := clients.ConfigClient.ConfigV1().ClusterOperators().Get(ctx, "aro", metav1.GetOptions{})
 			g.Expect(err).NotTo(HaveOccurred())
 
-			g.Expect(cov1Helpers.IsStatusConditionTrue(co.Status.Conditions, configv1.OperatorAvailable))
-			g.Expect(cov1Helpers.IsStatusConditionFalse(co.Status.Conditions, configv1.OperatorProgressing))
-			g.Expect(cov1Helpers.IsStatusConditionFalse(co.Status.Conditions, configv1.OperatorDegraded))
-		}).WithContext(ctx).WithTimeout(timeout).Should(Succeed())
+			g.Expect(cov1Helpers.IsStatusConditionTrue(co.Status.Conditions, configv1.OperatorAvailable)).To(BeTrue())
+			g.Expect(cov1Helpers.IsStatusConditionFalse(co.Status.Conditions, configv1.OperatorProgressing)).To(BeTrue())
+			g.Expect(cov1Helpers.IsStatusConditionFalse(co.Status.Conditions, configv1.OperatorDegraded)).To(BeTrue())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).WithTimeout(timeout).Should(Succeed())
 	})
 })
 
@@ -302,6 +304,7 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 	var testnsg mgmtnetwork.SecurityGroup
 
 	const nsg = "e2e-nsg"
+	const emptyMachineSet = "e2e-test-machineset"
 
 	gatherNetworkInfo := func(ctx context.Context) {
 		By("gathering vnet name, resource group, location, and adds master/worker subnets to list to reconcile")
@@ -309,8 +312,9 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		location = *oc.Location
 
-		vnet, masterSubnet, err := apisubnet.Split(*oc.OpenShiftClusterProperties.MasterProfile.SubnetID)
+		vnet, masterSubnet, err := apisubnet.Split((*oc.OpenShiftClusterProperties.MasterProfile.SubnetID))
 		Expect(err).NotTo(HaveOccurred())
+
 		_, workerSubnet, err := apisubnet.Split((*(*oc.OpenShiftClusterProperties.WorkerProfiles)[0].SubnetID))
 		Expect(err).NotTo(HaveOccurred())
 
@@ -323,6 +327,32 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 		resourceGroup = r.ResourceGroup
 		vnetName = r.ResourceName
+
+		// Store the existing NSGs for the cluster before the test runs, in order to ensure we clean up
+		// after the test finishes, success or failure.
+		// This is expensive but will prevent flakes.
+		By("gathering existing subnet NSGs")
+		for subnet := range subnetsToReconcile {
+			subnetObject, err := clients.Subnet.Get(ctx, resourceGroup, vnetName, subnet, "")
+			Expect(err).NotTo(HaveOccurred())
+
+			subnetsToReconcile[subnet] = subnetObject.NetworkSecurityGroup.ID
+		}
+	}
+
+	cleanUpSubnetNSGs := func(ctx context.Context) {
+		By("cleaning up subnet NSGs")
+		for subnet := range subnetsToReconcile {
+			subnetObject, err := clients.Subnet.Get(ctx, resourceGroup, vnetName, subnet, "")
+			Expect(err).NotTo(HaveOccurred())
+
+			if subnetObject.NetworkSecurityGroup.ID != subnetsToReconcile[subnet] {
+				subnetObject.NetworkSecurityGroup.ID = subnetsToReconcile[subnet]
+
+				err = clients.Subnet.CreateOrUpdateAndWait(ctx, resourceGroup, vnetName, subnet, subnetObject)
+				Expect(err).NotTo(HaveOccurred())
+			}
+		}
 	}
 
 	createE2ENSG := func(ctx context.Context) {
@@ -342,15 +372,33 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 	}
 
 	BeforeEach(func(ctx context.Context) {
+		// TODO remove this when GA
+		By("checking if preconfiguredNSG is enabled")
+		co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		if co.Spec.OperatorFlags[operator.AzureSubnetsNsgManaged] == operator.FlagFalse {
+			Skip("preconfiguredNSG is enabled, skipping test")
+		}
+		By("preconfiguredNSG is disabled")
+
 		gatherNetworkInfo(ctx)
 		createE2ENSG(ctx)
 	})
 	AfterEach(func(ctx context.Context) {
+		cleanUpSubnetNSGs(ctx)
+
 		By("deleting test NSG")
 		err := clients.NetworkSecurityGroups.DeleteAndWait(ctx, resourceGroup, nsg)
 		if err != nil {
 			log.Warn(err)
 		}
+
+		By("deleting test machineset if it still exists")
+		err = clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").Delete(ctx, emptyMachineSet, metav1.DeleteOptions{})
+		Expect(err).To(SatisfyAny(
+			Not(HaveOccurred()),
+			MatchError(kerrors.IsNotFound),
+		))
 	})
 	It("must reconcile list of subnets when NSG is changed", func(ctx context.Context) {
 		for subnet := range subnetsToReconcile {
@@ -358,12 +406,33 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 			// Gets current subnet NSG and then updates it to testnsg.
 			subnetObject, err := clients.Subnet.Get(ctx, resourceGroup, vnetName, subnet, "")
 			Expect(err).NotTo(HaveOccurred())
-			// Updates the value to the original NSG in our subnetsToReconcile map
-			subnetsToReconcile[subnet] = subnetObject.NetworkSecurityGroup.ID
+
 			subnetObject.NetworkSecurityGroup = &testnsg
+
 			err = clients.Subnet.CreateOrUpdateAndWait(ctx, resourceGroup, vnetName, subnet, subnetObject)
 			Expect(err).NotTo(HaveOccurred())
 		}
+
+		By("creating an empty MachineSet to force a reconcile")
+		Eventually(func(g Gomega, ctx context.Context) {
+			machinesets, err := clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").List(ctx, metav1.ListOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(machinesets.Items).To(Not(BeEmpty()))
+
+			newMachineSet := machinesets.Items[0].DeepCopy()
+			newMachineSet.Status = machinev1beta1.MachineSetStatus{}
+			newMachineSet.ObjectMeta = metav1.ObjectMeta{
+				Name:        emptyMachineSet,
+				Namespace:   "openshift-machine-api",
+				Annotations: newMachineSet.ObjectMeta.Annotations,
+				Labels:      newMachineSet.ObjectMeta.Labels,
+			}
+			newMachineSet.Name = emptyMachineSet
+			newMachineSet.Spec.Replicas = to.Int32Ptr(0)
+
+			_, err = clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").Create(ctx, newMachineSet, metav1.CreateOptions{})
+			g.Expect(err).NotTo(HaveOccurred())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		for subnet, correctNSG := range subnetsToReconcile {
 			By(fmt.Sprintf("waiting for the subnet %q to be reconciled so it includes the original cluster NSG", subnet))
@@ -375,7 +444,7 @@ var _ = Describe("ARO Operator - Azure Subnet Reconciler", func() {
 				co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(co.Annotations).To(Satisfy(subnetReconciliationAnnotationExists))
-			}).WithContext(ctx).Should(Succeed())
+			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 		}
 	})
 })
@@ -400,7 +469,7 @@ var _ = Describe("ARO Operator - MUO Deployment", func() {
 			g.Expect(err).NotTo(HaveOccurred())
 
 			g.Expect(string(b)).To(ContainSubstring(`X:boringcrypto,strictfipsruntime`))
-		}).WithContext(ctx).Should(Succeed())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	}, SpecTimeout(2*time.Minute))
 
 	It("must be restored if deleted", func(ctx context.Context) {
@@ -421,19 +490,19 @@ var _ = Describe("ARO Operator - MUO Deployment", func() {
 		}
 
 		By("waiting for the MUO deployment to be ready")
-		Eventually(muoDeploymentExists).WithContext(ctx).Should(Succeed())
+		Eventually(muoDeploymentExists).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("deleting the MUO deployment")
 		Expect(deleteMUODeployment(ctx)).Should(Succeed())
 
 		By("waiting for the MUO deployment to be reconciled")
-		Eventually(muoDeploymentExists).WithContext(ctx).Should(Succeed())
+		Eventually(muoDeploymentExists).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	}, SpecTimeout(2*time.Minute))
 })
 
 var _ = Describe("ARO Operator - ImageConfig Reconciler", func() {
 	const (
-		imageconfigFlag  = "aro.imageconfig.enabled"
+		imageconfigFlag  = operator.ImageConfigEnabled
 		optionalRegistry = "quay.io"
 		timeout          = 5 * time.Minute
 	)
@@ -499,7 +568,7 @@ var _ = Describe("ARO Operator - ImageConfig Reconciler", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("waiting for the Image config to be reset")
-		Eventually(verifyLists(nil, nil)).WithContext(ctx).Should(Succeed())
+		Eventually(verifyLists(nil, nil)).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
 
 	It("must set empty allow and block lists in Image config by default", func() {
@@ -519,7 +588,7 @@ var _ = Describe("ARO Operator - ImageConfig Reconciler", func() {
 
 		By("checking that Image config eventually has ARO service registries and the test registry in the allow list")
 		expectedAllowlist := append(requiredRegistries, optionalRegistry)
-		Eventually(verifyLists(expectedAllowlist, nil)).WithContext(ctx).Should(Succeed())
+		Eventually(verifyLists(expectedAllowlist, nil)).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
 
 	It("must remove ARO service registries from the block lists, but keep customer added registries", func(ctx context.Context) {
@@ -530,7 +599,7 @@ var _ = Describe("ARO Operator - ImageConfig Reconciler", func() {
 
 		By("checking that Image config eventually doesn't include ARO service registries")
 		expectedBlocklist := []string{optionalRegistry}
-		Eventually(verifyLists(nil, expectedBlocklist)).WithContext(ctx).Should(Succeed())
+		Eventually(verifyLists(nil, expectedBlocklist)).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
 })
 
@@ -592,8 +661,8 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 
 var _ = Describe("ARO Operator - Guardrails", func() {
 	const (
-		guardrailsEnabledFlag         = "aro.guardrails.enabled"
-		guardrailsDeployManagedFlag   = "aro.guardrails.deploy.managed"
+		guardrailsEnabledFlag         = operator.GuardrailsEnabled
+		guardrailsDeployManagedFlag   = operator.GuardrailsDeployManaged
 		guardrailsNamespace           = "openshift-azure-guardrails"
 		gkControllerManagerDeployment = "gatekeeper-controller-manager"
 		gkAuditDeployment             = "gatekeeper-audit"
@@ -625,13 +694,13 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 		}
 
 		By("waiting for the gatekeeper Controller Manager deployment to be ready")
-		Eventually(controllerManagerDeploymentExists).WithContext(ctx).Should(Succeed())
+		Eventually(controllerManagerDeploymentExists).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("deleting the gatekeeper Controller Manager deployment")
 		Expect(deleteControllerManagerDeployment(ctx)).Should(Succeed())
 
 		By("waiting for the gatekeeper Controller Manager deployment to be reconciled")
-		Eventually(controllerManagerDeploymentExists).WithContext(ctx).Should(Succeed())
+		Eventually(controllerManagerDeploymentExists).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
 
 	It("Audit must be restored if deleted", func(ctx context.Context) {
@@ -660,20 +729,20 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 		}
 
 		By("waiting for the gatekeeper Audit deployment to be ready")
-		Eventually(auditDeploymentExists).WithContext(ctx).Should(Succeed())
+		Eventually(auditDeploymentExists).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("deleting the gatekeeper Audit deployment")
 		Expect(deleteAuditDeployment(ctx)).Should(Succeed())
 
 		By("waiting for the gatekeeper Audit deployment to be reconciled")
-		Eventually(auditDeploymentExists).WithContext(ctx).Should(Succeed())
+		Eventually(auditDeploymentExists).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
 
 })
 
 var _ = Describe("ARO Operator - Cloud Provder Config ConfigMap", func() {
 	const (
-		cpcControllerEnabled = "aro.cloudproviderconfig.enabled"
+		cpcControllerEnabled = operator.CloudProviderConfigEnabled
 	)
 
 	It("must have disableOutboundSNAT set to true", func(ctx context.Context) {
@@ -691,13 +760,13 @@ var _ = Describe("ARO Operator - Cloud Provder Config ConfigMap", func() {
 			var err error
 			cm, err = clients.Kubernetes.CoreV1().ConfigMaps("openshift-config").Get(ctx, "cloud-provider-config", metav1.GetOptions{})
 			g.Expect(err).ToNot(HaveOccurred())
-		}).WithContext(ctx).Should(Succeed())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("waiting for disableOutboundSNAT to be true")
 		Eventually(func(g Gomega, ctx context.Context) {
 			disableOutboundSNAT, err := cpcController.GetDisableOutboundSNAT(cm.Data["config"])
 			g.Expect(err).NotTo(HaveOccurred())
 			g.Expect(disableOutboundSNAT).To(BeTrue())
-		}).WithContext(ctx).Should(Succeed())
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	})
 })

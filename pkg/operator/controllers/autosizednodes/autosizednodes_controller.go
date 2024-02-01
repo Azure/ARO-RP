@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 )
 
@@ -30,9 +31,7 @@ type Reconciler struct {
 
 const (
 	ControllerName = "AutoSizedNodes"
-
-	ControllerEnabled = "aro.autosizednodes.enabled"
-	configName        = "dynamic-node"
+	configName     = "dynamic-node"
 )
 
 func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
@@ -53,14 +52,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	r.log.Infof("Config changed, autoSize: %t\n", aro.Spec.OperatorFlags.GetSimpleBoolean(ControllerEnabled))
+	r.log.Infof("Config changed, autoSize: %t\n", aro.Spec.OperatorFlags.GetSimpleBoolean(operator.AutosizedNodesEnabled))
 
 	// key is used to locate the object in the etcd
 	key := types.NamespacedName{
 		Name: configName,
 	}
 
-	if !aro.Spec.OperatorFlags.GetSimpleBoolean(ControllerEnabled) {
+	if !aro.Spec.OperatorFlags.GetSimpleBoolean(operator.AutosizedNodesEnabled) {
 		// defaults to deleting the config
 		config := mcv1.KubeletConfig{
 			ObjectMeta: metav1.ObjectMeta{

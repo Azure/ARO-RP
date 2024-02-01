@@ -84,8 +84,8 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		srcAcrGeneva := "linuxgeneva-microsoft" + acrDomainSuffix
 		mirrorImages := []string{
 			// https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
-			srcAcrGeneva + "/distroless/genevamdm:2.2023.721.1630-e50918-20230721t1737",
-			srcAcrGeneva + "/distroless/genevamdsd:mariner_20230727.1",
+			srcAcrGeneva + "/distroless/genevamdm:2.2023.1118.1225-d7e0d6-20231118t1338",
+			srcAcrGeneva + "/distroless/genevamdsd:mariner_20231129.1",
 		}
 		for _, ref := range mirrorImages {
 			log.Printf("mirroring %s -> %s", ref, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref))
@@ -110,10 +110,10 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"registry.redhat.io/rhel9/support-tools:latest",
 
 		// https://catalog.redhat.com/software/containers/openshift4/ose-tools-rhel8/5f748d3399cc5b9e7c1a8747
-		"registry.redhat.io/openshift4/ose-tools-rhel8:v4.10",
 		"registry.redhat.io/openshift4/ose-tools-rhel8:v4.11",
 		"registry.redhat.io/openshift4/ose-tools-rhel8:v4.12",
 		"registry.redhat.io/openshift4/ose-tools-rhel8:v4.13",
+		"registry.redhat.io/openshift4/ose-tools-rhel8:v4.14",
 		"registry.redhat.io/openshift4/ose-tools-rhel8:latest",
 
 		// https://catalog.redhat.com/software/containers/ubi8/ubi-minimal/5c359a62bed8bd75a2c3fba8
@@ -126,15 +126,15 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 
 		// https://catalog.redhat.com/software/containers/ubi8/go-toolset/5ce8713aac3db925c03774d1
 		// https://catalog.redhat.com/software/containers/ubi9/go-toolset/61e5c00b4ec9945c18787690
-		"registry.access.redhat.com/ubi8/go-toolset:1.18.10",
-		"registry.access.redhat.com/ubi8/go-toolset:1.19.10",
+		"registry.access.redhat.com/ubi8/go-toolset:1.20.10",
+		"registry.access.redhat.com/ubi9/go-toolset:1.20.10",
 
 		// https://quay.io/repository/app-sre/managed-upgrade-operator?tab=tags
 		// https://gitlab.cee.redhat.com/service/app-interface/-/blob/master/data/services/osd-operators/cicd/saas/saas-managed-upgrade-operator.yaml?ref_type=heads
 		"quay.io/app-sre/managed-upgrade-operator:v0.1.952-44b631a",
 
 		// https://quay.io/repository/app-sre/hive?tab=tags
-		"quay.io/app-sre/hive:70b666ec89",
+		"quay.io/app-sre/hive:9dd47f8bfa",
 	} {
 		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref))
 
@@ -154,7 +154,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	var releases []pkgmirror.Node
 	if len(flag.Args()) == 1 {
 		log.Print("reading release graph")
-		releases, err = pkgmirror.AddFromGraph(version.NewVersion(4, 10))
+		releases, err = pkgmirror.AddFromGraph(version.NewVersion(4, 11))
 		if err != nil {
 			return err
 		}

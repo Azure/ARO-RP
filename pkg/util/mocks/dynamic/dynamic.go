@@ -117,6 +117,20 @@ func (mr *MockDynamicMockRecorder) ValidateLoadBalancerProfile(ctx, oc interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateLoadBalancerProfile", reflect.TypeOf((*MockDynamic)(nil).ValidateLoadBalancerProfile), ctx, oc)
 }
 
+// ValidatePreConfiguredNSGs mocks base method.
+func (m *MockDynamic) ValidatePreConfiguredNSGs(ctx context.Context, oc *api.OpenShiftCluster, subnets []dynamic.Subnet) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidatePreConfiguredNSGs", ctx, oc, subnets)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidatePreConfiguredNSGs indicates an expected call of ValidatePreConfiguredNSGs.
+func (mr *MockDynamicMockRecorder) ValidatePreConfiguredNSGs(ctx, oc, subnets interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatePreConfiguredNSGs", reflect.TypeOf((*MockDynamic)(nil).ValidatePreConfiguredNSGs), ctx, oc, subnets)
+}
+
 // ValidateServicePrincipal mocks base method.
 func (m *MockDynamic) ValidateServicePrincipal(ctx context.Context, spTokenCredential azcore.TokenCredential) error {
 	m.ctrl.T.Helper()

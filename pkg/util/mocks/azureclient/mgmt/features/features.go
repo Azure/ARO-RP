@@ -295,6 +295,20 @@ func (mr *MockResourcesClientMockRecorder) DeleteByID(arg0, arg1, arg2 interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteByID", reflect.TypeOf((*MockResourcesClient)(nil).DeleteByID), arg0, arg1, arg2)
 }
 
+// DeleteByIDAndWait mocks base method.
+func (m *MockResourcesClient) DeleteByIDAndWait(arg0 context.Context, arg1, arg2 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteByIDAndWait", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteByIDAndWait indicates an expected call of DeleteByIDAndWait.
+func (mr *MockResourcesClientMockRecorder) DeleteByIDAndWait(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteByIDAndWait", reflect.TypeOf((*MockResourcesClient)(nil).DeleteByIDAndWait), arg0, arg1, arg2)
+}
+
 // GetByID mocks base method.
 func (m *MockResourcesClient) GetByID(arg0 context.Context, arg1, arg2 string) (features.GenericResource, error) {
 	m.ctrl.T.Helper()

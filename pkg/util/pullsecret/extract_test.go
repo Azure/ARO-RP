@@ -15,7 +15,7 @@ var _ = Describe("Extract()", func() {
 		pullSecret := "{\"auths\": {\"example.com\": {\"auth\": \"dGVzdHVzZXI6dGVzdHBhc3M=\"}}}"
 
 		correctlyExtracted, err := Extract(pullSecret, "example.com")
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 		Expect(correctlyExtracted).To(Equal(&UserPass{Username: "testuser", Password: "testpass"}))
 	})
 

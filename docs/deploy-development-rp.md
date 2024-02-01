@@ -123,6 +123,8 @@
 
    By default, a public cluster will be created. In order to create a private cluster, set the `PRIVATE_CLUSTER` environment variable to `true` prior to creation. Internet access from the cluster can also be restricted by setting the `NO_INTERNET` environment variable to `true`.
 
+   > __NOTE:__ If the cluster creation fails with `unable to connect to Podman socket...dial unix ///run/user/1000/podman/podman.sock: connect: no such file or directory`, then you will need enable podman user socket by executing : `systemctl --user enable --now podman.socket`, and re-run the installation.
+
    [1]: https://docs.microsoft.com/en-us/azure/openshift/tutorial-create-cluster
 
 1. The following additional RP endpoints are available but not exposed via `az
@@ -262,6 +264,17 @@ After that, when you [create](https://github.com/Azure/ARO-RP/blob/master/docs/d
   ```bash
   VMROLE=<master or worker>
   curl -X GET -k "https://localhost:8443/admin/supportedvmsizes?vmRole=$VMROLE"
+  ```
+
+* Perform Etcd Recovery Operation on a cluster
+  ```bash
+  curl -X PATCH -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/etcdrecovery" 
+  ```
+
+* Delete a managed resource
+  ```bash
+  MANAGED_RESOURCEID=<id of managed resource to delete>
+  curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/deletemanagedresource?managedResourceID=$MANAGED_RESOURCEID"
   ```
 
 ## OpenShift Version

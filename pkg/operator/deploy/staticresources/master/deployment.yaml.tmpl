@@ -28,8 +28,23 @@ spec:
         - master
         image: "{{ .Image }}"
         name: aro-operator
-        {{ if .IsLocalDevelopment}}
         env:
+        - name: AZURE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: azure-cloud-credentials
+              key: azure_client_id
+        - name: AZURE_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: azure-cloud-credentials
+              key: azure_client_secret
+        - name: AZURE_TENANT_ID
+          valueFrom:
+            secretKeyRef:
+              name: azure-cloud-credentials
+              key: azure_tenant_id
+        {{ if .IsLocalDevelopment}}
         - name: "RP_MODE"
           value: "development"
         {{ end }}

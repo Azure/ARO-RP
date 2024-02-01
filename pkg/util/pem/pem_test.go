@@ -15,12 +15,12 @@ import (
 
 var _ = Describe("PEM", func() {
 	validCaKey, validCaCerts, err := utiltls.GenerateKeyAndCertificate("validca", nil, nil, true, false)
-	Expect(err).To(BeNil())
+	Expect(err).ToNot(HaveOccurred())
 
 	Describe("encoding keys", func() {
 		It("succeeds", func() {
 			keyOut, err := Encode(validCaKey)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			Expect(keyOut).To(ContainSubstring("BEGIN RSA PRIVATE KEY"))
 		})
 	})
@@ -28,7 +28,7 @@ var _ = Describe("PEM", func() {
 	Describe("encoding single certificate", func() {
 		It("succeeds", func() {
 			certsOut, err := Encode(validCaCerts...)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			Expect(certsOut).To(ContainSubstring("BEGIN CERTIFICATE"))
 		})
 	})
@@ -36,7 +36,7 @@ var _ = Describe("PEM", func() {
 	Describe("encoding multiple certificates", func() {
 		It("succeeds", func() {
 			certsOut, err := Encode(validCaCerts[0], validCaCerts[0])
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			Expect(bytes.Count(certsOut, []byte("BEGIN CERTIFICATE"))).To(Equal(2))
 		})
 	})

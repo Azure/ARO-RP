@@ -19,6 +19,7 @@ spec:
         import future.keywords.in
         import future.keywords.contains
         import data.lib.common.is_priv_namespace
+        import data.lib.common.is_exempted_account
 
         violation[{"msg": msg}] {
             # Check if the input namespace is a non-privileged namespace
@@ -27,6 +28,9 @@ spec:
 
             # Check if the input operation is CREATE or UPDATE
             input.review.operation in ["CREATE", "UPDATE"]
+
+            # Check if it is a regular user
+            not is_exempted_account(input.review)
 
             # Check if pod object has master toleration taints
             tolerations := input.review.object.spec.tolerations
@@ -106,6 +110,7 @@ spec:
 
           exempted_user = {
             "system:kube-controller-manager",
+            "system:kube-scheduler",
             "system:admin" # comment out temporarily for testing in console
           }
 
@@ -139,13 +144,13 @@ spec:
             "openshift-cloud-controller-manager",
             "openshift-cloud-controller-manager-operator",
             "openshift-cloud-credential-operator",
-            "openshift-cluster-csi-drivers",
+            # "openshift-cluster-csi-drivers",
             "openshift-cluster-machine-approver",
             "openshift-cluster-node-tuning-operator",
             "openshift-cluster-samples-operator",
             "openshift-cluster-storage-operator",
             "openshift-cluster-version",
-            "openshift-config",
+            # "openshift-config",
             "openshift-config-managed",
             "openshift-config-operator",
             "openshift-console",

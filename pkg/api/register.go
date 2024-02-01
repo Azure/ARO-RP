@@ -8,6 +8,7 @@ type OpenShiftClusterConverter interface {
 	ToExternal(*OpenShiftCluster) interface{}
 	ToExternalList([]*OpenShiftCluster, string) interface{}
 	ToInternal(interface{}, *OpenShiftCluster)
+	ExternalNoReadOnly(interface{})
 }
 
 type OpenShiftClusterStaticValidator interface {

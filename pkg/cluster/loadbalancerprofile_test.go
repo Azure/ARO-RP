@@ -14,6 +14,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
@@ -124,7 +125,7 @@ func TestGetDesiredOutboundIPs(t *testing.T) {
 			outboundIPs, err := tt.m.getDesiredOutboundIPs(ctx)
 			assert.Equal(t, tt.expectedErr, err, "Unexpected error exception")
 			// results are not deterministic when scaling down so just check desired length
-			assert.Equal(t, tt.m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs.Count, len(outboundIPs))
+			assert.Len(t, outboundIPs, tt.m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs.Count)
 		})
 	}
 }
@@ -1007,7 +1008,7 @@ func TestReconcileLoadBalancerProfile(t *testing.T) {
 			if tt.expectedErr != nil {
 				assert.Contains(t, tt.expectedErr, err, "Unexpected error exception")
 			} else {
-				assert.Equal(t, nil, err, "Unexpected error exception")
+				require.NoError(t, err, "Unexpected error exception")
 			}
 			assert.Equal(t, &tt.expectedLoadBalancerProfile, &tt.m.doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile)
 		})

@@ -17,8 +17,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	checkercommon "github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/common"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
@@ -75,12 +75,12 @@ func TestReconcile(t *testing.T) {
 				Spec: arov1alpha1.ClusterSpec{
 					AZEnvironment: azureclient.PublicCloud.Environment.Name,
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						checkercommon.ControllerEnabled: "true",
+						operator.CheckerEnabled: operator.FlagTrue,
 					},
 				},
 			}
 			if tt.controllerDisabled {
-				instance.Spec.OperatorFlags[checkercommon.ControllerEnabled] = "false"
+				instance.Spec.OperatorFlags[operator.CheckerEnabled] = operator.FlagFalse
 			}
 
 			clientFake := fake.NewClientBuilder().WithObjects(instance).Build()

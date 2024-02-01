@@ -13,48 +13,49 @@ import (
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 )
 
-func TestEmitPucmState(t *testing.T) {
+func TestEmitMaintenanceState(t *testing.T) {
 	for _, tt := range []struct {
 		name              string
 		provisioningState api.ProvisioningState
-		pucmPending       bool
+		maintenanceState  api.MaintenanceState
 		adminUpdateErr    string
-		expectedPucmState pucmState
+		expectedState     maintenanceState
 	}{
 		{
-			name:              "state none",
+			name:              "state none - empty maintenance state",
 			provisioningState: api.ProvisioningStateSucceeded,
-			expectedPucmState: pucmNone,
+			expectedState:     none,
+		},
+		{
+			name:              "state none - no maintenance state set",
+			provisioningState: api.ProvisioningStateSucceeded,
+			maintenanceState:  api.MaintenanceStateNone,
+			expectedState:     none,
 		},
 		{
 			name:              "state pending",
 			provisioningState: api.ProvisioningStateSucceeded,
-			pucmPending:       true,
-			expectedPucmState: pucmPending,
+			maintenanceState:  api.MaintenanceStatePending,
+			expectedState:     pending,
 		},
 		{
-			name:              "state unplanned - admin updating in flight and no admin update error",
+			name:              "state unplanned",
 			provisioningState: api.ProvisioningStateAdminUpdating,
-			expectedPucmState: pucmUnplanned,
+			maintenanceState:  api.MaintenanceStateUnplanned,
+			expectedState:     unplanned,
 		},
 		{
-			name:              "state planned - admin updating in flight and no admin update error",
+			name:              "state planned",
 			provisioningState: api.ProvisioningStateAdminUpdating,
-			pucmPending:       true,
-			expectedPucmState: pucmPlanned,
+			maintenanceState:  api.MaintenanceStatePlanned,
+			expectedState:     planned,
 		},
 		{
-			name:              "state unplanned - not admin updating but admin update error",
-			provisioningState: api.ProvisioningStateFailed,
-			adminUpdateErr:    "PUCM failed",
-			expectedPucmState: pucmUnplanned,
-		},
-		{
-			name:              "state planned - not admin updating but admin update error",
-			provisioningState: api.ProvisioningStateFailed,
-			pucmPending:       true,
-			adminUpdateErr:    "PUCM failed",
-			expectedPucmState: pucmPlanned,
+			name:              "state customer action needed",
+			provisioningState: api.ProvisioningStateSucceeded,
+			adminUpdateErr:    "error",
+			maintenanceState:  api.MaintenanceStateCustomerActionNeeded,
+			expectedState:     customerActionNeeded,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -67,7 +68,7 @@ func TestEmitPucmState(t *testing.T) {
 			oc := &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
 					ProvisioningState:    tt.provisioningState,
-					PucmPending:          tt.pucmPending,
+					MaintenanceState:     tt.maintenanceState,
 					LastAdminUpdateError: tt.adminUpdateErr,
 				},
 			}
@@ -77,10 +78,10 @@ func TestEmitPucmState(t *testing.T) {
 			}
 
 			m.EXPECT().EmitGauge("cluster.maintenance.pucm", int64(1), map[string]string{
-				"state": tt.expectedPucmState.String(),
+				"state": tt.expectedState.String(),
 			})
 
-			err := mon.emitPucmState(ctx)
+			err := mon.emitMaintenanceState(ctx)
 			if err != nil {
 				t.Fatal(err)
 			}

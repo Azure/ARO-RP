@@ -34,7 +34,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	env, err := env.NewCore(ctx, log)
+	env, err := env.NewCore(ctx, log, env.COMPONENT_TOOLING)
 	if err != nil {
 		return err
 	}

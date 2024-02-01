@@ -18,8 +18,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	checkercommon "github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/common"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
 )
 
@@ -62,7 +62,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(checkercommon.ControllerEnabled) {
+	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.CheckerEnabled) {
 		r.log.Debug("controller is disabled")
 		return r.reconcileDisabled(ctx)
 	}
