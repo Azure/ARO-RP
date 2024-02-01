@@ -210,7 +210,7 @@ validate-go-action:
 	@sha256sum --quiet -c .sha256sum || (echo error: client library is stale, please run make client; exit 1)
 
 validate-fips:
-	hack/fips/validate-fips.sh
+	hack/fips/validate-fips.sh ./aro
 
 unit-test-go:
 	go run gotest.tools/gotestsum@v1.9.0 --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
