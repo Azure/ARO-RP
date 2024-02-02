@@ -5,40 +5,13 @@ USER root
 ENV GOPATH=/root/go
 RUN mkdir -p /app
 WORKDIR /app
+COPY . /app
 
-#we have multiple steps for copy so we can make use of caching
-COPY vendor/ vendor
-
-COPY docs/ docs
-COPY hack/ hack
-
-COPY swagger/ swagger
-COPY test/ test
-COPY python/ python
-COPY portal/ portal
-
-COPY cmd/ cmd
-COPY pkg/ pkg
-
-#COPY all files with an extension (directories not copied)
-COPY ?*.* .
-COPY Makefile LICENSE ./
-
-COPY .git .git
-COPY .gitignore .gitignore
-COPY .pipelines .pipelines
-COPY .gdn .gdn
-COPY .github .github
-COPY .env .env
-COPY .sha256sum .sha256sum
-COPY .config .config
-
-RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.55.2
-RUN /root/go/bin/golangci-lint run
-
-RUN go run hack/ci-utils/differenceChecker/main.go make generate
-RUN make build-all
-RUN set -x && make validate-go unit-test-go
+FROM builder as lint-go
+WORKDIR /app
+COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/
+RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /usr/local/bin v1.55.2
+RUN make lint-go
 
 FROM ${REGISTRY}/ubi8/ubi-minimal
 RUN microdnf update && microdnf clean all
