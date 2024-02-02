@@ -93,8 +93,8 @@ func ensureAccessTokenClaims(ctx context.Context, spTokenCredential azcore.Token
 	return api.NewCloudError(
 		http.StatusBadRequest,
 		api.CloudErrorCodeInvalidServicePrincipalClaims,
-		"properties.servicePrincipleProfile",
-		"The provided service principal does not give an access token with at least one of the claims 'altsecid', 'oid' or 'puid'.")
+		"properties.servicePrincipalProfile",
+		"The Azure Red Hat Openshift resource provider service principal has been removed from your tenant. To restore, please unregister and then re-register the Azure Red Hat OpenShift resource provider.")
 }
 
 // Dynamic validates an OpenShift cluster
@@ -113,10 +113,20 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		})
 	}
 
-	var fpClientCred azcore.TokenCredential
-	var spClientCred azcore.TokenCredential
 	var pdpClient remotepdp.RemotePDPClient
 	spp := dv.oc.Properties.ServicePrincipalProfile
+
+	tenantID := dv.subscriptionDoc.Subscription.Properties.TenantID
+	options := dv.env.Environment().ClientSecretCredentialOptions()
+	spClientCred, err := azidentity.NewClientSecretCredential(
+		tenantID, spp.ClientID, string(spp.ClientSecret), options)
+	if err != nil {
+		return err
+	}
+	fpClientCred, err := dv.env.FPNewClientCertificateCredential(tenantID)
+	if err != nil {
+		return err
+	}
 
 	useCheckAccess, err := dv.env.LiveConfig().UseCheckAccess(ctx)
 	dv.log.Info("USE_CHECKACCESS: ", useCheckAccess)
@@ -130,21 +140,6 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	) {
 		// TODO remove after successfully migrating to CheckAccess
 		dv.log.Info("Using CheckAccess instead of ListPermissions")
-		var err error
-		fpClientCred, err = dv.env.FPNewClientCertificateCredential(dv.subscriptionDoc.Subscription.Properties.TenantID)
-		if err != nil {
-			return err
-		}
-
-		spClientCred, err = azidentity.NewClientSecretCredential(
-			dv.subscriptionDoc.Subscription.Properties.TenantID,
-			spp.ClientID,
-			string(spp.ClientSecret),
-			nil,
-		)
-		if err != nil {
-			return err
-		}
 
 		aroEnv := dv.env.Environment()
 		pdpClient = remotepdp.NewRemotePDPClient(
@@ -154,20 +149,12 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		)
 	}
 
-	tenantID := dv.subscriptionDoc.Subscription.Properties.TenantID
-	options := dv.env.Environment().ClientSecretCredentialOptions()
-	spTokenCredential, err := azidentity.NewClientSecretCredential(
-		tenantID, spp.ClientID, string(spp.ClientSecret), options)
-	if err != nil {
-		return err
-	}
-
 	scopes := []string{dv.env.Environment().ResourceManagerScope}
-	err = ensureAccessTokenClaims(ctx, spTokenCredential, scopes)
+	err = ensureAccessTokenClaims(ctx, spClientCred, scopes)
 	if err != nil {
 		return err
 	}
-	spAuthorizer := azidext.NewTokenCredentialAdapter(spTokenCredential, scopes)
+	spAuthorizer := azidext.NewTokenCredentialAdapter(spClientCred, scopes)
 
 	spDynamic := dynamic.NewValidator(
 		dv.log,
@@ -182,7 +169,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	)
 
 	// SP validation
-	err = spDynamic.ValidateServicePrincipal(ctx, spTokenCredential)
+	err = spDynamic.ValidateServicePrincipal(ctx, spClientCred)
 	if err != nil {
 		return err
 	}
@@ -219,6 +206,11 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	}
 
 	err = spDynamic.ValidatePreConfiguredNSGs(ctx, dv.oc, subnets)
+	if err != nil {
+		return err
+	}
+
+	err = ensureAccessTokenClaims(ctx, fpClientCred, scopes)
 	if err != nil {
 		return err
 	}
