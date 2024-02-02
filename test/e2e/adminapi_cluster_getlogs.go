@@ -45,9 +45,9 @@ func testGetPodLogsOK(ctx context.Context, containerName, podName, namespace str
 	expectedLog := "mock-pod-logs"
 
 	By("creating a test pod in openshift-azure-operator namespace with some known logs")
-	podDefinition := mockPod(containerName, podName, namespace, expectedLog)
-	pod := CreateK8sObjectWithRetry(
-		ctx, clients.Kubernetes.CoreV1().Pods(namespace).Create, podDefinition, metav1.CreateOptions{},
+	pod := mockPod(containerName, podName, namespace, expectedLog)
+	pod = CreateK8sObjectWithRetry(
+		ctx, clients.Kubernetes.CoreV1().Pods(namespace).Create, pod, metav1.CreateOptions{},
 	)
 
 	defer func() {
