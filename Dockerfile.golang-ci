@@ -13,6 +13,11 @@ COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/
 RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /usr/local/bin v1.55.2
 RUN make lint-go
 
+FROM builder as unit-test-go
+WORKDIR /app
+COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/
+RUN make unit-test-go
+
 FROM ${REGISTRY}/ubi8/ubi-minimal
 RUN microdnf update && microdnf clean all
 COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/
