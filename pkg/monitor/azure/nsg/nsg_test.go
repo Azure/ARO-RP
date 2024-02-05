@@ -98,29 +98,6 @@ var (
 	nsgOutbound = armnetwork.SecurityRuleDirectionOutbound
 )
 
-func createOC() api.OpenShiftCluster {
-	return api.OpenShiftCluster{
-		ID:       ocID,
-		Location: ocLocation,
-		Properties: api.OpenShiftClusterProperties{
-			MasterProfile: api.MasterProfile{
-				SubnetID: masterSubnetID,
-			},
-			WorkerProfiles: []api.WorkerProfile{
-				{
-					SubnetID: workerSubnet1ID,
-				},
-				{
-					SubnetID: "", // This should still work. Customers can create a faulty MachineSet.
-				},
-				{
-					SubnetID: workerSubnet2ID,
-				},
-			},
-		},
-	}
-}
-
 func ocFactory() api.OpenShiftCluster {
 	return api.OpenShiftCluster{
 		ID:       ocID,
@@ -663,7 +640,7 @@ func TestNewMonitor(t *testing.T) {
 			e := mock_env.NewMockInterface(ctrl)
 			emitter := mock_metrics.NewMockEmitter(ctrl)
 
-			oc := createOC()
+			oc := ocFactory()
 			if tt.modOC != nil {
 				tt.modOC(&oc)
 			}

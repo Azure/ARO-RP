@@ -52,6 +52,10 @@ type NSGMonitor struct {
 }
 
 func NewMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, e env.Interface, subscriptionID string, tenantID string, emitter metrics.Emitter, dims map[string]string, wg *sync.WaitGroup, trigger <-chan time.Time) monitoring.Monitor {
+	if oc == nil {
+		return &monitoring.NoOpMonitor{Wg: wg}
+	}
+
 	if oc.Properties.NetworkProfile.PreconfiguredNSG != api.PreconfiguredNSGEnabled {
 		return &monitoring.NoOpMonitor{Wg: wg}
 	}

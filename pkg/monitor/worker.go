@@ -24,6 +24,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
+// nsgMonitoringFrequency is used for initializing NSG monitoring ticker
+var nsgMonitoringFrequency = 10 * time.Minute
+
 // This function will continue to run until such time as it has a config to add to the global Hive shard map
 // Note that because the mon.hiveShardConfigs[shard] is set to `nil` when its created, the cluster
 // monitors will simply ignore Hive stats until this function populates the config
@@ -194,6 +197,7 @@ func (mon *monitor) worker(stop <-chan struct{}, delay time.Duration, id string)
 
 	log.Debug("starting monitoring")
 
+	nsgMonitoringTicker := time.NewTicker(nsgMonitoringFrequency)
 	t := time.NewTicker(time.Minute)
 	defer t.Stop()
 
@@ -216,7 +220,7 @@ out:
 		// cached metrics in the remaining minutes
 
 		if sub != nil && sub.Subscription != nil && sub.Subscription.State != api.SubscriptionStateSuspended && sub.Subscription.State != api.SubscriptionStateWarned {
-			mon.workOne(context.Background(), log, v.doc, sub, newh != h)
+			mon.workOne(context.Background(), log, v.doc, sub, newh != h, nsgMonitoringTicker)
 		}
 
 		select {
@@ -232,7 +236,7 @@ out:
 }
 
 // workOne checks the API server health of a cluster
-func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument, hourlyRun bool) {
+func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument, hourlyRun bool, nsgMonTicker *time.Ticker) {
 	ctx, cancel := context.WithTimeout(ctx, 50*time.Second)
 	defer cancel()
 
@@ -259,7 +263,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	var monitors []monitoring.Monitor
 	var wg sync.WaitGroup
 
-	nsgMon := nsg.NewMonitor(log, doc.OpenShiftCluster, mon.env, sub.ID, sub.Subscription.Properties.TenantID, mon.clusterm, dims, &wg, mon.nsgMonTrigger.C)
+	nsgMon := nsg.NewMonitor(log, doc.OpenShiftCluster, mon.env, sub.ID, sub.Subscription.Properties.TenantID, mon.clusterm, dims, &wg, nsgMonTicker.C)
 
 	c, err := cluster.NewMonitor(log, restConfig, doc.OpenShiftCluster, mon.clusterm, hiveRestConfig, hourlyRun, &wg)
 	if err != nil {
