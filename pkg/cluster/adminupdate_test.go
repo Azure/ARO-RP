@@ -12,6 +12,16 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
+func concatMultipleSlices[T any](slices ...[]T) []T {
+	result := []T{}
+
+	for _, s := range slices {
+		result = append(result, s...)
+	}
+
+	return result
+}
+
 func TestAdminUpdateSteps(t *testing.T) {
 	const (
 		key = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1"
@@ -31,9 +41,62 @@ func TestAdminUpdateSteps(t *testing.T) {
 		}
 	}
 
+	zerothSteps := []string{
+		"[Action initializeKubernetesClients-fm]",
+		"[Action ensureBillingRecord-fm]",
+		"[Action ensureDefaults-fm]",
+		"[AuthorizationRetryingAction fixupClusterSPObjectID-fm]",
+		"[Action startVMs-fm]",
+		"[Condition apiServersReady-fm, timeout 30m0s]",
+		"[Action fixInfraID-fm]",
+	}
+
+	generalFixesSteps := []string{
+		"[Action ensureResourceGroup-fm]",
+		"[Action createOrUpdateDenyAssignment-fm]",
+		"[Action ensureServiceEndpoints-fm]",
+		"[Action populateRegistryStorageAccountName-fm]",
+		"[Action migrateStorageAccounts-fm]",
+		"[Action fixSSH-fm]",
+		"[Action fixSREKubeconfig-fm]",
+		"[Action fixUserAdminKubeconfig-fm]",
+		"[Action createOrUpdateRouterIPFromCluster-fm]",
+		"[Action ensureGatewayUpgrade-fm]",
+		"[Action rotateACRTokenPassword-fm]",
+		"[Action populateRegistryStorageAccountName-fm]",
+		"[Action ensureMTUSize-fm]",
+	}
+
+	certificateRenewalSteps := []string{
+		"[Action populateDatabaseIntIP-fm]",
+		"[Action fixMCSCert-fm]",
+		"[Action fixMCSUserData-fm]",
+		"[Action configureAPIServerCertificate-fm]",
+		"[Action configureIngressCertificate-fm]",
+		"[Action initializeOperatorDeployer-fm]",
+		"[Action renewMDSDCertificate-fm]",
+	}
+
+	operatorUpdateSteps := []string{
+		"[Action initializeOperatorDeployer-fm]",
+		"[Action ensureAROOperator-fm]",
+		"[Condition aroDeploymentReady-fm, timeout 20m0s]",
+		"[Condition ensureAROOperatorRunningDesiredVersion-fm, timeout 5m0s]",
+	}
+
+	hiveSteps := []string{
+		"[Action initializeOperatorDeployer-fm]",
+		"[Action hiveCreateNamespace-fm]",
+		"[Action hiveEnsureResources-fm]",
+		"[Condition hiveClusterDeploymentReady-fm, timeout 5m0s]",
+		"[Action hiveResetCorrelationData-fm]",
+	}
+
+	updateProvisionedBySteps := []string{"[Action updateProvisionedBy-fm]"}
+
 	for _, tt := range []struct {
 		name           string
-		fixture        func() (*api.OpenShiftClusterDocument, bool)
+		fixture        func() (doc *api.OpenShiftClusterDocument, adoptHive bool)
 		shouldRunSteps []string
 	}{
 		{
@@ -44,19 +107,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskOperator
 				return doc, true
 			},
-			shouldRunSteps: []string{
-				"[Action initializeKubernetesClients-fm]",
-				"[Action ensureBillingRecord-fm]",
-				"[Action ensureDefaults-fm]",
-				"[AuthorizationRetryingAction fixupClusterSPObjectID-fm]",
-				"[Action fixInfraID-fm]",
-				"[Action startVMs-fm]",
-				"[Condition apiServersReady-fm, timeout 30m0s]",
-				"[Action initializeOperatorDeployer-fm]",
-				"[Action ensureAROOperator-fm]",
-				"[Condition aroDeploymentReady-fm, timeout 20m0s]",
-				"[Condition ensureAROOperatorRunningDesiredVersion-fm, timeout 5m0s]",
-			},
+			shouldRunSteps: concatMultipleSlices(zerothSteps, operatorUpdateSteps),
 		},
 		{
 			name: "ARO Operator Update on <= 4.6 cluster does not update operator",
@@ -67,16 +118,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.6.62"
 				return doc, true
 			},
-			shouldRunSteps: []string{
-				"[Action initializeKubernetesClients-fm]",
-				"[Action ensureBillingRecord-fm]",
-				"[Action ensureDefaults-fm]",
-				"[AuthorizationRetryingAction fixupClusterSPObjectID-fm]",
-				"[Action fixInfraID-fm]",
-				"[Action startVMs-fm]",
-				"[Condition apiServersReady-fm, timeout 30m0s]",
-				"[Action initializeOperatorDeployer-fm]",
-			},
+			shouldRunSteps: zerothSteps,
 		},
 		{
 			name: "ARO Operator Update on 4.7.0 cluster does update operator",
@@ -87,64 +129,20 @@ func TestAdminUpdateSteps(t *testing.T) {
 				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.7.0"
 				return doc, true
 			},
-			shouldRunSteps: []string{
-				"[Action initializeKubernetesClients-fm]",
-				"[Action ensureBillingRecord-fm]",
-				"[Action ensureDefaults-fm]",
-				"[AuthorizationRetryingAction fixupClusterSPObjectID-fm]",
-				"[Action fixInfraID-fm]",
-				"[Action startVMs-fm]",
-				"[Condition apiServersReady-fm, timeout 30m0s]",
-				"[Action initializeOperatorDeployer-fm]",
-				"[Action ensureAROOperator-fm]",
-				"[Condition aroDeploymentReady-fm, timeout 20m0s]",
-				"[Condition ensureAROOperatorRunningDesiredVersion-fm, timeout 5m0s]",
-			},
+			shouldRunSteps: concatMultipleSlices(zerothSteps, operatorUpdateSteps),
 		},
 		{
-			name: "Everything update",
+			name: "Everything update and adopt Hive.",
 			fixture: func() (*api.OpenShiftClusterDocument, bool) {
 				doc := baseClusterDoc()
 				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
 				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskEverything
 				return doc, true
 			},
-			shouldRunSteps: []string{
-				"[Action initializeKubernetesClients-fm]",
-				"[Action ensureBillingRecord-fm]",
-				"[Action ensureDefaults-fm]",
-				"[AuthorizationRetryingAction fixupClusterSPObjectID-fm]",
-				"[Action fixInfraID-fm]",
-				"[Action ensureResourceGroup-fm]",
-				"[Action createOrUpdateDenyAssignment-fm]",
-				"[Action ensureServiceEndpoints-fm]",
-				"[Action populateRegistryStorageAccountName-fm]",
-				"[Action migrateStorageAccounts-fm]",
-				"[Action fixSSH-fm]",
-				"[Action populateDatabaseIntIP-fm]",
-				"[Action startVMs-fm]",
-				"[Condition apiServersReady-fm, timeout 30m0s]",
-				"[Action fixSREKubeconfig-fm]",
-				"[Action fixUserAdminKubeconfig-fm]",
-				"[Action createOrUpdateRouterIPFromCluster-fm]",
-				"[Action fixMCSCert-fm]",
-				"[Action fixMCSUserData-fm]",
-				"[Action ensureGatewayUpgrade-fm]",
-				"[Action rotateACRTokenPassword-fm]",
-				"[Action configureAPIServerCertificate-fm]",
-				"[Action configureIngressCertificate-fm]",
-				"[Action populateRegistryStorageAccountName-fm]",
-				"[Action ensureMTUSize-fm]",
-				"[Action initializeOperatorDeployer-fm]",
-				"[Action ensureAROOperator-fm]",
-				"[Condition aroDeploymentReady-fm, timeout 20m0s]",
-				"[Condition ensureAROOperatorRunningDesiredVersion-fm, timeout 5m0s]",
-				"[Action hiveCreateNamespace-fm]",
-				"[Action hiveEnsureResources-fm]",
-				"[Condition hiveClusterDeploymentReady-fm, timeout 5m0s]",
-				"[Action hiveResetCorrelationData-fm]",
-				"[Action updateProvisionedBy-fm]",
-			},
+			shouldRunSteps: concatMultipleSlices(
+				zerothSteps, generalFixesSteps, certificateRenewalSteps,
+				operatorUpdateSteps, hiveSteps, updateProvisionedBySteps,
+			),
 		},
 		{
 			name: "Everything update on <= 4.6 cluster does not update operator",
@@ -155,39 +153,10 @@ func TestAdminUpdateSteps(t *testing.T) {
 				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.6.62"
 				return doc, true
 			},
-			shouldRunSteps: []string{
-				"[Action initializeKubernetesClients-fm]",
-				"[Action ensureBillingRecord-fm]",
-				"[Action ensureDefaults-fm]",
-				"[AuthorizationRetryingAction fixupClusterSPObjectID-fm]",
-				"[Action fixInfraID-fm]",
-				"[Action ensureResourceGroup-fm]",
-				"[Action createOrUpdateDenyAssignment-fm]",
-				"[Action ensureServiceEndpoints-fm]",
-				"[Action populateRegistryStorageAccountName-fm]",
-				"[Action migrateStorageAccounts-fm]",
-				"[Action fixSSH-fm]",
-				"[Action populateDatabaseIntIP-fm]",
-				"[Action startVMs-fm]",
-				"[Condition apiServersReady-fm, timeout 30m0s]",
-				"[Action fixSREKubeconfig-fm]",
-				"[Action fixUserAdminKubeconfig-fm]",
-				"[Action createOrUpdateRouterIPFromCluster-fm]",
-				"[Action fixMCSCert-fm]",
-				"[Action fixMCSUserData-fm]",
-				"[Action ensureGatewayUpgrade-fm]",
-				"[Action rotateACRTokenPassword-fm]",
-				"[Action configureAPIServerCertificate-fm]",
-				"[Action configureIngressCertificate-fm]",
-				"[Action populateRegistryStorageAccountName-fm]",
-				"[Action ensureMTUSize-fm]",
-				"[Action initializeOperatorDeployer-fm]",
-				"[Action hiveCreateNamespace-fm]",
-				"[Action hiveEnsureResources-fm]",
-				"[Condition hiveClusterDeploymentReady-fm, timeout 5m0s]",
-				"[Action hiveResetCorrelationData-fm]",
-				"[Action updateProvisionedBy-fm]",
-			},
+			shouldRunSteps: concatMultipleSlices(
+				zerothSteps, generalFixesSteps, certificateRenewalSteps,
+				hiveSteps, updateProvisionedBySteps,
+			),
 		},
 		{
 			name: "Blank, Hive not adopting (should perform everything but Hive)",
@@ -197,84 +166,23 @@ func TestAdminUpdateSteps(t *testing.T) {
 				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskEverything
 				return doc, false
 			},
-			shouldRunSteps: []string{
-				"[Action initializeKubernetesClients-fm]",
-				"[Action ensureBillingRecord-fm]",
-				"[Action ensureDefaults-fm]",
-				"[AuthorizationRetryingAction fixupClusterSPObjectID-fm]",
-				"[Action fixInfraID-fm]",
-				"[Action ensureResourceGroup-fm]",
-				"[Action createOrUpdateDenyAssignment-fm]",
-				"[Action ensureServiceEndpoints-fm]",
-				"[Action populateRegistryStorageAccountName-fm]",
-				"[Action migrateStorageAccounts-fm]",
-				"[Action fixSSH-fm]",
-				"[Action populateDatabaseIntIP-fm]",
-				"[Action startVMs-fm]",
-				"[Condition apiServersReady-fm, timeout 30m0s]",
-				"[Action fixSREKubeconfig-fm]",
-				"[Action fixUserAdminKubeconfig-fm]",
-				"[Action createOrUpdateRouterIPFromCluster-fm]",
-				"[Action fixMCSCert-fm]",
-				"[Action fixMCSUserData-fm]",
-				"[Action ensureGatewayUpgrade-fm]",
-				"[Action rotateACRTokenPassword-fm]",
-				"[Action configureAPIServerCertificate-fm]",
-				"[Action configureIngressCertificate-fm]",
-				"[Action populateRegistryStorageAccountName-fm]",
-				"[Action ensureMTUSize-fm]",
-				"[Action initializeOperatorDeployer-fm]",
-				"[Action ensureAROOperator-fm]",
-				"[Condition aroDeploymentReady-fm, timeout 20m0s]",
-				"[Condition ensureAROOperatorRunningDesiredVersion-fm, timeout 5m0s]",
-				"[Action updateProvisionedBy-fm]",
-			},
+			shouldRunSteps: concatMultipleSlices(
+				zerothSteps, generalFixesSteps, certificateRenewalSteps,
+				operatorUpdateSteps, updateProvisionedBySteps,
+			),
 		},
 		{
-			name: "Blank, Hive performing adopting (should perform everything but Hive)",
+			name: "Blank, Hive adopting (should perform everything)",
 			fixture: func() (*api.OpenShiftClusterDocument, bool) {
 				doc := baseClusterDoc()
 				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
 				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskEverything
 				return doc, true
 			},
-			shouldRunSteps: []string{
-				"[Action initializeKubernetesClients-fm]",
-				"[Action ensureBillingRecord-fm]",
-				"[Action ensureDefaults-fm]",
-				"[AuthorizationRetryingAction fixupClusterSPObjectID-fm]",
-				"[Action fixInfraID-fm]",
-				"[Action ensureResourceGroup-fm]",
-				"[Action createOrUpdateDenyAssignment-fm]",
-				"[Action ensureServiceEndpoints-fm]",
-				"[Action populateRegistryStorageAccountName-fm]",
-				"[Action migrateStorageAccounts-fm]",
-				"[Action fixSSH-fm]",
-				"[Action populateDatabaseIntIP-fm]",
-				"[Action startVMs-fm]",
-				"[Condition apiServersReady-fm, timeout 30m0s]",
-				"[Action fixSREKubeconfig-fm]",
-				"[Action fixUserAdminKubeconfig-fm]",
-				"[Action createOrUpdateRouterIPFromCluster-fm]",
-				"[Action fixMCSCert-fm]",
-				"[Action fixMCSUserData-fm]",
-				"[Action ensureGatewayUpgrade-fm]",
-				"[Action rotateACRTokenPassword-fm]",
-				"[Action configureAPIServerCertificate-fm]",
-				"[Action configureIngressCertificate-fm]",
-				"[Action populateRegistryStorageAccountName-fm]",
-				"[Action ensureMTUSize-fm]",
-				"[Action initializeOperatorDeployer-fm]",
-				"[Action renewMDSDCertificate-fm]",
-				"[Action ensureAROOperator-fm]",
-				"[Condition aroDeploymentReady-fm, timeout 20m0s]",
-				"[Condition ensureAROOperatorRunningDesiredVersion-fm, timeout 5m0s]",
-				"[Action hiveCreateNamespace-fm]",
-				"[Action hiveEnsureResources-fm]",
-				"[Condition hiveClusterDeploymentReady-fm, timeout 5m0s]",
-				"[Action hiveResetCorrelationData-fm]",
-				"[Action updateProvisionedBy-fm]",
-			},
+			shouldRunSteps: concatMultipleSlices(
+				zerothSteps, generalFixesSteps, certificateRenewalSteps,
+				operatorUpdateSteps, hiveSteps, updateProvisionedBySteps,
+			),
 		},
 		{
 			name: "Rotate in-cluster MDSD/Ingress/API certs",
@@ -284,22 +192,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskRenewCerts
 				return doc, true
 			},
-			shouldRunSteps: []string{
-				"[Action initializeKubernetesClients-fm]",
-				"[Action ensureBillingRecord-fm]",
-				"[Action ensureDefaults-fm]",
-				"[AuthorizationRetryingAction fixupClusterSPObjectID-fm]",
-				"[Action fixInfraID-fm]",
-				"[Action populateDatabaseIntIP-fm]",
-				"[Action startVMs-fm]",
-				"[Condition apiServersReady-fm, timeout 30m0s]",
-				"[Action fixMCSCert-fm]",
-				"[Action fixMCSUserData-fm]",
-				"[Action configureAPIServerCertificate-fm]",
-				"[Action configureIngressCertificate-fm]",
-				"[Action initializeOperatorDeployer-fm]",
-				"[Action renewMDSDCertificate-fm]",
-			},
+			shouldRunSteps: concatMultipleSlices(zerothSteps, certificateRenewalSteps),
 		},
 		{
 			name: "adminUpdate() does not adopt Hive-created clusters",
@@ -311,38 +204,10 @@ func TestAdminUpdateSteps(t *testing.T) {
 				doc.OpenShiftCluster.Properties.HiveProfile.CreatedByHive = true
 				return doc, true
 			},
-			shouldRunSteps: []string{
-				"[Action initializeKubernetesClients-fm]",
-				"[Action ensureBillingRecord-fm]",
-				"[Action ensureDefaults-fm]",
-				"[AuthorizationRetryingAction fixupClusterSPObjectID-fm]",
-				"[Action fixInfraID-fm]",
-				"[Action ensureResourceGroup-fm]",
-				"[Action createOrUpdateDenyAssignment-fm]",
-				"[Action ensureServiceEndpoints-fm]",
-				"[Action populateRegistryStorageAccountName-fm]",
-				"[Action migrateStorageAccounts-fm]",
-				"[Action fixSSH-fm]",
-				"[Action populateDatabaseIntIP-fm]",
-				"[Action startVMs-fm]",
-				"[Condition apiServersReady-fm, timeout 30m0s]",
-				"[Action fixSREKubeconfig-fm]",
-				"[Action fixUserAdminKubeconfig-fm]",
-				"[Action createOrUpdateRouterIPFromCluster-fm]",
-				"[Action fixMCSCert-fm]",
-				"[Action fixMCSUserData-fm]",
-				"[Action ensureGatewayUpgrade-fm]",
-				"[Action rotateACRTokenPassword-fm]",
-				"[Action configureAPIServerCertificate-fm]",
-				"[Action configureIngressCertificate-fm]",
-				"[Action populateRegistryStorageAccountName-fm]",
-				"[Action ensureMTUSize-fm]",
-				"[Action initializeOperatorDeployer-fm]",
-				"[Action ensureAROOperator-fm]",
-				"[Condition aroDeploymentReady-fm, timeout 20m0s]",
-				"[Condition ensureAROOperatorRunningDesiredVersion-fm, timeout 5m0s]",
-				"[Action updateProvisionedBy-fm]",
-			},
+			shouldRunSteps: concatMultipleSlices(
+				zerothSteps, generalFixesSteps, certificateRenewalSteps,
+				operatorUpdateSteps, updateProvisionedBySteps,
+			),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
