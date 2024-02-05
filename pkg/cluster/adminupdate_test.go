@@ -12,16 +12,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
-func concatMultipleSlices[T any](slices ...[]T) []T {
-	result := []T{}
-
-	for _, s := range slices {
-		result = append(result, s...)
-	}
-
-	return result
-}
-
 func TestAdminUpdateSteps(t *testing.T) {
 	const (
 		key = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1"

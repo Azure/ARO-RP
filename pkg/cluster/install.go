@@ -34,6 +34,16 @@ const (
 	operatorCutOffVersion = "4.7.0" // OCP versions older than this will not receive ARO operator updates
 )
 
+func concatMultipleSlices[T any](slices ...[]T) []T {
+	result := []T{}
+
+	for _, s := range slices {
+		result = append(result, s...)
+	}
+
+	return result
+}
+
 // AdminUpdate performs an admin update of an ARO cluster
 func (m *manager) AdminUpdate(ctx context.Context) error {
 	toRun := m.adminUpdate()
@@ -48,8 +58,9 @@ func (m *manager) adminUpdate() []steps.Step {
 
 	stepsToRun := m.getZerothSteps()
 	if isEverything {
-		stepsToRun = append(stepsToRun, m.getGeneralFixesSteps()...)
-		stepsToRun = append(stepsToRun, m.getCertificateRenewalSteps()...)
+		stepsToRun = concatMultipleSlices(
+			stepsToRun, m.getGeneralFixesSteps(), m.getCertificateRenewalSteps(),
+		)
 		if m.shouldUpdateOperator() {
 			stepsToRun = append(stepsToRun, m.getOperatorUpdateSteps()...)
 		}
@@ -76,6 +87,7 @@ func (m *manager) getZerothSteps() []steps.Step {
 		steps.Action(m.initializeKubernetesClients), // must be first
 		steps.Action(m.ensureBillingRecord),         // belt and braces
 		steps.Action(m.ensureDefaults),
+
 		// TODO: this relies on an authorizer that isn't exposed in the manager
 		// struct, so we'll rebuild the fpAuthorizer and use the error catching
 		// to advance
@@ -94,7 +106,6 @@ func (m *manager) getZerothSteps() []steps.Step {
 
 func (m *manager) getGeneralFixesSteps() []steps.Step {
 	return []steps.Step{
-		// Block 1
 		steps.Action(m.ensureResourceGroup), // re-create RP RBAC if needed after tenant migration
 		steps.Action(m.createOrUpdateDenyAssignment),
 		steps.Action(m.ensureServiceEndpoints),
@@ -103,16 +114,13 @@ func (m *manager) getGeneralFixesSteps() []steps.Step {
 		steps.Action(m.fixSSH),
 		// steps.Action(m.removePrivateDNSZone), // TODO(mj): re-enable once we communicate this out
 
-		// Block 3
 		steps.Action(m.fixSREKubeconfig),
 		steps.Action(m.fixUserAdminKubeconfig),
 		steps.Action(m.createOrUpdateRouterIPFromCluster),
 
-		// Block 5
 		steps.Action(m.ensureGatewayUpgrade),
 		steps.Action(m.rotateACRTokenPassword),
 
-		// Block 7
 		steps.Action(m.populateRegistryStorageAccountName),
 		steps.Action(m.ensureMTUSize),
 	}
@@ -120,32 +128,25 @@ func (m *manager) getGeneralFixesSteps() []steps.Step {
 
 func (m *manager) getCertificateRenewalSteps() []steps.Step {
 	return []steps.Step{
-		// Block 2
 		steps.Action(m.populateDatabaseIntIP),
-
-		// Block 4
 		steps.Action(m.fixMCSCert),
 		steps.Action(m.fixMCSUserData),
-
-		// Block 6
 		steps.Action(m.configureAPIServerCertificate),
 		steps.Action(m.configureIngressCertificate),
 
-		// Bootstrap 2
 		steps.Action(m.initializeOperatorDeployer),
 
-		// Block 8
-		steps.Action(m.renewMDSDCertificate),
+		steps.Action(m.renewMDSDCertificate), // Dependant on initializeOperatorDeployer.
 	}
 }
 
 func (m *manager) getOperatorUpdateSteps() []steps.Step {
 	return []steps.Step{
-		// Bootstrap 2
 		steps.Action(m.initializeOperatorDeployer),
 
-		// block 9
 		steps.Action(m.ensureAROOperator),
+
+		// The following are dependant on initializeOperatorDeployer.
 		steps.Condition(m.aroDeploymentReady, 20*time.Minute, true),
 		steps.Condition(m.ensureAROOperatorRunningDesiredVersion, 5*time.Minute, true),
 	}
@@ -153,7 +154,6 @@ func (m *manager) getOperatorUpdateSteps() []steps.Step {
 
 func (m *manager) getHiveAdoptionAndReconciliationSteps() []steps.Step {
 	return []steps.Step{
-		// block 10
 		steps.Action(m.hiveCreateNamespace),
 		steps.Action(m.hiveEnsureResources),
 		steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, false),
