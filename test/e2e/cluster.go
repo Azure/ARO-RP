@@ -281,10 +281,13 @@ func clusterSubnets(oc redhatopenshift.OpenShiftCluster) []string {
 }
 
 func createStatefulSet(ctx context.Context, cli kubernetes.Interface, namespace, storageClass string) string {
-	pvcStorage, err := resource.ParseQuantity("2Gi")
+	quantity := "2Gi"
+	pvcStorage, err := resource.ParseQuantity(quantity)
 	if err != nil {
-		Fail("Could not parse '2Gi' when creating a stateful set.")
+		message := fmt.Sprintf("Could not parse %v when creating a stateful set.", quantity)
+		Fail(message)
 	}
+
 	ssName := fmt.Sprintf("busybox-%s-%d", storageClass, GinkgoParallelProcess())
 
 	ss := &appsv1.StatefulSet{
