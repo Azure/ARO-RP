@@ -20,6 +20,8 @@ import msrest.serialization
 class APIServerProfile(msrest.serialization.Model):
     """APIServerProfile represents an API server profile.
 
+    Variables are only populated by the server, and will be ignored when sending a request.
+
     :ivar visibility: API server visibility. Possible values include: "Private", "Public".
     :vartype visibility: str or ~azure.mgmt.redhatopenshift.v2023_11_22.models.Visibility
     :ivar url: The URL to access the cluster API server.
@@ -27,6 +29,11 @@ class APIServerProfile(msrest.serialization.Model):
     :ivar ip: The IP of the cluster API server.
     :vartype ip: str
     """
+
+    _validation = {
+        'url': {'readonly': True},
+        'ip': {'readonly': True},
+    }
 
     _attribute_map = {
         'visibility': {'key': 'visibility', 'type': 'str'},
@@ -41,15 +48,11 @@ class APIServerProfile(msrest.serialization.Model):
         """
         :keyword visibility: API server visibility. Possible values include: "Private", "Public".
         :paramtype visibility: str or ~azure.mgmt.redhatopenshift.v2023_11_22.models.Visibility
-        :keyword url: The URL to access the cluster API server.
-        :paramtype url: str
-        :keyword ip: The IP of the cluster API server.
-        :paramtype ip: str
         """
         super(APIServerProfile, self).__init__(**kwargs)
         self.visibility = kwargs.get('visibility', None)
-        self.url = kwargs.get('url', None)
-        self.ip = kwargs.get('ip', None)
+        self.url = None
+        self.ip = None
 
 
 class CloudErrorBody(msrest.serialization.Model):
@@ -153,9 +156,15 @@ class ClusterProfile(msrest.serialization.Model):
 class ConsoleProfile(msrest.serialization.Model):
     """ConsoleProfile represents a console profile.
 
+    Variables are only populated by the server, and will be ignored when sending a request.
+
     :ivar url: The URL to access the cluster console.
     :vartype url: str
     """
+
+    _validation = {
+        'url': {'readonly': True},
+    }
 
     _attribute_map = {
         'url': {'key': 'url', 'type': 'str'},
@@ -166,11 +175,9 @@ class ConsoleProfile(msrest.serialization.Model):
         **kwargs
     ):
         """
-        :keyword url: The URL to access the cluster console.
-        :paramtype url: str
         """
         super(ConsoleProfile, self).__init__(**kwargs)
-        self.url = kwargs.get('url', None)
+        self.url = None
 
 
 class Display(msrest.serialization.Model):
@@ -240,6 +247,8 @@ class EffectiveOutboundIP(msrest.serialization.Model):
 class IngressProfile(msrest.serialization.Model):
     """IngressProfile represents an ingress profile.
 
+    Variables are only populated by the server, and will be ignored when sending a request.
+
     :ivar name: The ingress profile name.
     :vartype name: str
     :ivar visibility: Ingress visibility. Possible values include: "Private", "Public".
@@ -247,6 +256,10 @@ class IngressProfile(msrest.serialization.Model):
     :ivar ip: The IP of the ingress.
     :vartype ip: str
     """
+
+    _validation = {
+        'ip': {'readonly': True},
+    }
 
     _attribute_map = {
         'name': {'key': 'name', 'type': 'str'},
@@ -263,13 +276,11 @@ class IngressProfile(msrest.serialization.Model):
         :paramtype name: str
         :keyword visibility: Ingress visibility. Possible values include: "Private", "Public".
         :paramtype visibility: str or ~azure.mgmt.redhatopenshift.v2023_11_22.models.Visibility
-        :keyword ip: The IP of the ingress.
-        :paramtype ip: str
         """
         super(IngressProfile, self).__init__(**kwargs)
         self.name = kwargs.get('name', None)
         self.visibility = kwargs.get('visibility', None)
-        self.ip = kwargs.get('ip', None)
+        self.ip = None
 
 
 class LoadBalancerProfile(msrest.serialization.Model):
