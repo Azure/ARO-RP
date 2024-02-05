@@ -125,7 +125,7 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`github.com/Azure/ARO-RP/pkg/cluster.(*manager).logAzureInformation-fm: null`),
+					"msg":   gomega.Equal(`github.com/Azure/ARO-RP/pkg/cluster/failurediagnostics.(*manager).LogAzureInformation-fm: null`),
 				},
 			},
 			kubernetescli: fake.NewSimpleClientset(node),
@@ -165,7 +165,7 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`github.com/Azure/ARO-RP/pkg/cluster.(*manager).logAzureInformation-fm: null`),
+					"msg":   gomega.Equal(`github.com/Azure/ARO-RP/pkg/cluster/failurediagnostics.(*manager).LogAzureInformation-fm: null`),
 				},
 			},
 			kubernetescli: fake.NewSimpleClientset(),
