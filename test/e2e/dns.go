@@ -295,8 +295,8 @@ func createResolvConfJob(ctx context.Context, cli kubernetes.Interface, nodeName
 
 func deleteResolvConfJob(ctx context.Context, cli kubernetes.Interface, nodeName string, namespace string) {
 	dpb := metav1.DeletePropagationBackground
-	deleteCall := cli.BatchV1().Jobs(namespace).Delete
-	DeleteK8sObjectWithRetry(ctx, deleteCall, resolvConfJobName(nodeName), metav1.DeleteOptions{
+	deleteFunc := cli.BatchV1().Jobs(namespace).Delete
+	DeleteK8sObjectWithRetry(ctx, deleteFunc, resolvConfJobName(nodeName), metav1.DeleteOptions{
 		PropagationPolicy: &dpb,
 	})
 }
