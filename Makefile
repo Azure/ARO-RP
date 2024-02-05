@@ -72,7 +72,7 @@ clean:
 	find -type d -name 'gomock_reflect_[0-9]*' -exec rm -rf {} \+ 2>/dev/null
 
 ci:
-	docker build --platform=linux/amd64 --network=host --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.golang-ci
+	docker build --platform=linux/amd64 --network=host --build-arg REGISTRY=$(REGISTRY) -f Dockerfile.golang-ci --skip-unused-stages=false --jobs=0
 	
 client: generate
 	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01 2023-07-01-preview 2023-09-04 2023-11-22
