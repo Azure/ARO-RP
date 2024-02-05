@@ -28,8 +28,9 @@ var _ = Describe("Hive manager creates a namespace", func() {
 	})
 
 	It("Should be created successfully", func() {
+		const docID = "00000000-0000-0000-0000-000000000000"
 		var err error
-		ns, err = clients.HiveClusterManager.CreateNamespace(context.Background())
+		ns, err = clients.HiveClusterManager.CreateNamespace(context.Background(), docID)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ns).NotTo(BeNil())
 
