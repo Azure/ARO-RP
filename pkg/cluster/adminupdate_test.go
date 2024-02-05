@@ -265,6 +265,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				"[Action populateRegistryStorageAccountName-fm]",
 				"[Action ensureMTUSize-fm]",
 				"[Action initializeOperatorDeployer-fm]",
+				"[Action renewMDSDCertificate-fm]",
 				"[Action ensureAROOperator-fm]",
 				"[Condition aroDeploymentReady-fm, timeout 20m0s]",
 				"[Condition ensureAROOperatorRunningDesiredVersion-fm, timeout 5m0s]",
