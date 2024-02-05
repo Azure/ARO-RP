@@ -46,7 +46,7 @@ func (m *manager) adminUpdate() []steps.Step {
 	isOperator := task == api.MaintenanceTaskOperator
 	isRenewCerts := task == api.MaintenanceTaskRenewCerts
 
-	steps := []steps.Step{}
+	steps := m.getZerothSteps()
 	if isEverything {
 		steps = append(steps, m.getGeneralFixesSteps()...)
 		steps = append(steps, m.getCertificateRenewalSteps()...)
@@ -65,8 +65,7 @@ func (m *manager) adminUpdate() []steps.Step {
 	}
 	return steps
 }
-
-func (m *manager) getGeneralFixesSteps() []steps.Step {
+func (m *manager) getZerothSteps() []steps.Step {
 	bootstrap0 := []steps.Step{
 		steps.Action(m.initializeKubernetesClients), // must be first
 		steps.Action(m.ensureBillingRecord),         // belt and braces
@@ -83,8 +82,11 @@ func (m *manager) getGeneralFixesSteps() []steps.Step {
 		steps.Action(m.fixInfraID), // Old clusters lacks infraID in the database. Which makes code prone to errors.
 	}
 
-	steps := append(
-		append(bootstrap0, step0...),
+	return append(bootstrap0, step0...)
+}
+
+func (m *manager) getGeneralFixesSteps() []steps.Step {
+	return []steps.Step{
 		// Block 1
 		steps.Action(m.ensureResourceGroup), // re-create RP RBAC if needed after tenant migration
 		steps.Action(m.createOrUpdateDenyAssignment),
@@ -113,30 +115,11 @@ func (m *manager) getGeneralFixesSteps() []steps.Step {
 
 		// Bootstrap 2
 		steps.Action(m.initializeOperatorDeployer),
-	)
-
-	return steps
+	}
 }
 
 func (m *manager) getCertificateRenewalSteps() []steps.Step {
-	bootstrap0 := []steps.Step{
-		steps.Action(m.initializeKubernetesClients), // must be first
-		steps.Action(m.ensureBillingRecord),         // belt and braces
-		steps.Action(m.ensureDefaults),
-	}
-
-	// Generic fix-up or setup actions that are fairly safe to always take, and
-	// don't require a running cluster
-	step0 := []steps.Step{
-		// TODO: this relies on an authorizer that isn't exposed in the manager
-		// struct, so we'll rebuild the fpAuthorizer and use the error catching
-		// to advance
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixupClusterSPObjectID),
-		steps.Action(m.fixInfraID), // Old clusters lacks infraID in the database. Which makes code prone to errors.
-	}
-
-	steps := append(
-		append(bootstrap0, step0...),
+	return []steps.Step{
 		// Block 2
 		steps.Action(m.populateDatabaseIntIP),
 
@@ -157,29 +140,11 @@ func (m *manager) getCertificateRenewalSteps() []steps.Step {
 
 		// Block 8
 		steps.Action(m.renewMDSDCertificate),
-	)
-	return steps
+	}
 }
 
 func (m *manager) getOperatorUpdateSteps() []steps.Step {
-	bootstrap0 := []steps.Step{
-		steps.Action(m.initializeKubernetesClients), // must be first
-		steps.Action(m.ensureBillingRecord),         // belt and braces
-		steps.Action(m.ensureDefaults),
-	}
-
-	// Generic fix-up or setup actions that are fairly safe to always take, and
-	// don't require a running cluster
-	step0 := []steps.Step{
-		// TODO: this relies on an authorizer that isn't exposed in the manager
-		// struct, so we'll rebuild the fpAuthorizer and use the error catching
-		// to advance
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixupClusterSPObjectID),
-		steps.Action(m.fixInfraID), // Old clusters lacks infraID in the database. Which makes code prone to errors.
-	}
-
-	steps := append(
-		append(bootstrap0, step0...),
+	return []steps.Step{
 		// Bootstrap 1
 		steps.Action(m.startVMs),
 		steps.Condition(m.apiServersReady, 30*time.Minute, true),
@@ -190,29 +155,11 @@ func (m *manager) getOperatorUpdateSteps() []steps.Step {
 		steps.Action(m.ensureAROOperator),
 		steps.Condition(m.aroDeploymentReady, 20*time.Minute, true),
 		steps.Condition(m.ensureAROOperatorRunningDesiredVersion, 5*time.Minute, true),
-	)
-	return steps
+	}
 }
 
 func (m *manager) getHiveAdoptionAndReconciliationSteps() []steps.Step {
-	bootstrap0 := []steps.Step{
-		steps.Action(m.initializeKubernetesClients), // must be first
-		steps.Action(m.ensureBillingRecord),         // belt and braces
-		steps.Action(m.ensureDefaults),
-	}
-
-	// Generic fix-up or setup actions that are fairly safe to always take, and
-	// don't require a running cluster
-	step0 := []steps.Step{
-		// TODO: this relies on an authorizer that isn't exposed in the manager
-		// struct, so we'll rebuild the fpAuthorizer and use the error catching
-		// to advance
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixupClusterSPObjectID),
-		steps.Action(m.fixInfraID), // Old clusters lacks infraID in the database. Which makes code prone to errors.
-	}
-
-	steps := append(
-		append(bootstrap0, step0...),
+	return []steps.Step{
 		// Bootstrap 1
 		steps.Action(m.startVMs),
 		steps.Condition(m.apiServersReady, 30*time.Minute, true),
@@ -224,8 +171,7 @@ func (m *manager) getHiveAdoptionAndReconciliationSteps() []steps.Step {
 		steps.Action(m.hiveEnsureResources),
 		steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, false),
 		steps.Action(m.hiveResetCorrelationData),
-	)
-	return steps
+	}
 }
 
 func (m *manager) shouldUpdateOperator() bool {
