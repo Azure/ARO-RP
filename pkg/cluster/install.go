@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	operatorCutoffVersion = "4.7.0" // OCP versions older than this will not receive ARO operator updates
+	operatorCutOffVersion = "4.7.0" // OCP versions older than this will not receive ARO operator updates
 )
 
 // AdminUpdate performs an admin update of an ARO cluster
@@ -180,8 +180,8 @@ func (m *manager) shouldUpdateOperator() bool {
 		return false
 	}
 
-	cutoffVersion := semver.New(operatorCutoffVersion)
-	return cutoffVersion.Compare(*runningVersion) <= 0
+	cutOffVersion := semver.New(operatorCutOffVersion)
+	return cutOffVersion.Compare(*runningVersion) <= 0
 }
 
 func (m *manager) clusterWasCreatedByHive() bool {
