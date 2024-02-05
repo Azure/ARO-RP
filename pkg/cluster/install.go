@@ -46,43 +46,50 @@ func (m *manager) adminUpdate() []steps.Step {
 	isOperator := task == api.MaintenanceTaskOperator
 	isRenewCerts := task == api.MaintenanceTaskRenewCerts
 
-	steps := m.getZerothSteps()
+	stepsToRun := m.getZerothSteps()
 	if isEverything {
-		steps = append(steps, m.getGeneralFixesSteps()...)
-		steps = append(steps, m.getCertificateRenewalSteps()...)
+		stepsToRun = append(stepsToRun, m.getGeneralFixesSteps()...)
+		stepsToRun = append(stepsToRun, m.getCertificateRenewalSteps()...)
 		if m.shouldUpdateOperator() {
-			steps = append(steps, m.getOperatorUpdateSteps()...)
+			stepsToRun = append(stepsToRun, m.getOperatorUpdateSteps()...)
 		}
 		if m.adoptViaHive && !m.clusterWasCreatedByHive() {
-			steps = append(steps, m.getHiveAdoptionAndReconciliationSteps()...)
+			stepsToRun = append(stepsToRun, m.getHiveAdoptionAndReconciliationSteps()...)
 		}
 	} else if isRenewCerts {
-		steps = append(steps, m.getCertificateRenewalSteps()...)
+		stepsToRun = append(stepsToRun, m.getCertificateRenewalSteps()...)
 	} else if isOperator && m.shouldUpdateOperator() {
-		steps = append(steps, m.getOperatorUpdateSteps()...)
-	} else {
-		panic("Unsure if we allow this?")
+		stepsToRun = append(stepsToRun, m.getOperatorUpdateSteps()...)
 	}
-	return steps
+
+	// We don't run this on an operator-only deploy as PUCM scripts then cannot
+	// determine if the cluster has been fully admin-updated
+	// Run this last so we capture the resource provider only once the upgrade has been fully performed
+	if isEverything {
+		stepsToRun = append(stepsToRun, steps.Action(m.updateProvisionedBy))
+	}
+
+	return stepsToRun
 }
 func (m *manager) getZerothSteps() []steps.Step {
-	bootstrap0 := []steps.Step{
+	bootstrap := []steps.Step{
 		steps.Action(m.initializeKubernetesClients), // must be first
 		steps.Action(m.ensureBillingRecord),         // belt and braces
 		steps.Action(m.ensureDefaults),
-	}
-
-	// Generic fix-up or setup actions that are fairly safe to always take, and
-	// don't require a running cluster
-	step0 := []steps.Step{
 		// TODO: this relies on an authorizer that isn't exposed in the manager
 		// struct, so we'll rebuild the fpAuthorizer and use the error catching
 		// to advance
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixupClusterSPObjectID),
+		steps.Action(m.startVMs),
+		steps.Condition(m.apiServersReady, 30*time.Minute, true),
+	}
+
+	// Generic fix-up actions that are fairly safe to always take, and don't require a running cluster
+	step0 := []steps.Step{
 		steps.Action(m.fixInfraID), // Old clusters lacks infraID in the database. Which makes code prone to errors.
 	}
 
-	return append(bootstrap0, step0...)
+	return append(bootstrap, step0...)
 }
 
 func (m *manager) getGeneralFixesSteps() []steps.Step {
@@ -96,10 +103,6 @@ func (m *manager) getGeneralFixesSteps() []steps.Step {
 		steps.Action(m.fixSSH),
 		// steps.Action(m.removePrivateDNSZone), // TODO(mj): re-enable once we communicate this out
 
-		// Bootstrap 1
-		steps.Action(m.startVMs),
-		steps.Condition(m.apiServersReady, 30*time.Minute, true),
-
 		// Block 3
 		steps.Action(m.fixSREKubeconfig),
 		steps.Action(m.fixUserAdminKubeconfig),
@@ -112,9 +115,6 @@ func (m *manager) getGeneralFixesSteps() []steps.Step {
 		// Block 7
 		steps.Action(m.populateRegistryStorageAccountName),
 		steps.Action(m.ensureMTUSize),
-
-		// Bootstrap 2
-		steps.Action(m.initializeOperatorDeployer),
 	}
 }
 
@@ -122,10 +122,6 @@ func (m *manager) getCertificateRenewalSteps() []steps.Step {
 	return []steps.Step{
 		// Block 2
 		steps.Action(m.populateDatabaseIntIP),
-
-		// Bootstrap 1
-		steps.Action(m.startVMs),
-		steps.Condition(m.apiServersReady, 30*time.Minute, true),
 
 		// Block 4
 		steps.Action(m.fixMCSCert),
@@ -145,9 +141,6 @@ func (m *manager) getCertificateRenewalSteps() []steps.Step {
 
 func (m *manager) getOperatorUpdateSteps() []steps.Step {
 	return []steps.Step{
-		// Bootstrap 1
-		steps.Action(m.startVMs),
-		steps.Condition(m.apiServersReady, 30*time.Minute, true),
 		// Bootstrap 2
 		steps.Action(m.initializeOperatorDeployer),
 
@@ -160,9 +153,6 @@ func (m *manager) getOperatorUpdateSteps() []steps.Step {
 
 func (m *manager) getHiveAdoptionAndReconciliationSteps() []steps.Step {
 	return []steps.Step{
-		// Bootstrap 1
-		steps.Action(m.startVMs),
-		steps.Condition(m.apiServersReady, 30*time.Minute, true),
 		// Bootstrap 2
 		steps.Action(m.initializeOperatorDeployer),
 
