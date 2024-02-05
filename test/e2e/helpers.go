@@ -34,8 +34,6 @@ type K8sDeleteFunc func(ctx context.Context, name string, options metav1.DeleteO
 // GetK8sObjectWithRetry takes a get function like clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Get
 // and the parameters for it. It then makes the call with some retry logic and returns the result after
 // asserting there were no errors.
-//
-// By default the call is retried for 5mins with a 250ms interval.
 func GetK8sObjectWithRetry[T kruntime.Object](
 	ctx context.Context, getFunc K8sGetFunc[T], name string, options metav1.GetOptions,
 ) (result T, err error) {
@@ -105,12 +103,10 @@ type AllowedCleanUpAPIInterface[T kruntime.Object] interface {
 	Delete(ctx context.Context, name string, options metav1.DeleteOptions) error
 }
 
-// This function takes a client that knows how to issue a GET and DELETE call for a given resource.
+// CleanupK8sResource takes a client that knows how to issue a GET and DELETE call for a given resource.
 // It then issues a delete request then and polls the API to until the resource is no longer found.
 //
 // Note: If the DELETE request receives a 404 we assume the resource has been cleaned up successfully.
-//
-// By default the call is retried for 10mins with a 1s interval.
 func CleanupK8sResource[T kruntime.Object](
 	ctx context.Context, client AllowedCleanUpAPIInterface[T], name string,
 ) {
