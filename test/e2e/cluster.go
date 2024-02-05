@@ -39,11 +39,11 @@ var _ = Describe("Cluster", Serial, func() {
 	BeforeEach(func(ctx context.Context) {
 		By("creating a test namespace")
 		testNamespace := fmt.Sprintf("test-e2e-%d", GinkgoParallelProcess())
-		project = NewProject(ctx, clients.Kubernetes, clients.Project, testNamespace)
+		project = BuildNewProject(ctx, clients.Kubernetes, clients.Project, testNamespace)
 
 		By("verifying the namespace is ready")
 		Eventually(func(ctx context.Context) error {
-			return project.Verify(ctx)
+			return project.VerifyProjectIsReady(ctx)
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(BeNil())
 
 		DeferCleanup(func(ctx context.Context) {
