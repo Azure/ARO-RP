@@ -153,9 +153,6 @@ func (m *manager) getOperatorUpdateSteps() []steps.Step {
 
 func (m *manager) getHiveAdoptionAndReconciliationSteps() []steps.Step {
 	return []steps.Step{
-		// Bootstrap 2
-		steps.Action(m.initializeOperatorDeployer),
-
 		// block 10
 		steps.Action(m.hiveCreateNamespace),
 		steps.Action(m.hiveEnsureResources),

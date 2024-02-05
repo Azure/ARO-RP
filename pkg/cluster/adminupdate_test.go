@@ -85,7 +85,6 @@ func TestAdminUpdateSteps(t *testing.T) {
 	}
 
 	hiveSteps := []string{
-		"[Action initializeOperatorDeployer-fm]",
 		"[Action hiveCreateNamespace-fm]",
 		"[Action hiveEnsureResources-fm]",
 		"[Condition hiveClusterDeploymentReady-fm, timeout 5m0s]",
