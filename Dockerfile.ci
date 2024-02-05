@@ -1,5 +1,5 @@
 ARG REGISTRY
-FROM ${REGISTRY}/ubi8/go-toolset:1.18.10
+FROM ${REGISTRY}/ubi8/go-toolset:1.20.10
 
 USER root
 ENV GOPATH=/root/go
