@@ -31,27 +31,23 @@ type K8sListFunc[T kruntime.Object] func(ctx context.Context, options metav1.Lis
 type K8sCreateFunc[T kruntime.Object] func(ctx context.Context, object T, options metav1.CreateOptions) (T, error)
 type K8sDeleteFunc func(ctx context.Context, name string, options metav1.DeleteOptions) error
 
-// This function takes a get function like clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Get
+// GetK8sObjectWithRetry takes a get function like clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Get
 // and the parameters for it. It then makes the call with some retry logic and returns the result after
 // asserting there were no errors.
-//
-// By default the call is retried for 5s with a 250ms interval.
 func GetK8sObjectWithRetry[T kruntime.Object](
-	ctx context.Context, get K8sGetFunc[T], name string, options metav1.GetOptions,
+	ctx context.Context, getFunc K8sGetFunc[T], name string, options metav1.GetOptions,
 ) T {
 	var object T
 	Eventually(func(g Gomega, ctx context.Context) {
-		result, err := get(ctx, name, options)
+		result, err := getFunc(ctx, name, options)
 		g.Expect(err).NotTo(HaveOccurred())
 		object = result
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
 	return object
 }
 
-// This function gets the logs for the specified pod in the named namespace. It gets them with some
+// GetK8sPodLogsWithRetry gets the logs for the specified pod in the named namespace. It gets them with some
 // retry logic and returns the raw string-ified body after asserting there were no errors.
-//
-// By default the call is retried for 5s with a 250ms interval.
 func GetK8sPodLogsWithRetry(
 	ctx context.Context, namespace string, name string, options corev1.PodLogOptions,
 ) (rawBody string) {
@@ -63,49 +59,43 @@ func GetK8sPodLogsWithRetry(
 	return
 }
 
-// This function takes a list function like clients.Kubernetes.CoreV1().Nodes().List and the
+// ListK8sObjectWithRetry takes a list function like clients.Kubernetes.CoreV1().Nodes().List and the
 // parameters for it. It then makes the call with some retry logic and returns the result after
 // asserting there were no errors.
-//
-// By default the call is retried for 5s with a 250ms interval.
 func ListK8sObjectWithRetry[T kruntime.Object](
-	ctx context.Context, list K8sListFunc[T], options metav1.ListOptions,
+	ctx context.Context, listFunc K8sListFunc[T], options metav1.ListOptions,
 ) T {
 	var object T
 	Eventually(func(g Gomega, ctx context.Context) {
-		result, err := list(ctx, options)
+		result, err := listFunc(ctx, options)
 		g.Expect(err).NotTo(HaveOccurred())
 		object = result
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
 	return object
 }
 
-// This function takes a create function like clients.Kubernetes.CoreV1().Pods(namespace).Create
+// CreateK8sObjectWithRetry takes a create function like clients.Kubernetes.CoreV1().Pods(namespace).Create
 // and the parameters for it. It then makes the call with some retry logic and returns the result after
 // asserting there were no errors.
-//
-// By default the call is retried for 5s with a 250ms interval.
 func CreateK8sObjectWithRetry[T kruntime.Object](
-	ctx context.Context, create K8sCreateFunc[T], obj T, options metav1.CreateOptions,
+	ctx context.Context, createFunc K8sCreateFunc[T], obj T, options metav1.CreateOptions,
 ) T {
 	var object T
 	Eventually(func(g Gomega, ctx context.Context) {
-		result, err := create(ctx, obj, options)
+		result, err := createFunc(ctx, obj, options)
 		g.Expect(err).NotTo(HaveOccurred())
 		object = result
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
 	return object
 }
 
-// This function takes a delete function like clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Delete
+// DeleteK8sObjectWithRetry takes a delete function like clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Delete
 // and the parameters for it. It then makes the call with some retry logic.
-//
-// By default the call is retried for 5s with a 250ms interval.
 func DeleteK8sObjectWithRetry(
-	ctx context.Context, delete K8sDeleteFunc, name string, options metav1.DeleteOptions,
+	ctx context.Context, deleteFunc K8sDeleteFunc, name string, options metav1.DeleteOptions,
 ) {
 	Eventually(func(g Gomega, ctx context.Context) {
-		err := delete(ctx, name, options)
+		err := deleteFunc(ctx, name, options)
 		g.Expect(err).NotTo(HaveOccurred())
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
 }
@@ -116,7 +106,7 @@ type Project struct {
 	Name          string
 }
 
-func NewProject(
+func BuildNewProject(
 	ctx context.Context, cli kubernetes.Interface, projectClient projectclient.Interface, name string,
 ) Project {
 	p := Project{
@@ -143,8 +133,9 @@ func (p Project) Delete(ctx context.Context) {
 	DeleteK8sObjectWithRetry(ctx, deleteFunc, p.Name, metav1.DeleteOptions{})
 }
 
-// VerifyProjectIsReady verifies that the project and relevant resources have been created correctly and returns error otherwise
-func (p Project) Verify(ctx context.Context) error {
+// VerifyProjectIsReady verifies that the project and relevant resources have been created correctly
+// and returns an error if any.
+func (p Project) VerifyProjectIsReady(ctx context.Context) error {
 	By("creating a SelfSubjectAccessReviews")
 	CreateK8sObjectWithRetry(ctx, p.cli.AuthorizationV1().SelfSubjectAccessReviews().Create,
 		&authorizationv1.SelfSubjectAccessReview{
