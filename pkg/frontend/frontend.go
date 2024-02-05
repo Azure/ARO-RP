@@ -203,6 +203,7 @@ func NewFrontend(ctx context.Context,
 		NextProtos:             []string{"h2", "http/1.1"},
 		ClientAuth:             tls.RequestClientCert,
 		SessionTicketsDisabled: true,
+		MinVersion:             tls.VersionTLS12,
 		CurvePreferences: []tls.CurveID{
 			tls.CurveP256,
 			tls.X25519,
