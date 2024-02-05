@@ -51,8 +51,8 @@ var _ = Describe("Update clusters", func() {
 
 	It("must restart the aro-operator-master Deployment", func(ctx context.Context) {
 		By("saving the current revision of the aro-operator-master Deployment")
-		getCall := clients.Kubernetes.AppsV1().Deployments("openshift-azure-operator").Get
-		deployment := GetK8sObjectWithRetry(ctx, getCall, "aro-operator-master", metav1.GetOptions{})
+		getFunc := clients.Kubernetes.AppsV1().Deployments("openshift-azure-operator").Get
+		deployment := GetK8sObjectWithRetry(ctx, getFunc, "aro-operator-master", metav1.GetOptions{})
 
 		Expect(deployment.ObjectMeta.Annotations).To(HaveKey("deployment.kubernetes.io/revision"))
 
@@ -64,7 +64,7 @@ var _ = Describe("Update clusters", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking that the aro-operator-master Deployment was restarted")
-		deployment = GetK8sObjectWithRetry(ctx, getCall, "aro-operator-master", metav1.GetOptions{})
+		deployment = GetK8sObjectWithRetry(ctx, getFunc, "aro-operator-master", metav1.GetOptions{})
 
 		Expect(deployment.Spec.Template.Annotations).To(HaveKey("kubectl.kubernetes.io/restartedAt"))
 		Expect(deployment.ObjectMeta.Annotations).To(HaveKey("deployment.kubernetes.io/revision"))

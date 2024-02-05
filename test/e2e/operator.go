@@ -40,9 +40,9 @@ import (
 )
 
 func updatedObjects(ctx context.Context, nsFilter string) ([]string, error) {
-	listCall := clients.Kubernetes.CoreV1().Pods("openshift-azure-operator").List
+	listFunc := clients.Kubernetes.CoreV1().Pods("openshift-azure-operator").List
 	pods := ListK8sObjectWithRetry(
-		ctx, listCall, metav1.ListOptions{LabelSelector: "app=aro-operator-master"},
+		ctx, listFunc, metav1.ListOptions{LabelSelector: "app=aro-operator-master"},
 	)
 	if len(pods.Items) != 1 {
 		return nil, fmt.Errorf("%d aro-operator-master pods found", len(pods.Items))
@@ -159,10 +159,10 @@ var _ = Describe("ARO Operator - Geneva Logging", func() {
 var _ = Describe("ARO Operator - Cluster Monitoring ConfigMap", func() {
 	It("must not have persistent volume set", func(ctx context.Context) {
 		var cm *corev1.ConfigMap
-		getCall := clients.Kubernetes.CoreV1().ConfigMaps("openshift-monitoring").Get
+		getFunc := clients.Kubernetes.CoreV1().ConfigMaps("openshift-monitoring").Get
 
 		By("waiting for the ConfigMap to make sure it exists")
-		cm = GetK8sObjectWithRetry(ctx, getCall, "cluster-monitoring-config", metav1.GetOptions{})
+		cm = GetK8sObjectWithRetry(ctx, getFunc, "cluster-monitoring-config", metav1.GetOptions{})
 
 		By("unmarshalling the config from the ConfigMap data")
 		var configData monitoring.Config
@@ -181,33 +181,33 @@ var _ = Describe("ARO Operator - Cluster Monitoring ConfigMap", func() {
 	})
 
 	It("must be restored if deleted", func(ctx context.Context) {
-		getCall := clients.Kubernetes.CoreV1().ConfigMaps("openshift-monitoring").Get
-		deleteCall := clients.Kubernetes.CoreV1().ConfigMaps("openshift-monitoring").Delete
+		getFunc := clients.Kubernetes.CoreV1().ConfigMaps("openshift-monitoring").Get
+		deleteFunc := clients.Kubernetes.CoreV1().ConfigMaps("openshift-monitoring").Delete
 
 		By("waiting for the ConfigMap to make sure it exists")
-		GetK8sObjectWithRetry(ctx, getCall, "cluster-monitoring-config", metav1.GetOptions{})
+		GetK8sObjectWithRetry(ctx, getFunc, "cluster-monitoring-config", metav1.GetOptions{})
 
 		By("deleting for the ConfigMap")
-		DeleteK8sObjectWithRetry(ctx, deleteCall, "cluster-monitoring-config", metav1.DeleteOptions{})
+		DeleteK8sObjectWithRetry(ctx, deleteFunc, "cluster-monitoring-config", metav1.DeleteOptions{})
 
 		By("waiting for the ConfigMap to make sure it was restored")
-		GetK8sObjectWithRetry(ctx, getCall, "cluster-monitoring-config", metav1.GetOptions{})
+		GetK8sObjectWithRetry(ctx, getFunc, "cluster-monitoring-config", metav1.GetOptions{})
 	})
 })
 
 var _ = Describe("ARO Operator - RBAC", func() {
 	It("must restore system:aro-sre ClusterRole if deleted", func(ctx context.Context) {
-		getCall := clients.Kubernetes.RbacV1().ClusterRoles().Get
-		deleteCall := clients.Kubernetes.RbacV1().ClusterRoles().Delete
+		getFunc := clients.Kubernetes.RbacV1().ClusterRoles().Get
+		deleteFunc := clients.Kubernetes.RbacV1().ClusterRoles().Delete
 
 		By("waiting for the ClusterRole to make sure it exists")
-		GetK8sObjectWithRetry(ctx, getCall, "system:aro-sre", metav1.GetOptions{})
+		GetK8sObjectWithRetry(ctx, getFunc, "system:aro-sre", metav1.GetOptions{})
 
 		By("deleting for the ClusterRole")
-		DeleteK8sObjectWithRetry(ctx, deleteCall, "system:aro-sre", metav1.DeleteOptions{})
+		DeleteK8sObjectWithRetry(ctx, deleteFunc, "system:aro-sre", metav1.DeleteOptions{})
 
 		By("waiting for the ClusterRole to make sure it was restored")
-		GetK8sObjectWithRetry(ctx, getCall, "system:aro-sre", metav1.GetOptions{})
+		GetK8sObjectWithRetry(ctx, getFunc, "system:aro-sre", metav1.GetOptions{})
 	})
 })
 
@@ -462,17 +462,17 @@ var _ = Describe("ARO Operator - MUO Deployment", func() {
 	}, SpecTimeout(2*time.Minute))
 
 	It("must be restored if deleted", func(ctx context.Context) {
-		deleteCall := clients.Kubernetes.AppsV1().Deployments(managedUpgradeOperatorNamespace).Delete
-		getCall := clients.Kubernetes.AppsV1().Deployments(managedUpgradeOperatorNamespace).Get
+		deleteFunc := clients.Kubernetes.AppsV1().Deployments(managedUpgradeOperatorNamespace).Delete
+		getFunc := clients.Kubernetes.AppsV1().Deployments(managedUpgradeOperatorNamespace).Get
 
 		By("waiting for the MUO deployment to be ready")
-		GetK8sObjectWithRetry(ctx, getCall, managedUpgradeOperatorDeployment, metav1.GetOptions{})
+		GetK8sObjectWithRetry(ctx, getFunc, managedUpgradeOperatorDeployment, metav1.GetOptions{})
 
 		By("deleting the MUO deployment")
-		DeleteK8sObjectWithRetry(ctx, deleteCall, managedUpgradeOperatorDeployment, metav1.DeleteOptions{})
+		DeleteK8sObjectWithRetry(ctx, deleteFunc, managedUpgradeOperatorDeployment, metav1.DeleteOptions{})
 
 		By("waiting for the MUO deployment to be reconciled")
-		GetK8sObjectWithRetry(ctx, getCall, managedUpgradeOperatorDeployment, metav1.GetOptions{})
+		GetK8sObjectWithRetry(ctx, getFunc, managedUpgradeOperatorDeployment, metav1.GetOptions{})
 	}, SpecTimeout(2*time.Minute))
 })
 
@@ -653,17 +653,17 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 			Skip("Guardrails Controller is not enabled, skipping test")
 		}
 
-		getCall := clients.Kubernetes.AppsV1().Deployments(guardrailsNamespace).Get
-		deleteCall := clients.Kubernetes.AppsV1().Deployments(guardrailsNamespace).Delete
+		getFunc := clients.Kubernetes.AppsV1().Deployments(guardrailsNamespace).Get
+		deleteFunc := clients.Kubernetes.AppsV1().Deployments(guardrailsNamespace).Delete
 
 		By("waiting for the gatekeeper Controller Manager deployment to be ready")
-		GetK8sObjectWithRetry(ctx, getCall, gkControllerManagerDeployment, metav1.GetOptions{})
+		GetK8sObjectWithRetry(ctx, getFunc, gkControllerManagerDeployment, metav1.GetOptions{})
 
 		By("deleting the gatekeeper Controller Manager deployment")
-		DeleteK8sObjectWithRetry(ctx, deleteCall, gkControllerManagerDeployment, metav1.DeleteOptions{})
+		DeleteK8sObjectWithRetry(ctx, deleteFunc, gkControllerManagerDeployment, metav1.DeleteOptions{})
 
 		By("waiting for the gatekeeper Controller Manager deployment to be reconciled")
-		GetK8sObjectWithRetry(ctx, getCall, gkControllerManagerDeployment, metav1.GetOptions{})
+		GetK8sObjectWithRetry(ctx, getFunc, gkControllerManagerDeployment, metav1.GetOptions{})
 	})
 
 	It("Audit must be restored if deleted", func(ctx context.Context) {
@@ -675,17 +675,17 @@ var _ = Describe("ARO Operator - Guardrails", func() {
 			Skip("Guardrails Controller is not enabled, skipping test")
 		}
 
-		getCall := clients.Kubernetes.AppsV1().Deployments(guardrailsNamespace).Get
-		deleteCall := clients.Kubernetes.AppsV1().Deployments(guardrailsNamespace).Delete
+		getFunc := clients.Kubernetes.AppsV1().Deployments(guardrailsNamespace).Get
+		deleteFunc := clients.Kubernetes.AppsV1().Deployments(guardrailsNamespace).Delete
 
 		By("waiting for the gatekeeper Audit deployment to be ready")
-		GetK8sObjectWithRetry(ctx, getCall, gkAuditDeployment, metav1.GetOptions{})
+		GetK8sObjectWithRetry(ctx, getFunc, gkAuditDeployment, metav1.GetOptions{})
 
 		By("deleting the gatekeeper Audit deployment")
-		DeleteK8sObjectWithRetry(ctx, deleteCall, gkAuditDeployment, metav1.DeleteOptions{})
+		DeleteK8sObjectWithRetry(ctx, deleteFunc, gkAuditDeployment, metav1.DeleteOptions{})
 
 		By("waiting for the gatekeeper Audit deployment to be reconciled")
-		GetK8sObjectWithRetry(ctx, getCall, gkAuditDeployment, metav1.GetOptions{})
+		GetK8sObjectWithRetry(ctx, getFunc, gkAuditDeployment, metav1.GetOptions{})
 	})
 
 })
@@ -705,8 +705,8 @@ var _ = Describe("ARO Operator - Cloud Provider Config ConfigMap", func() {
 		}
 
 		By("waiting for the ConfigMap to make sure it exists")
-		getCall := clients.Kubernetes.CoreV1().ConfigMaps("openshift-config").Get
-		cm := GetK8sObjectWithRetry(ctx, getCall, "cloud-provider-config", metav1.GetOptions{})
+		getFunc := clients.Kubernetes.CoreV1().ConfigMaps("openshift-config").Get
+		cm := GetK8sObjectWithRetry(ctx, getFunc, "cloud-provider-config", metav1.GetOptions{})
 
 		By("waiting for disableOutboundSNAT to be true")
 		Eventually(func(g Gomega, ctx context.Context) {

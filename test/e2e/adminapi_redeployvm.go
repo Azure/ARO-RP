@@ -64,8 +64,8 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 		By("waiting for the redeployed node to eventually become Ready in OpenShift")
 		// wait 1 minute - this will guarantee we pass the minimum (default) threshold of Node heartbeats (40 seconds)
 		Eventually(func(g Gomega, ctx context.Context) {
-			getCall := clients.Kubernetes.CoreV1().Nodes().Get
-			node := GetK8sObjectWithRetry(ctx, getCall, *vm.Name, metav1.GetOptions{})
+			getFunc := clients.Kubernetes.CoreV1().Nodes().Get
+			node := GetK8sObjectWithRetry(ctx, getFunc, *vm.Name, metav1.GetOptions{})
 
 			g.Expect(ready.NodeIsReady(node)).To(BeTrue())
 		}).WithContext(ctx).WithTimeout(10 * time.Minute).WithPolling(time.Minute).Should(Succeed())
@@ -111,8 +111,8 @@ func getNodeUptime(g Gomega, ctx context.Context, node string) (time.Time, error
 
 	defer func() {
 		By("deleting the uptime pod via Kubernetes API")
-		deleteCall := clients.Kubernetes.CoreV1().Pods(namespace).Delete
-		DeleteK8sObjectWithRetry(ctx, deleteCall, podName, metav1.DeleteOptions{})
+		deleteFunc := clients.Kubernetes.CoreV1().Pods(namespace).Delete
+		DeleteK8sObjectWithRetry(ctx, deleteFunc, podName, metav1.DeleteOptions{})
 
 		// To avoid flakes, we need it to be completely deleted before we can use it again
 		// in a separate run or in a separate It block
@@ -125,8 +125,8 @@ func getNodeUptime(g Gomega, ctx context.Context, node string) (time.Time, error
 
 	By("waiting for uptime pod to move into the Succeeded phase")
 	g.Eventually(func(g Gomega, ctx context.Context) {
-		getCall := clients.Kubernetes.CoreV1().Pods(namespace).Get
-		pod := GetK8sObjectWithRetry(ctx, getCall, podName, metav1.GetOptions{})
+		getFunc := clients.Kubernetes.CoreV1().Pods(namespace).Get
+		pod := GetK8sObjectWithRetry(ctx, getFunc, podName, metav1.GetOptions{})
 
 		g.Expect(pod.Status.Phase).To(Equal(corev1.PodSucceeded))
 	}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())

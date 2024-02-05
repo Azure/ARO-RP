@@ -124,8 +124,8 @@ func NewProject(
 		cli:           cli,
 		Name:          name,
 	}
-	createCall := p.projectClient.ProjectV1().Projects().Create
-	CreateK8sObjectWithRetry(ctx, createCall, &projectv1.Project{
+	createFunc := p.projectClient.ProjectV1().Projects().Create
+	CreateK8sObjectWithRetry(ctx, createFunc, &projectv1.Project{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: p.Name,
 		},
@@ -139,8 +139,8 @@ func (p Project) CleanUp(ctx context.Context) {
 }
 
 func (p Project) Delete(ctx context.Context) {
-	deleteCall := p.projectClient.ProjectV1().Projects().Delete
-	DeleteK8sObjectWithRetry(ctx, deleteCall, p.Name, metav1.DeleteOptions{})
+	deleteFunc := p.projectClient.ProjectV1().Projects().Delete
+	DeleteK8sObjectWithRetry(ctx, deleteFunc, p.Name, metav1.DeleteOptions{})
 }
 
 // VerifyProjectIsReady verifies that the project and relevant resources have been created correctly and returns error otherwise
