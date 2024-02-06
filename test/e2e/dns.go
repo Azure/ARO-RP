@@ -43,7 +43,7 @@ const (
 	resolvConfContainerName = "read-resolv-conf"
 )
 
-var _ = Describe("ARO cluster DNS", Focus, func() {
+var _ = Describe("ARO cluster DNS", func() {
 	It("must not be adversely affected by Azure host servicing", func(ctx context.Context) {
 		By("creating a test namespace")
 		testNamespace := fmt.Sprintf("test-e2e-%d", GinkgoParallelProcess())
