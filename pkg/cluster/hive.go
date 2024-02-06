@@ -17,7 +17,7 @@ func (m *manager) hiveCreateNamespace(ctx context.Context) error {
 		return nil
 	}
 
-	namespace, err := m.hiveClusterManager.CreateNamespace(ctx)
+	namespace, err := m.hiveClusterManager.CreateNamespace(ctx, m.doc.ID)
 	if err != nil {
 		return err
 	}

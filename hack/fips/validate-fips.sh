@@ -1,24 +1,22 @@
 #!/bin/bash
 
-# The small go program below will validate that a 
-# FIPS validated crypto lib
-cat > ./hack/fips/main.go << 'EOF'
-package main
+set -xe
 
-// Copyright (c) Microsoft Corporation.
-// Licensed under the Apache License 2.0.
+# check if we can build and have built a valid FIPS-compatible binary
+res=$(go run github.com/acardace/fips-detect@v0.0.0-20230309083406-7157dae5bafd ${1} -j)
 
-import (
-	_ "crypto/tls/fipsonly"
+binary=$(echo $res | go run ./hack/jq -r '.goBinaryFips.value')
+lib=$(echo $res | go run ./hack/jq -r '.cryptoLibFips.value')
 
-	utillog "github.com/Azure/ARO-RP/pkg/util/log"
-)
+if [[ $binary == "false" ]]; then
+	echo "binary is not FIPS compatible"
+	exit 1
+fi
 
-func main() {
-	log := utillog.GetLogger()
-	log.Println("FIPS mode enabled")
-}
-EOF
-trap "rm ./hack/fips/main.go" EXIT
-echo "Attempting to run program that requires FIPS crypto"
-go run ./hack/fips/main.go
+if [[ $lib == "false" ]]; then
+	echo "lib is not FIPS compatible"
+	exit 1
+fi
+
+tool=$(go tool nm ${1} | grep FIPS)
+echo $tool

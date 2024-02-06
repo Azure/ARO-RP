@@ -22,6 +22,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
+var privilegedNamespaceLabels = map[string]string{
+	"pod-security.kubernetes.io/enforce": "privileged",
+	"pod-security.kubernetes.io/audit":   "privileged",
+	"pod-security.kubernetes.io/warn":    "privileged",
+}
+
 func (r *Reconciler) securityContextConstraints(ctx context.Context, name, serviceAccountName string) (*securityv1.SecurityContextConstraints, error) {
 	scc := &securityv1.SecurityContextConstraints{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: "privileged"}, scc)
@@ -284,6 +290,7 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        kubeNamespace,
 				Annotations: map[string]string{projectv1.ProjectNodeSelector: ""},
+				Labels:      privilegedNamespaceLabels,
 			},
 		},
 		&corev1.Secret{

@@ -24,11 +24,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/hive/failure"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 type ClusterManager interface {
-	CreateNamespace(ctx context.Context) (*corev1.Namespace, error)
+	CreateNamespace(ctx context.Context, docID string) (*corev1.Namespace, error)
 
 	// CreateOrUpdate reconciles the ClusterDocument and related secrets for an
 	// existing cluster. This may adopt the cluster (Create) or amend the
@@ -110,11 +109,11 @@ func NewFromConfig(log *logrus.Entry, _env env.Core, restConfig *rest.Config) (C
 	}, nil
 }
 
-func (hr *clusterManager) CreateNamespace(ctx context.Context) (*corev1.Namespace, error) {
+func (hr *clusterManager) CreateNamespace(ctx context.Context, docID string) (*corev1.Namespace, error) {
 	var namespaceName string
 	var namespace *corev1.Namespace
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		namespaceName = "aro-" + uuid.DefaultGenerator.Generate()
+		namespaceName = "aro-" + docID
 		namespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: namespaceName,
