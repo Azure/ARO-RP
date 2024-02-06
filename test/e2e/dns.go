@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -18,6 +19,8 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/cli-runtime/pkg/printers"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
@@ -39,7 +42,7 @@ const (
 	resolvConfContainerName = "read-resolv-conf"
 )
 
-var _ = Describe("ARO cluster DNS", func() {
+var _ = Describe("ARO cluster DNS", Focus, func() {
 	It("must not be adversely affected by Azure host servicing", func(ctx context.Context) {
 		By("creating a test namespace")
 		testNamespace := fmt.Sprintf("test-e2e-%d", GinkgoParallelProcess())
@@ -325,6 +328,8 @@ func verifyResolvConf(ctx context.Context, cli kubernetes.Interface, nodeName st
 		return fmt.Errorf("found %v Pods associated with the Job, but there should be exactly 1", len(podList.Items))
 	}
 
+	outputResourceToLogs(&podList.Items[0])
+
 	podName := podList.Items[0].ObjectMeta.Name
 	tailLines := int64(10)
 	podLogOptions := &corev1.PodLogOptions{
@@ -405,4 +410,9 @@ func workerNodesReady(ctx context.Context, cli kubernetes.Interface) error {
 	}
 
 	return nil
+}
+
+func outputResourceToLogs[T kruntime.Object](obj T) {
+	printer := printers.YAMLPrinter{}
+	printer.PrintObj(obj, os.Stdout)
 }
