@@ -198,6 +198,7 @@ func (mon *monitor) worker(stop <-chan struct{}, delay time.Duration, id string)
 	log.Debug("starting monitoring")
 
 	nsgMonitoringTicker := time.NewTicker(nsgMonitoringFrequency)
+	defer nsgMonitoringTicker.Stop()
 	t := time.NewTicker(time.Minute)
 	defer t.Stop()
 
