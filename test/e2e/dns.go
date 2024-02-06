@@ -26,11 +26,13 @@ import (
 )
 
 var (
-	nameserverRegex              = regexp.MustCompile("nameserver [0-9.]*")
-	verifyResolvConfTimeout      = 5 * time.Minute
-	verifyResolvConfPollInterval = 1 * time.Second
-	nodesReadyPollInterval       = 2 * time.Second
-	nicUpdateWaitTime            = 5 * time.Second
+	nameserverRegex                = regexp.MustCompile("nameserver [0-9.]*")
+	resolvConfJobIsCompleteTimeout = 2 * time.Minute
+	resolvConfJobIsCompletePolling = 5 * time.Second
+	verifyResolvConfTimeout        = 30 * time.Second
+	verifyResolvConfPollInterval   = 1 * time.Second
+	nodesReadyPollInterval         = 2 * time.Second
+	nicUpdateWaitTime              = 5 * time.Second
 )
 
 const (
@@ -149,6 +151,7 @@ var _ = Describe("ARO cluster DNS", func() {
 		By("verifying each worker node's resolv.conf via a one-shot Job per node")
 		for wn, ip := range workerNodes {
 			createResolvConfJob(ctx, clients.Kubernetes, wn, testNamespace)
+			resolvConfJobIsComplete(ctx, clients.Kubernetes, wn, testNamespace)
 
 			Eventually(verifyResolvConf).
 				WithContext(ctx).
@@ -195,6 +198,7 @@ var _ = Describe("ARO cluster DNS", func() {
 
 		for wn, ip := range workerNodes {
 			createResolvConfJob(ctx, clients.Kubernetes, wn, testNamespace)
+			resolvConfJobIsComplete(ctx, clients.Kubernetes, wn, testNamespace)
 
 			Eventually(verifyResolvConf).
 				WithContext(ctx).
@@ -293,6 +297,20 @@ func createResolvConfJob(ctx context.Context, cli kubernetes.Interface, nodeName
 		},
 	}
 	CreateK8sObjectWithRetry(ctx, cli.BatchV1().Jobs(namespace).Create, job, metav1.CreateOptions{})
+}
+
+func resolvConfJobIsComplete(ctx context.Context, cli kubernetes.Interface, nodeName string, namespace string) {
+	Eventually(func(ctx context.Context) (bool, error) {
+		job, err := cli.BatchV1().Jobs(namespace).Get(ctx, resolvConfJobName(nodeName), metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+		return job.Status.Succeeded == 1, nil
+	}).
+		WithContext(ctx).
+		WithTimeout(resolvConfJobIsCompleteTimeout).
+		WithPolling(resolvConfJobIsCompletePolling).
+		Should(BeTrue())
 }
 
 func deleteResolvConfJob(ctx context.Context, cli kubernetes.Interface, nodeName string, namespace string) {
