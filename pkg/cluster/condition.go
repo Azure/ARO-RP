@@ -17,16 +17,8 @@ import (
 
 const minimumWorkerNodes = 2
 
-// condition functions should return an error only if it's not retryable
-// if a condition function encounters a retryable error it should return false, nil.
-
-func (m *manager) bootstrapConfigMapReady(ctx context.Context) (bool, error) {
-	cm, err := m.kubernetescli.CoreV1().ConfigMaps("kube-system").Get(ctx, "bootstrap", metav1.GetOptions{})
-	if err != nil && m.env.IsLocalDevelopmentMode() {
-		m.log.Printf("bootstrapConfigMapReady condition error %s", err)
-	}
-	return err == nil && cm.Data["status"] == "complete", nil
-}
+// condition functions should return an error only if it's not able to be retried
+// if a condition function encounters a error when retrying it should return false, nil.
 
 func (m *manager) apiServersReady(ctx context.Context) (bool, error) {
 	apiserver, err := m.configcli.ConfigV1().ClusterOperators().Get(ctx, "kube-apiserver", metav1.GetOptions{})
