@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -30,11 +29,13 @@ import (
 )
 
 var (
-	nameserverRegex              = regexp.MustCompile("nameserver [0-9.]*")
-	verifyResolvConfTimeout      = 30 * time.Second
-	verifyResolvConfPollInterval = 1 * time.Second
-	nodesReadyPollInterval       = 2 * time.Second
-	nicUpdateWaitTime            = 5 * time.Second
+	nameserverRegex                = regexp.MustCompile("nameserver [0-9.]*")
+	resolvConfJobIsCompleteTimeout = 2 * time.Minute
+	resolvConfJobIsCompletePolling = 5 * time.Second
+	verifyResolvConfTimeout        = 30 * time.Second
+	verifyResolvConfPollInterval   = 1 * time.Second
+	nodesReadyPollInterval         = 2 * time.Second
+	nicUpdateWaitTime              = 5 * time.Second
 )
 
 const (
@@ -157,8 +158,18 @@ var _ = Describe("ARO cluster DNS", Focus, func() {
 
 		By("verifying each worker node's resolv.conf via a one-shot Job per node")
 		for wn, ip := range workerNodes {
-			err = createResolvConfJob(ctx, clients.Kubernetes, wn, testNamespace)
-			Expect(err).NotTo(HaveOccurred())
+			Eventually(createResolvConfJob).
+				WithContext(ctx).
+				WithTimeout(DefaultEventuallyTimeout).
+				WithArguments(clients.Kubernetes, wn, testNamespace).
+				Should(Succeed())
+
+			Eventually(resolvConfJobIsComplete).
+				WithContext(ctx).
+				WithTimeout(resolvConfJobIsCompleteTimeout).
+				WithPolling(resolvConfJobIsCompletePolling).
+				WithArguments(clients.Kubernetes, wn, testNamespace).
+				Should(BeTrue())
 
 			Eventually(verifyResolvConf).
 				WithContext(ctx).
@@ -167,8 +178,12 @@ var _ = Describe("ARO cluster DNS", Focus, func() {
 				WithArguments(clients.Kubernetes, wn, testNamespace, ip).
 				Should(Succeed())
 
-			err = deleteResolvConfJob(ctx, clients.Kubernetes, wn, testNamespace)
-			Expect(err).NotTo(HaveOccurred())
+			Eventually(deleteResolvConfJob).
+				WithContext(ctx).
+				WithTimeout(verifyResolvConfTimeout).
+				WithPolling(verifyResolvConfPollInterval).
+				WithArguments(clients.Kubernetes, wn, testNamespace).
+				Should(Succeed())
 		}
 
 		By("stopping all three worker VMs")
@@ -205,8 +220,18 @@ var _ = Describe("ARO cluster DNS", Focus, func() {
 		By("verifying each worker node's resolv.conf is still correct after simulating host servicing, again via a one-shot Job per node")
 
 		for wn, ip := range workerNodes {
-			err = createResolvConfJob(ctx, clients.Kubernetes, wn, testNamespace)
-			Expect(err).NotTo(HaveOccurred())
+			Eventually(createResolvConfJob).
+				WithContext(ctx).
+				WithTimeout(DefaultEventuallyTimeout).
+				WithArguments(clients.Kubernetes, wn, testNamespace).
+				Should(Succeed())
+
+			Eventually(resolvConfJobIsComplete).
+				WithContext(ctx).
+				WithTimeout(resolvConfJobIsCompleteTimeout).
+				WithPolling(resolvConfJobIsCompletePolling).
+				WithArguments(clients.Kubernetes, wn, testNamespace).
+				Should(BeTrue())
 
 			Eventually(verifyResolvConf).
 				WithContext(ctx).
@@ -215,8 +240,12 @@ var _ = Describe("ARO cluster DNS", Focus, func() {
 				WithArguments(clients.Kubernetes, wn, testNamespace, ip).
 				Should(Succeed())
 
-			err = deleteResolvConfJob(ctx, clients.Kubernetes, wn, testNamespace)
-			Expect(err).NotTo(HaveOccurred())
+			Eventually(deleteResolvConfJob).
+				WithContext(ctx).
+				WithTimeout(verifyResolvConfTimeout).
+				WithPolling(verifyResolvConfPollInterval).
+				WithArguments(clients.Kubernetes, wn, testNamespace).
+				Should(Succeed())
 		}
 
 		By("stopping all three worker VMs")
@@ -307,6 +336,19 @@ func createResolvConfJob(ctx context.Context, cli kubernetes.Interface, nodeName
 	}
 	_, err := cli.BatchV1().Jobs(namespace).Create(ctx, job, metav1.CreateOptions{})
 	return err
+}
+
+func resolvConfJobIsComplete(ctx context.Context, cli kubernetes.Interface, nodeName string, namespace string) (bool, error) {
+	job, err := cli.BatchV1().Jobs(namespace).Get(ctx, resolvConfJobName(nodeName), metav1.GetOptions{})
+	if err != nil {
+		return false, err
+	}
+	complete := job.Status.Succeeded == 1
+	if !complete {
+		GinkgoLogr.Info("waiting for resolv.conf job completion")
+		outputResourceToLogs(job)
+	}
+	return complete, nil
 }
 
 func deleteResolvConfJob(ctx context.Context, cli kubernetes.Interface, nodeName string, namespace string) error {
@@ -414,5 +456,5 @@ func workerNodesReady(ctx context.Context, cli kubernetes.Interface) error {
 
 func outputResourceToLogs[T kruntime.Object](obj T) {
 	printer := printers.YAMLPrinter{}
-	printer.PrintObj(obj, os.Stdout)
+	printer.PrintObj(obj, GinkgoWriter)
 }
