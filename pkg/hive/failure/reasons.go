@@ -17,6 +17,7 @@ var Reasons = []InstallFailingReason{
 	// priority over later ones.
 	AzureRequestDisallowedByPolicy,
 	AzureInvalidTemplateDeployment,
+	AzureZonalAllocationFailed,
 }
 
 var AzureRequestDisallowedByPolicy = InstallFailingReason{
@@ -34,5 +35,14 @@ var AzureInvalidTemplateDeployment = InstallFailingReason{
 	Message: "Deployment failed. Please see details for more information.",
 	SearchRegexes: []*regexp.Regexp{
 		regexp.MustCompile(`"code":\w?"InvalidTemplateDeployment"`),
+	},
+}
+
+var AzureZonalAllocationFailed = InstallFailingReason{
+	Name:    "AzureZonalAllocationFailed",
+	Reason:  "AzureZonalAllocationFailed",
+	Message: "Allocation failed. We do not have sufficient capacity for the requested VM size in this zone.",
+	SearchRegexes: []*regexp.Regexp{
+		regexp.MustCompile(`"code":\w?"DeploymentFailed".*"code":\w?"ZonalAllocationFailed"`),
 	},
 }

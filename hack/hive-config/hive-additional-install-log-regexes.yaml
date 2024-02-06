@@ -12,6 +12,12 @@ data:
       name: AzureInvalidTemplateDeployment
       searchRegexStrings:
       - '"code":\w?"InvalidTemplateDeployment"'
+    - installFailingMessage: Allocation failed. We do not have sufficient capacity for
+        the requested VM size in this zone.
+      installFailingReason: AzureZonalAllocationFailed
+      name: AzureZonalAllocationFailed
+      searchRegexStrings:
+      - '"code":\w?"DeploymentFailed".*"code":\w?"ZonalAllocationFailed"'
 kind: ConfigMap
 metadata:
   creationTimestamp: null
