@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/jongio/azidext/go/azidext"
@@ -19,9 +18,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/vmsscleaner"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	sdkdns "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armdns"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/msi"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
@@ -46,7 +45,7 @@ type deployer struct {
 
 	globaldeployments      features.DeploymentsClient
 	globalgroups           features.ResourceGroupsClient
-	globalrecordsets       dns.RecordSetsClient
+	globalrecordsets       sdkdns.RecordSetsClient
 	globalaccounts         storage.AccountsClient
 	deployments            features.DeploymentsClient
 	groups                 features.ResourceGroupsClient
@@ -58,7 +57,7 @@ type deployer struct {
 	roleassignments        authorization.RoleAssignmentsClient
 	vmss                   compute.VirtualMachineScaleSetsClient
 	vmssvms                compute.VirtualMachineScaleSetVMsClient
-	zones                  dns.ZonesClient
+	zones                  sdkdns.ZonesClient
 	clusterKeyvault        keyvault.Manager
 	dbtokenKeyvault        keyvault.Manager
 	portalKeyvault         keyvault.Manager
@@ -91,15 +90,13 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 	kvAuthorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
 	vmssClient := compute.NewVirtualMachineScaleSetsClient(_env.Environment(), config.SubscriptionID, authorizer)
-	options := _env.Environment().EnvironmentCredentialOptions()
-	spTokenCredential, err := azidentity.NewEnvironmentCredential(options)
 	return &deployer{
 		log: log,
 		env: _env,
 
 		globaldeployments:      features.NewDeploymentsClient(_env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
 		globalgroups:           features.NewResourceGroupsClient(_env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
-		globalrecordsets:       dns.NewRecordSetsClient(_env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
+		globalrecordsets:       sdkdns.NewRecordSetsClient(_env.Environment(), *config.Configuration.GlobalSubscriptionID, tokenCredential),
 		globalaccounts:         storage.NewAccountsClient(_env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
 		deployments:            features.NewDeploymentsClient(_env.Environment(), config.SubscriptionID, authorizer),
 		groups:                 features.NewResourceGroupsClient(_env.Environment(), config.SubscriptionID, authorizer),
@@ -111,7 +108,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 		publicipaddresses:      network.NewPublicIPAddressesClient(_env.Environment(), config.SubscriptionID, authorizer),
 		vmss:                   vmssClient,
 		vmssvms:                compute.NewVirtualMachineScaleSetVMsClient(_env.Environment(), config.SubscriptionID, authorizer),
-		zones:                  dns.NewZonesClient(_env.Environment(), config.SubscriptionID, authorizer),
+		zones:                  sdkdns.NewZonesClient(_env.Environment(), config.SubscriptionID, tokenCredential),
 		clusterKeyvault:        keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+env.ClusterKeyvaultSuffix+"."+_env.Environment().KeyVaultDNSSuffix+"/"),
 		dbtokenKeyvault:        keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+env.DBTokenKeyvaultSuffix+"."+_env.Environment().KeyVaultDNSSuffix+"/"),
 		portalKeyvault:         keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+env.PortalKeyvaultSuffix+"."+_env.Environment().KeyVaultDNSSuffix+"/"),

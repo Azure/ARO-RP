@@ -8,7 +8,6 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	sdkdns "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -28,7 +27,7 @@ type recordSetsClient struct {
 var _ RecordSetsClient = &recordSetsClient{}
 
 // NewRecordSetsClient creates a new RecordSetsClient
-func NewRecordSetsClient(environment *azureclient.AROEnvironment, subscriptionID string, credential azidentity.EnvironmentCredential) RecordSetsClient {
+func NewRecordSetsClient(environment *azureclient.AROEnvironment, subscriptionID string, credential azcore.TokenCredential) RecordSetsClient {
 	options := arm.ClientOptions{
 		ClientOptions: azcore.ClientOptions{
 			Cloud: environment.Cloud,
