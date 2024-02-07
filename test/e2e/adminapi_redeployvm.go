@@ -17,6 +17,7 @@ import (
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/util/ready"
@@ -63,8 +64,8 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 		By("waiting for the redeployed node to eventually become Ready in OpenShift")
 		// wait 1 minute - this will guarantee we pass the minimum (default) threshold of Node heartbeats (40 seconds)
 		Eventually(func(g Gomega, ctx context.Context) {
-			node, err := clients.Kubernetes.CoreV1().Nodes().Get(ctx, *vm.Name, metav1.GetOptions{})
-			g.Expect(err).NotTo(HaveOccurred())
+			getFunc := clients.Kubernetes.CoreV1().Nodes().Get
+			node := GetK8sObjectWithRetry(ctx, getFunc, *vm.Name, metav1.GetOptions{})
 
 			g.Expect(ready.NodeIsReady(node)).To(BeTrue())
 		}).WithContext(ctx).WithTimeout(10 * time.Minute).WithPolling(time.Minute).Should(Succeed())
@@ -79,10 +80,10 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 func getNodeUptime(g Gomega, ctx context.Context, node string) (time.Time, error) {
 	// container kernel = node kernel = `uptime` in a Pod reflects the Node as well
 	namespace := "default"
-	name := fmt.Sprintf("%s-uptime-%d", node, GinkgoParallelProcess())
+	podName := fmt.Sprintf("%s-uptime-%d", node, GinkgoParallelProcess())
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      podName,
 			Namespace: namespace,
 		},
 		Spec: corev1.PodSpec{
@@ -108,25 +109,30 @@ func getNodeUptime(g Gomega, ctx context.Context, node string) (time.Time, error
 		return time.Time{}, err
 	}
 
-	// Defer Delete
 	defer func() {
-		By("deleting uptime pod")
-		err := clients.Kubernetes.CoreV1().Pods(namespace).Delete(ctx, name, metav1.DeleteOptions{})
-		if err != nil {
-			log.Error("Could not delete test Pod")
-		}
+		By("deleting the uptime pod via Kubernetes API")
+		deleteFunc := clients.Kubernetes.CoreV1().Pods(namespace).Delete
+		DeleteK8sObjectWithRetry(ctx, deleteFunc, podName, metav1.DeleteOptions{})
+
+		// To avoid flakes, we need it to be completely deleted before we can use it again
+		// in a separate run or in a separate It block
+		By("waiting for uptime pod to be deleted")
+		Eventually(func(g Gomega, ctx context.Context) {
+			_, err := clients.Kubernetes.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
+			g.Expect(kerrors.IsNotFound(err)).To(BeTrue(), "expect uptime pod to be deleted")
+		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 	}()
 
 	By("waiting for uptime pod to move into the Succeeded phase")
 	g.Eventually(func(g Gomega, ctx context.Context) {
-		p, err := clients.Kubernetes.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
-		g.Expect(err).NotTo(HaveOccurred())
+		getFunc := clients.Kubernetes.CoreV1().Pods(namespace).Get
+		pod := GetK8sObjectWithRetry(ctx, getFunc, podName, metav1.GetOptions{})
 
-		g.Expect(p.Status.Phase).To(Equal(corev1.PodSucceeded))
+		g.Expect(pod.Status.Phase).To(Equal(corev1.PodSucceeded))
 	}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 	By("getting logs")
-	req := clients.Kubernetes.CoreV1().Pods(namespace).GetLogs(name, &corev1.PodLogOptions{})
+	req := clients.Kubernetes.CoreV1().Pods(namespace).GetLogs(podName, &corev1.PodLogOptions{})
 	stream, err := req.Stream(ctx)
 	if err != nil {
 		return time.Time{}, err
