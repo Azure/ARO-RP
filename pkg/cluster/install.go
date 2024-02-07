@@ -67,10 +67,13 @@ func (m *manager) adminUpdate() []steps.Step {
 		if m.adoptViaHive && !m.clusterWasCreatedByHive() {
 			stepsToRun = append(stepsToRun, m.getHiveAdoptionAndReconciliationSteps()...)
 		}
+	} else if isOperator {
+		stepsToRun = append(stepsToRun, m.getCertificateRenewalSteps()...)
+		if m.shouldUpdateOperator() {
+			stepsToRun = append(stepsToRun, m.getOperatorUpdateSteps()...)
+		}
 	} else if isRenewCerts {
 		stepsToRun = append(stepsToRun, m.getCertificateRenewalSteps()...)
-	} else if isOperator && m.shouldUpdateOperator() {
-		stepsToRun = append(stepsToRun, m.getOperatorUpdateSteps()...)
 	}
 
 	// We don't run this on an operator-only deploy as PUCM scripts then cannot

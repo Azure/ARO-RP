@@ -96,7 +96,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskOperator
 				return doc, true
 			},
-			shouldRunSteps: concatMultipleSlices(zerothSteps, operatorUpdateSteps),
+			shouldRunSteps: concatMultipleSlices(zerothSteps, certificateRenewalSteps, operatorUpdateSteps),
 		},
 		{
 			name: "ARO Operator Update on <= 4.6 cluster does not update operator",
@@ -107,7 +107,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.6.62"
 				return doc, true
 			},
-			shouldRunSteps: zerothSteps,
+			shouldRunSteps: concatMultipleSlices(zerothSteps, certificateRenewalSteps),
 		},
 		{
 			name: "ARO Operator Update on 4.7.0 cluster does update operator",
@@ -118,7 +118,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.7.0"
 				return doc, true
 			},
-			shouldRunSteps: concatMultipleSlices(zerothSteps, operatorUpdateSteps),
+			shouldRunSteps: concatMultipleSlices(zerothSteps, certificateRenewalSteps, operatorUpdateSteps),
 		},
 		{
 			name: "Everything update and adopt Hive.",
