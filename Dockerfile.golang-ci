@@ -18,6 +18,11 @@ WORKDIR /app
 COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/
 RUN make unit-test-go
 
+FROM builder as validate-fips
+WORKDIR /app
+COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/
+RUN make validate-fips
+
 FROM ${REGISTRY}/ubi8/ubi-minimal
 RUN microdnf update && microdnf clean all
 COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/
