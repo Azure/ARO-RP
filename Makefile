@@ -7,6 +7,11 @@ GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_gra
 
 export GOFLAGS=$(GO_FLAGS)
 
+
+
+
+
+
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
 MARINER_VERSION = 20230321
 FLUENTBIT_VERSION = 1.9.10
