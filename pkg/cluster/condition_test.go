@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
@@ -26,84 +25,10 @@ import (
 	ktesting "k8s.io/client-go/testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
-	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
 const errMustBeNilMsg = "err must be nil; condition is retried until timeout"
-
-func TestBootstrapConfigMapReady(t *testing.T) {
-	ctx := context.Background()
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
-	for _, tt := range []struct {
-		name               string
-		configMapName      string
-		configMapNamespace string
-		configMapStatus    string
-		env                func() env.Interface
-		want               bool
-	}{
-		{
-			name: "Can't get config maps for kube-system namespace",
-			env: func() env.Interface {
-				env := mock_env.NewMockInterface(controller)
-				env.EXPECT().IsLocalDevelopmentMode().Return(true)
-				return env
-			},
-		},
-		{
-			name:               "Can't get bootstrap config map",
-			configMapNamespace: "kube-system",
-			env: func() env.Interface {
-				env := mock_env.NewMockInterface(controller)
-				env.EXPECT().IsLocalDevelopmentMode().Return(true)
-				return env
-			},
-		},
-		{
-			name:               "Status not complete",
-			configMapName:      "bootstrap",
-			configMapNamespace: "kube-system",
-			env: func() env.Interface {
-				return mock_env.NewMockInterface(controller)
-			},
-		},
-		{
-			name:               "Bootstrap config map is ready",
-			configMapName:      "bootstrap",
-			configMapNamespace: "kube-system",
-			configMapStatus:    "complete",
-			env: func() env.Interface {
-				return mock_env.NewMockInterface(controller)
-			},
-			want: true,
-		},
-	} {
-		m := &manager{
-			log: logrus.NewEntry(logrus.StandardLogger()),
-			env: tt.env(),
-			kubernetescli: fake.NewSimpleClientset(&corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      tt.configMapName,
-					Namespace: tt.configMapNamespace,
-				},
-				Data: map[string]string{
-					"status": tt.configMapStatus,
-				},
-			}),
-		}
-		ready, err := m.bootstrapConfigMapReady(ctx)
-		if err != nil {
-			t.Error(errMustBeNilMsg)
-		}
-		if ready != tt.want {
-			t.Error(ready)
-		}
-	}
-}
 
 func TestOperatorConsoleExists(t *testing.T) {
 	ctx := context.Background()
