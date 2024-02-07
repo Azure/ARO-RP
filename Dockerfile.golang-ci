@@ -6,6 +6,7 @@ ENV GOPATH=/root/go
 RUN mkdir -p /app
 WORKDIR /app
 COPY . /app
+run make generate
 RUN make build-all
 RUN [[ -z "$(git status -s)" ]]
 
