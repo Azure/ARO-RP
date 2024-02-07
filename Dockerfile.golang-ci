@@ -6,6 +6,8 @@ ENV GOPATH=/root/go
 RUN mkdir -p /app
 WORKDIR /app
 COPY . /app
+RUN make build-all
+RUN [[ -z "$(git status -s)" ]]
 
 FROM builder as lint-go
 WORKDIR /app
