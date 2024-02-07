@@ -187,5 +187,5 @@ func (m *manager) validateACRToken(ctx context.Context) error {
 		return err
 	}
 	rc := pullsecret.NewRegistryClient()
-	return rc.ValidatePullSecret(ctx, pullSecret)
+	return rc.ValidatePullSecret(ctx, pullSecret, []string{m.env.ACRDomain()})
 }

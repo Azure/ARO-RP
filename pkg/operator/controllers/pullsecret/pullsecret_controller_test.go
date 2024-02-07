@@ -782,6 +782,7 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 				AROController: base.AROController{
 					Client: clientBuilder.Build(),
 					Name:   ControllerName,
+					Log:    logrus.WithContext(ctx),
 				},
 				registryClient: pullsecret.RegistryClient{CheckAuth: func(ctx context.Context, sc *container_types.SystemContext, s1, s2, s3 string) error { return nil }},
 			}

@@ -378,15 +378,23 @@ func TestUnmarshalSecretData(t *testing.T) {
 }
 
 func TestValidatePullSecret(t *testing.T) {
-	azurecrError := "unable to retrieve auth token: invalid username/password: unauthorized: authentication required, visit https://aka.ms/acr/authorization for more information. This error has been customized to ensure it doesn't leak to Azure."
+	azurecrError := "unable to retrieve auth token: invalid username/password: unauthorized: authentication required, visit https://aka.ms/acr/authorization for more information. This error has been customized so if it leaks to Azure the test will fail."
 	erroringRegistry := RegistryClient{
-		CheckAuth: func(ctx context.Context, sc *types.SystemContext, s1, s2, s3 string) error {
+		CheckAuth: func(ctx context.Context, sc *types.SystemContext, u, p, registry string) error {
 			return fmt.Errorf(azurecrError)
 		},
 	}
 	succeedingRegistry := RegistryClient{
-		CheckAuth: func(ctx context.Context, sc *types.SystemContext, s1, s2, s3 string) error {
+		CheckAuth: func(ctx context.Context, sc *types.SystemContext, u, p, registry string) error {
 			return nil
+		},
+	}
+	onlyAroSucceedsRegistry := RegistryClient{
+		CheckAuth: func(ctx context.Context, sc *types.SystemContext, u, p, registry string) error {
+			if registry == "arosvc.azurecr.io" {
+				return nil
+			}
+			return fmt.Errorf(azurecrError)
 		},
 	}
 	test := []struct {
@@ -408,6 +416,20 @@ func TestValidatePullSecret(t *testing.T) {
 				"registry.redhat.io": "ZnJlZDplbnRlcg==",
 			},
 			client: succeedingRegistry,
+		},
+		{
+			name: "broken user registry",
+			ps: &corev1.Secret{
+				Data: map[string][]byte{
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}, "registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}, "registry.example.com":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+				},
+			},
+			wantAuth: map[string]string{
+				"arosvc.azurecr.io":    "ZnJlZDplbnRlcg==",
+				"registry.redhat.io":   "ZnJlZDplbnRlcg==",
+				"registry.example.com": "ZnJlZDplbnRlcg==",
+			},
+			client: onlyAroSucceedsRegistry,
 		},
 		{
 			name: "authentication failure",
@@ -443,7 +465,7 @@ func TestValidatePullSecret(t *testing.T) {
 
 	for _, tt := range test {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.client.ValidatePullSecret(context.TODO(), tt.ps)
+			err := tt.client.ValidatePullSecret(context.TODO(), tt.ps, []string{"arosvc.azurecr.io"})
 			if err != nil {
 				if err.Error() != tt.wantErr {
 					t.Fatalf("%v\ndoes not match:\n%s\n", err.Error(), tt.wantErr)

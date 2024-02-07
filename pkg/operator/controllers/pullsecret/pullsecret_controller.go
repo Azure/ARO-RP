@@ -171,6 +171,12 @@ func (r *Reconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret,
 		}
 	}
 
+	err = r.registryClient.ValidatePullSecret(ctx, operatorSecret, []string{})
+	if err != nil {
+		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
+	}
+
 	fixedData, update, err := pullsecret.Merge(string(secret.Data[corev1.DockerConfigJsonKey]), string(operatorSecret.Data[corev1.DockerConfigJsonKey]))
 	if err != nil {
 		return nil, err
@@ -197,7 +203,7 @@ func (r *Reconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret,
 			return secret, err
 		}
 
-		err = r.registryClient.ValidatePullSecret(ctx, secret)
+		err = r.registryClient.ValidatePullSecret(ctx, secret, []string{})
 		if err != nil {
 			r.Log.Error(err)
 			r.SetDegraded(ctx, err)
@@ -210,7 +216,7 @@ func (r *Reconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret,
 		return secret, err
 	}
 
-	err = r.registryClient.ValidatePullSecret(ctx, secret)
+	err = r.registryClient.ValidatePullSecret(ctx, secret, []string{})
 	if err != nil {
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)
