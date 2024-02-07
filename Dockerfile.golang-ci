@@ -10,6 +10,11 @@ run make generate
 RUN make build-all
 RUN [[ -z "$(git status -s)" ]]
 
+FROM builder as vendor-check
+WORKDIR /app
+COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/
+RUN go mod vendor && go mod tidy -compat=1.18 && hack/ci-utils/isClean.sh
+
 FROM builder as lint-go
 WORKDIR /app
 COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/
