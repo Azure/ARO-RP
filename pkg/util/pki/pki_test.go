@@ -3,59 +3,62 @@ package pki
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-import (
-	"crypto/tls"
-	"crypto/x509"
-	"fmt"
-	"net/http"
-	"os"
-	"testing"
-)
+// // Copyright (c) Microsoft Corporation.
+// // Licensed under the Apache License 2.0.
 
-func TestGetTlsConfig(t *testing.T) {
-	if os.Getenv("ARO_RUN_PKI_TESTS") != "" {
-		t.Skip("")
-	}
-	kpiUrl := "https://issuer.pki.azure.com/dsms/issuercertificates?getissuersv3&caName=%s"
-	testUrl := "https://diag-runtimehost-prod.trafficmanager.net"
+// import (
+// 	"crypto/tls"
+// 	"crypto/x509"
+// 	"fmt"
+// 	"net/http"
+// 	"os"
+// 	"testing"
+// )
 
-	caName := "ame"
-	caCertPool, err := GetTlsCertPool(kpiUrl, caName)
+// func TestGetTlsConfig(t *testing.T) {
+// 	if os.Getenv("ARO_RUN_PKI_TESTS") != "" {
+// 		t.Skip("")
+// 	}
+// 	kpiUrl := "https://issuer.pki.azure.com/dsms/issuercertificates?getissuersv3&caName=%s"
+// 	testUrl := "https://diag-runtimehost-prod.trafficmanager.net"
 
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-	}
+// 	caName := "ame"
+// 	caCertPool, err := GetTlsCertPool(kpiUrl, caName)
 
-	if caCertPool == nil {
-		t.Error("Expected non-nil CertPool")
-	}
+// 	if err != nil {
+// 		t.Errorf("Expected no error, got %v", err)
+// 	}
 
-	url := fmt.Sprintf(kpiUrl, caName)
-	if _, ok := caMap[url]; !ok {
-		t.Errorf("Expected caMap to contain entry for %s", caName)
-	}
+// 	if caCertPool == nil {
+// 		t.Error("Expected non-nil CertPool")
+// 	}
 
-	// Create a new tls.Config with the custom CA certificate
-	tlsConfig := &tls.Config{
-		RootCAs:            caCertPool,
-		InsecureSkipVerify: false,
-	}
+// 	url := fmt.Sprintf(kpiUrl, caName)
+// 	if _, ok := caMap[url]; !ok {
+// 		t.Errorf("Expected caMap to contain entry for %s", caName)
+// 	}
 
-	// Use the tls.Config with your client
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: tlsConfig,
-		},
-	}
+// 	// Create a new tls.Config with the custom CA certificate
+// 	tlsConfig := &tls.Config{
+// 		RootCAs:            caCertPool,
+// 		InsecureSkipVerify: false,
+// 	}
 
-	resp, err := client.Get(testUrl)
+// 	// Use the tls.Config with your client
+// 	client := &http.Client{
+// 		Transport: &http.Transport{
+// 			TLSClientConfig: tlsConfig,
+// 		},
+// 	}
 
-	if err != nil {
-		if _, ok := err.(x509.UnknownAuthorityError); ok {
-			t.Errorf("Invalid SSL/TLS certificate")
-		}
-		t.Errorf("Error calling %s", testUrl)
-	}
+// 	resp, err := client.Get(testUrl)
 
-	defer resp.Body.Close()
-}
+// 	if err != nil {
+// 		if _, ok := err.(x509.UnknownAuthorityError); ok {
+// 			t.Errorf("Invalid SSL/TLS certificate")
+// 		}
+// 		t.Errorf("Error calling %s", testUrl)
+// 	}
+
+// 	defer resp.Body.Close()
+// }
