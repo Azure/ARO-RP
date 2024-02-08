@@ -31,7 +31,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
-	sdkdns "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armdns"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -87,7 +86,7 @@ type manager struct {
 	fpPrivateEndpoints    network.PrivateEndpointsClient
 	rpPrivateLinkServices network.PrivateLinkServicesClient
 
-	dns     sdkdns.Manager
+	dns     dns.Manager
 	storage storage.Manager
 	subnet  subnet.Manager
 	graph   graph.Manager
