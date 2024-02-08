@@ -34,6 +34,11 @@ type testMode string
 const (
 	testModeCreate testMode = "Create"
 	testModeUpdate testMode = "Update"
+
+	consoleProfileUrl   = "https://console-openshift-console.apps.cluster.location.aroapp.io/"
+	apiserverProfileUrl = "https://api.cluster.location.aroapp.io:6443/"
+	apiserverProfileIp  = "1.2.3.4"
+	ingressProfileIp    = "1.2.3.4"
 )
 
 var (
@@ -44,12 +49,23 @@ func getResourceID(clusterName string) string {
 	return fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/microsoft.redhatopenshift/openshiftclusters/%s", subscriptionID, clusterName)
 }
 
-func validOpenShiftCluster(name, location string) *OpenShiftCluster {
+func validSystemData() *SystemData {
 	timestamp, err := time.Parse(time.RFC3339, "2021-01-23T12:34:54.0000000Z")
 	if err != nil {
 		panic(err)
 	}
 
+	return &SystemData{
+		CreatedBy:          "00000000-0000-0000-0000-000000000000",
+		CreatedByType:      CreatedByTypeApplication,
+		CreatedAt:          &timestamp,
+		LastModifiedBy:     "00000000-0000-0000-0000-000000000000",
+		LastModifiedByType: CreatedByTypeApplication,
+		LastModifiedAt:     &timestamp,
+	}
+}
+
+func validOpenShiftCluster(name, location string) *OpenShiftCluster {
 	oc := &OpenShiftCluster{
 		ID:       getResourceID(name),
 		Name:     name,
@@ -57,14 +73,6 @@ func validOpenShiftCluster(name, location string) *OpenShiftCluster {
 		Location: location,
 		Tags: Tags{
 			"key": "value",
-		},
-		SystemData: &SystemData{
-			CreatedBy:          "00000000-0000-0000-0000-000000000000",
-			CreatedByType:      CreatedByTypeApplication,
-			CreatedAt:          &timestamp,
-			LastModifiedBy:     "00000000-0000-0000-0000-000000000000",
-			LastModifiedByType: CreatedByTypeApplication,
-			LastModifiedAt:     &timestamp,
 		},
 		Properties: OpenShiftClusterProperties{
 			ProvisioningState: ProvisioningStateSucceeded,
@@ -76,7 +84,7 @@ func validOpenShiftCluster(name, location string) *OpenShiftCluster {
 				FipsValidatedModules: FipsValidatedModulesDisabled,
 			},
 			ConsoleProfile: ConsoleProfile{
-				URL: "https://console-openshift-console.apps.cluster.location.aroapp.io/",
+				URL: "",
 			},
 			ServicePrincipalProfile: ServicePrincipalProfile{
 				ClientSecret: "clientSecret",
@@ -109,14 +117,14 @@ func validOpenShiftCluster(name, location string) *OpenShiftCluster {
 			},
 			APIServerProfile: APIServerProfile{
 				Visibility: VisibilityPublic,
-				URL:        "https://api.cluster.location.aroapp.io:6443/",
-				IP:         "1.2.3.4",
+				URL:        "",
+				IP:         "",
 			},
 			IngressProfiles: []IngressProfile{
 				{
 					Name:       "default",
 					Visibility: VisibilityPublic,
-					IP:         "1.2.3.4",
+					IP:         "",
 				},
 			},
 		},
@@ -168,7 +176,15 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 				var current *api.OpenShiftCluster
 				if mode == testModeUpdate {
 					current = &api.OpenShiftCluster{}
-					(&openShiftClusterConverter{}).ToInternal(validOCForTest(), current)
+
+					ext := validOCForTest()
+					ext.SystemData = validSystemData()
+					ext.Properties.ConsoleProfile.URL = consoleProfileUrl
+					ext.Properties.APIServerProfile.URL = apiserverProfileUrl
+					ext.Properties.APIServerProfile.IP = apiserverProfileIp
+					ext.Properties.IngressProfiles[0].IP = ingressProfileIp
+
+					(&openShiftClusterConverter{}).ToInternal(ext, current)
 				}
 
 				err := v.Static(oc, current, v.location, v.domain, tt.requireD2sV3Workers, v.resourceID)
@@ -1075,14 +1091,15 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.SystemData = &SystemData{}
 			},
-			wantErr: "400: PropertyChangeNotAllowed: systemData.createdBy: Changing property 'systemData.createdBy' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: systemData: Changing property 'systemData' is not allowed.",
 		},
 		{
 			name: "systemData LastUpdated changed",
 			modify: func(oc *OpenShiftCluster) {
+				oc.SystemData = &SystemData{}
 				oc.SystemData.LastModifiedBy = "Bob"
 			},
-			wantErr: "400: PropertyChangeNotAllowed: systemData.lastModifiedBy: Changing property 'systemData.lastModifiedBy' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: systemData: Changing property 'systemData' is not allowed.",
 		},
 		{
 			name: "update LoadBalancerProfile.ManagedOutboundIPs.Count",
