@@ -59,7 +59,7 @@ func testGetPodLogsOK(ctx context.Context, containerName, podName, namespace str
 
 	By("waiting for the pod to successfully terminate")
 	Eventually(func(g Gomega, ctx context.Context) {
-		pod = GetK8sObjectWithRetry(
+		pod, _ = GetK8sObjectWithRetry(
 			ctx, clients.Kubernetes.CoreV1().Pods(namespace).Get, podName, metav1.GetOptions{},
 		)
 		g.Expect(pod.Status.Phase).To(Equal(corev1.PodSucceeded))
