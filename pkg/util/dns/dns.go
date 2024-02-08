@@ -9,14 +9,14 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armdns"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcore"
 	sdkdns "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armdns"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcore"
 )
 
 const (
