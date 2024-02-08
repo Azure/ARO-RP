@@ -27,16 +27,27 @@ log_entry_type = {'warn': 'Warning', 'error': 'Error'}
 
 def can_do_action(perms, action):
     for perm in perms:
-        for not_action in perm.not_actions:
-            match = re.escape(not_action)
-            match = re.match("(?i)^" + match.replace(r"\*", ".*") + "$", action)
-            if match:
-                return f"{action} permission is disabled"
+        matched = False
+
         for perm_action in perm.actions:
             match = re.escape(perm_action)
             match = re.match("(?i)^" + match.replace(r"\*", ".*") + "$", action)
             if match:
-                return None
+                matched = True
+                break
+
+        if not matched:
+            continue
+
+        for not_action in perm.not_actions:
+            match = re.escape(not_action)
+            match = re.match("(?i)^" + match.replace(r"\*", ".*") + "$", action)
+            if match:
+                matched = False
+                break
+
+        if matched:
+            return None
 
     return f"{action} permission is missing"
 
