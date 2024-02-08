@@ -15,7 +15,7 @@ import (
 	"github.com/golang/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	mock_dns "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armdns"
+	mock_armdns "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armdns"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -42,7 +42,7 @@ func TestCreate(t *testing.T) {
 	type test struct {
 		name    string
 		oc      *api.OpenShiftCluster
-		mocks   func(*test, *mock_dns.MockRecordSetsClient)
+		mocks   func(*test, *mock_armdns.MockRecordSetsClient)
 		wantErr string
 	}
 
@@ -50,7 +50,7 @@ func TestCreate(t *testing.T) {
 		{
 			name: "managed, new record",
 			oc:   managedOc,
-			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
+			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
 					Return(sdkdns.RecordSet{}, autorest.DetailedError{
@@ -75,7 +75,7 @@ func TestCreate(t *testing.T) {
 		{
 			name: "managed, our record already exists",
 			oc:   managedOc,
-			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
+			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
 					Return(sdkdns.RecordSet{
@@ -90,7 +90,7 @@ func TestCreate(t *testing.T) {
 		{
 			name: "managed, someone else's record already exists",
 			oc:   managedOc,
-			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
+			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
 					Return(sdkdns.RecordSet{
@@ -106,7 +106,7 @@ func TestCreate(t *testing.T) {
 		{
 			name: "managed, error",
 			oc:   managedOc,
-			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
+			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
 					Return(sdkdns.RecordSet{}, fmt.Errorf("random error"))
@@ -126,7 +126,7 @@ func TestCreate(t *testing.T) {
 			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")
 			env.EXPECT().Domain().AnyTimes().Return("domain")
 
-			recordsets := mock_dns.NewMockRecordSetsClient(controller)
+			recordsets := mock_armdns.NewMockRecordSetsClient(controller)
 			if tt.mocks != nil {
 				tt.mocks(tt, recordsets)
 			}
@@ -164,7 +164,7 @@ func TestUpdate(t *testing.T) {
 	type test struct {
 		name    string
 		oc      *api.OpenShiftCluster
-		mocks   func(*test, *mock_dns.MockRecordSetsClient)
+		mocks   func(*test, *mock_armdns.MockRecordSetsClient)
 		wantErr string
 	}
 
@@ -172,7 +172,7 @@ func TestUpdate(t *testing.T) {
 		{
 			name: "managed, our record already exists",
 			oc:   managedOc,
-			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
+			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "api.test", sdkdns.RecordTypeA, nil).
 					Return(sdkdns.RecordSet{
@@ -207,7 +207,7 @@ func TestUpdate(t *testing.T) {
 		{
 			name: "managed, someone else's record already exists",
 			oc:   managedOc,
-			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
+			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "api.test", sdkdns.RecordTypeA, nil).
 					Return(sdkdns.RecordSet{
@@ -223,7 +223,7 @@ func TestUpdate(t *testing.T) {
 		{
 			name: "managed, error",
 			oc:   managedOc,
-			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
+			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "api.test", sdkdns.RecordTypeA, nil).
 					Return(sdkdns.RecordSet{}, fmt.Errorf("random error"))
@@ -243,7 +243,7 @@ func TestUpdate(t *testing.T) {
 			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")
 			env.EXPECT().Domain().AnyTimes().Return("domain")
 
-			recordsets := mock_dns.NewMockRecordSetsClient(controller)
+			recordsets := mock_armdns.NewMockRecordSetsClient(controller)
 			if tt.mocks != nil {
 				tt.mocks(tt, recordsets)
 			}
@@ -282,7 +282,7 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 		name     string
 		routerIP string
 		oc       *api.OpenShiftCluster
-		mocks    func(*test, *mock_dns.MockRecordSetsClient)
+		mocks    func(*test, *mock_armdns.MockRecordSetsClient)
 		wantErr  string
 	}
 
@@ -291,7 +291,7 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 			name:     "managed - create",
 			routerIP: "1.2.3.4",
 			oc:       managedOc,
-			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
+			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, nil).
 					Return(sdkdns.RecordSet{}, fmt.Errorf("random error"))
@@ -317,7 +317,7 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 			name:     "managed, error",
 			routerIP: "1.2.3.4",
 			oc:       managedOc,
-			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
+			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, nil).
 					Return(sdkdns.RecordSet{}, fmt.Errorf("random error"))
@@ -344,7 +344,7 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 			name:     "managed, update match",
 			routerIP: "1.2.3.4",
 			oc:       managedOc,
-			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
+			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, nil).
 					Return(sdkdns.RecordSet{
@@ -363,7 +363,7 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 			name:     "managed, update missmatch",
 			routerIP: "2.2.3.4",
 			oc:       managedOc,
-			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
+			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, nil).
 					Return(sdkdns.RecordSet{
@@ -407,7 +407,7 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")
 			env.EXPECT().Domain().AnyTimes().Return("domain")
 
-			recordsets := mock_dns.NewMockRecordSetsClient(controller)
+			recordsets := mock_armdns.NewMockRecordSetsClient(controller)
 			if tt.mocks != nil {
 				tt.mocks(tt, recordsets)
 			}
@@ -445,7 +445,7 @@ func TestDelete(t *testing.T) {
 	type test struct {
 		name    string
 		oc      *api.OpenShiftCluster
-		mocks   func(*test, *mock_dns.MockRecordSetsClient)
+		mocks   func(*test, *mock_armdns.MockRecordSetsClient)
 		wantErr string
 	}
 
@@ -453,7 +453,7 @@ func TestDelete(t *testing.T) {
 		{
 			name: "managed, not found",
 			oc:   managedOc,
-			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
+			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
 					Return(sdkdns.RecordSet{}, autorest.DetailedError{
@@ -464,7 +464,7 @@ func TestDelete(t *testing.T) {
 		{
 			name: "managed, our record exists",
 			oc:   managedOc,
-			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
+			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
 					Return(sdkdns.RecordSet{
@@ -488,7 +488,7 @@ func TestDelete(t *testing.T) {
 		{
 			name: "managed, someone else's record exists",
 			oc:   managedOc,
-			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
+			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
 					Return(sdkdns.RecordSet{
@@ -503,7 +503,7 @@ func TestDelete(t *testing.T) {
 		{
 			name: "managed, error",
 			oc:   managedOc,
-			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
+			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
 					Return(sdkdns.RecordSet{}, fmt.Errorf("random error"))
@@ -523,7 +523,7 @@ func TestDelete(t *testing.T) {
 			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")
 			env.EXPECT().Domain().AnyTimes().Return("domain")
 
-			recordsets := mock_dns.NewMockRecordSetsClient(controller)
+			recordsets := mock_armdns.NewMockRecordSetsClient(controller)
 			if tt.mocks != nil {
 				tt.mocks(tt, recordsets)
 			}
