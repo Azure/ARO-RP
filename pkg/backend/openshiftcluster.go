@@ -345,9 +345,13 @@ func (ocb *openShiftClusterBackend) asyncOperationResultLog(log *logrus.Entry, i
 			"properties.servicePrincipalProfile", "The Azure Red Hat Openshift resource provider service principal has been removed from your tenant. To restore, please unregister and then re-register the Azure Red Hat OpenShift resource provider.")
 	}
 
-	_, ok := backendErr.(*api.CloudError)
+	err, ok := backendErr.(*api.CloudError)
 	if ok {
-		log = log.WithField("resultType", utillog.UserErrorResultType)
+		if int(err.StatusCode) < 500 {
+			log = log.WithField("resultType", utillog.UserErrorResultType)
+		} else {
+			log = log.WithField("resultType", utillog.ServerErrorResultType)
+		}
 	} else {
 		log = log.WithField("resultType", utillog.ServerErrorResultType)
 	}
