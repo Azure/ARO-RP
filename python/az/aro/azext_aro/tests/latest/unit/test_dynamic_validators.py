@@ -19,7 +19,7 @@ test_can_do_action_data = [
         "empty permissions list",
         [],
         "Microsoft.Network/virtualNetworks/subnets/join/action",
-        "Microsoft.Network/virtualNetworks/subnets/join/action permission is missing"
+        False
     ),
     (
         "has permission - exact",
@@ -28,7 +28,7 @@ test_can_do_action_data = [
             Permission(actions=["Microsoft.Network/virtualNetworks/subnets/join/action"], not_actions=[]),
         ],
         "Microsoft.Network/virtualNetworks/subnets/join/action",
-        None
+        True
     ),
     (
         "has permission - wildcard",
@@ -36,7 +36,7 @@ test_can_do_action_data = [
             Permission(actions=["Microsoft.Network/virtualNetworks/subnets/*/action"], not_actions=[]),
         ],
         "Microsoft.Network/virtualNetworks/subnets/join/action",
-        None
+        True
     ),
     (
         "has permission - exact, conflict",
@@ -45,7 +45,7 @@ test_can_do_action_data = [
             Permission(actions=["Microsoft.Network/virtualNetworks/subnets/join/action"], not_actions=[]),
         ],
         "Microsoft.Network/virtualNetworks/subnets/join/action",
-        None
+        True
     ),
     (
         "has permission excluded - exact",
@@ -53,7 +53,7 @@ test_can_do_action_data = [
             Permission(actions=["Microsoft.Network/*"], not_actions=["Microsoft.Network/virtualNetworks/subnets/join/action"]),
         ],
         "Microsoft.Network/virtualNetworks/subnets/join/action",
-        "Microsoft.Network/virtualNetworks/subnets/join/action permission is missing"
+        False
     ),
     (
         "has permission excluded - wildcard",
@@ -61,23 +61,23 @@ test_can_do_action_data = [
             Permission(actions=["Microsoft.Network/*"], not_actions=["Microsoft.Network/virtualNetworks/subnets/*/action"]),
         ],
         "Microsoft.Network/virtualNetworks/subnets/join/action",
-        "Microsoft.Network/virtualNetworks/subnets/join/action permission is missing"
+        False
     )
 ]
 
 
 @pytest.mark.parametrize(
-    "test_description, perms, action, expected_error",
+    "test_description, perms, action, expected",
     test_can_do_action_data,
     ids=[i[0] for i in test_can_do_action_data]
 )
 def test_can_do_action(
-    test_description, perms, action, expected_error
+    test_description, perms, action, expected
 ):
-    error = can_do_action(perms, action)
+    actual = can_do_action(perms, action)
 
-    if error != expected_error:
-        raise Exception(f"Error mismatch, expected: {expected_error}, actual: {error}")
+    if actual != expected:
+        raise Exception(f"Error mismatch, expected: {expected}, actual: {actual}")
 
 
 test_validate_cidr_data = [

@@ -47,9 +47,9 @@ def can_do_action(perms, action):
                 break
 
         if matched:
-            return None
+            return True
 
-    return f"{action} permission is missing"
+    return False
 
 
 def validate_resource(client, key, resource, actions):
@@ -62,9 +62,8 @@ def validate_resource(client, key, resource, actions):
     for action in actions:
         perms, perms_copy = tee(perms)
         perms_list = list(perms_copy)
-        error = can_do_action(perms_list, action)
-        if error is not None:
-            row = [key, resource['name'], log_entry_type["error"], error]
+        if not can_do_action(perms_list, action):
+            row = [key, resource['name'], log_entry_type["error"], f"{action} permission is missing"]
             errors.append(row)
 
     return errors
