@@ -1,0 +1,13 @@
+ARG REGISTRY
+
+FROM ${REGISTRY}/ubi8/nodejs-16 AS portal-base
+WORKDIR /build/portal/v2
+USER root
+
+FROM portal-base AS portal-build
+COPY /portal/v2/package*.json ./
+RUN npm ci
+RUN npm audit --omit=dev
+COPY /portal/v2/ ./
+RUN npm run lint
+RUN npm run build
