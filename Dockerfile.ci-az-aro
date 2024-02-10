@@ -1,0 +1,14 @@
+FROM docker.io/library/python:3.10 AS az-aro-base
+WORKDIR /build/
+COPY requirements.txt .
+RUN pip install -U pip \
+    && pip install -r requirements.txt
+
+# untracked testing deps
+RUN pip install azure.mgmt.core
+RUN pip install azure.cli
+
+COPY python/ .
+# TODO: azdev linting??? Getting "TypeError: expected str, bytes or os.PathLike object, not NoneType" - for ... maybe... $HOME?
+RUN pip install pytest
+RUN pytest --ignore=az/aro/azext_aro/tests/latest/integration
