@@ -68,7 +68,6 @@ func (m *manager) adminUpdate() []steps.Step {
 			stepsToRun = append(stepsToRun, m.getHiveAdoptionAndReconciliationSteps()...)
 		}
 	} else if isOperator {
-		stepsToRun = append(stepsToRun, m.getCertificateRenewalSteps()...)
 		if m.shouldUpdateOperator() {
 			stepsToRun = append(stepsToRun, m.getOperatorUpdateSteps()...)
 		}
