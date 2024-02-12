@@ -144,7 +144,9 @@ func (m *manager) Delete(ctx context.Context, oc *api.OpenShiftCluster) error {
 		return nil
 	}
 
-	_, err = m.recordsets.Delete(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+prefix, sdkdns.RecordTypeA, nil)
+	_, err = m.recordsets.Delete(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+prefix, sdkdns.RecordTypeA, &sdkdns.RecordSetsClientDeleteOptions{
+		IfMatch: to.StringPtr(""),
+	})
 	if err != nil {
 		return err
 	}

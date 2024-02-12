@@ -56,7 +56,9 @@ func TestCreate(t *testing.T) {
 					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
 					Return(armdns.RecordSetsClientGetResponse{
 						RecordSet: sdkdns.RecordSet{},
-					}, fmt.Errorf(""))
+					}, autorest.DetailedError{
+						StatusCode: http.StatusNotFound,
+					})
 
 				recordsets.EXPECT().
 					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, sdkdns.RecordSet{
@@ -66,7 +68,7 @@ func TestCreate(t *testing.T) {
 							},
 							TTL: to.Int64Ptr(300),
 						},
-					}, sdkdns.RecordSetsClientCreateOrUpdateOptions{
+					}, &sdkdns.RecordSetsClientCreateOrUpdateOptions{
 						IfMatch:     to.StringPtr(""),
 						IfNoneMatch: to.StringPtr("*"),
 					}).
@@ -509,13 +511,13 @@ func TestDelete(t *testing.T) {
 					}, nil)
 
 				recordsets.EXPECT().
-					Delete(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, armdns.RecordSetsClientDeleteOptions{
+					Delete(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, &armdns.RecordSetsClientDeleteOptions{
 						IfMatch: to.StringPtr(""),
 					}).
 					Return(armdns.RecordSetsClientDeleteResponse{}, nil)
 
 				recordsets.EXPECT().
-					Delete(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, armdns.RecordSetsClientDeleteOptions{
+					Delete(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, &armdns.RecordSetsClientDeleteOptions{
 						IfMatch: to.StringPtr("etag"),
 					}).
 					Return(armdns.RecordSetsClientDeleteResponse{}, nil)
