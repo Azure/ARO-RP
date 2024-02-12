@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns"
 	sdkdns "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -53,9 +54,9 @@ func TestCreate(t *testing.T) {
 			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSet{}, autorest.DetailedError{
-						StatusCode: http.StatusNotFound,
-					})
+					Return(armdns.RecordSetsClientGetResponse{
+						RecordSet: sdkdns.RecordSet{},
+					}, fmt.Errorf(""))
 
 				recordsets.EXPECT().
 					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, sdkdns.RecordSet{
@@ -65,11 +66,13 @@ func TestCreate(t *testing.T) {
 							},
 							TTL: to.Int64Ptr(300),
 						},
-					}, &sdkdns.RecordSetsClientCreateOrUpdateOptions{
-						IfMatch:     nil,
+					}, sdkdns.RecordSetsClientCreateOrUpdateOptions{
+						IfMatch:     to.StringPtr(""),
 						IfNoneMatch: to.StringPtr("*"),
 					}).
-					Return(sdkdns.RecordSet{}, nil)
+					Return(armdns.RecordSetsClientCreateOrUpdateResponse{
+						RecordSet: sdkdns.RecordSet{},
+					}, nil)
 			},
 		},
 		{
@@ -78,10 +81,12 @@ func TestCreate(t *testing.T) {
 			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSet{
-						Properties: &sdkdns.RecordSetProperties{
-							Metadata: map[string]*string{
-								"resourceId": &tt.oc.ID,
+					Return(armdns.RecordSetsClientGetResponse{
+						RecordSet: sdkdns.RecordSet{
+							Properties: &sdkdns.RecordSetProperties{
+								Metadata: map[string]*string{
+									"resourceId": &tt.oc.ID,
+								},
 							},
 						},
 					}, nil)
@@ -93,10 +98,12 @@ func TestCreate(t *testing.T) {
 			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSet{
-						Properties: &sdkdns.RecordSetProperties{
-							Metadata: map[string]*string{
-								"resourceId": to.StringPtr("not us"),
+					Return(armdns.RecordSetsClientGetResponse{
+						RecordSet: sdkdns.RecordSet{
+							Properties: &sdkdns.RecordSetProperties{
+								Metadata: map[string]*string{
+									"resourceId": to.StringPtr("not us"),
+								},
 							},
 						},
 					}, nil)
@@ -109,7 +116,7 @@ func TestCreate(t *testing.T) {
 			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSet{}, fmt.Errorf("random error"))
+					Return(armdns.RecordSetsClientGetResponse{}, fmt.Errorf("random error"))
 			},
 			wantErr: "random error",
 		},
@@ -175,14 +182,15 @@ func TestUpdate(t *testing.T) {
 			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "api.test", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSet{
-						Etag: to.StringPtr("etag"),
-						Properties: &sdkdns.RecordSetProperties{
-							Metadata: map[string]*string{
-								"resourceId": &tt.oc.ID,
+					Return(armdns.RecordSetsClientGetResponse{
+						RecordSet: sdkdns.RecordSet{
+							Etag: to.StringPtr("etag"),
+							Properties: &sdkdns.RecordSetProperties{
+								Metadata: map[string]*string{
+									"resourceId": &tt.oc.ID,
+								},
 							},
-						},
-					}, nil)
+						}}, nil)
 
 				recordsets.EXPECT().
 					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "api.test", sdkdns.RecordTypeA, sdkdns.RecordSet{
@@ -199,9 +207,11 @@ func TestUpdate(t *testing.T) {
 						},
 					}, &sdkdns.RecordSetsClientCreateOrUpdateOptions{
 						IfMatch:     to.StringPtr("etag"),
-						IfNoneMatch: nil,
+						IfNoneMatch: to.StringPtr(""),
 					}).
-					Return(sdkdns.RecordSet{}, nil)
+					Return(armdns.RecordSetsClientCreateOrUpdateResponse{
+						RecordSet: sdkdns.RecordSet{},
+					}, nil)
 			},
 		},
 		{
@@ -210,13 +220,14 @@ func TestUpdate(t *testing.T) {
 			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "api.test", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSet{
-						Properties: &sdkdns.RecordSetProperties{
-							Metadata: map[string]*string{
-								"resourceId": to.StringPtr("not us"),
+					Return(armdns.RecordSetsClientGetResponse{
+						RecordSet: sdkdns.RecordSet{
+							Properties: &sdkdns.RecordSetProperties{
+								Metadata: map[string]*string{
+									"resourceId": to.StringPtr("not us"),
+								},
 							},
-						},
-					}, nil)
+						}}, nil)
 			},
 			wantErr: `recordset "api.test" already registered`,
 		},
@@ -226,7 +237,10 @@ func TestUpdate(t *testing.T) {
 			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "api.test", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSet{}, fmt.Errorf("random error"))
+					Return(
+						armdns.RecordSetsClientGetResponse{
+							RecordSet: sdkdns.RecordSet{},
+						}, fmt.Errorf("random error"))
 			},
 			wantErr: "random error",
 		},
@@ -294,7 +308,9 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSet{}, fmt.Errorf("random error"))
+					Return(armdns.RecordSetsClientGetResponse{
+						RecordSet: sdkdns.RecordSet{},
+					}, fmt.Errorf("random error"))
 
 				recordsets.EXPECT().
 					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, sdkdns.RecordSet{
@@ -310,7 +326,9 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 						IfMatch:     nil,
 						IfNoneMatch: nil,
 					}).
-					Return(sdkdns.RecordSet{}, nil)
+					Return(armdns.RecordSetsClientCreateOrUpdateResponse{
+						RecordSet: sdkdns.RecordSet{},
+					}, nil)
 			},
 		},
 		{
@@ -320,7 +338,9 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSet{}, fmt.Errorf("random error"))
+					Return(armdns.RecordSetsClientGetResponse{
+						RecordSet: sdkdns.RecordSet{},
+					}, fmt.Errorf("random error"))
 
 				recordsets.EXPECT().
 					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, sdkdns.RecordSet{
@@ -336,7 +356,9 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 						IfMatch:     nil,
 						IfNoneMatch: nil,
 					}).
-					Return(sdkdns.RecordSet{}, fmt.Errorf("random error"))
+					Return(armdns.RecordSetsClientCreateOrUpdateResponse{
+						RecordSet: sdkdns.RecordSet{},
+					}, fmt.Errorf("random error"))
 			},
 			wantErr: "random error",
 		},
@@ -347,12 +369,14 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSet{
-						Properties: &sdkdns.RecordSetProperties{
-							TTL: to.Int64Ptr(300),
-							ARecords: []*sdkdns.ARecord{
-								{
-									IPv4Address: to.StringPtr(tt.routerIP),
+					Return(armdns.RecordSetsClientGetResponse{
+						RecordSet: sdkdns.RecordSet{
+							Properties: &sdkdns.RecordSetProperties{
+								TTL: to.Int64Ptr(300),
+								ARecords: []*sdkdns.ARecord{
+									{
+										IPv4Address: to.StringPtr(tt.routerIP),
+									},
 								},
 							},
 						},
@@ -366,12 +390,14 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSet{
-						Properties: &sdkdns.RecordSetProperties{
-							TTL: to.Int64Ptr(300),
-							ARecords: []*sdkdns.ARecord{
-								{
-									IPv4Address: to.StringPtr("1.2.3.4"),
+					Return(armdns.RecordSetsClientGetResponse{
+						RecordSet: sdkdns.RecordSet{
+							Properties: &sdkdns.RecordSetProperties{
+								TTL: to.Int64Ptr(300),
+								ARecords: []*sdkdns.ARecord{
+									{
+										IPv4Address: to.StringPtr("1.2.3.4"),
+									},
 								},
 							},
 						},
@@ -391,7 +417,9 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 						IfMatch:     nil,
 						IfNoneMatch: nil,
 					}).
-					Return(sdkdns.RecordSet{}, nil)
+					Return(armdns.RecordSetsClientCreateOrUpdateResponse{
+						RecordSet: sdkdns.RecordSet{},
+					}, nil)
 			},
 		},
 		{
@@ -456,7 +484,9 @@ func TestDelete(t *testing.T) {
 			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSet{}, autorest.DetailedError{
+					Return(armdns.RecordSetsClientGetResponse{
+						RecordSet: sdkdns.RecordSet{},
+					}, autorest.DetailedError{
 						StatusCode: http.StatusNotFound,
 					})
 			},
@@ -467,22 +497,28 @@ func TestDelete(t *testing.T) {
 			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSet{
-						Etag: to.StringPtr("etag"),
-						Properties: &sdkdns.RecordSetProperties{
-							Metadata: map[string]*string{
-								"resourceId": &tt.oc.ID,
+					Return(armdns.RecordSetsClientGetResponse{
+						RecordSet: sdkdns.RecordSet{
+							Etag: to.StringPtr("etag"),
+							Properties: &sdkdns.RecordSetProperties{
+								Metadata: map[string]*string{
+									"resourceId": &tt.oc.ID,
+								},
 							},
 						},
 					}, nil)
 
 				recordsets.EXPECT().
-					Delete(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, "").
-					Return(autorest.Response{}, nil)
+					Delete(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, armdns.RecordSetsClientDeleteOptions{
+						IfMatch: to.StringPtr(""),
+					}).
+					Return(armdns.RecordSetsClientDeleteResponse{}, nil)
 
 				recordsets.EXPECT().
-					Delete(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, "etag").
-					Return(autorest.Response{}, nil)
+					Delete(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, armdns.RecordSetsClientDeleteOptions{
+						IfMatch: to.StringPtr("etag"),
+					}).
+					Return(armdns.RecordSetsClientDeleteResponse{}, nil)
 			},
 		},
 		{
@@ -491,10 +527,12 @@ func TestDelete(t *testing.T) {
 			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSet{
-						Properties: &sdkdns.RecordSetProperties{
-							Metadata: map[string]*string{
-								"resourceId": to.StringPtr("not us"),
+					Return(armdns.RecordSetsClientGetResponse{
+						RecordSet: sdkdns.RecordSet{
+							Properties: &sdkdns.RecordSetProperties{
+								Metadata: map[string]*string{
+									"resourceId": to.StringPtr("not us"),
+								},
 							},
 						},
 					}, nil)
@@ -506,7 +544,9 @@ func TestDelete(t *testing.T) {
 			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
 				recordsets.EXPECT().
 					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSet{}, fmt.Errorf("random error"))
+					Return(armdns.RecordSetsClientGetResponse{
+						RecordSet: sdkdns.RecordSet{},
+					}, fmt.Errorf("random error"))
 			},
 			wantErr: "random error",
 		},
