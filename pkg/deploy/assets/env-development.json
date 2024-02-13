@@ -36,6 +36,12 @@
             "defaultValue": ""
         }
     },
+    "variables": {
+        "removeChar1": "[replace(resourceGroup().name, '-', '')]",
+        "removeChar2": "[replace(variables('removeChar1'), ' ', '')]",
+        "removeChar3": "[replace(variables('removeChar2'), '_', '')]",
+        "storageAccountName": "[concat(take(replace(variables('removeChar3'), '.', ''), 21), 'oic')]"
+    },
     "resources": [
         {
             "sku": {
@@ -419,6 +425,20 @@
                 "[resourceId('Microsoft.Network/virtualNetworkGateways', 'dev-vpn')]"
             ],
             "location": "[resourceGroup().location]"
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2018-07-01",
+            "name": "[variables('storageAccountName')]",
+            "location": "[resourceGroup().location]",
+            "sku": {
+                "name": "Standard_LRS",
+                "tier": "Standard"
+            },
+            "kind": "StorageV2",
+            "properties": {
+                "accessTier": "Hot"
+            }
         }
     ]
 }
