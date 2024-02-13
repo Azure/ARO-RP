@@ -193,13 +193,10 @@ func (p Project) VerifyProjectIsReady(ctx context.Context) error {
 	return nil
 }
 
-// VerifyProjectIsDeleted verifies that the project does not exist and returns error if a project exists
-// or if it encounters an error other than NotFound
-func (p Project) VerifyProjectIsDeleted(ctx context.Context) error {
-	_, err := p.projectClient.ProjectV1().Projects().Get(ctx, p.Name, metav1.GetOptions{})
-	if kerrors.IsNotFound(err) {
-		return nil
-	}
-
-	return fmt.Errorf("Project exists")
+// VerifyProjectIsDeleted verifies that the project does not exist by polling it.
+func (p Project) VerifyProjectIsDeleted(ctx context.Context) {
+	Eventually(func(g Gomega, ctx context.Context) {
+		_, err := p.projectClient.ProjectV1().Projects().Get(ctx, p.Name, metav1.GetOptions{})
+		g.Expect(kerrors.IsNotFound(err)).To(BeTrue())
+	}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 }
