@@ -36,48 +36,48 @@ func (m *MockRecordSetsClient) EXPECT() *MockRecordSetsClientMockRecorder {
 }
 
 // CreateOrUpdate mocks base method.
-func (m *MockRecordSetsClient) CreateOrUpdate(ctx context.Context, resourceGroupName, zoneName, relativeRecordSetName string, recordType armdns.RecordType, parameters armdns.RecordSet, options *armdns.RecordSetsClientCreateOrUpdateOptions) (armdns.RecordSetsClientCreateOrUpdateResponse, error) {
+func (m *MockRecordSetsClient) CreateOrUpdate(arg0 context.Context, arg1, arg2, arg3 string, arg4 armdns.RecordType, arg5 armdns.RecordSet, arg6 *armdns.RecordSetsClientCreateOrUpdateOptions) (armdns.RecordSetsClientCreateOrUpdateResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdate", ctx, resourceGroupName, zoneName, relativeRecordSetName, recordType, parameters, options)
+	ret := m.ctrl.Call(m, "CreateOrUpdate", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 	ret0, _ := ret[0].(armdns.RecordSetsClientCreateOrUpdateResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateOrUpdate indicates an expected call of CreateOrUpdate.
-func (mr *MockRecordSetsClientMockRecorder) CreateOrUpdate(ctx, resourceGroupName, zoneName, relativeRecordSetName, recordType, parameters, options interface{}) *gomock.Call {
+func (mr *MockRecordSetsClientMockRecorder) CreateOrUpdate(arg0, arg1, arg2, arg3, arg4, arg5, arg6 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockRecordSetsClient)(nil).CreateOrUpdate), ctx, resourceGroupName, zoneName, relativeRecordSetName, recordType, parameters, options)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockRecordSetsClient)(nil).CreateOrUpdate), arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 }
 
 // Delete mocks base method.
-func (m *MockRecordSetsClient) Delete(ctx context.Context, resourceGroupName, zoneName, relativeRecordSetName string, recordType armdns.RecordType, options *armdns.RecordSetsClientDeleteOptions) (armdns.RecordSetsClientDeleteResponse, error) {
+func (m *MockRecordSetsClient) Delete(arg0 context.Context, arg1, arg2, arg3 string, arg4 armdns.RecordType, arg5 *armdns.RecordSetsClientDeleteOptions) (armdns.RecordSetsClientDeleteResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", ctx, resourceGroupName, zoneName, relativeRecordSetName, recordType, options)
+	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2, arg3, arg4, arg5)
 	ret0, _ := ret[0].(armdns.RecordSetsClientDeleteResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockRecordSetsClientMockRecorder) Delete(ctx, resourceGroupName, zoneName, relativeRecordSetName, recordType, options interface{}) *gomock.Call {
+func (mr *MockRecordSetsClientMockRecorder) Delete(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockRecordSetsClient)(nil).Delete), ctx, resourceGroupName, zoneName, relativeRecordSetName, recordType, options)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockRecordSetsClient)(nil).Delete), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
 // Get mocks base method.
-func (m *MockRecordSetsClient) Get(ctx context.Context, resourceGroupName, zoneName, relativeRecordSetName string, recordType armdns.RecordType, options *armdns.RecordSetsClientGetOptions) (armdns.RecordSetsClientGetResponse, error) {
+func (m *MockRecordSetsClient) Get(arg0 context.Context, arg1, arg2, arg3 string, arg4 armdns.RecordType, arg5 *armdns.RecordSetsClientGetOptions) (armdns.RecordSetsClientGetResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", ctx, resourceGroupName, zoneName, relativeRecordSetName, recordType, options)
+	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3, arg4, arg5)
 	ret0, _ := ret[0].(armdns.RecordSetsClientGetResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockRecordSetsClientMockRecorder) Get(ctx, resourceGroupName, zoneName, relativeRecordSetName, recordType, options interface{}) *gomock.Call {
+func (mr *MockRecordSetsClientMockRecorder) Get(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockRecordSetsClient)(nil).Get), ctx, resourceGroupName, zoneName, relativeRecordSetName, recordType, options)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockRecordSetsClient)(nil).Get), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
 // MockZonesClient is a mock of ZonesClient interface.
@@ -104,16 +104,16 @@ func (m *MockZonesClient) EXPECT() *MockZonesClientMockRecorder {
 }
 
 // Get mocks base method.
-func (m *MockZonesClient) Get(ctx context.Context, resourceGroupName, zoneName string, options *armdns.ZonesClientGetOptions) (armdns.ZonesClientGetResponse, error) {
+func (m *MockZonesClient) Get(arg0 context.Context, arg1, arg2 string, arg3 *armdns.ZonesClientGetOptions) (armdns.ZonesClientGetResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", ctx, resourceGroupName, zoneName, options)
+	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(armdns.ZonesClientGetResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockZonesClientMockRecorder) Get(ctx, resourceGroupName, zoneName, options interface{}) *gomock.Call {
+func (mr *MockZonesClientMockRecorder) Get(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockZonesClient)(nil).Get), ctx, resourceGroupName, zoneName, options)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockZonesClient)(nil).Get), arg0, arg1, arg2, arg3)
 }
