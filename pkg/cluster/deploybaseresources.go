@@ -275,7 +275,6 @@ func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration) error 
 	_ = wait.PollImmediateUntil(30*time.Second, func() (bool, error) {
 		var c bool
 		c, innerErr = func() (bool, error) {
-
 			for _, subnetID := range []string{
 				m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
 				workerSubnetId,
