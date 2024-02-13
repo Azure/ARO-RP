@@ -17,10 +17,20 @@
     },
     "resources": [
         {
-            "properties": {},
+            "location": "global",
+            "Etag": null,
+            "Properties": {
+                "RegistrationVirtualNetworks": null,
+                "ResolutionVirtualNetworks": null,
+                "ZoneType": null,
+                "MaxNumberOfRecordSets": null,
+                "MaxNumberOfRecordsPerRecordSet": null,
+                "NameServers": null,
+                "NumberOfRecordSets": null
+            },
+            "ID": null,
             "name": "[concat(resourceGroup().location, '.', parameters('clusterParentDomainName'))]",
             "type": "Microsoft.Network/dnsZones",
-            "location": "global",
             "apiVersion": "2018-05-01"
         },
         {

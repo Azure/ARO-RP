@@ -42,17 +42,37 @@
             "apiVersion": "2020-11-01-preview"
         },
         {
-            "properties": {},
+            "location": "global",
+            "Etag": null,
+            "Properties": {
+                "RegistrationVirtualNetworks": null,
+                "ResolutionVirtualNetworks": null,
+                "ZoneType": null,
+                "MaxNumberOfRecordSets": null,
+                "MaxNumberOfRecordsPerRecordSet": null,
+                "NameServers": null,
+                "NumberOfRecordSets": null
+            },
+            "ID": null,
             "name": "[parameters('rpParentDomainName')]",
             "type": "Microsoft.Network/dnsZones",
-            "location": "global",
             "apiVersion": "2018-05-01"
         },
         {
-            "properties": {},
+            "location": "global",
+            "Etag": null,
+            "Properties": {
+                "RegistrationVirtualNetworks": null,
+                "ResolutionVirtualNetworks": null,
+                "ZoneType": null,
+                "MaxNumberOfRecordSets": null,
+                "MaxNumberOfRecordsPerRecordSet": null,
+                "NameServers": null,
+                "NumberOfRecordSets": null
+            },
+            "ID": null,
             "name": "[parameters('clusterParentDomainName')]",
             "type": "Microsoft.Network/dnsZones",
-            "location": "global",
             "apiVersion": "2018-05-01"
         },
         {
