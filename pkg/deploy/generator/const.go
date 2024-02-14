@@ -25,4 +25,6 @@ const (
 	fileDatabaseDevelopment    = "databases-development.json"
 	fileRPDevelopmentPredeploy = "rp-development-predeploy.json"
 	fileRPDevelopment          = "rp-development.json"
+
+	fileOic = "rp-oic.json"
 )

@@ -343,22 +343,6 @@
             "apiVersion": "2020-12-01"
         },
         {
-            "sku": {
-                "name": "Standard_LRS"
-            },
-            "kind": "StorageV2",
-            "properties": {
-                "accessTier": "Hot",
-                "supportsHttpsTrafficOnly": true,
-                "allowBlobPublicAccess": true,
-                "minimumTlsVersion": "TLS1_2"
-            },
-            "location": "[resourceGroup().location]",
-            "name": "[concat(take(replace(resourceGroup().name, '-', ''), 21), 'oic')]",
-            "type": "Microsoft.Storage/storageAccounts",
-            "apiVersion": "2019-06-01"
-        },
-        {
             "properties": {
                 "allowVirtualNetworkAccess": true,
                 "allowForwardedTraffic": true,

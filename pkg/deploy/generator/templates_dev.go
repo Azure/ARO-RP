@@ -37,8 +37,7 @@ func (g *generator) devSharedTemplate() *arm.Template {
 		g.devDiskEncryptionKey(),
 		g.devDiskEncryptionKeyVaultAccessPolicy(),
 		g.devDiskEncryptionSet(),
-		g.devProxyVMSS(),
-		g.devOicStorageAccount())
+		g.devProxyVMSS())
 
 	t.Resources = append(t.Resources,
 		g.virtualNetworkPeering("dev-vpn-vnet/peering-dev-vnet",
