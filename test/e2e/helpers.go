@@ -115,7 +115,7 @@ func CleanupK8sResource[T kruntime.Object](
 		ctx, client.Delete, name, metav1.DeleteOptions{},
 	)
 
-	if err != nil && kerrors.IsNotFound(err) {
+	if kerrors.IsNotFound(err) {
 		return
 	}
 
