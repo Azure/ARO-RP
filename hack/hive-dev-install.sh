@@ -67,7 +67,6 @@ else
 fi
 
 $KUBECTL apply -f ./hack/hive-config/crds
-$KUBECTL apply -f ./hack/hive-config/hive-deployment.yaml
 
 echo "$PULL_SECRET" > /tmp/.tmp-secret
 # Using dry-run allows updates to work seamlessly
@@ -75,5 +74,12 @@ $KUBECTL create secret generic hive-global-pull-secret --from-file=.dockerconfig
 rm -f /tmp/.tmp-secret
 
 sed "s/HIVE_OPERATOR_NS/$HIVE_OPERATOR_NS/g" hack/hive-config/hive-config.yaml | $KUBECTL apply -f -
+$KUBECTL apply -f ./hack/hive-config/hive-additional-install-log-regexes.yaml
+
+$KUBECTL apply -f ./hack/hive-config/hive-deployment.yaml
+
+$KUBECTL wait --timeout=5m --for=condition=Available --namespace $HIVE_OPERATOR_NS deployment/hive-operator
+$KUBECTL wait --timeout=5m --for=condition=Available --namespace $HIVE_OPERATOR_NS deployment/hive-controllers
+$KUBECTL wait --timeout=5m --for=condition=Ready --namespace $HIVE_OPERATOR_NS pod --selector "control-plane=clustersync"
 
 echo -e "\nHive is installed."
