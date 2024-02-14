@@ -37,10 +37,13 @@ type K8sDeleteFunc func(ctx context.Context, name string, options metav1.DeleteO
 func GetK8sObjectWithRetry[T kruntime.Object](
 	ctx context.Context, getFunc K8sGetFunc[T], name string, options metav1.GetOptions,
 ) (result T, err error) {
+	var object T
 	Eventually(func(g Gomega, ctx context.Context) {
+		result, err := getFunc(ctx, name, options)
 		g.Expect(err).NotTo(HaveOccurred())
+		object = result
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
-	return result, err
+	return object, err
 }
 
 // GetK8sPodLogsWithRetry gets the logs for the specified pod in the named namespace. It gets them with some
