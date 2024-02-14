@@ -15,6 +15,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/Azure/ARO-RP/test/validate"
 )
 
@@ -131,7 +132,7 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 			t.Run(tt.name, func(t *testing.T) {
 				// default values if not set
 				if tt.architectureVersion == nil {
-					tt.architectureVersion = (*api.ArchitectureVersion)(to.IntPtr(1))
+					tt.architectureVersion = (*api.ArchitectureVersion)(to.IntPtr(int(version.InstallArchitectureVersion)))
 				}
 
 				if tt.location == nil {
@@ -762,7 +763,7 @@ func TestOpenShiftClusterStaticValidateLoadBalancerProfile(t *testing.T) {
 					},
 				}
 			},
-			architectureVersion: (*api.ArchitectureVersion)(to.IntPtr(0)),
+			architectureVersion: (*api.ArchitectureVersion)(to.IntPtr(int(api.ArchitectureVersionV1))),
 			wantErr:             "400: InvalidParameter: properties.networkProfile.loadBalancerProfile.managedOutboundIps.count: The provided managedOutboundIps.count 20 is invalid: managedOutboundIps.count must be 1, multiple IPs are not supported for this cluster's network architecture.",
 		},
 	}
