@@ -111,13 +111,14 @@ func CleanupK8sResource[T kruntime.Object](
 ) {
 	DefaultEventuallyTimeout = 10 * time.Minute
 	PollingInterval = 1 * time.Second
-	err := DeleteK8sObjectWithRetry(
-		ctx, client.Delete, name, metav1.DeleteOptions{},
-	)
-
-	if kerrors.IsNotFound(err) {
-		return
-	}
+	Eventually(func(g Gomega, ctx context.Context) {
+		err := client.Delete(ctx, name, metav1.DeleteOptions{})
+		if kerrors.IsNotFound(err) {
+			Succeed()
+		} else {
+			g.Expect(err).NotTo(HaveOccurred())
+		}
+	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
 
 	Eventually(func(g Gomega, ctx context.Context) {
 		_, err := GetK8sObjectWithRetry(ctx, client.Get, name, metav1.GetOptions{})
