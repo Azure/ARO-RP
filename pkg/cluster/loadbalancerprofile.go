@@ -19,6 +19,16 @@ import (
 
 const outboundRuleV4 = "outbound-rule-v4"
 
+type deleteIPResult struct {
+	name string
+	err  error
+}
+
+type createIPResult struct {
+	ip  mgmtnetwork.PublicIPAddress
+	err error
+}
+
 func (m *manager) reconcileLoadBalancerProfile(ctx context.Context) error {
 	if m.doc.OpenShiftCluster.Properties.NetworkProfile.OutboundType != api.OutboundTypeLoadbalancer || m.doc.OpenShiftCluster.Properties.ArchitectureVersion == api.ArchitectureVersionV1 {
 		return nil
@@ -179,11 +189,6 @@ func setOutboundRuleV4(lb mgmtnetwork.LoadBalancer, outboundRuleV4FrontendIPConf
 	}
 }
 
-type deleteResult struct {
-	name string
-	err  error
-}
-
 // Delete all managed outbound IPs that are not in use by the load balancer.
 // The default outbound ip is saved if the api server is public.
 func (m *manager) deleteUnusedManagedIPs(ctx context.Context) error {
@@ -194,7 +199,7 @@ func (m *manager) deleteUnusedManagedIPs(ctx context.Context) error {
 		return err
 	}
 
-	ch := make(chan deleteResult)
+	ch := make(chan deleteIPResult)
 	defer close(ch)
 	var cleanupErrors []string
 
@@ -217,10 +222,10 @@ func (m *manager) deleteUnusedManagedIPs(ctx context.Context) error {
 	return nil
 }
 
-func (m *manager) deleteIPAddress(ctx context.Context, resourceGroupName string, ipName string, ch chan<- deleteResult) {
+func (m *manager) deleteIPAddress(ctx context.Context, resourceGroupName string, ipName string, ch chan<- deleteIPResult) {
 	m.log.Infof("deleting managed public IP Address: %s", ipName)
 	err := m.publicIPAddresses.DeleteAndWait(ctx, resourceGroupName, ipName)
-	ch <- deleteResult{
+	ch <- deleteIPResult{
 		name: ipName,
 		err:  err,
 	}
@@ -267,11 +272,6 @@ func (m *manager) reconcileOutboundIPs(ctx context.Context) ([]api.ResourceRefer
 		return m.reconcileDesiredManagedIPs(ctx)
 	}
 	return nil, nil
-}
-
-type createIPResult struct {
-	ip  mgmtnetwork.PublicIPAddress
-	err error
 }
 
 // Returns RP managed outbound ips to be added to the outbound rule.
