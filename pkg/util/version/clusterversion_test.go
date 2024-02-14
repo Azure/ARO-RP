@@ -22,6 +22,7 @@ func TestGetClusterVersion(t *testing.T) {
 	}{
 		{
 			name: "cluster version nil returns error",
+			//nolint:staticcheck // Ignore: SA4009 argument cv is overwritten before first use (staticcheck)
 			mocks: func(cv *configv1.ClusterVersion) {
 				cv = nil
 			},
