@@ -37,13 +37,11 @@ type K8sDeleteFunc func(ctx context.Context, name string, options metav1.DeleteO
 func GetK8sObjectWithRetry[T kruntime.Object](
 	ctx context.Context, getFunc K8sGetFunc[T], name string, options metav1.GetOptions,
 ) (result T, err error) {
-	var object T
 	Eventually(func(g Gomega, ctx context.Context) {
-		result, err := getFunc(ctx, name, options)
+		result, err = getFunc(ctx, name, options)
 		g.Expect(err).NotTo(HaveOccurred())
-		object = result
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
-	return object, err
+	return
 }
 
 // GetK8sPodLogsWithRetry gets the logs for the specified pod in the named namespace. It gets them with some
@@ -64,14 +62,13 @@ func GetK8sPodLogsWithRetry(
 // asserting there were no errors.
 func ListK8sObjectWithRetry[T kruntime.Object](
 	ctx context.Context, listFunc K8sListFunc[T], options metav1.ListOptions,
-) T {
-	var object T
+) (result T) {
+	var err error
 	Eventually(func(g Gomega, ctx context.Context) {
-		result, err := listFunc(ctx, options)
+		result, err = listFunc(ctx, options)
 		g.Expect(err).NotTo(HaveOccurred())
-		object = result
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
-	return object
+	return
 }
 
 // CreateK8sObjectWithRetry takes a create function like clients.Kubernetes.CoreV1().Pods(namespace).Create
@@ -79,14 +76,13 @@ func ListK8sObjectWithRetry[T kruntime.Object](
 // asserting there were no errors.
 func CreateK8sObjectWithRetry[T kruntime.Object](
 	ctx context.Context, createFunc K8sCreateFunc[T], obj T, options metav1.CreateOptions,
-) T {
-	var object T
+) (result T) {
+	var err error
 	Eventually(func(g Gomega, ctx context.Context) {
-		result, err := createFunc(ctx, obj, options)
+		result, err = createFunc(ctx, obj, options)
 		g.Expect(err).NotTo(HaveOccurred())
-		object = result
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
-	return object
+	return
 }
 
 // DeleteK8sObjectWithRetry takes a delete function like clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Delete
