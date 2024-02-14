@@ -25,6 +25,7 @@ type validateTest struct {
 	current             func(oc *OpenShiftCluster)
 	modify              func(oc *OpenShiftCluster)
 	requireD2sV3Workers bool
+	architectureVersion *api.ArchitectureVersion
 	wantErr             string
 }
 
@@ -129,6 +130,10 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				// default values if not set
+				if tt.architectureVersion == nil {
+					tt.architectureVersion = (*api.ArchitectureVersion)(to.IntPtr(1))
+				}
+
 				if tt.location == nil {
 					tt.location = to.StringPtr("location")
 				}
@@ -167,6 +172,8 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 				var current *api.OpenShiftCluster
 				if mode == testModeUpdate {
 					current = &api.OpenShiftCluster{}
+					current.Properties.ArchitectureVersion = *tt.architectureVersion
+
 					(&openShiftClusterConverter{}).ToInternal(validOCForTest(), current)
 				}
 
@@ -744,9 +751,26 @@ func TestOpenShiftClusterStaticValidateLoadBalancerProfile(t *testing.T) {
 			wantErr: "400: InvalidParameter: properties.networkProfile.loadBalancerProfile.effectiveOutboundIps: The field effectiveOutboundIps is read only.",
 		},
 	}
+
+	updateOnlyTests := []*validateTest{
+		{
+			name: "LoadBalancerProfile.ManagedOutboundIPs is invalid with multiple managed IPs and architecture v1",
+			current: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.LoadBalancerProfile = &LoadBalancerProfile{
+					ManagedOutboundIPs: &ManagedOutboundIPs{
+						Count: 20,
+					},
+				}
+			},
+			architectureVersion: (*api.ArchitectureVersion)(to.IntPtr(0)),
+			wantErr:             "400: InvalidParameter: properties.networkProfile.loadBalancerProfile.managedOutboundIps.count: The provided managedOutboundIps.count 20 is invalid: managedOutboundIps.count must be 1, multiple IPs are not supported for this cluster's network architecture.",
+		},
+	}
+
 	runTests(t, testModeCreate, createTests)
 	runTests(t, testModeCreate, tests)
 	runTests(t, testModeUpdate, tests)
+	runTests(t, testModeUpdate, updateOnlyTests)
 }
 
 func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {

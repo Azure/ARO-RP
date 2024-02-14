@@ -18,6 +18,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type openShiftClusterStaticValidator struct {
@@ -35,12 +36,16 @@ func (sv openShiftClusterStaticValidator) Static(_oc interface{}, _current *api.
 	sv.domain = domain
 	sv.requireD2sV3Workers = requireD2sV3Workers
 	sv.resourceID = resourceID
+	var architectureVersion api.ArchitectureVersion
 
 	oc := _oc.(*OpenShiftCluster)
 
 	var current *OpenShiftCluster
 	if _current != nil {
+		architectureVersion = _current.Properties.ArchitectureVersion
 		current = (&openShiftClusterConverter{}).ToExternal(_current).(*OpenShiftCluster)
+	} else {
+		architectureVersion = version.InstallArchitectureVersion
 	}
 
 	var err error
@@ -49,7 +54,7 @@ func (sv openShiftClusterStaticValidator) Static(_oc interface{}, _current *api.
 		return err
 	}
 
-	err = sv.validate(oc, current == nil)
+	err = sv.validate(oc, current == nil, architectureVersion)
 	if err != nil {
 		return err
 	}
@@ -61,7 +66,7 @@ func (sv openShiftClusterStaticValidator) Static(_oc interface{}, _current *api.
 	return sv.validateDelta(oc, current)
 }
 
-func (sv openShiftClusterStaticValidator) validate(oc *OpenShiftCluster, isCreate bool) error {
+func (sv openShiftClusterStaticValidator) validate(oc *OpenShiftCluster, isCreate bool, architectureVersion api.ArchitectureVersion) error {
 	if !strings.EqualFold(oc.ID, sv.resourceID) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeMismatchingResourceID, "id", "The provided resource ID '%s' did not match the name in the Url '%s'.", oc.ID, sv.resourceID)
 	}
@@ -75,10 +80,10 @@ func (sv openShiftClusterStaticValidator) validate(oc *OpenShiftCluster, isCreat
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "location", "The provided location '%s' is invalid.", oc.Location)
 	}
 
-	return sv.validateProperties("properties", &oc.Properties, isCreate)
+	return sv.validateProperties("properties", &oc.Properties, isCreate, architectureVersion)
 }
 
-func (sv openShiftClusterStaticValidator) validateProperties(path string, p *OpenShiftClusterProperties, isCreate bool) error {
+func (sv openShiftClusterStaticValidator) validateProperties(path string, p *OpenShiftClusterProperties, isCreate bool, architectureVersion api.ArchitectureVersion) error {
 	switch p.ProvisioningState {
 	case ProvisioningStateCreating, ProvisioningStateUpdating,
 		ProvisioningStateAdminUpdating, ProvisioningStateDeleting,
@@ -98,7 +103,7 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *Ope
 	if err := sv.validateNetworkProfile(path+".networkProfile", &p.NetworkProfile, p.APIServerProfile.Visibility, p.IngressProfiles[0].Visibility); err != nil {
 		return err
 	}
-	if err := sv.validateLoadBalancerProfile(path+".networkProfile.loadBalancerProfile", p.NetworkProfile.LoadBalancerProfile, isCreate); err != nil {
+	if err := sv.validateLoadBalancerProfile(path+".networkProfile.loadBalancerProfile", p.NetworkProfile.LoadBalancerProfile, isCreate, architectureVersion); err != nil {
 		return err
 	}
 	if err := sv.validateMasterProfile(path+".masterProfile", &p.MasterProfile); err != nil {
@@ -253,7 +258,7 @@ func (sv openShiftClusterStaticValidator) validateNetworkProfile(path string, np
 	return nil
 }
 
-func (sv openShiftClusterStaticValidator) validateLoadBalancerProfile(path string, lbp *LoadBalancerProfile, isCreate bool) error {
+func (sv openShiftClusterStaticValidator) validateLoadBalancerProfile(path string, lbp *LoadBalancerProfile, isCreate bool, architectureVersion api.ArchitectureVersion) error {
 	if lbp == nil {
 		return nil
 	}
@@ -265,7 +270,7 @@ func (sv openShiftClusterStaticValidator) validateLoadBalancerProfile(path strin
 
 	switch {
 	case lbp.ManagedOutboundIPs != nil:
-		err := validateManagedOutboundIPs(path, *lbp.ManagedOutboundIPs)
+		err := validateManagedOutboundIPs(path, *lbp.ManagedOutboundIPs, architectureVersion)
 		if err != nil {
 			return err
 		}
@@ -308,7 +313,10 @@ func checkPickedExactlyOne(path string, lbp *LoadBalancerProfile) error {
 	return nil
 }
 
-func validateManagedOutboundIPs(path string, managedOutboundIPs ManagedOutboundIPs) error {
+func validateManagedOutboundIPs(path string, managedOutboundIPs ManagedOutboundIPs, architectureVersion api.ArchitectureVersion) error {
+	if architectureVersion == api.ArchitectureVersionV1 && managedOutboundIPs.Count > 1 {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".managedOutboundIps.count", "The provided managedOutboundIps.count %d is invalid: managedOutboundIps.count must be 1, multiple IPs are not supported for this cluster's network architecture.", managedOutboundIPs.Count)
+	}
 	if !(managedOutboundIPs.Count > 0 && managedOutboundIPs.Count <= 20) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".managedOutboundIps.count", "The provided managedOutboundIps.count %d is invalid: managedOutboundIps.count must be in the range of 1 to 20 (inclusive).", managedOutboundIPs.Count)
 	}
