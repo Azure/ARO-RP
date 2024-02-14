@@ -30,6 +30,7 @@ func ShouldUsePodSecurityStandard(ctx context.Context, client client.Client) (bo
 	if err != nil {
 		return false, err
 	}
+
 	vers, err := version.GetClusterVersion(cv)
 	if err != nil {
 		return false, err
