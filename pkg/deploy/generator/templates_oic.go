@@ -11,7 +11,14 @@ func (g *generator) oicTemplate() *arm.Template {
 	t := templateStanza()
 
 	t.Resources = append(t.Resources,
-		g.oicStorageAccount())
+		g.oicStorageAccount(),
+		g.oicRoleAssignment())
+
+	t.Parameters = map[string]*arm.TemplateParameter{
+		"rpServicePrincipalId": {
+			Type: "string",
+		},
+	}
 
 	return t
 }

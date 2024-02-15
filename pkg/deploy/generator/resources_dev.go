@@ -356,4 +356,3 @@ func (g *generator) devDiskEncryptionKeyVaultAccessPolicy() *arm.Resource {
 		DependsOn:  []string{fmt.Sprintf("[resourceId('Microsoft.Compute/diskEncryptionSets', %s)]", sharedDiskEncryptionSetName)},
 	}
 }
-

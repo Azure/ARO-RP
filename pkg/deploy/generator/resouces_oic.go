@@ -6,6 +6,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/rbac"
 )
 
 func (g *generator) oicStorageAccount() *arm.Resource {
@@ -29,4 +30,14 @@ func (g *generator) oicStorageAccount() *arm.Resource {
 		Resource:   storageAccount,
 		APIVersion: azureclient.APIVersion("Microsoft.Storage"),
 	}
+}
+
+func (g *generator) oicRoleAssignment() *arm.Resource {
+	return rbac.ResourceRoleAssignmentWithName(
+		rbac.RoleStorageBlobDataContributor,
+		"parameters('rpServicePrincipalId')", // RP MSI
+		"Microsoft.Storage/storageAccounts",
+		"concat(take(replace(resourceGroup().name, '-', ''), 21), 'oic')",
+		"concat(concat(take(replace(resourceGroup().name, '-', ''), 21), 'oic'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Storage/storageAccounts', concat(take(replace(resourceGroup().name, '-', ''), 21), 'oic'))))",
+	)
 }
