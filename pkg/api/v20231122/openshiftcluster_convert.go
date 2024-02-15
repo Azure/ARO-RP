@@ -174,7 +174,9 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	out.Properties.ClusterProfile.Domain = oc.Properties.ClusterProfile.Domain
 	out.Properties.ClusterProfile.Version = oc.Properties.ClusterProfile.Version
 	out.Properties.ClusterProfile.ResourceGroupID = oc.Properties.ClusterProfile.ResourceGroupID
-	out.Properties.ConsoleProfile.URL = oc.Properties.ConsoleProfile.URL
+	if oc.Properties.ConsoleProfile.URL != "" {
+		out.Properties.ConsoleProfile.URL = oc.Properties.ConsoleProfile.URL
+	}
 	out.Properties.ClusterProfile.FipsValidatedModules = api.FipsValidatedModules(oc.Properties.ClusterProfile.FipsValidatedModules)
 	out.Properties.ServicePrincipalProfile.ClientID = oc.Properties.ServicePrincipalProfile.ClientID
 	out.Properties.ServicePrincipalProfile.ClientSecret = api.SecureString(oc.Properties.ServicePrincipalProfile.ClientSecret)
@@ -238,25 +240,33 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 		}
 	}
 	out.Properties.APIServerProfile.Visibility = api.Visibility(oc.Properties.APIServerProfile.Visibility)
-	out.Properties.APIServerProfile.URL = oc.Properties.APIServerProfile.URL
-	out.Properties.APIServerProfile.IP = oc.Properties.APIServerProfile.IP
+	if oc.Properties.APIServerProfile.URL != "" {
+		out.Properties.APIServerProfile.URL = oc.Properties.APIServerProfile.URL
+	}
+	if oc.Properties.APIServerProfile.IP != "" {
+		out.Properties.APIServerProfile.IP = oc.Properties.APIServerProfile.IP
+	}
 	out.Properties.IngressProfiles = nil
 	if oc.Properties.IngressProfiles != nil {
 		out.Properties.IngressProfiles = make([]api.IngressProfile, len(oc.Properties.IngressProfiles))
 		for i := range oc.Properties.IngressProfiles {
 			out.Properties.IngressProfiles[i].Name = oc.Properties.IngressProfiles[i].Name
 			out.Properties.IngressProfiles[i].Visibility = api.Visibility(oc.Properties.IngressProfiles[i].Visibility)
-			out.Properties.IngressProfiles[i].IP = oc.Properties.IngressProfiles[i].IP
+			if oc.Properties.IngressProfiles[i].IP != "" {
+				out.Properties.IngressProfiles[i].IP = oc.Properties.IngressProfiles[i].IP
+			}
 		}
 	}
 
-	out.SystemData = api.SystemData{
-		CreatedBy:          oc.SystemData.CreatedBy,
-		CreatedAt:          oc.SystemData.CreatedAt,
-		CreatedByType:      api.CreatedByType(oc.SystemData.CreatedByType),
-		LastModifiedBy:     oc.SystemData.LastModifiedBy,
-		LastModifiedAt:     oc.SystemData.LastModifiedAt,
-		LastModifiedByType: api.CreatedByType(oc.SystemData.CreatedByType),
+	if oc.SystemData != nil {
+		out.SystemData = api.SystemData{
+			CreatedBy:          oc.SystemData.CreatedBy,
+			CreatedAt:          oc.SystemData.CreatedAt,
+			CreatedByType:      api.CreatedByType(oc.SystemData.CreatedByType),
+			LastModifiedBy:     oc.SystemData.LastModifiedBy,
+			LastModifiedAt:     oc.SystemData.LastModifiedAt,
+			LastModifiedByType: api.CreatedByType(oc.SystemData.CreatedByType),
+		}
 	}
 }
 

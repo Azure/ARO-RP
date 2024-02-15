@@ -29,7 +29,7 @@ type OpenShiftCluster struct {
 	Location string `json:"location,omitempty"`
 
 	// SystemData - The system metadata relating to this resource
-	SystemData *SystemData `json:"systemData,omitempty"`
+	SystemData *SystemData `json:"systemData,omitempty" swagger:"readOnly"`
 
 	// The resource tags.
 	Tags Tags `json:"tags,omitempty" mutable:"true"`
@@ -119,7 +119,7 @@ type ClusterProfile struct {
 // ConsoleProfile represents a console profile.
 type ConsoleProfile struct {
 	// The URL to access the cluster console.
-	URL string `json:"url,omitempty"`
+	URL string `json:"url,omitempty" swagger:"readOnly"`
 }
 
 // ServicePrincipalProfile represents a service principal profile.
@@ -249,10 +249,10 @@ type APIServerProfile struct {
 	Visibility Visibility `json:"visibility,omitempty"`
 
 	// The URL to access the cluster API server.
-	URL string `json:"url,omitempty"`
+	URL string `json:"url,omitempty" swagger:"readOnly"`
 
 	// The IP of the cluster API server.
-	IP string `json:"ip,omitempty"`
+	IP string `json:"ip,omitempty" swagger:"readOnly"`
 }
 
 // Visibility represents visibility.
@@ -273,7 +273,7 @@ type IngressProfile struct {
 	Visibility Visibility `json:"visibility,omitempty"`
 
 	// The IP of the ingress.
-	IP string `json:"ip,omitempty"`
+	IP string `json:"ip,omitempty" swagger:"readOnly"`
 }
 
 // CreatedByType by defines user type, which executed the request

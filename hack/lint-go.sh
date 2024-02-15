@@ -14,5 +14,5 @@ then
     echo "ERROR: golangci-lint could not be found, Go linting aborted. To install it visit https://golangci-lint.run/usage/install/#local-installation"
     exit 1
 else
-    golangci-lint run
+    golangci-lint run --verbose
 fi

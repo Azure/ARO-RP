@@ -37,16 +37,17 @@ var _ = Describe("[Admin API] CertificateSigningRequest action", func() {
 		By("creating mock CSRs via Kubernetes API")
 		for i := 0; i < csrCount; i++ {
 			csr := mockCSR(prefix+strconv.Itoa(i), namespace, csrData)
-			_, err := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Create(ctx, csr, metav1.CreateOptions{})
-			Expect(err).NotTo(HaveOccurred())
+
+			createFunc := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Create
+			CreateK8sObjectWithRetry(ctx, createFunc, csr, metav1.CreateOptions{})
 		}
 	})
 
 	AfterEach(func(ctx context.Context) {
 		By("deleting the mock CSRs via Kubernetes API")
 		for i := 0; i < csrCount; i++ {
-			err := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Delete(ctx, prefix+strconv.Itoa(i), metav1.DeleteOptions{})
-			Expect(err).NotTo(HaveOccurred())
+			deleteFunc := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Delete
+			DeleteK8sObjectWithRetry(ctx, deleteFunc, prefix+strconv.Itoa(i), metav1.DeleteOptions{})
 		}
 	})
 
@@ -70,8 +71,8 @@ func testCSRApproveOK(ctx context.Context, objName, namespace string) {
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 	By("checking that the CSR was approved via Kubernetes API")
-	testcsr, err := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Get(ctx, objName, metav1.GetOptions{})
-	Expect(err).NotTo(HaveOccurred())
+	getFunc := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Get
+	testcsr := GetK8sObjectWithRetry(ctx, getFunc, objName, metav1.GetOptions{})
 
 	approved := false
 	for _, condition := range testcsr.Status.Conditions {
@@ -93,8 +94,8 @@ func testCSRMassApproveOK(ctx context.Context, namePrefix, namespace string, csr
 
 	By("checking that all CSRs were approved via Kubernetes API")
 	for i := 1; i < csrCount; i++ {
-		testcsr, err := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Get(ctx, namePrefix+strconv.Itoa(i), metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred())
+		getFunc := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Get
+		testcsr := GetK8sObjectWithRetry(ctx, getFunc, namePrefix+strconv.Itoa(i), metav1.GetOptions{})
 
 		approved := false
 		for _, condition := range testcsr.Status.Conditions {

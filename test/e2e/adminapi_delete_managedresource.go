@@ -46,8 +46,8 @@ var _ = Describe("[Admin API] Delete managed resource action", func() {
 		var pipAddressID string
 
 		By("creating a test service of type loadbalancer")
-		_, err := clients.Kubernetes.CoreV1().Services("default").Create(ctx, &loadBalancerService, metav1.CreateOptions{})
-		Expect(err).NotTo(HaveOccurred())
+		creationFunc := clients.Kubernetes.CoreV1().Services("default").Create
+		CreateK8sObjectWithRetry(ctx, creationFunc, &loadBalancerService, metav1.CreateOptions{})
 
 		defer func() {
 			By("cleaning up the k8s loadbalancer service")
@@ -66,8 +66,8 @@ var _ = Describe("[Admin API] Delete managed resource action", func() {
 
 		// wait for ingress IP to be assigned as this indicate the service is ready
 		Eventually(func(g Gomega, ctx context.Context) {
-			service, err = clients.Kubernetes.CoreV1().Services("default").Get(ctx, "test", metav1.GetOptions{})
-			g.Expect(err).NotTo(HaveOccurred())
+			getFunc := clients.Kubernetes.CoreV1().Services("default").Get
+			service = GetK8sObjectWithRetry(ctx, getFunc, "test", metav1.GetOptions{})
 			g.Expect(service.Status.LoadBalancer.Ingress).To(HaveLen(1))
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 

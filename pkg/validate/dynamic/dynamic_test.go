@@ -1673,7 +1673,7 @@ func TestValidateNatGatewaysPermissionsWithCheckAccess(t *testing.T) {
 	}
 }
 
-func TestCheckBYONsg(t *testing.T) {
+func TestCheckPreconfiguredNSG(t *testing.T) {
 	subnetWithNSG := &mgmtnetwork.Subnet{
 		SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 			NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
@@ -1686,26 +1686,24 @@ func TestCheckBYONsg(t *testing.T) {
 	}
 
 	for _, tt := range []struct {
-		name             string
-		subnetByID       map[string]*mgmtnetwork.Subnet
-		preconfiguredNSG api.PreconfiguredNSG
-		wantErr          string
+		name       string
+		subnetByID map[string]*mgmtnetwork.Subnet
+		wantErr    string
 	}{
 		{
-			name: "pass: all subnets are attached (BYONSG)",
+			name: "pass: all subnets are attached",
 			subnetByID: map[string]*mgmtnetwork.Subnet{
 				"A": subnetWithNSG,
 				"B": subnetWithNSG,
 			},
-			preconfiguredNSG: api.PreconfiguredNSGEnabled,
 		},
 		{
-			name: "pass: no subnets are attached (no longer BYONSG)",
+			name: "fail: no subnets are attached",
 			subnetByID: map[string]*mgmtnetwork.Subnet{
 				"A": subnetWithoutNSG,
 				"B": subnetWithoutNSG,
 			},
-			preconfiguredNSG: api.PreconfiguredNSGDisabled,
+			wantErr: "400: InvalidLinkedVNet: : When the enable-preconfigured-nsg option is specified, both the master and worker subnets should have network security groups (NSG) attached to them before starting the cluster installation.",
 		},
 		{
 			name: "fail: parts of the subnets are attached",
@@ -1714,19 +1712,15 @@ func TestCheckBYONsg(t *testing.T) {
 				"B": subnetWithoutNSG,
 				"C": subnetWithNSG,
 			},
-			preconfiguredNSG: api.PreconfiguredNSGDisabled,
-			wantErr:          "400: InvalidLinkedVNet: : When the enable-preconfigured-nsg option is specified, both the master and worker subnets should have network security groups (NSG) attached to them before starting the cluster installation.",
+			wantErr: "400: InvalidLinkedVNet: : When the enable-preconfigured-nsg option is specified, both the master and worker subnets should have network security groups (NSG) attached to them before starting the cluster installation.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			dv := &dynamic{
 				log: logrus.NewEntry(logrus.StandardLogger()),
 			}
-			preconfiguredNSG, err := dv.checkPreconfiguredNSG(tt.subnetByID)
+			err := dv.checkPreconfiguredNSG(tt.subnetByID)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-			if preconfiguredNSG != tt.preconfiguredNSG {
-				t.Errorf("preconfiguredNSG got %s, want %s", preconfiguredNSG, tt.preconfiguredNSG)
-			}
 		})
 	}
 }

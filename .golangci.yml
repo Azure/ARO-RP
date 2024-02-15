@@ -12,6 +12,9 @@ run:
     - "exclude_graphdriver_btrfs"
   go: "1.18"
 
+output:
+  format: github-actions
+
 issues:
   max-same-issues: 0
   exclude-rules:

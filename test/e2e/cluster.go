@@ -27,7 +27,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
-	"github.com/Azure/ARO-RP/test/util/project"
 )
 
 const (
@@ -35,28 +34,24 @@ const (
 )
 
 var _ = Describe("Cluster", Serial, func() {
-	var p project.Project
+	var project Project
 
 	BeforeEach(func(ctx context.Context) {
 		By("creating a test namespace")
 		testNamespace := fmt.Sprintf("test-e2e-%d", GinkgoParallelProcess())
-		p = project.NewProject(clients.Kubernetes, clients.Project, testNamespace)
-		err := p.Create(ctx)
-		Expect(err).NotTo(HaveOccurred(), "Failed to create test namespace")
+		project = BuildNewProject(ctx, clients.Kubernetes, clients.Project, testNamespace)
 
 		By("verifying the namespace is ready")
 		Eventually(func(ctx context.Context) error {
-			return p.Verify(ctx)
+			return project.VerifyProjectIsReady(ctx)
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(BeNil())
 
 		DeferCleanup(func(ctx context.Context) {
 			By("deleting a test namespace")
-			err := p.Delete(ctx)
-			Expect(err).NotTo(HaveOccurred(), "Failed to delete test namespace")
-
+			project.Delete(ctx)
 			By("verifying the namespace is deleted")
 			Eventually(func(ctx context.Context) error {
-				return p.VerifyProjectIsDeleted(ctx)
+				return project.VerifyProjectIsDeleted(ctx)
 			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(BeNil())
 		})
 	})
@@ -73,12 +68,11 @@ var _ = Describe("Cluster", Serial, func() {
 				storageClass = "managed-premium"
 			}
 
-			ssName, err := createStatefulSet(ctx, clients.Kubernetes, p.Name, storageClass)
-			Expect(err).NotTo(HaveOccurred())
+			ssName := createStatefulSet(ctx, clients.Kubernetes, project.Name, storageClass)
 
 			By("verifying the stateful set is ready")
 			Eventually(func(g Gomega, ctx context.Context) {
-				s, err := clients.Kubernetes.AppsV1().StatefulSets(p.Name).Get(ctx, ssName, metav1.GetOptions{})
+				s, err := clients.Kubernetes.AppsV1().StatefulSets(project.Name).Get(ctx, ssName, metav1.GetOptions{})
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(ready.StatefulSetIsReady(s)).To(BeTrue(), "expect stateful to be ready")
 				GinkgoWriter.Println(s)
@@ -179,17 +173,16 @@ var _ = Describe("Cluster", Serial, func() {
 
 			By("creating stateful set")
 			storageClass := "azurefile-csi"
-			ssName, err := createStatefulSet(ctx, clients.Kubernetes, p.Name, storageClass)
-			Expect(err).NotTo(HaveOccurred())
+			ssName := createStatefulSet(ctx, clients.Kubernetes, project.Name, storageClass)
 
 			By("verifying the stateful set is ready")
 			Eventually(func(g Gomega, ctx context.Context) {
-				s, err := clients.Kubernetes.AppsV1().StatefulSets(p.Name).Get(ctx, ssName, metav1.GetOptions{})
+				s, err := clients.Kubernetes.AppsV1().StatefulSets(project.Name).Get(ctx, ssName, metav1.GetOptions{})
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(ready.StatefulSetIsReady(s)).To(BeTrue(), "expect stateful to be ready")
 
 				pvcName := statefulSetPVCName(ssName, testPVCName, 0)
-				pvc, err := clients.Kubernetes.CoreV1().PersistentVolumeClaims(p.Name).Get(ctx, pvcName, metav1.GetOptions{})
+				pvc, err := clients.Kubernetes.CoreV1().PersistentVolumeClaims(project.Name).Get(ctx, pvcName, metav1.GetOptions{})
 				g.Expect(err).NotTo(HaveOccurred())
 				GinkgoWriter.Println(pvc)
 			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
@@ -223,18 +216,16 @@ var _ = Describe("Cluster", Serial, func() {
 
 	It("can create load balancer services", func(ctx context.Context) {
 		By("creating an external load balancer service")
-		err := createLoadBalancerService(ctx, clients.Kubernetes, "elb", p.Name, map[string]string{})
-		Expect(err).NotTo(HaveOccurred())
+		createLoadBalancerService(ctx, clients.Kubernetes, "elb", project.Name, map[string]string{})
 
 		By("creating an internal load balancer service")
-		err = createLoadBalancerService(ctx, clients.Kubernetes, "ilb", p.Name, map[string]string{
+		createLoadBalancerService(ctx, clients.Kubernetes, "ilb", project.Name, map[string]string{
 			"service.beta.kubernetes.io/azure-load-balancer-internal": "true",
 		})
-		Expect(err).NotTo(HaveOccurred())
 
 		By("verifying the external load balancer service is ready")
 		Eventually(func(ctx context.Context) bool {
-			svc, err := clients.Kubernetes.CoreV1().Services(p.Name).Get(ctx, "elb", metav1.GetOptions{})
+			svc, err := clients.Kubernetes.CoreV1().Services(project.Name).Get(ctx, "elb", metav1.GetOptions{})
 			if err != nil {
 				return false
 			}
@@ -243,7 +234,7 @@ var _ = Describe("Cluster", Serial, func() {
 
 		By("verifying the internal load balancer service is ready")
 		Eventually(func(ctx context.Context) bool {
-			svc, err := clients.Kubernetes.CoreV1().Services(p.Name).Get(ctx, "ilb", metav1.GetOptions{})
+			svc, err := clients.Kubernetes.CoreV1().Services(project.Name).Get(ctx, "ilb", metav1.GetOptions{})
 			if err != nil {
 				return false
 			}
@@ -257,12 +248,11 @@ var _ = Describe("Cluster", Serial, func() {
 		deployName := "internal-registry-deploy"
 
 		By("creating a test deployment from an internal container registry")
-		err := createContainerFromInternalContainerRegistryImage(ctx, clients.Kubernetes, deployName, p.Name)
-		Expect(err).NotTo(HaveOccurred())
+		createContainerFromInternalContainerRegistryImage(ctx, clients.Kubernetes, deployName, project.Name)
 
 		By("verifying the deployment is ready")
 		Eventually(func(g Gomega, ctx context.Context) {
-			s, err := clients.Kubernetes.AppsV1().Deployments(p.Name).Get(ctx, deployName, metav1.GetOptions{})
+			s, err := clients.Kubernetes.AppsV1().Deployments(project.Name).Get(ctx, deployName, metav1.GetOptions{})
 			g.Expect(err).NotTo(HaveOccurred())
 
 			g.Expect(ready.DeploymentIsReady(s)).To(BeTrue(), "expect stateful to be ready")
@@ -290,14 +280,17 @@ func clusterSubnets(oc redhatopenshift.OpenShiftCluster) []string {
 	return subnets
 }
 
-func createStatefulSet(ctx context.Context, cli kubernetes.Interface, namespace, storageClass string) (string, error) {
-	pvcStorage, err := resource.ParseQuantity("2Gi")
+func createStatefulSet(ctx context.Context, cli kubernetes.Interface, namespace, storageClass string) string {
+	quantity := "2Gi"
+	pvcStorage, err := resource.ParseQuantity(quantity)
 	if err != nil {
-		return "", err
+		message := fmt.Sprintf("Could not parse %v when creating a stateful set.", quantity)
+		Fail(message)
 	}
+
 	ssName := fmt.Sprintf("busybox-%s-%d", storageClass, GinkgoParallelProcess())
 
-	_, err = cli.AppsV1().StatefulSets(namespace).Create(ctx, &appsv1.StatefulSet{
+	ss := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: ssName,
 		},
@@ -349,15 +342,17 @@ func createStatefulSet(ctx context.Context, cli kubernetes.Interface, namespace,
 				},
 			},
 		},
-	}, metav1.CreateOptions{})
-	return ssName, err
+	}
+
+	_ = CreateK8sObjectWithRetry(ctx, cli.AppsV1().StatefulSets(namespace).Create, ss, metav1.CreateOptions{})
+	return ssName
 }
 
 func statefulSetPVCName(ssName string, claimName string, ordinal int) string {
 	return fmt.Sprintf("%s-%s-%d", claimName, ssName, ordinal)
 }
 
-func createLoadBalancerService(ctx context.Context, cli kubernetes.Interface, name, namespace string, annotations map[string]string) error {
+func createLoadBalancerService(ctx context.Context, cli kubernetes.Interface, name, namespace string, annotations map[string]string) {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
@@ -374,11 +369,10 @@ func createLoadBalancerService(ctx context.Context, cli kubernetes.Interface, na
 			Type: corev1.ServiceTypeLoadBalancer,
 		},
 	}
-	_, err := cli.CoreV1().Services(namespace).Create(ctx, svc, metav1.CreateOptions{})
-	return err
+	CreateK8sObjectWithRetry(ctx, cli.CoreV1().Services(namespace).Create, svc, metav1.CreateOptions{})
 }
 
-func createContainerFromInternalContainerRegistryImage(ctx context.Context, cli kubernetes.Interface, name, namespace string) error {
+func createContainerFromInternalContainerRegistryImage(ctx context.Context, cli kubernetes.Interface, name, namespace string) {
 	deploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -411,6 +405,5 @@ func createContainerFromInternalContainerRegistryImage(ctx context.Context, cli 
 			},
 		},
 	}
-	_, err := cli.AppsV1().Deployments(namespace).Create(ctx, deploy, metav1.CreateOptions{})
-	return err
+	CreateK8sObjectWithRetry(ctx, cli.AppsV1().Deployments(namespace).Create, deploy, metav1.CreateOptions{})
 }
