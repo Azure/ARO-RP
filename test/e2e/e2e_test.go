@@ -8,9 +8,7 @@ package e2e
 
 import (
 	"flag"
-	"math/rand"
 	"testing"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -23,8 +21,6 @@ import (
 )
 
 func TestE2E(t *testing.T) {
-	rand.Seed(time.Now().UnixNano())
-
 	flag.Parse()
 	logrus.SetOutput(GinkgoWriter)
 	log = utillog.GetLogger()
