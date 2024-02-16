@@ -7,12 +7,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
@@ -35,8 +33,6 @@ func usage() {
 }
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
-
 	flag.Usage = usage
 	flag.Parse()
 

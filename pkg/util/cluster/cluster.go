@@ -346,7 +346,6 @@ func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, wor
 	// 10.1.0.0/24 is used by rp-vnet to host Proxy VM
 	// 10.2.0.0/24 is used by dev-vpn-vnet to host VirtualNetworkGateway
 	var x, y int
-	rand.Seed(time.Now().UnixNano())
 	// Local Dev clusters are limited to /16 dev-vnet
 	if !c.ci {
 		x, y = 0, 2*rand.Intn(128)
