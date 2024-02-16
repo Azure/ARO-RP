@@ -76,6 +76,7 @@ func (s *Server) Run() error {
 		ClientCAs:              pool,
 		ClientAuth:             tls.RequireAndVerifyClientCert,
 		SessionTicketsDisabled: true,
+		MinVersion:             tls.VersionTLS12,
 		CurvePreferences: []tls.CurveID{
 			tls.CurveP256,
 			tls.X25519,

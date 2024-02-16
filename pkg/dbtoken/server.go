@@ -64,6 +64,7 @@ func NewServer(
 		},
 		NextProtos:             []string{"h2", "http/1.1"},
 		SessionTicketsDisabled: true,
+		MinVersion:             tls.VersionTLS12,
 		CurvePreferences: []tls.CurveID{
 			tls.CurveP256,
 			tls.X25519,
