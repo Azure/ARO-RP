@@ -50,7 +50,7 @@ endif
 endif
 
 build-all:
-	go build ./...
+	go build ./pkg/... ./test/... ./hack/... ./cmd/...
 
 aro: check-release generate
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro
