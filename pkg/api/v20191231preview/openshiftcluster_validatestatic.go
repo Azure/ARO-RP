@@ -184,6 +184,10 @@ func (sv openShiftClusterStaticValidator) validateServicePrincipalProfile(path s
 }
 
 func (sv openShiftClusterStaticValidator) validateNetworkProfile(path string, np *NetworkProfile) error {
+	if np.PodCIDR == api.JoinCIDR || np.ServiceCIDR == api.JoinCIDR {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidCIDRRange, path, "Azure Red Hat OpenShift uses '%s' IP address range internally. Do not include this '%s' IP address range in any other CIDR definitions in your cluster.", api.JoinCIDR, api.JoinCIDR)
+	}
+
 	podIP, pod, err := net.ParseCIDR(np.PodCIDR)
 
 	if err != nil {

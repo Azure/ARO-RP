@@ -530,6 +530,20 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 			},
 			wantErr: "400: InvalidNetworkAddress: properties.networkProfile.serviceCidr: The provided service CIDR '10.0.150.0/16' is invalid, expecting: '10.0.0.0/16'.",
 		},
+		{
+			name: "podCidr invalid CIDR",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PodCIDR = "100.64.0.0/16"
+			},
+			wantErr: "400: InvalidCIDRRange: properties.networkProfile: Azure Red Hat OpenShift uses '100.64.0.0/16' IP address range internally. Do not include this '100.64.0.0/16' IP address range in any other CIDR definitions in your cluster.",
+		},
+		{
+			name: "serviceCidr invalid CIDR",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.ServiceCIDR = "100.64.0.0/16"
+			},
+			wantErr: "400: InvalidCIDRRange: properties.networkProfile: Azure Red Hat OpenShift uses '100.64.0.0/16' IP address range internally. Do not include this '100.64.0.0/16' IP address range in any other CIDR definitions in your cluster.",
+		},
 	}
 
 	runTests(t, testModeCreate, tests)
