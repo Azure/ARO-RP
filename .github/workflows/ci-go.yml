@@ -19,9 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: registry.access.redhat.com/ubi8/go-toolset:1.20.10
-    defaults:
-      run:
-        working-directory: /app
+      env:
+        GOPATH: /root/go
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
