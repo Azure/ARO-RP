@@ -33,5 +33,7 @@ COPY .env .env
 COPY .sha256sum .sha256sum
 COPY .config .config
 
+RUN go install gotest.tools/gotestsum@v1.11.0
+
 RUN hack/ci-utils/build.sh
 
