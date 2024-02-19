@@ -19,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: registry.access.redhat.com/ubi8/go-toolset:1.20.10
+    env:
+      GO111MODULE: auto
     steps:
     - run: |
         go install gotest.tools/gotestsum@v1.11.0
