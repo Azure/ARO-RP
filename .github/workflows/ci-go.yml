@@ -19,9 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: registry.access.redhat.com/ubi8/go-toolset:1.20.10
-      env:
-        GOPATH: /root/go
     steps:
+    - run: |
+        go install gotest.tools/gotestsum@v1.11.0
     - name: Checkout repository
       uses: actions/checkout@v4
     - run: |
