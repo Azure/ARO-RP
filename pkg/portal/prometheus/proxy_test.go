@@ -228,7 +228,7 @@ func TestProxy(t *testing.T) {
 				dialer.EXPECT().DialContext(gomock.Any(), "tcp", apiServerPrivateEndpointIP+":6443").Return(l.DialContext(ctx, "", ""))
 			},
 			wantStatusCode: http.StatusOK,
-			wantBody:       "GET /test HTTP/1.1\r\nHost: prometheus-k8s-0:9090\r\nAccept-Encoding: gzip\r\nUser-Agent: Go-http-client/1.1\r\n\r\n",
+			wantBody:       "GET /test HTTP/1.1\r\nHost: prometheus-k8s-0:9090\r\nAccept-Encoding: gzip\r\nUser-Agent: testua\r\n\r\n",
 		},
 		{
 			name: "bad path",
@@ -269,6 +269,8 @@ func TestProxy(t *testing.T) {
 			if err != nil {
 				panic(err)
 			}
+
+			r.Header.Set("User-Agent", "testua")
 
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()

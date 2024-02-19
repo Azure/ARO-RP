@@ -106,7 +106,7 @@ func applyPythonLicense() error {
 		}
 
 		switch path {
-		case "python/client", "vendor":
+		case "python/client", "vendor", "python/az/aro/azext_aro/aaz":
 			return filepath.SkipDir
 		}
 

@@ -659,11 +659,10 @@ func (dv *dynamic) createSubnetMapByID(ctx context.Context, subnets []Subnet) (m
 	return subnetByID, nil
 }
 
-// checkPreconfiguredNSG checks whether all the subnets have or don't have NSG attached.
-// when the PreconfigureNSG feature flag is on and only some of the subnets are attached with an NSG,
-// it returns an error.  If none of the subnets is attached, the feature is no longer active and the
-// cluster installation process should fall back to using the managed nsg.
-func (dv *dynamic) checkPreconfiguredNSG(subnetByID map[string]*mgmtnetwork.Subnet) (api.PreconfiguredNSG, error) {
+// checkPreconfiguredNSG checks whether all the subnets have an NSG attached.
+// when the PreconfigureNSG feature flag is on and not all subnets are attached,
+// it returns an error.
+func (dv *dynamic) checkPreconfiguredNSG(subnetByID map[string]*mgmtnetwork.Subnet) error {
 	var attached int
 	for _, subnet := range subnetByID {
 		if subnetHasNSGAttached(subnet) {
@@ -674,24 +673,16 @@ func (dv *dynamic) checkPreconfiguredNSG(subnetByID map[string]*mgmtnetwork.Subn
 	// all subnets have an attached NSG
 	if attached == len(subnetByID) {
 		dv.log.Info("all subnets are attached, BYO NSG")
-		return api.PreconfiguredNSGEnabled, nil // correct setup by customer
+		return nil // correct setup by customer
 	}
 
-	// no subnets have attached NSG, fallback
-	if attached == 0 {
-		dv.log.Info("no subnets are attached, no longer BYO NSG. Fall back to using cluster NSG.")
-		return api.PreconfiguredNSGDisabled, nil
+	return &api.CloudError{
+		StatusCode: http.StatusBadRequest,
+		CloudErrorBody: &api.CloudErrorBody{
+			Code:    api.CloudErrorCodeInvalidLinkedVNet,
+			Message: errMsgNSGNotProperlyAttached,
+		},
 	}
-
-	// some subnets have NSGs attached, error out
-	return api.PreconfiguredNSGDisabled,
-		&api.CloudError{
-			StatusCode: http.StatusBadRequest,
-			CloudErrorBody: &api.CloudErrorBody{
-				Code:    api.CloudErrorCodeInvalidLinkedVNet,
-				Message: errMsgNSGNotProperlyAttached,
-			},
-		}
 }
 
 func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error {
@@ -703,7 +694,8 @@ func (dv *dynamic) ValidateSubnets(ctx context.Context, oc *api.OpenShiftCluster
 
 	if oc.Properties.ProvisioningState == api.ProvisioningStateCreating {
 		if oc.Properties.NetworkProfile.PreconfiguredNSG == api.PreconfiguredNSGEnabled {
-			oc.Properties.NetworkProfile.PreconfiguredNSG, err = dv.checkPreconfiguredNSG(subnetByID)
+			dv.log.Info("cluster creation with preconfigured-nsg")
+			err = dv.checkPreconfiguredNSG(subnetByID)
 			if err != nil {
 				return err
 			}
