@@ -28,6 +28,7 @@ import (
 	appsv1client "k8s.io/client-go/kubernetes/typed/apps/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -63,12 +64,13 @@ type operator struct {
 	oc  *api.OpenShiftCluster
 
 	arocli        aroclient.Interface
+	client        client.Client
 	extensionscli extensionsclient.Interface
 	kubernetescli kubernetes.Interface
 	dh            dynamichelper.Interface
 }
 
-func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli aroclient.Interface, extensionscli extensionsclient.Interface, kubernetescli kubernetes.Interface) (Operator, error) {
+func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli aroclient.Interface, client client.Client, extensionscli extensionsclient.Interface, kubernetescli kubernetes.Interface) (Operator, error) {
 	restConfig, err := restconfig.RestConfig(env, oc)
 	if err != nil {
 		return nil, err
@@ -84,6 +86,7 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli 
 		oc:  oc,
 
 		arocli:        arocli,
+		client:        client,
 		extensionscli: extensionscli,
 		kubernetescli: kubernetescli,
 		dh:            dh,
@@ -91,9 +94,10 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli 
 }
 
 type deploymentData struct {
-	Image              string
-	Version            string
-	IsLocalDevelopment bool
+	Image                        string
+	Version                      string
+	IsLocalDevelopment           bool
+	SupportsPodSecurityAdmission bool
 }
 
 func templateManifests(data deploymentData) ([][]byte, error) {
@@ -125,7 +129,7 @@ func templateManifests(data deploymentData) ([][]byte, error) {
 	return templatedFiles, nil
 }
 
-func (o *operator) createDeploymentData() deploymentData {
+func (o *operator) createDeploymentData(ctx context.Context) (deploymentData, error) {
 	image := o.env.AROOperatorImage()
 
 	// HACK: Override for ARO_IMAGE env variable setup in local-dev mode
@@ -141,15 +145,27 @@ func (o *operator) createDeploymentData() deploymentData {
 		image = fmt.Sprintf("%s/aro:%s", o.env.ACRDomain(), version)
 	}
 
-	return deploymentData{
-		IsLocalDevelopment: o.env.IsLocalDevelopmentMode(),
-		Image:              image,
-		Version:            version,
+	// Set Pod Security Admission parameters if > 4.10
+	// this only gets set on PUCM (Everything or OperatorUpdate)
+	usePodSecurityAdmission, err := pkgoperator.ShouldUsePodSecurityStandard(ctx, o.client)
+	if err != nil {
+		return deploymentData{}, err
 	}
+
+	return deploymentData{
+		IsLocalDevelopment:           o.env.IsLocalDevelopmentMode(),
+		Image:                        image,
+		SupportsPodSecurityAdmission: usePodSecurityAdmission,
+		Version:                      version,
+	}, nil
 }
 
-func (o *operator) createObjects() ([]kruntime.Object, error) {
-	deploymentData := o.createDeploymentData()
+func (o *operator) createObjects(ctx context.Context) ([]kruntime.Object, error) {
+	deploymentData, err := o.createDeploymentData(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	templated, err := templateManifests(deploymentData)
 	if err != nil {
 		return nil, err
@@ -166,10 +182,10 @@ func (o *operator) createObjects() ([]kruntime.Object, error) {
 	return objects, nil
 }
 
-func (o *operator) resources() ([]kruntime.Object, error) {
+func (o *operator) resources(ctx context.Context) ([]kruntime.Object, error) {
 	// first static resources from Assets
 
-	results, err := o.createObjects()
+	results, err := o.createObjects(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -281,7 +297,7 @@ func (o *operator) resources() ([]kruntime.Object, error) {
 }
 
 func (o *operator) CreateOrUpdate(ctx context.Context) error {
-	resources, err := o.resources()
+	resources, err := o.resources(ctx)
 	if err != nil {
 		return err
 	}
