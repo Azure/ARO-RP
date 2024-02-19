@@ -36,7 +36,7 @@ func (sv openShiftClusterStaticValidator) Static(_oc interface{}, _current *api.
 	sv.domain = domain
 	sv.requireD2sV3Workers = requireD2sV3Workers
 	sv.resourceID = resourceID
-	var architectureVersion api.ArchitectureVersion
+	architectureVersion := version.InstallArchitectureVersion
 
 	oc := _oc.(*OpenShiftCluster)
 
@@ -44,8 +44,6 @@ func (sv openShiftClusterStaticValidator) Static(_oc interface{}, _current *api.
 	if _current != nil {
 		architectureVersion = _current.Properties.ArchitectureVersion
 		current = (&openShiftClusterConverter{}).ToExternal(_current).(*OpenShiftCluster)
-	} else {
-		architectureVersion = version.InstallArchitectureVersion
 	}
 
 	var err error
