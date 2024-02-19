@@ -90,6 +90,20 @@ discoverycache:
 generate:
 	go generate -v -x ./...
 
+# TODO: Figure out how to make this work outside GOROOT????
+generate-operator-apiclient:
+	go run ./vendor/sigs.k8s.io/controller-tools/cmd/controller-gen object paths=./pkg/operator/apis/...
+	go run ./vendor/k8s.io/code-generator/cmd/client-gen --clientset-name versioned --input-base ./pkg/operator/apis --input aro.openshift.io/v1alpha1,preview.aro.openshift.io/v1alpha1 --output-package ./pkg/operator/clientset --go-header-file ./hack/licenses/boilerplate.go.txt
+	gofmt -s -w ./pkg/operator/clientset
+	go run ./vendor/golang.org/x/tools/cmd/goimports -local=github.com/Azure/ARO-RP -e -w ./pkg/operator/clientset ./pkg/operator/apis
+
+	# build the operator's CRD (based on the apis) for master deployment
+	go run ./vendor/sigs.k8s.io/controller-tools/cmd/controller-gen "crd:trivialVersions=true" paths="./pkg/operator/apis/..." output:crd:dir=./pkg/operator/deploy/staticresources
+	# for worker deployment - less privileges as it only runs the internetchecker
+	# rbac (based on in-code tags - search for "+kubebuilder:rbac")
+	go run ./vendor/sigs.k8s.io/controller-tools/cmd/controller-gen rbac:roleName=aro-operator-worker paths="./pkg/operator/controllers/checkers/internetchecker/..." output:dir=./pkg/operator/deploy/staticresources/worker
+
+
 generate-guardrails:
 	cd pkg/operator/controllers/guardrails/policies && ./scripts/generate.sh > /dev/null
 
