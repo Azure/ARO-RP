@@ -3,11 +3,81 @@
 
 from unittest.mock import Mock, patch
 from azext_aro._dynamic_validators import (
-    dyn_validate_cidr_ranges, dyn_validate_subnet_and_route_tables, dyn_validate_vnet, dyn_validate_resource_permissions, dyn_validate_version
+    can_do_action,
+    dyn_validate_cidr_ranges,
+    dyn_validate_subnet_and_route_tables,
+    dyn_validate_vnet,
+    dyn_validate_resource_permissions,
+    dyn_validate_version
 )
 
 from azure.mgmt.authorization.models import Permission
 import pytest
+
+test_can_do_action_data = [
+    (
+        "empty permissions list",
+        [],
+        "Microsoft.Network/virtualNetworks/subnets/join/action",
+        False
+    ),
+    (
+        "has permission - exact",
+        [
+            Permission(actions=["Microsoft.Compute/virtualMachines/*"], not_actions=[]),
+            Permission(actions=["Microsoft.Network/virtualNetworks/subnets/join/action"], not_actions=[]),
+        ],
+        "Microsoft.Network/virtualNetworks/subnets/join/action",
+        True
+    ),
+    (
+        "has permission - wildcard",
+        [
+            Permission(actions=["Microsoft.Network/virtualNetworks/subnets/*/action"], not_actions=[]),
+        ],
+        "Microsoft.Network/virtualNetworks/subnets/join/action",
+        True
+    ),
+    (
+        "has permission - exact, conflict",
+        [
+            Permission(actions=[], not_actions=["Microsoft.Network/virtualNetworks/subnets/join/action"]),
+            Permission(actions=["Microsoft.Network/virtualNetworks/subnets/join/action"], not_actions=[]),
+        ],
+        "Microsoft.Network/virtualNetworks/subnets/join/action",
+        True
+    ),
+    (
+        "has permission excluded - exact",
+        [
+            Permission(actions=["Microsoft.Network/*"], not_actions=["Microsoft.Network/virtualNetworks/subnets/join/action"]),
+        ],
+        "Microsoft.Network/virtualNetworks/subnets/join/action",
+        False
+    ),
+    (
+        "has permission excluded - wildcard",
+        [
+            Permission(actions=["Microsoft.Network/*"], not_actions=["Microsoft.Network/virtualNetworks/subnets/*/action"]),
+        ],
+        "Microsoft.Network/virtualNetworks/subnets/join/action",
+        False
+    )
+]
+
+
+@pytest.mark.parametrize(
+    "test_description, perms, action, expected",
+    test_can_do_action_data,
+    ids=[i[0] for i in test_can_do_action_data]
+)
+def test_can_do_action(
+    test_description, perms, action, expected
+):
+    actual = can_do_action(perms, action)
+
+    if actual != expected:
+        raise Exception(f"Error mismatch, expected: {expected}, actual: {actual}")
 
 
 test_validate_cidr_data = [
@@ -166,7 +236,7 @@ test_validate_subnets_data = [
             "child_name_1": None
         },
         Mock(),
-        "Microsoft.Network/routeTables/join/action permission is disabled"
+        "Microsoft.Network/routeTables/join/action permission is missing"
     ),
     (
         "should return missing permission when actions are not present",
@@ -301,7 +371,7 @@ test_validate_vnets_data = [
             "child_name_1": None
         },
         Mock(),
-        "Microsoft.Network/virtualNetworks/join/action permission is disabled"
+        "Microsoft.Network/virtualNetworks/join/action permission is missing"
     ),
     (
         "should return missing permission when actions are not present",
