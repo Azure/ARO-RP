@@ -54,7 +54,7 @@ func GetK8sPodLogsWithRetry(
 		g.Expect(err).NotTo(HaveOccurred())
 		rawBody = string(body)
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
-	return
+	return rawBody
 }
 
 // ListK8sObjectWithRetry takes a list function like clients.Kubernetes.CoreV1().Nodes().List and the
@@ -68,7 +68,7 @@ func ListK8sObjectWithRetry[T kruntime.Object](
 		result, err = listFunc(ctx, options)
 		g.Expect(err).NotTo(HaveOccurred())
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
-	return
+	return result
 }
 
 // CreateK8sObjectWithRetry takes a create function like clients.Kubernetes.CoreV1().Pods(namespace).Create
@@ -82,7 +82,7 @@ func CreateK8sObjectWithRetry[T kruntime.Object](
 		result, err = createFunc(ctx, obj, options)
 		g.Expect(err).NotTo(HaveOccurred())
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
-	return
+	return result
 }
 
 // DeleteK8sObjectWithRetry takes a delete function like clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Delete
@@ -94,7 +94,7 @@ func DeleteK8sObjectWithRetry(
 		err := deleteFunc(ctx, name, options)
 		g.Expect(err).NotTo(HaveOccurred())
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
-	return
+	return err
 }
 
 type AllowedCleanUpAPIInterface[T kruntime.Object] interface {
