@@ -89,7 +89,7 @@ discoverycache:
 	$(MAKE) generate
 
 generate:
-	go generate ./...
+	go generate -v -x ./...
 
 # TODO: This does not work outside of GOROOT. We should replace all usage of the
 # clientset with controller-runtime so we don't need to generate it.
