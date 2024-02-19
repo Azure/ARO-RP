@@ -11,39 +11,44 @@ on:
 permissions:
   contents: read
 
-env:
-  GOFLAGS: -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
-
 jobs:
   ci-from-docker:
     runs-on: ubuntu-latest
     container:
       image: registry.access.redhat.com/ubi8/go-toolset:1.20.10
-    env:
-      GO111MODULE: auto
     steps:
-    - run: |
-        go install gotest.tools/gotestsum@v1.11.0
     - name: Checkout repository
       uses: actions/checkout@v4
-    - name: Go Information
+    - name: Install Go runtime deps
       run: |
-        go env
-    - run: |
-        hack/ci-utils/build.sh
+        go install gotest.tools/gotestsum@v1.11.0
+    - name: Build all
+      run: |
+        make build-all
+    - name: Run unit tests
+      run: |
+        make unit-test-go
 
   vendor-check:
     runs-on: ubuntu-latest
+    container:
+      image: registry.access.redhat.com/ubi8/go-toolset:1.20.10
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version-file: go.mod
-
     - run: |
         go mod vendor
         go mod tidy -compat=1.20
+        hack/ci-utils/isClean.sh
+
+  generate-check:
+    runs-on: ubuntu-latest
+    container:
+      image: registry.access.redhat.com/ubi8/go-toolset:1.20.10
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Run make generate
+      run: |
+        make generate
         hack/ci-utils/isClean.sh
