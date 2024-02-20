@@ -81,6 +81,16 @@ deploy_vpn_for_dedicated_rp() {
              "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" >/dev/null
 }
 
+deploy_oic_for_dedicated_rp() {
+    echo "########## Deploying storage account and role assignment in RG $RESOURCEGROUP ##########"
+    az deployment group create \
+        -g "$RESOURCEGROUP" \
+        -n rp-oic \
+        --template-file pkg/deploy/assets/rp-oic.json \
+        --parameters \
+            "rpServicePrincipalId=$(az identity show -g $RESOURCEGROUP -n aro-rp-$LOCATION | jq -r '.["principalId"]')"
+}
+
 deploy_env_dev_override() {
     echo "########## Deploying env-development in RG $RESOURCEGROUP ##########"
     az deployment group create \

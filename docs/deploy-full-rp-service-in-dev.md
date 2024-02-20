@@ -54,12 +54,6 @@
     ```
     > __NOTE:__ If the AKS deployment fails with missing RP VNETs, delete the "gateway-production-predeploy" deployment in the gateway resource group, and re-run `make deploy` and then re-run `deploy_aks_dev`.
 
-1. Create storage account and role assignment required for workload identity clusters
-    ```
-    source ./hack/devtools/deploy-shared-env.sh
-    deploy_oic_dev
-    ```
-
 1. Install Hive into AKS
     1. Download the VPN config. Please note that this action will _**OVER WRITE**_ the `secrets/vpn-$LOCATION.ovpn` on your local machine. **DO NOT** run `make secrets-update` after doing this, as you will overwrite existing config, until such time as you have run `make secrets` to get the config restored.
         ```bash
@@ -207,6 +201,12 @@
     ```
 
 1. Run `make deploy`
+
+1. Create storage account and role assignment required for workload identity clusters
+    ```
+    source ./hack/devtools/deploy-shared-env.sh
+    deploy_oic_for_dedicated_rp
+    ```
 
 ## SSH to RP VMSS Instance
 
