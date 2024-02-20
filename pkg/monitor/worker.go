@@ -10,15 +10,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/monitor/azure/nsg"
 	"github.com/Azure/ARO-RP/pkg/monitor/cluster"
 	"github.com/Azure/ARO-RP/pkg/monitor/dimension"
@@ -27,6 +23,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
+
+// nsgMonitoringFrequency is used for initializing NSG monitoring ticker
+var nsgMonitoringFrequency = 10 * time.Minute
 
 // This function will continue to run until such time as it has a config to add to the global Hive shard map
 // Note that because the mon.hiveShardConfigs[shard] is set to `nil` when its created, the cluster
@@ -198,6 +197,8 @@ func (mon *monitor) worker(stop <-chan struct{}, delay time.Duration, id string)
 
 	log.Debug("starting monitoring")
 
+	nsgMonitoringTicker := time.NewTicker(nsgMonitoringFrequency)
+	defer nsgMonitoringTicker.Stop()
 	t := time.NewTicker(time.Minute)
 	defer t.Stop()
 
@@ -220,7 +221,7 @@ out:
 		// cached metrics in the remaining minutes
 
 		if sub != nil && sub.Subscription != nil && sub.Subscription.State != api.SubscriptionStateSuspended && sub.Subscription.State != api.SubscriptionStateWarned {
-			mon.workOne(context.Background(), log, v.doc, sub, newh != h)
+			mon.workOne(context.Background(), log, v.doc, sub, newh != h, nsgMonitoringTicker)
 		}
 
 		select {
@@ -235,28 +236,8 @@ out:
 	log.Debug("stopping monitoring")
 }
 
-func (mon *monitor) newNSGMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, subscriptionID, tenantID string, e metrics.Emitter, dims map[string]string, wg *sync.WaitGroup) monitoring.Monitor {
-	token, err := mon.env.FPNewClientCertificateCredential(tenantID)
-	if err != nil {
-		log.Error("Unable to create FP Authorizer for NSG monitoring.", err)
-		mon.clusterm.EmitGauge(nsg.MetricFailedNSGMonitorCreation, int64(1), dims)
-		return &monitoring.NoOpMonitor{Wg: wg}
-	}
-	options := arm.ClientOptions{
-		ClientOptions: azcore.ClientOptions{Cloud: mon.env.Environment().Cloud},
-	}
-	client, err := armnetwork.NewSubnetsClient(subscriptionID, token, &options)
-	if err != nil {
-		log.Error("Unable to create the subnet client for NSG monitoring", err)
-		mon.clusterm.EmitGauge(nsg.MetricFailedNSGMonitorCreation, int64(1), dims)
-		return &monitoring.NoOpMonitor{Wg: wg}
-	}
-
-	return nsg.NewNSGMonitor(log, oc, subscriptionID, client, e, wg)
-}
-
 // workOne checks the API server health of a cluster
-func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument, hourlyRun bool) {
+func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument, hourlyRun bool, nsgMonTicker *time.Ticker) {
 	ctx, cancel := context.WithTimeout(ctx, 50*time.Second)
 	defer cancel()
 
@@ -283,11 +264,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	var monitors []monitoring.Monitor
 	var wg sync.WaitGroup
 
-	if doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG == api.PreconfiguredNSGEnabled && hourlyRun {
-		mon.clusterm.EmitGauge(nsg.MetricPreconfiguredNSGEnabled, int64(1), dims)
-		nsgMon := mon.newNSGMonitor(log, doc.OpenShiftCluster, sub.ID, sub.Subscription.Properties.TenantID, mon.clusterm, dims, &wg)
-		monitors = append(monitors, nsgMon)
-	}
+	nsgMon := nsg.NewMonitor(log, doc.OpenShiftCluster, mon.env, sub.ID, sub.Subscription.Properties.TenantID, mon.clusterm, dims, &wg, nsgMonTicker.C)
 
 	c, err := cluster.NewMonitor(log, restConfig, doc.OpenShiftCluster, mon.clusterm, hiveRestConfig, hourlyRun, &wg)
 	if err != nil {
@@ -298,7 +275,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 		return
 	}
 
-	monitors = append(monitors, c)
+	monitors = append(monitors, c, nsgMon)
 	allJobsDone := make(chan bool)
 	go execute(ctx, allJobsDone, &wg, monitors)
 
