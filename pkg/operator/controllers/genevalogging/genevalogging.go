@@ -18,6 +18,7 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
+	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -41,6 +42,21 @@ func (r *Reconciler) securityContextConstraints(ctx context.Context, name, servi
 	scc.Groups = []string{}
 	scc.Users = []string{serviceAccountName}
 	return scc, nil
+}
+
+// namespaceLabels adds proper namespace labels for the privileged geneva logging
+// daemonset on OpenShift 4.11+
+func (r *Reconciler) namespaceLabels(ctx context.Context) (map[string]string, error) {
+	usePodSecurityAdmission, err := pkgoperator.ShouldUsePodSecurityStandard(ctx, r.Client)
+	if err != nil {
+		return nil, err
+	}
+
+	if usePodSecurityAdmission {
+		return privilegedNamespaceLabels, nil
+	}
+
+	return map[string]string{}, nil
 }
 
 func (r *Reconciler) daemonset(cluster *arov1alpha1.Cluster) (*appsv1.DaemonSet, error) {
@@ -285,12 +301,17 @@ func (r *Reconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster
 		return nil, err
 	}
 
+	nsLabels, err := r.namespaceLabels(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	return []kruntime.Object{
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        kubeNamespace,
 				Annotations: map[string]string{projectv1.ProjectNodeSelector: ""},
-				Labels:      privilegedNamespaceLabels,
+				Labels:      nsLabels,
 			},
 		},
 		&corev1.Secret{

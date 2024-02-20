@@ -20,6 +20,7 @@ import (
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
@@ -89,6 +90,7 @@ type manager struct {
 	subnet  subnet.Manager
 	graph   graph.Manager
 
+	client           client.Client
 	kubernetescli    kubernetes.Interface
 	dynamiccli       dynamic.Interface
 	extensionscli    extensionsclient.Interface

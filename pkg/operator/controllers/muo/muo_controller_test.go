@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	configv1 "github.com/openshift/api/config/v1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,9 +27,10 @@ import (
 
 func TestMUOReconciler(t *testing.T) {
 	tests := []struct {
-		name  string
-		mocks func(*mock_deployer.MockDeployer, *arov1alpha1.Cluster)
-		flags arov1alpha1.OperatorFlags
+		name           string
+		mocks          func(*mock_deployer.MockDeployer, *arov1alpha1.Cluster)
+		flags          arov1alpha1.OperatorFlags
+		clusterVersion string
 		// connected MUO -- cluster pullsecret
 		pullsecret string
 		// errors
@@ -49,6 +51,7 @@ func TestMUOReconciler(t *testing.T) {
 				operator.MuoManaged: operator.FlagTrue,
 				controllerPullSpec:  "wonderfulPullspec",
 			},
+			clusterVersion: "4.10.0",
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.MUODeploymentConfig{
 					Pullspec:        "wonderfulPullspec",
@@ -64,6 +67,7 @@ func TestMUOReconciler(t *testing.T) {
 				operator.MuoEnabled: operator.FlagTrue,
 				operator.MuoManaged: operator.FlagTrue,
 			},
+			clusterVersion: "4.10.0",
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.MUODeploymentConfig{
 					Pullspec:        "acrtest.example.com/app-sre/managed-upgrade-operator:v0.1.952-44b631a",
@@ -81,6 +85,7 @@ func TestMUOReconciler(t *testing.T) {
 				controllerForceLocalOnly: "false",
 				controllerPullSpec:       "wonderfulPullspec",
 			},
+			clusterVersion: "4.10.0",
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.MUODeploymentConfig{
 					Pullspec:        "wonderfulPullspec",
@@ -98,7 +103,8 @@ func TestMUOReconciler(t *testing.T) {
 				controllerForceLocalOnly: "false",
 				controllerPullSpec:       "wonderfulPullspec",
 			},
-			pullsecret: "{\"auths\": {}}",
+			clusterVersion: "4.10.0",
+			pullsecret:     "{\"auths\": {}}",
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.MUODeploymentConfig{
 					Pullspec:        "wonderfulPullspec",
@@ -116,7 +122,8 @@ func TestMUOReconciler(t *testing.T) {
 				controllerForceLocalOnly: "false",
 				controllerPullSpec:       "wonderfulPullspec",
 			},
-			pullsecret: "i'm a little json, short and stout",
+			clusterVersion: "4.10.0",
+			pullsecret:     "i'm a little json, short and stout",
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.MUODeploymentConfig{
 					Pullspec:        "wonderfulPullspec",
@@ -134,7 +141,8 @@ func TestMUOReconciler(t *testing.T) {
 				controllerForceLocalOnly: "false",
 				controllerPullSpec:       "wonderfulPullspec",
 			},
-			pullsecret: "{\"auths\": {\"" + pullSecretOCMKey + "\": {\"auth\": \"secret value\"}}}",
+			clusterVersion: "4.10.0",
+			pullsecret:     "{\"auths\": {\"" + pullSecretOCMKey + "\": {\"auth\": \"secret value\"}}}",
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.MUODeploymentConfig{
 					Pullspec:        "wonderfulPullspec",
@@ -154,7 +162,8 @@ func TestMUOReconciler(t *testing.T) {
 				controllerOcmBaseURL:     "https://example.com",
 				controllerPullSpec:       "wonderfulPullspec",
 			},
-			pullsecret: "{\"auths\": {\"" + pullSecretOCMKey + "\": {\"auth\": \"secret value\"}}}",
+			clusterVersion: "4.10.0",
+			pullsecret:     "{\"auths\": {\"" + pullSecretOCMKey + "\": {\"auth\": \"secret value\"}}}",
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.MUODeploymentConfig{
 					Pullspec:        "wonderfulPullspec",
@@ -173,7 +182,8 @@ func TestMUOReconciler(t *testing.T) {
 				controllerForceLocalOnly: "true",
 				controllerPullSpec:       "wonderfulPullspec",
 			},
-			pullsecret: "{\"auths\": {\"" + pullSecretOCMKey + "\": {\"auth\": \"secret value\"}}}",
+			clusterVersion: "4.10.0",
+			pullsecret:     "{\"auths\": {\"" + pullSecretOCMKey + "\": {\"auth\": \"secret value\"}}}",
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.MUODeploymentConfig{
 					Pullspec:        "wonderfulPullspec",
@@ -190,15 +200,26 @@ func TestMUOReconciler(t *testing.T) {
 				operator.MuoManaged: operator.FlagTrue,
 				controllerPullSpec:  "wonderfulPullspec",
 			},
+			clusterVersion: "4.11.0",
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				expectedConfig := &config.MUODeploymentConfig{
-					Pullspec:        "wonderfulPullspec",
-					EnableConnected: false,
+					Pullspec:                     "wonderfulPullspec",
+					EnableConnected:              false,
+					SupportsPodSecurityAdmission: true,
 				}
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, expectedConfig).Return(nil)
 				md.EXPECT().IsReady(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
 			},
 			wantErr: "managed Upgrade Operator deployment timed out on Ready: timed out waiting for the condition",
+		},
+		{
+			name: "managed, could not parse cluster version fails",
+			flags: arov1alpha1.OperatorFlags{
+				operator.MuoEnabled: operator.FlagTrue,
+				operator.MuoManaged: operator.FlagTrue,
+				controllerPullSpec:  "wonderfulPullspec",
+			},
+			wantErr: `could not parse version ""`,
 		},
 		{
 			name: "managed, CreateOrUpdate() fails",
@@ -207,6 +228,7 @@ func TestMUOReconciler(t *testing.T) {
 				operator.MuoManaged: operator.FlagTrue,
 				controllerPullSpec:  "wonderfulPullspec",
 			},
+			clusterVersion: "4.10.0",
 			mocks: func(md *mock_deployer.MockDeployer, cluster *arov1alpha1.Cluster) {
 				md.EXPECT().CreateOrUpdate(gomock.Any(), cluster, gomock.AssignableToTypeOf(&config.MUODeploymentConfig{})).Return(errors.New("failed ensure"))
 			},
@@ -263,8 +285,24 @@ func TestMUOReconciler(t *testing.T) {
 					ACRDomain:     "acrtest.example.com",
 				},
 			}
+
+			cv := &configv1.ClusterVersion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "version",
+				},
+				Spec: configv1.ClusterVersionSpec{},
+				Status: configv1.ClusterVersionStatus{
+					History: []configv1.UpdateHistory{
+						{
+							State:   configv1.CompletedUpdate,
+							Version: tt.clusterVersion,
+						},
+					},
+				},
+			}
+
 			deployer := mock_deployer.NewMockDeployer(controller)
-			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(instance)
+			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(instance, cv)
 
 			if tt.pullsecret != "" {
 				clientBuilder = clientBuilder.WithObjects(&corev1.Secret{

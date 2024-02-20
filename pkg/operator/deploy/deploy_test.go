@@ -9,10 +9,12 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	configv1 "github.com/openshift/api/config/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
@@ -136,7 +138,9 @@ func TestCreateDeploymentData(t *testing.T) {
 		name                    string
 		mock                    func(*mock_env.MockInterface, *api.OpenShiftCluster)
 		operatorVersionOverride string
+		clusterVersion          string
 		expected                deploymentData
+		wantErr                 string
 	}{
 		{
 			name: "no image override, use default",
@@ -145,6 +149,7 @@ func TestCreateDeploymentData(t *testing.T) {
 					AROOperatorImage().
 					Return(operatorImageWithTag)
 			},
+			clusterVersion: "4.10.0",
 			expected: deploymentData{
 				Image:   operatorImageWithTag,
 				Version: operatorImageTag,
@@ -157,6 +162,7 @@ func TestCreateDeploymentData(t *testing.T) {
 					AROOperatorImage().
 					Return(operatorImageUntagged)
 			},
+			clusterVersion: "4.10.0",
 			expected: deploymentData{
 				Image:   operatorImageUntagged,
 				Version: "latest",
@@ -174,13 +180,29 @@ func TestCreateDeploymentData(t *testing.T) {
 
 				oc.Properties.OperatorVersion = "override"
 			},
+			clusterVersion: "4.10.0",
 			expected: deploymentData{
 				Image:   "docker.io/aro:override",
 				Version: "override",
 			},
 		},
+		{
+			name: "version supports pod security admission",
+			mock: func(env *mock_env.MockInterface, oc *api.OpenShiftCluster) {
+				env.EXPECT().
+					AROOperatorImage().
+					Return(operatorImageWithTag)
+			},
+			clusterVersion: "4.11.0",
+			expected: deploymentData{
+				Image:                        operatorImageWithTag,
+				Version:                      operatorImageTag,
+				SupportsPodSecurityAdmission: true,
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
@@ -190,12 +212,29 @@ func TestCreateDeploymentData(t *testing.T) {
 			oc := &api.OpenShiftCluster{Properties: api.OpenShiftClusterProperties{}}
 			tt.mock(env, oc)
 
-			o := operator{
-				oc:  oc,
-				env: env,
+			cv := &configv1.ClusterVersion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "version",
+				},
+				Spec: configv1.ClusterVersionSpec{},
+				Status: configv1.ClusterVersionStatus{
+					History: []configv1.UpdateHistory{
+						{
+							State:   configv1.CompletedUpdate,
+							Version: tt.clusterVersion,
+						},
+					},
+				},
 			}
 
-			deploymentData := o.createDeploymentData()
+			o := operator{
+				oc:     oc,
+				env:    env,
+				client: ctrlfake.NewClientBuilder().WithObjects(cv).Build(),
+			}
+
+			deploymentData, err := o.createDeploymentData(ctx)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 			if !reflect.DeepEqual(deploymentData, tt.expected) {
 				t.Errorf("actual deployment: %v, expected %v", deploymentData, tt.expected)
 			}
@@ -205,15 +244,17 @@ func TestCreateDeploymentData(t *testing.T) {
 
 func TestOperatorVersion(t *testing.T) {
 	type test struct {
-		name         string
-		oc           func() *api.OpenShiftClusterProperties
-		wantVersion  string
-		wantPullspec string
+		name           string
+		clusterVersion string
+		oc             func() *api.OpenShiftClusterProperties
+		wantVersion    string
+		wantPullspec   string
 	}
 
 	for _, tt := range []*test{
 		{
-			name: "default",
+			name:           "default",
+			clusterVersion: "4.10.0",
 			oc: func() *api.OpenShiftClusterProperties {
 				return &api.OpenShiftClusterProperties{}
 			},
@@ -221,7 +262,8 @@ func TestOperatorVersion(t *testing.T) {
 			wantPullspec: "defaultaroimagefromenv",
 		},
 		{
-			name: "overridden",
+			name:           "overridden",
+			clusterVersion: "4.10.0",
 			oc: func() *api.OpenShiftClusterProperties {
 				return &api.OpenShiftClusterProperties{
 					OperatorVersion: "v20220101.0",
@@ -232,6 +274,7 @@ func TestOperatorVersion(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
 			oc := tt.oc()
 
 			controller := gomock.NewController(t)
@@ -242,12 +285,28 @@ func TestOperatorVersion(t *testing.T) {
 			_env.EXPECT().AROOperatorImage().AnyTimes().Return("defaultaroimagefromenv")
 			_env.EXPECT().IsLocalDevelopmentMode().AnyTimes().Return(false)
 
-			o := &operator{
-				oc:  &api.OpenShiftCluster{Properties: *oc},
-				env: _env,
+			cv := &configv1.ClusterVersion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "version",
+				},
+				Spec: configv1.ClusterVersionSpec{},
+				Status: configv1.ClusterVersionStatus{
+					History: []configv1.UpdateHistory{
+						{
+							State:   configv1.CompletedUpdate,
+							Version: tt.clusterVersion,
+						},
+					},
+				},
 			}
 
-			staticResources, err := o.createObjects()
+			o := &operator{
+				oc:     &api.OpenShiftCluster{Properties: *oc},
+				env:    _env,
+				client: ctrlfake.NewClientBuilder().WithObjects(cv).Build(),
+			}
+
+			staticResources, err := o.createObjects(ctx)
 			if err != nil {
 				t.Error(err)
 			}
