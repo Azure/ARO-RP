@@ -42,7 +42,6 @@ import (
 	redhatopenshift20210901preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2021-09-01-preview/redhatopenshift"
 	redhatopenshift20220401 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2022-04-01/redhatopenshift"
 	redhatopenshift20230904 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2023-09-04/redhatopenshift"
-	redhatopenshift20231122 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2023-11-22/redhatopenshift"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
@@ -62,7 +61,6 @@ type Cluster struct {
 	openshiftclustersv20210901preview redhatopenshift20210901preview.OpenShiftClustersClient
 	openshiftclustersv20220401        redhatopenshift20220401.OpenShiftClustersClient
 	openshiftclustersv20230904        redhatopenshift20230904.OpenShiftClustersClient
-	openshiftclustersv20231122        redhatopenshift20231122.OpenShiftClustersClient
 	securitygroups                    network.SecurityGroupsClient
 	subnets                           network.SubnetsClient
 	routetables                       network.RouteTablesClient
@@ -118,7 +116,6 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		openshiftclustersv20210901preview: redhatopenshift20210901preview.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		openshiftclustersv20220401:        redhatopenshift20220401.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		openshiftclustersv20230904:        redhatopenshift20230904.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		openshiftclustersv20231122:        redhatopenshift20231122.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		securitygroups:                    network.NewSecurityGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		subnets:                           network.NewSubnetsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		routetables:                       network.NewRouteTablesClient(environment.Environment(), environment.SubscriptionID(), authorizer),
