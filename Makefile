@@ -15,6 +15,7 @@ AUTOREST_VERSION = 3.6.3
 AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
 GATEKEEPER_VERSION = v3.10.0
 GATEKEEPER_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/gatekeeper:$(GATEKEEPER_VERSION)
+GOTESTSUM = gotest.tools/gotestsum@v1.11.0
 
 ifneq ($(shell uname -s),Darwin)
     export CGO_CFLAGS=-Dgpgme_off_t=off_t
@@ -213,10 +214,10 @@ validate-fips:
 	hack/fips/validate-fips.sh ./aro
 
 unit-test-go:
-	go run gotest.tools/gotestsum@v1.9.0 --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
+	go run ${GOTESTSUM} --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
 
 unit-test-go-coverpkg:
-	go run gotest.tools/gotestsum@v1.9.0 --format pkgname --junitfile report.xml -- -coverpkg=./... -coverprofile=cover_coverpkg.out ./...
+	go run ${GOTESTSUM} --format pkgname --junitfile report.xml -- -coverpkg=./... -coverprofile=cover_coverpkg.out ./...
 
 lint-go:
 	hack/lint-go.sh
@@ -254,4 +255,7 @@ vendor:
 	# See comments in the script for background on why we need it
 	hack/update-go-module-dependencies.sh
 
-.PHONY: admin.kubeconfig aks.kubeconfig aro az clean client deploy dev-config.yaml discoverycache generate image-aro-multistage image-fluentbit image-proxy lint-go runlocal-rp proxy publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor build-all validate-go unit-test-go coverage-go validate-fips
+install-go-tools:
+	go install ${GOTESTSUM}
+
+.PHONY: admin.kubeconfig aks.kubeconfig aro az clean client deploy dev-config.yaml discoverycache generate image-aro-multistage image-fluentbit image-proxy lint-go runlocal-rp proxy publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor build-all validate-go unit-test-go coverage-go validate-fips install-go-tools
