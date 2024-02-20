@@ -233,7 +233,10 @@ test-python: pyenv az
 
 
 shared-cluster-login:
-	@oc login ${SHARED_CLUSTER_API} -u kubeadmin -p ${SHARED_CLUSTER_KUBEADMIN_PASSWORD}
+	az aro get-admin-kubeconfig \
+		--name ${SHARED_CLUSTER_CLUSTER_NAME} \
+		--resource-group ${SHARED_CLUSTER_RESOURCE_GROUP_NAME} \
+		--file admin.kubeconfig
 
 shared-cluster-create:
 	./hack/shared-cluster.sh create
