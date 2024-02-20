@@ -74,7 +74,7 @@ elif [[ $1 == create ]]; then
     echo "Adding tag to cluster..."
     # This tag stops the RG being cleaned up
     az tag create \
-      --resource-id "$CLUSTER_RESOURCE_GROUP_ID" \
+      --resource-id $CLUSTER_RESOURCE_GROUP_ID \
       --tags persist=true
 
 elif [[ $1 == "delete" ]]; then
