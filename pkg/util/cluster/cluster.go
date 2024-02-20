@@ -28,8 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	v20231122 "github.com/Azure/ARO-RP/pkg/api/v20231122"
-	mgmtredhatopenshift20231122 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2023-11-22/redhatopenshift"
+	v20230904 "github.com/Azure/ARO-RP/pkg/api/v20230904"
+	mgmtredhatopenshift20230904 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2023-09-04/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -41,6 +41,7 @@ import (
 	redhatopenshift20200430 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2020-04-30/redhatopenshift"
 	redhatopenshift20210901preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2021-09-01-preview/redhatopenshift"
 	redhatopenshift20220401 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2022-04-01/redhatopenshift"
+	redhatopenshift20230904 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2023-09-04/redhatopenshift"
 	redhatopenshift20231122 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2023-11-22/redhatopenshift"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
@@ -60,7 +61,7 @@ type Cluster struct {
 	openshiftclustersv20200430        redhatopenshift20200430.OpenShiftClustersClient
 	openshiftclustersv20210901preview redhatopenshift20210901preview.OpenShiftClustersClient
 	openshiftclustersv20220401        redhatopenshift20220401.OpenShiftClustersClient
-	openshiftclustersv20220904        redhatopenshift20231122.OpenShiftClustersClient
+	openshiftclustersv20230904        redhatopenshift20230904.OpenShiftClustersClient
 	openshiftclustersv20231122        redhatopenshift20231122.OpenShiftClustersClient
 	securitygroups                    network.SecurityGroupsClient
 	subnets                           network.SubnetsClient
@@ -116,7 +117,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		openshiftclustersv20200430:        redhatopenshift20200430.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		openshiftclustersv20210901preview: redhatopenshift20210901preview.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		openshiftclustersv20220401:        redhatopenshift20220401.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		openshiftclustersv20220904:        redhatopenshift20231122.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		openshiftclustersv20230904:        redhatopenshift20230904.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		openshiftclustersv20231122:        redhatopenshift20231122.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		securitygroups:                    network.NewSecurityGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		subnets:                           network.NewSubnetsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
@@ -142,9 +143,9 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 }
 
 func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName string, osClusterVersion string) error {
-	clusterGet, err := c.openshiftclustersv20231122.Get(ctx, vnetResourceGroup, clusterName)
+	clusterGet, err := c.openshiftclustersv20230904.Get(ctx, vnetResourceGroup, clusterName)
 	if err == nil {
-		if clusterGet.ProvisioningState == mgmtredhatopenshift20231122.Failed {
+		if clusterGet.ProvisioningState == mgmtredhatopenshift20230904.Failed {
 			return fmt.Errorf("cluster exists and is in failed provisioning state, please delete and retry")
 		}
 		c.log.Print("cluster already exists, skipping create")
@@ -503,19 +504,19 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
 	}
 
-	ext := api.APIs[v20231122.APIVersion].OpenShiftClusterConverter.ToExternal(&oc)
+	ext := api.APIs[v20230904.APIVersion].OpenShiftClusterConverter.ToExternal(&oc)
 	data, err := json.Marshal(ext)
 	if err != nil {
 		return err
 	}
 
-	ocExt := mgmtredhatopenshift20231122.OpenShiftCluster{}
+	ocExt := mgmtredhatopenshift20230904.OpenShiftCluster{}
 	err = json.Unmarshal(data, &ocExt)
 	if err != nil {
 		return err
 	}
 
-	return c.openshiftclustersv20231122.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, ocExt)
+	return c.openshiftclustersv20230904.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, ocExt)
 }
 
 func (c *Cluster) registerSubscription(ctx context.Context) error {
