@@ -1,6 +1,9 @@
 package clienthelper
 
 import (
+	"errors"
+
+	"github.com/go-test/deep"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,6 +40,8 @@ func TallyCountsAndKey(tally map[string]int) hookFunc {
 	}
 }
 
+// CompareTally will compare the two given tallies and return the differences
+// and an error if they are different.
 func CompareTally(expected map[string]int, actual map[string]int) ([]string, error) {
 	// If both are empty or nil, they match
 	if len(actual) == 0 && len(expected) == 0 {
@@ -51,4 +56,10 @@ func CompareTally(expected map[string]int, actual map[string]int) ([]string, err
 		actual = map[string]int{}
 	}
 
+	r := deep.Equal(expected, actual)
+	if len(r) != 0 {
+		return r, errors.New("tallies are not equal")
+	} else {
+		return nil, nil
+	}
 }
