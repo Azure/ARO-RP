@@ -15,8 +15,8 @@ check_env_set(){
   fi
 }
 
-check_env_set SHARED_CLUSTER_SHARED_CLUSTER_LOCATION
-check_env_set SHARED_CLUSTER_CLUSTER_NAME
+check_env_set SHARED_CLUSTER_LOCATION
+check_env_set SHARED_CLUSTER_NAME
 check_env_set SHARED_CLUSTER_RESOURCE_GROUP_NAME
 check_env_set SHARED_CLUSTER_CLUSTER_RESOURCE_GROUP_NAME
 
@@ -28,7 +28,7 @@ elif [[ $1 == create ]]; then
     echo "creating resource group and network"
     az group create \
     --name $SHARED_CLUSTER_RESOURCE_GROUP_NAME \
-    --location $SHARED_CLUSTER_SHARED_CLUSTER_LOCATION \
+    --location $SHARED_CLUSTER_LOCATION \
     --tags persist:true  # This tag stops the RG being cleaned up
 
     az network vnet create \
@@ -61,13 +61,13 @@ elif [[ $1 == create ]]; then
     az aro create \
       --resource-group $SHARED_CLUSTER_RESOURCE_GROUP_NAME \
       --cluster-resource-group $SHARED_CLUSTER_CLUSTER_RESOURCE_GROUP_NAME \
-      --name $SHARED_CLUSTER_CLUSTER_NAME \
+      --name $SHARED_CLUSTER_NAME \
       --vnet aro-vnet \
       --master-subnet master-subnet \
       --worker-subnet worker-subnet
 
     CLUSTER_RESOURCE_GROUP_ID=az aro show \
-      --name $SHARED_CLUSTER_CLUSTER_NAME \
+      --name $SHARED_CLUSTER_NAME \
       --resource-group $SHARED_CLUSTER_RESOURCE_GROUP_NAME \
       | jq .clusterProfile.resourceGroupId
 
@@ -79,7 +79,7 @@ elif [[ $1 == create ]]; then
 
 elif [[ $1 == "delete" ]]; then
   echo "Deleting cluster..."
-  az aro delete --name $SHARED_CLUSTER_CLUSTER_NAME -g $SHARED_CLUSTER_RESOURCE_GROUP_NAME --yes
+  az aro delete --name $SHARED_CLUSTER_NAME -g $SHARED_CLUSTER_RESOURCE_GROUP_NAME --yes
   echo "Deleting Vnet..."
   az network vnet delete --name aro-vnet -g $SHARED_CLUSTER_RESOURCE_GROUP_NAME
   echo "Deleting group..."
