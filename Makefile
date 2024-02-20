@@ -233,6 +233,7 @@ test-python: pyenv az
 
 
 shared-cluster-login:
+	RP_MODE="production" \
 	az aro get-admin-kubeconfig \
 		--name ${SHARED_CLUSTER_CLUSTER_NAME} \
 		--resource-group ${SHARED_CLUSTER_RESOURCE_GROUP_NAME} \
