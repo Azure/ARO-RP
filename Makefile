@@ -91,6 +91,13 @@ discoverycache:
 generate:
 	go generate ./...
 
+# TODO: This does not work outside of GOROOT. We should replace all usage of the
+# clientset with controller-runtime so we don't need to generate it.
+generate-operator-apiclient:
+	go run ./vendor/k8s.io/code-generator/cmd/client-gen --clientset-name versioned --input-base ./pkg/operator/apis --input aro.openshift.io/v1alpha1,preview.aro.openshift.io/v1alpha1 --output-package ./pkg/operator/clientset --go-header-file ./hack/licenses/boilerplate.go.txt
+	gofmt -s -w ./pkg/operator/clientset
+	go run ./vendor/golang.org/x/tools/cmd/goimports -local=github.com/Azure/ARO-RP -e -w ./pkg/operator/clientset ./pkg/operator/apis
+
 generate-guardrails:
 	cd pkg/operator/controllers/guardrails/policies && ./scripts/generate.sh > /dev/null
 
