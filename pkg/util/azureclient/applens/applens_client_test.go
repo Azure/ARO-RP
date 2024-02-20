@@ -7,7 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"testing"
@@ -352,7 +352,7 @@ func (p *pipelineVerifier) Do(req *policy.Request) (*http.Response, error) {
 	pr.method = req.Raw().Method
 	pr.url = req.Raw().URL
 	if req.Body() != nil {
-		readBody, _ := ioutil.ReadAll(req.Body())
+		readBody, _ := io.ReadAll(req.Body())
 		pr.body = string(readBody)
 	}
 	p.requests = append(p.requests, pr)

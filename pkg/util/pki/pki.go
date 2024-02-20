@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"sync"
 )
@@ -60,7 +60,7 @@ func FetchDataFromGetIssuerPki(url string) (*RootCAs, error) {
 	}
 
 	// Read in certs from endpoint
-	body, err := ioutil.ReadAll(response.Body)
+	body, err := io.ReadAll(response.Body)
 
 	if err != nil {
 		return nil, err
