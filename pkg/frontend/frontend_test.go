@@ -24,6 +24,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -52,7 +53,7 @@ func TestAdminReply(t *testing.T) {
 					Code: http.StatusNotFound,
 				},
 			},
-			wantStatusCode: http.StatusNotFound,
+			wantStatusCode: http.StatusAccepted,
 			wantBody: map[string]interface{}{
 				"error": map[string]interface{}{
 					"code":    "NotFound",
@@ -166,6 +167,82 @@ func TestAdminReply(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
+		})
+	}
+}
+
+func TestFrontendOperationResultLog(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		err      error
+		wantData logrus.Fields
+	}{
+		{
+			name: "Success Status Code",
+			err: &api.CloudError{
+				StatusCode: http.StatusNoContent,
+				CloudErrorBody: &api.CloudErrorBody{
+					Code:    api.CloudErrorCodeResourceNotFound,
+					Message: "This is not a real error",
+					Target:  "target",
+				},
+			},
+			wantData: logrus.Fields{
+				"LOGKIND":       "frontendqos",
+				"operationType": "method",
+				"resultType":    utillog.SuccessResultType,
+			},
+		},
+		{
+			name: "User Error Status Code",
+			err: &api.CloudError{
+				StatusCode: http.StatusBadRequest,
+				CloudErrorBody: &api.CloudErrorBody{
+					Code:    api.CloudErrorCodeResourceNotFound,
+					Message: "This is an user error result type",
+					Target:  "target",
+				},
+			},
+			wantData: logrus.Fields{
+				"LOGKIND":       "frontendqos",
+				"operationType": "method",
+				"resultType":    utillog.UserErrorResultType,
+			},
+		},
+		{
+			name: "Server Error Status Code",
+			err: &api.CloudError{
+				StatusCode: http.StatusInternalServerError,
+				CloudErrorBody: &api.CloudErrorBody{
+					Code:    api.CloudErrorCodeInternalServerError,
+					Message: "This is a server error result type",
+					Target:  "target",
+				},
+			},
+			wantData: logrus.Fields{
+				"LOGKIND":       "frontendqos",
+				"operationType": "method",
+				"resultType":    utillog.ServerErrorResultType,
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			//log := &logrus.Entry{}
+			h, log := testlog.New()
+
+			frontendOperationResultLog(log, "method", tt.err)
+
+			entry := h.LastEntry()
+			if entry == nil {
+				t.Fatal("Expected log entry, got nil")
+			}
+
+			for key, value := range tt.wantData {
+				if entry.Data[key] != value {
+					t.Errorf("Unexpected value for key %s, got %v, want %v", key, entry.Data[key], value)
+				}
+			}
+
 		})
 	}
 }
