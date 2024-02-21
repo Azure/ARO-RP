@@ -51,7 +51,7 @@ endif
 endif
 
 build-all:
-	go build ./pkg/... ./test/... ./hack/... ./cmd/...
+	go build ./...
 
 aro: check-release generate
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro
@@ -89,7 +89,7 @@ discoverycache:
 	$(MAKE) generate
 
 generate:
-	go generate -v -x ./...
+	go generate ./...
 
 # TODO: This does not work outside of GOROOT. We should replace all usage of the
 # clientset with controller-runtime so we don't need to generate it.
