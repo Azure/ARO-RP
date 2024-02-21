@@ -227,7 +227,6 @@ func TestFrontendOperationResultLog(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			//log := &logrus.Entry{}
 			h, log := testlog.New()
 
 			frontendOperationResultLog(log, "method", tt.err)
@@ -242,7 +241,6 @@ func TestFrontendOperationResultLog(t *testing.T) {
 					t.Errorf("Unexpected value for key %s, got %v, want %v", key, entry.Data[key], value)
 				}
 			}
-
 		})
 	}
 }
