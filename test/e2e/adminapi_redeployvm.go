@@ -64,7 +64,7 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 		// wait 1 minute - this will guarantee we pass the minimum (default) threshold of Node heartbeats (40 seconds)
 		Eventually(func(g Gomega, ctx context.Context) {
 			getFunc := clients.Kubernetes.CoreV1().Nodes().Get
-			node, _ := GetK8sObjectWithRetry(ctx, getFunc, *vm.Name, metav1.GetOptions{})
+			node := GetK8sObjectWithRetry(ctx, getFunc, *vm.Name, metav1.GetOptions{})
 
 			g.Expect(ready.NodeIsReady(node)).To(BeTrue())
 		}).WithContext(ctx).WithTimeout(10 * time.Minute).WithPolling(time.Minute).Should(Succeed())
@@ -118,7 +118,7 @@ func getNodeUptime(g Gomega, ctx context.Context, node string) (time.Time, error
 	By("waiting for uptime pod to move into the Succeeded phase")
 	g.Eventually(func(g Gomega, ctx context.Context) {
 		getFunc := clients.Kubernetes.CoreV1().Pods(namespace).Get
-		pod, _ := GetK8sObjectWithRetry(ctx, getFunc, podName, metav1.GetOptions{})
+		pod := GetK8sObjectWithRetry(ctx, getFunc, podName, metav1.GetOptions{})
 
 		g.Expect(pod.Status.Phase).To(Equal(corev1.PodSucceeded))
 	}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())

@@ -110,7 +110,7 @@ var _ = Describe("Disk encryption at rest", func() {
 		}
 
 		By("making sure the encrypted storage class is default")
-		sc, _ := GetK8sObjectWithRetry(
+		sc := GetK8sObjectWithRetry(
 			ctx, clients.Kubernetes.StorageV1().StorageClasses().Get, defaultStorageClass, metav1.GetOptions{},
 		)
 

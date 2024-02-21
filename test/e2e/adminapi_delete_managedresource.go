@@ -60,7 +60,7 @@ var _ = Describe("[Admin API] Delete managed resource action", func() {
 		// wait for ingress IP to be assigned as this indicate the service is ready
 		Eventually(func(g Gomega, ctx context.Context) {
 			getFunc := clients.Kubernetes.CoreV1().Services(namespace).Get
-			service, _ = GetK8sObjectWithRetry(ctx, getFunc, loadBalancerService.Name, metav1.GetOptions{})
+			service = GetK8sObjectWithRetry(ctx, getFunc, loadBalancerService.Name, metav1.GetOptions{})
 			g.Expect(service.Status.LoadBalancer.Ingress).To(HaveLen(1))
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 

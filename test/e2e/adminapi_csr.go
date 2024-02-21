@@ -72,7 +72,7 @@ func testCSRApproveOK(ctx context.Context, objName, namespace string) {
 
 	By("checking that the CSR was approved via Kubernetes API")
 	getFunc := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Get
-	testcsr, _ := GetK8sObjectWithRetry(ctx, getFunc, objName, metav1.GetOptions{})
+	testcsr := GetK8sObjectWithRetry(ctx, getFunc, objName, metav1.GetOptions{})
 
 	approved := false
 	for _, condition := range testcsr.Status.Conditions {
@@ -95,7 +95,7 @@ func testCSRMassApproveOK(ctx context.Context, namePrefix, namespace string, csr
 	By("checking that all CSRs were approved via Kubernetes API")
 	for i := 1; i < csrCount; i++ {
 		getFunc := clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Get
-		testcsr, _ := GetK8sObjectWithRetry(ctx, getFunc, namePrefix+strconv.Itoa(i), metav1.GetOptions{})
+		testcsr := GetK8sObjectWithRetry(ctx, getFunc, namePrefix+strconv.Itoa(i), metav1.GetOptions{})
 
 		approved := false
 		for _, condition := range testcsr.Status.Conditions {

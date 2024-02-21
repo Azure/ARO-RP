@@ -162,7 +162,7 @@ var _ = Describe("ARO Operator - Cluster Monitoring ConfigMap", func() {
 		getFunc := clients.Kubernetes.CoreV1().ConfigMaps("openshift-monitoring").Get
 
 		By("waiting for the ConfigMap to make sure it exists")
-		cm, _ = GetK8sObjectWithRetry(ctx, getFunc, "cluster-monitoring-config", metav1.GetOptions{})
+		cm = GetK8sObjectWithRetry(ctx, getFunc, "cluster-monitoring-config", metav1.GetOptions{})
 
 		By("unmarshalling the config from the ConfigMap data")
 		var configData monitoring.Config
@@ -706,7 +706,7 @@ var _ = Describe("ARO Operator - Cloud Provider Config ConfigMap", func() {
 
 		By("waiting for the ConfigMap to make sure it exists")
 		getFunc := clients.Kubernetes.CoreV1().ConfigMaps("openshift-config").Get
-		cm, _ := GetK8sObjectWithRetry(ctx, getFunc, "cloud-provider-config", metav1.GetOptions{})
+		cm := GetK8sObjectWithRetry(ctx, getFunc, "cloud-provider-config", metav1.GetOptions{})
 
 		By("waiting for disableOutboundSNAT to be true")
 		Eventually(func(g Gomega, ctx context.Context) {

@@ -188,7 +188,7 @@ func testConfigMapCreateOK(ctx context.Context, objName, namespace string) {
 	By("checking that the object was created via Kubernetes API")
 	getFunc := clients.Kubernetes.CoreV1().ConfigMaps(namespace).Get
 
-	cm, _ := GetK8sObjectWithRetry(ctx, getFunc, objName, metav1.GetOptions{})
+	cm := GetK8sObjectWithRetry(ctx, getFunc, objName, metav1.GetOptions{})
 
 	Expect(obj.Namespace).To(Equal(cm.Namespace))
 	Expect(obj.Name).To(Equal(cm.Name))
@@ -212,7 +212,7 @@ func testConfigMapGetOK(ctx context.Context, objName, namespace string, unrestri
 	By("comparing it to the actual object retrieved via Kubernetes API")
 	getFunc := clients.Kubernetes.CoreV1().ConfigMaps(namespace).Get
 
-	cm, _ := GetK8sObjectWithRetry(ctx, getFunc, objName, metav1.GetOptions{})
+	cm := GetK8sObjectWithRetry(ctx, getFunc, objName, metav1.GetOptions{})
 
 	Expect(obj.Namespace).To(Equal(cm.Namespace))
 	Expect(obj.Name).To(Equal(cm.Name))
@@ -252,7 +252,7 @@ func testConfigMapUpdateOK(ctx context.Context, objName, namespace string) {
 	By("checking that the object changed via Kubernetes API")
 	getFunc := clients.Kubernetes.CoreV1().ConfigMaps(namespace).Get
 
-	cm, _ := GetK8sObjectWithRetry(ctx, getFunc, objName, metav1.GetOptions{})
+	cm := GetK8sObjectWithRetry(ctx, getFunc, objName, metav1.GetOptions{})
 
 	Expect(cm.Namespace).To(Equal(namespace))
 	Expect(cm.Name).To(Equal(objName))
@@ -357,7 +357,7 @@ func testPodCreateOK(ctx context.Context, containerName, objName, namespace stri
 	By("checking that the pod was created via Kubernetes API")
 	getFunc := clients.Kubernetes.CoreV1().Pods(namespace).Get
 
-	pod, _ := GetK8sObjectWithRetry(ctx, getFunc, objName, metav1.GetOptions{})
+	pod := GetK8sObjectWithRetry(ctx, getFunc, objName, metav1.GetOptions{})
 
 	Expect(obj.Namespace).To(Equal(pod.Namespace))
 	Expect(obj.Name).To(Equal(pod.Name))

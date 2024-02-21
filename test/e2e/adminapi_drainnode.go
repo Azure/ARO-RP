@@ -72,7 +72,7 @@ func testCordonNodeOK(ctx context.Context, nodeName string) {
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 	By("checking that node was cordoned via Kubernetes API")
-	node, _ := GetK8sObjectWithRetry(ctx, clients.Kubernetes.CoreV1().Nodes().Get, nodeName, metav1.GetOptions{})
+	node := GetK8sObjectWithRetry(ctx, clients.Kubernetes.CoreV1().Nodes().Get, nodeName, metav1.GetOptions{})
 
 	Expect(node.Name).To(Equal(nodeName))
 	Expect(node.Spec.Unschedulable).Should(BeTrue())
@@ -89,7 +89,7 @@ func testUncordonNodeOK(ctx context.Context, nodeName string) {
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 	By("checking that node was uncordoned via Kubernetes API")
-	node, _ := GetK8sObjectWithRetry(ctx, clients.Kubernetes.CoreV1().Nodes().Get, nodeName, metav1.GetOptions{})
+	node := GetK8sObjectWithRetry(ctx, clients.Kubernetes.CoreV1().Nodes().Get, nodeName, metav1.GetOptions{})
 	Expect(node.Name).To(Equal(nodeName))
 	Expect(node.Spec.Unschedulable).Should(BeFalse())
 }

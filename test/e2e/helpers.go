@@ -36,12 +36,13 @@ type K8sDeleteFunc func(ctx context.Context, name string, options metav1.DeleteO
 // asserting there were no errors.
 func GetK8sObjectWithRetry[T kruntime.Object](
 	ctx context.Context, getFunc K8sGetFunc[T], name string, options metav1.GetOptions,
-) (result T, err error) {
+) (result T) {
+	var err error
 	Eventually(func(g Gomega, ctx context.Context) {
 		result, err = getFunc(ctx, name, options)
 		g.Expect(err).NotTo(HaveOccurred())
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
-	return
+	return result
 }
 
 // GetK8sPodLogsWithRetry gets the logs for the specified pod in the named namespace. It gets them with some
@@ -171,7 +172,7 @@ func (p Project) VerifyProjectIsReady(ctx context.Context) error {
 		}, metav1.CreateOptions{})
 
 	By("getting the relevant SA")
-	sa, _ := GetK8sObjectWithRetry(
+	sa := GetK8sObjectWithRetry(
 		ctx, p.cli.CoreV1().ServiceAccounts(p.Name).Get, "default", metav1.GetOptions{},
 	)
 
@@ -179,7 +180,7 @@ func (p Project) VerifyProjectIsReady(ctx context.Context) error {
 		return fmt.Errorf("default ServiceAccount does not have secrets")
 	}
 
-	project, _ := GetK8sObjectWithRetry(
+	project := GetK8sObjectWithRetry(
 		ctx, p.projectClient.ProjectV1().Projects().Get, p.Name, metav1.GetOptions{},
 	)
 	_, found := project.Annotations["openshift.io/sa.scc.uid-range"]
