@@ -450,7 +450,7 @@ func TestAttachNSGs(t *testing.T) {
 			subnet: subnet,
 		}
 
-		err := m._attachNSGs(ctx, 1*time.Millisecond)
+		err := m._attachNSGs(ctx, 1*time.Millisecond, 30*time.Second)
 		utilerror.AssertErrorMessage(t, err, tt.wantErr)
 	}
 }

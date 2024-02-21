@@ -256,11 +256,25 @@ func (m *manager) subnetsWithServiceEndpoint(ctx context.Context, serviceEndpoin
 	return subnets, nil
 }
 
+// attachNSGs attaches NSGs to the cluster subnets, if preconfigured NSG is not
+// enabled. This method is suitable for use with steps, and has default
+// timeout/polls set.
 func (m *manager) attachNSGs(ctx context.Context) error {
-	return m._attachNSGs(ctx, 3*time.Minute)
+	// Since we need to guard against the case where NSGs are not ready
+	// immediately after creation, we can have a relatively short retry period
+	// of 30s and timeout of 3m. These numbers were chosen via a
+	// highly-non-specific and data-adjacent process (picking them because they
+	// seemed decent enough).
+	//
+	// If we get the NSG not-ready error after 3 minutes, it's unusual enough
+	// that we should be raising it as an issue rather than tolerating it.
+	return m._attachNSGs(ctx, 3*time.Minute, 30*time.Second)
 }
 
-func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration) error {
+// _attachNSGs attaches NSGs to the cluster subnets, if preconfigured NSG is not
+// enabled. timeout and pollInterval are provided as arguments for testing
+// reasons.
+func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration, pollInterval time.Duration) error {
 	if m.doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG == api.PreconfiguredNSGEnabled {
 		return nil
 	}
@@ -272,7 +286,12 @@ func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration) error 
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	_ = wait.PollImmediateUntil(30*time.Second, func() (bool, error) {
+	// This polling function protects the case below where the NSG might not be
+	// ready to be referenced. We don't guard against trying to re-attach the
+	// NSG since the inner loop is tolerant of that, and since we are attaching
+	// the same NSG the only allowed failure case is when the NSG cannot be
+	// attached to begin with, so it shouldn't happen in practice.
+	_ = wait.PollImmediateUntil(pollInterval, func() (bool, error) {
 		var c bool
 		c, innerErr = func() (bool, error) {
 			for _, subnetID := range []string{
