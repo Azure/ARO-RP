@@ -53,7 +53,7 @@ func TestAdminReply(t *testing.T) {
 					Code: http.StatusNotFound,
 				},
 			},
-			wantStatusCode: http.StatusAccepted,
+			wantStatusCode: http.StatusNotFound,
 			wantBody: map[string]interface{}{
 				"error": map[string]interface{}{
 					"code":    "NotFound",
