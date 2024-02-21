@@ -83,7 +83,9 @@ func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus
 			err = s.auth.Rebuild()
 			return false, err // retry step
 		}
-		log.Printf("non-auth error, giving up: %v", err)
+		if err != nil {
+			log.Printf("non-auth error, giving up: %v", err)
+		}
 		return true, err
 	}, timeoutCtx.Done())
 

@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -242,11 +243,10 @@ func TestAttachNSGs(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tt := range []struct {
-		name       string
-		oc         *api.OpenShiftClusterDocument
-		mocks      func(*mock_subnet.MockManager)
-		wantResult bool
-		wantErr    string
+		name    string
+		oc      *api.OpenShiftClusterDocument
+		mocks   func(*mock_subnet.MockManager)
+		wantErr string
 	}{
 		{
 			name: "Success - NSG attached to both subnets",
@@ -287,7 +287,6 @@ func TestAttachNSGs(t *testing.T) {
 					},
 				}).Return(nil)
 			},
-			wantResult: true,
 		},
 		{
 			name: "Success - preconfigured NSG enabled",
@@ -313,8 +312,7 @@ func TestAttachNSGs(t *testing.T) {
 					},
 				},
 			},
-			mocks:      func(subnet *mock_subnet.MockManager) {},
-			wantResult: true,
+			mocks: func(subnet *mock_subnet.MockManager) {},
 		},
 		{
 			name: "Failure - unable to get a subnet",
@@ -340,8 +338,7 @@ func TestAttachNSGs(t *testing.T) {
 			mocks: func(subnet *mock_subnet.MockManager) {
 				subnet.EXPECT().Get(ctx, "masterSubnetID").Return(&mgmtnetwork.Subnet{}, fmt.Errorf("subnet not found"))
 			},
-			wantResult: false,
-			wantErr:    "subnet not found",
+			wantErr: "subnet not found",
 		},
 		{
 			name: "Failure - NSG already attached to a subnet",
@@ -373,8 +370,7 @@ func TestAttachNSGs(t *testing.T) {
 					},
 				}, nil)
 			},
-			wantResult: false,
-			wantErr:    "400: InvalidLinkedVNet: : The provided subnet 'masterSubnetID' is invalid: must not have a network security group attached.",
+			wantErr: "400: InvalidLinkedVNet: : The provided subnet 'masterSubnetID' is invalid: must not have a network security group attached.",
 		},
 		{
 			name: "Failure - failed to CreateOrUpdate subnet because NSG not yet ready for use",
@@ -407,7 +403,6 @@ func TestAttachNSGs(t *testing.T) {
 					},
 				}).Return(fmt.Errorf("Some random stuff followed by the important part that we're trying to match: Resource /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/aro-12345678/providers/Microsoft.Network/networkSecurityGroups/infra-nsg referenced by resource masterSubnetID was not found. and here's some more stuff that's at the end past the important part"))
 			},
-			wantResult: false,
 		},
 		{
 			name: "Failure - failed to CreateOrUpdate subnet with arbitrary error",
@@ -440,8 +435,7 @@ func TestAttachNSGs(t *testing.T) {
 					},
 				}).Return(fmt.Errorf("I'm an arbitrary error here to make life harder"))
 			},
-			wantResult: false,
-			wantErr:    "I'm an arbitrary error here to make life harder",
+			wantErr: "I'm an arbitrary error here to make life harder",
 		},
 	} {
 		controller := gomock.NewController(t)
@@ -456,10 +450,7 @@ func TestAttachNSGs(t *testing.T) {
 			subnet: subnet,
 		}
 
-		result, err := m.attachNSGs(ctx)
-		if result != tt.wantResult {
-			t.Errorf("Got %v, wanted %v", result, tt.wantResult)
-		}
+		err := m._attachNSGs(ctx, 1*time.Millisecond, 30*time.Second)
 		utilerror.AssertErrorMessage(t, err, tt.wantErr)
 	}
 }

@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -17,6 +18,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
@@ -254,65 +256,103 @@ func (m *manager) subnetsWithServiceEndpoint(ctx context.Context, serviceEndpoin
 	return subnets, nil
 }
 
-func (m *manager) attachNSGs(ctx context.Context) (bool, error) {
+// attachNSGs attaches NSGs to the cluster subnets, if preconfigured NSG is not
+// enabled. This method is suitable for use with steps, and has default
+// timeout/polls set.
+func (m *manager) attachNSGs(ctx context.Context) error {
+	// Since we need to guard against the case where NSGs are not ready
+	// immediately after creation, we can have a relatively short retry period
+	// of 30s and timeout of 3m. These numbers were chosen via a
+	// highly-non-specific and data-adjacent process (picking them because they
+	// seemed decent enough).
+	//
+	// If we get the NSG not-ready error after 3 minutes, it's unusual enough
+	// that we should be raising it as an issue rather than tolerating it.
+	return m._attachNSGs(ctx, 3*time.Minute, 30*time.Second)
+}
+
+// _attachNSGs attaches NSGs to the cluster subnets, if preconfigured NSG is not
+// enabled. timeout and pollInterval are provided as arguments for testing
+// reasons.
+func (m *manager) _attachNSGs(ctx context.Context, timeout time.Duration, pollInterval time.Duration) error {
 	if m.doc.OpenShiftCluster.Properties.NetworkProfile.PreconfiguredNSG == api.PreconfiguredNSGEnabled {
-		return true, nil
+		return nil
 	}
+	var innerErr error
+
 	workerProfiles, _ := api.GetEnrichedWorkerProfiles(m.doc.OpenShiftCluster.Properties)
 	workerSubnetId := workerProfiles[0].SubnetID
 
-	for _, subnetID := range []string{
-		m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
-		workerSubnetId,
-	} {
-		m.log.Printf("attaching network security group to subnet %s", subnetID)
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 
-		// TODO: there is probably an undesirable race condition here - check if etags can help.
+	// This polling function protects the case below where the NSG might not be
+	// ready to be referenced. We don't guard against trying to re-attach the
+	// NSG since the inner loop is tolerant of that, and since we are attaching
+	// the same NSG the only allowed failure case is when the NSG cannot be
+	// attached to begin with, so it shouldn't happen in practice.
+	_ = wait.PollImmediateUntil(pollInterval, func() (bool, error) {
+		var c bool
+		c, innerErr = func() (bool, error) {
+			for _, subnetID := range []string{
+				m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
+				workerSubnetId,
+			} {
+				m.log.Printf("attaching network security group to subnet %s", subnetID)
+				// TODO: there is probably an undesirable race condition here - check if etags can help.
 
-		s, err := m.subnet.Get(ctx, subnetID)
-		if err != nil {
-			return false, err
-		}
+				// We use the outer context, not the timeout context, as we do not want
+				// to time out the condition function itself, only stop retrying once
+				// timeoutCtx's timeout has fired.
+				s, err := m.subnet.Get(ctx, subnetID)
+				if err != nil {
+					return false, err
+				}
 
-		if s.SubnetPropertiesFormat == nil {
-			s.SubnetPropertiesFormat = &mgmtnetwork.SubnetPropertiesFormat{}
-		}
+				if s.SubnetPropertiesFormat == nil {
+					s.SubnetPropertiesFormat = &mgmtnetwork.SubnetPropertiesFormat{}
+				}
 
-		nsgID, err := apisubnet.NetworkSecurityGroupID(m.doc.OpenShiftCluster, subnetID)
-		if err != nil {
-			return false, err
-		}
+				nsgID, err := apisubnet.NetworkSecurityGroupID(m.doc.OpenShiftCluster, subnetID)
+				if err != nil {
+					return false, err
+				}
 
-		// Sometimes we get into the race condition between external services modifying
-		// subnets and our validation code. We try to catch this early, but
-		// these errors is propagated to make the user-facing error more clear incase
-		// modification happened after we ran validation code and we lost the race
-		if s.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
-			if strings.EqualFold(*s.SubnetPropertiesFormat.NetworkSecurityGroup.ID, nsgID) {
-				continue
+				// Sometimes we get into the race condition between external services modifying
+				// subnets and our validation code. We try to catch this early, but
+				// these errors is propagated to make the user-facing error more clear incase
+				// modification happened after we ran validation code and we lost the race
+				if s.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
+					if strings.EqualFold(*s.SubnetPropertiesFormat.NetworkSecurityGroup.ID, nsgID) {
+						continue
+					}
+
+					return false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided subnet '%s' is invalid: must not have a network security group attached.", subnetID)
+				}
+
+				s.SubnetPropertiesFormat.NetworkSecurityGroup = &mgmtnetwork.SecurityGroup{
+					ID: to.StringPtr(nsgID),
+				}
+
+				// Because we attempt to attach the NSG immediately after the base resource deployment
+				// finishes, the NSG is sometimes not yet ready to be referenced and used, causing
+				// an error to occur here. So if this particular error occurs, return nil to retry.
+				// But if some other type of error occurs, just return that error.
+				err = m.subnet.CreateOrUpdate(ctx, subnetID, s)
+				if err != nil {
+					if nsgNotReadyErrorRegex.MatchString(err.Error()) {
+						return false, nil
+					}
+					return false, err
+				}
 			}
+			return true, nil
+		}()
 
-			return false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided subnet '%s' is invalid: must not have a network security group attached.", subnetID)
-		}
+		return c, innerErr
+	}, timeoutCtx.Done())
 
-		s.SubnetPropertiesFormat.NetworkSecurityGroup = &mgmtnetwork.SecurityGroup{
-			ID: to.StringPtr(nsgID),
-		}
-
-		// Because we attempt to attach the NSG immediately after the base resource deployment
-		// finishes, the NSG is sometimes not yet ready to be referenced and used, causing
-		// an error to occur here. So if this particular error occurs, return nil to retry.
-		// But if some other type of error occurs, just return that error.
-		err = m.subnet.CreateOrUpdate(ctx, subnetID, s)
-		if err != nil {
-			if nsgNotReadyErrorRegex.MatchString(err.Error()) {
-				return false, nil
-			}
-			return false, err
-		}
-	}
-
-	return true, nil
+	return innerErr
 }
 
 func (m *manager) setMasterSubnetPolicies(ctx context.Context) error {
