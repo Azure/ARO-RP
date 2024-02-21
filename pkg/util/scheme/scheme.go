@@ -24,7 +24,6 @@ import (
 	appsv1defaults "k8s.io/kubernetes/pkg/apis/apps/v1"
 	corev1defaults "k8s.io/kubernetes/pkg/apis/core/v1"
 	rbacv1defaults "k8s.io/kubernetes/pkg/apis/rbac/v1"
-	azureproviderv1beta1 "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aropreviewv1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/preview.aro.openshift.io/v1alpha1"
@@ -49,13 +48,6 @@ func init() {
 	utilruntime.Must(monitoringv1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(operatorv1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(cloudcredentialv1.AddToScheme(scheme.Scheme))
-	// AzureMachineProviderSpec is not registered by default
-	scheme.Scheme.AddKnownTypes(machinev1beta1.GroupVersion, &machinev1beta1.AzureMachineProviderSpec{})
-	// AzureMachineProviderSpec type has been deleted from sigs.k8s.io/cluster-api-provider-azure.
-	// Now it is located in github.com/openshift/api and has another API Group.
-	// In order to guarantee backward compatibility, we need to add this type to the scheme
-	// under both API Groups
-	scheme.Scheme.AddKnownTypes(azureproviderv1beta1.SchemeGroupVersion, &machinev1beta1.AzureMachineProviderSpec{})
 	utilruntime.Must(hivev1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(imageregistryv1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(templatesv1.AddToScheme(scheme.Scheme))
