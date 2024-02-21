@@ -78,11 +78,11 @@ type OpenShiftClusterProperties struct {
 type ProvisioningState string
 
 // ProvisioningState constants.
-// TODO: ProvisioningStateCancelled is included to pass upstream CI. It is currently unused in ARO.
+// TODO: ProvisioningStateCanceled is included to pass upstream CI. It is currently unused in ARO.
 const (
 	ProvisioningStateCreating      ProvisioningState = "Creating"
 	ProvisioningStateUpdating      ProvisioningState = "Updating"
-	ProvisioningStateCancelled     ProvisioningState = "Cancelled"
+	ProvisioningStateCanceled      ProvisioningState = "Canceled"
 	ProvisioningStateAdminUpdating ProvisioningState = "AdminUpdating"
 	ProvisioningStateDeleting      ProvisioningState = "Deleting"
 	ProvisioningStateSucceeded     ProvisioningState = "Succeeded"
