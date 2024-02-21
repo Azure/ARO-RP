@@ -8,6 +8,7 @@ yaml-files:
 ignore: |
     vendor/
     *aro.openshift.io*.yaml
+    pkg/operator/deploy/staticresources/
 
 rules:
   braces: enable

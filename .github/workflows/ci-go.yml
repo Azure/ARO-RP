@@ -11,37 +11,44 @@ on:
 permissions:
   contents: read
 
-env:
-  GOFLAGS: -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
-
 jobs:
   ci-from-docker:
     runs-on: ubuntu-latest
+    container:
+      image: registry.access.redhat.com/ubi8/go-toolset:1.18.10
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-
-    - name: Build from buildah
-      uses: redhat-actions/buildah-build@v2
-      with:
-        image: test-image
-        tags: ${{ github.sha }}
-        context: .
-        containerfiles: ./Dockerfile.ci
-        build-args: REGISTRY=registry.access.redhat.com
+    - name: Install Go runtime deps
+      run: |
+        make install-go-tools
+    - name: Build all
+      run: |
+        make build-all
+    - name: Run unit tests
+      run: |
+        make unit-test-go
 
   vendor-check:
     runs-on: ubuntu-latest
+    container:
+      image: registry.access.redhat.com/ubi8/go-toolset:1.20.10
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version-file: go.mod
-
     - run: |
         go mod vendor
         go mod tidy -compat=1.18
+        hack/ci-utils/isClean.sh
+
+  generate-check:
+    runs-on: ubuntu-latest
+    container:
+      image: registry.access.redhat.com/ubi8/go-toolset:1.18.10
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Run make generate
+      run: |
+        make generate
         hack/ci-utils/isClean.sh
