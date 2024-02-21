@@ -79,8 +79,6 @@ linters-settings:
         alias: coreosarch
       - pkg: github.com/googleapis/gnostic/openapiv2
         alias: openapi_v2
-      - pkg: github.com/openshift/console-operator/pkg/api
-        alias: consoleapi
       - pkg: github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1
         alias: machinev1beta1
       - pkg: github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned
@@ -127,8 +125,6 @@ linters-settings:
         alias: clientcmdv1
       - pkg: k8s.io/client-go/tools/metrics
         alias: kmetrics
-      - pkg: sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1
-        alias: azureproviderv1beta1
       - pkg: sigs.k8s.io/controller-runtime
         alias: ctrl
       - pkg: github.com/openshift/hive/pkg/client/clientset/versioned
