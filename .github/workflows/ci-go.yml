@@ -38,7 +38,7 @@ jobs:
       uses: actions/checkout@v4
     - run: |
         go mod vendor
-        go mod tidy -compat=1.18
+        go mod tidy -compat=1.20
         hack/ci-utils/isClean.sh
 
   generate-check:
