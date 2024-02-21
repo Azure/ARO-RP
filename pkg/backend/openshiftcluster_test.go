@@ -365,7 +365,7 @@ func TestAsyncOperationResultLog(t *testing.T) {
 			},
 			wantData: logrus.Fields{
 				"LOGKIND":       "asyncqos",
-				"operationType": "method",
+				"operationType": "Succeeded",
 				"resultType":    utillog.SuccessResultType,
 			},
 		},
@@ -382,7 +382,7 @@ func TestAsyncOperationResultLog(t *testing.T) {
 			},
 			wantData: logrus.Fields{
 				"LOGKIND":       "asyncqos",
-				"operationType": "method",
+				"operationType": "Failed",
 				"resultType":    utillog.UserErrorResultType,
 			},
 		},
@@ -399,7 +399,7 @@ func TestAsyncOperationResultLog(t *testing.T) {
 			},
 			wantData: logrus.Fields{
 				"LOGKIND":       "asyncqos",
-				"operationType": "method",
+				"operationType": "Failed",
 				"resultType":    utillog.ServerErrorResultType,
 			},
 		},
