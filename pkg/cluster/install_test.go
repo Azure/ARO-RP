@@ -109,23 +109,23 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logClusterVersion:.*"name": "version"`),
+					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logClusterVersion-fm:.*"name": "version"`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logNodes:.*"name": "node"`),
+					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logNodes-fm:.*"name": "node"`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logClusterOperators:.*"name": "operator"`),
+					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logClusterOperators-fm:.*"name": "operator"`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logIngressControllers:.*"name": "ingress-controller"`),
+					"msg":   gomega.MatchRegexp(`(?s)pkg/cluster.\(\*manager\).logIngressControllers-fm:.*"name": "ingress-controller"`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`pkg/cluster/failurediagnostics.(*manager).LogAzureInformation: vmclient missing`),
+					"msg":   gomega.Equal(`pkg/cluster/failurediagnostics.(*manager).LogAzureInformation-fm: vmclient missing`),
 				},
 			},
 			kubernetescli: fake.NewSimpleClientset(node),
@@ -153,19 +153,19 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`pkg/cluster.(*manager).logNodes: null`),
+					"msg":   gomega.Equal(`pkg/cluster.(*manager).logNodes-fm: null`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`pkg/cluster.(*manager).logClusterOperators: null`),
+					"msg":   gomega.Equal(`pkg/cluster.(*manager).logClusterOperators-fm: null`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`pkg/cluster.(*manager).logIngressControllers: null`),
+					"msg":   gomega.Equal(`pkg/cluster.(*manager).logIngressControllers-fm: null`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`pkg/cluster/failurediagnostics.(*manager).LogAzureInformation: vmclient missing`),
+					"msg":   gomega.Equal(`pkg/cluster/failurediagnostics.(*manager).LogAzureInformation-fm: vmclient missing`),
 				},
 			},
 			kubernetescli: fake.NewSimpleClientset(),
