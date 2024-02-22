@@ -5,7 +5,9 @@ package storage
 
 import (
 	"context"
+	"io"
 	"net/url"
+	"strings"
 	"time"
 
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
@@ -17,8 +19,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 )
 
+type BlobStorageClient interface {
+	Get(uri string) (io.ReadCloser, error)
+	GetContainerReference(name string) *azstorage.Container
+}
+
 type Manager interface {
-	BlobService(ctx context.Context, resourceGroup, account string, p mgmtstorage.Permissions, r mgmtstorage.SignedResourceTypes) (*azstorage.BlobStorageClient, error)
+	BlobService(ctx context.Context, resourceGroup, account string, p mgmtstorage.Permissions, r mgmtstorage.SignedResourceTypes) (BlobStorageClient, error)
 }
 
 type manager struct {
@@ -33,7 +40,7 @@ func NewManager(env env.Core, subscriptionID string, authorizer autorest.Authori
 	}
 }
 
-func (m *manager) BlobService(ctx context.Context, resourceGroup, account string, p mgmtstorage.Permissions, r mgmtstorage.SignedResourceTypes) (*azstorage.BlobStorageClient, error) {
+func (m *manager) BlobService(ctx context.Context, resourceGroup, account string, p mgmtstorage.Permissions, r mgmtstorage.SignedResourceTypes) (BlobStorageClient, error) {
 	t := time.Now().UTC().Truncate(time.Second)
 	res, err := m.storageAccounts.ListAccountSAS(ctx, resourceGroup, account, mgmtstorage.AccountSasParameters{
 		Services:               mgmtstorage.B,
@@ -54,5 +61,22 @@ func (m *manager) BlobService(ctx context.Context, resourceGroup, account string
 
 	blobcli := azstorage.NewAccountSASClient(account, v, (*m.env.Environment()).Environment).GetBlobService()
 
-	return &blobcli, nil
+	return &wrappedStorageClient{&blobcli}, nil
+}
+
+type wrappedStorageClient struct {
+	client *azstorage.BlobStorageClient
+}
+
+func (c *wrappedStorageClient) GetContainerReference(name string) *azstorage.Container {
+	return c.client.GetContainerReference(name)
+}
+
+func (c *wrappedStorageClient) Get(uri string) (io.ReadCloser, error) {
+	parts := strings.Split(uri, "/")
+
+	container := c.client.GetContainerReference(parts[1])
+	b := container.GetBlobReference(parts[2])
+
+	return b.Get(nil)
 }
