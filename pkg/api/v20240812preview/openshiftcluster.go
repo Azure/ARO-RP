@@ -82,7 +82,7 @@ type ProvisioningState string
 const (
 	ProvisioningStateCreating      ProvisioningState = "Creating"
 	ProvisioningStateUpdating      ProvisioningState = "Updating"
-	ProvisioningStateCancelled     ProvisioningState = "Cancelled"
+	ProvisioningStateCancelled     ProvisioningState = "Canceled"
 	ProvisioningStateAdminUpdating ProvisioningState = "AdminUpdating"
 	ProvisioningStateDeleting      ProvisioningState = "Deleting"
 	ProvisioningStateSucceeded     ProvisioningState = "Succeeded"
