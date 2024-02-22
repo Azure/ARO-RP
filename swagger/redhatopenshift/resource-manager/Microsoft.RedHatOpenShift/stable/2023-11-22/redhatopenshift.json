@@ -2291,7 +2291,11 @@
         "Disabled",
         "Enabled"
       ],
-      "type": "string"
+      "type": "string",
+      "x-ms-enum": {
+        "name": "PreconfiguredNSG",
+        "modelAsString": true
+      }
     },
     "ProvisioningState": {
       "description": "ProvisioningState represents a provisioning state.",
@@ -2304,7 +2308,11 @@
         "Succeeded",
         "Updating"
       ],
-      "type": "string"
+      "type": "string",
+      "x-ms-enum": {
+        "name": "ProvisioningState",
+        "modelAsString": true
+      }
     },
     "Secret": {
       "description": "Secret represents a secret.",
