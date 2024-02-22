@@ -11,6 +11,43 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func TestMapStatusCodeToResultType(t *testing.T) {
+	for _, tt := range []struct {
+		name           string
+		statusCode     int
+		expectedResult ResultType
+	}{
+		{
+			name:           "200 -> Success",
+			statusCode:     200,
+			expectedResult: SuccessResultType,
+		},
+		{
+			name:           "300 -> User Error",
+			statusCode:     300,
+			expectedResult: UserErrorResultType,
+		},
+		{
+			name:           "400 -> User Error",
+			statusCode:     400,
+			expectedResult: UserErrorResultType,
+		},
+		{
+			name:           "500 -> Server Error",
+			statusCode:     500,
+			expectedResult: ServerErrorResultType,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if MapStatusCodeToResultType(tt.statusCode) != tt.expectedResult {
+				t.Error(tt.expectedResult + " found. Expected " + tt.expectedResult)
+
+			}
+
+		})
+	}
+}
+
 func TestEnrichWithPath(t *testing.T) {
 	for _, tt := range []struct {
 		name     string
