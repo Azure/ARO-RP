@@ -125,7 +125,7 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`github.com/Azure/ARO-RP/pkg/cluster/failurediagnostics.(*manager).LogAzureInformation-fm: null`),
+					"msg":   gomega.Equal(`pkg/cluster/failurediagnostics.(*manager).LogAzureInformation: vmclient missing`),
 				},
 			},
 			kubernetescli: fake.NewSimpleClientset(node),
@@ -165,7 +165,7 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`github.com/Azure/ARO-RP/pkg/cluster/failurediagnostics.(*manager).LogAzureInformation-fm: null`),
+					"msg":   gomega.Equal(`pkg/cluster/failurediagnostics.(*manager).LogAzureInformation: vmclient missing`),
 				},
 			},
 			kubernetescli: fake.NewSimpleClientset(),
