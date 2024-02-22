@@ -29,7 +29,7 @@ func FriendlyName(f interface{}) string {
 
 // FriendlyName returns a "friendly" stringified name of the given func.
 func ShortFriendlyName(f interface{}) string {
-	return strings.TrimSuffix(strings.TrimPrefix(FriendlyName(f), "github.com/Azure/ARO-RP/"), "-fm")
+	return strings.TrimPrefix(FriendlyName(f), "github.com/Azure/ARO-RP/")
 }
 
 func shortName(fullName string) string {
