@@ -794,7 +794,7 @@ func NewOpenShiftClusterListPage(cur OpenShiftClusterList, getNextPage func(cont
 
 // OpenShiftClusterProperties openShiftClusterProperties represents an OpenShift cluster's properties.
 type OpenShiftClusterProperties struct {
-	// ProvisioningState - The cluster provisioning state. Possible values include: 'AdminUpdating', 'Cancelled', 'Creating', 'Deleting', 'Failed', 'Succeeded', 'Updating'
+	// ProvisioningState - The cluster provisioning state. Possible values include: 'AdminUpdating', 'Canceled', 'Creating', 'Deleting', 'Failed', 'Succeeded', 'Updating'
 	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
 	// ClusterProfile - The cluster profile.
 	ClusterProfile *ClusterProfile `json:"clusterProfile,omitempty"`
