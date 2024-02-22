@@ -41,9 +41,7 @@ func TestMapStatusCodeToResultType(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if MapStatusCodeToResultType(tt.statusCode) != tt.expectedResult {
 				t.Error(tt.expectedResult + " found. Expected " + tt.expectedResult)
-
 			}
-
 		})
 	}
 }
