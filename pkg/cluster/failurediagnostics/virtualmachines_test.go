@@ -11,6 +11,9 @@ import (
 	"strings"
 	"testing"
 
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/go-test/deep"
 	"github.com/golang/mock/gomock"
 	"github.com/onsi/gomega"
@@ -21,9 +24,6 @@ import (
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	mock_storage "github.com/Azure/ARO-RP/pkg/util/mocks/storage"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
-	"github.com/Azure/go-autorest/autorest/to"
 )
 
 func TestVirtualMachines(t *testing.T) {
