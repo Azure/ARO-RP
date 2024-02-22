@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -22,10 +23,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	mock_cluster "github.com/Azure/ARO-RP/pkg/util/mocks/cluster"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	"github.com/Azure/ARO-RP/test/util/deterministicuuid"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 	"github.com/Azure/ARO-RP/test/util/testliveconfig"
 )
 
@@ -337,6 +340,85 @@ func TestBackendTry(t *testing.T) {
 			errs := c.CheckOpenShiftClusters(clientOpenShiftClusters)
 			for _, err := range errs {
 				t.Error(err)
+			}
+		})
+	}
+}
+
+func TestAsyncOperationResultLog(t *testing.T) {
+	for _, tt := range []struct {
+		name                     string
+		initialProvisioningState api.ProvisioningState
+		backendErr               error
+		wantData                 logrus.Fields
+	}{
+		{
+			name:                     "Success Status Code",
+			initialProvisioningState: api.ProvisioningStateSucceeded,
+			backendErr: &api.CloudError{
+				StatusCode: http.StatusNoContent,
+				CloudErrorBody: &api.CloudErrorBody{
+					Code:    api.CloudErrorCodeResourceNotFound,
+					Message: "This is not a real error",
+					Target:  "target",
+				},
+			},
+			wantData: logrus.Fields{
+				"LOGKIND":       "asyncqos",
+				"operationType": "Succeeded",
+				"resultType":    utillog.SuccessResultType,
+			},
+		},
+		{
+			name:                     "User Error Status Code",
+			initialProvisioningState: api.ProvisioningStateFailed,
+			backendErr: &api.CloudError{
+				StatusCode: http.StatusBadRequest,
+				CloudErrorBody: &api.CloudErrorBody{
+					Code:    api.CloudErrorCodeResourceNotFound,
+					Message: "This is an user error result type",
+					Target:  "target",
+				},
+			},
+			wantData: logrus.Fields{
+				"LOGKIND":       "asyncqos",
+				"operationType": "Failed",
+				"resultType":    utillog.UserErrorResultType,
+			},
+		},
+		{
+			name:                     "Server Error Status Code",
+			initialProvisioningState: api.ProvisioningStateFailed,
+			backendErr: &api.CloudError{
+				StatusCode: http.StatusInternalServerError,
+				CloudErrorBody: &api.CloudErrorBody{
+					Code:    api.CloudErrorCodeInternalServerError,
+					Message: "This is a server error result type",
+					Target:  "target",
+				},
+			},
+			wantData: logrus.Fields{
+				"LOGKIND":       "asyncqos",
+				"operationType": "Failed",
+				"resultType":    utillog.ServerErrorResultType,
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			h, log := testlog.New()
+
+			ocb := &openShiftClusterBackend{}
+			ocb.asyncOperationResultLog(log, tt.initialProvisioningState, tt.backendErr)
+
+			entry := h.LastEntry()
+			if entry == nil {
+				t.Fatal("Expected log entry, got nil")
+			}
+
+			for key, value := range tt.wantData {
+				if entry.Data[key] != value {
+					t.Errorf("Unexpected value for key %s, got %v, want %v", key, entry.Data[key], value)
+				}
 			}
 		})
 	}
