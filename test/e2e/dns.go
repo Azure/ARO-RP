@@ -39,6 +39,8 @@ const (
 )
 
 var _ = Describe("ARO cluster DNS", func() {
+	BeforeEach(skipIfNotInDevelopmentEnv)
+
 	It("must not be adversely affected by Azure host servicing", func(ctx context.Context) {
 		By("creating a test namespace")
 		testNamespace := fmt.Sprintf("test-e2e-%d", GinkgoParallelProcess())
