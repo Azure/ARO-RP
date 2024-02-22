@@ -7,7 +7,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/base64"
-	"strings"
+	"fmt"
 
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
 
@@ -15,42 +15,57 @@ import (
 )
 
 func (m *manager) LogAzureInformation(ctx context.Context) (interface{}, error) {
+	items := make([]interface{}, 0)
+
 	if m.virtualMachines == nil {
-		return nil, nil
+		items = append(items, "vmclient missing")
+		return items, nil
 	}
 
-	items := make([]interface{}, 0)
 	resourceGroupName := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	vms, err := m.virtualMachines.List(ctx, resourceGroupName)
 	if err != nil {
-		items = append(items, err)
+		items = append(items, fmt.Sprintf("vm listing error: %s", err))
+		return items, nil
+	}
+
+	if len(vms) == 0 {
+		items = append(items, "no vms found")
 		return items, nil
 	}
 
 	consoleURIs := make([][]string, 0)
-
 	for _, v := range vms {
-		items = append(items, v)
-		if v.InstanceView != nil && v.InstanceView.BootDiagnostics != nil && v.InstanceView.BootDiagnostics.SerialConsoleLogBlobURI != nil {
+		j, err := v.MarshalJSON()
+		if err != nil {
+			items = append(items, fmt.Sprintf("vm marshalling error: %s", err))
+		} else {
+			vmName := "<unknown>"
+			if v.Name != nil {
+				vmName = *v.Name
+			}
+			items = append(items, fmt.Sprintf("vm %s: %s", vmName, string(j)))
+		}
+		if v.VirtualMachineProperties != nil && v.InstanceView != nil && v.InstanceView.BootDiagnostics != nil && v.InstanceView.BootDiagnostics.SerialConsoleLogBlobURI != nil {
 			consoleURIs = append(consoleURIs, []string{*v.Name, *v.InstanceView.BootDiagnostics.SerialConsoleLogBlobURI})
 		}
 	}
 
+	if len(consoleURIs) == 0 {
+		items = append(items, "no usable console URIs found")
+		return items, nil
+	}
+
 	blob, err := m.storage.BlobService(ctx, resourceGroupName, "cluster"+m.doc.OpenShiftCluster.Properties.StorageSuffix, mgmtstorage.R, mgmtstorage.SignedResourceTypesO)
 	if err != nil {
-		items = append(items, err)
+		items = append(items, fmt.Sprintf("blob storage error: %s", err))
 		return items, nil
 	}
 
 	for _, i := range consoleURIs {
-		parts := strings.Split(i[1], "/")
-
-		c := blob.GetContainerReference(parts[1])
-		b := c.GetBlobReference(parts[2])
-
-		rc, err := b.Get(nil)
+		rc, err := blob.Get(i[1])
 		if err != nil {
-			items = append(items, err)
+			items = append(items, fmt.Sprintf("blob storage get error on %s: %s", i[0], err))
 			continue
 		}
 		defer rc.Close()
@@ -63,7 +78,7 @@ func (m *manager) LogAzureInformation(ctx context.Context) (interface{}, error) 
 			logForVM.Info(scanner.Text())
 		}
 		if err := scanner.Err(); err != nil {
-			items = append(items, err)
+			items = append(items, fmt.Sprintf("blob storage scan on %s: %s", i[0], err))
 		}
 	}
 
