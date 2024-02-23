@@ -216,7 +216,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (ingresscertificatechecker.NewReconciler(
 			log.WithField("controller", ingresscertificatechecker.ControllerName),
-			client, role)).SetupWithManager(mgr); err != nil {
+			client, metricsClient, role)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", ingresscertificatechecker.ControllerName, err)
 		}
 		if err = (guardrails.NewReconciler(

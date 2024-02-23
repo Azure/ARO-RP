@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 )
 
@@ -37,12 +38,14 @@ type ingressCertificateChecker interface {
 }
 
 type checker struct {
-	client client.Client
+	client        client.Client
+	metricsClient metrics.Client
 }
 
-func newIngressCertificateChecker(client client.Client) *checker {
+func newIngressCertificateChecker(client client.Client, metricsClient metrics.Client) *checker {
 	return &checker{
-		client: client,
+		client:        client,
+		metricsClient: metricsClient,
 	}
 }
 
@@ -61,7 +64,15 @@ func (r *checker) Check(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return validateCertificate(cv.Spec.ClusterID, ingress.Spec.DefaultCertificate, clusterHasManagedDomain)
+
+	err = validateCertificate(cv.Spec.ClusterID, ingress.Spec.DefaultCertificate, clusterHasManagedDomain)
+	if err != nil {
+		r.metricsClient.UpdateIngressCertificateValid(false)
+		return err
+	}
+
+	r.metricsClient.UpdateIngressCertificateValid(true)
+	return nil
 }
 
 func (r *checker) ingress(ctx context.Context) (*operatorv1.IngressController, error) {
