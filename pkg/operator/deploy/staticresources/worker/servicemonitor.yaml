@@ -1,0 +1,16 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: aro-operator-worker-metrics
+  namespace: openshift-azure-operator
+  labels:
+    name: aro-operator
+    role: worker
+spec:
+  selector:
+    matchLabels:
+      name: aro-operator
+      role: worker
+  endpoints:
+    - port: http-metrics
+      scheme: http

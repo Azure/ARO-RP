@@ -1,0 +1,57 @@
+{{- /* 
+  We maintain this file as a formal Go template because we parse all files in this directory as such,
+  and Prometheus's default {{}} delimeters used to inject label values conflicts with Go template's 
+  usage of the same delimeters.
+*/ -}}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    prometheus: aro-operator-alerts
+    role: alert-rules
+  name: aro-operator-alerts
+  namespace: openshift-monitoring
+spec:
+  groups:
+  - name: aro-operator-alerts
+    rules:
+    - alert: AROServicePrincipalInvalid
+      expr: arooperator_service_principal_valid == 0
+      for: 10m
+      labels:
+        severity: warning
+      annotations:
+        summary: Cluster Service Principal is invalid
+        description: >
+          Your cluster's service principal is invalid.
+          Please refer to {TODO FIND DOCUMENTATION} in order to refresh your service principal.
+    - alert: ARORequiredEndpointInaccessible
+      expr: arooperator_required_endpoint_accessible == 0
+      for: 10m
+      labels:
+        severity: warning
+      annotations:
+        summary: Required endpoint {{`{{$labels.endpoint_url}}`}} is not accessible from {{`{{$labels.role}}`}}
+        description: >
+          The required endpoint {{`{{$labels.endpoint_url}}`}} is not accessible within your cluster's {{`{{$labels.role}}`}} nodes.
+          If you are restricting egress traffic on your cluster, please refer to https://learn.microsoft.com/en-us/azure/openshift/howto-restrict-egress and ensure your networking configuration allows the cluster to access the specified endpoints.
+    - alert: AROIngressCertificateInvalid
+      expr: arooperator_ingress_certificate_valid == 0
+      for: 10m
+      labels:
+        severity: warning
+      annotations:
+        summary: Cluster ingress certificate is invalid
+        description: >
+            Your cluster's ingress certificate is expired, invalid, or missing.
+            Please refer to {TODO FIND DOCUMENTATION} in order to provide a valid certificate.
+    - alert: ARODNSConfigurationInvalid
+      expr: arooperator_dns_configuration_valid == 0
+      for: 10m
+      labels:
+        severity: warning
+      annotations:
+        summary: Cluster DNS configuration is invalid
+        description: >
+            Your cluster's custom DNS configuration is invalid.
+            Please refer to https://learn.microsoft.com/en-us/azure/openshift/howto-custom-dns in order to configure custom DNS for your cluster.

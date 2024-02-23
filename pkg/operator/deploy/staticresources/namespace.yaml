@@ -4,3 +4,5 @@ metadata:
   name: openshift-azure-operator
   annotations:
     openshift.io/node-selector: ""
+  labels:
+    openshift.io/cluster-monitoring: "true"
