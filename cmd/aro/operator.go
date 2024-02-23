@@ -42,6 +42,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/storageaccounts"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/subnets"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/workaround"
+	"github.com/Azure/ARO-RP/pkg/operator/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	// +kubebuilder:scaffold:imports
@@ -68,7 +69,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 
 	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
 		HealthProbeBindAddress: ":8080",
-		MetricsBindAddress:     "0", // disabled
+		MetricsBindAddress:     ":8383",
 		Port:                   8443,
 	})
 	if err != nil {
@@ -85,6 +86,8 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
+	metrics.RegisterMetrics()
+	metricsClient := metrics.NewClient()
 
 	if role == pkgoperator.RoleMaster {
 		if err = (genevalogging.NewReconciler(
