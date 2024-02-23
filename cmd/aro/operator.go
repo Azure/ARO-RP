@@ -211,7 +211,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (clusterdnschecker.NewReconciler(
 			log.WithField("controller", clusterdnschecker.ControllerName),
-			client, role)).SetupWithManager(mgr); err != nil {
+			client, metricsClient, role)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", clusterdnschecker.ControllerName, err)
 		}
 		if err = (ingresscertificatechecker.NewReconciler(
