@@ -17,6 +17,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_dynamic "github.com/Azure/ARO-RP/pkg/util/mocks/dynamic"
+	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/operator/metrics"
 	"github.com/Azure/ARO-RP/pkg/validate/dynamic"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -41,6 +42,7 @@ func TestCheck(t *testing.T) {
 		credentialsExist bool
 		validator        func(controller *gomock.Controller) dynamic.ServicePrincipalValidator
 		wantErr          string
+		wantMetricValid  bool
 	}{
 		{
 			name:             "valid service principal",
@@ -50,6 +52,7 @@ func TestCheck(t *testing.T) {
 				validator.EXPECT().ValidateServicePrincipal(ctx, &fakeTokenCredential{})
 				return validator
 			},
+			wantMetricValid: true,
 		},
 		{
 			name:             "fake validation on Service Principal error",
@@ -60,7 +63,8 @@ func TestCheck(t *testing.T) {
 					Return(errors.New("fake validation error"))
 				return validator
 			},
-			wantErr: "fake validation error",
+			wantErr:         "fake validation error",
+			wantMetricValid: false,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -71,6 +75,9 @@ func TestCheck(t *testing.T) {
 			if tt.validator != nil {
 				validatorMock = tt.validator(controller)
 			}
+
+			metricsClientFake := mock_metrics.NewMockClient(controller)
+			metricsClientFake.EXPECT().UpdateServicePrincipalValid(tt.wantMetricValid)
 
 			sp := &checker{
 				log: log,
@@ -83,6 +90,7 @@ func TestCheck(t *testing.T) {
 					}
 					return nil
 				},
+				metricsClient: metricsClientFake,
 			}
 
 			err := sp.Check(ctx, azure.PublicCloud.Name)

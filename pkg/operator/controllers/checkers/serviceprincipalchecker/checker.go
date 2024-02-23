@@ -10,6 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/Azure/ARO-RP/pkg/operator/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"
 	"github.com/Azure/ARO-RP/pkg/validate/dynamic"
@@ -24,9 +25,10 @@ type checker struct {
 
 	getTokenCredential func(azEnv *azureclient.AROEnvironment) (azcore.TokenCredential, error)
 	newSPValidator     func(azEnv *azureclient.AROEnvironment) dynamic.ServicePrincipalValidator
+	metricsClient      metrics.Client
 }
 
-func newServicePrincipalChecker(log *logrus.Entry, client client.Client) *checker {
+func newServicePrincipalChecker(log *logrus.Entry, client client.Client, metricsClient metrics.Client) *checker {
 	return &checker{
 		log: log,
 
@@ -34,6 +36,7 @@ func newServicePrincipalChecker(log *logrus.Entry, client client.Client) *checke
 		newSPValidator: func(azEnv *azureclient.AROEnvironment) dynamic.ServicePrincipalValidator {
 			return dynamic.NewServicePrincipalValidator(log, azEnv, dynamic.AuthorizerClusterServicePrincipal)
 		},
+		metricsClient: metricsClient,
 	}
 }
 
@@ -50,5 +53,7 @@ func (r *checker) Check(ctx context.Context, AZEnvironment string) error {
 		return err
 	}
 
-	return spDynamic.ValidateServicePrincipal(ctx, spTokenCredential)
+	err = spDynamic.ValidateServicePrincipal(ctx, spTokenCredential)
+	r.metricsClient.UpdateServicePrincipalValid(err == nil)
+	return err
 }
