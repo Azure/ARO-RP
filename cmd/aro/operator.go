@@ -233,7 +233,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 
 	if err = (internetchecker.NewReconciler(
 		log.WithField("controller", internetchecker.ControllerName),
-		client, role)).SetupWithManager(mgr); err != nil {
+		client, metricsClient, role)).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller %s: %v", internetchecker.ControllerName, err)
 	}
 
