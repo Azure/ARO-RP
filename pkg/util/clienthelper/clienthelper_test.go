@@ -52,12 +52,9 @@ func TestEnsureDeleted(t *testing.T) {
 			return nil
 		})
 
-	dh := &dynamicHelper{
-		client: client,
-		log:    logrus.NewEntry(logrus.StandardLogger()),
-	}
+	ch := NewWithClient(logrus.NewEntry(logrus.StandardLogger()), client)
 
-	err := dh.EnsureDeleted(ctx,
+	err := ch.EnsureDeleted(ctx,
 		schema.GroupVersionKind{Group: "core", Version: "v1", Kind: "ConfigMap"},
 		types.NamespacedName{
 			Name:      "test-name-1",
@@ -67,7 +64,7 @@ func TestEnsureDeleted(t *testing.T) {
 		t.Errorf("no error should be bounced for status not found, but got: %v", err)
 	}
 
-	err = dh.EnsureDeleted(ctx, schema.GroupVersionKind{Group: "core", Version: "v1", Kind: "ConfigMap"},
+	err = ch.EnsureDeleted(ctx, schema.GroupVersionKind{Group: "core", Version: "v1", Kind: "ConfigMap"},
 		types.NamespacedName{
 			Name:      "test-name-2",
 			Namespace: "test-ns-2",
@@ -76,7 +73,7 @@ func TestEnsureDeleted(t *testing.T) {
 		t.Errorf("function should handle failure response (non-404) correctly")
 	}
 
-	err = dh.EnsureDeleted(ctx, schema.GroupVersionKind{Group: "core", Version: "v1", Kind: "ConfigMap"},
+	err = ch.EnsureDeleted(ctx, schema.GroupVersionKind{Group: "core", Version: "v1", Kind: "ConfigMap"},
 		types.NamespacedName{
 			Name:      "test-name-3",
 			Namespace: "test-ns-3",
@@ -1368,12 +1365,12 @@ func TestMergeApply(t *testing.T) {
 					return nil
 				})
 
-			dh := &dynamicHelper{
+			ch := &clientHelper{
 				client: clientFake,
 				log:    logrus.NewEntry(logrus.StandardLogger()),
 			}
 
-			err = dh.ensureOne(ctx, tt.new)
+			err = ch.ensureOne(ctx, tt.new)
 			if err != nil {
 				t.Error(err)
 			}
@@ -1470,7 +1467,7 @@ func TestGetOne(t *testing.T) {
 			ctx := context.Background()
 
 			clientFake := fake.NewClientBuilder().WithRuntimeObjects(tt.existing...).Build()
-			dh := NewWithClient(logrus.NewEntry(logrus.StandardLogger()), clientFake)
+			ch := NewWithClient(logrus.NewEntry(logrus.StandardLogger()), clientFake)
 
 			gvks, _, err := scheme.Scheme.ObjectKinds(tt.want)
 			if err != nil {
@@ -1482,7 +1479,7 @@ func TestGetOne(t *testing.T) {
 				t.Error(err)
 			}
 
-			err = dh.GetOne(ctx, tt.query, c)
+			err = ch.GetOne(ctx, tt.query, c)
 			if tt.wantErr == nil && err != nil {
 				t.Fatal(err)
 			} else if tt.wantErr != nil {

@@ -40,7 +40,7 @@ type Interface interface {
 	GetOne(ctx context.Context, key types.NamespacedName, obj kruntime.Object) error
 }
 
-type dynamicHelper struct {
+type clientHelper struct {
 	log *logrus.Entry
 
 	client client.Client
@@ -60,41 +60,41 @@ func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {
 }
 
 func NewWithClient(log *logrus.Entry, client client.Client) Interface {
-	return &dynamicHelper{
+	return &clientHelper{
 		log:    log,
 		client: client,
 	}
 }
 
-func (dh *dynamicHelper) EnsureDeleted(ctx context.Context, gvk schema.GroupVersionKind, key types.NamespacedName) error {
+func (ch *clientHelper) EnsureDeleted(ctx context.Context, gvk schema.GroupVersionKind, key types.NamespacedName) error {
 	a := meta.AsPartialObjectMetadata(&metav1.ObjectMeta{
 		Name:      key.Name,
 		Namespace: key.Namespace,
 	})
 	a.SetGroupVersionKind(gvk)
 
-	dh.log.Infof("Delete kind %s ns %s name %s", gvk.Kind, key.Namespace, key.Name)
-	err := dh.client.Delete(ctx, a)
+	ch.log.Infof("Delete kind %s ns %s name %s", gvk.Kind, key.Namespace, key.Name)
+	err := ch.client.Delete(ctx, a)
 	if kerrors.IsNotFound(err) {
 		return nil
 	}
 	return err
 }
 
-func (dh *dynamicHelper) GetOne(ctx context.Context, key types.NamespacedName, obj kruntime.Object) error {
+func (ch *clientHelper) GetOne(ctx context.Context, key types.NamespacedName, obj kruntime.Object) error {
 	newObj, ok := obj.(client.Object)
 	if !ok {
 		return errors.New("can't convert object")
 	}
 
-	return dh.client.Get(ctx, key, newObj)
+	return ch.client.Get(ctx, key, newObj)
 }
 
 // Ensure that one or more objects match their desired state.  Only update
 // objects that need to be updated.
-func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...kruntime.Object) error {
+func (ch *clientHelper) Ensure(ctx context.Context, objs ...kruntime.Object) error {
 	for _, o := range objs {
-		err := dh.ensureOne(ctx, o)
+		err := ch.ensureOne(ctx, o)
 		if err != nil {
 			return err
 		}
@@ -103,7 +103,7 @@ func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...kruntime.Object) er
 	return nil
 }
 
-func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) error {
+func (ch *clientHelper) ensureOne(ctx context.Context, new kruntime.Object) error {
 	gvk, err := apiutil.GVKForObject(new, scheme.Scheme)
 	if err != nil {
 		return err
@@ -125,10 +125,10 @@ func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) err
 			return fmt.Errorf("object of kind %s can't be made a client.Object", gvk.String())
 		}
 
-		err = dh.client.Get(ctx, client.ObjectKey{Namespace: newObj.GetNamespace(), Name: newObj.GetName()}, oldObj)
+		err = ch.client.Get(ctx, client.ObjectKey{Namespace: newObj.GetNamespace(), Name: newObj.GetName()}, oldObj)
 		if kerrors.IsNotFound(err) {
-			dh.log.Infof("Create %s", keyFunc(gvk.GroupKind(), newObj.GetNamespace(), newObj.GetName()))
-			return dh.client.Create(ctx, newObj)
+			ch.log.Infof("Create %s", keyFunc(gvk.GroupKind(), newObj.GetNamespace(), newObj.GetName()))
+			return ch.client.Create(ctx, newObj)
 		}
 		if err != nil {
 			return err
@@ -137,8 +137,8 @@ func (dh *dynamicHelper) ensureOne(ctx context.Context, new kruntime.Object) err
 		if err != nil || !changed {
 			return err
 		}
-		dh.log.Infof("Update %s: %s", keyFunc(gvk.GroupKind(), candidate.GetNamespace(), candidate.GetName()), diff)
-		return dh.client.Update(ctx, candidate)
+		ch.log.Infof("Update %s: %s", keyFunc(gvk.GroupKind(), candidate.GetNamespace(), candidate.GetName()), diff)
+		return ch.client.Update(ctx, candidate)
 	})
 }
 
