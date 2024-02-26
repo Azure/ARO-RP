@@ -14,10 +14,10 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/util/immutable"
+	"github.com/Azure/ARO-RP/pkg/api/util/pullsecret"
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
-	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
