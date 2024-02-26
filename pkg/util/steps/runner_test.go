@@ -53,15 +53,15 @@ func TestStepRunner(t *testing.T) {
 			},
 			wantEntries: []map[string]types.GomegaMatcher{
 				{
-					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]"),
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]"),
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]"),
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 			},
@@ -77,15 +77,15 @@ func TestStepRunner(t *testing.T) {
 			},
 			wantEntries: []map[string]types.GomegaMatcher{
 				{
-					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]"),
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.failingFunc]"),
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.failingFunc]"),
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal(`step [Action github.com/Azure/ARO-RP/pkg/util/steps.failingFunc] encountered error: oh no!`),
+					"msg":   gomega.Equal(`step [Action pkg/util/steps.failingFunc] encountered error: oh no!`),
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
@@ -102,15 +102,15 @@ func TestStepRunner(t *testing.T) {
 			},
 			wantEntries: []map[string]types.GomegaMatcher{
 				{
-					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]"),
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("running step [Condition github.com/Azure/ARO-RP/pkg/util/steps.alwaysTrueCondition, timeout 50ms]"),
+					"msg":   gomega.Equal("running step [Condition pkg/util/steps.alwaysTrueCondition, timeout 50ms]"),
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]"),
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 			},
@@ -126,19 +126,19 @@ func TestStepRunner(t *testing.T) {
 			},
 			wantEntries: []map[string]types.GomegaMatcher{
 				{
-					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]"),
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("running step [Condition github.com/Azure/ARO-RP/pkg/util/steps.alwaysFalseCondition, timeout 50ms]"),
+					"msg":   gomega.Equal("running step [Condition pkg/util/steps.alwaysFalseCondition, timeout 50ms]"),
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("step [Condition github.com/Azure/ARO-RP/pkg/util/steps.alwaysFalseCondition, timeout 50ms] failed but has configured 'fail=false'. Continuing. Error: timed out waiting for the condition"),
+					"msg":   gomega.Equal("step [Condition pkg/util/steps.alwaysFalseCondition, timeout 50ms] failed but has configured 'fail=false'. Continuing. Error: timed out waiting for the condition"),
 					"level": gomega.Equal(logrus.WarnLevel),
 				},
 				{
-					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]"),
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 			},
@@ -159,15 +159,15 @@ func TestStepRunner(t *testing.T) {
 			},
 			wantEntries: []map[string]types.GomegaMatcher{
 				{
-					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]"),
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("running step [Condition github.com/Azure/ARO-RP/pkg/util/steps.timingOutCondition, timeout 50ms]"),
+					"msg":   gomega.Equal("running step [Condition pkg/util/steps.timingOutCondition, timeout 50ms]"),
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("step [Condition github.com/Azure/ARO-RP/pkg/util/steps.timingOutCondition, timeout 50ms] encountered error: timed out waiting for the condition"),
+					"msg":   gomega.Equal("step [Condition pkg/util/steps.timingOutCondition, timeout 50ms] encountered error: timed out waiting for the condition"),
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
@@ -189,15 +189,15 @@ func TestStepRunner(t *testing.T) {
 			},
 			wantEntries: []map[string]types.GomegaMatcher{
 				{
-					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]"),
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("running step [Condition github.com/Azure/ARO-RP/pkg/util/steps.internalTimeoutCondition, timeout 50ms]"),
+					"msg":   gomega.Equal("running step [Condition pkg/util/steps.internalTimeoutCondition, timeout 50ms]"),
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("step [Condition github.com/Azure/ARO-RP/pkg/util/steps.internalTimeoutCondition, timeout 50ms] encountered error: condition encountered internal timeout: timed out waiting for the condition"),
+					"msg":   gomega.Equal("step [Condition pkg/util/steps.internalTimeoutCondition, timeout 50ms] encountered error: condition encountered internal timeout: timed out waiting for the condition"),
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
@@ -214,15 +214,15 @@ func TestStepRunner(t *testing.T) {
 			},
 			wantEntries: []map[string]types.GomegaMatcher{
 				{
-					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]"),
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("running step [Condition github.com/Azure/ARO-RP/pkg/util/steps.alwaysFalseCondition, timeout 50ms]"),
+					"msg":   gomega.Equal("running step [Condition pkg/util/steps.alwaysFalseCondition, timeout 50ms]"),
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("step [Condition github.com/Azure/ARO-RP/pkg/util/steps.alwaysFalseCondition, timeout 50ms] encountered error: timed out waiting for the condition"),
+					"msg":   gomega.Equal("step [Condition pkg/util/steps.alwaysFalseCondition, timeout 50ms] encountered error: timed out waiting for the condition"),
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
