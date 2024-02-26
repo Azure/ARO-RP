@@ -24,16 +24,12 @@ We have the kubeadmin credentials as well as the kubeadmin kubeconfig file. You 
 SECRET_SA_ACCOUNT_NAME=rharosecretsdev make secrets
 ```
 
-* Oc login, assuming `env` sources `secrets/env`:
+* Get and set kubeconfig, assuming `env` sources `secrets/env`:
 ```
 . ./env
 make shared-cluster-login
 ```
 
-* Use kubeconfig
-```
-export KUBECONFIG=$PWD/secrets/shared-cluster.kubeconfig
-```
 
 ## Creating / Deleting the Shared Cluster
 
