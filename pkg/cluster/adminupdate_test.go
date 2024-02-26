@@ -215,7 +215,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 			var stepsToRun []string
 			for _, s := range toRun {
 				// make it a little nicer when defining the steps that should run, since they're all methods
-				o := strings.Replace(s.String(), "github.com/Azure/ARO-RP/pkg/cluster.(*manager).", "", -1)
+				o := strings.Replace(s.String(), "pkg/cluster.(*manager).", "", -1)
 				stepsToRun = append(stepsToRun, o)
 			}
 
