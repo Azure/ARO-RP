@@ -1595,3 +1595,5 @@ replace (
 	go.mongodb.org/mongo-driver => go.mongodb.org/mongo-driver v1.9.4
 	google.golang.org/grpc => google.golang.org/grpc v1.56.3
 )
+
+replace github.com/Azure/ARO-RP/pkg/api => ./pkg/api
