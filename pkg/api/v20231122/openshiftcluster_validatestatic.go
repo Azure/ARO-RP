@@ -18,7 +18,6 @@ import (
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type openShiftClusterStaticValidator struct {
@@ -36,7 +35,7 @@ func (sv openShiftClusterStaticValidator) Static(_oc interface{}, _current *api.
 	sv.domain = domain
 	sv.requireD2sV3Workers = requireD2sV3Workers
 	sv.resourceID = resourceID
-	architectureVersion := version.InstallArchitectureVersion
+	architectureVersion := api.ArchitectureVersionV2
 
 	oc := _oc.(*OpenShiftCluster)
 
