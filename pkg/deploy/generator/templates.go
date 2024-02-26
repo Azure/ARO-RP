@@ -9,8 +9,8 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 const (

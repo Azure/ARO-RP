@@ -15,9 +15,9 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
+	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/log/audit"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 type logResponseWriter struct {
