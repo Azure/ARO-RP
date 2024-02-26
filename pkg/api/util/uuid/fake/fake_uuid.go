@@ -4,7 +4,7 @@ package fake
 // Licensed under the Apache License 2.0.
 
 import (
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
+	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
 )
 
 type fakeGenerator struct {
