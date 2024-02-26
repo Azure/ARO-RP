@@ -725,7 +725,7 @@ class OpenShiftCluster(TrackedResource):
     :ivar location: Required. The geo-location where the resource lives.
     :vartype location: str
     :ivar provisioning_state: The cluster provisioning state. Possible values include:
-     "AdminUpdating", "Cancelled", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
+     "AdminUpdating", "Canceled", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
     :vartype provisioning_state: str or
      ~azure.mgmt.redhatopenshift.v2023_11_22.models.ProvisioningState
     :ivar cluster_profile: The cluster profile.
@@ -788,7 +788,7 @@ class OpenShiftCluster(TrackedResource):
         :keyword location: Required. The geo-location where the resource lives.
         :paramtype location: str
         :keyword provisioning_state: The cluster provisioning state. Possible values include:
-         "AdminUpdating", "Cancelled", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
+         "AdminUpdating", "Canceled", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
         :paramtype provisioning_state: str or
          ~azure.mgmt.redhatopenshift.v2023_11_22.models.ProvisioningState
         :keyword cluster_profile: The cluster profile.
@@ -914,7 +914,7 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
     :ivar system_data: The system meta data relating to this resource.
     :vartype system_data: ~azure.mgmt.redhatopenshift.v2023_11_22.models.SystemData
     :ivar provisioning_state: The cluster provisioning state. Possible values include:
-     "AdminUpdating", "Cancelled", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
+     "AdminUpdating", "Canceled", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
     :vartype provisioning_state: str or
      ~azure.mgmt.redhatopenshift.v2023_11_22.models.ProvisioningState
     :ivar cluster_profile: The cluster profile.
@@ -967,7 +967,7 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         :keyword tags: A set of tags. The resource tags.
         :paramtype tags: dict[str, str]
         :keyword provisioning_state: The cluster provisioning state. Possible values include:
-         "AdminUpdating", "Cancelled", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
+         "AdminUpdating", "Canceled", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
         :paramtype provisioning_state: str or
          ~azure.mgmt.redhatopenshift.v2023_11_22.models.ProvisioningState
         :keyword cluster_profile: The cluster profile.
