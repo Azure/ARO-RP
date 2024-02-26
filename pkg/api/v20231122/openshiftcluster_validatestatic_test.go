@@ -15,7 +15,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/Azure/ARO-RP/test/validate"
 )
 
@@ -80,7 +79,7 @@ func validOpenShiftCluster(name, location string) *OpenShiftCluster {
 			ClusterProfile: ClusterProfile{
 				PullSecret:           `{"auths":{"registry.connect.redhat.com":{"auth":""},"registry.redhat.io":{"auth":""}}}`,
 				Domain:               "cluster.location.aroapp.io",
-				Version:              version.DefaultInstallStream.Version.String(),
+				Version:              "4.14.0",
 				ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", subscriptionID),
 				FipsValidatedModules: FipsValidatedModulesDisabled,
 			},
@@ -140,7 +139,7 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 			t.Run(tt.name, func(t *testing.T) {
 				// default values if not set
 				if tt.architectureVersion == nil {
-					tt.architectureVersion = (*api.ArchitectureVersion)(to.IntPtr(int(version.InstallArchitectureVersion)))
+					tt.architectureVersion = (*api.ArchitectureVersion)(to.IntPtr(1))
 				}
 
 				if tt.location == nil {

@@ -15,7 +15,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/Azure/ARO-RP/test/validate"
 )
 
@@ -132,7 +131,7 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 			t.Run(tt.name, func(t *testing.T) {
 				// default values if not set
 				if tt.architectureVersion == nil {
-					tt.architectureVersion = (*api.ArchitectureVersion)(to.IntPtr(int(version.InstallArchitectureVersion)))
+					tt.architectureVersion = (*api.ArchitectureVersion)(to.IntPtr(1))
 				}
 
 				if tt.location == nil {
