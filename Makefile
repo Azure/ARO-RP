@@ -245,7 +245,8 @@ shared-cluster-login:
 	az aro get-admin-kubeconfig \
 		--name ${SHARED_CLUSTER_CLUSTER_NAME} \
 		--resource-group ${SHARED_CLUSTER_RESOURCE_GROUP_NAME} \
-		--file admin.kubeconfig
+		--file shared-cluster.admin.kubeconfig
+	export KUBECONFIG=shared-cluster.admin.kubeconfig
 
 shared-cluster-create:
 	./hack/shared-cluster.sh create
