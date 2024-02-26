@@ -6,7 +6,7 @@ package v20220904
 import (
 	"testing"
 
-	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	utilerror "github.com/Azure/ARO-RP/pkg/api/test/error"
 )
 
 var ocmResource = string(`
