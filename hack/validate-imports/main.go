@@ -22,7 +22,7 @@ func main() {
 				return err
 			}
 
-			if info.IsDir() || !strings.HasSuffix(path, ".go") {
+			if info.IsDir() || !strings.HasSuffix(path, ".go") || strings.Contains(path, "/vendor/") {
 				return nil
 			}
 
