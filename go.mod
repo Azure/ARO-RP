@@ -1599,3 +1599,5 @@ replace (
 	google.golang.org/grpc => google.golang.org/grpc v1.56.3
 	sigs.k8s.io/cluster-api-provider-azure => github.com/openshift/cluster-api-provider-azure v0.1.0-alpha.3.0.20210626224711-5d94c794092f
 )
+
+replace github.com/Azure/ARO-RP/pkg/api => ./pkg/api

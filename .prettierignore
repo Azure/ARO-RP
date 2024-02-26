@@ -8,3 +8,4 @@
 /portal/v2/node_modules/
 /swagger/
 /vendor/
+/pkg/api/vendor/
