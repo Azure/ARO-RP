@@ -163,6 +163,9 @@ func (g *generator) rpTemplate() *arm.Template {
 					// TODO: AKS Sharding: add rules for additional AKS shards for this RP instance. Currently only shard 1, which has subnet ClusterSubnet-001, is set above.
 					// AKS subnet design: https://docs.google.com/document/d/1gTGSW5S4uN1vB2hqVFKYr-qp6n62WbkdQMrKg-qvPbE
 				},
+				//{
+				//	ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'ev2-vnet')]"),
+				//},
 			},
 		}
 
