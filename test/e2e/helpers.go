@@ -104,7 +104,7 @@ type AllowedCleanUpAPIInterface[T kruntime.Object] interface {
 }
 
 // CleanupK8sResource takes a client that knows how to issue a GET and DELETE call for a given resource.
-// It then issues a delete request then and polls the API to until the resource is no longer found.
+// It then issues a delete request then and polls the API until the resource is no longer found.
 //
 // Note: If the DELETE request receives a 404 we assume the resource has been cleaned up successfully.
 func CleanupK8sResource[T kruntime.Object](
@@ -117,6 +117,7 @@ func CleanupK8sResource[T kruntime.Object](
 		g.Expect((err == nil || kerrors.IsNotFound(err))).To(BeTrue())
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
 
+	// GET the resource until NOT_FOUND to ensure it's been deleted.
 	Eventually(func(g Gomega, ctx context.Context) {
 		_, err := client.Get(ctx, name, metav1.GetOptions{})
 		g.Expect(kerrors.IsNotFound(err)).To(BeTrue())
