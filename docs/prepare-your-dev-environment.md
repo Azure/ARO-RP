@@ -2,13 +2,33 @@
 
 This document goes through the development dependencies one requires in order to build the RP code.
 
-## Software Required
+## Software Required, part 1
 
 1. Install [Go 1.18](https://golang.org/dl) or later, if you haven't already.
    1. After downloading follow the [Install instructions](https://go.dev/doc/install), replacing the tar archive with your download.
    1. Append `export PATH="${PATH}:/usr/local/go/bin"` to your shell's profile file.
 
 1. Configure `GOPATH` as an OS environment variable in your shell (a requirement of some dependencies for `make generate`). If you want to keep the default path, you can add something like `GOPATH=$(go env GOPATH)` to your shell's profile/RC file.
+
+#### Brief troubleshooting for the Go version (from @azoppiserpa experience)
+If you're using a later version, such as 1.22, you might encounter a SIGSEV with a large stack trace mentioning invalid pointers when trying to run `make generate`, even after all the other setup steps described in this document get completed. 
+
+I am not sure if that would happen to **any version that is not 1.18**, or if it was just for 1.22 (which is the one I was using), as I haven't tested that extensively.
+
+Anyways, to solve this problem, I installed `gvm`. This way I can set 1.18 for ARO-RP but keep 1.22 for other repos that require 1.22.
+
+#### Using gvm
+
+1. Install: ```bash < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)```
+2. Source: ```source /home/your_username/.gvm/scripts/gvm```
+3. Install go 1.18: ```gvm install go1.18```
+4. Navigate to ARO-RP: ```cd /path/to/ARO-RP```
+5. Create a `.go-version` in the root of ARO-RP: ```echo "go1.18" > .go-version```
+6. Enable go 1.18 for the directory, using the file: ```gvm use```
+
+Alternatively to steps 5 and 6, you could just run `gvm use go1.18`. That would set the go version for the terminal session in general, and than later you might have to check with `go version` to ensure you're using the one you want outside of `ARO-RP` and switch again with e.g. `gvm use 1.22`.
+
+## Software Required, part 2
 
 1. Install [Python 3.6-3.10](https://www.python.org/downloads), if you haven't already.  You will also need `python-setuptools` installed, if you don't have it installed already. Python versions earlier than 3.6 or later than 3.10 are not supported as of now.
 
