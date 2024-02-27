@@ -202,6 +202,12 @@
 
 1. Run `make deploy`
 
+1. Create storage account and role assignment required for workload identity clusters
+    ```
+    source ./hack/devtools/deploy-shared-env.sh
+    deploy_oic_for_dedicated_rp
+    ```
+
 ## SSH to RP VMSS Instance
 
 1. Update the RP NSG to allow SSH

@@ -1,0 +1,41 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "rpServicePrincipalId": {
+            "type": "string"
+        }
+    },
+    "resources": [
+        {
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "kind": "StorageV2",
+            "properties": {
+                "accessTier": "Hot",
+                "supportsHttpsTrafficOnly": true,
+                "allowBlobPublicAccess": true,
+                "minimumTlsVersion": "TLS1_2"
+            },
+            "location": "[resourceGroup().location]",
+            "name": "[concat(take(replace(resourceGroup().name, '-', ''), 21), 'oic')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2019-06-01"
+        },
+        {
+            "name": "[concat(concat(take(replace(resourceGroup().name, '-', ''), 21), 'oic'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Storage/storageAccounts', concat(take(replace(resourceGroup().name, '-', ''), 21), 'oic'))))]",
+            "type": "Microsoft.Storage/storageAccounts/providers/roleAssignments",
+            "properties": {
+                "scope": "[resourceId('Microsoft.Storage/storageAccounts', concat(take(replace(resourceGroup().name, '-', ''), 21), 'oic'))]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
+                "principalId": "[parameters('rpServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2018-09-01-preview",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', concat(take(replace(resourceGroup().name, '-', ''), 21), 'oic'))]"
+            ]
+        }
+    ]
+}

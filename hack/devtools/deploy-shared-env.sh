@@ -49,6 +49,16 @@ deploy_env_dev() {
             "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" >/dev/null
 }
 
+deploy_oic_dev() {
+    echo "########## Deploying storage account and role assignment in RG $RESOURCEGROUP ##########"
+    az deployment group create \
+        -g "$RESOURCEGROUP" \
+        -n rp-oic \
+        --template-file pkg/deploy/assets/rp-oic.json \
+        --parameters \
+            "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_RP_CLIENT_ID'" --query '[].id' -o tsv)" >/dev/null 
+}
+
 deploy_aks_dev() {
     echo "########## Deploying aks-development in RG $RESOURCEGROUP ##########"
     az deployment group create \
@@ -69,6 +79,16 @@ deploy_vpn_for_dedicated_rp() {
         --template-file pkg/deploy/assets/vpn-development.json \
         --parameters \
              "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" >/dev/null
+}
+
+deploy_oic_for_dedicated_rp() {
+    echo "########## Deploying storage account and role assignment in RG $RESOURCEGROUP ##########"
+    az deployment group create \
+        -g "$RESOURCEGROUP" \
+        -n rp-oic \
+        --template-file pkg/deploy/assets/rp-oic.json \
+        --parameters \
+            "rpServicePrincipalId=$(az identity show -g $RESOURCEGROUP -n aro-rp-$LOCATION | jq -r '.["principalId"]')"
 }
 
 deploy_env_dev_override() {
