@@ -239,14 +239,19 @@ test-python: pyenv az
 		azdev style && \
 		hack/unit-test-python.sh
 
+set-kubeconfig-to-admin:
+	sed -i "s/KUBECONFIG=.*/KUBECONFIG=admin.kubeconfig/g" env
 
-shared-cluster-login:
+set-kubeconfig-to-shared-cluster:
+	sed -i "s/KUBECONFIG=.*/KUBECONFIG=shared-cluster.admin.kubeconfig/g" env
+
+shared-cluster-login: set-kubeconfig-to-shared-cluster
+	rm shared-cluster.admin.kubeconfig 2> /dev/null; \
 	RP_MODE="production" \
 	az aro get-admin-kubeconfig \
-		--name ${SHARED_CLUSTER_CLUSTER_NAME} \
+		--name ${SHARED_CLUSTER_NAME} \
 		--resource-group ${SHARED_CLUSTER_RESOURCE_GROUP_NAME} \
-		--file shared-cluster.admin.kubeconfig
-	export KUBECONFIG=shared-cluster.admin.kubeconfig
+		--file shared-cluster.admin.kubeconfig; \
 
 shared-cluster-create:
 	./hack/shared-cluster.sh create
@@ -257,7 +262,7 @@ shared-cluster-delete:
 unit-test-python:
 	hack/unit-test-python.sh
 
-admin.kubeconfig:
+admin.kubeconfig: set-kubeconfig-to-admin
 	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig
 
 aks.kubeconfig:
