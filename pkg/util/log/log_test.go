@@ -18,22 +18,22 @@ func TestMapStatusCodeToResultType(t *testing.T) {
 		expectedResult ResultType
 	}{
 		{
-			name:           "200 -> Success",
+			name:           "Map 200 to correct result",
 			statusCode:     200,
 			expectedResult: SuccessResultType,
 		},
 		{
-			name:           "300 -> User Error",
+			name:           "Map 300 to correct result",
 			statusCode:     300,
 			expectedResult: UserErrorResultType,
 		},
 		{
-			name:           "400 -> User Error",
+			name:           "Map 400 to correct result",
 			statusCode:     400,
 			expectedResult: UserErrorResultType,
 		},
 		{
-			name:           "500 -> Server Error",
+			name:           "Map 500 to correct result",
 			statusCode:     500,
 			expectedResult: ServerErrorResultType,
 		},
