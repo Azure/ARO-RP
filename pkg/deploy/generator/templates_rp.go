@@ -164,7 +164,7 @@ func (g *generator) rpTemplate() *arm.Template {
 					// AKS subnet design: https://docs.google.com/document/d/1gTGSW5S4uN1vB2hqVFKYr-qp6n62WbkdQMrKg-qvPbE
 				},
 				{
-					ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'ev2-vnet')]"),
+					ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'ev2-vnet', 'ev2-subnet)]"),
 				},
 			},
 		}
