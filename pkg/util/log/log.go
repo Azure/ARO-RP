@@ -49,11 +49,11 @@ const (
 func MapStatusCodeToResultType(statusCode int) ResultType {
 	if statusCode < 300 && statusCode >= 200 {
 		return SuccessResultType
-	} else if statusCode < 500 {
-		return UserErrorResultType
-	} else {
-		return ServerErrorResultType
 	}
+	if statusCode < 500 {
+		return UserErrorResultType
+	}
+	return ServerErrorResultType
 }
 
 func getBaseLogger() *logrus.Logger {
