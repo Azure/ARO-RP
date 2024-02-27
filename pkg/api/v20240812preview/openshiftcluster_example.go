@@ -9,7 +9,6 @@ import (
 
 func exampleOpenShiftCluster() *OpenShiftCluster {
 	doc := api.ExampleOpenShiftClusterDocument()
-	doc.OpenShiftCluster.Properties.WorkerProfilesStatus = nil
 	return (&openShiftClusterConverter{}).ToExternal(doc.OpenShiftCluster).(*OpenShiftCluster)
 }
 
@@ -38,6 +37,7 @@ func ExampleOpenShiftClusterPutParameter() interface{} {
 	oc.Properties.APIServerProfile.IP = ""
 	oc.Properties.IngressProfiles[0].IP = ""
 	oc.Properties.MasterProfile.EncryptionAtHost = EncryptionAtHostEnabled
+	oc.Properties.WorkerProfilesStatus = nil
 	oc.Properties.NetworkProfile.LoadBalancerProfile = &LoadBalancerProfile{
 		ManagedOutboundIPs: &ManagedOutboundIPs{
 			Count: 1,
@@ -54,7 +54,6 @@ func ExampleOpenShiftClusterGetResponse() interface{} {
 	oc := exampleOpenShiftCluster()
 	oc.Properties.ClusterProfile.PullSecret = ""
 	oc.Properties.ServicePrincipalProfile.ClientSecret = ""
-	oc.Properties.WorkerProfilesStatus = nil
 	oc.Properties.NetworkProfile.LoadBalancerProfile = &LoadBalancerProfile{
 		EffectiveOutboundIPs: []EffectiveOutboundIP{
 			{
