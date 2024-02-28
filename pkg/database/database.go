@@ -68,7 +68,7 @@ func NewMasterKeyAuthorizer(ctx context.Context, token azcore.TokenCredential, c
 		return nil, err
 	}
 
-	return cosmosdb.NewMasterKeyAuthorizer(*keys.PrimaryMasterKey)
+	return cosmosdb.NewMasterKeyAuthorizer(*keys.SecondaryMasterKey)
 }
 
 func NewJSONHandle(aead encryption.AEAD) (*codec.JsonHandle, error) {
