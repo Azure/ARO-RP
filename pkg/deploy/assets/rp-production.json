@@ -13,7 +13,7 @@
                 "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'aks-net', 'ClusterSubnet-001')]"
             },
             {
-                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'ev2-vnet', 'ev2-subnet')]"
+                "id": "[resourceId('Microsoft.Network/virtualNetworks', 'ev2-vnet')]"
             }
         ]
     },
