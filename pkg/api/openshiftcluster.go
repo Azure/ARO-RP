@@ -178,6 +178,7 @@ const (
 	ProvisioningStateUpdating      ProvisioningState = "Updating"
 	ProvisioningStateAdminUpdating ProvisioningState = "AdminUpdating"
 	ProvisioningStateCanceled      ProvisioningState = "Canceled"
+	ProvisioningStateMaintenance   ProvisioningState = "Maintenance"
 	ProvisioningStateDeleting      ProvisioningState = "Deleting"
 	ProvisioningStateSucceeded     ProvisioningState = "Succeeded"
 	ProvisioningStateFailed        ProvisioningState = "Failed"
