@@ -4,6 +4,8 @@ package database
 // Licensed under the Apache License 2.0.
 
 import (
+	"time"
+
 	"github.com/ugorji/go/codec"
 
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -84,5 +86,14 @@ func NewFakeClusterManager() (db database.ClusterManagerConfigurations, client *
 	injectClusterManager(client)
 	coll := &fakeCollectionClient{}
 	db = database.NewClusterManagerConfigurationsWithProvidedClient(client, coll, "", uuid)
+	return db, client
+}
+
+func NewFakeMaintenanceManifests(now func() time.Time) (db database.MaintenanceManifests, client *cosmosdb.FakeMaintenanceManifestDocumentClient) {
+	uuid := deterministicuuid.NewTestUUIDGenerator(deterministicuuid.MAINTENANCE_MANIFESTS)
+	coll := &fakeCollectionClient{}
+	client = cosmosdb.NewFakeMaintenanceManifestDocumentClient(jsonHandle)
+	injectMaintenanceManifests(client, now)
+	db = database.NewMaintenanceManifestsWithProvidedClient(client, coll, "", uuid)
 	return db, client
 }
