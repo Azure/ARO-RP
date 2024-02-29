@@ -21,6 +21,7 @@ type Fixture struct {
 	openShiftVersionDocuments                []*api.OpenShiftVersionDocument
 	platformWorkloadIdentityRoleSetDocuments []*api.PlatformWorkloadIdentityRoleSetDocument
 	clusterManagerConfigurationDocuments     []*api.ClusterManagerConfigurationDocument
+	maintenanceManifestDocuments             []*api.MaintenanceManifestDocument
 
 	openShiftClustersDatabase                database.OpenShiftClusters
 	billingDatabase                          database.Billing
@@ -31,6 +32,7 @@ type Fixture struct {
 	openShiftVersionsDatabase                database.OpenShiftVersions
 	platformWorkloadIdentityRoleSetsDatabase database.PlatformWorkloadIdentityRoleSets
 	clusterManagerConfigurationsDatabase     database.ClusterManagerConfigurations
+	maintenanceManifestsDatabase             database.MaintenanceManifests
 
 	openShiftVersionsUUID                uuid.Generator
 	platformWorkloadIdentityRoleSetsUUID uuid.Generator
@@ -38,6 +40,18 @@ type Fixture struct {
 
 func NewFixture() *Fixture {
 	return &Fixture{}
+}
+
+func (f *Fixture) Clear() {
+	f.openshiftClusterDocuments = []*api.OpenShiftClusterDocument{}
+	f.subscriptionDocuments = []*api.SubscriptionDocument{}
+	f.billingDocuments = []*api.BillingDocument{}
+	f.asyncOperationDocuments = []*api.AsyncOperationDocument{}
+	f.portalDocuments = []*api.PortalDocument{}
+	f.gatewayDocuments = []*api.GatewayDocument{}
+	f.openShiftVersionDocuments = []*api.OpenShiftVersionDocument{}
+	f.clusterManagerConfigurationDocuments = []*api.ClusterManagerConfigurationDocument{}
+	f.maintenanceManifestDocuments = []*api.MaintenanceManifestDocument{}
 }
 
 func (f *Fixture) WithClusterManagerConfigurations(db database.ClusterManagerConfigurations) *Fixture {
@@ -84,6 +98,11 @@ func (f *Fixture) WithOpenShiftVersions(db database.OpenShiftVersions, uuid uuid
 func (f *Fixture) WithPlatformWorkloadIdentityRoleSets(db database.PlatformWorkloadIdentityRoleSets, uuid uuid.Generator) *Fixture {
 	f.platformWorkloadIdentityRoleSetsDatabase = db
 	f.platformWorkloadIdentityRoleSetsUUID = uuid
+	return f
+}
+
+func (f *Fixture) WithMaintenanceManifests(db database.MaintenanceManifests) *Fixture {
+	f.maintenanceManifestsDatabase = db
 	return f
 }
 
@@ -186,6 +205,17 @@ func (f *Fixture) AddClusterManagerConfigurationDocuments(docs ...*api.ClusterMa
 	}
 }
 
+func (f *Fixture) AddMaintenanceManifestDocuments(docs ...*api.MaintenanceManifestDocument) {
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.maintenanceManifestDocuments = append(f.maintenanceManifestDocuments, docCopy.(*api.MaintenanceManifestDocument))
+	}
+}
+
 func (f *Fixture) Create() error {
 	ctx := context.Background()
 
@@ -259,6 +289,16 @@ func (f *Fixture) Create() error {
 			i.ID = f.clusterManagerConfigurationsDatabase.NewUUID()
 		}
 		_, err := f.clusterManagerConfigurationsDatabase.Create(ctx, i)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, i := range f.maintenanceManifestDocuments {
+		if i.ID == "" {
+			i.ID = f.maintenanceManifestsDatabase.NewUUID()
+		}
+		_, err := f.maintenanceManifestsDatabase.Create(ctx, i)
 		if err != nil {
 			return err
 		}

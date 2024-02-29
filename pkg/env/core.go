@@ -29,6 +29,8 @@ const (
 	COMPONENT_UPDATE_ROLE_SETS    ServiceComponent = "UPDATE_ROLE_SETS"
 	COMPONENT_DEPLOY              ServiceComponent = "DEPLOY"
 	COMPONENT_TOOLING             ServiceComponent = "TOOLING"
+	COMPONENT_MIMO_SCHEDULER      ServiceComponent = "MIMO_SCHEDULER"
+	COMPONENT_MIMO_ACTUATOR       ServiceComponent = "MIMO_ACTUATOR"
 )
 
 // Core collects basic configuration information which is expected to be

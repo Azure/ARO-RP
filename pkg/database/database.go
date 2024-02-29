@@ -35,6 +35,7 @@ const (
 	collPlatformWorkloadIdentityRoleSet = "PlatformWorkloadIdentityRoleSets"
 	collPortal                          = "Portal"
 	collSubscriptions                   = "Subscriptions"
+	collMaintenanceManifests            = "MaintenanceManifests"
 )
 
 func NewDatabaseClient(log *logrus.Entry, _env env.Core, authorizer cosmosdb.Authorizer, m metrics.Emitter, aead encryption.AEAD, databaseAccountName string) (cosmosdb.DatabaseClient, error) {
