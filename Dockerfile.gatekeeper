@@ -1,5 +1,5 @@
 ARG REGISTRY
-FROM ${REGISTRY}/ubi8/go-toolset:1.18.10-1 AS builder
+FROM ${REGISTRY}/ubi8/go-toolset:1.20.10-1 AS builder
 ARG GATEKEEPER_VERSION
 ENV DOWNLOAD_URL=https://github.com/open-policy-agent/gatekeeper/archive/${GATEKEEPER_VERSION}.tar.gz
 
@@ -29,4 +29,4 @@ ENTRYPOINT ["/manager"]
 
 USER ${USER_UID}
 LABEL io.openshift.managed.name="guardrails-operator" \
-      io.openshift.managed.description="Operator to enforce guardrails policies for Openshift version 4 clusters"
+    io.openshift.managed.description="Operator to enforce guardrails policies for Openshift version 4 clusters"

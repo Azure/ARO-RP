@@ -6,10 +6,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/sirupsen/logrus"
@@ -70,8 +68,6 @@ func run(ctx context.Context, log *logrus.Entry) error {
 
 func main() {
 	log := utillog.GetLogger()
-
-	rand.Seed(time.Now().UnixNano())
 
 	if err := run(context.Background(), log); err != nil {
 		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
