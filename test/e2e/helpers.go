@@ -90,12 +90,11 @@ func CreateK8sObjectWithRetry[T kruntime.Object](
 // and the parameters for it. It then makes the call with some retry logic.
 func DeleteK8sObjectWithRetry(
 	ctx context.Context, deleteFunc K8sDeleteFunc, name string, options metav1.DeleteOptions,
-) (err error) {
+) {
 	Eventually(func(g Gomega, ctx context.Context) {
 		err := deleteFunc(ctx, name, options)
 		g.Expect(err).NotTo(HaveOccurred())
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
-	return err
 }
 
 type AllowedCleanUpAPIInterface[T kruntime.Object] interface {
