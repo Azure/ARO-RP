@@ -14,7 +14,6 @@ import (
 	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
 	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
 	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
-	consoleapi "github.com/openshift/console-operator/pkg/api"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,7 +42,7 @@ func TestOperatorConsoleExists(t *testing.T) {
 		},
 		{
 			name:        "Operator console exists",
-			consoleName: consoleapi.ConfigResourceName,
+			consoleName: consoleConfigResourceName,
 			want:        true,
 		},
 	} {
