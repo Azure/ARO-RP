@@ -21,7 +21,7 @@ import (
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
-func TestSystemreservedEnsure(t *testing.T) {
+func TestSystemReservedEnsure(t *testing.T) {
 	kubeletConfig := func(resourceVersion string) *mcv1.KubeletConfig {
 		return &mcv1.KubeletConfig{
 			TypeMeta: metav1.TypeMeta{
@@ -121,7 +121,7 @@ func TestSystemreservedEnsure(t *testing.T) {
 			}
 			clientFake := clientBuilder.Build()
 
-			sr := &systemreserved{
+			sr := &systemReserved{
 				client: clientFake,
 				log:    utillog.GetLogger(),
 			}
@@ -153,7 +153,7 @@ func TestSystemreservedEnsure(t *testing.T) {
 	}
 }
 
-func TestSystemreservedRemove(t *testing.T) {
+func TestSystemReservedRemove(t *testing.T) {
 	tests := []struct {
 		name string
 		mcp  *mcv1.MachineConfigPool
@@ -220,7 +220,7 @@ func TestSystemreservedRemove(t *testing.T) {
 
 			clientFake := clientBuilder.Build()
 
-			sr := &systemreserved{
+			sr := &systemReserved{
 				client: clientFake,
 				log:    utillog.GetLogger(),
 			}

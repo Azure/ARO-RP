@@ -4,7 +4,7 @@ package workaround
 // Licensed under the Apache License 2.0.
 
 const (
-	// systemreserved workaround
+	// systemReserved workaround
 	// Tweaked values from from https://github.com/openshift/kubernetes/blob/master/pkg/kubelet/apis/config/v1beta1/defaults_linux.go
 	hardEviction                = "500Mi"
 	nodeFsAvailable             = "10%"

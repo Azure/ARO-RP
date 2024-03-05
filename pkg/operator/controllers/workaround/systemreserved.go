@@ -20,7 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-type systemreserved struct {
+type systemReserved struct {
 	log *logrus.Entry
 
 	client client.Client
@@ -28,29 +28,29 @@ type systemreserved struct {
 	versionFixed *version.Version
 }
 
-var _ Workaround = &systemreserved{}
+var _ Workaround = &systemReserved{}
 
-func NewSystemReserved(log *logrus.Entry, client client.Client) *systemreserved {
+func NewSystemReserved(log *logrus.Entry, client client.Client) *systemReserved {
 	verFixed, err := version.ParseVersion("4.8.0")
 	utilruntime.Must(err)
 
-	return &systemreserved{
+	return &systemReserved{
 		log:          log,
 		client:       client,
 		versionFixed: verFixed,
 	}
 }
 
-func (sr *systemreserved) Name() string {
+func (sr *systemReserved) Name() string {
 	return "SystemReserved fix for bz-1857446"
 }
 
-func (sr *systemreserved) IsRequired(clusterVersion *version.Version, cluster *arov1alpha1.Cluster) bool {
+func (sr *systemReserved) IsRequired(clusterVersion *version.Version, cluster *arov1alpha1.Cluster) bool {
 	return clusterVersion.Lt(sr.versionFixed)
 }
 
-func (sr *systemreserved) Ensure(ctx context.Context) error {
-	sr.log.Debug("ensure systemreserved")
+func (sr *systemReserved) Ensure(ctx context.Context) error {
+	sr.log.Debug("ensure systemReserved")
 
 	// Step 1. Add label to worker MachineConfigPool.
 	// Get the worker MachineConfigPool, modify it to add a label aro.openshift.io/limits: "", and apply the modified config.
@@ -114,8 +114,8 @@ func (sr *systemreserved) Ensure(ctx context.Context) error {
 	return err
 }
 
-func (sr *systemreserved) Remove(ctx context.Context) error {
-	sr.log.Debug("remove systemreserved")
+func (sr *systemReserved) Remove(ctx context.Context) error {
+	sr.log.Debug("remove systemReserved")
 	mcp := &mcv1.MachineConfigPool{}
 	err := sr.client.Get(ctx, types.NamespacedName{Name: workerMachineConfigPoolName}, mcp)
 	if err != nil {
