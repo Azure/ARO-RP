@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -38,32 +38,55 @@ func (r *Reconciler) machineValid(ctx context.Context, machine *machinev1beta1.M
 		return []error{fmt.Errorf("machine %s: provider spec missing", machine.Name)}
 	}
 
-	obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(machine.Spec.ProviderSpec.Value.Raw, nil, nil)
+	obj := &unstructured.Unstructured{}
+	err := obj.UnmarshalJSON(machine.Spec.ProviderSpec.Value.Raw)
 	if err != nil {
 		return []error{err}
 	}
-	machineProviderSpec, ok := obj.(*machinev1beta1.AzureMachineProviderSpec)
-	if !ok {
-		return []error{fmt.Errorf("machine %s: failed to read provider spec: %T", machine.Name, obj)}
-	}
+
+	machineProviderSpec := obj.UnstructuredContent()
 
 	// Validate VM size in machine provider spec
-	if !validate.VMSizeIsValid(api.VMSize(machineProviderSpec.VMSize), r.isLocalDevelopmentMode, isMaster) {
-		errs = append(errs, fmt.Errorf("machine %s: invalid VM size '%v'", machine.Name, machineProviderSpec.VMSize))
+	vmSize, ok, err := unstructured.NestedString(machineProviderSpec, "vmSize")
+	if !ok {
+		errs = append(errs, fmt.Errorf("machine %s: vmSize not found", machine.Name))
+	} else if err != nil {
+		errs = append(errs, fmt.Errorf("machine %s: vmSize invalid", machine.Name))
+	} else {
+		if !validate.VMSizeIsValid(api.VMSize(vmSize), r.isLocalDevelopmentMode, isMaster) {
+			errs = append(errs, fmt.Errorf("machine %s: invalid VM size '%v'", machine.Name, vmSize))
+		}
 	}
 
 	// Validate disk size in machine provider spec
-	if !isMaster && !validate.DiskSizeIsValid(int(machineProviderSpec.OSDisk.DiskSizeGB)) {
-		errs = append(errs, fmt.Errorf("machine %s: invalid disk size '%v'", machine.Name, machineProviderSpec.OSDisk.DiskSizeGB))
+	diskSizeGB, ok, err := unstructured.NestedInt64(machineProviderSpec, "osDisk", "diskSizeGB")
+	if !ok {
+		errs = append(errs, fmt.Errorf("machine %s: osDisk.diskSizeGB not found", machine.Name))
+	} else if err != nil {
+		errs = append(errs, fmt.Errorf("machine %s: osDisk.diskSizeGB invalid", machine.Name))
+	} else {
+		if !isMaster && !validate.DiskSizeIsValid(int(diskSizeGB)) {
+			errs = append(errs, fmt.Errorf("machine %s: invalid disk size '%v'", machine.Name, diskSizeGB))
+		}
 	}
 
 	// Validate image publisher and offer
-	if machineProviderSpec.Image.Publisher != "azureopenshift" || machineProviderSpec.Image.Offer != "aro4" {
-		errs = append(errs, fmt.Errorf("machine %s: invalid image '%v'", machine.Name, machineProviderSpec.Image))
+	image, ok, err := unstructured.NestedStringMap(machineProviderSpec, "image")
+	if !ok {
+		errs = append(errs, fmt.Errorf("machine %s: image not found", machine.Name))
+	} else if err != nil {
+		errs = append(errs, fmt.Errorf("machine %s: image invalid", machine.Name))
+	} else {
+		if image["publisher"] != "azureopenshift" || image["offer"] != "aro4" {
+			errs = append(errs, fmt.Errorf("machine %s: invalid image '%v'", machine.Name, image))
+		}
 	}
 
-	if machineProviderSpec.ManagedIdentity != "" {
-		errs = append(errs, fmt.Errorf("machine %s: invalid managedIdentity '%v'", machine.Name, machineProviderSpec.ManagedIdentity))
+	managedIdentity, ok, err := unstructured.NestedString(machineProviderSpec, "ManagedIdentity")
+	if err != nil {
+		errs = append(errs, fmt.Errorf("machine %s: ManagedIdentity invalid", machine.Name))
+	} else if ok {
+		errs = append(errs, fmt.Errorf("machine %s: invalid managedIdentity '%v'", machine.Name, managedIdentity))
 	}
 
 	return errs
