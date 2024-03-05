@@ -8,12 +8,13 @@ In brief, there are three options:
 
 1. use r/w or r/o primary keys, which grant access to the whole database account
 2. implement a service which transforms (1) into scoped resource tokens
-3. a third AAD RBAC-based model is in preview.
+3. a third AAD RBAC-based model with Entra Ids.
 
 Currently, the RP, monitoring and portal service share the same security
 boundary (the RP VM) and use option 1.  The dbtoken service, which also runs on
-the RP VM, is our implementation of option 2.  As and when option 3 goes GA, it
-may be possible to retire the dbtoken service.
+the RP VM, is our implementation of option 2.  Option 3 is now in GA and there are plans
+[here](https://issues.redhat.com/browse/ARO-5512) to implement it and replace option 1
+and 2.
 
 The purpose of the dbtoken service at its implementation time is to enable the
 gateway component (which handles end-user traffic) to access the service Cosmos
