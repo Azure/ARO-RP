@@ -5,6 +5,7 @@ package clusterdata
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 
@@ -16,7 +17,6 @@ import (
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
@@ -65,14 +65,10 @@ func (ce machineClientEnricher) Enrich(
 			continue
 		}
 
-		obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(machineset.Spec.Template.Spec.ProviderSpec.Value.Raw, nil, nil)
+		machineProviderSpec := &machinev1beta1.AzureMachineProviderSpec{}
+		err := json.Unmarshal(machineset.Spec.Template.Spec.ProviderSpec.Value.Raw, machineProviderSpec)
 		if err != nil {
-			log.Info(err)
-			continue
-		}
-		machineProviderSpec, ok := obj.(*machinev1beta1.AzureMachineProviderSpec)
-		if !ok {
-			log.Infof("failed to read provider spec from the machine set %q: %T", machineset.Name, obj)
+			log.Infof("failed to read provider spec from the machine set %q: %v", machineset.Name, err)
 			continue
 		}
 

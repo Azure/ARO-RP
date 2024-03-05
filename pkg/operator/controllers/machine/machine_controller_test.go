@@ -111,7 +111,7 @@ func TestMachineReconciler(t *testing.T) {
 			wantConditions: []operatorv1.OperatorCondition{{
 				Type:    arov1alpha1.MachineValid,
 				Status:  operatorv1.ConditionFalse,
-				Message: "machine foo-hx8z7-worker-1: invalid image 'map[offer:aro4 publisher:bananas]'",
+				Message: "machine foo-hx8z7-worker-1: invalid image '{bananas aro4    }'",
 				Reason:  "CheckFailed",
 			}},
 		},
