@@ -28,7 +28,7 @@ import (
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
-func TestAutosizednodesReconciler(t *testing.T) {
+func TestAutosizedNodesReconciler(t *testing.T) {
 	aro := func(autoSizeEnabled bool) *arov1alpha1.Cluster {
 		return &arov1alpha1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
