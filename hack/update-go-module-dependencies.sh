@@ -19,11 +19,6 @@
 #     For example, dependency Foo from release-4.7 branch requires
 #	  dependency Bar at older commit which is
 #     not compatible with Bar@release-4.7.
-#
-# Note that github.com/openshift org also contains forks of K8s upstream repos and we
-# use these forks (indirectly in most cases). This means that
-# we also must take care of replacing modules such as sigs.k8s.io/cluster-api-provider-azure
-# with github.com/openshift/cluster-api-provider-azure (just an example, there are more).
 
 for x in vendor/github.com/openshift/*; do
 	case $x in
@@ -31,18 +26,6 @@ for x in vendor/github.com/openshift/*; do
 
 		# Do not update Hive: it is not part of OCP
 		vendor/github.com/openshift/hive)
-			;;
-
-		# Inconsistent imports: some of our dependencies import it as github.com/metal3-io/cluster-api-provider-baremetal
-		# but in some places directly from the openshift fork.
-		# Replace github.com/metal3-io/cluster-api-provider-baremetal with an openshift fork in go.mod
-		vendor/github.com/openshift/cluster-api-provider-baremetal)
-			;;
-
-		# It is only used indirectly and intermediate dependencies pin to different incompatible commits.
-		# We force a specific commit here to make all dependencies happy.
-		vendor/github.com/openshift/cloud-credential-operator)
-			go mod edit -replace github.com/openshift/cloud-credential-operator=github.com/openshift/cloud-credential-operator@v0.0.0-20200316201045-d10080b52c9e
 			;;
 
 		# This repo doesn't follow release-x.y branching strategy
@@ -54,10 +37,6 @@ for x in vendor/github.com/openshift/*; do
 			go mod edit -replace ${x##vendor/}=$(go list -mod=mod -m ${x##vendor/}@release-4.10 | sed -e 's/ /@/')
 			;;
 	esac
-done
-
-for x in aws azure openstack; do
-	go mod edit -replace sigs.k8s.io/cluster-api-provider-$x=$(go list -mod=mod -m github.com/openshift/cluster-api-provider-$x@release-4.10 | sed -e 's/ /@/')
 done
 
 go get -u ./...
