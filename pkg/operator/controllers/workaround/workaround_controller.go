@@ -24,7 +24,7 @@ const (
 )
 
 // Reconciler the point of the workaround controller is to apply
-// workarounds that we have unitl upstream fixes are available.
+// workarounds that we have until upstream fixes are available.
 type Reconciler struct {
 	log *logrus.Entry
 
