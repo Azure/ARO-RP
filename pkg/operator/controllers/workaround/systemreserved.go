@@ -16,7 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -32,7 +31,7 @@ type systemreserved struct {
 var _ Workaround = &systemreserved{}
 
 func NewSystemReserved(log *logrus.Entry, client client.Client) *systemreserved {
-	verFixed, err := version.ParseVersion("4.99.0") // TODO set this correctly when known.
+	verFixed, err := version.ParseVersion("4.8.0")
 	utilruntime.Must(err)
 
 	return &systemreserved{
@@ -47,9 +46,6 @@ func (sr *systemreserved) Name() string {
 }
 
 func (sr *systemreserved) IsRequired(clusterVersion *version.Version, cluster *arov1alpha1.Cluster) bool {
-	if cluster.Spec.OperatorFlags.GetSimpleBoolean(operator.AutosizedNodesEnabled) {
-		return false
-	}
 	return clusterVersion.Lt(sr.versionFixed)
 }
 
