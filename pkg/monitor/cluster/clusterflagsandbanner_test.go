@@ -158,16 +158,15 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 		},
 		{
 			name:          "cluster with non-standard operator flags and activated support banner",
-			operatorFlags: generateNonStandardFlags([]string{operator.ImageConfigEnabled, operator.DnsmasqEnabled, operator.GenevaLoggingEnabled, operator.AutosizedNodesEnabled}),
+			operatorFlags: generateNonStandardFlags([]string{operator.ImageConfigEnabled, operator.DnsmasqEnabled, operator.GenevaLoggingEnabled}),
 			clusterBanner: arov1alpha1.Banner{
 				Content: arov1alpha1.BannerContactSupport,
 			},
 			expectFlagsMetricsValue: 1,
 			expectFlagsMetricsDims: map[string]string{
-				operator.ImageConfigEnabled:    operator.FlagFalse,
-				operator.DnsmasqEnabled:        operator.FlagFalse,
-				operator.GenevaLoggingEnabled:  operator.FlagFalse,
-				operator.AutosizedNodesEnabled: operator.FlagFalse,
+				operator.ImageConfigEnabled:   operator.FlagFalse,
+				operator.DnsmasqEnabled:       operator.FlagFalse,
+				operator.GenevaLoggingEnabled: operator.FlagFalse,
 			},
 			expectBannerMetricsValue: 1,
 			expectBannerMetricsDims:  map[string]string{"msg": "contact support"},
