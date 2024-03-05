@@ -16,10 +16,57 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
+
+func TestIsRequired(t *testing.T) {
+	for _, tt := range []struct {
+		name           string
+		clusterVersion string
+		expectedResult bool
+	}{
+		{
+			name:           "4.7 - Required",
+			clusterVersion: "4.7.18",
+			expectedResult: true,
+		},
+		{
+			name:           "4.8 - Not Required",
+			clusterVersion: "4.8.10",
+			expectedResult: false,
+		},
+		{
+			name:           "4.11 - Not Required",
+			clusterVersion: "4.11.10",
+			expectedResult: false,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			clusterVersion, err := version.ParseVersion(tt.clusterVersion)
+			if err != nil {
+				t.Errorf("error = %v", err)
+				return
+			}
+
+			sr := NewSystemReserved(
+				utillog.GetLogger(),
+				ctrlfake.NewClientBuilder().Build(),
+			)
+			cluster := &arov1alpha1.Cluster{}
+			if tt.expectedResult != sr.IsRequired(clusterVersion, cluster) {
+				t.Errorf(
+					"Expected %v, but got %v",
+					tt.expectedResult,
+					sr.IsRequired(clusterVersion, cluster),
+				)
+			}
+		})
+	}
+}
 
 func TestSystemReservedEnsure(t *testing.T) {
 	kubeletConfig := func(resourceVersion string) *mcv1.KubeletConfig {
