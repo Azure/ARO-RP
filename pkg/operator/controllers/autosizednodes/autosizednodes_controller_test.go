@@ -6,14 +6,11 @@ package autosizednodes
 import (
 	"context"
 	"reflect"
-	"strconv"
 	"testing"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/google/go-cmp/cmp"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/sirupsen/logrus"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -22,28 +19,23 @@ import (
 
 	// This "_" import is counterintuitive but is required to initialize the scheme
 	// ARO unfortunately relies on implicit import and its side effect for this
-	"github.com/Azure/ARO-RP/pkg/operator"
+
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	"github.com/Azure/go-autorest/autorest/to"
 )
 
 func TestAutosizedNodesReconciler(t *testing.T) {
-	aro := func(autoSizeEnabled bool) *arov1alpha1.Cluster {
+	aro := func() *arov1alpha1.Cluster {
 		return &arov1alpha1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "aro",
 				Namespace: "openshift-azure-operator",
 			},
-			Spec: arov1alpha1.ClusterSpec{
-				OperatorFlags: arov1alpha1.OperatorFlags{
-					operator.AutosizedNodesEnabled: strconv.FormatBool(autoSizeEnabled),
-				},
-			},
 		}
 	}
 
-	emptyConfig := mcv1.KubeletConfig{}
 	config := makeConfig()
 
 	tests := []struct {
@@ -53,31 +45,19 @@ func TestAutosizedNodesReconciler(t *testing.T) {
 		wantConfig *mcv1.KubeletConfig
 	}{
 		{
-			name:       "is not needed",
-			client:     fake.NewClientBuilder().WithRuntimeObjects(aro(false)).Build(),
-			wantConfig: &emptyConfig,
-			wantErrMsg: kerrors.NewNotFound(mcv1.Resource("kubeletconfigs"), "dynamic-node").Error(),
-		},
-		{
 			name:       "is needed and not present already",
-			client:     fake.NewClientBuilder().WithRuntimeObjects(aro(true)).Build(),
+			client:     fake.NewClientBuilder().WithRuntimeObjects(aro()).Build(),
 			wantConfig: &config,
 		},
 		{
 			name:       "is needed and present already",
-			client:     fake.NewClientBuilder().WithRuntimeObjects(aro(true), &config).Build(),
+			client:     fake.NewClientBuilder().WithRuntimeObjects(aro(), &config).Build(),
 			wantConfig: &config,
-		},
-		{
-			name:       "is not needed and is present",
-			client:     fake.NewClientBuilder().WithRuntimeObjects(aro(false), &config).Build(),
-			wantConfig: &emptyConfig,
-			wantErrMsg: kerrors.NewNotFound(mcv1.Resource("kubeletconfigs"), "dynamic-node").Error(),
 		},
 		{
 			name: "is needed and config got modified",
 			client: fake.NewClientBuilder().WithRuntimeObjects(
-				aro(true),
+				aro(),
 				&mcv1.KubeletConfig{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: configName,

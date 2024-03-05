@@ -51,12 +51,12 @@ func generateDefaultFlags() arov1alpha1.OperatorFlags {
 	return df
 }
 
-func generateNonStandardFlags(nonDefualtFlagNames []string) arov1alpha1.OperatorFlags {
+func generateNonStandardFlags(nonDefaultFlagNames []string) arov1alpha1.OperatorFlags {
 	nsf := make(arov1alpha1.OperatorFlags)
 	for k, v := range operator.DefaultOperatorFlags() {
 		nsf[k] = v
 	}
-	for _, n := range nonDefualtFlagNames {
+	for _, n := range nonDefaultFlagNames {
 		if nsf[n] == "true" {
 			nsf[n] = "false"
 		} else {
@@ -117,32 +117,30 @@ func TestEmitOperatorFlagsAndSupportBanner(t *testing.T) {
 		},
 		{
 			name:          "cluster with non-standard operator flags",
-			operatorFlags: generateNonStandardFlags([]string{operator.ImageConfigEnabled, operator.DnsmasqEnabled, operator.GenevaLoggingEnabled, operator.AutosizedNodesEnabled}),
+			operatorFlags: generateNonStandardFlags([]string{operator.ImageConfigEnabled, operator.DnsmasqEnabled, operator.GenevaLoggingEnabled}),
 			clusterBanner: arov1alpha1.Banner{
 				Content: "",
 			},
 			expectFlagsMetricsValue: 1,
 			expectFlagsMetricsDims: map[string]string{
-				operator.ImageConfigEnabled:    operator.FlagFalse,
-				operator.DnsmasqEnabled:        operator.FlagFalse,
-				operator.GenevaLoggingEnabled:  operator.FlagFalse,
-				operator.AutosizedNodesEnabled: operator.FlagFalse,
+				operator.ImageConfigEnabled:   operator.FlagFalse,
+				operator.DnsmasqEnabled:       operator.FlagFalse,
+				operator.GenevaLoggingEnabled: operator.FlagFalse,
 			},
 			expectBannerMetricsValue: 0,
 			expectBannerMetricsDims:  nil,
 		},
 		{
 			name:          "cluster with missing operator flags",
-			operatorFlags: generateFlagsWithMissingEntries([]string{operator.ImageConfigEnabled, operator.DnsmasqEnabled, operator.GenevaLoggingEnabled, operator.AutosizedNodesEnabled}),
+			operatorFlags: generateFlagsWithMissingEntries([]string{operator.ImageConfigEnabled, operator.DnsmasqEnabled, operator.GenevaLoggingEnabled}),
 			clusterBanner: arov1alpha1.Banner{
 				Content: "",
 			},
 			expectFlagsMetricsValue: 1,
 			expectFlagsMetricsDims: map[string]string{
-				operator.ImageConfigEnabled:    "DNE",
-				operator.DnsmasqEnabled:        "DNE",
-				operator.GenevaLoggingEnabled:  "DNE",
-				operator.AutosizedNodesEnabled: "DNE",
+				operator.ImageConfigEnabled:   "DNE",
+				operator.DnsmasqEnabled:       "DNE",
+				operator.GenevaLoggingEnabled: "DNE",
 			},
 			expectBannerMetricsValue: 0,
 			expectBannerMetricsDims:  nil,

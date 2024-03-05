@@ -19,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 )
 
@@ -52,25 +51,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	r.log.Infof("Config changed, autoSize: %t\n", aro.Spec.OperatorFlags.GetSimpleBoolean(operator.AutosizedNodesEnabled))
-
 	// key is used to locate the object in the etcd
 	key := types.NamespacedName{
 		Name: configName,
-	}
-
-	if !aro.Spec.OperatorFlags.GetSimpleBoolean(operator.AutosizedNodesEnabled) {
-		// defaults to deleting the config
-		config := mcv1.KubeletConfig{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: configName,
-			},
-		}
-		err = r.client.Delete(ctx, &config)
-		if err != nil {
-			err = fmt.Errorf("could not delete KubeletConfig: %w", err)
-		}
-		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	defaultConfig := makeConfig()
