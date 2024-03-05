@@ -9,8 +9,8 @@ from os.path import exists
 
 from azure.cli.core.commands.client_factory import get_mgmt_service_client, get_subscription_id
 from azure.cli.core.profiles import ResourceType
-from azure.cli.core.azclierror import CLIInternalError, InvalidArgumentValueError, \
-    RequiredArgumentMissingError
+from azure.cli.core.azclierror import CLIInternalError, \
+    InvalidArgumentValueError, RequiredArgumentMissingError
 from azure.core.exceptions import ResourceNotFoundError
 from knack.log import get_logger
 from msrestazure.azure_exceptions import CloudError
@@ -193,8 +193,9 @@ def validate_subnets(master_subnet, worker_subnet):
     worker_parts = parse_resource_id(worker_subnet)
 
     if master_parts['resource_group'].lower() != worker_parts['resource_group'].lower():
-        raise InvalidArgumentValueError(f"--master-subnet resource group '{master_parts['resource_group']}' must equal "
-                                        f"--worker-subnet resource group '{worker_parts['resource_group']}'.")
+        raise InvalidArgumentValueError(
+            f"--master-subnet resource group '{master_parts['resource_group']}' must equal "
+            f"--worker-subnet resource group '{worker_parts['resource_group']}'.")
 
     if master_parts['name'].lower() != worker_parts['name'].lower():
         raise InvalidArgumentValueError(
@@ -271,3 +272,14 @@ def validate_refresh_cluster_credentials(namespace):
 def validate_version_format(namespace):
     if namespace.version is not None and not re.match(r'^[4-9]{1}\.[0-9]{1,2}\.[0-9]{1,2}$', namespace.version):
         raise InvalidArgumentValueError('--version is invalid')
+
+
+def validate_load_balancer_managed_outbound_ip_count(namespace):
+    if namespace.load_balancer_managed_outbound_ip_count is None:
+        return
+
+    minimum_managed_outbound_ips = 1
+    maximum_managed_outbound_ips = 20
+    if namespace.load_balancer_managed_outbound_ip_count < minimum_managed_outbound_ips or namespace.load_balancer_managed_outbound_ip_count > maximum_managed_outbound_ips:  # pylint: disable=line-too-long
+        error_msg = f"--load-balancer-managed-outbound-ip-count must be between {minimum_managed_outbound_ips} and {maximum_managed_outbound_ips} (inclusive)."  # pylint: disable=line-too-long
+        raise InvalidArgumentValueError(error_msg)
