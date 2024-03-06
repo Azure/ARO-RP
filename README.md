@@ -134,7 +134,7 @@ questions or comments.
 
     * subnets: Ensures that the Network Security Groups (NSGs) are correct, and updates the Azure Machine Provider spec with subnet, vnet, and Network Resource Group.
 
-    * workaround: Applies a set of temporay workarounds to the ARO cluster.
+    * workaround: Applies a set of temporary workarounds to the ARO cluster.
 
     * previewfeature: Allows toggling certain features that are not yet enabled by default.
 
