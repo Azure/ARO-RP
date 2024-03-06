@@ -33,3 +33,10 @@ How did you test that this PR works?
   docs.
 - If no, explain why (e.g. "tech debt cleanup, N/A").
 -->
+
+### How do you know this will function as expected in production? 
+
+<!--
+- Does adequate telemetry, monitoring and documention exist to effectively operate your change?
+- Have failure modes been identified and mitigated? 
+-->
