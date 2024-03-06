@@ -69,8 +69,6 @@ az: pyenv
 
 azext-aro:
 	docker build . -f Dockerfile.aro-azext --no-cache=$(NO_CACHE) -t aro-azext:latest
-	mkdir -p ./python/az/aro/dist
-	docker run -v ./python/az/aro/dist/:/data/az/aro/dist:z aro-azext:latest
 
 clean:
 	rm -rf python/az/aro/{aro.egg-info,build,dist} aro

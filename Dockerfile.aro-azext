@@ -4,4 +4,5 @@ RUN pip install pytest
 COPY /python /data/
 
 WORKDIR /data/az/aro
-CMD ["/bin/sh", "-c", "pytest --ignore=azext_aro/tests/latest/integration; python3 setup.py bdist_wheel"]
+RUN pytest --ignore=azext_aro/tests/latest/integration
+RUN python3 setup.py bdist_wheel
