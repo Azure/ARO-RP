@@ -239,19 +239,10 @@ test-python: pyenv az
 		azdev style && \
 		hack/unit-test-python.sh
 
-set-kubeconfig-to-admin:
-	sed -i "s/KUBECONFIG=.*/KUBECONFIG=admin.kubeconfig/g" env
-
-set-kubeconfig-to-shared-cluster:
-	sed -i "s/KUBECONFIG=.*/KUBECONFIG=shared-cluster.admin.kubeconfig/g" env
-
-shared-cluster-login: set-kubeconfig-to-shared-cluster
-	rm shared-cluster.admin.kubeconfig 2> /dev/null; \
-	RP_MODE="production" \
-	az aro get-admin-kubeconfig \
-		--name ${SHARED_CLUSTER_NAME} \
-		--resource-group ${SHARED_CLUSTER_RESOURCE_GROUP_NAME} \
-		--file shared-cluster.admin.kubeconfig; \
+shared-cluster-login:
+	@oc login $(shell az aro show -g sre-shared-cluster -n sre-shared-cluster -ojson --query apiserverProfile.url) \
+		-u kubeadmin \
+		-p $(shell az aro list-credentials -g sre-shared-cluster -n sre-shared-cluster  -ojson --query "kubeadminPassword")
 
 shared-cluster-create:
 	./hack/shared-cluster.sh create
@@ -262,7 +253,7 @@ shared-cluster-delete:
 unit-test-python:
 	hack/unit-test-python.sh
 
-admin.kubeconfig: set-kubeconfig-to-admin
+admin.kubeconfig:
 	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig
 
 aks.kubeconfig:
