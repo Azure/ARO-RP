@@ -1,0 +1,7 @@
+FROM mcr.microsoft.com/azure-cli:2.58.0
+
+RUN pip install pytest
+COPY /python /data/
+
+WORKDIR /data/az/aro
+CMD ["/bin/sh", "-c", "pytest --ignore=azext_aro/tests/latest/integration; python3 setup.py bdist_wheel"]
