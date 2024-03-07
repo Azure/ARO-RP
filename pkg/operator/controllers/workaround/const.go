@@ -15,7 +15,4 @@ const (
 	kubeletConfigName           = "aro-limits"
 	workerMachineConfigPoolName = "worker"
 	memReserved                 = "2000Mi"
-
-	// ifreload workaround
-	kubeNamespace = "openshift-azure-ifreload"
 )
