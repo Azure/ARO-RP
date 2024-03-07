@@ -51,7 +51,7 @@ var (
 		AppSuffix:                "aro.azure.com",
 		AppLensEndpoint:          "https://diag-runtimehost-prod.trafficmanager.net/api/invoke",
 		AppLensScope:             "b9a1efcd-32ee-4330-834c-c04eb00f4b33",
-		AppLensTenantID:          "72f988bf-86f1-41af-91ab-2d7cd011db47",
+		AppLensTenantID:          "33e01921-4d64-4f8c-a055-5bdaffd5e33d",
 		PkiIssuerUrlTemplate:     "https://issuer.pki.azure.com/dsms/issuercertificates?getissuersv3&caName=%s",
 		PkiCaName:                "ame",
 		Cloud:                    cloud.AzurePublic,
