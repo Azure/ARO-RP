@@ -62,6 +62,8 @@ type ContainerEngine interface { //nolint:interfacebloat
 	HealthCheckRun(ctx context.Context, nameOrID string, options HealthCheckOptions) (*define.HealthCheckResults, error)
 	Info(ctx context.Context) (*define.Info, error)
 	KubeApply(ctx context.Context, body io.Reader, opts ApplyOptions) error
+	Locks(ctx context.Context) (*LocksReport, error)
+	Migrate(ctx context.Context, options SystemMigrateOptions) error
 	NetworkConnect(ctx context.Context, networkname string, options NetworkConnectOptions) error
 	NetworkCreate(ctx context.Context, network types.Network, createOptions *types.NetworkCreateOptions) (*types.Network, error)
 	NetworkUpdate(ctx context.Context, networkname string, options NetworkUpdateOptions) error
@@ -90,9 +92,11 @@ type ContainerEngine interface { //nolint:interfacebloat
 	PodStop(ctx context.Context, namesOrIds []string, options PodStopOptions) ([]*PodStopReport, error)
 	PodTop(ctx context.Context, options PodTopOptions) (*StringSliceReport, error)
 	PodUnpause(ctx context.Context, namesOrIds []string, options PodunpauseOptions) ([]*PodUnpauseReport, error)
+	Renumber(ctx context.Context) error
+	Reset(ctx context.Context) error
 	SetupRootless(ctx context.Context, noMoveProcess bool) error
 	SecretCreate(ctx context.Context, name string, reader io.Reader, options SecretCreateOptions) (*SecretCreateReport, error)
-	SecretInspect(ctx context.Context, nameOrIDs []string) ([]*SecretInfoReport, []error, error)
+	SecretInspect(ctx context.Context, nameOrIDs []string, options SecretInspectOptions) ([]*SecretInfoReport, []error, error)
 	SecretList(ctx context.Context, opts SecretListRequest) ([]*SecretInfoReport, error)
 	SecretRm(ctx context.Context, nameOrID []string, opts SecretRmOptions) ([]*SecretRmReport, error)
 	SecretExists(ctx context.Context, nameOrID string) (*BoolReport, error)

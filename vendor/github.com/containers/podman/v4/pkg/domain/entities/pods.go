@@ -38,9 +38,10 @@ type ListPodsReport struct {
 }
 
 type ListPodContainer struct {
-	Id     string //nolint:revive,stylecheck
-	Names  string
-	Status string
+	Id           string //nolint:revive,stylecheck
+	Names        string
+	Status       string
+	RestartCount uint
 }
 
 type PodPauseOptions struct {
@@ -104,8 +105,9 @@ type PodRmOptions struct {
 }
 
 type PodRmReport struct {
-	Err error
-	Id  string //nolint:revive,stylecheck
+	RemovedCtrs map[string]error
+	Err         error
+	Id          string //nolint:revive,stylecheck
 }
 
 // PddSpec is an abstracted version of PodSpecGen designed to eventually accept options
@@ -135,6 +137,7 @@ type PodCreateOptions struct {
 	Net                *NetOptions       `json:"net,omitempty"`
 	Share              []string          `json:"share,omitempty"`
 	ShareParent        *bool             `json:"share_parent,omitempty"`
+	Restart            string            `json:"restart,omitempty"`
 	Pid                string            `json:"pid,omitempty"`
 	Cpus               float64           `json:"cpus,omitempty"`
 	CpusetCpus         string            `json:"cpuset_cpus,omitempty"`
@@ -143,6 +146,7 @@ type PodCreateOptions struct {
 	VolumesFrom        []string          `json:"volumes_from,omitempty"`
 	SecurityOpt        []string          `json:"security_opt,omitempty"`
 	Sysctl             []string          `json:"sysctl,omitempty"`
+	Uts                string            `json:"uts,omitempty"`
 }
 
 // PodLogsOptions describes the options to extract pod logs.
@@ -221,6 +225,7 @@ type ContainerCreateOptions struct {
 	Init               bool
 	InitContainerType  string
 	InitPath           string
+	IntelRdtClosID     string
 	Interactive        bool
 	IPC                string
 	Label              []string
@@ -309,7 +314,7 @@ type ContainerCreateOptions struct {
 func NewInfraContainerCreateOptions() ContainerCreateOptions {
 	options := ContainerCreateOptions{
 		IsInfra:          true,
-		ImageVolume:      "bind",
+		ImageVolume:      define.TypeBind,
 		MemorySwappiness: -1,
 	}
 	return options
@@ -358,6 +363,12 @@ func ToPodSpecGen(s specgen.PodSpecGenerator, p *PodCreateOptions) (*specgen.Pod
 		return nil, err
 	}
 	s.Ipc = out
+
+	out, err = specgen.ParseNamespace(p.Uts)
+	if err != nil {
+		return nil, err
+	}
+	s.UtsNs = out
 	s.Hostname = p.Hostname
 	s.ExitPolicy = p.ExitPolicy
 	s.Labels = p.Labels
@@ -375,6 +386,14 @@ func ToPodSpecGen(s specgen.PodSpecGenerator, p *PodCreateOptions) (*specgen.Pod
 	s.ShareParent = p.ShareParent
 	s.PodCreateCommand = p.CreateCommand
 	s.VolumesFrom = p.VolumesFrom
+	if p.Restart != "" {
+		policy, retries, err := util.ParseRestartPolicy(p.Restart)
+		if err != nil {
+			return nil, err
+		}
+		s.RestartPolicy = policy
+		s.RestartRetries = &retries
+	}
 
 	// Networking config
 
