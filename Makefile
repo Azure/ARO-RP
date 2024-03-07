@@ -239,9 +239,10 @@ test-python: pyenv az
 		azdev style && \
 		hack/unit-test-python.sh
 
-
 shared-cluster-login:
-	@oc login ${SHARED_CLUSTER_API} -u kubeadmin -p ${SHARED_CLUSTER_KUBEADMIN_PASSWORD}
+	@oc login $(shell az aro show -g sre-shared-cluster -n sre-shared-cluster -ojson --query apiserverProfile.url) \
+		-u kubeadmin \
+		-p $(shell az aro list-credentials -g sre-shared-cluster -n sre-shared-cluster  -ojson --query "kubeadminPassword")
 
 shared-cluster-create:
 	./hack/shared-cluster.sh create

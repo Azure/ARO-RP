@@ -16,24 +16,26 @@ The following diagram is the overview of where our shared cluster lives, and how
 
 ## Authentication
 
-We have the kubeadmin credentials as well as the kubeadmin kubeconfig file. You can use either to authenticate to the cluster.
+You can use either to authenticate to the cluster:
 
-* Make secrets:
+* Make secrets, get and set KUBECONFIG, assuming `env` sources `secrets/env`:
+```
+SECRET_SA_ACCOUNT_NAME=rharosecretsdev make secrets;
+. ./env;
 
-```
-SECRET_SA_ACCOUNT_NAME=rharosecretsdev make secrets
+az aro get-admin-kubeconfig \
+    --name $SHARED_CLUSTER_NAME \
+    --resource-group $SHARED_CLUSTER_RESOURCE_GROUP_NAME \
+    --file shared-cluster.admin.kubeconfig;
+
+export KUBECONFIG=shared-cluster.admin.kubeconfig
 ```
 
-* Oc login, assuming `env` sources `secrets/env`:
+* Get details from AZ and use oc login, assuming you are logged in to the RH tenant:
 ```
-. ./env
 make shared-cluster-login
 ```
 
-* Use kubeconfig
-```
-export KUBECONFIG=$PWD/secrets/shared-cluster.kubeconfig
-```
 
 ## Creating / Deleting the Shared Cluster
 
