@@ -8,11 +8,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -351,7 +352,8 @@ func TestAsyncOperationResultLog(t *testing.T) {
 		name                     string
 		initialProvisioningState api.ProvisioningState
 		backendErr               error
-		wantData                 []logrus.Fields
+		want                     []logrus.Fields
+		wantEntries              []map[string]types.GomegaMatcher
 	}{
 		{
 			name:                     "Success Status Code",
@@ -364,12 +366,13 @@ func TestAsyncOperationResultLog(t *testing.T) {
 					Target:  "target",
 				},
 			},
-			wantData: []logrus.Fields{
+			wantEntries: []map[string]types.GomegaMatcher{
 				{
-					"LOGKIND":       "asyncqos",
-					"operationType": "Succeeded",
-					"resultType":    utillog.SuccessResultType,
-				}},
+					"LOGKIND":       gomega.Equal("asyncqos"),
+					"operationType": gomega.Equal("Succeeded"),
+					"resultType":    gomega.Equal(utillog.SuccessResultType),
+				},
+			},
 		},
 		{
 			name:                     "User Error Status Code",
@@ -378,15 +381,16 @@ func TestAsyncOperationResultLog(t *testing.T) {
 				StatusCode: http.StatusBadRequest,
 				CloudErrorBody: &api.CloudErrorBody{
 					Code:    api.CloudErrorCodeResourceNotFound,
-					Message: "This is an user error result type",
+					Message: "This is a user error result type",
 					Target:  "target",
 				},
 			},
-			wantData: []logrus.Fields{
+			wantEntries: []map[string]types.GomegaMatcher{
 				{
-					"LOGKIND":       "asyncqos",
-					"operationType": "Failed",
-					"resultType":    utillog.UserErrorResultType,
+					"LOGKIND":       gomega.Equal("asyncqos"),
+					"operationType": gomega.Equal("Failed"),
+					"resultType":    gomega.Equal(utillog.UserErrorResultType),
+					"errorDetails":  gomega.ContainSubstring("This is a user error result type"),
 				}},
 		},
 		{
@@ -400,11 +404,13 @@ func TestAsyncOperationResultLog(t *testing.T) {
 					Target:  "target",
 				},
 			},
-			wantData: []logrus.Fields{{
-				"LOGKIND":       "asyncqos",
-				"operationType": "Failed",
-				"resultType":    utillog.ServerErrorResultType,
-			}},
+			wantEntries: []map[string]types.GomegaMatcher{
+				{
+					"LOGKIND":       gomega.Equal("asyncqos"),
+					"operationType": gomega.Equal("Failed"),
+					"resultType":    gomega.Equal(utillog.ServerErrorResultType),
+					"errorDetails":  gomega.ContainSubstring("This is a server error result type"),
+				}},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -412,23 +418,9 @@ func TestAsyncOperationResultLog(t *testing.T) {
 
 			ocb := &openShiftClusterBackend{}
 			ocb.asyncOperationResultLog(log, tt.initialProvisioningState, tt.backendErr)
-
-			entry := h.LastEntry()
-			if entry == nil {
-				t.Fatal("Expected log entry, got nil")
-			}
-			var results []logrus.Fields
-
-			for _, log := range h.AllEntries() {
-				results = append(results, logrus.Fields{
-					"LOGKIND":       log.Data["LOGKIND"],
-					"operationType": log.Data["operationType"],
-					"resultType":    log.Data["resultType"],
-				})
-			}
-
-			if !reflect.DeepEqual(results, tt.wantData) {
-				t.Errorf("Unexpected value/s got %v, want %v", results, tt.wantData)
+			err := testlog.AssertLoggingOutput(h, tt.wantEntries)
+			if err != nil {
+				t.Error(err)
 			}
 		})
 	}
