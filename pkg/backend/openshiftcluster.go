@@ -347,7 +347,14 @@ func (ocb *openShiftClusterBackend) asyncOperationResultLog(log *logrus.Entry, i
 
 	err, ok := backendErr.(*api.CloudError)
 	if ok {
-		log = log.WithField("resultType", utillog.MapStatusCodeToResultType(err.StatusCode))
+		if err.StatusCode < 300 && err.StatusCode >= 200 {
+			log.Info("long running operation succeeded")
+			return
+		} else if err.StatusCode < 500 {
+			log = log.WithField("resultType", utillog.UserErrorResultType)
+		} else {
+			log = log.WithField("resultType", utillog.ServerErrorResultType)
+		}
 	} else {
 		log = log.WithField("resultType", utillog.ServerErrorResultType)
 	}
