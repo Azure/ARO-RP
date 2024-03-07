@@ -34,8 +34,8 @@ type Stream struct {
 // This default is left here ONLY for use by local development mode,
 // until we can come up with a better solution.
 var DefaultInstallStream = Stream{
-	Version:  NewVersion(4, 12, 25),
-	PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:5a4fb052cda1d14d1e306ce87e6b0ded84edddaa76f1cf401bcded99cef2ad84",
+	Version:  NewVersion(4, 13, 23),
+	PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:ca556d3494d08765c90481f15dd965995371168ea7ee7a551000bed4481931c8",
 }
 
 // FluentbitImage contains the location of the Fluentbit container image
