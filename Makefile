@@ -160,7 +160,7 @@ run-portal:
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro portal
 
 build-portal:
-	cd portal/v1 && npm install && npm run build && cd ../v2 && npm install && npm run build
+	cd portal/v2 && npm install && npm run build
 
 pyenv:
 	python3 -m venv pyenv
