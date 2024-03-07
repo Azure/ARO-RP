@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -350,7 +351,7 @@ func TestAsyncOperationResultLog(t *testing.T) {
 		name                     string
 		initialProvisioningState api.ProvisioningState
 		backendErr               error
-		wantData                 logrus.Fields
+		wantData                 []logrus.Fields
 	}{
 		{
 			name:                     "Success Status Code",
@@ -363,11 +364,12 @@ func TestAsyncOperationResultLog(t *testing.T) {
 					Target:  "target",
 				},
 			},
-			wantData: logrus.Fields{
-				"LOGKIND":       "asyncqos",
-				"operationType": "Succeeded",
-				"resultType":    utillog.SuccessResultType,
-			},
+			wantData: []logrus.Fields{
+				{
+					"LOGKIND":       "asyncqos",
+					"operationType": "Succeeded",
+					"resultType":    utillog.SuccessResultType,
+				}},
 		},
 		{
 			name:                     "User Error Status Code",
@@ -380,11 +382,12 @@ func TestAsyncOperationResultLog(t *testing.T) {
 					Target:  "target",
 				},
 			},
-			wantData: logrus.Fields{
-				"LOGKIND":       "asyncqos",
-				"operationType": "Failed",
-				"resultType":    utillog.UserErrorResultType,
-			},
+			wantData: []logrus.Fields{
+				{
+					"LOGKIND":       "asyncqos",
+					"operationType": "Failed",
+					"resultType":    utillog.UserErrorResultType,
+				}},
 		},
 		{
 			name:                     "Server Error Status Code",
@@ -397,11 +400,11 @@ func TestAsyncOperationResultLog(t *testing.T) {
 					Target:  "target",
 				},
 			},
-			wantData: logrus.Fields{
+			wantData: []logrus.Fields{{
 				"LOGKIND":       "asyncqos",
 				"operationType": "Failed",
 				"resultType":    utillog.ServerErrorResultType,
-			},
+			}},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -414,11 +417,18 @@ func TestAsyncOperationResultLog(t *testing.T) {
 			if entry == nil {
 				t.Fatal("Expected log entry, got nil")
 			}
+			var results []logrus.Fields
 
-			for key, value := range tt.wantData {
-				if entry.Data[key] != value {
-					t.Errorf("Unexpected value for key %s, got %v, want %v", key, entry.Data[key], value)
-				}
+			for _, log := range h.AllEntries() {
+				results = append(results, logrus.Fields{
+					"LOGKIND":       log.Data["LOGKIND"],
+					"operationType": log.Data["operationType"],
+					"resultType":    log.Data["resultType"],
+				})
+			}
+
+			if !reflect.DeepEqual(results, tt.wantData) {
+				t.Errorf("Unexpected value/s got %v, want %v", results, tt.wantData)
 			}
 		})
 	}
