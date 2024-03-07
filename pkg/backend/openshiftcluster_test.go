@@ -352,7 +352,6 @@ func TestAsyncOperationResultLog(t *testing.T) {
 		name                     string
 		initialProvisioningState api.ProvisioningState
 		backendErr               error
-		want                     []logrus.Fields
 		wantEntries              []map[string]types.GomegaMatcher
 	}{
 		{
