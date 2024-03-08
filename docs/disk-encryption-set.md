@@ -32,7 +32,7 @@ Follow [tutorial-create-cluster](https://docs.microsoft.com/en-us/azure/openshif
 ```bash
 export KEYVAULT_NAME=$USER-enckv
 export KEYVAULT_KEY_NAME=$USER-key
-export DISK_ENCRYPTION_SET_NAME=$USER-des
+export DISK_ENCRYPTION_SET_NAME=$RESOURCEGROUP-disk-encryption-set
 ```
   - create the KeyVault and Key
 ```bash
@@ -45,7 +45,7 @@ az keyvault key create --vault-name $KEYVAULT_NAME \
                        -n $KEYVAULT_KEY_NAME \
                        --protection software
 
-KEYVAULT_ID=$(az keyvault show --name $KEYVAULT_NAME --query "[id]" -o tsv)
+KEYVAULT_ID=$(az keyvault show --name $KEYVAULT_NAME -g $RESOURCEGROUP --query "[id]" -o tsv)
 
 KEYVAULT_KEY_URL=$(az keyvault key show --vault-name $KEYVAULT_NAME \
                                         --name $KEYVAULT_KEY_NAME \
