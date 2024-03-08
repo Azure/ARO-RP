@@ -3,6 +3,7 @@ run:
   skip-dirs:
     - vendor/portal
     - vendor
+    - pkg/api/vendor
   skip-dirs-use-default: true
   modules-download-mode: vendor
   build-tags:

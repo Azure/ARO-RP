@@ -24,12 +24,12 @@ import (
 	"github.com/gorilla/securecookie"
 	"golang.org/x/oauth2"
 
+	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
 	"github.com/Azure/ARO-RP/pkg/util/roundtripper"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 

@@ -3,6 +3,7 @@ module github.com/Azure/ARO-RP
 go 1.20
 
 require (
+	github.com/Azure/ARO-RP/pkg/api v0.0.0-00010101000000-000000000000
 	github.com/Azure/azure-sdk-for-go v63.1.0+incompatible
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.9.1
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.3.1
@@ -1600,3 +1601,5 @@ replace (
 	google.golang.org/grpc => google.golang.org/grpc v1.56.3
 	sigs.k8s.io/cluster-api-provider-azure => github.com/openshift/cluster-api-provider-azure v0.1.0-alpha.3.0.20210626224711-5d94c794092f
 )
+
+replace github.com/Azure/ARO-RP/pkg/api => ./pkg/api

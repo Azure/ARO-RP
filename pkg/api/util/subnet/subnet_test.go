@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	utilerror "github.com/Azure/ARO-RP/pkg/api/test/error"
 )
 
 func TestNetworkSecurityGroupID(t *testing.T) {
