@@ -133,7 +133,7 @@ func (m *manager) getCertificateRenewalSteps() []steps.Step {
 
 		steps.Action(m.initializeOperatorDeployer),
 
-		steps.Action(m.renewMDSDCertificate), // Dependant on initializeOperatorDeployer.
+		steps.Action(m.renewMDSDCertificate), // Dependent on initializeOperatorDeployer.
 	}
 }
 
@@ -143,7 +143,7 @@ func (m *manager) getOperatorUpdateSteps() []steps.Step {
 
 		steps.Action(m.ensureAROOperator),
 
-		// The following are dependant on initializeOperatorDeployer.
+		// The following are dependent on initializeOperatorDeployer.
 		steps.Condition(m.aroDeploymentReady, 20*time.Minute, true),
 		steps.Condition(m.ensureAROOperatorRunningDesiredVersion, 5*time.Minute, true),
 	}
