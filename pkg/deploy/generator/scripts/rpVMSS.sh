@@ -581,7 +581,11 @@ if [ -f \$NEW_CERT_FILE ]; then
   else
     sed -i -ne '1,/END CERTIFICATE/ p' \$NEW_CERT_FILE
   fi
-  if ! diff $NEW_CERT_FILE $CURRENT_CERT_FILE >/dev/null 2>&1; then
+
+  new_cert_sn="\$(openssl x509 -in "\$NEW_CERT_FILE" -noout -serial | awk -F= '{print \$2}')"
+  current_cert_sn="\$(openssl x509 -in "\$CURRENT_CERT_FILE" -noout -serial | awk -F= '{print \$2}')"
+  if [[ ! -z \$new_cert_sn ]] && [[ \$new_cert_sn != "\$current_cert_sn" ]]; then
+    echo updating certificate for \$COMPONENT
     chmod 0600 \$NEW_CERT_FILE
     mv \$NEW_CERT_FILE \$CURRENT_CERT_FILE
   fi
