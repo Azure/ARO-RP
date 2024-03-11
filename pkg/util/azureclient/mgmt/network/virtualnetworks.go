@@ -27,6 +27,7 @@ var _ VirtualNetworksClient = &virtualNetworksClient{}
 func NewVirtualNetworksClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) VirtualNetworksClient {
 	client := mgmtnetwork.NewVirtualNetworksClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &virtualNetworksClient{
 		VirtualNetworksClient: client,

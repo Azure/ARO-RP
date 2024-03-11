@@ -25,6 +25,7 @@ var _ PrivateZonesClient = &privateZonesClient{}
 func NewPrivateZonesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) PrivateZonesClient {
 	client := mgmtprivatedns.NewPrivateZonesClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &privateZonesClient{
 		PrivateZonesClient: client,

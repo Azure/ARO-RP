@@ -28,6 +28,7 @@ var _ PrivateEndpointsClient = &privateEndpointsClient{}
 func NewPrivateEndpointsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) PrivateEndpointsClient {
 	client := mgmtnetwork.NewPrivateEndpointsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &privateEndpointsClient{
 		PrivateEndpointsClient: client,

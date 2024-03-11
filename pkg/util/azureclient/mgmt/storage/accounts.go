@@ -30,6 +30,8 @@ var _ AccountsClient = &accountsClient{}
 func NewAccountsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) AccountsClient {
 	client := mgmtstorage.NewAccountsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
+
 	return &accountsClient{
 		AccountsClient: client,
 	}

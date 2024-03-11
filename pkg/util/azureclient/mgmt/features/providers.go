@@ -25,6 +25,7 @@ var _ ProvidersClient = &providersClient{}
 func NewProvidersClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) ProvidersClient {
 	client := mgmtfeatures.NewProvidersClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &providersClient{
 		ProvidersClient: client,

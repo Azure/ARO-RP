@@ -8,6 +8,8 @@ import (
 
 	azkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
 	"github.com/Azure/go-autorest/autorest"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 // BaseClient is a minimal interface for azure BaseClient
@@ -32,6 +34,7 @@ var _ BaseClient = &baseClient{}
 func New(authorizer autorest.Authorizer) BaseClient {
 	client := azkeyvault.New()
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &baseClient{
 		BaseClient: client,

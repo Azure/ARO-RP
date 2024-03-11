@@ -25,6 +25,7 @@ var _ DenyAssignmentClient = &denyAssignmentClient{}
 func NewDenyAssignmentsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) DenyAssignmentClient {
 	client := mgmtauthorization.NewDenyAssignmentsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &denyAssignmentClient{
 		DenyAssignmentsClient: client,

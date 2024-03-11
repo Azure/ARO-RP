@@ -29,6 +29,7 @@ var _ ResourcesClient = &resourcesClient{}
 func NewResourcesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) ResourcesClient {
 	client := mgmtfeatures.NewResourcesClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &resourcesClient{
 		ResourcesClient: client,
