@@ -76,9 +76,6 @@ func (m *manager) adminUpdate() []steps.Step {
 	return stepsToRun
 }
 
-func ConcatMultipleSlices(stepsToRun []steps.Step, step1 []steps.Step, step2 []steps.Step) {
-	panic("unimplemented")
-}
 func (m *manager) getZerothSteps() []steps.Step {
 	bootstrap := []steps.Step{
 		steps.Action(m.initializeKubernetesClients), // must be first
