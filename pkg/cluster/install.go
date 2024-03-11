@@ -86,8 +86,6 @@ func (m *manager) getZerothSteps() []steps.Step {
 		// struct, so we'll rebuild the fpAuthorizer and use the error catching
 		// to advance
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixupClusterSPObjectID),
-		steps.Action(m.startVMs),
-		steps.Condition(m.apiServersReady, 30*time.Minute, true),
 	}
 
 	// Generic fix-up actions that are fairly safe to always take, and don't require a running cluster
@@ -98,8 +96,15 @@ func (m *manager) getZerothSteps() []steps.Step {
 	return append(bootstrap, step0...)
 }
 
-func (m *manager) getGeneralFixesSteps() []steps.Step {
+func (m *manager) getEnsureAPIServerReadySteps() []steps.Step {
 	return []steps.Step{
+		steps.Action(m.startVMs),
+		steps.Condition(m.apiServersReady, 30*time.Minute, true),
+	}
+}
+
+func (m *manager) getGeneralFixesSteps() []steps.Step {
+	stepsThatDontNeedAPIServer := []steps.Step{
 		steps.Action(m.ensureResourceGroup), // re-create RP RBAC if needed after tenant migration
 		steps.Action(m.createOrUpdateDenyAssignment),
 		steps.Action(m.ensureServiceEndpoints),
@@ -108,6 +113,8 @@ func (m *manager) getGeneralFixesSteps() []steps.Step {
 		steps.Action(m.fixSSH),
 		// steps.Action(m.removePrivateDNSZone), // TODO(mj): re-enable once we communicate this out
 
+	}
+	stepsThatNeedAPIServer := []steps.Step{
 		steps.Action(m.fixSREKubeconfig),
 		steps.Action(m.fixUserAdminKubeconfig),
 		steps.Action(m.createOrUpdateRouterIPFromCluster),
@@ -118,10 +125,15 @@ func (m *manager) getGeneralFixesSteps() []steps.Step {
 		steps.Action(m.populateRegistryStorageAccountName),
 		steps.Action(m.ensureMTUSize),
 	}
+	return utilgenerics.ConcatMultipleSlices(
+		stepsThatDontNeedAPIServer,
+		m.getEnsureAPIServerReadySteps(),
+		stepsThatNeedAPIServer,
+	)
 }
 
 func (m *manager) getCertificateRenewalSteps() []steps.Step {
-	return []steps.Step{
+	steps := []steps.Step{
 		steps.Action(m.populateDatabaseIntIP),
 		steps.Action(m.fixMCSCert),
 		steps.Action(m.fixMCSUserData),
@@ -132,10 +144,11 @@ func (m *manager) getCertificateRenewalSteps() []steps.Step {
 
 		steps.Action(m.renewMDSDCertificate), // Dependent on initializeOperatorDeployer.
 	}
+	return utilgenerics.ConcatMultipleSlices(m.getEnsureAPIServerReadySteps(), steps)
 }
 
 func (m *manager) getOperatorUpdateSteps() []steps.Step {
-	return []steps.Step{
+	steps := []steps.Step{
 		steps.Action(m.initializeOperatorDeployer),
 
 		steps.Action(m.ensureAROOperator),
@@ -144,6 +157,7 @@ func (m *manager) getOperatorUpdateSteps() []steps.Step {
 		steps.Condition(m.aroDeploymentReady, 20*time.Minute, true),
 		steps.Condition(m.ensureAROOperatorRunningDesiredVersion, 5*time.Minute, true),
 	}
+	return utilgenerics.ConcatMultipleSlices(m.getEnsureAPIServerReadySteps(), steps)
 }
 
 func (m *manager) getHiveAdoptionAndReconciliationSteps() []steps.Step {

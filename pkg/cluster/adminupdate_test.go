@@ -37,8 +37,6 @@ func TestAdminUpdateSteps(t *testing.T) {
 		"[Action ensureBillingRecord-fm]",
 		"[Action ensureDefaults-fm]",
 		"[AuthorizationRetryingAction fixupClusterSPObjectID-fm]",
-		"[Action startVMs-fm]",
-		"[Condition apiServersReady-fm, timeout 30m0s]",
 		"[Action fixInfraID-fm]",
 	}
 
@@ -49,6 +47,8 @@ func TestAdminUpdateSteps(t *testing.T) {
 		"[Action populateRegistryStorageAccountName-fm]",
 		"[Action migrateStorageAccounts-fm]",
 		"[Action fixSSH-fm]",
+		"[Action startVMs-fm]",
+		"[Condition apiServersReady-fm, timeout 30m0s]",
 		"[Action fixSREKubeconfig-fm]",
 		"[Action fixUserAdminKubeconfig-fm]",
 		"[Action createOrUpdateRouterIPFromCluster-fm]",
@@ -59,6 +59,8 @@ func TestAdminUpdateSteps(t *testing.T) {
 	}
 
 	certificateRenewalSteps := []string{
+		"[Action startVMs-fm]",
+		"[Condition apiServersReady-fm, timeout 30m0s]",
 		"[Action populateDatabaseIntIP-fm]",
 		"[Action fixMCSCert-fm]",
 		"[Action fixMCSUserData-fm]",
@@ -69,6 +71,8 @@ func TestAdminUpdateSteps(t *testing.T) {
 	}
 
 	operatorUpdateSteps := []string{
+		"[Action startVMs-fm]",
+		"[Condition apiServersReady-fm, timeout 30m0s]",
 		"[Action initializeOperatorDeployer-fm]",
 		"[Action ensureAROOperator-fm]",
 		"[Condition aroDeploymentReady-fm, timeout 20m0s]",
