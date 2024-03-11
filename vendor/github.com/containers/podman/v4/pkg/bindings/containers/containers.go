@@ -290,8 +290,10 @@ func Top(ctx context.Context, nameOrID string, options *TopOptions) ([]string, e
 	}
 	params := url.Values{}
 	if options.Changed("Descriptors") {
-		psArgs := strings.Join(options.GetDescriptors(), ",")
-		params.Add("ps_args", psArgs)
+		psArgs := options.GetDescriptors()
+		for _, arg := range psArgs {
+			params.Add("ps_args", arg)
+		}
 	}
 	response, err := conn.DoRequest(ctx, nil, http.MethodGet, "/containers/%s/top", params, nil, nameOrID)
 	if err != nil {
@@ -341,6 +343,8 @@ func Unpause(ctx context.Context, nameOrID string, options *UnpauseOptions) erro
 func Wait(ctx context.Context, nameOrID string, options *WaitOptions) (int32, error) {
 	if options == nil {
 		options = new(WaitOptions)
+	} else if len(options.Condition) > 0 && len(options.Conditions) > 0 {
+		return -1, fmt.Errorf("%q field cannot be used with deprecated %q field", "Conditions", "Condition")
 	}
 	var exitCode int32
 	conn, err := bindings.GetClient(ctx)
@@ -351,6 +355,7 @@ func Wait(ctx context.Context, nameOrID string, options *WaitOptions) (int32, er
 	if err != nil {
 		return exitCode, err
 	}
+	delete(params, "conditions") // They're called "condition"
 	response, err := conn.DoRequest(ctx, nil, http.MethodPost, "/containers/%s/wait", params, nil, nameOrID)
 	if err != nil {
 		return exitCode, err
