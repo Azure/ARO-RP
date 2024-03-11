@@ -25,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
+	utilgenerics "github.com/Azure/ARO-RP/pkg/util/generics"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -33,16 +34,6 @@ import (
 const (
 	operatorCutOffVersion = "4.7.0" // OCP versions older than this will not receive ARO operator updates
 )
-
-func concatMultipleSlices[T any](slices ...[]T) []T {
-	result := []T{}
-
-	for _, s := range slices {
-		result = append(result, s...)
-	}
-
-	return result
-}
 
 // AdminUpdate performs an admin update of an ARO cluster
 func (m *manager) AdminUpdate(ctx context.Context) error {
@@ -58,7 +49,7 @@ func (m *manager) adminUpdate() []steps.Step {
 
 	stepsToRun := m.getZerothSteps()
 	if isEverything {
-		stepsToRun = concatMultipleSlices(
+		stepsToRun = utilgenerics.ConcatMultipleSlices(
 			stepsToRun, m.getGeneralFixesSteps(), m.getCertificateRenewalSteps(),
 		)
 		if m.shouldUpdateOperator() {
@@ -83,6 +74,10 @@ func (m *manager) adminUpdate() []steps.Step {
 	}
 
 	return stepsToRun
+}
+
+func ConcatMultipleSlices(stepsToRun []steps.Step, step1 []steps.Step, step2 []steps.Step) {
+	panic("unimplemented")
 }
 func (m *manager) getZerothSteps() []steps.Step {
 	bootstrap := []steps.Step{

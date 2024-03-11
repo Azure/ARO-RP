@@ -10,6 +10,7 @@ import (
 	"github.com/go-test/deep"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	utilgenerics "github.com/Azure/ARO-RP/pkg/util/generics"
 )
 
 func TestAdminUpdateSteps(t *testing.T) {
@@ -96,7 +97,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskOperator
 				return doc, true
 			},
-			shouldRunSteps: concatMultipleSlices(zerothSteps, operatorUpdateSteps),
+			shouldRunSteps: utilgenerics.ConcatMultipleSlices(zerothSteps, operatorUpdateSteps),
 		},
 		{
 			name: "ARO Operator Update on <= 4.6 cluster does not update operator",
@@ -107,7 +108,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.6.62"
 				return doc, true
 			},
-			shouldRunSteps: concatMultipleSlices(zerothSteps),
+			shouldRunSteps: utilgenerics.ConcatMultipleSlices(zerothSteps),
 		},
 		{
 			name: "ARO Operator Update on 4.7.0 cluster does update operator",
@@ -118,7 +119,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.7.0"
 				return doc, true
 			},
-			shouldRunSteps: concatMultipleSlices(zerothSteps, operatorUpdateSteps),
+			shouldRunSteps: utilgenerics.ConcatMultipleSlices(zerothSteps, operatorUpdateSteps),
 		},
 		{
 			name: "Everything update and adopt Hive.",
@@ -128,7 +129,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskEverything
 				return doc, true
 			},
-			shouldRunSteps: concatMultipleSlices(
+			shouldRunSteps: utilgenerics.ConcatMultipleSlices(
 				zerothSteps, generalFixesSteps, certificateRenewalSteps,
 				operatorUpdateSteps, hiveSteps, updateProvisionedBySteps,
 			),
@@ -142,7 +143,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.6.62"
 				return doc, true
 			},
-			shouldRunSteps: concatMultipleSlices(
+			shouldRunSteps: utilgenerics.ConcatMultipleSlices(
 				zerothSteps, generalFixesSteps, certificateRenewalSteps,
 				hiveSteps, updateProvisionedBySteps,
 			),
@@ -155,7 +156,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskEverything
 				return doc, false
 			},
-			shouldRunSteps: concatMultipleSlices(
+			shouldRunSteps: utilgenerics.ConcatMultipleSlices(
 				zerothSteps, generalFixesSteps, certificateRenewalSteps,
 				operatorUpdateSteps, updateProvisionedBySteps,
 			),
@@ -168,7 +169,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskEverything
 				return doc, true
 			},
-			shouldRunSteps: concatMultipleSlices(
+			shouldRunSteps: utilgenerics.ConcatMultipleSlices(
 				zerothSteps, generalFixesSteps, certificateRenewalSteps,
 				operatorUpdateSteps, hiveSteps, updateProvisionedBySteps,
 			),
@@ -181,7 +182,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskRenewCerts
 				return doc, true
 			},
-			shouldRunSteps: concatMultipleSlices(zerothSteps, certificateRenewalSteps),
+			shouldRunSteps: utilgenerics.ConcatMultipleSlices(zerothSteps, certificateRenewalSteps),
 		},
 		{
 			name: "adminUpdate() does not adopt Hive-created clusters",
@@ -193,7 +194,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 				doc.OpenShiftCluster.Properties.HiveProfile.CreatedByHive = true
 				return doc, true
 			},
-			shouldRunSteps: concatMultipleSlices(
+			shouldRunSteps: utilgenerics.ConcatMultipleSlices(
 				zerothSteps, generalFixesSteps, certificateRenewalSteps,
 				operatorUpdateSteps, updateProvisionedBySteps,
 			),
