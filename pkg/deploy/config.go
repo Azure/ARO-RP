@@ -12,8 +12,8 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/ghodss/yaml"
 	"golang.org/x/crypto/ssh"
+	"sigs.k8s.io/yaml"
 )
 
 // NOTICE: when modifying the config definition here, don't forget to update
