@@ -8,12 +8,12 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"fmt"
 	"math"
 	"math/big"
 	"net"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -44,7 +44,7 @@ type CertCfg struct {
 func PrivateKey() (*rsa.PrivateKey, error) {
 	rsaKey, err := rsa.GenerateKey(rand.Reader, keySize)
 	if err != nil {
-		return nil, errors.Wrap(err, "error generating RSA private key")
+		return nil, fmt.Errorf("error generating RSA private key: %w", err)
 	}
 
 	return rsaKey, nil
@@ -77,7 +77,7 @@ func SignedCertificate(
 	}
 	certBytes, err := x509.CreateCertificate(rand.Reader, &certTmpl, caCert, key.Public(), caKey)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create x509 certificate")
+		return nil, fmt.Errorf("failed to create x509 certificate: %w", err)
 	}
 	return x509.ParseCertificate(certBytes)
 }
@@ -87,27 +87,27 @@ func GenerateSignedCertificate(caKey *rsa.PrivateKey, caCert *x509.Certificate, 
 	// create a private key
 	key, err := PrivateKey()
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to generate private key")
+		return nil, nil, fmt.Errorf("failed to generate private key: %w", err)
 	}
 
 	// create a CSR
 	csrTmpl := x509.CertificateRequest{Subject: cfg.Subject, DNSNames: cfg.DNSNames, IPAddresses: cfg.IPAddresses}
 	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &csrTmpl, key)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to create certificate request")
+		return nil, nil, fmt.Errorf("failed to create certificate request: %w", err)
 	}
 
 	csr, err := x509.ParseCertificateRequest(csrBytes)
 	if err != nil {
 		logrus.Debugf("Failed to parse x509 certificate request: %s", err)
-		return nil, nil, errors.Wrap(err, "error parsing x509 certificate request")
+		return nil, nil, fmt.Errorf("error parsing x509 certificate request: %w", err)
 	}
 
 	// create a cert
 	cert, err := SignedCertificate(cfg, csr, key, caCert, caKey)
 	if err != nil {
 		logrus.Debugf("Failed to create a signed certificate: %s", err)
-		return nil, nil, errors.Wrap(err, "failed to create a signed certificate")
+		return nil, nil, fmt.Errorf("failed to create a signed certificate: %w", err)
 	}
 	return key, cert, nil
 }
