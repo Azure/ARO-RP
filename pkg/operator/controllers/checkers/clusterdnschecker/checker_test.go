@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
+	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -18,9 +19,10 @@ func TestCheck(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tt := range []struct {
-		name    string
-		DNS     *operatorv1.DNS
-		wantErr string
+		name       string
+		DNS        *operatorv1.DNS
+		wantErr    string
+		wantResult result
 	}{
 		{
 			name: "valid dns config",
@@ -28,6 +30,10 @@ func TestCheck(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
+			},
+			wantResult: result{
+				success: true,
+				message: "no in-cluster upstream DNS servers",
 			},
 		},
 		{
@@ -44,10 +50,13 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			wantErr: `malformed config: "." in zones`,
+			wantResult: result{
+				success: false,
+				message: `malformed config: "." in zones`,
+			},
 		},
 		{
-			name: "invalid config: forward plugin upstream is",
+			name: "forward plugin upstream is",
 			DNS: &operatorv1.DNS{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
@@ -67,7 +76,10 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			wantErr: `custom upstream DNS servers in use: first-fake.io, second-fake.io, third-fake.io`,
+			wantResult: result{
+				success: true,
+				message: `custom upstream DNS servers in use: first-fake.io, second-fake.io, third-fake.io`,
+			},
 		},
 		{
 			name:    "default config not found",
@@ -84,8 +96,9 @@ func TestCheck(t *testing.T) {
 				client: clientBuilder.Build(),
 			}
 
-			err := sp.Check(ctx)
+			result, err := sp.Check(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+			assert.Equal(t, tt.wantResult, result)
 		})
 	}
 }

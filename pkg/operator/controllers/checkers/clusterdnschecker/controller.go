@@ -68,8 +68,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	r.log.Debug("running")
-	checkErr := r.checker.Check(ctx)
-	condition := r.condition(checkErr)
+	result, checkErr := r.checker.Check(ctx)
+	condition := r.condition(checkErr, result)
 
 	err = conditions.SetCondition(ctx, r.client, condition, r.role)
 	if err != nil {
@@ -92,7 +92,7 @@ func (r *Reconciler) reconcileDisabled(ctx context.Context) (ctrl.Result, error)
 	return reconcile.Result{}, conditions.SetCondition(ctx, r.client, condition, r.role)
 }
 
-func (r *Reconciler) condition(checkErr error) *operatorv1.OperatorCondition {
+func (r *Reconciler) condition(checkErr error, result result) *operatorv1.OperatorCondition {
 	if checkErr != nil {
 		return &operatorv1.OperatorCondition{
 			Type:    arov1alpha1.DefaultClusterDNS,
@@ -102,10 +102,15 @@ func (r *Reconciler) condition(checkErr error) *operatorv1.OperatorCondition {
 		}
 	}
 
+	status := operatorv1.ConditionTrue
+	if !result.success {
+		status = operatorv1.ConditionFalse
+	}
+
 	return &operatorv1.OperatorCondition{
 		Type:    arov1alpha1.DefaultClusterDNS,
-		Status:  operatorv1.ConditionTrue,
-		Message: "No in-cluster upstream DNS servers",
+		Status:  status,
+		Message: result.message,
 		Reason:  "CheckDone",
 	}
 }

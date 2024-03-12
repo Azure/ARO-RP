@@ -14,7 +14,12 @@ import (
 )
 
 type clusterDNSChecker interface {
-	Check(ctx context.Context) error
+	Check(ctx context.Context) (result, error)
+}
+
+type result struct {
+	success bool
+	message string
 }
 
 type checker struct {
@@ -27,11 +32,11 @@ func newClusterDNSChecker(client client.Client) *checker {
 	}
 }
 
-func (r *checker) Check(ctx context.Context) error {
+func (r *checker) Check(ctx context.Context) (result, error) {
 	dns := &operatorv1.DNS{}
 	err := r.client.Get(ctx, types.NamespacedName{Name: "default"}, dns)
 	if err != nil {
-		return err
+		return result{}, err
 	}
 
 	var upstreams []string
@@ -40,8 +45,8 @@ func (r *checker) Check(ctx context.Context) error {
 			if z == "." {
 				// If "." is set as a zone, bail out and warn about the
 				// malformed config, as this will prevent CoreDNS from rolling
-				// out
-				return fmt.Errorf("malformed config: %q in zones", z)
+				// out.
+				return result{false, fmt.Sprintf("malformed config: %q in zones", z)}, nil
 			}
 		}
 
@@ -49,8 +54,11 @@ func (r *checker) Check(ctx context.Context) error {
 	}
 
 	if len(upstreams) > 0 {
-		return fmt.Errorf("custom upstream DNS servers in use: %s", strings.Join(upstreams, ", "))
+		// Custom DNS servers are a supported setup as per our docs
+		// https://learn.microsoft.com/en-us/azure/openshift/dns-forwarding
+		// We still report them here for awareness.
+		return result{true, fmt.Sprintf("custom upstream DNS servers in use: %s", strings.Join(upstreams, ", "))}, nil
 	}
 
-	return nil
+	return result{true, "no in-cluster upstream DNS servers"}, nil
 }

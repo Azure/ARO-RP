@@ -26,9 +26,9 @@ import (
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
-type fakeChecker func(ctx context.Context) error
+type fakeChecker func(ctx context.Context) (result, error)
 
-func (fc fakeChecker) Check(ctx context.Context) error {
+func (fc fakeChecker) Check(ctx context.Context) (result, error) {
 	return fc(ctx)
 }
 
@@ -39,24 +39,43 @@ func TestReconcile(t *testing.T) {
 		name                 string
 		controllerDisabled   bool
 		checkerReturnErr     error
+		checkerReturnResult  result
 		wantConditionStatus  operatorv1.ConditionStatus
 		wantConditionMessage string
 		wantErr              string
 		wantResult           reconcile.Result
 	}{
 		{
-			name:                 "no errors",
+			name: "no errors",
+			checkerReturnResult: result{
+				success: true,
+				message: "no in-cluster upstream DNS servers",
+			},
 			wantConditionStatus:  operatorv1.ConditionTrue,
-			wantConditionMessage: "No in-cluster upstream DNS servers",
+			wantConditionMessage: "no in-cluster upstream DNS servers",
 			wantResult:           reconcile.Result{RequeueAfter: time.Hour},
+		},
+		{
+			name:                 "check passed but failed condition",
+			wantConditionStatus:  operatorv1.ConditionFalse,
+			wantConditionMessage: "fake failed condition",
+			checkerReturnResult: result{
+				success: false,
+				message: "fake failed condition",
+			},
+			wantResult: reconcile.Result{RequeueAfter: time.Hour},
 		},
 		{
 			name:                 "check failed with an error",
 			wantConditionStatus:  operatorv1.ConditionFalse,
 			wantConditionMessage: "fake basic error",
 			checkerReturnErr:     errors.New("fake basic error"),
-			wantErr:              "fake basic error",
-			wantResult:           reconcile.Result{RequeueAfter: time.Hour},
+			checkerReturnResult: result{
+				success: false,
+				message: "",
+			},
+			wantErr:    "fake basic error",
+			wantResult: reconcile.Result{RequeueAfter: time.Hour},
 		},
 		{
 			name:                "controller disabled",
@@ -88,8 +107,8 @@ func TestReconcile(t *testing.T) {
 			r := &Reconciler{
 				log:  utillog.GetLogger(),
 				role: "master",
-				checker: fakeChecker(func(ctx context.Context) error {
-					return tt.checkerReturnErr
+				checker: fakeChecker(func(ctx context.Context) (result, error) {
+					return tt.checkerReturnResult, tt.checkerReturnErr
 				}),
 				client: clientFake,
 			}
