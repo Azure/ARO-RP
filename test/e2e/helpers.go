@@ -37,6 +37,7 @@ type K8sDeleteFunc func(ctx context.Context, name string, options metav1.DeleteO
 func GetK8sObjectWithRetry[T kruntime.Object](
 	ctx context.Context, getFunc K8sGetFunc[T], name string, options metav1.GetOptions,
 ) (result T) {
+	GinkgoHelper()
 	var err error
 	Eventually(func(g Gomega, ctx context.Context) {
 		result, err = getFunc(ctx, name, options)
@@ -50,6 +51,7 @@ func GetK8sObjectWithRetry[T kruntime.Object](
 func GetK8sPodLogsWithRetry(
 	ctx context.Context, namespace string, name string, options corev1.PodLogOptions,
 ) (rawBody string) {
+	GinkgoHelper()
 	Eventually(func(g Gomega, ctx context.Context) {
 		body, err := clients.Kubernetes.CoreV1().Pods(namespace).GetLogs(name, &options).DoRaw(ctx)
 		g.Expect(err).NotTo(HaveOccurred())
@@ -64,6 +66,7 @@ func GetK8sPodLogsWithRetry(
 func ListK8sObjectWithRetry[T kruntime.Object](
 	ctx context.Context, listFunc K8sListFunc[T], options metav1.ListOptions,
 ) (result T) {
+	GinkgoHelper()
 	var err error
 	Eventually(func(g Gomega, ctx context.Context) {
 		result, err = listFunc(ctx, options)
@@ -78,6 +81,7 @@ func ListK8sObjectWithRetry[T kruntime.Object](
 func CreateK8sObjectWithRetry[T kruntime.Object](
 	ctx context.Context, createFunc K8sCreateFunc[T], obj T, options metav1.CreateOptions,
 ) (result T) {
+	GinkgoHelper()
 	var err error
 	Eventually(func(g Gomega, ctx context.Context) {
 		result, err = createFunc(ctx, obj, options)
@@ -91,6 +95,7 @@ func CreateK8sObjectWithRetry[T kruntime.Object](
 func DeleteK8sObjectWithRetry(
 	ctx context.Context, deleteFunc K8sDeleteFunc, name string, options metav1.DeleteOptions,
 ) {
+	GinkgoHelper()
 	Eventually(func(g Gomega, ctx context.Context) {
 		err := deleteFunc(ctx, name, options)
 		g.Expect(err).NotTo(HaveOccurred())
@@ -109,6 +114,7 @@ type AllowedCleanUpAPIInterface[T kruntime.Object] interface {
 func CleanupK8sResource[T kruntime.Object](
 	ctx context.Context, client AllowedCleanUpAPIInterface[T], name string,
 ) {
+	GinkgoHelper()
 	DefaultEventuallyTimeout = 10 * time.Minute
 	PollingInterval = 1 * time.Second
 	Eventually(func(g Gomega, ctx context.Context) {
@@ -132,6 +138,7 @@ type Project struct {
 func BuildNewProject(
 	ctx context.Context, cli kubernetes.Interface, projectClient projectclient.Interface, name string,
 ) Project {
+	GinkgoHelper()
 	p := Project{
 		projectClient: projectClient,
 		cli:           cli,
@@ -147,11 +154,13 @@ func BuildNewProject(
 }
 
 func (p Project) CleanUp(ctx context.Context) {
+	GinkgoHelper()
 	p.Delete(ctx)
 	p.VerifyProjectIsDeleted(ctx)
 }
 
 func (p Project) Delete(ctx context.Context) {
+	GinkgoHelper()
 	deleteFunc := p.projectClient.ProjectV1().Projects().Delete
 	DeleteK8sObjectWithRetry(ctx, deleteFunc, p.Name, metav1.DeleteOptions{})
 }
@@ -159,6 +168,7 @@ func (p Project) Delete(ctx context.Context) {
 // VerifyProjectIsReady verifies that the project and relevant resources have been created correctly
 // and returns an error if any.
 func (p Project) VerifyProjectIsReady(ctx context.Context) error {
+	GinkgoHelper()
 	By("creating a SelfSubjectAccessReviews")
 	CreateK8sObjectWithRetry(ctx, p.cli.AuthorizationV1().SelfSubjectAccessReviews().Create,
 		&authorizationv1.SelfSubjectAccessReview{
@@ -192,6 +202,7 @@ func (p Project) VerifyProjectIsReady(ctx context.Context) error {
 
 // VerifyProjectIsDeleted verifies that the project does not exist by polling it.
 func (p Project) VerifyProjectIsDeleted(ctx context.Context) {
+	GinkgoHelper()
 	Eventually(func(g Gomega, ctx context.Context) {
 		_, err := p.projectClient.ProjectV1().Projects().Get(ctx, p.Name, metav1.GetOptions{})
 		g.Expect(kerrors.IsNotFound(err)).To(BeTrue())
