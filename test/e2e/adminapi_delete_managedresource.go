@@ -14,7 +14,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -45,29 +44,23 @@ var _ = Describe("[Admin API] Delete managed resource action", func() {
 		var fipConfigID string
 		var pipAddressID string
 
+		const namespace = "default"
+
 		By("creating a test service of type loadbalancer")
-		creationFunc := clients.Kubernetes.CoreV1().Services("default").Create
+		creationFunc := clients.Kubernetes.CoreV1().Services(namespace).Create
 		CreateK8sObjectWithRetry(ctx, creationFunc, &loadBalancerService, metav1.CreateOptions{})
 
 		defer func() {
 			By("cleaning up the k8s loadbalancer service")
-			// wait for deletion to prevent flakes on retries
-			Eventually(func(g Gomega, ctx context.Context) {
-				err := clients.Kubernetes.CoreV1().Services("default").Delete(ctx, "test", metav1.DeleteOptions{})
-				g.Expect((err == nil || kerrors.IsNotFound(err))).To(BeTrue(), "expect Service to be deleted")
-			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
-
-			By("confirming that the k8s loadbalancer service is gone")
-			Eventually(func(g Gomega, ctx context.Context) {
-				_, err := clients.Kubernetes.CoreV1().Services("default").Get(ctx, "test", metav1.GetOptions{})
-				g.Expect(kerrors.IsNotFound(err)).To(BeTrue())
-			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+			CleanupK8sResource[*corev1.Service](
+				ctx, clients.Kubernetes.CoreV1().Services(namespace), loadBalancerService.Name,
+			)
 		}()
 
 		// wait for ingress IP to be assigned as this indicate the service is ready
 		Eventually(func(g Gomega, ctx context.Context) {
-			getFunc := clients.Kubernetes.CoreV1().Services("default").Get
-			service = GetK8sObjectWithRetry(ctx, getFunc, "test", metav1.GetOptions{})
+			getFunc := clients.Kubernetes.CoreV1().Services(namespace).Get
+			service = GetK8sObjectWithRetry(ctx, getFunc, loadBalancerService.Name, metav1.GetOptions{})
 			g.Expect(service.Status.LoadBalancer.Ingress).To(HaveLen(1))
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
@@ -115,7 +108,7 @@ var _ = Describe("[Admin API] Delete managed resource action", func() {
 		oc, err := clients.OpenshiftClustersPreview.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 
-		// Fake name prevents accidently deleting the PLS but still validates gaurdrail logic works.
+		// Fake name prevents accidentally deleting the PLS but still validates guardrail logic works.
 		plsResourceID := fmt.Sprintf("%s/providers/Microsoft.Network/PrivateLinkServices/%s", *oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, "fake-pls")
 
 		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/deletemanagedresource", url.Values{"managedResourceID": []string{plsResourceID}}, true, nil, nil)

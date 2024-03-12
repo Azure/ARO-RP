@@ -17,7 +17,6 @@ import (
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	corev1 "k8s.io/api/core/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/util/ready"
@@ -111,16 +110,9 @@ func getNodeUptime(g Gomega, ctx context.Context, node string) (time.Time, error
 
 	defer func() {
 		By("deleting the uptime pod via Kubernetes API")
-		deleteFunc := clients.Kubernetes.CoreV1().Pods(namespace).Delete
-		DeleteK8sObjectWithRetry(ctx, deleteFunc, podName, metav1.DeleteOptions{})
-
-		// To avoid flakes, we need it to be completely deleted before we can use it again
-		// in a separate run or in a separate It block
-		By("waiting for uptime pod to be deleted")
-		Eventually(func(g Gomega, ctx context.Context) {
-			_, err := clients.Kubernetes.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
-			g.Expect(kerrors.IsNotFound(err)).To(BeTrue(), "expect uptime pod to be deleted")
-		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+		CleanupK8sResource[*corev1.Pod](
+			ctx, clients.Kubernetes.CoreV1().Pods(namespace), podName,
+		)
 	}()
 
 	By("waiting for uptime pod to move into the Succeeded phase")

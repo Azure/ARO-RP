@@ -47,12 +47,8 @@ var _ = Describe("Cluster", Serial, func() {
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(BeNil())
 
 		DeferCleanup(func(ctx context.Context) {
-			By("deleting a test namespace")
-			project.Delete(ctx)
-			By("verifying the namespace is deleted")
-			Eventually(func(ctx context.Context) error {
-				return project.VerifyProjectIsDeleted(ctx)
-			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(BeNil())
+			By("deleting the test project")
+			project.CleanUp(ctx)
 		})
 	})
 
@@ -138,7 +134,7 @@ var _ = Describe("Cluster", Serial, func() {
 			cluster, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
-			// Poke the ARO storageaccount controller to reconcile
+			// Poke the ARO storage account controller to reconcile
 			cluster.Spec.OperatorFlags[operator.StorageAccountsEnabled] = operator.FlagFalse
 			cluster, err = clients.AROClusters.AroV1alpha1().Clusters().Update(ctx, cluster, metav1.UpdateOptions{})
 			Expect(err).NotTo(HaveOccurred())

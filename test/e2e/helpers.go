@@ -36,14 +36,13 @@ type K8sDeleteFunc func(ctx context.Context, name string, options metav1.DeleteO
 // asserting there were no errors.
 func GetK8sObjectWithRetry[T kruntime.Object](
 	ctx context.Context, getFunc K8sGetFunc[T], name string, options metav1.GetOptions,
-) T {
-	var object T
+) (result T) {
+	var err error
 	Eventually(func(g Gomega, ctx context.Context) {
-		result, err := getFunc(ctx, name, options)
+		result, err = getFunc(ctx, name, options)
 		g.Expect(err).NotTo(HaveOccurred())
-		object = result
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
-	return object
+	return result
 }
 
 // GetK8sPodLogsWithRetry gets the logs for the specified pod in the named namespace. It gets them with some
@@ -56,7 +55,7 @@ func GetK8sPodLogsWithRetry(
 		g.Expect(err).NotTo(HaveOccurred())
 		rawBody = string(body)
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
-	return
+	return rawBody
 }
 
 // ListK8sObjectWithRetry takes a list function like clients.Kubernetes.CoreV1().Nodes().List and the
@@ -64,14 +63,13 @@ func GetK8sPodLogsWithRetry(
 // asserting there were no errors.
 func ListK8sObjectWithRetry[T kruntime.Object](
 	ctx context.Context, listFunc K8sListFunc[T], options metav1.ListOptions,
-) T {
-	var object T
+) (result T) {
+	var err error
 	Eventually(func(g Gomega, ctx context.Context) {
-		result, err := listFunc(ctx, options)
+		result, err = listFunc(ctx, options)
 		g.Expect(err).NotTo(HaveOccurred())
-		object = result
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
-	return object
+	return result
 }
 
 // CreateK8sObjectWithRetry takes a create function like clients.Kubernetes.CoreV1().Pods(namespace).Create
@@ -79,14 +77,13 @@ func ListK8sObjectWithRetry[T kruntime.Object](
 // asserting there were no errors.
 func CreateK8sObjectWithRetry[T kruntime.Object](
 	ctx context.Context, createFunc K8sCreateFunc[T], obj T, options metav1.CreateOptions,
-) T {
-	var object T
+) (result T) {
+	var err error
 	Eventually(func(g Gomega, ctx context.Context) {
-		result, err := createFunc(ctx, obj, options)
+		result, err = createFunc(ctx, obj, options)
 		g.Expect(err).NotTo(HaveOccurred())
-		object = result
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
-	return object
+	return result
 }
 
 // DeleteK8sObjectWithRetry takes a delete function like clients.Kubernetes.CertificatesV1().CertificateSigningRequests().Delete
@@ -98,6 +95,32 @@ func DeleteK8sObjectWithRetry(
 		err := deleteFunc(ctx, name, options)
 		g.Expect(err).NotTo(HaveOccurred())
 	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
+}
+
+type AllowedCleanUpAPIInterface[T kruntime.Object] interface {
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (T, error)
+	Delete(ctx context.Context, name string, options metav1.DeleteOptions) error
+}
+
+// CleanupK8sResource takes a client that knows how to issue a GET and DELETE call for a given resource.
+// It then issues a delete request then and polls the API until the resource is no longer found.
+//
+// Note: If the DELETE request receives a 404 we assume the resource has been cleaned up successfully.
+func CleanupK8sResource[T kruntime.Object](
+	ctx context.Context, client AllowedCleanUpAPIInterface[T], name string,
+) {
+	DefaultEventuallyTimeout = 10 * time.Minute
+	PollingInterval = 1 * time.Second
+	Eventually(func(g Gomega, ctx context.Context) {
+		err := client.Delete(ctx, name, metav1.DeleteOptions{})
+		g.Expect((err == nil || kerrors.IsNotFound(err))).To(BeTrue())
+	}).WithContext(ctx).WithTimeout(DefaultTimeout).WithPolling(PollingInterval).Should(Succeed())
+
+	// GET the resource until NOT_FOUND to ensure it's been deleted.
+	Eventually(func(g Gomega, ctx context.Context) {
+		_, err := client.Get(ctx, name, metav1.GetOptions{})
+		g.Expect(kerrors.IsNotFound(err)).To(BeTrue())
+	}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 }
 
 type Project struct {
@@ -167,13 +190,10 @@ func (p Project) VerifyProjectIsReady(ctx context.Context) error {
 	return nil
 }
 
-// VerifyProjectIsDeleted verifies that the project does not exist and returns error if a project exists
-// or if it encounters an error other than NotFound
-func (p Project) VerifyProjectIsDeleted(ctx context.Context) error {
-	_, err := p.projectClient.ProjectV1().Projects().Get(ctx, p.Name, metav1.GetOptions{})
-	if kerrors.IsNotFound(err) {
-		return nil
-	}
-
-	return fmt.Errorf("Project exists")
+// VerifyProjectIsDeleted verifies that the project does not exist by polling it.
+func (p Project) VerifyProjectIsDeleted(ctx context.Context) {
+	Eventually(func(g Gomega, ctx context.Context) {
+		_, err := p.projectClient.ProjectV1().Projects().Get(ctx, p.Name, metav1.GetOptions{})
+		g.Expect(kerrors.IsNotFound(err)).To(BeTrue())
+	}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 }

@@ -34,17 +34,13 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 				// but we need to remove the object in case of failure
 				// to allow us to run this test against the same cluster multiple times.
 				By("deleting the config map via Kubernetes API")
-				err := clients.Kubernetes.CoreV1().ConfigMaps(namespace).Delete(ctx, objName, metav1.DeleteOptions{})
-				// On successfully we expect NotFound error
-				if !kerrors.IsNotFound(err) {
-					Expect(err).NotTo(HaveOccurred())
-				}
+				CleanupK8sResource[*corev1.ConfigMap](
+					ctx, clients.Kubernetes.CoreV1().ConfigMaps(namespace), objName,
+				)
 				By("deleting the pod via Kubernetes API")
-				err = clients.Kubernetes.CoreV1().Pods(namespace).Delete(ctx, objName, metav1.DeleteOptions{})
-				// On successfully we expect NotFound error
-				if !kerrors.IsNotFound(err) {
-					Expect(err).NotTo(HaveOccurred())
-				}
+				CleanupK8sResource[*corev1.Pod](
+					ctx, clients.Kubernetes.CoreV1().Pods(namespace), objName,
+				)
 			}()
 
 			testConfigMapCreateOK(ctx, objName, namespace)
@@ -74,16 +70,9 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 
 				defer func() {
 					By("deleting the test customer namespace via Kubernetes API")
-					deleteFunc := clients.Kubernetes.CoreV1().Namespaces().Delete
-					DeleteK8sObjectWithRetry(ctx, deleteFunc, namespace, metav1.DeleteOptions{})
-
-					// To avoid flakes, we need it to be completely deleted before we can use it again
-					// in a separate run or in a separate It block
-					By("waiting for the test customer namespace to be deleted")
-					Eventually(func(g Gomega, ctx context.Context) {
-						_, err := clients.Kubernetes.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
-						g.Expect(kerrors.IsNotFound(err)).To(BeTrue(), "expect Namespace to be deleted")
-					}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+					CleanupK8sResource[*corev1.Namespace](
+						ctx, clients.Kubernetes.CoreV1().Namespaces(), namespace,
+					)
 				}()
 
 				testConfigMapCreateOrUpdateForbidden(ctx, "creating", objName, namespace)
@@ -112,16 +101,9 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 
 				defer func() {
 					By("deleting the test customer namespace via Kubernetes API")
-					deleteFunc := clients.Kubernetes.CoreV1().Namespaces().Delete
-					DeleteK8sObjectWithRetry(ctx, deleteFunc, namespace, metav1.DeleteOptions{})
-
-					// To avoid flakes, we need it to be completely deleted before we can use it again
-					// in a separate run or in a separate It block
-					By("waiting for the test customer namespace to be deleted")
-					Eventually(func(g Gomega, ctx context.Context) {
-						_, err := clients.Kubernetes.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
-						g.Expect(kerrors.IsNotFound(err)).To(BeTrue(), "expect Namespace to be deleted")
-					}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+					CleanupK8sResource[*corev1.Namespace](
+						ctx, clients.Kubernetes.CoreV1().Namespaces(), namespace,
+					)
 				}()
 
 				By("creating an object via Kubernetes API")
