@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/url"
@@ -14,7 +15,6 @@ import (
 	"github.com/ugorji/go/codec"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -82,35 +82,21 @@ func getUserDataSecretReference(objMeta *metav1.ObjectMeta, spec *machinev1beta1
 		return nil, nil
 	}
 
-	obj := &unstructured.Unstructured{}
-	err := obj.UnmarshalJSON(spec.ProviderSpec.Value.Raw)
+	machineProviderSpec := &machinev1beta1.AzureMachineProviderSpec{}
+	err := json.Unmarshal(spec.ProviderSpec.Value.Raw, machineProviderSpec)
 	if err != nil {
-		return nil, fmt.Errorf("failed unmarshaling provider spec: %w", err)
+		return nil, fmt.Errorf("machine %s: failed to read provider spec: %w", spec.Name, err)
 	}
 
-	machineProviderSpec := obj.UnstructuredContent()
-
-	secret := &corev1.SecretReference{}
-
-	userDataSecretNamespace, ok, err := unstructured.NestedString(machineProviderSpec, "userDataSecret", "namespace")
-	if err != nil {
-		return nil, fmt.Errorf("failed getting secret reference: %w", err)
-	} else if !ok || userDataSecretNamespace == "" {
-		secret.Namespace = objMeta.Namespace
-	} else {
-		secret.Namespace = userDataSecretNamespace
-	}
-
-	userDataSecretName, ok, err := unstructured.NestedString(machineProviderSpec, "userDataSecret", "name")
-	if err != nil {
-		return nil, fmt.Errorf("failed getting secret reference name: %w", err)
-	} else if !ok || userDataSecretName == "" {
+	if machineProviderSpec.UserDataSecret == nil {
 		return nil, nil
-	} else {
-		secret.Name = userDataSecretName
 	}
 
-	return secret, nil
+	if machineProviderSpec.UserDataSecret.Namespace == "" {
+		machineProviderSpec.UserDataSecret.Namespace = objMeta.Namespace
+	}
+
+	return machineProviderSpec.UserDataSecret, nil
 }
 
 func (m *manager) fixMCSUserData(ctx context.Context) error {
@@ -132,7 +118,7 @@ func (m *manager) fixMCSUserData(ctx context.Context) error {
 			var userData *userData
 			err = codec.NewDecoderBytes(s.Data["userData"], &h).Decode(&userData)
 			if err != nil {
-				return fmt.Errorf("failed decoding secret userData: %w", err)
+				return err
 			}
 
 			var changed bool
@@ -140,7 +126,7 @@ func (m *manager) fixMCSUserData(ctx context.Context) error {
 				var _changed bool
 				a.Source, _changed, err = m.fixSource(a.Source)
 				if err != nil {
-					return fmt.Errorf("failed fixing domain source: %w", err)
+					return err
 				}
 
 				changed = changed || _changed
@@ -152,7 +138,7 @@ func (m *manager) fixMCSUserData(ctx context.Context) error {
 				var _changed bool
 				a.Source, _changed, err = m.fixSource(a.Source)
 				if err != nil {
-					return fmt.Errorf("failed fixing domain source: %w", err)
+					return err
 				}
 
 				changed = changed || _changed
@@ -167,7 +153,7 @@ func (m *manager) fixMCSUserData(ctx context.Context) error {
 			var b []byte
 			err = codec.NewEncoderBytes(&b, &h).Encode(userData)
 			if err != nil {
-				return fmt.Errorf("failed encoding userData: %w", err)
+				return err
 			}
 
 			s.Data["userData"] = b

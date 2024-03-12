@@ -226,6 +226,26 @@ func TestGetUserDataSecretReference(t *testing.T) {
 			shouldFail: false,
 		},
 		{
+			name:       "valid cluster-api-provider-azure spec, custom namespace",
+			objectMeta: &metav1.ObjectMeta{Namespace: "any"},
+			machineSpec: &machinev1beta1.MachineSpec{
+				ProviderSpec: machinev1beta1.ProviderSpec{
+					Value: &kruntime.RawExtension{
+						Raw: []byte(`{
+								"apiVersion": "azureproviderconfig.openshift.io/v1beta1",
+								"kind": "AzureMachineProviderSpec",
+								"userDataSecret": {"name": "any", "namespace": "other"}
+							}`),
+					},
+				},
+			},
+			result: &corev1.SecretReference{
+				Name:      "any",
+				Namespace: "other",
+			},
+			shouldFail: false,
+		},
+		{
 			name:       "valid openshift/api spec",
 			objectMeta: &metav1.ObjectMeta{Namespace: "another"},
 			machineSpec: &machinev1beta1.MachineSpec{
@@ -255,6 +275,18 @@ func TestGetUserDataSecretReference(t *testing.T) {
 								"apiVersion": "apiversion.openshift.io/unknown",
 								"kind": "AzureMachineProviderSpec"
 							}`),
+					},
+				},
+			},
+			shouldFail: true,
+		},
+		{
+			name:       "not valid json",
+			objectMeta: &metav1.ObjectMeta{Namespace: "any"},
+			machineSpec: &machinev1beta1.MachineSpec{
+				ProviderSpec: machinev1beta1.ProviderSpec{
+					Value: &kruntime.RawExtension{
+						Raw: []byte(`\n`),
 					},
 				},
 			},
