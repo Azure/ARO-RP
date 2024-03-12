@@ -16,24 +16,30 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	kjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/client-go/kubernetes/scheme"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func marshalAzureMachineProviderSpec(t *testing.T, spec *machinev1beta1.AzureMachineProviderSpec) []byte {
-	serializer := kjson.NewSerializerWithOptions(
-		kjson.DefaultMetaFactory, scheme.Scheme, scheme.Scheme,
-		kjson.SerializerOptions{Yaml: true},
-	)
+	// AzureMachineProviderSpec is not registered at runtime because it is a
+	// plugin, to avoid polluting the global scheme in tests we create a new
+	// Scheme here just for serializing during tests.
+	s := kruntime.NewScheme()
+	s.AddKnownTypes(machinev1beta1.GroupVersion, &machinev1beta1.AzureMachineProviderSpec{})
 
-	yaml := scheme.Codecs.CodecForVersions(serializer, nil, schema.GroupVersions(scheme.Scheme.PrioritizedVersionsAllGroups()), nil)
+	ser := kjson.NewSerializerWithOptions(
+		kjson.DefaultMetaFactory, s, s,
+		kjson.SerializerOptions{Yaml: false},
+	)
+	json := serializer.NewCodecFactory(s).CodecForVersions(ser, nil, schema.GroupVersions(s.PrioritizedVersionsAllGroups()), nil)
 
 	buf := &bytes.Buffer{}
-	err := yaml.Encode(spec, buf)
+	err := json.Encode(spec, buf)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,8 +137,10 @@ func testMachineSet(t *testing.T, namespace, name string, spec *machinev1beta1.A
 
 func TestFixMCSUserData(t *testing.T) {
 	ctx := context.Background()
+	hook, log := testlog.New()
 
 	m := &manager{
+		log: log,
 		doc: &api.OpenShiftClusterDocument{
 			OpenShiftCluster: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
@@ -182,6 +190,10 @@ func TestFixMCSUserData(t *testing.T) {
 		if !reflect.DeepEqual(s, wantSecret) {
 			t.Error(cmp.Diff(s, wantSecret))
 		}
+
+		for _, i := range hook.Entries {
+			t.Error(i)
+		}
 	}
 }
 
@@ -210,6 +222,26 @@ func TestGetUserDataSecretReference(t *testing.T) {
 			result: &corev1.SecretReference{
 				Name:      "any",
 				Namespace: "any",
+			},
+			shouldFail: false,
+		},
+		{
+			name:       "valid cluster-api-provider-azure spec, custom namespace",
+			objectMeta: &metav1.ObjectMeta{Namespace: "any"},
+			machineSpec: &machinev1beta1.MachineSpec{
+				ProviderSpec: machinev1beta1.ProviderSpec{
+					Value: &kruntime.RawExtension{
+						Raw: []byte(`{
+								"apiVersion": "azureproviderconfig.openshift.io/v1beta1",
+								"kind": "AzureMachineProviderSpec",
+								"userDataSecret": {"name": "any", "namespace": "other"}
+							}`),
+					},
+				},
+			},
+			result: &corev1.SecretReference{
+				Name:      "any",
+				Namespace: "other",
 			},
 			shouldFail: false,
 		},
@@ -243,6 +275,18 @@ func TestGetUserDataSecretReference(t *testing.T) {
 								"apiVersion": "apiversion.openshift.io/unknown",
 								"kind": "AzureMachineProviderSpec"
 							}`),
+					},
+				},
+			},
+			shouldFail: true,
+		},
+		{
+			name:       "not valid json",
+			objectMeta: &metav1.ObjectMeta{Namespace: "any"},
+			machineSpec: &machinev1beta1.MachineSpec{
+				ProviderSpec: machinev1beta1.ProviderSpec{
+					Value: &kruntime.RawExtension{
+						Raw: []byte(`\n`),
 					},
 				},
 			},

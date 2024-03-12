@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/url"
@@ -14,7 +15,6 @@ import (
 	"github.com/ugorji/go/codec"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -82,13 +82,10 @@ func getUserDataSecretReference(objMeta *metav1.ObjectMeta, spec *machinev1beta1
 		return nil, nil
 	}
 
-	obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(spec.ProviderSpec.Value.Raw, nil, nil)
+	machineProviderSpec := &machinev1beta1.AzureMachineProviderSpec{}
+	err := json.Unmarshal(spec.ProviderSpec.Value.Raw, machineProviderSpec)
 	if err != nil {
-		return nil, err
-	}
-	machineProviderSpec, ok := obj.(*machinev1beta1.AzureMachineProviderSpec)
-	if !ok {
-		return nil, fmt.Errorf("machine %s: failed to read provider spec: %T", spec.Name, obj)
+		return nil, fmt.Errorf("machine %s: failed to read provider spec: %w", spec.Name, err)
 	}
 
 	if machineProviderSpec.UserDataSecret == nil {

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
-	consoleapi "github.com/openshift/console-operator/pkg/api"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,7 +48,7 @@ func (m *manager) minimumWorkerNodesReady(ctx context.Context) (bool, error) {
 }
 
 func (m *manager) operatorConsoleExists(ctx context.Context) (bool, error) {
-	_, err := m.operatorcli.OperatorV1().Consoles().Get(ctx, consoleapi.ConfigResourceName, metav1.GetOptions{})
+	_, err := m.operatorcli.OperatorV1().Consoles().Get(ctx, consoleConfigResourceName, metav1.GetOptions{})
 	return err == nil, nil
 }
 

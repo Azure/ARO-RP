@@ -5,10 +5,10 @@ package machine
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -37,14 +37,10 @@ func (r *Reconciler) machineValid(ctx context.Context, machine *machinev1beta1.M
 	if machine.Spec.ProviderSpec.Value == nil {
 		return []error{fmt.Errorf("machine %s: provider spec missing", machine.Name)}
 	}
-
-	obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(machine.Spec.ProviderSpec.Value.Raw, nil, nil)
+	machineProviderSpec := &machinev1beta1.AzureMachineProviderSpec{}
+	err := json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, machineProviderSpec)
 	if err != nil {
-		return []error{err}
-	}
-	machineProviderSpec, ok := obj.(*machinev1beta1.AzureMachineProviderSpec)
-	if !ok {
-		return []error{fmt.Errorf("machine %s: failed to read provider spec: %T", machine.Name, obj)}
+		return []error{fmt.Errorf("machine %s: failed to read provider spec: %v", machine.Name, err)}
 	}
 
 	// Validate VM size in machine provider spec
