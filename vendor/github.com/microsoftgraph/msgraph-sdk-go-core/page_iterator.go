@@ -216,7 +216,7 @@ func convertToPage[T interface{}](response interface{}) (PageResult[T], error) {
 	}
 
 	method := reflect.ValueOf(response).MethodByName("GetValue")
-	if method.IsNil() {
+	if method.Kind() == reflect.Invalid {
 		return page, errors.New("value property missing in response object")
 	}
 	value := method.Call(nil)[0]

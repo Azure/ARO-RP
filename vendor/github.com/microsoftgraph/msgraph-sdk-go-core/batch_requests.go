@@ -6,7 +6,6 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"errors"
-	nethttplibrary "github.com/microsoft/kiota-http-go"
 	"net/url"
 	"reflect"
 	"strconv"
@@ -17,6 +16,7 @@ import (
 	abstractions "github.com/microsoft/kiota-abstractions-go"
 	"github.com/microsoft/kiota-abstractions-go/serialization"
 	absser "github.com/microsoft/kiota-abstractions-go/serialization"
+	nethttplibrary "github.com/microsoft/kiota-http-go"
 )
 
 const BatchRequestErrorRegistryKey = "BATCH_REQUEST_ERROR_REGISTRY_KEY"
@@ -210,13 +210,24 @@ func getRootParseNode(responseItem BatchItem) (absser.ParseNode, error) {
 	if contentType == "" {
 		return nil, nil
 	}
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	err := enc.Encode(responseItem.GetBody())
-	if err != nil {
-		return nil, err
+
+	var (
+		content []byte
+		err     error
+	)
+	if contentType == jsonContentType {
+		if content, err = json.Marshal(responseItem.GetBody()); err != nil {
+			return nil, err
+		}
+	} else {
+		var buf bytes.Buffer
+		if err = gob.NewEncoder(&buf).Encode(responseItem.GetBody()); err != nil {
+			return nil, err
+		}
+		content = buf.Bytes()
 	}
-	return serialization.DefaultParseNodeFactoryInstance.GetRootParseNode(contentType, buf.Bytes())
+
+	return serialization.DefaultParseNodeFactoryInstance.GetRootParseNode(contentType, content)
 }
 
 func throwErrors(responseItem BatchItem, typeName string) error {
@@ -266,7 +277,7 @@ func GetBatchResponseById[T serialization.Parsable](resp BatchResponse, itemId s
 	item := resp.GetResponseById(itemId)
 
 	if *item.GetStatus() >= 400 {
-		return res, throwErrors(item, reflect.TypeOf(new(T)).Name())
+		return res, throwErrors(item, reflect.TypeOf(new(T)).Elem().Name())
 	}
 
 	jsonStr, err := json.Marshal(item.GetBody())
@@ -282,7 +293,7 @@ func GetBatchResponseById[T serialization.Parsable](resp BatchResponse, itemId s
 	}
 
 	result, err := parseNode.GetObjectValue(constructor)
-	return result.(T), nil
+	return result.(T), err
 }
 
 func getErrorMapper(key string) abstractions.ErrorMappings {

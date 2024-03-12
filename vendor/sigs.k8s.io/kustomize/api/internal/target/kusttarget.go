@@ -6,7 +6,6 @@ package target
 import (
 	"encoding/json"
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -14,6 +13,7 @@ import (
 	"sigs.k8s.io/kustomize/api/ifc"
 	"sigs.k8s.io/kustomize/api/internal/accumulator"
 	"sigs.k8s.io/kustomize/api/internal/builtins"
+	"sigs.k8s.io/kustomize/api/internal/kusterr"
 	"sigs.k8s.io/kustomize/api/internal/plugins/builtinconfig"
 	"sigs.k8s.io/kustomize/api/internal/plugins/builtinhelpers"
 	"sigs.k8s.io/kustomize/api/internal/plugins/loader"
@@ -303,7 +303,9 @@ func (kt *KustTarget) configureExternalGenerators() (
 				rm.Replace(r)
 			}
 		}
-		ra.AppendAll(rm)
+		if err = ra.AppendAll(rm); err != nil {
+			return nil, errors.Wrapf(err, "configuring external generator")
+		}
 	}
 	ra, err := kt.accumulateResources(ra, generatorPaths)
 	if err != nil {
@@ -347,7 +349,10 @@ func (kt *KustTarget) configureExternalTransformers(transformers []string) ([]*r
 				rm.Replace(r)
 			}
 		}
-		ra.AppendAll(rm)
+
+		if err = ra.AppendAll(rm); err != nil {
+			return nil, errors.Wrapf(err, "configuring external transformer")
+		}
 	}
 	ra, err := kt.accumulateResources(ra, transformerPaths)
 	if err != nil {
@@ -402,11 +407,14 @@ func (kt *KustTarget) accumulateResources(
 		// try loading resource as file then as base (directory or git repository)
 		if errF := kt.accumulateFile(ra, path); errF != nil {
 			// not much we can do if the error is an HTTP error so we bail out
-			if errors.Is(errF, load.ErrorHTTP) {
+			if errors.Is(errF, load.ErrHTTP) {
 				return nil, errF
 			}
 			ldr, err := kt.ldr.New(path)
 			if err != nil {
+				if kusterr.IsMalformedYAMLError(errF) { // Some error occurred while tyring to decode YAML file
+					return nil, errF
+				}
 				return nil, errors.Wrapf(
 					err, "accumulation err='%s'", errF.Error())
 			}
@@ -421,6 +429,9 @@ func (kt *KustTarget) accumulateResources(
 				ra, err = kt.accumulateDirectory(ra, ldr, false)
 			}
 			if err != nil {
+				if kusterr.IsMalformedYAMLError(errF) { // Some error occurred while tyring to decode YAML file
+					return nil, errF
+				}
 				return nil, errors.Wrapf(
 					err, "accumulation err='%s'", errF.Error())
 			}
@@ -469,9 +480,8 @@ func (kt *KustTarget) accumulateDirectory(
 	subKt.kustomization.BuildMetadata = kt.kustomization.BuildMetadata
 	subKt.origin = kt.origin
 	var bytes []byte
-	path := ldr.Root()
 	if openApiPath, exists := subKt.Kustomization().OpenAPI["path"]; exists {
-		bytes, err = ldr.Load(filepath.Join(path, openApiPath))
+		bytes, err = ldr.Load(openApiPath)
 		if err != nil {
 			return nil, err
 		}

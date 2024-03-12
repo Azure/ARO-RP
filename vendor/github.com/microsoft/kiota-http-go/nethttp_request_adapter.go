@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"io/ioutil"
 	nethttp "net/http"
 	"reflect"
 	"regexp"
@@ -215,7 +214,8 @@ func (a *NetHttpRequestAdapter) prepareContext(ctx context.Context, requestInfo 
 		ctx = context.Background()
 	}
 	// set deadline if not set in receiving context
-	if _, deadlineSet := ctx.Deadline(); !deadlineSet {
+	// ignore if timeout is 0 as it means no timeout
+	if _, deadlineSet := ctx.Deadline(); !deadlineSet && a.httpClient.Timeout != 0 {
 		ctx, _ = context.WithTimeout(ctx, a.httpClient.Timeout)
 	}
 
@@ -566,7 +566,7 @@ func (a *NetHttpRequestAdapter) SendPrimitive(ctx context.Context, requestInfo *
 			return nil, nil
 		}
 		if typeName == "[]byte" {
-			res, err := ioutil.ReadAll(response.Body)
+			res, err := io.ReadAll(response.Body)
 			if err != nil {
 				span.RecordError(err)
 				return nil, err
@@ -702,7 +702,12 @@ func (a *NetHttpRequestAdapter) SendNoContent(ctx context.Context, requestInfo *
 func (a *NetHttpRequestAdapter) getRootParseNode(ctx context.Context, response *nethttp.Response, spanForAttributes trace.Span) (absser.ParseNode, context.Context, error) {
 	ctx, span := otel.GetTracerProvider().Tracer(a.observabilityOptions.GetTracerInstrumentationName()).Start(ctx, "getRootParseNode")
 	defer span.End()
-	body, err := ioutil.ReadAll(response.Body)
+
+	if response.ContentLength == 0 {
+		return nil, ctx, nil
+	}
+
+	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		spanForAttributes.RecordError(err)
 		return nil, ctx, err
@@ -718,7 +723,7 @@ func (a *NetHttpRequestAdapter) getRootParseNode(ctx context.Context, response *
 	return rootNode, ctx, err
 }
 func (a *NetHttpRequestAdapter) purge(response *nethttp.Response) error {
-	_, _ = ioutil.ReadAll(response.Body) //we don't care about errors comming from reading the body, just trying to purge anything that maybe left
+	_, _ = io.ReadAll(response.Body) //we don't care about errors comming from reading the body, just trying to purge anything that maybe left
 	err := response.Body.Close()
 	if err != nil {
 		return err
@@ -758,6 +763,8 @@ func (a *NetHttpRequestAdapter) throwIfFailedResponse(ctx context.Context, respo
 			errorCtor = errorMappings["4XX"]
 		} else if response.StatusCode >= 500 && response.StatusCode < 600 && errorMappings["5XX"] != nil {
 			errorCtor = errorMappings["5XX"]
+		} else if errorMappings["XXX"] != nil && response.StatusCode >= 400 && response.StatusCode < 600 {
+			errorCtor = errorMappings["XXX"]
 		}
 	}
 
@@ -795,9 +802,9 @@ func (a *NetHttpRequestAdapter) throwIfFailedResponse(ctx context.Context, respo
 	errValue, err := rootNode.GetObjectValue(errorCtor)
 	if err != nil {
 		spanForAttributes.RecordError(err)
-		if apiError, ok := err.(*abs.ApiError); ok {
-			apiError.ResponseStatusCode = response.StatusCode
-			apiError.ResponseHeaders = responseHeaders
+		if apiErrorable, ok := err.(abs.ApiErrorable); ok {
+			apiErrorable.SetResponseHeaders(responseHeaders)
+			apiErrorable.SetStatusCode(response.StatusCode)
 		}
 		return err
 	} else if errValue == nil {
@@ -808,7 +815,13 @@ func (a *NetHttpRequestAdapter) throwIfFailedResponse(ctx context.Context, respo
 		}
 	}
 
+	if apiErrorable, ok := errValue.(abs.ApiErrorable); ok {
+		apiErrorable.SetResponseHeaders(responseHeaders)
+		apiErrorable.SetStatusCode(response.StatusCode)
+	}
+
 	err = errValue.(error)
+
 	spanForAttributes.RecordError(err)
 	return err
 }
