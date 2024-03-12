@@ -11,6 +11,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+## [1.1.0] - 2024-02-02
+
+### Added
+
+- Added support for large file uploads.
+
+## [1.0.2] - 2023-12-01
+
+### Changed
+
+- Fixed a bug where GetBatchResponseById failed to deserialize error response bodies.
+
+## [1.0.1] - 2023-11-24
+
+### Changed
+
+- Fixed a bug where page iterator would panic if it couldn't find the GetValue method on the collection.
+
 ## [1.0.0] - 2023-05-04
 
 ### Changed

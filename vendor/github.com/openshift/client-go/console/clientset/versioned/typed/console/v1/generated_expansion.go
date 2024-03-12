@@ -10,6 +10,8 @@ type ConsoleLinkExpansion interface{}
 
 type ConsoleNotificationExpansion interface{}
 
+type ConsolePluginExpansion interface{}
+
 type ConsoleQuickStartExpansion interface{}
 
 type ConsoleYAMLSampleExpansion interface{}

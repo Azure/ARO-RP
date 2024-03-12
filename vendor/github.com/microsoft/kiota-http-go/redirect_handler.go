@@ -161,6 +161,9 @@ func (middleware RedirectHandler) getRedirectRequest(request *nethttp.Request, r
 		return nil, err
 	}
 	result.URL = targetUrl
+	if result.Host != targetUrl.Host {
+		result.Host = targetUrl.Host
+	}
 	sameHost := strings.EqualFold(targetUrl.Host, request.URL.Host)
 	sameScheme := strings.EqualFold(targetUrl.Scheme, request.URL.Scheme)
 	if !sameHost || !sameScheme {

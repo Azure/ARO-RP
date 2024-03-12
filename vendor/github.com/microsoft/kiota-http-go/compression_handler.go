@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io"
-	"io/ioutil"
 	"net/http"
 
 	abstractions "github.com/microsoft/kiota-abstractions-go"
@@ -82,7 +81,7 @@ func (c *CompressionHandler) Intercept(pipeline Pipeline, middlewareIndex int, r
 		span.SetAttributes(attribute.Bool("http.request_body_compressed", true))
 	}
 
-	unCompressedBody, err := ioutil.ReadAll(req.Body)
+	unCompressedBody, err := io.ReadAll(req.Body)
 	unCompressedContentLength := req.ContentLength
 	if err != nil {
 		if span != nil {
@@ -116,7 +115,7 @@ func (c *CompressionHandler) Intercept(pipeline Pipeline, middlewareIndex int, r
 	// If response has status 415 retry request with uncompressed body
 	if resp.StatusCode == 415 {
 		delete(req.Header, "Content-Encoding")
-		req.Body = ioutil.NopCloser(bytes.NewBuffer(unCompressedBody))
+		req.Body = io.NopCloser(bytes.NewBuffer(unCompressedBody))
 		req.ContentLength = unCompressedContentLength
 
 		if span != nil {
@@ -141,5 +140,5 @@ func compressReqBody(reqBody []byte) (io.ReadCloser, int, error) {
 		return nil, 0, err
 	}
 
-	return ioutil.NopCloser(&buffer), buffer.Len(), nil
+	return io.NopCloser(&buffer), buffer.Len(), nil
 }

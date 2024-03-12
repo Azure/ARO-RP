@@ -6,9 +6,9 @@ package dynamichelper
 import (
 	"strings"
 
-	"github.com/ghodss/yaml"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/yaml"
 )
 
 // this is specifically for the Guardrails

@@ -4,9 +4,12 @@ package v1
 
 import (
 	"context"
+	json "encoding/json"
+	"fmt"
 	"time"
 
 	v1 "github.com/openshift/api/console/v1"
+	consolev1 "github.com/openshift/client-go/console/applyconfigurations/console/v1"
 	scheme "github.com/openshift/client-go/console/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -30,6 +33,7 @@ type ConsoleLinkInterface interface {
 	List(ctx context.Context, opts metav1.ListOptions) (*v1.ConsoleLinkList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.ConsoleLink, err error)
+	Apply(ctx context.Context, consoleLink *consolev1.ConsoleLinkApplyConfiguration, opts metav1.ApplyOptions) (result *v1.ConsoleLink, err error)
 	ConsoleLinkExpansion
 }
 
@@ -145,6 +149,31 @@ func (c *consoleLinks) Patch(ctx context.Context, name string, pt types.PatchTyp
 		Name(name).
 		SubResource(subresources...).
 		VersionedParams(&opts, scheme.ParameterCodec).
+		Body(data).
+		Do(ctx).
+		Into(result)
+	return
+}
+
+// Apply takes the given apply declarative configuration, applies it and returns the applied consoleLink.
+func (c *consoleLinks) Apply(ctx context.Context, consoleLink *consolev1.ConsoleLinkApplyConfiguration, opts metav1.ApplyOptions) (result *v1.ConsoleLink, err error) {
+	if consoleLink == nil {
+		return nil, fmt.Errorf("consoleLink provided to Apply must not be nil")
+	}
+	patchOpts := opts.ToPatchOptions()
+	data, err := json.Marshal(consoleLink)
+	if err != nil {
+		return nil, err
+	}
+	name := consoleLink.Name
+	if name == nil {
+		return nil, fmt.Errorf("consoleLink.Name must be provided to Apply")
+	}
+	result = &v1.ConsoleLink{}
+	err = c.client.Patch(types.ApplyPatchType).
+		Resource("consolelinks").
+		Name(*name).
+		VersionedParams(&patchOpts, scheme.ParameterCodec).
 		Body(data).
 		Do(ctx).
 		Into(result)

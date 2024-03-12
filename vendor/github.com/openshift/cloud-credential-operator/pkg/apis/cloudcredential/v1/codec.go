@@ -26,7 +26,8 @@ import (
 
 // NewScheme creates a new Scheme
 func NewScheme() (*runtime.Scheme, error) {
-	return SchemeBuilder.Build()
+	s := runtime.NewScheme()
+	return s, SchemeBuilder.AddToScheme(s)
 }
 
 // ProviderCodec is a runtime codec for providers.

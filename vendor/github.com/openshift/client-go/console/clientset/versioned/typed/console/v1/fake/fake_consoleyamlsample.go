@@ -4,8 +4,11 @@ package fake
 
 import (
 	"context"
+	json "encoding/json"
+	"fmt"
 
 	consolev1 "github.com/openshift/api/console/v1"
+	applyconfigurationsconsolev1 "github.com/openshift/client-go/console/applyconfigurations/console/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -99,6 +102,27 @@ func (c *FakeConsoleYAMLSamples) DeleteCollection(ctx context.Context, opts v1.D
 func (c *FakeConsoleYAMLSamples) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *consolev1.ConsoleYAMLSample, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceAction(consoleyamlsamplesResource, name, pt, data, subresources...), &consolev1.ConsoleYAMLSample{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*consolev1.ConsoleYAMLSample), err
+}
+
+// Apply takes the given apply declarative configuration, applies it and returns the applied consoleYAMLSample.
+func (c *FakeConsoleYAMLSamples) Apply(ctx context.Context, consoleYAMLSample *applyconfigurationsconsolev1.ConsoleYAMLSampleApplyConfiguration, opts v1.ApplyOptions) (result *consolev1.ConsoleYAMLSample, err error) {
+	if consoleYAMLSample == nil {
+		return nil, fmt.Errorf("consoleYAMLSample provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(consoleYAMLSample)
+	if err != nil {
+		return nil, err
+	}
+	name := consoleYAMLSample.Name
+	if name == nil {
+		return nil, fmt.Errorf("consoleYAMLSample.Name must be provided to Apply")
+	}
+	obj, err := c.Fake.
+		Invokes(testing.NewRootPatchSubresourceAction(consoleyamlsamplesResource, *name, types.ApplyPatchType, data), &consolev1.ConsoleYAMLSample{})
 	if obj == nil {
 		return nil, err
 	}

@@ -5,6 +5,7 @@ package imagetag
 
 import (
 	"sigs.k8s.io/kustomize/api/filters/filtersutil"
+
 	"sigs.k8s.io/kustomize/api/image"
 	"sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
@@ -30,18 +31,36 @@ func (u imageTagUpdater) SetImageValue(rn *yaml.RNode) error {
 		return nil
 	}
 
-	name, tag := image.Split(value)
+	name, tag, digest := image.Split(value)
 	if u.ImageTag.NewName != "" {
 		name = u.ImageTag.NewName
 	}
-	if u.ImageTag.NewTag != "" {
-		tag = ":" + u.ImageTag.NewTag
-	}
-	if u.ImageTag.Digest != "" {
-		tag = "@" + u.ImageTag.Digest
+
+	// overriding tag or digest will replace both original tag and digest values
+	switch {
+	case u.ImageTag.NewTag != "" && u.ImageTag.Digest != "":
+		tag = u.ImageTag.NewTag
+		digest = u.ImageTag.Digest
+	case u.ImageTag.NewTag != "":
+		tag = u.ImageTag.NewTag
+		digest = ""
+	case u.ImageTag.Digest != "":
+		tag = ""
+		digest = u.ImageTag.Digest
+	case u.ImageTag.TagSuffix != "":
+		tag += u.ImageTag.TagSuffix
+		digest = ""
 	}
 
-	return u.trackableSetter.SetScalar(name + tag)(rn)
+	// build final image name
+	if tag != "" {
+		name += ":" + tag
+	}
+	if digest != "" {
+		name += "@" + digest
+	}
+
+	return u.trackableSetter.SetScalar(name)(rn)
 }
 
 func (u imageTagUpdater) Filter(rn *yaml.RNode) (*yaml.RNode, error) {

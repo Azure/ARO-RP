@@ -4,8 +4,11 @@ package fake
 
 import (
 	"context"
+	json "encoding/json"
+	"fmt"
 
 	consolev1 "github.com/openshift/api/console/v1"
+	applyconfigurationsconsolev1 "github.com/openshift/client-go/console/applyconfigurations/console/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -99,6 +102,27 @@ func (c *FakeConsoleExternalLogLinks) DeleteCollection(ctx context.Context, opts
 func (c *FakeConsoleExternalLogLinks) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *consolev1.ConsoleExternalLogLink, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceAction(consoleexternalloglinksResource, name, pt, data, subresources...), &consolev1.ConsoleExternalLogLink{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*consolev1.ConsoleExternalLogLink), err
+}
+
+// Apply takes the given apply declarative configuration, applies it and returns the applied consoleExternalLogLink.
+func (c *FakeConsoleExternalLogLinks) Apply(ctx context.Context, consoleExternalLogLink *applyconfigurationsconsolev1.ConsoleExternalLogLinkApplyConfiguration, opts v1.ApplyOptions) (result *consolev1.ConsoleExternalLogLink, err error) {
+	if consoleExternalLogLink == nil {
+		return nil, fmt.Errorf("consoleExternalLogLink provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(consoleExternalLogLink)
+	if err != nil {
+		return nil, err
+	}
+	name := consoleExternalLogLink.Name
+	if name == nil {
+		return nil, fmt.Errorf("consoleExternalLogLink.Name must be provided to Apply")
+	}
+	obj, err := c.Fake.
+		Invokes(testing.NewRootPatchSubresourceAction(consoleexternalloglinksResource, *name, types.ApplyPatchType, data), &consolev1.ConsoleExternalLogLink{})
 	if obj == nil {
 		return nil, err
 	}

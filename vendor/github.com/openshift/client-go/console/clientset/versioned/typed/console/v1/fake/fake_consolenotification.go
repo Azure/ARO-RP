@@ -4,8 +4,11 @@ package fake
 
 import (
 	"context"
+	json "encoding/json"
+	"fmt"
 
 	consolev1 "github.com/openshift/api/console/v1"
+	applyconfigurationsconsolev1 "github.com/openshift/client-go/console/applyconfigurations/console/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -99,6 +102,27 @@ func (c *FakeConsoleNotifications) DeleteCollection(ctx context.Context, opts v1
 func (c *FakeConsoleNotifications) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *consolev1.ConsoleNotification, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceAction(consolenotificationsResource, name, pt, data, subresources...), &consolev1.ConsoleNotification{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*consolev1.ConsoleNotification), err
+}
+
+// Apply takes the given apply declarative configuration, applies it and returns the applied consoleNotification.
+func (c *FakeConsoleNotifications) Apply(ctx context.Context, consoleNotification *applyconfigurationsconsolev1.ConsoleNotificationApplyConfiguration, opts v1.ApplyOptions) (result *consolev1.ConsoleNotification, err error) {
+	if consoleNotification == nil {
+		return nil, fmt.Errorf("consoleNotification provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(consoleNotification)
+	if err != nil {
+		return nil, err
+	}
+	name := consoleNotification.Name
+	if name == nil {
+		return nil, fmt.Errorf("consoleNotification.Name must be provided to Apply")
+	}
+	obj, err := c.Fake.
+		Invokes(testing.NewRootPatchSubresourceAction(consolenotificationsResource, *name, types.ApplyPatchType, data), &consolev1.ConsoleNotification{})
 	if obj == nil {
 		return nil, err
 	}

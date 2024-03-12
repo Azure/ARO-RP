@@ -11,6 +11,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+## [1.3.2] - 2024-02-28
+
+### Changed
+
+- Fix bug with headers inspection handler using wrong key.
+
+## [1.3.1] - 2024-02-09
+
+### Changed
+
+- Fix bug that resulted in the error "content is empty" being returned instead of HTTP status information if the request returned no content and an unsuccessful status code.
+
+## [1.3.0] - 2024-01-22
+
+### Added
+
+- Added support to override default middleware with function `GetDefaultMiddlewaresWithOptions`.
+
+## [1.2.1] - 2023-01-22
+
+### Changed
+
+- Fix bug passing no timeout in client as 0 timeout in context  .
+
+## [1.2.0] - 2024-01-22
+
+### Added
+
+- Adds support for XXX status code.
+
+## [1.1.2] - 2024-01-20
+
+### Changed
+
+- Changed the code by replacing ioutil.ReadAll and ioutil.NopCloser with io.ReadAll and io.NopCloser, respectively, due to their deprecation.
+
+## [1.1.1] - 2023-11-22
+
+### Added
+
+- Added response headers and status code to returned error in `throwIfFailedResponse`.
+
+## [1.1.0] - 2023-08-11
+
+### Added
+
+- Added headers inspection middleware and option.
+
+## [1.0.1] - 2023-07-19
+
+### Changed
+
+- Bug Fix: Update Host for Redirect URL in go client.
+
 ## [1.0.0] - 2023-05-04
 
 ### Changed

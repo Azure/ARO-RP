@@ -4,9 +4,12 @@ package v1alpha1
 
 import (
 	"context"
+	json "encoding/json"
+	"fmt"
 	"time"
 
 	v1alpha1 "github.com/openshift/api/console/v1alpha1"
+	consolev1alpha1 "github.com/openshift/client-go/console/applyconfigurations/console/v1alpha1"
 	scheme "github.com/openshift/client-go/console/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -30,6 +33,7 @@ type ConsolePluginInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.ConsolePluginList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
 	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ConsolePlugin, err error)
+	Apply(ctx context.Context, consolePlugin *consolev1alpha1.ConsolePluginApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.ConsolePlugin, err error)
 	ConsolePluginExpansion
 }
 
@@ -145,6 +149,31 @@ func (c *consolePlugins) Patch(ctx context.Context, name string, pt types.PatchT
 		Name(name).
 		SubResource(subresources...).
 		VersionedParams(&opts, scheme.ParameterCodec).
+		Body(data).
+		Do(ctx).
+		Into(result)
+	return
+}
+
+// Apply takes the given apply declarative configuration, applies it and returns the applied consolePlugin.
+func (c *consolePlugins) Apply(ctx context.Context, consolePlugin *consolev1alpha1.ConsolePluginApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.ConsolePlugin, err error) {
+	if consolePlugin == nil {
+		return nil, fmt.Errorf("consolePlugin provided to Apply must not be nil")
+	}
+	patchOpts := opts.ToPatchOptions()
+	data, err := json.Marshal(consolePlugin)
+	if err != nil {
+		return nil, err
+	}
+	name := consolePlugin.Name
+	if name == nil {
+		return nil, fmt.Errorf("consolePlugin.Name must be provided to Apply")
+	}
+	result = &v1alpha1.ConsolePlugin{}
+	err = c.client.Patch(types.ApplyPatchType).
+		Resource("consoleplugins").
+		Name(*name).
+		VersionedParams(&patchOpts, scheme.ParameterCodec).
 		Body(data).
 		Do(ctx).
 		Into(result)
