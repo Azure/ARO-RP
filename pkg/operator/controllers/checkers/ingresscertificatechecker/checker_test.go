@@ -7,6 +7,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -15,6 +16,7 @@ import (
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/operator/metrics"
 )
 
 type testData struct {
@@ -23,6 +25,8 @@ type testData struct {
 	clusterVersion    *configv1.ClusterVersion
 	cluster           *arov1alpha1.Cluster
 	wantErr           string
+	wantMetricEmitted bool
+	wantMetricValue   bool
 }
 
 func TestCheck(t *testing.T) {
@@ -33,7 +37,7 @@ func TestCheck(t *testing.T) {
 
 	ctx := context.Background()
 
-	testCases := []testData{
+	for _, tt := range []testData{
 		{
 			name:           "Check returns clusterVersion not found error when ClusterVersion is nil",
 			clusterVersion: nil,
@@ -58,6 +62,8 @@ func TestCheck(t *testing.T) {
 			ingressController: fakeIngressController(nil),
 			cluster:           fakeCluster(managedDomain),
 			wantErr:           errNoCertificateAndManagedDomain.Error(),
+			wantMetricEmitted: true,
+			wantMetricValue:   false,
 		},
 		{
 			name:              "Check returns error (customer's fault) when no certificate is set and cluster has a custom domain",
@@ -65,6 +71,8 @@ func TestCheck(t *testing.T) {
 			ingressController: fakeIngressController(nil),
 			cluster:           fakeCluster(customDomain),
 			wantErr:           errNoCertificateAndCustomDomain.Error(),
+			wantMetricEmitted: true,
+			wantMetricValue:   false,
 		},
 		{
 			name:           "Check returns error when cluster has a managed domain and there is an invalid certificate name",
@@ -72,8 +80,10 @@ func TestCheck(t *testing.T) {
 			ingressController: fakeIngressController(&corev1.LocalObjectReference{
 				Name: "fake-custom-name-ingress",
 			}),
-			cluster: fakeCluster(managedDomain),
-			wantErr: errInvalidCertificateAndManagedDomain.Error(),
+			cluster:           fakeCluster(managedDomain),
+			wantErr:           errInvalidCertificateAndManagedDomain.Error(),
+			wantMetricEmitted: true,
+			wantMetricValue:   false,
 		},
 		{
 			name:           "Check returns no error when cluster has a managed domain and certificate has a valid name",
@@ -81,7 +91,9 @@ func TestCheck(t *testing.T) {
 			ingressController: fakeIngressController(&corev1.LocalObjectReference{
 				Name: "fake-cluster-id-ingress",
 			}),
-			cluster: fakeCluster(managedDomain),
+			cluster:           fakeCluster(managedDomain),
+			wantMetricEmitted: true,
+			wantMetricValue:   true,
 		},
 		{
 			name:           "Check returns error when cluster has a managed domain and certificate name is empty",
@@ -89,8 +101,10 @@ func TestCheck(t *testing.T) {
 			ingressController: fakeIngressController(&corev1.LocalObjectReference{
 				Name: "",
 			}),
-			cluster: fakeCluster(managedDomain),
-			wantErr: errInvalidCertificateAndManagedDomain.Error(),
+			cluster:           fakeCluster(managedDomain),
+			wantErr:           errInvalidCertificateAndManagedDomain.Error(),
+			wantMetricEmitted: true,
+			wantMetricValue:   false,
 		},
 		{
 			name:           "Check returns error when cluster has a managed domain and certificate name is just the ingress suffix",
@@ -98,8 +112,10 @@ func TestCheck(t *testing.T) {
 			ingressController: fakeIngressController(&corev1.LocalObjectReference{
 				Name: "-ingress",
 			}),
-			cluster: fakeCluster(managedDomain),
-			wantErr: errInvalidCertificateAndManagedDomain.Error(),
+			cluster:           fakeCluster(managedDomain),
+			wantErr:           errInvalidCertificateAndManagedDomain.Error(),
+			wantMetricEmitted: true,
+			wantMetricValue:   false,
 		},
 		{
 			name:           "Check returns no error when we do not have a managed domain and certificate name is empty",
@@ -107,7 +123,9 @@ func TestCheck(t *testing.T) {
 			ingressController: fakeIngressController(&corev1.LocalObjectReference{
 				Name: "",
 			}),
-			cluster: fakeCluster(customDomain),
+			cluster:           fakeCluster(customDomain),
+			wantMetricEmitted: true,
+			wantMetricValue:   true,
 		},
 		{
 			name:           "Check returns no error when we do not have a managed domain and certificate name is just the suffix",
@@ -115,7 +133,9 @@ func TestCheck(t *testing.T) {
 			ingressController: fakeIngressController(&corev1.LocalObjectReference{
 				Name: "-ingress",
 			}),
-			cluster: fakeCluster(customDomain),
+			cluster:           fakeCluster(customDomain),
+			wantMetricEmitted: true,
+			wantMetricValue:   true,
 		},
 		{
 			name:           "Check returns no error when we do not have a managed domain and certificate name is invalid",
@@ -123,14 +143,23 @@ func TestCheck(t *testing.T) {
 			ingressController: fakeIngressController(&corev1.LocalObjectReference{
 				Name: "invalid-ingress-name",
 			}),
-			cluster: fakeCluster(customDomain),
+			cluster:           fakeCluster(customDomain),
+			wantMetricEmitted: true,
+			wantMetricValue:   true,
 		},
-	}
-
-	for _, tt := range testCases {
+	} {
 		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			metricsClientFake := mock_metrics.NewMockClient(controller)
+			if tt.wantMetricEmitted {
+				metricsClientFake.EXPECT().UpdateIngressCertificateValid(tt.wantMetricValue)
+			}
+
 			sp := &checker{
-				client: buildFakeClient(tt),
+				client:        buildFakeClient(tt),
+				metricsClient: metricsClientFake,
 			}
 
 			err := sp.Check(ctx)

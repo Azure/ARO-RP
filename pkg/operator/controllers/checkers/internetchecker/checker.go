@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/Azure/ARO-RP/pkg/operator/metrics"
 )
 
 type simpleHTTPClient interface {
@@ -22,11 +24,13 @@ type internetChecker interface {
 // checker evaluates our capability to create new
 // connections to given internet endpoints.
 type checker struct {
-	checkTimeout time.Duration
-	httpClient   simpleHTTPClient
+	checkTimeout  time.Duration
+	httpClient    simpleHTTPClient
+	metricsClient metrics.Client
+	role          string
 }
 
-func newInternetChecker() *checker {
+func newInternetChecker(metricsClient metrics.Client, role string) *checker {
 	return &checker{
 		checkTimeout: time.Minute,
 		httpClient: &http.Client{
@@ -46,6 +50,8 @@ func newInternetChecker() *checker {
 				DisableKeepAlives: true,
 			},
 		},
+		metricsClient: metricsClient,
+		role:          role,
 	}
 }
 func (r *checker) Check(URLs []string) error {
@@ -79,10 +85,12 @@ func (r *checker) checkWithRetry(url string) error {
 	for i := 0; i < 6; i++ {
 		err = r.checkOnce(url, r.checkTimeout/6)
 		if err == nil {
+			r.metricsClient.UpdateRequiredEndpointAccessible(url, r.role, true)
 			return nil
 		}
 	}
 
+	r.metricsClient.UpdateRequiredEndpointAccessible(url, r.role, false)
 	return err
 }
 

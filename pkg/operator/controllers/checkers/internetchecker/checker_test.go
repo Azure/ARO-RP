@@ -14,8 +14,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	operatorv1 "github.com/openshift/api/operator/v1"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
+	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/operator/metrics"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -66,47 +69,61 @@ var (
 
 func TestCheck(t *testing.T) {
 	var testCases = []struct {
-		name          string
-		responses     []*fakeResponse
-		wantErr       string
-		wantCondition operatorv1.ConditionStatus
+		name            string
+		responses       []*fakeResponse
+		wantErr         string
+		wantCondition   operatorv1.ConditionStatus
+		wantMetricValue bool
 	}{
 		{
-			name:          "200 OK",
-			responses:     []*fakeResponse{okResp},
-			wantCondition: operatorv1.ConditionTrue,
+			name:            "200 OK",
+			responses:       []*fakeResponse{okResp},
+			wantCondition:   operatorv1.ConditionTrue,
+			wantMetricValue: true,
 		},
 		{
-			name:          "bad request",
-			responses:     []*fakeResponse{badReq},
-			wantCondition: operatorv1.ConditionTrue,
+			name:            "bad request",
+			responses:       []*fakeResponse{badReq},
+			wantCondition:   operatorv1.ConditionTrue,
+			wantMetricValue: true,
 		},
 		{
-			name:          "eventual 200 OK",
-			responses:     []*fakeResponse{networkUnreach, timedoutReq, okResp},
-			wantCondition: operatorv1.ConditionTrue,
+			name:            "eventual 200 OK",
+			responses:       []*fakeResponse{networkUnreach, timedoutReq, okResp},
+			wantCondition:   operatorv1.ConditionTrue,
+			wantMetricValue: true,
 		},
 		{
-			name:          "eventual bad request",
-			responses:     []*fakeResponse{timedoutReq, networkUnreach, badReq},
-			wantCondition: operatorv1.ConditionTrue,
+			name:            "eventual bad request",
+			responses:       []*fakeResponse{timedoutReq, networkUnreach, badReq},
+			wantCondition:   operatorv1.ConditionTrue,
+			wantMetricValue: true,
 		},
 		{
-			name:          "timedout request",
-			responses:     []*fakeResponse{networkUnreach, timedoutReq, timedoutReq, timedoutReq, timedoutReq, timedoutReq},
-			wantErr:       "https://not-used-in-test.io: context deadline exceeded",
-			wantCondition: operatorv1.ConditionFalse,
+			name:            "timedout request",
+			responses:       []*fakeResponse{networkUnreach, timedoutReq, timedoutReq, timedoutReq, timedoutReq, timedoutReq},
+			wantErr:         "https://not-used-in-test.io: context deadline exceeded",
+			wantCondition:   operatorv1.ConditionFalse,
+			wantMetricValue: false,
 		},
 	}
 
-	for _, test := range testCases {
-		t.Run(test.name, func(t *testing.T) {
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			metricsClientFake := mock_metrics.NewMockClient(controller)
+			metricsClientFake.EXPECT().UpdateRequiredEndpointAccessible(urltocheck, operator.RoleMaster, tt.wantMetricValue)
+
 			r := &checker{
-				checkTimeout: 100 * time.Millisecond,
-				httpClient:   &testClient{responses: test.responses},
+				checkTimeout:  100 * time.Millisecond,
+				httpClient:    &testClient{responses: tt.responses},
+				metricsClient: metricsClientFake,
+				role:          operator.RoleMaster,
 			}
 			err := r.Check([]string{urltocheck})
-			utilerror.AssertErrorMessage(t, err, test.wantErr)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
 }

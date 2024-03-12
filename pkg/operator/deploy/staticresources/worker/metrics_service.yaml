@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: aro-operator-worker-metrics
+  namespace: openshift-azure-operator
+  labels:
+    name: aro-operator
+    role: worker
+spec:
+  selector:
+    name: aro-operator
+    role: worker
+  ports:
+    - name: http-metrics
+      port: 8383
+      targetPort: 8383
+      protocol: TCP

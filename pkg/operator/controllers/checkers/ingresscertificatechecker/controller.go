@@ -22,6 +22,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
 )
 
@@ -43,12 +44,12 @@ type Reconciler struct {
 	checker ingressCertificateChecker
 }
 
-func NewReconciler(log *logrus.Entry, client client.Client, role string) *Reconciler {
+func NewReconciler(log *logrus.Entry, client client.Client, metricsClient metrics.Client, role string) *Reconciler {
 	return &Reconciler{
 		log:     log,
 		role:    role,
 		client:  client,
-		checker: newIngressCertificateChecker(client),
+		checker: newIngressCertificateChecker(client, metricsClient),
 	}
 }
 
