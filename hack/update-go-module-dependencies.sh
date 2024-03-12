@@ -34,7 +34,7 @@ for x in vendor/github.com/openshift/*; do
 			;;
 
 		*)
-			go mod edit -replace ${x##vendor/}=$(go list -mod=mod -m ${x##vendor/}@release-4.10 | sed -e 's/ /@/')
+			go mod edit -replace ${x##vendor/}=$(go list -mod=mod -m ${x##vendor/}@release-4.12 | sed -e 's/ /@/')
 			;;
 	esac
 done
