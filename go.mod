@@ -1585,12 +1585,12 @@ replace (
 // OpenShift pins
 replace (
 	github.com/googleapis/gnostic => github.com/google/gnostic v0.5.5
-	github.com/openshift/api => github.com/openshift/api v0.0.0-20230426102702-398424d53f74
-	github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20220603133046-984ee5ebedcf
-	github.com/openshift/cloud-credential-operator => github.com/openshift/cloud-credential-operator v0.0.0-20200316201045-d10080b52c9e
+	github.com/openshift/api => github.com/openshift/api v0.0.0-20240103200955-7ca3a4634e46
+	github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
+	github.com/openshift/cloud-credential-operator => github.com/openshift/cloud-credential-operator v0.0.0-20231121092806-c1c1417e8e90
 	github.com/openshift/hive/apis => github.com/openshift/hive/apis v0.0.0-20231116161336-9dd47f8bfa1f
-	github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20230222114049-eac44a078a6e
-	github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20220319215057-e6ba00b88555
+	github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20231120144800-ba257b06bf7b
+	github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20240311054642-5a05d1fdbbf6
 	go.mongodb.org/mongo-driver => go.mongodb.org/mongo-driver v1.9.4
 	google.golang.org/grpc => google.golang.org/grpc v1.56.3
 )
