@@ -748,201 +748,179 @@
             "location": "[resourceGroup().location]"
         },
         {
+            "apiVersion": "2023-04-15",
             "kind": "GlobalDocumentDB",
+            "location": "[resourceGroup().location]",
+            "name": "[parameters('databaseAccountName')]",
             "properties": {
-                "consistencyPolicy": {
-                    "defaultConsistencyLevel": "Strong"
-                },
-                "locations": [
-                    {
-                        "locationName": "[resourceGroup().location]"
-                    }
-                ],
-                "databaseAccountOfferType": "Standard",
-                "ipRules": "[if(parameters('disableCosmosDBFirewall'), createArray(), concat(parameters('ipRules'),createArray(createObject('ipAddressOrRange', '104.42.195.92'),createObject('ipAddressOrRange','40.76.54.131'),createObject('ipAddressOrRange','52.176.6.30'),createObject('ipAddressOrRange','52.169.50.45'),createObject('ipAddressOrRange','52.187.184.26'))))]",
-                "isVirtualNetworkFilterEnabled": "[not(parameters('disableCosmosDBFirewall'))]",
-                "virtualNetworkRules": "[if(parameters('disableCosmosDBFirewall'), createArray(), variables('rpCosmoDbVirtualNetworkRules'))]",
-                "disableKeyBasedMetadataWriteAccess": true,
                 "backupPolicy": {
                     "periodicModeProperties": {
                         "backupIntervalInMinutes": 240,
                         "backupRetentionIntervalInHours": 720
                     },
                     "type": "Periodic"
-                }
+                },
+                "consistencyPolicy": {
+                    "defaultConsistencyLevel": "Strong"
+                },
+                "databaseAccountOfferType": "Standard",
+                "disableKeyBasedMetadataWriteAccess": true,
+                "ipRules": "[if(parameters('disableCosmosDBFirewall'), createArray(), concat(parameters('ipRules'),createArray(createObject('ipAddressOrRange', '104.42.195.92'),createObject('ipAddressOrRange','40.76.54.131'),createObject('ipAddressOrRange','52.176.6.30'),createObject('ipAddressOrRange','52.169.50.45'),createObject('ipAddressOrRange','52.187.184.26'))))]",
+                "isVirtualNetworkFilterEnabled": "[not(parameters('disableCosmosDBFirewall'))]",
+                "locations": [
+                    {
+                        "locationName": "[resourceGroup().location]"
+                    }
+                ],
+                "minimalTlsVersion": "Tls12",
+                "virtualNetworkRules": "[if(parameters('disableCosmosDBFirewall'), createArray(), variables('rpCosmoDbVirtualNetworkRules'))]"
             },
-            "name": "[parameters('databaseAccountName')]",
-            "type": "Microsoft.DocumentDB/databaseAccounts",
-            "location": "[resourceGroup().location]",
             "tags": {
                 "defaultExperience": "Core (SQL)"
             },
-            "apiVersion": "2021-01-15"
+            "type": "Microsoft.DocumentDB/databaseAccounts"
         },
         {
+            "apiVersion": "2023-04-15",
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO')]",
             "properties": {
-                "resource": {
-                    "id": "['ARO']"
-                },
                 "options": {
                     "throughput": "[parameters('cosmosDB').standardProvisionedThroughput]"
+                },
+                "resource": {
+                    "id": "['ARO']"
                 }
             },
-            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO')]",
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2021-01-15",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
-            ]
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases"
         },
         {
+            "apiVersion": "2023-04-15",
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/AsyncOperations')]",
             "properties": {
+                "options": {},
                 "resource": {
+                    "defaultTtl": 604800,
                     "id": "AsyncOperations",
                     "partitionKey": {
+                        "kind": "Hash",
                         "paths": [
                             "/id"
-                        ],
-                        "kind": "Hash"
-                    },
-                    "defaultTtl": 604800
-                },
-                "options": {}
+                        ]
+                    }
+                }
             },
-            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/AsyncOperations')]",
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2021-01-15",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
-            ]
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         },
         {
+            "apiVersion": "2023-04-15",
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/OpenShiftVersions')]",
             "properties": {
+                "options": {},
                 "resource": {
+                    "defaultTtl": -1,
                     "id": "OpenShiftVersions",
                     "partitionKey": {
+                        "kind": "Hash",
                         "paths": [
                             "/id"
-                        ],
-                        "kind": "Hash"
-                    },
-                    "defaultTtl": -1
-                },
-                "options": {}
+                        ]
+                    }
+                }
             },
-            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/OpenShiftVersions')]",
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2021-01-15",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
-            ]
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         },
         {
+            "apiVersion": "2023-04-15",
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/ClusterManagerConfigurations')]",
             "properties": {
+                "options": {},
                 "resource": {
                     "id": "ClusterManagerConfigurations",
                     "partitionKey": {
+                        "kind": "Hash",
                         "paths": [
                             "/partitionKey"
-                        ],
-                        "kind": "Hash"
+                        ]
                     }
-                },
-                "options": {}
+                }
             },
-            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/ClusterManagerConfigurations')]",
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2021-01-15",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
-            ]
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         },
         {
+            "apiVersion": "2023-04-15",
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Billing')]",
             "properties": {
+                "options": {},
                 "resource": {
                     "id": "Billing",
                     "partitionKey": {
+                        "kind": "Hash",
                         "paths": [
                             "/id"
-                        ],
-                        "kind": "Hash"
+                        ]
                     }
-                },
-                "options": {}
-            },
-            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Billing')]",
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2021-01-15",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
-            ]
-        },
-        {
-            "properties": {
-                "resource": {
-                    "id": "Gateway",
-                    "partitionKey": {
-                        "paths": [
-                            "/id"
-                        ],
-                        "kind": "Hash"
-                    },
-                    "defaultTtl": -1
-                },
-                "options": {
-                    "throughput": "[parameters('cosmosDB').gatewayProvisionedThroughput]"
                 }
             },
-            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Gateway')]",
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2021-01-15",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
-            ]
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         },
         {
+            "apiVersion": "2023-04-15",
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Gateway')]",
             "properties": {
+                "options": {
+                    "throughput": "[parameters('cosmosDB').gatewayProvisionedThroughput]"
+                },
                 "resource": {
-                    "id": "Monitors",
+                    "defaultTtl": -1,
+                    "id": "Gateway",
                     "partitionKey": {
+                        "kind": "Hash",
                         "paths": [
                             "/id"
-                        ],
-                        "kind": "Hash"
-                    },
-                    "defaultTtl": -1
-                },
-                "options": {}
+                        ]
+                    }
+                }
             },
-            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Monitors')]",
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2021-01-15",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
-            ]
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         },
         {
+            "apiVersion": "2023-04-15",
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Monitors')]",
             "properties": {
+                "options": {},
+                "resource": {
+                    "defaultTtl": -1,
+                    "id": "Monitors",
+                    "partitionKey": {
+                        "kind": "Hash",
+                        "paths": [
+                            "/id"
+                        ]
+                    }
+                }
+            },
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
+        },
+        {
+            "apiVersion": "2023-04-15",
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/OpenShiftClusters')]",
+            "properties": {
+                "options": {},
                 "resource": {
                     "id": "OpenShiftClusters",
                     "partitionKey": {
+                        "kind": "Hash",
                         "paths": [
                             "/partitionKey"
-                        ],
-                        "kind": "Hash"
+                        ]
                     },
                     "uniqueKeyPolicy": {
                         "uniqueKeys": [
@@ -963,64 +941,48 @@
                             }
                         ]
                     }
-                },
-                "options": {}
-            },
-            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/OpenShiftClusters')]",
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2021-01-15",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
-            ]
-        },
-        {
-            "properties": {
-                "resource": {
-                    "id": "Portal",
-                    "partitionKey": {
-                        "paths": [
-                            "/id"
-                        ],
-                        "kind": "Hash"
-                    },
-                    "defaultTtl": -1
-                },
-                "options": {
-                    "throughput": "[parameters('cosmosDB').portalProvisionedThroughput]"
                 }
             },
-            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Portal')]",
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2021-01-15",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
-            ]
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         },
         {
+            "apiVersion": "2023-04-15",
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Portal')]",
             "properties": {
+                "options": {
+                    "throughput": "[parameters('cosmosDB').portalProvisionedThroughput]"
+                },
+                "resource": {
+                    "defaultTtl": -1,
+                    "id": "Portal",
+                    "partitionKey": {
+                        "kind": "Hash",
+                        "paths": [
+                            "/id"
+                        ]
+                    }
+                }
+            },
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
+        },
+        {
+            "apiVersion": "2023-04-15",
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Subscriptions')]",
+            "properties": {
+                "options": {},
                 "resource": {
                     "id": "Subscriptions",
                     "partitionKey": {
+                        "kind": "Hash",
                         "paths": [
                             "/id"
-                        ],
-                        "kind": "Hash"
+                        ]
                     }
-                },
-                "options": {}
+                }
             },
-            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Subscriptions')]",
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2021-01-15",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
-            ]
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         },
         {
             "properties": {
