@@ -25,7 +25,6 @@ require (
 	github.com/coreos/ignition/v2 v2.14.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible
-	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/go-logr/logr v1.4.1
@@ -40,7 +39,6 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/securecookie v1.1.2
 	github.com/gorilla/sessions v1.2.2
-	github.com/hashicorp/go-multierror v1.1.1
 	github.com/itchyny/gojq v0.12.13
 	github.com/jewzaam/go-cosmosdb v0.0.0-20230924011506-8f8942a01991
 	github.com/jongio/azidext/go/azidext v0.5.0
@@ -56,10 +54,10 @@ require (
 	github.com/open-policy-agent/frameworks/constraint v0.0.0-20221109005544-7de84dff5081
 	github.com/opencontainers/runtime-spec v1.1.1-0.20230922153023-c0e90434df2a
 	github.com/openshift/api v3.9.1-0.20191111211345-a27ff30ebf09+incompatible
-	github.com/openshift/client-go v0.0.0-20220525160904-9e1acff93e4a
+	github.com/openshift/client-go v0.0.0-20220831193253-4950ae70c8ea
 	github.com/openshift/cloud-credential-operator v0.0.0-00010101000000-000000000000
 	github.com/openshift/hive/apis v0.0.0-20240131003045-5fbe0d158ba9
-	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
+	github.com/openshift/library-go v0.0.0-20231020125033-d932feccfc56
 	github.com/openshift/machine-config-operator v0.0.1-0.20230519222939-1abc13efbb0d
 	github.com/pires/go-proxyproto v0.6.2
 	github.com/pkg/errors v0.9.1
@@ -79,17 +77,18 @@ require (
 	golang.org/x/sync v0.6.0
 	golang.org/x/text v0.14.0
 	golang.org/x/tools v0.19.0
-	k8s.io/api v0.29.1
-	k8s.io/apiextensions-apiserver v0.25.0
-	k8s.io/apimachinery v0.29.1
+	k8s.io/api v0.28.3
+	k8s.io/apiextensions-apiserver v0.25.16
+	k8s.io/apimachinery v0.28.3
 	k8s.io/cli-runtime v0.25.16
 	k8s.io/client-go v0.26.2
 	k8s.io/code-generator v0.25.16
-	k8s.io/kubectl v0.24.17
+	k8s.io/kubectl v0.25.15
 	k8s.io/kubernetes v1.28.4
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
 	sigs.k8s.io/controller-runtime v0.13.1
 	sigs.k8s.io/controller-tools v0.9.0
+	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
@@ -141,6 +140,7 @@ require (
 	github.com/exponent-io/jsonpath v0.0.0-20210407135951-1de76d718b3f // indirect
 	github.com/fatih/color v1.15.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
+	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-jose/go-jose/v3 v3.0.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -169,10 +169,10 @@ require (
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20230323073829-e72429f035bd // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
-	github.com/googleapis/gnostic v0.6.8 // indirect
 	github.com/gorilla/schema v1.2.1 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/imdario/mergo v0.3.15 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/itchyny/timefmt-go v0.1.5 // indirect
@@ -272,14 +272,13 @@ require (
 	k8s.io/component-base v0.26.2 // indirect
 	k8s.io/gengo v0.0.0-20211129171323-c02415ce4185 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
-	k8s.io/kube-aggregator v0.24.1 // indirect
+	k8s.io/kube-aggregator v0.25.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20220803162953-67bda5d908f1 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/kube-storage-version-migrator v0.0.4 // indirect
 	sigs.k8s.io/kustomize/api v0.12.1 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.13.9 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
-	sigs.k8s.io/yaml v1.4.0 // indirect
 	tags.cncf.io/container-device-interface v0.6.2 // indirect
 )
 
@@ -1048,6 +1047,19 @@ exclude (
 	github.com/gogo/protobuf v1.3.0
 	github.com/gogo/protobuf v1.3.1
 	github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d
+	github.com/onsi/ginkgo v1.11.0
+	github.com/onsi/ginkgo v1.12.1
+	github.com/onsi/ginkgo v1.6.0
+	github.com/onsi/ginkgo/v2 v2.0.0
+	github.com/onsi/ginkgo/v2 v2.1.3
+	github.com/onsi/ginkgo/v2 v2.1.4
+	github.com/onsi/ginkgo/v2 v2.1.6
+	github.com/onsi/gomega v1.10.1
+	github.com/onsi/gomega v1.10.2
+	github.com/onsi/gomega v1.17.0
+	github.com/onsi/gomega v1.18.1
+	github.com/onsi/gomega v1.19.0
+	github.com/onsi/gomega v1.7.1
 	// remove old runc
 	github.com/opencontainers/runc v1.0.2
 	github.com/opencontainers/runc v1.1.4
@@ -1078,6 +1090,7 @@ exclude (
 	github.com/prometheus/procfs v0.7.3
 	github.com/russross/blackfriday v1.5.2
 	github.com/sirupsen/logrus v1.4.1
+	github.com/sirupsen/logrus v1.4.2
 	github.com/sirupsen/logrus v1.6.0
 	github.com/sirupsen/logrus v1.7.0
 	github.com/sirupsen/logrus v1.8.1
@@ -1576,10 +1589,6 @@ replace (
 	k8s.io/kubernetes => k8s.io/kubernetes v1.25.16
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.11.2
 	sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.5.0
-	sigs.k8s.io/kustomize/api => sigs.k8s.io/kustomize/api v0.11.2
-	sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.13.3
-	sigs.k8s.io/structured-merge-diff => sigs.k8s.io/structured-merge-diff v1.0.1-0.20191108220359-b1b620dd3f06
-
 )
 
 // OpenShift pins
