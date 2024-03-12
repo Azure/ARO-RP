@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type getFunc func(key client.ObjectKey, obj client.Object) error
+type getFunc func(key client.ObjectKey, obj client.Object, opts ...client.GetOption) error
 type hookFunc func(obj client.Object) error
 
 type HookingClient struct {
@@ -63,14 +63,14 @@ func (c *HookingClient) WithPatchHook(f hookFunc) *HookingClient {
 }
 
 // See [sigs.k8s.io/controller-runtime/pkg/client.Reader.Get]
-func (c *HookingClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+func (c *HookingClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 	for _, h := range c.getHook {
 		err := h(key, obj)
 		if err != nil {
 			return err
 		}
 	}
-	return c.f.Get(ctx, key, obj)
+	return c.f.Get(ctx, key, obj, opts...)
 }
 
 // See [sigs.k8s.io/controller-runtime/pkg/client.Reader.List]
