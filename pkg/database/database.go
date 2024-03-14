@@ -17,6 +17,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/database/keysprovider"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	dbmetrics "github.com/Azure/ARO-RP/pkg/metrics/statsd/cosmosdb"
@@ -68,15 +69,11 @@ func NewMasterKeyAuthorizer(ctx context.Context, log *logrus.Entry, token azcore
 		return nil, err
 	}
 
-	return cosmosdb.NewMasterKeyAuthorizer(getDatabaseKey(keys, log))
-}
+	keysProvider := keysprovider.NewDatabaseKeysProvider(keys)
+	secondaryMasterKeyInfo := keysProvider.GetSecondaryMasterKey()
+	log.Info(secondaryMasterKeyInfo.ContextInfo)
 
-func getDatabaseKey(keys sdkcosmos.DatabaseAccountsClientListKeysResponse, log *logrus.Entry) string {
-	keyName := "SecondaryMasterKey"
-	log.Infof("Using %s to authenticate with CosmosDB", keyName)
-	r := reflect.ValueOf(keys)
-	key := reflect.Indirect(r).FieldByName(keyName)
-	return key.String()
+	return cosmosdb.NewMasterKeyAuthorizer(secondaryMasterKeyInfo.Value)
 }
 
 func NewJSONHandle(aead encryption.AEAD) (*codec.JsonHandle, error) {
