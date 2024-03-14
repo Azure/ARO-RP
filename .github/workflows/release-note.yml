@@ -25,7 +25,7 @@ jobs:
       run: ./.github/generate_release_note.sh ${{ github.workspace }}/CHANGELOG.txt
 
     - name: Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         body_path: ${{ github.workspace }}/CHANGELOG.txt
         name: Release ${{ github.ref_name }}
