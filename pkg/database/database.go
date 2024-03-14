@@ -55,7 +55,7 @@ func NewDatabaseClient(log *logrus.Entry, _env env.Core, authorizer cosmosdb.Aut
 	return cosmosdb.NewDatabaseClient(log, c, h, databaseAccountName+"."+_env.Environment().CosmosDBDNSSuffix, authorizer), nil
 }
 
-func NewMasterKeyAuthorizer(ctx context.Context, token azcore.TokenCredential, clientOptions *policy.ClientOptions, subscriptionID, resourceGroup, databaseAccountName string) (cosmosdb.Authorizer, error) {
+func NewMasterKeyAuthorizer(ctx context.Context, log *logrus.Entry, token azcore.TokenCredential, clientOptions *policy.ClientOptions, subscriptionID, resourceGroup, databaseAccountName string) (cosmosdb.Authorizer, error) {
 	databaseaccounts, err := armcosmos.NewDatabaseAccountsClient(subscriptionID, token, clientOptions)
 	if err != nil {
 		return nil, err
@@ -68,7 +68,15 @@ func NewMasterKeyAuthorizer(ctx context.Context, token azcore.TokenCredential, c
 		return nil, err
 	}
 
-	return cosmosdb.NewMasterKeyAuthorizer(*keys.SecondaryMasterKey)
+	return cosmosdb.NewMasterKeyAuthorizer(getDatabaseKey(keys, log))
+}
+
+func getDatabaseKey(keys sdkcosmos.DatabaseAccountsClientListKeysResponse, log *logrus.Entry) string {
+	keyName := "SecondaryMasterKey"
+	log.Infof("Using %s to authenticate with CosmosDB", keyName)
+	r := reflect.ValueOf(keys)
+	key := reflect.Indirect(r).FieldByName(keyName)
+	return key.String()
 }
 
 func NewJSONHandle(aead encryption.AEAD) (*codec.JsonHandle, error) {
