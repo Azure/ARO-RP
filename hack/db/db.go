@@ -68,7 +68,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	clientOptions := &policy.ClientOptions{
 		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
 	}
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, tokenCredential, clientOptions, _env.SubscriptionID(), _env.ResourceGroup(), dbAccountName)
+	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, log.WithField("component", "database"), tokenCredential, clientOptions, _env.SubscriptionID(), _env.ResourceGroup(), dbAccountName)
 	if err != nil {
 		return err
 	}
