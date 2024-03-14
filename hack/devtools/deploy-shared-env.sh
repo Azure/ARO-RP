@@ -56,7 +56,8 @@ deploy_oic_dev() {
         -n rp-oic \
         --template-file pkg/deploy/assets/rp-oic.json \
         --parameters \
-            "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_RP_CLIENT_ID'" --query '[].id' -o tsv)" >/dev/null 
+            "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_RP_CLIENT_ID'" --query '[].id' -o tsv)" >/dev/null \
+            "storageAccountDomain=$(echo ${RESOURCEGROUP//-})"
 }
 
 deploy_aks_dev() {
@@ -88,7 +89,8 @@ deploy_oic_for_dedicated_rp() {
         -n rp-oic \
         --template-file pkg/deploy/assets/rp-oic.json \
         --parameters \
-            "rpServicePrincipalId=$(az identity show -g $RESOURCEGROUP -n aro-rp-$LOCATION | jq -r '.["principalId"]')"
+            "rpServicePrincipalId=$(az identity show -g $RESOURCEGROUP -n aro-rp-$LOCATION | jq -r '.["principalId"]')" \
+            "storageAccountDomain=$(yq '.rps[].configuration.storageAccountDomain' dev-config.yaml | cut -d '.' -f1)"
 }
 
 deploy_env_dev_override() {
