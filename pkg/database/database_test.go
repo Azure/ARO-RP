@@ -6,12 +6,12 @@ package database
 import (
 	"testing"
 
+	sdkcosmos "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 
 	testlog "github.com/Azure/ARO-RP/test/util/log"
-	sdkcosmos "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
 )
 
 func TestGetDatabaseKey(t *testing.T) {
