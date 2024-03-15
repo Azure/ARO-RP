@@ -110,22 +110,22 @@ func (m *manager) startContainer(ctx context.Context, version *api.OpenShiftVers
 	return err
 }
 
-func (m *manager) containerFinished(context.Context) (bool, error) {
+func (m *manager) containerFinished(context.Context) (bool, bool, error) {
 	containerName := "installer-" + m.clusterUUID
 	inspectData, err := containers.Inspect(m.conn, containerName, nil)
 	if err != nil {
-		return false, err
+		return false, false, err
 	}
 
 	if inspectData.State.Status == "exited" || inspectData.State.Status == "stopped" {
 		if inspectData.State.ExitCode != 0 {
 			getContainerLogs(m.conn, m.log, containerName)
-			return true, fmt.Errorf("container exited with %d", inspectData.State.ExitCode)
+			return true, false, fmt.Errorf("container exited with %d", inspectData.State.ExitCode)
 		}
 		m.success = true
-		return true, nil
+		return true, false, nil
 	}
-	return false, nil
+	return false, true, nil
 }
 
 func (m *manager) createSecrets(ctx context.Context, doc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument) error {

@@ -11,17 +11,19 @@ import (
 
 // functionnames that will be used in the conditionFunction below
 // All the keys of map timeoutConditionErrors
-func attachNSGs(context.Context) (bool, error)                             { return false, nil }
-func apiServersReady(context.Context) (bool, error)                        { return false, nil }
-func minimumWorkerNodesReady(context.Context) (bool, error)                { return false, nil }
-func operatorConsoleExists(context.Context) (bool, error)                  { return false, nil }
-func operatorConsoleReady(context.Context) (bool, error)                   { return false, nil }
-func clusterVersionReady(context.Context) (bool, error)                    { return false, nil }
-func ingressControllerReady(context.Context) (bool, error)                 { return false, nil }
-func aroDeploymentReady(context.Context) (bool, error)                     { return false, nil }
-func ensureAROOperatorRunningDesiredVersion(context.Context) (bool, error) { return false, nil }
-func hiveClusterDeploymentReady(context.Context) (bool, error)             { return false, nil }
-func hiveClusterInstallationComplete(context.Context) (bool, error)        { return false, nil }
+func attachNSGs(context.Context) (bool, bool, error)              { return false, false, nil }
+func apiServersReady(context.Context) (bool, bool, error)         { return false, false, nil }
+func minimumWorkerNodesReady(context.Context) (bool, bool, error) { return false, false, nil }
+func operatorConsoleExists(context.Context) (bool, bool, error)   { return false, false, nil }
+func operatorConsoleReady(context.Context) (bool, bool, error)    { return false, false, nil }
+func clusterVersionReady(context.Context) (bool, bool, error)     { return false, false, nil }
+func ingressControllerReady(context.Context) (bool, bool, error)  { return false, false, nil }
+func aroDeploymentReady(context.Context) (bool, bool, error)      { return false, false, nil }
+func ensureAROOperatorRunningDesiredVersion(context.Context) (bool, bool, error) {
+	return false, false, nil
+}
+func hiveClusterDeploymentReady(context.Context) (bool, bool, error)      { return false, false, nil }
+func hiveClusterInstallationComplete(context.Context) (bool, bool, error) { return false, false, nil }
 
 func TestEnrichConditionTimeoutError(t *testing.T) {
 	for _, tt := range []struct {

@@ -436,24 +436,24 @@ func (e *etcdrenew) deleteEtcdSecrets(ctx context.Context) error {
 }
 
 // Checks if the new revision is put on the etcd and validates if all the nodes are running the same revision
-func (e *etcdrenew) isEtcdRevised(ctx context.Context) (bool, error) {
+func (e *etcdrenew) isEtcdRevised(ctx context.Context) (etcdCheck bool, retry bool, err error) {
 	isAtRevision := true
 	rawEtcd, err := e.k.KubeGet(ctx, "etcd.operator.openshift.io", "", "cluster")
 	if err != nil {
 		e.log.Warnf(err.Error())
-		return false, nil
+		return false, true, nil
 	}
 	etcd := &operatorv1.Etcd{}
 	err = codec.NewDecoderBytes(rawEtcd, &codec.JsonHandle{}).Decode(etcd)
 	if err != nil {
 		e.log.Warnf(err.Error())
-		return false, nil
+		return false, true, nil
 	}
 
 	// no new revision is observed.
 	if e.lastRevision == etcd.Status.LatestAvailableRevision {
 		e.log.Infof("last revision is %d, latest available revision is %d", e.lastRevision, etcd.Status.LatestAvailableRevision)
-		return false, nil
+		return false, true, nil
 	}
 	for _, s := range etcd.Status.NodeStatuses {
 		e.log.Infof("Current Revision for node %s is %d, expected revision is %d", s.NodeName, s.CurrentRevision, etcd.Status.LatestAvailableRevision)
@@ -463,7 +463,7 @@ func (e *etcdrenew) isEtcdRevised(ctx context.Context) (bool, error) {
 		}
 	}
 
-	return isAtRevision, nil
+	return isAtRevision, true, nil
 }
 
 // Applies the backedup etcd secret and applies them on the cluster

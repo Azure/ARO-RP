@@ -1,373 +1,217 @@
-package cluster
+package containerinstall
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
-	"errors"
-	"strings"
-	"testing"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
 	"time"
 
-	"github.com/golang/mock/gomock"
-	"github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
-	configv1 "github.com/openshift/api/config/v1"
-	operatorv1 "github.com/openshift/api/operator/v1"
-	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
-	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
-	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
+	"github.com/containers/podman/v4/pkg/bindings/containers"
+	"github.com/containers/podman/v4/pkg/bindings/images"
+	"github.com/containers/podman/v4/pkg/bindings/secrets"
+	"github.com/containers/podman/v4/pkg/specgen"
+	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	mock_hive "github.com/Azure/ARO-RP/pkg/util/mocks/hive"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
-	"github.com/Azure/ARO-RP/pkg/util/version"
-	testdatabase "github.com/Azure/ARO-RP/test/database"
-	utilerror "github.com/Azure/ARO-RP/test/util/error"
-	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
-func failingFunc(context.Context) error { return errors.New("oh no!") }
+var (
+	devEnvVars = []string{
+		"AZURE_FP_CLIENT_ID",
+		"AZURE_RP_CLIENT_ID",
+		"AZURE_RP_CLIENT_SECRET",
+		"AZURE_SUBSCRIPTION_ID",
+		"AZURE_TENANT_ID",
+		"DOMAIN_NAME",
+		"KEYVAULT_PREFIX",
+		"LOCATION",
+		"PROXY_HOSTNAME",
+		"PULL_SECRET",
+		"RESOURCEGROUP",
+	}
+)
 
-func successfulActionStep(context.Context) error { return nil }
+func (m *manager) Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion) error {
+	s := []steps.Step{
+		steps.Action(func(context.Context) error {
+			options := (&images.PullOptions{}).
+				WithQuiet(true).
+				WithPolicy("always").
+				WithUsername(m.pullSecret.Username).
+				WithPassword(m.pullSecret.Password)
 
-func successfulConditionStep(context.Context) (bool, error) { return true, nil }
+			_, err := images.Pull(m.conn, version.Properties.InstallerPullspec, options)
+			return err
+		}),
+		steps.Action(func(context.Context) error { return m.createSecrets(ctx, doc, sub) }),
+		steps.Action(func(context.Context) error { return m.startContainer(ctx, version) }),
+		steps.Condition(m.containerFinished, 60*time.Minute, false),
+		steps.Action(m.cleanupContainers),
+	}
 
-type fakeMetricsEmitter struct {
-	Metrics map[string]int64
+	_, err := steps.Run(ctx, m.log, 10*time.Second, s, nil)
+	if err != nil {
+		return err
+	}
+	if !m.success {
+		return fmt.Errorf("failed to install cluster")
+	}
+	return nil
 }
 
-func newfakeMetricsEmitter() *fakeMetricsEmitter {
-	m := make(map[string]int64)
-	return &fakeMetricsEmitter{
-		Metrics: m,
+func (m *manager) putSecret(secretName string) specgen.Secret {
+	return specgen.Secret{
+		Source: m.clusterUUID + "-" + secretName,
+		Target: "/.azure/" + secretName,
+		Mode:   0o644,
 	}
 }
 
-func (e *fakeMetricsEmitter) EmitGauge(metricName string, metricValue int64, dimensions map[string]string) {
-	e.Metrics[metricName] = metricValue
-}
+func (m *manager) startContainer(ctx context.Context, version *api.OpenShiftVersion) error {
+	s := specgen.NewSpecGenerator(version.Properties.InstallerPullspec, false)
+	s.Name = "installer-" + m.clusterUUID
 
-func (e *fakeMetricsEmitter) EmitFloat(metricName string, metricValue float64, dimensions map[string]string) {
-}
-
-var clusterOperator = &configv1.ClusterOperator{
-	ObjectMeta: metav1.ObjectMeta{
-		Name: "operator",
-	},
-}
-
-var clusterVersion = &configv1.ClusterVersion{
-	ObjectMeta: metav1.ObjectMeta{
-		Name: "version",
-	},
-}
-
-var node = &corev1.Node{
-	ObjectMeta: metav1.ObjectMeta{
-		Name: "node",
-	},
-}
-
-var ingressController = &operatorv1.IngressController{
-	ObjectMeta: metav1.ObjectMeta{
-		Namespace: "openshift-ingress-operator",
-		Name:      "ingress-controller",
-	},
-}
-
-func TestStepRunnerWithInstaller(t *testing.T) {
-	ctx := context.Background()
-
-	for _, tt := range []struct {
-		name          string
-		steps         []steps.Step
-		wantEntries   []map[string]types.GomegaMatcher
-		wantErr       string
-		kubernetescli *fake.Clientset
-		configcli     *configfake.Clientset
-		operatorcli   *operatorfake.Clientset
-	}{
-		{
-			name: "Failed step run will log cluster version, cluster operator status, and ingress information if available",
-			steps: []steps.Step{
-				steps.Action(failingFunc),
-			},
-			wantErr: "oh no!",
-			wantEntries: []map[string]types.GomegaMatcher{
-				{
-					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`running step [Action github.com/Azure/ARO-RP/pkg/cluster.failingFunc]`),
-				},
-				{
-					"level": gomega.Equal(logrus.ErrorLevel),
-					"msg":   gomega.Equal("step [Action github.com/Azure/ARO-RP/pkg/cluster.failingFunc] encountered error: oh no!"),
-				},
-				{
-					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`(?s)github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logClusterVersion\-fm:.*"name": "version"`),
-				},
-				{
-					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`(?s)github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logNodes\-fm:.*"name": "node"`),
-				},
-				{
-					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`(?s)github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logClusterOperators\-fm:.*"name": "operator"`),
-				},
-				{
-					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`(?s)github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logIngressControllers\-fm:.*"name": "ingress-controller"`),
-				},
-			},
-			kubernetescli: fake.NewSimpleClientset(node),
-			configcli:     configfake.NewSimpleClientset(clusterVersion, clusterOperator),
-			operatorcli:   operatorfake.NewSimpleClientset(ingressController),
-		},
-		{
-			name: "Failed step run will not crash if it cannot get the clusterversions, clusteroperators, ingresscontrollers",
-			steps: []steps.Step{
-				steps.Action(failingFunc),
-			},
-			wantErr: "oh no!",
-			wantEntries: []map[string]types.GomegaMatcher{
-				{
-					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`running step [Action github.com/Azure/ARO-RP/pkg/cluster.failingFunc]`),
-				},
-				{
-					"level": gomega.Equal(logrus.ErrorLevel),
-					"msg":   gomega.Equal("step [Action github.com/Azure/ARO-RP/pkg/cluster.failingFunc] encountered error: oh no!"),
-				},
-				{
-					"level": gomega.Equal(logrus.ErrorLevel),
-					"msg":   gomega.Equal(`clusterversions.config.openshift.io "version" not found`),
-				},
-				{
-					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`github.com/Azure/ARO-RP/pkg/cluster.(*manager).logNodes-fm: null`),
-				},
-				{
-					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`github.com/Azure/ARO-RP/pkg/cluster.(*manager).logClusterOperators-fm: null`),
-				},
-				{
-					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`github.com/Azure/ARO-RP/pkg/cluster.(*manager).logIngressControllers-fm: null`),
-				},
-			},
-			kubernetescli: fake.NewSimpleClientset(),
-			configcli:     configfake.NewSimpleClientset(),
-			operatorcli:   operatorfake.NewSimpleClientset(),
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			h, log := testlog.New()
-			m := &manager{
-				log:           log,
-				kubernetescli: tt.kubernetescli,
-				configcli:     tt.configcli,
-				operatorcli:   tt.operatorcli,
-				now:           func() time.Time { return time.Now() },
-			}
-
-			err := m.runSteps(ctx, tt.steps, "")
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-
-			err = testlog.AssertLoggingOutput(h, tt.wantEntries)
-			if err != nil {
-				t.Error(err)
-			}
-		})
+	s.Secrets = []specgen.Secret{
+		m.putSecret("99_aro.json"),
+		m.putSecret("99_sub.json"),
+		m.putSecret("proxy.crt"),
+		m.putSecret("proxy-client.crt"),
+		m.putSecret("proxy-client.key"),
 	}
-}
 
-func TestUpdateProvisionedBy(t *testing.T) {
-	ctx := context.Background()
-	key := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1"
+	s.Env = map[string]string{
+		"ARO_RP_MODE":               "development",
+		"ARO_UUID":                  m.clusterUUID,
+		"OPENSHIFT_INSTALL_INVOKER": "hive",
+		"OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE": version.Properties.OpenShiftPullspec,
+	}
 
-	openShiftClustersDatabase, _ := testdatabase.NewFakeOpenShiftClusters()
-	fixture := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClustersDatabase)
-	fixture.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-		Key: strings.ToLower(key),
-		OpenShiftCluster: &api.OpenShiftCluster{
-			ID: key,
-			Properties: api.OpenShiftClusterProperties{
-				ProvisioningState: api.ProvisioningStateCreating,
-			},
-		},
+	for _, envvar := range devEnvVars {
+		s.Env["ARO_"+envvar] = os.Getenv(envvar)
+	}
+
+	s.Mounts = append(s.Mounts, specs.Mount{
+		Destination: "/.azure",
+		Type:        "tmpfs",
+		Source:      "",
 	})
-	err := fixture.Create()
-	if err != nil {
-		t.Fatal(err)
-	}
+	s.WorkDir = "/.azure"
+	s.Entrypoint = []string{"/bin/bash", "-c", "/bin/openshift-install create manifests && /bin/openshift-install create cluster"}
 
-	clusterdoc, err := openShiftClustersDatabase.Dequeue(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	i := &manager{
-		doc: clusterdoc,
-		db:  openShiftClustersDatabase,
-	}
-	err = i.updateProvisionedBy(ctx)
-	if err != nil {
-		t.Error(err)
-	}
-
-	updatedClusterDoc, err := openShiftClustersDatabase.Get(ctx, strings.ToLower(key))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if updatedClusterDoc.OpenShiftCluster.Properties.ProvisionedBy != version.GitCommit {
-		t.Error("version was not added")
-	}
+	_, err := runContainer(m.conn, m.log, s)
+	return err
 }
 
-func TestInstallationTimeMetrics(t *testing.T) {
-	_, log := testlog.New()
-	fm := newfakeMetricsEmitter()
-
-	for _, tt := range []struct {
-		name          string
-		metricsTopic  string
-		timePerStep   int64
-		steps         []steps.Step
-		wantedMetrics map[string]int64
-	}{
-		{
-			name:         "Failed step run will not generate any install time metrics",
-			metricsTopic: "install",
-			steps: []steps.Step{
-				steps.Action(successfulActionStep),
-				steps.Action(failingFunc),
-			},
-		},
-		{
-			name:         "Succeeded step run for cluster installation will generate a valid install time metrics",
-			metricsTopic: "install",
-			timePerStep:  2,
-			steps: []steps.Step{
-				steps.Action(successfulActionStep),
-				steps.Condition(successfulConditionStep, 30*time.Minute, true),
-				steps.Action(successfulActionStep),
-			},
-			wantedMetrics: map[string]int64{
-				"backend.openshiftcluster.install.duration.total.seconds":                             4,
-				"backend.openshiftcluster.install.action.successfulActionStep.duration.seconds":       2,
-				"backend.openshiftcluster.install.condition.successfulConditionStep.duration.seconds": 2,
-			},
-		},
-		{
-			name:         "Succeeded step run for cluster update will generate a valid install time metrics",
-			metricsTopic: "update",
-			timePerStep:  3,
-			steps: []steps.Step{
-				steps.Action(successfulActionStep),
-				steps.Condition(successfulConditionStep, 30*time.Minute, true),
-				steps.Action(successfulActionStep),
-			},
-			wantedMetrics: map[string]int64{
-				"backend.openshiftcluster.update.duration.total.seconds":                             6,
-				"backend.openshiftcluster.update.action.successfulActionStep.duration.seconds":       3,
-				"backend.openshiftcluster.update.condition.successfulConditionStep.duration.seconds": 3,
-			},
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
-			m := &manager{
-				log:            log,
-				metricsEmitter: fm,
-				now:            func() time.Time { return time.Now().Add(time.Duration(tt.timePerStep) * time.Second) },
-			}
-
-			err := m.runSteps(ctx, tt.steps, tt.metricsTopic)
-			if err != nil {
-				if len(fm.Metrics) != 0 {
-					t.Error("fake metrics obj should be empty when run steps failed")
-				}
-			} else {
-				if tt.wantedMetrics != nil {
-					for k, v := range tt.wantedMetrics {
-						time, ok := fm.Metrics[k]
-						if !ok {
-							t.Errorf("unexpected metrics key: %s", k)
-						}
-						if time != v {
-							t.Errorf("incorrect fake metrics value, want: %d, got: %d", v, time)
-						}
-					}
-				}
-			}
-		})
+func (m *manager) containerFinished(context.Context) (bool, bool, error) {
+	containerName := "installer-" + m.clusterUUID
+	inspectData, err := containers.Inspect(m.conn, containerName, nil)
+	if err != nil {
+		return false, false, err
 	}
+
+	if inspectData.State.Status == "exited" || inspectData.State.Status == "stopped" {
+		if inspectData.State.ExitCode != 0 {
+			getContainerLogs(m.conn, m.log, containerName)
+			return true, false, fmt.Errorf("container exited with %d", inspectData.State.ExitCode)
+		}
+		m.success = true
+		return true, false, nil
+	}
+	return false, true, nil
 }
 
-func TestRunHiveInstallerSetsCreatedByHiveFieldToTrueInClusterDoc(t *testing.T) {
-	ctx := context.Background()
-	key := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1"
-
-	openShiftClustersDatabase, _ := testdatabase.NewFakeOpenShiftClusters()
-	fixture := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClustersDatabase)
-	doc := &api.OpenShiftClusterDocument{
-		Key: strings.ToLower(key),
-		OpenShiftCluster: &api.OpenShiftCluster{
-			ID: key,
-			Properties: api.OpenShiftClusterProperties{
-				ProvisioningState: api.ProvisioningStateCreating,
-			},
-		},
-	}
-
-	fixture.AddOpenShiftClusterDocuments(doc)
-	err := fixture.Create()
+func (m *manager) createSecrets(ctx context.Context, doc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument) error {
+	encCluster, err := json.Marshal(doc.OpenShiftCluster)
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
-
-	dequeuedDoc, err := openShiftClustersDatabase.Dequeue(ctx)
+	_, err = secrets.Create(
+		m.conn, bytes.NewBuffer(encCluster),
+		(&secrets.CreateOptions{}).WithName(m.clusterUUID+"-99_aro.json"))
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
 
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
-	hiveClusterManagerMock := mock_hive.NewMockClusterManager(controller)
-	hiveClusterManagerMock.EXPECT().Install(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
-
-	m := &manager{
-		doc: dequeuedDoc,
-		db:  openShiftClustersDatabase,
-		openShiftClusterDocumentVersioner: &FakeOpenShiftClusterDocumentVersionerService{
-			expectedOpenShiftVersion: nil,
-			expectedError:            nil,
-		},
-		hiveClusterManager: hiveClusterManagerMock,
-	}
-
-	err = m.runHiveInstaller(ctx)
+	encSub, err := json.Marshal(sub.Subscription)
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
-
-	updatedDoc, err := openShiftClustersDatabase.Get(ctx, strings.ToLower(key))
+	_, err = secrets.Create(
+		m.conn, bytes.NewBuffer(encSub),
+		(&secrets.CreateOptions{}).WithName(m.clusterUUID+"-99_sub.json"))
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
 
-	expected := true
-	got := updatedDoc.OpenShiftCluster.Properties.HiveProfile.CreatedByHive
-	if got != expected {
-		t.Fatalf("expected updatedDoc.OpenShiftCluster.Properties.HiveProfile.CreatedByHive set to %v, but got %v", expected, got)
+	basepath := os.Getenv("ARO_CHECKOUT_PATH")
+	if basepath == "" {
+		// This assumes we are running from an ARO-RP checkout in development
+		var err error
+		_, curmod, _, _ := runtime.Caller(0)
+		basepath, err = filepath.Abs(filepath.Join(filepath.Dir(curmod), "../.."))
+		if err != nil {
+			return err
+		}
 	}
+
+	err = m.secretFromFile(filepath.Join(basepath, "secrets/proxy.crt"), "proxy.crt")
+	if err != nil {
+		return err
+	}
+
+	err = m.secretFromFile(filepath.Join(basepath, "secrets/proxy-client.crt"), "proxy-client.crt")
+	if err != nil {
+		return err
+	}
+
+	err = m.secretFromFile(filepath.Join(basepath, "secrets/proxy-client.key"), "proxy-client.key")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *manager) secretFromFile(from, name string) error {
+	f, err := os.Open(from)
+	if err != nil {
+		return err
+	}
+
+	_, err = secrets.Create(
+		m.conn, f,
+		(&secrets.CreateOptions{}).WithName(m.clusterUUID+"-"+name))
+	return err
+}
+
+func (m *manager) cleanupContainers(ctx context.Context) error {
+	containerName := "installer-" + m.clusterUUID
+
+	if !m.success {
+		m.log.Infof("cleaning up failed container %s", containerName)
+		getContainerLogs(m.conn, m.log, containerName)
+	}
+
+	_, err := containers.Remove(
+		m.conn, containerName,
+		(&containers.RemoveOptions{}).WithForce(true).WithIgnore(true))
+	if err != nil {
+		m.log.Errorf("unable to remove container: %v", err)
+	}
+
+	for _, secretName := range []string{"99_aro.json", "99_sub.json", "proxy.crt", "proxy-client.crt", "proxy-client.key"} {
+		err = secrets.Remove(m.conn, m.clusterUUID+"-"+secretName)
+		if err != nil {
+			m.log.Debugf("unable to remove secret %s: %v", m.clusterUUID+"-"+secretName, err)
+		}
+	}
+	return nil
 }

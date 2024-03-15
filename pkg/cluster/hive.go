@@ -34,14 +34,32 @@ func (m *manager) hiveEnsureResources(ctx context.Context) error {
 	return m.hiveClusterManager.CreateOrUpdate(ctx, m.subscriptionDoc, m.doc)
 }
 
-func (m *manager) hiveClusterDeploymentReady(ctx context.Context) (bool, error) {
+func (m *manager) hiveClusterDeploymentReady(ctx context.Context) (deploymentReady bool, retry bool, err error) {
 	m.log.Info("waiting for cluster deployment to become ready")
-	return m.hiveClusterManager.IsClusterDeploymentReady(ctx, m.doc)
+	deploymentReady, err = m.hiveClusterManager.IsClusterDeploymentReady(ctx, m.doc)
+	if err != nil {
+		return deploymentReady, false, err
+	} else {
+		if !deploymentReady {
+			return deploymentReady, true, err
+		} else {
+			return deploymentReady, false, err
+		}
+	}
 }
 
-func (m *manager) hiveClusterInstallationComplete(ctx context.Context) (bool, error) {
+func (m *manager) hiveClusterInstallationComplete(ctx context.Context) (installationComplete bool, retry bool, err error) {
 	m.log.Info("waiting for cluster installation to complete")
-	return m.hiveClusterManager.IsClusterInstallationComplete(ctx, m.doc)
+	installationComplete, err = m.hiveClusterManager.IsClusterDeploymentReady(ctx, m.doc)
+	if err != nil {
+		return installationComplete, false, err
+	} else {
+		if !installationComplete {
+			return installationComplete, true, err
+		} else {
+			return installationComplete, false, err
+		}
+	}
 }
 
 func (m *manager) hiveResetCorrelationData(ctx context.Context) error {
