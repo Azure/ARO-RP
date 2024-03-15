@@ -348,7 +348,7 @@ func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, wor
 	var x, y int
 	// Local Dev clusters are limited to /16 dev-vnet
 	if !c.ci {
-		x, y = 0, 2*rand.Intn(128)
+		x, y = 0, 64
 	} else {
 		x, y = rand.Intn((124))+3, 2*rand.Intn(128)
 	}
@@ -446,6 +446,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 				ResourceGroupID:      fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.env.SubscriptionID(), "aro-"+clusterName),
 				FipsValidatedModules: api.FipsValidatedModulesEnabled,
 				Version:              osClusterVersion,
+				PullSecret:           api.SecureString(os.Getenv("USER_PULL_SECRET")),
 			},
 			ServicePrincipalProfile: api.ServicePrincipalProfile{
 				ClientID:     clientID,
