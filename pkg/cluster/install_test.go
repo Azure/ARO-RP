@@ -35,7 +35,7 @@ func failingFunc(context.Context) error { return errors.New("oh no!") }
 
 func successfulActionStep(context.Context) error { return nil }
 
-func successfulConditionStep(context.Context) (bool, error) { return true, nil }
+func successfulConditionStep(context.Context) (bool, bool, error) { return true, false, nil }
 
 type fakeMetricsEmitter struct {
 	Metrics map[string]int64

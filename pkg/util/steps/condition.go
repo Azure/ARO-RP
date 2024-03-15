@@ -40,7 +40,7 @@ var timeoutConditionErrors = map[string]string{
 // condition has been met and an error.
 //
 // Suitable for polling external sources for readiness.
-type conditionFunction func(context.Context) (bool, error)
+type conditionFunction func(context.Context) (bool, bool, error)
 
 // Condition returns a Step suitable for checking whether subsequent Steps can
 // be executed.
@@ -86,8 +86,8 @@ func (c conditionStep) run(ctx context.Context, log *logrus.Entry) error {
 		// We use the outer context, not the timeout context, as we do not want
 		// to time out the condition function itself, only stop retrying once
 		// timeoutCtx's timeout has fired.
-		cnd, cndErr := c.f(ctx)
-		if errors.Is(cndErr, wait.ErrWaitTimeout) {
+		cnd, retry, cndErr := c.f(ctx)
+		if errors.Is(cndErr, wait.ErrWaitTimeout) && !retry {
 			return cnd, fmt.Errorf("condition encountered internal timeout: %w", cndErr)
 		}
 

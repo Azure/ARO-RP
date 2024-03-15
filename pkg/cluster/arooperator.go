@@ -39,26 +39,27 @@ func (m *manager) ensureAROOperator(ctx context.Context) error {
 	return err
 }
 
-func (m *manager) aroDeploymentReady(ctx context.Context) (bool, error) {
+func (m *manager) aroDeploymentReady(ctx context.Context) (ok bool, retry bool, err error) {
 	if !m.isIngressProfileAvailable() {
 		// If the ingress profile is not available, ARO operator update/deploy will fail.
 		m.log.Error("skip aroDeploymentReady")
-		return true, nil
+		return true, false, nil
 	}
-	return m.aroOperatorDeployer.IsReady(ctx)
+	ok, err = m.aroOperatorDeployer.IsReady(ctx)
+	return ok, false, err
 }
 
-func (m *manager) ensureAROOperatorRunningDesiredVersion(ctx context.Context) (bool, error) {
+func (m *manager) ensureAROOperatorRunningDesiredVersion(ctx context.Context) (ok bool, retry bool, err error) {
 	if !m.isIngressProfileAvailable() {
 		// If the ingress profile is not available, ARO operator update/deploy will fail.
 		m.log.Error("skip ensureAROOperatorRunningDesiredVersion")
-		return true, nil
+		return true, false, nil
 	}
-	ok, err := m.aroOperatorDeployer.IsRunningDesiredVersion(ctx)
+	ok, err = m.aroOperatorDeployer.IsRunningDesiredVersion(ctx)
 	if !ok || err != nil {
-		return false, err
+		return false, false, err
 	}
-	return true, nil
+	return true, false, nil
 }
 
 func (m *manager) ensureCredentialsRequest(ctx context.Context) error {
