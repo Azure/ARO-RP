@@ -194,7 +194,7 @@ func setOutboundRuleV4(lb mgmtnetwork.LoadBalancer, outboundRuleV4FrontendIPConf
 func (m *manager) deleteUnusedManagedIPs(ctx context.Context) error {
 	resourceGroupName := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	ipsToDelete, err := m.getManagedIPsToDelete(ctx)
+	unusedManagedIPs, err := m.getUnusedManagedIPs(ctx)
 	if err != nil {
 		return err
 	}
@@ -203,12 +203,12 @@ func (m *manager) deleteUnusedManagedIPs(ctx context.Context) error {
 	defer close(ch)
 	var cleanupErrors []string
 
-	for _, id := range ipsToDelete {
+	for _, id := range unusedManagedIPs {
 		ipName := stringutils.LastTokenByte(id, '/')
 		go m.deleteIPAddress(ctx, resourceGroupName, ipName, ch)
 	}
 
-	for range ipsToDelete {
+	for range unusedManagedIPs {
 		result := <-ch
 		if result.err != nil {
 			cleanupErrors = append(cleanupErrors, fmt.Sprintf("deletion of unused managed ip %s failed with error: %v", result.name, result.err))
@@ -231,7 +231,7 @@ func (m *manager) deleteIPAddress(ctx context.Context, resourceGroupName string,
 	}
 }
 
-func (m *manager) getManagedIPsToDelete(ctx context.Context) ([]string, error) {
+func (m *manager) getUnusedManagedIPs(ctx context.Context) ([]string, error) {
 	resourceGroupName := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 
@@ -250,17 +250,17 @@ func (m *manager) getManagedIPsToDelete(ctx context.Context) ([]string, error) {
 	for i := 0; i < len(outboundIPs); i++ {
 		outboundIPMap[strings.ToLower(outboundIPs[i].ID)] = outboundIPs[i]
 	}
-	var ipsToDelete []string
+	var unusedManagedIPs []string
 	for _, ip := range managedIPs {
 		// don't delete api server ip
 		if *ip.Name == infraID+"-pip-v4" && m.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
 			continue
 		}
 		if _, ok := outboundIPMap[strings.ToLower(*ip.ID)]; !ok && strings.Contains(strings.ToLower(*ip.ID), strings.ToLower(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)) {
-			ipsToDelete = append(ipsToDelete, *ip.ID)
+			unusedManagedIPs = append(unusedManagedIPs, *ip.ID)
 		}
 	}
-	return ipsToDelete, nil
+	return unusedManagedIPs, nil
 }
 
 // Returns the desired RP managed outbound publicIPAddresses.  Additional Managed Outbound IPs
