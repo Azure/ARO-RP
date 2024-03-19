@@ -103,6 +103,7 @@ const (
 	CloudErrorCodeScopeLocked                        = "ScopeLocked"
 	CloudErrorCodeRequestDisallowedByPolicy          = "RequestDisallowedByPolicy"
 	CloudErrorCodeInvalidNetworkAddress              = "InvalidNetworkAddress"
+	CloudErrorCodeZonalAllocationFailed              = "ZonalAllocationFailed"
 )
 
 // NewCloudError returns a new CloudError
