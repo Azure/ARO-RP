@@ -360,6 +360,11 @@ type NetworkProfile struct {
 	LoadBalancerProfile        *LoadBalancerProfile `json:"loadBalancerProfile,omitempty"`
 }
 
+// In ARO 4.11 and beyond, OVN-Kubernetes, the default network provider, internally operates within the IP address range of 100.64.0.0/16.
+const (
+	JoinCIDR = "100.64.0.0/16"
+)
+
 // PreconfiguredNSG represents whether customers want to use their own NSG attached to the subnets
 type PreconfiguredNSG string
 
