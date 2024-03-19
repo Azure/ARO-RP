@@ -122,7 +122,7 @@ func enrichConditionTimeoutError(f conditionFunction, originalErr error) error {
 }
 
 func (c conditionStep) String() string {
-	return fmt.Sprintf("[Condition %s, timeout %s]", FriendlyName(c.f), c.timeout)
+	return fmt.Sprintf("[Condition %s, timeout %s]", ShortFriendlyName(c.f), c.timeout)
 }
 
 func (c conditionStep) metricsName() string {
