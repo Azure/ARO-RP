@@ -36,6 +36,9 @@ type OpenShiftCluster struct {
 
 	// The cluster properties.
 	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
+
+	// Identity stores information about the cluster MSI(s) in a workload identity cluster.
+	Identity *Identity `json:"identity,omitempty"`
 }
 
 // Tags represents an OpenShift cluster's tags.
@@ -54,6 +57,9 @@ type OpenShiftClusterProperties struct {
 
 	// The cluster service principal profile.
 	ServicePrincipalProfile ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
+
+	// The workload identity profile.
+	PlatformWorkloadIdentityProfile PlatformWorkloadIdentityProfile `json:"platformWorkloadIdentityProfile,omitempty"`
 
 	// The cluster network profile.
 	NetworkProfile NetworkProfile `json:"networkProfile,omitempty"`
@@ -92,6 +98,9 @@ const (
 // FipsValidatedModules determines if FIPS is used.
 type FipsValidatedModules string
 
+// OIDCIssuer represents the URL of the managed OIDC issuer in a workload identity cluster.
+type OIDCIssuer string
+
 // FipsValidatedModules constants.
 const (
 	FipsValidatedModulesEnabled  FipsValidatedModules = "Enabled"
@@ -114,6 +123,9 @@ type ClusterProfile struct {
 
 	// If FIPS validated crypto modules are used
 	FipsValidatedModules FipsValidatedModules `json:"fipsValidatedModules,omitempty"`
+
+	// The URL of the managed OIDC issuer in a workload identity cluster.
+	OIDCIssuer OIDCIssuer `json:"oidcIssuer,omitempty"`
 }
 
 // ConsoleProfile represents a console profile.
@@ -274,6 +286,34 @@ type IngressProfile struct {
 
 	// The IP of the ingress.
 	IP string `json:"ip,omitempty" swagger:"readOnly"`
+}
+
+// PlatformWorkloadIdentity stores information representing a single workload identity.
+type PlatformWorkloadIdentity struct {
+	Name       string
+	ResourceID string
+	ClientID   string
+	ObjectID   string
+}
+
+// PlatformWorkloadIdentityProfile encapsulates all information that is specific to workload identity clusters.
+type PlatformWorkloadIdentityProfile struct {
+	PlatformWorkloadIdentities []PlatformWorkloadIdentity
+}
+
+//  ClusterUserAssignedIdentity stores information about a user-assigned managed identity in a predefined format required by Microsoft's Managed Identity team.
+type ClusterUserAssignedIdentity struct {
+	ClientID    string
+	PrincipalID string
+}
+
+// UserAssignedIdentities stores a mapping from resource IDs of managed identities to their client/principal IDs.
+type UserAssignedIdentities map[string]ClusterUserAssignedIdentity
+
+// Identity stores information about the cluster MSI(s) in a workload identity cluster.
+type Identity struct {
+	Type                   string
+	UserAssignedIdentities UserAssignedIdentities
 }
 
 // CreatedByType by defines user type, which executed the request
