@@ -7,10 +7,12 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"strings"
 
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/storage"
 )
@@ -25,14 +27,16 @@ type manager struct {
 
 	aead    encryption.AEAD
 	storage storage.Manager
+	env     env.Interface
 }
 
-func NewManager(log *logrus.Entry, aead encryption.AEAD, storage storage.Manager) Manager {
+func NewManager(env env.Interface, log *logrus.Entry, aead encryption.AEAD, storage storage.Manager) Manager {
 	return &manager{
 		log: log,
 
 		aead:    aead,
 		storage: storage,
+		env:     env,
 	}
 }
 
@@ -49,6 +53,24 @@ func (m *manager) Exists(ctx context.Context, resourceGroup, account string) (bo
 }
 
 func (m *manager) LoadPersisted(ctx context.Context, resourceGroup, account string) (PersistedGraph, error) {
+	pg, err := m.loadPersisted(ctx, resourceGroup, account)
+	if err == nil || !strings.Contains(err.Error(), "chacha20poly1305: message authentication failed") {
+		return pg, err
+	}
+	m.log.Infof("cluster graph key changed, reloading AEAD")
+	if err = m.reloadAead(ctx); err != nil {
+		m.log.Errorf("failed to reload AEAD, error: %v", err)
+		return nil, err
+	}
+	return m.loadPersisted(ctx, resourceGroup, account)
+}
+
+func (m *manager) reloadAead(ctx context.Context) (err error) {
+	m.aead, err = encryption.NewMulti(ctx, m.env.ServiceKeyvault(), env.EncryptionSecretV2Name, env.EncryptionSecretName)
+	return err
+}
+
+func (m *manager) loadPersisted(ctx context.Context, resourceGroup, account string) (PersistedGraph, error) {
 	m.log.Print("load persisted graph")
 
 	blobService, err := m.storage.BlobService(ctx, resourceGroup, account, mgmtstorage.Permissions("r"), mgmtstorage.SignedResourceTypesO)
