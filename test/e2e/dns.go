@@ -45,7 +45,7 @@ var _ = Describe("ARO cluster DNS", func() {
 
 	It("must not be adversely affected by Azure host servicing", func(ctx context.Context) {
 		By("creating a test namespace")
-		testNamespace := fmt.Sprintf("test-e2e-%d", GinkgoParallelProcess())
+		testNamespace := fmt.Sprintf("test-ee-%d", GinkgoParallelProcess())
 		p := BuildNewProject(ctx, clients.Kubernetes, clients.Project, testNamespace)
 
 		By("verifying the namespace is ready")
