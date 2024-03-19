@@ -19,6 +19,17 @@ func ExampleOpenShiftClusterPatchParameter() interface{} {
 	oc.Location = ""
 	oc.SystemData = nil
 	oc.Properties.WorkerProfilesStatus = nil
+	oc.Properties.PlatformWorkloadIdentityProfile = PlatformWorkloadIdentityProfile{
+		PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
+			{
+				Name:       "",
+				ResourceID: "",
+				ClientID:   "",
+				ObjectID:   "",
+			},
+		},
+	}
+
 	return oc
 }
 
@@ -29,6 +40,10 @@ func ExampleOpenShiftClusterPutParameter() interface{} {
 	oc.ID = ""
 	oc.Name = ""
 	oc.Type = ""
+	oc.Identity = &Identity{
+		Type:                   "",
+		UserAssignedIdentities: map[string]ClusterUserAssignedIdentity{},
+	}
 	oc.Properties.ProvisioningState = ""
 	oc.Properties.ClusterProfile.Version = ""
 	oc.Properties.ClusterProfile.FipsValidatedModules = FipsValidatedModulesEnabled
@@ -43,6 +58,16 @@ func ExampleOpenShiftClusterPutParameter() interface{} {
 			Count: 1,
 		},
 	}
+	oc.Properties.PlatformWorkloadIdentityProfile = PlatformWorkloadIdentityProfile{
+		PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
+			{
+				Name:       "",
+				ResourceID: "",
+				ClientID:   "",
+				ObjectID:   "",
+			},
+		},
+	}
 	oc.SystemData = nil
 
 	return oc
@@ -53,6 +78,7 @@ func ExampleOpenShiftClusterPutParameter() interface{} {
 func ExampleOpenShiftClusterGetResponse() interface{} {
 	oc := exampleOpenShiftCluster()
 	oc.Properties.ClusterProfile.PullSecret = ""
+	oc.Properties.ClusterProfile.OIDCIssuer = ""
 	oc.Properties.ServicePrincipalProfile.ClientSecret = ""
 	oc.Properties.NetworkProfile.LoadBalancerProfile = &LoadBalancerProfile{
 		EffectiveOutboundIPs: []EffectiveOutboundIP{
@@ -62,6 +88,16 @@ func ExampleOpenShiftClusterGetResponse() interface{} {
 		},
 		ManagedOutboundIPs: &ManagedOutboundIPs{
 			Count: 1,
+		},
+	}
+	oc.Properties.PlatformWorkloadIdentityProfile = PlatformWorkloadIdentityProfile{
+		PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
+			{
+				Name:       "",
+				ResourceID: "",
+				ClientID:   "",
+				ObjectID:   "",
+			},
 		},
 	}
 
