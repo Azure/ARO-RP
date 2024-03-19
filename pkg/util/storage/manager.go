@@ -5,6 +5,7 @@ package storage
 
 import (
 	"context"
+	"net/http"
 	"net/url"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/date"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 )
@@ -33,6 +35,30 @@ func NewManager(env env.Core, subscriptionID string, authorizer autorest.Authori
 	}
 }
 
+func getCorrectErrWhenTooManyRequests(err error) error {
+	detailedError, ok := err.(autorest.DetailedError)
+	if !ok {
+		return err
+	}
+	if detailedError.StatusCode != http.StatusTooManyRequests {
+		return err
+	}
+	msg := "Requests are being throttled due to Azure Storage limits being exceeded. Please visit https://learn.microsoft.com/en-us/azure/openshift/troubleshoot#exceeding-azure-storage-limits for more details."
+	cloudError := &api.CloudError{
+		StatusCode: http.StatusTooManyRequests,
+		CloudErrorBody: &api.CloudErrorBody{
+			Code:    api.CloudErrorCodeThrottlingLimitExceeded,
+			Message: "ThrottlingLimitExceeded",
+			Details: []api.CloudErrorBody{
+				{
+					Message: msg,
+				},
+			},
+		},
+	}
+	return cloudError
+}
+
 func (m *manager) BlobService(ctx context.Context, resourceGroup, account string, p mgmtstorage.Permissions, r mgmtstorage.SignedResourceTypes) (*azstorage.BlobStorageClient, error) {
 	t := time.Now().UTC().Truncate(time.Second)
 	res, err := m.storageAccounts.ListAccountSAS(ctx, resourceGroup, account, mgmtstorage.AccountSasParameters{
@@ -44,7 +70,7 @@ func (m *manager) BlobService(ctx context.Context, resourceGroup, account string
 		SharedAccessExpiryTime: &date.Time{Time: t.Add(24 * time.Hour)},
 	})
 	if err != nil {
-		return nil, err
+		return nil, getCorrectErrWhenTooManyRequests(err)
 	}
 
 	v, err := url.ParseQuery(*res.AccountSasToken)
