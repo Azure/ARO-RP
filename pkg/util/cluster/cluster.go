@@ -91,6 +91,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 	}
 
 	options := environment.Environment().EnvironmentCredentialOptions()
+	
 	spTokenCredential, err := azidentity.NewEnvironmentCredential(options)
 	if err != nil {
 		return nil, err
@@ -104,7 +105,12 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 	scopes := []string{environment.Environment().ResourceManagerScope}
 	authorizer := azidext.NewTokenCredentialAdapter(spTokenCredential, scopes)
 
-	vaultClient, err := armkeyvault.NewVaultsClient(environment.SubscriptionID(), spTokenCredential, options)
+	armOption:= arm.ClientOptions{
+		ClientOptions: policy.ClientOptions{
+			Cloud: options.Cloud,
+		}
+	}
+	vaultClient, err := armkeyvault.NewVaultsClient(environment.SubscriptionID(), spTokenCredential, armOption)
 
 	if err != nil {
 		return nil, err
