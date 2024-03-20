@@ -192,7 +192,8 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 	clientOptions := &policy.ClientOptions{
 		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
 	}
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, log.WithField("component", "database"), msiToken, clientOptions, _env.SubscriptionID(), _env.ResourceGroup(), dbAccountName)
+	logrusEntry := log.WithField("component", "database")
+	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, logrusEntry, msiToken, clientOptions, _env.SubscriptionID(), _env.ResourceGroup(), dbAccountName)
 	if err != nil {
 		return nil, err
 	}
