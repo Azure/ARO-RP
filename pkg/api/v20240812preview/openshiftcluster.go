@@ -288,17 +288,17 @@ type IngressProfile struct {
 	IP string `json:"ip,omitempty" swagger:"readOnly"`
 }
 
+// PlatformWorkloadIdentityProfile encapsulates all information that is specific to workload identity clusters.
+type PlatformWorkloadIdentityProfile struct {
+	PlatformWorkloadIdentities []PlatformWorkloadIdentity
+}
+
 // PlatformWorkloadIdentity stores information representing a single workload identity.
 type PlatformWorkloadIdentity struct {
 	Name       string
 	ResourceID string
 	ClientID   string
 	ObjectID   string
-}
-
-// PlatformWorkloadIdentityProfile encapsulates all information that is specific to workload identity clusters.
-type PlatformWorkloadIdentityProfile struct {
-	PlatformWorkloadIdentities []PlatformWorkloadIdentity
 }
 
 //  ClusterUserAssignedIdentity stores information about a user-assigned managed identity in a predefined format required by Microsoft's Managed Identity team.

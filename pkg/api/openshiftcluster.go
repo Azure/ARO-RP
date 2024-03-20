@@ -21,6 +21,7 @@ type OpenShiftCluster struct {
 	SystemData SystemData                 `json:"systemData,omitempty"`
 	Tags       map[string]string          `json:"tags,omitempty"`
 	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
+	Identity   *Identity                  `json:"identity,omitempty"`
 
 	//this property is used in the enrichers. Should not be marshalled
 	Lock sync.Mutex `json:"-"`
@@ -121,6 +122,8 @@ type OpenShiftClusterProperties struct {
 	ConsoleProfile ConsoleProfile `json:"consoleProfile,omitempty"`
 
 	ServicePrincipalProfile ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
+
+	PlatformWorkloadIdentityProfile PlatformWorkloadIdentityProfile `json:"platformWorkloadIdentityProfile,omitempty"`
 
 	NetworkProfile NetworkProfile `json:"networkProfile,omitempty"`
 
@@ -248,6 +251,8 @@ const (
 	FipsValidatedModulesDisabled FipsValidatedModules = "Disabled"
 )
 
+type OIDCIssuer string
+
 // ClusterProfile represents a cluster profile.
 type ClusterProfile struct {
 	MissingFields
@@ -257,6 +262,7 @@ type ClusterProfile struct {
 	Version              string               `json:"version,omitempty"`
 	ResourceGroupID      string               `json:"resourceGroupId,omitempty"`
 	FipsValidatedModules FipsValidatedModules `json:"fipsValidatedModules,omitempty"`
+	OIDCIssuer           OIDCIssuer           `json:"oidcIssuer,omitempty"`
 }
 
 // FeatureProfile represents a feature profile.
@@ -760,4 +766,39 @@ type HiveProfile struct {
 	// of clusters that were created by Hive to avoid deleting existing
 	// ClusterDeployments.
 	CreatedByHive bool `json:"createdByHive,omitempty"`
+}
+
+type PlatformWorkloadIdentityProfile struct {
+	MissingFields
+
+	PlatformWorkloadIdentities []PlatformWorkloadIdentity
+}
+
+// PlatformWorkloadIdentity stores information representing a single workload identity.
+type PlatformWorkloadIdentity struct {
+	MissingFields
+
+	Name       string
+	ResourceID string
+	ClientID   string
+	ObjectID   string
+}
+
+//  ClusterUserAssignedIdentity stores information about a user-assigned managed identity in a predefined format required by Microsoft's Managed Identity team.
+type ClusterUserAssignedIdentity struct {
+	MissingFields
+
+	ClientID    string
+	PrincipalID string
+}
+
+// UserAssignedIdentities stores a mapping from resource IDs of managed identities to their client/principal IDs.
+type UserAssignedIdentities map[string]ClusterUserAssignedIdentity
+
+// Identity stores information about the cluster MSI(s) in a workload identity cluster.
+type Identity struct {
+	MissingFields
+
+	Type                   string
+	UserAssignedIdentities UserAssignedIdentities
 }

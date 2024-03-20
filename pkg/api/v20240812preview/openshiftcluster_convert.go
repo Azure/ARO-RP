@@ -27,6 +27,7 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 				Version:              oc.Properties.ClusterProfile.Version,
 				ResourceGroupID:      oc.Properties.ClusterProfile.ResourceGroupID,
 				FipsValidatedModules: FipsValidatedModules(oc.Properties.ClusterProfile.FipsValidatedModules),
+				OIDCIssuer:           OIDCIssuer(oc.Properties.ClusterProfile.OIDCIssuer),
 			},
 			ConsoleProfile: ConsoleProfile{
 				URL: oc.Properties.ConsoleProfile.URL,
@@ -124,6 +125,27 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 		}
 	}
 
+	if oc.Identity != nil {
+		out.Identity.Type = oc.Identity.Type
+		out.Identity.UserAssignedIdentities = make(map[string]ClusterUserAssignedIdentity, len(oc.Identity.UserAssignedIdentities))
+		for k := range oc.Identity.UserAssignedIdentities {
+			var temp ClusterUserAssignedIdentity
+			temp.ClientID = oc.Identity.UserAssignedIdentities[k].ClientID
+			temp.PrincipalID = oc.Identity.UserAssignedIdentities[k].PrincipalID
+			out.Identity.UserAssignedIdentities[k] = temp
+		}
+	}
+
+	out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = make([]PlatformWorkloadIdentity, len(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities))
+	if out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities != nil {
+		for i := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].Name = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].Name
+			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ResourceID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ResourceID
+			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ClientID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ClientID
+			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ObjectID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ObjectID
+		}
+	}
+
 	out.SystemData = &SystemData{
 		CreatedBy:          oc.SystemData.CreatedBy,
 		CreatedAt:          oc.SystemData.CreatedAt,
@@ -169,6 +191,18 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 			out.Tags[k] = v
 		}
 	}
+
+	if oc.Identity != nil {
+		out.Identity.Type = oc.Identity.Type
+		out.Identity.UserAssignedIdentities = make(map[string]api.ClusterUserAssignedIdentity, len(oc.Identity.UserAssignedIdentities))
+		for k := range oc.Identity.UserAssignedIdentities {
+			var temp api.ClusterUserAssignedIdentity
+			temp.ClientID = oc.Identity.UserAssignedIdentities[k].ClientID
+			temp.PrincipalID = oc.Identity.UserAssignedIdentities[k].PrincipalID
+			out.Identity.UserAssignedIdentities[k] = temp
+		}
+	}
+
 	out.Properties.ProvisioningState = api.ProvisioningState(oc.Properties.ProvisioningState)
 	out.Properties.ClusterProfile.PullSecret = api.SecureString(oc.Properties.ClusterProfile.PullSecret)
 	out.Properties.ClusterProfile.Domain = oc.Properties.ClusterProfile.Domain
@@ -180,6 +214,17 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	out.Properties.ClusterProfile.FipsValidatedModules = api.FipsValidatedModules(oc.Properties.ClusterProfile.FipsValidatedModules)
 	out.Properties.ServicePrincipalProfile.ClientID = oc.Properties.ServicePrincipalProfile.ClientID
 	out.Properties.ServicePrincipalProfile.ClientSecret = api.SecureString(oc.Properties.ServicePrincipalProfile.ClientSecret)
+
+	out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = make([]api.PlatformWorkloadIdentity, len(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities))
+	if out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities != nil {
+		for i := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].Name = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].Name
+			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ResourceID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ResourceID
+			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ClientID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ClientID
+			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ObjectID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ObjectID
+		}
+	}
+
 	out.Properties.NetworkProfile.PodCIDR = oc.Properties.NetworkProfile.PodCIDR
 	out.Properties.NetworkProfile.ServiceCIDR = oc.Properties.NetworkProfile.ServiceCIDR
 	out.Properties.NetworkProfile.OutboundType = api.OutboundType(oc.Properties.NetworkProfile.OutboundType)
