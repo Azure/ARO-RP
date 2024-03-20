@@ -4,6 +4,7 @@ COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcela
 ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
 E2E_FLAGS ?= -test.v --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2 --ginkgo.junit-report=e2e-report.xml
 GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
+NO_CACHE ?= true
 
 export GOFLAGS=$(GO_FLAGS)
 
@@ -74,6 +75,9 @@ clean:
 
 client: generate
 	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01 2023-07-01-preview 2023-09-04 2023-11-22 2024-08-12-preview
+
+ci-portal:
+	docker build . -f Dockerfile.ci-portal --build-arg REGISTRY=$(REGISTRY) --no-cache=$(NO_CACHE)
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
@@ -266,4 +270,4 @@ vendor:
 install-go-tools:
 	go install ${GOTESTSUM}
 
-.PHONY: admin.kubeconfig aks.kubeconfig aro az clean client deploy dev-config.yaml discoverycache generate image-aro-multistage image-fluentbit image-proxy lint-go runlocal-rp proxy publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor build-all validate-go unit-test-go coverage-go validate-fips install-go-tools
+.PHONY: admin.kubeconfig aks.kubeconfig aro az ci-portal clean client deploy dev-config.yaml discoverycache generate image-aro-multistage image-fluentbit image-proxy lint-go runlocal-rp proxy publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor build-all validate-go unit-test-go coverage-go validate-fips install-go-tools
