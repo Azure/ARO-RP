@@ -58,6 +58,13 @@ func (r *MachineConfigPoolReconciler) Reconcile(ctx context.Context, request ctr
 		r.Log.Debug("restart dnsmasq machineconfig enabled")
 	}
 
+	allowReconcile, err := r.AllowRebootCausingReconciliation(ctx, instance)
+	if err != nil {
+		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
+		return reconcile.Result{}, err
+	}
+
 	r.Log.Debug("running")
 	mcp := &mcv1.MachineConfigPool{}
 	err = r.Client.Get(ctx, types.NamespacedName{Name: request.Name}, mcp)
@@ -71,7 +78,7 @@ func (r *MachineConfigPoolReconciler) Reconcile(ctx context.Context, request ctr
 		return reconcile.Result{}, err
 	}
 
-	err = reconcileMachineConfigs(ctx, instance, r.dh, restartDnsmasq, *mcp)
+	err = reconcileMachineConfigs(ctx, instance, r.dh, r.Client, allowReconcile, restartDnsmasq, *mcp)
 	if err != nil {
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)
