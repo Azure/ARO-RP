@@ -358,6 +358,7 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.initializeKubernetesClients),
 		steps.Action(m.initializeOperatorDeployer), // depends on kube clients
 		steps.Condition(m.apiServersReady, 30*time.Minute, true),
+		steps.Action(m.enableOperatorReconciliation),
 		steps.Action(m.installAROOperator),
 		steps.Action(m.incrInstallPhase),
 	)
@@ -392,6 +393,7 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.configureIngressCertificate),
 			steps.Condition(m.ingressControllerReady, 30*time.Minute, true),
 			steps.Action(m.configureDefaultStorageClass),
+			steps.Action(m.disableOperatorReconciliation),
 			steps.Action(m.finishInstallation),
 		},
 	}

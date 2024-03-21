@@ -60,6 +60,7 @@ type Operator interface {
 	RenewMDSDCertificate(context.Context) error
 	EnsureUpgradeAnnotation(context.Context) error
 	SyncClusterObject(context.Context) error
+	SetForceReconcile(context.Context, bool) error
 }
 
 type operator struct {
@@ -104,6 +105,22 @@ type deploymentData struct {
 	Version                      string
 	IsLocalDevelopment           bool
 	SupportsPodSecurityAdmission bool
+}
+
+func (o *operator) SetForceReconcile(ctx context.Context, enable bool) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		c, err := o.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if enable {
+			c.Spec.OperatorFlags[pkgoperator.ForceReconciliation] = "true"
+		} else {
+			c.Spec.OperatorFlags[pkgoperator.ForceReconciliation] = "false"
+		}
+		_, err = o.arocli.AroV1alpha1().Clusters().Update(ctx, c, metav1.UpdateOptions{})
+		return err
+	})
 }
 
 func templateManifests(data deploymentData) ([][]byte, error) {
