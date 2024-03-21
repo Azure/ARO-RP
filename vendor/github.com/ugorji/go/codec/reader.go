@@ -577,9 +577,9 @@ func (z *bufioDecReader) readUntilFill(stop byte) []byte {
 
 // bytesDecReader is a decReader that reads off a byte slice with zero copying
 //
-// Note: we do not try to convert index'ing out of bounds to an io.EOF.
+// Note: we do not try to convert index'ing out of bounds to an io error.
 // instead, we let it bubble up to the exported Encode/Decode method
-// and recover it as an io.EOF.
+// and recover it as an io error.
 //
 // see panicValToErr(...) function in helper.go.
 type bytesDecReader struct {
