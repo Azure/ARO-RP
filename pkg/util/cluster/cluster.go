@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	armsdk "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	sdkkeyvault "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
@@ -106,13 +107,13 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 	scopes := []string{environment.Environment().ResourceManagerScope}
 	authorizer := azidext.NewTokenCredentialAdapter(spTokenCredential, scopes)
 
-	armOption := arm.ClientOptions{
+	armOption := armsdk.ClientOptions{
 		ClientOptions: policy.ClientOptions{
 			Cloud: options.Cloud,
 		},
 	}
 
-	vaultClient, err := armkeyvault.NewVaultsClient(environment.SubscriptionID(), spTokenCredential, armOption)
+	vaultClient, err := armkeyvault.NewVaultsClient(environment.SubscriptionID(), spTokenCredential, &armOption)
 
 	if err != nil {
 		return nil, err
