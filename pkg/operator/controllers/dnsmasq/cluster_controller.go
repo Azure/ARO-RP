@@ -5,9 +5,11 @@ package dnsmasq
 
 import (
 	"context"
+	"fmt"
 
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/sirupsen/logrus"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -124,11 +126,19 @@ func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster,
 		return err
 	}
 
+	// If we are allowed to reconcile the resources, then we run Ensure to
+	// create or update. If we are not allowed to reconcile, we do not want to
+	// perform any updates, but we do want to perform initial configuration.
 	if allowReconcile {
 		return dh.Ensure(ctx, resources...)
 	} else {
 		for _, i := range resources {
-			c.Create(ctx, i.(client.Object))
+			err := c.Create(ctx, i.(client.Object))
+			// Since we are only creating, ignore AlreadyExists
+			if err != nil && !kerrors.IsAlreadyExists(err) {
+				return fmt.Errorf("error creating client object: %w", err)
+			}
 		}
 	}
+	return nil
 }
