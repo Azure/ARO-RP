@@ -113,7 +113,8 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 	clientOptions := &policy.ClientOptions{
 		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
 	}
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, msiToken, clientOptions, _env.SubscriptionID(), _env.ResourceGroup(), dbAccountName)
+	logrusEntry := log.WithField("component", "database")
+	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, logrusEntry, msiToken, clientOptions, _env.SubscriptionID(), _env.ResourceGroup(), dbAccountName)
 	if err != nil {
 		return err
 	}
