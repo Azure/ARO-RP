@@ -113,6 +113,9 @@ generate-kiota:
 	go run ./hack/validate-imports pkg/util/graph/graphsdk
 	go run ./hack/licenses -dirs ./pkg/util/graph/graphsdk
 
+init-contrib:
+	cp -R hack/git/hooks/* .git/hooks/
+
 image-aro-multistage:
 	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
 
@@ -270,4 +273,4 @@ vendor:
 install-go-tools:
 	go install ${GOTESTSUM}
 
-.PHONY: admin.kubeconfig aks.kubeconfig aro az ci-portal clean client deploy dev-config.yaml discoverycache generate image-aro-multistage image-fluentbit image-proxy lint-go runlocal-rp proxy publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor build-all validate-go unit-test-go coverage-go validate-fips install-go-tools
+.PHONY: admin.kubeconfig aks.kubeconfig aro az ci-portal clean client deploy dev-config.yaml discoverycache generate image-aro-multistage image-fluentbit image-proxy init-contrib lint-go runlocal-rp proxy publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor build-all validate-go unit-test-go coverage-go validate-fips install-go-tools
