@@ -20,6 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
@@ -29,17 +30,17 @@ const (
 
 type ClusterReconciler struct {
 	base.AROController
-	dh dynamichelper.Interface
+	ch clienthelper.Interface
 }
 
-func NewClusterReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *ClusterReconciler {
+func NewClusterReconciler(log *logrus.Entry, client client.Client, ch clienthelper.Interface) *ClusterReconciler {
 	return &ClusterReconciler{
 		AROController: base.AROController{
 			Log:    log,
 			Client: client,
 			Name:   ClusterControllerName,
 		},
-		dh: dh,
+		ch: ch,
 	}
 }
 
@@ -68,11 +69,6 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		return reconcile.Result{}, err
 	}
 
-	if !allowReconcile {
-		r.Log.Debugf("skipping reconciliation of %s", r.Name)
-		return reconcile.Result{}, nil
-	}
-
 	r.Log.Debug("running")
 	mcps := &mcv1.MachineConfigPoolList{}
 	err = r.Client.List(ctx, mcps)
@@ -82,7 +78,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		return reconcile.Result{}, err
 	}
 
-	err = reconcileMachineConfigs(ctx, instance, r.dh, r.Client, allowReconcile, restartDnsmasq, mcps.Items...)
+	err = reconcileMachineConfigs(ctx, instance, r.ch, r.Client, allowReconcile, restartDnsmasq, mcps.Items...)
 	if err != nil {
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)
@@ -105,7 +101,7 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, dh dynamichelper.Interface, c client.Client, allowReconcile bool, restartDnsmasq bool, mcps ...mcv1.MachineConfigPool) error {
+func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster, ch clienthelper.Interface, c client.Client, allowReconcile bool, restartDnsmasq bool, mcps ...mcv1.MachineConfigPool) error {
 	var resources []kruntime.Object
 	for _, mcp := range mcps {
 		resource, err := dnsmasqMachineConfig(instance.Spec.Domain, instance.Spec.APIIntIP, instance.Spec.IngressIP, mcp.Name, instance.Spec.GatewayDomains, instance.Spec.GatewayPrivateEndpointIP, restartDnsmasq)
@@ -130,7 +126,7 @@ func reconcileMachineConfigs(ctx context.Context, instance *arov1alpha1.Cluster,
 	// create or update. If we are not allowed to reconcile, we do not want to
 	// perform any updates, but we do want to perform initial configuration.
 	if allowReconcile {
-		return dh.Ensure(ctx, resources...)
+		return ch.Ensure(ctx, resources...)
 	} else {
 		for _, i := range resources {
 			err := c.Create(ctx, i.(client.Object))

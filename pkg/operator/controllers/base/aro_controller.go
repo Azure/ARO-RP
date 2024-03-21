@@ -5,6 +5,7 @@ package base
 
 import (
 	"context"
+	"fmt"
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
@@ -111,7 +112,8 @@ func (c *AROController) IsClusterUpgrading(ctx context.Context) (bool, error) {
 	cv := &configv1.ClusterVersion{}
 	err := c.Client.Get(ctx, types.NamespacedName{Name: "version"}, cv)
 	if err != nil {
-		c.Log.Errorf("error getting the ClusterVersion: %v", err)
+		err = fmt.Errorf("error getting the ClusterVersion: %w", err)
+		c.Log.Error(err)
 		return false, err
 	}
 
