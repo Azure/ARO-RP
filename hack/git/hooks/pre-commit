@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+LC_ALL=C
+
+# e.g. "ARO-1234/short-description" or "hotfix/v20240321.00"
+valid_branch_regex="^(ARO-[0-9]{4}|hotfix)\/[a-z0-9._-]+$"
+local_branch="$(git rev-parse --abbrev-ref HEAD)"
+
+if [[ ! $local_branch =~ $valid_branch_regex ]]
+then
+    echo "There is something wrong with your branch name. Branch names in this project must adhere to this contract: $valid_branch_regex. Your commit will be rejected. Please rename your branch (git branch --move) to a valid name and try again."
+    exit 1
+fi
+
+exit 0
