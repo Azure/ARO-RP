@@ -16,7 +16,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
-	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 )
 
 const (
@@ -26,17 +26,17 @@ const (
 type MachineConfigPoolReconciler struct {
 	base.AROController
 
-	dh dynamichelper.Interface
+	ch clienthelper.Interface
 }
 
-func NewMachineConfigPoolReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *MachineConfigPoolReconciler {
+func NewMachineConfigPoolReconciler(log *logrus.Entry, client client.Client, ch clienthelper.Interface) *MachineConfigPoolReconciler {
 	return &MachineConfigPoolReconciler{
 		AROController: base.AROController{
 			Log:    log,
 			Client: client,
 			Name:   MachineConfigPoolControllerName,
 		},
-		dh: dh,
+		ch: ch,
 	}
 }
 
@@ -78,7 +78,7 @@ func (r *MachineConfigPoolReconciler) Reconcile(ctx context.Context, request ctr
 		return reconcile.Result{}, err
 	}
 
-	err = reconcileMachineConfigs(ctx, instance, r.dh, r.Client, allowReconcile, restartDnsmasq, *mcp)
+	err = reconcileMachineConfigs(ctx, instance, r.ch, r.Client, allowReconcile, restartDnsmasq, *mcp)
 	if err != nil {
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)

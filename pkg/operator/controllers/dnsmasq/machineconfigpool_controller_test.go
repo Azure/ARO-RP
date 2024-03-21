@@ -20,7 +20,9 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
+	testclienthelper "github.com/Azure/ARO-RP/test/util/clienthelper"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -31,10 +33,6 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 	defaultProgressing := utilconditions.ControllerDefaultProgressing(MachineConfigPoolControllerName)
 	defaultDegraded := utilconditions.ControllerDefaultDegraded(MachineConfigPoolControllerName)
 	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
-
-	fakeDh := func(controller *gomock.Controller) *mock_dynamichelper.MockInterface {
-		return mock_dynamichelper.NewMockInterface(controller)
-	}
 
 	tests := []struct {
 		name           string
@@ -145,16 +143,22 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			client := ctrlfake.NewClientBuilder().
+			createTally := make(map[string]int)
+			updateTally := make(map[string]int)
+
+			client := testclienthelper.NewHookingClient(ctrlfake.NewClientBuilder().
 				WithObjects(tt.objects...).
-				Build()
-			dh := fakeDh(controller)
-			tt.mocks(dh)
+				Build())
+
+			client.WithCreateHook(testclienthelper.TallyCountsAndKey(createTally)).WithUpdateHook(testclienthelper.TallyCountsAndKey(updateTally))
+
+			log := logrus.NewEntry(logrus.StandardLogger())
+			ch := clienthelper.NewWithClient(log, client)
 
 			r := NewMachineConfigPoolReconciler(
-				logrus.NewEntry(logrus.StandardLogger()),
+				log,
 				client,
-				dh,
+				ch,
 			)
 			ctx := context.Background()
 			_, err := r.Reconcile(ctx, tt.request)
