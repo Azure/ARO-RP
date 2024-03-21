@@ -64,13 +64,18 @@ func (c *HookingClient) WithPatchHook(f hookFunc) *HookingClient {
 
 // See [sigs.k8s.io/controller-runtime/pkg/client.Reader.Get]
 func (c *HookingClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+	err := c.f.Get(ctx, key, obj)
+	if err != nil {
+		return err
+	}
+
 	for _, h := range c.getHook {
 		err := h(key, obj)
 		if err != nil {
 			return err
 		}
 	}
-	return c.f.Get(ctx, key, obj)
+	return nil
 }
 
 // See [sigs.k8s.io/controller-runtime/pkg/client.Reader.List]
@@ -85,24 +90,34 @@ func (c *HookingClient) Watch(ctx context.Context, list client.ObjectList, opts 
 
 // See [sigs.k8s.io/controller-runtime/pkg/client.Writer.Create]
 func (c *HookingClient) Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
+	err := c.f.Create(ctx, obj, opts...)
+	if err != nil {
+		return err
+	}
+
 	for _, h := range c.createHook {
 		err := h(obj)
 		if err != nil {
 			return err
 		}
 	}
-	return c.f.Create(ctx, obj, opts...)
+	return nil
 }
 
 // See [sigs.k8s.io/controller-runtime/pkg/client.Writer.Delete]
 func (c *HookingClient) Delete(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
+	err := c.f.Delete(ctx, obj, opts...)
+	if err != nil {
+		return err
+	}
+
 	for _, h := range c.deleteHook {
 		err := h(obj)
 		if err != nil {
 			return err
 		}
 	}
-	return c.f.Delete(ctx, obj, opts...)
+	return nil
 }
 
 // See [sigs.k8s.io/controller-runtime/pkg/client.Writer.DeleteAllOf]
@@ -112,24 +127,34 @@ func (c *HookingClient) DeleteAllOf(ctx context.Context, obj client.Object, opts
 
 // See [sigs.k8s.io/controller-runtime/pkg/client.Writer.Update]
 func (c *HookingClient) Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+	err := c.f.Update(ctx, obj, opts...)
+	if err != nil {
+		return err
+	}
+
 	for _, h := range c.updateHook {
 		err := h(obj)
 		if err != nil {
 			return err
 		}
 	}
-	return c.f.Update(ctx, obj, opts...)
+	return nil
 }
 
 // See [sigs.k8s.io/controller-runtime/pkg/client.Writer.Patch]
 func (c *HookingClient) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+	err := c.f.Patch(ctx, obj, patch, opts...)
+	if err != nil {
+		return err
+	}
+
 	for _, h := range c.patchHook {
 		err := h(obj)
 		if err != nil {
 			return err
 		}
 	}
-	return c.f.Patch(ctx, obj, patch, opts...)
+	return nil
 }
 
 // See [sigs.k8s.io/controller-runtime/pkg/client.Client.Scheme]
