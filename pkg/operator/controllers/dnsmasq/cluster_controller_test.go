@@ -59,8 +59,7 @@ func TestClusterReconciler(t *testing.T) {
 					},
 					Spec: arov1alpha1.ClusterSpec{
 						OperatorFlags: arov1alpha1.OperatorFlags{
-							operator.DnsmasqEnabled:      operator.FlagFalse,
-							operator.ForceReconciliation: operator.FlagTrue,
+							operator.DnsmasqEnabled: operator.FlagFalse,
 						},
 					},
 				},
@@ -102,7 +101,7 @@ func TestClusterReconciler(t *testing.T) {
 			wantConditions: defaultConditions,
 		},
 		{
-			name: "valid MachineConfigPool creates ARO DNS MachineConfig",
+			name: "valid MachineConfigPool creates ARO DNS MachineConfig, forced reconciliation",
 			objects: []client.Object{
 				&arov1alpha1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
