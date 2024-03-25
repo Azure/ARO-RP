@@ -1367,8 +1367,8 @@ class PlatformWorkloadIdentity(msrest.serialization.Model):
 
     Variables are only populated by the server, and will be ignored when sending a request.
 
-    :ivar name:
-    :vartype name: str
+    :ivar operator_name:
+    :vartype operator_name: str
     :ivar resource_id:
     :vartype resource_id: str
     :ivar client_id:
@@ -1383,7 +1383,7 @@ class PlatformWorkloadIdentity(msrest.serialization.Model):
     }
 
     _attribute_map = {
-        'name': {'key': 'name', 'type': 'str'},
+        'operator_name': {'key': 'operatorName', 'type': 'str'},
         'resource_id': {'key': 'resourceId', 'type': 'str'},
         'client_id': {'key': 'clientId', 'type': 'str'},
         'object_id': {'key': 'objectId', 'type': 'str'},
@@ -1392,18 +1392,18 @@ class PlatformWorkloadIdentity(msrest.serialization.Model):
     def __init__(
         self,
         *,
-        name: Optional[str] = None,
+        operator_name: Optional[str] = None,
         resource_id: Optional[str] = None,
         **kwargs
     ):
         """
-        :keyword name:
-        :paramtype name: str
+        :keyword operator_name:
+        :paramtype operator_name: str
         :keyword resource_id:
         :paramtype resource_id: str
         """
         super(PlatformWorkloadIdentity, self).__init__(**kwargs)
-        self.name = name
+        self.operator_name = operator_name
         self.resource_id = resource_id
         self.client_id = None
         self.object_id = None

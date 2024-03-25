@@ -1502,8 +1502,8 @@ func NewOperationListPage(cur OperationList, getNextPage func(context.Context, O
 // PlatformWorkloadIdentity platformWorkloadIdentity stores information representing a single workload
 // identity.
 type PlatformWorkloadIdentity struct {
-	Name       *string `json:"name,omitempty"`
-	ResourceID *string `json:"resourceId,omitempty"`
+	OperatorName *string `json:"operatorName,omitempty"`
+	ResourceID   *string `json:"resourceId,omitempty"`
 	// ClientID - READ-ONLY
 	ClientID *string `json:"clientId,omitempty"`
 	// ObjectID - READ-ONLY
@@ -1513,8 +1513,8 @@ type PlatformWorkloadIdentity struct {
 // MarshalJSON is the custom marshaler for PlatformWorkloadIdentity.
 func (pwi PlatformWorkloadIdentity) MarshalJSON() ([]byte, error) {
 	objectMap := make(map[string]interface{})
-	if pwi.Name != nil {
-		objectMap["name"] = pwi.Name
+	if pwi.OperatorName != nil {
+		objectMap["operatorName"] = pwi.OperatorName
 	}
 	if pwi.ResourceID != nil {
 		objectMap["resourceId"] = pwi.ResourceID

@@ -2329,7 +2329,7 @@
       "description": "PlatformWorkloadIdentity stores information representing a single workload identity.",
       "type": "object",
       "properties": {
-        "name": {
+        "operatorName": {
           "type": "string"
         },
         "resourceId": {

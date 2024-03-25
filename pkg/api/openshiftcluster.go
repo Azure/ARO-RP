@@ -123,7 +123,7 @@ type OpenShiftClusterProperties struct {
 
 	ServicePrincipalProfile ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
 
-	PlatformWorkloadIdentityProfile PlatformWorkloadIdentityProfile `json:"platformWorkloadIdentityProfile,omitempty"`
+	PlatformWorkloadIdentityProfile *PlatformWorkloadIdentityProfile `json:"platformWorkloadIdentityProfile,omitempty"`
 
 	NetworkProfile NetworkProfile `json:"networkProfile,omitempty"`
 
@@ -778,10 +778,10 @@ type PlatformWorkloadIdentityProfile struct {
 type PlatformWorkloadIdentity struct {
 	MissingFields
 
-	Name       string `json:"name,omitempty"`
-	ResourceID string `json:"resourceId,omitempty"`
-	ClientID   string `json:"clientId,omitempty" swagger:"readOnly"`
-	ObjectID   string `json:"objectId,omitempty" swagger:"readOnly"`
+	OperatorName string `json:"operatorName,omitempty"`
+	ResourceID   string `json:"resourceId,omitempty"`
+	ClientID     string `json:"clientId,omitempty" swagger:"readOnly"`
+	ObjectID     string `json:"objectId,omitempty" swagger:"readOnly"`
 }
 
 // ClusterUserAssignedIdentity stores information about a user-assigned managed identity in a predefined format required by Microsoft's Managed Identity team.
