@@ -20,6 +20,11 @@
           "clientId": "clientId",
           "clientSecret": "clientSecret"
         },
+        "platformWorkloadIdentityProfile": {
+          "platformWorkloadIdentities": [
+            {}
+          ]
+        },
         "networkProfile": {
           "podCidr": "10.128.0.0/14",
           "serviceCidr": "172.30.0.0/16",
@@ -53,7 +58,8 @@
             "visibility": "Public"
           }
         ]
-      }
+      },
+      "identity": {}
     }
   },
   "responses": {
@@ -87,6 +93,7 @@
           "servicePrincipalProfile": {
             "clientId": "clientId"
           },
+          "platformWorkloadIdentityProfile": {},
           "networkProfile": {
             "podCidr": "10.128.0.0/14",
             "serviceCidr": "172.30.0.0/16",
@@ -150,6 +157,7 @@
           "servicePrincipalProfile": {
             "clientId": "clientId"
           },
+          "platformWorkloadIdentityProfile": {},
           "networkProfile": {
             "podCidr": "10.128.0.0/14",
             "serviceCidr": "172.30.0.0/16",

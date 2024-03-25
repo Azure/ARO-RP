@@ -288,23 +288,22 @@ type IngressProfile struct {
 	IP string `json:"ip,omitempty" swagger:"readOnly"`
 }
 
-// PlatformWorkloadIdentityProfile encapsulates all information that is specific to workload identity clusters.
 type PlatformWorkloadIdentityProfile struct {
-	PlatformWorkloadIdentities []PlatformWorkloadIdentity
+	PlatformWorkloadIdentities []PlatformWorkloadIdentity `json:"platformWorkloadIdentities,omitempty"`
 }
 
 // PlatformWorkloadIdentity stores information representing a single workload identity.
 type PlatformWorkloadIdentity struct {
-	Name       string
-	ResourceID string
-	ClientID   string
-	ObjectID   string
+	Name       string `json:"name,omitempty"`
+	ResourceID string `json:"resourceId,omitempty"`
+	ClientID   string `json:"clientId,omitempty" swagger:"readOnly"`
+	ObjectID   string `json:"objectId,omitempty" swagger:"readOnly"`
 }
 
-//  ClusterUserAssignedIdentity stores information about a user-assigned managed identity in a predefined format required by Microsoft's Managed Identity team.
+// ClusterUserAssignedIdentity stores information about a user-assigned managed identity in a predefined format required by Microsoft's Managed Identity team.
 type ClusterUserAssignedIdentity struct {
-	ClientID    string
-	PrincipalID string
+	ClientID    string `json:"clientId,omitempty"`
+	PrincipalID string `json:"principalId,omitempty"`
 }
 
 // UserAssignedIdentities stores a mapping from resource IDs of managed identities to their client/principal IDs.
@@ -312,8 +311,8 @@ type UserAssignedIdentities map[string]ClusterUserAssignedIdentity
 
 // Identity stores information about the cluster MSI(s) in a workload identity cluster.
 type Identity struct {
-	Type                   string
-	UserAssignedIdentities UserAssignedIdentities
+	Type                   string                 `json:"type,omitempty"`
+	UserAssignedIdentities UserAssignedIdentities `json:"userAssignedIdentities,omitempty"`
 }
 
 // CreatedByType by defines user type, which executed the request
