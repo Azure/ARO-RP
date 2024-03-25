@@ -8,7 +8,7 @@ In brief, there are three options:
 
 1. use r/w or r/o primary keys, which grant access to the whole database account
 2. implement a service which transforms (1) into scoped resource tokens
-3. a third AAD RBAC-based model with Entra Ids.
+3. a Microsoft Entra ID RBAC-based model.
 
 Currently, the RP, monitoring and portal service share the same security
 boundary (the RP VM) and use option 1.  The dbtoken service, which also runs on
