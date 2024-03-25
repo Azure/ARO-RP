@@ -489,7 +489,7 @@ func frontendOperationResultLog(log *logrus.Entry, method string, err error) {
 	log = log.WithField("resultType", resultType)
 
 	if resultType == utillog.SuccessResultType {
-		log.Info("long running operation succeeded")
+		log.Info("front end operation succeeded")
 		return
 	}
 
