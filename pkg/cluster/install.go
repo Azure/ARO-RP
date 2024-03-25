@@ -359,8 +359,8 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.initializeKubernetesClients),
 		steps.Action(m.initializeOperatorDeployer), // depends on kube clients
 		steps.Condition(m.apiServersReady, 30*time.Minute, true),
-		steps.Action(m.enableOperatorReconciliation),
 		steps.Action(m.installAROOperator),
+		steps.Action(m.enableOperatorReconciliation),
 		steps.Action(m.incrInstallPhase),
 	)
 
