@@ -136,11 +136,12 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 		}
 	}
 
-	if oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities != nil {
+	if oc.Properties.PlatformWorkloadIdentityProfile != nil && oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities != nil {
+		out.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{}
 		out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = make([]PlatformWorkloadIdentity, len(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities))
 
 		for i := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].Name = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].Name
+			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].OperatorName = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].OperatorName
 			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ResourceID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ResourceID
 			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ClientID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ClientID
 			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ObjectID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ObjectID
@@ -216,11 +217,12 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	out.Properties.ServicePrincipalProfile.ClientID = oc.Properties.ServicePrincipalProfile.ClientID
 	out.Properties.ServicePrincipalProfile.ClientSecret = api.SecureString(oc.Properties.ServicePrincipalProfile.ClientSecret)
 
-	if oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities != nil {
+	if oc.Properties.PlatformWorkloadIdentityProfile != nil && oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities != nil {
+		out.Properties.PlatformWorkloadIdentityProfile = &api.PlatformWorkloadIdentityProfile{}
 		out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = make([]api.PlatformWorkloadIdentity, len(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities))
 
 		for i := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].Name = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].Name
+			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].OperatorName = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].OperatorName
 			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ResourceID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ResourceID
 			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ClientID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ClientID
 			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ObjectID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ObjectID
