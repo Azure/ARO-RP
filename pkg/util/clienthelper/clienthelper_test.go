@@ -45,7 +45,7 @@ func TestEnsureDeleted(t *testing.T) {
 	})
 
 	client := testclienthelper.NewHookingClient(builder.Build()).
-		WithDeleteHook(func(obj client.Object) error {
+		WithPreDeleteHook(func(obj client.Object) error {
 			if obj.GetName() == "test-name-2" {
 				return fmt.Errorf("error on %s", obj.GetName())
 			}
@@ -70,7 +70,7 @@ func TestEnsureDeleted(t *testing.T) {
 			Namespace: "test-ns-2",
 		})
 	if err == nil {
-		t.Errorf("function should handle failure response (non-404) correctly")
+		t.Error(fmt.Errorf("function should handle failure response (non-404) correctly: %w", err))
 	}
 
 	err = ch.EnsureDeleted(ctx, schema.GroupVersionKind{Group: "core", Version: "v1", Kind: "ConfigMap"},
