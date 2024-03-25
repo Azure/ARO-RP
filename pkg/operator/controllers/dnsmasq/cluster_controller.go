@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 
+	configv1 "github.com/openshift/api/config/v1"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -14,8 +15,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -44,8 +47,8 @@ func NewClusterReconciler(log *logrus.Entry, client client.Client, ch clienthelp
 	}
 }
 
-// Reconcile watches the ARO object, and if it changes, reconciles all the
-// 99-%s-aro-dns machineconfigs
+// Reconcile watches the ARO object and ClusterVersion, and if they change,
+// reconciles all the 99-%s-aro-dns machineconfigs
 func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.GetCluster(ctx)
 	if err != nil {
@@ -94,10 +97,18 @@ func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return o.GetName() == arov1alpha1.SingletonClusterName
 	})
+	clusterVersionPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return o.GetName() == "version"
+	})
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
 		Named(ClusterControllerName).
+		Watches(
+			&source.Kind{Type: &configv1.ClusterVersion{}},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(clusterVersionPredicate),
+		).
 		Complete(r)
 }
 
