@@ -56,8 +56,8 @@ deploy_oic_dev() {
         -n rp-oic \
         --template-file pkg/deploy/assets/rp-oic.json \
         --parameters \
-            "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_RP_CLIENT_ID'" --query '[].id' -o tsv)" >/dev/null \
-            "storageAccountDomain=$(echo ${RESOURCEGROUP//-})"
+            "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_RP_CLIENT_ID'" --query '[].id' -o tsv)" \
+            "storageAccountDomain=$(echo ${RESOURCEGROUP//-})" >/dev/null
 }
 
 deploy_aks_dev() {
