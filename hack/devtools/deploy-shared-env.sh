@@ -90,7 +90,7 @@ deploy_oic_for_dedicated_rp() {
         --template-file pkg/deploy/assets/rp-oic.json \
         --parameters \
             "rpServicePrincipalId=$(az identity show -g $RESOURCEGROUP -n aro-rp-$LOCATION | jq -r '.["principalId"]')" \
-            "storageAccountDomain=$(yq '.rps[].configuration.storageAccountDomain' dev-config.yaml | cut -d '.' -f1)"
+            "storageAccountDomain=$(yq '.rps[].configuration.storageAccountDomain' dev-config.yaml)"
 }
 
 deploy_env_dev_override() {
