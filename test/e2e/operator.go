@@ -608,13 +608,11 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 		return names
 	}
 
-	BeforeEach(func(ctx context.Context) {
+	It("must handle the lifetime of the `99-${MCP}-custom-dns MachineConfig for every MachineConfigPool ${MCP}", func(ctx context.Context) {
 		By("Create custom MachineConfigPool")
 		_, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigPools().Create(ctx, &customMcp, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
-	})
 
-	It("must handle the lifetime of the `99-${MCP}-custom-dns MachineConfig for every MachineConfigPool ${MCP}", func(ctx context.Context) {
 		By("should create an ARO DNS MachineConfig when creating a custom MachineConfigPool")
 		Eventually(func(g Gomega, _ctx context.Context) []string {
 			return getMachineConfigNames(g, _ctx)
