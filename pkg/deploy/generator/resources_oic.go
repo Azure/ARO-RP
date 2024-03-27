@@ -16,8 +16,8 @@ import (
 
 var (
 	// Storage accounts must not contain dashes or be more than 24 characters
-	// Name it after the resource group + 'oic'
-	storageAccountName         string = "concat(take(replace(resourceGroup().name, '-', ''), 21), 'oic')"
+	// Append "oic" to the pre-existing storage account prefix.
+	storageAccountName         string = "concat(take(substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.')), 21), 'oic')"
 	resourceTypeStorageAccount string = "Microsoft.Storage/storageAccounts"
 )
 
