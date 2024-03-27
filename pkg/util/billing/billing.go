@@ -82,7 +82,7 @@ func storageClient(env env.Interface, billing database.Billing, sub database.Sub
 }
 
 func (m *manager) Ensure(ctx context.Context, doc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument) error {
-	billingDoc, err := m.billingDB.Create(ctx, &api.BillingDocument{
+	_, err := m.billingDB.Create(ctx, &api.BillingDocument{
 		ID:                        doc.ID,
 		Key:                       doc.Key,
 		ClusterResourceGroupIDKey: doc.ClusterResourceGroupIDKey,
@@ -101,26 +101,17 @@ func (m *manager) Ensure(ctx context.Context, doc *api.OpenShiftClusterDocument,
 		return err
 	}
 
-	if e2eErr := m.createOrUpdateE2EBlob(ctx, billingDoc); e2eErr != nil {
-		m.log.Warnf("createOrUpdateE2EBlob failed: %s", e2eErr)
-	}
-
 	return nil
 }
 
 func (m *manager) Delete(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
 	m.log.Printf("updating billing record with deletion time")
-	billingDoc, err := m.billingDB.MarkForDeletion(ctx, doc.ID)
+	_, err := m.billingDB.MarkForDeletion(ctx, doc.ID)
 	if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil
 	}
 	if err != nil {
 		return err
-	}
-
-	if e2eErr := m.createOrUpdateE2EBlob(ctx, billingDoc); e2eErr != nil {
-		// We are not failing the operation if we cannot write to e2e storage account, just warning
-		m.log.Warnf("createOrUpdateE2EBlob failed: %s", e2eErr)
 	}
 
 	return nil
