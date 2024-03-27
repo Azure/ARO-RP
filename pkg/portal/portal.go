@@ -323,7 +323,6 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router, prom *prometheus.Promethe
 		case "":
 		default:
 			fmtName := strings.TrimPrefix(name, "v2/build/")
-			fmt.Print(fmtName)
 			r.Methods(http.MethodGet).Path("/" + fmtName).HandlerFunc(p.serve(name))
 		}
 	}
