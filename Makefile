@@ -351,7 +351,7 @@ go-tidy: # Run go mod tidy - add missing and remove unused modules.
 	go mod tidy -compat=${GOLANG_VERSION}
 
 .PHONY: go-vendor
-go-vendor:  # Run go mod vendor - only modules that are used in the source code will be vendored in (make vendored copy of dependencies). 
+go-vendor:  # Run go mod vendor - only modules that are used in the source code will be vendored in (make vendored copy of dependencies).
 	go mod vendor
 
 .PHONY: go-verify
