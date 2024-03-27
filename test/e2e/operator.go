@@ -579,7 +579,7 @@ var _ = Describe("ARO Operator - ImageConfig Reconciler", func() {
 	})
 })
 
-var _ = Describe("ARO Operator - dnsmasq", func() {
+var _ = Describe("ARO Operator - dnsmasq", Ordered, func() {
 	const (
 		timeout = 1 * time.Minute
 		polling = 10 * time.Second
@@ -614,7 +614,7 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("must handle the lifetime of the `99-${MCP}-custom-dns MachineConfig for every MachineConfigPool ${MCP}", Ordered, func(ctx context.Context) {
+	It("must handle the lifetime of the `99-${MCP}-custom-dns MachineConfig for every MachineConfigPool ${MCP}", func(ctx context.Context) {
 		It("should create an ARO DNS MachineConfig when creating a custom MachineConfigPool", func(ctx context.Context) {
 			Eventually(func(g Gomega, ctx context.Context) []string {
 				return getMachineConfigNames(g, ctx)
