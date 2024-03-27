@@ -579,7 +579,7 @@ var _ = Describe("ARO Operator - ImageConfig Reconciler", func() {
 	})
 })
 
-var _ = Describe("ARO Operator - dnsmasq", Ordered, func() {
+var _ = Describe("ARO Operator - dnsmasq", func() {
 	const (
 		timeout = 1 * time.Minute
 		polling = 10 * time.Second
@@ -614,7 +614,7 @@ var _ = Describe("ARO Operator - dnsmasq", Ordered, func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("must handle the lifetime of the `99-${MCP}-custom-dns MachineConfig for every MachineConfigPool ${MCP}", func(ctx context.Context) {
+	Describe("must handle the lifetime of the `99-${MCP}-custom-dns MachineConfig for every MachineConfigPool ${MCP}", Ordered, func() {
 		It("should create an ARO DNS MachineConfig when creating a custom MachineConfigPool", func(ctx context.Context) {
 			Eventually(func(g Gomega, ctx context.Context) []string {
 				return getMachineConfigNames(g, ctx)
@@ -622,13 +622,13 @@ var _ = Describe("ARO Operator - dnsmasq", Ordered, func() {
 				Should(ContainElement(mcName))
 		})
 
-		It("should have the MachineConfig be owned by the Operator", func(g Gomega, ctx context.Context) {
+		It("should have the MachineConfig be owned by the Operator", func(ctx context.Context) {
 			customMachineConfig, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigs().Get(ctx, mcName, metav1.GetOptions{})
-			g.Expect(err).NotTo(HaveOccurred())
-			g.Expect(customMachineConfig.ObjectMeta.OwnerReferences[0].Name).To(Equal(mcpName))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(customMachineConfig.ObjectMeta.OwnerReferences[0].Name).To(Equal(mcpName))
 		})
 
-		It("should delete the MachineConfig when deleting the custom MachineConfigPool", func(g Gomega, ctx context.Context) {
+		It("should delete the MachineConfig when deleting the custom MachineConfigPool", func(ctx context.Context) {
 			err := clients.MachineConfig.MachineconfigurationV1().MachineConfigPools().Delete(ctx, mcpName, metav1.DeleteOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(func(g Gomega) {
