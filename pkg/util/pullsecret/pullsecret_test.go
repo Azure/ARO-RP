@@ -4,10 +4,13 @@ package pullsecret
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"testing"
 
+	"github.com/containers/image/v5/types"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -369,6 +372,104 @@ func TestUnmarshalSecretData(t *testing.T) {
 				}
 			} else if !reflect.DeepEqual(out, tt.wantAuth) {
 				t.Fatalf("Auth does not match:\n%v\n%v", out, tt.wantAuth)
+			}
+		})
+	}
+}
+
+func TestValidatePullSecret(t *testing.T) {
+	azurecrError := "unable to retrieve auth token: invalid username/password: unauthorized: authentication required, visit https://aka.ms/acr/authorization for more information. This error has been customized so if it leaks to Azure the test will fail."
+	erroringRegistry := RegistryClient{
+		CheckAuth: func(ctx context.Context, sc *types.SystemContext, u, p, registry string) error {
+			return fmt.Errorf(azurecrError)
+		},
+	}
+	succeedingRegistry := RegistryClient{
+		CheckAuth: func(ctx context.Context, sc *types.SystemContext, u, p, registry string) error {
+			return nil
+		},
+	}
+	onlyAroSucceedsRegistry := RegistryClient{
+		CheckAuth: func(ctx context.Context, sc *types.SystemContext, u, p, registry string) error {
+			if registry == "arosvc.azurecr.io" {
+				return nil
+			}
+			return fmt.Errorf(azurecrError)
+		},
+	}
+	test := []struct {
+		name     string
+		ps       *corev1.Secret
+		wantAuth map[string]string
+		wantErr  string
+		client   RegistryClient
+	}{
+		{
+			name: "ok secret",
+			ps: &corev1.Secret{
+				Data: map[string][]byte{
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}, "registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+				},
+			},
+			wantAuth: map[string]string{
+				"arosvc.azurecr.io":  "ZnJlZDplbnRlcg==",
+				"registry.redhat.io": "ZnJlZDplbnRlcg==",
+			},
+			client: succeedingRegistry,
+		},
+		{
+			name: "broken user registry",
+			ps: &corev1.Secret{
+				Data: map[string][]byte{
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}, "registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}, "registry.example.com":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+				},
+			},
+			wantAuth: map[string]string{
+				"arosvc.azurecr.io":    "ZnJlZDplbnRlcg==",
+				"registry.redhat.io":   "ZnJlZDplbnRlcg==",
+				"registry.example.com": "ZnJlZDplbnRlcg==",
+			},
+			client: onlyAroSucceedsRegistry,
+		},
+		{
+			name: "authentication failure",
+			ps: &corev1.Secret{
+				Data: map[string][]byte{
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+				},
+			},
+			wantErr: fmt.Sprintf("failed to authenticate to registry arosvc.azurecr.io: %s", azurecrError),
+			client:  erroringRegistry,
+		},
+		{
+			name: "broken secret, bad bas64",
+			ps: &corev1.Secret{
+				Data: map[string][]byte{
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"INVALID"}}}`),
+				},
+			},
+			wantErr: "illegal base64 data at input byte 4",
+			client:  erroringRegistry,
+		},
+		{
+			name: "broken secret, missing colon",
+			ps: &corev1.Secret{
+				Data: map[string][]byte{
+					corev1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZGVudGVy"}}}`),
+				},
+			},
+			wantErr: "credentials format error: arosvc.azurecr.io",
+			client:  erroringRegistry,
+		},
+	}
+
+	for _, tt := range test {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.client.ValidatePullSecret(context.TODO(), tt.ps, []string{"arosvc.azurecr.io"})
+			if err != nil {
+				if err.Error() != tt.wantErr {
+					t.Fatalf("%v\ndoes not match:\n%s\n", err.Error(), tt.wantErr)
+				}
 			}
 		})
 	}

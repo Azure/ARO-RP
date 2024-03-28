@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"testing"
 
+	container_types "github.com/containers/image/v5/types"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,7 +20,9 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
+	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -287,8 +290,14 @@ func TestPullSecretReconciler(t *testing.T) {
 			clientFake := ctrlfake.NewClientBuilder().WithObjects(tt.instance).WithObjects(tt.secrets...).Build()
 
 			r := &Reconciler{
-				log:    logrus.NewEntry(logrus.StandardLogger()),
-				client: clientFake,
+				AROController: base.AROController{
+					Log:    logrus.NewEntry(logrus.StandardLogger()),
+					Client: clientFake,
+					Name:   ControllerName,
+				},
+				registryClient: pullsecret.RegistryClient{
+					CheckAuth: func(ctx context.Context, sc *container_types.SystemContext, s1, s2, s3 string) error { return nil },
+				},
 			}
 			if tt.request.Name == "" {
 				tt.request.NamespacedName = pullSecretName
@@ -301,7 +310,7 @@ func TestPullSecretReconciler(t *testing.T) {
 			}
 
 			s := &corev1.Secret{}
-			err = r.client.Get(ctx, types.NamespacedName{Namespace: "openshift-config", Name: "pull-secret"}, s)
+			err = r.Client.Get(ctx, types.NamespacedName{Namespace: "openshift-config", Name: "pull-secret"}, s)
 			if err != nil {
 				t.Error(err)
 			}
@@ -364,7 +373,10 @@ func TestParseRedHatKeys(t *testing.T) {
 	for _, tt := range test {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &Reconciler{
-				log: logrus.NewEntry(logrus.StandardLogger()),
+				AROController: base.AROController{
+					Log:  logrus.NewEntry(logrus.StandardLogger()),
+					Name: ControllerName,
+				},
 			}
 
 			out, err := r.parseRedHatKeys(tt.ps)
@@ -767,7 +779,12 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 			}
 
 			r := &Reconciler{
-				client: clientBuilder.Build(),
+				AROController: base.AROController{
+					Client: clientBuilder.Build(),
+					Name:   ControllerName,
+					Log:    logrus.WithContext(ctx),
+				},
+				registryClient: pullsecret.RegistryClient{CheckAuth: func(ctx context.Context, sc *container_types.SystemContext, s1, s2, s3 string) error { return nil }},
 			}
 
 			s, err := r.ensureGlobalPullSecret(ctx, tt.operatorPullSecret, tt.pullSecret)
