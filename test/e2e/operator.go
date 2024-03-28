@@ -683,7 +683,7 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 
 			return config.Labels
 		}).WithContext(ctx).WithPolling(polling).WithTimeout(timeout).MustPassRepeatedly(3).Should(Equal(map[string]string{
-			"machineconfiguration.openshift.io/role": "custom",
+			"machineconfiguration.openshift.io/role": mcpName,
 			"testlabel":                              "testvalue",
 		}))
 
@@ -706,7 +706,7 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 
 			return config.Labels
 		}).WithContext(ctx).WithPolling(polling).WithTimeout(timeout).Should(Equal(map[string]string{
-			"machineconfiguration.openshift.io/role": "custom",
+			"machineconfiguration.openshift.io/role": mcpName,
 		}))
 	})
 })
