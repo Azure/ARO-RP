@@ -8,7 +8,6 @@ import (
 	_ "embed"
 	"testing"
 
-	"github.com/ghodss/yaml"
 	"github.com/go-test/deep"
 	"github.com/golang/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
@@ -17,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	ctrlfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/yaml"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/muo/config"

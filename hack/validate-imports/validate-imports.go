@@ -73,8 +73,8 @@ func validateImport(imp *ast.ImportSpec) error {
 	}
 
 	switch packageName {
-	case "sigs.k8s.io/yaml", "gopkg.in/yaml.v2":
-		return fmt.Errorf("%s is imported; use github.com/ghodss/yaml", packageName)
+	case "github.com/ghodss/yaml", "gopkg.in/yaml.v2":
+		return fmt.Errorf("%s is imported; use sigs.k8s.io/yaml", packageName)
 	case "github.com/google/uuid", "github.com/satori/go.uuid":
 		return fmt.Errorf("%s is imported; use github.com/gofrs/uuid", packageName)
 	}
