@@ -474,27 +474,23 @@ func frontendOperationResultLog(log *logrus.Entry, method string, err error) {
 		return
 	}
 
+	var statusCode int
+
 	switch err := err.(type) {
 	case *api.CloudError:
-		if err.StatusCode < 300 && err.StatusCode >= 200 {
-			log.Info("front end operation succeeded")
-			return
-		} else if err.StatusCode < 500 {
-			log = log.WithField("resultType", utillog.UserErrorResultType)
-		} else {
-			log = log.WithField("resultType", utillog.ServerErrorResultType)
-		}
+		statusCode = err.StatusCode
 	case statusCodeError:
-		if int(err) < 300 && int(err) >= 200 {
-			log.Info("front end operation succeeded")
-			return
-		} else if int(err) < 500 {
-			log = log.WithField("resultType", utillog.UserErrorResultType)
-		} else {
-			log = log.WithField("resultType", utillog.ServerErrorResultType)
-		}
+		statusCode = int(err)
 	default:
-		log = log.WithField("resultType", utillog.ServerErrorResultType)
+		statusCode = 500
+	}
+
+	resultType := utillog.MapStatusCodeToResultType(statusCode)
+	log = log.WithField("resultType", resultType)
+
+	if resultType == utillog.SuccessResultType {
+		log.Info("front end operation succeeded")
+		return
 	}
 
 	log = log.WithField("errorDetails", err.Error())

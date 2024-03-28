@@ -46,6 +46,16 @@ const (
 	ServerErrorResultType ResultType = "InternalServerError"
 )
 
+func MapStatusCodeToResultType(statusCode int) ResultType {
+	if statusCode < 300 && statusCode >= 200 {
+		return SuccessResultType
+	}
+	if statusCode < 500 {
+		return UserErrorResultType
+	}
+	return ServerErrorResultType
+}
+
 func getBaseLogger() *logrus.Logger {
 	logger := logrus.New()
 
