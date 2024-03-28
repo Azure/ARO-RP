@@ -8,8 +8,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
+	sdkdns "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns"
 	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2021-01-15/documentdb"
-	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/to"
 
@@ -120,66 +120,77 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 	}
 	dbtokenIP := *((*lb.FrontendIPConfigurations)[0].PrivateIPAddress)
 
-	zone, err := d.zones.Get(ctx, d.config.RPResourceGroupName, d.config.Location+"."+*d.config.Configuration.ClusterParentDomainName)
+	zone, err := d.zones.Get(ctx, d.config.RPResourceGroupName, d.config.Location+"."+*d.config.Configuration.ClusterParentDomainName, nil)
 	if err != nil {
 		return err
 	}
 
-	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPParentDomainName, "rp."+d.config.Location, mgmtdns.A, mgmtdns.RecordSet{
-		RecordSetProperties: &mgmtdns.RecordSetProperties{
+	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPParentDomainName, "rp."+d.config.Location, sdkdns.RecordTypeA, sdkdns.RecordSet{
+		Properties: &sdkdns.RecordSetProperties{
 			TTL: to.Int64Ptr(3600),
-			ARecords: &[]mgmtdns.ARecord{
+			ARecords: []*sdkdns.ARecord{{
+				IPv4Address: rpPIP.IPAddress,
+			},
+			},
+		},
+	}, &sdkdns.RecordSetsClientCreateOrUpdateOptions{
+		IfMatch:     nil,
+		IfNoneMatch: nil,
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPParentDomainName, d.config.Location+".admin", sdkdns.RecordTypeA, sdkdns.RecordSet{
+		Properties: &sdkdns.RecordSetProperties{
+			TTL: to.Int64Ptr(3600),
+			ARecords: []*sdkdns.ARecord{
 				{
-					Ipv4Address: rpPIP.IPAddress,
+					IPv4Address: portalPIP.IPAddress,
 				},
 			},
 		},
-	}, "", "")
+	}, &sdkdns.RecordSetsClientCreateOrUpdateOptions{
+		IfMatch:     nil,
+		IfNoneMatch: nil,
+	})
 	if err != nil {
 		return err
 	}
 
-	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPParentDomainName, d.config.Location+".admin", mgmtdns.A, mgmtdns.RecordSet{
-		RecordSetProperties: &mgmtdns.RecordSetProperties{
+	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPParentDomainName, "dbtoken."+d.config.Location, sdkdns.RecordTypeA, sdkdns.RecordSet{
+		Properties: &sdkdns.RecordSetProperties{
 			TTL: to.Int64Ptr(3600),
-			ARecords: &[]mgmtdns.ARecord{
+			ARecords: []*sdkdns.ARecord{
 				{
-					Ipv4Address: portalPIP.IPAddress,
+					IPv4Address: &dbtokenIP,
 				},
 			},
 		},
-	}, "", "")
+	}, &sdkdns.RecordSetsClientCreateOrUpdateOptions{
+		IfMatch:     nil,
+		IfNoneMatch: nil,
+	})
 	if err != nil {
 		return err
 	}
 
-	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPParentDomainName, "dbtoken."+d.config.Location, mgmtdns.A, mgmtdns.RecordSet{
-		RecordSetProperties: &mgmtdns.RecordSetProperties{
-			TTL: to.Int64Ptr(3600),
-			ARecords: &[]mgmtdns.ARecord{
-				{
-					Ipv4Address: &dbtokenIP,
-				},
-			},
-		},
-	}, "", "")
-	if err != nil {
-		return err
-	}
-
-	nsRecords := make([]mgmtdns.NsRecord, 0, len(*zone.NameServers))
-	for i := range *zone.NameServers {
-		nsRecords = append(nsRecords, mgmtdns.NsRecord{
-			Nsdname: &(*zone.NameServers)[i],
+	nsRecords := make([]*sdkdns.NsRecord, 0, len(zone.Zone.Properties.NameServers))
+	for i := range zone.Zone.Properties.NameServers {
+		nsRecords = append(nsRecords, &sdkdns.NsRecord{
+			Nsdname: zone.Zone.Properties.NameServers[i],
 		})
 	}
 
-	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.ClusterParentDomainName, d.config.Location, mgmtdns.NS, mgmtdns.RecordSet{
-		RecordSetProperties: &mgmtdns.RecordSetProperties{
+	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.ClusterParentDomainName, d.config.Location, sdkdns.RecordTypeNS, sdkdns.RecordSet{
+		Properties: &sdkdns.RecordSetProperties{
 			TTL:       to.Int64Ptr(3600),
-			NsRecords: &nsRecords,
+			NsRecords: nsRecords,
 		},
-	}, "", "")
+	}, &sdkdns.RecordSetsClientCreateOrUpdateOptions{
+		IfMatch:     nil,
+		IfNoneMatch: nil,
+	})
 	return err
 }
 

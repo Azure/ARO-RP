@@ -7,6 +7,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
@@ -149,6 +150,11 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 	if err != nil {
 		return nil, err
 	}
+	options := _env.Environment().EnvironmentCredentialOptions()
+	spTokenCredential, err := azidentity.NewEnvironmentCredential(options)
+	if err != nil {
+		return nil, err
+	}
 
 	return &manager{
 		log:                   log,
@@ -180,7 +186,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		fpPrivateEndpoints:    network.NewPrivateEndpointsClient(_env.Environment(), _env.SubscriptionID(), localFPAuthorizer),
 		rpPrivateLinkServices: network.NewPrivateLinkServicesClient(_env.Environment(), _env.SubscriptionID(), msiAuthorizer),
 
-		dns:     dns.NewManager(_env, localFPAuthorizer),
+		dns:     dns.NewManager(_env, spTokenCredential),
 		storage: storage,
 		subnet:  subnet.NewManager(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		graph:   graph.NewManager(_env, log, aead, storage),
