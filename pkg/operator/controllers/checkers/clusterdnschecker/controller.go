@@ -20,6 +20,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/predicates"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
 )
 
@@ -117,16 +118,12 @@ func (r *Reconciler) condition(checkErr error, result result) *operatorv1.Operat
 
 // SetupWithManager setup our manager
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
-	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
-		return o.GetName() == arov1alpha1.SingletonClusterName
-	})
-
 	defaultClusterDNSPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return o.GetName() == "default"
 	})
 
 	builder := ctrl.NewControllerManagedBy(mgr).
-		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
+		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{}))).
 		Watches(
 			&source.Kind{Type: &operatorv1.DNS{}},
 			&handler.EnqueueRequestForObject{},

@@ -22,6 +22,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/predicates"
 	"github.com/Azure/ARO-RP/pkg/util/conditions"
 )
 
@@ -118,20 +119,12 @@ func (r *Reconciler) condition(checkErr error) *operatorv1.OperatorCondition {
 
 // SetupWithManager setup our manager
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
-	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
-		return o.GetName() == arov1alpha1.SingletonClusterName
-	})
-
 	defaultIngressControllerPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return o.GetNamespace() == "openshift-ingress-operator" && o.GetName() == "default"
 	})
 
-	clusterVersionPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
-		return o.GetName() == "version"
-	})
-
 	builder := ctrl.NewControllerManagedBy(mgr).
-		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
+		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{}))).
 		Watches(
 			&source.Kind{Type: &operatorv1.IngressController{}},
 			&handler.EnqueueRequestForObject{},
@@ -140,7 +133,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(
 			&source.Kind{Type: &configv1.ClusterVersion{}},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(clusterVersionPredicate),
+			builder.WithPredicates(predicates.ClusterVersion),
 		)
 
 	return builder.Named(ControllerName).Complete(r)

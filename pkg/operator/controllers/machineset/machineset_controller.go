@@ -15,11 +15,11 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
+	"github.com/Azure/ARO-RP/pkg/operator/predicates"
 )
 
 const (
@@ -108,13 +108,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 }
 
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
-	machineSetPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
-		role := o.GetLabels()["machine.openshift.io/cluster-api-machine-role"]
-		return strings.EqualFold("worker", role)
-	})
-
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&machinev1beta1.MachineSet{}, builder.WithPredicates(machineSetPredicate)).
+		For(&machinev1beta1.MachineSet{}, builder.WithPredicates(predicates.MachineRoleWorker)).
 		Named(ControllerName).
 		Complete(r)
 }
