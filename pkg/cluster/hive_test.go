@@ -63,7 +63,7 @@ func TestHiveClusterDeploymentReady(t *testing.T) {
 			}
 			m.hiveClusterManager = hiveMock
 
-			result, err := m.hiveClusterDeploymentReady(context.Background())
+			result, _, err := m.hiveClusterDeploymentReady(context.Background())
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if tt.wantResult != result {

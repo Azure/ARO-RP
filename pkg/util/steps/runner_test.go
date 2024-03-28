@@ -19,16 +19,16 @@ import (
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
-func successfulFunc(context.Context) error               { return nil }
-func failingFunc(context.Context) error                  { return errors.New("oh no!") }
-func alwaysFalseCondition(context.Context) (bool, error) { return false, nil }
-func alwaysTrueCondition(context.Context) (bool, error)  { return true, nil }
-func timingOutCondition(ctx context.Context) (bool, error) {
+func successfulFunc(context.Context) error                     { return nil }
+func failingFunc(context.Context) error                        { return errors.New("oh no!") }
+func alwaysFalseCondition(context.Context) (bool, bool, error) { return false, true, nil }
+func alwaysTrueCondition(context.Context) (bool, bool, error)  { return true, false, nil }
+func timingOutCondition(ctx context.Context) (bool, bool, error) {
 	time.Sleep(60 * time.Millisecond)
-	return false, nil
+	return false, true, nil
 }
-func internalTimeoutCondition(ctx context.Context) (bool, error) {
-	return false, wait.ErrWaitTimeout
+func internalTimeoutCondition(ctx context.Context) (bool, bool, error) {
+	return false, false, wait.ErrWaitTimeout
 }
 
 func currentTimeFunc() time.Time {
