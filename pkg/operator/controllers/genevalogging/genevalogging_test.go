@@ -108,6 +108,44 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 			wantConditions: defaultConditions,
 		},
 		{
+			name: "fluentbit/mdsd specs provided as empty strings",
+			operatorFlags: arov1alpha1.OperatorFlags{
+				operator.GenevaLoggingEnabled: operator.FlagTrue,
+				controllerFluentbitPullSpec:   "",
+				controllerMDSDPullSpec:        "",
+			},
+			validateDaemonset: func(d *appsv1.DaemonSet) (errs []error) {
+				if len(d.Spec.Template.Spec.Containers) != 2 {
+					errs = append(errs, fmt.Errorf("expected 2 containers, got %d", len(d.Spec.Template.Spec.Containers)))
+				}
+
+				// we want the default fluentbit image
+				fluentbit, err := getContainer(d, "fluentbit")
+				if err != nil {
+					errs = append(errs, err)
+					return
+				}
+				for _, err := range deep.Equal(fluentbit.Image, version.FluentbitImage("acrDomain")) {
+					errs = append(errs, errors.New(err))
+				}
+
+				// we want the default mdsd image
+				mdsd, err := getContainer(d, "mdsd")
+				if err != nil {
+					errs = append(errs, err)
+					return
+				}
+				for _, err := range deep.Equal(mdsd.Image, version.MdsdImage("acrDomain")) {
+					errs = append(errs, errors.New(err))
+				}
+
+				return
+			},
+			mocks:          nominalMocks,
+			wantErrMsg:     "",
+			wantConditions: defaultConditions,
+		},
+		{
 			name: "fluentbit changed",
 			operatorFlags: arov1alpha1.OperatorFlags{
 				operator.GenevaLoggingEnabled: operator.FlagTrue,
