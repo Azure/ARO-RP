@@ -200,11 +200,6 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
-	err = spDynamic.ValidateLoadBalancerProfile(ctx, dv.oc)
-	if err != nil {
-		return err
-	}
-
 	err = spDynamic.ValidatePreConfiguredNSGs(ctx, dv.oc, subnets)
 	if err != nil {
 		return err
@@ -245,6 +240,11 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	}
 
 	err = fpDynamic.ValidatePreConfiguredNSGs(ctx, dv.oc, subnets)
+	if err != nil {
+		return err
+	}
+
+	err = fpDynamic.ValidateLoadBalancerProfile(ctx, dv.oc)
 	if err != nil {
 		return err
 	}
