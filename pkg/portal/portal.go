@@ -69,7 +69,6 @@ type portal struct {
 
 	dialer proxy.Dialer
 
-	templateV1         *template.Template
 	templateV2         *template.Template
 	templatePrometheus *template.Template
 
@@ -134,22 +133,12 @@ func (p *portal) setupRouter(kconfig *kubeconfig.Kubeconfig, prom *prometheus.Pr
 	r := mux.NewRouter()
 	r.Use(middleware.Panic(p.log))
 
-	assetv1, err := assets.EmbeddedFiles.ReadFile("v1/build/index.html")
-	if err != nil {
-		return nil, err
-	}
-
 	assetv2, err := assets.EmbeddedFiles.ReadFile("v2/build/index.html")
 	if err != nil {
 		return nil, err
 	}
 
 	assetPrometheus, err := assets.EmbeddedFiles.ReadFile("prometheus-ui/index.html")
-	if err != nil {
-		return nil, err
-	}
-
-	p.templateV1, err = template.New("index.html").Parse(string(assetv1))
 	if err != nil {
 		return nil, err
 	}
@@ -325,37 +314,18 @@ func (p *portal) aadAuthenticatedRoutes(r *mux.Router, prom *prometheus.Promethe
 	r.Methods(http.MethodPost).Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}/ssh/new").HandlerFunc(sshStruct.New)
 
 	for _, name := range names {
-		regexp, _ := regexp.Compile(`v[1,2]/build/.*\..*`)
+		regexp, _ := regexp.Compile(`v2/build/.*\..*`)
 		name := regexp.FindString(name)
 		switch name {
 		case "v2/build/index.html":
 			r.Methods(http.MethodGet).Path("/").HandlerFunc(p.indexV2)
 			r.Methods(http.MethodGet).PathPrefix("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.redhatopenshift/openshiftclusters/{resourceName}").HandlerFunc(p.indexV2)
-		case "v1/build/index.html":
-			r.Methods(http.MethodGet).Path("/v1").HandlerFunc(p.index)
 		case "":
 		default:
-			fmtName := strings.TrimPrefix(name, "v1/build/")
-			fmtName = strings.TrimPrefix(fmtName, "v2/build/")
-
+			fmtName := strings.TrimPrefix(name, "v2/build/")
 			r.Methods(http.MethodGet).Path("/" + fmtName).HandlerFunc(p.serve(name))
 		}
 	}
-}
-
-func (p *portal) index(w http.ResponseWriter, r *http.Request) {
-	buf := &bytes.Buffer{}
-
-	err := p.templateV1.ExecuteTemplate(buf, "index.html", map[string]interface{}{
-		"location":       p.env.Location(),
-		csrf.TemplateTag: csrf.TemplateField(r),
-	})
-	if err != nil {
-		p.internalServerError(w, err)
-		return
-	}
-
-	http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(buf.Bytes()))
 }
 
 func (p *portal) indexV2(w http.ResponseWriter, r *http.Request) {

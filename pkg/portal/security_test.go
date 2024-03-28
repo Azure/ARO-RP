@@ -123,15 +123,15 @@ func TestSecurity(t *testing.T) {
 			},
 		},
 		{
-			name: "/main.js",
+			name: "/asset-manifest.json",
 			request: func() (*http.Request, error) {
-				return http.NewRequest(http.MethodGet, "https://server/main.js", nil)
+				return http.NewRequest(http.MethodGet, "https://server/asset-manifest.json", nil)
 			},
-			wantAuditOperation: "GET /main.js",
+			wantAuditOperation: "GET /asset-manifest.json",
 			wantAuditTargetResources: []audit.TargetResource{
 				{
 					TargetResourceType: "",
-					TargetResourceName: "/main.js",
+					TargetResourceName: "/asset-manifest.json",
 				},
 			},
 		},
@@ -359,7 +359,7 @@ func TestSecurity(t *testing.T) {
 				// the Payload will change during this access, resulting in the e2e panicking.
 				// `go test -race -timeout 30s -run ^TestSecurity$ ./pkg/portal` should show the race and
 				// where the concurrent read/write is occurring.
-				if tt.name == "/" || tt.name == "/main.js" {
+				if tt.name == "/" || tt.name == "/asset-manifest.json" {
 					err = testpoller.Poll(1*time.Second, 5*time.Millisecond, func() (bool, error) {
 						if len(auditHook.AllEntries()) == 1 {
 							if _, ok := auditHook.AllEntries()[0].Data[audit.MetadataPayload]; ok {

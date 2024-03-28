@@ -22,7 +22,6 @@ import {
   Icon,
   mergeStyleSets,
   registerIcons,
-  DefaultButton,
 } from "@fluentui/react"
 import { AxiosResponse } from "axios"
 import { useBoolean } from "@fluentui/react-hooks"
@@ -55,9 +54,9 @@ export interface ICluster {
 
 export interface IClusterCoordinates {
   subscription: string
-  resourceGroup: string,
-  name: string,
-  resourceId: string,
+  resourceGroup: string
+  name: string
+  resourceId: string
 }
 
 const stackStyles: IStackStyles = {
@@ -95,22 +94,6 @@ const MenuButtonStyles: IButtonStyles = {
     color: DefaultPalette.white,
   },
   rootHovered: {
-    color: DefaultPalette.themePrimary,
-  },
-}
-
-const v1ButtonStyle: IButtonStyles = {
-  root: {
-    backgroundColor: "transparent",
-    color: DefaultPalette.white,
-    minWidth: "50px",
-    height: "20px",
-    marginLeft: "10px",
-    padding: "0px",
-    borderColor: DefaultPalette.white,
-  },
-  rootHovered: {
-    backgroundColor: DefaultPalette.white,
     color: DefaultPalette.themePrimary,
   },
 }
@@ -310,11 +293,6 @@ function App() {
               </TooltipHost>
             </Stack.Item>
             <Stack.Item>
-              <DefaultButton styles={v1ButtonStyle} title="Go to Admin Portal V1" href="/v1">
-                V1
-              </DefaultButton>
-            </Stack.Item>
-            <Stack.Item>
               <IconButton
                 iconProps={{ iconName: "SignOut" }}
                 onClick={logOut}
@@ -326,24 +304,20 @@ function App() {
         <Stack styles={contentStackStyles}>
           <Stack.Item grow>{error && errorBar()}</Stack.Item>
           <Stack.Item grow>
-            <ClusterList
-              csrfToken={csrfRef}
-              sshBox={sshRef}
-              csrfTokenAvailable={fetching}
-            />
+            <ClusterList csrfToken={csrfRef} sshBox={sshRef} csrfTokenAvailable={fetching} />
           </Stack.Item>
           <Stack.Item grow>
             <Routes>
               <Route
                 path="/subscriptions/:subscriptionId/resourcegroups/:resourceGroupName/providers/microsoft.redhatopenshift/openshiftclusters/:resourceName/*?"
-                element={(
+                element={
                   <ClusterDetailPanel
                     csrfToken={csrfRef}
                     sshBox={sshRef}
                     loaded={fetching}
                     onClose={_onCloseDetailPanel}
                   />
-                )}
+                }
               />
             </Routes>
           </Stack.Item>

@@ -7,7 +7,6 @@ import (
 	"embed"
 )
 
-//go:embed v1/*
 //go:embed v2/*
 //go:embed prometheus-ui/*
 var EmbeddedFiles embed.FS
