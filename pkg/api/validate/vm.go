@@ -224,6 +224,12 @@ var supportedWorkerVmSizes = map[api.VMSize]api.VMSizeStruct{
 	api.VMSizeStandardNC12sV3:  api.VMSizeStandardNC12sV3Struct,
 	api.VMSizeStandardNC24sV3:  api.VMSizeStandardNC24sV3Struct,
 	api.VMSizeStandardNC24rsV3: api.VMSizeStandardNC24rsV3Struct,
+
+	api.VMSizeStandardNC24adsA100V4: api.VMSizeStandardNC24adsA100V4Struct,
+	api.VMSizeStandardNC48adsA100V4: api.VMSizeStandardNC48adsA100V4Struct,
+	api.VMSizeStandardNC96adsA100V4: api.VMSizeStandardNC96adsA100V4Struct,
+
+	api.VMSizeStandardND96asrV4: api.VMSizeStandardND96asrV4Struct,
 }
 
 func DiskSizeIsValid(sizeGB int) bool {
