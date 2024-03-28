@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 
 	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -35,6 +36,22 @@ func (m *manager) ensureAROOperator(ctx context.Context) error {
 	err := m.aroOperatorDeployer.CreateOrUpdate(ctx)
 	if err != nil {
 		m.log.Errorf("cannot ensureAROOperator.CreateOrUpdate: %s", err.Error())
+	}
+	return err
+}
+
+func (m *manager) enableOperatorReconciliation(ctx context.Context) error {
+	err := m.aroOperatorDeployer.SetForceReconcile(ctx, true)
+	if err != nil {
+		m.log.Error(fmt.Errorf("cannot ensureAROOperator.SetForceReconcile: %w", err))
+	}
+	return err
+}
+
+func (m *manager) disableOperatorReconciliation(ctx context.Context) error {
+	err := m.aroOperatorDeployer.SetForceReconcile(ctx, false)
+	if err != nil {
+		m.log.Error(fmt.Errorf("cannot ensureAROOperator.SetForceReconcile: %w", err))
 	}
 	return err
 }

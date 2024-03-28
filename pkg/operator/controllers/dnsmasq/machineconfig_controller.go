@@ -17,7 +17,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
-	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 )
 
 const (
@@ -27,19 +27,19 @@ const (
 type MachineConfigReconciler struct {
 	base.AROController
 
-	dh dynamichelper.Interface
+	ch clienthelper.Interface
 }
 
 var rxARODNS = regexp.MustCompile("^99-(.*)-aro-dns$")
 
-func NewMachineConfigReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *MachineConfigReconciler {
+func NewMachineConfigReconciler(log *logrus.Entry, client client.Client, ch clienthelper.Interface) *MachineConfigReconciler {
 	return &MachineConfigReconciler{
 		AROController: base.AROController{
 			Log:    log,
 			Client: client,
 			Name:   MachineConfigControllerName,
 		},
-		dh: dh,
+		ch: ch,
 	}
 }
 
@@ -58,6 +58,13 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 
 	if instance.Spec.OperatorFlags.GetSimpleBoolean(operator.RestartDnsmasqEnabled) {
 		r.Log.Debug("restart dnsmasq machineconfig enabled")
+	}
+
+	allowReconcile, err := r.AllowRebootCausingReconciliation(ctx, instance)
+	if err != nil {
+		r.Log.Error(err)
+		r.SetDegraded(ctx, err)
+		return reconcile.Result{}, err
 	}
 
 	r.Log.Debug("running")
@@ -82,7 +89,7 @@ func (r *MachineConfigReconciler) Reconcile(ctx context.Context, request ctrl.Re
 		return reconcile.Result{}, nil
 	}
 
-	err = reconcileMachineConfigs(ctx, instance, r.dh, instance.Spec.OperatorFlags.GetSimpleBoolean(operator.RestartDnsmasqEnabled), *mcp)
+	err = reconcileMachineConfigs(ctx, instance, r.ch, r.Client, allowReconcile, instance.Spec.OperatorFlags.GetSimpleBoolean(operator.RestartDnsmasqEnabled), *mcp)
 	if err != nil {
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)
