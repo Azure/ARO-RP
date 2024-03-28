@@ -76,10 +76,13 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 
 	// Geneva allows anonymous pulls
 	var srcAuthGeneva *types.DockerAuthConfig
-	var errorOccurred bool
+
+	// We can lose visibility of early image mirroring errors because logs are trimmed in the output of Ev2 pipelines.
+	// If images fail to mirror, those errors need to be returned together and logged at the end of the execution.
+	var imageMirroringErrors []string
 
 	// Geneva mirroring from upstream only takes place in Public Cloud, in
-	// soverign clouds a separate mirror process mirrors from the public cloud
+	// sovereign clouds a separate mirror process mirrors from the public cloud
 	if env.Environment().Environment == azure.PublicCloud {
 		srcAcrGeneva := "linuxgeneva-microsoft" + acrDomainSuffix
 		mirrorImages := []string{
@@ -91,8 +94,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 			log.Printf("mirroring %s -> %s", ref, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref))
 			err = pkgmirror.Copy(ctx, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthGeneva)
 			if err != nil {
-				log.Errorf("%s: %s\n", ref, err)
-				errorOccurred = true
+				imageMirroringErrors = append(imageMirroringErrors, fmt.Sprintf("%s: %s\n", ref, err))
 			}
 		}
 	} else {
@@ -145,8 +147,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 
 		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuth)
 		if err != nil {
-			log.Errorf("%s: %s\n", ref, err)
-			errorOccurred = true
+			imageMirroringErrors = append(imageMirroringErrors, fmt.Sprintf("%s: %s\n", ref, err))
 		}
 	}
 
@@ -192,15 +193,14 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		log.Printf("mirroring release %s", release.Version)
 		err = pkgmirror.Mirror(ctx, log, dstAcr+acrDomainSuffix, release.Payload, dstAuth, srcAuthQuay)
 		if err != nil {
-			log.Errorf("%s: %s\n", release, err)
-			errorOccurred = true
+			imageMirroringErrors = append(imageMirroringErrors, fmt.Sprintf("%s: %s\n", release, err))
 		}
 	}
 
 	log.Print("done")
 
-	if errorOccurred {
-		return fmt.Errorf("an error occurred")
+	if imageMirroringErrors != nil {
+		return fmt.Errorf("failed to mirror image/s\n%s", strings.Join(imageMirroringErrors, "\n"))
 	}
 
 	return nil
