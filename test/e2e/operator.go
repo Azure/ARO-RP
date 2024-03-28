@@ -608,6 +608,26 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 		return names
 	}
 
+	AfterEach(func(ctx context.Context) {
+		// delete the MCP after, just in case
+		err := clients.MachineConfig.MachineconfigurationV1().MachineConfigPools().Delete(ctx, mcpName, metav1.DeleteOptions{})
+		if err != nil && !kerrors.IsNotFound(err) {
+			Expect(err).ToNot(HaveOccurred())
+		}
+
+		// reset the force reconciliation flag
+		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			co.Spec.OperatorFlags[operator.ForceReconciliation] = operator.FlagFalse
+			_, err = clients.AROClusters.AroV1alpha1().Clusters().Update(ctx, co, metav1.UpdateOptions{})
+			return err
+		})
+		Expect(err).NotTo(HaveOccurred())
+	})
+
 	It("must handle the lifetime of the `99-${MCP}-custom-dns MachineConfig for every MachineConfigPool ${MCP}", func(ctx context.Context) {
 		By("Create custom MachineConfigPool")
 		_, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigPools().Create(ctx, &customMcp, metav1.CreateOptions{})
@@ -631,7 +651,63 @@ var _ = Describe("ARO Operator - dnsmasq", func() {
 			machineConfigs := getMachineConfigNames(g, _ctx)
 			g.Expect(machineConfigs).NotTo(ContainElement(mcName))
 		}).WithContext(ctx).WithTimeout(timeout).WithPolling(polling).Should(Succeed())
+	})
 
+	It("must respect the forceReconciliation flag and not update MachineConfigs by default", func(ctx context.Context) {
+		By("Create custom MachineConfigPool")
+		_, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigPools().Create(ctx, &customMcp, metav1.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		By("should create an ARO DNS MachineConfig when creating a custom MachineConfigPool")
+		Eventually(func(g Gomega, _ctx context.Context) []string {
+			return getMachineConfigNames(g, _ctx)
+		}).WithContext(ctx).WithTimeout(timeout).WithPolling(polling).
+			Should(ContainElement(mcName))
+
+		By("updating the MachineConfig, it should not trigger a reconcile")
+		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			customMachineConfig, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigs().Get(ctx, mcName, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			customMachineConfig.ObjectMeta.Labels["testlabel"] = "testvalue"
+			_, err = clients.MachineConfig.MachineconfigurationV1().MachineConfigs().Update(ctx, customMachineConfig, metav1.UpdateOptions{})
+			return err
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		By("checking the machineconfig labels, we can see if it has reconciled")
+		Eventually(func(g Gomega, _ctx context.Context) map[string]string {
+			config, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigs().Get(ctx, mcName, metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			return config.Labels
+		}).WithContext(ctx).WithPolling(polling).WithTimeout(timeout).MustPassRepeatedly(3).Should(Equal(map[string]string{
+			"machineconfiguration.openshift.io/role": "custom",
+			"testlabel":                              "testvalue",
+		}))
+
+		By("updating the forceReconciliation flag, we can force a reconcile")
+		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			co, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			co.Spec.OperatorFlags[operator.ForceReconciliation] = operator.FlagTrue
+			_, err = clients.AROClusters.AroV1alpha1().Clusters().Update(ctx, co, metav1.UpdateOptions{})
+			return err
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		By("checking the machineconfig labels, we can see if our flag has been removed")
+		Eventually(func(g Gomega, _ctx context.Context) map[string]string {
+			config, err := clients.MachineConfig.MachineconfigurationV1().MachineConfigs().Get(ctx, mcName, metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			return config.Labels
+		}).WithContext(ctx).WithPolling(polling).WithTimeout(timeout).Should(Equal(map[string]string{
+			"machineconfiguration.openshift.io/role": "custom",
+		}))
 	})
 })
 
