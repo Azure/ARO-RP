@@ -18,7 +18,7 @@ require (
 	github.com/apparentlymart/go-cidr v1.1.0
 	github.com/codahale/etm v0.0.0-20141003032925-c00c9e6fb4c9
 	github.com/containers/image/v5 v5.29.2
-	github.com/containers/podman/v4 v4.9.3
+	github.com/containers/podman/v4 v4.9.4
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/coreos/go-semver v0.3.0
 	github.com/coreos/go-systemd/v22 v22.5.1-0.20231103132048-7d375ecc2b09
