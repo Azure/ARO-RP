@@ -21,8 +21,7 @@ The reason for calling script instead of directly calling:
 
 ```bash
 go get -u ./...
-go mod tidy -compat=1.20
-go mod vendor
+make go-verify
 ```
 
 is that packages modified in this script do not fully support modules and
@@ -43,8 +42,7 @@ the PR, one can simply call
 go get <module>@<release> OR
 go get -u <module>@<release>
 
-go mod tidy -compat=1.20
-go mod vendor
+make go-verify
 ```
 
 ---
