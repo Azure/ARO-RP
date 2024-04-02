@@ -40,6 +40,3 @@ for x in vendor/github.com/openshift/*; do
 done
 
 go get -u ./...
-
-go mod tidy -compat=1.20
-go mod vendor
