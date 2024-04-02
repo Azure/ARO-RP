@@ -89,7 +89,7 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
-			wantErr: `oh no!`,
+			wantErr: `400: [Action github.com/Azure/ARO-RP/pkg/util/steps.failingFunc]: encountered error: oh no!`,
 		},
 		{
 			name: "A successful condition will allow steps to continue",
@@ -171,7 +171,7 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
-			wantErr: "timed out waiting for the condition",
+			wantErr: "400: [Condition github.com/Azure/ARO-RP/pkg/util/steps.timingOutCondition, timeout 50ms]: encountered error: timed out waiting for the condition",
 		},
 		{
 			name: "A Condition that returns a timeout error causes a different failure from a timed out Condition",
@@ -201,7 +201,7 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
-			wantErr: "condition encountered internal timeout: timed out waiting for the condition",
+			wantErr: "400: [Condition github.com/Azure/ARO-RP/pkg/util/steps.internalTimeoutCondition, timeout 50ms]: encountered error: condition encountered internal timeout: timed out waiting for the condition",
 		},
 		{
 			name: "A Condition that does not return true in the timeout time causes a failure",
@@ -226,7 +226,7 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
-			wantErr: "timed out waiting for the condition",
+			wantErr: "400: [Condition github.com/Azure/ARO-RP/pkg/util/steps.alwaysFalseCondition, timeout 50ms]: encountered error: timed out waiting for the condition",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
