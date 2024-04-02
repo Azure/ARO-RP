@@ -4,12 +4,9 @@ package billing
 // Licensed under the Apache License 2.0.
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"net/http"
 	"os"
-	"strings"
 
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -85,7 +82,7 @@ func storageClient(env env.Interface, billing database.Billing, sub database.Sub
 }
 
 func (m *manager) Ensure(ctx context.Context, doc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument) error {
-	billingDoc, err := m.billingDB.Create(ctx, &api.BillingDocument{
+	_, err := m.billingDB.Create(ctx, &api.BillingDocument{
 		ID:                        doc.ID,
 		Key:                       doc.Key,
 		ClusterResourceGroupIDKey: doc.ClusterResourceGroupIDKey,
@@ -104,26 +101,17 @@ func (m *manager) Ensure(ctx context.Context, doc *api.OpenShiftClusterDocument,
 		return err
 	}
 
-	if e2eErr := m.createOrUpdateE2EBlob(ctx, billingDoc); e2eErr != nil {
-		m.log.Warnf("createOrUpdateE2EBlob failed: %s", e2eErr)
-	}
-
 	return nil
 }
 
 func (m *manager) Delete(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
 	m.log.Printf("updating billing record with deletion time")
-	billingDoc, err := m.billingDB.MarkForDeletion(ctx, doc.ID)
+	_, err := m.billingDB.MarkForDeletion(ctx, doc.ID)
 	if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil
 	}
 	if err != nil {
 		return err
-	}
-
-	if e2eErr := m.createOrUpdateE2EBlob(ctx, billingDoc); e2eErr != nil {
-		// We are not failing the operation if we cannot write to e2e storage account, just warning
-		m.log.Warnf("createOrUpdateE2EBlob failed: %s", e2eErr)
 	}
 
 	return nil
@@ -136,52 +124,4 @@ func isSubscriptionRegisteredForE2E(sub *api.SubscriptionProperties) bool {
 		return feature.IsRegisteredForFeature(sub, api.FeatureFlagSaveAROTestConfig)
 	}
 	return false
-}
-
-// createOrUpdateE2Eblob create a copy of the billing document in the e2e
-// storage account. This is used later on by the billing e2e
-func (m *manager) createOrUpdateE2EBlob(ctx context.Context, doc *api.BillingDocument) error {
-	//skip updating the storage account if this is a dev scenario
-	if m.storageClient == nil {
-		return nil
-	}
-
-	// Validate if E2E Feature is registered
-	resource, err := azure.ParseResourceID(doc.Key)
-	if err != nil {
-		return err
-	}
-
-	subscriptionDoc, err := m.subDB.Get(ctx, resource.SubscriptionID)
-	if err != nil {
-		return err
-	}
-
-	if !isSubscriptionRegisteredForE2E(subscriptionDoc.Subscription.Properties) {
-		return nil
-	}
-
-	blobclient := m.storageClient.GetBlobService()
-
-	containerName := strings.ToLower("bill-" + doc.Billing.Location + "-" + resource.ResourceGroup + "-" + resource.ResourceName)
-	if len(containerName) > 63 {
-		containerName = containerName[:63]
-	}
-
-	// The following is added to get rid of the '-' at the end in order to avoid an invalid container name.
-	containerName = strings.TrimSuffix(containerName, "-")
-
-	containerRef := blobclient.GetContainerReference(containerName)
-	_, err = containerRef.CreateIfNotExists(nil)
-	if err != nil {
-		return err
-	}
-
-	blobRef := containerRef.GetBlobReference("billingentity")
-	b, err := json.Marshal(doc)
-	if err != nil {
-		return err
-	}
-
-	return blobRef.CreateBlockBlobFromReader(bytes.NewReader(b), nil)
 }
