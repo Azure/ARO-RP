@@ -170,6 +170,8 @@ Once installer fork is ready, perform the following changes in the [ARO Installe
 1. Update `go mod edit -replace` calls in `hack/update-go-module-dependencies.sh` to use a new release-X.Y branch.
     * Make sure to read comments in the script.
 1. `make vendor`.
+    * Set the OCP release branch you would like to use for OCP dependencies in the Makefile (e.g., OCP_RELEASE_BRANCH ?= 4.15).
+      Otherwise, it will use OCP 4.10 release branch.
     * You most likely will have to make changes to the codebase at this point to adjust it to new versions of dependencies.
     * Also you likely will have to repeat this step several time until you resolve all conflicting dependencies.
       Follow `go mod` failures, which will tell you what module requires what other module.
