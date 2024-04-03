@@ -22,6 +22,7 @@ type GraphBaseServiceClient struct {
 }
 
 // Applications provides operations to manage the collection of application entities.
+// returns a *ApplicationsRequestBuilder when successful
 func (m *GraphBaseServiceClient) Applications() *ifc7ae6fb75d952477cad00b42c63b11b8c674355828ff1ba0e1b8bd380f51827.ApplicationsRequestBuilder {
 	return ifc7ae6fb75d952477cad00b42c63b11b8c674355828ff1ba0e1b8bd380f51827.NewApplicationsRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
 }
@@ -61,6 +62,7 @@ func NewGraphBaseServiceClient(requestAdapter i2ae4187f7daee263371cb1c977df63981
 }
 
 // ServicePrincipals provides operations to manage the collection of servicePrincipal entities.
+// returns a *ServicePrincipalsRequestBuilder when successful
 func (m *GraphBaseServiceClient) ServicePrincipals() *i50842935825402c554412d8c8453e6ff3db97093d4f614fff0d8372d844cb674.ServicePrincipalsRequestBuilder {
 	return i50842935825402c554412d8c8453e6ff3db97093d4f614fff0d8372d844cb674.NewServicePrincipalsRequestBuilderInternal(m.BaseRequestBuilder.PathParameters, m.BaseRequestBuilder.RequestAdapter)
 }

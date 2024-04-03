@@ -11,6 +11,84 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+## [1.5.6] - 2024-01-18
+
+### Changed
+
+- The input contains http or https which function will return an error. [#130](https://github.com/microsoft/kiota-abstractions-go/issues/130)
+
+## [1.5.5] - 2024-01-17
+
+### Changed
+
+- Fixed a bug where reseting properties to null would be impossible with the in memory backing store. [microsoftgraph/msgraph-sdk-go#643](https://github.com/microsoftgraph/msgraph-sdk-go/issues/643)
+
+## [1.5.4] - 2024-01-16
+
+### Changed
+
+- Fix bug where empty string query parameters are added to the request. [#133](https://github.com/microsoft/kiota-abstractions-go/issues/133)
+
+## [1.5.3] - 2023-11-24
+
+### Added
+
+- Added support for multi valued query and path parameters of type other than string. [#124](https://github.com/microsoft/kiota-abstractions-go/pull/124)
+
+## [1.5.2] - 2023-11-22
+
+### Added
+
+- Added ApiErrorable interface. [microsoft/kiota-http-go#110](https://github.com/microsoft/kiota-http-go/issues/110)
+
+## [1.5.1] - 2023-11-15
+
+### Added
+
+- Added support for query an path parameters of enum type. [microsoft/kiota#3693](https://github.com/microsoft/kiota/issues/3693)
+
+## [1.5.0] - 2023-11-08
+
+### Added
+
+- Added request information methods to reduce the amount of generated code.
+
+## [1.4.0] - 2023-11-01
+
+### Added
+
+- Added serialization helpers. [microsoft/kiota#3406](https://github.com/microsoft/kiota/issues/3406)
+
+## [1.3.1] - 2023-10-31
+
+### Changed
+
+- Fixed an issue where query parameters of type array of anything else than string would not be expanded properly. [#114](https://github.com/microsoft/kiota-abstractions-go/issues/114)
+
+## [1.3.0] - 2023-10-12
+
+### Added
+
+- Added an overload method to set binary content with their content type.
+
+## [1.2.3] - 2023-10-05
+
+### Added
+
+- A tryAdd method to RequestHeaders
+
+## [1.2.2] - 2023-09-21
+
+### Changed
+
+- Switched the RFC 6570 implementation to std-uritemplate
+
+## [1.2.1] - 2023-09-06
+
+### Changed
+
+- Fixed a bug where serialization registries would always replace existing values. [#95](https://github.com/microsoft/kiota-abstractions-go/issues/95)
+
 ## [1.2.0] - 2023-07-26
 
 ### Added

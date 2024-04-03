@@ -10,7 +10,6 @@ import (
 	i6a022527509c6c974d313985d6b1e1814af5796dab5da8f53d13c951e06bb0cd "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models"
 )
 
-// ItemAddPasswordPostRequestBody
 type ItemAddPasswordPostRequestBody struct {
 	// Stores model information.
 	backingStore ie8677ce2c7e1b4c22e9c3827ecd078d41185424dd9eeb92b7d971ed2d49a392e.BackingStore
@@ -24,16 +23,19 @@ func NewItemAddPasswordPostRequestBody() *ItemAddPasswordPostRequestBody {
 }
 
 // CreateItemAddPasswordPostRequestBodyFromDiscriminatorValue creates a new instance of the appropriate class based on discriminator value
+// returns a Parsable when successful
 func CreateItemAddPasswordPostRequestBodyFromDiscriminatorValue(parseNode i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) (i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable, error) {
 	return NewItemAddPasswordPostRequestBody(), nil
 }
 
-// GetBackingStore gets the backingStore property value. Stores model information.
+// GetBackingStore gets the BackingStore property value. Stores model information.
+// returns a BackingStore when successful
 func (m *ItemAddPasswordPostRequestBody) GetBackingStore() ie8677ce2c7e1b4c22e9c3827ecd078d41185424dd9eeb92b7d971ed2d49a392e.BackingStore {
 	return m.backingStore
 }
 
 // GetFieldDeserializers the deserialization information for the current model
+// returns a map[string]func(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode)(error) when successful
 func (m *ItemAddPasswordPostRequestBody) GetFieldDeserializers() map[string]func(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
 	res := make(map[string]func(i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error)
 	res["passwordCredential"] = func(n i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.ParseNode) error {
@@ -50,6 +52,7 @@ func (m *ItemAddPasswordPostRequestBody) GetFieldDeserializers() map[string]func
 }
 
 // GetPasswordCredential gets the passwordCredential property value. The passwordCredential property
+// returns a PasswordCredentialable when successful
 func (m *ItemAddPasswordPostRequestBody) GetPasswordCredential() i6a022527509c6c974d313985d6b1e1814af5796dab5da8f53d13c951e06bb0cd.PasswordCredentialable {
 	val, err := m.GetBackingStore().Get("passwordCredential")
 	if err != nil {
@@ -72,7 +75,7 @@ func (m *ItemAddPasswordPostRequestBody) Serialize(writer i878a80d2330e89d268963
 	return nil
 }
 
-// SetBackingStore sets the backingStore property value. Stores model information.
+// SetBackingStore sets the BackingStore property value. Stores model information.
 func (m *ItemAddPasswordPostRequestBody) SetBackingStore(value ie8677ce2c7e1b4c22e9c3827ecd078d41185424dd9eeb92b7d971ed2d49a392e.BackingStore) {
 	m.backingStore = value
 }
@@ -85,7 +88,6 @@ func (m *ItemAddPasswordPostRequestBody) SetPasswordCredential(value i6a02252750
 	}
 }
 
-// ItemAddPasswordPostRequestBodyable
 type ItemAddPasswordPostRequestBodyable interface {
 	ie8677ce2c7e1b4c22e9c3827ecd078d41185424dd9eeb92b7d971ed2d49a392e.BackedModel
 	i878a80d2330e89d26896388a3f487eef27b0a0e6c010c493bf80be1452208f91.Parsable
