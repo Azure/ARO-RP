@@ -18,6 +18,8 @@ GATEKEEPER_VERSION = v3.10.0
 GATEKEEPER_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/gatekeeper:$(GATEKEEPER_VERSION)
 GOTESTSUM = gotest.tools/gotestsum@v1.11.0
 
+OCP_RELEASE_BRANCH ?= 4.10
+
 ifneq ($(shell uname -s),Darwin)
     export CGO_CFLAGS=-Dgpgme_off_t=off_t
 endif
@@ -268,7 +270,7 @@ aks.kubeconfig:
 
 vendor:
 	# See comments in the script for background on why we need it
-	hack/update-go-module-dependencies.sh
+	hack/update-go-module-dependencies.sh ${OCP_RELEASE_BRANCH}
 
 install-go-tools:
 	go install ${GOTESTSUM}

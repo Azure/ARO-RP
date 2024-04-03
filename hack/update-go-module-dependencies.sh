@@ -20,6 +20,15 @@
 #	  dependency Bar at older commit which is
 #     not compatible with Bar@release-4.7.
 
+# Check if the first input argument exists
+if [ $# -ge 1 ]; then
+    OCP_RELEASE_BRANCH="$1"
+    echo "OCP_RELEASE_BRANCH environment variable set to the provided value: $OCP_RELEASE_BRANCH"
+else
+    OCP_RELEASE_BRANCH="4.10"
+    echo "No input argument provided. Setting OCP_RELEASE_BRANCH to default value: $OCP_RELEASE_BRANCH"
+fi
+
 for x in vendor/github.com/openshift/*; do
 	case $x in
 		# Review the list of special cases on each release.
@@ -34,7 +43,7 @@ for x in vendor/github.com/openshift/*; do
 			;;
 
 		*)
-			go mod edit -replace ${x##vendor/}=$(go list -mod=mod -m ${x##vendor/}@release-4.10 | sed -e 's/ /@/')
+			go mod edit -replace ${x##vendor/}=$(go list -mod=mod -m ${x##vendor/}@release-$OCP_RELEASE_BRANCH | sed -e 's/ /@/')
 			;;
 	esac
 done
