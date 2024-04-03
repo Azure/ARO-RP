@@ -415,6 +415,7 @@ type IngressProfile struct {
 	IP         string     `json:"ip,omitempty"`
 }
 
+// PlatformWorkloadIdentityProfile encapsulates all information that is specific to workload identity clusters.
 type PlatformWorkloadIdentityProfile struct {
 	PlatformWorkloadIdentities []PlatformWorkloadIdentity `json:"platformWorkloadIdentities,omitempty"`
 }

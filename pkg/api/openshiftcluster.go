@@ -251,6 +251,7 @@ const (
 	FipsValidatedModulesDisabled FipsValidatedModules = "Disabled"
 )
 
+// OIDCIssuer represents the URL of the managed OIDC issuer in a workload identity cluster.
 type OIDCIssuer string
 
 // ClusterProfile represents a cluster profile.
@@ -768,6 +769,7 @@ type HiveProfile struct {
 	CreatedByHive bool `json:"createdByHive,omitempty"`
 }
 
+// PlatformWorkloadIdentityProfile encapsulates all information that is specific to workload identity clusters.
 type PlatformWorkloadIdentityProfile struct {
 	MissingFields
 
