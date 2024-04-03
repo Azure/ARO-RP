@@ -155,13 +155,8 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		return fmt.Errorf("fp service principal id is not found")
 	}
 
-	c.log.Infof("creating AAD application")
-	appID, appSecret, err := c.createApplication(ctx, "aro-"+clusterName)
-	if err != nil {
-		return err
-	}
-
-	spID, err := c.createServicePrincipal(ctx, appID)
+	c.log.Infof("creating cluster service principal")
+	appID, appSecret, spID, err := c.getOrCreateClusterServicePrincipal(ctx, clusterName)
 	if err != nil {
 		return err
 	}
@@ -368,7 +363,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			errs = append(errs, err)
 		}
 
-		err = c.deleteApplication(ctx, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID)
+		err = c.cleanUpApplication(ctx, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID)
 		if err != nil {
 			errs = append(errs, err)
 		}

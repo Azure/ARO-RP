@@ -75,6 +75,8 @@ jobs:
 
           register_sub
 
+          export E2E_USE_EXISTING_APPLICATION_PREFIX="aro-v4-e2e-devops-spn-"
+
           make test-e2e -o e2e.test
         displayName: Execute Tests
         target: container
