@@ -1,11 +1,12 @@
 # Upstream differences
 
-This file catalogues the differences of install approach between ARO and
-upstream OCP.
+This file catalogues the differences of install approach between Azure Redhat Openshift (ARO) and
+upstream Openshift Container Platform (OCP).
 
 ## Installer carry patches
 
 1. Clone ARO and upstream repos:
+
     ```sh
     # clone our forked installer
     git clone https://github.com/openshift/installer-aro.git
@@ -15,7 +16,9 @@ upstream OCP.
     git remote add upstream https://github.com/openshift/installer.git
     git fetch upstream -a
     ```
-1. See carry patches from previous release:
+
+2. See carry patches from previous release:
+
     ```sh
     # list patches
     git log upstream/release-X.Y-1..origin/release-X.Y-1-azure
@@ -64,6 +67,7 @@ To support a new version of OpenShift on ARO, you will need to reconcile [upstre
 To bring new OCP release branch into ARO installer fork:
 
 1. If not done already, fetch our fork and upstream repos:
+
     ```sh
     # clone our forked installer
     # Alternatively, fork openshift/installer-aro and clone your fork
@@ -74,7 +78,9 @@ To bring new OCP release branch into ARO installer fork:
     git remote add upstream https://github.com/openshift/installer.git
     git fetch upstream -a
     ```
-1. Assess and document differences in X.Y and X.Y-1 in upstream
+
+2. Assess and document differences in X.Y and X.Y-1 in upstream
+
     ```sh
     # diff the upstream X.Y with X.Y-1 and search for architecture changes
     git diff upstream/release-X.Y-1 upstream/release-X.Y
@@ -82,20 +88,27 @@ To bring new OCP release branch into ARO installer fork:
     # pay particular attention to Terraform files, which may need to be moved into ARO's ARM templates
     git diff upstream/release-X.Y-1 upstream/release-X.Y */azure/*.tf
     ```
-2. Create a new X.Y release branch in our forked installer
+
+3. Create a new X.Y release branch in our forked installer
+
     ```sh
     # create a new release branch in the fork based on the upstream
     git checkout upstream/release-X.Y
     git checkout -b release-X.Y-azure
     ```
-3. If there is a golang version bump in this release, modify `./hack/build.sh` and `./hack/go-test.sh` with the new version, then verify these scripts still work and commit them
-4. Determine the patches you need to cherry-pick, based on the last (Y-1) release
+
+4. If there is a golang version bump in this release, modify `./hack/build.sh` and `./hack/go-test.sh` with the new version, then verify these scripts still work and commit them
+
+5. Determine the patches you need to cherry-pick, based on the last (Y-1) release
+
     ```sh
     # find commit shas to cherry-pick from last time
     git checkout release-X.Y-1-azure
     git log
     ```
-5. For every commit you need to cherry-pick (in-order), do:
+
+6. For every commit you need to cherry-pick (in-order), do:
+
     ```sh
     # WARNING: when you reach the commit for `commit data/assets_vfsdata.go`, look ahead
     git cherry-pick abc123 # may require manually fixing a merge
@@ -103,7 +116,9 @@ To bring new OCP release branch into ARO installer fork:
     ./hack/go-test.sh # fix any failures
     # if you had to manually merge, you can now `git cherry-pick --continue`
     ```
-    - When cherry-picking the specific patch `commit data/assets_vfsdata.go`, instead run:
+
+    * When cherry-picking the specific patch `commit data/assets_vfsdata.go`, instead run:
+
         ```sh
         git cherry-pick abc123 # may require manually fixing a merge
         ./hack/build.sh   # fix any failures
@@ -135,10 +150,12 @@ git pull upstream/release-X.Y --rebase=interactive
 When you get to the editor mode to set up your rebase, you should do a few things:
 
 1. after each `pick` line, add the verification commands with:
+
     ```text
     exec ./hack/build.sh
     exec ./hack/go-test.sh
     ```
+
 1. change the line for commit `data/assets_vfsdata.go` from `pick` to `edit` so you can regenerate assets as outlined [above](#update-installer-fork), and verify it manually.
 
 By the end of this editing process, you should have a rebase file that looks something like:
@@ -178,7 +195,7 @@ Once installer fork is ready, perform the following changes in the [ARO Installe
       You will probably need to look at the `go.mod` files of these modules and see whether they set own replace directives,
       as the script is likely to fail with something like this:
 
-      ```
+      ```golang
       go: github.com/openshift/installer@v0.16.1 requires
           github.com/openshift/cluster-api-provider-kubevirt@v0.0.0-20201214114543-e5aed9c73f1f requires
           kubevirt.io/client-go@v0.0.0-00010101000000-000000000000: invalid version: unknown revision 000000000000
@@ -200,7 +217,7 @@ In the ARO-RP codebase:
 1. The list of the hard-coded namespaces in `pkg/util/namespace/namespace.go` needs to be updated regularly as every
    minor version of upstream OCP introduces a new namespace or two.
 
-
 Publish RHCOS image to the Azure Cloud Partner Portal:
+
 1. Publish RHCOS image. See [this document](https://github.com/openshift/installer-aro-wrapper/blob/main/docs/publish-rhcos-image.md).
-1. After this point, you should be able to create a dev cluster using the RP and it should use the new release.
+2. After this point, you should be able to create a dev cluster using the RP and it should use the new release.
