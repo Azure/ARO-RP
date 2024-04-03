@@ -97,7 +97,7 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 			steps: []steps.Step{
 				steps.Action(failingFunc),
 			},
-			wantErr: "400: [Action github.com/Azure/ARO-RP/pkg/cluster.failingFunc]: encountered error: oh no!",
+			wantErr: "oh no!",
 			wantEntries: []map[string]types.GomegaMatcher{
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
@@ -133,7 +133,7 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 			steps: []steps.Step{
 				steps.Action(failingFunc),
 			},
-			wantErr: "400: [Action github.com/Azure/ARO-RP/pkg/cluster.failingFunc]: encountered error: oh no!",
+			wantErr: "oh no!",
 			wantEntries: []map[string]types.GomegaMatcher{
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
