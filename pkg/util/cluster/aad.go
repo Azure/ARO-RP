@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/davecgh/go-spew/spew"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
@@ -60,6 +61,11 @@ func (c *Cluster) createApplication(ctx context.Context, displayName string) (ms
 	appBody.SetDisplayName(&displayName)
 	appResult, err := c.spGraphClient.Applications().Post(ctx, appBody, nil)
 	if err != nil {
+		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
+			c.log.Error(spew.Sdump(oDataError.GetErrorEscaped()))
+		} else {
+			c.log.Error(err)
+		}
 		return nil, err
 	}
 	return appResult, nil
@@ -75,6 +81,11 @@ func (c *Cluster) getExistingApplication(ctx context.Context, prefix string) (ms
 
 	getAppsResponse, err := c.spGraphClient.Applications().Get(ctx, getAppOptions)
 	if err != nil {
+		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
+			c.log.Error(spew.Sdump(oDataError.GetErrorEscaped()))
+		} else {
+			c.log.Error(err)
+		}
 		return nil, err
 	}
 
@@ -106,6 +117,11 @@ func (c *Cluster) addPasswordCredentialToApplication(ctx context.Context, app ms
 	// https://learn.microsoft.com/en-us/graph/api/application-addpassword?view=graph-rest-1.0&tabs=http#http-request
 	pwResult, err := c.spGraphClient.Applications().ByApplicationId(*id).AddPassword().Post(ctx, pwCredentialRequestBody, nil)
 	if err != nil {
+		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
+			c.log.Error(spew.Sdump(oDataError.GetErrorEscaped()))
+		} else {
+			c.log.Error(err)
+		}
 		return "", err
 	}
 
@@ -144,6 +160,11 @@ func (c *Cluster) createServicePrincipal(ctx context.Context, appID string) (str
 		return err == nil, err
 	}, timeoutCtx.Done())
 	if err != nil {
+		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
+			c.log.Error(spew.Sdump(oDataError.GetErrorEscaped()))
+		} else {
+			c.log.Error(err)
+		}
 		return "", err
 	}
 
@@ -160,6 +181,11 @@ func (c *Cluster) cleanUpApplication(ctx context.Context, appID string) error {
 	}
 	result, err := c.spGraphClient.Applications().Get(ctx, requestConfiguration)
 	if err != nil {
+		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
+			c.log.Error(spew.Sdump(oDataError.GetErrorEscaped()))
+		} else {
+			c.log.Error(err)
+		}
 		return err
 	}
 
@@ -173,9 +199,19 @@ func (c *Cluster) cleanUpApplication(ctx context.Context, appID string) error {
 			c.log.Print("cleaning up cluster resources on application to allow reuse")
 			spObjID, err := utilgraph.GetServicePrincipalIDByAppID(ctx, c.spGraphClient, appID)
 			if err != nil {
+				if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
+					c.log.Error(spew.Sdump(oDataError.GetErrorEscaped()))
+				} else {
+					c.log.Error(err)
+				}
 				return err
 			}
 			if err = c.spGraphClient.ServicePrincipals().ByServicePrincipalId(*spObjID).Delete(ctx, nil); err != nil {
+				if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
+					c.log.Error(spew.Sdump(oDataError.GetErrorEscaped()))
+				} else {
+					c.log.Error(err)
+				}
 				return err
 			}
 
@@ -187,6 +223,11 @@ func (c *Cluster) cleanUpApplication(ctx context.Context, appID string) error {
 				// the application's Object ID, not to the Application ID.
 				// https://learn.microsoft.com/en-us/graph/api/application-delete?view=graph-rest-1.0&tabs=http#http-request
 				if err := c.spGraphClient.Applications().ByApplicationId(*getAppsResponse[0].GetId()).RemovePassword().Post(ctx, removePasswordRequestBody, nil); err != nil {
+					if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
+						c.log.Error(spew.Sdump(oDataError.GetErrorEscaped()))
+					} else {
+						c.log.Error(err)
+					}
 					return err
 				}
 			}
@@ -197,7 +238,16 @@ func (c *Cluster) cleanUpApplication(ctx context.Context, appID string) error {
 			// ByApplicationId is confusingly named, but it refers to
 			// the application's Object ID, not to the Application ID.
 			// https://learn.microsoft.com/en-us/graph/api/application-delete?view=graph-rest-1.0&tabs=http#http-request
-			return c.spGraphClient.Applications().ByApplicationId(*getAppsResponse[0].GetId()).Delete(ctx, nil)
+			if err := c.spGraphClient.Applications().ByApplicationId(*getAppsResponse[0].GetId()).Delete(ctx, nil); err != nil {
+				if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
+					c.log.Error(spew.Sdump(oDataError.GetErrorEscaped()))
+				} else {
+					c.log.Error(err)
+				}
+				return err
+			}
+
+			return nil
 		}
 	default:
 		return fmt.Errorf("%d applications found for appId %s", len(getAppsResponse), appID)
