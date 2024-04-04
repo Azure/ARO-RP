@@ -130,9 +130,11 @@ mkdir -p /root/.docker
 REGISTRY_AUTH_FILE=/root/.docker/config.json az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
 
 MDMIMAGE="${RPIMAGE%%/*}/${MDMIMAGE##*/}"
+MISEIMAGE="${RPIMAGE%%/*}/${MISEIMAGE##*/}"
 docker pull "$MDMIMAGE"
 docker pull "$RPIMAGE"
 docker pull "$FLUENTBITIMAGE"
+docker pull "$MISEIMAGE"
 
 az logout
 
@@ -264,6 +266,110 @@ StartLimitInterval=0
 WantedBy=multi-user.target
 EOF
 
+LOGININSTANCE="https://login.microsoftonline.com"
+LOGINURL="https://login.windows.net/"
+if [[ $AZURECLOUDNAME == "AzureUSGovernment" ]]; then
+  LOGINURL="https://login.microsoftonline.us"
+fi
+
+mkdir -p /app/mise
+echo "configuring MISE service"
+cat >/etc/sysconfig/mise <<EOF
+AZURECLOUDNAME='$AZURECLOUDNAME'
+ARMCLIENTID='$ARMCLIENTID'
+FPCLIENTID='$FPCLIENTID'
+FPTENANTID='$FPTENANTID'
+MISEIMAGE='$MISEIMAGE'
+MISELOGLEVEL='$MISELOGLEVEL'
+MISE_ADDRESS='$MISEADDRESS'
+MISEALLOWEDHOSTS='$MISEALLOWEDHOSTS'
+MISEVALIDAUDIENCES='$MISEVALIDAUDIENCES'
+MISEVALIDAPPIDS='$MISEVALIDAPPIDS'
+LOGININSTANCE='$LOGININSTANCE'
+LOGINURL='$LOGINURL'
+EOF
+
+cat >/app/appsettings.json <<EOF
+{
+    "Version": "1",
+    "HeartbeatIntervalMs": 5000,
+    "AzureAd": {
+        "Instance": "$LOGININSTANCE",
+        "ClientId": "$FPCLIENTID",
+        "TenantId": "$FPTENANTID",
+        "MinimumDataClassificationCategory": "SystemMetadata",
+        "InboundPolicies": [
+            {
+                "Label": "arorp-arm-inbound-policy",
+                "Authority": "$LOGINURL/$FPTENANTID/v2.0",
+                "AuthenticationSchemes": [
+                    "PoP"
+                ],
+                "ValidAudiences": $MISEVALIDAUDIENCES,
+                "SignedHttpRequestValidationPolicy": {
+                    "ValidateTs": true,
+                    "ValidateM": true,
+                    "ValidateU": true,
+                    "ValidateP": true
+                }
+                "ValidApplicationIds": $MISEVALIDAPPIDS
+            }
+        ],
+        "Logging": {
+            "LogLevel": "$MISELOGLEVEL"
+        },
+        "Modules": {
+            "TrV2": {
+                "ModuleType": "TrV2Module",
+                "Enabled": true
+            }
+        }
+    },
+    "AllowedHosts": "$MISEALLOWEDHOSTS",
+    "Kestrel": {
+        "Endpoints": {
+            "Http": {
+                "Url": "$MISEADDRESS"
+            }
+        }
+    },
+    "Logging": {
+        "LogLevel": {
+            "Default": "$MISELOGLEVEL",
+            "Microsoft": "$MISELOGLEVEL",
+            "Microsoft.Hosting.Lifetime": "$MISELOGLEVEL"
+        }
+    }
+}
+EOF
+
+cat >/etc/systemd/system/mise.service <<'EOF'
+[Unit]
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+RestartSec=1s
+EnvironmentFile=/etc/sysconfig/mise
+ExecStartPre=-/usr/bin/docker rm -f %N
+ExecStart=/usr/bin/docker run \
+  -p 5000:5000 \
+  -v /app/appsettings.json:/app/appsettings.json \
+  --hostname %H \
+  --name %N \
+  --net=host \
+  --rm \
+  $MISEIMAGE
+ExecStop=/usr/bin/docker stop %N
+Restart=always
+RestartSec=3
+StartLimitInterval=0
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
 echo "configuring aro-rp service"
 cat >/etc/sysconfig/aro-rp <<EOF
 ACR_RESOURCE_ID='$ACRRESOURCEID'
@@ -286,12 +392,14 @@ KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=RP
 MDSD_ENVIRONMENT='$MDSDENVIRONMENT'
+MISE_ADDRESS='$MISEADDRESS'
 RP_FEATURES='$RPFEATURES'
 RPIMAGE='$RPIMAGE'
 ARO_INSTALL_VIA_HIVE='$CLUSTERSINSTALLVIAHIVE'
 ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC='$CLUSTERDEFAULTINSTALLERPULLSPEC'
 ARO_ADOPT_BY_HIVE='$CLUSTERSADOPTBYHIVE'
 USE_CHECKACCESS='$USECHECKACCESS'
+ARO_MISE_AUTH_ENABLED='$ARO_MISE_AUTH_ENABLED'
 EOF
 
 cat >/etc/systemd/system/aro-rp.service <<'EOF'
@@ -680,7 +788,7 @@ cat >/etc/default/vsa-nodescan-agent.config <<EOF
 EOF
 
 echo "enabling aro services"
-for service in aro-dbtoken aro-monitor aro-portal aro-rp auoms azsecd azsecmond mdsd mdm chronyd fluentbit; do
+for service in aro-dbtoken aro-monitor aro-portal aro-rp mise auoms azsecd azsecmond mdsd mdm chronyd fluentbit; do
   systemctl enable $service.service
 done
 
