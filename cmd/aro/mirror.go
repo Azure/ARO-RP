@@ -103,8 +103,8 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 
 	for _, ref := range []string{
 
-		// https://mcr.microsoft.com/en-us/product/cbl-mariner/base/azure-cli/about
-		"mcr.microsoft.com/cbl-mariner/base/azure-cli:2",
+		// https://mcr.microsoft.com/en-us/product/azure-cli/about
+		"mcr.microsoft.com/azure-cli:cbl-mariner2.0",
 
 		// https://catalog.redhat.com/software/containers/rhel8/support-tools/5ba3eaf9bed8bd6ee819b78b
 		// https://catalog.redhat.com/software/containers/rhel9/support-tools/615be213075b022acc111bf9
