@@ -1522,7 +1522,8 @@ func (pwi PlatformWorkloadIdentity) MarshalJSON() ([]byte, error) {
 	return json.Marshal(objectMap)
 }
 
-// PlatformWorkloadIdentityProfile ...
+// PlatformWorkloadIdentityProfile platformWorkloadIdentityProfile encapsulates all information that is
+// specific to workload identity clusters.
 type PlatformWorkloadIdentityProfile struct {
 	PlatformWorkloadIdentities *[]PlatformWorkloadIdentity `json:"platformWorkloadIdentities,omitempty"`
 }

@@ -1301,7 +1301,7 @@ class PlatformWorkloadIdentity(msrest.serialization.Model):
 
 
 class PlatformWorkloadIdentityProfile(msrest.serialization.Model):
-    """PlatformWorkloadIdentityProfile.
+    """PlatformWorkloadIdentityProfile encapsulates all information that is specific to workload identity clusters.
 
     :ivar platform_workload_identities:
     :vartype platform_workload_identities:
