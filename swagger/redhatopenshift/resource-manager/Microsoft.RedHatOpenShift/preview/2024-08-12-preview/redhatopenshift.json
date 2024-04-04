@@ -2346,6 +2346,7 @@
       }
     },
     "PlatformWorkloadIdentityProfile": {
+      "description": "PlatformWorkloadIdentityProfile encapsulates all information that is specific to workload identity clusters.",
       "type": "object",
       "properties": {
         "platformWorkloadIdentities": {
