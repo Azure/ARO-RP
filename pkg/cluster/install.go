@@ -47,6 +47,7 @@ func (m *manager) adminUpdate() []steps.Step {
 	isEverything := task == api.MaintenanceTaskEverything || task == ""
 	isOperator := task == api.MaintenanceTaskOperator
 	isRenewCerts := task == api.MaintenanceTaskRenewCerts
+	isSyncClusterObject := task == api.MaintenanceTaskSyncClusterObject
 
 	// Generic fix-up or setup actions that are fairly safe to always take, and
 	// don't require a running cluster
@@ -123,7 +124,7 @@ func (m *manager) adminUpdate() []steps.Step {
 		)
 	}
 
-	if isEverything || isOperator || isRenewCerts {
+	if isEverything || isOperator || isRenewCerts || isSyncClusterObject {
 		toRun = append(toRun,
 			steps.Action(m.initializeOperatorDeployer))
 	}
@@ -140,6 +141,10 @@ func (m *manager) adminUpdate() []steps.Step {
 			steps.Action(m.ensureAROOperator),
 			steps.Condition(m.aroDeploymentReady, 20*time.Minute, true),
 			steps.Condition(m.ensureAROOperatorRunningDesiredVersion, 5*time.Minute, true),
+		)
+	} else if isSyncClusterObject && m.shouldUpdateOperator() {
+		toRun = append(toRun,
+			steps.Action(m.syncOnlyClusterObject),
 		)
 	}
 

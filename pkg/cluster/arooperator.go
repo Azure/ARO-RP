@@ -39,6 +39,14 @@ func (m *manager) ensureAROOperator(ctx context.Context) error {
 	return err
 }
 
+func (m *manager) syncOnlyClusterObject(ctx context.Context) error {
+	err := m.aroOperatorDeployer.SyncClusterObject(ctx)
+	if err != nil {
+		m.log.Errorf("cannot ensureAROOperator.SyncClusterObject: %s", err.Error())
+	}
+	return err
+}
+
 func (m *manager) aroDeploymentReady(ctx context.Context) (bool, error) {
 	if !m.isIngressProfileAvailable() {
 		// If the ingress profile is not available, ARO operator update/deploy will fail.

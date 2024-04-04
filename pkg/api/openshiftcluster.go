@@ -199,9 +199,10 @@ const (
 	// Maintenance tasks that perform work on the cluster
 	//
 
-	MaintenanceTaskEverything MaintenanceTask = "Everything"
-	MaintenanceTaskOperator   MaintenanceTask = "OperatorUpdate"
-	MaintenanceTaskRenewCerts MaintenanceTask = "CertificatesRenewal"
+	MaintenanceTaskEverything        MaintenanceTask = "Everything"
+	MaintenanceTaskOperator          MaintenanceTask = "OperatorUpdate"
+	MaintenanceTaskRenewCerts        MaintenanceTask = "CertificatesRenewal"
+	MaintenanceTaskSyncClusterObject MaintenanceTask = "SyncClusterObject"
 
 	//
 	// Maintenance tasks for updating customer maintenance signals
