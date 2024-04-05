@@ -219,13 +219,13 @@ get_cluster_sp() {
     echo "########## Downloading SP secrets ##########"
 
     az keyvault secret download --vault-name=aro-e2e-principals \
-        --id=aro-v4-e2e-devops-spn-1-app-id \
+        --name=aro-v4-e2e-devops-spn-1-app-id \
         --file=secrets/app-id
     az keyvault secret download --vault-name=aro-e2e-principals \
-        --id=aro-v4-e2e-devops-spn-1-sp-id \
+        --name=aro-v4-e2e-devops-spn-1-sp-id \
         --file=secrets/sp-id
     az keyvault secret download --vault-name=aro-e2e-principals \
-        --id=aro-v4-e2e-devops-spn-1-secret-value \
+        --name=aro-v4-e2e-devops-spn-1-secret-value \
         --file=secrets/secret-value
 
     echo "\nexport AZURE_CLUSTER_SERVICE_PRINCIPAL_ID=" >>secrets/env
