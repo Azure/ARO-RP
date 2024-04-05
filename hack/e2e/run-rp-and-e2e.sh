@@ -228,13 +228,13 @@ get_cluster_sp() {
         --name=aro-v4-e2e-devops-spn-1-secret-value \
         --file=secrets/secret-value
 
-    echo "\\nexport AZURE_CLUSTER_SERVICE_PRINCIPAL_ID=\'" >>secrets/env
+    echo -e -n "\nexport AZURE_CLUSTER_SERVICE_PRINCIPAL_ID=\'" >>secrets/env
     cat secrets/sp-id >>secrets/env
-    echo "\'\\nexport AZURE_CLUSTER_APP_ID=\'" >>secrets/env
+    echo -e -n "\'\nexport AZURE_CLUSTER_APP_ID=\'" >>secrets/env
     cat secrets/app-id >>secrets/env
-    echo "\'\\nexport AZURE_CLUSTER_APP_SECRET=\'" >>secrets/env
+    echo -e -n "\'\nexport AZURE_CLUSTER_APP_SECRET=\'" >>secrets/env
     cat secrets/secret-value >>secrets/env
-    echo "\'\\n" >>secrets/env
+    echo -e -n "\'\n" >>secrets/env
 }
 
 # TODO: CLUSTER and is also recalculated in multiple places
