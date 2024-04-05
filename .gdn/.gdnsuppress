@@ -225,20 +225,6 @@
       "expirationDate": null,
       "type": null
     },
-    "20cd31403587ea29d121d28ac3ef7d9b6a7b922baaf817f79ba4ccf0d5730b43": {
-      "signature": "20cd31403587ea29d121d28ac3ef7d9b6a7b922baaf817f79ba4ccf0d5730b43",
-      "alternativeSignatures": [],
-      "target": "portal/v1/build/main.js.LICENSE.txt",
-      "memberOf": [
-        "default"
-      ],
-      "tool": "policheck",
-      "ruleId": "166862",
-      "justification": null,
-      "createdDate": "2022-07-14 16:28:44Z",
-      "expirationDate": null,
-      "type": null
-    },
     "9c277a79f4467e0f7fc8eaeac774f9680776f80a1acfee7a0e3331dde2f7ef6d": {
       "signature": "9c277a79f4467e0f7fc8eaeac774f9680776f80a1acfee7a0e3331dde2f7ef6d",
       "alternativeSignatures": [],
