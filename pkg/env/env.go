@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/proxy"
@@ -123,10 +124,12 @@ func IsCI() bool {
 // if it does not exist an environment variable with that name, it will return an error.
 // Otherwise it returns nil.
 func ValidateVars(vars ...string) error {
+	var err error
+
 	for _, envName := range vars {
 		if envValue, found := os.LookupEnv(envName); !found || envValue == "" {
-			return fmt.Errorf("environment variable %q unset", envName)
+			err = multierror.Append(fmt.Errorf("environment variable %q unset", envName), err)
 		}
 	}
-	return nil
+	return err
 }

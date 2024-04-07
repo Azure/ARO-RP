@@ -112,6 +112,10 @@
    OR use the create utility:
 
    ```bash
+   # Create the application to run the cluster as and load it
+   CLUSTER=<cluster-name> go run ./hack/cluster createapp
+   source clusterapp.env
+   # Create the cluster
    CLUSTER=<cluster-name> go run ./hack/cluster create
    ```
 
@@ -119,6 +123,7 @@
 
    ```bash
    CLUSTER=<cluster-name> go run ./hack/cluster delete
+   CLUSTER=<cluster-name> go run ./hack/cluster deleteapp
    ```
 
    By default, a public cluster will be created. In order to create a private cluster, set the `PRIVATE_CLUSTER` environment variable to `true` prior to creation. Internet access from the cluster can also be restricted by setting the `NO_INTERNET` environment variable to `true`.

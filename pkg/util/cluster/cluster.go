@@ -139,6 +139,33 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 	return c, nil
 }
 
+func (c *Cluster) CreateApp(ctx context.Context, clusterName string) error {
+	c.log.Infof("creating AAD application")
+	appID, appSecret, err := c.createApplication(ctx, "aro-"+clusterName)
+	if err != nil {
+		return err
+	}
+
+	c.log.Infof("creating service principal")
+	spID, err := c.createServicePrincipal(ctx, appID)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile("clusterapp.env", []byte(fmt.Sprintf("AZURE_CLUSTER_SERVICE_PRINCIPAL_ID=%s\nAZURE_CLUSTER_APP_ID=%s\nAZURE_CLUSTER_APP_SECRET=%s", spID, appID, appSecret)), 0o600)
+}
+
+func (c *Cluster) DeleteApp(ctx context.Context) error {
+	err := env.ValidateVars(
+		"AZURE_CLUSTER_APP_ID",
+	)
+	if err != nil {
+		return err
+	}
+
+	return c.deleteApplication(ctx, os.Getenv("AZURE_CLUSTER_APP_ID"))
+}
+
 func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName string, osClusterVersion string) error {
 	clusterGet, err := c.openshiftclustersv20220904.Get(ctx, vnetResourceGroup, clusterName)
 	if err == nil {
@@ -149,22 +176,20 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		return nil
 	}
 
+	err = env.ValidateVars(
+		"AZURE_FP_SERVICE_PRINCIPAL_ID",
+		"AZURE_CLUSTER_SERVICE_PRINCIPAL_ID",
+		"AZURE_CLUSTER_APP_ID",
+		"AZURE_CLUSTER_APP_SECRET",
+	)
+	if err != nil {
+		return err
+	}
+
 	fpSPID := os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")
-
-	if fpSPID == "" {
-		return fmt.Errorf("fp service principal id is not found")
-	}
-
-	c.log.Infof("creating AAD application")
-	appID, appSecret, err := c.createApplication(ctx, "aro-"+clusterName)
-	if err != nil {
-		return err
-	}
-
-	spID, err := c.createServicePrincipal(ctx, appID)
-	if err != nil {
-		return err
-	}
+	spID := os.Getenv("AZURE_CLUSTER_SERVICE_PRINCIPAL_ID")
+	appID := os.Getenv("AZURE_CLUSTER_APP_ID")
+	appSecret := os.Getenv("AZURE_CLUSTER_APP_SECRET")
 
 	visibility := api.VisibilityPublic
 
@@ -194,9 +219,6 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	}
 
 	addressPrefix, masterSubnet, workerSubnet := c.generateSubnets()
-	if err != nil {
-		return err
-	}
 
 	var kvName string
 	if len(vnetResourceGroup) > 10 {
@@ -364,12 +386,8 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 
 	oc, err := c.openshiftclustersv20200430.Get(ctx, vnetResourceGroup, clusterName)
 	if err == nil {
+		c.log.Print("deleting role assignments")
 		err = c.deleteRoleAssignments(ctx, vnetResourceGroup, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID)
-		if err != nil {
-			errs = append(errs, err)
-		}
-
-		err = c.deleteApplication(ctx, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID)
 		if err != nil {
 			errs = append(errs, err)
 		}
