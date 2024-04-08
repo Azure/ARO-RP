@@ -24,27 +24,29 @@ type OpenShiftCluster struct {
 	Location   string                     `json:"location,omitempty"`
 	Tags       map[string]string          `json:"tags,omitempty"`
 	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
+	Identity   *Identity                  `json:"identity,omitempty"`
 }
 
 // OpenShiftClusterProperties represents an OpenShift cluster's properties.
 type OpenShiftClusterProperties struct {
-	ArchitectureVersion     ArchitectureVersion     `json:"architectureVersion"` // ArchitectureVersion is int so 0 is valid value to be returned
-	ProvisioningState       ProvisioningState       `json:"provisioningState,omitempty"`
-	LastProvisioningState   ProvisioningState       `json:"lastProvisioningState,omitempty"`
-	FailedProvisioningState ProvisioningState       `json:"failedProvisioningState,omitempty"`
-	LastAdminUpdateError    string                  `json:"lastAdminUpdateError,omitempty"`
-	MaintenanceTask         MaintenanceTask         `json:"maintenanceTask,omitempty" mutable:"true"`
-	OperatorFlags           OperatorFlags           `json:"operatorFlags,omitempty" mutable:"true"`
-	OperatorVersion         string                  `json:"operatorVersion,omitempty" mutable:"true"`
-	CreatedAt               time.Time               `json:"createdAt,omitempty"`
-	CreatedBy               string                  `json:"createdBy,omitempty"`
-	ProvisionedBy           string                  `json:"provisionedBy,omitempty"`
-	ClusterProfile          ClusterProfile          `json:"clusterProfile,omitempty"`
-	FeatureProfile          FeatureProfile          `json:"featureProfile,omitempty"`
-	ConsoleProfile          ConsoleProfile          `json:"consoleProfile,omitempty"`
-	ServicePrincipalProfile ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
-	NetworkProfile          NetworkProfile          `json:"networkProfile,omitempty"`
-	MasterProfile           MasterProfile           `json:"masterProfile,omitempty"`
+	ArchitectureVersion             ArchitectureVersion              `json:"architectureVersion"` // ArchitectureVersion is int so 0 is valid value to be returned
+	ProvisioningState               ProvisioningState                `json:"provisioningState,omitempty"`
+	LastProvisioningState           ProvisioningState                `json:"lastProvisioningState,omitempty"`
+	FailedProvisioningState         ProvisioningState                `json:"failedProvisioningState,omitempty"`
+	LastAdminUpdateError            string                           `json:"lastAdminUpdateError,omitempty"`
+	MaintenanceTask                 MaintenanceTask                  `json:"maintenanceTask,omitempty" mutable:"true"`
+	OperatorFlags                   OperatorFlags                    `json:"operatorFlags,omitempty" mutable:"true"`
+	OperatorVersion                 string                           `json:"operatorVersion,omitempty" mutable:"true"`
+	CreatedAt                       time.Time                        `json:"createdAt,omitempty"`
+	CreatedBy                       string                           `json:"createdBy,omitempty"`
+	ProvisionedBy                   string                           `json:"provisionedBy,omitempty"`
+	ClusterProfile                  ClusterProfile                   `json:"clusterProfile,omitempty"`
+	FeatureProfile                  FeatureProfile                   `json:"featureProfile,omitempty"`
+	ConsoleProfile                  ConsoleProfile                   `json:"consoleProfile,omitempty"`
+	ServicePrincipalProfile         ServicePrincipalProfile          `json:"servicePrincipalProfile,omitempty"`
+	PlatformWorkloadIdentityProfile *PlatformWorkloadIdentityProfile `json:"platformWorkloadIdentityProfile,omitempty"`
+	NetworkProfile                  NetworkProfile                   `json:"networkProfile,omitempty"`
+	MasterProfile                   MasterProfile                    `json:"masterProfile,omitempty"`
 	// WorkerProfiles is used to store the worker profile data that was sent in the api request
 	WorkerProfiles []WorkerProfile `json:"workerProfiles,omitempty"`
 	// WorkerProfilesStatus is used to store the enriched worker profile data
@@ -75,6 +77,9 @@ const (
 
 // FipsValidatedModules determines if FIPS is used.
 type FipsValidatedModules string
+
+// OIDCIssuer represents the URL of the managed OIDC issuer in a workload identity cluster.
+type OIDCIssuer string
 
 // FipsValidatedModules constants.
 const (
@@ -129,6 +134,7 @@ type ClusterProfile struct {
 	Version              string               `json:"version,omitempty"`
 	ResourceGroupID      string               `json:"resourceGroupId,omitempty"`
 	FipsValidatedModules FipsValidatedModules `json:"fipsValidatedModules,omitempty"`
+	OIDCIssuer           OIDCIssuer           `json:"oidcIssuer,omitempty"`
 }
 
 // FeatureProfile represents a feature profile.
@@ -407,6 +413,34 @@ type IngressProfile struct {
 	Name       string     `json:"name,omitempty"`
 	Visibility Visibility `json:"visibility,omitempty"`
 	IP         string     `json:"ip,omitempty"`
+}
+
+// PlatformWorkloadIdentityProfile encapsulates all information that is specific to workload identity clusters.
+type PlatformWorkloadIdentityProfile struct {
+	PlatformWorkloadIdentities []PlatformWorkloadIdentity `json:"platformWorkloadIdentities,omitempty"`
+}
+
+// PlatformWorkloadIdentity stores information representing a single workload identity.
+type PlatformWorkloadIdentity struct {
+	OperatorName string `json:"operatorName,omitempty"`
+	ResourceID   string `json:"resourceId,omitempty"`
+	ClientID     string `json:"clientId,omitempty" swagger:"readOnly"`
+	ObjectID     string `json:"objectId,omitempty" swagger:"readOnly"`
+}
+
+// ClusterUserAssignedIdentity stores information about a user-assigned managed identity in a predefined format required by Microsoft's Managed Identity team.
+type ClusterUserAssignedIdentity struct {
+	ClientID    string `json:"clientId,omitempty"`
+	PrincipalID string `json:"principalId,omitempty"`
+}
+
+// UserAssignedIdentities stores a mapping from resource IDs of managed identities to their client/principal IDs.
+type UserAssignedIdentities map[string]ClusterUserAssignedIdentity
+
+// Identity stores information about the cluster MSI(s) in a workload identity cluster.
+type Identity struct {
+	Type                   string                 `json:"type,omitempty"`
+	UserAssignedIdentities UserAssignedIdentities `json:"userAssignedIdentities,omitempty"`
 }
 
 // Install represents an install process.

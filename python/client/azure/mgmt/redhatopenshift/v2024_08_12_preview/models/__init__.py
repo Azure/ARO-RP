@@ -18,9 +18,11 @@ try:
     from ._models_py3 import APIServerProfile
     from ._models_py3 import CloudErrorBody
     from ._models_py3 import ClusterProfile
+    from ._models_py3 import ClusterUserAssignedIdentity
     from ._models_py3 import ConsoleProfile
     from ._models_py3 import Display
     from ._models_py3 import EffectiveOutboundIP
+    from ._models_py3 import Identity
     from ._models_py3 import IngressProfile
     from ._models_py3 import LoadBalancerProfile
     from ._models_py3 import MachinePool
@@ -38,6 +40,8 @@ try:
     from ._models_py3 import OpenShiftVersionList
     from ._models_py3 import Operation
     from ._models_py3 import OperationList
+    from ._models_py3 import PlatformWorkloadIdentity
+    from ._models_py3 import PlatformWorkloadIdentityProfile
     from ._models_py3 import ProxyResource
     from ._models_py3 import Resource
     from ._models_py3 import Secret
@@ -57,9 +61,11 @@ except (SyntaxError, ImportError):
     from ._models import APIServerProfile  # type: ignore
     from ._models import CloudErrorBody  # type: ignore
     from ._models import ClusterProfile  # type: ignore
+    from ._models import ClusterUserAssignedIdentity  # type: ignore
     from ._models import ConsoleProfile  # type: ignore
     from ._models import Display  # type: ignore
     from ._models import EffectiveOutboundIP  # type: ignore
+    from ._models import Identity  # type: ignore
     from ._models import IngressProfile  # type: ignore
     from ._models import LoadBalancerProfile  # type: ignore
     from ._models import MachinePool  # type: ignore
@@ -77,6 +83,8 @@ except (SyntaxError, ImportError):
     from ._models import OpenShiftVersionList  # type: ignore
     from ._models import Operation  # type: ignore
     from ._models import OperationList  # type: ignore
+    from ._models import PlatformWorkloadIdentity  # type: ignore
+    from ._models import PlatformWorkloadIdentityProfile  # type: ignore
     from ._models import ProxyResource  # type: ignore
     from ._models import Resource  # type: ignore
     from ._models import Secret  # type: ignore
@@ -107,9 +115,11 @@ __all__ = [
     'APIServerProfile',
     'CloudErrorBody',
     'ClusterProfile',
+    'ClusterUserAssignedIdentity',
     'ConsoleProfile',
     'Display',
     'EffectiveOutboundIP',
+    'Identity',
     'IngressProfile',
     'LoadBalancerProfile',
     'MachinePool',
@@ -127,6 +137,8 @@ __all__ = [
     'OpenShiftVersionList',
     'Operation',
     'OperationList',
+    'PlatformWorkloadIdentity',
+    'PlatformWorkloadIdentityProfile',
     'ProxyResource',
     'Resource',
     'Secret',
