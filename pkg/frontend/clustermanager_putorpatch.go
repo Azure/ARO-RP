@@ -55,7 +55,7 @@ func (f *frontend) putOrPatchClusterManagerConfiguration(w http.ResponseWriter, 
 
 func (f *frontend) _putOrPatchSyncSet(ctx context.Context, log *logrus.Entry, r *http.Request, header *http.Header, converter api.SyncSetConverter, staticValidator api.ClusterManagerStaticValidator) ([]byte, error) {
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
-	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
+	correlationData := api.GetCorrelationDataFromCtx(r.Context())
 	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
 	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 	ocmResourceType, ocmResourceName := chi.URLParam(r, "ocmResourceType"), chi.URLParam(r, "ocmResourceName")
@@ -127,7 +127,7 @@ func (f *frontend) _putOrPatchSyncSet(ctx context.Context, log *logrus.Entry, r 
 
 func (f *frontend) _putOrPatchMachinePool(ctx context.Context, log *logrus.Entry, r *http.Request, header *http.Header, converter api.MachinePoolConverter, staticValidator api.ClusterManagerStaticValidator) ([]byte, error) {
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
-	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
+	correlationData := api.GetCorrelationDataFromCtx(r.Context())
 	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
 	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 	ocmResourceType, ocmResourceName := chi.URLParam(r, "ocmResourceType"), chi.URLParam(r, "ocmResourceName")
@@ -200,7 +200,7 @@ func (f *frontend) _putOrPatchMachinePool(ctx context.Context, log *logrus.Entry
 
 func (f *frontend) _putOrPatchSyncIdentityProvider(ctx context.Context, log *logrus.Entry, r *http.Request, header *http.Header, converter api.SyncIdentityProviderConverter, staticValidator api.ClusterManagerStaticValidator) ([]byte, error) {
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
-	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
+	correlationData := api.GetCorrelationDataFromCtx(r.Context())
 	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
 	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 	ocmResourceType, ocmResourceName := chi.URLParam(r, "ocmResourceType"), chi.URLParam(r, "ocmResourceName")
@@ -273,7 +273,7 @@ func (f *frontend) _putOrPatchSyncIdentityProvider(ctx context.Context, log *log
 
 func (f *frontend) _putOrPatchSecret(ctx context.Context, log *logrus.Entry, r *http.Request, header *http.Header, converter api.SecretConverter, staticValidator api.ClusterManagerStaticValidator) ([]byte, error) {
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
-	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
+	correlationData := api.GetCorrelationDataFromCtx(r.Context())
 	systemData, _ := r.Context().Value(middleware.ContextKeySystemData).(*api.SystemData) // don't panic
 	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 	ocmResourceType, ocmResourceName := chi.URLParam(r, "ocmResourceType"), chi.URLParam(r, "ocmResourceName")

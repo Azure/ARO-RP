@@ -28,6 +28,7 @@ var _ VirtualNetworkPeeringsClient = &virtualNetworkPeeringsClient{}
 func NewVirtualNetworkPeeringsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) VirtualNetworkPeeringsClient {
 	client := mgmtnetwork.NewVirtualNetworkPeeringsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &virtualNetworkPeeringsClient{
 		VirtualNetworkPeeringsClient: client,

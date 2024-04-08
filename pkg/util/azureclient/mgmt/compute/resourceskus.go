@@ -25,6 +25,7 @@ var _ ResourceSkusClient = &resourceSkusClient{}
 func NewResourceSkusClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) ResourceSkusClient {
 	client := mgmtcompute.NewResourceSkusClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &resourceSkusClient{
 		ResourceSkusClient: client,

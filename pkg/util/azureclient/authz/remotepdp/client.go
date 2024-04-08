@@ -12,6 +12,8 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 // this asserts that &remotePDPClient{} would always implement RemotePDPClient
@@ -35,6 +37,13 @@ type remotePDPClient struct {
 func NewRemotePDPClient(endpoint, scope string, cred azcore.TokenCredential) *remotePDPClient {
 	authPolicy := runtime.NewBearerTokenPolicy(cred, []string{scope}, nil)
 
+	customRoundTripper := azureclient.NewCustomRoundTripper(http.DefaultTransport)
+	clientOptions := &azcore.ClientOptions{
+		Transport: &http.Client{
+			Transport: customRoundTripper,
+		},
+	}
+
 	pipeline := runtime.NewPipeline(
 		modulename,
 		version,
@@ -42,7 +51,7 @@ func NewRemotePDPClient(endpoint, scope string, cred azcore.TokenCredential) *re
 			PerCall:  []policy.Policy{},
 			PerRetry: []policy.Policy{authPolicy},
 		},
-		nil,
+		clientOptions,
 	)
 
 	return &remotePDPClient{endpoint, pipeline}

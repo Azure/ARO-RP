@@ -25,6 +25,7 @@ var _ RegistriesClient = &registriesClient{}
 func NewRegistriesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) RegistriesClient {
 	client := mgmtcontainerregistry.NewRegistriesClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &registriesClient{
 		RegistriesClient: client,

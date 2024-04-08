@@ -27,6 +27,7 @@ var _ ZonesClient = &zonesClient{}
 func NewZonesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) ZonesClient {
 	client := mgmtdns.NewZonesClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &zonesClient{
 		ZonesClient: client,

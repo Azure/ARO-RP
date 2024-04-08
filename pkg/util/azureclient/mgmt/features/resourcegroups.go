@@ -33,6 +33,7 @@ func NewResourceGroupsClient(environment *azureclient.AROEnvironment, subscripti
 	client.Authorizer = authorizer
 	client.PollingDelay = 10 * time.Second
 	client.PollingDuration = time.Hour
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &resourceGroupsClient{
 		ResourceGroupsClient: client,

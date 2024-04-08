@@ -28,6 +28,7 @@ var _ VirtualMachinesClient = &virtualMachinesClient{}
 func NewVirtualMachinesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) VirtualMachinesClient {
 	client := mgmtcompute.NewVirtualMachinesClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &virtualMachinesClient{
 		VirtualMachinesClient: client,

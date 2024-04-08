@@ -25,6 +25,7 @@ var _ TokensClient = &tokensClient{}
 func NewTokensClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) TokensClient {
 	client := mgmtcontainerregistry.NewTokensClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &tokensClient{
 		TokensClient: client,

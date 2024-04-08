@@ -28,6 +28,7 @@ var _ SecurityGroupsClient = &securityGroupsClient{}
 func NewSecurityGroupsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) SecurityGroupsClient {
 	client := mgmtnetwork.NewSecurityGroupsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &securityGroupsClient{
 		SecurityGroupsClient: client,
