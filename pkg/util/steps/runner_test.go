@@ -113,11 +113,11 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("step [Action github.com/Azure/ARO-RP/pkg/util/steps.failingFunc] encountered error: oh no!"),
+					"msg":   gomega.Equal(`step [Action github.com/Azure/ARO-RP/pkg/util/steps.failingFunc] encountered error: oh no!`),
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
-			wantErr: "oh no!",
+			wantErr: `oh no!`,
 		},
 		{
 			name: "A successful condition will allow steps to continue",
