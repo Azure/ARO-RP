@@ -35,19 +35,22 @@ configure_service_aro_gateway() {
     log "Configuring aro-gateway service"
 
     local -r aro_gateway_conf_filename='/etc/sysconfig/aro-gateway'
+    local -r add_conf_file="PODMAN_NETWORK='$network'
+ROLE='${role,,}'"
 
     write_file aro_gateway_conf_filename conf_file true
+    write_file aro_gateway_conf_filename add_conf_file false
 
     # shellcheck disable=SC2034
     local -r aro_gateway_service_filename='/etc/systemd/system/aro-gateway.service'
 
     # shellcheck disable=SC2034
-    local -r aro_gateway_service_file="[Unit]
+    local -r aro_gateway_service_file='[Unit]
 After=network-online.target
 Wants=network-online.target
 
 [Service]
-EnvironmentFile=${aro_gateway_conf_filename}
+EnvironmentFile=/etc/sysconfig/aro-gateway
 ExecStartPre=-/usr/bin/podman rm -f %N
 ExecStart=/usr/bin/podman run \
   --hostname %H \
@@ -61,14 +64,14 @@ ExecStart=/usr/bin/podman run \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
   -m 2g \
-  --network=$network \
+  --network=${PODMAN_NETWORK} \
   -p 80:8080 \
   -p 8081:8081 \
   -p 443:8443 \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
-  $image \
-  ${role,,}
+  $RPIMAGE \
+  $ROLE
 ExecStop=/usr/bin/podman stop -t 3600 %N
 TimeoutStopSec=3600
 Restart=always
@@ -77,7 +80,7 @@ StartLimitInterval=0
 
 [Install]
 WantedBy=multi-user.target
-    "
+    '
 
     write_file aro_gateway_service_filename aro_gateway_service_file true
 }
@@ -97,18 +100,21 @@ configure_service_aro_rp() {
     log "Configuring aro-rp service"
 
     local -r aro_rp_conf_filename='/etc/sysconfig/aro-rp'
+    local -r add_conf_file="PODMAN_NETWORK='$network'
+ROLE='${role,,}'"
 
     write_file aro_rp_conf_filename conf_file true
+    write_file aro_rp_conf_filename add_conf_file false
 
     # shellcheck disable=SC2034
     local -r aro_rp_service_filename='/etc/systemd/system/aro-rp.service'
     # shellcheck disable=SC2034
-    local -r aro_rp_service_file="[Unit]
+    local -r aro_rp_service_file='[Unit]
 After=network-online.target
 Wants=network-online.target
 
 [Service]
-EnvironmentFile=${aro_rp_conf_filename}
+EnvironmentFile=/etc/sysconfig/aro-rp
 ExecStartPre=-/usr/bin/podman rm -f %N
 ExecStart=/usr/bin/podman run \
   --hostname %H \
@@ -139,14 +145,15 @@ ExecStart=/usr/bin/podman run \
   -e ARO_ADOPT_BY_HIVE \
   -e OIDC_AFD_ENDPOINT \
   -e OIDC_STORAGE_ACCOUNT_NAME \
+  -e MISE_ADDRESS \
   -m 2g \
-  --network=$network \
+  --network=${PODMAN_NETWORK} \
   -p 443:8443 \
   -v /etc/aro-rp:/etc/aro-rp \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
-  $image \
-  ${role,,}
+  $RPIMAGE \
+  $ROLE
 ExecStop=/usr/bin/podman stop -t 3600 %N
 TimeoutStopSec=3600
 Restart=always
@@ -154,7 +161,7 @@ RestartSec=1
 StartLimitInterval=0
 
 [Install]
-WantedBy=multi-user.target"
+WantedBy=multi-user.target'
 
     write_file aro_rp_service_filename aro_rp_service_file true
 }
@@ -188,14 +195,15 @@ DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=BBM
-RPIMAGE='$image'"
+RPIMAGE='$image'
+PODMAN_NETWORK='$network'"
 
     write_file aro_monitor_service_conf_filename aro_monitor_service_conf_file true
 
     # shellcheck disable=SC2034
     local -r aro_monitor_service_filename='/etc/systemd/system/aro-monitor.service'
     # shellcheck disable=SC2034
-    local -r aro_monitor_service_file="[Unit]
+    local -r aro_monitor_service_file='[Unit]
 After=network-online.target
 Wants=network-online.target
 
@@ -207,7 +215,7 @@ ExecStart=/usr/bin/podman run \
   --name %N \
   --rm \
   --cap-drop net_raw \
-  --network=$network \
+  --network=${PODMAN_NETWORK} \
   -e AZURE_FP_CLIENT_ID \
   -e DOMAIN_NAME \
   -e CLUSTER_MDSD_ACCOUNT \
@@ -225,14 +233,14 @@ ExecStart=/usr/bin/podman run \
   -m 2.5g \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
-  $image \
+  $RPIMAGE \
   monitor
 Restart=always
 RestartSec=1
 StartLimitInterval=0
 
 [Install]
-WantedBy=multi-user.target"
+WantedBy=multi-user.target'
 
     write_file aro_monitor_service_filename aro_monitor_service_file true
 }
@@ -258,14 +266,15 @@ KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=Portal
 PORTAL_HOSTNAME='$LOCATION.admin.$RPPARENTDOMAINNAME'
-RPIMAGE='$image'"
+RPIMAGE='$image'
+PODMAN_NETWORK='$network'"
 
     write_file aro_portal_service_conf_filename aro_portal_service_conf_file true
 
     # shellcheck disable=SC2034
     local -r aro_portal_service_filename='/etc/systemd/system/aro-portal.service'
     # shellcheck disable=SC2034
-    local -r aro_portal_service_file="[Unit]
+    local -r aro_portal_service_file='[Unit]
 After=network-online.target
 Wants=network-online.target
 StartLimitInterval=0
@@ -278,7 +287,7 @@ ExecStart=/usr/bin/podman run \
   --name %N \
   --rm \
   --cap-drop net_raw \
-  --network=$network \
+  --network=${PODMAN_NETWORK} \
   -e AZURE_PORTAL_ACCESS_GROUP_IDS \
   -e AZURE_PORTAL_CLIENT_ID \
   -e AZURE_PORTAL_ELEVATED_GROUP_IDS \
@@ -292,15 +301,210 @@ ExecStart=/usr/bin/podman run \
   -p 2222:2222 \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
-  $image \
+  $RPIMAGE \
   portal
 Restart=always
 RestartSec=1
 
 [Install]
-WantedBy=multi-user.target"
+WantedBy=multi-user.target'
 
     write_file aro_portal_service_filename aro_portal_service_file true
+}
+
+# configure_service_aro_mise
+# args:
+# 1) image - nameref, string; MISE container image
+# 2) network - nameref, string; podman network name to be attached
+configure_service_aro_mise() {
+    local -n image="$1"
+    local -n network="$2"
+    log "starting"
+    log "Configuring aro-mise service"
+
+    LOGININSTANCE="https://login.microsoftonline.com"
+    if [[ $AZURECLOUDNAME == "AzureUSGovernment" ]]; then
+        LOGININSTANCE="https://login.microsoftonline.us"
+    fi
+    # shellcheck disable=SC2034
+    local -r aro_mise_service_conf_filename='/etc/sysconfig/aro-mise'
+    # shellcheck disable=SC2034
+    local -r aro_mise_service_conf_file="FPCLIENTID='$FPCLIENTID'
+FPTENANTID='$FPTENANTID'
+MISEIMAGE='$image'
+MISEVALIDAUDIENCES='$MISEVALIDAUDIENCES'
+MISEVALIDAPPIDS='$MISEVALIDAPPIDS'
+LOGININSTANCE='$LOGININSTANCE'
+PODMAN_NETWORK='$network'"
+
+    write_file aro_mise_service_conf_filename aro_mise_service_conf_file true
+
+    mkdir -p /app/mise
+    cat >/app/mise/appsettings.json <<EOF
+{
+    "Version": "1",
+    "HeartbeatIntervalMs": 5000,
+    "AzureAd": {
+        "Instance": "$LOGININSTANCE",
+        "ClientId": "$FPCLIENTID",
+        "TenantId": "$FPTENANTID",
+        "Audience": "api://$FPCLIENTID",
+        "ShowPII": false,
+        "InboundPolicies": [
+            {
+                "Label": "arorp-arm-inbound-policy",
+                "Authority": "$LOGININSTANCE/$FPTENANTID/"
+,
+                "AuthenticationSchemes": [
+                    "PoP"
+                ],
+                "ValidAudiences": $MISEVALIDAUDIENCES,
+                "SignedHttpRequestValidationPolicy": {
+                    "ValidateTs": true,
+                    "ValidateM": true,
+                    "ValidateU": true,
+                    "ValidateP": true
+                },
+                "ValidApplicationIds": $MISEVALIDAPPIDS
+            }
+        ],
+        "Logging": {
+            "LogLevel": "Information"
+        },
+        "Modules": {
+            "TrV2": {
+                "ModuleType": "TrV2Module",
+                "Enabled": true
+            }
+        }
+    },
+    "AllowedHosts": "*",
+    "Kestrel": {
+        "Endpoints": {
+            "Http": {
+                "Url": "http://aro-mise:5000"
+            }
+        }
+    },
+    "Logging": {
+        "LogLevel": {
+            "Default": "Information",
+            "Microsoft": "Information",
+            "Microsoft.Hosting.Lifetime": "Information"
+        }
+    }
+}
+EOF
+
+    # shellcheck disable=SC2034
+    local -r aro_mise_service_filename='/etc/systemd/system/aro-mise.service'
+    # shellcheck disable=SC2034
+    local -r aro_mise_service_file='[Unit]
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+[Service]
+RestartSec=1s
+EnvironmentFile=/etc/sysconfig/aro-mise
+ExecStartPre=-/usr/bin/docker rm -f %N
+ExecStart=/usr/bin/docker run \
+  -p 5000:5000 \
+  -v /app/mise/appsettings.json:/app/appsettings.json:z \
+  --hostname %H \
+  --name %N \
+  --network=${PODMAN_NETWORK} \
+  --rm \
+  $MISEIMAGE
+ExecStop=/usr/bin/docker stop %N
+Restart=always
+RestartSec=3
+StartLimitInterval=0
+[Install]
+WantedBy=multi-user.target'
+
+    write_file aro_mise_service_filename aro_mise_service_file true
+}
+# configure_service_aro_otel_collector
+# args:
+# 1) image - nameref, string; OTEL container image
+# 2) network - nameref, string; podman network name to be attached
+configure_service_aro_otel_collector() {
+    local -n image="$1"
+    local -n network="$2"
+    log "starting"
+    log "Configuring aro-otel-collector service"
+
+    # shellcheck disable=SC2034
+    local -r aro_otel_collector_service_conf_filename='/etc/sysconfig/aro-otel-collector'
+    # shellcheck disable=SC2034
+    local -r aro_otel_collector_service_conf_file="GOMEMLIMIT=1000MiB
+OTELIMAGE='$image'
+PODMAN_NETWORK='$network'"
+
+    write_file aro_otel_collector_service_conf_filename aro_otel_collector_service_conf_file true
+
+    mkdir -p /app/otel
+    cat >/app/otel/config.yaml <<'EOF'
+receivers:
+  httpcheck:
+    targets:
+    # MISE Endpoints
+      - endpoint: http://aro-mise:5000/healthz
+        method: GET
+      - endpoint: http://aro-mise:5000/readyz
+        method: GET
+    # OTELs own Endpoints
+      - endpoint: http://aro-otel-collector:13133/healthz
+        method: GET
+      - endpoint: http://aro-otel-collector:13133/readyz
+        method: GET
+    collection_interval: 20s
+processors:
+  batch:
+extensions:
+  health_check:
+    endpoint: "aro-otel-collector:13133"
+exporters:
+  otlp:
+    endpoint: mdm:4317
+    tls:
+      insecure: true
+service:
+  extensions: [health_check]
+  pipelines:
+    metrics:
+      receivers: [httpcheck]
+      processors: [batch]
+      exporters: [otlp]
+EOF
+
+    # shellcheck disable=SC2034
+    local -r aro_otel_collector_service_filename='/etc/systemd/system/aro-otel-collector.service'
+    # shellcheck disable=SC2034
+    local -r aro_otel_collector_service_file='[Unit]
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+[Service]
+RestartSec=1s
+EnvironmentFile=/etc/sysconfig/aro-otel-collector
+ExecStartPre=-/usr/bin/docker rm -f %N
+ExecStart=/usr/bin/docker run \
+  --hostname %H \
+  --name %N \
+  --rm \
+  --network=${PODMAN_NETWORK} \
+  -m 2g \
+  -v /app/otel/config.yaml:/etc/otelcol-contrib/config.yaml:z \
+  $OTELIMAGE
+ExecStop=/usr/bin/docker stop %N
+Restart=always
+RestartSec=3
+StartLimitInterval=0
+[Install]
+WantedBy=multi-user.target'
+
+    write_file aro_otel_collector_service_filename aro_otel_collector_service_file true
 }
 
 # configure_service_mdsd
@@ -374,14 +578,15 @@ configure_service_fluentbit() {
     # shellcheck disable=SC2034
     local -r sysconfig_filename='/etc/sysconfig/fluentbit'
     # shellcheck disable=SC2034
-    local -r sysconfig_file="FLUENTBITIMAGE=$image"
+    local -r sysconfig_file="FLUENTBITIMAGE=$image
+PODMAN_NETWORK='$network'"
 
     write_file sysconfig_filename sysconfig_file true
 
     # shellcheck disable=SC2034
     local -r service_filename='/etc/systemd/system/fluentbit.service'
     # shellcheck disable=SC2034
-    local -r service_file="[Unit]
+    local -r service_file='[Unit]
 After=network-online.target
 Wants=network-online.target
 StartLimitIntervalSec=0
@@ -393,7 +598,7 @@ ExecStartPre=-/usr/bin/podman rm -f %N
 ExecStart=/usr/bin/podman run \
   --security-opt label=disable \
   --entrypoint /opt/td-agent-bit/bin/td-agent-bit \
-  --net=host \
+  --network=${PODMAN_NETWORK} \
   --hostname %H \
   --name %N \
   --rm \
@@ -402,7 +607,7 @@ ExecStart=/usr/bin/podman run \
   -v /var/lib/fluent:/var/lib/fluent:z \
   -v /var/log/journal:/var/log/journal:ro \
   -v /etc/machine-id:/etc/machine-id:ro \
-  $image \
+  $FLUENTBITIMAGE \
   -c /etc/fluentbit/fluentbit.conf
 
 ExecStop=/usr/bin/podman stop %N
@@ -411,7 +616,7 @@ RestartSec=5
 StartLimitInterval=0
 
 [Install]
-WantedBy=multi-user.target"
+WantedBy=multi-user.target'
 
     write_file service_filename service_file true
 }
@@ -593,7 +798,11 @@ configure_service_mdm() {
 MDMIMAGE='$image'
 MDMSOURCEENVIRONMENT='$LOCATION'
 MDMSOURCEROLE='$role'
-MDMSOURCEROLEINSTANCE=\"$(hostname)\""
+MDMSOURCEROLEINSTANCE=\"$(hostname)\"
+MDM_INPUT=statsd_local,otlp_grpc
+MDM_NAMESPACE="OTEL"
+MDM_ACCOUNT="AzureRedHatOpenShiftRP"
+PODMAN_NETWORK='$network'"
 
     write_file sysconfig_mdm_filename sysconfig_mdm_file true
 
@@ -601,7 +810,7 @@ MDMSOURCEROLEINSTANCE=\"$(hostname)\""
     # shellcheck disable=SC2034
     local -r mdm_service_filename="/etc/systemd/system/mdm.service"
     # shellcheck disable=SC2034
-    local -r mdm_service_file="[Unit]
+    local -r mdm_service_file='[Unit]
 After=network-online.target
 Wants=network-online.target
 
@@ -614,26 +823,29 @@ ExecStart=/usr/bin/podman run \
   --name %N \
   --rm \
   --cap-drop net_raw \
-  --network=$network \
+  --network=${PODMAN_NETWORK} \
   -m 2g \
   -v /etc/mdm.pem:/etc/mdm.pem \
   -v /var/etw:/var/etw:z \
-  $image \
+  $MDMIMAGE \
+  -Input $MDM_INPUT \
+  -MetricNamespace $MDM_NAMESPACE \
+  -MonitoringAccount $MDM_ACCOUNT \
   -CertFile /etc/mdm.pem \
   -FrontEndUrl $MDMFRONTENDURL \
   -Logger Console \
   -LogLevel Warning \
   -PrivateKeyFile /etc/mdm.pem \
   -SourceEnvironment $LOCATION \
-  -SourceRole $role \
-  -SourceRoleInstance $HOSTNAME
+  -SourceRole $MDMSOURCEROLE \
+  -SourceRoleInstance $MDMSOURCEROLEINSTANCE
 ExecStop=/usr/bin/podman stop %N
 Restart=always
 RestartSec=1
 StartLimitInterval=0
 
 [Install]
-WantedBy=multi-user.target"
+WantedBy=multi-user.target'
 
     write_file mdm_service_filename mdm_service_file true
 }
@@ -658,6 +870,8 @@ configure_vmss_aro_services() {
         configure_service_aro_rp "${images["rp"]}" "$1" "${configs["rp_config"]}" "${configs["network"]}"
         configure_service_aro_monitor "${images["rp"]}" "${configs["network"]}"
         configure_service_aro_portal "${images["rp"]}" "${configs["network"]}"
+        configure_service_aro_mise "${images["mise"]}" "${configs["network"]}"
+        configure_service_aro_otel_collector "${images["otel"]}" "${configs["network"]}"
         configure_certs_rp
     fi
 

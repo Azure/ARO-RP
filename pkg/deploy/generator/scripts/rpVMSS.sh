@@ -45,8 +45,8 @@ main() {
     )
 
     dnf_install_pkgs install_pkgs \
-                     retry_wait_time \
-                     "$pkg_retry_count"
+                      retry_wait_time \
+                      "$pkg_retry_count"
 
     fips_configure
 
@@ -60,6 +60,8 @@ main() {
     # shellcheck disable=SC2153 disable=SC2034
     local -r mdmimage="${RPIMAGE%%/*}/${MDMIMAGE#*/}"
     local -r rpimage="$RPIMAGE"
+    local -r miseimage="${RPIMAGE%%/*}/${MISEIMAGE#*/}"
+    local -r otelimage="$OTELIMAGE"
     # shellcheck disable=SC2034
     local -r fluentbit_image="$FLUENTBITIMAGE"
     # shellcheck disable=SC2034
@@ -67,6 +69,8 @@ main() {
         ["mdm"]="mdmimage"
         ["rp"]="rpimage"
         ["fluentbit"]="fluentbit_image"
+        ["mise"]="miseimage"
+        ["otel"]="otelimage"
     )
 
     pull_container_images aro_images
@@ -150,6 +154,7 @@ KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE='${role_rp^^}'
 MDSD_ENVIRONMENT='$MDSDENVIRONMENT'
+MISE_ADDRESS='http://aro-mise:5000'
 RP_FEATURES='$RPFEATURES'
 RPIMAGE='$rpimage'
 ARO_INSTALL_VIA_HIVE='$CLUSTERSINSTALLVIAHIVE'
@@ -174,7 +179,9 @@ OIDC_STORAGE_ACCOUNT_NAME='$OIDCSTORAGEACCOUNTNAME'
 
     # shellcheck disable=SC2034
     local -ra aro_services=(
+        "aro-mise"
         "aro-monitor"
+        "aro-otel-collector"
         "aro-portal"
         "aro-rp"
         "azsecd"
