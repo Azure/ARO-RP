@@ -27,6 +27,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/computeskus"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
+	"github.com/Azure/ARO-RP/pkg/util/miseadapter"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -43,6 +44,7 @@ type prod struct {
 
 	armClientAuthorizer   clientauthorizer.ClientAuthorizer
 	adminClientAuthorizer clientauthorizer.ClientAuthorizer
+	miseAuthorizer        miseadapter.MISEAdapter
 
 	acrDomain string
 	vmskus    map[string]*mgmtcompute.ResourceSku
@@ -216,32 +218,48 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 	return p, nil
 }
 
+func (p *prod) MISEAuthorizer() miseadapter.MISEAdapter {
+	return p.miseAuthorizer
+}
+
 func (p *prod) InitializeAuthorizers() error {
-	if !p.FeatureIsSet(FeatureEnableDevelopmentAuthorizer) {
-		p.armClientAuthorizer = clientauthorizer.NewARM(p.log, p.Core)
-	} else {
-		armClientAuthorizer, err := clientauthorizer.NewSubjectNameAndIssuer(
+	if p.FeatureIsSet(FeatureEnableMISE) {
+		err := ValidateVars(
+			"MISE_ADDRESS",
+		)
+		if err != nil {
+			return err
+		}
+		p.miseAuthorizer = miseadapter.NewAuthorizer(os.Getenv("MISE_ADDRESS"))
+	}
+
+	if !p.FeatureIsSet(FeatureEnforceMISE) {
+		if !p.FeatureIsSet(FeatureEnableDevelopmentAuthorizer) {
+			p.armClientAuthorizer = clientauthorizer.NewARM(p.log, p.Core)
+		} else {
+			armClientAuthorizer, err := clientauthorizer.NewSubjectNameAndIssuer(
+				p.log,
+				"/etc/aro-rp/arm-ca-bundle.pem",
+				os.Getenv("ARM_API_CLIENT_CERT_COMMON_NAME"),
+			)
+			if err != nil {
+				return err
+			}
+
+			p.armClientAuthorizer = armClientAuthorizer
+		}
+
+		adminClientAuthorizer, err := clientauthorizer.NewSubjectNameAndIssuer(
 			p.log,
-			"/etc/aro-rp/arm-ca-bundle.pem",
-			os.Getenv("ARM_API_CLIENT_CERT_COMMON_NAME"),
+			"/etc/aro-rp/admin-ca-bundle.pem",
+			os.Getenv("ADMIN_API_CLIENT_CERT_COMMON_NAME"),
 		)
 		if err != nil {
 			return err
 		}
 
-		p.armClientAuthorizer = armClientAuthorizer
+		p.adminClientAuthorizer = adminClientAuthorizer
 	}
-
-	adminClientAuthorizer, err := clientauthorizer.NewSubjectNameAndIssuer(
-		p.log,
-		"/etc/aro-rp/admin-ca-bundle.pem",
-		os.Getenv("ADMIN_API_CLIENT_CERT_COMMON_NAME"),
-	)
-	if err != nil {
-		return err
-	}
-
-	p.adminClientAuthorizer = adminClientAuthorizer
 	return nil
 }
 
