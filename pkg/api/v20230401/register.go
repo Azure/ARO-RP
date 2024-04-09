@@ -45,10 +45,5 @@ func init() {
 				api.OperationOpenShiftClusterGetDetectors,
 			},
 		},
-		SyncSetConverter:              syncSetConverter{},
-		MachinePoolConverter:          machinePoolConverter{},
-		SyncIdentityProviderConverter: syncIdentityProviderConverter{},
-		SecretConverter:               secretConverter{},
-		ClusterManagerStaticValidator: clusterManagerStaticValidator{},
 	}
 }
