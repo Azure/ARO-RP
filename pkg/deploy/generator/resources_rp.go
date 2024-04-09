@@ -376,6 +376,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"databaseAccountName",
 		"fluentbitImage",
 		"fpClientId",
+		"fpTenantId",
 		"fpServicePrincipalId",
 		"gatewayDomains",
 		"gatewayResourceGroupName",
@@ -408,6 +409,18 @@ func (g *generator) rpVMSS() *arm.Resource {
 		)
 	}
 
+	// convert array variables to string using ARM string() function to be passed via customScript later
+	for _, variable := range []string{
+		"miseValidAudiences",
+		"miseValidAppIDs",
+	} {
+		parts = append(parts,
+			fmt.Sprintf("'%s=$(base64 -d <<<'''", strings.ToUpper(variable)),
+			fmt.Sprintf("base64(string(parameters('%s')))", variable),
+			"''')\n'",
+		)
+	}
+
 	for _, variable := range []string{
 		"adminApiCaBundle",
 		"armApiCaBundle",
@@ -421,6 +434,14 @@ func (g *generator) rpVMSS() *arm.Resource {
 
 	parts = append(parts,
 		"'MDMIMAGE=''"+version.MdmImage("")+"''\n'",
+	)
+
+	parts = append(parts,
+		"'OTELIMAGE=''"+version.OTelImage("")+"''\n'",
+	)
+
+	parts = append(parts,
+		"'MISEIMAGE=''"+version.MiseImage("")+"''\n'",
 	)
 
 	parts = append(parts,
