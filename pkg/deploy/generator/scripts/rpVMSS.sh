@@ -8,13 +8,13 @@ systemctl reload sshd.service
 #Adding retry logic to yum commands in order to avoid stalling out on resource locks
 echo "running RHUI fix"
 for attempt in {1..5}; do
-  yum update -y --disablerepo='*' --enablerepo='rhui-microsoft-azure*'
+  yum update -y --disablerepo='*' --enablerepo='rhui-microsoft-azure*' && break
   if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
 done
 
 echo "running yum update"
 for attempt in {1..5}; do
-  yum -y -x WALinuxAgent -x WALinuxAgent-udev update --allowerasing
+  yum -y -x WALinuxAgent -x WALinuxAgent-udev update --allowerasing && break
   if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
 done
 
