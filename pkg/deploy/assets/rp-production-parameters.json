@@ -75,6 +75,9 @@
         "fpServicePrincipalId": {
             "value": ""
         },
+        "fpTenantId": {
+            "value": ""
+        },
         "gatewayDomains": {
             "value": ""
         },
@@ -97,6 +100,21 @@
             "value": ""
         },
         "mdsdEnvironment": {
+            "value": ""
+        },
+        "miseAddress": {
+            "value": "http://localhost:5000"
+        },
+        "miseAllowedHosts": {
+            "value": "*"
+        },
+        "miseLogLevel": {
+            "value": "Information"
+        },
+        "miseValidAppIDs": {
+            "value": ""
+        },
+        "miseValidAudiences": {
             "value": ""
         },
         "nonZonalRegions": {
