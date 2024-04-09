@@ -27,10 +27,22 @@ type AuthMiddleware struct {
 
 func (a AuthMiddleware) Authenticate(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Admin API authorisation (Geneva Actions) is performed via mutual TLS
+		// authentication
+		apiVersion := r.URL.Query().Get(api.APIVersionKey)
+		if apiVersion == admin.APIVersion || strings.HasPrefix(r.URL.Path, "/admin") {
+			if !a.AdminAuth.IsAuthorized(r.TLS) {
+				api.WriteError(w, http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Forbidden.")
+				return
+			}
+
+			h.ServeHTTP(w, r)
+		}
+
+		// ARM traffic is authenticated via either MISE or mutual TLS
+		// authentication
 		var err error
 		var authenticated bool
-
-		apiVersion := r.URL.Query().Get(api.APIVersionKey)
 
 		if a.EnableMISE {
 			authenticated, err = a.MiseAuth.IsAuthorized(r.Context(), r)
@@ -43,16 +55,10 @@ func (a AuthMiddleware) Authenticate(h http.Handler) http.Handler {
 			}
 		}
 
-		// If we do not enforce MISE, then fall back to checking the TLS certificate
+		// If we do not enforce MISE, then fall back to checking the TLS
+		// certificate
 		if !a.EnforceMISE {
-			var clientAuthorizer clientauthorizer.ClientAuthorizer
-			if apiVersion == admin.APIVersion || strings.HasPrefix(r.URL.Path, "/admin") {
-				clientAuthorizer = a.AdminAuth
-			} else {
-				clientAuthorizer = a.ArmAuth
-			}
-
-			authenticated = clientAuthorizer.IsAuthorized(r.TLS)
+			authenticated = a.ArmAuth.IsAuthorized(r.TLS)
 		}
 
 		if !authenticated {
