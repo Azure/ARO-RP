@@ -7,16 +7,15 @@ set -o errexit \
 
 main() {
     configure_sshd
-    configure_rhui_repo
-    dnf_update_pkgs
+    configure_and_install_dnf_pkgs_repos
     configure_disk_partitions
     configure_logrotate
-    create_azure_rpm_repos
     configure_selinux
     mkdir -p /var/log/journal
     mkdir -p /var/lib/waagent/Microsoft.Azure.KeyVault.Store
     configure_firewalld_rules
     pull_container_images
+    configure_system_services
 }
 
 # We need to configure PasswordAuthentication to yes in order for the VMSS Access JIT to work
@@ -28,6 +27,15 @@ configure_sshd() {
     systemctl is-active --quiet sshd || abort "sshd failed to reload"
 }
 
+# configure_and_install_dnf_pkgs_repos
+configure_and_install_dnf_pkgs_repos() {
+    configure_rhui_repo
+    dnf_update_pkgs
+    dnf_install_pkgs
+    create_azure_rpm_repos
+}
+
+# configure_rhui_repo
 configure_rhui_repo() {
     log "running RHUI package updates"
     #Adding retry logic to yum commands in order to avoid stalling out on resource locks
@@ -45,6 +53,7 @@ configure_rhui_repo() {
     done
 }
 
+# dnf_update_pkgs
 dnf_update_pkgs() {
     log "running dnf update"
     for attempt in {1..5}; do
@@ -61,13 +70,16 @@ dnf_update_pkgs() {
     done
 }
 
+# dnf_install_pkgs
 dnf_install_pkgs() {
     log "importing rpm repositories"
     rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
     rpm --import https://packages.microsoft.com/keys/microsoft.asc
 
     for attempt in {1..5}; do
-        yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && break
+        dnf -y \
+            install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm \
+            && break
         if [[ ${attempt} -lt 5 ]]; then
             sleep 10
         else
@@ -76,7 +88,7 @@ dnf_install_pkgs() {
     done
 
     for attempt in {1..5}; do
-        yum -y \
+        dnf -y \
             install \
             clamav \
             azsec-clamav \
@@ -98,6 +110,7 @@ dnf_install_pkgs() {
     done
 }
 
+# configure_disk_partitions
 configure_disk_partitions() {
     log "extending partition table"
     # Linux block devices are inconsistently named
@@ -119,8 +132,9 @@ configure_disk_partitions() {
 
 # configure_logrotate clobbers /etc/logrotate.conf
 configure_logrotate() {
-    log "configuring logrotate"
-cat >/etc/logrotate.conf <<'EOF'
+    local logrotate_conf_file="/etc/logrotate.conf"
+    log "Writing over $logrotate_conf_file"
+cat >"$logrotate_conf_file" <<'EOF'
 # see "man logrotate" for details
 # rotate log files weekly
 weekly
@@ -159,8 +173,9 @@ EOF
 
 # create_azure_rpm_repos creates /etc/yum.repos.d/azure.repo repository file
 create_azure_rpm_repos() {
-    log "configuring yum repository and running yum update"
-cat >/etc/yum.repos.d/azure.repo <<'EOF'
+    local azure_repo_file="/etc/yum.repos.d/azure.repo"
+    log "Writing $azure_repo_file"
+cat >"$azure_repo_file" <<'EOF'
 [azure-cli]
 name=azure-cli
 baseurl=https://packages.microsoft.com/yumrepos/azure-cli
@@ -175,43 +190,54 @@ gpgcheck=no
 EOF
 }
 
+# configure_selinux
 configure_selinux() {
+    local relabel="${1:-false}"
     semanage fcontext -a -t var_log_t "/var/log/journal(/.*)?"
     chcon -R system_u:object_r:var_log_t:s0 /var/opt/microsoft/linuxmonagent
+
+    if relabel; then
+        restorecon -RF /var/log/*
+    fi
 }
 
+# configure_firewalld_rules
 configure_firewalld_rules() {
     # https://access.redhat.com/security/cve/cve-2020-13401
-    log "applying firewall rules"
-cat >/etc/sysctl.d/02-disable-accept-ra.conf <<'EOF'
+    local prefix="/etc/sysctl.d"
+    local diable_accept_ra_conf="$prefix/02-disable-accept-ra.conf"
+    log "Writing $diable_accept_ra_conf"
+cat >"$diable_accept_ra_conf" <<'EOF'
 net.ipv6.conf.all.accept_ra=0
 EOF
 
-cat >/etc/sysctl.d/01-disable-core.conf <<'EOF'
+    local disable_core="$prefix/01-disable-core.conf"
+    log "Writing $disable_core"
+cat >"$disable_core" <<'EOF'
 kernel.core_pattern = |/bin/true
 EOF
     sysctl --system
 
-    log "adding firewalld ports to default zone"
-    firewall-cmd \
-        --add-port=443/tcp \
-        --permanent
-    firewall-cmd \
-        --add-port=444/tcp \
-        --permanent
-    firewall-cmd \
-        --add-port=445/tcp \
-        --permanent
-    firewall-cmd \
-        --add-port=2222/tcp \
-        --permanent
+    enable_ports=(
+        "443/tcp"
+        "444/tcp"
+        "445/tcp"
+        "2222/tcp"
+    )
+    log "Enabling ports ${enable_ports[*]} on default firewalld zone"
+    # shellcheck disable=SC2068
+    for port in ${enable_ports[@]}; do
+        log "Enabling port $port now"
+        firewall-cmd "--add-port=$port"
+    done
     
     log "reloading firewalld"
     firewall-cmd reload
+
+    firewall-cmd --runtime-to-permanent
 }
 
-export AZURE_CLOUD_NAME="${AZURECLOUDNAME:?"Failed to carry over variables"}"
-
+# pull_container_images
 pull_container_images() {
     echo "logging into prod acr"
     az login -i --allow-no-subscriptions
@@ -316,9 +342,13 @@ cat >/etc/fluentbit/fluentbit.conf <<'EOF'
 	Port 29230
 EOF
 
-    log "FLUENTBITIMAGE=$FLUENTBITIMAGE" >/etc/sysconfig/fluentbit
+    local sysconfig_fluentbit="/etc/sysconfig/fluentbit"
+    log "Writing value FLUENTBITIMAGE=$FLUENTBITIMAGE to $sysconfig_fluentbit"
+    echo "FLUENTBITIMAGE=$FLUENTBITIMAGE" >"$sysconfig_fluentbit"
 
-cat >/etc/systemd/system/fluentbit.service <<'EOF'
+    fluentbit_service_file="/etc/systemd/system/fluentbit.service"
+    log "Writing $fluentbit_service_file now"
+cat >"$fluentbit_service_file" <<'EOF'
 [Unit]
 After=network-online.target
 Wants=network-online.target
@@ -370,7 +400,9 @@ configure_certs() {
 
 # we leave clientId blank as long as only 1 managed identity assigned to vmss
 # if we have more than 1, we will need to populate with clientId used for off-node scanning
-cat >/etc/default/vsa-nodescan-agent.config <<EOF
+    nodescan_agent_file="/etc/default/vsa-nodescan-agent.config"
+    log "Writing $nodescan_agent_file"
+cat >"$nodescan_agent_file" <<EOF
 {
     "Nice": 19,
     "Timeout": 10800,
@@ -387,7 +419,9 @@ EOF
 configure_service_mdm() {
     log "configuring mdm service"
 
-cat >/etc/sysconfig/mdm <<EOF
+    sysconfig_mdm_file="/etc/sysconfig/mdm"
+    log "Writing $sysconfig_mdm_file"
+cat >"$sysconfig_mdm_file" <<EOF
 MDMFRONTENDURL='$MDMFRONTENDURL'
 MDMIMAGE='$MDMIMAGE'
 MDMSOURCEENVIRONMENT='$LOCATION'
@@ -396,7 +430,9 @@ MDMSOURCEROLEINSTANCE='$(hostname)'
 EOF
 
     mkdir /var/etw
-cat >/etc/systemd/system/mdm.service <<'EOF'
+    mdm_service_file="/etc/systemd/system/mdm.service"
+    log "Writing $mdm_service_file"
+cat >"$mdm_service_file"<<'EOF'
 [Unit]
 After=network-online.target
 Wants=network-online.target
@@ -435,7 +471,9 @@ EOF
 # configure_timers_mdm_mdsd
 configure_timers_mdm_mdsd() {
     for var in "mdsd" "mdm"; do
-cat >/etc/systemd/system/download-$var-credentials.service <<EOF
+    download_creds_service_file="/etc/systemd/system/download-$var-credentials.service"
+    log "Writing $download_creds_service_file"
+cat >"$download_creds_service_file" <<EOF
 [Unit]
 Description=Periodic $var credentials refresh
 
@@ -444,7 +482,9 @@ Type=oneshot
 ExecStart=/usr/local/bin/download-credentials.sh $var
 EOF
 
-cat >/etc/systemd/system/download-$var-credentials.timer <<EOF
+    download_creds_timer_file="/etc/systemd/system/download-$var-credentials.timer"
+    log "Writing $download_creds_timer_file"
+cat >"$download_creds_timer_file"<<EOF
 [Unit]
 Description=Periodic $var credentials refresh
 After=network-online.target
@@ -460,7 +500,9 @@ WantedBy=timers.target
 EOF
     done
 
-cat >/usr/local/bin/download-credentials.sh <<EOF
+    download_creds_script_file="/usr/local/bin/download-credentials.sh"
+    log "Writing $download_creds_script_file"
+cat >"$download_creds_script_file" <<EOF
 #!/bin/bash
 set -eu
 
@@ -535,7 +577,9 @@ EOF
     /usr/local/bin/download-credentials.sh mdm
     MDSDCERTIFICATESAN=$(openssl x509 -in /var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem -noout -subject | sed -e 's/.*CN = //')
 
-cat >/etc/systemd/system/watch-mdm-credentials.service <<EOF
+    watch_mdm_creds_service_file="/etc/systemd/system/watch-mdm-credentials.service"
+    log "Writing $watch_mdm_creds_service_file"
+cat >"$watch_mdm_creds_service_file" <<EOF
 [Unit]
 Description=Watch for changes in mdm.pem and restarts the mdm service
 
@@ -547,7 +591,9 @@ ExecStart=/usr/bin/systemctl restart mdm.service
 WantedBy=multi-user.target
 EOF
 
-cat >/etc/systemd/system/watch-mdm-credentials.path <<EOF
+    watch_mdm_creds_path_file="/etc/systemd/system/watch-mdm-credentials.path"
+    log "Writing $watch_mdm_creds_path_file"
+cat >"$watch_mdm_creds_path_file" <<EOF
 [Path]
 PathModified=/etc/mdm.pem
 
@@ -837,7 +883,9 @@ cat >"$mdsd_override_conf" <<'EOF'
 After=network-online.target
 EOF
 
-cat >/etc/default/mdsd <<EOF
+    default_mdsd_file="/etc/default/mdsd"
+    log "Writing $default_mdsd_file"
+cat >"$default_mdsd_file" <<EOF
 MDSD_ROLE_PREFIX=/var/run/mdsd/default
 MDSD_OPTIONS="-A -d -r \$MDSD_ROLE_PREFIX"
 
@@ -876,7 +924,7 @@ run_azsecd_config_scan() {
 
 # reboot_vm restores all selinux file contexts, waits 30 seconds then reboots
 reboot_vm() {
-    restorecon -RF /var/log/*
+    configure_selinux "true"
     (sleep 30 && log "rebooting vm now"; reboot) &
 }
 
@@ -892,3 +940,7 @@ abort() {
     log "${1}" "2"
     exit 1
 }
+
+export AZURE_CLOUD_NAME="${AZURECLOUDNAME:?"Failed to carry over variables"}"
+
+main
