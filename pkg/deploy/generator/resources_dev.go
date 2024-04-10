@@ -101,7 +101,11 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 		)
 	}
 
-	trailer := base64.StdEncoding.EncodeToString(scriptDevProxyVMSS)
+	var sb strings.Builder
+
+	sb.WriteString(string(scriptDevProxyVMSS))
+
+	trailer := base64.StdEncoding.EncodeToString([]byte(sb.String()))
 
 	parts = append(parts, "'\n'", fmt.Sprintf("base64ToString('%s')", trailer))
 

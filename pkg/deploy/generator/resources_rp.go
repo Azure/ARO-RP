@@ -441,7 +441,19 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"''')\n'",
 	)
 
-	trailer := base64.StdEncoding.EncodeToString(scriptRpVMSS)
+	var sb strings.Builder
+
+	// VMSS extensions only support one custom script
+	// Because of this, the util-*.sh scripts are prefixed to the bootstrapping script
+	// main is called at the end of the bootstrapping script, so appending them will not work
+	sb.WriteString(string(scriptUtilCommon))
+	sb.WriteString(string(scriptUtilPackages))
+	sb.WriteString(string(scriptUtilServices))
+	sb.WriteString(string(scriptUtilSystem))
+	sb.WriteString("\n#Start of rpVMSS.sh\n")
+	sb.WriteString(string(scriptRpVMSS))
+
+	trailer := base64.StdEncoding.EncodeToString([]byte(sb.String()))
 
 	parts = append(parts, "'\n'", fmt.Sprintf("base64ToString('%s')", trailer))
 
@@ -456,8 +468,19 @@ func (g *generator) rpVMSS() *arm.Resource {
 			},
 			Tags: map[string]*string{},
 			VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
+				// Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade#arm-templates
 				UpgradePolicy: &mgmtcompute.UpgradePolicy{
-					Mode: mgmtcompute.UpgradeModeRolling,
+					Mode: mgmtcompute.UpgradeModeAutomatic,
+					RollingUpgradePolicy: &mgmtcompute.RollingUpgradePolicy{
+						// Percentage equates to 1.02 instances out of 3
+						MaxBatchInstancePercent:             to.Int32Ptr(34),
+						MaxUnhealthyInstancePercent:         to.Int32Ptr(34),
+						MaxUnhealthyUpgradedInstancePercent: to.Int32Ptr(34),
+						PauseTimeBetweenBatches:             to.StringPtr("PT10M"),
+					},
+					AutomaticOSUpgradePolicy: &mgmtcompute.AutomaticOSUpgradePolicy{
+						EnableAutomaticOSUpgrade: to.BoolPtr(true),
+					},
 				},
 				VirtualMachineProfile: &mgmtcompute.VirtualMachineScaleSetVMProfile{
 					OsProfile: &mgmtcompute.VirtualMachineScaleSetOSProfile{
@@ -476,11 +499,15 @@ func (g *generator) rpVMSS() *arm.Resource {
 						},
 					},
 					StorageProfile: &mgmtcompute.VirtualMachineScaleSetStorageProfile{
+						// https://eng.ms/docs/products/azure-linux/gettingstarted/azurevm/azurevm
 						ImageReference: &mgmtcompute.ImageReference{
-							Publisher: to.StringPtr("RedHat"),
-							Offer:     to.StringPtr("RHEL"),
-							Sku:       to.StringPtr("8-LVM"),
-							Version:   to.StringPtr("latest"),
+							Publisher: to.StringPtr("MicrosoftCBLMariner"),
+							Offer:     to.StringPtr("cbl-mariner"),
+							// cbl-mariner-2-gen2-fips is not supported by Automatic OS Updates
+							// therefore the non fips image is used, and fips is configured manually
+							// Reference: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-automatic-upgrade
+							Sku:     to.StringPtr("cbl-mariner-2-gen2"),
+							Version: to.StringPtr("latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
 							CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
@@ -534,6 +561,23 @@ func (g *generator) rpVMSS() *arm.Resource {
 									Settings:                map[string]interface{}{},
 									ProtectedSettings: map[string]interface{}{
 										"script": script,
+									},
+								},
+							},
+							{
+								// az-secmonitor package no longer needs to be manually installed
+								// References:
+								// 		https://eng.ms/docs/products/azure-linux/gettingstarted/aks/monitoring
+								//		https://msazure.visualstudio.com/ASMDocs/_wiki/wikis/ASMDocs.wiki/179541/Linux-AzSecPack-AutoConfig-Onboarding-(manual-for-C-AI)?anchor=3.1.1-using-arm-template-resource-elements
+								Name: to.StringPtr("AzureMonitorLinuxAgent"),
+								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
+									Publisher:               to.StringPtr("Microsoft.Azure.Monitor"),
+									EnableAutomaticUpgrade:  to.BoolPtr(true),
+									AutoUpgradeMinorVersion: to.BoolPtr(true),
+									TypeHandlerVersion:      to.StringPtr("1.0"),
+									Type:                    to.StringPtr("AzureMonitorLinuxAgent"),
+									Settings: map[string]interface{}{
+										"GCS_AUTO_CONFIG": true,
 									},
 								},
 							},
