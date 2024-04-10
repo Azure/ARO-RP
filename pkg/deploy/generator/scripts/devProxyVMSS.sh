@@ -1,3 +1,4 @@
+#!/bin/bash
 #Adding retry logic to yum commands in order to avoid stalling out on resource locks
 echo "installing moby-engine (docker)"
 for attempt in {1..60}; do
