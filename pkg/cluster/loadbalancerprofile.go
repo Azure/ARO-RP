@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"sync"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 
@@ -22,11 +23,6 @@ const outboundRuleV4 = "outbound-rule-v4"
 type deleteIPResult struct {
 	name string
 	err  error
-}
-
-type createIPResult struct {
-	ip  mgmtnetwork.PublicIPAddress
-	err error
 }
 
 func (m *manager) reconcileLoadBalancerProfile(ctx context.Context) error {
@@ -321,27 +317,51 @@ func getDesiredOutboundIPs(managedOBIPCount int, ipAddresses map[string]mgmtnetw
 }
 
 func (m *manager) createPublicIPAddresses(ctx context.Context, ipAddresses map[string]mgmtnetwork.PublicIPAddress, numToCreate int) error {
-	ch := make(chan createIPResult)
-	defer close(ch)
-	var errResults []string
-	// create additional IPs if needed
-	for i := 0; i < numToCreate; i++ {
-		go m.createPublicIPAddress(ctx, ch)
-	}
+	var wg sync.WaitGroup
 
+	resultCh := make(chan mgmtnetwork.PublicIPAddress)
+	errCh := make(chan error)
+	doneCh := make(chan bool)
+
+	m.processIPAddresses(ctx, numToCreate, resultCh, errCh, &wg)
+
+	go func() {
+		wg.Wait()
+		close(resultCh)
+		close(errCh)
+		doneCh <- true
+		close(doneCh)
+	}()
+
+	return consumResults(resultCh, errCh, doneCh, ipAddresses)
+}
+
+func (m *manager) processIPAddresses(ctx context.Context, numToCreate int, resultCh chan<- mgmtnetwork.PublicIPAddress, errCh chan<- error, wg *sync.WaitGroup) {
+	wg.Add(numToCreate)
 	for i := 0; i < numToCreate; i++ {
-		result := <-ch
-		if result.err != nil {
-			errResults = append(errResults, fmt.Sprintf("creation of ip address %s failed with error: %s", *result.ip.Name, result.err.Error()))
-		} else {
-			ipAddresses[*result.ip.Name] = result.ip
+		go m.createPublicIPAddress(ctx, resultCh, errCh, wg)
+	}
+}
+
+func consumResults(resultCh <-chan mgmtnetwork.PublicIPAddress, errCh <-chan error, doneCh <-chan bool, ipAddresses map[string]mgmtnetwork.PublicIPAddress) error {
+	var errResults []string
+	for {
+		select {
+		case err := <-errCh:
+			if err != nil {
+				errResults = append(errResults, err.Error())
+			}
+		case ip := <-resultCh:
+			if ip.Name != nil {
+				ipAddresses[*ip.Name] = ip
+			}
+		case <-doneCh:
+			if errResults != nil {
+				return fmt.Errorf("failed to create required IPs\n%s", strings.Join(errResults, "\n"))
+			}
+			return nil
 		}
 	}
-
-	if len(errResults) > 0 {
-		return fmt.Errorf("failed to create required IPs\n%s", strings.Join(errResults, "\n"))
-	}
-	return nil
 }
 
 // Get all current managed IP Addresses in cluster resource group based on naming convention.
@@ -369,8 +389,9 @@ func genManagedOutboundIPName() string {
 	return uuid.DefaultGenerator.Generate() + "-outbound-pip-v4"
 }
 
-// Create a managed outbound IP Address.
-func (m *manager) createPublicIPAddress(ctx context.Context, ch chan<- createIPResult) {
+func (m *manager) createPublicIPAddress(ctx context.Context, resultsCh chan<- mgmtnetwork.PublicIPAddress, errorsCh chan<- error, wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	name := genManagedOutboundIPName()
 	resourceGroupName := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	resourceID := fmt.Sprintf("%s/providers/Microsoft.Network/publicIPAddresses/%s", m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, name)
@@ -378,10 +399,12 @@ func (m *manager) createPublicIPAddress(ctx context.Context, ch chan<- createIPR
 	publicIPAddress := newPublicIPAddress(name, resourceID, m.doc.OpenShiftCluster.Location)
 
 	err := m.publicIPAddresses.CreateOrUpdateAndWait(ctx, resourceGroupName, name, publicIPAddress)
-	ch <- createIPResult{
-		ip:  publicIPAddress,
-		err: err,
+	if err != nil {
+		errorsCh <- fmt.Errorf("creation of ip address %v failed with error: %v", name, err.Error())
+		return
 	}
+
+	resultsCh <- publicIPAddress
 }
 
 func getOutboundIPsFromLB(lb mgmtnetwork.LoadBalancer) []api.ResourceReference {
