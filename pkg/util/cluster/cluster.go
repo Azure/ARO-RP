@@ -388,6 +388,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 		c.log.Print("deleting role assignments")
 		err = c.deleteRoleAssignments(ctx, vnetResourceGroup, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID)
 		if err != nil {
+			c.log.Errorf("error when deleting role assignments: %v", err)
 			errs = append(errs, err)
 		}
 	}
@@ -403,6 +404,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			c.log.Print("deleting cluster")
 			err = c.openshiftclustersv20200430.DeleteAndWait(ctx, vnetResourceGroup, clusterName)
 			if err != nil {
+				c.log.Errorf("error when deleting cluster: %v", err)
 				errs = append(errs, err)
 			}
 		}
@@ -412,6 +414,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			c.log.Print("deleting resource group")
 			err = c.groups.DeleteAndWait(ctx, vnetResourceGroup)
 			if err != nil {
+				c.log.Errorf("error when deleting resource group: %v", err)
 				errs = append(errs, err)
 			}
 		}
@@ -422,6 +425,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 				err = c.ciParentVnetPeerings.DeleteAndWait(ctx, r.ResourceGroup, r.ResourceName, vnetResourceGroup+"-peer")
 			}
 			if err != nil {
+				c.log.Errorf("error when deleting vnet peerings: %v", err)
 				errs = append(errs, err)
 			}
 		}
@@ -429,6 +433,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 		c.log.Print("deleting cluster")
 		err = c.openshiftclustersv20200430.DeleteAndWait(ctx, vnetResourceGroup, clusterName)
 		if err != nil {
+			c.log.Errorf("error when deleting cluster: %v", err)
 			errs = append(errs, err)
 		}
 
@@ -436,33 +441,37 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 		c.log.Info("deleting deployment")
 		err = c.deployments.DeleteAndWait(ctx, vnetResourceGroup, clusterName)
 		if err != nil {
+			c.log.Errorf("error when deleting deployment: %v", err)
 			errs = append(errs, err)
 		}
 
 		c.log.Info("deleting master/worker subnets")
 		err = c.subnets.DeleteAndWait(ctx, vnetResourceGroup, "dev-vnet", clusterName+"-master")
 		if err != nil {
+			c.log.Errorf("error when deleting master subnet: %v", err)
 			errs = append(errs, err)
 		}
 
 		err = c.subnets.DeleteAndWait(ctx, vnetResourceGroup, "dev-vnet", clusterName+"-worker")
 		if err != nil {
+			c.log.Errorf("error when deleting worker subnet: %v", err)
 			errs = append(errs, err)
 		}
 
 		c.log.Info("deleting route table")
 		err = c.routetables.DeleteAndWait(ctx, vnetResourceGroup, clusterName+"-rt")
 		if err != nil {
+			c.log.Errorf("error when deleting route table: %v", err)
 			errs = append(errs, err)
 		}
 	}
 
-	c.log.Info("done")
-
 	if errs != nil {
+		c.log.Error("done, errors encountered")
 		return errs // https://golang.org/doc/faq#nil_error
 	}
 
+	c.log.Info("done")
 	return nil
 }
 
