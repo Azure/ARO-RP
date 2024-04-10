@@ -1,48 +1,278 @@
 #!/bin/bash
 
-echo "setting ssh password authentication"
-# We need to manually set PasswordAuthentication to true in order for the VMSS Access JIT to work
-sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
-systemctl reload sshd.service
+set -o errexit \
+    -o nounset
 
-#Adding retry logic to yum commands in order to avoid stalling out on resource locks
-echo "running RHUI fix"
-for attempt in {1..5}; do
-  yum update -y --disablerepo='*' --enablerepo='rhui-microsoft-azure*' && break
-  if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
-done
+if [ "${DEBUG:-false}" == true ]; then
+    set -x
+fi
 
-echo "running yum update"
-for attempt in {1..5}; do
-  yum -y -x WALinuxAgent -x WALinuxAgent-udev update --allowerasing && break
-  if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
-done
+main() {
+    parse_run_options "$@"
 
-echo "extending partition table"
-# Linux block devices are inconsistently named
-# it's difficult to tie the lvm pv to the physical disk using /dev/disk files, which is why lvs is used here
-physicalDisk="$(lvs -o devices -a | head -n2 | tail -n1 | cut -d ' ' -f 3 | cut -d \( -f 1 | tr -d '[:digit:]')"
-growpart "$physicalDisk" 2
 
-echo "extending filesystems"
-lvextend -l +20%FREE /dev/rootvg/rootlv
-xfs_growfs /
+    configure_sshd
+    configure_and_install_dnf_pkgs_repos
+    configure_disk_partitions
+    configure_logrotate
+    configure_selinux
 
-lvextend -l +100%FREE /dev/rootvg/varlv
-xfs_growfs /var
+    mkdir -p /var/log/journal
+    mkdir -p /var/lib/waagent/Microsoft.Azure.KeyVault.Store
 
-echo "importing rpm repositories"
-rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
-rpm --import https://packages.microsoft.com/keys/microsoft.asc
+    configure_firewalld_rules
+    pull_container_images
+    configure_system_services
+    reboot_vm
+}
 
-for attempt in {1..5}; do
-  yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && break
-  if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
-done
+usage() {
+    local -n options="$1"
+    log "$(basename "$0") [$options]
+        -d Configure Disk Partitions
+        -p Configure rpm repositories, import required rpm keys, update & install packages with dnf
+        -l Configure logrotate.conf
+        -s Make selinux modifications required for ARO RP
+        -r Configure sshd - Allow password authenticaiton
+        -f Configure firewalld default zone rules
+        -u Configure systemd unit files for ARO RP
+        -i Pull container images
 
-echo "configuring logrotate"
-cat >/etc/logrotate.conf <<'EOF'
-# see "man logrotate" for details
+        Note: steps will be executed in the order that flags are provided
+    "
+}
+
+# parse_run_options takes all arguements passed to main and parses them
+# allowing individual step(s) to be ran, rather than all steps
+#
+# This is useful for local testing, or possibly modifying the bootstrap execution via environment variables in the deployment pipeline
+parse_run_options() {
+    # shellcheck disable=SC2206
+    local -a options=(${1:-})
+    if [ "${#options[@]}" -eq 0 ]; then
+        log "Running all steps"
+        return 0
+    fi
+
+    local OPTIND
+    local -r allowed_options="dplsrfui"
+    while getopts ${allowed_options} options; do
+        case "${options}" in
+            d)
+                log "Running step configure_disk_partitions"
+                configure_disk_partitions
+                ;;
+            p)
+                log "Running step configure_and_install_dnf_pkgs_repos"
+                configure_and_install_dnf_pkgs_repos
+                ;;
+            l)
+                log "Running configure_logrotate"
+                configure_logrotate
+                ;;
+            s)
+                log "Running configure_selinux"
+                configure_selinux
+                ;;
+            r)
+                log "Running configure_sshd"
+                configure_sshd
+                ;;
+            f)
+                log "Running configure_firewalld_rules"
+                configure_firewalld_rules
+                ;;
+            u)
+                log "Running pull_container_images & configure_system_services"
+                configure_system_services
+                ;;
+            i)
+                log "Running pull_container_images"
+                pull_container_images 
+                ;;
+            *)
+                usage allowed_options
+                abort "Unkown option provided"
+                ;;
+        esac
+    done
+    
+    exit 0
+}
+
+# We need to configure PasswordAuthentication to yes in order for the VMSS Access JIT to work
+configure_sshd() {
+    log "starting"
+    log "setting ssh password authentication"
+    sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+
+    systemctl reload sshd.service
+    systemctl is-active --quiet sshd || abort "sshd failed to reload"
+}
+
+# configure_and_install_dnf_pkgs_repos
+configure_and_install_dnf_pkgs_repos() {
+    log "starting"
+
+    # transaction attempt retry time in seconds
+    local -ri retry_wait_time=60
+    configure_rhui_repo retry_wait_time
+    create_azure_rpm_repos retry_wait_time
+
+    local -ar exclude_pkgs=(
+        "-x WALinuxAgent"
+        "-x WALinuxAgent-udev"
+    )
+
+    dnf_update_pkgs exclude_pkgs retry_wait_time
+
+    local -ra rpm_keys=(
+        https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
+        https://packages.microsoft.com/keys/microsoft.asc
+    )
+
+    rpm_import_keys rpm_keys retry_wait_time
+
+    local -ra repo_rpm_pkgs=(
+        https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+    )
+
+    local -ra install_pkgs=(
+        clamav
+        azsec-clamav
+        azsec-monitor
+        azure-cli
+        azure-mdsd
+        azure-security
+        podman
+        podman-docker
+        openssl-perl
+        # hack - we are installing python3 on hosts due to an issue with Azure Linux Extensions https://github.com/Azure/azure-linux-extensions/pull/1505
+        python3
+    )
+
+    dnf_install_pkgs repo_rpm_pkgs retry_wait_time
+    dnf_install_pkgs install_pkgs retry_wait_time
+}
+
+# configure_rhui_repo
+configure_rhui_repo() {
+    log "starting"
+
+    local -ra cmd=(
+        dnf
+        update
+        -y
+        --disablerepo='*'
+        --enablerepo='rhui-microsoft-azure*'
+    )
+
+    log "running RHUI package updates"
+    retry cmd "$1"
+}
+
+# retry Adding retry logic to yum commands in order to avoid stalling out on resource locks
+retry() {
+    local -n cmd_retry="$1"
+    local -n wait_time="$2"
+
+    for attempt in {1..5}; do
+        log "attempt #${attempt} - ${FUNCNAME[2]}"
+        ${cmd_retry[@]} &
+
+        wait $! && break
+        if [[ ${attempt} -lt 5 ]]; then
+            sleep "$wait_time"
+        else
+            abort "attempt #${attempt} - Failed to update packages"
+        fi
+    done
+}
+
+# dnf_update_pkgs
+dnf_update_pkgs() {
+    local -n excludes="$1"
+    log "starting"
+
+    local -ra cmd=(
+        dnf
+        -y
+        ${excludes[@]}
+        update
+        --allowerasing
+    )
+
+    log "Updating all packages"
+    retry cmd "$2"
+}
+
+# dnf_install_pkgs
+dnf_install_pkgs() {
+    local -n pkgs="$1"
+    log "starting"
+
+    local -ra cmd=(
+        dnf
+        -y
+        install
+        ${pkgs[@]}
+    )
+
+    log "Attempting to install packages: ${pkgs[*]}"
+    retry cmd "$2"
+}
+
+# rpm_import_keys
+rpm_import_keys() {
+    local -n keys="$1"
+    log "starting"
+
+
+    # shellcheck disable=SC2068
+    for key in ${keys[@]}; do
+        if [ ${#keys[@]} -eq 0 ]; then
+            break
+        fi
+            local -a cmd=(
+                rpm
+                --import
+                -v
+                "$key"
+            )
+
+            log "attempt #$attempt - importing rpm repository key $key"
+            retry cmd "$2" && unset key
+    done
+}
+
+# configure_disk_partitions
+configure_disk_partitions() {
+    log "starting"
+    log "extending partition table"
+
+    # Linux block devices are inconsistently named
+    # it's difficult to tie the lvm pv to the physical disk using /dev/disk files, which is why lvs is used here
+    physical_disk="$(lvs -o devices -a | head -n2 | tail -n1 | cut -d ' ' -f 3 | cut -d \( -f 1 | tr -d '[:digit:]')"
+    growpart "$physical_disk" 2
+
+    log "extending filesystems"
+    log "extending root lvm"
+    lvextend -l +20%FREE /dev/rootvg/rootlv
+    log "growing root filesystem"
+    xfs_growfs /
+
+    log "extending var lvm"
+    lvextend -l +100%FREE /dev/rootvg/varlv
+    log "growing var filesystem"
+    xfs_growfs /var
+}
+
+# configure_logrotate clobbers /etc/logrotate.conf
+configure_logrotate() {
+    log "starting"
+
+    local -r logrotate_conf_filename='/etc/logrotate.conf'
+    local -r logrotate_conf_file='# see "man logrotate" for details
 # rotate log files weekly
 weekly
 
@@ -61,7 +291,7 @@ compress
 # RPM packages drop log rotation information into this directory
 include /etc/logrotate.d
 
-# no packages own wtmp and btmp -- we'll rotate them here
+# no packages own wtmp and btmp -- we will rotate them here
 /var/log/wtmp {
     monthly
     create 0664 root utmp
@@ -74,12 +304,17 @@ include /etc/logrotate.d
     monthly
     create 0600 root utmp
     rotate 1
-}
-EOF
+}'
 
-echo "configuring yum repository and running yum update"
-cat >/etc/yum.repos.d/azure.repo <<'EOF'
-[azure-cli]
+    write_file logrotate_conf_filename logrotate_conf_file true
+}
+
+# create_azure_rpm_repos creates /etc/yum.repos.d/azure.repo repository file
+create_azure_rpm_repos() {
+    log "starting"
+
+    local -r azure_repo_filename='/etc/yum.repos.d/azure.repo'
+    local -r azure_repo_file='[azure-cli]
 name=azure-cli
 baseurl=https://packages.microsoft.com/yumrepos/azure-cli
 enabled=yes
@@ -89,63 +324,151 @@ gpgcheck=yes
 name=azurecore
 baseurl=https://packages.microsoft.com/yumrepos/azurecore
 enabled=yes
-gpgcheck=no
-EOF
+gpgcheck=no'
 
-semanage fcontext -a -t var_log_t "/var/log/journal(/.*)?"
-mkdir -p /var/log/journal
+    write_file azure_repo_filename azure_repo_file true
+}
 
-for attempt in {1..5}; do
-yum -y install clamav azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security podman podman-docker openssl-perl python3 && break
-  # hack - we are installing python3 on hosts due to an issue with Azure Linux Extensions https://github.com/Azure/azure-linux-extensions/pull/1505
-  if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
-done
+# configure_selinux
+configure_selinux() {
+    log "starting"
 
-# https://access.redhat.com/security/cve/cve-2020-13401
-echo "applying firewall rules"
-cat >/etc/sysctl.d/02-disable-accept-ra.conf <<'EOF'
-net.ipv6.conf.all.accept_ra=0
-EOF
+    local -r relabel="${1:-false}"
 
-cat >/etc/sysctl.d/01-disable-core.conf <<'EOF'
-kernel.core_pattern = |/bin/true
-EOF
-sysctl --system
+    already_defined_ignore_error="File context for /var/log/journal(/.*)? already defined"
+    semanage fcontext -a -t var_log_t "/var/log/journal(/.*)?" || log "$already_defined_ignore_error"
+    chcon -R system_u:object_r:var_log_t:s0 /var/opt/microsoft/linuxmonagent
 
-firewall-cmd --add-port=443/tcp --permanent
-firewall-cmd --add-port=444/tcp --permanent
-firewall-cmd --add-port=445/tcp --permanent
-firewall-cmd --add-port=2222/tcp --permanent
+    if "$relabel"; then
+        restorecon -RF /var/log/* || log "$already_defined_ignore_error"
+    fi
+}
 
-export AZURE_CLOUD_NAME=$AZURECLOUDNAME
+# configure_firewalld_rules
+configure_firewalld_rules() {
+    log "starting"
 
-echo "logging into prod acr"
-az login -i --allow-no-subscriptions
+    # https://access.redhat.com/security/cve/cve-2020-13401
+    local -r prefix="/etc/sysctl.d"
+    local -r disable_accept_ra_conf_filename="$prefix/02-disable-accept-ra.conf"
+    local -r disable_accept_ra_conf_file="net.ipv6.conf.all.accept_ra=0"
 
-# Suppress emulation output for podman instead of docker for az acr compatability
-mkdir -p /etc/containers/
-touch /etc/containers/nodocker
+    write_file disable_accept_ra_conf_filename disable_accept_ra_conf_file true
 
-mkdir -p /root/.docker
-REGISTRY_AUTH_FILE=/root/.docker/config.json az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
+    local -r disable_core_filename="$prefix/01-disable-core.conf"
+    local -r disable_core_file="kernel.core_pattern = |/bin/true
+    "
+    write_file disable_core_filename disable_core_file true
 
-MDMIMAGE="${RPIMAGE%%/*}/${MDMIMAGE##*/}"
-docker pull "$MDMIMAGE"
-docker pull "$RPIMAGE"
-docker pull "$FLUENTBITIMAGE"
+    sysctl --system
 
-az logout
+    local -ra enable_ports=(
+        "443/tcp"
+        "444/tcp"
+        "445/tcp"
+        "2222/tcp"
+    )
 
-echo "configuring fluentbit service"
-mkdir -p /etc/fluentbit/
-mkdir -p /var/lib/fluent
+    log "Enabling ports ${enable_ports[*]} on default firewalld zone"
+    # shellcheck disable=SC2068
+    for port in ${enable_ports[@]}; do
+        log "Enabling port $port now"
+        firewall-cmd "--add-port=$port"
+    done
 
-cat >/etc/fluentbit/fluentbit.conf <<'EOF'
-[INPUT]
-	Name systemd
-	Tag journald
-	Systemd_Filter _COMM=aro
-	DB /var/lib/fluent/journaldb
+    firewall-cmd --runtime-to-permanent
+}
+
+# pull_container_images
+pull_container_images() {
+    log "starting"
+
+    # The managed identity that the VM runs as only has a single roleassignment.
+    # This role assignment is ACRPull which is not necessarily present in the
+    # subscription we're deploying into.  If the identity does not have any
+    # role assignments scoped on the subscription we're deploying into, it will
+    # not show on az login -i, which is why the below line is commented.
+    # az account set -s "$SUBSCRIPTIONID"
+    az login -i --allow-no-subscriptions
+
+    # Suppress emulation output for podman instead of docker for az acr compatability
+    mkdir -p /etc/containers/
+    mkdir -p /root/.docker
+    touch /etc/containers/nodocker
+
+	# This name is used in the case that az acr login searches for this in it's environment
+    local -r REGISTRY_AUTH_FILE="/root/.docker/config.json"
+    
+    log "logging into prod acr"
+    az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
+
+    MDMIMAGE="${RPIMAGE%%/*}/${MDMIMAGE##*/}"
+    docker pull "$MDMIMAGE"
+    docker pull "$RPIMAGE"
+    docker pull "$FLUENTBITIMAGE"
+
+    az logout
+}
+
+# configure_system_services creates, configures, and enables the following systemd services and timers
+# services
+#   fluentbit
+#   mdm
+#   mdsd
+#   arp-rp
+#   aro-dbtoken
+#   aro-monitor
+#   aro-portal
+configure_system_services() {
+    configure_service_fluentbit
+    configure_service_mdm
+    configure_timers_mdm_mdsd
+    configure_service_aro_rp
+    configure_service_aro_dbtoken
+    configure_service_aro_monitor
+    configure_service_aro_portal
+    configure_service_mdsd
+}
+
+# enable_aro_services enables all services required for aro rp
+enable_aro_services() {
+    log "starting"
+
+    local -ra aro_services=(
+        "aro-dbtoken"
+        "aro-monitor"
+        "aro-portal"
+        "aro-rp"
+        "auoms"
+        "azsecd"
+        "azsecmond"
+        "mdsd"
+        "mdm"
+        "chronyd"
+        "fluentbit"
+    )
+    log "enabling aro services ${aro_services[*]}"
+    # shellcheck disable=SC2068
+    for service in ${aro_services[@]}; do
+        log "Enabling $service now"
+        systemctl enable "$service.service"
+    done
+}
+
+# configure_service_fluentbit
+configure_service_fluentbit() {
+    log "starting"
+    log "configuring fluentbit service"
+
+    mkdir -p /etc/fluentbit/
+    mkdir -p /var/lib/fluent
+
+    local -r fluentbit_conf_filename='/etc/fluentbit/fluentbit.conf'
+    local -r fluentbit_conf_file="[INPUT]
+Name systemd
+Tag journald
+Systemd_Filter _COMM=aro
+DB /var/lib/fluent/journaldb
 
 [FILTER]
 	Name modify
@@ -173,13 +496,18 @@ cat >/etc/fluentbit/fluentbit.conf <<'EOF'
 [OUTPUT]
 	Name forward
 	Match *
-	Port 29230
-EOF
+	Port 29230"
 
-echo "FLUENTBITIMAGE=$FLUENTBITIMAGE" >/etc/sysconfig/fluentbit
+    write_file fluentbit_conf_filename fluentbit_conf_file true
 
-cat >/etc/systemd/system/fluentbit.service <<'EOF'
-[Unit]
+    local -r sysconfig_fluentbit_filename='/etc/sysconfig/fluentbit'
+    local -r sysconfig_fluentbit_file="FLUENTBITIMAGE=$FLUENTBITIMAGE"
+
+    write_file sysconfig_fluentbit_filename sysconfig_fluentbit_file true
+
+    local -r fluentbit_service_filename='/etc/systemd/system/fluentbit.service'
+
+    local -r fluentbit_service_file="[Unit]
 After=network-online.target
 Wants=network-online.target
 StartLimitIntervalSec=0
@@ -209,28 +537,61 @@ RestartSec=5
 StartLimitInterval=0
 
 [Install]
-WantedBy=multi-user.target
-EOF
+WantedBy=multi-user.target"
 
-mkdir /etc/aro-rp
-base64 -d <<<"$ADMINAPICABUNDLE" >/etc/aro-rp/admin-ca-bundle.pem
-if [[ -n "$ARMAPICABUNDLE" ]]; then
-  base64 -d <<<"$ARMAPICABUNDLE" >/etc/aro-rp/arm-ca-bundle.pem
-fi
-chown -R 1000:1000 /etc/aro-rp
+    write_file fluentbit_conf_filename fluentbit_conf_file true
+}
 
-echo "configuring mdm service"
-cat >/etc/sysconfig/mdm <<EOF
-MDMFRONTENDURL='$MDMFRONTENDURL'
+# configure_certs
+configure_certs() {
+    log "starting"
+
+    mkdir /etc/aro-rp
+    base64 -d <<<"$ADMINAPICABUNDLE" >/etc/aro-rp/admin-ca-bundle.pem
+    if [[ -n "$ARMAPICABUNDLE" ]]; then
+    base64 -d <<<"$ARMAPICABUNDLE" >/etc/aro-rp/arm-ca-bundle.pem
+    fi
+    chown -R 1000:1000 /etc/aro-rp
+
+    # setting MONITORING_GCS_AUTH_ID_TYPE=AuthKeyVault seems to have caused mdsd not
+    # to honour SSL_CERT_FILE any more, heaven only knows why.
+    mkdir -p /usr/lib/ssl/certs
+    csplit -f /usr/lib/ssl/certs/cert- -b %03d.pem /etc/pki/tls/certs/ca-bundle.crt /^$/1 "{*}" >/dev/null
+    c_rehash /usr/lib/ssl/certs
+
+# we leave clientId blank as long as only 1 managed identity assigned to vmss
+# if we have more than 1, we will need to populate with clientId used for off-node scanning
+    local -r nodescan_agent_filename="/etc/default/vsa-nodescan-agent.config"
+    local -r nodescan_agent_file="{
+    \"Nice\": 19,
+    \"Timeout\": 10800,
+    \"ClientId\": \"\",
+    \"TenantId\": $AZURESECPACKVSATENANTID,
+    \"QualysStoreBaseUrl\": $AZURESECPACKQUALYSURL,
+    \"ProcessTimeout\": 300,
+    \"CommandDelay\": 0
+  }"
+
+    write_file nodescan_agent_filename nodescan_agent_file true
+}
+
+# configure_service_mdm
+configure_service_mdm() {
+    log "starting"
+    log "configuring mdm service"
+
+    local -r sysconfig_mdm_filename="/etc/sysconfig/mdm"
+    local -r sysconfig_mdm_file="MDMFRONTENDURL='$MDMFRONTENDURL'
 MDMIMAGE='$MDMIMAGE'
 MDMSOURCEENVIRONMENT='$LOCATION'
 MDMSOURCEROLE=rp
-MDMSOURCEROLEINSTANCE='$(hostname)'
-EOF
+MDMSOURCEROLEINSTANCE=\"$(hostname)\""
 
-mkdir /var/etw
-cat >/etc/systemd/system/mdm.service <<'EOF'
-[Unit]
+    write_file sysconfig_mdm_filename sysconfig_mdm_file true
+
+    mkdir -p /var/etw
+    local -r mdm_service_filename="/etc/systemd/system/mdm.service"
+    local -r mdm_service_file="[Unit]
 After=network-online.target
 Wants=network-online.target
 
@@ -261,12 +622,157 @@ RestartSec=1
 StartLimitInterval=0
 
 [Install]
-WantedBy=multi-user.target
-EOF
+WantedBy=multi-user.target"
 
-echo "configuring aro-rp service"
-cat >/etc/sysconfig/aro-rp <<EOF
-ACR_RESOURCE_ID='$ACRRESOURCEID'
+    write_file mdm_service_filename mdm_service_file true
+}
+
+# configure_timers_mdm_mdsd
+configure_timers_mdm_mdsd() {
+    log "starting"
+
+    for var in "mdsd" "mdm"; do
+        local download_creds_service_filename="/etc/systemd/system/download-$var-credentials.service"
+        local download_creds_service_file="[Unit]
+Description=Periodic $var credentials refresh
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/download-credentials.sh $var"
+
+        write_file download_creds_service_filename download_creds_service_file true
+
+        local download_creds_timer_filename="/etc/systemd/system/download-$var-credentials.timer"
+        local download_creds_timer_file="[Unit]
+Description=Periodic $var credentials refresh
+After=network-online.target
+Wants=network-online.target
+
+[Timer]
+OnBootSec=0min
+OnCalendar=0/12:00:00
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target"
+
+        write_file download_creds_timer_filename download_creds_timer_file true
+    done
+
+    local -r download_creds_script_filename="/usr/local/bin/download-credentials.sh"
+    local -r download_creds_script_file="#!/bin/bash
+set -eu
+
+COMPONENT=\$1
+echo \"Download \$COMPONENT credentials\"
+
+TEMP_DIR=\"\$(mktemp -d)\"
+export AZURE_CONFIG_DIR=\"\$(mktemp -d)\"
+
+echo \"Logging into Azure...\"
+RETRIES=3
+while [[ \$RETRIES -gt 0 ]]; do
+    if az login -i --allow-no-subscriptions
+    then
+        echo \"az login successful\"
+        break
+    else
+        echo \"az login failed. Retrying...\"
+        let RETRIES-=1
+        sleep 5
+    fi
+done
+
+trap \"cleanup\" EXIT
+
+cleanup() {
+  az logout
+  [[ \$TEMP_DIR =~ /tmp/.+ ]] && rm -rf \$TEMP_DIR
+  [[ \$AZURE_CONFIG_DIR =~ /tmp/.+ ]] && rm -rf \$AZURE_CONFIG_DIR
+}
+
+if [[ \$COMPONENT = \"mdm\" ]]; then
+  CURRENT_CERT_FILE=\"/etc/mdm.pem\"
+elif [[ \$COMPONENT\ = \"mdsd\" ]]; then
+  CURRENT_CERT_FILE=\"/var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem\"
+else
+  echo Invalid usage && exit 1
+fi
+
+SECRET_NAME=\"rp-\${COMPONENT}\"
+NEW_CERT_FILE=\"\$TEMP_DIR/\$COMPONENT.pem\"
+for attempt in {1..5}; do
+  az keyvault \
+    secret \
+    download \
+    --file \"\$NEW_CERT_FILE\" \
+    --id \"https://$KEYVAULTPREFIX-svc.$KEYVAULTDNSSUFFIX/secrets/\$SECRET_NAME\" \
+    && break
+  if [[ \$attempt -lt 5 ]]; then sleep 10; else exit 1; fi
+done
+
+if [ -f \$NEW_CERT_FILE ]; then
+  if [[ \$COMPONENT = \"mdsd\" ]]; then
+    chown syslog:syslog \$NEW_CERT_FILE
+  else
+    sed -i -ne '1,/END CERTIFICATE/ p' \$NEW_CERT_FILE
+  fi
+
+  new_cert_sn=\"\$(openssl x509 -in \"\$NEW_CERT_FILE\" -noout -serial | awk -F= '{print \$2}')\"
+  current_cert_sn=\"\$(openssl x509 -in \"\$CURRENT_CERT_FILE\" -noout -serial | awk -F= '{print \$2}')\"
+  if [[ ! -z \$new_cert_sn ]] && [[ \$new_cert_sn != \"\$current_cert_sn\" ]]; then
+    echo updating certificate for \$COMPONENT
+    chmod 0600 \$NEW_CERT_FILE
+    mv \$NEW_CERT_FILE \$CURRENT_CERT_FILE
+  fi
+else
+  echo Failed to refresh certificate for \$COMPONENT && exit 1
+fi"
+
+    write_file download_creds_script_filename download_creds_script_file true
+
+    chmod u+x /usr/local/bin/download-credentials.sh
+
+    systemctl enable download-mdsd-credentials.timer
+    systemctl enable download-mdm-credentials.timer
+
+    /usr/local/bin/download-credentials.sh mdsd
+    /usr/local/bin/download-credentials.sh mdm
+
+    local -r MDSDCERTIFICATESAN="$(openssl x509 -in /var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem -noout -subject | sed -e 's/.*CN = //')"
+    local -r watch_mdm_creds_service_filename="/etc/systemd/system/watch-mdm-credentials.service"
+    local -r watch_mdm_creds_service_file="[Unit]
+Description=Watch for changes in mdm.pem and restarts the mdm service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl restart mdm.service
+
+[Install]
+WantedBy=multi-user.target"
+
+    write_file watch_mdm_creds_service_filename watch_mdm_creds_service_file true
+
+    local -r watch_mdm_creds_path_filename='/etc/systemd/system/watch-mdm-credentials.path'
+    local -r watch_mdm_creds_path_file='[Path]
+PathModified=/etc/mdm.pem
+
+[Install]
+WantedBy=multi-user.target'
+
+    write_file watch_mdm_creds_path_filename watch_mdm_creds_path_file true
+
+    local -r watch_mdm_creds='watch-mdm-credentials.path'
+    systemctl enable "$watch_mdm_creds" || abort "failed to enable $watch_mdm_creds"
+    systemctl start "$watch_mdm_creds" || abort "failed to start $watch_mdm_creds"
+}
+
+# configure_service_aro_rp
+configure_service_aro_rp() {
+    log "starting"
+
+    local -r aro_rp_conf_filename='/etc/sysconfig/aro-rp'
+    local -r aro_rp_conf_file="ACR_RESOURCE_ID='$ACRRESOURCEID'
 ADMIN_API_CLIENT_CERT_COMMON_NAME='$ADMINAPICLIENTCERTCOMMONNAME'
 ARM_API_CLIENT_CERT_COMMON_NAME='$ARMAPICLIENTCERTCOMMONNAME'
 AZURE_ARM_CLIENT_ID='$ARMCLIENTID'
@@ -291,11 +797,12 @@ RPIMAGE='$RPIMAGE'
 ARO_INSTALL_VIA_HIVE='$CLUSTERSINSTALLVIAHIVE'
 ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC='$CLUSTERDEFAULTINSTALLERPULLSPEC'
 ARO_ADOPT_BY_HIVE='$CLUSTERSADOPTBYHIVE'
-USE_CHECKACCESS='$USECHECKACCESS'
-EOF
+USE_CHECKACCESS='$USECHECKACCESS'"
 
-cat >/etc/systemd/system/aro-rp.service <<'EOF'
-[Unit]
+    write_file aro_rp_conf_filename aro_rp_conf_file true
+
+    local -r aro_rp_service_filename='/etc/systemd/system/aro-rp.service'
+    local -r aro_rp_service_file="[Unit]
 After=network-online.target
 Wants=network-online.target
 
@@ -345,22 +852,28 @@ RestartSec=1
 StartLimitInterval=0
 
 [Install]
-WantedBy=multi-user.target
-EOF
+WantedBy=multi-user.target"
 
-echo "configuring aro-dbtoken service"
-cat >/etc/sysconfig/aro-dbtoken <<EOF
-DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
+    write_file aro_rp_service_filename aro_rp_conf_file true
+}
+
+# configure_service_aro_dbtoken
+configure_service_aro_dbtoken() {
+    log "starting"
+
+    local -r aro_dbtoken_service_conf_filename='/etc/sysconfig/aro-dbtoken'
+    local -r aro_dbtoken_service_conf_file="DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 AZURE_DBTOKEN_CLIENT_ID='$DBTOKENCLIENTID'
 AZURE_GATEWAY_SERVICE_PRINCIPAL_ID='$GATEWAYSERVICEPRINCIPALID'
 KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=DBToken
-RPIMAGE='$RPIMAGE'
-EOF
+RPIMAGE='$RPIMAGE'"
 
-cat >/etc/systemd/system/aro-dbtoken.service <<'EOF'
-[Unit]
+    write_file aro_dbtoken_service_conf_filename aro_dbtoken_service_conf_file true
+
+    local -r aro_dbtoken_service_filename='/etc/systemd/system/aro-dbtoken.service'
+    local -r aro_dbtoken_service_file="[Unit]
 After=network-online.target
 Wants=network-online.target
 
@@ -391,14 +904,20 @@ RestartSec=1
 StartLimitInterval=0
 
 [Install]
-WantedBy=multi-user.target
-EOF
+WantedBy=multi-user.target"
 
-# DOMAIN_NAME, CLUSTER_MDSD_ACCOUNT, CLUSTER_MDSD_CONFIG_VERSION, GATEWAY_DOMAINS, GATEWAY_RESOURCEGROUP, MDSD_ENVIRONMENT CLUSTER_MDSD_NAMESPACE
-# are not used, but can't easily be refactored out. Should be revisited in the future.
-echo "configuring aro-monitor service"
-cat >/etc/sysconfig/aro-monitor <<EOF
-AZURE_FP_CLIENT_ID='$FPCLIENTID'
+    write_file aro_dbtoken_service_filename aro_dbtoken_service_file true
+}
+
+# configure_service_aro_monitor
+configure_service_aro_monitor() {
+    log "starting"
+    log "configuring aro-monitor service"
+
+    # DOMAIN_NAME, CLUSTER_MDSD_ACCOUNT, CLUSTER_MDSD_CONFIG_VERSION, GATEWAY_DOMAINS, GATEWAY_RESOURCEGROUP, MDSD_ENVIRONMENT CLUSTER_MDSD_NAMESPACE
+    # are not used, but can't easily be refactored out. Should be revisited in the future.
+    local -r aro_monitor_service_conf_filename='/etc/sysconfig/aro-monitor'
+    local -r aro_monitor_service_conf_file="AZURE_FP_CLIENT_ID='$FPCLIENTID'
 DOMAIN_NAME='$LOCATION.$CLUSTERPARENTDOMAINNAME'
 CLUSTER_MDSD_ACCOUNT='$CLUSTERMDSDACCOUNT'
 CLUSTER_MDSD_CONFIG_VERSION='$CLUSTERMDSDCONFIGVERSION'
@@ -412,11 +931,12 @@ DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=BBM
-RPIMAGE='$RPIMAGE'
-EOF
+RPIMAGE='$RPIMAGE'"
 
-cat >/etc/systemd/system/aro-monitor.service <<'EOF'
-[Unit]
+    write_file aro_monitor_service_conf_filename aro_monitor_service_conf_file true
+
+    local -r aro_monitor_service_filename='/etc/systemd/system/aro-monitor.service'
+    local -r aro_monitor_service_file="[Unit]
 After=network-online.target
 Wants=network-online.target
 
@@ -452,12 +972,17 @@ RestartSec=1
 StartLimitInterval=0
 
 [Install]
-WantedBy=multi-user.target
-EOF
+WantedBy=multi-user.target"
 
-echo "configuring aro-portal service"
-cat >/etc/sysconfig/aro-portal <<EOF
-AZURE_PORTAL_ACCESS_GROUP_IDS='$PORTALACCESSGROUPIDS'
+    write_file aro_monitor_service_filename aro_monitor_service_file true
+}
+
+# configure_service_aro_portal
+configure_service_aro_portal() {
+    log "starting"
+
+    local -r aro_portal_service_conf_filename='/etc/sysconfig/aro-portal'
+    local -r aro_portal_service_conf_file="AZURE_PORTAL_ACCESS_GROUP_IDS='$PORTALACCESSGROUPIDS'
 AZURE_PORTAL_CLIENT_ID='$PORTALCLIENTID'
 AZURE_PORTAL_ELEVATED_GROUP_IDS='$PORTALELEVATEDGROUPIDS'
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
@@ -465,11 +990,12 @@ KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=Portal
 PORTAL_HOSTNAME='$LOCATION.admin.$RPPARENTDOMAINNAME'
-RPIMAGE='$RPIMAGE'
-EOF
+RPIMAGE='$RPIMAGE'"
 
-cat >/etc/systemd/system/aro-portal.service <<'EOF'
-[Unit]
+    write_file aro_portal_service_conf_filename aro_portal_service_conf_file true
+
+    local -r aro_portal_service_filename='/etc/systemd/system/aro-portal.service'
+    local -r aro_portal_service_file="[Unit]
 After=network-online.target
 Wants=network-online.target
 StartLimitInterval=0
@@ -501,147 +1027,27 @@ Restart=always
 RestartSec=1
 
 [Install]
-WantedBy=multi-user.target
-EOF
+WantedBy=multi-user.target"
 
-echo "configuring mdsd and mdm services"
-chcon -R system_u:object_r:var_log_t:s0 /var/opt/microsoft/linuxmonagent
-
-mkdir -p /var/lib/waagent/Microsoft.Azure.KeyVault.Store
-
-for var in "mdsd" "mdm"; do
-cat >/etc/systemd/system/download-$var-credentials.service <<EOF
-[Unit]
-Description=Periodic $var credentials refresh
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/download-credentials.sh $var
-EOF
-
-cat >/etc/systemd/system/download-$var-credentials.timer <<EOF
-[Unit]
-Description=Periodic $var credentials refresh
-After=network-online.target
-Wants=network-online.target
-
-[Timer]
-OnBootSec=0min
-OnCalendar=0/12:00:00
-AccuracySec=5s
-
-[Install]
-WantedBy=timers.target
-EOF
-done
-
-cat >/usr/local/bin/download-credentials.sh <<EOF
-#!/bin/bash
-set -eu
-
-COMPONENT="\$1"
-echo "Download \$COMPONENT credentials"
-
-TEMP_DIR=\$(mktemp -d)
-export AZURE_CONFIG_DIR=\$(mktemp -d)
-
-echo "Logging into Azure..."
-RETRIES=3
-while [ "\$RETRIES" -gt 0 ]; do
-    if az login -i --allow-no-subscriptions
-    then
-        echo "az login successful"
-        break
-    else
-        echo "az login failed. Retrying..."
-        let RETRIES-=1
-        sleep 5
-    fi
-done
-
-trap "cleanup" EXIT
-
-cleanup() {
-  az logout
-  [[ "\$TEMP_DIR" =~ /tmp/.+ ]] && rm -rf \$TEMP_DIR
-  [[ "\$AZURE_CONFIG_DIR" =~ /tmp/.+ ]] && rm -rf \$AZURE_CONFIG_DIR
+    write_file aro_portal_service_conf_filename aro_portal_service_conf_file true
 }
 
-if [ "\$COMPONENT" = "mdm" ]; then
-  CURRENT_CERT_FILE="/etc/mdm.pem"
-elif [ "\$COMPONENT" = "mdsd" ]; then
-  CURRENT_CERT_FILE="/var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem"
-else
-  echo Invalid usage && exit 1
-fi
+# configure_service_mdsd
+configure_service_mdsd() {
+    log "starting"
 
-SECRET_NAME="rp-\${COMPONENT}"
-NEW_CERT_FILE="\$TEMP_DIR/\$COMPONENT.pem"
-for attempt in {1..5}; do
-  az keyvault secret download --file \$NEW_CERT_FILE --id "https://$KEYVAULTPREFIX-svc.$KEYVAULTDNSSUFFIX/secrets/\$SECRET_NAME" && break
-  if [[ \$attempt -lt 5 ]]; then sleep 10; else exit 1; fi
-done
+    local -r mdsd_service_dir="/etc/systemd/system/mdsd.service.d"
+    mkdir "$mdsd_service_dir"
 
-if [ -f \$NEW_CERT_FILE ]; then
-  if [ "\$COMPONENT" = "mdsd" ]; then
-    chown syslog:syslog \$NEW_CERT_FILE
-  else
-    sed -i -ne '1,/END CERTIFICATE/ p' \$NEW_CERT_FILE
-  fi
+    local -r mdsd_override_conf_filename="$mdsd_service_dir/override.conf"
+    local -r mdsd_override_conf_file="[Unit]
+After=network-online.target"
 
-  new_cert_sn="\$(openssl x509 -in "\$NEW_CERT_FILE" -noout -serial | awk -F= '{print \$2}')"
-  current_cert_sn="\$(openssl x509 -in "\$CURRENT_CERT_FILE" -noout -serial | awk -F= '{print \$2}')"
-  if [[ ! -z \$new_cert_sn ]] && [[ \$new_cert_sn != "\$current_cert_sn" ]]; then
-    echo updating certificate for \$COMPONENT
-    chmod 0600 \$NEW_CERT_FILE
-    mv \$NEW_CERT_FILE \$CURRENT_CERT_FILE
-  fi
-else
-  echo Failed to refresh certificate for \$COMPONENT && exit 1
-fi
-EOF
+    write_file mdsd_override_conf_filename mdsd_override_conf_file true
 
-chmod u+x /usr/local/bin/download-credentials.sh
-
-systemctl enable download-mdsd-credentials.timer
-systemctl enable download-mdm-credentials.timer
-
-/usr/local/bin/download-credentials.sh mdsd
-/usr/local/bin/download-credentials.sh mdm
-MDSDCERTIFICATESAN=$(openssl x509 -in /var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem -noout -subject | sed -e 's/.*CN = //')
-
-cat >/etc/systemd/system/watch-mdm-credentials.service <<EOF
-[Unit]
-Description=Watch for changes in mdm.pem and restarts the mdm service
-
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/systemctl restart mdm.service
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-cat >/etc/systemd/system/watch-mdm-credentials.path <<EOF
-[Path]
-PathModified=/etc/mdm.pem
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-systemctl enable watch-mdm-credentials.path
-systemctl start watch-mdm-credentials.path
-
-mkdir /etc/systemd/system/mdsd.service.d
-cat >/etc/systemd/system/mdsd.service.d/override.conf <<'EOF'
-[Unit]
-After=network-online.target
-EOF
-
-cat >/etc/default/mdsd <<EOF
-MDSD_ROLE_PREFIX=/var/run/mdsd/default
-MDSD_OPTIONS="-A -d -r \$MDSD_ROLE_PREFIX"
+    local -r default_mdsd_filename="/etc/default/mdsd"
+    local -r default_mdsd_file="MDSD_ROLE_PREFIX=/var/run/mdsd/default
+MDSD_OPTIONS=\"-A -d -r \$MDSD_ROLE_PREFIX\"
 
 export MONITORING_GCS_ENVIRONMENT='$MDSDENVIRONMENT'
 export MONITORING_GCS_ACCOUNT='$RPMDSDACCOUNT'
@@ -654,40 +1060,74 @@ export MONITORING_USE_GENEVA_CONFIG_SERVICE=true
 
 export MONITORING_TENANT='$LOCATION'
 export MONITORING_ROLE=rp
-export MONITORING_ROLE_INSTANCE='$(hostname)'
+export MONITORING_ROLE_INSTANCE=\"$(hostname)\"
 
-export MDSD_MSGPACK_SORT_COLUMNS=1
-EOF
+export MDSD_MSGPACK_SORT_COLUMNS=1\""
 
-# setting MONITORING_GCS_AUTH_ID_TYPE=AuthKeyVault seems to have caused mdsd not
-# to honour SSL_CERT_FILE any more, heaven only knows why.
-mkdir -p /usr/lib/ssl/certs
-csplit -f /usr/lib/ssl/certs/cert- -b %03d.pem /etc/pki/tls/certs/ca-bundle.crt /^$/1 {*} >/dev/null
-c_rehash /usr/lib/ssl/certs
+    write_file default_mdsd_filename default_mdsd_file true
 
-# we leave clientId blank as long as only 1 managed identity assigned to vmss
-# if we have more than 1, we will need to populate with clientId used for off-node scanning
-cat >/etc/default/vsa-nodescan-agent.config <<EOF
-{
-    "Nice": 19,
-    "Timeout": 10800,
-    "ClientId": "",
-    "TenantId": "$AZURESECPACKVSATENANTID",
-    "QualysStoreBaseUrl": "$AZURESECPACKQUALYSURL",
-    "ProcessTimeout": 300,
-    "CommandDelay": 0
-  }
-EOF
+}
 
-echo "enabling aro services"
-for service in aro-dbtoken aro-monitor aro-portal aro-rp auoms azsecd azsecmond mdsd mdm chronyd fluentbit; do
-  systemctl enable $service.service
-done
+# run_azsecd_config_scan
+run_azsecd_config_scan() {
+    log "starting"
 
-for scan in baseline clamav software; do
-  /usr/local/bin/azsecd config -s $scan -d P1D
-done
+    local -ar configs=(
+        "baseline"
+        "clamav"
+        "software"
+    )
 
-echo "rebooting"
-restorecon -RF /var/log/*
-(sleep 30; reboot) &
+    log "Scanning configuration files ${configs[*]}"
+    # shellcheck disable=SC2068
+    for scan in ${configs[@]}; do
+        log "Scanning config file $scan now"
+        /usr/local/bin/azsecd config -s "$scan" -d P1D
+    done
+}
+
+# write_file
+# Args
+# 1) filename - string
+# 2) file_contents - string
+# 3) clobber - boolean; optional - defaults to false
+write_file() {
+    local -n filename="$1"
+    local -n file_contents="$2"
+    local -r clobber="${3:-false}"
+
+    if $clobber; then
+        log "Overwriting file $filename"
+        echo "$file_contents" > "$filename"
+    else
+        log "Appending to $filename"
+        echo "$file_contents" >> "$filename"
+    fi
+}
+
+# reboot_vm restores all selinux file contexts, waits 30 seconds then reboots
+reboot_vm() {
+    log "starting"
+
+    configure_selinux "true"
+    (sleep 30 && log "rebooting vm now"; reboot) &
+}
+
+# log is a wrapper for echo that includes the function name
+log() {
+    local -r msg="${1:-"log message is empty"}"
+    local -r stack_level="${2:-1}"
+    echo "${FUNCNAME[${stack_level}]}: ${msg}"
+}
+
+# abort is a wrapper for log that exits with an error code
+abort() {
+    local -ri origin_stacklevel=2
+    log "${1}" "$origin_stacklevel"
+    log "Exiting"
+    exit 1
+}
+
+export AZURE_CLOUD_NAME="${AZURECLOUDNAME:?"Failed to carry over variables"}"
+
+main "$@"
