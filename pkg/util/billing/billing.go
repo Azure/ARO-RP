@@ -6,17 +6,13 @@ package billing
 import (
 	"context"
 	"net/http"
-	"os"
 
-	azstorage "github.com/Azure/azure-sdk-for-go/storage"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/feature"
 )
 
@@ -31,54 +27,17 @@ type Manager interface {
 }
 
 type manager struct {
-	storageClient *azstorage.Client
-	billingDB     database.Billing
-	subDB         database.Subscriptions
-	log           *logrus.Entry
+	billingDB database.Billing
+	subDB     database.Subscriptions
+	log       *logrus.Entry
 }
 
 func NewManager(env env.Interface, billing database.Billing, sub database.Subscriptions, log *logrus.Entry) (Manager, error) {
-	storageClient, err := storageClient(env, billing, sub, log)
-	if err != nil {
-		return nil, err
-	}
-
 	return &manager{
-		storageClient: storageClient,
-		subDB:         sub,
-		billingDB:     billing,
-		log:           log,
+		subDB:     sub,
+		billingDB: billing,
+		log:       log,
 	}, nil
-}
-
-func storageClient(env env.Interface, billing database.Billing, sub database.Subscriptions, log *logrus.Entry) (*azstorage.Client, error) {
-	if os.Getenv("BILLING_E2E_STORAGE_ACCOUNT_ID") == "" {
-		return nil, nil
-	}
-
-	r, err := azure.ParseResourceID(os.Getenv("BILLING_E2E_STORAGE_ACCOUNT_ID"))
-	if err != nil {
-		return nil, err
-	}
-
-	localFPAuthorizer, err := env.FPAuthorizer(env.TenantID(), env.Environment().ResourceManagerScope)
-	if err != nil {
-		return nil, err
-	}
-
-	e2estorage := storage.NewAccountsClient(env.Environment(), r.SubscriptionID, localFPAuthorizer)
-
-	keys, err := e2estorage.ListKeys(context.Background(), r.ResourceGroup, r.ResourceName, "")
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := azstorage.NewBasicClient(r.ResourceName, *(*keys.Keys)[0].Value)
-	if err != nil {
-		return nil, err
-	}
-
-	return &client, nil
 }
 
 func (m *manager) Ensure(ctx context.Context, doc *api.OpenShiftClusterDocument, sub *api.SubscriptionDocument) error {
