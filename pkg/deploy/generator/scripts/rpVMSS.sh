@@ -3,7 +3,7 @@
 set -o errexit \
     -o nounset \
 
-# trap 'catch' ERR
+trap 'catch' ERR
 
 main() {
     configure_sshd
@@ -11,11 +11,13 @@ main() {
     configure_disk_partitions
     configure_logrotate
     configure_selinux
-    mkdir -p /var/log/journal
+    journal_dir="/var/log/journal"
+    mkdir -p "$journal_dir"
     mkdir -p /var/lib/waagent/Microsoft.Azure.KeyVault.Store
     configure_firewalld_rules
     pull_container_images
     configure_system_services
+    reboot_vm
 }
 
 # We need to configure PasswordAuthentication to yes in order for the VMSS Access JIT to work
@@ -30,9 +32,9 @@ configure_sshd() {
 # configure_and_install_dnf_pkgs_repos
 configure_and_install_dnf_pkgs_repos() {
     configure_rhui_repo
+    create_azure_rpm_repos
     dnf_update_pkgs
     dnf_install_pkgs
-    create_azure_rpm_repos
 }
 
 # configure_rhui_repo
@@ -192,26 +194,28 @@ EOF
 
 # configure_selinux
 configure_selinux() {
-    local relabel="${1:-false}"
-    semanage fcontext -a -t var_log_t "/var/log/journal(/.*)?"
+    local -r relabel="${1:-false}"
+
+    already_defined_ignore_error="File context for /var/log/journal(/.*)? already defined"
+    semanage fcontext -a -t var_log_t "/var/log/journal(/.*)?" || log "$already_defined_ignore_error"
     chcon -R system_u:object_r:var_log_t:s0 /var/opt/microsoft/linuxmonagent
 
-    if relabel; then
-        restorecon -RF /var/log/*
+    if "$relabel"; then
+        restorecon -RF /var/log/* || log "$already_defined_ignore_error"
     fi
 }
 
 # configure_firewalld_rules
 configure_firewalld_rules() {
     # https://access.redhat.com/security/cve/cve-2020-13401
-    local prefix="/etc/sysctl.d"
-    local diable_accept_ra_conf="$prefix/02-disable-accept-ra.conf"
+    local -r prefix="/etc/sysctl.d"
+    local -r diable_accept_ra_conf="$prefix/02-disable-accept-ra.conf"
     log "Writing $diable_accept_ra_conf"
 cat >"$diable_accept_ra_conf" <<'EOF'
 net.ipv6.conf.all.accept_ra=0
 EOF
 
-    local disable_core="$prefix/01-disable-core.conf"
+    local -r disable_core="$prefix/01-disable-core.conf"
     log "Writing $disable_core"
 cat >"$disable_core" <<'EOF'
 kernel.core_pattern = |/bin/true
@@ -230,9 +234,6 @@ EOF
         log "Enabling port $port now"
         firewall-cmd "--add-port=$port"
     done
-    
-    log "reloading firewalld"
-    firewall-cmd reload
 
     firewall-cmd --runtime-to-permanent
 }
@@ -279,7 +280,7 @@ configure_system_services() {
 
 # enable_aro_services enables all services required for aro rp
 enable_aro_services() {
-    local -a aro_services=(
+    local -ra aro_services=(
         "aro-dbtoken"
         "aro-monitor"
         "aro-portal"
@@ -342,7 +343,7 @@ cat >/etc/fluentbit/fluentbit.conf <<'EOF'
 	Port 29230
 EOF
 
-    local sysconfig_fluentbit="/etc/sysconfig/fluentbit"
+    local -r sysconfig_fluentbit="/etc/sysconfig/fluentbit"
     log "Writing value FLUENTBITIMAGE=$FLUENTBITIMAGE to $sysconfig_fluentbit"
     echo "FLUENTBITIMAGE=$FLUENTBITIMAGE" >"$sysconfig_fluentbit"
 
@@ -429,7 +430,7 @@ MDMSOURCEROLE=rp
 MDMSOURCEROLEINSTANCE='$(hostname)'
 EOF
 
-    mkdir /var/etw
+    mkdir -p /var/etw
     mdm_service_file="/etc/systemd/system/mdm.service"
     log "Writing $mdm_service_file"
 cat >"$mdm_service_file"<<'EOF'
@@ -482,7 +483,7 @@ Type=oneshot
 ExecStart=/usr/local/bin/download-credentials.sh $var
 EOF
 
-    download_creds_timer_file="/etc/systemd/system/download-$var-credentials.timer"
+    local -r download_creds_timer_file="/etc/systemd/system/download-$var-credentials.timer"
     log "Writing $download_creds_timer_file"
 cat >"$download_creds_timer_file"<<EOF
 [Unit]
@@ -500,7 +501,7 @@ WantedBy=timers.target
 EOF
     done
 
-    download_creds_script_file="/usr/local/bin/download-credentials.sh"
+    local -r download_creds_script_file="/usr/local/bin/download-credentials.sh"
     log "Writing $download_creds_script_file"
 cat >"$download_creds_script_file" <<EOF
 #!/bin/bash
@@ -575,8 +576,8 @@ EOF
 
     /usr/local/bin/download-credentials.sh mdsd
     /usr/local/bin/download-credentials.sh mdm
-    MDSDCERTIFICATESAN=$(openssl x509 -in /var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem -noout -subject | sed -e 's/.*CN = //')
 
+    local -r MDSDCERTIFICATESAN=$(openssl x509 -in /var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem -noout -subject | sed -e 's/.*CN = //')
     watch_mdm_creds_service_file="/etc/systemd/system/watch-mdm-credentials.service"
     log "Writing $watch_mdm_creds_service_file"
 cat >"$watch_mdm_creds_service_file" <<EOF
@@ -601,7 +602,7 @@ PathModified=/etc/mdm.pem
 WantedBy=multi-user.target
 EOF
 
-    local watch_mdm_creds="watch-mdm-credentials.path"
+    local -r watch_mdm_creds="watch-mdm-credentials.path"
     systemctl enable "$watch_mdm_creds" || abort "failed to enable $watch_mdm_creds"
 
     systemctl start "$watch_mdm_creds" || abort "failed to start $watch_mdm_creds"
@@ -609,7 +610,7 @@ EOF
 
 # configure_service_aro_rp
 configure_service_aro_rp() {
-    local arp_rp_config_file="/etc/sysconfig/aro-rp"
+    local -r arp_rp_config_file="/etc/sysconfig/aro-rp"
     log "Writing $arp_rp_config_file"
 cat >"$arp_rp_config_file"<<EOF
 ACR_RESOURCE_ID='$ACRRESOURCEID'
@@ -640,7 +641,7 @@ ARO_ADOPT_BY_HIVE='$CLUSTERSADOPTBYHIVE'
 USE_CHECKACCESS='$USECHECKACCESS'
 EOF
 
-    local aro_rp_service_file="/etc/systemd/system/aro-rp.service"
+    local -r aro_rp_service_file="/etc/systemd/system/aro-rp.service"
     log "Writing $aro_rp_service_file"
 cat >"$aro_rp_service_file" <<'EOF'
 [Unit]
@@ -699,7 +700,7 @@ EOF
 
 # configure_service_aro_dbtoken
 configure_service_aro_dbtoken() {
-    local aro_dbtoken_service_config_file="/etc/sysconfig/aro-dbtoken"
+    local -r aro_dbtoken_service_config_file="/etc/sysconfig/aro-dbtoken"
     log "Writing $aro_dbtoken_service_file"
 cat >"$aro_dbtoken_service_file" <<EOF
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
@@ -711,7 +712,7 @@ MDM_NAMESPACE=DBToken
 RPIMAGE='$RPIMAGE'
 EOF
 
-    local aro_dbtoken_service_file="/etc/systemd/system/aro-dbtoken.service"
+    local -r aro_dbtoken_service_file="/etc/systemd/system/aro-dbtoken.service"
     log "Writing $aro_dbtoken_service_file"
 cat >"$aro_dbtoken_service_config_file" <<'EOF'
 [Unit]
@@ -751,7 +752,7 @@ EOF
 
 # configure_service_aro_monitor
 configure_service_aro_monitor() {
-    local aro_monitor_service_config="/etc/sysconfig/aro-monitor"
+    local -r aro_monitor_service_config="/etc/sysconfig/aro-monitor"
     log "configuring aro-monitor service"
 # DOMAIN_NAME, CLUSTER_MDSD_ACCOUNT, CLUSTER_MDSD_CONFIG_VERSION, GATEWAY_DOMAINS, GATEWAY_RESOURCEGROUP, MDSD_ENVIRONMENT CLUSTER_MDSD_NAMESPACE
 # are not used, but can't easily be refactored out. Should be revisited in the future.
@@ -773,7 +774,7 @@ MDM_NAMESPACE=BBM
 RPIMAGE='$RPIMAGE'
 EOF
 
-    local aro_monitor_service_file="/etc/systemd/system/aro-monitor.service"
+    local -r aro_monitor_service_file="/etc/systemd/system/aro-monitor.service"
     log "Writing $aro_monitor_service_file"
 cat >"$aro_monitor_service_file" <<'EOF'
 [Unit]
@@ -818,7 +819,7 @@ EOF
 
 # configure_service_aro_portal
 configure_service_aro_portal() {
-    local aro_portal_service_config="/etc/sysconfig/aro-portal"
+    local -r aro_portal_service_config="/etc/sysconfig/aro-portal"
     log "Writing $aro_portal_service_config"
 cat >"$aro_portal_service_config" <<EOF
 AZURE_PORTAL_ACCESS_GROUP_IDS='$PORTALACCESSGROUPIDS'
@@ -832,7 +833,7 @@ PORTAL_HOSTNAME='$LOCATION.admin.$RPPARENTDOMAINNAME'
 RPIMAGE='$RPIMAGE'
 EOF
 
-    local aro_portal_service_file="/etc/systemd/system/aro-portal.service"
+    local -r aro_portal_service_file="/etc/systemd/system/aro-portal.service"
     log "Writing $aro_portal_service_config"
 cat >"$aro_portal_service_file" <<'EOF'
 [Unit]
@@ -873,10 +874,10 @@ EOF
 
 # configure_service_mdsd
 configure_service_mdsd() {
-    local mdsd_service_dir="/etc/systemd/system/mdsd.service.d"
+    local -r mdsd_service_dir="/etc/systemd/system/mdsd.service.d"
     log "Creating $mdsd_service_dir"
     mkdir "$mdsd_service_dir"
-    local mdsd_override_conf="$mdsd_service_dir/override.conf"
+    local -r mdsd_override_conf="$mdsd_service_dir/override.conf"
     log "Writing $mdsd_override_conf"
 cat >"$mdsd_override_conf" <<'EOF'
 [Unit]
@@ -908,7 +909,7 @@ EOF
 
 # run_azsecd_config_scan
 run_azsecd_config_scan() {
-    local -a configs=(
+    local -ar configs=(
         "baseline"
         "clamav"
         "software"
@@ -930,14 +931,15 @@ reboot_vm() {
 
 # log is a wrapper for echo that includes the function name
 log() {
-    local msg="${1:-"log message is empty"}"
-    local stack_level="${2:-1}"
+    local -r msg="${1:-"log message is empty"}"
+    local -r stack_level="${2:-1}"
     echo "${FUNCNAME[${stack_level}]}: ${msg}"
 }
 
 # abort is a wrapper for log that exits with an error code
 abort() {
-    log "${1}" "2"
+    local -ri origin_stacklevel=2
+    log "${1}" "$origin_stacklevel"
     exit 1
 }
 
