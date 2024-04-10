@@ -148,7 +148,8 @@ mkdir -p /etc/containers/
 touch /etc/containers/nodocker
 
 mkdir -p /root/.docker
-REGISTRY_AUTH_FILE=/root/.docker/config.json az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
+REGISTRY_AUTH_FILE="/root/.docker/config.json"
+az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
 
 MDMIMAGE="${RPIMAGE%%/*}/${MDMIMAGE##*/}"
 docker pull "$MDMIMAGE"

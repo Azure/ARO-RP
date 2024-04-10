@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set -o errexit \
-    -o nounset \
+    -o nounset
 
 trap 'catch' ERR
 
@@ -11,9 +11,10 @@ main() {
     configure_disk_partitions
     configure_logrotate
     configure_selinux
-    journal_dir="/var/log/journal"
-    mkdir -p "$journal_dir"
+
+    mkdir -p /var/log/journal
     mkdir -p /var/lib/waagent/Microsoft.Azure.KeyVault.Store
+
     configure_firewalld_rules
     pull_container_images
     configure_system_services
@@ -134,10 +135,8 @@ configure_disk_partitions() {
 
 # configure_logrotate clobbers /etc/logrotate.conf
 configure_logrotate() {
-    local logrotate_conf_file="/etc/logrotate.conf"
-    log "Writing over $logrotate_conf_file"
-cat >"$logrotate_conf_file" <<'EOF'
-# see "man logrotate" for details
+    local -r logrotate_conf_filename='/etc/logrotate.conf'
+    local -r logrotate_conf_file='# see "man logrotate" for details
 # rotate log files weekly
 weekly
 
@@ -156,7 +155,7 @@ compress
 # RPM packages drop log rotation information into this directory
 include /etc/logrotate.d
 
-# no packages own wtmp and btmp -- we'll rotate them here
+# no packages own wtmp and btmp -- we will rotate them here
 /var/log/wtmp {
     monthly
     create 0664 root utmp
@@ -169,16 +168,15 @@ include /etc/logrotate.d
     monthly
     create 0600 root utmp
     rotate 1
-}
-EOF
+}'
+
+    write_file logrotate_conf_filename logrotate_conf_file true
 }
 
 # create_azure_rpm_repos creates /etc/yum.repos.d/azure.repo repository file
 create_azure_rpm_repos() {
-    local azure_repo_file="/etc/yum.repos.d/azure.repo"
-    log "Writing $azure_repo_file"
-cat >"$azure_repo_file" <<'EOF'
-[azure-cli]
+    local -r azure_repo_filename='/etc/yum.repos.d/azure.repo'
+    local -r azure_repo_file='[azure-cli]
 name=azure-cli
 baseurl=https://packages.microsoft.com/yumrepos/azure-cli
 enabled=yes
@@ -188,8 +186,9 @@ gpgcheck=yes
 name=azurecore
 baseurl=https://packages.microsoft.com/yumrepos/azurecore
 enabled=yes
-gpgcheck=no
-EOF
+gpgcheck=no'
+
+    write_file azure_repo_filename azure_repo_file
 }
 
 # configure_selinux
@@ -215,11 +214,11 @@ cat >"$diable_accept_ra_conf" <<'EOF'
 net.ipv6.conf.all.accept_ra=0
 EOF
 
-    local -r disable_core="$prefix/01-disable-core.conf"
-    log "Writing $disable_core"
-cat >"$disable_core" <<'EOF'
-kernel.core_pattern = |/bin/true
-EOF
+    local -r disable_core_filename="$prefix/01-disable-core.conf"
+    local -r disable_core_file="kernel.core_pattern = |/bin/true
+    "
+    write_file disable_core_filename disable_core_file
+
     sysctl --system
 
     enable_ports=(
@@ -248,7 +247,9 @@ pull_container_images() {
     touch /etc/containers/nodocker
 
     mkdir -p /root/.docker
-    REGISTRY_AUTH_FILE=/root/.docker/config.json az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
+    local -r REGISTRY_AUTH_FILE="/root/.docker/config.json"
+    
+    az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
 
     MDMIMAGE="${RPIMAGE%%/*}/${MDMIMAGE##*/}"
     docker pull "$MDMIMAGE"
@@ -307,12 +308,12 @@ configure_service_fluentbit() {
     mkdir -p /etc/fluentbit/
     mkdir -p /var/lib/fluent
 
-cat >/etc/fluentbit/fluentbit.conf <<'EOF'
-[INPUT]
-	Name systemd
-	Tag journald
-	Systemd_Filter _COMM=aro
-	DB /var/lib/fluent/journaldb
+    local -r fluentbit_conf_filename='/etc/fluentbit/fluentbit.conf'
+    local -r fluentbit_conf_file="[INPUT]
+Name systemd
+Tag journald
+Systemd_Filter _COMM=aro
+DB /var/lib/fluent/journaldb
 
 [FILTER]
 	Name modify
@@ -340,17 +341,18 @@ cat >/etc/fluentbit/fluentbit.conf <<'EOF'
 [OUTPUT]
 	Name forward
 	Match *
-	Port 29230
-EOF
+	Port 29230"
 
-    local -r sysconfig_fluentbit="/etc/sysconfig/fluentbit"
-    log "Writing value FLUENTBITIMAGE=$FLUENTBITIMAGE to $sysconfig_fluentbit"
-    echo "FLUENTBITIMAGE=$FLUENTBITIMAGE" >"$sysconfig_fluentbit"
+    write_file fluentbit_conf_filename fluentbit_conf_file
 
-    fluentbit_service_file="/etc/systemd/system/fluentbit.service"
-    log "Writing $fluentbit_service_file now"
-cat >"$fluentbit_service_file" <<'EOF'
-[Unit]
+    local -r sysconfig_fluentbit_filename='/etc/sysconfig/fluentbit'
+    local -r sysconfig_fluentbit_file="FLUENTBITIMAGE=$FLUENTBITIMAGE"
+
+    write_file sysconfig_fluentbit_filename sysconfig_fluentbit_file
+
+    local -r fluentbit_service_filename='/etc/systemd/system/fluentbit.service'
+
+    local -r fluentbit_service_file="[Unit]
 After=network-online.target
 Wants=network-online.target
 StartLimitIntervalSec=0
@@ -380,8 +382,9 @@ RestartSec=5
 StartLimitInterval=0
 
 [Install]
-WantedBy=multi-user.target
-EOF
+WantedBy=multi-user.target"
+
+    write_file fluentbit_conf_filename fluentbit_conf_file
 }
 
 # configure_certs
@@ -396,45 +399,41 @@ configure_certs() {
     # setting MONITORING_GCS_AUTH_ID_TYPE=AuthKeyVault seems to have caused mdsd not
     # to honour SSL_CERT_FILE any more, heaven only knows why.
     mkdir -p /usr/lib/ssl/certs
-    csplit -f /usr/lib/ssl/certs/cert- -b %03d.pem /etc/pki/tls/certs/ca-bundle.crt /^$/1 {*} >/dev/null
+    csplit -f /usr/lib/ssl/certs/cert- -b %03d.pem /etc/pki/tls/certs/ca-bundle.crt /^$/1 "{*}" >/dev/null
     c_rehash /usr/lib/ssl/certs
 
 # we leave clientId blank as long as only 1 managed identity assigned to vmss
 # if we have more than 1, we will need to populate with clientId used for off-node scanning
-    nodescan_agent_file="/etc/default/vsa-nodescan-agent.config"
-    log "Writing $nodescan_agent_file"
-cat >"$nodescan_agent_file" <<EOF
-{
-    "Nice": 19,
-    "Timeout": 10800,
-    "ClientId": "",
-    "TenantId": "$AZURESECPACKVSATENANTID",
-    "QualysStoreBaseUrl": "$AZURESECPACKQUALYSURL",
-    "ProcessTimeout": 300,
-    "CommandDelay": 0
-  }
-EOF
+    local -r nodescan_agent_filename="/etc/default/vsa-nodescan-agent.config"
+    local -r nodescan_agent_file="{
+    \"Nice\": 19,
+    \"Timeout\": 10800,
+    \"ClientId\": \"\",
+    \"TenantId\": $AZURESECPACKVSATENANTID,
+    \"QualysStoreBaseUrl\": $AZURESECPACKQUALYSURL,
+    \"ProcessTimeout\": 300,
+    \"CommandDelay\": 0
+  }"
+
+    write_file nodescan_agent_filename nodescan_agent_file
 }
 
 # configure_service_mdm
 configure_service_mdm() {
     log "configuring mdm service"
 
-    sysconfig_mdm_file="/etc/sysconfig/mdm"
-    log "Writing $sysconfig_mdm_file"
-cat >"$sysconfig_mdm_file" <<EOF
-MDMFRONTENDURL='$MDMFRONTENDURL'
+    local -r sysconfig_mdm_filename="/etc/sysconfig/mdm"
+    local -r sysconfig_mdm_file="MDMFRONTENDURL='$MDMFRONTENDURL'
 MDMIMAGE='$MDMIMAGE'
 MDMSOURCEENVIRONMENT='$LOCATION'
 MDMSOURCEROLE=rp
-MDMSOURCEROLEINSTANCE='$(hostname)'
-EOF
+MDMSOURCEROLEINSTANCE=\"$(hostname)\""
+
+    write_file sysconfig_mdm_filename sysconfig_mdm_file
 
     mkdir -p /var/etw
-    mdm_service_file="/etc/systemd/system/mdm.service"
-    log "Writing $mdm_service_file"
-cat >"$mdm_service_file"<<'EOF'
-[Unit]
+    local -r mdm_service_filename="/etc/systemd/system/mdm.service"
+    local -r mdm_service_file="[Unit]
 After=network-online.target
 Wants=network-online.target
 
@@ -465,28 +464,26 @@ RestartSec=1
 StartLimitInterval=0
 
 [Install]
-WantedBy=multi-user.target
-EOF
+WantedBy=multi-user.target"
+
+    write_file mdm_service_filename mdm_service_file
 }
 
 # configure_timers_mdm_mdsd
 configure_timers_mdm_mdsd() {
     for var in "mdsd" "mdm"; do
-    download_creds_service_file="/etc/systemd/system/download-$var-credentials.service"
-    log "Writing $download_creds_service_file"
-cat >"$download_creds_service_file" <<EOF
-[Unit]
+        local download_creds_service_filename="/etc/systemd/system/download-$var-credentials.service"
+        local download_creds_service_file="[Unit]
 Description=Periodic $var credentials refresh
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/download-credentials.sh $var
-EOF
+ExecStart=/usr/local/bin/download-credentials.sh $var"
 
-    local -r download_creds_timer_file="/etc/systemd/system/download-$var-credentials.timer"
-    log "Writing $download_creds_timer_file"
-cat >"$download_creds_timer_file"<<EOF
-[Unit]
+        write_file download_creds_service_filename download_creds_service_file
+
+        local download_creds_timer_filename="/etc/systemd/system/download-$var-credentials.timer"
+        local download_creds_timer_file="[Unit]
 Description=Periodic $var credentials refresh
 After=network-online.target
 Wants=network-online.target
@@ -497,77 +494,82 @@ OnCalendar=0/12:00:00
 AccuracySec=5s
 
 [Install]
-WantedBy=timers.target
-EOF
+WantedBy=timers.target"
+
+        write_file download_creds_timer_filename download_creds_timer_file
     done
 
-    local -r download_creds_script_file="/usr/local/bin/download-credentials.sh"
-    log "Writing $download_creds_script_file"
-cat >"$download_creds_script_file" <<EOF
-#!/bin/bash
+    local -r download_creds_script_filename="/usr/local/bin/download-credentials.sh"
+    local -r download_creds_script_file="#!/bin/bash
 set -eu
 
-COMPONENT="\$1"
-echo "Download \$COMPONENT credentials"
+COMPONENT=\$1
+echo \"Download \$COMPONENT credentials\"
 
-TEMP_DIR=\$(mktemp -d)
-export AZURE_CONFIG_DIR=\$(mktemp -d)
+TEMP_DIR=\"\$(mktemp -d)\"
+export AZURE_CONFIG_DIR=\"\$(mktemp -d)\"
 
-echo "Logging into Azure..."
+echo \"Logging into Azure...\"
 RETRIES=3
-while [ "\$RETRIES" -gt 0 ]; do
+while [[ \$RETRIES -gt 0 ]]; do
     if az login -i --allow-no-subscriptions
     then
-        echo "az login successful"
+        echo \"az login successful\"
         break
     else
-        echo "az login failed. Retrying..."
+        echo \"az login failed. Retrying...\"
         let RETRIES-=1
         sleep 5
     fi
 done
 
-trap "cleanup" EXIT
+trap \"cleanup\" EXIT
 
 cleanup() {
   az logout
-  [[ "\$TEMP_DIR" =~ /tmp/.+ ]] && rm -rf \$TEMP_DIR
-  [[ "\$AZURE_CONFIG_DIR" =~ /tmp/.+ ]] && rm -rf \$AZURE_CONFIG_DIR
+  [[ \$TEMP_DIR =~ /tmp/.+ ]] && rm -rf \$TEMP_DIR
+  [[ \$AZURE_CONFIG_DIR =~ /tmp/.+ ]] && rm -rf \$AZURE_CONFIG_DIR
 }
 
-if [ "\$COMPONENT" = "mdm" ]; then
-  CURRENT_CERT_FILE="/etc/mdm.pem"
-elif [ "\$COMPONENT" = "mdsd" ]; then
-  CURRENT_CERT_FILE="/var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem"
+if [[ \$COMPONENT = \"mdm\" ]]; then
+  CURRENT_CERT_FILE=\"/etc/mdm.pem\"
+elif [[ \$COMPONENT\ = \"mdsd\" ]]; then
+  CURRENT_CERT_FILE=\"/var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem\"
 else
   echo Invalid usage && exit 1
 fi
 
-SECRET_NAME="rp-\${COMPONENT}"
-NEW_CERT_FILE="\$TEMP_DIR/\$COMPONENT.pem"
+SECRET_NAME=\"rp-\${COMPONENT}\"
+NEW_CERT_FILE=\"\$TEMP_DIR/\$COMPONENT.pem\"
 for attempt in {1..5}; do
-  az keyvault secret download --file \$NEW_CERT_FILE --id "https://$KEYVAULTPREFIX-svc.$KEYVAULTDNSSUFFIX/secrets/\$SECRET_NAME" && break
+  az keyvault \
+    secret \
+    download \
+    --file \"\$NEW_CERT_FILE\" \
+    --id \"https://$KEYVAULTPREFIX-svc.$KEYVAULTDNSSUFFIX/secrets/\$SECRET_NAME\" \
+    && break
   if [[ \$attempt -lt 5 ]]; then sleep 10; else exit 1; fi
 done
 
 if [ -f \$NEW_CERT_FILE ]; then
-  if [ "\$COMPONENT" = "mdsd" ]; then
+  if [[ \$COMPONENT = \"mdsd\" ]]; then
     chown syslog:syslog \$NEW_CERT_FILE
   else
     sed -i -ne '1,/END CERTIFICATE/ p' \$NEW_CERT_FILE
   fi
 
-  new_cert_sn="\$(openssl x509 -in "\$NEW_CERT_FILE" -noout -serial | awk -F= '{print \$2}')"
-  current_cert_sn="\$(openssl x509 -in "\$CURRENT_CERT_FILE" -noout -serial | awk -F= '{print \$2}')"
-  if [[ ! -z \$new_cert_sn ]] && [[ \$new_cert_sn != "\$current_cert_sn" ]]; then
+  new_cert_sn=\"\$(openssl x509 -in \"\$NEW_CERT_FILE\" -noout -serial | awk -F= '{print \$2}')\"
+  current_cert_sn=\"\$(openssl x509 -in \"\$CURRENT_CERT_FILE\" -noout -serial | awk -F= '{print \$2}')\"
+  if [[ ! -z \$new_cert_sn ]] && [[ \$new_cert_sn != \"\$current_cert_sn\" ]]; then
     echo updating certificate for \$COMPONENT
     chmod 0600 \$NEW_CERT_FILE
     mv \$NEW_CERT_FILE \$CURRENT_CERT_FILE
   fi
 else
   echo Failed to refresh certificate for \$COMPONENT && exit 1
-fi
-EOF
+fi"
+
+    write_file download_creds_script_filename download_creds_script_file
 
     chmod u+x /usr/local/bin/download-credentials.sh
 
@@ -577,11 +579,9 @@ EOF
     /usr/local/bin/download-credentials.sh mdsd
     /usr/local/bin/download-credentials.sh mdm
 
-    local -r MDSDCERTIFICATESAN=$(openssl x509 -in /var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem -noout -subject | sed -e 's/.*CN = //')
-    watch_mdm_creds_service_file="/etc/systemd/system/watch-mdm-credentials.service"
-    log "Writing $watch_mdm_creds_service_file"
-cat >"$watch_mdm_creds_service_file" <<EOF
-[Unit]
+    local -r MDSDCERTIFICATESAN="$(openssl x509 -in /var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem -noout -subject | sed -e 's/.*CN = //')"
+    local -r watch_mdm_creds_service_filename="/etc/systemd/system/watch-mdm-credentials.service"
+    local -r watch_mdm_creds_service_file="[Unit]
 Description=Watch for changes in mdm.pem and restarts the mdm service
 
 [Service]
@@ -589,31 +589,28 @@ Type=oneshot
 ExecStart=/usr/bin/systemctl restart mdm.service
 
 [Install]
-WantedBy=multi-user.target
-EOF
+WantedBy=multi-user.target"
 
-    watch_mdm_creds_path_file="/etc/systemd/system/watch-mdm-credentials.path"
-    log "Writing $watch_mdm_creds_path_file"
-cat >"$watch_mdm_creds_path_file" <<EOF
-[Path]
+    write_file watch_mdm_creds_service_filename watch_mdm_creds_service_file
+
+    local -r watch_mdm_creds_path_filename='/etc/systemd/system/watch-mdm-credentials.path'
+    local -r watch_mdm_creds_path_file='[Path]
 PathModified=/etc/mdm.pem
 
 [Install]
-WantedBy=multi-user.target
-EOF
+WantedBy=multi-user.target'
 
-    local -r watch_mdm_creds="watch-mdm-credentials.path"
+    write_file watch_mdm_creds_path_filename watch_mdm_creds_path_file
+
+    local -r watch_mdm_creds='watch-mdm-credentials.path'
     systemctl enable "$watch_mdm_creds" || abort "failed to enable $watch_mdm_creds"
-
     systemctl start "$watch_mdm_creds" || abort "failed to start $watch_mdm_creds"
 }
 
 # configure_service_aro_rp
 configure_service_aro_rp() {
-    local -r arp_rp_config_file="/etc/sysconfig/aro-rp"
-    log "Writing $arp_rp_config_file"
-cat >"$arp_rp_config_file"<<EOF
-ACR_RESOURCE_ID='$ACRRESOURCEID'
+    local -r aro_rp_conf_filename='/etc/sysconfig/aro-rp'
+    local -r aro_rp_conf_file="ACR_RESOURCE_ID='$ACRRESOURCEID'
 ADMIN_API_CLIENT_CERT_COMMON_NAME='$ADMINAPICLIENTCERTCOMMONNAME'
 ARM_API_CLIENT_CERT_COMMON_NAME='$ARMAPICLIENTCERTCOMMONNAME'
 AZURE_ARM_CLIENT_ID='$ARMCLIENTID'
@@ -638,13 +635,12 @@ RPIMAGE='$RPIMAGE'
 ARO_INSTALL_VIA_HIVE='$CLUSTERSINSTALLVIAHIVE'
 ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC='$CLUSTERDEFAULTINSTALLERPULLSPEC'
 ARO_ADOPT_BY_HIVE='$CLUSTERSADOPTBYHIVE'
-USE_CHECKACCESS='$USECHECKACCESS'
-EOF
+USE_CHECKACCESS='$USECHECKACCESS'"
 
-    local -r aro_rp_service_file="/etc/systemd/system/aro-rp.service"
-    log "Writing $aro_rp_service_file"
-cat >"$aro_rp_service_file" <<'EOF'
-[Unit]
+    write_file aro_rp_conf_filename aro_rp_conf_file
+
+    local -r aro_rp_service_filename='/etc/systemd/system/aro-rp.service'
+    local -r aro_rp_service_file="[Unit]
 After=network-online.target
 Wants=network-online.target
 
@@ -694,28 +690,26 @@ RestartSec=1
 StartLimitInterval=0
 
 [Install]
-WantedBy=multi-user.target
-EOF
+WantedBy=multi-user.target"
+
+    write_file aro_rp_service_filename aro_rp_conf_file
 }
 
 # configure_service_aro_dbtoken
 configure_service_aro_dbtoken() {
-    local -r aro_dbtoken_service_config_file="/etc/sysconfig/aro-dbtoken"
-    log "Writing $aro_dbtoken_service_file"
-cat >"$aro_dbtoken_service_file" <<EOF
-DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
+    local -r aro_dbtoken_service_conf_filename='/etc/sysconfig/aro-dbtoken'
+    local -r aro_dbtoken_service_conf_file="DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 AZURE_DBTOKEN_CLIENT_ID='$DBTOKENCLIENTID'
 AZURE_GATEWAY_SERVICE_PRINCIPAL_ID='$GATEWAYSERVICEPRINCIPALID'
 KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=DBToken
-RPIMAGE='$RPIMAGE'
-EOF
+RPIMAGE='$RPIMAGE'"
 
-    local -r aro_dbtoken_service_file="/etc/systemd/system/aro-dbtoken.service"
-    log "Writing $aro_dbtoken_service_file"
-cat >"$aro_dbtoken_service_config_file" <<'EOF'
-[Unit]
+    write_file aro_dbtoken_service_conf_filename aro_dbtoken_service_conf_file
+
+    local -r aro_dbtoken_service_filename='/etc/systemd/system/aro-dbtoken.service'
+    local -r aro_dbtoken_service_file="[Unit]
 After=network-online.target
 Wants=network-online.target
 
@@ -746,18 +740,18 @@ RestartSec=1
 StartLimitInterval=0
 
 [Install]
-WantedBy=multi-user.target
-EOF
+WantedBy=multi-user.target"
+
+    write_file aro_dbtoken_service_filename aro_dbtoken_service_file
 }
 
 # configure_service_aro_monitor
 configure_service_aro_monitor() {
-    local -r aro_monitor_service_config="/etc/sysconfig/aro-monitor"
     log "configuring aro-monitor service"
-# DOMAIN_NAME, CLUSTER_MDSD_ACCOUNT, CLUSTER_MDSD_CONFIG_VERSION, GATEWAY_DOMAINS, GATEWAY_RESOURCEGROUP, MDSD_ENVIRONMENT CLUSTER_MDSD_NAMESPACE
-# are not used, but can't easily be refactored out. Should be revisited in the future.
-cat >"$aro_monitor_service_config" <<EOF
-AZURE_FP_CLIENT_ID='$FPCLIENTID'
+    # DOMAIN_NAME, CLUSTER_MDSD_ACCOUNT, CLUSTER_MDSD_CONFIG_VERSION, GATEWAY_DOMAINS, GATEWAY_RESOURCEGROUP, MDSD_ENVIRONMENT CLUSTER_MDSD_NAMESPACE
+    # are not used, but can't easily be refactored out. Should be revisited in the future.
+    local -r aro_monitor_service_conf_filename='/etc/sysconfig/aro-monitor'
+    local -r aro_monitor_service_conf_file="AZURE_FP_CLIENT_ID='$FPCLIENTID'
 DOMAIN_NAME='$LOCATION.$CLUSTERPARENTDOMAINNAME'
 CLUSTER_MDSD_ACCOUNT='$CLUSTERMDSDACCOUNT'
 CLUSTER_MDSD_CONFIG_VERSION='$CLUSTERMDSDCONFIGVERSION'
@@ -771,13 +765,12 @@ DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=BBM
-RPIMAGE='$RPIMAGE'
-EOF
+RPIMAGE='$RPIMAGE'"
 
-    local -r aro_monitor_service_file="/etc/systemd/system/aro-monitor.service"
-    log "Writing $aro_monitor_service_file"
-cat >"$aro_monitor_service_file" <<'EOF'
-[Unit]
+    write_file aro_monitor_service_conf_filename aro_monitor_service_conf_file
+
+    local -r aro_monitor_service_filename='/etc/systemd/system/aro-monitor.service'
+    local -r aro_monitor_service_file="[Unit]
 After=network-online.target
 Wants=network-online.target
 
@@ -813,16 +806,15 @@ RestartSec=1
 StartLimitInterval=0
 
 [Install]
-WantedBy=multi-user.target
-EOF
+WantedBy=multi-user.target"
+
+    write_file aro_monitor_service_filename aro_monitor_service_file
 }
 
 # configure_service_aro_portal
 configure_service_aro_portal() {
-    local -r aro_portal_service_config="/etc/sysconfig/aro-portal"
-    log "Writing $aro_portal_service_config"
-cat >"$aro_portal_service_config" <<EOF
-AZURE_PORTAL_ACCESS_GROUP_IDS='$PORTALACCESSGROUPIDS'
+    local -r aro_portal_service_conf_filename='/etc/sysconfig/aro-portal'
+    local -r aro_portal_service_conf_file="AZURE_PORTAL_ACCESS_GROUP_IDS='$PORTALACCESSGROUPIDS'
 AZURE_PORTAL_CLIENT_ID='$PORTALCLIENTID'
 AZURE_PORTAL_ELEVATED_GROUP_IDS='$PORTALELEVATEDGROUPIDS'
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
@@ -830,13 +822,12 @@ KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=Portal
 PORTAL_HOSTNAME='$LOCATION.admin.$RPPARENTDOMAINNAME'
-RPIMAGE='$RPIMAGE'
-EOF
+RPIMAGE='$RPIMAGE'"
 
-    local -r aro_portal_service_file="/etc/systemd/system/aro-portal.service"
-    log "Writing $aro_portal_service_config"
-cat >"$aro_portal_service_file" <<'EOF'
-[Unit]
+    write_file aro_portal_service_conf_filename aro_portal_service_conf_file
+
+    local -r aro_portal_service_filename='/etc/systemd/system/aro-portal.service'
+    local -r aro_portal_service_file="[Unit]
 After=network-online.target
 Wants=network-online.target
 StartLimitInterval=0
@@ -868,27 +859,25 @@ Restart=always
 RestartSec=1
 
 [Install]
-WantedBy=multi-user.target
-EOF
+WantedBy=multi-user.target"
+
+    write_file aro_portal_service_conf_filename aro_portal_service_conf_file
 }
 
 # configure_service_mdsd
 configure_service_mdsd() {
     local -r mdsd_service_dir="/etc/systemd/system/mdsd.service.d"
-    log "Creating $mdsd_service_dir"
     mkdir "$mdsd_service_dir"
-    local -r mdsd_override_conf="$mdsd_service_dir/override.conf"
-    log "Writing $mdsd_override_conf"
-cat >"$mdsd_override_conf" <<'EOF'
-[Unit]
-After=network-online.target
-EOF
 
-    default_mdsd_file="/etc/default/mdsd"
-    log "Writing $default_mdsd_file"
-cat >"$default_mdsd_file" <<EOF
-MDSD_ROLE_PREFIX=/var/run/mdsd/default
-MDSD_OPTIONS="-A -d -r \$MDSD_ROLE_PREFIX"
+    local -r mdsd_override_conf_filename="$mdsd_service_dir/override.conf"
+    local -r mdsd_override_conf_file="[Unit]
+After=network-online.target"
+
+    write_file mdsd_override_conf_filename mdsd_override_conf_file
+
+    local -r default_mdsd_filename="/etc/default/mdsd"
+    local -r default_mdsd_file="MDSD_ROLE_PREFIX=/var/run/mdsd/default
+MDSD_OPTIONS=\"-A -d -r \$MDSD_ROLE_PREFIX\"
 
 export MONITORING_GCS_ENVIRONMENT='$MDSDENVIRONMENT'
 export MONITORING_GCS_ACCOUNT='$RPMDSDACCOUNT'
@@ -901,10 +890,12 @@ export MONITORING_USE_GENEVA_CONFIG_SERVICE=true
 
 export MONITORING_TENANT='$LOCATION'
 export MONITORING_ROLE=rp
-export MONITORING_ROLE_INSTANCE='$(hostname)'
+export MONITORING_ROLE_INSTANCE=\"$(hostname)\"
 
-export MDSD_MSGPACK_SORT_COLUMNS=1
-EOF
+export MDSD_MSGPACK_SORT_COLUMNS=1\""
+
+    write_file default_mdsd_filename default_mdsd_file
+
 }
 
 # run_azsecd_config_scan
@@ -921,6 +912,25 @@ run_azsecd_config_scan() {
         log "Scanning config file $scan now"
         /usr/local/bin/azsecd config -s "$scan" -d P1D
     done
+}
+
+# write_file
+# Args
+# 1) filename - string
+# 2) file_contents - string
+# 3) clobber - boolean; optional - defaults to false
+write_file() {
+    local -n filename="$1"
+    local -n file_contents="$2"
+    local -r clobber="${3:-false}"
+
+    if $clobber; then
+        log "Overwriting file $filename"
+        echo "$file_contents" > "$filename"
+    else
+        log "Appending to $filename"
+        echo "$file_contents" >> "$filename"
+    fi
 }
 
 # reboot_vm restores all selinux file contexts, waits 30 seconds then reboots
