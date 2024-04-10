@@ -390,15 +390,23 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 		if err != nil {
 			errs = append(errs, err)
 		}
-
-		c.log.Print("deleting cluster")
-		err = c.openshiftclustersv20200430.DeleteAndWait(ctx, vnetResourceGroup, clusterName)
-		if err != nil {
-			errs = append(errs, err)
-		}
 	}
 
 	if c.ci {
+		// Only perform explicit cluster deletion when in local development mode, otherwise
+		// we let the resource group deletion performed below clean up the cluster.
+		//
+		// When the cluster resource is known by ARM (e.g. prod e2e), deleting the cluster
+		// here can result in race conditions when deleting the resource group below,
+		// as ARM will also attempt to delete the cluster.
+		if env.IsLocalDevelopmentMode() {
+			c.log.Print("deleting cluster")
+			err = c.openshiftclustersv20200430.DeleteAndWait(ctx, vnetResourceGroup, clusterName)
+			if err != nil {
+				errs = append(errs, err)
+			}
+		}
+
 		_, err = c.groups.Get(ctx, vnetResourceGroup)
 		if err == nil {
 			c.log.Print("deleting resource group")
@@ -418,6 +426,12 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			}
 		}
 	} else {
+		c.log.Print("deleting cluster")
+		err = c.openshiftclustersv20200430.DeleteAndWait(ctx, vnetResourceGroup, clusterName)
+		if err != nil {
+			errs = append(errs, err)
+		}
+
 		// Deleting the deployment does not clean up the associated resources
 		c.log.Info("deleting deployment")
 		err = c.deployments.DeleteAndWait(ctx, vnetResourceGroup, clusterName)
