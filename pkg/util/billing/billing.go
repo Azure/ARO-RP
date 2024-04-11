@@ -13,7 +13,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/feature"
 )
 
 const (
@@ -74,13 +73,4 @@ func (m *manager) Delete(ctx context.Context, doc *api.OpenShiftClusterDocument)
 	}
 
 	return nil
-}
-
-// isSubscriptionRegisteredForE2E returns true if the subscription has the
-// "Microsoft.RedHatOpenShift/SaveAROTestConfig" feature registered
-func isSubscriptionRegisteredForE2E(sub *api.SubscriptionProperties) bool {
-	if sub.TenantID == tenantIDMSFT || sub.TenantID == tenantIDAME {
-		return feature.IsRegisteredForFeature(sub, api.FeatureFlagSaveAROTestConfig)
-	}
-	return false
 }
