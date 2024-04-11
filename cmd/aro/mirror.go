@@ -87,8 +87,8 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		srcAcrGeneva := "linuxgeneva-microsoft" + acrDomainSuffix
 		mirrorImages := []string{
 			// https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
-			srcAcrGeneva + "/distroless/genevamdm:2.2023.1118.1225-d7e0d6-20231118t1338",
-			srcAcrGeneva + "/distroless/genevamdsd:mariner_20231129.1",
+			srcAcrGeneva + "/distroless/genevamdm:2.2024.328.1744-c5fb79-20240328t1935",
+			srcAcrGeneva + "/distroless/genevamdsd:mariner_20240327.2",
 		}
 		for _, ref := range mirrorImages {
 			log.Printf("mirroring %s -> %s", ref, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref))
@@ -103,8 +103,8 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 
 	for _, ref := range []string{
 
-		// https://mcr.microsoft.com/en-us/product/cbl-mariner/base/azure-cli/about
-		"mcr.microsoft.com/cbl-mariner/base/azure-cli:2",
+		// https://mcr.microsoft.com/en-us/product/azure-cli/about
+		"mcr.microsoft.com/azure-cli:cbl-mariner2.0",
 
 		// https://catalog.redhat.com/software/containers/rhel8/support-tools/5ba3eaf9bed8bd6ee819b78b
 		// https://catalog.redhat.com/software/containers/rhel9/support-tools/615be213075b022acc111bf9

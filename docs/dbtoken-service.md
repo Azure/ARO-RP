@@ -3,7 +3,7 @@
 ## Introduction
 
 Cosmos DB access control is described
-[https://docs.microsoft.com/en-us/azure/cosmos-db/secure-access-to-data](here).
+[here](https://docs.microsoft.com/en-us/azure/cosmos-db/secure-access-to-data).
 In brief, there are three options:
 
 1. use r/w or r/o primary keys, which grant access to the whole database account

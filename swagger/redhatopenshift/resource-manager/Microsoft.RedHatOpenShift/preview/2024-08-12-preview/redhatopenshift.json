@@ -1813,6 +1813,22 @@
         "fipsValidatedModules": {
           "$ref": "#/definitions/FipsValidatedModules",
           "description": "If FIPS validated crypto modules are used"
+        },
+        "oidcIssuer": {
+          "$ref": "#/definitions/OIDCIssuer",
+          "description": "The URL of the managed OIDC issuer in a workload identity cluster."
+        }
+      }
+    },
+    "ClusterUserAssignedIdentity": {
+      "description": "ClusterUserAssignedIdentity stores information about a user-assigned managed identity in a predefined format required by Microsoft's Managed Identity team.",
+      "type": "object",
+      "properties": {
+        "clientId": {
+          "type": "string"
+        },
+        "principalId": {
+          "type": "string"
         }
       }
     },
@@ -1881,6 +1897,18 @@
       "x-ms-enum": {
         "name": "FipsValidatedModules",
         "modelAsString": true
+      }
+    },
+    "Identity": {
+      "description": "Identity stores information about the cluster MSI(s) in a workload identity cluster.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "userAssignedIdentities": {
+          "$ref": "#/definitions/UserAssignedIdentities"
+        }
       }
     },
     "IngressProfile": {
@@ -2044,6 +2072,10 @@
         }
       }
     },
+    "OIDCIssuer": {
+      "description": "OIDCIssuer represents the URL of the managed OIDC issuer in a workload identity cluster.",
+      "type": "string"
+    },
     "OpenShiftCluster": {
       "description": "OpenShiftCluster represents an Azure Red Hat OpenShift cluster.",
       "type": "object",
@@ -2129,6 +2161,10 @@
           "$ref": "#/definitions/ServicePrincipalProfile",
           "description": "The cluster service principal profile."
         },
+        "platformWorkloadIdentityProfile": {
+          "$ref": "#/definitions/PlatformWorkloadIdentityProfile",
+          "description": "The workload identity profile."
+        },
         "networkProfile": {
           "$ref": "#/definitions/NetworkProfile",
           "description": "The cluster network profile."
@@ -2180,6 +2216,10 @@
           "$ref": "#/definitions/OpenShiftClusterProperties",
           "description": "The cluster properties.",
           "x-ms-client-flatten": true
+        },
+        "identity": {
+          "$ref": "#/definitions/Identity",
+          "description": "Identity stores information about the cluster MSI(s) in a workload identity cluster."
         },
         "systemData": {
           "$ref": "../../../../../common-types/resource-management/v3/types.json#/definitions/systemData",
@@ -2283,6 +2323,39 @@
       "x-ms-enum": {
         "name": "OutboundType",
         "modelAsString": true
+      }
+    },
+    "PlatformWorkloadIdentity": {
+      "description": "PlatformWorkloadIdentity stores information representing a single workload identity.",
+      "type": "object",
+      "properties": {
+        "operatorName": {
+          "type": "string"
+        },
+        "resourceId": {
+          "type": "string"
+        },
+        "clientId": {
+          "type": "string",
+          "readOnly": true
+        },
+        "objectId": {
+          "type": "string",
+          "readOnly": true
+        }
+      }
+    },
+    "PlatformWorkloadIdentityProfile": {
+      "description": "PlatformWorkloadIdentityProfile encapsulates all information that is specific to workload identity clusters.",
+      "type": "object",
+      "properties": {
+        "platformWorkloadIdentities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PlatformWorkloadIdentity"
+          },
+          "x-ms-identifiers": []
+        }
       }
     },
     "PreconfiguredNSG": {
@@ -2528,6 +2601,13 @@
       "type": "object",
       "additionalProperties": {
         "type": "string"
+      }
+    },
+    "UserAssignedIdentities": {
+      "description": "UserAssignedIdentities stores a mapping from resource IDs of managed identities to their client/principal IDs.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/ClusterUserAssignedIdentity"
       }
     },
     "VMSize": {

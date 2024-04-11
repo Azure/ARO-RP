@@ -40,19 +40,19 @@ var DefaultInstallStream = Stream{
 
 // FluentbitImage contains the location of the Fluentbit container image
 func FluentbitImage(acrDomain string) string {
-	return acrDomain + "/fluentbit:1.9.10-cm20231115@sha256:9226a7c6a15714581e4c64f40009b205d0acd0e51342365a0cc95ff6b7105315"
+	return acrDomain + "/fluentbit:1.9.10-cm20240301@sha256:5a6a6987a1e8d4223b7e64524117cb294acbd7a0b10f813f298d4f632efe3c4f"
 }
 
 // MdmImage contains the location of the MDM container image
 // https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
 func MdmImage(acrDomain string) string {
-	return acrDomain + "/genevamdm:2.2023.1118.1225-d7e0d6-20231118t1338"
+	return acrDomain + "/genevamdm:2.2024.328.1744-c5fb79-20240328t1935"
 }
 
 // MdsdImage contains the location of the MDSD container image
 // https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
 func MdsdImage(acrDomain string) string {
-	return acrDomain + "/genevamdsd:mariner_20231129.1"
+	return acrDomain + "/genevamdsd:mariner_20240304.1"
 }
 
 // MUOImage contains the location of the Managed Upgrade Operator container image

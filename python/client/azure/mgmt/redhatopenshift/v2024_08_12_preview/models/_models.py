@@ -117,6 +117,8 @@ class ClusterProfile(msrest.serialization.Model):
      include: "Disabled", "Enabled".
     :vartype fips_validated_modules: str or
      ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.FipsValidatedModules
+    :ivar oidc_issuer: The URL of the managed OIDC issuer in a workload identity cluster.
+    :vartype oidc_issuer: str
     """
 
     _attribute_map = {
@@ -125,6 +127,7 @@ class ClusterProfile(msrest.serialization.Model):
         'version': {'key': 'version', 'type': 'str'},
         'resource_group_id': {'key': 'resourceGroupId', 'type': 'str'},
         'fips_validated_modules': {'key': 'fipsValidatedModules', 'type': 'str'},
+        'oidc_issuer': {'key': 'oidcIssuer', 'type': 'str'},
     }
 
     def __init__(
@@ -144,6 +147,8 @@ class ClusterProfile(msrest.serialization.Model):
          include: "Disabled", "Enabled".
         :paramtype fips_validated_modules: str or
          ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.FipsValidatedModules
+        :keyword oidc_issuer: The URL of the managed OIDC issuer in a workload identity cluster.
+        :paramtype oidc_issuer: str
         """
         super(ClusterProfile, self).__init__(**kwargs)
         self.pull_secret = kwargs.get('pull_secret', None)
@@ -151,6 +156,36 @@ class ClusterProfile(msrest.serialization.Model):
         self.version = kwargs.get('version', None)
         self.resource_group_id = kwargs.get('resource_group_id', None)
         self.fips_validated_modules = kwargs.get('fips_validated_modules', None)
+        self.oidc_issuer = kwargs.get('oidc_issuer', None)
+
+
+class ClusterUserAssignedIdentity(msrest.serialization.Model):
+    """ClusterUserAssignedIdentity stores information about a user-assigned managed identity in a predefined format required by Microsoft's Managed Identity team.
+
+    :ivar client_id:
+    :vartype client_id: str
+    :ivar principal_id:
+    :vartype principal_id: str
+    """
+
+    _attribute_map = {
+        'client_id': {'key': 'clientId', 'type': 'str'},
+        'principal_id': {'key': 'principalId', 'type': 'str'},
+    }
+
+    def __init__(
+        self,
+        **kwargs
+    ):
+        """
+        :keyword client_id:
+        :paramtype client_id: str
+        :keyword principal_id:
+        :paramtype principal_id: str
+        """
+        super(ClusterUserAssignedIdentity, self).__init__(**kwargs)
+        self.client_id = kwargs.get('client_id', None)
+        self.principal_id = kwargs.get('principal_id', None)
 
 
 class ConsoleProfile(msrest.serialization.Model):
@@ -242,6 +277,39 @@ class EffectiveOutboundIP(msrest.serialization.Model):
         """
         super(EffectiveOutboundIP, self).__init__(**kwargs)
         self.id = kwargs.get('id', None)
+
+
+class Identity(msrest.serialization.Model):
+    """Identity stores information about the cluster MSI(s) in a workload identity cluster.
+
+    :ivar type:
+    :vartype type: str
+    :ivar user_assigned_identities: UserAssignedIdentities stores a mapping from resource IDs of
+     managed identities to their client/principal IDs.
+    :vartype user_assigned_identities: dict[str,
+     ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.ClusterUserAssignedIdentity]
+    """
+
+    _attribute_map = {
+        'type': {'key': 'type', 'type': 'str'},
+        'user_assigned_identities': {'key': 'userAssignedIdentities', 'type': '{ClusterUserAssignedIdentity}'},
+    }
+
+    def __init__(
+        self,
+        **kwargs
+    ):
+        """
+        :keyword type:
+        :paramtype type: str
+        :keyword user_assigned_identities: UserAssignedIdentities stores a mapping from resource IDs of
+         managed identities to their client/principal IDs.
+        :paramtype user_assigned_identities: dict[str,
+         ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.ClusterUserAssignedIdentity]
+        """
+        super(Identity, self).__init__(**kwargs)
+        self.type = kwargs.get('type', None)
+        self.user_assigned_identities = kwargs.get('user_assigned_identities', None)
 
 
 class IngressProfile(msrest.serialization.Model):
@@ -737,6 +805,9 @@ class OpenShiftCluster(TrackedResource):
     :ivar service_principal_profile: The cluster service principal profile.
     :vartype service_principal_profile:
      ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.ServicePrincipalProfile
+    :ivar platform_workload_identity_profile: The workload identity profile.
+    :vartype platform_workload_identity_profile:
+     ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.PlatformWorkloadIdentityProfile
     :ivar network_profile: The cluster network profile.
     :vartype network_profile: ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.NetworkProfile
     :ivar master_profile: The cluster master profile.
@@ -775,6 +846,7 @@ class OpenShiftCluster(TrackedResource):
         'cluster_profile': {'key': 'properties.clusterProfile', 'type': 'ClusterProfile'},
         'console_profile': {'key': 'properties.consoleProfile', 'type': 'ConsoleProfile'},
         'service_principal_profile': {'key': 'properties.servicePrincipalProfile', 'type': 'ServicePrincipalProfile'},
+        'platform_workload_identity_profile': {'key': 'properties.platformWorkloadIdentityProfile', 'type': 'PlatformWorkloadIdentityProfile'},
         'network_profile': {'key': 'properties.networkProfile', 'type': 'NetworkProfile'},
         'master_profile': {'key': 'properties.masterProfile', 'type': 'MasterProfile'},
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
@@ -805,6 +877,9 @@ class OpenShiftCluster(TrackedResource):
         :keyword service_principal_profile: The cluster service principal profile.
         :paramtype service_principal_profile:
          ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.ServicePrincipalProfile
+        :keyword platform_workload_identity_profile: The workload identity profile.
+        :paramtype platform_workload_identity_profile:
+         ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.PlatformWorkloadIdentityProfile
         :keyword network_profile: The cluster network profile.
         :paramtype network_profile:
          ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.NetworkProfile
@@ -825,6 +900,7 @@ class OpenShiftCluster(TrackedResource):
         self.cluster_profile = kwargs.get('cluster_profile', None)
         self.console_profile = kwargs.get('console_profile', None)
         self.service_principal_profile = kwargs.get('service_principal_profile', None)
+        self.platform_workload_identity_profile = kwargs.get('platform_workload_identity_profile', None)
         self.network_profile = kwargs.get('network_profile', None)
         self.master_profile = kwargs.get('master_profile', None)
         self.worker_profiles = kwargs.get('worker_profiles', None)
@@ -921,6 +997,9 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
 
     :ivar tags: A set of tags. The resource tags.
     :vartype tags: dict[str, str]
+    :ivar identity: Identity stores information about the cluster MSI(s) in a workload identity
+     cluster.
+    :vartype identity: ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.Identity
     :ivar system_data: The system meta data relating to this resource.
     :vartype system_data: ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.SystemData
     :ivar provisioning_state: The cluster provisioning state. Possible values include:
@@ -934,6 +1013,9 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
     :ivar service_principal_profile: The cluster service principal profile.
     :vartype service_principal_profile:
      ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.ServicePrincipalProfile
+    :ivar platform_workload_identity_profile: The workload identity profile.
+    :vartype platform_workload_identity_profile:
+     ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.PlatformWorkloadIdentityProfile
     :ivar network_profile: The cluster network profile.
     :vartype network_profile: ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.NetworkProfile
     :ivar master_profile: The cluster master profile.
@@ -959,11 +1041,13 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
 
     _attribute_map = {
         'tags': {'key': 'tags', 'type': '{str}'},
+        'identity': {'key': 'identity', 'type': 'Identity'},
         'system_data': {'key': 'systemData', 'type': 'SystemData'},
         'provisioning_state': {'key': 'properties.provisioningState', 'type': 'str'},
         'cluster_profile': {'key': 'properties.clusterProfile', 'type': 'ClusterProfile'},
         'console_profile': {'key': 'properties.consoleProfile', 'type': 'ConsoleProfile'},
         'service_principal_profile': {'key': 'properties.servicePrincipalProfile', 'type': 'ServicePrincipalProfile'},
+        'platform_workload_identity_profile': {'key': 'properties.platformWorkloadIdentityProfile', 'type': 'PlatformWorkloadIdentityProfile'},
         'network_profile': {'key': 'properties.networkProfile', 'type': 'NetworkProfile'},
         'master_profile': {'key': 'properties.masterProfile', 'type': 'MasterProfile'},
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
@@ -979,6 +1063,9 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         """
         :keyword tags: A set of tags. The resource tags.
         :paramtype tags: dict[str, str]
+        :keyword identity: Identity stores information about the cluster MSI(s) in a workload identity
+         cluster.
+        :paramtype identity: ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.Identity
         :keyword provisioning_state: The cluster provisioning state. Possible values include:
          "AdminUpdating", "Canceled", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
         :paramtype provisioning_state: str or
@@ -992,6 +1079,9 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         :keyword service_principal_profile: The cluster service principal profile.
         :paramtype service_principal_profile:
          ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.ServicePrincipalProfile
+        :keyword platform_workload_identity_profile: The workload identity profile.
+        :paramtype platform_workload_identity_profile:
+         ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.PlatformWorkloadIdentityProfile
         :keyword network_profile: The cluster network profile.
         :paramtype network_profile:
          ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.NetworkProfile
@@ -1009,11 +1099,13 @@ class OpenShiftClusterUpdate(msrest.serialization.Model):
         """
         super(OpenShiftClusterUpdate, self).__init__(**kwargs)
         self.tags = kwargs.get('tags', None)
+        self.identity = kwargs.get('identity', None)
         self.system_data = None
         self.provisioning_state = kwargs.get('provisioning_state', None)
         self.cluster_profile = kwargs.get('cluster_profile', None)
         self.console_profile = kwargs.get('console_profile', None)
         self.service_principal_profile = kwargs.get('service_principal_profile', None)
+        self.platform_workload_identity_profile = kwargs.get('platform_workload_identity_profile', None)
         self.network_profile = kwargs.get('network_profile', None)
         self.master_profile = kwargs.get('master_profile', None)
         self.worker_profiles = kwargs.get('worker_profiles', None)
@@ -1162,6 +1254,75 @@ class OperationList(msrest.serialization.Model):
         super(OperationList, self).__init__(**kwargs)
         self.value = kwargs.get('value', None)
         self.next_link = kwargs.get('next_link', None)
+
+
+class PlatformWorkloadIdentity(msrest.serialization.Model):
+    """PlatformWorkloadIdentity stores information representing a single workload identity.
+
+    Variables are only populated by the server, and will be ignored when sending a request.
+
+    :ivar operator_name:
+    :vartype operator_name: str
+    :ivar resource_id:
+    :vartype resource_id: str
+    :ivar client_id:
+    :vartype client_id: str
+    :ivar object_id:
+    :vartype object_id: str
+    """
+
+    _validation = {
+        'client_id': {'readonly': True},
+        'object_id': {'readonly': True},
+    }
+
+    _attribute_map = {
+        'operator_name': {'key': 'operatorName', 'type': 'str'},
+        'resource_id': {'key': 'resourceId', 'type': 'str'},
+        'client_id': {'key': 'clientId', 'type': 'str'},
+        'object_id': {'key': 'objectId', 'type': 'str'},
+    }
+
+    def __init__(
+        self,
+        **kwargs
+    ):
+        """
+        :keyword operator_name:
+        :paramtype operator_name: str
+        :keyword resource_id:
+        :paramtype resource_id: str
+        """
+        super(PlatformWorkloadIdentity, self).__init__(**kwargs)
+        self.operator_name = kwargs.get('operator_name', None)
+        self.resource_id = kwargs.get('resource_id', None)
+        self.client_id = None
+        self.object_id = None
+
+
+class PlatformWorkloadIdentityProfile(msrest.serialization.Model):
+    """PlatformWorkloadIdentityProfile encapsulates all information that is specific to workload identity clusters.
+
+    :ivar platform_workload_identities:
+    :vartype platform_workload_identities:
+     list[~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.PlatformWorkloadIdentity]
+    """
+
+    _attribute_map = {
+        'platform_workload_identities': {'key': 'platformWorkloadIdentities', 'type': '[PlatformWorkloadIdentity]'},
+    }
+
+    def __init__(
+        self,
+        **kwargs
+    ):
+        """
+        :keyword platform_workload_identities:
+        :paramtype platform_workload_identities:
+         list[~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.PlatformWorkloadIdentity]
+        """
+        super(PlatformWorkloadIdentityProfile, self).__init__(**kwargs)
+        self.platform_workload_identities = kwargs.get('platform_workload_identities', None)
 
 
 class Secret(ProxyResource):

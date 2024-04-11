@@ -5,11 +5,18 @@ echo "setting ssh password authentication"
 sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
 systemctl reload sshd.service
 
+#Adding retry logic to yum commands in order to avoid stalling out on resource locks
 echo "running RHUI fix"
-yum update -y --disablerepo='*' --enablerepo='rhui-microsoft-azure*'
+for attempt in {1..5}; do
+  yum update -y --disablerepo='*' --enablerepo='rhui-microsoft-azure*' && break
+  if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
+done
 
 echo "running yum update"
-yum -y -x WALinuxAgent -x WALinuxAgent-udev update --allowerasing
+for attempt in {1..5}; do
+  yum -y -x WALinuxAgent -x WALinuxAgent-udev update --allowerasing && break
+  if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
+done
 
 echo "extending partition table"
 # Linux block devices are inconsistently named

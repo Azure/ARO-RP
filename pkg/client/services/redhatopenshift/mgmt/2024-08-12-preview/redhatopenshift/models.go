@@ -101,6 +101,15 @@ type ClusterProfile struct {
 	ResourceGroupID *string `json:"resourceGroupId,omitempty"`
 	// FipsValidatedModules - If FIPS validated crypto modules are used. Possible values include: 'FipsValidatedModulesDisabled', 'FipsValidatedModulesEnabled'
 	FipsValidatedModules FipsValidatedModules `json:"fipsValidatedModules,omitempty"`
+	// OidcIssuer - The URL of the managed OIDC issuer in a workload identity cluster.
+	OidcIssuer *string `json:"oidcIssuer,omitempty"`
+}
+
+// ClusterUserAssignedIdentity clusterUserAssignedIdentity stores information about a user-assigned managed
+// identity in a predefined format required by Microsoft's Managed Identity team.
+type ClusterUserAssignedIdentity struct {
+	ClientID    *string `json:"clientId,omitempty"`
+	PrincipalID *string `json:"principalId,omitempty"`
 }
 
 // ConsoleProfile consoleProfile represents a console profile.
@@ -132,6 +141,24 @@ type Display struct {
 type EffectiveOutboundIP struct {
 	// ID - The fully qualified Azure resource id of an IP address resource.
 	ID *string `json:"id,omitempty"`
+}
+
+// Identity identity stores information about the cluster MSI(s) in a workload identity cluster.
+type Identity struct {
+	Type                   *string                                 `json:"type,omitempty"`
+	UserAssignedIdentities map[string]*ClusterUserAssignedIdentity `json:"userAssignedIdentities"`
+}
+
+// MarshalJSON is the custom marshaler for Identity.
+func (i Identity) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if i.Type != nil {
+		objectMap["type"] = i.Type
+	}
+	if i.UserAssignedIdentities != nil {
+		objectMap["userAssignedIdentities"] = i.UserAssignedIdentities
+	}
+	return json.Marshal(objectMap)
 }
 
 // IngressProfile ingressProfile represents an ingress profile.
@@ -802,6 +829,8 @@ type OpenShiftClusterProperties struct {
 	ConsoleProfile *ConsoleProfile `json:"consoleProfile,omitempty"`
 	// ServicePrincipalProfile - The cluster service principal profile.
 	ServicePrincipalProfile *ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
+	// PlatformWorkloadIdentityProfile - The workload identity profile.
+	PlatformWorkloadIdentityProfile *PlatformWorkloadIdentityProfile `json:"platformWorkloadIdentityProfile,omitempty"`
 	// NetworkProfile - The cluster network profile.
 	NetworkProfile *NetworkProfile `json:"networkProfile,omitempty"`
 	// MasterProfile - The cluster master profile.
@@ -830,6 +859,9 @@ func (oscp OpenShiftClusterProperties) MarshalJSON() ([]byte, error) {
 	}
 	if oscp.ServicePrincipalProfile != nil {
 		objectMap["servicePrincipalProfile"] = oscp.ServicePrincipalProfile
+	}
+	if oscp.PlatformWorkloadIdentityProfile != nil {
+		objectMap["platformWorkloadIdentityProfile"] = oscp.PlatformWorkloadIdentityProfile
 	}
 	if oscp.NetworkProfile != nil {
 		objectMap["networkProfile"] = oscp.NetworkProfile
@@ -978,6 +1010,8 @@ type OpenShiftClusterUpdate struct {
 	Tags map[string]*string `json:"tags"`
 	// OpenShiftClusterProperties - The cluster properties.
 	*OpenShiftClusterProperties `json:"properties,omitempty"`
+	// Identity - Identity stores information about the cluster MSI(s) in a workload identity cluster.
+	Identity *Identity `json:"identity,omitempty"`
 	// SystemData - READ-ONLY; The system meta data relating to this resource.
 	SystemData *SystemData `json:"systemData,omitempty"`
 }
@@ -990,6 +1024,9 @@ func (oscu OpenShiftClusterUpdate) MarshalJSON() ([]byte, error) {
 	}
 	if oscu.OpenShiftClusterProperties != nil {
 		objectMap["properties"] = oscu.OpenShiftClusterProperties
+	}
+	if oscu.Identity != nil {
+		objectMap["identity"] = oscu.Identity
 	}
 	return json.Marshal(objectMap)
 }
@@ -1020,6 +1057,15 @@ func (oscu *OpenShiftClusterUpdate) UnmarshalJSON(body []byte) error {
 					return err
 				}
 				oscu.OpenShiftClusterProperties = &openShiftClusterProperties
+			}
+		case "identity":
+			if v != nil {
+				var identity Identity
+				err = json.Unmarshal(*v, &identity)
+				if err != nil {
+					return err
+				}
+				oscu.Identity = &identity
 			}
 		case "systemData":
 			if v != nil {
@@ -1451,6 +1497,35 @@ func NewOperationListPage(cur OperationList, getNextPage func(context.Context, O
 		fn: getNextPage,
 		ol: cur,
 	}
+}
+
+// PlatformWorkloadIdentity platformWorkloadIdentity stores information representing a single workload
+// identity.
+type PlatformWorkloadIdentity struct {
+	OperatorName *string `json:"operatorName,omitempty"`
+	ResourceID   *string `json:"resourceId,omitempty"`
+	// ClientID - READ-ONLY
+	ClientID *string `json:"clientId,omitempty"`
+	// ObjectID - READ-ONLY
+	ObjectID *string `json:"objectId,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for PlatformWorkloadIdentity.
+func (pwi PlatformWorkloadIdentity) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if pwi.OperatorName != nil {
+		objectMap["operatorName"] = pwi.OperatorName
+	}
+	if pwi.ResourceID != nil {
+		objectMap["resourceId"] = pwi.ResourceID
+	}
+	return json.Marshal(objectMap)
+}
+
+// PlatformWorkloadIdentityProfile platformWorkloadIdentityProfile encapsulates all information that is
+// specific to workload identity clusters.
+type PlatformWorkloadIdentityProfile struct {
+	PlatformWorkloadIdentities *[]PlatformWorkloadIdentity `json:"platformWorkloadIdentities,omitempty"`
 }
 
 // ProxyResource the resource model definition for a Azure Resource Manager proxy resource. It will not
