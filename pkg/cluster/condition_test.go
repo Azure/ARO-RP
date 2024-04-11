@@ -53,7 +53,7 @@ func TestOperatorConsoleExists(t *testing.T) {
 				},
 			}),
 		}
-		ready, err := m.operatorConsoleExists(ctx)
+		ready, _, err := m.operatorConsoleExists(ctx)
 		if err != nil {
 			t.Error(errMustBeNilMsg)
 		}
@@ -182,8 +182,8 @@ func TestMinimumWorkerNodesReady(t *testing.T) {
 				},
 			}),
 		}
-		ready, err := m.minimumWorkerNodesReady(ctx)
-		if err != nil {
+		ready, retry, err := m.minimumWorkerNodesReady(ctx)
+		if err != nil && !retry {
 			t.Error(errMustBeNilMsg)
 		}
 		if ready != tt.want {
@@ -231,7 +231,7 @@ func TestClusterVersionReady(t *testing.T) {
 				},
 			}),
 		}
-		ready, err := m.clusterVersionReady(ctx)
+		ready, _, err := m.clusterVersionReady(ctx)
 		if err != nil {
 			t.Error(errMustBeNilMsg)
 		}
@@ -389,7 +389,7 @@ func TestAroCredentialsRequestReconciled(t *testing.T) {
 				},
 			}
 
-			result, err := m.aroCredentialsRequestReconciled(ctx)
+			result, _, err := m.aroCredentialsRequestReconciled(ctx)
 			if result != tt.want {
 				t.Errorf("Result was %v, wanted %v", result, tt.want)
 			}

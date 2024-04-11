@@ -215,7 +215,7 @@ func TestAroDeploymentReady(t *testing.T) {
 				aroOperatorDeployer: dep,
 			}
 
-			ok, err := m.aroDeploymentReady(ctx)
+			ok, _, err := m.aroDeploymentReady(ctx)
 			if err != nil || ok != tt.wantRes {
 				t.Error(err)
 			}
@@ -311,7 +311,7 @@ func TestEnsureAROOperatorRunningDesiredVersion(t *testing.T) {
 				aroOperatorDeployer: dep,
 			}
 
-			ok, err := m.ensureAROOperatorRunningDesiredVersion(ctx)
+			ok, _, err := m.ensureAROOperatorRunningDesiredVersion(ctx)
 			if err != nil || ok != tt.wantRes {
 				t.Error(err)
 			}
