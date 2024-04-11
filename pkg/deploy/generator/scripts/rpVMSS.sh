@@ -35,7 +35,34 @@ configure_and_install_dnf_pkgs_repos() {
     configure_rhui_repo
     create_azure_rpm_repos
     dnf_update_pkgs
-    dnf_install_pkgs
+
+    local -ra rpm_keys=(
+        https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
+        https://packages.microsoft.com/keys/microsoft.asc
+    )
+
+    rpm_import_keys rpm_keys
+
+    local -ra repo_rpm_pkgs=(
+        https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+    )
+
+    local -ra install_pkgs=(
+        clamav
+        azsec-clamav
+        azsec-monitor
+        azure-cli
+        azure-mdsd
+        azure-security
+        podman
+        podman-docker
+        openssl-perl
+        # hack - we are installing python3 on hosts due to an issue with Azure Linux Extensions https://github.com/Azure/azure-linux-extensions/pull/1505
+        python3
+    )
+
+    dnf_install_pkgs repo_rpm_pkgs
+    dnf_install_pkgs install_pkgs
 }
 
 # configure_rhui_repo
@@ -75,52 +102,41 @@ dnf_update_pkgs() {
 
 # dnf_install_pkgs
 dnf_install_pkgs() {
-    local -ra repo_keys=(
-        https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
-        https://packages.microsoft.com/keys/microsoft.asc
-    )
-
-    # shellcheck disable=SC2068
+    local -n pkgs="$1"
     for attempt in {1..5}; do
-        for key in ${repo_keys[@]}; do
-            log "importing rpm repository key $key attempt #$attempt"
-            rpm --import \
-                -v \
-                "$key" \
-                && break
-        done
-        if [[ ${attempt} -lt 5 ]]; then
-            sleep 10
-        else
-            abort "Failed to import rpm repository key $key after $attempt attempts"
-        fi
-    done
-
-    local -ra install_pkgs=(
-        clamav
-        azsec-clamav
-        azsec-monitor
-        azure-cli
-        azure-mdsd
-        azure-security
-        podman
-        podman-docker
-        openssl-perl
-        # hack - we are installing python3 on hosts due to an issue with Azure Linux Extensions https://github.com/Azure/azure-linux-extensions/pull/1505
-        python3
-        https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-    )
-
-    for attempt in {1..5}; do
-        log "Installing packages ${install_pkgs[*]} attempt #$attempt"
-        dnf install \
-            -y \
+        log "Installing packages ${pkgs[*]} attempt #$attempt"
+        dnf -y \
+            install \
             "${install_pkgs[@]}" \
             && break
         if [[ ${attempt} -lt 5 ]]; then
             sleep 10
         else
-            abort "Failed to install packages ${install_pkgs[*]} after $attempt attempts"
+            abort "Failed to install packages ${pkgs[*]} after $attempt attempts"
+        fi
+    done
+}
+
+# rpm_import_keys
+rpm_import_keys() {
+    local -n keys="$1"
+    # shellcheck disable=SC2068
+    for key in ${keys[@]}; do
+    if [ ${#keys[@]} -eq 0 ]; then
+        break
+    fi
+        for attempt in {1..5}; do
+            log "importing rpm repository key $key attempt #$attempt"
+            rpm --import \
+                -v \
+                "$key" \
+                && unset key \
+                && break
+        done
+        if [ -z ${key+x} ] && [[ ${attempt} -lt 5 ]]; then
+            sleep 10
+        else
+            abort "Failed to import rpm repository key $key after $attempt attempts"
         fi
     done
 }
@@ -229,7 +245,7 @@ EOF
     local -r disable_core_filename="$prefix/01-disable-core.conf"
     local -r disable_core_file="kernel.core_pattern = |/bin/true
     "
-    write_file disable_core_filename disable_core_file
+    write_file disable_core_filename disable_core_file true
 
     sysctl --system
 
@@ -355,12 +371,12 @@ DB /var/lib/fluent/journaldb
 	Match *
 	Port 29230"
 
-    write_file fluentbit_conf_filename fluentbit_conf_file
+    write_file fluentbit_conf_filename fluentbit_conf_file true
 
     local -r sysconfig_fluentbit_filename='/etc/sysconfig/fluentbit'
     local -r sysconfig_fluentbit_file="FLUENTBITIMAGE=$FLUENTBITIMAGE"
 
-    write_file sysconfig_fluentbit_filename sysconfig_fluentbit_file
+    write_file sysconfig_fluentbit_filename sysconfig_fluentbit_file true
 
     local -r fluentbit_service_filename='/etc/systemd/system/fluentbit.service'
 
@@ -396,7 +412,7 @@ StartLimitInterval=0
 [Install]
 WantedBy=multi-user.target"
 
-    write_file fluentbit_conf_filename fluentbit_conf_file
+    write_file fluentbit_conf_filename fluentbit_conf_file true
 }
 
 # configure_certs
@@ -427,7 +443,7 @@ configure_certs() {
     \"CommandDelay\": 0
   }"
 
-    write_file nodescan_agent_filename nodescan_agent_file
+    write_file nodescan_agent_filename nodescan_agent_file true
 }
 
 # configure_service_mdm
@@ -441,7 +457,7 @@ MDMSOURCEENVIRONMENT='$LOCATION'
 MDMSOURCEROLE=rp
 MDMSOURCEROLEINSTANCE=\"$(hostname)\""
 
-    write_file sysconfig_mdm_filename sysconfig_mdm_file
+    write_file sysconfig_mdm_filename sysconfig_mdm_file true
 
     mkdir -p /var/etw
     local -r mdm_service_filename="/etc/systemd/system/mdm.service"
@@ -478,7 +494,7 @@ StartLimitInterval=0
 [Install]
 WantedBy=multi-user.target"
 
-    write_file mdm_service_filename mdm_service_file
+    write_file mdm_service_filename mdm_service_file true
 }
 
 # configure_timers_mdm_mdsd
@@ -492,7 +508,7 @@ Description=Periodic $var credentials refresh
 Type=oneshot
 ExecStart=/usr/local/bin/download-credentials.sh $var"
 
-        write_file download_creds_service_filename download_creds_service_file
+        write_file download_creds_service_filename download_creds_service_file true
 
         local download_creds_timer_filename="/etc/systemd/system/download-$var-credentials.timer"
         local download_creds_timer_file="[Unit]
@@ -508,7 +524,7 @@ AccuracySec=5s
 [Install]
 WantedBy=timers.target"
 
-        write_file download_creds_timer_filename download_creds_timer_file
+        write_file download_creds_timer_filename download_creds_timer_file true
     done
 
     local -r download_creds_script_filename="/usr/local/bin/download-credentials.sh"
@@ -581,7 +597,7 @@ else
   echo Failed to refresh certificate for \$COMPONENT && exit 1
 fi"
 
-    write_file download_creds_script_filename download_creds_script_file
+    write_file download_creds_script_filename download_creds_script_file true
 
     chmod u+x /usr/local/bin/download-credentials.sh
 
@@ -603,7 +619,7 @@ ExecStart=/usr/bin/systemctl restart mdm.service
 [Install]
 WantedBy=multi-user.target"
 
-    write_file watch_mdm_creds_service_filename watch_mdm_creds_service_file
+    write_file watch_mdm_creds_service_filename watch_mdm_creds_service_file true
 
     local -r watch_mdm_creds_path_filename='/etc/systemd/system/watch-mdm-credentials.path'
     local -r watch_mdm_creds_path_file='[Path]
@@ -612,7 +628,7 @@ PathModified=/etc/mdm.pem
 [Install]
 WantedBy=multi-user.target'
 
-    write_file watch_mdm_creds_path_filename watch_mdm_creds_path_file
+    write_file watch_mdm_creds_path_filename watch_mdm_creds_path_file true
 
     local -r watch_mdm_creds='watch-mdm-credentials.path'
     systemctl enable "$watch_mdm_creds" || abort "failed to enable $watch_mdm_creds"
@@ -649,7 +665,7 @@ ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC='$CLUSTERDEFAULTINSTALLERPULLSPEC'
 ARO_ADOPT_BY_HIVE='$CLUSTERSADOPTBYHIVE'
 USE_CHECKACCESS='$USECHECKACCESS'"
 
-    write_file aro_rp_conf_filename aro_rp_conf_file
+    write_file aro_rp_conf_filename aro_rp_conf_file true
 
     local -r aro_rp_service_filename='/etc/systemd/system/aro-rp.service'
     local -r aro_rp_service_file="[Unit]
@@ -704,7 +720,7 @@ StartLimitInterval=0
 [Install]
 WantedBy=multi-user.target"
 
-    write_file aro_rp_service_filename aro_rp_conf_file
+    write_file aro_rp_service_filename aro_rp_conf_file true
 }
 
 # configure_service_aro_dbtoken
@@ -718,7 +734,7 @@ MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=DBToken
 RPIMAGE='$RPIMAGE'"
 
-    write_file aro_dbtoken_service_conf_filename aro_dbtoken_service_conf_file
+    write_file aro_dbtoken_service_conf_filename aro_dbtoken_service_conf_file true
 
     local -r aro_dbtoken_service_filename='/etc/systemd/system/aro-dbtoken.service'
     local -r aro_dbtoken_service_file="[Unit]
@@ -754,7 +770,7 @@ StartLimitInterval=0
 [Install]
 WantedBy=multi-user.target"
 
-    write_file aro_dbtoken_service_filename aro_dbtoken_service_file
+    write_file aro_dbtoken_service_filename aro_dbtoken_service_file true
 }
 
 # configure_service_aro_monitor
@@ -779,7 +795,7 @@ MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=BBM
 RPIMAGE='$RPIMAGE'"
 
-    write_file aro_monitor_service_conf_filename aro_monitor_service_conf_file
+    write_file aro_monitor_service_conf_filename aro_monitor_service_conf_file true
 
     local -r aro_monitor_service_filename='/etc/systemd/system/aro-monitor.service'
     local -r aro_monitor_service_file="[Unit]
@@ -820,7 +836,7 @@ StartLimitInterval=0
 [Install]
 WantedBy=multi-user.target"
 
-    write_file aro_monitor_service_filename aro_monitor_service_file
+    write_file aro_monitor_service_filename aro_monitor_service_file true
 }
 
 # configure_service_aro_portal
@@ -836,7 +852,7 @@ MDM_NAMESPACE=Portal
 PORTAL_HOSTNAME='$LOCATION.admin.$RPPARENTDOMAINNAME'
 RPIMAGE='$RPIMAGE'"
 
-    write_file aro_portal_service_conf_filename aro_portal_service_conf_file
+    write_file aro_portal_service_conf_filename aro_portal_service_conf_file true
 
     local -r aro_portal_service_filename='/etc/systemd/system/aro-portal.service'
     local -r aro_portal_service_file="[Unit]
@@ -873,7 +889,7 @@ RestartSec=1
 [Install]
 WantedBy=multi-user.target"
 
-    write_file aro_portal_service_conf_filename aro_portal_service_conf_file
+    write_file aro_portal_service_conf_filename aro_portal_service_conf_file true
 }
 
 # configure_service_mdsd
@@ -885,7 +901,7 @@ configure_service_mdsd() {
     local -r mdsd_override_conf_file="[Unit]
 After=network-online.target"
 
-    write_file mdsd_override_conf_filename mdsd_override_conf_file
+    write_file mdsd_override_conf_filename mdsd_override_conf_file true
 
     local -r default_mdsd_filename="/etc/default/mdsd"
     local -r default_mdsd_file="MDSD_ROLE_PREFIX=/var/run/mdsd/default
@@ -906,7 +922,7 @@ export MONITORING_ROLE_INSTANCE=\"$(hostname)\"
 
 export MDSD_MSGPACK_SORT_COLUMNS=1\""
 
-    write_file default_mdsd_filename default_mdsd_file
+    write_file default_mdsd_filename default_mdsd_file true
 
 }
 
