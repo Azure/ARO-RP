@@ -52,7 +52,7 @@ func MdmImage(acrDomain string) string {
 // MdsdImage contains the location of the MDSD container image
 // https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
 func MdsdImage(acrDomain string) string {
-	return acrDomain + "/genevamdsd:mariner_20240327.2"
+	return acrDomain + "/genevamdsd:mariner_20240304.1"
 }
 
 // MUOImage contains the location of the Managed Upgrade Operator container image
