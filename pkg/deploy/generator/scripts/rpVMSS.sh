@@ -84,7 +84,10 @@ dnf_install_pkgs() {
     for attempt in {1..5}; do
         for key in ${repo_keys[@]}; do
             log "importing rpm repository key $key attempt #$attempt"
-            rpm --import "$key"
+            rpm --import \
+                -v \
+                "$key" \
+                && break
         done
         if [[ ${attempt} -lt 5 ]]; then
             sleep 10
@@ -94,7 +97,6 @@ dnf_install_pkgs() {
     done
 
     local -ra install_pkgs=(
-        install
         clamav
         azsec-clamav
         azsec-monitor
@@ -111,7 +113,8 @@ dnf_install_pkgs() {
 
     for attempt in {1..5}; do
         log "Installing packages ${install_pkgs[*]} attempt #$attempt"
-        dnf -y \
+        dnf install \
+            -y \
             "${install_pkgs[@]}" \
             && break
         if [[ ${attempt} -lt 5 ]]; then
