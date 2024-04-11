@@ -58,8 +58,8 @@ configure_rhui_repo() {
 
 # dnf_update_pkgs
 dnf_update_pkgs() {
-    log "running dnf update"
     for attempt in {1..5}; do
+        log "running dnf update attempt #${attempt}"
         dnf -y \
             -x WALinuxAgent \
             -x WALinuxAgent-udev \
@@ -68,47 +68,56 @@ dnf_update_pkgs() {
         if [[ ${attempt} -lt 5 ]]; then
             sleep 10
         else
-            return 1
+            abort "Failed to update packages after ${attempt} attempts"
         fi
     done
 }
 
 # dnf_install_pkgs
 dnf_install_pkgs() {
-    log "importing rpm repositories"
-    rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
-    rpm --import https://packages.microsoft.com/keys/microsoft.asc
+    local -ra repo_keys=(
+        https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
+        https://packages.microsoft.com/keys/microsoft.asc
+    )
 
+    # shellcheck disable=SC2068
     for attempt in {1..5}; do
-        dnf -y \
-            install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm \
-            && break
+        for key in ${repo_keys[@]}; do
+            log "importing rpm repository key $key attempt #$attempt"
+            rpm --import "$key"
+        done
         if [[ ${attempt} -lt 5 ]]; then
             sleep 10
         else
-            return 1
+            abort "Failed to import rpm repository key $key after $attempt attempts"
         fi
     done
 
-    for attempt in {1..5}; do
-        dnf -y \
-            install \
-            clamav \
-            azsec-clamav \
-            azsec-monitor \
-            azure-cli \
-            azure-mdsd \
-            azure-security \
-            podman \
-            podman-docker \
-            openssl-perl \
-            python3 \
-            && break
+    local -ra install_pkgs=(
+        install
+        clamav
+        azsec-clamav
+        azsec-monitor
+        azure-cli
+        azure-mdsd
+        azure-security
+        podman
+        podman-docker
+        openssl-perl
         # hack - we are installing python3 on hosts due to an issue with Azure Linux Extensions https://github.com/Azure/azure-linux-extensions/pull/1505
+        python3
+        https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+    )
+
+    for attempt in {1..5}; do
+        log "Installing packages ${install_pkgs[*]} attempt #$attempt"
+        dnf -y \
+            "${install_pkgs[@]}" \
+            && break
         if [[ ${attempt} -lt 5 ]]; then
             sleep 10
         else
-            abort "failed to install required packages"
+            abort "Failed to install packages ${install_pkgs[*]} after $attempt attempts"
         fi
     done
 }
