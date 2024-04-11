@@ -15,11 +15,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 )
 
-const (
-	tenantIDMSFT = "72f988bf-86f1-41af-91ab-2d7cd011db47"
-	tenantIDAME  = "33e01921-4d64-4f8c-a055-5bdaffd5e33d"
-)
-
 type Manager interface {
 	Ensure(context.Context, *api.OpenShiftClusterDocument, *api.SubscriptionDocument) error
 	Delete(context.Context, *api.OpenShiftClusterDocument) error
