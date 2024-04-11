@@ -85,7 +85,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		mirrorImages := []string{
 			// https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
 			srcAcrGeneva + "/distroless/genevamdm:2.2024.328.1744-c5fb79-20240328t1935",
-			srcAcrGeneva + "/distroless/genevamdsd:mariner_20240304.1",
+			srcAcrGeneva + "/distroless/genevamdsd:mariner_20240327.2",
 		}
 		for _, ref := range mirrorImages {
 			log.Printf("mirroring %s -> %s", ref, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref))
