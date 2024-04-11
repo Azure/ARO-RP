@@ -41,7 +41,6 @@ func (g *generator) rpTemplate() *arm.Template {
 			"azureCloudName",
 			"azureSecPackQualysUrl",
 			"azureSecPackVSATenantId",
-			"billingE2EStorageAccountId",
 			"billingServicePrincipalId",
 			"clusterMdmAccount",
 			"clusterMdsdAccount",
@@ -101,7 +100,6 @@ func (g *generator) rpTemplate() *arm.Template {
 			"armApiClientCertCommonName",
 			"armClientId",
 			"billingServicePrincipalId",
-			"billingE2EStorageAccountId",
 			"gatewayDomains",
 			"rpFeatures":
 			p.DefaultValue = ""

@@ -29,9 +29,6 @@
         "azureSecPackVSATenantId": {
             "value": ""
         },
-        "billingE2EStorageAccountId": {
-            "value": ""
-        },
         "billingServicePrincipalId": {
             "value": ""
         },

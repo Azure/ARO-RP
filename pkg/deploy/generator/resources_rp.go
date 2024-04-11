@@ -457,7 +457,6 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"azureCloudName",
 		"azureSecPackQualysUrl",
 		"azureSecPackVSATenantId",
-		"billingE2EStorageAccountId",
 		"clusterMdmAccount",
 		"clusterMdsdAccount",
 		"clusterMdsdConfigVersion",
