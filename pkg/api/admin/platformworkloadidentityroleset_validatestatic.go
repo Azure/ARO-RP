@@ -1,16 +1,10 @@
 package admin
 
-import (
-	"errors"
-	"fmt"
-	"net/http"
-
-	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/util/immutable"
-)
-
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
+
+/*
+TODO: Uncomment once API endpoints have been implemented and this code is being used.
 
 type platformWorkloadIdentityRoleSetStaticValidator struct{}
 
@@ -70,3 +64,4 @@ func (sv platformWorkloadIdentityRoleSetStaticValidator) validateDelta(new, curr
 	}
 	return nil
 }
+*/

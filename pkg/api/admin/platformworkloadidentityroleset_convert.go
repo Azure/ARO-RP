@@ -3,9 +3,8 @@ package admin
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-import (
-	"github.com/Azure/ARO-RP/pkg/api"
-)
+/*
+TODO: Uncomment once API endpoints have been implemented and this code is being used.
 
 type platformWorkloadIdentityRoleSetConverter struct{}
 
@@ -65,3 +64,4 @@ func (c platformWorkloadIdentityRoleSetConverter) ToInternal(_new interface{}, o
 		out.Properties.PlatformWorkloadIdentityRoles[i].ServiceAccounts = append(out.Properties.PlatformWorkloadIdentityRoles[i].ServiceAccounts, r.ServiceAccounts...)
 	}
 }
+*/
