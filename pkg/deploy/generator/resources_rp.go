@@ -1112,7 +1112,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 	}
 
 	if !g.production {
-		database.Resource.(*sdkcosmos.SQLContainerCreateUpdateParameters).Properties.Options = &sdkcosmos.CreateUpdateOptions{
+		database.Resource.(*sdkcosmos.SQLDatabaseCreateUpdateParameters).Properties.Options = &sdkcosmos.CreateUpdateOptions{
 			AutoscaleSettings: &sdkcosmos.AutoscaleSettings{
 				MaxThroughput: to.Int32Ptr(1000),
 			},

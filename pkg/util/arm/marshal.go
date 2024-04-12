@@ -21,7 +21,11 @@ func (r *Resource) MarshalJSON() ([]byte, error) {
 
 	// hack to handle newer track2 sdk which doesn't have json tags
 	if strings.HasPrefix(r.Type, "Microsoft.DocumentDB/databaseAccounts/sqlDatabases") {
-		b, err = r.Resource.(*sdkcosmos.SQLContainerCreateUpdateParameters).MarshalJSON()
+		if reflect.TypeOf(r.Resource) == reflect.TypeOf(&sdkcosmos.SQLDatabaseCreateUpdateParameters{}) {
+			b, err = r.Resource.(*sdkcosmos.SQLDatabaseCreateUpdateParameters).MarshalJSON()
+		} else if reflect.TypeOf(r.Resource) == reflect.TypeOf(&sdkcosmos.SQLContainerCreateUpdateParameters{}) {
+			b, err = r.Resource.(*sdkcosmos.SQLContainerCreateUpdateParameters).MarshalJSON()
+		}
 	} else if strings.HasPrefix(r.Type, "Microsoft.DocumentDB/databaseAccounts") {
 		b, err = r.Resource.(*sdkcosmos.DatabaseAccountCreateUpdateParameters).MarshalJSON()
 	}
