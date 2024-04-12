@@ -27,10 +27,7 @@ func (c platformWorkloadIdentityRoleSetConverter) ToExternal(s *api.PlatformWork
 		out.Properties.PlatformWorkloadIdentityRoles[i].RoleDefinitionName = r.RoleDefinitionName
 		out.Properties.PlatformWorkloadIdentityRoles[i].RoleDefinitionID = r.RoleDefinitionID
 		out.Properties.PlatformWorkloadIdentityRoles[i].ServiceAccounts = make([]string, 0, len(r.ServiceAccounts))
-
-		for _, sa := range r.ServiceAccounts {
-			out.Properties.PlatformWorkloadIdentityRoles[i].ServiceAccounts = append(out.Properties.PlatformWorkloadIdentityRoles[i].ServiceAccounts, sa)
-		}
+		out.Properties.PlatformWorkloadIdentityRoles[i].ServiceAccounts = append(out.Properties.PlatformWorkloadIdentityRoles[i].ServiceAccounts, r.ServiceAccounts...)
 	}
 
 	return out
@@ -63,9 +60,6 @@ func (c platformWorkloadIdentityRoleSetConverter) ToInternal(_new interface{}, o
 	for i, r := range out.Properties.PlatformWorkloadIdentityRoles {
 		out.Properties.PlatformWorkloadIdentityRoles = append(out.Properties.PlatformWorkloadIdentityRoles, r)
 		out.Properties.PlatformWorkloadIdentityRoles[i].ServiceAccounts = make([]string, 0, len(r.ServiceAccounts))
-
-		for _, sa := range r.ServiceAccounts {
-			out.Properties.PlatformWorkloadIdentityRoles[i].ServiceAccounts = append(out.Properties.PlatformWorkloadIdentityRoles[i].ServiceAccounts, sa)
-		}
+		out.Properties.PlatformWorkloadIdentityRoles[i].ServiceAccounts = append(out.Properties.PlatformWorkloadIdentityRoles[i].ServiceAccounts, r.ServiceAccounts...)
 	}
 }
