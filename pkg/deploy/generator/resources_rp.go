@@ -1038,9 +1038,9 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 
 func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Resource {
 	database := &arm.Resource{
-		Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
-			Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
-				Resource: &sdkcosmos.SQLContainerResource{
+		Resource: &sdkcosmos.SQLDatabaseCreateUpdateParameters{
+			Properties: &sdkcosmos.SQLDatabaseCreateUpdateProperties{
+				Resource: &sdkcosmos.SQLDatabaseResource{
 					ID: to.StringPtr("[" + databaseName + "]"),
 				},
 				Options: &sdkcosmos.CreateUpdateOptions{
