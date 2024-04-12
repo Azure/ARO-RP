@@ -11,8 +11,6 @@ type PlatformWorkloadIdentityRoleSetList struct {
 
 // PlatformWorkloadIdentityRoleSet represents a mapping from the names of OCP operators to the built-in roles that should be assigned to those operator's corresponding managed identities for a particular OCP version.
 type PlatformWorkloadIdentityRoleSet struct {
-	proxyResource bool
-
 	// The ID for the resource.
 	ID string `json:"id,omitempty" mutable:"case"`
 
