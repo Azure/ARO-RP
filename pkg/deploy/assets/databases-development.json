@@ -11,160 +11,146 @@
     },
     "resources": [
         {
+            "apiVersion": "2023-04-15",
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'))]",
             "properties": {
-                "resource": {
-                    "id": "[parameters('databaseName')]"
-                },
                 "options": {
                     "autoscaleSettings": {
                         "maxThroughput": 1000
                     }
+                },
+                "resource": {
+                    "id": "[parameters('databaseName')]"
                 }
             },
-            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'))]",
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2021-01-15"
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases"
         },
         {
+            "apiVersion": "2023-04-15",
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/AsyncOperations')]",
             "properties": {
+                "options": {},
                 "resource": {
+                    "defaultTtl": 604800,
                     "id": "AsyncOperations",
                     "partitionKey": {
+                        "kind": "Hash",
                         "paths": [
                             "/id"
-                        ],
-                        "kind": "Hash"
-                    },
-                    "defaultTtl": 604800
-                },
-                "options": {}
+                        ]
+                    }
+                }
             },
-            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/AsyncOperations')]",
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2021-01-15",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
-            ]
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         },
         {
+            "apiVersion": "2023-04-15",
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/OpenShiftVersions')]",
             "properties": {
+                "options": {},
                 "resource": {
+                    "defaultTtl": -1,
                     "id": "OpenShiftVersions",
                     "partitionKey": {
+                        "kind": "Hash",
                         "paths": [
                             "/id"
-                        ],
-                        "kind": "Hash"
-                    },
-                    "defaultTtl": -1
-                },
-                "options": {}
+                        ]
+                    }
+                }
             },
-            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/OpenShiftVersions')]",
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2021-01-15",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
-            ]
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         },
         {
+            "apiVersion": "2023-04-15",
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/ClusterManagerConfigurations')]",
             "properties": {
+                "options": {},
                 "resource": {
                     "id": "ClusterManagerConfigurations",
                     "partitionKey": {
+                        "kind": "Hash",
                         "paths": [
                             "/partitionKey"
-                        ],
-                        "kind": "Hash"
+                        ]
                     }
-                },
-                "options": {}
+                }
             },
-            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/ClusterManagerConfigurations')]",
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2021-01-15",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
-            ]
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         },
         {
+            "apiVersion": "2023-04-15",
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Billing')]",
             "properties": {
+                "options": {},
                 "resource": {
                     "id": "Billing",
                     "partitionKey": {
+                        "kind": "Hash",
                         "paths": [
                             "/id"
-                        ],
-                        "kind": "Hash"
+                        ]
                     }
-                },
-                "options": {}
+                }
             },
-            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Billing')]",
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2021-01-15",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
-            ]
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         },
         {
+            "apiVersion": "2023-04-15",
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Gateway')]",
             "properties": {
+                "options": {},
                 "resource": {
+                    "defaultTtl": -1,
                     "id": "Gateway",
                     "partitionKey": {
+                        "kind": "Hash",
                         "paths": [
                             "/id"
-                        ],
-                        "kind": "Hash"
-                    },
-                    "defaultTtl": -1
-                },
-                "options": {}
+                        ]
+                    }
+                }
             },
-            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Gateway')]",
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2021-01-15",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
-            ]
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         },
         {
+            "apiVersion": "2023-04-15",
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Monitors')]",
             "properties": {
+                "options": {},
                 "resource": {
+                    "defaultTtl": -1,
                     "id": "Monitors",
                     "partitionKey": {
+                        "kind": "Hash",
                         "paths": [
                             "/id"
-                        ],
-                        "kind": "Hash"
-                    },
-                    "defaultTtl": -1
-                },
-                "options": {}
+                        ]
+                    }
+                }
             },
-            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Monitors')]",
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2021-01-15",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
-            ]
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         },
         {
+            "apiVersion": "2023-04-15",
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/OpenShiftClusters')]",
             "properties": {
+                "options": {},
                 "resource": {
                     "id": "OpenShiftClusters",
                     "partitionKey": {
+                        "kind": "Hash",
                         "paths": [
                             "/partitionKey"
-                        ],
-                        "kind": "Hash"
+                        ]
                     },
                     "uniqueKeyPolicy": {
                         "uniqueKeys": [
@@ -185,59 +171,46 @@
                             }
                         ]
                     }
-                },
-                "options": {}
+                }
             },
-            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/OpenShiftClusters')]",
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2021-01-15",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
-            ]
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         },
         {
+            "apiVersion": "2023-04-15",
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Portal')]",
             "properties": {
+                "options": {},
                 "resource": {
+                    "defaultTtl": -1,
                     "id": "Portal",
                     "partitionKey": {
+                        "kind": "Hash",
                         "paths": [
                             "/id"
-                        ],
-                        "kind": "Hash"
-                    },
-                    "defaultTtl": -1
-                },
-                "options": {}
+                        ]
+                    }
+                }
             },
-            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Portal')]",
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2021-01-15",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
-            ]
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         },
         {
+            "apiVersion": "2023-04-15",
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Subscriptions')]",
             "properties": {
+                "options": {},
                 "resource": {
                     "id": "Subscriptions",
                     "partitionKey": {
+                        "kind": "Hash",
                         "paths": [
                             "/id"
-                        ],
-                        "kind": "Hash"
+                        ]
                     }
-                },
-                "options": {}
+                }
             },
-            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Subscriptions')]",
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2021-01-15",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
-            ]
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         }
     ]
 }
