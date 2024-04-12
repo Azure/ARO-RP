@@ -20,10 +20,6 @@ Subscription feature flags used by ARO-RP include:
   graduating features to production such that they only apply on our Red Hat
   engineering subscription.
 
-* Microsoft.RedHatOpenShift/SaveAROTestConfig: used on our test subscriptions to
-  cause the pkg/billing to copy billing data to a storage account so that it can
-  be validated by the billing E2E tests.
-
 Subscription feature flags are also used for API preview, INT and region
 rollout. See the RP ARM manifest for more details.
 

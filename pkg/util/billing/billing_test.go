@@ -184,12 +184,6 @@ func TestEnsure(t *testing.T) {
 					ID: subID,
 					Subscription: &api.Subscription{
 						Properties: &api.SubscriptionProperties{
-							RegisteredFeatures: []api.RegisteredFeatureProfile{
-								{
-									Name:  api.FeatureFlagSaveAROTestConfig,
-									State: "NotRegistered",
-								},
-							},
 							TenantID: tenantID,
 						},
 					},
@@ -226,12 +220,6 @@ func TestEnsure(t *testing.T) {
 					ID: subID,
 					Subscription: &api.Subscription{
 						Properties: &api.SubscriptionProperties{
-							RegisteredFeatures: []api.RegisteredFeatureProfile{
-								{
-									Name:  api.FeatureFlagSaveAROTestConfig,
-									State: "NotRegistered",
-								},
-							},
 							TenantID: tenantID,
 						},
 					},
@@ -258,12 +246,6 @@ func TestEnsure(t *testing.T) {
 					ID: subID,
 					Subscription: &api.Subscription{
 						Properties: &api.SubscriptionProperties{
-							RegisteredFeatures: []api.RegisteredFeatureProfile{
-								{
-									Name:  api.FeatureFlagSaveAROTestConfig,
-									State: "NotRegistered",
-								},
-							},
 							TenantID: tenantID,
 						},
 					},
