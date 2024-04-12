@@ -57,8 +57,10 @@ func (c platformWorkloadIdentityRoleSetConverter) ToInternal(_new interface{}, o
 	out.Properties.OpenShiftVersion = new.Properties.OpenShiftVersion
 	out.Properties.PlatformWorkloadIdentityRoles = make([]api.PlatformWorkloadIdentityRole, 0, len(new.Properties.PlatformWorkloadIdentityRoles))
 
-	for i, r := range out.Properties.PlatformWorkloadIdentityRoles {
-		out.Properties.PlatformWorkloadIdentityRoles = append(out.Properties.PlatformWorkloadIdentityRoles, r)
+	for i, r := range new.Properties.PlatformWorkloadIdentityRoles {
+		out.Properties.PlatformWorkloadIdentityRoles[i].OperatorName = r.OperatorName
+		out.Properties.PlatformWorkloadIdentityRoles[i].RoleDefinitionName = r.RoleDefinitionName
+		out.Properties.PlatformWorkloadIdentityRoles[i].RoleDefinitionID = r.RoleDefinitionID
 		out.Properties.PlatformWorkloadIdentityRoles[i].ServiceAccounts = make([]string, 0, len(r.ServiceAccounts))
 		out.Properties.PlatformWorkloadIdentityRoles[i].ServiceAccounts = append(out.Properties.PlatformWorkloadIdentityRoles[i].ServiceAccounts, r.ServiceAccounts...)
 	}
