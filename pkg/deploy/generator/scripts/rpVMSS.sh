@@ -3,8 +3,6 @@
 set -o errexit \
     -o nounset
 
-trap 'catch' ERR
-
 main() {
     configure_sshd
     configure_and_install_dnf_pkgs_repos
@@ -23,6 +21,7 @@ main() {
 
 # We need to configure PasswordAuthentication to yes in order for the VMSS Access JIT to work
 configure_sshd() {
+    log "starting"
     log "setting ssh password authentication"
     sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
 
@@ -32,9 +31,16 @@ configure_sshd() {
 
 # configure_and_install_dnf_pkgs_repos
 configure_and_install_dnf_pkgs_repos() {
+    log "starting"
     configure_rhui_repo
     create_azure_rpm_repos
-    dnf_update_pkgs
+
+    local -ar exclude_pkgs=(
+        "-x WALinuxAgent"
+        "-x WALinuxAgent-udev"
+    )
+
+    dnf_update_pkgs exclude_pkgs
 
     local -ra rpm_keys=(
         https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
@@ -67,35 +73,44 @@ configure_and_install_dnf_pkgs_repos() {
 
 # configure_rhui_repo
 configure_rhui_repo() {
+    log "starting"
     log "running RHUI package updates"
+
     #Adding retry logic to yum commands in order to avoid stalling out on resource locks
     for attempt in {1..5}; do
+        log "attempt #${attempt} - running dnf update"
         dnf update \
             -y \
             --disablerepo='*' \
-            --enablerepo='rhui-microsoft-azure*' \
-            && break
+            --enablerepo='rhui-microsoft-azure*' &
+
+            wait $! && break
         if [[ ${attempt} -lt 5 ]]; then
             sleep 10
         else
-            abort "failed to run dnf update"
+            abort "attempt #${attempt} - Failed to update packages"
         fi
     done
 }
 
 # dnf_update_pkgs
 dnf_update_pkgs() {
+    local -n excludes="$1"
+    log "starting"
+
     for attempt in {1..5}; do
-        log "running dnf update attempt #${attempt}"
+        log "attempt #${attempt} - running dnf update"
+        # shellcheck disable=SC2068
         dnf -y \
-            -x WALinuxAgent \
-            -x WALinuxAgent-udev \
-            update --allowerasing \
-            && break
+            ${excludes[@]} \
+            update \
+            --allowerasing &
+
+            wait $! && break
         if [[ ${attempt} -lt 5 ]]; then
             sleep 10
         else
-            abort "Failed to update packages after ${attempt} attempts"
+            abort "attempt #${attempt} - Failed to update packages"
         fi
     done
 }
@@ -103,16 +118,19 @@ dnf_update_pkgs() {
 # dnf_install_pkgs
 dnf_install_pkgs() {
     local -n pkgs="$1"
+    log "starting"
+
     for attempt in {1..5}; do
-        log "Installing packages ${pkgs[*]} attempt #$attempt"
+        log "attempt #$attempt - Installing packages ${pkgs[*]}"
         dnf -y \
             install \
-            "${install_pkgs[@]}" \
-            && break
+            "${pkgs[@]}" &
+
+            wait $! && break
         if [[ ${attempt} -lt 5 ]]; then
             sleep 10
         else
-            abort "Failed to install packages ${pkgs[*]} after $attempt attempts"
+            abort "attempt #${attempt} - Failed to install packages ${pkgs[*]}"
         fi
     done
 }
@@ -120,13 +138,15 @@ dnf_install_pkgs() {
 # rpm_import_keys
 rpm_import_keys() {
     local -n keys="$1"
+    log "starting"
+
     # shellcheck disable=SC2068
     for key in ${keys[@]}; do
     if [ ${#keys[@]} -eq 0 ]; then
         break
     fi
         for attempt in {1..5}; do
-            log "importing rpm repository key $key attempt #$attempt"
+            log "attempt #$attempt - importing rpm repository key $key"
             rpm --import \
                 -v \
                 "$key" \
@@ -136,14 +156,16 @@ rpm_import_keys() {
         if [ -z ${key+x} ] && [[ ${attempt} -lt 5 ]]; then
             sleep 10
         else
-            abort "Failed to import rpm repository key $key after $attempt attempts"
+            abort "attempt #${attempt} - Failed to import rpm repository key $key"
         fi
     done
 }
 
 # configure_disk_partitions
 configure_disk_partitions() {
+    log "starting"
     log "extending partition table"
+
     # Linux block devices are inconsistently named
     # it's difficult to tie the lvm pv to the physical disk using /dev/disk files, which is why lvs is used here
     physicalDisk="$(lvs -o devices -a | head -n2 | tail -n1 | cut -d ' ' -f 3 | cut -d \( -f 1 | tr -d '[:digit:]')"
@@ -163,6 +185,8 @@ configure_disk_partitions() {
 
 # configure_logrotate clobbers /etc/logrotate.conf
 configure_logrotate() {
+    log "starting"
+
     local -r logrotate_conf_filename='/etc/logrotate.conf'
     local -r logrotate_conf_file='# see "man logrotate" for details
 # rotate log files weekly
@@ -203,6 +227,8 @@ include /etc/logrotate.d
 
 # create_azure_rpm_repos creates /etc/yum.repos.d/azure.repo repository file
 create_azure_rpm_repos() {
+    log "starting"
+
     local -r azure_repo_filename='/etc/yum.repos.d/azure.repo'
     local -r azure_repo_file='[azure-cli]
 name=azure-cli
@@ -216,11 +242,13 @@ baseurl=https://packages.microsoft.com/yumrepos/azurecore
 enabled=yes
 gpgcheck=no'
 
-    write_file azure_repo_filename azure_repo_file
+    write_file azure_repo_filename azure_repo_file true
 }
 
 # configure_selinux
 configure_selinux() {
+    log "starting"
+
     local -r relabel="${1:-false}"
 
     already_defined_ignore_error="File context for /var/log/journal(/.*)? already defined"
@@ -234,6 +262,8 @@ configure_selinux() {
 
 # configure_firewalld_rules
 configure_firewalld_rules() {
+    log "starting"
+
     # https://access.redhat.com/security/cve/cve-2020-13401
     local -r prefix="/etc/sysctl.d"
     local -r diable_accept_ra_conf="$prefix/02-disable-accept-ra.conf"
@@ -267,6 +297,8 @@ EOF
 
 # pull_container_images
 pull_container_images() {
+    log "starting"
+
     echo "logging into prod acr"
     az login -i --allow-no-subscriptions
 
@@ -309,6 +341,8 @@ configure_system_services() {
 
 # enable_aro_services enables all services required for aro rp
 enable_aro_services() {
+    log "starting"
+
     local -ra aro_services=(
         "aro-dbtoken"
         "aro-monitor"
@@ -332,7 +366,9 @@ enable_aro_services() {
 
 # configure_service_fluentbit
 configure_service_fluentbit() {
+    log "starting"
     log "configuring fluentbit service"
+
     mkdir -p /etc/fluentbit/
     mkdir -p /var/lib/fluent
 
@@ -417,6 +453,8 @@ WantedBy=multi-user.target"
 
 # configure_certs
 configure_certs() {
+    log "starting"
+
     mkdir /etc/aro-rp
     base64 -d <<<"$ADMINAPICABUNDLE" >/etc/aro-rp/admin-ca-bundle.pem
     if [[ -n "$ARMAPICABUNDLE" ]]; then
@@ -448,6 +486,7 @@ configure_certs() {
 
 # configure_service_mdm
 configure_service_mdm() {
+    log "starting"
     log "configuring mdm service"
 
     local -r sysconfig_mdm_filename="/etc/sysconfig/mdm"
@@ -499,6 +538,8 @@ WantedBy=multi-user.target"
 
 # configure_timers_mdm_mdsd
 configure_timers_mdm_mdsd() {
+    log "starting"
+
     for var in "mdsd" "mdm"; do
         local download_creds_service_filename="/etc/systemd/system/download-$var-credentials.service"
         local download_creds_service_file="[Unit]
@@ -637,6 +678,8 @@ WantedBy=multi-user.target'
 
 # configure_service_aro_rp
 configure_service_aro_rp() {
+    log "starting"
+
     local -r aro_rp_conf_filename='/etc/sysconfig/aro-rp'
     local -r aro_rp_conf_file="ACR_RESOURCE_ID='$ACRRESOURCEID'
 ADMIN_API_CLIENT_CERT_COMMON_NAME='$ADMINAPICLIENTCERTCOMMONNAME'
@@ -725,6 +768,8 @@ WantedBy=multi-user.target"
 
 # configure_service_aro_dbtoken
 configure_service_aro_dbtoken() {
+    log "starting"
+
     local -r aro_dbtoken_service_conf_filename='/etc/sysconfig/aro-dbtoken'
     local -r aro_dbtoken_service_conf_file="DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 AZURE_DBTOKEN_CLIENT_ID='$DBTOKENCLIENTID'
@@ -775,7 +820,9 @@ WantedBy=multi-user.target"
 
 # configure_service_aro_monitor
 configure_service_aro_monitor() {
+    log "starting"
     log "configuring aro-monitor service"
+
     # DOMAIN_NAME, CLUSTER_MDSD_ACCOUNT, CLUSTER_MDSD_CONFIG_VERSION, GATEWAY_DOMAINS, GATEWAY_RESOURCEGROUP, MDSD_ENVIRONMENT CLUSTER_MDSD_NAMESPACE
     # are not used, but can't easily be refactored out. Should be revisited in the future.
     local -r aro_monitor_service_conf_filename='/etc/sysconfig/aro-monitor'
@@ -841,6 +888,8 @@ WantedBy=multi-user.target"
 
 # configure_service_aro_portal
 configure_service_aro_portal() {
+    log "starting"
+
     local -r aro_portal_service_conf_filename='/etc/sysconfig/aro-portal'
     local -r aro_portal_service_conf_file="AZURE_PORTAL_ACCESS_GROUP_IDS='$PORTALACCESSGROUPIDS'
 AZURE_PORTAL_CLIENT_ID='$PORTALCLIENTID'
@@ -894,6 +943,8 @@ WantedBy=multi-user.target"
 
 # configure_service_mdsd
 configure_service_mdsd() {
+    log "starting"
+
     local -r mdsd_service_dir="/etc/systemd/system/mdsd.service.d"
     mkdir "$mdsd_service_dir"
 
@@ -928,6 +979,8 @@ export MDSD_MSGPACK_SORT_COLUMNS=1\""
 
 # run_azsecd_config_scan
 run_azsecd_config_scan() {
+    log "starting"
+
     local -ar configs=(
         "baseline"
         "clamav"
@@ -963,6 +1016,8 @@ write_file() {
 
 # reboot_vm restores all selinux file contexts, waits 30 seconds then reboots
 reboot_vm() {
+    log "starting"
+
     configure_selinux "true"
     (sleep 30 && log "rebooting vm now"; reboot) &
 }
