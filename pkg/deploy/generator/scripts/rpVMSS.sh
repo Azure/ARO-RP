@@ -3,7 +3,14 @@
 set -o errexit \
     -o nounset
 
+if [ "${DEBUG:-false}" == true ]; then
+    set -x
+fi
+
 main() {
+    parse_run_options "$@"
+
+
     configure_sshd
     configure_and_install_dnf_pkgs_repos
     configure_disk_partitions
@@ -17,6 +24,59 @@ main() {
     pull_container_images
     configure_system_services
     reboot_vm
+}
+
+parse_run_options() {
+    local -a options=("$1")
+    if [ "${#options[@]}" -eq 0 ]; then
+        log "Running all steps"
+        return 0
+    fi
+
+    local OPTIND
+
+    while getopts "dplsrfui" options; do
+        case "${options}" in
+            d)
+                log "Running step configure_disk_partitions"
+                configure_disk_partitions
+                ;;
+            p)
+                log "Running step configure_and_install_dnf_pkgs_repos"
+                configure_and_install_dnf_pkgs_repos
+                ;;
+            l)
+                log "Running configure_logrotate"
+                configure_logrotate
+                ;;
+            s)
+                log "Running configure_selinux"
+                configure_selinux
+                ;;
+            r)
+                log "Running configure_sshd"
+                configure_sshd
+                ;;
+            f)
+                log "Running configure_firewalld_rules"
+                configure_firewalld_rules
+                ;;
+            u)
+                log "Running pull_container_images & configure_system_services"
+                pull_container_images
+                configure_system_services
+                ;;
+            i)
+                log "Running pull_container_images"
+                pull_container_images 
+                ;;
+            *)
+                abort "Unkown option"
+                ;;
+        esac
+    done
+    
+    exit 0
 }
 
 # We need to configure PasswordAuthentication to yes in order for the VMSS Access JIT to work
@@ -43,14 +103,14 @@ configure_and_install_dnf_pkgs_repos() {
         "-x WALinuxAgent-udev"
     )
 
-    dnf_update_pkgs exclude_pkgs
+    dnf_update_pkgs exclude_pkgs retry_wait_time
 
     local -ra rpm_keys=(
         https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
         https://packages.microsoft.com/keys/microsoft.asc
     )
 
-    rpm_import_keys rpm_keys
+    rpm_import_keys rpm_keys retry_wait_time
 
     local -ra repo_rpm_pkgs=(
         https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
@@ -1041,9 +1101,10 @@ log() {
 abort() {
     local -ri origin_stacklevel=2
     log "${1}" "$origin_stacklevel"
+    log "Exiting"
     exit 1
 }
 
 export AZURE_CLOUD_NAME="${AZURECLOUDNAME:?"Failed to carry over variables"}"
 
-main
+main "$@"
