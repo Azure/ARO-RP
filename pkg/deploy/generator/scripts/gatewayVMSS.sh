@@ -28,15 +28,18 @@ main() {
 }
 
 usage() {
-    log "$(basename "$0") [-dplsrfui]
+    local -n options="$1"
+    log "$(basename "$0") [$options]
         -d Configure Disk Partitions
         -p Configure rpm repositories, import required rpm keys, update & install packages with dnf
         -l Configure logrotate.conf
         -s Make selinux modifications required for ARO RP
         -r Configure sshd - Allow password authenticaiton
         -f Configure firewalld default zone rules
-        -u Pull container images and configure systemd unit files for ARO RP
+        -u Configure systemd unit files for ARO RP
         -i Pull container images
+
+        Note: steps will be executed in the order that flags are provided
     "
 }
 
@@ -45,15 +48,16 @@ usage() {
 #
 # This is useful for local testing, or possibly modifying the bootstrap execution via environment variables in the deployment pipeline
 parse_run_options() {
-    local -a options=("$1")
+    # shellcheck disable=SC2206
+    local -a options=(${1:-})
     if [ "${#options[@]}" -eq 0 ]; then
         log "Running all steps"
         return 0
     fi
 
     local OPTIND
-
-    while getopts "dplsrfui" options; do
+    local -r allowed_options="dplsrfui"
+    while getopts ${allowed_options} options; do
         case "${options}" in
             d)
                 log "Running step configure_disk_partitions"
@@ -88,7 +92,7 @@ parse_run_options() {
                 pull_container_images 
                 ;;
             *)
-                usage
+                usage allowed_options
                 abort "Unkown option provided"
                 ;;
         esac
@@ -372,12 +376,12 @@ configure_firewalld_rules() {
 
     sysctl --system
 
-    enable_ports=(
+    local -ra enable_ports=(
+        "80/tcp"
+        "8081/tcp"
         "443/tcp"
-        "444/tcp"
-        "445/tcp"
-        "2222/tcp"
     )
+
     log "Enabling ports ${enable_ports[*]} on default firewalld zone"
     # shellcheck disable=SC2068
     for port in ${enable_ports[@]}; do
@@ -392,8 +396,6 @@ configure_firewalld_rules() {
 pull_container_images() {
     log "starting"
 
-    echo "logging into prod acr"
-
     # The managed identity that the VM runs as only has a single roleassignment.
     # This role assignment is ACRPull which is not necessarily present in the
     # subscription we're deploying into.  If the identity does not have any
@@ -404,11 +406,13 @@ pull_container_images() {
 
     # Suppress emulation output for podman instead of docker for az acr compatability
     mkdir -p /etc/containers/
+    mkdir -p /root/.docker
     touch /etc/containers/nodocker
 
-    mkdir -p /root/.docker
+	# This name is used in the case that az acr login searches for this in it's environment
     local -r REGISTRY_AUTH_FILE="/root/.docker/config.json"
     
+    log "logging into prod acr"
     az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
 
     MDMIMAGE="${RPIMAGE%%/*}/${MDMIMAGE##*/}"
