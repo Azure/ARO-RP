@@ -26,6 +26,23 @@ main() {
     reboot_vm
 }
 
+usage() {
+    log "$(basename "$0") [-dplsrfui]
+        -d Configure Disk Partitions
+        -p Configure rpm repositories, import required rpm keys, update & install packages with dnf
+        -l Configure logrotate.conf
+        -s Make selinux modifications required for ARO RP
+        -r Configure sshd - Allow password authenticaiton
+        -f Configure firewalld default zone rules
+        -u Pull container images and configure systemd unit files for ARO RP
+        -i Pull container images
+    "
+}
+
+# parse_run_options takes all arguements passed to main and parses them
+# allowing individual step(s) to be ran, rather than all steps
+#
+# This is useful for local testing, or possibly modifying the bootstrap execution via environment variables in the deployment pipeline
 parse_run_options() {
     local -a options=("$1")
     if [ "${#options[@]}" -eq 0 ]; then
@@ -71,7 +88,8 @@ parse_run_options() {
                 pull_container_images 
                 ;;
             *)
-                abort "Unkown option"
+                usage
+                abort "Unkown option provided"
                 ;;
         esac
     done
