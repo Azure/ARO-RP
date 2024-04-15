@@ -154,19 +154,30 @@ configure_and_install_dnf_pkgs_repos() {
 
 # configure_rhui_repo
 configure_rhui_repo() {
-    local -n wait_time="$1"
     log "starting"
+
+    local -ra cmd=(
+        dnf
+        update
+        -y
+        --disablerepo='*'
+        --enablerepo='rhui-microsoft-azure*'
+    )
+
     log "running RHUI package updates"
+    retry cmd "$1"
+}
 
-    #Adding retry logic to yum commands in order to avoid stalling out on resource locks
+# retry Adding retry logic to yum commands in order to avoid stalling out on resource locks
+retry() {
+    local -n cmd_retry="$1"
+    local -n wait_time="$2"
+
     for attempt in {1..5}; do
-        log "attempt #${attempt} - running dnf update"
-        dnf update \
-            -y \
-            --disablerepo='*' \
-            --enablerepo='rhui-microsoft-azure*' &
+        log "attempt #${attempt} - ${FUNCNAME[2]}"
+        ${cmd_retry[@]} &
 
-            wait $! && break
+        wait $! && break
         if [[ ${attempt} -lt 5 ]]; then
             sleep "$wait_time"
         else
@@ -178,72 +189,56 @@ configure_rhui_repo() {
 # dnf_update_pkgs
 dnf_update_pkgs() {
     local -n excludes="$1"
-    local -n wait_time="$2"
     log "starting"
 
-    for attempt in {1..5}; do
-        log "attempt #${attempt} - running dnf update"
-        # shellcheck disable=SC2068
-        dnf -y \
-            ${excludes[@]} \
-            update \
-            --allowerasing &
+    local -ra cmd=(
+        dnf
+        -y
+        ${excludes[@]}
+        update
+        --allowerasing
+    )
 
-            wait $! && break
-        if [[ ${attempt} -lt 5 ]]; then
-            sleep "$wait_time"
-        else
-            abort "attempt #${attempt} - Failed to update packages"
-        fi
-    done
+    log "Updating all packages"
+    retry cmd "$2"
 }
 
 # dnf_install_pkgs
 dnf_install_pkgs() {
     local -n pkgs="$1"
-    local -n wait_time="$2"
     log "starting"
 
-    for attempt in {1..5}; do
-        log "attempt #$attempt - Installing packages ${pkgs[*]}"
-        dnf -y \
-            install \
-            "${pkgs[@]}" &
+    local -ra cmd=(
+        dnf
+        -y
+        install
+        ${pkgs[@]}
+    )
 
-            wait $! && break
-        if [[ ${attempt} -lt 5 ]]; then
-            sleep "$wait_time"
-        else
-            abort "attempt #${attempt} - Failed to install packages ${pkgs[*]}"
-        fi
-    done
+    log "Attempting to install packages: ${pkgs[*]}"
+    retry cmd "$2"
 }
 
 # rpm_import_keys
 rpm_import_keys() {
     local -n keys="$1"
-    local -n wait_time="$2"
     log "starting"
+
 
     # shellcheck disable=SC2068
     for key in ${keys[@]}; do
-    if [ ${#keys[@]} -eq 0 ]; then
-        break
-    fi
-        for attempt in {1..5}; do
-            log "attempt #$attempt - importing rpm repository key $key"
-            rpm --import \
-                -v \
-                "$key" \
-                && unset key
-
-                wait $! && break
-        done
-        if [ -z ${key+x} ] && [[ ${attempt} -lt 5 ]]; then
-            sleep "$wait_time"
-        else
-            abort "attempt #${attempt} - Failed to import rpm repository key $key"
+        if [ ${#keys[@]} -eq 0 ]; then
+            break
         fi
+            local -a cmd=(
+                rpm
+                --import
+                -v
+                "$key"
+            )
+
+            log "attempt #$attempt - importing rpm repository key $key"
+            retry cmd "$2" && unset key
     done
 }
 
@@ -352,11 +347,10 @@ configure_firewalld_rules() {
 
     # https://access.redhat.com/security/cve/cve-2020-13401
     local -r prefix="/etc/sysctl.d"
-    local -r diable_accept_ra_conf="$prefix/02-disable-accept-ra.conf"
-    log "Writing $diable_accept_ra_conf"
-cat >"$diable_accept_ra_conf" <<'EOF'
-net.ipv6.conf.all.accept_ra=0
-EOF
+    local -r disable_accept_ra_conf_filename="$prefix/02-disable-accept-ra.conf"
+    local -r disable_accept_ra_conf_file="net.ipv6.conf.all.accept_ra=0"
+
+    write_file disable_accept_ra_conf_filename disable_accept_ra_conf_file true
 
     local -r disable_core_filename="$prefix/01-disable-core.conf"
     local -r disable_core_file="kernel.core_pattern = |/bin/true
