@@ -1,21 +1,8 @@
-#Adding retry logic to yum commands in order to avoid stalling out on resource locks
 echo "running RHUI fix"
-for attempt in {1..5}; do
-  yum update -y --disablerepo='*' --enablerepo='rhui-microsoft-azure*' && break
-  if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
-done
+yum update -y --disablerepo='*' --enablerepo='rhui-microsoft-azure*'
 
-echo "running yum update"
-for attempt in {1..5}; do
-  yum -y -x WALinuxAgent -x WALinuxAgent-udev update --allowerasing && break
-  if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
-done
-
-echo "installing podman-docker"
-for attempt in {1..5}; do
-  yum -y install podman-docker && break
-  if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
-done
+yum -y -x WALinuxAgent -x WALinuxAgent-udev update
+yum -y install podman-docker
 
 firewall-cmd --add-port=443/tcp --permanent
 
