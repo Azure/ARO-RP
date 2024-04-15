@@ -545,7 +545,9 @@ func (g *generator) rpVMSS() *arm.Resource {
 				Tier:     to.StringPtr("Standard"),
 				Capacity: to.Int64Ptr(1338),
 			},
-			Tags: map[string]*string{},
+			Tags: map[string]*string{
+				"SkipLinuxAzSecPack": to.StringPtr("true"),
+			},
 			VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
 				UpgradePolicy: &mgmtcompute.UpgradePolicy{
 					Mode: mgmtcompute.UpgradeModeManual,
