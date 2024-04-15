@@ -32,8 +32,11 @@ configure_sshd() {
 # configure_and_install_dnf_pkgs_repos
 configure_and_install_dnf_pkgs_repos() {
     log "starting"
-    configure_rhui_repo
-    create_azure_rpm_repos
+
+    # transaction attempt retry time in seconds
+    local -ri retry_wait_time=60
+    configure_rhui_repo retry_wait_time
+    create_azure_rpm_repos retry_wait_time
 
     local -ar exclude_pkgs=(
         "-x WALinuxAgent"
@@ -67,12 +70,13 @@ configure_and_install_dnf_pkgs_repos() {
         python3
     )
 
-    dnf_install_pkgs repo_rpm_pkgs
-    dnf_install_pkgs install_pkgs
+    dnf_install_pkgs repo_rpm_pkgs retry_wait_time
+    dnf_install_pkgs install_pkgs retry_wait_time
 }
 
 # configure_rhui_repo
 configure_rhui_repo() {
+    local -n wait_time="$1"
     log "starting"
     log "running RHUI package updates"
 
@@ -86,7 +90,7 @@ configure_rhui_repo() {
 
             wait $! && break
         if [[ ${attempt} -lt 5 ]]; then
-            sleep 10
+            sleep "$wait_time"
         else
             abort "attempt #${attempt} - Failed to update packages"
         fi
@@ -96,6 +100,7 @@ configure_rhui_repo() {
 # dnf_update_pkgs
 dnf_update_pkgs() {
     local -n excludes="$1"
+    local -n wait_time="$2"
     log "starting"
 
     for attempt in {1..5}; do
@@ -108,7 +113,7 @@ dnf_update_pkgs() {
 
             wait $! && break
         if [[ ${attempt} -lt 5 ]]; then
-            sleep 10
+            sleep "$wait_time"
         else
             abort "attempt #${attempt} - Failed to update packages"
         fi
@@ -118,6 +123,7 @@ dnf_update_pkgs() {
 # dnf_install_pkgs
 dnf_install_pkgs() {
     local -n pkgs="$1"
+    local -n wait_time="$2"
     log "starting"
 
     for attempt in {1..5}; do
@@ -128,7 +134,7 @@ dnf_install_pkgs() {
 
             wait $! && break
         if [[ ${attempt} -lt 5 ]]; then
-            sleep 10
+            sleep "$wait_time"
         else
             abort "attempt #${attempt} - Failed to install packages ${pkgs[*]}"
         fi
@@ -138,6 +144,7 @@ dnf_install_pkgs() {
 # rpm_import_keys
 rpm_import_keys() {
     local -n keys="$1"
+    local -n wait_time="$2"
     log "starting"
 
     # shellcheck disable=SC2068
@@ -150,11 +157,12 @@ rpm_import_keys() {
             rpm --import \
                 -v \
                 "$key" \
-                && unset key \
-                && break
+                && unset key
+
+                wait $! && break
         done
         if [ -z ${key+x} ] && [[ ${attempt} -lt 5 ]]; then
-            sleep 10
+            sleep "$wait_time"
         else
             abort "attempt #${attempt} - Failed to import rpm repository key $key"
         fi
