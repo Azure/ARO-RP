@@ -254,8 +254,8 @@ configure_disk_partitions() {
 
     # Linux block devices are inconsistently named
     # it's difficult to tie the lvm pv to the physical disk using /dev/disk files, which is why lvs is used here
-    physicalDisk="$(lvs -o devices -a | head -n2 | tail -n1 | cut -d ' ' -f 3 | cut -d \( -f 1 | tr -d '[:digit:]')"
-    growpart "$physicalDisk" 2
+    physical_disk="$(lvs -o devices -a | head -n2 | tail -n1 | cut -d ' ' -f 3 | cut -d \( -f 1 | tr -d '[:digit:]')"
+    growpart "$physical_disk" 2
 
     log "extending filesystems"
     log "extending root lvm"
@@ -386,6 +386,13 @@ pull_container_images() {
     log "starting"
 
     echo "logging into prod acr"
+
+    # The managed identity that the VM runs as only has a single roleassignment.
+    # This role assignment is ACRPull which is not necessarily present in the
+    # subscription we're deploying into.  If the identity does not have any
+    # role assignments scoped on the subscription we're deploying into, it will
+    # not show on az login -i, which is why the below line is commented.
+    # az account set -s "$SUBSCRIPTIONID"
     az login -i --allow-no-subscriptions
 
     # Suppress emulation output for podman instead of docker for az acr compatability
