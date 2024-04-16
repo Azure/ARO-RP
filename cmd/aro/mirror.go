@@ -127,9 +127,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"registry.access.redhat.com/ubi8/nodejs-18:latest",
 
 		// https://catalog.redhat.com/software/containers/ubi8/go-toolset/5ce8713aac3db925c03774d1
-		// https://catalog.redhat.com/software/containers/ubi9/go-toolset/61e5c00b4ec9945c18787690
-		"registry.access.redhat.com/ubi8/go-toolset:1.20.10",
-		"registry.access.redhat.com/ubi9/go-toolset:1.20.10",
+		"registry.access.redhat.com/ubi8/go-toolset:1.20.12-5",
 
 		// https://quay.io/repository/app-sre/managed-upgrade-operator?tab=tags
 		// https://gitlab.cee.redhat.com/service/app-interface/-/blob/master/data/services/osd-operators/cicd/saas/saas-managed-upgrade-operator.yaml?ref_type=heads
