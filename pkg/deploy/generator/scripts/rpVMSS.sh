@@ -905,48 +905,6 @@ run_azsecd_config_scan() {
     done
 }
 
-# write_file
-# Args
-# 1) filename - string
-# 2) file_contents - string
-# 3) clobber - boolean; optional - defaults to false
-write_file() {
-    local -n filename="$1"
-    local -n file_contents="$2"
-    local -r clobber="${3:-false}"
-
-    if $clobber; then
-        log "Overwriting file $filename"
-        echo "$file_contents" > "$filename"
-    else
-        log "Appending to $filename"
-        echo "$file_contents" >> "$filename"
-    fi
-}
-
-# reboot_vm restores all selinux file contexts, waits 30 seconds then reboots
-reboot_vm() {
-    log "starting"
-
-    configure_selinux "true"
-    (sleep 30 && log "rebooting vm now"; reboot) &
-}
-
-# log is a wrapper for echo that includes the function name
-log() {
-    local -r msg="${1:-"log message is empty"}"
-    local -r stack_level="${2:-1}"
-    echo "${FUNCNAME[${stack_level}]}: ${msg}"
-}
-
-# abort is a wrapper for log that exits with an error code
-abort() {
-    local -ri origin_stacklevel=2
-    log "${1}" "$origin_stacklevel"
-    log "Exiting"
-    exit 1
-}
-
 export AZURE_CLOUD_NAME="${AZURECLOUDNAME:?"Failed to carry over variables"}"
 
 main "$@"
