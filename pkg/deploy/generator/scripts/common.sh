@@ -19,6 +19,21 @@ retry() {
     done
 }
 
+# dnf_install_pkgs
+dnf_install_pkgs() {
+    local -n pkgs="$1"
+    log "starting"
+
+    local -ra cmd=(
+        dnf
+        -y
+        install
+        ${pkgs[@]}
+    )
+
+    log "Attempting to install packages: ${pkgs[*]}"
+    retry cmd "$2"
+}
 
 # We need to configure PasswordAuthentication to yes in order for the VMSS Access JIT to work
 configure_sshd() {

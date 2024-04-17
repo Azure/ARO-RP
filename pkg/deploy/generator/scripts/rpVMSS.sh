@@ -173,6 +173,7 @@ parse_run_options() {
     exit 0
 }
 
+# configure_rpm_repos
 configure_rpm_repos() {
     log "starting"
 
@@ -194,22 +195,6 @@ configure_rhui_repo() {
 
     log "running RHUI package updates"
     retry cmd "$1"
-}
-
-# dnf_install_pkgs
-dnf_install_pkgs() {
-    local -n pkgs="$1"
-    log "starting"
-
-    local -ra cmd=(
-        dnf
-        -y
-        install
-        ${pkgs[@]}
-    )
-
-    log "Attempting to install packages: ${pkgs[*]}"
-    retry cmd "$2"
 }
 
 # configure_disk_partitions
