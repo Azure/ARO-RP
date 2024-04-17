@@ -189,3 +189,16 @@ pull_container_images() {
 
     az logout
 }
+
+# enable_services enables all services required for aro rp
+enable_services() {
+    local -n services="$1"
+    log "starting"
+
+    log "enabling aro services ${aro_services[*]}"
+    # shellcheck disable=SC2068
+    for service in ${aro_services[@]}; do
+        log "Enabling $service now"
+        systemctl enable "$service.service"
+    done
+}

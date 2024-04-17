@@ -78,7 +78,24 @@ main() {
     )
 
     pull_container_images images
-    configure_system_services
+    configure_aro_services
+
+    local -ra aro_services=(
+        "aro-dbtoken"
+        "aro-monitor"
+        "aro-portal"
+        "aro-rp"
+        "auoms"
+        "azsecd"
+        "azsecmond"
+        "mdsd"
+        "mdm"
+        "chronyd"
+        "fluentbit"
+    )
+
+    enable_services aro_services
+
     reboot_vm
 }
 
@@ -237,7 +254,7 @@ gpgcheck=no'
     write_file azure_repo_filename azure_repo_file true
 }
 
-# configure_system_services creates, configures, and enables the following systemd services and timers
+# configure_aro_services creates, configures, and enables the following systemd services and timers
 # services
 #   fluentbit
 #   mdm
@@ -246,7 +263,7 @@ gpgcheck=no'
 #   aro-dbtoken
 #   aro-monitor
 #   aro-portal
-configure_system_services() {
+configure_aro_services() {
     configure_service_fluentbit
     configure_service_mdm
     configure_timers_mdm_mdsd
@@ -255,31 +272,6 @@ configure_system_services() {
     configure_service_aro_monitor
     configure_service_aro_portal
     configure_service_mdsd
-}
-
-# enable_aro_services enables all services required for aro rp
-enable_aro_services() {
-    log "starting"
-
-    local -ra aro_services=(
-        "aro-dbtoken"
-        "aro-monitor"
-        "aro-portal"
-        "aro-rp"
-        "auoms"
-        "azsecd"
-        "azsecmond"
-        "mdsd"
-        "mdm"
-        "chronyd"
-        "fluentbit"
-    )
-    log "enabling aro services ${aro_services[*]}"
-    # shellcheck disable=SC2068
-    for service in ${aro_services[@]}; do
-        log "Enabling $service now"
-        systemctl enable "$service.service"
-    done
 }
 
 # configure_service_fluentbit
