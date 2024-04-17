@@ -45,10 +45,6 @@
         "azureSecPackVSATenantId": {
             "type": "string"
         },
-        "billingServicePrincipalId": {
-            "type": "string",
-            "defaultValue": ""
-        },
         "clusterDefaultInstallerPullspec": {
             "type": "string",
             "defaultValue": ""
@@ -672,21 +668,6 @@
             "apiVersion": "2018-03-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]"
-            ]
-        },
-        {
-            "name": "[concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('billingServicePrincipalId') , 'Billing / DocumentDB Account Contributor'))]",
-            "type": "Microsoft.DocumentDB/databaseAccounts/providers/roleAssignments",
-            "properties": {
-                "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
-                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '5bd9cd88-fe45-4216-938b-f97437e15450')]",
-                "principalId": "[parameters('billingServicePrincipalId')]",
-                "principalType": "ServicePrincipal"
-            },
-            "condition": "[greater(length(parameters('billingServicePrincipalId')), 0)]",
-            "apiVersion": "2018-09-01-preview",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
             ]
         },
         {
