@@ -442,6 +442,7 @@ type UserAssignedIdentities map[string]ClusterUserAssignedIdentity
 type Identity struct {
 	Type                   string                 `json:"type,omitempty"`
 	UserAssignedIdentities UserAssignedIdentities `json:"userAssignedIdentities,omitempty"`
+	IdentityURL            string                 `json:"identityURL,omitempty"`
 }
 
 // Install represents an install process.

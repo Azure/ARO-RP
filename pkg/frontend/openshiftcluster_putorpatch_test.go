@@ -3305,3 +3305,84 @@ func TestEnrichClusterSystemData(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateIdentityUrl(t *testing.T) {
+	for _, tt := range []struct {
+		name        string
+		identityURL string
+		cluster     *api.OpenShiftCluster
+		expected    *api.OpenShiftCluster
+		isCreate    bool
+		wantError   error
+	}{
+		{
+			name:        "identity URL is empty, is not wi/mi cluster create",
+			identityURL: "",
+			cluster:     &api.OpenShiftCluster{},
+			expected:    &api.OpenShiftCluster{},
+			isCreate:    false,
+		},
+		{
+			name:        "identity URL is empty, is wi/mi cluster create",
+			identityURL: "",
+			cluster:     &api.OpenShiftCluster{},
+			expected:    &api.OpenShiftCluster{},
+			isCreate:    true,
+			wantError:   errMissingIdentityURL,
+		},
+		{
+			name:        "cluster is not wi/mi, identityURL passed",
+			identityURL: "http://foo.bar",
+			cluster: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ServicePrincipalProfile: &api.ServicePrincipalProfile{},
+				},
+			},
+			expected: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ServicePrincipalProfile: &api.ServicePrincipalProfile{},
+				},
+			},
+			isCreate: true,
+		},
+		{
+			name:        "cluster is not wi/mi, identityURL not passed",
+			identityURL: "",
+			cluster: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ServicePrincipalProfile: &api.ServicePrincipalProfile{},
+				},
+			},
+			expected: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ServicePrincipalProfile: &api.ServicePrincipalProfile{},
+				},
+			},
+			isCreate: true,
+		},
+		{
+			name: "pass - identity URL passed on wi/mi cluster",
+			cluster: &api.OpenShiftCluster{
+				Identity: &api.Identity{},
+			},
+			identityURL: "http://foo.bar",
+			expected: &api.OpenShiftCluster{
+				Identity: &api.Identity{
+					IdentityURL: "http://foo.bar",
+				},
+			},
+			isCreate: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateIdentityUrl(tt.cluster, tt.identityURL, tt.isCreate)
+			if err != nil && err != tt.wantError {
+				t.Error(cmp.Diff(err, tt.wantError))
+			}
+
+			if !reflect.DeepEqual(tt.cluster, tt.expected) {
+				t.Error(cmp.Diff(tt.cluster, tt.expected))
+			}
+		})
+	}
+}

@@ -803,4 +803,5 @@ type Identity struct {
 
 	Type                   string                 `json:"type,omitempty"`
 	UserAssignedIdentities UserAssignedIdentities `json:"userAssignedIdentities,omitempty"`
+	IdentityURL            string                 `json:"identityURL,omitempty"`
 }
