@@ -29,9 +29,6 @@
         "azureSecPackVSATenantId": {
             "value": ""
         },
-        "billingServicePrincipalId": {
-            "value": ""
-        },
         "clusterDefaultInstallerPullspec": {
             "value": ""
         },
