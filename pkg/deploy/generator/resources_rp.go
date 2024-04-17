@@ -1425,19 +1425,6 @@ func (g *generator) rpRBAC() []*arm.Resource {
 	}
 }
 
-func (g *generator) rpBillingContributorRbac() []*arm.Resource {
-	return []*arm.Resource{
-		rbac.ResourceRoleAssignmentWithName(
-			rbac.RoleDocumentDBAccountContributor,
-			"parameters('billingServicePrincipalId')",
-			"Microsoft.DocumentDB/databaseAccounts",
-			"parameters('databaseAccountName')",
-			"concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('billingServicePrincipalId') , 'Billing / DocumentDB Account Contributor'))",
-			"[greater(length(parameters('billingServicePrincipalId')), 0)]",
-		),
-	}
-}
-
 func (g *generator) rpACR() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtcontainerregistry.Registry{
