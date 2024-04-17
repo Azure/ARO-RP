@@ -869,7 +869,7 @@ configure_service_mdsd() {
     log "starting"
 
     local -r mdsd_service_dir="/etc/systemd/system/mdsd.service.d"
-    mkdir "$mdsd_service_dir"
+    mkdir -p "$mdsd_service_dir"
 
     local -r mdsd_override_conf_filename="$mdsd_service_dir/override.conf"
     local -r mdsd_override_conf_file="[Unit]
