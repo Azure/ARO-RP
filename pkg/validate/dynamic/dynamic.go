@@ -25,7 +25,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/token"
@@ -85,7 +84,6 @@ type dynamic struct {
 	env                        env.Interface
 	azEnv                      *azureclient.AROEnvironment
 
-	permissions                           authorization.PermissionsClient
 	virtualNetworks                       virtualNetworksGetClient
 	diskEncryptionSets                    compute.DiskEncryptionSetsClient
 	resourceSkusClient                    compute.ResourceSkusClient
@@ -123,7 +121,6 @@ func NewValidator(
 
 		spComputeUsage: compute.NewUsageClient(azEnv, subscriptionID, authorizer),
 		spNetworkUsage: network.NewUsageClient(azEnv, subscriptionID, authorizer),
-		permissions:    authorization.NewPermissionsClient(azEnv, subscriptionID, authorizer),
 		virtualNetworks: newVirtualNetworksCache(
 			network.NewVirtualNetworksClient(azEnv, subscriptionID, authorizer),
 		),
