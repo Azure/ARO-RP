@@ -114,3 +114,45 @@ configure_firewalld_rules() {
 
     firewall-cmd --runtime-to-permanent
 }
+
+# configure_logrotate clobbers /etc/logrotate.conf
+configure_logrotate() {
+    log "starting"
+
+    local -r logrotate_conf_filename='/etc/logrotate.conf'
+    local -r logrotate_conf_file='# see "man logrotate" for details
+# rotate log files weekly
+weekly
+
+# keep 2 weeks worth of backlogs
+rotate 2
+
+# create new (empty) log files after rotating old ones
+create
+
+# use date as a suffix of the rotated file
+dateext
+
+# uncomment this if you want your log files compressed
+compress
+
+# RPM packages drop log rotation information into this directory
+include /etc/logrotate.d
+
+# no packages own wtmp and btmp -- we will rotate them here
+/var/log/wtmp {
+    monthly
+    create 0664 root utmp
+        minsize 1M
+    rotate 1
+}
+
+/var/log/btmp {
+    missingok
+    monthly
+    create 0600 root utmp
+    rotate 1
+}'
+
+    write_file logrotate_conf_filename logrotate_conf_file true
+}
