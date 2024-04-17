@@ -7,14 +7,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"testing"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
-	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
@@ -25,7 +22,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
 	mock_remotepdp "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/authz/remotepdp"
 	mock_azcore "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azcore"
-	mock_authorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -47,122 +43,6 @@ var (
 	masterNSGv1       = resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-controlplane-nsg"
 	workerNSGv1       = resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg"
 )
-
-func TestValidateVnetPermissions(t *testing.T) {
-	ctx := context.Background()
-
-	resourceType := "virtualNetworks"
-	resourceProvider := "Microsoft.Network"
-
-	for _, tt := range []struct {
-		name    string
-		mocks   func(*mock_authorization.MockPermissionsClient, context.CancelFunc)
-		wantErr string
-	}{
-		{
-			name: "pass",
-			mocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel context.CancelFunc) {
-				permissionsClient.EXPECT().
-					ListForResource(gomock.Any(), resourceGroupName, resourceProvider, "", resourceType, vnetName).
-					Return([]mgmtauthorization.Permission{
-						{
-							Actions: &[]string{
-								"Microsoft.Network/virtualNetworks/join/action",
-								"Microsoft.Network/virtualNetworks/read",
-								"Microsoft.Network/virtualNetworks/write",
-								"Microsoft.Network/virtualNetworks/subnets/join/action",
-								"Microsoft.Network/virtualNetworks/subnets/read",
-								"Microsoft.Network/virtualNetworks/subnets/write",
-							},
-							NotActions: &[]string{},
-						},
-					}, nil)
-			},
-		},
-		{
-			name: "fail: missing permissions",
-			mocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel context.CancelFunc) {
-				permissionsClient.EXPECT().
-					ListForResource(gomock.Any(), resourceGroupName, resourceProvider, "", resourceType, vnetName).
-					Do(func(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) {
-						cancel()
-					}).
-					Return(
-						[]mgmtauthorization.Permission{
-							{
-								Actions:    &[]string{},
-								NotActions: &[]string{},
-							},
-						},
-						nil,
-					)
-			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on vnet '" + vnetID + "'.",
-		},
-		{
-			name: "fail: not found",
-			mocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel context.CancelFunc) {
-				permissionsClient.EXPECT().
-					ListForResource(gomock.Any(), resourceGroupName, resourceProvider, "", resourceType, vnetName).
-					Do(func(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) {
-						cancel()
-					}).
-					Return(
-						nil,
-						autorest.DetailedError{
-							StatusCode: http.StatusNotFound,
-						},
-					)
-			},
-			wantErr: "400: InvalidLinkedVNet: : The vnet '" + vnetID + "' could not be found.",
-		},
-		{
-			name: "fail: fp/sp has no permission on the target vnet (forbidden error)",
-			mocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel context.CancelFunc) {
-				permissionsClient.EXPECT().
-					ListForResource(gomock.Any(), resourceGroupName, resourceProvider, "", resourceType, vnetName).
-					Do(func(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) {
-						cancel()
-					}).
-					Return(
-						nil,
-						autorest.DetailedError{
-							StatusCode: http.StatusForbidden,
-							Message:    "some forbidden error on the resource.",
-						},
-					)
-			},
-
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on vnet '" + vnetID + "'.\nOriginal error message: some forbidden error on the resource.",
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			ctx, cancel := context.WithCancel(ctx)
-			defer cancel()
-
-			permissionsClient := mock_authorization.NewMockPermissionsClient(controller)
-			tt.mocks(permissionsClient, cancel)
-
-			dv := &dynamic{
-				appID:          "fff51942-b1f9-4119-9453-aaa922259eb7",
-				authorizerType: AuthorizerClusterServicePrincipal,
-				log:            logrus.NewEntry(logrus.StandardLogger()),
-				permissions:    permissionsClient,
-			}
-
-			vnetr, err := azure.ParseResourceID(vnetID)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			err = dv.validateVnetPermissions(ctx, vnetr)
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-		})
-	}
-}
 
 func TestGetRouteTableID(t *testing.T) {
 	for _, tt := range []struct {
@@ -267,324 +147,6 @@ func TestGetNatGatewayID(t *testing.T) {
 
 			// purposefully hardcoding path to "" so it is not needed in the wantErr message
 			_, err := getNatGatewayID(vnet, masterSubnet)
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-		})
-	}
-}
-
-func TestValidateRouteTablesPermissions(t *testing.T) {
-	ctx := context.Background()
-
-	for _, tt := range []struct {
-		name            string
-		subnet          Subnet
-		permissionMocks func(*mock_authorization.MockPermissionsClient, context.CancelFunc)
-		vnetMocks       func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
-		wantErr         string
-	}{
-		{
-			name:   "fail: failed to get vnet",
-			subnet: Subnet{ID: masterSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
-					Return(vnet, errors.New("failed to get vnet"))
-			},
-			wantErr: "failed to get vnet",
-		},
-		{
-			name:   "fail: master subnet doesn't exist",
-			subnet: Subnet{ID: masterSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				vnet.Subnets = nil
-				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
-					Return(vnet, nil)
-			},
-			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + masterSubnet + "' could not be found.",
-		},
-		{
-			name:   "fail: worker subnet ID doesn't exist",
-			subnet: Subnet{ID: workerSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				(*vnet.Subnets)[1].ID = to.StringPtr("not valid")
-				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
-					Return(vnet, nil)
-			},
-			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + workerSubnet + "' could not be found.",
-		},
-		{
-			name:   "fail: permissions don't exist",
-			subnet: Subnet{ID: workerSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
-					Return(vnet, nil)
-			},
-			permissionMocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel context.CancelFunc) {
-				permissionsClient.EXPECT().
-					ListForResource(gomock.Any(), resourceGroupName, "Microsoft.Network", "", "routeTables", gomock.Any()).
-					Do(func(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) {
-						cancel()
-					}).
-					Return(
-						[]mgmtauthorization.Permission{
-							{
-								Actions:    &[]string{},
-								NotActions: &[]string{},
-							},
-						},
-						nil,
-					)
-			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor role on route table '" + workerRtID + "'.",
-		},
-		{
-			name:   "pass",
-			subnet: Subnet{ID: masterSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
-					Return(vnet, nil)
-			},
-			permissionMocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel context.CancelFunc) {
-				permissionsClient.EXPECT().
-					ListForResource(gomock.Any(), resourceGroupName, "Microsoft.Network", "", "routeTables", gomock.Any()).
-					AnyTimes().
-					Return([]mgmtauthorization.Permission{
-						{
-							Actions: &[]string{
-								"Microsoft.Network/routeTables/join/action",
-								"Microsoft.Network/routeTables/read",
-								"Microsoft.Network/routeTables/write",
-							},
-							NotActions: &[]string{},
-						},
-					}, nil)
-			},
-		},
-		{
-			name:   "pass: no route table to check",
-			subnet: Subnet{ID: masterSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				(*vnet.Subnets)[0].RouteTable = nil
-				(*vnet.Subnets)[1].RouteTable = nil
-				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
-					Return(vnet, nil)
-			},
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			ctx, cancel := context.WithCancel(ctx)
-			defer cancel()
-
-			permissionsClient := mock_authorization.NewMockPermissionsClient(controller)
-			vnetClient := mock_network.NewMockVirtualNetworksClient(controller)
-
-			vnet := &mgmtnetwork.VirtualNetwork{
-				ID: &vnetID,
-				VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-					Subnets: &[]mgmtnetwork.Subnet{
-						{
-							ID: &masterSubnet,
-							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-								RouteTable: &mgmtnetwork.RouteTable{
-									ID: &masterRtID,
-								},
-							},
-						},
-						{
-							ID: &workerSubnet,
-							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-								RouteTable: &mgmtnetwork.RouteTable{
-									ID: &workerRtID,
-								},
-							},
-						},
-					},
-				},
-			}
-
-			dv := &dynamic{
-				authorizerType:  AuthorizerClusterServicePrincipal,
-				log:             logrus.NewEntry(logrus.StandardLogger()),
-				permissions:     permissionsClient,
-				virtualNetworks: vnetClient,
-			}
-
-			if tt.permissionMocks != nil {
-				tt.permissionMocks(permissionsClient, cancel)
-			}
-
-			if tt.vnetMocks != nil {
-				tt.vnetMocks(vnetClient, *vnet)
-			}
-
-			err := dv.validateRouteTablePermissions(ctx, tt.subnet)
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-		})
-	}
-}
-
-func TestValidateNatGatewaysPermissions(t *testing.T) {
-	ctx := context.Background()
-
-	for _, tt := range []struct {
-		name            string
-		subnet          Subnet
-		permissionMocks func(*mock_authorization.MockPermissionsClient, context.CancelFunc)
-		vnetMocks       func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
-		wantErr         string
-	}{
-		{
-			name:   "fail: failed to get vnet",
-			subnet: Subnet{ID: masterSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
-					Return(vnet, errors.New("failed to get vnet"))
-			},
-			wantErr: "failed to get vnet",
-		},
-		{
-			name:   "fail: master subnet doesn't exist",
-			subnet: Subnet{ID: masterSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				vnet.Subnets = nil
-				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
-					Return(vnet, nil)
-			},
-			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + masterSubnet + "' could not be found.",
-		},
-		{
-			name:   "fail: worker subnet ID doesn't exist",
-			subnet: Subnet{ID: workerSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				(*vnet.Subnets)[1].ID = to.StringPtr("not valid")
-				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
-					Return(vnet, nil)
-			},
-			wantErr: "400: InvalidLinkedVNet: : The provided subnet '" + workerSubnet + "' could not be found.",
-		},
-		{
-			name:   "fail: permissions don't exist",
-			subnet: Subnet{ID: workerSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
-					Return(vnet, nil)
-			},
-			permissionMocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel context.CancelFunc) {
-				permissionsClient.EXPECT().
-					ListForResource(gomock.Any(), resourceGroupName, "Microsoft.Network", "", "natGateways", gomock.Any()).
-					Do(func(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) {
-						cancel()
-					}).
-					Return(
-						[]mgmtauthorization.Permission{
-							{
-								Actions:    &[]string{},
-								NotActions: &[]string{},
-							},
-						},
-						nil,
-					)
-			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor role on nat gateway '" + workerNgID + "'.",
-		},
-		{
-			name:   "pass",
-			subnet: Subnet{ID: masterSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
-					Return(vnet, nil)
-			},
-			permissionMocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel context.CancelFunc) {
-				permissionsClient.EXPECT().
-					ListForResource(gomock.Any(), resourceGroupName, "Microsoft.Network", "", "natGateways", gomock.Any()).
-					AnyTimes().
-					Return([]mgmtauthorization.Permission{
-						{
-							Actions: &[]string{
-								"Microsoft.Network/natGateways/join/action",
-								"Microsoft.Network/natGateways/read",
-								"Microsoft.Network/natGateways/write",
-							},
-							NotActions: &[]string{},
-						},
-					}, nil)
-			},
-		},
-		{
-			name:   "pass: no nat gateway to check",
-			subnet: Subnet{ID: masterSubnet},
-			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
-				(*vnet.Subnets)[0].NatGateway = nil
-				(*vnet.Subnets)[1].NatGateway = nil
-				vnetClient.EXPECT().
-					Get(gomock.Any(), resourceGroupName, vnetName, "").
-					Return(vnet, nil)
-			},
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			ctx, cancel := context.WithCancel(ctx)
-			defer cancel()
-
-			permissionsClient := mock_authorization.NewMockPermissionsClient(controller)
-			vnetClient := mock_network.NewMockVirtualNetworksClient(controller)
-
-			vnet := &mgmtnetwork.VirtualNetwork{
-				ID: &vnetID,
-				VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-					Subnets: &[]mgmtnetwork.Subnet{
-						{
-							ID: &masterSubnet,
-							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-								NatGateway: &mgmtnetwork.SubResource{
-									ID: &masterNgID,
-								},
-							},
-						},
-						{
-							ID: &workerSubnet,
-							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-								NatGateway: &mgmtnetwork.SubResource{
-									ID: &workerNgID,
-								},
-							},
-						},
-					},
-				},
-			}
-
-			dv := &dynamic{
-				authorizerType:  AuthorizerClusterServicePrincipal,
-				log:             logrus.NewEntry(logrus.StandardLogger()),
-				permissions:     permissionsClient,
-				virtualNetworks: vnetClient,
-			}
-
-			if tt.permissionMocks != nil {
-				tt.permissionMocks(permissionsClient, cancel)
-			}
-
-			if tt.vnetMocks != nil {
-				tt.vnetMocks(vnetClient, *vnet)
-			}
-
-			err := dv.validateNatGatewayPermissions(ctx, tt.subnet)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
@@ -1131,7 +693,7 @@ func mockTokenCredential(tokenCred *mock_azcore.MockTokenCredential) {
 		Return(mockAccessToken, nil)
 }
 
-func TestValidateVnetPermissionsWithCheckAccess(t *testing.T) {
+func TestValidateVnetPermissions(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tt := range []struct {
@@ -1289,7 +851,7 @@ var (
 	}
 )
 
-func TestValidateRouteTablesPermissionsWithCheckAccess(t *testing.T) {
+func TestValidateRouteTablesPermissions(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tt := range []struct {
@@ -1504,7 +1066,7 @@ var (
 	}
 )
 
-func TestValidateNatGatewaysPermissionsWithCheckAccess(t *testing.T) {
+func TestValidateNatGatewaysPermissions(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tt := range []struct {
