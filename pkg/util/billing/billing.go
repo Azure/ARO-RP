@@ -22,13 +22,13 @@ type Manager interface {
 
 type manager struct {
 	billingDB database.Billing
-	subDB     database.Subscriptions
-	log       *logrus.Entry
+	//markedForRemovalSubDB database.Subscriptions
+	log *logrus.Entry
 }
 
 func NewManager(env env.Interface, billing database.Billing, sub database.Subscriptions, log *logrus.Entry) (Manager, error) {
 	return &manager{
-		subDB:     sub,
+		//markedForRemovalSubDB: sub,
 		billingDB: billing,
 		log:       log,
 	}, nil

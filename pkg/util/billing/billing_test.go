@@ -125,7 +125,7 @@ func TestDelete(t *testing.T) {
 			m := &manager{
 				log:       log,
 				billingDB: billingDatabase,
-				subDB:     subscriptionsDatabase,
+				//markedForRemovalSubDB: subscriptionsDatabase,
 			}
 
 			err = m.Delete(ctx, &api.OpenShiftClusterDocument{ID: docID})
@@ -295,7 +295,7 @@ func TestEnsure(t *testing.T) {
 			m := &manager{
 				log:       log,
 				billingDB: billingDatabase,
-				subDB:     subscriptionsDatabase,
+				//markedForRemovalSubDB: subscriptionsDatabase,
 			}
 
 			doc, err := openShiftClusterDatabase.Get(ctx, strings.ToLower(testdatabase.GetResourcePath(subID, "resourceName")))
