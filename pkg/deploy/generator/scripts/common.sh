@@ -175,6 +175,7 @@ include /etc/logrotate.d
 # pull_container_images
 pull_container_images() {
     local -n pull_images="$1"
+    local -n registry_conf="${2:-}"
     log "starting"
 
     # The managed identity that the VM runs as only has a single roleassignment.
@@ -190,9 +191,13 @@ pull_container_images() {
     mkdir -p /root/.docker
     touch /etc/containers/nodocker
 
-	# This name is used in the case that az acr login searches for this in it's environment
+    # This name is used in the case that az acr login searches for this in it's environment
     local -r REGISTRY_AUTH_FILE="/root/.docker/config.json"
     
+    if [[ -n $registry_conf ]]; then
+        write_file REGISTRY_AUTH_FILE registry_conf true
+    fi
+
     log "logging into prod acr"
     az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
 
@@ -210,9 +215,9 @@ enable_services() {
     local -n services="$1"
     log "starting"
 
-    log "enabling aro services ${aro_services[*]}"
+    log "enabling services ${services[*]}"
     # shellcheck disable=SC2068
-    for service in ${aro_services[@]}; do
+    for service in ${services[@]}; do
         log "Enabling $service now"
         systemctl enable "$service.service"
     done
@@ -259,3 +264,30 @@ abort() {
     log "Exiting"
     exit 1
 }
+
+# configure_rhui_repo
+configure_rhui_repo() {
+    log "starting"
+
+    local -ra cmd=(
+        dnf
+        update
+        -y
+        --disablerepo='*'
+        --enablerepo='rhui-microsoft-azure*'
+    )
+
+    log "running RHUI package updates"
+    retry cmd "$1"
+}
+
+configure_dnf_cron_job() {
+    log "Starting"
+    local -r cron_weekly_dnf_update_filename='/etc/cron.weekly/dnfupdate'
+    local -r cron_weekly_dnf_update_file="#!/bin/bash
+dnf update -y"
+
+    write_file cron_weekly_dnf_update_filename cron_weekly_dnf_update_file true
+    chmod +x "$cron_weekly_dnf_update_filename"
+}
+

@@ -89,6 +89,7 @@ main() {
 
     dnf_install_pkgs repo_rpm_pkgs retry_wait_time
     dnf_install_pkgs install_pkgs retry_wait_time
+    configure_dnf_cron_job
 
     configure_disk_partitions
     configure_logrotate
@@ -114,10 +115,10 @@ usage() {
         -d Configure Disk Partitions
         -p Configure rpm repositories, import required rpm keys, update & install packages with dnf
         -l Configure logrotate.conf
-        -s Make selinux modifications required for ARO RP
+        -s Configure selinux
         -r Configure sshd - Allow password authenticaiton
         -f Configure firewalld default zone rules
-        -u Configure systemd unit files for ARO RP
+        -u Configure systemd unit files
         -i Pull container images
 
         Note: steps will be executed in the order that flags are provided
@@ -165,6 +166,9 @@ parse_run_options() {
 
                 log "Running step dnf_install_pkgs pkgs"
                 dnf_install_pkgs pkgs_to_install retry_time
+                
+                log "Running step configure_dnf_crond_job"
+                configure_dnf_cron_job
                 ;;
             l)
                 log "Running configure_logrotate"
@@ -207,22 +211,6 @@ configure_rpm_repos() {
 
     configure_rhui_repo "$1"
     create_azure_rpm_repos "$1"
-}
-
-# configure_rhui_repo
-configure_rhui_repo() {
-    log "starting"
-
-    local -ra cmd=(
-        dnf
-        update
-        -y
-        --disablerepo='*'
-        --enablerepo='rhui-microsoft-azure*'
-    )
-
-    log "running RHUI package updates"
-    retry cmd "$1"
 }
 
 # configure_disk_partitions
