@@ -152,7 +152,7 @@ func (c *Cluster) CreateApp(ctx context.Context, clusterName string) error {
 		return err
 	}
 
-	return os.WriteFile("clusterapp.env", []byte(fmt.Sprintf("AZURE_CLUSTER_SERVICE_PRINCIPAL_ID=%s\nAZURE_CLUSTER_APP_ID=%s\nAZURE_CLUSTER_APP_SECRET=%s", spID, appID, appSecret)), 0o600)
+	return os.WriteFile("clusterapp.env", []byte(fmt.Sprintf("export AZURE_CLUSTER_SERVICE_PRINCIPAL_ID=%s\nexport AZURE_CLUSTER_APP_ID=%s\nexport AZURE_CLUSTER_APP_SECRET=%s", spID, appID, appSecret)), 0o600)
 }
 
 func (c *Cluster) DeleteApp(ctx context.Context) error {
