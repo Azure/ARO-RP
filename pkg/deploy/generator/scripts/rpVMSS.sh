@@ -14,25 +14,15 @@ main() {
     # shellcheck source=common.sh
     source common.sh
 
-    parse_run_options "$@"
-
-
-    configure_sshd
-    configure_rpm_repos retry_wait_time
-
     local -ar exclude_pkgs=(
         "-x WALinuxAgent"
         "-x WALinuxAgent-udev"
     )
 
-    dnf_update_pkgs exclude_pkgs retry_wait_time
-
     local -ra rpm_keys=(
         https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
         https://packages.microsoft.com/keys/microsoft.asc
     )
-
-    rpm_import_keys rpm_keys retry_wait_time
 
     local -ra repo_rpm_pkgs=(
         https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
@@ -52,24 +42,6 @@ main() {
         python3
     )
 
-    dnf_install_pkgs repo_rpm_pkgs retry_wait_time
-    dnf_install_pkgs install_pkgs retry_wait_time
-
-    configure_disk_partitions
-    configure_logrotate
-    configure_selinux
-
-    mkdir -p /var/log/journal
-    mkdir -p /var/lib/waagent/Microsoft.Azure.KeyVault.Store
-
-    local -ra enable_ports=(
-        "443/tcp"
-        "444/tcp"
-        "445/tcp"
-        "2222/tcp"
-    )
-    configure_firewalld_rules enable_ports
-
     MDMIMAGE="${RPIMAGE%%/*}/${MDMIMAGE##*/}"
     local -ra images=(
         "$MDMIMAGE"
@@ -77,8 +49,12 @@ main() {
         "$FLUENTBITIMAGE"
     )
 
-    pull_container_images images
-    configure_aro_services
+    local -ra enable_ports=(
+        "443/tcp"
+        "444/tcp"
+        "445/tcp"
+        "2222/tcp"
+    )
 
     local -ra aro_services=(
         "aro-dbtoken"
@@ -93,6 +69,39 @@ main() {
         "chronyd"
         "fluentbit"
     )
+
+    parse_run_options "$@" \
+                        retry_wait_time \
+                        exclude_pkgs \
+                        rpm_keys \
+                        repo_rpm_pkgs \
+                        install_pkgs \
+                        images \
+                        enable_ports \
+                        aro_services
+
+    configure_sshd
+    configure_rpm_repos retry_wait_time
+
+    dnf_update_pkgs exclude_pkgs retry_wait_time
+
+    rpm_import_keys rpm_keys retry_wait_time
+
+    dnf_install_pkgs repo_rpm_pkgs retry_wait_time
+    dnf_install_pkgs install_pkgs retry_wait_time
+
+    configure_disk_partitions
+    configure_logrotate
+    configure_selinux
+
+    mkdir -p /var/log/journal
+    mkdir -p /var/lib/waagent/Microsoft.Azure.KeyVault.Store
+
+    configure_firewalld_rules enable_ports
+
+    pull_container_images images
+    configure_aro_services
+    enable_services
 
     enable_services aro_services
 
@@ -122,6 +131,15 @@ usage() {
 parse_run_options() {
     # shellcheck disable=SC2206
     local -a options=(${1:-})
+    local -n retry_time="$2"
+    local -n pkgs_to_exclude="$3"
+    local -n keys_to_import="$4"
+    local -n rpm_pkgs="$5"
+    local -n pkgs_to_install="$6"
+    local -n images_to_pull="$7"
+    local -n ports_to_enable="$8"
+    local -n services_to_enable="$9"
+
     if [ "${#options[@]}" -eq 0 ]; then
         log "Running all steps"
         return 0
@@ -136,8 +154,17 @@ parse_run_options() {
                 configure_disk_partitions
                 ;;
             p)
-                log "Running step configure_and_install_dnf_pkgs_repos"
-                configure_and_install_dnf_pkgs_repos
+                log "Running step configure_rpm_repos"
+                configure_rpm_repos keys_to_import
+
+                log "Running step dnf_update_pkgs"
+                dnf_update_pkgs pkgs_to_exclude retry_time
+
+                log "Running step dnf_install_pkgs rpm_pkgs"
+                dnf_install_pkgs rpm_pkgs retry_time
+
+                log "Running step dnf_install_pkgs pkgs"
+                dnf_install_pkgs pkgs_to_install retry_time
                 ;;
             l)
                 log "Running configure_logrotate"
@@ -153,15 +180,16 @@ parse_run_options() {
                 ;;
             f)
                 log "Running configure_firewalld_rules"
-                configure_firewalld_rules
+                configure_firewalld_rules ports_to_enable
                 ;;
             u)
                 log "Running pull_container_images & configure_system_services"
-                configure_system_services
+                configure_aro_services
+                enable_services services_to_enable
                 ;;
             i)
                 log "Running pull_container_images"
-                pull_container_images 
+                pull_container_images images_to_pull
                 ;;
             *)
                 usage allowed_options
