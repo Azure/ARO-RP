@@ -371,7 +371,7 @@ StartLimitInterval=0
 [Install]
 WantedBy=multi-user.target"
 
-    write_file fluentbit_conf_filename fluentbit_conf_file true
+    write_file fluentbit_service_filename fluentbit_service_file true
 }
 
 # configure_certs
@@ -686,7 +686,7 @@ StartLimitInterval=0
 [Install]
 WantedBy=multi-user.target"
 
-    write_file aro_rp_service_filename aro_rp_conf_file true
+    write_file aro_rp_service_filename aro_rp_service_file true
 }
 
 # configure_service_aro_dbtoken
@@ -861,7 +861,7 @@ RestartSec=1
 [Install]
 WantedBy=multi-user.target"
 
-    write_file aro_portal_service_conf_filename aro_portal_service_conf_file true
+    write_file aro_portal_service_filename aro_portal_service_file true
 }
 
 # configure_service_mdsd
