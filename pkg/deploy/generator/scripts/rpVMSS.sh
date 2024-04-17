@@ -8,11 +8,53 @@ if [ "${DEBUG:-false}" == true ]; then
 fi
 
 main() {
+    # transaction attempt retry time in seconds
+    local -ri retry_wait_time=60
+
+    # shellcheck source=common.sh
+    source common.sh
+
     parse_run_options "$@"
 
 
     configure_sshd
-    configure_and_install_dnf_pkgs_repos
+    configure_rpm_repos retry_wait_time
+
+    local -ar exclude_pkgs=(
+        "-x WALinuxAgent"
+        "-x WALinuxAgent-udev"
+    )
+
+    dnf_update_pkgs exclude_pkgs retry_wait_time
+
+    local -ra rpm_keys=(
+        https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
+        https://packages.microsoft.com/keys/microsoft.asc
+    )
+
+    rpm_import_keys rpm_keys retry_wait_time
+
+    local -ra repo_rpm_pkgs=(
+        https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+    )
+
+    local -ra install_pkgs=(
+        clamav
+        azsec-clamav
+        azsec-monitor
+        azure-cli
+        azure-mdsd
+        azure-security
+        podman
+        podman-docker
+        openssl-perl
+        # hack - we are installing python3 on hosts due to an issue with Azure Linux Extensions https://github.com/Azure/azure-linux-extensions/pull/1505
+        python3
+    )
+
+    dnf_install_pkgs repo_rpm_pkgs retry_wait_time
+    dnf_install_pkgs install_pkgs retry_wait_time
+
     configure_disk_partitions
     configure_logrotate
     configure_selinux
@@ -20,8 +62,22 @@ main() {
     mkdir -p /var/log/journal
     mkdir -p /var/lib/waagent/Microsoft.Azure.KeyVault.Store
 
-    configure_firewalld_rules
-    pull_container_images
+    local -ra enable_ports=(
+        "443/tcp"
+        "444/tcp"
+        "445/tcp"
+        "2222/tcp"
+    )
+    configure_firewalld_rules enable_ports
+
+    MDMIMAGE="${RPIMAGE%%/*}/${MDMIMAGE##*/}"
+    local -ra images=(
+        "$MDMIMAGE"
+        "$RPIMAGE"
+        "$FLUENTBITIMAGE"
+    )
+
+    pull_container_images images
     configure_system_services
     reboot_vm
 }
@@ -100,59 +156,11 @@ parse_run_options() {
     exit 0
 }
 
-# We need to configure PasswordAuthentication to yes in order for the VMSS Access JIT to work
-configure_sshd() {
-    log "starting"
-    log "setting ssh password authentication"
-    sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
-
-    systemctl reload sshd.service
-    systemctl is-active --quiet sshd || abort "sshd failed to reload"
-}
-
-# configure_and_install_dnf_pkgs_repos
-configure_and_install_dnf_pkgs_repos() {
+configure_rpm_repos() {
     log "starting"
 
-    # transaction attempt retry time in seconds
-    local -ri retry_wait_time=60
-    configure_rhui_repo retry_wait_time
-    create_azure_rpm_repos retry_wait_time
-
-    local -ar exclude_pkgs=(
-        "-x WALinuxAgent"
-        "-x WALinuxAgent-udev"
-    )
-
-    dnf_update_pkgs exclude_pkgs retry_wait_time
-
-    local -ra rpm_keys=(
-        https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
-        https://packages.microsoft.com/keys/microsoft.asc
-    )
-
-    rpm_import_keys rpm_keys retry_wait_time
-
-    local -ra repo_rpm_pkgs=(
-        https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-    )
-
-    local -ra install_pkgs=(
-        clamav
-        azsec-clamav
-        azsec-monitor
-        azure-cli
-        azure-mdsd
-        azure-security
-        podman
-        podman-docker
-        openssl-perl
-        # hack - we are installing python3 on hosts due to an issue with Azure Linux Extensions https://github.com/Azure/azure-linux-extensions/pull/1505
-        python3
-    )
-
-    dnf_install_pkgs repo_rpm_pkgs retry_wait_time
-    dnf_install_pkgs install_pkgs retry_wait_time
+    configure_rhui_repo "$1"
+    create_azure_rpm_repos "$1"
 }
 
 # configure_rhui_repo
@@ -171,41 +179,6 @@ configure_rhui_repo() {
     retry cmd "$1"
 }
 
-# retry Adding retry logic to yum commands in order to avoid stalling out on resource locks
-retry() {
-    local -n cmd_retry="$1"
-    local -n wait_time="$2"
-
-    for attempt in {1..5}; do
-        log "attempt #${attempt} - ${FUNCNAME[2]}"
-        ${cmd_retry[@]} &
-
-        wait $! && break
-        if [[ ${attempt} -lt 5 ]]; then
-            sleep "$wait_time"
-        else
-            abort "attempt #${attempt} - Failed to update packages"
-        fi
-    done
-}
-
-# dnf_update_pkgs
-dnf_update_pkgs() {
-    local -n excludes="$1"
-    log "starting"
-
-    local -ra cmd=(
-        dnf
-        -y
-        ${excludes[@]}
-        update
-        --allowerasing
-    )
-
-    log "Updating all packages"
-    retry cmd "$2"
-}
-
 # dnf_install_pkgs
 dnf_install_pkgs() {
     local -n pkgs="$1"
@@ -220,29 +193,6 @@ dnf_install_pkgs() {
 
     log "Attempting to install packages: ${pkgs[*]}"
     retry cmd "$2"
-}
-
-# rpm_import_keys
-rpm_import_keys() {
-    local -n keys="$1"
-    log "starting"
-
-
-    # shellcheck disable=SC2068
-    for key in ${keys[@]}; do
-        if [ ${#keys[@]} -eq 0 ]; then
-            break
-        fi
-            local -a cmd=(
-                rpm
-                --import
-                -v
-                "$key"
-            )
-
-            log "attempt #$attempt - importing rpm repository key $key"
-            retry cmd "$2" && unset key
-    done
 }
 
 # configure_disk_partitions
@@ -329,58 +279,9 @@ gpgcheck=no'
     write_file azure_repo_filename azure_repo_file true
 }
 
-# configure_selinux
-configure_selinux() {
-    log "starting"
-
-    local -r relabel="${1:-false}"
-
-    already_defined_ignore_error="File context for /var/log/journal(/.*)? already defined"
-    semanage fcontext -a -t var_log_t "/var/log/journal(/.*)?" || log "$already_defined_ignore_error"
-    chcon -R system_u:object_r:var_log_t:s0 /var/opt/microsoft/linuxmonagent
-
-    if "$relabel"; then
-        restorecon -RF /var/log/* || log "$already_defined_ignore_error"
-    fi
-}
-
-# configure_firewalld_rules
-configure_firewalld_rules() {
-    log "starting"
-
-    # https://access.redhat.com/security/cve/cve-2020-13401
-    local -r prefix="/etc/sysctl.d"
-    local -r disable_accept_ra_conf_filename="$prefix/02-disable-accept-ra.conf"
-    local -r disable_accept_ra_conf_file="net.ipv6.conf.all.accept_ra=0"
-
-    write_file disable_accept_ra_conf_filename disable_accept_ra_conf_file true
-
-    local -r disable_core_filename="$prefix/01-disable-core.conf"
-    local -r disable_core_file="kernel.core_pattern = |/bin/true
-    "
-    write_file disable_core_filename disable_core_file true
-
-    sysctl --system
-
-    local -ra enable_ports=(
-        "443/tcp"
-        "444/tcp"
-        "445/tcp"
-        "2222/tcp"
-    )
-
-    log "Enabling ports ${enable_ports[*]} on default firewalld zone"
-    # shellcheck disable=SC2068
-    for port in ${enable_ports[@]}; do
-        log "Enabling port $port now"
-        firewall-cmd "--add-port=$port"
-    done
-
-    firewall-cmd --runtime-to-permanent
-}
-
 # pull_container_images
 pull_container_images() {
+    local -n pull_images="$1"
     log "starting"
 
     # The managed identity that the VM runs as only has a single roleassignment.
@@ -402,10 +303,11 @@ pull_container_images() {
     log "logging into prod acr"
     az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
 
-    MDMIMAGE="${RPIMAGE%%/*}/${MDMIMAGE##*/}"
-    docker pull "$MDMIMAGE"
-    docker pull "$RPIMAGE"
-    docker pull "$FLUENTBITIMAGE"
+    # shellcheck disable=SC2068
+    for i in ${pull_images[@]}; do
+        log "Pulling image $i now"
+        podman pull "$i"
+    done
 
     az logout
 }
