@@ -156,3 +156,36 @@ include /etc/logrotate.d
 
     write_file logrotate_conf_filename logrotate_conf_file true
 }
+
+# pull_container_images
+pull_container_images() {
+    local -n pull_images="$1"
+    log "starting"
+
+    # The managed identity that the VM runs as only has a single roleassignment.
+    # This role assignment is ACRPull which is not necessarily present in the
+    # subscription we're deploying into.  If the identity does not have any
+    # role assignments scoped on the subscription we're deploying into, it will
+    # not show on az login -i, which is why the below line is commented.
+    # az account set -s "$SUBSCRIPTIONID"
+    az login -i --allow-no-subscriptions
+
+    # Suppress emulation output for podman instead of docker for az acr compatability
+    mkdir -p /etc/containers/
+    mkdir -p /root/.docker
+    touch /etc/containers/nodocker
+
+	# This name is used in the case that az acr login searches for this in it's environment
+    local -r REGISTRY_AUTH_FILE="/root/.docker/config.json"
+    
+    log "logging into prod acr"
+    az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
+
+    # shellcheck disable=SC2068
+    for i in ${pull_images[@]}; do
+        log "Pulling image $i now"
+        podman pull "$i"
+    done
+
+    az logout
+}
