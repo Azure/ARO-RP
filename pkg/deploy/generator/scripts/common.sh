@@ -120,7 +120,7 @@ configure_firewalld_rules() {
 
     sysctl --system
 
-    log "Enabling ports ${enable_ports[*]} on default firewalld zone"
+    log "Enabling ports ${ports[*]} on default firewalld zone"
     # shellcheck disable=SC2068
     for port in ${ports[@]}; do
         log "Enabling port $port now"

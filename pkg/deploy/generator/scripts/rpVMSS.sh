@@ -14,19 +14,28 @@ main() {
     # shellcheck source=common.sh
     source common.sh
 
+    configure_sshd
+    configure_rpm_repos retry_wait_time
+
     local -ar exclude_pkgs=(
         "-x WALinuxAgent"
         "-x WALinuxAgent-udev"
     )
+
+    dnf_update_pkgs exclude_pkgs retry_wait_time
 
     local -ra rpm_keys=(
         https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
         https://packages.microsoft.com/keys/microsoft.asc
     )
 
+    rpm_import_keys rpm_keys retry_wait_time
+
     local -ra repo_rpm_pkgs=(
         https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
     )
+
+    dnf_install_pkgs repo_rpm_pkgs retry_wait_time
 
     local -ra install_pkgs=(
         clamav
@@ -42,12 +51,15 @@ main() {
         python3
     )
 
-    MDMIMAGE="${RPIMAGE%%/*}/${MDMIMAGE##*/}"
-    local -ra images=(
-        "$MDMIMAGE"
-        "$RPIMAGE"
-        "$FLUENTBITIMAGE"
-    )
+    dnf_install_pkgs install_pkgs retry_wait_time
+    configure_dnf_cron_job
+
+    configure_disk_partitions
+    configure_logrotate
+    configure_selinux
+
+    mkdir -p /var/log/journal
+    mkdir -p /var/lib/waagent/Microsoft.Azure.KeyVault.Store
 
     local -ra enable_ports=(
         "443/tcp"
@@ -55,6 +67,17 @@ main() {
         "445/tcp"
         "2222/tcp"
     )
+
+    configure_firewalld_rules enable_ports
+
+    MDMIMAGE="${RPIMAGE%%/*}/${MDMIMAGE##*/}"
+    local -ra images=(
+        "$MDMIMAGE"
+        "$RPIMAGE"
+        "$FLUENTBITIMAGE"
+    )
+
+    pull_container_images images
 
     local -ra aro_services=(
         "aro-dbtoken"
@@ -70,140 +93,12 @@ main() {
         "fluentbit"
     )
 
-    local -ra user_options=("$@")
-    parse_run_options user_options \
-                        retry_wait_time \
-                        exclude_pkgs \
-                        rpm_keys \
-                        repo_rpm_pkgs \
-                        install_pkgs \
-                        images \
-                        enable_ports \
-                        aro_services
-
-    configure_sshd
-    configure_rpm_repos retry_wait_time
-
-    dnf_update_pkgs exclude_pkgs retry_wait_time
-
-    rpm_import_keys rpm_keys retry_wait_time
-
-    dnf_install_pkgs repo_rpm_pkgs retry_wait_time
-    dnf_install_pkgs install_pkgs retry_wait_time
-    configure_dnf_cron_job
-
-    configure_disk_partitions
-    configure_logrotate
-    configure_selinux
-
-    mkdir -p /var/log/journal
-    mkdir -p /var/lib/waagent/Microsoft.Azure.KeyVault.Store
-
-    configure_firewalld_rules enable_ports
-
-    pull_container_images images
     configure_aro_services
     enable_services
 
     enable_services aro_services
 
     reboot_vm
-}
-
-usage() {
-    local -n options="$1"
-    log "$(basename "$0") [$options]
-        -d Configure Disk Partitions
-        -p Configure rpm repositories, import required rpm keys, update & install packages with dnf
-        -l Configure logrotate.conf
-        -s Configure selinux
-        -r Configure sshd - Allow password authenticaiton
-        -f Configure firewalld default zone rules
-        -u Configure systemd unit files
-        -i Pull container images
-
-        Note: steps will be executed in the order that flags are provided
-    "
-}
-
-# parse_run_options takes all arguements passed to main and parses them
-# allowing individual step(s) to be ran, rather than all steps
-#
-# This is useful for local testing, or possibly modifying the bootstrap execution via environment variables in the deployment pipeline
-parse_run_options() {
-    # shellcheck disable=SC2206
-    local -n run_options="$1"
-    local -n retry_time="$2"
-    local -n pkgs_to_exclude="$3"
-    local -n keys_to_import="$4"
-    local -n rpm_pkgs="$5"
-    local -n pkgs_to_install="$6"
-    local -n images_to_pull="$7"
-    local -n ports_to_enable="$8"
-    local -n services_to_enable="$9"
-
-    if [ "${#run_options[@]}" -eq 0 ]; then
-        log "Running all steps"
-        return 0
-    fi
-
-    local OPTIND
-    local -r allowed_options="dplsrfui"
-    while getopts ${allowed_options} options; do
-        case "${run_options}" in
-            d)
-                log "Running step configure_disk_partitions"
-                configure_disk_partitions
-                ;;
-            p)
-                log "Running step configure_rpm_repos"
-                configure_rpm_repos keys_to_import
-
-                log "Running step dnf_update_pkgs"
-                dnf_update_pkgs pkgs_to_exclude retry_time
-
-                log "Running step dnf_install_pkgs rpm_pkgs"
-                dnf_install_pkgs rpm_pkgs retry_time
-
-                log "Running step dnf_install_pkgs pkgs"
-                dnf_install_pkgs pkgs_to_install retry_time
-                
-                log "Running step configure_dnf_crond_job"
-                configure_dnf_cron_job
-                ;;
-            l)
-                log "Running configure_logrotate"
-                configure_logrotate
-                ;;
-            s)
-                log "Running configure_selinux"
-                configure_selinux
-                ;;
-            r)
-                log "Running configure_sshd"
-                configure_sshd
-                ;;
-            f)
-                log "Running configure_firewalld_rules"
-                configure_firewalld_rules ports_to_enable
-                ;;
-            u)
-                log "Running pull_container_images & configure_system_services"
-                configure_aro_services
-                enable_services services_to_enable
-                ;;
-            i)
-                log "Running pull_container_images"
-                pull_container_images images_to_pull
-                ;;
-            *)
-                usage allowed_options
-                abort "Unkown option provided"
-                ;;
-        esac
-    done
-    
-    exit 0
 }
 
 # configure_rpm_repos

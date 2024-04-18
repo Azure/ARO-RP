@@ -14,9 +14,26 @@ main() {
     # shellcheck source=common.sh
     source common.sh
 
+    local -ar exclude_pkgs=(
+        "-x WALinuxAgent"
+        "-x WALinuxAgent-udev"
+    )
+
+    dnf_update_pkgs pkgs_to_exclude retry_wait_time
+
+    local -ra install_pkgs=(
+        podman
+        podman-docker
+    )
+
+    dnf_install_pkgs install_pkgs retry_wait_time
+    configure_dnf_cron_job
+
     local -ra enable_ports=(
         "443/tcp"
     )
+
+    configure_firewalld_rules enable_ports
 
     local -ra proxy_images=("$PROXYIMAGE")
 	local -r registry_config_file="{
@@ -27,104 +44,15 @@ main() {
     }
 }"
 
-    local -ar exclude_pkgs=(
-        "-x WALinuxAgent"
-        "-x WALinuxAgent-udev"
-    )
-
-    local -ra install_pkgs=(
-        podman
-        podman-docker
-    )
-
-    local -ra proxy_services=(
-		proxy
-    )
-
-    local -ra user_options=("$@")
-    parse_run_options user_options \
-                        exclude_pkgs \
-                        install_pkgs \
-                        enable_ports \
-                        proxy_services \
-                        proxy_images
-
-    dnf_update_pkgs pkgs_to_exclude retry_wait_time
-    dnf_install_pkgs install_pkgs retry_wait_time
-    configure_dnf_cron_job
-
-    configure_firewalld_rules enable_ports
     pull_container_images proxy_image registry_config_file
     configure_devproxy_services proxy_images
+
+    local -ra proxy_services=(
+        proxy
+    )
+
     enable_services proxy_services
     reboot_vm
-}
-
-usage() {
-    local -n options="$1"
-    log "$(basename "$0") [$options]
-        -p Configure rpm repositories, import required rpm keys, update & install packages with dnf
-        -f Configure firewalld default zone rules
-        -u Configure systemd unit files
-        -i Pull container images
-
-        Note: steps will be executed in the order that flags are provided
-    "
-}
-
-# parse_run_options takes all arguements passed to main and parses them
-# allowing individual step(s) to be ran, rather than all steps
-#
-# This is useful for local testing, or possibly modifying the bootstrap execution via environment variables in the deployment pipeline
-parse_run_options() {
-    # shellcheck disable=SC2206
-    local -n run_options="$1"
-    local -n pkgs_to_exclude="$2"
-    local -n pkgs_to_install="$3"
-    local -n ports_to_enable="$4"
-    local -n services_to_enable="$5"
-    local -n images_to_pull="$6"
-
-    if [ "${#run_options[@]}" -eq 0 ]; then
-        log "Running all steps"
-        return 0
-    fi
-
-    local OPTIND
-	local -r allowed_options="pfui"
-    while getopts ${allowed_options} options; do
-        case "${run_options}" in
-            p)
-                log "Running step dnf_update_pkgs"
-                dnf_update_pkgs pkgs_to_exclude retry_wait_time
-
-                log "Running step dnf_install_pkgs"
-                dnf_install_pkgs pkgs_to_install retry_wait_time
-
-                log "Running step configure_dnf_cron_job"
-                configure_dnf_cron_job
-                ;;
-            f)
-                log "Running configure_firewalld_rules"
-                configure_firewalld_rules ports_to_enable
-                ;;
-            u)
-                log "Running step configure_devproxy_services"
-                configure_devproxy_services proxy_images
-                enable_services services_to_enable
-                ;;
-            i)
-                log "Running pull_container_images"
-                pull_container_images images_to_pull
-                ;;
-            *)
-                usage allowed_options
-                abort "Unkown option provided"
-                ;;
-        esac
-    done
-    
-    exit 0
 }
 
 # configure_system_services creates, configures, and enables the following systemd services and timers
