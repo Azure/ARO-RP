@@ -17,6 +17,7 @@ import (
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -108,6 +109,9 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *Ope
 		return err
 	}
 	if err := sv.validateAPIServerProfile(path+".apiserverProfile", &p.APIServerProfile); err != nil {
+		return err
+	}
+	if err := sv.validatePlatformWorkloadIdentityProfile(path+".platformWorkloadIdentityProfile", p.PlatformWorkloadIdentityProfile); err != nil {
 		return err
 	}
 
@@ -410,5 +414,20 @@ func (sv openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftCl
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, err.Target, err.Message)
 	}
 
+	return nil
+}
+
+func (sv openShiftClusterStaticValidator) validatePlatformWorkloadIdentityProfile(path string, pwip *PlatformWorkloadIdentityProfile) error {
+	// PlatformWorkloadIdentityProfile being empty is acceptable
+	if pwip == nil {
+		return nil
+	}
+
+	// Validate the PlatformWorkloadIdentities
+	for n, p := range pwip.PlatformWorkloadIdentities {
+		if !stringutils.IsResourceIDFormatted(p.ResourceID) {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities[%d].resourceID", path, n), "ResourceID %s formatted incorrectly.", p.ResourceID)
+		}
+	}
 	return nil
 }

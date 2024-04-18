@@ -1161,3 +1161,42 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 
 	runTests(t, testModeUpdate, tests)
 }
+
+func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testing.T) {
+	createTests := []*validateTest{
+		{
+			name: "valid empty workloadIdentityProfile",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = nil
+			},
+		},
+		{
+			name: "valid workloadIdentityProfile",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
+						{
+							ResourceID: "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/identities/fake-cluster-name",
+						},
+					},
+				}
+				oc.Properties.ServicePrincipalProfile = nil
+			},
+		},
+		{
+			name: "invalid resourceID",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
+						{
+							ResourceID: "BAD",
+						},
+					},
+				}
+			},
+			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile.PlatformWorkloadIdentities[0].resourceID: ResourceID BAD formatted incorrectly.",
+		},
+	}
+
+	runTests(t, testModeCreate, createTests)
+}
