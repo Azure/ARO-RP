@@ -54,7 +54,7 @@ main() {
 
     configure_firewalld_rules enable_ports
     pull_container_images proxy_image registry_config_file
-    configure_devproxy_services
+    configure_devproxy_services proxy_images
     enable_services proxy_services
     reboot_vm
 }
@@ -84,7 +84,7 @@ parse_run_options() {
     local -n services_to_enable="$5"
     local -n images_to_pull="$6"
 
-    if [ "${#options[@]}" -eq 0 ]; then
+    if [ "${#run_options[@]}" -eq 0 ]; then
         log "Running all steps"
         return 0
     fi
@@ -92,7 +92,7 @@ parse_run_options() {
     local OPTIND
 	local -r allowed_options="pfui"
     while getopts ${allowed_options} options; do
-        case "${options}" in
+        case "${run_options}" in
             p)
                 log "Running step dnf_update_pkgs"
                 dnf_update_pkgs pkgs_to_exclude retry_wait_time
@@ -109,7 +109,7 @@ parse_run_options() {
                 ;;
             u)
                 log "Running step configure_devproxy_services"
-                configure_devproxy_services
+                configure_devproxy_services proxy_images
                 enable_services services_to_enable
                 ;;
             i)
@@ -130,7 +130,7 @@ parse_run_options() {
 # services
 #	proxy
 configure_devproxy_services() {
-	configure_service_proxy
+	configure_service_proxy "$1"
 }
 
 # enable_aro_services enables all services required for aro rp
@@ -158,7 +158,7 @@ configure_certs() {
 
 configure_service_proxy() {
 	local -r sysconfig_proxy_filename='/etc/sysconfig/proxy'
-	local -r sysconfig_proxy_file="PROXY_IMAGE='$PROXYIMAGE'"
+	local -r sysconfig_proxy_file="PROXY_IMAGE='$1'"
 
 	write_file sysconfig_proxy_filename sysconfig_proxy_file true
 
@@ -170,7 +170,7 @@ Wants=network-online.target
 [Service]
 EnvironmentFile=/etc/sysconfig/proxy
 ExecStartPre=-/usr/bin/docker rm -f %n
-ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 -v /etc/proxy:/secrets $PROXY_IMAGE
+ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 -v /etc/proxy:/secrets $1
 ExecStop=/usr/bin/docker stop %n
 Restart=always
 RestartSec=1
@@ -179,9 +179,11 @@ StartLimitInterval=0
 [Install]
 WantedBy=multi-user.target"
 
+    write_file proxy_service_filename proxy_service_file true
+
 	local -r cron_weekly_pull_image_filename='/etc/cron.weekly/pull-image'
 	local -r cron_weekly_pull_image_file="#!/bin/bash
-docker pull $PROXYIMAGE
+docker pull $1
 systemctl restart proxy.service"
 	
 	write_file cron_weekly_pull_image_filename cron_weekly_pull_image_file true

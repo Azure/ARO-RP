@@ -142,7 +142,7 @@ parse_run_options() {
     local -n ports_to_enable="$8"
     local -n services_to_enable="$9"
 
-    if [ "${#options[@]}" -eq 0 ]; then
+    if [ "${#run_options[@]}" -eq 0 ]; then
         log "Running all steps"
         return 0
     fi
@@ -150,7 +150,7 @@ parse_run_options() {
     local OPTIND
     local -r allowed_options="dplsrfui"
     while getopts ${allowed_options} options; do
-        case "${options}" in
+        case "${run_options}" in
             d)
                 log "Running step configure_disk_partitions"
                 configure_disk_partitions
