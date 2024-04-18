@@ -133,18 +133,6 @@ configure_devproxy_services() {
 	configure_service_proxy "$1"
 }
 
-# enable_aro_services enables all services required for aro rp
-enable_aro_services() {
-    log "starting"
-
-    log "enabling aro services ${aro_services[*]}"
-    # shellcheck disable=SC2068
-    for service in ${aro_services[@]}; do
-        log "Enabling $service now"
-        systemctl enable "$service.service"
-    done
-}
-
 # configure_certs
 configure_certs() {
     log "starting"
@@ -157,8 +145,9 @@ configure_certs() {
 }
 
 configure_service_proxy() {
+    local -n proxy_image="$1"
 	local -r sysconfig_proxy_filename='/etc/sysconfig/proxy'
-	local -r sysconfig_proxy_file="PROXY_IMAGE='$1'"
+	local -r sysconfig_proxy_file="PROXY_IMAGE='$proxy_image'"
 
 	write_file sysconfig_proxy_filename sysconfig_proxy_file true
 
@@ -170,7 +159,7 @@ Wants=network-online.target
 [Service]
 EnvironmentFile=/etc/sysconfig/proxy
 ExecStartPre=-/usr/bin/docker rm -f %n
-ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 -v /etc/proxy:/secrets $1
+ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 -v /etc/proxy:/secrets $proxy_image
 ExecStop=/usr/bin/docker stop %n
 Restart=always
 RestartSec=1
@@ -183,7 +172,7 @@ WantedBy=multi-user.target"
 
 	local -r cron_weekly_pull_image_filename='/etc/cron.weekly/pull-image'
 	local -r cron_weekly_pull_image_file="#!/bin/bash
-docker pull $1
+docker pull $proxy_image
 systemctl restart proxy.service"
 	
 	write_file cron_weekly_pull_image_filename cron_weekly_pull_image_file true
