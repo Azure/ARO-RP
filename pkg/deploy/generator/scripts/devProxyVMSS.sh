@@ -24,7 +24,8 @@ main() {
         \"${proxy_images[0]%%/*}\": {
             \"auth\": \"$PROXYIMAGEAUTH\"
         }
-    }"
+    }
+}"
 
     local -ar exclude_pkgs=(
         "-x WALinuxAgent"
@@ -182,7 +183,7 @@ systemctl restart proxy.service"
 	local -r cron_daily_restart_proxy_file="#!/bin/bash
 systemctl restart proxy.service"
 	
-	write_file cron_daily_restart_proxy_filename cron_daily_restart_proxy_file
+	write_file cron_daily_restart_proxy_filename cron_daily_restart_proxy_file true
 	chmod +x "$cron_daily_restart_proxy_filename"
 }
 
