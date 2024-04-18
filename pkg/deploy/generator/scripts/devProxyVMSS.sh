@@ -18,10 +18,10 @@ main() {
         "443/tcp"
     )
 
-    local proxy_image="$PROXYIMAGE"
+    local -ra proxy_images=("$PROXYIMAGE")
 	local -r registry_config_file="{
     \"auths\": {
-        \"${PROXYIMAGE%%/*}\": {
+        \"${proxy_images[0]%%/*}\": {
             \"auth\": \"$PROXYIMAGEAUTH\"
         }
     }"
@@ -40,7 +40,13 @@ main() {
 		proxy
     )
 
-    parse_run_options "$@"
+    local -ra user_options=("$@")
+    parse_run_options user_options \
+                        exclude_pkgs \
+                        install_pkgs \
+                        enable_ports \
+                        proxy_services \
+                        proxy_images
 
     dnf_update_pkgs pkgs_to_exclude retry_wait_time
     dnf_install_pkgs install_pkgs retry_wait_time
@@ -71,7 +77,7 @@ usage() {
 # This is useful for local testing, or possibly modifying the bootstrap execution via environment variables in the deployment pipeline
 parse_run_options() {
     # shellcheck disable=SC2206
-    local -a options=(${1:-})
+    local -n run_options="$1"
     local -n pkgs_to_exclude="$2"
     local -n pkgs_to_install="$3"
     local -n ports_to_enable="$4"

@@ -70,7 +70,8 @@ main() {
         "fluentbit"
     )
 
-    parse_run_options "$@" \
+    local -ra user_options=("$@")
+    parse_run_options user_options \
                         retry_wait_time \
                         exclude_pkgs \
                         rpm_keys \
@@ -131,7 +132,7 @@ usage() {
 # This is useful for local testing, or possibly modifying the bootstrap execution via environment variables in the deployment pipeline
 parse_run_options() {
     # shellcheck disable=SC2206
-    local -a options=(${1:-})
+    local -n run_options="$1"
     local -n retry_time="$2"
     local -n pkgs_to_exclude="$3"
     local -n keys_to_import="$4"
