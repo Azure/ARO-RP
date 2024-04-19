@@ -28,3 +28,17 @@ func TestIsResourceIDFormatted(t *testing.T) {
 		t.Errorf("want %t, got %t\n", want, result)
 	}
 }
+
+func TestResourceType(t *testing.T) {
+	resourceType := ResourceType("/subscriptions/subscriptionID/resourceGroups/resourcegroupname/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourcename")
+	want := "openShiftClusters"
+	if resourceType != want {
+		t.Errorf("want %s, got %s\n", want, resourceType)
+	}
+
+	resourceType = ResourceType("/subscriptions/subscriptionID/resourceGroups/resourcegroupname/providers/Microsoft.RedHatOpenShift/identities/resourcename")
+	want = "identities"
+	if resourceType != want {
+		t.Errorf("want %s, got %s\n", want, resourceType)
+	}
+}

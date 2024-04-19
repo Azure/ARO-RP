@@ -428,6 +428,10 @@ func (sv openShiftClusterStaticValidator) validatePlatformWorkloadIdentityProfil
 		if !stringutils.IsResourceIDFormatted(p.ResourceID) {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities[%d].resourceID", path, n), "ResourceID %s formatted incorrectly.", p.ResourceID)
 		}
+
+		if stringutils.ResourceType(p.ResourceID) != "identities" {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities[%d].resourceID", path, n), "Resource must be an identity.")
+		}
 	}
 	return nil
 }
