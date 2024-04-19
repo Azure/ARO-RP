@@ -53,13 +53,14 @@ main() {
 
     dnf_install_pkgs install_pkgs retry_wait_time
     configure_dnf_cron_job
-
     configure_disk_partitions
-    configure_logrotate
-    configure_selinux
 
-    mkdir -p /var/log/journal
-    mkdir -p /var/lib/waagent/Microsoft.Azure.KeyVault.Store
+    # Key dictates the filename written in /etc/logrotate.d
+    # Present for future dropin files, also is required for configure_logrotate
+    local -rA logrotate_dropins=()
+    configure_logrotate logrotate_dropins
+    configure_selinux
+    create_required_dirs
 
     local -ra enable_ports=(
         "443/tcp"
@@ -78,7 +79,8 @@ main() {
         "$rpimage"
         "$fluentbit_image"
     )
-    pull_container_images images
+	local -r registry_config_file=""
+    pull_container_images images registry_config_file
 
     local -r fluentbit_conf_file="[INPUT]
 Name systemd
@@ -114,24 +116,17 @@ DB /var/lib/fluent/journaldb
 	Match *
 	Port 29230"
 
-    local -r aro_dbtoken_service_conf_file="DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
-AZURE_DBTOKEN_CLIENT_ID='$DBTOKENCLIENTID'
-AZURE_GATEWAY_SERVICE_PRINCIPAL_ID='$GATEWAYSERVICEPRINCIPALID'
-KEYVAULT_PREFIX='$KEYVAULTPREFIX'
-MDM_ACCOUNT='$RPMDMACCOUNT'
-MDM_NAMESPACE=DBToken
-RPIMAGE='$RPIMAGE'"
-
-    # TODO pass this to mdsd service call
     configure_service_fluentbit fluentbit_conf_file fluentbit_image
-    configure_service_mdm
-    configure_timers_mdm_mdsd
+    local -r monitor_role="rp"
+    configure_service_mdm monitor_role mdmimage
+    configure_timers_mdm_mdsd monitor_role
     configure_service_aro_rp
-    configure_service_aro_dbtoken
-    configure_service_aro_monitor
-    configure_service_aro_portal
+
+    configure_service_dbtoken rpimage
+    configure_service_aro_monitor rpimage
+    configure_service_aro_portal rpimage
     local -r mdsd_rp_version="$RPMDSDCONFIGVERSION"
-    configure_service_mdsd mdsd_rp_version
+    configure_service_mdsd monitor_role mdsd_rp_version
 
     local -ra aro_services=(
         "aro-dbtoken"
@@ -145,6 +140,8 @@ RPIMAGE='$RPIMAGE'"
         "mdm"
         "chronyd"
         "fluentbit"
+        "download-mdsd-credentials.timer"
+        "download-mdm-credentials.timer"
     )
 
     enable_services aro_services
@@ -272,6 +269,7 @@ WantedBy=multi-user.target"
 
 # configure_service_aro_monitor
 configure_service_aro_monitor() {
+    local -n image="$1"
     log "starting"
     log "configuring aro-monitor service"
 
@@ -292,7 +290,7 @@ DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=BBM
-RPIMAGE='$RPIMAGE'"
+RPIMAGE='$image'"
 
     write_file aro_monitor_service_conf_filename aro_monitor_service_conf_file true
 
@@ -326,7 +324,7 @@ ExecStart=/usr/bin/docker run \
   -m 2.5g \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
-  $RPIMAGE \
+  $image \
   monitor
 Restart=always
 RestartSec=1
@@ -340,6 +338,7 @@ WantedBy=multi-user.target"
 
 # configure_service_aro_portal
 configure_service_aro_portal() {
+    local -n image="$1"
     log "starting"
 
     local -r aro_portal_service_conf_filename='/etc/sysconfig/aro-portal'
@@ -351,7 +350,7 @@ KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE=Portal
 PORTAL_HOSTNAME='$LOCATION.admin.$RPPARENTDOMAINNAME'
-RPIMAGE='$RPIMAGE'"
+RPIMAGE='$image'"
 
     write_file aro_portal_service_conf_filename aro_portal_service_conf_file true
 
@@ -382,7 +381,7 @@ ExecStart=/usr/bin/docker run \
   -p 2222:2222 \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
-  $RPIMAGE \
+  $image \
   portal
 Restart=always
 RestartSec=1
@@ -392,6 +391,61 @@ WantedBy=multi-user.target"
 
     write_file aro_portal_service_filename aro_portal_service_file true
 }
+
+# configure_service_aro_dbtoken
+configure_service_dbtoken() {
+    local -n image="$1"
+    log "starting"
+
+    local -r conf_file="DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
+AZURE_DBTOKEN_CLIENT_ID='$DBTOKENCLIENTID'
+AZURE_GATEWAY_SERVICE_PRINCIPAL_ID='$GATEWAYSERVICEPRINCIPALID'
+KEYVAULT_PREFIX='$KEYVAULTPREFIX'
+MDM_ACCOUNT='$RPMDMACCOUNT'
+MDM_NAMESPACE=DBToken
+RPIMAGE='$image'"
+
+    local -r conf_filename='/etc/sysconfig/aro-dbtoken'
+
+    write_file conf_filename conf_file true
+
+    local -r service_file="[Unit]
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+EnvironmentFile=/etc/sysconfig/aro-dbtoken
+ExecStartPre=-/usr/bin/docker rm -f %N
+ExecStart=/usr/bin/docker run \
+  --hostname %H \
+  --name %N \
+  --rm \
+  --cap-drop net_raw \
+  -e AZURE_GATEWAY_SERVICE_PRINCIPAL_ID \
+  -e DATABASE_ACCOUNT_NAME \
+  -e AZURE_DBTOKEN_CLIENT_ID \
+  -e KEYVAULT_PREFIX \
+  -e MDM_ACCOUNT \
+  -e MDM_NAMESPACE \
+  -m 2g \
+  -p 445:8445 \
+  -v /run/systemd/journal:/run/systemd/journal \
+  -v /var/etw:/var/etw:z \
+  $image \
+  dbtoken
+ExecStop=/usr/bin/docker stop -t 3600 %N
+TimeoutStopSec=3600
+Restart=always
+RestartSec=1
+StartLimitInterval=0
+
+[Install]
+WantedBy=multi-user.target"
+
+    local -r service_filename='/etc/systemd/system/aro-dbtoken.service'
+    write_file service_filename service_file true
+}
+
 
 export AZURE_CLOUD_NAME="${AZURECLOUDNAME:?"Failed to carry over variables"}"
 

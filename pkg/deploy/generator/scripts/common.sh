@@ -131,7 +131,9 @@ configure_firewalld_rules() {
 }
 
 # configure_logrotate clobbers /etc/logrotate.conf
-# TODO add writing of dropin files
+# args:
+# 1) dropin_files - associative array. Key name dictates filenames written to /etc/logrotate.d.
+#   If an empty array is provided, no files will be written
 configure_logrotate() {
     local -n dropin_files="$1"
     log "starting"
@@ -228,7 +230,7 @@ enable_services() {
     # shellcheck disable=SC2068
     for service in ${services[@]}; do
         log "Enabling $service now"
-        systemctl enable "$service.service"
+        systemctl enable "$service"
     done
 }
 
@@ -377,14 +379,16 @@ configure_certs() {
 
 # configure_service_mdm
 configure_service_mdm() {
+    local -n role="$1"
+    local -n image="$2"
     log "starting"
     log "configuring mdm service"
 
     local -r sysconfig_mdm_filename="/etc/sysconfig/mdm"
     local -r sysconfig_mdm_file="MDMFRONTENDURL='$MDMFRONTENDURL'
-MDMIMAGE='$MDMIMAGE'
+MDMIMAGE='$image'
 MDMSOURCEENVIRONMENT='$LOCATION'
-MDMSOURCEROLE=gateway
+MDMSOURCEROLE='$role'
 MDMSOURCEROLEINSTANCE=\"$(hostname)\""
 
     write_file sysconfig_mdm_filename sysconfig_mdm_file true
@@ -407,7 +411,7 @@ ExecStart=/usr/bin/docker run \
   -m 2g \
   -v /etc/mdm.pem:/etc/mdm.pem \
   -v /var/etw:/var/etw:z \
-  $MDMIMAGE \
+  $image \
   -CertFile /etc/mdm.pem \
   -FrontEndUrl $MDMFRONTENDURL \
   -Logger Console \
@@ -429,6 +433,7 @@ WantedBy=multi-user.target"
 
 # configure_timers_mdm_mdsd
 configure_timers_mdm_mdsd() {
+    local -n component="$1"
     log "starting"
 
     for var in "mdsd" "mdm"; do
@@ -493,20 +498,20 @@ cleanup() {
 
 if [[ \$COMPONENT = \"mdm\" ]]; then
   CURRENT_CERT_FILE=\"/etc/mdm.pem\"
-elif [[ \$COMPONENT\ = \"mdsd\" ]]; then
+elif [[ \$COMPONENT = \"mdsd\" ]]; then
   CURRENT_CERT_FILE=\"/var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem\"
 else
   echo Invalid usage && exit 1
 fi
 
-SECRET_NAME=\"gwy-\${COMPONENT}\"
+SECRET_NAME=\"$component-\${COMPONENT}\"
 NEW_CERT_FILE=\"\$TEMP_DIR/\$COMPONENT.pem\"
 for attempt in {1..5}; do
   az keyvault \
     secret \
     download \
     --file \"\$NEW_CERT_FILE\" \
-    --id \"https://$KEYVAULTPREFIX-gwy.$KEYVAULTDNSSUFFIX/secrets/\$SECRET_NAME\" \
+    --id \"https://$KEYVAULTPREFIX-$component.$KEYVAULTDNSSUFFIX/secrets/\$SECRET_NAME\" \
     && break
   if [[ \$attempt -lt 5 ]]; then sleep 10; else exit 1; fi
 done
@@ -533,12 +538,8 @@ fi"
 
     chmod u+x /usr/local/bin/download-credentials.sh
 
-    # TODO place this in enable services section
-    systemctl enable download-mdsd-credentials.timer
-    systemctl enable download-mdm-credentials.timer
-
-    /usr/local/bin/download-credentials.sh mdsd
-    /usr/local/bin/download-credentials.sh mdm
+    $download_creds_script_filename mdsd
+    $download_creds_script_filename mdm
 
     local -r MDSDCERTIFICATESAN="$(openssl x509 -in /var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem -noout -subject | sed -e 's/.*CN = //')"
     local -r watch_mdm_creds_service_filename="/etc/systemd/system/watch-mdm-credentials.service"
@@ -570,31 +571,30 @@ WantedBy=multi-user.target'
 
 # configure_service_fluentbit
 configure_service_fluentbit() {
-    local -n fluentbit_conf_file="$1"
-    local -n fluentbit_image="$2"
+    local -n conf_file="$1"
+    local -n image="$2"
     log "starting"
     log "configuring fluentbit service"
 
-    if [[ -n $fluentbit_conf_file ]]; then
-        abort "$1 fluentbit config file cannot be empty"
-    elif [[ -n $fluentbit_image ]]; then
-        abort "$2 fluentbit image cannot be empty"
+    if [ -z "$conf_file" ]; then
+        abort "$1 config file cannot be empty"
+    elif [ -z "$image" ]; then
+        abort "$2 image cannot be empty"
     fi
 
     mkdir -p /etc/fluentbit/
     mkdir -p /var/lib/fluent
 
-    local -r fluentbit_conf_filename='/etc/fluentbit/fluentbit.conf'
-    write_file fluentbit_conf_filename fluentbit_conf_file true
+    local -r conf_filename='/etc/fluentbit/fluentbit.conf'
+    write_file conf_filename conf_file true
 
-    local -r sysconfig_fluentbit_filename='/etc/sysconfig/fluentbit'
-    local -r sysconfig_fluentbit_file="FLUENTBITIMAGE=$fluentbit_image"
+    local -r sysconfig_filename='/etc/sysconfig/fluentbit'
+    local -r sysconfig_file="FLUENTBITIMAGE=$fluentbit_image"
 
-    write_file sysconfig_fluentbit_filename sysconfig_fluentbit_file true
+    write_file sysconfig_filename sysconfig_file true
 
-    local -r fluentbit_service_filename='/etc/systemd/system/fluentbit.service'
-
-    local -r fluentbit_service_file="[Unit]
+    local -r service_filename='/etc/systemd/system/fluentbit.service'
+    local -r service_file="[Unit]
 After=network-online.target
 Wants=network-online.target
 StartLimitIntervalSec=0
@@ -615,7 +615,7 @@ ExecStart=/usr/bin/docker run \
   -v /var/lib/fluent:/var/lib/fluent:z \
   -v /var/log/journal:/var/log/journal:ro \
   -v /etc/machine-id:/etc/machine-id:ro \
-  $fluentbit_image \
+  $image \
   -c /etc/fluentbit/fluentbit.conf
 
 ExecStop=/usr/bin/docker stop %N
@@ -626,99 +626,13 @@ StartLimitInterval=0
 [Install]
 WantedBy=multi-user.target"
 
-    write_file fluentbit_service_filename fluentbit_service_file true
-}
-
-# configure_service_aro_dbtoken
-configure_service_aro_dbtoken() {
-    local -n dbtoken_conf="$1"
-    local -n log_dir="${2:-}"
-    log "starting"
-
-    local -r aro_dbtoken_service_conf_filename='/etc/sysconfig/aro-dbtoken'
-
-    write_file aro_dbtoken_service_conf_filename aro_dbtoken_service_conf_file true
-
-    local -r aro_dbtoken_service_filename='/etc/systemd/system/aro-dbtoken.service'
-    # TODO add test if log_dir is empty, else
-    local -r aro_dbtoken_service_file="[Unit]
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-EnvironmentFile=/etc/sysconfig/aro-dbtoken
-ExecStartPre=-/usr/bin/docker rm -f %N
-ExecStart=/usr/bin/docker run \
-  --hostname %H \
-  --name %N \
-  --rm \
-  --cap-drop net_raw \
-  -e AZURE_GATEWAY_SERVICE_PRINCIPAL_ID \
-  -e DATABASE_ACCOUNT_NAME \
-  -e AZURE_DBTOKEN_CLIENT_ID \
-  -e KEYVAULT_PREFIX \
-  -e MDM_ACCOUNT \
-  -e MDM_NAMESPACE \
-  -m 2g \
-  -p 445:8445 \
-  -v /run/systemd/journal:/run/systemd/journal \
-  -v /var/etw:/var/etw:z \
-  $RPIMAGE \
-  dbtoken
-ExecStop=/usr/bin/docker stop -t 3600 %N
-TimeoutStopSec=3600
-Restart=always
-RestartSec=1
-StartLimitInterval=0
-
-[Install]
-WantedBy=multi-user.target"
-
-    local -r aro_dbtoken_service_file="[Unit]
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-EnvironmentFile=/etc/sysconfig/aro-gateway
-ExecStartPre=-/usr/bin/docker rm -f %N
-ExecStartPre=/usr/bin/mkdir -p ${gateway_logdir}
-ExecStart=/usr/bin/docker run \
-  --hostname %H \
-  --name %N \
-  --rm \
-  --cap-drop net_raw \
-  -e ACR_RESOURCE_ID \
-  -e DATABASE_ACCOUNT_NAME \
-  -e AZURE_DBTOKEN_CLIENT_ID \
-  -e DBTOKEN_URL \
-  -e GATEWAY_DOMAINS \
-  -e GATEWAY_FEATURES \
-  -e MDM_ACCOUNT \
-  -e MDM_NAMESPACE \
-  -m 2g \
-  -p 80:8080 \
-  -p 8081:8081 \
-  -p 443:8443 \
-  -v /run/systemd/journal:/run/systemd/journal \
-  -v /var/etw:/var/etw:z \
-  -v ${gateway_logdir}:/ctr.log:z \
-  \$RPIMAGE \
-  gateway
-ExecStop=/usr/bin/docker stop -t 3600 %N
-TimeoutStopSec=3600
-Restart=always
-RestartSec=1
-StartLimitInterval=0
-
-[Install]
-WantedBy=multi-user.target"
-
-    write_file aro_dbtoken_service_filename aro_dbtoken_service_file true
+    write_file service_filename service_file true
 }
 
 # configure_service_mdsd
 configure_service_mdsd() {
-    local -n monitor_config_version="$1"
+    local -n monitoring_role="$1"
+    local -n monitor_config_version="$2"
     log "starting"
 
     local -r mdsd_service_dir="/etc/systemd/system/mdsd.service.d"
@@ -744,7 +658,7 @@ export MONITORING_CONFIG_VERSION='$monitor_config_version'
 export MONITORING_USE_GENEVA_CONFIG_SERVICE=true
 
 export MONITORING_TENANT='$LOCATION'
-export MONITORING_ROLE=rp
+export MONITORING_ROLE='$monitoring_role'
 export MONITORING_ROLE_INSTANCE=\"$(hostname)\"
 
 export MDSD_MSGPACK_SORT_COLUMNS=1\""
@@ -768,4 +682,9 @@ run_azsecd_config_scan() {
         log "Scanning config file $scan now"
         /usr/local/bin/azsecd config -s "$scan" -d P1D
     done
+}
+
+create_required_dirs() {
+    mkdir -p /var/log/journal
+    mkdir -p /var/lib/waagent/Microsoft.Azure.KeyVault.Store
 }
