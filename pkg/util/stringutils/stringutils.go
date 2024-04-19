@@ -31,3 +31,8 @@ func IsResourceIDFormatted(id string) bool {
 
 	return match
 }
+
+// ResourceType takes a resourceID as a string and returns the resource type as a string
+func ResourceType(resourceID string) string {
+	return strings.Split(resourceID, "/")[7]
+}
