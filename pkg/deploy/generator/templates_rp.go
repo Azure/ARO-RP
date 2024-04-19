@@ -68,6 +68,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"miseAllowedHosts",
 			"miseValidAudiences",
 			"miseValidAppIDs",
+			"otelimage",
 			"nonZonalRegions",
 			"portalAccessGroupIds",
 			"portalClientId",
@@ -139,6 +140,8 @@ func (g *generator) rpTemplate() *arm.Template {
 			p.Type = "array"
 		case "miseValidAppIDs":
 			p.Type = "array"
+		case "otelimage":
+			p.DefaultValue = "mcr.microsoft.com/oss/otel/opentelemetry-collector-contrib:0.95.0-linux-amd64"
 		case "nonZonalRegions":
 			p.Type = "array"
 			p.DefaultValue = []string{

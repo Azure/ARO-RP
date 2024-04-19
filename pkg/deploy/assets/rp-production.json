@@ -172,6 +172,10 @@
                 "westus"
             ]
         },
+        "otelimage": {
+            "type": "string",
+            "defaultValue": "mcr.microsoft.com/oss/otel/opentelemetry-collector-contrib:0.95.0-linux-amd64"
+        },
         "portalAccessGroupIds": {
             "type": "string"
         },
