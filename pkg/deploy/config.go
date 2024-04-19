@@ -88,7 +88,6 @@ type Configuration struct {
 	MISEALLOWEDHOSTS                   *string                `json:"miseAllowedHosts,omitempty"`
 	MISEVALIDAUDIENCES                 []string               `json:"miseValidAudiences,omitempty"`
 	MISEVALIDAPPIDs                    []string               `json:"miseValidAppIDs,omitempty"`
-	OtelImage                          *string                `json:"otelImage,omitempty"`
 	NonZonalRegions                    []string               `json:"nonZonalRegions,omitempty"`
 	PortalAccessGroupIDs               []string               `json:"portalAccessGroupIds,omitempty" value:"required"`
 	PortalClientID                     *string                `json:"portalClientId,omitempty" value:"required"`

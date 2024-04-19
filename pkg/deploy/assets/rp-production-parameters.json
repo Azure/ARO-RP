@@ -144,9 +144,6 @@
                 "westus"
             ]
         },
-        "otelimage": {
-            "value": "mcr.microsoft.com/oss/otel/opentelemetry-collector-contrib:0.95.0-linux-amd64"
-        },
         "portalAccessGroupIds": {
             "value": ""
         },

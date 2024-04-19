@@ -479,6 +479,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"miseLogLevel",
 		"miseAddress",
 		"miseAllowedHosts",
+		"otelImage",
 		"portalAccessGroupIds",
 		"portalClientId",
 		"portalElevatedGroupIds",
@@ -528,6 +529,10 @@ func (g *generator) rpVMSS() *arm.Resource {
 
 	parts = append(parts,
 		"'MDMIMAGE=''"+version.MdmImage("")+"''\n'",
+	)
+
+	parts = append(parts,
+		"'OTELIMAGE=''"+version.OTelImage("")+"''\n'",
 	)
 
 	parts = append(parts,
