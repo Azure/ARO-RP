@@ -5,6 +5,8 @@ echo "setting ssh password authentication"
 sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
 systemctl reload sshd.service
 
+sleep 300
+
 #Adding retry logic to yum commands in order to avoid stalling out on resource locks
 echo "running RHUI fix"
 for attempt in {1..5}; do

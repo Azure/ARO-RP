@@ -1,3 +1,5 @@
+sleep 300
+
 #Adding retry logic to yum commands in order to avoid stalling out on resource locks
 echo "running RHUI fix"
 for attempt in {1..5}; do
