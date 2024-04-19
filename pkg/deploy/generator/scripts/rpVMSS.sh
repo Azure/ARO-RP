@@ -96,7 +96,7 @@ semanage fcontext -a -t var_log_t "/var/log/journal(/.*)?"
 mkdir -p /var/log/journal
 
 for attempt in {1..60}; do
-yum -y install clamav azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security podman podman-docker openssl-perl python3 && break
+  yum -y install clamav azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security podman podman-docker openssl-perl python3 && break
   # hack - we are installing python3 on hosts due to an issue with Azure Linux Extensions https://github.com/Azure/azure-linux-extensions/pull/1505
   if [[ ${attempt} -lt 60 ]]; then sleep 30; else exit 1; fi
 done
@@ -135,6 +135,7 @@ docker pull "$MDMIMAGE"
 docker pull "$RPIMAGE"
 docker pull "$FLUENTBITIMAGE"
 docker pull "$MISEIMAGE"
+docker pull "$OTELIMAGE"
 
 az logout
 
@@ -228,6 +229,8 @@ MDMIMAGE='$MDMIMAGE'
 MDMSOURCEENVIRONMENT='$LOCATION'
 MDMSOURCEROLE=rp
 MDMSOURCEROLEINSTANCE='$(hostname)'
+MDM_INPUT=statsd_local,otlp_grpc
+OTLP_GRPC_HOST=127.0.0.1
 EOF
 
 mkdir /var/etw
@@ -245,6 +248,7 @@ ExecStart=/usr/bin/docker run \
   --name %N \
   --rm \
   --cap-drop net_raw \
+  --net=host \
   -m 2g \
   -v /etc/mdm.pem:/etc/mdm.pem \
   -v /var/etw:/var/etw:z \
@@ -257,6 +261,152 @@ ExecStart=/usr/bin/docker run \
   -SourceEnvironment $MDMSOURCEENVIRONMENT \
   -SourceRole $MDMSOURCEROLE \
   -SourceRoleInstance $MDMSOURCEROLEINSTANCE
+ExecStop=/usr/bin/docker stop %N
+Restart=always
+RestartSec=1
+StartLimitInterval=0
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+mkdir -p /app/otel
+cat >/app/otel/config.yaml <<'EOF'
+receivers:
+  podman_stats:
+    collection_interval: 15s
+    timeout: 20s
+
+  hostmetrics:
+    scrapers:
+      cpu:
+      disk:
+      filesystem:
+      load:
+      memory:
+      network:
+      process:
+      processes:
+      paging:
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 700
+    spike_limit_mib: 200
+
+  batch:
+
+exporters:
+  otlp:
+    endpoint: mdm:4317
+    tls:
+      insecure: true
+
+service:
+  extensions: [podman_stats, hostmetrics]
+  pipelines:
+    metrics:
+      receivers: [podman_stats, hostmetrics]
+      processors: [memory_limiter, batch]
+      exporters: [otlp]
+'EOF'
+
+cat >/etc/sysconfig/otel-collector <<'EOF'
+GOMEMLIMIT=1000MiB
+'EOF'
+
+cat >/etc/systemd/system/otel-collector.service <<'EOF'
+[Unit]
+After=mdm.service
+Wants=mdm.service
+
+[Service]
+EnvironmentFile=/etc/sysconfig/otel-collector
+ExecStartPre=-/usr/bin/docker rm -f %N
+ExecStart=/usr/bin/docker run \
+  --security-opt label=disable \
+  --hostname %H \
+  --name %N \
+  --rm \
+  --net=host \
+  -m 2g \
+  -v /var/run/podman.sock:/var/run/podman.sock \
+  -v /app/otel/config.yaml:/etc/otelcol-contrib/config.yaml \
+  $OTELIMAGE
+ExecStop=/usr/bin/docker stop %N
+Restart=always
+RestartSec=1
+StartLimitInterval=0
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+mkdir -p /app/otel
+cat >/app/otel/config.yaml <<'EOF'
+receivers:
+  podman_stats:
+    collection_interval: 15s
+    timeout: 20s
+
+  hostmetrics:
+    scrapers:
+      cpu:
+      disk:
+      filesystem:
+      load:
+      memory:
+      network:
+      process:
+      processes:
+      paging:
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 700
+    spike_limit_mib: 200
+
+  batch:
+
+exporters:
+  otlp:
+    endpoint: mdm:4317
+    tls:
+      insecure: true
+
+service:
+  extensions: [podman_stats, hostmetrics]
+  pipelines:
+    metrics:
+      receivers: [podman_stats, hostmetrics]
+      processors: [memory_limiter, batch]
+      exporters: [otlp]
+'EOF'
+
+cat >/etc/sysconfig/otel-collector <<'EOF'
+GOMEMLIMIT=1000MiB
+'EOF'
+
+cat >/etc/systemd/system/otel-collector.service <<'EOF'
+[Unit]
+After=mdm.service
+Wants=mdm.service
+
+[Service]
+EnvironmentFile=/etc/sysconfig/otel-collector
+ExecStartPre=-/usr/bin/docker rm -f %N
+ExecStart=/usr/bin/docker run \
+  --security-opt label=disable \
+  --hostname %H \
+  --name %N \
+  --rm \
+  --net=host \
+  -m 2g \
+  -v /var/run/podman.sock:/var/run/podman.sock \
+  -v /app/otel/config.yaml:/etc/otelcol-contrib/config.yaml \
+  $OTELIMAGE
 ExecStop=/usr/bin/docker stop %N
 Restart=always
 RestartSec=1
@@ -618,7 +768,7 @@ chcon -R system_u:object_r:var_log_t:s0 /var/opt/microsoft/linuxmonagent
 mkdir -p /var/lib/waagent/Microsoft.Azure.KeyVault.Store
 
 for var in "mdsd" "mdm"; do
-cat >/etc/systemd/system/download-$var-credentials.service <<EOF
+  cat >/etc/systemd/system/download-$var-credentials.service <<EOF
 [Unit]
 Description=Periodic $var credentials refresh
 
@@ -627,7 +777,7 @@ Type=oneshot
 ExecStart=/usr/local/bin/download-credentials.sh $var
 EOF
 
-cat >/etc/systemd/system/download-$var-credentials.timer <<EOF
+  cat >/etc/systemd/system/download-$var-credentials.timer <<EOF
 [Unit]
 Description=Periodic $var credentials refresh
 After=network-online.target
@@ -788,7 +938,7 @@ cat >/etc/default/vsa-nodescan-agent.config <<EOF
 EOF
 
 echo "enabling aro services"
-for service in aro-dbtoken aro-monitor aro-portal aro-rp mise auoms azsecd azsecmond mdsd mdm chronyd fluentbit; do
+for service in aro-dbtoken aro-monitor aro-portal aro-rp mise otel-collector auoms azsecd azsecmond mdsd mdm chronyd fluentbit; do
   systemctl enable $service.service
 done
 
@@ -798,4 +948,7 @@ done
 
 echo "rebooting"
 restorecon -RF /var/log/*
-(sleep 30; reboot) &
+(
+  sleep 30
+  reboot
+) &
