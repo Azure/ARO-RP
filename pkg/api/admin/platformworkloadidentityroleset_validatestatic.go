@@ -51,6 +51,10 @@ func (sv platformWorkloadIdentityRoleSetStaticValidator) validate(new *PlatformW
 		if r.RoleDefinitionID == "" {
 			errs = append(errs, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].roleDefinitionId", i), "Must be provided"))
 		}
+
+		if r.ServiceAccounts == nil || len(r.ServiceAccounts) == 0 {
+			errs = append(errs, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].serviceAccounts", i), "Must be provided and must be non-empty"))
+		}
 	}
 
 	return errors.Join(errs...)
