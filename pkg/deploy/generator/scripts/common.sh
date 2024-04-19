@@ -131,7 +131,9 @@ configure_firewalld_rules() {
 }
 
 # configure_logrotate clobbers /etc/logrotate.conf
+# TODO add writing of dropin files
 configure_logrotate() {
+    local -n dropin_files="$1"
     log "starting"
 
     local -r logrotate_conf_filename='/etc/logrotate.conf'
@@ -170,6 +172,13 @@ include /etc/logrotate.d
 }'
 
     write_file logrotate_conf_filename logrotate_conf_file true
+
+    local -r logrotate_d="/etc/logrotate.d"
+    log "Writing logrotate files to $logrotate_d"
+    for dropin_name in "${!dropin_files[@]}"; do
+        local -r dropin_file="$logrotate_d/$dropin_name"
+        write_file "$dropin_file" "${dropin_files["$dropin_name"]}"
+    done
 }
 
 # pull_container_images
@@ -291,3 +300,472 @@ dnf update -y"
     chmod +x "$cron_weekly_dnf_update_filename"
 }
 
+# create_azure_rpm_repos creates /etc/yum.repos.d/azure.repo repository file
+create_azure_rpm_repos() {
+    log "starting"
+
+    local -r azure_repo_filename='/etc/yum.repos.d/azure.repo'
+    local -r azure_repo_file='[azure-cli]
+name=azure-cli
+baseurl=https://packages.microsoft.com/yumrepos/azure-cli
+enabled=yes
+gpgcheck=yes
+
+[azurecore]
+name=azurecore
+baseurl=https://packages.microsoft.com/yumrepos/azurecore
+enabled=yes
+gpgcheck=no'
+
+    write_file azure_repo_filename azure_repo_file true
+}
+
+# configure_disk_partitions
+configure_disk_partitions() {
+    log "starting"
+    log "extending partition table"
+
+    # Linux block devices are inconsistently named
+    # it's difficult to tie the lvm pv to the physical disk using /dev/disk files, which is why lvs is used here
+    physical_disk="$(lvs -o devices -a | head -n2 | tail -n1 | cut -d ' ' -f 3 | cut -d \( -f 1 | tr -d '[:digit:]')"
+    growpart "$physical_disk" 2
+
+    log "extending filesystems"
+    log "extending root lvm"
+    lvextend -l +20%FREE /dev/rootvg/rootlv
+    log "growing root filesystem"
+    xfs_growfs /
+
+    log "extending var lvm"
+    lvextend -l +100%FREE /dev/rootvg/varlv
+    log "growing var filesystem"
+    xfs_growfs /var
+}
+
+# configure_certs
+configure_certs() {
+    log "starting"
+
+    mkdir /etc/aro-rp
+    base64 -d <<<"$ADMINAPICABUNDLE" >/etc/aro-rp/admin-ca-bundle.pem
+    if [[ -n "$ARMAPICABUNDLE" ]]; then
+    base64 -d <<<"$ARMAPICABUNDLE" >/etc/aro-rp/arm-ca-bundle.pem
+    fi
+    chown -R 1000:1000 /etc/aro-rp
+
+    # setting MONITORING_GCS_AUTH_ID_TYPE=AuthKeyVault seems to have caused mdsd not
+    # to honour SSL_CERT_FILE any more, heaven only knows why.
+    mkdir -p /usr/lib/ssl/certs
+    csplit -f /usr/lib/ssl/certs/cert- -b %03d.pem /etc/pki/tls/certs/ca-bundle.crt /^$/1 "{*}" >/dev/null
+    c_rehash /usr/lib/ssl/certs
+
+# we leave clientId blank as long as only 1 managed identity assigned to vmss
+# if we have more than 1, we will need to populate with clientId used for off-node scanning
+    local -r nodescan_agent_filename="/etc/default/vsa-nodescan-agent.config"
+    local -r nodescan_agent_file="{
+    \"Nice\": 19,
+    \"Timeout\": 10800,
+    \"ClientId\": \"\",
+    \"TenantId\": $AZURESECPACKVSATENANTID,
+    \"QualysStoreBaseUrl\": $AZURESECPACKQUALYSURL,
+    \"ProcessTimeout\": 300,
+    \"CommandDelay\": 0
+  }"
+
+    write_file nodescan_agent_filename nodescan_agent_file true
+}
+
+# configure_service_mdm
+configure_service_mdm() {
+    log "starting"
+    log "configuring mdm service"
+
+    local -r sysconfig_mdm_filename="/etc/sysconfig/mdm"
+    local -r sysconfig_mdm_file="MDMFRONTENDURL='$MDMFRONTENDURL'
+MDMIMAGE='$MDMIMAGE'
+MDMSOURCEENVIRONMENT='$LOCATION'
+MDMSOURCEROLE=gateway
+MDMSOURCEROLEINSTANCE=\"$(hostname)\""
+
+    write_file sysconfig_mdm_filename sysconfig_mdm_file true
+
+    mkdir -p /var/etw
+    local -r mdm_service_filename="/etc/systemd/system/mdm.service"
+    local -r mdm_service_file="[Unit]
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+EnvironmentFile=/etc/sysconfig/mdm
+ExecStartPre=-/usr/bin/docker rm -f %N
+ExecStart=/usr/bin/docker run \
+  --entrypoint /usr/sbin/MetricsExtension \
+  --hostname %H \
+  --name %N \
+  --rm \
+  --cap-drop net_raw \
+  -m 2g \
+  -v /etc/mdm.pem:/etc/mdm.pem \
+  -v /var/etw:/var/etw:z \
+  $MDMIMAGE \
+  -CertFile /etc/mdm.pem \
+  -FrontEndUrl $MDMFRONTENDURL \
+  -Logger Console \
+  -LogLevel Warning \
+  -PrivateKeyFile /etc/mdm.pem \
+  -SourceEnvironment $MDMSOURCEENVIRONMENT \
+  -SourceRole $MDMSOURCEROLE \
+  -SourceRoleInstance $MDMSOURCEROLEINSTANCE
+ExecStop=/usr/bin/docker stop %N
+Restart=always
+RestartSec=1
+StartLimitInterval=0
+
+[Install]
+WantedBy=multi-user.target"
+
+    write_file mdm_service_filename mdm_service_file true
+}
+
+# configure_timers_mdm_mdsd
+configure_timers_mdm_mdsd() {
+    log "starting"
+
+    for var in "mdsd" "mdm"; do
+        local download_creds_service_filename="/etc/systemd/system/download-$var-credentials.service"
+        local download_creds_service_file="[Unit]
+Description=Periodic $var credentials refresh
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/download-credentials.sh $var"
+
+        write_file download_creds_service_filename download_creds_service_file true
+
+        local download_creds_timer_filename="/etc/systemd/system/download-$var-credentials.timer"
+        local download_creds_timer_file="[Unit]
+Description=Periodic $var credentials refresh
+After=network-online.target
+Wants=network-online.target
+
+[Timer]
+OnBootSec=0min
+OnCalendar=0/12:00:00
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target"
+
+        write_file download_creds_timer_filename download_creds_timer_file true
+    done
+
+    local -r download_creds_script_filename="/usr/local/bin/download-credentials.sh"
+    local -r download_creds_script_file="#!/bin/bash
+set -eu
+
+COMPONENT=\$1
+echo \"Download \$COMPONENT credentials\"
+
+TEMP_DIR=\"\$(mktemp -d)\"
+export AZURE_CONFIG_DIR=\"\$(mktemp -d)\"
+
+echo \"Logging into Azure...\"
+RETRIES=3
+while [[ \$RETRIES -gt 0 ]]; do
+    if az login -i --allow-no-subscriptions
+    then
+        echo \"az login successful\"
+        break
+    else
+        echo \"az login failed. Retrying...\"
+        let RETRIES-=1
+        sleep 5
+    fi
+done
+
+trap \"cleanup\" EXIT
+
+cleanup() {
+  az logout
+  [[ \$TEMP_DIR =~ /tmp/.+ ]] && rm -rf \$TEMP_DIR
+  [[ \$AZURE_CONFIG_DIR =~ /tmp/.+ ]] && rm -rf \$AZURE_CONFIG_DIR
+}
+
+if [[ \$COMPONENT = \"mdm\" ]]; then
+  CURRENT_CERT_FILE=\"/etc/mdm.pem\"
+elif [[ \$COMPONENT\ = \"mdsd\" ]]; then
+  CURRENT_CERT_FILE=\"/var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem\"
+else
+  echo Invalid usage && exit 1
+fi
+
+SECRET_NAME=\"gwy-\${COMPONENT}\"
+NEW_CERT_FILE=\"\$TEMP_DIR/\$COMPONENT.pem\"
+for attempt in {1..5}; do
+  az keyvault \
+    secret \
+    download \
+    --file \"\$NEW_CERT_FILE\" \
+    --id \"https://$KEYVAULTPREFIX-gwy.$KEYVAULTDNSSUFFIX/secrets/\$SECRET_NAME\" \
+    && break
+  if [[ \$attempt -lt 5 ]]; then sleep 10; else exit 1; fi
+done
+
+if [ -f \$NEW_CERT_FILE ]; then
+  if [[ \$COMPONENT = \"mdsd\" ]]; then
+    chown syslog:syslog \$NEW_CERT_FILE
+  else
+    sed -i -ne '1,/END CERTIFICATE/ p' \$NEW_CERT_FILE
+  fi
+
+  new_cert_sn=\"\$(openssl x509 -in \"\$NEW_CERT_FILE\" -noout -serial | awk -F= '{print \$2}')\"
+  current_cert_sn=\"\$(openssl x509 -in \"\$CURRENT_CERT_FILE\" -noout -serial | awk -F= '{print \$2}')\"
+  if [[ ! -z \$new_cert_sn ]] && [[ \$new_cert_sn != \"\$current_cert_sn\" ]]; then
+    echo updating certificate for \$COMPONENT
+    chmod 0600 \$NEW_CERT_FILE
+    mv \$NEW_CERT_FILE \$CURRENT_CERT_FILE
+  fi
+else
+  echo Failed to refresh certificate for \$COMPONENT && exit 1
+fi"
+
+    write_file download_creds_script_filename download_creds_script_file true
+
+    chmod u+x /usr/local/bin/download-credentials.sh
+
+    # TODO place this in enable services section
+    systemctl enable download-mdsd-credentials.timer
+    systemctl enable download-mdm-credentials.timer
+
+    /usr/local/bin/download-credentials.sh mdsd
+    /usr/local/bin/download-credentials.sh mdm
+
+    local -r MDSDCERTIFICATESAN="$(openssl x509 -in /var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem -noout -subject | sed -e 's/.*CN = //')"
+    local -r watch_mdm_creds_service_filename="/etc/systemd/system/watch-mdm-credentials.service"
+    local -r watch_mdm_creds_service_file="[Unit]
+Description=Watch for changes in mdm.pem and restarts the mdm service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl restart mdm.service
+
+[Install]
+WantedBy=multi-user.target"
+
+    write_file watch_mdm_creds_service_filename watch_mdm_creds_service_file true
+
+    local -r watch_mdm_creds_path_filename='/etc/systemd/system/watch-mdm-credentials.path'
+    local -r watch_mdm_creds_path_file='[Path]
+PathModified=/etc/mdm.pem
+
+[Install]
+WantedBy=multi-user.target'
+
+    write_file watch_mdm_creds_path_filename watch_mdm_creds_path_file true
+
+    local -r watch_mdm_creds='watch-mdm-credentials.path'
+    systemctl enable "$watch_mdm_creds" || abort "failed to enable $watch_mdm_creds"
+    systemctl start "$watch_mdm_creds" || abort "failed to start $watch_mdm_creds"
+}
+
+# configure_service_fluentbit
+configure_service_fluentbit() {
+    local -n fluentbit_conf_file="$1"
+    local -n fluentbit_image="$2"
+    log "starting"
+    log "configuring fluentbit service"
+
+    if [[ -n $fluentbit_conf_file ]]; then
+        abort "$1 fluentbit config file cannot be empty"
+    elif [[ -n $fluentbit_image ]]; then
+        abort "$2 fluentbit image cannot be empty"
+    fi
+
+    mkdir -p /etc/fluentbit/
+    mkdir -p /var/lib/fluent
+
+    local -r fluentbit_conf_filename='/etc/fluentbit/fluentbit.conf'
+    write_file fluentbit_conf_filename fluentbit_conf_file true
+
+    local -r sysconfig_fluentbit_filename='/etc/sysconfig/fluentbit'
+    local -r sysconfig_fluentbit_file="FLUENTBITIMAGE=$fluentbit_image"
+
+    write_file sysconfig_fluentbit_filename sysconfig_fluentbit_file true
+
+    local -r fluentbit_service_filename='/etc/systemd/system/fluentbit.service'
+
+    local -r fluentbit_service_file="[Unit]
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+RestartSec=1s
+EnvironmentFile=/etc/sysconfig/fluentbit
+ExecStartPre=-/usr/bin/docker rm -f %N
+ExecStart=/usr/bin/docker run \
+  --security-opt label=disable \
+  --entrypoint /opt/td-agent-bit/bin/td-agent-bit \
+  --net=host \
+  --hostname %H \
+  --name %N \
+  --rm \
+  --cap-drop net_raw \
+  -v /etc/fluentbit/fluentbit.conf:/etc/fluentbit/fluentbit.conf \
+  -v /var/lib/fluent:/var/lib/fluent:z \
+  -v /var/log/journal:/var/log/journal:ro \
+  -v /etc/machine-id:/etc/machine-id:ro \
+  $fluentbit_image \
+  -c /etc/fluentbit/fluentbit.conf
+
+ExecStop=/usr/bin/docker stop %N
+Restart=always
+RestartSec=5
+StartLimitInterval=0
+
+[Install]
+WantedBy=multi-user.target"
+
+    write_file fluentbit_service_filename fluentbit_service_file true
+}
+
+# configure_service_aro_dbtoken
+configure_service_aro_dbtoken() {
+    local -n dbtoken_conf="$1"
+    local -n log_dir="${2:-}"
+    log "starting"
+
+    local -r aro_dbtoken_service_conf_filename='/etc/sysconfig/aro-dbtoken'
+
+    write_file aro_dbtoken_service_conf_filename aro_dbtoken_service_conf_file true
+
+    local -r aro_dbtoken_service_filename='/etc/systemd/system/aro-dbtoken.service'
+    # TODO add test if log_dir is empty, else
+    local -r aro_dbtoken_service_file="[Unit]
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+EnvironmentFile=/etc/sysconfig/aro-dbtoken
+ExecStartPre=-/usr/bin/docker rm -f %N
+ExecStart=/usr/bin/docker run \
+  --hostname %H \
+  --name %N \
+  --rm \
+  --cap-drop net_raw \
+  -e AZURE_GATEWAY_SERVICE_PRINCIPAL_ID \
+  -e DATABASE_ACCOUNT_NAME \
+  -e AZURE_DBTOKEN_CLIENT_ID \
+  -e KEYVAULT_PREFIX \
+  -e MDM_ACCOUNT \
+  -e MDM_NAMESPACE \
+  -m 2g \
+  -p 445:8445 \
+  -v /run/systemd/journal:/run/systemd/journal \
+  -v /var/etw:/var/etw:z \
+  $RPIMAGE \
+  dbtoken
+ExecStop=/usr/bin/docker stop -t 3600 %N
+TimeoutStopSec=3600
+Restart=always
+RestartSec=1
+StartLimitInterval=0
+
+[Install]
+WantedBy=multi-user.target"
+
+    local -r aro_dbtoken_service_file="[Unit]
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+EnvironmentFile=/etc/sysconfig/aro-gateway
+ExecStartPre=-/usr/bin/docker rm -f %N
+ExecStartPre=/usr/bin/mkdir -p ${gateway_logdir}
+ExecStart=/usr/bin/docker run \
+  --hostname %H \
+  --name %N \
+  --rm \
+  --cap-drop net_raw \
+  -e ACR_RESOURCE_ID \
+  -e DATABASE_ACCOUNT_NAME \
+  -e AZURE_DBTOKEN_CLIENT_ID \
+  -e DBTOKEN_URL \
+  -e GATEWAY_DOMAINS \
+  -e GATEWAY_FEATURES \
+  -e MDM_ACCOUNT \
+  -e MDM_NAMESPACE \
+  -m 2g \
+  -p 80:8080 \
+  -p 8081:8081 \
+  -p 443:8443 \
+  -v /run/systemd/journal:/run/systemd/journal \
+  -v /var/etw:/var/etw:z \
+  -v ${gateway_logdir}:/ctr.log:z \
+  \$RPIMAGE \
+  gateway
+ExecStop=/usr/bin/docker stop -t 3600 %N
+TimeoutStopSec=3600
+Restart=always
+RestartSec=1
+StartLimitInterval=0
+
+[Install]
+WantedBy=multi-user.target"
+
+    write_file aro_dbtoken_service_filename aro_dbtoken_service_file true
+}
+
+# configure_service_mdsd
+configure_service_mdsd() {
+    local -n monitor_config_version="$1"
+    log "starting"
+
+    local -r mdsd_service_dir="/etc/systemd/system/mdsd.service.d"
+    mkdir -p "$mdsd_service_dir"
+
+    local -r mdsd_override_conf_filename="$mdsd_service_dir/override.conf"
+    local -r mdsd_override_conf_file="[Unit]
+After=network-online.target"
+
+    write_file mdsd_override_conf_filename mdsd_override_conf_file true
+
+    local -r default_mdsd_filename="/etc/default/mdsd"
+    local -r default_mdsd_file="MDSD_ROLE_PREFIX=/var/run/mdsd/default
+MDSD_OPTIONS=\"-A -d -r \$MDSD_ROLE_PREFIX\"
+
+export MONITORING_GCS_ENVIRONMENT='$MDSDENVIRONMENT'
+export MONITORING_GCS_ACCOUNT='$RPMDSDACCOUNT'
+export MONITORING_GCS_REGION='$LOCATION'
+export MONITORING_GCS_AUTH_ID_TYPE=AuthKeyVault
+export MONITORING_GCS_AUTH_ID='$MDSDCERTIFICATESAN'
+export MONITORING_GCS_NAMESPACE='$RPMDSDNAMESPACE'
+export MONITORING_CONFIG_VERSION='$monitor_config_version'
+export MONITORING_USE_GENEVA_CONFIG_SERVICE=true
+
+export MONITORING_TENANT='$LOCATION'
+export MONITORING_ROLE=rp
+export MONITORING_ROLE_INSTANCE=\"$(hostname)\"
+
+export MDSD_MSGPACK_SORT_COLUMNS=1\""
+
+    write_file default_mdsd_filename default_mdsd_file true
+}
+
+# run_azsecd_config_scan
+run_azsecd_config_scan() {
+    log "starting"
+
+    local -ar configs=(
+        "baseline"
+        "clamav"
+        "software"
+    )
+
+    log "Scanning configuration files ${configs[*]}"
+    # shellcheck disable=SC2068
+    for scan in ${configs[@]}; do
+        log "Scanning config file $scan now"
+        /usr/local/bin/azsecd config -s "$scan" -d P1D
+    done
+}
