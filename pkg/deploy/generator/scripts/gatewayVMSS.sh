@@ -757,7 +757,7 @@ WantedBy=multi-user.target'
     systemctl start "$watch_mdm_creds" || abort "failed to start $watch_mdm_creds"
 }
 
-# configure_service_aro_rp
+# configure_service_aro_gateway
 configure_service_aro_gateway() {
     local -n log_dir="$1"
     log "starting"

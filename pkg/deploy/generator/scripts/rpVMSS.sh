@@ -750,6 +750,7 @@ WantedBy=multi-user.target"
 
 # configure_service_mdsd
 configure_service_mdsd() {
+    local -n mdsd
     log "starting"
 
     local -r mdsd_service_dir="/etc/systemd/system/mdsd.service.d"
