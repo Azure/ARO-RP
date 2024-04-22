@@ -49,7 +49,7 @@ func TestGetAsyncOperationResult(t *testing.T) {
 							ClusterProfile: api.ClusterProfile{
 								PullSecret: "{}",
 							},
-							ServicePrincipalProfile: api.ServicePrincipalProfile{
+							ServicePrincipalProfile: &api.ServicePrincipalProfile{
 								ClientSecret: "clientSecret",
 							},
 						},
@@ -69,6 +69,9 @@ func TestGetAsyncOperationResult(t *testing.T) {
 				ID:   testdatabase.GetResourcePath(mockSubID, "fakeClusterID"),
 				Name: "resourceName",
 				Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+				Properties: v20200430.OpenShiftClusterProperties{
+					ServicePrincipalProfile: &v20200430.ServicePrincipalProfile{},
+				},
 			},
 		},
 		{

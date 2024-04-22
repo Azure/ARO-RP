@@ -95,7 +95,7 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *Ope
 	if err := sv.validateConsoleProfile(path+".consoleProfile", &p.ConsoleProfile); err != nil {
 		return err
 	}
-	if err := sv.validateServicePrincipalProfile(path+".servicePrincipalProfile", &p.ServicePrincipalProfile); err != nil {
+	if err := sv.validateServicePrincipalProfile(path+".servicePrincipalProfile", p.ServicePrincipalProfile); err != nil {
 		return err
 	}
 	if err := sv.validateNetworkProfile(path+".networkProfile", &p.NetworkProfile, p.APIServerProfile.Visibility, p.IngressProfiles[0].Visibility); err != nil {
@@ -187,6 +187,10 @@ func (sv openShiftClusterStaticValidator) validateConsoleProfile(path string, cp
 }
 
 func (sv openShiftClusterStaticValidator) validateServicePrincipalProfile(path string, spp *ServicePrincipalProfile) error {
+	if spp == nil {
+		return nil
+	}
+
 	valid := uuid.IsValid(spp.ClientID)
 	if !valid {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".clientId", "The provided client ID '%s' is invalid.", spp.ClientID)

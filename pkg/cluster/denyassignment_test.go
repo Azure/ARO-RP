@@ -30,7 +30,7 @@ func TestCreateOrUpdateDenyAssignment(t *testing.T) {
 					ClusterProfile: api.ClusterProfile{
 						ResourceGroupID: fmt.Sprintf("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/%s", clusterRGName),
 					},
-					ServicePrincipalProfile: api.ServicePrincipalProfile{
+					ServicePrincipalProfile: &api.ServicePrincipalProfile{
 						SPObjectID: fakeClusterSPObjectId,
 					},
 				},

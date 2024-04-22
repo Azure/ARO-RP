@@ -43,7 +43,7 @@ type OpenShiftClusterProperties struct {
 	ClusterProfile                  ClusterProfile                   `json:"clusterProfile,omitempty"`
 	FeatureProfile                  FeatureProfile                   `json:"featureProfile,omitempty"`
 	ConsoleProfile                  ConsoleProfile                   `json:"consoleProfile,omitempty"`
-	ServicePrincipalProfile         ServicePrincipalProfile          `json:"servicePrincipalProfile,omitempty"`
+	ServicePrincipalProfile         *ServicePrincipalProfile         `json:"servicePrincipalProfile,omitempty"`
 	PlatformWorkloadIdentityProfile *PlatformWorkloadIdentityProfile `json:"platformWorkloadIdentityProfile,omitempty"`
 	NetworkProfile                  NetworkProfile                   `json:"networkProfile,omitempty"`
 	MasterProfile                   MasterProfile                    `json:"masterProfile,omitempty"`
@@ -149,8 +149,9 @@ type ConsoleProfile struct {
 
 // ServicePrincipalProfile represents a service principal profile.
 type ServicePrincipalProfile struct {
-	ClientID   string `json:"clientId,omitempty"`
-	SPObjectID string `json:"spObjectId,omitempty"`
+	ClientID     string `json:"clientId,omitempty"`
+	SPObjectID   string `json:"spObjectId,omitempty"`
+	ClientSecret string `json:"clientSecret,omitempty"`
 }
 
 // SoftwareDefinedNetwork constants.

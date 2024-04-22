@@ -2123,7 +2123,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							},
 							IngressProfiles: []api.IngressProfile{{Name: "will-be-removed"}},
 							WorkerProfiles:  []api.WorkerProfile{{Name: "will-be-removed"}},
-							ServicePrincipalProfile: api.ServicePrincipalProfile{
+							ServicePrincipalProfile: &api.ServicePrincipalProfile{
 								ClientSecret: "will-be-kept",
 							},
 							NetworkProfile: api.NetworkProfile{
@@ -2162,7 +2162,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 								Domain:               "changed",
 								FipsValidatedModules: api.FipsValidatedModulesDisabled,
 							},
-							ServicePrincipalProfile: api.ServicePrincipalProfile{
+							ServicePrincipalProfile: &api.ServicePrincipalProfile{
 								ClientSecret: "will-be-kept",
 							},
 							NetworkProfile: api.NetworkProfile{
@@ -2195,6 +2195,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					ClusterProfile: v20200430.ClusterProfile{
 						Domain: "changed",
 					},
+					ServicePrincipalProfile: &v20200430.ServicePrincipalProfile{},
 				},
 			},
 		},
@@ -2678,7 +2679,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		{
 			name: "creating cluster failing when provided cluster resource group already contains a cluster",
 			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ServicePrincipalProfile.ClientID = mockSubID
+				oc.Properties.ServicePrincipalProfile = &v20200430.ServicePrincipalProfile{
+					ClientID: mockSubID,
+				}
 				oc.Properties.ClusterProfile.ResourceGroupID = fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID)
 			},
 			fixture: func(f *testdatabase.Fixture) {
@@ -2726,7 +2729,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		{
 			name: "creating cluster failing when provided client ID is not unique",
 			request: func(oc *v20200430.OpenShiftCluster) {
-				oc.Properties.ServicePrincipalProfile.ClientID = mockSubID
+				oc.Properties.ServicePrincipalProfile = &v20200430.ServicePrincipalProfile{
+					ClientID: mockSubID,
+				}
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
@@ -2918,7 +2923,7 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 							VMSize:           v20220401.VMSize("Standard_D32s_v3"),
 							SubnetID:         fmt.Sprintf("/subscriptions/%s/resourcegroups/network/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", mockSubID),
 						},
-						ServicePrincipalProfile: v20220401.ServicePrincipalProfile{
+						ServicePrincipalProfile: &v20220401.ServicePrincipalProfile{
 							ClientID:     "00000000-0000-0000-1111-000000000000",
 							ClientSecret: "00000000-0000-0000-0000-000000000000",
 						},
@@ -2973,7 +2978,7 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 								VMSize:           api.VMSize("Standard_D32s_v3"),
 								SubnetID:         fmt.Sprintf("/subscriptions/%s/resourcegroups/network/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", mockSubID),
 							},
-							ServicePrincipalProfile: api.ServicePrincipalProfile{
+							ServicePrincipalProfile: &api.ServicePrincipalProfile{
 								ClientID:     "00000000-0000-0000-1111-000000000000",
 								ClientSecret: "00000000-0000-0000-0000-000000000000",
 							},
@@ -3032,7 +3037,7 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 								VMSize:           api.VMSize("Standard_D32s_v3"),
 								SubnetID:         fmt.Sprintf("/subscriptions/%s/resourcegroups/network/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", mockSubID),
 							},
-							ServicePrincipalProfile: api.ServicePrincipalProfile{
+							ServicePrincipalProfile: &api.ServicePrincipalProfile{
 								ClientID:     "00000000-0000-0000-1111-000000000000",
 								ClientSecret: "00000000-0000-0000-0000-000000000000",
 							},
@@ -3089,7 +3094,7 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 						VMSize:           v20220401.VMSize("Standard_D32s_v3"),
 						SubnetID:         fmt.Sprintf("/subscriptions/%s/resourcegroups/network/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", mockSubID),
 					},
-					ServicePrincipalProfile: v20220401.ServicePrincipalProfile{
+					ServicePrincipalProfile: &v20220401.ServicePrincipalProfile{
 						ClientID: "00000000-0000-0000-1111-000000000000",
 					},
 					NetworkProfile: v20220401.NetworkProfile{

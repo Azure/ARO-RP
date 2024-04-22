@@ -77,7 +77,7 @@ func validOpenShiftCluster(name, location string) *OpenShiftCluster {
 			ConsoleProfile: ConsoleProfile{
 				URL: "https://console-openshift-console.apps.cluster.location.aroapp.io/",
 			},
-			ServicePrincipalProfile: ServicePrincipalProfile{
+			ServicePrincipalProfile: &ServicePrincipalProfile{
 				ClientSecret: "clientSecret",
 				ClientID:     "11111111-1111-1111-1111-111111111111",
 			},

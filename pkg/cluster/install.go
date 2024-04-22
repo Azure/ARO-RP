@@ -187,12 +187,10 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.validateResources),
 		steps.Action(m.initializeKubernetesClients), // All init steps are first
 		steps.Action(m.initializeOperatorDeployer),  // depends on kube clients
-		steps.Action(m.initializeClusterSPClients),
+		// Since ServicePrincipalProfile is now a pointer and our converters re-build the struct,
+		// our update path needs to enrich the doc with SPObjectID since it was overwritten by our API on put/patch.
+		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixupClusterSPObjectID),
 
-		// TODO: this relies on an authorizer that isn't exposed in the manager
-		// struct, so we'll rebuild the fpAuthorizer and use the error catching
-		// to advance
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.clusterSPObjectID),
 		// credentials rotation flow steps
 		steps.Action(m.createOrUpdateClusterServicePrincipalRBAC),
 		steps.Action(m.createOrUpdateDenyAssignment),
