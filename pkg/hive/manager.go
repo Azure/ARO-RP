@@ -35,6 +35,8 @@ type ClusterManager interface {
 	CreateOrUpdate(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument) error
 	// Delete removes the cluster from Hive.
 	Delete(ctx context.Context, doc *api.OpenShiftClusterDocument) error
+	// Delete cluster Hive Pods
+	DeleteHivePods(ctx context.Context, doc *api.OpenShiftClusterDocument) error
 	// Install creates a ClusterDocument and related secrets for a new cluster
 	// so that it can be provisioned by Hive.
 	Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion) error
@@ -156,6 +158,21 @@ func (hr *clusterManager) Delete(ctx context.Context, doc *api.OpenShiftClusterD
 		return nil
 	}
 
+	return err
+}
+
+func (hr *clusterManager) DeleteHivePods(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
+	podList, err := hr.kubernetescli.CoreV1().Pods(doc.OpenShiftCluster.Properties.HiveProfile.Namespace).List(ctx, metav1.ListOptions{})
+	if err != nil && kerrors.IsNotFound(err) {
+		return nil
+	}
+
+	for _, pod := range podList.Items {
+		err = hr.kubernetescli.CoreV1().Pods(doc.OpenShiftCluster.Properties.HiveProfile.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return err
+		}
+	}
 	return err
 }
 

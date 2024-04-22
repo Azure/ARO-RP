@@ -59,3 +59,17 @@ func (m *manager) hiveDeleteResources(ctx context.Context) error {
 
 	return m.hiveClusterManager.Delete(ctx, m.doc)
 }
+
+func (m *manager) hiveDeletePodResources(ctx context.Context) error {
+	m.log.Info("deleting hive pods for the cluster")
+	namespace := m.doc.OpenShiftCluster.Properties.HiveProfile.Namespace
+	if namespace == "" {
+		m.log.Info("skipping: no hive namespace in cluster document")
+		return nil
+	}
+
+	err := m.hiveClusterManager.DeleteHivePods(ctx, m.doc)
+	m.log.Errorf(err.Error())
+
+	return err
+}

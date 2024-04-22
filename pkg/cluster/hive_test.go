@@ -311,3 +311,46 @@ func TestHiveDeleteResources(t *testing.T) {
 		})
 	}
 }
+
+func TestHiveDeletePodResources(t *testing.T) {
+	ctx := context.Background()
+	for _, tt := range []struct {
+		testName           string
+		namespace          string
+		clusterManagerMock func(mockCtrl *gomock.Controller, doc *api.OpenShiftClusterDocument) *mock_hive.MockClusterManager
+		wantErr            string
+	}{
+		{
+			testName: "doesn't attempt to delete pods in the namespace if namespace doesn't exist",
+			clusterManagerMock: func(mockCtrl *gomock.Controller, doc *api.OpenShiftClusterDocument) *mock_hive.MockClusterManager {
+				mockClusterManager := mock_hive.NewMockClusterManager(mockCtrl)
+				mockClusterManager.EXPECT().DeleteHivePods(ctx, doc).Times(0)
+				return mockClusterManager
+			},
+		},
+		{
+			testName:  "returns error if cluster manager returns error",
+			namespace: "existing-namespace",
+			clusterManagerMock: func(mockCtrl *gomock.Controller, doc *api.OpenShiftClusterDocument) *mock_hive.MockClusterManager {
+				mockClusterManager := mock_hive.NewMockClusterManager(mockCtrl)
+				mockClusterManager.EXPECT().DeleteHivePods(ctx, doc).Return(fmt.Errorf("cluster manager error"))
+				return mockClusterManager
+			},
+			wantErr: "cluster manager error",
+		},
+	} {
+		t.Run(tt.testName, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			m := createManagerForTests(t, tt.namespace)
+
+			if tt.clusterManagerMock != nil {
+				m.hiveClusterManager = tt.clusterManagerMock(controller, m.doc)
+			}
+
+			err := m.hiveDeletePodResources(ctx)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}

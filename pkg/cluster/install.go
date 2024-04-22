@@ -150,6 +150,7 @@ func (m *manager) adminUpdate() []steps.Step {
 			steps.Action(m.hiveEnsureResources),
 			steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, false),
 			steps.Action(m.hiveResetCorrelationData),
+			steps.Action(m.hiveDeletePodResources),
 		)
 	}
 
@@ -219,6 +220,7 @@ func (m *manager) Update(ctx context.Context) error {
 			steps.Action(m.hiveEnsureResources),
 			steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, true),
 			steps.Action(m.hiveResetCorrelationData),
+			steps.Action(m.hiveDeletePodResources),
 		)
 	}
 
@@ -326,6 +328,7 @@ func (m *manager) bootstrap() []steps.Step {
 		s = append(s,
 			// Reset correlation data whether adopting or installing via Hive
 			steps.Action(m.hiveResetCorrelationData),
+			steps.Action(m.hiveDeletePodResources),
 		)
 	}
 
@@ -404,6 +407,9 @@ func (m *manager) runSteps(ctx context.Context, s []steps.Step, metricsTopic str
 		_, err = steps.Run(ctx, m.log, 10*time.Second, s, nil)
 	}
 	if err != nil {
+		if m.adoptViaHive || m.installViaHive {
+			_ = m.hiveDeletePodResources(ctx)
+		}
 		m.gatherFailureLogs(ctx)
 	}
 	return err

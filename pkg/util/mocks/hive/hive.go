@@ -81,6 +81,20 @@ func (mr *MockClusterManagerMockRecorder) Delete(arg0, arg1 interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockClusterManager)(nil).Delete), arg0, arg1)
 }
 
+// DeleteHivePods mocks base method.
+func (m *MockClusterManager) DeleteHivePods(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteHivePods", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteHivePods indicates an expected call of DeleteHivePods.
+func (mr *MockClusterManagerMockRecorder) DeleteHivePods(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteHivePods", reflect.TypeOf((*MockClusterManager)(nil).DeleteHivePods), arg0, arg1)
+}
+
 // GetClusterDeployment mocks base method.
 func (m *MockClusterManager) GetClusterDeployment(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) (*v1.ClusterDeployment, error) {
 	m.ctrl.T.Helper()
