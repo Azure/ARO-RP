@@ -248,7 +248,7 @@ func TestAroCredentialsRequestReconciled(t *testing.T) {
 		name          string
 		kubernetescli func() *fake.Clientset
 		dynamiccli    func() *dynamicfake.FakeDynamicClient
-		spp           api.ServicePrincipalProfile
+		spp           *api.ServicePrincipalProfile
 		want          bool
 		wantErrMsg    string
 	}{
@@ -261,7 +261,7 @@ func TestAroCredentialsRequestReconciled(t *testing.T) {
 			dynamiccli: func() *dynamicfake.FakeDynamicClient {
 				return dynamicfake.NewSimpleDynamicClient(scheme.Scheme)
 			},
-			spp: api.ServicePrincipalProfile{
+			spp: &api.ServicePrincipalProfile{
 				ClientID:     "aadClientId",
 				ClientSecret: "aadClientSecret",
 			},
@@ -276,7 +276,7 @@ func TestAroCredentialsRequestReconciled(t *testing.T) {
 			dynamiccli: func() *dynamicfake.FakeDynamicClient {
 				return dynamicfake.NewSimpleDynamicClient(scheme.Scheme)
 			},
-			spp: api.ServicePrincipalProfile{
+			spp: &api.ServicePrincipalProfile{
 				ClientID:     "aadClientId",
 				ClientSecret: "aadClientSecretNew",
 			},
@@ -295,7 +295,7 @@ func TestAroCredentialsRequestReconciled(t *testing.T) {
 				})
 				return dynamiccli
 			},
-			spp: api.ServicePrincipalProfile{
+			spp: &api.ServicePrincipalProfile{
 				ClientID:     "aadClientId",
 				ClientSecret: "aadClientSecretNew",
 			},
@@ -317,7 +317,7 @@ func TestAroCredentialsRequestReconciled(t *testing.T) {
 				}
 				return dynamicfake.NewSimpleDynamicClient(scheme.Scheme, &cr)
 			},
-			spp: api.ServicePrincipalProfile{
+			spp: &api.ServicePrincipalProfile{
 				ClientID:     "aadClientId",
 				ClientSecret: "aadClientSecretNew",
 			},
@@ -343,7 +343,7 @@ func TestAroCredentialsRequestReconciled(t *testing.T) {
 				}
 				return dynamicfake.NewSimpleDynamicClient(scheme.Scheme, &cr)
 			},
-			spp: api.ServicePrincipalProfile{
+			spp: &api.ServicePrincipalProfile{
 				ClientID:     "aadClientId",
 				ClientSecret: "aadClientSecretNew",
 			},
@@ -368,7 +368,7 @@ func TestAroCredentialsRequestReconciled(t *testing.T) {
 				}
 				return dynamicfake.NewSimpleDynamicClient(scheme.Scheme, &cr)
 			},
-			spp: api.ServicePrincipalProfile{
+			spp: &api.ServicePrincipalProfile{
 				ClientID:     "aadClientId",
 				ClientSecret: "aadClientSecretNew",
 			},

@@ -87,7 +87,7 @@ func validOpenShiftCluster(name, location string) *OpenShiftCluster {
 			ConsoleProfile: ConsoleProfile{
 				URL: "",
 			},
-			ServicePrincipalProfile: ServicePrincipalProfile{
+			ServicePrincipalProfile: &ServicePrincipalProfile{
 				ClientSecret: "clientSecret",
 				ClientID:     "11111111-1111-1111-1111-111111111111",
 			},

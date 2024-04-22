@@ -45,7 +45,7 @@ func ExampleOpenShiftClusterDocument() *OpenShiftClusterDocument {
 				ConsoleProfile: ConsoleProfile{
 					URL: "https://console-openshift-console.apps.cluster.location.aroapp.io/",
 				},
-				ServicePrincipalProfile: ServicePrincipalProfile{
+				ServicePrincipalProfile: &ServicePrincipalProfile{
 					ClientSecret: "clientSecret",
 					ClientID:     "clientId",
 				},

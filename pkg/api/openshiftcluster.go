@@ -121,7 +121,7 @@ type OpenShiftClusterProperties struct {
 
 	ConsoleProfile ConsoleProfile `json:"consoleProfile,omitempty"`
 
-	ServicePrincipalProfile ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
+	ServicePrincipalProfile *ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
 
 	PlatformWorkloadIdentityProfile *PlatformWorkloadIdentityProfile `json:"platformWorkloadIdentityProfile,omitempty"`
 

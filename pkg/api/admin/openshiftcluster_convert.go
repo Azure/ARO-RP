@@ -45,10 +45,6 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 			ConsoleProfile: ConsoleProfile{
 				URL: oc.Properties.ConsoleProfile.URL,
 			},
-			ServicePrincipalProfile: ServicePrincipalProfile{
-				ClientID:   oc.Properties.ServicePrincipalProfile.ClientID,
-				SPObjectID: oc.Properties.ServicePrincipalProfile.SPObjectID,
-			},
 			NetworkProfile: NetworkProfile{
 				SoftwareDefinedNetwork:     SoftwareDefinedNetwork(oc.Properties.NetworkProfile.SoftwareDefinedNetwork),
 				PodCIDR:                    oc.Properties.NetworkProfile.PodCIDR,
@@ -75,6 +71,14 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 			ImageRegistryStorageAccountName: oc.Properties.ImageRegistryStorageAccountName,
 			InfraID:                         oc.Properties.InfraID,
 		},
+	}
+
+	if oc.Properties.ServicePrincipalProfile != nil {
+		out.Properties.ServicePrincipalProfile = &ServicePrincipalProfile{
+			ClientID:     oc.Properties.ServicePrincipalProfile.ClientID,
+			SPObjectID:   oc.Properties.ServicePrincipalProfile.SPObjectID,
+			ClientSecret: string(oc.Properties.ServicePrincipalProfile.ClientSecret),
+		}
 	}
 
 	if oc.Properties.NetworkProfile.LoadBalancerProfile != nil {
@@ -275,8 +279,13 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	out.Properties.ClusterProfile.ResourceGroupID = oc.Properties.ClusterProfile.ResourceGroupID
 	out.Properties.FeatureProfile.GatewayEnabled = oc.Properties.FeatureProfile.GatewayEnabled
 	out.Properties.ConsoleProfile.URL = oc.Properties.ConsoleProfile.URL
-	out.Properties.ServicePrincipalProfile.ClientID = oc.Properties.ServicePrincipalProfile.ClientID
-	out.Properties.ServicePrincipalProfile.SPObjectID = oc.Properties.ServicePrincipalProfile.SPObjectID
+	if oc.Properties.ServicePrincipalProfile != nil {
+		out.Properties.ServicePrincipalProfile = &api.ServicePrincipalProfile{
+			ClientID:     oc.Properties.ServicePrincipalProfile.ClientID,
+			SPObjectID:   oc.Properties.ServicePrincipalProfile.SPObjectID,
+			ClientSecret: api.SecureString(oc.Properties.ServicePrincipalProfile.ClientSecret),
+		}
+	}
 	if oc.Properties.PlatformWorkloadIdentityProfile != nil && oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities != nil {
 		out.Properties.PlatformWorkloadIdentityProfile = &api.PlatformWorkloadIdentityProfile{}
 		out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = make([]api.PlatformWorkloadIdentity, len(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities))

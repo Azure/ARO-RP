@@ -32,7 +32,7 @@ func makeDoc(num int) *api.OpenShiftClusterDocument {
 				ClusterProfile: api.ClusterProfile{
 					PullSecret: "{}",
 				},
-				ServicePrincipalProfile: api.ServicePrincipalProfile{
+				ServicePrincipalProfile: &api.ServicePrincipalProfile{
 					ClientSecret: (api.SecureString)(clientSecret),
 				},
 			},
@@ -78,11 +78,17 @@ func TestListOpenShiftCluster(t *testing.T) {
 							ID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName01", mockSubID),
 							Name: "resourceName01",
 							Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+							Properties: v20200430.OpenShiftClusterProperties{
+								ServicePrincipalProfile: &v20200430.ServicePrincipalProfile{},
+							},
 						},
 						{
 							ID:   testdatabase.GetResourcePath(mockSubID, "resourceName02"),
 							Name: "resourceName02",
 							Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+							Properties: v20200430.OpenShiftClusterProperties{
+								ServicePrincipalProfile: &v20200430.ServicePrincipalProfile{},
+							},
 						},
 					},
 				}
@@ -117,6 +123,9 @@ func TestListOpenShiftCluster(t *testing.T) {
 						ID:   testdatabase.GetResourcePath(mockSubID, fmt.Sprintf("resourceName%02d", i)),
 						Name: fmt.Sprintf("resourceName%02d", i),
 						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+						Properties: v20200430.OpenShiftClusterProperties{
+							ServicePrincipalProfile: &v20200430.ServicePrincipalProfile{},
+						},
 					})
 				}
 
@@ -145,6 +154,9 @@ func TestListOpenShiftCluster(t *testing.T) {
 							ID:   testdatabase.GetResourcePath(mockSubID, "resourceName11"),
 							Name: "resourceName11",
 							Type: "Microsoft.RedHatOpenShift/openShiftClusters",
+							Properties: v20200430.OpenShiftClusterProperties{
+								ServicePrincipalProfile: &v20200430.ServicePrincipalProfile{},
+							},
 						},
 					},
 				}

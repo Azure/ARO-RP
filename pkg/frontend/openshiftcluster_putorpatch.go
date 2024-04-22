@@ -126,7 +126,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	// Our base structure for unmarshal is skeleton document with values we
 	// think is required. We expect payload to have everything else required.
 	case http.MethodPut:
-		ext = converter.ToExternal(&api.OpenShiftCluster{
+		document := &api.OpenShiftCluster{
 			ID:   doc.OpenShiftCluster.ID,
 			Name: doc.OpenShiftCluster.Name,
 			Type: doc.OpenShiftCluster.Type,
@@ -136,12 +136,16 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 					PullSecret: doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret,
 					Version:    doc.OpenShiftCluster.Properties.ClusterProfile.Version,
 				},
-				ServicePrincipalProfile: api.ServicePrincipalProfile{
-					ClientSecret: doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret,
-				},
 			},
 			SystemData: doc.OpenShiftCluster.SystemData,
-		})
+		}
+
+		if doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil {
+			document.Properties.ServicePrincipalProfile = &api.ServicePrincipalProfile{}
+			document.Properties.ServicePrincipalProfile.ClientSecret = doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret
+		}
+
+		ext = converter.ToExternal(document)
 
 	// In case of PATCH we take current cluster document, which is enriched
 	// from the cluster and use it as base for unmarshal. So customer can
@@ -190,7 +194,11 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID = strings.ToLower(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
 
 		doc.ClusterResourceGroupIDKey = strings.ToLower(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
-		doc.ClientIDKey = strings.ToLower(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID)
+
+		if doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil {
+			doc.ClientIDKey = strings.ToLower(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID)
+		}
+
 		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateCreating
 
 		doc.Bucket, err = f.bucketAllocator.Allocate()
@@ -235,7 +243,10 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	// We remove sensitive data from document to prevent sensitive data being
 	// returned to the customer.
 	doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
-	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
+
+	if doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil {
+		doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
+	}
 
 	// We don't return enriched worker profile data on PUT/PATCH operations
 	doc.OpenShiftCluster.Properties.WorkerProfilesStatus = nil
