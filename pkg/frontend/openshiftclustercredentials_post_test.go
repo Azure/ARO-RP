@@ -58,7 +58,7 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 							ClusterProfile: api.ClusterProfile{
 								PullSecret: "{}",
 							},
-							ServicePrincipalProfile: api.ServicePrincipalProfile{
+							ServicePrincipalProfile: &api.ServicePrincipalProfile{
 								ClientSecret: "clientSecret",
 							},
 							KubeadminPassword: "password",
@@ -105,7 +105,7 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 							ClusterProfile: api.ClusterProfile{
 								PullSecret: "{}",
 							},
-							ServicePrincipalProfile: api.ServicePrincipalProfile{
+							ServicePrincipalProfile: &api.ServicePrincipalProfile{
 								ClientSecret: "clientSecret",
 							},
 						},
@@ -139,7 +139,7 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 							ClusterProfile: api.ClusterProfile{
 								PullSecret: "{}",
 							},
-							ServicePrincipalProfile: api.ServicePrincipalProfile{
+							ServicePrincipalProfile: &api.ServicePrincipalProfile{
 								ClientSecret: "clientSecret",
 							},
 						},
@@ -174,7 +174,7 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 								PullSecret: "{}",
 							},
 							FailedProvisioningState: api.ProvisioningStateCreating,
-							ServicePrincipalProfile: api.ServicePrincipalProfile{
+							ServicePrincipalProfile: &api.ServicePrincipalProfile{
 								ClientSecret: "clientSecret",
 							},
 						},
@@ -209,7 +209,7 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 								PullSecret: "{}",
 							},
 							FailedProvisioningState: api.ProvisioningStateDeleting,
-							ServicePrincipalProfile: api.ServicePrincipalProfile{
+							ServicePrincipalProfile: &api.ServicePrincipalProfile{
 								ClientSecret: "clientSecret",
 							},
 						},

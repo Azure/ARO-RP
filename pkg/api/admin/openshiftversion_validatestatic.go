@@ -21,7 +21,7 @@ func (sv openShiftVersionStaticValidator) Static(_new interface{}, _current *api
 		current = (&openShiftVersionConverter{}).ToExternal(_current).(*OpenShiftVersion)
 	}
 
-	err := sv.validate(new, current == nil)
+	err := sv.validate(new)
 	if err != nil {
 		return err
 	}
@@ -33,7 +33,7 @@ func (sv openShiftVersionStaticValidator) Static(_new interface{}, _current *api
 	return sv.validateDelta(new, current)
 }
 
-func (sv openShiftVersionStaticValidator) validate(new *OpenShiftVersion, isCreate bool) error {
+func (sv openShiftVersionStaticValidator) validate(new *OpenShiftVersion) error {
 	if new.Properties.Version == "" {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.version", "Must be provided")
 	}

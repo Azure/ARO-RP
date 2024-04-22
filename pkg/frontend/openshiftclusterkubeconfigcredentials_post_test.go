@@ -54,8 +54,9 @@ func TestPostOpenShiftClusterKubeConfigCredentials(t *testing.T) {
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState:   api.ProvisioningStateSucceeded,
-							UserAdminKubeconfig: api.SecureBytes("{kubeconfig}"),
+							ProvisioningState:       api.ProvisioningStateSucceeded,
+							UserAdminKubeconfig:     api.SecureBytes("{kubeconfig}"),
+							ServicePrincipalProfile: &api.ServicePrincipalProfile{},
 						},
 					},
 				})

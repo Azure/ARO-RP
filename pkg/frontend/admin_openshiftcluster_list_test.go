@@ -49,7 +49,7 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 								ClusterProfile: api.ClusterProfile{
 									PullSecret: "{}",
 								},
-								ServicePrincipalProfile: api.ServicePrincipalProfile{
+								ServicePrincipalProfile: &api.ServicePrincipalProfile{
 									ClientSecret: "clientSecret1",
 								},
 							},
@@ -65,7 +65,7 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 								ClusterProfile: api.ClusterProfile{
 									PullSecret: "{}",
 								},
-								ServicePrincipalProfile: api.ServicePrincipalProfile{
+								ServicePrincipalProfile: &api.ServicePrincipalProfile{
 									ClientSecret: "clientSecret2",
 								},
 							},
@@ -80,11 +80,17 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName1"),
 						Name: "resourceName1",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+						Properties: admin.OpenShiftClusterProperties{
+							ServicePrincipalProfile: &admin.ServicePrincipalProfile{},
+						},
 					},
 					{
 						ID:   testdatabase.GetResourcePath(otherMockSubID, "resourceName2"),
 						Name: "resourceName2",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+						Properties: admin.OpenShiftClusterProperties{
+							ServicePrincipalProfile: &admin.ServicePrincipalProfile{},
+						},
 					},
 				},
 			},

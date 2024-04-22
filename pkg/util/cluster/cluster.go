@@ -465,10 +465,6 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 				FipsValidatedModules: api.FipsValidatedModulesEnabled,
 				Version:              osClusterVersion,
 			},
-			ServicePrincipalProfile: api.ServicePrincipalProfile{
-				ClientID:     clientID,
-				ClientSecret: api.SecureString(clientSecret),
-			},
 			NetworkProfile: api.NetworkProfile{
 				PodCIDR:                "10.128.0.0/14",
 				ServiceCIDR:            "172.30.0.0/16",
@@ -502,6 +498,13 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 			},
 		},
 		Location: c.env.Location(),
+	}
+
+	if clientID != "" && clientSecret != "" {
+		oc.Properties.ServicePrincipalProfile = &api.ServicePrincipalProfile{
+			ClientID:     clientID,
+			ClientSecret: api.SecureString(clientSecret),
+		}
 	}
 
 	if c.env.IsLocalDevelopmentMode() {

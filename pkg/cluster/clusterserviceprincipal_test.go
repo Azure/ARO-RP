@@ -50,7 +50,7 @@ func TestCreateOrUpdateClusterServicePrincipalRBAC(t *testing.T) {
 					ClusterProfile: api.ClusterProfile{
 						ResourceGroupID: resourceGroupID,
 					},
-					ServicePrincipalProfile: api.ServicePrincipalProfile{
+					ServicePrincipalProfile: &api.ServicePrincipalProfile{
 						SPObjectID: fakeClusterSPObjectId,
 					},
 				},
@@ -263,7 +263,7 @@ func TestServicePrincipalUpdated(t *testing.T) {
 	for _, tt := range []struct {
 		name          string
 		kubernetescli func() *fake.Clientset
-		spp           api.ServicePrincipalProfile
+		spp           *api.ServicePrincipalProfile
 		wantSecret    func() *corev1.Secret
 		wantErrMsg    string
 	}{
@@ -272,7 +272,7 @@ func TestServicePrincipalUpdated(t *testing.T) {
 			kubernetescli: func() *fake.Clientset {
 				return fake.NewSimpleClientset()
 			},
-			spp: api.ServicePrincipalProfile{
+			spp: &api.ServicePrincipalProfile{
 				ClientID:     "aadClientId",
 				ClientSecret: "aadClientSecretNew",
 			},
@@ -287,7 +287,7 @@ func TestServicePrincipalUpdated(t *testing.T) {
 				})
 				return cli
 			},
-			spp: api.ServicePrincipalProfile{
+			spp: &api.ServicePrincipalProfile{
 				ClientID:     "aadClientId",
 				ClientSecret: "aadClientSecretNew",
 			},
@@ -300,7 +300,7 @@ func TestServicePrincipalUpdated(t *testing.T) {
 				secret.Data["cloud-config"] = []byte("This is some random data that is not going to unmarshal properly!")
 				return fake.NewSimpleClientset(&secret)
 			},
-			spp: api.ServicePrincipalProfile{
+			spp: &api.ServicePrincipalProfile{
 				ClientID:     "aadClientId",
 				ClientSecret: "aadClientSecretNew",
 			},
@@ -312,7 +312,7 @@ func TestServicePrincipalUpdated(t *testing.T) {
 				secret := getFakeAROSecret("aadClientId", "aadClientSecret")
 				return fake.NewSimpleClientset(&secret)
 			},
-			spp: api.ServicePrincipalProfile{
+			spp: &api.ServicePrincipalProfile{
 				ClientID:     "aadClientIdNew",
 				ClientSecret: "aadClientSecretNew",
 			},
@@ -327,7 +327,7 @@ func TestServicePrincipalUpdated(t *testing.T) {
 				secret := getFakeAROSecret("aadClientId", "aadClientSecret")
 				return fake.NewSimpleClientset(&secret)
 			},
-			spp: api.ServicePrincipalProfile{
+			spp: &api.ServicePrincipalProfile{
 				ClientID:     "aadClientId",
 				ClientSecret: "aadClientSecretNew",
 			},
@@ -342,7 +342,7 @@ func TestServicePrincipalUpdated(t *testing.T) {
 				secret := getFakeAROSecret("aadClientId", "aadClientSecret")
 				return fake.NewSimpleClientset(&secret)
 			},
-			spp: api.ServicePrincipalProfile{
+			spp: &api.ServicePrincipalProfile{
 				ClientID:     "aadClientId",
 				ClientSecret: "aadClientSecret",
 			},
@@ -397,7 +397,7 @@ func TestUpdateAROSecret(t *testing.T) {
 			},
 			doc: api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: api.ServicePrincipalProfile{
+					ServicePrincipalProfile: &api.ServicePrincipalProfile{
 						ClientID:     "aadClientId",
 						ClientSecret: "aadClientSecret",
 					},
@@ -418,7 +418,7 @@ func TestUpdateAROSecret(t *testing.T) {
 			},
 			doc: api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: api.ServicePrincipalProfile{
+					ServicePrincipalProfile: &api.ServicePrincipalProfile{
 						ClientID:     "new-client-id",
 						ClientSecret: "aadClientSecret",
 					},
@@ -449,7 +449,7 @@ func TestUpdateAROSecret(t *testing.T) {
 			},
 			doc: api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: api.ServicePrincipalProfile{
+					ServicePrincipalProfile: &api.ServicePrincipalProfile{
 						ClientID:     "clientID",
 						ClientSecret: "aadClientSecret",
 					},
@@ -528,7 +528,7 @@ func TestUpdateOpenShiftSecret(t *testing.T) {
 			},
 			doc: api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: api.ServicePrincipalProfile{
+					ServicePrincipalProfile: &api.ServicePrincipalProfile{
 						ClientID:     "azure_client_id_value",
 						ClientSecret: "azure_client_secret_value",
 					},
@@ -553,7 +553,7 @@ func TestUpdateOpenShiftSecret(t *testing.T) {
 			},
 			doc: api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: api.ServicePrincipalProfile{
+					ServicePrincipalProfile: &api.ServicePrincipalProfile{
 						ClientID:     "azure_client_id_value",
 						ClientSecret: "new_azure_client_secret_value",
 					},
@@ -580,7 +580,7 @@ func TestUpdateOpenShiftSecret(t *testing.T) {
 			},
 			doc: api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: api.ServicePrincipalProfile{
+					ServicePrincipalProfile: &api.ServicePrincipalProfile{
 						ClientID:     "azure_client_id_value",
 						ClientSecret: "azure_client_secret_value",
 					},
@@ -606,7 +606,7 @@ func TestUpdateOpenShiftSecret(t *testing.T) {
 			},
 			doc: api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: api.ServicePrincipalProfile{
+					ServicePrincipalProfile: &api.ServicePrincipalProfile{
 						ClientID:     "azure_client_id_value",
 						ClientSecret: "azure_client_secret_value",
 					},
