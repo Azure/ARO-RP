@@ -178,8 +178,9 @@ include /etc/logrotate.d
     local -r logrotate_d="/etc/logrotate.d"
     log "Writing logrotate files to $logrotate_d"
     for dropin_name in "${!dropin_files[@]}"; do
-        local -r dropin_file="$logrotate_d/$dropin_name"
-        write_file "$dropin_file" "${dropin_files["$dropin_name"]}"
+        local -r dropin_filename="$logrotate_d/$dropin_name"
+        local -r dropin_file="${dropin_files["$dropin_name"]}"
+        write_file dropin_filename dropin_file true
     done
 }
 
@@ -225,6 +226,8 @@ pull_container_images() {
 enable_services() {
     local -n services="$1"
     log "starting"
+
+    systemctl daemon-reload
 
     log "enabling services ${services[*]}"
     # shellcheck disable=SC2068
@@ -276,7 +279,40 @@ abort() {
     exit 1
 }
 
-# configure_rhui_repo
+# configure_rpm_repos
+# New repositories should be added in their own functions, and called here
+# args:
+# 1) retry_wait_time - nameref
+configure_rpm_repos() {
+    log "starting"
+
+    configure_rhui_repo "$1"
+    create_azure_rpm_repos
+}
+
+# create_azure_rpm_repos creates /etc/yum.repos.d/azure.repo repository file
+create_azure_rpm_repos() {
+    log "starting"
+
+    local -r azure_repo_filename='/etc/yum.repos.d/azure.repo'
+    local -r azure_repo_file='[azure-cli]
+name=azure-cli
+baseurl=https://packages.microsoft.com/yumrepos/azure-cli
+enabled=yes
+gpgcheck=yes
+
+[azurecore]
+name=azurecore
+baseurl=https://packages.microsoft.com/yumrepos/azurecore
+enabled=yes
+gpgcheck=no'
+
+    write_file azure_repo_filename azure_repo_file true
+}
+
+# configure_rhui_repo enables all rhui-microsoft-azure* repos
+# args:
+# 1) retry_wait_time - nameref
 configure_rhui_repo() {
     log "starting"
 
@@ -300,26 +336,6 @@ dnf update -y"
 
     write_file cron_weekly_dnf_update_filename cron_weekly_dnf_update_file true
     chmod +x "$cron_weekly_dnf_update_filename"
-}
-
-# create_azure_rpm_repos creates /etc/yum.repos.d/azure.repo repository file
-create_azure_rpm_repos() {
-    log "starting"
-
-    local -r azure_repo_filename='/etc/yum.repos.d/azure.repo'
-    local -r azure_repo_file='[azure-cli]
-name=azure-cli
-baseurl=https://packages.microsoft.com/yumrepos/azure-cli
-enabled=yes
-gpgcheck=yes
-
-[azurecore]
-name=azurecore
-baseurl=https://packages.microsoft.com/yumrepos/azurecore
-enabled=yes
-gpgcheck=no'
-
-    write_file azure_repo_filename azure_repo_file true
 }
 
 # configure_disk_partitions
@@ -361,8 +377,8 @@ configure_certs() {
     csplit -f /usr/lib/ssl/certs/cert- -b %03d.pem /etc/pki/tls/certs/ca-bundle.crt /^$/1 "{*}" >/dev/null
     c_rehash /usr/lib/ssl/certs
 
-# we leave clientId blank as long as only 1 managed identity assigned to vmss
-# if we have more than 1, we will need to populate with clientId used for off-node scanning
+    # we leave clientId blank as long as only 1 managed identity assigned to vmss
+    # if we have more than 1, we will need to populate with clientId used for off-node scanning
     local -r nodescan_agent_filename="/etc/default/vsa-nodescan-agent.config"
     local -r nodescan_agent_file="{
     \"Nice\": 19,
@@ -575,12 +591,6 @@ configure_service_fluentbit() {
     local -n image="$2"
     log "starting"
     log "configuring fluentbit service"
-
-    if [ -z "$conf_file" ]; then
-        abort "$1 config file cannot be empty"
-    elif [ -z "$image" ]; then
-        abort "$2 image cannot be empty"
-    fi
 
     mkdir -p /etc/fluentbit/
     mkdir -p /var/lib/fluent

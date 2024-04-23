@@ -8,7 +8,14 @@ if [ "${DEBUG:-false}" == true ]; then
 fi
 
 main() {
+    # transaction attempt retry time in seconds
+    local -ri retry_wait_time=60
+
+    # shellcheck source=common.sh
+    source common.sh
+
     configure_sshd
+    configure_rpm_repos retry_wait_time
 
     local -ar exclude_pkgs=(
         "-x WALinuxAgent"
@@ -29,6 +36,7 @@ main() {
     )
 
     dnf_install_pkgs repo_rpm_pkgs retry_wait_time
+    configure_dnf_cron_job
 
     local -ra install_pkgs=(
         clamav
@@ -61,15 +69,14 @@ ${gateway_logdir} {
     compress
 }"
 
+    # Key dictates the filename written in /etc/logrotate.d
     local -rA logrotate_dropins=(
-        ["gateway_log_config"]="$gateway_log_file"
+        ["gateway"]="$gateway_log_file"
     )
 
     configure_logrotate logrotate_dropins
     configure_selinux
-
-    mkdir -p /var/log/journal
-    mkdir -p /var/lib/waagent/Microsoft.Azure.KeyVault.Store
+    create_required_dirs
 
     local -ra enable_ports=(
         "80/tcp"
@@ -87,18 +94,7 @@ ${gateway_logdir} {
         "$fluentbit_image"
     )
 
-    pull_container_images images
-
-    local -ra gateway_services=(
-      aro-gateway
-      auoms
-      azsecd
-      azsecmond
-      mdsd
-      mdm
-      chronyd
-      fluentbit
-    )
+    pull_container_images images registry_config_file
 
     local -r fluentbit_conf_file="[INPUT]
 Name systemd
@@ -117,7 +113,11 @@ DB /var/lib/fluent/journaldb
 	Match *
 	Port 29230"
 
-    local -r aro_dbtoken_service_conf_file="ACR_RESOURCE_ID='$ACRRESOURCEID'
+    configure_service_fluentbit fluentbit_conf_file fluentbit_image
+    local -r mdm_role="gateway"
+    configure_service_mdm mdm_role mdmimage
+
+    local -r gwy_dbtoken_service_conf_file="ACR_RESOURCE_ID='$ACRRESOURCEID'
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 AZURE_DBTOKEN_CLIENT_ID='$DBTOKENCLIENTID'
 DBTOKEN_URL='$DBTOKENURL'
@@ -126,14 +126,28 @@ MDM_NAMESPACE=Gateway
 GATEWAY_DOMAINS='$GATEWAYDOMAINS'
 GATEWAY_FEATURES='$GATEWAYFEATURES'
 RPIMAGE='$RPIMAGE'"
+    configure_service_gateway gateway_logdir
 
-    local -n mdsd_gateway_version="$GATEWAYMDSDCONFIGVERSION"
+    local -r mdsd_config_version="$GATEWAYMDSDCONFIGVERSION"
+    configure_service_mdsd mdm_role mdsd_config_version
+    local -r mdsd_role="gwy"
+    configure_timers_mdm_mdsd mdsd_role
 
-    configure_service_fluentbit fluentbit_conf_file fluentbit_image
-    configure_service_mdm
-    configure_timers_mdm_mdsd
-    configure_service_gateway gateway_log_file
-    configure_service_mdsd
+    local -ra gateway_services=(
+        "aro-gateway"
+        "auoms"
+        "azsecd"
+        "azsecmond"
+        "mdsd"
+        "mdm"
+        "chronyd"
+        "fluentbit"
+        "download-mdsd-credentials.timer"
+        "download-mdm-credentials.timer"
+    )
+
+    enable_services gateway_services
+
     reboot_vm
 }
 

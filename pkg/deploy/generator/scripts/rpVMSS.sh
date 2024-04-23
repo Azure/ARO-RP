@@ -149,34 +149,6 @@ DB /var/lib/fluent/journaldb
     reboot_vm
 }
 
-# configure_rpm_repos
-configure_rpm_repos() {
-    log "starting"
-
-    configure_rhui_repo "$1"
-    create_azure_rpm_repos
-}
-
-# create_azure_rpm_repos creates /etc/yum.repos.d/azure.repo repository file
-create_azure_rpm_repos() {
-    log "starting"
-
-    local -r azure_repo_filename='/etc/yum.repos.d/azure.repo'
-    local -r azure_repo_file='[azure-cli]
-name=azure-cli
-baseurl=https://packages.microsoft.com/yumrepos/azure-cli
-enabled=yes
-gpgcheck=yes
-
-[azurecore]
-name=azurecore
-baseurl=https://packages.microsoft.com/yumrepos/azurecore
-enabled=yes
-gpgcheck=no'
-
-    write_file azure_repo_filename azure_repo_file true
-}
-
 # configure_service_aro_rp
 configure_service_aro_rp() {
     log "starting"
