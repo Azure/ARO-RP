@@ -51,13 +51,15 @@ import (
 var embeddedFiles embed.FS
 
 type Operator interface {
-	CreateOrUpdate(context.Context) error
+	Install(context.Context) error
+	Update(context.Context) error
 	CreateOrUpdateCredentialsRequest(context.Context) error
 	IsReady(context.Context) (bool, error)
 	Restart(context.Context, []string) error
 	IsRunningDesiredVersion(context.Context) (bool, error)
 	RenewMDSDCertificate(context.Context) error
 	EnsureUpgradeAnnotation(context.Context) error
+	SyncClusterObject(context.Context) error
 }
 
 type operator struct {
@@ -188,7 +190,6 @@ func (o *operator) createObjects(ctx context.Context) ([]kruntime.Object, error)
 
 func (o *operator) resources(ctx context.Context) ([]kruntime.Object, error) {
 	// first static resources from Assets
-
 	results, err := o.createObjects(ctx)
 	if err != nil {
 		return nil, err
@@ -211,6 +212,24 @@ func (o *operator) resources(ctx context.Context) ([]kruntime.Object, error) {
 		return nil, err
 	}
 
+	// create a secret here for genevalogging, later we will copy it to
+	// the genevalogging namespace.
+	return append(results,
+		&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      pkgoperator.SecretName,
+				Namespace: pkgoperator.Namespace,
+			},
+			Data: map[string][]byte{
+				genevalogging.GenevaCertName: gcsCertBytes,
+				genevalogging.GenevaKeyName:  gcsKeyBytes,
+				corev1.DockerConfigJsonKey:   []byte(ps),
+			},
+		},
+	), nil
+}
+
+func (o *operator) clusterObject() (*arov1alpha1.Cluster, error) {
 	vnetID, _, err := apisubnet.Split(o.oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return nil, err
@@ -281,32 +300,44 @@ func (o *operator) resources(ctx context.Context) ([]kruntime.Object, error) {
 		// covers the case of an admin-disable, we need to update dnsmasq on each node
 		cluster.Spec.GatewayDomains = make([]string, 0)
 	}
-
-	// create a secret here for genevalogging, later we will copy it to
-	// the genevalogging namespace.
-	return append(results,
-		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      pkgoperator.SecretName,
-				Namespace: pkgoperator.Namespace,
-			},
-			Data: map[string][]byte{
-				genevalogging.GenevaCertName: gcsCertBytes,
-				genevalogging.GenevaKeyName:  gcsKeyBytes,
-				corev1.DockerConfigJsonKey:   []byte(ps),
-			},
-		},
-		cluster,
-	), nil
+	return cluster, nil
 }
 
-func (o *operator) CreateOrUpdate(ctx context.Context) error {
+func (o *operator) SyncClusterObject(ctx context.Context) error {
+	resource, err := o.clusterObject()
+	if err != nil {
+		return err
+	}
+	return o.dh.Ensure(ctx, resource)
+}
+
+func (o *operator) Install(ctx context.Context) error {
 	resources, err := o.resources(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = dynamichelper.Prepare(resources)
+	// If we're installing the Operator for the first time, include the Cluster
+	// object, otherwise it is updated separately
+	cluster, err := o.clusterObject()
+	if err != nil {
+		return err
+	}
+	resources = append(resources, cluster)
+
+	return o.applyDeployment(ctx, resources)
+}
+
+func (o *operator) Update(ctx context.Context) error {
+	resources, err := o.resources(ctx)
+	if err != nil {
+		return err
+	}
+	return o.applyDeployment(ctx, resources)
+}
+
+func (o *operator) applyDeployment(ctx context.Context, resources []kruntime.Object) error {
+	err := dynamichelper.Prepare(resources)
 	if err != nil {
 		return err
 	}

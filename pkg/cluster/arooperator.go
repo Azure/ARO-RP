@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 
 	cloudcredentialv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -32,9 +33,25 @@ func (m *manager) ensureAROOperator(ctx context.Context) error {
 		return nil
 	}
 
-	err := m.aroOperatorDeployer.CreateOrUpdate(ctx)
+	err := m.aroOperatorDeployer.Update(ctx)
 	if err != nil {
-		m.log.Errorf("cannot ensureAROOperator.CreateOrUpdate: %s", err.Error())
+		m.log.Error(fmt.Errorf("cannot ensureAROOperator.Update: %w", err))
+	}
+	return err
+}
+
+func (m *manager) installAROOperator(ctx context.Context) error {
+	err := m.aroOperatorDeployer.Install(ctx)
+	if err != nil {
+		m.log.Error(fmt.Errorf("cannot installAROOperator.Install: %w", err))
+	}
+	return err
+}
+
+func (m *manager) syncClusterObject(ctx context.Context) error {
+	err := m.aroOperatorDeployer.SyncClusterObject(ctx)
+	if err != nil {
+		m.log.Error(fmt.Errorf("cannot ensureAROOperator.SyncClusterObject: %w", err))
 	}
 	return err
 }
