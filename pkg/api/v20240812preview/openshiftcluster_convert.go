@@ -32,10 +32,6 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 			ConsoleProfile: ConsoleProfile{
 				URL: oc.Properties.ConsoleProfile.URL,
 			},
-			ServicePrincipalProfile: ServicePrincipalProfile{
-				ClientID:     oc.Properties.ServicePrincipalProfile.ClientID,
-				ClientSecret: string(oc.Properties.ServicePrincipalProfile.ClientSecret),
-			},
 			NetworkProfile: NetworkProfile{
 				PodCIDR:          oc.Properties.NetworkProfile.PodCIDR,
 				ServiceCIDR:      oc.Properties.NetworkProfile.ServiceCIDR,
@@ -136,6 +132,12 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 		}
 	}
 
+	if oc.Properties.ServicePrincipalProfile != nil {
+		out.Properties.ServicePrincipalProfile = &ServicePrincipalProfile{}
+		out.Properties.ServicePrincipalProfile.ClientID = oc.Properties.ServicePrincipalProfile.ClientID
+		out.Properties.ServicePrincipalProfile.ClientSecret = string(oc.Properties.ServicePrincipalProfile.ClientSecret)
+	}
+
 	if oc.Properties.PlatformWorkloadIdentityProfile != nil && oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities != nil {
 		out.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{}
 		out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = make([]PlatformWorkloadIdentity, len(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities))
@@ -214,8 +216,12 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 		out.Properties.ConsoleProfile.URL = oc.Properties.ConsoleProfile.URL
 	}
 	out.Properties.ClusterProfile.FipsValidatedModules = api.FipsValidatedModules(oc.Properties.ClusterProfile.FipsValidatedModules)
-	out.Properties.ServicePrincipalProfile.ClientID = oc.Properties.ServicePrincipalProfile.ClientID
-	out.Properties.ServicePrincipalProfile.ClientSecret = api.SecureString(oc.Properties.ServicePrincipalProfile.ClientSecret)
+
+	if oc.Properties.ServicePrincipalProfile != nil {
+		out.Properties.ServicePrincipalProfile = &api.ServicePrincipalProfile{}
+		out.Properties.ServicePrincipalProfile.ClientID = oc.Properties.ServicePrincipalProfile.ClientID
+		out.Properties.ServicePrincipalProfile.ClientSecret = api.SecureString(oc.Properties.ServicePrincipalProfile.ClientSecret)
+	}
 
 	if oc.Properties.PlatformWorkloadIdentityProfile != nil && oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities != nil {
 		out.Properties.PlatformWorkloadIdentityProfile = &api.PlatformWorkloadIdentityProfile{}
