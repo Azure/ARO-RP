@@ -187,7 +187,8 @@ include /etc/logrotate.d
 # pull_container_images
 pull_container_images() {
     local -n pull_images="$1"
-    local -n registry_conf="${2:-}"
+    local -n registry_conf="${2:-empty}"
+    local -r az_login="${3:-true}"
     log "starting"
 
     # The managed identity that the VM runs as only has a single roleassignment.
@@ -196,7 +197,9 @@ pull_container_images() {
     # role assignments scoped on the subscription we're deploying into, it will
     # not show on az login -i, which is why the below line is commented.
     # az account set -s "$SUBSCRIPTIONID"
-    az login -i --allow-no-subscriptions
+    if $az_login; then
+        az login -i --allow-no-subscriptions
+    fi
 
     # Suppress emulation output for podman instead of docker for az acr compatability
     mkdir -p /etc/containers/
@@ -211,7 +214,9 @@ pull_container_images() {
     fi
 
     log "logging into prod acr"
-    az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
+    if $az_login; then
+        az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
+    fi
 
     # shellcheck disable=SC2068
     for i in ${pull_images[@]}; do
@@ -219,7 +224,9 @@ pull_container_images() {
         podman pull "$i"
     done
 
-    az logout
+    if $az_login; then
+        az logout
+    fi
 }
 
 # enable_services enables all services required for aro rp
@@ -367,28 +374,32 @@ configure_certs() {
     log "Configuring certificates for $role"
 
     if [ "$role" == "devproxy" ]; then
-        base64 -d <<<"$PROXYCERT" >/etc/proxy/proxy.crt
-        base64 -d <<<"$PROXYKEY" >/etc/proxy/proxy.key
-        base64 -d <<<"$PROXYCLIENTCERT" >/etc/proxy/proxy-client.crt
+        local -r proxy_certs_basedir="/etc/proxy"
+        mkdir -p "$proxy_certs_basedir"
+        base64 -d <<<"$PROXYCERT" > "$proxy_certs_basedir/proxy.crt"
+        base64 -d <<<"$PROXYKEY" > "$proxy_certs_basedir/proxy.key"
+        base64 -d <<<"$PROXYCLIENTCERT" > "$proxy_certs_basedir/proxy-client.crt"
         chown -R 1000:1000 /etc/proxy
-        chmod 0600 /etc/proxy/proxy.key
+        chmod 0600 "$proxy_certs_basedir/proxy.key"
         return 0
     fi
 
     if [ "$role" == "rp" ]; then
-        mkdir -p /etc/aro-rp
-        base64 -d <<<"$ADMINAPICABUNDLE" >/etc/aro-rp/admin-ca-bundle.pem
+        local -r rp_certs_basedir="/etc/aro-rp"
+        mkdir -p 
+        base64 -d <<<"$ADMINAPICABUNDLE" > "$rp_certs_basedir/admin-ca-bundle.pem"
         if [[ -n "$ARMAPICABUNDLE" ]]; then
-        base64 -d <<<"$ARMAPICABUNDLE" >/etc/aro-rp/arm-ca-bundle.pem
+        base64 -d <<<"$ARMAPICABUNDLE" > "$rp_certs_basedir/arm-ca-bundle.pem"
         fi
-        chown -R 1000:1000 /etc/aro-rp
+        chown -R 1000:1000 "$rp_certs_basedir"
     fi
 
     # setting MONITORING_GCS_AUTH_ID_TYPE=AuthKeyVault seems to have caused mdsd not
     # to honour SSL_CERT_FILE any more, heaven only knows why.
-    mkdir -p /usr/lib/ssl/certs
-    csplit -f /usr/lib/ssl/certs/cert- -b %03d.pem /etc/pki/tls/certs/ca-bundle.crt /^$/1 "{*}" >/dev/null
-    c_rehash /usr/lib/ssl/certs
+    local -r ssl_certs_basedir="/usr/lib/ssl/certs"
+    mkdir -p 
+    csplit -f "$ssl_certs_basedir/cert-" -b %03d.pem /etc/pki/tls/certs/ca-bundle.crt /^$/1 "{*}" >/dev/null
+    c_rehash "$ssl_certs_basedir"
 
     # we leave clientId blank as long as only 1 managed identity assigned to vmss
     # if we have more than 1, we will need to populate with clientId used for off-node scanning
@@ -710,4 +721,6 @@ run_azsecd_config_scan() {
 create_required_dirs() {
     mkdir -p /var/log/journal
     mkdir -p /var/lib/waagent/Microsoft.Azure.KeyVault.Store
+    # Does not exist on devProxyVMSS
+    mkdir -p /var/opt/microsoft/linuxmonagent
 }

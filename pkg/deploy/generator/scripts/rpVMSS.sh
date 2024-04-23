@@ -14,6 +14,7 @@ main() {
     # shellcheck source=common.sh
     source common.sh
 
+    create_required_dirs
     configure_sshd
     configure_rpm_repos retry_wait_time
 
@@ -60,7 +61,6 @@ main() {
     local -rA logrotate_dropins=()
     configure_logrotate logrotate_dropins
     configure_selinux
-    create_required_dirs
 
     local -ra enable_ports=(
         "443/tcp"
@@ -127,6 +127,8 @@ DB /var/lib/fluent/journaldb
     configure_service_aro_portal rpimage
     local -r mdsd_rp_version="$RPMDSDCONFIGVERSION"
     configure_service_mdsd monitor_role mdsd_rp_version
+
+    configure_certs monitor_role
 
     local -ra aro_services=(
         "aro-dbtoken"

@@ -14,6 +14,8 @@ main() {
     # shellcheck source=common.sh
     source common.sh
 
+    create_required_dirs
+
     local -ar exclude_pkgs=(
         "-x WALinuxAgent"
         "-x WALinuxAgent-udev"
@@ -44,8 +46,11 @@ main() {
     }
 }"
 
-    pull_container_images proxy_image registry_config_file
+    pull_container_images proxy_image registry_config_file false
     configure_devproxy_services proxy_images
+
+    local -r vmss_role="devproxy"
+    configure_certs vmss_role
 
     local -ra proxy_services=(
         proxy
@@ -60,17 +65,6 @@ main() {
 #	proxy
 configure_devproxy_services() {
 	configure_service_proxy "$1"
-}
-
-# configure_certs
-configure_certs() {
-    log "starting"
-
-	base64 -d <<<"$PROXYCERT" >/etc/proxy/proxy.crt
-	base64 -d <<<"$PROXYKEY" >/etc/proxy/proxy.key
-	base64 -d <<<"$PROXYCLIENTCERT" >/etc/proxy/proxy-client.crt
-	chown -R 1000:1000 /etc/proxy
-	chmod 0600 /etc/proxy/proxy.key
 }
 
 configure_service_proxy() {

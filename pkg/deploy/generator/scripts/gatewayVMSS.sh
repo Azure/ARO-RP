@@ -14,6 +14,7 @@ main() {
     # shellcheck source=common.sh
     source common.sh
 
+    create_required_dirs
     configure_sshd
     configure_rpm_repos retry_wait_time
 
@@ -76,7 +77,6 @@ ${gateway_logdir} {
 
     configure_logrotate logrotate_dropins
     configure_selinux
-    create_required_dirs
 
     local -ra enable_ports=(
         "80/tcp"
@@ -132,6 +132,8 @@ RPIMAGE='$RPIMAGE'"
     configure_service_mdsd mdm_role mdsd_config_version
     local -r mdsd_role="gwy"
     configure_timers_mdm_mdsd mdsd_role
+
+    configure_certs mdm_role
 
     local -ra gateway_services=(
         "aro-gateway"
