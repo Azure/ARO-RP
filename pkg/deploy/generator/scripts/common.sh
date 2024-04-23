@@ -362,14 +362,27 @@ configure_disk_partitions() {
 
 # configure_certs
 configure_certs() {
+    local -n role="$1"
     log "starting"
+    log "Configuring certificates for $role"
 
-    mkdir /etc/aro-rp
-    base64 -d <<<"$ADMINAPICABUNDLE" >/etc/aro-rp/admin-ca-bundle.pem
-    if [[ -n "$ARMAPICABUNDLE" ]]; then
-    base64 -d <<<"$ARMAPICABUNDLE" >/etc/aro-rp/arm-ca-bundle.pem
+    if [ "$role" == "devproxy" ]; then
+        base64 -d <<<"$PROXYCERT" >/etc/proxy/proxy.crt
+        base64 -d <<<"$PROXYKEY" >/etc/proxy/proxy.key
+        base64 -d <<<"$PROXYCLIENTCERT" >/etc/proxy/proxy-client.crt
+        chown -R 1000:1000 /etc/proxy
+        chmod 0600 /etc/proxy/proxy.key
+        return 0
     fi
-    chown -R 1000:1000 /etc/aro-rp
+
+    if [ "$role" == "rp" ]; then
+        mkdir -p /etc/aro-rp
+        base64 -d <<<"$ADMINAPICABUNDLE" >/etc/aro-rp/admin-ca-bundle.pem
+        if [[ -n "$ARMAPICABUNDLE" ]]; then
+        base64 -d <<<"$ARMAPICABUNDLE" >/etc/aro-rp/arm-ca-bundle.pem
+        fi
+        chown -R 1000:1000 /etc/aro-rp
+    fi
 
     # setting MONITORING_GCS_AUTH_ID_TYPE=AuthKeyVault seems to have caused mdsd not
     # to honour SSL_CERT_FILE any more, heaven only knows why.
