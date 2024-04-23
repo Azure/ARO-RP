@@ -11,8 +11,8 @@ main() {
     # transaction attempt retry time in seconds
     local -ri retry_wait_time=60
 
-    # shellcheck source=common.sh
-    source common.sh
+    # shellcheck source=commonVMSS.sh
+    source commonVMSS.sh
 
     create_required_dirs
     configure_sshd
