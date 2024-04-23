@@ -114,6 +114,9 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *Ope
 	if err := sv.validatePlatformWorkloadIdentityProfile(path+".platformWorkloadIdentityProfile", p.PlatformWorkloadIdentityProfile); err != nil {
 		return err
 	}
+	if err := sv.validateIdentityXORServiceCredentials(p.PlatformWorkloadIdentityProfile, path+".servicePrincipalProfile", p.ServicePrincipalProfile); err != nil {
+		return err
+	}
 
 	if isCreate {
 		if len(p.WorkerProfilesStatus) != 0 {
@@ -433,5 +436,21 @@ func (sv openShiftClusterStaticValidator) validatePlatformWorkloadIdentityProfil
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities[%d].resourceID", path, n), "Resource must be an identity.")
 		}
 	}
+	return nil
+}
+
+func (sv openShiftClusterStaticValidator) validateIdentityXORServiceCredentials(pwip *PlatformWorkloadIdentityProfile, spPath string, spp *ServicePrincipalProfile) error {
+	// nothing to validate if the platform workload identity profile is nil
+	if pwip == nil {
+		if spp == nil {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, spPath, "Must provide either an identity or service principal credentials.")
+		}
+		return nil
+	}
+
+	if spp != nil && (spp.ClientID != "" || spp.ClientSecret != "") {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, spPath, "Cannot use identities and service principal credentials at the same time.")
+	}
+
 	return nil
 }

@@ -1209,6 +1209,23 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 			},
 			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile.PlatformWorkloadIdentities[0].resourceID: Resource must be an identity.",
 		},
+		{
+			name: "no credentials with identities",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
+						{
+							ResourceID: "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/identities/fake-cluster-name",
+						},
+					},
+				}
+				oc.Properties.ServicePrincipalProfile = &ServicePrincipalProfile{
+					ClientID:     "11111111-1111-1111-1111-111111111111",
+					ClientSecret: "BAD",
+				}
+			},
+			wantErr: "400: InvalidParameter: properties.servicePrincipalProfile: Cannot use identities and service principal credentials at the same time.",
+		},
 	}
 
 	runTests(t, testModeCreate, createTests)
