@@ -1226,6 +1226,33 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 			},
 			wantErr: "400: InvalidParameter: properties.servicePrincipalProfile: Cannot use identities and service principal credentials at the same time.",
 		},
+		{
+			name: "cluster identity missing operator identity",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Identity = &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{
+						"first": {
+							ClientID:    "11111111-1111-1111-1111-111111111111",
+							PrincipalID: "SOMETHING",
+						},
+					},
+				}
+			},
+			wantErr: "400: InvalidParameter: identity: Cluster identity and operator roles require each other.",
+		},
+		{
+			name: "operator identity missing cluster identity",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
+						{
+							OperatorName: "operator_name",
+						},
+					},
+				}
+			},
+			wantErr: "400: InvalidParameter: identity: Cluster identity and operator roles require each other.",
+		},
 	}
 
 	runTests(t, testModeCreate, createTests)
