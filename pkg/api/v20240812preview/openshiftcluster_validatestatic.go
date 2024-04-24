@@ -79,6 +79,10 @@ func (sv openShiftClusterStaticValidator) validate(oc *OpenShiftCluster, isCreat
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "location", "The provided location '%s' is invalid.", oc.Location)
 	}
 
+	if err := sv.validatePlatformIdentitiesExist("identity", oc); err != nil {
+		return err
+	}
+
 	return sv.validateProperties("properties", &oc.Properties, isCreate, architectureVersion)
 }
 
@@ -452,5 +456,23 @@ func (sv openShiftClusterStaticValidator) validateIdentityXORServiceCredentials(
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, spPath, "Cannot use identities and service principal credentials at the same time.")
 	}
 
+	return nil
+}
+
+func (sv openShiftClusterStaticValidator) validatePlatformIdentitiesExist(path string, oc *OpenShiftCluster) error {
+	clusterIdentityPresent := oc.Identity != nil
+
+	operatorRolePresent := false
+	if oc.Properties.PlatformWorkloadIdentityProfile != nil {
+		for _, pwip := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+			if pwip.OperatorName != "" {
+				operatorRolePresent = true
+			}
+		}
+	}
+
+	if clusterIdentityPresent != operatorRolePresent {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path, "Cluster identity and operator roles require each other.")
+	}
 	return nil
 }
