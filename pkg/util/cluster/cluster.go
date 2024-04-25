@@ -15,8 +15,10 @@ import (
 	"strings"
 	"time"
 
+	armsdk "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
+	sdkkeyvault "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -34,9 +36,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armkeyvault"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
-	keyvaultclient "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	redhatopenshift20200430 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2020-04-30/redhatopenshift"
 	redhatopenshift20210901preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2021-09-01-preview/redhatopenshift"
@@ -67,7 +69,7 @@ type Cluster struct {
 	roleassignments                   authorization.RoleAssignmentsClient
 	peerings                          network.VirtualNetworkPeeringsClient
 	ciParentVnetPeerings              network.VirtualNetworkPeeringsClient
-	vaultsClient                      keyvaultclient.VaultsClient
+	vaultsClient                      armkeyvault.VaultsClient
 }
 
 type errors []error
@@ -91,6 +93,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 	}
 
 	options := environment.Environment().EnvironmentCredentialOptions()
+
 	spTokenCredential, err := azidentity.NewEnvironmentCredential(options)
 	if err != nil {
 		return nil, err
@@ -104,6 +107,17 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 	scopes := []string{environment.Environment().ResourceManagerScope}
 	authorizer := azidext.NewTokenCredentialAdapter(spTokenCredential, scopes)
 
+	armOption := armsdk.ClientOptions{
+		ClientOptions: policy.ClientOptions{
+			Cloud: options.Cloud,
+		},
+	}
+
+	vaultClient, err := armkeyvault.NewVaultsClient(environment.SubscriptionID(), spTokenCredential, &armOption)
+
+	if err != nil {
+		return nil, err
+	}
 	c := &Cluster{
 		log: log,
 		env: environment,
@@ -121,7 +135,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		routetables:                       network.NewRouteTablesClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		roleassignments:                   authorization.NewRoleAssignmentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		peerings:                          network.NewVirtualNetworkPeeringsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		vaultsClient:                      keyvaultclient.NewVaultsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		vaultsClient:                      vaultClient,
 	}
 
 	if ci && env.IsLocalDevelopmentMode() {
@@ -232,7 +246,8 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	if c.ci {
 		// name is limited to 24 characters, but must be globally unique, so we generate one and try if it is available
 		kvName = "kv-" + uuid.DefaultGenerator.Generate()[:21]
-		result, err := c.vaultsClient.CheckNameAvailability(ctx, mgmtkeyvault.VaultCheckNameAvailabilityParameters{Name: &kvName, Type: to.StringPtr("Microsoft.KeyVault/vaults")})
+
+		result, err := c.vaultsClient.CheckNameAvailability(ctx, sdkkeyvault.VaultCheckNameAvailabilityParameters{Name: &kvName, Type: to.StringPtr("Microsoft.KeyVault/vaults")}, nil)
 		if err != nil {
 			return err
 		}
