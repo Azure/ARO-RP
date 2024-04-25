@@ -7,15 +7,15 @@ systemctl reload sshd.service
 
 #Adding retry logic to yum commands in order to avoid stalling out on resource locks
 echo "running RHUI fix"
-for attempt in {1..5}; do
+for attempt in {1..60}; do
   yum update -y --disablerepo='*' --enablerepo='rhui-microsoft-azure*' && break
-  if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
+  if [[ ${attempt} -lt 60 ]]; then sleep 30; else exit 1; fi
 done
 
 echo "running yum update"
-for attempt in {1..5}; do
+for attempt in {1..60}; do
   yum -y -x WALinuxAgent -x WALinuxAgent-udev update --allowerasing && break
-  if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
+  if [[ ${attempt} -lt 60 ]]; then sleep 30; else exit 1; fi
 done
 
 echo "extending partition table"
@@ -35,9 +35,9 @@ echo "importing rpm repositories"
 rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
 rpm --import https://packages.microsoft.com/keys/microsoft.asc
 
-for attempt in {1..5}; do
+for attempt in {1..60}; do
   yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && break
-  if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
+  if [[ ${attempt} -lt 60 ]]; then sleep 30; else exit 1; fi
 done
 
 echo "configuring logrotate"
@@ -95,10 +95,10 @@ EOF
 semanage fcontext -a -t var_log_t "/var/log/journal(/.*)?"
 mkdir -p /var/log/journal
 
-for attempt in {1..5}; do
+for attempt in {1..60}; do
 yum -y install clamav azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security podman podman-docker openssl-perl python3 && break
   # hack - we are installing python3 on hosts due to an issue with Azure Linux Extensions https://github.com/Azure/azure-linux-extensions/pull/1505
-  if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
+  if [[ ${attempt} -lt 60 ]]; then sleep 30; else exit 1; fi
 done
 
 # https://access.redhat.com/security/cve/cve-2020-13401
