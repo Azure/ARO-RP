@@ -5,6 +5,7 @@ package compute
 
 import (
 	"context"
+	"time"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest"
@@ -28,6 +29,7 @@ var _ VirtualMachinesClient = &virtualMachinesClient{}
 func NewVirtualMachinesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) VirtualMachinesClient {
 	client := mgmtcompute.NewVirtualMachinesClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.PollingDuration = 30 * time.Minute
 
 	return &virtualMachinesClient{
 		VirtualMachinesClient: client,
