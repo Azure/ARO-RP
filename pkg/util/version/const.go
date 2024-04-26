@@ -62,5 +62,5 @@ func MUOImage(acrDomain string) string {
 
 // GateKeeperImage contains the location of the GateKeeper container image
 func GateKeeperImage(acrDomain string) string {
-	return acrDomain + "/gatekeeper:v3.11.1"
+	return acrDomain + "/gatekeeper:v3.15.1"
 }
