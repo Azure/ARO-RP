@@ -51,11 +51,6 @@ func (f *frontend) _putSubscription(ctx context.Context, r *http.Request) ([]byt
 	oldState := doc.Subscription.State
 
 	h := &codec.JsonHandle{
-		BasicHandle: codec.BasicHandle{
-			DecodeOptions: codec.DecodeOptions{
-				ErrorIfNoField: true,
-			},
-		},
 		Indent: 4,
 	}
 
