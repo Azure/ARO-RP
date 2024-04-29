@@ -1360,7 +1360,7 @@ func TestMergeApply(t *testing.T) {
 			builder := fake.NewClientBuilder().WithRuntimeObjects(tt.old)
 
 			clientFake := testclienthelper.NewHookingClient(builder.Build()).
-				WithUpdateHook(func(obj client.Object) error {
+				WithPostUpdateHook(func(obj client.Object) error {
 					beenChanged = true
 					return nil
 				})
