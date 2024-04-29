@@ -291,4 +291,11 @@ func (c openShiftClusterConverter) ExternalNoReadOnly(_oc interface{}) {
 	for i := range oc.Properties.IngressProfiles {
 		oc.Properties.IngressProfiles[i].IP = ""
 	}
+	oc.SystemData = nil
+	oc.Properties.ConsoleProfile.URL = ""
+	oc.Properties.APIServerProfile.URL = ""
+	oc.Properties.APIServerProfile.IP = ""
+	for i := range oc.Properties.IngressProfiles {
+		oc.Properties.IngressProfiles[i].IP = ""
+	}
 }
