@@ -46,6 +46,7 @@ func main() {
 	ctx := context.Background()
 	log := utillog.GetLogger()
 	cfg := viper.GetViper()
+	cfg.AutomaticEnv()
 
 	if err := run(ctx, log, dryRun, cfg); err != nil {
 		log.Fatal(err)

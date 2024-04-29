@@ -42,6 +42,7 @@ func main() {
 	audit := utillog.GetAuditEntry()
 	log := utillog.GetLogger()
 	cfg := viper.GetViper()
+	cfg.AutomaticEnv()
 
 	go func() {
 		log.Warn(http.ListenAndServe("localhost:6060", nil))

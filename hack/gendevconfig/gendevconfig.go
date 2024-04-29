@@ -60,6 +60,7 @@ func run(ctx context.Context, log *logrus.Entry, cfg *viper.Viper) error {
 func main() {
 	log := utillog.GetLogger()
 	cfg := viper.GetViper()
+	cfg.AutomaticEnv()
 
 	if err := run(context.Background(), log, cfg); err != nil {
 		log.Fatal(err)
