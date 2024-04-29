@@ -46,7 +46,7 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 		},
 	}
 
-	if oc.Properties.ServicePrincipalProfile != nil {		
+	if oc.Properties.ServicePrincipalProfile != nil {
 		out.Properties.ServicePrincipalProfile = &ServicePrincipalProfile{
 			ClientID:     oc.Properties.ServicePrincipalProfile.ClientID,
 			ClientSecret: string(oc.Properties.ServicePrincipalProfile.ClientSecret),
