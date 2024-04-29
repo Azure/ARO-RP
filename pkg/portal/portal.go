@@ -379,10 +379,7 @@ func (p *portal) makeFetcher(ctx context.Context, r *http.Request) (cluster.Fetc
 	// get proxied, so use a direct dialer for this
 	var dialer proxy.Dialer
 	if p.env.IsLocalDevelopmentMode() && doc.OpenShiftCluster.Properties.APIServerProfile.IP == "127.0.0.1" {
-		dialer, err = proxy.NewDialer(false)
-		if err != nil {
-			return nil, err
-		}
+		dialer = proxy.NewDirectDialer()
 	} else {
 		dialer = p.dialer
 	}

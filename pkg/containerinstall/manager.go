@@ -6,7 +6,6 @@ package containerinstall
 import (
 	"context"
 	"errors"
-	"os"
 
 	"github.com/sirupsen/logrus"
 
@@ -36,12 +35,12 @@ func New(ctx context.Context, log *logrus.Entry, env env.Interface, clusterUUID 
 		return nil, errors.New("running cluster installs in a container is only run in development")
 	}
 
-	pullSecret, err := pullsecret.Extract(os.Getenv("PULL_SECRET"), env.ACRDomain())
+	pullSecret, err := pullsecret.Extract(env.GetEnv("PULL_SECRET"), env.ACRDomain())
 	if err != nil {
 		return nil, err
 	}
 
-	conn, err := getConnection(ctx)
+	conn, err := getConnection(ctx, env)
 	if err != nil {
 		return nil, err
 	}

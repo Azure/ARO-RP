@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -47,14 +48,14 @@ import (
 	// +kubebuilder:scaffold:imports
 )
 
-func operator(ctx context.Context, log *logrus.Entry) error {
+func operator(ctx context.Context, log *logrus.Entry, cfg *viper.Viper) error {
 	role := flag.Arg(1)
 	switch role {
 	case pkgoperator.RoleMaster, pkgoperator.RoleWorker:
 	default:
 		return fmt.Errorf("invalid role %s", role)
 	}
-	isLocalDevelopmentMode := env.IsLocalDevelopmentMode()
+	isLocalDevelopmentMode := env.IsLocalDevelopmentModeFromConfig(cfg)
 	if isLocalDevelopmentMode {
 		log.Info("running in local development mode")
 	}

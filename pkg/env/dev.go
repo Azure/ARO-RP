@@ -7,12 +7,12 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -22,11 +22,11 @@ type dev struct {
 	*prod
 }
 
-func newDev(ctx context.Context, log *logrus.Entry, component ServiceComponent) (Interface, error) {
+func newDev(ctx context.Context, log *logrus.Entry, component ServiceComponent, cfg *viper.Viper) (Interface, error) {
 	d := &dev{}
 
 	var err error
-	d.prod, err = newProd(ctx, log, component)
+	d.prod, err = newProd(ctx, log, component, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func (d *dev) InitializeAuthorizers() error {
 }
 
 func (d *dev) AROOperatorImage() string {
-	override := os.Getenv("ARO_IMAGE")
+	override := d.GetEnv("ARO_IMAGE")
 	if override != "" {
 		return override
 	}

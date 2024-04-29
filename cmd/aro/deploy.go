@@ -7,19 +7,19 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 
 	pkgdeploy "github.com/Azure/ARO-RP/pkg/deploy"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-func deploy(ctx context.Context, log *logrus.Entry) error {
+func deploy(ctx context.Context, log *logrus.Entry, cfg *viper.Viper) error {
 	// TODO(mjudeikis): Remove this hack in public once we moved to EV2
 	// We are not able to use MSI in public cloud CI as we would need
 	// to have dedicated node pool with MSI where we can controll which jobs are running
@@ -30,9 +30,9 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 	// MSI in production to populate env.Environment, Subscription, Location, etc
 	var _env env.Core
 	var tokenCredential azcore.TokenCredential
-	if os.Getenv("AZURE_EV2") != "" { // running in EV2 - use MSI
+	if cfg.GetString("AZURE_EV2") != "" { // running in EV2 - use MSI
 		var err error
-		_env, err = env.NewCore(ctx, log, env.COMPONENT_DEPLOY)
+		_env, err = env.NewCore(ctx, log, env.COMPONENT_DEPLOY, cfg)
 		if err != nil {
 			return err
 		}
@@ -42,7 +42,7 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 			return err
 		}
 	} else { // running in CI node/Public - Use SP from Env
-		err := env.ValidateVars(
+		err := env.ValidateVars(cfg,
 			"AZURE_CLIENT_ID",
 			"AZURE_CLIENT_SECRET",
 			"AZURE_SUBSCRIPTION_ID",
@@ -52,10 +52,11 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 			return err
 		}
 
-		_env, err = env.NewCoreForCI(ctx, log)
+		_env, err = env.NewCoreForCI(ctx, log, cfg)
 		if err != nil {
 			return err
 		}
+
 		options := _env.Environment().EnvironmentCredentialOptions()
 		tokenCredential, err = azidentity.NewEnvironmentCredential(options)
 		if err != nil {

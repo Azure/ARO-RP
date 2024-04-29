@@ -22,7 +22,9 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
+	"github.com/spf13/viper"
 
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -41,9 +43,14 @@ var _ = Describe("Podman", Ordered, func() {
 
 	BeforeAll(func() {
 		var err error
+		var _env env.Core
 		var outerconn context.Context
+		_env, err = env.NewCoreForCI(context.Background(), log, viper.GetViper())
+		if err != nil {
+			Fail("unable to access podman: %v")
+		}
 		outerconn, cancel = context.WithCancel(context.Background())
-		conn, err = getConnection(outerconn)
+		conn, err = getConnection(outerconn, _env)
 		if err != nil {
 			Skip("unable to access podman: %v")
 		}

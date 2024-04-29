@@ -17,6 +17,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"time"
+
+	"github.com/spf13/viper"
 )
 
 type Dialer interface {
@@ -45,6 +47,7 @@ type dev struct {
 	proxyPool       *x509.CertPool
 	proxyClientCert []byte
 	proxyClientKey  *rsa.PrivateKey
+	proxyHostname   string
 }
 
 func (d *dev) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
@@ -55,7 +58,7 @@ func (d *dev) DialContext(ctx context.Context, network, address string) (net.Con
 	c, err := (&net.Dialer{
 		Timeout:   30 * time.Second,
 		KeepAlive: 30 * time.Second,
-	}).DialContext(ctx, network, os.Getenv("PROXY_HOSTNAME")+":443")
+	}).DialContext(ctx, network, d.proxyHostname+":443")
 	if err != nil {
 		return nil, err
 	}
@@ -107,19 +110,25 @@ func (d *dev) DialContext(ctx context.Context, network, address string) (net.Con
 	return &conn{Conn: c, r: r}, nil
 }
 
+func NewDirectDialer() Dialer {
+	return &prod{}
+}
+
 // NewDialer returns a Dialer which can dial a customer cluster API server. When
 // not in local development mode, there is no magic here.  In local development
 // mode, this dials the development proxy, which proxies to the requested
 // endpoint.  This enables the RP to run without routeability to its vnet in
 // local development mode.
-func NewDialer(isLocalDevelopmentMode bool) (Dialer, error) {
+func NewDialer(cfg *viper.Viper, isLocalDevelopmentMode bool) (Dialer, error) {
 	if !isLocalDevelopmentMode {
 		return &prod{}, nil
 	}
 
-	d := &dev{}
+	d := &dev{
+		proxyHostname: cfg.GetString("PROXY_HOSTNAME"),
+	}
 
-	basepath := os.Getenv("ARO_CHECKOUT_PATH")
+	basepath := cfg.GetString("ARO_CHECKOUT_PATH")
 	if basepath == "" {
 		// This assumes we are running from an ARO-RP checkout in development
 		var err error

@@ -8,12 +8,13 @@ import (
 	context "context"
 	reflect "reflect"
 
-	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
-	liveconfig "github.com/Azure/ARO-RP/pkg/util/liveconfig"
 	azcore "github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	autorest "github.com/Azure/go-autorest/autorest"
 	gomock "github.com/golang/mock/gomock"
 	logrus "github.com/sirupsen/logrus"
+
+	azureclient "github.com/Azure/ARO-RP/pkg/util/azureclient"
+	liveconfig "github.com/Azure/ARO-RP/pkg/util/liveconfig"
 )
 
 // MockCore is a mock of Core interface.
@@ -65,6 +66,20 @@ func (m *MockCore) Environment() *azureclient.AROEnvironment {
 func (mr *MockCoreMockRecorder) Environment() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Environment", reflect.TypeOf((*MockCore)(nil).Environment))
+}
+
+// GetEnv mocks base method.
+func (m *MockCore) GetEnv(arg0 string) string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEnv", arg0)
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetEnv indicates an expected call of GetEnv.
+func (mr *MockCoreMockRecorder) GetEnv(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnv", reflect.TypeOf((*MockCore)(nil).GetEnv), arg0)
 }
 
 // Hostname mocks base method.
@@ -226,4 +241,22 @@ func (m *MockCore) TenantID() string {
 func (mr *MockCoreMockRecorder) TenantID() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TenantID", reflect.TypeOf((*MockCore)(nil).TenantID))
+}
+
+// ValidateVars mocks base method.
+func (m *MockCore) ValidateVars(arg0 ...string) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ValidateVars", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateVars indicates an expected call of ValidateVars.
+func (mr *MockCoreMockRecorder) ValidateVars(arg0 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateVars", reflect.TypeOf((*MockCore)(nil).ValidateVars), arg0...)
 }

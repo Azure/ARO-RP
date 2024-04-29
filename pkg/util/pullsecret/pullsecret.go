@@ -6,12 +6,12 @@ package pullsecret
 import (
 	"encoding/base64"
 	"encoding/json"
-	"os"
 	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 )
 
 type pullSecret struct {
@@ -149,8 +149,8 @@ func Validate(_ps string) error {
 	return json.Unmarshal([]byte(_ps), &ps)
 }
 
-func Build(oc *api.OpenShiftCluster, ps string) (string, error) {
-	pullSecret := os.Getenv("PULL_SECRET")
+func Build(_env env.Core, oc *api.OpenShiftCluster, ps string) (string, error) {
+	pullSecret := _env.GetEnv("PULL_SECRET")
 
 	pullSecret, _, err := Merge(pullSecret, ps)
 	if err != nil {

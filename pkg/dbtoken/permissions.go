@@ -6,13 +6,13 @@ package dbtoken
 import (
 	"context"
 	"net/http"
-	"os"
 
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/env"
 )
 
-func ConfigurePermissions(ctx context.Context, dbid string, userc cosmosdb.UserClient) error {
-	gateway := os.Getenv("AZURE_GATEWAY_SERVICE_PRINCIPAL_ID")
+func ConfigurePermissions(ctx context.Context, _env env.Core, dbid string, userc cosmosdb.UserClient) error {
+	gateway := _env.GetEnv("AZURE_GATEWAY_SERVICE_PRINCIPAL_ID")
 
 	_, err := userc.Create(ctx, &cosmosdb.User{
 		ID: gateway,

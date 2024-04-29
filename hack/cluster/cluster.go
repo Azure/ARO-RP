@@ -11,6 +11,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
@@ -23,27 +24,27 @@ const (
 	Cluster = "CLUSTER"
 )
 
-func run(ctx context.Context, log *logrus.Entry) error {
+func run(ctx context.Context, log *logrus.Entry, cfg *viper.Viper) error {
 	if len(os.Args) != 2 {
 		return fmt.Errorf("usage: CLUSTER=x %s {create,createApp,deleteApp,delete}", os.Args[0])
 	}
 
-	if err := env.ValidateVars(Cluster); err != nil {
-		return err
-	}
-
-	env, err := env.NewCore(ctx, log, env.COMPONENT_TOOLING)
+	_env, err := env.NewCore(ctx, log, env.COMPONENT_TOOLING, cfg)
 	if err != nil {
 		return err
 	}
 
-	vnetResourceGroup := os.Getenv("RESOURCEGROUP") // TODO: remove this when we deploy and peer a vnet per cluster create
-	if os.Getenv("CI") != "" {
-		vnetResourceGroup = os.Getenv(Cluster)
+	if err := _env.ValidateVars(Cluster); err != nil {
+		return err
 	}
-	clusterName := os.Getenv(Cluster)
 
-	osClusterVersion := os.Getenv("OS_CLUSTER_VERSION")
+	vnetResourceGroup := _env.GetEnv("RESOURCEGROUP") // TODO: remove this when we deploy and peer a vnet per cluster create
+	if _env.IsCI() {
+		vnetResourceGroup = _env.GetEnv(Cluster)
+	}
+	clusterName := _env.GetEnv(Cluster)
+
+	osClusterVersion := _env.GetEnv("OS_CLUSTER_VERSION")
 	if osClusterVersion == "" {
 		osClusterVersion = version.DefaultInstallStream.Version.String()
 		log.Infof("using default cluster version %s", osClusterVersion)
@@ -51,7 +52,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		log.Infof("using specified cluster version %s", osClusterVersion)
 	}
 
-	c, err := cluster.New(log, env, os.Getenv("CI") != "")
+	c, err := cluster.New(log, _env)
 	if err != nil {
 		return err
 	}
@@ -72,8 +73,9 @@ func run(ctx context.Context, log *logrus.Entry) error {
 
 func main() {
 	log := utillog.GetLogger()
+	cfg := viper.GetViper()
 
-	if err := run(context.Background(), log); err != nil {
+	if err := run(context.Background(), log, cfg); err != nil {
 		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
 			spew.Dump(oDataError.GetErrorEscaped())
 		}

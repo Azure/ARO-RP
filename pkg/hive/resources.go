@@ -5,7 +5,6 @@ package hive
 
 import (
 	"fmt"
-	"os"
 
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	hivev1azure "github.com/openshift/hive/apis/hive/v1/azure"
@@ -14,6 +13,7 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
@@ -111,16 +111,16 @@ func clusterServicePrincipalSecret(namespace string, secret []byte) *corev1.Secr
 	}
 }
 
-func envSecret(namespace string, isDevelopment bool) *corev1.Secret {
+func envSecret(_env env.Core, namespace string) *corev1.Secret {
 	stringdata := map[string]string{}
 
-	if isDevelopment {
+	if _env.IsLocalDevelopmentMode() {
 		for _, i := range devEnvVars {
-			stringdata["ARO_"+i] = os.Getenv(i)
+			stringdata["ARO_"+i] = _env.GetEnv(i)
 		}
 	} else {
 		for _, i := range prodEnvVars {
-			stringdata["ARO_"+i] = os.Getenv(i)
+			stringdata["ARO_"+i] = _env.GetEnv(i)
 		}
 	}
 
@@ -168,8 +168,8 @@ func adoptedClusterDeployment(namespace, clusterName, clusterID, infraID, locati
 	}
 }
 
-func pullsecretSecret(namespace string, oc *api.OpenShiftCluster) (*corev1.Secret, error) {
-	pullSecret, err := pullsecret.Build(oc, string(oc.Properties.ClusterProfile.PullSecret))
+func pullsecretSecret(_env env.Core, namespace string, oc *api.OpenShiftCluster) (*corev1.Secret, error) {
+	pullSecret, err := pullsecret.Build(_env, oc, string(oc.Properties.ClusterProfile.PullSecret))
 	if err != nil {
 		return nil, err
 	}

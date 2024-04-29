@@ -12,6 +12,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/spf13/viper"
+
 	"github.com/Azure/ARO-RP/pkg/env"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
@@ -39,6 +41,7 @@ func main() {
 	ctx := context.Background()
 	audit := utillog.GetAuditEntry()
 	log := utillog.GetLogger()
+	cfg := viper.GetViper()
 
 	go func() {
 		log.Warn(http.ListenAndServe("localhost:6060", nil))
@@ -50,31 +53,31 @@ func main() {
 	switch strings.ToLower(flag.Arg(0)) {
 	case "dbtoken":
 		checkArgs(1)
-		err = dbtoken(ctx, log)
+		err = dbtoken(ctx, log, cfg)
 	case "deploy":
 		checkArgs(3)
-		err = deploy(ctx, log)
+		err = deploy(ctx, log, cfg)
 	case "gateway":
 		checkArgs(1)
-		err = gateway(ctx, log)
+		err = gateway(ctx, log, cfg)
 	case "mirror":
 		checkMinArgs(1)
-		err = mirror(ctx, log)
+		err = mirror(ctx, log, cfg)
 	case "monitor":
 		checkArgs(1)
-		err = monitor(ctx, log)
+		err = monitor(ctx, log, cfg)
 	case "rp":
 		checkArgs(1)
-		err = rp(ctx, log, audit)
+		err = rp(ctx, log, audit, cfg)
 	case "portal":
 		checkArgs(1)
-		err = portal(ctx, log, audit)
+		err = portal(ctx, log, audit, cfg)
 	case "operator":
 		checkArgs(2)
-		err = operator(ctx, log)
+		err = operator(ctx, log, cfg)
 	case "update-versions":
 		checkArgs(1)
-		err = updateOCPVersions(ctx, log)
+		err = updateOCPVersions(ctx, log, cfg)
 	default:
 		usage()
 		os.Exit(2)
@@ -99,14 +102,14 @@ func checkMinArgs(required int) {
 	}
 }
 
-func DBName(isLocalDevelopmentMode bool) (string, error) {
-	if !isLocalDevelopmentMode {
+func DBName(_env env.Core) (string, error) {
+	if !_env.IsLocalDevelopmentMode() {
 		return "ARO", nil
 	}
 
-	if err := env.ValidateVars(envDatabaseName); err != nil {
+	if err := _env.ValidateVars(envDatabaseName); err != nil {
 		return "", fmt.Errorf("%v (development mode)", err.Error())
 	}
 
-	return os.Getenv(envDatabaseName), nil
+	return _env.GetEnv(envDatabaseName), nil
 }

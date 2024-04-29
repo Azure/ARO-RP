@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
@@ -20,6 +19,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/jongio/azidext/go/azidext"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
@@ -67,13 +67,13 @@ type prod struct {
 	features map[Feature]bool
 }
 
-func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent) (*prod, error) {
-	if err := ValidateVars("AZURE_FP_CLIENT_ID", "DOMAIN_NAME"); err != nil {
+func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent, cfg *viper.Viper) (*prod, error) {
+	if err := ValidateVars(cfg, "AZURE_FP_CLIENT_ID", "DOMAIN_NAME"); err != nil {
 		return nil, err
 	}
 
-	if !IsLocalDevelopmentMode() {
-		err := ValidateVars(
+	if !IsLocalDevelopmentModeFromConfig(cfg) {
+		err := ValidateVars(cfg,
 			"CLUSTER_MDSD_CONFIG_VERSION",
 			"CLUSTER_MDSD_ACCOUNT",
 			"GATEWAY_DOMAINS",
@@ -86,12 +86,12 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 		}
 	}
 
-	core, err := NewCore(ctx, log, component)
+	core, err := NewCore(ctx, log, component, cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	dialer, err := proxy.NewDialer(core.IsLocalDevelopmentMode())
+	dialer, err := proxy.NewDialer(cfg, core.IsLocalDevelopmentMode())
 	if err != nil {
 		return nil, err
 	}
@@ -100,19 +100,19 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 		Core:   core,
 		Dialer: dialer,
 
-		fpClientID: os.Getenv("AZURE_FP_CLIENT_ID"),
+		fpClientID: core.GetEnv("AZURE_FP_CLIENT_ID"),
 
-		clusterGenevaLoggingAccount:       os.Getenv("CLUSTER_MDSD_ACCOUNT"),
-		clusterGenevaLoggingConfigVersion: os.Getenv("CLUSTER_MDSD_CONFIG_VERSION"),
-		clusterGenevaLoggingEnvironment:   os.Getenv("MDSD_ENVIRONMENT"),
-		clusterGenevaLoggingNamespace:     os.Getenv("CLUSTER_MDSD_NAMESPACE"),
+		clusterGenevaLoggingAccount:       core.GetEnv("CLUSTER_MDSD_ACCOUNT"),
+		clusterGenevaLoggingConfigVersion: core.GetEnv("CLUSTER_MDSD_CONFIG_VERSION"),
+		clusterGenevaLoggingEnvironment:   core.GetEnv("MDSD_ENVIRONMENT"),
+		clusterGenevaLoggingNamespace:     core.GetEnv("CLUSTER_MDSD_NAMESPACE"),
 
 		log: log,
 
 		features: map[Feature]bool{},
 	}
 
-	features := os.Getenv("RP_FEATURES")
+	features := core.GetEnv("RP_FEATURES")
 	if features != "" {
 		for _, feature := range strings.Split(features, ",") {
 			f, err := FeatureString("Feature" + feature)
@@ -134,10 +134,10 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 		return nil, err
 	}
 
-	if err := ValidateVars(KeyvaultPrefix); err != nil {
+	if err := ValidateVars(cfg, KeyvaultPrefix); err != nil {
 		return nil, err
 	}
-	keyVaultPrefix := os.Getenv(KeyvaultPrefix)
+	keyVaultPrefix := core.GetEnv(KeyvaultPrefix)
 	serviceKeyvaultURI := keyvault.URI(p, ServiceKeyvaultSuffix, keyVaultPrefix)
 	p.serviceKeyvault = keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
 
@@ -183,7 +183,7 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 	}
 
 	if !p.IsLocalDevelopmentMode() {
-		gatewayDomains := os.Getenv("GATEWAY_DOMAINS")
+		gatewayDomains := core.GetEnv("GATEWAY_DOMAINS")
 		if gatewayDomains != "" {
 			p.gatewayDomains = strings.Split(gatewayDomains, ",")
 		}
@@ -223,7 +223,7 @@ func (p *prod) InitializeAuthorizers() error {
 		armClientAuthorizer, err := clientauthorizer.NewSubjectNameAndIssuer(
 			p.log,
 			"/etc/aro-rp/arm-ca-bundle.pem",
-			os.Getenv("ARM_API_CLIENT_CERT_COMMON_NAME"),
+			p.GetEnv("ARM_API_CLIENT_CERT_COMMON_NAME"),
 		)
 		if err != nil {
 			return err
@@ -235,7 +235,7 @@ func (p *prod) InitializeAuthorizers() error {
 	adminClientAuthorizer, err := clientauthorizer.NewSubjectNameAndIssuer(
 		p.log,
 		"/etc/aro-rp/admin-ca-bundle.pem",
-		os.Getenv("ADMIN_API_CLIENT_CERT_COMMON_NAME"),
+		p.GetEnv("ADMIN_API_CLIENT_CERT_COMMON_NAME"),
 	)
 	if err != nil {
 		return err
@@ -254,7 +254,7 @@ func (p *prod) AdminClientAuthorizer() clientauthorizer.ClientAuthorizer {
 }
 
 func (p *prod) ACRResourceID() string {
-	return os.Getenv("ACR_RESOURCE_ID")
+	return p.GetEnv("ACR_RESOURCE_ID")
 }
 
 func (p *prod) ACRDomain() string {
@@ -307,7 +307,7 @@ func (p *prod) ClusterKeyvault() keyvault.Manager {
 }
 
 func (p *prod) Domain() string {
-	return os.Getenv("DOMAIN_NAME")
+	return p.GetEnv("DOMAIN_NAME")
 }
 
 func (p *prod) FeatureIsSet(f Feature) bool {
@@ -340,7 +340,7 @@ func (p *prod) GatewayDomains() []string {
 }
 
 func (p *prod) GatewayResourceGroup() string {
-	return os.Getenv("GATEWAY_RESOURCEGROUP")
+	return p.GetEnv("GATEWAY_RESOURCEGROUP")
 }
 
 func (p *prod) ServiceKeyvault() keyvault.Manager {

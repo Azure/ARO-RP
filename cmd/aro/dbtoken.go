@@ -6,10 +6,10 @@ package main
 import (
 	"context"
 	"net"
-	"os"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/policy"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -21,18 +21,18 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
 )
 
-func dbtoken(ctx context.Context, log *logrus.Entry) error {
-	_env, err := env.NewCore(ctx, log, env.COMPONENT_DBTOKEN)
+func dbtoken(ctx context.Context, log *logrus.Entry, cfg *viper.Viper) error {
+	_env, err := env.NewCore(ctx, log, env.COMPONENT_DBTOKEN, cfg)
 	if err != nil {
 		return err
 	}
 
-	if err := env.ValidateVars("AZURE_GATEWAY_SERVICE_PRINCIPAL_ID", "AZURE_DBTOKEN_CLIENT_ID"); err != nil {
+	if err := _env.ValidateVars("AZURE_GATEWAY_SERVICE_PRINCIPAL_ID", "AZURE_DBTOKEN_CLIENT_ID"); err != nil {
 		return err
 	}
 
 	if !_env.IsLocalDevelopmentMode() {
-		if err := env.ValidateVars("MDM_ACCOUNT", "MDM_NAMESPACE"); err != nil {
+		if err := _env.ValidateVars("MDM_ACCOUNT", "MDM_NAMESPACE"); err != nil {
 			return err
 		}
 	}
@@ -47,7 +47,7 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	m := statsd.New(ctx, log.WithField("component", "dbtoken"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	m := statsd.New(ctx, log.WithField("component", "dbtoken"), _env, _env.GetEnv("MDM_ACCOUNT"), _env.GetEnv("MDM_NAMESPACE"), _env.GetEnv("MDM_STATSD_SOCKET"))
 
 	g, err := golang.NewMetrics(log.WithField("component", "dbtoken"), m)
 	if err != nil {
@@ -56,11 +56,11 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 
 	go g.Run()
 
-	if err := env.ValidateVars(envDatabaseAccountName); err != nil {
+	if err := _env.ValidateVars(envDatabaseAccountName); err != nil {
 		return err
 	}
 
-	dbAccountName := os.Getenv(envDatabaseAccountName)
+	dbAccountName := _env.GetEnv(envDatabaseAccountName)
 
 	clientOptions := &policy.ClientOptions{
 		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
@@ -76,22 +76,22 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbName, err := DBName(_env.IsLocalDevelopmentMode())
+	dbName, err := DBName(_env)
 	if err != nil {
 		return err
 	}
 
 	userc := cosmosdb.NewUserClient(dbc, dbName)
 
-	err = pkgdbtoken.ConfigurePermissions(ctx, dbName, userc)
+	err = pkgdbtoken.ConfigurePermissions(ctx, _env, dbName, userc)
 	if err != nil {
 		return err
 	}
 
-	if err := env.ValidateVars(envKeyVaultPrefix); err != nil {
+	if err := _env.ValidateVars(envKeyVaultPrefix); err != nil {
 		return err
 	}
-	keyVaultPrefix := os.Getenv(envKeyVaultPrefix)
+	keyVaultPrefix := _env.GetEnv(envKeyVaultPrefix)
 	dbtokenKeyvaultURI := keyvault.URI(_env, env.DBTokenKeyvaultSuffix, keyVaultPrefix)
 	dbtokenKeyvault := keyvault.NewManager(msiKVAuthorizer, dbtokenKeyvaultURI)
 
@@ -102,7 +102,7 @@ func dbtoken(ctx context.Context, log *logrus.Entry) error {
 
 	// example value: https://login.microsoftonline.com/11111111-1111-1111-1111-111111111111/v2.0
 	issuer := _env.Environment().ActiveDirectoryEndpoint + _env.TenantID() + "/v2.0"
-	clientID := os.Getenv("AZURE_DBTOKEN_CLIENT_ID")
+	clientID := _env.GetEnv("AZURE_DBTOKEN_CLIENT_ID")
 
 	verifier, err := oidc.NewVerifier(ctx, issuer, clientID)
 	if err != nil {

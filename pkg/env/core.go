@@ -10,6 +10,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerservice"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
@@ -42,12 +43,17 @@ type Core interface {
 	NewLiveConfigManager(context.Context) (liveconfig.Manager, error)
 	instancemetadata.InstanceMetadata
 
+	GetEnv(string) string
+	ValidateVars(...string) error
+
 	Component() string
 	Logger() *logrus.Entry
 }
 
 type core struct {
 	instancemetadata.InstanceMetadata
+
+	cfg *viper.Viper
 
 	isLocalDevelopmentMode bool
 	isCI                   bool
@@ -72,6 +78,14 @@ func (c *core) Logger() *logrus.Entry {
 	return c.componentLog
 }
 
+func (c *core) GetEnv(name string) string {
+	return c.cfg.GetString(name)
+}
+
+func (c *core) ValidateVars(vars ...string) error {
+	return ValidateVars(c.cfg, vars...)
+}
+
 func (c *core) NewLiveConfigManager(ctx context.Context) (liveconfig.Manager, error) {
 	msiAuthorizer, err := c.NewMSIAuthorizer(c.Environment().ResourceManagerScope)
 	if err != nil {
@@ -81,22 +95,22 @@ func (c *core) NewLiveConfigManager(ctx context.Context) (liveconfig.Manager, er
 	mcc := containerservice.NewManagedClustersClient(c.Environment(), c.SubscriptionID(), msiAuthorizer)
 
 	if c.isLocalDevelopmentMode {
-		return liveconfig.NewDev(c.Location(), mcc), nil
+		return liveconfig.NewDev(c.cfg, c.Location(), mcc), nil
 	}
 
-	return liveconfig.NewProd(c.Location(), mcc), nil
+	return liveconfig.NewProd(c.cfg, c.Location(), mcc), nil
 }
 
-func NewCore(ctx context.Context, log *logrus.Entry, component ServiceComponent) (Core, error) {
+func NewCore(ctx context.Context, log *logrus.Entry, component ServiceComponent, cfg *viper.Viper) (Core, error) {
 	// assign results of package-level functions to struct's environment flags
-	isLocalDevelopmentMode := IsLocalDevelopmentMode()
-	isCI := IsCI()
+	isLocalDevelopmentMode := IsLocalDevelopmentModeFromConfig(cfg)
+	isCI := IsCI(cfg)
 	componentLog := log.WithField("component", strings.ReplaceAll(strings.ToLower(string(component)), "_", "-"))
 	if isLocalDevelopmentMode {
 		log.Info("running in local development mode")
 	}
 
-	im, err := instancemetadata.New(ctx, log, isLocalDevelopmentMode)
+	im, err := instancemetadata.New(ctx, log, isLocalDevelopmentMode, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -118,13 +132,13 @@ func NewCore(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 // which may run on CI VMs.  CI VMs don't currently have MSI and hence cannot
 // resolve their tenant ID, and also may access resources in a different tenant
 // (e.g. AME).
-func NewCoreForCI(ctx context.Context, log *logrus.Entry) (Core, error) {
-	isLocalDevelopmentMode := IsLocalDevelopmentMode()
+func NewCoreForCI(ctx context.Context, log *logrus.Entry, cfg *viper.Viper) (Core, error) {
+	isLocalDevelopmentMode := IsLocalDevelopmentModeFromConfig(cfg)
 	if isLocalDevelopmentMode {
 		log.Info("running in local development mode")
 	}
 
-	im, err := instancemetadata.NewDev(false)
+	im, err := instancemetadata.NewDev(cfg, false)
 	if err != nil {
 		return nil, err
 	}

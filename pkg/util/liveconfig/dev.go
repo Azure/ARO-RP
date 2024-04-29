@@ -6,7 +6,6 @@ package liveconfig
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -20,7 +19,7 @@ func (d *dev) HiveRestConfig(ctx context.Context, shard int) (*rest.Config, erro
 	}
 
 	// Use an override kubeconfig path if one is provided
-	kubeConfigPath := os.Getenv(envVar)
+	kubeConfigPath := d.cfg.GetString(envVar)
 	if kubeConfigPath != "" {
 		restConfig, err := clientcmd.BuildConfigFromFlags("", kubeConfigPath)
 		if err != nil {
@@ -53,7 +52,7 @@ func (d *dev) HiveRestConfig(ctx context.Context, shard int) (*rest.Config, erro
 }
 
 func (d *dev) InstallViaHive(ctx context.Context) (bool, error) {
-	installViaHive := os.Getenv(hiveInstallerEnableEnvVar)
+	installViaHive := d.cfg.GetString(hiveInstallerEnableEnvVar)
 	if installViaHive != "" {
 		return true, nil
 	}
@@ -61,11 +60,11 @@ func (d *dev) InstallViaHive(ctx context.Context) (bool, error) {
 }
 
 func (d *dev) DefaultInstallerPullSpecOverride(ctx context.Context) string {
-	return os.Getenv(hiveDefaultPullSpecEnvVar)
+	return d.cfg.GetString(hiveDefaultPullSpecEnvVar)
 }
 
 func (p *dev) AdoptByHive(ctx context.Context) (bool, error) {
-	adopt := os.Getenv(hiveAdoptEnableEnvVar)
+	adopt := p.cfg.GetString(hiveAdoptEnableEnvVar)
 	if adopt != "" {
 		return true, nil
 	}
@@ -73,7 +72,7 @@ func (p *dev) AdoptByHive(ctx context.Context) (bool, error) {
 }
 
 func (d *dev) UseCheckAccess(ctx context.Context) (bool, error) {
-	checkAccess := os.Getenv(useCheckAccess)
+	checkAccess := d.cfg.GetString(useCheckAccess)
 	if checkAccess == "enabled" {
 		return true, nil
 	}

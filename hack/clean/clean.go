@@ -6,12 +6,12 @@ package main
 import (
 	"context"
 	"flag"
-	"os"
 	"strings"
 	"time"
 
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
@@ -45,8 +45,9 @@ func main() {
 	flag.Parse()
 	ctx := context.Background()
 	log := utillog.GetLogger()
+	cfg := viper.GetViper()
 
-	if err := run(ctx, log, dryRun); err != nil {
+	if err := run(ctx, log, dryRun, cfg); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -57,8 +58,13 @@ type settings struct {
 	deleteGroupPrefixes []string
 }
 
-func run(ctx context.Context, log *logrus.Entry, dryRun *bool) error {
-	err := env.ValidateVars(
+func run(ctx context.Context, log *logrus.Entry, dryRun *bool, cfg *viper.Viper) error {
+	_env, err := env.NewCoreForCI(ctx, log, cfg)
+	if err != nil {
+		return err
+	}
+
+	err = _env.ValidateVars(
 		"AZURE_CLIENT_ID",
 		"AZURE_CLIENT_SECRET",
 		"AZURE_SUBSCRIPTION_ID",
@@ -68,15 +74,10 @@ func run(ctx context.Context, log *logrus.Entry, dryRun *bool) error {
 		return err
 	}
 
-	env, err := env.NewCoreForCI(ctx, log)
-	if err != nil {
-		return err
-	}
-
 	var ttl time.Duration
-	if os.Getenv("AZURE_PURGE_TTL") != "" {
+	if _env.GetEnv("AZURE_PURGE_TTL") != "" {
 		var err error
-		ttl, err = time.ParseDuration(os.Getenv("AZURE_PURGE_TTL"))
+		ttl, err = time.ParseDuration(_env.GetEnv("AZURE_PURGE_TTL"))
 		if err != nil {
 			return err
 		}
@@ -85,13 +86,13 @@ func run(ctx context.Context, log *logrus.Entry, dryRun *bool) error {
 	}
 
 	var createdTag = defaultCreatedAtTag
-	if os.Getenv("AZURE_PURGE_CREATED_TAG") != "" {
-		createdTag = os.Getenv("AZURE_PURGE_CREATED_TAG")
+	if _env.GetEnv("AZURE_PURGE_CREATED_TAG") != "" {
+		createdTag = _env.GetEnv("AZURE_PURGE_CREATED_TAG")
 	}
 
 	deleteGroupPrefixes := []string{}
-	if os.Getenv("AZURE_PURGE_RESOURCEGROUP_PREFIXES") != "" {
-		deleteGroupPrefixes = strings.Split(os.Getenv("AZURE_PURGE_RESOURCEGROUP_PREFIXES"), ",")
+	if _env.GetEnv("AZURE_PURGE_RESOURCEGROUP_PREFIXES") != "" {
+		deleteGroupPrefixes = strings.Split(_env.GetEnv("AZURE_PURGE_RESOURCEGROUP_PREFIXES"), ",")
 	}
 
 	settings := settings{
@@ -102,7 +103,7 @@ func run(ctx context.Context, log *logrus.Entry, dryRun *bool) error {
 
 	log.Infof("Starting the resource cleaner, DryRun: %t", *dryRun)
 
-	rc, err := purge.NewResourceCleaner(log, env, settings.shouldDelete, *dryRun)
+	rc, err := purge.NewResourceCleaner(log, _env, settings.shouldDelete, *dryRun)
 	if err != nil {
 		return err
 	}

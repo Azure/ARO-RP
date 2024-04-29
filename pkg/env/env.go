@@ -17,6 +17,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
@@ -101,33 +102,37 @@ type Interface interface {
 	VMSku(vmSize string) (*mgmtcompute.ResourceSku, error)
 }
 
-func NewEnv(ctx context.Context, log *logrus.Entry, component ServiceComponent) (Interface, error) {
-	if IsLocalDevelopmentMode() {
-		if err := ValidateVars(ProxyHostName); err != nil {
+func NewEnv(ctx context.Context, log *logrus.Entry, component ServiceComponent, cfg *viper.Viper) (Interface, error) {
+	if IsLocalDevelopmentModeFromConfig(cfg) {
+		if err := ValidateVars(cfg, ProxyHostName); err != nil {
 			return nil, err
 		}
-		return newDev(ctx, log, component)
+		return newDev(ctx, log, component, cfg)
 	}
 
-	return newProd(ctx, log, component)
+	return newProd(ctx, log, component, cfg)
+}
+
+func IsLocalDevelopmentModeFromConfig(cfg *viper.Viper) bool {
+	return strings.EqualFold(cfg.GetString("RP_MODE"), "development")
 }
 
 func IsLocalDevelopmentMode() bool {
 	return strings.EqualFold(os.Getenv("RP_MODE"), "development")
 }
 
-func IsCI() bool {
-	return strings.EqualFold(os.Getenv("CI"), "true")
+func IsCI(cfg *viper.Viper) bool {
+	return strings.EqualFold(cfg.GetString("CI"), "true")
 }
 
 // ValidateVars iterates over all the elements of vars and
 // if it does not exist an environment variable with that name, it will return an error.
 // Otherwise it returns nil.
-func ValidateVars(vars ...string) error {
+func ValidateVars(cfg *viper.Viper, vars ...string) error {
 	var err error
 
 	for _, envName := range vars {
-		if envValue, found := os.LookupEnv(envName); !found || envValue == "" {
+		if !cfg.IsSet(envName) || cfg.GetString(envName) == "" {
 			err = multierror.Append(fmt.Errorf("environment variable %q unset", envName), err)
 		}
 	}

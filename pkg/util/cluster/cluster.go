@@ -73,9 +73,9 @@ type Cluster struct {
 	vaultsClient                      armkeyvault.VaultsClient
 }
 
-func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
-	if env.IsLocalDevelopmentMode() {
-		if err := env.ValidateVars("AZURE_FP_CLIENT_ID"); err != nil {
+func New(log *logrus.Entry, environment env.Core) (*Cluster, error) {
+	if environment.IsLocalDevelopmentMode() {
+		if err := environment.ValidateVars("AZURE_FP_CLIENT_ID"); err != nil {
 			return nil, err
 		}
 	}
@@ -109,7 +109,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 	c := &Cluster{
 		log: log,
 		env: environment,
-		ci:  ci,
+		ci:  environment.IsCI(),
 
 		spGraphClient:                     spGraphClient,
 		deployments:                       features.NewDeploymentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
@@ -126,7 +126,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		vaultsClient:                      vaultClient,
 	}
 
-	if ci && env.IsLocalDevelopmentMode() {
+	if environment.IsCI() && environment.IsLocalDevelopmentMode() {
 		// Only peer if CI=true and RP_MODE=development
 		c.ciParentVnet = fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vpn-vnet", c.env.SubscriptionID(), c.env.ResourceGroup())
 
@@ -158,14 +158,14 @@ func (c *Cluster) CreateApp(ctx context.Context, clusterName string) error {
 }
 
 func (c *Cluster) DeleteApp(ctx context.Context) error {
-	err := env.ValidateVars(
+	err := c.env.ValidateVars(
 		"AZURE_CLUSTER_APP_ID",
 	)
 	if err != nil {
 		return err
 	}
 
-	return c.deleteApplication(ctx, os.Getenv("AZURE_CLUSTER_APP_ID"))
+	return c.deleteApplication(ctx, c.env.GetEnv("AZURE_CLUSTER_APP_ID"))
 }
 
 func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName string, osClusterVersion string) error {
@@ -178,7 +178,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		return nil
 	}
 
-	err = env.ValidateVars(
+	err = c.env.ValidateVars(
 		"AZURE_FP_SERVICE_PRINCIPAL_ID",
 		"AZURE_CLUSTER_SERVICE_PRINCIPAL_ID",
 		"AZURE_CLUSTER_APP_ID",
@@ -188,14 +188,14 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		return err
 	}
 
-	fpSPID := os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")
-	spID := os.Getenv("AZURE_CLUSTER_SERVICE_PRINCIPAL_ID")
-	appID := os.Getenv("AZURE_CLUSTER_APP_ID")
-	appSecret := os.Getenv("AZURE_CLUSTER_APP_SECRET")
+	fpSPID := c.env.GetEnv("AZURE_FP_SERVICE_PRINCIPAL_ID")
+	spID := c.env.GetEnv("AZURE_CLUSTER_SERVICE_PRINCIPAL_ID")
+	appID := c.env.GetEnv("AZURE_CLUSTER_APP_ID")
+	appSecret := c.env.GetEnv("AZURE_CLUSTER_APP_SECRET")
 
 	visibility := api.VisibilityPublic
 
-	if os.Getenv("PRIVATE_CLUSTER") != "" || os.Getenv("NO_INTERNET") != "" {
+	if c.env.GetEnv("PRIVATE_CLUSTER") != "" || c.env.GetEnv("NO_INTERNET") != "" {
 		visibility = api.VisibilityPrivate
 	}
 
@@ -257,7 +257,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	}
 
 	// TODO: ick
-	if os.Getenv("NO_INTERNET") != "" {
+	if c.env.GetEnv("NO_INTERNET") != "" {
 		parameters["routes"] = &arm.ParametersParameter{
 			Value: []mgmtnetwork.Route{
 				{

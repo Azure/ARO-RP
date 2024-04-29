@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/spf13/viper"
+
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
-func NewDev(checkEnv bool) (InstanceMetadata, error) {
+func NewDev(cfg *viper.Viper, checkEnv bool) (InstanceMetadata, error) {
 	if checkEnv {
 		for _, key := range []string{
 			"AZURE_SUBSCRIPTION_ID",
@@ -18,7 +20,7 @@ func NewDev(checkEnv bool) (InstanceMetadata, error) {
 			"LOCATION",
 			"RESOURCEGROUP",
 		} {
-			if _, found := os.LookupEnv(key); !found {
+			if !cfg.IsSet(key) {
 				return nil, fmt.Errorf("environment variable %q unset (development mode)", key)
 			}
 		}
@@ -40,10 +42,10 @@ func NewDev(checkEnv bool) (InstanceMetadata, error) {
 
 	return &instanceMetadata{
 		hostname:       hostname,
-		tenantID:       os.Getenv("AZURE_TENANT_ID"),
-		subscriptionID: os.Getenv("AZURE_SUBSCRIPTION_ID"),
-		location:       os.Getenv("LOCATION"),
-		resourceGroup:  os.Getenv("RESOURCEGROUP"),
+		tenantID:       cfg.GetString("AZURE_TENANT_ID"),
+		subscriptionID: cfg.GetString("AZURE_SUBSCRIPTION_ID"),
+		location:       cfg.GetString("LOCATION"),
+		resourceGroup:  cfg.GetString("RESOURCEGROUP"),
 		environment:    &environment,
 	}, nil
 }

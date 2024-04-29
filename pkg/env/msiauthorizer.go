@@ -5,7 +5,6 @@ package env
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
@@ -37,13 +36,13 @@ func (c *core) NewMSITokenCredential() (azcore.TokenCredential, error) {
 	azureClientIdKey := "AZURE_" + msiContext + "_CLIENT_ID"
 	azureClientSecretKey := "AZURE_" + msiContext + "_CLIENT_SECRET"
 
-	if err := ValidateVars(azureClientIdKey, azureClientSecretKey, tenantIdKey); err != nil {
+	if err := ValidateVars(c.cfg, azureClientIdKey, azureClientSecretKey, tenantIdKey); err != nil {
 		return nil, fmt.Errorf("%v (development mode)", err.Error())
 	}
 
-	tenantId := os.Getenv(tenantIdKey)
-	azureClientId := os.Getenv(azureClientIdKey)
-	azureClientSecret := os.Getenv(azureClientSecretKey)
+	tenantId := c.cfg.GetString(tenantIdKey)
+	azureClientId := c.cfg.GetString(azureClientIdKey)
+	azureClientSecret := c.cfg.GetString(azureClientSecretKey)
 
 	options := c.Environment().ClientSecretCredentialOptions()
 

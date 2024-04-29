@@ -5,12 +5,11 @@ package liveconfig
 
 import (
 	"context"
-	"os"
 )
 
 func (p *prod) UseCheckAccess(ctx context.Context) (bool, error) {
 	// TODO: Replace with RP Live Service Config (KeyVault)
-	checkAccess := os.Getenv(useCheckAccess)
+	checkAccess := p.cfg.GetString(useCheckAccess)
 	if checkAccess == "enabled" {
 		return true, nil
 	}

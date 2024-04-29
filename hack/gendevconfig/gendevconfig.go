@@ -9,14 +9,20 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 
 	"github.com/Azure/ARO-RP/pkg/deploy"
 	"github.com/Azure/ARO-RP/pkg/env"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
-func run(ctx context.Context, log *logrus.Entry) error {
-	err := env.ValidateVars(
+func run(ctx context.Context, log *logrus.Entry, cfg *viper.Viper) error {
+	_env, err := env.NewCore(ctx, log, env.COMPONENT_TOOLING, cfg)
+	if err != nil {
+		return err
+	}
+
+	err = _env.ValidateVars(
 		"ADMIN_OBJECT_ID",
 		"AZURE_CLIENT_ID",
 		"AZURE_DBTOKEN_CLIENT_ID",
@@ -34,15 +40,10 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	if _, found := os.LookupEnv("SSH_PUBLIC_KEY"); !found {
-		log.Warnf("environment variable SSH_PUBLIC_KEY unset, will use %s/.ssh/id_rsa.pub", os.Getenv("HOME"))
+		log.Warnf("environment variable SSH_PUBLIC_KEY unset, will use %s/.ssh/id_rsa.pub", _env.GetEnv("HOME"))
 	}
 
-	env, err := env.NewCore(ctx, log, env.COMPONENT_TOOLING)
-	if err != nil {
-		return err
-	}
-
-	c, err := deploy.DevConfig(env)
+	c, err := deploy.DevConfig(_env)
 	if err != nil {
 		return err
 	}
@@ -58,8 +59,9 @@ func run(ctx context.Context, log *logrus.Entry) error {
 
 func main() {
 	log := utillog.GetLogger()
+	cfg := viper.GetViper()
 
-	if err := run(context.Background(), log); err != nil {
+	if err := run(context.Background(), log, cfg); err != nil {
 		log.Fatal(err)
 	}
 }

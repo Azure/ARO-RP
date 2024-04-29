@@ -16,7 +16,7 @@ import (
 
 func adminKeyvaultAccessPolicy(_env env.Core) map[string]interface{} {
 	return map[string]interface{}{
-		"objectId": os.Getenv("ADMIN_OBJECT_ID"),
+		"objectId": _env.GetEnv("ADMIN_OBJECT_ID"),
 		"permissions": map[string]interface{}{
 			"certificates": []interface{}{
 				"Get",
@@ -44,7 +44,7 @@ func adminKeyvaultAccessPolicy(_env env.Core) map[string]interface{} {
 
 func deployKeyvaultAccessPolicy(_env env.Core) map[string]interface{} {
 	return map[string]interface{}{
-		"objectId": os.Getenv("AZURE_SERVICE_PRINCIPAL_ID"),
+		"objectId": _env.GetEnv("AZURE_SERVICE_PRINCIPAL_ID"),
 		"permissions": map[string]interface{}{
 			"secrets": []interface{}{
 				"Get",
@@ -72,9 +72,9 @@ func DevConfig(_env env.Core) (*Config, error) {
 		return nil, err
 	}
 
-	sshPublicKeyPath := os.Getenv("SSH_PUBLIC_KEY")
+	sshPublicKeyPath := _env.GetEnv("SSH_PUBLIC_KEY")
 	if sshPublicKeyPath == "" {
-		sshPublicKeyPath = os.Getenv("HOME") + "/.ssh/id_rsa.pub"
+		sshPublicKeyPath = _env.GetEnv("HOME") + "/.ssh/id_rsa.pub"
 	}
 
 	sshPublicKey, err := os.ReadFile(sshPublicKeyPath)
@@ -82,7 +82,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 		return nil, err
 	}
 
-	keyvaultPrefix := os.Getenv("USER") + "-aro-" + _env.Location()
+	keyvaultPrefix := _env.GetEnv("USER") + "-aro-" + _env.Location()
 	if len(keyvaultPrefix) > 20 {
 		keyvaultPrefix = keyvaultPrefix[:20]
 	}
@@ -92,37 +92,37 @@ func DevConfig(_env env.Core) (*Config, error) {
 			{
 				Location:                 _env.Location(),
 				SubscriptionID:           _env.SubscriptionID(),
-				GatewayResourceGroupName: os.Getenv("USER") + "-gwy-" + _env.Location(),
-				RPResourceGroupName:      os.Getenv("USER") + "-aro-" + _env.Location(),
+				GatewayResourceGroupName: _env.GetEnv("USER") + "-gwy-" + _env.Location(),
+				RPResourceGroupName:      _env.GetEnv("USER") + "-aro-" + _env.Location(),
 				Configuration: &Configuration{
 					AzureCloudName:              &_env.Environment().ActualCloudName,
-					DatabaseAccountName:         to.StringPtr(os.Getenv("USER") + "-aro-" + _env.Location()),
-					GatewayStorageAccountDomain: to.StringPtr(os.Getenv("USER") + "gwy" + _env.Location() + ".blob." + _env.Environment().StorageEndpointSuffix),
+					DatabaseAccountName:         to.StringPtr(_env.GetEnv("USER") + "-aro-" + _env.Location()),
+					GatewayStorageAccountDomain: to.StringPtr(_env.GetEnv("USER") + "gwy" + _env.Location() + ".blob." + _env.Environment().StorageEndpointSuffix),
 					KeyvaultDNSSuffix:           &_env.Environment().KeyVaultDNSSuffix,
 					KeyvaultPrefix:              &keyvaultPrefix,
-					StorageAccountDomain:        to.StringPtr(os.Getenv("USER") + "aro" + _env.Location() + ".blob." + _env.Environment().StorageEndpointSuffix),
+					StorageAccountDomain:        to.StringPtr(_env.GetEnv("USER") + "aro" + _env.Location() + ".blob." + _env.Environment().StorageEndpointSuffix),
 				},
 			},
 		},
 		Configuration: &Configuration{
-			ACRResourceID:                to.StringPtr("/subscriptions/" + _env.SubscriptionID() + "/resourceGroups/" + os.Getenv("USER") + "-global/providers/Microsoft.ContainerRegistry/registries/" + os.Getenv("USER") + "aro"),
+			ACRResourceID:                to.StringPtr("/subscriptions/" + _env.SubscriptionID() + "/resourceGroups/" + _env.GetEnv("USER") + "-global/providers/Microsoft.ContainerRegistry/registries/" + _env.GetEnv("USER") + "aro"),
 			AdminAPICABundle:             to.StringPtr(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ca}))),
 			AdminAPIClientCertCommonName: &clientCert.Subject.CommonName,
 			ARMAPICABundle:               to.StringPtr(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: ca}))),
 			ARMAPIClientCertCommonName:   &clientCert.Subject.CommonName,
-			ARMClientID:                  to.StringPtr(os.Getenv("AZURE_ARM_CLIENT_ID")),
+			ARMClientID:                  to.StringPtr(_env.GetEnv("AZURE_ARM_CLIENT_ID")),
 			AzureSecPackVSATenantId:      to.StringPtr(""),
 			ClusterMDMAccount:            to.StringPtr(version.DevClusterGenevaMetricsAccount),
 			ClusterMDSDAccount:           to.StringPtr(version.DevClusterGenevaLoggingAccount),
 			ClusterMDSDConfigVersion:     to.StringPtr(version.DevClusterGenevaLoggingConfigVersion),
 			ClusterMDSDNamespace:         to.StringPtr(version.DevClusterGenevaLoggingNamespace),
-			ClusterParentDomainName:      to.StringPtr(os.Getenv("USER") + "-clusters." + os.Getenv("PARENT_DOMAIN_NAME")),
+			ClusterParentDomainName:      to.StringPtr(_env.GetEnv("USER") + "-clusters." + _env.GetEnv("PARENT_DOMAIN_NAME")),
 			CosmosDB: &CosmosDBConfiguration{
 				StandardProvisionedThroughput: 1000,
 				PortalProvisionedThroughput:   400,
 				GatewayProvisionedThroughput:  400,
 			},
-			DBTokenClientID:         to.StringPtr(os.Getenv("AZURE_DBTOKEN_CLIENT_ID")),
+			DBTokenClientID:         to.StringPtr(_env.GetEnv("AZURE_DBTOKEN_CLIENT_ID")),
 			DisableCosmosDBFirewall: to.BoolPtr(true),
 			ExtraClusterKeyvaultAccessPolicies: []interface{}{
 				adminKeyvaultAccessPolicy(_env),
@@ -141,9 +141,9 @@ func DevConfig(_env env.Core) (*Config, error) {
 				adminKeyvaultAccessPolicy(_env),
 				deployKeyvaultAccessPolicy(_env),
 			},
-			FluentbitImage:       to.StringPtr(version.FluentbitImage(os.Getenv("USER") + "aro." + _env.Environment().ContainerRegistryDNSSuffix)),
-			FPClientID:           to.StringPtr(os.Getenv("AZURE_FP_CLIENT_ID")),
-			FPServicePrincipalID: to.StringPtr(os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")),
+			FluentbitImage:       to.StringPtr(version.FluentbitImage(_env.GetEnv("USER") + "aro." + _env.Environment().ContainerRegistryDNSSuffix)),
+			FPClientID:           to.StringPtr(_env.GetEnv("AZURE_FP_CLIENT_ID")),
+			FPServicePrincipalID: to.StringPtr(_env.GetEnv("AZURE_FP_SERVICE_PRINCIPAL_ID")),
 			GatewayDomains: []string{
 				"eastus-shared.ppe.warm.ingest.monitor.core.windows.net",
 				"gcs.ppe.monitoring.core.windows.net",
@@ -163,16 +163,16 @@ func DevConfig(_env env.Core) (*Config, error) {
 			GatewayMDSDConfigVersion:    to.StringPtr(version.DevGatewayGenevaLoggingConfigVersion),
 			GatewayVMSSCapacity:         to.IntPtr(1),
 			GlobalResourceGroupLocation: to.StringPtr(_env.Location()),
-			GlobalResourceGroupName:     to.StringPtr(os.Getenv("USER") + "-global"),
+			GlobalResourceGroupName:     to.StringPtr(_env.GetEnv("USER") + "-global"),
 			GlobalSubscriptionID:        to.StringPtr(_env.SubscriptionID()),
 			MDMFrontendURL:              to.StringPtr("https://global.ppe.microsoftmetrics.com/"),
 			MDSDEnvironment:             to.StringPtr(version.DevGenevaLoggingEnvironment),
 			PortalAccessGroupIDs: []string{
-				os.Getenv("AZURE_PORTAL_ACCESS_GROUP_IDS"),
+				_env.GetEnv("AZURE_PORTAL_ACCESS_GROUP_IDS"),
 			},
-			PortalClientID: to.StringPtr(os.Getenv("AZURE_PORTAL_CLIENT_ID")),
+			PortalClientID: to.StringPtr(_env.GetEnv("AZURE_PORTAL_CLIENT_ID")),
 			PortalElevatedGroupIDs: []string{
-				os.Getenv("AZURE_PORTAL_ELEVATED_GROUP_IDS"),
+				_env.GetEnv("AZURE_PORTAL_ELEVATED_GROUP_IDS"),
 			},
 			AzureSecPackQualysUrl: to.StringPtr(""),
 			RPFeatures: []string{
@@ -184,27 +184,27 @@ func DevConfig(_env env.Core) (*Config, error) {
 				"EnableOCMEndpoints",
 			},
 			// TODO update this to support FF
-			RPImagePrefix:                     to.StringPtr(os.Getenv("USER") + "aro.azurecr.io/aro"),
+			RPImagePrefix:                     to.StringPtr(_env.GetEnv("USER") + "aro.azurecr.io/aro"),
 			RPMDMAccount:                      to.StringPtr(version.DevRPGenevaMetricsAccount),
 			RPMDSDAccount:                     to.StringPtr(version.DevRPGenevaLoggingAccount),
 			RPMDSDConfigVersion:               to.StringPtr(version.DevRPGenevaLoggingConfigVersion),
 			RPMDSDNamespace:                   to.StringPtr(version.DevRPGenevaLoggingNamespace),
-			RPParentDomainName:                to.StringPtr(os.Getenv("USER") + "-rp." + os.Getenv("PARENT_DOMAIN_NAME")),
-			RPVersionStorageAccountName:       to.StringPtr(os.Getenv("USER") + "rpversion"),
+			RPParentDomainName:                to.StringPtr(_env.GetEnv("USER") + "-rp." + _env.GetEnv("PARENT_DOMAIN_NAME")),
+			RPVersionStorageAccountName:       to.StringPtr(_env.GetEnv("USER") + "rpversion"),
 			RPVMSSCapacity:                    to.IntPtr(1),
 			SSHPublicKey:                      to.StringPtr(string(sshPublicKey)),
 			SubscriptionResourceGroupLocation: to.StringPtr(_env.Location()),
-			SubscriptionResourceGroupName:     to.StringPtr(os.Getenv("USER") + "-subscription"),
+			SubscriptionResourceGroupName:     to.StringPtr(_env.GetEnv("USER") + "-subscription"),
 			VMSSCleanupEnabled:                to.BoolPtr(true),
 			VMSize:                            to.StringPtr("Standard_D2s_v3"),
 
 			// TODO: Replace with Live Service Configuration in KeyVault
-			InstallViaHive:           to.StringPtr(os.Getenv("ARO_INSTALL_VIA_HIVE")),
-			DefaultInstallerPullspec: to.StringPtr(os.Getenv("ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC")),
-			AdoptByHive:              to.StringPtr(os.Getenv("ARO_ADOPT_BY_HIVE")),
+			InstallViaHive:           to.StringPtr(_env.GetEnv("ARO_INSTALL_VIA_HIVE")),
+			DefaultInstallerPullspec: to.StringPtr(_env.GetEnv("ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC")),
+			AdoptByHive:              to.StringPtr(_env.GetEnv("ARO_ADOPT_BY_HIVE")),
 			// TODO Remove when CheckAccess is completely rolled out
 			// Start enabling this in Dev
-			UseCheckAccess: to.StringPtr(os.Getenv("USE_CHECKACCESS")),
+			UseCheckAccess: to.StringPtr(_env.GetEnv("USE_CHECKACCESS")),
 		},
 	}, nil
 }

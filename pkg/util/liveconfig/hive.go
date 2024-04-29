@@ -6,7 +6,6 @@ package liveconfig
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	mgmtcontainerservice "github.com/Azure/azure-sdk-for-go/services/containerservice/mgmt/2021-10-01/containerservice"
@@ -97,7 +96,7 @@ func (p *prod) HiveRestConfig(ctx context.Context, shard int) (*rest.Config, err
 
 func (p *prod) InstallViaHive(ctx context.Context) (bool, error) {
 	// TODO: Replace with RP Live Service Config (KeyVault)
-	installViaHive := os.Getenv(hiveInstallerEnableEnvVar)
+	installViaHive := p.cfg.GetString(hiveInstallerEnableEnvVar)
 	if installViaHive != "" {
 		return true, nil
 	}
@@ -107,12 +106,12 @@ func (p *prod) InstallViaHive(ctx context.Context) (bool, error) {
 func (p *prod) DefaultInstallerPullSpecOverride(ctx context.Context) string {
 	// TODO: we should probably not have an override in prod, but it may have unintended
 	// consequences in an int-like development RP
-	return os.Getenv(hiveDefaultPullSpecEnvVar)
+	return p.cfg.GetString(hiveDefaultPullSpecEnvVar)
 }
 
 func (p *prod) AdoptByHive(ctx context.Context) (bool, error) {
 	// TODO: Replace with RP Live Service Config (KeyVault)
-	adopt := os.Getenv(hiveAdoptEnableEnvVar)
+	adopt := p.cfg.GetString(hiveAdoptEnableEnvVar)
 	if adopt != "" {
 		return true, nil
 	}

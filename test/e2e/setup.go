@@ -27,6 +27,7 @@ import (
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	monitoringclient "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"github.com/tebeka/selenium"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -107,7 +108,7 @@ func skipIfNotInDevelopmentEnv() {
 }
 
 func skipIfSeleniumNotEnabled() {
-	if os.Getenv("ARO_SELENIUM_HOSTNAME") == "" {
+	if _env.GetEnv("ARO_SELENIUM_HOSTNAME") == "" {
 		Skip("ARO_SELENIUM_HOSTNAME not set, skipping portal e2e")
 	}
 }
@@ -170,7 +171,7 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 		hubPort  = 4444
 		hostPort = 8444
 	)
-	hubAddress := os.Getenv("ARO_SELENIUM_HOSTNAME")
+	hubAddress := _env.GetEnv("ARO_SELENIUM_HOSTNAME")
 	os.Setenv("SE_SESSION_REQUEST_TIMEOUT", "9000")
 
 	caps := selenium.Capabilities{
@@ -211,7 +212,7 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 
 	var portalAuthCmd string
 	var portalAuthArgs = make([]string, 0)
-	if os.Getenv("CI") != "" {
+	if _env.GetEnv("CI") != "" {
 		// In CI we have a prebuilt portalauth binary
 		portalAuthCmd = "./portalauth"
 	} else {
@@ -229,11 +230,11 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 
 	os.Setenv("SESSION", string(output))
 
-	log.Infof("Session Output : %s\n", os.Getenv("SESSION"))
+	log.Infof("Session Output : %s\n", _env.GetEnv("SESSION"))
 
 	cookie := &selenium.Cookie{
 		Name:   "session",
-		Value:  os.Getenv("SESSION"),
+		Value:  _env.GetEnv("SESSION"),
 		Expiry: math.MaxUint32,
 	}
 
@@ -388,8 +389,8 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	}, nil
 }
 
-func setup(ctx context.Context) error {
-	err := env.ValidateVars(
+func setup(ctx context.Context, cfg *viper.Viper) error {
+	err := env.ValidateVars(cfg,
 		"AZURE_CLIENT_ID",
 		"AZURE_CLIENT_SECRET",
 		"AZURE_SUBSCRIPTION_ID",
@@ -401,21 +402,21 @@ func setup(ctx context.Context) error {
 		return err
 	}
 
-	_env, err = env.NewCoreForCI(ctx, log)
+	_env, err = env.NewCoreForCI(ctx, log, cfg)
 	if err != nil {
 		return err
 	}
 
-	vnetResourceGroup = os.Getenv("RESOURCEGROUP") // TODO: remove this when we deploy and peer a vnet per cluster create
-	if os.Getenv("CI") != "" {
-		vnetResourceGroup = os.Getenv("CLUSTER")
+	vnetResourceGroup = _env.GetEnv("RESOURCEGROUP") // TODO: remove this when we deploy and peer a vnet per cluster create
+	if _env.GetEnv("CI") != "" {
+		vnetResourceGroup = _env.GetEnv("CLUSTER")
 	}
-	clusterName = os.Getenv("CLUSTER")
+	clusterName = _env.GetEnv("CLUSTER")
 
-	osClusterVersion = os.Getenv("OS_CLUSTER_VERSION")
+	osClusterVersion = _env.GetEnv("OS_CLUSTER_VERSION")
 
-	if os.Getenv("CI") != "" { // always create cluster in CI
-		cluster, err := cluster.New(log, _env, os.Getenv("CI") != "")
+	if _env.GetEnv("CI") != "" { // always create cluster in CI
+		cluster, err := cluster.New(log, _env)
 		if err != nil {
 			return err
 		}
@@ -442,8 +443,8 @@ func setup(ctx context.Context) error {
 
 func done(ctx context.Context) error {
 	// terminate early if delete flag is set to false
-	if os.Getenv("CI") != "" && os.Getenv("E2E_DELETE_CLUSTER") != "false" {
-		cluster, err := cluster.New(log, _env, os.Getenv("CI") != "")
+	if _env.GetEnv("CI") != "" && _env.GetEnv("E2E_DELETE_CLUSTER") != "false" {
+		cluster, err := cluster.New(log, _env)
 		if err != nil {
 			return err
 		}
@@ -463,7 +464,7 @@ var _ = BeforeSuite(func() {
 	SetDefaultEventuallyTimeout(DefaultEventuallyTimeout)
 	SetDefaultEventuallyPollingInterval(10 * time.Second)
 
-	if err := setup(context.Background()); err != nil {
+	if err := setup(context.Background(), viper.GetViper()); err != nil {
 		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
 			spew.Dump(oDataError.GetErrorEscaped())
 		}

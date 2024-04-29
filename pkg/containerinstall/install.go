@@ -95,7 +95,7 @@ func (m *manager) startContainer(ctx context.Context, version *api.OpenShiftVers
 	}
 
 	for _, envvar := range devEnvVars {
-		s.Env["ARO_"+envvar] = os.Getenv(envvar)
+		s.Env["ARO_"+envvar] = m.env.GetEnv(envvar)
 	}
 
 	s.Mounts = append(s.Mounts, specs.Mount{
@@ -151,7 +151,7 @@ func (m *manager) createSecrets(ctx context.Context, doc *api.OpenShiftClusterDo
 		return err
 	}
 
-	basepath := os.Getenv("ARO_CHECKOUT_PATH")
+	basepath := m.env.GetEnv("ARO_CHECKOUT_PATH")
 	if basepath == "" {
 		// This assumes we are running from an ARO-RP checkout in development
 		var err error

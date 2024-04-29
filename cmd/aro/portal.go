@@ -12,6 +12,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/policy"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -25,14 +26,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
-func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
-	_env, err := env.NewCore(ctx, log, env.COMPONENT_PORTAL)
-	if err != nil {
-		return err
-	}
-
-	if !_env.IsLocalDevelopmentMode() {
-		err := env.ValidateVars(
+func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry, cfg *viper.Viper) error {
+	if !env.IsLocalDevelopmentMode() {
+		err := env.ValidateVars(cfg,
 			"MDM_ACCOUNT",
 			"MDM_NAMESPACE",
 			"PORTAL_HOSTNAME")
@@ -42,7 +38,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		}
 	}
 
-	err = env.ValidateVars(
+	err := env.ValidateVars(cfg,
 		"AZURE_PORTAL_CLIENT_ID",
 		"AZURE_PORTAL_ACCESS_GROUP_IDS",
 		"AZURE_PORTAL_ELEVATED_GROUP_IDS")
@@ -51,12 +47,17 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	groupIDs, err := parseGroupIDs(os.Getenv("AZURE_PORTAL_ACCESS_GROUP_IDS"))
+	_env, err := env.NewCore(ctx, log, env.COMPONENT_PORTAL, cfg)
 	if err != nil {
 		return err
 	}
 
-	elevatedGroupIDs, err := parseGroupIDs(os.Getenv("AZURE_PORTAL_ELEVATED_GROUP_IDS"))
+	groupIDs, err := parseGroupIDs(_env.GetEnv("AZURE_PORTAL_ACCESS_GROUP_IDS"))
+	if err != nil {
+		return err
+	}
+
+	elevatedGroupIDs, err := parseGroupIDs(_env.GetEnv("AZURE_PORTAL_ELEVATED_GROUP_IDS"))
 	if err != nil {
 		return err
 	}
@@ -71,7 +72,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	m := statsd.New(ctx, log.WithField("component", "portal"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	m := statsd.New(ctx, log.WithField("component", "portal"), _env, _env.GetEnv("MDM_ACCOUNT"), _env.GetEnv("MDM_NAMESPACE"), _env.GetEnv("MDM_STATSD_SOCKET"))
 
 	g, err := golang.NewMetrics(log.WithField("component", "portal"), m)
 	if err != nil {
@@ -80,10 +81,10 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 
 	go g.Run()
 
-	if err := env.ValidateVars(envKeyVaultPrefix); err != nil {
+	if err := _env.ValidateVars(envKeyVaultPrefix); err != nil {
 		return err
 	}
-	keyVaultPrefix := os.Getenv(envKeyVaultPrefix)
+	keyVaultPrefix := _env.GetEnv(envKeyVaultPrefix)
 	// TODO: should not be using the service keyvault here
 	serviceKeyvaultURI := keyvault.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
 	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
@@ -93,11 +94,11 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	if err := env.ValidateVars(envDatabaseAccountName); err != nil {
+	if err := _env.ValidateVars(envDatabaseAccountName); err != nil {
 		return err
 	}
 
-	dbAccountName := os.Getenv(envDatabaseAccountName)
+	dbAccountName := _env.GetEnv(envDatabaseAccountName)
 	clientOptions := &policy.ClientOptions{
 		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
 	}
@@ -112,7 +113,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	dbName, err := DBName(_env.IsLocalDevelopmentMode())
+	dbName, err := DBName(_env)
 	if err != nil {
 		return err
 	}
@@ -154,12 +155,12 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	dialer, err := proxy.NewDialer(_env.IsLocalDevelopmentMode())
+	dialer, err := proxy.NewDialer(cfg, _env.IsLocalDevelopmentMode())
 	if err != nil {
 		return err
 	}
 
-	clientID := os.Getenv("AZURE_PORTAL_CLIENT_ID")
+	clientID := _env.GetEnv("AZURE_PORTAL_CLIENT_ID")
 	verifier, err := oidc.NewVerifier(ctx, _env.Environment().ActiveDirectoryEndpoint+_env.TenantID()+"/v2.0", clientID)
 	if err != nil {
 		return err
@@ -177,7 +178,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 	address := "localhost:8444"
 	sshAddress := "localhost:2222"
 	if !_env.IsLocalDevelopmentMode() {
-		hostname = os.Getenv("PORTAL_HOSTNAME")
+		hostname = _env.GetEnv("PORTAL_HOSTNAME")
 		address = ":8444"
 		sshAddress = ":2222"
 	}

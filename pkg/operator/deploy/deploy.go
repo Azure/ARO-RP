@@ -202,7 +202,7 @@ func (o *operator) resources(ctx context.Context) ([]kruntime.Object, error) {
 		return nil, err
 	}
 
-	ps, err := pullsecret.Build(o.oc, "")
+	ps, err := pullsecret.Build(o.env, o.oc, "")
 	if err != nil {
 		return nil, err
 	}

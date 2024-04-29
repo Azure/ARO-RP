@@ -365,6 +365,20 @@ func (mr *MockInterfaceMockRecorder) GatewayResourceGroup() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GatewayResourceGroup", reflect.TypeOf((*MockInterface)(nil).GatewayResourceGroup))
 }
 
+// GetEnv mocks base method.
+func (m *MockInterface) GetEnv(arg0 string) string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEnv", arg0)
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetEnv indicates an expected call of GetEnv.
+func (mr *MockInterfaceMockRecorder) GetEnv(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnv", reflect.TypeOf((*MockInterface)(nil).GetEnv), arg0)
+}
+
 // Hostname mocks base method.
 func (m *MockInterface) Hostname() string {
 	m.ctrl.T.Helper()
@@ -596,4 +610,22 @@ func (m *MockInterface) VMSku(vmSize string) (*compute.ResourceSku, error) {
 func (mr *MockInterfaceMockRecorder) VMSku(vmSize interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMSku", reflect.TypeOf((*MockInterface)(nil).VMSku), vmSize)
+}
+
+// ValidateVars mocks base method.
+func (m *MockInterface) ValidateVars(arg0 ...string) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ValidateVars", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateVars indicates an expected call of ValidateVars.
+func (mr *MockInterfaceMockRecorder) ValidateVars(arg0 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateVars", reflect.TypeOf((*MockInterface)(nil).ValidateVars), arg0...)
 }

@@ -11,6 +11,7 @@ import (
 	mgmtcontainerservice "github.com/Azure/azure-sdk-for-go/services/containerservice/mgmt/2021-10-01/containerservice"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
+	"github.com/spf13/viper"
 
 	mock_containerservice "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/containerservice"
 )
@@ -70,7 +71,7 @@ func TestProdHiveAdmin(t *testing.T) {
 
 	mcc.EXPECT().ListClusterAdminCredentials(gomock.Any(), "rp-eastus", "aro-aks-cluster-001", "public").Return(resp, nil)
 
-	lc := NewProd("eastus", mcc)
+	lc := NewProd(viper.GetViper(), "eastus", mcc)
 
 	restConfig, err := lc.HiveRestConfig(ctx, 1)
 	if err != nil {

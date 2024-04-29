@@ -21,6 +21,7 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
@@ -52,17 +53,17 @@ func makeEnvSecret(name string) corev1.EnvVar {
 }
 
 func (c *clusterManager) Install(ctx context.Context, sub *api.SubscriptionDocument, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion) error {
-	sppSecret, err := servicePrincipalSecretForInstall(doc.OpenShiftCluster, sub, c.env.IsLocalDevelopmentMode())
+	sppSecret, err := servicePrincipalSecretForInstall(c.env, doc.OpenShiftCluster, sub)
 	if err != nil {
 		return err
 	}
 
-	psSecret, err := pullsecretSecret(doc.OpenShiftCluster.Properties.HiveProfile.Namespace, doc.OpenShiftCluster)
+	psSecret, err := pullsecretSecret(c.env, doc.OpenShiftCluster.Properties.HiveProfile.Namespace, doc.OpenShiftCluster)
 	if err != nil {
 		return err
 	}
 
-	cd := c.clusterDeploymentForInstall(doc, version, c.env.IsLocalDevelopmentMode())
+	cd := c.clusterDeploymentForInstall(c.env, doc, version)
 
 	// Enrich the cluster deployment with the correlation data so that logs are
 	// properly annotated
@@ -77,7 +78,7 @@ func (c *clusterManager) Install(ctx context.Context, sub *api.SubscriptionDocum
 
 	resources := []kruntime.Object{
 		sppSecret,
-		envSecret(doc.OpenShiftCluster.Properties.HiveProfile.Namespace, c.env.IsLocalDevelopmentMode()),
+		envSecret(c.env, doc.OpenShiftCluster.Properties.HiveProfile.Namespace),
 		psSecret,
 		installConfigCM(doc.OpenShiftCluster.Properties.HiveProfile.Namespace, doc.OpenShiftCluster.Location),
 		cd,
@@ -96,7 +97,7 @@ func (c *clusterManager) Install(ctx context.Context, sub *api.SubscriptionDocum
 	return nil
 }
 
-func servicePrincipalSecretForInstall(oc *api.OpenShiftCluster, sub *api.SubscriptionDocument, isDevelopment bool) (*corev1.Secret, error) {
+func servicePrincipalSecretForInstall(_env env.Core, oc *api.OpenShiftCluster, sub *api.SubscriptionDocument) (*corev1.Secret, error) {
 	clusterSPBytes, err := clusterSPToBytes(sub, oc)
 	if err != nil {
 		return nil, err
@@ -116,11 +117,11 @@ func servicePrincipalSecretForInstall(oc *api.OpenShiftCluster, sub *api.Subscri
 	sppSecret.Data["99_aro.json"] = enc
 	sppSecret.Data["99_sub.json"] = encSub
 
-	if isDevelopment {
+	if _env.IsLocalDevelopmentMode() {
 		// In development mode, load in the proxy certificates so that clusters
 		// can be accessed from a local (not in Azure) Hive
 
-		basepath := os.Getenv("ARO_CHECKOUT_PATH")
+		basepath := _env.GetEnv("ARO_CHECKOUT_PATH")
 		if basepath == "" {
 			// This assumes we are running from an ARO-RP checkout in development
 			var err error
@@ -154,7 +155,7 @@ func servicePrincipalSecretForInstall(oc *api.OpenShiftCluster, sub *api.Subscri
 	return sppSecret, nil
 }
 
-func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion, isDevelopment bool) *hivev1.ClusterDeployment {
+func (c *clusterManager) clusterDeploymentForInstall(_env env.Core, doc *api.OpenShiftClusterDocument, version *api.OpenShiftVersion) *hivev1.ClusterDeployment {
 	var envVars = []corev1.EnvVar{
 		{
 			Name:  "ARO_UUID",
@@ -162,7 +163,7 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 		},
 	}
 
-	if isDevelopment {
+	if _env.IsLocalDevelopmentMode() {
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  "ARO_RP_MODE",
 			Value: "development",
@@ -178,7 +179,7 @@ func (c *clusterManager) clusterDeploymentForInstall(doc *api.OpenShiftClusterDo
 
 	clusterDomain := doc.OpenShiftCluster.Properties.ClusterProfile.Domain
 	if !strings.ContainsRune(clusterDomain, '.') {
-		clusterDomain += "." + os.Getenv("DOMAIN_NAME")
+		clusterDomain += "." + _env.GetEnv("DOMAIN_NAME")
 	}
 
 	// Do not set InfraID here, as Hive wants to do that

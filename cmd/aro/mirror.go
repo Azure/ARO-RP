@@ -9,12 +9,12 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/containers/image/v5/types"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	pkgmirror "github.com/Azure/ARO-RP/pkg/mirror"
@@ -27,8 +27,8 @@ var doNotMirrorTags = map[string]struct{}{
 	"4.8.8": {}, // release points to unreachable link
 }
 
-func getAuth(key string) (*types.DockerAuthConfig, error) {
-	b, err := base64.StdEncoding.DecodeString(os.Getenv(key))
+func getAuth(_env env.Core, key string) (*types.DockerAuthConfig, error) {
+	b, err := base64.StdEncoding.DecodeString(_env.GetEnv(key))
 	if err != nil {
 		return nil, err
 	}
@@ -39,8 +39,8 @@ func getAuth(key string) (*types.DockerAuthConfig, error) {
 	}, nil
 }
 
-func mirror(ctx context.Context, log *logrus.Entry) error {
-	err := env.ValidateVars(
+func mirror(ctx context.Context, log *logrus.Entry, cfg *viper.Viper) error {
+	err := env.ValidateVars(cfg,
 		"DST_AUTH",
 		"DST_ACR_NAME",
 		"SRC_AUTH_QUAY",
@@ -50,26 +50,26 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	env, err := env.NewCoreForCI(ctx, log)
+	_env, err := env.NewCoreForCI(ctx, log, cfg)
 	if err != nil {
 		return err
 	}
 
-	acrDomainSuffix := "." + env.Environment().ContainerRegistryDNSSuffix
+	acrDomainSuffix := "." + _env.Environment().ContainerRegistryDNSSuffix
 
-	dstAuth, err := getAuth("DST_AUTH")
+	dstAuth, err := getAuth(_env, "DST_AUTH")
 	if err != nil {
 		return err
 	}
 
-	dstAcr := os.Getenv("DST_ACR_NAME")
+	dstAcr := _env.GetEnv("DST_ACR_NAME")
 
-	srcAuthQuay, err := getAuth("SRC_AUTH_QUAY")
+	srcAuthQuay, err := getAuth(_env, "SRC_AUTH_QUAY")
 	if err != nil {
 		return err
 	}
 
-	srcAuthRedhat, err := getAuth("SRC_AUTH_REDHAT")
+	srcAuthRedhat, err := getAuth(_env, "SRC_AUTH_REDHAT")
 	if err != nil {
 		return err
 	}
@@ -83,7 +83,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 
 	// Geneva mirroring from upstream only takes place in Public Cloud, in
 	// sovereign clouds a separate mirror process mirrors from the public cloud
-	if env.Environment().Environment == azure.PublicCloud {
+	if _env.Environment().Environment == azure.PublicCloud {
 		srcAcrGeneva := "linuxgeneva-microsoft" + acrDomainSuffix
 		mirrorImages := []string{
 			// https://eng.ms/docs/products/geneva/collect/references/linuxcontainers

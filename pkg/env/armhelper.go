@@ -6,7 +6,6 @@ package env
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
@@ -68,7 +67,7 @@ type armHelper struct {
 }
 
 func newARMHelper(ctx context.Context, log *logrus.Entry, env Interface) (ARMHelper, error) {
-	if os.Getenv("AZURE_ARM_CLIENT_ID") == "" {
+	if env.GetEnv("AZURE_ARM_CLIENT_ID") == "" {
 		return &noopARMHelper{}, nil
 	}
 
@@ -80,7 +79,7 @@ func newARMHelper(ctx context.Context, log *logrus.Entry, env Interface) (ARMHel
 	}
 
 	options := env.Environment().ClientCertificateCredentialOptions()
-	armHelperTokenCredential, err := azidentity.NewClientCertificateCredential(env.TenantID(), os.Getenv("AZURE_ARM_CLIENT_ID"), certs, key, options)
+	armHelperTokenCredential, err := azidentity.NewClientCertificateCredential(env.TenantID(), env.GetEnv("AZURE_ARM_CLIENT_ID"), certs, key, options)
 	if err != nil {
 		return nil, err
 	}

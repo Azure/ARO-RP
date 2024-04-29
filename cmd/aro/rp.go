@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/policy"
 	"github.com/Azure/go-autorest/tracing"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	kmetrics "k8s.io/client-go/tools/metrics"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -41,10 +42,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
-func rp(ctx context.Context, log, audit *logrus.Entry) error {
+func rp(ctx context.Context, log, audit *logrus.Entry, cfg *viper.Viper) error {
 	stop := make(chan struct{})
 
-	_env, err := env.NewEnv(ctx, log, env.COMPONENT_RP)
+	_env, err := env.NewEnv(ctx, log, env.COMPONENT_RP, cfg)
 	if err != nil {
 		return err
 	}
@@ -69,7 +70,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		}
 	}
 
-	if err = env.ValidateVars(keys...); err != nil {
+	if err = _env.ValidateVars(keys...); err != nil {
 		return err
 	}
 
@@ -78,7 +79,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	metrics := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	metrics := statsd.New(ctx, log.WithField("component", "metrics"), _env, _env.GetEnv("MDM_ACCOUNT"), _env.GetEnv("MDM_NAMESPACE"), _env.GetEnv("MDM_STATSD_SOCKET"))
 
 	g, err := golang.NewMetrics(log.WithField("component", "metrics"), metrics)
 	if err != nil {
@@ -93,7 +94,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		RequestLatency: k8s.NewLatency(metrics),
 	})
 
-	clusterm := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("CLUSTER_MDM_ACCOUNT"), os.Getenv("CLUSTER_MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	clusterm := statsd.New(ctx, log.WithField("component", "metrics"), _env, _env.GetEnv("CLUSTER_MDM_ACCOUNT"), _env.GetEnv("CLUSTER_MDM_NAMESPACE"), _env.GetEnv("MDM_STATSD_SOCKET"))
 
 	msiToken, err := _env.NewMSITokenCredential()
 	if err != nil {
@@ -105,11 +106,11 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	if err := env.ValidateVars(envDatabaseAccountName); err != nil {
+	if err := _env.ValidateVars(envDatabaseAccountName); err != nil {
 		return err
 	}
 
-	dbAccountName := os.Getenv(envDatabaseAccountName)
+	dbAccountName := _env.GetEnv(envDatabaseAccountName)
 	clientOptions := &policy.ClientOptions{
 		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
 	}
@@ -124,7 +125,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	dbName, err := DBName(env.IsLocalDevelopmentMode())
+	dbName, err := DBName(_env)
 	if err != nil {
 		return err
 	}

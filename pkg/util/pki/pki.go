@@ -48,16 +48,11 @@ type IntermediateInfo struct {
 // returns the ame certs
 func FetchDataFromGetIssuerPki(url string) (*RootCAs, error) {
 	response, err := http.Get(url)
-
 	if err != nil {
 		return nil, err
 	}
 
 	defer response.Body.Close()
-
-	if err != nil {
-		return nil, err
-	}
 
 	// Read in certs from endpoint
 	body, err := io.ReadAll(response.Body)

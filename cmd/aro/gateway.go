@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 
 	"github.com/Azure/ARO-RP/pkg/database"
 	pkgdbtoken "github.com/Azure/ARO-RP/pkg/dbtoken"
@@ -22,17 +23,17 @@ import (
 	utilnet "github.com/Azure/ARO-RP/pkg/util/net"
 )
 
-func gateway(ctx context.Context, log *logrus.Entry) error {
-	_env, err := env.NewCore(ctx, log, env.COMPONENT_GATEWAY)
+func gateway(ctx context.Context, log *logrus.Entry, cfg *viper.Viper) error {
+	_env, err := env.NewCore(ctx, log, env.COMPONENT_GATEWAY, cfg)
 	if err != nil {
 		return err
 	}
 
-	if err = env.ValidateVars("AZURE_DBTOKEN_CLIENT_ID"); err != nil {
+	if err = _env.ValidateVars("AZURE_DBTOKEN_CLIENT_ID"); err != nil {
 		return err
 	}
 
-	m := statsd.New(ctx, log.WithField("component", "gateway"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+	m := statsd.New(ctx, log.WithField("component", "gateway"), _env, _env.GetEnv("MDM_ACCOUNT"), _env.GetEnv("MDM_NAMESPACE"), _env.GetEnv("MDM_STATSD_SOCKET"))
 
 	g, err := golang.NewMetrics(log.WithField("component", "gateway"), m)
 	if err != nil {
@@ -41,10 +42,10 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 
 	go g.Run()
 
-	if err := env.ValidateVars(envDatabaseAccountName); err != nil {
+	if err := _env.ValidateVars(envDatabaseAccountName); err != nil {
 		return err
 	}
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, nil, m, nil, os.Getenv(envDatabaseAccountName))
+	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, nil, m, nil, _env.GetEnv(envDatabaseAccountName))
 	if err != nil {
 		return err
 	}
@@ -54,7 +55,7 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 	//
 	// In this context, the "resource" parameter is passed to azidentity as a
 	// "scope" argument even though a scope normally consists of an endpoint URL.
-	scope := os.Getenv("AZURE_DBTOKEN_CLIENT_ID")
+	scope := _env.GetEnv("AZURE_DBTOKEN_CLIENT_ID")
 	msiRefresherAuthorizer, err := _env.NewMSIAuthorizer(scope)
 	if err != nil {
 		return err
@@ -62,20 +63,20 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 
 	// TODO: refactor this poor man's feature flag
 	insecureSkipVerify := _env.IsLocalDevelopmentMode()
-	for _, feature := range strings.Split(os.Getenv("GATEWAY_FEATURES"), ",") {
+	for _, feature := range strings.Split(_env.GetEnv("GATEWAY_FEATURES"), ",") {
 		if feature == "InsecureSkipVerifyDBTokenCertificate" {
 			insecureSkipVerify = true
 			break
 		}
 	}
 
-	url, err := getURL(_env.IsLocalDevelopmentMode())
+	url, err := getURL(_env)
 	if err != nil {
 		return err
 	}
 	dbRefresher := pkgdbtoken.NewRefresher(log, _env, msiRefresherAuthorizer, insecureSkipVerify, dbc, "gateway", m, "gateway", url)
 
-	dbName, err := DBName(_env.IsLocalDevelopmentMode())
+	dbName, err := DBName(_env)
 	if err != nil {
 		return err
 	}
@@ -111,7 +112,7 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 
 	log.Print("listening")
 
-	p, err := pkggateway.NewGateway(ctx, _env, log.WithField("component", "gateway"), log.WithField("component", "gateway-access"), dbGateway, httpsl, httpl, healthListener, os.Getenv("ACR_RESOURCE_ID"), os.Getenv("GATEWAY_DOMAINS"), m)
+	p, err := pkggateway.NewGateway(ctx, _env, log.WithField("component", "gateway"), log.WithField("component", "gateway-access"), dbGateway, httpsl, httpl, healthListener, _env.GetEnv("ACR_RESOURCE_ID"), _env.GetEnv("GATEWAY_DOMAINS"), m)
 	if err != nil {
 		return err
 	}
@@ -131,14 +132,14 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 	return nil
 }
 
-func getURL(isLocalDevelopmentMode bool) (string, error) {
-	if isLocalDevelopmentMode {
+func getURL(_env env.Core) (string, error) {
+	if _env.IsLocalDevelopmentMode() {
 		return "https://localhost:8445", nil
 	}
 
-	if err := env.ValidateVars(envDBTokenUrl); err != nil {
+	if err := _env.ValidateVars(envDBTokenUrl); err != nil {
 		return "", err
 	}
 
-	return os.Getenv(envDBTokenUrl), nil
+	return _env.GetEnv(envDBTokenUrl), nil
 }

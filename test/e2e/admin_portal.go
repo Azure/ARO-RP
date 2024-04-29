@@ -6,7 +6,6 @@ package e2e
 import (
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -58,7 +57,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		cluster, err := wd.FindElement(selenium.ByCSSSelector, "div[data-automation-key='name']")
 		Expect(err).ToNot(HaveOccurred())
 
-		Expect(cluster.Text()).To(Equal(os.Getenv("CLUSTER")))
+		Expect(cluster.Text()).To(Equal(_env.GetEnv("CLUSTER")))
 	})
 
 	It("Should be able to filter cluster data correctly", func() {
@@ -150,7 +149,7 @@ var _ = Describe("Admin Portal E2E Testing", func() {
 		resourceId, err := filter.GetAttribute("value")
 		Expect(err).ToNot(HaveOccurred())
 
-		Expect(resourceId).To(ContainSubstring("/providers/Microsoft.RedHatOpenShift/openShiftClusters/" + os.Getenv("CLUSTER")))
+		Expect(resourceId).To(ContainSubstring("/providers/Microsoft.RedHatOpenShift/openShiftClusters/" + _env.GetEnv("CLUSTER")))
 	})
 
 	It("Should be able to open ssh panel and get ssh details", func() {

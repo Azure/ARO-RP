@@ -8,13 +8,13 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
@@ -29,13 +29,13 @@ const (
 	KeyVaultPrefix     = "KEYVAULT_PREFIX"
 )
 
-func run(ctx context.Context, log *logrus.Entry) error {
+func run(ctx context.Context, log *logrus.Entry, cfg *viper.Viper) error {
 	username := flag.String("username", "testuser", "username of the portal user")
 	groups := flag.String("groups", "", "comma-separated list of groups the user is in")
 
 	flag.Parse()
 
-	_env, err := env.NewCore(ctx, log, env.COMPONENT_TOOLING)
+	_env, err := env.NewCore(ctx, log, env.COMPONENT_TOOLING, cfg)
 	if err != nil {
 		return err
 	}
@@ -45,10 +45,10 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	if err := env.ValidateVars(KeyVaultPrefix); err != nil {
+	if err := _env.ValidateVars(KeyVaultPrefix); err != nil {
 		return err
 	}
-	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
+	keyVaultPrefix := _env.GetEnv(KeyVaultPrefix)
 	portalKeyvaultURI := keyvault.URI(_env, env.PortalKeyvaultSuffix, keyVaultPrefix)
 	portalKeyvault := keyvault.NewManager(msiKVAuthorizer, portalKeyvaultURI)
 
@@ -86,8 +86,9 @@ func run(ctx context.Context, log *logrus.Entry) error {
 
 func main() {
 	log := utillog.GetLogger()
+	cfg := viper.GetViper()
 
-	if err := run(context.Background(), log); err != nil {
+	if err := run(context.Background(), log, cfg); err != nil {
 		log.Fatal(err)
 	}
 }

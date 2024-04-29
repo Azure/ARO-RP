@@ -5,9 +5,9 @@ package instancemetadata
 
 import (
 	"context"
-	"os"
 
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
@@ -55,15 +55,15 @@ func (im *instanceMetadata) Environment() *azureclient.AROEnvironment {
 }
 
 // New returns a new InstanceMetadata for the given mode, environment, and deployment system
-func New(ctx context.Context, log *logrus.Entry, isLocalDevelopmentMode bool) (InstanceMetadata, error) {
+func New(ctx context.Context, log *logrus.Entry, isLocalDevelopmentMode bool, cfg *viper.Viper) (InstanceMetadata, error) {
 	if isLocalDevelopmentMode {
 		log.Info("creating development InstanceMetadata")
-		return NewDev(true)
+		return NewDev(cfg, true)
 	}
 
-	if os.Getenv("AZURE_EV2") != "" {
+	if cfg.GetString("AZURE_EV2") != "" {
 		log.Info("creating InstanceMetadata from Environment")
-		return newProdFromEnv(ctx)
+		return newProdFromEnv(ctx, cfg)
 	}
 
 	log.Info("creating InstanceMetadata from Azure Instance Metadata Service (AIMS)")

@@ -7,6 +7,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/spf13/viper"
 	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerservice"
@@ -33,32 +34,36 @@ type Manager interface {
 type dev struct {
 	location              string
 	managedClustersClient containerservice.ManagedClustersClient
+	cfg                   *viper.Viper
 
 	hiveCredentialsMutex sync.RWMutex
 	cachedCredentials    map[int]*rest.Config
 }
 
-func NewDev(location string, managedClustersClient containerservice.ManagedClustersClient) Manager {
+func NewDev(cfg *viper.Viper, location string, managedClustersClient containerservice.ManagedClustersClient) Manager {
 	return &dev{location: location,
 		managedClustersClient: managedClustersClient,
 		cachedCredentials:     make(map[int]*rest.Config),
 		hiveCredentialsMutex:  sync.RWMutex{},
+		cfg:                   cfg,
 	}
 }
 
 type prod struct {
 	location              string
 	managedClustersClient containerservice.ManagedClustersClient
+	cfg                   *viper.Viper
 
 	hiveCredentialsMutex sync.RWMutex
 	cachedCredentials    map[int]*rest.Config
 }
 
-func NewProd(location string, managedClustersClient containerservice.ManagedClustersClient) Manager {
+func NewProd(cfg *viper.Viper, location string, managedClustersClient containerservice.ManagedClustersClient) Manager {
 	return &prod{
 		location:              location,
 		managedClustersClient: managedClustersClient,
 		cachedCredentials:     make(map[int]*rest.Config),
 		hiveCredentialsMutex:  sync.RWMutex{},
+		cfg:                   cfg,
 	}
 }

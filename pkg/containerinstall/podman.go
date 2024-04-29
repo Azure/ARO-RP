@@ -5,19 +5,20 @@ package containerinstall
 
 import (
 	"context"
-	"os"
 
 	"github.com/containers/podman/v4/pkg/bindings"
 	"github.com/containers/podman/v4/pkg/bindings/containers"
 	"github.com/containers/podman/v4/pkg/specgen"
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/ARO-RP/pkg/env"
 )
 
-func getConnection(ctx context.Context) (context.Context, error) {
-	socket := os.Getenv("ARO_PODMAN_SOCKET")
+func getConnection(ctx context.Context, _env env.Core) (context.Context, error) {
+	socket := _env.GetEnv("ARO_PODMAN_SOCKET")
 
 	if socket == "" {
-		sock_dir := os.Getenv("XDG_RUNTIME_DIR")
+		sock_dir := _env.GetEnv("XDG_RUNTIME_DIR")
 		socket = "unix:" + sock_dir + "/podman/podman.sock"
 	}
 

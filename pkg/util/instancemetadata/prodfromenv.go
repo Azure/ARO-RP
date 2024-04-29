@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/spf13/viper"
+
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
@@ -18,9 +20,9 @@ type prodFromEnv struct {
 	LookupEnv func(key string) (string, bool)
 }
 
-func newProdFromEnv(ctx context.Context) (InstanceMetadata, error) {
+func newProdFromEnv(ctx context.Context, cfg *viper.Viper) (InstanceMetadata, error) {
 	p := &prodFromEnv{
-		Getenv:    os.Getenv,
+		Getenv:    cfg.GetString,
 		LookupEnv: os.LookupEnv,
 	}
 

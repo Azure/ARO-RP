@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -28,12 +29,12 @@ const (
 	KeyVaultPrefix      = "KEYVAULT_PREFIX"
 )
 
-func run(ctx context.Context, log *logrus.Entry) error {
+func run(ctx context.Context, log *logrus.Entry, cfg *viper.Viper) error {
 	if len(os.Args) != 2 {
 		return fmt.Errorf("usage: %s resourceid", os.Args[0])
 	}
 
-	_env, err := env.NewCore(ctx, log, env.COMPONENT_TOOLING)
+	_env, err := env.NewCore(ctx, log, env.COMPONENT_TOOLING, cfg)
 	if err != nil {
 		return err
 	}
@@ -48,10 +49,10 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	if err := env.ValidateVars(KeyVaultPrefix); err != nil {
+	if err := _env.ValidateVars(KeyVaultPrefix); err != nil {
 		return err
 	}
-	keyVaultPrefix := os.Getenv(KeyVaultPrefix)
+	keyVaultPrefix := _env.GetEnv(KeyVaultPrefix)
 	serviceKeyvaultURI := keyvault.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
 	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
 
@@ -60,11 +61,11 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	if err := env.ValidateVars(DatabaseAccountName); err != nil {
+	if err := _env.ValidateVars(DatabaseAccountName); err != nil {
 		return err
 	}
 
-	dbAccountName := os.Getenv(DatabaseAccountName)
+	dbAccountName := _env.GetEnv(DatabaseAccountName)
 	clientOptions := &policy.ClientOptions{
 		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
 	}
@@ -79,7 +80,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbName, err := DBName(_env.IsLocalDevelopmentMode())
+	dbName, err := DBName(_env)
 	if err != nil {
 		return err
 	}
@@ -99,20 +100,21 @@ func run(ctx context.Context, log *logrus.Entry) error {
 
 func main() {
 	log := utillog.GetLogger()
+	cfg := viper.GetViper()
 
-	if err := run(context.Background(), log); err != nil {
+	if err := run(context.Background(), log, cfg); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func DBName(isLocalDevelopmentMode bool) (string, error) {
-	if !isLocalDevelopmentMode {
+func DBName(_env env.Core) (string, error) {
+	if !_env.IsLocalDevelopmentMode() {
 		return "ARO", nil
 	}
 
-	if err := env.ValidateVars(DatabaseName); err != nil {
+	if err := _env.ValidateVars(DatabaseName); err != nil {
 		return "", fmt.Errorf("%v (development mode)", err.Error())
 	}
 
-	return os.Getenv(DatabaseName), nil
+	return _env.GetEnv(DatabaseName), nil
 }
