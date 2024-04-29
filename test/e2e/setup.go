@@ -463,8 +463,10 @@ var _ = BeforeSuite(func() {
 
 	SetDefaultEventuallyTimeout(DefaultEventuallyTimeout)
 	SetDefaultEventuallyPollingInterval(10 * time.Second)
+	cfg := viper.GetViper()
+	cfg.AutomaticEnv()
 
-	if err := setup(context.Background(), viper.GetViper()); err != nil {
+	if err := setup(context.Background(), cfg); err != nil {
 		if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
 			spew.Dump(oDataError.GetErrorEscaped())
 		}

@@ -71,7 +71,9 @@ func TestProdHiveAdmin(t *testing.T) {
 
 	mcc.EXPECT().ListClusterAdminCredentials(gomock.Any(), "rp-eastus", "aro-aks-cluster-001", "public").Return(resp, nil)
 
-	lc := NewProd(viper.GetViper(), "eastus", mcc)
+	cfg := viper.GetViper()
+	cfg.AutomaticEnv()
+	lc := NewProd(cfg, "eastus", mcc)
 
 	restConfig, err := lc.HiveRestConfig(ctx, 1)
 	if err != nil {
