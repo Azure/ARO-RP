@@ -297,6 +297,7 @@ func TestBackendTry(t *testing.T) {
 			manager := mock_cluster.NewMockInterface(controller)
 			_env := mock_env.NewMockInterface(controller)
 			_env.EXPECT().LiveConfig().AnyTimes().Return(tlc)
+			_env.EXPECT().GetEnv(gomock.Any()).AnyTimes().Return("")
 
 			dbOpenShiftClusters, clientOpenShiftClusters := testdatabase.NewFakeOpenShiftClusters()
 			dbSubscriptions, _ := testdatabase.NewFakeSubscriptions()

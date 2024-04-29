@@ -119,6 +119,7 @@ func NewCore(ctx context.Context, log *logrus.Entry, component ServiceComponent,
 
 	return &core{
 		InstanceMetadata: im,
+		cfg:              cfg,
 
 		isLocalDevelopmentMode: isLocalDevelopmentMode,
 		isCI:                   isCI,
@@ -144,6 +145,7 @@ func NewCoreForCI(ctx context.Context, log *logrus.Entry, cfg *viper.Viper) (Cor
 	}
 
 	return &core{
+		cfg:                    cfg,
 		InstanceMetadata:       im,
 		isLocalDevelopmentMode: isLocalDevelopmentMode,
 	}, nil

@@ -45,7 +45,9 @@ var _ = Describe("Podman", Ordered, func() {
 		var err error
 		var _env env.Core
 		var outerconn context.Context
-		_env, err = env.NewCoreForCI(context.Background(), log, viper.GetViper())
+		cfg := viper.GetViper()
+		cfg.AutomaticEnv()
+		_env, err = env.NewCoreForCI(context.Background(), log, cfg)
 		if err != nil {
 			Fail("unable to access podman: %v")
 		}
