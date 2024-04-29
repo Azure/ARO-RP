@@ -107,7 +107,7 @@ func NewCore(ctx context.Context, log *logrus.Entry, component ServiceComponent,
 	isCI := IsCI(cfg)
 	componentLog := log.WithField("component", strings.ReplaceAll(strings.ToLower(string(component)), "_", "-"))
 	if isLocalDevelopmentMode {
-		log.Infof("running in local development mode, ci=%s", isCI)
+		log.Infof("running in local development mode, ci=%v", isCI)
 	}
 
 	im, err := instancemetadata.New(ctx, log, isLocalDevelopmentMode, cfg)
@@ -135,8 +135,9 @@ func NewCore(ctx context.Context, log *logrus.Entry, component ServiceComponent,
 // (e.g. AME).
 func NewCoreForCI(ctx context.Context, log *logrus.Entry, cfg *viper.Viper) (Core, error) {
 	isLocalDevelopmentMode := IsLocalDevelopmentModeFromConfig(cfg)
+	isCI := IsCI(cfg)
 	if isLocalDevelopmentMode {
-		log.Info("running in local development mode")
+		log.Infof("running in local development mode, ci=%v", isCI)
 	}
 
 	im, err := instancemetadata.NewDev(cfg, false)
@@ -148,5 +149,6 @@ func NewCoreForCI(ctx context.Context, log *logrus.Entry, cfg *viper.Viper) (Cor
 		cfg:                    cfg,
 		InstanceMetadata:       im,
 		isLocalDevelopmentMode: isLocalDevelopmentMode,
+		isCI:                   isCI,
 	}, nil
 }
