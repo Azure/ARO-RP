@@ -108,7 +108,7 @@ func skipIfNotInDevelopmentEnv() {
 }
 
 func skipIfSeleniumNotEnabled() {
-	if _env.GetEnv("ARO_SELENIUM_HOSTNAME") == "" {
+	if os.Getenv("ARO_SELENIUM_HOSTNAME") == "" {
 		Skip("ARO_SELENIUM_HOSTNAME not set, skipping portal e2e")
 	}
 }
@@ -171,7 +171,7 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 		hubPort  = 4444
 		hostPort = 8444
 	)
-	hubAddress := _env.GetEnv("ARO_SELENIUM_HOSTNAME")
+	hubAddress := os.Getenv("ARO_SELENIUM_HOSTNAME")
 	os.Setenv("SE_SESSION_REQUEST_TIMEOUT", "9000")
 
 	caps := selenium.Capabilities{
@@ -212,7 +212,7 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 
 	var portalAuthCmd string
 	var portalAuthArgs = make([]string, 0)
-	if _env.GetEnv("CI") != "" {
+	if os.Getenv("CI") != "" {
 		// In CI we have a prebuilt portalauth binary
 		portalAuthCmd = "./portalauth"
 	} else {
@@ -230,11 +230,11 @@ func adminPortalSessionSetup() (string, *selenium.WebDriver) {
 
 	os.Setenv("SESSION", string(output))
 
-	log.Infof("Session Output : %s\n", _env.GetEnv("SESSION"))
+	log.Infof("Session Output : %s\n", os.Getenv("SESSION"))
 
 	cookie := &selenium.Cookie{
 		Name:   "session",
-		Value:  _env.GetEnv("SESSION"),
+		Value:  os.Getenv("SESSION"),
 		Expiry: math.MaxUint32,
 	}
 
@@ -407,15 +407,15 @@ func setup(ctx context.Context, cfg *viper.Viper) error {
 		return err
 	}
 
-	vnetResourceGroup = _env.GetEnv("RESOURCEGROUP") // TODO: remove this when we deploy and peer a vnet per cluster create
-	if _env.GetEnv("CI") != "" {
-		vnetResourceGroup = _env.GetEnv("CLUSTER")
+	vnetResourceGroup = os.Getenv("RESOURCEGROUP") // TODO: remove this when we deploy and peer a vnet per cluster create
+	if os.Getenv("CI") != "" {
+		vnetResourceGroup = os.Getenv("CLUSTER")
 	}
-	clusterName = _env.GetEnv("CLUSTER")
+	clusterName = os.Getenv("CLUSTER")
 
-	osClusterVersion = _env.GetEnv("OS_CLUSTER_VERSION")
+	osClusterVersion = os.Getenv("OS_CLUSTER_VERSION")
 
-	if _env.GetEnv("CI") != "" { // always create cluster in CI
+	if os.Getenv("CI") != "" { // always create cluster in CI
 		cluster, err := cluster.New(log, _env)
 		if err != nil {
 			return err
@@ -443,7 +443,7 @@ func setup(ctx context.Context, cfg *viper.Viper) error {
 
 func done(ctx context.Context) error {
 	// terminate early if delete flag is set to false
-	if _env.GetEnv("CI") != "" && _env.GetEnv("E2E_DELETE_CLUSTER") != "false" {
+	if os.Getenv("CI") != "" && os.Getenv("E2E_DELETE_CLUSTER") != "false" {
 		cluster, err := cluster.New(log, _env)
 		if err != nil {
 			return err

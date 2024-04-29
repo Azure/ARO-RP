@@ -26,8 +26,13 @@ import (
 )
 
 func monitor(ctx context.Context, log *logrus.Entry, cfg *viper.Viper) error {
-	if !env.IsLocalDevelopmentMode() {
-		err := env.ValidateVars(cfg,
+	_env, err := env.NewEnv(ctx, log, env.COMPONENT_MONITOR, cfg)
+	if err != nil {
+		return err
+	}
+
+	if !_env.IsLocalDevelopmentMode() {
+		err := _env.ValidateVars(
 			"CLUSTER_MDM_ACCOUNT",
 			"CLUSTER_MDM_NAMESPACE",
 			"MDM_ACCOUNT",
@@ -36,11 +41,6 @@ func monitor(ctx context.Context, log *logrus.Entry, cfg *viper.Viper) error {
 		if err != nil {
 			return err
 		}
-	}
-
-	_env, err := env.NewEnv(ctx, log, env.COMPONENT_MONITOR, cfg)
-	if err != nil {
-		return err
 	}
 
 	m := statsd.New(ctx, log.WithField("component", "metrics"), _env, _env.GetEnv("MDM_ACCOUNT"), _env.GetEnv("MDM_NAMESPACE"), _env.GetEnv("MDM_STATSD_SOCKET"))

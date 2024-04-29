@@ -6,6 +6,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -24,7 +25,7 @@ var (
 
 	controlPlaneAPIURLOverride = func(clusterDomain string, clusterLocation string) string {
 		if !strings.ContainsRune(clusterDomain, '.') {
-			clusterDomain += "." + clusterLocation + "." + _env.GetEnv("PARENT_DOMAIN_NAME")
+			clusterDomain += "." + clusterLocation + "." + os.Getenv("PARENT_DOMAIN_NAME")
 		}
 
 		return fmt.Sprintf("api-int.%s:6443", clusterDomain)
