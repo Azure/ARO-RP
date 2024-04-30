@@ -1176,7 +1176,16 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
 					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
 						{
-							ResourceID: "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name",
+							OperatorName: "FAKE-OPERATOR",
+							ResourceID:   "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name",
+						},
+					},
+				}
+				oc.Identity = &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{
+						"first": {
+							ClientID:    "11111111-1111-1111-1111-111111111111",
+							PrincipalID: "SOMETHING",
 						},
 					},
 				}
@@ -1202,7 +1211,16 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
 					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
 						{
-							ResourceID: "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/otherThing/fake-cluster-name",
+							OperatorName: "FAKE-OPERATOR",
+							ResourceID:   "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/otherThing/fake-cluster-name",
+						},
+					},
+				}
+				oc.Identity = &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{
+						"first": {
+							ClientID:    "11111111-1111-1111-1111-111111111111",
+							PrincipalID: "SOMETHING",
 						},
 					},
 				}
@@ -1215,7 +1233,16 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
 					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
 						{
-							ResourceID: "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name",
+							OperatorName: "FAKE-OPERATOR",
+							ResourceID:   "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name",
+						},
+					},
+				}
+				oc.Identity = &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{
+						"first": {
+							ClientID:    "11111111-1111-1111-1111-111111111111",
+							PrincipalID: "SOMETHING",
 						},
 					},
 				}
