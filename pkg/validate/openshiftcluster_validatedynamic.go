@@ -19,7 +19,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
-	"github.com/Azure/ARO-RP/pkg/util/feature"
 	"github.com/Azure/ARO-RP/pkg/validate/dynamic"
 )
 
@@ -134,20 +133,12 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
-	if useCheckAccess || feature.IsRegisteredForFeature(
-		dv.subscriptionDoc.Subscription.Properties,
-		api.FeatureFlagCheckAccessTestToggle,
-	) {
-		// TODO remove after successfully migrating to CheckAccess
-		dv.log.Info("Using CheckAccess instead of ListPermissions")
-
-		aroEnv := dv.env.Environment()
-		pdpClient = remotepdp.NewRemotePDPClient(
-			fmt.Sprintf(aroEnv.Endpoint, dv.env.Location()),
-			aroEnv.OAuthScope,
-			fpClientCred,
-		)
-	}
+	aroEnv := dv.env.Environment()
+	pdpClient = remotepdp.NewRemotePDPClient(
+		fmt.Sprintf(aroEnv.Endpoint, dv.env.Location()),
+		aroEnv.OAuthScope,
+		fpClientCred,
+	)
 
 	scopes := []string{dv.env.Environment().ResourceManagerScope}
 	err = ensureAccessTokenClaims(ctx, spClientCred, scopes)

@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -19,7 +18,10 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	mock_authorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
+	mock_remotepdp "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/authz/remotepdp"
+	mock_azcore "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azcore"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
@@ -44,10 +46,11 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 
 		t.Run(string(authorizerType), func(t *testing.T) {
 			for _, tt := range []struct {
-				name    string
-				oc      *api.OpenShiftCluster
-				mocks   func(permissions *mock_authorization.MockPermissionsClient, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, cancel context.CancelFunc)
-				wantErr string
+				name        string
+				oc          *api.OpenShiftCluster
+				actionInfos []remotepdp.ActionInfo
+				mocks       func(*mock_compute.MockDiskEncryptionSetsClient, *mock_remotepdp.MockRemotePDPClient, *mock_azcore.MockTokenCredential, context.CancelFunc)
+				wantErr     string
 			}{
 				{
 					name: "no disk encryption set provided",
@@ -66,13 +69,11 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(permissions *mock_authorization.MockPermissionsClient, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, cancel context.CancelFunc) {
-						permissions.EXPECT().
-							ListForResource(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.Provider, "", fakeDesR1.ResourceType, fakeDesR1.ResourceName).
-							Return([]mgmtauthorization.Permission{{
-								Actions:    &[]string{"Microsoft.Compute/diskEncryptionSets/read"},
-								NotActions: &[]string{},
-							}}, nil)
+					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+						mockTokenCredential(tokenCred)
+						pdpClient.EXPECT().
+							CheckAccess(gomock.Any(), gomock.Any()).
+							Return(validDiskEncryptionAuthorizationDecision, nil)
 						diskEncryptionSets.EXPECT().
 							Get(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.ResourceName).
 							Return(mgmtcompute.DiskEncryptionSet{Location: to.StringPtr("eastus")}, nil)
@@ -91,13 +92,11 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(permissions *mock_authorization.MockPermissionsClient, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, cancel context.CancelFunc) {
-						permissions.EXPECT().
-							ListForResource(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.Provider, "", fakeDesR1.ResourceType, fakeDesR1.ResourceName).
-							Return([]mgmtauthorization.Permission{{
-								Actions:    &[]string{"Microsoft.Compute/diskEncryptionSets/read"},
-								NotActions: &[]string{},
-							}}, nil)
+					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+						mockTokenCredential(tokenCred)
+						pdpClient.EXPECT().
+							CheckAccess(gomock.Any(), gomock.Any()).
+							Return(validDiskEncryptionAuthorizationDecision, nil)
 						diskEncryptionSets.EXPECT().
 							Get(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.ResourceName).
 							Return(mgmtcompute.DiskEncryptionSet{Location: to.StringPtr("eastus")}, nil)
@@ -116,19 +115,21 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(permissions *mock_authorization.MockPermissionsClient, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, cancel context.CancelFunc) {
-						permissions.EXPECT().
-							ListForResource(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.Provider, "", fakeDesR1.ResourceType, fakeDesR1.ResourceName).
-							Return([]mgmtauthorization.Permission{{
-								Actions:    &[]string{"Microsoft.Compute/diskEncryptionSets/read"},
-								NotActions: &[]string{},
-							}}, nil)
-						permissions.EXPECT().
-							ListForResource(gomock.Any(), fakeDesR2.ResourceGroup, fakeDesR2.Provider, "", fakeDesR2.ResourceType, fakeDesR2.ResourceName).
-							Return([]mgmtauthorization.Permission{{
-								Actions:    &[]string{"Microsoft.Compute/diskEncryptionSets/read"},
-								NotActions: &[]string{},
-							}}, nil)
+					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+						mockTokenCredential(tokenCred)
+						pdpClient.EXPECT().
+							CheckAccess(gomock.Any(), gomock.Any()).
+							DoAndReturn(func(_ context.Context, authReq remotepdp.AuthorizationRequest) (*remotepdp.AuthorizationDecisionResponse, error) {
+								cancel() // wait.PollImmediateUntil will always be invoked at least once
+								switch authReq.Resource.Id {
+								case fakeDesR1.String():
+									return validDiskEncryptionAuthorizationDecision, nil
+								case fakeDesR2.String():
+									return validDiskEncryptionAuthorizationDecision, nil
+								}
+								return invalidDiskEncryptionAuthorizationDecisionsReadNotAllowed, nil
+							},
+							).AnyTimes()
 						diskEncryptionSets.EXPECT().
 							Get(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.ResourceName).
 							Return(mgmtcompute.DiskEncryptionSet{Location: to.StringPtr("eastus")}, nil)
@@ -150,13 +151,11 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(permissions *mock_authorization.MockPermissionsClient, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, cancel context.CancelFunc) {
-						permissions.EXPECT().
-							ListForResource(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.Provider, "", fakeDesR1.ResourceType, fakeDesR1.ResourceName).
-							Return([]mgmtauthorization.Permission{{
-								Actions:    &[]string{"Microsoft.Compute/diskEncryptionSets/read"},
-								NotActions: &[]string{},
-							}}, nil)
+					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+						mockTokenCredential(tokenCred)
+						pdpClient.EXPECT().
+							CheckAccess(gomock.Any(), gomock.Any()).
+							Return(validDiskEncryptionAuthorizationDecision, nil)
 						diskEncryptionSets.EXPECT().
 							Get(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.ResourceName).
 							Return(mgmtcompute.DiskEncryptionSet{}, autorest.DetailedError{StatusCode: http.StatusNotFound})
@@ -176,9 +175,10 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(permissions *mock_authorization.MockPermissionsClient, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, cancel context.CancelFunc) {
-						permissions.EXPECT().
-							ListForResource(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.Provider, "", fakeDesR1.ResourceType, fakeDesR1.ResourceName).
+					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+						mockTokenCredential(tokenCred)
+						pdpClient.EXPECT().
+							CheckAccess(gomock.Any(), gomock.Any()).
 							Return(nil, errors.New("fakeerr"))
 					},
 					wantErr: "fakeerr",
@@ -196,13 +196,11 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(permissions *mock_authorization.MockPermissionsClient, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, cancel context.CancelFunc) {
-						permissions.EXPECT().
-							ListForResource(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.Provider, "", fakeDesR1.ResourceType, fakeDesR1.ResourceName).
-							Return([]mgmtauthorization.Permission{{
-								Actions:    &[]string{"Microsoft.Compute/diskEncryptionSets/read"},
-								NotActions: &[]string{},
-							}}, nil)
+					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+						mockTokenCredential(tokenCred)
+						pdpClient.EXPECT().
+							CheckAccess(gomock.Any(), gomock.Any()).
+							Return(validDiskEncryptionAuthorizationDecision, nil)
 						diskEncryptionSets.EXPECT().
 							Get(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.ResourceName).
 							Return(mgmtcompute.DiskEncryptionSet{}, errors.New("fakeerr"))
@@ -222,10 +220,11 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(permissions *mock_authorization.MockPermissionsClient, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, cancel context.CancelFunc) {
-						permissions.EXPECT().
-							ListForResource(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.Provider, "", fakeDesR1.ResourceType, fakeDesR1.ResourceName).
-							Do(func(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) {
+					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+						mockTokenCredential(tokenCred)
+						pdpClient.EXPECT().
+							CheckAccess(gomock.Any(), gomock.Any()).
+							Do(func(arg0, arg1 interface{}) {
 								cancel()
 							})
 					},
@@ -244,16 +243,21 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(permissions *mock_authorization.MockPermissionsClient, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, cancel context.CancelFunc) {
-						permissions.EXPECT().
-							ListForResource(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.Provider, "", fakeDesR1.ResourceType, fakeDesR1.ResourceName).
-							Return([]mgmtauthorization.Permission{{
-								Actions:    &[]string{"Microsoft.Compute/diskEncryptionSets/read"},
-								NotActions: &[]string{},
-							}}, nil)
-						permissions.EXPECT().
-							ListForResource(gomock.Any(), fakeDesR2.ResourceGroup, fakeDesR2.Provider, "", fakeDesR2.ResourceType, fakeDesR2.ResourceName).
-							Return(nil, autorest.DetailedError{StatusCode: http.StatusNotFound})
+					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+						mockTokenCredential(tokenCred)
+						pdpClient.EXPECT().
+							CheckAccess(gomock.Any(), gomock.Any()).
+							DoAndReturn(func(_ context.Context, authReq remotepdp.AuthorizationRequest) (*remotepdp.AuthorizationDecisionResponse, error) {
+								cancel() // wait.PollImmediateUntil will always be invoked at least once
+								switch authReq.Resource.Id {
+								case fakeDesR1.String():
+									return validDiskEncryptionAuthorizationDecision, nil
+								case fakeDesR2.String():
+									return nil, autorest.DetailedError{StatusCode: http.StatusNotFound}
+								}
+								return invalidDiskEncryptionAuthorizationDecisionsReadNotAllowed, nil
+							},
+							).AnyTimes()
 						diskEncryptionSets.EXPECT().
 							Get(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.ResourceName).
 							Return(mgmtcompute.DiskEncryptionSet{Location: to.StringPtr("eastus")}, nil)
@@ -273,13 +277,11 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 							}},
 						},
 					},
-					mocks: func(permissions *mock_authorization.MockPermissionsClient, diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, cancel context.CancelFunc) {
-						permissions.EXPECT().
-							ListForResource(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.Provider, "", fakeDesR1.ResourceType, fakeDesR1.ResourceName).
-							Return([]mgmtauthorization.Permission{{
-								Actions:    &[]string{"Microsoft.Compute/diskEncryptionSets/read"},
-								NotActions: &[]string{},
-							}}, nil)
+					mocks: func(diskEncryptionSets *mock_compute.MockDiskEncryptionSetsClient, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential, cancel context.CancelFunc) {
+						mockTokenCredential(tokenCred)
+						pdpClient.EXPECT().
+							CheckAccess(gomock.Any(), gomock.Any()).
+							Return(validDiskEncryptionAuthorizationDecision, nil)
 						diskEncryptionSets.EXPECT().
 							Get(gomock.Any(), fakeDesR1.ResourceGroup, fakeDesR1.ResourceName).
 							Return(mgmtcompute.DiskEncryptionSet{Location: to.StringPtr("westeurope")}, nil)
@@ -294,18 +296,21 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 					controller := gomock.NewController(t)
 					defer controller.Finish()
 
-					permissionsClient := mock_authorization.NewMockPermissionsClient(controller)
 					diskEncryptionSetsClient := mock_compute.NewMockDiskEncryptionSetsClient(controller)
+					tokenCred := mock_azcore.NewMockTokenCredential(controller)
+					remotePDPClient := mock_remotepdp.NewMockRemotePDPClient(controller)
 
 					if tt.mocks != nil {
-						tt.mocks(permissionsClient, diskEncryptionSetsClient, cancel)
+						tt.mocks(diskEncryptionSetsClient, remotePDPClient, tokenCred, cancel)
 					}
 
 					dv := &dynamic{
-						authorizerType:     authorizerType,
-						log:                logrus.NewEntry(logrus.StandardLogger()),
-						permissions:        permissionsClient,
-						diskEncryptionSets: diskEncryptionSetsClient,
+						azEnv:                      &azureclient.PublicCloud,
+						authorizerType:             authorizerType,
+						log:                        logrus.NewEntry(logrus.StandardLogger()),
+						diskEncryptionSets:         diskEncryptionSetsClient,
+						pdpClient:                  remotePDPClient,
+						checkAccessSubjectInfoCred: tokenCred,
 					}
 
 					err := dv.ValidateDiskEncryptionSets(ctx, tt.oc)
@@ -315,3 +320,22 @@ func TestValidateDiskEncryptionSets(t *testing.T) {
 		})
 	}
 }
+
+var (
+	invalidDiskEncryptionAuthorizationDecisionsReadNotAllowed = &remotepdp.AuthorizationDecisionResponse{
+		Value: []remotepdp.AuthorizationDecision{
+			{
+				ActionId:       "Microsoft.Compute/diskEncryptionSets/read",
+				AccessDecision: remotepdp.NotAllowed,
+			},
+		},
+	}
+	validDiskEncryptionAuthorizationDecision = &remotepdp.AuthorizationDecisionResponse{
+		Value: []remotepdp.AuthorizationDecision{
+			{
+				ActionId:       "Microsoft.Compute/diskEncryptionSets/read",
+				AccessDecision: remotepdp.Allowed,
+			},
+		},
+	}
+)
