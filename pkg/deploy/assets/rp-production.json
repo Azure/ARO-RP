@@ -780,6 +780,9 @@
         },
         {
             "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ],
             "location": "[resourceGroup().location]",
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO')]",
             "properties": {
@@ -794,6 +797,10 @@
         },
         {
             "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ],
             "location": "[resourceGroup().location]",
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/AsyncOperations')]",
             "properties": {
@@ -813,6 +820,10 @@
         },
         {
             "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ],
             "location": "[resourceGroup().location]",
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/OpenShiftVersions')]",
             "properties": {
@@ -832,6 +843,10 @@
         },
         {
             "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ],
             "location": "[resourceGroup().location]",
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/ClusterManagerConfigurations')]",
             "properties": {
@@ -850,6 +865,10 @@
         },
         {
             "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ],
             "location": "[resourceGroup().location]",
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Billing')]",
             "properties": {
@@ -868,6 +887,10 @@
         },
         {
             "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ],
             "location": "[resourceGroup().location]",
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Gateway')]",
             "properties": {
@@ -889,6 +912,10 @@
         },
         {
             "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ],
             "location": "[resourceGroup().location]",
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Monitors')]",
             "properties": {
@@ -908,6 +935,10 @@
         },
         {
             "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ],
             "location": "[resourceGroup().location]",
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/OpenShiftClusters')]",
             "properties": {
@@ -945,6 +976,10 @@
         },
         {
             "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ],
             "location": "[resourceGroup().location]",
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Portal')]",
             "properties": {
@@ -966,6 +1001,10 @@
         },
         {
             "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ],
             "location": "[resourceGroup().location]",
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Subscriptions')]",
             "properties": {
