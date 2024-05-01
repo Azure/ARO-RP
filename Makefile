@@ -114,7 +114,8 @@ generate-kiota:
 	go run ./hack/licenses -dirs ./pkg/util/graph/graphsdk
 
 init-contrib:
-	cp -R hack/git/hooks/* .git/hooks/
+	install -v hack/git/hooks/* .git/hooks/
+	
 
 image-aro-multistage:
 	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
