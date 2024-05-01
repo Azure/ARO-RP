@@ -54,33 +54,32 @@
             "location": "[resourceGroup().location]"
         },
         {
-            "apiVersion": "2023-04-15",
             "kind": "GlobalDocumentDB",
-            "location": "[resourceGroup().location]",
-            "name": "[parameters('databaseAccountName')]",
             "properties": {
+                "consistencyPolicy": {
+                    "defaultConsistencyLevel": "Strong"
+                },
+                "locations": [
+                    {
+                        "locationName": "[resourceGroup().location]"
+                    }
+                ],
+                "databaseAccountOfferType": "Standard",
                 "backupPolicy": {
                     "periodicModeProperties": {
                         "backupIntervalInMinutes": 240,
                         "backupRetentionIntervalInHours": 720
                     },
                     "type": "Periodic"
-                },
-                "consistencyPolicy": {
-                    "defaultConsistencyLevel": "Strong"
-                },
-                "databaseAccountOfferType": "Standard",
-                "locations": [
-                    {
-                        "locationName": "[resourceGroup().location]"
-                    }
-                ],
-                "minimalTlsVersion": "Tls12"
+                }
             },
+            "name": "[parameters('databaseAccountName')]",
+            "type": "Microsoft.DocumentDB/databaseAccounts",
+            "location": "[resourceGroup().location]",
             "tags": {
                 "defaultExperience": "Core (SQL)"
             },
-            "type": "Microsoft.DocumentDB/databaseAccounts"
+            "apiVersion": "2021-01-15"
         },
         {
             "name": "[guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader')]",

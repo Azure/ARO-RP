@@ -7,44 +7,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"strings"
 
-	sdkcosmos "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
 	gofrsuuid "github.com/gofrs/uuid"
 )
 
 // MarshalJSON marshals the nested r.Resource ignoring any MarshalJSON() methods
 // on its types.  It then merges remaining fields of r over the result
 func (r *Resource) MarshalJSON() ([]byte, error) {
-	var b []byte
-	var err error
-
-	// hack to handle newer track2 sdk which doesn't have json tags
-	if strings.HasPrefix(r.Type, "Microsoft.DocumentDB/databaseAccounts/sqlDatabases") {
-		if reflect.TypeOf(r.Resource) == reflect.TypeOf(&sdkcosmos.SQLDatabaseCreateUpdateParameters{}) {
-			b, err = r.Resource.(*sdkcosmos.SQLDatabaseCreateUpdateParameters).MarshalJSON()
-		} else if reflect.TypeOf(r.Resource) == reflect.TypeOf(&sdkcosmos.SQLContainerCreateUpdateParameters{}) {
-			b, err = r.Resource.(*sdkcosmos.SQLContainerCreateUpdateParameters).MarshalJSON()
-		}
-	} else if strings.HasPrefix(r.Type, "Microsoft.DocumentDB/databaseAccounts") {
-		b, err = r.Resource.(*sdkcosmos.DatabaseAccountCreateUpdateParameters).MarshalJSON()
-	}
-
-	if err != nil {
-		return b, err
-	}
-
-	if b != nil {
-		dataMap := map[string]interface{}{}
-		err = json.Unmarshal(b, &dataMap)
-		if err != nil {
-			return nil, err
-		}
-
-		dataMap["apiVersion"] = r.APIVersion
-		return json.Marshal(dataMap)
-	}
-
 	resource := reflect.ValueOf(shadowCopy(r.Resource))
 	outer := reflect.ValueOf(*r)
 
