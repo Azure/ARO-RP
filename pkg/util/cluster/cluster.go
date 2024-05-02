@@ -389,16 +389,12 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 	switch {
 	case c.ci && env.IsLocalDevelopmentMode(): // PR E2E
 		errs = append(errs,
-			c.deleteRoleAssignments(ctx, vnetResourceGroup, clusterName),
 			c.deleteCluster(ctx, vnetResourceGroup, clusterName),
 			c.deleteClusterResourceGroup(ctx, vnetResourceGroup),
 			c.deleteVnetPeerings(ctx, vnetResourceGroup),
 		)
 	case c.ci: // Prod E2E
-		errs = append(errs,
-			c.deleteRoleAssignments(ctx, vnetResourceGroup, clusterName),
-			c.deleteClusterResourceGroup(ctx, vnetResourceGroup),
-		)
+		errs = append(errs, c.deleteClusterResourceGroup(ctx, vnetResourceGroup))
 	default:
 		errs = append(errs,
 			c.deleteRoleAssignments(ctx, vnetResourceGroup, clusterName),
