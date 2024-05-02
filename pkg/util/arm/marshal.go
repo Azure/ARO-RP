@@ -42,6 +42,9 @@ func (r *Resource) MarshalJSON() ([]byte, error) {
 		}
 
 		dataMap["apiVersion"] = r.APIVersion
+		if r.DependsOn != nil {
+			dataMap["dependsOn"] = r.DependsOn
+		}
 		return json.Marshal(dataMap)
 	}
 
