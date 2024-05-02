@@ -1,0 +1,13 @@
+# ignore everything
+*
+
+# ...except these
+!.golangci.yml
+!cmd
+!go.mod
+!go.sum
+!hack
+!pkg
+!swagger
+!test
+!vendor
