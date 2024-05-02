@@ -15,13 +15,7 @@ import (
 var secretPreservingJSONHandle *codec.JsonHandle
 
 func init() {
-	secretPreservingJSONHandle = &codec.JsonHandle{
-		BasicHandle: codec.BasicHandle{
-			DecodeOptions: codec.DecodeOptions{
-				ErrorIfNoField: true,
-			},
-		},
-	}
+	secretPreservingJSONHandle = &codec.JsonHandle{}
 
 	err := secretPreservingJSONHandle.SetInterfaceExt(reflect.TypeOf(SecureBytes{}), 1, secureHidingExt{})
 	if err != nil {

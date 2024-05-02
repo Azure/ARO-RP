@@ -78,13 +78,7 @@ func getDatabaseKey(keys sdkcosmos.DatabaseAccountsClientListKeysResponse, log *
 }
 
 func NewJSONHandle(aead encryption.AEAD) (*codec.JsonHandle, error) {
-	h := &codec.JsonHandle{
-		BasicHandle: codec.BasicHandle{
-			DecodeOptions: codec.DecodeOptions{
-				ErrorIfNoField: true,
-			},
-		},
-	}
+	h := &codec.JsonHandle{}
 
 	if aead == nil {
 		return h, nil

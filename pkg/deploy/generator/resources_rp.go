@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"strings"
 
+	sdkcosmos "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2021-01-15/documentdb"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	mgmtmsi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
@@ -547,7 +547,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 			Tags: map[string]*string{},
 			VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
 				UpgradePolicy: &mgmtcompute.UpgradePolicy{
-					Mode: mgmtcompute.UpgradeModeManual,
+					Mode: mgmtcompute.UpgradeModeRolling,
 				},
 				VirtualMachineProfile: &mgmtcompute.VirtualMachineScaleSetVMProfile{
 					OsProfile: &mgmtcompute.VirtualMachineScaleSetOSProfile{
@@ -977,25 +977,31 @@ func (g *generator) rpServiceKeyvault() *arm.Resource {
 }
 
 func (g *generator) rpCosmosDB() []*arm.Resource {
-	cosmosdb := &mgmtdocumentdb.DatabaseAccountCreateUpdateParameters{
-		Kind: mgmtdocumentdb.GlobalDocumentDB,
-		DatabaseAccountCreateUpdateProperties: &mgmtdocumentdb.DatabaseAccountCreateUpdateProperties{
-			ConsistencyPolicy: &mgmtdocumentdb.ConsistencyPolicy{
-				DefaultConsistencyLevel: mgmtdocumentdb.Strong,
+	dbType := sdkcosmos.DatabaseAccountKindGlobalDocumentDB
+	consistency := sdkcosmos.DefaultConsistencyLevelStrong
+	backupPolicy := sdkcosmos.BackupPolicyTypePeriodic
+	minTLSVersion := sdkcosmos.MinimalTLSVersionTls12
+
+	cosmosdb := &sdkcosmos.DatabaseAccountCreateUpdateParameters{
+		Kind: &dbType,
+		Properties: &sdkcosmos.DatabaseAccountCreateUpdateProperties{
+			ConsistencyPolicy: &sdkcosmos.ConsistencyPolicy{
+				DefaultConsistencyLevel: &consistency,
 			},
-			Locations: &[]mgmtdocumentdb.Location{
+			Locations: []*sdkcosmos.Location{
 				{
 					LocationName: to.StringPtr("[resourceGroup().location]"),
 				},
 			},
-			DatabaseAccountOfferType: to.StringPtr(string(mgmtdocumentdb.Standard)),
-			BackupPolicy: mgmtdocumentdb.PeriodicModeBackupPolicy{
-				Type: mgmtdocumentdb.TypePeriodic,
-				PeriodicModeProperties: &mgmtdocumentdb.PeriodicModeProperties{
+			DatabaseAccountOfferType: to.StringPtr("Standard"),
+			BackupPolicy: &sdkcosmos.PeriodicModeBackupPolicy{
+				Type: &backupPolicy,
+				PeriodicModeProperties: &sdkcosmos.PeriodicModeProperties{
 					BackupIntervalInMinutes:        to.Int32Ptr(240), //4 hours
 					BackupRetentionIntervalInHours: to.Int32Ptr(720), //30 days
 				},
 			},
+			MinimalTLSVersion: &minTLSVersion,
 		},
 		Name:     to.StringPtr("[parameters('databaseAccountName')]"),
 		Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts"),
@@ -1008,12 +1014,13 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 	r := &arm.Resource{
 		Resource:   cosmosdb,
 		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
+		Type:       "Microsoft.DocumentDB/databaseAccounts",
 	}
 	if g.production {
-		cosmosdb.IPRules = &[]mgmtdocumentdb.IPAddressOrRange{}
-		cosmosdb.IsVirtualNetworkFilterEnabled = to.BoolPtr(true)
-		cosmosdb.VirtualNetworkRules = &[]mgmtdocumentdb.VirtualNetworkRule{}
-		cosmosdb.DisableKeyBasedMetadataWriteAccess = to.BoolPtr(true)
+		cosmosdb.Properties.IPRules = []*sdkcosmos.IPAddressOrRange{}
+		cosmosdb.Properties.IsVirtualNetworkFilterEnabled = to.BoolPtr(true)
+		cosmosdb.Properties.VirtualNetworkRules = []*sdkcosmos.VirtualNetworkRule{}
+		cosmosdb.Properties.DisableKeyBasedMetadataWriteAccess = to.BoolPtr(true)
 	}
 
 	rs := []*arm.Resource{
@@ -1030,12 +1037,12 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 
 func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Resource {
 	database := &arm.Resource{
-		Resource: &mgmtdocumentdb.SQLDatabaseCreateUpdateParameters{
-			SQLDatabaseCreateUpdateProperties: &mgmtdocumentdb.SQLDatabaseCreateUpdateProperties{
-				Resource: &mgmtdocumentdb.SQLDatabaseResource{
+		Resource: &sdkcosmos.SQLDatabaseCreateUpdateParameters{
+			Properties: &sdkcosmos.SQLDatabaseCreateUpdateProperties{
+				Resource: &sdkcosmos.SQLDatabaseResource{
 					ID: to.StringPtr("[" + databaseName + "]"),
 				},
-				Options: &mgmtdocumentdb.CreateUpdateOptions{
+				Options: &sdkcosmos.CreateUpdateOptions{
 					Throughput: to.Int32Ptr(cosmosDbStandardProvisionedThroughputHack),
 				},
 			},
@@ -1044,21 +1051,23 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
+		Type:       "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 	}
+	hashPartitionKey := sdkcosmos.PartitionKindHash
 	portal := &arm.Resource{
-		Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
-			SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
-				Resource: &mgmtdocumentdb.SQLContainerResource{
+		Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
+			Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
+				Resource: &sdkcosmos.SQLContainerResource{
 					ID: to.StringPtr("Portal"),
-					PartitionKey: &mgmtdocumentdb.ContainerPartitionKey{
-						Paths: &[]string{
-							"/id",
+					PartitionKey: &sdkcosmos.ContainerPartitionKey{
+						Paths: []*string{
+							to.StringPtr("/id"),
 						},
-						Kind: mgmtdocumentdb.PartitionKindHash,
+						Kind: &hashPartitionKey,
 					},
 					DefaultTTL: to.Int32Ptr(-1),
 				},
-				Options: &mgmtdocumentdb.CreateUpdateOptions{
+				Options: &sdkcosmos.CreateUpdateOptions{
 					Throughput: to.Int32Ptr(cosmosDbPortalProvisionedThroughputHack),
 				},
 			},
@@ -1070,22 +1079,23 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 		DependsOn: []string{
 			"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 		},
+		Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 	}
 
 	gateway := &arm.Resource{
-		Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
-			SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
-				Resource: &mgmtdocumentdb.SQLContainerResource{
+		Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
+			Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
+				Resource: &sdkcosmos.SQLContainerResource{
 					ID: to.StringPtr("Gateway"),
-					PartitionKey: &mgmtdocumentdb.ContainerPartitionKey{
-						Paths: &[]string{
-							"/id",
+					PartitionKey: &sdkcosmos.ContainerPartitionKey{
+						Paths: []*string{
+							to.StringPtr("/id"),
 						},
-						Kind: mgmtdocumentdb.PartitionKindHash,
+						Kind: &hashPartitionKey,
 					},
 					DefaultTTL: to.Int32Ptr(-1),
 				},
-				Options: &mgmtdocumentdb.CreateUpdateOptions{
+				Options: &sdkcosmos.CreateUpdateOptions{
 					Throughput: to.Int32Ptr(cosmosDbGatewayProvisionedThroughputHack),
 				},
 			},
@@ -1097,34 +1107,35 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 		DependsOn: []string{
 			"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 		},
+		Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 	}
 
 	if !g.production {
-		database.Resource.(*mgmtdocumentdb.SQLDatabaseCreateUpdateParameters).SQLDatabaseCreateUpdateProperties.Options = &mgmtdocumentdb.CreateUpdateOptions{
-			AutoscaleSettings: &mgmtdocumentdb.AutoscaleSettings{
+		database.Resource.(*sdkcosmos.SQLDatabaseCreateUpdateParameters).Properties.Options = &sdkcosmos.CreateUpdateOptions{
+			AutoscaleSettings: &sdkcosmos.AutoscaleSettings{
 				MaxThroughput: to.Int32Ptr(1000),
 			},
 		}
-		portal.Resource.(*mgmtdocumentdb.SQLContainerCreateUpdateParameters).SQLContainerCreateUpdateProperties.Options = &mgmtdocumentdb.CreateUpdateOptions{}
-		gateway.Resource.(*mgmtdocumentdb.SQLContainerCreateUpdateParameters).SQLContainerCreateUpdateProperties.Options = &mgmtdocumentdb.CreateUpdateOptions{}
+		portal.Resource.(*sdkcosmos.SQLContainerCreateUpdateParameters).Properties.Options = &sdkcosmos.CreateUpdateOptions{}
+		gateway.Resource.(*sdkcosmos.SQLContainerCreateUpdateParameters).Properties.Options = &sdkcosmos.CreateUpdateOptions{}
 	}
 
 	rs := []*arm.Resource{
 		database,
 		{
-			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
-				SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
-					Resource: &mgmtdocumentdb.SQLContainerResource{
+			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
+				Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
+					Resource: &sdkcosmos.SQLContainerResource{
 						ID: to.StringPtr("AsyncOperations"),
-						PartitionKey: &mgmtdocumentdb.ContainerPartitionKey{
-							Paths: &[]string{
-								"/id",
+						PartitionKey: &sdkcosmos.ContainerPartitionKey{
+							Paths: []*string{
+								to.StringPtr("/id"),
 							},
-							Kind: mgmtdocumentdb.PartitionKindHash,
+							Kind: &hashPartitionKey,
 						},
 						DefaultTTL: to.Int32Ptr(7 * 86400), // 7 days
 					},
-					Options: &mgmtdocumentdb.CreateUpdateOptions{},
+					Options: &sdkcosmos.CreateUpdateOptions{},
 				},
 				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/AsyncOperations')]"),
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
@@ -1134,21 +1145,22 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
+			Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 		},
 		{
-			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
-				SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
-					Resource: &mgmtdocumentdb.SQLContainerResource{
+			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
+				Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
+					Resource: &sdkcosmos.SQLContainerResource{
 						ID: to.StringPtr("OpenShiftVersions"),
-						PartitionKey: &mgmtdocumentdb.ContainerPartitionKey{
-							Paths: &[]string{
-								"/id",
+						PartitionKey: &sdkcosmos.ContainerPartitionKey{
+							Paths: []*string{
+								to.StringPtr("/id"),
 							},
-							Kind: mgmtdocumentdb.PartitionKindHash,
+							Kind: &hashPartitionKey,
 						},
 						DefaultTTL: to.Int32Ptr(-1),
 					},
-					Options: &mgmtdocumentdb.CreateUpdateOptions{},
+					Options: &sdkcosmos.CreateUpdateOptions{},
 				},
 				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/OpenShiftVersions')]"),
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
@@ -1158,20 +1170,21 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
+			Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 		},
 		{
-			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
-				SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
-					Resource: &mgmtdocumentdb.SQLContainerResource{
+			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
+				Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
+					Resource: &sdkcosmos.SQLContainerResource{
 						ID: to.StringPtr("ClusterManagerConfigurations"),
-						PartitionKey: &mgmtdocumentdb.ContainerPartitionKey{
-							Paths: &[]string{
-								"/partitionKey",
+						PartitionKey: &sdkcosmos.ContainerPartitionKey{
+							Paths: []*string{
+								to.StringPtr("/partitionKey"),
 							},
-							Kind: mgmtdocumentdb.PartitionKindHash,
+							Kind: &hashPartitionKey,
 						},
 					},
-					Options: &mgmtdocumentdb.CreateUpdateOptions{},
+					Options: &sdkcosmos.CreateUpdateOptions{},
 				},
 				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/ClusterManagerConfigurations')]"),
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
@@ -1181,20 +1194,21 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
+			Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 		},
 		{
-			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
-				SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
-					Resource: &mgmtdocumentdb.SQLContainerResource{
+			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
+				Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
+					Resource: &sdkcosmos.SQLContainerResource{
 						ID: to.StringPtr("Billing"),
-						PartitionKey: &mgmtdocumentdb.ContainerPartitionKey{
-							Paths: &[]string{
-								"/id",
+						PartitionKey: &sdkcosmos.ContainerPartitionKey{
+							Paths: []*string{
+								to.StringPtr("/id"),
 							},
-							Kind: mgmtdocumentdb.PartitionKindHash,
+							Kind: &hashPartitionKey,
 						},
 					},
-					Options: &mgmtdocumentdb.CreateUpdateOptions{},
+					Options: &sdkcosmos.CreateUpdateOptions{},
 				},
 				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Billing')]"),
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
@@ -1204,22 +1218,23 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
+			Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 		},
 		gateway,
 		{
-			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
-				SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
-					Resource: &mgmtdocumentdb.SQLContainerResource{
+			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
+				Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
+					Resource: &sdkcosmos.SQLContainerResource{
 						ID: to.StringPtr("Monitors"),
-						PartitionKey: &mgmtdocumentdb.ContainerPartitionKey{
-							Paths: &[]string{
-								"/id",
+						PartitionKey: &sdkcosmos.ContainerPartitionKey{
+							Paths: []*string{
+								to.StringPtr("/id"),
 							},
-							Kind: mgmtdocumentdb.PartitionKindHash,
+							Kind: &hashPartitionKey,
 						},
 						DefaultTTL: to.Int32Ptr(-1),
 					},
-					Options: &mgmtdocumentdb.CreateUpdateOptions{},
+					Options: &sdkcosmos.CreateUpdateOptions{},
 				},
 				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Monitors')]"),
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
@@ -1229,39 +1244,40 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
+			Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 		},
 		{
-			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
-				SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
-					Resource: &mgmtdocumentdb.SQLContainerResource{
+			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
+				Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
+					Resource: &sdkcosmos.SQLContainerResource{
 						ID: to.StringPtr("OpenShiftClusters"),
-						PartitionKey: &mgmtdocumentdb.ContainerPartitionKey{
-							Paths: &[]string{
-								"/partitionKey",
+						PartitionKey: &sdkcosmos.ContainerPartitionKey{
+							Paths: []*string{
+								to.StringPtr("/partitionKey"),
 							},
-							Kind: mgmtdocumentdb.PartitionKindHash,
+							Kind: &hashPartitionKey,
 						},
-						UniqueKeyPolicy: &mgmtdocumentdb.UniqueKeyPolicy{
-							UniqueKeys: &[]mgmtdocumentdb.UniqueKey{
+						UniqueKeyPolicy: &sdkcosmos.UniqueKeyPolicy{
+							UniqueKeys: []*sdkcosmos.UniqueKey{
 								{
-									Paths: &[]string{
-										"/key",
+									Paths: []*string{
+										to.StringPtr("/key"),
 									},
 								},
 								{
-									Paths: &[]string{
-										"/clusterResourceGroupIdKey",
+									Paths: []*string{
+										to.StringPtr("/clusterResourceGroupIdKey"),
 									},
 								},
 								{
-									Paths: &[]string{
-										"/clientIdKey",
+									Paths: []*string{
+										to.StringPtr("/clientIdKey"),
 									},
 								},
 							},
 						},
 					},
-					Options: &mgmtdocumentdb.CreateUpdateOptions{},
+					Options: &sdkcosmos.CreateUpdateOptions{},
 				},
 				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/OpenShiftClusters')]"),
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
@@ -1271,21 +1287,22 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
+			Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 		},
 		portal,
 		{
-			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
-				SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
-					Resource: &mgmtdocumentdb.SQLContainerResource{
+			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
+				Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
+					Resource: &sdkcosmos.SQLContainerResource{
 						ID: to.StringPtr("Subscriptions"),
-						PartitionKey: &mgmtdocumentdb.ContainerPartitionKey{
-							Paths: &[]string{
-								"/id",
+						PartitionKey: &sdkcosmos.ContainerPartitionKey{
+							Paths: []*string{
+								to.StringPtr("/id"),
 							},
-							Kind: mgmtdocumentdb.PartitionKindHash,
+							Kind: &hashPartitionKey,
 						},
 					},
-					Options: &mgmtdocumentdb.CreateUpdateOptions{},
+					Options: &sdkcosmos.CreateUpdateOptions{},
 				},
 				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Subscriptions')]"),
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
@@ -1295,6 +1312,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
+			Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
 		},
 	}
 

@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -15,8 +16,10 @@ import (
 	"strings"
 	"time"
 
+	armsdk "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
+	sdkkeyvault "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -34,9 +37,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armkeyvault"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
-	keyvaultclient "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	redhatopenshift20200430 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2020-04-30/redhatopenshift"
 	redhatopenshift20210901preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2021-09-01-preview/redhatopenshift"
@@ -67,20 +70,7 @@ type Cluster struct {
 	roleassignments                   authorization.RoleAssignmentsClient
 	peerings                          network.VirtualNetworkPeeringsClient
 	ciParentVnetPeerings              network.VirtualNetworkPeeringsClient
-	vaultsClient                      keyvaultclient.VaultsClient
-}
-
-type errors []error
-
-func (errs errors) Error() string {
-	var sb strings.Builder
-
-	for _, err := range errs {
-		sb.WriteString(err.Error())
-		sb.WriteByte('\n')
-	}
-
-	return sb.String()
+	vaultsClient                      armkeyvault.VaultsClient
 }
 
 func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
@@ -91,6 +81,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 	}
 
 	options := environment.Environment().EnvironmentCredentialOptions()
+
 	spTokenCredential, err := azidentity.NewEnvironmentCredential(options)
 	if err != nil {
 		return nil, err
@@ -104,6 +95,17 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 	scopes := []string{environment.Environment().ResourceManagerScope}
 	authorizer := azidext.NewTokenCredentialAdapter(spTokenCredential, scopes)
 
+	armOption := armsdk.ClientOptions{
+		ClientOptions: policy.ClientOptions{
+			Cloud: options.Cloud,
+		},
+	}
+
+	vaultClient, err := armkeyvault.NewVaultsClient(environment.SubscriptionID(), spTokenCredential, &armOption)
+
+	if err != nil {
+		return nil, err
+	}
 	c := &Cluster{
 		log: log,
 		env: environment,
@@ -121,7 +123,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		routetables:                       network.NewRouteTablesClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		roleassignments:                   authorization.NewRoleAssignmentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		peerings:                          network.NewVirtualNetworkPeeringsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		vaultsClient:                      keyvaultclient.NewVaultsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		vaultsClient:                      vaultClient,
 	}
 
 	if ci && env.IsLocalDevelopmentMode() {
@@ -152,7 +154,7 @@ func (c *Cluster) CreateApp(ctx context.Context, clusterName string) error {
 		return err
 	}
 
-	return os.WriteFile("clusterapp.env", []byte(fmt.Sprintf("AZURE_CLUSTER_SERVICE_PRINCIPAL_ID=%s\nAZURE_CLUSTER_APP_ID=%s\nAZURE_CLUSTER_APP_SECRET=%s", spID, appID, appSecret)), 0o600)
+	return os.WriteFile("clusterapp.env", []byte(fmt.Sprintf("export AZURE_CLUSTER_SERVICE_PRINCIPAL_ID=%s\nexport AZURE_CLUSTER_APP_ID=%s\nexport AZURE_CLUSTER_APP_SECRET=%s", spID, appID, appSecret)), 0o600)
 }
 
 func (c *Cluster) DeleteApp(ctx context.Context) error {
@@ -232,7 +234,8 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	if c.ci {
 		// name is limited to 24 characters, but must be globally unique, so we generate one and try if it is available
 		kvName = "kv-" + uuid.DefaultGenerator.Generate()[:21]
-		result, err := c.vaultsClient.CheckNameAvailability(ctx, mgmtkeyvault.VaultCheckNameAvailabilityParameters{Name: &kvName, Type: to.StringPtr("Microsoft.KeyVault/vaults")})
+
+		result, err := c.vaultsClient.CheckNameAvailability(ctx, sdkkeyvault.VaultCheckNameAvailabilityParameters{Name: &kvName, Type: to.StringPtr("Microsoft.KeyVault/vaults")}, nil)
 		if err != nil {
 			return err
 		}
@@ -381,75 +384,32 @@ func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, wor
 }
 
 func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName string) error {
-	var errs errors
+	var errs []error
 
-	oc, err := c.openshiftclustersv20200430.Get(ctx, vnetResourceGroup, clusterName)
-	if err == nil {
-		c.log.Print("deleting role assignments")
-		err = c.deleteRoleAssignments(ctx, vnetResourceGroup, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID)
-		if err != nil {
-			errs = append(errs, err)
-		}
-
-		c.log.Print("deleting cluster")
-		err = c.openshiftclustersv20200430.DeleteAndWait(ctx, vnetResourceGroup, clusterName)
-		if err != nil {
-			errs = append(errs, err)
-		}
-	}
-
-	if c.ci {
-		_, err = c.groups.Get(ctx, vnetResourceGroup)
-		if err == nil {
-			c.log.Print("deleting resource group")
-			err = c.groups.DeleteAndWait(ctx, vnetResourceGroup)
-			if err != nil {
-				errs = append(errs, err)
-			}
-		}
-		// Only delete peering if CI=true and RP_MODE=development
-		if env.IsLocalDevelopmentMode() {
-			r, err := azure.ParseResourceID(c.ciParentVnet)
-			if err == nil {
-				err = c.ciParentVnetPeerings.DeleteAndWait(ctx, r.ResourceGroup, r.ResourceName, vnetResourceGroup+"-peer")
-			}
-			if err != nil {
-				errs = append(errs, err)
-			}
-		}
-	} else {
-		// Deleting the deployment does not clean up the associated resources
-		c.log.Info("deleting deployment")
-		err = c.deployments.DeleteAndWait(ctx, vnetResourceGroup, clusterName)
-		if err != nil {
-			errs = append(errs, err)
-		}
-
-		c.log.Info("deleting master/worker subnets")
-		err = c.subnets.DeleteAndWait(ctx, vnetResourceGroup, "dev-vnet", clusterName+"-master")
-		if err != nil {
-			errs = append(errs, err)
-		}
-
-		err = c.subnets.DeleteAndWait(ctx, vnetResourceGroup, "dev-vnet", clusterName+"-worker")
-		if err != nil {
-			errs = append(errs, err)
-		}
-
-		c.log.Info("deleting route table")
-		err = c.routetables.DeleteAndWait(ctx, vnetResourceGroup, clusterName+"-rt")
-		if err != nil {
-			errs = append(errs, err)
-		}
+	switch {
+	case c.ci && env.IsLocalDevelopmentMode(): // PR E2E
+		errs = append(errs,
+			c.deleteRoleAssignments(ctx, vnetResourceGroup, clusterName),
+			c.deleteCluster(ctx, vnetResourceGroup, clusterName),
+			c.deleteClusterResourceGroup(ctx, vnetResourceGroup),
+			c.deleteVnetPeerings(ctx, vnetResourceGroup),
+		)
+	case c.ci: // Prod E2E
+		errs = append(errs,
+			c.deleteRoleAssignments(ctx, vnetResourceGroup, clusterName),
+			c.deleteClusterResourceGroup(ctx, vnetResourceGroup),
+		)
+	default:
+		errs = append(errs,
+			c.deleteRoleAssignments(ctx, vnetResourceGroup, clusterName),
+			c.deleteCluster(ctx, vnetResourceGroup, clusterName),
+			c.deleteDeployment(ctx, vnetResourceGroup, clusterName), // Deleting the deployment does not clean up the associated resources
+			c.deleteVnetResources(ctx, vnetResourceGroup, "dev-vnet", clusterName),
+		)
 	}
 
 	c.log.Info("done")
-
-	if errs != nil {
-		return errs // https://golang.org/doc/faq#nil_error
-	}
-
-	return nil
+	return errors.Join(errs...)
 }
 
 // createCluster created new clusters, based on where it is running.
@@ -647,10 +607,15 @@ func (c *Cluster) fixupNSGs(ctx context.Context, vnetResourceGroup, clusterName 
 	return nil
 }
 
-func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, appID string) error {
-	spObjID, err := utilgraph.GetServicePrincipalIDByAppID(ctx, c.spGraphClient, appID)
+func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, clusterName string) error {
+	c.log.Print("deleting role assignments")
+	oc, err := c.openshiftclustersv20200430.Get(ctx, vnetResourceGroup, clusterName)
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting cluster document: %w", err)
+	}
+	spObjID, err := utilgraph.GetServicePrincipalIDByAppID(ctx, c.spGraphClient, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID)
+	if err != nil {
+		return fmt.Errorf("error getting service principal for cluster: %w", err)
 	}
 	if spObjID == nil {
 		return nil
@@ -658,7 +623,7 @@ func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, 
 
 	roleAssignments, err := c.roleassignments.ListForResourceGroup(ctx, vnetResourceGroup, fmt.Sprintf("principalId eq '%s'", *spObjID))
 	if err != nil {
-		return err
+		return fmt.Errorf("error listing role assignments for service principal: %w", err)
 	}
 
 	for _, roleAssignment := range roleAssignments {
@@ -670,12 +635,77 @@ func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, 
 			c.log.Infof("deleting role assignment %s", *roleAssignment.Name)
 			_, err = c.roleassignments.Delete(ctx, *roleAssignment.Scope, *roleAssignment.Name)
 			if err != nil {
-				return err
+				return fmt.Errorf("error deleting role assignment %s: %w", *roleAssignment.Name, err)
 			}
 		}
 	}
 
 	return nil
+}
+
+func (c *Cluster) deleteCluster(ctx context.Context, resourceGroup, clusterName string) error {
+	c.log.Printf("deleting cluster %s", clusterName)
+	if err := c.openshiftclustersv20200430.DeleteAndWait(ctx, resourceGroup, clusterName); err != nil {
+		return fmt.Errorf("error deleting cluster %s: %w", clusterName, err)
+	}
+	return nil
+}
+
+func (c *Cluster) deleteClusterResourceGroup(ctx context.Context, resourceGroup string) error {
+	if _, err := c.groups.Get(ctx, resourceGroup); err != nil {
+		c.log.Printf("error getting resource group %s, skipping deletion: %v", resourceGroup, err)
+		return nil
+	}
+
+	c.log.Printf("deleting resource group %s", resourceGroup)
+	if err := c.groups.DeleteAndWait(ctx, resourceGroup); err != nil {
+		return fmt.Errorf("error deleting resource group: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Cluster) deleteVnetPeerings(ctx context.Context, resourceGroup string) error {
+	r, err := azure.ParseResourceID(c.ciParentVnet)
+	if err == nil {
+		err = c.ciParentVnetPeerings.DeleteAndWait(ctx, r.ResourceGroup, r.ResourceName, resourceGroup+"-peer")
+	}
+	if err != nil {
+		return fmt.Errorf("error deleting vnet peerings: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Cluster) deleteDeployment(ctx context.Context, resourceGroup, clusterName string) error {
+	c.log.Info("deleting deployment")
+	if err := c.deployments.DeleteAndWait(ctx, resourceGroup, clusterName); err != nil {
+		return fmt.Errorf("error deleting deployment: %w", err)
+	}
+	return nil
+}
+
+func (c *Cluster) deleteVnetResources(ctx context.Context, resourceGroup, vnetName, clusterName string) error {
+	var errs []error
+
+	c.log.Info("deleting master/worker subnets")
+	if err := c.subnets.DeleteAndWait(ctx, resourceGroup, vnetName, clusterName+"-master"); err != nil {
+		c.log.Errorf("error when deleting master subnet: %v", err)
+		errs = append(errs, err)
+	}
+
+	if err := c.subnets.DeleteAndWait(ctx, resourceGroup, vnetName, clusterName+"-worker"); err != nil {
+		c.log.Errorf("error when deleting worker subnet: %v", err)
+		errs = append(errs, err)
+	}
+
+	c.log.Info("deleting route table")
+	if err := c.routetables.DeleteAndWait(ctx, resourceGroup, clusterName+"-rt"); err != nil {
+		c.log.Errorf("error when deleting route table: %v", err)
+		errs = append(errs, err)
+	}
+
+	return errors.Join(errs...)
 }
 
 func (c *Cluster) peerSubnetsToCI(ctx context.Context, vnetResourceGroup, clusterName string) error {

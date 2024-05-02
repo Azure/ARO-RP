@@ -5,6 +5,7 @@ package steps
 
 import (
 	"context"
+	"net/http"
 	"reflect"
 	"runtime"
 	"strings"
@@ -13,6 +14,8 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	msgraph_errors "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
 )
 
@@ -53,10 +56,21 @@ func Run(ctx context.Context, log *logrus.Entry, pollInterval time.Duration, ste
 		err := step.run(ctx, log)
 
 		if err != nil {
-			log.Errorf("step %s encountered error: %s", step, err.Error())
+			if azureerrors.IsUnauthorizedClientError(err) ||
+				azureerrors.HasAuthorizationFailedError(err) ||
+				azureerrors.IsInvalidSecretError(err) {
+				err = api.NewCloudError(http.StatusBadRequest, step.String(),
+					"encountered error",
+					err.Error())
+				log.Error(err)
+			} else {
+				log.Errorf("step %s encountered error: %s", step, err.Error())
+			}
+
 			if oDataError, ok := err.(msgraph_errors.ODataErrorable); ok {
 				spew.Fdump(log.Writer(), oDataError.GetErrorEscaped())
 			}
+
 			return nil, err
 		}
 

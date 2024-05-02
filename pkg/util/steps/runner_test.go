@@ -19,8 +19,11 @@ import (
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
-func successfulFunc(context.Context) error               { return nil }
-func failingFunc(context.Context) error                  { return errors.New("oh no!") }
+func successfulFunc(context.Context) error { return nil }
+func failingFunc(context.Context) error    { return errors.New("oh no!") }
+func failingAzureError(context.Context) error {
+	return errors.New("Status=403 Code=\"AuthorizationFailed\"")
+}
 func alwaysFalseCondition(context.Context) (bool, error) { return false, nil }
 func alwaysTrueCondition(context.Context) (bool, error)  { return true, nil }
 func timingOutCondition(ctx context.Context) (bool, error) {
@@ -65,6 +68,31 @@ func TestStepRunner(t *testing.T) {
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 			},
+		},
+		{
+			name: "An azure error will fail the run",
+			steps: func(controller *gomock.Controller) []Step {
+				return []Step{
+					Action(successfulFunc),
+					Action(failingAzureError),
+					Action(successfulFunc),
+				}
+			},
+			wantEntries: []map[string]types.GomegaMatcher{
+				{
+					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+				{
+					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.failingAzureError]"),
+					"level": gomega.Equal(logrus.InfoLevel),
+				},
+				{
+					"msg":   gomega.Equal("step [Action github.com/Azure/ARO-RP/pkg/util/steps.failingAzureError] encountered error: Status=403 Code=\"AuthorizationFailed\""),
+					"level": gomega.Equal(logrus.ErrorLevel),
+				},
+			},
+			wantErr: "Status=403 Code=\"AuthorizationFailed\"",
 		},
 		{
 			name: "A failing Action will fail the run",

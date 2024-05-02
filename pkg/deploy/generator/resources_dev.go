@@ -53,7 +53,7 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 			},
 			VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
 				UpgradePolicy: &mgmtcompute.UpgradePolicy{
-					Mode: mgmtcompute.UpgradeModeManual,
+					Mode: mgmtcompute.UpgradeModeRolling,
 				},
 				VirtualMachineProfile: &mgmtcompute.VirtualMachineScaleSetVMProfile{
 					OsProfile: &mgmtcompute.VirtualMachineScaleSetOSProfile{
