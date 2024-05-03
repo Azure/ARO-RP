@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
+	"github.com/Azure/ARO-RP/pkg/util/miseadapter"
 )
 
 type Feature int
@@ -35,6 +36,8 @@ const (
 	FeatureRequireD2sV3Workers
 	FeatureDisableReadinessDelay
 	FeatureEnableOCMEndpoints
+	FeatureEnableMISE
+	FeatureEnforceMISE
 )
 
 const (
@@ -76,6 +79,7 @@ type Interface interface {
 	InitializeAuthorizers() error
 	ArmClientAuthorizer() clientauthorizer.ClientAuthorizer
 	AdminClientAuthorizer() clientauthorizer.ClientAuthorizer
+	MISEAuthorizer() miseadapter.MISEAdapter
 	ClusterGenevaLoggingAccount() string
 	ClusterGenevaLoggingConfigVersion() string
 	ClusterGenevaLoggingEnvironment() string

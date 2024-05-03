@@ -64,3 +64,12 @@ func MUOImage(acrDomain string) string {
 func GateKeeperImage(acrDomain string) string {
 	return acrDomain + "/gatekeeper:v3.11.1"
 }
+
+// MiseImage contains the location of the Mise container image
+func MiseImage(acrDomain string) string {
+	return acrDomain + "/mise:1.0.02609.71-mise-cbl-mariner2.0-distroless"
+}
+
+func OTelImage(acrDomain string) string {
+	return "mcr.microsoft.com/oss/otel/opentelemetry-collector-contrib:0.95.0-linux-amd64"
+}
