@@ -139,8 +139,10 @@ Make sure that `PKG_CONFIG_PATH` contains the pkgconfig files of the above packa
     cd ${GOPATH:-$HOME/go}/src/github.com/Azure/ARO-RP
     ```
 
-1. Add standard git hooks
+1. Configure local git
 
     ```bash
     make init-contrib
+    git config --global github.user <<user_name>>
     ```
+

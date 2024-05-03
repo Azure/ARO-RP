@@ -9,23 +9,9 @@
 1. Build the development `az aro` extension:
 
    ```bash
+   . ./env
    make az
    ```
-
-1. Verify that the ARO extension path is in your `az` configuration:
-
-   ```bash
-   grep -q 'dev_sources' ~/.azure/config || cat >>~/.azure/config <<EOF
-   [extension]
-   dev_sources = $PWD/python
-   EOF
-   ```
-
-   > Alternatively, if you do not want to configure the Azure CLI to utilize
-   > this extension globally, you can set the `AZURE_EXTENSION_DEV_SOURCES`
-   > environment variable to the `./python/` subfolder of this repository, e.g.
-   > in your ./env environment file, when you want to use the extension, and
-   > unset it when you do not.
 
 1. Verify the ARO extension is registered:
 
@@ -41,7 +27,10 @@
    ```
 
    Note: you will be able to update your development `az aro` extension in the
-   future by simply running `git pull`.
+   future by simply running `git pull`. If you need to use the "prod" extension,
+   what is bundled in `az` natively rather than your `./python`, you can
+   `unset AZURE_EXTENSION_DEV_SOURCES` (found in your `./env` file).
+
 
 
 ## Prepare your environment
