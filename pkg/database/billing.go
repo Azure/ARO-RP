@@ -6,11 +6,18 @@ package database
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"strings"
+	"time"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+)
+
+const (
+	billingContainerName string = "Billing"
 )
 
 type billing struct {
@@ -29,48 +36,61 @@ type Billing interface {
 }
 
 // NewBilling returns a new Billing
-func NewBilling(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string) (Billing, error) {
+func NewBilling(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string, sqlResourceClient *armcosmos.SQLResourcesClient, location, resourceGroup, dbAccountName string) (Billing, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbName)
 
-	triggers := []*cosmosdb.Trigger{
+	triggerResources := []*armcosmos.SQLTriggerResource{
 		{
-			ID:               "setCreationBillingTimeStamp",
-			TriggerOperation: cosmosdb.TriggerOperationCreate,
-			TriggerType:      cosmosdb.TriggerTypePre,
-			Body: `function trigger() {
-	var request = getContext().getRequest();
-	var body = request.getBody();
-	var date = new Date();
-	var now = Math.floor(date.getTime() / 1000);
-	var billingBody = body["billing"];
-	if (!billingBody["creationTime"]) {
-		billingBody["creationTime"] = now;
-	}
-	request.setBody(body);
-}`,
+			ID: to.Ptr("setCreationBillingTimeStamp"),
+			Body: to.Ptr(`function trigger() {
+				var request = getContext().getRequest();
+				var body = request.getBody();
+				var date = new Date();
+				var now = Math.floor(date.getTime() / 1000);
+				var billingBody = body["billing"];
+				if (!billingBody["creationTime"]) {
+					billingBody["creationTime"] = now;
+				}
+				request.setBody(body);
+			}`),
+			TriggerOperation: to.Ptr(armcosmos.TriggerOperation("Create")),
+			TriggerType:      to.Ptr(armcosmos.TriggerType("Pre")),
 		},
 		{
-			ID:               "setDeletionBillingTimeStamp",
-			TriggerOperation: cosmosdb.TriggerOperationReplace,
-			TriggerType:      cosmosdb.TriggerTypePre,
-			Body: `function trigger() {
-	var request = getContext().getRequest();
-	var body = request.getBody();
-	var date = new Date();
-	var now = Math.floor(date.getTime() / 1000);
-	var billingBody = body["billing"];
-	if (!billingBody["deletionTime"]) {
-		billingBody["deletionTime"] = now;
-	}
-	request.setBody(body);
-}`,
+			ID: to.Ptr("setDeletionBillingTimeStamp"),
+			Body: to.Ptr(`function trigger() {
+				var request = getContext().getRequest();
+				var body = request.getBody();
+				var date = new Date();
+				var now = Math.floor(date.getTime() / 1000);
+				var billingBody = body["billing"];
+				if (!billingBody["creationTime"]) {
+					billingBody["creationTime"] = now;
+				}
+				request.setBody(body);
+			}`),
+			TriggerOperation: to.Ptr(armcosmos.TriggerOperation("Replace")),
+			TriggerType:      to.Ptr(armcosmos.TriggerType("Pre")),
 		},
 	}
 
-	triggerc := cosmosdb.NewTriggerClient(collc, collBilling)
-	for _, trigger := range triggers {
-		_, err := triggerc.Create(ctx, trigger)
-		if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
+	for _, triggerResource := range triggerResources {
+		createUpdateSQLTriggerParameters := armcosmos.SQLTriggerCreateUpdateParameters{
+			Properties: &armcosmos.SQLTriggerCreateUpdateProperties{
+				Options:  &armcosmos.CreateUpdateOptions{},
+				Resource: triggerResource,
+			},
+			Location: &location,
+		}
+		ctx, cancel := context.WithTimeout(ctx, time.Minute*5)
+		defer cancel()
+
+		poller, err := sqlResourceClient.BeginCreateUpdateSQLTrigger(ctx, resourceGroup, dbAccountName, dbName, billingContainerName, *triggerResource.ID, createUpdateSQLTriggerParameters, nil)
+		if err != nil {
+			return nil, err
+		}
+		_, err = poller.PollUntilDone(ctx, nil)
+		if err != nil {
 			return nil, err
 		}
 	}

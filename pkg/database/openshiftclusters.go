@@ -8,7 +8,10 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -23,6 +26,8 @@ const (
 	OpenshiftClustersPrefixQuery        = `SELECT * FROM OpenShiftClusters doc WHERE STARTSWITH(doc.key, @prefix)`
 	OpenshiftClustersClientIdQuery      = `SELECT * FROM OpenShiftClusters doc WHERE doc.clientIdKey = @clientID`
 	OpenshiftClustersResourceGroupQuery = `SELECT * FROM OpenShiftClusters doc WHERE doc.clusterResourceGroupIdKey = @resourceGroupID`
+
+	openShiftClusterContainerName = "OpenShiftClusters"
 )
 
 type OpenShiftClusterDocumentMutator func(*api.OpenShiftClusterDocument) error
@@ -56,28 +61,41 @@ type OpenShiftClusters interface {
 }
 
 // NewOpenShiftClusters returns a new OpenShiftClusters
-func NewOpenShiftClusters(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string) (OpenShiftClusters, error) {
+func NewOpenShiftClusters(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string, sqlResourceClient *armcosmos.SQLResourcesClient, location, resourceGroup, dbAccountName string) (OpenShiftClusters, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbName)
 
-	triggers := []*cosmosdb.Trigger{
+	triggerResources := []*armcosmos.SQLTriggerResource{
 		{
-			ID:               "renewLease",
-			TriggerOperation: cosmosdb.TriggerOperationAll,
-			TriggerType:      cosmosdb.TriggerTypePre,
-			Body: `function trigger() {
-	var request = getContext().getRequest();
-	var body = request.getBody();
-	var date = new Date();
-	body["leaseExpires"] = Math.floor(date.getTime() / 1000) + 60;
-	request.setBody(body);
-}`,
+			ID: to.Ptr("renewLease"),
+			Body: to.Ptr(`function trigger() {
+				var request = getContext().getRequest();
+				var body = request.getBody();
+				var date = new Date();
+				body["leaseExpires"] = Math.floor(date.getTime() / 1000) + 60;
+				request.setBody(body);
+			}`),
+			TriggerOperation: to.Ptr(armcosmos.TriggerOperation(cosmosdb.TriggerOperationAll)),
+			TriggerType:      to.Ptr(armcosmos.TriggerType(cosmosdb.TriggerTypePre)),
 		},
 	}
+	for _, triggerResource := range triggerResources {
+		createUpdateSQLTriggerParameters := armcosmos.SQLTriggerCreateUpdateParameters{
+			Properties: &armcosmos.SQLTriggerCreateUpdateProperties{
+				Options:  &armcosmos.CreateUpdateOptions{},
+				Resource: triggerResource,
+			},
+			Location: &location,
+			// ID:       &id,
+		}
+		ctx, cancel := context.WithTimeout(ctx, time.Minute*5)
+		defer cancel()
 
-	triggerc := cosmosdb.NewTriggerClient(collc, collOpenShiftClusters)
-	for _, trigger := range triggers {
-		_, err := triggerc.Create(ctx, trigger)
-		if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
+		poller, err := sqlResourceClient.BeginCreateUpdateSQLTrigger(ctx, resourceGroup, dbAccountName, dbName, openShiftClusterContainerName, *triggerResource.ID, createUpdateSQLTriggerParameters, nil)
+		if err != nil {
+			return nil, err
+		}
+		_, err = poller.PollUntilDone(ctx, nil)
+		if err != nil {
 			return nil, err
 		}
 	}

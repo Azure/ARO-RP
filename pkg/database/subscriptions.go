@@ -8,13 +8,20 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
-const SubscriptionsDequeueQuery string = `SELECT * FROM Subscriptions doc WHERE (doc.deleting ?? false) AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
+const (
+	SubscriptionsDequeueQuery string = `SELECT * FROM Subscriptions doc WHERE (doc.deleting ?? false) AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
+	subscriptionContainerName string = "Subscriptions"
+)
 
 type subscriptions struct {
 	c    cosmosdb.SubscriptionDocumentClient
@@ -33,40 +40,53 @@ type Subscriptions interface {
 }
 
 // NewSubscriptions returns a new Subscriptions
-func NewSubscriptions(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string) (Subscriptions, error) {
+func NewSubscriptions(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string, sqlResourceClient *armcosmos.SQLResourcesClient, location, resourceGroup, dbAccountName string) (Subscriptions, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbName)
 
-	triggers := []*cosmosdb.Trigger{
+	triggerResources := []*armcosmos.SQLTriggerResource{
 		{
-			ID:               "renewLease",
-			TriggerOperation: cosmosdb.TriggerOperationAll,
-			TriggerType:      cosmosdb.TriggerTypePre,
-			Body: `function trigger() {
-	var request = getContext().getRequest();
-	var body = request.getBody();
-	var date = new Date();
-	body["leaseExpires"] = Math.floor(date.getTime() / 1000) + 60;
-	request.setBody(body);
-}`,
+			ID: to.Ptr("renewLease"),
+			Body: to.Ptr(`function trigger() {
+				var request = getContext().getRequest();
+				var body = request.getBody();
+				var date = new Date();
+				body["leaseExpires"] = Math.floor(date.getTime() / 1000) + 60;
+				request.setBody(body);
+			}`),
+			TriggerOperation: to.Ptr(armcosmos.TriggerOperation(cosmosdb.TriggerOperationAll)),
+			TriggerType:      to.Ptr(armcosmos.TriggerType(cosmosdb.TriggerTypePre)),
 		},
 		{
-			ID:               "retryLater",
-			TriggerOperation: cosmosdb.TriggerOperationAll,
-			TriggerType:      cosmosdb.TriggerTypePre,
-			Body: `function trigger() {
-	var request = getContext().getRequest();
-	var body = request.getBody();
-	var date = new Date();
-	body["leaseExpires"] = Math.floor(date.getTime() / 1000) + 600;
-	request.setBody(body);
-}`,
+			ID: to.Ptr("retryLater"),
+			Body: to.Ptr(`function trigger() {
+				var request = getContext().getRequest();
+				var body = request.getBody();
+				var date = new Date();
+				body["leaseExpires"] = Math.floor(date.getTime() / 1000) + 600;
+				request.setBody(body);
+			}`),
+			TriggerOperation: to.Ptr(armcosmos.TriggerOperation(cosmosdb.TriggerOperationAll)),
+			TriggerType:      to.Ptr(armcosmos.TriggerType(cosmosdb.TriggerTypePre)),
 		},
 	}
 
-	triggerc := cosmosdb.NewTriggerClient(collc, collSubscriptions)
-	for _, trigger := range triggers {
-		_, err := triggerc.Create(ctx, trigger)
-		if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
+	for _, triggerResource := range triggerResources {
+		createUpdateSQLTriggerParameters := armcosmos.SQLTriggerCreateUpdateParameters{
+			Properties: &armcosmos.SQLTriggerCreateUpdateProperties{
+				Options:  &armcosmos.CreateUpdateOptions{},
+				Resource: triggerResource,
+			},
+			Location: &location,
+		}
+		ctx, cancel := context.WithTimeout(ctx, time.Minute*5)
+		defer cancel()
+
+		poller, err := sqlResourceClient.BeginCreateUpdateSQLTrigger(ctx, resourceGroup, dbAccountName, dbName, subscriptionContainerName, *triggerResource.ID, createUpdateSQLTriggerParameters, nil)
+		if err != nil {
+			return nil, err
+		}
+		_, err = poller.PollUntilDone(ctx, nil)
+		if err != nil {
 			return nil, err
 		}
 	}

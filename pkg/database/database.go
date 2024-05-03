@@ -6,11 +6,13 @@ package database
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net/http"
 	"reflect"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/policy"
+	azcorepolicy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	sdkcosmos "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
@@ -70,6 +72,22 @@ func NewMasterKeyAuthorizer(ctx context.Context, log *logrus.Entry, token azcore
 	}
 
 	return cosmosdb.NewMasterKeyAuthorizer(getDatabaseKey(keys, log))
+}
+
+func NewTokenAuthorizer(ctx context.Context, log *logrus.Entry, cred azcore.TokenCredential, databaseAccountName string, scopes []string) (cosmosdb.Authorizer, error) {
+	scopes = append(scopes, fmt.Sprintf("https://%s.documents.azure.com/.default", databaseAccountName))
+	acquireToken := func() (token string, newExpiration time.Time, err error) {
+		tk, err := cred.GetToken(ctx, azcorepolicy.TokenRequestOptions{Scopes: scopes})
+		if err != nil {
+			return "", time.Time{}, err
+		}
+		return tk.Token, tk.ExpiresOn, nil
+	}
+	tk, expiration, err := acquireToken()
+	if err != nil {
+		return nil, err
+	}
+	return cosmosdb.NewTokenAuthorizer(tk, expiration, acquireToken), nil
 }
 
 func getDatabaseKey(keys sdkcosmos.DatabaseAccountsClientListKeysResponse, log *logrus.Entry) string {

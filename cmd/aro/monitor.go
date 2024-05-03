@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/policy"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
 	"github.com/Azure/go-autorest/tracing"
 	"github.com/sirupsen/logrus"
 	kmetrics "k8s.io/client-go/tools/metrics"
@@ -92,7 +93,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
 	}
 	logrusEntry := log.WithField("component", "database")
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, logrusEntry, msiToken, clientOptions, _env.SubscriptionID(), _env.ResourceGroup(), dbAccountName)
+	dbAuthorizer, err := database.NewTokenAuthorizer(ctx, logrusEntry, msiToken, dbAccountName, []string{})
 	if err != nil {
 		return err
 	}
@@ -111,12 +112,17 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, dbc, dbName)
+	sqlResourceClient, err := armcosmos.NewSQLResourcesClient(_env.SubscriptionID(), msiToken, clientOptions)
 	if err != nil {
 		return err
 	}
 
-	dbSubscriptions, err := database.NewSubscriptions(ctx, dbc, dbName)
+	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, dbc, dbName, sqlResourceClient, _env.Location(), _env.ResourceGroup(), dbAccountName)
+	if err != nil {
+		return err
+	}
+
+	dbSubscriptions, err := database.NewSubscriptions(ctx, dbc, dbName, sqlResourceClient, _env.Location(), _env.ResourceGroup(), dbAccountName)
 	if err != nil {
 		return err
 	}

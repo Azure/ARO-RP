@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/policy"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -102,7 +103,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
 	}
 	logrusEntry := log.WithField("component", "database")
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, logrusEntry, msiToken, clientOptions, _env.SubscriptionID(), _env.ResourceGroup(), dbAccountName)
+	dbAuthorizer, err := database.NewTokenAuthorizer(ctx, logrusEntry, msiToken, dbAccountName, []string{})
 	if err != nil {
 		return err
 	}
@@ -116,7 +117,13 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
-	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, dbc, dbName)
+
+	sqlResourceClient, err := armcosmos.NewSQLResourcesClient(_env.SubscriptionID(), msiToken, clientOptions)
+	if err != nil {
+		return err
+	}
+
+	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, dbc, dbName, sqlResourceClient, _env.Location(), _env.ResourceGroup(), dbAccountName)
 	if err != nil {
 		return err
 	}

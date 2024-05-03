@@ -157,9 +157,9 @@ func DevConfig(_env env.Core) (*Config, error) {
 				"qos.ppe.warm.ingest.monitor.core.windows.net",
 				"test1.diagnostics.monitoring.core.windows.net",
 			},
-			GatewayFeatures: []string{
-				"InsecureSkipVerifyDBTokenCertificate",
-			},
+			// GatewayFeatures: []string{
+			// 	"InsecureSkipVerifyDBTokenCertificate",
+			// },
 			GatewayMDSDConfigVersion:    to.StringPtr(version.DevGatewayGenevaLoggingConfigVersion),
 			GatewayVMSSCapacity:         to.IntPtr(1),
 			GlobalResourceGroupLocation: to.StringPtr(_env.Location()),

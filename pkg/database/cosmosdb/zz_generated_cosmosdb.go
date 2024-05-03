@@ -118,12 +118,14 @@ func (c *databaseClient) _do(ctx context.Context, method, path, resourceType, re
 
 	req.Header.Set("x-ms-version", "2018-12-31")
 
-	c.mu.RLock()
+	// c.mu.RLock() // not required not since authorizer.get() will have that lock
 	if c.authorizer != nil {
-		c.authorizer.Authorize(req, resourceType, resourceLink)
+		err := c.authorizer.Authorize(req, resourceType, resourceLink)
+		if err != nil {
+			return nil, err
+		}
 	}
-	c.mu.RUnlock()
-
+	// c.mu.RUnlock()
 	resp, err := c.hc.Do(req)
 	if err != nil {
 		return nil, err
