@@ -457,7 +457,6 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"azureCloudName",
 		"azureSecPackQualysUrl",
 		"azureSecPackVSATenantId",
-		"billingE2EStorageAccountId",
 		"clusterMdmAccount",
 		"clusterMdsdAccount",
 		"clusterMdsdConfigVersion",
@@ -1440,19 +1439,6 @@ func (g *generator) rpRBAC() []*arm.Resource {
 			"Microsoft.Network/dnsZones",
 			"concat(resourceGroup().location, '.', parameters('clusterParentDomainName'))",
 			"concat(resourceGroup().location, '.', parameters('clusterParentDomainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', concat(resourceGroup().location, '.', parameters('clusterParentDomainName'))), 'FP / DNS Zone Contributor'))",
-		),
-	}
-}
-
-func (g *generator) rpBillingContributorRbac() []*arm.Resource {
-	return []*arm.Resource{
-		rbac.ResourceRoleAssignmentWithName(
-			rbac.RoleDocumentDBAccountContributor,
-			"parameters('billingServicePrincipalId')",
-			"Microsoft.DocumentDB/databaseAccounts",
-			"parameters('databaseAccountName')",
-			"concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('billingServicePrincipalId') , 'Billing / DocumentDB Account Contributor'))",
-			"[greater(length(parameters('billingServicePrincipalId')), 0)]",
 		),
 	}
 }
