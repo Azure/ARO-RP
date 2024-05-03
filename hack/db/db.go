@@ -12,6 +12,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -84,7 +85,12 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	openShiftClusters, err := database.NewOpenShiftClusters(ctx, dbc, dbName)
+	sqlResourceClient, err := armcosmos.NewSQLResourcesClient(_env.SubscriptionID(), tokenCredential, clientOptions)
+	if err != nil {
+		return err
+	}
+
+	openShiftClusters, err := database.NewOpenShiftClusters(ctx, dbc, dbName, sqlResourceClient, _env.Location(), _env.ResourceGroup(), dbAccountName)
 	if err != nil {
 		return err
 	}
