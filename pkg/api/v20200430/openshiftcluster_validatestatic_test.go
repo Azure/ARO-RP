@@ -387,6 +387,13 @@ func TestOpenShiftClusterStaticValidateServicePrincipalProfile(t *testing.T) {
 			},
 			wantErr: "400: InvalidParameter: properties.servicePrincipalProfile.clientSecret: The provided client secret is invalid.",
 		},
+		{
+			name: "nil ServicePrincipalProfile invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ServicePrincipalProfile = nil
+			},
+			wantErr: "400: InvalidParameter: properties.servicePrincipalProfile.servicePrincipalProfile: ServicePrincipalProfile cannot be nil in this API version.",
+		},
 	}
 
 	runTests(t, testModeCreate, tests)

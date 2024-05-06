@@ -182,7 +182,7 @@ func (sv openShiftClusterStaticValidator) validateConsoleProfile(path string, cp
 
 func (sv openShiftClusterStaticValidator) validateServicePrincipalProfile(path string, spp *ServicePrincipalProfile) error {
 	if spp == nil {
-		return nil
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".servicePrincipalProfile", "ServicePrincipalProfile cannot be nil in this API version.")
 	}
 
 	valid := uuid.IsValid(spp.ClientID)
