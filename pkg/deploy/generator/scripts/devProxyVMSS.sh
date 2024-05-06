@@ -1,23 +1,12 @@
 #Adding retry logic to yum commands in order to avoid stalling out on resource locks
-echo "running RHUI fix"
+echo "installing moby-engine (docker)"
 for attempt in {1..60}; do
-  yum update -y --disablerepo='*' --enablerepo='rhui-microsoft-azure*' && break
-  if [[ ${attempt} -lt 60 ]]; then sleep 30; else exit 1; fi
+	tdnf install -y moby-engine moby-cli && break
+	if [[ ${attempt} -lt 60 ]]; then sleep 30; else exit 1; fi
 done
 
-echo "running yum update"
-for attempt in {1..60}; do
-  yum -y -x WALinuxAgent -x WALinuxAgent-udev update --allowerasing && break
-  if [[ ${attempt} -lt 60 ]]; then sleep 30; else exit 1; fi
-done
-
-echo "installing podman-docker"
-for attempt in {1..60}; do
-  yum -y install podman-docker && break
-  if [[ ${attempt} -lt 60 ]]; then sleep 30; else exit 1; fi
-done
-
-firewall-cmd --add-port=443/tcp --permanent
+systemctl enable docker
+systemctl start docker
 
 mkdir /root/.docker
 cat >/root/.docker/config.json <<EOF
@@ -29,9 +18,6 @@ cat >/root/.docker/config.json <<EOF
 	}
 }
 EOF
-
-mkdir -p /etc/containers/
-touch /etc/containers/nodocker
 
 docker pull "$PROXYIMAGE"
 
