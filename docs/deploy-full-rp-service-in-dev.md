@@ -267,7 +267,7 @@
         --nsg-name rp-nsg \
         --access Allow \
         --priority 500 \
-        --source-address-prefixes "$(curl --silent ipecho.net/plain)/32" \
+        --source-address-prefixes "$(curl --silent -4 ipecho.net/plain)/32" \
         --protocol Tcp \
         --destination-port-ranges 22
     ```
@@ -290,7 +290,7 @@
         --nsg-name gateway-nsg \
         --access Allow \
         --priority 500 \
-        --source-address-prefixes "$(curl --silent ipecho.net/plain)/32" \
+        --source-address-prefixes "$(curl --silent -4 ipecho.net/plain)/32" \
         --protocol Tcp \
         --destination-port-ranges 22
     ```
@@ -315,7 +315,7 @@
         --nsg-name rp-nsg \
         --access Allow \
         --priority 499 \
-        --source-address-prefixes "$(curl --silent ipecho.net/plain)/32" \
+        --source-address-prefixes "$(curl --silent -4 ipecho.net/plain)/32" \
         --protocol Tcp \
         --destination-port-ranges 443
     ```
