@@ -4,11 +4,16 @@ package pullsecret
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"os"
 	"reflect"
+	"strings"
 
+	dockerregistry "github.com/containers/image/v5/docker"
+	"github.com/containers/image/v5/types"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -163,4 +168,55 @@ func Build(oc *api.OpenShiftCluster, ps string) (string, error) {
 	}
 
 	return pullSecret, nil
+}
+
+type RegistryClient struct {
+	CheckAuth func(context.Context, *types.SystemContext, string, string, string) error
+}
+
+func NewRegistryClient() RegistryClient {
+	return RegistryClient{
+		CheckAuth: dockerregistry.CheckAuth,
+	}
+}
+
+// ValidatePullSecret validates a passed in pull secret by attempting to log in to the registry
+// Will check only pull secrets for the specified domains, an empty domains slice will check all pull secrets
+func (r *RegistryClient) ValidatePullSecret(ctx context.Context, secret *corev1.Secret, domains []string) error {
+	dockerConfig, err := UnmarshalSecretData(secret)
+	if err != nil {
+		return err
+	}
+	errs := make([]string, 0)
+	for registry, authBase64 := range dockerConfig {
+		checkRegistry := false
+		for _, domain := range domains {
+			if registry == domain {
+				checkRegistry = true
+			}
+		}
+		if len(domains) == 0 || checkRegistry {
+			authDecoded, err := base64.StdEncoding.DecodeString(authBase64)
+			if err != nil {
+				errs = append(errs, err.Error())
+				continue
+			}
+
+			auth := strings.SplitN(string(authDecoded), ":", 2)
+			if len(auth) != 2 {
+				errs = append(errs, fmt.Errorf("credentials format error: %s", registry).Error())
+				continue
+			}
+			err = r.CheckAuth(ctx, nil, auth[0], auth[1], registry)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("failed to authenticate to registry %s: %w", registry, err).Error())
+			}
+		}
+	}
+	// go 1.20:
+	// return errors.Join(errs)
+	if len(errs) > 0 {
+		return fmt.Errorf(strings.Join(errs, ";"))
+	}
+	return nil
 }
