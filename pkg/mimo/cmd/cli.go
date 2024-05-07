@@ -19,7 +19,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/mimo/actuator"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
-	"github.com/Azure/ARO-RP/pkg/util/service"
 )
 
 func main() {
@@ -113,7 +112,7 @@ func main() {
 						return err
 					}
 
-					m := statsd.NewFromEnv(ctx.Context, _env.Logger(), _env)
+					m := statsd.New(ctx, log.WithField("component", "actuator"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 
 					g, err := golang.NewMetrics(_env.Logger(), m)
 					if err != nil {
@@ -127,11 +126,6 @@ func main() {
 					}
 
 					dbName, err := service.DBName(_env.IsLocalDevelopmentMode())
-					if err != nil {
-						return err
-					}
-
-					buckets, err := database.NewBucketServices(ctx.Context, dbc, dbName)
 					if err != nil {
 						return err
 					}
@@ -151,7 +145,7 @@ func main() {
 						return err
 					}
 
-					a := actuator.NewService(_env.Logger(), dialer, buckets, clusters, manifests, m)
+					a := actuator.NewService(_env.Logger(), dialer, clusters, manifests, m)
 
 					sigterm := make(chan os.Signal, 1)
 					done := make(chan struct{})

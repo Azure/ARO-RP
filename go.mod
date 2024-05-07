@@ -76,6 +76,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/tebeka/selenium v0.9.9
 	github.com/ugorji/go/codec v1.2.12
+	github.com/urfave/cli/v2 v2.27.2
 	github.com/vincent-petithory/dataurl v1.0.0
 	golang.org/x/crypto v0.24.0
 	golang.org/x/net v0.26.0
@@ -133,6 +134,7 @@ require (
 	github.com/containers/psgo v1.8.0 // indirect
 	github.com/containers/storage v1.51.0 // indirect
 	github.com/coreos/vcontext v0.0.0-20211021162308-f1dbbca7bef4 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
 	github.com/cyberphone/json-canonicalization v0.0.0-20231011164504-785e29786b46 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
 	github.com/disiqueira/gotree/v3 v3.0.2 // indirect
@@ -238,6 +240,7 @@ require (
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/robfig/cron v1.2.0 // indirect
 	github.com/russross/blackfriday v1.6.0 // indirect
+	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.7.0 // indirect
 	github.com/sigstore/fulcio v1.4.3 // indirect
 	github.com/sigstore/rekor v1.2.2 // indirect
@@ -254,6 +257,7 @@ require (
 	github.com/vbatts/tar-split v0.11.5 // indirect
 	github.com/vbauerster/mpb/v8 v8.6.2 // indirect
 	github.com/xlab/treeprint v1.1.0 // indirect
+	github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	go.mongodb.org/mongo-driver v1.11.3 // indirect
 	go.mozilla.org/pkcs7 v0.0.0-20210826202110-33d05740a352 // indirect
