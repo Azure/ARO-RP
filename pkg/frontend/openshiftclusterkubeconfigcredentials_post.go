@@ -73,6 +73,7 @@ func (f *frontend) _postOpenShiftClusterKubeConfigCredentials(ctx context.Contex
 	if doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil {
 		doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 	}
+	doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey = ""
 
 	return json.MarshalIndent(converter.ToExternal(doc.OpenShiftCluster), "", "    ")
 }
