@@ -48,8 +48,6 @@ type Configuration struct {
 	ARMAPICABundle                     *string                `json:"armApiCaBundle,omitempty"`
 	ARMAPIClientCertCommonName         *string                `json:"armApiClientCertCommonName,omitempty"`
 	ARMClientID                        *string                `json:"armClientId,omitempty"`
-	BillingE2EStorageAccountID         *string                `json:"billingE2EStorageAccountId,omitempty"`
-	BillingServicePrincipalID          *string                `json:"billingServicePrincipalId,omitempty"`
 	ClusterMDMAccount                  *string                `json:"clusterMdmAccount,omitempty" value:"required"`
 	ClusterMDSDAccount                 *string                `json:"clusterMdsdAccount,omitempty" value:"required"`
 	ClusterMDSDConfigVersion           *string                `json:"clusterMdsdConfigVersion,omitempty" value:"required"`

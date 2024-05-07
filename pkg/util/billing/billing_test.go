@@ -19,101 +19,6 @@ import (
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
-func TestIsSubscriptionRegisteredForE2E(t *testing.T) {
-	const tenantID = "11111111-1111-1111-1111-111111111111"
-
-	for _, tt := range []struct {
-		name string
-		sub  api.SubscriptionProperties
-		want bool
-	}{
-		{
-			name: "empty",
-		},
-		{
-			name: "sub without feature flag registered and not internal tenant",
-			sub: api.SubscriptionProperties{
-				TenantID: tenantID,
-				RegisteredFeatures: []api.RegisteredFeatureProfile{
-					{
-						Name:  "RandomFeature",
-						State: "Registered",
-					},
-				},
-			},
-		},
-		{
-			name: "sub with feature flag registered and not internal tenant",
-			sub: api.SubscriptionProperties{
-				TenantID: tenantID,
-				RegisteredFeatures: []api.RegisteredFeatureProfile{
-					{
-						Name:  api.FeatureFlagSaveAROTestConfig,
-						State: "Registered",
-					},
-				},
-			},
-		},
-		{
-			name: "AME internal tenant and feature flag not registered",
-			sub: api.SubscriptionProperties{
-				TenantID: tenantIDAME,
-				RegisteredFeatures: []api.RegisteredFeatureProfile{
-					{
-						Name:  "RandomFeature",
-						State: "Registered",
-					},
-				},
-			},
-		},
-		{
-			name: "MSFT internal tenant and feature flag not registered",
-			sub: api.SubscriptionProperties{
-				TenantID: tenantIDMSFT,
-				RegisteredFeatures: []api.RegisteredFeatureProfile{
-					{
-						Name:  "RandomFeature",
-						State: "Registered",
-					},
-				},
-			},
-		},
-		{
-			name: "AME internal tenant and feature flag registered",
-			sub: api.SubscriptionProperties{
-				TenantID: tenantIDAME,
-				RegisteredFeatures: []api.RegisteredFeatureProfile{
-					{
-						Name:  api.FeatureFlagSaveAROTestConfig,
-						State: "Registered",
-					},
-				},
-			},
-			want: true,
-		},
-		{
-			name: "MSFT internal tenant and feature flag registered",
-			sub: api.SubscriptionProperties{
-				TenantID: tenantIDMSFT,
-				RegisteredFeatures: []api.RegisteredFeatureProfile{
-					{
-						Name:  api.FeatureFlagSaveAROTestConfig,
-						State: "Registered",
-					},
-				},
-			},
-			want: true,
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			got := isSubscriptionRegisteredForE2E(&tt.sub)
-			if got != tt.want {
-				t.Error(got)
-			}
-		})
-	}
-}
-
 func TestDelete(t *testing.T) {
 	ctx := context.Background()
 
@@ -220,7 +125,6 @@ func TestDelete(t *testing.T) {
 			m := &manager{
 				log:       log,
 				billingDB: billingDatabase,
-				subDB:     subscriptionsDatabase,
 			}
 
 			err = m.Delete(ctx, &api.OpenShiftClusterDocument{ID: docID})
@@ -279,12 +183,6 @@ func TestEnsure(t *testing.T) {
 					ID: subID,
 					Subscription: &api.Subscription{
 						Properties: &api.SubscriptionProperties{
-							RegisteredFeatures: []api.RegisteredFeatureProfile{
-								{
-									Name:  api.FeatureFlagSaveAROTestConfig,
-									State: "NotRegistered",
-								},
-							},
 							TenantID: tenantID,
 						},
 					},
@@ -321,12 +219,6 @@ func TestEnsure(t *testing.T) {
 					ID: subID,
 					Subscription: &api.Subscription{
 						Properties: &api.SubscriptionProperties{
-							RegisteredFeatures: []api.RegisteredFeatureProfile{
-								{
-									Name:  api.FeatureFlagSaveAROTestConfig,
-									State: "NotRegistered",
-								},
-							},
 							TenantID: tenantID,
 						},
 					},
@@ -353,12 +245,6 @@ func TestEnsure(t *testing.T) {
 					ID: subID,
 					Subscription: &api.Subscription{
 						Properties: &api.SubscriptionProperties{
-							RegisteredFeatures: []api.RegisteredFeatureProfile{
-								{
-									Name:  api.FeatureFlagSaveAROTestConfig,
-									State: "NotRegistered",
-								},
-							},
 							TenantID: tenantID,
 						},
 					},
@@ -408,7 +294,6 @@ func TestEnsure(t *testing.T) {
 			m := &manager{
 				log:       log,
 				billingDB: billingDatabase,
-				subDB:     subscriptionsDatabase,
 			}
 
 			doc, err := openShiftClusterDatabase.Get(ctx, strings.ToLower(testdatabase.GetResourcePath(subID, "resourceName")))

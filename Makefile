@@ -9,7 +9,7 @@ NO_CACHE ?= true
 export GOFLAGS=$(GO_FLAGS)
 
 # fluentbit version must also be updated in RP code, see pkg/util/version/const.go
-MARINER_VERSION = 20230321
+MARINER_VERSION = 20240301
 FLUENTBIT_VERSION = 1.9.10
 FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$(MARINER_VERSION)
 AUTOREST_VERSION = 3.6.3
@@ -114,7 +114,8 @@ generate-kiota:
 	go run ./hack/licenses -dirs ./pkg/util/graph/graphsdk
 
 init-contrib:
-	cp -R hack/git/hooks/* .git/hooks/
+	install -v hack/git/hooks/* .git/hooks/
+	
 
 image-aro-multistage:
 	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .

@@ -25,11 +25,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
-	"github.com/Azure/ARO-RP/pkg/util/permissions"
-	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/token"
 )
 
@@ -87,7 +84,6 @@ type dynamic struct {
 	env                        env.Interface
 	azEnv                      *azureclient.AROEnvironment
 
-	permissions                           authorization.PermissionsClient
 	virtualNetworks                       virtualNetworksGetClient
 	diskEncryptionSets                    compute.DiskEncryptionSetsClient
 	resourceSkusClient                    compute.ResourceSkusClient
@@ -125,7 +121,6 @@ func NewValidator(
 
 		spComputeUsage: compute.NewUsageClient(azEnv, subscriptionID, authorizer),
 		spNetworkUsage: network.NewUsageClient(azEnv, subscriptionID, authorizer),
-		permissions:    authorization.NewPermissionsClient(azEnv, subscriptionID, authorizer),
 		virtualNetworks: newVirtualNetworksCache(
 			network.NewVirtualNetworksClient(azEnv, subscriptionID, authorizer),
 		),
@@ -397,12 +392,8 @@ func (dv *dynamic) validateActions(ctx context.Context, r *azure.Resource, actio
 	defer cancel()
 
 	c := closure{dv: dv, ctx: ctx, resource: r, actions: actions}
-	conditionalFunc := c.usingListPermissions
-	if dv.pdpClient != nil {
-		conditionalFunc = c.usingCheckAccessV2
-	}
 
-	return wait.PollImmediateUntil(30*time.Second, conditionalFunc, timeoutCtx.Done())
+	return wait.PollImmediateUntil(30*time.Second, c.usingCheckAccessV2, timeoutCtx.Done())
 }
 
 // closure is the closure used in PollImmediateUntil's ConditionalFunc
@@ -414,47 +405,8 @@ type closure struct {
 	oid      *string
 }
 
-// usingListPermissions is how the current check is done
-func (c closure) usingListPermissions() (bool, error) {
-	c.dv.log.Debug("retry validateActions with ListPermissions")
-	perms, err := c.dv.permissions.ListForResource(
-		c.ctx,
-		c.resource.ResourceGroup,
-		c.resource.Provider,
-		"",
-		c.resource.ResourceType,
-		c.resource.ResourceName,
-	)
-	if err != nil {
-		return false, err
-	}
-
-	// If we get a StatusForbidden, try refreshing the SP (since with a
-	// brand-new SP it might take time to propagate)
-	if detailedErr, ok := err.(autorest.DetailedError); ok &&
-		detailedErr.StatusCode == http.StatusForbidden {
-		return false, steps.ErrWantRefresh
-	}
-	if err != nil {
-		return false, err
-	}
-
-	for _, action := range c.actions {
-		ok, err := permissions.CanDoAction(perms, action)
-		if !ok || err != nil {
-			// TODO(jminter): I don't understand if there are genuinely
-			// cases where CanDoAction can return false then true shortly
-			// after. I'm a little skeptical; if it can't happen we can
-			// simplify this code.  We should add a metric on this.
-			return false, err
-		}
-	}
-	return true, nil
-}
-
 // usingCheckAccessV2 uses the new RBAC checkAccessV2 API
 func (c closure) usingCheckAccessV2() (bool, error) {
-	// TODO remove this when fully migrated to CheckAccess
 	c.dv.log.Info("validateActions with CheckAccessV2")
 
 	// reusing oid during retries

@@ -41,8 +41,6 @@ func (g *generator) rpTemplate() *arm.Template {
 			"azureCloudName",
 			"azureSecPackQualysUrl",
 			"azureSecPackVSATenantId",
-			"billingE2EStorageAccountId",
-			"billingServicePrincipalId",
 			"clusterMdmAccount",
 			"clusterMdsdAccount",
 			"clusterMdsdConfigVersion",
@@ -100,8 +98,6 @@ func (g *generator) rpTemplate() *arm.Template {
 		case "armApiCaBundle",
 			"armApiClientCertCommonName",
 			"armClientId",
-			"billingServicePrincipalId",
-			"billingE2EStorageAccountId",
 			"gatewayDomains",
 			"rpFeatures":
 			p.DefaultValue = ""
@@ -177,7 +173,6 @@ func (g *generator) rpTemplate() *arm.Template {
 			g.rpLBAlert(67.0, 3, "rp-degraded-alert", "PT15M", "PT6H", "DipAvailability"),     // 1/3 backend down for 1h or 2/3 down for 3h in the last 6h
 			g.rpLBAlert(33.0, 2, "rp-vnet-alert", "PT5M", "PT5M", "VipAvailability"))          // this will trigger only if the Azure network infrastructure between the loadBalancers and VMs is down for 3.5min
 		// more on alerts https://msazure.visualstudio.com/AzureRedHatOpenShift/_wiki/wikis/ARO.wiki/53765/WIP-Alerting
-		t.Resources = append(t.Resources, g.rpBillingContributorRbac()...)
 
 		t.Resources = append(t.Resources,
 			g.virtualNetworkPeering("rp-vnet/peering-gateway-vnet", "[resourceId(parameters('gatewayResourceGroupName'), 'Microsoft.Network/virtualNetworks', 'gateway-vnet')]", false, false, nil),

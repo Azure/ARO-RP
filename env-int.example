@@ -5,5 +5,6 @@ export RESOURCEGROUP=$USER-aro-$LOCATION
 export DATABASE_ACCOUNT_NAME=$USER-aro-$LOCATION
 export DATABASE_NAME=ARO
 export KEYVAULT_PREFIX=$USER-aro-$LOCATION
+export KEYVAULT_PREFIX=${KEYVAULT_PREFIX::20}
 export ARO_IMAGE=${USER}aro.azurecr.io/aro:$(git rev-parse --short=7 HEAD)$([[ $(git status --porcelain) = "" ]] || echo -dirty)
 export FLUENTBIT_IMAGE=${USER}aro.azurecr.io/fluentbit:latest

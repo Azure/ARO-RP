@@ -326,4 +326,15 @@ func (c openShiftClusterConverter) ExternalNoReadOnly(_oc interface{}) {
 	if oc.Properties.NetworkProfile.LoadBalancerProfile != nil {
 		oc.Properties.NetworkProfile.LoadBalancerProfile.EffectiveOutboundIPs = nil
 	}
+	oc.SystemData = nil
+	oc.Properties.ConsoleProfile.URL = ""
+	oc.Properties.APIServerProfile.URL = ""
+	oc.Properties.APIServerProfile.IP = ""
+	for i := range oc.Properties.IngressProfiles {
+		oc.Properties.IngressProfiles[i].IP = ""
+	}
+	for i := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+		oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ClientID = ""
+		oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ObjectID = ""
+	}
 }
