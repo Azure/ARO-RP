@@ -56,6 +56,7 @@ type Operator interface {
 	Restart(context.Context, []string) error
 	IsRunningDesiredVersion(context.Context) (bool, error)
 	RenewMDSDCertificate(context.Context) error
+	SyncClusterObject(context.Context) error
 }
 
 type operator struct {
@@ -207,6 +208,35 @@ func (o *operator) resources(ctx context.Context) ([]kruntime.Object, error) {
 		return nil, err
 	}
 
+	domain := o.oc.Properties.ClusterProfile.Domain
+	if !strings.ContainsRune(domain, '.') {
+		domain += "." + o.env.Domain()
+	}
+
+	cluster, err := o.clusterObject(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// create a secret here for genevalogging, later we will copy it to
+	// the genevalogging namespace.
+	return append(results,
+		&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      pkgoperator.SecretName,
+				Namespace: pkgoperator.Namespace,
+			},
+			Data: map[string][]byte{
+				genevalogging.GenevaCertName: gcsCertBytes,
+				genevalogging.GenevaKeyName:  gcsKeyBytes,
+				corev1.DockerConfigJsonKey:   []byte(ps),
+			},
+		},
+		cluster,
+	), nil
+}
+
+func (o *operator) clusterObject(ctx context.Context) (*arov1alpha1.Cluster, error) {
 	vnetID, _, err := apisubnet.Split(o.oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return nil, err
@@ -277,23 +307,15 @@ func (o *operator) resources(ctx context.Context) ([]kruntime.Object, error) {
 		// covers the case of an admin-disable, we need to update dnsmasq on each node
 		cluster.Spec.GatewayDomains = make([]string, 0)
 	}
+	return cluster, nil
+}
 
-	// create a secret here for genevalogging, later we will copy it to
-	// the genevalogging namespace.
-	return append(results,
-		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      pkgoperator.SecretName,
-				Namespace: pkgoperator.Namespace,
-			},
-			Data: map[string][]byte{
-				genevalogging.GenevaCertName: gcsCertBytes,
-				genevalogging.GenevaKeyName:  gcsKeyBytes,
-				corev1.DockerConfigJsonKey:   []byte(ps),
-			},
-		},
-		cluster,
-	), nil
+func (o *operator) SyncClusterObject(ctx context.Context) error {
+	resource, err := o.clusterObject(ctx)
+	if err != nil {
+		return err
+	}
+	return o.dh.Ensure(ctx, resource)
 }
 
 func (o *operator) CreateOrUpdate(ctx context.Context) error {
