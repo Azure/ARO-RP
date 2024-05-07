@@ -97,3 +97,7 @@ func (d *dev) FPNewClientCertificateCredential(tenantID string) (*azidentity.Cli
 
 	return credential, nil
 }
+
+func (d *dev) OIDCEndpoint() string {
+	return fmt.Sprintf("%s.blob.%s", d.OIDCStorageAccountName(), d.Environment().StorageEndpointSuffix)
+}

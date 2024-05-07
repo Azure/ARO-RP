@@ -429,6 +429,7 @@ az ad app credential reset \
    PARENT_DOMAIN_RESOURCEGROUP='$PARENT_DOMAIN_RESOURCEGROUP'
    export DOMAIN_NAME="\$LOCATION.\$PARENT_DOMAIN_NAME"
    export AZURE_ENVIRONMENT='AzurePublicCloud'
+   export STORAGE_ACCOUNT_DOMAIN="${RESOURCEGROUP//-}.blob.core.windows.net"
    EOF
    ```
 
