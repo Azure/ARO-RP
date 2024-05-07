@@ -44,7 +44,7 @@ func TestClusterServidePrincipalEnricherTask(t *testing.T) {
 			}),
 			wantOc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: api.ServicePrincipalProfile{
+					ServicePrincipalProfile: &api.ServicePrincipalProfile{
 						ClientID:     "new-client-id",
 						ClientSecret: api.SecureString("new-client-secret"),
 					},
@@ -56,7 +56,7 @@ func TestClusterServidePrincipalEnricherTask(t *testing.T) {
 			client: fake.NewSimpleClientset(),
 			wantOc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: api.ServicePrincipalProfile{
+					ServicePrincipalProfile: &api.ServicePrincipalProfile{
 						ClientID:     "old-client-id",
 						ClientSecret: "old-client-secret",
 					},
@@ -68,7 +68,7 @@ func TestClusterServidePrincipalEnricherTask(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			oc := &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: api.ServicePrincipalProfile{
+					ServicePrincipalProfile: &api.ServicePrincipalProfile{
 						ClientID:     "old-client-id",
 						ClientSecret: api.SecureString("old-client-secret"),
 					},

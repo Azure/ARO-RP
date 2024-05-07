@@ -314,7 +314,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
 					Properties: OpenShiftClusterProperties{
-						ServicePrincipalProfile: ServicePrincipalProfile{
+						ServicePrincipalProfile: &ServicePrincipalProfile{
 							ClientID: "clientId",
 						},
 					},
@@ -330,7 +330,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
 					Properties: OpenShiftClusterProperties{
-						ServicePrincipalProfile: ServicePrincipalProfile{
+						ServicePrincipalProfile: &ServicePrincipalProfile{
 							SPObjectID: "clientId",
 						},
 					},

@@ -79,7 +79,7 @@ func validOpenShiftCluster(name, location string) *OpenShiftCluster {
 			ConsoleProfile: ConsoleProfile{
 				URL: "https://console-openshift-console.apps.cluster.location.aroapp.io/",
 			},
-			ServicePrincipalProfile: ServicePrincipalProfile{
+			ServicePrincipalProfile: &ServicePrincipalProfile{
 				ClientSecret: "clientSecret",
 				ClientID:     "11111111-1111-1111-1111-111111111111",
 			},
@@ -446,6 +446,13 @@ func TestOpenShiftClusterStaticValidateServicePrincipalProfile(t *testing.T) {
 				oc.Properties.ServicePrincipalProfile.ClientSecret = ""
 			},
 			wantErr: "400: InvalidParameter: properties.servicePrincipalProfile.clientSecret: The provided client secret is invalid.",
+		},
+		{
+			name: "nil ServicePrincipalProfile invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ServicePrincipalProfile = nil
+			},
+			wantErr: "400: InvalidParameter: properties.servicePrincipalProfile.servicePrincipalProfile: ServicePrincipalProfile cannot be nil in this API version.",
 		},
 	}
 

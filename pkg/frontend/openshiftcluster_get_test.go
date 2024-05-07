@@ -47,7 +47,7 @@ func TestGetOpenShiftCluster(t *testing.T) {
 							ClusterProfile: api.ClusterProfile{
 								PullSecret: "{}",
 							},
-							ServicePrincipalProfile: api.ServicePrincipalProfile{
+							ServicePrincipalProfile: &api.ServicePrincipalProfile{
 								ClientSecret: "clientSecret",
 							},
 						},
@@ -62,6 +62,9 @@ func TestGetOpenShiftCluster(t *testing.T) {
 					ID:   tt.resourceID,
 					Name: "resourceName",
 					Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+					Properties: v20200430.OpenShiftClusterProperties{
+						ServicePrincipalProfile: &v20200430.ServicePrincipalProfile{},
+					},
 				}
 			},
 		},
