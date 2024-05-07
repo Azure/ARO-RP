@@ -56,6 +56,7 @@ const (
 	ServiceKeyvaultSuffix            = "-svc"
 	RPPrivateEndpointPrefix          = "rp-pe-"
 	ProxyHostName                    = "PROXY_HOSTNAME"
+	OIDCBlobContainerPrefix          = "oic-"
 )
 
 // Interface is clunky and somewhat legacy and only used in the RP codebase (not

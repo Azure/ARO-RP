@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	azstorage "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
@@ -24,6 +26,7 @@ import (
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -33,6 +36,48 @@ const storageServiceEndpoint = "Microsoft.Storage"
 
 func (m *manager) createDNS(ctx context.Context) error {
 	return m.dns.Create(ctx, m.doc.OpenShiftCluster)
+}
+
+func (m *manager) createOIDC(ctx context.Context) error {
+	// TODO: Uncomment below part after testing OIDC creation in different environments
+	// if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil {
+	// 	return nil
+	// }
+
+	blobContainerName := env.OIDCBlobContainerPrefix + m.doc.ID
+
+	publicAccess := azstorage.PublicAccessNone
+	// Public access on OIDC Container needed for development environments because of no AFD avaialbility
+	if m.env.IsLocalDevelopmentMode() {
+		publicAccess = azstorage.PublicAccessBlob
+	}
+	err := m.rpBlob.CreateBlobContainer(ctx, m.env.ResourceGroup(), m.env.OIDCStorageAccountName(), blobContainerName, publicAccess)
+	if err != nil {
+		return err
+	}
+
+	oidcBuilder, err := oidcbuilder.NewOIDCBuilder(m.env.Environment().StorageEndpointSuffix, m.env.OIDCEndpoint(), m.env.OIDCStorageAccountName(), blobContainerName)
+	if err != nil {
+		return err
+	}
+
+	azBlobClient, err := m.rpBlob.GetAZBlobClient(oidcBuilder.GetBlobContainerURL(), &azblob.ClientOptions{})
+	if err != nil {
+		return err
+	}
+
+	err = oidcBuilder.EnsureOIDCDocs(ctx, blobContainerName, azBlobClient)
+	if err != nil {
+		return err
+	}
+
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer = api.OIDCIssuer(oidcBuilder.GetEndpointUrl())
+		doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey = api.SecureString(oidcBuilder.GetPrivateKey())
+		return nil
+	})
+
+	return err
 }
 
 func (m *manager) ensureInfraID(ctx context.Context) (err error) {

@@ -441,6 +441,12 @@ func (m *manager) Delete(ctx context.Context) error {
 		return err
 	}
 
+	m.log.Printf("deleting OIDC configuration")
+	err = m.rpBlob.DeleteBlobContainer(ctx, m.env.ResourceGroup(), m.env.OIDCStorageAccountName(), env.OIDCBlobContainerPrefix+m.doc.ID)
+	if err != nil {
+		return err
+	}
+
 	m.log.Printf("deleting role assignments")
 	err = m.deleteRoleAssignments(ctx)
 	if err != nil {
