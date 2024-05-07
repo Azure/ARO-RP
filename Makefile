@@ -76,7 +76,7 @@ clean:
 client: generate
 	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01 2023-07-01-preview 2023-09-04 2023-11-22 2024-08-12-preview
 
-ci-rp:
+ci-rp: fix-macos-vendor
 	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg VERSION=$(VERSION) --no-cache=$(NO_CACHE)
 
 ci-portal:
@@ -94,6 +94,11 @@ discoverycache:
 	$(MAKE) admin.kubeconfig
 	KUBECONFIG=admin.kubeconfig go run ./hack/gendiscoverycache
 	$(MAKE) generate
+
+fix-macos-vendor:
+ifeq ($(shell uname -s),Darwin)
+	mv ./vendor/github.com/Microsoft ./vendor/github.com/temp-microsoft && mv ./vendor/github.com/temp-microsoft ./vendor/github.com/microsoft || true
+endif
 
 generate:
 	go generate ./...
@@ -276,4 +281,4 @@ vendor:
 install-go-tools:
 	go install ${GOTESTSUM}
 
-.PHONY: admin.kubeconfig aks.kubeconfig aro az ci-portal ci-rp clean client deploy dev-config.yaml discoverycache generate image-aro-multistage image-fluentbit image-proxy init-contrib lint-go runlocal-rp proxy publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor build-all validate-go unit-test-go coverage-go validate-fips install-go-tools
+.PHONY: admin.kubeconfig aks.kubeconfig aro az ci-portal ci-rp clean client deploy dev-config.yaml discoverycache fix-macos-vendor generate image-aro-multistage image-fluentbit image-proxy init-contrib lint-go runlocal-rp proxy publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor build-all validate-go unit-test-go coverage-go validate-fips install-go-tools
