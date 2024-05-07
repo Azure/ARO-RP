@@ -77,7 +77,6 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		a = &actuator{
 			log:   log,
 			env:   _env,
-			oc:    clusters,
 			mmf:   manifests,
 			tasks: map[string]TaskFunc{},
 			now:   now,
@@ -86,10 +85,12 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 
 	JustBeforeEach(func() {
 		err := fixtures.WithOpenShiftClusters(clusters).WithMaintenanceManifests(manifests).Create()
-		Expect(err).To(BeNil())
+		Expect(err).ToNot(HaveOccurred())
 	})
 
 	When("old manifests", func() {
+		var manifestID string
+
 		BeforeEach(func() {
 			fixtures.Clear()
 			fixtures.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
@@ -99,7 +100,7 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 				},
 			})
 
-			manifestID := manifests.NewUUID()
+			manifestID = manifests.NewUUID()
 			fixtures.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
 				ID:        manifestID,
 				ClusterID: strings.ToLower(clusterResourceID),
@@ -124,11 +125,14 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		})
 
 		It("expires them", func() {
-			d, err := clusters.Get(context.Background(), strings.ToLower(clusterResourceID))
-			Expect(err).To(BeNil())
+			doc, err := manifests.Get(context.Background(), strings.ToLower(clusterResourceID), manifestID)
+			Expect(err).ToNot(HaveOccurred())
 
-			didWork, err := a.Process(ctx, d)
-			Expect(err).To(BeNil())
+			d, err := clusters.Get(context.Background(), strings.ToLower(clusterResourceID))
+			Expect(err).ToNot(HaveOccurred())
+
+			didWork, err := a.Process(ctx, doc, d)
+			Expect(err).ToNot(HaveOccurred())
 			Expect(didWork).To(BeFalse())
 
 			errs := checker.CheckMaintenanceManifests(manifestsClient)
@@ -137,6 +141,8 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 	})
 
 	When("new manifests", func() {
+		var manifestID string
+
 		BeforeEach(func() {
 			fixtures.Clear()
 			fixtures.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
@@ -146,7 +152,7 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 				},
 			})
 
-			manifestID := manifests.NewUUID()
+			manifestID = manifests.NewUUID()
 			fixtures.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
 				ID:        manifestID,
 				ClusterID: strings.ToLower(clusterResourceID),
@@ -173,15 +179,18 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		})
 
 		It("runs them", func() {
-			a.AddTask("0", func(ctx context.Context, th TaskHandler, oscd *api.OpenShiftClusterDocument, mmd *api.MaintenanceManifestDocument) (api.MaintenanceManifestState, string) {
+			a.AddTask("0", func(ctx context.Context, th TaskHandler, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
 				return api.MaintenanceManifestStateCompleted, "done"
 			})
 
-			d, err := clusters.Get(context.Background(), strings.ToLower(clusterResourceID))
-			Expect(err).To(BeNil())
+			doc, err := manifests.Get(context.Background(), strings.ToLower(clusterResourceID), manifestID)
+			Expect(err).ToNot(HaveOccurred())
 
-			didWork, err := a.Process(ctx, d)
-			Expect(err).To(BeNil())
+			d, err := clusters.Get(context.Background(), strings.ToLower(clusterResourceID))
+			Expect(err).ToNot(HaveOccurred())
+
+			didWork, err := a.Process(ctx, doc, d)
+			Expect(err).ToNot(HaveOccurred())
 			Expect(didWork).To(BeTrue())
 
 			errs := checker.CheckMaintenanceManifests(manifestsClient)
