@@ -384,7 +384,7 @@
                     "partitionKey": {
                         "kind": "Hash",
                         "paths": [
-                            "/ClusterID"
+                            "/id"
                         ]
                     }
                 }

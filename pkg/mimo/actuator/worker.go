@@ -5,148 +5,120 @@ package actuator
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
+	"github.com/Azure/go-autorest/autorest/to"
 )
 
-// changefeed tracks the OpenShiftClusters change feed and keeps mon.docs
-// up-to-date.  We don't monitor clusters in Creating state, hence we don't add
-// them to mon.docs.  We also don't monitor clusters in Deleting state; when
-// this state is reached we delete from mon.docs
-func (s *service) changefeed(ctx context.Context, baseLog *logrus.Entry, stop <-chan struct{}) {
-	defer recover.Panic(baseLog)
+const maxDequeueCount = 5
 
-	clustersIterator := s.dbOpenShiftClusters.ChangeFeed()
+func (s *service) try(ctx context.Context) (bool, error) {
 
-	// Align this time with the deletion mechanism.
-	// Go to docs/monitoring.md for the details.
-	t := time.NewTicker(10 * time.Second)
-	defer t.Stop()
-
-	for {
-		successful := true
-		for {
-			docs, err := clustersIterator.Next(ctx, -1)
-			if err != nil {
-				successful = false
-				baseLog.Error(err)
-				break
-			}
-			if docs == nil {
-				break
-			}
-
-			s.mu.Lock()
-
-			for _, doc := range docs.OpenShiftClusterDocuments {
-				ps := doc.OpenShiftCluster.Properties.ProvisioningState
-				fps := doc.OpenShiftCluster.Properties.FailedProvisioningState
-
-				switch {
-				case ps == api.ProvisioningStateCreating,
-					ps == api.ProvisioningStateDeleting,
-					ps == api.ProvisioningStateFailed &&
-						(fps == api.ProvisioningStateCreating ||
-							fps == api.ProvisioningStateDeleting):
-					s.b.DeleteDoc(doc)
-				default:
-					// TODO: improve memory usage by storing a subset of doc in mon.docs
-					s.b.UpsertDoc(doc)
-				}
-			}
-
-			s.mu.Unlock()
-		}
-
-		if successful {
-			s.lastChangefeed.Store(time.Now())
-		}
-
-		select {
-		case <-t.C:
-		case <-stop:
-			return
-		}
+	doc, err := s.dbMaintenanceManifests.Dequeue(ctx)
+	if err != nil || doc == nil {
+		return false, err
 	}
-}
-
-// worker reads clusters to be monitored and monitors them
-func (s *service) worker(stop <-chan struct{}, delay time.Duration, id string) {
-	defer recover.Panic(s.baseLog)
-
-	time.Sleep(delay)
 
 	log := s.baseLog
-	{
-		s.mu.RLock()
-		v := s.b.Doc(id)
-		s.mu.RUnlock()
+	log = utillog.EnrichWithResourceID(log, doc.ClusterID)
 
-		if v == nil {
-			return
-		}
-
-		log = utillog.EnrichWithResourceID(log, v.OpenShiftCluster.ID)
+	if doc.Dequeues > maxDequeueCount {
+		err := fmt.Errorf("dequeued %d times, failing", doc.Dequeues)
+		_, leaseErr := s.dbMaintenanceManifests.EndLease(ctx, doc.ClusterID, doc.ID, api.MaintenanceManifestStateTimedOut, to.StringPtr(err.Error()))
+		return true, leaseErr
 	}
 
-	log.Debug("starting service")
+	log.Print("dequeued")
+	s.workers.Add(1)
+	s.m.EmitGauge("mimo.actuator.workers.count", int64(s.workers.Load()), nil)
 
-	t := time.NewTicker(time.Minute)
-	defer t.Stop()
+	go func() {
+		defer recover.Panic(log)
 
-	h := time.Now().Hour()
+		t := time.Now()
 
-out:
-	for {
-		s.mu.RLock()
-		v := s.b.Doc(id)
-		s.mu.RUnlock()
+		defer func() {
+			s.workers.Add(-1)
+			s.m.EmitGauge("mimo.actuator.workers.count", int64(s.workers.Load()), nil)
+			s.cond.Signal()
 
-		if v == nil {
-			break
+			log.WithField("duration", time.Since(t).Seconds()).Print("done")
+		}()
+
+		err := s.handle(context.Background(), log, doc)
+		if err != nil {
+			log.Error(err)
 		}
-
-		newh := time.Now().Hour()
-
-		s.workOne(context.Background(), log, v, newh != h)
-
-		select {
-		case <-t.C:
-		case <-stop:
-			break out
-		}
-
-		h = newh
-	}
-
-	log.Debug("stopping actuator")
+	}()
+	return true, nil
 }
 
-// workOne checks the API server health of a cluster
-func (s *service) workOne(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument, hourlyRun bool) {
-	restConfig, err := restconfig.RestConfig(s.dialer, doc.OpenShiftCluster)
+func (s *service) handle(ctx context.Context, log *logrus.Entry, doc *api.MaintenanceManifestDocument) error {
+	// Get a lease on the OpenShiftClusterDocument
+	var oc *api.OpenShiftClusterDocument
+	var err error
+
+	release := func() {
+		if doc.LeaseOwner != "" {
+			_, err = s.dbMaintenanceManifests.EndLease(ctx, doc.ClusterID, doc.ID, api.MaintenanceManifestStateTimedOut, nil)
+			if err != nil {
+				log.Error(err)
+			}
+		}
+
+		if oc == nil || oc.LeaseOwner == "" {
+			return
+		}
+		oc, err = s.dbOpenShiftClusters.EndLease(ctx, doc.ResourceID, oc.OpenShiftCluster.Properties.ProvisioningState, oc.OpenShiftCluster.Properties.LastProvisioningState, nil)
+		if err != nil {
+			log.Error(err)
+		}
+	}
+	defer release()
+
+	timeout, cancel := context.WithTimeout(ctx, 30*time.Minute)
+	defer cancel()
+
+	// Wait a little bit to get the OpenShiftClusters lease
+	err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+		var inerr error
+		oc, inerr = s.dbOpenShiftClusters.Lease(ctx, doc.ClusterID)
+		if inerr != nil {
+			if inerr.Error() == "lost lease" {
+				return false, nil
+			}
+			return false, inerr
+		}
+
+		return true, nil
+	}, timeout.Done())
+
+	restConfig, err := restconfig.RestConfig(s.dialer, oc.OpenShiftCluster)
 	if err != nil {
-		log.Error(err)
-		return
+		return err
 	}
 
-	m, err := NewActuator(ctx, s.env, log, restConfig, s.dbOpenShiftClusters, s.dbMaintenanceManifests)
+	actuator, err := NewActuator(ctx, s.env, log, restConfig, s.dbMaintenanceManifests)
 	if err != nil {
-		log.Error(err)
+		return err
+	}
+
+	_, err = actuator.Process(ctx, doc, oc)
+	if err != nil {
 		s.m.EmitGauge("actuator.cluster.failedworker", 1, map[string]string{
-			"resourceId": doc.OpenShiftCluster.ID,
+			"resourceId": doc.ClusterID,
 		})
-		return
+		return err
 	}
 
-	_, err = m.Process(ctx, doc)
-	if err != nil {
-		log.Error(err)
-	}
+	return nil
+
 }
