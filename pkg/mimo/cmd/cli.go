@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/mimo/actuator"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
+	"github.com/Azure/ARO-RP/pkg/util/service"
 )
 
 func main() {
@@ -55,7 +56,7 @@ func main() {
 						return err
 					}
 
-					m := statsd.NewFromEnv(ctx.Context, _env.Logger(), _env)
+					m := statsd.New(ctx.Context, log.WithField("component", "scheduler"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 
 					g, err := golang.NewMetrics(_env.Logger(), m)
 					if err != nil {
@@ -112,7 +113,7 @@ func main() {
 						return err
 					}
 
-					m := statsd.New(ctx, log.WithField("component", "actuator"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
+					m := statsd.New(ctx.Context, log.WithField("component", "actuator"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 
 					g, err := golang.NewMetrics(_env.Logger(), m)
 					if err != nil {
@@ -120,7 +121,7 @@ func main() {
 					}
 					go g.Run()
 
-					dbc, err := service.NewDatabase(ctx.Context, _env, log, m, service.DB_DBTOKEN_PROD_MASTERKEY_DEV, false)
+					dbc, err := service.NewDatabase(ctx.Context, _env, log, m, service.DB_ALWAYS_MASTERKEY, false)
 					if err != nil {
 						return err
 					}
