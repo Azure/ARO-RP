@@ -14,8 +14,7 @@ FLUENTBIT_VERSION = 1.9.10
 FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$(MARINER_VERSION)
 AUTOREST_VERSION = 3.6.3
 AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
-GATEKEEPER_VERSION = v3.10.0
-GATEKEEPER_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/gatekeeper:$(GATEKEEPER_VERSION)
+GATEKEEPER_VERSION = v3.15.1
 GOTESTSUM = gotest.tools/gotestsum@v1.11.0
 
 ifneq ($(shell uname -s),Darwin)
@@ -40,6 +39,7 @@ else
 endif
 
 ARO_IMAGE ?= $(ARO_IMAGE_BASE):$(VERSION)
+GATEKEEPER_IMAGE ?= ${REGISTRY}/gatekeeper:$(GATEKEEPER_VERSION)
 
 check-release:
 # Check that VERSION is a valid tag when building an official release (when RELEASE=true).
