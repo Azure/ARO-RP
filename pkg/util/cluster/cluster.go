@@ -44,6 +44,7 @@ import (
 	redhatopenshift20230904 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2023-09-04/redhatopenshift"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
+	"github.com/Azure/ARO-RP/pkg/util/rolesets"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -466,6 +467,11 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 			return err
 		}
 
+		err = c.insertPlatformWorkloadIdentityRoleSetsIntoCosmosdb()
+		if err != nil {
+			return err
+		}
+
 		oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
 	}
 
@@ -594,6 +600,37 @@ func (c *Cluster) ensureDefaultVersionInCosmosdb(ctx context.Context) error {
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := insecureLocalClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	return resp.Body.Close()
+}
+
+func (c *Cluster) insertPlatformWorkloadIdentityRoleSetsIntoCosmosdb() error {
+	defaultRoleSet := rolesets.DefaultPlatformWorkloadIdentityRoleSet
+	b, err := json.Marshal(&api.PlatformWorkloadIdentityRoleSetDocument{
+		PlatformWorkloadIdentityRoleSet: &defaultRoleSet,
+	})
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, "https://localhost:8443/platformworkloadidentityrolesets/", bytes.NewReader(b))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	cli := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+	}
+
+	resp, err := cli.Do(req)
 	if err != nil {
 		return err
 	}
