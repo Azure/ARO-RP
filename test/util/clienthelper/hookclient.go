@@ -55,25 +55,25 @@ func NewHookingClient(c client.WithWatch) *HookingClient {
 	}
 }
 
-func (c *HookingClient) WithGetHook(f getFunc) *HookingClient {
+func (c *HookingClient) WithPostGetHook(f getFunc) *HookingClient {
 	c.postGetHook = append(c.postGetHook, f)
 	return c
 }
 
-func (c *HookingClient) WithDeleteHook(f hookFunc) *HookingClient {
+func (c *HookingClient) WithPostDeleteHook(f hookFunc) *HookingClient {
 	c.postDeleteHook = append(c.postDeleteHook, f)
 	return c
 }
 
-func (c *HookingClient) WithCreateHook(f hookFunc) *HookingClient {
+func (c *HookingClient) WithPostCreateHook(f hookFunc) *HookingClient {
 	c.postCreateHook = append(c.postCreateHook, f)
 	return c
 }
-func (c *HookingClient) WithUpdateHook(f hookFunc) *HookingClient {
+func (c *HookingClient) WithPostUpdateHook(f hookFunc) *HookingClient {
 	c.postUpdateHook = append(c.postUpdateHook, f)
 	return c
 }
-func (c *HookingClient) WithPatchHook(f hookFunc) *HookingClient {
+func (c *HookingClient) WithPostPatchHook(f hookFunc) *HookingClient {
 	c.postPatchHook = append(c.postPatchHook, f)
 	return c
 }
