@@ -27,13 +27,14 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
+	utilgenerics "github.com/Azure/ARO-RP/pkg/util/generics"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 const (
-	operatorCutoffVersion = "4.7.0" // OCP versions older than this will not receive ARO operator updates
+	operatorCutOffVersion = "4.7.0" // OCP versions older than this will not receive ARO operator updates
 )
 
 // AdminUpdate performs an admin update of an ARO cluster
@@ -48,9 +49,37 @@ func (m *manager) adminUpdate() []steps.Step {
 	isOperator := task == api.MaintenanceTaskOperator
 	isRenewCerts := task == api.MaintenanceTaskRenewCerts
 
-	// Generic fix-up or setup actions that are fairly safe to always take, and
-	// don't require a running cluster
-	toRun := []steps.Step{
+	stepsToRun := m.getZerothSteps()
+	if isEverything {
+		stepsToRun = utilgenerics.ConcatMultipleSlices(
+			stepsToRun, m.getGeneralFixesSteps(), m.getCertificateRenewalSteps(),
+		)
+		if m.shouldUpdateOperator() {
+			stepsToRun = append(stepsToRun, m.getOperatorUpdateSteps()...)
+		}
+		if m.adoptViaHive && !m.clusterWasCreatedByHive() {
+			stepsToRun = append(stepsToRun, m.getHiveAdoptionAndReconciliationSteps()...)
+		}
+	} else if isOperator {
+		if m.shouldUpdateOperator() {
+			stepsToRun = append(stepsToRun, m.getOperatorUpdateSteps()...)
+		}
+	} else if isRenewCerts {
+		stepsToRun = append(stepsToRun, m.getCertificateRenewalSteps()...)
+	}
+
+	// We don't run this on an operator-only deploy as PUCM scripts then cannot
+	// determine if the cluster has been fully admin-updated
+	// Run this last so we capture the resource provider only once the upgrade has been fully performed
+	if isEverything {
+		stepsToRun = append(stepsToRun, steps.Action(m.updateProvisionedBy))
+	}
+
+	return stepsToRun
+}
+
+func (m *manager) getZerothSteps() []steps.Step {
+	bootstrap := []steps.Step{
 		steps.Action(m.initializeKubernetesClients), // must be first
 		steps.Action(m.ensureBillingRecord),         // belt and braces
 		steps.Action(m.ensureDefaults),
@@ -59,109 +88,87 @@ func (m *manager) adminUpdate() []steps.Step {
 		// struct, so we'll rebuild the fpAuthorizer and use the error catching
 		// to advance
 		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixupClusterSPObjectID),
+	}
+
+	// Generic fix-up actions that are fairly safe to always take, and don't require a running cluster
+	step0 := []steps.Step{
 		steps.Action(m.fixInfraID), // Old clusters lacks infraID in the database. Which makes code prone to errors.
 	}
 
-	if isEverything {
-		toRun = append(toRun,
-			steps.Action(m.ensureResourceGroup), // re-create RP RBAC if needed after tenant migration
-			steps.Action(m.createOrUpdateDenyAssignment),
-			steps.Action(m.ensureServiceEndpoints),
-			steps.Action(m.populateRegistryStorageAccountName), // must go before migrateStorageAccounts
-			steps.Action(m.migrateStorageAccounts),
-			steps.Action(m.fixSSH),
-			// steps.Action(m.removePrivateDNSZone), // TODO(mj): re-enable once we communicate this out
-		)
-	}
+	return append(bootstrap, step0...)
+}
 
-	if isEverything || isRenewCerts {
-		toRun = append(toRun,
-			steps.Action(m.populateDatabaseIntIP),
-		)
-	}
-
-	// Make sure the VMs are switched on and we have an APIServer
-	toRun = append(toRun,
+func (m *manager) getEnsureAPIServerReadySteps() []steps.Step {
+	return []steps.Step{
 		steps.Action(m.startVMs),
 		steps.Condition(m.apiServersReady, 30*time.Minute, true),
+	}
+}
+
+func (m *manager) getGeneralFixesSteps() []steps.Step {
+	stepsThatDontNeedAPIServer := []steps.Step{
+		steps.Action(m.ensureResourceGroup), // re-create RP RBAC if needed after tenant migration
+		steps.Action(m.createOrUpdateDenyAssignment),
+		steps.Action(m.ensureServiceEndpoints),
+		steps.Action(m.populateRegistryStorageAccountName), // must go before migrateStorageAccounts
+		steps.Action(m.migrateStorageAccounts),
+		steps.Action(m.fixSSH),
+		// steps.Action(m.removePrivateDNSZone), // TODO(mj): re-enable once we communicate this out
+
+	}
+	stepsThatNeedAPIServer := []steps.Step{
+		steps.Action(m.fixSREKubeconfig),
+		steps.Action(m.fixUserAdminKubeconfig),
+		steps.Action(m.createOrUpdateRouterIPFromCluster),
+
+		steps.Action(m.ensureGatewayUpgrade),
+		steps.Action(m.rotateACRTokenPassword),
+
+		steps.Action(m.populateRegistryStorageAccountName),
+		steps.Action(m.ensureMTUSize),
+	}
+	return utilgenerics.ConcatMultipleSlices(
+		stepsThatDontNeedAPIServer,
+		m.getEnsureAPIServerReadySteps(),
+		stepsThatNeedAPIServer,
 	)
+}
 
-	// Requires Kubernetes clients
-	if isEverything {
-		toRun = append(toRun,
-			steps.Action(m.fixSREKubeconfig),
-			steps.Action(m.fixUserAdminKubeconfig),
-			steps.Action(m.createOrUpdateRouterIPFromCluster),
-		)
+func (m *manager) getCertificateRenewalSteps() []steps.Step {
+	steps := []steps.Step{
+		steps.Action(m.populateDatabaseIntIP),
+		steps.Action(m.fixMCSCert),
+		steps.Action(m.fixMCSUserData),
+		steps.Action(m.configureAPIServerCertificate),
+		steps.Action(m.configureIngressCertificate),
+
+		steps.Action(m.initializeOperatorDeployer),
+
+		steps.Action(m.renewMDSDCertificate), // Dependent on initializeOperatorDeployer.
 	}
+	return utilgenerics.ConcatMultipleSlices(m.getEnsureAPIServerReadySteps(), steps)
+}
 
-	if isEverything || isRenewCerts {
-		toRun = append(toRun,
-			steps.Action(m.fixMCSCert),
-			steps.Action(m.fixMCSUserData),
-		)
+func (m *manager) getOperatorUpdateSteps() []steps.Step {
+	steps := []steps.Step{
+		steps.Action(m.initializeOperatorDeployer),
+
+		steps.Action(m.ensureAROOperator),
+
+		// The following are dependent on initializeOperatorDeployer.
+		steps.Condition(m.aroDeploymentReady, 20*time.Minute, true),
+		steps.Condition(m.ensureAROOperatorRunningDesiredVersion, 5*time.Minute, true),
 	}
+	return utilgenerics.ConcatMultipleSlices(m.getEnsureAPIServerReadySteps(), steps)
+}
 
-	if isEverything {
-		toRun = append(toRun,
-			steps.Action(m.ensureGatewayUpgrade),
-			steps.Action(m.rotateACRTokenPassword),
-		)
+func (m *manager) getHiveAdoptionAndReconciliationSteps() []steps.Step {
+	return []steps.Step{
+		steps.Action(m.hiveCreateNamespace),
+		steps.Action(m.hiveEnsureResources),
+		steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, false),
+		steps.Action(m.hiveResetCorrelationData),
 	}
-
-	if isEverything || isRenewCerts {
-		toRun = append(toRun,
-			steps.Action(m.configureAPIServerCertificate),
-			steps.Action(m.configureIngressCertificate),
-		)
-	}
-
-	if isEverything {
-		toRun = append(toRun,
-			steps.Action(m.populateRegistryStorageAccountName),
-			steps.Action(m.ensureMTUSize),
-		)
-	}
-
-	if isEverything || isOperator || isRenewCerts {
-		toRun = append(toRun,
-			steps.Action(m.initializeOperatorDeployer))
-	}
-
-	if isRenewCerts {
-		toRun = append(toRun,
-			steps.Action(m.renewMDSDCertificate),
-		)
-	}
-
-	// Update the ARO Operator
-	if (isEverything || isOperator) && m.shouldUpdateOperator() {
-		toRun = append(toRun,
-			steps.Action(m.ensureAROOperator),
-			steps.Condition(m.aroDeploymentReady, 20*time.Minute, true),
-			steps.Condition(m.ensureAROOperatorRunningDesiredVersion, 5*time.Minute, true),
-		)
-	}
-
-	// Hive cluster adoption and reconciliation
-	if isEverything && m.adoptViaHive && !m.clusterWasCreatedByHive() {
-		toRun = append(toRun,
-			steps.Action(m.hiveCreateNamespace),
-			steps.Action(m.hiveEnsureResources),
-			steps.Condition(m.hiveClusterDeploymentReady, 5*time.Minute, false),
-			steps.Action(m.hiveResetCorrelationData),
-		)
-	}
-
-	// We don't run this on an operator-only deploy as PUCM scripts then cannot
-	// determine if the cluster has been fully admin-updated
-	if isEverything {
-		toRun = append(toRun,
-			steps.Action(m.updateProvisionedBy), // Run this last so we capture the resource provider only once the upgrade has been fully performed
-		)
-	}
-
-	return toRun
 }
 
 func (m *manager) shouldUpdateOperator() bool {
@@ -170,8 +177,8 @@ func (m *manager) shouldUpdateOperator() bool {
 		return false
 	}
 
-	cutoffVersion := semver.New(operatorCutoffVersion)
-	return cutoffVersion.Compare(*runningVersion) <= 0
+	cutOffVersion := semver.New(operatorCutOffVersion)
+	return cutOffVersion.Compare(*runningVersion) <= 0
 }
 
 func (m *manager) clusterWasCreatedByHive() bool {
