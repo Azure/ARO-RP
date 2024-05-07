@@ -123,6 +123,7 @@ func main() {
 						return err
 					}
 
+					m := statsd.New(ctx, log.WithField("component", "actuator"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 					m := statsd.New(ctx.Context, log.WithField("component", "actuator"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 
 					g, err := golang.NewMetrics(_env.Logger(), m)

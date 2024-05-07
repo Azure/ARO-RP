@@ -25,6 +25,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
+const maxWorkers = 5
+
 type Runnable interface {
 	Run(context.Context, <-chan struct{}, chan<- struct{}) error
 }
@@ -102,6 +104,12 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 	lastGotDocs := make(map[string]*api.OpenShiftClusterDocument)
 
 	for {
+		s.mu.Lock()
+		for s.workers.Load() >= maxWorkers && !s.stopping.Load() {
+			s.cond.Wait()
+		}
+		s.mu.Unlock()
+
 		if s.stopping.Load() {
 			break
 		}

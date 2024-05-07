@@ -15,6 +15,9 @@ import (
 )
 
 const (
+	MaintenanceManifestQueryForCluster  = `SELECT * FROM MaintenanceManifests doc WHERE doc.maintenanceManifest.state IN ("Pending", "InProgress") AND doc.clusterID = @clusterID ORDER BY doc.maintenanceManifest.runAfter`
+	MaintenanceManifestQueueLengthQuery = `SELECT VALUE COUNT(1) FROM MaintenanceManifests doc WHERE doc.maintenanceManifest.state IN ("Pending") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
+	MaintenanceManifestDequeueQuery     = `SELECT * FROM MaintenanceManifests doc WHERE doc.maintenanceManifest.state IN ("Pending") AND (doc.maintenanceManifest.runAfter ?? 0) < GetCurrentTimestamp() / 1000 AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000 SORT BY doc.maintenanceManifest.runAfter asc, doc.maintenanceManifest.priority asc`
 	MaintenanceManifestDequeueQueryForCluster = `SELECT * FROM MaintenanceManifests doc WHERE doc.maintenanceManifest.state IN ("Pending") AND doc.clusterResourceID = @clusterID`
 	MaintenanceManifestQueryForCluster        = `SELECT * FROM MaintenanceManifests doc WHERE doc.clusterResourceID = @clusterID`
 	MaintenanceManifestQueueLengthQuery       = `SELECT VALUE COUNT(1) FROM MaintenanceManifests doc WHERE doc.maintenanceManifest.state IN ("Pending") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
@@ -218,6 +221,31 @@ func (c *maintenanceManifests) EndLease(ctx context.Context, clusterResourceID s
 	}, nil)
 }
 
+func (c *maintenanceManifests) Dequeue(ctx context.Context) (*api.MaintenanceManifestDocument, error) {
+	i := c.c.Query("", &cosmosdb.Query{
+		Query:      MaintenanceManifestDequeueQuery,
+		Parameters: []cosmosdb.Parameter{},
+	}, nil)
+
+	for {
+		docs, err := i.Next(ctx, -1)
+		if err != nil {
+			return nil, err
+		}
+		if docs == nil {
+			return nil, nil
+		}
+
+		for _, doc := range docs.MaintenanceManifestDocuments {
+			doc.LeaseOwner = c.uuid
+			doc.Dequeues++
+			doc, err = c.update(ctx, doc, &cosmosdb.Options{PreTriggers: []string{"renewLease"}})
+			if cosmosdb.IsErrorStatusCode(err, http.StatusPreconditionFailed) { // someone else got there first
+				continue
+			}
+			return doc, err
+		}
+	}
 // Lease performs the initial lease/dequeue on the document.
 func (c *maintenanceManifests) Lease(ctx context.Context, clusterResourceID string, id string) (*api.MaintenanceManifestDocument, error) {
 	if clusterResourceID != strings.ToLower(clusterResourceID) {

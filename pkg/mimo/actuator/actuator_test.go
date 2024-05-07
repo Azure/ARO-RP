@@ -77,8 +77,13 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		clusters, _ = testdatabase.NewFakeOpenShiftClusters()
 
 		a = &actuator{
-			log: log,
-			env: _env,
+			log:   log,
+			env:   _env,
+			mmf:   manifests,
+			tasks: map[string]TaskFunc{},
+			now:   now,
+			log:   log,
+			env:   _env,
 
 			clusterResourceID: strings.ToLower(clusterResourceID),
 
