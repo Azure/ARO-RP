@@ -432,24 +432,28 @@ func (m *manager) Delete(ctx context.Context) error {
 	m.log.Printf("deleting dns")
 	err = m.dns.Delete(ctx, m.doc.OpenShiftCluster)
 	if err != nil {
+		m.log.Error(err)
 		return err
 	}
 
 	m.log.Print("deleting private endpoint")
 	err = m.fpPrivateEndpoints.DeleteAndWait(ctx, m.env.ResourceGroup(), env.RPPrivateEndpointPrefix+m.doc.ID)
 	if err != nil {
+		m.log.Error(err)
 		return err
 	}
 
 	m.log.Printf("deleting role assignments")
 	err = m.deleteRoleAssignments(ctx)
 	if err != nil {
+		m.log.Error(err)
 		return err
 	}
 
 	m.log.Printf("deleting role definition")
 	err = m.deleteRoleDefinition(ctx)
 	if err != nil {
+		m.log.Error(err)
 		return err
 	}
 
@@ -460,17 +464,20 @@ func (m *manager) Delete(ctx context.Context) error {
 	m.log.Printf("deleting gateway record")
 	err = m.deleteGatewayAndWait(ctx)
 	if err != nil {
+		m.log.Error(err)
 		return err
 	}
 
 	err = m.deleteResourcesAndResourceGroup(ctx)
 	if err != nil {
+		m.log.Error(err)
 		return err
 	}
 
 	if !m.env.FeatureIsSet(env.FeatureDisableSignedCertificates) {
 		managedDomain, err := dns.ManagedDomain(m.env, m.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
 		if err != nil {
+			m.log.Error(err)
 			return err
 		}
 
@@ -478,12 +485,14 @@ func (m *manager) Delete(ctx context.Context) error {
 			m.log.Print("deleting signed apiserver certificate")
 			err = m.env.ClusterKeyvault().EnsureCertificateDeleted(ctx, m.doc.ID+"-apiserver")
 			if err != nil {
+				m.log.Error(err)
 				return err
 			}
 
 			m.log.Print("deleting signed ingress certificate")
 			err = m.env.ClusterKeyvault().EnsureCertificateDeleted(ctx, m.doc.ID+"-ingress")
 			if err != nil {
+				m.log.Error(err)
 				return err
 			}
 		}
