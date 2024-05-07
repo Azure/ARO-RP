@@ -394,6 +394,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"rpMdsdConfigVersion",
 		"rpMdsdNamespace",
 		"rpParentDomainName",
+		"storageAccountDomain",
 
 		// TODO: Replace with Live Service Configuration in KeyVault
 		"clustersInstallViaHive",

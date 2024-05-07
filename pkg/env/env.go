@@ -92,6 +92,8 @@ type Interface interface {
 	ServiceKeyvault() keyvault.Manager
 	ACRResourceID() string
 	ACRDomain() string
+	OIDCStorageAccountName() string
+	OIDCEndpoint() string
 	AROOperatorImage() string
 	LiveConfig() liveconfig.Manager
 
