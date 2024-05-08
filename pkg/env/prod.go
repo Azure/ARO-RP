@@ -314,6 +314,7 @@ func (p *prod) FeatureIsSet(f Feature) bool {
 	return p.features[f]
 }
 
+// TODO: Delete FPAuthorizer once the replace from track1 to track2 is done.
 func (p *prod) FPAuthorizer(tenantID string, scopes ...string) (autorest.Authorizer, error) {
 	fpTokenCredential, err := p.FPNewClientCertificateCredential(tenantID)
 	if err != nil {
