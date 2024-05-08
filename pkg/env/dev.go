@@ -76,6 +76,7 @@ func (d *dev) Listen() (net.Listener, error) {
 	return net.Listen("tcp", "localhost:8443")
 }
 
+// TODO: Delete FPAuthorizer once the replace from track1 to track2 is done.
 func (d *dev) FPAuthorizer(tenantID string, scopes ...string) (autorest.Authorizer, error) {
 	fpTokenCredential, err := d.FPNewClientCertificateCredential(tenantID)
 	if err != nil {

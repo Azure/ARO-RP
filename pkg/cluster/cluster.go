@@ -30,6 +30,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -66,12 +67,16 @@ type manager struct {
 	localFpAuthorizer autorest.Authorizer
 	metricsEmitter    metrics.Emitter
 
-	spGraphClient         *utilgraph.GraphServiceClient
-	disks                 compute.DisksClient
-	virtualMachines       compute.VirtualMachinesClient
-	interfaces            network.InterfacesClient
-	publicIPAddresses     network.PublicIPAddressesClient
+	spGraphClient   *utilgraph.GraphServiceClient
+	disks           compute.DisksClient
+	virtualMachines compute.VirtualMachinesClient
+	// TODO: use armInterfaces instead.
+	interfaces        network.InterfacesClient
+	armInterfaces     armnetwork.InterfacesClient
+	publicIPAddresses network.PublicIPAddressesClient
+	// TODO: use armLoadBalancers instead.
 	loadBalancers         network.LoadBalancersClient
+	armLoadBalancers      armnetwork.LoadBalancersClient
 	privateEndpoints      network.PrivateEndpointsClient
 	securityGroups        network.SecurityGroupsClient
 	deployments           features.DeploymentsClient
@@ -128,7 +133,13 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
+	// TODO: Delete once the replace to track2 is done
 	fpAuthorizer, err := refreshable.NewAuthorizer(_env, subscriptionDoc.Subscription.Properties.TenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	fpCredential, err := _env.FPNewClientCertificateCredential(_env.TenantID())
 	if err != nil {
 		return nil, err
 	}
@@ -150,6 +161,16 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
+	armLoadBalancersClient, err := armnetwork.NewLoadBalancersClient(_env.Environment(), r.SubscriptionID, fpCredential)
+	if err != nil {
+		return nil, err
+	}
+
+	armInterfacesClient, err := armnetwork.NewInterfacesClient(_env.Environment(), r.SubscriptionID, fpCredential)
+	if err != nil {
+		return nil, err
+	}
+
 	return &manager{
 		log:                   log,
 		env:                   _env,
@@ -165,8 +186,10 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		disks:                 compute.NewDisksClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		virtualMachines:       compute.NewVirtualMachinesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		interfaces:            network.NewInterfacesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		armInterfaces:         armInterfacesClient,
 		publicIPAddresses:     network.NewPublicIPAddressesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		loadBalancers:         network.NewLoadBalancersClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		armLoadBalancers:      armLoadBalancersClient,
 		privateEndpoints:      network.NewPrivateEndpointsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		securityGroups:        network.NewSecurityGroupsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		deployments:           features.NewDeploymentsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
