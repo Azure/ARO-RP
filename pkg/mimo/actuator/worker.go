@@ -21,9 +21,9 @@ import (
 const maxDequeueCount = 5
 
 func (s *service) try(ctx context.Context) (bool, error) {
-
 	doc, err := s.dbMaintenanceManifests.Dequeue(ctx)
 	if err != nil || doc == nil {
+		s.baseLog.Error(err)
 		return false, err
 	}
 

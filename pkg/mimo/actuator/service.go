@@ -49,7 +49,8 @@ func NewService(log *logrus.Entry, dialer proxy.Dialer, dbOpenShiftClusters data
 		baseLog: log,
 		dialer:  dialer,
 
-		dbOpenShiftClusters: dbOpenShiftClusters,
+		dbOpenShiftClusters:    dbOpenShiftClusters,
+		dbMaintenanceManifests: dbMaintenanceManifests,
 
 		m:           m,
 		serviceName: "actuator",
