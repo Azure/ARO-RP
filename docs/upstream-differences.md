@@ -202,3 +202,20 @@ In the ARO-RP codebase:
 Publish RHCOS image to the Azure Cloud Partner Portal:
 1. Publish RHCOS image. See [this document](https://github.com/openshift/installer-aro-wrapper/blob/main/docs/publish-rhcos-image.md).
 1. After this point, you should be able to create a dev cluster using the RP and it should use the new release.
+
+# Install Test
+
+Once the installer is deployed in each region, we need to test installation to detect if there is any increase in installation failure.
+
+You can install multiple clusters at one time in a region by running this script (**`tmux` is required**):
+
+```bash
+VERSION=<version> ./hack/installtest/test.sh create
+```
+
+You can delete them by running this:
+
+```bash
+./hack/installtest/test.sh delete
+```
+
