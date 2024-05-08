@@ -44,7 +44,10 @@ func (f *frontend) _getOpenShiftCluster(ctx context.Context, log *logrus.Entry, 
 	f.clusterEnricher.Enrich(timeoutCtx, log, doc.OpenShiftCluster)
 
 	doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
-	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
+
+	if doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil {
+		doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
+	}
 
 	return json.MarshalIndent(converter.ToExternal(doc.OpenShiftCluster), "", "    ")
 }

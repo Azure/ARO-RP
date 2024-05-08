@@ -66,7 +66,10 @@ func (f *frontend) _postOpenShiftClusterCredentials(ctx context.Context, r *http
 	}
 
 	doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
-	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
+
+	if doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil {
+		doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
+	}
 
 	return json.MarshalIndent(converter.ToExternal(doc.OpenShiftCluster), "", "    ")
 }
