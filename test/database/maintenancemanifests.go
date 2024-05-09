@@ -6,7 +6,6 @@ package database
 import (
 	"context"
 	"fmt"
-	"sort"
 	"strconv"
 	"time"
 
@@ -16,8 +15,8 @@ import (
 )
 
 func injectMaintenanceManifests(c *cosmosdb.FakeMaintenanceManifestDocumentClient, now func() time.Time) {
-	c.SetQueryHandler(database.MaintenanceManifestDequeueQuery, func(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.MaintenanceManifestDocumentRawIterator {
-		return fakeMaintenanceManifestsDequeue(client, query, options, now)
+	c.SetQueryHandler(database.MaintenanceManifestQueryForCluster, func(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.MaintenanceManifestDocumentRawIterator {
+		return fakeMaintenanceManifestsForCluster(client, query, options, now)
 	})
 
 	c.SetTriggerHandler("renewLease", func(ctx context.Context, doc *api.MaintenanceManifestDocument) error {
@@ -25,7 +24,7 @@ func injectMaintenanceManifests(c *cosmosdb.FakeMaintenanceManifestDocumentClien
 	})
 }
 
-func fakeMaintenanceManifestsDequeue(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options, now func() time.Time) cosmosdb.MaintenanceManifestDocumentRawIterator {
+func fakeMaintenanceManifestsForCluster(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options, now func() time.Time) cosmosdb.MaintenanceManifestDocumentRawIterator {
 	startingIndex, err := fakeMaintenanceManifestsGetContinuation(options)
 	if err != nil {
 		return cosmosdb.NewFakeMaintenanceManifestDocumentErroringRawIterator(err)
@@ -44,15 +43,10 @@ func fakeMaintenanceManifestsDequeue(client cosmosdb.MaintenanceManifestDocument
 	var results []*api.MaintenanceManifestDocument
 	for _, r := range input.MaintenanceManifestDocuments {
 		if r.ClusterID == clusterID &&
-			r.MaintenanceManifest.State == api.MaintenanceManifestStatePending &&
-			r.MaintenanceManifest.RunAfter < int(now().Unix()) {
+			r.MaintenanceManifest.State == api.MaintenanceManifestStatePending {
 			results = append(results, r)
 		}
 	}
-
-	sort.SliceStable(results, func(i, j int) bool {
-		return results[i].MaintenanceManifest.RunAfter > results[j].MaintenanceManifest.RunAfter && results[i].MaintenanceManifest.Priority > results[j].MaintenanceManifest.Priority
-	})
 
 	return cosmosdb.NewFakeMaintenanceManifestDocumentIterator(results, startingIndex)
 }
