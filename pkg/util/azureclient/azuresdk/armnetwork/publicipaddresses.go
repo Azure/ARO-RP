@@ -7,7 +7,6 @@ import (
 	"context"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -27,12 +26,7 @@ var _ PublicIPAddressesClient = &publicIPAddressesClient{}
 
 // NewPublicIPAddressesClient creates a new PublicIPAddressesClient
 func NewPublicIPAddressesClient(environment *azureclient.AROEnvironment, subscriptionID string, credential azcore.TokenCredential) (PublicIPAddressesClient, error) {
-	options := arm.ClientOptions{
-		ClientOptions: azcore.ClientOptions{
-			Cloud: environment.Cloud,
-		},
-	}
-	clientFactory, err := armnetwork.NewClientFactory(subscriptionID, credential, &options)
+	clientFactory, err := NewClientFactory(environment, subscriptionID, credential)
 	if err != nil {
 		return nil, err
 	}

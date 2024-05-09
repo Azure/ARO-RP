@@ -7,7 +7,6 @@ import (
 	"context"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -27,15 +26,11 @@ var _ LoadBalancersClient = &loadBalancersClient{}
 
 // NewLoadBalancersClient creates a new LoadBalancersClient
 func NewLoadBalancersClient(environment *azureclient.AROEnvironment, subscriptionID string, credential azcore.TokenCredential) (LoadBalancersClient, error) {
-	options := arm.ClientOptions{
-		ClientOptions: azcore.ClientOptions{
-			Cloud: environment.Cloud,
-		},
-	}
-	clientFactory, err := armnetwork.NewClientFactory(subscriptionID, credential, &options)
+	clientFactory, err := NewClientFactory(environment, subscriptionID, credential)
 	if err != nil {
 		return nil, err
 	}
+
 	return &loadBalancersClient{LoadBalancersClient: clientFactory.NewLoadBalancersClient()}, nil
 }
 
@@ -51,14 +46,10 @@ var _ LoadBalancerBackendAddressPoolsClient = &loadBalancerBackendAddressPoolsCl
 
 // NewLoadBalancerBackendAddressPoolsClient creates a new NewLoadBalancerBackendAddressPoolsClient
 func NewLoadBalancerBackendAddressPoolsClient(environment *azureclient.AROEnvironment, subscriptionID string, credential azcore.TokenCredential) (LoadBalancerBackendAddressPoolsClient, error) {
-	options := arm.ClientOptions{
-		ClientOptions: azcore.ClientOptions{
-			Cloud: environment.Cloud,
-		},
-	}
-	clientFactory, err := armnetwork.NewClientFactory(subscriptionID, credential, &options)
+	clientFactory, err := NewClientFactory(environment, subscriptionID, credential)
 	if err != nil {
 		return nil, err
 	}
+
 	return &loadBalancerBackendAddressPoolsClient{LoadBalancerBackendAddressPoolsClient: clientFactory.NewLoadBalancerBackendAddressPoolsClient()}, nil
 }
