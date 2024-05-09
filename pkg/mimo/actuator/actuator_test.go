@@ -75,9 +75,14 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		clusters, _ = testdatabase.NewFakeOpenShiftClusters()
 
 		a = &actuator{
-			log:   log,
-			env:   _env,
-			mmf:   manifests,
+			log: log,
+			env: _env,
+
+			clusterID: strings.ToLower(clusterResourceID),
+
+			mmf: manifests,
+			oc:  clusters,
+
 			tasks: map[string]TaskFunc{},
 			now:   now,
 		}
@@ -125,13 +130,7 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		})
 
 		It("expires them", func() {
-			doc, err := manifests.Get(context.Background(), strings.ToLower(clusterResourceID), manifestID)
-			Expect(err).ToNot(HaveOccurred())
-
-			d, err := clusters.Get(context.Background(), strings.ToLower(clusterResourceID))
-			Expect(err).ToNot(HaveOccurred())
-
-			didWork, err := a.Process(ctx, doc, d)
+			didWork, err := a.Process(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(didWork).To(BeFalse())
 
@@ -183,13 +182,7 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 				return api.MaintenanceManifestStateCompleted, "done"
 			})
 
-			doc, err := manifests.Get(context.Background(), strings.ToLower(clusterResourceID), manifestID)
-			Expect(err).ToNot(HaveOccurred())
-
-			d, err := clusters.Get(context.Background(), strings.ToLower(clusterResourceID))
-			Expect(err).ToNot(HaveOccurred())
-
-			didWork, err := a.Process(ctx, doc, d)
+			didWork, err := a.Process(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(didWork).To(BeTrue())
 

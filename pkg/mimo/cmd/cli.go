@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -100,6 +101,12 @@ func main() {
 						EnvVars:  []string{"MDM_STATSD_SOCKET"},
 						Required: false,
 					},
+					&cli.StringFlag{
+						Name:        "loglevel",
+						EnvVars:     []string{"ARO_LOGLEVEL"},
+						DefaultText: "info",
+						Required:    false,
+					},
 				},
 				Before: func(ctx *cli.Context) error {
 					log.Print("MIMO actuator initialising")
@@ -107,6 +114,11 @@ func main() {
 				},
 				Action: func(ctx *cli.Context) error {
 					stop := make(chan struct{})
+
+					l, err := logrus.ParseLevel(ctx.String("loglevel"))
+					if err != nil {
+						log.Logger.SetLevel(l)
+					}
 
 					_env, err := env.NewEnv(ctx.Context, log, env.COMPONENT_MIMO_ACTUATOR)
 					if err != nil {
