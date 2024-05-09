@@ -113,7 +113,7 @@ func TestMachineConfigPoolReconciler(t *testing.T) {
 				WithObjects(tt.objects...).
 				Build())
 
-			client.WithCreateHook(testclienthelper.TallyCountsAndKey(createTally)).WithUpdateHook(testclienthelper.TallyCountsAndKey(updateTally))
+			client.WithPostCreateHook(testclienthelper.TallyCountsAndKey(createTally)).WithPostUpdateHook(testclienthelper.TallyCountsAndKey(updateTally))
 
 			log := logrus.NewEntry(logrus.StandardLogger())
 			ch := clienthelper.NewWithClient(log, client)
@@ -373,7 +373,7 @@ func TestMachineConfigPoolReconcilerNotUpgrading(t *testing.T) {
 				}).
 				Build())
 
-			client.WithCreateHook(testclienthelper.TallyCountsAndKey(createTally)).WithUpdateHook(testclienthelper.TallyCountsAndKey(updateTally))
+			client.WithPostCreateHook(testclienthelper.TallyCountsAndKey(createTally)).WithPostUpdateHook(testclienthelper.TallyCountsAndKey(updateTally))
 
 			log := logrus.NewEntry(logrus.StandardLogger())
 			ch := clienthelper.NewWithClient(log, client)
@@ -527,7 +527,7 @@ func TestMachineConfigPoolReconcilerClusterUpgrading(t *testing.T) {
 				}).
 				Build())
 
-			client.WithCreateHook(testclienthelper.TallyCountsAndKey(createTally)).WithUpdateHook(testclienthelper.TallyCountsAndKey(updateTally))
+			client.WithPostCreateHook(testclienthelper.TallyCountsAndKey(createTally)).WithPostUpdateHook(testclienthelper.TallyCountsAndKey(updateTally))
 
 			log := logrus.NewEntry(logrus.StandardLogger())
 			ch := clienthelper.NewWithClient(log, client)
