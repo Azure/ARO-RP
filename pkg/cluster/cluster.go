@@ -72,7 +72,8 @@ type manager struct {
 	virtualMachines       compute.VirtualMachinesClient
 	interfaces            network.InterfacesClient // TODO: use armInterfaces instead.
 	armInterfaces         armnetwork.InterfacesClient
-	publicIPAddresses     network.PublicIPAddressesClient
+	publicIPAddresses     network.PublicIPAddressesClient // TODO: use armPublicIPAddresses instead.
+	armPublicIPAddresses  armnetwork.PublicIPAddressesClient
 	loadBalancers         network.LoadBalancersClient // TODO: use armLoadBalancers instead.
 	armLoadBalancers      armnetwork.LoadBalancersClient
 	privateEndpoints      network.PrivateEndpointsClient
@@ -169,6 +170,11 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
+	armPublicIPAddressesClient, err := armnetwork.NewPublicIPAddressesClient(_env.Environment(), r.SubscriptionID, fpCredential)
+	if err != nil {
+		return nil, err
+	}
+
 	return &manager{
 		log:                   log,
 		env:                   _env,
@@ -186,6 +192,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		interfaces:            network.NewInterfacesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		armInterfaces:         armInterfacesClient,
 		publicIPAddresses:     network.NewPublicIPAddressesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		armPublicIPAddresses:  armPublicIPAddressesClient,
 		loadBalancers:         network.NewLoadBalancersClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		armLoadBalancers:      armLoadBalancersClient,
 		privateEndpoints:      network.NewPrivateEndpointsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
