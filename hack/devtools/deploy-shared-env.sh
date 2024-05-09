@@ -210,7 +210,7 @@ vpn_configuration() {
         -n dev-vpn \
         -o tsv)"
     export CLIENTCERTIFICATE="$(openssl x509 -inform der -in secrets/vpn-client.crt)"
-    export PRIVATEKEY="$(openssl rsa -inform der -in secrets/vpn-client.key)"
+    export PRIVATEKEY="$(openssl pkey -inform der -in secrets/vpn-client.key)"
     unzip -qc vpnclientconfiguration.zip 'OpenVPN\\vpnconfig.ovpn' \
         | envsubst \
         | grep -v '^log ' >"secrets/vpn-$LOCATION.ovpn"
