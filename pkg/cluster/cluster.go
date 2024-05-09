@@ -7,6 +7,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
@@ -31,6 +33,7 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -160,17 +163,24 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	armLoadBalancersClient, err := armnetwork.NewLoadBalancersClient(_env.Environment(), r.SubscriptionID, fpCredential)
+	clientOptions := arm.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: _env.Environment().Cloud,
+			Retry: common.RetryOptions,
+		},
+	}
+
+	armLoadBalancersClient, err := armnetwork.NewLoadBalancersClient(r.SubscriptionID, fpCredential, &clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	armInterfacesClient, err := armnetwork.NewInterfacesClient(_env.Environment(), r.SubscriptionID, fpCredential)
+	armInterfacesClient, err := armnetwork.NewInterfacesClient(r.SubscriptionID, fpCredential, &clientOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	armPublicIPAddressesClient, err := armnetwork.NewPublicIPAddressesClient(_env.Environment(), r.SubscriptionID, fpCredential)
+	armPublicIPAddressesClient, err := armnetwork.NewPublicIPAddressesClient(r.SubscriptionID, fpCredential, &clientOptions)
 	if err != nil {
 		return nil, err
 	}
