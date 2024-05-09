@@ -70,11 +70,13 @@ type manager struct {
 	spGraphClient   *utilgraph.GraphServiceClient
 	disks           compute.DisksClient
 	virtualMachines compute.VirtualMachinesClient
-	// TODO: use armInterfaces instead.
-	interfaces        network.InterfacesClient
-	armInterfaces     armnetwork.InterfacesClient
-	publicIPAddresses network.PublicIPAddressesClient
-	// TODO: use armLoadBalancers instead.
+	// TODO: Delete track1 client once the replacement to track2 is done
+	interfaces    network.InterfacesClient
+	armInterfaces armnetwork.InterfacesClient
+	// TODO: Delete track1 client once the replacement to track2 is done
+	publicIPAddresses    network.PublicIPAddressesClient
+	armPublicIPAddresses armnetwork.PublicIPAddressesClient
+	// TODO: Delete track1 client once the replacement to track2 is done
 	loadBalancers         network.LoadBalancersClient
 	armLoadBalancers      armnetwork.LoadBalancersClient
 	privateEndpoints      network.PrivateEndpointsClient
@@ -89,11 +91,13 @@ type manager struct {
 	denyAssignments       authorization.DenyAssignmentClient
 	fpPrivateEndpoints    network.PrivateEndpointsClient
 	rpPrivateLinkServices network.PrivateLinkServicesClient
+	armSubnets            armnetwork.SubnetsClient
 
 	dns     dns.Manager
 	storage storage.Manager
-	subnet  subnet.Manager
-	graph   graph.Manager
+	// TODO: Delete this once the replace to track2 is done.
+	subnet subnet.Manager
+	graph  graph.Manager
 
 	client           client.Client
 	kubernetescli    kubernetes.Interface
@@ -171,6 +175,11 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
+	armPublicIPAddressesClient, err := armnetwork.NewPublicIPAddressesClient(_env.Environment(), r.SubscriptionID, fpCredential)
+	if err != nil {
+		return nil, err
+	}
+
 	return &manager{
 		log:                   log,
 		env:                   _env,
@@ -188,6 +197,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		interfaces:            network.NewInterfacesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		armInterfaces:         armInterfacesClient,
 		publicIPAddresses:     network.NewPublicIPAddressesClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
+		armPublicIPAddresses:  armPublicIPAddressesClient,
 		loadBalancers:         network.NewLoadBalancersClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		armLoadBalancers:      armLoadBalancersClient,
 		privateEndpoints:      network.NewPrivateEndpointsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
