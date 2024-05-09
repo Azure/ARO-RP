@@ -15,9 +15,8 @@ import (
 )
 
 const (
-	MaintenanceManifestQueryForCluster  = `SELECT * FROM MaintenanceManifests doc WHERE doc.maintenanceManifest.state IN ("Pending", "InProgress") AND doc.clusterID = @clusterID ORDER BY doc.maintenanceManifest.runAfter`
+	MaintenanceManifestQueryForCluster  = `SELECT * FROM MaintenanceManifests doc WHERE doc.maintenanceManifest.state IN ("Pending") AND doc.clusterID = @clusterID`
 	MaintenanceManifestQueueLengthQuery = `SELECT VALUE COUNT(1) FROM MaintenanceManifests doc WHERE doc.maintenanceManifest.state IN ("Pending") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
-	MaintenanceManifestDequeueQuery     = `SELECT * FROM MaintenanceManifests doc WHERE doc.maintenanceManifest.state IN ("Pending") AND (doc.maintenanceManifest.runAfter ?? 0) < GetCurrentTimestamp() / 1000 AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000 SORT BY doc.maintenanceManifest.runAfter asc, doc.maintenanceManifest.priority asc`
 )
 
 type MaintenanceManifestDocumentMutator func(*api.MaintenanceManifestDocument) error
@@ -36,7 +35,7 @@ type MaintenanceManifests interface {
 	PatchWithLease(context.Context, string, string, MaintenanceManifestDocumentMutator) (*api.MaintenanceManifestDocument, error)
 	Lease(context.Context, string, string) (*api.MaintenanceManifestDocument, error)
 	EndLease(context.Context, string, string, api.MaintenanceManifestState, *string) (*api.MaintenanceManifestDocument, error)
-	Dequeue(ctx context.Context) (*api.MaintenanceManifestDocument, error)
+	Dequeue(ctx context.Context, clusterID string, id string) (*api.MaintenanceManifestDocument, error)
 	Get(context.Context, string, string) (*api.MaintenanceManifestDocument, error)
 
 	NewUUID() string
@@ -222,29 +221,14 @@ func (c *maintenanceManifests) EndLease(ctx context.Context, clusterID string, i
 	}, nil)
 }
 
-func (c *maintenanceManifests) Dequeue(ctx context.Context) (*api.MaintenanceManifestDocument, error) {
-	i := c.c.Query("", &cosmosdb.Query{
-		Query:      MaintenanceManifestDequeueQuery,
-		Parameters: []cosmosdb.Parameter{},
-	}, nil)
-
-	for {
-		docs, err := i.Next(ctx, -1)
-		if err != nil {
-			return nil, err
-		}
-		if docs == nil {
-			return nil, nil
-		}
-
-		for _, doc := range docs.MaintenanceManifestDocuments {
-			doc.LeaseOwner = c.uuid
-			doc.Dequeues++
-			doc, err = c.update(ctx, doc, &cosmosdb.Options{PreTriggers: []string{"renewLease"}})
-			if cosmosdb.IsErrorStatusCode(err, http.StatusPreconditionFailed) { // someone else got there first
-				continue
-			}
-			return doc, err
-		}
+func (c *maintenanceManifests) Dequeue(ctx context.Context, clusterID string, id string) (*api.MaintenanceManifestDocument, error) {
+	if clusterID != strings.ToLower(clusterID) {
+		return nil, fmt.Errorf("clusterID %q is not lower case", clusterID)
 	}
+
+	return c.patchWithLease(ctx, clusterID, id, func(doc *api.MaintenanceManifestDocument) error {
+		doc.LeaseOwner = c.uuid
+		doc.Dequeues++
+		return nil
+	}, &cosmosdb.Options{PreTriggers: []string{"renewLease"}})
 }
