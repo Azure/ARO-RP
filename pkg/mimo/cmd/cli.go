@@ -4,11 +4,9 @@ package main
 // Licensed under the Apache License 2.0.
 
 import (
-	"math/rand"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -18,13 +16,14 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
 	"github.com/Azure/ARO-RP/pkg/mimo/actuator"
+	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
+	"github.com/Azure/ARO-RP/pkg/mimo/tasks/example"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/service"
 )
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
 	log := utillog.GetLogger()
 	developmentMode := env.IsLocalDevelopmentMode()
 
@@ -158,7 +157,11 @@ func main() {
 						return err
 					}
 
-					a := actuator.NewService(_env.Logger(), dialer, clusters, manifests, m)
+					a := actuator.NewService(_env, _env.Logger(), dialer, clusters, manifests, m)
+
+					a.SetTasks(map[string]tasks.TaskFunc{
+						"64d23e34-78c3-4d60-831c-6efb22f08508": example.ExampleTask,
+					})
 
 					sigterm := make(chan os.Signal, 1)
 					done := make(chan struct{})

@@ -20,6 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -83,7 +84,7 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 			mmf: manifests,
 			oc:  clusters,
 
-			tasks: map[string]TaskFunc{},
+			tasks: map[string]tasks.TaskFunc{},
 			now:   now,
 		}
 	})
@@ -178,7 +179,7 @@ var _ = Describe("MIMO Actuator", Ordered, func() {
 		})
 
 		It("runs them", func() {
-			a.AddTask("0", func(ctx context.Context, th TaskHandler, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
+			a.AddTask("0", func(ctx context.Context, th tasks.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
 				return api.MaintenanceManifestStateCompleted, "done"
 			})
 
