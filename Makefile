@@ -77,7 +77,7 @@ client: generate
 	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01 2023-07-01-preview 2023-09-04 2023-11-22 2024-08-12-preview
 
 ci-rp: fix-macos-vendor
-	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg VERSION=$(VERSION) --no-cache=$(NO_CACHE)
+	docker build . -f Dockerfile.ci-unified --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg VERSION=$(VERSION) --no-cache=$(NO_CACHE)
 
 ci-portal:
 	docker build . -f Dockerfile.ci-portal --build-arg REGISTRY=$(REGISTRY) --no-cache=$(NO_CACHE)
@@ -123,7 +123,6 @@ generate-kiota:
 
 init-contrib:
 	install -v hack/git/hooks/* .git/hooks/
-	
 
 image-aro-multistage:
 	docker build --platform=linux/amd64 --network=host --no-cache -f Dockerfile.aro-multistage -t $(ARO_IMAGE) --build-arg REGISTRY=$(REGISTRY) .
