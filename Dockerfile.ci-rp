@@ -1,0 +1,48 @@
+ARG REGISTRY
+ARG VERSION
+
+###############################################################################
+# builder is responsible for all compilation and validation of the RP
+###############################################################################
+FROM ${REGISTRY}/ubi8/go-toolset:1.20.12-5 as builder
+USER root
+WORKDIR /app
+
+# golang config
+ENV GOPATH=/root/go
+ENV GOFLAGS="-tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper"
+
+# install general build tools
+RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /usr/local/bin v1.56.2
+
+# copy from least changed -> most changed to improve cache hits
+COPY go.mod go.sum ./
+COPY vendor vendor
+COPY swagger swagger
+COPY .golangci.yml ./
+COPY hack hack
+COPY cmd cmd
+COPY pkg pkg
+COPY test test
+
+# lint
+RUN golangci-lint run --verbose
+
+# build
+RUN go generate ./...
+RUN go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${VERSION}" ./cmd/aro
+RUN go test ./test/e2e/... -tags e2e,codec.safe -c -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${VERSION}" -o e2e.test
+
+# test
+RUN ARO_RUN_PKI_TESTS=nope go run gotest.tools/gotestsum@v1.11.0 --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
+RUN hack/fips/validate-fips.sh ./aro
+
+###############################################################################
+# final is our slim image with minimal layers and tools
+###############################################################################
+FROM ${REGISTRY}/ubi8/ubi-minimal AS final
+RUN microdnf update && microdnf clean all
+COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/
+ENTRYPOINT ["aro"]
+EXPOSE 2222/tcp 8080/tcp 8443/tcp 8444/tcp 8445/tcp
+USER 1000
