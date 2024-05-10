@@ -10,21 +10,22 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/exp/maps"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 )
 
 const maxDequeueCount = 5
 
 type Actuator interface {
 	Process(context.Context) (bool, error)
-	AddTask(string, TaskFunc)
-	AddTasks(map[string]TaskFunc)
+	AddTask(string, tasks.TaskFunc)
+	AddTasks(map[string]tasks.TaskFunc)
 }
 
 type actuator struct {
@@ -37,7 +38,7 @@ type actuator struct {
 	oc  database.OpenShiftClusters
 	mmf database.MaintenanceManifests
 
-	tasks map[string]TaskFunc
+	tasks map[string]tasks.TaskFunc
 }
 
 func NewActuator(
@@ -54,7 +55,7 @@ func NewActuator(
 		clusterID: strings.ToLower(clusterID),
 		oc:        oc,
 		mmf:       mmf,
-		tasks:     make(map[string]TaskFunc),
+		tasks:     make(map[string]tasks.TaskFunc),
 
 		now: now,
 	}
@@ -62,11 +63,11 @@ func NewActuator(
 	return a, nil
 }
 
-func (a *actuator) AddTask(u string, t TaskFunc) {
+func (a *actuator) AddTask(u string, t tasks.TaskFunc) {
 	a.tasks[u] = t
 }
 
-func (a *actuator) AddTasks(tasks map[string]TaskFunc) {
+func (a *actuator) AddTasks(tasks map[string]tasks.TaskFunc) {
 	maps.Copy(a.tasks, tasks)
 }
 
@@ -138,6 +139,8 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		return false, err // This will include StatusPreconditionFaileds
 	}
 
+	taskContext := newTaskContext(a.env, a.log, oc)
+
 	// Execute on the manifests we want to action
 	for _, doc := range manifestsToAction {
 		// here
@@ -166,10 +169,7 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		}
 
 		// Perform the task
-		handler := &th{
-			env: a.env,
-		}
-		state, msg := f(ctx, handler, doc, oc)
+		state, msg := f(ctx, taskContext, doc, oc)
 		_, err = a.mmf.EndLease(ctx, doc.ClusterID, doc.ID, state, &msg)
 		if err != nil {
 			a.log.Error(err)
