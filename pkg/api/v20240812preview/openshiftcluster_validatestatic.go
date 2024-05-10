@@ -449,14 +449,11 @@ func (sv openShiftClusterStaticValidator) validatePlatformWorkloadIdentityProfil
 
 func (sv openShiftClusterStaticValidator) validateIdentityXORServiceCredentials(pwip *PlatformWorkloadIdentityProfile, spPath string, spp *ServicePrincipalProfile) error {
 	// nothing to validate if the platform workload identity profile is nil
-	if pwip == nil {
-		if spp == nil {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, spPath, "Must provide either an identity or service principal credentials.")
-		}
-		return nil
+	if pwip == nil && spp == nil {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, spPath, "Must provide either an identity or service principal credentials.")
 	}
 
-	if spp != nil && (spp.ClientID != "" || spp.ClientSecret != "") {
+	if pwip != nil && spp != nil && (spp.ClientID != "" || spp.ClientSecret != "") {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, spPath, "Cannot use identities and service principal credentials at the same time.")
 	}
 
