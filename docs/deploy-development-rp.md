@@ -153,6 +153,26 @@
       alias rp-logs-all='journalctl _COMM=aro -o json -e | jq -r '\''select (.COMPONENT != null and (.COMPONENT | contains("access"))|not) | .MESSAGE'\'''
       EOF
       ```
+     
+### Use a custom installer
+
+Sometimes you want to use a custom installer, for example, when you want to test a new OCP version's installer.
+You can create a cluster with the new installer following these steps:
+
+1. Push the installer image to somewhere accessible from Hive AKS.
+    
+    [quay.io](https://quay.io/) would be one of the options.
+    You need pull-secret to use the repositories other than `arointsvc.azurecr.io`.
+    It must be configured in the secrets.
+    If you are using the hack script, you don't have to care about it because the script uses `USER_PULL_SECRET` automatically.
+
+1. [Run the RP](#run-the-rp-and-create-a-cluster)
+    
+1. [Update the OpenShift installer version](#openshift-version)
+
+1. Create a cluster with the version you updated.
+
+    If you are using the hack script, you can specify the version with `OS_CLUSTER_VERSION` env var.
 
 ## Automatically run local RP
 If you are already familiar with running the ARO RP locally, you can speed up the process executing the [local_dev_env.sh](../hack/devtools/local_dev_env.sh) script.
