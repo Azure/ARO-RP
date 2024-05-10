@@ -37,7 +37,6 @@ type service struct {
 
 	dbOpenShiftClusters    database.OpenShiftClusters
 	dbMaintenanceManifests database.MaintenanceManifests
-	serviceName            string
 
 	m        metrics.Emitter
 	mu       sync.RWMutex
@@ -49,27 +48,38 @@ type service struct {
 
 	lastChangefeed atomic.Value //time.Time
 	startTime      time.Time
+
+	pollTime time.Duration
+	now      func() time.Time
+
+	tasks map[string]TaskFunc
 }
 
-func NewService(log *logrus.Entry, dialer proxy.Dialer, dbOpenShiftClusters database.OpenShiftClusters, dbMaintenanceManifests database.MaintenanceManifests, m metrics.Emitter) Runnable {
+func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbOpenShiftClusters database.OpenShiftClusters, dbMaintenanceManifests database.MaintenanceManifests, m metrics.Emitter) *service {
 	s := &service{
+		env:     env,
 		baseLog: log,
 		dialer:  dialer,
 
 		dbOpenShiftClusters:    dbOpenShiftClusters,
 		dbMaintenanceManifests: dbMaintenanceManifests,
 
-		m:           m,
-		serviceName: "actuator",
-		stopping:    &atomic.Bool{},
-		workers:     &atomic.Int32{},
+		m:        m,
+		stopping: &atomic.Bool{},
+		workers:  &atomic.Int32{},
 
 		startTime: time.Now(),
+		now:       time.Now,
+		pollTime:  time.Minute,
 	}
 
 	s.b = buckets.NewBucketWorker(log, s.worker, &s.mu)
 
 	return s
+}
+
+func (s *service) SetTasks(tasks map[string]TaskFunc) {
+	s.tasks = tasks
 }
 
 func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- struct{}) error {
@@ -88,7 +98,7 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 			s.cond.Signal()
 		}()
 	}
-	go heartbeat.EmitHeartbeat(s.baseLog, s.m, s.serviceName+".heartbeat", nil, s.checkReady)
+	go heartbeat.EmitHeartbeat(s.baseLog, s.m, "actuator.heartbeat", nil, s.checkReady)
 
 	lastGotDocs := make(map[string]*api.OpenShiftClusterDocument)
 
@@ -105,7 +115,6 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 		}
 
 		<-t.C
-
 	}
 
 	if !s.env.FeatureIsSet(env.FeatureDisableReadinessDelay) {
@@ -116,8 +125,11 @@ func (s *service) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 	return nil
 }
 
+// Temporary method of updating without the changefeed -- the reason why is
+// complicated
 func (s *service) poll(ctx context.Context, oldDocs map[string]*api.OpenShiftClusterDocument) (map[string]*api.OpenShiftClusterDocument, error) {
-	i, err := s.dbOpenShiftClusters.GetAllUUIDs(ctx, "")
+	// Fetch all of the cluster UUIDs
+	i, err := s.dbOpenShiftClusters.GetAllResourceIDs(ctx, "")
 	if err != nil {
 		return nil, err
 	}
@@ -158,6 +170,9 @@ func (s *service) poll(ctx context.Context, oldDocs map[string]*api.OpenShiftClu
 		s.b.UpsertDoc(cluster)
 	}
 
+	// Store when we last fetched the clusters
+	s.lastChangefeed.Store(s.now())
+
 	return docMap, nil
 }
 
@@ -169,37 +184,40 @@ func (s *service) waitForWorkerCompletion() {
 	s.mu.Unlock()
 }
 
-// checkReady checks the ready status of the monitor to make it consistent
-// across the /healthz/ready endpoint and emitted metrics.   We wait for 2
-// minutes before indicating health.  This ensures that there will be a gap in
-// our health metric if we crash or restart.
 func (s *service) checkReady() bool {
 	lastChangefeedTime, ok := s.lastChangefeed.Load().(time.Time)
 	if !ok {
 		return false
 	}
-	return (time.Since(lastChangefeedTime) < time.Minute) && // did we process the change feed recently?
+	return (time.Since(lastChangefeedTime) < time.Minute) && // did we update our list of clusters recently?
 		(time.Since(s.startTime) > 2*time.Minute) // are we running for at least 2 minutes?
 }
 
 func (s *service) worker(stop <-chan struct{}, delay time.Duration, id string) {
 	defer recover.Panic(s.baseLog)
 
+	// Wait for a randomised delay before starting
 	time.Sleep(delay)
 
 	log := utillog.EnrichWithResourceID(s.baseLog, id)
 
-	a, err := NewActuator(context.Background(), s.env, log, id, s.dbOpenShiftClusters, s.dbMaintenanceManifests)
+	a, err := NewActuator(context.Background(), s.env, log, id, s.dbOpenShiftClusters, s.dbMaintenanceManifests, s.now)
 	if err != nil {
 		log.Error(err)
 		return
 	}
 
-	t := time.NewTicker(time.Minute)
+	a.AddTasks(s.tasks)
+
+	t := time.NewTicker(s.pollTime)
 	defer t.Stop()
 
 out:
 	for {
+		if s.stopping.Load() {
+			break
+		}
+
 		func() {
 			s.workers.Add(1)
 			s.m.EmitGauge("mimo.actuator.workers.active.count", int64(s.workers.Load()), nil)
@@ -207,7 +225,6 @@ out:
 			defer func() {
 				s.workers.Add(-1)
 				s.m.EmitGauge("mimo.actuator.workers.active.count", int64(s.workers.Load()), nil)
-				s.cond.Signal()
 			}()
 
 			_, err := a.Process(context.Background())
@@ -222,5 +239,4 @@ out:
 			break out
 		}
 	}
-
 }
