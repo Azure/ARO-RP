@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"golang.org/x/exp/maps"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -23,6 +24,7 @@ const maxDequeueCount = 5
 type Actuator interface {
 	Process(context.Context) (bool, error)
 	AddTask(string, TaskFunc)
+	AddTasks(map[string]TaskFunc)
 }
 
 type actuator struct {
@@ -44,7 +46,8 @@ func NewActuator(
 	log *logrus.Entry,
 	clusterID string,
 	oc database.OpenShiftClusters,
-	mmf database.MaintenanceManifests) (Actuator, error) {
+	mmf database.MaintenanceManifests,
+	now func() time.Time) (Actuator, error) {
 	a := &actuator{
 		env:       _env,
 		log:       log,
@@ -53,7 +56,7 @@ func NewActuator(
 		mmf:       mmf,
 		tasks:     make(map[string]TaskFunc),
 
-		now: time.Now,
+		now: now,
 	}
 
 	return a, nil
@@ -61,6 +64,10 @@ func NewActuator(
 
 func (a *actuator) AddTask(u string, t TaskFunc) {
 	a.tasks[u] = t
+}
+
+func (a *actuator) AddTasks(tasks map[string]TaskFunc) {
+	maps.Copy(a.tasks, tasks)
 }
 
 func (a *actuator) Process(ctx context.Context) (bool, error) {
