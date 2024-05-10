@@ -17,14 +17,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/buckets"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
-
-const maxWorkers = 5
 
 type Runnable interface {
 	Run(context.Context, <-chan struct{}, chan<- struct{}) error
@@ -52,7 +51,7 @@ type service struct {
 	pollTime time.Duration
 	now      func() time.Time
 
-	tasks map[string]TaskFunc
+	tasks map[string]tasks.TaskFunc
 }
 
 func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbOpenShiftClusters database.OpenShiftClusters, dbMaintenanceManifests database.MaintenanceManifests, m metrics.Emitter) *service {
@@ -78,7 +77,7 @@ func NewService(env env.Interface, log *logrus.Entry, dialer proxy.Dialer, dbOpe
 	return s
 }
 
-func (s *service) SetTasks(tasks map[string]TaskFunc) {
+func (s *service) SetTasks(tasks map[string]tasks.TaskFunc) {
 	s.tasks = tasks
 }
 
@@ -207,6 +206,7 @@ func (s *service) worker(stop <-chan struct{}, delay time.Duration, id string) {
 		return
 	}
 
+	// load in the tasks for the Actuator from the controller
 	a.AddTasks(s.tasks)
 
 	t := time.NewTicker(s.pollTime)

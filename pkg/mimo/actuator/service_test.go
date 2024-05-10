@@ -20,6 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/mimo/tasks"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -151,6 +152,9 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 				Key: strings.ToLower(clusterResourceID),
 				OpenShiftCluster: &api.OpenShiftCluster{
 					ID: clusterResourceID,
+					Properties: api.OpenShiftClusterProperties{
+						ProvisioningState: api.ProvisioningStateSucceeded,
+					},
 				},
 			})
 
@@ -208,8 +212,30 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 			done := make(chan struct{})
 			svc.pollTime = time.Second
 
-			svc.SetTasks(map[string]TaskFunc{
-				"0000-0000-0001": func(ctx context.Context, th TaskHandler, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
+			svc.SetTasks(map[string]tasks.TaskFunc{
+				"0000-0000-0001": func(ctx context.Context, th tasks.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
+					svc.stopping.Store(true)
+					return api.MaintenanceManifestStateCompleted, "ok"
+				},
+			})
+
+			svc.worker(done, 0*time.Second, clusterResourceID)
+
+			errs := checker.CheckMaintenanceManifests(manifestsClient)
+			Expect(errs).To(BeNil(), fmt.Sprintf("%v", errs))
+		})
+
+		It("loads the full cluster document", func() {
+			// run once
+			done := make(chan struct{})
+			svc.pollTime = time.Second
+
+			svc.SetTasks(map[string]tasks.TaskFunc{
+				"0000-0000-0001": func(ctx context.Context, th tasks.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
+					// ProvisioningState is in the full document, not just the
+					// ClusterID only as in the bucket worker
+					Expect(oscd.OpenShiftCluster.Properties.ProvisioningState).To(Equal(api.ProvisioningStateSucceeded))
+
 					svc.stopping.Store(true)
 					return api.MaintenanceManifestStateCompleted, "ok"
 				},
