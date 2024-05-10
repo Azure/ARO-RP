@@ -418,8 +418,12 @@ type IngressProfile struct {
 
 // PlatformWorkloadIdentityProfile encapsulates all information that is specific to workload identity clusters.
 type PlatformWorkloadIdentityProfile struct {
+	UpgradeableTo              *UpgradeableTo             `json:"upgradeableTo,omitempty"`
 	PlatformWorkloadIdentities []PlatformWorkloadIdentity `json:"platformWorkloadIdentities,omitempty"`
 }
+
+// UpgradeableTo stores a single OpenShift version a workload idetntiy cluster can be upgraded to
+type UpgradeableTo string
 
 // PlatformWorkloadIdentity stores information representing a single workload identity.
 type PlatformWorkloadIdentity struct {

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-multierror"
+	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -56,6 +57,7 @@ type Operator interface {
 	Restart(context.Context, []string) error
 	IsRunningDesiredVersion(context.Context) (bool, error)
 	RenewMDSDCertificate(context.Context) error
+	EnsureUpgradeAnnotations(context.Context) error
 }
 
 type operator struct {
@@ -67,6 +69,7 @@ type operator struct {
 	client        client.Client
 	extensionscli extensionsclient.Interface
 	kubernetescli kubernetes.Interface
+	operatorcli   operatorclient.Interface
 	dh            dynamichelper.Interface
 }
 
@@ -429,6 +432,36 @@ func (o *operator) RenewMDSDCertificate(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (o *operator) EnsureUpgradeAnnotations(ctx context.Context) error {
+	if o.oc.Properties.PlatformWorkloadIdentityProfile == nil {
+		return nil
+	}
+
+	if o.oc.Properties.ServicePrincipalProfile != nil {
+		return nil
+	}
+
+	upgradeableTo := string(*o.oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo)
+
+	cloudcredentialobject, err := o.operatorcli.OperatorV1().CloudCredentials().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	for _, v := range cloudcredentialobject.Items {
+		v.Annotations = map[string]string{
+			"cloudcredential.openshift.io/upgradeable-to": upgradeableTo,
+		}
+
+		_, err = o.operatorcli.OperatorV1().CloudCredentials().Update(ctx, &v, metav1.UpdateOptions{})
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
