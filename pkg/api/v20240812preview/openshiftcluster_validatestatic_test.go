@@ -1202,6 +1202,7 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 						},
 					},
 				}
+				oc.Properties.ServicePrincipalProfile = nil
 			},
 			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile.PlatformWorkloadIdentities[0].resourceID: ResourceID BAD formatted incorrectly.",
 		},
@@ -1216,6 +1217,7 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 						},
 					},
 				}
+				oc.Properties.ServicePrincipalProfile = nil
 				oc.Identity = &Identity{
 					UserAssignedIdentities: UserAssignedIdentities{
 						"first": {
@@ -1277,8 +1279,32 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 						},
 					},
 				}
+				oc.Properties.ServicePrincipalProfile = nil
 			},
 			wantErr: "400: InvalidParameter: identity: Cluster identity and operator roles require each other.",
+		},
+		{
+			name: "operator name missing",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
+						{
+							ResourceID:   "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name",
+							OperatorName: "",
+						},
+					},
+				}
+				oc.Properties.ServicePrincipalProfile = nil
+			},
+			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile.PlatformWorkloadIdentities[0].resourceID: Operator name is empty.",
+		},
+		{
+			name: "identity and service principal missing",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = nil
+				oc.Properties.ServicePrincipalProfile = nil
+			},
+			wantErr: "400: InvalidParameter: properties.servicePrincipalProfile: Must provide either an identity or service principal credentials.",
 		},
 	}
 
