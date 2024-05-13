@@ -66,7 +66,10 @@ func (f *frontend) _getOpenShiftClusters(ctx context.Context, log *logrus.Entry,
 
 	for i := range ocs {
 		ocs[i].Properties.ClusterProfile.PullSecret = ""
-		ocs[i].Properties.ServicePrincipalProfile.ClientSecret = ""
+
+		if ocs[i].Properties.ServicePrincipalProfile != nil {
+			ocs[i].Properties.ServicePrincipalProfile.ClientSecret = ""
+		}
 	}
 
 	nextLink, err := f.buildNextLink(r.Header.Get("Referer"), i.Continuation())
