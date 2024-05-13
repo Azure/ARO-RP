@@ -4,7 +4,6 @@ package stringutils
 // Licensed under the Apache License 2.0.
 
 import (
-	"regexp"
 	"strings"
 )
 
@@ -20,19 +19,4 @@ func Contains(list []string, value string) bool {
 		}
 	}
 	return false
-}
-
-// returns true if a string is formatted like an Azure resource ID
-// otherwise, returns false
-func IsResourceIDFormatted(id string) bool {
-	resourceIDPattern := "/subscriptions/.*/resourceGroups/.*/providers/.*/.*/.*"
-	// the regexp is statically defined and hard-coded, we shouldn't need to check for errors
-	match, _ := regexp.MatchString(resourceIDPattern, id)
-
-	return match
-}
-
-// ResourceType takes a resourceID as a string and returns the resource type as a string
-func ResourceType(resourceID string) string {
-	return strings.Split(resourceID, "/")[7]
 }

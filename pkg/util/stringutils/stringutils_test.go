@@ -14,31 +14,3 @@ func TestLastTokenByte(t *testing.T) {
 		t.Errorf("want %s, got %s", want, result)
 	}
 }
-
-func TestIsResourceIDFormatted(t *testing.T) {
-	result := IsResourceIDFormatted("/subscriptions/subscriptionID/resourceGroups/resourcegroupname/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourcename")
-	want := true
-	if result != want {
-		t.Errorf("want %t, got %t\n", want, result)
-	}
-
-	result = IsResourceIDFormatted("xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
-	want = false
-	if result != want {
-		t.Errorf("want %t, got %t\n", want, result)
-	}
-}
-
-func TestResourceType(t *testing.T) {
-	resourceType := ResourceType("/subscriptions/subscriptionID/resourceGroups/resourcegroupname/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourcename")
-	want := "openShiftClusters"
-	if resourceType != want {
-		t.Errorf("want %s, got %s\n", want, resourceType)
-	}
-
-	resourceType = ResourceType("/subscriptions/subscriptionID/resourceGroups/resourcegroupname/providers/Microsoft.RedHatOpenShift/identities/resourcename")
-	want = "identities"
-	if resourceType != want {
-		t.Errorf("want %s, got %s\n", want, resourceType)
-	}
-}
