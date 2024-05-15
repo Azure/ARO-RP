@@ -66,10 +66,10 @@ elif [[ $1 == create ]]; then
       --master-subnet master-subnet \
       --worker-subnet worker-subnet
 
-    CLUSTER_RESOURCE_GROUP_ID=az aro show \
+    CLUSTER_RESOURCE_GROUP_ID=$(az aro show \
       --name $SHARED_CLUSTER_NAME \
       --resource-group $SHARED_CLUSTER_RESOURCE_GROUP_NAME \
-      | jq .clusterProfile.resourceGroupId
+      | jq .clusterProfile.resourceGroupId)
 
     echo "Adding tag to cluster..."
     # This tag stops the RG being cleaned up
