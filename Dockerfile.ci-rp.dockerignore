@@ -14,13 +14,10 @@
 
 # Allow files and directories for JavaScript build
 !portal/v2/package*.json
-!portal/v2/*.js
-!portal/v2/*.jsx
-!portal/v2/*.ts
-!portal/v2/*.tsx
-!portal/v2/*.css
-!portal/v2/*.scss
-!portal/v2/*.html
-!portal/v2/*.json
-!portal/v2/public/
-!portal/v2/src/
+!portal/v2/src
+!portal/v2/public
+!portal/v2/config-overrides.js
+!portal/v2/tsconfig.json
+!portal/v2/.eslintrc.yml
+!portal/v2/.npmrc
+
