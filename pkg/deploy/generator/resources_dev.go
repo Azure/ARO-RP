@@ -114,6 +114,12 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 				Tier:     to.StringPtr("Standard"),
 				Capacity: to.Int64Ptr(1),
 			},
+			Identity: &mgmtcompute.VirtualMachineScaleSetIdentity{
+				Type: mgmtcompute.ResourceIdentityTypeUserAssigned,
+				UserAssignedIdentities: map[string]*mgmtcompute.VirtualMachineScaleSetIdentityUserAssignedIdentitiesValue{
+					"[resourceId('AzSecPackAutoConfigRG', 'Microsoft.ManagedIdentity/userAssignedIdentities', concat('AzSecPackAutoConfigUA-', resourceGroup().location))]": {},
+				},
+			},
 			VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
 				UpgradePolicy: &mgmtcompute.UpgradePolicy{
 					Mode: mgmtcompute.UpgradeModeRolling,
@@ -242,6 +248,9 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
+		Tags: map[string]any{
+			"azsecpack": "nonprod",
+		},
 		DependsOn: []string{
 			"[resourceId('Microsoft.Network/loadBalancers', 'dev-lb-internal')]",
 		},
