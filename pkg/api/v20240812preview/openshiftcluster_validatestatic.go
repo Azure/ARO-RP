@@ -461,14 +461,7 @@ func (sv openShiftClusterStaticValidator) validatePlatformIdentities(oc *OpenShi
 	}
 
 	clusterIdentityPresent := oc.Identity != nil
-	operatorRolePresent := false
-	if pwip != nil {
-		for _, pwi := range pwip.PlatformWorkloadIdentities {
-			if pwi.OperatorName != "" {
-				operatorRolePresent = true
-			}
-		}
-	}
+	operatorRolePresent := pwip != nil
 
 	if clusterIdentityPresent != operatorRolePresent {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "identity", "Cluster identity and operator roles require each other.")
