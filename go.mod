@@ -59,7 +59,7 @@ require (
 	github.com/openshift/api v3.9.1-0.20191111211345-a27ff30ebf09+incompatible
 	github.com/openshift/client-go v0.0.0-20220525160904-9e1acff93e4a
 	github.com/openshift/cloud-credential-operator v0.0.0-00010101000000-000000000000
-	github.com/openshift/hive/apis v0.0.0-20240131003045-5fbe0d158ba9
+	github.com/openshift/hive/apis v0.0.0-20240510150258-83aedb9f6e73
 	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
 	github.com/openshift/machine-config-operator v0.0.1-0.20230519222939-1abc13efbb0d
 	github.com/pires/go-proxyproto v0.6.2
@@ -74,21 +74,21 @@ require (
 	github.com/tebeka/selenium v0.9.9
 	github.com/ugorji/go/codec v1.2.12
 	github.com/vincent-petithory/dataurl v1.0.0
-	golang.org/x/crypto v0.21.0
-	golang.org/x/net v0.22.0
+	golang.org/x/crypto v0.23.0
+	golang.org/x/net v0.25.0
 	golang.org/x/oauth2 v0.17.0
 	golang.org/x/sync v0.6.0
-	golang.org/x/text v0.14.0
+	golang.org/x/text v0.15.0
 	golang.org/x/tools v0.19.0
-	k8s.io/api v0.29.1
+	k8s.io/api v0.30.0
 	k8s.io/apiextensions-apiserver v0.25.0
-	k8s.io/apimachinery v0.29.1
+	k8s.io/apimachinery v0.30.0
 	k8s.io/cli-runtime v0.25.16
 	k8s.io/client-go v0.26.2
 	k8s.io/code-generator v0.25.16
 	k8s.io/kubectl v0.24.17
 	k8s.io/kubernetes v1.28.4
-	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
+	k8s.io/utils v0.0.0-20240502163921-fe8a2dddb1d0
 	sigs.k8s.io/controller-runtime v0.13.1
 	sigs.k8s.io/controller-tools v0.9.0
 )
@@ -254,8 +254,8 @@ require (
 	go.starlark.net v0.0.0-20220328144851-d1966c6b9fcd // indirect
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
 	golang.org/x/mod v0.16.0 // indirect
-	golang.org/x/sys v0.18.0 // indirect
-	golang.org/x/term v0.18.0 // indirect
+	golang.org/x/sys v0.20.0 // indirect
+	golang.org/x/term v0.20.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
