@@ -11,6 +11,7 @@ import (
 	"github.com/golang/mock/gomock"
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
+	fakeoperatorclient "github.com/openshift/client-go/operator/clientset/versioned/fake"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -464,7 +465,7 @@ func TestCheckPodImageVersion(t *testing.T) {
 }
 
 func TestEnsureUpgradeAnnotations(t *testing.T) {
-	//UpgradeableTo1 := api.UpgradeableTo("4.14.59")
+	UpgradeableTo1 := api.UpgradeableTo("4.14.59")
 
 	for _, tt := range []struct {
 		name           string
@@ -488,20 +489,20 @@ func TestEnsureUpgradeAnnotations(t *testing.T) {
 				},
 			},
 		},
-		// {
-		// 	name: "no version persisted in cluster document, persist it",
-		// 	cluster: api.OpenShiftCluster{
-		// 		Properties: api.OpenShiftClusterProperties{
-		// 			PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-		// 				UpgradeableTo: &UpgradeableTo1,
-		// 			},
-		// 		},
-		// 	},
-		// 	annotation: nil,
-		// 	wantAnnotation: map[string]string{
-		// 		"cloudcredential.openshift.io/upgradeable-to": "4.14.59",
-		// 	},
-		// },
+		{
+			name: "no version persisted in cluster document, persist it",
+			cluster: api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+						UpgradeableTo: &UpgradeableTo1,
+					},
+				},
+			},
+			annotation: nil,
+			wantAnnotation: map[string]string{
+				"cloudcredential.openshift.io/upgradeable-to": "4.14.59",
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
@@ -518,15 +519,19 @@ func TestEnsureUpgradeAnnotations(t *testing.T) {
 			}
 
 			o := operator{
-				oc:     oc,
-				env:    env,
-				client: ctrlfake.NewClientBuilder().WithObjects(cloudcredentialobject).Build(),
+				oc:          oc,
+				env:         env,
+				operatorcli: fakeoperatorclient.NewSimpleClientset(cloudcredentialobject),
 			}
 
 			err := o.EnsureUpgradeAnnotations(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-			if !reflect.DeepEqual(tt.annotation, tt.wantAnnotation) {
-				t.Errorf("actual annotation: %v, wanted %v", tt.annotation, tt.wantAnnotation)
+			result, _ := o.operatorcli.OperatorV1().CloudCredentials().List(ctx, metav1.ListOptions{})
+			for _, v := range result.Items {
+				actualAnnotations := v.ObjectMeta.Annotations
+				if !reflect.DeepEqual(actualAnnotations, tt.wantAnnotation) {
+					t.Errorf("actual annotation: %v, wanted %v", tt.annotation, tt.wantAnnotation)
+				}
 			}
 		})
 	}
