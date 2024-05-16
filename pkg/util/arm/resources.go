@@ -2,7 +2,6 @@ package arm
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 )
 
@@ -43,24 +42,29 @@ func (r ArmResource) String() string {
 // ParseArmResourceId take the resourceID of a child resource to an OpenShiftCluster
 // TODO refactor this function to support an additional layer of child resources if we ever get to that point, right now only supports 1 child resource
 func ParseArmResourceId(resourceId string) (*ArmResource, error) {
-	const resourceIDPatternText = `(?i)subscriptions/(.+)/resourcegroups/(.+)/providers/(.+?)/(.+?)/(.+?)/(.+?)/(.+)`
-	resourceIDPattern := regexp.MustCompile(resourceIDPatternText)
-	match := resourceIDPattern.FindStringSubmatch(resourceId)
-
-	if len(match) != 8 || strings.Contains(match[7], "/") {
+	resourceComponents := strings.Split(strings.TrimPrefix(resourceId, "/"), "/")
+	if !strings.EqualFold(resourceComponents[0], "subscriptions") || !strings.EqualFold(resourceComponents[2], "resourceGroups") || !strings.EqualFold(resourceComponents[4], "providers") {
 		return nil, fmt.Errorf("parsing failed for %s. Invalid resource Id format", resourceId)
 	}
 
 	result := &ArmResource{
-		SubscriptionID: match[1],
-		ResourceGroup:  match[2],
-		Provider:       match[3],
-		ResourceType:   match[4],
-		ResourceName:   match[5],
-		SubResource: SubResource{
-			ResourceType: match[6],
-			ResourceName: match[7],
-		},
+		SubscriptionID: resourceComponents[1],
+		ResourceGroup:  resourceComponents[3],
+		Provider:       resourceComponents[5],
+		ResourceType:   resourceComponents[6],
+		ResourceName:   resourceComponents[7],
+	}
+	if len(resourceComponents) > 8 {
+		result.SubResource = SubResource{
+			ResourceType: resourceComponents[8],
+			ResourceName: resourceComponents[9],
+		}
+		if len(resourceComponents) > 10 {
+			result.SubResource.SubResource = &SubResource{
+				ResourceType: resourceComponents[10],
+				ResourceName: resourceComponents[11],
+			}
+		}
 	}
 	return result, nil
 }

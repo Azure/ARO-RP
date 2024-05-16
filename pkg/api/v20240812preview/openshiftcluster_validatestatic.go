@@ -8,7 +8,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -17,6 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/util/immutable"
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -427,13 +427,11 @@ func (sv openShiftClusterStaticValidator) validatePlatformWorkloadIdentityProfil
 		return nil
 	}
 
-	resourceIDPattern, _ := regexp.Compile("/subscriptions/.*/resourceGroups/.*/providers/.*/.*/.*")
-
 	// Validate the PlatformWorkloadIdentities
 	for n, p := range pwip.PlatformWorkloadIdentities {
 		// the regexp is statically defined and hard-coded, we shouldn't need to check for errors
-		match := resourceIDPattern.Match([]byte(p.ResourceID))
-		if !match {
+		resource, err := arm.ParseArmResourceId(p.ResourceID)
+		if err != nil {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities[%d].resourceID", path, n), "ResourceID %s formatted incorrectly.", p.ResourceID)
 		}
 
@@ -441,7 +439,7 @@ func (sv openShiftClusterStaticValidator) validatePlatformWorkloadIdentityProfil
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities[%d].resourceID", path, n), "Operator name is empty.")
 		}
 
-		if strings.Split(p.ResourceID, "/")[7] != "userAssignedIdentities" {
+		if resource.ResourceType != "userAssignedIdentities" {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities[%d].resourceID", path, n), "Resource must be a user assigned identity.")
 		}
 	}
