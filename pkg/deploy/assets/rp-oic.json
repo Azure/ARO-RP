@@ -21,6 +21,9 @@
                 "allowBlobPublicAccess": true,
                 "minimumTlsVersion": "TLS1_2"
             },
+            "tags": {
+                "Az.Sec.AnonymousBlobAccessEnforcement::Skip": "PublicRelease"
+            },
             "location": "[resourceGroup().location]",
             "name": "[concat(take(substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.')), 21), 'oic')]",
             "type": "Microsoft.Storage/storageAccounts",
