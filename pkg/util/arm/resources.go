@@ -40,10 +40,9 @@ func (r ArmResource) String() string {
 }
 
 // ParseArmResourceId takes in an ARM resource ID and returns an ArmResource object representing that resource. It supports up to two levels of subresource nesting.
-// TODO refactor this function to support an additional layer of child resources if we ever get to that point, right now only supports 1 child resource
 func ParseArmResourceId(resourceId string) (*ArmResource, error) {
 	resourceComponents := strings.Split(strings.TrimPrefix(resourceId, "/"), "/")
-	if !strings.EqualFold(resourceComponents[0], "subscriptions") || !strings.EqualFold(resourceComponents[2], "resourceGroups") || !strings.EqualFold(resourceComponents[4], "providers") {
+	if len(resourceComponents) < 8 || !strings.EqualFold(resourceComponents[0], "subscriptions") || !strings.EqualFold(resourceComponents[2], "resourceGroups") || !strings.EqualFold(resourceComponents[4], "providers") {
 		return nil, fmt.Errorf("parsing failed for %s. Invalid resource Id format", resourceId)
 	}
 
@@ -61,8 +60,8 @@ func ParseArmResourceId(resourceId string) (*ArmResource, error) {
 		}
 		if len(resourceComponents) > 10 {
 			result.SubResource.SubResource = &SubResource{
-				ResourceType: resourceComponents[10],
-				ResourceName: resourceComponents[11],
+				ResourceType: resourceComponents[8], // same subresource type as the first subresource
+				ResourceName: resourceComponents[10],
 			}
 		}
 	}
