@@ -1,0 +1,73 @@
+---
+- name: create_vnet | Vnet
+  azure.azcollection.azure_rm_virtualnetwork:
+    name: "{{ vnet_name | default('aro-vnet') }}"
+    resource_group: "{{ resource_group }}"
+    address_prefixes_cidr: "{{ network_prefix_cidr }}"
+    location: "{{ location }}"
+    tags:
+      createdby: "{{ currentuser_info.userPrincipalName }}"
+      createdwith: "ansible smoketest"
+      purge: "true"
+  delegate_to: localhost
+  register: vnet_state
+- name: create_vnet | Debug vnet_state
+  ansible.builtin.debug:
+    var: vnet_state
+
+- name: create_vnet | Create route table
+  when: "routes is defined"
+  block:
+    - name: create_vnet | Create route table
+      azure.azcollection.azure_rm_routetable:
+        name: "{{ vnet_name | default('aro-vnet') }}-rt"
+        resource_group: "{{ resource_group }}"
+        location: "{{ location }}"
+        tags:
+          createdby: "{{ currentuser_info.userPrincipalName }}"
+          createdwith: "ansible smoketest"
+          purge: "true"
+      delegate_to: localhost
+      register: route_table_state
+    - name: create_vnet | Debug route_table_state
+      ansible.builtin.debug:
+        var: route_table_state
+    - name: create_vnet | Create routes
+      azure.azcollection.azure_rm_route:
+        resource_group: "{{ resource_group }}"
+        name: "{{ item.name }}"
+        address_prefix: "{{ item.address_prefix }}"
+        next_hop_type: "{{ item.next_hop_type }}"
+        route_table_name: "{{ vnet_name | default('aro-vnet') }}-rt"
+      loop: "{{ routes }}"
+      delegate_to: localhost
+      register: route_entry_state
+    - name: create_vnet | Debug route_entry_state
+      ansible.builtin.debug:
+        var: route_entry_state
+
+- name: create_vnet | Master subnet
+  azure.azcollection.azure_rm_subnet:
+    name: master
+    virtual_network_name: "{{ vnet_name | default('aro-vnet') }}"
+    address_prefix_cidr: "{{ master_cidr }}"
+    resource_group: "{{ resource_group }}"
+    private_link_service_network_policies: "{% if outbound_type == 'UserDefinedRouting' %}Disabled{% else %}{{ omit }}{% endif %}"
+    route_table: "{% if routes is defined %}{{ vnet_name | default('aro-vnet') }}-rt{% else %}{{ omit }}{% endif %}"
+  delegate_to: localhost
+  register: master_subnet_state
+- name: create_vnet | Debug master_subnet_state
+  ansible.builtin.debug:
+    var: master_subnet_state
+- name: create_vnet | Worker subnet
+  azure.azcollection.azure_rm_subnet:
+    name: worker
+    virtual_network_name: "{{ vnet_name | default('aro-vnet') }}"
+    address_prefix_cidr: "{{ worker_cidr }}"
+    resource_group: "{{ resource_group }}"
+    route_table: "{% if routes is defined %}{{ vnet_name | default('aro-vnet') }}-rt{% else %}{{ omit }}{% endif %}"
+  delegate_to: localhost
+  register: worker_subnet_state
+- name: create_vnet | Debug worker_subnet_state
+  ansible.builtin.debug:
+    var: worker_subnet_state

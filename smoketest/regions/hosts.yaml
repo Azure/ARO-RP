@@ -1,0 +1,72 @@
+---
+simple_clusters:
+  hosts:
+    smoketest-basic:
+      # Basic cluster
+      name: aro-default
+      resource_group: "{{ CLUSTERPREFIX }}-basic-{{ location }}"
+      network_prefix_cidr: 10.0.0.0/22
+      master_cidr: 10.0.0.0/23
+      worker_cidr: 10.0.2.0/23
+    smoketest-private:
+      # Private cluster
+      name: aro-default
+      resource_group: "{{ CLUSTERPREFIX }}-private-{{ location }}"
+      network_prefix_cidr: 10.0.0.0/22
+      master_cidr: 10.0.0.0/23
+      worker_cidr: 10.0.2.0/23
+      apiserver_visibility: Private
+      ingress_visibility: Private
+    smoketest-enc:
+      # Basic cluster with encryption-at-host enabled
+      name: aro-414
+      resource_group: "{{ CLUSTERPREFIX }}-enc-{{ location }}-414"
+      version: 4.14.16
+      network_prefix_cidr: 10.0.0.0/22
+      master_cidr: 10.0.0.0/23
+      master_size: Standard_E8s_v5
+      master_encryption_at_host: true
+      worker_cidr: 10.0.2.0/23
+      worker_size: Standard_D4s_v5
+      worker_encryption_at_host: true
+    smoketest-udr414:
+      name: aro-414
+      resource_group: "{{ CLUSTERPREFIX }}-udr-{{ location }}-414"
+      version: "{{ CLUSTERVERSION | default('4.14.16') }}"
+      network_prefix_cidr: 10.0.0.0/22
+      master_cidr: 10.0.0.0/23
+      worker_cidr: 10.0.2.0/23
+      apiserver_visibility: Private
+      ingress_visibility: Private
+      outbound_type: UserDefinedRouting
+      routes:
+        - name: Blackhole
+          address_prefix: 0.0.0.0/0
+          next_hop_type: none
+    smoketest-udr413:
+      name: aro-413
+      resource_group: "{{ CLUSTERPREFIX }}-udr-{{ location }}-413"
+      version: "4.13.23"
+      network_prefix_cidr: 10.0.0.0/22
+      master_cidr: 10.0.0.0/23
+      worker_cidr: 10.0.2.0/23
+      apiserver_visibility: Private
+      ingress_visibility: Private
+      outbound_type: UserDefinedRouting
+      routes:
+        - name: Blackhole
+          address_prefix: 0.0.0.0/0
+          next_hop_type: none
+byok_clusters:
+  hosts:
+    smoketest-byok:
+      # Cluster with customer-managed disk encryption key
+      # https://learn.microsoft.com/en-us/azure/openshift/howto-byok
+      name: aro-414
+      resource_group: "{{ CLUSTERPREFIX }}-byok-{{ location }}-414"
+      version: 4.14.16
+      network_prefix_cidr: 10.0.0.0/22
+      master_cidr: 10.0.0.0/23
+      master_size: Standard_E8s_v5
+      worker_cidr: 10.0.2.0/23
+      worker_size: Standard_D4s_v5

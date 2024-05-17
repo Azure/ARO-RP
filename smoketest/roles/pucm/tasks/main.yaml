@@ -1,0 +1,14 @@
+---
+- name: Az aro update
+  ansible.builtin.command:
+    argv: [az, aro, update, "--name={{ name }}", "--resource-group={{ resource_group }}", -o=yaml]
+  delegate_to: localhost
+- name: Wait for provisioningState to become Succeeded
+  azure.azcollection.azure_rm_openshiftmanagedcluster_info:
+    name: "{{ name }}"
+    resource_group: "{{ resource_group }}"
+  delegate_to: localhost
+  register: cluster_status
+  until: cluster_status.clusters.properties.provisioningState == 'Succeeded'
+  retries: 6
+  delay: 10

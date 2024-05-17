@@ -1,0 +1,45 @@
+ARG REGISTRY
+ARG VERSION
+
+###############################################################################
+# final is our slim image with minimal layers and tools
+###############################################################################
+# FROM ${REGISTRY}/ubi9/python-312:1-10
+FROM ${REGISTRY}/ubi9/python-311:1-62 AS final
+ARG PIPX_VERSION=1.5.0 \
+    ANSIBLE_VERSION=9.5.1 \
+    ANSIBLE_LINT_VERSION=24.6.0 \
+    ANSIBLE_AZCOLLECTION_VERSION=2.3.0
+
+# Cause Ansible to print task timing information
+ENV ANSIBLE_CALLBACKS_ENABLED=profile_tasks
+USER root
+WORKDIR /smoketest
+
+COPY smoketest /smoketest
+
+# Using pipx here because ansible and azure-cli have differing required core Azure modules
+# They each need a separate venv to avoid collisions
+RUN ${APP_ROOT}/bin/pip install "pipx==${PIPX_VERSION}" && \
+    ${APP_ROOT}/bin/pipx install "azure-cli==${AZURE_CLI_VERSION}" && \
+    ${APP_ROOT}/bin/pipx install "ansible==${ANSIBLE_VERSION}" --include-deps && \
+    ${APP_ROOT}/bin/pipx runpip ansible install -r "/smoketest/ansible-requirements.txt" && \
+    ${HOME}/.local/bin/ansible-galaxy collection install "azure.azcollection==${ANSIBLE_AZCOLLECTION_VERSION}" && \
+    ${APP_ROOT}/bin/pipx runpip ansible install -r "${HOME}/.ansible/collections/ansible_collections/azure/azcollection/requirements-azure.txt" && \
+    ${APP_ROOT}/bin/pipx list
+
+###############################################################################
+# linter takes the final image and injects ansible-lint. Ansible-lint needs 
+# ansible itself and all ansible modules and python modules installed to correctly lint
+###############################################################################
+FROM final AS linter
+ARG AZURE_CLI_VERSION=2.60.0
+RUN ${APP_ROOT}/bin/pipx inject ansible --include-apps "ansible-lint==${ANSIBLE_LINT_VERSION}" && \
+    ${HOME}/.local/bin/ansible-lint -v -c /smoketest/.ansible_lint.yaml --project-dir /smoketest --format sarif | tee /smoketest/sarif.txt
+
+###############################################################################
+# Re-FROM final so that it's the output container
+###############################################################################
+FROM final
+COPY --from=linter /smoketest/sarif.txt /sarif.txt
+ENTRYPOINT ["/opt/app-root/src/.local/bin/ansible-playbook"]

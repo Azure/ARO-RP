@@ -1,0 +1,17 @@
+---
+- name: Deploy simple clusters
+  hosts: simple_clusters
+  gather_facts: false
+  environment:
+    AZURE_CORE_SURVEY_MESSAGE: "false"
+  roles:
+    - simple_cluster
+    - cleanup
+- name: Bring your own keys disk encryption
+  hosts: byok_clusters
+  gather_facts: false
+  environment:
+    AZURE_CORE_SURVEY_MESSAGE: "false"
+  roles:
+    - byok_cluster
+    - cleanup

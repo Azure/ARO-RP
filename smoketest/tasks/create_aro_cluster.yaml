@@ -1,0 +1,109 @@
+---
+# TODO: Create clusters with azure_rm_openshiftmanagedcluster if possible
+# - name: Create cluster service principal
+#   azure.azcollection.azure_rm_adserviceprincipal:
+#     delegate_to: localhost
+#     app_id: "{{ name | to_uuid }}"
+#     tenant: "{{ sub_info.tenant_id }}"
+#   register: csp_info
+# - ansible.builtin.debug: var=csp_info
+# - name: Create cluster service principal
+#   ansible.builtin.command:
+#     delegate_to: localhost
+#     argv: [
+#       "az", "ad", "sp", "create-for-rbac",
+#       "-n", "{{ name }}-sp",
+#       "--role", "contributor",
+#       "--scopes", "{{ rg_info.state.id }}"
+#     ]
+#   register: sp_info
+# - ansible.builtin.debug: var=sp_info
+# - name: Create aro cluster
+#   azure.azcollection.azure_rm_openshiftmanagedcluster:
+#     delegate_to: localhost
+#     name: "{{ name }}"
+#     resource_group: "{{ resource_group }}"
+#     location: "{{ location }}"
+#     service_principal_profile:
+#       client_id: "{{ csp_info.state.client_id }}"
+#       client_secret: "{{ csp_info.state.client_secret }}"
+#     worker_profiles:
+#       - name: "worker"
+#         vm_size: "Standard_D4s_v3"
+#         subnet_id: "{{ worker_subnet_state.state.id }}"
+#     master_profile:
+#       vm_size: "Standard_D4s_v3"
+#       subnet_id: "{{ master_subnet_state.state.id }}"
+# - name: Get aro cluster
+#   ansible.builtin.command:
+#     delegate_to: localhost
+#     argv: ["az","aro", "show", "--name={{ name }}", "--resource-group={{ resource_group }}", "-o=yaml"]
+#   register: aro_create_result
+- name: create_aro_cluster | Create aro cluster
+  ansible.builtin.command:
+    argv: "{{ argv | reject('equalto', omit) | list }}"
+  vars:
+    argv:
+      - az
+      - aro
+      - create
+      - --name={{ name }}
+      - --resource-group={{ resource_group }}
+      - --location={{ location }}
+      - --master-subnet=master
+      - --subscription={{ sub_info.subscription_id }}
+      - --vnet=aro-vnet
+      - --worker-subnet=worker
+      - "{% if apiserver_visibility is defined %}--apiserver-visibility={{ apiserver_visibility }}{% else %}{{ omit }}{% endif %}"
+      - "{% if byok_des_status is defined and byok_des_status.state.provisioning_state == 'Succeeded'
+         %}--disk-encryption-set={{ byok_des_status.state.id }}{% else %}{{ omit }}{% endif %}"
+      - "{% if cluster_resource_group is defined %}--cluster-resource-group={{ cluster_resource_group }}{% else %}{{ omit }}{% endif %}"
+      - "{% if domain is defined %}--domain={{ domain }}{% else %}{{ omit }}{% endif %}"
+      - "{% if enable_preconfigured_nsg is defined %}--enable-preconfigured-nsg={{ enable_preconfigured_nsg }}{% else %}{{ omit }}{% endif %}"
+      - "{% if fips_validated_modules is defined %}--fips-validated-modules={{ fips_validated_modules }}{% else %}{{ omit }}{% endif %}"
+      - "{% if ingress_visibility is defined %}--ingress-visibility={{ ingress_visibility }}{% else %}{{ omit }}{% endif %}"
+      - "{% if master_encryption_at_host is defined %}--master-encryption-at-host={{ master_encryption_at_host }}{% else %}{{ omit }}{% endif %}"
+      - "{% if master_vm_size is defined %}--master-vm-size={{ master_vm_size }}{% else %}{{ omit }}{% endif %}"
+      - "{% if outbound_type is defined %}--outbound-type={{ outbound_type }}{% else %}{{ omit }}{% endif %}"
+      - "{% if pod_cidr is defined %}--pod-cidr={{ pod_cidr }}{% else %}{{ omit }}{% endif %}"
+      - "{% if service_cidr is defined %}--service-cidr={{ service_cidr }}{% else %}{{ omit }}{% endif %}"
+      - "{% if version is defined %}--version={{ version }}{% else %}{{ omit }}{% endif %}"
+      - "{% if worker_encryption_at_host is defined %}--worker-encryption-at-host={{ worker_encryption_at_host }}{% else %}{{ omit }}{% endif %}"
+      - "{% if worker_count is defined %}--worker-count={{ worker_count }}{% else %}{{ omit }}{% endif %}"
+      - "{% if worker_vm_size is defined %}--worker-vm-size={{ worker_vm_size }}{% else %}{{ omit }}{% endif %}"
+      - --tags=createdby='{{ currentuser_info.userPrincipalName }}' createdwith='ansible smoketest' purge=true
+      - -o=yaml
+  delegate_to: localhost
+  register: aro_create_result
+- name: create_aro_cluster | Set fact aro_create_result
+  ansible.builtin.set_fact:
+    aro_cluster_state: "{{ aro_create_result.stdout | from_yaml }}"
+- name: create_aro_cluster | Debug aro_cluster_state
+  ansible.builtin.debug:
+    var: aro_cluster_state
+- name: create_aro_cluster | Get cluster kubeconfig
+  ansible.builtin.command:
+    argv: [az, aro, get-admin-kubeconfig, "--name={{ name }}", "--resource-group={{ resource_group }}", "-f=/tmp/{{ name }}.kubeconfig"]
+  delegate_to: localhost
+  register: aro_credentails_result
+- name: create_aro_cluster | Cluster info
+  # Wait for cluster to become reachable
+  kubernetes.core.k8s_cluster_info:
+    kubeconfig: /tmp/{{ name }}.kubeconfig
+  delegate_to: localhost
+  register: k8s_cluster_info
+  retries: 10
+  delay: 60
+- name: create_aro_cluster | Get clusterversion
+  kubernetes.core.k8s_info:
+    kubeconfig: /tmp/{{ name }}.kubeconfig
+    api_version: config.openshift.io/v1
+    kind: ClusterVersion
+    name: version
+  delegate_to: localhost
+  register: oc_get_clusterversion
+  retries: 10 # Need retries to wait for real ingress cert to deploy
+  delay: 60
+- name: create_aro_cluster | Debug clusterversion status conditions
+  ansible.builtin.debug:
+    var: oc_get_clusterversion.resources[0].status.conditions
