@@ -1503,6 +1503,8 @@ func (g *generator) rpVersionStorageAccount() []*arm.Resource {
 	return []*arm.Resource{
 		g.storageAccount("[parameters('rpVersionStorageAccountName')]", &mgmtstorage.AccountProperties{
 			AllowBlobPublicAccess: to.BoolPtr(true),
+		}, map[string]*string{
+			tagKeyExemptPublicBlob: to.StringPtr(tagValueExemptPublicBlob),
 		}),
 		{
 			Resource: &mgmtstorage.BlobContainer{

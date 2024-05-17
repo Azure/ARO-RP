@@ -88,7 +88,7 @@ func (g *generator) publicIPAddress(name string) *arm.Resource {
 	}
 }
 
-func (g *generator) storageAccount(name string, accountProperties *mgmtstorage.AccountProperties) *arm.Resource {
+func (g *generator) storageAccount(name string, accountProperties *mgmtstorage.AccountProperties, tags map[string]*string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtstorage.Account{
 			Name:     &name,
@@ -98,6 +98,7 @@ func (g *generator) storageAccount(name string, accountProperties *mgmtstorage.A
 				Name: "Standard_LRS",
 			},
 			AccountProperties: accountProperties,
+			Tags:              tags,
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Storage"),
 	}
