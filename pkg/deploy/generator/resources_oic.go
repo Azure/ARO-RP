@@ -36,6 +36,9 @@ func (g *generator) oicStorageAccount() *arm.Resource {
 		Name:     to.StringPtr(fmt.Sprintf("[%s]", storageAccountName)),
 		Location: to.StringPtr("[resourceGroup().location]"),
 		Type:     to.StringPtr(resourceTypeStorageAccount),
+		Tags: map[string]*string{
+			tagKeyExemptPublicBlob: to.StringPtr(tagValueExemptPublicBlob),
+		},
 	}
 
 	return &arm.Resource{
