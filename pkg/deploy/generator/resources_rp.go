@@ -1536,5 +1536,5 @@ func (g *generator) rpVersionStorageAccount() []*arm.Resource {
 }
 
 func (g *generator) rpStorageAccount() *arm.Resource {
-	return g.storageAccount("[substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.'))]", nil)
+	return g.storageAccount("[substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.'))]", nil, nil)
 }
