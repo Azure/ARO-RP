@@ -5,6 +5,7 @@ ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
 E2E_FLAGS ?= -test.v --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2 --ginkgo.junit-report=e2e-report.xml
 GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
 NO_CACHE ?= true
+PODMAN_VOLUME_OVERLAY=$(shell if [[ $$(getenforce) == "Enforcing" ]]; then echo ":O"; else echo ""; fi 2>/dev/null)
 
 export GOFLAGS=$(GO_FLAGS)
 
@@ -285,4 +286,27 @@ vendor:
 install-go-tools:
 	go install ${GOTESTSUM}
 
-.PHONY: admin.kubeconfig aks.kubeconfig aro az ci-rp ci-clean clean client deploy dev-config.yaml discoverycache fix-macos-vendor generate image-aro-multistage image-fluentbit image-proxy init-contrib lint-go runlocal-rp proxy publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor build-all validate-go unit-test-go coverage-go validate-fips install-go-tools
+smoketest-image:
+# IMAGE_EXISTS = $(shell podman image exists aro-smoketest:$(VERSION))
+	docker image exists aro-smoketest:$(VERSION) || docker build . -f Dockerfile.smoketest --build-arg REGISTRY=$(REGISTRY) --build-arg VERSION=$(VERSION) --no-cache=$(NO_CACHE) --tag aro-smoketest:$(VERSION)
+
+REGION := eastus
+CLUSTERPREFIX := smoketest
+CLUSTERPATTERN := smoketest-basic*
+CLEANUP := True
+# Delete the cluster after success unless it's disabled with `make smoketest CLEANUP=False`
+ifeq ($(CLEANUP),False)
+	CLEANUP_ARG = -e CLEANUP=False
+else
+	CLEANUP_ARG = 
+endif
+smoketest: smoketest-image
+	docker run --rm -t -v $${AZURE_CONFIG_DIR:-~/.azure}:/opt/app-root/src/.azure$(PODMAN_VOLUME_OVERLAY) aro-smoketest:$(VERSION) -i regions/$(REGION) -l $(CLUSTERPATTERN) -e CLUSTERPREFIX=$(CLUSTERPREFIX) $(CLEANUP_ARG) smoketest.yaml
+
+smoketest-dev: smoketest-image
+	docker run --rm -it -v $${AZURE_CONFIG_DIR:-~/.azure}:/opt/app-root/src/.azure$(PODMAN_VOLUME_OVERLAY) -v ./smoketest:/smoketest$(PODMAN_VOLUME_OVERLAY) aro-smoketest:$(VERSION) -i regions/$(REGION) -l $(CLUSTERPATTERN) -e CLUSTERPREFIX=$(CLUSTERPREFIX) $(CLEANUP_ARG) smoketest.yaml
+
+lint-ansible:
+	cd smoketest; ansible-lint -c .ansible_lint.yaml
+
+.PHONY: admin.kubeconfig aks.kubeconfig aro az ci-rp ci-clean clean client deploy dev-config.yaml discoverycache fix-macos-vendor generate image-aro-multistage image-fluentbit image-proxy init-contrib lint-go runlocal-rp proxy publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor build-all validate-go unit-test-go coverage-go validate-fips install-go-tools smoketest smoketest-image smoketest-dev lint-ansible

@@ -1,0 +1,9 @@
+---
+- name: delete_aro_cluster | Delete aro cluster
+  when: CLEANUP is not defined or CLEANUP != "False"
+  azure.azcollection.azure_rm_openshiftmanagedcluster:
+    name: "{{ name }}"
+    resource_group: "{{ resource_group }}"
+    location: "{{ location }}"
+    state: absent
+  delegate_to: localhost
