@@ -39,7 +39,7 @@ func (r ArmResource) String() string {
 	return fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s/%s/%s", r.SubscriptionID, r.ResourceGroup, r.Provider, r.ResourceType, r.ResourceName, r.SubResource.ResourceType, r.SubResource.ResourceName)
 }
 
-// ParseArmResourceId take the resourceID of a child resource to an OpenShiftCluster
+// ParseArmResourceId takes in an ARM resource ID and returns an ArmResource object representing that resource. It supports up to two levels of subresource nesting.
 // TODO refactor this function to support an additional layer of child resources if we ever get to that point, right now only supports 1 child resource
 func ParseArmResourceId(resourceId string) (*ArmResource, error) {
 	resourceComponents := strings.Split(strings.TrimPrefix(resourceId, "/"), "/")
