@@ -84,6 +84,13 @@ ci-rp: fix-macos-vendor
 	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg VERSION=$(VERSION) --cache-from builder -t aro-final
 >>>>>>> 8c2de5475 (adding labels to each stage in docker file ci-rp and building them individually)
 
+ci-portal:
+	docker build . -f Dockerfile.ci-portal --build-arg REGISTRY=$(REGISTRY) --no-cache=$(NO_CACHE)
+
+ci-clean:
+	docker image prune --force --all --filter="label=builder=true"
+	docker image prune --force --all --filter="label=final=true"
+
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
 deploy:
