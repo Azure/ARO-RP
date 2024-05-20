@@ -139,12 +139,6 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 		}
 	}
 
-	if oc.Properties.ServicePrincipalProfile != nil {
-		out.Properties.ServicePrincipalProfile = &ServicePrincipalProfile{}
-		out.Properties.ServicePrincipalProfile.ClientID = oc.Properties.ServicePrincipalProfile.ClientID
-		out.Properties.ServicePrincipalProfile.ClientSecret = string(oc.Properties.ServicePrincipalProfile.ClientSecret)
-	}
-
 	if oc.Properties.PlatformWorkloadIdentityProfile != nil && oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities != nil {
 		out.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{}
 		out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = make([]PlatformWorkloadIdentity, len(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities))
