@@ -437,30 +437,28 @@ func (o *operator) RenewMDSDCertificate(ctx context.Context) error {
 }
 
 func (o *operator) EnsureUpgradeAnnotations(ctx context.Context) error {
-	if o.oc.Properties.PlatformWorkloadIdentityProfile == nil {
-		return nil
-	}
-
-	if o.oc.Properties.ServicePrincipalProfile != nil {
+	if o.oc.Properties.PlatformWorkloadIdentityProfile == nil ||
+		o.oc.Properties.ServicePrincipalProfile != nil {
 		return nil
 	}
 
 	upgradeableTo := string(*o.oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo)
+	upgradeableAnnotation := "cloudcredential.openshift.io/upgradeable-to"
 
-	cloudcredentialobject, err := o.operatorcli.OperatorV1().CloudCredentials().List(ctx, metav1.ListOptions{})
+	cloudcredentialobject, err := o.operatorcli.OperatorV1().CloudCredentials().Get(ctx, "cluster", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 
-	for _, v := range cloudcredentialobject.Items {
-		v.Annotations = map[string]string{
-			"cloudcredential.openshift.io/upgradeable-to": upgradeableTo,
-		}
+	if cloudcredentialobject.Annotations == nil {
+		cloudcredentialobject.Annotations = map[string]string{}
+	}
 
-		_, err = o.operatorcli.OperatorV1().CloudCredentials().Update(ctx, &v, metav1.UpdateOptions{})
-		if err != nil {
-			return err
-		}
+	cloudcredentialobject.Annotations[upgradeableAnnotation] = upgradeableTo
+
+	_, err = o.operatorcli.OperatorV1().CloudCredentials().Update(ctx, cloudcredentialobject, metav1.UpdateOptions{})
+	if err != nil {
+		return err
 	}
 
 	return nil

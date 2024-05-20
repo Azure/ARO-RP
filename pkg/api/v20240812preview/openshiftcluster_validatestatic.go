@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 
 	azcorearm "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
@@ -442,6 +443,14 @@ func (sv openShiftClusterStaticValidator) validatePlatformWorkloadIdentityProfil
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities[%d].resourceID", path, n), "Resource must be a user assigned identity.")
 		}
 	}
+
+	if pwip.UpgradeableTo != nil {
+		matches, err := regexp.MatchString(`^4\.[0-9]{2}\.`, string(*pwip.UpgradeableTo))
+		if !matches || err != nil {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.UpgradeableTo[%v]", path, *pwip.UpgradeableTo), "UpgradeableTo must be a valid OpenShift version.")
+		}
+	}
+
 	return nil
 }
 

@@ -11,7 +11,7 @@ import (
 	"github.com/golang/mock/gomock"
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
-	fakeoperatorclient "github.com/openshift/client-go/operator/clientset/versioned/fake"
+	operatorfake "github.com/openshift/client-go/operator/clientset/versioned/fake"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -468,38 +468,76 @@ func TestEnsureUpgradeAnnotations(t *testing.T) {
 	UpgradeableTo1 := api.UpgradeableTo("4.14.59")
 
 	for _, tt := range []struct {
-		name           string
-		cluster        api.OpenShiftCluster
-		annotation     map[string]string
-		wantAnnotation map[string]string
-		wantErr        string
+		name                 string
+		cluster              api.OpenShiftClusterProperties
+		annotation           map[string]string
+		wantAnnotation       map[string]string
+		wantErr              string
+		cloudCredentialsName string
 	}{
 		{
 			name: "nil PlatformWorkloadIdentityProfile, no version persisted in cluster document",
 		},
 		{
 			name: "non-nil ServicePrincipalProfile, no version persisted in cluster document",
-			cluster: api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: &api.ServicePrincipalProfile{
-						ClientID:     "",
-						ClientSecret: "",
-					},
-					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
+			cluster: api.OpenShiftClusterProperties{
+				ServicePrincipalProfile: &api.ServicePrincipalProfile{
+					ClientID:     "",
+					ClientSecret: "",
 				},
+				PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
 			},
 		},
 		{
 			name: "no version persisted in cluster document, persist it",
-			cluster: api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
-						UpgradeableTo: &UpgradeableTo1,
-					},
+			cluster: api.OpenShiftClusterProperties{
+				PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+					UpgradeableTo: &UpgradeableTo1,
 				},
 			},
 			annotation: nil,
 			wantAnnotation: map[string]string{
+				"cloudcredential.openshift.io/upgradeable-to": "4.14.59",
+			},
+		},
+		{
+			name: "cloud credential 'cluster' doesn't exist",
+			cluster: api.OpenShiftClusterProperties{
+				PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+					UpgradeableTo: &UpgradeableTo1,
+				},
+			},
+			cloudCredentialsName: "oh_no",
+			annotation:           nil,
+			wantAnnotation:       nil,
+			wantErr:              `cloudcredentials.operator.openshift.io "cluster" not found`,
+		},
+		{
+			name: "version persisted in cluster document, replace it",
+			cluster: api.OpenShiftClusterProperties{
+				PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+					UpgradeableTo: &UpgradeableTo1,
+				},
+			},
+			annotation: map[string]string{
+				"cloudcredential.openshift.io/upgradeable-to": "4.14.02",
+			},
+			wantAnnotation: map[string]string{
+				"cloudcredential.openshift.io/upgradeable-to": "4.14.59",
+			},
+		},
+		{
+			name: "annotations exist, append the upgradeable annotation",
+			cluster: api.OpenShiftClusterProperties{
+				PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+					UpgradeableTo: &UpgradeableTo1,
+				},
+			},
+			annotation: map[string]string{
+				"foo": "bar",
+			},
+			wantAnnotation: map[string]string{
+				"foo": "bar",
 				"cloudcredential.openshift.io/upgradeable-to": "4.14.59",
 			},
 		},
@@ -510,10 +548,18 @@ func TestEnsureUpgradeAnnotations(t *testing.T) {
 			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
-			oc := &tt.cluster
+
+			oc := &api.OpenShiftCluster{
+				Properties: tt.cluster,
+			}
+
+			if tt.cloudCredentialsName == "" {
+				tt.cloudCredentialsName = "cluster"
+			}
 
 			cloudcredentialobject := &operatorv1.CloudCredential{
 				ObjectMeta: metav1.ObjectMeta{
+					Name:        tt.cloudCredentialsName,
 					Annotations: tt.annotation,
 				},
 			}
@@ -521,7 +567,7 @@ func TestEnsureUpgradeAnnotations(t *testing.T) {
 			o := operator{
 				oc:          oc,
 				env:         env,
-				operatorcli: fakeoperatorclient.NewSimpleClientset(cloudcredentialobject),
+				operatorcli: operatorfake.NewSimpleClientset(cloudcredentialobject),
 			}
 
 			err := o.EnsureUpgradeAnnotations(ctx)
