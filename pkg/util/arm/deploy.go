@@ -28,13 +28,18 @@ func DeployTemplate(ctx context.Context, log *logrus.Entry, deployments features
 		},
 	})
 
+	if err == nil {
+		return nil
+	}
+
 	if azureerrors.IsDeploymentActiveError(err) {
 		log.Printf("waiting for %s template to be deployed", deploymentName)
 		err = deployments.Wait(ctx, resourceGroupName, deploymentName)
 	}
 
 	if azureerrors.HasAuthorizationFailedError(err) ||
-		azureerrors.HasLinkedAuthorizationFailedError(err) {
+		azureerrors.HasLinkedAuthorizationFailedError(err) ||
+		azureerrors.IsDeploymentMissingPermissionsError(err) {
 		return err
 	}
 

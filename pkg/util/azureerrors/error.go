@@ -14,6 +14,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
+const (
+	CodeInvalidTemplateDeployment = "InvalidTemplateDeployment"
+)
+
 // HasAuthorizationFailedError returns true it the error is, or contains, an
 // AuthorizationFailed error
 func HasAuthorizationFailedError(err error) bool {
@@ -53,6 +57,22 @@ func deploymentFailedDueToAuthError(err error, authCode string) bool {
 						return true
 					}
 				}
+			}
+		}
+	}
+
+	return false
+}
+
+// IsDeploymentMissingPermissionsError returns true if the error indicates that
+// ARM rejected a template deployment pre-flight due to missing role
+// assignments.
+// This can be an indicator of role assignment propagation delay.
+func IsDeploymentMissingPermissionsError(err error) bool {
+	if detailedErr, ok := err.(autorest.DetailedError); ok {
+		if serviceErr, ok := detailedErr.Original.(*azure.ServiceError); ok {
+			if serviceErr.Code == CodeInvalidTemplateDeployment && strings.Contains(serviceErr.Message, "Authorization failed for template resource") {
+				return true
 			}
 		}
 	}

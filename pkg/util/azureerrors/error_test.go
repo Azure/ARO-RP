@@ -120,3 +120,36 @@ func TestIsDeploymentActiveError(t *testing.T) {
 		})
 	}
 }
+
+func TestIsDeploymentMissingPermissionsError(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "Another error",
+			err:  errors.New("something happened"),
+		},
+		{
+			name: "Missing RoleAssignment",
+			err: autorest.DetailedError{
+				PackageType: "features.DeploymentsClient",
+				Method:      "CreateOrUpdate",
+				Message:     "Failure sending request",
+				Original: &azure.ServiceError{
+					Code:    CodeInvalidTemplateDeployment,
+					Message: "The template deployment failed with error: 'Authorization failed for template resource '$RESOURCE' of type 'Microsoft.Authorization/roleAssignments'. The client '$CLIENT' with object id '$CLIENT' does not have permission to perform action '$ACTION' at scope '$SCOPE'.'.",
+				},
+			},
+			want: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := IsDeploymentMissingPermissionsError(autorest.NewErrorWithError(tt.err, "", "", nil, ""))
+			if got != tt.want {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
