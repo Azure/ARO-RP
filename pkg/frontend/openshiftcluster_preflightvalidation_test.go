@@ -165,7 +165,7 @@ func TestPreflightValidation(t *testing.T) {
 			oc := tt.preflightRequest()
 
 			go f.Run(ctx, nil, nil)
-			f.mu.Lock()
+			f.ocpVersionsMu.Lock()
 			f.defaultOcpVersion = "4.10.0"
 			f.enabledOcpVersions = map[string]*api.OpenShiftVersion{
 				f.defaultOcpVersion: {
@@ -174,7 +174,7 @@ func TestPreflightValidation(t *testing.T) {
 					},
 				},
 			}
-			f.mu.Unlock()
+			f.ocpVersionsMu.Unlock()
 
 			headers := http.Header{
 				"Content-Type": []string{"application/json"},

@@ -85,14 +85,14 @@ func TestListInstallVersions(t *testing.T) {
 
 			go frontend.Run(ctx, nil, nil)
 
-			frontend.mu.Lock()
+			frontend.ocpVersionsMu.Lock()
 			frontend.enabledOcpVersions = tt.changeFeed
 			for key, doc := range tt.changeFeed {
 				if doc.Properties.Enabled {
 					frontend.defaultOcpVersion = key
 				}
 			}
-			frontend.mu.Unlock()
+			frontend.ocpVersionsMu.Unlock()
 
 			resp, b, err := ti.request(method,
 				fmt.Sprintf("https://server/subscriptions/%s/providers/Microsoft.RedHatOpenShift/locations/%s/openshiftversions?api-version=%s", mockSubID, ti.env.Location(), tt.apiVersion),

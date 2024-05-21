@@ -2817,14 +2817,14 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			}
 
 			go f.Run(ctx, nil, nil)
-			f.mu.Lock()
+			f.ocpVersionsMu.Lock()
 			f.enabledOcpVersions = tt.changeFeed
 			for key, doc := range tt.changeFeed {
 				if doc.Properties.Default {
 					f.defaultOcpVersion = key
 				}
 			}
-			f.mu.Unlock()
+			f.ocpVersionsMu.Unlock()
 
 			oc := &v20200430.OpenShiftCluster{}
 			if tt.request != nil {

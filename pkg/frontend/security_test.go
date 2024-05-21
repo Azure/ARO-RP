@@ -84,7 +84,8 @@ func TestSecurity(t *testing.T) {
 
 	// enable /healthz to return 200
 	f.startTime = time.Time{}
-	f.lastChangefeed.Store(time.Time{})
+	f.lastOcpVersionsChangefeed.Store(time.Time{})
+	f.lastPlatformWorkloadIdentityRoleSetsChangefeed.Store(time.Time{})
 
 	go f.Run(ctx, nil, nil)
 

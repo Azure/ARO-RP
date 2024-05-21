@@ -57,18 +57,22 @@ type frontend struct {
 	apiVersionMiddleware  middleware.ApiVersionValidator
 	maintenanceMiddleware middleware.MaintenanceMiddleware
 
-	dbAsyncOperations             database.AsyncOperations
-	dbClusterManagerConfiguration database.ClusterManagerConfigurations
-	dbOpenShiftClusters           database.OpenShiftClusters
-	dbSubscriptions               database.Subscriptions
-	dbOpenShiftVersions           database.OpenShiftVersions
+	dbAsyncOperations                  database.AsyncOperations
+	dbClusterManagerConfiguration      database.ClusterManagerConfigurations
+	dbOpenShiftClusters                database.OpenShiftClusters
+	dbSubscriptions                    database.Subscriptions
+	dbOpenShiftVersions                database.OpenShiftVersions
+	dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets
 
-	defaultOcpVersion  string // always enabled
-	enabledOcpVersions map[string]*api.OpenShiftVersion
-	apis               map[string]*api.Version
+	defaultOcpVersion                         string // always enabled
+	enabledOcpVersions                        map[string]*api.OpenShiftVersion
+	availablePlatformWorkloadIdentityRoleSets map[string]*api.PlatformWorkloadIdentityRoleSet
+	apis                                      map[string]*api.Version
 
-	lastChangefeed atomic.Value //time.Time
-	mu             sync.RWMutex
+	lastOcpVersionsChangefeed                      atomic.Value //time.Time
+	lastPlatformWorkloadIdentityRoleSetsChangefeed atomic.Value
+	ocpVersionsMu                                  sync.RWMutex
+	platformWorkloadIdentityRoleSetsMu             sync.RWMutex
 
 	aead encryption.AEAD
 
@@ -117,6 +121,7 @@ func NewFrontend(ctx context.Context,
 	dbOpenShiftClusters database.OpenShiftClusters,
 	dbSubscriptions database.Subscriptions,
 	dbOpenShiftVersions database.OpenShiftVersions,
+	dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets,
 	apis map[string]*api.Version,
 	m metrics.Emitter,
 	clusterm metrics.Emitter,
@@ -148,18 +153,19 @@ func NewFrontend(ctx context.Context,
 			AdminAuth: _env.AdminClientAuthorizer(),
 			ArmAuth:   _env.ArmClientAuthorizer(),
 		},
-		dbAsyncOperations:             dbAsyncOperations,
-		dbClusterManagerConfiguration: dbClusterManagerConfiguration,
-		dbOpenShiftClusters:           dbOpenShiftClusters,
-		dbSubscriptions:               dbSubscriptions,
-		dbOpenShiftVersions:           dbOpenShiftVersions,
-		apis:                          apis,
-		m:                             middleware.MetricsMiddleware{Emitter: m},
-		maintenanceMiddleware:         middleware.MaintenanceMiddleware{Emitter: clusterm},
-		aead:                          aead,
-		hiveClusterManager:            hiveClusterManager,
-		kubeActionsFactory:            kubeActionsFactory,
-		azureActionsFactory:           azureActionsFactory,
+		dbAsyncOperations:                  dbAsyncOperations,
+		dbClusterManagerConfiguration:      dbClusterManagerConfiguration,
+		dbOpenShiftClusters:                dbOpenShiftClusters,
+		dbSubscriptions:                    dbSubscriptions,
+		dbOpenShiftVersions:                dbOpenShiftVersions,
+		dbPlatformWorkloadIdentityRoleSets: dbPlatformWorkloadIdentityRoleSets,
+		apis:                               apis,
+		m:                                  middleware.MetricsMiddleware{Emitter: m},
+		maintenanceMiddleware:              middleware.MaintenanceMiddleware{Emitter: clusterm},
+		aead:                               aead,
+		hiveClusterManager:                 hiveClusterManager,
+		kubeActionsFactory:                 kubeActionsFactory,
+		azureActionsFactory:                azureActionsFactory,
 
 		quotaValidator:     quotaValidator{},
 		skuValidator:       skuValidator{},
@@ -167,7 +173,8 @@ func NewFrontend(ctx context.Context,
 
 		clusterEnricher: enricher,
 
-		enabledOcpVersions: map[string]*api.OpenShiftVersion{},
+		enabledOcpVersions:                        map[string]*api.OpenShiftVersion{},
+		availablePlatformWorkloadIdentityRoleSets: map[string]*api.PlatformWorkloadIdentityRoleSet{},
 
 		bucketAllocator: &bucket.Random{},
 
@@ -372,7 +379,8 @@ func (f *frontend) setupRouter() chi.Router {
 
 func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- struct{}) {
 	defer recover.Panic(f.baseLog)
-	go f.changefeed(ctx)
+	go f.changefeedOcpVersions(ctx)
+	go f.changefeedRoleSets(ctx)
 
 	if stop != nil {
 		go func() {
