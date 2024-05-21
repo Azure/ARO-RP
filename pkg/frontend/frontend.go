@@ -284,6 +284,8 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 				r.Get("/operationresults/{operationId}", f.getAsyncOperationResult)
 
 				r.Get("/openshiftversions", f.listInstallVersions)
+
+				r.Get("/platformworkloadidentityrolesets", f.listPlatformWorkloadIdentityRoleSets)
 			})
 		})
 	})
