@@ -37,6 +37,12 @@ type OpenShiftVersionStaticValidator interface {
 	Static(interface{}, *OpenShiftVersion) error
 }
 
+type PlatformWorkloadIdentityRoleSetConverter interface {
+	ToExternal(*PlatformWorkloadIdentityRoleSet) interface{}
+	ToExternalList([]*PlatformWorkloadIdentityRoleSet) interface{}
+	ToInternal(interface{}, *PlatformWorkloadIdentityRoleSet)
+}
+
 type SyncSetConverter interface {
 	ToExternal(*SyncSet) interface{}
 	ToExternalList([]*SyncSet) interface{}
@@ -69,6 +75,7 @@ type Version struct {
 	OpenShiftClusterAdminKubeconfigConverter OpenShiftClusterAdminKubeconfigConverter
 	OpenShiftVersionConverter                OpenShiftVersionConverter
 	OpenShiftVersionStaticValidator          OpenShiftVersionStaticValidator
+	PlatformWorkloadIdentityRoleSetConverter PlatformWorkloadIdentityRoleSetConverter
 	OperationList                            OperationList
 	SyncSetConverter                         SyncSetConverter
 	MachinePoolConverter                     MachinePoolConverter
