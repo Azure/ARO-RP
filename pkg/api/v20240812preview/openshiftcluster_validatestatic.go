@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strings"
 
+	azcorearm "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -78,6 +79,10 @@ func (sv openShiftClusterStaticValidator) validate(oc *OpenShiftCluster, isCreat
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "location", "The provided location '%s' is invalid.", oc.Location)
 	}
 
+	if err := sv.validatePlatformIdentities(oc); err != nil {
+		return err
+	}
+
 	return sv.validateProperties("properties", &oc.Properties, isCreate, architectureVersion)
 }
 
@@ -108,6 +113,9 @@ func (sv openShiftClusterStaticValidator) validateProperties(path string, p *Ope
 		return err
 	}
 	if err := sv.validateAPIServerProfile(path+".apiserverProfile", &p.APIServerProfile); err != nil {
+		return err
+	}
+	if err := sv.validatePlatformWorkloadIdentityProfile(path+".platformWorkloadIdentityProfile", p.PlatformWorkloadIdentityProfile); err != nil {
 		return err
 	}
 
@@ -410,5 +418,50 @@ func (sv openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftCl
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, err.Target, err.Message)
 	}
 
+	return nil
+}
+
+func (sv openShiftClusterStaticValidator) validatePlatformWorkloadIdentityProfile(path string, pwip *PlatformWorkloadIdentityProfile) error {
+	// PlatformWorkloadIdentityProfile being empty is acceptable
+	if pwip == nil {
+		return nil
+	}
+
+	// Validate the PlatformWorkloadIdentities
+	for n, p := range pwip.PlatformWorkloadIdentities {
+		resource, err := azcorearm.ParseResourceID(p.ResourceID)
+		if err != nil {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities[%d].resourceID", path, n), "ResourceID %s formatted incorrectly.", p.ResourceID)
+		}
+
+		if p.OperatorName == "" {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities[%d].resourceID", path, n), "Operator name is empty.")
+		}
+
+		if resource.ResourceType.Type != "userAssignedIdentities" {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities[%d].resourceID", path, n), "Resource must be a user assigned identity.")
+		}
+	}
+	return nil
+}
+
+func (sv openShiftClusterStaticValidator) validatePlatformIdentities(oc *OpenShiftCluster) error {
+	pwip := oc.Properties.PlatformWorkloadIdentityProfile
+	spp := oc.Properties.ServicePrincipalProfile
+
+	if pwip == nil && spp == nil {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.servicePrincipalProfile", "Must provide either an identity or service principal credentials.")
+	}
+
+	if pwip != nil && spp != nil && (spp.ClientID != "" || spp.ClientSecret != "") {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.servicePrincipalProfile", "Cannot use identities and service principal credentials at the same time.")
+	}
+
+	clusterIdentityPresent := oc.Identity != nil
+	operatorRolePresent := pwip != nil
+
+	if clusterIdentityPresent != operatorRolePresent {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "identity", "Cluster identity and platform workload identities require each other.")
+	}
 	return nil
 }

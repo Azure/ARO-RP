@@ -1161,3 +1161,169 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 
 	runTests(t, testModeUpdate, tests)
 }
+
+func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testing.T) {
+	createTests := []*validateTest{
+		{
+			name: "valid empty workloadIdentityProfile",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = nil
+			},
+		},
+		{
+			name: "valid workloadIdentityProfile",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
+						{
+							OperatorName: "FAKE-OPERATOR",
+							ResourceID:   "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name",
+						},
+					},
+				}
+				oc.Identity = &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{
+						"first": {
+							ClientID:    "11111111-1111-1111-1111-111111111111",
+							PrincipalID: "SOMETHING",
+						},
+					},
+				}
+				oc.Properties.ServicePrincipalProfile = nil
+			},
+		},
+		{
+			name: "invalid resourceID",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Identity = &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{
+						"first": {
+							ClientID:    "11111111-1111-1111-1111-111111111111",
+							PrincipalID: "SOMETHING",
+						},
+					},
+				}
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
+						{
+							OperatorName: "FAKE-OPERATOR",
+							ResourceID:   "BAD",
+						},
+					},
+				}
+				oc.Properties.ServicePrincipalProfile = nil
+			},
+			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile.PlatformWorkloadIdentities[0].resourceID: ResourceID BAD formatted incorrectly.",
+		},
+		{
+			name: "wrong resource type",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
+						{
+							OperatorName: "FAKE-OPERATOR",
+							ResourceID:   "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/otherThing/fake-cluster-name",
+						},
+					},
+				}
+				oc.Properties.ServicePrincipalProfile = nil
+				oc.Identity = &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{
+						"first": {
+							ClientID:    "11111111-1111-1111-1111-111111111111",
+							PrincipalID: "SOMETHING",
+						},
+					},
+				}
+			},
+			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile.PlatformWorkloadIdentities[0].resourceID: Resource must be a user assigned identity.",
+		},
+		{
+			name: "no credentials with identities",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
+						{
+							OperatorName: "FAKE-OPERATOR",
+							ResourceID:   "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name",
+						},
+					},
+				}
+				oc.Identity = &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{
+						"first": {
+							ClientID:    "11111111-1111-1111-1111-111111111111",
+							PrincipalID: "SOMETHING",
+						},
+					},
+				}
+				oc.Properties.ServicePrincipalProfile = &ServicePrincipalProfile{
+					ClientID:     "11111111-1111-1111-1111-111111111111",
+					ClientSecret: "BAD",
+				}
+			},
+			wantErr: "400: InvalidParameter: properties.servicePrincipalProfile: Cannot use identities and service principal credentials at the same time.",
+		},
+		{
+			name: "cluster identity missing platform workload identity",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Identity = &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{
+						"first": {
+							ClientID:    "11111111-1111-1111-1111-111111111111",
+							PrincipalID: "SOMETHING",
+						},
+					},
+				}
+			},
+			wantErr: "400: InvalidParameter: identity: Cluster identity and platform workload identities require each other.",
+		},
+		{
+			name: "platform workload identity missing cluster identity",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
+						{
+							OperatorName: "operator_name",
+						},
+					},
+				}
+				oc.Properties.ServicePrincipalProfile = nil
+			},
+			wantErr: "400: InvalidParameter: identity: Cluster identity and platform workload identities require each other.",
+		},
+		{
+			name: "operator name missing",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Identity = &Identity{
+					UserAssignedIdentities: UserAssignedIdentities{
+						"first": {
+							ClientID:    "11111111-1111-1111-1111-111111111111",
+							PrincipalID: "SOMETHING",
+						},
+					},
+				}
+				oc.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{
+					PlatformWorkloadIdentities: []PlatformWorkloadIdentity{
+						{
+							ResourceID:   "/subscriptions/12345678-1234-1234-1234-123456789012/resourceGroups/a-fake-group/providers/Microsoft.RedHatOpenShift/userAssignedIdentities/fake-cluster-name",
+							OperatorName: "",
+						},
+					},
+				}
+				oc.Properties.ServicePrincipalProfile = nil
+			},
+			wantErr: "400: InvalidParameter: properties.platformWorkloadIdentityProfile.PlatformWorkloadIdentities[0].resourceID: Operator name is empty.",
+		},
+		{
+			name: "identity and service principal missing",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.PlatformWorkloadIdentityProfile = nil
+				oc.Properties.ServicePrincipalProfile = nil
+			},
+			wantErr: "400: InvalidParameter: properties.servicePrincipalProfile: Must provide either an identity or service principal credentials.",
+		},
+	}
+
+	runTests(t, testModeCreate, createTests)
+}
