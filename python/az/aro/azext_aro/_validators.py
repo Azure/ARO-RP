@@ -270,7 +270,7 @@ def validate_refresh_cluster_credentials(namespace):
 
 
 def validate_version_format(namespace):
-    if namespace.version is not None and not re.match(r'^[4-9]{1}\.[0-9]{1,2}\.[0-9]{1,2}$', namespace.version):
+    if namespace.version is not None and not re.match(r'^[4-9]{1}\.[0-9]{1,2}\.[0-9]{1,3}(-.*)?$', namespace.version):
         raise InvalidArgumentValueError('--version is invalid')
 
 

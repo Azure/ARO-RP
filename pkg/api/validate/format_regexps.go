@@ -21,5 +21,6 @@ var (
 		`([a-z0-9]|[a-z0-9][-a-z0-9]{0,61}[a-z0-9])` +
 		`(\.([a-z0-9]|[a-z0-9][-a-z0-9]{0,61}[a-z0-9]))*` +
 		`$`)
-	RxInstallVersion = regexp.MustCompile(`^[4-9]{1}\.[0-9]{1,2}\.[0-9]{1,3}$`)
+	// DO NOT MERGE - temporary changes to support installing versions with suffixes for testing
+	RxInstallVersion = regexp.MustCompile(`^[4-9]{1}\.[0-9]{1,2}\.[0-9]{1,3}(-.*)?$`)
 )
