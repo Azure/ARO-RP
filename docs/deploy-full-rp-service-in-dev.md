@@ -73,13 +73,13 @@
 1. Deploy a VPN Gateway
     This is required in order to be able to connect to AKS from your local machine:
     ```bash
-    source ./hack/devtools/deploy-shared-env.sh
+    source hack/devtools/deploy-shared-env.sh
     deploy_vpn_for_dedicated_rp
     ```
 
 1. Deploy AKS by running these commands from the ARO-RP root directory:
     ```bash
-    source ./hack/devtools/deploy-shared-env.sh
+    source hack/devtools/deploy-shared-env.sh
     deploy_aks_dev
     ```
     > __NOTE:__ If the AKS deployment fails with missing RP VNETs, delete the "gateway-production-predeploy" deployment in the gateway resource group, and re-run `make deploy` and then re-run `deploy_aks_dev`.
@@ -263,7 +263,7 @@
 
 1. Create storage account and role assignment required for workload identity clusters
     ```
-    source ./hack/devtools/deploy-shared-env.sh
+    source hack/devtools/deploy-shared-env.sh
     deploy_oic_for_dedicated_rp
     ```
 
@@ -421,7 +421,7 @@ Since setting up your own VPN in an earlier step will overwrite your local secre
     . ./env
     . ./env-int
 
-    source ./hack/devtools/deploy-shared-env.sh
+    source hack/devtools/deploy-shared-env.sh
     vpn_configuration
     ```
 
