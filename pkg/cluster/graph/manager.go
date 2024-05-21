@@ -9,7 +9,6 @@ import (
 	"io"
 	"strings"
 
-	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -19,41 +18,45 @@ import (
 
 type Manager interface {
 	Exists(ctx context.Context, resourceGroup, account string) (bool, error)
-	LoadPersisted(ctx context.Context, resourceGroup, account string) (PersistedGraph, error)
+	LoadPersisted(ctx context.Context, account string) (PersistedGraph, error)
 }
 
 type manager struct {
 	log *logrus.Entry
 
-	aead    encryption.AEAD
-	storage storage.Manager
-	env     env.Interface
+	aead encryption.AEAD
+	blob storage.Manager
+	env  env.Interface
 }
 
-func NewManager(env env.Interface, log *logrus.Entry, aead encryption.AEAD, storage storage.Manager) Manager {
+func NewManager(env env.Interface, log *logrus.Entry, aead encryption.AEAD, blob storage.Manager) Manager {
 	return &manager{
 		log: log,
 
-		aead:    aead,
-		storage: storage,
-		env:     env,
+		aead: aead,
+		blob: blob,
+		env:  env,
 	}
 }
 
 func (m *manager) Exists(ctx context.Context, resourceGroup, account string) (bool, error) {
 	m.log.Print("checking if graph exists")
 
-	blobService, err := m.storage.BlobService(ctx, resourceGroup, account, mgmtstorage.Permissions("r"), mgmtstorage.SignedResourceTypesO)
+	client, err := m.blob.BlobService(account, "aro")
 	if err != nil {
 		return false, err
 	}
 
-	aro := blobService.GetContainerReference("aro")
-	return aro.GetBlobReference("graph").Exists()
+	_, err = client.NewBlobClient("graph").GetProperties(ctx, nil)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
-func (m *manager) LoadPersisted(ctx context.Context, resourceGroup, account string) (PersistedGraph, error) {
-	pg, err := m.loadPersisted(ctx, resourceGroup, account)
+func (m *manager) LoadPersisted(ctx context.Context, account string) (PersistedGraph, error) {
+	pg, err := m.loadPersisted(ctx, account)
 	if err == nil || !strings.Contains(err.Error(), "chacha20poly1305: message authentication failed") {
 		return pg, err
 	}
@@ -62,7 +65,7 @@ func (m *manager) LoadPersisted(ctx context.Context, resourceGroup, account stri
 		m.log.Errorf("failed to reload AEAD, error: %v", err)
 		return nil, err
 	}
-	return m.loadPersisted(ctx, resourceGroup, account)
+	return m.loadPersisted(ctx, account)
 }
 
 func (m *manager) reloadAead(ctx context.Context) (err error) {
@@ -70,23 +73,20 @@ func (m *manager) reloadAead(ctx context.Context) (err error) {
 	return err
 }
 
-func (m *manager) loadPersisted(ctx context.Context, resourceGroup, account string) (PersistedGraph, error) {
+func (m *manager) loadPersisted(ctx context.Context, account string) (PersistedGraph, error) {
 	m.log.Print("load persisted graph")
 
-	blobService, err := m.storage.BlobService(ctx, resourceGroup, account, mgmtstorage.Permissions("r"), mgmtstorage.SignedResourceTypesO)
+	blobService, err := m.blob.BlobService(account, "aro")
 	if err != nil {
 		return nil, err
 	}
 
-	aro := blobService.GetContainerReference("aro")
-	cluster := aro.GetBlobReference("graph")
-	rc, err := cluster.Get(nil)
+	rc, err := blobService.NewBlobClient("graph").DownloadStream(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
-	defer rc.Close()
 
-	b, err := io.ReadAll(rc)
+	b, err := io.ReadAll(rc.Body)
 	if err != nil {
 		return nil, err
 	}

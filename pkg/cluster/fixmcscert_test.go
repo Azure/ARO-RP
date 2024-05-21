@@ -70,7 +70,7 @@ func TestFixMCSCert(t *testing.T) {
 
 				pg["*tls.RootCA"] = data
 				graph := mock_graph.NewMockManager(controller)
-				graph.EXPECT().LoadPersisted(ctx, "", "cluster").Return(pg, nil)
+				graph.EXPECT().LoadPersisted(ctx, "cluster").Return(pg, nil)
 
 				kubernetescli := fake.NewSimpleClientset(&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{

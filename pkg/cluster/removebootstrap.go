@@ -6,9 +6,6 @@ package cluster
 import (
 	"context"
 
-	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
-	azstorage "github.com/Azure/azure-sdk-for-go/storage"
-
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -35,15 +32,13 @@ func (m *manager) removeBootstrap(ctx context.Context) error {
 func (m *manager) removeBootstrapIgnition(ctx context.Context) error {
 	m.log.Print("remove ignition config")
 
-	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
 
-	blobService, err := m.storage.BlobService(ctx, resourceGroup, account, mgmtstorage.Permissions("d"), mgmtstorage.SignedResourceTypesC)
+	blobService, err := m.storage.BlobService(account, "ignition")
 	if err != nil {
 		return err
 	}
 
-	bootstrapIgn := blobService.GetContainerReference("ignition")
-	_, err = bootstrapIgn.DeleteIfExists(&azstorage.DeleteContainerOptions{})
+	_, err = blobService.Delete(ctx, nil)
 	return err
 }

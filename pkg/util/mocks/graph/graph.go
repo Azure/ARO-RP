@@ -52,16 +52,16 @@ func (mr *MockManagerMockRecorder) Exists(arg0, arg1, arg2 interface{}) *gomock.
 }
 
 // LoadPersisted mocks base method.
-func (m *MockManager) LoadPersisted(arg0 context.Context, arg1, arg2 string) (graph.PersistedGraph, error) {
+func (m *MockManager) LoadPersisted(arg0 context.Context, arg1 string) (graph.PersistedGraph, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LoadPersisted", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "LoadPersisted", arg0, arg1)
 	ret0, _ := ret[0].(graph.PersistedGraph)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // LoadPersisted indicates an expected call of LoadPersisted.
-func (mr *MockManagerMockRecorder) LoadPersisted(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockManagerMockRecorder) LoadPersisted(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadPersisted", reflect.TypeOf((*MockManager)(nil).LoadPersisted), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadPersisted", reflect.TypeOf((*MockManager)(nil).LoadPersisted), arg0, arg1)
 }

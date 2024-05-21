@@ -17,11 +17,9 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/installer"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
-	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
 func (m *manager) fixMCSCert(ctx context.Context) error {
-	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
 
 	intIP := net.ParseIP(m.doc.OpenShiftCluster.Properties.APIServerProfile.IntIP)
@@ -56,7 +54,7 @@ func (m *manager) fixMCSCert(ctx context.Context) error {
 		certChanged = true
 
 		if rootCA == nil {
-			pg, err := m.graph.LoadPersisted(ctx, resourceGroup, account)
+			pg, err := m.graph.LoadPersisted(ctx, account)
 			if err != nil {
 				return err
 			}

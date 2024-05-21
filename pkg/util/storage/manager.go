@@ -4,81 +4,56 @@ package storage
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
-	"net/http"
-	"net/url"
-	"time"
+	"fmt"
 
-	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
-	azstorage "github.com/Azure/azure-sdk-for-go/storage"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/date"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 
-	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armstorage"
 )
 
 type Manager interface {
-	BlobService(ctx context.Context, resourceGroup, account string, p mgmtstorage.Permissions, r mgmtstorage.SignedResourceTypes) (*azstorage.BlobStorageClient, error)
+	BlobService(account string, containerName string) (*container.Client, error)
 }
 
 type manager struct {
-	env             env.Core
-	storageAccounts storage.AccountsClient
+	env            *azureclient.AROEnvironment
+	cred           azcore.TokenCredential
+	blobContainers armstorage.BlobContainersClient
 }
 
-func NewManager(env env.Core, subscriptionID string, authorizer autorest.Authorizer) Manager {
-	return &manager{
-		env:             env,
-		storageAccounts: storage.NewAccountsClient(env.Environment(), subscriptionID, authorizer),
-	}
-}
-
-func getCorrectErrWhenTooManyRequests(err error) error {
-	detailedError, ok := err.(autorest.DetailedError)
-	if !ok {
-		return err
-	}
-	if detailedError.StatusCode != http.StatusTooManyRequests {
-		return err
-	}
-	msg := "Requests are being throttled due to Azure Storage limits being exceeded. Please visit https://learn.microsoft.com/en-us/azure/openshift/troubleshoot#exceeding-azure-storage-limits for more details."
-	cloudError := &api.CloudError{
-		StatusCode: http.StatusTooManyRequests,
-		CloudErrorBody: &api.CloudErrorBody{
-			Code:    api.CloudErrorCodeThrottlingLimitExceeded,
-			Message: "ThrottlingLimitExceeded",
-			Details: []api.CloudErrorBody{
-				{
-					Message: msg,
-				},
-			},
-		},
-	}
-	return cloudError
-}
-
-func (m *manager) BlobService(ctx context.Context, resourceGroup, account string, p mgmtstorage.Permissions, r mgmtstorage.SignedResourceTypes) (*azstorage.BlobStorageClient, error) {
-	t := time.Now().UTC().Truncate(time.Second)
-	res, err := m.storageAccounts.ListAccountSAS(ctx, resourceGroup, account, mgmtstorage.AccountSasParameters{
-		Services:               mgmtstorage.B,
-		ResourceTypes:          r,
-		Permissions:            p,
-		Protocols:              mgmtstorage.HTTPS,
-		SharedAccessStartTime:  &date.Time{Time: t},
-		SharedAccessExpiryTime: &date.Time{Time: t.Add(24 * time.Hour)},
-	})
-	if err != nil {
-		return nil, getCorrectErrWhenTooManyRequests(err)
-	}
-
-	v, err := url.ParseQuery(*res.AccountSasToken)
+func NewManager(environment *azureclient.AROEnvironment, subscriptionID string, credential azcore.TokenCredential) (Manager, error) {
+	blobContainers, err := armstorage.NewBlobContainersClient(environment, subscriptionID, credential)
 	if err != nil {
 		return nil, err
 	}
 
-	blobcli := azstorage.NewAccountSASClient(account, v, (*m.env.Environment()).Environment).GetBlobService()
+	return &manager{
+		env:            environment,
+		cred:           credential,
+		blobContainers: blobContainers,
+	}, nil
+}
 
-	return &blobcli, nil
+func (m *manager) BlobService(account string, containerName string) (*container.Client, error) {
+	containerURL := fmt.Sprintf(
+		"https://%s.blob.%s/%s",
+		account,
+		m.env.StorageEndpointSuffix,
+		containerName,
+	)
+
+	options := container.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: m.env.Cloud,
+		},
+	}
+
+	client, err := container.NewClient(containerURL, m.cred, &options)
+	if err != nil {
+		return nil, err
+	}
+
+	return client, nil
 }

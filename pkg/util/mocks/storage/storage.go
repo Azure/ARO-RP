@@ -5,11 +5,9 @@
 package mock_storage
 
 import (
-	context "context"
 	reflect "reflect"
 
-	storage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
-	storage0 "github.com/Azure/azure-sdk-for-go/storage"
+	container "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -37,16 +35,16 @@ func (m *MockManager) EXPECT() *MockManagerMockRecorder {
 }
 
 // BlobService mocks base method.
-func (m *MockManager) BlobService(arg0 context.Context, arg1, arg2 string, arg3 storage.Permissions, arg4 storage.SignedResourceTypes) (*storage0.BlobStorageClient, error) {
+func (m *MockManager) BlobService(arg0, arg1 string) (*container.Client, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BlobService", arg0, arg1, arg2, arg3, arg4)
-	ret0, _ := ret[0].(*storage0.BlobStorageClient)
+	ret := m.ctrl.Call(m, "BlobService", arg0, arg1)
+	ret0, _ := ret[0].(*container.Client)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // BlobService indicates an expected call of BlobService.
-func (mr *MockManagerMockRecorder) BlobService(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+func (mr *MockManagerMockRecorder) BlobService(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlobService", reflect.TypeOf((*MockManager)(nil).BlobService), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BlobService", reflect.TypeOf((*MockManager)(nil).BlobService), arg0, arg1)
 }

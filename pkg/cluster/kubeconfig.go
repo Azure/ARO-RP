@@ -17,7 +17,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/cluster/graph"
 	"github.com/Azure/ARO-RP/pkg/util/installer"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
-	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
 // generateAROServiceKubeconfig generates additional admin credentials and a
@@ -85,10 +84,9 @@ func (m *manager) generateUserAdminKubeconfig(pg graph.PersistedGraph) ([]byte, 
 }
 
 func (m *manager) generateKubeconfigs(ctx context.Context) error {
-	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
 
-	pg, err := m.graph.LoadPersisted(ctx, resourceGroup, account)
+	pg, err := m.graph.LoadPersisted(ctx, account)
 	if err != nil {
 		return err
 	}

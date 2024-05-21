@@ -22,10 +22,9 @@ import (
 )
 
 func (m *manager) updateClusterData(ctx context.Context) error {
-	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	account := "cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix
 
-	pg, err := m.graph.LoadPersisted(ctx, resourceGroup, account)
+	pg, err := m.graph.LoadPersisted(ctx, account)
 	if err != nil {
 		return err
 	}
