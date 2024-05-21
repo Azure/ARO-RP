@@ -26,8 +26,6 @@ import (
 var (
 	devEnvVars = []string{
 		"AZURE_FP_CLIENT_ID",
-		"AZURE_RP_CLIENT_ID",
-		"AZURE_RP_CLIENT_SECRET",
 		"AZURE_SUBSCRIPTION_ID",
 		"AZURE_TENANT_ID",
 		"DOMAIN_NAME",
