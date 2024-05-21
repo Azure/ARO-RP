@@ -104,6 +104,9 @@
             "properties": {
                 "allowBlobPublicAccess": true
             },
+            "tags": {
+                "Az.Sec.AnonymousBlobAccessEnforcement::Skip": "PublicRelease"
+            },
             "location": "[resourceGroup().location]",
             "name": "[parameters('rpVersionStorageAccountName')]",
             "type": "Microsoft.Storage/storageAccounts",

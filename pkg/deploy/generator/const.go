@@ -3,8 +3,8 @@ package generator
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-// Template file constants
 const (
+	// Template file constants
 	FileRPProductionManagedIdentity          = "rp-production-managed-identity.json"
 	FileRPProductionPredeploy                = "rp-production-predeploy.json"
 	FileRPProductionPredeployParameters      = "rp-production-predeploy-parameters.json"
@@ -27,4 +27,8 @@ const (
 	fileRPDevelopment          = "rp-development.json"
 
 	fileOic = "rp-oic.json"
+
+	// Tag constants
+	tagKeyExemptPublicBlob   = "Az.Sec.AnonymousBlobAccessEnforcement::Skip"
+	tagValueExemptPublicBlob = "PublicRelease"
 )
