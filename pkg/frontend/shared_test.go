@@ -68,18 +68,20 @@ type testInfra struct {
 	fixture    *testdatabase.Fixture
 	checker    *testdatabase.Checker
 
-	openShiftClustersClient   *cosmosdb.FakeOpenShiftClusterDocumentClient
-	openShiftClustersDatabase database.OpenShiftClusters
-	asyncOperationsClient     *cosmosdb.FakeAsyncOperationDocumentClient
-	asyncOperationsDatabase   database.AsyncOperations
-	billingClient             *cosmosdb.FakeBillingDocumentClient
-	billingDatabase           database.Billing
-	clusterManagerClient      *cosmosdb.FakeClusterManagerConfigurationDocumentClient
-	clusterManagerDatabase    database.ClusterManagerConfigurations
-	subscriptionsClient       *cosmosdb.FakeSubscriptionDocumentClient
-	subscriptionsDatabase     database.Subscriptions
-	openShiftVersionsClient   *cosmosdb.FakeOpenShiftVersionDocumentClient
-	openShiftVersionsDatabase database.OpenShiftVersions
+	openShiftClustersClient                  *cosmosdb.FakeOpenShiftClusterDocumentClient
+	openShiftClustersDatabase                database.OpenShiftClusters
+	asyncOperationsClient                    *cosmosdb.FakeAsyncOperationDocumentClient
+	asyncOperationsDatabase                  database.AsyncOperations
+	billingClient                            *cosmosdb.FakeBillingDocumentClient
+	billingDatabase                          database.Billing
+	clusterManagerClient                     *cosmosdb.FakeClusterManagerConfigurationDocumentClient
+	clusterManagerDatabase                   database.ClusterManagerConfigurations
+	subscriptionsClient                      *cosmosdb.FakeSubscriptionDocumentClient
+	subscriptionsDatabase                    database.Subscriptions
+	openShiftVersionsClient                  *cosmosdb.FakeOpenShiftVersionDocumentClient
+	openShiftVersionsDatabase                database.OpenShiftVersions
+	platformWorkloadIdentityRoleSetsClient   *cosmosdb.FakePlatformWorkloadIdentityRoleSetDocumentClient
+	platformWorkloadIdentityRoleSetsDatabase database.PlatformWorkloadIdentityRoleSets
 }
 
 func newTestInfra(t *testing.T) *testInfra {
@@ -176,6 +178,13 @@ func (ti *testInfra) WithOpenShiftVersions() *testInfra {
 	uuid := deterministicuuid.NewTestUUIDGenerator(7)
 	ti.openShiftVersionsDatabase, ti.openShiftVersionsClient = testdatabase.NewFakeOpenShiftVersions(uuid)
 	ti.fixture.WithOpenShiftVersions(ti.openShiftVersionsDatabase, uuid)
+	return ti
+}
+
+func (ti *testInfra) WithPlatformWorkloadIdentityRoleSets() *testInfra {
+	uuid := deterministicuuid.NewTestUUIDGenerator(8)
+	ti.platformWorkloadIdentityRoleSetsDatabase, ti.platformWorkloadIdentityRoleSetsClient = testdatabase.NewFakePlatformWorkloadIdentityRoleSets(uuid)
+	ti.fixture.WithPlatformWorkloadIdentityRoleSets(ti.platformWorkloadIdentityRoleSetsDatabase, uuid)
 	return ti
 }
 
