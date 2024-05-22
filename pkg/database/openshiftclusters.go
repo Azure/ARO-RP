@@ -83,7 +83,6 @@ func NewOpenShiftClusters(ctx context.Context, dbc cosmosdb.DatabaseClient, dbNa
 				Resource: triggerResource,
 			},
 			Location: &location,
-			// ID:       &id,
 		}
 		ctx, cancel := context.WithTimeout(ctx, time.Minute*5)
 		defer cancel()

@@ -16,10 +16,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 )
 
-const (
-	billingContainerName string = "Billing"
-)
-
 type billing struct {
 	c cosmosdb.BillingDocumentClient
 }
@@ -85,7 +81,7 @@ func NewBilling(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string,
 		ctx, cancel := context.WithTimeout(ctx, time.Minute*5)
 		defer cancel()
 
-		poller, err := sqlResourceClient.BeginCreateUpdateSQLTrigger(ctx, resourceGroup, dbAccountName, dbName, billingContainerName, *triggerResource.ID, createUpdateSQLTriggerParameters, nil)
+		poller, err := sqlResourceClient.BeginCreateUpdateSQLTrigger(ctx, resourceGroup, dbAccountName, dbName, collBilling, *triggerResource.ID, createUpdateSQLTriggerParameters, nil)
 		if err != nil {
 			return nil, err
 		}
