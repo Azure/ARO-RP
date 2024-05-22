@@ -74,7 +74,7 @@ func (d *dev) AROOperatorImage() string {
 func (d *dev) Listen() (net.Listener, error) {
 	// in dev mode there is no authentication, so for safety we only listen on
 	// localhost
-	return net.Listen("tcp", "localhost:8443")
+	return net.Listen("tcp", ":8443")
 }
 
 // TODO: Delete FPAuthorizer once the replace from track1 to track2 is done.
