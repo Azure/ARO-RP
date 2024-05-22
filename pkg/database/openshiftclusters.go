@@ -26,8 +26,6 @@ const (
 	OpenshiftClustersPrefixQuery        = `SELECT * FROM OpenShiftClusters doc WHERE STARTSWITH(doc.key, @prefix)`
 	OpenshiftClustersClientIdQuery      = `SELECT * FROM OpenShiftClusters doc WHERE doc.clientIdKey = @clientID`
 	OpenshiftClustersResourceGroupQuery = `SELECT * FROM OpenShiftClusters doc WHERE doc.clusterResourceGroupIdKey = @resourceGroupID`
-
-	openShiftClusterContainerName = "OpenShiftClusters"
 )
 
 type OpenShiftClusterDocumentMutator func(*api.OpenShiftClusterDocument) error
@@ -90,7 +88,7 @@ func NewOpenShiftClusters(ctx context.Context, dbc cosmosdb.DatabaseClient, dbNa
 		ctx, cancel := context.WithTimeout(ctx, time.Minute*5)
 		defer cancel()
 
-		poller, err := sqlResourceClient.BeginCreateUpdateSQLTrigger(ctx, resourceGroup, dbAccountName, dbName, openShiftClusterContainerName, *triggerResource.ID, createUpdateSQLTriggerParameters, nil)
+		poller, err := sqlResourceClient.BeginCreateUpdateSQLTrigger(ctx, resourceGroup, dbAccountName, dbName, collOpenShiftClusters, *triggerResource.ID, createUpdateSQLTriggerParameters, nil)
 		if err != nil {
 			return nil, err
 		}

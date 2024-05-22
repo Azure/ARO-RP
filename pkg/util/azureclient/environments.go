@@ -34,6 +34,7 @@ type AROEnvironment struct {
 	ResourceManagerScope string
 	KeyVaultScope        string
 	MicrosoftGraphScope  string
+	CosmosDBDNSSuffix    string
 }
 
 // AzureRbacPDPEnvironment contains cloud specific instance of Authz RBAC PDP Remote Server
@@ -62,6 +63,7 @@ var (
 		ResourceManagerScope: azure.PublicCloud.ResourceManagerEndpoint + "/.default",
 		KeyVaultScope:        azure.PublicCloud.ResourceIdentifiers.KeyVault + "/.default",
 		MicrosoftGraphScope:  azure.PublicCloud.MicrosoftGraphEndpoint + "/.default",
+		CosmosDBDNSSuffix:    azure.PublicCloud.CosmosDBDNSSuffix + "/.default",
 	}
 
 	// USGovernmentCloud contains additional ARO information for the US Gov cloud environment.
@@ -84,6 +86,7 @@ var (
 		ResourceManagerScope: azure.USGovernmentCloud.ResourceManagerEndpoint + "/.default",
 		KeyVaultScope:        azure.USGovernmentCloud.ResourceIdentifiers.KeyVault + "/.default",
 		MicrosoftGraphScope:  azure.USGovernmentCloud.MicrosoftGraphEndpoint + "/.default",
+		CosmosDBDNSSuffix:    azure.USGovernmentCloud.CosmosDBDNSSuffix + "/.default",
 	}
 )
 
