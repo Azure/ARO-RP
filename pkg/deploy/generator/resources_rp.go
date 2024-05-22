@@ -1176,6 +1176,31 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
 				Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
 					Resource: &sdkcosmos.SQLContainerResource{
+						ID: to.StringPtr("PlatformWorkloadIdentityRoleSets"),
+						PartitionKey: &sdkcosmos.ContainerPartitionKey{
+							Paths: []*string{
+								to.StringPtr("/id"),
+							},
+							Kind: &hashPartitionKey,
+						},
+						DefaultTTL: to.Int32Ptr(-1),
+					},
+					Options: &sdkcosmos.CreateUpdateOptions{},
+				},
+				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/PlatformWorkloadIdentityRoleSets')]"),
+				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Location: to.StringPtr("[resourceGroup().location]"),
+			},
+			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
+			DependsOn: []string{
+				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
+			},
+			Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+		},
+		{
+			Resource: &sdkcosmos.SQLContainerCreateUpdateParameters{
+				Properties: &sdkcosmos.SQLContainerCreateUpdateProperties{
+					Resource: &sdkcosmos.SQLContainerResource{
 						ID: to.StringPtr("ClusterManagerConfigurations"),
 						PartitionKey: &sdkcosmos.ContainerPartitionKey{
 							Paths: []*string{
