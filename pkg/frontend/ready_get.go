@@ -24,7 +24,7 @@ func (f *frontend) checkReady() bool {
 	_, okOcpVersions := f.lastOcpVersionsChangefeed.Load().(time.Time)
 	_, okPlatformWorkloadIdentityRoleSets := f.lastPlatformWorkloadIdentityRoleSetsChangefeed.Load().(time.Time)
 
-	return ok &&
+	return okOcpVersions && okPlatformWorkloadIdentityRoleSets &&
 		f.ready.Load().(bool) &&
 		f.env.ArmClientAuthorizer().IsReady() &&
 		f.env.AdminClientAuthorizer().IsReady()
