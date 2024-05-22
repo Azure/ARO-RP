@@ -386,9 +386,9 @@ To access the cluster for oc / kubectl or SSH'ing into the cluster you need to c
 
   * Run the ssh-aks.sh script, specifying the cluster name and the node number of the VM you are trying to ssh to.
   ```bash
-  hack/ssk-aks.sh aro-aks-cluster 0 # The first VM node in 'aro-aks-cluster'
-  hack/ssk-aks.sh aro-aks-cluster 1 # The second VM node in 'aro-aks-cluster'
-  hack/ssk-aks.sh aro-aks-cluster 2 # The third VM node in 'aro-aks-cluster'
+  hack/ssh-aks.sh aro-aks-cluster 0 # The first VM node in 'aro-aks-cluster'
+  hack/ssh-aks.sh aro-aks-cluster 1 # The second VM node in 'aro-aks-cluster'
+  hack/ssh-aks.sh aro-aks-cluster 2 # The third VM node in 'aro-aks-cluster'
   ```
 
 * Access via Azure Portal
