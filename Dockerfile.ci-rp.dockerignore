@@ -11,3 +11,16 @@
 !swagger
 !test
 !vendor
+
+# Ignore locally built NPM artifacts - using new automated process
+pkg/portal/assets/v2/build
+
+# Allow files and directories for JavaScript build
+!portal/v2/package*.json
+!portal/v2/src
+!portal/v2/public
+!portal/v2/config-overrides.js
+!portal/v2/tsconfig.json
+!portal/v2/.eslintrc.yml
+!portal/v2/.npmrc
+
