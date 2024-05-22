@@ -8,10 +8,13 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
 )
 
 type monitors struct {
@@ -30,28 +33,41 @@ type Monitors interface {
 }
 
 // NewMonitors returns a new Monitors
-func NewMonitors(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string) (Monitors, error) {
+func NewMonitors(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string, sqlResourceClient *armcosmos.SQLResourcesClient, location, resourceGroup, dbAccountName string) (Monitors, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbName)
 
-	triggers := []*cosmosdb.Trigger{
+	triggerResources := []*armcosmos.SQLTriggerResource{
 		{
-			ID:               "renewLease",
-			TriggerOperation: cosmosdb.TriggerOperationAll,
-			TriggerType:      cosmosdb.TriggerTypePre,
-			Body: `function trigger() {
-	var request = getContext().getRequest();
-	var body = request.getBody();
-	var date = new Date();
-	body["leaseExpires"] = Math.floor(date.getTime() / 1000) + 60;
-	request.setBody(body);
-}`,
+			ID: to.Ptr("renewLease"),
+			Body: to.Ptr(`function trigger() {
+				var request = getContext().getRequest();
+				var body = request.getBody();
+				var date = new Date();
+				body["leaseExpires"] = Math.floor(date.getTime() / 1000) + 60;
+				request.setBody(body);
+			}`),
+			TriggerOperation: to.Ptr(armcosmos.TriggerOperation(cosmosdb.TriggerOperationAll)),
+			TriggerType:      to.Ptr(armcosmos.TriggerType(cosmosdb.TriggerTypePre)),
 		},
 	}
 
-	triggerc := cosmosdb.NewTriggerClient(collc, collMonitors)
-	for _, trigger := range triggers {
-		_, err := triggerc.Create(ctx, trigger)
-		if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
+	for _, triggerResource := range triggerResources {
+		createUpdateSQLTriggerParameters := armcosmos.SQLTriggerCreateUpdateParameters{
+			Properties: &armcosmos.SQLTriggerCreateUpdateProperties{
+				Options:  &armcosmos.CreateUpdateOptions{},
+				Resource: triggerResource,
+			},
+			Location: &location,
+		}
+		ctx, cancel := context.WithTimeout(ctx, time.Minute*5)
+		defer cancel()
+
+		poller, err := sqlResourceClient.BeginCreateUpdateSQLTrigger(ctx, resourceGroup, dbAccountName, dbName, collMonitors, *triggerResource.ID, createUpdateSQLTriggerParameters, nil)
+		if err != nil {
+			return nil, err
+		}
+		_, err = poller.PollUntilDone(ctx, nil)
+		if err != nil {
 			return nil, err
 		}
 	}

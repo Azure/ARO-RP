@@ -109,12 +109,13 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
-	dbMonitors, err := database.NewMonitors(ctx, dbc, dbName)
+
+	sqlResourceClient, err := armcosmos.NewSQLResourcesClient(_env.SubscriptionID(), msiToken, clientOptions)
 	if err != nil {
 		return err
 	}
 
-	sqlResourceClient, err := armcosmos.NewSQLResourcesClient(_env.SubscriptionID(), msiToken, clientOptions)
+	dbMonitors, err := database.NewMonitors(ctx, dbc, dbName, sqlResourceClient, _env.Location(), _env.ResourceGroup(), dbAccountName)
 	if err != nil {
 		return err
 	}
