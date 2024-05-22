@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -54,7 +55,8 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	dbAccountName := os.Getenv(envDatabaseAccountName)
-	dbAuthorizer, err := database.NewTokenAuthorizer(ctx, logrusEntry, msiToken, dbAccountName, []string{})
+	scope := []string{fmt.Sprintf("https://%s.%s", dbAccountName, _env.Environment().CosmosDBDNSSuffix)}
+	dbAuthorizer, err := database.NewTokenAuthorizer(ctx, logrusEntry, msiToken, dbAccountName, scope)
 	if err != nil {
 		return err
 	}

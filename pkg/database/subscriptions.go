@@ -20,7 +20,6 @@ import (
 
 const (
 	SubscriptionsDequeueQuery string = `SELECT * FROM Subscriptions doc WHERE (doc.deleting ?? false) AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
-	subscriptionContainerName string = "Subscriptions"
 )
 
 type subscriptions struct {
@@ -81,7 +80,7 @@ func NewSubscriptions(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName s
 		ctx, cancel := context.WithTimeout(ctx, time.Minute*5)
 		defer cancel()
 
-		poller, err := sqlResourceClient.BeginCreateUpdateSQLTrigger(ctx, resourceGroup, dbAccountName, dbName, subscriptionContainerName, *triggerResource.ID, createUpdateSQLTriggerParameters, nil)
+		poller, err := sqlResourceClient.BeginCreateUpdateSQLTrigger(ctx, resourceGroup, dbAccountName, dbName, collSubscriptions, *triggerResource.ID, createUpdateSQLTriggerParameters, nil)
 		if err != nil {
 			return nil, err
 		}

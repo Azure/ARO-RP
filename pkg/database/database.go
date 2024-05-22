@@ -6,7 +6,6 @@ package database
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"net/http"
 	"reflect"
 	"time"
@@ -75,7 +74,6 @@ func NewMasterKeyAuthorizer(ctx context.Context, log *logrus.Entry, token azcore
 }
 
 func NewTokenAuthorizer(ctx context.Context, log *logrus.Entry, cred azcore.TokenCredential, databaseAccountName string, scopes []string) (cosmosdb.Authorizer, error) {
-	scopes = append(scopes, fmt.Sprintf("https://%s.documents.azure.com/.default", databaseAccountName))
 	acquireToken := func() (token string, newExpiration time.Time, err error) {
 		tk, err := cred.GetToken(ctx, azcorepolicy.TokenRequestOptions{Scopes: scopes})
 		if err != nil {
