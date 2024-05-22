@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -29,7 +30,16 @@ type Server struct {
 	subnet         *net.IPNet
 }
 
+func health(w http.ResponseWriter, _ *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Running.")
+}
+
 func (s *Server) Run() error {
+	healthMux := http.NewServeMux()
+	healthMux.HandleFunc("/", health)
+	go http.ListenAndServe(":8080", healthMux)
+
 	_, subnet, err := net.ParseCIDR(s.Subnet)
 	if err != nil {
 		return err

@@ -17,6 +17,69 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
+// devLBInternal is needed for defining a healthprobe.
+// VMSS with auto upgrademode requires a healthprobe from an LB.
+func (g *generator) devLBInternal() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtnetwork.LoadBalancer{
+			Sku: &mgmtnetwork.LoadBalancerSku{
+				Name: mgmtnetwork.LoadBalancerSkuNameBasic,
+			},
+			LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
+				FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
+					{
+						FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
+							Subnet: &mgmtnetwork.Subnet{
+								ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
+							},
+						},
+						Name: to.StringPtr("not-used"),
+					},
+				},
+				BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
+					{
+						Name: to.StringPtr("dev-backend"),
+					},
+				},
+				LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{
+					{
+						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &mgmtnetwork.SubResource{
+								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'dev-lb-internal', 'not-used')]"),
+							},
+							BackendAddressPool: &mgmtnetwork.SubResource{
+								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'dev-lb-internal', 'dev-backend')]"),
+							},
+							Probe: &mgmtnetwork.SubResource{
+								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'dev-lb-internal', 'dev-probe')]"),
+							},
+							Protocol:         mgmtnetwork.TransportProtocolTCP,
+							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
+							FrontendPort:     to.Int32Ptr(443),
+							BackendPort:      to.Int32Ptr(443),
+						},
+						Name: to.StringPtr("dev-lbrule"),
+					},
+				},
+				Probes: &[]mgmtnetwork.Probe{
+					{
+						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
+							Protocol:       mgmtnetwork.ProbeProtocolTCP,
+							Port:           to.Int32Ptr(443),
+							NumberOfProbes: to.Int32Ptr(3),
+						},
+						Name: to.StringPtr("dev-probe"),
+					},
+				},
+			},
+			Name:     to.StringPtr("dev-lb-internal"),
+			Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
+	}
+}
+
 func (g *generator) devProxyVMSS() *arm.Resource {
 	parts := []string{
 		fmt.Sprintf("base64ToString('%s')", base64.StdEncoding.EncodeToString([]byte("set -ex\n\n"))),
@@ -51,6 +114,12 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 				Tier:     to.StringPtr("Standard"),
 				Capacity: to.Int64Ptr(1),
 			},
+			Identity: &mgmtcompute.VirtualMachineScaleSetIdentity{
+				Type: mgmtcompute.ResourceIdentityTypeUserAssigned,
+				UserAssignedIdentities: map[string]*mgmtcompute.VirtualMachineScaleSetIdentityUserAssignedIdentitiesValue{
+					"[resourceId('AzSecPackAutoConfigRG', 'Microsoft.ManagedIdentity/userAssignedIdentities', concat('AzSecPackAutoConfigUA-', resourceGroup().location))]": {},
+				},
+			},
 			VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
 				UpgradePolicy: &mgmtcompute.UpgradePolicy{
 					Mode: mgmtcompute.UpgradeModeRolling,
@@ -73,9 +142,9 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 					},
 					StorageProfile: &mgmtcompute.VirtualMachineScaleSetStorageProfile{
 						ImageReference: &mgmtcompute.ImageReference{
-							Publisher: to.StringPtr("RedHat"),
-							Offer:     to.StringPtr("RHEL"),
-							Sku:       to.StringPtr("8-LVM"),
+							Publisher: to.StringPtr("MicrosoftCBLMariner"),
+							Offer:     to.StringPtr("cbl-mariner"),
+							Sku:       to.StringPtr("cbl-mariner-2-gen2"),
 							Version:   to.StringPtr("latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
@@ -86,6 +155,9 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 						},
 					},
 					NetworkProfile: &mgmtcompute.VirtualMachineScaleSetNetworkProfile{
+						HealthProbe: &mgmtcompute.APIEntityReference{
+							ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'dev-lb-internal', 'dev-probe')]"),
+						},
 						NetworkInterfaceConfigurations: &[]mgmtcompute.VirtualMachineScaleSetNetworkConfiguration{
 							{
 								Name: to.StringPtr("dev-proxy-vmss-nic"),
@@ -105,6 +177,11 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 														DNSSettings: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationDNSSettings{
 															DomainNameLabel: to.StringPtr("[parameters('proxyDomainNameLabel')]"),
 														},
+													},
+												},
+												LoadBalancerBackendAddressPools: &[]mgmtcompute.SubResource{
+													{
+														ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'dev-lb-internal', 'dev-backend')]"),
 													},
 												},
 											},
@@ -171,6 +248,12 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
+		Tags: map[string]any{
+			"azsecpack": "nonprod",
+		},
+		DependsOn: []string{
+			"[resourceId('Microsoft.Network/loadBalancers', 'dev-lb-internal')]",
+		},
 	}
 }
 

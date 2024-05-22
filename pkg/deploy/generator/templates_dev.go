@@ -33,6 +33,7 @@ func (g *generator) devSharedTemplate() *arm.Template {
 		g.devVnet(),
 		g.devVPNVnet(),
 		g.devVPN(),
+		g.devLBInternal(),
 		g.devDiskEncryptionKeyvault(),
 		g.devDiskEncryptionKey(),
 		g.devDiskEncryptionKeyVaultAccessPolicy(),
