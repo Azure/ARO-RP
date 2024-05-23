@@ -81,15 +81,18 @@ ci-rp: fix-macos-vendor
 	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --no-cache=$(NO_CACHE)
 =======
 	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg VERSION=$(VERSION) --target builder --no-cache=$(NO_CACHE) -t aro-builder
+<<<<<<< HEAD
 	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg VERSION=$(VERSION) --cache-from builder -t aro-final
 >>>>>>> 8c2de5475 (adding labels to each stage in docker file ci-rp and building them individually)
+=======
+	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg VERSION=$(VERSION) --cache-from aro-builder -t aro-final
+>>>>>>> d726cd951 (quick fix for labeling all images built by ci with aro- prefix and removing --force flag in image pruning line)
 
 ci-portal:
 	docker build . -f Dockerfile.ci-portal --build-arg REGISTRY=$(REGISTRY) --no-cache=$(NO_CACHE)
 
 ci-clean:
-	docker image prune --force --all --filter="label=builder=true"
-	docker image prune --force --all --filter="label=final=true"
+	docker image prune --all --filter="label=aro-*=true"
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.

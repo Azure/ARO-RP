@@ -65,7 +65,7 @@ RUN hack/fips/validate-fips.sh ./aro
 # Stage 3: final is our slim image with minimal layers and tools
 ###############################################################################
 FROM ${REGISTRY}/ubi8/ubi-minimal AS final
-LABEL final=true
+LABEL aro-final=true
 RUN microdnf update && microdnf clean all
 COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/
 ENTRYPOINT ["aro"]
