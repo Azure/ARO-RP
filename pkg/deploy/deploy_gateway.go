@@ -40,9 +40,6 @@ func (d *deployer) DeployGateway(ctx context.Context) error {
 
 	// Special cases where the config isn't marshalled into the ARM template parameters cleanly
 	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
-	parameters.Parameters["dbtokenURL"] = &arm.ParametersParameter{
-		Value: "https://dbtoken." + d.config.Location + "." + *d.config.Configuration.RPParentDomainName + ":8445",
-	}
 	parameters.Parameters["rpImage"] = &arm.ParametersParameter{
 		Value: *d.config.Configuration.RPImagePrefix + ":" + d.version,
 	}

@@ -46,7 +46,6 @@ func (g *generator) rpTemplate() *arm.Template {
 			"clusterMdsdConfigVersion",
 			"clusterMdsdNamespace",
 			"cosmosDB",
-			"dbtokenClientId",
 			"disableCosmosDBFirewall",
 			"fluentbitImage",
 			"fpClientId",
@@ -166,17 +165,12 @@ func (g *generator) rpTemplate() *arm.Template {
 			g.publicIPAddress("rp-pip"),
 			g.publicIPAddress("portal-pip"),
 			g.rpLB(),
-			g.rpLBInternal(),
 			g.rpVMSS(),
 			g.rpStorageAccount(),
 			g.rpLBAlert(30.0, 2, "rp-availability-alert", "PT5M", "PT15M", "DipAvailability"), // triggers on all 3 RPs being down for 10min, can't be >=0.3 due to deploys going down to 32% at times.
 			g.rpLBAlert(67.0, 3, "rp-degraded-alert", "PT15M", "PT6H", "DipAvailability"),     // 1/3 backend down for 1h or 2/3 down for 3h in the last 6h
 			g.rpLBAlert(33.0, 2, "rp-vnet-alert", "PT5M", "PT5M", "VipAvailability"))          // this will trigger only if the Azure network infrastructure between the loadBalancers and VMs is down for 3.5min
 		// more on alerts https://msazure.visualstudio.com/AzureRedHatOpenShift/_wiki/wikis/ARO.wiki/53765/WIP-Alerting
-
-		t.Resources = append(t.Resources,
-			g.virtualNetworkPeering("rp-vnet/peering-gateway-vnet", "[resourceId(parameters('gatewayResourceGroupName'), 'Microsoft.Network/virtualNetworks', 'gateway-vnet')]", false, false, nil),
-		)
 	}
 
 	t.Resources = append(t.Resources, g.rpDNSZone(),
@@ -282,7 +276,6 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 	if g.production {
 		t.Variables = map[string]interface{}{
 			"clusterKeyvaultAccessPolicies": g.rpClusterKeyvaultAccessPolicies(),
-			"dbTokenKeyvaultAccessPolicies": g.rpDBTokenKeyvaultAccessPolicies(),
 			"portalKeyvaultAccessPolicies":  g.rpPortalKeyvaultAccessPolicies(),
 			"serviceKeyvaultAccessPolicies": g.rpServiceKeyvaultAccessPolicies(),
 		}
@@ -298,7 +291,6 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 		params = append(params,
 			"deployNSGs",
 			"extraClusterKeyvaultAccessPolicies",
-			"extraDBTokenKeyvaultAccessPolicies",
 			"extraPortalKeyvaultAccessPolicies",
 			"extraServiceKeyvaultAccessPolicies",
 			"gatewayResourceGroupName",
@@ -317,7 +309,6 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 			p.Type = "bool"
 			p.DefaultValue = false
 		case "extraClusterKeyvaultAccessPolicies",
-			"extraDBTokenKeyvaultAccessPolicies",
 			"extraPortalKeyvaultAccessPolicies",
 			"extraServiceKeyvaultAccessPolicies":
 			p.Type = "array"
@@ -337,7 +328,6 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 		g.rpVnet(),
 		g.rpPEVnet(),
 		g.rpClusterKeyvault(),
-		g.rpDBTokenKeyvault(),
 		g.rpPortalKeyvault(),
 		g.rpServiceKeyvault(),
 		g.rpServiceKeyvaultDynamic(),

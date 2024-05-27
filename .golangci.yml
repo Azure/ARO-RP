@@ -150,7 +150,7 @@ linters-settings:
         alias: $1
       - pkg: "^github\\.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/([0-9]+)-([0-9]+)-([0-9]+)-?(preview)?/redhatopenshift$"
         alias: mgmtredhatopenshift$1$2$3$4
-      - pkg: "^github\\.com/Azure/ARO-RP/pkg/(dbtoken|deploy|gateway|mirror|monitor|operator|portal)$"
+      - pkg: "^github\\.com/Azure/ARO-RP/pkg/(deploy|gateway|mirror|monitor|operator|portal)$"
         alias: pkg$1
       - pkg: "^github\\.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/([0-9]+)-([0-9]+)-([0-9]+)-?(preview)?/redhatopenshift$"
         alias: redhatopenshift$1$2$3$4

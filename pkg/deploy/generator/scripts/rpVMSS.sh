@@ -114,7 +114,6 @@ sysctl --system
 
 firewall-cmd --add-port=443/tcp --permanent
 firewall-cmd --add-port=444/tcp --permanent
-firewall-cmd --add-port=445/tcp --permanent
 firewall-cmd --add-port=2222/tcp --permanent
 
 export AZURE_CLOUD_NAME=$AZURECLOUDNAME

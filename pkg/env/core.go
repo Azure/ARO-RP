@@ -22,7 +22,6 @@ const (
 	COMPONENT_RP                  ServiceComponent = "RP"
 	COMPONENT_GATEWAY             ServiceComponent = "GATEWAY"
 	COMPONENT_MONITOR             ServiceComponent = "MONITOR"
-	COMPONENT_DBTOKEN             ServiceComponent = "DBTOKEN"
 	COMPONENT_OPERATOR            ServiceComponent = "OPERATOR"
 	COMPONENT_MIRROR              ServiceComponent = "MIRROR"
 	COMPONENT_PORTAL              ServiceComponent = "PORTAL"
