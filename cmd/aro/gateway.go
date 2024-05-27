@@ -26,10 +26,6 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	if err = env.ValidateVars("AZURE_DBTOKEN_CLIENT_ID"); err != nil {
-		return err
-	}
-
 	m := statsd.New(ctx, log.WithField("component", "gateway"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 
 	g, err := golang.NewMetrics(log.WithField("component", "gateway"), m)

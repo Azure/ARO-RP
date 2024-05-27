@@ -19,7 +19,6 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	err := env.ValidateVars(
 		"ADMIN_OBJECT_ID",
 		"AZURE_CLIENT_ID",
-		"AZURE_DBTOKEN_CLIENT_ID",
 		"AZURE_SERVICE_PRINCIPAL_ID",
 		"AZURE_FP_SERVICE_PRINCIPAL_ID",
 		"AZURE_PORTAL_ACCESS_GROUP_IDS",

@@ -122,12 +122,8 @@ func DevConfig(_env env.Core) (*Config, error) {
 				PortalProvisionedThroughput:   400,
 				GatewayProvisionedThroughput:  400,
 			},
-			DBTokenClientID:         to.StringPtr(os.Getenv("AZURE_DBTOKEN_CLIENT_ID")),
 			DisableCosmosDBFirewall: to.BoolPtr(true),
 			ExtraClusterKeyvaultAccessPolicies: []interface{}{
-				adminKeyvaultAccessPolicy(_env),
-			},
-			ExtraDBTokenKeyvaultAccessPolicies: []interface{}{
 				adminKeyvaultAccessPolicy(_env),
 			},
 			ExtraGatewayKeyvaultAccessPolicies: []interface{}{

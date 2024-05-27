@@ -83,9 +83,6 @@
         "databaseAccountName": {
             "type": "string"
         },
-        "dbtokenClientId": {
-            "type": "string"
-        },
         "disableCosmosDBFirewall": {
             "type": "bool",
             "defaultValue": false
@@ -359,64 +356,6 @@
         },
         {
             "sku": {
-                "name": "Standard"
-            },
-            "properties": {
-                "frontendIPConfigurations": [
-                    {
-                        "properties": {
-                            "subnet": {
-                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"
-                            }
-                        },
-                        "name": "dbtoken-frontend",
-                        "zones": "[if(contains(parameters('nonZonalRegions'),toLower(replace(resourceGroup().location, ' ', ''))),'',pickZones('Microsoft.Network', 'publicIPAddresses', resourceGroup().location, 3))]"
-                    }
-                ],
-                "backendAddressPools": [
-                    {
-                        "name": "rp-backend"
-                    }
-                ],
-                "loadBalancingRules": [
-                    {
-                        "properties": {
-                            "frontendIPConfiguration": {
-                                "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb-internal', 'dbtoken-frontend')]"
-                            },
-                            "backendAddressPool": {
-                                "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb-internal', 'rp-backend')]"
-                            },
-                            "probe": {
-                                "id": "[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb-internal', 'dbtoken-probe')]"
-                            },
-                            "protocol": "Tcp",
-                            "loadDistribution": "Default",
-                            "frontendPort": 8445,
-                            "backendPort": 445
-                        },
-                        "name": "dbtoken-lbrule"
-                    }
-                ],
-                "probes": [
-                    {
-                        "properties": {
-                            "protocol": "Https",
-                            "port": 445,
-                            "numberOfProbes": 2,
-                            "requestPath": "/healthz/ready"
-                        },
-                        "name": "dbtoken-probe"
-                    }
-                ]
-            },
-            "name": "rp-lb-internal",
-            "type": "Microsoft.Network/loadBalancers",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2020-08-01"
-        },
-        {
-            "sku": {
                 "name": "[parameters('vmSize')]",
                 "tier": "Standard",
                 "capacity": "[parameters('rpVmssCapacity')]"
@@ -479,9 +418,6 @@
                                                 "loadBalancerBackendAddressPools": [
                                                     {
                                                         "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"
-                                                    },
-                                                    {
-                                                        "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb-internal', 'rp-backend')]"
                                                     }
                                                 ]
                                             }
@@ -530,7 +466,6 @@
             "dependsOn": [
                 "[resourceId('Microsoft.Authorization/roleAssignments', guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader'))]",
                 "[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]",
-                "[resourceId('Microsoft.Network/loadBalancers', 'rp-lb-internal')]",
                 "[resourceId('Microsoft.Storage/storageAccounts', substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.')))]"
             ]
         },
@@ -668,21 +603,6 @@
             "dependsOn": [
                 "[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]"
             ]
-        },
-        {
-            "properties": {
-                "allowVirtualNetworkAccess": true,
-                "allowForwardedTraffic": true,
-                "allowGatewayTransit": false,
-                "useRemoteGateways": false,
-                "remoteVirtualNetwork": {
-                    "id": "[resourceId(parameters('gatewayResourceGroupName'), 'Microsoft.Network/virtualNetworks', 'gateway-vnet')]"
-                }
-            },
-            "name": "rp-vnet/peering-gateway-vnet",
-            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
-            "apiVersion": "2020-08-01",
-            "location": "[resourceGroup().location]"
         },
         {
             "properties": {},

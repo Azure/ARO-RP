@@ -17,12 +17,6 @@
         "databaseAccountName": {
             "type": "string"
         },
-        "dbtokenClientId": {
-            "type": "string"
-        },
-        "dbtokenUrl": {
-            "type": "string"
-        },
         "fluentbitImage": {
             "type": "string"
         },
