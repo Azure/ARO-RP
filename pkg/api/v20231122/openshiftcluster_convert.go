@@ -183,6 +183,7 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	out.Properties.NetworkProfile.PodCIDR = oc.Properties.NetworkProfile.PodCIDR
 	out.Properties.NetworkProfile.ServiceCIDR = oc.Properties.NetworkProfile.ServiceCIDR
 	out.Properties.NetworkProfile.OutboundType = api.OutboundType(oc.Properties.NetworkProfile.OutboundType)
+	out.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSG(oc.Properties.NetworkProfile.PreconfiguredNSG)
 
 	if oc.Properties.NetworkProfile.LoadBalancerProfile != nil {
 		loadBalancerProfile := api.LoadBalancerProfile{}

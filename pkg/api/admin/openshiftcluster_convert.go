@@ -296,6 +296,7 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	out.Properties.NetworkProfile.APIServerPrivateEndpointIP = oc.Properties.NetworkProfile.APIServerPrivateEndpointIP
 	out.Properties.NetworkProfile.GatewayPrivateEndpointIP = oc.Properties.NetworkProfile.GatewayPrivateEndpointIP
 	out.Properties.NetworkProfile.GatewayPrivateLinkID = oc.Properties.NetworkProfile.GatewayPrivateLinkID
+	out.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSG(oc.Properties.NetworkProfile.PreconfiguredNSG)
 	if oc.Properties.NetworkProfile.LoadBalancerProfile != nil {
 		loadBalancerProfile := api.LoadBalancerProfile{}
 
