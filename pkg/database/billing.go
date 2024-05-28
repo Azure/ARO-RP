@@ -7,10 +7,9 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
+	sdkcosmos "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -32,10 +31,10 @@ type Billing interface {
 }
 
 // NewBilling returns a new Billing
-func NewBilling(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string, sqlResourceClient *armcosmos.SQLResourcesClient, location, resourceGroup, dbAccountName string) (Billing, error) {
+func NewBilling(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string, sqlResourceClient *sdkcosmos.SQLResourcesClient, location, resourceGroup, dbAccountName string) (Billing, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbName)
 
-	triggerResources := []*armcosmos.SQLTriggerResource{
+	triggerResources := []*sdkcosmos.SQLTriggerResource{
 		{
 			ID: to.Ptr("setCreationBillingTimeStamp"),
 			Body: to.Ptr(`function trigger() {
@@ -49,8 +48,8 @@ func NewBilling(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string,
 				}
 				request.setBody(body);
 			}`),
-			TriggerOperation: to.Ptr(armcosmos.TriggerOperation("Create")),
-			TriggerType:      to.Ptr(armcosmos.TriggerType("Pre")),
+			TriggerOperation: to.Ptr(sdkcosmos.TriggerOperation("Create")),
+			TriggerType:      to.Ptr(sdkcosmos.TriggerType("Pre")),
 		},
 		{
 			ID: to.Ptr("setDeletionBillingTimeStamp"),
@@ -65,30 +64,14 @@ func NewBilling(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string,
 				}
 				request.setBody(body);
 			}`),
-			TriggerOperation: to.Ptr(armcosmos.TriggerOperation("Replace")),
-			TriggerType:      to.Ptr(armcosmos.TriggerType("Pre")),
+			TriggerOperation: to.Ptr(sdkcosmos.TriggerOperation("Replace")),
+			TriggerType:      to.Ptr(sdkcosmos.TriggerType("Pre")),
 		},
 	}
 
-	for _, triggerResource := range triggerResources {
-		createUpdateSQLTriggerParameters := armcosmos.SQLTriggerCreateUpdateParameters{
-			Properties: &armcosmos.SQLTriggerCreateUpdateProperties{
-				Options:  &armcosmos.CreateUpdateOptions{},
-				Resource: triggerResource,
-			},
-			Location: &location,
-		}
-		ctx, cancel := context.WithTimeout(ctx, time.Minute*5)
-		defer cancel()
-
-		poller, err := sqlResourceClient.BeginCreateUpdateSQLTrigger(ctx, resourceGroup, dbAccountName, dbName, collBilling, *triggerResource.ID, createUpdateSQLTriggerParameters, nil)
-		if err != nil {
-			return nil, err
-		}
-		_, err = poller.PollUntilDone(ctx, nil)
-		if err != nil {
-			return nil, err
-		}
+	err := createTriggers(ctx, sqlResourceClient, triggerResources, resourceGroup, dbName, dbAccountName, location, collBilling)
+	if err != nil {
+		return nil, err
 	}
 
 	documentClient := cosmosdb.NewBillingDocumentClient(collc, collBilling)
