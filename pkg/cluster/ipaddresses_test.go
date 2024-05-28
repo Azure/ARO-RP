@@ -707,7 +707,7 @@ func TestEnsureGatewayCreate(t *testing.T) {
 
 	for _, tt := range []struct {
 		name                     string
-		mocks                    func(*mock_env.MockInterface, *mock_network.MockPrivateEndpointsClient, *mock_network.MockPrivateLinkServicesClient)
+		mocks                    func(*mock_env.MockInterface, *mock_armnetwork.MockPrivateEndpointsClient, *mock_armnetwork.MockPrivateLinkServicesClient)
 		fixture                  func(*testdatabase.Fixture)
 		checker                  func(*testdatabase.Checker)
 		gatewayEnabled           bool
@@ -723,29 +723,33 @@ func TestEnsureGatewayCreate(t *testing.T) {
 		},
 		{
 			name: "error: private endpoint connection not found",
-			mocks: func(env *mock_env.MockInterface, privateEndpoints *mock_network.MockPrivateEndpointsClient, rpPrivateLinkServices *mock_network.MockPrivateLinkServicesClient) {
+			mocks: func(env *mock_env.MockInterface, privateEndpoints *mock_armnetwork.MockPrivateEndpointsClient, rpPrivateLinkServices *mock_armnetwork.MockPrivateLinkServicesClient) {
 				env.EXPECT().GatewayResourceGroup().AnyTimes().Return("gatewayResourceGroup")
-				privateEndpoints.EXPECT().Get(ctx, "clusterResourceGroup", "infra-pe", "networkInterfaces").Return(mgmtnetwork.PrivateEndpoint{
-					PrivateEndpointProperties: &mgmtnetwork.PrivateEndpointProperties{
-						NetworkInterfaces: &[]mgmtnetwork.Interface{
-							{
-								InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
-									IPConfigurations: &[]mgmtnetwork.InterfaceIPConfiguration{
-										{
-											InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
-												PrivateIPAddress: to.StringPtr(privateIP),
+				privateEndpoints.EXPECT().Get(ctx, "clusterResourceGroup", "infra-pe", &armnetwork.PrivateEndpointsClientGetOptions{Expand: to.StringPtr("networkInterfaces")}).Return(armnetwork.PrivateEndpointsClientGetResponse{
+					PrivateEndpoint: armnetwork.PrivateEndpoint{
+						Properties: &armnetwork.PrivateEndpointProperties{
+							NetworkInterfaces: []*armnetwork.Interface{
+								{
+									Properties: &armnetwork.InterfacePropertiesFormat{
+										IPConfigurations: []*armnetwork.InterfaceIPConfiguration{
+											{
+												Properties: &armnetwork.InterfaceIPConfigurationPropertiesFormat{
+													PrivateIPAddress: to.StringPtr(privateIP),
+												},
 											},
 										},
 									},
 								},
 							},
 						},
+						ID: to.StringPtr("peID"),
 					},
-					ID: to.StringPtr("peID"),
 				}, nil)
-				rpPrivateLinkServices.EXPECT().Get(ctx, "gatewayResourceGroup", "gateway-pls-001", "").Return(mgmtnetwork.PrivateLinkService{
-					PrivateLinkServiceProperties: &mgmtnetwork.PrivateLinkServiceProperties{
-						PrivateEndpointConnections: &[]mgmtnetwork.PrivateEndpointConnection{},
+				rpPrivateLinkServices.EXPECT().Get(ctx, "gatewayResourceGroup", "gateway-pls-001", nil).Return(armnetwork.PrivateLinkServicesClientGetResponse{
+					PrivateLinkService: armnetwork.PrivateLinkService{
+						Properties: &armnetwork.PrivateLinkServiceProperties{
+							PrivateEndpointConnections: []*armnetwork.PrivateEndpointConnection{},
+						},
 					},
 				}, nil)
 			},
@@ -754,64 +758,68 @@ func TestEnsureGatewayCreate(t *testing.T) {
 		},
 		{
 			name: "ok",
-			mocks: func(env *mock_env.MockInterface, privateEndpoints *mock_network.MockPrivateEndpointsClient, rpPrivateLinkServices *mock_network.MockPrivateLinkServicesClient) {
+			mocks: func(env *mock_env.MockInterface, privateEndpoints *mock_armnetwork.MockPrivateEndpointsClient, rpPrivateLinkServices *mock_armnetwork.MockPrivateLinkServicesClient) {
 				env.EXPECT().GatewayResourceGroup().AnyTimes().Return("gatewayResourceGroup")
-				privateEndpoints.EXPECT().Get(ctx, "clusterResourceGroup", "infra-pe", "networkInterfaces").Return(mgmtnetwork.PrivateEndpoint{
-					PrivateEndpointProperties: &mgmtnetwork.PrivateEndpointProperties{
-						NetworkInterfaces: &[]mgmtnetwork.Interface{
-							{
-								InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
-									IPConfigurations: &[]mgmtnetwork.InterfaceIPConfiguration{
-										{
-											InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
-												PrivateIPAddress: to.StringPtr(privateIP),
+				privateEndpoints.EXPECT().Get(ctx, "clusterResourceGroup", "infra-pe", &armnetwork.PrivateEndpointsClientGetOptions{Expand: to.StringPtr("networkInterfaces")}).Return(armnetwork.PrivateEndpointsClientGetResponse{
+					PrivateEndpoint: armnetwork.PrivateEndpoint{
+						Properties: &armnetwork.PrivateEndpointProperties{
+							NetworkInterfaces: []*armnetwork.Interface{
+								{
+									Properties: &armnetwork.InterfacePropertiesFormat{
+										IPConfigurations: []*armnetwork.InterfaceIPConfiguration{
+											{
+												Properties: &armnetwork.InterfaceIPConfigurationPropertiesFormat{
+													PrivateIPAddress: to.StringPtr(privateIP),
+												},
 											},
 										},
 									},
 								},
 							},
 						},
+						ID: to.StringPtr("peID"),
 					},
-					ID: to.StringPtr("peID"),
 				}, nil)
-				rpPrivateLinkServices.EXPECT().Get(ctx, "gatewayResourceGroup", "gateway-pls-001", "").Return(mgmtnetwork.PrivateLinkService{
-					PrivateLinkServiceProperties: &mgmtnetwork.PrivateLinkServiceProperties{
-						PrivateEndpointConnections: &[]mgmtnetwork.PrivateEndpointConnection{
-							{
-								PrivateEndpointConnectionProperties: &mgmtnetwork.PrivateEndpointConnectionProperties{
-									PrivateEndpoint: &mgmtnetwork.PrivateEndpoint{
-										ID: to.StringPtr("otherPeID"),
+				rpPrivateLinkServices.EXPECT().Get(ctx, "gatewayResourceGroup", "gateway-pls-001", nil).Return(armnetwork.PrivateLinkServicesClientGetResponse{
+					PrivateLinkService: armnetwork.PrivateLinkService{
+						Properties: &armnetwork.PrivateLinkServiceProperties{
+							PrivateEndpointConnections: []*armnetwork.PrivateEndpointConnection{
+								{
+									Properties: &armnetwork.PrivateEndpointConnectionProperties{
+										PrivateEndpoint: &armnetwork.PrivateEndpoint{
+											ID: to.StringPtr("otherPeID"),
+										},
 									},
 								},
-							},
-							{
-								PrivateEndpointConnectionProperties: &mgmtnetwork.PrivateEndpointConnectionProperties{
-									PrivateEndpoint: &mgmtnetwork.PrivateEndpoint{
-										ID: to.StringPtr("peID"),
+								{
+									Properties: &armnetwork.PrivateEndpointConnectionProperties{
+										PrivateEndpoint: &armnetwork.PrivateEndpoint{
+											ID: to.StringPtr("peID"),
+										},
+										PrivateLinkServiceConnectionState: &armnetwork.PrivateLinkServiceConnectionState{
+											Status: to.StringPtr(""),
+										},
+										LinkIdentifier: to.StringPtr("1234"),
 									},
-									PrivateLinkServiceConnectionState: &mgmtnetwork.PrivateLinkServiceConnectionState{
-										Status: to.StringPtr(""),
-									},
-									LinkIdentifier: to.StringPtr("1234"),
+									Name: to.StringPtr("conn"),
 								},
-								Name: to.StringPtr("conn"),
 							},
 						},
 					},
 				}, nil)
-				rpPrivateLinkServices.EXPECT().UpdatePrivateEndpointConnection(ctx, "gatewayResourceGroup", "gateway-pls-001", "conn", mgmtnetwork.PrivateEndpointConnection{
-					PrivateEndpointConnectionProperties: &mgmtnetwork.PrivateEndpointConnectionProperties{
-						PrivateEndpoint: &mgmtnetwork.PrivateEndpoint{
+				rpPrivateLinkServices.EXPECT().UpdatePrivateEndpointConnection(ctx, "gatewayResourceGroup", "gateway-pls-001", "conn", armnetwork.PrivateEndpointConnection{
+					Properties: &armnetwork.PrivateEndpointConnectionProperties{
+						PrivateEndpoint: &armnetwork.PrivateEndpoint{
 							ID: to.StringPtr("peID"),
 						},
-						PrivateLinkServiceConnectionState: &mgmtnetwork.PrivateLinkServiceConnectionState{
+						PrivateLinkServiceConnectionState: &armnetwork.PrivateLinkServiceConnectionState{
 							Status:      to.StringPtr("Approved"),
 							Description: to.StringPtr("Approved"),
 						},
 						LinkIdentifier: to.StringPtr("1234"),
 					},
 					Name: to.StringPtr("conn"),
-				}).Return(mgmtnetwork.PrivateEndpointConnection{}, nil)
+				}, nil).Return(armnetwork.PrivateLinkServicesClientUpdatePrivateEndpointConnectionResponse{}, nil)
 			},
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
@@ -851,8 +859,8 @@ func TestEnsureGatewayCreate(t *testing.T) {
 			defer controller.Finish()
 
 			env := mock_env.NewMockInterface(controller)
-			privateEndpoints := mock_network.NewMockPrivateEndpointsClient(controller)
-			rpPrivateLinkServices := mock_network.NewMockPrivateLinkServicesClient(controller)
+			privateEndpoints := mock_armnetwork.NewMockPrivateEndpointsClient(controller)
+			rpPrivateLinkServices := mock_armnetwork.NewMockPrivateLinkServicesClient(controller)
 
 			dbOpenShiftClusters, clientOpenShiftClusters := testdatabase.NewFakeOpenShiftClusters()
 			dbGateway, clientGateway := testdatabase.NewFakeGateway()
@@ -893,8 +901,8 @@ func TestEnsureGatewayCreate(t *testing.T) {
 						},
 					},
 				},
-				privateEndpoints:      privateEndpoints,
-				rpPrivateLinkServices: rpPrivateLinkServices,
+				armPrivateEndpoints:      privateEndpoints,
+				armRPPrivateLinkServices: rpPrivateLinkServices,
 			}
 
 			err = m.ensureGatewayCreate(ctx)
