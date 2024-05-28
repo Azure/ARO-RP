@@ -104,7 +104,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
 	}
 	logrusEntry := log.WithField("component", "database")
-	scope := []string{fmt.Sprintf("https://%s.%s", dbAccountName, _env.Environment().CosmosDBDNSSuffix)}
+	scope := []string{fmt.Sprintf("https://%s.%s", dbAccountName, _env.Environment().CosmosDBDNSSuffixScope)}
 	dbAuthorizer, err := database.NewTokenAuthorizer(ctx, logrusEntry, msiToken, dbAccountName, scope)
 	if err != nil {
 		return err

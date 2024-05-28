@@ -113,8 +113,9 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 	clientOptions := &policy.ClientOptions{
 		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
 	}
+
 	logrusEntry := log.WithField("component", "database")
-	scope := []string{fmt.Sprintf("https://%s.%s", dbAccountName, _env.Environment().CosmosDBDNSSuffix)}
+	scope := []string{fmt.Sprintf("https://%s.%s", dbAccountName, _env.Environment().CosmosDBDNSSuffixScope)}
 	dbAuthorizer, err := database.NewTokenAuthorizer(ctx, logrusEntry, msiToken, dbAccountName, scope)
 	if err != nil {
 		return err
@@ -168,6 +169,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
+
 	go database.EmitMetrics(ctx, log, dbOpenShiftClusters, metrics)
 
 	feAead, err := encryption.NewMulti(ctx, _env.ServiceKeyvault(), env.FrontendEncryptionSecretV2Name, env.FrontendEncryptionSecretName)
@@ -178,6 +180,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
+
 	f, err := frontend.NewFrontend(ctx, audit, log.WithField("component", "frontend"), _env, dbAsyncOperations, dbClusterManagerConfiguration, dbOpenShiftClusters, dbSubscriptions, dbOpenShiftVersions, api.APIs, metrics, clusterm, feAead, hiveClusterManager, adminactions.NewKubeActions, adminactions.NewAzureActions, clusterdata.NewParallelEnricher(metrics, _env))
 	if err != nil {
 		return err

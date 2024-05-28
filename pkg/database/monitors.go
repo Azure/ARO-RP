@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
@@ -52,25 +51,9 @@ func NewMonitors(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string
 		},
 	}
 
-	for _, triggerResource := range triggerResources {
-		createUpdateSQLTriggerParameters := armcosmos.SQLTriggerCreateUpdateParameters{
-			Properties: &armcosmos.SQLTriggerCreateUpdateProperties{
-				Options:  &armcosmos.CreateUpdateOptions{},
-				Resource: triggerResource,
-			},
-			Location: &location,
-		}
-		ctx, cancel := context.WithTimeout(ctx, time.Minute*5)
-		defer cancel()
-
-		poller, err := sqlResourceClient.BeginCreateUpdateSQLTrigger(ctx, resourceGroup, dbAccountName, dbName, collMonitors, *triggerResource.ID, createUpdateSQLTriggerParameters, nil)
-		if err != nil {
-			return nil, err
-		}
-		_, err = poller.PollUntilDone(ctx, nil)
-		if err != nil {
-			return nil, err
-		}
+	err := createTriggers(ctx, sqlResourceClient, triggerResources, resourceGroup, dbName, dbAccountName, location, collMonitors)
+	if err != nil {
+		return nil, err
 	}
 
 	return &monitors{
