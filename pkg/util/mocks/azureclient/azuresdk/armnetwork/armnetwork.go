@@ -506,6 +506,34 @@ func (m *MockSubnetsClient) EXPECT() *MockSubnetsClientMockRecorder {
 	return m.recorder
 }
 
+// CreateOrUpdateAndWait mocks base method.
+func (m *MockSubnetsClient) CreateOrUpdateAndWait(arg0 context.Context, arg1, arg2, arg3 string, arg4 armnetwork.Subnet, arg5 *armnetwork.SubnetsClientBeginCreateOrUpdateOptions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", arg0, arg1, arg2, arg3, arg4, arg5)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateOrUpdateAndWait indicates an expected call of CreateOrUpdateAndWait.
+func (mr *MockSubnetsClientMockRecorder) CreateOrUpdateAndWait(arg0, arg1, arg2, arg3, arg4, arg5 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockSubnetsClient)(nil).CreateOrUpdateAndWait), arg0, arg1, arg2, arg3, arg4, arg5)
+}
+
+// DeleteAndWait mocks base method.
+func (m *MockSubnetsClient) DeleteAndWait(arg0 context.Context, arg1, arg2, arg3 string, arg4 *armnetwork.SubnetsClientBeginDeleteOptions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2, arg3, arg4)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteAndWait indicates an expected call of DeleteAndWait.
+func (mr *MockSubnetsClientMockRecorder) DeleteAndWait(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockSubnetsClient)(nil).DeleteAndWait), arg0, arg1, arg2, arg3, arg4)
+}
+
 // Get mocks base method.
 func (m *MockSubnetsClient) Get(arg0 context.Context, arg1, arg2, arg3 string, arg4 *armnetwork.SubnetsClientGetOptions) (armnetwork.SubnetsClientGetResponse, error) {
 	m.ctrl.T.Helper()
