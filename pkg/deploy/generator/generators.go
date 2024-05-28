@@ -114,7 +114,13 @@ func (g *generator) Artifacts() error {
 }
 
 func (g *generator) writeTemplate(t *arm.Template, output string) error {
-	b, err := g.templateFixup(t)
+
+	sharedAccessKeyHack := false
+	if output == FileRPProduction {
+		sharedAccessKeyHack = true
+	}
+
+	b, err := g.templateFixup(t, sharedAccessKeyHack)
 	if err != nil {
 		return err
 	}
