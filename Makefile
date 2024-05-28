@@ -92,9 +92,6 @@ ci-rp: fix-macos-vendor
 	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg VERSION=$(VERSION) --no-cache=$(NO_CACHE)
 >>>>>>> 14e0b5fbc (removing builds using --cache-from flag and will cover them with a separate PR and user story, thus rolling back the changes w.r.to to the builds to how they were written earlier)
 
-ci-portal:
-	docker build . -f Dockerfile.ci-portal --build-arg REGISTRY=$(REGISTRY) --no-cache=$(NO_CACHE)
-
 ci-clean:
 	docker image prune --all --filter="label=aro-*=true"
 

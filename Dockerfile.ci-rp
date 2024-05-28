@@ -6,6 +6,7 @@ ARG ARO_VERSION
 # builder is responsible for all compilation and validation of the RP
 ###############################################################################
 FROM ${REGISTRY}/ubi8/nodejs-16  as portal-build
+LABEL aro-portal-build=true
 WORKDIR /build/portal/v2
 USER root
 
@@ -23,10 +24,14 @@ RUN npm run lint && npm run build
 ###############################################################################
 FROM ${REGISTRY}/ubi8/go-toolset:1.20.12-5 AS builder
 <<<<<<< HEAD
+<<<<<<< HEAD
 ARG ARO_VERSION
 =======
 LABEL builder=true
 >>>>>>> 8c2de5475 (adding labels to each stage in docker file ci-rp and building them individually)
+=======
+LABEL aro-builder=true
+>>>>>>> 88c3b811f (manually fixing few things which got missed at the time of resolving the merge conflicts)
 USER root
 WORKDIR /app
 
