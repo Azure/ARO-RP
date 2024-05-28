@@ -14,7 +14,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
 
-func TestUpdateFromIterator(t *testing.T) {
+func TestUpdateFromIteratorOcpVersions(t *testing.T) {
 	for _, tt := range []struct {
 		name           string
 		docsInIterator []*api.OpenShiftVersionDocument
@@ -184,12 +184,354 @@ func TestUpdateFromIterator(t *testing.T) {
 
 			fakeIterator := cosmosdb.NewFakeOpenShiftVersionDocumentIterator(tt.docsInIterator, 0)
 
-			go frontend.updateFromIterator(ctx, ticker, fakeIterator)
+			go frontend.updateFromIteratorOcpVersions(ctx, ticker, fakeIterator)
 			time.Sleep(time.Second)
 			cancel()
 
 			if !reflect.DeepEqual(frontend.enabledOcpVersions, tt.wantVersions) {
 				t.Error(cmp.Diff(frontend.enabledOcpVersions, tt.wantVersions))
+			}
+		})
+	}
+}
+
+func TestUpdateFromIteratorRoleSets(t *testing.T) {
+	for _, tt := range []struct {
+		name           string
+		docsInIterator []*api.PlatformWorkloadIdentityRoleSetDocument
+		roleSets       map[string]*api.PlatformWorkloadIdentityRoleSet
+		wantRoleSets   map[string]*api.PlatformWorkloadIdentityRoleSet
+	}{
+		{
+			name: "add to empty",
+			docsInIterator: []*api.PlatformWorkloadIdentityRoleSetDocument{
+				{
+					PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
+						Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+							OpenShiftVersion: "4.14",
+							PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+								{
+									OperatorName:       "CloudControllerManager",
+									RoleDefinitionName: "Azure RedHat OpenShift Cloud Controller Manager Role",
+									RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4",
+									ServiceAccounts: []string{
+										"openshift-cloud-controller-manager:cloud-controller-manager",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			roleSets: map[string]*api.PlatformWorkloadIdentityRoleSet{},
+			wantRoleSets: map[string]*api.PlatformWorkloadIdentityRoleSet{
+				"4.14": {
+					Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+						OpenShiftVersion: "4.14",
+						PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+							{
+								OperatorName:       "CloudControllerManager",
+								RoleDefinitionName: "Azure RedHat OpenShift Cloud Controller Manager Role",
+								RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4",
+								ServiceAccounts: []string{
+									"openshift-cloud-controller-manager:cloud-controller-manager",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "do nothing",
+			docsInIterator: []*api.PlatformWorkloadIdentityRoleSetDocument{
+				{
+					PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
+						Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+							OpenShiftVersion: "4.14",
+							PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+								{
+									OperatorName:       "CloudControllerManager",
+									RoleDefinitionName: "Azure RedHat OpenShift Cloud Controller Manager Role",
+									RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4",
+									ServiceAccounts: []string{
+										"openshift-cloud-controller-manager:cloud-controller-manager",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			roleSets: map[string]*api.PlatformWorkloadIdentityRoleSet{
+				"4.14": {
+					Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+						OpenShiftVersion: "4.14",
+						PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+							{
+								OperatorName:       "CloudControllerManager",
+								RoleDefinitionName: "Azure RedHat OpenShift Cloud Controller Manager Role",
+								RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4",
+								ServiceAccounts: []string{
+									"openshift-cloud-controller-manager:cloud-controller-manager",
+								},
+							},
+						},
+					},
+				},
+			},
+			wantRoleSets: map[string]*api.PlatformWorkloadIdentityRoleSet{
+				"4.14": {
+					Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+						OpenShiftVersion: "4.14",
+						PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+							{
+								OperatorName:       "CloudControllerManager",
+								RoleDefinitionName: "Azure RedHat OpenShift Cloud Controller Manager Role",
+								RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4",
+								ServiceAccounts: []string{
+									"openshift-cloud-controller-manager:cloud-controller-manager",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "add to not empty",
+			docsInIterator: []*api.PlatformWorkloadIdentityRoleSetDocument{
+				{
+					PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
+						Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+							OpenShiftVersion: "4.14",
+							PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+								{
+									OperatorName:       "CloudControllerManager",
+									RoleDefinitionName: "Azure RedHat OpenShift Cloud Controller Manager Role",
+									RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4",
+									ServiceAccounts: []string{
+										"openshift-cloud-controller-manager:cloud-controller-manager",
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
+						Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+							OpenShiftVersion: "4.15",
+							PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+								{
+									OperatorName:       "CloudControllerManager",
+									RoleDefinitionName: "Azure RedHat OpenShift Cloud Controller Manager Role",
+									RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4",
+									ServiceAccounts: []string{
+										"openshift-cloud-controller-manager:cloud-controller-manager",
+									},
+								},
+								{
+									OperatorName:       "ClusterIngressOperator",
+									RoleDefinitionName: "Azure RedHat OpenShift Cluster Ingress Operator Role",
+									RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/0336e1d3-7a87-462b-b6db-342b63f7802c",
+									ServiceAccounts: []string{
+										"openshift-ingress-operator:ingress-operator",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			roleSets: map[string]*api.PlatformWorkloadIdentityRoleSet{
+				"4.14": {
+					Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+						OpenShiftVersion: "4.14",
+						PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+							{
+								OperatorName:       "CloudControllerManager",
+								RoleDefinitionName: "Azure RedHat OpenShift Cloud Controller Manager Role",
+								RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4",
+								ServiceAccounts: []string{
+									"openshift-cloud-controller-manager:cloud-controller-manager",
+								},
+							},
+						},
+					},
+				},
+			},
+			wantRoleSets: map[string]*api.PlatformWorkloadIdentityRoleSet{
+				"4.14": {
+					Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+						OpenShiftVersion: "4.14",
+						PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+							{
+								OperatorName:       "CloudControllerManager",
+								RoleDefinitionName: "Azure RedHat OpenShift Cloud Controller Manager Role",
+								RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4",
+								ServiceAccounts: []string{
+									"openshift-cloud-controller-manager:cloud-controller-manager",
+								},
+							},
+						},
+					},
+				},
+				"4.15": {
+					Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+						OpenShiftVersion: "4.15",
+						PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+							{
+								OperatorName:       "CloudControllerManager",
+								RoleDefinitionName: "Azure RedHat OpenShift Cloud Controller Manager Role",
+								RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4",
+								ServiceAccounts: []string{
+									"openshift-cloud-controller-manager:cloud-controller-manager",
+								},
+							},
+							{
+								OperatorName:       "ClusterIngressOperator",
+								RoleDefinitionName: "Azure RedHat OpenShift Cluster Ingress Operator Role",
+								RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/0336e1d3-7a87-462b-b6db-342b63f7802c",
+								ServiceAccounts: []string{
+									"openshift-ingress-operator:ingress-operator",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "remove existing",
+			docsInIterator: []*api.PlatformWorkloadIdentityRoleSetDocument{
+				{
+					PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
+						Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+							OpenShiftVersion: "4.14",
+							PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+								{
+									OperatorName:       "CloudControllerManager",
+									RoleDefinitionName: "Azure RedHat OpenShift Cloud Controller Manager Role",
+									RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4",
+									ServiceAccounts: []string{
+										"openshift-cloud-controller-manager:cloud-controller-manager",
+									},
+								},
+							},
+						},
+						Deleting: true,
+					},
+				},
+				{
+					PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
+						Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+							OpenShiftVersion: "4.15",
+							PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+								{
+									OperatorName:       "CloudControllerManager",
+									RoleDefinitionName: "Azure RedHat OpenShift Cloud Controller Manager Role",
+									RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4",
+									ServiceAccounts: []string{
+										"openshift-cloud-controller-manager:cloud-controller-manager",
+									},
+								},
+								{
+									OperatorName:       "ClusterIngressOperator",
+									RoleDefinitionName: "Azure RedHat OpenShift Cluster Ingress Operator Role",
+									RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/0336e1d3-7a87-462b-b6db-342b63f7802c",
+									ServiceAccounts: []string{
+										"openshift-ingress-operator:ingress-operator",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			roleSets: map[string]*api.PlatformWorkloadIdentityRoleSet{
+				"4.14": {
+					Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+						OpenShiftVersion: "4.14",
+						PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+							{
+								OperatorName:       "CloudControllerManager",
+								RoleDefinitionName: "Azure RedHat OpenShift Cloud Controller Manager Role",
+								RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4",
+								ServiceAccounts: []string{
+									"openshift-cloud-controller-manager:cloud-controller-manager",
+								},
+							},
+						},
+					},
+				},
+				"4.15": {
+					Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+						OpenShiftVersion: "4.15",
+						PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+							{
+								OperatorName:       "CloudControllerManager",
+								RoleDefinitionName: "Azure RedHat OpenShift Cloud Controller Manager Role",
+								RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4",
+								ServiceAccounts: []string{
+									"openshift-cloud-controller-manager:cloud-controller-manager",
+								},
+							},
+							{
+								OperatorName:       "ClusterIngressOperator",
+								RoleDefinitionName: "Azure RedHat OpenShift Cluster Ingress Operator Role",
+								RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/0336e1d3-7a87-462b-b6db-342b63f7802c",
+								ServiceAccounts: []string{
+									"openshift-ingress-operator:ingress-operator",
+								},
+							},
+						},
+					},
+				},
+			},
+			wantRoleSets: map[string]*api.PlatformWorkloadIdentityRoleSet{
+				"4.15": {
+					Properties: api.PlatformWorkloadIdentityRoleSetProperties{
+						OpenShiftVersion: "4.15",
+						PlatformWorkloadIdentityRoles: []api.PlatformWorkloadIdentityRole{
+							{
+								OperatorName:       "CloudControllerManager",
+								RoleDefinitionName: "Azure RedHat OpenShift Cloud Controller Manager Role",
+								RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4",
+								ServiceAccounts: []string{
+									"openshift-cloud-controller-manager:cloud-controller-manager",
+								},
+							},
+							{
+								OperatorName:       "ClusterIngressOperator",
+								RoleDefinitionName: "Azure RedHat OpenShift Cluster Ingress Operator Role",
+								RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/0336e1d3-7a87-462b-b6db-342b63f7802c",
+								ServiceAccounts: []string{
+									"openshift-ingress-operator:ingress-operator",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ticker := time.NewTicker(1)
+			ctx, cancel := context.WithCancel(context.TODO())
+
+			frontend := frontend{
+				availablePlatformWorkloadIdentityRoleSets: tt.roleSets,
+			}
+
+			fakeIterator := cosmosdb.NewFakePlatformWorkloadIdentityRoleSetDocumentIterator(tt.docsInIterator, 0)
+
+			go frontend.updateFromIteratorRoleSets(ctx, ticker, fakeIterator)
+			time.Sleep(time.Second)
+			cancel()
+
+			if !reflect.DeepEqual(frontend.availablePlatformWorkloadIdentityRoleSets, tt.wantRoleSets) {
+				t.Error(cmp.Diff(frontend.availablePlatformWorkloadIdentityRoleSets, tt.wantRoleSets))
 			}
 		})
 	}
