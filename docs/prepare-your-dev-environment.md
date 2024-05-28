@@ -34,7 +34,7 @@ This document goes through the development dependencies one requires in order to
         If you're using podman-machine, you will need to export the socket, for example::
 
             ```bash
-            export ARO_PODMAN_SOCKET=unix:///$HOME/.local/share/containers/podman/machine/qemu/podman.sock
+            export ARO_PODMAN_SOCKET=unix://$HOME/.local/share/containers/podman/machine/qemu/podman.sock
             ```
         
         You will also need to ensure that podman machine has enough resources::
