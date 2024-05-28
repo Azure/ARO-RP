@@ -78,6 +78,7 @@ client: generate
 
 ci-rp: fix-macos-vendor
 <<<<<<< HEAD
+<<<<<<< HEAD
 	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --no-cache=$(NO_CACHE)
 =======
 	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg VERSION=$(VERSION) --target builder --no-cache=$(NO_CACHE) -t aro-builder
@@ -87,6 +88,9 @@ ci-rp: fix-macos-vendor
 =======
 	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg VERSION=$(VERSION) --cache-from aro-builder -t aro-final
 >>>>>>> d726cd951 (quick fix for labeling all images built by ci with aro- prefix and removing --force flag in image pruning line)
+=======
+	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg VERSION=$(VERSION) --no-cache=$(NO_CACHE)
+>>>>>>> 14e0b5fbc (removing builds using --cache-from flag and will cover them with a separate PR and user story, thus rolling back the changes w.r.to to the builds to how they were written earlier)
 
 ci-portal:
 	docker build . -f Dockerfile.ci-portal --build-arg REGISTRY=$(REGISTRY) --no-cache=$(NO_CACHE)
