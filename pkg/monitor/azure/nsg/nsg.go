@@ -75,10 +75,13 @@ func NewMonitor(log *logrus.Entry, oc *api.OpenShiftCluster, e env.Interface, su
 		return &monitoring.NoOpMonitor{Wg: wg}
 	}
 
-	options := arm.ClientOptions{
-		ClientOptions: e.Environment().ClientCertificateCredentialOptions().ClientOptions,
+	clientOptions := arm.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: e.Environment().Cloud,
+		},
 	}
-	client, err := armnetwork.NewSubnetsClient(subscriptionID, token, &options)
+
+	client, err := sdknetwork.NewSubnetsClient(subscriptionID, token, &clientOptions)
 	if err != nil {
 		log.Error("Unable to create the subnet client for NSG monitoring", err)
 		emitter.EmitGauge(MetricFailedNSGMonitorCreation, int64(1), dims)
