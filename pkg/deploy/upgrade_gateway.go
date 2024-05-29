@@ -22,7 +22,7 @@ func (d *deployer) UpgradeGateway(ctx context.Context) error {
 	err := d.gatewayWaitForReadiness(timeoutCtx, gatewayVMSSPrefix+d.version)
 	if err != nil {
 		// delete VMSS since VMSS instances are not healthy
-		if *d.config.Configuration.VMSSCleanupEnabled {
+		if false && *d.config.Configuration.VMSSCleanupEnabled {
 			d.vmssCleaner.RemoveFailedNewScaleset(ctx, d.config.GatewayResourceGroupName, gatewayVMSSPrefix+d.version)
 		}
 		return err
