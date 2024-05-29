@@ -36,28 +36,28 @@ func (c *cleaner) RemoveFailedNewScaleset(ctx context.Context, rgName, vmssToDel
 		return false
 	}
 
-	switch len(scalesets) {
-	case 0:
-		// If there are no scalesets, can retry again without worrying about deletion
-		return true
-	case 1:
-		// If there is a single scaleset, can retry iff the name differs from vmssToDelete
-		return *scalesets[0].Name != vmssToDelete
-	}
+	// switch len(scalesets) {
+	// case 0:
+	// 	// If there are no scalesets, can retry again without worrying about deletion
+	// 	return true
+	// case 1:
+	// 	// If there is a single scaleset, can retry iff the name differs from vmssToDelete
+	// 	return *scalesets[0].Name != vmssToDelete
+	// }
 
-	for _, vmss := range scalesets {
-		if *vmss.Name != vmssToDelete {
-			// If it's not the newly deployed VMSS, skip it.
-			continue
-		}
+	// for _, vmss := range scalesets {
+	// 	if *vmss.Name != vmssToDelete {
+	// 		// If it's not the newly deployed VMSS, skip it.
+	// 		continue
+	// 	}
 
-		c.log.Printf("deleting failed or unhealthy scaleset %s", vmssToDelete)
-		err = c.vmss.DeleteAndWait(ctx, rgName, vmssToDelete)
-		if err != nil {
-			c.log.Warn(err)
-			return false // If deletion failed, vmssToDelete still exists. Don't retry.
-		}
-	}
+	// 	c.log.Printf("deleting failed or unhealthy scaleset %s", vmssToDelete)
+	// 	err = c.vmss.DeleteAndWait(ctx, rgName, vmssToDelete)
+	// 	if err != nil {
+	// 		c.log.Warn(err)
+	// 		return false // If deletion failed, vmssToDelete still exists. Don't retry.
+	// 	}
+	// }
 	// If vmssToDelete was found and deleted successfully, deployment can be retried
 	// If it was not returned from List, assume it does not exist and that deployment can be retried.
 	return true
