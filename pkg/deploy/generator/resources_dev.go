@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-12-01/compute"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -139,6 +139,9 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 								},
 							},
 						},
+					},
+					SecurityProfile: &mgmtcompute.SecurityProfile{
+						SecurityType: mgmtcompute.SecurityTypesTrustedLaunch,
 					},
 					StorageProfile: &mgmtcompute.VirtualMachineScaleSetStorageProfile{
 						ImageReference: &mgmtcompute.ImageReference{
@@ -386,7 +389,7 @@ func (g *generator) devDiskEncryptionKey() *arm.Resource {
 func (g *generator) devDiskEncryptionSet() *arm.Resource {
 	diskEncryptionSet := &mgmtcompute.DiskEncryptionSet{
 		EncryptionSetProperties: &mgmtcompute.EncryptionSetProperties{
-			ActiveKey: &mgmtcompute.KeyVaultAndKeyReference{
+			ActiveKey: &mgmtcompute.KeyForDiskEncryptionSet{
 				KeyURL: to.StringPtr(fmt.Sprintf("[reference(resourceId('Microsoft.KeyVault/vaults/keys', %s, %s), '%s', 'Full').properties.keyUriWithVersion]", sharedKeyVaultName, sharedDiskEncryptionKeyName, azureclient.APIVersion("Microsoft.KeyVault"))),
 				SourceVault: &mgmtcompute.SourceVault{
 					ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.KeyVault/vaults', %s)]", sharedKeyVaultName)),
@@ -397,7 +400,7 @@ func (g *generator) devDiskEncryptionSet() *arm.Resource {
 		Name:     to.StringPtr(fmt.Sprintf("[%s]", sharedDiskEncryptionSetName)),
 		Type:     to.StringPtr("Microsoft.Compute/diskEncryptionSets"),
 		Location: to.StringPtr("[resourceGroup().location]"),
-		Identity: &mgmtcompute.EncryptionSetIdentity{Type: mgmtcompute.SystemAssigned},
+		Identity: &mgmtcompute.EncryptionSetIdentity{Type: mgmtcompute.DiskEncryptionSetIdentityType(mgmtcompute.ResourceIdentityTypeSystemAssigned)},
 	}
 
 	return &arm.Resource{
