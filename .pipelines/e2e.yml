@@ -108,19 +108,18 @@ jobs:
         artifact: must-gather
         displayName: Append must-gather to Pipeline
         condition: failed()
-
-      - script: |
-          export CI=true
-          . ./hack/e2e/run-rp-and-e2e.sh
-
-          delete_e2e_cluster
-          kill_rp
-          kill_selenium
-          kill_podman
-          kill_vpn
-        displayName: Cleanup
-        condition: always()
-        target: container
+#comment out delete for debug only
+      # - script: |
+      #     export CI=true
+      #     . ./hack/e2e/run-rp-and-e2e.sh
+      #     delete_e2e_cluster
+      #     kill_rp
+      #     kill_selenium
+      #     kill_podman
+      #     kill_vpn
+      #   displayName: Cleanup
+      #   condition: always()
+      #   target: container
       - script: |
           export CI=true
           . ./hack/e2e/run-rp-and-e2e.sh

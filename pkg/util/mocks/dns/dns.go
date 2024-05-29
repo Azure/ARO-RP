@@ -8,9 +8,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	gomock "github.com/golang/mock/gomock"
-
 	api "github.com/Azure/ARO-RP/pkg/api"
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockManager is a mock of Manager interface.
