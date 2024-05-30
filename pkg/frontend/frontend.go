@@ -297,6 +297,10 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 			r.Get("/", f.getAdminOpenShiftVersions)
 			r.Put("/", f.putAdminOpenShiftVersion)
 		})
+		r.Route("/platformworkloadidentityrolesets", func(r chi.Router) {
+			r.Get("/", f.getAdminPlatformWorkloadIdentityRoleSets)
+			r.Put("/", f.putAdminPlatformWorkloadIdentityRoleSet)
+		})
 		r.Get("/supportedvmsizes", f.supportedvmsizes)
 
 		r.Route("/subscriptions/{subscriptionId}", func(r chi.Router) {
