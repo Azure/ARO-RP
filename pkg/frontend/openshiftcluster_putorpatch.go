@@ -311,9 +311,7 @@ func validateIdentityUrl(cluster *api.OpenShiftCluster, identityURL string, isCr
 		return nil
 	}
 
-	if cluster.Identity != nil {
-		cluster.Identity.IdentityURL = identityURL
-	}
+	cluster.Identity.IdentityURL = identityURL
 
 	return nil
 }
