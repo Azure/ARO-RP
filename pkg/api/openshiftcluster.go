@@ -777,7 +777,7 @@ type PlatformWorkloadIdentityProfile struct {
 	PlatformWorkloadIdentities []PlatformWorkloadIdentity `json:"platformWorkloadIdentities,omitempty"`
 }
 
-// UpgradeableTo stores a single OpenShift version a workload idetntiy cluster can be upgraded to
+// UpgradeableTo stores a single OpenShift version a workload identity cluster can be upgraded to
 type UpgradeableTo string
 
 // PlatformWorkloadIdentity stores information representing a single workload identity.

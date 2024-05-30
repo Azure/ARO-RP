@@ -1412,7 +1412,7 @@ class PlatformWorkloadIdentity(msrest.serialization.Model):
 class PlatformWorkloadIdentityProfile(msrest.serialization.Model):
     """PlatformWorkloadIdentityProfile encapsulates all information that is specific to workload identity clusters.
 
-    :ivar upgradeable_to: UpgradeableTo stores a single OpenShift version a workload idetntiy
+    :ivar upgradeable_to: UpgradeableTo stores a single OpenShift version a workload identity
      cluster can be upgraded to.
     :vartype upgradeable_to: str
     :ivar platform_workload_identities:
@@ -1433,7 +1433,7 @@ class PlatformWorkloadIdentityProfile(msrest.serialization.Model):
         **kwargs
     ):
         """
-        :keyword upgradeable_to: UpgradeableTo stores a single OpenShift version a workload idetntiy
+        :keyword upgradeable_to: UpgradeableTo stores a single OpenShift version a workload identity
          cluster can be upgraded to.
         :paramtype upgradeable_to: str
         :keyword platform_workload_identities:

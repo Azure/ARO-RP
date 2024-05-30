@@ -1164,7 +1164,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 
 func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testing.T) {
 	validUpgradeableToValue := UpgradeableTo("4.14.29")
-	invalidUpgradeableToValue := UpgradeableTo("16.107.90")
+	invalidUpgradeableToValue := UpgradeableTo("16.107.invalid")
 
 	createTests := []*validateTest{
 		{
@@ -1345,7 +1345,7 @@ func TestOpenShiftClusterStaticValidatePlatformWorkloadIdentityProfile(t *testin
 					UpgradeableTo: &invalidUpgradeableToValue,
 				}
 			},
-			wantErr: `400: InvalidParameter: properties.platformWorkloadIdentityProfile.UpgradeableTo[16.107.90]: UpgradeableTo must be a valid OpenShift version.`,
+			wantErr: `400: InvalidParameter: properties.platformWorkloadIdentityProfile.UpgradeableTo[16.107.invalid]: UpgradeableTo must be a valid OpenShift version in the format 'x.y.z'.`,
 		},
 	}
 

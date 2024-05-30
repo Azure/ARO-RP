@@ -8,11 +8,11 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 
 	azcorearm "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/coreos/go-semver/semver"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/util/immutable"
@@ -445,9 +445,9 @@ func (sv openShiftClusterStaticValidator) validatePlatformWorkloadIdentityProfil
 	}
 
 	if pwip.UpgradeableTo != nil {
-		matches, err := regexp.MatchString(`^4\.[0-9]{2}\.`, string(*pwip.UpgradeableTo))
-		if !matches || err != nil {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.UpgradeableTo[%v]", path, *pwip.UpgradeableTo), "UpgradeableTo must be a valid OpenShift version.")
+		_, err := semver.NewVersion(string(*pwip.UpgradeableTo))
+		if err != nil {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.UpgradeableTo[%v]", path, *pwip.UpgradeableTo), "UpgradeableTo must be a valid OpenShift version in the format 'x.y.z'.")
 		}
 	}
 
