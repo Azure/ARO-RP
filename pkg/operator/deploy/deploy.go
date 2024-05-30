@@ -57,7 +57,7 @@ type Operator interface {
 	Restart(context.Context, []string) error
 	IsRunningDesiredVersion(context.Context) (bool, error)
 	RenewMDSDCertificate(context.Context) error
-	EnsureUpgradeAnnotations(context.Context) error
+	EnsureUpgradeAnnotation(context.Context) error
 }
 
 type operator struct {
@@ -436,7 +436,7 @@ func (o *operator) RenewMDSDCertificate(ctx context.Context) error {
 	return nil
 }
 
-func (o *operator) EnsureUpgradeAnnotations(ctx context.Context) error {
+func (o *operator) EnsureUpgradeAnnotation(ctx context.Context) error {
 	if o.oc.Properties.PlatformWorkloadIdentityProfile == nil ||
 		o.oc.Properties.ServicePrincipalProfile != nil {
 		return nil

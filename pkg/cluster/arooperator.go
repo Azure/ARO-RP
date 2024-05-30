@@ -65,8 +65,8 @@ func (m *manager) ensureCredentialsRequest(ctx context.Context) error {
 	return m.aroOperatorDeployer.CreateOrUpdateCredentialsRequest(ctx)
 }
 
-func (m *manager) ensureUpgradeAnnotations(ctx context.Context) error {
-	return m.aroOperatorDeployer.EnsureUpgradeAnnotations(ctx)
+func (m *manager) ensureUpgradeAnnotation(ctx context.Context) error {
+	return m.aroOperatorDeployer.EnsureUpgradeAnnotation(ctx)
 }
 
 func (m *manager) renewMDSDCertificate(ctx context.Context) error {

@@ -62,18 +62,18 @@ func (mr *MockOperatorMockRecorder) CreateOrUpdateCredentialsRequest(arg0 interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateCredentialsRequest", reflect.TypeOf((*MockOperator)(nil).CreateOrUpdateCredentialsRequest), arg0)
 }
 
-// EnsureUpgradeAnnotations mocks base method.
-func (m *MockOperator) EnsureUpgradeAnnotations(arg0 context.Context) error {
+// EnsureUpgradeAnnotation mocks base method.
+func (m *MockOperator) EnsureUpgradeAnnotation(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureUpgradeAnnotations", arg0)
+	ret := m.ctrl.Call(m, "EnsureUpgradeAnnotation", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// EnsureUpgradeAnnotations indicates an expected call of EnsureUpgradeAnnotations.
-func (mr *MockOperatorMockRecorder) EnsureUpgradeAnnotations(arg0 interface{}) *gomock.Call {
+// EnsureUpgradeAnnotation indicates an expected call of EnsureUpgradeAnnotation.
+func (mr *MockOperatorMockRecorder) EnsureUpgradeAnnotation(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureUpgradeAnnotations", reflect.TypeOf((*MockOperator)(nil).EnsureUpgradeAnnotations), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureUpgradeAnnotation", reflect.TypeOf((*MockOperator)(nil).EnsureUpgradeAnnotation), arg0)
 }
 
 // IsReady mocks base method.

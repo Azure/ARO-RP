@@ -464,7 +464,7 @@ func TestCheckPodImageVersion(t *testing.T) {
 	}
 }
 
-func TestEnsureUpgradeAnnotations(t *testing.T) {
+func TestTestEnsureUpgradeAnnotation(t *testing.T) {
 	UpgradeableTo1 := api.UpgradeableTo("4.14.59")
 
 	for _, tt := range []struct {
@@ -570,7 +570,7 @@ func TestEnsureUpgradeAnnotations(t *testing.T) {
 				operatorcli: operatorfake.NewSimpleClientset(cloudcredentialobject),
 			}
 
-			err := o.EnsureUpgradeAnnotations(ctx)
+			err := o.EnsureUpgradeAnnotation(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 			result, _ := o.operatorcli.OperatorV1().CloudCredentials().List(ctx, metav1.ListOptions{})
 			for _, v := range result.Items {
