@@ -1,10 +1,9 @@
 package admin
 
+import "github.com/Azure/ARO-RP/pkg/api"
+
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
-
-/*
-TODO: Uncomment once API endpoints have been implemented and this code is being used.
 
 type platformWorkloadIdentityRoleSetConverter struct{}
 
@@ -21,12 +20,19 @@ func (c platformWorkloadIdentityRoleSetConverter) ToExternal(s *api.PlatformWork
 		},
 	}
 
-	for i, r := range s.Properties.PlatformWorkloadIdentityRoles {
-		out.Properties.PlatformWorkloadIdentityRoles[i].OperatorName = r.OperatorName
-		out.Properties.PlatformWorkloadIdentityRoles[i].RoleDefinitionName = r.RoleDefinitionName
-		out.Properties.PlatformWorkloadIdentityRoles[i].RoleDefinitionID = r.RoleDefinitionID
-		out.Properties.PlatformWorkloadIdentityRoles[i].ServiceAccounts = make([]string, 0, len(r.ServiceAccounts))
-		out.Properties.PlatformWorkloadIdentityRoles[i].ServiceAccounts = append(out.Properties.PlatformWorkloadIdentityRoles[i].ServiceAccounts, r.ServiceAccounts...)
+	for _, r := range s.Properties.PlatformWorkloadIdentityRoles {
+		role := PlatformWorkloadIdentityRole{
+			OperatorName:       r.OperatorName,
+			RoleDefinitionName: r.RoleDefinitionName,
+			RoleDefinitionID:   r.RoleDefinitionID,
+			ServiceAccounts:    make([]string, 0, len(r.ServiceAccounts)),
+		}
+
+		for _, sa := range r.ServiceAccounts {
+			role.ServiceAccounts = append(role.ServiceAccounts, sa)
+		}
+
+		out.Properties.PlatformWorkloadIdentityRoles = append(out.Properties.PlatformWorkloadIdentityRoles, role)
 	}
 
 	return out
@@ -56,12 +62,18 @@ func (c platformWorkloadIdentityRoleSetConverter) ToInternal(_new interface{}, o
 	out.Properties.OpenShiftVersion = new.Properties.OpenShiftVersion
 	out.Properties.PlatformWorkloadIdentityRoles = make([]api.PlatformWorkloadIdentityRole, 0, len(new.Properties.PlatformWorkloadIdentityRoles))
 
-	for i, r := range new.Properties.PlatformWorkloadIdentityRoles {
-		out.Properties.PlatformWorkloadIdentityRoles[i].OperatorName = r.OperatorName
-		out.Properties.PlatformWorkloadIdentityRoles[i].RoleDefinitionName = r.RoleDefinitionName
-		out.Properties.PlatformWorkloadIdentityRoles[i].RoleDefinitionID = r.RoleDefinitionID
-		out.Properties.PlatformWorkloadIdentityRoles[i].ServiceAccounts = make([]string, 0, len(r.ServiceAccounts))
-		out.Properties.PlatformWorkloadIdentityRoles[i].ServiceAccounts = append(out.Properties.PlatformWorkloadIdentityRoles[i].ServiceAccounts, r.ServiceAccounts...)
+	for _, r := range new.Properties.PlatformWorkloadIdentityRoles {
+		role := api.PlatformWorkloadIdentityRole{
+			OperatorName:       r.OperatorName,
+			RoleDefinitionName: r.RoleDefinitionName,
+			RoleDefinitionID:   r.RoleDefinitionID,
+			ServiceAccounts:    make([]string, 0, len(r.ServiceAccounts)),
+		}
+
+		for _, sa := range r.ServiceAccounts {
+			role.ServiceAccounts = append(role.ServiceAccounts, sa)
+		}
+
+		out.Properties.PlatformWorkloadIdentityRoles = append(out.Properties.PlatformWorkloadIdentityRoles, role)
 	}
 }
-*/
