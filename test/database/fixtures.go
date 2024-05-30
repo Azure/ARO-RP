@@ -164,7 +164,7 @@ func (f *Fixture) AddOpenShiftVersionDocuments(docs ...*api.OpenShiftVersionDocu
 	}
 }
 
-func (f *Fixture) AddPlatformWorkloadIdentityRoleSets(docs ...*api.PlatformWorkloadIdentityRoleSetDocument) {
+func (f *Fixture) AddPlatformWorkloadIdentityRoleSetDocuments(docs ...*api.PlatformWorkloadIdentityRoleSetDocument) {
 	for _, doc := range docs {
 		docCopy, err := deepCopy(doc)
 		if err != nil {
