@@ -14,7 +14,6 @@ import (
 	azcorepolicy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	sdkcosmos "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
-
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 

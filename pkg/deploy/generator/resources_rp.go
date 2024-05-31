@@ -874,9 +874,30 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 	if g.production {
 		rs = append(rs, g.database("'ARO'", true)...)
 		rs = append(rs, g.rpCosmosDBAlert(10, 90, 3, "rp-cosmosdb-alert", "PT5M", "PT1H"))
+		rs = append(rs, g.CosmosDBDataContributorRoleAssignment("rp"))
+		rs = append(rs, g.CosmosDBDataContributorRoleAssignment("gateway"))
 	}
 
 	return rs
+}
+
+func (g *generator) CosmosDBDataContributorRoleAssignment(component string) *arm.Resource {
+	return &arm.Resource{
+		Resource: mgmtauthorization.RoleAssignment{
+			Name: to.StringPtr("[concat(parameters('databaseAccountName'), '/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('" + component + "ServicePrincipalId'), 'DocumentDB Data Contributor'))]"),
+			Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments"),
+			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+				Scope:            to.StringPtr("[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"),
+				RoleDefinitionID: to.StringPtr("[concat(resourceId('Microsoft.DocumentDB/databaseAccounts/', parameters('databaseAccountName')), '/sqlRoleDefinitions/" + rbac.RoleDocumentDBDataContributor + "')]"),
+				PrincipalID:      to.StringPtr("[parameters('" + component + "ServicePrincipalId')]"),
+				PrincipalType:    mgmtauthorization.ServicePrincipal,
+			},
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
+		DependsOn: []string{
+			"[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
+		},
+	}
 }
 
 func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Resource {

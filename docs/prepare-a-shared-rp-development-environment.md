@@ -1,8 +1,8 @@
 # Prepare a shared RP development environment
 
 Follow these steps to build a shared RP development environment and secrets
-file.  A single RP development environment can be shared across multiple
-developers and/or CI flows.  It may include multiple resource groups in multiple
+file. A single RP development environment can be shared across multiple
+developers and/or CI flows. It may include multiple resource groups in multiple
 locations.
 
 ## Prerequisites
@@ -12,7 +12,7 @@ locations.
    applications.
 
 1. You will need a publicly resolvable DNS Zone resource in your Azure
-   subscription.  Set PARENT_DOMAIN_NAME and PARENT_DOMAIN_RESOURCEGROUP to the name and
+   subscription. Set PARENT_DOMAIN_NAME and PARENT_DOMAIN_RESOURCEGROUP to the name and
    resource group of the DNS Zone resource:
 
    ```bash
@@ -21,9 +21,9 @@ locations.
    ```
 
 1. You will need a storage account in your Azure subscription in which to store
-   shared development environment secrets.   The storage account must contain a
-   private container named `secrets`.  All team members must have `Storage Blob
-   Data Reader` or `Storage Blob Data Contributor` role on the storage account.
+   shared development environment secrets. The storage account must contain a
+   private container named `secrets`. All team members must have `Storage Blob
+Data Reader` or `Storage Blob Data Contributor` role on the storage account.
    Set SECRET_SA_ACCOUNT_NAME to the name of the storage account:
 
    ```bash
@@ -32,7 +32,7 @@ locations.
 
 1. You will need an AAD object (this could be your AAD user, or an AAD group of
    which you are a member) which will be able to administer certificates in the
-   development environment key vault(s).  Set ADMIN_OBJECT_ID to the object ID.
+   development environment key vault(s). Set ADMIN_OBJECT_ID to the object ID.
 
    ```bash
    ADMIN_OBJECT_ID="$(az ad group show -g 'aro-engineering' --query id -o tsv)"
@@ -73,12 +73,11 @@ locations.
    mkdir -p secrets
    ```
 
-
 ## AAD applications
 
 1. Create an AAD application which will fake up the ARM layer:
 
-   This application requires client certificate authentication to be enabled.  A
+   This application requires client certificate authentication to be enabled. A
    suitable key/certificate file can be generated using the following helper
    utility:
 
@@ -101,11 +100,11 @@ locations.
 
    Later this application will be granted:
 
-   * `User Access Administrator` on your subscription.
+   - `User Access Administrator` on your subscription.
 
 1. Create an AAD application which will fake up the first party application.
 
-   This application requires client certificate authentication to be enabled.  A
+   This application requires client certificate authentication to be enabled. A
    suitable key/certificate file can be generated using the following helper
    utility:
 
@@ -130,9 +129,9 @@ locations.
 
    Later this application will be granted:
 
-   * `ARO v4 FP Subscription` on your subscription.
-   * `DNS Zone Contributor` on the DNS zone in RESOURCEGROUP.
-   * `Network Contributor` on RESOURCEGROUP.
+   - `ARO v4 FP Subscription` on your subscription.
+   - `DNS Zone Contributor` on the DNS zone in RESOURCEGROUP.
+   - `Network Contributor` on RESOURCEGROUP.
 
 1. Create an AAD application which will fake up the RP identity.
 
@@ -150,9 +149,9 @@ locations.
 
    Later this application will be granted:
 
-   * `Reader` on RESOURCEGROUP.
-   * `Secrets / Get` on the key vault in RESOURCEGROUP.
-   * `DocumentDB Account Contributor` on the CosmosDB resource in RESOURCEGROUP.
+   - `Reader` on RESOURCEGROUP.
+   - `Secrets / Get` on the key vault in RESOURCEGROUP.
+   - `DocumentDB Account Contributor` on the CosmosDB resource in RESOURCEGROUP.
 
 1. Create an AAD application which will fake up the gateway identity.
 
@@ -184,21 +183,21 @@ locations.
 
    Later this application will be granted:
 
-   * `Contributor`  on your subscription.
-   * `User Access Administrator` on your subscription.
+   - `Contributor` on your subscription.
+   - `User Access Administrator` on your subscription.
 
    You must also manually grant this application the `Microsoft.Graph/Application.ReadWrite.OwnedBy` permission, which requires admin access, in order for AAD applications to be created/deleted on a per-cluster basis.
 
-   * Go into the Azure Portal
-   * Go to Azure Active Directory
-   * Navigate to the `aro-v4-tooling-shared` app registration page
-   * Click 'API permissions' in the left side pane
-   * Click 'Add a permission'.
-   * Click 'Microsoft Graph'
-   * Select 'Application permissions'
-   * Search for 'Application' and select `Application.ReadWrite.OwnedBy`
-   * Click 'Add permissions'
-   * This request will need to be approved by a tenant administrator. If you are one, you can click the `Grant admin consent for <name>` button to the right of the `Add a permission` button on the app page
+   - Go into the Azure Portal
+   - Go to Azure Active Directory
+   - Navigate to the `aro-v4-tooling-shared` app registration page
+   - Click 'API permissions' in the left side pane
+   - Click 'Add a permission'.
+   - Click 'Microsoft Graph'
+   - Select 'Application permissions'
+   - Search for 'Application' and select `Application.ReadWrite.OwnedBy`
+   - Click 'Add permissions'
+   - This request will need to be approved by a tenant administrator. If you are one, you can click the `Grant admin consent for <name>` button to the right of the `Add a permission` button on the app page
 
 1. Set up the RP role definitions and subscription role assignments in your Azure subscription. The usage of "uuidgen" for fpRoleDefinitionId is simply there to keep from interfering with any linked resources and to create the role net new. This mimics the RBAC that ARM sets up. With at least `User Access Administrator` permissions on your subscription, do:
 
@@ -217,7 +216,7 @@ locations.
 
 1. Create an AAD application which will fake up the portal client.
 
-   This application requires client certificate authentication to be enabled.  A
+   This application requires client certificate authentication to be enabled. A
    suitable key/certificate file can be generated using the following helper
    utility:
 
@@ -240,7 +239,7 @@ locations.
 
 ## Certificates
 
-1. Create the VPN CA key/certificate.  A suitable key/certificate file can be
+1. Create the VPN CA key/certificate. A suitable key/certificate file can be
    generated using the following helper utility:
 
    ```bash
@@ -248,7 +247,7 @@ locations.
    mv vpn-ca.* secrets
    ```
 
-1. Create the VPN client key/certificate.  A suitable key/certificate file can be
+1. Create the VPN client key/certificate. A suitable key/certificate file can be
    generated using the following helper utility:
 
    ```bash
@@ -256,7 +255,7 @@ locations.
    mv vpn-client.* secrets
    ```
 
-1. Create the proxy serving key/certificate.  A suitable key/certificate file
+1. Create the proxy serving key/certificate. A suitable key/certificate file
    can be generated using the following helper utility:
 
    ```bash
@@ -264,7 +263,7 @@ locations.
    mv proxy.* secrets
    ```
 
-1. Create the proxy client key/certificate.  A suitable key/certificate file can
+1. Create the proxy client key/certificate. A suitable key/certificate file can
    be generated using the following helper utility:
 
    ```bash
@@ -272,14 +271,14 @@ locations.
    mv proxy-client.* secrets
    ```
 
-1. Create the proxy ssh key/certificate.  A suitable key/certificate file can
+1. Create the proxy ssh key/certificate. A suitable key/certificate file can
    be generated using the following helper utility:
 
    ```bash
    ssh-keygen -f secrets/proxy_id_rsa -N ''
    ```
 
-1. Create an RP serving key/certificate.  A suitable key/certificate file
+1. Create an RP serving key/certificate. A suitable key/certificate file
    can be generated using the following helper utility:
 
    ```bash
@@ -287,7 +286,7 @@ locations.
    mv localhost.* secrets
    ```
 
-1. Create the dev CA key/certificate.  A suitable key/certificate file can be
+1. Create the dev CA key/certificate. A suitable key/certificate file can be
    generated using the following helper utility:
 
    ```bash
@@ -295,7 +294,7 @@ locations.
    mv dev-ca.* secrets
    ```
 
-1. Create the dev client key/certificate.  A suitable key/certificate file can
+1. Create the dev client key/certificate. A suitable key/certificate file can
    be generated using the following helper utility:
 
    ```bash
@@ -322,13 +321,12 @@ import_certs_secrets
 
 5. Next, we need to update certificates owned by FP Service Principal. Current configuration in DEV and INT is listed below. You can get the `AAD APP ID` from the `secrets/env` file
 
-Variable                 | Certificate Client | Subscription Type  | AAD App Name | Key Vault Name     |
-| ---                    | ---                | ---                | ---                |  ---                |
-| AZURE_FP_CLIENT_ID     | firstparty         | DEV                | aro-v4-fp-shared-dev      |  v4-eastus-dev-svc      |
-| AZURE_ARM_CLIENT_ID    | arm                | DEV                | aro-v4-arm-shared-dev     |  v4-eastus-dev-svc      |
-| AZURE_PORTAL_CLIENT_ID | portal-client      | DEV                | aro-v4-portal-shared-dev  |  v4-eastus-dev-svc      |
-| AZURE_FP_CLIENT_ID     | firstparty         | INT                | aro-int-sp            |  aro-int-eastus-svc |
-
+| Variable               | Certificate Client | Subscription Type | AAD App Name             | Key Vault Name     |
+| ---------------------- | ------------------ | ----------------- | ------------------------ | ------------------ |
+| AZURE_FP_CLIENT_ID     | firstparty         | DEV               | aro-v4-fp-shared-dev     | v4-eastus-dev-svc  |
+| AZURE_ARM_CLIENT_ID    | arm                | DEV               | aro-v4-arm-shared-dev    | v4-eastus-dev-svc  |
+| AZURE_PORTAL_CLIENT_ID | portal-client      | DEV               | aro-v4-portal-shared-dev | v4-eastus-dev-svc  |
+| AZURE_FP_CLIENT_ID     | firstparty         | INT               | aro-int-sp               | aro-int-eastus-svc |
 
 ```bash
 # Import firstparty.pem to keyvault v4-eastus-svc
@@ -351,18 +349,18 @@ az ad app credential reset \
 5. The RP makes API calls to kubernetes cluster via a proxy VMSS agent. For the agent to get the updated certificates, this vm needs to be deleted & redeployed. Proxy VM is currently deployed by the `deploy_env_dev` function in `deploy-shared-env.sh`. It makes use of `env-development.json`
 
 6. Run `[rharosecretsdev|e2earosecrets] make secrets-update` to upload it to your
-storage account so other people on your team can access it via `make secrets`
+   storage account so other people on your team can access it via `make secrets`
 
 # Environment file
 
-1. Choose the resource group prefix.  The resource group location will be
+1. Choose the resource group prefix. The resource group location will be
    The resource group location will be appended to the prefix to make the resource group name. If a v4-prefixed environment exists in the subscription already, use a unique prefix.
 
    ```bash
    RESOURCEGROUP_PREFIX=v4
    ```
 
-1. Choose the proxy domain name label.  This final proxy hostname will be of the
+1. Choose the proxy domain name label. This final proxy hostname will be of the
    form `vm0.$PROXY_DOMAIN_NAME_LABEL.$LOCATION.cloudapp.azure.com`.
 
    ```bash
@@ -378,7 +376,6 @@ storage account so other people on your team can access it via `make secrets`
    export AZURE_ARM_CLIENT_ID='$AZURE_ARM_CLIENT_ID'
    export AZURE_FP_CLIENT_ID='$AZURE_FP_CLIENT_ID'
    export AZURE_FP_SERVICE_PRINCIPAL_ID='$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].id' -o tsv)'
-   export AZURE_DBTOKEN_CLIENT_ID='$AZURE_DBTOKEN_CLIENT_ID'
    export AZURE_PORTAL_CLIENT_ID='$AZURE_PORTAL_CLIENT_ID'
    export AZURE_PORTAL_ACCESS_GROUP_IDS='$ADMIN_OBJECT_ID'
    export AZURE_PORTAL_ELEVATED_GROUP_IDS='$ADMIN_OBJECT_ID'
@@ -414,7 +411,7 @@ storage account so other people on your team can access it via `make secrets`.
 Look at the [helper file](../hack/devtools/deploy-shared-env.sh) to understand
 each of the bash functions below.
 
-1. Copy, edit (if necessary) and source your environment file.  The required
+1. Copy, edit (if necessary) and source your environment file. The required
    environment variable configuration is documented immediately below:
 
    ```bash
@@ -423,7 +420,7 @@ each of the bash functions below.
    . ./env
    ```
 
-   * LOCATION: Location of the shared RP development environment (default:
+   - LOCATION: Location of the shared RP development environment (default:
      `eastus`).
 
 1. Create the resource group and deploy the RP resources:
@@ -446,7 +443,7 @@ each of the bash functions below.
 
    If you encounter a "VirtualNetworkGatewayCannotUseStandardPublicIP" error
    when running the `deploy_env_dev` command, you have to override two
-   additional parameters.  Run this command instead:
+   additional parameters. Run this command instead:
 
    ```bash
    deploy_env_dev_override
@@ -472,10 +469,10 @@ each of the bash functions below.
    import_certs_secrets
    ```
 
-   > __NOTE:__: in production, three additional keys/certificates (rp-mdm, rp-mdsd, and
-   cluster-mdsd) are also required in the $KEYVAULT_PREFIX-svc key vault.  These
-   are client certificates for RP metric and log forwarding (respectively) to
-   Geneva.
+   > **NOTE:**: in production, three additional keys/certificates (rp-mdm, rp-mdsd, and
+   > cluster-mdsd) are also required in the $KEYVAULT_PREFIX-svc key vault. These
+   > are client certificates for RP metric and log forwarding (respectively) to
+   > Geneva.
 
    If you need them in development:
 
@@ -504,15 +501,15 @@ each of the bash functions below.
         --file secrets/cluster-logging-int.pem
    ```
 
-   > __NOTE:__: in development, if you don't have valid certs for these, you can just
-   upload `localhost.pem` as a placeholder for each of these. This will avoid an
-   error stemming from them not existing, but it will result in logging pods
-   crash looping in any clusters you make. Additionally, no gateway resources are
-   created in development so you should not need to execute the cert import statement
-   for the "-gwy" keyvault.
+   > **NOTE:**: in development, if you don't have valid certs for these, you can just
+   > upload `localhost.pem` as a placeholder for each of these. This will avoid an
+   > error stemming from them not existing, but it will result in logging pods
+   > crash looping in any clusters you make. Additionally, no gateway resources are
+   > created in development so you should not need to execute the cert import statement
+   > for the "-gwy" keyvault.
 
 1. In pre-production (int, e2e) certain certificates are provisioned via keyvault
-integration. These should be rotated and generated in the keyvault itself:
+   integration. These should be rotated and generated in the keyvault itself:
 
 ```
 Vault Name: "$KEYVAULT_PREFIX-svc"
@@ -536,9 +533,7 @@ Development value: secrets/cluster-logging-int.pem
    vpn_configuration
    ```
 
-
 ## Append Resource Group to Subscription Cleaner DenyList
 
-* We have subscription pruning that takes place routinely and need to add our resource group for the shared rp environment to the `denylist` of the cleaner:
-   * [https://github.com/Azure/ARO-RP/blob/e918d1b87be53a3b3cdf18b674768a6480fb56b8/hack/clean/clean.go#L29](https://github.com/Azure/ARO-RP/blob/e918d1b87be53a3b3cdf18b674768a6480fb56b8/hack/clean/clean.go#L29)
-
+- We have subscription pruning that takes place routinely and need to add our resource group for the shared rp environment to the `denylist` of the cleaner:
+  - [https://github.com/Azure/ARO-RP/blob/e918d1b87be53a3b3cdf18b674768a6480fb56b8/hack/clean/clean.go#L29](https://github.com/Azure/ARO-RP/blob/e918d1b87be53a3b3cdf18b674768a6480fb56b8/hack/clean/clean.go#L29)
