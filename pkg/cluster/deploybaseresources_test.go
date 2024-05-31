@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	azstorage "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
@@ -25,11 +27,14 @@ import (
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	mock_azblob "github.com/Azure/ARO-RP/pkg/util/mocks/azblob"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
+	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	uuidfake "github.com/Azure/ARO-RP/pkg/util/uuid/fake"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -1391,6 +1396,199 @@ func TestNewPublicLoadBalancer(t *testing.T) {
 			tt.m.newPublicLoadBalancer(ctx, &resources)
 
 			assert.Equal(t, tt.expectedARMResources, resources)
+		})
+	}
+}
+
+func TestCreateOIDC(t *testing.T) {
+	ctx := context.Background()
+	clusterID := "test-cluster"
+	resourceGroupName := "fakeResourceGroup"
+	oidcStorageAccountName := "eastusoic"
+	afdEndpoint := "fake.oic.aro.test.net"
+	storageEndpointForDev := oidcStorageAccountName + ".blob." + azureclient.PublicCloud.StorageEndpointSuffix
+	resourceID := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName"
+	prodOIDCIssuer := fmt.Sprintf("https://%s/%s%s", afdEndpoint, env.OIDCBlobContainerPrefix, clusterID)
+	devOIDCIssuer := fmt.Sprintf("https://%s/%s%s", storageEndpointForDev, env.OIDCBlobContainerPrefix, clusterID)
+
+	for _, tt := range []struct {
+		name                              string
+		oc                                *api.OpenShiftClusterDocument
+		mocks                             func(*mock_azblob.MockManager, *mock_env.MockInterface, *mock_azblob.MockAZBlobClient)
+		wantedOIDCIssuer                  string
+		wantErr                           string
+		wantBoundServiceAccountSigningKey bool
+	}{
+		// TODO: Uncomment the test case after testing the PR on all the environments
+		// {
+		// 	name: "Success - Exit createOIDC for non MIWI clusters",
+		// 	oc: &api.OpenShiftClusterDocument{
+		// 		Key: strings.ToLower(resourceID),
+		// 		ID:  resourceID,
+		// 		OpenShiftCluster: &api.OpenShiftCluster{
+		// 			Properties: api.OpenShiftClusterProperties{
+		// 				ClusterProfile: api.ClusterProfile{
+		// 					ResourceGroupID: resourceGroup,
+		// 				},
+		// 				ServicePrincipalProfile: &api.ServicePrincipalProfile{
+		// 					SPObjectID: fakeClusterSPObjectId,
+		// 				},
+		// 			},
+		// 		},
+		// 	},
+		// 	wantBoundServiceAccountSigningKey: false,
+		// },
+		{
+			name: "Success - Create and persist OIDC Issuer URL",
+			oc: &api.OpenShiftClusterDocument{
+				Key: strings.ToLower(resourceID),
+				ID:  clusterID,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: resourceGroup,
+						},
+					},
+				},
+			},
+			mocks: func(blob *mock_azblob.MockManager, env *mock_env.MockInterface, azblobClient *mock_azblob.MockAZBlobClient) {
+				env.EXPECT().OIDCStorageAccountName().AnyTimes().Return(oidcStorageAccountName)
+				env.EXPECT().IsLocalDevelopmentMode().Return(false)
+				env.EXPECT().ResourceGroup().Return(resourceGroupName)
+				env.EXPECT().Environment().Return(&azureclient.PublicCloud)
+				env.EXPECT().OIDCEndpoint().Return(afdEndpoint)
+				blob.EXPECT().CreateBlobContainer(gomock.Any(), resourceGroupName, oidcStorageAccountName, gomock.Any(), azstorage.PublicAccessNone).Return(nil)
+				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.BodyKey, gomock.Any()).Return(nil)
+				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.JWKSKey, gomock.Any()).Return(nil)
+				blob.EXPECT().GetAZBlobClient(gomock.Any(), &azblob.ClientOptions{}).Return(azblobClient, nil)
+			},
+			wantedOIDCIssuer:                  prodOIDCIssuer,
+			wantBoundServiceAccountSigningKey: true,
+		},
+		{
+			name: "Success - Create and persist OIDC Issuer URL - Dev Env",
+			oc: &api.OpenShiftClusterDocument{
+				Key: strings.ToLower(resourceID),
+				ID:  clusterID,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: resourceGroup,
+						},
+					},
+				},
+			},
+			mocks: func(blob *mock_azblob.MockManager, env *mock_env.MockInterface, azblobClient *mock_azblob.MockAZBlobClient) {
+				env.EXPECT().OIDCStorageAccountName().AnyTimes().Return(oidcStorageAccountName)
+				env.EXPECT().IsLocalDevelopmentMode().Return(true)
+				env.EXPECT().ResourceGroup().Return(resourceGroupName)
+				env.EXPECT().Environment().Return(&azureclient.PublicCloud)
+				env.EXPECT().OIDCEndpoint().Return(storageEndpointForDev)
+				blob.EXPECT().CreateBlobContainer(gomock.Any(), resourceGroupName, oidcStorageAccountName, gomock.Any(), azstorage.PublicAccessBlob).Return(nil)
+				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.BodyKey, gomock.Any()).Return(nil)
+				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.JWKSKey, gomock.Any()).Return(nil)
+				blob.EXPECT().GetAZBlobClient(gomock.Any(), &azblob.ClientOptions{}).Return(azblobClient, nil)
+			},
+			wantedOIDCIssuer:                  devOIDCIssuer,
+			wantBoundServiceAccountSigningKey: true,
+		},
+		{
+			name: "Fail - Create Blob Container throws error",
+			oc: &api.OpenShiftClusterDocument{
+				Key: strings.ToLower(resourceID),
+				ID:  clusterID,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: resourceGroup,
+						},
+					},
+				},
+			},
+			mocks: func(blob *mock_azblob.MockManager, env *mock_env.MockInterface, azblob *mock_azblob.MockAZBlobClient) {
+				env.EXPECT().OIDCStorageAccountName().AnyTimes().Return(oidcStorageAccountName)
+				env.EXPECT().IsLocalDevelopmentMode().Return(false)
+				env.EXPECT().ResourceGroup().Return(resourceGroupName)
+				blob.EXPECT().CreateBlobContainer(gomock.Any(), resourceGroupName, oidcStorageAccountName, gomock.Any(), azstorage.PublicAccessNone).Return(errors.New("generic error"))
+			},
+			wantBoundServiceAccountSigningKey: false,
+			wantErr:                           "generic error",
+		},
+		{
+			name: "Fail - azBlobClient creation failure",
+			oc: &api.OpenShiftClusterDocument{
+				Key: strings.ToLower(resourceID),
+				ID:  clusterID,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: resourceGroup,
+						},
+					},
+				},
+			},
+			mocks: func(blob *mock_azblob.MockManager, env *mock_env.MockInterface, azblobClient *mock_azblob.MockAZBlobClient) {
+				env.EXPECT().OIDCStorageAccountName().AnyTimes().Return(oidcStorageAccountName)
+				env.EXPECT().IsLocalDevelopmentMode().Return(false)
+				env.EXPECT().ResourceGroup().Return(resourceGroupName)
+				env.EXPECT().Environment().Return(&azureclient.PublicCloud)
+				env.EXPECT().OIDCEndpoint().Return(afdEndpoint)
+				blob.EXPECT().CreateBlobContainer(gomock.Any(), resourceGroupName, oidcStorageAccountName, gomock.Any(), azstorage.PublicAccessNone).Return(nil)
+				blob.EXPECT().GetAZBlobClient(gomock.Any(), &azblob.ClientOptions{}).Return(azblobClient, errors.New("generic error"))
+			},
+			wantBoundServiceAccountSigningKey: false,
+			wantErr:                           "generic error",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			dbOpenShiftClusters, _ := testdatabase.NewFakeOpenShiftClusters()
+
+			rpBlobManager := mock_azblob.NewMockManager(controller)
+			env := mock_env.NewMockInterface(controller)
+			azBlobClient := mock_azblob.NewMockAZBlobClient(controller)
+			if tt.mocks != nil {
+				tt.mocks(rpBlobManager, env, azBlobClient)
+			}
+
+			f := testdatabase.NewFixture().WithOpenShiftClusters(dbOpenShiftClusters)
+			f.AddOpenShiftClusterDocuments(tt.oc)
+
+			err := f.Create()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			doc, err := dbOpenShiftClusters.Get(ctx, strings.ToLower(resourceID))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			m := &manager{
+				db:     dbOpenShiftClusters,
+				log:    logrus.NewEntry(logrus.StandardLogger()),
+				rpBlob: rpBlobManager,
+				doc:    doc,
+				env:    env,
+			}
+
+			err = m.createOIDC(ctx)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+
+			checkDoc, err := dbOpenShiftClusters.Get(ctx, strings.ToLower(resourceID))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if string(checkDoc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer) != tt.wantedOIDCIssuer {
+				t.Fatalf("OIDC Issuer URL - %s != %s (wanted)", checkDoc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer, tt.wantedOIDCIssuer)
+			}
+
+			if checkDoc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey == "" && tt.wantBoundServiceAccountSigningKey {
+				t.Fatalf("Bound Service Account Token is not as expected - wantBoundServiceAccountSigningKey is %t", tt.wantBoundServiceAccountSigningKey)
+			}
 		})
 	}
 }
