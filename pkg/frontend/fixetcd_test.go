@@ -530,6 +530,7 @@ func TestFixEtcd(t *testing.T) {
 				nil,
 				nil,
 				nil,
+				nil,
 				ti.enricher)
 			if err != nil {
 				t.Fatal(err)

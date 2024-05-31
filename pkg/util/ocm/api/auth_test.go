@@ -1,0 +1,30 @@
+package api_test
+
+import (
+	"github.com/Azure/ARO-RP/pkg/util/ocm/api"
+	"testing"
+)
+
+func TestAccessToken(t *testing.T) {
+	testCases := []struct {
+		name           string
+		clusterID      string
+		token          string
+		expAccessToken string
+	}{
+		{
+			name:           "Test AccessToken String",
+			clusterID:      "123",
+			token:          "abc",
+			expAccessToken: "123:abc",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			accessToken := api.NewAccessToken(tc.clusterID, tc.token)
+			if accessToken.String() != tc.expAccessToken {
+				t.Errorf("AccessToken got %v, expect %v", accessToken.String(), tc.expAccessToken)
+			}
+		})
+	}
+}
