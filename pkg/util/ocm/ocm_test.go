@@ -9,9 +9,9 @@ import (
 
 	"github.com/golang/mock/gomock"
 
+	mock_api "github.com/Azure/ARO-RP/pkg/util/mocks/ocm/api"
 	"github.com/Azure/ARO-RP/pkg/util/ocm"
 	"github.com/Azure/ARO-RP/pkg/util/ocm/api"
-	mock_api "github.com/Azure/ARO-RP/pkg/util/ocm/api/mock"
 )
 
 func TestGetClusterInfoWithUpgradePolicies(t *testing.T) {
