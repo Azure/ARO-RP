@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -43,27 +42,25 @@ func (sv platformWorkloadIdentityRoleSetStaticValidator) validate(new *PlatformW
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.platformWorkloadIdentityRoles", "Must be provided and must be non-empty")
 	}
 
-	errs := []error{}
-
 	for i, r := range new.Properties.PlatformWorkloadIdentityRoles {
 		if r.OperatorName == "" {
-			errs = append(errs, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].operatorName", i), "Must be provided"))
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].operatorName", i), "Must be provided")
 		}
 
 		if r.RoleDefinitionName == "" {
-			errs = append(errs, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].roleDefinitionName", i), "Must be provided"))
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].roleDefinitionName", i), "Must be provided")
 		}
 
 		if r.RoleDefinitionID == "" {
-			errs = append(errs, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].roleDefinitionId", i), "Must be provided"))
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].roleDefinitionId", i), "Must be provided")
 		}
 
 		if r.ServiceAccounts == nil || len(r.ServiceAccounts) == 0 {
-			errs = append(errs, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].serviceAccounts", i), "Must be provided and must be non-empty"))
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].serviceAccounts", i), "Must be provided and must be non-empty")
 		}
 	}
 
-	return errors.Join(errs...)
+	return nil
 }
 
 func (sv platformWorkloadIdentityRoleSetStaticValidator) validateDelta(new, current *PlatformWorkloadIdentityRoleSet) error {
