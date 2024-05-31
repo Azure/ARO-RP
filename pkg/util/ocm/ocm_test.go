@@ -5,11 +5,13 @@ package ocm_test
 
 import (
 	"context"
+	"testing"
+
+	"github.com/golang/mock/gomock"
+
 	"github.com/Azure/ARO-RP/pkg/util/ocm"
 	"github.com/Azure/ARO-RP/pkg/util/ocm/api"
 	mock_api "github.com/Azure/ARO-RP/pkg/util/ocm/api/mock"
-	"github.com/golang/mock/gomock"
-	"testing"
 )
 
 func TestGetClusterInfoWithUpgradePolicies(t *testing.T) {

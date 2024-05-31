@@ -6,11 +6,12 @@ package api_test
 import (
 	"context"
 	"encoding/json"
-	"github.com/Azure/ARO-RP/pkg/util/ocm/api"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
+
+	"github.com/Azure/ARO-RP/pkg/util/ocm/api"
 )
 
 func TestAPI(t *testing.T) {

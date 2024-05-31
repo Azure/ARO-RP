@@ -4,9 +4,10 @@ package api_test
 // Licensed under the Apache License 2.0.
 
 import (
-	"github.com/Azure/ARO-RP/pkg/util/ocm/api"
 	"net/http"
 	"testing"
+
+	"github.com/Azure/ARO-RP/pkg/util/ocm/api"
 )
 
 func TestRequestBuilder_Build(t *testing.T) {

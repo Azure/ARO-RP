@@ -4,8 +4,9 @@ package api_test
 // Licensed under the Apache License 2.0.
 
 import (
-	"github.com/Azure/ARO-RP/pkg/util/ocm/api"
 	"testing"
+
+	"github.com/Azure/ARO-RP/pkg/util/ocm/api"
 )
 
 func TestBuildEndpoint(t *testing.T) {

@@ -4,10 +4,11 @@ package api_test
 // Licensed under the Apache License 2.0.
 
 import (
-	"github.com/Azure/ARO-RP/pkg/util/ocm/api"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/Azure/ARO-RP/pkg/util/ocm/api"
 )
 
 func TestAccessTokenTransport_RoundTrip(t *testing.T) {

@@ -8,22 +8,23 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
-	"github.com/Azure/ARO-RP/pkg/metrics/noop"
-	ocmapi "github.com/Azure/ARO-RP/pkg/util/ocm/api"
-	testdatabase "github.com/Azure/ARO-RP/test/database"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
+	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
+	ocmapi "github.com/Azure/ARO-RP/pkg/util/ocm/api"
+	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
 func createSecretBytesWithAuths(authsJson string) []byte {

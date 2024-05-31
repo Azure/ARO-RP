@@ -7,21 +7,23 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
-	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
-	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
-	ocmapi "github.com/Azure/ARO-RP/pkg/util/ocm/api"
-	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
+	"net/http"
+	"path/filepath"
+	"strings"
+
 	"github.com/ghodss/yaml"
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
-	"net/http"
-	"path/filepath"
-	"strings"
+
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
+	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	ocmapi "github.com/Azure/ARO-RP/pkg/util/ocm/api"
+	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
 func (f *frontend) getOCMClusterInfo(w http.ResponseWriter, r *http.Request) {

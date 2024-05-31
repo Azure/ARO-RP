@@ -5,8 +5,8 @@
 package mock_api
 
 import (
-	context "context"
-	reflect "reflect"
+	"context"
+	"reflect"
 
 	gomock "github.com/golang/mock/gomock"
 
