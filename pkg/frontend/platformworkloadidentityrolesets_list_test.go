@@ -8,10 +8,11 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/coreos/go-semver/semver"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/v20240812preview"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
-	"github.com/coreos/go-semver/semver"
 )
 
 // Copyright (c) Microsoft Corporation.

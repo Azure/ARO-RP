@@ -8,10 +8,11 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
 
 func (f *frontend) listPlatformWorkloadIdentityRoleSets(w http.ResponseWriter, r *http.Request) {
