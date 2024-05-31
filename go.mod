@@ -29,7 +29,7 @@ require (
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-chi/chi/v5 v5.0.8
-	github.com/go-logr/logr v1.4.1
+	github.com/go-logr/logr v1.4.2
 	github.com/go-test/deep v1.1.0
 	github.com/gofrs/uuid v4.2.0+incompatible
 	github.com/golang-jwt/jwt/v4 v4.5.0
@@ -59,7 +59,7 @@ require (
 	github.com/openshift/api v3.9.1-0.20191111211345-a27ff30ebf09+incompatible
 	github.com/openshift/client-go v0.0.0-20220525160904-9e1acff93e4a
 	github.com/openshift/cloud-credential-operator v0.0.0-00010101000000-000000000000
-	github.com/openshift/hive/apis v0.0.0-20240510150258-83aedb9f6e73
+	github.com/openshift/hive/apis v0.0.0-20240529172037-d7ead609f495
 	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
 	github.com/openshift/machine-config-operator v0.0.1-0.20230519222939-1abc13efbb0d
 	github.com/pires/go-proxyproto v0.6.2
@@ -80,9 +80,9 @@ require (
 	golang.org/x/sync v0.6.0
 	golang.org/x/text v0.15.0
 	golang.org/x/tools v0.19.0
-	k8s.io/api v0.30.0
+	k8s.io/api v0.30.1
 	k8s.io/apiextensions-apiserver v0.25.0
-	k8s.io/apimachinery v0.30.0
+	k8s.io/apimachinery v0.30.1
 	k8s.io/cli-runtime v0.25.16
 	k8s.io/client-go v0.26.2
 	k8s.io/code-generator v0.25.16
