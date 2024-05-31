@@ -14,7 +14,7 @@ import (
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
-func TestPlatformWorkloadIdenittyRoleSetList(t *testing.T) {
+func TestPlatformWorkloadIdentityRoleSetList(t *testing.T) {
 	ctx := context.Background()
 
 	type test struct {
