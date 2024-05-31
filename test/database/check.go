@@ -18,14 +18,15 @@ import (
 const deletionTimeSetSentinel = 123456789
 
 type Checker struct {
-	openshiftClusterDocuments []*api.OpenShiftClusterDocument
-	subscriptionDocuments     []*api.SubscriptionDocument
-	billingDocuments          []*api.BillingDocument
-	asyncOperationDocuments   []*api.AsyncOperationDocument
-	portalDocuments           []*api.PortalDocument
-	gatewayDocuments          []*api.GatewayDocument
-	openShiftVersionDocuments []*api.OpenShiftVersionDocument
-	validationResult          []*api.ValidationResult
+	openshiftClusterDocuments                []*api.OpenShiftClusterDocument
+	subscriptionDocuments                    []*api.SubscriptionDocument
+	billingDocuments                         []*api.BillingDocument
+	asyncOperationDocuments                  []*api.AsyncOperationDocument
+	portalDocuments                          []*api.PortalDocument
+	gatewayDocuments                         []*api.GatewayDocument
+	openShiftVersionDocuments                []*api.OpenShiftVersionDocument
+	platformWorkloadIdentityRoleSetDocuments []*api.PlatformWorkloadIdentityRoleSetDocument
+	validationResult                         []*api.ValidationResult
 }
 
 func NewChecker() *Checker {
@@ -106,6 +107,17 @@ func (f *Checker) AddOpenShiftVersionDocuments(docs ...*api.OpenShiftVersionDocu
 		}
 
 		f.openShiftVersionDocuments = append(f.openShiftVersionDocuments, docCopy.(*api.OpenShiftVersionDocument))
+	}
+}
+
+func (f *Checker) AddPlatformWorkloadIdentityRoleSetDocuments(docs ...*api.PlatformWorkloadIdentityRoleSetDocument) {
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.platformWorkloadIdentityRoleSetDocuments = append(f.platformWorkloadIdentityRoleSetDocuments, docCopy.(*api.PlatformWorkloadIdentityRoleSetDocument))
 	}
 }
 
@@ -269,6 +281,30 @@ func (f *Checker) CheckOpenShiftVersions(versions *cosmosdb.FakeOpenShiftVersion
 		}
 	} else if len(all.OpenShiftVersionDocuments) != 0 || len(f.openShiftVersionDocuments) != 0 {
 		errs = append(errs, fmt.Errorf("versions length different, %d vs %d", len(all.OpenShiftVersionDocuments), len(f.openShiftVersionDocuments)))
+	}
+
+	return errs
+}
+
+func (f *Checker) CheckPlatformWorkloadIdentityRoleSets(roleSets *cosmosdb.FakePlatformWorkloadIdentityRoleSetDocumentClient) (errs []error) {
+	ctx := context.Background()
+
+	all, err := roleSets.ListAll(ctx, nil)
+	if err != nil {
+		return []error{err}
+	}
+
+	sort.Slice(all.PlatformWorkloadIdentityRoleSetDocuments, func(i, j int) bool {
+		return all.PlatformWorkloadIdentityRoleSetDocuments[i].ID < all.PlatformWorkloadIdentityRoleSetDocuments[j].ID
+	})
+
+	if len(f.platformWorkloadIdentityRoleSetDocuments) != 0 && len(all.PlatformWorkloadIdentityRoleSetDocuments) == len(f.platformWorkloadIdentityRoleSetDocuments) {
+		diff := deep.Equal(all.PlatformWorkloadIdentityRoleSetDocuments, f.platformWorkloadIdentityRoleSetDocuments)
+		for _, i := range diff {
+			errs = append(errs, errors.New(i))
+		}
+	} else if len(all.PlatformWorkloadIdentityRoleSetDocuments) != 0 || len(f.platformWorkloadIdentityRoleSetDocuments) != 0 {
+		errs = append(errs, fmt.Errorf("role sets length different, %d vs %d", len(all.PlatformWorkloadIdentityRoleSetDocuments), len(f.platformWorkloadIdentityRoleSetDocuments)))
 	}
 
 	return errs
