@@ -1,5 +1,8 @@
 package api
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import "time"
 
 // UpgradePolicyList represents an unmarshalled Upgrade Policy response from Cluster Services

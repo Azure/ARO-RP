@@ -1,5 +1,8 @@
 package api_test
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"github.com/Azure/ARO-RP/pkg/util/ocm/api"
 	"testing"
