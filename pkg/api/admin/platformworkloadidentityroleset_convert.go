@@ -28,9 +28,7 @@ func (c platformWorkloadIdentityRoleSetConverter) ToExternal(s *api.PlatformWork
 			ServiceAccounts:    make([]string, 0, len(r.ServiceAccounts)),
 		}
 
-		for _, sa := range r.ServiceAccounts {
-			role.ServiceAccounts = append(role.ServiceAccounts, sa)
-		}
+		role.ServiceAccounts = append(role.ServiceAccounts, r.ServiceAccounts...)
 
 		out.Properties.PlatformWorkloadIdentityRoles = append(out.Properties.PlatformWorkloadIdentityRoles, role)
 	}
@@ -70,9 +68,7 @@ func (c platformWorkloadIdentityRoleSetConverter) ToInternal(_new interface{}, o
 			ServiceAccounts:    make([]string, 0, len(r.ServiceAccounts)),
 		}
 
-		for _, sa := range r.ServiceAccounts {
-			role.ServiceAccounts = append(role.ServiceAccounts, sa)
-		}
+		role.ServiceAccounts = append(role.ServiceAccounts, r.ServiceAccounts...)
 
 		out.Properties.PlatformWorkloadIdentityRoles = append(out.Properties.PlatformWorkloadIdentityRoles, role)
 	}
