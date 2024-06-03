@@ -43,7 +43,7 @@ require (
 	github.com/gorilla/sessions v1.2.2
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/itchyny/gojq v0.12.13
-	github.com/jewzaam/go-cosmosdb v0.0.0-20240320220716-88298caebe4a
+	github.com/jewzaam/go-cosmosdb v0.0.0-20240603205015-e096456eff37
 	github.com/jongio/azidext/go/azidext v0.5.0
 	github.com/microsoft/kiota-abstractions-go v1.2.0
 	github.com/microsoft/kiota-http-go v1.0.0

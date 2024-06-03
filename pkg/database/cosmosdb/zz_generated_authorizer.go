@@ -44,28 +44,23 @@ func NewMasterKeyAuthorizer(masterKey string) (Authorizer, error) {
 }
 
 type tokenAuthorizer struct {
-	token      string
-	expiration time.Time
-	// cond is used to synchronize access to the shared resource embodied by the remaining fields
-	cond *sync.Cond
-	// acquiring indicates that some thread/goroutine is in the process of acquiring/updating the resource
-	acquiring bool
-
-	// lastAttempt indicates when a thread/goroutine last attempted to acquire/update the resource
+	token       string
+	expiration  time.Time
+	cond        *sync.Cond
+	acquiring   bool
 	lastAttempt time.Time
-
-	getToken func() (token string, newExpiration time.Time, err error)
+	getToken    func() (token string, newExpiration time.Time, err error)
 }
 
 func (a *tokenAuthorizer) Authorize(req *http.Request, resourceType, resourceLink string) error {
-	_, err := a.get()
+	token, err := a.acquireToken()
 	if err != nil {
 		return err
 	}
-	authorizationHeader := fmt.Sprintf("type=aad&ver=1.0&sig=%s", a.token)
-	date := time.Now().UTC().Format("Mon, 02 Jan 2006 15:04:05 GMT")
+	authorizationHeader := fmt.Sprintf("type=aad&ver=1.0&sig=%s", token)
+	currentTime := time.Now().UTC().Format("Mon, 02 Jan 2006 15:04:05 GMT")
 	req.Header.Set("Authorization", authorizationHeader)
-	req.Header.Set("x-ms-date", date)
+	req.Header.Set("x-ms-date", currentTime)
 
 	return nil
 }
@@ -76,12 +71,12 @@ func NewTokenAuthorizer(token string, expiration time.Time, getToken func() (tok
 
 // Get returns the underlying resource.
 // If the resource is fresh, no refresh is performed.
-func (a *tokenAuthorizer) get() (string, error) {
+func (a *tokenAuthorizer) acquireToken() (string, error) {
 	// If the resource is expiring within this time window, update it eagerly.
-	// This allows other threads/goroutines to keep running by using the not-yet-expired
-	// resource value while one thread/goroutine updates the resource.
-	const window = 5 * time.Minute   // This example updates the resource 5 minutes prior to expiration
-	const backoff = 30 * time.Second // Minimum wait time between eager update attempts
+	// This allows other goroutines to keep running by using the not-yet-expired
+	// resource value while one goroutine updates the resource.
+	const window = 5 * time.Minute   // To update the token if 5 mins left to expire
+	const backoff = 30 * time.Second // Minimum wait time between attempts
 	now, acquire, expired := time.Now(), false, false
 
 	// acquire exclusive lock
@@ -91,55 +86,52 @@ func (a *tokenAuthorizer) get() (string, error) {
 	for {
 		expired = a.expiration.IsZero() || a.expiration.Before(now)
 		if expired {
-			// The resource was never acquired or has expired
 			if !a.acquiring {
-				// If another thread/goroutine is not acquiring/updating the resource, this thread/goroutine will do it
+				// This goroutine will acquire the token.
 				a.acquiring, acquire = true, true
 				break
 			}
-			// Getting here means that this thread/goroutine will wait for the updated resource
+			// Getting here means that this goroutine will wait for the updated token
 		} else if a.expiration.Add(-window).Before(now) {
-			// The resource is valid but is expiring within the time window
+			// The token is valid but is expiring within the time window(5 mins)
 			if !a.acquiring && a.lastAttempt.Add(backoff).Before(now) {
-				// If another thread/goroutine is not acquiring/renewing the resource, and none has attempted
-				// to do so within the last 30 seconds, this thread/goroutine will do it
+				// If another goroutine is not acquiring/renewing the token, and none has attempted
+				// to do so within the last 30 seconds, this goroutine will do it
 				a.acquiring, acquire = true, true
 				break
 			}
-			// This thread/goroutine will use the existing resource value while another updates it
+			// This goroutine will use the existing token value while another updates it
 			token = a.token
 			break
 		} else {
-			// The resource is not close to expiring, this thread/goroutine should use its current value
+			// The token is not close to expiring, this so using its current value
 			token = a.token
 			break
 		}
-		// If we get here, wait for the new resource value to be acquired/updated
+		// If we get here, wait for the new token value to be acquired/updated
 		a.cond.Wait()
 	}
-	a.cond.L.Unlock() // Release the lock so no threads/goroutines are blocked
+	a.cond.L.Unlock() // Release the lock so no goroutines are blocked
 
 	var err error
 	if acquire {
-		// This thread/goroutine has been selected to acquire/update the resource
+		// This goroutine has been selected to acquire/update the token
 		var expiration time.Time
 		var newValue string
 		a.lastAttempt = now
 		newValue, expiration, err = a.getToken()
 
-		// Atomically, update the shared resource's new value & expiration.
+		// Atomically, update the shared token's new value & expiration.
 		a.cond.L.Lock()
 		if err == nil {
-			// Update resource & expiration, return the new value
+			// Update token & expiration, return the new value
 			token = newValue
 			a.token, a.expiration = token, expiration
 		} else if !expired {
-			// An eager update failed. Discard the error and return the current--still valid--resource value
+			// An eager update failed. Discard the error and return the current--still valid--token value
 			err = nil
 		}
-		a.acquiring = false // Indicate that no thread/goroutine is currently acquiring the resource
-
-		// Wake up any waiting threads/goroutines since there is a resource they can ALL use
+		a.acquiring = false
 		a.cond.L.Unlock()
 		a.cond.Broadcast()
 	}

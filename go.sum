@@ -388,8 +388,8 @@ github.com/itchyny/gojq v0.12.13/go.mod h1:JzwzAqenfhrPUuwbmEz3nu3JQmFLlQTQMUcOd
 github.com/itchyny/timefmt-go v0.1.5 h1:G0INE2la8S6ru/ZI5JecgyzbbJNs5lG1RcBqa7Jm6GE=
 github.com/itchyny/timefmt-go v0.1.5/go.mod h1:nEP7L+2YmAbT2kZ2HfSs1d8Xtw9LY8D2stDBckWakZ8=
 github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
-github.com/jewzaam/go-cosmosdb v0.0.0-20240320220716-88298caebe4a h1:x8omH/WFc+AYa/2zTNQCLkpPQDxxpSAiYkCpXqRhtUI=
-github.com/jewzaam/go-cosmosdb v0.0.0-20240320220716-88298caebe4a/go.mod h1:hEk8/SoE/NBT9ofV69Gzs98vbGyF155SaYl1p9bxKb8=
+github.com/jewzaam/go-cosmosdb v0.0.0-20240603205015-e096456eff37 h1:69P76EErLYvPuva+ITbDvOIaA+KH9153kU8QeGhJijk=
+github.com/jewzaam/go-cosmosdb v0.0.0-20240603205015-e096456eff37/go.mod h1:hEk8/SoE/NBT9ofV69Gzs98vbGyF155SaYl1p9bxKb8=
 github.com/jinzhu/copier v0.4.0 h1:w3ciUoD19shMCRargcpm0cm91ytaBhDvuRpz1ODO/U8=
 github.com/jinzhu/copier v0.4.0/go.mod h1:DfbEm0FYsaqBcKcFuvmOZb218JkPGtvSHsKg8S8hyyg=
 github.com/jmespath/go-jmespath v0.3.0/go.mod h1:9QtRXoHjLGCJ5IBSaohpXITPlowMeeYCZ7fLUTSywik=

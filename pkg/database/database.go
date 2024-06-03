@@ -127,7 +127,7 @@ func createTriggers(ctx context.Context, sqlResourceClient *sdkcosmos.SQLResourc
 		ctx, cancel := context.WithTimeout(ctx, time.Minute*5)
 		defer cancel()
 
-		poller, err := sqlResourceClient.BeginCreateUpdateSQLTrigger(ctx, resourceGroup, dbAccountName, dbName, collBilling, *triggerResource.ID, createUpdateSQLTriggerParameters, nil)
+		poller, err := sqlResourceClient.BeginCreateUpdateSQLTrigger(ctx, resourceGroup, dbAccountName, dbName, containerName, *triggerResource.ID, createUpdateSQLTriggerParameters, nil)
 		if err != nil {
 			return err
 		}

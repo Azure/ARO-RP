@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/textproto"
 	"strconv"
@@ -108,7 +108,7 @@ func (c *databaseClient) _do(ctx context.Context, method, path, resourceType, re
 		if err != nil {
 			return nil, err
 		}
-		req.Body = ioutil.NopCloser(buf)
+		req.Body = io.NopCloser(buf)
 		req.Header.Set("Content-Type", "application/json")
 	}
 
@@ -118,14 +118,12 @@ func (c *databaseClient) _do(ctx context.Context, method, path, resourceType, re
 
 	req.Header.Set("x-ms-version", "2018-12-31")
 
-	// c.mu.RLock() // not required not since authorizer.get() will have that lock
 	if c.authorizer != nil {
 		err := c.authorizer.Authorize(req, resourceType, resourceLink)
 		if err != nil {
 			return nil, err
 		}
 	}
-	// c.mu.RUnlock()
 	resp, err := c.hc.Do(req)
 	if err != nil {
 		return nil, err
