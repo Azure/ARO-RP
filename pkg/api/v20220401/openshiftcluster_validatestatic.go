@@ -198,13 +198,19 @@ func (sv openShiftClusterStaticValidator) validateServicePrincipalProfile(path s
 
 func (sv openShiftClusterStaticValidator) validateNetworkProfile(path string, np *NetworkProfile) error {
 	podIP, pod, err := net.ParseCIDR(np.PodCIDR)
-
 	if err != nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".podCidr", "The provided pod CIDR '%s' is invalid: '%s'.", np.PodCIDR, err)
 	}
 
 	if pod.IP.To4() == nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".podCidr", "The provided pod CIDR '%s' is invalid: must be IPv4.", np.PodCIDR)
+	}
+
+	for _, s := range api.JoinCIDRRange {
+		_, cidr, _ := net.ParseCIDR(s)
+		if cidr.Contains(pod.IP) || pod.Contains(cidr.IP) {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidCIDRRange, path, "Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '%s' IP address range in any other CIDR definitions in your cluster.", np.PodCIDR)
+		}
 	}
 
 	ones, _ := pod.Mask.Size()
@@ -225,6 +231,13 @@ func (sv openShiftClusterStaticValidator) validateNetworkProfile(path string, np
 
 	if service.IP.To4() == nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".serviceCidr", "The provided service CIDR '%s' is invalid: must be IPv4.", np.ServiceCIDR)
+	}
+
+	for _, s := range api.JoinCIDRRange {
+		_, cidr, _ := net.ParseCIDR(s)
+		if cidr.Contains(service.IP) || service.Contains(cidr.IP) {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidCIDRRange, path, "Azure Red Hat OpenShift uses 100.64.0.0/16, 169.254.169.0/29, and 100.88.0.0/16 IP address ranges internally. Do not include this '%s' IP address range in any other CIDR definitions in your cluster.", np.ServiceCIDR)
+		}
 	}
 
 	ones, _ = service.Mask.Size()

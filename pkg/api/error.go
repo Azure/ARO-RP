@@ -104,6 +104,7 @@ const (
 	CloudErrorCodeRequestDisallowedByPolicy          = "RequestDisallowedByPolicy"
 	CloudErrorCodeInvalidNetworkAddress              = "InvalidNetworkAddress"
 	CloudErrorCodeThrottlingLimitExceeded            = "ThrottlingLimitExceeded"
+	CloudErrorCodeInvalidCIDRRange                   = "InvalidCIDRRange"
 )
 
 // NewCloudError returns a new CloudError
