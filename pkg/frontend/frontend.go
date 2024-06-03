@@ -111,6 +111,7 @@ type Runnable interface {
 	Run(context.Context, <-chan struct{}, chan<- struct{})
 }
 
+// TODO: Get the number of function parameters under control :D
 // NewFrontend returns a new runnable frontend
 func NewFrontend(ctx context.Context,
 	auditLog *logrus.Entry,
