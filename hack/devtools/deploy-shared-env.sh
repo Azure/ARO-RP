@@ -60,6 +60,14 @@ deploy_oic_dev() {
             "storageAccountDomain=$(echo ${RESOURCEGROUP//-})" >/dev/null
 }
 
+deploy_rp_managed_identity() {
+    echo "########## Deploying RP Managed Identity (for hive/aks) in RG $RESOURCEGROUP ##########"
+    az deployment group create \
+        -g "$RESOURCEGROUP" \
+        -n rp-managed-identity \
+        --template-file pkg/deploy/assets/rp-production-managed-identity.json
+}
+
 deploy_aks_dev() {
     echo "########## Deploying aks-development in RG $RESOURCEGROUP ##########"
     az deployment group create \
@@ -238,6 +246,30 @@ clean_env() {
           --record-set-name "$RESOURCEGROUP" \
           --nsdname "$ns"
       done
+}
+
+deploy_e2e_secret_storage() {
+    az deployment group create \
+        --name e2esecretstorage \
+        --resource-group global-infra \
+        --parameters storageAccounts_e2earosecrets_name=$SECRET_SA_ACCOUNT_NAME \
+        --template-file pkg/deploy/assets/e2e-secret-storage.json 
+}
+
+deploy_aro_spn_keyvault() {
+    az deployment group create \
+        --name aroe2eprincipals \
+        --resource-group global-infra \
+        --parameters \
+            "vaults_aro_e2e_principals_name=$VAULTS_ARO_E2E_PRINCIPALS_NAME" \
+            "tenant_id=$AZURE_TENANT_ID" \
+        --template-file pkg/deploy/assets/e2e-aro-spn-keyvault.json
+}
+
+deploy_aro_spns() {
+    # Create ARO cluster service principals
+
+
 }
 
 echo "##########################################"
