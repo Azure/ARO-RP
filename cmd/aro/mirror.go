@@ -12,7 +12,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/containers/image/v5/types"
 	"github.com/sirupsen/logrus"
 
@@ -74,32 +73,9 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	// Geneva allows anonymous pulls
-	var srcAuthGeneva *types.DockerAuthConfig
-
 	// We can lose visibility of early image mirroring errors because logs are trimmed in the output of Ev2 pipelines.
 	// If images fail to mirror, those errors need to be returned together and logged at the end of the execution.
 	var imageMirroringErrors []string
-
-	// Geneva mirroring from upstream only takes place in Public Cloud, in
-	// sovereign clouds a separate mirror process mirrors from the public cloud
-	if env.Environment().Environment == azure.PublicCloud {
-		srcAcrGeneva := "linuxgeneva-microsoft" + acrDomainSuffix
-		mirrorImages := []string{
-			// https://eng.ms/docs/products/geneva/collect/references/linuxcontainers
-			srcAcrGeneva + "/distroless/genevamdm:2.2024.328.1744-c5fb79-20240328t1935",
-			srcAcrGeneva + "/distroless/genevamdsd:mariner_20240327.2",
-		}
-		for _, ref := range mirrorImages {
-			log.Printf("mirroring %s -> %s", ref, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref))
-			err = pkgmirror.Copy(ctx, pkgmirror.DestLastIndex(dstAcr+acrDomainSuffix, ref), ref, dstAuth, srcAuthGeneva)
-			if err != nil {
-				imageMirroringErrors = append(imageMirroringErrors, fmt.Sprintf("%s: %s\n", ref, err))
-			}
-		}
-	} else {
-		log.Printf("skipping Geneva mirroring due to not being in Public")
-	}
 
 	for _, ref := range []string{
 
