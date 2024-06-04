@@ -3,6 +3,7 @@ package admin
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/util/immutable"
@@ -42,22 +43,28 @@ func (sv platformWorkloadIdentityRoleSetStaticValidator) validate(new *PlatformW
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.platformWorkloadIdentityRoles", "Must be provided and must be non-empty")
 	}
 
+	missingProperties := []string{}
+
 	for i, r := range new.Properties.PlatformWorkloadIdentityRoles {
 		if r.OperatorName == "" {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].operatorName", i), "Must be provided")
+			missingProperties = append(missingProperties, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].operatorName", i))
 		}
 
 		if r.RoleDefinitionName == "" {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].roleDefinitionName", i), "Must be provided")
+			missingProperties = append(missingProperties, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].roleDefinitionName", i))
 		}
 
 		if r.RoleDefinitionID == "" {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].roleDefinitionId", i), "Must be provided")
+			missingProperties = append(missingProperties, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].roleDefinitionId", i))
 		}
 
 		if r.ServiceAccounts == nil || len(r.ServiceAccounts) == 0 {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].serviceAccounts", i), "Must be provided and must be non-empty")
+			missingProperties = append(missingProperties, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].serviceAccounts", i))
 		}
+	}
+
+	if len(missingProperties) > 0 {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, strings.Join(missingProperties, ", "), "Must be provided")
 	}
 
 	return nil

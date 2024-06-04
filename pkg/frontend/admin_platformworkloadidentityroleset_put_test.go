@@ -643,7 +643,7 @@ func TestPlatformWorkloadIdentityRoleSetPut(t *testing.T) {
 				},
 			},
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      "400: InvalidParameter: properties.platformWorkloadIdentityRoles[0].serviceAccounts: Must be provided and must be non-empty",
+			wantError:      "400: InvalidParameter: properties.platformWorkloadIdentityRoles[0].serviceAccounts: Must be provided",
 			wantDocuments: []*api.PlatformWorkloadIdentityRoleSetDocument{
 				{
 					ID: "08080808-0808-0808-0808-080808080001",
@@ -674,7 +674,7 @@ func TestPlatformWorkloadIdentityRoleSetPut(t *testing.T) {
 			},
 		},
 		{
-			name: "updating known version requires non-empty PlatformWorkloadIdentityRole.ServiceAccounts",
+			name: "updating known version requires PlatformWorkloadIdentityRole.RoleDefinitionId and PlatformWorkloadIdentityRole.ServiceAccounts (tests the case where multiple attributes are missing and error message consists of missing properties joined together)",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddPlatformWorkloadIdentityRoleSetDocuments(
 					&api.PlatformWorkloadIdentityRoleSetDocument{
@@ -711,14 +711,12 @@ func TestPlatformWorkloadIdentityRoleSetPut(t *testing.T) {
 						{
 							OperatorName:       "ClusterIngressOperator",
 							RoleDefinitionName: "Azure RedHat OpenShift Cluster Ingress Operator Role",
-							RoleDefinitionID:   "/providers/Microsoft.Authorization/roleDefinitions/a1f96423-95ce-4224-ab27-4e3dc72facd4",
-							ServiceAccounts:    []string{},
 						},
 					},
 				},
 			},
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      "400: InvalidParameter: properties.platformWorkloadIdentityRoles[0].serviceAccounts: Must be provided and must be non-empty",
+			wantError:      "400: InvalidParameter: properties.platformWorkloadIdentityRoles[0].roleDefinitionId, properties.platformWorkloadIdentityRoles[0].serviceAccounts: Must be provided",
 			wantDocuments: []*api.PlatformWorkloadIdentityRoleSetDocument{
 				{
 					ID: "08080808-0808-0808-0808-080808080001",
