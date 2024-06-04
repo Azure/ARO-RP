@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-multierror"
+	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -56,6 +57,7 @@ type Operator interface {
 	Restart(context.Context, []string) error
 	IsRunningDesiredVersion(context.Context) (bool, error)
 	RenewMDSDCertificate(context.Context) error
+	EnsureUpgradeAnnotation(context.Context) error
 }
 
 type operator struct {
@@ -67,10 +69,11 @@ type operator struct {
 	client        client.Client
 	extensionscli extensionsclient.Interface
 	kubernetescli kubernetes.Interface
+	operatorcli   operatorclient.Interface
 	dh            dynamichelper.Interface
 }
 
-func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli aroclient.Interface, client client.Client, extensionscli extensionsclient.Interface, kubernetescli kubernetes.Interface) (Operator, error) {
+func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli aroclient.Interface, client client.Client, extensionscli extensionsclient.Interface, kubernetescli kubernetes.Interface, operatorcli operatorclient.Interface) (Operator, error) {
 	restConfig, err := restconfig.RestConfig(env, oc)
 	if err != nil {
 		return nil, err
@@ -89,6 +92,7 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, arocli 
 		client:        client,
 		extensionscli: extensionscli,
 		kubernetescli: kubernetescli,
+		operatorcli:   operatorcli,
 		dh:            dh,
 	}, nil
 }
@@ -429,6 +433,34 @@ func (o *operator) RenewMDSDCertificate(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (o *operator) EnsureUpgradeAnnotation(ctx context.Context) error {
+	if o.oc.Properties.PlatformWorkloadIdentityProfile == nil ||
+		o.oc.Properties.ServicePrincipalProfile != nil {
+		return nil
+	}
+
+	upgradeableTo := string(*o.oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo)
+	upgradeableAnnotation := "cloudcredential.openshift.io/upgradeable-to"
+
+	cloudcredentialobject, err := o.operatorcli.OperatorV1().CloudCredentials().Get(ctx, "cluster", metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	if cloudcredentialobject.Annotations == nil {
+		cloudcredentialobject.Annotations = map[string]string{}
+	}
+
+	cloudcredentialobject.Annotations[upgradeableAnnotation] = upgradeableTo
+
+	_, err = o.operatorcli.OperatorV1().CloudCredentials().Update(ctx, cloudcredentialobject, metav1.UpdateOptions{})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

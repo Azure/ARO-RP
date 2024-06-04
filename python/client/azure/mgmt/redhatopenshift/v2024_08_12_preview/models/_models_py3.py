@@ -1412,27 +1412,36 @@ class PlatformWorkloadIdentity(msrest.serialization.Model):
 class PlatformWorkloadIdentityProfile(msrest.serialization.Model):
     """PlatformWorkloadIdentityProfile encapsulates all information that is specific to workload identity clusters.
 
+    :ivar upgradeable_to: UpgradeableTo stores a single OpenShift version a workload identity
+     cluster can be upgraded to.
+    :vartype upgradeable_to: str
     :ivar platform_workload_identities:
     :vartype platform_workload_identities:
      list[~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.PlatformWorkloadIdentity]
     """
 
     _attribute_map = {
+        'upgradeable_to': {'key': 'upgradeableTo', 'type': 'str'},
         'platform_workload_identities': {'key': 'platformWorkloadIdentities', 'type': '[PlatformWorkloadIdentity]'},
     }
 
     def __init__(
         self,
         *,
+        upgradeable_to: Optional[str] = None,
         platform_workload_identities: Optional[List["PlatformWorkloadIdentity"]] = None,
         **kwargs
     ):
         """
+        :keyword upgradeable_to: UpgradeableTo stores a single OpenShift version a workload identity
+         cluster can be upgraded to.
+        :paramtype upgradeable_to: str
         :keyword platform_workload_identities:
         :paramtype platform_workload_identities:
          list[~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.PlatformWorkloadIdentity]
         """
         super(PlatformWorkloadIdentityProfile, self).__init__(**kwargs)
+        self.upgradeable_to = upgradeable_to
         self.platform_workload_identities = platform_workload_identities
 
 

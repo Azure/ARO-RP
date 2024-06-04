@@ -141,6 +141,12 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 
 	if oc.Properties.PlatformWorkloadIdentityProfile != nil && oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities != nil {
 		out.Properties.PlatformWorkloadIdentityProfile = &PlatformWorkloadIdentityProfile{}
+
+		if oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo != nil {
+			temp := UpgradeableTo(*oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo)
+			out.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = &temp
+		}
+
 		out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = make([]PlatformWorkloadIdentity, len(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities))
 
 		for i := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
@@ -225,6 +231,12 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 	}
 	if oc.Properties.PlatformWorkloadIdentityProfile != nil && oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities != nil {
 		out.Properties.PlatformWorkloadIdentityProfile = &api.PlatformWorkloadIdentityProfile{}
+
+		if oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo != nil {
+			temp := api.UpgradeableTo(*oc.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo)
+			out.Properties.PlatformWorkloadIdentityProfile.UpgradeableTo = &temp
+		}
+
 		out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities = make([]api.PlatformWorkloadIdentity, len(oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities))
 
 		for i := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {

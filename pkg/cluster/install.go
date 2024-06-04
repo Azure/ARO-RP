@@ -213,6 +213,7 @@ func (m *manager) Update(ctx context.Context) error {
 		steps.Action(m.updateAROSecret),
 		steps.Action(m.restartAROOperatorMaster), // depends on m.updateOpenShiftSecret; the point of restarting is to pick up any changes made to the secret
 		steps.Condition(m.aroDeploymentReady, 5*time.Minute, true),
+		steps.Action(m.ensureUpgradeAnnotation),
 		steps.Action(m.reconcileLoadBalancerProfile),
 	}
 
@@ -524,7 +525,7 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 // initializeKubernetesClients initializes clients which are used
 // once the cluster is up later on in the install process.
 func (m *manager) initializeOperatorDeployer(ctx context.Context) (err error) {
-	m.aroOperatorDeployer, err = deploy.New(m.log, m.env, m.doc.OpenShiftCluster, m.arocli, m.client, m.extensionscli, m.kubernetescli)
+	m.aroOperatorDeployer, err = deploy.New(m.log, m.env, m.doc.OpenShiftCluster, m.arocli, m.client, m.extensionscli, m.kubernetescli, m.operatorcli)
 	return
 }
 

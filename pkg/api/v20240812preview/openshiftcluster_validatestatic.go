@@ -12,6 +12,7 @@ import (
 
 	azcorearm "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/coreos/go-semver/semver"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/util/immutable"
@@ -442,6 +443,14 @@ func (sv openShiftClusterStaticValidator) validatePlatformWorkloadIdentityProfil
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.PlatformWorkloadIdentities[%d].resourceID", path, n), "Resource must be a user assigned identity.")
 		}
 	}
+
+	if pwip.UpgradeableTo != nil {
+		_, err := semver.NewVersion(string(*pwip.UpgradeableTo))
+		if err != nil {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("%s.UpgradeableTo[%v]", path, *pwip.UpgradeableTo), "UpgradeableTo must be a valid OpenShift version in the format 'x.y.z'.")
+		}
+	}
+
 	return nil
 }
 

@@ -1525,6 +1525,7 @@ func (pwi PlatformWorkloadIdentity) MarshalJSON() ([]byte, error) {
 // PlatformWorkloadIdentityProfile platformWorkloadIdentityProfile encapsulates all information that is
 // specific to workload identity clusters.
 type PlatformWorkloadIdentityProfile struct {
+	UpgradeableTo              *string                     `json:"upgradeableTo,omitempty"`
 	PlatformWorkloadIdentities *[]PlatformWorkloadIdentity `json:"platformWorkloadIdentities,omitempty"`
 }
 
