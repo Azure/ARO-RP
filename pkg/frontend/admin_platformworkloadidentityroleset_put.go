@@ -38,6 +38,7 @@ func (f *frontend) putAdminPlatformWorkloadIdentityRoleSet(w http.ResponseWriter
 
 	docs, err := f.dbPlatformWorkloadIdentityRoleSets.ListAll(ctx)
 	if err != nil {
+		log.Error(err)
 		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
 		return
 	}
@@ -72,12 +73,14 @@ func (f *frontend) putAdminPlatformWorkloadIdentityRoleSet(w http.ResponseWriter
 	if isCreate {
 		roleSetDoc, err = f.dbPlatformWorkloadIdentityRoleSets.Create(ctx, roleSetDoc)
 		if err != nil {
+			log.Error(err)
 			api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
 			return
 		}
 	} else {
 		roleSetDoc, err = f.dbPlatformWorkloadIdentityRoleSets.Update(ctx, roleSetDoc)
 		if err != nil {
+			log.Error(err)
 			api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
 			return
 		}
