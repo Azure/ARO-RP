@@ -9,12 +9,12 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/coreos/go-semver/semver"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func (f *frontend) getAdminPlatformWorkloadIdentityRoleSets(w http.ResponseWriter, r *http.Request) {
@@ -38,10 +38,7 @@ func (f *frontend) getAdminPlatformWorkloadIdentityRoleSets(w http.ResponseWrite
 	}
 
 	sort.Slice(roleSets, func(i, j int) bool {
-		appendPatch := func(in string) string {
-			return in + ".0"
-		}
-		return semver.New(appendPatch(roleSets[i].Properties.OpenShiftVersion)).LessThan(*semver.New(appendPatch(roleSets[j].Properties.OpenShiftVersion)))
+		return version.CreateSemverFromMinorVersionString(roleSets[i].Properties.OpenShiftVersion).LessThan(*version.CreateSemverFromMinorVersionString(roleSets[j].Properties.OpenShiftVersion))
 	})
 
 	b, err := json.MarshalIndent(converter.ToExternalList(roleSets), "", "    ")

@@ -8,11 +8,10 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/coreos/go-semver/semver"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/v20240812preview"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 // Copyright (c) Microsoft Corporation.
@@ -152,11 +151,7 @@ func TestListPlatformWorkloadIdentityRoleSets(t *testing.T) {
 				}
 
 				sort.Slice(r.PlatformWorkloadIdentityRoleSets, func(i, j int) bool {
-					// Super hacky - since we only store a platform role set per minor version, append a ".0" to get the version string to work with semver for the purposes of these unit tests :D
-					appendPatch := func(in string) string {
-						return in + ".0"
-					}
-					return semver.New(appendPatch(r.PlatformWorkloadIdentityRoleSets[i].Properties.OpenShiftVersion)).LessThan(*semver.New(appendPatch(r.PlatformWorkloadIdentityRoleSets[j].Properties.OpenShiftVersion)))
+					return version.CreateSemverFromMinorVersionString(r.PlatformWorkloadIdentityRoleSets[i].Properties.OpenShiftVersion).LessThan(*version.CreateSemverFromMinorVersionString(r.PlatformWorkloadIdentityRoleSets[j].Properties.OpenShiftVersion))
 				})
 
 				b, err = json.Marshal(r)
