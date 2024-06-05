@@ -1241,7 +1241,6 @@ func (g *generator) rpCosmosDBTriggers(databaseName, containerName, triggerID, t
 					TriggerOperation: &triggerOperation,
 					TriggerType:      &triggerType,
 				},
-				// Options: &sdkcosmos.CreateUpdateOptions{},
 			},
 			Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/" + containerName + "/" + triggerID + "')]"),
 			Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers"),
@@ -1250,7 +1249,7 @@ func (g *generator) rpCosmosDBTriggers(databaseName, containerName, triggerID, t
 		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 		DependsOn: []string{
 			"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
-			// "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), concat(" + databaseName + ", '/" + containerName + "'))]",
+			"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), " + databaseName + ", '" + containerName + "')]",
 		},
 		Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers",
 	}

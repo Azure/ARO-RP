@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	sdkcosmos "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -34,45 +33,45 @@ type Billing interface {
 func NewBilling(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string, sqlResourceClient *sdkcosmos.SQLResourcesClient, location, resourceGroup, dbAccountName string) (Billing, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbName)
 
-	triggerResources := []*sdkcosmos.SQLTriggerResource{
-		{
-			ID: to.Ptr("setCreationBillingTimeStamp"),
-			Body: to.Ptr(`function trigger() {
-				var request = getContext().getRequest();
-				var body = request.getBody();
-				var date = new Date();
-				var now = Math.floor(date.getTime() / 1000);
-				var billingBody = body["billing"];
-				if (!billingBody["creationTime"]) {
-					billingBody["creationTime"] = now;
-				}
-				request.setBody(body);
-			}`),
-			TriggerOperation: to.Ptr(sdkcosmos.TriggerOperation("Create")),
-			TriggerType:      to.Ptr(sdkcosmos.TriggerType("Pre")),
-		},
-		{
-			ID: to.Ptr("setDeletionBillingTimeStamp"),
-			Body: to.Ptr(`function trigger() {
-				var request = getContext().getRequest();
-				var body = request.getBody();
-				var date = new Date();
-				var now = Math.floor(date.getTime() / 1000);
-				var billingBody = body["billing"];
-				if (!billingBody["creationTime"]) {
-					billingBody["creationTime"] = now;
-				}
-				request.setBody(body);
-			}`),
-			TriggerOperation: to.Ptr(sdkcosmos.TriggerOperation("Replace")),
-			TriggerType:      to.Ptr(sdkcosmos.TriggerType("Pre")),
-		},
-	}
+	// triggerResources := []*sdkcosmos.SQLTriggerResource{
+	// 	{
+	// 		ID: to.Ptr("setCreationBillingTimeStamp"),
+	// 		Body: to.Ptr(`function trigger() {
+	// 			var request = getContext().getRequest();
+	// 			var body = request.getBody();
+	// 			var date = new Date();
+	// 			var now = Math.floor(date.getTime() / 1000);
+	// 			var billingBody = body["billing"];
+	// 			if (!billingBody["creationTime"]) {
+	// 				billingBody["creationTime"] = now;
+	// 			}
+	// 			request.setBody(body);
+	// 		}`),
+	// 		TriggerOperation: to.Ptr(sdkcosmos.TriggerOperation("Create")),
+	// 		TriggerType:      to.Ptr(sdkcosmos.TriggerType("Pre")),
+	// 	},
+	// 	{
+	// 		ID: to.Ptr("setDeletionBillingTimeStamp"),
+	// 		Body: to.Ptr(`function trigger() {
+	// 			var request = getContext().getRequest();
+	// 			var body = request.getBody();
+	// 			var date = new Date();
+	// 			var now = Math.floor(date.getTime() / 1000);
+	// 			var billingBody = body["billing"];
+	// 			if (!billingBody["creationTime"]) {
+	// 				billingBody["creationTime"] = now;
+	// 			}
+	// 			request.setBody(body);
+	// 		}`),
+	// 		TriggerOperation: to.Ptr(sdkcosmos.TriggerOperation("Replace")),
+	// 		TriggerType:      to.Ptr(sdkcosmos.TriggerType("Pre")),
+	// 	},
+	// }
 
-	err := createTriggers(ctx, sqlResourceClient, triggerResources, resourceGroup, dbName, dbAccountName, location, collBilling)
-	if err != nil {
-		return nil, err
-	}
+	// err := createTriggers(ctx, sqlResourceClient, triggerResources, resourceGroup, dbName, dbAccountName, location, collBilling)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	documentClient := cosmosdb.NewBillingDocumentClient(collc, collBilling)
 	return NewBillingWithProvidedClient(documentClient), nil
