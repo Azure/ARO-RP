@@ -7,12 +7,12 @@ steps:
       #trap 'set +e; for c in $(docker ps -aq); do docker rm -f $c; done; docker image prune -af ; rm -rf ~/.docker/config.json; rm -rf /run/user/$(id -u $USERNAME)/containers/auth.json' EXIT
 
       export RP_IMAGE_ACR=${{ parameters.rpImageACR }}
-      
-      if [ -z "${{ parameters.acrCredentialsJSON }}" ]; then
+
+      if [ -z ${{ parameters.acrCredentialsJSON }} ]; then
         az acr login --name "$RP_IMAGE_ACR"
       else 
         trap 'rm -f acr-credentials.json' EXIT
-        base64 -d >acr-credentials.json <<<${{ parameters.azureDevOpsJSONSPN }}
+        base64 -d >acr-credentials.json <<<${{ parameters.acrCredentialsJSON }}
         az acr login --name "$RP_IMAGE_ACR" -u "$(jq -r .username < acr-credentials.json)" -p "$(jq -r .password < acr-credentials.json)"
       fi
 
