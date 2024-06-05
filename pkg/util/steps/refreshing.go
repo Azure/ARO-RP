@@ -77,6 +77,7 @@ func (s *authorizationRefreshingActionStep) run(ctx context.Context, log *logrus
 			(azureerrors.IsUnauthorizedClientError(err) ||
 				azureerrors.HasAuthorizationFailedError(err) ||
 				azureerrors.IsInvalidSecretError(err) ||
+				azureerrors.IsDeploymentMissingPermissionsError(err) ||
 				err == ErrWantRefresh) {
 			log.Printf("auth error, refreshing and retrying: %v", err)
 			// Try refreshing auth.

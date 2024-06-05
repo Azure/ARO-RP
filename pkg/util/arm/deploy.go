@@ -34,7 +34,8 @@ func DeployTemplate(ctx context.Context, log *logrus.Entry, deployments features
 	}
 
 	if azureerrors.HasAuthorizationFailedError(err) ||
-		azureerrors.HasLinkedAuthorizationFailedError(err) {
+		azureerrors.HasLinkedAuthorizationFailedError(err) ||
+		azureerrors.IsDeploymentMissingPermissionsError(err) {
 		return err
 	}
 
