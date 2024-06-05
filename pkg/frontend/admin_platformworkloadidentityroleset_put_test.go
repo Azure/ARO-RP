@@ -29,7 +29,7 @@ func TestPlatformWorkloadIdentityRoleSetPut(t *testing.T) {
 
 	for _, tt := range []*test{
 		{
-			name: "updating known version",
+			name: "PUT to update an existing entry updates it in-place and results in StatusOK",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddPlatformWorkloadIdentityRoleSetDocuments(
 					&api.PlatformWorkloadIdentityRoleSetDocument{
@@ -112,7 +112,7 @@ func TestPlatformWorkloadIdentityRoleSetPut(t *testing.T) {
 			},
 		},
 		{
-			name: "creating new version",
+			name: "PUT to add a new entry creates it successfully and results in StatusOK",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddPlatformWorkloadIdentityRoleSetDocuments(
 					&api.PlatformWorkloadIdentityRoleSetDocument{
@@ -221,7 +221,7 @@ func TestPlatformWorkloadIdentityRoleSetPut(t *testing.T) {
 			},
 		},
 		{
-			name:           "creating new version needs body",
+			name:           "PUT with missing request body results in StatusBadRequest",
 			fixture:        func(f *testdatabase.Fixture) {},
 			body:           &admin.PlatformWorkloadIdentityRoleSet{},
 			wantStatusCode: http.StatusBadRequest,
@@ -229,7 +229,7 @@ func TestPlatformWorkloadIdentityRoleSetPut(t *testing.T) {
 			wantDocuments:  []*api.PlatformWorkloadIdentityRoleSetDocument{},
 		},
 		{
-			name: "updating known version requires OpenShiftVersion",
+			name: "PUT with missing OpenShiftVersion results in StatusBadRequest",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddPlatformWorkloadIdentityRoleSetDocuments(
 					&api.PlatformWorkloadIdentityRoleSetDocument{
@@ -305,7 +305,7 @@ func TestPlatformWorkloadIdentityRoleSetPut(t *testing.T) {
 			},
 		},
 		{
-			name: "updating known version requires PlatformWorkloadIdentityRoles",
+			name: "PUT with missing PlatformWorkloadIdentityRoles results in StatusBadRequest",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddPlatformWorkloadIdentityRoleSetDocuments(
 					&api.PlatformWorkloadIdentityRoleSetDocument{
@@ -372,7 +372,7 @@ func TestPlatformWorkloadIdentityRoleSetPut(t *testing.T) {
 			},
 		},
 		{
-			name: "updating known version requires PlatformWorkloadIdentityRole.OperatorName",
+			name: "PUT with missing PlatformWorkloadIdentityRole.OperatorName results in StatusBadRequest",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddPlatformWorkloadIdentityRoleSetDocuments(
 					&api.PlatformWorkloadIdentityRoleSetDocument{
@@ -448,7 +448,7 @@ func TestPlatformWorkloadIdentityRoleSetPut(t *testing.T) {
 			},
 		},
 		{
-			name: "updating known version requires PlatformWorkloadIdentityRole.RoleDefinitionName",
+			name: "PUT with missing PlatformWorkloadIdentityRole.RoleDefinitionName results in StatusBadRequest",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddPlatformWorkloadIdentityRoleSetDocuments(
 					&api.PlatformWorkloadIdentityRoleSetDocument{
@@ -524,7 +524,7 @@ func TestPlatformWorkloadIdentityRoleSetPut(t *testing.T) {
 			},
 		},
 		{
-			name: "updating known version requires PlatformWorkloadIdentityRole.RoleDefinitionID",
+			name: "PUT with missing PlatformWorkloadIdentityRole.RoleDefinitionID results in StatusBadRequest",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddPlatformWorkloadIdentityRoleSetDocuments(
 					&api.PlatformWorkloadIdentityRoleSetDocument{
@@ -600,7 +600,7 @@ func TestPlatformWorkloadIdentityRoleSetPut(t *testing.T) {
 			},
 		},
 		{
-			name: "updating known version requires PlatformWorkloadIdentityRole.ServiceAccounts",
+			name: "PUT with missing PlatformWorkloadIdentityRole.ServiceAccounts results in StatusBadRequest",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddPlatformWorkloadIdentityRoleSetDocuments(
 					&api.PlatformWorkloadIdentityRoleSetDocument{
@@ -674,7 +674,7 @@ func TestPlatformWorkloadIdentityRoleSetPut(t *testing.T) {
 			},
 		},
 		{
-			name: "updating known version requires PlatformWorkloadIdentityRole.RoleDefinitionId and PlatformWorkloadIdentityRole.ServiceAccounts (tests the case where multiple attributes are missing and error message consists of missing properties joined together)",
+			name: "PUT with missing PlatformWorkloadIdentityRole.RoleDefinitionId and PlatformWorkloadIdentityRole.ServiceAccounts results in StatusBadRequest - tests the case where multiple attributes are missing and error message consists of messages about multiple missing properties joined together",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddPlatformWorkloadIdentityRoleSetDocuments(
 					&api.PlatformWorkloadIdentityRoleSetDocument{

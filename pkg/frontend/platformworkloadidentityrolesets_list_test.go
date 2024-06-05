@@ -31,7 +31,7 @@ func TestListPlatformWorkloadIdentityRoleSets(t *testing.T) {
 		wantError      string
 	}{
 		{
-			name: "valid request - return a list of role sets",
+			name: "GET request results in StatusOK",
 			changeFeed: map[string]*api.PlatformWorkloadIdentityRoleSet{
 				"4.14": {
 					Properties: api.PlatformWorkloadIdentityRoleSetProperties{
@@ -109,13 +109,13 @@ func TestListPlatformWorkloadIdentityRoleSets(t *testing.T) {
 			},
 		},
 		{
-			name:           "api version does not exist",
+			name:           "GET request with non-existent API version results in StatusBadRequest",
 			apiVersion:     "invalid",
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      "400: InvalidResourceType: : The resource type '' could not be found in the namespace 'microsoft.redhatopenshift' for api version 'invalid'.",
 		},
 		{
-			name:           "api version is old and doesn't support MIWI",
+			name:           "GET request with old API version that doesn't support MIWI results in StatusBadRequest",
 			apiVersion:     "2022-09-04",
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      "400: InvalidResourceType: : The endpoint could not be found in the namespace 'microsoft.redhatopenshift' for api version '2022-09-04'.",

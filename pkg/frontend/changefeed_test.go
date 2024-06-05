@@ -22,7 +22,7 @@ func TestUpdateFromIteratorOcpVersions(t *testing.T) {
 		wantVersions   map[string]*api.OpenShiftVersion
 	}{
 		{
-			name: "add to empty",
+			name: "Add a new doc from the changefeed to an empty frontend cache",
 			docsInIterator: []*api.OpenShiftVersionDocument{
 				{
 					OpenShiftVersion: &api.OpenShiftVersion{
@@ -44,7 +44,7 @@ func TestUpdateFromIteratorOcpVersions(t *testing.T) {
 			},
 		},
 		{
-			name: "do nothing",
+			name: "Docs in changefeed match docs in frontend cache - no changes needed",
 			docsInIterator: []*api.OpenShiftVersionDocument{
 				{
 					OpenShiftVersion: &api.OpenShiftVersion{
@@ -73,7 +73,7 @@ func TestUpdateFromIteratorOcpVersions(t *testing.T) {
 			},
 		},
 		{
-			name: "add to not empty",
+			name: "Add a new doc from the iterator to a non-empty frontend cache",
 			docsInIterator: []*api.OpenShiftVersionDocument{
 				{
 					OpenShiftVersion: &api.OpenShiftVersion{
@@ -108,7 +108,7 @@ func TestUpdateFromIteratorOcpVersions(t *testing.T) {
 			},
 		},
 		{
-			name: "remove existing",
+			name: "A doc present in the frontend cache is marked deleting in the changefeed - remove it from the cache",
 			docsInIterator: []*api.OpenShiftVersionDocument{
 				{
 					OpenShiftVersion: &api.OpenShiftVersion{
@@ -152,7 +152,7 @@ func TestUpdateFromIteratorOcpVersions(t *testing.T) {
 			},
 		},
 		{
-			name: "remove disabled versions",
+			name: "A doc present in the frontend cache is marked disabled in the changefeed - remove it from the cache",
 			docsInIterator: []*api.OpenShiftVersionDocument{
 				{
 					OpenShiftVersion: &api.OpenShiftVersion{

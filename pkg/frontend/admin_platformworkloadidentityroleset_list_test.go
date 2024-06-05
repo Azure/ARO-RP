@@ -27,7 +27,7 @@ func TestPlatformWorkloadIdentityRoleSetList(t *testing.T) {
 
 	for _, tt := range []*test{
 		{
-			name:           "empty",
+			name:           "GET request returns empty result with StatusOK",
 			fixture:        func(f *testdatabase.Fixture) {},
 			wantStatusCode: http.StatusOK,
 			wantResponse: &admin.PlatformWorkloadIdentityRoleSetList{
@@ -35,7 +35,7 @@ func TestPlatformWorkloadIdentityRoleSetList(t *testing.T) {
 			},
 		},
 		{
-			name: "happy path",
+			name: "GET request returns non-empty result with StatusOK",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddPlatformWorkloadIdentityRoleSetDocuments(
 					&api.PlatformWorkloadIdentityRoleSetDocument{
