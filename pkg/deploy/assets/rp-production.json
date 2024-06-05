@@ -536,15 +536,6 @@
             ]
         },
         {
-            "sku": {
-                "name": "Standard_LRS"
-            },
-            "location": "[resourceGroup().location]",
-            "name": "[substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.'))]",
-            "type": "Microsoft.Storage/storageAccounts",
-            "apiVersion": "2019-06-01"
-        },
-        {
             "properties": {
                 "severity": 2,
                 "enabled": true,

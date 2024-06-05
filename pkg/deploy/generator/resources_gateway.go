@@ -419,7 +419,3 @@ func (g *generator) gatewayRBAC() []*arm.Resource {
 		),
 	}
 }
-
-func (g *generator) gatewayStorageAccount() *arm.Resource {
-	return g.storageAccount("[substring(parameters('gatewayStorageAccountDomain'), 0, indexOf(parameters('gatewayStorageAccountDomain'), '.'))]", nil, nil)
-}
