@@ -1206,6 +1206,20 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 		},
 	}
 
+	// Adding Triggers
+	rs = append(rs,
+		// Subscription
+		g.rpCosmosDBTriggers(databaseName, "Subscriptions", "renewLease", renewLeaseTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationAll),
+		g.rpCosmosDBTriggers(databaseName, "Subscriptions", "retryLater", retryLaterTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationAll),
+		// Billing
+		g.rpCosmosDBTriggers(databaseName, "Billing", "setCreationBillingTimeStamp", setCreationBillingTimeStampTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationCreate),
+		g.rpCosmosDBTriggers(databaseName, "Billing", "setDeletionBillingTimeStamp", setDeletionBillingTimeStampTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationReplace),
+		// OpenShiftClusters
+		g.rpCosmosDBTriggers(databaseName, "OpenShiftClusters", "renewLease", renewLeaseTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationAll),
+		// Monitors
+		g.rpCosmosDBTriggers(databaseName, "Monitors", "renewLease", renewLeaseTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationAll),
+	)
+
 	if addDependsOn {
 		for i := range rs {
 			rs[i].DependsOn = append(rs[i].DependsOn,
@@ -1215,6 +1229,31 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 	}
 
 	return rs
+}
+
+func (g *generator) rpCosmosDBTriggers(databaseName, containerName, triggerID, triggerFunction string, triggerType sdkcosmos.TriggerType, triggerOperation sdkcosmos.TriggerOperation) *arm.Resource {
+	return &arm.Resource{
+		Resource: &sdkcosmos.SQLTriggerCreateUpdateParameters{
+			Properties: &sdkcosmos.SQLTriggerCreateUpdateProperties{
+				Resource: &sdkcosmos.SQLTriggerResource{
+					ID:               to.StringPtr(triggerID),
+					Body:             to.StringPtr(triggerFunction),
+					TriggerOperation: &triggerOperation,
+					TriggerType:      &triggerType,
+				},
+				// Options: &sdkcosmos.CreateUpdateOptions{},
+			},
+			Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/" + containerName + "/" + triggerID + "')]"),
+			Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
+		DependsOn: []string{
+			"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
+			// "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), concat(" + databaseName + ", '/" + containerName + "'))]",
+		},
+		Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers",
+	}
 }
 
 func (g *generator) rpCosmosDBAlert(throttledRequestThreshold float64, ruConsumptionThreshold float64, severity int32, name string, evalFreq string, windowSize string) *arm.Resource {

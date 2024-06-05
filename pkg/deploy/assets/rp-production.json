@@ -941,6 +941,126 @@
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"
         },
         {
+            "Properties": {
+                "Resource": {
+                    "ID": "renewLease",
+                    "Body": "function trigger() {\n\t\t\t\tvar request = getContext().getRequest();\n\t\t\t\tvar body = request.getBody();\n\t\t\t\tvar date = new Date();\n\t\t\t\tbody[\"leaseExpires\"] = Math.floor(date.getTime() / 1000) + 60;\n\t\t\t\trequest.setBody(body);\n\t\t\t}",
+                    "TriggerOperation": "All",
+                    "TriggerType": "Pre"
+                },
+                "Options": null
+            },
+            "location": "[resourceGroup().location]",
+            "ID": null,
+            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Subscriptions/renewLease')]",
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers",
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ]
+        },
+        {
+            "Properties": {
+                "Resource": {
+                    "ID": "retryLater",
+                    "Body": "function trigger() {\n\t\t\t\tvar request = getContext().getRequest();\n\t\t\t\tvar body = request.getBody();\n\t\t\t\tvar date = new Date();\n\t\t\t\tbody[\"leaseExpires\"] = Math.floor(date.getTime() / 1000) + 600;\n\t\t\t\trequest.setBody(body);\n\t\t\t}",
+                    "TriggerOperation": "All",
+                    "TriggerType": "Pre"
+                },
+                "Options": null
+            },
+            "location": "[resourceGroup().location]",
+            "ID": null,
+            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Subscriptions/retryLater')]",
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers",
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ]
+        },
+        {
+            "Properties": {
+                "Resource": {
+                    "ID": "setCreationBillingTimeStamp",
+                    "Body": "function trigger() {\n\t\t\t\tvar request = getContext().getRequest();\n\t\t\t\tvar body = request.getBody();\n\t\t\t\tvar date = new Date();\n\t\t\t\tvar now = Math.floor(date.getTime() / 1000);\n\t\t\t\tvar billingBody = body[\"billing\"];\n\t\t\t\tif (!billingBody[\"creationTime\"]) {\n\t\t\t\t\tbillingBody[\"creationTime\"] = now;\n\t\t\t\t}\n\t\t\t\trequest.setBody(body);\n\t\t\t}",
+                    "TriggerOperation": "Create",
+                    "TriggerType": "Pre"
+                },
+                "Options": null
+            },
+            "location": "[resourceGroup().location]",
+            "ID": null,
+            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Billing/setCreationBillingTimeStamp')]",
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers",
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ]
+        },
+        {
+            "Properties": {
+                "Resource": {
+                    "ID": "setDeletionBillingTimeStamp",
+                    "Body": "function trigger() {\n\t\t\t\tvar request = getContext().getRequest();\n\t\t\t\tvar body = request.getBody();\n\t\t\t\tvar date = new Date();\n\t\t\t\tvar now = Math.floor(date.getTime() / 1000);\n\t\t\t\tvar billingBody = body[\"billing\"];\n\t\t\t\tif (!billingBody[\"creationTime\"]) {\n\t\t\t\t\tbillingBody[\"creationTime\"] = now;\n\t\t\t\t}\n\t\t\t\trequest.setBody(body);\n\t\t\t}",
+                    "TriggerOperation": "Replace",
+                    "TriggerType": "Pre"
+                },
+                "Options": null
+            },
+            "location": "[resourceGroup().location]",
+            "ID": null,
+            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Billing/setDeletionBillingTimeStamp')]",
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers",
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ]
+        },
+        {
+            "Properties": {
+                "Resource": {
+                    "ID": "renewLease",
+                    "Body": "function trigger() {\n\t\t\t\tvar request = getContext().getRequest();\n\t\t\t\tvar body = request.getBody();\n\t\t\t\tvar date = new Date();\n\t\t\t\tbody[\"leaseExpires\"] = Math.floor(date.getTime() / 1000) + 60;\n\t\t\t\trequest.setBody(body);\n\t\t\t}",
+                    "TriggerOperation": "All",
+                    "TriggerType": "Pre"
+                },
+                "Options": null
+            },
+            "location": "[resourceGroup().location]",
+            "ID": null,
+            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/OpenShiftClusters/renewLease')]",
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers",
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ]
+        },
+        {
+            "Properties": {
+                "Resource": {
+                    "ID": "renewLease",
+                    "Body": "function trigger() {\n\t\t\t\tvar request = getContext().getRequest();\n\t\t\t\tvar body = request.getBody();\n\t\t\t\tvar date = new Date();\n\t\t\t\tbody[\"leaseExpires\"] = Math.floor(date.getTime() / 1000) + 60;\n\t\t\t\trequest.setBody(body);\n\t\t\t}",
+                    "TriggerOperation": "All",
+                    "TriggerType": "Pre"
+                },
+                "Options": null
+            },
+            "location": "[resourceGroup().location]",
+            "ID": null,
+            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Monitors/renewLease')]",
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers",
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ]
+        },
+        {
             "properties": {
                 "severity": 3,
                 "enabled": true,
