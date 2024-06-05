@@ -266,9 +266,14 @@ deploy_aro_spn_keyvault() {
         --template-file pkg/deploy/assets/e2e-aro-spn-keyvault.json
 }
 
-deploy_aro_spns() {
-    # Create ARO cluster service principals
-
+deploy_aro_e2e_global_keyvault() {
+    az deployment group create \
+        --name aroe2eprincipals \
+        --resource-group global-infra \
+        --parameters \
+            "vault_name=$ARO_E2E_GLOBAL_VAULT_NAME" \
+            "tenant_id=$AZURE_TENANT_ID" \
+        --template-file pkg/deploy/assets/e2e-global-keyvault.json
 
 }
 
