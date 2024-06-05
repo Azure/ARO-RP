@@ -54,7 +54,7 @@ RUN go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${A
 RUN go test ./test/e2e/... -tags e2e,codec.safe -c -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${ARO_VERSION}" -o e2e.test
 
 # Additional tests
-RUN ARO_RUN_PKI_TESTS=nope go run gotest.tools/gotestsum@v1.11.0 --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
+RUN ARO_SKIP_PKI_TESTS=true go run gotest.tools/gotestsum@v1.11.0 --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
 RUN hack/fips/validate-fips.sh ./aro
 
 ###############################################################################
