@@ -12,7 +12,6 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/policy"
 	azcorepolicy "github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	sdkcosmos "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
@@ -113,29 +112,4 @@ func NewJSONHandle(aead encryption.AEAD) (*codec.JsonHandle, error) {
 	}
 
 	return h, nil
-}
-
-func createTriggers(ctx context.Context, sqlResourceClient *sdkcosmos.SQLResourcesClient, triggerResources []*sdkcosmos.SQLTriggerResource, resourceGroup, dbName, dbAccountName, location, containerName string) error {
-	for _, triggerResource := range triggerResources {
-		createUpdateSQLTriggerParameters := sdkcosmos.SQLTriggerCreateUpdateParameters{
-			Properties: &sdkcosmos.SQLTriggerCreateUpdateProperties{
-				Options:  &sdkcosmos.CreateUpdateOptions{},
-				Resource: triggerResource,
-			},
-			Location: &location,
-		}
-		ctx, cancel := context.WithTimeout(ctx, time.Minute*5)
-		defer cancel()
-
-		poller, err := sqlResourceClient.BeginCreateUpdateSQLTrigger(ctx, resourceGroup, dbAccountName, dbName, containerName, *triggerResource.ID, createUpdateSQLTriggerParameters, nil)
-		if err != nil {
-			return err
-		}
-
-		_, err = poller.PollUntilDone(ctx, &runtime.PollUntilDoneOptions{Frequency: 1 * time.Second})
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }

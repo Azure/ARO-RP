@@ -10,8 +10,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/policy"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
 	"github.com/Azure/go-autorest/tracing"
 	"github.com/sirupsen/logrus"
 	kmetrics "k8s.io/client-go/tools/metrics"
@@ -110,9 +108,6 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 	dbAccountName := os.Getenv(envDatabaseAccountName)
-	clientOptions := &policy.ClientOptions{
-		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
-	}
 
 	logrusEntry := log.WithField("component", "database")
 	scope := []string{fmt.Sprintf("https://%s.%s", dbAccountName, _env.Environment().CosmosDBDNSSuffixScope)}
@@ -140,12 +135,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	sqlResourceClient, err := armcosmos.NewSQLResourcesClient(_env.SubscriptionID(), msiToken, clientOptions)
-	if err != nil {
-		return err
-	}
-
-	dbBilling, err := database.NewBilling(ctx, dbc, dbName, sqlResourceClient, _env.Location(), _env.ResourceGroup(), dbAccountName)
+	dbBilling, err := database.NewBilling(ctx, dbc, dbName)
 	if err != nil {
 		return err
 	}
@@ -155,12 +145,12 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, dbc, dbName, sqlResourceClient, _env.Location(), _env.ResourceGroup(), dbAccountName)
+	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, dbc, dbName)
 	if err != nil {
 		return err
 	}
 
-	dbSubscriptions, err := database.NewSubscriptions(ctx, dbc, dbName, sqlResourceClient, _env.Location(), _env.ResourceGroup(), dbAccountName)
+	dbSubscriptions, err := database.NewSubscriptions(ctx, dbc, dbName)
 	if err != nil {
 		return err
 	}

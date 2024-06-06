@@ -9,8 +9,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos/v2"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
@@ -37,40 +35,8 @@ type Subscriptions interface {
 }
 
 // NewSubscriptions returns a new Subscriptions
-func NewSubscriptions(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string, sqlResourceClient *armcosmos.SQLResourcesClient, location, resourceGroup, dbAccountName string) (Subscriptions, error) {
+func NewSubscriptions(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string) (Subscriptions, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbName)
-
-	// triggerResources := []*armcosmos.SQLTriggerResource{
-	// 	{
-	// 		ID: to.Ptr("renewLease"),
-	// 		Body: to.Ptr(`function trigger() {
-	// 			var request = getContext().getRequest();
-	// 			var body = request.getBody();
-	// 			var date = new Date();
-	// 			body["leaseExpires"] = Math.floor(date.getTime() / 1000) + 60;
-	// 			request.setBody(body);
-	// 		}`),
-	// 		TriggerOperation: to.Ptr(armcosmos.TriggerOperation(cosmosdb.TriggerOperationAll)),
-	// 		TriggerType:      to.Ptr(armcosmos.TriggerType(cosmosdb.TriggerTypePre)),
-	// 	},
-	// 	{
-	// 		ID: to.Ptr("retryLater"),
-	// 		Body: to.Ptr(`function trigger() {
-	// 			var request = getContext().getRequest();
-	// 			var body = request.getBody();
-	// 			var date = new Date();
-	// 			body["leaseExpires"] = Math.floor(date.getTime() / 1000) + 600;
-	// 			request.setBody(body);
-	// 		}`),
-	// 		TriggerOperation: to.Ptr(armcosmos.TriggerOperation(cosmosdb.TriggerOperationAll)),
-	// 		TriggerType:      to.Ptr(armcosmos.TriggerType(cosmosdb.TriggerTypePre)),
-	// 	},
-	// }
-
-	// err := createTriggers(ctx, sqlResourceClient, triggerResources, resourceGroup, dbName, dbAccountName, location, collSubscriptions)
-	// if err != nil {
-	// 	return nil, err
-	// }
 
 	documentClient := cosmosdb.NewSubscriptionDocumentClient(collc, collSubscriptions)
 	return NewSubscriptionsWithProvidedClient(documentClient, uuid.DefaultGenerator.Generate()), nil
