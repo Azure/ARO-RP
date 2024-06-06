@@ -192,7 +192,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	rpBlob, err := azblob.NewManager(_env, _env.SubscriptionID(), msiCredential)
+	rpBlob, err := azblob.NewManager(_env.Environment(), _env.SubscriptionID(), msiCredential)
 	if err != nil {
 		return nil, err
 	}

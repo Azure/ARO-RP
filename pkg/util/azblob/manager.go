@@ -12,7 +12,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/bloberror"
 
-	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armstorage"
 )
 
@@ -27,8 +27,8 @@ type manager struct {
 	blobContainer armstorage.BlobContainersClient
 }
 
-func NewManager(env env.Interface, subscriptionID string, credential azcore.TokenCredential) (Manager, error) {
-	client, err := armstorage.NewBlobContainersClient(env.Environment(), subscriptionID, credential)
+func NewManager(environment *azureclient.AROEnvironment, subscriptionID string, credential azcore.TokenCredential) (Manager, error) {
+	client, err := armstorage.NewBlobContainersClient(environment, subscriptionID, credential)
 	if err != nil {
 		return nil, err
 	}

@@ -441,10 +441,12 @@ func (m *manager) Delete(ctx context.Context) error {
 		return err
 	}
 
-	m.log.Printf("deleting OIDC configuration")
-	err = m.rpBlob.DeleteBlobContainer(ctx, m.env.ResourceGroup(), m.env.OIDCStorageAccountName(), env.OIDCBlobContainerPrefix+m.doc.ID)
-	if err != nil {
-		return err
+	if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile == nil && m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile != nil {
+		m.log.Printf("deleting OIDC configuration")
+		err = m.rpBlob.DeleteBlobContainer(ctx, m.env.ResourceGroup(), m.env.OIDCStorageAccountName(), env.OIDCBlobContainerPrefix+m.doc.ID)
+		if err != nil {
+			return err
+		}
 	}
 
 	m.log.Printf("deleting role assignments")
