@@ -257,7 +257,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	if doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil {
 		doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 	}
-	doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey = ""
+	doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey = nil
 
 	// We don't return enriched worker profile data on PUT/PATCH operations
 	doc.OpenShiftCluster.Properties.WorkerProfilesStatus = nil

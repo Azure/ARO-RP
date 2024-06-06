@@ -1419,25 +1419,24 @@ func TestCreateOIDC(t *testing.T) {
 		wantErr                           string
 		wantBoundServiceAccountSigningKey bool
 	}{
-		// TODO: Uncomment the test case after testing the PR on all the environments
-		// {
-		// 	name: "Success - Exit createOIDC for non MIWI clusters",
-		// 	oc: &api.OpenShiftClusterDocument{
-		// 		Key: strings.ToLower(resourceID),
-		// 		ID:  resourceID,
-		// 		OpenShiftCluster: &api.OpenShiftCluster{
-		// 			Properties: api.OpenShiftClusterProperties{
-		// 				ClusterProfile: api.ClusterProfile{
-		// 					ResourceGroupID: resourceGroup,
-		// 				},
-		// 				ServicePrincipalProfile: &api.ServicePrincipalProfile{
-		// 					SPObjectID: fakeClusterSPObjectId,
-		// 				},
-		// 			},
-		// 		},
-		// 	},
-		// 	wantBoundServiceAccountSigningKey: false,
-		// },
+		{
+			name: "Success - Exit createOIDC for non MIWI clusters",
+			oc: &api.OpenShiftClusterDocument{
+				Key: strings.ToLower(resourceID),
+				ID:  resourceID,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: resourceGroup,
+						},
+						ServicePrincipalProfile: &api.ServicePrincipalProfile{
+							SPObjectID: fakeClusterSPObjectId,
+						},
+					},
+				},
+			},
+			wantBoundServiceAccountSigningKey: false,
+		},
 		{
 			name: "Success - Create and persist OIDC Issuer URL",
 			oc: &api.OpenShiftClusterDocument{
@@ -1586,7 +1585,7 @@ func TestCreateOIDC(t *testing.T) {
 				t.Fatalf("OIDC Issuer URL - %s != %s (wanted)", checkDoc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer, tt.wantedOIDCIssuer)
 			}
 
-			if checkDoc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey == "" && tt.wantBoundServiceAccountSigningKey {
+			if checkDoc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey == nil && tt.wantBoundServiceAccountSigningKey {
 				t.Fatalf("Bound Service Account Token is not as expected - wantBoundServiceAccountSigningKey is %t", tt.wantBoundServiceAccountSigningKey)
 			}
 		})

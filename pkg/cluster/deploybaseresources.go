@@ -73,7 +73,7 @@ func (m *manager) createOIDC(ctx context.Context) error {
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer = api.OIDCIssuer(oidcBuilder.GetEndpointUrl())
-		doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey = api.SecureString(oidcBuilder.GetPrivateKey())
+		doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey = api.SecureBytes(oidcBuilder.GetPrivateKey())
 		return nil
 	})
 

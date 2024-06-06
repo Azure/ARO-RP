@@ -70,7 +70,7 @@ func (f *frontend) _getOpenShiftClusters(ctx context.Context, log *logrus.Entry,
 		if ocs[i].Properties.ServicePrincipalProfile != nil {
 			ocs[i].Properties.ServicePrincipalProfile.ClientSecret = ""
 		}
-		ocs[i].Properties.ClusterProfile.BoundServiceAccountSigningKey = ""
+		ocs[i].Properties.ClusterProfile.BoundServiceAccountSigningKey = nil
 	}
 
 	nextLink, err := f.buildNextLink(r.Header.Get("Referer"), i.Continuation())

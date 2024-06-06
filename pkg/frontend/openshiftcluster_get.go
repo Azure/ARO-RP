@@ -48,7 +48,7 @@ func (f *frontend) _getOpenShiftCluster(ctx context.Context, log *logrus.Entry, 
 	if doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil {
 		doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 	}
-	doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey = ""
+	doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey = nil
 
 	return json.MarshalIndent(converter.ToExternal(doc.OpenShiftCluster), "", "    ")
 }
