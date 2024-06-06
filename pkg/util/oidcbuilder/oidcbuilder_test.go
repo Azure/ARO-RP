@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -135,8 +136,8 @@ func TestEnsureOIDCDocs(t *testing.T) {
 				t.Fatalf("GetEndpointUrl doesn't match the original endpointURL - %s != %s (wanted)", tt.oidcbuilder.GetEndpointUrl(), tt.oidcbuilder.endpointURL)
 			}
 
-			if tt.oidcbuilder.GetPrivateKey() != string(tt.oidcbuilder.privateKey) {
-				t.Fatalf("GetPrivateKey doesn't match the original endpointURL - %s != %s (wanted)", tt.oidcbuilder.GetPrivateKey(), string(tt.oidcbuilder.privateKey))
+			if !reflect.DeepEqual(tt.oidcbuilder.privateKey, tt.oidcbuilder.GetPrivateKey()) {
+				t.Fatalf("GetPrivateKey doesn't match the original privateKey")
 			}
 
 			if tt.oidcbuilder.GetBlobContainerURL() != tt.oidcbuilder.blobContainerURL {

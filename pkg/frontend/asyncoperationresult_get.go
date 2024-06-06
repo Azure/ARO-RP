@@ -67,7 +67,7 @@ func (f *frontend) _getAsyncOperationResult(ctx context.Context, r *http.Request
 	if asyncdoc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil {
 		asyncdoc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 	}
-	asyncdoc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey = ""
+	asyncdoc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey = nil
 
 	return json.MarshalIndent(converter.ToExternal(asyncdoc.OpenShiftCluster), "", "    ")
 }

@@ -53,8 +53,8 @@ func (b *OIDCBuilder) GetEndpointUrl() string {
 	return b.endpointURL
 }
 
-func (b *OIDCBuilder) GetPrivateKey() string {
-	return string(b.privateKey)
+func (b *OIDCBuilder) GetPrivateKey() []byte {
+	return b.privateKey
 }
 
 func (b *OIDCBuilder) GetBlobContainerURL() string {
