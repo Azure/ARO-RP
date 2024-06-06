@@ -281,4 +281,4 @@ vendor:
 install-go-tools:
 	go install ${GOTESTSUM}
 
-.PHONY: admin.kubeconfig aks.kubeconfig aro az ci-portal ci-rp ci-clean clean client deploy dev-config.yaml discoverycache fix-macos-vendor generate image-aro-multistage image-fluentbit image-proxy init-contrib lint-go runlocal-rp proxy publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor build-all validate-go unit-test-go coverage-go validate-fips install-go-tools
+.PHONY: admin.kubeconfig aks.kubeconfig aro az ci-rp ci-clean clean client deploy dev-config.yaml discoverycache fix-macos-vendor generate image-aro-multistage image-fluentbit image-proxy init-contrib lint-go runlocal-rp proxy publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor build-all validate-go unit-test-go coverage-go validate-fips install-go-tools
