@@ -45,6 +45,8 @@ type kubeActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster
 
 type azureActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error)
 
+type ocmActionsFactory func(clusterID, ocmBaseUrl, token string) adminactions.OCMActions
+
 type frontend struct {
 	auditLog *logrus.Entry
 	baseLog  *logrus.Entry
@@ -75,6 +77,7 @@ type frontend struct {
 	hiveClusterManager  hive.ClusterManager
 	kubeActionsFactory  kubeActionsFactory
 	azureActionsFactory azureActionsFactory
+	ocmActionsFactory   ocmActionsFactory
 
 	skuValidator       SkuValidator
 	quotaValidator     QuotaValidator
@@ -124,6 +127,7 @@ func NewFrontend(ctx context.Context,
 	hiveClusterManager hive.ClusterManager,
 	kubeActionsFactory kubeActionsFactory,
 	azureActionsFactory azureActionsFactory,
+	ocmActionsFactory ocmActionsFactory,
 	enricher clusterdata.BestEffortEnricher,
 ) (*frontend, error) {
 	f := &frontend{
@@ -160,6 +164,7 @@ func NewFrontend(ctx context.Context,
 		hiveClusterManager:            hiveClusterManager,
 		kubeActionsFactory:            kubeActionsFactory,
 		azureActionsFactory:           azureActionsFactory,
+		ocmActionsFactory:             ocmActionsFactory,
 
 		quotaValidator:     quotaValidator{},
 		skuValidator:       skuValidator{},
@@ -318,6 +323,10 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/startvm", f.postAdminOpenShiftClusterStartVM)
 
 				r.Get("/skus", f.getAdminOpenShiftClusterVMResizeOptions)
+
+				r.Get("/getocmclusterinfowithupgradepolicies", f.getOCMClusterInfo)
+
+				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/cancelocmupgradepolicy", f.postAdminOCMCancelUpgradePolicy)
 
 				// We don't emit unplanned maintenance signal for resize since it is only used for planned maintenance
 				r.Post("/resize", f.postAdminOpenShiftClusterVMResize)

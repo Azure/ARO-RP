@@ -174,6 +174,7 @@ func TestAdminEtcdRecovery(t *testing.T) {
 				nil,
 				kubeActionsFactory,
 				nil,
+				nil,
 				ti.enricher)
 			if err != nil {
 				t.Fatal(err)

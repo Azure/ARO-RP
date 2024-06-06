@@ -545,6 +545,7 @@ func TestAdminEtcdCertificateRenew(t *testing.T) {
 					return k, nil
 				},
 				nil,
+				nil,
 				nil)
 			if err != nil {
 				t.Fatal(err)
@@ -761,6 +762,7 @@ func TestAdminEtcdCertificateRecovery(t *testing.T) {
 				func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error) {
 					return k, nil
 				},
+				nil,
 				nil,
 				nil)
 			if err != nil {
