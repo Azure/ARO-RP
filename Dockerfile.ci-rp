@@ -23,15 +23,8 @@ RUN npm run lint && npm run build
 # Stage 2: Compile the Golang RP code
 ###############################################################################
 FROM ${REGISTRY}/ubi8/go-toolset:1.20.12-5 AS builder
-<<<<<<< HEAD
-<<<<<<< HEAD
 ARG ARO_VERSION
-=======
-LABEL builder=true
->>>>>>> 8c2de5475 (adding labels to each stage in docker file ci-rp and building them individually)
-=======
 LABEL aro-builder=true
->>>>>>> 88c3b811f (manually fixing few things which got missed at the time of resolving the merge conflicts)
 USER root
 WORKDIR /app
 

@@ -77,20 +77,7 @@ client: generate
 	hack/build-client.sh "${AUTOREST_IMAGE}" 2020-04-30 2021-09-01-preview 2022-04-01 2022-09-04 2023-04-01 2023-07-01-preview 2023-09-04 2023-11-22 2024-08-12-preview
 
 ci-rp: fix-macos-vendor
-<<<<<<< HEAD
-<<<<<<< HEAD
 	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --no-cache=$(NO_CACHE)
-=======
-	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg VERSION=$(VERSION) --target builder --no-cache=$(NO_CACHE) -t aro-builder
-<<<<<<< HEAD
-	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg VERSION=$(VERSION) --cache-from builder -t aro-final
->>>>>>> 8c2de5475 (adding labels to each stage in docker file ci-rp and building them individually)
-=======
-	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg VERSION=$(VERSION) --cache-from aro-builder -t aro-final
->>>>>>> d726cd951 (quick fix for labeling all images built by ci with aro- prefix and removing --force flag in image pruning line)
-=======
-	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg VERSION=$(VERSION) --no-cache=$(NO_CACHE)
->>>>>>> 14e0b5fbc (removing builds using --cache-from flag and will cover them with a separate PR and user story, thus rolling back the changes w.r.to to the builds to how they were written earlier)
 
 ci-clean:
 	docker image prune --all --filter="label=aro-*=true"
@@ -294,4 +281,4 @@ vendor:
 install-go-tools:
 	go install ${GOTESTSUM}
 
-.PHONY: admin.kubeconfig aks.kubeconfig aro az ci-clean ci-portal ci-rp clean client deploy dev-config.yaml discoverycache fix-macos-vendor generate image-aro-multistage image-fluentbit image-proxy init-contrib lint-go runlocal-rp proxy publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor build-all validate-go unit-test-go coverage-go validate-fips install-go-tools
+.PHONY: admin.kubeconfig aks.kubeconfig aro az ci-portal ci-rp ci-clean clean client deploy dev-config.yaml discoverycache fix-macos-vendor generate image-aro-multistage image-fluentbit image-proxy init-contrib lint-go runlocal-rp proxy publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor build-all validate-go unit-test-go coverage-go validate-fips install-go-tools
