@@ -39,10 +39,9 @@ func (m *manager) createDNS(ctx context.Context) error {
 }
 
 func (m *manager) createOIDC(ctx context.Context) error {
-	// TODO: Uncomment below part after testing OIDC creation in different environments
-	// if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil {
-	// 	return nil
-	// }
+	if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil || m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile == nil {
+		return nil
+	}
 
 	blobContainerName := env.OIDCBlobContainerPrefix + m.doc.ID
 

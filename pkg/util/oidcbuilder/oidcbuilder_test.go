@@ -58,7 +58,7 @@ func TestEnsureOIDCDocs(t *testing.T) {
 			},
 			mocks: func(azblobClient *mock_azblob.MockAZBlobClient) {
 				azblobClient.EXPECT().
-					UploadBuffer(gomock.Any(), "", BodyKey, gomock.Any()).
+					UploadBuffer(gomock.Any(), "", DiscoveryDocumentKey, gomock.Any()).
 					Return(nil)
 				azblobClient.EXPECT().
 					UploadBuffer(gomock.Any(), "", JWKSKey, gomock.Any()).
@@ -95,7 +95,7 @@ func TestEnsureOIDCDocs(t *testing.T) {
 			},
 			mocks: func(azblobClient *mock_azblob.MockAZBlobClient) {
 				azblobClient.EXPECT().
-					UploadBuffer(gomock.Any(), "", BodyKey, gomock.Any()).
+					UploadBuffer(gomock.Any(), "", DiscoveryDocumentKey, gomock.Any()).
 					Return(errors.New("generic error"))
 			},
 			wantErr: "generic error",
@@ -110,7 +110,7 @@ func TestEnsureOIDCDocs(t *testing.T) {
 			},
 			mocks: func(azblobClient *mock_azblob.MockAZBlobClient) {
 				azblobClient.EXPECT().
-					UploadBuffer(gomock.Any(), "", BodyKey, gomock.Any()).
+					UploadBuffer(gomock.Any(), "", DiscoveryDocumentKey, gomock.Any()).
 					Return(nil)
 				azblobClient.EXPECT().
 					UploadBuffer(gomock.Any(), "", JWKSKey, gomock.Any()).

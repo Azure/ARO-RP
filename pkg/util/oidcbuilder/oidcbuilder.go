@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	BodyKey = ".well-known/openid-configuration"
-	JWKSKey = "openid/v1/jwks"
+	DiscoveryDocumentKey = ".well-known/openid-configuration"
+	JWKSKey              = "openid/v1/jwks"
 )
 
 type OIDCBuilder struct {
@@ -61,12 +61,12 @@ func (b *OIDCBuilder) GetBlobContainerURL() string {
 	return b.blobContainerURL
 }
 
-func populateOidcFolder(ctx context.Context, body string, jwks []byte, azBlobClient utilazblob.AZBlobClient) error {
+func populateOidcFolder(ctx context.Context, discoveryDocument string, jwks []byte, azBlobClient utilazblob.AZBlobClient) error {
 	err := azBlobClient.UploadBuffer(
 		ctx,
 		"",
-		BodyKey,
-		[]byte(body),
+		DiscoveryDocumentKey,
+		[]byte(discoveryDocument),
 	)
 	if err != nil {
 		return err

@@ -1420,7 +1420,7 @@ func TestCreateOIDC(t *testing.T) {
 		wantBoundServiceAccountSigningKey bool
 	}{
 		{
-			name: "Success - Exit createOIDC for non MIWI clusters",
+			name: "Success - Exit createOIDC for non MIWI clusters that has ServicePrincipalProfile",
 			oc: &api.OpenShiftClusterDocument{
 				Key: strings.ToLower(resourceID),
 				ID:  resourceID,
@@ -1438,6 +1438,21 @@ func TestCreateOIDC(t *testing.T) {
 			wantBoundServiceAccountSigningKey: false,
 		},
 		{
+			name: "Success - Exit createOIDC for non MIWI clusters that has no PlatformWorkloadIdentityProfile or ServicePrincipalProfile",
+			oc: &api.OpenShiftClusterDocument{
+				Key: strings.ToLower(resourceID),
+				ID:  resourceID,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: resourceGroup,
+						},
+					},
+				},
+			},
+			wantBoundServiceAccountSigningKey: false,
+		},
+		{
 			name: "Success - Create and persist OIDC Issuer URL",
 			oc: &api.OpenShiftClusterDocument{
 				Key: strings.ToLower(resourceID),
@@ -1447,6 +1462,7 @@ func TestCreateOIDC(t *testing.T) {
 						ClusterProfile: api.ClusterProfile{
 							ResourceGroupID: resourceGroup,
 						},
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
 					},
 				},
 			},
@@ -1457,7 +1473,7 @@ func TestCreateOIDC(t *testing.T) {
 				env.EXPECT().Environment().Return(&azureclient.PublicCloud)
 				env.EXPECT().OIDCEndpoint().Return(afdEndpoint)
 				blob.EXPECT().CreateBlobContainer(gomock.Any(), resourceGroupName, oidcStorageAccountName, gomock.Any(), azstorage.PublicAccessNone).Return(nil)
-				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.BodyKey, gomock.Any()).Return(nil)
+				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DiscoveryDocumentKey, gomock.Any()).Return(nil)
 				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.JWKSKey, gomock.Any()).Return(nil)
 				blob.EXPECT().GetAZBlobClient(gomock.Any(), &azblob.ClientOptions{}).Return(azblobClient, nil)
 			},
@@ -1474,6 +1490,7 @@ func TestCreateOIDC(t *testing.T) {
 						ClusterProfile: api.ClusterProfile{
 							ResourceGroupID: resourceGroup,
 						},
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
 					},
 				},
 			},
@@ -1484,7 +1501,7 @@ func TestCreateOIDC(t *testing.T) {
 				env.EXPECT().Environment().Return(&azureclient.PublicCloud)
 				env.EXPECT().OIDCEndpoint().Return(storageEndpointForDev)
 				blob.EXPECT().CreateBlobContainer(gomock.Any(), resourceGroupName, oidcStorageAccountName, gomock.Any(), azstorage.PublicAccessBlob).Return(nil)
-				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.BodyKey, gomock.Any()).Return(nil)
+				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DiscoveryDocumentKey, gomock.Any()).Return(nil)
 				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.JWKSKey, gomock.Any()).Return(nil)
 				blob.EXPECT().GetAZBlobClient(gomock.Any(), &azblob.ClientOptions{}).Return(azblobClient, nil)
 			},
@@ -1501,6 +1518,7 @@ func TestCreateOIDC(t *testing.T) {
 						ClusterProfile: api.ClusterProfile{
 							ResourceGroupID: resourceGroup,
 						},
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
 					},
 				},
 			},
@@ -1523,6 +1541,7 @@ func TestCreateOIDC(t *testing.T) {
 						ClusterProfile: api.ClusterProfile{
 							ResourceGroupID: resourceGroup,
 						},
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
 					},
 				},
 			},
