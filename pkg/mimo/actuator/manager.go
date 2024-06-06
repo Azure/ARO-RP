@@ -151,7 +151,7 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		}
 
 		// Attempt a dequeue
-		doc, err = a.mmf.Dequeue(ctx, a.clusterID, doc.ID)
+		doc, err = a.mmf.Lease(ctx, a.clusterID, doc.ID)
 		if err != nil {
 			// log and continue if it doesn't work
 			a.log.Error(err)
