@@ -523,6 +523,7 @@ func TestFixEtcd(t *testing.T) {
 				ti.openShiftClustersDatabase,
 				ti.subscriptionsDatabase,
 				nil,
+				nil,
 				api.APIs,
 				&noop.Noop{},
 				&noop.Noop{},

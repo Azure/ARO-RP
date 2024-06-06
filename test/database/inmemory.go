@@ -72,6 +72,12 @@ func NewFakeOpenShiftVersions(uuid uuid.Generator) (db database.OpenShiftVersion
 	return db, client
 }
 
+func NewFakePlatformWorkloadIdentityRoleSets(uuid uuid.Generator) (db database.PlatformWorkloadIdentityRoleSets, client *cosmosdb.FakePlatformWorkloadIdentityRoleSetDocumentClient) {
+	client = cosmosdb.NewFakePlatformWorkloadIdentityRoleSetDocumentClient(jsonHandle)
+	db = database.NewPlatformWorkloadIdentityRoleSetsWithProvidedClient(client, uuid)
+	return db, client
+}
+
 func NewFakeClusterManager() (db database.ClusterManagerConfigurations, client *cosmosdb.FakeClusterManagerConfigurationDocumentClient) {
 	uuid := deterministicuuid.NewTestUUIDGenerator(deterministicuuid.CLUSTERMANAGER)
 	client = cosmosdb.NewFakeClusterManagerConfigurationDocumentClient(jsonHandle)

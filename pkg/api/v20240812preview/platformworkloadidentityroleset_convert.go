@@ -24,10 +24,13 @@ func (c platformWorkloadIdentityRoleSetConverter) ToExternal(s *api.PlatformWork
 		},
 	}
 
-	for i, r := range s.Properties.PlatformWorkloadIdentityRoles {
-		out.Properties.PlatformWorkloadIdentityRoles[i].OperatorName = r.OperatorName
-		out.Properties.PlatformWorkloadIdentityRoles[i].RoleDefinitionName = r.RoleDefinitionName
-		out.Properties.PlatformWorkloadIdentityRoles[i].RoleDefinitionID = r.RoleDefinitionID
+	for _, r := range s.Properties.PlatformWorkloadIdentityRoles {
+		role := PlatformWorkloadIdentityRole{
+			OperatorName:       r.OperatorName,
+			RoleDefinitionName: r.RoleDefinitionName,
+			RoleDefinitionID:   r.RoleDefinitionID,
+		}
+		out.Properties.PlatformWorkloadIdentityRoles = append(out.Properties.PlatformWorkloadIdentityRoles, role)
 	}
 
 	return out
@@ -57,9 +60,12 @@ func (c platformWorkloadIdentityRoleSetConverter) ToInternal(_new interface{}, o
 	out.Properties.OpenShiftVersion = new.Properties.OpenShiftVersion
 	out.Properties.PlatformWorkloadIdentityRoles = make([]api.PlatformWorkloadIdentityRole, 0, len(new.Properties.PlatformWorkloadIdentityRoles))
 
-	for i, r := range new.Properties.PlatformWorkloadIdentityRoles {
-		out.Properties.PlatformWorkloadIdentityRoles[i].OperatorName = r.OperatorName
-		out.Properties.PlatformWorkloadIdentityRoles[i].RoleDefinitionName = r.RoleDefinitionName
-		out.Properties.PlatformWorkloadIdentityRoles[i].RoleDefinitionID = r.RoleDefinitionID
+	for _, r := range new.Properties.PlatformWorkloadIdentityRoles {
+		role := api.PlatformWorkloadIdentityRole{
+			OperatorName:       r.OperatorName,
+			RoleDefinitionName: r.RoleDefinitionName,
+			RoleDefinitionID:   r.RoleDefinitionID,
+		}
+		out.Properties.PlatformWorkloadIdentityRoles = append(out.Properties.PlatformWorkloadIdentityRoles, role)
 	}
 }

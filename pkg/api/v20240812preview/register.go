@@ -22,6 +22,7 @@ func init() {
 		OpenShiftClusterCredentialsConverter:     openShiftClusterCredentialsConverter{},
 		OpenShiftClusterAdminKubeconfigConverter: openShiftClusterAdminKubeconfigConverter{},
 		OpenShiftVersionConverter:                openShiftVersionConverter{},
+		PlatformWorkloadIdentityRoleSetConverter: platformWorkloadIdentityRoleSetConverter{},
 		OperationList: api.OperationList{
 			Operations: []api.Operation{
 				api.OperationResultsRead,

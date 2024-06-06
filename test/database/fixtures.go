@@ -12,25 +12,28 @@ import (
 )
 
 type Fixture struct {
-	openshiftClusterDocuments            []*api.OpenShiftClusterDocument
-	subscriptionDocuments                []*api.SubscriptionDocument
-	billingDocuments                     []*api.BillingDocument
-	asyncOperationDocuments              []*api.AsyncOperationDocument
-	portalDocuments                      []*api.PortalDocument
-	gatewayDocuments                     []*api.GatewayDocument
-	openShiftVersionDocuments            []*api.OpenShiftVersionDocument
-	clusterManagerConfigurationDocuments []*api.ClusterManagerConfigurationDocument
+	openshiftClusterDocuments                []*api.OpenShiftClusterDocument
+	subscriptionDocuments                    []*api.SubscriptionDocument
+	billingDocuments                         []*api.BillingDocument
+	asyncOperationDocuments                  []*api.AsyncOperationDocument
+	portalDocuments                          []*api.PortalDocument
+	gatewayDocuments                         []*api.GatewayDocument
+	openShiftVersionDocuments                []*api.OpenShiftVersionDocument
+	platformWorkloadIdentityRoleSetDocuments []*api.PlatformWorkloadIdentityRoleSetDocument
+	clusterManagerConfigurationDocuments     []*api.ClusterManagerConfigurationDocument
 
-	openShiftClustersDatabase            database.OpenShiftClusters
-	billingDatabase                      database.Billing
-	subscriptionsDatabase                database.Subscriptions
-	asyncOperationsDatabase              database.AsyncOperations
-	portalDatabase                       database.Portal
-	gatewayDatabase                      database.Gateway
-	openShiftVersionsDatabase            database.OpenShiftVersions
-	clusterManagerConfigurationsDatabase database.ClusterManagerConfigurations
+	openShiftClustersDatabase                database.OpenShiftClusters
+	billingDatabase                          database.Billing
+	subscriptionsDatabase                    database.Subscriptions
+	asyncOperationsDatabase                  database.AsyncOperations
+	portalDatabase                           database.Portal
+	gatewayDatabase                          database.Gateway
+	openShiftVersionsDatabase                database.OpenShiftVersions
+	platformWorkloadIdentityRoleSetsDatabase database.PlatformWorkloadIdentityRoleSets
+	clusterManagerConfigurationsDatabase     database.ClusterManagerConfigurations
 
-	openShiftVersionsUUID uuid.Generator
+	openShiftVersionsUUID                uuid.Generator
+	platformWorkloadIdentityRoleSetsUUID uuid.Generator
 }
 
 func NewFixture() *Fixture {
@@ -75,6 +78,12 @@ func (f *Fixture) WithGateway(db database.Gateway) *Fixture {
 func (f *Fixture) WithOpenShiftVersions(db database.OpenShiftVersions, uuid uuid.Generator) *Fixture {
 	f.openShiftVersionsDatabase = db
 	f.openShiftVersionsUUID = uuid
+	return f
+}
+
+func (f *Fixture) WithPlatformWorkloadIdentityRoleSets(db database.PlatformWorkloadIdentityRoleSets, uuid uuid.Generator) *Fixture {
+	f.platformWorkloadIdentityRoleSetsDatabase = db
+	f.platformWorkloadIdentityRoleSetsUUID = uuid
 	return f
 }
 
@@ -155,6 +164,17 @@ func (f *Fixture) AddOpenShiftVersionDocuments(docs ...*api.OpenShiftVersionDocu
 	}
 }
 
+func (f *Fixture) AddPlatformWorkloadIdentityRoleSetDocuments(docs ...*api.PlatformWorkloadIdentityRoleSetDocument) {
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.platformWorkloadIdentityRoleSetDocuments = append(f.platformWorkloadIdentityRoleSetDocuments, docCopy.(*api.PlatformWorkloadIdentityRoleSetDocument))
+	}
+}
+
 func (f *Fixture) AddClusterManagerConfigurationDocuments(docs ...*api.ClusterManagerConfigurationDocument) {
 	for _, doc := range docs {
 		docCopy, err := deepCopy(doc)
@@ -219,6 +239,16 @@ func (f *Fixture) Create() error {
 			i.ID = f.openShiftVersionsDatabase.NewUUID()
 		}
 		_, err := f.openShiftVersionsDatabase.Create(ctx, i)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, i := range f.platformWorkloadIdentityRoleSetDocuments {
+		if i.ID == "" {
+			i.ID = f.platformWorkloadIdentityRoleSetsDatabase.NewUUID()
+		}
+		_, err := f.platformWorkloadIdentityRoleSetsDatabase.Create(ctx, i)
 		if err != nil {
 			return err
 		}

@@ -35,11 +35,11 @@ func (f *frontend) listInstallVersions(w http.ResponseWriter, r *http.Request) {
 func (f *frontend) getEnabledInstallVersions(ctx context.Context) []*api.OpenShiftVersion {
 	versions := make([]*api.OpenShiftVersion, 0)
 
-	f.mu.RLock()
+	f.ocpVersionsMu.RLock()
 	for _, v := range f.enabledOcpVersions {
 		versions = append(versions, v)
 	}
-	f.mu.RUnlock()
+	f.ocpVersionsMu.RUnlock()
 
 	return versions
 }
