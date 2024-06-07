@@ -66,7 +66,7 @@ func TestDeployCreateOrUpdateCorrectKinds(t *testing.T) {
 	expectedKinds := map[string]int{
 		"ClusterRole":                    1,
 		"ClusterRoleBinding":             1,
-		"CustomResourceDefinition":       10,
+		"CustomResourceDefinition":       13,
 		"Deployment":                     2,
 		"Namespace":                      1,
 		"Role":                           1,
