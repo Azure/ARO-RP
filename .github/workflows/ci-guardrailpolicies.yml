@@ -30,5 +30,7 @@ jobs:
 
     - name: run opa & guardrails policies test.sh
       run: |
-        export PATH=$PATH:/home/runner/go/bin; cd ${GITHUB_WORKSPACE}/pkg/operator/controllers/guardrails/policies; bash ./scripts/test.sh
+        export PATH=$PATH:/home/runner/go/bin
+        cd ${GITHUB_WORKSPACE}/pkg/operator/controllers/guardrails/policies
+        bash ./scripts/test.sh
       shell: bash
