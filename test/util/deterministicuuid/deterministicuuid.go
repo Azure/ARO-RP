@@ -5,7 +5,7 @@ import (
 
 	gofrsuuid "github.com/gofrs/uuid"
 
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
+	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
 )
 
 // Copyright (c) Microsoft Corporation.

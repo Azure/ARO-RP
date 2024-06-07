@@ -18,10 +18,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
+	uuidfake "github.com/Azure/ARO-RP/pkg/api/util/uuid/fake"
 	"github.com/Azure/ARO-RP/pkg/hive/failure"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
-	uuidfake "github.com/Azure/ARO-RP/pkg/util/uuid/fake"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 

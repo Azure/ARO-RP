@@ -3,6 +3,7 @@ module github.com/Azure/ARO-RP
 go 1.20
 
 require (
+	github.com/Azure/ARO-RP/pkg/api v0.0.0-00010101000000-000000000000
 	github.com/Azure/azure-sdk-for-go v63.1.0+incompatible
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.9.1
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.4.0
@@ -1595,3 +1596,5 @@ replace (
 	go.mongodb.org/mongo-driver => go.mongodb.org/mongo-driver v1.9.4
 	google.golang.org/grpc => google.golang.org/grpc v1.56.3
 )
+
+replace github.com/Azure/ARO-RP/pkg/api => ./pkg/api

@@ -14,9 +14,9 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerregistry"
-	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
 type Manager interface {
