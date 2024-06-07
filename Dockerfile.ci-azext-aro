@@ -1,0 +1,12 @@
+FROM mcr.microsoft.com/azure-cli:2.61.0 AS builder
+
+RUN pip install pytest
+COPY /python /data/
+
+WORKDIR /data/az/aro
+RUN pytest --ignore=azext_aro/tests/latest/integration
+RUN python3 setup.py bdist_wheel
+
+FROM mcr.microsoft.com/azure-cli:2.61.0-cbl-mariner2.0 AS final
+COPY --from=builder /data/az/aro/dist /opt/az
+RUN az extension add --yes --source /opt/az/aro-*-py2.py3-none-any.whl

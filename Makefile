@@ -67,6 +67,10 @@ az: pyenv
 	python3 ./setup.py bdist_wheel || true && \
 	rm -f ~/.azure/commandIndex.json # https://github.com/Azure/azure-cli/issues/14997
 
+.PHONY: azext-aro
+azext-aro:
+	docker build --platform=linux/amd64 . -f Dockerfile.ci-azext-aro --no-cache=$(NO_CACHE) -t azext-aro:latest
+
 clean:
 	rm -rf python/az/aro/{aro.egg-info,build,dist} aro
 	find python -type f -name '*.pyc' -delete
