@@ -95,8 +95,8 @@ client: generate
 .PHONY: ci-rp
 ci-rp: fix-macos-vendor
 	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --target portal-build --no-cache=$(NO_CACHE) -t $(ARO_PORTAL_BUILD_IMAGE)
-	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --target builder --cache-from portal-build -t $(ARO_BUILDER_IMAGE)
-	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --cache-from builder -t $(ARO_IMAGE)
+	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --target builder --cache-from $(ARO_PORTAL_BUILD_IMAGE) -t $(ARO_BUILDER_IMAGE)
+	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --cache-from $(ARO_BUILDER_IMAGE) -t $(ARO_IMAGE)
 
 .PHONY: ci-clean
 ci-clean:
