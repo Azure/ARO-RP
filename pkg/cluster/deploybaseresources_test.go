@@ -1466,12 +1466,12 @@ func TestCreateOIDC(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(blob *mock_azblob.MockManager, env *mock_env.MockInterface, azblobClient *mock_azblob.MockAZBlobClient) {
-				env.EXPECT().OIDCStorageAccountName().AnyTimes().Return(oidcStorageAccountName)
-				env.EXPECT().IsLocalDevelopmentMode().Return(false)
-				env.EXPECT().ResourceGroup().Return(resourceGroupName)
-				env.EXPECT().Environment().Return(&azureclient.PublicCloud)
-				env.EXPECT().OIDCEndpoint().Return(afdEndpoint)
+			mocks: func(blob *mock_azblob.MockManager, menv *mock_env.MockInterface, azblobClient *mock_azblob.MockAZBlobClient) {
+				menv.EXPECT().OIDCStorageAccountName().AnyTimes().Return(oidcStorageAccountName)
+				menv.EXPECT().FeatureIsSet(env.FeatureEnablePublicOIDCBlobAccess).Return(false)
+				menv.EXPECT().ResourceGroup().Return(resourceGroupName)
+				menv.EXPECT().Environment().Return(&azureclient.PublicCloud)
+				menv.EXPECT().OIDCEndpoint().Return(afdEndpoint)
 				blob.EXPECT().CreateBlobContainer(gomock.Any(), resourceGroupName, oidcStorageAccountName, gomock.Any(), azstorage.PublicAccessNone).Return(nil)
 				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DiscoveryDocumentKey, gomock.Any()).Return(nil)
 				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.JWKSKey, gomock.Any()).Return(nil)
@@ -1494,12 +1494,12 @@ func TestCreateOIDC(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(blob *mock_azblob.MockManager, env *mock_env.MockInterface, azblobClient *mock_azblob.MockAZBlobClient) {
-				env.EXPECT().OIDCStorageAccountName().AnyTimes().Return(oidcStorageAccountName)
-				env.EXPECT().IsLocalDevelopmentMode().Return(true)
-				env.EXPECT().ResourceGroup().Return(resourceGroupName)
-				env.EXPECT().Environment().Return(&azureclient.PublicCloud)
-				env.EXPECT().OIDCEndpoint().Return(storageEndpointForDev)
+			mocks: func(blob *mock_azblob.MockManager, menv *mock_env.MockInterface, azblobClient *mock_azblob.MockAZBlobClient) {
+				menv.EXPECT().OIDCStorageAccountName().AnyTimes().Return(oidcStorageAccountName)
+				menv.EXPECT().FeatureIsSet(env.FeatureEnablePublicOIDCBlobAccess).Return(true)
+				menv.EXPECT().ResourceGroup().Return(resourceGroupName)
+				menv.EXPECT().Environment().Return(&azureclient.PublicCloud)
+				menv.EXPECT().OIDCEndpoint().Return(storageEndpointForDev)
 				blob.EXPECT().CreateBlobContainer(gomock.Any(), resourceGroupName, oidcStorageAccountName, gomock.Any(), azstorage.PublicAccessBlob).Return(nil)
 				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DiscoveryDocumentKey, gomock.Any()).Return(nil)
 				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.JWKSKey, gomock.Any()).Return(nil)
@@ -1522,10 +1522,10 @@ func TestCreateOIDC(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(blob *mock_azblob.MockManager, env *mock_env.MockInterface, azblob *mock_azblob.MockAZBlobClient) {
-				env.EXPECT().OIDCStorageAccountName().AnyTimes().Return(oidcStorageAccountName)
-				env.EXPECT().IsLocalDevelopmentMode().Return(false)
-				env.EXPECT().ResourceGroup().Return(resourceGroupName)
+			mocks: func(blob *mock_azblob.MockManager, menv *mock_env.MockInterface, azblob *mock_azblob.MockAZBlobClient) {
+				menv.EXPECT().OIDCStorageAccountName().AnyTimes().Return(oidcStorageAccountName)
+				menv.EXPECT().FeatureIsSet(env.FeatureEnablePublicOIDCBlobAccess).Return(false)
+				menv.EXPECT().ResourceGroup().Return(resourceGroupName)
 				blob.EXPECT().CreateBlobContainer(gomock.Any(), resourceGroupName, oidcStorageAccountName, gomock.Any(), azstorage.PublicAccessNone).Return(errors.New("generic error"))
 			},
 			wantBoundServiceAccountSigningKey: false,
@@ -1545,12 +1545,12 @@ func TestCreateOIDC(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(blob *mock_azblob.MockManager, env *mock_env.MockInterface, azblobClient *mock_azblob.MockAZBlobClient) {
-				env.EXPECT().OIDCStorageAccountName().AnyTimes().Return(oidcStorageAccountName)
-				env.EXPECT().IsLocalDevelopmentMode().Return(false)
-				env.EXPECT().ResourceGroup().Return(resourceGroupName)
-				env.EXPECT().Environment().Return(&azureclient.PublicCloud)
-				env.EXPECT().OIDCEndpoint().Return(afdEndpoint)
+			mocks: func(blob *mock_azblob.MockManager, menv *mock_env.MockInterface, azblobClient *mock_azblob.MockAZBlobClient) {
+				menv.EXPECT().OIDCStorageAccountName().AnyTimes().Return(oidcStorageAccountName)
+				menv.EXPECT().FeatureIsSet(env.FeatureEnablePublicOIDCBlobAccess).Return(false)
+				menv.EXPECT().ResourceGroup().Return(resourceGroupName)
+				menv.EXPECT().Environment().Return(&azureclient.PublicCloud)
+				menv.EXPECT().OIDCEndpoint().Return(afdEndpoint)
 				blob.EXPECT().CreateBlobContainer(gomock.Any(), resourceGroupName, oidcStorageAccountName, gomock.Any(), azstorage.PublicAccessNone).Return(nil)
 				blob.EXPECT().GetAZBlobClient(gomock.Any(), &azblob.ClientOptions{}).Return(azblobClient, errors.New("generic error"))
 			},
@@ -1571,12 +1571,12 @@ func TestCreateOIDC(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(blob *mock_azblob.MockManager, env *mock_env.MockInterface, azblobClient *mock_azblob.MockAZBlobClient) {
-				env.EXPECT().OIDCStorageAccountName().AnyTimes().Return(oidcStorageAccountName)
-				env.EXPECT().IsLocalDevelopmentMode().Return(false)
-				env.EXPECT().ResourceGroup().Return(resourceGroupName)
-				env.EXPECT().Environment().Return(&azureclient.PublicCloud)
-				env.EXPECT().OIDCEndpoint().Return(afdEndpoint)
+			mocks: func(blob *mock_azblob.MockManager, menv *mock_env.MockInterface, azblobClient *mock_azblob.MockAZBlobClient) {
+				menv.EXPECT().OIDCStorageAccountName().AnyTimes().Return(oidcStorageAccountName)
+				menv.EXPECT().FeatureIsSet(env.FeatureEnablePublicOIDCBlobAccess).Return(false)
+				menv.EXPECT().ResourceGroup().Return(resourceGroupName)
+				menv.EXPECT().Environment().Return(&azureclient.PublicCloud)
+				menv.EXPECT().OIDCEndpoint().Return(afdEndpoint)
 				blob.EXPECT().CreateBlobContainer(gomock.Any(), resourceGroupName, oidcStorageAccountName, gomock.Any(), azstorage.PublicAccessNone).Return(nil)
 				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DiscoveryDocumentKey, gomock.Any()).Return(nil)
 				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.JWKSKey, gomock.Any()).Return(errors.New("generic error"))

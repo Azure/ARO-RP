@@ -44,3 +44,5 @@ feature flags defined in pkg/env/env.go.  At the time of writing these include:
 
 * EnableOCMEndpoints: Register the OCM endpoints in the frontend. Otherwise the
   endpoints are not available at all.
+
+* EnablePublicOIDCBlobAccess: Allow the Public access to the OIDC blob in case the environment needs a decoupling from an AFD endpoint. Production will always use AFD endpoint so no public access for the production.

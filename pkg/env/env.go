@@ -35,6 +35,7 @@ const (
 	FeatureRequireD2sV3Workers
 	FeatureDisableReadinessDelay
 	FeatureEnableOCMEndpoints
+	FeatureEnablePublicOIDCBlobAccess
 )
 
 const (
