@@ -9,8 +9,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
-
-	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 // LoadBalancersClient is a minimal interface for Azure LoadBalancersClient
@@ -26,13 +24,8 @@ type loadBalancersClient struct {
 var _ LoadBalancersClient = &loadBalancersClient{}
 
 // NewLoadBalancersClient creates a new LoadBalancersClient
-func NewLoadBalancersClient(environment *azureclient.AROEnvironment, subscriptionID string, credential azcore.TokenCredential) (LoadBalancersClient, error) {
-	options := arm.ClientOptions{
-		ClientOptions: azcore.ClientOptions{
-			Cloud: environment.Cloud,
-		},
-	}
-	clientFactory, err := armnetwork.NewClientFactory(subscriptionID, credential, &options)
+func NewLoadBalancersClient(subscriptionID string, credential azcore.TokenCredential, options *arm.ClientOptions) (LoadBalancersClient, error) {
+	clientFactory, err := armnetwork.NewClientFactory(subscriptionID, credential, options)
 	if err != nil {
 		return nil, err
 	}
@@ -50,13 +43,8 @@ type loadBalancerBackendAddressPoolsClient struct {
 var _ LoadBalancerBackendAddressPoolsClient = &loadBalancerBackendAddressPoolsClient{}
 
 // NewLoadBalancerBackendAddressPoolsClient creates a new NewLoadBalancerBackendAddressPoolsClient
-func NewLoadBalancerBackendAddressPoolsClient(environment *azureclient.AROEnvironment, subscriptionID string, credential azcore.TokenCredential) (LoadBalancerBackendAddressPoolsClient, error) {
-	options := arm.ClientOptions{
-		ClientOptions: azcore.ClientOptions{
-			Cloud: environment.Cloud,
-		},
-	}
-	clientFactory, err := armnetwork.NewClientFactory(subscriptionID, credential, &options)
+func NewLoadBalancerBackendAddressPoolsClient(subscriptionID string, credential azcore.TokenCredential, options *arm.ClientOptions) (LoadBalancerBackendAddressPoolsClient, error) {
+	clientFactory, err := armnetwork.NewClientFactory(subscriptionID, credential, options)
 	if err != nil {
 		return nil, err
 	}
