@@ -46,7 +46,7 @@ func (m *manager) createOIDC(ctx context.Context) error {
 	blobContainerName := env.OIDCBlobContainerPrefix + m.doc.ID
 
 	publicAccess := azstorage.PublicAccessNone
-	// Public access on OIDC Container needed for development environments because of no AFD avaialbility
+	// Public access on OIDC Container needed for development environments because of no AFD availability
 	if m.env.IsLocalDevelopmentMode() {
 		publicAccess = azstorage.PublicAccessBlob
 	}

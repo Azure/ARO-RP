@@ -39,8 +39,6 @@ func NewManager(environment *azureclient.AROEnvironment, subscriptionID string, 
 }
 
 func (m *manager) CreateBlobContainer(ctx context.Context, resourceGroup string, accountName string, containerName string, publicAccess azstorage.PublicAccess) error {
-	needToCreateBlobContainer := false
-
 	_, err := m.blobContainer.Get(
 		ctx,
 		resourceGroup,
@@ -48,14 +46,9 @@ func (m *manager) CreateBlobContainer(ctx context.Context, resourceGroup string,
 		containerName,
 		&azstorage.BlobContainersClientGetOptions{},
 	)
-	if err != nil {
-		if !bloberror.HasCode(err, bloberror.ContainerNotFound) {
-			return err
-		}
-		needToCreateBlobContainer = true
-	}
-
-	if !needToCreateBlobContainer {
+	if err != nil && !bloberror.HasCode(err, bloberror.ContainerNotFound) {
+		return err
+	} else if err == nil {
 		return nil
 	}
 

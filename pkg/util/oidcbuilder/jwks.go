@@ -31,10 +31,10 @@ func CreateKeyPair() (encPrivateKey []byte, encPublicKey []byte, err error) {
 		Bytes:   x509.MarshalPKCS1PrivateKey(privateKey),
 	})
 
-	// Generate public key from private keypair
+	// Serialize public key into a byte array to prepare to store it in the OIDC storage blob
 	pubKeyBytes, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to generate public key from private")
+		return nil, nil, errors.Wrapf(err, "failed to serialize public key")
 	}
 	encodedPublicKey := pem.EncodeToMemory(&pem.Block{
 		Type:    "PUBLIC KEY",
