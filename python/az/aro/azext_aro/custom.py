@@ -7,7 +7,7 @@ import os
 from base64 import b64decode
 import textwrap
 
-import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2023_11_22.models as openshiftcluster
+import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2024_08_12_preview.models as openshiftcluster
 
 from azure.cli.command_modules.role import GraphError
 from azure.cli.core.commands.client_factory import get_mgmt_service_client
