@@ -12,14 +12,6 @@ main() {
     local -ri retry_wait_time=30
     local -ri pkg_retry_count=60
 
-    # commonVMSS.sh does not exist when deployed to VMSS via VMSS extensions
-    # This is because commonVMSS.sh is concatenated with this script
-    common_sh="commonVMSS.sh"
-    if [ -f "$common_sh" ]; then
-        # shellcheck source=commonVMSS.sh
-        source "$common_sh"
-    fi
-
     create_required_dirs
     configure_sshd
     configure_rpm_repos retry_wait_time "$pkg_retry_count"
@@ -71,7 +63,6 @@ main() {
     local -ra enable_ports=(
         "443/tcp"
         "444/tcp"
-        "445/tcp"
         "2222/tcp"
     )
 
@@ -126,14 +117,6 @@ DB /var/lib/fluent/journaldb
 
 
     local -r mdsd_config_version="$RPMDSDCONFIGVERSION"
-    local -r dbtoken_config_file="DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
-    AZURE_DBTOKEN_CLIENT_ID='$DBTOKENCLIENTID'
-    AZURE_GATEWAY_SERVICE_PRINCIPAL_ID='$GATEWAYSERVICEPRINCIPALID'
-    KEYVAULT_PREFIX='$KEYVAULTPREFIX'
-    MDM_ACCOUNT='$RPMDMACCOUNT'
-    MDM_NAMESPACE=DBToken
-    RPIMAGE='$rpimage'"
-
     local -r aro_rp_conf_file="ACR_RESOURCE_ID='$ACRRESOURCEID'
 ADMIN_API_CLIENT_CERT_COMMON_NAME='$ADMINAPICLIENTCERTCOMMONNAME'
 ARM_API_CLIENT_CERT_COMMON_NAME='$ARMAPICLIENTCERTCOMMONNAME'
@@ -158,12 +141,14 @@ RPIMAGE='$rpimage'
 ARO_INSTALL_VIA_HIVE='$CLUSTERSINSTALLVIAHIVE'
 ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC='$CLUSTERDEFAULTINSTALLERPULLSPEC'
 ARO_ADOPT_BY_HIVE='$CLUSTERSADOPTBYHIVE'
-USE_CHECKACCESS='$USECHECKACCESS'"
+USE_CHECKACCESS='$USECHECKACCESS'
+OIDC_AFD_ENDPOINT='$LOCATION.oic.$RPPARENTDOMAINNAME'
+OIDC_STORAGE_ACCOUNT_NAME='$OIDCSTORAGEACCOUNTNAME'
+"
 
     # values are references to variables, they should not be dereferenced here
     local -rA aro_configs=(
         ["rp_config"]="aro_rp_conf_file"
-        ["dbtoken"]="dbtoken_config_file"
         ["fluentbit"]="fluentbit_conf_file"
         ["mdsd"]="mdsd_config_version"
     )
@@ -173,7 +158,6 @@ USE_CHECKACCESS='$USECHECKACCESS'"
                                 aro_configs
 
     local -ra aro_services=(
-        "aro-dbtoken"
         "aro-monitor"
         "aro-portal"
         "aro-rp"
@@ -194,5 +178,13 @@ USE_CHECKACCESS='$USECHECKACCESS'"
 }
 
 export AZURE_CLOUD_NAME="${AZURECLOUDNAME:?"Failed to carry over variables"}"
+
+# util.sh does not exist when deployed to VMSS via VMSS extensions
+# This is because commonVMSS.sh is concatenated with this script
+util="util.sh"
+if [ -f "$util" ]; then
+    # shellcheck source=util.sh
+    source "$util"
+fi
 
 main "$@"

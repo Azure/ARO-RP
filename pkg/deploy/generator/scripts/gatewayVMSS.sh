@@ -12,14 +12,6 @@ main() {
     local -ri retry_wait_time=30
     local -ri pkg_retry_count=60
 
-    # commonVMSS.sh does not exist when deployed to VMSS via VMSS extensions
-    # This is because commonVMSS.sh is concatenated with this script
-    common_sh="commonVMSS.sh"
-    if [ -f "$common_sh" ]; then
-        # shellcheck source=commonVMSS.sh
-        source "$common_sh"
-    fi
-
     create_required_dirs
     configure_sshd
     configure_rpm_repos retry_wait_time "$pkg_retry_count"
@@ -163,5 +155,13 @@ RPIMAGE='$rpimage'"
 }
 
 export AZURE_CLOUD_NAME="${AZURECLOUDNAME:?"Failed to carry over variables"}"
+
+# util.sh does not exist when deployed to VMSS via VMSS extensions
+# This is because commonVMSS.sh is concatenated with this script
+util="util.sh"
+if [ -f "$util" ]; then
+    # shellcheck source=util.sh
+    source "$util"
+fi
 
 main "$@"

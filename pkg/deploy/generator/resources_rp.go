@@ -445,9 +445,12 @@ func (g *generator) rpVMSS() *arm.Resource {
 	var sb strings.Builder
 
 	// VMSS extensions only support one custom script
-	// Because of this, the commonVMSS.sh is prefixed to the bootstrapping script
-	// main is called at the end of the bootstrapping script, so appending commonVMSS.sh won't work
-	sb.WriteString(string(scriptCommonVMSS))
+	// Because of this, the util-*.sh scripts are prefixed to the bootstrapping script
+	// main is called at the end of the bootstrapping script, so appending them will not work
+	sb.WriteString(string(scriptUtilCommon))
+	sb.WriteString(string(scriptUtilPackages))
+	sb.WriteString(string(scriptUtilServices))
+	sb.WriteString(string(scriptUtilSystem))
 	sb.WriteString("\n#Start of rpVMSS.sh\n")
 	sb.WriteString(string(scriptRpVMSS))
 
