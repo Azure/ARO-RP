@@ -73,7 +73,6 @@ func (g *generator) rpTemplate() *arm.Template {
 			"rpParentDomainName",
 			"rpVmssCapacity",
 			"sshPublicKey",
-			"storageAccountDomain",
 			"subscriptionResourceGroupName",
 			"vmSize",
 			"vmssCleanupEnabled",

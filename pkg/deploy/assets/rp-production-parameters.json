@@ -159,9 +159,6 @@
         "sshPublicKey": {
             "value": ""
         },
-        "storageAccountDomain": {
-            "value": ""
-        },
         "subscriptionResourceGroupName": {
             "value": ""
         },

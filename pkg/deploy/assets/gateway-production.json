@@ -40,9 +40,6 @@
         "gatewayServicePrincipalId": {
             "type": "string"
         },
-        "gatewayStorageAccountDomain": {
-            "type": "string"
-        },
         "gatewayVmSize": {
             "type": "string",
             "defaultValue": "Standard_D4s_v3"

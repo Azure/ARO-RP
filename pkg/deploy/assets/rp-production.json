@@ -184,9 +184,6 @@
         "sshPublicKey": {
             "type": "string"
         },
-        "storageAccountDomain": {
-            "type": "string"
-        },
         "subscriptionResourceGroupName": {
             "type": "string"
         },
