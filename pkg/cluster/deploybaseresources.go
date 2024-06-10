@@ -47,7 +47,7 @@ func (m *manager) createOIDC(ctx context.Context) error {
 
 	publicAccess := azstorage.PublicAccessNone
 	// Public access on OIDC Container needed for development environments because of no AFD availability
-	if m.env.IsLocalDevelopmentMode() {
+	if m.env.FeatureIsSet(env.FeatureEnablePublicOIDCBlobAccess) {
 		publicAccess = azstorage.PublicAccessBlob
 	}
 	err := m.rpBlob.CreateBlobContainer(ctx, m.env.ResourceGroup(), m.env.OIDCStorageAccountName(), blobContainerName, publicAccess)

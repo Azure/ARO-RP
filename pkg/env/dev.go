@@ -36,6 +36,7 @@ func newDev(ctx context.Context, log *logrus.Entry, component ServiceComponent) 
 		FeatureDisableSignedCertificates,
 		FeatureRequireD2sV3Workers,
 		FeatureDisableReadinessDelay,
+		FeatureEnablePublicOIDCBlobAccess,
 	} {
 		d.features[feature] = true
 	}
