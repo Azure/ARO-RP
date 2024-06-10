@@ -2,6 +2,8 @@ package oidcbuilder
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -38,6 +40,14 @@ func TestEnsureOIDCDocs(t *testing.T) {
 		Type:    "PUBLIC KEY",
 		Headers: nil,
 		Bytes:   pubKeyBytes,
+	})
+
+	nonRSAPrivateKey, _ := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	nonRSAPubKeyBytes, err := x509.MarshalPKIXPublicKey(&nonRSAPrivateKey.PublicKey)
+	nonRSAEncodedPublicKey := pem.EncodeToMemory(&pem.Block{
+		Type:    "PUBLIC KEY",
+		Headers: nil,
+		Bytes:   nonRSAPubKeyBytes,
 	})
 
 	invalidKey := []byte("Invalid Key")
@@ -117,6 +127,16 @@ func TestEnsureOIDCDocs(t *testing.T) {
 					Return(errors.New("generic error"))
 			},
 			wantErr: "generic error",
+		},
+		{
+			name: "Fail - Public key is not of type RSA",
+			oidcbuilder: &OIDCBuilder{
+				privateKey:       priKey,
+				publicKey:        nonRSAEncodedPublicKey,
+				blobContainerURL: blobContainerURL,
+				endpointURL:      endpointURL,
+			},
+			wantErr: "Public key is not of type RSA",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

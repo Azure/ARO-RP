@@ -1557,6 +1557,34 @@ func TestCreateOIDC(t *testing.T) {
 			wantBoundServiceAccountSigningKey: false,
 			wantErr:                           "generic error",
 		},
+		{
+			name: "Fail - OIDCBuilder fails to populate OIDC blob",
+			oc: &api.OpenShiftClusterDocument{
+				Key: strings.ToLower(resourceID),
+				ID:  clusterID,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: resourceGroup,
+						},
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
+					},
+				},
+			},
+			mocks: func(blob *mock_azblob.MockManager, env *mock_env.MockInterface, azblobClient *mock_azblob.MockAZBlobClient) {
+				env.EXPECT().OIDCStorageAccountName().AnyTimes().Return(oidcStorageAccountName)
+				env.EXPECT().IsLocalDevelopmentMode().Return(false)
+				env.EXPECT().ResourceGroup().Return(resourceGroupName)
+				env.EXPECT().Environment().Return(&azureclient.PublicCloud)
+				env.EXPECT().OIDCEndpoint().Return(afdEndpoint)
+				blob.EXPECT().CreateBlobContainer(gomock.Any(), resourceGroupName, oidcStorageAccountName, gomock.Any(), azstorage.PublicAccessNone).Return(nil)
+				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.DiscoveryDocumentKey, gomock.Any()).Return(nil)
+				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.JWKSKey, gomock.Any()).Return(errors.New("generic error"))
+				blob.EXPECT().GetAZBlobClient(gomock.Any(), &azblob.ClientOptions{}).Return(azblobClient, nil)
+			},
+			wantBoundServiceAccountSigningKey: false,
+			wantErr:                           "generic error",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
