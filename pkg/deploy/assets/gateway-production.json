@@ -294,8 +294,7 @@
                     },
                     "diagnosticsProfile": {
                         "bootDiagnostics": {
-                            "enabled": true,
-                            "storageUri": "[concat('https://', parameters('gatewayStorageAccountDomain'), '/')]"
+                            "enabled": true
                         }
                     },
                     "extensionProfile": {

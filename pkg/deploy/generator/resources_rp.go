@@ -634,8 +634,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 					},
 					DiagnosticsProfile: &mgmtcompute.DiagnosticsProfile{
 						BootDiagnostics: &mgmtcompute.BootDiagnostics{
-							Enabled:    to.BoolPtr(true),
-							StorageURI: to.StringPtr("[concat('https://', parameters('storageAccountDomain'), '/')]"),
+							Enabled: to.BoolPtr(true),
 						},
 					},
 				},

@@ -493,8 +493,7 @@
                     },
                     "diagnosticsProfile": {
                         "bootDiagnostics": {
-                            "enabled": true,
-                            "storageUri": "[concat('https://', parameters('storageAccountDomain'), '/')]"
+                            "enabled": true
                         }
                     },
                     "extensionProfile": {
