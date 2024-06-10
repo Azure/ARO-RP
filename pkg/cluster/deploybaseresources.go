@@ -27,6 +27,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -72,7 +73,7 @@ func (m *manager) createOIDC(ctx context.Context) error {
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer = api.OIDCIssuer(oidcBuilder.GetEndpointUrl())
-		doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey = api.SecureBytes(oidcBuilder.GetPrivateKey())
+		doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey = pointerutils.ToPtr(api.SecureString(oidcBuilder.GetPrivateKey()))
 		return nil
 	})
 

@@ -156,7 +156,7 @@ func TestEnsureOIDCDocs(t *testing.T) {
 				t.Fatalf("GetEndpointUrl doesn't match the original endpointURL - %s != %s (wanted)", tt.oidcbuilder.GetEndpointUrl(), tt.oidcbuilder.endpointURL)
 			}
 
-			if !reflect.DeepEqual(tt.oidcbuilder.privateKey, tt.oidcbuilder.GetPrivateKey()) {
+			if !reflect.DeepEqual(string(tt.oidcbuilder.privateKey), tt.oidcbuilder.GetPrivateKey()) {
 				t.Fatalf("GetPrivateKey doesn't match the original privateKey")
 			}
 

@@ -264,7 +264,7 @@ type ClusterProfile struct {
 	ResourceGroupID               string               `json:"resourceGroupId,omitempty"`
 	FipsValidatedModules          FipsValidatedModules `json:"fipsValidatedModules,omitempty"`
 	OIDCIssuer                    OIDCIssuer           `json:"oidcIssuer,omitempty"`
-	BoundServiceAccountSigningKey SecureBytes          `json:"boundServiceAccountSigningKey,omitempty"`
+	BoundServiceAccountSigningKey *SecureString        `json:"boundServiceAccountSigningKey,omitempty"`
 }
 
 // FeatureProfile represents a feature profile.
