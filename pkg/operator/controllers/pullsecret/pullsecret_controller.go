@@ -184,18 +184,22 @@ func (r *Reconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret,
 		// allows for simpler logic flow, when delete and create are not handled separately
 		// this call happens only when there is a need to change, it has no significant impact on performance
 		err := r.client.Delete(ctx, secret)
-		r.log.Info("Pullsecret Not Found, Creating Again")
+		r.log.Info("Global Pull secret Not Found, Creating Again")
 		if err != nil && !kerrors.IsNotFound(err) {
 			return nil, err
 		}
 
 		err = r.client.Create(ctx, secret)
-		r.log.Info("Pullsecret Created")
+		if err == nil {
+			r.log.Info("Global Pull secret Created")
+		}
 		return secret, err
 	}
 
 	err = r.client.Update(ctx, secret)
-	r.log.Info("Updating Existing Pullsecret")
+	if err == nil {
+		r.log.Info("Updating Existing Global Pull secret")
+	}
 	return secret, err
 }
 
