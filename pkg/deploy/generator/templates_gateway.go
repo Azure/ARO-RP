@@ -34,7 +34,6 @@ func (g *generator) gatewayTemplate() *arm.Template {
 		"gatewayFeatures",
 		"gatewayMdsdConfigVersion",
 		"gatewayServicePrincipalId",
-		"gatewayStorageAccountDomain",
 		"gatewayVmSize",
 		"gatewayVmssCapacity",
 		"keyvaultDNSSuffix",
@@ -84,7 +83,6 @@ func (g *generator) gatewayTemplate() *arm.Template {
 	}
 
 	t.Resources = append(t.Resources,
-		g.gatewayStorageAccount(),
 		g.gatewayLB(),
 		g.gatewayPLS(),
 		g.gatewayVMSS(),

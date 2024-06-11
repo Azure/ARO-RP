@@ -184,9 +184,6 @@
         "sshPublicKey": {
             "type": "string"
         },
-        "storageAccountDomain": {
-            "type": "string"
-        },
         "subscriptionResourceGroupName": {
             "type": "string"
         },
@@ -533,15 +530,6 @@
                 "[resourceId('Microsoft.Network/loadBalancers', 'rp-lb-internal')]",
                 "[resourceId('Microsoft.Storage/storageAccounts', substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.')))]"
             ]
-        },
-        {
-            "sku": {
-                "name": "Standard_LRS"
-            },
-            "location": "[resourceGroup().location]",
-            "name": "[substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.'))]",
-            "type": "Microsoft.Storage/storageAccounts",
-            "apiVersion": "2019-06-01"
         },
         {
             "properties": {
