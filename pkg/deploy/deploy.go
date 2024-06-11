@@ -88,6 +88,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 	kvAuthorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
 	vmssClient := compute.NewVirtualMachineScaleSetsClient(_env.Environment(), config.SubscriptionID, authorizer)
+
 	return &deployer{
 		log: log,
 		env: _env,
