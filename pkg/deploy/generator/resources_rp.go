@@ -887,7 +887,7 @@ func (g *generator) CosmosDBDataContributorRoleAssignment(databaseName, componen
 			Name: to.StringPtr("[concat(parameters('databaseAccountName'), '/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('" + component + "ServicePrincipalId'), 'DocumentDB Data Contributor'))]"),
 			Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments"),
 			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-				Scope:            to.StringPtr("[concat(resourceId('Microsoft.DocumentDB/databaseAccounts/', parameters('databaseAccountName')), '/dbs/', " + databaseName + "]"),
+				Scope:            to.StringPtr("[concat(resourceId('Microsoft.DocumentDB/databaseAccounts/', parameters('databaseAccountName')), '/dbs/', " + databaseName + ")]"),
 				RoleDefinitionID: to.StringPtr("[concat(resourceId('Microsoft.DocumentDB/databaseAccounts/', parameters('databaseAccountName')), '/sqlRoleDefinitions/" + rbac.RoleDocumentDBDataContributor + "')]"),
 				PrincipalID:      to.StringPtr("[parameters('" + component + "ServicePrincipalId')]"),
 				PrincipalType:    mgmtauthorization.ServicePrincipal,
