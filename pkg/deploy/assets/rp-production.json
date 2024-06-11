@@ -1119,7 +1119,7 @@
             "name": "[concat(parameters('databaseAccountName'), '/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('rpServicePrincipalId'), 'DocumentDB Data Contributor'))]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments",
             "properties": {
-                "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
+                "scope": "[concat(resourceId('Microsoft.DocumentDB/databaseAccounts/', parameters('databaseAccountName')), '/dbs/', 'ARO']",
                 "roleDefinitionId": "[concat(resourceId('Microsoft.DocumentDB/databaseAccounts/', parameters('databaseAccountName')), '/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002')]",
                 "principalId": "[parameters('rpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
@@ -1133,7 +1133,7 @@
             "name": "[concat(parameters('databaseAccountName'), '/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('gatewayServicePrincipalId'), 'DocumentDB Data Contributor'))]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments",
             "properties": {
-                "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
+                "scope": "[concat(resourceId('Microsoft.DocumentDB/databaseAccounts/', parameters('databaseAccountName')), '/dbs/', 'ARO']",
                 "roleDefinitionId": "[concat(resourceId('Microsoft.DocumentDB/databaseAccounts/', parameters('databaseAccountName')), '/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002')]",
                 "principalId": "[parameters('gatewayServicePrincipalId')]",
                 "principalType": "ServicePrincipal"

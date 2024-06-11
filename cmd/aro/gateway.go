@@ -45,11 +45,6 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 	}
 	logrusEntry := log.WithField("component", "database")
 
-	dbName, err := DBName(_env.IsLocalDevelopmentMode())
-	if err != nil {
-		return err
-	}
-
 	dbAccountName := os.Getenv(envDatabaseAccountName)
 	scope := []string{fmt.Sprintf("https://%s.%s", dbAccountName, _env.Environment().CosmosDBDNSSuffixScope)}
 	dbAuthorizer, err := database.NewTokenAuthorizer(ctx, logrusEntry, msiToken, dbAccountName, scope)
@@ -57,6 +52,11 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 	dbc, err := database.NewDatabaseClient(logrusEntry, _env, dbAuthorizer, m, nil, dbAccountName)
+	if err != nil {
+		return err
+	}
+
+	dbName, err := DBName(_env.IsLocalDevelopmentMode())
 	if err != nil {
 		return err
 	}

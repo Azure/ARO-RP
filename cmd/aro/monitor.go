@@ -88,9 +88,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	dbAccountName := os.Getenv(envDatabaseAccountName)
-	// clientOptions := &policy.ClientOptions{
-	// 	ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
-	// }
+
 	logrusEntry := log.WithField("component", "database")
 	scope := []string{fmt.Sprintf("https://%s.%s", dbAccountName, _env.Environment().CosmosDBDNSSuffixScope)}
 	dbAuthorizer, err := database.NewTokenAuthorizer(ctx, logrusEntry, msiToken, dbAccountName, scope)

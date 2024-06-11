@@ -67,5 +67,5 @@ LABEL aro-final=true
 RUN microdnf update && microdnf clean all
 COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/
 ENTRYPOINT ["aro"]
-EXPOSE 2222/tcp 8080/tcp 8443/tcp 8444/tcp 8445/tcp
+EXPOSE 2222/tcp 8080/tcp 8443/tcp 8444/tcp
 USER 1000

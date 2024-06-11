@@ -43,13 +43,12 @@ type deployer struct {
 	log *logrus.Entry
 	env env.Core
 
-	globaldeployments features.DeploymentsClient
-	globalgroups      features.ResourceGroupsClient
-	globalrecordsets  dns.RecordSetsClient
-	globalaccounts    storage.AccountsClient
-	deployments       features.DeploymentsClient
-	groups            features.ResourceGroupsClient
-	// loadbalancers          network.LoadBalancersClient
+	globaldeployments      features.DeploymentsClient
+	globalgroups           features.ResourceGroupsClient
+	globalrecordsets       dns.RecordSetsClient
+	globalaccounts         storage.AccountsClient
+	deployments            features.DeploymentsClient
+	groups                 features.ResourceGroupsClient
 	userassignedidentities msi.UserAssignedIdentitiesClient
 	providers              features.ProvidersClient
 	publicipaddresses      network.PublicIPAddressesClient
