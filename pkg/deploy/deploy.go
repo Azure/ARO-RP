@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/jongio/azidext/go/azidext"
@@ -89,8 +88,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 	kvAuthorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
 	vmssClient := compute.NewVirtualMachineScaleSetsClient(_env.Environment(), config.SubscriptionID, authorizer)
-	options := _env.Environment().EnvironmentCredentialOptions()
-	spTokenCredential, err := azidentity.NewEnvironmentCredential(options)
 	return &deployer{
 		log: log,
 		env: _env,
