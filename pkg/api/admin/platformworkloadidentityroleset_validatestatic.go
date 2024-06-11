@@ -1,10 +1,16 @@
 package admin
 
+import (
+	"fmt"
+	"net/http"
+	"strings"
+
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/util/immutable"
+)
+
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
-
-/*
-TODO: Uncomment once API endpoints have been implemented and this code is being used.
 
 type platformWorkloadIdentityRoleSetStaticValidator struct{}
 
@@ -37,27 +43,31 @@ func (sv platformWorkloadIdentityRoleSetStaticValidator) validate(new *PlatformW
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.platformWorkloadIdentityRoles", "Must be provided and must be non-empty")
 	}
 
-	errs := []error{}
+	missingProperties := []string{}
 
 	for i, r := range new.Properties.PlatformWorkloadIdentityRoles {
 		if r.OperatorName == "" {
-			errs = append(errs, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].operatorName", i), "Must be provided"))
+			missingProperties = append(missingProperties, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].operatorName", i))
 		}
 
 		if r.RoleDefinitionName == "" {
-			errs = append(errs, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].roleDefinitionName", i), "Must be provided"))
+			missingProperties = append(missingProperties, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].roleDefinitionName", i))
 		}
 
 		if r.RoleDefinitionID == "" {
-			errs = append(errs, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].roleDefinitionId", i), "Must be provided"))
+			missingProperties = append(missingProperties, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].roleDefinitionId", i))
 		}
 
 		if r.ServiceAccounts == nil || len(r.ServiceAccounts) == 0 {
-			errs = append(errs, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].serviceAccounts", i), "Must be provided and must be non-empty"))
+			missingProperties = append(missingProperties, fmt.Sprintf("properties.platformWorkloadIdentityRoles[%d].serviceAccounts", i))
 		}
 	}
 
-	return errors.Join(errs...)
+	if len(missingProperties) > 0 {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, strings.Join(missingProperties, ", "), "Must be provided")
+	}
+
+	return nil
 }
 
 func (sv platformWorkloadIdentityRoleSetStaticValidator) validateDelta(new, current *PlatformWorkloadIdentityRoleSet) error {
@@ -68,4 +78,3 @@ func (sv platformWorkloadIdentityRoleSetStaticValidator) validateDelta(new, curr
 	}
 	return nil
 }
-*/

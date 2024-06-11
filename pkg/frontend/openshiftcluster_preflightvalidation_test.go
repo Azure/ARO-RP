@@ -158,14 +158,14 @@ func TestPreflightValidation(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, ti.openShiftVersionsDatabase, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil)
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, ti.openShiftVersionsDatabase, ti.platformWorkloadIdentityRoleSetsDatabase, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 			oc := tt.preflightRequest()
 
 			go f.Run(ctx, nil, nil)
-			f.mu.Lock()
+			f.ocpVersionsMu.Lock()
 			f.defaultOcpVersion = "4.10.0"
 			f.enabledOcpVersions = map[string]*api.OpenShiftVersion{
 				f.defaultOcpVersion: {
@@ -174,7 +174,7 @@ func TestPreflightValidation(t *testing.T) {
 					},
 				},
 			}
-			f.mu.Unlock()
+			f.ocpVersionsMu.Unlock()
 
 			headers := http.Header{
 				"Content-Type": []string{"application/json"},

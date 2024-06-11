@@ -12,7 +12,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
-func (f *frontend) changefeed(ctx context.Context) {
+func (f *frontend) changefeedOcpVersions(ctx context.Context) {
 	defer recover.Panic(f.baseLog)
 
 	// f.dbOpenShiftVersions will be nil when running unit tests. Return here to avoid nil pointer panic
@@ -20,15 +20,30 @@ func (f *frontend) changefeed(ctx context.Context) {
 		return
 	}
 
-	frontendIterator := f.dbOpenShiftVersions.ChangeFeed()
+	ocpVersionsIterator := f.dbOpenShiftVersions.ChangeFeed()
 
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
 
-	f.updateFromIterator(ctx, t, frontendIterator)
+	f.updateFromIteratorOcpVersions(ctx, t, ocpVersionsIterator)
 }
 
-func (f *frontend) updateFromIterator(ctx context.Context, ticker *time.Ticker, frontendIterator cosmosdb.OpenShiftVersionDocumentIterator) {
+func (f *frontend) changefeedRoleSets(ctx context.Context) {
+	defer recover.Panic(f.baseLog)
+
+	if f.dbPlatformWorkloadIdentityRoleSets == nil {
+		return
+	}
+
+	roleSetsIterator := f.dbPlatformWorkloadIdentityRoleSets.ChangeFeed()
+
+	t := time.NewTicker(10 * time.Second)
+	defer t.Stop()
+
+	f.updateFromIteratorRoleSets(ctx, t, roleSetsIterator)
+}
+
+func (f *frontend) updateFromIteratorOcpVersions(ctx context.Context, ticker *time.Ticker, frontendIterator cosmosdb.OpenShiftVersionDocumentIterator) {
 	for {
 		successful := true
 
@@ -47,7 +62,7 @@ func (f *frontend) updateFromIterator(ctx context.Context, ticker *time.Ticker, 
 		}
 
 		if successful {
-			f.lastChangefeed.Store(time.Now())
+			f.lastOcpVersionsChangefeed.Store(time.Now())
 		}
 
 		select {
@@ -60,8 +75,8 @@ func (f *frontend) updateFromIterator(ctx context.Context, ticker *time.Ticker, 
 
 // updateOcpVersions adds enabled versions to the frontend cache
 func (f *frontend) updateOcpVersions(docs []*api.OpenShiftVersionDocument) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
+	f.ocpVersionsMu.Lock()
+	defer f.ocpVersionsMu.Unlock()
 
 	for _, doc := range docs {
 		if doc.OpenShiftVersion.Deleting || !doc.OpenShiftVersion.Properties.Enabled {
@@ -72,6 +87,50 @@ func (f *frontend) updateOcpVersions(docs []*api.OpenShiftVersionDocument) {
 			if doc.OpenShiftVersion.Properties.Default {
 				f.defaultOcpVersion = doc.OpenShiftVersion.Properties.Version
 			}
+		}
+	}
+}
+
+func (f *frontend) updateFromIteratorRoleSets(ctx context.Context, ticker *time.Ticker, frontendIterator cosmosdb.PlatformWorkloadIdentityRoleSetDocumentIterator) {
+	for {
+		successful := true
+
+		for {
+			docs, err := frontendIterator.Next(ctx, -1)
+			if err != nil {
+				successful = false
+				f.baseLog.Error(err)
+				break
+			}
+			if docs == nil {
+				break
+			}
+
+			f.updatePlatformWorkloadIdentityRoleSets(docs.PlatformWorkloadIdentityRoleSetDocuments)
+		}
+
+		if successful {
+			f.lastPlatformWorkloadIdentityRoleSetsChangefeed.Store(time.Now())
+		}
+
+		select {
+		case <-ticker.C:
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func (f *frontend) updatePlatformWorkloadIdentityRoleSets(docs []*api.PlatformWorkloadIdentityRoleSetDocument) {
+	f.platformWorkloadIdentityRoleSetsMu.Lock()
+	defer f.platformWorkloadIdentityRoleSetsMu.Unlock()
+
+	for _, doc := range docs {
+		if doc.PlatformWorkloadIdentityRoleSet.Deleting {
+			// https://docs.microsoft.com/en-us/azure/cosmos-db/change-feed-design-patterns#deletes
+			delete(f.availablePlatformWorkloadIdentityRoleSets, doc.PlatformWorkloadIdentityRoleSet.Properties.OpenShiftVersion)
+		} else {
+			f.availablePlatformWorkloadIdentityRoleSets[doc.PlatformWorkloadIdentityRoleSet.Properties.OpenShiftVersion] = doc.PlatformWorkloadIdentityRoleSet
 		}
 	}
 }

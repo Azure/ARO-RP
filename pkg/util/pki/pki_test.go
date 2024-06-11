@@ -13,7 +13,7 @@ import (
 )
 
 func TestGetTlsConfig(t *testing.T) {
-	if os.Getenv("ARO_RUN_PKI_TESTS") != "" {
+	if os.Getenv("ARO_SKIP_PKI_TESTS") != "" {
 		t.Skip("")
 	}
 	kpiUrl := "https://issuer.pki.azure.com/dsms/issuercertificates?getissuersv3&caName=%s"

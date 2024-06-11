@@ -6,6 +6,7 @@ ARG ARO_VERSION
 # builder is responsible for all compilation and validation of the RP
 ###############################################################################
 FROM ${REGISTRY}/ubi8/nodejs-16  as portal-build
+LABEL aro-portal-build=true
 WORKDIR /build/portal/v2
 USER root
 
@@ -23,6 +24,7 @@ RUN npm run lint && npm run build
 ###############################################################################
 FROM ${REGISTRY}/ubi8/go-toolset:1.20.12-5 AS builder
 ARG ARO_VERSION
+LABEL aro-builder=true
 USER root
 WORKDIR /app
 
@@ -54,13 +56,14 @@ RUN go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${A
 RUN go test ./test/e2e/... -tags e2e,codec.safe -c -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${ARO_VERSION}" -o e2e.test
 
 # Additional tests
-RUN ARO_RUN_PKI_TESTS=nope go run gotest.tools/gotestsum@v1.11.0 --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
+RUN ARO_SKIP_PKI_TESTS=true go run gotest.tools/gotestsum@v1.11.0 --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
 RUN hack/fips/validate-fips.sh ./aro
 
 ###############################################################################
 # Stage 3: final is our slim image with minimal layers and tools
 ###############################################################################
 FROM ${REGISTRY}/ubi8/ubi-minimal AS final
+LABEL aro-final=true
 RUN microdnf update && microdnf clean all
 COPY --from=builder /app/aro /app/e2e.test /usr/local/bin/
 ENTRYPOINT ["aro"]

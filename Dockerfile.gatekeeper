@@ -14,7 +14,7 @@ WORKDIR ${GOPATH}/src/github.com/open-policy-agent/gatekeeper
 USER root
 RUN curl -Lq $DOWNLOAD_URL | tar -xz --strip-components=1
 
-RUN go build -mod vendor -a -ldflags "-X github.com/open-policy-agent/gatekeeper/pkg/version.Version=latest" -o manager
+RUN go build -mod vendor -a -ldflags "-X github.com/open-policy-agent/gatekeeper/pkg/version.Version=$GATEKEEPER_VERSION" -o manager
 
 #### Runtime container
 FROM ${REGISTRY}/ubi8/ubi-minimal:latest

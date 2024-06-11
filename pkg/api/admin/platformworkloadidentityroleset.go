@@ -33,14 +33,14 @@ type PlatformWorkloadIdentityRoleSetProperties struct {
 // PlatformWorkloadIdentityRole represents a mapping from a particular OCP operator to the built-in role that should be assigned to that operator's corresponding managed identity.
 type PlatformWorkloadIdentityRole struct {
 	// OperatorName represents the name of the operator that this role is for.
-	OperatorName string `json:"operatorName,omitempty" mutable:"true"`
+	OperatorName string `json:"operatorName,omitempty" mutable:"true" validate:"required"`
 
 	// RoleDefinitionName represents the name of the role.
-	RoleDefinitionName string `json:"roleDefinitionName,omitempty" mutable:"true"`
+	RoleDefinitionName string `json:"roleDefinitionName,omitempty" mutable:"true" validate:"required"`
 
 	// RoleDefinitionID represents the resource ID of the role definition.
-	RoleDefinitionID string `json:"roleDefinitionId,omitempty" mutable:"true"`
+	RoleDefinitionID string `json:"roleDefinitionId,omitempty" mutable:"true" validate:"required"`
 
 	// ServiceAccounts represents the set of service accounts associated with the given operator, since each service account needs its own federated credential.
-	ServiceAccounts []string `json:"serviceAccounts,omitempty" mutable:"true"`
+	ServiceAccounts []string `json:"serviceAccounts,omitempty" mutable:"true" validate:"required"`
 }

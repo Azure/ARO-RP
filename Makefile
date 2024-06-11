@@ -14,8 +14,7 @@ FLUENTBIT_VERSION = 1.9.10
 FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$(MARINER_VERSION)
 AUTOREST_VERSION = 3.6.3
 AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
-GATEKEEPER_VERSION = v3.10.0
-GATEKEEPER_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/gatekeeper:$(GATEKEEPER_VERSION)
+GATEKEEPER_VERSION = v3.15.1
 GOTESTSUM = gotest.tools/gotestsum@v1.11.0
 
 ifneq ($(shell uname -s),Darwin)
@@ -40,6 +39,7 @@ else
 endif
 
 ARO_IMAGE ?= $(ARO_IMAGE_BASE):$(VERSION)
+GATEKEEPER_IMAGE ?= ${REGISTRY}/gatekeeper:$(GATEKEEPER_VERSION)
 
 check-release:
 # Check that VERSION is a valid tag when building an official release (when RELEASE=true).
@@ -67,6 +67,10 @@ az: pyenv
 	python3 ./setup.py bdist_wheel || true && \
 	rm -f ~/.azure/commandIndex.json # https://github.com/Azure/azure-cli/issues/14997
 
+.PHONY: azext-aro
+azext-aro:
+	docker build --platform=linux/amd64 . -f Dockerfile.ci-azext-aro --no-cache=$(NO_CACHE) -t azext-aro:latest
+
 clean:
 	rm -rf python/az/aro/{aro.egg-info,build,dist} aro
 	find python -type f -name '*.pyc' -delete
@@ -78,6 +82,9 @@ client: generate
 
 ci-rp: fix-macos-vendor
 	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --no-cache=$(NO_CACHE)
+
+ci-clean:
+	docker image prune --all --filter="label=aro-*=true"
 
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
@@ -278,4 +285,4 @@ vendor:
 install-go-tools:
 	go install ${GOTESTSUM}
 
-.PHONY: admin.kubeconfig aks.kubeconfig aro az ci-portal ci-rp clean client deploy dev-config.yaml discoverycache fix-macos-vendor generate image-aro-multistage image-fluentbit image-proxy init-contrib lint-go runlocal-rp proxy publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor build-all validate-go unit-test-go coverage-go validate-fips install-go-tools
+.PHONY: admin.kubeconfig aks.kubeconfig aro az ci-rp ci-clean clean client deploy dev-config.yaml discoverycache fix-macos-vendor generate image-aro-multistage image-fluentbit image-proxy init-contrib lint-go runlocal-rp proxy publish-image-aro-multistage publish-image-fluentbit publish-image-proxy secrets secrets-update e2e.test tunnel test-e2e test-go test-python vendor build-all validate-go unit-test-go coverage-go validate-fips install-go-tools

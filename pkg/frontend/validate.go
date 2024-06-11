@@ -203,14 +203,14 @@ func validateAdminMasterVMSize(vmSize string) error {
 // validateInstallVersion validates the install version set in the clusterprofile.version
 // TODO convert this into static validation instead of this receiver function in the validation for frontend.
 func (f *frontend) validateInstallVersion(ctx context.Context, oc *api.OpenShiftCluster) error {
-	f.mu.RLock()
+	f.ocpVersionsMu.RLock()
 	// If this request is from an older API or the user did not specify
 	// the version to install, use the default version.
 	if oc.Properties.ClusterProfile.Version == "" {
 		oc.Properties.ClusterProfile.Version = f.defaultOcpVersion
 	}
 	_, ok := f.enabledOcpVersions[oc.Properties.ClusterProfile.Version]
-	f.mu.RUnlock()
+	f.ocpVersionsMu.RUnlock()
 
 	if !ok || !validate.RxInstallVersion.MatchString(oc.Properties.ClusterProfile.Version) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.clusterProfile.version", "The requested OpenShift version '%s' is invalid.", oc.Properties.ClusterProfile.Version)

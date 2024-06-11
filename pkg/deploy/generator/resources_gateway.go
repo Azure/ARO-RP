@@ -346,8 +346,7 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 					},
 					DiagnosticsProfile: &mgmtcompute.DiagnosticsProfile{
 						BootDiagnostics: &mgmtcompute.BootDiagnostics{
-							Enabled:    to.BoolPtr(true),
-							StorageURI: to.StringPtr("[concat('https://', parameters('gatewayStorageAccountDomain'), '/')]"),
+							Enabled: to.BoolPtr(true),
 						},
 					},
 				},

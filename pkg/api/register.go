@@ -37,6 +37,16 @@ type OpenShiftVersionStaticValidator interface {
 	Static(interface{}, *OpenShiftVersion) error
 }
 
+type PlatformWorkloadIdentityRoleSetConverter interface {
+	ToExternal(*PlatformWorkloadIdentityRoleSet) interface{}
+	ToExternalList([]*PlatformWorkloadIdentityRoleSet) interface{}
+	ToInternal(interface{}, *PlatformWorkloadIdentityRoleSet)
+}
+
+type PlatformWorkloadIdentityRoleSetStaticValidator interface {
+	Static(interface{}, *PlatformWorkloadIdentityRoleSet) error
+}
+
 type SyncSetConverter interface {
 	ToExternal(*SyncSet) interface{}
 	ToExternalList([]*SyncSet) interface{}
@@ -63,18 +73,20 @@ type SecretConverter interface {
 
 // Version is a set of endpoints implemented by each API version
 type Version struct {
-	OpenShiftClusterConverter                OpenShiftClusterConverter
-	OpenShiftClusterStaticValidator          OpenShiftClusterStaticValidator
-	OpenShiftClusterCredentialsConverter     OpenShiftClusterCredentialsConverter
-	OpenShiftClusterAdminKubeconfigConverter OpenShiftClusterAdminKubeconfigConverter
-	OpenShiftVersionConverter                OpenShiftVersionConverter
-	OpenShiftVersionStaticValidator          OpenShiftVersionStaticValidator
-	OperationList                            OperationList
-	SyncSetConverter                         SyncSetConverter
-	MachinePoolConverter                     MachinePoolConverter
-	SyncIdentityProviderConverter            SyncIdentityProviderConverter
-	SecretConverter                          SecretConverter
-	ClusterManagerStaticValidator            ClusterManagerStaticValidator
+	OpenShiftClusterConverter                      OpenShiftClusterConverter
+	OpenShiftClusterStaticValidator                OpenShiftClusterStaticValidator
+	OpenShiftClusterCredentialsConverter           OpenShiftClusterCredentialsConverter
+	OpenShiftClusterAdminKubeconfigConverter       OpenShiftClusterAdminKubeconfigConverter
+	OpenShiftVersionConverter                      OpenShiftVersionConverter
+	OpenShiftVersionStaticValidator                OpenShiftVersionStaticValidator
+	PlatformWorkloadIdentityRoleSetConverter       PlatformWorkloadIdentityRoleSetConverter
+	PlatformWorkloadIdentityRoleSetStaticValidator PlatformWorkloadIdentityRoleSetStaticValidator
+	OperationList                                  OperationList
+	SyncSetConverter                               SyncSetConverter
+	MachinePoolConverter                           MachinePoolConverter
+	SyncIdentityProviderConverter                  SyncIdentityProviderConverter
+	SecretConverter                                SecretConverter
+	ClusterManagerStaticValidator                  ClusterManagerStaticValidator
 }
 
 // APIs is the map of registered API versions

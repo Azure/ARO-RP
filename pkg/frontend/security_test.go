@@ -77,14 +77,15 @@ func TestSecurity(t *testing.T) {
 
 	log := logrus.NewEntry(logrus.StandardLogger())
 	auditHook, auditEntry := testlog.NewAudit()
-	f, err := NewFrontend(ctx, auditEntry, log, _env, nil, nil, nil, nil, nil, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil)
+	f, err := NewFrontend(ctx, auditEntry, log, _env, nil, nil, nil, nil, nil, nil, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// enable /healthz to return 200
 	f.startTime = time.Time{}
-	f.lastChangefeed.Store(time.Time{})
+	f.lastOcpVersionsChangefeed.Store(time.Time{})
+	f.lastPlatformWorkloadIdentityRoleSetsChangefeed.Store(time.Time{})
 
 	go f.Run(ctx, nil, nil)
 

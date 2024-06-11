@@ -1727,7 +1727,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, nil, apis, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, ti.enricher)
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, nil, nil, apis, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, ti.enricher)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -2800,7 +2800,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, ti.openShiftVersionsDatabase, apis, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, ti.enricher)
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, ti.openShiftVersionsDatabase, ti.platformWorkloadIdentityRoleSetsDatabase, apis, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, ti.enricher)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -2817,14 +2817,14 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			}
 
 			go f.Run(ctx, nil, nil)
-			f.mu.Lock()
+			f.ocpVersionsMu.Lock()
 			f.enabledOcpVersions = tt.changeFeed
 			for key, doc := range tt.changeFeed {
 				if doc.Properties.Default {
 					f.defaultOcpVersion = key
 				}
 			}
-			f.mu.Unlock()
+			f.ocpVersionsMu.Unlock()
 
 			oc := &v20200430.OpenShiftCluster{}
 			if tt.request != nil {
@@ -3133,7 +3133,7 @@ func TestPutOrPatchOpenShiftClusterValidated(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, ti.openShiftVersionsDatabase, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, ti.enricher)
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, ti.openShiftVersionsDatabase, ti.platformWorkloadIdentityRoleSetsDatabase, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, ti.enricher)
 			if err != nil {
 				t.Fatal(err)
 			}
