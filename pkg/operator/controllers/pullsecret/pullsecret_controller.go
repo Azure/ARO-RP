@@ -198,7 +198,7 @@ func (r *Reconciler) ensureGlobalPullSecret(ctx context.Context, operatorSecret,
 
 	err = r.client.Update(ctx, secret)
 	if err == nil {
-		r.log.Info("Updating Existing Global Pull secret")
+		r.log.Info("Updated Existing Global Pull secret")
 	}
 	return secret, err
 }
