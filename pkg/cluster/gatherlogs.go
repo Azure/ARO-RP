@@ -31,7 +31,7 @@ func (m *manager) gatherFailureLogs(ctx context.Context) {
 			continue
 		}
 
-		m.log.Printf("%s: %s", steps.ShortFriendlyName(f), string(b))
+		m.log.Printf("%s: %s", steps.FriendlyName(f), string(b))
 	}
 }
 

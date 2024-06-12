@@ -21,12 +21,7 @@ import (
 
 // FriendlyName returns a "friendly" stringified name of the given func.
 func FriendlyName(f interface{}) string {
-	return strings.TrimSuffix(runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name(), "-fm")
-}
-
-// FriendlyName returns a "friendly" stringified name of the given func.
-func ShortFriendlyName(f interface{}) string {
-	return strings.TrimPrefix(FriendlyName(f), "github.com/Azure/ARO-RP/")
+	return strings.TrimPrefix(strings.TrimSuffix(runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name(), "-fm"), "github.com/Azure/ARO-RP/")
 }
 
 func shortName(fullName string) string {
