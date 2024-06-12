@@ -217,14 +217,13 @@ delete_e2e_cluster() {
 
 get_cluster_sp() {
     echo "########## Downloading SP secrets ##########"
-
-    az keyvault secret download --vault-name=aro-classic-e2e-spn \
+    az keyvault secret download --vault-name=$CSP_VAULT_NAME \
         --name=aro-v4-e2e-devops-spn-1-app-id \
         --file=secrets/app-id
-    az keyvault secret download --vault-name=aro-classic-e2e-spn \
+    az keyvault secret download --vault-name=$CSP_VAULT_NAME \
         --name=aro-v4-e2e-devops-spn-1-sp-id \
         --file=secrets/sp-id
-    az keyvault secret download --vault-name=aro-classic-e2e-spn \
+    az keyvault secret download --vault-name=$CSP_VAULT_NAME \
         --name=aro-v4-e2e-devops-spn-1-secret-value \
         --file=secrets/secret-value
 
