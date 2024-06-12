@@ -51,6 +51,11 @@ func TestBackendTry(t *testing.T) {
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(resourceID),
+					CorrelationData: &api.CorrelationData{
+						CorrelationID:   "correlationId",
+						ClientRequestID: "clientRequestId",
+						RequestID:       "requestId",
+					},
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:       resourceID,
 						Name:     "resourceName",
@@ -58,6 +63,17 @@ func TestBackendTry(t *testing.T) {
 						Location: "location",
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateCreating,
+							NetworkProfile: api.NetworkProfile{
+								PodCIDR:          "10.128.0.0/14",
+								ServiceCIDR:      "172.30.0.0/16",
+								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
+								OutboundType:     api.OutboundTypeUserDefinedRouting,
+								LoadBalancerProfile: &api.LoadBalancerProfile{
+									ManagedOutboundIPs: &api.ManagedOutboundIPs{
+										Count: 0,
+									},
+								},
+							},
 						},
 					},
 				})
@@ -77,6 +93,17 @@ func TestBackendTry(t *testing.T) {
 							ProvisioningState: api.ProvisioningStateCreating,
 							Install: &api.Install{
 								Phase: api.InstallPhaseBootstrap,
+							},
+							NetworkProfile: api.NetworkProfile{
+								PodCIDR:          "10.128.0.0/14",
+								ServiceCIDR:      "172.30.0.0/16",
+								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
+								OutboundType:     api.OutboundTypeUserDefinedRouting,
+								LoadBalancerProfile: &api.LoadBalancerProfile{
+									ManagedOutboundIPs: &api.ManagedOutboundIPs{
+										Count: 0,
+									},
+								},
 							},
 						},
 					},
@@ -104,6 +131,17 @@ func TestBackendTry(t *testing.T) {
 						Location: "location",
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateCreating,
+							NetworkProfile: api.NetworkProfile{
+								PodCIDR:          "10.128.0.0/14",
+								ServiceCIDR:      "172.30.0.0/16",
+								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
+								OutboundType:     api.OutboundTypeLoadbalancer,
+								LoadBalancerProfile: &api.LoadBalancerProfile{
+									ManagedOutboundIPs: &api.ManagedOutboundIPs{
+										Count: 0,
+									},
+								},
+							},
 						},
 					},
 				})
@@ -121,6 +159,17 @@ func TestBackendTry(t *testing.T) {
 						Location: "location",
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateSucceeded,
+							NetworkProfile: api.NetworkProfile{
+								PodCIDR:          "10.128.0.0/14",
+								ServiceCIDR:      "172.30.0.0/16",
+								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
+								OutboundType:     api.OutboundTypeLoadbalancer,
+								LoadBalancerProfile: &api.LoadBalancerProfile{
+									ManagedOutboundIPs: &api.ManagedOutboundIPs{
+										Count: 0,
+									},
+								},
+							},
 						},
 					},
 				})
@@ -147,6 +196,17 @@ func TestBackendTry(t *testing.T) {
 						Location: "location",
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateCreating,
+							NetworkProfile: api.NetworkProfile{
+								PodCIDR:          "10.128.0.0/14",
+								ServiceCIDR:      "172.30.0.0/16",
+								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
+								OutboundType:     api.OutboundTypeLoadbalancer,
+								LoadBalancerProfile: &api.LoadBalancerProfile{
+									ManagedOutboundIPs: &api.ManagedOutboundIPs{
+										Count: 0,
+									},
+								},
+							},
 						},
 					},
 				})
@@ -166,6 +226,17 @@ func TestBackendTry(t *testing.T) {
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState:       api.ProvisioningStateFailed,
 							FailedProvisioningState: api.ProvisioningStateCreating,
+							NetworkProfile: api.NetworkProfile{
+								PodCIDR:          "10.128.0.0/14",
+								ServiceCIDR:      "172.30.0.0/16",
+								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
+								OutboundType:     api.OutboundTypeLoadbalancer,
+								LoadBalancerProfile: &api.LoadBalancerProfile{
+									ManagedOutboundIPs: &api.ManagedOutboundIPs{
+										Count: 0,
+									},
+								},
+							},
 						},
 					},
 				})
@@ -192,6 +263,17 @@ func TestBackendTry(t *testing.T) {
 							LastAdminUpdateError:  "oh no",
 							MaintenanceTask:       api.MaintenanceTaskEverything,
 							MaintenanceState:      api.MaintenanceStateUnplanned,
+							NetworkProfile: api.NetworkProfile{
+								PodCIDR:          "10.128.0.0/14",
+								ServiceCIDR:      "172.30.0.0/16",
+								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
+								OutboundType:     api.OutboundTypeLoadbalancer,
+								LoadBalancerProfile: &api.LoadBalancerProfile{
+									ManagedOutboundIPs: &api.ManagedOutboundIPs{
+										Count: 0,
+									},
+								},
+							},
 						},
 					},
 				})
@@ -210,6 +292,17 @@ func TestBackendTry(t *testing.T) {
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateSucceeded,
 							MaintenanceState:  api.MaintenanceStateNone,
+							NetworkProfile: api.NetworkProfile{
+								PodCIDR:          "10.128.0.0/14",
+								ServiceCIDR:      "172.30.0.0/16",
+								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
+								OutboundType:     api.OutboundTypeLoadbalancer,
+								LoadBalancerProfile: &api.LoadBalancerProfile{
+									ManagedOutboundIPs: &api.ManagedOutboundIPs{
+										Count: 0,
+									},
+								},
+							},
 						},
 					},
 				})
@@ -234,6 +327,17 @@ func TestBackendTry(t *testing.T) {
 							FailedProvisioningState: api.ProvisioningStateUpdating,
 							MaintenanceTask:         api.MaintenanceTaskEverything,
 							MaintenanceState:        api.MaintenanceStateUnplanned,
+							NetworkProfile: api.NetworkProfile{
+								PodCIDR:          "10.128.0.0/14",
+								ServiceCIDR:      "172.30.0.0/16",
+								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
+								OutboundType:     api.OutboundTypeLoadbalancer,
+								LoadBalancerProfile: &api.LoadBalancerProfile{
+									ManagedOutboundIPs: &api.ManagedOutboundIPs{
+										Count: 0,
+									},
+								},
+							},
 						},
 					},
 				})
@@ -254,6 +358,17 @@ func TestBackendTry(t *testing.T) {
 							FailedProvisioningState: api.ProvisioningStateUpdating,
 							LastAdminUpdateError:    "oh no!",
 							MaintenanceState:        api.MaintenanceStateUnplanned,
+							NetworkProfile: api.NetworkProfile{
+								PodCIDR:          "10.128.0.0/14",
+								ServiceCIDR:      "172.30.0.0/16",
+								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
+								OutboundType:     api.OutboundTypeLoadbalancer,
+								LoadBalancerProfile: &api.LoadBalancerProfile{
+									ManagedOutboundIPs: &api.ManagedOutboundIPs{
+										Count: 0,
+									},
+								},
+							},
 						},
 					},
 				})
@@ -274,6 +389,17 @@ func TestBackendTry(t *testing.T) {
 						Location: "location",
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateDeleting,
+							NetworkProfile: api.NetworkProfile{
+								PodCIDR:          "10.128.0.0/14",
+								ServiceCIDR:      "172.30.0.0/16",
+								PreconfiguredNSG: api.PreconfiguredNSGDisabled,
+								OutboundType:     api.OutboundTypeLoadbalancer,
+								LoadBalancerProfile: &api.LoadBalancerProfile{
+									ManagedOutboundIPs: &api.ManagedOutboundIPs{
+										Count: 0,
+									},
+								},
+							},
 						},
 					},
 				})
@@ -297,6 +423,7 @@ func TestBackendTry(t *testing.T) {
 			manager := mock_cluster.NewMockInterface(controller)
 			_env := mock_env.NewMockInterface(controller)
 			_env.EXPECT().LiveConfig().AnyTimes().Return(tlc)
+			_env.EXPECT().SubscriptionID().AnyTimes().Return(mockSubID)
 
 			dbOpenShiftClusters, clientOpenShiftClusters := testdatabase.NewFakeOpenShiftClusters()
 			dbSubscriptions, _ := testdatabase.NewFakeSubscriptions()
