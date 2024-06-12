@@ -33,60 +33,60 @@ func TestAdminUpdateSteps(t *testing.T) {
 	}
 
 	zerothSteps := []string{
-		"[Action initializeKubernetesClients-fm]",
-		"[Action ensureBillingRecord-fm]",
-		"[Action ensureDefaults-fm]",
-		"[AuthorizationRetryingAction fixupClusterSPObjectID-fm]",
-		"[Action fixInfraID-fm]",
+		"[Action initializeKubernetesClients]",
+		"[Action ensureBillingRecord]",
+		"[Action ensureDefaults]",
+		"[AuthorizationRetryingAction fixupClusterSPObjectID]",
+		"[Action fixInfraID]",
 	}
 
 	generalFixesSteps := []string{
-		"[Action ensureResourceGroup-fm]",
-		"[Action createOrUpdateDenyAssignment-fm]",
-		"[Action ensureServiceEndpoints-fm]",
-		"[Action populateRegistryStorageAccountName-fm]",
-		"[Action migrateStorageAccounts-fm]",
-		"[Action fixSSH-fm]",
-		"[Action startVMs-fm]",
-		"[Condition apiServersReady-fm, timeout 30m0s]",
-		"[Action fixSREKubeconfig-fm]",
-		"[Action fixUserAdminKubeconfig-fm]",
-		"[Action createOrUpdateRouterIPFromCluster-fm]",
-		"[Action ensureGatewayUpgrade-fm]",
-		"[Action rotateACRTokenPassword-fm]",
-		"[Action populateRegistryStorageAccountName-fm]",
-		"[Action ensureMTUSize-fm]",
+		"[Action ensureResourceGroup]",
+		"[Action createOrUpdateDenyAssignment]",
+		"[Action ensureServiceEndpoints]",
+		"[Action populateRegistryStorageAccountName]",
+		"[Action migrateStorageAccounts]",
+		"[Action fixSSH]",
+		"[Action startVMs]",
+		"[Condition apiServersReady, timeout 30m0s]",
+		"[Action fixSREKubeconfig]",
+		"[Action fixUserAdminKubeconfig]",
+		"[Action createOrUpdateRouterIPFromCluster]",
+		"[Action ensureGatewayUpgrade]",
+		"[Action rotateACRTokenPassword]",
+		"[Action populateRegistryStorageAccountName]",
+		"[Action ensureMTUSize]",
 	}
 
 	certificateRenewalSteps := []string{
-		"[Action startVMs-fm]",
-		"[Condition apiServersReady-fm, timeout 30m0s]",
-		"[Action populateDatabaseIntIP-fm]",
-		"[Action fixMCSCert-fm]",
-		"[Action fixMCSUserData-fm]",
-		"[Action configureAPIServerCertificate-fm]",
-		"[Action configureIngressCertificate-fm]",
-		"[Action initializeOperatorDeployer-fm]",
-		"[Action renewMDSDCertificate-fm]",
+		"[Action startVMs]",
+		"[Condition apiServersReady, timeout 30m0s]",
+		"[Action populateDatabaseIntIP]",
+		"[Action fixMCSCert]",
+		"[Action fixMCSUserData]",
+		"[Action configureAPIServerCertificate]",
+		"[Action configureIngressCertificate]",
+		"[Action initializeOperatorDeployer]",
+		"[Action renewMDSDCertificate]",
 	}
 
 	operatorUpdateSteps := []string{
-		"[Action startVMs-fm]",
-		"[Condition apiServersReady-fm, timeout 30m0s]",
-		"[Action initializeOperatorDeployer-fm]",
-		"[Action ensureAROOperator-fm]",
-		"[Condition aroDeploymentReady-fm, timeout 20m0s]",
-		"[Condition ensureAROOperatorRunningDesiredVersion-fm, timeout 5m0s]",
+		"[Action startVMs]",
+		"[Condition apiServersReady, timeout 30m0s]",
+		"[Action initializeOperatorDeployer]",
+		"[Action ensureAROOperator]",
+		"[Condition aroDeploymentReady, timeout 20m0s]",
+		"[Condition ensureAROOperatorRunningDesiredVersion, timeout 5m0s]",
 	}
 
 	hiveSteps := []string{
-		"[Action hiveCreateNamespace-fm]",
-		"[Action hiveEnsureResources-fm]",
-		"[Condition hiveClusterDeploymentReady-fm, timeout 5m0s]",
-		"[Action hiveResetCorrelationData-fm]",
+		"[Action hiveCreateNamespace]",
+		"[Action hiveEnsureResources]",
+		"[Condition hiveClusterDeploymentReady, timeout 5m0s]",
+		"[Action hiveResetCorrelationData]",
 	}
 
-	updateProvisionedBySteps := []string{"[Action updateProvisionedBy-fm]"}
+	updateProvisionedBySteps := []string{"[Action updateProvisionedBy]"}
 
 	for _, tt := range []struct {
 		name           string

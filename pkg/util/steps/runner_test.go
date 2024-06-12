@@ -80,15 +80,15 @@ func TestStepRunner(t *testing.T) {
 			},
 			wantEntries: []map[string]types.GomegaMatcher{
 				{
-					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]"),
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.successfulFunc]"),
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("running step [Action github.com/Azure/ARO-RP/pkg/util/steps.failingAzureError]"),
+					"msg":   gomega.Equal("running step [Action pkg/util/steps.failingAzureError]"),
 					"level": gomega.Equal(logrus.InfoLevel),
 				},
 				{
-					"msg":   gomega.Equal("step [Action github.com/Azure/ARO-RP/pkg/util/steps.failingAzureError] encountered error: Status=403 Code=\"AuthorizationFailed\""),
+					"msg":   gomega.Equal("step [Action pkg/util/steps.failingAzureError] encountered error: Status=403 Code=\"AuthorizationFailed\""),
 					"level": gomega.Equal(logrus.ErrorLevel),
 				},
 			},
