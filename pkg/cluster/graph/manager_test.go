@@ -8,7 +8,6 @@ import (
 	"errors"
 	"testing"
 
-	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 
@@ -27,23 +26,16 @@ func TestLoadPersisted(t *testing.T) {
 		wantErr string
 	}{
 		{
-			name: "get a general error as azstorage not mocked",
-			mocks: func(storage *mock_storage.MockManager, env *mock_env.MockInterface, kv *mock_keyvault.MockManager) {
-				storage.EXPECT().BlobService(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&azstorage.BlobStorageClient{}, nil)
-			},
-			wantErr: " authentication is not supported yet",
-		},
-		{
 			name: "loadPersisted returns an error other than the chacha20poly1305 one",
 			mocks: func(storage *mock_storage.MockManager, env *mock_env.MockInterface, kv *mock_keyvault.MockManager) {
-				storage.EXPECT().BlobService(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&azstorage.BlobStorageClient{}, errors.New("general error"))
+				storage.EXPECT().BlobService(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("general error"))
 			},
 			wantErr: "general error",
 		},
 		{
 			name: "loadPersisted returns a chacha20poly1305 error",
 			mocks: func(storage *mock_storage.MockManager, env *mock_env.MockInterface, kv *mock_keyvault.MockManager) {
-				storage.EXPECT().BlobService(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&azstorage.BlobStorageClient{}, errors.New("chacha20poly1305: message authentication failed"))
+				storage.EXPECT().BlobService(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("chacha20poly1305: message authentication failed"))
 				env.EXPECT().ServiceKeyvault().Return(kv)
 				kv.EXPECT().GetBase64Secret(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("random error"))
 			},
@@ -51,18 +43,13 @@ func TestLoadPersisted(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			env_ctrl := gomock.NewController(t)
-			defer env_ctrl.Finish()
-			storage_ctrl := gomock.NewController(t)
-			defer storage_ctrl.Finish()
-			kv_ctrl := gomock.NewController(t)
-			defer kv_ctrl.Finish()
+			ctrl := gomock.NewController(t)
 
 			rg := "test-rg"
 			account := "TEST-ACCOUNT"
-			env := mock_env.NewMockInterface(env_ctrl)
-			storage := mock_storage.NewMockManager(storage_ctrl)
-			kv := mock_keyvault.NewMockManager(kv_ctrl)
+			env := mock_env.NewMockInterface(ctrl)
+			storage := mock_storage.NewMockManager(ctrl)
+			kv := mock_keyvault.NewMockManager(ctrl)
 
 			tt.mocks(storage, env, kv)
 
