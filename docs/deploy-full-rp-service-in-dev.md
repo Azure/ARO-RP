@@ -232,10 +232,6 @@
         --vault-name "$KEYVAULT_PREFIX-por" \
         --name portal-client \
         --file secrets/portal-client.pem >/dev/null
-    az keyvault certificate import \
-        --vault-name "$KEYVAULT_PREFIX-dbt" \
-        --name dbtoken-server \
-        --file secrets/localhost.pem >/dev/null
     ```
 
 1. Delete the existing VMSS
@@ -398,3 +394,4 @@
     ```
 
     > __NOTE:__ The `az aro` CLI extension must be registered in order to run `az aro` commands against a local or tunneled RP. The usual hack script used to create clusters does not work due to keyvault mirroring requirements. The name of the cluster depends on the DNS zone that was created in an earlier step.
+

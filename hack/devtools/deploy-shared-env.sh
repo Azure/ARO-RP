@@ -127,10 +127,6 @@ import_certs_secrets() {
         --name portal-server \
         --file secrets/localhost.pem >/dev/null
     az keyvault certificate import \
-        --vault-name "$KEYVAULT_PREFIX-dbt" \
-        --name dbtoken-server \
-        --file secrets/localhost.pem >/dev/null
-    az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-por" \
         --name portal-client \
         --file secrets/portal-client.pem >/dev/null

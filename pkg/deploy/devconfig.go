@@ -122,12 +122,8 @@ func DevConfig(_env env.Core) (*Config, error) {
 				PortalProvisionedThroughput:   400,
 				GatewayProvisionedThroughput:  400,
 			},
-			DBTokenClientID:         to.StringPtr(os.Getenv("AZURE_DBTOKEN_CLIENT_ID")),
 			DisableCosmosDBFirewall: to.BoolPtr(true),
 			ExtraClusterKeyvaultAccessPolicies: []interface{}{
-				adminKeyvaultAccessPolicy(_env),
-			},
-			ExtraDBTokenKeyvaultAccessPolicies: []interface{}{
 				adminKeyvaultAccessPolicy(_env),
 			},
 			ExtraGatewayKeyvaultAccessPolicies: []interface{}{
@@ -156,9 +152,6 @@ func DevConfig(_env env.Core) (*Config, error) {
 				"monitoringagentbvt2.blob.core.windows.net",
 				"qos.ppe.warm.ingest.monitor.core.windows.net",
 				"test1.diagnostics.monitoring.core.windows.net",
-			},
-			GatewayFeatures: []string{
-				"InsecureSkipVerifyDBTokenCertificate",
 			},
 			GatewayMDSDConfigVersion:    to.StringPtr(version.DevGatewayGenevaLoggingConfigVersion),
 			GatewayVMSSCapacity:         to.IntPtr(1),

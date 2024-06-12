@@ -5,9 +5,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/policy"
 	"github.com/Azure/go-autorest/tracing"
 	"github.com/sirupsen/logrus"
 	kmetrics "k8s.io/client-go/tools/metrics"
@@ -88,11 +88,10 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	dbAccountName := os.Getenv(envDatabaseAccountName)
-	clientOptions := &policy.ClientOptions{
-		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
-	}
+
 	logrusEntry := log.WithField("component", "database")
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, logrusEntry, msiToken, clientOptions, _env.SubscriptionID(), _env.ResourceGroup(), dbAccountName)
+	scope := []string{fmt.Sprintf("https://%s.%s", dbAccountName, _env.Environment().CosmosDBDNSSuffixScope)}
+	dbAuthorizer, err := database.NewTokenAuthorizer(ctx, logrusEntry, msiToken, dbAccountName, scope)
 	if err != nil {
 		return err
 	}
@@ -106,6 +105,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
+
 	dbMonitors, err := database.NewMonitors(ctx, dbc, dbName)
 	if err != nil {
 		return err

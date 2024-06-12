@@ -199,8 +199,6 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 		"azureSecPackQualysUrl",
 		"azureSecPackVSATenantId",
 		"databaseAccountName",
-		"dbtokenClientId",
-		"dbtokenUrl",
 		"mdmFrontendUrl",
 		"mdsdEnvironment",
 		"fluentbitImage",

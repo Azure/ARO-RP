@@ -10,7 +10,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/policy"
 	"github.com/Azure/go-autorest/tracing"
 	"github.com/sirupsen/logrus"
 	kmetrics "k8s.io/client-go/tools/metrics"
@@ -108,13 +107,11 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 	if err := env.ValidateVars(envDatabaseAccountName); err != nil {
 		return err
 	}
-
 	dbAccountName := os.Getenv(envDatabaseAccountName)
-	clientOptions := &policy.ClientOptions{
-		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
-	}
+
 	logrusEntry := log.WithField("component", "database")
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, logrusEntry, msiToken, clientOptions, _env.SubscriptionID(), _env.ResourceGroup(), dbAccountName)
+	scope := []string{fmt.Sprintf("https://%s.%s", dbAccountName, _env.Environment().CosmosDBDNSSuffixScope)}
+	dbAuthorizer, err := database.NewTokenAuthorizer(ctx, logrusEntry, msiToken, dbAccountName, scope)
 	if err != nil {
 		return err
 	}
@@ -128,6 +125,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
+
 	dbAsyncOperations, err := database.NewAsyncOperations(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
 	if err != nil {
 		return err

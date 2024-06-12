@@ -18,10 +18,6 @@ Majority of the certificates are configured for auto-renewal to ensure that when
     - Certificates:
         - This keyvault contains all cluster `api` and `*.apps` certificates used within OpenShift.  These certificates are auto-rotated and pushed to clusters during AdminUpdates in the `configureAPIServerCertificate` and `configureIngressCertificate` steps.  These certificates will not be generated if the `DisableSignedCertificates` [feature flag](./feature-flags.md) is set within the RP config.
 
-1. DBToken (dbt)
-    - Certificates:
-        - `dbtoken-server` is a TLS certificate used in the [`dbtoken` service](./dbtoken-service.md) for RESTful calls to issue credentials.
-
 1. Portal (por)
     - Certificates:
         - `portal-client` is a certificate which is used within the aro-portal app registration.  The subject of this certificate must match that within the `trustedSubjects` section of the app registration manifest within the Azure portal, otherwise callbacks from the Microsoft AAD login service will not function correctly.
@@ -48,3 +44,4 @@ Majority of the certificates are configured for auto-renewal to ensure that when
     - Certificates:
         - `gwy-mdm` the certificate used for emitting metrics to the Geneva/MDM service
         - `gwy-mdsd` the certificate used for emitting logs to the Geneva/MDSD service
+

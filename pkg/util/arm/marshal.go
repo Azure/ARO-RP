@@ -25,6 +25,8 @@ func (r *Resource) MarshalJSON() ([]byte, error) {
 			b, err = r.Resource.(*sdkcosmos.SQLDatabaseCreateUpdateParameters).MarshalJSON()
 		} else if reflect.TypeOf(r.Resource) == reflect.TypeOf(&sdkcosmos.SQLContainerCreateUpdateParameters{}) {
 			b, err = r.Resource.(*sdkcosmos.SQLContainerCreateUpdateParameters).MarshalJSON()
+		} else if reflect.TypeOf(r.Resource) == reflect.TypeOf(&sdkcosmos.SQLTriggerCreateUpdateParameters{}) {
+			b, err = r.Resource.(*sdkcosmos.SQLTriggerCreateUpdateParameters).MarshalJSON()
 		}
 	} else if strings.HasPrefix(r.Type, "Microsoft.DocumentDB/databaseAccounts") {
 		b, err = r.Resource.(*sdkcosmos.DatabaseAccountCreateUpdateParameters).MarshalJSON()

@@ -114,7 +114,6 @@ sysctl --system
 
 firewall-cmd --add-port=443/tcp --permanent
 firewall-cmd --add-port=444/tcp --permanent
-firewall-cmd --add-port=445/tcp --permanent
 firewall-cmd --add-port=2222/tcp --permanent
 
 export AZURE_CLOUD_NAME=$AZURECLOUDNAME
@@ -336,52 +335,6 @@ ExecStart=/usr/bin/docker run \
   -v /var/etw:/var/etw:z \
   $RPIMAGE \
   rp
-ExecStop=/usr/bin/docker stop -t 3600 %N
-TimeoutStopSec=3600
-Restart=always
-RestartSec=1
-StartLimitInterval=0
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-echo "configuring aro-dbtoken service"
-cat >/etc/sysconfig/aro-dbtoken <<EOF
-DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
-AZURE_DBTOKEN_CLIENT_ID='$DBTOKENCLIENTID'
-AZURE_GATEWAY_SERVICE_PRINCIPAL_ID='$GATEWAYSERVICEPRINCIPALID'
-KEYVAULT_PREFIX='$KEYVAULTPREFIX'
-MDM_ACCOUNT='$RPMDMACCOUNT'
-MDM_NAMESPACE=DBToken
-RPIMAGE='$RPIMAGE'
-EOF
-
-cat >/etc/systemd/system/aro-dbtoken.service <<'EOF'
-[Unit]
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-EnvironmentFile=/etc/sysconfig/aro-dbtoken
-ExecStartPre=-/usr/bin/docker rm -f %N
-ExecStart=/usr/bin/docker run \
-  --hostname %H \
-  --name %N \
-  --rm \
-  --cap-drop net_raw \
-  -e AZURE_GATEWAY_SERVICE_PRINCIPAL_ID \
-  -e DATABASE_ACCOUNT_NAME \
-  -e AZURE_DBTOKEN_CLIENT_ID \
-  -e KEYVAULT_PREFIX \
-  -e MDM_ACCOUNT \
-  -e MDM_NAMESPACE \
-  -m 2g \
-  -p 445:8445 \
-  -v /run/systemd/journal:/run/systemd/journal \
-  -v /var/etw:/var/etw:z \
-  $RPIMAGE \
-  dbtoken
 ExecStop=/usr/bin/docker stop -t 3600 %N
 TimeoutStopSec=3600
 Restart=always
@@ -678,7 +631,7 @@ cat >/etc/default/vsa-nodescan-agent.config <<EOF
 EOF
 
 echo "enabling aro services"
-for service in aro-dbtoken aro-monitor aro-portal aro-rp auoms azsecd azsecmond mdsd mdm chronyd fluentbit; do
+for service in aro-monitor aro-portal aro-rp auoms azsecd azsecmond mdsd mdm chronyd fluentbit; do
   systemctl enable $service.service
 done
 

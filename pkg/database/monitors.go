@@ -33,29 +33,6 @@ type Monitors interface {
 func NewMonitors(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string) (Monitors, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbName)
 
-	triggers := []*cosmosdb.Trigger{
-		{
-			ID:               "renewLease",
-			TriggerOperation: cosmosdb.TriggerOperationAll,
-			TriggerType:      cosmosdb.TriggerTypePre,
-			Body: `function trigger() {
-	var request = getContext().getRequest();
-	var body = request.getBody();
-	var date = new Date();
-	body["leaseExpires"] = Math.floor(date.getTime() / 1000) + 60;
-	request.setBody(body);
-}`,
-		},
-	}
-
-	triggerc := cosmosdb.NewTriggerClient(collc, collMonitors)
-	for _, trigger := range triggers {
-		_, err := triggerc.Create(ctx, trigger)
-		if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
-			return nil, err
-		}
-	}
-
 	return &monitors{
 		c:    cosmosdb.NewMonitorDocumentClient(collc, collMonitors),
 		uuid: uuid.DefaultGenerator.Generate(),

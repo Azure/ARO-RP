@@ -103,32 +103,6 @@ func (g *generator) rpSecurityGroup() *arm.Resource {
 				SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
 					Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
 					SourcePortRange:          to.StringPtr("*"),
-					DestinationPortRange:     to.StringPtr("445"),
-					SourceAddressPrefix:      to.StringPtr("10.0.8.0/24"),
-					DestinationAddressPrefix: to.StringPtr("*"),
-					Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-					Priority:                 to.Int32Ptr(140),
-					Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
-				},
-				Name: to.StringPtr("dbtoken_in_gateway_445"),
-			},
-			mgmtnetwork.SecurityRule{
-				SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
-					Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
-					SourcePortRange:          to.StringPtr("*"),
-					DestinationPortRange:     to.StringPtr("8445"),
-					SourceAddressPrefix:      to.StringPtr("10.0.8.0/24"),
-					DestinationAddressPrefix: to.StringPtr("*"),
-					Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-					Priority:                 to.Int32Ptr(141),
-					Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
-				},
-				Name: to.StringPtr("dbtoken_in_gateway_8445"),
-			},
-			mgmtnetwork.SecurityRule{
-				SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
-					Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
-					SourcePortRange:          to.StringPtr("*"),
 					DestinationPortRange:     to.StringPtr("*"),
 					SourceAddressPrefix:      to.StringPtr("10.0.8.0/24"),
 					DestinationAddressPrefix: to.StringPtr("*"),
@@ -334,69 +308,6 @@ func (g *generator) rpLB() *arm.Resource {
 	}
 }
 
-func (g *generator) rpLBInternal() *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtnetwork.LoadBalancer{
-			Sku: &mgmtnetwork.LoadBalancerSku{
-				Name: mgmtnetwork.LoadBalancerSkuNameStandard,
-			},
-			LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
-				FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
-					{
-						FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
-							Subnet: &mgmtnetwork.Subnet{
-								ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
-							},
-						},
-						Name:  to.StringPtr("dbtoken-frontend"),
-						Zones: &[]string{},
-					},
-				},
-				BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
-					{
-						Name: to.StringPtr("rp-backend"),
-					},
-				},
-				LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{
-					{
-						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
-							FrontendIPConfiguration: &mgmtnetwork.SubResource{
-								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb-internal', 'dbtoken-frontend')]"),
-							},
-							BackendAddressPool: &mgmtnetwork.SubResource{
-								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb-internal', 'rp-backend')]"),
-							},
-							Probe: &mgmtnetwork.SubResource{
-								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb-internal', 'dbtoken-probe')]"),
-							},
-							Protocol:         mgmtnetwork.TransportProtocolTCP,
-							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
-							FrontendPort:     to.Int32Ptr(8445),
-							BackendPort:      to.Int32Ptr(445),
-						},
-						Name: to.StringPtr("dbtoken-lbrule"),
-					},
-				},
-				Probes: &[]mgmtnetwork.Probe{
-					{
-						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
-							Protocol:       mgmtnetwork.ProbeProtocolHTTPS,
-							Port:           to.Int32Ptr(445),
-							NumberOfProbes: to.Int32Ptr(2),
-							RequestPath:    to.StringPtr("/healthz/ready"),
-						},
-						Name: to.StringPtr("dbtoken-probe"),
-					},
-				},
-			},
-			Name:     to.StringPtr("rp-lb-internal"),
-			Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
-			Location: to.StringPtr("[resourceGroup().location]"),
-		},
-		APIVersion: azureclient.APIVersion("Microsoft.Network"),
-	}
-}
-
 // rpLBAlert generates an alert resource for the rp-lb healthprobe metric
 func (g *generator) rpLBAlert(threshold float64, severity int32, name string, evalFreq string, windowSize string, metric string) *arm.Resource {
 	return &arm.Resource{
@@ -463,7 +374,6 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"clusterMdsdNamespace",
 		"clusterParentDomainName",
 		"databaseAccountName",
-		"dbtokenClientId",
 		"fluentbitImage",
 		"fpClientId",
 		"fpServicePrincipalId",
@@ -604,9 +514,6 @@ func (g *generator) rpVMSS() *arm.Resource {
 													{
 														ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
 													},
-													{
-														ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb-internal', 'rp-backend')]"),
-													},
 												},
 											},
 										},
@@ -654,7 +561,6 @@ func (g *generator) rpVMSS() *arm.Resource {
 		DependsOn: []string{
 			"[resourceId('Microsoft.Authorization/roleAssignments', guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader'))]",
 			"[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]",
-			"[resourceId('Microsoft.Network/loadBalancers', 'rp-lb-internal')]",
 			"[resourceId('Microsoft.Storage/storageAccounts', substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.')))]",
 		},
 	}
@@ -686,20 +592,6 @@ func (g *generator) rpClusterKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolic
 					mgmtkeyvault.Delete,
 					mgmtkeyvault.Get,
 					mgmtkeyvault.Update,
-				},
-			},
-		},
-	}
-}
-
-func (g *generator) rpDBTokenKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyEntry {
-	return []mgmtkeyvault.AccessPolicyEntry{
-		{
-			TenantID: &tenantUUIDHack,
-			ObjectID: to.StringPtr("[parameters('rpServicePrincipalId')]"),
-			Permissions: &mgmtkeyvault.Permissions{
-				Secrets: &[]mgmtkeyvault.SecretPermissions{
-					mgmtkeyvault.SecretPermissionsGet,
 				},
 			},
 		},
@@ -764,53 +656,6 @@ func (g *generator) rpClusterKeyvault() *arm.Resource {
 					Certificates: &[]mgmtkeyvault.CertificatePermissions{
 						mgmtkeyvault.Get,
 						mgmtkeyvault.List,
-					},
-				},
-			},
-		)
-	}
-
-	return &arm.Resource{
-		Resource:   vault,
-		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
-	}
-}
-
-func (g *generator) rpDBTokenKeyvault() *arm.Resource {
-	vault := &mgmtkeyvault.Vault{
-		Properties: &mgmtkeyvault.VaultProperties{
-			EnableSoftDelete: to.BoolPtr(true),
-			TenantID:         &tenantUUIDHack,
-			Sku: &mgmtkeyvault.Sku{
-				Name:   mgmtkeyvault.Standard,
-				Family: to.StringPtr("A"),
-			},
-			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{
-				{
-					ObjectID: to.StringPtr(dbTokenAccessPolicyHack),
-				},
-			},
-		},
-		Name:     to.StringPtr("[concat(parameters('keyvaultPrefix'), '" + env.DBTokenKeyvaultSuffix + "')]"),
-		Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
-		Location: to.StringPtr("[resourceGroup().location]"),
-	}
-
-	if !g.production {
-		*vault.Properties.AccessPolicies = append(g.rpDBTokenKeyvaultAccessPolicies(),
-			mgmtkeyvault.AccessPolicyEntry{
-				TenantID: &tenantUUIDHack,
-				ObjectID: to.StringPtr("[parameters('adminObjectId')]"),
-				Permissions: &mgmtkeyvault.Permissions{
-					Certificates: &[]mgmtkeyvault.CertificatePermissions{
-						mgmtkeyvault.Delete,
-						mgmtkeyvault.Get,
-						mgmtkeyvault.Import,
-						mgmtkeyvault.List,
-					},
-					Secrets: &[]mgmtkeyvault.SecretPermissions{
-						mgmtkeyvault.SecretPermissionsSet,
-						mgmtkeyvault.SecretPermissionsList,
 					},
 				},
 			},
@@ -1029,9 +874,30 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 	if g.production {
 		rs = append(rs, g.database("'ARO'", true)...)
 		rs = append(rs, g.rpCosmosDBAlert(10, 90, 3, "rp-cosmosdb-alert", "PT5M", "PT1H"))
+		rs = append(rs, g.CosmosDBDataContributorRoleAssignment("'ARO'", "rp"))
+		rs = append(rs, g.CosmosDBDataContributorRoleAssignment("'ARO'", "gateway"))
 	}
 
 	return rs
+}
+
+func (g *generator) CosmosDBDataContributorRoleAssignment(databaseName, component string) *arm.Resource {
+	return &arm.Resource{
+		Resource: mgmtauthorization.RoleAssignment{
+			Name: to.StringPtr("[concat(parameters('databaseAccountName'), '/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('" + component + "ServicePrincipalId'), 'DocumentDB Data Contributor'))]"),
+			Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments"),
+			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+				Scope:            to.StringPtr("[concat(resourceId('Microsoft.DocumentDB/databaseAccounts/', parameters('databaseAccountName')), '/dbs/', " + databaseName + ")]"),
+				RoleDefinitionID: to.StringPtr("[concat(resourceId('Microsoft.DocumentDB/databaseAccounts/', parameters('databaseAccountName')), '/sqlRoleDefinitions/" + rbac.RoleDocumentDBDataContributor + "')]"),
+				PrincipalID:      to.StringPtr("[parameters('" + component + "ServicePrincipalId')]"),
+				PrincipalType:    mgmtauthorization.ServicePrincipal,
+			},
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
+		DependsOn: []string{
+			"[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
+		},
+	}
 }
 
 func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Resource {
@@ -1340,6 +1206,20 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 		},
 	}
 
+	// Adding Triggers
+	rs = append(rs,
+		// Subscription
+		g.rpCosmosDBTriggers(databaseName, "Subscriptions", "renewLease", renewLeaseTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationAll),
+		g.rpCosmosDBTriggers(databaseName, "Subscriptions", "retryLater", retryLaterTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationAll),
+		// Billing
+		g.rpCosmosDBTriggers(databaseName, "Billing", "setCreationBillingTimeStamp", setCreationBillingTimeStampTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationCreate),
+		g.rpCosmosDBTriggers(databaseName, "Billing", "setDeletionBillingTimeStamp", setDeletionBillingTimeStampTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationReplace),
+		// OpenShiftClusters
+		g.rpCosmosDBTriggers(databaseName, "OpenShiftClusters", "renewLease", renewLeaseTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationAll),
+		// Monitors
+		g.rpCosmosDBTriggers(databaseName, "Monitors", "renewLease", renewLeaseTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationAll),
+	)
+
 	if addDependsOn {
 		for i := range rs {
 			rs[i].DependsOn = append(rs[i].DependsOn,
@@ -1349,6 +1229,30 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 	}
 
 	return rs
+}
+
+func (g *generator) rpCosmosDBTriggers(databaseName, containerName, triggerID, triggerFunction string, triggerType sdkcosmos.TriggerType, triggerOperation sdkcosmos.TriggerOperation) *arm.Resource {
+	return &arm.Resource{
+		Resource: &sdkcosmos.SQLTriggerCreateUpdateParameters{
+			Properties: &sdkcosmos.SQLTriggerCreateUpdateProperties{
+				Resource: &sdkcosmos.SQLTriggerResource{
+					ID:               to.StringPtr(triggerID),
+					Body:             to.StringPtr(triggerFunction),
+					TriggerOperation: &triggerOperation,
+					TriggerType:      &triggerType,
+				},
+			},
+			Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/" + containerName + "/" + triggerID + "')]"),
+			Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+		},
+		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
+		DependsOn: []string{
+			"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
+			"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('databaseAccountName'), " + databaseName + ", '" + containerName + "')]",
+		},
+		Type: "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers",
+	}
 }
 
 func (g *generator) rpCosmosDBAlert(throttledRequestThreshold float64, ruConsumptionThreshold float64, severity int32, name string, evalFreq string, windowSize string) *arm.Resource {

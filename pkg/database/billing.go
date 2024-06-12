@@ -6,7 +6,6 @@ package database
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -31,49 +30,6 @@ type Billing interface {
 // NewBilling returns a new Billing
 func NewBilling(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string) (Billing, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbName)
-
-	triggers := []*cosmosdb.Trigger{
-		{
-			ID:               "setCreationBillingTimeStamp",
-			TriggerOperation: cosmosdb.TriggerOperationCreate,
-			TriggerType:      cosmosdb.TriggerTypePre,
-			Body: `function trigger() {
-	var request = getContext().getRequest();
-	var body = request.getBody();
-	var date = new Date();
-	var now = Math.floor(date.getTime() / 1000);
-	var billingBody = body["billing"];
-	if (!billingBody["creationTime"]) {
-		billingBody["creationTime"] = now;
-	}
-	request.setBody(body);
-}`,
-		},
-		{
-			ID:               "setDeletionBillingTimeStamp",
-			TriggerOperation: cosmosdb.TriggerOperationReplace,
-			TriggerType:      cosmosdb.TriggerTypePre,
-			Body: `function trigger() {
-	var request = getContext().getRequest();
-	var body = request.getBody();
-	var date = new Date();
-	var now = Math.floor(date.getTime() / 1000);
-	var billingBody = body["billing"];
-	if (!billingBody["deletionTime"]) {
-		billingBody["deletionTime"] = now;
-	}
-	request.setBody(body);
-}`,
-		},
-	}
-
-	triggerc := cosmosdb.NewTriggerClient(collc, collBilling)
-	for _, trigger := range triggers {
-		_, err := triggerc.Create(ctx, trigger)
-		if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
-			return nil, err
-		}
-	}
 
 	documentClient := cosmosdb.NewBillingDocumentClient(collc, collBilling)
 	return NewBillingWithProvidedClient(documentClient), nil

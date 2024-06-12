@@ -17,12 +17,6 @@
         "databaseAccountName": {
             "value": ""
         },
-        "dbtokenClientId": {
-            "value": ""
-        },
-        "dbtokenUrl": {
-            "value": ""
-        },
         "fluentbitImage": {
             "value": ""
         },

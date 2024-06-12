@@ -14,7 +14,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
-const SubscriptionsDequeueQuery string = `SELECT * FROM Subscriptions doc WHERE (doc.deleting ?? false) AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
+const (
+	SubscriptionsDequeueQuery string = `SELECT * FROM Subscriptions doc WHERE (doc.deleting ?? false) AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
+)
 
 type subscriptions struct {
 	c    cosmosdb.SubscriptionDocumentClient
@@ -35,41 +37,6 @@ type Subscriptions interface {
 // NewSubscriptions returns a new Subscriptions
 func NewSubscriptions(ctx context.Context, dbc cosmosdb.DatabaseClient, dbName string) (Subscriptions, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbName)
-
-	triggers := []*cosmosdb.Trigger{
-		{
-			ID:               "renewLease",
-			TriggerOperation: cosmosdb.TriggerOperationAll,
-			TriggerType:      cosmosdb.TriggerTypePre,
-			Body: `function trigger() {
-	var request = getContext().getRequest();
-	var body = request.getBody();
-	var date = new Date();
-	body["leaseExpires"] = Math.floor(date.getTime() / 1000) + 60;
-	request.setBody(body);
-}`,
-		},
-		{
-			ID:               "retryLater",
-			TriggerOperation: cosmosdb.TriggerOperationAll,
-			TriggerType:      cosmosdb.TriggerTypePre,
-			Body: `function trigger() {
-	var request = getContext().getRequest();
-	var body = request.getBody();
-	var date = new Date();
-	body["leaseExpires"] = Math.floor(date.getTime() / 1000) + 600;
-	request.setBody(body);
-}`,
-		},
-	}
-
-	triggerc := cosmosdb.NewTriggerClient(collc, collSubscriptions)
-	for _, trigger := range triggers {
-		_, err := triggerc.Create(ctx, trigger)
-		if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
-			return nil, err
-		}
-	}
 
 	documentClient := cosmosdb.NewSubscriptionDocumentClient(collc, collSubscriptions)
 	return NewSubscriptionsWithProvidedClient(documentClient, uuid.DefaultGenerator.Generate()), nil
