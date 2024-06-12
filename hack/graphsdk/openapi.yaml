@@ -442,6 +442,45 @@ paths:
         schema:
           type: string
         x-ms-docs-key-type: application
+  '/applications/{application-id}/removePassword':
+    description: Provides operations to call the removePassword method.
+    post:
+      tags:
+        - applications.Actions
+      summary: Invoke action removePassword
+      description: Remove a password from an application.
+      externalDocs:
+        description: Find more info here
+        url: https://learn.microsoft.com/graph/api/application-removepassword?view=graph-rest-1.0
+      operationId: applications.application.removePassword
+      requestBody:
+        description: Action parameters
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                keyId:
+                  pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+                  type: string
+                  format: uuid
+        required: true
+      responses:
+        '204':
+          description: Success
+        4XX:
+          $ref: '#/components/responses/error'
+        5XX:
+          $ref: '#/components/responses/error'
+      x-ms-docs-operation-type: action
+    parameters:
+      - name: application-id
+        in: path
+        description: The unique identifier of application
+        required: true
+        schema:
+          type: string
+        x-ms-docs-key-type: application
   /servicePrincipals:
     description: Provides operations to manage the collection of servicePrincipal entities.
     get:
