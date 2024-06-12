@@ -10,7 +10,7 @@ steps:
 
       if [ -z ${{ parameters.acrCredentialsJSON }} ]; then
         az acr login --name "$RP_IMAGE_ACR"
-      else 
+      else
         base64 -d >acr-credentials.json <<<${{ parameters.acrCredentialsJSON }}
         az acr login --name "$RP_IMAGE_ACR" -u "$(jq -r .username < acr-credentials.json)" -p "$(jq -r .password < acr-credentials.json)"
         rm -f acr-credentials.json
