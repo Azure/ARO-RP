@@ -45,6 +45,23 @@ This document goes through the development dependencies one requires in order to
             podman machine init --cpus 4 --memory 5000
             podman machine start
             ```
+1.  Setting Up Podman with [Lima](https://github.com/ReToCode/local-cluster-setup/blob/main/lima/README.md) on macOS to Resolve JSON Parse Errors when using 4.x clients.
+    
+    __NOTE:__ This is a temporary workaround until an RHCOS image with Podman server 5.1.x becomes available.
+        
+        Create file `podman.yaml`
+          
+        Copy podman lima [template](https://github.com/lima-vm/lima/blob/1aae540f885f74fe7ba7a0c10761b42139a01216/examples/podman.yaml) to `podman.yaml`
+
+        Install Lima and Podman, and configure the environment:
+
+         ```bash
+            brew install lima podman
+            cat podman.yaml | limactl create --name=local -
+            limactl start local
+            podman system connection add lima-local "unix:///Users/$(whoami)/.lima/local/sock/podman.sock"
+            podman system connection default lima-local
+            ```
 
 > __NOTE:__ If using Fedora 37+ podman and podman-docker should already be installed and enabled.
 
