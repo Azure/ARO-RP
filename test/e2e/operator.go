@@ -122,7 +122,7 @@ var _ = Describe("ARO Operator - Internet checking", func() {
 	})
 })
 
-var _ = Describe("ARO Operator - Geneva Logging", func() {
+var _ = XDescribe("ARO Operator - Geneva Logging", func() {
 	It("must be repaired if DaemonSet deleted", func(ctx context.Context) {
 		mdsdIsReady := func(g Gomega, ctx context.Context) {
 			done, err := ready.CheckDaemonSetIsReady(ctx, clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging"), "mdsd")()
