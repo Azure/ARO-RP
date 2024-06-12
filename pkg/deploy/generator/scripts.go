@@ -15,3 +15,6 @@ var scriptGatewayVMSS []byte
 
 //go:embed scripts/rpVMSS.sh
 var scriptRpVMSS []byte
+
+//go:embed scripts/commonVMSS.sh
+var scriptCommonVMSS []byte

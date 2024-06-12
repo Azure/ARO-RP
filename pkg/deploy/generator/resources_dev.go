@@ -101,7 +101,16 @@ func (g *generator) devProxyVMSS() *arm.Resource {
 		)
 	}
 
-	trailer := base64.StdEncoding.EncodeToString(scriptDevProxyVMSS)
+	var sb strings.Builder
+
+	// VMSS extensions only support one custom script
+	// Because of this, the commonVMSS.sh is prefixed to the bootstrapping script
+	// main is called at the end of the bootstrapping script, so appending commonVMSS.sh won't work
+	sb.WriteString(string(scriptCommonVMSS))
+	sb.WriteString("\n#Start of devProxyVMSS.sh\n")
+	sb.WriteString(string(scriptDevProxyVMSS))
+
+	trailer := base64.StdEncoding.EncodeToString([]byte(sb.String()))
 
 	parts = append(parts, "'\n'", fmt.Sprintf("base64ToString('%s')", trailer))
 
