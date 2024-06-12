@@ -561,7 +561,6 @@ func (g *generator) rpVMSS() *arm.Resource {
 		DependsOn: []string{
 			"[resourceId('Microsoft.Authorization/roleAssignments', guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader'))]",
 			"[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]",
-			"[resourceId('Microsoft.Storage/storageAccounts', substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.')))]",
 		},
 	}
 }

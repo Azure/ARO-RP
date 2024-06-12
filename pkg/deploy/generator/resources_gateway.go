@@ -363,7 +363,6 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
 		DependsOn: []string{
 			"[resourceId('Microsoft.Network/loadBalancers', 'gateway-lb-internal')]",
-			"[resourceId('Microsoft.Storage/storageAccounts', substring(parameters('gatewayStorageAccountDomain'), 0, indexOf(parameters('gatewayStorageAccountDomain'), '.')))]",
 		},
 	}
 }

@@ -280,7 +280,10 @@
             },
             "properties": {
                 "upgradePolicy": {
-                    "mode": "Rolling"
+                    "mode": "Rolling",
+                    "automaticOSUpgradePolicy": {
+                        "enableAutomaticOSUpgrade": true
+                    }
                 },
                 "virtualMachineProfile": {
                     "osProfile": {
