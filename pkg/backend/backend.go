@@ -28,12 +28,13 @@ type backend struct {
 	baseLog *logrus.Entry
 	env     env.Interface
 
-	dbAsyncOperations   database.AsyncOperations
-	dbBilling           database.Billing
-	dbGateway           database.Gateway
-	dbOpenShiftClusters database.OpenShiftClusters
-	dbSubscriptions     database.Subscriptions
-	dbOpenShiftVersions database.OpenShiftVersions
+	dbAsyncOperations                  database.AsyncOperations
+	dbBilling                          database.Billing
+	dbGateway                          database.Gateway
+	dbOpenShiftClusters                database.OpenShiftClusters
+	dbSubscriptions                    database.Subscriptions
+	dbOpenShiftVersions                database.OpenShiftVersions
+	dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets
 
 	aead    encryption.AEAD
 	m       metrics.Emitter
@@ -54,8 +55,8 @@ type Runnable interface {
 }
 
 // NewBackend returns a new runnable backend
-func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsyncOperations database.AsyncOperations, dbBilling database.Billing, dbGateway database.Gateway, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, dbOpenShiftVersions database.OpenShiftVersions, aead encryption.AEAD, m metrics.Emitter) (Runnable, error) {
-	b, err := newBackend(ctx, log, env, dbAsyncOperations, dbBilling, dbGateway, dbOpenShiftClusters, dbSubscriptions, dbOpenShiftVersions, aead, m)
+func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsyncOperations database.AsyncOperations, dbBilling database.Billing, dbGateway database.Gateway, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, dbOpenShiftVersions database.OpenShiftVersions, dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets, aead encryption.AEAD, m metrics.Emitter) (Runnable, error) {
+	b, err := newBackend(ctx, log, env, dbAsyncOperations, dbBilling, dbGateway, dbOpenShiftClusters, dbSubscriptions, dbOpenShiftVersions, dbPlatformWorkloadIdentityRoleSets, aead, m)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +66,7 @@ func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsy
 	return b, nil
 }
 
-func newBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsyncOperations database.AsyncOperations, dbBilling database.Billing, dbGateway database.Gateway, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, dbOpenShiftVersions database.OpenShiftVersions, aead encryption.AEAD, m metrics.Emitter) (*backend, error) {
+func newBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsyncOperations database.AsyncOperations, dbBilling database.Billing, dbGateway database.Gateway, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, dbOpenShiftVersions database.OpenShiftVersions, dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets, aead encryption.AEAD, m metrics.Emitter) (*backend, error) {
 	billing, err := billing.NewManager(env, dbBilling, dbSubscriptions, log)
 	if err != nil {
 		return nil, err
@@ -75,12 +76,13 @@ func newBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsy
 		baseLog: log,
 		env:     env,
 
-		dbAsyncOperations:   dbAsyncOperations,
-		dbBilling:           dbBilling,
-		dbGateway:           dbGateway,
-		dbOpenShiftClusters: dbOpenShiftClusters,
-		dbSubscriptions:     dbSubscriptions,
-		dbOpenShiftVersions: dbOpenShiftVersions,
+		dbAsyncOperations:                  dbAsyncOperations,
+		dbBilling:                          dbBilling,
+		dbGateway:                          dbGateway,
+		dbOpenShiftClusters:                dbOpenShiftClusters,
+		dbSubscriptions:                    dbSubscriptions,
+		dbOpenShiftVersions:                dbOpenShiftVersions,
+		dbPlatformWorkloadIdentityRoleSets: dbPlatformWorkloadIdentityRoleSets,
 
 		billing: billing,
 		aead:    aead,
