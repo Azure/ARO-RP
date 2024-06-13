@@ -105,6 +105,8 @@ const (
 	CloudErrorCodeInvalidNetworkAddress              = "InvalidNetworkAddress"
 	CloudErrorCodeThrottlingLimitExceeded            = "ThrottlingLimitExceeded"
 	CloudErrorCodeInvalidCIDRRange                   = "InvalidCIDRRange"
+	CloudErrorCodePlatformWorkloadIdentityMismatch   = "CloudErrorCodePlatformWorkloadIdentityMismatch"
+	CloudErrorCodeInvalidClusterMSICount             = "CloudErrorCodeInvalidClusterMSICount"
 )
 
 // NewCloudError returns a new CloudError
