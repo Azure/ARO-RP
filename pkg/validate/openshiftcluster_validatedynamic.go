@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
+	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/validate/dynamic"
 )
 
@@ -34,14 +35,16 @@ func NewOpenShiftClusterDynamicValidator(
 	oc *api.OpenShiftCluster,
 	subscriptionDoc *api.SubscriptionDocument,
 	fpAuthorizer autorest.Authorizer,
+	platformWorkloadIdentityRolesByVersion platformworkloadidentity.PlatformWorkloadIdentityRolesByVersion,
 ) OpenShiftClusterDynamicValidator {
 	return &openShiftClusterDynamicValidator{
 		log: log,
 		env: env,
 
-		oc:              oc,
-		subscriptionDoc: subscriptionDoc,
-		fpAuthorizer:    fpAuthorizer,
+		oc:                                     oc,
+		subscriptionDoc:                        subscriptionDoc,
+		fpAuthorizer:                           fpAuthorizer,
+		platformWorkloadIdentityRolesByVersion: platformWorkloadIdentityRolesByVersion,
 	}
 }
 
@@ -49,9 +52,10 @@ type openShiftClusterDynamicValidator struct {
 	log *logrus.Entry
 	env env.Interface
 
-	oc              *api.OpenShiftCluster
-	subscriptionDoc *api.SubscriptionDocument
-	fpAuthorizer    autorest.Authorizer
+	oc                                     *api.OpenShiftCluster
+	subscriptionDoc                        *api.SubscriptionDocument
+	fpAuthorizer                           autorest.Authorizer
+	platformWorkloadIdentityRolesByVersion platformworkloadidentity.PlatformWorkloadIdentityRolesByVersion
 }
 
 // ensureAccessTokenClaims can detect an error when the service principal (fp, cluster sp) has accidentally deleted from
