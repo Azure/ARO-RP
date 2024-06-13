@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/platformworkloadidentity"
 	"github.com/Azure/ARO-RP/pkg/validate/dynamic"
 )
@@ -35,6 +36,7 @@ func NewOpenShiftClusterDynamicValidator(
 	oc *api.OpenShiftCluster,
 	subscriptionDoc *api.SubscriptionDocument,
 	fpAuthorizer autorest.Authorizer,
+	roleDefinitions armauthorization.RoleDefinitionsClient,
 	platformWorkloadIdentityRolesByVersion platformworkloadidentity.PlatformWorkloadIdentityRolesByVersion,
 ) OpenShiftClusterDynamicValidator {
 	return &openShiftClusterDynamicValidator{
@@ -44,6 +46,7 @@ func NewOpenShiftClusterDynamicValidator(
 		oc:                                     oc,
 		subscriptionDoc:                        subscriptionDoc,
 		fpAuthorizer:                           fpAuthorizer,
+		roleDefinitions:                        roleDefinitions,
 		platformWorkloadIdentityRolesByVersion: platformWorkloadIdentityRolesByVersion,
 	}
 }
@@ -55,6 +58,7 @@ type openShiftClusterDynamicValidator struct {
 	oc                                     *api.OpenShiftCluster
 	subscriptionDoc                        *api.SubscriptionDocument
 	fpAuthorizer                           autorest.Authorizer
+	roleDefinitions                        armauthorization.RoleDefinitionsClient
 	platformWorkloadIdentityRolesByVersion platformworkloadidentity.PlatformWorkloadIdentityRolesByVersion
 }
 
@@ -163,10 +167,18 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		pdpClient,
 	)
 
-	// SP validation
-	err = spDynamic.ValidateServicePrincipal(ctx, spClientCred)
-	if err != nil {
-		return err
+	if dv.oc.Properties.PlatformWorkloadIdentityProfile == nil || dv.oc.Properties.ServicePrincipalProfile != nil {
+		// SP validation
+		err = spDynamic.ValidateServicePrincipal(ctx, spClientCred)
+		if err != nil {
+			return err
+		}
+	} else {
+		// PlatformWorkloadIdentity and ClusterMSIIdentity Validation
+		err = spDynamic.ValidatePlatformWorkloadIdentityProfile(ctx, dv.oc, dv.platformWorkloadIdentityRolesByVersion.GetPlatformWorkloadIdentityRoles(), dv.roleDefinitions)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = spDynamic.ValidateVnet(

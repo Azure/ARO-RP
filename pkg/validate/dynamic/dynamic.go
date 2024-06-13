@@ -25,8 +25,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/authz/remotepdp"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/token"
 )
 
@@ -73,6 +75,7 @@ type Dynamic interface {
 	ValidateEncryptionAtHost(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidateLoadBalancerProfile(ctx context.Context, oc *api.OpenShiftCluster) error
 	ValidatePreConfiguredNSGs(ctx context.Context, oc *api.OpenShiftCluster, subnets []Subnet) error
+	ValidatePlatformWorkloadIdentityProfile(ctx context.Context, oc *api.OpenShiftCluster, platformWorkloadIdentityRoles []api.PlatformWorkloadIdentityRole, roleDefinitions armauthorization.RoleDefinitionsClient) error
 }
 
 type dynamic struct {
@@ -80,9 +83,11 @@ type dynamic struct {
 	appID          string // for use when reporting an error
 	authorizerType AuthorizerType
 	// This represents the Subject for CheckAccess.  Could be either FP or SP.
-	checkAccessSubjectInfoCred azcore.TokenCredential
-	env                        env.Interface
-	azEnv                      *azureclient.AROEnvironment
+	checkAccessSubjectInfoCred   azcore.TokenCredential
+	env                          env.Interface
+	azEnv                        *azureclient.AROEnvironment
+	platformIdentities           []api.PlatformWorkloadIdentity
+	platformIdentitiesActionsMap map[string][]string
 
 	virtualNetworks                       virtualNetworksGetClient
 	diskEncryptionSets                    compute.DiskEncryptionSetsClient
@@ -386,12 +391,12 @@ func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) 
 	return err
 }
 
-func (dv *dynamic) validateActions(ctx context.Context, r *azure.Resource, actions []string) error {
+func (dv *dynamic) validateActionsByOID(ctx context.Context, r *azure.Resource, actions []string, oid *string) error {
 	// ARM has a 5 minute cache around role assignment creation, so wait one minute longer
 	timeoutCtx, cancel := context.WithTimeout(ctx, 6*time.Minute)
 	defer cancel()
 
-	c := closure{dv: dv, ctx: ctx, resource: r, actions: actions}
+	c := closure{dv: dv, ctx: ctx, resource: r, actions: actions, oid: oid}
 
 	return wait.PollImmediateUntil(30*time.Second, c.usingCheckAccessV2, timeoutCtx.Done())
 }
@@ -774,6 +779,24 @@ func (dv *dynamic) ValidatePreConfiguredNSGs(ctx context.Context, oc *api.OpenSh
 		}
 
 		if err := dv.validateNSGPermissions(ctx, *nsgID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (dv *dynamic) validateActions(ctx context.Context, r *azure.Resource, actions []string) error {
+	if dv.platformIdentities != nil {
+		for _, platformIdentity := range dv.platformIdentities {
+			actionsToValidate := stringutils.GroupsIntersect(actions, dv.platformIdentitiesActionsMap[platformIdentity.OperatorName])
+			if len(actionsToValidate) > 0 {
+				if err := dv.validateActionsByOID(ctx, r, actionsToValidate, &platformIdentity.ObjectID); err != nil {
+					return err
+				}
+			}
+		}
+	} else {
+		if err := dv.validateActionsByOID(ctx, r, actions, nil); err != nil {
 			return err
 		}
 	}

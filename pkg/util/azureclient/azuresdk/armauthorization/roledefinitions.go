@@ -8,7 +8,6 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v3"
 )
 
@@ -22,11 +21,6 @@ type roleDefinitionsClient struct {
 
 var _ RoleDefinitionsClient = &roleDefinitionsClient{}
 
-func NewRoleDefinitionsClient(cloud cloud.Configuration, credential azcore.TokenCredential) (RoleDefinitionsClient, error) {
-	options := arm.ClientOptions{
-		ClientOptions: azcore.ClientOptions{
-			Cloud: cloud,
-		},
-	}
-	return armauthorization.NewRoleDefinitionsClient(credential, &options)
+func NewRoleDefinitionsClient(credential azcore.TokenCredential, options *arm.ClientOptions) (RoleDefinitionsClient, error) {
+	return armauthorization.NewRoleDefinitionsClient(credential, options)
 }

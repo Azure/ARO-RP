@@ -12,6 +12,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 
 	api "github.com/Azure/ARO-RP/pkg/api"
+	armauthorization "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armauthorization"
 	dynamic "github.com/Azure/ARO-RP/pkg/validate/dynamic"
 )
 
@@ -115,6 +116,20 @@ func (m *MockDynamic) ValidateLoadBalancerProfile(ctx context.Context, oc *api.O
 func (mr *MockDynamicMockRecorder) ValidateLoadBalancerProfile(ctx, oc interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateLoadBalancerProfile", reflect.TypeOf((*MockDynamic)(nil).ValidateLoadBalancerProfile), ctx, oc)
+}
+
+// ValidatePlatformWorkloadIdentityProfile mocks base method.
+func (m *MockDynamic) ValidatePlatformWorkloadIdentityProfile(ctx context.Context, oc *api.OpenShiftCluster, platformWorkloadIdentityRoles []api.PlatformWorkloadIdentityRole, roleDefinitions armauthorization.RoleDefinitionsClient) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidatePlatformWorkloadIdentityProfile", ctx, oc, platformWorkloadIdentityRoles, roleDefinitions)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidatePlatformWorkloadIdentityProfile indicates an expected call of ValidatePlatformWorkloadIdentityProfile.
+func (mr *MockDynamicMockRecorder) ValidatePlatformWorkloadIdentityProfile(ctx, oc, platformWorkloadIdentityRoles, roleDefinitions interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatePlatformWorkloadIdentityProfile", reflect.TypeOf((*MockDynamic)(nil).ValidatePlatformWorkloadIdentityProfile), ctx, oc, platformWorkloadIdentityRoles, roleDefinitions)
 }
 
 // ValidatePreConfiguredNSGs mocks base method.
