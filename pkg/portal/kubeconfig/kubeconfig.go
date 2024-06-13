@@ -25,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/portal/util/clientcache"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/roundtripper"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
 const (
@@ -95,7 +96,7 @@ func (k *Kubeconfig) New(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	elevated := len(middleware.GroupsIntersect(k.elevatedGroupIDs, ctx.Value(middleware.ContextKeyGroups).([]string))) > 0
+	elevated := len(stringutils.GroupsIntersect(k.elevatedGroupIDs, ctx.Value(middleware.ContextKeyGroups).([]string))) > 0
 
 	token := k.DbPortal.NewUUID()
 	portalDoc := &api.PortalDocument{

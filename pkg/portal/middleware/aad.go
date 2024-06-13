@@ -23,6 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
 	"github.com/Azure/ARO-RP/pkg/util/roundtripper"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
@@ -308,7 +309,7 @@ func (a *aad) callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	groupsIntersect := GroupsIntersect(a.allGroups, claims.Groups)
+	groupsIntersect := stringutils.GroupsIntersect(a.allGroups, claims.Groups)
 	if len(groupsIntersect) == 0 {
 		http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 	}
@@ -373,17 +374,4 @@ func (a *aad) clientAssertion(req *http.Request) (*http.Response, error) {
 func (a *aad) internalServerError(w http.ResponseWriter, err error) {
 	a.log.Warn(err)
 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-}
-
-func GroupsIntersect(as, bs []string) (gs []string) {
-	for _, a := range as {
-		for _, b := range bs {
-			if a == b {
-				gs = append(gs, a)
-				break
-			}
-		}
-	}
-
-	return gs
 }
