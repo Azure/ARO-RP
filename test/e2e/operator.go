@@ -123,6 +123,10 @@ var _ = Describe("ARO Operator - Internet checking", func() {
 })
 
 var _ = XDescribe("ARO Operator - Geneva Logging", func() {
+	if _env.IsLocalDevelopmentMode() {
+		Skip("skipping tests in non-development environment")
+	}
+
 	It("must be repaired if DaemonSet deleted", func(ctx context.Context) {
 		mdsdIsReady := func(g Gomega, ctx context.Context) {
 			done, err := ready.CheckDaemonSetIsReady(ctx, clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging"), "mdsd")()
