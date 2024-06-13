@@ -35,6 +35,7 @@ import (
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	uuidfake "github.com/Azure/ARO-RP/pkg/util/uuid/fake"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
@@ -1415,7 +1416,7 @@ func TestCreateOIDC(t *testing.T) {
 		name                              string
 		oc                                *api.OpenShiftClusterDocument
 		mocks                             func(*mock_azblob.MockManager, *mock_env.MockInterface, *mock_azblob.MockAZBlobClient)
-		wantedOIDCIssuer                  string
+		wantedOIDCIssuer                  *api.OIDCIssuer
 		wantErr                           string
 		wantBoundServiceAccountSigningKey bool
 	}{
@@ -1435,6 +1436,7 @@ func TestCreateOIDC(t *testing.T) {
 					},
 				},
 			},
+			wantedOIDCIssuer:                  nil,
 			wantBoundServiceAccountSigningKey: false,
 		},
 		{
@@ -1450,6 +1452,7 @@ func TestCreateOIDC(t *testing.T) {
 					},
 				},
 			},
+			wantedOIDCIssuer:                  nil,
 			wantBoundServiceAccountSigningKey: false,
 		},
 		{
@@ -1477,7 +1480,7 @@ func TestCreateOIDC(t *testing.T) {
 				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.JWKSKey, gomock.Any()).Return(nil)
 				blob.EXPECT().GetAZBlobClient(gomock.Any(), &azblob.ClientOptions{}).Return(azblobClient, nil)
 			},
-			wantedOIDCIssuer:                  prodOIDCIssuer,
+			wantedOIDCIssuer:                  pointerutils.ToPtr(api.OIDCIssuer(prodOIDCIssuer)),
 			wantBoundServiceAccountSigningKey: true,
 		},
 		{
@@ -1505,7 +1508,7 @@ func TestCreateOIDC(t *testing.T) {
 				azblobClient.EXPECT().UploadBuffer(gomock.Any(), "", oidcbuilder.JWKSKey, gomock.Any()).Return(nil)
 				blob.EXPECT().GetAZBlobClient(gomock.Any(), &azblob.ClientOptions{}).Return(azblobClient, nil)
 			},
-			wantedOIDCIssuer:                  devOIDCIssuer,
+			wantedOIDCIssuer:                  pointerutils.ToPtr(api.OIDCIssuer(devOIDCIssuer)),
 			wantBoundServiceAccountSigningKey: true,
 		},
 		{
@@ -1628,8 +1631,16 @@ func TestCreateOIDC(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if string(checkDoc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer) != tt.wantedOIDCIssuer {
-				t.Fatalf("OIDC Issuer URL - %s != %s (wanted)", checkDoc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer, tt.wantedOIDCIssuer)
+			if tt.wantedOIDCIssuer == nil && checkDoc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer != nil {
+				t.Fatalf("Expected OIDC Issuer URL as nil but got a value as %s", *checkDoc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer)
+			}
+
+			if tt.wantedOIDCIssuer != nil && checkDoc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer == nil {
+				t.Fatalf("OIDC Issuer URL isn't as expected, wanted %s returned nil", *tt.wantedOIDCIssuer)
+			}
+
+			if tt.wantedOIDCIssuer != nil && checkDoc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer == nil && *tt.wantedOIDCIssuer != *checkDoc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer {
+				t.Fatalf("OIDC Issuer URL isn't as expected, wanted %s returned %s", *tt.wantedOIDCIssuer, *checkDoc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer)
 			}
 
 			if checkDoc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey == nil && tt.wantBoundServiceAccountSigningKey {
