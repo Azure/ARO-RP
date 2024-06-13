@@ -30,6 +30,9 @@ func (n *teststruct) hiveClusterInstallationComplete(context.Context) (bool, err
 }
 
 func TestEnrichConditionTimeoutError(t *testing.T) {
+	// When stringifying a method on a struct, golang adds -fm -- this is not
+	// useful to us, so using a struct instance here will verify that it is not
+	// present when matching the timeout error strings
 	s := &teststruct{}
 
 	for _, tt := range []struct {
