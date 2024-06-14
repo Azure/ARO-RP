@@ -7,6 +7,9 @@
         },
         "databaseName": {
             "type": "string"
+        },
+        "rpServicePrincipalId": {
+            "type": "string"
         }
     },
     "resources": [
@@ -368,6 +371,17 @@
                 }
             },
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/triggers"
+        },
+        {
+            "name": "[concat(parameters('databaseAccountName'), '/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('rpServicePrincipalId'), 'DocumentDB Data Contributor'))]",
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments",
+            "properties": {
+                "scope": "[concat(resourceId('Microsoft.DocumentDB/databaseAccounts/', parameters('databaseAccountName')), '/dbs/', parameters('databaseName'))]",
+                "roleDefinitionId": "[concat(resourceId('Microsoft.DocumentDB/databaseAccounts/', parameters('databaseAccountName')), '/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002')]",
+                "principalId": "[parameters('rpServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2023-04-15"
         }
     ]
 }

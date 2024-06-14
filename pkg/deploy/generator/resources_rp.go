@@ -881,7 +881,7 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 }
 
 func (g *generator) CosmosDBDataContributorRoleAssignment(databaseName, component string) *arm.Resource {
-	return &arm.Resource{
+	roleAssignment := &arm.Resource{
 		Resource: mgmtauthorization.RoleAssignment{
 			Name: to.StringPtr("[concat(parameters('databaseAccountName'), '/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('" + component + "ServicePrincipalId'), 'DocumentDB Data Contributor'))]"),
 			Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments"),
@@ -893,10 +893,14 @@ func (g *generator) CosmosDBDataContributorRoleAssignment(databaseName, componen
 			},
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
-		DependsOn: []string{
-			"[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
-		},
 	}
+	// Development database deployment template does not define the databaseAccount
+	if g.production {
+		roleAssignment.DependsOn = []string{
+			"[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
+		}
+	}
+	return roleAssignment
 }
 
 func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Resource {

@@ -12,12 +12,16 @@ func (g *generator) devDatabaseTemplate() *arm.Template {
 
 	t.Resources = append(t.Resources,
 		g.database("parameters('databaseName')", false)...)
+	t.Resources = append(t.Resources, g.CosmosDBDataContributorRoleAssignment("parameters('databaseName')", "rp"))
 
 	t.Parameters = map[string]*arm.TemplateParameter{
 		"databaseAccountName": {
 			Type: "string",
 		},
 		"databaseName": {
+			Type: "string",
+		},
+		"rpServicePrincipalId": {
 			Type: "string",
 		},
 	}

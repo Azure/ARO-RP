@@ -185,6 +185,7 @@ deploy_e2e_db() {
         --parameters \
         "databaseAccountName=$DATABASE_ACCOUNT_NAME" \
         "databaseName=$DATABASE_NAME" \
+        "rpServicePrincipalId=$AZURE_RP_SERVICE_PRINCIPAL_ID"
         >/dev/null
 
 }
