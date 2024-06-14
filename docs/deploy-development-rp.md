@@ -74,8 +74,7 @@
      --template-file pkg/deploy/assets/databases-development.json \
      --parameters \
        "databaseAccountName=$DATABASE_ACCOUNT_NAME" \
-       "databaseName=$DATABASE_NAME" \
-       "rpServicePrincipalId=$AZURE_RP_SERVICE_PRINCIPAL_ID"
+       "databaseName=$DATABASE_NAME"
      1>/dev/null
    ```
 
