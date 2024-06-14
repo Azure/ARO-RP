@@ -13,7 +13,7 @@ locations.
 
 1. Set the az account
    ```bash
-   az account set -n "ARO Classic E2E"
+   az account set -n "<your-azure-subscription"
    ```
 
 1. You will need a resource group for global infrastructure
@@ -27,7 +27,7 @@ locations.
    resource group of the DNS Zone resource:
 
    ```bash
-   PARENT_DOMAIN_NAME=aro-classic.e2e.v4.dev.azmosa.io
+   PARENT_DOMAIN_NAME=<your-dns-parent-domain>
    PARENT_DOMAIN_RESOURCEGROUP=global-infra
 
    az network dns zone create --name $PARENT_DOMAIN_NAME -g $PARENT_DOMAIN_RESOURCEGROUP
@@ -40,7 +40,7 @@ Data Reader` or `Storage Blob Data Contributor` role on the storage account.
    Set SECRET_SA_ACCOUNT_NAME to the name of the storage account:
 
    ```bash
-   export SECRET_SA_ACCOUNT_NAME=e2earoclassicsecrets
+   export SECRET_SA_ACCOUNT_NAME=<your-storage-account-name>
    ./hack/devtools/deploy-shared-env-storage.sh
    
    ```
@@ -50,7 +50,7 @@ Data Reader` or `Storage Blob Data Contributor` role on the storage account.
    development environment key vault(s). Set ADMIN_OBJECT_ID to the object ID.
 
    ```bash
-   ADMIN_OBJECT_ID="$(az ad group show -g 'ARO Classic' --query id -o tsv)"
+   ADMIN_OBJECT_ID="$(az ad group show -g '<your-az-group>' --query id -o tsv)"
    ```
 
 1. You will need the ARO RP-specific pull secret (ask one of the
@@ -377,7 +377,7 @@ az ad app credential reset \
 
 5. The RP makes API calls to kubernetes cluster via a proxy VMSS agent. For the agent to get the updated certificates, this vm needs to be deleted & redeployed. Proxy VM is currently deployed by the `deploy_env_dev` function in `deploy-shared-env.sh`. It makes use of `env-development.json`
 
-6. Run `[rharosecretsdev|e2earosecrets] make secrets-update` to upload it to your
+6. Run `[rharosecretsdev|e2earosecrets|e2earoclassicsecrets] make secrets-update` to upload it to your
    storage account so other people on your team can access it via `make secrets`
 
 # Environment file
@@ -386,14 +386,14 @@ az ad app credential reset \
    The resource group location will be appended to the prefix to make the resource group name. If a v4-prefixed environment exists in the subscription already, use a unique prefix.
 
    ```bash
-   RESOURCEGROUP_PREFIX=e2e-eastus
+   RESOURCEGROUP_PREFIX=<your-rg-prefix>
    ```
 
 1. Choose the proxy domain name label. This final proxy hostname will be of the
    form `vm0.$PROXY_DOMAIN_NAME_LABEL.$LOCATION.cloudapp.azure.com`.
 
    ```bash
-   PROXY_DOMAIN_NAME_LABEL=e2eclassicaroproxy
+   PROXY_DOMAIN_NAME_LABEL=<your-proxy-domain-name-label>
    ```
 
 1. Create the secrets/env file:
@@ -580,12 +580,12 @@ Development value: secrets/cluster-logging-int.pem
    vpn_configuration
    ```
 
-## PR E2E Only - Create aro-e2e-global keyvault, ADO Library Variable Group
+## PR E2E Only - Create the global keyvault, ADO Library Variable Group
 
 1. Create E2E global keyvault
    ```bash
    AZURE_TENANT_ID=$(az account show --query tenantId -o tsv)
-   ARO_E2E_GLOBAL_VAULT_NAME=aro-classic-e2e-global
+   ARO_E2E_GLOBAL_VAULT_NAME=<your-global-keyvault>
 
    deploy_aro_e2e_global_keyvault
    ``` 
@@ -608,7 +608,7 @@ Due to cross tenant ACR access, token credentials must be generated for arointsv
 ```
 cat <my-acr-cred-file>.json | base64 -w0
 ```
-1. Add the secret to the Libary variable group that is connected to the aro-e2e-global keyvault
+1. Add the secret to the Libary variable group that is connected to the global keyvault
 
 ## PR E2E Only - Add keyvault permissions to aro-v4-e2e-devops-spn
 - assign 'Keyvault Secrets User' to aro-v4-e2e-devops-spn
