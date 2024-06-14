@@ -561,7 +561,6 @@ func (g *generator) rpVMSS() *arm.Resource {
 		DependsOn: []string{
 			"[resourceId('Microsoft.Authorization/roleAssignments', guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader'))]",
 			"[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]",
-			"[resourceId('Microsoft.Storage/storageAccounts', substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.')))]",
 		},
 	}
 }
@@ -887,8 +886,8 @@ func (g *generator) CosmosDBDataContributorRoleAssignment(databaseName, componen
 			Name: to.StringPtr("[concat(parameters('databaseAccountName'), '/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('" + component + "ServicePrincipalId'), 'DocumentDB Data Contributor'))]"),
 			Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments"),
 			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-				Scope:            to.StringPtr("[concat(resourceId('Microsoft.DocumentDB/databaseAccounts/', parameters('databaseAccountName')), '/dbs/', " + databaseName + ")]"),
-				RoleDefinitionID: to.StringPtr("[concat(resourceId('Microsoft.DocumentDB/databaseAccounts/', parameters('databaseAccountName')), '/sqlRoleDefinitions/" + rbac.RoleDocumentDBDataContributor + "')]"),
+				Scope:            to.StringPtr("[resourceId('Microsoft.DocumentDB/databaseAccounts/dbs', parameters('databaseAccountName'), " + databaseName + ")]"),
+				RoleDefinitionID: to.StringPtr("[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', parameters('databaseAccountName'), '" + rbac.RoleDocumentDBDataContributor + "')]"),
 				PrincipalID:      to.StringPtr("[parameters('" + component + "ServicePrincipalId')]"),
 				PrincipalType:    mgmtauthorization.ServicePrincipal,
 			},
