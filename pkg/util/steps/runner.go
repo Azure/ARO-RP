@@ -19,9 +19,12 @@ import (
 	msgraph_errors "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk/models/odataerrors"
 )
 
-// FriendlyName returns a "friendly" stringified name of the given func.
+// FriendlyName returns a "friendly" stringified name of the given func. This
+// consists of removing the ARO base package name (so it produces pkg/foobar
+// instead of github.com/Azure/ARO-RP/pkg/foobar) and removing the -fm suffix
+// from Golang struct methods.
 func FriendlyName(f interface{}) string {
-	return runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name()
+	return strings.TrimPrefix(strings.TrimSuffix(runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name(), "-fm"), "github.com/Azure/ARO-RP/")
 }
 
 func shortName(fullName string) string {

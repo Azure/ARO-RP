@@ -108,7 +108,7 @@ func (c conditionStep) run(ctx context.Context, log *logrus.Entry) error {
 // returns enriched error messages mentioned in timeoutConditionErrors
 func enrichConditionTimeoutError(f conditionFunction, originalErr error) error {
 	funcNameParts := strings.Split(FriendlyName(f), ".")
-	funcName := strings.TrimSuffix(funcNameParts[len(funcNameParts)-1], "-fm")
+	funcName := funcNameParts[len(funcNameParts)-1]
 
 	message, exists := timeoutConditionErrors[funcName]
 	if !exists {
