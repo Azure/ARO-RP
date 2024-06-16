@@ -21,8 +21,7 @@ The reason for calling script instead of directly calling:
 
 ```bash
 go get -u ./...
-go mod tidy -compat=1.20
-go mod vendor
+make go-verify
 ```
 
 is that packages modified in this script do not fully support modules and
@@ -43,8 +42,7 @@ the PR, one can simply call
 go get <module>@<release> OR
 go get -u <module>@<release>
 
-go mod tidy -compat=1.20
-go mod vendor
+make go-verify
 ```
 
 ---
@@ -52,8 +50,8 @@ go mod vendor
 **NOTE** vendoring is required as ARO mirrors all dependencies locally for the CI reliability
 and reproducibility.
 
-**NOTE** that when running `go mod vendor` only modules that are used in the
-source code will be vendored in.
+**NOTE** that running `make go-verify` adds missing (and remove unused) modules,
+make a vendored copy to the *vendor* direcory and then verifies that the dependencies have expected content.
 
 **NOTE** when updating a package modified in `hack/update-go-module-dependencies.sh`
 changes have to be made there also. Otherwise next run of `make vendor` will
