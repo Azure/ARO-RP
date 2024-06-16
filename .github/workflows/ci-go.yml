@@ -37,8 +37,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
     - run: |
-        go mod vendor
-        go mod tidy -compat=1.20
+        make go-verify
         hack/ci-utils/isClean.sh
 
   generate-check:
