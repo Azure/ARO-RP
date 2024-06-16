@@ -17,6 +17,9 @@ AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
 GATEKEEPER_VERSION = v3.15.1
 GOTESTSUM = gotest.tools/gotestsum@v1.11.0
 
+# Golang version go mod tidy compatibility
+GOLANG_VERSION ?= 1.20
+
 ifneq ($(shell uname -s),Darwin)
     export CGO_CFLAGS=-Dgpgme_off_t=off_t
 endif
@@ -334,10 +337,23 @@ admin.kubeconfig:
 aks.kubeconfig:
 	hack/get-admin-aks-kubeconfig.sh
 
+.PHONY: go-tidy
+go-tidy: # Run go mod tidy - add missing and remove unused modules.
+	go mod tidy -compat=${GOLANG_VERSION}
+
+.PHONY: go-vendor
+go-vendor:  # Run go mod vendor - only modules that are used in the source code will be vendored in (make vendored copy of dependencies). 
+	go mod vendor
+
+.PHONY: go-verify
+go-verify: go-tidy go-vendor # Run go mod verify - verify dependencies have expected content
+	go mod verify
+
 .PHONY: vendor
 vendor:
 	# See comments in the script for background on why we need it
 	hack/update-go-module-dependencies.sh
+	$(MAKE) go-verify
 
 .PHONY: install-go-tools
 install-go-tools:
