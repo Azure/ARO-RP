@@ -7,682 +7,213 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"testing"
+	"strings"
 
 	sdkdns "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/golang/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	mock_armdns "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armdns"
-	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	utilerror "github.com/Azure/ARO-RP/test/util/error"
+	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armdns"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/azcore"
 )
 
-func TestCreate(t *testing.T) {
-	ctx := context.Background()
+const (
+	resourceID = "resourceId"
+)
 
-	managedOc := &api.OpenShiftCluster{
-		Properties: api.OpenShiftClusterProperties{
-			ClusterProfile: api.ClusterProfile{
-				Domain: "domain",
-			},
-		},
-	}
+type Manager interface {
+	Create(context.Context, *api.OpenShiftCluster) error
+	Update(context.Context, *api.OpenShiftCluster, string) error
+	CreateOrUpdateRouter(context.Context, *api.OpenShiftCluster, string) error
+	Delete(context.Context, *api.OpenShiftCluster) error
+}
 
-	unmanagedOc := &api.OpenShiftCluster{
-		Properties: api.OpenShiftClusterProperties{
-			ClusterProfile: api.ClusterProfile{
-				Domain: "domain.notmanaged",
-			},
-		},
-	}
+type manager struct {
+	env        env.Interface
+	recordsets armdns.RecordSetsClient
+}
 
-	type test struct {
-		name    string
-		oc      *api.OpenShiftCluster
-		mocks   func(*test, *mock_armdns.MockRecordSetsClient)
-		wantErr string
-	}
-
-	for _, tt := range []*test{
-		{
-			name: "managed, new record",
-			oc:   managedOc,
-			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
-				recordsets.EXPECT().
-					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSetsClientGetResponse{
-						RecordSet: sdkdns.RecordSet{},
-					}, autorest.DetailedError{
-						StatusCode: http.StatusNotFound,
-					})
-
-				recordsets.EXPECT().
-					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, sdkdns.RecordSet{
-						Properties: &sdkdns.RecordSetProperties{
-							Metadata: map[string]*string{
-								resourceID: to.StringPtr(tt.oc.ID),
-							},
-							TTL: to.Int64Ptr(300),
-						},
-					}, &sdkdns.RecordSetsClientCreateOrUpdateOptions{
-						IfMatch:     to.StringPtr(""),
-						IfNoneMatch: to.StringPtr("*"),
-					}).
-					Return(sdkdns.RecordSetsClientCreateOrUpdateResponse{
-						RecordSet: sdkdns.RecordSet{},
-					}, nil)
-			},
-		},
-		{
-			name: "managed, our record already exists",
-			oc:   managedOc,
-			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
-				recordsets.EXPECT().
-					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSetsClientGetResponse{
-						RecordSet: sdkdns.RecordSet{
-							Properties: &sdkdns.RecordSetProperties{
-								Metadata: map[string]*string{
-									"resourceId": &tt.oc.ID,
-								},
-							},
-						},
-					}, nil)
-			},
-		},
-		{
-			name: "managed, someone else's record already exists",
-			oc:   managedOc,
-			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
-				recordsets.EXPECT().
-					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSetsClientGetResponse{
-						RecordSet: sdkdns.RecordSet{
-							Properties: &sdkdns.RecordSetProperties{
-								Metadata: map[string]*string{
-									"resourceId": to.StringPtr("not us"),
-								},
-							},
-						},
-					}, nil)
-			},
-			wantErr: `400: DuplicateDomain: : The provided domain 'domain' is already in use by a cluster.`,
-		},
-		{
-			name: "managed, error",
-			oc:   managedOc,
-			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
-				recordsets.EXPECT().
-					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSetsClientGetResponse{}, fmt.Errorf("random error"))
-			},
-			wantErr: "random error",
-		},
-		{
-			name: "unmanaged",
-			oc:   unmanagedOc,
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			env := mock_env.NewMockInterface(controller)
-			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")
-			env.EXPECT().Domain().AnyTimes().Return("domain")
-
-			recordsets := mock_armdns.NewMockRecordSetsClient(controller)
-			if tt.mocks != nil {
-				tt.mocks(tt, recordsets)
-			}
-
-			m := &manager{
-				env:        env,
-				recordsets: recordsets,
-			}
-
-			err := m.Create(ctx, tt.oc)
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-		})
+func NewManager(env env.Interface, tokenCredential azcore.TokenCredential) Manager {
+	return &manager{
+		env:        env,
+		recordsets: armdns.NewRecordSetsClient(env.Environment(), env.SubscriptionID(), tokenCredential),
 	}
 }
 
-func TestUpdate(t *testing.T) {
-	ctx := context.Background()
-
-	managedOc := &api.OpenShiftCluster{
-		Properties: api.OpenShiftClusterProperties{
-			ClusterProfile: api.ClusterProfile{
-				Domain: "test.domain",
-			},
-		},
+func (m *manager) Create(ctx context.Context, oc *api.OpenShiftCluster) error {
+	prefix, err := m.managedDomainPrefix(oc.Properties.ClusterProfile.Domain)
+	if err != nil || prefix == "" {
+		return err
 	}
 
-	unmanagedOc := &api.OpenShiftCluster{
-		Properties: api.OpenShiftClusterProperties{
-			ClusterProfile: api.ClusterProfile{
-				Domain: "domain.notmanaged",
-			},
-		},
+	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+prefix, sdkdns.RecordTypeA, nil)
+	if err == nil {
+		if rs.Properties.Metadata[resourceID] == nil || *rs.Properties.Metadata[resourceID] != oc.ID {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeDuplicateDomain, "", "The provided domain '%s' is already in use by a cluster.", oc.Properties.ClusterProfile.Domain)
+		}
+
+		return nil
 	}
 
-	type test struct {
-		name    string
-		oc      *api.OpenShiftCluster
-		mocks   func(*test, *mock_armdns.MockRecordSetsClient)
-		wantErr string
+	if detailedErr, ok := err.(autorest.DetailedError); ok &&
+		detailedErr.StatusCode == http.StatusNotFound {
+		err = nil
+	}
+	if err != nil {
+		return err
 	}
 
-	for _, tt := range []*test{
-		{
-			name: "managed, our record already exists",
-			oc:   managedOc,
-			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
-				recordsets.EXPECT().
-					Get(ctx, "rpResourcegroup", "domain", "api.test", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSetsClientGetResponse{
-						RecordSet: sdkdns.RecordSet{
-							Etag: to.StringPtr("etag"),
-							Properties: &sdkdns.RecordSetProperties{
-								Metadata: map[string]*string{
-									"resourceId": &tt.oc.ID,
-								},
-							},
-						}}, nil)
-
-				recordsets.EXPECT().
-					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "api.test", sdkdns.RecordTypeA, sdkdns.RecordSet{
-						Properties: &sdkdns.RecordSetProperties{
-							Metadata: map[string]*string{
-								resourceID: to.StringPtr(tt.oc.ID),
-							},
-							TTL: to.Int64Ptr(300),
-							ARecords: []*sdkdns.ARecord{
-								{
-									IPv4Address: to.StringPtr("1.2.3.4"),
-								},
-							},
-						},
-					}, &sdkdns.RecordSetsClientCreateOrUpdateOptions{
-						IfMatch:     to.StringPtr("etag"),
-						IfNoneMatch: to.StringPtr(""),
-					}).
-					Return(sdkdns.RecordSetsClientCreateOrUpdateResponse{
-						RecordSet: sdkdns.RecordSet{},
-					}, nil)
-			},
-		},
-		{
-			name: "managed, someone else's record already exists",
-			oc:   managedOc,
-			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
-				recordsets.EXPECT().
-					Get(ctx, "rpResourcegroup", "domain", "api.test", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSetsClientGetResponse{
-						RecordSet: sdkdns.RecordSet{
-							Properties: &sdkdns.RecordSetProperties{
-								Metadata: map[string]*string{
-									"resourceId": to.StringPtr("not us"),
-								},
-							},
-						}}, nil)
-			},
-			wantErr: `recordset "api.test" already registered`,
-		},
-		{
-			name: "managed, error",
-			oc:   managedOc,
-			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
-				recordsets.EXPECT().
-					Get(ctx, "rpResourcegroup", "domain", "api.test", sdkdns.RecordTypeA, nil).
-					Return(
-						sdkdns.RecordSetsClientGetResponse{
-							RecordSet: sdkdns.RecordSet{},
-						}, fmt.Errorf("random error"))
-			},
-			wantErr: "random error",
-		},
-		{
-			name: "unmanaged",
-			oc:   unmanagedOc,
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			env := mock_env.NewMockInterface(controller)
-			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")
-			env.EXPECT().Domain().AnyTimes().Return("domain")
-
-			recordsets := mock_armdns.NewMockRecordSetsClient(controller)
-			if tt.mocks != nil {
-				tt.mocks(tt, recordsets)
-			}
-
-			m := &manager{
-				env:        env,
-				recordsets: recordsets,
-			}
-
-			err := m.Update(ctx, tt.oc, "1.2.3.4")
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-		})
-	}
+	return m.createOrUpdate(ctx, oc, "", "", "*")
 }
 
-func TestCreateOrUpdateRouter(t *testing.T) {
-	ctx := context.Background()
-
-	managedOc := &api.OpenShiftCluster{
-		Properties: api.OpenShiftClusterProperties{
-			ClusterProfile: api.ClusterProfile{
-				Domain: "domain",
-			},
-		},
+func (m *manager) Update(ctx context.Context, oc *api.OpenShiftCluster, ip string) error {
+	prefix, err := m.managedDomainPrefix(oc.Properties.ClusterProfile.Domain)
+	if err != nil || prefix == "" {
+		return err
 	}
 
-	unmanagedOc := &api.OpenShiftCluster{
-		Properties: api.OpenShiftClusterProperties{
-			ClusterProfile: api.ClusterProfile{
-				Domain: "domain.notmanaged",
-			},
-		},
+	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+prefix, sdkdns.RecordTypeA, nil)
+	if err != nil {
+		return err
 	}
 
-	type test struct {
-		name     string
-		routerIP string
-		oc       *api.OpenShiftCluster
-		mocks    func(*test, *mock_armdns.MockRecordSetsClient)
-		wantErr  string
+	if rs.Properties.Metadata[resourceID] == nil || *rs.Properties.Metadata[resourceID] != oc.ID {
+		return fmt.Errorf("recordset %q already registered", "api."+prefix)
 	}
 
-	for _, tt := range []*test{
-		{
-			name:     "managed - create",
-			routerIP: "1.2.3.4",
-			oc:       managedOc,
-			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
-				recordsets.EXPECT().
-					Get(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSetsClientGetResponse{
-						RecordSet: sdkdns.RecordSet{},
-					}, fmt.Errorf("random error"))
-
-				recordsets.EXPECT().
-					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, sdkdns.RecordSet{
-						Properties: &sdkdns.RecordSetProperties{
-							TTL: to.Int64Ptr(300),
-							ARecords: []*sdkdns.ARecord{
-								{
-									IPv4Address: to.StringPtr(tt.routerIP),
-								},
-							},
-						},
-					}, &sdkdns.RecordSetsClientCreateOrUpdateOptions{
-						IfMatch:     nil,
-						IfNoneMatch: nil,
-					}).
-					Return(sdkdns.RecordSetsClientCreateOrUpdateResponse{
-						RecordSet: sdkdns.RecordSet{},
-					}, nil)
-			},
-		},
-		{
-			name:     "managed, error",
-			routerIP: "1.2.3.4",
-			oc:       managedOc,
-			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
-				recordsets.EXPECT().
-					Get(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSetsClientGetResponse{
-						RecordSet: sdkdns.RecordSet{},
-					}, fmt.Errorf("random error"))
-
-				recordsets.EXPECT().
-					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, sdkdns.RecordSet{
-						Properties: &sdkdns.RecordSetProperties{
-							TTL: to.Int64Ptr(300),
-							ARecords: []*sdkdns.ARecord{
-								{
-									IPv4Address: to.StringPtr(tt.routerIP),
-								},
-							},
-						},
-					}, &sdkdns.RecordSetsClientCreateOrUpdateOptions{
-						IfMatch:     nil,
-						IfNoneMatch: nil,
-					}).
-					Return(sdkdns.RecordSetsClientCreateOrUpdateResponse{
-						RecordSet: sdkdns.RecordSet{},
-					}, fmt.Errorf("random error"))
-			},
-			wantErr: "random error",
-		},
-		{
-			name:     "managed, update match",
-			routerIP: "1.2.3.4",
-			oc:       managedOc,
-			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
-				recordsets.EXPECT().
-					Get(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSetsClientGetResponse{
-						RecordSet: sdkdns.RecordSet{
-							Properties: &sdkdns.RecordSetProperties{
-								TTL: to.Int64Ptr(300),
-								ARecords: []*sdkdns.ARecord{
-									{
-										IPv4Address: to.StringPtr(tt.routerIP),
-									},
-								},
-							},
-						},
-					}, nil)
-			},
-		},
-		{
-			name:     "managed, update missmatch",
-			routerIP: "2.2.3.4",
-			oc:       managedOc,
-			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
-				recordsets.EXPECT().
-					Get(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSetsClientGetResponse{
-						RecordSet: sdkdns.RecordSet{
-							Properties: &sdkdns.RecordSetProperties{
-								TTL: to.Int64Ptr(300),
-								ARecords: []*sdkdns.ARecord{
-									{
-										IPv4Address: to.StringPtr("1.2.3.4"),
-									},
-								},
-							},
-						},
-					}, nil)
-
-				recordsets.EXPECT().
-					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, sdkdns.RecordSet{
-						Properties: &sdkdns.RecordSetProperties{
-							TTL: to.Int64Ptr(300),
-							ARecords: []*sdkdns.ARecord{
-								{
-									IPv4Address: to.StringPtr(tt.routerIP),
-								},
-							},
-						},
-					}, &sdkdns.RecordSetsClientCreateOrUpdateOptions{
-						IfMatch:     nil,
-						IfNoneMatch: nil,
-					}).
-					Return(sdkdns.RecordSetsClientCreateOrUpdateResponse{
-						RecordSet: sdkdns.RecordSet{},
-					}, nil)
-			},
-		},
-		{
-			name: "unmanaged",
-			oc:   unmanagedOc,
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			env := mock_env.NewMockInterface(controller)
-			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")
-			env.EXPECT().Domain().AnyTimes().Return("domain")
-
-			recordsets := mock_armdns.NewMockRecordSetsClient(controller)
-			if tt.mocks != nil {
-				tt.mocks(tt, recordsets)
-			}
-
-			m := &manager{
-				env:        env,
-				recordsets: recordsets,
-			}
-
-			err := m.CreateOrUpdateRouter(ctx, tt.oc, tt.routerIP)
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-		})
-	}
+	return m.createOrUpdate(ctx, oc, ip, *rs.Etag, "")
 }
 
-func TestDelete(t *testing.T) {
-	ctx := context.Background()
-
-	managedOc := &api.OpenShiftCluster{
-		Properties: api.OpenShiftClusterProperties{
-			ClusterProfile: api.ClusterProfile{
-				Domain: "domain",
-			},
-		},
+func (m *manager) CreateOrUpdateRouter(ctx context.Context, oc *api.OpenShiftCluster, routerIP string) error {
+	prefix, err := m.managedDomainPrefix(oc.Properties.ClusterProfile.Domain)
+	if err != nil || prefix == "" {
+		return err
 	}
 
-	unmanagedOc := &api.OpenShiftCluster{
-		Properties: api.OpenShiftClusterProperties{
-			ClusterProfile: api.ClusterProfile{
-				Domain: "domain.notmanaged",
-			},
-		},
+	var isCreate bool
+	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+prefix, sdkdns.RecordTypeA, nil)
+	if detailedErr, ok := err.(autorest.DetailedError); ok &&
+		detailedErr.StatusCode == http.StatusNotFound {
+		isCreate = true
 	}
 
-	type test struct {
-		name    string
-		oc      *api.OpenShiftCluster
-		mocks   func(*test, *mock_armdns.MockRecordSetsClient)
-		wantErr string
-	}
-
-	for _, tt := range []*test{
-		{
-			name: "managed, not found",
-			oc:   managedOc,
-			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
-				recordsets.EXPECT().
-					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSetsClientGetResponse{
-						RecordSet: sdkdns.RecordSet{},
-					}, autorest.DetailedError{
-						StatusCode: http.StatusNotFound,
-					})
-			},
-		},
-		{
-			name: "managed, our record exists",
-			oc:   managedOc,
-			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
-				recordsets.EXPECT().
-					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSetsClientGetResponse{
-						RecordSet: sdkdns.RecordSet{
-							Etag: to.StringPtr("etag"),
-							Properties: &sdkdns.RecordSetProperties{
-								Metadata: map[string]*string{
-									"resourceId": &tt.oc.ID,
-								},
-							},
-						},
-					}, nil)
-
-				recordsets.EXPECT().
-					Delete(ctx, "rpResourcegroup", "domain", "*.apps.domain", sdkdns.RecordTypeA, &sdkdns.RecordSetsClientDeleteOptions{
-						IfMatch: to.StringPtr(""),
-					}).
-					Return(sdkdns.RecordSetsClientDeleteResponse{}, nil)
-
-				recordsets.EXPECT().
-					Delete(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, &sdkdns.RecordSetsClientDeleteOptions{
-						IfMatch: to.StringPtr("etag"),
-					}).
-					Return(sdkdns.RecordSetsClientDeleteResponse{}, nil)
-			},
-		},
-		{
-			name: "managed, someone else's record exists",
-			oc:   managedOc,
-			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
-				recordsets.EXPECT().
-					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSetsClientGetResponse{
-						RecordSet: sdkdns.RecordSet{
-							Properties: &sdkdns.RecordSetProperties{
-								Metadata: map[string]*string{
-									"resourceId": to.StringPtr("not us"),
-								},
-							},
-						},
-					}, nil)
-			},
-		},
-		{
-			name: "managed, error",
-			oc:   managedOc,
-			mocks: func(tt *test, recordsets *mock_armdns.MockRecordSetsClient) {
-				recordsets.EXPECT().
-					Get(ctx, "rpResourcegroup", "domain", "api.domain", sdkdns.RecordTypeA, nil).
-					Return(sdkdns.RecordSetsClientGetResponse{
-						RecordSet: sdkdns.RecordSet{},
-					}, fmt.Errorf("random error"))
-			},
-			wantErr: "random error",
-		},
-		{
-			name: "unmanaged",
-			oc:   unmanagedOc,
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			env := mock_env.NewMockInterface(controller)
-			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")
-			env.EXPECT().Domain().AnyTimes().Return("domain")
-
-			recordsets := mock_armdns.NewMockRecordSetsClient(controller)
-			if tt.mocks != nil {
-				tt.mocks(tt, recordsets)
+	// If record exists and routerIP already match - skip CreateOrUpdate
+	if err == nil && !isCreate {
+		for _, a := range rs.Properties.ARecords {
+			if *a.IPv4Address == routerIP {
+				return nil
 			}
-
-			m := &manager{
-				env:        env,
-				recordsets: recordsets,
-			}
-
-			err := m.Delete(ctx, tt.oc)
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-		})
+		}
 	}
+
+	_, err = m.recordsets.CreateOrUpdate(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+prefix, sdkdns.RecordTypeA, sdkdns.RecordSet{
+		Properties: &sdkdns.RecordSetProperties{
+			TTL: to.Int64Ptr(300),
+			ARecords: []*sdkdns.ARecord{
+				{
+					IPv4Address: &routerIP,
+				},
+			},
+		},
+	}, &sdkdns.RecordSetsClientCreateOrUpdateOptions{
+		IfMatch:     nil,
+		IfNoneMatch: nil,
+	})
+
+	return err
 }
 
-func TestManagedDomain(t *testing.T) {
-	for _, tt := range []struct {
-		domain  string
-		want    string
-		wantErr string
-	}{
-		{
-			domain: "eastus.aroapp.io",
-		},
-		{
-			domain: "aroapp.io",
-		},
-		{
-			domain: "redhat.com",
-		},
-		{
-			domain: "foo.eastus.aroapp.io.redhat.com",
-		},
-		{
-			domain: "foo.eastus.aroapp.io",
-			want:   "foo.eastus.aroapp.io",
-		},
-		{
-			domain: "bar",
-			want:   "bar.eastus.aroapp.io",
-		},
-		{
-			domain:  "",
-			wantErr: `invalid domain ""`,
-		},
-		{
-			domain:  ".foo",
-			wantErr: `invalid domain ".foo"`,
-		},
-		{
-			domain:  "foo.",
-			wantErr: `invalid domain "foo."`,
-		},
-	} {
-		t.Run(tt.domain, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			env := mock_env.NewMockInterface(controller)
-			env.EXPECT().Domain().AnyTimes().Return("eastus.aroapp.io")
-
-			got, err := ManagedDomain(env, tt.domain)
-			if got != tt.want {
-				t.Error(got)
-			}
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-		})
+func (m *manager) Delete(ctx context.Context, oc *api.OpenShiftCluster) error {
+	prefix, err := m.managedDomainPrefix(oc.Properties.ClusterProfile.Domain)
+	if err != nil || prefix == "" {
+		return err
 	}
+
+	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+prefix, sdkdns.RecordTypeA, nil)
+	if detailedErr, ok := err.(autorest.DetailedError); ok &&
+		detailedErr.StatusCode == http.StatusNotFound {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	if rs.Properties.Metadata[resourceID] == nil || *rs.Properties.Metadata[resourceID] != oc.ID {
+		return nil
+	}
+
+	_, err = m.recordsets.Delete(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+prefix, sdkdns.RecordTypeA, &sdkdns.RecordSetsClientDeleteOptions{
+		IfMatch: to.StringPtr(""),
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = m.recordsets.Delete(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+prefix, sdkdns.RecordTypeA, &sdkdns.RecordSetsClientDeleteOptions{
+		IfMatch: rs.Etag,
+	})
+
+	return err
 }
 
-func TestManagedDomainPrefix(t *testing.T) {
-	for _, tt := range []struct {
-		domain  string
-		want    string
-		wantErr string
-	}{
-		{
-			domain: "foo",
-			want:   "foo",
-		},
-		{
-			domain: "foo.domain",
-			want:   "foo",
-		},
-		{
-			domain: "foo.other",
-			want:   "",
-		},
-		{
-			domain:  "",
-			wantErr: `invalid domain ""`,
-		},
-		{
-			domain:  ".foo",
-			wantErr: `invalid domain ".foo"`,
-		},
-		{
-			domain:  "foo.",
-			wantErr: `invalid domain "foo."`,
-		},
-	} {
-		t.Run(tt.domain, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			env := mock_env.NewMockInterface(controller)
-			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")
-			env.EXPECT().Domain().AnyTimes().Return("domain")
-
-			m := &manager{
-				env: env,
-			}
-
-			got, err := m.managedDomainPrefix(tt.domain)
-			if got != tt.want {
-				t.Error(got)
-			}
-			utilerror.AssertErrorMessage(t, err, tt.wantErr)
-		})
+func (m *manager) createOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, ip, ifMatch, ifNoneMatch string) error {
+	prefix, err := m.managedDomainPrefix(oc.Properties.ClusterProfile.Domain)
+	if err != nil || prefix == "" {
+		return err
 	}
+
+	rs := sdkdns.RecordSet{
+		Properties: &sdkdns.RecordSetProperties{
+			Metadata: map[string]*string{
+				resourceID: &oc.ID,
+			},
+			TTL: to.Int64Ptr(300),
+		},
+	}
+
+	if ip != "" {
+		rs.Properties.ARecords = []*sdkdns.ARecord{
+			{
+				IPv4Address: &ip,
+			},
+		}
+	}
+
+	_, err = m.recordsets.CreateOrUpdate(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+prefix, sdkdns.RecordTypeA, rs,
+		&sdkdns.RecordSetsClientCreateOrUpdateOptions{
+			IfMatch:     &ifMatch,
+			IfNoneMatch: &ifNoneMatch,
+		})
+
+	return err
+}
+
+func (m *manager) managedDomainPrefix(clusterDomain string) (string, error) {
+	managedDomain, err := ManagedDomain(m.env, clusterDomain)
+	if err != nil || managedDomain == "" {
+		return "", err
+	}
+
+	return managedDomain[:strings.IndexByte(managedDomain, '.')], nil
+}
+
+// ManagedDomain returns the fully qualified domain of a cluster if we manage
+// it.  If we don't, it returns the empty string.  We manage only domains of the
+// form "foo.$LOCATION.aroapp.io" and "foo" (we consider this a short form of
+// the former).
+func ManagedDomain(env env.Interface, domain string) (string, error) {
+	if domain == "" ||
+		strings.HasPrefix(domain, ".") ||
+		strings.HasSuffix(domain, ".") {
+		// belt and braces: validation should already prevent this
+		return "", fmt.Errorf("invalid domain %q", domain)
+	}
+
+	domain = strings.TrimSuffix(domain, "."+env.Domain())
+	if strings.ContainsRune(domain, '.') {
+		return "", nil
+	}
+	return domain + "." + env.Domain(), nil
 }
