@@ -19,7 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
-// 1 - Get env data from agent VMs (with getEnvironemntData) and write to types created in step 1
+// 1 - Get env data from agent VMs (with getEnvironmentData) and write to types created in step 1
 func getPlatformWorkloadIdentityRoleSet() (*api.PlatformWorkloadIdentityRoleSet, error) {
 	const envKey = envPlatformWorkloadIdentityRoleSets
 	var PlatformWorkloadIdentityRoleSet api.PlatformWorkloadIdentityRoleSet
@@ -47,7 +47,7 @@ func getRoleSetFromEnv() ([]api.PlatformWorkloadIdentityRoleSet, error) {
 // 2 - Get the existing role set documents, if existing
 // Mostly copied from update_ocp_versions.go
 func getPlatformWorkloadIdentityRoleSetDatabase(ctx context.Context, log *logrus.Entry) (database.PlatformWorkloadIdentityRoleSets, error) {
-	_env, err := env.NewCore(ctx, log, env.COMPONENT_UPDATE_OCP_VERSIONS)
+	_env, err := env.NewCore(ctx, log, env.COMPONENT_UPDATE_ROLE_SETS)
 	if err != nil {
 		return nil, err
 	}
@@ -96,18 +96,18 @@ func getPlatformWorkloadIdentityRoleSetDatabase(ctx context.Context, log *logrus
 	if err != nil {
 		return nil, err
 	}
-	dbPlatformWorkloadIdentityRoleSetsDocument, err := database.NewPlatformWorkloadIdentityRoleSets(ctx, dbc, dbName)
+	dbPlatformWorkloadIdentityRoleSets, err := database.NewPlatformWorkloadIdentityRoleSets(ctx, dbc, dbName)
 	if err != nil {
 		return nil, err
 	}
 
-	return dbPlatformWorkloadIdentityRoleSetsDocument, nil
+	return dbPlatformWorkloadIdentityRoleSets, nil
 }
 
 // 3 - Put/patch the new role sets to the doc, overwriting whatever is there for that version, or adding if new
 // Mostly copied from update_ocp_versions.go
 func updatePlatformWorkloadIdentityRoleSetsInCosmosDB(ctx context.Context, dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets, log *logrus.Entry) error {
-	dbPlatformWorkloadIdentityRoleSet, err := dbPlatformWorkloadIdentityRoleSets.ListAll(ctx)
+	existingRoleSets, err := dbPlatformWorkloadIdentityRoleSets.ListAll(ctx)
 	if err != nil {
 		return nil
 	}
@@ -122,7 +122,7 @@ func updatePlatformWorkloadIdentityRoleSetsInCosmosDB(ctx context.Context, dbPla
 		newRoleSets[doc.Properties.OpenShiftVersion] = doc
 	}
 
-	for _, doc := range dbPlatformWorkloadIdentityRoleSet.PlatformWorkloadIdentityRoleSetDocuments {
+	for _, doc := range existingRoleSets.PlatformWorkloadIdentityRoleSetDocuments {
 		existing, found := newRoleSets[doc.PlatformWorkloadIdentityRoleSet.Properties.OpenShiftVersion]
 		if found {
 			log.Printf("Found Version %q, patching", existing.Properties.OpenShiftVersion)
