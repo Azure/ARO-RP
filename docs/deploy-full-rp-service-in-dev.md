@@ -135,6 +135,15 @@
       go run ./cmd/aro mirror 4.11.21
       ```
 
+    1. Mirror genevamdm and genevamdsd images from upstream distroless Geneva MDM/MDSD to your ACR
+
+        Run the following commands to mirror two Microsoft Geneve images based on the tags from [pkg/util/version/const.go](https://github.com/Azure/ARO-RP/blob/master/pkg/util/version/const.go) (e.g., 2.2024.517.533-b73893-20240522t0954 and mariner_20240524.1).
+
+        ```bash
+            GENEVAMDM_IMAGE_TAG=distroless/genevamdm:2.2024.517.533-b73893-20240522t0954 az acr import --name $DST_ACR_NAME.azurecr.io/$GENEVAMDM_IMAGE_TAG --source linuxgeneva-microsoft.azurecr.io/$GENEVAMDM_IMAGE_TAG
+            GENEVAMDSD_IMAGE_TAG=distroless/genevamdsd:mariner_20240524.1 az acr import --name $DST_ACR_NAME.azurecr.io/$GENEVAMDSD_IMAGE_TAG --source linuxgeneva-microsoft.azurecr.io/$GENEVAMDSD_IMAGE_TAG
+        ```
+
     1. Push the ARO and Fluentbit images to your ACR
 
         > If running this step from a VM separate from your workstation, ensure the commit tag used to build the image matches the commit tag where `make deploy` is run.
