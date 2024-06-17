@@ -41,9 +41,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
-	redhatopenshift20200430 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2020-04-30/redhatopenshift"
-	redhatopenshift20210901preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2021-09-01-preview/redhatopenshift"
-	redhatopenshift20220401 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2022-04-01/redhatopenshift"
 	redhatopenshift20230904 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2023-09-04/redhatopenshift"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
@@ -58,20 +55,17 @@ type Cluster struct {
 	ci           bool
 	ciParentVnet string
 
-	spGraphClient                     *utilgraph.GraphServiceClient
-	deployments                       features.DeploymentsClient
-	groups                            features.ResourceGroupsClient
-	openshiftclustersv20200430        redhatopenshift20200430.OpenShiftClustersClient
-	openshiftclustersv20210901preview redhatopenshift20210901preview.OpenShiftClustersClient
-	openshiftclustersv20220401        redhatopenshift20220401.OpenShiftClustersClient
-	openshiftclustersv20230904        redhatopenshift20230904.OpenShiftClustersClient
-	securitygroups                    network.SecurityGroupsClient
-	subnets                           network.SubnetsClient
-	routetables                       network.RouteTablesClient
-	roleassignments                   authorization.RoleAssignmentsClient
-	peerings                          network.VirtualNetworkPeeringsClient
-	ciParentVnetPeerings              network.VirtualNetworkPeeringsClient
-	vaultsClient                      armkeyvault.VaultsClient
+	spGraphClient        *utilgraph.GraphServiceClient
+	deployments          features.DeploymentsClient
+	groups               features.ResourceGroupsClient
+	openshiftclusters    redhatopenshift20230904.OpenShiftClustersClient
+	securitygroups       network.SecurityGroupsClient
+	subnets              network.SubnetsClient
+	routetables          network.RouteTablesClient
+	roleassignments      authorization.RoleAssignmentsClient
+	peerings             network.VirtualNetworkPeeringsClient
+	ciParentVnetPeerings network.VirtualNetworkPeeringsClient
+	vaultsClient         armkeyvault.VaultsClient
 }
 
 func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
@@ -112,19 +106,16 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		env: environment,
 		ci:  ci,
 
-		spGraphClient:                     spGraphClient,
-		deployments:                       features.NewDeploymentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		groups:                            features.NewResourceGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		openshiftclustersv20200430:        redhatopenshift20200430.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		openshiftclustersv20210901preview: redhatopenshift20210901preview.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		openshiftclustersv20220401:        redhatopenshift20220401.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		openshiftclustersv20230904:        redhatopenshift20230904.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		securitygroups:                    network.NewSecurityGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		subnets:                           network.NewSubnetsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		routetables:                       network.NewRouteTablesClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		roleassignments:                   authorization.NewRoleAssignmentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		peerings:                          network.NewVirtualNetworkPeeringsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		vaultsClient:                      vaultClient,
+		spGraphClient:     spGraphClient,
+		deployments:       features.NewDeploymentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		groups:            features.NewResourceGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		openshiftclusters: redhatopenshift20230904.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		securitygroups:    network.NewSecurityGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		subnets:           network.NewSubnetsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		routetables:       network.NewRouteTablesClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		roleassignments:   authorization.NewRoleAssignmentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		peerings:          network.NewVirtualNetworkPeeringsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		vaultsClient:      vaultClient,
 	}
 
 	if ci && env.IsLocalDevelopmentMode() {
@@ -170,7 +161,7 @@ func (c *Cluster) DeleteApp(ctx context.Context) error {
 }
 
 func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName string, osClusterVersion string) error {
-	clusterGet, err := c.openshiftclustersv20230904.Get(ctx, vnetResourceGroup, clusterName)
+	clusterGet, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
 	if err == nil {
 		if clusterGet.ProvisioningState == mgmtredhatopenshift20230904.Failed {
 			return fmt.Errorf("cluster exists and is in failed provisioning state, please delete and retry")
@@ -496,7 +487,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		return err
 	}
 
-	return c.openshiftclustersv20230904.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, ocExt)
+	return c.openshiftclusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, ocExt)
 }
 
 var insecureLocalClient *http.Client = &http.Client{
@@ -681,7 +672,7 @@ func (c *Cluster) fixupNSGs(ctx context.Context, vnetResourceGroup, clusterName 
 
 func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, clusterName string) error {
 	c.log.Print("deleting role assignments")
-	oc, err := c.openshiftclustersv20200430.Get(ctx, vnetResourceGroup, clusterName)
+	oc, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
 	if err != nil {
 		return fmt.Errorf("error getting cluster document: %w", err)
 	}
@@ -717,7 +708,7 @@ func (c *Cluster) deleteRoleAssignments(ctx context.Context, vnetResourceGroup, 
 
 func (c *Cluster) deleteCluster(ctx context.Context, resourceGroup, clusterName string) error {
 	c.log.Printf("deleting cluster %s", clusterName)
-	if err := c.openshiftclustersv20200430.DeleteAndWait(ctx, resourceGroup, clusterName); err != nil {
+	if err := c.openshiftclusters.DeleteAndWait(ctx, resourceGroup, clusterName); err != nil {
 		return fmt.Errorf("error deleting cluster %s: %w", clusterName, err)
 	}
 	return nil
