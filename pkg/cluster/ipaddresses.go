@@ -164,27 +164,25 @@ func (m *manager) populateDatabaseIntIP(ctx context.Context) error {
 	return err
 }
 
-// updateAPIIPEarly updates the `doc` with the public and private IP of the API server,
-// and updates the DNS record of the API server according to the API server visibility.
-// This function can only be called on create - not on update - because it
+// this function can only be called on create - not on update - because it
 // refers to -pip-v4, which doesn't exist on pre-DNS change clusters.
 func (m *manager) updateAPIIPEarly(ctx context.Context) error {
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	lb, err := m.armLoadBalancers.Get(ctx, resourceGroup, infraID+"-internal", nil)
+	lb, err := m.loadBalancers.Get(ctx, resourceGroup, infraID+"-internal", "")
 	if err != nil {
 		return err
 	}
-	intIPAddress := *lb.Properties.FrontendIPConfigurations[0].Properties.PrivateIPAddress
+	intIPAddress := *((*lb.FrontendIPConfigurations)[0].PrivateIPAddress)
 
 	ipAddress := intIPAddress
 	if m.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
-		ip, err := m.armPublicIPAddresses.Get(ctx, resourceGroup, infraID+"-pip-v4", nil)
+		ip, err := m.publicIPAddresses.Get(ctx, resourceGroup, infraID+"-pip-v4", "")
 		if err != nil {
 			return err
 		}
-		ipAddress = *ip.Properties.IPAddress
+		ipAddress = *ip.IPAddress
 	}
 
 	err = m.dns.Update(ctx, m.doc.OpenShiftCluster, ipAddress)

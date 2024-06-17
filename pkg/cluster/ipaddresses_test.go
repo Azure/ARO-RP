@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v2"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
@@ -19,18 +18,12 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
-	mock_armnetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/armnetwork"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 	mock_dns "github.com/Azure/ARO-RP/pkg/util/mocks/dns"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_subnet "github.com/Azure/ARO-RP/pkg/util/mocks/subnet"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
-)
-
-const (
-	privateIP = "10.0.0.1"
-	publicIP  = "1.2.3.4"
 )
 
 func TestCreateOrUpdateRouterIPFromCluster(t *testing.T) {
@@ -68,7 +61,7 @@ func TestCreateOrUpdateRouterIPFromCluster(t *testing.T) {
 				fixture.AddOpenShiftClusterDocuments(doc)
 
 				doc.Dequeues = 1
-				doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = publicIP
+				doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = "1.2.3.4"
 				checker.AddOpenShiftClusterDocuments(doc)
 			},
 			mocks: func(dns *mock_dns.MockManager) {
@@ -84,7 +77,7 @@ func TestCreateOrUpdateRouterIPFromCluster(t *testing.T) {
 				Status: corev1.ServiceStatus{
 					LoadBalancer: corev1.LoadBalancerStatus{
 						Ingress: []corev1.LoadBalancerIngress{{
-							IP: publicIP,
+							IP: "1.2.3.4",
 						}},
 					},
 				},
@@ -224,7 +217,7 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 				fixture.AddOpenShiftClusterDocuments(doc)
 
 				doc.Dequeues = 1
-				doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = publicIP
+				doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = "1.2.3.4"
 				checker.AddOpenShiftClusterDocuments(doc)
 			},
 			mocks: func(publicIPAddresses *mock_network.MockPublicIPAddressesClient, dns *mock_dns.MockManager, subnet *mock_subnet.MockManager) {
@@ -232,7 +225,7 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 					Get(gomock.Any(), "clusterResourceGroup", "infra-default-v4", "").
 					Return(mgmtnetwork.PublicIPAddress{
 						PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
-							IPAddress: to.StringPtr(publicIP),
+							IPAddress: to.StringPtr("1.2.3.4"),
 						},
 					}, nil)
 				dns.EXPECT().
@@ -269,13 +262,13 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 				fixture.AddOpenShiftClusterDocuments(doc)
 
 				doc.Dequeues = 1
-				doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = publicIP
+				doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = "1.2.3.4"
 				checker.AddOpenShiftClusterDocuments(doc)
 			},
 			mocks: func(publicIPAddresses *mock_network.MockPublicIPAddressesClient, dns *mock_dns.MockManager, subnet *mock_subnet.MockManager) {
 				subnet.EXPECT().
 					GetHighestFreeIP(gomock.Any(), "subnetid").
-					Return(publicIP, nil)
+					Return("1.2.3.4", nil)
 				dns.EXPECT().
 					CreateOrUpdateRouter(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
@@ -315,13 +308,13 @@ func TestCreateOrUpdateRouterIPEarly(t *testing.T) {
 				fixture.AddOpenShiftClusterDocuments(doc)
 
 				doc.Dequeues = 1
-				doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = publicIP
+				doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = "1.2.3.4"
 				checker.AddOpenShiftClusterDocuments(doc)
 			},
 			mocks: func(publicIPAddresses *mock_network.MockPublicIPAddressesClient, dns *mock_dns.MockManager, subnet *mock_subnet.MockManager) {
 				subnet.EXPECT().
 					GetHighestFreeIP(gomock.Any(), "enricheWPsubnetid").
-					Return(publicIP, nil)
+					Return("1.2.3.4", nil)
 				dns.EXPECT().
 					CreateOrUpdateRouter(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
@@ -409,7 +402,7 @@ func TestPopulateDatabaseIntIP(t *testing.T) {
 				fixture.AddOpenShiftClusterDocuments(doc)
 
 				doc.Dequeues = 1
-				doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = privateIP
+				doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = "10.0.0.1"
 				checker.AddOpenShiftClusterDocuments(doc)
 			},
 			mocks: func(loadBalancers *mock_network.MockLoadBalancersClient) {
@@ -420,7 +413,7 @@ func TestPopulateDatabaseIntIP(t *testing.T) {
 							FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
 								{
 									FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
-										PrivateIPAddress: to.StringPtr(privateIP),
+										PrivateIPAddress: to.StringPtr("10.0.0.1"),
 									},
 								},
 							},
@@ -448,7 +441,7 @@ func TestPopulateDatabaseIntIP(t *testing.T) {
 				fixture.AddOpenShiftClusterDocuments(doc)
 
 				doc.Dequeues = 1
-				doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = privateIP
+				doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = "10.0.0.1"
 				checker.AddOpenShiftClusterDocuments(doc)
 			},
 			mocks: func(loadBalancers *mock_network.MockLoadBalancersClient) {
@@ -459,7 +452,7 @@ func TestPopulateDatabaseIntIP(t *testing.T) {
 							FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
 								{
 									FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
-										PrivateIPAddress: to.StringPtr(privateIP),
+										PrivateIPAddress: to.StringPtr("10.0.0.1"),
 									},
 								},
 							},
@@ -479,7 +472,7 @@ func TestPopulateDatabaseIntIP(t *testing.T) {
 								ResourceGroupID: resourceGroupID,
 							},
 							APIServerProfile: api.APIServerProfile{
-								IntIP: privateIP,
+								IntIP: "10.0.0.1",
 							},
 							ProvisioningState: api.ProvisioningStateCreating,
 							InfraID:           "infra",
@@ -547,7 +540,7 @@ func TestUpdateAPIIPEarly(t *testing.T) {
 	for _, tt := range []struct {
 		name           string
 		fixtureChecker func(*testdatabase.Fixture, *testdatabase.Checker, *cosmosdb.FakeOpenShiftClusterDocumentClient)
-		mocks          func(*mock_armnetwork.MockLoadBalancersClient, *mock_armnetwork.MockPublicIPAddressesClient, *mock_dns.MockManager)
+		mocks          func(*mock_network.MockLoadBalancersClient, *mock_network.MockPublicIPAddressesClient, *mock_dns.MockManager)
 		wantErr        string
 	}{
 		{
@@ -572,37 +565,33 @@ func TestUpdateAPIIPEarly(t *testing.T) {
 				fixture.AddOpenShiftClusterDocuments(doc)
 
 				doc.Dequeues = 1
-				doc.OpenShiftCluster.Properties.APIServerProfile.IP = publicIP
-				doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = privateIP
+				doc.OpenShiftCluster.Properties.APIServerProfile.IP = "1.2.3.4"
+				doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = "10.0.0.1"
 				checker.AddOpenShiftClusterDocuments(doc)
 			},
-			mocks: func(loadBalancers *mock_armnetwork.MockLoadBalancersClient, publicIPAddresses *mock_armnetwork.MockPublicIPAddressesClient, dns *mock_dns.MockManager) {
+			mocks: func(loadBalancers *mock_network.MockLoadBalancersClient, publicIPAddresses *mock_network.MockPublicIPAddressesClient, dns *mock_dns.MockManager) {
 				loadBalancers.EXPECT().
-					Get(gomock.Any(), "clusterResourceGroup", "infra-internal", nil).
-					Return(armnetwork.LoadBalancersClientGetResponse{
-						LoadBalancer: armnetwork.LoadBalancer{
-							Properties: &armnetwork.LoadBalancerPropertiesFormat{
-								FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
-									{
-										Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
-											PrivateIPAddress: to.StringPtr(privateIP),
-										},
+					Get(gomock.Any(), "clusterResourceGroup", "infra-internal", "").
+					Return(mgmtnetwork.LoadBalancer{
+						LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
+							FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
+								{
+									FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
+										PrivateIPAddress: to.StringPtr("10.0.0.1"),
 									},
 								},
 							},
 						},
 					}, nil)
 				publicIPAddresses.EXPECT().
-					Get(gomock.Any(), "clusterResourceGroup", "infra-pip-v4", nil).
-					Return(armnetwork.PublicIPAddressesClientGetResponse{
-						PublicIPAddress: armnetwork.PublicIPAddress{
-							Properties: &armnetwork.PublicIPAddressPropertiesFormat{
-								IPAddress: to.StringPtr(publicIP),
-							},
+					Get(gomock.Any(), "clusterResourceGroup", "infra-pip-v4", "").
+					Return(mgmtnetwork.PublicIPAddress{
+						PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
+							IPAddress: to.StringPtr("1.2.3.4"),
 						},
 					}, nil)
 				dns.EXPECT().
-					Update(gomock.Any(), gomock.Any(), publicIP).
+					Update(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
 			},
 		},
@@ -628,28 +617,26 @@ func TestUpdateAPIIPEarly(t *testing.T) {
 				fixture.AddOpenShiftClusterDocuments(doc)
 
 				doc.Dequeues = 1
-				doc.OpenShiftCluster.Properties.APIServerProfile.IP = privateIP
-				doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = privateIP
+				doc.OpenShiftCluster.Properties.APIServerProfile.IP = "10.0.0.1"
+				doc.OpenShiftCluster.Properties.APIServerProfile.IntIP = "10.0.0.1"
 				checker.AddOpenShiftClusterDocuments(doc)
 			},
-			mocks: func(loadBalancers *mock_armnetwork.MockLoadBalancersClient, publicIPAddresses *mock_armnetwork.MockPublicIPAddressesClient, dns *mock_dns.MockManager) {
+			mocks: func(loadBalancers *mock_network.MockLoadBalancersClient, publicIPAddresses *mock_network.MockPublicIPAddressesClient, dns *mock_dns.MockManager) {
 				loadBalancers.EXPECT().
-					Get(gomock.Any(), "clusterResourceGroup", "infra-internal", nil).
-					Return(armnetwork.LoadBalancersClientGetResponse{
-						LoadBalancer: armnetwork.LoadBalancer{
-							Properties: &armnetwork.LoadBalancerPropertiesFormat{
-								FrontendIPConfigurations: []*armnetwork.FrontendIPConfiguration{
-									{
-										Properties: &armnetwork.FrontendIPConfigurationPropertiesFormat{
-											PrivateIPAddress: to.StringPtr(privateIP),
-										},
+					Get(gomock.Any(), "clusterResourceGroup", "infra-internal", "").
+					Return(mgmtnetwork.LoadBalancer{
+						LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
+							FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
+								{
+									FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
+										PrivateIPAddress: to.StringPtr("10.0.0.1"),
 									},
 								},
 							},
 						},
 					}, nil)
 				dns.EXPECT().
-					Update(gomock.Any(), gomock.Any(), privateIP).
+					Update(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
 			},
 		},
@@ -658,8 +645,8 @@ func TestUpdateAPIIPEarly(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			loadBalancers := mock_armnetwork.NewMockLoadBalancersClient(controller)
-			publicIPAddresses := mock_armnetwork.NewMockPublicIPAddressesClient(controller)
+			loadBalancers := mock_network.NewMockLoadBalancersClient(controller)
+			publicIPAddresses := mock_network.NewMockPublicIPAddressesClient(controller)
 			dns := mock_dns.NewMockManager(controller)
 			if tt.mocks != nil {
 				tt.mocks(loadBalancers, publicIPAddresses, dns)
@@ -684,11 +671,11 @@ func TestUpdateAPIIPEarly(t *testing.T) {
 			}
 
 			m := &manager{
-				doc:                  doc,
-				db:                   dbOpenShiftClusters,
-				armPublicIPAddresses: publicIPAddresses,
-				armLoadBalancers:     loadBalancers,
-				dns:                  dns,
+				doc:               doc,
+				db:                dbOpenShiftClusters,
+				publicIPAddresses: publicIPAddresses,
+				loadBalancers:     loadBalancers,
+				dns:               dns,
 			}
 
 			err = m.updateAPIIPEarly(ctx)
@@ -719,7 +706,7 @@ func TestEnsureGatewayCreate(t *testing.T) {
 		},
 		{
 			name:                     "noop: IP set",
-			gatewayPrivateEndpointIP: privateIP,
+			gatewayPrivateEndpointIP: "1.2.3.4",
 		},
 		{
 			name: "error: private endpoint connection not found",
@@ -733,7 +720,7 @@ func TestEnsureGatewayCreate(t *testing.T) {
 									IPConfigurations: &[]mgmtnetwork.InterfaceIPConfiguration{
 										{
 											InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
-												PrivateIPAddress: to.StringPtr(privateIP),
+												PrivateIPAddress: to.StringPtr("1.2.3.4"),
 											},
 										},
 									},
@@ -764,7 +751,7 @@ func TestEnsureGatewayCreate(t *testing.T) {
 									IPConfigurations: &[]mgmtnetwork.InterfaceIPConfiguration{
 										{
 											InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
-												PrivateIPAddress: to.StringPtr(privateIP),
+												PrivateIPAddress: to.StringPtr("1.2.3.4"),
 											},
 										},
 									},
@@ -828,7 +815,7 @@ func TestEnsureGatewayCreate(t *testing.T) {
 						ID: resourceID,
 						Properties: api.OpenShiftClusterProperties{
 							NetworkProfile: api.NetworkProfile{
-								GatewayPrivateEndpointIP: privateIP,
+								GatewayPrivateEndpointIP: "1.2.3.4",
 								GatewayPrivateLinkID:     "1234",
 							},
 						},
