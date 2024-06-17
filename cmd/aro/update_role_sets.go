@@ -19,33 +19,19 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
-// 1 - Get env data from agent VMs (with getEnvironmentData) and write to types created in step 1
-func getPlatformWorkloadIdentityRoleSet() (*api.PlatformWorkloadIdentityRoleSet, error) {
+// 1 - Get env data from agent VMs (with getEnvironmentData)
+func getRoleSetsFromEnv() ([]api.PlatformWorkloadIdentityRoleSet, error) {
 	const envKey = envPlatformWorkloadIdentityRoleSets
-	var PlatformWorkloadIdentityRoleSet api.PlatformWorkloadIdentityRoleSet
+	var roleSets []api.PlatformWorkloadIdentityRoleSet
 
-	// marshall env data into type api.PlatformWorkloadIdentityRoleSet
-	if err := getEnvironmentData(envKey, &PlatformWorkloadIdentityRoleSet); err != nil {
+	// Unmarshal env data into type api.PlatformWorkloadIdentityRoleSet
+	if err := getEnvironmentData(envKey, &roleSets); err != nil {
 		return nil, err
 	}
 
-	return &PlatformWorkloadIdentityRoleSet, nil
+	return roleSets, nil
 }
 
-func getRoleSetFromEnv() ([]api.PlatformWorkloadIdentityRoleSet, error) {
-	roleSet, err := getPlatformWorkloadIdentityRoleSet()
-	if err != nil {
-		return nil, err
-	}
-
-	finalRoleSet := []api.PlatformWorkloadIdentityRoleSet{}
-	finalRoleSet = append(finalRoleSet, *roleSet)
-
-	return finalRoleSet, nil
-}
-
-// 2 - Get the existing role set documents, if existing
-// Mostly copied from update_ocp_versions.go
 func getPlatformWorkloadIdentityRoleSetDatabase(ctx context.Context, log *logrus.Entry) (database.PlatformWorkloadIdentityRoleSets, error) {
 	_env, err := env.NewCore(ctx, log, env.COMPONENT_UPDATE_ROLE_SETS)
 	if err != nil {
@@ -104,24 +90,26 @@ func getPlatformWorkloadIdentityRoleSetDatabase(ctx context.Context, log *logrus
 	return dbPlatformWorkloadIdentityRoleSets, nil
 }
 
-// 3 - Put/patch the new role sets to the doc, overwriting whatever is there for that version, or adding if new
-// Mostly copied from update_ocp_versions.go
 func updatePlatformWorkloadIdentityRoleSetsInCosmosDB(ctx context.Context, dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets, log *logrus.Entry) error {
+	// 2 - Get the existing role set documents, if existing
+	// Mostly copied from update_ocp_versions.go
 	existingRoleSets, err := dbPlatformWorkloadIdentityRoleSets.ListAll(ctx)
 	if err != nil {
 		return nil
 	}
 
-	incomingRoleSet, err := getRoleSetFromEnv()
+	incomingRoleSets, err := getRoleSetsFromEnv()
 	if err != nil {
 		return err
 	}
 
 	newRoleSets := make(map[string]api.PlatformWorkloadIdentityRoleSet)
-	for _, doc := range incomingRoleSet {
+	for _, doc := range incomingRoleSets {
 		newRoleSets[doc.Properties.OpenShiftVersion] = doc
 	}
 
+	// 3 - Put/patch the new role sets to the doc, overwriting whatever is there for that version, or adding if new
+	// Mostly copied from update_ocp_versions.go
 	for _, doc := range existingRoleSets.PlatformWorkloadIdentityRoleSetDocuments {
 		existing, found := newRoleSets[doc.PlatformWorkloadIdentityRoleSet.Properties.OpenShiftVersion]
 		if found {
