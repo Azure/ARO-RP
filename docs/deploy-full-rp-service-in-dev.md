@@ -129,6 +129,13 @@
       go run ./cmd/aro mirror latest
       ```
 
+      > __NOTE:__ when devmapper package is missing try to install _device-mapper-devel_ or run with tag `exclude_graphdriver_devicemapper` (e.g., -tags=exclude_graphdriver_devicemapper) to ignore that.
+      > __NOTE:__ when "fatal error: btrfs/ioctl.h: No such file or directory" error occours try to install _btrfs-progs-devel_ package or run with tag `exclude_graphdriver_btrfs` (e.g., -tags=exclude_graphdriver_btrfs) to ignore that.
+
+    ```bash
+      go run -tags=exclude_graphdriver_devicemapper,exclude_graphdriver_btrfs ./cmd/aro mirror latest
+    ```
+
       If you are going to test or work with multi-version installs, then you should mirror any additional versions as well, for example for 4.11.21 it would be
 
       ```bash
@@ -137,7 +144,7 @@
 
     1. Mirror genevamdm and genevamdsd images from upstream distroless Geneva MDM/MDSD to your ACR
 
-        Run the following commands to mirror two Microsoft Geneve images based on the tags from [pkg/util/version/const.go](https://github.com/Azure/ARO-RP/blob/master/pkg/util/version/const.go) (e.g., 2.2024.517.533-b73893-20240522t0954 and mariner_20240524.1).
+        Run the following commands to mirror two Microsoft Geneva images based on the tags from [pkg/util/version/const.go](https://github.com/Azure/ARO-RP/blob/master/pkg/util/version/const.go) (e.g., 2.2024.517.533-b73893-20240522t0954 and mariner_20240524.1).
 
         ```bash
             GENEVAMDM_IMAGE_TAG=distroless/genevamdm:2.2024.517.533-b73893-20240522t0954 az acr import --name $DST_ACR_NAME.azurecr.io/$GENEVAMDM_IMAGE_TAG --source linuxgeneva-microsoft.azurecr.io/$GENEVAMDM_IMAGE_TAG
