@@ -3,13 +3,18 @@
 
 from unittest.mock import Mock, patch
 from azext_aro._validators import (
-    validate_cidr, validate_client_id, validate_client_secret, validate_cluster_resource_group, validate_outbound_type,
-    validate_disk_encryption_set, validate_domain, validate_pull_secret, validate_subnet, validate_subnets,
-    validate_visibility, validate_vnet_resource_group_name, validate_worker_count, validate_worker_vm_disk_size_gb, validate_refresh_cluster_credentials,
-    validate_load_balancer_managed_outbound_ip_count
+    validate_cidr, validate_client_id, validate_client_secret,
+    validate_cluster_resource_group, validate_outbound_type,
+    validate_disk_encryption_set, validate_domain, validate_pull_secret,
+    validate_subnet, validate_subnets, validate_visibility,
+    validate_vnet_resource_group_name, validate_worker_count,
+    validate_worker_vm_disk_size_gb, validate_refresh_cluster_credentials,
+    validate_load_balancer_managed_outbound_ip_count,
+    validate_enable_managed_identity
 )
 from azure.cli.core.azclierror import (
-    InvalidArgumentValueError, RequiredArgumentMissingError, RequiredArgumentMissingError, CLIInternalError
+    InvalidArgumentValueError, RequiredArgumentMissingError,
+    CLIInternalError, MutuallyExclusiveArgumentError
 )
 from azure.core.exceptions import ResourceNotFoundError
 import pytest
@@ -87,6 +92,12 @@ test_validate_client_id_data = [
         "should not raise any exception when namespace.client_id is a valid input for creating a UUID and namespace.client_secret has a valid str representation",
         Mock(client_id="12345678123456781234567812345678", client_secret="12345"),
         None
+    ),
+    (
+        "should raise MutuallyExclusiveArgumentError when enable_managed_identity is true",
+        Mock(client_id="12345678123456781234567812345678",
+             enable_managed_identity=True),
+        MutuallyExclusiveArgumentError
     )
 ]
 
@@ -106,9 +117,15 @@ def test_validate_client_id(test_description, namespace, expected_exception):
 
 test_validate_client_secret_data = [
     (
-        "should not raise any exception when isCreate is false",
+        "should not raise any exception when isCreate is false and enable_managed_identity is None",
         False,
         Mock(client_id=None),
+        None
+    ),
+    (
+        "should raise MutuallyExclusiveArgumentError when isCreate is false and enable_managed_identity is True",
+        False,
+        Mock(client_secret="123", enable_managed_identity=True),
         None
     ),
     (
@@ -134,6 +151,12 @@ test_validate_client_secret_data = [
         True,
         Mock(client_id=None, client_secret="123"),
         RequiredArgumentMissingError
+    ),
+    (
+        "should raise MutuallyExclusiveArgumentError when enable_managed_identity is true",
+        True,
+        Mock(client_secret="123", enable_managed_identity=True),
+        MutuallyExclusiveArgumentError
     )
 ]
 
@@ -918,3 +941,71 @@ def test_validate_load_balancer_managed_outbound_ip_count(test_description, name
     else:
         with pytest.raises(expected_exception):
             validate_load_balancer_managed_outbound_ip_count(namespace)
+
+
+test_validate_enable_managed_identity_data = [
+    (
+        "Should not raise any exception when empty",
+        Mock(enable_managed_identity=None),
+        None, None,
+    ),
+    (
+        "Should not raise any exception when False",
+        Mock(enable_managed_identity=False),
+        None, None
+    ),
+    (
+        "Should raise InvalidArgumentValueError if client_id is present",
+        Mock(enable_managed_identity=True,
+             client_id="00000000-0000-0000-0000-000000000000", client_secret=None),
+        InvalidArgumentValueError, 'Must not specify --client-id when --enable-managed-identity is True'
+    ),
+    (
+        "Should raise InvalidArgumentValueError if client_secret is present",
+        Mock(enable_managed_identity=True,
+             client_id=None, client_secret="asdfghjkl"),
+        InvalidArgumentValueError, 'Must not specify --client-secret when --enable-managed-identity is True'
+    ),
+    (
+        "Should raise InvalidArgumentValueError when version is not present",
+        Mock(enable_managed_identity=True,
+             client_id=None, client_secret=None,
+             version=None),
+        InvalidArgumentValueError, 'Enabling managed identity requires --version >= 4.14.z'
+    ),
+    (
+        "Should raise InvalidArgumentValueError when version is invalid",
+        Mock(enable_managed_identity=True,
+             client_id=None, client_secret=None,
+             version="a"),
+        InvalidArgumentValueError, 'Enabling managed identity requires --version >= 4.14.z'
+    ),
+    (
+        "Should raise InvalidArgumentValueError when version <= 4.14.0",
+        Mock(enable_managed_identity=True,
+             client_id=None, client_secret=None,
+             version="4.13.99"),
+        InvalidArgumentValueError, 'Enabling managed identity requires --version >= 4.14.z'
+    ),
+    (
+        "Should not raise any exception when valid",
+        Mock(enable_managed_identity=True,
+             client_id=None, client_secret=None,
+             version="4.14.0"),
+        None, None
+    )
+]
+
+
+@pytest.mark.parametrize(
+    "test_description, namespace, expected_exception, expected_exception_message",
+    test_validate_enable_managed_identity_data,
+    ids=[i[0] for i in test_validate_enable_managed_identity_data]
+)
+def test_validate_enable_managed_identity(test_description, namespace, expected_exception, expected_exception_message):
+    if expected_exception is None:
+        validate_enable_managed_identity(namespace)
+    else:
+        with pytest.raises(expected_exception, match=expected_exception_message):
+            validate_enable_managed_identity(namespace)
+

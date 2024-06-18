@@ -70,6 +70,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                apiserver_visibility=None,
                ingress_visibility=None,
                load_balancer_managed_outbound_ip_count=None,
+               enable_managed_identity=False,
                tags=None,
                version=None,
                no_wait=False):
@@ -107,16 +108,18 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
     random_id = generate_random_id()
 
     aad = AADManager(cmd.cli_ctx)
-    if client_id is None:
-        client_id, client_secret = aad.create_application(cluster_resource_group or 'aro-' + random_id)
 
-    client_sp_id = aad.get_service_principal_id(client_id)
-    if not client_sp_id:
-        client_sp_id = aad.create_service_principal(client_id)
+    if not enable_managed_identity:
+        if client_id is None:
+            client_id, client_secret = aad.create_application(cluster_resource_group or 'aro-' + random_id)
 
-    rp_client_sp_id = aad.get_service_principal_id(resolve_rp_client_id())
-    if not rp_client_sp_id:
-        raise ResourceNotFoundError("RP service principal not found.")
+        client_sp_id = aad.get_service_principal_id(client_id)
+        if not client_sp_id:
+            client_sp_id = aad.create_service_principal(client_id)
+
+        rp_client_sp_id = aad.get_service_principal_id(resolve_rp_client_id())
+        if not rp_client_sp_id:
+            raise ResourceNotFoundError("RP service principal not found.")
 
     if rp_mode_development():
         worker_vm_size = worker_vm_size or 'Standard_D2s_v3'
@@ -145,10 +148,6 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                                f"/resourceGroups/{cluster_resource_group or 'aro-' + random_id}"),
             fips_validated_modules='Enabled' if fips_validated_modules else 'Disabled',
             version=version or '',
-        ),
-        service_principal_profile=openshiftcluster.ServicePrincipalProfile(
-            client_id=client_id,
-            client_secret=client_secret,
         ),
         network_profile=openshiftcluster.NetworkProfile(
             pod_cidr=pod_cidr or '10.128.0.0/14',
@@ -183,10 +182,25 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                 visibility=ingress_visibility or 'Public',
             )
         ],
+        service_principal_profile=None,
+        platform_workload_identity_profile=None,
     )
 
-    sp_obj_ids = [client_sp_id, rp_client_sp_id]
-    ensure_resource_permissions(cmd.cli_ctx, oc, True, sp_obj_ids)
+    if enable_managed_identity is True:
+        # TODO - add platform workload identities here
+
+        # TODO - add cluster identity here
+
+        # TODO - perform client-side validation of required identity permissions
+
+    else:
+        oc.service_principal_profile = openshiftcluster.ServicePrincipalProfile(
+            client_id=client_id,
+            client_secret=client_secret,
+        )
+
+        sp_obj_ids = [client_sp_id, rp_client_sp_id]
+        ensure_resource_permissions(cmd.cli_ctx, oc, True, sp_obj_ids)
 
     return sdk_no_wait(no_wait, client.open_shift_clusters.begin_create_or_update,
                        resource_group_name=resource_group_name,

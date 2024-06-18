@@ -10,7 +10,8 @@ from os.path import exists
 from azure.cli.core.commands.client_factory import get_mgmt_service_client, get_subscription_id
 from azure.cli.core.profiles import ResourceType
 from azure.cli.core.azclierror import CLIInternalError, \
-    InvalidArgumentValueError, RequiredArgumentMissingError
+    InvalidArgumentValueError, RequiredArgumentMissingError, \
+    MutuallyExclusiveArgumentError
 from azure.core.exceptions import ResourceNotFoundError
 from knack.log import get_logger
 from msrestazure.azure_exceptions import CloudError
@@ -36,19 +37,24 @@ def validate_cidr(key):
 def validate_client_id(namespace):
     if namespace.client_id is None:
         return
+    if namespace.enable_managed_identity is True:
+        raise MutuallyExclusiveArgumentError('Must not specify --client-id when --enable-managed-identity is True')  # pylint: disable=line-too-long
+
     try:
         uuid.UUID(namespace.client_id)
     except ValueError as e:
-        raise InvalidArgumentValueError(f"Invalid --client-id '{namespace.client_id}'.") from e
+        raise InvalidArgumentValueError(f"Invalid --client-id '{namespace.client_id}'.") from e  # pylint: disable=line-too-long
 
     if namespace.client_secret is None or not str(namespace.client_secret):
-        raise RequiredArgumentMissingError('Must specify --client-secret with --client-id.')
+        raise RequiredArgumentMissingError('Must specify --client-secret with --client-id.')  # pylint: disable=line-too-long
 
 
 def validate_client_secret(isCreate):
     def _validate_client_secret(namespace):
         if not isCreate or namespace.client_secret is None:
             return
+        if namespace.enable_managed_identity is True:
+            raise MutuallyExclusiveArgumentError('Must not specify --client-secret when --enable-managed-identity is True')  # pylint: disable=line-too-long
         if namespace.client_id is None or not str(namespace.client_id):
             raise RequiredArgumentMissingError('Must specify --client-id with --client-secret.')
 
@@ -283,3 +289,21 @@ def validate_load_balancer_managed_outbound_ip_count(namespace):
     if namespace.load_balancer_managed_outbound_ip_count < minimum_managed_outbound_ips or namespace.load_balancer_managed_outbound_ip_count > maximum_managed_outbound_ips:  # pylint: disable=line-too-long
         error_msg = f"--load-balancer-managed-outbound-ip-count must be between {minimum_managed_outbound_ips} and {maximum_managed_outbound_ips} (inclusive)."  # pylint: disable=line-too-long
         raise InvalidArgumentValueError(error_msg)
+
+
+def validate_enable_managed_identity(namespace):
+    if not namespace.enable_managed_identity:
+        return
+
+    if namespace.client_id is not None:
+        raise InvalidArgumentValueError('Must not specify --client-id when --enable-managed-identity is True')
+
+    if namespace.client_secret is not None:
+        raise InvalidArgumentValueError('Must not specify --client-secret when --enable-managed-identity is True')
+
+    if namespace.version is None or not re.match(r'^[4-9]{1}\.[0-9]{1,2}\.[0-9]{1,2}$', namespace.version):
+        raise InvalidArgumentValueError('Enabling managed identity requires --version >= 4.14.z')
+
+    _, versionY, _ = namespace.version.split('.', 2)
+    if int(versionY) < 14:
+        raise InvalidArgumentValueError('Enabling managed identity requires --version >= 4.14.z')

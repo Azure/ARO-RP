@@ -18,6 +18,7 @@ from azext_aro._validators import validate_refresh_cluster_credentials
 from azext_aro._validators import validate_version_format
 from azext_aro._validators import validate_outbound_type
 from azext_aro._validators import validate_load_balancer_managed_outbound_ip_count
+from azext_aro._validators import validate_enable_managed_identity
 from azure.cli.core.commands.parameters import name_type
 from azure.cli.core.commands.parameters import get_enum_type, get_three_state_flag
 from azure.cli.core.commands.parameters import resource_group_name_type
@@ -122,6 +123,11 @@ def load_arguments(self, _):
                    help='The desired number of IPv4 outbound IPs created and managed by Azure for the cluster public load balancer.',  # pylint: disable=line-too-long
                    validator=validate_load_balancer_managed_outbound_ip_count,
                    options_list=['--load-balancer-managed-outbound-ip-count', '--lb-ip-count'])
+
+        c.argument('enable_managed_identity', arg_group='Identity', arg_type=get_three_state_flag(),
+                   options_list=['--enable-managed-identity', '--enable-mi'],
+                   validator=validate_enable_managed_identity,
+                   help='Enable managed identity for this cluster.', is_preview=True)
 
     with self.argument_context('aro update') as c:
         c.argument('client_secret',
