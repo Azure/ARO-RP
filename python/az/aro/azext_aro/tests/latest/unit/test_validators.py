@@ -10,7 +10,8 @@ from azext_aro._validators import (
     validate_vnet_resource_group_name, validate_worker_count,
     validate_worker_vm_disk_size_gb, validate_refresh_cluster_credentials,
     validate_load_balancer_managed_outbound_ip_count,
-    validate_enable_managed_identity, validate_platform_workload_identities
+    validate_enable_managed_identity, validate_platform_workload_identities,
+    validate_cluster_identity
 )
 from azure.cli.core.azclierror import (
     InvalidArgumentValueError, RequiredArgumentMissingError,
@@ -996,11 +997,21 @@ test_validate_enable_managed_identity_data = [
         RequiredArgumentMissingError, 'Enabling managed identity requires platform workload identities to be provided'
     ),
     (
+        "Should raise RequiredArgumentMissingError when cluster identity is not set",
+        Mock(enable_managed_identity=True,
+             client_id=None, client_secret=None,
+             version="4.14.0",
+             platform_workload_identities=[Mock(resource_id="foo")],
+             mi_user_assigned=None),
+        RequiredArgumentMissingError, 'Enabling managed identity requires cluster identity to be provided'
+    ),
+    (
         "Should not raise any exception when valid",
         Mock(enable_managed_identity=True,
              client_id=None, client_secret=None,
              version="4.14.0",
-             platform_workload_identities=[Mock(resource_id="foo")]),
+             platform_workload_identities=[Mock(resource_id="foo")],
+             mi_user_assigned="foo"),
         None, None
     )
 ]
@@ -1086,3 +1097,63 @@ def test_validate_platform_workload_identities(test_description, namespace, expe
     if expected_identities is not None:
         for expected, actual in zip(expected_identities, namespace.platform_workload_identities):
             assert (expected.resource_id == actual.resource_id)
+
+
+test_validate_cluster_identity_data = [
+    (
+        "Should not raise any exception when empty",
+        Mock(mi_user_assigned=None),
+        None,
+        None
+    ),
+    (
+        "Should raise RequiredArgumentMissingError if enable_managed_identity is not present",
+        Mock(enable_managed_identity=None,
+             mi_user_assigned="foo"),
+        RequiredArgumentMissingError,
+        None
+    ),
+    (
+        "Should raise RequiredArgumentMissingError if enable_managed_identity is False",
+        Mock(enable_managed_identity=False,
+             mi_user_assigned="foo"),
+        RequiredArgumentMissingError,
+        None
+    ),
+    (
+        "Should raise InvalidArgumentError if resource ID is not for userAssignedIdentities",
+        Mock(enable_managed_identity=True,
+             subscription_id="00000000-0000-0000-0000-000000000000",
+             resource_group_name="resourceGroup",
+             mi_user_assigned="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.Network/virtualNetworks/foo"),
+        InvalidArgumentValueError,
+        None
+    ),
+    (
+        "Should convert identity passed in as name to full resource ID",
+        Mock(enable_managed_identity=True,
+             subscription_id="00000000-0000-0000-0000-000000000000",
+             resource_group_name="resourceGroup",
+             mi_user_assigned="foo"),
+        None,
+        "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"
+    )
+]
+
+
+@pytest.mark.parametrize(
+    "test_description, namespace, expected_exception, expected_identity",
+    test_validate_cluster_identity_data,
+    ids=[i[0] for i in test_validate_cluster_identity_data]
+)
+def test_validate_cluster_identity(test_description, namespace, expected_exception, expected_identity):
+    cli_ctx = Mock(data={'subscription_id': namespace.subscription_id})
+    cmd = Mock(cli_ctx=cli_ctx)
+    if expected_exception is None:
+        validate_cluster_identity(cmd, namespace)
+    else:
+        with pytest.raises(expected_exception):
+            validate_cluster_identity(cmd, namespace)
+
+    if expected_identity is not None:
+        assert (expected_identity == namespace.mi_user_assigned)

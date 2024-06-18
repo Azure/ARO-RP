@@ -311,6 +311,9 @@ def validate_enable_managed_identity(namespace):
     if not namespace.platform_workload_identities:
         raise RequiredArgumentMissingError('Enabling managed identity requires platform workload identities to be provided')  # pylint: disable=line-too-long
 
+    if not namespace.mi_user_assigned:
+        raise RequiredArgumentMissingError('Enabling managed identity requires cluster identity to be provided')
+
 
 def validate_platform_workload_identities(cmd, namespace):
     if namespace.platform_workload_identities is None:
@@ -321,15 +324,39 @@ def validate_platform_workload_identities(cmd, namespace):
 
     for identity in namespace.platform_workload_identities:
         if not is_valid_resource_id(identity.resource_id):
-            identity.resource_id = resource_id(
-                subscription=get_subscription_id(cmd.cli_ctx),
-                resource_group=namespace.resource_group_name,
-                namespace='Microsoft.ManagedIdentity',
-                type='userAssignedIdentities',
-                name=identity.resource_id,
-            )
+            identity.resource_id = identity_name_to_resource_id(
+                cmd, namespace, identity.resource_id)
 
-        parsed_resource_id = parse_resource_id(identity.resource_id)
-        if parsed_resource_id['namespace'] != 'Microsoft.ManagedIdentity' or \
-                parsed_resource_id['type'] != 'userAssignedIdentities':
+        if not identity_resource_id_is_valid(identity.resource_id):
             raise InvalidArgumentValueError(f"Resource {identity.resource_id} used for platform workload identity {identity.name} is not a valid userAssignedIdentity")  # pylint: disable=line-too-long
+
+
+def validate_cluster_identity(cmd, namespace):
+    if namespace.mi_user_assigned is None:
+        return
+
+    if not namespace.enable_managed_identity:
+        raise RequiredArgumentMissingError('Must set --enable-managed-identity when providing platform workload identities')  # pylint: disable=line-too-long
+
+    if not is_valid_resource_id(namespace.mi_user_assigned):
+        namespace.mi_user_assigned = identity_name_to_resource_id(
+            cmd, namespace, namespace.mi_user_assigned)
+
+    if not identity_resource_id_is_valid(namespace.mi_user_assigned):
+        raise InvalidArgumentValueError(f"Resource {namespace.mi_user_assigned} used for cluster user assigned identity is not a valid userAssignedIdentity")  # pylint: disable=line-too-long
+
+
+def identity_name_to_resource_id(cmd, namespace, name):
+    return resource_id(
+        subscription=get_subscription_id(cmd.cli_ctx),
+        resource_group=namespace.resource_group_name,
+        namespace='Microsoft.ManagedIdentity',
+        type='userAssignedIdentities',
+        name=name,
+    )
+
+
+def identity_resource_id_is_valid(rid):
+    parsed = parse_resource_id(rid)
+    return parsed['namespace'] == 'Microsoft.ManagedIdentity' and \
+        parsed['type'] == 'userAssignedIdentities'

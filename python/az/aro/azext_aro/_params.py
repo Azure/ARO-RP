@@ -21,6 +21,7 @@ from azext_aro._validators import validate_outbound_type
 from azext_aro._validators import validate_load_balancer_managed_outbound_ip_count
 from azext_aro._validators import validate_enable_managed_identity
 from azext_aro._validators import validate_platform_workload_identities
+from azext_aro._validators import validate_cluster_identity
 from azure.cli.core.commands.parameters import name_type
 from azure.cli.core.commands.parameters import get_enum_type, get_three_state_flag
 from azure.cli.core.commands.parameters import resource_group_name_type
@@ -135,6 +136,10 @@ def load_arguments(self, _):
                    options_list=['--assign-platform-workload-identity', '--assign-platform-wi'],
                    validator=validate_platform_workload_identities,
                    action=AROPlatformWorkloadIdentityAddAction, nargs='+')
+        c.argument('mi_user_assigned', arg_group='Identity',
+                   options_list=['--mi-user-assigned', '--assign-cluster-identity'],
+                   validator=validate_cluster_identity,
+                   help='Set the user managed identity on the cluster.')
 
     with self.argument_context('aro update') as c:
         c.argument('client_secret',
