@@ -18,8 +18,9 @@
             "properties": {
                 "accessTier": "Hot",
                 "supportsHttpsTrafficOnly": true,
-                "allowBlobPublicAccess": true,
-                "minimumTlsVersion": "TLS1_2"
+                "allowBlobPublicAccess": false,
+                "minimumTlsVersion": "TLS1_2",
+                "allowSharedKeyAccess": false
             },
             "tags": {
                 "Az.Sec.AnonymousBlobAccessEnforcement::Skip": "PublicRelease"
@@ -27,7 +28,7 @@
             "location": "[resourceGroup().location]",
             "name": "[concat(take(substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.')), 21), 'oic')]",
             "type": "Microsoft.Storage/storageAccounts",
-            "apiVersion": "2019-06-01"
+            "apiVersion": "2021-09-01"
         },
         {
             "name": "[concat(concat(take(substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.')), 21), 'oic'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Storage/storageAccounts', concat(take(substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.')), 21), 'oic'))))]",

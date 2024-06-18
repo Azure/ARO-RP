@@ -6,7 +6,7 @@ package cluster
 import (
 	"context"
 
-	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
+	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"

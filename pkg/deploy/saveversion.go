@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"time"
 
-	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
+	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/Azure/go-autorest/autorest/date"
 )
@@ -20,10 +20,10 @@ func (d *deployer) SaveVersion(ctx context.Context) error {
 	t := time.Now().UTC().Truncate(time.Second)
 	res, err := d.globalaccounts.ListAccountSAS(
 		ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPVersionStorageAccountName, mgmtstorage.AccountSasParameters{
-			Services:               mgmtstorage.B,
+			Services:               mgmtstorage.ServicesB,
 			ResourceTypes:          mgmtstorage.SignedResourceTypesO,
 			Permissions:            "cw", // create and write
-			Protocols:              mgmtstorage.HTTPS,
+			Protocols:              mgmtstorage.HTTPProtocolHTTPS,
 			SharedAccessStartTime:  &date.Time{Time: t},
 			SharedAccessExpiryTime: &date.Time{Time: t.Add(24 * time.Hour)},
 		})
