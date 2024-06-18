@@ -129,8 +129,8 @@
       go run ./cmd/aro mirror latest
       ```
 
-      > __NOTE:__ when devmapper package is missing try to install _device-mapper-devel_ or run with tag `exclude_graphdriver_devicemapper` (e.g., -tags=exclude_graphdriver_devicemapper) to ignore that.
-      > __NOTE:__ when "fatal error: btrfs/ioctl.h: No such file or directory" error occours try to install _btrfs-progs-devel_ package or run with tag `exclude_graphdriver_btrfs` (e.g., -tags=exclude_graphdriver_btrfs) to ignore that.
+      > __Troubleshooting:__ There could be some issues when mirroring the images to the ACR realted to missing _devmapper_ or _btrfs_ (usually with "fatal error: btrfs/ioctl.h: No such file or directory" error) packages.
+      If respectively installing _device-mapper-devel_ or _btrfs-progs-devel_ packages won't help, then you may ignore them as follows:
 
     ```bash
       go run -tags=exclude_graphdriver_devicemapper,exclude_graphdriver_btrfs ./cmd/aro mirror latest
