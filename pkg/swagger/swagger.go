@@ -219,6 +219,8 @@ func Run(api, outputDir string) error {
 			if property.Name == "properties" {
 				property.Schema.ClientFlatten = true
 				properties = append(properties, property)
+			} else if property.Name == "identity" {
+				properties = append(properties, property)
 			}
 		}
 		s.Definitions[azureResource].Properties = properties
