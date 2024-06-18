@@ -6,7 +6,7 @@ package generator
 import (
 	"fmt"
 
-	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
+	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
@@ -23,15 +23,17 @@ var (
 
 func (g *generator) oicStorageAccount() *arm.Resource {
 	storageAccount := &mgmtstorage.Account{
-		Kind: mgmtstorage.StorageV2,
+		Kind: mgmtstorage.KindStorageV2,
 		Sku: &mgmtstorage.Sku{
 			Name: "Standard_LRS",
 		},
 		AccountProperties: &mgmtstorage.AccountProperties{
-			AllowBlobPublicAccess:  to.BoolPtr(true),
+			AllowBlobPublicAccess:  to.BoolPtr(false),
 			EnableHTTPSTrafficOnly: to.BoolPtr(true),
-			MinimumTLSVersion:      mgmtstorage.TLS12,
-			AccessTier:             mgmtstorage.Hot,
+			MinimumTLSVersion:      mgmtstorage.MinimumTLSVersionTLS12,
+			AccessTier:             mgmtstorage.AccessTierHot,
+			AllowSharedKeyAccess:   to.BoolPtr(false),
+			// Production has Public Network Access Disabled as OIDC Storage Account will be accessed via Azure Front Door
 		},
 		Name:     to.StringPtr(fmt.Sprintf("[%s]", storageAccountName)),
 		Location: to.StringPtr("[resourceGroup().location]"),

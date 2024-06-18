@@ -8,7 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	storage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
+	storage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	gomock "github.com/golang/mock/gomock"
 )
 

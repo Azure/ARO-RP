@@ -39,7 +39,8 @@ func NewTableClientWithBaseURI(baseURI string, subscriptionID string) TableClien
 // must be between 3 and 24 characters in length and use numbers and lower-case letters only.
 // tableName - a table name must be unique within a storage account and must be between 3 and 63 characters.The
 // name must comprise of only alphanumeric characters and it cannot begin with a numeric character.
-func (client TableClient) Create(ctx context.Context, resourceGroupName string, accountName string, tableName string) (result Table, err error) {
+// parameters - the parameters to provide to create a table.
+func (client TableClient) Create(ctx context.Context, resourceGroupName string, accountName string, tableName string, parameters *Table) (result Table, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/TableClient.Create")
 		defer func() {
@@ -67,7 +68,7 @@ func (client TableClient) Create(ctx context.Context, resourceGroupName string, 
 		return result, validation.NewError("storage.TableClient", "Create", err.Error())
 	}
 
-	req, err := client.CreatePreparer(ctx, resourceGroupName, accountName, tableName)
+	req, err := client.CreatePreparer(ctx, resourceGroupName, accountName, tableName, parameters)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "storage.TableClient", "Create", nil, "Failure preparing request")
 		return
@@ -90,7 +91,7 @@ func (client TableClient) Create(ctx context.Context, resourceGroupName string, 
 }
 
 // CreatePreparer prepares the Create request.
-func (client TableClient) CreatePreparer(ctx context.Context, resourceGroupName string, accountName string, tableName string) (*http.Request, error) {
+func (client TableClient) CreatePreparer(ctx context.Context, resourceGroupName string, accountName string, tableName string, parameters *Table) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"accountName":       autorest.Encode("path", accountName),
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
@@ -98,16 +99,21 @@ func (client TableClient) CreatePreparer(ctx context.Context, resourceGroupName 
 		"tableName":         autorest.Encode("path", tableName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2021-09-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/tableServices/default/tables/{tableName}", pathParameters),
 		autorest.WithQueryParameters(queryParameters))
+	if parameters != nil {
+		preparer = autorest.DecoratePreparer(preparer,
+			autorest.WithJSON(parameters))
+	}
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }
 
@@ -196,7 +202,7 @@ func (client TableClient) DeletePreparer(ctx context.Context, resourceGroupName 
 		"tableName":         autorest.Encode("path", tableName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2021-09-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -293,7 +299,7 @@ func (client TableClient) GetPreparer(ctx context.Context, resourceGroupName str
 		"tableName":         autorest.Encode("path", tableName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2021-09-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -389,7 +395,7 @@ func (client TableClient) ListPreparer(ctx context.Context, resourceGroupName st
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2021-09-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -465,7 +471,8 @@ func (client TableClient) ListComplete(ctx context.Context, resourceGroupName st
 // must be between 3 and 24 characters in length and use numbers and lower-case letters only.
 // tableName - a table name must be unique within a storage account and must be between 3 and 63 characters.The
 // name must comprise of only alphanumeric characters and it cannot begin with a numeric character.
-func (client TableClient) Update(ctx context.Context, resourceGroupName string, accountName string, tableName string) (result Table, err error) {
+// parameters - the parameters to provide to create a table.
+func (client TableClient) Update(ctx context.Context, resourceGroupName string, accountName string, tableName string, parameters *Table) (result Table, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/TableClient.Update")
 		defer func() {
@@ -493,7 +500,7 @@ func (client TableClient) Update(ctx context.Context, resourceGroupName string, 
 		return result, validation.NewError("storage.TableClient", "Update", err.Error())
 	}
 
-	req, err := client.UpdatePreparer(ctx, resourceGroupName, accountName, tableName)
+	req, err := client.UpdatePreparer(ctx, resourceGroupName, accountName, tableName, parameters)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "storage.TableClient", "Update", nil, "Failure preparing request")
 		return
@@ -516,7 +523,7 @@ func (client TableClient) Update(ctx context.Context, resourceGroupName string, 
 }
 
 // UpdatePreparer prepares the Update request.
-func (client TableClient) UpdatePreparer(ctx context.Context, resourceGroupName string, accountName string, tableName string) (*http.Request, error) {
+func (client TableClient) UpdatePreparer(ctx context.Context, resourceGroupName string, accountName string, tableName string, parameters *Table) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"accountName":       autorest.Encode("path", accountName),
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
@@ -524,16 +531,21 @@ func (client TableClient) UpdatePreparer(ctx context.Context, resourceGroupName 
 		"tableName":         autorest.Encode("path", tableName),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2021-09-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
 
 	preparer := autorest.CreatePreparer(
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/tableServices/default/tables/{tableName}", pathParameters),
 		autorest.WithQueryParameters(queryParameters))
+	if parameters != nil {
+		preparer = autorest.DecoratePreparer(preparer,
+			autorest.WithJSON(parameters))
+	}
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }
 
