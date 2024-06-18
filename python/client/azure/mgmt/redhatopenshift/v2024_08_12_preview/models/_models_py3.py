@@ -854,6 +854,9 @@ class OpenShiftCluster(TrackedResource):
     :vartype tags: dict[str, str]
     :ivar location: Required. The geo-location where the resource lives.
     :vartype location: str
+    :ivar identity: Identity stores information about the cluster MSI(s) in a workload identity
+     cluster.
+    :vartype identity: ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.Identity
     :ivar provisioning_state: The cluster provisioning state. Possible values include:
      "AdminUpdating", "Canceled", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
     :vartype provisioning_state: str or
@@ -902,6 +905,7 @@ class OpenShiftCluster(TrackedResource):
         'system_data': {'key': 'systemData', 'type': 'SystemData'},
         'tags': {'key': 'tags', 'type': '{str}'},
         'location': {'key': 'location', 'type': 'str'},
+        'identity': {'key': 'identity', 'type': 'Identity'},
         'provisioning_state': {'key': 'properties.provisioningState', 'type': 'str'},
         'cluster_profile': {'key': 'properties.clusterProfile', 'type': 'ClusterProfile'},
         'console_profile': {'key': 'properties.consoleProfile', 'type': 'ConsoleProfile'},
@@ -920,6 +924,7 @@ class OpenShiftCluster(TrackedResource):
         *,
         location: str,
         tags: Optional[Dict[str, str]] = None,
+        identity: Optional["Identity"] = None,
         provisioning_state: Optional[Union[str, "ProvisioningState"]] = None,
         cluster_profile: Optional["ClusterProfile"] = None,
         console_profile: Optional["ConsoleProfile"] = None,
@@ -937,6 +942,9 @@ class OpenShiftCluster(TrackedResource):
         :paramtype tags: dict[str, str]
         :keyword location: Required. The geo-location where the resource lives.
         :paramtype location: str
+        :keyword identity: Identity stores information about the cluster MSI(s) in a workload identity
+         cluster.
+        :paramtype identity: ~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.Identity
         :keyword provisioning_state: The cluster provisioning state. Possible values include:
          "AdminUpdating", "Canceled", "Creating", "Deleting", "Failed", "Succeeded", "Updating".
         :paramtype provisioning_state: str or
@@ -969,6 +977,7 @@ class OpenShiftCluster(TrackedResource):
          list[~azure.mgmt.redhatopenshift.v2024_08_12_preview.models.IngressProfile]
         """
         super(OpenShiftCluster, self).__init__(tags=tags, location=location, **kwargs)
+        self.identity = identity
         self.provisioning_state = provisioning_state
         self.cluster_profile = cluster_profile
         self.console_profile = console_profile

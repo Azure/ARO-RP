@@ -536,6 +536,8 @@ type OpenShiftCluster struct {
 	autorest.Response `json:"-"`
 	// OpenShiftClusterProperties - The cluster properties.
 	*OpenShiftClusterProperties `json:"properties,omitempty"`
+	// Identity - Identity stores information about the cluster MSI(s) in a workload identity cluster.
+	Identity *Identity `json:"identity,omitempty"`
 	// Tags - Resource tags.
 	Tags map[string]*string `json:"tags"`
 	// Location - The geo-location where the resource lives
@@ -555,6 +557,9 @@ func (osc OpenShiftCluster) MarshalJSON() ([]byte, error) {
 	objectMap := make(map[string]interface{})
 	if osc.OpenShiftClusterProperties != nil {
 		objectMap["properties"] = osc.OpenShiftClusterProperties
+	}
+	if osc.Identity != nil {
+		objectMap["identity"] = osc.Identity
 	}
 	if osc.Tags != nil {
 		objectMap["tags"] = osc.Tags
@@ -582,6 +587,15 @@ func (osc *OpenShiftCluster) UnmarshalJSON(body []byte) error {
 					return err
 				}
 				osc.OpenShiftClusterProperties = &openShiftClusterProperties
+			}
+		case "identity":
+			if v != nil {
+				var identity Identity
+				err = json.Unmarshal(*v, &identity)
+				if err != nil {
+					return err
+				}
+				osc.Identity = &identity
 			}
 		case "tags":
 			if v != nil {
