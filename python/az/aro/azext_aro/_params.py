@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the Apache License 2.0.
 
+from azext_aro._actions import AROPlatformWorkloadIdentityAddAction
 from azext_aro._validators import validate_cidr
 from azext_aro._validators import validate_client_id
 from azext_aro._validators import validate_client_secret
@@ -19,6 +20,7 @@ from azext_aro._validators import validate_version_format
 from azext_aro._validators import validate_outbound_type
 from azext_aro._validators import validate_load_balancer_managed_outbound_ip_count
 from azext_aro._validators import validate_enable_managed_identity
+from azext_aro._validators import validate_platform_workload_identities
 from azure.cli.core.commands.parameters import name_type
 from azure.cli.core.commands.parameters import get_enum_type, get_three_state_flag
 from azure.cli.core.commands.parameters import resource_group_name_type
@@ -128,6 +130,11 @@ def load_arguments(self, _):
                    options_list=['--enable-managed-identity', '--enable-mi'],
                    validator=validate_enable_managed_identity,
                    help='Enable managed identity for this cluster.', is_preview=True)
+        c.argument('platform_workload_identities', arg_group='Identity',
+                   help='Assign a platform workload identity used within the cluster', is_preview=True,
+                   options_list=['--assign-platform-workload-identity', '--assign-platform-wi'],
+                   validator=validate_platform_workload_identities,
+                   action=AROPlatformWorkloadIdentityAddAction, nargs='+')
 
     with self.argument_context('aro update') as c:
         c.argument('client_secret',

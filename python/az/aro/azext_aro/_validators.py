@@ -307,3 +307,29 @@ def validate_enable_managed_identity(namespace):
     _, versionY, _ = namespace.version.split('.', 2)
     if int(versionY) < 14:
         raise InvalidArgumentValueError('Enabling managed identity requires --version >= 4.14.z')
+
+    if not namespace.platform_workload_identities:
+        raise RequiredArgumentMissingError('Enabling managed identity requires platform workload identities to be provided')  # pylint: disable=line-too-long
+
+
+def validate_platform_workload_identities(cmd, namespace):
+    if namespace.platform_workload_identities is None:
+        return
+
+    if not namespace.enable_managed_identity:
+        raise RequiredArgumentMissingError('Must set --enable-managed-identity when providing platform workload identities')  # pylint: disable=line-too-long
+
+    for identity in namespace.platform_workload_identities:
+        if not is_valid_resource_id(identity.resource_id):
+            identity.resource_id = resource_id(
+                subscription=get_subscription_id(cmd.cli_ctx),
+                resource_group=namespace.resource_group_name,
+                namespace='Microsoft.ManagedIdentity',
+                type='userAssignedIdentities',
+                name=identity.resource_id,
+            )
+
+        parsed_resource_id = parse_resource_id(identity.resource_id)
+        if parsed_resource_id['namespace'] != 'Microsoft.ManagedIdentity' or \
+                parsed_resource_id['type'] != 'userAssignedIdentities':
+            raise InvalidArgumentValueError(f"Resource {identity.resource_id} used for platform workload identity {identity.name} is not a valid userAssignedIdentity")  # pylint: disable=line-too-long

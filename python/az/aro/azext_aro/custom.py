@@ -71,6 +71,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                ingress_visibility=None,
                load_balancer_managed_outbound_ip_count=None,
                enable_managed_identity=False,
+               platform_workload_identities=None,
                tags=None,
                version=None,
                no_wait=False):
@@ -187,7 +188,9 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
     )
 
     if enable_managed_identity is True:
-        # TODO - add platform workload identities here
+        oc.platform_workload_identity_profile = openshiftcluster.PlatformWorkloadIdentityProfile(
+            platform_workload_identities=platform_workload_identities
+        )
 
         # TODO - add cluster identity here
 
