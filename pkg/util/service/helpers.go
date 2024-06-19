@@ -21,15 +21,3 @@ func DBName(isLocalDevelopmentMode bool) (string, error) {
 
 	return os.Getenv(DatabaseName), nil
 }
-
-func GetDBTokenURL(isLocalDevelopmentMode bool) (string, error) {
-	if isLocalDevelopmentMode {
-		return "https://localhost:8445", nil
-	}
-
-	if err := env.ValidateVars(DBTokenUrl); err != nil {
-		return "", err
-	}
-
-	return os.Getenv(DBTokenUrl), nil
-}
