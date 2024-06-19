@@ -27,11 +27,6 @@ func FriendlyName(f interface{}) string {
 	return strings.TrimPrefix(strings.TrimSuffix(runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name(), "-fm"), "github.com/Azure/ARO-RP/")
 }
 
-// FriendlyName returns a "friendly" stringified name of the given func.
-func ShortFriendlyName(f interface{}) string {
-	return strings.TrimPrefix(FriendlyName(f), "github.com/Azure/ARO-RP/")
-}
-
 func shortName(fullName string) string {
 	sepCheck := func(c rune) bool {
 		return c == '/' || c == '.'

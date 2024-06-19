@@ -41,16 +41,16 @@ func (m *manager) gatherFailureLogs(ctx context.Context) {
 				continue
 			}
 
-			m.log.Printf("%s: %s", steps.ShortFriendlyName(f.f), string(b))
+			m.log.Printf("%s: %s", steps.FriendlyName(f.f), string(b))
 		} else {
 			entries, ok := o.([]interface{})
-			name := steps.ShortFriendlyName(f.f)
+			name := steps.FriendlyName(f.f)
 			if ok {
 				for _, i := range entries {
 					m.log.Printf("%s: %v", name, i)
 				}
 			} else {
-				m.log.Printf("%s: %v", steps.ShortFriendlyName(f.f), o)
+				m.log.Printf("%s: %v", steps.FriendlyName(f.f), o)
 			}
 		}
 	}
