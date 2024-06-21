@@ -184,7 +184,7 @@ deploy_e2e_db() {
         --template-file pkg/deploy/assets/databases-development.json \
         --parameters \
         "databaseAccountName=$DATABASE_ACCOUNT_NAME" \
-        "databaseName=$DATABASE_NAME"
+        "databaseName=$DATABASE_NAME" \
         >/dev/null
 
 }
