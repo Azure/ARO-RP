@@ -336,7 +336,7 @@ def validate_cluster_identity(cmd, namespace):
         return
 
     if not namespace.enable_managed_identity:
-        raise RequiredArgumentMissingError('Must set --enable-managed-identity when providing platform workload identities')  # pylint: disable=line-too-long
+        raise RequiredArgumentMissingError('Must set --enable-managed-identity when providing a cluster identity')  # pylint: disable=line-too-long
 
     if not is_valid_resource_id(namespace.mi_user_assigned):
         namespace.mi_user_assigned = identity_name_to_resource_id(

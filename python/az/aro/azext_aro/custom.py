@@ -198,8 +198,6 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
             user_assigned_identities={mi_user_assigned: {}}
         )
 
-        # TODO - add cluster identity here
-
         # TODO - perform client-side validation of required identity permissions
 
     else:

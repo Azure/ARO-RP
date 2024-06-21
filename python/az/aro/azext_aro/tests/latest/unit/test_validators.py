@@ -982,7 +982,7 @@ test_validate_enable_managed_identity_data = [
         InvalidArgumentValueError, 'Enabling managed identity requires --version >= 4.14.z'
     ),
     (
-        "Should raise InvalidArgumentValueError when version <= 4.14.0",
+        "Should raise InvalidArgumentValueError when version < 4.14.0",
         Mock(enable_managed_identity=True,
              client_id=None, client_secret=None,
              version="4.13.99"),
