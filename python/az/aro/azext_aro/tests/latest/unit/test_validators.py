@@ -1076,6 +1076,18 @@ test_validate_platform_workload_identities_data = [
             Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
             Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/bar"),
         ]
+    ),
+    (
+        "Should not raise any exception when valid",
+        Mock(enable_managed_identity=True,
+             subscription_id="00000000-0000-0000-0000-000000000000",
+             resource_group_name="resourceGroup",
+             platform_workload_identities=[
+                 Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/anotherResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
+                 Mock(resource_id="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/bar")
+             ]),
+        None,
+        None
     )
 ]
 
@@ -1137,6 +1149,15 @@ test_validate_cluster_identity_data = [
              mi_user_assigned="foo"),
         None,
         "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"
+    ),
+    (
+        "Should not raise any exception when valid",
+        Mock(enable_managed_identity=True,
+             subscription_id="00000000-0000-0000-0000-000000000000",
+             resource_group_name="resourceGroup",
+             mi_user_assigned="/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/foo"),
+        None,
+        None
     )
 ]
 
