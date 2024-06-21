@@ -13,7 +13,7 @@ locations.
 
 1. Set the az account
    ```bash
-   az account set -n "<your-azure-subscription"
+   az account set -n "<your-azure-subscription>"
    ```
 
 1. You will need a resource group for global infrastructure
@@ -466,10 +466,10 @@ each of the bash functions below.
    deploy_rp_dev_predeploy
    # Deploy the infrastructure resources such as Cosmos, KV, Vnet...
    deploy_rp_dev
-   # Deploy the proxy and VPN
-   deploy_env_dev
    # Deploy RP MSI for aks/hive
    deploy_rp_managed_identity
+   # Deploy the proxy and VPN
+   deploy_env_dev
    # Deploy AKS resources for Hive
    deploy_aks_dev
    # Deploy storage account and role assignment required for workload identity clusters
