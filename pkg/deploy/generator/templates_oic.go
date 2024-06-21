@@ -18,7 +18,7 @@ func (g *generator) oicTemplate() *arm.Template {
 		"rpServicePrincipalId": {
 			Type: "string",
 		},
-		"storageAccountDomain": {
+		"oidcStorageAccountName": {
 			Type: "string",
 		},
 	}

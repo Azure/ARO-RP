@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	azstorage "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -44,19 +43,20 @@ func (m *manager) createOIDC(ctx context.Context) error {
 		return nil
 	}
 
-	blobContainerName := env.OIDCBlobContainerPrefix + m.doc.ID
-
-	publicAccess := azstorage.PublicAccessNone
-	// Public access on OIDC Container needed for development environments because of no AFD availability
-	if m.env.FeatureIsSet(env.FeatureEnablePublicOIDCBlobAccess) {
-		publicAccess = azstorage.PublicAccessBlob
+	// OIDC Storage Web Endpoint need to be determined for Development environments
+	var oidcEndpoint string
+	if m.env.FeatureIsSet(env.FeatureRequireOIDCStorageWebEndpoint) {
+		properties, err := m.rpBlob.GetContainerProperties(ctx, m.env.ResourceGroup(), m.env.OIDCStorageAccountName(), oidcbuilder.WebContainer)
+		if err != nil {
+			return err
+		}
+		oidcEndpoint = *properties.Properties.PrimaryEndpoints.Web
+	} else {
+		// For Production Azure Front Door Endpoint will be the OIDC Endpoint
+		oidcEndpoint = m.env.OIDCEndpoint()
 	}
-	err := m.rpBlob.CreateBlobContainer(ctx, m.env.ResourceGroup(), m.env.OIDCStorageAccountName(), blobContainerName, publicAccess)
-	if err != nil {
-		return err
-	}
 
-	oidcBuilder, err := oidcbuilder.NewOIDCBuilder(m.env.Environment().StorageEndpointSuffix, m.env.OIDCEndpoint(), m.env.OIDCStorageAccountName(), blobContainerName)
+	oidcBuilder, err := oidcbuilder.NewOIDCBuilder(m.env, oidcEndpoint, env.OIDCBlobDirectoryPrefix+m.doc.ID)
 	if err != nil {
 		return err
 	}
@@ -66,7 +66,7 @@ func (m *manager) createOIDC(ctx context.Context) error {
 		return err
 	}
 
-	err = oidcBuilder.EnsureOIDCDocs(ctx, blobContainerName, azBlobClient)
+	err = oidcBuilder.EnsureOIDCDocs(ctx, azBlobClient)
 	if err != nil {
 		return err
 	}

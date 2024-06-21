@@ -7,12 +7,16 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/bloberror"
+
+	"github.com/Azure/ARO-RP/pkg/env"
 	utilazblob "github.com/Azure/ARO-RP/pkg/util/azblob"
 )
 
 const (
 	DiscoveryDocumentKey = ".well-known/openid-configuration"
 	JWKSKey              = "openid/v1/jwks"
+	WebContainer         = "$web"
 )
 
 type OIDCBuilder struct {
@@ -20,9 +24,10 @@ type OIDCBuilder struct {
 	publicKey        []byte
 	blobContainerURL string
 	endpointURL      string
+	directory        string
 }
 
-func NewOIDCBuilder(storageEndpointSuffix string, storageEndpoint string, accountName, containerName string) (*OIDCBuilder, error) {
+func NewOIDCBuilder(env env.Interface, oidcEndpoint string, directoryName string) (*OIDCBuilder, error) {
 	privateKey, publicKey, err := CreateKeyPair()
 	if err != nil {
 		return nil, err
@@ -31,12 +36,17 @@ func NewOIDCBuilder(storageEndpointSuffix string, storageEndpoint string, accoun
 	return &OIDCBuilder{
 		privateKey:       privateKey,
 		publicKey:        publicKey,
-		blobContainerURL: fmt.Sprintf("https://%s.blob.%s/%s", accountName, storageEndpointSuffix, containerName),
-		endpointURL:      fmt.Sprintf("https://%s/%s", storageEndpoint, containerName),
+		blobContainerURL: GenerateBlobContainerURL(env),
+		endpointURL:      fmt.Sprintf("%s%s", oidcEndpoint, directoryName),
+		directory:        directoryName,
 	}, nil
 }
 
-func (b *OIDCBuilder) EnsureOIDCDocs(ctx context.Context, oidcContainerName string, azBlobClient utilazblob.AZBlobClient) error {
+func GenerateBlobContainerURL(env env.Interface) string {
+	return fmt.Sprintf("https://%s.blob.%s/%s", env.OIDCStorageAccountName(), env.Environment().StorageEndpointSuffix, WebContainer)
+}
+
+func (b *OIDCBuilder) EnsureOIDCDocs(ctx context.Context, azBlobClient utilazblob.AZBlobClient) error {
 	// Create the OIDC configuration
 	discoveryDocument := GenerateDiscoveryDocument(b.endpointURL)
 
@@ -46,7 +56,7 @@ func (b *OIDCBuilder) EnsureOIDCDocs(ctx context.Context, oidcContainerName stri
 		return err
 	}
 
-	return populateOidcFolder(ctx, discoveryDocument, jwks, azBlobClient)
+	return populateOidcFolder(ctx, b.directory, discoveryDocument, jwks, azBlobClient)
 }
 
 func (b *OIDCBuilder) GetEndpointUrl() string {
@@ -61,11 +71,11 @@ func (b *OIDCBuilder) GetBlobContainerURL() string {
 	return b.blobContainerURL
 }
 
-func populateOidcFolder(ctx context.Context, discoveryDocument string, jwks []byte, azBlobClient utilazblob.AZBlobClient) error {
+func populateOidcFolder(ctx context.Context, directory string, discoveryDocument string, jwks []byte, azBlobClient utilazblob.AZBlobClient) error {
 	err := azBlobClient.UploadBuffer(
 		ctx,
 		"",
-		DiscoveryDocumentKey,
+		DocumentKey(directory, DiscoveryDocumentKey),
 		[]byte(discoveryDocument),
 	)
 	if err != nil {
@@ -75,7 +85,21 @@ func populateOidcFolder(ctx context.Context, discoveryDocument string, jwks []by
 	return azBlobClient.UploadBuffer(
 		ctx,
 		"",
-		JWKSKey,
+		DocumentKey(directory, JWKSKey),
 		jwks,
 	)
+}
+
+func DeleteOidcFolder(ctx context.Context, directory string, azBlobClient utilazblob.AZBlobClient) error {
+	for _, key := range []string{DiscoveryDocumentKey, JWKSKey} {
+		err := azBlobClient.DeleteBlob(ctx, "", DocumentKey(directory, key))
+		if err != nil && !bloberror.HasCode(err, bloberror.BlobNotFound) {
+			return err
+		}
+	}
+	return nil
+}
+
+func DocumentKey(directory string, blobKey string) string {
+	return fmt.Sprintf("%s/%s", directory, blobKey)
 }

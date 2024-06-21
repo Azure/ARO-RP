@@ -6,9 +6,9 @@ import (
 	"fmt"
 )
 
-const _FeatureName = "FeatureDisableDenyAssignmentsFeatureDisableSignedCertificatesFeatureEnableDevelopmentAuthorizerFeatureRequireD2sV3WorkersFeatureDisableReadinessDelayFeatureEnableOCMEndpointsFeatureEnablePublicOIDCBlobAccess"
+const _FeatureName = "FeatureDisableDenyAssignmentsFeatureDisableSignedCertificatesFeatureEnableDevelopmentAuthorizerFeatureRequireD2sV3WorkersFeatureDisableReadinessDelayFeatureEnableOCMEndpointsFeatureRequireOIDCStorageWebEndpoint"
 
-var _FeatureIndex = [...]uint8{0, 29, 61, 95, 121, 149, 174, 207}
+var _FeatureIndex = [...]uint8{0, 29, 61, 95, 121, 149, 174, 210}
 
 func (i Feature) String() string {
 	if i < 0 || i >= Feature(len(_FeatureIndex)-1) {
@@ -26,7 +26,7 @@ var _FeatureNameToValueMap = map[string]Feature{
 	_FeatureName[95:121]:  3,
 	_FeatureName[121:149]: 4,
 	_FeatureName[149:174]: 5,
-	_FeatureName[174:207]: 6,
+	_FeatureName[174:210]: 6,
 }
 
 // FeatureString retrieves an enum value from the enum constants string name.

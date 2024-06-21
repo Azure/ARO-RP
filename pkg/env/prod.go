@@ -31,9 +31,9 @@ import (
 )
 
 const (
-	KeyvaultPrefix       = "KEYVAULT_PREFIX"
-	StorageAccountDomain = "STORAGE_ACCOUNT_DOMAIN"
-	OIDCAFDEndpoint      = "OIDC_AFD_ENDPOINT"
+	KeyvaultPrefix         = "KEYVAULT_PREFIX"
+	OIDCAFDEndpoint        = "OIDC_AFD_ENDPOINT"
+	OIDCStorageAccountName = "OIDC_STORAGE_ACCOUNT_NAME"
 )
 
 type prod struct {
@@ -205,11 +205,11 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 		p.gatewayDomains = append(p.gatewayDomains, p.acrDomain, acrDataDomain)
 	}
 
-	if err := ValidateVars(StorageAccountDomain); err != nil {
+	if err := ValidateVars(OIDCStorageAccountName); err != nil {
 		return nil, err
 	}
 
-	if !p.IsLocalDevelopmentMode() {
+	if !p.FeatureIsSet(FeatureRequireOIDCStorageWebEndpoint) {
 		if err := ValidateVars(OIDCAFDEndpoint); err != nil {
 			return nil, err
 		}
@@ -274,16 +274,11 @@ func (p *prod) ACRDomain() string {
 }
 
 func (p *prod) OIDCStorageAccountName() string {
-	storageAccountDomain := os.Getenv("STORAGE_ACCOUNT_DOMAIN")
-	idx := strings.Index(storageAccountDomain, ".")
-	if idx >= 21 {
-		return storageAccountDomain[:21] + "oic"
-	}
-	return storageAccountDomain[:idx] + "oic"
+	return os.Getenv(OIDCStorageAccountName)
 }
 
 func (p *prod) OIDCEndpoint() string {
-	return os.Getenv("OIDC_AFD_ENDPOINT")
+	return fmt.Sprintf("https://%s/", os.Getenv("OIDC_AFD_ENDPOINT"))
 }
 
 func (p *prod) AROOperatorImage() string {
