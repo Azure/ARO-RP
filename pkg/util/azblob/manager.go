@@ -7,89 +7,36 @@ import (
 	"context"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	azstorage "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
-	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/bloberror"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armstorage"
 )
 
 type Manager interface {
-	CreateBlobContainer(ctx context.Context, resourceGroup string, account string, container string, publicAccess azstorage.PublicAccess) error
-	DeleteBlobContainer(ctx context.Context, resourceGroupName string, accountName string, containerName string) error
+	GetContainerProperties(ctx context.Context, resourceGroupName string, accountName string, containerName string) (azstorage.AccountsClientGetPropertiesResponse, error)
 	GetAZBlobClient(blobContainerURL string, options *azblob.ClientOptions) (AZBlobClient, error)
 }
 
 type manager struct {
-	cred          azcore.TokenCredential
-	blobContainer armstorage.BlobContainersClient
+	cred    azcore.TokenCredential
+	account armstorage.AccountsClient
 }
 
 func NewManager(environment *azureclient.AROEnvironment, subscriptionID string, credential azcore.TokenCredential) (Manager, error) {
-	client, err := armstorage.NewBlobContainersClient(environment, subscriptionID, credential)
+	accountsClient, err := armstorage.NewAccountsClient(environment, subscriptionID, credential)
 	if err != nil {
 		return nil, err
 	}
 	return &manager{
-		cred:          credential,
-		blobContainer: client,
+		cred:    credential,
+		account: accountsClient,
 	}, nil
 }
 
-func (m *manager) CreateBlobContainer(ctx context.Context, resourceGroup string, accountName string, containerName string, publicAccess azstorage.PublicAccess) error {
-	_, err := m.blobContainer.Get(
-		ctx,
-		resourceGroup,
-		accountName,
-		containerName,
-		&azstorage.BlobContainersClientGetOptions{},
-	)
-	if err != nil && !bloberror.HasCode(err, bloberror.ContainerNotFound) {
-		return err
-	} else if err == nil {
-		return nil
-	}
-
-	_, err = m.blobContainer.Create(
-		ctx,
-		resourceGroup,
-		accountName,
-		containerName,
-		azstorage.BlobContainer{
-			ContainerProperties: &azstorage.ContainerProperties{
-				PublicAccess: to.Ptr(publicAccess),
-			},
-		},
-		&azstorage.BlobContainersClientCreateOptions{},
-	)
-
-	return err
-}
-
-func (m *manager) DeleteBlobContainer(ctx context.Context, resourceGroupName string, accountName string, containerName string) error {
-	_, err := m.blobContainer.Get(
-		ctx,
-		resourceGroupName,
-		accountName,
-		containerName,
-		&azstorage.BlobContainersClientGetOptions{},
-	)
-	if err != nil {
-		if bloberror.HasCode(err, bloberror.ContainerNotFound) {
-			return nil
-		}
-	}
-
-	_, err = m.blobContainer.Delete(
-		ctx,
-		resourceGroupName,
-		accountName,
-		containerName,
-		&azstorage.BlobContainersClientDeleteOptions{},
-	)
-	return err
+func (m *manager) GetContainerProperties(ctx context.Context, resourceGroupName string, accountName string, containerName string) (azstorage.AccountsClientGetPropertiesResponse, error) {
+	return m.account.GetProperties(ctx, resourceGroupName, accountName, &azstorage.AccountsClientGetPropertiesOptions{})
 }
 
 func (m *manager) GetAZBlobClient(blobContainerURL string, options *azblob.ClientOptions) (AZBlobClient, error) {
@@ -98,6 +45,7 @@ func (m *manager) GetAZBlobClient(blobContainerURL string, options *azblob.Clien
 
 type AZBlobClient interface {
 	UploadBuffer(ctx context.Context, containerName string, blobName string, buffer []byte) error
+	DeleteBlob(ctx context.Context, containerName string, directoryName string) error
 }
 
 type azBlobClient struct {
@@ -114,5 +62,10 @@ func NewAZBlobClient(blobContainerURL string, credential azcore.TokenCredential,
 
 func (azBlobClient *azBlobClient) UploadBuffer(ctx context.Context, containerName string, blobName string, buffer []byte) error {
 	_, err := azBlobClient.client.UploadBuffer(ctx, containerName, blobName, buffer, &azblob.UploadBufferOptions{})
+	return err
+}
+
+func (azBlobClient *azBlobClient) DeleteBlob(ctx context.Context, containerName string, directoryName string) error {
+	_, err := azBlobClient.client.DeleteBlob(ctx, containerName, directoryName, &azblob.DeleteBlobOptions{})
 	return err
 }

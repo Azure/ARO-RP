@@ -36,7 +36,7 @@ func newDev(ctx context.Context, log *logrus.Entry, component ServiceComponent) 
 		FeatureDisableSignedCertificates,
 		FeatureRequireD2sV3Workers,
 		FeatureDisableReadinessDelay,
-		FeatureEnablePublicOIDCBlobAccess,
+		FeatureRequireOIDCStorageWebEndpoint,
 	} {
 		d.features[feature] = true
 	}
@@ -97,8 +97,4 @@ func (d *dev) FPNewClientCertificateCredential(tenantID string) (*azidentity.Cli
 	}
 
 	return credential, nil
-}
-
-func (d *dev) OIDCEndpoint() string {
-	return fmt.Sprintf("%s.blob.%s", d.OIDCStorageAccountName(), d.Environment().StorageEndpointSuffix)
 }

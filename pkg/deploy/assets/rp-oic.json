@@ -2,10 +2,10 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "rpServicePrincipalId": {
+        "oidcStorageAccountName": {
             "type": "string"
         },
-        "storageAccountDomain": {
+        "rpServicePrincipalId": {
             "type": "string"
         }
     },
@@ -26,22 +26,22 @@
                 "Az.Sec.AnonymousBlobAccessEnforcement::Skip": "PublicRelease"
             },
             "location": "[resourceGroup().location]",
-            "name": "[concat(take(substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.')), 21), 'oic')]",
+            "name": "[parameters('oidcStorageAccountName')]",
             "type": "Microsoft.Storage/storageAccounts",
             "apiVersion": "2021-09-01"
         },
         {
-            "name": "[concat(concat(take(substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.')), 21), 'oic'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Storage/storageAccounts', concat(take(substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.')), 21), 'oic'))))]",
+            "name": "[concat(parameters('oidcStorageAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Storage/storageAccounts', parameters('oidcStorageAccountName'))))]",
             "type": "Microsoft.Storage/storageAccounts/providers/roleAssignments",
             "properties": {
-                "scope": "[resourceId('Microsoft.Storage/storageAccounts', concat(take(substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.')), 21), 'oic'))]",
+                "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('oidcStorageAccountName'))]",
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
                 "principalId": "[parameters('rpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
             "apiVersion": "2018-09-01-preview",
             "dependsOn": [
-                "[resourceId('Microsoft.Storage/storageAccounts', concat(take(substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.')), 21), 'oic'))]"
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('oidcStorageAccountName'))]"
             ]
         }
     ]

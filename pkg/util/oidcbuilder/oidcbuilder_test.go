@@ -1,6 +1,7 @@
 package oidcbuilder
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -9,12 +10,20 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"reflect"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/bloberror"
 	"github.com/golang/mock/gomock"
 
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_azblob "github.com/Azure/ARO-RP/pkg/util/mocks/azblob"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -23,7 +32,7 @@ import (
 
 func TestEnsureOIDCDocs(t *testing.T) {
 	ctx := context.Background()
-	fakeContainerName := "fakeContainer"
+	directoryName := "fakeDirectory"
 	blobContainerURL := "fakeBlobContainerURL"
 	endpointURL := "fakeEndPointURL"
 
@@ -64,14 +73,15 @@ func TestEnsureOIDCDocs(t *testing.T) {
 				privateKey:       priKey,
 				publicKey:        pubKey,
 				blobContainerURL: blobContainerURL,
+				directory:        directoryName,
 				endpointURL:      endpointURL,
 			},
 			mocks: func(azblobClient *mock_azblob.MockAZBlobClient) {
 				azblobClient.EXPECT().
-					UploadBuffer(gomock.Any(), "", DiscoveryDocumentKey, gomock.Any()).
+					UploadBuffer(gomock.Any(), "", DocumentKey(directoryName, DiscoveryDocumentKey), gomock.Any()).
 					Return(nil)
 				azblobClient.EXPECT().
-					UploadBuffer(gomock.Any(), "", JWKSKey, gomock.Any()).
+					UploadBuffer(gomock.Any(), "", DocumentKey(directoryName, JWKSKey), gomock.Any()).
 					Return(nil)
 			},
 		},
@@ -82,6 +92,7 @@ func TestEnsureOIDCDocs(t *testing.T) {
 				publicKey:        invalidKey,
 				blobContainerURL: blobContainerURL,
 				endpointURL:      endpointURL,
+				directory:        directoryName,
 			},
 			wantErr: "Failed to decode PEM file",
 		},
@@ -92,6 +103,7 @@ func TestEnsureOIDCDocs(t *testing.T) {
 				publicKey:        incorrectlyEncodedPublicKey,
 				blobContainerURL: blobContainerURL,
 				endpointURL:      endpointURL,
+				directory:        directoryName,
 			},
 			wantErr: "Failed to parse key content: x509: failed to parse public key (use ParsePKCS1PublicKey instead for this key format)",
 		},
@@ -102,10 +114,11 @@ func TestEnsureOIDCDocs(t *testing.T) {
 				publicKey:        pubKey,
 				blobContainerURL: blobContainerURL,
 				endpointURL:      endpointURL,
+				directory:        directoryName,
 			},
 			mocks: func(azblobClient *mock_azblob.MockAZBlobClient) {
 				azblobClient.EXPECT().
-					UploadBuffer(gomock.Any(), "", DiscoveryDocumentKey, gomock.Any()).
+					UploadBuffer(gomock.Any(), "", DocumentKey(directoryName, DiscoveryDocumentKey), gomock.Any()).
 					Return(errors.New("generic error"))
 			},
 			wantErr: "generic error",
@@ -117,13 +130,14 @@ func TestEnsureOIDCDocs(t *testing.T) {
 				publicKey:        pubKey,
 				blobContainerURL: blobContainerURL,
 				endpointURL:      endpointURL,
+				directory:        directoryName,
 			},
 			mocks: func(azblobClient *mock_azblob.MockAZBlobClient) {
 				azblobClient.EXPECT().
-					UploadBuffer(gomock.Any(), "", DiscoveryDocumentKey, gomock.Any()).
+					UploadBuffer(gomock.Any(), "", DocumentKey(directoryName, DiscoveryDocumentKey), gomock.Any()).
 					Return(nil)
 				azblobClient.EXPECT().
-					UploadBuffer(gomock.Any(), "", JWKSKey, gomock.Any()).
+					UploadBuffer(gomock.Any(), "", DocumentKey(directoryName, JWKSKey), gomock.Any()).
 					Return(errors.New("generic error"))
 			},
 			wantErr: "generic error",
@@ -135,6 +149,7 @@ func TestEnsureOIDCDocs(t *testing.T) {
 				publicKey:        nonRSAEncodedPublicKey,
 				blobContainerURL: blobContainerURL,
 				endpointURL:      endpointURL,
+				directory:        directoryName,
 			},
 			wantErr: "Public key is not of type RSA",
 		},
@@ -149,7 +164,7 @@ func TestEnsureOIDCDocs(t *testing.T) {
 				tt.mocks(azBlobClient)
 			}
 
-			err = tt.oidcbuilder.EnsureOIDCDocs(ctx, fakeContainerName, azBlobClient)
+			err = tt.oidcbuilder.EnsureOIDCDocs(ctx, azBlobClient)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 
 			if tt.oidcbuilder.GetEndpointUrl() != tt.oidcbuilder.endpointURL {
@@ -162,6 +177,122 @@ func TestEnsureOIDCDocs(t *testing.T) {
 
 			if tt.oidcbuilder.GetBlobContainerURL() != tt.oidcbuilder.blobContainerURL {
 				t.Fatalf("GetBlobContainerURL doesn't match the original endpointURL - %s != %s (wanted)", tt.oidcbuilder.GetBlobContainerURL(), tt.oidcbuilder.blobContainerURL)
+			}
+		})
+	}
+}
+
+type fakeReadCloser struct {
+	io.Reader
+}
+
+func (fakeReadCloser) Close() error { return nil }
+func TestDeleteOidcFolder(t *testing.T) {
+	ctx := context.Background()
+	directoryName := "fakeDirectory"
+	respErrBlobNotFound := &azcore.ResponseError{
+		ErrorCode: string(bloberror.BlobNotFound),
+	}
+	respErrGeneric := &azcore.ResponseError{
+		ErrorCode: string("Generic Error"),
+		RawResponse: &http.Response{
+			Request: &http.Request{
+				Method: "FAKE",
+				URL:    &url.URL{},
+			},
+			Body: fakeReadCloser{bytes.NewBufferString("Generic Error")},
+		},
+		StatusCode: 400,
+	}
+	genericErrorMessage := `FAKE ://
+--------------------------------------------------------------------------------
+RESPONSE 0: 
+ERROR CODE: Generic Error
+--------------------------------------------------------------------------------
+Generic Error
+--------------------------------------------------------------------------------
+`
+
+	for _, tt := range []struct {
+		name    string
+		mocks   func(*mock_azblob.MockAZBlobClient)
+		wantErr string
+	}{
+		{
+			name: "Success",
+			mocks: func(azblobClient *mock_azblob.MockAZBlobClient) {
+				azblobClient.EXPECT().DeleteBlob(ctx, "", DocumentKey(directoryName, DiscoveryDocumentKey)).Return(nil)
+				azblobClient.EXPECT().DeleteBlob(ctx, "", DocumentKey(directoryName, JWKSKey)).Return(nil)
+			},
+		},
+		{
+			name: "Fail - Generic Error when deleting DiscoveryDocument",
+			mocks: func(azblobClient *mock_azblob.MockAZBlobClient) {
+				azblobClient.EXPECT().DeleteBlob(ctx, "", DocumentKey(directoryName, DiscoveryDocumentKey)).Return(respErrGeneric)
+			},
+			wantErr: genericErrorMessage,
+		},
+		{
+			name: "Fail - Generic Error when deleting JWKS",
+			mocks: func(azblobClient *mock_azblob.MockAZBlobClient) {
+				azblobClient.EXPECT().DeleteBlob(ctx, "", DocumentKey(directoryName, DiscoveryDocumentKey)).Return(respErrBlobNotFound)
+				azblobClient.EXPECT().DeleteBlob(ctx, "", DocumentKey(directoryName, JWKSKey)).Return(respErrGeneric)
+			},
+			wantErr: genericErrorMessage,
+		},
+		{
+			name: "Success - One Blob exists and other doesn't",
+			mocks: func(azblobClient *mock_azblob.MockAZBlobClient) {
+				azblobClient.EXPECT().DeleteBlob(ctx, "", DocumentKey(directoryName, DiscoveryDocumentKey)).Return(respErrBlobNotFound)
+				azblobClient.EXPECT().DeleteBlob(ctx, "", DocumentKey(directoryName, JWKSKey)).Return(nil)
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			azBlobClient := mock_azblob.NewMockAZBlobClient(controller)
+
+			if tt.mocks != nil {
+				tt.mocks(azBlobClient)
+			}
+
+			err := DeleteOidcFolder(ctx, directoryName, azBlobClient)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestGenerateBlobContainerURL(t *testing.T) {
+	oidcStorageAccountName := "eastusoic"
+	for _, tt := range []struct {
+		name     string
+		mocks    func(*mock_env.MockInterface)
+		expected string
+	}{
+		{
+			name: "Success: Working as Expected",
+			mocks: func(menv *mock_env.MockInterface) {
+				menv.EXPECT().OIDCStorageAccountName().Return(oidcStorageAccountName)
+				menv.EXPECT().Environment().Return(&azureclient.PublicCloud)
+			},
+			expected: fmt.Sprintf("https://%s.blob.%s/%s", oidcStorageAccountName, azureclient.PublicCloud.StorageEndpointSuffix, WebContainer),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			env := mock_env.NewMockInterface(controller)
+
+			if tt.mocks != nil {
+				tt.mocks(env)
+			}
+
+			result := GenerateBlobContainerURL(env)
+			if result != tt.expected {
+				t.Fatalf("Expected %s, but received %s", tt.expected, result)
 			}
 		})
 	}

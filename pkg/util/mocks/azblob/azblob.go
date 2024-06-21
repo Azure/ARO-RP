@@ -38,34 +38,6 @@ func (m *MockManager) EXPECT() *MockManagerMockRecorder {
 	return m.recorder
 }
 
-// CreateBlobContainer mocks base method.
-func (m *MockManager) CreateBlobContainer(arg0 context.Context, arg1, arg2, arg3 string, arg4 armstorage.PublicAccess) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateBlobContainer", arg0, arg1, arg2, arg3, arg4)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// CreateBlobContainer indicates an expected call of CreateBlobContainer.
-func (mr *MockManagerMockRecorder) CreateBlobContainer(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateBlobContainer", reflect.TypeOf((*MockManager)(nil).CreateBlobContainer), arg0, arg1, arg2, arg3, arg4)
-}
-
-// DeleteBlobContainer mocks base method.
-func (m *MockManager) DeleteBlobContainer(arg0 context.Context, arg1, arg2, arg3 string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteBlobContainer", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeleteBlobContainer indicates an expected call of DeleteBlobContainer.
-func (mr *MockManagerMockRecorder) DeleteBlobContainer(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteBlobContainer", reflect.TypeOf((*MockManager)(nil).DeleteBlobContainer), arg0, arg1, arg2, arg3)
-}
-
 // GetAZBlobClient mocks base method.
 func (m *MockManager) GetAZBlobClient(arg0 string, arg1 *azblob0.ClientOptions) (azblob.AZBlobClient, error) {
 	m.ctrl.T.Helper()
@@ -79,6 +51,21 @@ func (m *MockManager) GetAZBlobClient(arg0 string, arg1 *azblob0.ClientOptions) 
 func (mr *MockManagerMockRecorder) GetAZBlobClient(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAZBlobClient", reflect.TypeOf((*MockManager)(nil).GetAZBlobClient), arg0, arg1)
+}
+
+// GetContainerProperties mocks base method.
+func (m *MockManager) GetContainerProperties(arg0 context.Context, arg1, arg2, arg3 string) (armstorage.AccountsClientGetPropertiesResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetContainerProperties", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(armstorage.AccountsClientGetPropertiesResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetContainerProperties indicates an expected call of GetContainerProperties.
+func (mr *MockManagerMockRecorder) GetContainerProperties(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainerProperties", reflect.TypeOf((*MockManager)(nil).GetContainerProperties), arg0, arg1, arg2, arg3)
 }
 
 // MockAZBlobClient is a mock of AZBlobClient interface.
@@ -102,6 +89,20 @@ func NewMockAZBlobClient(ctrl *gomock.Controller) *MockAZBlobClient {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockAZBlobClient) EXPECT() *MockAZBlobClientMockRecorder {
 	return m.recorder
+}
+
+// DeleteBlob mocks base method.
+func (m *MockAZBlobClient) DeleteBlob(arg0 context.Context, arg1, arg2 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteBlob", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteBlob indicates an expected call of DeleteBlob.
+func (mr *MockAZBlobClientMockRecorder) DeleteBlob(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteBlob", reflect.TypeOf((*MockAZBlobClient)(nil).DeleteBlob), arg0, arg1, arg2)
 }
 
 // UploadBuffer mocks base method.

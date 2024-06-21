@@ -35,7 +35,7 @@ const (
 	FeatureRequireD2sV3Workers
 	FeatureDisableReadinessDelay
 	FeatureEnableOCMEndpoints
-	FeatureEnablePublicOIDCBlobAccess
+	FeatureRequireOIDCStorageWebEndpoint
 )
 
 const (
@@ -57,7 +57,7 @@ const (
 	ServiceKeyvaultSuffix            = "-svc"
 	RPPrivateEndpointPrefix          = "rp-pe-"
 	ProxyHostName                    = "PROXY_HOSTNAME"
-	OIDCBlobContainerPrefix          = "oic-"
+	OIDCBlobDirectoryPrefix          = "oic-"
 )
 
 // Interface is clunky and somewhat legacy and only used in the RP codebase (not

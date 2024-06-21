@@ -87,6 +87,12 @@ func DevConfig(_env env.Core) (*Config, error) {
 		keyvaultPrefix = keyvaultPrefix[:20]
 	}
 
+	oidcStorageAccountName := os.Getenv("USER") + _env.Location()
+	if len(oidcStorageAccountName) >= 21 {
+		oidcStorageAccountName = oidcStorageAccountName[:21]
+	}
+	oidcStorageAccountName = oidcStorageAccountName + "oic"
+
 	return &Config{
 		RPs: []RPConfig{
 			{
@@ -101,6 +107,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 					KeyvaultDNSSuffix:           &_env.Environment().KeyVaultDNSSuffix,
 					KeyvaultPrefix:              &keyvaultPrefix,
 					StorageAccountDomain:        to.StringPtr(os.Getenv("USER") + "aro" + _env.Location() + ".blob." + _env.Environment().StorageEndpointSuffix),
+					OIDCStorageAccountName:      to.StringPtr(oidcStorageAccountName),
 				},
 			},
 		},
@@ -175,7 +182,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 				"RequireD2sV3Workers",
 				"DisableReadinessDelay",
 				"EnableOCMEndpoints",
-				"EnablePublicOIDCBlobAccess",
+				"RequireOIDCStorageWebEndpoint",
 			},
 			// TODO update this to support FF
 			RPImagePrefix:                     to.StringPtr(os.Getenv("USER") + "aro.azurecr.io/aro"),
