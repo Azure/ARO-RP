@@ -32,7 +32,6 @@
                 "softDeleteRetentionInDays": 90,
                 "enableRbacAuthorization": false,
                 "vaultUri": "[concat('https://', parameters('vault_name'), '.vault.azure.net/')]",
-                "provisioningState": "Succeeded",
                 "publicNetworkAccess": "Enabled"
             }
         }
