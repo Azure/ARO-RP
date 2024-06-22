@@ -140,6 +140,9 @@
                 "westus"
             ]
         },
+        "oidcStorageAccountName": {
+            "type": "string"
+        },
         "portalAccessGroupIds": {
             "type": "string"
         },

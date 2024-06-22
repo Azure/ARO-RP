@@ -45,7 +45,7 @@ func (m *manager) GetAZBlobClient(blobContainerURL string, options *azblob.Clien
 
 type AZBlobClient interface {
 	UploadBuffer(ctx context.Context, containerName string, blobName string, buffer []byte) error
-	DeleteBlob(ctx context.Context, containerName string, directoryName string) error
+	DeleteBlob(ctx context.Context, containerName string, blobName string) error
 }
 
 type azBlobClient struct {
@@ -65,7 +65,7 @@ func (azBlobClient *azBlobClient) UploadBuffer(ctx context.Context, containerNam
 	return err
 }
 
-func (azBlobClient *azBlobClient) DeleteBlob(ctx context.Context, containerName string, directoryName string) error {
-	_, err := azBlobClient.client.DeleteBlob(ctx, containerName, directoryName, &azblob.DeleteBlobOptions{})
+func (azBlobClient *azBlobClient) DeleteBlob(ctx context.Context, containerName string, blobName string) error {
+	_, err := azBlobClient.client.DeleteBlob(ctx, containerName, blobName, &azblob.DeleteBlobOptions{})
 	return err
 }
