@@ -209,12 +209,6 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 		return nil, err
 	}
 
-	if !p.FeatureIsSet(FeatureRequireOIDCStorageWebEndpoint) {
-		if err := ValidateVars(OIDCAFDEndpoint); err != nil {
-			return nil, err
-		}
-	}
-
 	p.ARMHelper, err = newARMHelper(ctx, log, p)
 	if err != nil {
 		return nil, err

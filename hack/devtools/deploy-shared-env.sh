@@ -102,7 +102,7 @@ deploy_oic_for_dedicated_rp() {
             "rpServicePrincipalId=$(az identity show -g $RESOURCEGROUP -n aro-rp-$LOCATION | jq -r '.["principalId"]')" \
             "oidcStorageAccountName=$(yq '.rps[].configuration.oidcStorageAccountName' dev-config.yaml)" >/dev/null
     echo "########## Enabling Static Website for OIDC storage account in RG $RESOURCEGROUP ##########"
-    az storage blob service-properties update --static-website true --account-name ${yq '.rps[].configuration.oidcStorageAccountName' dev-config.yaml} --auth-mode login >/dev/null
+    az storage blob service-properties update --static-website true --account-name $(yq '.rps[].configuration.oidcStorageAccountName' dev-config.yaml) --auth-mode login >/dev/null
 }
 
 deploy_env_dev_override() {
