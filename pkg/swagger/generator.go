@@ -48,7 +48,6 @@ type generator struct {
 	systemData             bool
 	kubeConfig             bool
 	installVersionList     bool
-	clusterManager         bool
 	workerProfilesStatus   bool
 	roleSetList            bool
 	managedServiceIdentity bool
@@ -116,7 +115,6 @@ var apis = map[string]*generator{
 		xmsIdentifiers:     []string{},
 		commonTypesVersion: "v3",
 		systemData:         true,
-		clusterManager:     true,
 		installVersionList: true,
 		kubeConfig:         true,
 	},
@@ -135,7 +133,6 @@ var apis = map[string]*generator{
 		xmsIdentifiers:     []string{},
 		commonTypesVersion: "v3",
 		systemData:         true,
-		clusterManager:     true,
 		installVersionList: true,
 		kubeConfig:         true,
 	},
@@ -154,7 +151,6 @@ var apis = map[string]*generator{
 		xmsIdentifiers:     []string{},
 		commonTypesVersion: "v3",
 		systemData:         true,
-		clusterManager:     true,
 		installVersionList: true,
 		kubeConfig:         true,
 	},
@@ -174,7 +170,6 @@ var apis = map[string]*generator{
 		xmsIdentifiers:       []string{},
 		commonTypesVersion:   "v3",
 		systemData:           true,
-		clusterManager:       true,
 		installVersionList:   true,
 		kubeConfig:           true,
 		workerProfilesStatus: true,
@@ -195,7 +190,6 @@ var apis = map[string]*generator{
 		xmsIdentifiers:       []string{},
 		commonTypesVersion:   "v3",
 		systemData:           true,
-		clusterManager:       true,
 		installVersionList:   true,
 		kubeConfig:           true,
 		workerProfilesStatus: true,
@@ -222,7 +216,6 @@ var apis = map[string]*generator{
 		commonTypesVersion:     "v6",
 		managedServiceIdentity: true,
 		systemData:             true,
-		clusterManager:         true,
 		installVersionList:     true,
 		kubeConfig:             true,
 		workerProfilesStatus:   true,
