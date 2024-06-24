@@ -51,7 +51,6 @@ type generator struct {
 	kubeConfig             bool
 	installVersionList     bool
 	installVersionGet      bool
-	clusterManager         bool
 	workerProfilesStatus   bool
 	roleSetList            bool
 	managedServiceIdentity bool
@@ -119,7 +118,6 @@ var apis = map[string]*generator{
 		xmsIdentifiers:     []string{},
 		commonTypesVersion: "v3",
 		systemData:         true,
-		clusterManager:     true,
 		installVersionList: true,
 		kubeConfig:         true,
 	},
@@ -138,7 +136,6 @@ var apis = map[string]*generator{
 		xmsIdentifiers:     []string{},
 		commonTypesVersion: "v3",
 		systemData:         true,
-		clusterManager:     true,
 		installVersionList: true,
 		kubeConfig:         true,
 	},
@@ -157,7 +154,6 @@ var apis = map[string]*generator{
 		xmsIdentifiers:     []string{},
 		commonTypesVersion: "v3",
 		systemData:         true,
-		clusterManager:     true,
 		installVersionList: true,
 		kubeConfig:         true,
 	},
@@ -177,7 +173,6 @@ var apis = map[string]*generator{
 		xmsIdentifiers:       []string{},
 		commonTypesVersion:   "v3",
 		systemData:           true,
-		clusterManager:       true,
 		installVersionList:   true,
 		kubeConfig:           true,
 		workerProfilesStatus: true,
@@ -198,16 +193,11 @@ var apis = map[string]*generator{
 		xmsIdentifiers:       []string{},
 		commonTypesVersion:   "v3",
 		systemData:           true,
-		clusterManager:       true,
 		installVersionList:   true,
 		kubeConfig:           true,
 		workerProfilesStatus: true,
 	},
 	apiv20240812previewPath: {
-		exampleSyncIdentityProviderPutParameter:            v20240812preview.ExampleSyncIdentityProviderPutParameter,
-		exampleSyncIdentityProviderPatchParameter:          v20240812preview.ExampleSyncIdentityProviderPatchParameter,
-		exampleSyncIdentityProviderResponse:                v20240812preview.ExampleSyncIdentityProviderResponse,
-		exampleSyncIdentityProviderListResponse:            v20240812preview.ExampleSyncIdentityProviderListResponse,
 		exampleOpenShiftClusterPutParameter:                v20240812preview.ExampleOpenShiftClusterPutParameter,
 		exampleOpenShiftClusterPatchParameter:              v20240812preview.ExampleOpenShiftClusterPatchParameter,
 		exampleOpenShiftClusterGetResponse:                 v20240812preview.ExampleOpenShiftClusterGetResponse,
