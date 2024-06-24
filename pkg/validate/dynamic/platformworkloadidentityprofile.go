@@ -21,14 +21,18 @@ func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(ctx context.Context, 
 	platformIdentitiesActionsMap := map[string][]string{}
 
 	for _, role := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
-		platformIdentitiesActionsMap[role.OperatorName] = []string{}
+		platformIdentitiesActionsMap[role.OperatorName] = nil
 	}
 
 	for _, role := range platformWorkloadIdentityRoles {
 		_, ok := platformIdentitiesActionsMap[role.OperatorName]
 		if !ok {
+			requiredOperatorIdentities := []string{}
+			for _, role := range platformWorkloadIdentityRoles {
+				requiredOperatorIdentities = append(requiredOperatorIdentities, role.OperatorName)
+			}
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePlatformWorkloadIdentityMismatch,
-				"properties.ValidatePlatformWorkloadIdentityProfile.PlatformWorkloadIdentities", "There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift version '%s'", oc.Properties.ClusterProfile.Version)
+				"properties.ValidatePlatformWorkloadIdentityProfile.PlatformWorkloadIdentities", "There's a mismatch between the required and expected set of platform workload identities for the requested OpenShift version '%s'. The required platform workload identities are '%v'", oc.Properties.ClusterProfile.Version, requiredOperatorIdentities)
 		}
 	}
 
@@ -38,22 +42,12 @@ func (dv *dynamic) ValidatePlatformWorkloadIdentityProfile(ctx context.Context, 
 	}
 
 	for _, role := range platformWorkloadIdentityRoles {
-		definition, err := roleDefinitions.GetByID(ctx, role.RoleDefinitionID, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{})
+		actions, err := getActionsForRoleDefinition(ctx, role.RoleDefinitionID, roleDefinitions, http.StatusBadRequest)
 		if err != nil {
 			return err
 		}
 
-		if len(definition.Properties.Permissions) <= 0 {
-			return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInvalidClusterMSICount,
-				"dynamic.ValidatePlatformWorkloadIdentityProfile", "No Permissions exists for the role %s", role.RoleDefinitionID)
-		}
-
-		for _, action := range definition.Properties.Permissions[0].Actions {
-			platformIdentitiesActionsMap[role.OperatorName] = append(platformIdentitiesActionsMap[role.OperatorName], *action)
-		}
-		for _, dataAction := range definition.Properties.Permissions[0].DataActions {
-			platformIdentitiesActionsMap[role.OperatorName] = append(platformIdentitiesActionsMap[role.OperatorName], *dataAction)
-		}
+		platformIdentitiesActionsMap[role.OperatorName] = actions
 	}
 
 	dv.platformIdentities = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities
@@ -81,23 +75,9 @@ func (dv *dynamic) validateClusterMSI(ctx context.Context, oc *api.OpenShiftClus
 }
 
 func (dv *dynamic) validateClusterMSIPermissions(ctx context.Context, oid string, platformIdentities []api.PlatformWorkloadIdentity, roleDefinitions armauthorization.RoleDefinitionsClient) error {
-	definition, err := roleDefinitions.GetByID(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{})
+	actions, err := getActionsForRoleDefinition(ctx, rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole, roleDefinitions, http.StatusInternalServerError)
 	if err != nil {
 		return err
-	}
-
-	if len(definition.RoleDefinition.Properties.Permissions) <= 0 {
-		return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInvalidClusterMSICount,
-			"dynamic.validateClusterMSIPermissions", "No Permissions exists for the role %s", rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole)
-	}
-
-	actions := []string{}
-	for _, action := range definition.RoleDefinition.Properties.Permissions[0].Actions {
-		actions = append(actions, *action)
-	}
-
-	for _, dataAction := range definition.RoleDefinition.Properties.Permissions[0].DataActions {
-		actions = append(actions, *dataAction)
 	}
 
 	for _, platformIdentity := range platformIdentities {
@@ -112,4 +92,26 @@ func (dv *dynamic) validateClusterMSIPermissions(ctx context.Context, oid string
 		}
 	}
 	return nil
+}
+
+func getActionsForRoleDefinition(ctx context.Context, roleDefinitionID string, roleDefinitions armauthorization.RoleDefinitionsClient, errorStatusCode int) ([]string, error) {
+	definition, err := roleDefinitions.GetByID(ctx, roleDefinitionID, &sdkauthorization.RoleDefinitionsClientGetByIDOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(definition.RoleDefinition.Properties.Permissions) <= 0 {
+		return nil, api.NewCloudError(errorStatusCode, api.CloudErrorCodeInvalidClusterMSICount,
+			"dynamic.validateClusterMSIPermissions", "No Permissions exists for the role %s", rbac.RoleAzureRedHatOpenShiftFederatedCredentialRole)
+	}
+
+	actions := []string{}
+	for _, action := range definition.RoleDefinition.Properties.Permissions[0].Actions {
+		actions = append(actions, *action)
+	}
+
+	for _, dataAction := range definition.RoleDefinition.Properties.Permissions[0].DataActions {
+		actions = append(actions, *dataAction)
+	}
+	return actions, nil
 }
