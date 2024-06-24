@@ -9,8 +9,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	sdkdns "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns"
-
-	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 // RecordSetsClient is a minimal interface for azure RecordSetsClient
@@ -27,13 +25,8 @@ type recordSetsClient struct {
 var _ RecordSetsClient = &recordSetsClient{}
 
 // NewRecordSetsClient creates a new RecordSetsClient
-func NewRecordSetsClient(environment *azureclient.AROEnvironment, subscriptionID string, credential azcore.TokenCredential) RecordSetsClient {
-	options := arm.ClientOptions{
-		ClientOptions: azcore.ClientOptions{
-			Cloud: environment.Cloud,
-		},
-	}
-	clientFactory, err := sdkdns.NewClientFactory(subscriptionID, credential, &options)
+func NewRecordSetsClient(subscriptionID string, credential azcore.TokenCredential, options *arm.ClientOptions) RecordSetsClient {
+	clientFactory, err := sdkdns.NewClientFactory(subscriptionID, credential, options)
 	if err != nil {
 		return nil
 	}
