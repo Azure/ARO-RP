@@ -23,7 +23,7 @@ from azure.mgmt.core import ARMPipelineClient
 
 from . import models
 from ._configuration import AzureRedHatOpenShiftClientConfiguration
-from .operations import MachinePoolsOperations, OpenShiftClustersOperations, OpenShiftVersionsOperations, Operations, SecretsOperations, SyncIdentityProvidersOperations, SyncSetsOperations
+from .operations import OpenShiftClustersOperations, OpenShiftVersionsOperations, Operations
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import,ungrouped-imports
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from azure.core.credentials import TokenCredential
     from azure.core.rest import HttpRequest, HttpResponse
 
-class AzureRedHatOpenShiftClient(object):    # pylint: disable=too-many-instance-attributes
+class AzureRedHatOpenShiftClient(object):
     """Rest API for Azure Red Hat OpenShift 4.
 
     :ivar operations: Operations operations
@@ -43,17 +43,6 @@ class AzureRedHatOpenShiftClient(object):    # pylint: disable=too-many-instance
     :ivar open_shift_clusters: OpenShiftClustersOperations operations
     :vartype open_shift_clusters:
      azure.mgmt.redhatopenshift.v2023_07_01_preview.operations.OpenShiftClustersOperations
-    :ivar machine_pools: MachinePoolsOperations operations
-    :vartype machine_pools:
-     azure.mgmt.redhatopenshift.v2023_07_01_preview.operations.MachinePoolsOperations
-    :ivar secrets: SecretsOperations operations
-    :vartype secrets: azure.mgmt.redhatopenshift.v2023_07_01_preview.operations.SecretsOperations
-    :ivar sync_identity_providers: SyncIdentityProvidersOperations operations
-    :vartype sync_identity_providers:
-     azure.mgmt.redhatopenshift.v2023_07_01_preview.operations.SyncIdentityProvidersOperations
-    :ivar sync_sets: SyncSetsOperations operations
-    :vartype sync_sets:
-     azure.mgmt.redhatopenshift.v2023_07_01_preview.operations.SyncSetsOperations
     :param credential: Credential needed for the client to connect to Azure.
     :type credential: ~azure.core.credentials.TokenCredential
     :param subscription_id: The ID of the target subscription.
@@ -85,10 +74,6 @@ class AzureRedHatOpenShiftClient(object):    # pylint: disable=too-many-instance
         self.operations = Operations(self._client, self._config, self._serialize, self._deserialize)
         self.open_shift_versions = OpenShiftVersionsOperations(self._client, self._config, self._serialize, self._deserialize)
         self.open_shift_clusters = OpenShiftClustersOperations(self._client, self._config, self._serialize, self._deserialize)
-        self.machine_pools = MachinePoolsOperations(self._client, self._config, self._serialize, self._deserialize)
-        self.secrets = SecretsOperations(self._client, self._config, self._serialize, self._deserialize)
-        self.sync_identity_providers = SyncIdentityProvidersOperations(self._client, self._config, self._serialize, self._deserialize)
-        self.sync_sets = SyncSetsOperations(self._client, self._config, self._serialize, self._deserialize)
 
 
     def _send_request(

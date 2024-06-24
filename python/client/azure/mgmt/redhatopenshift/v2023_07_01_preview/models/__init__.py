@@ -23,9 +23,6 @@ try:
     from ._models_py3 import EffectiveOutboundIP
     from ._models_py3 import IngressProfile
     from ._models_py3 import LoadBalancerProfile
-    from ._models_py3 import MachinePool
-    from ._models_py3 import MachinePoolList
-    from ._models_py3 import MachinePoolUpdate
     from ._models_py3 import ManagedOutboundIPs
     from ._models_py3 import MasterProfile
     from ._models_py3 import NetworkProfile
@@ -42,16 +39,7 @@ try:
     from ._models_py3 import OutboundIPPrefix
     from ._models_py3 import ProxyResource
     from ._models_py3 import Resource
-    from ._models_py3 import Secret
-    from ._models_py3 import SecretList
-    from ._models_py3 import SecretUpdate
     from ._models_py3 import ServicePrincipalProfile
-    from ._models_py3 import SyncIdentityProvider
-    from ._models_py3 import SyncIdentityProviderList
-    from ._models_py3 import SyncIdentityProviderUpdate
-    from ._models_py3 import SyncSet
-    from ._models_py3 import SyncSetList
-    from ._models_py3 import SyncSetUpdate
     from ._models_py3 import SystemData
     from ._models_py3 import TrackedResource
     from ._models_py3 import WorkerProfile
@@ -64,9 +52,6 @@ except (SyntaxError, ImportError):
     from ._models import EffectiveOutboundIP  # type: ignore
     from ._models import IngressProfile  # type: ignore
     from ._models import LoadBalancerProfile  # type: ignore
-    from ._models import MachinePool  # type: ignore
-    from ._models import MachinePoolList  # type: ignore
-    from ._models import MachinePoolUpdate  # type: ignore
     from ._models import ManagedOutboundIPs  # type: ignore
     from ._models import MasterProfile  # type: ignore
     from ._models import NetworkProfile  # type: ignore
@@ -83,16 +68,7 @@ except (SyntaxError, ImportError):
     from ._models import OutboundIPPrefix  # type: ignore
     from ._models import ProxyResource  # type: ignore
     from ._models import Resource  # type: ignore
-    from ._models import Secret  # type: ignore
-    from ._models import SecretList  # type: ignore
-    from ._models import SecretUpdate  # type: ignore
     from ._models import ServicePrincipalProfile  # type: ignore
-    from ._models import SyncIdentityProvider  # type: ignore
-    from ._models import SyncIdentityProviderList  # type: ignore
-    from ._models import SyncIdentityProviderUpdate  # type: ignore
-    from ._models import SyncSet  # type: ignore
-    from ._models import SyncSetList  # type: ignore
-    from ._models import SyncSetUpdate  # type: ignore
     from ._models import SystemData  # type: ignore
     from ._models import TrackedResource  # type: ignore
     from ._models import WorkerProfile  # type: ignore
@@ -115,9 +91,6 @@ __all__ = [
     'EffectiveOutboundIP',
     'IngressProfile',
     'LoadBalancerProfile',
-    'MachinePool',
-    'MachinePoolList',
-    'MachinePoolUpdate',
     'ManagedOutboundIPs',
     'MasterProfile',
     'NetworkProfile',
@@ -134,16 +107,7 @@ __all__ = [
     'OutboundIPPrefix',
     'ProxyResource',
     'Resource',
-    'Secret',
-    'SecretList',
-    'SecretUpdate',
     'ServicePrincipalProfile',
-    'SyncIdentityProvider',
-    'SyncIdentityProviderList',
-    'SyncIdentityProviderUpdate',
-    'SyncSet',
-    'SyncSetList',
-    'SyncSetUpdate',
     'SystemData',
     'TrackedResource',
     'WorkerProfile',
