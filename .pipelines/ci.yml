@@ -34,6 +34,7 @@ jobs:
       name: 1es-aro-ci-pool
     variables:
       HOME: $(Agent.BuildDirectory)
+
     steps:
       - template: ./templates/template-checkout.yml
       - script: |
