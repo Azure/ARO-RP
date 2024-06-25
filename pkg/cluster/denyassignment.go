@@ -17,8 +17,8 @@ func (m *manager) createOrUpdateDenyAssignment(ctx context.Context) error {
 	}
 
 	// needed for AdminUpdate so it would not block other steps
-	if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.SPObjectID == "" {
-		m.log.Print("skipping createOrUpdateDenyAssignment: SPObjectID is empty")
+	if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile == nil && m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile == nil {
+		m.log.Print("skipping createOrUpdateDenyAssignment: ServicePrincipalProfile and PlatformWorkloadIdentityProfile are empty")
 		return nil
 	}
 
