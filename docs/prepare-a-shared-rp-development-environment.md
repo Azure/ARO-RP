@@ -11,13 +11,26 @@ locations.
    Azure subscription, as well as the ability to create and configure AAD
    applications.
 
+1. Set the az account
+   ```bash
+   az account set -n "<your-azure-subscription>"
+   ```
+
+1. You will need a resource group for global infrastructure
+   ```bash
+   GLOBAL_RESOURCEGROUP=global-infra
+   az group create -n $GLOBAL_RESOURCEGROUP --location eastus
+   ```
+
 1. You will need a publicly resolvable DNS Zone resource in your Azure
    subscription. Set PARENT_DOMAIN_NAME and PARENT_DOMAIN_RESOURCEGROUP to the name and
    resource group of the DNS Zone resource:
 
    ```bash
-   PARENT_DOMAIN_NAME=osadev.cloud
-   PARENT_DOMAIN_RESOURCEGROUP=dns
+   PARENT_DOMAIN_NAME=<your-dns-parent-domain>
+   PARENT_DOMAIN_RESOURCEGROUP=global-infra
+
+   az network dns zone create --name $PARENT_DOMAIN_NAME -g $PARENT_DOMAIN_RESOURCEGROUP
    ```
 
 1. You will need a storage account in your Azure subscription in which to store
@@ -27,7 +40,9 @@ Data Reader` or `Storage Blob Data Contributor` role on the storage account.
    Set SECRET_SA_ACCOUNT_NAME to the name of the storage account:
 
    ```bash
-   SECRET_SA_ACCOUNT_NAME=e2earosecrets
+   export SECRET_SA_ACCOUNT_NAME=<your-storage-account-name>
+   ./hack/devtools/deploy-shared-env-storage.sh
+   
    ```
 
 1. You will need an AAD object (this could be your AAD user, or an AAD group of
@@ -35,7 +50,7 @@ Data Reader` or `Storage Blob Data Contributor` role on the storage account.
    development environment key vault(s). Set ADMIN_OBJECT_ID to the object ID.
 
    ```bash
-   ADMIN_OBJECT_ID="$(az ad group show -g 'aro-engineering' --query id -o tsv)"
+   ADMIN_OBJECT_ID="$(az ad group show -g '<your-az-group>' --query id -o tsv)"
    ```
 
 1. You will need the ARO RP-specific pull secret (ask one of the
@@ -75,6 +90,11 @@ Data Reader` or `Storage Blob Data Contributor` role on the storage account.
 
 ## AAD applications
 
+1. Set a prefix variable used for naming apps/sp
+```bash
+# for PR E2E Environment
+PREFIX=aro-v4-e2e
+```
 1. Create an AAD application which will fake up the ARM layer:
 
    This application requires client certificate authentication to be enabled. A
@@ -89,7 +109,7 @@ Data Reader` or `Storage Blob Data Contributor` role on the storage account.
    ```bash
    > __NOTE:__: for macos change the -w0 option for base64 to -b0
    AZURE_ARM_CLIENT_ID="$(az ad app create \
-     --display-name aro-v4-arm-shared \
+     --display-name ${PREFIX}-arm-shared \
      --query appId \
      -o tsv)"
    az ad app credential reset \
@@ -118,7 +138,7 @@ Data Reader` or `Storage Blob Data Contributor` role on the storage account.
    ```bash
    > __NOTE:__: for macos change the -w0 option for base64 to -b0
    AZURE_FP_CLIENT_ID="$(az ad app create \
-     --display-name aro-v4-fp-shared \
+     --display-name ${PREFIX}-fp-shared \
      --query appId \
      -o tsv)"
    az ad app credential reset \
@@ -137,13 +157,7 @@ Data Reader` or `Storage Blob Data Contributor` role on the storage account.
 
    ```bash
    AZURE_RP_CLIENT_SECRET="$(uuidgen)"
-   AZURE_RP_CLIENT_ID="$(az ad app create \
-     --display-name aro-v4-rp-shared \
-     --end-date '2299-12-31T11:59:59+00:00' \
-     --key-type password \
-     --password "$AZURE_RP_CLIENT_SECRET" \
-     --query appId \
-     -o tsv)"
+   AZURE_RP_CLIENT_ID="$(az ad app create --display-name ${PREFIX}-rp-shared --end-date '2299-12-31T11:59:59+00:00' --key-type Password --key-value "$AZURE_RP_CLIENT_SECRET" --query appId -o tsv)"
    az ad sp create --id "$AZURE_RP_CLIENT_ID" >/dev/null
    ```
 
@@ -158,7 +172,7 @@ Data Reader` or `Storage Blob Data Contributor` role on the storage account.
    ```bash
    AZURE_GATEWAY_CLIENT_SECRET="$(uuidgen)"
    AZURE_GATEWAY_CLIENT_ID="$(az ad app create \
-     --display-name aro-v4-gateway-shared \
+     --display-name ${PREFIX}-gateway-shared \
      --end-date '2299-12-31T11:59:59+00:00' \
      --key-type password \
      --password "$AZURE_GATEWAY_CLIENT_SECRET" \
@@ -172,7 +186,7 @@ Data Reader` or `Storage Blob Data Contributor` role on the storage account.
    ```bash
    AZURE_CLIENT_SECRET="$(uuidgen)"
    AZURE_CLIENT_ID="$(az ad app create \
-     --display-name aro-v4-tooling-shared \
+     --display-name ${PREFIX}-tooling-shared \
      --end-date '2299-12-31T11:59:59+00:00' \
      --key-type password \
      --password "$AZURE_CLIENT_SECRET" \
@@ -228,10 +242,17 @@ Data Reader` or `Storage Blob Data Contributor` role on the storage account.
    ```bash
    > __NOTE:__: for macos change the -w0 option for base64 to -b0
    AZURE_PORTAL_CLIENT_ID="$(az ad app create \
-     --display-name aro-v4-portal-shared \
-     --reply-urls "https://localhost:8444/callback" \
+     --display-name ${PREFIX}-portal-shared \
      --query appId \
      -o tsv)"
+
+   OBJ_ID="$(az ad app show --id $AZURE_PORTAL_CLIENT_ID --query id -o tsv)"
+
+   az rest --method PATCH \
+    --uri "https://graph.microsoft.com/v1.0/applications/$OBJ_ID" \
+    --headers 'Content-Type=application/json' \
+    --body '{"web":{"redirectUris":["https://locahlost:8444/callback"]}}'
+
    az ad app credential reset \
      --id "$AZURE_PORTAL_CLIENT_ID" \
      --cert "$(base64 -w0 <secrets/portal-client.crt)" >/dev/null
@@ -302,6 +323,14 @@ Data Reader` or `Storage Blob Data Contributor` role on the storage account.
    mv dev-client.* secrets
    ```
 
+1. Create the  CA key/certificate.  A suitable key/certificate file can be
+   generated using the following helper utility:
+
+   ```bash
+   go run ./hack/genkey cluster-mdsd
+   mv cluster-mdsd.* secrets
+   ```
+
 ## Certificate Rotation
 
 This section documents the steps taken to rotate certificates in dev and INT subscriptions
@@ -348,7 +377,7 @@ az ad app credential reset \
 
 5. The RP makes API calls to kubernetes cluster via a proxy VMSS agent. For the agent to get the updated certificates, this vm needs to be deleted & redeployed. Proxy VM is currently deployed by the `deploy_env_dev` function in `deploy-shared-env.sh`. It makes use of `env-development.json`
 
-6. Run `[rharosecretsdev|e2earosecrets] make secrets-update` to upload it to your
+6. Run `[rharosecretsdev|e2earosecrets|e2earoclassicsecrets] make secrets-update` to upload it to your
    storage account so other people on your team can access it via `make secrets`
 
 # Environment file
@@ -357,14 +386,14 @@ az ad app credential reset \
    The resource group location will be appended to the prefix to make the resource group name. If a v4-prefixed environment exists in the subscription already, use a unique prefix.
 
    ```bash
-   RESOURCEGROUP_PREFIX=v4
+   RESOURCEGROUP_PREFIX=<your-rg-prefix>
    ```
 
 1. Choose the proxy domain name label. This final proxy hostname will be of the
    form `vm0.$PROXY_DOMAIN_NAME_LABEL.$LOCATION.cloudapp.azure.com`.
 
    ```bash
-   PROXY_DOMAIN_NAME_LABEL=aroproxy
+   PROXY_DOMAIN_NAME_LABEL=<your-proxy-domain-name-label>
    ```
 
 1. Create the secrets/env file:
@@ -422,7 +451,11 @@ each of the bash functions below.
 
    - LOCATION: Location of the shared RP development environment (default:
      `eastus`).
-
+1. Create AzSecPack managed Identity https://msazure.visualstudio.com/ASMDocs/_wiki/wikis/ASMDocs.wiki/234249/AzSecPack-AutoConfig-UserAssigned-Managed-Identity (required for `deploy_env_dev`)
+1. Enable EncryptionAtHost for subscription.
+   ```bash
+   az feature register --namespace Microsoft.Compute --name EncryptionAtHost 
+   ```
 1. Create the resource group and deploy the RP resources:
 
    ```bash
@@ -433,6 +466,8 @@ each of the bash functions below.
    deploy_rp_dev_predeploy
    # Deploy the infrastructure resources such as Cosmos, KV, Vnet...
    deploy_rp_dev
+   # Deploy RP MSI for aks/hive
+   deploy_rp_managed_identity
    # Deploy the proxy and VPN
    deploy_env_dev
    # Deploy AKS resources for Hive
@@ -520,6 +555,18 @@ Vault Name: "$KEYVAULT_PREFIX-svc"
 Certificate: cluster-mdsd
 Development value: secrets/cluster-logging-int.pem
 ```
+   > __NOTE:__: in the new tenant OneCert is not available, therefore firstparty and cluster-mdsd are self signed.
+   ```bash
+      az keyvault certificate import \
+         --vault-name "$KEYVAULT_PREFIX-svc" \
+         --name rp-firstparty \
+         --file secrets/firstparty.pem
+
+      az keyvault certificate import \
+         --vault-name "$KEYVAULT_PREFIX-svc" \
+         --name cluster-mdsd \
+         --file secrets/cluster-mdsd.pem
+   ```
 
 1. Create nameserver records in the parent DNS zone:
 
@@ -532,6 +579,40 @@ Development value: secrets/cluster-logging-int.pem
    ```bash
    vpn_configuration
    ```
+
+## PR E2E Only - Create the global keyvault, ADO Library Variable Group
+
+1. Create E2E global keyvault
+   ```bash
+   AZURE_TENANT_ID=$(az account show --query tenantId -o tsv)
+   ARO_E2E_GLOBAL_VAULT_NAME=<your-global-keyvault>
+
+   deploy_aro_e2e_global_keyvault
+   ``` 
+1. Upload Keyvault Secrets and Certificates
+1. Give List/Get permissions to Azure DevOps Connection SPN
+1. Set up Library Variable group in ADO and connect it to keyvault
+
+## PR E2E Only - Setup ACR Credentials
+Due to cross tenant ACR access, token credentials must be generated for arointsvc
+1. Login to MSIT tenant and navigate to arointsvc
+1. Under "Repository permissions -> Tokens" add a new token and generate a password
+1. Add username and password to json file formatted like below and convert it to base64
+```
+{
+    "username": "<username>",
+    "password": "<Password>"
+}
+```
+1. convert to base 64, copy the output and add it to aro-e2e-global keyvault
+```
+cat <my-acr-cred-file>.json | base64 -w0
+```
+1. Add the secret to the Libary variable group that is connected to the global keyvault
+
+## PR E2E Only - Add keyvault permissions to aro-v4-e2e-devops-spn
+- assign 'Keyvault Secrets User' to aro-v4-e2e-devops-spn
+
 
 ## Append Resource Group to Subscription Cleaner DenyList
 

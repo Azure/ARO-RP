@@ -407,7 +407,7 @@
             "identity": {
                 "type": "UserAssigned",
                 "userAssignedIdentities": {
-                    "[resourceId('AzSecPackAutoConfigRG', 'Microsoft.ManagedIdentity/userAssignedIdentities', concat('AzSecPackAutoConfigUA-', resourceGroup().location))]": {}
+                    "[resourceId('AzSecPackAutoConfigRG', 'Microsoft.ManagedIdentity/userAssignedIdentities', 'AzSecPackAutoConfigUA-eastus')]": {}
                 }
             },
             "name": "dev-proxy-vmss",

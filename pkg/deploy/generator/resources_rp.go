@@ -875,28 +875,38 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 		rs = append(rs, g.rpCosmosDBAlert(10, 90, 3, "rp-cosmosdb-alert", "PT5M", "PT1H"))
 		rs = append(rs, g.CosmosDBDataContributorRoleAssignment("'ARO'", "rp"))
 		rs = append(rs, g.CosmosDBDataContributorRoleAssignment("'ARO'", "gateway"))
+	} else {
+		rs = append(rs, g.CosmosDBDataContributorRoleAssignment("''", "rp"))
 	}
 
 	return rs
 }
 
 func (g *generator) CosmosDBDataContributorRoleAssignment(databaseName, component string) *arm.Resource {
-	return &arm.Resource{
+	var scope string
+	if g.production {
+		scope = "[resourceId('Microsoft.DocumentDB/databaseAccounts/dbs', parameters('databaseAccountName'), " + databaseName + ")]"
+	} else {
+		scope = "[resourceId('Microsoft.DocumentDB/databaseAccounts/', parameters('databaseAccountName'))]"
+	}
+
+	roleAssignment := &arm.Resource{
 		Resource: mgmtauthorization.RoleAssignment{
 			Name: to.StringPtr("[concat(parameters('databaseAccountName'), '/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('" + component + "ServicePrincipalId'), 'DocumentDB Data Contributor'))]"),
 			Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments"),
 			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-				Scope:            to.StringPtr("[resourceId('Microsoft.DocumentDB/databaseAccounts/dbs', parameters('databaseAccountName'), " + databaseName + ")]"),
+				Scope:            &scope,
 				RoleDefinitionID: to.StringPtr("[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', parameters('databaseAccountName'), '" + rbac.RoleDocumentDBDataContributor + "')]"),
 				PrincipalID:      to.StringPtr("[parameters('" + component + "ServicePrincipalId')]"),
 				PrincipalType:    mgmtauthorization.ServicePrincipal,
 			},
 		},
-		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 		DependsOn: []string{
 			"[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
 		},
+		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 	}
+	return roleAssignment
 }
 
 func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Resource {

@@ -83,6 +83,20 @@
             "type": "Microsoft.DocumentDB/databaseAccounts"
         },
         {
+            "name": "[concat(parameters('databaseAccountName'), '/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('rpServicePrincipalId'), 'DocumentDB Data Contributor'))]",
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments",
+            "properties": {
+                "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts/', parameters('databaseAccountName'))]",
+                "roleDefinitionId": "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', parameters('databaseAccountName'), '00000000-0000-0000-0000-000000000002')]",
+                "principalId": "[parameters('rpServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2023-04-15",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ]
+        },
+        {
             "name": "[guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader')]",
             "type": "Microsoft.Authorization/roleAssignments",
             "properties": {
