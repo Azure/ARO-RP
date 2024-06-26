@@ -10,6 +10,7 @@ if [[ $CI ]]; then
     set -a
     HIVEKUBECONFIGPATH="secrets/e2e-aks-kubeconfig"
     HIVE_KUBE_CONFIG_PATH_1="secrets/aks.kubeconfig"
+    ARO_INSTALL_VIA_HIVE="true"
     CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
     DATABASE_NAME="v4-e2e-V$BUILD_BUILDID-$LOCATION"
     PRIVATE_CLUSTER=true
