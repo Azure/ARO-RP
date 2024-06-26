@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	"github.com/Azure/go-autorest/tracing"
@@ -21,8 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
 	pkgmonitor "github.com/Azure/ARO-RP/pkg/monitor"
 	"github.com/Azure/ARO-RP/pkg/proxy"
-	"github.com/Azure/ARO-RP/pkg/util/encryption"
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
+	"github.com/Azure/ARO-RP/pkg/util/service"
 )
 
 func monitor(ctx context.Context, log *logrus.Entry) error {
@@ -60,48 +58,17 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 
 	clusterm := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("CLUSTER_MDM_ACCOUNT"), os.Getenv("CLUSTER_MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 
-	msiToken, err := _env.NewMSITokenCredential()
+	aead, err := service.NewAEADWithCore(ctx, _env, env.EncryptionSecretV2Name, env.EncryptionSecretName)
 	if err != nil {
 		return err
 	}
 
-	msiKVAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().KeyVaultScope)
+	dbc, err := service.NewDatabaseClient(ctx, _env, log, &noop.Noop{}, aead)
 	if err != nil {
 		return err
 	}
 
-	if err := env.ValidateVars(envKeyVaultPrefix); err != nil {
-		return err
-	}
-	keyVaultPrefix := os.Getenv(envKeyVaultPrefix)
-	// TODO: should not be using the service keyvault here
-	serviceKeyvaultURI := keyvault.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
-	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
-
-	aead, err := encryption.NewMulti(ctx, serviceKeyvault, env.EncryptionSecretV2Name, env.EncryptionSecretName)
-	if err != nil {
-		return err
-	}
-
-	if err := env.ValidateVars(envDatabaseAccountName); err != nil {
-		return err
-	}
-
-	dbAccountName := os.Getenv(envDatabaseAccountName)
-
-	logrusEntry := log.WithField("component", "database")
-	scope := []string{fmt.Sprintf("https://%s.%s", dbAccountName, _env.Environment().CosmosDBDNSSuffixScope)}
-	dbAuthorizer, err := database.NewTokenAuthorizer(ctx, logrusEntry, msiToken, dbAccountName, scope)
-	if err != nil {
-		return err
-	}
-
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, &noop.Noop{}, aead, dbAccountName)
-	if err != nil {
-		return err
-	}
-
-	dbName, err := DBName(_env.IsLocalDevelopmentMode())
+	dbName, err := service.DBName(_env.IsLocalDevelopmentMode())
 	if err != nil {
 		return err
 	}

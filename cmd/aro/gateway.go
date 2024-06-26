@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -18,6 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
 	utilnet "github.com/Azure/ARO-RP/pkg/util/net"
+	"github.com/Azure/ARO-RP/pkg/util/service"
 )
 
 func gateway(ctx context.Context, log *logrus.Entry) error {
@@ -35,28 +35,12 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 
 	go g.Run()
 
-	if err := env.ValidateVars(envDatabaseAccountName); err != nil {
-		return err
-	}
-
-	msiToken, err := _env.NewMSITokenCredential()
-	if err != nil {
-		return err
-	}
-	logrusEntry := log.WithField("component", "database")
-
-	dbAccountName := os.Getenv(envDatabaseAccountName)
-	scope := []string{fmt.Sprintf("https://%s.%s", dbAccountName, _env.Environment().CosmosDBDNSSuffixScope)}
-	dbAuthorizer, err := database.NewTokenAuthorizer(ctx, logrusEntry, msiToken, dbAccountName, scope)
-	if err != nil {
-		return err
-	}
-	dbc, err := database.NewDatabaseClient(logrusEntry, _env, dbAuthorizer, m, nil, dbAccountName)
+	dbc, err := service.NewDatabaseClient(ctx, _env, log, m, nil)
 	if err != nil {
 		return err
 	}
 
-	dbName, err := DBName(_env.IsLocalDevelopmentMode())
+	dbName, err := service.DBName(_env.IsLocalDevelopmentMode())
 	if err != nil {
 		return err
 	}
