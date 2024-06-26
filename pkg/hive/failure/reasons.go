@@ -17,6 +17,7 @@ var Reasons = []InstallFailingReason{
 	// priority over later ones.
 	AzureRequestDisallowedByPolicy,
 	AzureInvalidTemplateDeployment,
+	AzureOSProvisioningTimedOut,
 }
 
 var AzureRequestDisallowedByPolicy = InstallFailingReason{
@@ -34,5 +35,14 @@ var AzureInvalidTemplateDeployment = InstallFailingReason{
 	Message: "Deployment failed. Please see details for more information.",
 	SearchRegexes: []*regexp.Regexp{
 		regexp.MustCompile(`"code":\w?"InvalidTemplateDeployment"`),
+	},
+}
+
+var AzureOSProvisioningTimedOut = InstallFailingReason{
+	Name:    "AzureOSProvisioningTimedOut",
+	Reason:  "AzureOSProvisioningTimedOut",
+	Message: "OS Provisioning for VM did not finish in the allotted time.",
+	SearchRegexes: []*regexp.Regexp{
+		regexp.MustCompile(`"code":\w?"ResourceDeploymentFailure".*"code":\w?"OSProvisioningTimedOut"`),
 	},
 }

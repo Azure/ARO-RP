@@ -50,6 +50,16 @@ func HandleProvisionFailed(ctx context.Context, cd *hivev1.ClusterDeployment, co
 			AzureInvalidTemplateDeployment.Message,
 			*armError,
 		)
+	case AzureOSProvisioningTimedOut.Reason:
+		armError, err := parseDeploymentFailedJson(*installLog)
+		if err != nil {
+			return err
+		}
+
+		return wrapArmError(
+			AzureOSProvisioningTimedOut.Message,
+			*armError,
+		)
 	default:
 		return genericErr
 	}
