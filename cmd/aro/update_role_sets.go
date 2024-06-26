@@ -20,9 +20,9 @@ import (
 )
 
 // 1 - Get env data from agent VMs (with getEnvironmentData)
-func getRoleSetsFromEnv() ([]api.PlatformWorkloadIdentityRoleSet, error) {
+func getRoleSetsFromEnv() ([]api.PlatformWorkloadIdentityRoleSetProperties, error) {
 	const envKey = envPlatformWorkloadIdentityRoleSets
-	var roleSets []api.PlatformWorkloadIdentityRoleSet
+	var roleSets []api.PlatformWorkloadIdentityRoleSetProperties
 
 	// Unmarshal env data into type api.PlatformWorkloadIdentityRoleSet
 	if err := getEnvironmentData(envKey, &roleSets); err != nil {
@@ -103,9 +103,9 @@ func updatePlatformWorkloadIdentityRoleSetsInCosmosDB(ctx context.Context, dbPla
 		return err
 	}
 
-	newRoleSets := make(map[string]api.PlatformWorkloadIdentityRoleSet)
+	newRoleSets := make(map[string]api.PlatformWorkloadIdentityRoleSetProperties)
 	for _, doc := range incomingRoleSets {
-		newRoleSets[doc.Properties.OpenShiftVersion] = doc
+		newRoleSets[doc.OpenShiftVersion] = doc
 	}
 
 	// 3 - Put/patch the new role sets to the doc, overwriting whatever is there for that version, or adding if new
@@ -113,16 +113,16 @@ func updatePlatformWorkloadIdentityRoleSetsInCosmosDB(ctx context.Context, dbPla
 	for _, doc := range existingRoleSets.PlatformWorkloadIdentityRoleSetDocuments {
 		existing, found := newRoleSets[doc.PlatformWorkloadIdentityRoleSet.Properties.OpenShiftVersion]
 		if found {
-			log.Printf("Found Version %q, patching", existing.Properties.OpenShiftVersion)
+			log.Printf("Found Version %q, patching", existing.OpenShiftVersion)
 			_, err := dbPlatformWorkloadIdentityRoleSets.Patch(ctx, doc.ID, func(inFlightDoc *api.PlatformWorkloadIdentityRoleSetDocument) error {
-				inFlightDoc.PlatformWorkloadIdentityRoleSet = &existing
+				inFlightDoc.PlatformWorkloadIdentityRoleSet.Properties = existing
 				return nil
 			})
 			if err != nil {
 				return err
 			}
-			log.Printf("Version %q found", existing.Properties.OpenShiftVersion)
-			delete(newRoleSets, existing.Properties.OpenShiftVersion)
+			log.Printf("Version %q found", existing.OpenShiftVersion)
+			delete(newRoleSets, existing.OpenShiftVersion)
 			continue
 		}
 
@@ -140,11 +140,14 @@ func updatePlatformWorkloadIdentityRoleSetsInCosmosDB(ctx context.Context, dbPla
 	}
 
 	for _, doc := range newRoleSets {
-		log.Printf("Version %q not found in database, creating", doc.Properties.OpenShiftVersion)
+		log.Printf("Version %q not found in database, creating", doc.OpenShiftVersion)
 		newDoc := api.PlatformWorkloadIdentityRoleSetDocument{
-			ID:                              dbPlatformWorkloadIdentityRoleSets.NewUUID(),
-			PlatformWorkloadIdentityRoleSet: &doc,
+			ID: dbPlatformWorkloadIdentityRoleSets.NewUUID(),
+			PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{
+				Properties: doc,
+			},
 		}
+
 		_, err := dbPlatformWorkloadIdentityRoleSets.Create(ctx, &newDoc)
 		if err != nil {
 			return err
