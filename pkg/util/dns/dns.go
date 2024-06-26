@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	sdkdns "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -36,9 +37,14 @@ type manager struct {
 }
 
 func NewManager(env env.Interface, tokenCredential azcore.TokenCredential) Manager {
+	options := arm.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: env.Environment().Cloud,
+		},
+	}
 	return &manager{
 		env:        env,
-		recordsets: armdns.NewRecordSetsClient(env.Environment(), env.SubscriptionID(), tokenCredential),
+		recordsets: armdns.NewRecordSetsClient(env.SubscriptionID(), tokenCredential, &options),
 	}
 }
 
