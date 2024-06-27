@@ -3,9 +3,11 @@
 
 from azure.cli.core.commands import CliCommandType
 from azext_aro._client_factory import cf_aro
-from azext_aro._format import aro_show_table_format
-from azext_aro._format import aro_list_table_format
-from azext_aro._format import aro_version_table_format
+from azext_aro._format import (
+    aro_show_table_format,
+    aro_list_table_format,
+    aro_version_table_format
+)
 from azext_aro._help import helps  # pylint: disable=unused-import
 
 

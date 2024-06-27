@@ -10,16 +10,27 @@ import textwrap
 import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2024_08_12_preview.models as openshiftcluster
 
 from azure.cli.command_modules.role import GraphError
-from azure.cli.core.commands.client_factory import get_mgmt_service_client
-from azure.cli.core.commands.client_factory import get_subscription_id
+from azure.cli.core.commands.client_factory import (
+    get_mgmt_service_client,
+    get_subscription_id
+)
 from azure.cli.core.profiles import ResourceType
 from azure.cli.core.util import sdk_no_wait
-from azure.cli.core.azclierror import FileOperationError, ResourceNotFoundError, \
-    UnauthorizedError, ValidationError
+from azure.cli.core.azclierror import (
+    FileOperationError,
+    ResourceNotFoundError,
+    UnauthorizedError,
+    ValidationError
+)
 from azext_aro._aad import AADManager
-from azext_aro._rbac import assign_role_to_resource, \
+from azext_aro._rbac import (
+    assign_role_to_resource,
     has_role_assignment_on_resource
-from azext_aro._rbac import ROLE_NETWORK_CONTRIBUTOR, ROLE_READER
+)
+from azext_aro._rbac import (
+    ROLE_NETWORK_CONTRIBUTOR,
+    ROLE_READER
+)
 from azext_aro._validators import validate_subnets
 from azext_aro._dynamic_validators import validate_cluster_create
 from azext_aro.aaz.latest.network.vnet.subnet import Show as subnet_show
@@ -27,7 +38,10 @@ from azext_aro.aaz.latest.network.vnet.subnet import Show as subnet_show
 from knack.log import get_logger
 
 from msrestazure.azure_exceptions import CloudError
-from msrestazure.tools import resource_id, parse_resource_id
+from msrestazure.tools import (
+    resource_id,
+    parse_resource_id
+)
 from msrest.exceptions import HttpOperationError
 
 from tabulate import tabulate

@@ -9,9 +9,12 @@ from os.path import exists
 
 from azure.cli.core.commands.client_factory import get_mgmt_service_client, get_subscription_id
 from azure.cli.core.profiles import ResourceType
-from azure.cli.core.azclierror import CLIInternalError, \
-    InvalidArgumentValueError, RequiredArgumentMissingError, \
+from azure.cli.core.azclierror import (
+    CLIInternalError,
+    InvalidArgumentValueError,
+    RequiredArgumentMissingError,
     MutuallyExclusiveArgumentError
+)
 from azure.core.exceptions import ResourceNotFoundError
 from knack.log import get_logger
 from msrestazure.azure_exceptions import CloudError
@@ -327,7 +330,7 @@ def validate_platform_workload_identities(cmd, namespace):
             identity.resource_id = identity_name_to_resource_id(
                 cmd, namespace, identity.resource_id)
 
-        if not identity_resource_id_is_valid(identity.resource_id):
+        if not is_valid_identity_resource_id(identity.resource_id):
             raise InvalidArgumentValueError(f"Resource {identity.resource_id} used for platform workload identity {identity.name} is not a valid userAssignedIdentity")  # pylint: disable=line-too-long
 
 
@@ -342,7 +345,7 @@ def validate_cluster_identity(cmd, namespace):
         namespace.mi_user_assigned = identity_name_to_resource_id(
             cmd, namespace, namespace.mi_user_assigned)
 
-    if not identity_resource_id_is_valid(namespace.mi_user_assigned):
+    if not is_valid_identity_resource_id(namespace.mi_user_assigned):
         raise InvalidArgumentValueError(f"Resource {namespace.mi_user_assigned} used for cluster user assigned identity is not a valid userAssignedIdentity")  # pylint: disable=line-too-long
 
 
@@ -356,7 +359,7 @@ def identity_name_to_resource_id(cmd, namespace, name):
     )
 
 
-def identity_resource_id_is_valid(rid):
+def is_valid_identity_resource_id(rid):
     parsed = parse_resource_id(rid)
     return parsed['namespace'] == 'Microsoft.ManagedIdentity' and \
         parsed['type'] == 'userAssignedIdentities'
