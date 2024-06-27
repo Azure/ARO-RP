@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	sdkarm "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/jongio/azidext/go/azidext"
@@ -26,7 +27,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
-	sdkarm "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 )
 
 var _ Deployer = (*deployer)(nil)
