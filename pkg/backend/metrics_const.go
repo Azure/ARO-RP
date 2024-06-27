@@ -4,15 +4,16 @@ package backend
 // Licensed under the Apache License 2.0.
 
 const (
-	metricPackage       = "backend.openshiftcluster"
-	metricValue   int64 = 1
-	enabled             = "Enabled"
-	disabled            = "Disabled"
-	custom              = "Custom"
-	defaultSet          = "Default"
-	unknown             = "unknown"
-	empty               = "empty"
-	managed             = "managed"
+	metricPackage                = "backend.openshiftcluster"
+	metricValue            int64 = 1
+	enabled                      = "Enabled"
+	disabled                     = "Disabled"
+	custom                       = "Custom"
+	defaultSet                   = "Default"
+	unknown                      = "unknown"
+	empty                        = "empty"
+	managed                      = "managed"
+	metricFailToCollectErr       = "failed to collect metric:"
 
 	encryptionAtHostMetricName = "encryptionathost"
 	diskSizeMetricName         = "disksize"
@@ -56,11 +57,13 @@ const (
 	operatorFlagsMetricName = "operatorflags"
 
 	asyncOperationsIdMetricName = "async_operationsid"
-	rpVersionMetricName         = "rpversion"
-	ocpVersionMetricName        = "ocpversion"
-	clusterNameMetricName       = "clustername"
-	resourecGroupMetricName     = "resourcegroup"
-	locationMetricName          = "location"
+	openshiftClusterMetricName  = "openshiftcluster"
+	rpVersionMetricName         = openshiftClusterMetricName + "." + "rpversion"
+	ocpVersionMetricName        = openshiftClusterMetricName + "." + "ocpversion"
+	clusterNameMetricName       = openshiftClusterMetricName + "." + "clustername"
+	clusterIdMetricName         = openshiftClusterMetricName + "." + "clusterid"
+	resourecGroupMetricName     = openshiftClusterMetricName + "." + "resourcegroup"
+	locationMetricName          = openshiftClusterMetricName + "." + "location"
 	resourceIdMetricName        = "resourceid"
 	subscriptionIdMetricName    = "subscriptionid"
 

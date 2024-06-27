@@ -104,14 +104,10 @@ func TestEmitMetrics(t *testing.T) {
 							FipsValidatedModules: api.FipsValidatedModulesEnabled,
 						},
 						NetworkProfile: api.NetworkProfile{
-							LoadBalancerProfile: &api.LoadBalancerProfile{
-								ManagedOutboundIPs: &api.ManagedOutboundIPs{
-									Count: 1,
-								},
-							},
-							PodCIDR:          "10.128.0.1/14",
-							ServiceCIDR:      "172.30.0.1/16",
-							PreconfiguredNSG: api.PreconfiguredNSGEnabled,
+							LoadBalancerProfile: &api.LoadBalancerProfile{},
+							PodCIDR:             "10.128.0.1/14",
+							ServiceCIDR:         "172.30.0.1/16",
+							PreconfiguredNSG:    api.PreconfiguredNSGEnabled,
 						},
 						OperatorFlags: api.OperatorFlags{"testFlag": "true"},
 						WorkerProfiles: []api.WorkerProfile{
@@ -204,12 +200,12 @@ func TestEmitMetrics(t *testing.T) {
 			}
 
 			dimensions := map[string]string{}
-			ocb.gatherOperationMetrics(tt.operationType, tt.provisioningState, tt.backendErr, dimensions)
-			ocb.gatherCorrelationID(tt.doc, dimensions)
-			ocb.gatherMiscMetrics(tt.doc, dimensions)
-			ocb.gatherAuthMetrics(tt.doc, dimensions)
-			ocb.gatherNetworkMetrics(tt.doc, dimensions)
-			ocb.gatherNodeMetrics(tt.doc, dimensions)
+			ocb.gatherOperationMetrics(log, tt.operationType, tt.provisioningState, tt.backendErr, dimensions)
+			ocb.gatherCorrelationID(log, tt.doc, dimensions)
+			ocb.gatherMiscMetrics(log, tt.doc, dimensions)
+			ocb.gatherAuthMetrics(log, tt.doc, dimensions)
+			ocb.gatherNetworkMetrics(log, tt.doc, dimensions)
+			ocb.gatherNodeMetrics(log, tt.doc, dimensions)
 
 			emitter.EXPECT().EmitGauge(ocb.getMetricName(tt.operationType), metricValue, dimensions).MaxTimes(1)
 
