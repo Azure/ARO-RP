@@ -111,7 +111,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 		publicipaddresses:      network.NewPublicIPAddressesClient(_env.Environment(), config.SubscriptionID, authorizer),
 		vmss:                   vmssClient,
 		vmssvms:                compute.NewVirtualMachineScaleSetVMsClient(_env.Environment(), config.SubscriptionID, authorizer),
-		zones:                  sdkdns.NewZonesClient(config.SubscriptionID, tokenCredential, $options),
+		zones:                  sdkdns.NewZonesClient(config.SubscriptionID, tokenCredential, &options),
 		clusterKeyvault:        keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+env.ClusterKeyvaultSuffix+"."+_env.Environment().KeyVaultDNSSuffix+"/"),
 		portalKeyvault:         keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+env.PortalKeyvaultSuffix+"."+_env.Environment().KeyVaultDNSSuffix+"/"),
 		serviceKeyvault:        keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+env.ServiceKeyvaultSuffix+"."+_env.Environment().KeyVaultDNSSuffix+"/"),
