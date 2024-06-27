@@ -154,10 +154,10 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 		return err
 	}
 
-	nsRecords := make([]mgmtdns.NsRecord, 0, len(*zone.NameServers))
-	for i := range *zone.NameServers {
-		nsRecords = append(nsRecords, mgmtdns.NsRecord{
-			Nsdname: &(*zone.NameServers)[i],
+	nsRecords := make([]*sdkdns.NsRecord, 0, len(zone.Zone.Properties.NameServers))
+	for i := range zone.Zone.Properties.NameServers {
+		nsRecords = append(nsRecords, &sdkdns.NsRecord{
+			Nsdname: zone.Zone.Properties.NameServers[i],
 		})
 	}
 
