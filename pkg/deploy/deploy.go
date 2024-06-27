@@ -26,7 +26,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	sdkarm "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 )
 
