@@ -18,6 +18,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/vmsscleaner"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	sdkdns "github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armdns"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
@@ -26,6 +27,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	sdkarm "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 )
 
 var _ Deployer = (*deployer)(nil)
@@ -45,7 +48,7 @@ type deployer struct {
 
 	globaldeployments      features.DeploymentsClient
 	globalgroups           features.ResourceGroupsClient
-	globalrecordsets       dns.RecordSetsClient
+	globalrecordsets       sdkdns.RecordSetsClient
 	globalaccounts         storage.AccountsClient
 	deployments            features.DeploymentsClient
 	groups                 features.ResourceGroupsClient
@@ -56,7 +59,7 @@ type deployer struct {
 	roleassignments        authorization.RoleAssignmentsClient
 	vmss                   compute.VirtualMachineScaleSetsClient
 	vmssvms                compute.VirtualMachineScaleSetVMsClient
-	zones                  dns.ZonesClient
+	zones                  sdkdns.ZonesClient
 	clusterKeyvault        keyvault.Manager
 	portalKeyvault         keyvault.Manager
 	serviceKeyvault        keyvault.Manager
@@ -88,14 +91,18 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 	kvAuthorizer := azidext.NewTokenCredentialAdapter(tokenCredential, scopes)
 
 	vmssClient := compute.NewVirtualMachineScaleSetsClient(_env.Environment(), config.SubscriptionID, authorizer)
-
+	options := sdkarm.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: _env.Environment().Cloud,
+		},
+	}
 	return &deployer{
 		log: log,
 		env: _env,
 
 		globaldeployments:      features.NewDeploymentsClient(_env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
 		globalgroups:           features.NewResourceGroupsClient(_env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
-		globalrecordsets:       dns.NewRecordSetsClient(_env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
+		globalrecordsets:       dns.NewRecordSetsClient(*config.Configuration.GlobalSubscriptionID, authorizer, &options),
 		globalaccounts:         storage.NewAccountsClient(_env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
 		deployments:            features.NewDeploymentsClient(_env.Environment(), config.SubscriptionID, authorizer),
 		groups:                 features.NewResourceGroupsClient(_env.Environment(), config.SubscriptionID, authorizer),
@@ -106,7 +113,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Core, config *RPConfig
 		publicipaddresses:      network.NewPublicIPAddressesClient(_env.Environment(), config.SubscriptionID, authorizer),
 		vmss:                   vmssClient,
 		vmssvms:                compute.NewVirtualMachineScaleSetVMsClient(_env.Environment(), config.SubscriptionID, authorizer),
-		zones:                  dns.NewZonesClient(_env.Environment(), config.SubscriptionID, authorizer),
+		zones:                  dns.NewZonesClient(config.SubscriptionID, authorizer, options),
 		clusterKeyvault:        keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+env.ClusterKeyvaultSuffix+"."+_env.Environment().KeyVaultDNSSuffix+"/"),
 		portalKeyvault:         keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+env.PortalKeyvaultSuffix+"."+_env.Environment().KeyVaultDNSSuffix+"/"),
 		serviceKeyvault:        keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+env.ServiceKeyvaultSuffix+"."+_env.Environment().KeyVaultDNSSuffix+"/"),
