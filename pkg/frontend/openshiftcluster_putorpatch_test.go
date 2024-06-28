@@ -6,6 +6,7 @@ package frontend
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -3316,49 +3317,20 @@ func TestValidateIdentityUrl(t *testing.T) {
 		wantError   error
 	}{
 		{
-			name:        "identity URL is empty, is not wi/mi cluster create",
-			identityURL: "",
-			cluster:     &api.OpenShiftCluster{},
-			expected:    &api.OpenShiftCluster{},
-			isCreate:    false,
-		},
-		{
 			name:        "identity URL is empty, is wi/mi cluster create",
 			identityURL: "",
 			cluster:     &api.OpenShiftCluster{},
 			expected:    &api.OpenShiftCluster{},
 			isCreate:    true,
-			wantError:   errMissingIdentityURL,
+			wantError:   errMissingIdentityParmeter,
 		},
 		{
-			name:        "cluster is not wi/mi, identityURL passed",
-			identityURL: "http://foo.bar",
-			cluster: &api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: &api.ServicePrincipalProfile{},
-				},
-			},
-			expected: &api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: &api.ServicePrincipalProfile{},
-				},
-			},
-			isCreate: true,
-		},
-		{
-			name:        "cluster is not wi/mi, identityURL not passed",
+			name:        "identity URL is empty, is not wi/mi cluster create",
 			identityURL: "",
-			cluster: &api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: &api.ServicePrincipalProfile{},
-				},
-			},
-			expected: &api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					ServicePrincipalProfile: &api.ServicePrincipalProfile{},
-				},
-			},
-			isCreate: true,
+			cluster:     &api.OpenShiftCluster{},
+			expected:    &api.OpenShiftCluster{},
+			isCreate:    false,
+			wantError:   nil,
 		},
 		{
 			name: "pass - identity URL passed on wi/mi cluster",
@@ -3376,12 +3348,99 @@ func TestValidateIdentityUrl(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			err := validateIdentityUrl(tt.cluster, tt.identityURL, tt.isCreate)
-			if err != nil && err != tt.wantError {
+			if !errors.Is(err, tt.wantError) {
 				t.Error(cmp.Diff(err, tt.wantError))
 			}
 
 			if !reflect.DeepEqual(tt.cluster, tt.expected) {
 				t.Error(cmp.Diff(tt.cluster, tt.expected))
+			}
+		})
+	}
+}
+
+func TestValidateIdentityTenantID(t *testing.T) {
+	for _, tt := range []struct {
+		name      string
+		tenantID  string
+		cluster   *api.OpenShiftCluster
+		expected  *api.OpenShiftCluster
+		isCreate  bool
+		wantError error
+	}{
+		{
+			name:      "tenantID is empty, is wi/mi cluster create",
+			tenantID:  "",
+			cluster:   &api.OpenShiftCluster{},
+			expected:  &api.OpenShiftCluster{},
+			isCreate:  true,
+			wantError: errMissingIdentityParmeter,
+		},
+		{
+			name:      "tenantID is empty, is not wi/mi cluster create",
+			tenantID:  "",
+			cluster:   &api.OpenShiftCluster{},
+			expected:  &api.OpenShiftCluster{},
+			isCreate:  false,
+			wantError: nil,
+		},
+		{
+			name: "pass - tenantID passed on wi/mi cluster",
+			cluster: &api.OpenShiftCluster{
+				Identity: &api.Identity{},
+			},
+			tenantID: "bogus",
+			expected: &api.OpenShiftCluster{
+				Identity: &api.Identity{
+					TenantID: "bogus",
+				},
+			},
+			isCreate: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateIdentityTenantID(tt.cluster, tt.tenantID, tt.isCreate)
+			if !errors.Is(err, tt.wantError) {
+				t.Error(cmp.Diff(err, tt.wantError))
+			}
+
+			if !reflect.DeepEqual(tt.cluster, tt.expected) {
+				t.Error(cmp.Diff(tt.cluster, tt.expected))
+			}
+		})
+	}
+}
+
+func TestValidateIdentityParam(t *testing.T) {
+	for _, tt := range []struct {
+		name      string
+		param     string
+		isCreate  bool
+		wantError error
+	}{
+		{
+			name:      "param is empty, is wi/mi cluster create",
+			param:     "",
+			isCreate:  true,
+			wantError: errMissingIdentityParmeter,
+		},
+		{
+			name:      "param is empty, is not wi/mi cluster create",
+			param:     "",
+			isCreate:  false,
+			wantError: nil,
+		},
+		{
+			name:      "pass - param passed on wi/mi cluster",
+			param:     "bogus",
+			isCreate:  true,
+			wantError: nil,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateIdentityParam(tt.param, tt.isCreate)
+			if !errors.Is(err, tt.wantError) {
+				t.Error(cmp.Diff(err, tt.wantError))
 			}
 		})
 	}

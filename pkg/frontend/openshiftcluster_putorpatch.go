@@ -306,7 +306,7 @@ func enrichClusterSystemData(doc *api.OpenShiftClusterDocument, systemData *api.
 }
 
 func validateIdentityUrl(cluster *api.OpenShiftCluster, identityURL string, isCreate bool) error {
-	if err := validateIdentityParam(cluster, identityURL, isCreate); err != nil {
+	if err := validateIdentityParam(identityURL, isCreate); err != nil {
 		return fmt.Errorf("%w: %s", err, "identity URL")
 	}
 
@@ -316,7 +316,7 @@ func validateIdentityUrl(cluster *api.OpenShiftCluster, identityURL string, isCr
 }
 
 func validateIdentityTenantID(cluster *api.OpenShiftCluster, identityTenantID string, isCreate bool) error {
-	if err := validateIdentityParam(cluster, identityTenantID, isCreate); err != nil {
+	if err := validateIdentityParam(identityTenantID, isCreate); err != nil {
 		return fmt.Errorf("%w: %s", err, "identity tenant ID")
 	}
 
@@ -325,7 +325,7 @@ func validateIdentityTenantID(cluster *api.OpenShiftCluster, identityTenantID st
 	return nil
 }
 
-func validateIdentityParam(cluster *api.OpenShiftCluster, param string, isCreate bool) error {
+func validateIdentityParam(param string, isCreate bool) error {
 	if param == "" {
 		if isCreate {
 			return errMissingIdentityParmeter
