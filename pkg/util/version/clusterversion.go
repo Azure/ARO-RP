@@ -4,9 +4,12 @@ package version
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"errors"
 
 	configv1 "github.com/openshift/api/config/v1"
+	configclient "github.com/openshift/client-go/config/clientset/versioned"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // GetClusterVersion fetches the version of the openshift cluster.
@@ -33,4 +36,18 @@ func GetClusterVersion(cv *configv1.ClusterVersion) (*Version, error) {
 	}
 
 	return nil, unknownErr
+}
+
+func ClusterVersionIsLessThan4_4(ctx context.Context, configcli configclient.Interface) (bool, error) {
+	cv, err := configcli.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
+	if err != nil {
+		return false, err
+	}
+	v, err := GetClusterVersion(cv)
+	if err != nil {
+		return false, err
+	}
+
+	// 4.3 uses SRV records for etcd
+	return v.Lt(NewVersion(4, 4)), nil
 }
