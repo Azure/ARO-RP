@@ -25,11 +25,7 @@ func getRoleSetsFromEnv() ([]api.PlatformWorkloadIdentityRoleSetProperties, erro
 	var roleSets []api.PlatformWorkloadIdentityRoleSetProperties
 
 	// Unmarshal env data into type api.PlatformWorkloadIdentityRoleSet
-	if err := getEnvironmentData(envKey, &roleSets); err != nil {
-		return nil, err
-	}
-
-	return roleSets, nil
+	return roleSets, getEnvironmentData(envKey, &roleSets)
 }
 
 func getPlatformWorkloadIdentityRoleSetDatabase(ctx context.Context, log *logrus.Entry) (database.PlatformWorkloadIdentityRoleSets, error) {
@@ -82,12 +78,8 @@ func getPlatformWorkloadIdentityRoleSetDatabase(ctx context.Context, log *logrus
 	if err != nil {
 		return nil, err
 	}
-	dbPlatformWorkloadIdentityRoleSets, err := database.NewPlatformWorkloadIdentityRoleSets(ctx, dbc, dbName)
-	if err != nil {
-		return nil, err
-	}
 
-	return dbPlatformWorkloadIdentityRoleSets, nil
+	return database.NewPlatformWorkloadIdentityRoleSets(ctx, dbc, dbName)
 }
 
 func updatePlatformWorkloadIdentityRoleSetsInCosmosDB(ctx context.Context, dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets, log *logrus.Entry) error {
