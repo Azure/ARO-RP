@@ -18,6 +18,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
+	"github.com/Azure/ARO-RP/pkg/api/util/identity"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
@@ -99,7 +100,8 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	}
 
 	// Don't persist identity parameters in non-wimi clusters
-	if doc.OpenShiftCluster.Properties.ServicePrincipalProfile == nil || doc.OpenShiftCluster.Identity != nil {
+	if identity.IsManagedWorkloadIdentityEnabled(doc.OpenShiftCluster) {
+		// We don't support changing the cluster MSI, so only need to validate/apply on create
 		if isCreate {
 			if err := validateIdentityUrl(doc.OpenShiftCluster, identityURL); err != nil {
 				return nil, err
