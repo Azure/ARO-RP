@@ -23,6 +23,7 @@ import (
 	mock_remotepdp "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/authz/remotepdp"
 	mock_azcore "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/azuresdk/azcore"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
+	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
@@ -42,6 +43,9 @@ var (
 	workerNgID        = resourceGroupID + "/providers/Microsoft.Network/natGateways/workerNg"
 	masterNSGv1       = resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-controlplane-nsg"
 	workerNSGv1       = resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg"
+	platformIdentity1 = resourceGroupID + "/providers/Microsoft.ManagedIdentity/userAssignedIdentities/miwi-platform-identity"
+	dummyClientId     = uuid.DefaultGenerator.Generate()
+	dummyObjectId     = uuid.DefaultGenerator.Generate()
 )
 
 func TestGetRouteTableID(t *testing.T) {
@@ -601,6 +605,24 @@ var mockAccessToken = azcore.AccessToken{
 }
 
 var (
+	platformIdentity1SubnetActions = []string{
+		"Microsoft.Network/virtualNetworks/read",
+		"Microsoft.Network/routeTables/write",
+		"Microsoft.Network/natGateways/read",
+		"Microsoft.Network/networkSecurityGroups/join/action",
+		"Microsoft.Compute/diskEncryptionSets/read",
+	}
+	platformIdentity1SubnetActionsNoIntersect = []string{
+		"Microsoft.Network/virtualNetworks/nointersect/nointersect",
+	}
+	platformIdentities = []api.PlatformWorkloadIdentity{
+		{
+			OperatorName: "Dummy",
+			ResourceID:   platformIdentity1,
+			ClientID:     dummyClientId,
+			ObjectID:     dummyObjectId,
+		},
+	}
 	validSubnetsAuthorizationDecisions = remotepdp.AuthorizationDecisionResponse{
 		Value: []remotepdp.AuthorizationDecision{
 			{
@@ -697,9 +719,11 @@ func TestValidateVnetPermissions(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tt := range []struct {
-		name    string
-		mocks   func(*mock_azcore.MockTokenCredential, *mock_remotepdp.MockRemotePDPClient, context.CancelFunc)
-		wantErr string
+		name                string
+		platformIdentities  []api.PlatformWorkloadIdentity
+		platformIdentityMap map[string][]string
+		mocks               func(*mock_azcore.MockTokenCredential, *mock_remotepdp.MockRemotePDPClient, context.CancelFunc)
+		wantErr             string
 	}{
 		{
 			name: "pass",
@@ -708,6 +732,29 @@ func TestValidateVnetPermissions(t *testing.T) {
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Return(&validSubnetsAuthorizationDecisions, nil)
+			},
+		},
+		{
+			name:               "pass - MIWI Cluster",
+			platformIdentities: platformIdentities,
+			platformIdentityMap: map[string][]string{
+				"Dummy": platformIdentity1SubnetActions,
+			},
+			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, _ context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Return(&validSubnetsAuthorizationDecisions, nil)
+			},
+		},
+		{
+			name:               "Success - MIWI Cluster - No intersecting Subnet Actions",
+			platformIdentities: platformIdentities,
+			platformIdentityMap: map[string][]string{
+				"Dummy": platformIdentity1SubnetActionsNoIntersect,
+			},
+			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, _ context.CancelFunc) {
+				mockTokenCredential(tokenCred)
 			},
 		},
 		{
@@ -722,6 +769,23 @@ func TestValidateVnetPermissions(t *testing.T) {
 					Return(&invalidSubnetsAuthorizationDecisionsReadNotAllowed, nil)
 			},
 			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on vnet '" + vnetID + "'.",
+		},
+		{
+			name:               "Fail - MIWI Cluster - missing permissions",
+			platformIdentities: platformIdentities,
+			platformIdentityMap: map[string][]string{
+				"Dummy": platformIdentity1SubnetActions,
+			},
+			mocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Do(func(arg0, arg1 interface{}) {
+						cancel()
+					}).
+					Return(&invalidSubnetsAuthorizationDecisionsReadNotAllowed, nil)
+			},
+			wantErr: "400: InvalidServicePrincipalPermissions: : The Dummy platform managed identity does not have required permissions on vnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet'.",
 		},
 		{
 			name: "fail: CheckAccess Return less entries than requested",
@@ -792,6 +856,11 @@ func TestValidateVnetPermissions(t *testing.T) {
 				checkAccessSubjectInfoCred: tokenCred,
 			}
 
+			if tt.platformIdentities != nil {
+				dv.platformIdentities = tt.platformIdentities
+				dv.platformIdentitiesActionsMap = tt.platformIdentityMap
+			}
+
 			vnetr, err := azure.ParseResourceID(vnetID)
 			if err != nil {
 				t.Fatal(err)
@@ -855,11 +924,13 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tt := range []struct {
-		name           string
-		subnet         Subnet
-		pdpClientMocks func(*mock_azcore.MockTokenCredential, *mock_remotepdp.MockRemotePDPClient, context.CancelFunc)
-		vnetMocks      func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
-		wantErr        string
+		name                string
+		subnet              Subnet
+		platformIdentities  []api.PlatformWorkloadIdentity
+		platformIdentityMap map[string][]string
+		pdpClientMocks      func(*mock_azcore.MockTokenCredential, *mock_remotepdp.MockRemotePDPClient, context.CancelFunc)
+		vnetMocks           func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
+		wantErr             string
 	}{
 		{
 			name:   "fail: failed to get vnet",
@@ -921,7 +992,30 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					}).
 					Return(&invalidRouteTablesAuthorizationDecisionsWriteNotAllowed, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor role on route table '" + workerRtID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on route table '" + workerRtID + "'.",
+		},
+		{
+			name:               "Fail - MIWI Cluster - permissions don't exist",
+			subnet:             Subnet{ID: workerSubnet},
+			platformIdentities: platformIdentities,
+			platformIdentityMap: map[string][]string{
+				"Dummy": platformIdentity1SubnetActions,
+			},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
+			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Do(func(arg0, arg1 interface{}) {
+						cancel()
+					}).
+					Return(&invalidRouteTablesAuthorizationDecisionsWriteNotAllowed, nil)
+			},
+			wantErr: "400: InvalidServicePrincipalPermissions: : The Dummy platform managed identity does not have required permissions on route table '" + workerRtID + "'.",
 		},
 		{
 			name:   "fail: CheckAccessV2 doesn't return all the entries",
@@ -940,7 +1034,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 					}).
 					Return(&invalidRouteTablesAuthorizationDecisionsMissingWrite, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor role on route table '" + workerRtID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on route table '" + workerRtID + "'.",
 		},
 		{
 			name:   "pass",
@@ -955,6 +1049,41 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Return(&validRouteTablesAuthorizationDecisions, nil)
+			},
+		},
+		{
+			name:               "pass - MIWI Cluster",
+			subnet:             Subnet{ID: workerSubnet},
+			platformIdentities: platformIdentities,
+			platformIdentityMap: map[string][]string{
+				"Dummy": platformIdentity1SubnetActions,
+			},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
+			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Return(&validRouteTablesAuthorizationDecisions, nil)
+			},
+		},
+		{
+			name:               "Success - MIWI Cluster - No intersecting Subnet Actions",
+			subnet:             Subnet{ID: workerSubnet},
+			platformIdentities: platformIdentities,
+			platformIdentityMap: map[string][]string{
+				"Dummy": platformIdentity1SubnetActionsNoIntersect,
+			},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
+			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+				mockTokenCredential(tokenCred)
 			},
 		},
 	} {
@@ -996,6 +1125,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 			}
 
 			dv := &dynamic{
+				appID:                      "fff51942-b1f9-4119-9453-aaa922259eb7",
 				azEnv:                      &azureclient.PublicCloud,
 				authorizerType:             AuthorizerClusterServicePrincipal,
 				log:                        logrus.NewEntry(logrus.StandardLogger()),
@@ -1010,6 +1140,11 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 
 			if tt.vnetMocks != nil {
 				tt.vnetMocks(vnetClient, *vnet)
+			}
+
+			if tt.platformIdentities != nil {
+				dv.platformIdentities = tt.platformIdentities
+				dv.platformIdentitiesActionsMap = tt.platformIdentityMap
 			}
 
 			err := dv.validateRouteTablePermissions(ctx, tt.subnet)
@@ -1070,11 +1205,13 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tt := range []struct {
-		name           string
-		subnet         Subnet
-		pdpClientMocks func(*mock_azcore.MockTokenCredential, *mock_remotepdp.MockRemotePDPClient, context.CancelFunc)
-		vnetMocks      func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
-		wantErr        string
+		name                string
+		subnet              Subnet
+		platformIdentities  []api.PlatformWorkloadIdentity
+		platformIdentityMap map[string][]string
+		pdpClientMocks      func(*mock_azcore.MockTokenCredential, *mock_remotepdp.MockRemotePDPClient, context.CancelFunc)
+		vnetMocks           func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
+		wantErr             string
 	}{
 		{
 			name:   "fail: failed to get vnet",
@@ -1126,7 +1263,31 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 					}).
 					Return(&invalidNatGWAuthorizationDecisionsReadNotAllowed, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor role on nat gateway '" + workerNgID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on nat gateway '" + workerNgID + "'.",
+		},
+		{
+			name:               "Fail - MIWI Cluster - permissions don't exist",
+			subnet:             Subnet{ID: workerSubnet},
+			platformIdentities: platformIdentities,
+			platformIdentityMap: map[string][]string{
+				"Dummy": platformIdentity1SubnetActions,
+			},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
+			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				pdpClient.
+					EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Do(func(arg0, arg1 interface{}) {
+						cancel()
+					}).
+					Return(&invalidNatGWAuthorizationDecisionsReadNotAllowed, nil)
+			},
+			wantErr: "400: InvalidServicePrincipalPermissions: : The Dummy platform managed identity does not have required permissions on nat gateway '" + workerNgID + "'.",
 		},
 		{
 			name:   "fail: CheckAccessV2 doesn't return all permissions",
@@ -1146,7 +1307,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 					}).
 					Return(&invalidNatGWAuthorizationDecisionsMissingWrite, nil)
 			},
-			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal does not have Network Contributor role on nat gateway '" + workerNgID + "'.",
+			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on nat gateway '" + workerNgID + "'.",
 		},
 		{
 			name:   "pass",
@@ -1161,6 +1322,41 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 				pdpClient.EXPECT().
 					CheckAccess(gomock.Any(), gomock.Any()).
 					Return(&validNatGWAuthorizationDecision, nil)
+			},
+		},
+		{
+			name:               "pass - MIWI Cluster",
+			subnet:             Subnet{ID: workerSubnet},
+			platformIdentities: platformIdentities,
+			platformIdentityMap: map[string][]string{
+				"Dummy": platformIdentity1SubnetActions,
+			},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
+			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().
+					CheckAccess(gomock.Any(), gomock.Any()).
+					Return(&validNatGWAuthorizationDecision, nil)
+			},
+		},
+		{
+			name:               "Success - MIWI Cluster - No intersecting Subnet Actions",
+			subnet:             Subnet{ID: workerSubnet},
+			platformIdentities: platformIdentities,
+			platformIdentityMap: map[string][]string{
+				"Dummy": platformIdentity1SubnetActionsNoIntersect,
+			},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					Return(vnet, nil)
+			},
+			pdpClientMocks: func(tokenCred *mock_azcore.MockTokenCredential, pdpClient *mock_remotepdp.MockRemotePDPClient, cancel context.CancelFunc) {
+				mockTokenCredential(tokenCred)
 			},
 		},
 		{
@@ -1213,6 +1409,7 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 			}
 
 			dv := &dynamic{
+				appID:                      "fff51942-b1f9-4119-9453-aaa922259eb7",
 				azEnv:                      &azureclient.PublicCloud,
 				authorizerType:             AuthorizerClusterServicePrincipal,
 				log:                        logrus.NewEntry(logrus.StandardLogger()),
@@ -1227,6 +1424,11 @@ func TestValidateNatGatewaysPermissions(t *testing.T) {
 
 			if tt.vnetMocks != nil {
 				tt.vnetMocks(vnetClient, *vnet)
+			}
+
+			if tt.platformIdentities != nil {
+				dv.platformIdentities = tt.platformIdentities
+				dv.platformIdentitiesActionsMap = tt.platformIdentityMap
 			}
 
 			err := dv.validateNatGatewayPermissions(ctx, tt.subnet)
@@ -1308,11 +1510,13 @@ var (
 func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 	ctx := context.Background()
 	for _, tt := range []struct {
-		name             string
-		modifyOC         func(*api.OpenShiftCluster)
-		checkAccessMocks func(context.CancelFunc, *mock_remotepdp.MockRemotePDPClient, *mock_azcore.MockTokenCredential)
-		vnetMocks        func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
-		wantErr          string
+		name                string
+		modifyOC            func(*api.OpenShiftCluster)
+		platformIdentities  []api.PlatformWorkloadIdentity
+		platformIdentityMap map[string][]string
+		checkAccessMocks    func(context.CancelFunc, *mock_remotepdp.MockRemotePDPClient, *mock_azcore.MockTokenCredential)
+		vnetMocks           func(*mock_network.MockVirtualNetworksClient, mgmtnetwork.VirtualNetwork)
+		wantErr             string
 	}{
 		{
 			name: "pass: skip when preconfiguredNSG is not enabled",
@@ -1349,6 +1553,38 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 			wantErr: "400: InvalidServicePrincipalPermissions: : The cluster service principal (Application ID: fff51942-b1f9-4119-9453-aaa922259eb7) does not have Network Contributor role on network security group '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg'. This is required when the enable-preconfigured-nsg option is specified.",
 		},
 		{
+			name: "Fail - MIWI Cluster - permissions don't exist on all nsg",
+			modifyOC: func(oc *api.OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
+			},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					AnyTimes().
+					Return(vnet, nil)
+			},
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
+				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().CheckAccess(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, authReq remotepdp.AuthorizationRequest) (*remotepdp.AuthorizationDecisionResponse, error) {
+						cancel() // wait.PollImmediateUntil will always be invoked at least once
+						switch authReq.Resource.Id {
+						case masterNSGv1:
+							return &canJoinNSG, nil
+						case workerNSGv1:
+							return &cannotJoinNSG, nil
+						}
+						return &cannotJoinNSG, nil
+					},
+					).AnyTimes()
+			},
+			platformIdentities: platformIdentities,
+			platformIdentityMap: map[string][]string{
+				"Dummy": platformIdentity1SubnetActions,
+			},
+			wantErr: "400: InvalidServicePrincipalPermissions: : The Dummy platform managed identity does not have required permissions on network security group '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg'. This is required when the enable-preconfigured-nsg option is specified.",
+		},
+		{
 			name: "pass: sp has the required permission on the NSG",
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
@@ -1367,6 +1603,56 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 					}).
 					Return(&canJoinNSG, nil).
 					AnyTimes()
+			},
+		},
+		{
+			name: "pass - MIWI Cluster",
+			modifyOC: func(oc *api.OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
+			},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					AnyTimes().
+					Return(vnet, nil)
+			},
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
+				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().CheckAccess(gomock.Any(), gomock.Any()).
+					Do(func(_, _ interface{}) {
+						cancel()
+					}).
+					Return(&canJoinNSG, nil).
+					AnyTimes()
+			},
+			platformIdentities: platformIdentities,
+			platformIdentityMap: map[string][]string{
+				"Dummy": platformIdentity1SubnetActions,
+			},
+		},
+		{
+			name: "Success - MIWI Cluster - No intersecting Subnet Actions",
+			modifyOC: func(oc *api.OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PreconfiguredNSG = api.PreconfiguredNSGEnabled
+			},
+			vnetMocks: func(vnetClient *mock_network.MockVirtualNetworksClient, vnet mgmtnetwork.VirtualNetwork) {
+				vnetClient.EXPECT().
+					Get(gomock.Any(), resourceGroupName, vnetName, "").
+					AnyTimes().
+					Return(vnet, nil)
+			},
+			checkAccessMocks: func(cancel context.CancelFunc, pdpClient *mock_remotepdp.MockRemotePDPClient, tokenCred *mock_azcore.MockTokenCredential) {
+				mockTokenCredential(tokenCred)
+				pdpClient.EXPECT().CheckAccess(gomock.Any(), gomock.Any()).
+					Do(func(_, _ interface{}) {
+						cancel()
+					}).
+					Return(&canJoinNSG, nil).
+					AnyTimes()
+			},
+			platformIdentities: platformIdentities,
+			platformIdentityMap: map[string][]string{
+				"Dummy": platformIdentity1SubnetActionsNoIntersect,
 			},
 		},
 	} {
@@ -1446,6 +1732,11 @@ func TestValidatePreconfiguredNSGPermissions(t *testing.T) {
 					ID:   workerSubnet,
 					Path: workerSubnetPath,
 				},
+			}
+
+			if tt.platformIdentities != nil {
+				dv.platformIdentities = tt.platformIdentities
+				dv.platformIdentitiesActionsMap = tt.platformIdentityMap
 			}
 
 			err := dv.ValidatePreConfiguredNSGs(ctx, oc, subnets)
