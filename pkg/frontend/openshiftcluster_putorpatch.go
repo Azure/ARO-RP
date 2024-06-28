@@ -25,7 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-var errMissingIdentityURL error = fmt.Errorf("identityURL not provided but required for workload identity cluster")
+var errMissingIdentityParmeter error = fmt.Errorf("identity parameter not provided but required for workload identity cluster")
 
 func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -44,11 +44,12 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 	resourceProviderNamespace := chi.URLParam(r, "resourceProviderNamespace")
 
 	identityURL := r.Header.Get("x-ms-identity-url")
+	identityTenantID := r.Header.Get("x-ms-home-tenant-id")
 
 	apiVersion := r.URL.Query().Get(api.APIVersionKey)
 	err := cosmosdb.RetryOnPreconditionFailed(func() error {
 		var err error
-		b, err = f._putOrPatchOpenShiftCluster(ctx, log, body, correlationData, systemData, r.URL.Path, originalPath, r.Method, referer, &header, f.apis[apiVersion].OpenShiftClusterConverter, f.apis[apiVersion].OpenShiftClusterStaticValidator, subId, resourceProviderNamespace, apiVersion, identityURL)
+		b, err = f._putOrPatchOpenShiftCluster(ctx, log, body, correlationData, systemData, r.URL.Path, originalPath, r.Method, referer, &header, f.apis[apiVersion].OpenShiftClusterConverter, f.apis[apiVersion].OpenShiftClusterStaticValidator, subId, resourceProviderNamespace, apiVersion, identityURL, identityTenantID)
 		return err
 	})
 
@@ -56,7 +57,8 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 	reply(log, w, header, b, err)
 }
 
-func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.Entry, body []byte, correlationData *api.CorrelationData, systemData *api.SystemData, path, originalPath, method, referer string, header *http.Header, converter api.OpenShiftClusterConverter, staticValidator api.OpenShiftClusterStaticValidator, subId, resourceProviderNamespace string, apiVersion string, identityURL string) ([]byte, error) {
+// TODO - refactor this function to reduce the number of parameters
+func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.Entry, body []byte, correlationData *api.CorrelationData, systemData *api.SystemData, path, originalPath, method, referer string, header *http.Header, converter api.OpenShiftClusterConverter, staticValidator api.OpenShiftClusterStaticValidator, subId, resourceProviderNamespace string, apiVersion string, identityURL string, identityTenantID string) ([]byte, error) {
 	subscription, err := f.validateSubscriptionState(ctx, path, api.SubscriptionStateRegistered)
 	if err != nil {
 		return nil, err
@@ -96,9 +98,14 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		}
 	}
 
-	err = validateIdentityUrl(doc.OpenShiftCluster, identityURL, isCreate)
-	if err != nil {
-		return nil, err
+	// Don't persist identity parameters in non-wimi clusters
+	if doc.OpenShiftCluster.Properties.ServicePrincipalProfile == nil || doc.OpenShiftCluster.Identity != nil {
+		if err := validateIdentityUrl(doc.OpenShiftCluster, identityURL, isCreate); err != nil {
+			return nil, err
+		}
+		if err := validateIdentityTenantID(doc.OpenShiftCluster, identityTenantID, isCreate); err != nil {
+			return nil, err
+		}
 	}
 
 	doc.CorrelationData = correlationData
@@ -299,19 +306,31 @@ func enrichClusterSystemData(doc *api.OpenShiftClusterDocument, systemData *api.
 }
 
 func validateIdentityUrl(cluster *api.OpenShiftCluster, identityURL string, isCreate bool) error {
-	// Don't persist identity URL in non-wimi clusters
-	if cluster.Properties.ServicePrincipalProfile != nil || cluster.Identity == nil {
-		return nil
-	}
-
-	if identityURL == "" {
-		if isCreate {
-			return errMissingIdentityURL
-		}
-		return nil
+	if err := validateIdentityParam(cluster, identityURL, isCreate); err != nil {
+		return fmt.Errorf("%w: %s", err, "identity URL")
 	}
 
 	cluster.Identity.IdentityURL = identityURL
+
+	return nil
+}
+
+func validateIdentityTenantID(cluster *api.OpenShiftCluster, identityTenantID string, isCreate bool) error {
+	if err := validateIdentityParam(cluster, identityTenantID, isCreate); err != nil {
+		return fmt.Errorf("%w: %s", err, "identity tenant ID")
+	}
+
+	cluster.Identity.TenantID = identityTenantID
+
+	return nil
+}
+
+func validateIdentityParam(cluster *api.OpenShiftCluster, param string, isCreate bool) error {
+	if param == "" {
+		if isCreate {
+			return errMissingIdentityParmeter
+		}
+	}
 
 	return nil
 }
