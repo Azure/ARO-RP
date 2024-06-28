@@ -100,11 +100,13 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 
 	// Don't persist identity parameters in non-wimi clusters
 	if doc.OpenShiftCluster.Properties.ServicePrincipalProfile == nil || doc.OpenShiftCluster.Identity != nil {
-		if err := validateIdentityUrl(doc.OpenShiftCluster, identityURL, isCreate); err != nil {
-			return nil, err
-		}
-		if err := validateIdentityTenantID(doc.OpenShiftCluster, identityTenantID, isCreate); err != nil {
-			return nil, err
+		if isCreate {
+			if err := validateIdentityUrl(doc.OpenShiftCluster, identityURL); err != nil {
+				return nil, err
+			}
+			if err := validateIdentityTenantID(doc.OpenShiftCluster, identityTenantID); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -305,9 +307,9 @@ func enrichClusterSystemData(doc *api.OpenShiftClusterDocument, systemData *api.
 	}
 }
 
-func validateIdentityUrl(cluster *api.OpenShiftCluster, identityURL string, isCreate bool) error {
-	if err := validateIdentityParam(identityURL, isCreate); err != nil {
-		return fmt.Errorf("%w: %s", err, "identity URL")
+func validateIdentityUrl(cluster *api.OpenShiftCluster, identityURL string) error {
+	if identityURL == "" {
+		return fmt.Errorf("%w: %s", errMissingIdentityParmeter, "identity URL")
 	}
 
 	cluster.Identity.IdentityURL = identityURL
@@ -315,22 +317,12 @@ func validateIdentityUrl(cluster *api.OpenShiftCluster, identityURL string, isCr
 	return nil
 }
 
-func validateIdentityTenantID(cluster *api.OpenShiftCluster, identityTenantID string, isCreate bool) error {
-	if err := validateIdentityParam(identityTenantID, isCreate); err != nil {
-		return fmt.Errorf("%w: %s", err, "identity tenant ID")
+func validateIdentityTenantID(cluster *api.OpenShiftCluster, identityTenantID string) error {
+	if identityTenantID == "" {
+		return fmt.Errorf("%w: %s", errMissingIdentityParmeter, "identity tenant ID")
 	}
 
 	cluster.Identity.TenantID = identityTenantID
-
-	return nil
-}
-
-func validateIdentityParam(param string, isCreate bool) error {
-	if param == "" {
-		if isCreate {
-			return errMissingIdentityParmeter
-		}
-	}
 
 	return nil
 }

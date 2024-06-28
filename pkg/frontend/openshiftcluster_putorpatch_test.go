@@ -3313,27 +3313,17 @@ func TestValidateIdentityUrl(t *testing.T) {
 		identityURL string
 		cluster     *api.OpenShiftCluster
 		expected    *api.OpenShiftCluster
-		isCreate    bool
 		wantError   error
 	}{
 		{
-			name:        "identity URL is empty, is wi/mi cluster create",
+			name:        "identity URL is empty",
 			identityURL: "",
 			cluster:     &api.OpenShiftCluster{},
 			expected:    &api.OpenShiftCluster{},
-			isCreate:    true,
 			wantError:   errMissingIdentityParmeter,
 		},
 		{
-			name:        "identity URL is empty, is not wi/mi cluster create",
-			identityURL: "",
-			cluster:     &api.OpenShiftCluster{},
-			expected:    &api.OpenShiftCluster{},
-			isCreate:    false,
-			wantError:   nil,
-		},
-		{
-			name: "pass - identity URL passed on wi/mi cluster",
+			name: "pass - identity URL passed",
 			cluster: &api.OpenShiftCluster{
 				Identity: &api.Identity{},
 			},
@@ -3343,11 +3333,10 @@ func TestValidateIdentityUrl(t *testing.T) {
 					IdentityURL: "http://foo.bar",
 				},
 			},
-			isCreate: true,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateIdentityUrl(tt.cluster, tt.identityURL, tt.isCreate)
+			err := validateIdentityUrl(tt.cluster, tt.identityURL)
 			if !errors.Is(err, tt.wantError) {
 				t.Error(cmp.Diff(err, tt.wantError))
 			}
@@ -3365,27 +3354,17 @@ func TestValidateIdentityTenantID(t *testing.T) {
 		tenantID  string
 		cluster   *api.OpenShiftCluster
 		expected  *api.OpenShiftCluster
-		isCreate  bool
 		wantError error
 	}{
 		{
-			name:      "tenantID is empty, is wi/mi cluster create",
+			name:      "tenantID is empty",
 			tenantID:  "",
 			cluster:   &api.OpenShiftCluster{},
 			expected:  &api.OpenShiftCluster{},
-			isCreate:  true,
 			wantError: errMissingIdentityParmeter,
 		},
 		{
-			name:      "tenantID is empty, is not wi/mi cluster create",
-			tenantID:  "",
-			cluster:   &api.OpenShiftCluster{},
-			expected:  &api.OpenShiftCluster{},
-			isCreate:  false,
-			wantError: nil,
-		},
-		{
-			name: "pass - tenantID passed on wi/mi cluster",
+			name: "pass - tenantID passed",
 			cluster: &api.OpenShiftCluster{
 				Identity: &api.Identity{},
 			},
@@ -3395,52 +3374,16 @@ func TestValidateIdentityTenantID(t *testing.T) {
 					TenantID: "bogus",
 				},
 			},
-			isCreate: true,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateIdentityTenantID(tt.cluster, tt.tenantID, tt.isCreate)
+			err := validateIdentityTenantID(tt.cluster, tt.tenantID)
 			if !errors.Is(err, tt.wantError) {
 				t.Error(cmp.Diff(err, tt.wantError))
 			}
 
 			if !reflect.DeepEqual(tt.cluster, tt.expected) {
 				t.Error(cmp.Diff(tt.cluster, tt.expected))
-			}
-		})
-	}
-}
-
-func TestValidateIdentityParam(t *testing.T) {
-	for _, tt := range []struct {
-		name      string
-		param     string
-		isCreate  bool
-		wantError error
-	}{
-		{
-			name:      "param is empty, is wi/mi cluster create",
-			param:     "",
-			isCreate:  true,
-			wantError: errMissingIdentityParmeter,
-		},
-		{
-			name:      "param is empty, is not wi/mi cluster create",
-			param:     "",
-			isCreate:  false,
-			wantError: nil,
-		},
-		{
-			name:      "pass - param passed on wi/mi cluster",
-			param:     "bogus",
-			isCreate:  true,
-			wantError: nil,
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			err := validateIdentityParam(tt.param, tt.isCreate)
-			if !errors.Is(err, tt.wantError) {
-				t.Error(cmp.Diff(err, tt.wantError))
 			}
 		})
 	}
