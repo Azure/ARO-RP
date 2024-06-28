@@ -3320,7 +3320,7 @@ func TestValidateIdentityUrl(t *testing.T) {
 			identityURL: "",
 			cluster:     &api.OpenShiftCluster{},
 			expected:    &api.OpenShiftCluster{},
-			wantError:   errMissingIdentityParmeter,
+			wantError:   errMissingIdentityParameter,
 		},
 		{
 			name: "pass - identity URL passed",
@@ -3361,7 +3361,7 @@ func TestValidateIdentityTenantID(t *testing.T) {
 			tenantID:  "",
 			cluster:   &api.OpenShiftCluster{},
 			expected:  &api.OpenShiftCluster{},
-			wantError: errMissingIdentityParmeter,
+			wantError: errMissingIdentityParameter,
 		},
 		{
 			name: "pass - tenantID passed",

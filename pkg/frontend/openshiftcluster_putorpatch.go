@@ -25,7 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-var errMissingIdentityParmeter error = fmt.Errorf("identity parameter not provided but required for workload identity cluster")
+var errMissingIdentityParameter error = fmt.Errorf("identity parameter not provided but required for workload identity cluster")
 
 func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -309,7 +309,7 @@ func enrichClusterSystemData(doc *api.OpenShiftClusterDocument, systemData *api.
 
 func validateIdentityUrl(cluster *api.OpenShiftCluster, identityURL string) error {
 	if identityURL == "" {
-		return fmt.Errorf("%w: %s", errMissingIdentityParmeter, "identity URL")
+		return fmt.Errorf("%w: %s", errMissingIdentityParameter, "identity URL")
 	}
 
 	cluster.Identity.IdentityURL = identityURL
@@ -319,7 +319,7 @@ func validateIdentityUrl(cluster *api.OpenShiftCluster, identityURL string) erro
 
 func validateIdentityTenantID(cluster *api.OpenShiftCluster, identityTenantID string) error {
 	if identityTenantID == "" {
-		return fmt.Errorf("%w: %s", errMissingIdentityParmeter, "identity tenant ID")
+		return fmt.Errorf("%w: %s", errMissingIdentityParameter, "identity tenant ID")
 	}
 
 	cluster.Identity.TenantID = identityTenantID
