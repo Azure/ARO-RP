@@ -17,14 +17,12 @@ const (
 	hiveInstallerEnableEnvVar = "ARO_INSTALL_VIA_HIVE"
 	hiveDefaultPullSpecEnvVar = "ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC"
 	hiveAdoptEnableEnvVar     = "ARO_ADOPT_BY_HIVE"
-	useCheckAccess            = "USE_CHECKACCESS"
 )
 
 type Manager interface {
 	HiveRestConfig(context.Context, int) (*rest.Config, error)
 	InstallViaHive(context.Context) (bool, error)
 	AdoptByHive(context.Context) (bool, error)
-	UseCheckAccess(context.Context) (bool, error)
 
 	// Allows overriding the default installer pullspec for Prod, if the OpenShiftVersions database is not populated
 	DefaultInstallerPullSpecOverride(context.Context) string

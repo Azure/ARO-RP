@@ -195,9 +195,6 @@ func DevConfig(_env env.Core) (*Config, error) {
 			InstallViaHive:           to.StringPtr(os.Getenv("ARO_INSTALL_VIA_HIVE")),
 			DefaultInstallerPullspec: to.StringPtr(os.Getenv("ARO_HIVE_DEFAULT_INSTALLER_PULLSPEC")),
 			AdoptByHive:              to.StringPtr(os.Getenv("ARO_ADOPT_BY_HIVE")),
-			// TODO Remove when CheckAccess is completely rolled out
-			// Start enabling this in Dev
-			UseCheckAccess: to.StringPtr(os.Getenv("USE_CHECKACCESS")),
 		},
 	}, nil
 }

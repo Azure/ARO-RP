@@ -9,8 +9,4 @@ const (
 	// Unit (MTU) on Azure virtual networks, which as of late 2021 is 3900 bytes.
 	// Otherwise cluster nodes will use the DHCP-provided MTU of 1500 bytes.
 	FeatureFlagMTU3900 = "Microsoft.RedHatOpenShift/MTU3900"
-
-	// FeatureFlagCheckAccessTestToggle is used for safely testing the new check access
-	// API in production. The toggle will be removed once the testing has been completed.
-	FeatureFlagCheckAccessTestToggle = "Microsoft.RedHatOpenShift/CheckAccessTestToggle"
 )
