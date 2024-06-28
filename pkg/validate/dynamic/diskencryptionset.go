@@ -74,12 +74,12 @@ func (dv *dynamic) validateDiskEncryptionSetPermissions(ctx context.Context, des
 		errCode = api.CloudErrorCodeInvalidServicePrincipalPermissions
 	}
 
-	err := dv.validateActions(ctx, desr, []string{
+	operatorName, err := dv.validateActions(ctx, desr, []string{
 		"Microsoft.Compute/diskEncryptionSets/read",
 	})
 
 	if err == wait.ErrWaitTimeout {
-		return api.NewCloudError(http.StatusBadRequest, errCode, path, "The %s service principal does not have Reader permission on disk encryption set '%s'.", dv.authorizerType, desr.String())
+		return dv.noPermissionsErr(errCode, errMsgMissingPermissionsOnDES, errMsgSPHasMissingReaderRole, path, operatorName, desr.String())
 	}
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		detailedErr.StatusCode == http.StatusNotFound {
