@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/csrf"
 
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -23,7 +24,7 @@ type PortalInfo struct {
 
 func (p *portal) info(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	elevated := len(middleware.GroupsIntersect(p.elevatedGroupIDs, ctx.Value(middleware.ContextKeyGroups).([]string))) > 0
+	elevated := len(stringutils.GroupsIntersect(p.elevatedGroupIDs, ctx.Value(middleware.ContextKeyGroups).([]string))) > 0
 
 	resp := PortalInfo{
 		Location:  p.env.Location(),

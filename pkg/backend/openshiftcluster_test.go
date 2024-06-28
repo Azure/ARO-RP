@@ -302,6 +302,7 @@ func TestBackendTry(t *testing.T) {
 			dbSubscriptions, _ := testdatabase.NewFakeSubscriptions()
 			uuidGen := deterministicuuid.NewTestUUIDGenerator(deterministicuuid.OPENSHIFT_VERSIONS)
 			dbOpenShiftVersions, _ := testdatabase.NewFakeOpenShiftVersions(uuidGen)
+			dbPlatformWorkloadIdentityRoleSets, _ := testdatabase.NewFakePlatformWorkloadIdentityRoleSets(uuidGen)
 
 			f := testdatabase.NewFixture().WithOpenShiftClusters(dbOpenShiftClusters).WithSubscriptions(dbSubscriptions)
 			tt.mocks(manager, dbOpenShiftClusters)
@@ -311,11 +312,11 @@ func TestBackendTry(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			createManager := func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, database.Gateway, database.OpenShiftVersions, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument, hive.ClusterManager, metrics.Emitter) (cluster.Interface, error) {
+			createManager := func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, database.Gateway, database.OpenShiftVersions, database.PlatformWorkloadIdentityRoleSets, encryption.AEAD, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument, hive.ClusterManager, metrics.Emitter) (cluster.Interface, error) {
 				return manager, nil
 			}
 
-			b, err := newBackend(ctx, log, _env, nil, nil, nil, dbOpenShiftClusters, dbSubscriptions, dbOpenShiftVersions, nil, &noop.Noop{})
+			b, err := newBackend(ctx, log, _env, nil, nil, nil, dbOpenShiftClusters, dbSubscriptions, dbOpenShiftVersions, dbPlatformWorkloadIdentityRoleSets, nil, &noop.Noop{})
 			if err != nil {
 				t.Fatal(err)
 			}
