@@ -129,7 +129,7 @@
       go run ./cmd/aro mirror latest
       ```
 
-      > __Troubleshooting:__ There could be some issues when mirroring the images to the ACR realted to missing _devmapper_ or _btrfs_ (usually with "fatal error: btrfs/ioctl.h: No such file or directory" error) packages.
+      > __Troubleshooting:__ There could be some issues when mirroring the images to the ACR related to missing _devmapper_ or _btrfs_ (usually with "fatal error: btrfs/ioctl.h: No such file or directory" error) packages.
       If respectively installing _device-mapper-devel_ or _btrfs-progs-devel_ packages won't help, then you may ignore them as follows:
 
     ```bash
