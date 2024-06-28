@@ -12,7 +12,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/apparentlymart/go-cidr/cidr"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
@@ -28,7 +27,6 @@ type Manager interface {
 	GetAll(ctx context.Context, subnetIds []string) ([]*mgmtnetwork.Subnet, error)
 	GetHighestFreeIP(ctx context.Context, subnetID string) (string, error)
 	CreateOrUpdate(ctx context.Context, subnetID string, subnet *mgmtnetwork.Subnet) error
-	CreateOrUpdateFromIds(ctx context.Context, subnetIds []string, gatewayEnabled bool) error
 }
 
 type manager struct {
@@ -146,29 +144,4 @@ func (m *manager) GetAll(ctx context.Context, subnetIds []string) ([]*mgmtnetwor
 		subnets[i] = subnet
 	}
 	return subnets, nil
-}
-
-func (m *manager) CreateOrUpdateFromIds(ctx context.Context, subnetIds []string, gatewayEnabled bool) error {
-	subnets, err := m.GetAll(ctx, subnetIds)
-	if err != nil {
-		return err
-	}
-
-	// Only add service endpoints to the subnets if egress lockdown is not enabled.
-	if !gatewayEnabled {
-		subnetsToBeUpdated := addEndpointsToSubnets(api.SubnetsEndpoints, subnets)
-
-		return m.createOrUpdateSubnets(ctx, subnetsToBeUpdated)
-	}
-
-	return m.createOrUpdateSubnets(ctx, subnets)
-}
-
-func (m *manager) createOrUpdateSubnets(ctx context.Context, subnets []*mgmtnetwork.Subnet) error {
-	for _, subnet := range subnets {
-		if err := m.CreateOrUpdate(ctx, *subnet.ID, subnet); err != nil {
-			return err
-		}
-	}
-	return nil
 }
