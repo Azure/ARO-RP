@@ -98,7 +98,8 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		}
 	}
 
-	// Don't persist identity parameters in non-wimi clusters
+	// Don't persist identity parameters in non managed/workload identity clusters
+	// TODO - use a common function to check if the cluster is a managed/workload identity cluster
 	if doc.OpenShiftCluster.Properties.ServicePrincipalProfile == nil || doc.OpenShiftCluster.Identity != nil {
 		if isCreate {
 			if err := validateIdentityUrl(doc.OpenShiftCluster, identityURL); err != nil {
