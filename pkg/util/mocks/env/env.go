@@ -527,6 +527,34 @@ func (mr *MockInterfaceMockRecorder) NewMSITokenCredential() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMSITokenCredential", reflect.TypeOf((*MockInterface)(nil).NewMSITokenCredential))
 }
 
+// OIDCEndpoint mocks base method.
+func (m *MockInterface) OIDCEndpoint() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "OIDCEndpoint")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// OIDCEndpoint indicates an expected call of OIDCEndpoint.
+func (mr *MockInterfaceMockRecorder) OIDCEndpoint() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OIDCEndpoint", reflect.TypeOf((*MockInterface)(nil).OIDCEndpoint))
+}
+
+// OIDCStorageAccountName mocks base method.
+func (m *MockInterface) OIDCStorageAccountName() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "OIDCStorageAccountName")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// OIDCStorageAccountName indicates an expected call of OIDCStorageAccountName.
+func (mr *MockInterfaceMockRecorder) OIDCStorageAccountName() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OIDCStorageAccountName", reflect.TypeOf((*MockInterface)(nil).OIDCStorageAccountName))
+}
+
 // ResourceGroup mocks base method.
 func (m *MockInterface) ResourceGroup() string {
 	m.ctrl.T.Helper()

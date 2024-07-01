@@ -768,6 +768,7 @@ func TestEnsureGlobalPullSecret(t *testing.T) {
 
 			r := &Reconciler{
 				client: clientBuilder.Build(),
+				log:    logrus.NewEntry(logrus.StandardLogger()),
 			}
 
 			s, err := r.ensureGlobalPullSecret(ctx, tt.operatorPullSecret, tt.pullSecret)

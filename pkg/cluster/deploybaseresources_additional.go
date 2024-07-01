@@ -9,7 +9,7 @@ import (
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
-	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
+	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -88,11 +88,11 @@ func (m *manager) storageAccount(name, region string, ocpSubnets []string, encry
 	virtualNetworkRules := []mgmtstorage.VirtualNetworkRule{
 		{
 			VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
-			Action:                   mgmtstorage.Allow,
+			Action:                   mgmtstorage.ActionAllow,
 		},
 		{
 			VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-vnet/subnets/rp-subnet"),
-			Action:                   mgmtstorage.Allow,
+			Action:                   mgmtstorage.ActionAllow,
 		},
 	}
 
@@ -100,7 +100,7 @@ func (m *manager) storageAccount(name, region string, ocpSubnets []string, encry
 	for _, subnet := range ocpSubnets {
 		virtualNetworkRules = append(virtualNetworkRules, mgmtstorage.VirtualNetworkRule{
 			VirtualNetworkResourceID: to.StringPtr(subnet),
-			Action:                   mgmtstorage.Allow,
+			Action:                   mgmtstorage.ActionAllow,
 		})
 	}
 
@@ -110,7 +110,7 @@ func (m *manager) storageAccount(name, region string, ocpSubnets []string, encry
 	if m.installViaHive && strings.Index(name, "cluster") == 0 {
 		virtualNetworkRules = append(virtualNetworkRules, mgmtstorage.VirtualNetworkRule{
 			VirtualNetworkResourceID: to.StringPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/aks-net/subnets/PodSubnet-%03d", m.env.SubscriptionID(), m.env.ResourceGroup(), hiveShard)),
-			Action:                   mgmtstorage.Allow,
+			Action:                   mgmtstorage.ActionAllow,
 		})
 	}
 
@@ -120,21 +120,21 @@ func (m *manager) storageAccount(name, region string, ocpSubnets []string, encry
 	if !m.env.IsLocalDevelopmentMode() {
 		virtualNetworkRules = append(virtualNetworkRules, mgmtstorage.VirtualNetworkRule{
 			VirtualNetworkResourceID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.GatewayResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/gateway-vnet/subnets/gateway-subnet"),
-			Action:                   mgmtstorage.Allow,
+			Action:                   mgmtstorage.ActionAllow,
 		})
 	}
 
 	sa := &mgmtstorage.Account{
-		Kind: mgmtstorage.StorageV2,
+		Kind: mgmtstorage.KindStorageV2,
 		Sku: &mgmtstorage.Sku{
 			Name: "Standard_LRS",
 		},
 		AccountProperties: &mgmtstorage.AccountProperties{
 			AllowBlobPublicAccess:  to.BoolPtr(false),
 			EnableHTTPSTrafficOnly: to.BoolPtr(true),
-			MinimumTLSVersion:      mgmtstorage.TLS12,
+			MinimumTLSVersion:      mgmtstorage.MinimumTLSVersionTLS12,
 			NetworkRuleSet: &mgmtstorage.NetworkRuleSet{
-				Bypass:              mgmtstorage.AzureServices,
+				Bypass:              mgmtstorage.BypassAzureServices,
 				VirtualNetworkRules: &virtualNetworkRules,
 				DefaultAction:       "Deny",
 			},

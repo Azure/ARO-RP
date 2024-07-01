@@ -35,6 +35,7 @@ const (
 	FeatureRequireD2sV3Workers
 	FeatureDisableReadinessDelay
 	FeatureEnableOCMEndpoints
+	FeatureRequireOIDCStorageWebEndpoint
 )
 
 const (
@@ -56,6 +57,7 @@ const (
 	ServiceKeyvaultSuffix            = "-svc"
 	RPPrivateEndpointPrefix          = "rp-pe-"
 	ProxyHostName                    = "PROXY_HOSTNAME"
+	OIDCBlobDirectoryPrefix          = "oic-"
 )
 
 // Interface is clunky and somewhat legacy and only used in the RP codebase (not
@@ -92,6 +94,8 @@ type Interface interface {
 	ServiceKeyvault() keyvault.Manager
 	ACRResourceID() string
 	ACRDomain() string
+	OIDCStorageAccountName() string
+	OIDCEndpoint() string
 	AROOperatorImage() string
 	LiveConfig() liveconfig.Manager
 

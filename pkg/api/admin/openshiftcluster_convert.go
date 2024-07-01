@@ -5,6 +5,7 @@ package admin
 
 import (
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 type openShiftClusterConverter struct{}
@@ -37,7 +38,6 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 				Version:              oc.Properties.ClusterProfile.Version,
 				ResourceGroupID:      oc.Properties.ClusterProfile.ResourceGroupID,
 				FipsValidatedModules: FipsValidatedModules(oc.Properties.ClusterProfile.FipsValidatedModules),
-				OIDCIssuer:           OIDCIssuer(oc.Properties.ClusterProfile.OIDCIssuer),
 			},
 			FeatureProfile: FeatureProfile{
 				GatewayEnabled: oc.Properties.FeatureProfile.GatewayEnabled,
@@ -206,6 +206,10 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 			out.Properties.RegistryProfiles[i].Name = v.Name
 			out.Properties.RegistryProfiles[i].Username = v.Username
 		}
+	}
+
+	if oc.Properties.ClusterProfile.OIDCIssuer != nil {
+		out.Properties.ClusterProfile.OIDCIssuer = pointerutils.ToPtr(OIDCIssuer(*oc.Properties.ClusterProfile.OIDCIssuer))
 	}
 
 	out.Properties.HiveProfile = HiveProfile{

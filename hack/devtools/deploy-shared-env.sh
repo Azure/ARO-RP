@@ -57,7 +57,17 @@ deploy_oic_dev() {
         --template-file pkg/deploy/assets/rp-oic.json \
         --parameters \
             "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_RP_CLIENT_ID'" --query '[].id' -o tsv)" \
-            "storageAccountDomain=$(echo ${RESOURCEGROUP//-})" >/dev/null
+            "oidcStorageAccountName=$(echo $OIDC_STORAGE_ACCOUNT_NAME)" >/dev/null
+    echo "########## Enabling Static Website for OIDC storage account in RG $RESOURCEGROUP ##########"
+    az storage blob service-properties update --static-website true --account-name ${OIDC_STORAGE_ACCOUNT_NAME} --auth-mode login >/dev/null
+}
+
+deploy_rp_managed_identity() {
+    echo "########## Deploying RP Managed Identity (for hive/aks) in RG $RESOURCEGROUP ##########"
+    az deployment group create \
+        -g "$RESOURCEGROUP" \
+        -n rp-managed-identity \
+        --template-file pkg/deploy/assets/rp-production-managed-identity.json
 }
 
 deploy_aks_dev() {
@@ -90,7 +100,9 @@ deploy_oic_for_dedicated_rp() {
         --template-file pkg/deploy/assets/rp-oic.json \
         --parameters \
             "rpServicePrincipalId=$(az identity show -g $RESOURCEGROUP -n aro-rp-$LOCATION | jq -r '.["principalId"]')" \
-            "storageAccountDomain=$(yq '.rps[].configuration.storageAccountDomain' dev-config.yaml)"
+            "oidcStorageAccountName=$(yq '.rps[].configuration.oidcStorageAccountName' dev-config.yaml)" >/dev/null
+    echo "########## Enabling Static Website for OIDC storage account in RG $RESOURCEGROUP ##########"
+    az storage blob service-properties update --static-website true --account-name $(yq '.rps[].configuration.oidcStorageAccountName' dev-config.yaml) --auth-mode login >/dev/null
 }
 
 deploy_env_dev_override() {
@@ -238,6 +250,35 @@ clean_env() {
           --record-set-name "$RESOURCEGROUP" \
           --nsdname "$ns"
       done
+}
+
+deploy_e2e_secret_storage() {
+    az deployment group create \
+        --name e2esecretstorage \
+        --resource-group global-infra \
+        --parameters storageAccounts_e2earosecrets_name=$SECRET_SA_ACCOUNT_NAME \
+        --template-file pkg/deploy/assets/e2e-secret-storage.json 
+}
+
+deploy_aro_spn_keyvault() {
+    az deployment group create \
+        --name aroe2eprincipals \
+        --resource-group global-infra \
+        --parameters \
+            "vaults_aro_e2e_principals_name=$VAULTS_ARO_E2E_PRINCIPALS_NAME" \
+            "tenant_id=$AZURE_TENANT_ID" \
+        --template-file pkg/deploy/assets/e2e-aro-spn-keyvault.json
+}
+
+deploy_aro_e2e_global_keyvault() {
+    az deployment group create \
+        --name aroe2eprincipals \
+        --resource-group global-infra \
+        --parameters \
+            "vault_name=$ARO_E2E_GLOBAL_VAULT_NAME" \
+            "tenant_id=$AZURE_TENANT_ID" \
+        --template-file pkg/deploy/assets/e2e-global-keyvault.json
+
 }
 
 echo "##########################################"

@@ -40,13 +40,14 @@ jobs:
       - template: ./templates/template-push-images-to-acr.yml
         parameters:
           rpImageACR: $(RP_IMAGE_ACR)
+          acrCredentialsJSON: $(acr-credentials)
       - script: |
           make extract-aro-docker
         displayName: Extract ARO binaries from build
 
       - script: |
           az account set -s $AZURE_SUBSCRIPTION_ID
-          SECRET_SA_ACCOUNT_NAME=e2earosecrets make secrets
+          SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME) make secrets
           . secrets/env
 
           export CI=true

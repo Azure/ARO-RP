@@ -125,7 +125,7 @@ type ClusterProfile struct {
 	FipsValidatedModules FipsValidatedModules `json:"fipsValidatedModules,omitempty"`
 
 	// The URL of the managed OIDC issuer in a workload identity cluster.
-	OIDCIssuer OIDCIssuer `json:"oidcIssuer,omitempty"`
+	OIDCIssuer *OIDCIssuer `json:"oidcIssuer,omitempty"`
 }
 
 // ConsoleProfile represents a console profile.

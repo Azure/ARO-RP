@@ -117,6 +117,9 @@
                 "westus"
             ]
         },
+        "oidcStorageAccountName": {
+            "value": ""
+        },
         "portalAccessGroupIds": {
             "value": ""
         },

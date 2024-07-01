@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
@@ -25,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
+	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -439,6 +441,19 @@ func (m *manager) Delete(ctx context.Context) error {
 	err = m.fpPrivateEndpoints.DeleteAndWait(ctx, m.env.ResourceGroup(), env.RPPrivateEndpointPrefix+m.doc.ID)
 	if err != nil {
 		return err
+	}
+
+	if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile == nil && m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile != nil {
+		m.log.Printf("deleting OIDC configuration")
+		blobContainerURL := oidcbuilder.GenerateBlobContainerURL(m.env)
+		azBlobClient, err := m.rpBlob.GetAZBlobClient(blobContainerURL, &azblob.ClientOptions{})
+		if err != nil {
+			return err
+		}
+		err = oidcbuilder.DeleteOidcFolder(ctx, env.OIDCBlobDirectoryPrefix+m.doc.ID, azBlobClient)
+		if err != nil {
+			return err
+		}
 	}
 
 	m.log.Printf("deleting role assignments")

@@ -41,5 +41,3 @@ done
 
 go get -u ./...
 
-go mod tidy -compat=1.20
-go mod vendor

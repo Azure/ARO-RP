@@ -16,7 +16,7 @@ import (
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2020-11-01-preview/containerregistry"
 	mgmtinsights "github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
-	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
+	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -394,6 +394,7 @@ func (g *generator) rpVMSS() *arm.Resource {
 		"rpMdsdConfigVersion",
 		"rpMdsdNamespace",
 		"rpParentDomainName",
+		"oidcStorageAccountName",
 
 		// TODO: Replace with Live Service Configuration in KeyVault
 		"clustersInstallViaHive",
@@ -875,28 +876,38 @@ func (g *generator) rpCosmosDB() []*arm.Resource {
 		rs = append(rs, g.rpCosmosDBAlert(10, 90, 3, "rp-cosmosdb-alert", "PT5M", "PT1H"))
 		rs = append(rs, g.CosmosDBDataContributorRoleAssignment("'ARO'", "rp"))
 		rs = append(rs, g.CosmosDBDataContributorRoleAssignment("'ARO'", "gateway"))
+	} else {
+		rs = append(rs, g.CosmosDBDataContributorRoleAssignment("''", "rp"))
 	}
 
 	return rs
 }
 
 func (g *generator) CosmosDBDataContributorRoleAssignment(databaseName, component string) *arm.Resource {
-	return &arm.Resource{
+	var scope string
+	if g.production {
+		scope = "[resourceId('Microsoft.DocumentDB/databaseAccounts/dbs', parameters('databaseAccountName'), " + databaseName + ")]"
+	} else {
+		scope = "[resourceId('Microsoft.DocumentDB/databaseAccounts/', parameters('databaseAccountName'))]"
+	}
+
+	roleAssignment := &arm.Resource{
 		Resource: mgmtauthorization.RoleAssignment{
 			Name: to.StringPtr("[concat(parameters('databaseAccountName'), '/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('" + component + "ServicePrincipalId'), 'DocumentDB Data Contributor'))]"),
 			Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments"),
 			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-				Scope:            to.StringPtr("[resourceId('Microsoft.DocumentDB/databaseAccounts/dbs', parameters('databaseAccountName'), " + databaseName + ")]"),
+				Scope:            &scope,
 				RoleDefinitionID: to.StringPtr("[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions', parameters('databaseAccountName'), '" + rbac.RoleDocumentDBDataContributor + "')]"),
 				PrincipalID:      to.StringPtr("[parameters('" + component + "ServicePrincipalId')]"),
 				PrincipalType:    mgmtauthorization.ServicePrincipal,
 			},
 		},
-		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 		DependsOn: []string{
 			"[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
 		},
+		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 	}
+	return roleAssignment
 }
 
 func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Resource {

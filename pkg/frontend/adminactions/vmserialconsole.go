@@ -13,7 +13,7 @@ import (
 	"time"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
+	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/sirupsen/logrus"
@@ -46,10 +46,10 @@ func (a *azureActions) VMSerialConsole(ctx context.Context, w http.ResponseWrite
 	t := time.Now().UTC().Truncate(time.Second)
 	res, err := a.storageAccounts.ListAccountSAS(
 		ctx, clusterRGName, "cluster"+a.oc.Properties.StorageSuffix, mgmtstorage.AccountSasParameters{
-			Services:               mgmtstorage.B,
+			Services:               mgmtstorage.ServicesB,
 			ResourceTypes:          mgmtstorage.SignedResourceTypesO,
-			Permissions:            mgmtstorage.R,
-			Protocols:              mgmtstorage.HTTPS,
+			Permissions:            mgmtstorage.PermissionsR,
+			Protocols:              mgmtstorage.HTTPProtocolHTTPS,
 			SharedAccessStartTime:  &date.Time{Time: t},
 			SharedAccessExpiryTime: &date.Time{Time: t.Add(24 * time.Hour)},
 		})

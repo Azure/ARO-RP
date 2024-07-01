@@ -281,6 +281,7 @@ func (m *manager) bootstrap() []steps.Step {
 		steps.Action(m.populateMTUSize),
 
 		steps.Action(m.createDNS),
+		steps.Action(m.createOIDC),
 		steps.Action(m.initializeClusterSPClients), // must run before clusterSPObjectID
 
 		// TODO: this relies on an authorizer that isn't exposed in the manager
