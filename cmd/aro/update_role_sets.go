@@ -19,7 +19,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
-// 1 - Get env data from agent VMs (with getEnvironmentData)
 func getRoleSetsFromEnv() ([]api.PlatformWorkloadIdentityRoleSetProperties, error) {
 	const envKey = envPlatformWorkloadIdentityRoleSets
 	var roleSets []api.PlatformWorkloadIdentityRoleSetProperties
@@ -83,8 +82,6 @@ func getPlatformWorkloadIdentityRoleSetDatabase(ctx context.Context, log *logrus
 }
 
 func updatePlatformWorkloadIdentityRoleSetsInCosmosDB(ctx context.Context, dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets, log *logrus.Entry) error {
-	// 2 - Get the existing role set documents, if existing
-	// Mostly copied from update_ocp_versions.go
 	existingRoleSets, err := dbPlatformWorkloadIdentityRoleSets.ListAll(ctx)
 	if err != nil {
 		return nil
@@ -100,8 +97,6 @@ func updatePlatformWorkloadIdentityRoleSetsInCosmosDB(ctx context.Context, dbPla
 		newRoleSets[doc.OpenShiftVersion] = doc
 	}
 
-	// 3 - Put/patch the new role sets to the doc, overwriting whatever is there for that version, or adding if new
-	// Mostly copied from update_ocp_versions.go
 	for _, doc := range existingRoleSets.PlatformWorkloadIdentityRoleSetDocuments {
 		existing, found := newRoleSets[doc.PlatformWorkloadIdentityRoleSet.Properties.OpenShiftVersion]
 		if found {
