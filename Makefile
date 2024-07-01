@@ -2,7 +2,7 @@ SHELL = /bin/bash
 TAG ?= $(shell git describe --exact-match 2>/dev/null)
 COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
-INTERMEDIATE_IMAGE_LOCAL = ${INTERMEDIATE_IMAGE_ACR_LOCAL}.azurecr.io/aro
+RP_IMAGE_LOCAL = localhost/aro
 E2E_FLAGS ?= -test.v --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2 --ginkgo.junit-report=e2e-report.xml
 GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
 NO_CACHE ?= true
@@ -42,8 +42,8 @@ else
 	REGISTRY = $(RP_IMAGE_ACR)
 endif
 
-ARO_PORTAL_BUILD_IMAGE ?= $(INTERMEDIATE_IMAGE_LOCAL)-portal-build
-ARO_BUILDER_IMAGE ?= $(INTERMEDIATE_IMAGE_LOCAL)-builder
+ARO_PORTAL_BUILD_IMAGE ?= $(RP_IMAGE_LOCAL)-portal-build
+ARO_BUILDER_IMAGE ?= $(RP_IMAGE_LOCAL)-builder
 ARO_IMAGE ?= $(ARO_IMAGE_BASE):$(VERSION)
 GATEKEEPER_IMAGE ?= ${REGISTRY}/gatekeeper:$(GATEKEEPER_VERSION)
 
