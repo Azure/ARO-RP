@@ -41,7 +41,7 @@ else
 	REGISTRY = $(RP_IMAGE_ACR)
 endif
 
-RP_IMAGE_LOCAL = localhost/aro
+RP_IMAGE_LOCAL ?= localhost/aro
 ARO_PORTAL_BUILD_IMAGE ?= $(RP_IMAGE_LOCAL)-portal-build
 ARO_BUILDER_IMAGE ?= $(RP_IMAGE_LOCAL)-builder
 ARO_IMAGE ?= $(ARO_IMAGE_BASE):$(VERSION)
