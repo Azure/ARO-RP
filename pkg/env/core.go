@@ -26,6 +26,7 @@ const (
 	COMPONENT_MIRROR              ServiceComponent = "MIRROR"
 	COMPONENT_PORTAL              ServiceComponent = "PORTAL"
 	COMPONENT_UPDATE_OCP_VERSIONS ServiceComponent = "UPDATE_OCP_VERSIONS"
+	COMPONENT_UPDATE_ROLE_SETS    ServiceComponent = "UPDATE_ROLE_SETS"
 	COMPONENT_DEPLOY              ServiceComponent = "DEPLOY"
 	COMPONENT_TOOLING             ServiceComponent = "TOOLING"
 )
