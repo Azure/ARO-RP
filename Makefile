@@ -1,7 +1,7 @@
 SHELL = /bin/bash
 TAG ?= $(shell git describe --exact-match 2>/dev/null)
 COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
-ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
+ARO_IMAGE_BASE = aro-local
 E2E_FLAGS ?= -test.v --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2 --ginkgo.junit-report=e2e-report.xml
 GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
 NO_CACHE ?= true
@@ -63,10 +63,86 @@ build-all:
 aro: check-release generate
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro
 
-.PHONY: runlocal-rp
-runlocal-rp:
-	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro rp
+# Target to deploy the CosmosDB database and container
+.PHONY: deploy-database
+deploy-database:
+	@echo "Deploying CosmosDB database and container..."
+	@az deployment group create \
+		-g "$(RESOURCEGROUP)" \
+		-n "databases-development-$(USER)" \
+		--template-file pkg/deploy/assets/databases-development.json \
+		--parameters \
+			databaseAccountName="$(DATABASE_ACCOUNT_NAME)" \
+			databaseName="$(DATABASE_NAME)" \
+		1>/dev/null || echo "Deployment failed or already exists"
 
+# Target to login to ACR
+.PHONY: acr-login
+acr-login:
+	@echo "Logging into ACR..."
+	@echo "PULL_SECRET: $${PULL_SECRET}"
+	@acr_auth=$$(echo "$${PULL_SECRET}" | jq -r '.auths["arointsvc.azurecr.io"].auth' | base64 -d); \
+	echo "Decoded ACR Auth: $$acr_auth"; \
+	username=$$(echo "$$acr_auth" | cut -d: -f1); \
+	password=$$(echo "$$acr_auth" | cut -d: -f2); \
+	echo "ACR Username: $$username"; \
+	echo "ACR Password: $$password"; \
+	docker login arointsvc.azurecr.io --username $$username --password $$password
+
+# Target to run the local RP
+.PHONY: runlocal-rp
+runlocal-rp: ci-rp deploy-database acr-login 
+	@set -a; source secrets/env; set +a; \
+	if [ ! -f $(PWD)/aks.kubeconfig ]; then echo "aks.kubeconfig not found"; exit 1; fi; \
+	podman run --rm -p 8443:8443 --network host \
+		--name aro-rp \
+		-w /app \
+		-e RP_MODE="development" \
+		-e PROXY_HOSTNAME="$${PROXY_HOSTNAME}" \
+		-e DOMAIN_NAME="$${DOMAIN_NAME}" \
+		-e AZURE_RP_CLIENT_ID="$${AZURE_RP_CLIENT_ID}" \
+		-e AZURE_FP_CLIENT_ID="$${AZURE_FP_CLIENT_ID}" \
+		-e AZURE_SUBSCRIPTION_ID="$${AZURE_SUBSCRIPTION_ID}" \
+		-e AZURE_TENANT_ID="$${AZURE_TENANT_ID}" \
+		-e AZURE_RP_CLIENT_SECRET="$${AZURE_RP_CLIENT_SECRET}" \
+		-e LOCATION="$${LOCATION}" \
+		-e RESOURCEGROUP="$${RESOURCEGROUP}" \
+		-e AZURE_ARM_CLIENT_ID="$${AZURE_ARM_CLIENT_ID}" \
+		-e AZURE_FP_SERVICE_PRINCIPAL_ID="$${AZURE_FP_SERVICE_PRINCIPAL_ID}" \
+		-e AZURE_DBTOKEN_CLIENT_ID="$${AZURE_DBTOKEN_CLIENT_ID}" \
+		-e AZURE_PORTAL_CLIENT_ID="$${AZURE_PORTAL_CLIENT_ID}" \
+		-e AZURE_PORTAL_ACCESS_GROUP_IDS="$${AZURE_PORTAL_ACCESS_GROUP_IDS}" \
+		-e AZURE_CLIENT_ID="$${AZURE_CLIENT_ID}" \
+		-e AZURE_SERVICE_PRINCIPAL_ID="$${AZURE_SERVICE_PRINCIPAL_ID}" \
+		-e AZURE_CLIENT_SECRET="$${AZURE_CLIENT_SECRET}" \
+		-e AZURE_GATEWAY_CLIENT_ID="$${AZURE_GATEWAY_CLIENT_ID}" \
+		-e AZURE_GATEWAY_SERVICE_PRINCIPAL_ID="$${AZURE_GATEWAY_SERVICE_PRINCIPAL_ID}" \
+		-e AZURE_GATEWAY_CLIENT_SECRET="$${AZURE_GATEWAY_CLIENT_SECRET}" \
+		-e DATABASE_NAME="$${DATABASE_NAME}" \
+		-e PULL_SECRET="$${PULL_SECRET}" \
+		-e SECRET_SA_ACCOUNT_NAME="$${SECRET_SA_ACCOUNT_NAME}" \
+		-e DATABASE_ACCOUNT_NAME="$${DATABASE_ACCOUNT_NAME}" \
+		-e KEYVAULT_PREFIX="$${KEYVAULT_PREFIX}" \
+		-e ADMIN_OBJECT_ID="$${ADMIN_OBJECT_ID}" \
+		-e PARENT_DOMAIN_NAME="$${PARENT_DOMAIN_NAME}" \
+		-e PARENT_DOMAIN_RESOURCEGROUP="$${PARENT_DOMAIN_RESOURCEGROUP}" \
+		-e AZURE_ENVIRONMENT="$${AZURE_ENVIRONMENT}" \
+		-e STORAGE_ACCOUNT_DOMAIN="$${STORAGE_ACCOUNT_DOMAIN}" \
+		-e SHARED_CLUSTER_API="$${SHARED_CLUSTER_API}" \
+		-e SHARED_CLUSTER_KUBEADMIN_PASSWORD="$${SHARED_CLUSTER_KUBEADMIN_PASSWORD}" \
+		-e SHARED_CLUSTER_LOCATION="$${SHARED_CLUSTER_LOCATION}" \
+		-e SHARED_CLUSTER_NAME="$${SHARED_CLUSTER_NAME}" \
+		-e SHARED_CLUSTER_RESOURCE_GROUP_NAME="$${SHARED_CLUSTER_RESOURCE_GROUP_NAME}" \
+		-e SHARED_CLUSTER_CLUSTER_RESOURCE_GROUP_NAME="$${SHARED_CLUSTER_CLUSTER_RESOURCE_GROUP_NAME}" \
+		-e KUBECONFIG="/app/secrets/aks.kubeconfig" \
+		-e HIVE_KUBE_CONFIG_PATH="/app/secrets/aks.kubeconfig" \
+		-e ARO_CHECKOUT_PATH="/app" \
+		-e ARO_INSTALL_VIA_HIVE="true" \
+		-e ARO_ADOPT_BY_HIVE="true" \
+		-v $(PWD)/aks.kubeconfig:/app/secrets/aks.kubeconfig:z \
+		-v $(PWD)/secrets:/app/secrets:z \
+		$$ARO_IMAGE rp
+		
 .PHONY: az
 az: pyenv
 	. pyenv/bin/activate && \
