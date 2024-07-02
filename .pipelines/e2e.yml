@@ -4,7 +4,7 @@ pr: none
 resources:
   pipelines:
     - pipeline: e2e
-      source: CI
+      source: \Public Cloud ARO pipelines\CI\CI
       trigger: true
   containers:
     - container: container

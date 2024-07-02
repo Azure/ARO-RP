@@ -12,9 +12,6 @@ trigger:
       - v2*
 
 pr:
-  branches:
-    include:
-      - master
   paths:
     exclude:
       - docs/*
@@ -32,12 +29,12 @@ variables:
   - template: vars.yml
 
 jobs:
-
   - job: Python_Unit_Tests
     pool:
       name: 1es-aro-ci-pool
     variables:
       HOME: $(Agent.BuildDirectory)
+
     steps:
       - template: ./templates/template-checkout.yml
       - script: |
