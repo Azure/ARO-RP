@@ -9,7 +9,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
-	"github.com/Azure/ARO-RP/pkg/util/storage"
 )
 
 type manager struct {
@@ -18,15 +17,12 @@ type manager struct {
 	doc *api.OpenShiftClusterDocument
 
 	virtualMachines compute.VirtualMachinesClient
-
-	storage storage.Manager
 }
 
 func NewFailureDiagnostics(log *logrus.Entry, _env env.Interface,
 	doc *api.OpenShiftClusterDocument,
 
 	virtualMachines compute.VirtualMachinesClient,
-	storage storage.Manager,
 
 ) *manager {
 	return &manager{
@@ -34,6 +30,5 @@ func NewFailureDiagnostics(log *logrus.Entry, _env env.Interface,
 		env:             _env,
 		doc:             doc,
 		virtualMachines: virtualMachines,
-		storage:         storage,
 	}
 }

@@ -9,8 +9,6 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
-
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -30,11 +28,11 @@ func (m *manager) LogAzureInformation(ctx context.Context) (interface{}, error) 
 	}
 
 	if len(vms) == 0 {
-		items = append(items, "no vms found")
+		items = append(items, "no VMs found")
 		return items, nil
 	}
 
-	consoleURIs := make([][]string, 0)
+	vmNames := make([]string, 0)
 	for _, v := range vms {
 		j, err := v.MarshalJSON()
 		if err != nil {
@@ -43,43 +41,34 @@ func (m *manager) LogAzureInformation(ctx context.Context) (interface{}, error) 
 			vmName := "<unknown>"
 			if v.Name != nil {
 				vmName = *v.Name
+				vmNames = append(vmNames, vmName)
 			}
 			items = append(items, fmt.Sprintf("vm %s: %s", vmName, string(j)))
 		}
-		if v.VirtualMachineProperties != nil && v.InstanceView != nil && v.InstanceView.BootDiagnostics != nil && v.InstanceView.BootDiagnostics.SerialConsoleLogBlobURI != nil {
-			consoleURIs = append(consoleURIs, []string{*v.Name, *v.InstanceView.BootDiagnostics.SerialConsoleLogBlobURI})
-		}
 	}
 
-	if len(consoleURIs) == 0 {
-		items = append(items, "no usable console URIs found")
-		return items, nil
-	}
+	// Fetch boot diagnostics URIs for the VMs
+	for _, vmName := range vmNames {
+		func() {
+			serialConsoleBlob, err := m.virtualMachines.GetSerialConsoleForVM(ctx, resourceGroupName, vmName)
+			if err != nil {
+				items = append(items, fmt.Sprintf("vm boot diagnostics retrieval error for %s: %s", vmName, err))
+				return
+			}
 
-	blob, err := m.storage.BlobService(ctx, resourceGroupName, "cluster"+m.doc.OpenShiftCluster.Properties.StorageSuffix, mgmtstorage.R, mgmtstorage.SignedResourceTypesO)
-	if err != nil {
-		items = append(items, fmt.Sprintf("blob storage error: %s", err))
-		return items, nil
-	}
+			defer serialConsoleBlob.Close()
 
-	for _, i := range consoleURIs {
-		rc, err := blob.Get(i[1])
-		if err != nil {
-			items = append(items, fmt.Sprintf("blob storage get error on %s: %s", i[0], err))
-			continue
-		}
-		defer rc.Close()
+			logForVM := m.log.WithField("failedRoleInstance", vmName)
 
-		logForVM := m.log.WithField("failedRoleInstance", i[0])
-
-		b64Reader := base64.NewDecoder(base64.StdEncoding, rc)
-		scanner := bufio.NewScanner(b64Reader)
-		for scanner.Scan() {
-			logForVM.Info(scanner.Text())
-		}
-		if err := scanner.Err(); err != nil {
-			items = append(items, fmt.Sprintf("blob storage scan on %s: %s", i[0], err))
-		}
+			b64Reader := base64.NewDecoder(base64.StdEncoding, serialConsoleBlob)
+			scanner := bufio.NewScanner(b64Reader)
+			for scanner.Scan() {
+				logForVM.Info(scanner.Text())
+			}
+			if err := scanner.Err(); err != nil {
+				items = append(items, fmt.Sprintf("blob storage scan on %s: %s", vmName, err))
+			}
+		}()
 	}
 
 	return items, nil
