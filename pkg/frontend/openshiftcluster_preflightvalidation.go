@@ -9,10 +9,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
@@ -36,8 +36,8 @@ func (f *frontend) preflightValidation(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		b = marshalValidationResult(api.ValidationResult{
 			Status: api.ValidationStatusFailed,
-			Error: &api.ManagementErrorWithDetails{
-				Message: to.StringPtr(err.Error()),
+			Error: &api.CloudErrorBody{
+				Message: err.Error(),
 			},
 		})
 		reply(log, w, header, b, statusCodeError(http.StatusOK))
@@ -52,9 +52,9 @@ func (f *frontend) preflightValidation(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		if strings.EqualFold(typeMeta.Type, "Microsoft.RedHatOpenShift/openShiftClusters") {
-			res := f._preflightValidation(ctx, log, raw, typeMeta.APIVersion, typeMeta.Id)
+			res := f._preflightValidation(ctx, log, raw, typeMeta.APIVersion, strings.ToLower(typeMeta.Id))
 			if res.Status == api.ValidationStatusFailed {
-				log.Warningf("preflight validation failed")
+				log.Warningf("preflight validation failed with err: '%s'", res.Error.Message)
 				b = marshalValidationResult(res)
 				reply(log, w, header, b, statusCodeError(http.StatusOK))
 				return
@@ -68,6 +68,18 @@ func (f *frontend) preflightValidation(w http.ResponseWriter, r *http.Request) {
 }
 
 func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, raw json.RawMessage, apiVersion string, resourceID string) api.ValidationResult {
+	log.Infof("running preflight validation on resource: %s", resourceID)
+	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
+	isCreate := cosmosdb.IsErrorStatusCode(err, http.StatusNotFound)
+	if err != nil && !isCreate {
+		log.Warning(err.Error())
+		return api.ValidationResult{
+			Status: api.ValidationStatusFailed,
+			Error: &api.CloudErrorBody{
+				Message: "400: Cluster not found for resourceID: " + resourceID,
+			},
+		}
+	}
 	// unmarshal raw to OpenShiftCluster type
 	oc := &api.OpenShiftCluster{}
 	oc.Properties.ProvisioningState = api.ProvisioningStateSucceeded
@@ -79,35 +91,44 @@ func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, 
 	converter := f.apis[apiVersion].OpenShiftClusterConverter
 	staticValidator := f.apis[apiVersion].OpenShiftClusterStaticValidator
 	ext := converter.ToExternal(oc)
-	if err := json.Unmarshal(raw, &ext); err != nil {
+	if err = json.Unmarshal(raw, &ext); err != nil {
+		log.Warning(err.Error())
 		return api.ValidationResult{
 			Status: api.ValidationStatusFailed,
-			Error: &api.ManagementErrorWithDetails{
-				Message: to.StringPtr(err.Error()),
+			Error: &api.CloudErrorBody{
+				Message: api.CloudErrorCodeInternalServerError,
 			},
 		}
 	}
-
-	converter.ToInternal(ext, oc)
-	if err := staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sV3Workers), resourceID); err != nil {
-		return api.ValidationResult{
-			Status: api.ValidationStatusFailed,
-			Error: &api.ManagementErrorWithDetails{
-				Message: to.StringPtr(err.Error()),
-			},
+	if isCreate {
+		converter.ToInternal(ext, oc)
+		if err = staticValidator.Static(ext, nil, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sV3Workers), resourceID); err != nil {
+			return api.ValidationResult{
+				Status: api.ValidationStatusFailed,
+				Error: &api.CloudErrorBody{
+					Message: err.Error(),
+				},
+			}
+		}
+		if err := f.validateInstallVersion(ctx, oc); err != nil {
+			return api.ValidationResult{
+				Status: api.ValidationStatusFailed,
+				Error: &api.CloudErrorBody{
+					Code:    api.CloudErrorCodeInvalidParameter,
+					Message: err.Error(),
+				},
+			}
+		}
+	} else {
+		if err := staticValidator.Static(ext, doc.OpenShiftCluster, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sV3Workers), resourceID); err != nil {
+			return api.ValidationResult{
+				Status: api.ValidationStatusFailed,
+				Error: &api.CloudErrorBody{
+					Message: err.Error(),
+				},
+			}
 		}
 	}
-
-	if err := f.validateInstallVersion(ctx, oc); err != nil {
-		return api.ValidationResult{
-			Status: api.ValidationStatusFailed,
-			Error: &api.ManagementErrorWithDetails{
-				Code:    to.StringPtr(api.CloudErrorCodeInvalidParameter),
-				Message: to.StringPtr(err.Error()),
-			},
-		}
-	}
-
 	return validationSuccess
 }
 
