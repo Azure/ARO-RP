@@ -6,6 +6,7 @@ package mock_compute
 
 import (
 	context "context"
+	io "io"
 	reflect "reflect"
 
 	compute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
@@ -166,6 +167,21 @@ func (m *MockVirtualMachinesClient) Get(arg0 context.Context, arg1, arg2 string,
 func (mr *MockVirtualMachinesClientMockRecorder) Get(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockVirtualMachinesClient)(nil).Get), arg0, arg1, arg2, arg3)
+}
+
+// GetSerialConsoleForVM mocks base method.
+func (m *MockVirtualMachinesClient) GetSerialConsoleForVM(arg0 context.Context, arg1, arg2 string) (io.ReadCloser, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSerialConsoleForVM", arg0, arg1, arg2)
+	ret0, _ := ret[0].(io.ReadCloser)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSerialConsoleForVM indicates an expected call of GetSerialConsoleForVM.
+func (mr *MockVirtualMachinesClientMockRecorder) GetSerialConsoleForVM(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSerialConsoleForVM", reflect.TypeOf((*MockVirtualMachinesClient)(nil).GetSerialConsoleForVM), arg0, arg1, arg2)
 }
 
 // List mocks base method.
