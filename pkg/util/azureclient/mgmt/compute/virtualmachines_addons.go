@@ -5,6 +5,9 @@ package compute
 
 import (
 	"context"
+	"fmt"
+	"io"
+	"net/http"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -18,6 +21,7 @@ type VirtualMachinesClientAddons interface {
 	StartAndWait(ctx context.Context, resourceGroupName string, VMName string) error
 	StopAndWait(ctx context.Context, resourceGroupName string, VMName string, deallocateVM bool) error
 	List(ctx context.Context, resourceGroupName string) (result []mgmtcompute.VirtualMachine, err error)
+	GetSerialConsoleForVM(ctx context.Context, resourceGroupName string, VMName string) (blob io.ReadCloser, err error)
 }
 
 func (c *virtualMachinesClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, VMName string, parameters mgmtcompute.VirtualMachine) error {
@@ -94,4 +98,37 @@ func (c *virtualMachinesClient) List(ctx context.Context, resourceGroupName stri
 	}
 
 	return result, nil
+}
+
+// retrieveBootDiagnosticsData returns the boot diagnostics data for the given
+// VM by RG and VMName.
+func (c *virtualMachinesClient) retrieveBootDiagnosticsData(ctx context.Context, resourceGroupName string, VMName string) (serialConsoleURI string, err error) {
+	resp, err := c.VirtualMachinesClient.RetrieveBootDiagnosticsData(ctx, resourceGroupName, VMName, to.Int32Ptr(60))
+	if err != nil {
+		return "", err
+	}
+
+	if resp.SerialConsoleLogBlobURI == nil {
+		return "", fmt.Errorf("no available serial console URI")
+	}
+
+	return *resp.SerialConsoleLogBlobURI, nil
+}
+
+// GetSerialConsoleForVM will return the serial console log blob as an
+// io.ReadCloser, or an error if it cannot be retrieved.
+func (c *virtualMachinesClient) GetSerialConsoleForVM(ctx context.Context, resourceGroupName string, vmName string) (io.ReadCloser, error) {
+	serialConsoleLogBlobURI, err := c.retrieveBootDiagnosticsData(ctx, resourceGroupName, vmName)
+	if err != nil {
+		return nil, fmt.Errorf("failure getting boot diagnostics URI Azure: %w", err)
+	}
+
+	client := &http.Client{}
+
+	resp, err := client.Get(serialConsoleLogBlobURI)
+	if err != nil {
+		return nil, fmt.Errorf("failure downloading blob URI: %w", err)
+	}
+
+	return resp.Body, nil
 }
