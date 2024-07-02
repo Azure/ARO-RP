@@ -10,12 +10,12 @@ import (
 	"time"
 
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
-	"github.com/ghodss/yaml"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	applyv1 "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/yaml"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/clusterauthorizer"

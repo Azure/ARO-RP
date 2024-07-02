@@ -7,8 +7,8 @@ import (
 	"context"
 	"os"
 
-	"github.com/ghodss/yaml"
 	"github.com/sirupsen/logrus"
+	"sigs.k8s.io/yaml"
 
 	"github.com/Azure/ARO-RP/pkg/deploy"
 	"github.com/Azure/ARO-RP/pkg/env"
