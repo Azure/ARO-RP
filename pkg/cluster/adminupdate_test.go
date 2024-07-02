@@ -77,6 +77,14 @@ func TestAdminUpdateSteps(t *testing.T) {
 		"[Action ensureAROOperator]",
 		"[Condition aroDeploymentReady, timeout 20m0s]",
 		"[Condition ensureAROOperatorRunningDesiredVersion, timeout 5m0s]",
+		"[Action syncClusterObject]",
+	}
+
+	syncClusterObjectSteps := []string{
+		"[Action startVMs]",
+		"[Condition apiServersReady, timeout 30m0s]",
+		"[Action initializeOperatorDeployer]",
+		"[Action syncClusterObject]",
 	}
 
 	hiveSteps := []string{
@@ -124,19 +132,6 @@ func TestAdminUpdateSteps(t *testing.T) {
 				return doc, true
 			},
 			shouldRunSteps: utilgenerics.ConcatMultipleSlices(zerothSteps, operatorUpdateSteps),
-		},
-		{
-			name: "Everything update and adopt Hive.",
-			fixture: func() (*api.OpenShiftClusterDocument, bool) {
-				doc := baseClusterDoc()
-				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
-				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskEverything
-				return doc, true
-			},
-			shouldRunSteps: utilgenerics.ConcatMultipleSlices(
-				zerothSteps, generalFixesSteps, certificateRenewalSteps,
-				operatorUpdateSteps, hiveSteps, updateProvisionedBySteps,
-			),
 		},
 		{
 			name: "Everything update on <= 4.6 cluster does not update operator",
@@ -187,6 +182,16 @@ func TestAdminUpdateSteps(t *testing.T) {
 				return doc, true
 			},
 			shouldRunSteps: utilgenerics.ConcatMultipleSlices(zerothSteps, certificateRenewalSteps),
+		},
+		{
+			name: "SyncClusterObject steps",
+			fixture: func() (*api.OpenShiftClusterDocument, bool) {
+				doc := baseClusterDoc()
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
+				doc.OpenShiftCluster.Properties.MaintenanceTask = api.MaintenanceTaskSyncClusterObject
+				return doc, true
+			},
+			shouldRunSteps: utilgenerics.ConcatMultipleSlices(zerothSteps, syncClusterObjectSteps),
 		},
 		{
 			name: "adminUpdate() does not adopt Hive-created clusters",

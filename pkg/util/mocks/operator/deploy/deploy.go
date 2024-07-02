@@ -34,20 +34,6 @@ func (m *MockOperator) EXPECT() *MockOperatorMockRecorder {
 	return m.recorder
 }
 
-// CreateOrUpdate mocks base method.
-func (m *MockOperator) CreateOrUpdate(arg0 context.Context) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdate", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// CreateOrUpdate indicates an expected call of CreateOrUpdate.
-func (mr *MockOperatorMockRecorder) CreateOrUpdate(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockOperator)(nil).CreateOrUpdate), arg0)
-}
-
 // CreateOrUpdateCredentialsRequest mocks base method.
 func (m *MockOperator) CreateOrUpdateCredentialsRequest(arg0 context.Context) error {
 	m.ctrl.T.Helper()
@@ -74,6 +60,20 @@ func (m *MockOperator) EnsureUpgradeAnnotation(arg0 context.Context) error {
 func (mr *MockOperatorMockRecorder) EnsureUpgradeAnnotation(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureUpgradeAnnotation", reflect.TypeOf((*MockOperator)(nil).EnsureUpgradeAnnotation), arg0)
+}
+
+// Install mocks base method.
+func (m *MockOperator) Install(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Install", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Install indicates an expected call of Install.
+func (mr *MockOperatorMockRecorder) Install(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Install", reflect.TypeOf((*MockOperator)(nil).Install), arg0)
 }
 
 // IsReady mocks base method.
@@ -132,4 +132,32 @@ func (m *MockOperator) Restart(arg0 context.Context, arg1 []string) error {
 func (mr *MockOperatorMockRecorder) Restart(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restart", reflect.TypeOf((*MockOperator)(nil).Restart), arg0, arg1)
+}
+
+// SyncClusterObject mocks base method.
+func (m *MockOperator) SyncClusterObject(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SyncClusterObject", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SyncClusterObject indicates an expected call of SyncClusterObject.
+func (mr *MockOperatorMockRecorder) SyncClusterObject(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncClusterObject", reflect.TypeOf((*MockOperator)(nil).SyncClusterObject), arg0)
+}
+
+// Update mocks base method.
+func (m *MockOperator) Update(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockOperatorMockRecorder) Update(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockOperator)(nil).Update), arg0)
 }

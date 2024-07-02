@@ -31,7 +31,7 @@ func TestEnsureAROOperator(t *testing.T) {
 		wantErr string
 	}{
 		{
-			name: "create/update success",
+			name: "update success",
 			doc: &api.OpenShiftClusterDocument{
 				Key: strings.ToLower(key),
 				OpenShiftCluster: &api.OpenShiftCluster{
@@ -55,12 +55,12 @@ func TestEnsureAROOperator(t *testing.T) {
 			},
 			mocks: func(dep *mock_deploy.MockOperator) {
 				dep.EXPECT().
-					CreateOrUpdate(gomock.Any()).
+					Update(gomock.Any()).
 					Return(nil)
 			},
 		},
 		{
-			name: "create/update failure",
+			name: "update failure",
 			doc: &api.OpenShiftClusterDocument{
 				Key: strings.ToLower(key),
 				OpenShiftCluster: &api.OpenShiftCluster{
@@ -84,7 +84,7 @@ func TestEnsureAROOperator(t *testing.T) {
 			},
 			mocks: func(dep *mock_deploy.MockOperator) {
 				dep.EXPECT().
-					CreateOrUpdate(gomock.Any()).
+					Update(gomock.Any()).
 					Return(errors.New("Mock return: CreateFailed"))
 			},
 
@@ -122,6 +122,181 @@ func TestEnsureAROOperator(t *testing.T) {
 			}
 
 			err := m.ensureAROOperator(ctx)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestInstallAROOperator(t *testing.T) {
+	ctx := context.Background()
+
+	const (
+		key = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1"
+	)
+
+	for _, tt := range []struct {
+		name    string
+		doc     *api.OpenShiftClusterDocument
+		mocks   func(*mock_deploy.MockOperator)
+		wantErr string
+	}{
+		{
+			name: "install success",
+			doc: &api.OpenShiftClusterDocument{
+				Key: strings.ToLower(key),
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID: key,
+					Properties: api.OpenShiftClusterProperties{
+						IngressProfiles: []api.IngressProfile{
+							{
+								Visibility: api.VisibilityPublic,
+								Name:       "default",
+							},
+						},
+						ProvisioningState: api.ProvisioningStateAdminUpdating,
+						ClusterProfile: api.ClusterProfile{
+							Version: "4.8.18",
+						},
+						NetworkProfile: api.NetworkProfile{
+							APIServerPrivateEndpointIP: "1.2.3.4",
+						},
+					},
+				},
+			},
+			mocks: func(dep *mock_deploy.MockOperator) {
+				dep.EXPECT().
+					Install(gomock.Any()).
+					Return(nil)
+			},
+		},
+		{
+			name: "install failure",
+			doc: &api.OpenShiftClusterDocument{
+				Key: strings.ToLower(key),
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID: key,
+					Properties: api.OpenShiftClusterProperties{
+						IngressProfiles: []api.IngressProfile{
+							{
+								Visibility: api.VisibilityPublic,
+								Name:       "default",
+							},
+						},
+						ProvisioningState: api.ProvisioningStateAdminUpdating,
+						ClusterProfile: api.ClusterProfile{
+							Version: "4.8.18",
+						},
+						NetworkProfile: api.NetworkProfile{
+							APIServerPrivateEndpointIP: "1.2.3.4",
+						},
+					},
+				},
+			},
+			mocks: func(dep *mock_deploy.MockOperator) {
+				dep.EXPECT().
+					Install(gomock.Any()).
+					Return(errors.New("Mock return: CreateFailed"))
+			},
+			wantErr: "Mock return: CreateFailed",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			dep := mock_deploy.NewMockOperator(controller)
+			if tt.mocks != nil {
+				tt.mocks(dep)
+			}
+
+			m := &manager{
+				log: logrus.NewEntry(logrus.StandardLogger()),
+				doc: tt.doc,
+
+				aroOperatorDeployer: dep,
+			}
+
+			err := m.installAROOperator(ctx)
+			utilerror.AssertErrorMessage(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestSyncClusterObject(t *testing.T) {
+	ctx := context.Background()
+
+	const (
+		key = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1"
+	)
+
+	for _, tt := range []struct {
+		name    string
+		doc     *api.OpenShiftClusterDocument
+		mocks   func(*mock_deploy.MockOperator)
+		wantErr string
+	}{
+		{
+			name: "sync object",
+			doc: &api.OpenShiftClusterDocument{
+				Key: strings.ToLower(key),
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID: key,
+					Properties: api.OpenShiftClusterProperties{
+						IngressProfiles: []api.IngressProfile{
+							{
+								Visibility: api.VisibilityPublic,
+								Name:       "default",
+							},
+						},
+					},
+				},
+			},
+			mocks: func(dep *mock_deploy.MockOperator) {
+				dep.EXPECT().
+					SyncClusterObject(gomock.Any()).
+					Return(nil)
+			},
+		},
+		{
+			name: "sync object failure",
+			doc: &api.OpenShiftClusterDocument{
+				Key: strings.ToLower(key),
+				OpenShiftCluster: &api.OpenShiftCluster{
+					ID: key,
+					Properties: api.OpenShiftClusterProperties{
+						IngressProfiles: []api.IngressProfile{
+							{
+								Visibility: api.VisibilityPublic,
+								Name:       "default",
+							},
+						},
+					},
+				},
+			},
+			mocks: func(dep *mock_deploy.MockOperator) {
+				dep.EXPECT().
+					SyncClusterObject(gomock.Any()).
+					Return(errors.New("Mock return: DeployFailed"))
+			},
+			wantErr: "Mock return: DeployFailed",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			dep := mock_deploy.NewMockOperator(controller)
+			if tt.mocks != nil {
+				tt.mocks(dep)
+			}
+
+			m := &manager{
+				log:                 logrus.NewEntry(logrus.StandardLogger()),
+				doc:                 tt.doc,
+				aroOperatorDeployer: dep,
+			}
+
+			err := m.syncClusterObject(ctx)
 			utilerror.AssertErrorMessage(t, err, tt.wantErr)
 		})
 	}
