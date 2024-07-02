@@ -727,7 +727,7 @@ github.com/gorilla/csrf
 # github.com/gorilla/mux v1.8.1
 ## explicit; go 1.20
 github.com/gorilla/mux
-# github.com/gorilla/schema v1.2.1
+# github.com/gorilla/schema v1.4.1
 ## explicit; go 1.20
 github.com/gorilla/schema
 # github.com/gorilla/securecookie v1.1.2
