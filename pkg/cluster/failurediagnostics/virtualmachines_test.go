@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
-	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/go-test/deep"
 	"github.com/golang/mock/gomock"
@@ -22,7 +21,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
-	mock_storage "github.com/Azure/ARO-RP/pkg/util/mocks/storage"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -48,12 +46,12 @@ func TestVirtualMachines(t *testing.T) {
 	for _, tt := range []struct {
 		name           string
 		expectedOutput interface{}
-		mock           func(vmClient *mock_compute.MockVirtualMachinesClient, stor *mock_storage.MockManager, blob *mock_storage.MockBlobStorageClient)
+		mock           func(vmClient *mock_compute.MockVirtualMachinesClient)
 		expectedLogs   []map[string]types.GomegaMatcher
 	}{
 		{
 			name: "failure to fetch VMs",
-			mock: func(vmClient *mock_compute.MockVirtualMachinesClient, stor *mock_storage.MockManager, blob *mock_storage.MockBlobStorageClient) {
+			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return(nil, errors.New("vm explod"))
 			},
 			expectedLogs: []map[string]types.GomegaMatcher{},
@@ -63,33 +61,17 @@ func TestVirtualMachines(t *testing.T) {
 		},
 		{
 			name: "no VMs returned",
-			mock: func(vmClient *mock_compute.MockVirtualMachinesClient, stor *mock_storage.MockManager, blob *mock_storage.MockBlobStorageClient) {
+			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{}, nil)
 			},
 			expectedLogs: []map[string]types.GomegaMatcher{},
 			expectedOutput: []interface{}{
-				"no vms found",
+				"no VMs found",
 			},
 		},
 		{
-			name: "no console URIs returned",
-			mock: func(vmClient *mock_compute.MockVirtualMachinesClient, stor *mock_storage.MockManager, blob *mock_storage.MockBlobStorageClient) {
-				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
-					{
-						Name:     to.StringPtr("somename"),
-						Location: to.StringPtr("eastus"),
-					},
-				}, nil)
-			},
-			expectedLogs: []map[string]types.GomegaMatcher{},
-			expectedOutput: []interface{}{
-				`vm somename: {"location":"eastus"}`,
-				"no usable console URIs found",
-			},
-		},
-		{
-			name: "failure to fetch blob client",
-			mock: func(vmClient *mock_compute.MockVirtualMachinesClient, stor *mock_storage.MockManager, blob *mock_storage.MockBlobStorageClient) {
+			name: "failure to get VM serial console",
+			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
 						Name:     to.StringPtr("somename"),
@@ -104,46 +86,19 @@ func TestVirtualMachines(t *testing.T) {
 					},
 				}, nil)
 
-				stor.EXPECT().BlobService(gomock.Any(), "resourceGroupCluster", "clusterPrefixHere", mgmtstorage.R, mgmtstorage.SignedResourceTypesO).
-					Times(1).Return(nil, errors.New("explod"))
+				vmClient.EXPECT().GetSerialConsoleForVM(
+					gomock.Any(), "resourceGroupCluster", "somename",
+				).Times(1).Return(nil, errors.New("explod"))
 			},
 			expectedLogs: []map[string]types.GomegaMatcher{},
 			expectedOutput: []interface{}{
 				`vm somename: {"location":"eastus","properties":{}}`,
-				"blob storage error: explod",
-			},
-		},
-		{
-			name: "failed blob client get",
-			mock: func(vmClient *mock_compute.MockVirtualMachinesClient, stor *mock_storage.MockManager, blob *mock_storage.MockBlobStorageClient) {
-				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
-					{
-						Name:     to.StringPtr("somename"),
-						Location: to.StringPtr("eastus"),
-						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
-							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
-								BootDiagnostics: &mgmtcompute.BootDiagnosticsInstanceView{
-									SerialConsoleLogBlobURI: to.StringPtr("bogusurl/boguscontainer/bogusblob"),
-								},
-							},
-						},
-					},
-				}, nil)
-
-				stor.EXPECT().BlobService(gomock.Any(), "resourceGroupCluster", "clusterPrefixHere", mgmtstorage.R, mgmtstorage.SignedResourceTypesO).
-					Times(1).Return(blob, nil)
-
-				blob.EXPECT().Get("bogusurl/boguscontainer/bogusblob").Times(1).Return(nil, errors.New("can't read"))
-			},
-			expectedLogs: []map[string]types.GomegaMatcher{},
-			expectedOutput: []interface{}{
-				`vm somename: {"location":"eastus","properties":{}}`,
-				"blob storage get error on somename: can't read",
+				"vm boot diagnostics retrieval error for somename: explod",
 			},
 		},
 		{
 			name: "failed blob decoding",
-			mock: func(vmClient *mock_compute.MockVirtualMachinesClient, stor *mock_storage.MockManager, blob *mock_storage.MockBlobStorageClient) {
+			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
 						Name:     to.StringPtr("somename"),
@@ -158,12 +113,11 @@ func TestVirtualMachines(t *testing.T) {
 					},
 				}, nil)
 
-				stor.EXPECT().BlobService(gomock.Any(), "resourceGroupCluster", "clusterPrefixHere", mgmtstorage.R, mgmtstorage.SignedResourceTypesO).
-					Times(1).Return(blob, nil)
+				out := io.NopCloser(bytes.NewBufferString("aGVsbG8KdGhlcmUgOikKZ"))
 
-				out := bytes.NewBufferString("aGVsbG8KdGhlcmUgOikKZ")
-
-				blob.EXPECT().Get("bogusurl/boguscontainer/bogusblob").Times(1).Return(io.NopCloser(out), nil)
+				vmClient.EXPECT().GetSerialConsoleForVM(
+					gomock.Any(), "resourceGroupCluster", "somename",
+				).Times(1).Return(out, nil)
 			},
 			expectedLogs: []map[string]types.GomegaMatcher{
 				{
@@ -184,27 +138,20 @@ func TestVirtualMachines(t *testing.T) {
 		},
 		{
 			name: "success",
-			mock: func(vmClient *mock_compute.MockVirtualMachinesClient, stor *mock_storage.MockManager, blob *mock_storage.MockBlobStorageClient) {
+			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
 				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
 					{
-						Name:     to.StringPtr("somename"),
-						Location: to.StringPtr("eastus"),
-						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
-							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
-								BootDiagnostics: &mgmtcompute.BootDiagnosticsInstanceView{
-									SerialConsoleLogBlobURI: to.StringPtr("bogusurl/boguscontainer/bogusblob"),
-								},
-							},
-						},
+						Name:                     to.StringPtr("somename"),
+						Location:                 to.StringPtr("eastus"),
+						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{},
 					},
 				}, nil)
 
-				stor.EXPECT().BlobService(gomock.Any(), "resourceGroupCluster", "clusterPrefixHere", mgmtstorage.R, mgmtstorage.SignedResourceTypesO).
-					Times(1).Return(blob, nil)
+				out := io.NopCloser(bytes.NewBufferString("aGVsbG8KdGhlcmUgOikK"))
 
-				out := bytes.NewBufferString("aGVsbG8KdGhlcmUgOikK")
-
-				blob.EXPECT().Get("bogusurl/boguscontainer/bogusblob").Times(1).Return(io.NopCloser(out), nil)
+				vmClient.EXPECT().GetSerialConsoleForVM(
+					gomock.Any(), "resourceGroupCluster", "somename",
+				).Times(1).Return(out, nil)
 			},
 			expectedLogs: []map[string]types.GomegaMatcher{
 				{
@@ -231,16 +178,13 @@ func TestVirtualMachines(t *testing.T) {
 			defer controller.Finish()
 
 			vmClient := mock_compute.NewMockVirtualMachinesClient(controller)
-			storageClient := mock_storage.NewMockManager(controller)
-			blobClient := mock_storage.NewMockBlobStorageClient(controller)
 
-			tt.mock(vmClient, storageClient, blobClient)
+			tt.mock(vmClient)
 
 			d := &manager{
 				log:             entry,
 				doc:             oc,
 				virtualMachines: vmClient,
-				storage:         storageClient,
 			}
 
 			out, err := d.LogAzureInformation(ctx)
