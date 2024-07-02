@@ -98,10 +98,11 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		}
 	}
 
-	// Don't persist identity parameters in non managed/workload identity clusters
-	// TODO - use a common function to check if the cluster is a managed/workload identity cluster
-	if doc.OpenShiftCluster.Properties.ServicePrincipalProfile == nil || doc.OpenShiftCluster.Identity != nil {
-		if isCreate {
+	if isCreate {
+		// Persist identity URL and tenant ID only for managed/workload identity cluster create
+		// We don't support updating cluster managed identity after cluster creation
+		// TODO - use a common function to check if the cluster is a managed/workload identity cluster
+		if !(doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil || doc.OpenShiftCluster.Identity == nil) {
 			if err := validateIdentityUrl(doc.OpenShiftCluster, identityURL); err != nil {
 				return nil, err
 			}
