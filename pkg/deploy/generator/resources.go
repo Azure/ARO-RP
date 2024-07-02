@@ -4,7 +4,7 @@ package generator
 // Licensed under the Apache License 2.0.
 
 import (
-	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
+	sdkdns "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dns/armdns"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2019-09-01/keyvault"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtinsights "github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
@@ -32,11 +32,11 @@ func (g *generator) actionGroup(name string, shortName string) *arm.Resource {
 
 func (g *generator) dnsZone(name string) *arm.Resource {
 	return &arm.Resource{
-		Resource: &mgmtdns.Zone{
-			ZoneProperties: &mgmtdns.ZoneProperties{},
-			Name:           &name,
-			Type:           to.StringPtr("Microsoft.Network/dnsZones"),
-			Location:       to.StringPtr("global"),
+		Resource: &sdkdns.Zone{
+			Properties: &sdkdns.ZoneProperties{},
+			Name:       &name,
+			Type:       to.StringPtr("Microsoft.Network/dnsZones"),
+			Location:   to.StringPtr("global"),
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network/dnsZones"),
 	}
