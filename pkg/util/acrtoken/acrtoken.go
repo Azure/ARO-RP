@@ -7,10 +7,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2020-11-01-preview/containerregistry"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -145,9 +147,14 @@ func (m *manager) RotateTokenPassword(ctx context.Context, rp *api.RegistryProfi
 // generateTokenPassword takes an existing ACR token and generates
 // a password for the specified password name
 func (m *manager) generateTokenPassword(ctx context.Context, passwordName mgmtcontainerregistry.TokenPasswordName, rp *api.RegistryProfile) (string, error) {
+	const hoursInADay = 24
+	const acrTokenLifeInDays = 90
+	var tokenExpiration = time.Now().UTC().Add(time.Hour * hoursInADay * acrTokenLifeInDays)
+
 	creds, err := m.registries.GenerateCredentials(ctx, m.r.ResourceGroup, m.r.ResourceName, mgmtcontainerregistry.GenerateCredentialsParameters{
 		TokenID: to.StringPtr(m.env.ACRResourceID() + "/tokens/" + rp.Username),
 		Name:    passwordName,
+		Expiry:  &date.Time{Time: tokenExpiration},
 	})
 	if err != nil {
 		return "", err
