@@ -34,6 +34,14 @@ func TestCreateOrUpdateDenyAssignment(t *testing.T) {
 						SPObjectID: fakeClusterSPObjectId,
 					},
 				},
+				Identity: &api.Identity{
+					UserAssignedIdentities: api.UserAssignedIdentities{
+						"fakeIdentity": api.ClusterUserAssignedIdentity{
+							ClientID:    "fake",
+							PrincipalID: "alsoFake",
+						},
+					},
+				},
 			},
 		},
 	}

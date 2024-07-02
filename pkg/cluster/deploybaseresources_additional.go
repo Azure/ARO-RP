@@ -20,7 +20,22 @@ import (
 )
 
 func (m *manager) denyAssignment() *arm.Resource {
-	return &arm.Resource{
+	excludePrincipals := []mgmtauthorization.Principal{}
+	if m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile != nil && m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile == nil {
+		for _, identity := range m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
+			excludePrincipals = append(excludePrincipals, mgmtauthorization.Principal{
+				ID:   &identity.ObjectID,
+				Type: to.StringPtr(string(mgmtauthorization.ServicePrincipal)),
+			})
+		}
+	} else {
+		excludePrincipals = append(excludePrincipals, mgmtauthorization.Principal{
+			ID:   &m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.SPObjectID,
+			Type: to.StringPtr(string(mgmtauthorization.ServicePrincipal)),
+		})
+	}
+
+	resource := &arm.Resource{
 		Resource: &mgmtauthorization.DenyAssignment{
 			Name: to.StringPtr("[guid(resourceGroup().id, 'ARO cluster resource group deny assignment')]"),
 			Type: to.StringPtr("Microsoft.Authorization/denyAssignments"),
@@ -60,17 +75,13 @@ func (m *manager) denyAssignment() *arm.Resource {
 						Type: to.StringPtr("SystemDefined"),
 					},
 				},
-				ExcludePrincipals: &[]mgmtauthorization.Principal{
-					{
-						ID:   &m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.SPObjectID,
-						Type: to.StringPtr("ServicePrincipal"),
-					},
-				},
+				ExcludePrincipals: &excludePrincipals,
 				IsSystemProtected: to.BoolPtr(true),
 			},
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Authorization/denyAssignments"),
 	}
+	return resource
 }
 
 func (m *manager) clusterServicePrincipalRBAC() *arm.Resource {
