@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/msi-dataplane/pkg/dataplane"
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
 
@@ -43,8 +44,8 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 	subId := chi.URLParam(r, "subscriptionId")
 	resourceProviderNamespace := chi.URLParam(r, "resourceProviderNamespace")
 
-	identityURL := r.Header.Get("x-ms-identity-url")
-	identityTenantID := r.Header.Get("x-ms-home-tenant-id")
+	identityURL := r.Header.Get(dataplane.MsiIdentityURLHeader)
+	identityTenantID := r.Header.Get(dataplane.MsiTenantHeader)
 
 	apiVersion := r.URL.Query().Get(api.APIVersionKey)
 	err := cosmosdb.RetryOnPreconditionFailed(func() error {
