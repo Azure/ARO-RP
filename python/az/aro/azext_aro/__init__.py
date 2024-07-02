@@ -4,7 +4,10 @@
 from azext_aro._client_factory import cf_aro
 from azext_aro._params import load_arguments
 from azext_aro.commands import load_command_table
-from azure.cli.core import AzCommandsLoader, ModExtensionSuppress
+from azure.cli.core import (
+    AzCommandsLoader,
+    ModExtensionSuppress
+)
 from azure.cli.core.commands import CliCommandType
 from azure.cli.core.aaz import load_aaz_command_table
 try:

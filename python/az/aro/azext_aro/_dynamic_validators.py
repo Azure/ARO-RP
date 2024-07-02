@@ -8,8 +8,11 @@ from itertools import tee
 from azure.cli.core.commands.client_factory import get_mgmt_service_client
 from azure.cli.core.commands.validators import get_default_location_from_resource_group
 from azure.cli.core.profiles import ResourceType
-from azure.cli.core.azclierror import CLIInternalError, InvalidArgumentValueError, \
+from azure.cli.core.azclierror import (
+    CLIInternalError,
+    InvalidArgumentValueError,
     RequiredArgumentMissingError
+)
 from azure.core.exceptions import ResourceNotFoundError
 from knack.log import get_logger
 from msrestazure.tools import is_valid_resource_id, parse_resource_id

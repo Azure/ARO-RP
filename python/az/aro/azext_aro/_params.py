@@ -1,27 +1,36 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the Apache License 2.0.
 
-from azext_aro._validators import validate_cidr
-from azext_aro._validators import validate_client_id
-from azext_aro._validators import validate_client_secret
-from azext_aro._validators import validate_cluster_resource_group
-from azext_aro._validators import validate_disk_encryption_set
-from azext_aro._validators import validate_domain
-from azext_aro._validators import validate_pull_secret
-from azext_aro._validators import validate_subnet
-from azext_aro._validators import validate_visibility
-from azext_aro._validators import validate_vnet
-from azext_aro._validators import validate_vnet_resource_group_name
-from azext_aro._validators import validate_worker_count
-from azext_aro._validators import validate_worker_vm_disk_size_gb
-from azext_aro._validators import validate_refresh_cluster_credentials
-from azext_aro._validators import validate_version_format
-from azext_aro._validators import validate_outbound_type
-from azext_aro._validators import validate_load_balancer_managed_outbound_ip_count
-from azure.cli.core.commands.parameters import name_type
-from azure.cli.core.commands.parameters import get_enum_type, get_three_state_flag
-from azure.cli.core.commands.parameters import resource_group_name_type
-from azure.cli.core.commands.parameters import tags_type
+from azext_aro._actions import AROPlatformWorkloadIdentityAddAction
+from azext_aro._validators import (
+    validate_cidr,
+    validate_client_id,
+    validate_client_secret,
+    validate_cluster_resource_group,
+    validate_disk_encryption_set,
+    validate_domain,
+    validate_pull_secret,
+    validate_subnet,
+    validate_visibility,
+    validate_vnet,
+    validate_vnet_resource_group_name,
+    validate_worker_count,
+    validate_worker_vm_disk_size_gb,
+    validate_refresh_cluster_credentials,
+    validate_version_format,
+    validate_outbound_type,
+    validate_load_balancer_managed_outbound_ip_count,
+    validate_enable_managed_identity,
+    validate_platform_workload_identities,
+    validate_cluster_identity,
+)
+from azure.cli.core.commands.parameters import (
+    name_type,
+    get_enum_type,
+    get_three_state_flag,
+    resource_group_name_type,
+    tags_type
+)
 from azure.cli.core.commands.validators import get_default_location_from_resource_group
 
 
@@ -122,6 +131,20 @@ def load_arguments(self, _):
                    help='The desired number of IPv4 outbound IPs created and managed by Azure for the cluster public load balancer.',  # pylint: disable=line-too-long
                    validator=validate_load_balancer_managed_outbound_ip_count,
                    options_list=['--load-balancer-managed-outbound-ip-count', '--lb-ip-count'])
+
+        c.argument('enable_managed_identity', arg_group='Identity', arg_type=get_three_state_flag(),
+                   options_list=['--enable-managed-identity', '--enable-mi'],
+                   validator=validate_enable_managed_identity,
+                   help='Enable managed identity for this cluster.', is_preview=True)
+        c.argument('platform_workload_identities', arg_group='Identity',
+                   help='Assign a platform workload identity used within the cluster', is_preview=True,
+                   options_list=['--assign-platform-workload-identity', '--assign-platform-wi'],
+                   validator=validate_platform_workload_identities,
+                   action=AROPlatformWorkloadIdentityAddAction, nargs='+')
+        c.argument('mi_user_assigned', arg_group='Identity',
+                   options_list=['--mi-user-assigned', '--assign-cluster-identity'],
+                   validator=validate_cluster_identity,
+                   help='Set the user managed identity on the cluster.')
 
     with self.argument_context('aro update') as c:
         c.argument('client_secret',
