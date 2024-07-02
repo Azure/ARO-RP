@@ -1,0 +1,142 @@
+---
+simple_clusters:
+  hosts:
+    basic:
+      # The simplest possible cluster
+      name: aro
+      resource_group: "{{ CLUSTERPREFIX }}-basic-{{ location }}"
+    enc:
+      # Basic cluster with encryption-at-host enabled
+      name: aro-414
+      resource_group: "{{ CLUSTERPREFIX }}-enc-{{ location }}-414"
+      version: 4.14.16
+      master_size: Standard_E8s_v5
+      master_encryption_at_host: true
+      worker_size: Standard_D4s_v5
+      worker_encryption_at_host: true
+  vars:
+    network_prefix_cidr: 10.0.0.0/22
+    master_cidr: 10.0.0.0/23
+    master_size: Standard_D8s_v3
+    worker_cidr: 10.0.2.0/23
+    worker_size: Standard_D4s_v3
+  children:
+    baddns_clusters:
+    encrypted_clusters:
+    private_clusters:
+    udr_clusters:
+
+baddns_clusters:
+  # Custom DNS pointing to something that doesn't work to make sure
+  # we still work with uncooperative DNS servers
+  # https://learn.microsoft.com/en-us/azure/openshift/howto-custom-dns
+  hosts:
+    bad_dns413:
+      name: aro
+      resource_group: "{{ CLUSTERPREFIX }}-baddns-{{ location }}-413"
+      version: 4.13.23
+    bad_dns414:
+      name: aro
+      resource_group: "{{ CLUSTERPREFIX }}-baddns-{{ location }}-414"
+      version: 4.14.16
+  vars:
+    dns_servers:
+      - 172.16.0.0
+    network_prefix_cidr: 10.0.0.0/22
+    master_cidr: 10.0.0.0/23
+    master_size: Standard_D8s_v3
+    worker_cidr: 10.0.2.0/23
+    worker_size: Standard_D4s_v3
+
+byok_clusters:
+  # Cluster with customer-managed disk encryption key
+  # https://learn.microsoft.com/en-us/azure/openshift/howto-byok
+  hosts:
+    byok414:
+      name: aro-414
+      resource_group: "{{ CLUSTERPREFIX }}-byok-{{ location }}-414"
+      version: 4.14.16
+      network_prefix_cidr: 10.0.0.0/22
+      master_cidr: 10.0.0.0/23
+      master_size: Standard_E8s_v5
+      worker_cidr: 10.0.2.0/23
+      worker_size: Standard_D4s_v5
+    byok413:
+      name: aro-413
+      resource_group: "{{ CLUSTERPREFIX }}-byok-{{ location }}-413"
+      version: 4.13.23
+      network_prefix_cidr: 10.0.0.0/22
+      master_cidr: 10.0.0.0/23
+      master_size: Standard_E8s_v5
+      worker_cidr: 10.0.2.0/23
+      worker_size: Standard_D4s_v5
+
+
+encrypted_clusters:
+  # Basic cluster with encryption-at-host enabled
+  hosts:
+    enc413:
+      name: aro
+      resource_group: "{{ CLUSTERPREFIX }}-enc-{{ location }}-414"
+      version: 4.13.23
+    enc414:
+      name: aro
+      resource_group: "{{ CLUSTERPREFIX }}-enc-{{ location }}-413"
+      version: 4.14.16
+  vars:
+    network_prefix_cidr: 10.0.0.0/22
+    master_cidr: 10.0.0.0/23
+    worker_cidr: 10.0.2.0/23
+    master_size: Standard_E8s_v5
+    master_encryption_at_host: true
+    worker_size: Standard_D4s_v5
+    worker_encryption_at_host: true
+
+private_clusters:
+  hosts:
+    private:
+      # Simple private cluster, no UDR
+      name: aro
+      resource_group: "{{ CLUSTERPREFIX }}-private-{{ location }}"
+      apiserver_visibility: Private
+      ingress_visibility: Private
+      network_prefix_cidr: 10.0.0.0/22
+      master_cidr: 10.0.0.0/23
+      master_size: Standard_D8s_v3
+      worker_cidr: 10.0.2.0/23
+      worker_size: Standard_D4s_v3
+
+udr_clusters:
+  # https://learn.microsoft.com/en-us/azure/openshift/howto-create-private-cluster-4x
+  hosts:
+    udr414:
+      name: aro-414
+      resource_group: "{{ CLUSTERPREFIX }}-udr-{{ location }}-414"
+      version: 4.14.16
+      routes:
+        - name: Blackhole
+          address_prefix: 0.0.0.0/0
+          next_hop_type: none
+    udr_no_null414:
+      name: aro-414
+      resource_group: "{{ CLUSTERPREFIX }}-udrnonull-{{ location }}-414"
+      version: 4.14.16
+      routes:
+        - name: The Interwebs
+          address_prefix: 0.0.0.0/0
+          next_hop_type: internet
+    udr413:
+      name: aro-413
+      resource_group: "{{ CLUSTERPREFIX }}-udr-{{ location }}-413"
+      version: 4.13.23
+      routes:
+        - name: Blackhole
+          address_prefix: 0.0.0.0/0
+          next_hop_type: none
+  vars:
+    network_prefix_cidr: 10.0.0.0/22
+    master_cidr: 10.0.0.0/23
+    worker_cidr: 10.0.2.0/23
+    apiserver_visibility: Private
+    ingress_visibility: Private
+    outbound_type: UserDefinedRouting
