@@ -10,15 +10,13 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/policy"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
-	"github.com/Azure/ARO-RP/pkg/util/encryption"
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
+	"github.com/Azure/ARO-RP/pkg/util/service"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -160,53 +158,18 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 		}
 	}
 
-	msiToken, err := _env.NewMSITokenCredential()
-	if err != nil {
-		return nil, fmt.Errorf("MSI Authorizer failed with: %s", err.Error())
-	}
-
-	msiKVAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().KeyVaultScope)
-	if err != nil {
-		return nil, fmt.Errorf("MSI KeyVault Authorizer failed with: %s", err.Error())
-	}
-
 	m := statsd.New(ctx, log.WithField("component", "update-ocp-versions"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 
-	if err := env.ValidateVars(envKeyVaultPrefix); err != nil {
-		return nil, err
+	dbc, err := service.NewDatabaseClient(ctx, _env, log, m, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed creating database client: %w", err)
 	}
-	keyVaultPrefix := os.Getenv(envKeyVaultPrefix)
-	serviceKeyvaultURI := keyvault.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
-	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
 
-	aead, err := encryption.NewMulti(ctx, serviceKeyvault, env.EncryptionSecretV2Name, env.EncryptionSecretName)
+	dbName, err := service.DBName(_env.IsLocalDevelopmentMode())
 	if err != nil {
 		return nil, err
 	}
 
-	if err := env.ValidateVars(envDatabaseAccountName); err != nil {
-		return nil, err
-	}
-
-	dbAccountName := os.Getenv(envDatabaseAccountName)
-	clientOptions := &policy.ClientOptions{
-		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
-	}
-	logrusEntry := log.WithField("component", "database")
-	dbAuthorizer, err := database.NewMasterKeyAuthorizer(ctx, logrusEntry, msiToken, clientOptions, _env.SubscriptionID(), _env.ResourceGroup(), dbAccountName)
-	if err != nil {
-		return nil, err
-	}
-
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, m, aead, dbAccountName)
-	if err != nil {
-		return nil, err
-	}
-
-	dbName, err := DBName(_env.IsLocalDevelopmentMode())
-	if err != nil {
-		return nil, err
-	}
 	dbOpenShiftVersions, err := database.NewOpenShiftVersions(ctx, dbc, dbName)
 	if err != nil {
 		return nil, err

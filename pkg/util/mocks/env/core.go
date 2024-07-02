@@ -153,22 +153,18 @@ func (mr *MockCoreMockRecorder) NewLiveConfigManager(arg0 interface{}) *gomock.C
 }
 
 // NewMSIAuthorizer mocks base method.
-func (m *MockCore) NewMSIAuthorizer(arg0 ...string) (autorest.Authorizer, error) {
+func (m *MockCore) NewMSIAuthorizer(scope string) (autorest.Authorizer, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range arg0 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "NewMSIAuthorizer", varargs...)
+	ret := m.ctrl.Call(m, "NewMSIAuthorizer", scope)
 	ret0, _ := ret[0].(autorest.Authorizer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // NewMSIAuthorizer indicates an expected call of NewMSIAuthorizer.
-func (mr *MockCoreMockRecorder) NewMSIAuthorizer(arg0 ...interface{}) *gomock.Call {
+func (mr *MockCoreMockRecorder) NewMSIAuthorizer(scope interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMSIAuthorizer", reflect.TypeOf((*MockCore)(nil).NewMSIAuthorizer), arg0...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMSIAuthorizer", reflect.TypeOf((*MockCore)(nil).NewMSIAuthorizer), scope)
 }
 
 // NewMSITokenCredential mocks base method.

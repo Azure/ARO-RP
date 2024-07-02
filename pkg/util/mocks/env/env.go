@@ -494,22 +494,18 @@ func (mr *MockInterfaceMockRecorder) NewLiveConfigManager(arg0 interface{}) *gom
 }
 
 // NewMSIAuthorizer mocks base method.
-func (m *MockInterface) NewMSIAuthorizer(arg0 ...string) (autorest.Authorizer, error) {
+func (m *MockInterface) NewMSIAuthorizer(scope string) (autorest.Authorizer, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range arg0 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "NewMSIAuthorizer", varargs...)
+	ret := m.ctrl.Call(m, "NewMSIAuthorizer", scope)
 	ret0, _ := ret[0].(autorest.Authorizer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // NewMSIAuthorizer indicates an expected call of NewMSIAuthorizer.
-func (mr *MockInterfaceMockRecorder) NewMSIAuthorizer(arg0 ...interface{}) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) NewMSIAuthorizer(scope interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMSIAuthorizer", reflect.TypeOf((*MockInterface)(nil).NewMSIAuthorizer), arg0...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewMSIAuthorizer", reflect.TypeOf((*MockInterface)(nil).NewMSIAuthorizer), scope)
 }
 
 // NewMSITokenCredential mocks base method.
