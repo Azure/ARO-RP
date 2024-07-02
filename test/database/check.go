@@ -27,10 +27,23 @@ type Checker struct {
 	openShiftVersionDocuments                []*api.OpenShiftVersionDocument
 	platformWorkloadIdentityRoleSetDocuments []*api.PlatformWorkloadIdentityRoleSetDocument
 	validationResult                         []*api.ValidationResult
+	maintenanceManifestDocuments             []*api.MaintenanceManifestDocument
 }
 
 func NewChecker() *Checker {
 	return &Checker{}
+}
+
+func (f *Checker) Clear() {
+	f.openshiftClusterDocuments = []*api.OpenShiftClusterDocument{}
+	f.subscriptionDocuments = []*api.SubscriptionDocument{}
+	f.billingDocuments = []*api.BillingDocument{}
+	f.asyncOperationDocuments = []*api.AsyncOperationDocument{}
+	f.portalDocuments = []*api.PortalDocument{}
+	f.gatewayDocuments = []*api.GatewayDocument{}
+	f.openShiftVersionDocuments = []*api.OpenShiftVersionDocument{}
+	f.maintenanceManifestDocuments = []*api.MaintenanceManifestDocument{}
+	f.validationResult = []*api.ValidationResult{}
 }
 
 func (f *Checker) AddOpenShiftClusterDocuments(docs ...*api.OpenShiftClusterDocument) {
@@ -129,6 +142,17 @@ func (f *Checker) AddValidationResult(docs ...*api.ValidationResult) {
 		}
 
 		f.validationResult = append(f.validationResult, docCopy.(*api.ValidationResult))
+	}
+}
+
+func (f *Checker) AddMaintenanceManifestDocuments(docs ...*api.MaintenanceManifestDocument) {
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.maintenanceManifestDocuments = append(f.maintenanceManifestDocuments, docCopy.(*api.MaintenanceManifestDocument))
 	}
 }
 
@@ -305,6 +329,30 @@ func (f *Checker) CheckPlatformWorkloadIdentityRoleSets(roleSets *cosmosdb.FakeP
 		}
 	} else if len(all.PlatformWorkloadIdentityRoleSetDocuments) != 0 || len(f.platformWorkloadIdentityRoleSetDocuments) != 0 {
 		errs = append(errs, fmt.Errorf("role sets length different, %d vs %d", len(all.PlatformWorkloadIdentityRoleSetDocuments), len(f.platformWorkloadIdentityRoleSetDocuments)))
+	}
+
+	return errs
+}
+
+func (f *Checker) CheckMaintenanceManifests(client *cosmosdb.FakeMaintenanceManifestDocumentClient) (errs []error) {
+	ctx := context.Background()
+
+	all, err := client.ListAll(ctx, nil)
+	if err != nil {
+		return []error{err}
+	}
+
+	sort.Slice(all.MaintenanceManifestDocuments, func(i, j int) bool {
+		return all.MaintenanceManifestDocuments[i].ID < all.MaintenanceManifestDocuments[j].ID
+	})
+
+	if len(f.maintenanceManifestDocuments) != 0 && len(all.MaintenanceManifestDocuments) == len(f.maintenanceManifestDocuments) {
+		diff := deep.Equal(all.MaintenanceManifestDocuments, f.maintenanceManifestDocuments)
+		for _, i := range diff {
+			errs = append(errs, errors.New(i))
+		}
+	} else if len(all.MaintenanceManifestDocuments) != 0 || len(f.maintenanceManifestDocuments) != 0 {
+		errs = append(errs, fmt.Errorf("document length different, %d vs %d", len(all.MaintenanceManifestDocuments), len(f.maintenanceManifestDocuments)))
 	}
 
 	return errs

@@ -17,12 +17,13 @@ import (
 )
 
 const (
-	OpenShiftClustersDequeueQuery       = `SELECT * FROM OpenShiftClusters doc WHERE doc.openShiftCluster.properties.provisioningState IN ("Creating", "Deleting", "Updating", "AdminUpdating") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
-	OpenShiftClustersQueueLengthQuery   = `SELECT VALUE COUNT(1) FROM OpenShiftClusters doc WHERE doc.openShiftCluster.properties.provisioningState IN ("Creating", "Deleting", "Updating", "AdminUpdating") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
-	OpenShiftClustersGetQuery           = `SELECT * FROM OpenShiftClusters doc WHERE doc.key = @key`
-	OpenshiftClustersPrefixQuery        = `SELECT * FROM OpenShiftClusters doc WHERE STARTSWITH(doc.key, @prefix)`
-	OpenshiftClustersClientIdQuery      = `SELECT * FROM OpenShiftClusters doc WHERE doc.clientIdKey = @clientID`
-	OpenshiftClustersResourceGroupQuery = `SELECT * FROM OpenShiftClusters doc WHERE doc.clusterResourceGroupIdKey = @resourceGroupID`
+	OpenShiftClustersDequeueQuery               = `SELECT * FROM OpenShiftClusters doc WHERE doc.openShiftCluster.properties.provisioningState IN ("Creating", "Deleting", "Updating", "AdminUpdating") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
+	OpenShiftClustersQueueLengthQuery           = `SELECT VALUE COUNT(1) FROM OpenShiftClusters doc WHERE doc.openShiftCluster.properties.provisioningState IN ("Creating", "Deleting", "Updating", "AdminUpdating") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
+	OpenShiftClustersGetQuery                   = `SELECT * FROM OpenShiftClusters doc WHERE doc.key = @key`
+	OpenshiftClustersPrefixQuery                = `SELECT * FROM OpenShiftClusters doc WHERE STARTSWITH(doc.key, @prefix)`
+	OpenshiftClustersClientIdQuery              = `SELECT * FROM OpenShiftClusters doc WHERE doc.clientIdKey = @clientID`
+	OpenshiftClustersResourceGroupQuery         = `SELECT * FROM OpenShiftClusters doc WHERE doc.clusterResourceGroupIdKey = @resourceGroupID`
+	OpenshiftClustersClusterResourceIDOnlyQuery = `SELECT {key: doc.key} FROM OpenShiftClusters doc WHERE doc.openShiftCluster.properties.provisioningState IN ("Creating", "Deleting", "Updating", "AdminUpdating")`
 )
 
 type OpenShiftClusterDocumentMutator func(*api.OpenShiftClusterDocument) error
@@ -52,6 +53,8 @@ type OpenShiftClusters interface {
 	EndLease(context.Context, string, api.ProvisioningState, api.ProvisioningState, *string) (*api.OpenShiftClusterDocument, error)
 	GetByClientID(ctx context.Context, partitionKey, clientID string) (*api.OpenShiftClusterDocuments, error)
 	GetByClusterResourceGroupID(ctx context.Context, partitionKey, resourceGroupID string) (*api.OpenShiftClusterDocuments, error)
+	GetAllResourceIDs(ctx context.Context, continuation string) (cosmosdb.OpenShiftClusterDocumentIterator, error)
+	DoDequeue(ctx context.Context, doc *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error)
 	NewUUID() string
 }
 
@@ -266,15 +269,19 @@ func (c *openShiftClusters) Dequeue(ctx context.Context) (*api.OpenShiftClusterD
 		}
 
 		for _, doc := range docs.OpenShiftClusterDocuments {
-			doc.LeaseOwner = c.uuid
-			doc.Dequeues++
-			doc, err = c.update(ctx, doc, &cosmosdb.Options{PreTriggers: []string{"renewLease"}})
+			doc, err = c.DoDequeue(ctx, doc)
 			if cosmosdb.IsErrorStatusCode(err, http.StatusPreconditionFailed) { // someone else got there first
 				continue
 			}
 			return doc, err
 		}
 	}
+}
+
+func (c *openShiftClusters) DoDequeue(ctx context.Context, doc *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error) {
+	doc.LeaseOwner = c.uuid
+	doc.Dequeues++
+	return c.update(ctx, doc, &cosmosdb.Options{PreTriggers: []string{"renewLease"}})
 }
 
 func (c *openShiftClusters) Lease(ctx context.Context, key string) (*api.OpenShiftClusterDocument, error) {
@@ -346,4 +353,14 @@ func (c *openShiftClusters) GetByClusterResourceGroupID(ctx context.Context, par
 		return nil, err
 	}
 	return docs, nil
+}
+
+func (c *openShiftClusters) GetAllResourceIDs(ctx context.Context, continuation string) (cosmosdb.OpenShiftClusterDocumentIterator, error) {
+	return c.c.Query(
+		"",
+		&cosmosdb.Query{
+			Query: OpenshiftClustersClusterResourceIDOnlyQuery,
+		},
+		&cosmosdb.Options{Continuation: continuation},
+	), nil
 }
