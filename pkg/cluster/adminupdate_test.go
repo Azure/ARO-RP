@@ -77,6 +77,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 		"[Action ensureAROOperator]",
 		"[Condition aroDeploymentReady, timeout 20m0s]",
 		"[Condition ensureAROOperatorRunningDesiredVersion, timeout 5m0s]",
+		"[Action syncClusterObject]",
 	}
 
 	hiveSteps := []string{

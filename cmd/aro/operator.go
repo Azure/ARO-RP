@@ -42,6 +42,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/storageaccounts"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/subnets"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/workaround"
+	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	// +kubebuilder:scaffold:imports
@@ -86,6 +87,8 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
+	ch := clienthelper.NewWithClient(log, client)
+
 	if role == pkgoperator.RoleMaster {
 		if err = (genevalogging.NewReconciler(
 			log.WithField("controller", genevalogging.ControllerName),
@@ -129,17 +132,17 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (dnsmasq.NewClusterReconciler(
 			log.WithField("controller", dnsmasq.ClusterControllerName),
-			client, dh)).SetupWithManager(mgr); err != nil {
+			client, ch)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", dnsmasq.ClusterControllerName, err)
 		}
 		if err = (dnsmasq.NewMachineConfigReconciler(
 			log.WithField("controller", dnsmasq.MachineConfigControllerName),
-			client, dh)).SetupWithManager(mgr); err != nil {
+			client, ch)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", dnsmasq.MachineConfigControllerName, err)
 		}
 		if err = (dnsmasq.NewMachineConfigPoolReconciler(
 			log.WithField("controller", dnsmasq.MachineConfigPoolControllerName),
-			client, dh)).SetupWithManager(mgr); err != nil {
+			client, ch)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", dnsmasq.MachineConfigPoolControllerName, err)
 		}
 		if err = (node.NewReconciler(

@@ -58,6 +58,8 @@ type Operator interface {
 	IsRunningDesiredVersion(context.Context) (bool, error)
 	RenewMDSDCertificate(context.Context) error
 	EnsureUpgradeAnnotation(context.Context) error
+	SetForceReconcile(context.Context, bool) error
+	SyncClusterObject(context.Context) error
 }
 
 type operator struct {
@@ -102,6 +104,22 @@ type deploymentData struct {
 	Version                      string
 	IsLocalDevelopment           bool
 	SupportsPodSecurityAdmission bool
+}
+
+func (o *operator) SetForceReconcile(ctx context.Context, enable bool) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		c, err := o.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if enable {
+			c.Spec.OperatorFlags[pkgoperator.ForceReconciliation] = "true"
+		} else {
+			c.Spec.OperatorFlags[pkgoperator.ForceReconciliation] = "false"
+		}
+		_, err = o.arocli.AroV1alpha1().Clusters().Update(ctx, c, metav1.UpdateOptions{})
+		return err
+	})
 }
 
 func templateManifests(data deploymentData) ([][]byte, error) {
@@ -211,6 +229,30 @@ func (o *operator) resources(ctx context.Context) ([]kruntime.Object, error) {
 		return nil, err
 	}
 
+	cluster, err := o.clusterObject()
+	if err != nil {
+		return nil, err
+	}
+
+	// create a secret here for genevalogging, later we will copy it to
+	// the genevalogging namespace.
+	return append(results,
+		&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      pkgoperator.SecretName,
+				Namespace: pkgoperator.Namespace,
+			},
+			Data: map[string][]byte{
+				genevalogging.GenevaCertName: gcsCertBytes,
+				genevalogging.GenevaKeyName:  gcsKeyBytes,
+				corev1.DockerConfigJsonKey:   []byte(ps),
+			},
+		},
+		cluster,
+	), nil
+}
+
+func (o *operator) clusterObject() (*arov1alpha1.Cluster, error) {
 	vnetID, _, err := apisubnet.Split(o.oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return nil, err
@@ -281,23 +323,15 @@ func (o *operator) resources(ctx context.Context) ([]kruntime.Object, error) {
 		// covers the case of an admin-disable, we need to update dnsmasq on each node
 		cluster.Spec.GatewayDomains = make([]string, 0)
 	}
+	return cluster, nil
+}
 
-	// create a secret here for genevalogging, later we will copy it to
-	// the genevalogging namespace.
-	return append(results,
-		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      pkgoperator.SecretName,
-				Namespace: pkgoperator.Namespace,
-			},
-			Data: map[string][]byte{
-				genevalogging.GenevaCertName: gcsCertBytes,
-				genevalogging.GenevaKeyName:  gcsKeyBytes,
-				corev1.DockerConfigJsonKey:   []byte(ps),
-			},
-		},
-		cluster,
-	), nil
+func (o *operator) SyncClusterObject(ctx context.Context) error {
+	resource, err := o.clusterObject()
+	if err != nil {
+		return err
+	}
+	return o.dh.Ensure(ctx, resource)
 }
 
 func (o *operator) CreateOrUpdate(ctx context.Context) error {

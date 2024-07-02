@@ -5,7 +5,9 @@ package base
 
 import (
 	"context"
+	"fmt"
 
+	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 	"github.com/sirupsen/logrus"
@@ -13,7 +15,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type AROController struct {
@@ -102,4 +106,32 @@ func (c *AROController) defaultDegraded() *operatorv1.OperatorCondition {
 
 func (c *AROController) conditionName(conditionType string) string {
 	return c.Name + "Controller" + conditionType
+}
+
+func (c *AROController) IsClusterUpgrading(ctx context.Context) (bool, error) {
+	cv := &configv1.ClusterVersion{}
+	err := c.Client.Get(ctx, types.NamespacedName{Name: "version"}, cv)
+	if err != nil {
+		err = fmt.Errorf("error getting the ClusterVersion: %w", err)
+		c.Log.Error(err)
+		return false, err
+	}
+
+	return version.IsClusterUpgrading(cv), nil
+}
+
+func (c *AROController) AllowRebootCausingReconciliation(ctx context.Context, instance *arov1alpha1.Cluster) (bool, error) {
+	// If reconciliation is forced, perform it
+	if instance.Spec.OperatorFlags.GetSimpleBoolean(operator.ForceReconciliation) {
+		c.Log.Debugf("allowing reconciliation of %s because reconciliation forced", c.Name)
+		return true, nil
+	}
+
+	// Allow the reconciliation if the cluster is upgrading
+	isClusterUpgrading, err := c.IsClusterUpgrading(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	return isClusterUpgrading, nil
 }
