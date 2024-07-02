@@ -20,8 +20,6 @@ package redhatopenshiftapi
 import (
 	"context"
 
-	"github.com/Azure/go-autorest/autorest"
-
 	"github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2024-08-12-preview/redhatopenshift"
 )
 
@@ -56,51 +54,3 @@ type OpenShiftClustersClientAPI interface {
 }
 
 var _ OpenShiftClustersClientAPI = (*redhatopenshift.OpenShiftClustersClient)(nil)
-
-// MachinePoolsClientAPI contains the set of methods on the MachinePoolsClient type.
-type MachinePoolsClientAPI interface {
-	CreateOrUpdate(ctx context.Context, resourceGroupName string, resourceName string, childResourceName string, parameters redhatopenshift.MachinePool) (result redhatopenshift.MachinePool, err error)
-	Delete(ctx context.Context, resourceGroupName string, resourceName string, childResourceName string) (result autorest.Response, err error)
-	Get(ctx context.Context, resourceGroupName string, resourceName string, childResourceName string) (result redhatopenshift.MachinePool, err error)
-	List(ctx context.Context, resourceGroupName string, resourceName string) (result redhatopenshift.MachinePoolListPage, err error)
-	ListComplete(ctx context.Context, resourceGroupName string, resourceName string) (result redhatopenshift.MachinePoolListIterator, err error)
-	Update(ctx context.Context, resourceGroupName string, resourceName string, childResourceName string, parameters redhatopenshift.MachinePoolUpdate) (result redhatopenshift.MachinePool, err error)
-}
-
-var _ MachinePoolsClientAPI = (*redhatopenshift.MachinePoolsClient)(nil)
-
-// SecretsClientAPI contains the set of methods on the SecretsClient type.
-type SecretsClientAPI interface {
-	CreateOrUpdate(ctx context.Context, resourceGroupName string, resourceName string, childResourceName string, parameters redhatopenshift.Secret) (result redhatopenshift.Secret, err error)
-	Delete(ctx context.Context, resourceGroupName string, resourceName string, childResourceName string) (result autorest.Response, err error)
-	Get(ctx context.Context, resourceGroupName string, resourceName string, childResourceName string) (result redhatopenshift.Secret, err error)
-	List(ctx context.Context, resourceGroupName string, resourceName string) (result redhatopenshift.SecretListPage, err error)
-	ListComplete(ctx context.Context, resourceGroupName string, resourceName string) (result redhatopenshift.SecretListIterator, err error)
-	Update(ctx context.Context, resourceGroupName string, resourceName string, childResourceName string, parameters redhatopenshift.SecretUpdate) (result redhatopenshift.Secret, err error)
-}
-
-var _ SecretsClientAPI = (*redhatopenshift.SecretsClient)(nil)
-
-// SyncIdentityProvidersClientAPI contains the set of methods on the SyncIdentityProvidersClient type.
-type SyncIdentityProvidersClientAPI interface {
-	CreateOrUpdate(ctx context.Context, resourceGroupName string, resourceName string, childResourceName string, parameters redhatopenshift.SyncIdentityProvider) (result redhatopenshift.SyncIdentityProvider, err error)
-	Delete(ctx context.Context, resourceGroupName string, resourceName string, childResourceName string) (result autorest.Response, err error)
-	Get(ctx context.Context, resourceGroupName string, resourceName string, childResourceName string) (result redhatopenshift.SyncIdentityProvider, err error)
-	List(ctx context.Context, resourceGroupName string, resourceName string) (result redhatopenshift.SyncIdentityProviderListPage, err error)
-	ListComplete(ctx context.Context, resourceGroupName string, resourceName string) (result redhatopenshift.SyncIdentityProviderListIterator, err error)
-	Update(ctx context.Context, resourceGroupName string, resourceName string, childResourceName string, parameters redhatopenshift.SyncIdentityProviderUpdate) (result redhatopenshift.SyncIdentityProvider, err error)
-}
-
-var _ SyncIdentityProvidersClientAPI = (*redhatopenshift.SyncIdentityProvidersClient)(nil)
-
-// SyncSetsClientAPI contains the set of methods on the SyncSetsClient type.
-type SyncSetsClientAPI interface {
-	CreateOrUpdate(ctx context.Context, resourceGroupName string, resourceName string, childResourceName string, parameters redhatopenshift.SyncSet) (result redhatopenshift.SyncSet, err error)
-	Delete(ctx context.Context, resourceGroupName string, resourceName string, childResourceName string) (result autorest.Response, err error)
-	Get(ctx context.Context, resourceGroupName string, resourceName string, childResourceName string) (result redhatopenshift.SyncSet, err error)
-	List(ctx context.Context, resourceGroupName string, resourceName string) (result redhatopenshift.SyncSetListPage, err error)
-	ListComplete(ctx context.Context, resourceGroupName string, resourceName string) (result redhatopenshift.SyncSetListIterator, err error)
-	Update(ctx context.Context, resourceGroupName string, resourceName string, childResourceName string, parameters redhatopenshift.SyncSetUpdate) (result redhatopenshift.SyncSet, err error)
-}
-
-var _ SyncSetsClientAPI = (*redhatopenshift.SyncSetsClient)(nil)
