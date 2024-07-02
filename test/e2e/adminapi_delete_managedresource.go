@@ -65,7 +65,7 @@ var _ = Describe("[Admin API] Delete managed resource action", func() {
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
 
 		By("getting the newly created k8s service frontend IP configuration")
-		oc, err := clients.OpenshiftClustersPreview.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 
 		rgName := stringutils.LastTokenByte(*oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, '/')
@@ -95,7 +95,7 @@ var _ = Describe("[Admin API] Delete managed resource action", func() {
 
 	It("should NOT be possible to delete a resource not within the cluster's managed resource group", func(ctx context.Context) {
 		By("trying to delete the master subnet")
-		oc, err := clients.OpenshiftClustersPreview.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 
 		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/deletemanagedresource", url.Values{"managedResourceID": []string{*oc.OpenShiftClusterProperties.MasterProfile.SubnetID}}, true, nil, nil)
@@ -105,7 +105,7 @@ var _ = Describe("[Admin API] Delete managed resource action", func() {
 
 	It("should NOT be possible to delete the private link service in the cluster's managed resource group", func(ctx context.Context) {
 		By("trying to delete the private link service")
-		oc, err := clients.OpenshiftClustersPreview.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Fake name prevents accidentally deleting the PLS but still validates guardrail logic works.

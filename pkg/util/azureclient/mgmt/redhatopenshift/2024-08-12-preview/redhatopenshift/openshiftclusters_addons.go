@@ -12,6 +12,7 @@ import (
 // OpenShiftClustersClientAddons contains addons for OpenShiftClustersClient
 type OpenShiftClustersClientAddons interface {
 	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, resourceName string, parameters mgmtredhatopenshift20240812preview.OpenShiftCluster) error
+	UpdateAndWait(ctx context.Context, resourceGroupName string, resourceName string, parameters mgmtredhatopenshift20240812preview.OpenShiftClusterUpdate) error
 	DeleteAndWait(ctx context.Context, resourceGroupName string, resourceName string) error
 	List(ctx context.Context) (clusters []mgmtredhatopenshift20240812preview.OpenShiftCluster, err error)
 	ListByResourceGroup(ctx context.Context, resourceGroupName string) (clusters []mgmtredhatopenshift20240812preview.OpenShiftCluster, err error)
@@ -19,6 +20,15 @@ type OpenShiftClustersClientAddons interface {
 
 func (c *openShiftClustersClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, resourceName string, parameters mgmtredhatopenshift20240812preview.OpenShiftCluster) error {
 	future, err := c.CreateOrUpdate(ctx, resourceGroupName, resourceName, parameters)
+	if err != nil {
+		return err
+	}
+
+	return future.WaitForCompletionRef(ctx, c.Client)
+}
+
+func (c *openShiftClustersClient) UpdateAndWait(ctx context.Context, resourceGroupName string, resourceName string, parameters mgmtredhatopenshift20240812preview.OpenShiftClusterUpdate) error {
+	future, err := c.Update(ctx, resourceGroupName, resourceName, parameters)
 	if err != nil {
 		return err
 	}

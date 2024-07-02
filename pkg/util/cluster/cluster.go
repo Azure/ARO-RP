@@ -31,8 +31,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	v20230904 "github.com/Azure/ARO-RP/pkg/api/v20230904"
-	mgmtredhatopenshift20230904 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2023-09-04/redhatopenshift"
+	v20231122 "github.com/Azure/ARO-RP/pkg/api/v20231122"
+	mgmtredhatopenshift20231122 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2023-11-22/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/deploy/assets"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -41,7 +41,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
-	redhatopenshift20230904 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2023-09-04/redhatopenshift"
+	redhatopenshift20231122 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2023-11-22/redhatopenshift"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
@@ -57,7 +57,7 @@ type Cluster struct {
 	spGraphClient        *utilgraph.GraphServiceClient
 	deployments          features.DeploymentsClient
 	groups               features.ResourceGroupsClient
-	openshiftclusters    redhatopenshift20230904.OpenShiftClustersClient
+	openshiftclusters    redhatopenshift20231122.OpenShiftClustersClient
 	securitygroups       network.SecurityGroupsClient
 	subnets              network.SubnetsClient
 	routetables          network.RouteTablesClient
@@ -108,7 +108,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		spGraphClient:     spGraphClient,
 		deployments:       features.NewDeploymentsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		groups:            features.NewResourceGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
-		openshiftclusters: redhatopenshift20230904.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
+		openshiftclusters: redhatopenshift20231122.NewOpenShiftClustersClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		securitygroups:    network.NewSecurityGroupsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		subnets:           network.NewSubnetsClient(environment.Environment(), environment.SubscriptionID(), authorizer),
 		routetables:       network.NewRouteTablesClient(environment.Environment(), environment.SubscriptionID(), authorizer),
@@ -162,7 +162,7 @@ func (c *Cluster) DeleteApp(ctx context.Context) error {
 func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName string, osClusterVersion string) error {
 	clusterGet, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
 	if err == nil {
-		if clusterGet.ProvisioningState == mgmtredhatopenshift20230904.Failed {
+		if clusterGet.ProvisioningState == mgmtredhatopenshift20231122.Failed {
 			return fmt.Errorf("cluster exists and is in failed provisioning state, please delete and retry")
 		}
 		c.log.Print("cluster already exists, skipping create")
@@ -469,13 +469,13 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 		oc.Properties.WorkerProfiles[0].VMSize = api.VMSizeStandardD2sV3
 	}
 
-	ext := api.APIs[v20230904.APIVersion].OpenShiftClusterConverter.ToExternal(&oc)
+	ext := api.APIs[v20231122.APIVersion].OpenShiftClusterConverter.ToExternal(&oc)
 	data, err := json.Marshal(ext)
 	if err != nil {
 		return err
 	}
 
-	ocExt := mgmtredhatopenshift20230904.OpenShiftCluster{}
+	ocExt := mgmtredhatopenshift20231122.OpenShiftCluster{}
 	err = json.Unmarshal(data, &ocExt)
 	if err != nil {
 		return err
