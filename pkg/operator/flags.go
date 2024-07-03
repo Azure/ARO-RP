@@ -10,7 +10,7 @@ const (
 	AzureSubnetsServiceEndpointManaged = "aro.azuresubnets.serviceendpoint.managed"
 	BannerEnabled                      = "aro.banner.enabled"
 	CheckerEnabled                     = "aro.checker.enabled"
-	CPMSDeactivatorEnabled             = "aro.cpmsdeactivator.enabled"
+	CPMSEnabled                        = "aro.cpms.enabled"
 	DnsmasqEnabled                     = "aro.dnsmasq.enabled"
 	RestartDnsmasqEnabled              = "aro.restartdnsmasq.enabled"
 	GenevaLoggingEnabled               = "aro.genevalogging.enabled"
@@ -48,7 +48,7 @@ func DefaultOperatorFlags() map[string]string {
 		AzureSubnetsServiceEndpointManaged: FlagTrue,
 		BannerEnabled:                      FlagFalse,
 		CheckerEnabled:                     FlagTrue,
-		CPMSDeactivatorEnabled:             FlagTrue,
+		CPMSEnabled:                        FlagFalse,
 		DnsmasqEnabled:                     FlagTrue,
 		RestartDnsmasqEnabled:              FlagFalse,
 		GenevaLoggingEnabled:               FlagTrue,

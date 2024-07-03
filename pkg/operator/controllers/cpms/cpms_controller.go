@@ -24,33 +24,34 @@ import (
 // Licensed under the Apache License 2.0.
 
 const (
-	DeactivatorControllerName = "CPMSDeactivatorController"
-	SingletonCPMSName         = "cluster"
-	SingletonCPMSNamespace    = "openshift-machine-api"
+	ControllerName         = "CPMSDeactivatorController"
+	SingletonCPMSName      = "cluster"
+	SingletonCPMSNamespace = "openshift-machine-api"
 )
 
-type DeactivatorReconciler struct {
+type Reconciler struct {
 	base.AROController
 }
 
-func NewDeactivatorReconciler(log *logrus.Entry, client client.Client) *DeactivatorReconciler {
-	return &DeactivatorReconciler{
+func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
+	return &Reconciler{
 		AROController: base.AROController{
 			Log:    log,
 			Client: client,
-			Name:   DeactivatorControllerName,
+			Name:   ControllerName,
 		},
 	}
 }
 
-func (r *DeactivatorReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+// CPMS reconciler will disable the cluster CPMS if `aro.cpms.enabled` is false or missing.
+func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	instance, err := r.GetCluster(ctx)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.CPMSDeactivatorEnabled) {
-		r.Log.Debug("controller is disabled")
+	if instance.Spec.OperatorFlags.GetSimpleBoolean(operator.CPMSEnabled) {
+		r.Log.Debug("aro.cpms.enabled is true, will not deactivate active CPMS")
 		return reconcile.Result{}, nil
 	}
 
@@ -80,8 +81,8 @@ func (r *DeactivatorReconciler) Reconcile(ctx context.Context, request ctrl.Requ
 	return ctrl.Result{}, r.Client.Delete(ctx, cpms)
 }
 
-func (r *DeactivatorReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.Log.Info("starting cpms-deactivator controller")
+func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.Log.Info("starting cpms controller")
 
 	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
 		return o.GetName() == arov1alpha1.SingletonClusterName
@@ -94,6 +95,6 @@ func (r *DeactivatorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}), // only watch for spec changes
 		).
-		Named(DeactivatorControllerName).
+		Named(ControllerName).
 		Complete(r)
 }

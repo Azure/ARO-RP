@@ -21,7 +21,7 @@ import (
 	utilerror "github.com/Azure/ARO-RP/test/util/error"
 )
 
-func TestDeactivatorReconcile(t *testing.T) {
+func TestReconcile(t *testing.T) {
 	for _, tt := range []struct {
 		name       string
 		enabled    bool
@@ -29,15 +29,16 @@ func TestDeactivatorReconcile(t *testing.T) {
 		wantDelete bool
 	}{
 		{
-			name: "controller disabled, does nothing",
+			name:    "cpms enabled, does nothing",
+			enabled: true,
 		},
 		{
 			name:    "no CPMS, does nothing",
-			enabled: true,
+			enabled: false,
 		},
 		{
 			name:    "CPMS inactive, does nothing",
-			enabled: true,
+			enabled: false,
 			cpms: &machinev1.ControlPlaneMachineSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      SingletonCPMSName,
@@ -50,7 +51,7 @@ func TestDeactivatorReconcile(t *testing.T) {
 		},
 		{
 			name:    "CPMS active, deletes",
-			enabled: true,
+			enabled: false,
 			cpms: &machinev1.ControlPlaneMachineSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      SingletonCPMSName,
@@ -77,7 +78,7 @@ func TestDeactivatorReconcile(t *testing.T) {
 				},
 				Spec: arov1alpha1.ClusterSpec{
 					OperatorFlags: arov1alpha1.OperatorFlags{
-						operator.CPMSDeactivatorEnabled: operatorFlag,
+						operator.CPMSEnabled: operatorFlag,
 					},
 				},
 			}
@@ -90,7 +91,7 @@ func TestDeactivatorReconcile(t *testing.T) {
 
 			client := clientBuilder.Build()
 
-			r := NewDeactivatorReconciler(log, client)
+			r := NewReconciler(log, client)
 
 			ctx := context.Background()
 			_, err := r.Reconcile(ctx, ctrl.Request{})

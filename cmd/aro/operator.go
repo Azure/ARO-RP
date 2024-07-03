@@ -133,10 +133,10 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", dnsmasq.ClusterControllerName, err)
 		}
-		if err = (cpms.NewDeactivatorReconciler(
-			log.WithField("controller", cpms.DeactivatorControllerName),
+		if err = (cpms.NewReconciler(
+			log.WithField("controller", cpms.ControllerName),
 			client)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller %s: %v", cpms.DeactivatorControllerName, err)
+			return fmt.Errorf("unable to create controller %s: %v", cpms.ControllerName, err)
 		}
 		if err = (dnsmasq.NewMachineConfigReconciler(
 			log.WithField("controller", dnsmasq.MachineConfigControllerName),
