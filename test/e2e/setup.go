@@ -52,6 +52,10 @@ import (
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
 
+const (
+	smoke = "smoke"
+)
+
 var (
 	disallowedInFilenameRegex = regexp.MustCompile(`[<>:"/\\|?*\x00-\x1F]`)
 	DefaultEventuallyTimeout  = 5 * time.Minute
