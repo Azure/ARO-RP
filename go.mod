@@ -62,7 +62,7 @@ require (
 	github.com/openshift/api v3.9.1-0.20191111211345-a27ff30ebf09+incompatible
 	github.com/openshift/client-go v0.0.0-20220525160904-9e1acff93e4a
 	github.com/openshift/cloud-credential-operator v0.0.0-00010101000000-000000000000
-	github.com/openshift/hive/apis v0.0.0-20240529172037-d7ead609f495
+	github.com/openshift/hive/apis v0.0.0-20240627073933-b1ac27b24815
 	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
 	github.com/openshift/machine-config-operator v0.0.1-0.20230519222939-1abc13efbb0d
 	github.com/pires/go-proxyproto v0.6.2
@@ -84,9 +84,9 @@ require (
 	golang.org/x/text v0.16.0
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d
 	gopkg.in/go-jose/go-jose.v2 v2.6.1
-	k8s.io/api v0.30.1
+	k8s.io/api v0.30.2
 	k8s.io/apiextensions-apiserver v0.25.0
-	k8s.io/apimachinery v0.30.1
+	k8s.io/apimachinery v0.30.2
 	k8s.io/cli-runtime v0.25.16
 	k8s.io/client-go v0.26.2
 	k8s.io/code-generator v0.25.16
@@ -274,7 +274,7 @@ require (
 	k8s.io/apiserver v0.26.2 // indirect
 	k8s.io/component-base v0.26.2 // indirect
 	k8s.io/gengo v0.0.0-20211129171323-c02415ce4185 // indirect
-	k8s.io/klog/v2 v2.120.1 // indirect
+	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-aggregator v0.24.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20220803162953-67bda5d908f1 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
