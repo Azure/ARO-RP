@@ -24,6 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/checkers/serviceprincipalchecker"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/cloudproviderconfig"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/clusteroperatoraro"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/cpms"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/dnsmasq"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/guardrails"
@@ -131,6 +132,11 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			log.WithField("controller", dnsmasq.ClusterControllerName),
 			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", dnsmasq.ClusterControllerName, err)
+		}
+		if err = (cpms.NewDeactivatorReconciler(
+			log.WithField("controller", cpms.DeactivatorControllerName),
+			client)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller %s: %v", cpms.DeactivatorControllerName, err)
 		}
 		if err = (dnsmasq.NewMachineConfigReconciler(
 			log.WithField("controller", dnsmasq.MachineConfigControllerName),
