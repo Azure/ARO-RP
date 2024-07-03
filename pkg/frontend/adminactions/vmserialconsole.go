@@ -21,7 +21,6 @@ func (a *azureActions) VMSerialConsole(ctx context.Context, w http.ResponseWrite
 	if err != nil {
 		return err
 	}
-	defer blob.Close()
 
 	w.Header().Add("Content-Type", "text/plain")
 

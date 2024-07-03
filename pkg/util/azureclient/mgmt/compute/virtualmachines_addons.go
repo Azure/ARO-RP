@@ -4,6 +4,7 @@ package compute
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -21,7 +22,7 @@ type VirtualMachinesClientAddons interface {
 	StartAndWait(ctx context.Context, resourceGroupName string, VMName string) error
 	StopAndWait(ctx context.Context, resourceGroupName string, VMName string, deallocateVM bool) error
 	List(ctx context.Context, resourceGroupName string) (result []mgmtcompute.VirtualMachine, err error)
-	GetSerialConsoleForVM(ctx context.Context, resourceGroupName string, VMName string) (blob io.ReadCloser, err error)
+	GetSerialConsoleForVM(ctx context.Context, resourceGroupName string, VMName string) (blob io.Reader, err error)
 }
 
 func (c *virtualMachinesClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, VMName string, parameters mgmtcompute.VirtualMachine) error {
@@ -117,18 +118,32 @@ func (c *virtualMachinesClient) retrieveBootDiagnosticsData(ctx context.Context,
 
 // GetSerialConsoleForVM will return the serial console log blob as an
 // io.ReadCloser, or an error if it cannot be retrieved.
-func (c *virtualMachinesClient) GetSerialConsoleForVM(ctx context.Context, resourceGroupName string, vmName string) (io.ReadCloser, error) {
+func (c *virtualMachinesClient) GetSerialConsoleForVM(ctx context.Context, resourceGroupName string, vmName string) (io.Reader, error) {
 	serialConsoleLogBlobURI, err := c.retrieveBootDiagnosticsData(ctx, resourceGroupName, vmName)
 	if err != nil {
 		return nil, fmt.Errorf("failure getting boot diagnostics URI Azure: %w", err)
 	}
 
-	client := &http.Client{}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, serialConsoleLogBlobURI, nil)
+	if err != nil {
+		return nil, err
+	}
 
-	resp, err := client.Get(serialConsoleLogBlobURI)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failure downloading blob URI: %w", err)
 	}
+	defer resp.Body.Close()
 
-	return resp.Body, nil
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("got %d instead of 200 downloading blob URI", resp.StatusCode)
+	}
+
+	buf := &bytes.Buffer{}
+	_, err = io.Copy(buf, resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failure downloading blob URI body: %w", err)
+	}
+
+	return buf, nil
 }

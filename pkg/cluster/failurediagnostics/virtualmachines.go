@@ -56,8 +56,6 @@ func (m *manager) LogAzureInformation(ctx context.Context) (interface{}, error) 
 				return
 			}
 
-			defer serialConsoleBlob.Close()
-
 			logForVM := m.log.WithField("failedRoleInstance", vmName)
 
 			b64Reader := base64.NewDecoder(base64.StdEncoding, serialConsoleBlob)
