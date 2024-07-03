@@ -51,7 +51,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	if instance.Spec.OperatorFlags.GetSimpleBoolean(operator.CPMSEnabled) {
-		r.Log.Debug("aro.cpms.enabled is true, will not deactivate active CPMS")
+		r.Log.Infof("Flag %s is true, will not deactivate CPMS", operator.CPMSEnabled)
 		return reconcile.Result{}, nil
 	}
 
@@ -64,7 +64,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	)
 	if err != nil {
 		if kerrors.IsNotFound(err) {
-			r.Log.Debug("CPMS is not present on cluster, nothing to do")
+			r.Log.Info("CPMS is not present on cluster, nothing to do")
 			return ctrl.Result{}, nil
 		}
 		r.Log.Error("Error when retrieving CPMS: ", err)
@@ -72,7 +72,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	}
 
 	if cpms.Spec.State == machinev1.ControlPlaneMachineSetStateInactive {
-		r.Log.Debug("CPMS is inactive, nothing to do")
+		r.Log.Info("CPMS is inactive, nothing to do")
 		return ctrl.Result{}, nil
 	}
 
