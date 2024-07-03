@@ -8,6 +8,7 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	consolev1 "github.com/openshift/api/console/v1"
 	imageregistryv1 "github.com/openshift/api/imageregistry/v1"
+	machinev1 "github.com/openshift/api/machine/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	securityv1 "github.com/openshift/api/security/v1"
@@ -34,6 +35,7 @@ func init() {
 	utilruntime.Must(securityv1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(arov1alpha1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(aropreviewv1alpha1.AddToScheme(scheme.Scheme))
+	utilruntime.Must(machinev1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(machinev1beta1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(mcv1.AddToScheme(scheme.Scheme))
 	utilruntime.Must(configv1.AddToScheme(scheme.Scheme))
