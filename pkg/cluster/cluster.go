@@ -80,7 +80,6 @@ type manager struct {
 	armPublicIPAddresses     armnetwork.PublicIPAddressesClient
 	loadBalancers            network.LoadBalancersClient // TODO: use armLoadBalancers instead.
 	armLoadBalancers         armnetwork.LoadBalancersClient
-	privateEndpoints         network.PrivateEndpointsClient // TODO: use armPrivateEndpoints instead.
 	armPrivateEndpoints      armnetwork.PrivateEndpointsClient
 	securityGroups           network.SecurityGroupsClient // TODO: use armSecurityGroups instead.
 	armSecurityGroups        armnetwork.SecurityGroupsClient
@@ -94,7 +93,6 @@ type manager struct {
 	denyAssignments          authorization.DenyAssignmentClient
 	fpPrivateEndpoints       network.PrivateEndpointsClient // TODO: use armFPPrivateEndpoints instead.
 	armFPPrivateEndpoints    armnetwork.PrivateEndpointsClient
-	rpPrivateLinkServices    network.PrivateLinkServicesClient // TODO: use armRPPrivateLinkServices instead.
 	armRPPrivateLinkServices armnetwork.PrivateLinkServicesClient
 
 	dns     dns.Manager
@@ -158,12 +156,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 	}
 
 	msiCredential, err := _env.NewMSITokenCredential()
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO: Delete once the replacement to track2 is done.
-	msiAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().ResourceManagerScope)
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +239,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		armPublicIPAddresses:     armPublicIPAddressesClient,
 		loadBalancers:            network.NewLoadBalancersClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		armLoadBalancers:         armLoadBalancersClient,
-		privateEndpoints:         network.NewPrivateEndpointsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		armPrivateEndpoints:      armPrivateEndpoints,
 		securityGroups:           network.NewSecurityGroupsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		armSecurityGroups:        armSecurityGroupsClient,
@@ -261,7 +252,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		denyAssignments:          authorization.NewDenyAssignmentsClient(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		fpPrivateEndpoints:       network.NewPrivateEndpointsClient(_env.Environment(), _env.SubscriptionID(), localFPAuthorizer),
 		armFPPrivateEndpoints:    armFPPrivateEndpoints,
-		rpPrivateLinkServices:    network.NewPrivateLinkServicesClient(_env.Environment(), _env.SubscriptionID(), msiAuthorizer),
 		armRPPrivateLinkServices: armRPPrivateLinkServices,
 
 		dns:     dns.NewManager(_env, localFPAuthorizer),
