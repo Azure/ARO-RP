@@ -44,7 +44,7 @@ var _ = Describe("[Admin API] VM serial console action", func() {
 		var logs string
 
 		By("querying the serial console API")
-		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+clusterResourceID+"/serialconsole", url.Values{"vmName": []string{vm}}, true, nil, &logs)
+		resp, err := adminRequest(ctx, http.MethodGet, "/admin"+clusterResourceID+"/serialconsole", url.Values{"vmName": []string{vm}}, true, nil, &logs)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
