@@ -59,7 +59,7 @@ require (
 	github.com/onsi/gomega v1.30.0
 	github.com/open-policy-agent/frameworks/constraint v0.0.0-20221109005544-7de84dff5081
 	github.com/opencontainers/runtime-spec v1.1.1-0.20230922153023-c0e90434df2a
-	github.com/openshift/api v3.9.1-0.20191111211345-a27ff30ebf09+incompatible
+	github.com/openshift/api v0.0.0-20240103200955-7ca3a4634e46
 	github.com/openshift/client-go v0.0.0-20220525160904-9e1acff93e4a
 	github.com/openshift/cloud-credential-operator v0.0.0-00010101000000-000000000000
 	github.com/openshift/hive/apis v0.0.0-20240529172037-d7ead609f495
@@ -84,9 +84,9 @@ require (
 	golang.org/x/text v0.16.0
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d
 	gopkg.in/go-jose/go-jose.v2 v2.6.1
-	k8s.io/api v0.30.1
+	k8s.io/api v0.30.2
 	k8s.io/apiextensions-apiserver v0.25.0
-	k8s.io/apimachinery v0.30.1
+	k8s.io/apimachinery v0.30.2
 	k8s.io/cli-runtime v0.25.16
 	k8s.io/client-go v0.26.2
 	k8s.io/code-generator v0.25.16
@@ -274,7 +274,7 @@ require (
 	k8s.io/apiserver v0.26.2 // indirect
 	k8s.io/component-base v0.26.2 // indirect
 	k8s.io/gengo v0.0.0-20211129171323-c02415ce4185 // indirect
-	k8s.io/klog/v2 v2.120.1 // indirect
+	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-aggregator v0.24.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20220803162953-67bda5d908f1 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
@@ -1588,7 +1588,7 @@ replace (
 // OpenShift pins
 replace (
 	github.com/googleapis/gnostic => github.com/google/gnostic v0.5.5
-	github.com/openshift/api => github.com/openshift/api v0.0.0-20230426102702-398424d53f74
+	github.com/openshift/api => github.com/openshift/api v0.0.0-20240103200955-7ca3a4634e46
 	github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20220603133046-984ee5ebedcf
 	github.com/openshift/cloud-credential-operator => github.com/openshift/cloud-credential-operator v0.0.0-20200316201045-d10080b52c9e
 	github.com/openshift/hive/apis => github.com/openshift/hive/apis v0.0.0-20231116161336-9dd47f8bfa1f
