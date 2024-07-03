@@ -364,6 +364,7 @@ rules:
   - machinehealthchecks
   - machines
   - machinesets
+  - controlplanemachinesets
   verbs:
   - get
   - list
