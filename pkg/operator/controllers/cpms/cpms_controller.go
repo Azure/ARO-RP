@@ -3,10 +3,12 @@ package cpms
 import (
 	"context"
 
+	configv1 "github.com/openshift/api/config/v1"
 	machinev1 "github.com/openshift/api/machine/v1"
 	"github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,6 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 // Copyright (c) Microsoft Corporation.
@@ -31,15 +34,20 @@ const (
 
 type Reconciler struct {
 	base.AROController
+
+	cutoffVersion *version.Version
 }
 
 func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
+	cutoffVersion, err := version.ParseVersion("4.12.0")
+	utilruntime.Must(err)
 	return &Reconciler{
 		AROController: base.AROController{
 			Log:    log,
 			Client: client,
 			Name:   ControllerName,
 		},
+		cutoffVersion: cutoffVersion,
 	}
 }
 
@@ -55,6 +63,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 		return reconcile.Result{}, nil
 	}
 
+	cv := &configv1.ClusterVersion{}
+	err = r.Client.Get(ctx, types.NamespacedName{Name: "version"}, cv)
+	if err != nil {
+		r.Log.Errorf("Error when retrieving clusterversion: %v", err)
+		return reconcile.Result{}, err
+	}
+	clusterVersion, err := version.GetClusterVersion(cv)
+	if err != nil {
+		r.Log.Errorf("error getting the OpenShift version: %v", err)
+		return reconcile.Result{}, err
+	}
+
+	if clusterVersion.Lt(r.cutoffVersion) {
+		r.Log.Infof("cluster version %s does not support CPMS, nothing to do", clusterVersion.String())
+		return reconcile.Result{}, err
+	}
+
 	r.Log.Debug("running")
 	cpms := &machinev1.ControlPlaneMachineSet{}
 	err = r.Client.Get(
@@ -67,7 +92,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 			r.Log.Info("CPMS is not present on cluster, nothing to do")
 			return ctrl.Result{}, nil
 		}
-		r.Log.Error("Error when retrieving CPMS: ", err)
+		r.Log.Errorf("Error when retrieving CPMS: %v", err)
 		return ctrl.Result{}, err
 	}
 
@@ -92,6 +117,11 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicate.And(aroClusterPredicate, predicate.GenerationChangedPredicate{}))).
 		Watches(
 			&source.Kind{Type: &machinev1.ControlPlaneMachineSet{}},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}), // only watch for spec changes
+		).
+		Watches(
+			&source.Kind{Type: &configv1.ClusterVersion{}},
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(predicate.GenerationChangedPredicate{}), // only watch for spec changes
 		).

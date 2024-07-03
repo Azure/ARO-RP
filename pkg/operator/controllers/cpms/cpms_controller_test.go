@@ -7,6 +7,7 @@ import (
 	"context"
 	"testing"
 
+	configv1 "github.com/openshift/api/config/v1"
 	machinev1 "github.com/openshift/api/machine/v1"
 	"github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -23,14 +24,41 @@ import (
 
 func TestReconcile(t *testing.T) {
 	for _, tt := range []struct {
-		name       string
-		enabled    bool
-		cpms       *machinev1.ControlPlaneMachineSet
-		wantDelete bool
+		name           string
+		enabled        bool
+		clusterVersion string // default - 4.12.0
+		cpms           *machinev1.ControlPlaneMachineSet
+		wantDelete     bool
 	}{
 		{
 			name:    "cpms enabled, does nothing",
 			enabled: true,
+			cpms: &machinev1.ControlPlaneMachineSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      SingletonCPMSName,
+					Namespace: SingletonCPMSNamespace,
+				},
+				Spec: machinev1.ControlPlaneMachineSetSpec{
+					State: machinev1.ControlPlaneMachineSetStateActive,
+				},
+			},
+		},
+		{
+			name:           "clusterVersion 4.11, does nothing",
+			clusterVersion: "4.11.0",
+			// note - clusters < 4.12 cannot have a CPMS present.
+			// this active CPMS is defined here just to ensure that the controller
+			// does not attempt to delete it.
+			cpms: &machinev1.ControlPlaneMachineSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      SingletonCPMSName,
+					Namespace: SingletonCPMSNamespace,
+				},
+				Spec: machinev1.ControlPlaneMachineSetSpec{
+					State: machinev1.ControlPlaneMachineSetStateActive,
+				},
+			},
+			enabled: false,
 		},
 		{
 			name:    "no CPMS, does nothing",
@@ -83,7 +111,30 @@ func TestReconcile(t *testing.T) {
 				},
 			}
 
-			clientBuilder := ctrlfake.NewClientBuilder().WithObjects(instance)
+			ver := "4.12.0"
+			if tt.clusterVersion != "" {
+				ver = tt.clusterVersion
+			}
+
+			cv := &configv1.ClusterVersion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "version",
+				},
+				Status: configv1.ClusterVersionStatus{
+					Desired: configv1.Release{
+						Version: ver,
+					},
+					History: []configv1.UpdateHistory{
+						{
+							State:   configv1.CompletedUpdate,
+							Version: ver,
+						},
+					},
+				},
+			}
+
+			clientBuilder := ctrlfake.NewClientBuilder().
+				WithObjects(instance, cv)
 
 			if tt.cpms != nil {
 				clientBuilder.WithObjects(tt.cpms)
@@ -97,16 +148,20 @@ func TestReconcile(t *testing.T) {
 			_, err := r.Reconcile(ctx, ctrl.Request{})
 			utilerror.AssertErrorMessage(t, err, "")
 
-			if tt.wantDelete {
-				cpms := &machinev1.ControlPlaneMachineSet{}
-				err = client.Get(
-					ctx,
-					types.NamespacedName{Name: SingletonCPMSName, Namespace: SingletonCPMSNamespace},
-					cpms,
-				)
+			cpms := &machinev1.ControlPlaneMachineSet{}
+			err = client.Get(
+				ctx,
+				types.NamespacedName{Name: SingletonCPMSName, Namespace: SingletonCPMSNamespace},
+				cpms,
+			)
 
+			if tt.wantDelete {
 				if err == nil || !kerrors.IsNotFound(err) {
 					t.Errorf("CPMS still present on cluster")
+				}
+			} else {
+				if tt.cpms != nil && kerrors.IsNotFound(err) {
+					t.Errorf("Did not want delete on CPMS but was deleted")
 				}
 			}
 		})
