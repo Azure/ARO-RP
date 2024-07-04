@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -52,14 +53,17 @@ var _ = Describe("[Admin API] VM serial console action", func() {
 		foundLogs := false
 		b64Reader := base64.NewDecoder(base64.StdEncoding, bytes.NewBufferString(logs))
 		scanner := bufio.NewScanner(b64Reader)
+		output := ""
 		for scanner.Scan() {
-			if strings.Contains(scanner.Text(), "Red Hat Enterprise Linux CoreOS") {
-				foundLogs = true
-			}
+			output = output + scanner.Text()
 		}
 		Expect(scanner.Err()).NotTo(HaveOccurred())
 
-		Expect(foundLogs).To(BeTrue(), "expected to find serial console logs")
+		if strings.Contains(output, "Red Hat Enterprise Linux CoreOS") {
+			foundLogs = true
+		}
+
+		Expect(foundLogs).To(BeTrue(), fmt.Sprintf("expected to find serial console logs in b64: %s", logs))
 
 	})
 })

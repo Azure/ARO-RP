@@ -1,0 +1,76 @@
+package adminactions
+
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"testing"
+
+	"github.com/go-test/deep"
+	"github.com/golang/mock/gomock"
+	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/ARO-RP/pkg/api"
+	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	utilerror "github.com/Azure/ARO-RP/test/util/error"
+)
+
+func TestVMSerialConsole(t *testing.T) {
+	type test struct {
+		name         string
+		mocks        func(*mock_compute.MockVirtualMachinesClient)
+		wantResponse []byte
+		wantError    string
+	}
+
+	for _, tt := range []*test{
+		{
+			name: "basic coverage",
+			mocks: func(vmc *mock_compute.MockVirtualMachinesClient) {
+				iothing := bytes.NewBufferString("outputhere")
+
+				vmc.EXPECT().GetSerialConsoleForVM(gomock.Any(), clusterRG, "vm1").Return(iothing, nil)
+			},
+			wantResponse: []byte(`outputhere`),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			env := mock_env.NewMockInterface(controller)
+			env.EXPECT().Location().AnyTimes().Return(location)
+
+			vmClient := mock_compute.NewMockVirtualMachinesClient(controller)
+
+			tt.mocks(vmClient)
+			log := logrus.NewEntry(logrus.StandardLogger())
+			a := azureActions{
+				log: log,
+				env: env,
+				oc: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", subscription, clusterRG),
+						},
+					},
+				},
+				virtualMachines: vmClient,
+			}
+
+			ctx := context.Background()
+
+			resp, err := a.VMSerialConsole(ctx, log, "vm1")
+
+			utilerror.AssertErrorMessage(t, err, tt.wantError)
+
+			for _, errs := range deep.Equal(resp, tt.wantResponse) {
+				t.Error(errs)
+			}
+		})
+	}
+}
