@@ -162,8 +162,8 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 			manifestID2 := manifests.NewUUID()
 			fixtures.AddMaintenanceManifestDocuments(
 				&api.MaintenanceManifestDocument{
-					ID:        manifestID,
-					ClusterID: strings.ToLower(clusterResourceID),
+					ID:                manifestID,
+					ClusterResourceID: strings.ToLower(clusterResourceID),
 					MaintenanceManifest: &api.MaintenanceManifest{
 						State:     api.MaintenanceManifestStatePending,
 						RunBefore: 60,
@@ -171,8 +171,8 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 					},
 				},
 				&api.MaintenanceManifestDocument{
-					ID:        manifestID2,
-					ClusterID: strings.ToLower(clusterResourceID),
+					ID:                manifestID2,
+					ClusterResourceID: strings.ToLower(clusterResourceID),
 					MaintenanceManifest: &api.MaintenanceManifest{
 						State:            api.MaintenanceManifestStatePending,
 						RunBefore:        300,
@@ -184,8 +184,8 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 			checker.Clear()
 			checker.AddMaintenanceManifestDocuments(
 				&api.MaintenanceManifestDocument{
-					ID:        manifestID,
-					ClusterID: strings.ToLower(clusterResourceID),
+					ID:                manifestID,
+					ClusterResourceID: strings.ToLower(clusterResourceID),
 					MaintenanceManifest: &api.MaintenanceManifest{
 						State:      api.MaintenanceManifestStateTimedOut,
 						StatusText: "timed out at 1970-01-01 00:02:00 +0000 UTC",
@@ -194,8 +194,8 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 					},
 				},
 				&api.MaintenanceManifestDocument{
-					ID:        manifestID2,
-					ClusterID: strings.ToLower(clusterResourceID),
+					ID:                manifestID2,
+					ClusterResourceID: strings.ToLower(clusterResourceID),
 					MaintenanceManifest: &api.MaintenanceManifest{
 						State:            api.MaintenanceManifestStateCompleted,
 						StatusText:       "ok",
@@ -233,7 +233,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 			svc.SetTasks(map[string]tasks.TaskFunc{
 				"0000-0000-0001": func(ctx context.Context, th tasks.TaskContext, mmd *api.MaintenanceManifestDocument, oscd *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
 					// ProvisioningState is in the full document, not just the
-					// ClusterID only as in the bucket worker
+					// ClusterResourceID only as in the bucket worker
 					Expect(oscd.OpenShiftCluster.Properties.ProvisioningState).To(Equal(api.ProvisioningStateSucceeded))
 
 					svc.stopping.Store(true)

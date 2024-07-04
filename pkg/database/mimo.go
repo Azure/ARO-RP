@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	MaintenanceManifestQueryForCluster  = `SELECT * FROM MaintenanceManifests doc WHERE doc.maintenanceManifest.state IN ("Pending") AND doc.clusterID = @clusterID`
+	MaintenanceManifestQueryForCluster  = `SELECT * FROM MaintenanceManifests doc WHERE doc.maintenanceManifest.state IN ("Pending") AND doc.clusterResourceID = @clusterID`
 	MaintenanceManifestQueueLengthQuery = `SELECT VALUE COUNT(1) FROM MaintenanceManifests doc WHERE doc.maintenanceManifest.state IN ("Pending") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
 )
 
@@ -30,10 +30,10 @@ type maintenanceManifests struct {
 
 type MaintenanceManifests interface {
 	Create(context.Context, *api.MaintenanceManifestDocument) (*api.MaintenanceManifestDocument, error)
-	GetByClusterID(context.Context, string, string) (cosmosdb.MaintenanceManifestDocumentIterator, error)
+	GetByClusterResourceID(context.Context, string, string) (cosmosdb.MaintenanceManifestDocumentIterator, error)
 	Patch(context.Context, string, string, MaintenanceManifestDocumentMutator) (*api.MaintenanceManifestDocument, error)
 	PatchWithLease(context.Context, string, string, MaintenanceManifestDocumentMutator) (*api.MaintenanceManifestDocument, error)
-	Lease(ctx context.Context, clusterID string, id string) (*api.MaintenanceManifestDocument, error)
+	Lease(ctx context.Context, clusterResourceID string, id string) (*api.MaintenanceManifestDocument, error)
 	EndLease(context.Context, string, string, api.MaintenanceManifestState, *string) (*api.MaintenanceManifestDocument, error)
 	Get(context.Context, string, string) (*api.MaintenanceManifestDocument, error)
 
@@ -65,7 +65,7 @@ func (c *maintenanceManifests) Create(ctx context.Context, doc *api.MaintenanceM
 		return nil, fmt.Errorf("id %q is not lower case", doc.ID)
 	}
 
-	doc, err := c.c.Create(ctx, doc.ClusterID, doc, nil)
+	doc, err := c.c.Create(ctx, doc.ClusterResourceID, doc, nil)
 
 	if err, ok := err.(*cosmosdb.Error); ok && err.StatusCode == http.StatusConflict {
 		err.StatusCode = http.StatusPreconditionFailed
@@ -74,12 +74,12 @@ func (c *maintenanceManifests) Create(ctx context.Context, doc *api.MaintenanceM
 	return doc, err
 }
 
-func (c *maintenanceManifests) Get(ctx context.Context, clusterID string, id string) (*api.MaintenanceManifestDocument, error) {
+func (c *maintenanceManifests) Get(ctx context.Context, clusterResourceID string, id string) (*api.MaintenanceManifestDocument, error) {
 	if id != strings.ToLower(id) {
 		return nil, fmt.Errorf("id %q is not lower case", id)
 	}
 
-	return c.c.Get(ctx, clusterID, id, nil)
+	return c.c.Get(ctx, clusterResourceID, id, nil)
 }
 
 // QueueLength returns maintenanceManifests un-queued document count.
@@ -113,15 +113,15 @@ func (c *maintenanceManifests) QueueLength(ctx context.Context, collid string) (
 	return countTotal, nil
 }
 
-func (c *maintenanceManifests) Patch(ctx context.Context, clusterID string, id string, f MaintenanceManifestDocumentMutator) (*api.MaintenanceManifestDocument, error) {
-	return c.patch(ctx, clusterID, id, f, nil)
+func (c *maintenanceManifests) Patch(ctx context.Context, clusterResourceID string, id string, f MaintenanceManifestDocumentMutator) (*api.MaintenanceManifestDocument, error) {
+	return c.patch(ctx, clusterResourceID, id, f, nil)
 }
 
-func (c *maintenanceManifests) patch(ctx context.Context, clusterID string, id string, f MaintenanceManifestDocumentMutator, options *cosmosdb.Options) (*api.MaintenanceManifestDocument, error) {
+func (c *maintenanceManifests) patch(ctx context.Context, clusterResourceID string, id string, f MaintenanceManifestDocumentMutator, options *cosmosdb.Options) (*api.MaintenanceManifestDocument, error) {
 	var doc *api.MaintenanceManifestDocument
 
 	err := cosmosdb.RetryOnPreconditionFailed(func() (err error) {
-		doc, err = c.Get(ctx, clusterID, id)
+		doc, err = c.Get(ctx, clusterResourceID, id)
 		if err != nil {
 			return
 		}
@@ -140,12 +140,12 @@ func (c *maintenanceManifests) patch(ctx context.Context, clusterID string, id s
 
 // PatchWithLease performs a patch on the cluster that verifies the lease is
 // being held by this client before applying.
-func (c *maintenanceManifests) PatchWithLease(ctx context.Context, clusterID string, id string, f MaintenanceManifestDocumentMutator) (*api.MaintenanceManifestDocument, error) {
-	return c.patchWithLease(ctx, clusterID, id, f, &cosmosdb.Options{PreTriggers: []string{"renewLease"}})
+func (c *maintenanceManifests) PatchWithLease(ctx context.Context, clusterResourceID string, id string, f MaintenanceManifestDocumentMutator) (*api.MaintenanceManifestDocument, error) {
+	return c.patchWithLease(ctx, clusterResourceID, id, f, &cosmosdb.Options{PreTriggers: []string{"renewLease"}})
 }
 
-func (c *maintenanceManifests) patchWithLease(ctx context.Context, clusterID string, id string, f MaintenanceManifestDocumentMutator, options *cosmosdb.Options) (*api.MaintenanceManifestDocument, error) {
-	return c.patch(ctx, clusterID, id, func(doc *api.MaintenanceManifestDocument) error {
+func (c *maintenanceManifests) patchWithLease(ctx context.Context, clusterResourceID string, id string, f MaintenanceManifestDocumentMutator, options *cosmosdb.Options) (*api.MaintenanceManifestDocument, error) {
+	return c.patch(ctx, clusterResourceID, id, func(doc *api.MaintenanceManifestDocument) error {
 		if doc.LeaseOwner != c.uuid {
 			return fmt.Errorf("lost lease")
 		}
@@ -159,31 +159,31 @@ func (c *maintenanceManifests) update(ctx context.Context, doc *api.MaintenanceM
 		return nil, fmt.Errorf("id %q is not lower case", doc.ID)
 	}
 
-	return c.c.Replace(ctx, doc.ClusterID, doc, options)
+	return c.c.Replace(ctx, doc.ClusterResourceID, doc, options)
 }
 
 func (c *maintenanceManifests) ChangeFeed() cosmosdb.MaintenanceManifestDocumentIterator {
 	return c.c.ChangeFeed(nil)
 }
 
-func (c *maintenanceManifests) GetByClusterID(ctx context.Context, clusterID string, continuation string) (cosmosdb.MaintenanceManifestDocumentIterator, error) {
-	if clusterID != strings.ToLower(clusterID) {
-		return nil, fmt.Errorf("clusterID %q is not lower case", clusterID)
+func (c *maintenanceManifests) GetByClusterResourceID(ctx context.Context, clusterResourceID string, continuation string) (cosmosdb.MaintenanceManifestDocumentIterator, error) {
+	if clusterResourceID != strings.ToLower(clusterResourceID) {
+		return nil, fmt.Errorf("clusterResourceID %q is not lower case", clusterResourceID)
 	}
 
 	return c.c.Query("", &cosmosdb.Query{
 		Query: MaintenanceManifestQueryForCluster,
 		Parameters: []cosmosdb.Parameter{
 			{
-				Name:  "@clusterID",
-				Value: clusterID,
+				Name:  "@clusterResourceID",
+				Value: clusterResourceID,
 			},
 		},
 	}, &cosmosdb.Options{Continuation: continuation}), nil
 }
 
-func (c *maintenanceManifests) EndLease(ctx context.Context, clusterID string, id string, provisioningState api.MaintenanceManifestState, statusString *string) (*api.MaintenanceManifestDocument, error) {
-	return c.patchWithLease(ctx, clusterID, id, func(doc *api.MaintenanceManifestDocument) error {
+func (c *maintenanceManifests) EndLease(ctx context.Context, clusterResourceID string, id string, provisioningState api.MaintenanceManifestState, statusString *string) (*api.MaintenanceManifestDocument, error) {
+	return c.patchWithLease(ctx, clusterResourceID, id, func(doc *api.MaintenanceManifestDocument) error {
 		doc.MaintenanceManifest.State = provisioningState
 		if statusString != nil {
 			doc.MaintenanceManifest.StatusText = *statusString
@@ -200,12 +200,12 @@ func (c *maintenanceManifests) EndLease(ctx context.Context, clusterID string, i
 }
 
 // Lease performs the initial lease/dequeue on the document.
-func (c *maintenanceManifests) Lease(ctx context.Context, clusterID string, id string) (*api.MaintenanceManifestDocument, error) {
-	if clusterID != strings.ToLower(clusterID) {
-		return nil, fmt.Errorf("clusterID %q is not lower case", clusterID)
+func (c *maintenanceManifests) Lease(ctx context.Context, clusterResourceID string, id string) (*api.MaintenanceManifestDocument, error) {
+	if clusterResourceID != strings.ToLower(clusterResourceID) {
+		return nil, fmt.Errorf("clusterID %q is not lower case", clusterResourceID)
 	}
 
-	return c.patchWithLease(ctx, clusterID, id, func(doc *api.MaintenanceManifestDocument) error {
+	return c.patchWithLease(ctx, clusterResourceID, id, func(doc *api.MaintenanceManifestDocument) error {
 		doc.LeaseOwner = c.uuid
 		doc.Dequeues++
 		return nil
