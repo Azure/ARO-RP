@@ -27,6 +27,24 @@ import (
 
 var errMissingIdentityParameter error = fmt.Errorf("identity parameter not provided but required for workload identity cluster")
 
+type PutOrPatchClusterParameters struct {
+	body                      []byte
+	correlationData           *api.CorrelationData
+	systemData                *api.SystemData
+	path                      string
+	originalPath              string
+	method                    string
+	referer                   string
+	header                    *http.Header
+	converter                 api.OpenShiftClusterConverter
+	staticValidator           api.OpenShiftClusterStaticValidator
+	subId                     string
+	resourceProviderNamespace string
+	apiVersion                string
+	identityURL               string
+	identityTenantID          string
+}
+
 func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
@@ -47,9 +65,26 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 	identityTenantID := r.Header.Get("x-ms-home-tenant-id")
 
 	apiVersion := r.URL.Query().Get(api.APIVersionKey)
+	putOrPatchClusterParameters := PutOrPatchClusterParameters{
+		body,
+		correlationData,
+		systemData,
+		r.URL.Path,
+		originalPath,
+		r.Method,
+		referer,
+		&header,
+		f.apis[apiVersion].OpenShiftClusterConverter,
+		f.apis[apiVersion].OpenShiftClusterStaticValidator,
+		subId,
+		resourceProviderNamespace,
+		apiVersion,
+		identityURL,
+		identityTenantID,
+	}
 	err := cosmosdb.RetryOnPreconditionFailed(func() error {
 		var err error
-		b, err = f._putOrPatchOpenShiftCluster(ctx, log, body, correlationData, systemData, r.URL.Path, originalPath, r.Method, referer, &header, f.apis[apiVersion].OpenShiftClusterConverter, f.apis[apiVersion].OpenShiftClusterStaticValidator, subId, resourceProviderNamespace, apiVersion, identityURL, identityTenantID)
+		b, err = f._putOrPatchOpenShiftCluster(ctx, log, putOrPatchClusterParameters)
 		return err
 	})
 
@@ -57,30 +92,29 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 	reply(log, w, header, b, err)
 }
 
-// TODO - refactor this function to reduce the number of parameters
-func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.Entry, body []byte, correlationData *api.CorrelationData, systemData *api.SystemData, path, originalPath, method, referer string, header *http.Header, converter api.OpenShiftClusterConverter, staticValidator api.OpenShiftClusterStaticValidator, subId, resourceProviderNamespace string, apiVersion string, identityURL string, identityTenantID string) ([]byte, error) {
-	subscription, err := f.validateSubscriptionState(ctx, path, api.SubscriptionStateRegistered)
+func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.Entry, putOrPatchClusterParameters PutOrPatchClusterParameters) ([]byte, error) {
+	subscription, err := f.validateSubscriptionState(ctx, putOrPatchClusterParameters.path, api.SubscriptionStateRegistered)
 	if err != nil {
 		return nil, err
 	}
 
-	doc, err := f.dbOpenShiftClusters.Get(ctx, path)
+	doc, err := f.dbOpenShiftClusters.Get(ctx, putOrPatchClusterParameters.path)
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, err
 	}
 	isCreate := doc == nil
 
 	if isCreate {
-		originalR, err := azure.ParseResourceID(originalPath)
+		originalR, err := azure.ParseResourceID(putOrPatchClusterParameters.originalPath)
 		if err != nil {
 			return nil, err
 		}
 
 		doc = &api.OpenShiftClusterDocument{
 			ID:  f.dbOpenShiftClusters.NewUUID(),
-			Key: path,
+			Key: putOrPatchClusterParameters.path,
 			OpenShiftCluster: &api.OpenShiftCluster{
-				ID:   originalPath,
+				ID:   putOrPatchClusterParameters.originalPath,
 				Name: originalR.ResourceName,
 				Type: originalR.Provider + "/" + originalR.ResourceType,
 				Properties: api.OpenShiftClusterProperties{
@@ -103,16 +137,16 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		// We don't support updating cluster managed identity after cluster creation
 		// TODO - use a common function to check if the cluster is a managed/workload identity cluster
 		if !(doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil || doc.OpenShiftCluster.Identity == nil) {
-			if err := validateIdentityUrl(doc.OpenShiftCluster, identityURL); err != nil {
+			if err := validateIdentityUrl(doc.OpenShiftCluster, putOrPatchClusterParameters.identityURL); err != nil {
 				return nil, err
 			}
-			if err := validateIdentityTenantID(doc.OpenShiftCluster, identityTenantID); err != nil {
+			if err := validateIdentityTenantID(doc.OpenShiftCluster, putOrPatchClusterParameters.identityTenantID); err != nil {
 				return nil, err
 			}
 		}
 	}
 
-	doc.CorrelationData = correlationData
+	doc.CorrelationData = putOrPatchClusterParameters.correlationData
 
 	err = validateTerminalProvisioningState(doc.OpenShiftCluster.Properties.ProvisioningState)
 	if err != nil {
@@ -142,7 +176,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	}
 
 	var ext interface{}
-	switch method {
+	switch putOrPatchClusterParameters.method {
 	// In case of PUT we will take customer request payload and store into database
 	// Our base structure for unmarshal is skeleton document with values we
 	// think is required. We expect payload to have everything else required.
@@ -166,43 +200,43 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 			document.Properties.ServicePrincipalProfile.ClientSecret = doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret
 		}
 
-		ext = converter.ToExternal(document)
+		ext = putOrPatchClusterParameters.converter.ToExternal(document)
 
 	// In case of PATCH we take current cluster document, which is enriched
 	// from the cluster and use it as base for unmarshal. So customer can
 	// provide single field json to be updated in the database.
 	// Patch should be used for updating individual fields of the document.
 	case http.MethodPatch:
-		ext = converter.ToExternal(doc.OpenShiftCluster)
+		ext = putOrPatchClusterParameters.converter.ToExternal(doc.OpenShiftCluster)
 	}
 
-	converter.ExternalNoReadOnly(ext)
+	putOrPatchClusterParameters.converter.ExternalNoReadOnly(ext)
 
-	err = json.Unmarshal(body, &ext)
+	err = json.Unmarshal(putOrPatchClusterParameters.body, &ext)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
 	}
 
 	if isCreate {
-		converter.ToInternal(ext, doc.OpenShiftCluster)
-		err = f.ValidateNewCluster(ctx, subscription, doc.OpenShiftCluster, staticValidator, ext, path)
+		putOrPatchClusterParameters.converter.ToInternal(ext, doc.OpenShiftCluster)
+		err = f.ValidateNewCluster(ctx, subscription, doc.OpenShiftCluster, putOrPatchClusterParameters.staticValidator, ext, putOrPatchClusterParameters.path)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		err = staticValidator.Static(ext, doc.OpenShiftCluster, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sV3Workers), path)
+		err = putOrPatchClusterParameters.staticValidator.Static(ext, doc.OpenShiftCluster, f.env.Location(), f.env.Domain(), f.env.FeatureIsSet(env.FeatureRequireD2sV3Workers), putOrPatchClusterParameters.path)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	oldID, oldName, oldType, oldSystemData := doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type, doc.OpenShiftCluster.SystemData
-	converter.ToInternal(ext, doc.OpenShiftCluster)
+	putOrPatchClusterParameters.converter.ToInternal(ext, doc.OpenShiftCluster)
 	doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type, doc.OpenShiftCluster.SystemData = oldID, oldName, oldType, oldSystemData
 
 	// This will update systemData from the values in the header. Old values, which
 	// is not provided in the header must be preserved
-	f.systemDataClusterDocEnricher(doc, systemData)
+	f.systemDataClusterDocEnricher(doc, putOrPatchClusterParameters.systemData)
 
 	if isCreate {
 		err = f.validateInstallVersion(ctx, doc.OpenShiftCluster)
@@ -227,24 +261,24 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 			return nil, err
 		}
 	} else {
-		setUpdateProvisioningState(doc, apiVersion)
+		setUpdateProvisioningState(doc, putOrPatchClusterParameters.apiVersion)
 	}
 
 	// SetDefaults will set defaults on cluster document
 	api.SetDefaults(doc, operator.DefaultOperatorFlags)
 
-	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, subId, resourceProviderNamespace, doc)
+	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, putOrPatchClusterParameters.subId, putOrPatchClusterParameters.resourceProviderNamespace, doc)
 	if err != nil {
 		return nil, err
 	}
 
-	u, err := url.Parse(referer)
+	u, err := url.Parse(putOrPatchClusterParameters.referer)
 	if err != nil {
 		return nil, err
 	}
 
-	u.Path = f.operationsPath(subId, resourceProviderNamespace, doc.AsyncOperationID)
-	*header = http.Header{
+	u.Path = f.operationsPath(putOrPatchClusterParameters.subId, putOrPatchClusterParameters.resourceProviderNamespace, doc.AsyncOperationID)
+	*putOrPatchClusterParameters.header = http.Header{
 		"Azure-AsyncOperation": []string{u.String()},
 	}
 
@@ -272,7 +306,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	// We don't return enriched worker profile data on PUT/PATCH operations
 	doc.OpenShiftCluster.Properties.WorkerProfilesStatus = nil
 
-	b, err := json.MarshalIndent(converter.ToExternal(doc.OpenShiftCluster), "", "    ")
+	b, err := json.MarshalIndent(putOrPatchClusterParameters.converter.ToExternal(doc.OpenShiftCluster), "", "    ")
 	if err != nil {
 		return nil, err
 	}
