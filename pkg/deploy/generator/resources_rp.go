@@ -1265,7 +1265,6 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			// MIMO DB triggers
 			g.rpCosmosDBTriggers(databaseName, "MaintenanceManifests", "renewLease", renewLeaseTriggerFunction, sdkcosmos.TriggerTypePre, sdkcosmos.TriggerOperationAll),
 		)
-
 	}
 
 	if addDependsOn {
