@@ -27,7 +27,7 @@ import (
 
 var errMissingIdentityParameter error = fmt.Errorf("identity parameter not provided but required for workload identity cluster")
 
-type PutOrPatchClusterParameters struct {
+type PutOrPatchOpenshiftClusterParameters struct {
 	body                      []byte
 	correlationData           *api.CorrelationData
 	systemData                *api.SystemData
@@ -65,7 +65,7 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 	identityTenantID := r.Header.Get("x-ms-home-tenant-id")
 
 	apiVersion := r.URL.Query().Get(api.APIVersionKey)
-	putOrPatchClusterParameters := PutOrPatchClusterParameters{
+	putOrPatchClusterParameters := PutOrPatchOpenshiftClusterParameters{
 		body,
 		correlationData,
 		systemData,
@@ -92,7 +92,7 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 	reply(log, w, header, b, err)
 }
 
-func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.Entry, putOrPatchClusterParameters PutOrPatchClusterParameters) ([]byte, error) {
+func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.Entry, putOrPatchClusterParameters PutOrPatchOpenshiftClusterParameters) ([]byte, error) {
 	subscription, err := f.validateSubscriptionState(ctx, putOrPatchClusterParameters.path, api.SubscriptionStateRegistered)
 	if err != nil {
 		return nil, err
