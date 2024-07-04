@@ -484,6 +484,16 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 	return c.openshiftclusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, ocExt)
 }
 
+var localClient *http.Client = &http.Client{
+	Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	},
+}
+
+var localDefaultURL string = "https://localhost:8443"
+
 func (c *Cluster) registerSubscription(ctx context.Context) error {
 	b, err := json.Marshal(&api.Subscription{
 		State: api.SubscriptionStateRegistered,
@@ -501,22 +511,14 @@ func (c *Cluster) registerSubscription(ctx context.Context) error {
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPut, "https://localhost:8443/subscriptions/"+c.env.SubscriptionID()+"?api-version=2.0", bytes.NewReader(b))
+	req, err := http.NewRequest(http.MethodPut, localDefaultURL+"/subscriptions/"+c.env.SubscriptionID()+"?api-version=2.0", bytes.NewReader(b))
 	if err != nil {
 		return err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 
-	cli := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		},
-	}
-
-	resp, err := cli.Do(req)
+	resp, err := localClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -524,7 +526,46 @@ func (c *Cluster) registerSubscription(ctx context.Context) error {
 	return resp.Body.Close()
 }
 
+// getVersionsInCosmosDB
+func getVersionsInCosmosDB(ctx context.Context) ([]*api.OpenShiftVersion, error) {
+	type getVersionResponse struct {
+		Value []*api.OpenShiftVersion `json:"value"`
+	}
+
+	getRequest, err := http.NewRequestWithContext(ctx, http.MethodGet, localDefaultURL+"/admin/versions", &bytes.Buffer{})
+	if err != nil {
+		return nil, fmt.Errorf("error creating get versions request: %w", err)
+	}
+
+	getRequest.Header.Set("Content-Type", "application/json")
+
+	getResponse, err := localClient.Do(getRequest)
+	if err != nil {
+		return nil, fmt.Errorf("error couldn't retrieve versions in cosmos db: %w", err)
+	}
+
+	parsedResponse := getVersionResponse{}
+	decoder := json.NewDecoder(getResponse.Body)
+	err = decoder.Decode(&parsedResponse)
+
+	return parsedResponse.Value, nil
+}
+
 func (c *Cluster) insertDefaultVersionIntoCosmosdb(ctx context.Context) error {
+	// first, we make sure that we don't overwrite any existing entry for the default version
+	versionsInDB, err := getVersionsInCosmosDB(ctx)
+	if err != nil {
+		return fmt.Errorf("couldn't query versions in cosmosdb: %w", err)
+	}
+
+	for _, versionFromDB := range versionsInDB {
+		// we already have an entry for the default version
+		if versionFromDB.Properties.Version == version.DefaultInstallStream.Version.String() {
+			c.log.Debugf("Version %s already in DB. Not overwriting existing one.", version.DefaultInstallStream.Version.String())
+			return nil
+		}
+	}
+
 	defaultVersion := version.DefaultInstallStream
 	b, err := json.Marshal(&api.OpenShiftVersion{
 		Properties: api.OpenShiftVersionProperties{
@@ -540,22 +581,14 @@ func (c *Cluster) insertDefaultVersionIntoCosmosdb(ctx context.Context) error {
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPut, "https://localhost:8443/admin/versions", bytes.NewReader(b))
+	req, err := http.NewRequest(http.MethodPut, localDefaultURL + "/admin/versions", bytes.NewReader(b))
 	if err != nil {
 		return err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 
-	cli := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		},
-	}
-
-	resp, err := cli.Do(req)
+	resp, err := localClient.Do(req)
 	if err != nil {
 		return err
 	}
