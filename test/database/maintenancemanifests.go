@@ -36,13 +36,13 @@ func fakeMaintenanceManifestsForCluster(client cosmosdb.MaintenanceManifestDocum
 		panic(err)
 	}
 
-	clusterID := query.Parameters[0].Value
+	clusterResourceID := query.Parameters[0].Value
 
-	fmt.Print(clusterID, startingIndex)
+	fmt.Print(clusterResourceID, startingIndex)
 
 	var results []*api.MaintenanceManifestDocument
 	for _, r := range input.MaintenanceManifestDocuments {
-		if r.ClusterID == clusterID &&
+		if r.ClusterResourceID == clusterResourceID &&
 			r.MaintenanceManifest.State == api.MaintenanceManifestStatePending {
 			results = append(results, r)
 		}

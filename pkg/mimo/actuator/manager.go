@@ -33,7 +33,7 @@ type actuator struct {
 	log *logrus.Entry
 	now func() time.Time
 
-	clusterID string
+	clusterResourceID string
 
 	oc  database.OpenShiftClusters
 	mmf database.MaintenanceManifests
@@ -45,17 +45,17 @@ func NewActuator(
 	ctx context.Context,
 	_env env.Interface,
 	log *logrus.Entry,
-	clusterID string,
+	clusterResourceID string,
 	oc database.OpenShiftClusters,
 	mmf database.MaintenanceManifests,
 	now func() time.Time) (Actuator, error) {
 	a := &actuator{
-		env:       _env,
-		log:       log,
-		clusterID: strings.ToLower(clusterID),
-		oc:        oc,
-		mmf:       mmf,
-		tasks:     make(map[string]tasks.TaskFunc),
+		env:               _env,
+		log:               log,
+		clusterResourceID: strings.ToLower(clusterResourceID),
+		oc:                oc,
+		mmf:               mmf,
+		tasks:             make(map[string]tasks.TaskFunc),
 
 		now: now,
 	}
@@ -73,16 +73,16 @@ func (a *actuator) AddTasks(tasks map[string]tasks.TaskFunc) {
 
 func (a *actuator) Process(ctx context.Context) (bool, error) {
 	// Get the manifests for this cluster which need to be worked
-	i, err := a.mmf.GetByClusterID(ctx, a.clusterID, "")
+	i, err := a.mmf.GetByClusterResourceID(ctx, a.clusterResourceID, "")
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed getting manifests: %w", err)
 	}
 
 	docList := make([]*api.MaintenanceManifestDocument, 0)
 	for {
 		docs, err := i.Next(ctx, -1)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("failed reading next manifest document: %w", err)
 		}
 		if docs == nil {
 			break
@@ -93,8 +93,10 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 
 	manifestsToAction := make([]*api.MaintenanceManifestDocument, 0)
 
+	// Order manifests in order of RunAfter, and then Priority for ones with the
+	// same RunAfter.
 	sort.SliceStable(docList, func(i, j int) bool {
-		if docList[i].MaintenanceManifest.RunAfter != docList[j].MaintenanceManifest.RunAfter {
+		if docList[i].MaintenanceManifest.RunAfter == docList[j].MaintenanceManifest.RunAfter {
 			return docList[i].MaintenanceManifest.Priority < docList[j].MaintenanceManifest.Priority
 		}
 
@@ -109,7 +111,7 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 			// timed out, mark as such
 			a.log.Infof("marking %v as outdated: %v older than %v", doc.ID, doc.MaintenanceManifest.RunBefore, evaluationTime.UTC())
 
-			_, err := a.mmf.Patch(ctx, a.clusterID, doc.ID, func(d *api.MaintenanceManifestDocument) error {
+			_, err := a.mmf.Patch(ctx, a.clusterResourceID, doc.ID, func(d *api.MaintenanceManifestDocument) error {
 				d.MaintenanceManifest.State = api.MaintenanceManifestStateTimedOut
 				d.MaintenanceManifest.StatusText = fmt.Sprintf("timed out at %s", evaluationTime.UTC())
 				return nil
@@ -129,7 +131,7 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 	}
 
 	// Dequeue the document
-	oc, err := a.oc.Get(ctx, a.clusterID)
+	oc, err := a.oc.Get(ctx, a.clusterResourceID)
 	if err != nil {
 		return false, err
 	}
@@ -151,7 +153,7 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		}
 
 		// Attempt a dequeue
-		doc, err = a.mmf.Lease(ctx, a.clusterID, doc.ID)
+		doc, err = a.mmf.Lease(ctx, a.clusterResourceID, doc.ID)
 		if err != nil {
 			// log and continue if it doesn't work
 			a.log.Error(err)
@@ -161,7 +163,7 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 		// if we've tried too many times, give up
 		if doc.Dequeues > maxDequeueCount {
 			err := fmt.Errorf("dequeued %d times, failing", doc.Dequeues)
-			_, leaseErr := a.mmf.EndLease(ctx, doc.ClusterID, doc.ID, api.MaintenanceManifestStateTimedOut, to.StringPtr(err.Error()))
+			_, leaseErr := a.mmf.EndLease(ctx, doc.ClusterResourceID, doc.ID, api.MaintenanceManifestStateTimedOut, to.StringPtr(err.Error()))
 			if leaseErr != nil {
 				a.log.Error(err)
 			}
@@ -170,13 +172,13 @@ func (a *actuator) Process(ctx context.Context) (bool, error) {
 
 		// Perform the task
 		state, msg := f(ctx, taskContext, doc, oc)
-		_, err = a.mmf.EndLease(ctx, doc.ClusterID, doc.ID, state, &msg)
+		_, err = a.mmf.EndLease(ctx, doc.ClusterResourceID, doc.ID, state, &msg)
 		if err != nil {
 			a.log.Error(err)
 		}
 	}
 
 	// release the OpenShiftCluster
-	_, err = a.oc.EndLease(ctx, a.clusterID, oc.OpenShiftCluster.Properties.ProvisioningState, api.ProvisioningStateMaintenance, nil)
+	_, err = a.oc.EndLease(ctx, a.clusterResourceID, oc.OpenShiftCluster.Properties.ProvisioningState, api.ProvisioningStateMaintenance, nil)
 	return true, err
 }
