@@ -170,10 +170,10 @@ func (mr *MockVirtualMachinesClientMockRecorder) Get(arg0, arg1, arg2, arg3 inte
 }
 
 // GetSerialConsoleForVM mocks base method.
-func (m *MockVirtualMachinesClient) GetSerialConsoleForVM(arg0 context.Context, arg1, arg2 string) (io.ReadCloser, error) {
+func (m *MockVirtualMachinesClient) GetSerialConsoleForVM(arg0 context.Context, arg1, arg2 string) (io.Reader, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetSerialConsoleForVM", arg0, arg1, arg2)
-	ret0, _ := ret[0].(io.ReadCloser)
+	ret0, _ := ret[0].(io.Reader)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
