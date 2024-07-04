@@ -49,24 +49,22 @@ func (m *manager) LogAzureInformation(ctx context.Context) (interface{}, error) 
 
 	// Fetch boot diagnostics URIs for the VMs
 	for _, vmName := range vmNames {
-		func() {
-			serialConsoleBlob, err := m.virtualMachines.GetSerialConsoleForVM(ctx, resourceGroupName, vmName)
-			if err != nil {
-				items = append(items, fmt.Sprintf("vm boot diagnostics retrieval error for %s: %s", vmName, err))
-				return
-			}
+		serialConsoleBlob, err := m.virtualMachines.GetSerialConsoleForVM(ctx, resourceGroupName, vmName)
+		if err != nil {
+			items = append(items, fmt.Sprintf("vm boot diagnostics retrieval error for %s: %s", vmName, err))
+			continue
+		}
 
-			logForVM := m.log.WithField("failedRoleInstance", vmName)
+		logForVM := m.log.WithField("failedRoleInstance", vmName)
 
-			b64Reader := base64.NewDecoder(base64.StdEncoding, serialConsoleBlob)
-			scanner := bufio.NewScanner(b64Reader)
-			for scanner.Scan() {
-				logForVM.Info(scanner.Text())
-			}
-			if err := scanner.Err(); err != nil {
-				items = append(items, fmt.Sprintf("blob storage scan on %s: %s", vmName, err))
-			}
-		}()
+		b64Reader := base64.NewDecoder(base64.StdEncoding, serialConsoleBlob)
+		scanner := bufio.NewScanner(b64Reader)
+		for scanner.Scan() {
+			logForVM.Info(scanner.Text())
+		}
+		if err := scanner.Err(); err != nil {
+			items = append(items, fmt.Sprintf("blob storage scan on %s: %s", vmName, err))
+		}
 	}
 
 	return items, nil
