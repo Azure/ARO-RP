@@ -5,7 +5,6 @@ package adminactions
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,7 +15,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/applens"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
@@ -37,8 +35,6 @@ type AzureActions interface {
 	VMResize(ctx context.Context, vmName string, vmSize string) error
 	ResourceGroupHasVM(ctx context.Context, vmName string) (bool, error)
 	VMSerialConsole(ctx context.Context, w http.ResponseWriter, log *logrus.Entry, vmName string) error
-	AppLensGetDetector(ctx context.Context, detectorId string) ([]byte, error)
-	AppLensListDetectors(ctx context.Context) ([]byte, error)
 	ResourceDeleteAndWait(ctx context.Context, resourceID string) error
 }
 
@@ -56,7 +52,6 @@ type azureActions struct {
 	storageAccounts    storage.AccountsClient
 	networkInterfaces  network.InterfacesClient
 	loadBalancers      network.LoadBalancersClient
-	appLens            applens.AppLensClient
 }
 
 // NewAzureActions returns an azureActions
@@ -64,16 +59,6 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 	subscriptionDoc *api.SubscriptionDocument) (AzureActions, error) {
 	fpAuth, err := env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID,
 		env.Environment().ResourceManagerScope)
-	if err != nil {
-		return nil, err
-	}
-
-	fpClientCertCred, err := env.FPNewClientCertificateCredential(env.Environment().AppLensTenantID)
-	if err != nil {
-		return nil, err
-	}
-
-	appLensClient, err := applens.NewAppLensClient(env.Environment(), fpClientCertCred)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +77,6 @@ func NewAzureActions(log *logrus.Entry, env env.Interface, oc *api.OpenShiftClus
 		storageAccounts:    storage.NewAccountsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		networkInterfaces:  network.NewInterfacesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 		loadBalancers:      network.NewLoadBalancersClient(env.Environment(), subscriptionDoc.ID, fpAuth),
-		appLens:            appLensClient,
 	}, nil
 }
 
@@ -149,24 +133,4 @@ func (a *azureActions) ResourceGroupHasVM(ctx context.Context, vmName string) (b
 	}
 
 	return false, nil
-}
-
-func (a *azureActions) AppLensGetDetector(ctx context.Context, detectorId string) ([]byte, error) {
-	detector, err := a.appLens.GetDetector(ctx, &applens.GetDetectorOptions{ResourceID: a.oc.ID, DetectorID: detectorId, Location: a.oc.Location})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return json.Marshal(detector)
-}
-
-func (a *azureActions) AppLensListDetectors(ctx context.Context) ([]byte, error) {
-	detectors, err := a.appLens.ListDetectors(ctx, &applens.ListDetectorsOptions{ResourceID: a.oc.ID, Location: a.oc.Location})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return json.Marshal(detectors)
 }

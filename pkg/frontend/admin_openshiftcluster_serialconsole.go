@@ -5,6 +5,7 @@ package frontend
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -50,6 +51,8 @@ func (f *frontend) _getAdminOpenShiftClusterSerialConsole(ctx context.Context, w
 	if err != nil {
 		return err
 	}
+
+	fmt.Print("sanksdfg")
 
 	a, err := f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
 	if err != nil {
