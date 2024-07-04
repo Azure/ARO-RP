@@ -7,7 +7,6 @@ package mock_adminactions
 import (
 	context "context"
 	io "io"
-	http "net/http"
 	reflect "reflect"
 
 	compute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-01/compute"
@@ -326,17 +325,18 @@ func (mr *MockAzureActionsMockRecorder) VMResize(arg0, arg1, arg2 interface{}) *
 }
 
 // VMSerialConsole mocks base method.
-func (m *MockAzureActions) VMSerialConsole(arg0 context.Context, arg1 http.ResponseWriter, arg2 *logrus.Entry, arg3 string) error {
+func (m *MockAzureActions) VMSerialConsole(arg0 context.Context, arg1 *logrus.Entry, arg2 string) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VMSerialConsole", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret := m.ctrl.Call(m, "VMSerialConsole", arg0, arg1, arg2)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // VMSerialConsole indicates an expected call of VMSerialConsole.
-func (mr *MockAzureActionsMockRecorder) VMSerialConsole(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockAzureActionsMockRecorder) VMSerialConsole(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMSerialConsole", reflect.TypeOf((*MockAzureActions)(nil).VMSerialConsole), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMSerialConsole", reflect.TypeOf((*MockAzureActions)(nil).VMSerialConsole), arg0, arg1, arg2)
 }
 
 // VMSizeList mocks base method.

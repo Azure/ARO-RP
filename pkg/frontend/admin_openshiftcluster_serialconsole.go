@@ -5,7 +5,6 @@ package frontend
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -23,18 +22,22 @@ func (f *frontend) getAdminOpenShiftClusterSerialConsole(w http.ResponseWriter, 
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	err := f._getAdminOpenShiftClusterSerialConsole(ctx, w, r, log)
+	b, err := f._getAdminOpenShiftClusterSerialConsole(ctx, r, log)
 
-	adminReply(log, w, nil, nil, err)
+	if err == nil {
+		w.Header().Set("Content-Type", "text/plain")
+	}
+
+	adminReply(log, w, nil, b, err)
 }
 
-func (f *frontend) _getAdminOpenShiftClusterSerialConsole(ctx context.Context, w http.ResponseWriter, r *http.Request, log *logrus.Entry) error {
+func (f *frontend) _getAdminOpenShiftClusterSerialConsole(ctx context.Context, r *http.Request, log *logrus.Entry) ([]byte, error) {
 	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 
 	vmName := r.URL.Query().Get("vmName")
 	err := validateAdminVMName(vmName)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
@@ -42,22 +45,20 @@ func (f *frontend) _getAdminOpenShiftClusterSerialConsole(ctx context.Context, w
 	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", resType, resName, resGroupName)
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", resType, resName, resGroupName)
 	case err != nil:
-		return err
+		return nil, err
 	}
 
 	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	fmt.Print("sanksdfg")
 
 	a, err := f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return a.VMSerialConsole(ctx, w, log, vmName)
+	return a.VMSerialConsole(ctx, log, vmName)
 }
