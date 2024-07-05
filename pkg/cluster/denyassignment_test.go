@@ -24,34 +24,65 @@ func TestCreateOrUpdateDenyAssignment(t *testing.T) {
 	clusterRGName := "test-cluster"
 	m := &manager{
 		log: logrus.NewEntry(logrus.StandardLogger()),
-		doc: &api.OpenShiftClusterDocument{
-			OpenShiftCluster: &api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					ClusterProfile: api.ClusterProfile{
-						ResourceGroupID: fmt.Sprintf("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/%s", clusterRGName),
-					},
-					ServicePrincipalProfile: &api.ServicePrincipalProfile{
-						SPObjectID: fakeClusterSPObjectId,
-					},
-				},
-				Identity: &api.Identity{
-					UserAssignedIdentities: api.UserAssignedIdentities{
-						"fakeIdentity": api.ClusterUserAssignedIdentity{
-							ClientID:    "fake",
-							PrincipalID: "alsoFake",
-						},
-					},
-				},
-			},
-		},
 	}
 
 	for _, tt := range []struct {
 		name  string
+		doc   *api.OpenShiftClusterDocument
 		mocks func(*mock_features.MockDeploymentsClient)
 	}{
 		{
-			name: "needs create",
+			name: "needs create - ServicePrincipalProfile",
+			doc: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: fmt.Sprintf("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/%s", clusterRGName),
+						},
+						ServicePrincipalProfile: &api.ServicePrincipalProfile{
+							SPObjectID: fakeClusterSPObjectId,
+						},
+					},
+				},
+			},
+			mocks: func(client *mock_features.MockDeploymentsClient) {
+				var parameters map[string]interface{}
+				client.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRGName, gomock.Any(), mgmtfeatures.Deployment{
+					Properties: &mgmtfeatures.DeploymentProperties{
+						Template: &arm.Template{
+							Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+							ContentVersion: "1.0.0.0",
+							Resources: []*arm.Resource{
+								m.denyAssignment(),
+							},
+						},
+						Parameters: parameters,
+						Mode:       mgmtfeatures.Incremental,
+					},
+				}).Return(nil)
+			},
+		},
+		{
+			name: "needs create - PlatformWorkloadIdentityProfile",
+			doc: &api.OpenShiftClusterDocument{
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							ResourceGroupID: fmt.Sprintf("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/%s", clusterRGName),
+						},
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{
+							PlatformWorkloadIdentities: []api.PlatformWorkloadIdentity{
+								{
+									OperatorName: "anything",
+									ObjectID:     "00000000-0000-0000-0000-000000000000",
+									ClientID:     "11111111-1111-1111-1111-111111111111",
+									ResourceID:   "/subscriptions/22222222-2222-2222-2222-222222222222/resourceGroups/something/providers/Microsoft.ManagedIdentity/userAssignedIdentities/identity-name",
+								},
+							},
+						},
+					},
+				},
+			},
 			mocks: func(client *mock_features.MockDeploymentsClient) {
 				var parameters map[string]interface{}
 				client.EXPECT().CreateOrUpdateAndWait(gomock.Any(), clusterRGName, gomock.Any(), mgmtfeatures.Deployment{
@@ -78,6 +109,8 @@ func TestCreateOrUpdateDenyAssignment(t *testing.T) {
 			deployments := mock_features.NewMockDeploymentsClient(controller)
 
 			_env.EXPECT().FeatureIsSet(env.FeatureDisableDenyAssignments).AnyTimes().Return(false)
+
+			m.doc = tt.doc
 
 			if tt.mocks != nil {
 				tt.mocks(deployments)
