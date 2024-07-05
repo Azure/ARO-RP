@@ -325,18 +325,17 @@ func (mr *MockAzureActionsMockRecorder) VMResize(arg0, arg1, arg2 interface{}) *
 }
 
 // VMSerialConsole mocks base method.
-func (m *MockAzureActions) VMSerialConsole(arg0 context.Context, arg1 *logrus.Entry, arg2 string) ([]byte, error) {
+func (m *MockAzureActions) VMSerialConsole(arg0 context.Context, arg1 *logrus.Entry, arg2 string, arg3 io.Writer) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VMSerialConsole", arg0, arg1, arg2)
-	ret0, _ := ret[0].([]byte)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "VMSerialConsole", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // VMSerialConsole indicates an expected call of VMSerialConsole.
-func (mr *MockAzureActionsMockRecorder) VMSerialConsole(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockAzureActionsMockRecorder) VMSerialConsole(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMSerialConsole", reflect.TypeOf((*MockAzureActions)(nil).VMSerialConsole), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMSerialConsole", reflect.TypeOf((*MockAzureActions)(nil).VMSerialConsole), arg0, arg1, arg2, arg3)
 }
 
 // VMSizeList mocks base method.

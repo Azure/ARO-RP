@@ -87,53 +87,13 @@ func TestVirtualMachines(t *testing.T) {
 				}, nil)
 
 				vmClient.EXPECT().GetSerialConsoleForVM(
-					gomock.Any(), "resourceGroupCluster", "somename",
-				).Times(1).Return(nil, errors.New("explod"))
+					gomock.Any(), "resourceGroupCluster", "somename", gomock.Any(),
+				).Times(1).Return(errors.New("explod"))
 			},
 			expectedLogs: []map[string]types.GomegaMatcher{},
 			expectedOutput: []interface{}{
 				`vm somename: {"location":"eastus","properties":{}}`,
 				"vm boot diagnostics retrieval error for somename: explod",
-			},
-		},
-		{
-			name: "failed blob decoding",
-			mock: func(vmClient *mock_compute.MockVirtualMachinesClient) {
-				vmClient.EXPECT().List(gomock.Any(), "resourceGroupCluster").Return([]mgmtcompute.VirtualMachine{
-					{
-						Name:     to.StringPtr("somename"),
-						Location: to.StringPtr("eastus"),
-						VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
-							InstanceView: &mgmtcompute.VirtualMachineInstanceView{
-								BootDiagnostics: &mgmtcompute.BootDiagnosticsInstanceView{
-									SerialConsoleLogBlobURI: to.StringPtr("bogusurl/boguscontainer/bogusblob"),
-								},
-							},
-						},
-					},
-				}, nil)
-
-				out := io.NopCloser(bytes.NewBufferString("aGVsbG8KdGhlcmUgOikKZ"))
-
-				vmClient.EXPECT().GetSerialConsoleForVM(
-					gomock.Any(), "resourceGroupCluster", "somename",
-				).Times(1).Return(out, nil)
-			},
-			expectedLogs: []map[string]types.GomegaMatcher{
-				{
-					"level":              gomega.Equal(logrus.InfoLevel),
-					"msg":                gomega.Equal(`hello`),
-					"failedRoleInstance": gomega.Equal("somename"),
-				},
-				{
-					"level":              gomega.Equal(logrus.InfoLevel),
-					"msg":                gomega.Equal(`there :)`),
-					"failedRoleInstance": gomega.Equal("somename"),
-				},
-			},
-			expectedOutput: []interface{}{
-				`vm somename: {"location":"eastus","properties":{}}`,
-				`blob storage scan on somename: unexpected EOF`,
 			},
 		},
 		{
@@ -147,11 +107,14 @@ func TestVirtualMachines(t *testing.T) {
 					},
 				}, nil)
 
-				out := io.NopCloser(bytes.NewBufferString("aGVsbG8KdGhlcmUgOikK"))
-
+				iothing := bytes.NewBufferString("hello\nthere :)")
 				vmClient.EXPECT().GetSerialConsoleForVM(
-					gomock.Any(), "resourceGroupCluster", "somename",
-				).Times(1).Return(out, nil)
+					gomock.Any(), "resourceGroupCluster", "somename", gomock.Any(),
+				).Times(1).DoAndReturn(func(ctx context.Context,
+					rg string, vmName string, target io.Writer) error {
+					_, err := io.Copy(target, iothing)
+					return err
+				})
 			},
 			expectedLogs: []map[string]types.GomegaMatcher{
 				{

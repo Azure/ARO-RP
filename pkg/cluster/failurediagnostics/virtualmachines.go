@@ -5,8 +5,8 @@ package failurediagnostics
 
 import (
 	"bufio"
+	"bytes"
 	"context"
-	"encoding/base64"
 	"fmt"
 
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -49,16 +49,15 @@ func (m *manager) LogAzureInformation(ctx context.Context) (interface{}, error) 
 
 	// Fetch boot diagnostics URIs for the VMs
 	for _, vmName := range vmNames {
-		serialConsoleBlob, err := m.virtualMachines.GetSerialConsoleForVM(ctx, resourceGroupName, vmName)
+		blob := &bytes.Buffer{}
+		err := m.virtualMachines.GetSerialConsoleForVM(ctx, resourceGroupName, vmName, blob)
 		if err != nil {
 			items = append(items, fmt.Sprintf("vm boot diagnostics retrieval error for %s: %s", vmName, err))
 			continue
 		}
 
 		logForVM := m.log.WithField("failedRoleInstance", vmName)
-
-		b64Reader := base64.NewDecoder(base64.StdEncoding, serialConsoleBlob)
-		scanner := bufio.NewScanner(b64Reader)
+		scanner := bufio.NewScanner(blob)
 		for scanner.Scan() {
 			logForVM.Info(scanner.Text())
 		}

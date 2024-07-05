@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -33,7 +34,11 @@ func TestVMSerialConsole(t *testing.T) {
 			mocks: func(vmc *mock_compute.MockVirtualMachinesClient) {
 				iothing := bytes.NewBufferString("outputhere")
 
-				vmc.EXPECT().GetSerialConsoleForVM(gomock.Any(), clusterRG, "vm1").Return(iothing, nil)
+				vmc.EXPECT().GetSerialConsoleForVM(gomock.Any(), clusterRG, "vm1", gomock.Any()).DoAndReturn(func(ctx context.Context,
+					rg string, vmName string, target io.Writer) error {
+					_, err := io.Copy(target, iothing)
+					return err
+				})
 			},
 			wantResponse: []byte(`outputhere`),
 		},
@@ -64,11 +69,12 @@ func TestVMSerialConsole(t *testing.T) {
 
 			ctx := context.Background()
 
-			resp, err := a.VMSerialConsole(ctx, log, "vm1")
+			target := &bytes.Buffer{}
+			err := a.VMSerialConsole(ctx, log, "vm1", target)
 
 			utilerror.AssertErrorMessage(t, err, tt.wantError)
 
-			for _, errs := range deep.Equal(resp, tt.wantResponse) {
+			for _, errs := range deep.Equal(target.Bytes(), tt.wantResponse) {
 				t.Error(errs)
 			}
 		})

@@ -4,7 +4,9 @@ package frontend
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -22,22 +24,25 @@ func (f *frontend) getAdminOpenShiftClusterSerialConsole(w http.ResponseWriter, 
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	b, err := f._getAdminOpenShiftClusterSerialConsole(ctx, r, log)
+	buf := &bytes.Buffer{}
+
+	err := f._getAdminOpenShiftClusterSerialConsole(ctx, r, log, buf)
 
 	if err == nil {
 		w.Header().Set("Content-Type", "text/plain")
+		_, err = io.Copy(w, buf)
 	}
 
-	adminReply(log, w, nil, b, err)
+	adminReply(log, w, nil, nil, err)
 }
 
-func (f *frontend) _getAdminOpenShiftClusterSerialConsole(ctx context.Context, r *http.Request, log *logrus.Entry) ([]byte, error) {
+func (f *frontend) _getAdminOpenShiftClusterSerialConsole(ctx context.Context, r *http.Request, log *logrus.Entry, w io.Writer) error {
 	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 
 	vmName := r.URL.Query().Get("vmName")
 	err := validateAdminVMName(vmName)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
@@ -45,20 +50,20 @@ func (f *frontend) _getAdminOpenShiftClusterSerialConsole(ctx context.Context, r
 	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", resType, resName, resGroupName)
+		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", resType, resName, resGroupName)
 	case err != nil:
-		return nil, err
+		return err
 	}
 
 	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	a, err := f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return a.VMSerialConsole(ctx, log, vmName)
+	return a.VMSerialConsole(ctx, log, vmName, w)
 }

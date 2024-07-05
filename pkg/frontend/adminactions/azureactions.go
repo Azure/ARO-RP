@@ -34,7 +34,7 @@ type AzureActions interface {
 	VMSizeList(ctx context.Context) ([]mgmtcompute.ResourceSku, error)
 	VMResize(ctx context.Context, vmName string, vmSize string) error
 	ResourceGroupHasVM(ctx context.Context, vmName string) (bool, error)
-	VMSerialConsole(ctx context.Context, log *logrus.Entry, vmName string) ([]byte, error)
+	VMSerialConsole(ctx context.Context, log *logrus.Entry, vmName string, target io.Writer) error
 	ResourceDeleteAndWait(ctx context.Context, resourceID string) error
 }
 

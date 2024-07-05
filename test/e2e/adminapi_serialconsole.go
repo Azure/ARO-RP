@@ -4,11 +4,7 @@ package e2e
 // Licensed under the Apache License 2.0.
 
 import (
-	"bufio"
-	"bytes"
 	"context"
-	"encoding/base64"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -49,22 +45,7 @@ var _ = Describe("[Admin API] VM serial console action", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-		By("decoding the logs, we can see Linux serial console")
-		log.Infof("got logs: %s", logs)
-		foundLogs := false
-		b64Reader := base64.NewDecoder(base64.StdEncoding, bytes.NewBufferString(logs))
-		scanner := bufio.NewScanner(b64Reader)
-		output := ""
-		for scanner.Scan() {
-			output = output + scanner.Text()
-		}
-		Expect(scanner.Err()).NotTo(HaveOccurred())
-
-		if strings.Contains(output, "Red Hat Enterprise Linux CoreOS") {
-			foundLogs = true
-		}
-
-		Expect(foundLogs).To(BeTrue(), fmt.Sprintf("expected to find serial console logs in b64: %s", logs))
-
+		By("we can see Linux serial console")
+		Expect(logs).To(ContainSubstring("Red Hat Enterprise Linux CoreOS"))
 	})
 })

@@ -170,18 +170,17 @@ func (mr *MockVirtualMachinesClientMockRecorder) Get(arg0, arg1, arg2, arg3 inte
 }
 
 // GetSerialConsoleForVM mocks base method.
-func (m *MockVirtualMachinesClient) GetSerialConsoleForVM(arg0 context.Context, arg1, arg2 string) (io.Reader, error) {
+func (m *MockVirtualMachinesClient) GetSerialConsoleForVM(arg0 context.Context, arg1, arg2 string, arg3 io.Writer) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSerialConsoleForVM", arg0, arg1, arg2)
-	ret0, _ := ret[0].(io.Reader)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "GetSerialConsoleForVM", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // GetSerialConsoleForVM indicates an expected call of GetSerialConsoleForVM.
-func (mr *MockVirtualMachinesClientMockRecorder) GetSerialConsoleForVM(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockVirtualMachinesClientMockRecorder) GetSerialConsoleForVM(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSerialConsoleForVM", reflect.TypeOf((*MockVirtualMachinesClient)(nil).GetSerialConsoleForVM), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSerialConsoleForVM", reflect.TypeOf((*MockVirtualMachinesClient)(nil).GetSerialConsoleForVM), arg0, arg1, arg2, arg3)
 }
 
 // List mocks base method.
