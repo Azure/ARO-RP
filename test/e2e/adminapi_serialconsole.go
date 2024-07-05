@@ -50,6 +50,7 @@ var _ = Describe("[Admin API] VM serial console action", func() {
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 		By("decoding the logs, we can see Linux serial console")
+		log.Infof("got logs: %s", logs)
 		foundLogs := false
 		b64Reader := base64.NewDecoder(base64.StdEncoding, bytes.NewBufferString(logs))
 		scanner := bufio.NewScanner(b64Reader)
