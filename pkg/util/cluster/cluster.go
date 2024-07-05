@@ -461,7 +461,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 			return err
 		}
 
-		err = c.insertDefaultVersionIntoCosmosdb(ctx)
+		err = c.ensureDefaultVersionInCosmosdb(ctx)
 		if err != nil {
 			return err
 		}
@@ -484,7 +484,7 @@ func (c *Cluster) createCluster(ctx context.Context, vnetResourceGroup, clusterN
 	return c.openshiftclusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, ocExt)
 }
 
-var localClient *http.Client = &http.Client{
+var insecureLocalClient *http.Client = &http.Client{
 	Transport: &http.Transport{
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,
@@ -518,7 +518,7 @@ func (c *Cluster) registerSubscription(ctx context.Context) error {
 
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := localClient.Do(req)
+	resp, err := insecureLocalClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -526,7 +526,8 @@ func (c *Cluster) registerSubscription(ctx context.Context) error {
 	return resp.Body.Close()
 }
 
-// getVersionsInCosmosDB
+// getVersionsInCosmosDB connects to the local RP endpoint and queries the
+// available OpenShiftVersions
 func getVersionsInCosmosDB(ctx context.Context) ([]*api.OpenShiftVersion, error) {
 	type getVersionResponse struct {
 		Value []*api.OpenShiftVersion `json:"value"`
@@ -539,7 +540,7 @@ func getVersionsInCosmosDB(ctx context.Context) ([]*api.OpenShiftVersion, error)
 
 	getRequest.Header.Set("Content-Type", "application/json")
 
-	getResponse, err := localClient.Do(getRequest)
+	getResponse, err := insecureLocalClient.Do(getRequest)
 	if err != nil {
 		return nil, fmt.Errorf("error couldn't retrieve versions in cosmos db: %w", err)
 	}
@@ -548,10 +549,16 @@ func getVersionsInCosmosDB(ctx context.Context) ([]*api.OpenShiftVersion, error)
 	decoder := json.NewDecoder(getResponse.Body)
 	err = decoder.Decode(&parsedResponse)
 
-	return parsedResponse.Value, nil
+	return parsedResponse.Value, err
 }
 
-func (c *Cluster) insertDefaultVersionIntoCosmosdb(ctx context.Context) error {
+// ensureDefaultVersionInCosmosdb puts a default openshiftversion into the
+// cosmos DB IF it doesn't already contain an entry for the default version. It
+// is hardcoded to use the local-RP endpoint `https://localhost:8443`
+//
+// It returns without an error when a default version is already present or a
+// default version was successfully put into the db.
+func (c *Cluster) ensureDefaultVersionInCosmosdb(ctx context.Context) error {
 	// first, we make sure that we don't overwrite any existing entry for the default version
 	versionsInDB, err := getVersionsInCosmosDB(ctx)
 	if err != nil {
@@ -581,14 +588,14 @@ func (c *Cluster) insertDefaultVersionIntoCosmosdb(ctx context.Context) error {
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPut, localDefaultURL + "/admin/versions", bytes.NewReader(b))
+	req, err := http.NewRequest(http.MethodPut, localDefaultURL+"/admin/versions", bytes.NewReader(b))
 	if err != nil {
 		return err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := localClient.Do(req)
+	resp, err := insecureLocalClient.Do(req)
 	if err != nil {
 		return err
 	}
