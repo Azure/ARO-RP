@@ -492,7 +492,7 @@ var insecureLocalClient *http.Client = &http.Client{
 	},
 }
 
-var localDefaultURL string = "https://localhost:8443"
+const localDefaultURL string = "https://localhost:8443"
 
 func (c *Cluster) registerSubscription(ctx context.Context) error {
 	b, err := json.Marshal(&api.Subscription{
@@ -559,14 +559,12 @@ func getVersionsInCosmosDB(ctx context.Context) ([]*api.OpenShiftVersion, error)
 // It returns without an error when a default version is already present or a
 // default version was successfully put into the db.
 func (c *Cluster) ensureDefaultVersionInCosmosdb(ctx context.Context) error {
-	// first, we make sure that we don't overwrite any existing entry for the default version
 	versionsInDB, err := getVersionsInCosmosDB(ctx)
 	if err != nil {
 		return fmt.Errorf("couldn't query versions in cosmosdb: %w", err)
 	}
 
 	for _, versionFromDB := range versionsInDB {
-		// we already have an entry for the default version
 		if versionFromDB.Properties.Version == version.DefaultInstallStream.Version.String() {
 			c.log.Debugf("Version %s already in DB. Not overwriting existing one.", version.DefaultInstallStream.Version.String())
 			return nil
