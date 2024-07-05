@@ -8,7 +8,9 @@ import (
 	"flag"
 	"fmt"
 
+	machinev1 "github.com/openshift/api/machine/v1"
 	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -82,6 +84,10 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
+	discoverycli, err := discovery.NewDiscoveryClientForConfig(restConfig)
+	if err != nil {
+		return err
+	}
 	dh, err := dynamichelper.New(log, restConfig)
 	if err != nil {
 		return err
@@ -132,11 +138,6 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			log.WithField("controller", dnsmasq.ClusterControllerName),
 			client, dh)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", dnsmasq.ClusterControllerName, err)
-		}
-		if err = (cpms.NewReconciler(
-			log.WithField("controller", cpms.ControllerName),
-			client)).SetupWithManager(mgr); err != nil {
-			return fmt.Errorf("unable to create controller %s: %v", cpms.ControllerName, err)
 		}
 		if err = (dnsmasq.NewMachineConfigReconciler(
 			log.WithField("controller", dnsmasq.MachineConfigControllerName),
@@ -231,6 +232,17 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			log.WithField("controller", cloudproviderconfig.ControllerName),
 			client)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller %s: %v", cloudproviderconfig.ControllerName, err)
+		}
+
+		// only register CPMS controller on clusters that support the CRD
+		if err := discovery.ServerSupportsVersion(discoverycli, machinev1.GroupVersion); err == nil {
+			if err = (cpms.NewReconciler(
+				log.WithField("controller", cpms.ControllerName),
+				client)).SetupWithManager(mgr); err != nil {
+				return fmt.Errorf("unable to create controller %s: %v", cpms.ControllerName, err)
+			}
+		} else {
+			log.Infof("Cluster does not support machinev1 API, will not set up CPMS controller: %v", err)
 		}
 	}
 
