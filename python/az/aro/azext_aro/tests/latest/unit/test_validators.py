@@ -508,15 +508,15 @@ test_validate_subnet_data = [
 ]
 
 
-@ pytest.mark.parametrize(
+@pytest.mark.parametrize(
     "test_description, namespace, key, is_valid_resource_id_mock_return_value, parse_resource_id_mock_return_value, get_subscription_id_mock_return_value, get_network_vnet_subnet_show_mock_return_value, cmd, expected_exception",
     test_validate_subnet_data,
     ids=[i[0] for i in test_validate_subnet_data]
 )
-@ patch('azext_aro._validators.subnet_show')
-@ patch('azext_aro._validators.get_subscription_id')
-@ patch('azext_aro._validators.parse_resource_id')
-@ patch('azext_aro._validators.is_valid_resource_id')
+@patch('azext_aro._validators.subnet_show')
+@patch('azext_aro._validators.get_subscription_id')
+@patch('azext_aro._validators.parse_resource_id')
+@patch('azext_aro._validators.is_valid_resource_id')
 def test_validate_subnet(
     # Mocked functions:
     is_valid_resource_id_mock, parse_resource_id_mock, get_subscription_id_mock, get_network_vnet_subnet_show_mock,
@@ -668,7 +668,7 @@ test_validate_vnet_resource_group_name_data = [
 )
 def test_validate_vnet_resource_group_name(test_description, namespace, expected_namespace_vnet_resource_group_name):
     validate_vnet_resource_group_name(namespace)
-    assert(namespace.vnet_resource_group_name ==
+    assert (namespace.vnet_resource_group_name ==
            expected_namespace_vnet_resource_group_name)
 
 
