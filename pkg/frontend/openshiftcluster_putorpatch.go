@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/operator"
+	"github.com/Azure/ARO-RP/pkg/util/iswimi"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -150,7 +151,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 			SystemData: doc.OpenShiftCluster.SystemData,
 		}
 
-		if doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil {
+		if !iswimi.IsWimi(doc.OpenShiftCluster.Properties) {
 			document.Properties.ServicePrincipalProfile = &api.ServicePrincipalProfile{}
 			document.Properties.ServicePrincipalProfile.ClientSecret = doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret
 		}
@@ -205,7 +206,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 
 		doc.ClusterResourceGroupIDKey = strings.ToLower(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
 
-		if doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil {
+		if !iswimi.IsWimi(doc.OpenShiftCluster.Properties) {
 			doc.ClientIDKey = strings.ToLower(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID)
 		}
 
@@ -254,7 +255,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	// returned to the customer.
 	doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
 
-	if doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil {
+	if !iswimi.IsWimi(doc.OpenShiftCluster.Properties) {
 		doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 	}
 
@@ -300,7 +301,7 @@ func enrichClusterSystemData(doc *api.OpenShiftClusterDocument, systemData *api.
 
 func validateIdentityUrl(cluster *api.OpenShiftCluster, identityURL string, isCreate bool) error {
 	// Don't persist identity URL in non-wimi clusters
-	if cluster.Properties.ServicePrincipalProfile != nil || cluster.Identity == nil {
+	if !iswimi.IsWimi(cluster.Properties) {
 		return nil
 	}
 

@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	"github.com/Azure/ARO-RP/pkg/util/iswimi"
 )
 
 func (f *frontend) getAsyncOperationResult(w http.ResponseWriter, r *http.Request) {
@@ -64,7 +65,7 @@ func (f *frontend) _getAsyncOperationResult(ctx context.Context, r *http.Request
 
 	asyncdoc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
 
-	if asyncdoc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil {
+	if !iswimi.IsWimi(asyncdoc.OpenShiftCluster.Properties) {
 		asyncdoc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 	}
 
