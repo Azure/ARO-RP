@@ -151,7 +151,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 			SystemData: doc.OpenShiftCluster.SystemData,
 		}
 
-		if !iswimi.IsWimi(doc.OpenShiftCluster.Properties) {
+		if doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil {
 			document.Properties.ServicePrincipalProfile = &api.ServicePrincipalProfile{}
 			document.Properties.ServicePrincipalProfile.ClientSecret = doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret
 		}
@@ -206,7 +206,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 
 		doc.ClusterResourceGroupIDKey = strings.ToLower(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
 
-		if !iswimi.IsWimi(doc.OpenShiftCluster.Properties) {
+		if doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil {
 			doc.ClientIDKey = strings.ToLower(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID)
 		}
 
@@ -255,7 +255,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	// returned to the customer.
 	doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
 
-	if !iswimi.IsWimi(doc.OpenShiftCluster.Properties) {
+	if doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil {
 		doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 	}
 

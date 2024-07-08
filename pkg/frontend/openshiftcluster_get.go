@@ -15,7 +15,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
-	"github.com/Azure/ARO-RP/pkg/util/iswimi"
 )
 
 func (f *frontend) getOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
@@ -46,7 +45,7 @@ func (f *frontend) _getOpenShiftCluster(ctx context.Context, log *logrus.Entry, 
 
 	doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
 
-	if !iswimi.IsWimi(doc.OpenShiftCluster.Properties) {
+	if doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil {
 		doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 	}
 
