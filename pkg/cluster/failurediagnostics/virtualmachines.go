@@ -12,7 +12,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
-func (m *manager) LogAzureInformation(ctx context.Context) (interface{}, error) {
+// LogVMSerialConsole fetches the serial console from VMs and logs them with
+// the associated VM name.
+func (m *manager) LogVMSerialConsole(ctx context.Context) (interface{}, error) {
 	items := make([]interface{}, 0)
 
 	if m.virtualMachines == nil {

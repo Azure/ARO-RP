@@ -24,7 +24,7 @@ import (
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
-func TestVirtualMachines(t *testing.T) {
+func TestVirtualMachinesSerialConsole(t *testing.T) {
 	const (
 		key            = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1"
 		clusterProfile = "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroupCluster"
@@ -150,7 +150,7 @@ func TestVirtualMachines(t *testing.T) {
 				virtualMachines: vmClient,
 			}
 
-			out, err := d.LogAzureInformation(ctx)
+			out, err := d.LogVMSerialConsole(ctx)
 			if err != nil {
 				t.Errorf("returned %s, should never return an error", err)
 			}

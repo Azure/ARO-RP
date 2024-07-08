@@ -26,7 +26,7 @@ func (m *manager) gatherFailureLogs(ctx context.Context) {
 		{f: m.logNodes, isJSON: true},
 		{f: m.logClusterOperators, isJSON: true},
 		{f: m.logIngressControllers, isJSON: true},
-		{f: d.LogAzureInformation, isJSON: false},
+		{f: d.LogVMSerialConsole, isJSON: false},
 	} {
 		o, err := f.f(ctx)
 		if err != nil {
