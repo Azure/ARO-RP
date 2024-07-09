@@ -6,7 +6,6 @@ package machinehealthcheck
 import (
 	"context"
 	_ "embed"
-	"strings"
 	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -27,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
+	"github.com/Azure/ARO-RP/pkg/operator/predicates"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
 
@@ -166,22 +166,15 @@ func (r *Reconciler) isClusterUpgrading(ctx context.Context) (bool, error) {
 
 // SetupWithManager will manage only our MHC resource with our specific controller name
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
-	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
-		return strings.EqualFold(arov1alpha1.SingletonClusterName, o.GetName())
-	})
-	clusterVersionPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
-		return o.GetName() == "version"
-	})
-
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
+		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{}))).
 		Named(ControllerName).
 		Owns(&machinev1beta1.MachineHealthCheck{}).
 		Owns(&monitoringv1.PrometheusRule{}).
 		Watches(
 			&source.Kind{Type: &configv1.ClusterVersion{}},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(clusterVersionPredicate),
+			builder.WithPredicates(predicates.ClusterVersion),
 		).
 		Complete(r)
 }

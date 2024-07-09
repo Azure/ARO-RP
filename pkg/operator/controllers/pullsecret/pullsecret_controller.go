@@ -30,6 +30,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/predicates"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
@@ -112,23 +113,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 
 // SetupWithManager setup our manager
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
-	pullSecretPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
-		return (o.GetName() == pullSecretName.Name && o.GetNamespace() == pullSecretName.Namespace) ||
-			(o.GetName() == operator.SecretName && o.GetNamespace() == operator.Namespace)
-	})
-
-	aroClusterPredicate := predicate.NewPredicateFuncs(func(o client.Object) bool {
-		return o.GetName() == arov1alpha1.SingletonClusterName
-	})
-
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&arov1alpha1.Cluster{}, builder.WithPredicates(aroClusterPredicate)).
+		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{}))).
 		// https://github.com/kubernetes-sigs/controller-runtime/issues/1173
 		// equivalent to For(&v1.Secret{})., but can't call For multiple times on one builder
 		Watches(
 			&source.Kind{Type: &corev1.Secret{}},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(pullSecretPredicate),
+			builder.WithPredicates(predicate.Or(predicates.PullSecret, predicates.BackupPullSecret)),
 		).
 		Named(ControllerName).
 		Complete(r)
