@@ -1,0 +1,16 @@
+parameters:
+  dst_acr_name: ""
+  tag: ""
+  genevamdmImageTag: ""
+  genevamdsdImageTag: ""
+steps:
+  - script: |
+      export SRC_AUTH_QUAY=$(echo $USER_PULL_SECRET | jq -r '.auths."quay.io".auth')
+      export SRC_AUTH_REDHAT=$(echo $USER_PULL_SECRET | jq -r '.auths."registry.redhat.io".auth')
+      export DST_AUTH=$(echo -n '00000000-0000-0000-0000-000000000000:'$(az acr login -n ${{ parameters.dst_acr_name }} --expose-token | jq -r .accessToken) | base64 -w0)
+      docker login -u 00000000-0000-0000-0000-000000000000 -p "$(echo $DST_AUTH | base64 -d | cut -d':' -f2)" "${{ parameters.dst_acr_name }}.azurecr.io"
+      go run ./cmd/aro mirror ${{ parameters.tag }}
+      az acr import --name ${{ parameters.dst_acr_name }}.azurecr.io/${{ parameters.genevamdmImageTag }} --source linuxgeneva-microsoft.azurecr.io/${{ parameters.genevamdmImageTag }}
+      az acr import --name ${{ parameters.dst_acr_name }}.azurecr.io/${{ parameters.genevamdsdImageTag }} --source linuxgeneva-microsoft.azurecr.io/${{ parameters.genevamdsdImageTag }}
+    name: mirror-ocp-images-to-acr
+    displayName: ⚙️ Mirror OCP Images to ACR

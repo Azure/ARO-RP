@@ -1,0 +1,10 @@
+parameters:
+  resourceGroup: ""
+  vmssName: ""
+  isAllow: true
+
+steps:
+  - script: az vmss delete -g ${{ parameters.resourceGroup }} --name ${{ parameters.vmssName }}  --force-deletion
+    name: delete-vmss
+    displayName: ⚙️ Delete VMSS
+    continueOnError: false

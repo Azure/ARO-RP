@@ -1,0 +1,15 @@
+parameters:
+  fluentbitImageTag: ""
+  fluentbitImage: ""
+steps:
+  - script: |
+      make publish-image-aro-multistage
+
+      SRC_AUTH_AROINTSVC=$(echo ${PULL_SECRET} | jq -r '.auths."arointsvc.azurecr.io".auth' | base64 -d)
+      DST_TOKEN=$(az acr login -n ${DST_ACR_NAME} --expose-token | jq -r .accessToken)
+      skopeo copy \
+          --src-creds ${SRC_AUTH_AROINTSVC} \
+          --dest-username '00000000-0000-0000-0000-000000000000' --dest-password ${DST_TOKEN} \
+          docker://arointsvc.azurecr.io/fluentbit:${{ parameters.fluentbitImageTag } docker://${{ parameters.fluentbitImage }
+    name: build-push-aro-fluenbit-images-to-acr
+    displayName: ⚙️ Build and push aro images, and copy fluentbit image to ACR
