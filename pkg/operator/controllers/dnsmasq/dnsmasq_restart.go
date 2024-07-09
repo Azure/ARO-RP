@@ -12,13 +12,13 @@ import (
 	"github.com/vincent-petithory/dataurl"
 )
 
-const restartScriptFileName = "99-dnsmasq-restart"
+const dispatcherDnsmasqScriptFileName = "99-dnsmasq-fixup-resolvconf"
 
-func nmDispatcherRestartDnsmasq() ([]byte, error) {
-	t := template.Must(template.New(restartScriptFileName).Parse(restartScript))
+func dispatcherDnsmasqScript() ([]byte, error) {
+	t := template.Must(template.New(dispatcherDnsmasqScriptFileName).Parse(dispatcherDnsmasqScriptFile))
 	buf := &bytes.Buffer{}
 
-	err := t.ExecuteTemplate(buf, restartScriptFileName, nil)
+	err := t.ExecuteTemplate(buf, dispatcherDnsmasqScriptFileName, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -26,11 +26,11 @@ func nmDispatcherRestartDnsmasq() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func restartScriptIgnFile(data []byte) ign3types.File {
+func dispatcherDnsmasqScriptIgnFile(data []byte) ign3types.File {
 	return ign3types.File{
 		Node: ign3types.Node{
 			Overwrite: to.BoolPtr(true),
-			Path:      "/etc/NetworkManager/dispatcher.d/" + restartScriptFileName,
+			Path:      "/etc/NetworkManager/dispatcher.d/" + dispatcherDnsmasqScriptFileName,
 			User: ign3types.NodeUser{
 				Name: to.StringPtr("root"),
 			},

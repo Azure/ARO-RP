@@ -145,12 +145,12 @@ func ignition3Config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains [
 	}
 
 	if restartDnsmasq {
-		restartDnsmasqScript, err := nmDispatcherRestartDnsmasq()
+		dispatcherDnsmasqScript, err := dispatcherDnsmasqScript()
 		if err != nil {
 			return nil, err
 		}
 
-		ign.Storage.Files = append(ign.Storage.Files, restartScriptIgnFile(restartDnsmasqScript))
+		ign.Storage.Files = append(ign.Storage.Files, dispatcherDnsmasqScriptIgnFile(dispatcherDnsmasqScript))
 	}
 
 	return ign, nil

@@ -46,7 +46,7 @@ log() {
     local -n priority="${2:-priority_info}"
 
     local -r pid="$0"
-    local -r log_tag='99-DNSMASQ-RESTART SCRIPT'
+    local -r log_tag='99-DNSMASQ-FIXUP-RESOLVCONF - '
 
     /usr/bin/logger -i "$pid" \
            --priority "$priority" \
