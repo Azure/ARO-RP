@@ -12,7 +12,7 @@ package dnsmasq
 //
 // * ClusterReconciler controller ensures MachineConfigs exist.
 //
-// * MachineConfigs cause dnsmasq.service and dnsmasq.conf files to be laid down
+// * MachineConfigs cause aro-coredns.service and aro-coredns.conf files to be laid down
 //   to ensure that DNS resolution of the appropriate names succeeds locally to
 //   each VM.
 //

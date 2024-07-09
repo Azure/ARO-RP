@@ -55,7 +55,7 @@ func (r *MachineConfigPoolReconciler) Reconcile(ctx context.Context, request ctr
 
 	restartDnsmasq := instance.Spec.OperatorFlags.GetSimpleBoolean(operator.RestartDnsmasqEnabled)
 	if restartDnsmasq {
-		r.Log.Debug("restart dnsmasq machineconfig enabled")
+		r.Log.Debug("restart aro-coredns machineconfig enabled")
 	}
 
 	r.Log.Debug("running")

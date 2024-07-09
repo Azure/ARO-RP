@@ -12,7 +12,7 @@ import (
 	"github.com/vincent-petithory/dataurl"
 )
 
-const restartScriptFileName = "99-dnsmasq-restart"
+const restartScriptFileName = "99-aro-coredns-restart"
 
 func nmDispatcherRestartDnsmasq() ([]byte, error) {
 	t := template.Must(template.New(restartScriptFileName).Parse(restartScript))

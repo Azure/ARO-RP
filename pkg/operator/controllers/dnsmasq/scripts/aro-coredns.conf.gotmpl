@@ -1,4 +1,4 @@
-{{ define "dnsmasq.conf" }}
+{{ define "aro-coredns.conf" }}
 resolv-file=/etc/resolv.conf.dnsmasq
 strict-order
 address=/api.{{ .ClusterDomain }}/{{ .APIIntIP }}
