@@ -1,10 +1,11 @@
-{{ define "99-dnsmasq-restart" }}
+{{ define "99-dnsmasq-fixup-resolvconf" }}
 #!/bin/bash
 # This is a NetworkManager dispatcher script to restart dnsmasq
 # in the event of a network interface change (e. g. host servicing event https://learn.microsoft.com/en-us/azure/developer/intro/hosting-apps-on-azure)
 # this will restart dnsmasq, reapplying our /etc/resolv.conf file and overwriting any modifications made by NetworkManager
 
-set -o errexit \
+set -o pipefail \
+    -o errexit \
     -o nounset
 
 declare -r facility_daemon="daemon"
@@ -15,15 +16,16 @@ declare -r priority_err="${facility_daemon}.err"
 
 main() {
     local -r interface=$1
-    local -r action=$2
+    local -r operation=$2
 
-    if [ "$action" == "up" ] || [ "$action" == "connectivity-change" ] || [ "$action" == "dhcp4-change" ] || [ "$action" == "dhcp6-change" ]; then
-        log "$action happened on $interface"
+    local -r act_on_operations="(up|connectivity-change|dhcp4-change|dhcp6-change)"
+    if [[ $interface == enP* || $interface == eth0 ]] && [[ $operation =~ $act_on_operations ]]; then
+        log "$operation occured on $interface"
         log_dns_files
         local -r dnsmasq_pre_script="/usr/local/bin/aro-dnsmasq-pre.sh"
         log "Running $dnsmasq_pre_script now"
         local dnsmasq_prescript_output
-        if ! dnsmasq_prescript_output="$($dnsmasq_pre_script)"; then
+        if ! dnsmasq_prescript_output="$($dnsmasq_pre_script false)"; then
             log "$dnsmasq_pre_script failed with
             $dnsmasq_prescript_output" priority_err
             exit 1
@@ -73,12 +75,15 @@ $resolvconf_dnsmasq contents:
 }
 
 cat() {
+    # shellcheck disable=SC2068
     /usr/bin/cat $@
 }
 
 ls() {
+    # shellcheck disable=SC2068
     /usr/bin/ls $@
 }
 
 main "$@"
+
 {{ end }}
