@@ -106,9 +106,10 @@ const (
 	// Maintenance tasks that perform work on the cluster
 	//
 
-	MaintenanceTaskEverything MaintenanceTask = "Everything"
-	MaintenanceTaskOperator   MaintenanceTask = "OperatorUpdate"
-	MaintenanceTaskRenewCerts MaintenanceTask = "CertificatesRenewal"
+	MaintenanceTaskEverything        MaintenanceTask = "Everything"
+	MaintenanceTaskOperator          MaintenanceTask = "OperatorUpdate"
+	MaintenanceTaskRenewCerts        MaintenanceTask = "CertificatesRenewal"
+	MaintenanceTaskSyncClusterObject MaintenanceTask = "SyncClusterObject"
 
 	//
 	// Maintenance tasks for updating customer maintenance signals
@@ -134,7 +135,7 @@ type ClusterProfile struct {
 	Version              string               `json:"version,omitempty"`
 	ResourceGroupID      string               `json:"resourceGroupId,omitempty"`
 	FipsValidatedModules FipsValidatedModules `json:"fipsValidatedModules,omitempty"`
-	OIDCIssuer           OIDCIssuer           `json:"oidcIssuer,omitempty"`
+	OIDCIssuer           *OIDCIssuer          `json:"oidcIssuer,omitempty"`
 }
 
 // FeatureProfile represents a feature profile.

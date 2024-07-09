@@ -174,8 +174,8 @@ test_validate_cidr_data = [
     test_validate_cidr_data,
     ids=[i[0] for i in test_validate_cidr_data]
 )
-@ patch('azext_aro._dynamic_validators.get_subnet')
-@ patch('azext_aro._dynamic_validators.parse_resource_id')
+@patch('azext_aro._dynamic_validators.get_subnet')
+@patch('azext_aro._dynamic_validators.parse_resource_id')
 def test_validate_cidr(
     # Mocked functions:
     parse_resource_id_mock, get_subnet_mock,
@@ -305,10 +305,10 @@ test_validate_subnets_data = [
     test_validate_subnets_data,
     ids=[i[0] for i in test_validate_subnets_data]
 )
-@ patch('azext_aro._dynamic_validators.get_subnet')
-@ patch('azext_aro._dynamic_validators.get_mgmt_service_client')
-@ patch('azext_aro._dynamic_validators.parse_resource_id')
-@ patch('azext_aro._dynamic_validators.is_valid_resource_id')
+@patch('azext_aro._dynamic_validators.get_subnet')
+@patch('azext_aro._dynamic_validators.get_mgmt_service_client')
+@patch('azext_aro._dynamic_validators.parse_resource_id')
+@patch('azext_aro._dynamic_validators.is_valid_resource_id')
 def test_validate_subnets(
     # Mocked functions:
     is_valid_resource_id_mock, parse_resource_id_mock, get_mgmt_service_client_mock, get_subnet_mock,
@@ -400,10 +400,10 @@ test_validate_vnets_data = [
     test_validate_vnets_data,
     ids=[i[0] for i in test_validate_vnets_data]
 )
-@ patch('azext_aro._dynamic_validators.get_vnet')
-@ patch('azext_aro._dynamic_validators.get_mgmt_service_client')
-@ patch('azext_aro._dynamic_validators.parse_resource_id')
-@ patch('azext_aro._dynamic_validators.is_valid_resource_id')
+@patch('azext_aro._dynamic_validators.get_vnet')
+@patch('azext_aro._dynamic_validators.get_mgmt_service_client')
+@patch('azext_aro._dynamic_validators.parse_resource_id')
+@patch('azext_aro._dynamic_validators.is_valid_resource_id')
 def test_validate_vnets(
     # Mocked functions:
     is_valid_resource_id_mock, parse_resource_id_mock, get_mgmt_service_client_mock, get_vnet_mock,
@@ -473,8 +473,8 @@ test_validate_resource_data = [
     test_validate_resource_data,
     ids=[i[0] for i in test_validate_resource_data]
 )
-@ patch('azext_aro._dynamic_validators.has_role_assignment_on_resource')
-@ patch('azext_aro._dynamic_validators.parse_resource_id')
+@patch('azext_aro._dynamic_validators.has_role_assignment_on_resource')
+@patch('azext_aro._dynamic_validators.parse_resource_id')
 def test_validate_resources(
     # Mocked functions:
     parse_resource_id_mock, has_role_assignment_on_resource_mock,
@@ -523,7 +523,7 @@ test_validate_version_data = [
     test_validate_version_data,
     ids=[i[0] for i in test_validate_version_data]
 )
-@ patch('azext_aro.custom.aro_get_versions')
+@patch('azext_aro.custom.aro_get_versions')
 def test_validate_version(
 
     # Mocked Functions

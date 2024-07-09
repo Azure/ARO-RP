@@ -31,7 +31,9 @@ import (
 )
 
 const (
-	KeyvaultPrefix = "KEYVAULT_PREFIX"
+	KeyvaultPrefix         = "KEYVAULT_PREFIX"
+	OIDCAFDEndpoint        = "OIDC_AFD_ENDPOINT"
+	OIDCStorageAccountName = "OIDC_STORAGE_ACCOUNT_NAME"
 )
 
 type prod struct {
@@ -203,6 +205,10 @@ func newProd(ctx context.Context, log *logrus.Entry, component ServiceComponent)
 		p.gatewayDomains = append(p.gatewayDomains, p.acrDomain, acrDataDomain)
 	}
 
+	if err := ValidateVars(OIDCStorageAccountName); err != nil {
+		return nil, err
+	}
+
 	p.ARMHelper, err = newARMHelper(ctx, log, p)
 	if err != nil {
 		return nil, err
@@ -259,6 +265,14 @@ func (p *prod) ACRResourceID() string {
 
 func (p *prod) ACRDomain() string {
 	return p.acrDomain
+}
+
+func (p *prod) OIDCStorageAccountName() string {
+	return os.Getenv(OIDCStorageAccountName)
+}
+
+func (p *prod) OIDCEndpoint() string {
+	return fmt.Sprintf("https://%s/", os.Getenv("OIDC_AFD_ENDPOINT"))
 }
 
 func (p *prod) AROOperatorImage() string {

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
@@ -24,6 +25,8 @@ import (
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -33,6 +36,48 @@ const storageServiceEndpoint = "Microsoft.Storage"
 
 func (m *manager) createDNS(ctx context.Context) error {
 	return m.dns.Create(ctx, m.doc.OpenShiftCluster)
+}
+
+func (m *manager) createOIDC(ctx context.Context) error {
+	if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil || m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile == nil {
+		return nil
+	}
+
+	// OIDC Storage Web Endpoint need to be determined for Development environments
+	var oidcEndpoint string
+	if m.env.FeatureIsSet(env.FeatureRequireOIDCStorageWebEndpoint) {
+		properties, err := m.rpBlob.GetContainerProperties(ctx, m.env.ResourceGroup(), m.env.OIDCStorageAccountName(), oidcbuilder.WebContainer)
+		if err != nil {
+			return err
+		}
+		oidcEndpoint = *properties.Properties.PrimaryEndpoints.Web
+	} else {
+		// For Production Azure Front Door Endpoint will be the OIDC Endpoint
+		oidcEndpoint = m.env.OIDCEndpoint()
+	}
+
+	oidcBuilder, err := oidcbuilder.NewOIDCBuilder(m.env, oidcEndpoint, env.OIDCBlobDirectoryPrefix+m.doc.ID)
+	if err != nil {
+		return err
+	}
+
+	azBlobClient, err := m.rpBlob.GetAZBlobClient(oidcBuilder.GetBlobContainerURL(), &azblob.ClientOptions{})
+	if err != nil {
+		return err
+	}
+
+	err = oidcBuilder.EnsureOIDCDocs(ctx, azBlobClient)
+	if err != nil {
+		return err
+	}
+
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.ClusterProfile.OIDCIssuer = pointerutils.ToPtr(api.OIDCIssuer(oidcBuilder.GetEndpointUrl()))
+		doc.OpenShiftCluster.Properties.ClusterProfile.BoundServiceAccountSigningKey = pointerutils.ToPtr(api.SecureString(oidcBuilder.GetPrivateKey()))
+		return nil
+	})
+
+	return err
 }
 
 func (m *manager) ensureInfraID(ctx context.Context) (err error) {

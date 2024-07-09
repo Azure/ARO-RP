@@ -97,6 +97,7 @@ type Configuration struct {
 	SubscriptionResourceGroupLocation  *string                `json:"subscriptionResourceGroupLocation,omitempty" value:"required"`
 	VMSize                             *string                `json:"vmSize,omitempty" value:"required"`
 	VMSSCleanupEnabled                 *bool                  `json:"vmssCleanupEnabled,omitempty"`
+	OIDCStorageAccountName             *string                `json:"oidcStorageAccountName,omitempty" value:"required"`
 
 	// TODO: Replace with Live Service Configuration in KeyVault
 	InstallViaHive           *string `json:"clustersInstallViaHive,omitempty"`

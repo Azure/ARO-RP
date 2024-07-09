@@ -44,3 +44,7 @@ feature flags defined in pkg/env/env.go.  At the time of writing these include:
 
 * EnableOCMEndpoints: Register the OCM endpoints in the frontend. Otherwise the
   endpoints are not available at all.
+
+* RequireOIDCStorageWebEndpoint: Since Azure Front Door is only present for INT and PROD, there is a need to determine the web endpoint of the OIDC Storage Account after its creation.
+Format of web endpoint(It uses Azure DNS Zone endpoint):- **https://[storage-account].z[00-99].web.storage.azure.net** .
+Used in development only.

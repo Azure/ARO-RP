@@ -68,6 +68,12 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		}
 	}
 
+	if !_env.FeatureIsSet(env.FeatureRequireOIDCStorageWebEndpoint) {
+		if err := env.ValidateVars(env.OIDCAFDEndpoint); err != nil {
+			return err
+		}
+	}
+
 	if err = env.ValidateVars(keys...); err != nil {
 		return err
 	}

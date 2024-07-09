@@ -192,7 +192,7 @@ delete_pullsecret_with_userinfo(userinfo) = output {
   }
 }
 
-input_allowed_ns = "mytest"
+input_allowed_ns = "openshift-marketplace"
 
 input_disallowed_ns = "openshift-apiserver"
 

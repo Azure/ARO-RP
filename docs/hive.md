@@ -2,7 +2,13 @@
 
 ## Version
 
-Update the HIVE_IMAGE_COMMIT_HASH in `hack/hive-generate-config.sh` with the latest commit sha of the Hive image you are deploying. The commit sha is used to specify the image tag and also used during config generation to checkout the correct version of the config files. The config files are subsequently used by the `hack/hive-dev-install.sh` script during iunstallation or during config updates.
+The commit sha is used to specify the image tag and also used during config generation to checkout the correct version of the config files. The config files are subsequently used by the `hack/hive-dev-install.sh` script during installation or during config updates.
+
+1. You can either
+   1. Provide the hive image commit has as an argument to `hack/hive-generate-config.sh`. This is useful for testing new hive images before hive releases.
+      1. Example: `./hack/hive-generate-config.sh d7ead609f4`
+   2. Accept the default version by providing no arguments, which should be the latest.
+      1. Example: `./hack/hive-generate-config.sh`
 
 ## Generating config
 
@@ -19,19 +25,21 @@ This will download the latest source, reset to the hash specified in HIVE_IMAGE_
 
 ## Installing
 
-Ensure you have the latest AKS kubeconfig:
-```bash
-# get the AKS kubeconfig
-make aks.kubeconfig
-```
-
-Set KUBECONFIG to the aks.kubeconfig file, for example:
-```bash
-export KUBECONFIG="$PWD/aks.kubeconfig"
-```
-
-Installing then simply requires the running of the install script.
-
-```bash
-./hack/hive-dev-install.sh
-```
+1. Connect to the appropriate aks vpn
+   1. vpn-aks-westeurope.ovpn
+   2. vpn-aks-australiaeast.ovpn
+   3. vpn-aks-australiaeast.ovpn
+2. Ensure you have the latest AKS kubeconfig  
+    ```bash
+    # get the AKS kubeconfig
+    . ./env
+    make aks.kubeconfig
+    ```
+3. Set KUBECONFIG to the aks.kubeconfig file, for example:
+    ```bash
+    export KUBECONFIG="$PWD/aks.kubeconfig"
+    ```
+4. Installing then simply requires the running of the install script.
+    ```bash
+    ./hack/hive-dev-install.sh
+    ```

@@ -5,6 +5,7 @@ package v20240812preview
 
 import (
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 )
 
 type openShiftClusterConverter struct{}
@@ -27,7 +28,6 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 				Version:              oc.Properties.ClusterProfile.Version,
 				ResourceGroupID:      oc.Properties.ClusterProfile.ResourceGroupID,
 				FipsValidatedModules: FipsValidatedModules(oc.Properties.ClusterProfile.FipsValidatedModules),
-				OIDCIssuer:           OIDCIssuer(oc.Properties.ClusterProfile.OIDCIssuer),
 			},
 			ConsoleProfile: ConsoleProfile{
 				URL: oc.Properties.ConsoleProfile.URL,
@@ -155,6 +155,10 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ClientID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ClientID
 			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ObjectID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ObjectID
 		}
+	}
+
+	if oc.Properties.ClusterProfile.OIDCIssuer != nil {
+		out.Properties.ClusterProfile.OIDCIssuer = pointerutils.ToPtr(OIDCIssuer(*oc.Properties.ClusterProfile.OIDCIssuer))
 	}
 
 	out.SystemData = &SystemData{

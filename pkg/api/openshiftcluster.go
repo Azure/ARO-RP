@@ -202,9 +202,10 @@ const (
 	// Maintenance tasks that perform work on the cluster
 	//
 
-	MaintenanceTaskEverything MaintenanceTask = "Everything"
-	MaintenanceTaskOperator   MaintenanceTask = "OperatorUpdate"
-	MaintenanceTaskRenewCerts MaintenanceTask = "CertificatesRenewal"
+	MaintenanceTaskEverything        MaintenanceTask = "Everything"
+	MaintenanceTaskOperator          MaintenanceTask = "OperatorUpdate"
+	MaintenanceTaskRenewCerts        MaintenanceTask = "CertificatesRenewal"
+	MaintenanceTaskSyncClusterObject MaintenanceTask = "SyncClusterObject"
 
 	//
 	// Maintenance tasks for updating customer maintenance signals
@@ -258,12 +259,13 @@ type OIDCIssuer string
 type ClusterProfile struct {
 	MissingFields
 
-	PullSecret           SecureString         `json:"pullSecret,omitempty"`
-	Domain               string               `json:"domain,omitempty"`
-	Version              string               `json:"version,omitempty"`
-	ResourceGroupID      string               `json:"resourceGroupId,omitempty"`
-	FipsValidatedModules FipsValidatedModules `json:"fipsValidatedModules,omitempty"`
-	OIDCIssuer           OIDCIssuer           `json:"oidcIssuer,omitempty"`
+	PullSecret                    SecureString         `json:"pullSecret,omitempty"`
+	Domain                        string               `json:"domain,omitempty"`
+	Version                       string               `json:"version,omitempty"`
+	ResourceGroupID               string               `json:"resourceGroupId,omitempty"`
+	FipsValidatedModules          FipsValidatedModules `json:"fipsValidatedModules,omitempty"`
+	OIDCIssuer                    *OIDCIssuer          `json:"oidcIssuer,omitempty"`
+	BoundServiceAccountSigningKey *SecureString        `json:"boundServiceAccountSigningKey,omitempty"`
 }
 
 // FeatureProfile represents a feature profile.
@@ -366,6 +368,15 @@ type NetworkProfile struct {
 	PreconfiguredNSG           PreconfiguredNSG     `json:"preconfiguredNSG,omitempty"`
 	LoadBalancerProfile        *LoadBalancerProfile `json:"loadBalancerProfile,omitempty"`
 }
+
+// IP address ranges internally used by ARO
+var (
+	JoinCIDRRange []string = []string{
+		"100.64.0.0/16",
+		"169.254.169.0/29",
+		"100.88.0.0/16",
+	}
+)
 
 // PreconfiguredNSG represents whether customers want to use their own NSG attached to the subnets
 type PreconfiguredNSG string

@@ -32,6 +32,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/deploy"
+	"github.com/Azure/ARO-RP/pkg/util/azblob"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/armnetwork"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/azuresdk/common"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
@@ -96,6 +97,7 @@ type manager struct {
 	storage storage.Manager
 	subnet  subnet.Manager
 	graph   graph.Manager
+	rpBlob  azblob.Manager
 
 	client           client.Client
 	kubernetescli    kubernetes.Interface
@@ -146,6 +148,11 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
+	msiCredential, err := _env.NewMSITokenCredential()
+	if err != nil {
+		return nil, err
+	}
+
 	msiAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().ResourceManagerScope)
 	if err != nil {
 		return nil, err
@@ -181,6 +188,11 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 	}
 
 	armPublicIPAddressesClient, err := armnetwork.NewPublicIPAddressesClient(r.SubscriptionID, fpCredClusterTenant, &clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	rpBlob, err := azblob.NewManager(_env.Environment(), _env.SubscriptionID(), msiCredential)
 	if err != nil {
 		return nil, err
 	}
@@ -222,6 +234,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		storage: storage,
 		subnet:  subnet.NewManager(_env.Environment(), r.SubscriptionID, fpAuthorizer),
 		graph:   graph.NewManager(_env, log, aead, storage),
+		rpBlob:  rpBlob,
 
 		installViaHive:                    installViaHive,
 		adoptViaHive:                      adoptByHive,

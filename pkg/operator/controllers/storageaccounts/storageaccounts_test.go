@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
-	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
+	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
@@ -74,7 +74,7 @@ func getValidAccount(virtualNetworkResourceIDs []string) *mgmtstorage.Account {
 	for _, rule := range virtualNetworkResourceIDs {
 		*account.AccountProperties.NetworkRuleSet.VirtualNetworkRules = append(*account.AccountProperties.NetworkRuleSet.VirtualNetworkRules, mgmtstorage.VirtualNetworkRule{
 			VirtualNetworkResourceID: to.StringPtr(rule),
-			Action:                   mgmtstorage.Allow,
+			Action:                   mgmtstorage.ActionAllow,
 		})
 	}
 	return account
