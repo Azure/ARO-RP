@@ -53,8 +53,8 @@ func (r *MachineConfigPoolReconciler) Reconcile(ctx context.Context, request ctr
 		return reconcile.Result{}, nil
 	}
 
-	restartDnsmasq := instance.Spec.OperatorFlags.GetSimpleBoolean(operator.RestartDnsmasqEnabled)
-	if restartDnsmasq {
+	dispatcherDnsmasqScript := instance.Spec.OperatorFlags.GetSimpleBoolean(operator.DispatcherScriptDnsmasqEnabled)
+	if dispatcherDnsmasqScript {
 		r.Log.Debug("restart dnsmasq machineconfig enabled")
 	}
 
@@ -71,7 +71,7 @@ func (r *MachineConfigPoolReconciler) Reconcile(ctx context.Context, request ctr
 		return reconcile.Result{}, err
 	}
 
-	err = reconcileMachineConfigs(ctx, instance, r.dh, restartDnsmasq, *mcp)
+	err = reconcileMachineConfigs(ctx, instance, r.dh, dispatcherDnsmasqScript, *mcp)
 	if err != nil {
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)

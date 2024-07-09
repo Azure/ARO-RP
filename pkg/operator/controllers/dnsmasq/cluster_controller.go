@@ -54,8 +54,8 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		return reconcile.Result{}, nil
 	}
 
-	restartDnsmasq := instance.Spec.OperatorFlags.GetSimpleBoolean(operator.RestartDnsmasqEnabled)
-	if restartDnsmasq {
+	dispatcherDnsmasqScript := instance.Spec.OperatorFlags.GetSimpleBoolean(operator.DispatcherScriptDnsmasqEnabled)
+	if dispatcherDnsmasqScript {
 		r.Log.Debug("restartDnsmasq is enabled")
 	}
 
@@ -68,7 +68,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request)
 		return reconcile.Result{}, err
 	}
 
-	err = reconcileMachineConfigs(ctx, instance, r.dh, restartDnsmasq, mcps.Items...)
+	err = reconcileMachineConfigs(ctx, instance, r.dh, dispatcherDnsmasqScript, mcps.Items...)
 	if err != nil {
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)
