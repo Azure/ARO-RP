@@ -23,18 +23,6 @@ parameters:
   - name: aroImage
     type: string
     default: ${{ parameters.dst_acr_name }}.azurecr.io/aro:$(git rev-parse --short=7 HEAD) # do we have git?
-  - name: fluentbitImageTag
-    type: string
-    default: 1.9.10-cm20240301
-  - name: fluentbitImage
-    type: string
-    default: ${{ parameters.dst_acr_name }}.azurecr.io/fluentbit:${{ parameters.fluentbitImageTag }}
   - name: ocpVersionTag
     type: string
     default: latest
-  - name: genevamdmImageTag
-    type: string
-    default: distroless/genevamdm:2.2024.517.533-b73893-20240522t0954
-  - name: genevamdsdImageTag
-    type: string
-    default: distroless/genevamdsd:mariner_20240524.1

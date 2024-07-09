@@ -2,7 +2,7 @@ trigger: none
 pr: none
 
 parameters:
-  - template: rp-params.yml
+  - template: ./rp-dev/rp-dev-params.yml
 
 resources:
   containers:
@@ -12,10 +12,10 @@ resources:
 
 variables:
   # - template: vars.yml # probably redundant
-  - template: rp-vars.yml
+  - template: ./rp-dev/rp-dev-vars.yml
 
 jobs:
-  - job: RP_int_deployment
+  - job: Full_RP_dev_setup_deployment
     timeoutInMinutes: 180
     pool:
       name: 1es-aro-ci-pool
@@ -26,17 +26,16 @@ jobs:
       - template: ./templates/template-az-cli-login.yml # does it have az CLI alraedy?
         parameters:
           azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
-      - template: ./templates/rp-int-deployment/template-download-secrets.yml
-      - template: ./templates/rp-int-deployment/template-generate-rp-dev-config.yml
+      - template: ./templates/rp-dev/template-download-secrets.yml
+      - template: ./templates/rp-dev/template-generate-rp-dev-config.yml
         parameters:
           location: ${{ parameters.location }}
           resourceGroup: ${{ parameters.resourceGroup }}
           databaseAccountName: ${{ parameters.databaseAccountName }}
           keyvaultPrefix: ${{ parameters.keyvaultPrefix }}
           aroImage: ${{ parameters.aroImage }}
-          fluentbitImage: ${{ parameters.fluentbitImage }}
       - script: make deploy # use different target which will succeed and won't fail
-        name: semi-deploy-aro-rp-int
+        name: semi-deploy-aro-rp-dev
         displayName: ⚙️ Run pre-deplyments tasks prior to AKS
       - script: source ./hack/devtools/deploy-shared-env.sh && deploy_vpn_for_dedicated_rp
         name: deploy-vpn-gateway
@@ -44,31 +43,26 @@ jobs:
       - script: source ./hack/devtools/deploy-shared-env.sh && deploy_aks_dev
         name: deploy-aks-dev
         displayName: ⚙️ Deploy AKS
-      - template: ./templates/rp-int-deployment/template-install-hive.yml
+      - template: ./templates/rp-dev/template-install-hive.yml
         parameters:
           location: ${{ parameters.location }}
-      - template: ./templates/rp-int-deployment/template-mirror-ocp-images.yml
+      - template: ./templates/rp-dev/template-mirror-ocp-images.yml
         parameters:
           dst_acr_name: ${{ parameters.dst_acr_name }}
           tag: ${{ parameters.ocpVersionTag }}
-          genevamdmImageTag: ${{ parameters.genevamdmImageTag }}
-          genevamdsdImageTag: ${{ parameters.genevamdsdImageTag }}
-      - template: ./templates/rp-int-deployment/template-push-aro-fluenbit-to-acr.yml
-        parameters:
-          fluentbitImageTag: ${{ parameters.fluentbitImageTag }
-          fluentbitImage: ${{ parameters.fluentbitImage }
-      - template: ./templates/rp-int-deployment/template-dns-domain-and-certificate-keyvault.yml
-      - template: ./templates/rp-int-deployment/template-delete-vmss.yml
+      - template: ./templates/rp-dev/template-push-aro-fluenbit-to-acr.yml
+      - template: ./templates/rp-dev/template-dns-domain-and-certificate-keyvault.yml
+      - template: ./templates/rp-dev/template-delete-vmss.yml
         parameters:
           resourceGroup: ${{ parameters.resourceGroup }}
           vmssName: rp-vmss-${{ parameters.gitCommit }}
-      - template: ./templates/rp-int-deployment/template-delete-vmss.yml
+      - template: ./templates/rp-dev/template-delete-vmss.yml
         parameters:
           resourceGroup: $(UNIQUE_IDENTIFIER)-gwy-${{ parameters.location }}
           vmssName: gateway-vmss-${{ parameters.gitCommit }}
       - script: make deploy
-        name: full-deploy-aro-rp-int
-        displayName: ⚙️ Fully deploy ARO RP integreation
+        name: full-deploy-aro-rp-dev
+        displayName: ⚙️ Fully deploy ARO RP Setup
       - script: |
           source ./hack/devtools/deploy-shared-env.sh
           deploy_oic_for_dedicated_rp
@@ -77,12 +71,4 @@ jobs:
 ## few more steps would be added
 
 # cleanup
-      - template: ./templates/template-clean-subscription.yml
-        parameters:
-          dryRun: ${{ parameters.dryRun }}
-          subscriptionCredentialsJSON: $(aro-v4-e2e-devops-spn)
-          subscriptionId: $(subscriptionId)
-          purgeCreatedTag: $(purgeCreatedTag)
-          resourceGroupDeletePrefixes: $(resourceGroupDeletePrefixes)
-          purgeTTL: $(purgeTTL)
       - template: ./templates/template-az-cli-logout.yml

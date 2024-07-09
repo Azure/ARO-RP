@@ -4,14 +4,13 @@ parameters:
   databaseAccountName: ""
   keyvaultPrefix: ""
   aroImage: ""
-  fluentbitImage: ""
 
 steps:
   - script: |
       export LOCATION=${{ parameters.location }}
       source secrets/env
       export RESOURCEGROUP=${{ parameters.resourceGroup }} DATABASE_ACCOUNT_NAME=${{ parameters.databaseAccountName }} KEYVAULT_PREFIX=${{ parameters.keyvaultPrefix }}
-      export ARO_IMAGE=${{ parameters.aroImage }} FLUENTBIT_IMAGE=${{ parameters.fluentbitImage }}
+      export ARO_IMAGE=${{ parameters.aroImage }}
       make dev-config.yaml
     name: genereat-rp-dev-config
     displayName: ⚙️ Generating RP development config yaml (dev-config.yaml)
