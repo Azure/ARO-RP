@@ -140,6 +140,21 @@ func (mr *MockClusterManagerMockRecorder) IsClusterInstallationComplete(arg0, ar
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsClusterInstallationComplete", reflect.TypeOf((*MockClusterManager)(nil).IsClusterInstallationComplete), arg0, arg1)
 }
 
+// ListSelectorSyncSets mocks base method.
+func (m *MockClusterManager) ListSelectorSyncSets(arg0 context.Context) (*v1.SelectorSyncSetList, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListSelectorSyncSets", arg0)
+	ret0, _ := ret[0].(*v1.SelectorSyncSetList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListSelectorSyncSets indicates an expected call of ListSelectorSyncSets.
+func (mr *MockClusterManagerMockRecorder) ListSelectorSyncSets(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSelectorSyncSets", reflect.TypeOf((*MockClusterManager)(nil).ListSelectorSyncSets), arg0)
+}
+
 // ResetCorrelationData mocks base method.
 func (m *MockClusterManager) ResetCorrelationData(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) error {
 	m.ctrl.T.Helper()

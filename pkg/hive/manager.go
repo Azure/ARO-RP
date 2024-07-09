@@ -41,6 +41,7 @@ type ClusterManager interface {
 	IsClusterDeploymentReady(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error)
 	IsClusterInstallationComplete(ctx context.Context, doc *api.OpenShiftClusterDocument) (bool, error)
 	GetClusterDeployment(ctx context.Context, doc *api.OpenShiftClusterDocument) (*hivev1.ClusterDeployment, error)
+	ListSelectorSyncSets(ctx context.Context) (*hivev1.SelectorSyncSetList, error)
 	ResetCorrelationData(ctx context.Context, doc *api.OpenShiftClusterDocument) error
 }
 
@@ -221,6 +222,16 @@ func (hr *clusterManager) GetClusterDeployment(ctx context.Context, doc *api.Ope
 	}
 
 	return cd, nil
+}
+
+func (hr *clusterManager) ListSelectorSyncSets(ctx context.Context) (*hivev1.SelectorSyncSetList, error) {
+	sssList := &hivev1.SelectorSyncSetList{}
+	err := hr.hiveClientset.List(ctx, sssList)
+	if err != nil {
+		return nil, err
+	}
+
+	return sssList, nil
 }
 
 func (hr *clusterManager) ResetCorrelationData(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
