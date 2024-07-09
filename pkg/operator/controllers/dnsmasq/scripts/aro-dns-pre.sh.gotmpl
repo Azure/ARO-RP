@@ -1,4 +1,4 @@
-{{ define "aro-coredns-pre.sh" }}
+{{ define "aro-dns-pre.sh" }}
 #!/bin/bash
 set -euo pipefail
 
@@ -11,8 +11,8 @@ set -euo pipefail
 TMPSELFRESOLV=$(mktemp)
 TMPNETRESOLV=$(mktemp)
 
-echo "# Generated for aro-coredns.service - should point to self" > $TMPSELFRESOLV
-echo "# Generated for aro-coredns.service - should contain DHCP configured DNS" > $TMPNETRESOLV
+echo "# Generated for aro-dns.service - should point to self" > $TMPSELFRESOLV
+echo "# Generated for aro-dns.service - should contain DHCP configured DNS" > $TMPNETRESOLV
 
 if nmcli device show br-ex; then
     echo "OVN mode - br-ex device exists"

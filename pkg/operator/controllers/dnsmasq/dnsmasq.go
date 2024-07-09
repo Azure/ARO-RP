@@ -20,9 +20,9 @@ import (
 )
 
 const (
-	configFileName    = "aro-coredns.conf"
-	unitFileName      = "aro-coredns.service"
-	prescriptFileName = "aro-coredns-pre.sh"
+	configFileName    = "aro-dns.conf"
+	unitFileName      = "aro-dns.service"
+	prescriptFileName = "aro-dns-pre.sh"
 )
 
 func config(clusterDomain, apiIntIP, ingressIP string, gatewayDomains []string, gatewayPrivateEndpointIP string) ([]byte, error) {

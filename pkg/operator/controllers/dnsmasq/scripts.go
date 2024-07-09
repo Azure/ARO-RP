@@ -5,14 +5,14 @@ package dnsmasq
 
 import _ "embed"
 
-//go:embed scripts/aro-coredns.conf.gotmpl
+//go:embed scripts/aro-dns.conf.gotmpl
 var configFile string
 
-//go:embed scripts/aro-coredns.service.gotmpl
+//go:embed scripts/aro-dns.service.gotmpl
 var unitFile string
 
-//go:embed scripts/aro-coredns-pre.sh.gotmpl
+//go:embed scripts/aro-dns-pre.sh.gotmpl
 var preScriptFile string
 
-//go:embed scripts/99-aro-coredns-restart.gotmpl
+//go:embed scripts/99-aro-dns-restart.gotmpl
 var restartScript string
