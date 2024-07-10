@@ -24,7 +24,7 @@ import (
 // Licensed under the Apache License 2.0.
 
 const (
-	ControllerName         = "CPMSDeactivatorController"
+	ControllerName         = "CPMSController"
 	SingletonCPMSName      = "cluster"
 	SingletonCPMSNamespace = "openshift-machine-api"
 )
