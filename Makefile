@@ -102,7 +102,7 @@ ci-clean:
 # override COMMIT.
 .PHONY: deploy
 deploy:
-	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
 
 .PHONY: dev-config.yaml
 dev-config.yaml:
