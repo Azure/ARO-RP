@@ -46,11 +46,16 @@ jobs:
       - template: ./templates/rp-dev/template-install-hive.yml
         parameters:
           location: ${{ parameters.location }}
+      - template: ./templates/rp-dev/template-acr-login.yml
+        parameters:
+          dst_acr_name: ${{ parameters.dst_acr_name }}
       - template: ./templates/rp-dev/template-mirror-ocp-images.yml
         parameters:
           dst_acr_name: ${{ parameters.dst_acr_name }}
-          tag: ${{ parameters.ocpVersionTag }}
+          mirrorTag: ${{ parameters.ocpVersionTag }}
       - template: ./templates/rp-dev/template-push-aro-fluenbit-to-acr.yml
+        parameters:
+          dst_acr_name: ${{ parameters.dst_acr_name }}
       - template: ./templates/rp-dev/template-dns-domain-and-certificate-keyvault.yml
       - template: ./templates/rp-dev/template-delete-vmss.yml
         parameters:

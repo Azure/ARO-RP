@@ -1,19 +1,13 @@
 parameters:
   dst_acr_name: ""
-  tag: ""
+  mirrorTag: ""
 steps:
   - script: |
-      export SRC_AUTH_QUAY=$(echo $USER_PULL_SECRET | jq -r '.auths."quay.io".auth')
-      export SRC_AUTH_REDHAT=$(echo $USER_PULL_SECRET | jq -r '.auths."registry.redhat.io".auth')
-      export DST_AUTH=$(echo -n '00000000-0000-0000-0000-000000000000:'$(az acr login -n ${{ parameters.dst_acr_name }} --expose-token | jq -r .accessToken) | base64 -w0)
-      docker login -u 00000000-0000-0000-0000-000000000000 -p "$(echo $DST_AUTH | base64 -d | cut -d':' -f2)" "${{ parameters.dst_acr_name }}.azurecr.io"
-      go run ./cmd/aro mirror ${{ parameters.tag }}
+      go run ./cmd/aro mirror ${{ parameters.mirrorTag }}
 
-      source ./hack/get-image-tag.sh
-      mdm_image_tag=$(extract_image_tag "MdmImage", "pkg/util/version/const.go")
-      mdsd_image_tag=$(extract_image_tag "MdsdImage", "pkg/util/version/const.go")
-      echo "MDM Image:Tag $mdm_image_tag"
-      echo "MDSD Image:Tag $mdm_image_tag"
+      source ./hack/rp-dev-helper.sh
+      mdm_image_tag=$(get_digest_tag "MdmImage")
+      mdsd_image_tag=$(get_digest_tag "MdsdImage")
 
       az acr import --name ${{ parameters.dst_acr_name }}.azurecr.io/${mdm_image_tag} --source linuxgeneva-microsoft.azurecr.io/${mdm_image_tag}
       az acr import --name ${{ parameters.dst_acr_name }}.azurecr.io/${mdsd_image_tag} --source linuxgeneva-microsoft.azurecr.io/${mdsd_image_tag}

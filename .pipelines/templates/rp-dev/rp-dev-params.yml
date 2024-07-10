@@ -1,7 +1,4 @@
 parameters:
-  - name: gitCommit
-    type: string
-    default: c87a7be
   - name: gitBranch
     type: string
     default: master
