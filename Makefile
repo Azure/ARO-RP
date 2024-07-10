@@ -99,6 +99,10 @@ ci-rp: fix-macos-vendor
 	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --target builder --cache-from $(ARO_PORTAL_BUILD_IMAGE) -t $(ARO_BUILDER_IMAGE)
 	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --cache-from $(ARO_BUILDER_IMAGE) -t $(ARO_IMAGE)
 
+.PHONY: ci-tunnel
+ci-tunnel: fix-macos-vendor
+	docker build . -f Dockerfile.ci-tunnel --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --no-cache=$(NO_CACHE) -t aro-tunnel:$(VERSION)
+
 .PHONY: ci-clean
 ci-clean:
 	docker image prune --all --filter="label=aro-*=true"
