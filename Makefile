@@ -41,6 +41,9 @@ else
 	REGISTRY = $(RP_IMAGE_ACR)
 endif
 
+RP_IMAGE_LOCAL ?= localhost/aro
+ARO_PORTAL_BUILD_IMAGE ?= $(RP_IMAGE_LOCAL)-portal-build
+ARO_BUILDER_IMAGE ?= $(RP_IMAGE_LOCAL)-builder
 ARO_IMAGE ?= $(ARO_IMAGE_BASE):$(VERSION)
 GATEKEEPER_IMAGE ?= ${REGISTRY}/gatekeeper:$(GATEKEEPER_VERSION)
 
@@ -92,7 +95,9 @@ client: generate
 
 .PHONY: ci-rp
 ci-rp: fix-macos-vendor
-	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --no-cache=$(NO_CACHE)
+	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --target portal-build --no-cache=$(NO_CACHE) -t $(ARO_PORTAL_BUILD_IMAGE)
+	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --target builder --cache-from $(ARO_PORTAL_BUILD_IMAGE) -t $(ARO_BUILDER_IMAGE)
+	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --cache-from $(ARO_BUILDER_IMAGE) -t $(ARO_IMAGE)
 
 .PHONY: ci-clean
 ci-clean:
