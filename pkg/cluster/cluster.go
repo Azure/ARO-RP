@@ -154,14 +154,12 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 	}
 
 	fpCredRPTenant, err := _env.FPNewClientCertificateCredential(_env.TenantID())
-
 	if err != nil {
 		return nil, err
 	}
 
 	options := _env.Environment().EnvironmentCredentialOptions()
 	spTokenCredential, err := azidentity.NewEnvironmentCredential(options)
-
 	if err != nil {
 		return nil, err
 	}
