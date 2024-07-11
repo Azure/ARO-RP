@@ -228,9 +228,9 @@
                     },
                     "storageProfile": {
                         "imageReference": {
-                            "publisher": "RedHat",
-                            "offer": "RHEL",
-                            "sku": "8-LVM",
+                            "publisher": "MicrosoftCBLMariner",
+                            "offer": "cbl-mariner",
+                            "sku": "cbl-mariner-2-gen2-fips",
                             "version": "latest"
                         },
                         "osDisk": {
