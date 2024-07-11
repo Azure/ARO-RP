@@ -40,6 +40,7 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
+	"github.com/Azure/ARO-RP/pkg/util/iswimi"
 	utilkubernetes "github.com/Azure/ARO-RP/pkg/util/kubernetes"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
@@ -468,8 +469,7 @@ func (o *operator) RenewMDSDCertificate(ctx context.Context) error {
 }
 
 func (o *operator) EnsureUpgradeAnnotation(ctx context.Context) error {
-	if o.oc.Properties.PlatformWorkloadIdentityProfile == nil ||
-		o.oc.Properties.ServicePrincipalProfile != nil {
+	if !iswimi.IsWimi(o.oc.Properties) {
 		return nil
 	}
 

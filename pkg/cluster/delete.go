@@ -26,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
+	"github.com/Azure/ARO-RP/pkg/util/iswimi"
 	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -443,7 +444,7 @@ func (m *manager) Delete(ctx context.Context) error {
 		return err
 	}
 
-	if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile == nil && m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile != nil {
+	if iswimi.IsWimi(m.doc.OpenShiftCluster.Properties) {
 		m.log.Printf("deleting OIDC configuration")
 		blobContainerURL := oidcbuilder.GenerateBlobContainerURL(m.env)
 		azBlobClient, err := m.rpBlob.GetAZBlobClient(blobContainerURL, &azblob.ClientOptions{})

@@ -25,6 +25,7 @@ import (
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/iswimi"
 	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -39,7 +40,7 @@ func (m *manager) createDNS(ctx context.Context) error {
 }
 
 func (m *manager) createOIDC(ctx context.Context) error {
-	if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil || m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile == nil {
+	if !iswimi.IsWimi(m.doc.OpenShiftCluster.Properties) {
 		return nil
 	}
 

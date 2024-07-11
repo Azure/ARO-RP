@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/operator"
+	"github.com/Azure/ARO-RP/pkg/util/iswimi"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -136,7 +137,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		// Persist identity URL and tenant ID only for managed/workload identity cluster create
 		// We don't support updating cluster managed identity after cluster creation
 		// TODO - use a common function to check if the cluster is a managed/workload identity cluster
-		if !(doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil || doc.OpenShiftCluster.Identity == nil) {
+		if iswimi.IsWimi(doc.OpenShiftCluster.Properties) {
 			if err := validateIdentityUrl(doc.OpenShiftCluster, putOrPatchClusterParameters.identityURL); err != nil {
 				return nil, err
 			}
