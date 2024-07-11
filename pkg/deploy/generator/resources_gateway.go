@@ -277,9 +277,9 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 					},
 					StorageProfile: &mgmtcompute.VirtualMachineScaleSetStorageProfile{
 						ImageReference: &mgmtcompute.ImageReference{
-							Publisher: to.StringPtr("RedHat"),
-							Offer:     to.StringPtr("RHEL"),
-							Sku:       to.StringPtr("8-LVM"),
+							Publisher: to.StringPtr("MicrosoftCBLMariner"),
+							Offer:     to.StringPtr("cbl-mariner"),
+							Sku:       to.StringPtr("cbl-mariner-2-gen2-fips"),
 							Version:   to.StringPtr("latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
