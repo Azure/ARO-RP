@@ -7,10 +7,21 @@ parameters:
 
 steps:
   - script: |
+      # Export environment variables from parameters
       export LOCATION=${{ parameters.location }}
-      source secrets/env
-      export RESOURCEGROUP=${{ parameters.resourceGroup }} DATABASE_ACCOUNT_NAME=${{ parameters.databaseAccountName }} KEYVAULT_PREFIX=${{ parameters.keyvaultPrefix }}
+      export RESOURCEGROUP=${{ parameters.resourceGroup }}
+      export DATABASE_ACCOUNT_NAME=${{ parameters.databaseAccountName }}
+      export KEYVAULT_PREFIX=${{ parameters.keyvaultPrefix }}
       export ARO_IMAGE=${{ parameters.aroImage }}
+      # Source environment variables from the secrets file
+      source secrets/env
+
+      # Generate SSH key
+      ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa
+
+      # Run the make command to generate dev-config.yaml
       make dev-config.yaml
-    name: genereat-rp-dev-config
+      # Check if the dev-config.yaml file exists
+      [ -f "dev-config.yaml" ] || { echo "File dev-config.yaml does not exist."; exit 1; }
+    name: generate-rp-dev-config
     displayName: ⚙️ Generating RP development config yaml (dev-config.yaml)

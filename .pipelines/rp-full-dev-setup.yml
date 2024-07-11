@@ -25,8 +25,10 @@ jobs:
       - template: ./templates/template-checkout.yml
       - template: ./templates/template-az-cli-login.yml # does it have az CLI alraedy?
         parameters:
-          azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
+          azureDevOpsJSONSPN: ${{ parameters.azureJson }}
       - template: ./templates/rp-dev/template-download-secrets.yml
+        parameters:
+          secretSA: ${{ parameters.secretSA }}
       - template: ./templates/rp-dev/template-generate-rp-dev-config.yml
         parameters:
           location: ${{ parameters.location }}
