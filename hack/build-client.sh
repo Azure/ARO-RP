@@ -51,7 +51,7 @@ function generate_golang() {
     "/github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/${API_VERSION}/redhatopenshift/models.go" \
     "/github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/${API_VERSION}/redhatopenshift/redhatopenshiftapi/interfaces.go"
 
-  go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP pkg/client
+  ./hack/goruntool.sh goimports -w -local=github.com/Azure/ARO-RP pkg/client
 }
 
 function generate_python() {

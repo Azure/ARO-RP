@@ -16,7 +16,6 @@ FLUENTBIT_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/fluentbit:$(FLUENTBIT_VERSION)-cm$
 AUTOREST_VERSION = 3.6.3
 AUTOREST_IMAGE = quay.io/openshift-on-azure/autorest:${AUTOREST_VERSION}
 GATEKEEPER_VERSION = v3.15.1
-GOTESTSUM = gotest.tools/gotestsum@v1.11.0
 
 # Golang version go mod tidy compatibility
 GOLANG_VERSION ?= 1.21
@@ -138,9 +137,9 @@ generate:
 # clientset with controller-runtime so we don't need to generate it.
 .PHONY: generate-operator-apiclient
 generate-operator-apiclient:
-	go run ./vendor/k8s.io/code-generator/cmd/client-gen --clientset-name versioned --input-base ./pkg/operator/apis --input aro.openshift.io/v1alpha1,preview.aro.openshift.io/v1alpha1 --output-package ./pkg/operator/clientset --go-header-file ./hack/licenses/boilerplate.go.txt
+	./hack/goruntool.sh client-gen --clientset-name versioned --input-base ./pkg/operator/apis --input aro.openshift.io/v1alpha1,preview.aro.openshift.io/v1alpha1 --output-package ./pkg/operator/clientset --go-header-file ./hack/licenses/boilerplate.go.txt
 	gofmt -s -w ./pkg/operator/clientset
-	go run ./vendor/golang.org/x/tools/cmd/goimports -local=github.com/Azure/ARO-RP -e -w ./pkg/operator/clientset ./pkg/operator/apis
+	./hack/goruntool.sh goimports -local=github.com/Azure/ARO-RP -e -w ./pkg/operator/clientset ./pkg/operator/apis
 
 .PHONY: generate-guardrails
 generate-guardrails:
@@ -151,7 +150,7 @@ generate-kiota:
 	kiota generate --clean-output -l go -o ./pkg/util/graph/graphsdk -n "github.com/Azure/ARO-RP/pkg/util/graph/graphsdk" -d hack/graphsdk/openapi.yaml -c GraphBaseServiceClient --additional-data=False --backing-store=True
 	find ./pkg/util/graph/graphsdk -type f -name "*.go"  -exec sed -i'' -e 's\github.com/azure/aro-rp\github.com/Azure/ARO-RP\g' {} +
 	gofmt -s -w pkg/util/graph/graphsdk
-	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP pkg/util/graph/graphsdk
+	./hack/goruntool.sh goimports -w -local=github.com/Azure/ARO-RP pkg/util/graph/graphsdk
 	go run ./hack/validate-imports pkg/util/graph/graphsdk
 	go run ./hack/licenses -dirs ./pkg/util/graph/graphsdk
 
@@ -276,7 +275,7 @@ test-go: generate build-all validate-go lint-go unit-test-go
 .PHONY: validate-go
 validate-go:
 	gofmt -s -w cmd hack pkg test
-	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP cmd hack pkg test
+	./hack/goruntool.sh goimports -w -local=github.com/Azure/ARO-RP cmd hack pkg test
 	go run ./hack/validate-imports cmd hack pkg test
 	go run ./hack/licenses
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
@@ -298,11 +297,11 @@ validate-fips:
 
 .PHONY: unit-test-go
 unit-test-go:
-	go run ${GOTESTSUM} --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
+	./hack/goruntool.sh gotestsum --format pkgname --junitfile report.xml -- -coverprofile=cover.out ./...
 
 .PHONY: unit-test-go-coverpkg
 unit-test-go-coverpkg:
-	go run ${GOTESTSUM} --format pkgname --junitfile report.xml -- -coverpkg=./... -coverprofile=cover_coverpkg.out ./...
+	./hack/goruntool.sh gotestsum --format pkgname --junitfile report.xml -- -coverpkg=./... -coverprofile=cover_coverpkg.out ./...
 
 .PHONY: lint-go
 lint-go:
@@ -351,7 +350,7 @@ go-tidy: # Run go mod tidy - add missing and remove unused modules.
 	go mod tidy -compat=${GOLANG_VERSION}
 
 .PHONY: go-vendor
-go-vendor:  # Run go mod vendor - only modules that are used in the source code will be vendored in (make vendored copy of dependencies). 
+go-vendor:  # Run go mod vendor - only modules that are used in the source code will be vendored in (make vendored copy of dependencies).
 	go mod vendor
 
 .PHONY: go-verify
@@ -366,4 +365,4 @@ vendor:
 
 .PHONY: install-go-tools
 install-go-tools:
-	go install ${GOTESTSUM}
+	./hack/goruntool.sh install
