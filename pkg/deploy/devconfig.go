@@ -82,7 +82,12 @@ func DevConfig(_env env.Core) (*Config, error) {
 		return nil, err
 	}
 
-	azureUniquePrefix := os.Getenv("USER")
+	// use unique prefix for Azure resources when it is set, otherwise use your user's name
+	azureUniquePrefix := os.Getenv("AZURE_UNIQUE_PREFIX")
+	if azureUniquePrefix == "" {
+		azureUniquePrefix = os.Getenv("USER")
+	}
+
 	keyvaultPrefix := azureUniquePrefix + "-aro-" + _env.Location()
 	if len(keyvaultPrefix) > 20 {
 		keyvaultPrefix = keyvaultPrefix[:20]
