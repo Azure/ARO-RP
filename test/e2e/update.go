@@ -17,8 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	mgmtredhatopenshift20220904 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2022-09-04/redhatopenshift"
-	mgmtredhatopenshift20230701preview "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2023-07-01-preview/redhatopenshift"
+	mgmtredhatopenshift20231122 "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2023-11-22/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -40,7 +39,7 @@ var _ = Describe("Update clusters", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("sending the PATCH request to update the cluster")
-		err = clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, mgmtredhatopenshift20220904.OpenShiftClusterUpdate{})
+		err = clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, mgmtredhatopenshift20231122.OpenShiftClusterUpdate{})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking that the CredentialsRequest has been recreated")
@@ -60,7 +59,7 @@ var _ = Describe("Update clusters", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("sending the PATCH request to update the cluster")
-		err = clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, mgmtredhatopenshift20220904.OpenShiftClusterUpdate{})
+		err = clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, mgmtredhatopenshift20231122.OpenShiftClusterUpdate{})
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking that the aro-operator-master Deployment was restarted")
@@ -109,7 +108,7 @@ var _ = Describe("Update cluster Managed Outbound IPs", func() {
 
 	var _ = BeforeEach(func(ctx context.Context) {
 		By("ensuring the public loadbalancer starts with one outbound IP")
-		oc, err := clients.OpenshiftClustersPreview.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 
 		lbName, err = getInfraID(ctx)
@@ -121,18 +120,18 @@ var _ = Describe("Update cluster Managed Outbound IPs", func() {
 
 		if getOutboundIPsCount(lb) != 1 {
 			By("sending the PATCH request to set ManagedOutboundIPs.Count to 1")
-			err = clients.OpenshiftClustersPreview.UpdateAndWait(ctx, vnetResourceGroup, clusterName, newManagedOutboundIPUpdateBody(1))
+			err = clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, newManagedOutboundIPUpdateBody(1))
 			Expect(err).NotTo(HaveOccurred())
 		}
 	})
 
 	It("must be possible to increase and decrease IP Addresses on the public loadbalancer", func(ctx context.Context) {
 		By("sending the PATCH request to increase Managed Outbound IPs")
-		err := clients.OpenshiftClustersPreview.UpdateAndWait(ctx, vnetResourceGroup, clusterName, newManagedOutboundIPUpdateBody(5))
+		err := clients.OpenshiftClusters.UpdateAndWait(ctx, vnetResourceGroup, clusterName, newManagedOutboundIPUpdateBody(5))
 		Expect(err).NotTo(HaveOccurred())
 
 		By("getting the cluster resource")
-		oc, err := clients.OpenshiftClustersPreview.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking effectiveOutboundIPs has been updated")
@@ -145,11 +144,11 @@ var _ = Describe("Update cluster Managed Outbound IPs", func() {
 
 		By("sending the PUT request to decrease Managed Outbound IPs")
 		oc.OpenShiftClusterProperties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIps.Count = to.Int32Ptr(1)
-		err = clients.OpenshiftClustersPreview.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, oc)
+		err = clients.OpenshiftClusters.CreateOrUpdateAndWait(ctx, vnetResourceGroup, clusterName, oc)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("getting the cluster resource")
-		oc, err = clients.OpenshiftClustersPreview.Get(ctx, vnetResourceGroup, clusterName)
+		oc, err = clients.OpenshiftClusters.Get(ctx, vnetResourceGroup, clusterName)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("checking effectiveOutboundIPs has been updated")
@@ -170,12 +169,12 @@ func getInfraID(ctx context.Context) (string, error) {
 	return co.Spec.InfraID, err
 }
 
-func newManagedOutboundIPUpdateBody(managedOutboundIPCount int32) mgmtredhatopenshift20230701preview.OpenShiftClusterUpdate {
-	return mgmtredhatopenshift20230701preview.OpenShiftClusterUpdate{
-		OpenShiftClusterProperties: &mgmtredhatopenshift20230701preview.OpenShiftClusterProperties{
-			NetworkProfile: &mgmtredhatopenshift20230701preview.NetworkProfile{
-				LoadBalancerProfile: &mgmtredhatopenshift20230701preview.LoadBalancerProfile{
-					ManagedOutboundIps: &mgmtredhatopenshift20230701preview.ManagedOutboundIPs{
+func newManagedOutboundIPUpdateBody(managedOutboundIPCount int32) mgmtredhatopenshift20231122.OpenShiftClusterUpdate {
+	return mgmtredhatopenshift20231122.OpenShiftClusterUpdate{
+		OpenShiftClusterProperties: &mgmtredhatopenshift20231122.OpenShiftClusterProperties{
+			NetworkProfile: &mgmtredhatopenshift20231122.NetworkProfile{
+				LoadBalancerProfile: &mgmtredhatopenshift20231122.LoadBalancerProfile{
+					ManagedOutboundIps: &mgmtredhatopenshift20231122.ManagedOutboundIPs{
 						Count: to.Int32Ptr(managedOutboundIPCount),
 					},
 				},

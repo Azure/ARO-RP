@@ -1,0 +1,26 @@
+ARG REGISTRY
+ARG ARO_VERSION
+
+FROM ${REGISTRY}/ubi8/go-toolset:1.20.12-5 AS builder
+ARG ARO_VERSION
+USER root
+WORKDIR /app
+
+# golang config and build steps
+ENV GOPATH=/root/go
+
+# Copy dependencies and source files
+COPY go.mod go.sum ./
+COPY vendor vendor
+COPY hack hack
+COPY pkg pkg
+
+# build
+RUN go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${ARO_VERSION}" ./hack/tunnel
+
+FROM ${REGISTRY}/ubi8/ubi-minimal AS final
+RUN microdnf update && microdnf clean all
+COPY --from=builder /app/tunnel /usr/local/bin/
+ENTRYPOINT ["tunnel"]
+EXPOSE 8443/tcp
+USER 1000
