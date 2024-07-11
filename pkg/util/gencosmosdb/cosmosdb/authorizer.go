@@ -1,6 +1,7 @@
 package cosmosdb
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
@@ -13,14 +14,14 @@ import (
 )
 
 type Authorizer interface {
-	Authorize(*http.Request, string, string) error
+	Authorize(context.Context, *http.Request, string, string) error
 }
 
 type masterKeyAuthorizer struct {
 	masterKey []byte
 }
 
-func (a *masterKeyAuthorizer) Authorize(req *http.Request, resourceType, resourceLink string) error {
+func (a *masterKeyAuthorizer) Authorize(ctx context.Context, req *http.Request, resourceType, resourceLink string) error {
 	date := time.Now().UTC().Format("Mon, 02 Jan 2006 15:04:05 GMT")
 
 	h := hmac.New(sha256.New, a.masterKey)
@@ -47,11 +48,11 @@ type tokenAuthorizer struct {
 	cond        *sync.Cond
 	acquiring   bool
 	lastAttempt time.Time
-	getToken    func() (token string, newExpiration time.Time, err error)
+	getToken    func(context.Context) (token string, newExpiration time.Time, err error)
 }
 
-func (a *tokenAuthorizer) Authorize(req *http.Request, resourceType, resourceLink string) error {
-	token, err := a.acquireToken()
+func (a *tokenAuthorizer) Authorize(ctx context.Context, req *http.Request, resourceType, resourceLink string) error {
+	token, err := a.acquireToken(ctx)
 	if err != nil {
 		return err
 	}
@@ -63,13 +64,13 @@ func (a *tokenAuthorizer) Authorize(req *http.Request, resourceType, resourceLin
 	return nil
 }
 
-func NewTokenAuthorizer(token string, expiration time.Time, getToken func() (token string, newExpiration time.Time, err error)) Authorizer {
+func NewTokenAuthorizer(token string, expiration time.Time, getToken func(context.Context) (token string, newExpiration time.Time, err error)) Authorizer {
 	return &tokenAuthorizer{token: token, expiration: expiration, getToken: getToken, cond: sync.NewCond(&sync.Mutex{})}
 }
 
 // Get returns the underlying resource.
 // If the resource is fresh, no refresh is performed.
-func (a *tokenAuthorizer) acquireToken() (string, error) {
+func (a *tokenAuthorizer) acquireToken(ctx context.Context) (string, error) {
 	// If the resource is expiring within this time window, update it eagerly.
 	// This allows other goroutines to keep running by using the not-yet-expired
 	// resource value while one goroutine updates the resource.
@@ -117,7 +118,7 @@ func (a *tokenAuthorizer) acquireToken() (string, error) {
 		var expiration time.Time
 		var newValue string
 		a.lastAttempt = now
-		newValue, expiration, err = a.getToken()
+		newValue, expiration, err = a.getToken(ctx)
 
 		// Atomically, update the shared token's new value & expiration.
 		a.cond.L.Lock()
