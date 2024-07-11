@@ -1,5 +1,5 @@
 variables:
-  UNIQUE_IDENTIFIER: zzz # dummy value
+  AZURE_UNIQUE_PREFIX: zzz # dummy value
   NO_CACHE: false
   AZURE_EXTENSION_DEV_SOURCES: "$(pwd)/python"
   ARO_INSTALL_VIA_HIVE: true

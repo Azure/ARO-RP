@@ -2,9 +2,9 @@ steps:
   - script: |
       export PARENT_DOMAIN_NAME=osadev.cloud
       export PARENT_DOMAIN_RESOURCEGROUP=dns
-      export GLOBAL_RESOURCEGROUP=${UNIQUE_IDENTIFIER}-global
+      export GLOBAL_RESOURCEGROUP=${AZURE_UNIQUE_PREFIX}-global
 
-      for DOMAIN_NAME in ${UNIQUE_IDENTIFIER}-clusters.$PARENT_DOMAIN_NAME ${UNIQUE_IDENTIFIER}-rp.$PARENT_DOMAIN_NAME; do
+      for DOMAIN_NAME in ${AZURE_UNIQUE_PREFIX}-clusters.$PARENT_DOMAIN_NAME ${AZURE_UNIQUE_PREFIX}-rp.$PARENT_DOMAIN_NAME; do
           CHILD_DOMAIN_PREFIX="$(cut -d. -f1 <<<$DOMAIN_NAME)"
           echo "########## Creating NS record to DNS Zone $CHILD_DOMAIN_PREFIX ##########"
           az network dns record-set ns create \

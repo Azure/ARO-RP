@@ -65,7 +65,7 @@ jobs:
           vmssName: rp-vmss-${{ parameters.gitCommit }}
       - template: ./templates/rp-dev/template-delete-vmss.yml
         parameters:
-          resourceGroup: $(UNIQUE_IDENTIFIER)-gwy-${{ parameters.location }}
+          resourceGroup: $(AZURE_UNIQUE_PREFIX)-gwy-${{ parameters.location }}
           vmssName: gateway-vmss-${{ parameters.gitCommit }}
       - script: make deploy
         name: full-deploy-aro-rp-dev
