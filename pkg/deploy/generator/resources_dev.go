@@ -400,7 +400,7 @@ func (g *generator) devDiskEncryptionSet() *arm.Resource {
 		Name:     to.StringPtr(fmt.Sprintf("[%s]", sharedDiskEncryptionSetName)),
 		Type:     to.StringPtr("Microsoft.Compute/diskEncryptionSets"),
 		Location: to.StringPtr("[resourceGroup().location]"),
-		Identity: &mgmtcompute.EncryptionSetIdentity{Type: mgmtcompute.DiskEncryptionSetIdentityType(mgmtcompute.DiskEncryptionSetIdentityTypeSystemAssigned)},
+		Identity: &mgmtcompute.EncryptionSetIdentity{Type: mgmtcompute.DiskEncryptionSetIdentityTypeSystemAssigned},
 	}
 
 	return &arm.Resource{
