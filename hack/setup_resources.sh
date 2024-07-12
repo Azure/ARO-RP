@@ -2,6 +2,32 @@
 
 set -e
 
+# Determine the base directory of the script
+BASE_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+
+# Construct the path to const.go using the base directory
+CONST_GO_PATH="$BASE_DIR/pkg/util/version/const.go"
+
+# Debugging: Print paths for verification
+echo "Base directory: $BASE_DIR"
+echo "Path to const.go: $CONST_GO_PATH"
+
+# Check if const.go exists
+if [ ! -f "$CONST_GO_PATH" ]; then
+  echo "Error: File $CONST_GO_PATH not found."
+  exit 1
+fi
+
+# Extract version and pullspec from const.go
+OPENSHIFT_VERSION=$(awk -F'[(,)]' '/NewVersion/ {gsub(/ /, ""); print $2"."$3"."$4; exit}' "$CONST_GO_PATH")
+OCP_PULLSPEC=$(awk -F'"' '/PullSpec:/ {print $2; exit}' "$CONST_GO_PATH")
+INSTALLER_PULLSPEC="arointsvc.azurecr.io/aro-installer:release-$OPENSHIFT_VERSION"
+
+# Print the fetched values for verification
+echo "Using OpenShift version: $OPENSHIFT_VERSION"
+echo "Using OCP_PULLSPEC: $OCP_PULLSPEC"
+echo "Using INSTALLER_PULLSPEC: $INSTALLER_PULLSPEC"
+
 # Function to validate RP running
 validate_rp_running() {
     echo "########## Checking ARO RP Status ##########"
@@ -27,18 +53,15 @@ validate_rp_running() {
     done
 }
 
-# Ensure all env vars are set (CLUSTER_LOCATION, CLUSTER_RESOURCEGROUP, CLUSTER_NAME)
+# Ensure all env vars are set (LOCATION, CLUSTER_RESOURCEGROUP, CLUSTER_NAME)
 ALL_SET="true"
-if [ -z ${AZURE_SUBSCRIPTION_ID} ]; then ALL_SET="false" && echo "AZURE_SUBSCRIPTION_ID is unset"; else echo "AZURE_SUBSCRIPTION_ID is set to '$AZURE_SUBSCRIPTION_ID'"; fi
-if [ -z ${LOCATION} ]; then ALL_SET="false" && echo "LOCATION is unset"; else echo "LOCATION is set to '$LOCATION'"; fi
-if [ -z ${CLUSTER_RESOURCEGROUP} ]; then ALL_SET="false" && echo "CLUSTER_RESOURCEGROUP is unset"; else echo "CLUSTER_RESOURCEGROUP is set to '$CLUSTER_RESOURCEGROUP'"; fi
-if [ -z ${CLUSTER_NAME} ]; then ALL_SET="false" && echo "CLUSTER_NAME is unset"; else echo "CLUSTER_NAME is set to '$CLUSTER_NAME'"; fi
-if [ -z ${CLUSTER_VNET} ]; then CLUSTER_VNET="aro-vnet2"; echo "CLUSTER_VNET is ${CLUSTER_VNET}"; fi
-if [ -z ${CLUSTER_MASTER_SUBNET} ]; then CLUSTER_MASTER_SUBNET="master-subnet"; echo "CLUSTER_MASTER_SUBNET is ${CLUSTER_MASTER_SUBNET}"; fi
-if [ -z ${CLUSTER_WORKER_SUBNET} ]; then CLUSTER_WORKER_SUBNET="worker-subnet"; echo "CLUSTER_WORKER_SUBNET is ${CLUSTER_WORKER_SUBNET}"; fi
-if [ -z ${OPENSHIFT_VERSION} ]; then ALL_SET="false" && echo "OPENSHIFT_VERSION is unset"; else echo "OPENSHIFT_VERSION is set to '$OPENSHIFT_VERSION'"; fi
-if [ -z ${OCP_PULLSPEC} ]; then ALL_SET="false" && echo "OCP_PULLSPEC is unset"; else echo "OCP_PULLSPEC is set to '$OCP_PULLSPEC'"; fi
-if [ -z ${INSTALLER_PULLSPEC} ]; then ALL_SET="false" && echo "INSTALLER_PULLSPEC is unset"; else echo "INSTALLER_PULLSPEC is set to '$INSTALLER_PULLSPEC'"; fi
+if [ -z "${AZURE_SUBSCRIPTION_ID}" ]; then ALL_SET="false" && echo "AZURE_SUBSCRIPTION_ID is unset"; else echo "AZURE_SUBSCRIPTION_ID is set to '$AZURE_SUBSCRIPTION_ID'"; fi
+if [ -z "${LOCATION}" ]; then ALL_SET="false" && echo "LOCATION is unset"; else echo "LOCATION is set to '$LOCATION'"; fi
+if [ -z "${CLUSTER_RESOURCEGROUP}" ]; then ALL_SET="false" && echo "CLUSTER_RESOURCEGROUP is unset"; else echo "CLUSTER_RESOURCEGROUP is set to '$CLUSTER_RESOURCEGROUP'"; fi
+if [ -z "${CLUSTER_NAME}" ]; then ALL_SET="false" && echo "CLUSTER_NAME is unset"; else echo "CLUSTER_NAME is set to '$CLUSTER_NAME'"; fi
+if [ -z "${CLUSTER_VNET}" ]; then CLUSTER_VNET="aro-vnet2"; fi; echo "CLUSTER_VNET is ${CLUSTER_VNET}"
+if [ -z "${CLUSTER_MASTER_SUBNET}" ]; then CLUSTER_MASTER_SUBNET="master-subnet"; fi; echo "CLUSTER_MASTER_SUBNET is ${CLUSTER_MASTER_SUBNET}"
+if [ -z "${CLUSTER_WORKER_SUBNET}" ]; then CLUSTER_WORKER_SUBNET="worker-subnet"; fi; echo "CLUSTER_WORKER_SUBNET is ${CLUSTER_WORKER_SUBNET}"
 
 if [[ "${ALL_SET}" != "true" ]]; then exit 1; fi
 
@@ -46,7 +69,7 @@ if [[ "${ALL_SET}" != "true" ]]; then exit 1; fi
 echo "Checking Azure CLI version..."
 az_version=$(az --version | grep 'azure-cli' | awk '{print $2}')
 required_version="2.30.0"
-if  [ "$(printf '%s\n' "$required_version" "$az_version" | sort -V | head -n1)" = "$required_version" ]; then
+if [ "$(printf '%s\n' "$required_version" "$az_version" | sort -V | head -n1)" = "$required_version" ]; then
     echo "Azure CLI version is compatible"
 else
     echo "Azure CLI version must be $required_version or later. Please upgrade."
@@ -157,3 +180,5 @@ fi
 
 echo "To list cluster credentials, run:"
 echo "    az aro list-credentials --name $CLUSTER_NAME --resource-group $CLUSTER_RESOURCEGROUP"
+
+echo "Note: Do not manually delete any resources. Let the script handle the deletions to avoid issues."

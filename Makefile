@@ -67,53 +67,71 @@ build-all:
 aro: check-release generate
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro
 
+# Target to create docker secrets
+.PHONY: docker-secrets
+docker-secrets: aks.kubeconfig
+	docker secret rm --ignore aks.kubeconfig
+	docker secret create aks.kubeconfig ./aks.kubeconfig
+
+	docker secret rm --ignore proxy-client.key
+	docker secret create proxy-client.key ./secrets/proxy-client.key
+
+	docker secret rm --ignore proxy-client.crt
+	docker secret create proxy-client.crt ./secrets/proxy-client.crt
+
+	docker secret rm --ignore proxy.crt
+	docker secret create proxy.crt ./secrets/proxy.crt
+
 # Target to run the local RP
 .PHONY: runlocal-rp
-runlocal-rp: ci-rp aks.kubeconfig
-	@set -a; source secrets/env; set +a; \
-	podman run --rm -p 127.0.0.1:8443:8443 \
+runlocal-rp: ci-rp docker-secrets
+	docker run --rm -p 127.0.0.1:8443:8443 \
 		--name aro-rp \
 		-w /app \
+		-e ARO_IMAGE \
 		-e RP_MODE="development" \
-		-e PROXY_HOSTNAME="$${PROXY_HOSTNAME}" \
-		-e DOMAIN_NAME="$${DOMAIN_NAME}" \
-		-e AZURE_RP_CLIENT_ID="$${AZURE_RP_CLIENT_ID}" \
-		-e AZURE_FP_CLIENT_ID="$${AZURE_FP_CLIENT_ID}" \
-		-e AZURE_SUBSCRIPTION_ID="$${AZURE_SUBSCRIPTION_ID}" \
-		-e AZURE_TENANT_ID="$${AZURE_TENANT_ID}" \
-		-e AZURE_RP_CLIENT_SECRET="$${AZURE_RP_CLIENT_SECRET}" \
-		-e LOCATION="$${LOCATION}" \
-		-e RESOURCEGROUP="$${RESOURCEGROUP}" \
-		-e AZURE_ARM_CLIENT_ID="$${AZURE_ARM_CLIENT_ID}" \
-		-e AZURE_FP_SERVICE_PRINCIPAL_ID="$${AZURE_FP_SERVICE_PRINCIPAL_ID}" \
-		-e AZURE_DBTOKEN_CLIENT_ID="$${AZURE_DBTOKEN_CLIENT_ID}" \
-		-e AZURE_PORTAL_CLIENT_ID="$${AZURE_PORTAL_CLIENT_ID}" \
-		-e AZURE_PORTAL_ACCESS_GROUP_IDS="$${AZURE_PORTAL_ACCESS_GROUP_IDS}" \
-		-e AZURE_CLIENT_ID="$${AZURE_CLIENT_ID}" \
-		-e AZURE_SERVICE_PRINCIPAL_ID="$${AZURE_SERVICE_PRINCIPAL_ID}" \
-		-e AZURE_CLIENT_SECRET="$${AZURE_CLIENT_SECRET}" \
-		-e AZURE_GATEWAY_CLIENT_ID="$${AZURE_GATEWAY_CLIENT_ID}" \
-		-e AZURE_GATEWAY_SERVICE_PRINCIPAL_ID="$${AZURE_GATEWAY_SERVICE_PRINCIPAL_ID}" \
-		-e AZURE_GATEWAY_CLIENT_SECRET="$${AZURE_GATEWAY_CLIENT_SECRET}" \
-		-e DATABASE_NAME="$${DATABASE_NAME}" \
-		-e PULL_SECRET="$${PULL_SECRET}" \
-		-e SECRET_SA_ACCOUNT_NAME="$${SECRET_SA_ACCOUNT_NAME}" \
-		-e DATABASE_ACCOUNT_NAME="$${DATABASE_ACCOUNT_NAME}" \
-		-e KEYVAULT_PREFIX="$${KEYVAULT_PREFIX}" \
-		-e ADMIN_OBJECT_ID="$${ADMIN_OBJECT_ID}" \
-		-e PARENT_DOMAIN_NAME="$${PARENT_DOMAIN_NAME}" \
-		-e PARENT_DOMAIN_RESOURCEGROUP="$${PARENT_DOMAIN_RESOURCEGROUP}" \
-		-e AZURE_ENVIRONMENT="$${AZURE_ENVIRONMENT}" \
-		-e STORAGE_ACCOUNT_DOMAIN="$${STORAGE_ACCOUNT_DOMAIN}" \
-		-e OIDC_STORAGE_ACCOUNT_NAME="$${OIDC_STORAGE_ACCOUNT_NAME}" \
+		-e PROXY_HOSTNAME \
+		-e DOMAIN_NAME \
+		-e AZURE_RP_CLIENT_ID \
+		-e AZURE_FP_CLIENT_ID \
+		-e AZURE_SUBSCRIPTION_ID \
+		-e AZURE_TENANT_ID \
+		-e AZURE_RP_CLIENT_SECRET \
+		-e LOCATION \
+		-e RESOURCEGROUP \
+		-e AZURE_ARM_CLIENT_ID \
+		-e AZURE_FP_SERVICE_PRINCIPAL_ID \
+		-e AZURE_DBTOKEN_CLIENT_ID \
+		-e AZURE_PORTAL_CLIENT_ID \
+		-e AZURE_PORTAL_ACCESS_GROUP_IDS \
+		-e AZURE_CLIENT_ID \
+		-e AZURE_SERVICE_PRINCIPAL_ID \
+		-e AZURE_CLIENT_SECRET \
+		-e AZURE_GATEWAY_CLIENT_ID \
+		-e AZURE_GATEWAY_SERVICE_PRINCIPAL_ID \
+		-e AZURE_GATEWAY_CLIENT_SECRET \
+		-e DATABASE_NAME \
+		-e PULL_SECRET \
+		-e SECRET_SA_ACCOUNT_NAME \
+		-e DATABASE_ACCOUNT_NAME \
+		-e KEYVAULT_PREFIX \
+		-e ADMIN_OBJECT_ID \
+		-e PARENT_DOMAIN_NAME \
+		-e PARENT_DOMAIN_RESOURCEGROUP \
+		-e AZURE_ENVIRONMENT \
+		-e STORAGE_ACCOUNT_DOMAIN \
+		-e OIDC_STORAGE_ACCOUNT_NAME \
 		-e KUBECONFIG="/app/secrets/aks.kubeconfig" \
 		-e HIVE_KUBE_CONFIG_PATH="/app/secrets/aks.kubeconfig" \
 		-e ARO_CHECKOUT_PATH="/app" \
 		-e ARO_INSTALL_VIA_HIVE="true" \
 		-e ARO_ADOPT_BY_HIVE="true" \
-		-v $(PWD)/aks.kubeconfig:/app/secrets/aks.kubeconfig:z \
-		-v $(PWD)/secrets:/app/secrets:z \
-		$$ARO_IMAGE rp
+		--secret aks.kubeconfig,target=/app/secrets/aks.kubeconfig \
+		--secret proxy-client.key,target=/app/secrets/proxy-client.key \
+		--secret proxy-client.crt,target=/app/secrets/proxy-client.crt \
+		--secret proxy.crt,target=/app/secrets/proxy.crt \
+		$(RP_IMAGE_LOCAL) rp
+
 		
 .PHONY: az
 az: pyenv
