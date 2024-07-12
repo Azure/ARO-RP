@@ -358,10 +358,9 @@ func (g *generator) devVPN() *arm.Resource {
 }
 
 const (
-	sharedKeyVaultName          = "concat(take(resourceGroup().name,10), '" + SharedKeyVaultNameSuffix + "')"
-	sharedDiskEncryptionSetName = "concat(resourceGroup().name, '" + SharedDiskEncryptionSetNameSuffix + "')"
-	sharedDiskEncryptionKeyName = "concat(resourceGroup().name, '-disk-encryption-key')"
-	// Conflicts with current development subscription. cannot have two keyvaults with same name
+	sharedKeyVaultName                = "concat(take(resourceGroup().name,10), '" + SharedKeyVaultNameSuffix + "')"
+	sharedDiskEncryptionSetName       = "concat(resourceGroup().name, '" + SharedDiskEncryptionSetNameSuffix + "')"
+	sharedDiskEncryptionKeyName       = "concat(resourceGroup().name, '-disk-encryption-key')"
 	SharedKeyVaultNameSuffix          = "-dev-sharedKV"
 	SharedDiskEncryptionSetNameSuffix = "-disk-encryption-set"
 )
