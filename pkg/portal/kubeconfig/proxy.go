@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ghodss/yaml"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
+	"sigs.k8s.io/yaml"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
