@@ -51,6 +51,9 @@
    SECRET_SA_ACCOUNT_NAME=rharosecretsdev make secrets
    ```
 
+1. Run [msi.sh](../hack/devtools/msi.sh) to create a service principal and self-signed certificate to 
+mock a cluster MSI. Save the output values for `Client ID`, `Base64 Encoded Certificate`, and `Tenant`.
+
 1. Copy, edit (if necessary) and source your environment file.  The required
    environment variable configuration is documented immediately below:
 
@@ -64,6 +67,9 @@
      `eastus`).
    * `RP_MODE`: Set to `development` to use a development RP running at
      https://localhost:8443/.
+   * `MOCK_MSI_CLIENT_ID`: Client ID for service principal that mocks cluster MSI (see previous step).
+   * `MOCK_MSI_CERT`: Base64 encoded certificate for service principal that mocks cluster MSI (see previous step).
+   * `MOCK_MSI_TENANT`: Tenant ID for service principal that mocks cluster MSI (see previous step).
 
 1. Create your own RP database:
 
