@@ -48,8 +48,15 @@ func (f *frontend) preflightValidation(w http.ResponseWriter, r *http.Request) {
 		typeMeta := api.ResourceTypeMeta{}
 		if err := json.Unmarshal(raw, &typeMeta); err != nil {
 			// failing to parse the preflight body is not considered a validation failure. continue
-			log.Warningf("bad request. Failed to unmarshal ResourceTypeMeta: %s", err)
-			continue
+			log.Warningf("preflight validation failed with bad request. Failed to unmarshal ResourceTypeMeta: %s", err)
+			b = marshalValidationResult(api.ValidationResult{
+				Status: api.ValidationStatusFailed,
+				Error: &api.CloudErrorBody{
+					Message: err.Error(),
+				},
+			})
+			reply(log, w, header, b, statusCodeError(http.StatusOK))
+			return
 		}
 		if strings.EqualFold(typeMeta.Type, "Microsoft.RedHatOpenShift/openShiftClusters") {
 			res := f._preflightValidation(ctx, log, raw, typeMeta.APIVersion, strings.ToLower(typeMeta.Id))
