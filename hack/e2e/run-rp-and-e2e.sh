@@ -214,26 +214,6 @@ delete_e2e_cluster() {
     fi
 }
 
-get_cluster_sp() {
-    echo "########## Downloading SP secrets ##########"
-    az keyvault secret download --vault-name=$CSP_VAULT_NAME \
-        --name=aro-v4-e2e-devops-spn-1-app-id \
-        --file=secrets/app-id
-    az keyvault secret download --vault-name=$CSP_VAULT_NAME \
-        --name=aro-v4-e2e-devops-spn-1-sp-id \
-        --file=secrets/sp-id
-    az keyvault secret download --vault-name=$CSP_VAULT_NAME \
-        --name=aro-v4-e2e-devops-spn-1-secret-value \
-        --file=secrets/secret-value
-
-    echo -e -n "\nexport AZURE_CLUSTER_SERVICE_PRINCIPAL_ID=" >>secrets/env
-    cat secrets/sp-id >>secrets/env
-    echo -e -n "\nexport AZURE_CLUSTER_APP_ID=" >>secrets/env
-    cat secrets/app-id >>secrets/env
-    echo -e -n "\nexport AZURE_CLUSTER_APP_SECRET=" >>secrets/env
-    cat secrets/secret-value >>secrets/env
-}
-
 # TODO: CLUSTER and is also recalculated in multiple places
 # in the billing pipelines :-(
 
