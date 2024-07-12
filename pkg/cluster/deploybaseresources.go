@@ -25,10 +25,10 @@ import (
 	apisubnet "github.com/Azure/ARO-RP/pkg/api/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/ARO-RP/pkg/util/iswimi"
 	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
+	"github.com/Azure/ARO-RP/pkg/util/wimi"
 )
 
 var nsgNotReadyErrorRegex = regexp.MustCompile("Resource.*networkSecurityGroups.*referenced by resource.*not found")
@@ -40,7 +40,7 @@ func (m *manager) createDNS(ctx context.Context) error {
 }
 
 func (m *manager) createOIDC(ctx context.Context) error {
-	if !iswimi.IsWimi(m.doc.OpenShiftCluster.Properties) {
+	if !wimi.IsWimi(*m.doc.OpenShiftCluster) {
 		return nil
 	}
 

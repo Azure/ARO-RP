@@ -26,10 +26,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
-	"github.com/Azure/ARO-RP/pkg/util/iswimi"
 	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
+	"github.com/Azure/ARO-RP/pkg/util/wimi"
 )
 
 // deleteNic deletes the network interface resource by first fetching the resource using the interface
@@ -444,7 +444,7 @@ func (m *manager) Delete(ctx context.Context) error {
 		return err
 	}
 
-	if iswimi.IsWimi(m.doc.OpenShiftCluster.Properties) {
+	if wimi.IsWimi(*m.doc.OpenShiftCluster) {
 		m.log.Printf("deleting OIDC configuration")
 		blobContainerURL := oidcbuilder.GenerateBlobContainerURL(m.env)
 		azBlobClient, err := m.rpBlob.GetAZBlobClient(blobContainerURL, &azblob.ClientOptions{})
