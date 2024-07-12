@@ -7,7 +7,10 @@ import (
 	"strings"
 )
 
-// keys must be lower case
+// This map stores the versions of different Azure APIs to be used in generated ARM templates in various
+// parts of the codebase. The versions used here do not necessarily align with the API versions used in the
+// Go client wrappers defined in pkg/util/azureclient/mgmt and pkg/util/azureclient/azuresdk.
+// Keys must be lower case.
 var apiVersions = map[string]string{
 	"microsoft.authorization":                  "2018-09-01-preview",
 	"microsoft.authorization/denyassignments":  "2018-07-01-preview",
