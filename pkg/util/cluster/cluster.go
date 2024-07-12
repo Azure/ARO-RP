@@ -133,20 +133,26 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 	return c, nil
 }
 
-func (c *Cluster) CreateApp(ctx context.Context, clusterName string) error {
+type AppDetails struct {
+	applicationId     string
+	applicationSecret string
+	spId              string
+}
+
+func (c *Cluster) createApp(ctx context.Context, clusterName string) (applicationDetails AppDetails, err error) {
 	c.log.Infof("creating AAD application")
 	appID, appSecret, err := c.createApplication(ctx, "aro-"+clusterName)
 	if err != nil {
-		return err
+		return AppDetails{}, err
 	}
 
 	c.log.Infof("creating service principal")
 	spID, err := c.createServicePrincipal(ctx, appID)
 	if err != nil {
-		return err
+		return AppDetails{}, err
 	}
 
-	return os.WriteFile("clusterapp.env", []byte(fmt.Sprintf("export AZURE_CLUSTER_SERVICE_PRINCIPAL_ID=%s\nexport AZURE_CLUSTER_APP_ID=%s\nexport AZURE_CLUSTER_APP_SECRET=%s", spID, appID, appSecret)), 0o600)
+	return AppDetails{appID, appSecret, spID}, nil
 }
 
 func (c *Cluster) DeleteApp(ctx context.Context) error {
@@ -170,20 +176,15 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		return nil
 	}
 
-	err = env.ValidateVars(
-		"AZURE_FP_SERVICE_PRINCIPAL_ID",
-		"AZURE_CLUSTER_SERVICE_PRINCIPAL_ID",
-		"AZURE_CLUSTER_APP_ID",
-		"AZURE_CLUSTER_APP_SECRET",
-	)
+	fpSPId := os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")
+	if fpSPId == "" {
+		return fmt.Errorf("fp service principal id is not found")
+	}
+
+	appDetails, err := c.createApp(ctx, clusterName)
 	if err != nil {
 		return err
 	}
-
-	fpSPID := os.Getenv("AZURE_FP_SERVICE_PRINCIPAL_ID")
-	spID := os.Getenv("AZURE_CLUSTER_SERVICE_PRINCIPAL_ID")
-	appID := os.Getenv("AZURE_CLUSTER_APP_ID")
-	appSecret := os.Getenv("AZURE_CLUSTER_APP_SECRET")
 
 	visibility := api.VisibilityPublic
 
@@ -240,8 +241,8 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	parameters := map[string]*arm.ParametersParameter{
 		"clusterName":               {Value: clusterName},
 		"ci":                        {Value: c.ci},
-		"clusterServicePrincipalId": {Value: spID},
-		"fpServicePrincipalId":      {Value: fpSPID},
+		"clusterServicePrincipalId": {Value: appDetails.spId},
+		"fpServicePrincipalId":      {Value: fpSPId},
 		"vnetAddressPrefix":         {Value: addressPrefix},
 		"masterAddressPrefix":       {Value: masterSubnet},
 		"workerAddressPrefix":       {Value: workerSubnet},
@@ -292,7 +293,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		{"/subscriptions/" + c.env.SubscriptionID() + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/routeTables/" + clusterName + "-rt", rbac.RoleNetworkContributor},
 		{diskEncryptionSetID, rbac.RoleReader},
 	} {
-		for _, principalID := range []string{spID, fpSPID} {
+		for _, principalID := range []string{appDetails.spId, fpSPId} {
 			for i := 0; i < 5; i++ {
 				_, err = c.roleassignments.Create(
 					ctx,
@@ -331,7 +332,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	}
 
 	c.log.Info("creating cluster")
-	err = c.createCluster(ctx, vnetResourceGroup, clusterName, appID, appSecret, diskEncryptionSetID, visibility, osClusterVersion)
+	err = c.createCluster(ctx, vnetResourceGroup, clusterName, appDetails.applicationId, appDetails.applicationSecret, diskEncryptionSetID, visibility, osClusterVersion)
 
 	if err != nil {
 		return err

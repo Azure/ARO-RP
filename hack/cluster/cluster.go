@@ -25,7 +25,7 @@ const (
 
 func run(ctx context.Context, log *logrus.Entry) error {
 	if len(os.Args) != 2 {
-		return fmt.Errorf("usage: CLUSTER=x %s {create,createApp,deleteApp,delete}", os.Args[0])
+		return fmt.Errorf("usage: CLUSTER=x %s {create,deleteApp,delete}", os.Args[0])
 	}
 
 	if err := env.ValidateVars(Cluster); err != nil {
@@ -59,8 +59,6 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	switch strings.ToLower(os.Args[1]) {
 	case "create":
 		return c.Create(ctx, vnetResourceGroup, clusterName, osClusterVersion)
-	case "createapp":
-		return c.CreateApp(ctx, clusterName)
 	case "deleteapp":
 		return c.DeleteApp(ctx)
 	case "delete":
