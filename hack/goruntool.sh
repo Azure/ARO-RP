@@ -11,6 +11,7 @@ declare -A packages=(
     ["controller-gen"]="sigs.k8s.io/controller-tools/cmd/controller-gen@v0.5.0"
     ["client-gen"]="k8s.io/code-generator/cmd/client-gen@v0.25.16"
     ["go-bindata"]="github.com/go-bindata/go-bindata/go-bindata@v3.1.2+incompatible"
+    ["gocov-xml"]="github.com/AlekSi/gocov-xml@v1.1.0"
 )
 
 # shift off the first argument that we will use

@@ -61,6 +61,12 @@ jobs:
 
       - script: |
           set -xe
+          hack/goruntool.sh install
+        displayName: Install golang tools
+        target: golang
+
+      - script: |
+          set -xe
           make generate
           [[ -z "$(git status -s)" ]]
         displayName: ⚙️ Run Golang code generate
@@ -87,7 +93,7 @@ jobs:
 
       - script: |
           set -xe
-          go run github.com/axw/gocov/gocov@v1.1.0 convert cover.out | go run github.com/AlekSi/gocov-xml@v1.1.0 > coverage.xml
+          ./hack/goruntool.sh gocov-xml convert cover.out | ./hack/goruntool.sh gocov-xml > coverage.xml
         displayName: ⚙️ Process Reports
         condition: succeededOrFailed()
         target: golang
