@@ -267,7 +267,7 @@
             "name": "[concat(resourceGroup().name, '-disk-encryption-set')]",
             "type": "Microsoft.Compute/diskEncryptionSets",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2024-03-01",
+            "apiVersion": "2021-04-01",
             "dependsOn": [
                 "[resourceId('Microsoft.KeyVault/vaults/keys', concat(take(resourceGroup().name,10), '-dev-sharedKV'), concat(resourceGroup().name, '-disk-encryption-key'))]"
             ]
