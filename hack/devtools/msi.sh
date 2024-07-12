@@ -15,5 +15,5 @@ base64EncodedCert=$(get_mock_msi_cert "$sp")
 
 # Print the extracted values
 echo "Client ID: $clientID"
-echo "Tenant: $tenantID"
+echo "Tenant ID: $tenantID"
 echo "Base64 Encoded Certificate: $base64EncodedCert"

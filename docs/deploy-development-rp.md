@@ -69,7 +69,7 @@ mock a cluster MSI. Save the output values for `Client ID`, `Base64 Encoded Cert
      https://localhost:8443/.
    * `MOCK_MSI_CLIENT_ID`: Client ID for service principal that mocks cluster MSI (see previous step).
    * `MOCK_MSI_CERT`: Base64 encoded certificate for service principal that mocks cluster MSI (see previous step).
-   * `MOCK_MSI_TENANT`: Tenant ID for service principal that mocks cluster MSI (see previous step).
+   * `MOCK_MSI_TENANT_ID`: Tenant ID for service principal that mocks cluster MSI (see previous step).
 
 1. Create your own RP database:
 
