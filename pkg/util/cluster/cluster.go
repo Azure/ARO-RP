@@ -387,7 +387,10 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			c.deleteVnetPeerings(ctx, vnetResourceGroup),
 		)
 	case c.ci: // Prod E2E
-		errs = append(errs, c.deleteClusterResourceGroup(ctx, vnetResourceGroup))
+		errs = append(errs,
+			c.deleteClusterResourceGroup(ctx, vnetResourceGroup),
+			c.DeleteApp(ctx),
+		)
 	default:
 		errs = append(errs,
 			c.deleteRoleAssignments(ctx, vnetResourceGroup, clusterName),

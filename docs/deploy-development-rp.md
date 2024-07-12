@@ -127,7 +127,6 @@
    
       ```bash
       CLUSTER=<cluster-name> go run ./hack/cluster delete
-      CLUSTER=<cluster-name> go run ./hack/cluster deleteapp
       ```
 
       By default, a public cluster will be created. In order to create a private cluster, set the `PRIVATE_CLUSTER` environment variable to `true` prior to creation. Internet access from the cluster can also be restricted by setting the `NO_INTERNET` environment variable to `true`.

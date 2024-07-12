@@ -211,7 +211,6 @@ delete_e2e_cluster() {
         ./cluster delete
     else
         go run ./hack/cluster delete
-        go run ./hack/cluster deleteApp
     fi
 }
 
