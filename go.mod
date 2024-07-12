@@ -1,6 +1,8 @@
 module github.com/Azure/ARO-RP
 
-go 1.20
+go 1.22
+
+toolchain go1.22.5
 
 require (
 	github.com/Azure/azure-sdk-for-go v63.1.0+incompatible
@@ -147,6 +149,7 @@ require (
 	github.com/exponent-io/jsonpath v0.0.0-20210407135951-1de76d718b3f // indirect
 	github.com/fatih/color v1.15.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
