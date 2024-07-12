@@ -45,6 +45,7 @@ deploy_env_dev() {
             "proxyImage=arointsvc.azurecr.io/proxy:latest" \
             "proxyImageAuth=$(jq -r '.auths["arointsvc.azurecr.io"].auth' <<<$PULL_SECRET)" \
             "proxyKey=$(base64 -w0 <secrets/proxy.key)" \
+			"rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_RP_CLIENT_ID'" --query '[].id' -o tsv)" \
             "sshPublicKey=$(<secrets/proxy_id_rsa.pub)" \
             "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" >/dev/null
 }

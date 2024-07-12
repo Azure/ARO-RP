@@ -28,6 +28,9 @@
             "type": "string",
             "defaultValue": "Standard"
         },
+        "rpServicePrincipalId": {
+            "type": "string"
+        },
         "sshPublicKey": {
             "type": "string"
         },
@@ -200,7 +203,7 @@
             "apiVersion": "2020-08-01"
         },
         {
-            "name": "[concat(take(resourceGroup().name,10), '-dev-sharedKV')]",
+            "name": "[concat(take(resourceGroup().name,10), '-dev-disk-enc')]",
             "type": "Microsoft.KeyVault/vaults",
             "location": "[resourceGroup().location]",
             "properties": {
@@ -220,16 +223,16 @@
                 "kty": "RSA",
                 "keySize": 4096
             },
-            "name": "[concat(concat(take(resourceGroup().name,10), '-dev-sharedKV'), '/', concat(resourceGroup().name, '-disk-encryption-key'))]",
+            "name": "[concat(concat(take(resourceGroup().name,10), '-dev-disk-enc'), '/', concat(resourceGroup().name, '-disk-encryption-key'))]",
             "type": "Microsoft.KeyVault/vaults/keys",
             "location": "[resourceGroup().location]",
             "apiVersion": "2019-09-01",
             "dependsOn": [
-                "[resourceId('Microsoft.KeyVault/vaults', concat(take(resourceGroup().name,10), '-dev-sharedKV'))]"
+                "[resourceId('Microsoft.KeyVault/vaults', concat(take(resourceGroup().name,10), '-dev-disk-enc'))]"
             ]
         },
         {
-            "name": "[concat(concat(take(resourceGroup().name,10), '-dev-sharedKV'), '/add')]",
+            "name": "[concat(concat(take(resourceGroup().name,10), '-dev-disk-enc'), '/add')]",
             "type": "Microsoft.KeyVault/vaults/accessPolicies",
             "location": "[resourceGroup().location]",
             "properties": {
@@ -259,9 +262,9 @@
             "properties": {
                 "activeKey": {
                     "sourceVault": {
-                        "id": "[resourceId('Microsoft.KeyVault/vaults', concat(take(resourceGroup().name,10), '-dev-sharedKV'))]"
+                        "id": "[resourceId('Microsoft.KeyVault/vaults', concat(take(resourceGroup().name,10), '-dev-disk-enc'))]"
                     },
-                    "keyUrl": "[reference(resourceId('Microsoft.KeyVault/vaults/keys', concat(take(resourceGroup().name,10), '-dev-sharedKV'), concat(resourceGroup().name, '-disk-encryption-key')), '2019-09-01', 'Full').properties.keyUriWithVersion]"
+                    "keyUrl": "[reference(resourceId('Microsoft.KeyVault/vaults/keys', concat(take(resourceGroup().name,10), '-dev-disk-enc'), concat(resourceGroup().name, '-disk-encryption-key')), '2019-09-01', 'Full').properties.keyUriWithVersion]"
                 }
             },
             "name": "[concat(resourceGroup().name, '-disk-encryption-set')]",
@@ -269,7 +272,37 @@
             "location": "[resourceGroup().location]",
             "apiVersion": "2021-04-01",
             "dependsOn": [
-                "[resourceId('Microsoft.KeyVault/vaults/keys', concat(take(resourceGroup().name,10), '-dev-sharedKV'), concat(resourceGroup().name, '-disk-encryption-key'))]"
+                "[resourceId('Microsoft.KeyVault/vaults/keys', concat(take(resourceGroup().name,10), '-dev-disk-enc'), concat(resourceGroup().name, '-disk-encryption-key'))]"
+            ]
+        },
+        {
+            "name": "[concat(take(resourceGroup().name,10), '-dev-msi')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                    "family": "A",
+                    "name": "standard"
+                },
+                "accessPolicies": [],
+                "enabledForDiskEncryption": true,
+                "enablePurgeProtection": true
+            },
+            "apiVersion": "2019-09-01"
+        },
+        {
+            "name": "[concat(concat(take(resourceGroup().name,10), '-dev-msi'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.KeyVault/vaults', concat(take(resourceGroup().name,10), '-dev-msi')), parameters('rpServicePrincipalId'), 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7'))]",
+            "type": "Microsoft.KeyVault/vaults/providers/roleAssignments",
+            "properties": {
+                "scope": "[resourceId('Microsoft.KeyVault/vaults', concat(take(resourceGroup().name,10), '-dev-msi'))]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7')]",
+                "principalId": "[parameters('rpServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2018-09-01-preview",
+            "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', concat(take(resourceGroup().name,10), '-dev-msi'))]"
             ]
         },
         {

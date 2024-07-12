@@ -15,6 +15,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/rbac"
 )
 
 // devLBInternal is needed for defining a healthprobe.
@@ -443,4 +444,26 @@ func (g *generator) devDiskEncryptionKeyVaultAccessPolicy() *arm.Resource {
 		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
 		DependsOn:  []string{fmt.Sprintf("[resourceId('Microsoft.Compute/diskEncryptionSets', %s)]", sharedDiskEncryptionSetName)},
 	}
+}
+
+const (
+	SharedMSIKeyVaultName       = "concat(take(resourceGroup().name,10), '" + SharedMSIKeyVaultNameSuffix + "')"
+	SharedMSIKeyVaultNameSuffix = "-dev-msi"
+)
+
+// devMSIKeyvault returns an arm.Resource representing a shared key vault to be used for persisting mock MSI certificates when
+// the RP is running in local development mode.
+func (g *generator) devMSIKeyvault() *arm.Resource {
+	return g.keyVault(fmt.Sprintf("[%s]", SharedMSIKeyVaultName), &[]mgmtkeyvault.AccessPolicyEntry{}, nil, nil)
+}
+
+// devMSIKeyvaultRBAC returns an arm.Resource representing a role assignment that grants the local development mode's mock RP identity
+// the KeyVaultSecretsOfficer role on the shared dev MSI key vault.
+func (g *generator) devMSIKeyvaultRBAC() *arm.Resource {
+	return rbac.ResourceRoleAssignment(
+		rbac.RoleKeyVaultSecretsOfficer,
+		"parameters('rpServicePrincipalId')",
+		"Microsoft.KeyVault/vaults",
+		SharedMSIKeyVaultName,
+	)
 }
