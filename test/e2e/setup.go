@@ -445,7 +445,7 @@ func done(ctx context.Context) error {
 			return err
 		}
 
-		err = cluster.Delete(ctx, vnetResourceGroup, clusterName)
+		err = cluster.Delete(ctx, log, vnetResourceGroup, clusterName)
 		if err != nil {
 			return err
 		}

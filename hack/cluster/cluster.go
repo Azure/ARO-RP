@@ -54,13 +54,14 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	c, err := cluster.New(log, env, os.Getenv("CI") != "")
 	if err != nil {
 		return err
+
 	}
 
 	switch strings.ToLower(os.Args[1]) {
 	case "create":
 		return c.Create(ctx, vnetResourceGroup, clusterName, osClusterVersion)
 	case "delete":
-		return c.Delete(ctx, vnetResourceGroup, clusterName)
+		return c.Delete(ctx, log, vnetResourceGroup, clusterName)
 	default:
 		return fmt.Errorf("invalid command %s", os.Args[1])
 	}

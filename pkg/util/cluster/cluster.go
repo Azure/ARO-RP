@@ -136,7 +136,7 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 type AppDetails struct {
 	applicationId     string
 	applicationSecret string
-	spId              string
+	SPId              string
 }
 
 func (c *Cluster) createApp(ctx context.Context, clusterName string) (applicationDetails AppDetails, err error) {
@@ -153,17 +153,6 @@ func (c *Cluster) createApp(ctx context.Context, clusterName string) (applicatio
 	}
 
 	return AppDetails{appID, appSecret, spID}, nil
-}
-
-func (c *Cluster) deleteApp(ctx context.Context) error {
-	err := env.ValidateVars(
-		"AZURE_CLUSTER_APP_ID",
-	)
-	if err != nil {
-		return err
-	}
-
-	return c.deleteApplication(ctx, os.Getenv("AZURE_CLUSTER_APP_ID"))
 }
 
 func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName string, osClusterVersion string) error {
@@ -241,7 +230,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	parameters := map[string]*arm.ParametersParameter{
 		"clusterName":               {Value: clusterName},
 		"ci":                        {Value: c.ci},
-		"clusterServicePrincipalId": {Value: appDetails.spId},
+		"clusterServicePrincipalId": {Value: appDetails.SPId},
 		"fpServicePrincipalId":      {Value: fpSPId},
 		"vnetAddressPrefix":         {Value: addressPrefix},
 		"masterAddressPrefix":       {Value: masterSubnet},
@@ -293,7 +282,7 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 		{"/subscriptions/" + c.env.SubscriptionID() + "/resourceGroups/" + vnetResourceGroup + "/providers/Microsoft.Network/routeTables/" + clusterName + "-rt", rbac.RoleNetworkContributor},
 		{diskEncryptionSetID, rbac.RoleReader},
 	} {
-		for _, principalID := range []string{appDetails.spId, fpSPId} {
+		for _, principalID := range []string{appDetails.SPId, fpSPId} {
 			for i := 0; i < 5; i++ {
 				_, err = c.roleassignments.Create(
 					ctx,
@@ -376,7 +365,7 @@ func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, wor
 	return
 }
 
-func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName string) error {
+func (c *Cluster) Delete(ctx context.Context, log *logrus.Entry, vnetResourceGroup, clusterName string) error {
 	var errs []error
 
 	switch {
@@ -387,10 +376,17 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			c.deleteVnetPeerings(ctx, vnetResourceGroup),
 		)
 	case c.ci: // Prod E2E
-		errs = append(errs,
-			c.deleteClusterResourceGroup(ctx, vnetResourceGroup),
-			c.deleteApp(ctx),
-		)
+		oc, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
+		if err != nil {
+			log.Errorf("Prod E2E cluster %s not found in RG %s", clusterName, vnetResourceGroup)
+			errs = append(errs, err)
+		} else {
+			errs = append(errs,
+				c.deleteRoleAssignments(ctx, vnetResourceGroup, clusterName),
+				c.deleteClusterResourceGroup(ctx, vnetResourceGroup),
+				c.deleteApplication(ctx, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID),
+			)
+		}
 	default:
 		errs = append(errs,
 			c.deleteRoleAssignments(ctx, vnetResourceGroup, clusterName),
