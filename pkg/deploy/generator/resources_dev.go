@@ -358,16 +358,16 @@ func (g *generator) devVPN() *arm.Resource {
 }
 
 const (
-	sharedKeyVaultName                = "concat(take(resourceGroup().name,10), '" + SharedKeyVaultNameSuffix + "')"
-	sharedDiskEncryptionSetName       = "concat(resourceGroup().name, '" + SharedDiskEncryptionSetNameSuffix + "')"
-	sharedDiskEncryptionKeyName       = "concat(resourceGroup().name, '-disk-encryption-key')"
-	SharedKeyVaultNameSuffix          = "-dev-sharedKV"
-	SharedDiskEncryptionSetNameSuffix = "-disk-encryption-set"
+	sharedDiskEncryptionKeyVaultName       = "concat(take(resourceGroup().name,10), '" + SharedDiskEncryptionKeyVaultNameSuffix + "')"
+	sharedDiskEncryptionSetName            = "concat(resourceGroup().name, '" + SharedDiskEncryptionSetNameSuffix + "')"
+	sharedDiskEncryptionKeyName            = "concat(resourceGroup().name, '-disk-encryption-key')"
+	SharedDiskEncryptionKeyVaultNameSuffix = "-dev-disk-enc"
+	SharedDiskEncryptionSetNameSuffix      = "-disk-encryption-set"
 )
 
 // shared keyvault for keys used for disk encryption sets when creating clusters locally
 func (g *generator) devDiskEncryptionKeyvault() *arm.Resource {
-	return g.keyVault(fmt.Sprintf("[%s]", sharedKeyVaultName), &[]mgmtkeyvault.AccessPolicyEntry{}, nil, nil)
+	return g.keyVault(fmt.Sprintf("[%s]", sharedDiskEncryptionKeyVaultName), &[]mgmtkeyvault.AccessPolicyEntry{}, nil, nil)
 }
 
 func (g *generator) devDiskEncryptionKey() *arm.Resource {
@@ -377,7 +377,7 @@ func (g *generator) devDiskEncryptionKey() *arm.Resource {
 			KeySize: to.Int32Ptr(4096),
 		},
 
-		Name:     to.StringPtr(fmt.Sprintf("[concat(%s, '/', %s)]", sharedKeyVaultName, sharedDiskEncryptionKeyName)),
+		Name:     to.StringPtr(fmt.Sprintf("[concat(%s, '/', %s)]", sharedDiskEncryptionKeyVaultName, sharedDiskEncryptionKeyName)),
 		Type:     to.StringPtr("Microsoft.KeyVault/vaults/keys"),
 		Location: to.StringPtr("[resourceGroup().location]"),
 	}
@@ -385,7 +385,7 @@ func (g *generator) devDiskEncryptionKey() *arm.Resource {
 	return &arm.Resource{
 		Resource:   key,
 		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
-		DependsOn:  []string{fmt.Sprintf("[resourceId('Microsoft.KeyVault/vaults', %s)]", sharedKeyVaultName)},
+		DependsOn:  []string{fmt.Sprintf("[resourceId('Microsoft.KeyVault/vaults', %s)]", sharedDiskEncryptionKeyVaultName)},
 	}
 }
 
@@ -393,9 +393,9 @@ func (g *generator) devDiskEncryptionSet() *arm.Resource {
 	diskEncryptionSet := &mgmtcompute.DiskEncryptionSet{
 		EncryptionSetProperties: &mgmtcompute.EncryptionSetProperties{
 			ActiveKey: &mgmtcompute.KeyForDiskEncryptionSet{
-				KeyURL: to.StringPtr(fmt.Sprintf("[reference(resourceId('Microsoft.KeyVault/vaults/keys', %s, %s), '%s', 'Full').properties.keyUriWithVersion]", sharedKeyVaultName, sharedDiskEncryptionKeyName, azureclient.APIVersion("Microsoft.KeyVault"))),
+				KeyURL: to.StringPtr(fmt.Sprintf("[reference(resourceId('Microsoft.KeyVault/vaults/keys', %s, %s), '%s', 'Full').properties.keyUriWithVersion]", sharedDiskEncryptionKeyVaultName, sharedDiskEncryptionKeyName, azureclient.APIVersion("Microsoft.KeyVault"))),
 				SourceVault: &mgmtcompute.SourceVault{
-					ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.KeyVault/vaults', %s)]", sharedKeyVaultName)),
+					ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.KeyVault/vaults', %s)]", sharedDiskEncryptionKeyVaultName)),
 				},
 			},
 		},
@@ -410,7 +410,7 @@ func (g *generator) devDiskEncryptionSet() *arm.Resource {
 		Resource:   diskEncryptionSet,
 		APIVersion: azureclient.APIVersion("Microsoft.Compute/diskEncryptionSets"),
 		DependsOn: []string{
-			fmt.Sprintf("[resourceId('Microsoft.KeyVault/vaults/keys', %s, %s)]", sharedKeyVaultName, sharedDiskEncryptionKeyName),
+			fmt.Sprintf("[resourceId('Microsoft.KeyVault/vaults/keys', %s, %s)]", sharedDiskEncryptionKeyVaultName, sharedDiskEncryptionKeyName),
 		},
 	}
 }
@@ -433,7 +433,7 @@ func (g *generator) devDiskEncryptionKeyVaultAccessPolicy() *arm.Resource {
 			},
 		},
 
-		Name:     to.StringPtr(fmt.Sprintf("[concat(%s, '/add')]", sharedKeyVaultName)),
+		Name:     to.StringPtr(fmt.Sprintf("[concat(%s, '/add')]", sharedDiskEncryptionKeyVaultName)),
 		Type:     to.StringPtr("Microsoft.KeyVault/vaults/accessPolicies"),
 		Location: to.StringPtr("[resourceGroup().location]"),
 	}
