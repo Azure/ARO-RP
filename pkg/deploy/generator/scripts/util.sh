@@ -4,6 +4,10 @@
 # e. g. scp copying the script to a test VM
 # During normal deployment operations, the other util-*.sh files are prefixed to the VMSS scripts
 
+if [ "${DEBUG:-false}" == true ]; then
+    set -x
+fi
+
 util_common="util-common.sh"
 if [ -f "$util_common" ]; then
     # shellcheck source=util-common.sh

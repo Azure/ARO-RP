@@ -13,48 +13,23 @@ configure_sshd() {
     systemctl reload sshd.service || abort "sshd failed to reload"
 }
 
-# configure_firewalld_rules
-# args:
-# 1) ports - nameref, string array; ports to be enabled.
-#       Ports must be postfixed with /tcp or /udp
-configure_firewalld_rules() {
-    local -n ports="$1"
-    log "starting"
-
-    # https://access.redhat.com/security/cve/cve-2020-13401
-    local -r prefix="/etc/sysctl.d"
-    local -r disable_accept_ra_conf_filename="$prefix/02-disable-accept-ra.conf"
-    local -r disable_accept_ra_conf_file="net.ipv6.conf.all.accept_ra=0"
-
-    write_file disable_accept_ra_conf_filename disable_accept_ra_conf_file true
-
-    local -r disable_core_filename="$prefix/01-disable-core.conf"
-    local -r disable_core_file="kernel.core_pattern = |/bin/true
-    "
-    write_file disable_core_filename disable_core_file true
-
-    sysctl --system
-
-    log "Enabling ports ${ports[*]} on default firewalld zone"
-    # shellcheck disable=SC2068
-    for port in ${ports[@]}; do
-        log "Enabling port $port now"
-        firewall-cmd "--add-port=$port"
-    done
-
-    log "Writing runtime config to permanent config"
-    firewall-cmd --runtime-to-permanent
-}
-
 # configure_logrotate clobbers /etc/logrotate.conf
 # args:
 # 1) dropin_files - nameref, associative array, optional; logrotate files to write to /etc/logrotate.d
 #       Key name dictates filenames written to /etc/logrotate.d.
+# Example: 
+#   Key dictates the filename written in /etc/logrotate.d
+#   shellcheck disable=SC2034
+#   local -rA logrotate_dropins=(
+#      ["gateway"]="$gateway_log_file"
+#   )
 configure_logrotate() {
     local -n dropin_files="${1:-empty_str}"
     log "starting"
 
+    # shellcheck disable=SC2034
     local -r logrotate_conf_filename='/etc/logrotate.conf'
+    # shellcheck disable=SC2034
     local -r logrotate_conf_file='# see "man logrotate" for details
 # rotate log files weekly
 weekly
@@ -95,7 +70,9 @@ include /etc/logrotate.d
         local -r logrotate_d="/etc/logrotate.d"
         log "Writing logrotate files to $logrotate_d"
         for dropin_name in "${!dropin_files[@]}"; do
+            # shellcheck disable=SC2034
             local -r dropin_filename="$logrotate_d/$dropin_name"
+            # shellcheck disable=SC2034
             local -r dropin_file="${dropin_files["$dropin_name"]}"
             write_file dropin_filename dropin_file true
         done
@@ -105,14 +82,13 @@ include /etc/logrotate.d
 # pull_container_images
 # args:
 # 1) pull_images - nameref, string array
-# 2) az_login - boolean; login with az login and az acr login
-# 3) registry_conf - nameref, string, optional; path to docker/podman configuration file
+# 2) registry_conf - nameref, string, optional; path to docker/podman configuration file
 pull_container_images() {
     local -n pull_images="$1"
-    local -r az_login="${2}"
-    local -n registry_conf="${3:-empty_str}"
+    local -n registry_conf="${2:-empty_str}"
     log "starting"
 
+    # shellcheck disable=SC2034
     local -ri retry_time=30
     # The managed identity that the VM runs as only has a single roleassignment.
     # This role assignment is ACRPull which is not necessarily present in the
@@ -120,17 +96,15 @@ pull_container_images() {
     # role assignments scoped on the subscription we're deploying into, it will
     # not show on az login -i, which is why the below line is commented.
     # az account set -s "$SUBSCRIPTIONID"
-    if $az_login; then
-        cmd=(
-            az
-            login
-            -i
-            --allow-no-subscriptions
-        )
+    cmd=(
+        az
+        login
+        -i
+        --allow-no-subscriptions
+    )
 
-        log "Running az login with retries"
-        retry cmd retry_time
-    fi
+    log "Running az login with retries"
+    retry cmd retry_time
 
     # Suppress emulation output for podman instead of docker for az acr compatability
     mkdir -p /etc/containers/
@@ -145,18 +119,17 @@ pull_container_images() {
     fi
 
     log "logging into prod acr"
-    if $az_login; then
-        cmd=(
-            az
-            acr
-            login
-            --name
-            "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
-        )
+    cmd=(
+        az
+        acr
+        login
+        --name
+        # TODO replace this with variable expansion
+        # Reference: https://www.shellcheck.net/wiki/SC2001
+        "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
+    )
 
-        log "Running az login with retries"
-        retry cmd retry_time
-    fi
+    retry cmd retry_time
 
     # shellcheck disable=SC2068
     for i in ${pull_images[@]}; do
@@ -171,37 +144,14 @@ pull_container_images() {
         retry cmd retry_time
     done
 
-    if $az_login; then
-        cmd=(
-            az
-            logout
-        )
+    # shellcheck disable=SC2034
+    cmd=(
+        az
+        logout
+    )
 
-        log "Running az logout with retries"
-        retry cmd retry_time
-    fi
-}
-
-# configure_disk_partitions
-configure_disk_partitions() {
-    log "starting"
-    log "extending partition table"
-
-    # Linux block devices are inconsistently named
-    # it's difficult to tie the lvm pv to the physical disk using /dev/disk files, which is why lvs is used here
-    local -r physical_disk="$(lvs -o devices -a | head -n2 | tail -n1 | cut -d ' ' -f 3 | cut -d \( -f 1 | tr -d '[:digit:]')"
-    growpart "$physical_disk" 2
-
-    log "extending filesystems"
-    log "extending root lvm"
-    lvextend -l +20%FREE /dev/rootvg/rootlv
-    log "growing root filesystem"
-    xfs_growfs /
-
-    log "extending var lvm"
-    lvextend -l +100%FREE /dev/rootvg/varlv
-    log "growing var filesystem"
-    xfs_growfs /var
+    log "Running az logout with retries"
+    retry cmd retry_time
 }
 
 # configure_certs
@@ -244,7 +194,9 @@ configure_certs() {
 
     # we leave clientId blank as long as only 1 managed identity assigned to vmss
     # if we have more than 1, we will need to populate with clientId used for off-node scanning
+    # shellcheck disable=SC2034
     local -r nodescan_agent_filename="/etc/default/vsa-nodescan-agent.config"
+    # shellcheck disable=SC2034
     local -r nodescan_agent_file="{
     \"Nice\": 19,
     \"Timeout\": 10800,
@@ -290,4 +242,59 @@ create_required_dirs() {
         log "Creating directory $d"
         mkdir -p "$d" || abort "failed to create directory $d"
     done
+}
+
+# create_podman_networks()
+# args:
+# 1) nets - nameref, associative array; Networks to be created
+#       Key is the network name, value is the subnet with cidr notation
+create_podman_networks() {
+    local -n nets="$1"
+    log "starting"
+
+    # shellcheck disable=SC2068
+    for n in ${!nets[@]}; do
+        log "Creating podman network \"$n\" with subnet \"${nets[$n]}\""
+        podman network \
+            create \
+            --subnet "${nets["$n"]}" \
+            "$n"
+    done
+}
+
+# firewalld_configure_backend
+firewalld_configure_backend() {
+    log "starting"
+
+    log "Changing firewalld backend to iptables"
+    conf_file="/etc/firewalld/firewalld.conf"
+    sed -i 's/FirewallBackend=nftables/FirewallBackend=iptables/g' "$conf_file"
+}
+
+# firewalld_configure
+# args:
+# 1) ports - nameref, string array; ports to be enabled.
+#       Ports must be postfixed with /tcp or /udp
+firewalld_configure() {
+    local -n ports="$1"
+    log "starting"
+
+    firewalld_configure_backend
+
+    # shellcheck disable=SC2034
+    local -ra service=(
+        "firewalld"
+    )
+    enable_services service
+
+    log "Enabling ports ${ports[*]} on default firewalld zone"
+    # shellcheck disable=SC2068
+    for port in ${ports[@]}; do
+        log "Enabling port $port now"
+        firewall-cmd "--add-port=$port" \
+                     --permanent
+    done
+
+    log "Writing runtime config to permanent config"
+    firewall-cmd --runtime-to-permanent
 }

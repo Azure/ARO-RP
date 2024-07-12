@@ -488,10 +488,11 @@ func (g *generator) rpVMSS() *arm.Resource {
 						},
 					},
 					StorageProfile: &mgmtcompute.VirtualMachineScaleSetStorageProfile{
+						// https://eng.ms/docs/products/azure-linux/gettingstarted/azurevm/azurevm
 						ImageReference: &mgmtcompute.ImageReference{
 							Publisher: to.StringPtr("MicrosoftCBLMariner"),
 							Offer:     to.StringPtr("cbl-mariner"),
-							Sku:       to.StringPtr("cbl-mariner-2-fips"),
+							Sku:       to.StringPtr("cbl-mariner-2-gen2-fips"),
 							Version:   to.StringPtr("latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
@@ -546,6 +547,23 @@ func (g *generator) rpVMSS() *arm.Resource {
 									Settings:                map[string]interface{}{},
 									ProtectedSettings: map[string]interface{}{
 										"script": script,
+									},
+								},
+							},
+							{
+								// az-secmonitor package no longer needs to be manually installed
+								// References:
+								// 		https://eng.ms/docs/products/azure-linux/gettingstarted/aks/monitoring
+								//		https://msazure.visualstudio.com/ASMDocs/_wiki/wikis/ASMDocs.wiki/179541/Linux-AzSecPack-AutoConfig-Onboarding-(manual-for-C-AI)?anchor=3.1.1-using-arm-template-resource-elements
+								Name: to.StringPtr("AzureMonitorLinuxAgent"),
+								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
+									Publisher:               to.StringPtr("Microsoft.Azure.Monitor"),
+									EnableAutomaticUpgrade:  to.BoolPtr(true),
+									AutoUpgradeMinorVersion: to.BoolPtr(true),
+									TypeHandlerVersion:      to.StringPtr("1.0"),
+									Type:                    to.StringPtr("AzureMonitorLinuxAgent"),
+									Settings: map[string]interface{}{
+										"GCS_AUTO_CONFIG": true,
 									},
 								},
 							},

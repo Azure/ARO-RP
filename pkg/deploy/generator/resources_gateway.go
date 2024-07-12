@@ -352,6 +352,23 @@ func (g *generator) gatewayVMSS() *arm.Resource {
 									},
 								},
 							},
+							{
+								// az-secmonitor package no longer needs to be manually installed
+								// References:
+								// 		https://eng.ms/docs/products/azure-linux/gettingstarted/aks/monitoring
+								//		https://msazure.visualstudio.com/ASMDocs/_wiki/wikis/ASMDocs.wiki/179541/Linux-AzSecPack-AutoConfig-Onboarding-(manual-for-C-AI)?anchor=3.1.1-using-arm-template-resource-elements
+								Name: to.StringPtr("AzureMonitorLinuxAgent"),
+								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
+									Publisher:               to.StringPtr("Microsoft.Azure.Monitor"),
+									EnableAutomaticUpgrade:  to.BoolPtr(true),
+									AutoUpgradeMinorVersion: to.BoolPtr(true),
+									TypeHandlerVersion:      to.StringPtr("1.0"),
+									Type:                    to.StringPtr("AzureMonitorLinuxAgent"),
+									Settings: map[string]interface{}{
+										"GCS_AUTO_CONFIG": true,
+									},
+								},
+							},
 						},
 					},
 					DiagnosticsProfile: &mgmtcompute.DiagnosticsProfile{

@@ -1,101 +1,94 @@
 #!/bin/bash
 
 set -o errexit \
+    -o pipefail \
     -o nounset
-
-if [ "${DEBUG:-false}" == true ]; then
-    set -x
-fi
 
 main() {
     # transaction attempt retry time in seconds
+    # shellcheck disable=SC2034
     local -ri retry_wait_time=30
+    # shellcheck disable=SC2068
     local -ri pkg_retry_count=60
 
     create_required_dirs
     configure_sshd
-    configure_rpm_repos retry_wait_time "$pkg_retry_count"
+    configure_rpm_repos retry_wait_time \
+                    "$pkg_retry_count"
 
+    # shellcheck disable=SC2034
     local -ar exclude_pkgs=(
         "-x WALinuxAgent"
         "-x WALinuxAgent-udev"
     )
 
-    dnf_update_pkgs exclude_pkgs retry_wait_time "$pkg_retry_count"
+    dnf_update_pkgs exclude_pkgs \
+                    retry_wait_time \
+                    "$pkg_retry_count"
 
-    local -ra rpm_keys=(
-        https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
-        https://packages.microsoft.com/keys/microsoft.asc
-    )
-
-    rpm_import_keys rpm_keys retry_wait_time "$pkg_retry_count"
-
-    local -ra repo_rpm_pkgs=(
-        https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-    )
-
-    dnf_install_pkgs repo_rpm_pkgs retry_wait_time "$pkg_retry_count"
-
+    # shellcheck disable=SC2034
     local -ra install_pkgs=(
-        at
-        clamav
-        azsec-clamav
-        azsec-monitor
         azure-cli
-        azure-mdsd
-        azure-security
+        clamav
+        "azsec-clamav"
+        "azure-cli"
+        "azure-mdsd"
+        "azure-security"
         podman
         podman-docker
         openssl-perl
         # hack - we are installing python3 on hosts due to an issue with Azure Linux Extensions https://github.com/Azure/azure-linux-extensions/pull/1505
         python3
+        # required for podman networking
+        firewalld
     )
 
-    dnf_install_pkgs install_pkgs retry_wait_time "$pkg_retry_count"
+    dnf_install_pkgs install_pkgs \
+                     retry_wait_time \
+                     "$pkg_retry_count"
+
+    # TODO remove this after configuring auto updates
     configure_dnf_cron_job
-    configure_disk_partitions
 
-    # log directory to be mounted to running container
-    local -r gateway_logdir='/var/log/aro-gateway'
-    local -r gateway_log_file="# Maximum log directory size is 100G with this configuration
-# Setting limit to 100G to allow space for other logging services
-# copytruncate is a critical option used to prevent logs from being shipped twice
-${gateway_logdir} {
-    size 20G
-    rotate 5
-    create 0600 root root
-    copytruncate
-    noolddir
-    compress
-}"
+    # shellcheck disable=SC2119
+    configure_logrotate
 
-    # Key dictates the filename written in /etc/logrotate.d
-    local -rA logrotate_dropins=(
-        ["gateway"]="$gateway_log_file"
-    )
-
-    configure_logrotate logrotate_dropins
-    configure_selinux
-
-    local -ra enable_ports=(
-        "80/tcp"
-        "8081/tcp"
-        "443/tcp"
-    )
-    configure_firewalld_rules enable_ports
-
-    # shellcheck disable=SC2153
+    # shellcheck disable=SC2034 disable=SC2153
     local -r mdmimage="${RPIMAGE%%/*}/${MDMIMAGE#*/}"
     local -r rpimage="$RPIMAGE"
+    # shellcheck disable=SC2034
     local -r fluentbit_image="$FLUENTBITIMAGE"
     # values are references to variables, they should not be dereferenced here
+    # shellcheck disable=SC2034
     local -rA aro_images=(
         ["mdm"]="mdmimage"
         ["rp"]="rpimage"
         ["fluentbit"]="fluentbit_image"
     )
-    pull_container_images aro_images true
 
+    pull_container_images aro_images
+
+    local -r aro_network="aro"
+    # shellcheck disable=SC2034
+    local -rA networks=(
+        ["$aro_network"]="192.168.254.0/24"
+    )
+    create_podman_networks networks
+
+    # shellcheck disable=SC2034
+    local -ra enable_ports=(
+        # RP gateway
+        "80/tcp"
+        "8081/tcp"
+        "443/tcp"
+        # JIT ssh
+        "22/tcp"
+    )
+
+    firewalld_configure enable_ports
+
+
+    # shellcheck disable=SC2034
     local -r fluentbit_conf_file="[INPUT]
 Name systemd
 Tag journald
@@ -113,40 +106,42 @@ DB /var/lib/fluent/journaldb
 	Match *
 	Port 29230"
 
+    # shellcheck disable=SC2034
     local -r aro_gateway_conf_file="ACR_RESOURCE_ID='$ACRRESOURCEID'
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
-AZURE_DBTOKEN_CLIENT_ID='$DBTOKENCLIENTID'
-DBTOKEN_URL='$DBTOKENURL'
 MDM_ACCOUNT='$RPMDMACCOUNT'
 MDM_NAMESPACE='${role_gateway^}'
 GATEWAY_DOMAINS='$GATEWAYDOMAINS'
 GATEWAY_FEATURES='$GATEWAYFEATURES'
 RPIMAGE='$rpimage'"
 
+    # shellcheck disable=SC2034
     local -r mdsd_config_version="$GATEWAYMDSDCONFIGVERSION"
+
     # values are references to variables, they should not be dereferenced here
+    # shellcheck disable=SC2034
     local -rA aro_configs=(
         ["gateway_config"]="aro_gateway_conf_file"
         ["fluentbit"]="fluentbit_conf_file"
         ["mdsd"]="mdsd_config_version"
-        ["log_dir"]="gateway_logdir"
+        ["network"]="aro_network"
     )
 
     configure_vmss_aro_services role_gateway \
                                 aro_images \
                                 aro_configs
 
+    # shellcheck disable=SC2034
     local -ra gateway_services=(
         "aro-gateway"
-        "auoms"
         "azsecd"
-        "azsecmond"
         "mdsd"
         "mdm"
         "chronyd"
         "fluentbit"
         "download-mdsd-credentials.timer"
         "download-mdm-credentials.timer"
+        "firewalld"
     )
 
     enable_services gateway_services

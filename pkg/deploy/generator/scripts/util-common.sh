@@ -2,6 +2,7 @@
 # Internal Functions and Constants
 
 # empty_str - constant; used by functions for optional nameref string arguements
+# shellcheck disable=SC2034
 declare -r empty_str=""
 
 # role_gateway is used to determine which VMSS is being bootstrapped
@@ -121,29 +122,11 @@ get_keyvault_suffix() {
     esac
 }
 
-# configure_selinux
-# args:
-# 1) relabel - boolean, optional; defaults to false
-#                                 Relabel filesystem context
-configure_selinux() {
-    local -r relabel="${1:-false}"
-    log "starting"
-
-    already_defined_ignore_error="File context for /var/log/journal(/.*)? already defined"
-    semanage fcontext -a -t var_log_t "/var/log/journal(/.*)?" || log "$already_defined_ignore_error"
-    chcon -R system_u:object_r:var_log_t:s0 /var/opt/microsoft/linuxmonagent
-
-    if $relabel; then
-        restorecon -RF /var/log/* || log "$already_defined_ignore_error"
-    fi
-}
-
 # reboot_vm restores all selinux file contexts, then schedules a reboot for one hour later
 # Reboots should scheduled after all VM extensions have had time to complete
 # Reference: https://learn.microsoft.com/en-us/azure/virtual-machines/extensions/custom-script-linux#tips
 reboot_vm() {
     log "starting"
 
-    configure_selinux "true"
     (shutdown -r now &)
 }

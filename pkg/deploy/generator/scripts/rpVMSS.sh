@@ -1,46 +1,35 @@
 #!/bin/bash
 
 set -o errexit \
+    -o pipefail \
     -o nounset
-
-if [ "${DEBUG:-false}" == true ]; then
-    set -x
-fi
 
 main() {
     # transaction attempt retry time in seconds
+    # shellcheck disable=SC2034
     local -ri retry_wait_time=30
     local -ri pkg_retry_count=60
 
     create_required_dirs
     configure_sshd
-    configure_rpm_repos retry_wait_time "$pkg_retry_count"
+    configure_rpm_repos retry_wait_time \
+                        "$pkg_retry_count"
 
+    # shellcheck disable=SC2034
     local -ar exclude_pkgs=(
         "-x WALinuxAgent"
         "-x WALinuxAgent-udev"
     )
 
-    dnf_update_pkgs exclude_pkgs retry_wait_time "$pkg_retry_count"
+    dnf_update_pkgs exclude_pkgs \
+                    retry_wait_time \
+                    "$pkg_retry_count"
 
-    local -ra rpm_keys=(
-        https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
-        https://packages.microsoft.com/keys/microsoft.asc
-    )
-
-    rpm_import_keys rpm_keys retry_wait_time "$pkg_retry_count"
-
-    local -ra repo_rpm_pkgs=(
-        https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-    )
-
-    dnf_install_pkgs repo_rpm_pkgs retry_wait_time "$pkg_retry_count"
-
+    # shellcheck disable=SC2034
     local -ra install_pkgs=(
-        at
+        azure-cli
         clamav
         azsec-clamav
-        azsec-monitor
         azure-cli
         azure-mdsd
         azure-security
@@ -49,38 +38,57 @@ main() {
         openssl-perl
         # hack - we are installing python3 on hosts due to an issue with Azure Linux Extensions https://github.com/Azure/azure-linux-extensions/pull/1505
         python3
+        # required for podman networking
+        firewalld
     )
 
-    dnf_install_pkgs install_pkgs retry_wait_time "$pkg_retry_count"
+    dnf_install_pkgs install_pkgs \
+                     retry_wait_time \
+                     "$pkg_retry_count"
+    # TODO remove this after configuring auto updates
     configure_dnf_cron_job
-    configure_disk_partitions
 
-    # Key dictates the filename written in /etc/logrotate.d
-    # local -rA logrotate_dropins=()
+    # shellcheck disable=SC2119
     configure_logrotate
-    configure_selinux
 
-    local -ra enable_ports=(
-        "443/tcp"
-        "444/tcp"
-        "2222/tcp"
-    )
-
-    configure_firewalld_rules enable_ports
-
-    # shellcheck disable=SC2153
+    # shellcheck disable=SC2153 disable=SC2034
     local -r mdmimage="${RPIMAGE%%/*}/${MDMIMAGE#*/}"
     local -r rpimage="$RPIMAGE"
+    # shellcheck disable=SC2034
     local -r fluentbit_image="$FLUENTBITIMAGE"
+    # shellcheck disable=SC2034
     local -rA aro_images=(
         ["mdm"]="mdmimage"
         ["rp"]="rpimage"
         ["fluentbit"]="fluentbit_image"
     )
-    pull_container_images aro_images true
+
+    pull_container_images aro_images
+
+    local -r aro_network="aro"
+    # shellcheck disable=SC2034
+    local -rA networks=(
+        ["$aro_network"]="192.168.254.0/24"
+    )
+    create_podman_networks networks
+
+    # shellcheck disable=SC2034
+    local -ra enable_ports=(
+        # RP frontend
+        "443/tcp"
+        # Portal web
+        "444/tcp"
+        # Portal ssh
+        "2222/tcp"
+        # JIT ssh
+        "22/tcp"
+    )
+
+    firewalld_configure enable_ports
 
     # LOGKIND appears to no longer be a variable that is carried over by the deploy pipeline
     # Substituting it with an empty string
+    # shellcheck disable=SC2034
     local -r fluentbit_conf_file="[INPUT]
 Name systemd
 Tag journald
@@ -110,25 +118,15 @@ DB /var/lib/fluent/journaldb
 	Match journald
 	Rule ${LOGKIND:-} ifxaudit ifxaudit false
 
-[FILTER]
-	Name rewrite_tag
-	Match journald
-	Rule $LOGKIND outboundRequests outboundRequests false
-
-[FILTER]
-	Name modify
-	Match  outboundRequests
-	Remove CLIENT_PRINCIPAL_NAME
-	Remove FILE
-	Remove COMPONENT
-
 [OUTPUT]
 	Name forward
 	Match *
 	Port 29230"
 
 
+    # shellcheck disable=SC2034
     local -r mdsd_config_version="$RPMDSDCONFIGVERSION"
+    # shellcheck disable=SC2034
     local -r aro_rp_conf_file="ACR_RESOURCE_ID='$ACRRESOURCEID'
 ADMIN_API_CLIENT_CERT_COMMON_NAME='$ADMINAPICLIENTCERTCOMMONNAME'
 ARM_API_CLIENT_CERT_COMMON_NAME='$ARMAPICLIENTCERTCOMMONNAME'
@@ -158,29 +156,31 @@ OIDC_STORAGE_ACCOUNT_NAME='$OIDCSTORAGEACCOUNTNAME'
 "
 
     # values are references to variables, they should not be dereferenced here
+    # shellcheck disable=SC2034
     local -rA aro_configs=(
         ["rp_config"]="aro_rp_conf_file"
         ["fluentbit"]="fluentbit_conf_file"
         ["mdsd"]="mdsd_config_version"
+        ["network"]="aro_network"
     )
 
     configure_vmss_aro_services role_rp \
                                 aro_images \
                                 aro_configs
 
+    # shellcheck disable=SC2034
     local -ra aro_services=(
         "aro-monitor"
         "aro-portal"
         "aro-rp"
-        "auoms"
         "azsecd"
-        "azsecmond"
         "mdsd"
         "mdm"
         "chronyd"
         "fluentbit"
         "download-mdsd-credentials.timer"
         "download-mdm-credentials.timer"
+        "firewalld"
     )
 
     enable_services aro_services

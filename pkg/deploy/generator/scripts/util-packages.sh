@@ -1,6 +1,23 @@
 #!/bin/bash
 # Repository and package management related functions
 
+configure_repo_mariner_extended() {
+    local -r extended_repo_config="https://packages.microsoft.com/cbl-mariner/2.0/prod/extended/x86_64/config.repo"
+    curl -sSL "$extended_repo_config" -o /etc/yum.repos.d/mariner-extended.repo
+
+    local -r repo_name="cbl-mariner2.0prodextendedx86_64"
+
+    local -ra cmd=(
+        dnf
+        update
+        -y
+        --enablerepo="$repo_name"
+    )
+
+    log "Enabling repo $repo_name"
+    retry cmd "$1" "${2:-}"
+}
+
 # configure_rpm_repos
 # New repositories should be added in their own functions, and called here
 # args:
@@ -9,8 +26,7 @@
 configure_rpm_repos() {
     log "starting"
 
-    configure_rhui_repo "$1" "${2:-}"
-    create_azure_rpm_repos
+    configure_repo_mariner_extended "$1" "${2:-1}"
 }
 
 # dnf_install_pkgs
@@ -68,46 +84,6 @@ dnf_update_pkgs() {
 
     log "Updating all packages excluding \"${excludes[*]:-}\""
     retry cmd "$2" "${3:-}"
-}
-
-
-# create_azure_rpm_repos creates /etc/yum.repos.d/azure.repo repository file
-create_azure_rpm_repos() {
-    log "starting"
-
-    local -r azure_repo_filename='/etc/yum.repos.d/azure.repo'
-    local -r azure_repo_file='[azure-cli]
-name=azure-cli
-baseurl=https://packages.microsoft.com/yumrepos/azure-cli
-enabled=yes
-gpgcheck=yes
-
-[azurecore]
-name=azurecore
-baseurl=https://packages.microsoft.com/yumrepos/azurecore
-enabled=yes
-gpgcheck=no'
-
-    write_file azure_repo_filename azure_repo_file true
-}
-
-# configure_rhui_repo enables all rhui-microsoft-azure* repos
-# args:
-# 1) wait_time - nameref, integer; Time to wait before retrying command
-# 2) retries - integer, optional; Amount of times to retry command, defaults to 5
-configure_rhui_repo() {
-    log "starting"
-
-    local -ra cmd=(
-        dnf
-        update
-        -y
-        --disablerepo='*'
-        --enablerepo='rhui-microsoft-azure*'
-    )
-
-    log "running RHUI package updates"
-    retry cmd "$1" "${2:-}"
 }
 
 # configure_dnf_cron_job
