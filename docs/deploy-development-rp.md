@@ -119,9 +119,6 @@
    1. use the create utility:
 
       ```bash
-      # Create the application to run the cluster as and load it
-      CLUSTER=<cluster-name> go run ./hack/cluster createapp
-      source clusterapp.env
       # Create the cluster
       CLUSTER=<cluster-name> go run ./hack/cluster create
       ```
