@@ -155,7 +155,7 @@ func (c *Cluster) createApp(ctx context.Context, clusterName string) (applicatio
 	return AppDetails{appID, appSecret, spID}, nil
 }
 
-func (c *Cluster) DeleteApp(ctx context.Context) error {
+func (c *Cluster) deleteApp(ctx context.Context) error {
 	err := env.ValidateVars(
 		"AZURE_CLUSTER_APP_ID",
 	)
@@ -389,7 +389,7 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 	case c.ci: // Prod E2E
 		errs = append(errs,
 			c.deleteClusterResourceGroup(ctx, vnetResourceGroup),
-			c.DeleteApp(ctx),
+			c.deleteApp(ctx),
 		)
 	default:
 		errs = append(errs,
