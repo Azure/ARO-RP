@@ -140,13 +140,13 @@ type AppDetails struct {
 }
 
 func (c *Cluster) createApp(ctx context.Context, clusterName string) (applicationDetails AppDetails, err error) {
-	c.log.Infof("creating AAD application")
+	c.log.Infof("Creating AAD application")
 	appID, appSecret, err := c.createApplication(ctx, "aro-"+clusterName)
 	if err != nil {
 		return AppDetails{}, err
 	}
 
-	c.log.Infof("creating service principal")
+	c.log.Infof("Creating service principal")
 	spID, err := c.createServicePrincipal(ctx, appID)
 	if err != nil {
 		return AppDetails{}, err
@@ -365,7 +365,8 @@ func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, wor
 	return
 }
 
-func (c *Cluster) Delete(ctx context.Context, log *logrus.Entry, vnetResourceGroup, clusterName string) error {
+func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName string) error {
+	c.log.Infof("Deleting cluster %s in RG %s", clusterName, vnetResourceGroup)
 	var errs []error
 
 	switch {
@@ -378,11 +379,10 @@ func (c *Cluster) Delete(ctx context.Context, log *logrus.Entry, vnetResourceGro
 	case c.ci: // Prod E2E
 		oc, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
 		if err != nil {
-			log.Errorf("Prod E2E cluster %s not found in RG %s", clusterName, vnetResourceGroup)
+			c.log.Errorf("Prod E2E cluster %s not found in RG %s", clusterName, vnetResourceGroup)
 			errs = append(errs, err)
 		} else {
 			errs = append(errs,
-				c.deleteRoleAssignments(ctx, vnetResourceGroup, clusterName),
 				c.deleteClusterResourceGroup(ctx, vnetResourceGroup),
 				c.deleteApplication(ctx, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID),
 			)
