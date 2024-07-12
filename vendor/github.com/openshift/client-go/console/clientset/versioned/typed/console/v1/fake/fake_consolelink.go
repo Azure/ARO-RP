@@ -4,8 +4,11 @@ package fake
 
 import (
 	"context"
+	json "encoding/json"
+	"fmt"
 
 	consolev1 "github.com/openshift/api/console/v1"
+	applyconfigurationsconsolev1 "github.com/openshift/client-go/console/applyconfigurations/console/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -99,6 +102,27 @@ func (c *FakeConsoleLinks) DeleteCollection(ctx context.Context, opts v1.DeleteO
 func (c *FakeConsoleLinks) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *consolev1.ConsoleLink, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceAction(consolelinksResource, name, pt, data, subresources...), &consolev1.ConsoleLink{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*consolev1.ConsoleLink), err
+}
+
+// Apply takes the given apply declarative configuration, applies it and returns the applied consoleLink.
+func (c *FakeConsoleLinks) Apply(ctx context.Context, consoleLink *applyconfigurationsconsolev1.ConsoleLinkApplyConfiguration, opts v1.ApplyOptions) (result *consolev1.ConsoleLink, err error) {
+	if consoleLink == nil {
+		return nil, fmt.Errorf("consoleLink provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(consoleLink)
+	if err != nil {
+		return nil, err
+	}
+	name := consoleLink.Name
+	if name == nil {
+		return nil, fmt.Errorf("consoleLink.Name must be provided to Apply")
+	}
+	obj, err := c.Fake.
+		Invokes(testing.NewRootPatchSubresourceAction(consolelinksResource, *name, types.ApplyPatchType, data), &consolev1.ConsoleLink{})
 	if obj == nil {
 		return nil, err
 	}

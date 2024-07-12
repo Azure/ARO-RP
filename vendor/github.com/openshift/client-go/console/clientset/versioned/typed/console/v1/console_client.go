@@ -16,6 +16,7 @@ type ConsoleV1Interface interface {
 	ConsoleExternalLogLinksGetter
 	ConsoleLinksGetter
 	ConsoleNotificationsGetter
+	ConsolePluginsGetter
 	ConsoleQuickStartsGetter
 	ConsoleYAMLSamplesGetter
 }
@@ -39,6 +40,10 @@ func (c *ConsoleV1Client) ConsoleLinks() ConsoleLinkInterface {
 
 func (c *ConsoleV1Client) ConsoleNotifications() ConsoleNotificationInterface {
 	return newConsoleNotifications(c)
+}
+
+func (c *ConsoleV1Client) ConsolePlugins() ConsolePluginInterface {
+	return newConsolePlugins(c)
 }
 
 func (c *ConsoleV1Client) ConsoleQuickStarts() ConsoleQuickStartInterface {
