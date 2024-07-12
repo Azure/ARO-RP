@@ -1,31 +1,19 @@
 # Deploy development RP
 
-## Why to use it?
-This is the **preferred** and fast way to have your own local development RP setup, while also having a functional cluster.
-It uses hacks scripts around a lot of the setup to make things easier to bootstrap and be more sensible for running off of your local laptop. 
-
-- Check the specific use-case examples where [deploying full RP service](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-full-rp-service-in-dev.md) can be a better match.
-
 ## Prerequisites
 
 1. Your development environment is prepared according to the steps outlined in [Prepare Your Dev Environment](./prepare-your-dev-environment.md)
 
 ## Installing the extension
 
-1. Check the `env.example` file and copy it by creating your own:
-
-   ```bash
-   cp env.example env
-   ```
-
-2. Build the development `az aro` extension:
+1. Build the development `az aro` extension:
 
    ```bash
    . ./env
    make az
    ```
 
-3. Verify the ARO extension is registered:
+1. Verify the ARO extension is registered:
 
    ```bash
    az -v
@@ -481,12 +469,69 @@ To run fake metrics socket:
 ```bash
 go run ./hack/monitor
 ```
+## Run the RP and create a Hive cluster
 
-## Troubleshooting
+**Steps to perform on Mac**
 
-1. Trying to use `az aro` CLI in Production, fails with:
+1. Mount your local MacOS filesystem into the podman machine:
+```bash
+podman machine init --now --cpus=4 --memory=4096 -v $HOME:$HOME
 ```
-(NoRegisteredProviderFound) No registered resource provider found for location '$LOCATION' and API version '2024-08-12-preview'
+
+2. Use the openvpn config file (which is now mounted inside the podman machine) to start the VPN connection:
+
+```bash
+podman machine ssh
+
+sudo rpm-ostree install openvpn
+
+sudo systemctl reboot
+
+podman machine ssh
+
+sudo openvpn --config /Users/<user_name>/go/src/github.com/Azure/ARO-RP/secrets/vpn-aks-westeurope.ovpn --daemon --writepid vpnpid
+
+ps aux | grep openvpn
 ```
-- Check if`~/.azure/config` there is a block `extensions.dev_sources`. If yes, comment it.
-- Check if env var `AZURE_EXTENSION_DEV_SOURCES` is set. If yes, unset it.
+
+### Instructions for Modifying Environment File
+
+**Update the env File**
+
+- Open the `env` file.
+-  Update env file instructions: set `OPENSHIFT_VERSION`, update `INSTALLER_PULLSPEC` and `OCP_PULLSPEC`, mention quay.io for SHA256 hash.
+-  Update INSTALLER_PULLSPEC with the appropriate name and tag, typically matching the OpenShift version, e.g., `release-4.13.`(for more detail see the `env.example`)
+
+* Source the environment file before creating the cluster using the `setup_resources.sh` script(Added the updated env in the PR)
+```bash
+cd /hack
+
+./setup_resources.sh
+```
+
+* Once the cluster create verify connectivity with the ARO cluster:
+- Download the admin kubeconfig file
+```bash
+az aro get-admin-kubeconfig --name <cluster_name> --resource-group v4-westeurope --file ~/.kube/aro-admin-kubeconfig
+```
+- Set the KUBECONFIG environment variable
+```bash
+export KUBECONFIG=~/.kube/aro-admin-kubeconfig
+```
+- Verify connectivity with the ARO cluster
+```bash
+kubectl get nodes
+```
+
+```bash
+kubectl get nodes
+NAME                                                  STATUS   ROLES                  AGE   VERSION
+shpaitha-aro-cluster-4sp5c-master-0                   Ready    control-plane,master   39m   v1.25.11+1485cc9
+shpaitha-aro-cluster-4sp5c-master-1                   Ready    control-plane,master   39m   v1.25.11+1485cc9
+shpaitha-aro-cluster-4sp5c-master-2                   Ready    control-plane,master   39m   v1.25.11+1485cc9
+shpaitha-aro-cluster-4sp5c-worker-westeurope1-j9c76   Ready    worker                 29m   v1.25.11+1485cc9
+shpaitha-aro-cluster-4sp5c-worker-westeurope2-j9zrs   Ready    worker                 27m   v1.25.11+1485cc9
+shpaitha-aro-cluster-4sp5c-worker-westeurope3-56tk7   Ready    worker                 28m   v1.25.11+1485cc9 
+```
+
+

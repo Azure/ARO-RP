@@ -72,8 +72,6 @@ func (d *dev) AROOperatorImage() string {
 }
 
 func (d *dev) Listen() (net.Listener, error) {
-	// in dev mode there is no authentication, so for safety we only listen on
-	// localhost
 	return net.Listen("tcp", ":8443")
 }
 
