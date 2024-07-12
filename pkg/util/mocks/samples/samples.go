@@ -10,8 +10,9 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/openshift/api/samples/v1"
-	v10 "github.com/openshift/client-go/samples/clientset/versioned/typed/samples/v1"
-	v11 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v10 "github.com/openshift/client-go/samples/applyconfigurations/samples/v1"
+	v11 "github.com/openshift/client-go/samples/clientset/versioned/typed/samples/v1"
+	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
@@ -41,10 +42,10 @@ func (m *MockSamplesV1Interface) EXPECT() *MockSamplesV1InterfaceMockRecorder {
 }
 
 // Configs mocks base method.
-func (m *MockSamplesV1Interface) Configs() v10.ConfigInterface {
+func (m *MockSamplesV1Interface) Configs() v11.ConfigInterface {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Configs")
-	ret0, _ := ret[0].(v10.ConfigInterface)
+	ret0, _ := ret[0].(v11.ConfigInterface)
 	return ret0
 }
 
@@ -91,8 +92,38 @@ func (m *MockConfigInterface) EXPECT() *MockConfigInterfaceMockRecorder {
 	return m.recorder
 }
 
+// Apply mocks base method.
+func (m *MockConfigInterface) Apply(arg0 context.Context, arg1 *v10.ConfigApplyConfiguration, arg2 v12.ApplyOptions) (*v1.Config, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Apply", arg0, arg1, arg2)
+	ret0, _ := ret[0].(*v1.Config)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Apply indicates an expected call of Apply.
+func (mr *MockConfigInterfaceMockRecorder) Apply(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Apply", reflect.TypeOf((*MockConfigInterface)(nil).Apply), arg0, arg1, arg2)
+}
+
+// ApplyStatus mocks base method.
+func (m *MockConfigInterface) ApplyStatus(arg0 context.Context, arg1 *v10.ConfigApplyConfiguration, arg2 v12.ApplyOptions) (*v1.Config, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplyStatus", arg0, arg1, arg2)
+	ret0, _ := ret[0].(*v1.Config)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ApplyStatus indicates an expected call of ApplyStatus.
+func (mr *MockConfigInterfaceMockRecorder) ApplyStatus(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyStatus", reflect.TypeOf((*MockConfigInterface)(nil).ApplyStatus), arg0, arg1, arg2)
+}
+
 // Create mocks base method.
-func (m *MockConfigInterface) Create(arg0 context.Context, arg1 *v1.Config, arg2 v11.CreateOptions) (*v1.Config, error) {
+func (m *MockConfigInterface) Create(arg0 context.Context, arg1 *v1.Config, arg2 v12.CreateOptions) (*v1.Config, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*v1.Config)
@@ -107,7 +138,7 @@ func (mr *MockConfigInterfaceMockRecorder) Create(arg0, arg1, arg2 interface{}) 
 }
 
 // Delete mocks base method.
-func (m *MockConfigInterface) Delete(arg0 context.Context, arg1 string, arg2 v11.DeleteOptions) error {
+func (m *MockConfigInterface) Delete(arg0 context.Context, arg1 string, arg2 v12.DeleteOptions) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
@@ -121,7 +152,7 @@ func (mr *MockConfigInterfaceMockRecorder) Delete(arg0, arg1, arg2 interface{}) 
 }
 
 // DeleteCollection mocks base method.
-func (m *MockConfigInterface) DeleteCollection(arg0 context.Context, arg1 v11.DeleteOptions, arg2 v11.ListOptions) error {
+func (m *MockConfigInterface) DeleteCollection(arg0 context.Context, arg1 v12.DeleteOptions, arg2 v12.ListOptions) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteCollection", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
@@ -135,7 +166,7 @@ func (mr *MockConfigInterfaceMockRecorder) DeleteCollection(arg0, arg1, arg2 int
 }
 
 // Get mocks base method.
-func (m *MockConfigInterface) Get(arg0 context.Context, arg1 string, arg2 v11.GetOptions) (*v1.Config, error) {
+func (m *MockConfigInterface) Get(arg0 context.Context, arg1 string, arg2 v12.GetOptions) (*v1.Config, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*v1.Config)
@@ -150,7 +181,7 @@ func (mr *MockConfigInterfaceMockRecorder) Get(arg0, arg1, arg2 interface{}) *go
 }
 
 // List mocks base method.
-func (m *MockConfigInterface) List(arg0 context.Context, arg1 v11.ListOptions) (*v1.ConfigList, error) {
+func (m *MockConfigInterface) List(arg0 context.Context, arg1 v12.ListOptions) (*v1.ConfigList, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", arg0, arg1)
 	ret0, _ := ret[0].(*v1.ConfigList)
@@ -165,7 +196,7 @@ func (mr *MockConfigInterfaceMockRecorder) List(arg0, arg1 interface{}) *gomock.
 }
 
 // Patch mocks base method.
-func (m *MockConfigInterface) Patch(arg0 context.Context, arg1 string, arg2 types.PatchType, arg3 []byte, arg4 v11.PatchOptions, arg5 ...string) (*v1.Config, error) {
+func (m *MockConfigInterface) Patch(arg0 context.Context, arg1 string, arg2 types.PatchType, arg3 []byte, arg4 v12.PatchOptions, arg5 ...string) (*v1.Config, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1, arg2, arg3, arg4}
 	for _, a := range arg5 {
@@ -185,7 +216,7 @@ func (mr *MockConfigInterfaceMockRecorder) Patch(arg0, arg1, arg2, arg3, arg4 in
 }
 
 // Update mocks base method.
-func (m *MockConfigInterface) Update(arg0 context.Context, arg1 *v1.Config, arg2 v11.UpdateOptions) (*v1.Config, error) {
+func (m *MockConfigInterface) Update(arg0 context.Context, arg1 *v1.Config, arg2 v12.UpdateOptions) (*v1.Config, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*v1.Config)
@@ -200,7 +231,7 @@ func (mr *MockConfigInterfaceMockRecorder) Update(arg0, arg1, arg2 interface{}) 
 }
 
 // UpdateStatus mocks base method.
-func (m *MockConfigInterface) UpdateStatus(arg0 context.Context, arg1 *v1.Config, arg2 v11.UpdateOptions) (*v1.Config, error) {
+func (m *MockConfigInterface) UpdateStatus(arg0 context.Context, arg1 *v1.Config, arg2 v12.UpdateOptions) (*v1.Config, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateStatus", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*v1.Config)
@@ -215,7 +246,7 @@ func (mr *MockConfigInterfaceMockRecorder) UpdateStatus(arg0, arg1, arg2 interfa
 }
 
 // Watch mocks base method.
-func (m *MockConfigInterface) Watch(arg0 context.Context, arg1 v11.ListOptions) (watch.Interface, error) {
+func (m *MockConfigInterface) Watch(arg0 context.Context, arg1 v12.ListOptions) (watch.Interface, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Watch", arg0, arg1)
 	ret0, _ := ret[0].(watch.Interface)
