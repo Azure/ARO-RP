@@ -18,6 +18,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	configv1 "github.com/openshift/api/config/v1"
+	machinev1 "github.com/openshift/api/machine/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	cov1Helpers "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
@@ -25,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/yaml"
 
@@ -717,5 +719,57 @@ var _ = Describe("ARO Operator - Cloud Provider Config ConfigMap", func() {
 			g.Expect(err).NotTo(HaveOccurred())
 			g.Expect(disableOutboundSNAT).To(BeTrue())
 		}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+	})
+})
+
+var _ = Describe("ARO Operator - Control Plane MachineSets", func() {
+	const (
+		cpmsEnabled = operator.CPMSEnabled
+	)
+
+	getCpmsOrNil := func(ctx context.Context, name string, options metav1.GetOptions) (*machinev1.ControlPlaneMachineSet, error) {
+		cpms, err := clients.MachineAPI.MachineV1().ControlPlaneMachineSets("openshift-machine-api").Get(ctx, "cluster", metav1.GetOptions{})
+		if err != nil && !kerrors.IsNotFound(err) {
+			return nil, err
+		}
+		return cpms, nil
+	}
+
+	BeforeEach(func(ctx context.Context) {
+		if err := discovery.ServerSupportsVersion(clients.Kubernetes.Discovery(), machinev1.GroupVersion); err != nil {
+			Skip("Cluster does not support machinev1 API, CPMS controller not present")
+		}
+	})
+
+	It("should ensure CPMS is Inactive", func(ctx context.Context) {
+		By("checking whether CPMS is disabled in ARO operator config")
+		instance, err := clients.AROClusters.AroV1alpha1().Clusters().Get(ctx, "cluster", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		if instance.Spec.OperatorFlags.GetSimpleBoolean(cpmsEnabled) {
+			Skip("CloudProviderConfig Controller is not enabled, skipping test")
+		}
+
+		By("checking whether CPMS is set to Inactive")
+
+		cpms := GetK8sObjectWithRetry(ctx, getCpmsOrNil, "cluster", metav1.GetOptions{})
+		Expect(cpms).To(Or(
+			BeNil(),
+			HaveField("Spec.State", Equal(machinev1.ControlPlaneMachineSetStateInactive)),
+		))
+
+		if cpms != nil {
+			By("ensuring CPMS is reset to Inactive if enabled")
+			cpms.Spec.State = machinev1.ControlPlaneMachineSetStateActive
+			Eventually(func(g Gomega, ctx context.Context) {
+				_, err := clients.MachineAPI.MachineV1().ControlPlaneMachineSets("openshift-machine-api").Update(ctx, cpms, metav1.UpdateOptions{})
+				g.Expect(err).NotTo(HaveOccurred())
+			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+
+			Eventually(func(g Gomega, ctx context.Context) {
+				cpms := GetK8sObjectWithRetry(ctx, getCpmsOrNil, "cluster", metav1.GetOptions{})
+				g.Expect(cpms).To(HaveField("Spec.State", Equal(machinev1.ControlPlaneMachineSetStateInactive)))
+			}).WithContext(ctx).WithTimeout(DefaultEventuallyTimeout).Should(Succeed())
+		}
 	})
 })
