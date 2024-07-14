@@ -49,9 +49,9 @@
     What to change in `env-int` file:
 
     * if using a public key separate from `~/.ssh/id_rsa.pub` (for ssh access to RP and Gateway vmss instances), source it with `export SSH_PUBLIC_KEY=~/.ssh/id_separate.pub`
-    * don't try to change `$USER` prefix used there
+    - Modify `AZURE_PREFIX` environment variable for a different `$AZUREPREFIX` prefix of the created Azure resources.
     * set tag of `FLUENTBIT_IMAGE` value to match the default from `pkg/util/version/const.go`,
-      eg. `FLUENTBIT_IMAGE=${USER}aro.azurecr.io/fluentbit:1.9.10-cm20230426`
+      eg. `FLUENTBIT_IMAGE=${AZUREPREFIX}aro.azurecr.io/fluentbit:1.9.10-cm20230426`
     * if you actually care about fluentbit image version, you need to change the default both in the env-int file and for ARO Deployer, which is out of scope of this guide
 
 1. And finally source the env:
@@ -110,7 +110,7 @@
 
     1. Setup mirroring environment variables
         ```bash
-        export DST_ACR_NAME=${USER}aro
+        export DST_ACR_NAME=${AZUREPREFIX}aro
         export SRC_AUTH_QUAY=$(echo $USER_PULL_SECRET | jq -r '.auths."quay.io".auth')
         export SRC_AUTH_REDHAT=$(echo $USER_PULL_SECRET | jq -r '.auths."registry.redhat.io".auth')
         export DST_AUTH=$(echo -n '00000000-0000-0000-0000-000000000000:'$(az acr login -n ${DST_ACR_NAME} --expose-token | jq -r .accessToken) | base64 -w0)
@@ -179,9 +179,9 @@
     ```bash
     export PARENT_DOMAIN_NAME=osadev.cloud
     export PARENT_DOMAIN_RESOURCEGROUP=dns
-    export GLOBAL_RESOURCEGROUP=$USER-global
+    export GLOBAL_RESOURCEGROUP=$AZUREPREFIX-global
 
-    for DOMAIN_NAME in $USER-clusters.$PARENT_DOMAIN_NAME $USER-rp.$PARENT_DOMAIN_NAME; do
+    for DOMAIN_NAME in $AZUREPREFIX-clusters.$PARENT_DOMAIN_NAME $AZUREPREFIX-rp.$PARENT_DOMAIN_NAME; do
         CHILD_DOMAIN_PREFIX="$(cut -d. -f1 <<<$DOMAIN_NAME)"
         echo "########## Creating NS record to DNS Zone $CHILD_DOMAIN_PREFIX ##########"
         az network dns record-set ns create \
@@ -254,7 +254,7 @@
     > __NOTE:__ This needs to be deleted as deploying won't recreate the VMSS if the commit hash is the same.
 
     ```bash
-    az vmss delete -g ${RESOURCEGROUP} --name rp-vmss-$(git rev-parse --short=7 HEAD)$([[ $(git status --porcelain) = "" ]] || echo -dirty) && az vmss delete -g $USER-gwy-$LOCATION --name gateway-vmss-$(git rev-parse --short=7 HEAD)$([[ $(git status --porcelain) = "" ]] || echo -dirty)
+    az vmss delete -g ${RESOURCEGROUP} --name rp-vmss-$(git rev-parse --short=7 HEAD)$([[ $(git status --porcelain) = "" ]] || echo -dirty) && az vmss delete -g $AZUREPREFIX-gwy-$LOCATION --name gateway-vmss-$(git rev-parse --short=7 HEAD)$([[ $(git status --porcelain) = "" ]] || echo -dirty)
     ```
 
 1. Run `make deploy`. When the command finishes, there should be one VMSS for
@@ -298,7 +298,7 @@
     ```bash
     az network nsg rule create \
         --name ssh-to-gwy \
-        --resource-group $USER-gwy-$LOCATION \
+        --resource-group $AZUREPREFIX-gwy-$LOCATION \
         --nsg-name gateway-nsg \
         --access Allow \
         --priority 500 \
@@ -310,7 +310,7 @@
 
 1. SSH into the VM
     ```bash
-    VMSS_PIP=$(az vmss list-instance-public-ips -g $USER-gwy-$LOCATION --name gateway-vmss-$(git rev-parse --short=7 HEAD)$([[ $(git status --porcelain) = "" ]] || echo -dirty) | jq -r '.[0].ipAddress')
+    VMSS_PIP=$(az vmss list-instance-public-ips -g $AZUREPREFIX-gwy-$LOCATION --name gateway-vmss-$(git rev-parse --short=7 HEAD)$([[ $(git status --porcelain) = "" ]] || echo -dirty) | jq -r '.[0].ipAddress')
 
     ssh cloud-user@${VMSS_PIP}
     ```

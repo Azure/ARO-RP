@@ -70,7 +70,7 @@
    ```bash
    az deployment group create \
      -g "$RESOURCEGROUP" \
-     -n "databases-development-$USER" \
+     -n "databases-development-$AZUREPREFIX" \
      --template-file pkg/deploy/assets/databases-development.json \
      --parameters \
        "databaseAccountName=$DATABASE_ACCOUNT_NAME" \

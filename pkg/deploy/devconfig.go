@@ -83,7 +83,7 @@ func DevConfig(_env env.Core) (*Config, error) {
 	}
 
 	// use unique prefix for Azure resources when it is set, otherwise use your user's name
-	azureUniquePrefix := os.Getenv("AZURE_UNIQUE_PREFIX")
+	azureUniquePrefix := os.Getenv("AZURE_PREFIX")
 	if azureUniquePrefix == "" {
 		azureUniquePrefix = os.Getenv("USER")
 	}

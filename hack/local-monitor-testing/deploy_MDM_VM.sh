@@ -10,11 +10,13 @@ MDMFRONTENDURL=https://global.ppe.microsoftmetrics.com/
 MDMSOURCEENVIRONMENT=$LOCATION
 MDMSOURCEROLE=rp
 MDMSOURCEROLEINSTANCE=$HOSTNAME
+# use unique prefix for Azure resources when it is set, otherwise use your user's name
+export AZUREPREFIX="${AZURE_PREFIX:-$USER}"
 
 echo "Using:"
 
 echo "Resourcegroup = $RESOURCEGROUP"
-echo "User          = $USER"
+echo "AzureUniquePrefix = $AZUREPREFIX"
 echo "HOSTNAME      = $HOSTNAME"
 echo "Containername = $NAME"
 echo "Location      = $LOCATION"
@@ -25,7 +27,7 @@ echo "MDMSOURCEENV  = $MDMSOURCEENVIRONMENT"
 echo "MDMSOURCEROLE  = $MDMSOURCEROLE"
 echo "MDMSOURCEROLEINSTANCE  = $MDMSOURCEROLEINSTANCE"
 
-VMName="$USER-mdm-link"
+VMName="$AZUREPREFIX-mdm-link"
 
 CLOUDUSER="cloud-user"
 
