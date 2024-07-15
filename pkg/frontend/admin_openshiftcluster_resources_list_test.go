@@ -95,7 +95,7 @@ func TestAdminListResourcesList(t *testing.T) {
 
 			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, nil, nil, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error) {
 				return a, nil
-			}, nil)
+			}, nil, nil)
 			mockResponder := mock_frontend.NewMockStreamResponder(ti.controller)
 			mockResponder.EXPECT().AdminReplyStream(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
 			f.streamResponder = mockResponder

@@ -44,6 +44,7 @@ func (err statusCodeError) Error() string {
 type kubeActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error)
 
 type azureActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error)
+type appLensActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AppLensActions, error)
 
 type frontend struct {
 	auditLog *logrus.Entry
@@ -76,9 +77,10 @@ type frontend struct {
 
 	aead encryption.AEAD
 
-	hiveClusterManager  hive.ClusterManager
-	kubeActionsFactory  kubeActionsFactory
-	azureActionsFactory azureActionsFactory
+	hiveClusterManager    hive.ClusterManager
+	kubeActionsFactory    kubeActionsFactory
+	azureActionsFactory   azureActionsFactory
+	appLensActionsFactory appLensActionsFactory
 
 	skuValidator       SkuValidator
 	quotaValidator     QuotaValidator
@@ -130,6 +132,7 @@ func NewFrontend(ctx context.Context,
 	hiveClusterManager hive.ClusterManager,
 	kubeActionsFactory kubeActionsFactory,
 	azureActionsFactory azureActionsFactory,
+	appLensActionsFactory appLensActionsFactory,
 	enricher clusterdata.BestEffortEnricher,
 ) (*frontend, error) {
 	f := &frontend{
@@ -167,6 +170,7 @@ func NewFrontend(ctx context.Context,
 		hiveClusterManager:                 hiveClusterManager,
 		kubeActionsFactory:                 kubeActionsFactory,
 		azureActionsFactory:                azureActionsFactory,
+		appLensActionsFactory:              appLensActionsFactory,
 
 		quotaValidator:     quotaValidator{},
 		skuValidator:       skuValidator{},

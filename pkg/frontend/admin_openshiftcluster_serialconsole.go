@@ -4,7 +4,9 @@ package frontend
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -22,12 +24,19 @@ func (f *frontend) getAdminOpenShiftClusterSerialConsole(w http.ResponseWriter, 
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	err := f._getAdminOpenShiftClusterSerialConsole(ctx, w, r, log)
+	buf := &bytes.Buffer{}
+
+	err := f._getAdminOpenShiftClusterSerialConsole(ctx, r, log, buf)
+
+	if err == nil {
+		w.Header().Set("Content-Type", "text/plain")
+		_, err = io.Copy(w, buf)
+	}
 
 	adminReply(log, w, nil, nil, err)
 }
 
-func (f *frontend) _getAdminOpenShiftClusterSerialConsole(ctx context.Context, w http.ResponseWriter, r *http.Request, log *logrus.Entry) error {
+func (f *frontend) _getAdminOpenShiftClusterSerialConsole(ctx context.Context, r *http.Request, log *logrus.Entry, w io.Writer) error {
 	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 
 	vmName := r.URL.Query().Get("vmName")
@@ -56,5 +65,5 @@ func (f *frontend) _getAdminOpenShiftClusterSerialConsole(ctx context.Context, w
 		return err
 	}
 
-	return a.VMSerialConsole(ctx, w, log, vmName)
+	return a.VMSerialConsole(ctx, log, vmName, w)
 }
