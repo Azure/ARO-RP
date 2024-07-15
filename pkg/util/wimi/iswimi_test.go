@@ -11,7 +11,7 @@ import (
 )
 
 func TestIswimi(t *testing.T) {
-	tests := []struct {
+	tests := []*struct {
 		name string
 		oc   api.OpenShiftCluster
 		want bool
@@ -40,7 +40,7 @@ func TestIswimi(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := IsWimi(test.oc)
+			got := IsWimi(&test.oc)
 			if got != test.want {
 				t.Error(fmt.Errorf("got != want: %v != %v", got, test.want))
 			}

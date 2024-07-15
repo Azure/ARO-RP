@@ -6,7 +6,7 @@ package wimi
 import "github.com/Azure/ARO-RP/pkg/api"
 
 // IsWimi checks whether a cluster is a Workload Identity cluster or Service Principal cluster
-func IsWimi(oc api.OpenShiftCluster) bool {
+func IsWimi(oc *api.OpenShiftCluster) bool {
 	if oc.Properties.PlatformWorkloadIdentityProfile == nil || oc.Properties.ServicePrincipalProfile != nil {
 		return false
 	}
