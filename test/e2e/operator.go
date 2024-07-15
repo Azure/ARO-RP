@@ -747,7 +747,7 @@ var _ = Describe("ARO Operator - Control Plane MachineSets", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		if instance.Spec.OperatorFlags.GetSimpleBoolean(cpmsEnabled) {
-			Skip("CloudProviderConfig Controller is not enabled, skipping test")
+			Skip("CPMS is enabled (controller disabled), skipping test")
 		}
 
 		By("checking whether CPMS is set to Inactive")
