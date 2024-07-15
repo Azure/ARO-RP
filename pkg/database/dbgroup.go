@@ -17,16 +17,48 @@ type DatabaseGroupWithMonitors interface {
 	Monitors() (Monitors, error)
 }
 
-type DBGroup interface {
+type DatabaseGroupWithOpenShiftVersions interface {
+	OpenShiftVersions() (OpenShiftVersions, error)
+}
+
+type DatabaseGroupWithPlatformWorkloadIdentityRoleSets interface {
+	PlatformWorkloadIdentityRoleSets() (PlatformWorkloadIdentityRoleSets, error)
+}
+
+type DatabaseGroupWithAsyncOperations interface {
+	AsyncOperations() (AsyncOperations, error)
+}
+
+type DatabaseGroupWithBilling interface {
+	Billing() (Billing, error)
+}
+
+type DatabaseGroup interface {
 	DatabaseGroupWithOpenShiftClusters
 	DatabaseGroupWithSubscriptions
 	DatabaseGroupWithMonitors
+	DatabaseGroupWithOpenShiftVersions
+	DatabaseGroupWithPlatformWorkloadIdentityRoleSets
+	DatabaseGroupWithAsyncOperations
+	DatabaseGroupWithBilling
+
+	WithOpenShiftClusters(db OpenShiftClusters) DatabaseGroup
+	WithSubscriptions(db Subscriptions) DatabaseGroup
+	WithMonitors(db Monitors) DatabaseGroup
+	WithOpenShiftVersions(db OpenShiftVersions) DatabaseGroup
+	WithPlatformWorkloadIdentityRoleSets(db PlatformWorkloadIdentityRoleSets) DatabaseGroup
+	WithAsyncOperations(db AsyncOperations) DatabaseGroup
+	WithBilling(db Billing) DatabaseGroup
 }
 
 type dbGroup struct {
-	openShiftClusters OpenShiftClusters
-	subscriptions     Subscriptions
-	monitors          Monitors
+	openShiftClusters                OpenShiftClusters
+	subscriptions                    Subscriptions
+	monitors                         Monitors
+	platformWorkloadIdentityRoleSets PlatformWorkloadIdentityRoleSets
+	openShiftVersions                OpenShiftVersions
+	asyncOperations                  AsyncOperations
+	billing                          Billing
 }
 
 func (d *dbGroup) OpenShiftClusters() (OpenShiftClusters, error) {
@@ -36,8 +68,8 @@ func (d *dbGroup) OpenShiftClusters() (OpenShiftClusters, error) {
 	return d.openShiftClusters, nil
 }
 
-func (d *dbGroup) WithOpenShiftClusters(o OpenShiftClusters) *dbGroup {
-	d.openShiftClusters = o
+func (d *dbGroup) WithOpenShiftClusters(db OpenShiftClusters) DatabaseGroup {
+	d.openShiftClusters = db
 	return d
 }
 
@@ -48,10 +80,11 @@ func (d *dbGroup) Subscriptions() (Subscriptions, error) {
 	return d.subscriptions, nil
 }
 
-func (d *dbGroup) WithSubscriptions(s Subscriptions) *dbGroup {
-	d.subscriptions = s
+func (d *dbGroup) WithSubscriptions(db Subscriptions) DatabaseGroup {
+	d.subscriptions = db
 	return d
 }
+
 func (d *dbGroup) Monitors() (Monitors, error) {
 	if d.monitors == nil {
 		return nil, errors.New("no Monitors defined")
@@ -59,11 +92,59 @@ func (d *dbGroup) Monitors() (Monitors, error) {
 	return d.monitors, nil
 }
 
-func (d *dbGroup) WithMonitors(m Monitors) *dbGroup {
-	d.monitors = m
+func (d *dbGroup) WithMonitors(db Monitors) DatabaseGroup {
+	d.monitors = db
 	return d
 }
 
-func NewDBGroup() *dbGroup {
+func (d *dbGroup) OpenShiftVersions() (OpenShiftVersions, error) {
+	if d.openShiftVersions == nil {
+		return nil, errors.New("no OpenShiftVersions defined")
+	}
+	return d.openShiftVersions, nil
+}
+
+func (d *dbGroup) WithOpenShiftVersions(db OpenShiftVersions) DatabaseGroup {
+	d.openShiftVersions = db
+	return d
+}
+
+func (d *dbGroup) PlatformWorkloadIdentityRoleSets() (PlatformWorkloadIdentityRoleSets, error) {
+	if d.platformWorkloadIdentityRoleSets == nil {
+		return nil, errors.New("no PlatformWorkloadIdentityRoleSets defined")
+	}
+	return d.platformWorkloadIdentityRoleSets, nil
+}
+
+func (d *dbGroup) WithPlatformWorkloadIdentityRoleSets(db PlatformWorkloadIdentityRoleSets) DatabaseGroup {
+	d.platformWorkloadIdentityRoleSets = db
+	return d
+}
+
+func (d *dbGroup) AsyncOperations() (AsyncOperations, error) {
+	if d.asyncOperations == nil {
+		return nil, errors.New("no AsyncOperations defined")
+	}
+	return d.asyncOperations, nil
+}
+
+func (d *dbGroup) WithAsyncOperations(db AsyncOperations) DatabaseGroup {
+	d.asyncOperations = db
+	return d
+}
+
+func (d *dbGroup) Billing() (Billing, error) {
+	if d.billing == nil {
+		return nil, errors.New("no Billing defined")
+	}
+	return d.billing, nil
+}
+
+func (d *dbGroup) WithBilling(db Billing) DatabaseGroup {
+	d.billing = db
+	return d
+}
+
+func NewDBGroup() DatabaseGroup {
 	return &dbGroup{}
 }
