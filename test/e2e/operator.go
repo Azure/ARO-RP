@@ -728,7 +728,7 @@ var _ = Describe("ARO Operator - Control Plane MachineSets", func() {
 	)
 
 	getCpmsOrNil := func(ctx context.Context, name string, options metav1.GetOptions) (*machinev1.ControlPlaneMachineSet, error) {
-		cpms, err := clients.MachineAPI.MachineV1().ControlPlaneMachineSets("openshift-machine-api").Get(ctx, "cluster", metav1.GetOptions{})
+		cpms, err := clients.MachineAPI.MachineV1().ControlPlaneMachineSets("openshift-machine-api").Get(ctx, name, options)
 		if err != nil && !kerrors.IsNotFound(err) {
 			return nil, err
 		}
