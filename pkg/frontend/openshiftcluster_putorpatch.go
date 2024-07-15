@@ -136,7 +136,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	if isCreate {
 		// Persist identity URL and tenant ID only for managed/workload identity cluster create
 		// We don't support updating cluster managed identity after cluster creation
-		// TODO - use a common function to check if the cluster is a managed/workload identity cluster
 		if utilwimi.IsWimi(doc.OpenShiftCluster) {
 			if err := validateIdentityUrl(doc.OpenShiftCluster, putOrPatchClusterParameters.identityURL); err != nil {
 				return nil, err
