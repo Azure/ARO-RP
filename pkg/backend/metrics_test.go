@@ -193,6 +193,58 @@ func TestEmitMetrics(t *testing.T) {
 			provisioningState: api.ProvisioningStateSucceeded,
 			managedDomain:     true,
 		},
+		{
+			name: "Pass UDR Cluster",
+			backendErr: &api.CloudError{
+				StatusCode: 200,
+			},
+			doc: &api.OpenShiftClusterDocument{
+				CorrelationData: &api.CorrelationData{
+					CorrelationID:   "id",
+					ClientRequestID: "client request id",
+					RequestID:       "request id",
+				},
+				ResourceID: resourceID,
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Location: "eastus",
+					Tags:     map[string]string{"tag1": "true"},
+					Properties: api.OpenShiftClusterProperties{
+						ClusterProfile: api.ClusterProfile{
+							Domain:               "cluster",
+							PullSecret:           api.SecureString("super secret"),
+							FipsValidatedModules: api.FipsValidatedModulesEnabled,
+						},
+						NetworkProfile: api.NetworkProfile{
+							PodCIDR:     "10.128.0.1/14",
+							ServiceCIDR: "172.30.0.1/16",
+						},
+						OperatorFlags: api.OperatorFlags{"testFlag": "true"},
+						WorkerProfiles: []api.WorkerProfile{
+							{
+								DiskEncryptionSetID: "testing/disk/encryptionset",
+								EncryptionAtHost:    api.EncryptionAtHostDisabled,
+							},
+						},
+						MasterProfile: api.MasterProfile{
+							DiskEncryptionSetID: "testing/disk/encryptionset",
+							EncryptionAtHost:    api.EncryptionAtHostDisabled,
+						},
+						PlatformWorkloadIdentityProfile: &api.PlatformWorkloadIdentityProfile{},
+						IngressProfiles: []api.IngressProfile{
+							{
+								Name: "EmptyIngressProfile",
+							},
+						},
+						FeatureProfile: api.FeatureProfile{
+							GatewayEnabled: true,
+						},
+					},
+				},
+			},
+			operationType:     api.ProvisioningStateCreating,
+			provisioningState: api.ProvisioningStateSucceeded,
+			managedDomain:     true,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.managedDomain {
