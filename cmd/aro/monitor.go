@@ -88,6 +88,10 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
+	dbg := database.NewDBGroup().WithOpenShiftClusters(dbOpenShiftClusters).
+		WithSubscriptions(dbSubscriptions).
+		WithMonitors(dbMonitors)
+
 	dialer, err := proxy.NewDialer(_env.IsLocalDevelopmentMode())
 	if err != nil {
 		return err
@@ -98,7 +102,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), dialer, dbMonitors, dbOpenShiftClusters, dbSubscriptions, m, clusterm, liveConfig, _env)
+	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), dialer, dbg, m, clusterm, liveConfig, _env)
 
 	return mon.Run(ctx)
 }
