@@ -12,6 +12,11 @@ data:
       name: AzureInvalidTemplateDeployment
       searchRegexStrings:
       - '"code":\w?"InvalidTemplateDeployment"'
+    - installFailingMessage: Deployment failed. Please see details for more information.
+      installFailingReason: AzureZonalAllocationFailed
+      name: AzureZonalAllocationFailed
+      searchRegexStrings:
+      - '"code\W*":\W*"ZonalAllocationFailed\W*"'
 kind: ConfigMap
 metadata:
   creationTimestamp: null
