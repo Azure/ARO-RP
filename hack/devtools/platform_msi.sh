@@ -1,23 +1,35 @@
 #!/bin/bash
 
 # This script creates a platform Identities to use for local development
-# The script reads the operators file and creates platform identities for each operator
+# The script reads the env var PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS and creates platform identities for each operator
 
-prompt_for_operators_file() {
-    local operatorsFilePath
-    read -p "Please provide the absolute path of operators file including the file name?" operatorsFilePath
+get_platform_workloadIdentity_role_sets() {
+    local platformWorkloadIdentityRole
+   
+    # Parse the JSON data using jq
+    platformWorkloadIdentityRoles=$(echo "${PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS}" | jq -c '.[].platformWorkloadIdentityRoles[]')
 
-    if [ -z "$operatorsFilePath" ] || ! [ -f "$operatorsFilePath" ]; then
-        echo "ERROR: File ($operatorsFilePath) doesn't exists. Please provide the valid path of operators file."
-        exit 1
-    fi
-
-    dos2unix "$operatorsFilePath"
-    echo "$operatorsFilePath"
+    echo "${platformWorkloadIdentityRoles}"
 }
 
-create_platform_identity() {
-    local result=$(az identity create --name "$1" --resource-group "$RESOURCEGROUP" --subscription "$AZURE_SUBSCRIPTION_ID" --output json)
+assign_role_to_platform_identity() {
+    local principalId=$1
+    local roleId=$2
+    local scope="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}"
+
+    echo "INFO: Assigning roles to platform identity: ${principalId}"
+    local result=$(az role assignment create --assignee "${principalId}" --role "${roleId}"  --scope "${scope}" --output json)
+
+    echo "Role assignment result: $result"
+    echo ""
+}
+
+create_platform_identity_and_assign_role() {
+    local operatorName="${1}"
+    local roleDefinitionId="${2}"
+
+    echo "INFO: Creating platform identity for operator: ${operatorName}"
+    local result=$(az identity create --name "${operatorName}" --resource-group "${RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json)
 
     # Extract the client ID, principal Id, resource ID and name from the result
     clientID=$(echo $result | jq -r .clientId)
@@ -29,24 +41,39 @@ create_platform_identity() {
     echo "Principal ID: $principalId"
     echo "Resource ID: $resourceId"
     echo "Name: $name"
+    echo ""
+
+    if [[ "${operatorName}" == "MachineApiOperator" || "${operatorName}" == "NetworkOperator" \
+        || "${operatorName}" == "AzureFilesStorageOperator" || "${operatorName}" == "ServiceOperator" ]]; then
+
+        assign_role_to_platform_identity "${principalId}" "${roleDefinitionId}"
+    fi
 }
 
-process_operators_file() {
-    local operatorsFilePath="$1"
+setup_platform_identity() {
+    local platformWorkloadIdentityRoles=$(get_platform_workloadIdentity_role_sets)
 
     echo "INFO: Creating platform identities under RG ($RESOURCEGROUP) and Sub Id ($AZURE_SUBSCRIPTION_ID)"
     echo ""
-    while read operator || [ -n "${operator}" ]; do
-        echo "INFO: Creating platform identity for operator: ${operator}"
-        create_platform_identity "$operator"
-        echo ""
-    done < "${operatorsFilePath}"
+
+    # Loop through each element under platformWorkloadIdentityRoles
+    while read -r role; do
+        operatorName=$(echo "$role" | jq -r '.operatorName')
+        roleDefinitionId=$(echo "$role" | jq -r '.roleDefinitionId' | awk -F'/' '{print $NF}')
+
+        create_platform_identity_and_assign_role "${operatorName}" "${roleDefinitionId}"
+
+    done <<< "$platformWorkloadIdentityRoles"
 }
 
 main() {
-    operatorsFilePath=$(prompt_for_operators_file)
-    process_operators_file "$operatorsFilePath"
+
+    if [[ -z "${PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS}" ]]; then
+        echo "ERROR: Env Variable PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS is not set."
+        exit 1
+    fi
+
+    setup_platform_identity
 }
 
 main
-
