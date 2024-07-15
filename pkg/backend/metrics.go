@@ -218,7 +218,7 @@ func (ocb *openShiftClusterBackend) gatherNetworkMetrics(log *logrus.Entry, doc 
 		}
 	}
 
-	if doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs != nil {
+	if doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile != nil && doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs != nil {
 		dimensions[networkProfileManagedOutboundIpsMetricName] = strconv.FormatInt(int64(doc.OpenShiftCluster.Properties.NetworkProfile.LoadBalancerProfile.ManagedOutboundIPs.Count), 10)
 	} else {
 		log.Warnf("%s %s", metricFailToCollectErr, networkProfileManagedOutboundIpsMetricName)
