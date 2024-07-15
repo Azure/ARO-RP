@@ -120,11 +120,6 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	dbClusterManagerConfiguration, err := database.NewClusterManagerConfigurations(ctx, dbc, dbName)
-	if err != nil {
-		return err
-	}
-
 	dbBilling, err := database.NewBilling(ctx, dbc, dbName)
 	if err != nil {
 		return err
