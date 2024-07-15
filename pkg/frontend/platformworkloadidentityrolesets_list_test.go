@@ -125,7 +125,7 @@ func TestListPlatformWorkloadIdentityRoleSets(t *testing.T) {
 			ti := newTestInfra(t).WithSubscriptions().WithPlatformWorkloadIdentityRoleSets()
 			defer ti.done()
 
-			frontend, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, nil, nil, nil, nil, nil, ti.platformWorkloadIdentityRoleSetsDatabase, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, nil)
+			frontend, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, nil, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

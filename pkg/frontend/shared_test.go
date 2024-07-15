@@ -67,6 +67,7 @@ type testInfra struct {
 	log        *logrus.Entry
 	fixture    *testdatabase.Fixture
 	checker    *testdatabase.Checker
+	dbGroup    database.DatabaseGroup
 
 	openShiftClustersClient                  *cosmosdb.FakeOpenShiftClusterDocumentClient
 	openShiftClustersDatabase                database.OpenShiftClusters
@@ -122,6 +123,8 @@ func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *test
 	fixture := testdatabase.NewFixture()
 	checker := testdatabase.NewChecker()
 
+	dbGroup := database.NewDBGroup()
+
 	return &testInfra{
 		t: t,
 
@@ -133,6 +136,7 @@ func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *test
 		checker:    checker,
 		audit:      auditEntry,
 		log:        log,
+		dbGroup:    dbGroup,
 		cli: &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
@@ -153,24 +157,28 @@ func newTestInfraWithFeatures(t *testing.T, features map[env.Feature]bool) *test
 func (ti *testInfra) WithOpenShiftClusters() *testInfra {
 	ti.openShiftClustersDatabase, ti.openShiftClustersClient = testdatabase.NewFakeOpenShiftClusters()
 	ti.fixture.WithOpenShiftClusters(ti.openShiftClustersDatabase)
+	ti.dbGroup.WithOpenShiftClusters(ti.openShiftClustersDatabase)
 	return ti
 }
 
 func (ti *testInfra) WithBilling() *testInfra {
 	ti.billingDatabase, ti.billingClient = testdatabase.NewFakeBilling()
 	ti.fixture.WithBilling(ti.billingDatabase)
+	ti.dbGroup.WithBilling(ti.billingDatabase)
 	return ti
 }
 
 func (ti *testInfra) WithSubscriptions() *testInfra {
 	ti.subscriptionsDatabase, ti.subscriptionsClient = testdatabase.NewFakeSubscriptions()
 	ti.fixture.WithSubscriptions(ti.subscriptionsDatabase)
+	ti.dbGroup.WithSubscriptions(ti.subscriptionsDatabase)
 	return ti
 }
 
 func (ti *testInfra) WithAsyncOperations() *testInfra {
 	ti.asyncOperationsDatabase, ti.asyncOperationsClient = testdatabase.NewFakeAsyncOperations()
 	ti.fixture.WithAsyncOperations(ti.asyncOperationsDatabase)
+	ti.dbGroup.WithAsyncOperations(ti.asyncOperationsDatabase)
 	return ti
 }
 
@@ -178,6 +186,7 @@ func (ti *testInfra) WithOpenShiftVersions() *testInfra {
 	uuid := deterministicuuid.NewTestUUIDGenerator(7)
 	ti.openShiftVersionsDatabase, ti.openShiftVersionsClient = testdatabase.NewFakeOpenShiftVersions(uuid)
 	ti.fixture.WithOpenShiftVersions(ti.openShiftVersionsDatabase, uuid)
+	ti.dbGroup.WithOpenShiftVersions(ti.openShiftVersionsDatabase)
 	return ti
 }
 
@@ -185,6 +194,7 @@ func (ti *testInfra) WithPlatformWorkloadIdentityRoleSets() *testInfra {
 	uuid := deterministicuuid.NewTestUUIDGenerator(8)
 	ti.platformWorkloadIdentityRoleSetsDatabase, ti.platformWorkloadIdentityRoleSetsClient = testdatabase.NewFakePlatformWorkloadIdentityRoleSets(uuid)
 	ti.fixture.WithPlatformWorkloadIdentityRoleSets(ti.platformWorkloadIdentityRoleSetsDatabase, uuid)
+	ti.dbGroup.WithPlatformWorkloadIdentityRoleSets(ti.platformWorkloadIdentityRoleSetsDatabase)
 	return ti
 }
 
