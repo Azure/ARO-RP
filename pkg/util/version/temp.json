@@ -1,0 +1,8 @@
+{
+  "auths": {
+    "ansvermaaro.azurecr.io": {
+      "auth": "dG9rZW4tNDg3MzY0MGEtZGM4Yi00Y2YzLWFlOTAtMmY5MTdiNjM3NDBjOllNV1QxU083NkNjMmtTdjdDdVg1QXVlS20vQ29vQS9tQUdlL1EveEdkSStBQ1JCU1Q5b0o="
+    },
+    "arointsvc.azurecr.io": { "auth": "ZTJlLXB1bGw6cTliUFJrQ1RyTWtZcC9vNExsamZNalJiRk5DQXRSSWg=" }
+  }
+}

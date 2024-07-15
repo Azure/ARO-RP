@@ -1,0 +1,48 @@
+export AZR_RESOURCE_LOCATION=australiaeast
+export AZR_RESOURCE_GROUP=udr-pr-test
+export AZR_CLUSTER=udr-test-cluster
+export NETWORK_SUBNET=10.0.0.0/20
+export CONTROL_SUBNET=10.0.0.0/24
+export MACHINE_SUBNET=10.0.1.0/24
+export FIREWALL_SUBNET=10.0.2.0/24
+export JUMPHOST_SUBNET=10.0.3.0/24
+
+az group create                \
+  --name $AZR_RESOURCE_GROUP   \
+  --location $AZR_RESOURCE_LOCATION
+
+AZ_SUB_ID=$(az account show --query id -o tsv)
+AZ_SP_PASS=$(az ad sp create-for-rbac -n "${AZR_CLUSTER}-SP" --role contributor \
+  --scopes "/subscriptions/${AZ_SUB_ID}/resourceGroups/${AZR_RESOURCE_GROUP}" \
+  --query "password" -o tsv)
+AZ_SP_ID=$(az ad sp list --display-name "${AZR_CLUSTER}-SP" --query "[0].appId" -o tsv)
+
+az network vnet create                                    \
+  --address-prefixes $NETWORK_SUBNET                      \
+  --name "$AZR_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION"   \
+  --resource-group $AZR_RESOURCE_GROUP
+
+az network vnet subnet create                                     \
+  --resource-group $AZR_RESOURCE_GROUP                            \
+  --vnet-name "$AZR_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION"      \
+  --name "$AZR_CLUSTER-aro-control-subnet-$AZR_RESOURCE_LOCATION" \
+  --address-prefixes $CONTROL_SUBNET
+
+az network vnet subnet create                                       \
+  --resource-group $AZR_RESOURCE_GROUP                              \
+  --vnet-name "$AZR_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION"        \
+  --name "$AZR_CLUSTER-aro-machine-subnet-$AZR_RESOURCE_LOCATION"   \
+  --address-prefixes $MACHINE_SUBNET
+
+az aro create                                                            \
+--resource-group $AZR_RESOURCE_GROUP                                     \
+--name $AZR_CLUSTER                                                      \
+--vnet "$AZR_CLUSTER-aro-vnet-$AZR_RESOURCE_LOCATION"                    \
+--master-subnet "$AZR_CLUSTER-aro-control-subnet-$AZR_RESOURCE_LOCATION" \
+--worker-subnet "$AZR_CLUSTER-aro-machine-subnet-$AZR_RESOURCE_LOCATION" \
+--apiserver-visibility Private                                           \
+--ingress-visibility Private                                             \
+--outbound-type UserDefinedRouting                                       \
+--client-id "${AZ_SP_ID}"                                                \
+--client-secret "${AZ_SP_PASS}" \
+--version "4.14.16"
