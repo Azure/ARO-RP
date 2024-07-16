@@ -2,6 +2,11 @@
 
 # This script creates a platform Identities to use for local development
 # The script reads the env var PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS and creates platform identities for each operator
+# The script require following env vars to be set:
+#       - PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS: JSON data containing the role sets for each operator
+#       - AZURE_SUBSCRIPTION_ID: Azure subscription ID
+#       - RESOURCEGROUP: Azure resource group name
+#       - CLUSTER: Cluster name
 
 get_platform_workloadIdentity_role_sets() {
     local platformWorkloadIdentityRoles
@@ -16,20 +21,34 @@ assign_role_to_platform_identity() {
     local principalId=$1
     local roleId=$2
     local scope="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}"
+    local result=$(az role assignment list --assignee "${principalId}" --role "${roleId}" --scope "${scope}" 2>/dev/null | wc -l)
+
+    if [[ $result -gt 1 ]]; then
+        echo "INFO: Role already assigned to platform identity: ${principalId}"
+        echo ""
+        return
+    fi
 
     echo "INFO: Assigning roles to platform identity: ${principalId}"
-    local result=$(az role assignment create --assignee "${principalId}" --role "${roleId}"  --scope "${scope}" --output json)
+    result=$(az role assignment create --assignee-object-id "${principalId}" --assignee-principal-type "ServicePrincipal" --role "${roleId}"  --scope "${scope}" --output json)
 
-    echo "Role assignment result: $result"
+    echo "Role assignment result: ${result}"
     echo ""
 }
 
 create_platform_identity_and_assign_role() {
     local operatorName="${1}"
     local roleDefinitionId="${2}"
+    local identityName="${CLUSTER}-${operatorName}"
+    local result=$(az identity show --name "${identityName}" --resource-group "${RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json 2>/dev/null)
 
-    echo "INFO: Creating platform identity for operator: ${operatorName}"
-    local result=$(az identity create --name "${operatorName}" --resource-group "${RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json)
+    if [[ ! -z ${result} ]]; then
+        echo "INFO: Platform identity ${identityName} already exists for operator: ${operatorName}"
+        echo ""
+    else
+        echo "INFO: Creating platform identity for operator: ${operatorName}"
+        result=$(az identity create --name "${identityName}" --resource-group "${RESOURCEGROUP}" --subscription "${AZURE_SUBSCRIPTION_ID}" --output json)
+    fi
 
     # Extract the client ID, principal Id, resource ID and name from the result
     clientID=$(echo $result | jq -r .clientId)
