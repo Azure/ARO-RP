@@ -73,11 +73,11 @@ jobs:
       - template: ./templates/rp-dev/template-prepare-rp-deploy.yml
         parameters:
           rpResourceGroup: ${{ parameters.resourceGroup }}
-          rpVmssName: rp-vmss-${{ parameters.gitCommit }}
+          rpVmssName: rp-vmss-
           gwyResourceGroup: $(AZURE_UNIQUE_PREFIX)-gwy-${{ parameters.location }}
-          gwyVmssName: gateway-vmss-${{ parameters.gitCommit }}
+          gwyVmssName: gateway-vmss-
 
-      # 9) Fully delpoy RP
+      # 9) Fully deploy RP
       - script: make deploy
         name: full-deploy-aro-rp-dev
         displayName: 🚀 Fully deploy ARO RP Setup
