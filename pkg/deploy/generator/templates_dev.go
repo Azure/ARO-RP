@@ -38,8 +38,6 @@ func (g *generator) devSharedTemplate() *arm.Template {
 		g.devDiskEncryptionKey(),
 		g.devDiskEncryptionKeyVaultAccessPolicy(),
 		g.devDiskEncryptionSet(),
-		g.devMSIKeyvault(),
-		g.devMSIKeyvaultRBAC(),
 		g.devProxyVMSS())
 
 	t.Resources = append(t.Resources,
@@ -91,7 +89,6 @@ func (g *generator) devSharedTemplate() *arm.Template {
 		"proxyKey",
 		"publicIPAddressAllocationMethod",
 		"publicIPAddressSkuName",
-		"rpServicePrincipalId",
 		"sshPublicKey",
 		"vpnCACertificate",
 	} {

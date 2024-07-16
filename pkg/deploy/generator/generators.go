@@ -108,6 +108,10 @@ func (g *generator) Artifacts() error {
 		if err != nil {
 			return err
 		}
+		err = g.writeTemplate(g.devMSIKeyvaultTemplate(), fileDevMSIKeyVault)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
