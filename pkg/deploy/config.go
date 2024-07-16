@@ -156,7 +156,7 @@ func mergeConfig(primary, secondary *Configuration) (*Configuration, error) {
 	return primary, nil
 }
 
-// CheckRequiredFields validates configuration whether it provides required fields.
+// validate validates configuration whether it provides required fields.
 // Config is invalid if required fields are not provided.
 func (conf *RPConfig) validate() error {
 	configuration := conf.Configuration

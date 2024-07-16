@@ -98,11 +98,15 @@ ci-rp: fix-macos-vendor
 ci-clean:
 	docker image prune --all --filter="label=aro-*=true"
 
+.PHONY: pre-deploy
+pre-deploy:
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro pre-deploy dev-config.yaml ${LOCATION}
+
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
 .PHONY: deploy
 deploy:
-	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
 
 .PHONY: dev-config.yaml
 dev-config.yaml:

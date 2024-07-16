@@ -13,16 +13,16 @@ parameters:
     default: eastus
   - name: resourceGroup
     type: string
-    default: $(AZURE_UNIQUE_PREFIX)-aro-${{ parameters.location }}
+    default: $(AZURE_PREFIX)-aro-${{ parameters.location }}
   - name: databaseAccountName
     type: string
-    default: $(AZURE_UNIQUE_PREFIX)-aro-${{ parameters.location }}
+    default: $(AZURE_PREFIX)-aro-${{ parameters.location }}
   - name: keyvaultPrefix
     type: string
-    default: $(AZURE_UNIQUE_PREFIX)-aro-${{ parameters.location }}
+    default: $(AZURE_PREFIX)-aro-${{ parameters.location }}
   - name: dst_acr_name
     type: string
-    default: $(AZURE_UNIQUE_PREFIX)aro
+    default: $(AZURE_PREFIX)aro
   - name: aroImage
     type: string
     default: ${{ parameters.dst_acr_name }}.azurecr.io/aro:$(git rev-parse --short=7 HEAD) # do we have git?

@@ -47,6 +47,9 @@ func main() {
 
 	var err error
 	switch strings.ToLower(flag.Arg(0)) {
+	case "pre-deploy":
+		checkArgs(3)
+		err = preDeploy(ctx, log)
 	case "deploy":
 		checkArgs(3)
 		err = deploy(ctx, log)

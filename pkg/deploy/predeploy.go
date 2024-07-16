@@ -149,10 +149,6 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 		return err
 	}
 
-	err = d.deployPreDeploy(ctx, d.config.RPResourceGroupName, generator.FileRPProductionPredeploy, "rpServicePrincipalId", rpMSI.PrincipalID.String(), isCreate)
-	if err != nil {
-		return err
-	}
 
 	return d.configureServiceSecrets(ctx)
 }
