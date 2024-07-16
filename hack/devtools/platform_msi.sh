@@ -4,7 +4,7 @@
 # The script reads the env var PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS and creates platform identities for each operator
 
 get_platform_workloadIdentity_role_sets() {
-    local platformWorkloadIdentityRole
+    local platformWorkloadIdentityRoles
    
     # Parse the JSON data using jq
     platformWorkloadIdentityRoles=$(echo "${PLATFORM_WORKLOAD_IDENTITY_ROLE_SETS}" | jq -c '.[].platformWorkloadIdentityRoles[]')
