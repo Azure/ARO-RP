@@ -58,7 +58,7 @@ func TestGetNodeField(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			field, ok := getNodeField(tt.nodes)
 			if ok != tt.ok {
-				t.Errorf("expected ok to be %v, got %v", tt.ok, ok)
+				t.Errorf("expected ok to be %t, got %t", tt.ok, ok)
 			}
 			if !reflect.DeepEqual(field, tt.expected) {
 				t.Errorf("expected field to be %+v, got %+v", tt.expected, field)
