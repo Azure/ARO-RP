@@ -77,6 +77,7 @@ type frontend struct {
 	aead encryption.AEAD
 
 	hiveClusterManager  hive.ClusterManager
+	hiveSyncSetManager  hive.SyncSetManager
 	kubeActionsFactory  kubeActionsFactory
 	azureActionsFactory azureActionsFactory
 

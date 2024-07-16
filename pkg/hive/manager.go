@@ -14,6 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
@@ -52,6 +53,18 @@ type clusterManager struct {
 	kubernetescli kubernetes.Interface
 
 	dh dynamichelper.Interface
+}
+
+type SyncSetManager interface {
+	ListSyncSets(ctx context.Context, doc *api.OpenShiftClusterDocument) (*hivev1.SyncSetList, error)
+	GetSyncSet(ctx context.Context, doc *api.OpenShiftClusterDocument) (*hivev1.SyncSet, error)
+	ListSelectorSyncSets(ctx context.Context, doc *api.OpenShiftClusterDocument) (*hivev1.SelectorSyncSetList, error)
+	GetSelectorSyncSet(ctx context.Context, doc *api.OpenShiftClusterDocument) (*hivev1.SelectorSyncSet, error)
+}
+
+type syncSetManager struct {
+	log           *logrus.Entry
+	hiveClientset client.Client
 }
 
 // NewFromEnv can return a nil ClusterManager when hive features are disabled. This exists to support regions where we don't have hive,
@@ -262,4 +275,66 @@ func (hr *clusterManager) installLogsForLatestDeployment(ctx context.Context, cd
 	latestProvision := provisions[0]
 
 	return latestProvision.Spec.InstallLog, nil
+}
+
+func (hr *syncSetManager) ListSyncSets(ctx context.Context, doc *api.OpenShiftClusterDocument) (*hivev1.SyncSetList, error) {
+	sslist := &hivev1.SyncSetList{}
+	selector, _ := labels.Parse("hive.openshift.io/cluster-deployment-name")
+	err := hr.hiveClientset.List(ctx, sslist, &client.ListOptions{
+		Namespace:     doc.OpenShiftCluster.Properties.HiveProfile.Namespace,
+		LabelSelector: selector,
+	})
+	if err != nil {
+		hr.log.WithError(err).Warn("could not list syncsets for clusterdeployment")
+		return nil, err
+	}
+	if len(sslist.Items) == 0 {
+		return nil, errors.New("no syncsets for deployment")
+	}
+
+	return sslist, nil
+}
+
+func (hr *syncSetManager) GetSyncSet(ctx context.Context, doc *api.OpenShiftClusterDocument) (*hivev1.SyncSet, error) {
+	ssGet := &hivev1.SyncSet{}
+	err := hr.hiveClientset.Get(ctx, client.ObjectKey{
+		Namespace: doc.OpenShiftCluster.Properties.HiveProfile.Namespace,
+		Name:      ClusterDeploymentName,
+	}, ssGet)
+	if err != nil {
+		return nil, err
+	}
+
+	return ssGet, nil
+}
+
+func (hr *syncSetManager) ListSelectorSyncSets(ctx context.Context, doc *api.OpenShiftClusterDocument) (*hivev1.SelectorSyncSetList, error) {
+	sslist := &hivev1.SelectorSyncSetList{}
+	selector, _ := labels.Parse("hive.openshift.io/cluster-deployment-name")
+	err := hr.hiveClientset.List(ctx, sslist, &client.ListOptions{
+		Namespace:     doc.OpenShiftCluster.Properties.HiveProfile.Namespace,
+		LabelSelector: selector,
+	})
+	if err != nil {
+		hr.log.WithError(err).Warn("could not list selector syncsets for clusterdeployment")
+		return nil, err
+	}
+	if len(sslist.Items) == 0 {
+		return nil, errors.New("no selector syncsets for deployment")
+	}
+
+	return sslist, nil
+}
+
+func (hr *syncSetManager) GetSelectorSyncSet(ctx context.Context, doc *api.OpenShiftClusterDocument) (*hivev1.SelectorSyncSet, error) {
+	ssGet := &hivev1.SelectorSyncSet{}
+	err := hr.hiveClientset.Get(ctx, client.ObjectKey{
+		Namespace: doc.OpenShiftCluster.Properties.HiveProfile.Namespace,
+		Name:      ClusterDeploymentName,
+	}, ssGet)
+	if err != nil {
+		return nil, err
+	}
+
+	return ssGet, nil
 }
