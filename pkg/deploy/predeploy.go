@@ -210,6 +210,9 @@ func (d *deployer) UnDeployRG(ctx context.Context) error {
 	if _, err := d.groups.Delete(ctx, d.config.GatewayResourceGroupName); err != nil {
 		return err
 	}
+
+	// TODO: delete keyvault due to conflic (A vault with the same name already exists in deleted state)
+	// DO - az keyvault purge --name zzz-aro-eastus-gwy
 	return nil
 
 }

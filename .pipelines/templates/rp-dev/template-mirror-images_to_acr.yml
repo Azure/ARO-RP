@@ -14,8 +14,6 @@ steps:
   - script: |
       set -e
       go run ./cmd/aro mirror ${{ parameters.mirrorTag }}
-
-      source ./hack/rp-dev-helper.sh
     name: mirror-ocp-images-to-acr
     displayName: ⚙️ Mirror OCP Images to ACR
 

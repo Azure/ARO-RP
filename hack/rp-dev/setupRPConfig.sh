@@ -1,3 +1,5 @@
+#!/bin/bash -e
+
 export AZURE_PREFIX=$1 NO_CACHE=false AZURE_EXTENSION_DEV_SOURCES="$(pwd)/python" ARO_INSTALL_VIA_HIVE=true
 export ARO_ADOPT_BY_HIVE=true ARO_SKIP_PKI_TESTS=true DATABASE_NAME=ARO
 
