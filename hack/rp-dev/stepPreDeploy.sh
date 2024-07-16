@@ -1,6 +1,8 @@
 export AZURE_PREFIX=$1 NO_CACHE=false AZURE_EXTENSION_DEV_SOURCES="$(pwd)/python" ARO_INSTALL_VIA_HIVE=true
 export ARO_ADOPT_BY_HIVE=true ARO_SKIP_PKI_TESTS=true DATABASE_NAME=ARO
 
+# TODO - check if needed
+export USER=dummy
 secretSA=$(grep -A 2 secretSA .pipelines/templates/rp-dev/rp-dev-params.yml | grep 'default:' | awk '{print $2}')
 # Export the SECRET_SA_ACCOUNT_NAME environment variable and run make secrets
 export SECRET_SA_ACCOUNT_NAME=$secretSA && make secrets
@@ -26,8 +28,9 @@ gitCommit=$(git rev-parse --short=7 HEAD)
 export AROIMAGE=$AZURE_PREFIXaro.azurecr.io/aro:$gitCommit
 # Source environment variables from the secrets file
 source secrets/env
+# TODO - check if needed
 # Generate SSH key
-# ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa
+ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa
 
 # Run the make command to generate dev-config.yaml
 make dev-config.yaml
