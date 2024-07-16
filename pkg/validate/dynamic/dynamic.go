@@ -372,6 +372,7 @@ func (dv *dynamic) validateNatGatewayPermissions(ctx context.Context, s Subnet) 
 	return err
 }
 
+// validateActionsByOID creates a closure with oid(nil in case of Non-MIWI) to call usingCheckAccessV2 for checking SP/MI has actions allowed on a resource
 func (dv *dynamic) validateActionsByOID(ctx context.Context, r *azure.Resource, actions []string, oid *string) error {
 	// ARM has a 5 minute cache around role assignment creation, so wait one minute longer
 	timeoutCtx, cancel := context.WithTimeout(ctx, 6*time.Minute)
@@ -439,11 +440,7 @@ func (c closure) usingCheckAccessV2() (bool, error) {
 		}
 	}
 	if len(actionsToFind) > 0 {
-		missingActions := []string{}
-		for missingAction := range actionsToFind {
-			missingActions = append(missingActions, missingAction)
-		}
-		c.dv.log.Infof("The result didn't include permissions %v", missingActions)
+		c.dv.log.Infof("The result didn't include permissions %v for object ID: %s", actionsToFind, *c.oid)
 		return false, nil
 	}
 
@@ -772,6 +769,7 @@ func (dv *dynamic) ValidatePreConfiguredNSGs(ctx context.Context, oc *api.OpenSh
 	return nil
 }
 
+// validateActions calls validateActionsByOID with object ID in case of MIWI cluster otherwise without object ID
 func (dv *dynamic) validateActions(ctx context.Context, r *azure.Resource, actions []string) (*string, error) {
 	if dv.platformIdentities != nil {
 		for _, platformIdentity := range dv.platformIdentities {

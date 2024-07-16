@@ -41,7 +41,7 @@ func NewPlatformWorkloadIdentityRolesByVersion(ctx context.Context, oc *api.Open
 		}
 	}
 
-	return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.clusterProfile.version", "No PlatformWorkloadIdentityRoleSet found for the requested OpenShift version '%s'.", requestedInstallVersion)
+	return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "properties.clusterProfile.version", "No PlatformWorkloadIdentityRoleSet found for the requested OpenShift version '%s'. Please retry with different OpenShift version, and if the issue persists, raise an Azure support ticket", requestedInstallVersion)
 }
 
 func (service *platformWorkloadIdentityRolesByVersionService) GetPlatformWorkloadIdentityRoles() []api.PlatformWorkloadIdentityRole {
