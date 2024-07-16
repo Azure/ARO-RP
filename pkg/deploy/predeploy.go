@@ -181,6 +181,39 @@ func (d *deployer) PreDeployRP(ctx context.Context) error {
 	return d.configureServiceSecrets(ctx)
 }
 
+// UnPreDeploy undeploys 4 resource groups from the deoployment location
+func (d *deployer) UnDeployRG(ctx context.Context) error {
+	// TODO : Undeploy global rbac 
+	// err := d.deployRPGlobalSubscription(ctx)
+	// if err != nil {
+	// 	return err
+	// }
+
+	d.log.Infof("undeploying four resource groups in %s", *d.config.Configuration.SubscriptionResourceGroupLocation)
+
+	d.log.Infof("undeploying resource group %s", *d.config.Configuration.SubscriptionResourceGroupName)
+	if _, err := d.groups.Delete(ctx, *d.config.Configuration.SubscriptionResourceGroupName); err != nil {
+		return err
+	}
+
+	d.log.Infof("undeploying resource group %s", *d.config.Configuration.GlobalResourceGroupName)
+	if _, err := d.groups.Delete(ctx, *d.config.Configuration.GlobalResourceGroupName); err != nil {
+		return err
+	}
+
+	d.log.Infof("undeploying resource group %s", d.config.RPResourceGroupName)
+	if _, err := d.groups.Delete(ctx, d.config.RPResourceGroupName); err != nil {
+		return err
+	}
+
+	d.log.Infof("undeploying resource group %s", d.config.GatewayResourceGroupName)
+	if _, err := d.groups.Delete(ctx, d.config.GatewayResourceGroupName); err != nil {
+		return err
+	}
+	return nil
+
+}
+
 func (d *deployer) deployRPGlobal(ctx context.Context, rpServicePrincipalID, gatewayServicePrincipalID string) error {
 	deploymentName := "rp-global-" + d.config.Location
 

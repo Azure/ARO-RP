@@ -56,6 +56,9 @@ func main() {
 	case "deploy":
 		checkArgs(3)
 		err = deploy(ctx, log)
+	case "undeploy-rp-rg":
+		checkArgs(3)
+		err = unDeploy(ctx, log)
 	case "gateway":
 		checkArgs(1)
 		err = gateway(ctx, log)

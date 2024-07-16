@@ -106,6 +106,11 @@ pre-deploy:
 pre-deploy-rp:
 	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro pre-deploy-rp dev-config.yaml ${LOCATION}
 
+.PHONY: undeploy-rp-rg
+undeploy-rp-rg:
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro undeploy-rp-rg dev-config.yaml ${LOCATION}
+
+
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
 .PHONY: deploy

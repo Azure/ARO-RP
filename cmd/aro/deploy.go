@@ -103,6 +103,18 @@ func preDeploy (ctx context.Context, log *logrus.Entry) error {
 	return nil
 }
 
+func unDeploy (ctx context.Context, log *logrus.Entry) error {
+	deployer, err := getDeployer(ctx, log)
+	if err != nil {
+		return err
+	}
+	err = deployer.UnDeployRG(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func preDeployRP (ctx context.Context, log *logrus.Entry) error {
 	deployer, err := getDeployer(ctx, log)
 	if err != nil {

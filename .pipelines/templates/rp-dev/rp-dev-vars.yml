@@ -4,3 +4,9 @@ variables:
   ARO_INSTALL_VIA_HIVE: true
   ARO_ADOPT_BY_HIVE: true
   DATABASE_NAME: ARO
+
+# Pipeline Conditions
+  is-dev: ${{ eq(variables['Build.SourceBranch'], 'refs/heads/main') }}
+  is-release: ${{ and(eq(variables['Build.SourceBranch'], 'refs/heads/main'), ne(variables['Build.Reason'], 'Schedule')) }}
+  is-deployment: ${{ or(variables['is-dev'], variables['is-release']) }}
+  is-debug: true
