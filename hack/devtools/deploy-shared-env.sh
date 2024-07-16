@@ -45,7 +45,6 @@ deploy_env_dev() {
             "proxyImage=arointsvc.azurecr.io/proxy:latest" \
             "proxyImageAuth=$(jq -r '.auths["arointsvc.azurecr.io"].auth' <<<$PULL_SECRET)" \
             "proxyKey=$(base64 -w0 <secrets/proxy.key)" \
-            "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_RP_CLIENT_ID'" --query '[].id' -o tsv)" \
             "sshPublicKey=$(<secrets/proxy_id_rsa.pub)" \
             "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" >/dev/null
 }
@@ -61,6 +60,16 @@ deploy_oic_dev() {
             "oidcStorageAccountName=$(echo $OIDC_STORAGE_ACCOUNT_NAME)" >/dev/null
     echo "########## Enabling Static Website for OIDC storage account in RG $RESOURCEGROUP ##########"
     az storage blob service-properties update --static-website true --account-name ${OIDC_STORAGE_ACCOUNT_NAME} --auth-mode login >/dev/null
+}
+
+deploy_msi_kv_dev() {
+    echo "########## Deploying shared dev key vault for mock cluster MSI certificates in RG $RESOURCEGROUP ##########"
+    az deployment group create \
+        -g "$RESOURCEGROUP" \
+        -n rp-dev-msi-kv \
+        --template-file pkg/deploy/assets/rp-dev-msi-kv.json \
+        --parameters \
+		"rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_RP_CLIENT_ID'" --query '[].id' -o tsv)" >/dev/null
 }
 
 deploy_rp_managed_identity() {
@@ -104,6 +113,16 @@ deploy_oic_for_dedicated_rp() {
             "oidcStorageAccountName=$(yq '.rps[].configuration.oidcStorageAccountName' dev-config.yaml)" >/dev/null
     echo "########## Enabling Static Website for OIDC storage account in RG $RESOURCEGROUP ##########"
     az storage blob service-properties update --static-website true --account-name $(yq '.rps[].configuration.oidcStorageAccountName' dev-config.yaml) --auth-mode login >/dev/null
+}
+
+deploy_msi_kv_for_dedicated_rp() {
+    echo "########## Deploying key vault for mock cluster MSI certificates in RG $RESOURCEGROUP ##########"
+    az deployment group create \
+        -g "$RESOURCEGROUP" \
+        -n rp-dev-msi-kv \
+        --template-file pkg/deploy/assets/rp-dev-msi-kv.json \
+        --parameters \
+		"rpServicePrincipalId=$(az identity show -g $RESOURCEGROUP -n aro-rp-$LOCATION | jq -r '.["principalId"]')" >/dev/null
 }
 
 deploy_env_dev_override() {
