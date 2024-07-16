@@ -1578,7 +1578,7 @@ replace (
 	k8s.io/kubectl => k8s.io/kubectl v0.25.16
 	k8s.io/kubernetes => k8s.io/kubernetes v1.25.16
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.11.2
-	sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.5.0
+	sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.9.0
 	sigs.k8s.io/kustomize/api => sigs.k8s.io/kustomize/api v0.11.2
 	sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.13.3
 	sigs.k8s.io/structured-merge-diff => sigs.k8s.io/structured-merge-diff v1.0.1-0.20191108220359-b1b620dd3f06
