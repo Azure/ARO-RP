@@ -1,0 +1,42 @@
+parameters:
+  mirrorTag: ""
+  dst_acr_name: ""
+steps:
+  - script: |
+      set -e
+      export SRC_AUTH_QUAY=$(echo $USER_PULL_SECRET | jq -r '.auths."quay.io".auth')
+      export SRC_AUTH_REDHAT=$(echo $USER_PULL_SECRET | jq -r '.auths."registry.redhat.io".auth')
+      export DST_AUTH=$(echo -n '00000000-0000-0000-0000-000000000000:'$(az acr login -n ${{ parameters.dst_acr_name }} --expose-token | jq -r .accessToken) | base64 -w0)
+      docker login -u 00000000-0000-0000-0000-000000000000 -p "$(echo $DST_AUTH | base64 -d | cut -d':' -f2)" "${{ parameters.dst_acr_name }}.azurecr.io"
+    name: acr-login
+    displayName: ⚙️ Login to ACR
+
+  - script: |
+      set -e
+      go run ./cmd/aro mirror ${{ parameters.mirrorTag }}
+
+      source ./hack/rp-dev-helper.sh
+    name: mirror-ocp-images-to-acr
+    displayName: ⚙️ Mirror OCP Images to ACR
+
+  - script: |
+      set -e
+      mdm_image_tag=$(get_digest_tag "MdmImage")
+      mdsd_image_tag=$(get_digest_tag "MdsdImage")
+
+      az acr import --name ${{ parameters.dst_acr_name }}.azurecr.io/${mdm_image_tag} --source linuxgeneva-microsoft.azurecr.io/${mdm_image_tag}
+      az acr import --name ${{ parameters.dst_acr_name }}.azurecr.io/${mdsd_image_tag} --source linuxgeneva-microsoft.azurecr.io/${mdsd_image_tag}
+    name: import-mdm-mdsd-images-to-acr
+    displayName: ⚙️ Import MDM and MDSD images to ACR
+
+  - script: make publish-image-aro-multistage
+    name: import-aro-image-to-acr
+    displayName: ⚙️ Build, push and import ARO image to ACR
+
+  - script: |
+      set -e
+      source ./hack/rp-dev-helper.sh
+      fluentbit_image_tag=$(get_digest_tag "FluentbitImage")
+      copy_digest_tag $PULL_SECRET, "arointsvc", ${{ parameters.dst_acr_name }}, $fluentbit_image_tag
+    name: build-push-aro-fluenbit-images-to-acr
+    displayName: ⚙️ Copy fluentbit image to ACR

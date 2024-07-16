@@ -1,5 +1,12 @@
+parameters:
+    rpResourceGroup: ""
+    rpVmssName: ""
+    gwyResourceGroup: ""
+    gwyVmssName: ""
+
 steps:
   - script: |
+      set -e
       export PARENT_DOMAIN_NAME=osadev.cloud
       export PARENT_DOMAIN_RESOURCEGROUP=dns
       export GLOBAL_RESOURCEGROUP=${AZURE_UNIQUE_PREFIX}-global
@@ -24,3 +31,17 @@ steps:
       done
     name: dns-domain-and-certificate-keyvault
     displayName: ⚙️ Update the DNS Child Domains and the certificates in keyvault
+
+  - script: |
+      set -e
+      az vmss delete -g ${{ parameters.rpResourceGroup }} --name ${{ parameters.rpVmssName }}  --force-deletion
+    name: delete-rp-vmss
+    displayName: ⚙️ Delete RP VMSS
+    continueOnError: false
+
+  - script: |
+      set -e
+      az vmss delete -g ${{ parameters.gwyResourceGroup }} --name ${{ parameters.gwyVmssName }}  --force-deletion
+    name: delete-gwy-vmss
+    displayName: ⚙️ Delete GWY VMSS
+    continueOnError: false

@@ -29,90 +29,66 @@ jobs:
 # setup
       # 1) Checkout repo
       - template: ./templates/template-checkout.yml
-      
+
       # 2) Login to Azure with az CLI
       - template: ./templates/template-az-cli-login.yml # does it have az CLI alraedy?
         parameters:
           azureDevOpsJSONSPN: ${{ parameters.azureJson }}
-      
-      # 3) Download shard RP secrets
-      - template: ./templates/rp-dev/template-download-secrets.yml
-        parameters:
-          secretSA: ${{ parameters.secretSA }}
-      
-      # 4) Generate RP Dev configuration file
+
+      # 3) Generate RP Dev configuration file
       - template: ./templates/rp-dev/template-generate-rp-dev-config.yml
         parameters:
+          secretSA: ${{ parameters.secretSA }}
           location: ${{ parameters.location }}
           resourceGroup: ${{ parameters.resourceGroup }}
           databaseAccountName: ${{ parameters.databaseAccountName }}
           keyvaultPrefix: ${{ parameters.keyvaultPrefix }}
           aroImage: ${{ parameters.aroImage }}
-        
-      # 5) Semi deploy ...
+
+      # 4) Semi deploy ...
       - script: make deploy # use different target which will succeed and won't fail
         name: semi-deploy-aro-rp-dev
-        displayName: ⚙️ Run pre-deplyments tasks prior to AKS
-        condition: ${{ variables['is-release'] }}
-      
-      # 6) Deploy VPN Gateway
-      - script: source ./hack/devtools/deploy-shared-env.sh && deploy_vpn_for_dedicated_rp
-        name: deploy-vpn-gateway
-        displayName: ⚙️ Deploy VPN Gateway
-      
-      # 7) Deploy AKS
-      - script: source ./hack/devtools/deploy-shared-env.sh && deploy_aks_dev
-        name: deploy-aks-dev
-        displayName: ⚙️ Deploy AKS
+        displayName: 🚀 semi-deploy RP
 
-      # 8) Install Hive
+      # 5) Deploy VPN Gateway & AKS
+      - script: |
+          source ./hack/devtools/deploy-shared-env.sh
+          deploy_vpn_for_dedicated_rp
+          deploy_aks_dev
+        name: deploy-vpn-gateway
+        displayName: 🚀 Deploy VPN Gateway and AKS
+
+      # 6) Install Hive
       - template: ./templates/rp-dev/template-install-hive.yml
         parameters:
           location: ${{ parameters.location }}
-      
-      # 9) Login to ACR
-      - template: ./templates/rp-dev/template-acr-login.yml
-        parameters:
-          dst_acr_name: ${{ parameters.dst_acr_name }}
-      
-      # 10) Mirror OCP images to ACR
-      - template: ./templates/rp-dev/template-mirror-ocp-images.yml
-        parameters:
-          dst_acr_name: ${{ parameters.dst_acr_name }}
-          mirrorTag: ${{ parameters.ocpVersionTag }}
 
-      # 11) Push ARO and Fluenbit to ACR
-      - template: ./templates/rp-dev/template-push-aro-fluenbit-to-acr.yml
+      # 7) Mirror repos to ACR
+      - template: ./templates/rp-dev/template-mirror-images_to_acr.yml
         parameters:
+          mirrorTag: ${{ parameters.ocpVersionTag }}
           dst_acr_name: ${{ parameters.dst_acr_name }}
-      
-      # 12) Create DNS domain
-      - template: ./templates/rp-dev/template-dns-domain-and-certificate-keyvault.yml
-      
-      # 13) Delete old RP VMSS
-      - template: ./templates/rp-dev/template-delete-vmss.yml
+
+      # 8) Final preperation before deploying RP
+      - template: ./templates/rp-dev/template-prepare-rp-deploy.yml
         parameters:
-          resourceGroup: ${{ parameters.resourceGroup }}
-          vmssName: rp-vmss-${{ parameters.gitCommit }}
-      
-      # 14) Delete old Gateway VMSS
-      - template: ./templates/rp-dev/template-delete-vmss.yml
-        parameters:
-          resourceGroup: $(AZURE_UNIQUE_PREFIX)-gwy-${{ parameters.location }}
-          vmssName: gateway-vmss-${{ parameters.gitCommit }}
-      
-      # 15) Fully delpoy RP
+          rpResourceGroup: ${{ parameters.resourceGroup }}
+          rpVmssName: rp-vmss-${{ parameters.gitCommit }}
+          gwyResourceGroup: $(AZURE_UNIQUE_PREFIX)-gwy-${{ parameters.location }}
+          gwyVmssName: gateway-vmss-${{ parameters.gitCommit }}
+
+      # 9) Fully delpoy RP
       - script: make deploy
         name: full-deploy-aro-rp-dev
-        displayName: ⚙️ Fully deploy ARO RP Setup
-      
-      # 16) Create SA and Role assignment
+        displayName: 🚀 Fully deploy ARO RP Setup
+
+      # 10) Create SA and Role assignment
       - script: |
           source ./hack/devtools/deploy-shared-env.sh
           deploy_oic_for_dedicated_rp
         name: create-sa-role
         displayName: ⚙️ Create storage account and role assignment
-## few more steps would be added
+## few more steps would be added (e.g., cluster creation)
 
 # cleanup
       - template: ./templates/template-az-cli-logout.yml
