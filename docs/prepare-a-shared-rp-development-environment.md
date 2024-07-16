@@ -475,6 +475,8 @@ each of the bash functions below.
    deploy_aks_dev
    # Deploy storage account and role assignment required for workload identity clusters
    deploy_oic_dev
+   # Deploy shared key vault and role assignment for storing mock cluster MSI certificates for workload identity clusters
+   deploy_msi_kv_dev
    ```
 
    If you encounter a "VirtualNetworkGatewayCannotUseStandardPublicIP" error

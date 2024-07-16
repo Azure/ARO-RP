@@ -267,6 +267,12 @@
     deploy_oic_for_dedicated_rp
     ```
 
+1. Create key vault and role assignment for storing mock cluster MSI certificates for workload identity clusters
+    ```
+    source ./hack/devtools/deploy-shared-env.sh
+    deploy_msi_kv_for_dedicated_rp
+    ```
+
 1. If you are going to use multiversion, you can now update the OpenShiftVersions DB as per [OpenShift Version insttructions](./deploy-development-rp.md#openshift-version)
 
 ## SSH to RP VMSS Instance
