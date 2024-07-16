@@ -100,7 +100,18 @@ func preDeploy (ctx context.Context, log *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
-	// return nil
+	return nil
+}
+
+func preDeployRP (ctx context.Context, log *logrus.Entry) error {
+	deployer, err := getDeployer(ctx, log)
+	if err != nil {
+		return err
+	}
+	err = deployer.PreDeployRP(ctx)
+	if err != nil {
+		return err
+	}
 	// Must be last step so we can be sure there are no RPs at older versions
 	// still serving
 	return deployer.SaveVersion(ctx)

@@ -149,6 +149,34 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 		return err
 	}
 
+	return nil
+}
+
+// PreDeployRP
+func (d *deployer) PreDeployRP(ctx context.Context) error {
+
+	// deploy NSGs, keyvaults
+	// gateway first because RP predeploy will peer its vnet to the gateway vnet
+
+	// key the decision to deploy NSGs on the existence of the gateway
+	// predeploy.  We do this in order to refresh the RP NSGs when the gateway
+	// is deployed for the first time.
+	isCreate := false
+	_, err := d.deployments.Get(ctx, d.config.GatewayResourceGroupName, strings.TrimSuffix(generator.FileGatewayProductionPredeploy, ".json"))
+	if isDeploymentNotFoundError(err) {
+		isCreate = true
+		err = nil
+	}
+	
+	rpMSI, err := d.userassignedidentities.Get(ctx, d.config.RPResourceGroupName, "aro-rp-"+d.config.Location)
+	if err != nil {
+		return err
+	}
+
+	err = d.deployPreDeploy(ctx, d.config.RPResourceGroupName, generator.FileRPProductionPredeploy, "rpServicePrincipalId", rpMSI.PrincipalID.String(), isCreate)
+	if err != nil {
+		return err
+	}
 
 	return d.configureServiceSecrets(ctx)
 }

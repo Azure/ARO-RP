@@ -50,6 +50,9 @@ func main() {
 	case "pre-deploy":
 		checkArgs(3)
 		err = preDeploy(ctx, log)
+	case "pre-deploy-rp":
+		checkArgs(3)
+		err = preDeployRP(ctx, log)
 	case "deploy":
 		checkArgs(3)
 		err = deploy(ctx, log)
