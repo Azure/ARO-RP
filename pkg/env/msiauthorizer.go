@@ -50,10 +50,19 @@ func (c *core) NewMSITokenCredential() (azcore.TokenCredential, error) {
 	return azidentity.NewClientSecretCredential(tenantId, azureClientId, azureClientSecret, options)
 }
 
-func (c *core) NewMSIAuthorizer(scopes ...string) (autorest.Authorizer, error) {
+func (c *core) NewMSIAuthorizer(scope string) (autorest.Authorizer, error) {
+	// To prevent creating multiple authorisers with independent token
+	// refreshes, store them in a cache per-scope when created
+	auth, ok := c.msiAuthorizers[scope]
+	if ok {
+		return auth, nil
+	}
+
 	token, err := c.NewMSITokenCredential()
 	if err != nil {
 		return nil, err
 	}
-	return azidext.NewTokenCredentialAdapter(token, scopes), nil
+	auth = azidext.NewTokenCredentialAdapter(token, []string{scope})
+	c.msiAuthorizers[scope] = auth
+	return auth, nil
 }
