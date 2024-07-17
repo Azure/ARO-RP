@@ -17,7 +17,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
 	utilnet "github.com/Azure/ARO-RP/pkg/util/net"
-	"github.com/Azure/ARO-RP/pkg/util/service"
 )
 
 func gateway(ctx context.Context, log *logrus.Entry) error {
@@ -35,12 +34,12 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 
 	go g.Run()
 
-	dbc, err := service.NewDatabaseClient(ctx, _env, log, m, nil)
+	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, log, m, nil)
 	if err != nil {
 		return err
 	}
 
-	dbName, err := service.DBName(_env.IsLocalDevelopmentMode())
+	dbName, err := env.DBName(_env)
 	if err != nil {
 		return err
 	}

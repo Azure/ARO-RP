@@ -16,7 +16,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
 func getRoleSetsFromEnv() ([]api.PlatformWorkloadIdentityRoleSetProperties, error) {
@@ -38,26 +37,23 @@ func getPlatformWorkloadIdentityRoleSetDatabase(ctx context.Context, log *logrus
 		return nil, fmt.Errorf("MSI Authorizer failed with: %s", err.Error())
 	}
 
-	msiKVAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().KeyVaultScope)
-	if err != nil {
-		return nil, fmt.Errorf("MSI KeyVault Authorizer failed with: %s", err.Error())
-	}
-
 	m := statsd.New(ctx, log.WithField("component", "update-role-sets"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 
-	keyVaultPrefix := os.Getenv(envKeyVaultPrefix)
-	serviceKeyvaultURI := keyvault.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
-	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
-
-	aead, err := encryption.NewMulti(ctx, serviceKeyvault, env.EncryptionSecretV2Name, env.EncryptionSecretName)
+	aead, err := encryption.NewAEADWithCore(ctx, _env, env.EncryptionSecretV2Name, env.EncryptionSecretName)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := env.ValidateVars(envDatabaseAccountName); err != nil {
+	dbName, err := env.DBName(_env)
+	if err != nil {
 		return nil, err
 	}
-	dbAccountName := os.Getenv(envDatabaseAccountName)
+
+	dbAccountName, err := env.DBAccountName()
+	if err != nil {
+		return nil, err
+	}
+
 	clientOptions := &policy.ClientOptions{
 		ClientOptions: _env.Environment().ManagedIdentityCredentialOptions().ClientOptions,
 	}
@@ -69,11 +65,6 @@ func getPlatformWorkloadIdentityRoleSetDatabase(ctx context.Context, log *logrus
 	}
 
 	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, m, aead, dbAccountName)
-	if err != nil {
-		return nil, err
-	}
-
-	dbName, err := DBName(_env.IsLocalDevelopmentMode())
 	if err != nil {
 		return nil, err
 	}

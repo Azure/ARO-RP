@@ -18,9 +18,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/golang"
 	pkgportal "github.com/Azure/ARO-RP/pkg/portal"
 	"github.com/Azure/ARO-RP/pkg/proxy"
+	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/oidc"
-	"github.com/Azure/ARO-RP/pkg/util/service"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 )
 
@@ -69,17 +69,17 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 
 	go g.Run()
 
-	aead, err := service.NewAEADWithCore(ctx, _env, env.EncryptionSecretV2Name, env.EncryptionSecretName)
+	aead, err := encryption.NewAEADWithCore(ctx, _env, env.EncryptionSecretV2Name, env.EncryptionSecretName)
 	if err != nil {
 		return err
 	}
 
-	dbc, err := service.NewDatabaseClient(ctx, _env, log, m, aead)
+	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, log, m, aead)
 	if err != nil {
 		return err
 	}
 
-	dbName, err := service.DBName(_env.IsLocalDevelopmentMode())
+	dbName, err := env.DBName(_env)
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	keyVaultPrefix := os.Getenv(service.KeyVaultPrefix)
+	keyVaultPrefix := os.Getenv(encryption.KeyVaultPrefix)
 	portalKeyvaultURI := keyvault.URI(_env, env.PortalKeyvaultSuffix, keyVaultPrefix)
 	portalKeyvault := keyvault.NewManager(msiKVAuthorizer, portalKeyvaultURI)
 

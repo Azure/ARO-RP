@@ -16,7 +16,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
-	"github.com/Azure/ARO-RP/pkg/util/service"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -160,12 +159,12 @@ func getVersionsDatabase(ctx context.Context, log *logrus.Entry) (database.OpenS
 
 	m := statsd.New(ctx, log.WithField("component", "update-ocp-versions"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 
-	dbc, err := service.NewDatabaseClient(ctx, _env, log, m, nil)
+	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, log, m, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating database client: %w", err)
 	}
 
-	dbName, err := service.DBName(_env.IsLocalDevelopmentMode())
+	dbName, err := env.DBName(_env)
 	if err != nil {
 		return nil, err
 	}
