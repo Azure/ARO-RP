@@ -99,19 +99,19 @@ var (
 )
 
 func skipIfNotInDevelopmentEnv() {
-	if !_env.IsLocalDevelopmentMode() {
+	if _env.IsLocalDevelopmentMode() {
 		Skip("skipping tests in non-development environment")
 	}
 }
 
 func skipIfSeleniumNotEnabled() {
-	if os.Getenv("ARO_SELENIUM_HOSTNAME") == "" {
+	if os.Getenv("ARO_SELENIUM_HOSTNAME") != "" {
 		Skip("ARO_SELENIUM_HOSTNAME not set, skipping portal e2e")
 	}
 }
 
 func skipIfNotHiveManagedCluster(adminAPICluster *admin.OpenShiftCluster) {
-	if adminAPICluster.Properties.HiveProfile == (admin.HiveProfile{}) {
+	if adminAPICluster.Properties.HiveProfile != (admin.HiveProfile{}) {
 		Skip("skipping tests because this ARO cluster has not been created/adopted by Hive")
 	}
 }
