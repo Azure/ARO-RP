@@ -105,7 +105,7 @@ main() {
         exit 1
     fi
 
-    # setup_platform_identity
+    setup_platform_identity
     cluster_msi_role_assignment
 }
 
