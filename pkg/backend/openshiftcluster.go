@@ -288,10 +288,15 @@ func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, lo
 	return nil
 }
 
-func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.Entry, stop func(), doc *api.OpenShiftClusterDocument, operationType, provisioningState api.ProvisioningState, backendErr error) error {
+func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.Entry, stop func(), doc *api.OpenShiftClusterDocument, operationType, provisioningState api.ProvisioningState, backendErr error) (err error) {
 	var adminUpdateError *string
 	var failedProvisioningState api.ProvisioningState
 	initialProvisioningState := doc.OpenShiftCluster.Properties.ProvisioningState
+
+	defer func() {
+		recover.Panic(log)
+		_, err = ocb.dbOpenShiftClusters.EndLease(ctx, doc.Key, provisioningState, failedProvisioningState, adminUpdateError)
+	}()
 
 	if initialProvisioningState != api.ProvisioningStateAdminUpdating &&
 		provisioningState == api.ProvisioningStateFailed {
@@ -326,8 +331,6 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 	}
 
 	ocb.emitMetrics(log, doc, operationType, provisioningState, nil)
-
-	_, err := ocb.dbOpenShiftClusters.EndLease(ctx, doc.Key, provisioningState, failedProvisioningState, adminUpdateError)
 	return err
 }
 
