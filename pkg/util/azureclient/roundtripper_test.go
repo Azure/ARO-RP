@@ -116,9 +116,8 @@ func TestUpdateCorrelationDataAndEnrichLogWithResponse(t *testing.T) {
 			},
 			expecetdCorrelationIDUpdated: "CorrelationID",
 			expectedSubfields: logrus.Fields{
-				"response_status_code":   "0",
-				"contentLength":          "-1",
-				"durationInMilliseconds": time.Since(startTime).Milliseconds(),
+				"response_status_code":  "0",
+				"duration_milliseconds": time.Since(startTime).Milliseconds(),
 			},
 		},
 		{
@@ -139,7 +138,7 @@ func TestUpdateCorrelationDataAndEnrichLogWithResponse(t *testing.T) {
 			expectedSubfields: logrus.Fields{
 				"response_status_code": http.StatusOK,
 				"correlation_id":       "the_correlation_request_id",
-				"contentLength":        int64(10),
+				"content_length":       int64(10),
 			},
 		},
 	}

@@ -13,10 +13,16 @@ import (
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
-// genevaOutboundRequestsTable is the table name we configure in Geneva
-// to send logs of outgoing requests from ARO-RP to ARM.
-// https://docs.google.com/document/d/1RbnKKPNjw7kJZeR-2me4euM5CClGqF62FkaHVlWGxtM/edit?usp=sharing
-const genevaOutboundRequestsTable = "outboundRequests"
+const (
+	// outboundRequests is the table name we configure in Geneva
+	// to send logs of outgoing requests from ARO-RP to ARM.
+	// https://docs.google.com/document/d/1RbnKKPNjw7kJZeR-2me4eu
+	outboundRequests = "outboundRequests"
+
+	responseCode         = "response_status_code"
+	contentLength        = "content_length"
+	durationMilliseconds = "duration_milliseconds"
+)
 
 func NewCustomRoundTripper(next http.RoundTripper) http.RoundTripper {
 	return &customRoundTripper{
@@ -55,7 +61,7 @@ func updateCorrelationDataAndEnrichLogWithRequest(correlationData *api.Correlati
 	l = utillog.EnrichWithCorrelationData(l, correlationData)
 	l = l.WithFields(logrus.Fields{
 		"request_URL": req.URL,
-		"LOGKIND":     genevaOutboundRequestsTable,
+		"LOGKIND":     outboundRequests,
 	})
 
 	return l
@@ -64,9 +70,8 @@ func updateCorrelationDataAndEnrichLogWithRequest(correlationData *api.Correlati
 func updateCorrelationDataAndEnrichLogWithResponse(correlationData *api.CorrelationData, l *logrus.Entry, res *http.Response, requestTime time.Time) *logrus.Entry {
 	if res == nil {
 		return l.WithFields(logrus.Fields{
-			"response_status_code":   "0",
-			"contentLength":          "-1",
-			"durationInMilliseconds": time.Since(requestTime).Milliseconds(),
+			responseCode:         "0",
+			durationMilliseconds: time.Since(requestTime).Milliseconds(),
 		})
 	}
 
@@ -74,8 +79,8 @@ func updateCorrelationDataAndEnrichLogWithResponse(correlationData *api.Correlat
 	l = utillog.EnrichWithCorrelationData(l, correlationData)
 
 	return l.WithFields(logrus.Fields{
-		"response_status_code":   res.StatusCode,
-		"contentLength":          res.ContentLength,
-		"durationInMilliseconds": time.Since(requestTime).Milliseconds(),
+		responseCode:         res.StatusCode,
+		contentLength:        res.ContentLength,
+		durationMilliseconds: time.Since(requestTime).Milliseconds(),
 	})
 }
