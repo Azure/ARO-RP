@@ -98,7 +98,12 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		return nil, err
 	}
 
-	doc, err := f.dbOpenShiftClusters.Get(ctx, putOrPatchClusterParameters.path)
+	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
+	if err != nil {
+		return nil, err
+	}
+
+	doc, err := dbOpenShiftClusters.Get(ctx, putOrPatchClusterParameters.path)
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, err
 	}
@@ -111,7 +116,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 		}
 
 		doc = &api.OpenShiftClusterDocument{
-			ID:  f.dbOpenShiftClusters.NewUUID(),
+			ID:  dbOpenShiftClusters.NewUUID(),
 			Key: putOrPatchClusterParameters.path,
 			OpenShiftCluster: &api.OpenShiftCluster{
 				ID:   putOrPatchClusterParameters.originalPath,
@@ -283,13 +288,13 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	}
 
 	if isCreate {
-		newdoc, err := f.dbOpenShiftClusters.Create(ctx, doc)
+		newdoc, err := dbOpenShiftClusters.Create(ctx, doc)
 		if cosmosdb.IsErrorStatusCode(err, http.StatusPreconditionFailed) {
 			return nil, f.validateOpenShiftUniqueKey(ctx, doc)
 		}
 		doc = newdoc
 	} else {
-		doc, err = f.dbOpenShiftClusters.Update(ctx, doc)
+		doc, err = dbOpenShiftClusters.Update(ctx, doc)
 	}
 	if err != nil {
 		return nil, err

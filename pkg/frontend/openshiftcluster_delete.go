@@ -20,8 +20,13 @@ func (f *frontend) deleteOpenShiftCluster(w http.ResponseWriter, r *http.Request
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 
+	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
+	if err != nil {
+		reply(log, w, nil, nil, err)
+	}
+
 	var header http.Header
-	_, err := f.dbOpenShiftClusters.Patch(ctx, r.URL.Path, func(doc *api.OpenShiftClusterDocument) error {
+	_, err = dbOpenShiftClusters.Patch(ctx, r.URL.Path, func(doc *api.OpenShiftClusterDocument) error {
 		return f._deleteOpenShiftCluster(ctx, r, &header, doc)
 	})
 	switch {

@@ -32,6 +32,12 @@ type AdminOpenShiftClusterDetail struct {
 }
 
 func (p *portal) clusterInfo(w http.ResponseWriter, r *http.Request) {
+	dbOpenShiftClusters, err := p.dbGroup.OpenShiftClusters()
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
 	ctx := r.Context()
 
 	apiVars := mux.Vars(r)
@@ -40,7 +46,7 @@ func (p *portal) clusterInfo(w http.ResponseWriter, r *http.Request) {
 	clusterName := apiVars["clusterName"]
 	resourceId := p.getResourceID(subscription, resourceGroup, clusterName)
 
-	doc, err := p.dbOpenShiftClusters.Get(ctx, resourceId)
+	doc, err := dbOpenShiftClusters.Get(ctx, resourceId)
 	if err != nil {
 		http.Error(w, "Cluster not found", http.StatusNotFound)
 		return

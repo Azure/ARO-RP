@@ -38,7 +38,12 @@ func (f *frontend) _postAdminOpenShiftClusterEtcdRecovery(ctx context.Context, r
 	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
-	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
+	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
+	if err != nil {
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+	}
+
+	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return []byte{}, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", resType, resName, resGroupName)

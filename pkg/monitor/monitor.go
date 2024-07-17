@@ -24,13 +24,17 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/liveconfig"
 )
 
+type monitorDBs interface {
+	database.DatabaseGroupWithMonitors
+	database.DatabaseGroupWithOpenShiftClusters
+	database.DatabaseGroupWithSubscriptions
+}
+
 type monitor struct {
 	baseLog *logrus.Entry
 	dialer  proxy.Dialer
 
-	dbMonitors          database.Monitors
-	dbOpenShiftClusters database.OpenShiftClusters
-	dbSubscriptions     database.Subscriptions
+	dbGroup monitorDBs
 
 	m        metrics.Emitter
 	clusterm metrics.Emitter
@@ -56,14 +60,12 @@ type Runnable interface {
 	Run(context.Context) error
 }
 
-func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Monitors, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, m, clusterm metrics.Emitter, liveConfig liveconfig.Manager, e env.Interface) Runnable {
+func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbGroup monitorDBs, m, clusterm metrics.Emitter, liveConfig liveconfig.Manager, e env.Interface) Runnable {
 	return &monitor{
 		baseLog: log,
 		dialer:  dialer,
 
-		dbMonitors:          dbMonitors,
-		dbOpenShiftClusters: dbOpenShiftClusters,
-		dbSubscriptions:     dbSubscriptions,
+		dbGroup: dbGroup,
 
 		m:        m,
 		clusterm: clusterm,
@@ -83,7 +85,12 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Moni
 }
 
 func (mon *monitor) Run(ctx context.Context) error {
-	_, err := mon.dbMonitors.Create(ctx, &api.MonitorDocument{
+	dbMonitors, err := mon.dbGroup.Monitors()
+	if err != nil {
+		return err
+	}
+
+	_, err = dbMonitors.Create(ctx, &api.MonitorDocument{
 		ID: "master",
 	})
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusPreconditionFailed) {
@@ -100,7 +107,7 @@ func (mon *monitor) Run(ctx context.Context) error {
 
 	for {
 		// register ourself as a monitor
-		err = mon.dbMonitors.MonitorHeartbeat(ctx)
+		err = dbMonitors.MonitorHeartbeat(ctx)
 		if err != nil {
 			mon.baseLog.Error(err)
 		}

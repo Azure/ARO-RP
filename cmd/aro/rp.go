@@ -120,11 +120,6 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	dbClusterManagerConfiguration, err := database.NewClusterManagerConfigurations(ctx, dbc, dbName)
-	if err != nil {
-		return err
-	}
-
 	dbBilling, err := database.NewBilling(ctx, dbc, dbName)
 	if err != nil {
 		return err
@@ -165,7 +160,15 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
-	f, err := frontend.NewFrontend(ctx, audit, log.WithField("component", "frontend"), _env, dbAsyncOperations, dbClusterManagerConfiguration, dbOpenShiftClusters, dbSubscriptions, dbOpenShiftVersions, dbPlatformWorkloadIdentityRoleSets, api.APIs, metrics, clusterm, feAead, hiveClusterManager, adminactions.NewKubeActions, adminactions.NewAzureActions, adminactions.NewAppLensActions, clusterdata.NewParallelEnricher(metrics, _env))
+
+	dbg := database.NewDBGroup().WithAsyncOperations(dbAsyncOperations).
+		WithBilling(dbBilling).
+		WithOpenShiftClusters(dbOpenShiftClusters).
+		WithOpenShiftVersions(dbOpenShiftVersions).
+		WithPlatformWorkloadIdentityRoleSets(dbPlatformWorkloadIdentityRoleSets).
+		WithSubscriptions(dbSubscriptions)
+
+	f, err := frontend.NewFrontend(ctx, audit, log.WithField("component", "frontend"), _env, dbg, api.APIs, metrics, clusterm, feAead, hiveClusterManager, adminactions.NewKubeActions, adminactions.NewAzureActions, adminactions.NewAppLensActions, clusterdata.NewParallelEnricher(metrics, _env))
 	if err != nil {
 		return err
 	}

@@ -30,7 +30,18 @@ func (f *frontend) getAsyncOperationResult(w http.ResponseWriter, r *http.Reques
 func (f *frontend) _getAsyncOperationResult(ctx context.Context, r *http.Request, header http.Header, converter api.OpenShiftClusterConverter) ([]byte, error) {
 	operationId := chi.URLParam(r, "operationId")
 	subscriptionId := chi.URLParam(r, "subscriptionId")
-	asyncdoc, err := f.dbAsyncOperations.Get(ctx, operationId)
+
+	dbAsyncOperations, err := f.dbGroup.AsyncOperations()
+	if err != nil {
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+	}
+
+	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
+	if err != nil {
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+	}
+
+	asyncdoc, err := dbAsyncOperations.Get(ctx, operationId)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The entity was not found.")
@@ -46,7 +57,7 @@ func (f *frontend) _getAsyncOperationResult(ctx context.Context, r *http.Request
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The entity was not found.")
 	}
 
-	doc, err := f.dbOpenShiftClusters.Get(ctx, asyncdoc.OpenShiftClusterKey)
+	doc, err := dbOpenShiftClusters.Get(ctx, asyncdoc.OpenShiftClusterKey)
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, err
 	}

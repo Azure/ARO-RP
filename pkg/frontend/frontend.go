@@ -41,6 +41,15 @@ func (err statusCodeError) Error() string {
 	return fmt.Sprintf("%d", err)
 }
 
+type frontendDBs interface {
+	database.DatabaseGroupWithAsyncOperations
+	database.DatabaseGroupWithOpenShiftVersions
+	database.DatabaseGroupWithOpenShiftClusters
+	database.DatabaseGroupWithAsyncOperations
+	database.DatabaseGroupWithSubscriptions
+	database.DatabaseGroupWithPlatformWorkloadIdentityRoleSets
+}
+
 type kubeActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error)
 
 type azureActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error)
@@ -58,12 +67,7 @@ type frontend struct {
 	apiVersionMiddleware  middleware.ApiVersionValidator
 	maintenanceMiddleware middleware.MaintenanceMiddleware
 
-	dbAsyncOperations                  database.AsyncOperations
-	dbClusterManagerConfiguration      database.ClusterManagerConfigurations
-	dbOpenShiftClusters                database.OpenShiftClusters
-	dbSubscriptions                    database.Subscriptions
-	dbOpenShiftVersions                database.OpenShiftVersions
-	dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets
+	dbGroup frontendDBs
 
 	defaultOcpVersion                         string // always enabled
 	enabledOcpVersions                        map[string]*api.OpenShiftVersion
@@ -114,12 +118,7 @@ func NewFrontend(ctx context.Context,
 	auditLog *logrus.Entry,
 	baseLog *logrus.Entry,
 	_env env.Interface,
-	dbAsyncOperations database.AsyncOperations,
-	dbClusterManagerConfiguration database.ClusterManagerConfigurations,
-	dbOpenShiftClusters database.OpenShiftClusters,
-	dbSubscriptions database.Subscriptions,
-	dbOpenShiftVersions database.OpenShiftVersions,
-	dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets,
+	dbGroup frontendDBs,
 	apis map[string]*api.Version,
 	m metrics.Emitter,
 	clusterm metrics.Emitter,
@@ -152,20 +151,15 @@ func NewFrontend(ctx context.Context,
 			AdminAuth: _env.AdminClientAuthorizer(),
 			ArmAuth:   _env.ArmClientAuthorizer(),
 		},
-		dbAsyncOperations:                  dbAsyncOperations,
-		dbClusterManagerConfiguration:      dbClusterManagerConfiguration,
-		dbOpenShiftClusters:                dbOpenShiftClusters,
-		dbSubscriptions:                    dbSubscriptions,
-		dbOpenShiftVersions:                dbOpenShiftVersions,
-		dbPlatformWorkloadIdentityRoleSets: dbPlatformWorkloadIdentityRoleSets,
-		apis:                               apis,
-		m:                                  middleware.MetricsMiddleware{Emitter: m},
-		maintenanceMiddleware:              middleware.MaintenanceMiddleware{Emitter: clusterm},
-		aead:                               aead,
-		hiveClusterManager:                 hiveClusterManager,
-		kubeActionsFactory:                 kubeActionsFactory,
-		azureActionsFactory:                azureActionsFactory,
-		appLensActionsFactory:              appLensActionsFactory,
+		dbGroup:               dbGroup,
+		apis:                  apis,
+		m:                     middleware.MetricsMiddleware{Emitter: m},
+		maintenanceMiddleware: middleware.MaintenanceMiddleware{Emitter: clusterm},
+		aead:                  aead,
+		hiveClusterManager:    hiveClusterManager,
+		kubeActionsFactory:    kubeActionsFactory,
+		azureActionsFactory:   azureActionsFactory,
+		appLensActionsFactory: appLensActionsFactory,
 
 		quotaValidator:     quotaValidator{},
 		skuValidator:       skuValidator{},

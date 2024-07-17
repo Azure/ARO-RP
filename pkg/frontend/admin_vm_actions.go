@@ -20,7 +20,12 @@ func (f *frontend) prepareAdminActions(log *logrus.Entry, ctx context.Context, v
 		return nil, nil, err
 	}
 
-	doc, err = f.dbOpenShiftClusters.Get(ctx, resourceID)
+	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	doc, err = dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return nil, nil,

@@ -32,7 +32,12 @@ func (f *frontend) getSubscriptionDocument(ctx context.Context, key string) (*ap
 		return nil, err
 	}
 
-	doc, err := f.dbSubscriptions.Get(ctx, r.SubscriptionID)
+	dbSubscriptions, err := f.dbGroup.Subscriptions()
+	if err != nil {
+		return nil, err
+	}
+
+	doc, err := dbSubscriptions.Get(ctx, r.SubscriptionID)
 	if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", "Request is not allowed in unregistered subscription '%s'.", r.SubscriptionID)
 	}
@@ -57,14 +62,19 @@ func (f *frontend) validateSubscriptionState(ctx context.Context, path string, a
 
 // validateOpenShiftUniqueKey returns which unique key if causing a 412 error
 func (f *frontend) validateOpenShiftUniqueKey(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
-	docs, err := f.dbOpenShiftClusters.GetByClientID(ctx, doc.PartitionKey, doc.ClientIDKey)
+	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
+	if err != nil {
+		return err
+	}
+
+	docs, err := dbOpenShiftClusters.GetByClientID(ctx, doc.PartitionKey, doc.ClientIDKey)
 	if err != nil {
 		return err
 	}
 	if docs.Count != 0 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeDuplicateClientID, "", "The provided client ID '%s' is already in use by a cluster.", doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID)
 	}
-	docs, err = f.dbOpenShiftClusters.GetByClusterResourceGroupID(ctx, doc.PartitionKey, doc.ClusterResourceGroupIDKey)
+	docs, err = dbOpenShiftClusters.GetByClusterResourceGroupID(ctx, doc.PartitionKey, doc.ClusterResourceGroupIDKey)
 	if err != nil {
 		return err
 	}
