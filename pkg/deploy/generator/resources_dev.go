@@ -409,7 +409,7 @@ func (g *generator) devDiskEncryptionSet() *arm.Resource {
 
 	return &arm.Resource{
 		Resource:   diskEncryptionSet,
-		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
+		APIVersion: azureclient.APIVersion("Microsoft.Compute/diskEncryptionSets"),
 		DependsOn: []string{
 			fmt.Sprintf("[resourceId('Microsoft.KeyVault/vaults/keys', %s, %s)]", sharedKeyVaultName, sharedDiskEncryptionKeyName),
 		},
