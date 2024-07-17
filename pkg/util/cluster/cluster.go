@@ -390,7 +390,8 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 		} else {
 			errs = append(errs,
 				c.deleteApplication(ctx, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID),
-				c.deleteClusterResourceGroup(ctx, vnetResourceGroup),
+				c.deleteCluster(ctx, vnetResourceGroup, clusterName),
+				// c.deleteClusterResourceGroup(ctx, vnetResourceGroup),
 				c.deleteVnetPeerings(ctx, vnetResourceGroup),
 			)
 		}
