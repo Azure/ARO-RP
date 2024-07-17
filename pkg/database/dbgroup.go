@@ -33,6 +33,10 @@ type DatabaseGroupWithBilling interface {
 	Billing() (Billing, error)
 }
 
+type DatabaseGroupWithPortal interface {
+	Portal() (Portal, error)
+}
+
 type DatabaseGroup interface {
 	DatabaseGroupWithOpenShiftClusters
 	DatabaseGroupWithSubscriptions
@@ -41,6 +45,7 @@ type DatabaseGroup interface {
 	DatabaseGroupWithPlatformWorkloadIdentityRoleSets
 	DatabaseGroupWithAsyncOperations
 	DatabaseGroupWithBilling
+	DatabaseGroupWithPortal
 
 	WithOpenShiftClusters(db OpenShiftClusters) DatabaseGroup
 	WithSubscriptions(db Subscriptions) DatabaseGroup
@@ -49,6 +54,7 @@ type DatabaseGroup interface {
 	WithPlatformWorkloadIdentityRoleSets(db PlatformWorkloadIdentityRoleSets) DatabaseGroup
 	WithAsyncOperations(db AsyncOperations) DatabaseGroup
 	WithBilling(db Billing) DatabaseGroup
+	WithPortal(db Portal) DatabaseGroup
 }
 
 type dbGroup struct {
@@ -59,6 +65,7 @@ type dbGroup struct {
 	openShiftVersions                OpenShiftVersions
 	asyncOperations                  AsyncOperations
 	billing                          Billing
+	portal                           Portal
 }
 
 func (d *dbGroup) OpenShiftClusters() (OpenShiftClusters, error) {
@@ -142,6 +149,18 @@ func (d *dbGroup) Billing() (Billing, error) {
 
 func (d *dbGroup) WithBilling(db Billing) DatabaseGroup {
 	d.billing = db
+	return d
+}
+
+func (d *dbGroup) Portal() (Portal, error) {
+	if d.portal == nil {
+		return nil, errors.New("no Portal defined")
+	}
+	return d.portal, nil
+}
+
+func (d *dbGroup) WithPortal(db Portal) DatabaseGroup {
+	d.portal = db
 	return d
 }
 

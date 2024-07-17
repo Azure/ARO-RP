@@ -32,9 +32,14 @@ type AdminOpenShiftCluster struct {
 }
 
 func (p *portal) clusters(w http.ResponseWriter, r *http.Request) {
+	dbOpenShiftClusters, err := p.dbGroup.OpenShiftClusters()
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
 	ctx := r.Context()
 
-	docs, err := p.dbOpenShiftClusters.ListAll(ctx)
+	docs, err := dbOpenShiftClusters.ListAll(ctx)
 	if err != nil {
 		p.internalServerError(w, err)
 		return
@@ -196,6 +201,12 @@ func (p *portal) machineSets(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *portal) statistics(w http.ResponseWriter, r *http.Request) {
+	dbOpenShiftClusters, err := p.dbGroup.OpenShiftClusters()
+	if err != nil {
+		p.internalServerError(w, err)
+		return
+	}
+
 	ctx := r.Context()
 	duration := r.URL.Query().Get("duration")
 	parsedDuration, err := time.ParseDuration(duration)
@@ -220,7 +231,7 @@ func (p *portal) statistics(w http.ResponseWriter, r *http.Request) {
 		p.badRequest(w, err)
 		return
 	}
-	prom := prometheus.New(p.log, p.dbOpenShiftClusters, p.dialer)
+	prom := prometheus.New(p.log, dbOpenShiftClusters, p.dialer)
 	httpClient, err := prom.Cli(ctx, resourceID)
 	if err != nil {
 		p.internalServerError(w, err)
