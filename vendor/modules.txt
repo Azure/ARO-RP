@@ -998,6 +998,7 @@ github.com/openshift/api/cloudnetwork
 github.com/openshift/api/cloudnetwork/v1
 github.com/openshift/api/config
 github.com/openshift/api/config/v1
+github.com/openshift/api/config/v1alpha1
 github.com/openshift/api/console
 github.com/openshift/api/console/v1
 github.com/openshift/api/console/v1alpha1
@@ -1052,16 +1053,24 @@ github.com/openshift/api/template
 github.com/openshift/api/template/v1
 github.com/openshift/api/user
 github.com/openshift/api/user/v1
-# github.com/openshift/client-go v0.0.0-20220525160904-9e1acff93e4a => github.com/openshift/client-go v0.0.0-20220603133046-984ee5ebedcf
-## explicit; go 1.16
+# github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c => github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
+## explicit; go 1.18
+github.com/openshift/client-go/config/applyconfigurations/config/v1
+github.com/openshift/client-go/config/applyconfigurations/config/v1alpha1
+github.com/openshift/client-go/config/applyconfigurations/internal
 github.com/openshift/client-go/config/clientset/versioned
 github.com/openshift/client-go/config/clientset/versioned/fake
 github.com/openshift/client-go/config/clientset/versioned/scheme
 github.com/openshift/client-go/config/clientset/versioned/typed/config/v1
 github.com/openshift/client-go/config/clientset/versioned/typed/config/v1/fake
+github.com/openshift/client-go/config/clientset/versioned/typed/config/v1alpha1
+github.com/openshift/client-go/config/clientset/versioned/typed/config/v1alpha1/fake
 github.com/openshift/client-go/config/informers/externalversions/config/v1
 github.com/openshift/client-go/config/informers/externalversions/internalinterfaces
 github.com/openshift/client-go/config/listers/config/v1
+github.com/openshift/client-go/console/applyconfigurations/console/v1
+github.com/openshift/client-go/console/applyconfigurations/console/v1alpha1
+github.com/openshift/client-go/console/applyconfigurations/internal
 github.com/openshift/client-go/console/clientset/versioned
 github.com/openshift/client-go/console/clientset/versioned/fake
 github.com/openshift/client-go/console/clientset/versioned/scheme
@@ -1069,9 +1078,14 @@ github.com/openshift/client-go/console/clientset/versioned/typed/console/v1
 github.com/openshift/client-go/console/clientset/versioned/typed/console/v1/fake
 github.com/openshift/client-go/console/clientset/versioned/typed/console/v1alpha1
 github.com/openshift/client-go/console/clientset/versioned/typed/console/v1alpha1/fake
+github.com/openshift/client-go/imageregistry/applyconfigurations/imageregistry/v1
+github.com/openshift/client-go/imageregistry/applyconfigurations/internal
 github.com/openshift/client-go/imageregistry/clientset/versioned
 github.com/openshift/client-go/imageregistry/clientset/versioned/scheme
 github.com/openshift/client-go/imageregistry/clientset/versioned/typed/imageregistry/v1
+github.com/openshift/client-go/machine/applyconfigurations/internal
+github.com/openshift/client-go/machine/applyconfigurations/machine/v1
+github.com/openshift/client-go/machine/applyconfigurations/machine/v1beta1
 github.com/openshift/client-go/machine/clientset/versioned
 github.com/openshift/client-go/machine/clientset/versioned/fake
 github.com/openshift/client-go/machine/clientset/versioned/scheme
@@ -1079,6 +1093,9 @@ github.com/openshift/client-go/machine/clientset/versioned/typed/machine/v1
 github.com/openshift/client-go/machine/clientset/versioned/typed/machine/v1/fake
 github.com/openshift/client-go/machine/clientset/versioned/typed/machine/v1beta1
 github.com/openshift/client-go/machine/clientset/versioned/typed/machine/v1beta1/fake
+github.com/openshift/client-go/operator/applyconfigurations/internal
+github.com/openshift/client-go/operator/applyconfigurations/operator/v1
+github.com/openshift/client-go/operator/applyconfigurations/operator/v1alpha1
 github.com/openshift/client-go/operator/clientset/versioned
 github.com/openshift/client-go/operator/clientset/versioned/fake
 github.com/openshift/client-go/operator/clientset/versioned/scheme
@@ -1086,12 +1103,18 @@ github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1
 github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1/fake
 github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1alpha1
 github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1alpha1/fake
+github.com/openshift/client-go/project/applyconfigurations/internal
+github.com/openshift/client-go/project/applyconfigurations/project/v1
 github.com/openshift/client-go/project/clientset/versioned
 github.com/openshift/client-go/project/clientset/versioned/scheme
 github.com/openshift/client-go/project/clientset/versioned/typed/project/v1
+github.com/openshift/client-go/samples/applyconfigurations/internal
+github.com/openshift/client-go/samples/applyconfigurations/samples/v1
 github.com/openshift/client-go/samples/clientset/versioned
 github.com/openshift/client-go/samples/clientset/versioned/scheme
 github.com/openshift/client-go/samples/clientset/versioned/typed/samples/v1
+github.com/openshift/client-go/security/applyconfigurations/internal
+github.com/openshift/client-go/security/applyconfigurations/security/v1
 github.com/openshift/client-go/security/clientset/versioned
 github.com/openshift/client-go/security/clientset/versioned/scheme
 github.com/openshift/client-go/security/clientset/versioned/typed/security/v1
@@ -2315,7 +2338,7 @@ tags.cncf.io/container-device-interface/pkg/parser
 # sigs.k8s.io/structured-merge-diff => sigs.k8s.io/structured-merge-diff v1.0.1-0.20191108220359-b1b620dd3f06
 # github.com/googleapis/gnostic => github.com/google/gnostic v0.5.5
 # github.com/openshift/api => github.com/openshift/api v0.0.0-20240103200955-7ca3a4634e46
-# github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20220603133046-984ee5ebedcf
+# github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
 # github.com/openshift/cloud-credential-operator => github.com/openshift/cloud-credential-operator v0.0.0-20200316201045-d10080b52c9e
 # github.com/openshift/hive/apis => github.com/openshift/hive/apis v0.0.0-20231116161336-9dd47f8bfa1f
 # github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20230222114049-eac44a078a6e
