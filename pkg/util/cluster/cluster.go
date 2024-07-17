@@ -383,11 +383,17 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 
 	switch {
 	case c.ci && env.IsLocalDevelopmentMode(): // PR E2E
-		errs = append(errs,
-			c.deleteCluster(ctx, vnetResourceGroup, clusterName),
-			c.deleteClusterResourceGroup(ctx, vnetResourceGroup),
-			c.deleteVnetPeerings(ctx, vnetResourceGroup),
-		)
+		oc, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
+		if err != nil {
+			c.log.Errorf("Prod E2E cluster %s not found in RG %s", clusterName, vnetResourceGroup)
+			errs = append(errs, err)
+		} else {
+			errs = append(errs,
+				c.deleteApplication(ctx, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID),
+				c.deleteClusterResourceGroup(ctx, vnetResourceGroup),
+				c.deleteVnetPeerings(ctx, vnetResourceGroup),
+			)
+		}
 	case c.ci: // Prod E2E
 		oc, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
 		if err != nil {
@@ -395,8 +401,8 @@ func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName str
 			errs = append(errs, err)
 		} else {
 			errs = append(errs,
-				c.deleteClusterResourceGroup(ctx, vnetResourceGroup),
 				c.deleteApplication(ctx, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID),
+				c.deleteClusterResourceGroup(ctx, vnetResourceGroup),
 			)
 		}
 	default:
