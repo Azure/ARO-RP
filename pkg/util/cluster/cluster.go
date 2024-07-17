@@ -42,6 +42,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	redhatopenshift20231122 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2023-11-22/redhatopenshift"
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	utilgraph "github.com/Azure/ARO-RP/pkg/util/graph"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/rolesets"
@@ -378,35 +379,29 @@ func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, wor
 }
 
 func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName string) error {
-	c.log.Infof("Deleting cluster %s in RG %s", clusterName, vnetResourceGroup)
+	c.log.Infof("Deleting cluster %s in resource group %s", clusterName, vnetResourceGroup)
 	var errs []error
 
-	switch {
-	case c.ci && env.IsLocalDevelopmentMode(): // PR E2E
+	if c.ci {
 		oc, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
+		clusterResourceGroup := fmt.Sprintf("aro-%s", clusterName)
 		if err != nil {
-			c.log.Errorf("Prod E2E cluster %s not found in RG %s", clusterName, vnetResourceGroup)
+			c.log.Errorf("CI E2E cluster %s not found in resource group %s", clusterName, vnetResourceGroup)
 			errs = append(errs, err)
-		} else {
+		}
+		errs = append(errs,
+			c.deleteApplication(ctx, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID),
+			c.deleteCluster(ctx, vnetResourceGroup, clusterName),
+			c.ensureResourceGroupDeleted(ctx, clusterResourceGroup),
+			c.deleteResourceGroup(ctx, vnetResourceGroup),
+		)
+
+		if env.IsLocalDevelopmentMode() { //PR E2E
 			errs = append(errs,
-				c.deleteApplication(ctx, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID),
-				c.deleteCluster(ctx, vnetResourceGroup, clusterName),
-				// c.deleteClusterResourceGroup(ctx, vnetResourceGroup),
 				c.deleteVnetPeerings(ctx, vnetResourceGroup),
 			)
 		}
-	case c.ci: // Prod E2E
-		oc, err := c.openshiftclusters.Get(ctx, vnetResourceGroup, clusterName)
-		if err != nil {
-			c.log.Errorf("Prod E2E cluster %s not found in RG %s", clusterName, vnetResourceGroup)
-			errs = append(errs, err)
-		} else {
-			errs = append(errs,
-				c.deleteApplication(ctx, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID),
-				c.deleteClusterResourceGroup(ctx, vnetResourceGroup),
-			)
-		}
-	default:
+	} else {
 		errs = append(errs,
 			c.deleteRoleAssignments(ctx, vnetResourceGroup, clusterName),
 			c.deleteCluster(ctx, vnetResourceGroup, clusterName),
@@ -733,13 +728,28 @@ func (c *Cluster) deleteCluster(ctx context.Context, resourceGroup, clusterName 
 	return nil
 }
 
-func (c *Cluster) deleteClusterResourceGroup(ctx context.Context, resourceGroup string) error {
+func (c *Cluster) ensureResourceGroupDeleted(ctx context.Context, resourceGroupName string) error {
+	c.log.Printf("Deleting resource group %s", resourceGroupName)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer cancel()
+
+	return wait.PollImmediateUntil(5*time.Second, func() (bool, error) {
+		_, err := c.groups.Get(ctx, resourceGroupName)
+		if azureerrors.ResourceGroupNotFound(err) {
+			c.log.Infof("Finished deleting resource group %s", resourceGroupName)
+			return true, nil
+		}
+		return false, fmt.Errorf("Failed to delete resource group %s", resourceGroupName)
+	}, timeoutCtx.Done())
+}
+
+func (c *Cluster) deleteResourceGroup(ctx context.Context, resourceGroup string) error {
+	c.log.Printf("deleting resource group %s", resourceGroup)
 	if _, err := c.groups.Get(ctx, resourceGroup); err != nil {
 		c.log.Printf("error getting resource group %s, skipping deletion: %v", resourceGroup, err)
 		return nil
 	}
 
-	c.log.Printf("deleting resource group %s", resourceGroup)
 	if err := c.groups.DeleteAndWait(ctx, resourceGroup); err != nil {
 		return fmt.Errorf("error deleting resource group: %w", err)
 	}
