@@ -6,6 +6,8 @@ package api
 import (
 	"sync"
 	"time"
+
+	"github.com/Azure/go-autorest/autorest/date"
 )
 
 // OpenShiftCluster represents an OpenShift cluster
@@ -728,6 +730,7 @@ type RegistryProfile struct {
 	Name     string       `json:"name,omitempty"`
 	Username string       `json:"username,omitempty"`
 	Password SecureString `json:"password,omitempty"`
+	Expiry   *date.Time   `json:"expiry,omitempty"`
 }
 
 // Install represents an install process
