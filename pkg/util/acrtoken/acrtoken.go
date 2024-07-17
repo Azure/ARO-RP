@@ -38,6 +38,11 @@ type manager struct {
 	registries containerregistry.RegistriesClient
 }
 
+const (
+	HoursInADay        = 24
+	ACRTokenLifeInDays = 90
+)
+
 func NewManager(env env.Interface, localFPAuthorizer autorest.Authorizer) (Manager, error) {
 	r, err := azure.ParseResourceID(env.ACRResourceID())
 	if err != nil {
@@ -66,9 +71,12 @@ func (m *manager) GetRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProf
 }
 
 func (m *manager) NewRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProfile {
+	var tokenExpiration = time.Now().UTC().Add(time.Hour * HoursInADay * ACRTokenLifeInDays)
+
 	return &api.RegistryProfile{
 		Name:     fmt.Sprintf("%s.%s", m.r.ResourceName, m.env.Environment().ContainerRegistryDNSSuffix),
 		Username: "token-" + uuid.DefaultGenerator.Generate(),
+		Expiry:   &date.Time{Time: tokenExpiration},
 	}
 }
 
@@ -149,12 +157,11 @@ func (m *manager) RotateTokenPassword(ctx context.Context, rp *api.RegistryProfi
 func (m *manager) generateTokenPassword(ctx context.Context, passwordName mgmtcontainerregistry.TokenPasswordName, rp *api.RegistryProfile) (string, error) {
 	const hoursInADay = 24
 	const acrTokenLifeInDays = 90
-	var tokenExpiration = time.Now().UTC().Add(time.Hour * hoursInADay * acrTokenLifeInDays)
 
 	creds, err := m.registries.GenerateCredentials(ctx, m.r.ResourceGroup, m.r.ResourceName, mgmtcontainerregistry.GenerateCredentialsParameters{
 		TokenID: to.StringPtr(m.env.ACRResourceID() + "/tokens/" + rp.Username),
 		Name:    passwordName,
-		Expiry:  &date.Time{Time: tokenExpiration},
+		Expiry:  rp.Expiry,
 	})
 	if err != nil {
 		return "", err
