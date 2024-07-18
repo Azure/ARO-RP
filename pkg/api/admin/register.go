@@ -18,5 +18,6 @@ func init() {
 		OpenShiftVersionStaticValidator:                openShiftVersionStaticValidator{},
 		PlatformWorkloadIdentityRoleSetConverter:       platformWorkloadIdentityRoleSetConverter{},
 		PlatformWorkloadIdentityRoleSetStaticValidator: platformWorkloadIdentityRoleSetStaticValidator{},
+		MaintenanceManifestConverter:                   maintenanceManifestConverter{},
 	}
 }
