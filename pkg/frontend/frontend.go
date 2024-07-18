@@ -48,6 +48,7 @@ type frontendDBs interface {
 	database.DatabaseGroupWithAsyncOperations
 	database.DatabaseGroupWithSubscriptions
 	database.DatabaseGroupWithPlatformWorkloadIdentityRoleSets
+	database.DatabaseGroupWithMaintenanceManifests
 }
 
 type kubeActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error)
@@ -326,6 +327,9 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/etcdcertificaterenew", f.postAdminOpenShiftClusterEtcdCertificateRenew)
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/deletemanagedresource", f.postAdminOpenShiftDeleteManagedResource)
+
+				// MIMO
+				r.Get("/maintenancemanifests", f.getAdminMaintManifests)
 			})
 		})
 
