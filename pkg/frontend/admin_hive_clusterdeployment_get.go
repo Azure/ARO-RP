@@ -36,7 +36,12 @@ func (f *frontend) _getAdminHiveClusterDeployment(ctx context.Context, resourceI
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "hive is not enabled")
 	}
 
-	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
+	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
+	if err != nil {
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+	}
+
+	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "cluster not found")
 	}

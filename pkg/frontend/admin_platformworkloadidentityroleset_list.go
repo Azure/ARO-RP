@@ -24,7 +24,13 @@ func (f *frontend) getAdminPlatformWorkloadIdentityRoleSets(w http.ResponseWrite
 
 	converter := f.apis[admin.APIVersion].PlatformWorkloadIdentityRoleSetConverter
 
-	docs, err := f.dbPlatformWorkloadIdentityRoleSets.ListAll(ctx)
+	dbPlatformWorkloadIdentityRoleSets, err := f.dbGroup.PlatformWorkloadIdentityRoleSets()
+	if err != nil {
+		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return
+	}
+
+	docs, err := dbPlatformWorkloadIdentityRoleSets.ListAll(ctx)
 	if err != nil {
 		log.Error(err)
 		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")

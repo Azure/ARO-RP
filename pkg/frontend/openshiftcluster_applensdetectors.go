@@ -29,7 +29,7 @@ func (f *frontend) listAppLensDetectors(w http.ResponseWriter, r *http.Request) 
 }
 
 func (f *frontend) _listAppLensDetectors(ctx context.Context, r *http.Request, log *logrus.Entry) ([]byte, error) {
-	a, err := f._createAzureActionsFactory(ctx, r, log)
+	a, err := f._createAppLensActionsFactory(ctx, r, log)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func (f *frontend) getAppLensDetector(w http.ResponseWriter, r *http.Request) {
 }
 
 func (f *frontend) _appLensDetectors(ctx context.Context, r *http.Request, log *logrus.Entry) ([]byte, error) {
-	a, err := f._createAzureActionsFactory(ctx, r, log)
+	a, err := f._createAppLensActionsFactory(ctx, r, log)
 	if err != nil {
 		return nil, err
 	}
@@ -57,11 +57,17 @@ func (f *frontend) _appLensDetectors(ctx context.Context, r *http.Request, log *
 	return a.AppLensGetDetector(ctx, detectorId)
 }
 
-func (f *frontend) _createAzureActionsFactory(ctx context.Context, r *http.Request, log *logrus.Entry) (adminactions.AzureActions, error) {
+func (f *frontend) _createAppLensActionsFactory(ctx context.Context, r *http.Request, log *logrus.Entry) (adminactions.AppLensActions, error) {
 	resType, resName, resGroupName := chi.URLParam(r, "resourceType"), chi.URLParam(r, "resourceName"), chi.URLParam(r, "resourceGroupName")
 
 	resourceID := strings.TrimSuffix(r.URL.Path, "/detectors")
-	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
+
+	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
+	if err != nil {
+		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+	}
+
+	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", resType, resName, resGroupName)
@@ -74,7 +80,7 @@ func (f *frontend) _createAzureActionsFactory(ctx context.Context, r *http.Reque
 		return nil, err
 	}
 
-	a, err := f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
+	a, err := f.appLensActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
 	if err != nil {
 		return nil, err
 	}

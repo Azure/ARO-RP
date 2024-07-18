@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -35,28 +34,12 @@ func gateway(ctx context.Context, log *logrus.Entry) error {
 
 	go g.Run()
 
-	if err := env.ValidateVars(envDatabaseAccountName); err != nil {
-		return err
-	}
-
-	msiToken, err := _env.NewMSITokenCredential()
-	if err != nil {
-		return err
-	}
-	logrusEntry := log.WithField("component", "database")
-
-	dbAccountName := os.Getenv(envDatabaseAccountName)
-	scope := []string{fmt.Sprintf("https://%s.%s", dbAccountName, _env.Environment().CosmosDBDNSSuffixScope)}
-	dbAuthorizer, err := database.NewTokenAuthorizer(ctx, logrusEntry, msiToken, dbAccountName, scope)
-	if err != nil {
-		return err
-	}
-	dbc, err := database.NewDatabaseClient(logrusEntry, _env, dbAuthorizer, m, nil, dbAccountName)
+	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, log, m, nil)
 	if err != nil {
 		return err
 	}
 
-	dbName, err := DBName(_env.IsLocalDevelopmentMode())
+	dbName, err := env.DBName(_env)
 	if err != nil {
 		return err
 	}
