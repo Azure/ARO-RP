@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -345,22 +346,103 @@ func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName str
 	return nil
 }
 
+// ipRangesContainCIDR checks, weather any of the ipRanges overlap with the cidr string. In case cidr isn't valid, false is returned.
+func ipRangesContainCIDR(ipRanges []*net.IPNet, cidr string) bool {
+	_, cidrNet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return false
+	}
+
+	for _, snet := range ipRanges {
+		if snet.Contains(cidrNet.IP) || cidrNet.Contains(snet.IP) {
+			return true
+		}
+	}
+	return false
+}
+
+// GetIpRangesFromSubnet converts a given azure subnet to a list if IPNets.
+// Because an az subnet can cover multiple ipranges, we need to return a slice
+// instead of just a single ip range. This function never errors. If something
+// goes wrong, it instead returns an empty list.
+func GetIpRangesFromSubnet(subnet mgmtnetwork.Subnet) []*net.IPNet {
+	ipRanges := []*net.IPNet{}
+	if subnet.AddressPrefix != nil {
+		_, ipRange, err := net.ParseCIDR(*subnet.AddressPrefix)
+		if err == nil {
+			ipRanges = append(ipRanges, ipRange)
+		}
+	}
+
+	if subnet.AddressPrefixes == nil {
+		return ipRanges
+	}
+
+	for _, snetPrefix := range *subnet.AddressPrefixes {
+		_, ipRange, err := net.ParseCIDR(snetPrefix)
+		if err == nil {
+			ipRanges = append(ipRanges, ipRange)
+		}
+	}
+	return ipRanges
+}
+
+
+// getAllDevSubnets queries azure to retrieve all subnets assigned the vnet
+// `dev-vnet` in the current resource group
+func (c *Cluster) getAllDevSubnets() ([]mgmtnetwork.Subnet, error) {
+	allSubnets := []mgmtnetwork.Subnet{}
+	availSnetResults, err := c.subnets.List(context.TODO(), c.env.ResourceGroup(), "dev-vnet")
+	if err != nil {
+		return allSubnets, err
+	}
+	allSubnets = append(allSubnets, availSnetResults.Values()...)
+	for availSnetResults.NotDone() {
+		err = availSnetResults.NextWithContext(context.TODO())
+		if err != nil {
+			break
+		}
+		allSubnets = append(allSubnets, availSnetResults.Values()...)
+	}
+
+	return allSubnets, nil
+}
+
+
 func (c *Cluster) generateSubnets() (vnetPrefix string, masterSubnet string, workerSubnet string) {
 	// pick a random 23 in range [10.3.0.0, 10.127.255.0]
 	// 10.0.0.0/16 is used by dev-vnet to host CI
 	// 10.1.0.0/24 is used by rp-vnet to host Proxy VM
 	// 10.2.0.0/24 is used by dev-vpn-vnet to host VirtualNetworkGateway
-	var x, y int
-	// Local Dev clusters are limited to /16 dev-vnet
-	if !c.ci {
-		x, y = 0, 2*rand.Intn(128)
-	} else {
-		x, y = rand.Intn((124))+3, 2*rand.Intn(128)
+
+	allSubnets, err := c.getAllDevSubnets()
+	if err != nil {
+		c.log.Warnf("Error getting existing subnets. Continuing regardless: %v", err)
 	}
-	vnetPrefix = fmt.Sprintf("10.%d.%d.0/23", x, y)
-	masterSubnet = fmt.Sprintf("10.%d.%d.0/24", x, y)
-	workerSubnet = fmt.Sprintf("10.%d.%d.0/24", x, y+1)
-	return
+
+	ipRanges := []*net.IPNet{}
+	for _, snet := range allSubnets {
+		ipRanges = append(ipRanges, GetIpRangesFromSubnet(snet)...)
+	}
+
+	for i := 1; i < 100; i++ {
+		var x, y int
+		// Local Dev clusters are limited to /16 dev-vnet
+		if !c.ci {
+			x, y = 0, 2*rand.Intn(128)
+		} else {
+			x, y = rand.Intn((124))+3, 2*rand.Intn(128)
+		}
+		c.log.Infof("Generate Subnet try: %d\n", i)
+		vnetPrefix = fmt.Sprintf("10.%d.%d.0/23", x, y)
+		masterSubnet = fmt.Sprintf("10.%d.%d.0/24", x, y)
+		workerSubnet = fmt.Sprintf("10.%d.%d.0/24", x, y+1)
+		if !ipRangesContainCIDR(ipRanges, workerSubnet) && !ipRangesContainCIDR(ipRanges, masterSubnet) {
+			return vnetPrefix, masterSubnet, workerSubnet
+		}
+	}
+  
+	return vnetPrefix, masterSubnet, workerSubnet
 }
 
 func (c *Cluster) Delete(ctx context.Context, vnetResourceGroup, clusterName string) error {

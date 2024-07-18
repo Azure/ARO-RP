@@ -15,6 +15,7 @@ import (
 // SubnetsClient is a minimal interface for azure SubnetsClient
 type SubnetsClient interface {
 	Get(ctx context.Context, resourceGroupName string, virtualNetworkName string, subnetName string, expand string) (result mgmtnetwork.Subnet, err error)
+  List(ctx context.Context, resourceGroupName string, virtualNetworkName string) (result mgmtnetwork.SubnetListResultPage, err error)
 	SubnetsClientAddons
 }
 
