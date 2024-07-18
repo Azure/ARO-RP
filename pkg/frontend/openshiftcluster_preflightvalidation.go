@@ -6,6 +6,7 @@ package frontend
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -76,7 +77,18 @@ func (f *frontend) preflightValidation(w http.ResponseWriter, r *http.Request) {
 
 func (f *frontend) _preflightValidation(ctx context.Context, log *logrus.Entry, raw json.RawMessage, apiVersion string, resourceID string) api.ValidationResult {
 	log.Infof("running preflight validation on resource: %s", resourceID)
-	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
+	dbOpenShiftClusters, err := f.dbGroup.OpenShiftClusters()
+	if err != nil {
+		log.Error(err)
+		return api.ValidationResult{
+			Status: api.ValidationStatusFailed,
+			Error: &api.CloudErrorBody{
+				Message: fmt.Sprintf("500: %s", api.CloudErrorCodeInternalServerError),
+			},
+		}
+	}
+
+	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
 	isCreate := cosmosdb.IsErrorStatusCode(err, http.StatusNotFound)
 	if err != nil && !isCreate {
 		log.Warning(err.Error())
