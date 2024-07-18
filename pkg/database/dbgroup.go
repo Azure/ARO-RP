@@ -37,6 +37,10 @@ type DatabaseGroupWithPortal interface {
 	Portal() (Portal, error)
 }
 
+type DatabaseGroupWithMaintenanceManifests interface {
+	MaintenanceManifests() (MaintenanceManifests, error)
+}
+
 type DatabaseGroup interface {
 	DatabaseGroupWithOpenShiftClusters
 	DatabaseGroupWithSubscriptions
@@ -46,6 +50,7 @@ type DatabaseGroup interface {
 	DatabaseGroupWithAsyncOperations
 	DatabaseGroupWithBilling
 	DatabaseGroupWithPortal
+	DatabaseGroupWithMaintenanceManifests
 
 	WithOpenShiftClusters(db OpenShiftClusters) DatabaseGroup
 	WithSubscriptions(db Subscriptions) DatabaseGroup
@@ -55,6 +60,7 @@ type DatabaseGroup interface {
 	WithAsyncOperations(db AsyncOperations) DatabaseGroup
 	WithBilling(db Billing) DatabaseGroup
 	WithPortal(db Portal) DatabaseGroup
+	WithMaintenanceManifests(db MaintenanceManifests) DatabaseGroup
 }
 
 type dbGroup struct {
@@ -66,6 +72,7 @@ type dbGroup struct {
 	asyncOperations                  AsyncOperations
 	billing                          Billing
 	portal                           Portal
+	maintenanceManifests             MaintenanceManifests
 }
 
 func (d *dbGroup) OpenShiftClusters() (OpenShiftClusters, error) {
@@ -161,6 +168,18 @@ func (d *dbGroup) Portal() (Portal, error) {
 
 func (d *dbGroup) WithPortal(db Portal) DatabaseGroup {
 	d.portal = db
+	return d
+}
+
+func (d *dbGroup) MaintenanceManifests() (MaintenanceManifests, error) {
+	if d.maintenanceManifests == nil {
+		return nil, errors.New("no MaintenanceManifests defined")
+	}
+	return d.maintenanceManifests, nil
+}
+
+func (d *dbGroup) WithMaintenanceManifests(db MaintenanceManifests) DatabaseGroup {
+	d.maintenanceManifests = db
 	return d
 }
 
