@@ -302,6 +302,9 @@ func TestMerge(t *testing.T) {
 					Labels: map[string]string{
 						"config.openshift.io/inject-trusted-cabundle": "",
 					},
+					Annotations: map[string]string{
+						"openshift.io/owning-component": "Some Component",
+					},
 				},
 				Data: map[string]string{
 					"ca-bundle.crt": "bundlehere",
@@ -319,7 +322,9 @@ func TestMerge(t *testing.T) {
 					Labels: map[string]string{
 						"config.openshift.io/inject-trusted-cabundle": "",
 					},
-				},
+					Annotations: map[string]string{
+						"openshift.io/owning-component": "Some Component",
+					}},
 				Data: map[string]string{
 					"ca-bundle.crt": "bundlehere",
 				},
