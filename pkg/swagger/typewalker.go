@@ -132,8 +132,11 @@ func (tw *typeWalker) schemaFromType(t types.Type, deps map[*types.Named]struct{
 			field := t.Field(i)
 			if field.Exported() {
 				nodes, _ := tw.getNodes(field.Pos())
-				node := nodes[1].(*ast.Field)
-				tag, _ := strconv.Unquote(node.Tag.Value)
+				nodeField, ok := getNodeField(nodes)
+				if !ok {
+					panic("could not find field for nodes")
+				}
+				tag, _ := strconv.Unquote(nodeField.Tag.Value)
 
 				name := strings.SplitN(reflect.StructTag(tag).Get("json"), ",", 2)[0]
 				if name == "-" {
@@ -141,7 +144,7 @@ func (tw *typeWalker) schemaFromType(t types.Type, deps map[*types.Named]struct{
 				}
 
 				properties := tw.schemaFromType(field.Type(), deps)
-				properties.Description = strings.Trim(node.Doc.Text(), "\n")
+				properties.Description = strings.Trim(nodeField.Doc.Text(), "\n")
 
 				if swaggerTag, ok := reflect.StructTag(tag).Lookup("swagger"); ok {
 					// XXX In theory this would be a comma-delimited
@@ -228,4 +231,35 @@ func define(definitions Definitions, pkgname string, xmsEnumList, xmsSecretList 
 		th.define(definitions, name)
 	}
 	return nil
+}
+
+// Gets the field associate with the node
+func getNodeField(nodes []ast.Node) (*ast.Field, bool) {
+	if len(nodes) < 2 {
+		return nil, false
+	}
+	node := nodes[1]
+	if field, ok := node.(*ast.Field); ok {
+		return field, ok
+	}
+
+	// Case where field is a pointer, so inspect the third element
+	//
+	// Example:
+	//    type CloudError struct {
+	//        StatusCode int `json:"-"`
+	//        *CloudErrorBody `json:"error,omitempty"`
+	//    }
+	//
+	// ast package reads the pointer as type "ast.StarExpr"
+
+	if len(nodes) < 3 {
+		return nil, false
+	}
+	node = nodes[2]
+	if field, ok := node.(*ast.Field); ok {
+		return field, ok
+	}
+
+	return nil, false
 }
