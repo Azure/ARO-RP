@@ -117,7 +117,7 @@ github.com/Azure/go-autorest/logger
 # github.com/Azure/go-autorest/tracing v0.6.0
 ## explicit; go 1.12
 github.com/Azure/go-autorest/tracing
-# github.com/Azure/msi-dataplane v0.0.2
+# github.com/Azure/msi-dataplane v0.0.3
 ## explicit; go 1.22
 github.com/Azure/msi-dataplane/internal/swagger
 github.com/Azure/msi-dataplane/pkg/dataplane
