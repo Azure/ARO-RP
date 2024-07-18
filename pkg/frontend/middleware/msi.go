@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"net/http"
-	"os"
 
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
 )
@@ -13,11 +12,13 @@ const (
 )
 
 // MockMSIMiddleware is used to mock MSI headers for development purposes
-// Do not use this in production code!
+func GetMockMSIMiddleware() func(http.Handler) http.Handler {
+	return func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			r.Header.Set(dataplane.MsiIdentityURLHeader, mockIdentityURL)
+			r.Header.Set(dataplane.MsiTenantHeader, mockTenantIDEnvVar)
 
-func GetMockMSIMiddleware(next http.Handler) func(http.ResponseWriter, *http.Request) {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		r.Header.Set(dataplane.MsiIdentityURLHeader, mockIdentityURL)
-		r.Header.Set(dataplane.MsiTenantHeader, os.Getenv(mockTenantIDEnvVar))
-	})
+			h.ServeHTTP(w, r)
+		})
+	}
 }
