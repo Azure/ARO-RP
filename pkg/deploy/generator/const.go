@@ -26,8 +26,7 @@ const (
 	fileRPDevelopmentPredeploy = "rp-development-predeploy.json"
 	fileRPDevelopment          = "rp-development.json"
 
-	fileOic            = "rp-oic.json"
-	fileDevMSIKeyVault = "rp-dev-msi-kv.json"
+	fileMiwiDevelopment = "rp-development-miwi.json"
 
 	// Tag constants
 	tagKeyExemptPublicBlob   = "Az.Sec.AnonymousBlobAccessEnforcement::Skip"

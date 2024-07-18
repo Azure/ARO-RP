@@ -104,11 +104,7 @@ func (g *generator) Artifacts() error {
 		if err != nil {
 			return err
 		}
-		err = g.writeTemplate(g.oicTemplate(), fileOic)
-		if err != nil {
-			return err
-		}
-		err = g.writeTemplate(g.devMSIKeyvaultTemplate(), fileDevMSIKeyVault)
+		err = g.writeTemplate(g.miwiDevSharedTemplate(), fileMiwiDevelopment)
 		if err != nil {
 			return err
 		}
