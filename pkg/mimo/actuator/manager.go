@@ -73,7 +73,7 @@ func (a *actuator) AddTasks(tasks map[string]tasks.TaskFunc) {
 
 func (a *actuator) Process(ctx context.Context) (bool, error) {
 	// Get the manifests for this cluster which need to be worked
-	i, err := a.mmf.GetByClusterResourceID(ctx, a.clusterResourceID, "")
+	i, err := a.mmf.GetQueuedByClusterResourceID(ctx, a.clusterResourceID, "")
 	if err != nil {
 		return false, fmt.Errorf("failed getting manifests: %w", err)
 	}

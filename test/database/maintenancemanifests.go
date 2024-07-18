@@ -5,7 +5,6 @@ package database
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -18,10 +17,38 @@ func injectMaintenanceManifests(c *cosmosdb.FakeMaintenanceManifestDocumentClien
 	c.SetQueryHandler(database.MaintenanceManifestQueryForCluster, func(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.MaintenanceManifestDocumentRawIterator {
 		return fakeMaintenanceManifestsForCluster(client, query, options, now)
 	})
+	c.SetQueryHandler(database.MaintenanceManifestDequeueQueryForCluster, func(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.MaintenanceManifestDocumentRawIterator {
+		return fakeMaintenanceManifestsDequeueForCluster(client, query, options, now)
+	})
 
 	c.SetTriggerHandler("renewLease", func(ctx context.Context, doc *api.MaintenanceManifestDocument) error {
 		return fakeMaintenanceManifestsRenewLeaseTrigger(ctx, doc, now)
 	})
+}
+
+func fakeMaintenanceManifestsDequeueForCluster(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options, now func() time.Time) cosmosdb.MaintenanceManifestDocumentRawIterator {
+	startingIndex, err := fakeMaintenanceManifestsGetContinuation(options)
+	if err != nil {
+		return cosmosdb.NewFakeMaintenanceManifestDocumentErroringRawIterator(err)
+	}
+
+	input, err := client.ListAll(context.Background(), nil)
+	if err != nil {
+		// TODO: should this never happen?
+		panic(err)
+	}
+
+	clusterResourceID := query.Parameters[0].Value
+
+	var results []*api.MaintenanceManifestDocument
+	for _, r := range input.MaintenanceManifestDocuments {
+		if r.ClusterResourceID == clusterResourceID &&
+			r.MaintenanceManifest.State == api.MaintenanceManifestStatePending {
+			results = append(results, r)
+		}
+	}
+
+	return cosmosdb.NewFakeMaintenanceManifestDocumentIterator(results, startingIndex)
 }
 
 func fakeMaintenanceManifestsForCluster(client cosmosdb.MaintenanceManifestDocumentClient, query *cosmosdb.Query, options *cosmosdb.Options, now func() time.Time) cosmosdb.MaintenanceManifestDocumentRawIterator {
@@ -38,12 +65,9 @@ func fakeMaintenanceManifestsForCluster(client cosmosdb.MaintenanceManifestDocum
 
 	clusterResourceID := query.Parameters[0].Value
 
-	fmt.Print(clusterResourceID, startingIndex)
-
 	var results []*api.MaintenanceManifestDocument
 	for _, r := range input.MaintenanceManifestDocuments {
-		if r.ClusterResourceID == clusterResourceID &&
-			r.MaintenanceManifest.State == api.MaintenanceManifestStatePending {
+		if r.ClusterResourceID == clusterResourceID {
 			results = append(results, r)
 		}
 	}

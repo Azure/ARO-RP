@@ -15,8 +15,9 @@ import (
 )
 
 const (
-	MaintenanceManifestQueryForCluster  = `SELECT * FROM MaintenanceManifests doc WHERE doc.maintenanceManifest.state IN ("Pending") AND doc.clusterResourceID = @clusterID`
-	MaintenanceManifestQueueLengthQuery = `SELECT VALUE COUNT(1) FROM MaintenanceManifests doc WHERE doc.maintenanceManifest.state IN ("Pending") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
+	MaintenanceManifestDequeueQueryForCluster = `SELECT * FROM MaintenanceManifests doc WHERE doc.maintenanceManifest.state IN ("Pending") AND doc.clusterResourceID = @clusterID`
+	MaintenanceManifestQueryForCluster        = `SELECT * FROM MaintenanceManifests doc WHERE doc.clusterResourceID = @clusterID`
+	MaintenanceManifestQueueLengthQuery       = `SELECT VALUE COUNT(1) FROM MaintenanceManifests doc WHERE doc.maintenanceManifest.state IN ("Pending") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
 )
 
 type MaintenanceManifestDocumentMutator func(*api.MaintenanceManifestDocument) error
@@ -30,7 +31,8 @@ type maintenanceManifests struct {
 
 type MaintenanceManifests interface {
 	Create(context.Context, *api.MaintenanceManifestDocument) (*api.MaintenanceManifestDocument, error)
-	GetByClusterResourceID(context.Context, string, string) (cosmosdb.MaintenanceManifestDocumentIterator, error)
+	GetByClusterResourceID(ctx context.Context, clusterResourceID string, continuation string) (cosmosdb.MaintenanceManifestDocumentIterator, error)
+	GetQueuedByClusterResourceID(ctx context.Context, clusterResourceID string, continuation string) (cosmosdb.MaintenanceManifestDocumentIterator, error)
 	Patch(context.Context, string, string, MaintenanceManifestDocumentMutator) (*api.MaintenanceManifestDocument, error)
 	PatchWithLease(context.Context, string, string, MaintenanceManifestDocumentMutator) (*api.MaintenanceManifestDocument, error)
 	Lease(ctx context.Context, clusterResourceID string, id string) (*api.MaintenanceManifestDocument, error)
@@ -173,6 +175,22 @@ func (c *maintenanceManifests) GetByClusterResourceID(ctx context.Context, clust
 
 	return c.c.Query("", &cosmosdb.Query{
 		Query: MaintenanceManifestQueryForCluster,
+		Parameters: []cosmosdb.Parameter{
+			{
+				Name:  "@clusterResourceID",
+				Value: clusterResourceID,
+			},
+		},
+	}, &cosmosdb.Options{Continuation: continuation}), nil
+}
+
+func (c *maintenanceManifests) GetQueuedByClusterResourceID(ctx context.Context, clusterResourceID string, continuation string) (cosmosdb.MaintenanceManifestDocumentIterator, error) {
+	if clusterResourceID != strings.ToLower(clusterResourceID) {
+		return nil, fmt.Errorf("clusterResourceID %q is not lower case", clusterResourceID)
+	}
+
+	return c.c.Query("", &cosmosdb.Query{
+		Query: MaintenanceManifestDequeueQueryForCluster,
 		Parameters: []cosmosdb.Parameter{
 			{
 				Name:  "@clusterResourceID",
