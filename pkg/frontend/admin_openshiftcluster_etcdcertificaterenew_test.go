@@ -531,12 +531,7 @@ func TestAdminEtcdCertificateRenew(t *testing.T) {
 				ti.audit,
 				ti.log,
 				ti.env,
-				ti.asyncOperationsDatabase,
-				ti.clusterManagerDatabase,
-				ti.openShiftClustersDatabase,
-				ti.subscriptionsDatabase,
-				nil,
-				nil,
+				ti.dbGroup,
 				api.APIs,
 				&noop.Noop{},
 				&noop.Noop{},
@@ -545,6 +540,7 @@ func TestAdminEtcdCertificateRenew(t *testing.T) {
 				func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error) {
 					return k, nil
 				},
+				nil,
 				nil,
 				nil)
 			if err != nil {
@@ -749,12 +745,7 @@ func TestAdminEtcdCertificateRecovery(t *testing.T) {
 				ti.audit,
 				ti.log,
 				ti.env,
-				ti.asyncOperationsDatabase,
-				ti.clusterManagerDatabase,
-				ti.openShiftClustersDatabase,
-				ti.subscriptionsDatabase,
-				nil,
-				nil,
+				ti.dbGroup,
 				api.APIs,
 				&noop.Noop{},
 				&noop.Noop{},
@@ -763,6 +754,7 @@ func TestAdminEtcdCertificateRecovery(t *testing.T) {
 				func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error) {
 					return k, nil
 				},
+				nil,
 				nil,
 				nil)
 			if err != nil {

@@ -9,29 +9,50 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/Azure/ARO-RP/pkg/cluster/failurediagnostics"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 )
 
+type diagnosticStep struct {
+	f      func(context.Context) (interface{}, error)
+	isJSON bool
+}
+
 func (m *manager) gatherFailureLogs(ctx context.Context) {
-	for _, f := range []func(context.Context) (interface{}, error){
-		m.logClusterVersion,
-		m.logNodes,
-		m.logClusterOperators,
-		m.logIngressControllers,
+	d := failurediagnostics.NewFailureDiagnostics(m.log, m.env, m.doc, m.virtualMachines)
+
+	for _, f := range []diagnosticStep{
+		{f: m.logClusterVersion, isJSON: true},
+		{f: m.logNodes, isJSON: true},
+		{f: m.logClusterOperators, isJSON: true},
+		{f: m.logIngressControllers, isJSON: true},
+		{f: d.LogVMSerialConsole, isJSON: false},
 	} {
-		o, err := f(ctx)
+		o, err := f.f(ctx)
 		if err != nil {
 			m.log.Error(err)
 			continue
 		}
 
-		b, err := json.MarshalIndent(o, "", "    ")
-		if err != nil {
-			m.log.Error(err)
-			continue
-		}
+		if f.isJSON {
+			b, err := json.MarshalIndent(o, "", "    ")
+			if err != nil {
+				m.log.Error(err)
+				continue
+			}
 
-		m.log.Printf("%s: %s", steps.FriendlyName(f), string(b))
+			m.log.Printf("%s: %s", steps.FriendlyName(f.f), string(b))
+		} else {
+			entries, ok := o.([]interface{})
+			name := steps.FriendlyName(f.f)
+			if ok {
+				for _, i := range entries {
+					m.log.Printf("%s: %v", name, i)
+				}
+			} else {
+				m.log.Printf("%s: %v", steps.FriendlyName(f.f), o)
+			}
+		}
 	}
 }
 

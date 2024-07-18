@@ -18,7 +18,7 @@ GATEKEEPER_VERSION = v3.15.1
 GOTESTSUM = gotest.tools/gotestsum@v1.11.0
 
 # Golang version go mod tidy compatibility
-GOLANG_VERSION ?= 1.20
+GOLANG_VERSION ?= 1.21
 
 ifneq ($(shell uname -s),Darwin)
     export CGO_CFLAGS=-Dgpgme_off_t=off_t
@@ -41,7 +41,7 @@ else
 	REGISTRY = $(RP_IMAGE_ACR)
 endif
 
-RP_IMAGE_LOCAL ?= localhost/aro
+RP_IMAGE_LOCAL ?= aro
 ARO_PORTAL_BUILD_IMAGE ?= $(RP_IMAGE_LOCAL)-portal-build
 ARO_BUILDER_IMAGE ?= $(RP_IMAGE_LOCAL)-builder
 ARO_IMAGE ?= $(ARO_IMAGE_BASE):$(VERSION)
@@ -97,7 +97,7 @@ client: generate
 ci-rp: fix-macos-vendor
 	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --target portal-build --no-cache=$(NO_CACHE) -t $(ARO_PORTAL_BUILD_IMAGE)
 	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --target builder --cache-from $(ARO_PORTAL_BUILD_IMAGE) -t $(ARO_BUILDER_IMAGE)
-	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --cache-from $(ARO_BUILDER_IMAGE) -t $(ARO_IMAGE)
+	docker build . -f Dockerfile.ci-rp --ulimit=nofile=4096:4096 --build-arg REGISTRY=$(REGISTRY) --build-arg ARO_VERSION=$(VERSION) --cache-from $(ARO_BUILDER_IMAGE) -t $(RP_IMAGE_LOCAL)
 
 .PHONY: ci-tunnel
 ci-tunnel: fix-macos-vendor

@@ -36,7 +36,7 @@ func TestAdminUpdateSteps(t *testing.T) {
 		"[Action initializeKubernetesClients]",
 		"[Action ensureBillingRecord]",
 		"[Action ensureDefaults]",
-		"[AuthorizationRetryingAction fixupClusterSPObjectID]",
+		"[Action fixupClusterSPObjectID]",
 		"[Action fixInfraID]",
 	}
 

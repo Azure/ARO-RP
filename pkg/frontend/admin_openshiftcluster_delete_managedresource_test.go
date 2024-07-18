@@ -113,9 +113,9 @@ func TestAdminDeleteManagedResource(t *testing.T) {
 			a := mock_adminactions.NewMockAzureActions(ti.controller)
 			tt.mocks(tt, a)
 
-			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.asyncOperationsDatabase, ti.clusterManagerDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, nil, nil, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error) {
+			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, nil, nil, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error) {
 				return a, nil
-			}, nil)
+			}, nil, nil)
 
 			if err != nil {
 				t.Fatal(err)

@@ -6,7 +6,6 @@ package main
 import (
 	"context"
 	"crypto/x509"
-	"fmt"
 	"net"
 	"os"
 	"strings"
@@ -61,16 +60,6 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	msiToken, err := _env.NewMSITokenCredential()
-	if err != nil {
-		return err
-	}
-
-	msiKVAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().KeyVaultScope)
-	if err != nil {
-		return err
-	}
-
 	m := statsd.New(ctx, log.WithField("component", "portal"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 
 	g, err := golang.NewMetrics(log.WithField("component", "portal"), m)
@@ -80,38 +69,17 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 
 	go g.Run()
 
-	if err := env.ValidateVars(envKeyVaultPrefix); err != nil {
-		return err
-	}
-	keyVaultPrefix := os.Getenv(envKeyVaultPrefix)
-	// TODO: should not be using the service keyvault here
-	serviceKeyvaultURI := keyvault.URI(_env, env.ServiceKeyvaultSuffix, keyVaultPrefix)
-	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
-
-	aead, err := encryption.NewMulti(ctx, serviceKeyvault, env.EncryptionSecretV2Name, env.EncryptionSecretName)
+	aead, err := encryption.NewAEADWithCore(ctx, _env, env.EncryptionSecretV2Name, env.EncryptionSecretName)
 	if err != nil {
 		return err
 	}
 
-	if err := env.ValidateVars(envDatabaseAccountName); err != nil {
-		return err
-	}
-
-	dbAccountName := os.Getenv(envDatabaseAccountName)
-
-	logrusEntry := log.WithField("component", "database")
-	scope := []string{fmt.Sprintf("https://%s.%s", dbAccountName, _env.Environment().CosmosDBDNSSuffixScope)}
-	dbAuthorizer, err := database.NewTokenAuthorizer(ctx, logrusEntry, msiToken, dbAccountName, scope)
+	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, log, m, aead)
 	if err != nil {
 		return err
 	}
 
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, m, aead, dbAccountName)
-	if err != nil {
-		return err
-	}
-
-	dbName, err := DBName(_env.IsLocalDevelopmentMode())
+	dbName, err := env.DBName(_env)
 	if err != nil {
 		return err
 	}
@@ -126,6 +94,16 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
+	dbGroup := database.NewDBGroup().
+		WithOpenShiftClusters(dbOpenShiftClusters).
+		WithPortal(dbPortal)
+
+	msiKVAuthorizer, err := _env.NewMSIAuthorizer(_env.Environment().KeyVaultScope)
+	if err != nil {
+		return err
+	}
+
+	keyVaultPrefix := os.Getenv(encryption.KeyVaultPrefix)
 	portalKeyvaultURI := keyvault.URI(_env, env.PortalKeyvaultSuffix, keyVaultPrefix)
 	portalKeyvault := keyvault.NewManager(msiKVAuthorizer, portalKeyvaultURI)
 
@@ -194,7 +172,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 
 	log.Printf("listening %s", address)
 
-	p := pkgportal.NewPortal(_env, audit, log.WithField("component", "portal"), log.WithField("component", "portal-access"), l, sshl, verifier, hostname, servingKey, servingCerts, clientID, clientKey, clientCerts, sessionKey, sshKey, groupIDs, elevatedGroupIDs, dbOpenShiftClusters, dbPortal, dialer, m)
+	p := pkgportal.NewPortal(_env, audit, log.WithField("component", "portal"), log.WithField("component", "portal-access"), l, sshl, verifier, hostname, servingKey, servingCerts, clientID, clientKey, clientCerts, sessionKey, sshKey, groupIDs, elevatedGroupIDs, dbGroup, dialer, m)
 
 	return p.Run(ctx)
 }

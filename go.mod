@@ -1,8 +1,6 @@
 module github.com/Azure/ARO-RP
 
-go 1.22
-
-toolchain go1.22.5
+go 1.21
 
 require (
 	github.com/Azure/azure-sdk-for-go v63.1.0+incompatible
@@ -20,7 +18,7 @@ require (
 	github.com/Azure/go-autorest/autorest/to v0.4.0
 	github.com/Azure/go-autorest/autorest/validation v0.3.1
 	github.com/Azure/go-autorest/tracing v0.6.0
-	github.com/Azure/msi-dataplane v0.0.2
+	github.com/Azure/msi-dataplane v0.0.3
 	github.com/alvaroloes/enumer v1.1.2
 	github.com/apparentlymart/go-cidr v1.1.0
 	github.com/codahale/etm v0.0.0-20141003032925-c00c9e6fb4c9
@@ -61,8 +59,8 @@ require (
 	github.com/onsi/gomega v1.33.0
 	github.com/open-policy-agent/frameworks/constraint v0.0.0-20221109005544-7de84dff5081
 	github.com/opencontainers/runtime-spec v1.1.1-0.20230922153023-c0e90434df2a
-	github.com/openshift/api v3.9.1-0.20191111211345-a27ff30ebf09+incompatible
-	github.com/openshift/client-go v0.0.0-20220525160904-9e1acff93e4a
+	github.com/openshift/api v0.0.0-20240103200955-7ca3a4634e46
+	github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
 	github.com/openshift/cloud-credential-operator v0.0.0-00010101000000-000000000000
 	github.com/openshift/hive/apis v0.0.0-20240627073933-b1ac27b24815
 	github.com/openshift/library-go v0.0.0-20220525173854-9b950a41acdc
@@ -1586,7 +1584,7 @@ replace (
 	k8s.io/kubectl => k8s.io/kubectl v0.25.16
 	k8s.io/kubernetes => k8s.io/kubernetes v1.25.16
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.11.2
-	sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.5.0
+	sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.9.0
 	sigs.k8s.io/kustomize/api => sigs.k8s.io/kustomize/api v0.11.2
 	sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.13.3
 	sigs.k8s.io/structured-merge-diff => sigs.k8s.io/structured-merge-diff v1.0.1-0.20191108220359-b1b620dd3f06
@@ -1596,8 +1594,8 @@ replace (
 // OpenShift pins
 replace (
 	github.com/googleapis/gnostic => github.com/google/gnostic v0.5.5
-	github.com/openshift/api => github.com/openshift/api v0.0.0-20230426102702-398424d53f74
-	github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20220603133046-984ee5ebedcf
+	github.com/openshift/api => github.com/openshift/api v0.0.0-20240103200955-7ca3a4634e46
+	github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20221019143426-16aed247da5c
 	github.com/openshift/cloud-credential-operator => github.com/openshift/cloud-credential-operator v0.0.0-20200316201045-d10080b52c9e
 	github.com/openshift/hive/apis => github.com/openshift/hive/apis v0.0.0-20231116161336-9dd47f8bfa1f
 	github.com/openshift/library-go => github.com/openshift/library-go v0.0.0-20230222114049-eac44a078a6e

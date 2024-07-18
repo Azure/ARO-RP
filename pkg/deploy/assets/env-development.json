@@ -267,7 +267,7 @@
             "name": "[concat(resourceGroup().name, '-disk-encryption-set')]",
             "type": "Microsoft.Compute/diskEncryptionSets",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2020-12-01",
+            "apiVersion": "2021-04-01",
             "dependsOn": [
                 "[resourceId('Microsoft.KeyVault/vaults/keys', concat(take(resourceGroup().name,10), '-dev-sharedKV'), concat(resourceGroup().name, '-disk-encryption-key'))]"
             ]
@@ -353,6 +353,9 @@
                             }
                         ]
                     },
+                    "securityProfile": {
+                        "securityType": "TrustedLaunch"
+                    },
                     "extensionProfile": {
                         "extensions": [
                             {
@@ -417,7 +420,7 @@
             "tags": {
                 "azsecpack": "nonprod"
             },
-            "apiVersion": "2020-12-01",
+            "apiVersion": "2024-03-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/loadBalancers', 'dev-lb-internal')]"
             ]

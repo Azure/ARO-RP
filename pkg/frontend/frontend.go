@@ -41,9 +41,19 @@ func (err statusCodeError) Error() string {
 	return fmt.Sprintf("%d", err)
 }
 
+type frontendDBs interface {
+	database.DatabaseGroupWithAsyncOperations
+	database.DatabaseGroupWithOpenShiftVersions
+	database.DatabaseGroupWithOpenShiftClusters
+	database.DatabaseGroupWithAsyncOperations
+	database.DatabaseGroupWithSubscriptions
+	database.DatabaseGroupWithPlatformWorkloadIdentityRoleSets
+}
+
 type kubeActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (adminactions.KubeActions, error)
 
 type azureActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AzureActions, error)
+type appLensActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.AppLensActions, error)
 
 type frontend struct {
 	auditLog *logrus.Entry
@@ -57,12 +67,7 @@ type frontend struct {
 	apiVersionMiddleware  middleware.ApiVersionValidator
 	maintenanceMiddleware middleware.MaintenanceMiddleware
 
-	dbAsyncOperations                  database.AsyncOperations
-	dbClusterManagerConfiguration      database.ClusterManagerConfigurations
-	dbOpenShiftClusters                database.OpenShiftClusters
-	dbSubscriptions                    database.Subscriptions
-	dbOpenShiftVersions                database.OpenShiftVersions
-	dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets
+	dbGroup frontendDBs
 
 	defaultOcpVersion                         string // always enabled
 	enabledOcpVersions                        map[string]*api.OpenShiftVersion
@@ -76,9 +81,10 @@ type frontend struct {
 
 	aead encryption.AEAD
 
-	hiveClusterManager  hive.ClusterManager
-	kubeActionsFactory  kubeActionsFactory
-	azureActionsFactory azureActionsFactory
+	hiveClusterManager    hive.ClusterManager
+	kubeActionsFactory    kubeActionsFactory
+	azureActionsFactory   azureActionsFactory
+	appLensActionsFactory appLensActionsFactory
 
 	skuValidator       SkuValidator
 	quotaValidator     QuotaValidator
@@ -98,11 +104,6 @@ type frontend struct {
 	now                          func() time.Time
 	systemDataClusterDocEnricher func(*api.OpenShiftClusterDocument, *api.SystemData)
 
-	systemDataSyncSetEnricher              func(*api.ClusterManagerConfigurationDocument, *api.SystemData)
-	systemDataMachinePoolEnricher          func(*api.ClusterManagerConfigurationDocument, *api.SystemData)
-	systemDataSyncIdentityProviderEnricher func(*api.ClusterManagerConfigurationDocument, *api.SystemData)
-	systemDataSecretEnricher               func(*api.ClusterManagerConfigurationDocument, *api.SystemData)
-
 	streamResponder StreamResponder
 }
 
@@ -117,12 +118,7 @@ func NewFrontend(ctx context.Context,
 	auditLog *logrus.Entry,
 	baseLog *logrus.Entry,
 	_env env.Interface,
-	dbAsyncOperations database.AsyncOperations,
-	dbClusterManagerConfiguration database.ClusterManagerConfigurations,
-	dbOpenShiftClusters database.OpenShiftClusters,
-	dbSubscriptions database.Subscriptions,
-	dbOpenShiftVersions database.OpenShiftVersions,
-	dbPlatformWorkloadIdentityRoleSets database.PlatformWorkloadIdentityRoleSets,
+	dbGroup frontendDBs,
 	apis map[string]*api.Version,
 	m metrics.Emitter,
 	clusterm metrics.Emitter,
@@ -130,6 +126,7 @@ func NewFrontend(ctx context.Context,
 	hiveClusterManager hive.ClusterManager,
 	kubeActionsFactory kubeActionsFactory,
 	azureActionsFactory azureActionsFactory,
+	appLensActionsFactory appLensActionsFactory,
 	enricher clusterdata.BestEffortEnricher,
 ) (*frontend, error) {
 	f := &frontend{
@@ -154,19 +151,15 @@ func NewFrontend(ctx context.Context,
 			AdminAuth: _env.AdminClientAuthorizer(),
 			ArmAuth:   _env.ArmClientAuthorizer(),
 		},
-		dbAsyncOperations:                  dbAsyncOperations,
-		dbClusterManagerConfiguration:      dbClusterManagerConfiguration,
-		dbOpenShiftClusters:                dbOpenShiftClusters,
-		dbSubscriptions:                    dbSubscriptions,
-		dbOpenShiftVersions:                dbOpenShiftVersions,
-		dbPlatformWorkloadIdentityRoleSets: dbPlatformWorkloadIdentityRoleSets,
-		apis:                               apis,
-		m:                                  middleware.MetricsMiddleware{Emitter: m},
-		maintenanceMiddleware:              middleware.MaintenanceMiddleware{Emitter: clusterm},
-		aead:                               aead,
-		hiveClusterManager:                 hiveClusterManager,
-		kubeActionsFactory:                 kubeActionsFactory,
-		azureActionsFactory:                azureActionsFactory,
+		dbGroup:               dbGroup,
+		apis:                  apis,
+		m:                     middleware.MetricsMiddleware{Emitter: m},
+		maintenanceMiddleware: middleware.MaintenanceMiddleware{Emitter: clusterm},
+		aead:                  aead,
+		hiveClusterManager:    hiveClusterManager,
+		kubeActionsFactory:    kubeActionsFactory,
+		azureActionsFactory:   azureActionsFactory,
+		appLensActionsFactory: appLensActionsFactory,
 
 		quotaValidator:     quotaValidator{},
 		skuValidator:       skuValidator{},
@@ -183,11 +176,6 @@ func NewFrontend(ctx context.Context,
 
 		now:                          time.Now,
 		systemDataClusterDocEnricher: enrichClusterSystemData,
-
-		systemDataSyncSetEnricher:              enrichSyncSetSystemData,
-		systemDataMachinePoolEnricher:          enrichMachinePoolSystemData,
-		systemDataSyncIdentityProviderEnricher: enrichSyncIdentityProviderSystemData,
-		systemDataSecretEnricher:               enrichSecretSystemData,
 
 		streamResponder: defaultResponder{},
 	}
@@ -241,18 +229,6 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 
 			r.Route("/{resourceName}", func(r chi.Router) {
 				r.With(f.apiVersionMiddleware.ValidateAPIVersion).Route("/", func(r chi.Router) {
-					// With API version check
-					if f.env.FeatureIsSet(env.FeatureEnableOCMEndpoints) {
-						r.Route("/{ocmResourceType}",
-							func(r chi.Router) {
-								r.Delete("/{ocmResourceName}", f.deleteClusterManagerConfiguration)
-								r.Get("/{ocmResourceName}", f.getClusterManagerConfiguration)
-								r.Patch("/{ocmResourceName}", f.putOrPatchClusterManagerConfiguration)
-								r.Put("/{ocmResourceName}", f.putOrPatchClusterManagerConfiguration)
-							},
-						)
-					}
-
 					r.Delete("/", f.deleteOpenShiftCluster)
 					r.Get("/", f.getOpenShiftCluster)
 

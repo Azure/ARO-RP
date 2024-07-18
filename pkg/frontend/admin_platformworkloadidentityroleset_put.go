@@ -36,7 +36,13 @@ func (f *frontend) putAdminPlatformWorkloadIdentityRoleSet(w http.ResponseWriter
 		return
 	}
 
-	docs, err := f.dbPlatformWorkloadIdentityRoleSets.ListAll(ctx)
+	dbPlatformWorkloadIdentityRoleSets, err := f.dbGroup.PlatformWorkloadIdentityRoleSets()
+	if err != nil {
+		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return
+	}
+
+	docs, err := dbPlatformWorkloadIdentityRoleSets.ListAll(ctx)
 	if err != nil {
 		log.Error(err)
 		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
@@ -57,7 +63,7 @@ func (f *frontend) putAdminPlatformWorkloadIdentityRoleSet(w http.ResponseWriter
 	if isCreate {
 		err = staticValidator.Static(ext, nil)
 		roleSetDoc = &api.PlatformWorkloadIdentityRoleSetDocument{
-			ID:                              f.dbPlatformWorkloadIdentityRoleSets.NewUUID(),
+			ID:                              dbPlatformWorkloadIdentityRoleSets.NewUUID(),
 			PlatformWorkloadIdentityRoleSet: &api.PlatformWorkloadIdentityRoleSet{},
 		}
 	} else {
@@ -71,14 +77,14 @@ func (f *frontend) putAdminPlatformWorkloadIdentityRoleSet(w http.ResponseWriter
 	converter.ToInternal(ext, roleSetDoc.PlatformWorkloadIdentityRoleSet)
 
 	if isCreate {
-		roleSetDoc, err = f.dbPlatformWorkloadIdentityRoleSets.Create(ctx, roleSetDoc)
+		roleSetDoc, err = dbPlatformWorkloadIdentityRoleSets.Create(ctx, roleSetDoc)
 		if err != nil {
 			log.Error(err)
 			api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
 			return
 		}
 	} else {
-		roleSetDoc, err = f.dbPlatformWorkloadIdentityRoleSets.Update(ctx, roleSetDoc)
+		roleSetDoc, err = dbPlatformWorkloadIdentityRoleSets.Update(ctx, roleSetDoc)
 		if err != nil {
 			log.Error(err)
 			api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")

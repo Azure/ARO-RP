@@ -14,6 +14,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
@@ -21,6 +22,9 @@ func TestClusterList(t *testing.T) {
 	dbOpenShiftClusters, _ := testdatabase.NewFakeOpenShiftClusters()
 
 	fixture := testdatabase.NewFixture().
+		WithOpenShiftClusters(dbOpenShiftClusters)
+
+	dbg := database.NewDBGroup().
 		WithOpenShiftClusters(dbOpenShiftClusters)
 
 	parsedTime, err := time.Parse(time.RFC3339, "2011-01-02T01:03:00Z")
@@ -67,7 +71,7 @@ func TestClusterList(t *testing.T) {
 	}
 
 	p := &portal{
-		dbOpenShiftClusters: dbOpenShiftClusters,
+		dbGroup: dbg,
 	}
 
 	req, err := http.NewRequest(http.MethodGet, "/api/clusters", nil)
@@ -187,8 +191,11 @@ func TestClusterDetail(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	dbg := database.NewDBGroup().
+		WithOpenShiftClusters(dbOpenShiftClusters)
+
 	p := &portal{
-		dbOpenShiftClusters: dbOpenShiftClusters,
+		dbGroup: dbg,
 	}
 
 	req, err := http.NewRequest(http.MethodGet, "/api/00000000-0000-0000-0000-000000000000/resourcegroupname/succeeded", nil)

@@ -36,7 +36,13 @@ func (f *frontend) putAdminOpenShiftVersion(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	docs, err := f.dbOpenShiftVersions.ListAll(ctx)
+	dbOpenShiftVersions, err := f.dbGroup.OpenShiftVersions()
+	if err != nil {
+		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return
+	}
+
+	docs, err := dbOpenShiftVersions.ListAll(ctx)
 	if err != nil {
 		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
 		return
@@ -61,7 +67,7 @@ func (f *frontend) putAdminOpenShiftVersion(w http.ResponseWriter, r *http.Reque
 	if isCreate {
 		err = staticValidator.Static(ext, nil)
 		versionDoc = &api.OpenShiftVersionDocument{
-			ID:               f.dbOpenShiftVersions.NewUUID(),
+			ID:               dbOpenShiftVersions.NewUUID(),
 			OpenShiftVersion: &api.OpenShiftVersion{},
 		}
 	} else {
@@ -75,13 +81,13 @@ func (f *frontend) putAdminOpenShiftVersion(w http.ResponseWriter, r *http.Reque
 	converter.ToInternal(ext, versionDoc.OpenShiftVersion)
 
 	if isCreate {
-		versionDoc, err = f.dbOpenShiftVersions.Create(ctx, versionDoc)
+		versionDoc, err = dbOpenShiftVersions.Create(ctx, versionDoc)
 		if err != nil {
 			api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
 			return
 		}
 	} else {
-		versionDoc, err = f.dbOpenShiftVersions.Update(ctx, versionDoc)
+		versionDoc, err = dbOpenShiftVersions.Update(ctx, versionDoc)
 		if err != nil {
 			api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
 			return

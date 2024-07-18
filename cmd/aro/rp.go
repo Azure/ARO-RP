@@ -100,44 +100,22 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 
 	clusterm := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("CLUSTER_MDM_ACCOUNT"), os.Getenv("CLUSTER_MDM_NAMESPACE"), os.Getenv("MDM_STATSD_SOCKET"))
 
-	msiToken, err := _env.NewMSITokenCredential()
+	aead, err := encryption.NewAEADWithCore(ctx, _env, env.EncryptionSecretV2Name, env.EncryptionSecretName)
 	if err != nil {
 		return err
 	}
 
-	aead, err := encryption.NewMulti(ctx, _env.ServiceKeyvault(), env.EncryptionSecretV2Name, env.EncryptionSecretName)
+	dbc, err := database.NewDatabaseClientFromEnv(ctx, _env, log, metrics, aead)
 	if err != nil {
 		return err
 	}
 
-	if err := env.ValidateVars(envDatabaseAccountName); err != nil {
-		return err
-	}
-	dbAccountName := os.Getenv(envDatabaseAccountName)
-
-	logrusEntry := log.WithField("component", "database")
-	scope := []string{fmt.Sprintf("https://%s.%s", dbAccountName, _env.Environment().CosmosDBDNSSuffixScope)}
-	dbAuthorizer, err := database.NewTokenAuthorizer(ctx, logrusEntry, msiToken, dbAccountName, scope)
-	if err != nil {
-		return err
-	}
-
-	dbc, err := database.NewDatabaseClient(log.WithField("component", "database"), _env, dbAuthorizer, metrics, aead, dbAccountName)
-	if err != nil {
-		return err
-	}
-
-	dbName, err := DBName(env.IsLocalDevelopmentMode())
+	dbName, err := env.DBName(_env)
 	if err != nil {
 		return err
 	}
 
 	dbAsyncOperations, err := database.NewAsyncOperations(ctx, _env.IsLocalDevelopmentMode(), dbc, dbName)
-	if err != nil {
-		return err
-	}
-
-	dbClusterManagerConfiguration, err := database.NewClusterManagerConfigurations(ctx, dbc, dbName)
 	if err != nil {
 		return err
 	}
@@ -182,7 +160,15 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
-	f, err := frontend.NewFrontend(ctx, audit, log.WithField("component", "frontend"), _env, dbAsyncOperations, dbClusterManagerConfiguration, dbOpenShiftClusters, dbSubscriptions, dbOpenShiftVersions, dbPlatformWorkloadIdentityRoleSets, api.APIs, metrics, clusterm, feAead, hiveClusterManager, adminactions.NewKubeActions, adminactions.NewAzureActions, clusterdata.NewParallelEnricher(metrics, _env))
+
+	dbg := database.NewDBGroup().WithAsyncOperations(dbAsyncOperations).
+		WithBilling(dbBilling).
+		WithOpenShiftClusters(dbOpenShiftClusters).
+		WithOpenShiftVersions(dbOpenShiftVersions).
+		WithPlatformWorkloadIdentityRoleSets(dbPlatformWorkloadIdentityRoleSets).
+		WithSubscriptions(dbSubscriptions)
+
+	f, err := frontend.NewFrontend(ctx, audit, log.WithField("component", "frontend"), _env, dbg, api.APIs, metrics, clusterm, feAead, hiveClusterManager, adminactions.NewKubeActions, adminactions.NewAzureActions, adminactions.NewAppLensActions, clusterdata.NewParallelEnricher(metrics, _env))
 	if err != nil {
 		return err
 	}

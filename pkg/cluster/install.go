@@ -86,11 +86,7 @@ func (m *manager) getZerothSteps() []steps.Step {
 		steps.Action(m.initializeKubernetesClients), // must be first
 		steps.Action(m.ensureBillingRecord),         // belt and braces
 		steps.Action(m.ensureDefaults),
-
-		// TODO: this relies on an authorizer that isn't exposed in the manager
-		// struct, so we'll rebuild the fpAuthorizer and use the error catching
-		// to advance
-		steps.AuthorizationRetryingAction(m.fpAuthorizer, m.fixupClusterSPObjectID),
+		steps.Action(m.fixupClusterSPObjectID),
 	}
 
 	// Generic fix-up actions that are fairly safe to always take, and don't require a running cluster
