@@ -330,6 +330,9 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 
 				// MIMO
 				r.Get("/maintenancemanifests", f.getAdminMaintManifests)
+				r.Route("/maintenancemanifests/{manifestId}", func(r chi.Router) {
+					r.Get("/", f.getSingleAdminMaintManifest)
+				})
 			})
 		})
 
