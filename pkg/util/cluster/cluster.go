@@ -83,18 +83,6 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 		return nil, err
 	}
 
-	clientId, _ := os.LookupEnv("AZURE_CLIENT_ID")
-	log.Infof("AZURE_CLIENT_ID: %s", clientId)
-
-	fpClientId, _ := os.LookupEnv("AZURE_FP_CLIENT_ID")
-	log.Infof("AZURE_FP_CLIENT_ID: %s", fpClientId)
-
-	tenantId, _ := os.LookupEnv("AZURE_TENANT_ID")
-	log.Infof("AZURE_TENANT_ID: %s", tenantId)
-
-	subscriptionId, _ := os.LookupEnv("AZURE_SUBSCRIPTION_ID")
-	log.Infof("AZURE_SUBSCRIPTION_ID: %s", subscriptionId)
-
 	spGraphClient, err := environment.Environment().NewGraphServiceClient(spTokenCredential)
 	if err != nil {
 		return nil, err
