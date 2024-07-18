@@ -729,17 +729,17 @@ func (c *Cluster) deleteCluster(ctx context.Context, resourceGroup, clusterName 
 }
 
 func (c *Cluster) ensureResourceGroupDeleted(ctx context.Context, resourceGroupName string) error {
-	c.log.Printf("Deleting resource group %s", resourceGroupName)
+	c.log.Printf("deleting resource group %s", resourceGroupName)
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
 	return wait.PollImmediateUntil(5*time.Second, func() (bool, error) {
 		_, err := c.groups.Get(ctx, resourceGroupName)
 		if azureerrors.ResourceGroupNotFound(err) {
-			c.log.Infof("Finished deleting resource group %s", resourceGroupName)
+			c.log.Infof("finished deleting resource group %s", resourceGroupName)
 			return true, nil
 		}
-		return false, fmt.Errorf("Failed to delete resource group %s", resourceGroupName)
+		return false, fmt.Errorf("failed to delete resource group %s", resourceGroupName)
 	}, timeoutCtx.Done())
 }
 
