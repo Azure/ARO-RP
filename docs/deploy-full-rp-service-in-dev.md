@@ -261,16 +261,10 @@
    the RP with a single vm instance, and another VMSS with a single vm for
    Gateway.
 
-1. Create storage account and role assignment required for workload identity clusters
+1. Create additional infrastructure required for workload identity clusters
     ```
     source ./hack/devtools/deploy-shared-env.sh
-    deploy_oic_for_dedicated_rp
-    ```
-
-1. Create key vault and role assignment for storing mock cluster MSI certificates for workload identity clusters
-    ```
-    source ./hack/devtools/deploy-shared-env.sh
-    deploy_msi_kv_for_dedicated_rp
+    deploy_miwi_infra_for_dedicated_rp
     ```
 
 1. If you are going to use multiversion, you can now update the OpenShiftVersions DB as per [OpenShift Version insttructions](./deploy-development-rp.md#openshift-version)
