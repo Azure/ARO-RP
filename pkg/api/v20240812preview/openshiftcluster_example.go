@@ -26,6 +26,7 @@ func ExampleOpenShiftClusterPatchParameter() interface{} {
 				ResourceID:   "",
 				ClientID:     "",
 				ObjectID:     "",
+				TenantID:     "",
 			},
 		},
 	}
@@ -65,6 +66,7 @@ func ExampleOpenShiftClusterPutParameter() interface{} {
 				ResourceID:   "",
 				ClientID:     "",
 				ObjectID:     "",
+				TenantID:     "",
 			},
 		},
 	}
@@ -97,6 +99,7 @@ func ExampleOpenShiftClusterGetResponse() interface{} {
 				ResourceID:   "",
 				ClientID:     "",
 				ObjectID:     "",
+				TenantID:     "",
 			},
 		},
 	}

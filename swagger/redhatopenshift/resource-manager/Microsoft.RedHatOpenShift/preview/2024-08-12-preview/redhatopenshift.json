@@ -2346,6 +2346,10 @@
         "objectId": {
           "type": "string",
           "readOnly": true
+        },
+        "tenantId": {
+          "type": "string",
+          "readOnly": true
         }
       }
     },

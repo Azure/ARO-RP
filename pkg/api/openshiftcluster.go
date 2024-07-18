@@ -799,6 +799,7 @@ type PlatformWorkloadIdentity struct {
 	ResourceID   string `json:"resourceId,omitempty"`
 	ClientID     string `json:"clientId,omitempty" swagger:"readOnly"`
 	ObjectID     string `json:"objectId,omitempty" swagger:"readOnly"`
+	TenantID     string `json:"tenantId,omitempty" swagger:"readOnly"`
 }
 
 // ClusterUserAssignedIdentity stores information about a user-assigned managed identity in a predefined format required by Microsoft's Managed Identity team.

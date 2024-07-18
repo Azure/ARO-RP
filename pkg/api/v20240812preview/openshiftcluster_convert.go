@@ -154,6 +154,7 @@ func (c openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfac
 			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ResourceID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ResourceID
 			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ClientID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ClientID
 			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ObjectID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ObjectID
+			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].TenantID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].TenantID
 		}
 	}
 
@@ -248,6 +249,7 @@ func (c openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShif
 			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ResourceID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ResourceID
 			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ClientID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ClientID
 			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ObjectID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ObjectID
+			out.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].TenantID = oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].TenantID
 		}
 	}
 
@@ -360,6 +362,7 @@ func (c openShiftClusterConverter) ExternalNoReadOnly(_oc interface{}) {
 		for i := range oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities {
 			oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ClientID = ""
 			oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].ObjectID = ""
+			oc.Properties.PlatformWorkloadIdentityProfile.PlatformWorkloadIdentities[i].TenantID = ""
 		}
 	}
 }

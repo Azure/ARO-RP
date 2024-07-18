@@ -1522,6 +1522,8 @@ type PlatformWorkloadIdentity struct {
 	ClientID *string `json:"clientId,omitempty"`
 	// ObjectID - READ-ONLY
 	ObjectID *string `json:"objectId,omitempty"`
+	// TenantID - READ-ONLY
+	TenantID *string `json:"tenantId,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for PlatformWorkloadIdentity.
