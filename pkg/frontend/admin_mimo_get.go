@@ -6,9 +6,8 @@ package frontend
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
-	"path/filepath"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/sirupsen/logrus"
@@ -21,7 +20,7 @@ import (
 func (f *frontend) getSingleAdminMaintManifest(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
-	resourceID := strings.TrimPrefix(filepath.Dir(r.URL.Path), "/admin")
+	resourceID := resourceIdFromURLParams(r)
 	b, err := f._getSingleAdminMaintManifest(ctx, r, resourceID)
 
 	if cloudErr, ok := err.(*api.CloudError); ok {
@@ -49,7 +48,7 @@ func (f *frontend) _getSingleAdminMaintManifest(ctx context.Context, r *http.Req
 
 	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
 	if err != nil {
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "cluster not found")
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", fmt.Sprintf("cluster not found: %s", err.Error()))
 	}
 
 	if doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateDeleting {
@@ -58,7 +57,7 @@ func (f *frontend) _getSingleAdminMaintManifest(ctx context.Context, r *http.Req
 
 	manifest, err := dbMaintenanceManifests.Get(ctx, resourceID, manifestId)
 	if err != nil {
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeInternalServerError, "", err.Error())
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", fmt.Sprintf("manifest not found: %s", err.Error()))
 	}
 
 	return json.MarshalIndent(converter.ToExternal(manifest), "", "    ")
