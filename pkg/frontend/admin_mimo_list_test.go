@@ -153,7 +153,7 @@ func TestMIMOList(t *testing.T) {
 		},
 		{
 			name:           "missing cluster",
-			wantError:      "404: NotFound: : cluster not found",
+			wantError:      "404: NotFound: : cluster not found: 404 : ",
 			wantStatusCode: http.StatusNotFound,
 		},
 	} {
@@ -173,11 +173,7 @@ func TestMIMOList(t *testing.T) {
 				},
 			})
 
-			if tt.fixtures != nil {
-				tt.fixtures(ti.fixture)
-			}
-
-			err := ti.buildFixtures(nil)
+			err := ti.buildFixtures(tt.fixtures)
 			if err != nil {
 				t.Fatal(err)
 			}

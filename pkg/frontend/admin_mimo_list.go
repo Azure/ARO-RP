@@ -9,9 +9,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 
@@ -23,7 +21,7 @@ import (
 func (f *frontend) getAdminMaintManifests(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
-	resourceID := strings.TrimPrefix(filepath.Dir(r.URL.Path), "/admin")
+	resourceID := resourceIdFromURLParams(r)
 	b, err := f._getAdminMaintManifests(ctx, r, resourceID)
 
 	if cloudErr, ok := err.(*api.CloudError); ok {
@@ -55,7 +53,7 @@ func (f *frontend) _getAdminMaintManifests(ctx context.Context, r *http.Request,
 
 	doc, err := dbOpenShiftClusters.Get(ctx, resourceID)
 	if err != nil {
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "cluster not found")
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", fmt.Sprintf("cluster not found: %s", err.Error()))
 	}
 
 	if doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateDeleting {
