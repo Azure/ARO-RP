@@ -231,8 +231,14 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 				r.With(f.apiVersionMiddleware.ValidateAPIVersion).Route("/", func(r chi.Router) {
 					r.Delete("/", f.deleteOpenShiftCluster)
 					r.Get("/", f.getOpenShiftCluster)
-					r.Patch("/", f.putOrPatchOpenShiftCluster)
-					r.Put("/", f.putOrPatchOpenShiftCluster)
+
+					if f.env.IsLocalDevelopmentMode() {
+						r.With(middleware.MockMSIMiddleware).Patch("/", f.putOrPatchOpenShiftCluster)
+						r.With(middleware.MockMSIMiddleware).Put("/", f.putOrPatchOpenShiftCluster)
+					} else {
+						r.Patch("/", f.putOrPatchOpenShiftCluster)
+						r.Put("/", f.putOrPatchOpenShiftCluster)
+					}
 
 					r.Post("/listcredentials", f.postOpenShiftClusterCredentials)
 

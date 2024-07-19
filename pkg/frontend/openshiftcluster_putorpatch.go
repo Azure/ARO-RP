@@ -62,8 +62,7 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 	subId := chi.URLParam(r, "subscriptionId")
 	resourceProviderNamespace := chi.URLParam(r, "resourceProviderNamespace")
 
-	identityURL := r.Header.Get(dataplane.MsiIdentityURLHeader)
-	identityTenantID := r.Header.Get(dataplane.MsiTenantHeader)
+	identityURL, identityTenantID := getMSIHeaders(r.Header)
 
 	apiVersion := r.URL.Query().Get(api.APIVersionKey)
 	putOrPatchClusterParameters := PutOrPatchOpenshiftClusterParameters{
@@ -439,4 +438,8 @@ func adminUpdateProvisioningState(doc *api.OpenShiftClusterDocument) {
 		// This enables future admin update actions with body `{}` to succeed
 		doc.OpenShiftCluster.Properties.MaintenanceTask = ""
 	}
+}
+
+func getMSIHeaders(h http.Header) (string, string) {
+	return h.Get(dataplane.MsiIdentityURLHeader), h.Get(dataplane.MsiTenantHeader)
 }
