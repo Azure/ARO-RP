@@ -233,8 +233,8 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 					r.Get("/", f.getOpenShiftCluster)
 
 					if f.env.IsLocalDevelopmentMode() {
-						r.With(middleware.GetMockMSIMiddleware()).Patch("/", f.putOrPatchOpenShiftCluster)
-						r.With(middleware.GetMockMSIMiddleware()).Put("/", f.putOrPatchOpenShiftCluster)
+						r.With(middleware.MockMSIMiddleware).Patch("/", f.putOrPatchOpenShiftCluster)
+						r.With(middleware.MockMSIMiddleware).Put("/", f.putOrPatchOpenShiftCluster)
 					} else {
 						r.Patch("/", f.putOrPatchOpenShiftCluster)
 						r.Put("/", f.putOrPatchOpenShiftCluster)

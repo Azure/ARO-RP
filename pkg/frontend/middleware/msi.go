@@ -11,14 +11,10 @@ const (
 	mockTenantIDEnvVar = "MOCK_MSI_TENANT_ID"
 )
 
-// MockMSIMiddleware is used to mock MSI headers for development purposes
-func GetMockMSIMiddleware() func(http.Handler) http.Handler {
-	return func(h http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			r.Header.Set(dataplane.MsiIdentityURLHeader, mockIdentityURL)
-			r.Header.Set(dataplane.MsiTenantHeader, mockTenantIDEnvVar)
-
-			h.ServeHTTP(w, r)
-		})
-	}
+func MockMSIMiddleware(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Header.Set(dataplane.MsiIdentityURLHeader, mockIdentityURL)
+		r.Header.Set(dataplane.MsiTenantHeader, mockTenantIDEnvVar)
+		h.ServeHTTP(w, r)
+	})
 }
