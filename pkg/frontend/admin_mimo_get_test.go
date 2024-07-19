@@ -32,12 +32,12 @@ func TestMIMOGet(t *testing.T) {
 	}
 
 	for _, tt := range []*test{
-		// {
-		// 	name:           "no cluster",
-		// 	wantError:      "404: NotFound: : cluster not found",
-		// 	fixtures:       func(f *testdatabase.Fixture) {},
-		// 	wantStatusCode: http.StatusNotFound,
-		// },
+		{
+			name:           "no cluster",
+			wantError:      "404: NotFound: : cluster not found: 404 : ",
+			fixtures:       func(f *testdatabase.Fixture) {},
+			wantStatusCode: http.StatusNotFound,
+		},
 		{
 			name: "cluster being deleted",
 			fixtures: func(f *testdatabase.Fixture) {
@@ -68,7 +68,7 @@ func TestMIMOGet(t *testing.T) {
 					},
 				})
 			},
-			wantError:      "404: NotFound: : cluster not found",
+			wantError:      "404: NotFound: : manifest not found: 404 : ",
 			wantStatusCode: http.StatusNotFound,
 		},
 		{
@@ -119,14 +119,17 @@ func TestMIMOGet(t *testing.T) {
 				},
 			})
 
-			if tt.fixtures != nil {
-				tt.fixtures(ti.fixture)
-			}
-
-			err := ti.buildFixtures(nil)
+			err := ti.buildFixtures(tt.fixtures)
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			a, err := ti.openShiftClustersClient.ListAll(ctx, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			fmt.Print(a)
 
 			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, testdatabase.NewFakeAEAD(), nil, nil, nil, nil, nil)
 
