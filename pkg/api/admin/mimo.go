@@ -11,6 +11,7 @@ const (
 	MaintenanceManifestStateCompleted  MaintenanceManifestState = "Completed"
 	MaintenanceManifestStateFailed     MaintenanceManifestState = "Failed"
 	MaintenanceManifestStateTimedOut   MaintenanceManifestState = "TimedOut"
+	MaintenanceManifestStateCancelled  MaintenanceManifestState = "Cancelled"
 )
 
 type MaintenanceManifest struct {
