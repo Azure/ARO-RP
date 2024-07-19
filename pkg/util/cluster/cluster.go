@@ -727,7 +727,7 @@ func (c *Cluster) ensureResourceGroupDeleted(ctx context.Context, resourceGroupN
 			c.log.Infof("finished deleting resource group %s", resourceGroupName)
 			return true, nil
 		}
-		return false, fmt.Errorf("failed to delete resource group %s", resourceGroupName)
+		return false, fmt.Errorf("failed to delete resource group %s with %s", resourceGroupName, err)
 	}, timeoutCtx.Done())
 }
 
