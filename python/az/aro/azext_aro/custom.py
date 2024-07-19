@@ -19,6 +19,7 @@ from azure.cli.core.util import sdk_no_wait
 from azure.cli.core.azclierror import (
     FileOperationError,
     ResourceNotFoundError,
+    InvalidArgumentValueError,
     UnauthorizedError,
     ValidationError
 )
@@ -452,6 +453,7 @@ def aro_update(cmd,
                refresh_cluster_credentials=False,
                client_id=None,
                client_secret=None,
+               platform_workload_identities=None,
                load_balancer_managed_outbound_ip_count=None,
                no_wait=False):
     # if we can't read cluster spec, we will not be able to do much. Fail.
@@ -459,17 +461,38 @@ def aro_update(cmd,
 
     ocUpdate = openshiftcluster.OpenShiftClusterUpdate()
 
-    client_id, client_secret = cluster_application_update(cmd.cli_ctx, oc, client_id, client_secret, refresh_cluster_credentials)  # pylint: disable=line-too-long
+    if oc.service_principal_profile is not None:
+        client_id, client_secret = cluster_application_update(cmd.cli_ctx, oc, client_id, client_secret, refresh_cluster_credentials)  # pylint: disable=line-too-long
 
-    if client_id is not None or client_secret is not None:
-        # construct update payload
-        ocUpdate.service_principal_profile = openshiftcluster.ServicePrincipalProfile()
+        if client_id is not None or client_secret is not None:
+            # construct update payload
+            ocUpdate.service_principal_profile = openshiftcluster.ServicePrincipalProfile()
 
-        if client_secret is not None:
-            ocUpdate.service_principal_profile.client_secret = client_secret
+            if client_secret is not None:
+                ocUpdate.service_principal_profile.client_secret = client_secret
 
-        if client_id is not None:
-            ocUpdate.service_principal_profile.client_id = client_id
+            if client_id is not None:
+                ocUpdate.service_principal_profile.client_id = client_id
+
+    if platform_workload_identities is not None:
+        if oc.service_principal_profile is not None:
+            raise InvalidArgumentValueError(
+                "Cannot assign platform workload identities to a cluster with service principal"
+            )
+
+        pwis = {}
+        for i in oc.platform_workload_identity_profile.platform_workload_identities:
+            pwis[i.operator_name] = openshiftcluster.PlatformWorkloadIdentity(
+                operator_name=i.operator_name,
+                resource_id=i.resource_id
+            )
+
+        for i in platform_workload_identities:
+            pwis[i.operator_name] = i
+
+        ocUpdate.platform_workload_identity_profile = openshiftcluster.PlatformWorkloadIdentityProfile(
+            platform_workload_identities=list(pwis.values())
+        )
 
     if load_balancer_managed_outbound_ip_count is not None:
         ocUpdate.network_profile = openshiftcluster.NetworkProfile()

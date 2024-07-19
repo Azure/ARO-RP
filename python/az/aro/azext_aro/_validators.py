@@ -42,6 +42,8 @@ def validate_client_id(namespace):
         return
     if namespace.enable_managed_identity is True:
         raise MutuallyExclusiveArgumentError('Must not specify --client-id when --enable-managed-identity is True')  # pylint: disable=line-too-long
+    if namespace.platform_workload_identities is not None:
+        raise MutuallyExclusiveArgumentError('Must not specify --client-id when --assign-platform-workload-identity is used')  # pylint: disable=line-too-long
 
     try:
         uuid.UUID(namespace.client_id)
@@ -54,11 +56,13 @@ def validate_client_id(namespace):
 
 def validate_client_secret(isCreate):
     def _validate_client_secret(namespace):
-        if not isCreate or namespace.client_secret is None:
+        if namespace.client_secret is None:
             return
         if namespace.enable_managed_identity is True:
             raise MutuallyExclusiveArgumentError('Must not specify --client-secret when --enable-managed-identity is True')  # pylint: disable=line-too-long
-        if namespace.client_id is None or not str(namespace.client_id):
+        if namespace.platform_workload_identities is not None:
+            raise MutuallyExclusiveArgumentError('Must not specify --client-secret when --assign-platform-workload-identity is used')  # pylint: disable=line-too-long
+        if isCreate and (namespace.client_id is None or not str(namespace.client_id)):
             raise RequiredArgumentMissingError('Must specify --client-id with --client-secret.')
 
     return _validate_client_secret
@@ -318,20 +322,23 @@ def validate_enable_managed_identity(namespace):
         raise RequiredArgumentMissingError('Enabling managed identity requires cluster identity to be provided')
 
 
-def validate_platform_workload_identities(cmd, namespace):
-    if namespace.platform_workload_identities is None:
-        return
+def validate_platform_workload_identities(isCreate):
+    def _validate_platform_workload_identities(cmd, namespace):
+        if namespace.platform_workload_identities is None:
+            return
 
-    if not namespace.enable_managed_identity:
-        raise RequiredArgumentMissingError('Must set --enable-managed-identity when providing platform workload identities')  # pylint: disable=line-too-long
+        if isCreate and not namespace.enable_managed_identity:
+            raise RequiredArgumentMissingError('Must set --enable-managed-identity when providing platform workload identities')  # pylint: disable=line-too-long
 
-    for identity in namespace.platform_workload_identities:
-        if not is_valid_resource_id(identity.resource_id):
-            identity.resource_id = identity_name_to_resource_id(
-                cmd, namespace, identity.resource_id)
+        for identity in namespace.platform_workload_identities:
+            if not is_valid_resource_id(identity.resource_id):
+                identity.resource_id = identity_name_to_resource_id(
+                    cmd, namespace, identity.resource_id)
 
-        if not is_valid_identity_resource_id(identity.resource_id):
-            raise InvalidArgumentValueError(f"Resource {identity.resource_id} used for platform workload identity {identity.name} is not a valid userAssignedIdentity")  # pylint: disable=line-too-long
+            if not is_valid_identity_resource_id(identity.resource_id):
+                raise InvalidArgumentValueError(f"Resource {identity.resource_id} used for platform workload identity {identity.name} is not a valid userAssignedIdentity")  # pylint: disable=line-too-long
+
+    return _validate_platform_workload_identities
 
 
 def validate_cluster_identity(cmd, namespace):
