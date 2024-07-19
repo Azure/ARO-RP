@@ -10,6 +10,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -33,6 +34,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
+	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 type statusCodeError int
@@ -332,6 +334,7 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 				r.Get("/maintenancemanifests", f.getAdminMaintManifests)
 				r.Route("/maintenancemanifests/{manifestId}", func(r chi.Router) {
 					r.Get("/", f.getSingleAdminMaintManifest)
+					r.Post("/cancel", f.postAdminMaintManifestCancel)
 				})
 			})
 		})
@@ -499,4 +502,22 @@ func frontendOperationResultLog(log *logrus.Entry, method string, err error) {
 
 	log = log.WithField("errorDetails", err.Error())
 	log.Info("front end operation failed")
+}
+
+// resourceIdFromURLParams returns an Azure Resource ID built out of the
+// individual parameters of the URL.
+func resourceIdFromURLParams(r *http.Request) string {
+	subID, resType, resProvider, resName, resGroupName := chi.URLParam(r, "subscriptionId"),
+		chi.URLParam(r, "resourceType"),
+		chi.URLParam(r, "resourceProviderNamespace"),
+		chi.URLParam(r, "resourceName"),
+		chi.URLParam(r, "resourceGroupName")
+
+	return strings.ToLower(azure.Resource{
+		SubscriptionID: subID,
+		ResourceGroup:  resGroupName,
+		ResourceType:   resType,
+		ResourceName:   resName,
+		Provider:       resProvider,
+	}.String())
 }

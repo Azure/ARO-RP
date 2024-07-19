@@ -4,7 +4,9 @@ package database
 // Licensed under the Apache License 2.0.
 
 import (
+	"cmp"
 	"context"
+	"slices"
 	"strconv"
 	"time"
 
@@ -71,6 +73,10 @@ func fakeMaintenanceManifestsForCluster(client cosmosdb.MaintenanceManifestDocum
 			results = append(results, r)
 		}
 	}
+
+	slices.SortFunc(results, func(a, b *api.MaintenanceManifestDocument) int {
+		return cmp.Compare(a.ID, b.ID)
+	})
 
 	return cosmosdb.NewFakeMaintenanceManifestDocumentIterator(results, startingIndex)
 }
