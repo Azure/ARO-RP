@@ -134,26 +134,26 @@ func New(log *logrus.Entry, environment env.Core, ci bool) (*Cluster, error) {
 	return c, nil
 }
 
-type AppDetails struct {
+type appDetails struct {
 	applicationId     string
 	applicationSecret string
 	SPId              string
 }
 
-func (c *Cluster) createApp(ctx context.Context, clusterName string) (applicationDetails AppDetails, err error) {
+func (c *Cluster) createApp(ctx context.Context, clusterName string) (applicationDetails appDetails, err error) {
 	c.log.Infof("Creating AAD application")
 	appID, appSecret, err := c.createApplication(ctx, "aro-"+clusterName)
 	if err != nil {
-		return AppDetails{}, err
+		return appDetails{}, err
 	}
 
 	c.log.Infof("Creating service principal")
 	spID, err := c.createServicePrincipal(ctx, appID)
 	if err != nil {
-		return AppDetails{}, err
+		return appDetails{}, err
 	}
 
-	return AppDetails{appID, appSecret, spID}, nil
+	return appDetails{appID, appSecret, spID}, nil
 }
 
 func (c *Cluster) Create(ctx context.Context, vnetResourceGroup, clusterName string, osClusterVersion string) error {
