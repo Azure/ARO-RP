@@ -5,6 +5,7 @@ package middleware
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
 )
@@ -17,7 +18,7 @@ const (
 func MockMSIMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r.Header.Set(dataplane.MsiIdentityURLHeader, mockIdentityURL)
-		r.Header.Set(dataplane.MsiTenantHeader, mockTenantIDEnvVar)
+		r.Header.Set(dataplane.MsiTenantHeader, os.Getenv(mockTenantIDEnvVar))
 		h.ServeHTTP(w, r)
 	})
 }
