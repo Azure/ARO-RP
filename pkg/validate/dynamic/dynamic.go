@@ -467,7 +467,8 @@ func createAuthorizationRequest(subject, resourceId string, actions ...string) r
 	return remotepdp.AuthorizationRequest{
 		Subject: remotepdp.SubjectInfo{
 			Attributes: remotepdp.SubjectAttributes{
-				ObjectId: subject,
+				ObjectId:  subject,
+				ClaimName: remotepdp.GroupExpansion, // always do group expansion
 			},
 		},
 		Actions: actionInfos,
