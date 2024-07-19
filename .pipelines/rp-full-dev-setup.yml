@@ -1,0 +1,94 @@
+trigger: none
+pr: none
+
+# Parameters
+# ---------
+parameters:
+  - template: ./rp-dev/rp-dev-params.yml
+
+resources:
+  containers:
+    - container: container
+      image: registry.access.redhat.com/ubi8/toolbox:8.10
+      options: --user=0 --privileged -v /dev/shm:/dev/shm --device /dev/net/tun --name rp-dev-container # Root (and full sysetme) user privileges, shared memory between host and container, and access to the TUN device for network tunneling
+
+# Variables
+# ---------
+
+variables:
+  - template: ./rp-dev/rp-dev-vars.yml
+
+jobs:
+  - job: Full_RP_dev_setup_deployment
+    displayName: Deploy Full RP Dev
+    timeoutInMinutes: 180
+    pool:
+      name: 1es-aro-ci-pool
+
+    steps:
+# setup
+      # 1) Checkout repo
+      - template: ./templates/template-checkout.yml
+
+      # 2) Login to Azure with az CLI
+      - template: ./templates/template-az-cli-login.yml # does it have az CLI alraedy?
+        parameters:
+          azureDevOpsJSONSPN: ${{ parameters.azureJson }}
+
+      # 3) Generate RP Dev configuration file
+      - template: ./templates/rp-dev/template-generate-rp-dev-config.yml
+        parameters:
+          secretSA: ${{ parameters.secretSA }}
+          location: ${{ parameters.location }}
+          resourceGroup: ${{ parameters.resourceGroup }}
+          databaseAccountName: ${{ parameters.databaseAccountName }}
+          keyvaultPrefix: ${{ parameters.keyvaultPrefix }}
+          aroImage: ${{ parameters.aroImage }}
+
+      # 4) Semi deploy ...
+      - script: make deploy # use different target which will succeed and won't fail
+        name: semi-deploy-aro-rp-dev
+        displayName: 🚀 semi-deploy RP
+
+      # 5) Deploy VPN Gateway & AKS
+      - script: |
+          source ./hack/devtools/deploy-shared-env.sh
+          deploy_vpn_for_dedicated_rp
+          deploy_aks_dev
+        name: deploy-vpn-gateway
+        displayName: 🚀 Deploy VPN Gateway and AKS
+
+      # 6) Install Hive
+      - template: ./templates/rp-dev/template-install-hive.yml
+        parameters:
+          location: ${{ parameters.location }}
+
+      # 7) Mirror repos to ACR
+      - template: ./templates/rp-dev/template-mirror-images_to_acr.yml
+        parameters:
+          mirrorTag: ${{ parameters.ocpVersionTag }}
+          dst_acr_name: ${{ parameters.dst_acr_name }}
+
+      # 8) Final preperation before deploying RP
+      - template: ./templates/rp-dev/template-prepare-rp-deploy.yml
+        parameters:
+          rpResourceGroup: ${{ parameters.resourceGroup }}
+          rpVmssName: rp-vmss-
+          gwyResourceGroup: $(AZURE_UNIQUE_PREFIX)-gwy-${{ parameters.location }}
+          gwyVmssName: gateway-vmss-
+
+      # 9) Fully deploy RP
+      - script: make deploy
+        name: full-deploy-aro-rp-dev
+        displayName: 🚀 Fully deploy ARO RP Setup
+
+      # 10) Create SA and Role assignment
+      - script: |
+          source ./hack/devtools/deploy-shared-env.sh
+          deploy_oic_for_dedicated_rp
+        name: create-sa-role
+        displayName: ⚙️ Create storage account and role assignment
+## few more steps would be added (e.g., cluster creation)
+
+# cleanup
+      - template: ./templates/template-az-cli-logout.yml

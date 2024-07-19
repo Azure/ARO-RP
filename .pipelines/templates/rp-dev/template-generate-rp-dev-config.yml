@@ -1,0 +1,44 @@
+parameters:
+  secretSA: ""
+  location: ""
+  resourceGroup: ""
+  databaseAccountName: ""
+  keyvaultPrefix: ""
+  aroImage: ""
+
+steps:
+  - script: |
+      set -e
+      # Export the SECRET_SA_ACCOUNT_NAME environment variable and run make secrets
+      export SECRET_SA_ACCOUNT_NAME=${{ parameters.secretSA }} && make secrets
+
+      # Define the expected directory and file names
+      expected_dir="secrets"
+      files=("env" "dev-ca.crt" "dev-client.crt")
+
+      # Validate that the secrets directory and required files exist
+      [ -d "$expected_dir" ] || { echo "Directory '$expected_dir' has not been created."; exit 1; }
+      for file in "${files[@]}"; do
+        [ -f "$expected_dir/$file" ] || { echo "File '$file' does not exist inside the directory '$expected_dir'."; exit 1; }
+      done
+    name: download-secrets
+    displayName: 🔑 Downloading certificates and secrets from storage account
+
+  - script: |
+      set -e
+      # Export environment variables from parameters
+      export LOCATION=${{ parameters.location }} RESOURCEGROUP=${{ parameters.resourceGroup }} DATABASE_ACCOUNT_NAME=${{ parameters.databaseAccountName }}
+      export KEYVAULT_PREFIX=${{ parameters.keyvaultPrefix }} ARO_IMAGE=${{ parameters.aroImage }}
+      # Source environment variables from the secrets file
+      source secrets/env
+
+      # Generate SSH key
+      ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa
+
+      # Run the make command to generate dev-config.yaml
+      make dev-config.yaml
+
+      # Check if the dev-config.yaml file exists
+      [ -f "dev-config.yaml" ] || { echo "File dev-config.yaml does not exist."; exit 1; }
+    name: generate-rp-dev-config
+    displayName: ⚙️ Generating RP development config yaml (dev-config.yaml)

@@ -1,0 +1,14 @@
+parameters:
+  location: ""
+
+steps:
+  - script: |
+      set -e
+      source ./hack/devtools/deploy-shared-env.sh
+      vpn_configuration
+      sudo openvpn secrets/vpn-${{ parameters.location }}.ovpn &
+      make aks.kubeconfig
+      ./hack/hive-generate-config.sh
+      KUBECONFIG=$(pwd)/aks.kubeconfig ./hack/hive-dev-install.sh
+    name: install-hive
+    displayName: 🚀 Installing Hive into AKS
