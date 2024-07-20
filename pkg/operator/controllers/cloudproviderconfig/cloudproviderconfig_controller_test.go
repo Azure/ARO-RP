@@ -19,7 +19,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
@@ -116,13 +115,7 @@ func TestReconcileCloudProviderConfig(t *testing.T) {
 			clientBuilder.WithObjects(tt.configMap)
 		}
 
-		r := &CloudProviderConfigReconciler{
-			AROController: base.AROController{
-				Log:    logrus.NewEntry(logger),
-				Client: clientBuilder.Build(),
-				Name:   ControllerName,
-			},
-		}
+		r := NewReconciler(logrus.NewEntry(logger), clientBuilder.Build())
 		request := ctrl.Request{}
 		request.Name = "cloud-provider-config"
 		request.Namespace = "openshift-config"

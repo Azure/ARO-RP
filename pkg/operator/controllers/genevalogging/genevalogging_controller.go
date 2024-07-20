@@ -25,7 +25,8 @@ import (
 )
 
 const (
-	ControllerName = "GenevaLogging"
+	controllerName    = "GenevaLogging"
+	controllerEnabled = operator.GenevaLoggingEnabled
 
 	// full pullspec of fluentbit image
 	controllerFluentbitPullSpec = "aro.genevalogging.fluentbit.pullSpec"
@@ -41,14 +42,17 @@ type Reconciler struct {
 }
 
 func NewReconciler(log *logrus.Entry, client client.Client, dh dynamichelper.Interface) *Reconciler {
-	return &Reconciler{
+	r := &Reconciler{
 		AROController: base.AROController{
-			Log:    log,
-			Client: client,
-			Name:   ControllerName,
+			Log:         log.WithField("controller", controllerName),
+			Client:      client,
+			Name:        controllerName,
+			EnabledFlag: controllerEnabled,
 		},
 		dh: dh,
 	}
+	r.Reconciler = r
+	return r
 }
 
 func (r *Reconciler) ensureResources(ctx context.Context, instance *arov1alpha1.Cluster) error {
@@ -86,20 +90,8 @@ func (r *Reconciler) ensureResources(ctx context.Context, instance *arov1alpha1.
 }
 
 // Reconcile the genevalogging deployment.
-func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.GetCluster(ctx)
-	if err != nil {
-		r.Log.Error(err)
-		return reconcile.Result{}, err
-	}
-
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.GenevaLoggingEnabled) {
-		r.Log.Debug("controller is disabled")
-		return reconcile.Result{}, nil
-	}
-
-	r.Log.Debug("running")
-	err = r.ensureResources(ctx, instance)
+func (r *Reconciler) ReconcileEnabled(ctx context.Context, request ctrl.Request, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
+	err := r.ensureResources(ctx, instance)
 	if err != nil {
 		r.Log.Error(err)
 		r.SetDegraded(ctx, err)
@@ -120,6 +112,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.ServiceAccount{}).
 		Owns(&securityv1.SecurityContextConstraints{}).
-		Named(ControllerName).
+		Named(r.GetName()).
 		Complete(r)
 }

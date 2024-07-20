@@ -28,9 +28,9 @@ import (
 
 func TestReconciler(t *testing.T) {
 	transitionTime := metav1.Time{Time: time.Now()}
-	defaultAvailable := utilconditions.ControllerDefaultAvailable(ControllerName)
-	defaultProgressing := utilconditions.ControllerDefaultProgressing(ControllerName)
-	defaultDegraded := utilconditions.ControllerDefaultDegraded(ControllerName)
+	defaultAvailable := utilconditions.ControllerDefaultAvailable(controllerName)
+	defaultProgressing := utilconditions.ControllerDefaultProgressing(controllerName)
+	defaultDegraded := utilconditions.ControllerDefaultDegraded(controllerName)
 	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
 
 	tests := []struct {
@@ -72,7 +72,7 @@ func TestReconciler(t *testing.T) {
 			startConditions: defaultConditions,
 			wantConditions: []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing,
 				{
-					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+					Type:               controllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
 					Status:             operatorv1.ConditionTrue,
 					LastTransitionTime: transitionTime,
 					Message:            `nodes "nonexistent-node" not found`,
@@ -300,7 +300,7 @@ func TestReconciler(t *testing.T) {
 			wantConditions: []operatorv1.OperatorCondition{
 				defaultAvailable,
 				{
-					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeProgressing,
+					Type:               controllerName + "Controller" + operatorv1.OperatorStatusTypeProgressing,
 					Status:             operatorv1.ConditionTrue,
 					LastTransitionTime: transitionTime,
 					Message:            `Draining node aro-fake-node-0`,
@@ -339,7 +339,7 @@ func TestReconciler(t *testing.T) {
 			wantConditions: []operatorv1.OperatorCondition{
 				defaultAvailable,
 				{
-					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeProgressing,
+					Type:               controllerName + "Controller" + operatorv1.OperatorStatusTypeProgressing,
 					Status:             operatorv1.ConditionTrue,
 					LastTransitionTime: transitionTime,
 					Message:            `Draining node aro-fake-node-0`,
@@ -396,7 +396,7 @@ func TestReconciler(t *testing.T) {
 			startConditions: []operatorv1.OperatorCondition{
 				defaultAvailable,
 				{
-					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeProgressing,
+					Type:               controllerName + "Controller" + operatorv1.OperatorStatusTypeProgressing,
 					Status:             operatorv1.ConditionTrue,
 					LastTransitionTime: transitionTime,
 					Message:            `Draining node aro-fake-node-0`,

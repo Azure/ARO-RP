@@ -20,12 +20,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 )
 
 const (
-	ControllerName = "Node"
+	controllerName    = "Node"
+	controllerEnabled = operator.NodeDrainerEnabled
 )
 
 // Reconciler spots nodes that look like they're stuck upgrading.  When this
@@ -37,29 +39,22 @@ type Reconciler struct {
 }
 
 func NewReconciler(log *logrus.Entry, client client.Client, kubernetescli kubernetes.Interface) *Reconciler {
-	return &Reconciler{
+	r := &Reconciler{
 		AROController: base.AROController{
-			Log:    log,
-			Client: client,
-			Name:   ControllerName,
+			Log:         log.WithField("controller", controllerName),
+			Client:      client,
+			Name:        controllerName,
+			EnabledFlag: controllerEnabled,
 		},
 
 		kubernetescli: kubernetescli,
 	}
+	r.Reconciler = r
+	return r
 }
 
-func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.GetCluster(ctx)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.NodeDrainerEnabled) {
-		r.Log.Debug("controller is disabled")
-		return reconcile.Result{}, nil
-	}
-
-	r.Log.Debug("running")
+func (r *Reconciler) ReconcileEnabled(ctx context.Context, request ctrl.Request, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
+	var err error
 
 	node := &corev1.Node{}
 	err = r.Client.Get(ctx, types.NamespacedName{Name: request.Name}, node)
@@ -161,7 +156,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Node{}).
-		Named(ControllerName).
+		Named(r.GetName()).
 		Complete(r)
 }
 

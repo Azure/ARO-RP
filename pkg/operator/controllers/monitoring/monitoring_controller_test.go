@@ -11,7 +11,6 @@ import (
 
 	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/sirupsen/logrus"
-	"github.com/ugorji/go/codec"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -21,7 +20,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/operator/controllers/base"
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	utilconditions "github.com/Azure/ARO-RP/test/util/conditions"
@@ -32,9 +30,9 @@ var (
 )
 
 func TestReconcileMonitoringConfig(t *testing.T) {
-	defaultAvailable := utilconditions.ControllerDefaultAvailable(ControllerName)
-	defaultProgressing := utilconditions.ControllerDefaultProgressing(ControllerName)
-	defaultDegraded := utilconditions.ControllerDefaultDegraded(ControllerName)
+	defaultAvailable := utilconditions.ControllerDefaultAvailable(controllerName)
+	defaultProgressing := utilconditions.ControllerDefaultProgressing(controllerName)
+	defaultDegraded := utilconditions.ControllerDefaultDegraded(controllerName)
 	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
 	log := logrus.NewEntry(logrus.StandardLogger())
 	type test struct {
@@ -167,13 +165,8 @@ somethingElse:
 				clientBuilder.WithObjects(tt.configMap)
 			}
 
-			r := &MonitoringReconciler{
-				AROController: base.AROController{
-					Log:    log,
-					Client: clientBuilder.Build(),
-				},
-				jsonHandle: new(codec.JsonHandle),
-			}
+			r := NewReconciler(log, clientBuilder.Build())
+
 			request := ctrl.Request{}
 			request.Name = "cluster-monitoring-config"
 			request.Namespace = "openshift-monitoring"
@@ -197,9 +190,9 @@ somethingElse:
 }
 
 func TestReconcilePVC(t *testing.T) {
-	defaultAvailable := utilconditions.ControllerDefaultAvailable(ControllerName)
-	defaultProgressing := utilconditions.ControllerDefaultProgressing(ControllerName)
-	defaultDegraded := utilconditions.ControllerDefaultDegraded(ControllerName)
+	defaultAvailable := utilconditions.ControllerDefaultAvailable(controllerName)
+	defaultProgressing := utilconditions.ControllerDefaultProgressing(controllerName)
+	defaultDegraded := utilconditions.ControllerDefaultDegraded(controllerName)
 	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
 	volumeMode := corev1.PersistentVolumeFilesystem
 	tests := []struct {
@@ -298,13 +291,8 @@ func TestReconcilePVC(t *testing.T) {
 
 			clientFake := ctrlfake.NewClientBuilder().WithObjects(instance).WithObjects(tt.pvcs...).Build()
 
-			r := &MonitoringReconciler{
-				AROController: base.AROController{
-					Log:    logrus.NewEntry(logrus.StandardLogger()),
-					Client: clientFake,
-				},
-				jsonHandle: new(codec.JsonHandle),
-			}
+			r := NewReconciler(logrus.NewEntry(logrus.StandardLogger()), clientFake)
+
 			request := ctrl.Request{}
 			request.Name = "cluster-monitoring-config"
 			request.Namespace = "openshift-monitoring"

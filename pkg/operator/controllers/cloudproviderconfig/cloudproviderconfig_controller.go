@@ -27,7 +27,8 @@ import (
 )
 
 const (
-	ControllerName = "CloudProviderConfig"
+	controllerName    = "CloudProviderConfig"
+	controllerEnabled = operator.CloudProviderConfigEnabled // calling from flags.go due to removal on #3327
 )
 
 var cloudProviderConfigName = types.NamespacedName{Name: "cloud-provider-config", Namespace: "openshift-config"}
@@ -133,31 +134,23 @@ type CloudProviderConfigReconciler struct {
 	base.AROController
 }
 
-func NewReconciler(Log *logrus.Entry, client client.Client) *CloudProviderConfigReconciler {
-	return &CloudProviderConfigReconciler{
+func NewReconciler(log *logrus.Entry, client client.Client) *CloudProviderConfigReconciler {
+	r := &CloudProviderConfigReconciler{
 		AROController: base.AROController{
-			Log:    Log,
-			Client: client,
-			Name:   ControllerName,
+			Log:         log.WithField("controller", controllerName),
+			Client:      client,
+			Name:        controllerName,
+			EnabledFlag: controllerEnabled,
 		},
 	}
+	r.Reconciler = r
+	return r
 }
 
 // Reconcile makes sure that the cloud-provider-config is healthy
-func (r *CloudProviderConfigReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *CloudProviderConfigReconciler) ReconcileEnabled(ctx context.Context, request ctrl.Request, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
 	r.Log.Debug("reconcile ConfigMap openshift-config/cloud-provider-config")
 
-	instance, err := r.GetCluster(ctx)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.CloudProviderConfigEnabled) {
-		r.Log.Debug("controller is disabled")
-		return reconcile.Result{}, nil
-	}
-
-	r.Log.Debug("running")
 	return reconcile.Result{}, r.updateCloudProviderConfig(ctx)
 }
 
@@ -176,7 +169,7 @@ func (r *CloudProviderConfigReconciler) SetupWithManager(mgr ctrl.Manager) error
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(cloudProviderConfigPredicate),
 		).
-		Named(ControllerName).
+		Named(r.GetName()).
 		Complete(r)
 }
 
