@@ -164,7 +164,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 				&api.MaintenanceManifestDocument{
 					ID:                manifestID,
 					ClusterResourceID: strings.ToLower(clusterResourceID),
-					MaintenanceManifest: &api.MaintenanceManifest{
+					MaintenanceManifest: api.MaintenanceManifest{
 						State:     api.MaintenanceManifestStatePending,
 						RunBefore: 60,
 						RunAfter:  0,
@@ -173,7 +173,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 				&api.MaintenanceManifestDocument{
 					ID:                manifestID2,
 					ClusterResourceID: strings.ToLower(clusterResourceID),
-					MaintenanceManifest: &api.MaintenanceManifest{
+					MaintenanceManifest: api.MaintenanceManifest{
 						State:            api.MaintenanceManifestStatePending,
 						RunBefore:        300,
 						RunAfter:         0,
@@ -186,7 +186,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 				&api.MaintenanceManifestDocument{
 					ID:                manifestID,
 					ClusterResourceID: strings.ToLower(clusterResourceID),
-					MaintenanceManifest: &api.MaintenanceManifest{
+					MaintenanceManifest: api.MaintenanceManifest{
 						State:      api.MaintenanceManifestStateTimedOut,
 						StatusText: "timed out at 1970-01-01 00:02:00 +0000 UTC",
 						RunBefore:  60,
@@ -196,7 +196,7 @@ var _ = Describe("MIMO Actuator Service", Ordered, func() {
 				&api.MaintenanceManifestDocument{
 					ID:                manifestID2,
 					ClusterResourceID: strings.ToLower(clusterResourceID),
-					MaintenanceManifest: &api.MaintenanceManifest{
+					MaintenanceManifest: api.MaintenanceManifest{
 						State:            api.MaintenanceManifestStateCompleted,
 						StatusText:       "ok",
 						RunBefore:        300,
