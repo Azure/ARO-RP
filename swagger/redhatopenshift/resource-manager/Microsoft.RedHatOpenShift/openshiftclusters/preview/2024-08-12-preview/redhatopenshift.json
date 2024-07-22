@@ -1906,6 +1906,14 @@
         "type": {
           "type": "string"
         },
+        "principalId": {
+          "type": "string",
+          "readOnly": true
+        },
+        "tenantId": {
+          "type": "string",
+          "readOnly": true
+        },
         "userAssignedIdentities": {
           "$ref": "#/definitions/UserAssignedIdentities"
         }

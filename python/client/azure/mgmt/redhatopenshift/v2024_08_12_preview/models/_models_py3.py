@@ -313,6 +313,10 @@ class Identity(msrest.serialization.Model):
 
     :ivar type:
     :vartype type: str
+    :ivar principal_id:
+    :vartype principal_id: str
+    :ivar tenant_id:
+    :vartype tenant_id: str
     :ivar user_assigned_identities: UserAssignedIdentities stores a mapping from resource IDs of
      managed identities to their client/principal IDs.
     :vartype user_assigned_identities: dict[str,
@@ -321,6 +325,8 @@ class Identity(msrest.serialization.Model):
 
     _attribute_map = {
         'type': {'key': 'type', 'type': 'str'},
+        'principal_id': {'key': 'principalId', 'type': 'str'},
+        'tenant_id': {'key': 'tenantId', 'type': 'str'},
         'user_assigned_identities': {'key': 'userAssignedIdentities', 'type': '{ClusterUserAssignedIdentity}'},
     }
 
@@ -328,12 +334,18 @@ class Identity(msrest.serialization.Model):
         self,
         *,
         type: Optional[str] = None,
+        principal_id: Optional[str] = None,
+        tenant_id: Optional[str] = None,
         user_assigned_identities: Optional[Dict[str, "ClusterUserAssignedIdentity"]] = None,
         **kwargs
     ):
         """
         :keyword type:
         :paramtype type: str
+        :keyword principal_id:
+        :paramtype principal_id: str
+        :keyword tenant_id:
+        :paramtype tenant_id: str
         :keyword user_assigned_identities: UserAssignedIdentities stores a mapping from resource IDs of
          managed identities to their client/principal IDs.
         :paramtype user_assigned_identities: dict[str,
@@ -341,6 +353,8 @@ class Identity(msrest.serialization.Model):
         """
         super(Identity, self).__init__(**kwargs)
         self.type = type
+        self.principal_id = principal_id
+        self.tenant_id = tenant_id
         self.user_assigned_identities = user_assigned_identities
 
 
