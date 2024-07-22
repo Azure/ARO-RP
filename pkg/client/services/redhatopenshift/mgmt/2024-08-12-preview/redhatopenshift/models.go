@@ -146,6 +146,8 @@ type EffectiveOutboundIP struct {
 // Identity identity stores information about the cluster MSI(s) in a workload identity cluster.
 type Identity struct {
 	Type                   *string                                 `json:"type,omitempty"`
+	PrincipalID            *string                                 `json:"principalId,omitempty"`
+	TenantID               *string                                 `json:"tenantId,omitempty"`
 	UserAssignedIdentities map[string]*ClusterUserAssignedIdentity `json:"userAssignedIdentities"`
 }
 
@@ -154,6 +156,12 @@ func (i Identity) MarshalJSON() ([]byte, error) {
 	objectMap := make(map[string]interface{})
 	if i.Type != nil {
 		objectMap["type"] = i.Type
+	}
+	if i.PrincipalID != nil {
+		objectMap["principalId"] = i.PrincipalID
+	}
+	if i.TenantID != nil {
+		objectMap["tenantId"] = i.TenantID
 	}
 	if i.UserAssignedIdentities != nil {
 		objectMap["userAssignedIdentities"] = i.UserAssignedIdentities

@@ -817,7 +817,8 @@ type Identity struct {
 	MissingFields
 
 	Type                   string                 `json:"type,omitempty"`
+	PrincipalID            string                 `json:"principalId,omitempty" swagger:"readOnly"`
 	UserAssignedIdentities UserAssignedIdentities `json:"userAssignedIdentities,omitempty"`
 	IdentityURL            string                 `json:"identityURL,omitempty" mutable:"true"`
-	TenantID               string                 `json:"tenantId,omitempty" mutable:"true"`
+	TenantID               string                 `json:"tenantId,omitempty" swagger:"readOnly"`
 }
