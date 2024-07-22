@@ -329,7 +329,7 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 		g.rpClusterKeyvault(),
 		g.rpPortalKeyvault(),
 		g.rpServiceKeyvault(),
-		g.rpServiceKeyvaultDynamic(),
+		//g.rpServiceKeyvaultDynamic(),
 	)
 
 	if g.production {
