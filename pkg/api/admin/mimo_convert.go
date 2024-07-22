@@ -3,7 +3,9 @@ package admin
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-import "github.com/Azure/ARO-RP/pkg/api"
+import (
+	"github.com/Azure/ARO-RP/pkg/api"
+)
 
 type maintenanceManifestConverter struct{}
 
@@ -33,4 +35,17 @@ func (m maintenanceManifestConverter) ToExternalList(docs []*api.MaintenanceMani
 	}
 
 	return l
+}
+
+func (m maintenanceManifestConverter) ToInternal(_i interface{}, out *api.MaintenanceManifestDocument) {
+
+	i := _i.(*MaintenanceManifest)
+
+	out.ID = i.ID
+	out.MaintenanceManifest.MaintenanceSetID = i.MaintenanceSetID
+	out.MaintenanceManifest.Priority = i.Priority
+	out.MaintenanceManifest.RunAfter = i.RunAfter
+	out.MaintenanceManifest.RunBefore = i.RunBefore
+	out.MaintenanceManifest.State = api.MaintenanceManifestState(i.State)
+	out.MaintenanceManifest.StatusText = i.StatusText
 }
