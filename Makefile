@@ -3,6 +3,7 @@ TAG ?= $(shell git describe --exact-match 2>/dev/null)
 COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
 E2E_FLAGS ?= -test.v --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2 --ginkgo.junit-report=e2e-report.xml
+E2E_LABEL ?= !smoke
 GO_FLAGS ?= -tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper
 NO_CACHE ?= true
 
@@ -268,7 +269,7 @@ e2etools:
 
 .PHONY: test-e2e
 test-e2e: e2e.test
-	./e2e.test $(E2E_FLAGS)
+	./e2e.test $(E2E_FLAGS) --ginkgo.label-filter="$(E2E_LABEL)"
 
 .PHONY: test-go
 test-go: generate build-all validate-go lint-go unit-test-go
