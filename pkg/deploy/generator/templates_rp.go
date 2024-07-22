@@ -49,6 +49,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"disableCosmosDBFirewall",
 			"fluentbitImage",
 			"fpClientId",
+			"fpTenantId",
 			"fpServicePrincipalId",
 			"ipRules",
 			"keyvaultPrefix",
@@ -59,6 +60,11 @@ func (g *generator) rpTemplate() *arm.Template {
 			"ipRules",
 			"mdmFrontendUrl",
 			"mdsdEnvironment",
+			"miseLogLevel",
+			"miseAddress",
+			"miseAllowedHosts",
+			"miseValidAudiences",
+			"miseValidAppIDs",
 			"nonZonalRegions",
 			"portalAccessGroupIds",
 			"portalClientId",
@@ -115,6 +121,19 @@ func (g *generator) rpTemplate() *arm.Template {
 		case "rpVmssCapacity":
 			p.Type = "int"
 			p.DefaultValue = 3
+		case "miseLogLevel":
+			p.Type = "string"
+			p.DefaultValue = "Information"
+		case "miseAddress":
+			p.Type = "string"
+			p.DefaultValue = "http://localhost:5000"
+		case "miseAllowedHosts":
+			p.Type = "string"
+			p.DefaultValue = "*"
+		case "miseValidAudiences":
+			p.Type = "array"
+		case "miseValidAppIDs":
+			p.Type = "array"
 		case "nonZonalRegions":
 			p.Type = "array"
 			p.DefaultValue = []string{
@@ -329,7 +348,7 @@ func (g *generator) rpPredeployTemplate() *arm.Template {
 		g.rpClusterKeyvault(),
 		g.rpPortalKeyvault(),
 		g.rpServiceKeyvault(),
-		g.rpServiceKeyvaultDynamic(),
+		//g.rpServiceKeyvaultDynamic(),
 	)
 
 	if g.production {
