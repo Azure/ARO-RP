@@ -74,6 +74,11 @@ type SecretConverter interface {
 type MaintenanceManifestConverter interface {
 	ToExternal(*MaintenanceManifestDocument) interface{}
 	ToExternalList([]*MaintenanceManifestDocument, string) interface{}
+	ToInternal(interface{}, *MaintenanceManifestDocument)
+}
+
+type MaintenanceManifestStaticValidator interface {
+	Static(interface{}, *MaintenanceManifestDocument) error
 }
 
 // Version is a set of endpoints implemented by each API version
@@ -93,6 +98,7 @@ type Version struct {
 	SecretConverter                                SecretConverter
 	ClusterManagerStaticValidator                  ClusterManagerStaticValidator
 	MaintenanceManifestConverter                   MaintenanceManifestConverter
+	MaintenanceManifestStaticValidator             MaintenanceManifestStaticValidator
 }
 
 // APIs is the map of registered API versions

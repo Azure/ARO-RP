@@ -19,5 +19,6 @@ func init() {
 		PlatformWorkloadIdentityRoleSetConverter:       platformWorkloadIdentityRoleSetConverter{},
 		PlatformWorkloadIdentityRoleSetStaticValidator: platformWorkloadIdentityRoleSetStaticValidator{},
 		MaintenanceManifestConverter:                   maintenanceManifestConverter{},
+		MaintenanceManifestStaticValidator:             maintenanceManifestStaticValidator{},
 	}
 }
