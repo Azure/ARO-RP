@@ -26,8 +26,8 @@ type MaintenanceManifestDocument struct {
 	LSN         int                    `json:"_lsn,omitempty"`
 	Metadata    map[string]interface{} `json:"_metadata,omitempty"`
 
-	ClusterResourceID   string               `json:"clusterResourceID,omitempty"`
-	MaintenanceManifest *MaintenanceManifest `json:"maintenanceManifest,omitempty"`
+	ClusterResourceID   string              `json:"clusterResourceID,omitempty"`
+	MaintenanceManifest MaintenanceManifest `json:"maintenanceManifest,omitempty"`
 
 	LeaseOwner   string `json:"leaseOwner,omitempty" deep:"-"`
 	LeaseExpires int    `json:"leaseExpires,omitempty" deep:"-"`
