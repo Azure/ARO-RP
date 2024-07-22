@@ -30,6 +30,7 @@ var _ PrivateLinkServicesClient = &privateLinkServicesClient{}
 func NewPrivateLinkServicesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) PrivateLinkServicesClient {
 	client := mgmtnetwork.NewPrivateLinkServicesClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &privateLinkServicesClient{
 		PrivateLinkServicesClient: client,

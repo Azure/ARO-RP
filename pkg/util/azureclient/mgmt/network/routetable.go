@@ -28,6 +28,7 @@ var _ RouteTablesClient = &routeTablesClient{}
 func NewRouteTablesClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) RouteTablesClient {
 	client := mgmtnetwork.NewRouteTablesClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &routeTablesClient{
 		RouteTablesClient: client,

@@ -143,6 +143,10 @@ func EnrichWithPath(log *logrus.Entry, path string) *logrus.Entry {
 // EnrichWithCorrelationData sets log fields based on an optional
 // correlationData struct
 func EnrichWithCorrelationData(log *logrus.Entry, correlationData *api.CorrelationData) *logrus.Entry {
+	if log == nil {
+		log = GetLogger()
+	}
+
 	if correlationData == nil {
 		return log
 	}
@@ -150,8 +154,10 @@ func EnrichWithCorrelationData(log *logrus.Entry, correlationData *api.Correlati
 	return log.WithFields(logrus.Fields{
 		"correlation_id":        correlationData.CorrelationID,
 		"client_request_id":     correlationData.ClientRequestID,
+		"operation_id":          correlationData.OperationID,
 		"request_id":            correlationData.RequestID,
 		"client_principal_name": correlationData.ClientPrincipalName,
+		"request_time":          correlationData.RequestTime,
 	})
 }
 

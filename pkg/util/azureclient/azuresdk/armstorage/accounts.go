@@ -5,6 +5,7 @@ package armstorage
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
@@ -26,9 +27,14 @@ var _ AccountsClient = &accountsClient{}
 
 // NewAccountsClient creates a new AccountsClient
 func NewAccountsClient(environment *azureclient.AROEnvironment, subscriptionID string, credential azcore.TokenCredential) (AccountsClient, error) {
+	customRoundTripper := azureclient.NewCustomRoundTripper(http.DefaultTransport)
+
 	options := arm.ClientOptions{
 		ClientOptions: azcore.ClientOptions{
 			Cloud: environment.Cloud,
+			Transport: &http.Client{
+				Transport: customRoundTripper,
+			},
 		},
 	}
 	clientFactory, err := armstorage.NewClientFactory(subscriptionID, credential, &options)

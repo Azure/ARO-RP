@@ -28,6 +28,7 @@ var _ SubnetsClient = &subnetsClient{}
 func NewSubnetsClient(environment *azureclient.AROEnvironment, subscriptionID string, authorizer autorest.Authorizer) SubnetsClient {
 	client := mgmtnetwork.NewSubnetsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
+	client.Sender = azureclient.DecorateSenderWithLogging(client.Sender)
 
 	return &subnetsClient{
 		SubnetsClient: client,

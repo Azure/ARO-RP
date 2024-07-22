@@ -11,6 +11,8 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 const (
@@ -23,6 +25,19 @@ type ClientOptions struct {
 }
 
 func NewClientOptions(certPool *x509.CertPool) *ClientOptions {
+	httpTransport := &http.Transport{
+		TLSNextProto: make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
+		TLSClientConfig: &tls.Config{
+			RootCAs: certPool,
+		},
+	}
+
+	customRoundTripper := azureclient.NewCustomRoundTripper(httpTransport)
+
+	httpClient := &http.Client{
+		Transport: customRoundTripper,
+	}
+
 	return &ClientOptions{
 		azcore.ClientOptions{
 			Retry: policy.RetryOptions{
@@ -39,14 +54,7 @@ func NewClientOptions(certPool *x509.CertPool) *ClientOptions {
 				ApplicationID: userAgent,
 				Disabled:      false,
 			},
-			Transport: &http.Client{
-				Transport: &http.Transport{
-					TLSNextProto: make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
-					TLSClientConfig: &tls.Config{
-						RootCAs: certPool,
-					},
-				},
-			},
+			Transport: httpClient,
 		},
 	}
 }
