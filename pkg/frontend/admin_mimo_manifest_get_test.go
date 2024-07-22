@@ -17,7 +17,7 @@ import (
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
-func TestMIMOCancelTask(t *testing.T) {
+func TestMIMOGet(t *testing.T) {
 	mockSubID := "00000000-0000-0000-0000-000000000000"
 	mockTenantID := "00000000-0000-0000-0000-000000000000"
 	resourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID)
@@ -28,7 +28,6 @@ func TestMIMOCancelTask(t *testing.T) {
 		fixtures       func(f *testdatabase.Fixture)
 		wantStatusCode int
 		wantResponse   *admin.MaintenanceManifest
-		wantResult     func(f *testdatabase.Checker)
 		wantError      string
 	}
 
@@ -73,7 +72,7 @@ func TestMIMOCancelTask(t *testing.T) {
 			wantStatusCode: http.StatusNotFound,
 		},
 		{
-			name: "cancel pending",
+			name: "get entry",
 			fixtures: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(resourceID),
@@ -85,21 +84,9 @@ func TestMIMOCancelTask(t *testing.T) {
 				})
 				f.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
 					ClusterResourceID: strings.ToLower(resourceID),
-					MaintenanceManifest: &api.MaintenanceManifest{
+					MaintenanceManifest: api.MaintenanceManifest{
 						MaintenanceSetID: "exampleset",
 						State:            api.MaintenanceManifestStatePending,
-						RunAfter:         1,
-						RunBefore:        1,
-					},
-				})
-			},
-			wantResult: func(c *testdatabase.Checker) {
-				c.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
-					ID:                "07070707-0707-0707-0707-070707070001",
-					ClusterResourceID: strings.ToLower(resourceID),
-					MaintenanceManifest: &api.MaintenanceManifest{
-						MaintenanceSetID: "exampleset",
-						State:            api.MaintenanceManifestStateCancelled,
 						RunAfter:         1,
 						RunBefore:        1,
 					},
@@ -108,48 +95,12 @@ func TestMIMOCancelTask(t *testing.T) {
 			wantResponse: &admin.MaintenanceManifest{
 				ID:               "07070707-0707-0707-0707-070707070001",
 				MaintenanceSetID: "exampleset",
-				State:            admin.MaintenanceManifestStateCancelled,
+				State:            admin.MaintenanceManifestStatePending,
 				Priority:         0,
 				RunAfter:         1,
 				RunBefore:        1,
 			},
 			wantStatusCode: http.StatusOK,
-		},
-		{
-			name: "cannot cancel failed",
-			fixtures: func(f *testdatabase.Fixture) {
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(resourceID),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   resourceID,
-						Name: "resourceName",
-						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-					},
-				})
-				f.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
-					ClusterResourceID: strings.ToLower(resourceID),
-					MaintenanceManifest: &api.MaintenanceManifest{
-						MaintenanceSetID: "exampleset",
-						State:            api.MaintenanceManifestStateFailed,
-						RunAfter:         1,
-						RunBefore:        1,
-					},
-				})
-			},
-			wantResult: func(c *testdatabase.Checker) {
-				c.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
-					ID:                "07070707-0707-0707-0707-070707070001",
-					ClusterResourceID: strings.ToLower(resourceID),
-					MaintenanceManifest: &api.MaintenanceManifest{
-						MaintenanceSetID: "exampleset",
-						State:            api.MaintenanceManifestStateFailed,
-						RunAfter:         1,
-						RunBefore:        1,
-					},
-				})
-			},
-			wantError:      "406: PropertyChangeNotAllowed: : cannot cancel task in state Failed",
-			wantStatusCode: http.StatusNotAcceptable,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -173,9 +124,12 @@ func TestMIMOCancelTask(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if tt.wantResult != nil {
-				tt.wantResult(ti.checker)
+			a, err := ti.openShiftClustersClient.ListAll(ctx, nil)
+			if err != nil {
+				t.Fatal(err)
 			}
+
+			fmt.Print(a)
 
 			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, testdatabase.NewFakeAEAD(), nil, nil, nil, nil, nil)
 
@@ -185,8 +139,8 @@ func TestMIMOCancelTask(t *testing.T) {
 
 			go f.Run(ctx, nil, nil)
 
-			resp, b, err := ti.request(http.MethodPost,
-				fmt.Sprintf("https://server/admin%s/maintenancemanifests/07070707-0707-0707-0707-070707070001/cancel", resourceID),
+			resp, b, err := ti.request(http.MethodGet,
+				fmt.Sprintf("https://server/admin%s/maintenancemanifests/07070707-0707-0707-0707-070707070001", resourceID),
 				nil, nil)
 			if err != nil {
 				t.Fatal(err)
@@ -196,11 +150,6 @@ func TestMIMOCancelTask(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-
-			for _, err := range ti.checker.CheckMaintenanceManifests(ti.maintenanceManifestsClient) {
-				t.Error(err)
-			}
-
 		})
 	}
 }
