@@ -38,6 +38,7 @@ type MaintenanceManifests interface {
 	Lease(ctx context.Context, clusterResourceID string, id string) (*api.MaintenanceManifestDocument, error)
 	EndLease(context.Context, string, string, api.MaintenanceManifestState, *string) (*api.MaintenanceManifestDocument, error)
 	Get(context.Context, string, string) (*api.MaintenanceManifestDocument, error)
+	Delete(context.Context, string, string) error
 
 	NewUUID() string
 }
@@ -228,4 +229,12 @@ func (c *maintenanceManifests) Lease(ctx context.Context, clusterResourceID stri
 		doc.Dequeues++
 		return nil
 	}, &cosmosdb.Options{PreTriggers: []string{"renewLease"}})
+}
+
+func (c *maintenanceManifests) Delete(ctx context.Context, clusterResourceID string, id string) error {
+	if clusterResourceID != strings.ToLower(clusterResourceID) {
+		return fmt.Errorf("clusterID %q is not lower case", clusterResourceID)
+	}
+
+	return c.c.Delete(ctx, clusterResourceID, &api.MaintenanceManifestDocument{ID: id}, nil)
 }
