@@ -5,21 +5,18 @@ package frontend
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
-func TestMIMOListManifests(t *testing.T) {
+func TestMIMODeleteManifest(t *testing.T) {
 	mockSubID := "00000000-0000-0000-0000-000000000000"
 	mockTenantID := "00000000-0000-0000-0000-000000000000"
 	resourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID)
@@ -28,110 +25,18 @@ func TestMIMOListManifests(t *testing.T) {
 	type test struct {
 		name           string
 		fixtures       func(f *testdatabase.Fixture)
-		limit          int
 		wantStatusCode int
-		wantResponse   *admin.MaintenanceManifestList
+		wantResponse   []byte
+		wantResult     func(f *testdatabase.Checker)
 		wantError      string
 	}
 
 	for _, tt := range []*test{
 		{
-			name: "no entries",
-			fixtures: func(f *testdatabase.Fixture) {
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(resourceID),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   resourceID,
-						Name: "resourceName",
-						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-					},
-				})
-			},
-			wantResponse: &admin.MaintenanceManifestList{
-				MaintenanceManifests: []*admin.MaintenanceManifest{},
-			},
-			wantStatusCode: http.StatusOK,
-		},
-		{
-			name: "single entry",
-			fixtures: func(f *testdatabase.Fixture) {
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(resourceID),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   resourceID,
-						Name: "resourceName",
-						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-					},
-				})
-				f.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
-					ClusterResourceID: strings.ToLower(resourceID),
-					MaintenanceManifest: api.MaintenanceManifest{
-						MaintenanceSetID: "exampleset",
-						State:            api.MaintenanceManifestStatePending,
-						RunAfter:         1,
-						RunBefore:        1,
-					},
-				})
-			},
-			wantResponse: &admin.MaintenanceManifestList{
-				MaintenanceManifests: []*admin.MaintenanceManifest{
-					{
-						ID:               "07070707-0707-0707-0707-070707070001",
-						MaintenanceSetID: "exampleset",
-						State:            admin.MaintenanceManifestStatePending,
-						Priority:         0,
-						RunAfter:         1,
-						RunBefore:        1,
-					},
-				},
-			},
-			wantStatusCode: http.StatusOK,
-		},
-		{
-			name:  "limit over",
-			limit: 1,
-			fixtures: func(f *testdatabase.Fixture) {
-				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key: strings.ToLower(resourceID),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   resourceID,
-						Name: "resourceName",
-						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-					},
-				})
-				f.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
-					ClusterResourceID: strings.ToLower(resourceID),
-					MaintenanceManifest: api.MaintenanceManifest{
-						MaintenanceSetID: "exampleset",
-						State:            api.MaintenanceManifestStatePending,
-						RunAfter:         1,
-						RunBefore:        1,
-					},
-				})
-				f.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
-					ClusterResourceID: strings.ToLower(resourceID),
-					MaintenanceManifest: api.MaintenanceManifest{
-						MaintenanceSetID: "exampleset2",
-						State:            api.MaintenanceManifestStatePending,
-						RunAfter:         1,
-						RunBefore:        1,
-					},
-				})
-			},
-			wantResponse: &admin.MaintenanceManifestList{
-				NextLink: "https://mockrefererhost/?%24skipToken=" + url.QueryEscape(base64.StdEncoding.EncodeToString([]byte("FAKE1"))),
-				MaintenanceManifests: []*admin.MaintenanceManifest{
-					{
-						ID:               "07070707-0707-0707-0707-070707070001",
-						MaintenanceSetID: "exampleset",
-						State:            admin.MaintenanceManifestStatePending,
-						Priority:         0,
-						RunAfter:         1,
-						RunBefore:        1,
-					},
-				},
-			},
-			wantStatusCode: http.StatusOK,
+			name:           "no cluster",
+			wantError:      "404: NotFound: : cluster not found: 404 : ",
+			fixtures:       func(f *testdatabase.Fixture) {},
+			wantStatusCode: http.StatusNotFound,
 		},
 		{
 			name: "cluster being deleted",
@@ -152,9 +57,45 @@ func TestMIMOListManifests(t *testing.T) {
 			wantStatusCode: http.StatusNotFound,
 		},
 		{
-			name:           "missing cluster",
-			wantError:      "404: NotFound: : cluster not found: 404 : ",
+			name: "no item",
+			fixtures: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   resourceID,
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+					},
+				})
+			},
+			wantError:      "404: NotFound: : manifest not found: 404 : ",
 			wantStatusCode: http.StatusNotFound,
+		},
+		{
+			name: "delete successfully",
+			fixtures: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   resourceID,
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+					},
+				})
+				f.AddMaintenanceManifestDocuments(&api.MaintenanceManifestDocument{
+					ClusterResourceID: strings.ToLower(resourceID),
+					MaintenanceManifest: api.MaintenanceManifest{
+						MaintenanceSetID: "exampleset",
+						State:            api.MaintenanceManifestStatePending,
+						RunAfter:         1,
+						RunBefore:        1,
+					},
+				})
+			},
+			wantResult: func(c *testdatabase.Checker) {
+			},
+			wantResponse:   []byte("{}\n"),
+			wantStatusCode: http.StatusOK,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -178,6 +119,10 @@ func TestMIMOListManifests(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			if tt.wantResult != nil {
+				tt.wantResult(ti.checker)
+			}
+
 			f, err := NewFrontend(ctx, ti.audit, ti.log, ti.env, ti.dbGroup, api.APIs, &noop.Noop{}, &noop.Noop{}, testdatabase.NewFakeAEAD(), nil, nil, nil, nil, nil)
 
 			if err != nil {
@@ -186,17 +131,9 @@ func TestMIMOListManifests(t *testing.T) {
 
 			go f.Run(ctx, nil, nil)
 
-			if tt.limit == 0 {
-				tt.limit = 100
-			}
-
-			fmt.Printf("limit: %d", tt.limit)
-
-			resp, b, err := ti.request(http.MethodGet,
-				fmt.Sprintf("https://server/admin%s/maintenancemanifests?limit=%d", resourceID, tt.limit),
-				http.Header{
-					"Referer": []string{"https://mockrefererhost/"},
-				}, nil)
+			resp, b, err := ti.request(http.MethodDelete,
+				fmt.Sprintf("https://server/admin%s/maintenancemanifests/07070707-0707-0707-0707-070707070001", resourceID),
+				nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -205,6 +142,11 @@ func TestMIMOListManifests(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
+
+			for _, err := range ti.checker.CheckMaintenanceManifests(ti.maintenanceManifestsClient) {
+				t.Error(err)
+			}
+
 		})
 	}
 }
