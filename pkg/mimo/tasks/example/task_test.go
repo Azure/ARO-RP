@@ -48,7 +48,7 @@ func TestTask(t *testing.T) {
 
 	manifest := &api.MaintenanceManifestDocument{
 		ClusterResourceID: strings.ToLower(clusterResourceID),
-		MaintenanceManifest: &api.MaintenanceManifest{
+		MaintenanceManifest: api.MaintenanceManifest{
 			State:     api.MaintenanceManifestStatePending,
 			RunBefore: 60,
 			RunAfter:  0,
