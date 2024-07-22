@@ -1825,9 +1825,11 @@
       "type": "object",
       "properties": {
         "clientId": {
+          "description": "The ClientID of the ClusterUserAssignedIdentity resource",
           "type": "string"
         },
         "principalId": {
+          "description": "The PrincipalID of the ClusterUserAssignedIdentity resource",
           "type": "string"
         }
       }
@@ -1904,10 +1906,25 @@
       "type": "object",
       "properties": {
         "type": {
-          "type": "string"
+          "$ref": "#/definitions/ResourceIdentityType",
+          "description": "The type of the Identity resource."
+        },
+        "principalId": {
+          "description": "The PrincipalID of the Identity resource.",
+          "type": "string",
+          "readOnly": true
+        },
+        "tenantId": {
+          "description": "The TenantID provided by the MSI RP",
+          "type": "string",
+          "readOnly": true
         },
         "userAssignedIdentities": {
-          "$ref": "#/definitions/UserAssignedIdentities"
+          "description": "A map of ClusterUserAssigned identities attached to the cluster, specified in a type required by Microsoft's Managed Identity team.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/ClusterUserAssignedIdentity"
+          }
         }
       }
     },
@@ -2334,16 +2351,20 @@
       "type": "object",
       "properties": {
         "operatorName": {
+          "description": "The name of the operator the PlatformWorkloadIdentity is to be used for",
           "type": "string"
         },
         "resourceId": {
+          "description": "The resource ID of the PlatformWorkloadIdentity resource",
           "type": "string"
         },
         "clientId": {
+          "description": "The ClientID of the PlatformWorkloadIdentity resource",
           "type": "string",
           "readOnly": true
         },
         "objectId": {
+          "description": "The ObjectID of the PlatformWorkloadIdentity resource",
           "type": "string",
           "readOnly": true
         }
@@ -2392,6 +2413,18 @@
       "x-ms-enum": {
         "name": "ProvisioningState",
         "modelAsString": true
+      }
+    },
+    "ResourceIdentityType": {
+      "description": "The identity type.",
+      "enum": [
+        "SystemAssigned",
+        "UserAssigned"
+      ],
+      "type": "string",
+      "x-ms-enum": {
+        "name": "ResourceIdentityType",
+        "modelAsString": false
       }
     },
     "Secret": {
@@ -2613,13 +2646,6 @@
     "UpgradeableTo": {
       "description": "UpgradeableTo stores a single OpenShift version a workload identity cluster can be upgraded to",
       "type": "string"
-    },
-    "UserAssignedIdentities": {
-      "description": "UserAssignedIdentities stores a mapping from resource IDs of managed identities to their client/principal IDs.",
-      "type": "object",
-      "additionalProperties": {
-        "$ref": "#/definitions/ClusterUserAssignedIdentity"
-      }
     },
     "VMSize": {
       "description": "VM size availability varies by region.\nIf a node contains insufficient compute resources (memory, cpu, etc.), pods might fail to run correctly.\nFor more details on restricted VM sizes, see: https://docs.microsoft.com/en-us/azure/openshift/support-policies-v4#supported-virtual-machine-sizes",

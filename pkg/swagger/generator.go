@@ -316,7 +316,7 @@ var apis = map[string]*generator{
 		exampleOpenShiftVersionListResponse:            v20240812preview.ExampleOpenShiftVersionListResponse,
 		exampleOperationListResponse:                   api.ExampleOperationListResponse,
 
-		xmsEnum:              []string{"ProvisioningState", "PreconfiguredNSG", "EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility", "OutboundType"},
+		xmsEnum:              []string{"ProvisioningState", "PreconfiguredNSG", "EncryptionAtHost", "FipsValidatedModules", "SoftwareDefinedNetwork", "Visibility", "OutboundType", "ResourceIdentityType"},
 		xmsSecretList:        []string{"kubeconfig", "kubeadminPassword", "secretResources"},
 		xmsIdentifiers:       []string{},
 		commonTypesVersion:   "v3",
