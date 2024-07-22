@@ -14,13 +14,12 @@ steps:
   - script: |
       set -e
       go run ./cmd/aro mirror ${{ parameters.mirrorTag }}
-
-      source ./hack/rp-dev-helper.sh
     name: mirror-ocp-images-to-acr
     displayName: ⚙️ Mirror OCP Images to ACR
 
   - script: |
       set -e
+      source ./hack/rp-dev-helper.sh
       mdm_image_tag=$(get_digest_tag "MdmImage")
       mdsd_image_tag=$(get_digest_tag "MdsdImage")
 
