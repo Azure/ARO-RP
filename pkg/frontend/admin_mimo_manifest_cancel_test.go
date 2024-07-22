@@ -17,7 +17,7 @@ import (
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
-func TestMIMOCancelTask(t *testing.T) {
+func TestMIMOCancelManifest(t *testing.T) {
 	mockSubID := "00000000-0000-0000-0000-000000000000"
 	mockTenantID := "00000000-0000-0000-0000-000000000000"
 	resourceID := fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID)
