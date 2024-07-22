@@ -336,6 +336,7 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 					r.Put("/", f.putAdminMaintManifestCreate)
 					r.Route("/{manifestId}", func(r chi.Router) {
 						r.Get("/", f.getSingleAdminMaintManifest)
+						r.Delete("/", f.deleteAdminMaintManifest)
 						r.Post("/cancel", f.postAdminMaintManifestCancel)
 					})
 				})
