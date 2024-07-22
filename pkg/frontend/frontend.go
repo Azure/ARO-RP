@@ -331,10 +331,13 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 				r.With(f.maintenanceMiddleware.UnplannedMaintenanceSignal).Post("/deletemanagedresource", f.postAdminOpenShiftDeleteManagedResource)
 
 				// MIMO
-				r.Get("/maintenancemanifests", f.getAdminMaintManifests)
-				r.Route("/maintenancemanifests/{manifestId}", func(r chi.Router) {
-					r.Get("/", f.getSingleAdminMaintManifest)
-					r.Post("/cancel", f.postAdminMaintManifestCancel)
+				r.Route("/maintenancemanifests", func(r chi.Router) {
+					r.Get("/", f.getAdminMaintManifests)
+					r.Put("/", f.putAdminMaintManifestCreate)
+					r.Route("/{manifestId}", func(r chi.Router) {
+						r.Get("/", f.getSingleAdminMaintManifest)
+						r.Post("/cancel", f.postAdminMaintManifestCancel)
+					})
 				})
 			})
 		})
