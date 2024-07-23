@@ -127,12 +127,6 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
-	useCheckAccess, err := dv.env.LiveConfig().UseCheckAccess(ctx)
-	dv.log.Info("USE_CHECKACCESS: ", useCheckAccess)
-	if err != nil {
-		return err
-	}
-
 	aroEnv := dv.env.Environment()
 	pdpClient = remotepdp.NewRemotePDPClient(
 		fmt.Sprintf(aroEnv.Endpoint, dv.env.Location()),
