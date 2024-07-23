@@ -45,6 +45,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
+	utilwimi "github.com/Azure/ARO-RP/pkg/util/wimi"
 )
 
 //go:embed staticresources
@@ -468,8 +469,7 @@ func (o *operator) RenewMDSDCertificate(ctx context.Context) error {
 }
 
 func (o *operator) EnsureUpgradeAnnotation(ctx context.Context) error {
-	if o.oc.Properties.PlatformWorkloadIdentityProfile == nil ||
-		o.oc.Properties.ServicePrincipalProfile != nil {
+	if !utilwimi.IsWimi(o.oc) {
 		return nil
 	}
 

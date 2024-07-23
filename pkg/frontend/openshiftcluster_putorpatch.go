@@ -23,6 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	"github.com/Azure/ARO-RP/pkg/util/version"
+	utilwimi "github.com/Azure/ARO-RP/pkg/util/wimi"
 )
 
 var errMissingIdentityParameter error = fmt.Errorf("identity parameter not provided but required for workload identity cluster")
@@ -140,8 +141,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, log *logrus.
 	if isCreate {
 		// Persist identity URL and tenant ID only for managed/workload identity cluster create
 		// We don't support updating cluster managed identity after cluster creation
-		// TODO - use a common function to check if the cluster is a managed/workload identity cluster
-		if !(doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil || doc.OpenShiftCluster.Identity == nil) {
+		if utilwimi.IsWimi(doc.OpenShiftCluster) {
 			if err := validateIdentityUrl(doc.OpenShiftCluster, putOrPatchClusterParameters.identityURL); err != nil {
 				return nil, err
 			}

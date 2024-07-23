@@ -28,6 +28,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/oidcbuilder"
 	"github.com/Azure/ARO-RP/pkg/util/pointerutils"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
+	utilwimi "github.com/Azure/ARO-RP/pkg/util/wimi"
 )
 
 var nsgNotReadyErrorRegex = regexp.MustCompile("Resource.*networkSecurityGroups.*referenced by resource.*not found")
@@ -39,7 +40,7 @@ func (m *manager) createDNS(ctx context.Context) error {
 }
 
 func (m *manager) createOIDC(ctx context.Context) error {
-	if m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile != nil || m.doc.OpenShiftCluster.Properties.PlatformWorkloadIdentityProfile == nil {
+	if !utilwimi.IsWimi(m.doc.OpenShiftCluster) {
 		return nil
 	}
 
