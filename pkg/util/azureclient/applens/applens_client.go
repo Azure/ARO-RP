@@ -198,7 +198,7 @@ func (c *Client) executeAndEnsureSuccessResponse(request *policy.Request) (*http
 		return nil, err
 	}
 
-	successResponse := (response.StatusCode >= 200 && response.StatusCode < 300) || response.StatusCode == 304
+	successResponse := (response.StatusCode >= 200 && response.StatusCode < 300) || response.StatusCode == http.StatusNotModified
 	if successResponse {
 		return response, nil
 	}
