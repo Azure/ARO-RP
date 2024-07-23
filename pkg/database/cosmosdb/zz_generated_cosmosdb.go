@@ -119,7 +119,7 @@ func (c *databaseClient) _do(ctx context.Context, method, path, resourceType, re
 	req.Header.Set("x-ms-version", "2018-12-31")
 
 	if c.authorizer != nil {
-		err := c.authorizer.Authorize(req, resourceType, resourceLink)
+		err := c.authorizer.Authorize(ctx, req, resourceType, resourceLink)
 		if err != nil {
 			return nil, err
 		}
