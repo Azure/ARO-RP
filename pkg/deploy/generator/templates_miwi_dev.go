@@ -7,12 +7,15 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 )
 
-func (g *generator) oicTemplate() *arm.Template {
+func (g *generator) miwiDevSharedTemplate() *arm.Template {
 	t := templateStanza()
 
 	t.Resources = append(t.Resources,
 		g.oicStorageAccount(),
-		g.oicRoleAssignment())
+		g.oicRoleAssignment(),
+		g.devMSIKeyvault(),
+		g.devMSIKeyvaultRBAC(),
+	)
 
 	t.Parameters = map[string]*arm.TemplateParameter{
 		"rpServicePrincipalId": {

@@ -43,6 +43,36 @@
             "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts', parameters('oidcStorageAccountName'))]"
             ]
+        },
+        {
+            "name": "[concat(take(resourceGroup().name,10), '-dev-msi')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                    "family": "A",
+                    "name": "standard"
+                },
+                "accessPolicies": [],
+                "enabledForDiskEncryption": true,
+                "enablePurgeProtection": true
+            },
+            "apiVersion": "2019-09-01"
+        },
+        {
+            "name": "[concat(concat(take(resourceGroup().name,10), '-dev-msi'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.KeyVault/vaults', concat(take(resourceGroup().name,10), '-dev-msi')), parameters('rpServicePrincipalId'), 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7'))]",
+            "type": "Microsoft.KeyVault/vaults/providers/roleAssignments",
+            "properties": {
+                "scope": "[resourceId('Microsoft.KeyVault/vaults', concat(take(resourceGroup().name,10), '-dev-msi'))]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7')]",
+                "principalId": "[parameters('rpServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2018-09-01-preview",
+            "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', concat(take(resourceGroup().name,10), '-dev-msi'))]"
+            ]
         }
     ]
 }
