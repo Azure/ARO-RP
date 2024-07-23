@@ -311,9 +311,16 @@ type ClusterUserAssignedIdentity struct {
 	PrincipalID string `json:"principalId,omitempty"`
 }
 
+type IdentityType string
+
+const (
+	IdentitySystemAssigned IdentityType = "SystemAssigned"
+	IdentityUserAssigned   IdentityType = "UserAssigned"
+)
+
 // Identity stores information about the cluster MSI(s) in a workload identity cluster.
 type Identity struct {
-	Type                   string                                 `json:"type,omitempty"`
+	Type                   IdentityType                           `json:"type,omitempty"`
 	PrincipalID            string                                 `json:"principalId,omitempty" swagger:"readOnly"`
 	TenantID               string                                 `json:"tenantId,omitempty" swagger:"readOnly"`
 	UserAssignedIdentities map[string]ClusterUserAssignedIdentity `json:"userAssignedIdentities,omitempty"`
