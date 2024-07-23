@@ -16,7 +16,7 @@ import (
 )
 
 type Authorizer interface {
-	Authorize(context.Context , *http.Request, string, string) error
+	Authorize(context.Context, *http.Request, string, string) error
 }
 
 type masterKeyAuthorizer struct {
