@@ -531,8 +531,8 @@ const (
 )
 
 type VMSizeStruct struct {
-	CoreCount int
-	Family    string
+	CoreCount int    `json:"coreCount,omitempty"`
+	Family    string `json:"family,omitempty"`
 }
 
 var (

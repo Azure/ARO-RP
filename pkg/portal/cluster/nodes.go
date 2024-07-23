@@ -27,15 +27,15 @@ type Taint struct {
 }
 
 type MachineResources struct {
-	CPU           string
-	StorageVolume string
-	Memory        string
-	Pods          string
+	CPU           string `json:"cpu"`
+	StorageVolume string `json:"storageVolume"`
+	Memory        string `json:"memory"`
+	Pods          string `json:"pods"`
 }
 
 type Volume struct {
-	Name string
-	Path string
+	Name string `json:"name"`
+	Path string `json:"path"`
 }
 
 type NodeInformation struct {
