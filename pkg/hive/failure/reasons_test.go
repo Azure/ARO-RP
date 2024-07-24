@@ -63,6 +63,69 @@ level=error msg=step [AuthorizationRetryingAction github.com/openshift/ARO-Insta
 level=error msg=400: DeploymentFailed: : Deployment failed. Details: : : {"code":"InvalidTemplateDeployment","message":"The template deployment failed with multiple errors. Please see details for more information.","details":[{"additionalInfo":[],"code":"RequestDisallowedByPolicy","message":"Resource 'test-bootstrap' was disallowed by policy. Policy identifiers: ''.","target":"test-bootstrap"}]}`,
 			want: AzureRequestDisallowedByPolicy,
 		},
+		{
+			name: "ZonalAllocationFailed-1",
+			installLog: `Message: level=info msg=creating InstanceMetadata from Azure Instance Metadata Service (AIMS) level=info msg=InstanceMetadata: running on AzurePublicCloud level=info msg=running step [Action github.com/openshift/ARO-Installer/pkg/installer.(*manager).Manifests.func1] level=info msg=running step [Action github.com/openshift/ARO-Installer/pkg/installer.(*manager).Manifests.func2] level=info msg=resolving graph level=info
+						 msg=running step [Action github.com/openshift/ARO-Installer/pkg/installer.(*manager).Manifests.func3] level=info msg=checking if graph exists level=info msg=save graph Generates the Ignition Config asset level=info msg=creating InstanceMetadata from Azure Instance Metadata Service (AIMS) level=info msg=InstanceMetadata: running on AzurePublicCloud level=info
+						 msg=running step [AuthorizationRetryingAction github.com/openshift/ARO-Installer/pkg/installer.(*manager).deployResourceTemplate-fm] level=info msg=load persisted graph level=info msg=deploying resources template level=error msg=step [AuthorizationRetryingAction github.com/openshift/ARO-Installer/pkg/installer.(*manager).deployResourceTemplate-fm]
+						 encountered error: 400: DeploymentFailed: : Deployment failed. Details: : : {"code":"DeploymentFailed","message":"At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/arm-deployment-operations for usage details.","target":null,"details":
+						 [{"code":"Conflict","message":"{\r\n \"status\": \"Failed\",\r\n \"error\": {\r\n \"code\": \"ResourceDeploymentFailure\",\r\n \"message\": \"The resource write operation failed to complete successfully, because it reached terminal provisioning state 'Failed'.\",\r\n \"details\":
+						 [\r\n {\r\n \"code\": \"ZonalAllocationFailed\",\r\n \"message\": \"Allocation failed. We do not have sufficient capacity for the requested VM size in this zone. Read more about improving likelihood of allocation success at http://aka.ms/allocation-guidance\"\r\n }\r\n ]\r\n }\r\n}"}],"innererror":null,"additionalInfo":null}
+						 level=error msg=400: DeploymentFailed: : Deployment failed. Details: : : {"code":"DeploymentFailed","message":"At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/arm-deployment-operations for usage details.","target":null,"details":
+						 [{"code":"Conflict","message":"{\r\n \"status\": \"Failed\",\r\n \"error\": {\r\n \"code\": \"ResourceDeploymentFailure\",\r\n \"message\": \"The resource write operation failed to complete successfully, because it reached terminal provisioning state 'Failed'.\",\r\n \"details\":
+						 [\r\n {\r\n \"code\": \"ZonalAllocationFailed\",\r\n \"message\": \"Allocation failed. We do not have sufficient capacity for the requested VM size in this zone. Read more about improving likelihood of allocation success at http://aka.ms/allocation-guidance\"\r\n }\r\n ]\r\n }\r\n}"}],"innererror":null,"additionalInfo":null}`,
+			want: AzureZonalAllocationFailed,
+		},
+		{
+			name: "ZonalAllocationFailed-2",
+			installLog: `Message: level=info msg=creating InstanceMetadata from Azure Instance Metadata Service (AIMS)
+			level=info msg=InstanceMetadata: running on AzurePublicCloud
+			level=info msg=running step [Action github.com/openshift/ARO-Installer/pkg/installer.(*manager).Manifests.func1]
+			level=info msg=running step [Action github.com/openshift/ARO-Installer/pkg/installer.(*manager).Manifests.func2]
+			level=info msg=resolving graph
+			level=info msg=running step [Action github.com/openshift/ARO-Installer/pkg/installer.(*manager).Manifests.func3]
+			level=info msg=checking if graph exists level=info msg=save graph Generates the Ignition Config asset
+			level=info msg=creating InstanceMetadata from Azure Instance Metadata Service (AIMS)
+			level=info msg=InstanceMetadata: running on AzurePublicCloud
+			level=info msg=running step [AuthorizationRetryingAction github.com/openshift/ARO-Installer/pkg/installer.(*manager).deployResourceTemplate-fm] level=info msg=load persisted graph
+			level=info msg=deploying resources template
+			level=error msg=step [AuthorizationRetryingAction github.com/openshift/ARO-Installer/pkg/installer.(*manager).deployResourceTemplate-fm] encountered error: 400: DeploymentFailed: : Deployment failed.
+			Details: : :{"code":"DeploymentFailed","message":"At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/arm-deployment-operations for usage details.","target":null,"details":
+			[{"code":"Conflict","message":"{ \"status\": \"Failed\",\"error\":{\"code\":\"ResourceDeploymentFailure\", \"message\":\"The resource write operation failed to complete successfully, because it reached terminal provisioning state 'Failed'.\",\"details\":
+			[{\"code\":\"ZonalAllocationFailed\", \"message\": \"Allocation failed. We do not have sufficient capacity for the requested VM size in this zone. Read more about improving likelihood of allocation success at http://aka.ms/allocation-guidance\"}]}}"}],"innererror":null,"additionalInfo":null}
+			
+			level=error msg=400: DeploymentFailed: : Deployment failed.
+			Details: : :{"code":"DeploymentFailed","message":"At least one resource deployment operation failed. Please list deployment operations for details.
+			Please see https://aka.ms/arm-deployment-operations for usage details.","target":null,"details":[{"code":"Conflict","message":"{\"status\":\"Failed\",\"error\":
+			{\"code\":\"ResourceDeploymentFailure\",\"message\":\"The resource write operation failed to complete successfully, because it reached terminal provisioning state 'Failed'.\",\"details\":
+			[{\"code\":\"ZonalAllocationFailed\", \"message\": \"Allocation failed. We do not have sufficient capacity for the requested VM size in this zone. Read more about improving likelihood of allocation success at http://aka.ms/allocation-guidance\"}]}}"}],"innererror":null,"additionalInfo":null}`,
+			want: AzureZonalAllocationFailed,
+		},
+		{
+			name: "ZonalAllocationFailed-3",
+			installLog: `Message: level=info msg=creating InstanceMetadata from Azure Instance Metadata Service (AIMS)
+			level=info msg=InstanceMetadata: running on AzurePublicCloud
+			level=info msg=running step [Action github.com/openshift/ARO-Installer/pkg/installer.(*manager).Manifests.func1]
+			level=info msg=running step [Action github.com/openshift/ARO-Installer/pkg/installer.(*manager).Manifests.func2]
+			level=info msg=resolving graph
+			level=info msg=running step [Action github.com/openshift/ARO-Installer/pkg/installer.(*manager).Manifests.func3]
+			level=info msg=checking if graph exists level=info msg=save graph Generates the Ignition Config asset
+			level=info msg=creating InstanceMetadata from Azure Instance Metadata Service (AIMS)
+			level=info msg=InstanceMetadata: running on AzurePublicCloud
+			level=info msg=running step [AuthorizationRetryingAction github.com/openshift/ARO-Installer/pkg/installer.(*manager).deployResourceTemplate-fm] level=info msg=load persisted graph
+			level=info msg=deploying resources template
+			level=error msg=step [AuthorizationRetryingAction github.com/openshift/ARO-Installer/pkg/installer.(*manager).deployResourceTemplate-fm] encountered error: 400: DeploymentFailed: : Deployment failed.
+			Details: : :{"code":"DeploymentFailed","message":"At least one resource deployment operation failed. Please list deployment operations for details. Please see https://aka.ms/arm-deployment-operations for usage details.","target":null,"details":
+			[{"code":"Conflict","message":"{ "status": "Failed","error":{"code":"ResourceDeploymentFailure", "message":"The resource write operation failed to complete successfully, because it reached terminal provisioning state 'Failed'.","details":
+			[{"code":"ZonalAllocationFailed", "message": "Allocation failed. We do not have sufficient capacity for the requested VM size in this zone. Read more about improving likelihood of allocation success at http://aka.ms/allocation-guidance"}]}}"}],"innererror":null,"additionalInfo":null}
+			
+			level=error msg=400: DeploymentFailed: : Deployment failed.
+			Details: : :{"code":"DeploymentFailed","message":"At least one resource deployment operation failed. Please list deployment operations for details.
+			Please see https://aka.ms/arm-deployment-operations for usage details.","target":null,"details":
+			[{"code":"Conflict","message":"{"status":"Failed","error":{"code":"ResourceDeploymentFailure","message":"The resource write operation failed to complete successfully, because it reached terminal provisioning state 'Failed'.","details":
+			[{"code":"ZonalAllocationFailed", "message": "Allocation failed. We do not have sufficient capacity for the requested VM size in this zone. Read more about improving likelihood of allocation success at http://aka.ms/allocation-guidance"}]}}"}],"innererror":null,"additionalInfo":null}`,
+			want: AzureZonalAllocationFailed,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			// This test uses a "mock" version of Hive's real implementation for matching install logs against regex patterns.
