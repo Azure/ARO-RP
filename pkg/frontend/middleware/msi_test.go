@@ -6,7 +6,6 @@ package middleware
 import (
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/Azure/msi-dataplane/pkg/dataplane"
@@ -15,8 +14,7 @@ import (
 func TestMockMSIMiddleware(t *testing.T) {
 	// Set the environment variable for the test
 	mockTenantID := "test-tenant-id"
-	os.Setenv(mockTenantIDEnvVar, mockTenantID)
-	defer os.Unsetenv(mockTenantIDEnvVar)
+	t.Setenv(mockTenantIDEnvVar, mockTenantID)
 
 	// Create a mock handler to be wrapped by the middleware
 	mockHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
