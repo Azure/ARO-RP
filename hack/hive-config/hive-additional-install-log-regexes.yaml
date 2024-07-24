@@ -12,6 +12,12 @@ data:
       name: AzureInvalidTemplateDeployment
       searchRegexStrings:
       - '"code":\w?"InvalidTemplateDeployment"'
+    - installFailingMessage: OS Provisioning for VM, didn't finished in the allotted time.
+        Please see details for more information.
+      installFailingReason: AzureOSProvisioningTimedOut
+      name: AzureOSProvisioningTimedOut
+      searchRegexStrings:
+      - '"code\W*":\W*"OSProvisioningTimedOut\W*"'
 kind: ConfigMap
 metadata:
   creationTimestamp: null
