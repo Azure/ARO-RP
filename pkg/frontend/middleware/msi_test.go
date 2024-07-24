@@ -25,7 +25,7 @@ func TestMockMSIMiddleware(t *testing.T) {
 	handler := MockMSIMiddleware(mockHandler)
 
 	// Create a new HTTP request
-	req := httptest.NewRequest("GET", "http://example.com", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com", nil)
 	// Create a response recorder to capture the response
 	rr := httptest.NewRecorder()
 
