@@ -27,6 +27,11 @@ type OpenShiftCluster struct {
 	Lock sync.Mutex `json:"-"`
 }
 
+// IsWimi checks whether a cluster is a Workload Identity cluster or Service Principal cluster
+func (oc *OpenShiftCluster) IsWimi() bool {
+	return oc.Properties.PlatformWorkloadIdentityProfile != nil && oc.Properties.ServicePrincipalProfile == nil
+}
+
 // CreatedByType by defines user type, which executed the request
 // This field should match common-types field names for swagger and sdk generation
 type CreatedByType string
