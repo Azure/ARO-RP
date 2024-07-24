@@ -423,7 +423,7 @@ func (m *manager) Delete(ctx context.Context) error {
 		return err
 	}
 
-	if m.doc.OpenShiftCluster.IsWimi() {
+	if m.doc.OpenShiftCluster.IsWorkloadIdentity() {
 		m.log.Printf("deleting OIDC configuration")
 		blobContainerURL := oidcbuilder.GenerateBlobContainerURL(m.env)
 		azBlobClient, err := m.rpBlob.GetAZBlobClient(blobContainerURL, &azblob.ClientOptions{})

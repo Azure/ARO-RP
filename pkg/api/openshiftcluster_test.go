@@ -53,7 +53,7 @@ func TestIsTerminal(t *testing.T) {
 	}
 }
 
-func TestIsWimi(t *testing.T) {
+func TestIsWorkloadIdentity(t *testing.T) {
 	tests := []*struct {
 		name string
 		oc   OpenShiftCluster
@@ -79,11 +79,31 @@ func TestIsWimi(t *testing.T) {
 			},
 			want: false,
 		},
+		{
+			name: "Cluster is Service Principal",
+			oc: OpenShiftCluster{
+				Properties: OpenShiftClusterProperties{
+					PlatformWorkloadIdentityProfile: nil,
+					ServicePrincipalProfile:         nil,
+				},
+			},
+			want: false,
+		},
+		{
+			name: "Cluster is Service Principal",
+			oc: OpenShiftCluster{
+				Properties: OpenShiftClusterProperties{
+					PlatformWorkloadIdentityProfile: &PlatformWorkloadIdentityProfile{},
+					ServicePrincipalProfile:         &ServicePrincipalProfile{},
+				},
+			},
+			want: false,
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := test.oc.IsWimi()
+			got := test.oc.IsWorkloadIdentity()
 			if got != test.want {
 				t.Error(fmt.Errorf("got != want: %v != %v", got, test.want))
 			}
