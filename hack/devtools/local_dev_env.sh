@@ -39,7 +39,58 @@ ask_to_create_default_env_config() {
     fi
 }
 
+# We use a service principal and certificate as the mock MSI object
+create_mock_msi() {
+    appName="mock-msi-$(openssl rand -base64 9 | tr -dc 'a-zA-Z0-9' | head -c 6)"
+    az ad sp create-for-rbac --name $appName --create-cert --output json
+}
+
+get_mock_msi_clientID() {
+    echo "$1" | jq -r .appId
+}
+
+get_mock_msi_tenantID() {
+    echo "$1" | jq -r .tenant
+}
+
+get_mock_msi_cert() {
+    certFilePath=$(echo "$1" | jq -r '.fileWithCertAndPrivateKey')
+    base64EncodedCert=$(base64 -w 0 $certFilePath)
+    rm $certFilePath
+    echo $base64EncodedCert
+}
+
 create_env_file() {
+    local answer
+    read -p "Do you want to create an env file for Managed/Workload identity development? " answer
+    if [[ "$answer" == "y" || "$answer" == "Y" ]]; then
+        create_miwi_env_file
+    else 
+        create_regular_env_file
+    fi
+}
+
+create_miwi_env_file() {
+    echo "INFO: Creating default env config file for managed/workload identity development..."
+
+    mockMSI=$(create_mock_msi)
+    mockClientID=$(get_mock_msi_clientID "$mockMSI")
+    mockTenantID=$(get_mock_msi_tenantID "$mockMSI")
+    mockCert=$(get_mock_msi_cert "$mockMSI")
+
+    cat >env <<EOF
+export LOCATION=eastus
+export ARO_IMAGE=arointsvc.azurecr.io/aro:latest
+export RP_MODE=development # to use a development RP running at https://localhost:8443/
+export MOCK_MSI_CLIENT_ID="$mockClientID"
+export MOCK_MSI_TENANT_ID="$mockTenantID"
+export MOCK_MSI_CERT="$mockCert"
+
+source secrets/env
+EOF
+}
+
+create_regular_env_file() {
     echo "INFO: Creating default env config file..."
 
     cat >env <<EOF
@@ -50,6 +101,7 @@ export RP_MODE=development # to use a development RP running at https://localhos
 source secrets/env
 EOF
 }
+
 
 ask_to_create_Azure_deployment() {
     local answer
@@ -107,4 +159,6 @@ main() {
     run_the_RP
 }
 
-main
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main
+fi
