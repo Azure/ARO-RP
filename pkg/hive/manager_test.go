@@ -278,7 +278,7 @@ func TestIsClusterInstallationComplete(t *testing.T) {
 			level=info msg=checking if graph exists
 			level=info msg=save graph
 			Generates the Ignition Config asset
-			
+
 			level=info msg=running in local development mode
 			level=info msg=creating development InstanceMetadata
 			level=info msg=InstanceMetadata: running on AzurePublicCloud
@@ -338,7 +338,7 @@ func TestIsClusterInstallationComplete(t *testing.T) {
 			level=info msg=checking if graph exists
 			level=info msg=save graph
 			Generates the Ignition Config asset
-			
+
 			level=info msg=running in local development mode
 			level=info msg=creating development InstanceMetadata
 			level=info msg=InstanceMetadata: running on AzurePublicCloud
@@ -567,7 +567,6 @@ func TestGetClusterDeployment(t *testing.T) {
 		})
 	}
 }
-
 func TestGetClusterSyncforClusterDeployment(t *testing.T) {
 	fakeNamespace := "aro-00000000-0000-0000-0000-000000000000"
 	doc := &api.OpenShiftClusterDocument{
@@ -612,6 +611,97 @@ func TestGetClusterSyncforClusterDeployment(t *testing.T) {
 
 			if result != nil && result.Name != cs.Name && result.Namespace != cs.Namespace {
 				t.Error("Unexpected cluster sync returned", result)
+			}
+		})
+	}
+}
+
+func TestListSyncSet(t *testing.T) {
+	fakeNamespace := "aro-00000000-0000-0000-0000-000000000000"
+	syncsetTest := &hivev1.SyncSetList{
+		Items: []hivev1.SyncSet{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "syncset-1",
+					Namespace: fakeNamespace,
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "syncset-2",
+					Namespace: fakeNamespace,
+				},
+			},
+		},
+	}
+
+	for _, tt := range []struct {
+		name      string
+		label     string
+		namespace string
+		wantErr   string
+	}{
+		{name: "syncsets exists and are returned"},
+		{name: "syncsets does not exist err returned", label: "", namespace: "", wantErr: `no syncsets for namespace with provided label`},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fakeClientBuilder := fake.NewClientBuilder()
+			if tt.wantErr == "" {
+				fakeClientBuilder = fakeClientBuilder.WithRuntimeObjects(syncsetTest)
+			}
+			s := syncSetManager{
+				hiveClientset: fakeClientBuilder.Build(),
+				log:           logrus.NewEntry(logrus.StandardLogger()),
+			}
+
+			result, err := s.List(context.Background(), tt.namespace, tt.label, reflect.TypeOf(hivev1.SyncSetList{}))
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Fatal(err)
+			}
+
+			if result != nil && reflect.DeepEqual(result, syncsetTest) {
+				t.Fatal("Unexpected syncset list returned", result)
+			}
+		})
+	}
+}
+
+func TestGetSyncSet(t *testing.T) {
+	fakeNamespace := "aro-00000000-0000-0000-0000-000000000000"
+	syncsetTest := &hivev1.SyncSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "syncset-1",
+			Namespace: fakeNamespace,
+		},
+	}
+
+	for _, tt := range []struct {
+		name        string
+		syncsetname string
+		namespace   string
+		wantErr     string
+	}{
+		{name: "syncset exists and are returned", syncsetname: syncsetTest.Name, namespace: syncsetTest.Namespace},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fakeClientBuilder := fake.NewClientBuilder()
+			if tt.wantErr == "" {
+				fakeClientBuilder = fakeClientBuilder.WithRuntimeObjects(syncsetTest)
+			}
+			s := syncSetManager{
+				hiveClientset: fakeClientBuilder.Build(),
+				log:           logrus.NewEntry(logrus.StandardLogger()),
+			}
+
+			result, err := s.Get(context.Background(), tt.namespace, tt.syncsetname, reflect.TypeOf(hivev1.SyncSet{}))
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Fatal(err)
+			}
+
+			if result != nil && reflect.DeepEqual(result, syncsetTest) {
+				t.Fatal("Unexpected syncset is returned", result)
 			}
 		})
 	}

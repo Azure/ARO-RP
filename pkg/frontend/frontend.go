@@ -85,6 +85,7 @@ type frontend struct {
 	aead encryption.AEAD
 
 	hiveClusterManager    hive.ClusterManager
+	hiveSyncSetManager    hive.SyncSetManager
 	kubeActionsFactory    kubeActionsFactory
 	azureActionsFactory   azureActionsFactory
 	appLensActionsFactory appLensActionsFactory
@@ -127,6 +128,7 @@ func NewFrontend(ctx context.Context,
 	clusterm metrics.Emitter,
 	aead encryption.AEAD,
 	hiveClusterManager hive.ClusterManager,
+	hiveSyncSetManager hive.SyncSetManager,
 	kubeActionsFactory kubeActionsFactory,
 	azureActionsFactory azureActionsFactory,
 	appLensActionsFactory appLensActionsFactory,
@@ -160,6 +162,7 @@ func NewFrontend(ctx context.Context,
 		maintenanceMiddleware: middleware.MaintenanceMiddleware{Emitter: clusterm},
 		aead:                  aead,
 		hiveClusterManager:    hiveClusterManager,
+		hiveSyncSetManager:    hiveSyncSetManager,
 		kubeActionsFactory:    kubeActionsFactory,
 		azureActionsFactory:   azureActionsFactory,
 		appLensActionsFactory: appLensActionsFactory,
@@ -293,6 +296,10 @@ func (f *frontend) chiAuthenticatedRoutes(router chi.Router) {
 
 		r.Route("/maintenancemanifests", func(r chi.Router) {
 			r.Get("/queued", f.getAdminQueuedMaintManifests)
+		})
+		r.Route("/hivesyncset", func(r chi.Router) {
+			r.Get("/", f.listAdminHiveSyncSet)
+			r.Get("/syncsetname/{syncsetname}", f.getAdminHiveSyncSet)
 		})
 
 		r.Route("/subscriptions/{subscriptionId}", func(r chi.Router) {
