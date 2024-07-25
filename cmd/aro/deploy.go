@@ -19,7 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-func deploy(ctx context.Context, log *logrus.Entry) error {
+func getDeployer(ctx context.Context, log *logrus.Entry) (pkgdeploy.Deployer ,error) {
 	// TODO(mjudeikis): Remove this hack in public once we moved to EV2
 	// We are not able to use MSI in public cloud CI as we would need
 	// to have dedicated node pool with MSI where we can controll which jobs are running
@@ -34,12 +34,12 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 		var err error
 		_env, err = env.NewCore(ctx, log, env.COMPONENT_DEPLOY)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		options := _env.Environment().ManagedIdentityCredentialOptions()
 		tokenCredential, err = azidentity.NewManagedIdentityCredential(options)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	} else { // running in CI node/Public - Use SP from Env
 		err := env.ValidateVars(
@@ -49,17 +49,17 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 			"AZURE_TENANT_ID")
 
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		_env, err = env.NewCoreForCI(ctx, log)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		options := _env.Environment().EnvironmentCredentialOptions()
 		tokenCredential, err = azidentity.NewEnvironmentCredential(options)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 	env := _env
@@ -70,28 +70,48 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 
 	if deployVersion == "unknown" ||
 		(!env.IsLocalDevelopmentMode() && strings.Contains(deployVersion, "dirty")) {
-		return fmt.Errorf("invalid deploy version %q", deployVersion)
+		return nil, fmt.Errorf("invalid deploy version %q", deployVersion)
 	}
 
 	if strings.ToLower(location) != location {
-		return fmt.Errorf("location %s must be lower case", location)
+		return nil, fmt.Errorf("location %s must be lower case", location)
 	}
 
 	config, err := pkgdeploy.GetConfig(flag.Arg(1), location)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	deployer, err := pkgdeploy.New(ctx, log, env, config, deployVersion, tokenCredential)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = deployer.PreDeploy(ctx)
+	return deployer, nil
+
+}
+
+func preDeploy (ctx context.Context, log *logrus.Entry, hasAKS bool) error {
+	deployer, err := getDeployer(ctx, log)
 	if err != nil {
 		return err
 	}
+	err = deployer.PreDeploy(ctx, hasAKS)
+	if err != nil {
+		return err
+	}
+	
+	// Must be last step so we can be sure there are no RPs at older versions
+	// still serving
+	return deployer.SaveVersion(ctx)
+}
 
+func deploy (ctx context.Context, log *logrus.Entry) error {
+
+	deployer, err := getDeployer(ctx, log)
+	if err != nil {
+		return err
+	}
 	errch := make(chan error, 2)
 	go func() {
 		err := deployer.DeployRP(ctx)
@@ -131,7 +151,7 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 
 	var errorOccurred bool
 	for i := 0; i < 2; i++ {
-		err = <-errch
+		err := <-errch
 		if err != nil {
 			errorOccurred = true
 		}

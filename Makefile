@@ -1,6 +1,6 @@
 SHELL = /bin/bash
 TAG ?= $(shell git describe --exact-match 2>/dev/null)
-COMMIT = $(shell git rev-parse --short=7 HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
+COMMIT = $(shell git rev-parse --short=7 HEAD)
 ARO_IMAGE_BASE = ${RP_IMAGE_ACR}.azurecr.io/aro
 E2E_FLAGS ?= -test.v --ginkgo.v --ginkgo.timeout 180m --ginkgo.flake-attempts=2 --ginkgo.junit-report=e2e-report.xml
 E2E_LABEL ?= !smoke
@@ -108,11 +108,19 @@ ci-tunnel: fix-macos-vendor
 ci-clean:
 	docker image prune --all --filter="label=aro-*=true"
 
+.PHONY: pre-deploy-aks
+pre-deploy-aks:
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro pre-deploy-aks dev-config.yaml ${LOCATION}
+
+.PHONY: pre-deploy-full
+pre-deploy-full:
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro pre-deploy-full dev-config.yaml ${LOCATION}
+
 # TODO: hard coding dev-config.yaml is clunky; it is also probably convenient to
 # override COMMIT.
 .PHONY: deploy
-deploy:
-	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(VERSION)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
+deploy: pre-deploy-full
+	go run -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro deploy dev-config.yaml ${LOCATION}
 
 .PHONY: dev-config.yaml
 dev-config.yaml:

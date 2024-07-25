@@ -40,7 +40,7 @@ const (
 
 // PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
 // deployment
-func (d *deployer) PreDeploy(ctx context.Context) error {
+func (d *deployer) PreDeploy(ctx context.Context, hasAKS bool) error {
 	// deploy global rbac
 	err := d.deployRPGlobalSubscription(ctx)
 	if err != nil {
@@ -149,7 +149,11 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 		return err
 	}
 
-	err = d.deployPreDeploy(ctx, d.config.RPResourceGroupName, generator.FileRPProductionPredeploy, "rpServicePrincipalId", rpMSI.PrincipalID.String(), isCreate)
+	rpProdPreDeployFile := generator.FileRPProductionPredeployAks
+	if hasAKS {
+		rpProdPreDeployFile = generator.FileRPProductionPredeploy
+	}
+	err = d.deployPreDeploy(ctx, d.config.RPResourceGroupName, rpProdPreDeployFile, "rpServicePrincipalId", rpMSI.PrincipalID.String(), isCreate)
 	if err != nil {
 		return err
 	}
@@ -336,6 +340,10 @@ func (d *deployer) deployPreDeploy(ctx context.Context, resourceGroupName, deplo
 	}
 
 	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+	// if !isCreate {
+	// 	parameters.Parameters["deployNSGs"] = &arm.ParametersParameter{
+	// 	Value: isCreate,
+	// 	}
 	parameters.Parameters["deployNSGs"] = &arm.ParametersParameter{
 		Value: isCreate,
 	}

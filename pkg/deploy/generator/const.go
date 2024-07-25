@@ -7,6 +7,7 @@ const (
 	// Template file constants
 	FileRPProductionManagedIdentity          = "rp-production-managed-identity.json"
 	FileRPProductionPredeploy                = "rp-production-predeploy.json"
+	FileRPProductionPredeployAks       		 = "rp-production-predeploy-aks.json"
 	FileRPProductionPredeployParameters      = "rp-production-predeploy-parameters.json"
 	FileRPProduction                         = "rp-production.json"
 	FileRPProductionGlobal                   = "rp-production-global.json"
