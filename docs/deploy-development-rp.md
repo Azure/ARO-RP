@@ -120,7 +120,7 @@
       Note that as long as the `RP_MODE` environment variable is set to `development`, the `az aro` client will
       connect to your local RP.
 
-   1. use the create utility:
+   1. Use the create utility:
 
       ```bash
       # Create the cluster
