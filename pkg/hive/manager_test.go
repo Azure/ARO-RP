@@ -57,10 +57,6 @@ func TestIsClusterDeploymentReady(t *testing.T) {
 							Status: corev1.ConditionTrue,
 						},
 						{
-							Type:   hivev1.SyncSetFailedCondition,
-							Status: corev1.ConditionFalse,
-						},
-						{
 							Type:   hivev1.ControlPlaneCertificateNotFoundCondition,
 							Status: corev1.ConditionFalse,
 						},
@@ -87,46 +83,12 @@ func TestIsClusterDeploymentReady(t *testing.T) {
 							Status: corev1.ConditionTrue,
 						},
 						{
-							Type:   hivev1.SyncSetFailedCondition,
-							Status: corev1.ConditionFalse,
-						},
-						{
 							Type:   hivev1.ControlPlaneCertificateNotFoundCondition,
 							Status: corev1.ConditionFalse,
 						},
 						{
 							Type:   hivev1.UnreachableCondition,
 							Status: corev1.ConditionTrue,
-						},
-					},
-				},
-			},
-			wantResult: false,
-		},
-		{
-			name: "is not ready: syncset failed",
-			cd: &hivev1.ClusterDeployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      ClusterDeploymentName,
-					Namespace: fakeNamespace,
-				},
-				Status: hivev1.ClusterDeploymentStatus{
-					Conditions: []hivev1.ClusterDeploymentCondition{
-						{
-							Type:   hivev1.ProvisionedCondition,
-							Status: corev1.ConditionTrue,
-						},
-						{
-							Type:   hivev1.SyncSetFailedCondition,
-							Status: corev1.ConditionTrue,
-						},
-						{
-							Type:   hivev1.ControlPlaneCertificateNotFoundCondition,
-							Status: corev1.ConditionFalse,
-						},
-						{
-							Type:   hivev1.UnreachableCondition,
-							Status: corev1.ConditionFalse,
 						},
 					},
 				},
