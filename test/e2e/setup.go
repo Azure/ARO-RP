@@ -5,6 +5,7 @@ package e2e
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"math"
 	"net/url"
@@ -49,12 +50,16 @@ import (
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/uuid"
 	"github.com/Azure/ARO-RP/pkg/util/version"
+	"github.com/Azure/ARO-RP/test/util/dynamic"
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
 
 const (
 	smoke = "smoke"
 )
+
+//go:embed static_resources
+var staticResources embed.FS
 
 var (
 	disallowedInFilenameRegex = regexp.MustCompile(`[<>:"/\\|?*\x00-\x1F]`)
@@ -76,6 +81,7 @@ type clientSet struct {
 	Storage               storage.AccountsClient
 	LoadBalancers         network.LoadBalancersClient
 
+	Dynamic            dynamic.Client
 	RestConfig         *rest.Config
 	HiveRestConfig     *rest.Config
 	Monitoring         monitoringclient.Interface
@@ -324,6 +330,11 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
+	dynamiccli, err := dynamic.NewDynamicClient(restconfig)
+	if err != nil {
+		return nil, err
+	}
+
 	var hiveRestConfig *rest.Config
 	var hiveClientSet client.Client
 	var hiveAKS *kubernetes.Clientset
@@ -375,6 +386,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		RestConfig:         restconfig,
 		HiveRestConfig:     hiveRestConfig,
 		Kubernetes:         cli,
+		Dynamic:            dynamiccli,
 		Client:             controllerRuntimeClient,
 		Monitoring:         monitoring,
 		MachineAPI:         machineapicli,
