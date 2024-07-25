@@ -31,8 +31,6 @@
    what is bundled in `az` natively rather than your `./python`, you can
    `unset AZURE_EXTENSION_DEV_SOURCES` (found in your `./env` file).
 
-
-
 ## Prepare your environment
 
 1. If you don't have access to a shared development environment and secrets,
@@ -43,7 +41,6 @@
    ```bash
    az account set --subscription "ARO SRE Team - InProgress (EA Subscription 2)"
    ```
-   
 1. Set SECRET_SA_ACCOUNT_NAME to the name of the storage account containing your
    shared development environment secrets and save them in `secrets`:
 
@@ -51,10 +48,10 @@
    SECRET_SA_ACCOUNT_NAME=rharosecretsdev make secrets
    ```
 
-1. Run [msi.sh](../hack/devtools/msi.sh) to create a service principal and self-signed certificate to 
-mock a cluster MSI. Save the output values for `Client ID`, `Base64 Encoded Certificate`, and `Tenant`.
+1. Run [msi.sh](../hack/devtools/msi.sh) to create a service principal and self-signed certificate to
+   mock a cluster MSI. Save the output values for `Client ID`, `Base64 Encoded Certificate`, and `Tenant`.
 
-1. Copy, edit (if necessary) and source your environment file.  The required
+1. Copy, edit (if necessary) and source your environment file. The required
    environment variable configuration is documented immediately below:
 
    ```bash
@@ -63,13 +60,13 @@ mock a cluster MSI. Save the output values for `Client ID`, `Base64 Encoded Cert
    . ./env
    ```
 
-   * `LOCATION`: Location of the shared RP development environment (default:
+   - `LOCATION`: Location of the shared RP development environment (default:
      `eastus`).
-   * `RP_MODE`: Set to `development` to use a development RP running at
+   - `RP_MODE`: Set to `development` to use a development RP running at
      https://localhost:8443/.
-   * `MOCK_MSI_CLIENT_ID`: Client ID for service principal that mocks cluster MSI (see previous step).
-   * `MOCK_MSI_CERT`: Base64 encoded certificate for service principal that mocks cluster MSI (see previous step).
-   * `MOCK_MSI_TENANT_ID`: Tenant ID for service principal that mocks cluster MSI (see previous step).
+   - `MOCK_MSI_CLIENT_ID`: Client ID for service principal that mocks cluster MSI (see previous step).
+   - `MOCK_MSI_CERT`: Base64 encoded certificate for service principal that mocks cluster MSI (see previous step).
+   - `MOCK_MSI_TENANT_ID`: Tenant ID for service principal that mocks cluster MSI (see previous step).
 
 1. Create your own RP database:
 
@@ -83,7 +80,6 @@ mock a cluster MSI. Save the output values for `Client ID`, `Base64 Encoded Cert
        "databaseName=$DATABASE_NAME" \
      1>/dev/null
    ```
-
 
 ## Run the RP and create a cluster
 
@@ -100,10 +96,12 @@ mock a cluster MSI. Save the output values for `Client ID`, `Base64 Encoded Cert
    ```
 
 1. To create a cluster, use one of the following methods:
+
    1. Manually create the cluster using the public documentation.
-         
+
       Before following the instructions in [Create, access, and manage an Azure Red
       Hat OpenShift 4 Cluster][1], you will need to manually register your subscription to your local RP:
+
       ```bash
       $ curl -k -X PUT   -H 'Content-Type: application/json'   -d '{
       "state": "Registered",
@@ -130,21 +128,45 @@ mock a cluster MSI. Save the output values for `Client ID`, `Base64 Encoded Cert
       ```
 
       Later the cluster can be deleted as follows:
-   
+
       ```bash
       CLUSTER=<cluster-name> go run ./hack/cluster delete
       ```
 
       By default, a public cluster will be created. In order to create a private cluster, set the `PRIVATE_CLUSTER` environment variable to `true` prior to creation. Internet access from the cluster can also be restricted by setting the `NO_INTERNET` environment variable to `true`.
 
-   > __NOTE:__ If the cluster creation fails with `unable to connect to Podman socket...dial unix ///run/user/1000/podman/podman.sock: connect: no such file or directory`, then you will need enable podman user socket by executing : `systemctl --user enable --now podman.socket`, and re-run the installation.
+   > **NOTE:** If the cluster creation fails with `unable to connect to Podman socket...dial unix ///run/user/1000/podman/podman.sock: connect: no such file or directory`, then you will need enable podman user socket by executing : `systemctl --user enable --now podman.socket`, and re-run the installation.
 
    [1]: https://docs.microsoft.com/en-us/azure/openshift/tutorial-create-cluster
 
-1. The following additional RP endpoints are available but not exposed via `az
-   aro`:
+1. Using `oc`:
 
-   * Delete a subscription, cascading deletion to all its clusters:
+   1. Get the KUBECONFIG:
+
+      ```
+      az aro get-admin-kubeconfig \
+        --name <cluster-name> \
+        --resource-group <resource_group_name> \
+        --file dev.admin.kubeconfig;
+      export KUBECONFIG=dev.admin.kubeconfig
+      ```
+
+      The cluster and resource group names can be found by running `az aro list -o table`
+
+   1. Setup insecure-tls `oc`:
+
+      To interact with the cluster using using `oc` you will need to add the `--insecure-skip-tls-verify` flag to all commands or use this handy alias:
+
+      ```
+        alias oc-dev='oc --insecure-skip-tls-verify'
+      ```
+
+      Note: This is because the cluster is using self-signed certificates.
+
+1. The following additional RP endpoints are available but not exposed via `az
+aro`:
+
+   - Delete a subscription, cascading deletion to all its clusters:
 
      ```bash
      curl -k -X PUT \
@@ -153,140 +175,155 @@ mock a cluster MSI. Save the output values for `Client ID`, `Base64 Encoded Cert
        "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID?api-version=2.0"
      ```
 
-   * List operations:
+   - List operations:
 
      ```bash
      curl -k \
        "https://localhost:8443/providers/Microsoft.RedHatOpenShift/operations?api-version=2020-04-30"
      ```
 
-   * View RP logs in a friendly format:
+   - View RP logs in a friendly format:
 
      ```bash
      journalctl _COMM=aro -o json --since "15 min ago" -f | jq -r 'select (.COMPONENT != null and (.COMPONENT | contains("access"))|not) | .MESSAGE'
      ```
-  
-   * Optionally, create these aliases for viewing logs
-      ```bash
-      cat >>~/.bashrc <<'EOF'
-      alias rp-logs='journalctl _COMM=aro -o json --since "15 min ago" -f | jq -r '\''select (.COMPONENT != null and (.COMPONENT | contains("access"))|not) | .MESSAGE'\'''
-      alias rp-logs-all='journalctl _COMM=aro -o json -e | jq -r '\''select (.COMPONENT != null and (.COMPONENT | contains("access"))|not) | .MESSAGE'\'''
-      EOF
-      ```
-     
+
+   - Optionally, create these aliases for viewing logs
+     ```bash
+     cat >>~/.bashrc <<'EOF'
+     alias rp-logs='journalctl _COMM=aro -o json --since "15 min ago" -f | jq -r '\''select (.COMPONENT != null and (.COMPONENT | contains("access"))|not) | .MESSAGE'\'''
+     alias rp-logs-all='journalctl _COMM=aro -o json -e | jq -r '\''select (.COMPONENT != null and (.COMPONENT | contains("access"))|not) | .MESSAGE'\'''
+     EOF
+     ```
+
 ### Use a custom installer
 
 Sometimes you want to use a custom installer, for example, when you want to test a new OCP version's installer.
 You can create a cluster with the new installer following these steps:
 
 1. Push the installer image to somewhere accessible from Hive AKS.
-    
-    [quay.io](https://quay.io/) would be one of the options.
-    You need pull-secret to use the repositories other than `arointsvc.azurecr.io`.
-    It must be configured in the secrets.
-    If you are using the hack script, you don't have to care about it because the script uses `USER_PULL_SECRET` automatically.
+
+   [quay.io](https://quay.io/) would be one of the options.
+   You need pull-secret to use the repositories other than `arointsvc.azurecr.io`.
+   It must be configured in the secrets.
+   If you are using the hack script, you don't have to care about it because the script uses `USER_PULL_SECRET` automatically.
 
 1. [Run the RP](#run-the-rp-and-create-a-cluster)
-    
 1. [Update the OpenShift installer version](#openshift-version)
 
 1. Create a cluster with the version you updated.
 
-    If you are using the hack script, you can specify the version with `OS_CLUSTER_VERSION` env var.
+   If you are using the hack script, you can specify the version with `OS_CLUSTER_VERSION` env var.
 
 ## Automatically run local RP
+
 If you are already familiar with running the ARO RP locally, you can speed up the process executing the [local_dev_env.sh](../hack/devtools/local_dev_env.sh) script.
 
 ## Connect ARO-RP with a Hive development cluster
+
 The env variables names defined in pkg/util/liveconfig/manager.go control the communication of the ARO-RP with Hive.
-- If you want to use ARO-RP + Hive, set `HIVE_KUBE_CONFIG_PATH` to the path of the kubeconfig of the AKS Dev cluster. [Info](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#debugging-aks-cluster) about creating that kubeconfig (Step *Access the cluster via API*).
-- If you want to create clusters using the local ARO-RP + Hive instead of doing the standard cluster creation process (which doesn't use Hive), set `ARO_INSTALL_VIA_HIVE` to *true*.
-- If you want to enable the Hive adoption feature (which is performed during adminUpdate()), set `ARO_ADOPT_BY_HIVE` to *true*.
 
-After setting the above environment variables (using *export* directly in the terminal or including them in the *env* file), connect to the [VPN](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#debugging-aks-cluster) (*Connect to the VPN* section).
+- If you want to use ARO-RP + Hive, set `HIVE_KUBE_CONFIG_PATH` to the path of the kubeconfig of the AKS Dev cluster. [Info](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#debugging-aks-cluster) about creating that kubeconfig (Step _Access the cluster via API_).
+- If you want to create clusters using the local ARO-RP + Hive instead of doing the standard cluster creation process (which doesn't use Hive), set `ARO_INSTALL_VIA_HIVE` to _true_.
+- If you want to enable the Hive adoption feature (which is performed during adminUpdate()), set `ARO_ADOPT_BY_HIVE` to _true_.
 
-Then proceed to [run](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#run-the-rp-and-create-a-cluster) the ARO-RP as usual. 
+After setting the above environment variables (using _export_ directly in the terminal or including them in the _env_ file), connect to the [VPN](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#debugging-aks-cluster) (_Connect to the VPN_ section).
 
-After that, when you [create](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#run-the-rp-and-create-a-cluster) a cluster, you will be using Hive behind the scenes. You can check the created Hive objects following [Debugging OpenShift Cluster](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#debugging-openshift-cluster) and using the *oc* command.
+Then proceed to [run](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#run-the-rp-and-create-a-cluster) the ARO-RP as usual.
+
+After that, when you [create](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#run-the-rp-and-create-a-cluster) a cluster, you will be using Hive behind the scenes. You can check the created Hive objects following [Debugging OpenShift Cluster](https://github.com/Azure/ARO-RP/blob/master/docs/deploy-development-rp.md#debugging-openshift-cluster) and using the _oc_ command.
 
 ## Make Admin-Action API call(s) to a running local-rp
 
-  ```bash
-  export CLUSTER=<cluster-name>
-  export AZURE_SUBSCRIPTION_ID=<subscription-id>
-  export RESOURCEGROUP=<resource-group-name>
-    [OR]
-  . ./env
-  ```
+```bash
+export CLUSTER=<cluster-name>
+export AZURE_SUBSCRIPTION_ID=<subscription-id>
+export RESOURCEGROUP=<resource-group-name>
+  [OR]
+. ./env
+```
 
-* Perform AdminUpdate on a dev cluster
+- Perform AdminUpdate on a dev cluster
+
   ```bash
   curl -X PATCH -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER?api-version=admin" --header "Content-Type: application/json" -d "{}"
   ```
 
-* Get Cluster details of a dev cluster
+- Get Cluster details of a dev cluster
+
   ```bash
   curl -X GET -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER?api-version=admin" --header "Content-Type: application/json" -d "{}"
   ```
 
-* Get SerialConsole logs of a VM of dev cluster
+- Get SerialConsole logs of a VM of dev cluster
+
   ```bash
   VMNAME="aro-cluster-qplnw-master-0"
   curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/serialconsole?vmName=$VMNAME" --header "Content-Type: application/json" -d "{}"
   ```
 
-* Redeploy a VM in a dev cluster
+- Redeploy a VM in a dev cluster
+
   ```bash
   VMNAME="aro-cluster-qplnw-master-0"
   curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/redeployvm?vmName=$VMNAME" --header "Content-Type: application/json" -d "{}"
   ```
 
-* Stop a VM in a dev cluster
+- Stop a VM in a dev cluster
+
   ```bash
   VMNAME="aro-cluster-qplnw-master-0"
   curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/stopvm?vmName=$VMNAME" --header "Content-Type: application/json" -d "{}"
   ```
 
-* Stop and [deallocate a VM](https://learn.microsoft.com/en-us/azure/virtual-machines/states-billing) in a dev cluster
+- Stop and [deallocate a VM](https://learn.microsoft.com/en-us/azure/virtual-machines/states-billing) in a dev cluster
+
   ```bash
   VMNAME="aro-cluster-qplnw-master-0"
   curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/stopvm?vmName=$VMNAME&deallocateVM=True" --header "Content-Type: application/json" -d "{}"
   ```
 
-* Start a VM in a dev cluster
+- Start a VM in a dev cluster
+
   ```bash
   VMNAME="aro-cluster-qplnw-master-0"
   curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/startvm?vmName=$VMNAME" --header "Content-Type: application/json" -d "{}"
   ```
 
-* List VM Resize Options for a master node of dev cluster
+- List VM Resize Options for a master node of dev cluster
+
   ```bash
   curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/skus" --header "Content-Type: application/json" -d "{}"
   ```
 
-* Resize master node of a dev cluster
+- Resize master node of a dev cluster
+
   ```bash
   VMNAME="aro-cluster-qplnw-master-0"
   VMSIZE="Standard_D16s_v3"
   curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/resize?vmName=$VMNAME&vmSize=$VMSIZE" --header "Content-Type: application/json" -d "{}"
   ```
 
-* List Clusters of a local-rp
+- List Clusters of a local-rp
+
   ```bash
   curl -X GET -k "https://localhost:8443/admin/providers/microsoft.redhatopenshift/openshiftclusters"
   ```
 
-* List cluster Azure Resources of a dev cluster
+- List cluster Azure Resources of a dev cluster
+
   ```bash
   curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/resources"
   ```
 
-* Perform Cluster Upgrade on a dev cluster
+- Perform Cluster Upgrade on a dev cluster
+
   ```bash
   curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/upgrade"
   ```
 
-* Get container logs from an OpenShift pod in a cluster
+- Get container logs from an OpenShift pod in a cluster
+
   ```bash
   NAMESPACE=<namespace-name>
   POD=<pod-name>
@@ -294,18 +331,20 @@ After that, when you [create](https://github.com/Azure/ARO-RP/blob/master/docs/d
   curl -X GET -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/kubernetespodlogs?podname=$POD&namespace=$NAMESPACE&container=$CONTAINER"
   ```
 
-* List Supported VM Sizes
+- List Supported VM Sizes
+
   ```bash
   VMROLE=<master or worker>
   curl -X GET -k "https://localhost:8443/admin/supportedvmsizes?vmRole=$VMROLE"
   ```
 
-* Perform Etcd Recovery Operation on a cluster
+- Perform Etcd Recovery Operation on a cluster
+
   ```bash
-  curl -X PATCH -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/etcdrecovery" 
+  curl -X PATCH -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/etcdrecovery"
   ```
 
-* Delete a managed resource
+- Delete a managed resource
   ```bash
   MANAGED_RESOURCEID=<id of managed resource to delete>
   curl -X POST -k "https://localhost:8443/admin/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/deletemanagedresource?managedResourceID=$MANAGED_RESOURCEID"
@@ -313,27 +352,30 @@ After that, when you [create](https://github.com/Azure/ARO-RP/blob/master/docs/d
 
 ## OpenShift Version
 
-* We have a cosmos container which contains supported installable OCP versions, more information on the definition in `pkg/api/openshiftversion.go`.
+- We have a cosmos container which contains supported installable OCP versions, more information on the definition in `pkg/api/openshiftversion.go`.
 
-* Admin - List OpenShift installation versions
+- Admin - List OpenShift installation versions
+
   ```bash
   curl -X GET -k "https://localhost:8443/admin/versions"
   ```
 
-* Admin - Put a new OpenShift installation version
+- Admin - Put a new OpenShift installation version
+
   ```bash
   curl -X PUT -k "https://localhost:8443/admin/versions" --header "Content-Type: application/json" -d '{ "properties": { "version": "4.10.0", "enabled": true, "openShiftPullspec": "test.com/a:b", "installerPullspec": "test.com/a:b" }}'
   ```
 
-* List the enabled OpenShift installation versions within a region
+- List the enabled OpenShift installation versions within a region
   ```bash
   curl -X GET -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/providers/Microsoft.RedHatOpenShift/locations/$LOCATION/openshiftversions?api-version=2022-09-04"
   ```
 
 ## OpenShift Cluster Manager (OCM) Configuration API Actions
 
-* Create a new OCM configuration
-  * You can find example payloads in the projects `./hack/ocm` folder.
+- Create a new OCM configuration
+
+  - You can find example payloads in the projects `./hack/ocm` folder.
 
   ```bash
   curl -X PUT -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/syncsets/mySyncSet?api-version=2022-09-04" --header "Content-Type: application/json" -d @./hack/ocm/syncset.b64
@@ -341,55 +383,59 @@ After that, when you [create](https://github.com/Azure/ARO-RP/blob/master/docs/d
 
 ## Debugging OpenShift Cluster
 
-* SSH to the bootstrap node:
-> __NOTE:__ If you have a password-based `sudo` command, you must first authenticate before running `sudo` in the background
+- SSH to the bootstrap node:
+
+  > **NOTE:** If you have a password-based `sudo` command, you must first authenticate before running `sudo` in the background
+
   ```bash
   sudo openvpn secrets/vpn-$LOCATION.ovpn &
   CLUSTER=cluster hack/ssh-agent.sh bootstrap
   ```
 
-* Get an admin kubeconfig:
+- Get an admin kubeconfig:
 
   ```bash
   CLUSTER=cluster make admin.kubeconfig
   export KUBECONFIG=admin.kubeconfig
   ```
 
-* "SSH" to a cluster node:
+- "SSH" to a cluster node:
 
-  * Get the admin kubeconfig and `export KUBECONFIG` as detailed above.
-  * Run the ssh-agent.sh script. This takes the argument is the name of the NIC attached to the VM you are trying to ssh to.
-   * Given the following nodes these commands would be used to connect to the respective node
+  - Get the admin kubeconfig and `export KUBECONFIG` as detailed above.
+  - Run the ssh-agent.sh script. This takes the argument is the name of the NIC attached to the VM you are trying to ssh to.
+  - Given the following nodes these commands would be used to connect to the respective node
 
-    ```
-   $ oc get nodes
-   NAME                                     STATUS     ROLES    AGE   VERSION
-   aro-dev-abc123-master-0               Ready      master   47h   v1.19.0+2f3101c
-   aro-dev-abc123-master-1               Ready      master   47h   v1.19.0+2f3101c
-   aro-dev-abc123-master-2               Ready      master   47h   v1.19.0+2f3101c
-   aro-dev-abc123-worker-eastus1-2s5rb   Ready      worker   47h   v1.19.0+2f3101c
-   aro-dev-abc123-worker-eastus2-php82   Ready      worker   47h   v1.19.0+2f3101c
-   aro-dev-abc123-worker-eastus3-cbqs2   Ready      worker   47h   v1.19.0+2f3101c
+  ```
+  $ oc get nodes
+  NAME                                     STATUS     ROLES    AGE   VERSION
+  aro-dev-abc123-master-0               Ready      master   47h   v1.19.0+2f3101c
+  aro-dev-abc123-master-1               Ready      master   47h   v1.19.0+2f3101c
+  aro-dev-abc123-master-2               Ready      master   47h   v1.19.0+2f3101c
+  aro-dev-abc123-worker-eastus1-2s5rb   Ready      worker   47h   v1.19.0+2f3101c
+  aro-dev-abc123-worker-eastus2-php82   Ready      worker   47h   v1.19.0+2f3101c
+  aro-dev-abc123-worker-eastus3-cbqs2   Ready      worker   47h   v1.19.0+2f3101c
 
 
-   CLUSTER=cluster hack/ssh-agent.sh master0 # master node aro-dev-abc123-master-0
-   CLUSTER=cluster hack/ssh-agent.sh aro-dev-abc123-worker-eastus1-2s5rb # worker aro-dev-abc123-worker-eastus1-2s5rb
-   CLUSTER=cluster hack/ssh-agent.sh eastus1 # worker aro-dev-abc123-worker-eastus1-2s5rb
-   CLUSTER=cluster hack/ssh-agent.sh 2s5rb  # worker aro-dev-abc123-worker-eastus1-2s5rb
-   CLUSTER=cluster hack/ssh-agent.sh bootstrap # the bootstrap node used to provision cluster
-   ```
+  CLUSTER=cluster hack/ssh-agent.sh master0 # master node aro-dev-abc123-master-0
+  CLUSTER=cluster hack/ssh-agent.sh aro-dev-abc123-worker-eastus1-2s5rb # worker aro-dev-abc123-worker-eastus1-2s5rb
+  CLUSTER=cluster hack/ssh-agent.sh eastus1 # worker aro-dev-abc123-worker-eastus1-2s5rb
+  CLUSTER=cluster hack/ssh-agent.sh 2s5rb  # worker aro-dev-abc123-worker-eastus1-2s5rb
+  CLUSTER=cluster hack/ssh-agent.sh bootstrap # the bootstrap node used to provision cluster
+  ```
 
 # Debugging AKS Cluster
 
-* Connect to the VPN:
+- Connect to the VPN:
 
 To access the cluster for oc / kubectl or SSH'ing into the cluster you need to connect to the VPN first.
-> __NOTE:__ If you have a password-based `sudo` command, you must first authenticate before running `sudo` in the background
-  ```bash
-  sudo openvpn secrets/vpn-aks-$LOCATION.ovpn &
-  ```
 
-* Access the cluster via API (oc / kubectl):
+> **NOTE:** If you have a password-based `sudo` command, you must first authenticate before running `sudo` in the background
+
+```bash
+sudo openvpn secrets/vpn-aks-$LOCATION.ovpn &
+```
+
+- Access the cluster via API (oc / kubectl):
 
   ```bash
   make aks.kubeconfig
@@ -402,22 +448,24 @@ To access the cluster for oc / kubectl or SSH'ing into the cluster you need to c
   aks-systempool-99744725-vmss000002   Ready    agent   9h    v1.23.5
   ```
 
-* "SSH" into a cluster node:
+- "SSH" into a cluster node:
 
-  * Run the ssh-aks.sh script, specifying the cluster name and the node number of the VM you are trying to ssh to.
+  - Run the ssh-aks.sh script, specifying the cluster name and the node number of the VM you are trying to ssh to.
+
   ```bash
   hack/ssh-aks.sh aro-aks-cluster 0 # The first VM node in 'aro-aks-cluster'
   hack/ssh-aks.sh aro-aks-cluster 1 # The second VM node in 'aro-aks-cluster'
   hack/ssh-aks.sh aro-aks-cluster 2 # The third VM node in 'aro-aks-cluster'
   ```
 
-* Access via Azure Portal
+- Access via Azure Portal
 
 Due to the fact that the AKS cluster is private, you need to be connected to the VPN in order to view certain AKS cluster properties, because the UI interrogates k8s via the VPN.
 
 ### Metrics
 
 To run fake metrics socket:
+
 ```bash
 go run ./hack/monitor
 ```
