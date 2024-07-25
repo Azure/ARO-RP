@@ -19,9 +19,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-    - name: Install Go runtime deps
-      run: |
-        make install-go-tools
     - name: Build all
       run: |
         make build-all

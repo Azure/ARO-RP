@@ -363,6 +363,3 @@ vendor:
 	hack/update-go-module-dependencies.sh
 	$(MAKE) go-verify
 
-.PHONY: install-go-tools
-install-go-tools:
-	./hack/goruntool.sh install

@@ -10,9 +10,9 @@ WORKDIR /app
 
 COPY . /app
 
-# install go cmdline tools
+# go cmdline tool helpers
+COPY .bingo/ .bingo/
 COPY hack/goruntool.sh hack/goruntool.sh
-RUN hack/goruntool.sh install
 
 RUN make aro RELEASE=${IS_OFFICIAL_RELEASE} -o generate && make validate-fips && make e2e.test
 

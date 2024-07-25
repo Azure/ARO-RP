@@ -32,14 +32,6 @@ WORKDIR /app
 ENV GOPATH=/root/go
 ENV GOFLAGS="-tags=containers_image_openpgp,exclude_graphdriver_btrfs,exclude_graphdriver_devicemapper"
 
-# install go cmdline tools
-COPY hack/goruntool.sh hack/goruntool.sh
-RUN hack/goruntool.sh install
-
-# Install golangci-lint and verify
-RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /usr/local/bin v1.56.2 && \
-    golangci-lint --version || (echo "golangci-lint not found" && exit 1)
-
 # Copy dependencies and source files
 COPY go.mod go.sum ./
 COPY vendor vendor
@@ -49,6 +41,7 @@ COPY hack hack
 COPY cmd cmd
 COPY pkg pkg
 COPY test test
+COPY .bingo .bingo
 
 # Ensure JS assets are available before generating Go code
 COPY --from=portal-build /build/pkg/portal/assets/v2/build /app/pkg/portal/assets/v2/build

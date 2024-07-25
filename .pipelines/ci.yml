@@ -61,12 +61,6 @@ jobs:
 
       - script: |
           set -xe
-          hack/goruntool.sh install
-        displayName: Install golang tools
-        target: golang
-
-      - script: |
-          set -xe
           make generate
           [[ -z "$(git status -s)" ]]
         displayName: ⚙️ Run Golang code generate
