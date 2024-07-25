@@ -305,7 +305,7 @@ unit-test-go-coverpkg:
 
 .PHONY: lint-go
 lint-go:
-	hack/lint-go.sh
+	./hack/goruntool.sh golangci-lint run --verbose
 
 .PHONY: lint-admin-portal
 lint-admin-portal:
