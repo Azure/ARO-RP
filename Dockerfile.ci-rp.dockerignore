@@ -11,6 +11,7 @@
 !swagger
 !test
 !vendor
+!.bingo
 
 # Ignore locally built NPM artifacts - using new automated process
 pkg/portal/assets/v2/build
@@ -23,4 +24,3 @@ pkg/portal/assets/v2/build
 !portal/v2/tsconfig.json
 !portal/v2/.eslintrc.yml
 !portal/v2/.npmrc
-
