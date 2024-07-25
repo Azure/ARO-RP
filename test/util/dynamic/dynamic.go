@@ -43,27 +43,31 @@ func NewDynamicClient(kubeConfig *rest.Config) (Client, error) {
 	return &client{cli, mapper}, nil
 }
 
-func (d *client) getGVR(obj *unstructured.Unstructured) (*meta.RESTMapping, error) {
+func (d *client) getMapping(obj *unstructured.Unstructured) (*meta.RESTMapping, error) {
 	var gvk = obj.GroupVersionKind()
 	return d.mapping.RESTMapping(gvk.GroupKind(), gvk.Version)
 }
 
 // GetClient returns a non-namespaced or namespaced ResourceClient depending on a given object.
 func (d *client) GetClient(obj *unstructured.Unstructured) (ResourceClient, error) {
-	gvr, err := d.getGVR(obj)
+	mapping, err := d.getMapping(obj)
 	if err != nil {
 		return nil, err
 	}
-	if obj.GetNamespace() != "" {
-		return &resourceClient{d.Resource(gvr.Resource).Namespace(obj.GetNamespace())}, nil
+	if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
+		ns := obj.GetNamespace()
+		if ns == "" {
+			ns = "default"
+		}
+		return &resourceClient{d.Resource(mapping.Resource).Namespace(ns)}, nil
 	}
-	return &resourceClient{d.Resource(gvr.Resource)}, nil
+	return &resourceClient{d.Resource(mapping.Resource)}, nil
 }
 
 // ResourceClient is an interface that can be used for *K8sObjectWithRetry helper functions.
-// The default dynamic ResourceInterface can't be used for *K8sObjectWithRetry
-// because it has different method signatures from other clients interface.
-// https://pkg.go.dev/k8s.io/client-go/dynamic#ResourceInterface
+// In the original dynamic client, each method supports actions over subresources, which typed clients don't.
+// Because of the difference, it needs to be wrapped with a new interface to be used in the helper functions.
+// cf. https://pkg.go.dev/k8s.io/client-go/dynamic#ResourceInterface
 type ResourceClient interface {
 	Get(ctx context.Context, name string, options metav1.GetOptions) (*unstructured.Unstructured, error)
 	Create(ctx context.Context, obj *unstructured.Unstructured, options metav1.CreateOptions) (*unstructured.Unstructured, error)
