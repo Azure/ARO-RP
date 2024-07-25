@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"io"
 	"log"
 	"os"
 	"regexp"
@@ -42,12 +43,28 @@ func unexport(s string) string {
 }
 
 func run() error {
-	for _, name := range gencosmosdb.AssetNames() {
+	dirEntries, err := gencosmosdb.EmbeddedFiles.ReadDir("cosmosdb")
+	if err != nil {
+		return err
+	}
+
+	for _, dir := range dirEntries {
+		name := dir.Name()
 		if name == "template.go" || name == "template_fake.go" {
 			continue
 		}
 
-		err := writeFile("zz_generated_"+name, gencosmosdb.MustAsset(name))
+		file, err := gencosmosdb.EmbeddedFiles.Open("cosmosdb/" + dir.Name())
+		if err != nil {
+			return err
+		}
+
+		contents, err := io.ReadAll(file)
+		if err != nil {
+			return err
+		}
+
+		err = writeFile("zz_generated_"+name, contents)
 		if err != nil {
 			return err
 		}
@@ -67,7 +84,16 @@ func run() error {
 		plural := unexport(pluralExported)
 
 		for _, filename := range filesToGenerate {
-			data := gencosmosdb.MustAsset(filename)
+			file, err := gencosmosdb.EmbeddedFiles.Open("cosmosdb/" + filename)
+			if err != nil {
+				return err
+			}
+
+			data, err := io.ReadAll(file)
+			if err != nil {
+				return err
+			}
+
 			data = importRegexp.ReplaceAll(data, []byte("\tpkg \""+importpkg+"\""))
 
 			// plural must be done before singular ("template" is a sub-string of "templates")
@@ -77,7 +103,7 @@ func run() error {
 			data = singularExportedRegexp.ReplaceAll(data, []byte(singularExported))
 
 			generatedFilename := strings.Replace(filename, "template", strings.ToLower(singularExported), 1)
-			err := writeFile("zz_generated_"+generatedFilename, data)
+			err = writeFile("zz_generated_"+generatedFilename, data)
 			if err != nil {
 				return err
 			}
