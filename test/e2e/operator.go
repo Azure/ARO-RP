@@ -503,7 +503,6 @@ var _ = Describe("ARO Operator - ImageConfig Reconciler", func() {
 	const (
 		imageConfigFlag  = operator.ImageConfigEnabled
 		optionalRegistry = "quay.io"
-		timeout          = 5 * time.Minute
 	)
 	var requiredRegistries []string
 	var imageConfig *configv1.Image
