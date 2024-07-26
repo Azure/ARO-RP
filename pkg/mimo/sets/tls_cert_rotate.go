@@ -13,6 +13,9 @@ import (
 func TLSCertRotation(t mimo.TaskContext, doc *api.MaintenanceManifestDocument, oc *api.OpenShiftClusterDocument) (api.MaintenanceManifestState, string) {
 	s := []steps.Step{
 		steps.Action(cluster.EnsureAPIServerIsUp),
+
+		steps.Action(cluster.RotateAPIServerCertificate),
+		steps.Action(cluster.EnsureAPIServerServingCertificateConfiguration),
 	}
 
 	return run(t, s)
