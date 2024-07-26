@@ -23,7 +23,8 @@ import (
 )
 
 const (
-	ControllerName                      = "IngressControllerARO"
+	controllerName                      = "IngressControllerARO"
+	controllerEnabled                   = operator.IngressEnabled
 	openshiftIngressControllerNamespace = "openshift-ingress-operator"
 	openshiftIngressControllerName      = "default"
 	minimumReplicas                     = 2
@@ -36,27 +37,21 @@ type Reconciler struct {
 }
 
 func NewReconciler(log *logrus.Entry, client client.Client) *Reconciler {
-	return &Reconciler{
+	r := &Reconciler{
 		AROController: base.AROController{
-			Log:    log,
-			Client: client,
-			Name:   ControllerName,
+			Log:         log.WithField("controller", controllerName),
+			Client:      client,
+			Name:        controllerName,
+			EnabledFlag: controllerEnabled,
 		},
 	}
+	r.Reconciler = r
+	return r
 }
 
-func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	instance, err := r.GetCluster(ctx)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
+func (r *Reconciler) ReconcileEnabled(ctx context.Context, request ctrl.Request, instance *arov1alpha1.Cluster) (ctrl.Result, error) {
+	var err error
 
-	if !instance.Spec.OperatorFlags.GetSimpleBoolean(operator.IngressEnabled) {
-		r.Log.Debug("controller is disabled")
-		return reconcile.Result{}, nil
-	}
-
-	r.Log.Debug("running")
 	ingress := &operatorv1.IngressController{}
 	err = r.Client.Get(ctx, types.NamespacedName{Namespace: openshiftIngressControllerNamespace, Name: openshiftIngressControllerName}, ingress)
 	if err != nil {
@@ -83,6 +78,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}, builder.WithPredicates(predicate.And(predicates.AROCluster, predicate.GenerationChangedPredicate{}))).
-		Named(ControllerName).
+		Named(r.GetName()).
 		Complete(r)
 }

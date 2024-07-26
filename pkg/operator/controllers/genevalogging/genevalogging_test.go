@@ -96,16 +96,11 @@ func TestGenevaLoggingNamespaceLabels(t *testing.T) {
 		controller := gomock.NewController(t)
 		defer controller.Finish()
 
+		log := logrus.NewEntry(logrus.StandardLogger())
+		client := ctrlfake.NewClientBuilder().WithObjects(&tt.cv).Build()
 		mockDh := mock_dynamichelper.NewMockInterface(controller)
 
-		r := &Reconciler{
-			AROController: base.AROController{
-				Log:    logrus.NewEntry(logrus.StandardLogger()),
-				Client: ctrlfake.NewClientBuilder().WithObjects(&tt.cv).Build(),
-				Name:   ControllerName,
-			},
-			dh: mockDh,
-		}
+		r := NewReconciler(log, client, mockDh)
 
 		labels, err := r.namespaceLabels(ctx)
 		utilerror.AssertErrorMessage(t, err, tt.wantErr)
@@ -130,9 +125,9 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 	}
 
 	defaultConditions := []operatorv1.OperatorCondition{
-		utilconditions.ControllerDefaultAvailable(ControllerName),
-		utilconditions.ControllerDefaultProgressing(ControllerName),
-		utilconditions.ControllerDefaultDegraded(ControllerName),
+		utilconditions.ControllerDefaultAvailable(controllerName),
+		utilconditions.ControllerDefaultProgressing(controllerName),
+		utilconditions.ControllerDefaultDegraded(controllerName),
 	}
 
 	tests := []struct {
@@ -291,9 +286,9 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 			mocks:      nominalMocks,
 			wantErrMsg: "",
 			wantConditions: []operatorv1.OperatorCondition{
-				utilconditions.ControllerDefaultAvailable(ControllerName),
-				utilconditions.ControllerDefaultProgressing(ControllerName),
-				utilconditions.ControllerDefaultDegraded(ControllerName),
+				utilconditions.ControllerDefaultAvailable(controllerName),
+				utilconditions.ControllerDefaultProgressing(controllerName),
+				utilconditions.ControllerDefaultDegraded(controllerName),
 			},
 		},
 	}
@@ -333,16 +328,11 @@ func TestGenevaLoggingDaemonset(t *testing.T) {
 				&cv,
 			}
 
+			log := logrus.NewEntry(logrus.StandardLogger())
+			client := ctrlfake.NewClientBuilder().WithObjects(resources...).Build()
 			mockDh := mock_dynamichelper.NewMockInterface(controller)
 
-			r := &Reconciler{
-				AROController: base.AROController{
-					Log:    logrus.NewEntry(logrus.StandardLogger()),
-					Client: ctrlfake.NewClientBuilder().WithObjects(resources...).Build(),
-					Name:   ControllerName,
-				},
-				dh: mockDh,
-			}
+			r := NewReconciler(log, client, mockDh)
 
 			daemonset, err := r.daemonset(instance)
 			if err != nil {
@@ -425,7 +415,7 @@ func TestGenevaConfigMapResources(t *testing.T) {
 				AROController: base.AROController{
 					Log:    logrus.NewEntry(logrus.StandardLogger()),
 					Client: ctrlfake.NewClientBuilder().WithObjects(instance, scc, &cv).Build(),
-					Name:   ControllerName,
+					Name:   controllerName,
 				},
 			}
 

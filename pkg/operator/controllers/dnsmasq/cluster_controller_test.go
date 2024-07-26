@@ -26,9 +26,9 @@ import (
 
 func TestClusterReconciler(t *testing.T) {
 	transitionTime := metav1.Time{Time: time.Now()}
-	defaultAvailable := utilconditions.ControllerDefaultAvailable(ClusterControllerName)
-	defaultProgressing := utilconditions.ControllerDefaultProgressing(ClusterControllerName)
-	defaultDegraded := utilconditions.ControllerDefaultDegraded(ClusterControllerName)
+	defaultAvailable := utilconditions.ControllerDefaultAvailable(clusterControllerName)
+	defaultProgressing := utilconditions.ControllerDefaultProgressing(clusterControllerName)
+	defaultDegraded := utilconditions.ControllerDefaultDegraded(clusterControllerName)
 	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
 
 	fakeDh := func(controller *gomock.Controller) *mock_dynamichelper.MockInterface {
@@ -80,7 +80,7 @@ func TestClusterReconciler(t *testing.T) {
 							defaultAvailable,
 							defaultProgressing,
 							{
-								Type:               ClusterControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+								Type:               clusterControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
 								Status:             operatorv1.ConditionTrue,
 								LastTransitionTime: transitionTime,
 							},

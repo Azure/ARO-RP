@@ -29,9 +29,9 @@ import (
 
 func TestReconciler(t *testing.T) {
 	transitionTime := metav1.Time{Time: time.Now()}
-	defaultAvailable := utilconditions.ControllerDefaultAvailable(ControllerName)
-	defaultProgressing := utilconditions.ControllerDefaultProgressing(ControllerName)
-	defaultDegraded := utilconditions.ControllerDefaultDegraded(ControllerName)
+	defaultAvailable := utilconditions.ControllerDefaultAvailable(controllerName)
+	defaultProgressing := utilconditions.ControllerDefaultProgressing(controllerName)
+	defaultDegraded := utilconditions.ControllerDefaultDegraded(controllerName)
 	defaultConditions := []operatorv1.OperatorCondition{defaultAvailable, defaultProgressing, defaultDegraded}
 
 	fakeMachineSets := func(replicas0 int32, replicas1 int32, replicas2 int32) []client.Object {
@@ -146,7 +146,7 @@ func TestReconciler(t *testing.T) {
 				defaultAvailable,
 				defaultProgressing,
 				{
-					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+					Type:               controllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
 					Status:             operatorv1.ConditionTrue,
 					LastTransitionTime: transitionTime,
 					Message:            `machinesets.machine.openshift.io "aro-fake-machineset-0" not found`,
@@ -187,7 +187,7 @@ func TestReconciler(t *testing.T) {
 				defaultAvailable,
 				defaultProgressing,
 				{
-					Type:               ControllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
+					Type:               controllerName + "Controller" + operatorv1.OperatorStatusTypeDegraded,
 					Status:             operatorv1.ConditionTrue,
 					LastTransitionTime: transitionTime,
 					Message:            `machinesets.machine.openshift.io "aro-fake-machineset-0" not found`,
