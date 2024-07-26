@@ -92,7 +92,6 @@ func (f *frontend) _putAdminMaintManifestCreate(ctx context.Context, r *http.Req
 	savedDoc, err := dbMaintenanceManifests.Create(ctx, manifestDoc)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", err.Error())
-
 	}
 
 	return json.MarshalIndent(converter.ToExternal(savedDoc), "", "    ")

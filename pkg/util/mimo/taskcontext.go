@@ -1,5 +1,8 @@
 package mimo
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"context"
 	"fmt"
@@ -7,6 +10,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
 )
@@ -17,6 +21,10 @@ type TaskContext interface {
 	Environment() env.Interface
 	ClientHelper() (clienthelper.Interface, error)
 	Log() *logrus.Entry
+
+	// OpenShiftCluster
+	GetClusterUUID() string
+	GetOpenShiftClusterProperties() api.OpenShiftClusterProperties
 
 	SetResultMessage(string)
 	GetResultMessage() string

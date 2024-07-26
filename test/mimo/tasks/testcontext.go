@@ -5,24 +5,15 @@ package tasks
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/clienthelper"
-	"github.com/Azure/ARO-RP/pkg/util/mimo"
 )
-
-func NewFakeTestContext(ctx context.Context, env env.Interface, log *logrus.Entry, now func() time.Time, ch clienthelper.Interface) mimo.TaskContext {
-	return &fakeTestContext{
-		Context: ctx,
-		env:     env,
-		log:     log,
-		ch:      ch,
-		now:     now,
-	}
-}
 
 type fakeTestContext struct {
 	context.Context
@@ -31,14 +22,59 @@ type fakeTestContext struct {
 	ch  clienthelper.Interface
 	log *logrus.Entry
 
+	clusterUUID       string
+	clusterResourceID string
+	properties        api.OpenShiftClusterProperties
+
 	resultMessage string
 }
+
+type Option func(*fakeTestContext)
+
+func WithClientHelper(ch clienthelper.Interface) Option {
+	return func(ftc *fakeTestContext) {
+		ftc.ch = ch
+	}
+}
+
+func WithOpenShiftClusterDocument(oc *api.OpenShiftClusterDocument) Option {
+	return func(ftc *fakeTestContext) {
+		ftc.clusterUUID = oc.ID
+		ftc.clusterResourceID = oc.OpenShiftCluster.ID
+		ftc.properties = oc.OpenShiftCluster.Properties
+	}
+}
+
+func WithOpenShiftClusterProperties(uuid string, oc api.OpenShiftClusterProperties) Option {
+	return func(ftc *fakeTestContext) {
+		ftc.clusterUUID = uuid
+		ftc.properties = oc
+	}
+}
+
+func NewFakeTestContext(ctx context.Context, env env.Interface, log *logrus.Entry, now func() time.Time, o ...Option) *fakeTestContext {
+	ftc := &fakeTestContext{
+		Context: ctx,
+		env:     env,
+		log:     log,
+		now:     now,
+	}
+	for _, i := range o {
+		i(ftc)
+	}
+	return ftc
+}
+
+// handle
 
 func (t *fakeTestContext) Environment() env.Interface {
 	return t.env
 }
 
 func (t *fakeTestContext) ClientHelper() (clienthelper.Interface, error) {
+	if t.ch == nil {
+		return nil, fmt.Errorf("missing clienthelper")
+	}
 	return t.ch, nil
 }
 
@@ -48,6 +84,21 @@ func (t *fakeTestContext) Log() *logrus.Entry {
 
 func (t *fakeTestContext) Now() time.Time {
 	return t.now()
+}
+
+// OpenShiftCluster
+func (t *fakeTestContext) GetClusterUUID() string {
+	if t.clusterUUID == "" {
+		panic("didn't set up openshiftcluster in test")
+	}
+	return t.clusterUUID
+}
+
+func (t *fakeTestContext) GetOpenShiftClusterProperties() api.OpenShiftClusterProperties {
+	if t.clusterUUID == "" {
+		panic("didn't set up openshiftcluster in test")
+	}
+	return t.properties
 }
 
 func (t *fakeTestContext) SetResultMessage(s string) {
