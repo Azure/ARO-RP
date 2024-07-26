@@ -104,6 +104,5 @@ func TestAPIServerIsUp(t *testing.T) {
 				g.Expect(err).ToNot(HaveOccurred())
 			}
 		})
-
 	}
 }
